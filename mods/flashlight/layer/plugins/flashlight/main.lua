@@ -17,11 +17,9 @@ typedef struct { void* resource; bool requested; } flashlight_sound_ref;
 -- CRC32 of the signal the control sends, as the input system hashes it.
 local SIGNAL_TOGGLE = 0x78D9863A
 
--- The BazaarComputer's button click, and the sound types to try it through: player foley,
--- unlocalised effect, interface.
-local CLICK = 0x004E1CCF
-local CLICK_TYPES = { 15, 12, 20 }
-local NO_SOUND = 0xFFFFFFFF
+-- The switch, a bank of this layer's own, played through the player's own foley.
+local CLICK = 0x00FC0A00
+local SOUND_FOLEY_PLAYER = 15
 
 local RANGE = 25.0
 local OUTER_ANGLE = math.rad(45)
@@ -68,7 +66,7 @@ local owner = nil
 local on = false
 local toggles = 0
 local cast_shadows = true
-local click_held = false
+local click_bank = nil
 local trace = false
 
 local function call_target(call)
@@ -92,33 +90,27 @@ end
 
 -- A play never loads its bank, so the click's is requested once and never let go.
 local function hold_click()
-  if click_held then
+  if click_bank ~= nil then
     return
   end
-  click_held = true
-  local ref = ffi.new('flashlight_sound_ref')
-  get_from_sound_id(ref, CLICK, nil)
-  fcse.log('flashlight: click bank ' .. tostring(ref.resource))
-  if ref.resource ~= nil then
-    method(ref.resource, SOUND_REQUEST_LOAD_SLOT, 'void(__thiscall*)(void*)')(ref.resource)
+  click_bank = ffi.new('flashlight_sound_ref')
+  get_from_sound_id(click_bank, CLICK, nil)
+  if click_bank.resource ~= nil then
+    method(click_bank.resource, SOUND_REQUEST_LOAD_SLOT, 'void(__thiscall*)(void*)')(click_bank.resource)
   end
 end
 
 local function click()
   local system = get_sound_system()
-  if system ~= nil then
-    local play = method(system, SOUND_PLAY_SLOT,
-                        'uint32_t(__thiscall*)(void*, uint32_t, int32_t, void*, float)')
-    for _, id in ipairs({ CLICK, 0x004E7C77, 0x00455CFF }) do
-      for _, type in ipairs(CLICK_TYPES) do
-        local played = play(system, id, type, nil, 0.0)
-        fcse.log(('flashlight: %08X through type %d: %08X'):format(id, type, played))
-        if played ~= NO_SOUND then
-          return
-        end
-      end
-    end
+  if system == nil then
+    return
   end
+  local played = method(system, SOUND_PLAY_SLOT,
+                        'uint32_t(__thiscall*)(void*, uint32_t, int32_t, void*, float)')(
+    system, CLICK, SOUND_FOLEY_PLAYER, nil, 0.0)
+  local loaded = click_bank.resource ~= nil and
+                 ffi.cast('uint16_t*', ffi.cast('char*', click_bank.resource) + 8)[0] or -1
+  fcse.log(('flashlight: click %08X, bank loaded %d'):format(played, loaded))
 end
 
 local function light()
