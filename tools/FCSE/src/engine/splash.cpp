@@ -29,6 +29,16 @@ namespace {
 
     DetouredImport g_createHBitmap;
 
+    bool WriteImportSlot(uintptr_t* slot, uintptr_t value) {
+        DWORD previous = 0;
+        if (!VirtualProtect(slot, sizeof(*slot), PAGE_READWRITE, &previous)) {
+            return false;
+        }
+        *slot = value;
+        VirtualProtect(slot, sizeof(*slot), previous, &previous);
+        return true;
+    }
+
     void DetouredImport::Restore() {
         if (slot != nullptr && original != 0) {
             WriteImportSlot(slot, original);

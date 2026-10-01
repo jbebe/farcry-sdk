@@ -124,11 +124,6 @@ struct WideString {
     wchar_t buffer[8];
     uint32_t size;
     uint32_t capacity;
-
-    // The characters: inline until capacity reaches 8, then a pointer stored over the buffer.
-    const wchar_t* Text() const {
-        return capacity < 8 ? buffer : *reinterpret_cast<const wchar_t* const*>(buffer);
-    }
 };
 
 // MSVC's std::string, same shape with a 16-byte inline buffer used while capacity is under 0x10.

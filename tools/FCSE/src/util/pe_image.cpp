@@ -4,16 +4,6 @@
 
 namespace FCSE {
 
-bool WriteImportSlot(uintptr_t* slot, uintptr_t value) {
-    DWORD previous = 0;
-    if (!VirtualProtect(slot, sizeof(*slot), PAGE_READWRITE, &previous)) {
-        return false;
-    }
-    *slot = value;
-    VirtualProtect(slot, sizeof(*slot), previous, &previous);
-    return true;
-}
-
 const IMAGE_NT_HEADERS32* PeHeaders(const void* imageBase) {
     if (imageBase == nullptr) {
         return nullptr;
