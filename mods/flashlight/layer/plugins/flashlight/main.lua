@@ -90,6 +90,7 @@ local toggles = 0
 local cast_shadows = true
 local click_bank = nil
 local hud_ready = false
+local probe_area, probe_for, probe_next = nil, 0, 0
 
 local function call_target(call)
   return call + 5 + fcse.mem.read_i32(call + 1)
@@ -161,6 +162,8 @@ end
 local function show_icon(lit)
   local area, shown, hidden = hud_object(HUD_AREA), hud_object(lit and HUD_ON or HUD_OFF),
                               hud_object(lit and HUD_OFF or HUD_ON)
+  fcse.log('flashlight: hud', tostring(area), tostring(shown), tostring(hidden),
+           area ~= nil and ffi.cast('uint16_t*', ffi.cast('char*', area) + AREA_FRAME_TIME)[0] or '-')
   if area == nil or shown == nil or hidden == nil then
     return
   end
@@ -169,6 +172,7 @@ local function show_icon(lit)
   local frame_time = ffi.cast('uint16_t*', ffi.cast('char*', area) + AREA_FRAME_TIME)[0]
   set_time(area, frame_time * HUD_SHOW_FRAME, true, false)
   set_playing(area, true, false)
+  probe_area, probe_for, probe_next = area, 1.5, 0
 end
 
 local function light()
@@ -357,6 +361,16 @@ fcse.on('load', function()
       lit_for = math.min(lit_for + dt, FADE_IN)
       local t = lit_for / FADE_IN
       place(player, INTENSITY * (1 - (1 - t) * (1 - t)))
+    end
+
+    if probe_area ~= nil then
+      probe_for, probe_next = probe_for - dt, probe_next - dt
+      if probe_next <= 0 then
+        probe_next = 0.25
+        local a = ffi.cast('char*', probe_area)
+        fcse.log('flashlight: area time', ffi.cast('uint32_t*', a + 0x4C)[0], 'playing', a[0x54])
+      end
+      if probe_for <= 0 then probe_area = nil end
     end
   end)
 end)
