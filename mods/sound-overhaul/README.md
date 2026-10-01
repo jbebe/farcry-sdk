@@ -30,10 +30,20 @@ the audio runtime page, `docs/docs/engine-internals/audio-runtime.md`.
 - **Lets the player's own sounds take the room** (`src/player_reverb.cpp`). DARE gives every voice
   the same reverb send, which the player's shots and reloads, playing at full volume, bury under
   their dry sound. The plugin raises the send of 2D voices by 1,000 mB, the most EAX allows.
-- **Gives the Makarov a dry first-person shot and an outdoor echo** (`layer\mods\soundbinary\004569c9.spk`
-  and the `WeaponProperties.Secondary.Makarov` fragments under `layer\mods\worlds\`). Indoors the room
-  reverb supplies the tail. Outdoors the weapon's dormant `sndSingleBulletShotEcho` plays the rest of
-  the recording, trimmed by the game to the region's echo length.
+- **Gives every single-player weapon a new shot and an echo** (the `00fc02*` and swapped retail banks,
+  and the `WeaponProperties` fragments under `layer\mods\worlds\` and `downloadcontent\`), from Dark
+  Signal Weapon Soundscape. The echo, big or small by calibre, fills each weapon's dormant
+  `sndSingleBulletShotEcho`, which the game trims to the region's echo length.
+- **Plays full-auto per round** (`src/per_round_shots.cpp`): a weapon whose fire loops are emptied
+  plays its single shot on every round.
+- **Gives NPC shots their echo** (`src/last_echo.cpp`), which the game plays only for the player's.
+  From 40 m it crosses into a crack, and only the last echo of a burst rings out.
+- **Replaces the grenade and rocket blasts** (`00455b16`, `004b65df`, `00455bdb`).
+- **Makes voices fall off like speech** (`2fffffff.spk`), **drops the distant dogs** from the ambience
+  (`004b89d8`), **gives the Datsun a quieter, rougher idle** (`0045cbd8`), and **stops the player's own
+  pickups being muffled** (the `pile_archetypes` and `OA_MissionPickups` fragments).
+- **Adds a DevTools window that mutes** single shots, full-auto fire or echoes (`src/mutes.cpp`), when
+  DevTools is installed.
 - **Lets an older or Wine-derived `dsound.dll` open a device at all** (`src/enumeration_fix.cpp`).
   The bundled DSOAL does not need it.
 
@@ -49,10 +59,14 @@ layer\
 │     ├─ alsoft.ini           OpenAL Soft's settings: plain stereo, so headphones get no HRTF
 │     └─ Documentation\       licenses and exact versions
 └─ mods\
-   ├─ soundbinary\            sound banks replacing retail ones
-   └─ worlds\world1|world2\   weapon archetype fragments pointing at the echo events
-assets\weapon-sounds\         the recordings the banks are made from
+   ├─ soundbinary\            sound banks, new and replacing retail ones
+   ├─ worlds\world1|world2\   weapon and pickup archetype fragments
+   └─ downloadcontent\dlc1\   the same for the DLC weapons
+assets\                       the Nexus texts; the builders and packs the banks come from stay local
 ```
+
+A release is cut as in `RELEASING.md`; `CHANGELOG.md`, `README-release.md` (the README inside the zip)
+and `assets\nexus-*` are its texts.
 
 A bank is the retail one with its audio swapped, which also rewrites the length the game plays to. An
 echo adds the shot's event, sample and audio records again under new ids, the audio imported the same

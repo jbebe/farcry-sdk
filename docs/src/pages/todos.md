@@ -157,9 +157,9 @@ own. A step is done when it is heard in game.
 
 - [ ] **A weapon's echo by environment.** Each weapon has one echo today. Choosing it by place needs a
   hook on its one play call: it plays with no emitter, so no switch can choose **(inferred)**.
-- [ ] **Ship Sound Overhaul's reverb.** It works in game (DSOAL, the `PlaySoundReverb` body and the
-  player's stronger send); it still needs a release (CI and release workflows, Nexus page) and the
-  diagnostic logs removed (`reverb_log.cpp`, `echo_log.cpp`).
+- [ ] **Release Sound Overhaul 1.0.0.** The diagnostic logs are removed and the release is set up
+  (`CHANGELOG.md`, `sound-overhaul-release.yml`, the Nexus texts); it still needs pushing, a run of the
+  workflow, and a Nexus page with its IDs in the workflow.
 - [ ] **Retune the reverb presets** in `common/soundbinary/7fffffff.bao` (63 presets, EAX form).
 - [ ] **Building echo lengths.** `fEchoLength` is 0 on 620 of 623 placed buildings; set it per
   building class.
