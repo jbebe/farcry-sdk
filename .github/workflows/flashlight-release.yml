@@ -7,11 +7,11 @@ permissions:
   contents: write
 
 env:
-  # Empty until the Nexus mod page exists. NEXUS_MOD_ID is the internal ID that
-  # v3/games/farcry2/mods/<id> answers with, not the ID in the URL; the file ID is on the mod's Files
+  # https://www.nexusmods.com/farcry2/mods/381. NEXUS_MOD_ID is the internal ID that
+  # v3/games/farcry2/mods/381 answers with, not the 381 in the URL; the file ID is on the mod's Files
   # tab under "API Info". An empty file ID skips the upload.
-  NEXUS_MOD_ID: ''
-  NEXUS_FILE_FLASHLIGHT: ''
+  NEXUS_MOD_ID: '6317896892797'
+  NEXUS_FILE_FLASHLIGHT: '8067753'
 
 jobs:
   release:
