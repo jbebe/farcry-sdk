@@ -18,6 +18,7 @@ add_library(Flashlight SHARED
   "src/engine/hud.cpp"
   "src/engine/input.cpp"
   "src/engine/light.cpp"
+  "src/engine/player.cpp"
   "src/engine/sound.cpp"
 )
 

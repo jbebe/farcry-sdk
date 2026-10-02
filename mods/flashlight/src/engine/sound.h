@@ -5,8 +5,8 @@
 
 namespace Flashlight::Sound {
 
-// False, and logged, when this build lacks the sound system calls.
-bool Install();
+// Logs when this build lacks the sound system calls; everything below is then a no-op.
+void Install();
 
 // Requests the bank named after `id` and holds it loaded: a play never loads its own bank. Once is
 // enough; later calls do nothing.

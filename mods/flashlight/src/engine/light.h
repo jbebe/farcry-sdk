@@ -8,16 +8,13 @@ struct Spot {
     float range;
     float outerAngle;
     float innerAngle;
-    float colour[3];
+    const float* colour;
     bool castShadow;
     float shadowFactor;
 };
 
-// False, and logged, when this build lacks the light, player or camera calls.
+// False, and logged, when this build lacks the light or camera calls.
 bool Install();
-
-// The local player, or null outside a session.
-void* LocalPlayer();
 
 // Writes everything about the light but where it is, creating it first if there is none.
 void Configure(const Spot& spot);

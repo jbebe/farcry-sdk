@@ -1,13 +1,16 @@
 // Magma objects a loaded UI package exports by name, and the calls the HUD drives its groups with.
 #pragma once
 
+#include <cstdint>
+
 namespace Flashlight::Hud {
 
-// False, and logged, when this build lacks the Magma calls.
-bool Install();
+// Logs when this build lacks the Magma calls; Find then finds nothing.
+void Install();
 
-// The live object `name` is exported as, or null while no loaded package exports it.
-void* Find(const char* name);
+// The live object exported under the name whose magma::Id is `id`, or null while no loaded package
+// exports it.
+void* Find(uint32_t id);
 
 void SetVisible(void* element, bool visible);
 

@@ -1,13 +1,11 @@
 // The game's signal dispatcher: every action-map signal the player's bindings send.
-//
-// DevTools hooks the dispatcher's entry, so this mid-hooks its second instruction, where the signal
-// is still the first stack argument. The pattern starts past the entry because a hook there
-// rewrites it.
 #include "engine/input.h"
 
 #include "fcse_api.h"
 
 namespace {
+    // The dispatcher's second instruction, where the signal is still the first stack argument. The
+    // pattern starts past the entry, which DevTools' hook rewrites.
     FCSE::Relocation<uint8_t*> g_dispatch{FCSE::Pattern("83 EC 50 A8 01 53 55 56 57 8B F9 75 ?? 83 C8 01 A3")};
 
     Flashlight::Input::SignalFn g_onSignal = nullptr;

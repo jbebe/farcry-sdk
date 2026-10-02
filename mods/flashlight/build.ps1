@@ -4,8 +4,8 @@
     into the game.
 
 .DESCRIPTION
-    Wraps the vcvarsall.bat x86 + cmake --preset/--build dance, the same way tools/FCSE/build.ps1
-    does. The built DLL is staged into layer\plugins\flashlight\, where jackall-cli deploys it from.
+    Builds with the x86 toolchain and stages the DLL into layer\plugins\flashlight\, where
+    jackall-cli deploys it from.
 
 .PARAMETER Config
     "release" or "debug" - selects the x86-release/x86-debug CMake preset. Defaults to "release".
@@ -49,7 +49,6 @@ if (-not (Test-Path $VcVarsAll)) {
     throw "vcvarsall.bat not found at expected path: $VcVarsAll"
 }
 
-# Checked before the build, so a missing tool fails in seconds rather than after it.
 if ($Install) {
     if (-not (Test-Path (Join-Path $Install "FarCry2.exe"))) {
         throw "$Install does not look like the game's bin folder - no FarCry2.exe in it."

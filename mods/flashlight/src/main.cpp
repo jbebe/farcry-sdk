@@ -11,10 +11,7 @@ namespace {
 }
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
-    if (api->apiVersion != FCSE_API_VERSION || !FCSE::Bind(api)) {
-        return false;
-    }
-    if (!Flashlight::Install()) {
+    if (api->apiVersion != FCSE_API_VERSION || !FCSE::Bind(api) || !Flashlight::Install()) {
         return false;
     }
 
