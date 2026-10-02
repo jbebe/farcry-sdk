@@ -108,7 +108,9 @@ The world half of the frame runs in this order:
    6144×2048 target with a depth surface of their own.
 2. **The water reflection**, at 1024×1024 with its own multisampled depth.
 3. **A near-plane depth pass** of about 10 to 17 draws through a viewport of `MinZ` 0 to 0.001,
-   which is the first-person weapon. The stencil is cleared here.
+   which is the first-person weapon's depth (see
+   [the first-person weapon's two passes](#the-first-person-weapons-two-passes)). The stencil is
+   cleared here.
 4. **The depth prepass**, solid draws then alpha-tested ones, writing depth and the linear depth
    with the stencil off.
 5. **The main colour pass for solid geometry**, depth-tested against that depth without writing it.
@@ -117,11 +119,36 @@ The world half of the frame runs in this order:
 7. **Further colour passes and 12 or so blended draws**, some of them reading the linear depth.
    Every draw in passes 5 to 7 runs with the stencil enabled.
 8. **The sky pass.**
-9. **About 18 blended draws**, then a stencil clear and a handful of solid draws, most likely the
+9. **About 18 blended draws**, then a stencil clear and a handful of solid draws, which are the
    weapon's colour.
 10. **Bloom, luminance and the composite.**
 
 The world's depth-stencil surface is the same one from the near-plane pass through the sky pass.
+
+### The first-person weapon's two passes
+
+:::info[Verified in a running game]
+Retail GOG v1.03 at 1920×1080 with four-sample multisampling, whole frames recorded from an FCSE
+plugin while down the iron sights of a G3 and of a pistol.
+:::
+
+The weapon is drawn twice, and only its depth goes through the squeezed viewport.
+
+- **Its depth** comes first, before the world's depth prepass: 14 draws for the G3, through a
+  viewport of `MinZ` 0 to 0.001, into the multisampled `A8R8G8B8` linear-depth target, with depth
+  test, depth write and colour write on and the stencil off.
+- **Its colour** is the 16-draw pass right after the sky pass, into the multisampled FP16 scene
+  target through an ordinary viewport of 0 to 1. No draw after the sky pass is squeezed. Twelve of
+  the 16 repeat a draw of the depth pass exactly: the same start index, primitive count and vertex
+  count. That is what tells the weapon's colour pass apart.
+- **Its projection**, at `c8` to `c11` during those draws, has a near plane of 1 cm: `c10.w` reads
+  −0.01. The vertical scale `c9.y` read 2.593 down the G3's iron sights and 1.738 down the
+  pistol's.
+
+Drawing each depth draw a second time into a single-sampled `INTZ` texture of the screen's size or
+smaller, through a viewport of 0 to 1, gives the weapon's depth at full precision, since the
+multisampled original cannot be read. Weapon Overhaul's `src/engine/weapon_draws.cpp` does that, and
+finds the colour pass by the repeated draws.
 
 ### Whether there is a render thread
 
