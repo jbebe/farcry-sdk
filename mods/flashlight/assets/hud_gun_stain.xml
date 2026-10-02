@@ -1,0 +1,10 @@
+<XBTHeader>
+  <Metadata>
+    <HeaderSize>32</HeaderSize>
+    <Version>11</Version>
+    <StoredHeaderSize>32</StoredHeaderSize>
+    <Reserved>1</Reserved>
+    <Hash>BC305647B28442A81DFEED6F</Hash>
+  </Metadata>
+  <RawHeaderData>544258000B0000002000000001000000BC305647B28442A81DFEED6F00000000</RawHeaderData>
+</XBTHeader>
