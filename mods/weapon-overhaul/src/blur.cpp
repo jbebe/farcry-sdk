@@ -39,7 +39,7 @@ namespace {
     constexpr UINT kConstantCount = 4;
 
     constexpr D3DFORMAT kHalfFormat = D3DFMT_A16B16G16R16F;
-    constexpr D3DFORMAT kFocusFormat = D3DFMT_A32B32G32R32F;
+    constexpr D3DFORMAT kFocusFormat = D3DFMT_R32F;
 
     struct Target {
         IDirect3DTexture9* texture = nullptr;
@@ -67,9 +67,6 @@ namespace {
     bool g_refused = false;
     uint32_t g_drawnFrame = 0xFFFFFFFFu;
     bool g_reported = false;
-
-    IDirect3DSurface9* g_readback = nullptr;
-    WeaponOverhaul::WeaponDraws::Depth g_lastDepth = {};
 
     void ReleaseTarget(Target& target) {
         WeaponOverhaul::Release(target.surface);
@@ -230,7 +227,6 @@ namespace {
         draw.Quad(0.0f, 0.0f, width, height);
 
         g_focusIndex ^= 1;
-        g_lastDepth = depth;
         return true;
     }
 }
@@ -259,36 +255,12 @@ void WeaponOverhaul::Blur::OnScenePass(const Frame::Pass& pass) {
     }
 }
 
-bool WeaponOverhaul::Blur::ReadFocus(IDirect3DDevice9* device, float metres[2]) {
-    const Target& last = g_focus[g_focusIndex ^ 1];
-    if (last.surface == nullptr || g_lastDepth.depthOffset == 0.0f) {
-        return false;
-    }
-    if (g_readback == nullptr &&
-        FAILED(device->CreateOffscreenPlainSurface(1, 1, kFocusFormat, D3DPOOL_SYSTEMMEM,
-                                                   &g_readback, nullptr))) {
-        return false;
-    }
-    D3DLOCKED_RECT locked = {};
-    if (FAILED(device->GetRenderTargetData(last.surface, g_readback)) ||
-        FAILED(g_readback->LockRect(&locked, nullptr, D3DLOCK_READONLY))) {
-        return false;
-    }
-    const float* stored = static_cast<const float*>(locked.pBits);
-    for (int i = 0; i < 2; i++) {
-        metres[i] = std::abs(g_lastDepth.depthOffset / (stored[i] - g_lastDepth.depthScale));
-    }
-    g_readback->UnlockRect();
-    return true;
-}
-
 void WeaponOverhaul::Blur::SetEnabled(bool enabled) {
     g_enabled = enabled;
 }
 
 void WeaponOverhaul::Blur::ReleaseDeviceObjects() {
     ReleaseTargets();
-    WeaponOverhaul::Release(g_readback);
     g_owner = nullptr;
     g_refused = false;
     g_focusShader.Release();

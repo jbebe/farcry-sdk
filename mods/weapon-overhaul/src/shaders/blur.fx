@@ -20,8 +20,7 @@ sampler2D Large : register(s2);
 sampler2D WeaponDepth : register(s3);
 // The gun's half-resolution colour premultiplied by its blur amount, which is its alpha.
 sampler2D Down : register(s4);
-// x: the stored depth focused on, nought before there is one. y: the nearest of the gun under the
-// aim point.
+// The stored depth focused on, nought before there is one.
 sampler2D Focus : register(s5);
 
 static const float2 kCentre = float2(0.5f, 0.5f);
@@ -30,18 +29,15 @@ static const float2 kCentre = float2(0.5f, 0.5f);
 // sight beyond the rear one. The eye eases toward it, and keeps its focus while the gun is not there.
 float4 FocusPS(float2 uv : TEXCOORD0) : COLOR0 {
     float farthest = 0.0f;
-    float nearest = 1.0f;
     for (int x = -2; x <= 2; x++) {
         for (int y = 0; y < 5; y++) {
             float stored = tex2D(WeaponDepth, kCentre + float2(x * 3.0f, 1.0f + y * 4.0f) * Texel.xy).r;
             farthest = stored < 1.0f ? max(farthest, stored) : farthest;
-            nearest = min(nearest, stored);
         }
     }
-    float2 previous = tex2D(Focus, kCentre).xy;
-    float eased = previous.x > 0.0f ? lerp(previous.x, farthest, Settle.x) : farthest;
-    return float4(farthest > 0.0f ? eased : previous.x, nearest < 1.0f ? nearest : previous.y,
-                  0.0f, 1.0f);
+    float previous = tex2D(Focus, kCentre).r;
+    float eased = previous > 0.0f ? lerp(previous, farthest, Settle.x) : farthest;
+    return float4(farthest > 0.0f ? eased : previous, 0.0f, 0.0f, 1.0f);
 }
 
 float4 DownPS(float2 uv : TEXCOORD0) : COLOR0 {

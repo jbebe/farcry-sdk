@@ -57,7 +57,6 @@ add_library(WeaponOverhaul SHARED
   "src/engine/frame.cpp"
   "src/engine/screen_draw.cpp"
   "src/engine/shader.cpp"
-  "src/engine/trace.cpp"
   "src/engine/vtable.cpp"
   "src/engine/weapon_draws.cpp"
   ${SHADER_HEADERS}

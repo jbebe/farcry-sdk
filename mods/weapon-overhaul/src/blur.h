@@ -10,10 +10,6 @@ void OnScenePass(const Frame::Pass& pass);
 
 void SetEnabled(bool enabled);
 
-// The last focus, and the nearest of the gun under the aim point, in metres. Stalls on the GPU, so
-// only the trace asks.
-bool ReadFocus(IDirect3DDevice9* device, float metres[2]);
-
 // Frees everything held on the device. Call before the device is reset.
 void ReleaseDeviceObjects();
 

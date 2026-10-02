@@ -16,10 +16,8 @@ struct Depth {
     UINT width;
     UINT height;
     // From the projection the weapon was drawn with: one over the tangent of half the vertical
-    // field of view, and the depth scale, with w's sign folded in, and offset that turn stored
-    // depth into distance, as depthOffset / (stored - depthScale).
+    // field of view, and the depth offset that turns stored depth into dioptres.
     float verticalScale;
-    float depthScale;
     float depthOffset;
 };
 

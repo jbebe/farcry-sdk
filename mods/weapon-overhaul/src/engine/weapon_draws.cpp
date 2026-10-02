@@ -3,7 +3,6 @@
 #include "engine/com.h"
 #include "engine/frame.h"
 #include "engine/render_target.h"
-#include "engine/trace.h"
 #include "engine/vtable.h"
 #include "fcse_api.h"
 
@@ -43,7 +42,6 @@ namespace {
     uint32_t g_depthFrame = kNone;
     bool g_projection = false;
     float g_verticalScale = 0.0f;
-    float g_depthScale = 0.0f;
     float g_depthOffset = 0.0f;
     uint32_t g_colourFrame = kNone;
     uint32_t g_colourPass = kNone;
@@ -146,7 +144,6 @@ namespace {
             return false;
         }
         g_verticalScale = projection[5];
-        g_depthScale = projection[10] * projection[14];
         g_depthOffset = projection[11];
         return true;
     }
@@ -215,7 +212,6 @@ namespace {
             return g_original(device, type, baseVertexIndex, minVertexIndex, numVertices,
                               startIndex, primitiveCount);
         };
-        WeaponOverhaul::Trace::IndexedDraw(device);
         D3DVIEWPORT9 viewport = {};
         if (!g_watching || FAILED(device->GetViewport(&viewport))) {
             return draw();
@@ -229,12 +225,10 @@ namespace {
                 draw();
                 End(device);
             }
-        } else if (IsGunPart(frame, part)) {
-            WeaponOverhaul::Trace::GunPart();
-            if (WeaponOverhaul::Frame::PastSky() && g_colourFrame != frame) {
-                g_colourFrame = frame;
-                g_colourPass = WeaponOverhaul::Frame::PassSerial();
-            }
+        } else if (WeaponOverhaul::Frame::PastSky() && g_colourFrame != frame &&
+                   IsGunPart(frame, part)) {
+            g_colourFrame = frame;
+            g_colourPass = WeaponOverhaul::Frame::PassSerial();
         }
         return draw();
     }
@@ -259,7 +253,7 @@ bool WeaponOverhaul::WeaponDraws::Latest(Depth& out) {
     if (g_depthFrame != Frame::Number() || !g_projection) {
         return false;
     }
-    out = {g_depthTexture, g_width, g_height, g_verticalScale, g_depthScale, g_depthOffset};
+    out = {g_depthTexture, g_width, g_height, g_verticalScale, g_depthOffset};
     return true;
 }
 
