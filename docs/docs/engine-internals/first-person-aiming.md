@@ -63,6 +63,30 @@ The retail Lua bindings `Game:SetFPCameraOffsetX/Y/Z` (`0x1070C2E0` for X) set o
 are reachable with the console's `#` escape, for example `#Game:SetFPCameraOffsetX(0.01)` (see
 [the developer console](./developer-console.md#--the-lua-escape)).
 
+## The first-person body
+
+Whether the player is drawn as the first-person body is bit 7 (`0x80`) of the same byte in the
+pawn's **desired** data, `*(pawn + 0x10) + 0x144`, whose `0x40` bit is sprint. Two things read it:
+
+- `CPawnBeautifierComponent::BuildTag` (`0x100E9230`) picks the FirstPerson or ThirdPerson pose.
+- `CPawn::UpdateMaterialMask` (`0x10080FC0`) sets the full-body flag at `*(pawn + 0x10) + 0x49A`,
+  and shows or hides the kit parts tagged `FirstPerson`.
+
+Three cameras write it:
+
+- `CCameraPawnComponent`'s activation (`0x10693910`) sets it.
+- `CCameraThirdComponent`'s update (`0x10695BC0`) clears it and asks for the full body, while that
+  camera is active.
+- The free camera's update sets it every frame from the camera's own flag at `+0xCD`, which
+  `camera_toggle_first_person` flips.
+
+:::info[Seen in a running game]
+Clearing the bit does not give the player a body worth showing. Seen from `Cameras.Camera.Third` in
+a vehicle, the player is still headless and still in the pose made for the first-person camera. From
+the free camera, the body disappears beyond about 10 m. The model and its driving animations are
+first-person only.
+:::
+
 ## A scope's sight picture
 
 `CFCXWeapon::ShowHiResScope(bool)` (`0x106D3B80`) swaps the weapon's `SCOPE_HI` part in and every

@@ -12,9 +12,14 @@ namespace {
 
     constexpr size_t kLivePawn = 0x16;
 
+    // The listener, in ESI: its look accumulators, vertical then horizontal.
+    constexpr ptrdiff_t kListenerLook = 0x10;
+
     VehicleOverhaul::PawnTick::TickFn g_tick = nullptr;
 
-    void OnInputPass(FCSE_MidHookContext* ctx) { g_tick(reinterpret_cast<void*>(ctx->ecx)); }
+    void OnInputPass(FCSE_MidHookContext* ctx) {
+        g_tick(reinterpret_cast<void*>(ctx->ecx), reinterpret_cast<float*>(ctx->esi + kListenerLook));
+    }
 }
 
 namespace VehicleOverhaul::PawnTick {

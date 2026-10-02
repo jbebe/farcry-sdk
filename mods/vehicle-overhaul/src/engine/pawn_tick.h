@@ -3,7 +3,9 @@
 
 namespace VehicleOverhaul::PawnTick {
 
-using TickFn = void (*)(void* pawn);
+// `look` is the frame's mouse look on the input listener: pitch, then yaw, in half-turns a second.
+// Zeroing it keeps the pawn's own look still.
+using TickFn = void (*)(void* pawn, float* look);
 
 // Calls `tick` once a frame while a player exists. False, and logged, when the pass is not found.
 bool Install(TickFn tick);

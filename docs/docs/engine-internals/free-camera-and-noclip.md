@@ -126,15 +126,15 @@ component's **second base**, four bytes in — the component itself is `ecx - 4`
 | `+0xB4` | move forward |
 | `+0xB8` | move strafe |
 | `+0xBC` | move vertical |
-| `+0xC0` | look yaw |
-| `+0xC4` | look pitch |
+| `+0xC0` | look pitch |
+| `+0xC4` | look yaw |
 | `+0xC8` | speed, m/s |
 | `+0xCC` | speed adjust |
 
 Move axes are unit vectors in the camera's local frame; the speed field scales them, so it should not
 be folded in. Look values are rates — the engine integrates them as `angle += value * frameTime *
-180°` — and **pitch is negated**, so up is negative. A whole unit of look is half a turn per second,
-far too fast for a key.
+180°` — and **yaw is negated**, so a positive value turns right. A whole unit of look is half a turn
+per second, far too fast for a key.
 
 The one behaviour that surprises: **the engine writes these fields only when an action fires.** A
 released key therefore coasts at its last value rather than stopping, so anything feeding them has to
@@ -142,11 +142,40 @@ write one pass of zeros on release and then hand back.
 
 The shipped `free_camera` action mapping still fills these fields from a gamepad stick, so a free
 camera is partly pad-driven with no extra work. Mouse look has no such binding and has to be sampled
-from the pawn input listener — `+0x10` horizontal, `+0x14` vertical — and consumed.
+from the pawn input listener — `+0x10` vertical, `+0x14` horizontal — and consumed.
+
+## `CCameraThirdComponent`
+
+`Cameras.Camera.Third` is in the retail world libraries, with `fDistance` 5, and activates by name
+like the others. Its `Update` (Uplay `0x00695BC0`) puts the camera `fDistance` behind a point 1.7 m
+above the focus pawn, along **the pawn's own look angles** (effective data `+0x38`, or `+0x54` when
+its flags have bit 2), plus an orbit offset of its own. It tests no collision. In a vehicle the look is
+clamped by the vehicle's `vehicleMaxLookAngle` (30° of pitch; ±170°, ±90° or ±38° of yaw depending
+on the vehicle), so the camera cannot get above the car and stops at the end of the yaw range.
+
+Like the free camera, its `Update` is `__thiscall` on the second base, four bytes into the component,
+and writes the view in a fixed order. Anything placing the camera itself can repeat it:
+
+1. The camera entity, through the holder at `this + 0x04`: flush its job (Uplay `0x004DD4F0`), then
+   `SetPosition` (`0x004E01B0`) and `SetEuler` (`0x004E01C0`).
+2. `ModifySceneCamera` (`0x00504CE0`, on the component) returns the scene camera: position at `+0x08`,
+   `CSimpleCamera::SetAngles` (`0x00D108C0`) on `+0x04`, the FOV from `this + 0x6C` into `+0x28` and
+   `+0x30`.
+3. `CCameraComponent::Update` (`0x00504D50`) with the update's own `this`, frame time and flags.
+
+`BlendWithPreviousCamera` (`0x00505460`, on the component, taking the position, the angles and the
+frame time) eases in from the previous camera, and runs while the component is active (`this +
+0x0C`). Angles are pitch, roll and yaw in radians: pitch up is positive, and yaw 0 looks down +Y.
+
+While active, the update also asks for the player's full body; see
+[the first-person body](./first-person-aiming.md#the-first-person-body). Vehicle Overhaul's chase
+camera (`mods/vehicle-overhaul/src/engine/third_camera.cpp`) replaces this update while it owns the
+camera.
 
 ## Where this runs
 
-`CPawnInputListener::Update` is the right frame for all of it: gameplay input is enabled, a pawn is
+`CPawnInputListener::Update` is the right frame for switching cameras and for anything reading the
+player's input, and for noclip: gameplay input is enabled, a pawn is
 alive, and both the listener and the pawn are in hand. It carries **no frame delta**, so one has to be
 measured, and clamped — a hitch or a level load otherwise arrives as a step nothing could survive.
 

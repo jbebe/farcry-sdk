@@ -13,10 +13,14 @@ endif()
 
 add_library(VehicleOverhaul SHARED
   "src/main.cpp"
+  "src/chase.cpp"
   "src/third_person.cpp"
   "src/engine/camera.cpp"
+  "src/engine/entity.cpp"
   "src/engine/input.cpp"
   "src/engine/pawn_tick.cpp"
+  "src/engine/terrain.cpp"
+  "src/engine/third_camera.cpp"
   "src/engine/vehicle.cpp"
 )
 

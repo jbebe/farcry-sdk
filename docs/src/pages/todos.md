@@ -75,8 +75,8 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 
 ## Mods/vehicle-overhaul
 
-- [ ] Third-person view: see whether the engine's `Cameras.Camera.Third` follows, orbits and keeps
-      clear of terrain, and how the car and driver look from outside; a chase camera of our own if not
+- [ ] Third-person view: the driver is the headless first-person body. Hide it, or seat a third-person
+      stand-in with NPC driving animations
 - [ ] Off-road physics: trace how `WheeledParams` becomes Havok's vehicle, then tune live on the
       vehicle the player drives
 - [ ] An engine with real gears, its RPM read from the drivetrain, and a shift sound; the sound's
