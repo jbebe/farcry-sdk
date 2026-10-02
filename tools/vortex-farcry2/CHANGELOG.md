@@ -3,6 +3,30 @@
 Notable changes to the Vortex Far Cry 2 extension, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.3.0] - 2026-10-02
+
+### Added
+- **A mod can override the animation graph one state at a time**, the dependency index one
+  resource at a time, and the string table one string at a time, through `movemgr.bin`,
+  `<world>_depload.dat` and `oasisstrings.fragment.xml` fragments. Two mods touching different parts
+  of these files now merge instead of one overwriting the other.
+- **A world's descriptor splits per mission and per section**, and its `omnis`, `managers` and
+  `mapsdata` per entity. A `_layout.xml` moves entities between mission layers or deletes them one
+  at a time.
+- **Legacy mods import as the edits they actually made.** Every container is split, not only
+  `.fcb`, and an editor's float rounding is ignored, so an old `patch.dat` mod no longer claims
+  thousands of edits it never made and merges with the rest of the load order.
+
+### Changed
+- **Breaking: a whole-file `oasisstrings.rml` override is refused.** Ship an
+  `oasisstrings.fragment.xml` holding only the strings you change. A legacy mod's string table is
+  converted on import.
+
+### Fixed
+- **Mods built on these fragments installed without them.** 0.2.0 packed the fragment files into
+  `patch.dat` as loose files the game never reads, with no warning. The VSS Vintorez left the player
+  with empty hands, a frozen animation and no weapon switching, and kept the name "Dart".
+
 ## [0.2.0] - 2026-08-18
 
 ### Changed
