@@ -1,7 +1,6 @@
 // The hand's wiggle down the sights: the eye drifting a few millimetres off the gun.
 #include "sway.h"
 
-#include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <numbers>
@@ -10,8 +9,6 @@
 namespace {
     // Metres.
     constexpr float kDrift = 0.002f;
-    // Seconds to settle into the sights, and to let go of them.
-    constexpr float kSettle = 0.4f;
 
     struct Wave {
         double hertz;
@@ -24,7 +21,6 @@ namespace {
 
     std::atomic<bool> g_enabled{true};
     double g_time = 0.0;
-    float g_settled = 0.0f;
 
     float Drift(std::span<const Wave> waves) {
         float sum = 0.0f;
@@ -38,20 +34,10 @@ namespace {
 
 WeaponOverhaul::Aim::Offset WeaponOverhaul::Sway::Eye(const Aim::Frame& frame) {
     g_time += frame.seconds;
-
-    if (frame.scope) {
-        g_settled = 0.0f;
+    if (!g_enabled || frame.settled == 0.0f) {
         return {};
     }
-
-    const float step = frame.seconds / kSettle;
-    g_settled = std::clamp(g_settled + (frame.sights && g_enabled ? step : -step), 0.0f, 1.0f);
-    if (g_settled == 0.0f) {
-        return {};
-    }
-
-    const float ease = g_settled * g_settled * (3.0f - 2.0f * g_settled);
-    return {ease * kDrift * Drift(kRight), ease * kDrift * Drift(kUp)};
+    return {frame.settled * kDrift * Drift(kRight), frame.settled * kDrift * Drift(kUp)};
 }
 
 void WeaponOverhaul::Sway::SetEnabled(bool enabled) {

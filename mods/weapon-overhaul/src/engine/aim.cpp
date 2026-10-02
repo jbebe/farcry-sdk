@@ -5,6 +5,8 @@
 
 #include "fcse_api.h"
 
+#include <algorithm>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 
@@ -38,7 +40,12 @@ namespace {
     constexpr ptrdiff_t kScopeShown = 0x84;
     constexpr ptrdiff_t kHiResScope = 0x85;
 
+    // Seconds to settle into the sights, and to let go of them.
+    constexpr float kSettle = 0.4f;
+
     WeaponOverhaul::Aim::EyeFn g_eye = nullptr;
+    float g_settled = 0.0f;
+    std::atomic<float> g_eased{0.0f};
 
     // What was added to the eye during the camera update under way, and to which camera.
     uint8_t* g_addedTo = nullptr;
@@ -64,7 +71,16 @@ namespace {
 
         uint8_t* data = Field<uint8_t*>(pawn, kPawnData);
         const bool sights = (Field<uint8_t>(data, kEffectiveFlags) & kIronsight) != 0;
-        g_added = g_eye({seconds, sights, sights && ScopeShown(data)});
+        if (sights && ScopeShown(data)) {
+            g_settled = 0.0f;
+        } else {
+            const float step = seconds / kSettle;
+            g_settled = std::clamp(g_settled + (sights ? step : -step), 0.0f, 1.0f);
+        }
+        const float eased = g_settled * g_settled * (3.0f - 2.0f * g_settled);
+        g_eased = eased;
+
+        g_added = g_eye({seconds, eased});
         Field<float>(camera, kEyeRight) += g_added.right;
         Field<float>(camera, kEyeUp) += g_added.up;
         g_addedTo = camera;
@@ -97,7 +113,11 @@ bool WeaponOverhaul::Aim::Install(EyeFn eye) {
     if (!api->Hook(reinterpret_cast<void*>(g_updateCameraOffset.address()),
                    reinterpret_cast<void*>(&UpdateCameraOffsetDetour),
                    reinterpret_cast<void**>(&g_originalUpdateCameraOffset))) {
-        api->Log("aim: the camera offset cannot be hooked, so there is no sway");
+        api->Log("aim: the camera offset cannot be hooked, so nothing follows the sights");
     }
     return true;
+}
+
+float WeaponOverhaul::Aim::Settled() {
+    return g_eased;
 }

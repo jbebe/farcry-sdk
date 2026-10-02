@@ -1,0 +1,11 @@
+// The moment before the device is reset, the only point at which anything held in D3DPOOL_DEFAULT
+// can still be freed. A live one makes the reset fail.
+#pragma once
+
+namespace WeaponOverhaul::DeviceReset {
+
+// Hooks the device's Reset so `onRelease` runs first. False, and logged, when it cannot be hooked;
+// a caller that holds device resources must then hold none at all.
+bool Install(void (*onRelease)());
+
+}
