@@ -1,0 +1,45 @@
+<ActionMap name="common_driving">
+	<Import actionmap="common_driving_remap" optional="" />
+	<Import actionmap="common_gadget_remap" optional="" />
+	<Import actionmap="common_camerathird_remap" optional="" />
+	<!--Sixaxis-->
+	<!--<Binding input="pad:sensor_x" action="update" signal="steering" />-->
+	<Copy input="pad:sensor_x" toInput="pad:sixaxis_steering" />
+	<CurveFilter input="pad:sixaxis_steering" sensitivity="5" maxOutput="1" />
+	<Binding input="pad:sixaxis_steering" action="update" signal="sixaxis_steering" />
+	<!--Keyboard-->
+	<CompoundInput name="accelerator" device="kb">
+		<Input input="w" axis="0" />
+	</CompoundInput>
+	<CompoundInput name="reverse" device="kb">
+		<Input input="s" axis="0" invert="1" />
+	</CompoundInput>
+	<CompoundInput name="steering" device="kb">
+		<Input input="d" axis="0" />
+		<Input input="a" axis="0" invert="1" />
+	</CompoundInput>
+	<Binding input="kb:accelerator" action="press" signal="accelerator" />
+	<Binding input="kb:accelerator" action="release" signal="accelerator" />
+	<Binding input="kb:reverse" action="press" signal="reverse" />
+	<Binding input="kb:reverse" action="release" signal="reverse" />
+	<Binding input="kb:steering" action="press" signal="steering" />
+	<Binding input="kb:steering" action="release" signal="steering" />
+	<Binding input="kb:space" action="press" signal="hand_brake" />
+	<Binding input="kb:space" action="release" signal="hand_brake" />
+	<Binding input="kb:5" action="press" signal="toggle_gadget" />
+	<Binding input="kb:g" action="press" signal="toggle_headlights" />
+	<Binding input="kb:v" action="press" signal="active_camerathird" />
+	<!--Gamepad-->
+	<CompoundInput name="accelerator" device="pad">
+		<Input input="right_trigger" axis="0" />
+	</CompoundInput>
+	<CompoundInput name="reverse" device="pad">
+		<Input input="left_trigger" axis="0" invert="1" />
+	</CompoundInput>
+	<Binding input="pad:accelerator" action="update" signal="accelerator" />
+	<Binding input="pad:reverse" action="update" signal="reverse" />
+	<Binding input="pad:left_trigger" action="dbl_click" signal="auto_reverse" />
+	<Binding input="pad:left_thumb_leftright" action="update" signal="steering" />
+	<Binding input="pad:b" action="update" signal="hand_brake" />
+	<Binding input="pad:right_shoulder" action="press" signal="toggle_headlights" />
+</ActionMap>

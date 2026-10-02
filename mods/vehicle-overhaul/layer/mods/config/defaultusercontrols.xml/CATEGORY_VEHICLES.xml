@@ -1,0 +1,11 @@
+<Category name="CATEGORY_VEHICLES">
+	<Control name="accelerator" key1="kb:w" key2="kb:up" actionmap="common_driving_remap" group="2" conflictmask="12" />
+	<Control name="reverse" key1="kb:s" key2="kb:down" actionmap="common_driving_remap" group="2" conflictmask="12" />
+	<Control name="steerleft" key1="kb:a" key2="kb:left" actionmap="common_driving_remap" group="2" conflictmask="12" />
+	<Control name="steerright" key1="kb:d" key2="kb:right" actionmap="common_driving_remap" group="2" conflictmask="12" />
+	<Control name="toggle_headlights" key1="kb:g" actionmap="common_driving_remap" group="2" conflictmask="12" />
+	<Control name="hand_brake" key1="kb:space" actionmap="common_driving_remap" group="2" conflictmask="12" />
+	<Control name="change_seat" key1="kb:c" actionmap="common_changeseat_remap" group="2" conflictmask="12" />
+	<Control name="exitvehicle" key1="kb:e" actionmap="common_exitvehicle_remap" group="2" conflictmask="12" />
+	<Control name="active_camerathird" key1="kb:v" actionmap="common_camerathird_remap" group="2" conflictmask="12" />
+</Category>

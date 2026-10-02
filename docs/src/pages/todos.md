@@ -75,8 +75,15 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 
 ## Mods/vehicle-overhaul
 
-- [ ] A mod that overhauls vehicles. Not started; the engine sound's options are in the
+- [ ] Third-person view: see whether the engine's `Cameras.Camera.Third` follows, orbits and keeps
+      clear of terrain, and how the car and driver look from outside; a chase camera of our own if not
+- [ ] Off-road physics: trace how `WheeledParams` becomes Havok's vehicle, then tune live on the
+      vehicle the player drives
+- [ ] An engine with real gears, its RPM read from the drivetrain, and a shift sound; the sound's
+      options are in the
       [design log](/farcry-sdk/docs/design/realistic-sound#7-vehicle-engines--data-plugin-for-a-real-rpm)
+- [ ] Shooting out of the windows, from a legacy mod
+- [ ] Wrecks revived as drivable vehicles (bus, UAZ, a car); needed for 1.0
 
 ## Mods/sound-overhaul
 
