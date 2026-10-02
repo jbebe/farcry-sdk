@@ -1,1 +1,4 @@
+# CMake build tree, the local build machinery, and the built plugin the layer only carries.
+out/
 build/
+layer/plugins/flashlight/Flashlight.dll
