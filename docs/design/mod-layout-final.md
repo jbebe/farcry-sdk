@@ -402,3 +402,32 @@ Two things this cost, both accepted:
 - **A layer's identity is no longer its path.** `mapsdata` holds one `main` per level cell — 25 of
   them in world1 — so `_layout.xml` qualifies a layer by its cell (`under`), and a layer it names
   states its whole contents in order rather than only what moved.
+
+## Reopened: the control config files split per section
+
+`ActionMap` was rejected above on payload: a 12 KB file is a fine diff for a rebinding mod. True, and
+beside the point once two mods add a control. Every new control is a line in
+`config\defaultusercontrols.xml` and a binding in `config\inputactionmapcommon.xml`, so the Flashlight and
+the next mod with a hotkey both ship both files, and the later one's copy silently deletes the earlier
+one's control. That is the conflict-merge argument `WorldSector` was admitted on, not a payload one.
+
+| | measured over the 10 shipped files |
+|---|---|
+| sizes | `defaultusercontrols.xml` 4.7 KB; `inputactionmapcommon.xml` 42.7 KB, `ige` 34 KB, `single`/`multi` 12 KB, `console` 9.4 KB, `benchmark` 0.3 KB — none near Rule 1's line |
+| unit | a named root child: 6 `<Category>`, 1–75 `<ActionMap>` per file; median section 0.1–0.8 KB, the console file one 9 KB map |
+| identity | the section's `name`, unique in every file. The root's unnamed `<Import file>` and `<Config>` stay with the base file |
+| depth | stop at the section |
+
+The section is the override unit, but it does not merge as text. Two mods adding a binding to one
+action map insert at the same place, which a line merge calls a conflict - the one `depload` pins in its
+tests. A section therefore merges as a list: a child is matched by its `name`, else the action map it
+imports, else its whole text, so additions from both sides land, the ancestor's order is kept, and only
+two different edits of one named control conflict. No reordering, so `depload`'s worry about unknown
+order does not apply. The shipped data repeats one child exactly (the console map binds `kb:-` twice),
+so equal keys are numbered by occurrence.
+
+The files declare `ISO-8859-1` (all ASCII), and an assembled one is written back in that encoding.
+Sections nobody overrides keep their own formatting; only a self-closing tag's spacing is normalized.
+
+Measured on the Flashlight: two whole-file overrides, 4.8 KB and 42.9 KB, become one 0.8 KB category and
+one 1.7 KB action map.

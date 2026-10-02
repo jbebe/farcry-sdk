@@ -16,6 +16,8 @@ Notable changes to the Vortex Far Cry 2 extension, loosely following
 - **Legacy mods import as the edits they actually made.** Every container is split, not only
   `.fcb`, and an editor's float rounding is ignored, so an old `patch.dat` mod no longer claims
   thousands of edits it never made and merges with the rest of the load order.
+- **Mods that add controls combine.** A mod can ship just the controls category and action map it
+  adds to, and two mods adding to the same one both keep theirs.
 - **The conflicts notification lists every change a mod lost**, not only two mods editing the same
   part of one entry. It now also lists two mods shipping different copies of one whole file, and an
   entry a fragment replaced inside another mod's whole-file copy, which load order cannot fix. Each

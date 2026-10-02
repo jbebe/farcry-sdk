@@ -13,6 +13,9 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - **Sound bank editor** — the `.spk` panel edits a bank as a tree of what plays what.
 - **`mod build` reports every change a layer lost** — two layers shipping different copies of one
   whole file, and a fragment replacing an entry another layer changed in its whole-file copy.
+- **The control config files split per section** — one fragment per `<Category>` of
+  `defaultusercontrols.xml` and per `<ActionMap>` of an `inputactionmap*.xml`, merged child by child,
+  so two mods adding a control or binding to the same section both keep it.
 
 ### Changed
 - **Breaking:** `mod build --json` conflicts name the losing layers `overruledLayers` (was

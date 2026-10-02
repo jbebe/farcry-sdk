@@ -511,6 +511,40 @@ public class PatchBuilderTests : IDisposable
         Assert.Equal(["whole_file_mod"], conflict.OverruledLayers);
     }
 
+    /// <summary>A mod shipping the action maps whole and one shipping a single action map of them
+    /// both keep their binding, because the section lands on the whole copy.</summary>
+    [Fact]
+    public void An_action_map_section_lands_on_another_layers_whole_copy()
+    {
+        if (_install is null) return;
+
+        const string path = @"config\inputactionmapcommon.xml";
+        InputConfigContainerSplitter splitter = InputConfigContainerSplitter.Instance;
+        BuildResult result;
+        using (var vfs = GameVfs.OpenForOriginalsOnly(_install, TestSupport.LoadNames()))
+        {
+            byte[] vanilla = vfs.ReadOriginal(NameHash.Compute(path))!;
+            byte[] wholeCopy = splitter.Apply(vanilla, new Dictionary<string, string>
+            {
+                ["common_gameplay.xml"] = InputConfigSplitterTests.WithChild(
+                    vanilla, "common_gameplay.xml", InputConfigSplitterTests.Binding("kb:l", "toggle_flashlight")),
+            });
+            var wholeFileMod = MakeZipMod("whole_file_mod", ($"mods/{path}", wholeCopy));
+            var sectionMod = MakeZipMod("section_mod", ($"mods/{path}\\common_in_vehicle.xml",
+                System.Text.Encoding.UTF8.GetBytes(InputConfigSplitterTests.WithChild(
+                    vanilla, "common_in_vehicle.xml", InputConfigSplitterTests.Binding("kb:v", "active_camerathird")))));
+
+            result = PatchBuilder.Build(_install, [sectionMod, wholeFileMod], vfs.ReadOriginal);
+        }
+
+        FatEntry entry = FatArchive.Read(_install.PatchFat).Entries.First(e => e.Hash == NameHash.Compute(path));
+        using var rebuilt = DuniaArchive.Open(_install.PatchFat);
+        IContainerTree built = splitter.Open(rebuilt.Read(entry));
+        Assert.Contains("toggle_flashlight", built.Extract("common_gameplay.xml"));
+        Assert.Contains("active_camerathird", built.Extract("common_in_vehicle.xml"));
+        Assert.Empty(result.Conflicts);
+    }
+
     [Fact]
     public void A_GameVfs_kept_open_across_two_builds_can_still_read_the_patch_archive_afterward()
     {

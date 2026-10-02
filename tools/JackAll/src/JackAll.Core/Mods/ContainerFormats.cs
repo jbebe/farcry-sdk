@@ -28,18 +28,24 @@ public static class ContainerFormats
            || IsDepLoad(segment)
            || IsMoveGraph(segment)
            || IsStringTable(segment)
-           || IsWorldDescriptor(segment);
+           || IsWorldDescriptor(segment)
+           || IsInputConfig(segment);
 
     /// <summary>A world or map descriptor, which splits per mission.</summary>
     public static bool IsWorldDescriptor(string fileName)
         => WorldDescriptorContainerSplitter.IsWorldDescriptor(fileName);
+
+    /// <summary>The control list or an action map, which split per named section.</summary>
+    public static bool IsInputConfig(string path)
+        => InputConfigContainerSplitter.IsInputConfig(path);
 
     /// <summary>
     /// Whether a fragment of <paramref name="container"/> is a plain document rather than an `.fcb`
     /// value tree, and so belongs in a text view instead of the value editor.
     /// </summary>
     public static bool IsPlainDocumentFragment(string container, string fragmentId)
-        => IsDepLoad(container) || IsWorldDescriptor(container) || ContainerLayout.IsLayoutId(fragmentId);
+        => IsDepLoad(container) || IsWorldDescriptor(container) || IsInputConfig(container)
+           || ContainerLayout.IsLayoutId(fragmentId);
 
     /// <summary>
     /// Whether a fragment's base-game form is worth diffing against. A world sector's layout states
@@ -92,10 +98,10 @@ public static class ContainerFormats
                 : new DepLoadContainerSplitter(names);
         }
 
-        // The remaining two are matched on their filename, so a container path ending in one is
-        // unambiguous. Neither takes a NameDatabase: a MOVE state name is not a game path, so the
-        // hashlist cannot resolve one and the splitter reads its own bundled table instead, while a
-        // section carries its name in the file.
+        // The rest are matched on their filename, so a container path ending in one is unambiguous.
+        // None takes a NameDatabase: a MOVE state name is not a game path, so the hashlist cannot
+        // resolve one and the splitter reads its own bundled table instead, while a section carries
+        // its name in the file.
         string fileName = Path.GetFileName(containerPath);
         if (IsMoveGraph(fileName))
         {
@@ -105,6 +111,11 @@ public static class ContainerFormats
         if (IsWorldDescriptor(fileName))
         {
             return WorldDescriptorContainerSplitter.Instance;
+        }
+
+        if (IsInputConfig(fileName))
+        {
+            return InputConfigContainerSplitter.Instance;
         }
 
         return IsStringTable(fileName)

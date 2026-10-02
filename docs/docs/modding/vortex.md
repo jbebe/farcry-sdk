@@ -118,6 +118,8 @@ override unit:
 | World `omnis` / `managers` / `mapsdata` | one placed entity, and `_layout.xml` beside them | as a world sector | `world1.mapsdata.fcb\GhostPatrol_3.2056427141129582236.xml` |
 | World descriptor (`<world>.game.xml`) | one mission | its name, slashes as folders | `world1.game.xml\missions\outposts\w1_b_2\oiihvvl.xml` |
 | World descriptor (`<world>.game.xml`) | one section beside the missions | `_` plus the element name | `world1.game.xml\_environment.xml` |
+| Control list (`config\defaultusercontrols.xml`) | one `<Category>` | its `name` | `defaultusercontrols.xml\CATEGORY_VEHICLES.xml` |
+| Action maps (`config\inputactionmap*.xml`) | one `<ActionMap>` | its `name` | `inputactionmapcommon.xml\common_in_vehicle.xml` |
 
 For an entity override the **trailing numeric `disEntityId` is authoritative and the name prefix
 cosmetic** — an override staged under a since-renamed entity still matches, and `2058514756624450165.xml`
@@ -149,6 +151,14 @@ after the element: `_environment.xml` for the lighting, sky, shadow and draw-dis
 would cost a mod the entire descriptor — and with it, every one of that world's missions, which would
 then last-win against every mission mod you install beside it. Sections are named rather than listed, so
 a section this documentation has never heard of still gets a fragment of its own.
+
+The control config files split per named section, because every mod that adds a control has to touch
+both: the `<Category>` of `defaultusercontrols.xml` its control is listed in, and the `<ActionMap>` of
+`inputactionmapcommon.xml` that binds it. Ship those sections with your additions in them. A section
+merges child by child - a control matched by its `name`, an import by the action map it names, a binding
+by its whole line - so two mods adding to the same section both keep theirs, and only two mods changing
+the same control differently conflict. The imports and config block at the root of an action map file
+have no name and stay with the file.
 
 The sector layout is also where you **remove** something: `<delete id="2054324264221284349" />` takes that entity off
 the map. Deletion is the one edit that cannot merge, so it is exclusive over that entity and nothing
