@@ -2,41 +2,26 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.3.0] - 2026-10-02
 
 ### Added
-- **AI tab** — tune every soldier archetype's spotting, vision cones, marksmanship, detection,
-  movement and toughness, several at once and in both worlds; how soldiers fire each weapon (forced
-  misses per difficulty, bursts) and the accuracy curves; set the odds of optional behaviours
-  per progression level; browse the brain workspaces as a behaviour tree and edit task parameters,
-  typed as the engine reads them, with named flags and yes/no choices and the ignored ones struck out.
-- **`.ai.rml` brain workspaces** — read, recompiled from their source on save, and `ai unpack` /
-  `ai verify` / `ai lint` on the command line.
-- **`.spk` sound banks as XML** — `spk decode` / `encode` / `verify` edit events, samples, random
-  containers, switches, multilayers and rolloff curves; lengths, counts and offsets are derived on
-  build, and every retail bank rebuilds byte for byte. `spk new` scaffolds a bank that plays one clip
-  or a random pick of several. `spk encode` checks references, rates and stereo samples under a rolloff,
-  and refuses a rolloff curve that does not start at 0 m.
-
-- **Sound bank editor** — the `.spk` panel shows a bank as a tree of what plays what and edits it:
-  fields, random container chances, variations added from any audio file, switch cases, rolloff and
-  multilayer curves, with the same checks as `spk encode`. "Play a pick" auditions a random choice.
+- **AI tab** — tune soldier archetypes and how they fire each weapon, set the odds of optional
+  behaviours, and edit brain task parameters in a behaviour tree.
+- **`.ai.rml` brain workspaces** — read and recompiled on save; `ai unpack`, `verify` and `lint`.
+- **`.spk` sound banks as XML** — `spk decode`, `encode`, `verify` and `new`; every retail bank
+  rebuilds byte for byte.
+- **Sound bank editor** — the `.spk` panel edits a bank as a tree of what plays what.
 
 ### Changed
-- `spk import` re-derives every audio word of the samples it touches, the loop length and the rate
-  included, instead of only the byte length. The App's Import… does the same instead of padding.
+- `spk import` and the App's Import… re-derive a sample's loop length and rate, not only its
+  length.
 - Staging an edit keeps its file selected, so its preview stays open.
-- The `.fcb` and Domino sound previews play a random choice of a random container.
-- `spk list` names resource kinds (Sample, Random, Switch, Multilayer).
-- A Play's word 14 is named `positioned`, in the XML and as a checkbox in the App. `spk new` sets it
-  from the rolloff, and `--unpositioned` clears it for a sound played through a first-person sound
-  type, such as the player's shot echo, where a positioned event plays nothing.
-- `spk new` and the App's variations write records in ascending id order, as retail sound banks list
-  them; `spk encode` notes a bank that is not.
+- The `.fcb` and Domino sound previews play a random pick from a random container.
+- `spk list` names resource kinds.
 
 ### Fixed
-- Random, switch and multilayer resources no longer read as a link to their child count in the
-  xref index and the sound preview.
+- An imported looping sample started each loop from silence instead of where its own tail ends.
+- Random, switch and multilayer resources read as a link to their child count in the xref index.
 
 ## [1.2.0] - 2026-09-26
 
