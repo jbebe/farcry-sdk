@@ -3,7 +3,7 @@
 Notable changes to Flashlight, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.0.0] - 2026-10-02
 
 ### Added
 - **A flashlight on its own control**, Flashlight, on L by default and rebindable in Options >
