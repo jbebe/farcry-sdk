@@ -62,9 +62,9 @@ local HEADLIGHT_MODIFY_CALL = 0x5F
 local SOUND_PLAY_SLOT = 0x9C
 local SOUND_REQUEST_LOAD_SLOT = 0x08
 
--- The names this layer's hud.mgb exports: the icon's area, and an icon for each state.
-local HUD_AREA, HUD_ON, HUD_OFF = 'HUD_FLASHLIGHT', 'HUD_FLASHLIGHT_ON', 'HUD_FLASHLIGHT_OFF'
--- The frame the icon's timeline fades in from; frame 0 is where it rests, hidden.
+-- The names this layer's hud.mgb exports: an area per state, each fading its own icon.
+local HUD_ON, HUD_OFF = 'HUD_FLASHLIGHT_ON', 'HUD_FLASHLIGHT_OFF'
+-- The frame an icon's timeline fades in from; frame 0 is where it rests, hidden and stopped.
 local HUD_SHOW_FRAME = 1
 -- magma::Area's milliseconds per frame.
 local AREA_FRAME_TIME = 0x18
@@ -76,7 +76,7 @@ local GENERIC_OBJECT = 0x0C
 local container, create_light, modify_light, destroy_light
 local get_local_player, active_camera, render_camera
 local get_sound_system, get_from_sound_id
-local generic_server, find_generic, generic_target, set_visible, set_time, set_playing
+local generic_server, find_generic, generic_target, set_time, set_playing
 
 local handle = ffi.new('flashlight_handle', { -1, -1 })
 local owner = nil
@@ -90,7 +90,6 @@ local toggles = 0
 local cast_shadows = true
 local click_bank = nil
 local hud_ready = false
-local probe_area, probe_for, probe_next = nil, 0, 0
 
 local function call_target(call)
   return call + 5 + fcse.mem.read_i32(call + 1)
@@ -158,21 +157,18 @@ local function hud_object(name)
   return object ~= nil and object or nil
 end
 
--- Shows the icon for `lit` and plays its fade, the way the HUD shows the pills.
+-- Plays the icon for `lit` from the start of its fade, the way the HUD shows the pills, and sends
+-- the other back to its hidden rest.
 local function show_icon(lit)
-  local area, shown, hidden = hud_object(HUD_AREA), hud_object(lit and HUD_ON or HUD_OFF),
-                              hud_object(lit and HUD_OFF or HUD_ON)
-  fcse.log('flashlight: hud', tostring(area), tostring(shown), tostring(hidden),
-           area ~= nil and ffi.cast('uint16_t*', ffi.cast('char*', area) + AREA_FRAME_TIME)[0] or '-')
-  if area == nil or shown == nil or hidden == nil then
+  local shown, other = hud_object(lit and HUD_ON or HUD_OFF), hud_object(lit and HUD_OFF or HUD_ON)
+  if shown == nil or other == nil then
     return
   end
-  set_visible(shown, 1)
-  set_visible(hidden, 0)
-  local frame_time = ffi.cast('uint16_t*', ffi.cast('char*', area) + AREA_FRAME_TIME)[0]
-  set_time(area, frame_time * HUD_SHOW_FRAME, true, false)
-  set_playing(area, true, false)
-  probe_area, probe_for, probe_next = area, 1.5, 0
+  set_time(other, 0, true, false)
+  set_playing(other, false, false)
+  local frame_time = ffi.cast('uint16_t*', ffi.cast('char*', shown) + AREA_FRAME_TIME)[0]
+  set_time(shown, frame_time * HUD_SHOW_FRAME, true, false)
+  set_playing(shown, true, false)
 end
 
 local function light()
@@ -274,10 +270,9 @@ local function resolve_hud()
   local get_keyframe = fcse.uplay(0x00534500)
   local find = fcse.uplay(0x00AA6F60)
   local target = fcse.uplay(0x00AA65C0)
-  local visible = fcse.uplay(0x00AB13F0)
   local time = fcse.uplay(0x00A973E0)
   local playing = fcse.uplay(0x00A973A0)
-  if not (get_keyframe and find and target and visible and time and playing) or
+  if not (get_keyframe and find and target and time and playing) or
      fcse.mem.read_u16(get_keyframe + GENERIC_SERVER - 2) ~= 0x0D8B then
     return false
   end
@@ -285,7 +280,6 @@ local function resolve_hud()
   generic_server = fcse.mem.read_u32(get_keyframe + GENERIC_SERVER)
   find_generic = fcse.fn('void*(__thiscall*)(void*, const uint32_t*)', find)
   generic_target = fcse.fn('void*(__thiscall*)(void*)', target)
-  set_visible = fcse.fn('void(__thiscall*)(void*, int32_t)', visible)
   set_time = fcse.fn('uint8_t(__thiscall*)(void*, uint32_t, bool, bool)', time)
   set_playing = fcse.fn('void(__thiscall*)(void*, bool, bool)', playing)
   return true
@@ -361,16 +355,6 @@ fcse.on('load', function()
       lit_for = math.min(lit_for + dt, FADE_IN)
       local t = lit_for / FADE_IN
       place(player, INTENSITY * (1 - (1 - t) * (1 - t)))
-    end
-
-    if probe_area ~= nil then
-      probe_for, probe_next = probe_for - dt, probe_next - dt
-      if probe_next <= 0 then
-        probe_next = 0.25
-        local a = ffi.cast('char*', probe_area)
-        fcse.log('flashlight: area time', ffi.cast('uint32_t*', a + 0x4C)[0], 'playing', a[0x54])
-      end
-      if probe_for <= 0 then probe_area = nil end
     end
   end)
 end)
