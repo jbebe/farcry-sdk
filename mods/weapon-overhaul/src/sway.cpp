@@ -19,8 +19,8 @@ namespace {
         float weight;
     };
     // Unrelated frequencies, so the drift never visibly repeats. The first upward wave is the breath.
-    constexpr Wave kRight[] = {{0.37, 0.0, 0.55f}, {0.71, 1.3, 0.3f}, {1.29, 2.1, 0.15f}};
-    constexpr Wave kUp[] = {{0.25, 0.0, 0.5f}, {0.43, 0.7, 0.55f}, {0.83, 2.6, 0.3f}, {1.67, 4.0, 0.15f}};
+    constexpr Wave kRight[] = {{0.185, 0.0, 0.55f}, {0.355, 1.3, 0.3f}, {0.645, 2.1, 0.15f}};
+    constexpr Wave kUp[] = {{0.125, 0.0, 0.5f}, {0.215, 0.7, 0.55f}, {0.415, 2.6, 0.3f}, {0.835, 4.0, 0.15f}};
 
     std::atomic<bool> g_enabled{true};
     double g_time = 0.0;
