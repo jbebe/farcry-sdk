@@ -1,1 +1,1 @@
-A flashlight on its own rebindable key (L): the engine's own spot light at your head, with shadows, a switch click and a HUD icon above the diamond counter. Small, medium or large beam. No battery.
+A flashlight. Small, medium or large beam. No battery needed.
