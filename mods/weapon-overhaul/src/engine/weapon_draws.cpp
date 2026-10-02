@@ -1,7 +1,7 @@
 #include "engine/weapon_draws.h"
 
+#include "engine/aim.h"
 #include "engine/com.h"
-#include "engine/frame.h"
 #include "engine/render_target.h"
 #include "engine/vtable.h"
 #include "fcse_api.h"
@@ -18,21 +18,20 @@ namespace {
     constexpr D3DFORMAT kNullFormat = static_cast<D3DFORMAT>(MAKEFOURCC('N', 'U', 'L', 'L'));
     constexpr D3DFORMAT kReadableDepth = static_cast<D3DFORMAT>(MAKEFOURCC('I', 'N', 'T', 'Z'));
 
-    // The weapon is drawn through a viewport squeezed this close to the near plane.
+    // The weapon's depth is drawn through a viewport squeezed this close to the near plane.
     constexpr float kWeaponFarthest = 0.5f;
 
-    // The projection, as the engine binds it for every shader.
     constexpr UINT kProjectionRegister = 8;
 
     constexpr uint32_t kNone = 0xFFFFFFFFu;
 
     DrawIndexedPrimitiveFn g_original = nullptr;
+    WeaponOverhaul::WeaponDraws::GunPassFn g_onGunPass = nullptr;
     bool g_watching = false;
 
     IDirect3DDevice9* g_owner = nullptr;
-    IDirect3DSurface9* g_target = nullptr;
-    IDirect3DTexture9* g_depthTexture = nullptr;
-    IDirect3DSurface9* g_depthSurface = nullptr;
+    IDirect3DSurface9* g_nullTarget = nullptr;
+    WeaponOverhaul::Target g_depth;
     UINT g_width = 0;
     UINT g_height = 0;
     // Set once the device refuses something; cleared on reset.
@@ -46,8 +45,7 @@ namespace {
     uint32_t g_colourFrame = kNone;
     uint32_t g_colourPass = kNone;
 
-    // The gun's parts as its depth pass drew them this frame. Its colour pass draws the same parts
-    // again, through the whole depth range, so that is how it is told from the world's draws.
+    // The parts the gun's depth pass drew this frame, which its colour pass draws again.
     struct Part {
         UINT startIndex;
         UINT primitiveCount;
@@ -82,8 +80,7 @@ namespace {
         return false;
     }
 
-    // What a gathered draw changes, put back after it. Every target the engine had bound comes off,
-    // since the draw is half the size.
+    // What a gathered draw changes, put back after it.
     constexpr DWORD kTargets = 4;
     IDirect3DSurface9* g_savedTargets[kTargets] = {};
     IDirect3DSurface9* g_savedDepth = nullptr;
@@ -94,9 +91,8 @@ namespace {
     DWORD g_savedStates[std::size(kStates)] = {};
 
     void ReleaseTargets() {
-        WeaponOverhaul::Release(g_target);
-        WeaponOverhaul::Release(g_depthSurface);
-        WeaponOverhaul::Release(g_depthTexture);
+        WeaponOverhaul::Release(g_nullTarget);
+        WeaponOverhaul::Release(g_depth);
         g_depthFrame = kNone;
     }
 
@@ -109,7 +105,8 @@ namespace {
     }
 
     bool EnsureTargets(IDirect3DDevice9* device, UINT width, UINT height) {
-        if (g_owner == device && g_target != nullptr && g_width == width && g_height == height) {
+        if (g_owner == device && g_nullTarget != nullptr && g_width == width &&
+            g_height == height) {
             return true;
         }
         ReleaseTargets();
@@ -117,18 +114,14 @@ namespace {
             return false;
         }
         g_owner = device;
-        D3DSURFACE_DESC desc = {};
-        desc.Width = width;
-        desc.Height = height;
-        desc.Format = kReadableDepth;
-        HRESULT created = WeaponOverhaul::CreateTarget(device, desc, &g_depthTexture,
-                                                       &g_depthSurface, D3DUSAGE_DEPTHSTENCIL);
+        HRESULT created = WeaponOverhaul::CreateTarget(device, width, height, kReadableDepth,
+                                                       g_depth, D3DUSAGE_DEPTHSTENCIL);
         if (FAILED(created)) {
             return Refuse("INTZ depth texture", created);
         }
         if (FAILED(created = device->CreateRenderTarget(width, height, kNullFormat,
-                                                        D3DMULTISAMPLE_NONE, 0, FALSE, &g_target,
-                                                        nullptr))) {
+                                                        D3DMULTISAMPLE_NONE, 0, FALSE,
+                                                        &g_nullTarget, nullptr))) {
             return Refuse("NULL render target", created);
         }
         g_width = width;
@@ -148,8 +141,8 @@ namespace {
         return true;
     }
 
-    // The weapon's depth pass, before the world's: each of its draws is drawn again into our depth
-    // over the whole depth range, at half size.
+    // Binds our depth for one of the gun's depth draws, at half size over the whole depth range,
+    // with every target the engine had bound taken off.
     bool Begin(IDirect3DDevice9* device, const D3DVIEWPORT9& viewport) {
         DWORD writes = FALSE;
         if (viewport.Width != WeaponOverhaul::Frame::Width() ||
@@ -169,13 +162,13 @@ namespace {
             device->GetRenderState(kStates[i], &g_savedStates[i]);
             device->SetRenderState(kStates[i], kGatherStates[i]);
         }
-        device->SetRenderTarget(0, g_target);
+        device->SetRenderTarget(0, g_nullTarget);
         for (DWORD i = 1; i < kTargets; i++) {
             if (g_savedTargets[i] != nullptr) {
                 device->SetRenderTarget(i, nullptr);
             }
         }
-        device->SetDepthStencilSurface(g_depthSurface);
+        device->SetDepthStencilSurface(g_depth.surface);
 
         const uint32_t frame = WeaponOverhaul::Frame::Number();
         if (g_depthFrame != frame) {
@@ -232,33 +225,22 @@ namespace {
         }
         return draw();
     }
-}
 
-bool WeaponOverhaul::WeaponDraws::Install() {
-    void* draw = Vtable::Slot(Vtable::kDrawIndexedPrimitive);
-    if (draw == nullptr) {
-        FCSE::ApiPointer()->Log("weapon draws: no Direct3D 9 device could be made to read from");
-        return false;
+    void OnScenePass(const WeaponOverhaul::Frame::Pass& pass) {
+        g_watching = WeaponOverhaul::Aim::Settled() > 0.0f || WeaponOverhaul::Aim::Scoped() > 0.0f;
+        if (g_watching && pass.serial == g_colourPass &&
+            g_depthFrame == WeaponOverhaul::Frame::Number() && g_projection) {
+            g_onGunPass(pass, {g_depth.texture, g_width, g_height, g_verticalScale, g_depthOffset});
+        }
     }
-    // A rejected hook is already logged by FCSE.
-    return FCSE::ApiPointer()->Hook(draw, reinterpret_cast<void*>(&DrawIndexedPrimitiveDetour),
-                                    reinterpret_cast<void**>(&g_original));
 }
 
-void WeaponOverhaul::WeaponDraws::SetWatching(bool watching) {
-    g_watching = watching;
-}
-
-bool WeaponOverhaul::WeaponDraws::Latest(Depth& out) {
-    if (g_depthFrame != Frame::Number() || !g_projection) {
-        return false;
-    }
-    out = {g_depthTexture, g_width, g_height, g_verticalScale, g_depthOffset};
-    return true;
-}
-
-uint32_t WeaponOverhaul::WeaponDraws::ColourPass() {
-    return g_colourFrame == Frame::Number() ? g_colourPass : kNone;
+bool WeaponOverhaul::WeaponDraws::Install(GunPassFn onGunPass) {
+    g_onGunPass = onGunPass;
+    return Frame::Install(&OnScenePass) &&
+           Vtable::Hook(Vtable::kDrawIndexedPrimitive,
+                        reinterpret_cast<void*>(&DrawIndexedPrimitiveDetour),
+                        reinterpret_cast<void**>(&g_original));
 }
 
 void WeaponOverhaul::WeaponDraws::ReleaseDeviceObjects() {

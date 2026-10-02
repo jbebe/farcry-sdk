@@ -1,4 +1,5 @@
 #include "engine/vtable.h"
+#include "fcse_api.h"
 
 #include <d3d9.h>
 #include <windows.h>
@@ -39,8 +40,6 @@ namespace {
         if (g_read) {
             return;
         }
-        // Set before the attempt, not after: a machine that cannot make a device should be asked
-        // once and then answer null for ever, rather than build a device per hook.
         g_read = true;
 
         IDirect3D9* d3d = nullptr;
@@ -62,3 +61,12 @@ void* WeaponOverhaul::Vtable::Slot(size_t slot) {
     return slot < kSlotCount ? g_slots[slot] : nullptr;
 }
 
+bool WeaponOverhaul::Vtable::Hook(size_t slot, void* detour, void** original) {
+    void* target = Slot(slot);
+    if (target == nullptr) {
+        FCSE::ApiPointer()->Log("no Direct3D 9 device could be made to read the vtable from");
+        return false;
+    }
+    // A rejected hook is already logged by FCSE.
+    return FCSE::ApiPointer()->Hook(target, detour, original);
+}

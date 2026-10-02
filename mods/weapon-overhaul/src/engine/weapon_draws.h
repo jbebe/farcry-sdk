@@ -1,10 +1,11 @@
 // The first-person weapon's draws: its depth, drawn a second time into a texture of our own, and
-// the pass its colour is drawn in.
+// the end of the pass its colour is drawn in, where effects on the gun are drawn.
 //
 // See docs/docs/engine-internals/presentation-and-input.md for the passes.
 #pragma once
 
-#include <cstdint>
+#include "engine/frame.h"
+
 #include <d3d9.h>
 
 namespace WeaponOverhaul::WeaponDraws {
@@ -21,17 +22,12 @@ struct Depth {
     float depthOffset;
 };
 
-// Takes over the device's indexed draws. False, and logged, when it cannot.
-bool Install();
+using GunPassFn = void (*)(const Frame::Pass& pass, const Depth& depth);
 
-// Whether the draws are watched at all, which costs every draw one compare while off.
-void SetWatching(bool watching);
-
-// False unless this frame's weapon depth was drawn.
-bool Latest(Depth& out);
-
-// The serial of the pass the weapon's colour was first drawn in this frame, or none.
-uint32_t ColourPass();
+// Takes over the frame and the device's indexed draws. While the player is down the sights or a
+// scope, `onGunPass` runs as the gun's colour pass ends, with this frame's gun depth. False, and
+// logged, when either cannot be hooked.
+bool Install(GunPassFn onGunPass);
 
 void ReleaseDeviceObjects();
 

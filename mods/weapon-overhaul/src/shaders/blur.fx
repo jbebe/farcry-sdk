@@ -2,14 +2,12 @@
 // passes.
 
 // x: turns a difference in the weapon's stored depth into its blur, as a share of the largest.
-// y: how far the eye has settled into the sights.
+// y: how far the eye has settled into the sights. z: how far the focus moves toward this frame's.
 float4 Lens : register(c0);
 // xy: the blur's step along its axis, in texture coordinates.
 float4 Step : register(c1);
-// x: how far the focus moves toward this frame's in one frame.
-float4 Settle : register(c2);
 // xy: one half-resolution texel.
-float4 Texel : register(c3);
+float4 Texel : register(c2);
 
 // The scene as the pass left it, or the half-resolution image being blurred.
 sampler2D Source : register(s0);
@@ -36,7 +34,7 @@ float4 FocusPS(float2 uv : TEXCOORD0) : COLOR0 {
         }
     }
     float previous = tex2D(Focus, kCentre).r;
-    float eased = previous > 0.0f ? lerp(previous, farthest, Settle.x) : farthest;
+    float eased = previous > 0.0f ? lerp(previous, farthest, Lens.z) : farthest;
     return float4(farthest > 0.0f ? eased : previous, 0.0f, 0.0f, 1.0f);
 }
 

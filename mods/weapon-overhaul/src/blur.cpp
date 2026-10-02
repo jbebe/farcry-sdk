@@ -1,16 +1,11 @@
-// The gun out of focus down the iron sights, the eye focused on the front sight.
-//
-// The pass the gun's colour was drawn in is copied out. The focus is found on the front sight and
-// eased toward, the gun's colour taken down to half size weighted by how blurred each part is, that
-// blurred a little and a lot, and the result blended back over the gun and around its edge.
+// The gun out of focus down the iron sights, the eye focused on the front sight. The focus is found
+// on the front sight, and the gun blurred by how far each part is from it, past its own edge too.
 #include "blur.h"
 
 #include "engine/aim.h"
-#include "engine/com.h"
 #include "engine/render_target.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
-#include "engine/weapon_draws.h"
 #include "fcse_api.h"
 
 #include "blur_blur_ps.h"
@@ -36,15 +31,10 @@ namespace {
 
     constexpr UINT kLens = 0;
     constexpr UINT kStep = 1;
-    constexpr UINT kConstantCount = 4;
+    constexpr UINT kConstantCount = 3;
 
     constexpr D3DFORMAT kHalfFormat = D3DFMT_A16B16G16R16F;
     constexpr D3DFORMAT kFocusFormat = D3DFMT_R32F;
-
-    struct Target {
-        IDirect3DTexture9* texture = nullptr;
-        IDirect3DSurface9* surface = nullptr;
-    };
 
     WeaponOverhaul::PixelShader g_focusShader{"blur focus", g_blurFocusPixelShader};
     WeaponOverhaul::PixelShader g_downShader{"blur down", g_blurDownPixelShader};
@@ -55,43 +45,33 @@ namespace {
     IDirect3DDevice9* g_owner = nullptr;
     // The scene resolved; the focus, this frame's and the last; and at half size the gun taken
     // down, a scratch target, and the gun blurred a little and a lot.
-    Target g_copy;
-    Target g_focus[2];
-    Target g_halves[4];
+    WeaponOverhaul::Target g_copy;
+    WeaponOverhaul::Target g_focus[2];
+    WeaponOverhaul::Target g_halves[4];
     D3DSURFACE_DESC g_copyDesc = {};
+    UINT g_halfWidth = 0;
+    UINT g_halfHeight = 0;
     // Which focus target this frame writes, and whether both still hold whatever they were made with.
     int g_focusIndex = 0;
     bool g_focusFresh = true;
     std::chrono::steady_clock::time_point g_lastDraw;
     // Set once the device refuses something; cleared on reset.
     bool g_refused = false;
-    uint32_t g_drawnFrame = 0xFFFFFFFFu;
-    bool g_reported = false;
-
-    void ReleaseTarget(Target& target) {
-        WeaponOverhaul::Release(target.surface);
-        WeaponOverhaul::Release(target.texture);
-    }
 
     void ReleaseTargets() {
-        ReleaseTarget(g_copy);
-        for (Target& focus : g_focus) {
-            ReleaseTarget(focus);
+        WeaponOverhaul::Release(g_copy);
+        for (WeaponOverhaul::Target& focus : g_focus) {
+            WeaponOverhaul::Release(focus);
         }
-        for (Target& half : g_halves) {
-            ReleaseTarget(half);
+        for (WeaponOverhaul::Target& half : g_halves) {
+            WeaponOverhaul::Release(half);
         }
         g_focusFresh = true;
     }
 
     bool Create(IDirect3DDevice9* device, UINT width, UINT height, D3DFORMAT format,
-                Target& target) {
-        D3DSURFACE_DESC desc = {};
-        desc.Width = width;
-        desc.Height = height;
-        desc.Format = format;
-        const HRESULT created =
-            WeaponOverhaul::CreateTarget(device, desc, &target.texture, &target.surface);
+                WeaponOverhaul::Target& target) {
+        const HRESULT created = WeaponOverhaul::CreateTarget(device, width, height, format, target);
         if (FAILED(created)) {
             ReleaseTargets();
             g_refused = true;
@@ -102,9 +82,11 @@ namespace {
         return true;
     }
 
-    bool EnsureTargets(IDirect3DDevice9* device, const D3DSURFACE_DESC& scene) {
+    bool EnsureTargets(IDirect3DDevice9* device, const D3DSURFACE_DESC& scene, UINT halfWidth,
+                       UINT halfHeight) {
         if (g_owner == device && g_copy.texture != nullptr && g_copyDesc.Width == scene.Width &&
-            g_copyDesc.Height == scene.Height && g_copyDesc.Format == scene.Format) {
+            g_copyDesc.Height == scene.Height && g_copyDesc.Format == scene.Format &&
+            g_halfWidth == halfWidth && g_halfHeight == halfHeight) {
             return true;
         }
         ReleaseTargets();
@@ -113,13 +95,14 @@ namespace {
         }
         g_owner = device;
         g_copyDesc = scene;
+        g_halfWidth = halfWidth;
+        g_halfHeight = halfHeight;
         bool made = Create(device, scene.Width, scene.Height, scene.Format, g_copy);
-        for (Target& focus : g_focus) {
+        for (WeaponOverhaul::Target& focus : g_focus) {
             made = made && Create(device, 1, 1, kFocusFormat, focus);
         }
-        for (Target& half : g_halves) {
-            made = made && Create(device, (scene.Width + 1) / 2, (scene.Height + 1) / 2,
-                                  kHalfFormat, half);
+        for (WeaponOverhaul::Target& half : g_halves) {
+            made = made && Create(device, halfWidth, halfHeight, kHalfFormat, half);
         }
         return made;
     }
@@ -133,21 +116,23 @@ namespace {
     }
 
     // One Gaussian over the half-size gun, across and then down, `step` half-size pixels apart.
-    void BlurInto(IDirect3DDevice9* device, WeaponOverhaul::ScreenDraw& draw, const Target& into,
-                  float step, float halfWidth, float halfHeight) {
-        const float across[4] = {step / halfWidth, 0.0f, 0.0f, 0.0f};
-        const float downward[4] = {0.0f, step / halfHeight, 0.0f, 0.0f};
+    void BlurInto(IDirect3DDevice9* device, WeaponOverhaul::ScreenDraw& draw,
+                  const WeaponOverhaul::Target& into, float step) {
+        const float width = static_cast<float>(g_halfWidth);
+        const float height = static_cast<float>(g_halfHeight);
+        const float across[4] = {step / width, 0.0f, 0.0f, 0.0f};
+        const float downward[4] = {0.0f, step / height, 0.0f, 0.0f};
         device->SetPixelShaderConstantF(kStep, across, 1);
         device->SetRenderTarget(0, g_halves[1].surface);
         device->SetTexture(0, g_halves[0].texture);
-        draw.Quad(0.0f, 0.0f, halfWidth, halfHeight);
+        draw.Quad(0.0f, 0.0f, width, height);
         device->SetPixelShaderConstantF(kStep, downward, 1);
         device->SetRenderTarget(0, into.surface);
         device->SetTexture(0, g_halves[1].texture);
-        draw.Quad(0.0f, 0.0f, halfWidth, halfHeight);
+        draw.Quad(0.0f, 0.0f, width, height);
     }
 
-    bool Draw(const WeaponOverhaul::Frame::Pass& pass,
+    void Draw(const WeaponOverhaul::Frame::Pass& pass,
               const WeaponOverhaul::WeaponDraws::Depth& depth, float settled) {
         IDirect3DDevice9* device = pass.device;
         D3DSURFACE_DESC scene = {};
@@ -157,16 +142,14 @@ namespace {
         IDirect3DPixelShader9* blur = g_blurShader.Get(device);
         IDirect3DPixelShader9* composite = g_compositeShader.Get(device);
         if (focus == nullptr || down == nullptr || blur == nullptr || composite == nullptr ||
-            !EnsureTargets(device, scene) ||
+            !EnsureTargets(device, scene, depth.width, depth.height) ||
             FAILED(device->StretchRect(pass.target, nullptr, g_copy.surface, nullptr,
                                        D3DTEXF_NONE))) {
-            return false;
+            return;
         }
 
-        const float width = static_cast<float>(scene.Width);
-        const float height = static_cast<float>(scene.Height);
-        const float halfWidth = static_cast<float>((scene.Width + 1) / 2);
-        const float halfHeight = static_cast<float>((scene.Height + 1) / 2);
+        const float halfWidth = static_cast<float>(depth.width);
+        const float halfHeight = static_cast<float>(depth.height);
         // The largest blur in kSteps steps, in half-size pixels.
         const float step = kLargest * halfHeight / kSteps;
         // The blur's diameter is the pupil times the dioptres from focus; dioptres are stored depth
@@ -174,13 +157,12 @@ namespace {
         const float lens =
             kPupil * depth.verticalScale / (4.0f * std::abs(depth.depthOffset) * kLargest);
         const float constants[kConstantCount * 4] = {
-            lens, settled, 0.0f, 0.0f,
+            lens, settled, Refocus(), 0.0f,
             0.0f, 0.0f, 0.0f, 0.0f,
-            Refocus(), 0.0f, 0.0f, 0.0f,
             1.0f / halfWidth, 1.0f / halfHeight, 0.0f, 0.0f,
         };
-        const Target& focusNow = g_focus[g_focusIndex];
-        const Target& focusBefore = g_focus[g_focusIndex ^ 1];
+        const WeaponOverhaul::Target& focusNow = g_focus[g_focusIndex];
+        const WeaponOverhaul::Target& focusBefore = g_focus[g_focusIndex ^ 1];
 
         WeaponOverhaul::ScreenDraw draw(device, kLens, kConstantCount);
         device->SetPixelShaderConstantF(kLens, constants, kConstantCount);
@@ -192,7 +174,7 @@ namespace {
         device->SetDepthStencilSurface(nullptr);
 
         if (g_focusFresh) {
-            for (const Target& target : g_focus) {
+            for (const WeaponOverhaul::Target& target : g_focus) {
                 device->SetRenderTarget(0, target.surface);
                 device->Clear(0, nullptr, D3DCLEAR_TARGET, 0, 1.0f, 0);
             }
@@ -211,8 +193,8 @@ namespace {
         draw.Quad(0.0f, 0.0f, halfWidth, halfHeight);
 
         device->SetPixelShader(blur);
-        BlurInto(device, draw, g_halves[2], step * kSmall, halfWidth, halfHeight);
-        BlurInto(device, draw, g_halves[3], step, halfWidth, halfHeight);
+        BlurInto(device, draw, g_halves[2], step * kSmall);
+        BlurInto(device, draw, g_halves[3], step);
 
         // The scene's alpha carries brightness for the bloom, so it is left alone.
         device->SetRenderTarget(0, pass.target);
@@ -224,34 +206,16 @@ namespace {
         device->SetTexture(2, g_halves[3].texture);
         device->SetTexture(4, g_halves[0].texture);
         device->SetPixelShader(composite);
-        draw.Quad(0.0f, 0.0f, width, height);
+        draw.Quad(0.0f, 0.0f, static_cast<float>(scene.Width), static_cast<float>(scene.Height));
 
         g_focusIndex ^= 1;
-        return true;
     }
 }
 
-void WeaponOverhaul::Blur::OnScenePass(const Frame::Pass& pass) {
+void WeaponOverhaul::Blur::OnGunPass(const Frame::Pass& pass, const WeaponDraws::Depth& depth) {
     const float settled = g_enabled ? Aim::Settled() : 0.0f;
-    WeaponDraws::SetWatching(settled > 0.0f);
-    if (settled <= 0.0f || pass.serial != WeaponDraws::ColourPass() ||
-        g_drawnFrame == Frame::Number()) {
-        return;
-    }
-    g_drawnFrame = Frame::Number();
-
-    WeaponDraws::Depth depth = {};
-    const bool found = WeaponDraws::Latest(depth);
-    const bool drawn = found && Draw(pass, depth, settled);
-    if (!g_reported) {
-        g_reported = true;
-        if (drawn) {
-            FCSE::Logf("blur: drawing, the gun's vertical scale %.3f and depth offset %.4f",
-                       depth.verticalScale, depth.depthOffset);
-        } else {
-            FCSE::Logf("blur: the gun's colour pass was found but %s",
-                       found ? "the blur could not draw" : "not its depth");
-        }
+    if (settled > 0.0f) {
+        Draw(pass, depth, settled);
     }
 }
 

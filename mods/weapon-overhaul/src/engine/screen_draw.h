@@ -8,12 +8,8 @@
 
 namespace WeaponOverhaul {
 
-// Everything a draw at the end of a pass disturbs, saved on construction, set to a plain baseline
-// and put back when it goes out of scope: the targets, the shaders and geometry bindings, one range
-// of pixel shader constants, and render, stage and sampler states. The baseline is no depth test or
-// write, no stencil, culling, fog, scissor, alpha test or blend, full colour writes, point-sampled
-// clamped textures, and the whole viewport at its natural depth range.
-//
+// Everything a draw at the end of a pass disturbs, set to a plain baseline - no depth, stencil,
+// blend or culling, point-sampled clamped textures - and put back when it goes out of scope.
 // `firstConstant` and `constantCount` are the pixel shader registers the caller will write.
 class ScreenDraw {
 public:
@@ -23,9 +19,8 @@ public:
     ScreenDraw(const ScreenDraw&) = delete;
     ScreenDraw& operator=(const ScreenDraw&) = delete;
 
-    // A quad over the rectangle, in pixels, with texture coordinates running zero to one across it
-    // and the half-pixel offset that lands texels on pixel centres. Drawn through the fixed-function
-    // vertex pipeline, so it pairs only with a ps_2_x pixel shader.
+    // A quad over the rectangle, in pixels, with texture coordinates running zero to one across it.
+    // Pairs only with a ps_2_x pixel shader.
     void Quad(float left, float top, float right, float bottom);
 
 private:
@@ -33,7 +28,7 @@ private:
     static constexpr DWORD kSamplers = 6;
 
     static constexpr D3DRENDERSTATETYPE kRenderStates[] = {
-        D3DRS_ZENABLE,         D3DRS_ZWRITEENABLE,      D3DRS_ZFUNC,
+        D3DRS_ZENABLE,         D3DRS_ZWRITEENABLE,
         D3DRS_CULLMODE,        D3DRS_LIGHTING,          D3DRS_FOGENABLE,
         D3DRS_STENCILENABLE,   D3DRS_SCISSORTESTENABLE, D3DRS_COLORWRITEENABLE,
         D3DRS_ALPHATESTENABLE, D3DRS_ALPHABLENDENABLE,  D3DRS_SEPARATEALPHABLENDENABLE,

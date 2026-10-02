@@ -2,12 +2,10 @@
 
 #include "engine/com.h"
 #include "engine/vtable.h"
-#include "fcse_api.h"
 
 namespace {
     using EndSceneFn = HRESULT(__stdcall*)(IDirect3DDevice9*);
 
-    // The sky pass is the only world pass whose depth range is squeezed against the far plane.
     constexpr float kSkyPassMinZ = 0.9f;
 
     EndSceneFn g_originalEndScene = nullptr;
@@ -46,15 +44,11 @@ namespace {
         const bool haveDepth =
             SUCCEEDED(device->GetDepthStencilSurface(&depth.surface)) && depth.surface != nullptr;
         const bool toBackBuffer = target.surface == backBuffer.surface;
-
-        // The composite is the only back-buffer pass with no depth attached; the interface after it
-        // brings a depth surface of its own.
         if (toBackBuffer && !haveDepth) {
             g_pastSky = false;
             g_frame++;
             return;
         }
-        // The world renders into an offscreen target of the back buffer's size, with depth.
         if (toBackBuffer || !haveDepth || targetDesc.Width != backBufferDesc.Width ||
             targetDesc.Height != backBufferDesc.Height) {
             return;
@@ -64,7 +58,7 @@ namespace {
         if (SUCCEEDED(device->GetViewport(&viewport)) && viewport.MinZ >= kSkyPassMinZ) {
             g_pastSky = true;
         }
-        g_onScenePass({device, target.surface, depth.surface, backBufferDesc, g_passSerial});
+        g_onScenePass({device, target.surface, g_passSerial});
     }
 
     HRESULT __stdcall EndSceneDetour(IDirect3DDevice9* device) {
@@ -75,15 +69,9 @@ namespace {
 }
 
 bool WeaponOverhaul::Frame::Install(PassFn onScenePass) {
-    void* endScene = Vtable::Slot(Vtable::kEndScene);
-    if (endScene == nullptr) {
-        FCSE::ApiPointer()->Log("frame: no Direct3D 9 device could be made to read from");
-        return false;
-    }
     g_onScenePass = onScenePass;
-    // A rejected hook is already logged by FCSE.
-    return FCSE::ApiPointer()->Hook(endScene, reinterpret_cast<void*>(&EndSceneDetour),
-                                    reinterpret_cast<void**>(&g_originalEndScene));
+    return Vtable::Hook(Vtable::kEndScene, reinterpret_cast<void*>(&EndSceneDetour),
+                        reinterpret_cast<void**>(&g_originalEndScene));
 }
 
 uint32_t WeaponOverhaul::Frame::PassSerial() {

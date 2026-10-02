@@ -1,5 +1,5 @@
 // The moment before the device is reset, the only point at which anything held in D3DPOOL_DEFAULT
-// can still be freed. A live one makes the reset fail.
+// can still be freed.
 #pragma once
 
 namespace WeaponOverhaul::DeviceReset {

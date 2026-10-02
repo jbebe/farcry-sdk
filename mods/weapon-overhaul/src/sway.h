@@ -1,12 +1,12 @@
-// The hand's wiggle down the sights: the eye drifting a few millimetres off the gun.
+// The hand's drift: a few millimetres of wander and a slow breath.
 #pragma once
 
 #include "engine/aim.h"
 
 namespace WeaponOverhaul::Sway {
 
-// Where the eye sits off the gun this frame, for Aim::Install.
-Aim::Offset Eye(const Aim::Frame& frame);
+// The drift this frame, for Aim::Install; nothing while switched off.
+Aim::Offset Drift(float seconds);
 
 void SetEnabled(bool enabled);
 

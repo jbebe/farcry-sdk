@@ -3,26 +3,25 @@
 
 namespace WeaponOverhaul::Aim {
 
-struct Frame {
-    float seconds;
-    // How far the eye has settled into the iron sights, eased from nought to one. Nought while a
-    // scope's own sight picture is up, which is drawn in place of the gun.
-    float settled;
-};
-
 // Metres along the view's own axes.
 struct Offset {
     float right;
     float up;
 };
 
-using EyeFn = Offset (*)(const Frame& frame);
+// The hand's drift this frame, given the seconds since the last.
+using DriftFn = Offset (*)(float seconds);
 
-// Hooks the first-person camera; `eye` then runs once a frame and its answer moves the eye that far
-// from where the engine put it. False, and logged, when the camera cannot be hooked.
-bool Install(EyeFn eye);
+// Hooks the first-person camera; `drift` then runs once a frame, and down the iron sights the eye
+// follows it. False, and logged, when the camera cannot be hooked.
+bool Install(DriftFn drift);
 
-// The last frame's settle, for whatever draws after it.
+// How far the eye has settled into the iron sights, and into a scope's own sight picture, eased
+// from nought to one. At most one of them is above nought.
 float Settled();
+float Scoped();
+
+// The hand's drift last frame.
+Offset Drift();
 
 }

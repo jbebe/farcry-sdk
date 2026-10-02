@@ -2,7 +2,6 @@
 #include "blur.h"
 #include "engine/aim.h"
 #include "engine/device_reset.h"
-#include "engine/frame.h"
 #include "engine/weapon_draws.h"
 #include "fcse_api.h"
 #include "sway.h"
@@ -13,6 +12,11 @@ namespace {
     void OnDeviceRelease() {
         WeaponOverhaul::Blur::ReleaseDeviceObjects();
         WeaponOverhaul::WeaponDraws::ReleaseDeviceObjects();
+    }
+
+    void OnGunPass(const WeaponOverhaul::Frame::Pass& pass,
+                   const WeaponOverhaul::WeaponDraws::Depth& depth) {
+        WeaponOverhaul::Blur::OnGunPass(pass, depth);
     }
 
     void __cdecl OnSwayChanged(const FCSE_SettingValue* value, void*) {
@@ -26,16 +30,14 @@ namespace {
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION || !FCSE::Bind(api) ||
-        !WeaponOverhaul::Aim::Install(&WeaponOverhaul::Sway::Eye)) {
+        !WeaponOverhaul::Aim::Install(&WeaponOverhaul::Sway::Drift)) {
         return false;
     }
 
-    // Nothing is drawn without the seam that frees it before a reset, and a plugin refused past
-    // its first hook is unloaded with that hook live, so a failure here only costs the blur.
+    // Past the first hook a refusal would unload the plugin with that hook live, so this only logs.
     if (!WeaponOverhaul::DeviceReset::Install(&OnDeviceRelease) ||
-        !WeaponOverhaul::Frame::Install(&WeaponOverhaul::Blur::OnScenePass) ||
-        !WeaponOverhaul::WeaponDraws::Install()) {
-        api->Log("the gun blur is off: a Direct3D seam it needs could not be hooked");
+        !WeaponOverhaul::WeaponDraws::Install(&OnGunPass)) {
+        api->Log("nothing is drawn on the gun: a Direct3D seam could not be hooked");
     }
 
     const FCSE_Setting settings[] = {

@@ -12,10 +12,8 @@ namespace WeaponOverhaul::Frame {
 // One of the world's passes, as it ends.
 struct Pass {
     IDirect3DDevice9* device;
-    // The pass's own render target and depth-stencil surface, borrowed for the callback.
+    // The pass's render target, borrowed for the callback.
     IDirect3DSurface9* target;
-    IDirect3DSurface9* depth;
-    D3DSURFACE_DESC backBuffer;
     uint32_t serial;
 };
 

@@ -43,9 +43,13 @@ namespace {
     // Seconds to settle into the sights, and to let go of them.
     constexpr float kSettle = 0.4f;
 
-    WeaponOverhaul::Aim::EyeFn g_eye = nullptr;
-    float g_settled = 0.0f;
-    std::atomic<float> g_eased{0.0f};
+    WeaponOverhaul::Aim::DriftFn g_drift = nullptr;
+    float g_sights = 0.0f;
+    float g_scope = 0.0f;
+    std::atomic<float> g_settled{0.0f};
+    std::atomic<float> g_scoped{0.0f};
+    std::atomic<float> g_driftRight{0.0f};
+    std::atomic<float> g_driftUp{0.0f};
 
     // What was added to the eye during the camera update under way, and to which camera.
     uint8_t* g_addedTo = nullptr;
@@ -54,6 +58,10 @@ namespace {
     template <typename T>
     T& Field(uint8_t* object, ptrdiff_t offset) {
         return *reinterpret_cast<T*>(object + offset);
+    }
+
+    float Ease(float linear) {
+        return linear * linear * (3.0f - 2.0f * linear);
     }
 
     bool ScopeShown(uint8_t* pawnData) {
@@ -71,16 +79,19 @@ namespace {
 
         uint8_t* data = Field<uint8_t*>(pawn, kPawnData);
         const bool sights = (Field<uint8_t>(data, kEffectiveFlags) & kIronsight) != 0;
-        if (sights && ScopeShown(data)) {
-            g_settled = 0.0f;
-        } else {
-            const float step = seconds / kSettle;
-            g_settled = std::clamp(g_settled + (sights ? step : -step), 0.0f, 1.0f);
-        }
-        const float eased = g_settled * g_settled * (3.0f - 2.0f * g_settled);
-        g_eased = eased;
+        const bool scope = sights && ScopeShown(data);
+        const float step = seconds / kSettle;
+        // The iron sights let go at once when a scope's own sight picture comes up.
+        g_sights = scope ? 0.0f : std::clamp(g_sights + (sights ? step : -step), 0.0f, 1.0f);
+        g_scope = std::clamp(g_scope + (scope ? step : -step), 0.0f, 1.0f);
+        const float settled = Ease(g_sights);
+        g_settled = settled;
+        g_scoped = Ease(g_scope);
 
-        g_added = g_eye({seconds, eased});
+        const WeaponOverhaul::Aim::Offset drift = g_drift(seconds);
+        g_driftRight = drift.right;
+        g_driftUp = drift.up;
+        g_added = {drift.right * settled, drift.up * settled};
         Field<float>(camera, kEyeRight) += g_added.right;
         Field<float>(camera, kEyeUp) += g_added.up;
         g_addedTo = camera;
@@ -96,14 +107,14 @@ namespace {
     }
 }
 
-bool WeaponOverhaul::Aim::Install(EyeFn eye) {
+bool WeaponOverhaul::Aim::Install(DriftFn drift) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
     if (!g_update || !g_updateCameraOffset || !g_equippedWeapon || !g_playerCamera) {
         api->Log("aim: the camera functions were not found in this build");
         return false;
     }
 
-    g_eye = eye;
+    g_drift = drift;
     if (!api->Hook(reinterpret_cast<void*>(g_update.address()),
                    reinterpret_cast<void*>(&UpdateDetour),
                    reinterpret_cast<void**>(&g_originalUpdate))) {
@@ -119,5 +130,13 @@ bool WeaponOverhaul::Aim::Install(EyeFn eye) {
 }
 
 float WeaponOverhaul::Aim::Settled() {
-    return g_eased;
+    return g_settled;
+}
+
+float WeaponOverhaul::Aim::Scoped() {
+    return g_scoped;
+}
+
+WeaponOverhaul::Aim::Offset WeaponOverhaul::Aim::Drift() {
+    return {g_driftRight, g_driftUp};
 }

@@ -1,21 +1,31 @@
-// A texture of our own that a draw can render into and a shader can read.
+// Textures of our own that a draw can render into and a shader can read.
 #pragma once
+
+#include "engine/com.h"
 
 #include <d3d9.h>
 
 namespace WeaponOverhaul {
 
-// One single-sampled level at `desc`'s size and format, in the default pool. A depth texture passes
-// D3DUSAGE_DEPTHSTENCIL.
-inline HRESULT CreateTarget(IDirect3DDevice9* device, const D3DSURFACE_DESC& desc,
-                            IDirect3DTexture9** texture, IDirect3DSurface9** surface,
-                            DWORD usage = D3DUSAGE_RENDERTARGET) {
-    const HRESULT created = device->CreateTexture(desc.Width, desc.Height, 1, usage, desc.Format,
-                                                  D3DPOOL_DEFAULT, texture, nullptr);
-    if (FAILED(created)) {
-        return created;
+struct Target {
+    IDirect3DTexture9* texture = nullptr;
+    IDirect3DSurface9* surface = nullptr;
+};
+
+// One single-sampled level in the default pool. A depth texture passes D3DUSAGE_DEPTHSTENCIL.
+inline HRESULT CreateTarget(IDirect3DDevice9* device, UINT width, UINT height, D3DFORMAT format,
+                            Target& target, DWORD usage = D3DUSAGE_RENDERTARGET) {
+    HRESULT created = device->CreateTexture(width, height, 1, usage, format, D3DPOOL_DEFAULT,
+                                            &target.texture, nullptr);
+    if (SUCCEEDED(created)) {
+        created = target.texture->GetSurfaceLevel(0, &target.surface);
     }
-    return *texture == nullptr ? E_FAIL : (*texture)->GetSurfaceLevel(0, surface);
+    return created;
+}
+
+inline void Release(Target& target) {
+    Release(target.surface);
+    Release(target.texture);
 }
 
 }

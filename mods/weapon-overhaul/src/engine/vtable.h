@@ -14,4 +14,7 @@ constexpr size_t kDrawIndexedPrimitive = 82;
 // device of our own names them all.
 void* Slot(size_t slot);
 
+// Hooks `slot`, keeping what it called in `original`. False, and logged, when it cannot.
+bool Hook(size_t slot, void* detour, void** original);
+
 }
