@@ -33,6 +33,10 @@ namespace {
     constexpr float kSteps = 6.0f;
     // Seconds for the eye to refocus most of the way.
     constexpr float kRefocus = 0.1f;
+    // The least blur the rear sight is given, as a share of the largest, and the most a gun's blur
+    // is scaled up to give it that. A pistol held at arm's length needs about four and a half.
+    constexpr float kLeastRearSight = 0.6f;
+    constexpr float kMostBoost = 6.0f;
 
     constexpr UINT kLens = 0;
     constexpr UINT kStep = 1;
@@ -177,7 +181,7 @@ namespace {
         const float lens =
             kPupil * depth.verticalScale / (4.0f * std::abs(depth.depthOffset) * kLargest);
         const float constants[kConstantCount * 4] = {
-            lens, settled, 0.0f, 0.0f,
+            lens, settled, kLeastRearSight, kMostBoost,
             0.0f, 0.0f, 0.0f, 0.0f,
             Refocus(), 0.0f, 0.0f, 0.0f,
             1.0f / halfWidth, 1.0f / halfHeight, 0.0f, 0.0f,
