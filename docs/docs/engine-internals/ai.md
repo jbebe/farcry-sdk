@@ -6,8 +6,9 @@ sidebar_position: 18
 
 :::info[Verified via reverse engineering]
 Traced through GhidraMCP against the symbolized `FarCry2_server`; the brain contents are read out of
-the shipped `mercbrain.ai.rml`. The workspace loader, `GetChanceOfSuccess` and `ManageIntuition` were
-matched in the retail PC `Dunia.dll` (Steam) and behave the same. See [intro](../intro.md) for how
+the shipped `mercbrain.ai.rml`. The workspace loader, `GetChanceOfSuccess`, `ManageIntuition`,
+`AdjustFOV` and the vision evaluators were matched in the retail PC `Dunia.dll` (Steam) and behave
+the same. See [intro](../intro.md) for how
 RE-verified and community-reported claims are distinguished.
 :::
 
@@ -127,13 +128,31 @@ only through the orders and flags the lieutenant sends.
 ## Seeing
 
 The archetype's `SensorySystem` gives a focus cone and a wider peripheral cone per region type -
-`DesertFOV`, `SavannahFOV`, `JungleFOV`, each with `fLength` and `fAngle` - scaled by
-`FOVMultipliers` for the situation (unaware, in combat, after combat, player in a vehicle, night,
-looking through a scope).
+`DesertFOV`, `SavannahFOV`, `JungleFOV`, each with `fLength` and `fAngle`, the full angle in degrees.
+`CSensorySystem::AdjustFOV` sets both cones again for every target on every update:
+
+- **Length** is the region's `fLength` times the night term. In combat it is also times
+  `fCombatMultiplier`, and when alerted before or after a fight times `fPreCombatMultiplier` or
+  `fPostCombatMultiplier`; when idle there is no state multiplier. While he aims a sniper rifle it is
+  times `fSniperLengthMultiplier`. Against the player in a vehicle it is times
+  `fPlayerInVehicleMultiplier`, by day or with the vehicle's headlights on. Then it is capped: 150 m
+  against the player, 350 m through a scope, less against other soldiers.
+- **Angle** is the region's `fAngle`, times `fSniperAngleMultiplier` through a scope. A soldier
+  sitting in a vehicle sees all around him: both angles become 360°.
+
+The **night term** is `1 − night × fNightTimeMultiplier`. *night* is 0 by day and 1 at night, and
+ramps between them across dusk and dawn, four times kept by the dynamic environment manager. With
+the shipped 0.5, cones are half as long at full night. This is the only thing darkness changes.
+Against a target that fired a **muzzle flash in the last 3 seconds** the term is 1: firing at night
+gives you away as if it were day.
 
 Inside the cones, `VisibilityEvaluatorParameters` weigh how visible the player is from 0 to 1:
-distance, cone edge, body coverage, occlusion, vegetation, stance, movement and ambient light, each
-with its own weight.
+distance, cone edge, body coverage, occlusion, vegetation, stance and movement, each with its own
+weight, plus grass, whose weight is not exposed. Distance gives full visibility inside the first
+`fDistanceEvaluator_FullVisibilityRatio` of the cone's length, falling to
+`fDistanceEvaluator_MinVisibilityAtMaxFOVRange` at its end. `fAmbientLightEvaluatorWeight` is loaded
+but never read: there is no light evaluator, so no light in the scene, the sun included, reaches the
+AI.
 
 That visibility is compared with two thresholds that depend on the brain state.
 `CPawnAgent::SetVisibilityValues` installs them whenever the state changes:

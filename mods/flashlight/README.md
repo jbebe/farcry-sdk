@@ -2,10 +2,15 @@
 
 A flashlight for Far Cry 2: a spot light at the player's head, switched by a new **Flashlight**
 control (L by default, rebindable in Options > Controls), with a switch click and an icon on the HUD.
-There is no battery; it is a convenience, made to feel like part of the game.
+There is no battery. At night the light gives you away: guards see you from as far off as by day,
+and one you shine it on notices you even with his back turned.
 
 The light is one of the engine's own scene lights, made the way the player's vehicle makes its
-headlight and placed every frame from the render camera. Everything that can be data is data in
+headlight and placed every frame from the render camera. Light never reaches the AI in this engine,
+so while it is on the plugin applies two of the engine's own sight rules to the player. He counts as
+having just fired, which lifts the night's shorter sight. A guard inside the beam sees all around
+him, as one sitting in a vehicle does. Both are in
+[AI: Seeing](../../docs/docs/engine-internals/ai.md#seeing). Everything that can be data is data in
 `layer\`; the FCSE plugin in `src\` does only what data cannot reach.
 
 ## Settings
@@ -25,7 +30,7 @@ Both apply to a light that is on.
 src\                         the FCSE plugin
   flashlight.cpp             the toggle, the click-then-light timing, the HUD icon's timing
   engine\                    the game's own seams: the frame, the signal dispatcher, the light and
-                             camera, the sound system, the HUD's Magma objects
+                             camera, the guards' sight, the sound system, the HUD's Magma objects
 layer\mods\
   config\                    the toggle_flashlight control and its binding
   languages\                 the control's label, in every language

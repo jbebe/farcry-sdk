@@ -1,11 +1,13 @@
 # Flashlight
 
-A flashlight for Far Cry 2, made to feel like part of the game. There is no battery to manage; it
-is a convenience.
+A flashlight for Far Cry 2, made to feel like part of the game. There is no battery to manage, but
+at night it gives you away.
 
 - **Its own control**, Flashlight, on L by default and rebindable in Options > Controls.
 - **A real light.** The engine's own spot light, the kind the vehicles' headlights use, sits at your
   head and follows where you look. It is the headlights' warm white, reaches 25 m and casts shadows.
+- **Guards see it.** At night they see you from as far off as by day, and a guard you shine it on
+  notices you even with his back turned.
 - **A switch click**, with the light coming up just after it.
 - **A HUD icon** above the diamond counter, showing on or off. It fades in when you toggle and out
   again with the rest of the HUD.
