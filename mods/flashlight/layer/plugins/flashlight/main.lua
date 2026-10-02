@@ -62,10 +62,10 @@ local HEADLIGHT_MODIFY_CALL = 0x5F
 local SOUND_PLAY_SLOT = 0x9C
 local SOUND_REQUEST_LOAD_SLOT = 0x08
 
--- The names this layer's hud.mgb exports: the ammo group's fade area, and the icon for each state
--- inside it.
+-- The names this layer's hud.mgb exports: the flashlight's own HUD group, and the icon for each
+-- state inside it.
 local HUD_FADE, HUD_ON, HUD_OFF = 'HUD_FLASHLIGHT_FADE', 'HUD_FLASHLIGHT_ON', 'HUD_FLASHLIGHT_OFF'
--- The fade area's timeline: it fades in from frame 1 and holds at 5, fades out from 6 and rests at 11.
+-- The group's timeline: it fades in from frame 1 and holds at 5, fades out from 6 and rests at 11.
 local HUD_SHOW_FRAME, HUD_HIDE_FRAME = 1, 6
 -- Seconds the group stays up after a toggle: CFCXMainHudUI's fadeOutDelay.
 local HUD_HOLD = 3.0
@@ -163,7 +163,7 @@ local function hud_object(name)
   return object ~= nil and object or nil
 end
 
--- Makes the ammo group show the icon for `lit` whenever it is up. False while no HUD is loaded.
+-- Makes the group show the icon for `lit`. False while no HUD is loaded.
 local function sync_icon(lit)
   local on_icon, off_icon = hud_object(HUD_ON), hud_object(HUD_OFF)
   if on_icon == nil or off_icon == nil then
@@ -174,7 +174,7 @@ local function sync_icon(lit)
   return true
 end
 
--- Plays the ammo group's fade area from `frame`, the way the HUD shows and hides its groups.
+-- Plays the group from `frame`, the way the HUD shows and hides its own groups.
 local function play_fade(frame)
   local fade = hud_object(HUD_FADE)
   if fade == nil then
