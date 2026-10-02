@@ -62,10 +62,13 @@ local HEADLIGHT_MODIFY_CALL = 0x5F
 local SOUND_PLAY_SLOT = 0x9C
 local SOUND_REQUEST_LOAD_SLOT = 0x08
 
--- The names this layer's hud.mgb exports: an area per state, each fading its own icon.
-local HUD_ON, HUD_OFF = 'HUD_FLASHLIGHT_ON', 'HUD_FLASHLIGHT_OFF'
--- The frame an icon's timeline fades in from; frame 0 is where it rests, hidden and stopped.
-local HUD_SHOW_FRAME = 1
+-- The names this layer's hud.mgb exports: the ammo group's fade area, and the icon for each state
+-- inside it.
+local HUD_FADE, HUD_ON, HUD_OFF = 'HUD_FLASHLIGHT_FADE', 'HUD_FLASHLIGHT_ON', 'HUD_FLASHLIGHT_OFF'
+-- The fade area's timeline: it fades in from frame 1 and holds at 5, fades out from 6 and rests at 11.
+local HUD_SHOW_FRAME, HUD_HIDE_FRAME = 1, 6
+-- Seconds the group stays up after a toggle: CFCXMainHudUI's fadeOutDelay.
+local HUD_HOLD = 3.0
 -- magma::Area's milliseconds per frame.
 local AREA_FRAME_TIME = 0x18
 -- In CMagmaFacade::GetGenericObject<Keyframe>: `mov ecx, [<GenericObjectServer>]`.
@@ -76,7 +79,7 @@ local GENERIC_OBJECT = 0x0C
 local container, create_light, modify_light, destroy_light
 local get_local_player, active_camera, render_camera
 local get_sound_system, get_from_sound_id
-local generic_server, find_generic, generic_target, set_time, set_playing
+local generic_server, find_generic, generic_target, set_visible, set_time, set_playing
 
 local handle = ffi.new('flashlight_handle', { -1, -1 })
 local owner = nil
@@ -90,6 +93,9 @@ local toggles = 0
 local cast_shadows = true
 local click_bank = nil
 local hud_ready = false
+-- Whether the loaded HUD shows the icon for `wanted`, and the seconds until a toggle's group fades.
+local hud_synced = false
+local hud_hide_in = nil
 
 local function call_target(call)
   return call + 5 + fcse.mem.read_i32(call + 1)
@@ -157,18 +163,26 @@ local function hud_object(name)
   return object ~= nil and object or nil
 end
 
--- Plays the icon for `lit` from the start of its fade, the way the HUD shows the pills, and sends
--- the other back to its hidden rest.
-local function show_icon(lit)
-  local shown, other = hud_object(lit and HUD_ON or HUD_OFF), hud_object(lit and HUD_OFF or HUD_ON)
-  if shown == nil or other == nil then
+-- Makes the ammo group show the icon for `lit` whenever it is up. False while no HUD is loaded.
+local function sync_icon(lit)
+  local on_icon, off_icon = hud_object(HUD_ON), hud_object(HUD_OFF)
+  if on_icon == nil or off_icon == nil then
+    return false
+  end
+  set_visible(on_icon, lit and 1 or 0)
+  set_visible(off_icon, lit and 0 or 1)
+  return true
+end
+
+-- Plays the ammo group's fade area from `frame`, the way the HUD shows and hides its groups.
+local function play_fade(frame)
+  local fade = hud_object(HUD_FADE)
+  if fade == nil then
     return
   end
-  set_time(other, 0, true, false)
-  set_playing(other, false, false)
-  local frame_time = ffi.cast('uint16_t*', ffi.cast('char*', shown) + AREA_FRAME_TIME)[0]
-  set_time(shown, frame_time * HUD_SHOW_FRAME, true, false)
-  set_playing(shown, true, false)
+  local frame_time = ffi.cast('uint16_t*', ffi.cast('char*', fade) + AREA_FRAME_TIME)[0]
+  set_time(fade, frame_time * frame, true, false)
+  set_playing(fade, true, false)
 end
 
 local function light()
@@ -203,6 +217,7 @@ local function forget()
     handle.index, handle.generation = -1, -1
   end
   on, wanted, switch_in = false, false, nil
+  hud_synced, hud_hide_in = false, nil
 end
 
 -- Places the light at the camera, at `intensity`.
@@ -270,9 +285,10 @@ local function resolve_hud()
   local get_keyframe = fcse.uplay(0x00534500)
   local find = fcse.uplay(0x00AA6F60)
   local target = fcse.uplay(0x00AA65C0)
+  local visible = fcse.uplay(0x00AB13F0)
   local time = fcse.uplay(0x00A973E0)
   local playing = fcse.uplay(0x00A973A0)
-  if not (get_keyframe and find and target and time and playing) or
+  if not (get_keyframe and find and target and visible and time and playing) or
      fcse.mem.read_u16(get_keyframe + GENERIC_SERVER - 2) ~= 0x0D8B then
     return false
   end
@@ -280,6 +296,7 @@ local function resolve_hud()
   generic_server = fcse.mem.read_u32(get_keyframe + GENERIC_SERVER)
   find_generic = fcse.fn('void*(__thiscall*)(void*, const uint32_t*)', find)
   generic_target = fcse.fn('void*(__thiscall*)(void*)', target)
+  set_visible = fcse.fn('void(__thiscall*)(void*, int32_t)', visible)
   set_time = fcse.fn('uint8_t(__thiscall*)(void*, uint32_t, bool, bool)', time)
   set_playing = fcse.fn('void(__thiscall*)(void*, bool, bool)', playing)
   return true
@@ -331,8 +348,22 @@ fcse.on('load', function()
       click()
       switch_in = SWITCH_DELAY
     end
-    if toggles > 0 and hud_ready then
-      show_icon(wanted)
+    if hud_ready then
+      if toggles > 0 then
+        hud_synced = false
+        play_fade(HUD_SHOW_FRAME)
+        hud_hide_in = HUD_HOLD
+      end
+      if not hud_synced then
+        hud_synced = sync_icon(wanted)
+      end
+      if hud_hide_in ~= nil then
+        hud_hide_in = hud_hide_in - dt
+        if hud_hide_in <= 0 then
+          hud_hide_in = nil
+          play_fade(HUD_HIDE_FRAME)
+        end
+      end
     end
     toggles = 0
 
