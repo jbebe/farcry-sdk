@@ -5,6 +5,7 @@
 
 #include <safetyhook.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdio>
 #include <intrin.h>
@@ -28,6 +29,7 @@ namespace {
         std::variant<SafetyHookInline, SafetyHookMid> hook;
     };
 
+    // In install order, so hooks sharing a start appear innermost first.
     std::vector<ClaimedRange> g_claims;
 
     // A hook relocates whole instructions until they cover its 5-byte jump, so this is the least a
@@ -38,6 +40,8 @@ namespace {
         return aStart < bEnd && bStart < aEnd;
     }
 
+    // A hook at another hook's start stacks on it, since safetyhook relocates that hook's jump like
+    // any other instruction; one overlapping its displaced bytes anywhere else is rejected.
     bool Claim(const std::string& caller, void* target) {
         if (target == nullptr) {
             Log::Write(caller, "hook requested on a null target, rejected");
@@ -46,13 +50,29 @@ namespace {
 
         const auto start = reinterpret_cast<uintptr_t>(target);
         for (const ClaimedRange& claim : g_claims) {
-            if (RangesOverlap(start, start + kMinDisplaced, claim.start, claim.end)) {
+            if (claim.start != start &&
+                RangesOverlap(start, start + kMinDisplaced, claim.start, claim.end)) {
                 Log::Write(caller, "Hook conflict: target overlaps bytes already hooked by '" +
                                        claim.owner + "', rejected");
                 return false;
             }
         }
         return true;
+    }
+
+    // Keeps an installed hook, logging it as ahead of the newest one at the same start, if any.
+    template <class T>
+    void Record(const std::string& caller, void* target, T hook, std::string line) {
+        const auto start = reinterpret_cast<uintptr_t>(target);
+        const auto sameStart = [start](const ClaimedRange& claim) { return claim.start == start; };
+        const auto beneath = std::find_if(g_claims.rbegin(), g_claims.rend(), sameStart);
+        if (beneath != g_claims.rend()) {
+            line += ", ahead of '" + beneath->owner + "'";
+        }
+
+        const uintptr_t end = start + hook.original_bytes().size();
+        g_claims.push_back({start, end, caller, std::move(hook)});
+        Log::Write(caller, line);
     }
 
     std::string Describe(const safetyhook::InlineHook::Error& error) {
@@ -95,7 +115,10 @@ namespace {
 }
 
 void HookManager::Shutdown() {
-    g_claims.clear();
+    // Newest first: each hook puts back the bytes it found, and only the oldest found the original.
+    while (!g_claims.empty()) {
+        g_claims.pop_back();
+    }
 }
 
 bool HookManager::Hook(void* target, void* detour, void** original) {
@@ -111,11 +134,7 @@ bool HookManager::Hook(void* target, void* detour, void** original) {
     }
 
     *original = hook->original<void*>();
-
-    const auto start = reinterpret_cast<uintptr_t>(target);
-    const uintptr_t end = start + hook->original_bytes().size();
-    g_claims.push_back({start, end, caller, std::move(*hook)});
-    Log::Write(caller, "Hook installed");
+    Record(caller, target, std::move(*hook), "Hook installed");
     return true;
 }
 
@@ -131,10 +150,7 @@ bool HookManager::MidHook(void* target, FCSE_MidHookHandler handler) {
         return false;
     }
 
-    const auto start = reinterpret_cast<uintptr_t>(target);
-    const uintptr_t end = start + hook->original_bytes().size();
-    g_claims.push_back({start, end, caller, std::move(*hook)});
-    Log::Write(caller, "Mid-hook installed");
+    Record(caller, target, std::move(*hook), "Mid-hook installed");
     return true;
 }
 

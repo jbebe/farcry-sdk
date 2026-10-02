@@ -184,8 +184,8 @@ set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc"
                                             "${FCSE_ADDRLIB}")
 
 # The sources that mean something without a live Dunia.dll: config file, address-library decode,
-# build identification, logging, pattern matching, settings. Split out as a library so the test
-# targets link the same objects the loader does instead of recompiling them from ../src.
+# build identification, logging, pattern matching, settings, hooks. Split out as a library so the
+# test targets link the same objects the loader does instead of recompiling them from ../src.
 add_library(fcse_core STATIC
   "src/log.cpp"
   "src/log.h"
@@ -202,6 +202,8 @@ add_library(fcse_core STATIC
   "src/engine/address_symbols.h"
   "src/engine/dunia_api.cpp"
   "src/engine/dunia_api.h"
+  "src/api/hook.cpp"
+  "src/api/hook.h"
   "src/api/pattern_scan.cpp"
   "src/api/pattern_scan.h"
   "src/api/settings_registry.cpp"
@@ -227,6 +229,9 @@ if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET fcse_core PROPERTY CXX_STANDARD 20)
 endif()
 
+# PRIVATE, so the C++23 that safetyhook's headers need stops here: the tests only link it.
+target_link_libraries(fcse_core PRIVATE safetyhook)
+
 # Grouped by what a file talks to: engine/ reaches into the running game, api/ is what plugins and
 # Lua scripts both call, ui/ is FCSE's own settings page, lua/ is the script host. What is left at
 # the top of src/ is the loader entry point and the utilities every group uses.
@@ -247,8 +252,6 @@ add_executable(FCSE WIN32
   "src/api/plugin_loader.h"
   "src/api/function_registry.cpp"
   "src/api/function_registry.h"
-  "src/api/hook.cpp"
-  "src/api/hook.h"
   "src/api/patch.cpp"
   "src/api/patch.h"
   "src/ui/engine_page_abi.h"

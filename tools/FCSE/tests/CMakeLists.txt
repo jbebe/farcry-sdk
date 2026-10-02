@@ -110,6 +110,19 @@ endif()
 
 gtest_discover_tests(page_window_tests)
 
+# The hook manager, with real safetyhook hooks on code the test assembles in its own process. A
+# wrong claim rule or teardown order otherwise only shows up as a crash in someone's game.
+add_executable(hook_tests
+  "hook_tests.cpp"
+)
+target_link_libraries(hook_tests PRIVATE fcse_core GTest::gtest_main)
+
+if (CMAKE_VERSION VERSION_GREATER 3.12)
+  set_property(TARGET hook_tests PROPERTY CXX_STANDARD 20)
+endif()
+
+gtest_discover_tests(hook_tests)
+
 # Runs the real src/lua/runtime/fcse.lua against a stubbed native table, in the very interpreter
 # this build produced - so the dialect, the FFI behaviour and the runtime under test are all the
 # ones that will ship, not an approximation of them. Not wrapped in GoogleTest: the thing under test
