@@ -5,6 +5,7 @@
 // EnableFrontHeadlights uses, read out of its instructions.
 #include "engine/light.h"
 
+#include "engine/memory.h"
 #include "fcse_api.h"
 
 #include <algorithm>
@@ -65,24 +66,6 @@ namespace {
 
     Handle g_handle{-1, -1};
 
-    template <typename T>
-    T CallTarget(const uint8_t* call) {
-        return reinterpret_cast<T>(call + 5 + *reinterpret_cast<const int32_t*>(call + 1));
-    }
-
-    template <typename T>
-    T& Field(uint8_t* object, ptrdiff_t offset) {
-        return *reinterpret_cast<T*>(object + offset);
-    }
-
-    void SetVec3(uint8_t* object, ptrdiff_t offset, const float* value) {
-        std::copy_n(value, 3, &Field<float>(object, offset));
-    }
-
-    const float* Vec3(const uint8_t* object, ptrdiff_t offset) {
-        return reinterpret_cast<const float*>(object + offset);
-    }
-
     // The light, writable: ModifyOriginal also marks it for the renderer to pick up.
     uint8_t* Writable() { return g_modify(g_container, &g_handle, true); }
 }
@@ -124,17 +107,18 @@ void SetEnabled(bool enabled) {
     }
 }
 
-bool Place(void* player, float intensity, float above, float right, Pose& pose) {
+std::optional<Pose> Place(void* player, float intensity, float above, float right) {
     uint8_t* scene = Field<uint8_t*>(static_cast<uint8_t*>(player), kPlayerScene);
     void* camera = scene != nullptr ? g_activeCamera(scene + kSceneCameraManager) : nullptr;
     const uint8_t* view = camera != nullptr ? g_renderCamera(camera) : nullptr;
     if (view == nullptr) {
-        return false;
+        return std::nullopt;
     }
 
     const float* eye = Vec3(view, kCameraPosition);
     const float* up = Vec3(view, kCameraUp);
     const float* side = Vec3(view, kCameraRight);
+    Pose pose;
     for (int axis = 0; axis < 3; ++axis) {
         pose.position[axis] = eye[axis] + up[axis] * above + side[axis] * right;
     }
@@ -145,7 +129,7 @@ bool Place(void* player, float intensity, float above, float right, Pose& pose) 
     SetVec3(light, kPosition, pose.position);
     SetVec3(light, kDirection, pose.direction);
     SetVec3(light, kUp, up);
-    return true;
+    return pose;
 }
 
 void Destroy() {

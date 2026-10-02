@@ -2,6 +2,8 @@
 // the camera it is placed from.
 #pragma once
 
+#include <optional>
+
 namespace Flashlight::Light {
 
 struct Spot {
@@ -27,9 +29,9 @@ struct Pose {
 };
 
 // Places the light at the player's camera, `above` and `right` of the eye in metres, aimed where
-// the camera looks, at `intensity`, and returns where. Leaves it where it was, and returns false,
+// the camera looks, at `intensity`, and returns where. Leaves it where it was, and returns nothing,
 // when there is no camera to read.
-bool Place(void* player, float intensity, float above, float right, Pose& pose);
+std::optional<Pose> Place(void* player, float intensity, float above, float right);
 
 // The light belongs to the world it was made in; call this when that world goes.
 void Destroy();

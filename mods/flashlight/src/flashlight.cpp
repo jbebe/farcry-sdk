@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <iterator>
 #include <numbers>
+#include <optional>
 
 namespace {
     constexpr uint32_t kToggleSignal = Flashlight::Crc32("toggle_flashlight");
@@ -163,23 +164,22 @@ namespace {
                 g_litFor = 0.0f;
             }
             Flashlight::Light::SetEnabled(g_on);
-            if (!g_on) {
-                Flashlight::Sight::Clear();
-            }
         }
 
         if (g_reconfigure.exchange(false) && g_on) {
             Flashlight::Light::Configure(CurrentSpot());
         }
 
+        std::optional<Flashlight::Light::Pose> pose;
         if (g_on) {
             g_litFor = std::min(g_litFor + seconds, kFadeIn);
             const float t = g_litFor / kFadeIn;
-            Flashlight::Light::Pose pose;
-            if (Flashlight::Light::Place(player, kIntensity * (1.0f - (1.0f - t) * (1.0f - t)), kAbove, kRight, pose)) {
-                const Flashlight::Light::Spot spot = CurrentSpot();
-                Flashlight::Sight::SetBeam(pose.position, pose.direction, spot.range, spot.outerAngle);
-            }
+            pose = Flashlight::Light::Place(player, kIntensity * (1.0f - (1.0f - t) * (1.0f - t)), kAbove, kRight);
+        }
+        if (pose) {
+            Flashlight::Sight::SetBeam(*pose, CurrentSpot());
+        } else {
+            Flashlight::Sight::Clear();
         }
     }
 
