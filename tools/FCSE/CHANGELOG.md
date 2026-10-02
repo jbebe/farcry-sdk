@@ -2,7 +2,7 @@
 
 Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.3.0] - 2026-10-02
 
 ### Changed
 - **Mods can hook the same function.** A second plugin or script hooking an address another one
