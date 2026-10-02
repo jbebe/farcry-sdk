@@ -1,0 +1,9 @@
+<Category name="CATEGORY_MISC">
+	<Control name="heal" key1="kb:h" actionmap="common_heal_remap" group="1" conflictmask="12" />
+	<Control name="grenade" key1="kb:q" actionmap="common_grenade_remap" group="1" conflictmask="12" />
+	<Control name="nextthrowablegadget" key1="kb:f" actionmap="common_grenade_remap" group="1" conflictmask="12" />
+	<Control name="quicksave" key1="kb:f5" actionmap="quicksaveload_remap" group="3" conflictmask="3" />
+	<Control name="quickload" key1="kb:f9" actionmap="quicksaveload_remap" group="3" conflictmask="3" />
+	<Control name="toggle_recording" key1="kb:numpad8" actionmap="common_system_remap" group="-1" conflictmask="-1" />
+	<Control name="toggle_flashlight" key1="kb:l" actionmap="common_flashlight_remap" group="1" conflictmask="12" />
+</Category>

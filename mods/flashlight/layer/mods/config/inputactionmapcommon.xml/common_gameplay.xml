@@ -1,0 +1,30 @@
+<ActionMap name="common_gameplay">
+	<Import actionmap="common_gameplay_remap" optional="" />
+	<import actionmap="common_use_remap" optional="" />
+	<import actionmap="common_heal_remap" optional="" />
+	<import actionmap="common_jump_remap" optional="" />
+	<import actionmap="common_crouch_remap" optional="" />
+	<import actionmap="common_grenade_remap" optional="" />
+	<import actionmap="common_flashlight_remap" optional="" />
+	<!--Keyboard-->
+	<Binding input="kb:space" action="press" signal="jump" />
+	<Binding input="kb:c" action="press" signal="crouch" />
+	<Binding input="kb:e" action="press" signal="use" />
+	<Binding input="kb:h" action="press" signal="heal" />
+	<Binding input="kb:q" action="press" signal="throw_grenade" />
+	<Binding input="kb:f" action="press" signal="select_next_throw_gadget" />
+	<Binding input="kb:l" action="press" signal="toggle_flashlight" />
+	<!--Demo keys-->
+	<Binding input="kb:^" action="press" signal="start_rain_demo" />
+	<Binding input="kb:&amp;" action="press" signal="stop_rain_demo" />
+	<Binding input="kb:*" action="press" signal="start_time_demo" />
+	<Binding input="kb:(" action="press" signal="start_storm_demo" />
+	<Binding input="kb:)" action="press" signal="stop_storm_demo" />
+	<!--Gamepad-->
+	<Binding input="pad:a" action="press" signal="jump" />
+	<Binding input="pad:y" action="press" signal="use" />
+	<Binding input="pad:b" action="press" signal="crouch" />
+	<Binding input="pad:left_shoulder" action="press" signal="heal" />
+	<Binding input="pad:right_shoulder" action="press" signal="throw_grenade" />
+	<Binding input="pad:right_thumb_push" action="press" signal="select_next_throw_gadget" />
+</ActionMap>
