@@ -124,27 +124,28 @@ void SetEnabled(bool enabled) {
     }
 }
 
-void Place(void* player, float intensity, float above, float right) {
+bool Place(void* player, float intensity, float above, float right, Pose& pose) {
     uint8_t* scene = Field<uint8_t*>(static_cast<uint8_t*>(player), kPlayerScene);
     void* camera = scene != nullptr ? g_activeCamera(scene + kSceneCameraManager) : nullptr;
     const uint8_t* view = camera != nullptr ? g_renderCamera(camera) : nullptr;
     if (view == nullptr) {
-        return;
+        return false;
     }
 
     const float* eye = Vec3(view, kCameraPosition);
     const float* up = Vec3(view, kCameraUp);
     const float* side = Vec3(view, kCameraRight);
-    float position[3];
     for (int axis = 0; axis < 3; ++axis) {
-        position[axis] = eye[axis] + up[axis] * above + side[axis] * right;
+        pose.position[axis] = eye[axis] + up[axis] * above + side[axis] * right;
     }
+    std::copy_n(Vec3(view, kCameraFront), 3, pose.direction);
 
     uint8_t* light = Writable();
     Field<float>(light, kIntensity) = intensity;
-    SetVec3(light, kPosition, position);
-    SetVec3(light, kDirection, Vec3(view, kCameraFront));
+    SetVec3(light, kPosition, pose.position);
+    SetVec3(light, kDirection, pose.direction);
     SetVec3(light, kUp, up);
+    return true;
 }
 
 void Destroy() {

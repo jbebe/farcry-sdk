@@ -21,9 +21,15 @@ void Configure(const Spot& spot);
 
 void SetEnabled(bool enabled);
 
+struct Pose {
+    float position[3];
+    float direction[3];
+};
+
 // Places the light at the player's camera, `above` and `right` of the eye in metres, aimed where
-// the camera looks, at `intensity`. Leaves it where it was when there is no camera to read.
-void Place(void* player, float intensity, float above, float right);
+// the camera looks, at `intensity`, and returns where. Leaves it where it was, and returns false,
+// when there is no camera to read.
+bool Place(void* player, float intensity, float above, float right, Pose& pose);
 
 // The light belongs to the world it was made in; call this when that world goes.
 void Destroy();

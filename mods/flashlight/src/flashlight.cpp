@@ -11,6 +11,7 @@
 #include "engine/input.h"
 #include "engine/light.h"
 #include "engine/player.h"
+#include "engine/sight.h"
 #include "engine/sound.h"
 
 #include <algorithm>
@@ -99,6 +100,7 @@ namespace {
 
     void Forget() {
         Flashlight::Light::Destroy();
+        Flashlight::Sight::Clear();
         g_on = false;
         g_wanted = false;
         g_switchIn = kNever;
@@ -161,6 +163,9 @@ namespace {
                 g_litFor = 0.0f;
             }
             Flashlight::Light::SetEnabled(g_on);
+            if (!g_on) {
+                Flashlight::Sight::Clear();
+            }
         }
 
         if (g_reconfigure.exchange(false) && g_on) {
@@ -170,7 +175,11 @@ namespace {
         if (g_on) {
             g_litFor = std::min(g_litFor + seconds, kFadeIn);
             const float t = g_litFor / kFadeIn;
-            Flashlight::Light::Place(player, kIntensity * (1.0f - (1.0f - t) * (1.0f - t)), kAbove, kRight);
+            Flashlight::Light::Pose pose;
+            if (Flashlight::Light::Place(player, kIntensity * (1.0f - (1.0f - t) * (1.0f - t)), kAbove, kRight, pose)) {
+                const Flashlight::Light::Spot spot = CurrentSpot();
+                Flashlight::Sight::SetBeam(pose.position, pose.direction, spot.range, spot.outerAngle);
+            }
         }
     }
 
@@ -189,6 +198,7 @@ bool Install() {
     }
     Sound::Install();
     Hud::Install();
+    Sight::Install();
     return Frame::Install(&Tick) && Input::Install(&OnSignal);
 }
 
