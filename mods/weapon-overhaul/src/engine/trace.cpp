@@ -1,5 +1,6 @@
 #include "engine/trace.h"
 
+#include "blur.h"
 #include "engine/aim.h"
 #include "engine/com.h"
 #include "engine/frame.h"
@@ -111,10 +112,13 @@ void WeaponOverhaul::Trace::Pass(IDirect3DDevice9* device, bool composite, bool 
         g_recording = false;
         WeaponDraws::Depth depth = {};
         const bool found = WeaponDraws::Latest(depth);
+        float metres[2] = {};
+        const bool focused = Blur::ReadFocus(device, metres);
         FCSE::Logf("trace frame %u ends: colour pass %u, gun depth %s, vertical scale %.3f, "
-                   "depth offset %.4f",
+                   "depth offset %.4f, focus %s %.3f m, nearest under the aim point %.3f m",
                    g_frames, WeaponDraws::ColourPass(), found ? "drawn" : "missing",
-                   depth.verticalScale, depth.depthOffset);
+                   depth.verticalScale, depth.depthOffset, focused ? "read" : "unread", metres[0],
+                   metres[1]);
         return;
     }
     const DWORD now = GetTickCount();

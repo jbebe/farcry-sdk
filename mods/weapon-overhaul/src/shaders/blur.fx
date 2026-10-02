@@ -4,42 +4,52 @@
 // x: turns a difference in the weapon's stored depth into its blur, as a share of the largest.
 // y: how far the eye has settled into the sights.
 float4 Lens : register(c0);
-// xy: how far around the screen's centre the front sight is looked for, in texture coordinates.
-float4 Focus : register(c1);
 // xy: the blur's step along its axis, in texture coordinates.
-float4 Step : register(c2);
+float4 Step : register(c1);
+// x: how far the focus moves toward this frame's in one frame.
+float4 Settle : register(c2);
+// xy: one half-resolution texel.
+float4 Texel : register(c3);
 
 // The scene as the pass left it, or the half-resolution image being blurred.
 sampler2D Source : register(s0);
-// The half-resolution scene blurred, its alpha the blur amount blurred with it.
-sampler2D Blurred : register(s1);
-// The half-resolution scene, its alpha the blur amount.
-sampler2D Down : register(s2);
+// The gun's half-resolution colour blurred a little and a lot, premultiplied by its blur amount.
+sampler2D Small : register(s1);
+sampler2D Large : register(s2);
 // The weapon's hardware depth at half resolution, one where the weapon is not.
 sampler2D WeaponDepth : register(s3);
+// The gun's half-resolution colour premultiplied by its blur amount, which is its alpha.
+sampler2D Down : register(s4);
+// x: the stored depth focused on, nought before there is one. y: the nearest of the gun under the
+// aim point.
+sampler2D Focus : register(s5);
 
-// The farthest of the gun around the aim point, which is the front sight beyond the rear one; one
-// where the gun is not there at all.
-float FocusDepth() {
-    static const float2 kTaps[13] = {
-        float2(0.0f, 0.0f),
-        float2(1.0f, 0.0f), float2(0.5f, 0.866f), float2(-0.5f, 0.866f),
-        float2(-1.0f, 0.0f), float2(-0.5f, -0.866f), float2(0.5f, -0.866f),
-        float2(0.433f, 0.25f), float2(0.0f, 0.5f), float2(-0.433f, 0.25f),
-        float2(-0.433f, -0.25f), float2(0.0f, -0.5f), float2(0.433f, -0.25f),
-    };
-    float focus = 0.0f;
-    for (int i = 0; i < 13; i++) {
-        float stored = tex2D(WeaponDepth, 0.5f + kTaps[i] * Focus.xy).r;
-        focus = stored < 1.0f ? max(focus, stored) : focus;
+static const float2 kCentre = float2(0.5f, 0.5f);
+
+// The farthest of the gun on the front sight's line, just below the aim point, which is the front
+// sight beyond the rear one. The eye eases toward it, and keeps its focus while the gun is not there.
+float4 FocusPS(float2 uv : TEXCOORD0) : COLOR0 {
+    float farthest = 0.0f;
+    float nearest = 1.0f;
+    for (int x = -2; x <= 2; x++) {
+        for (int y = 0; y < 5; y++) {
+            float stored = tex2D(WeaponDepth, kCentre + float2(x * 3.0f, 1.0f + y * 4.0f) * Texel.xy).r;
+            farthest = stored < 1.0f ? max(farthest, stored) : farthest;
+            nearest = min(nearest, stored);
+        }
     }
-    return focus > 0.0f ? focus : 1.0f;
+    float2 previous = tex2D(Focus, kCentre).xy;
+    float eased = previous.x > 0.0f ? lerp(previous.x, farthest, Settle.x) : farthest;
+    return float4(farthest > 0.0f ? eased : previous.x, nearest < 1.0f ? nearest : previous.y,
+                  0.0f, 1.0f);
 }
 
 float4 DownPS(float2 uv : TEXCOORD0) : COLOR0 {
     float stored = tex2D(WeaponDepth, uv).r;
-    float amount = stored < 1.0f ? saturate(Lens.x * abs(stored - FocusDepth())) : 0.0f;
-    return float4(tex2D(Source, uv).rgb, amount);
+    float focus = tex2D(Focus, kCentre).x;
+    float amount = stored < 1.0f ? saturate(Lens.x * abs(stored - (focus > 0.0f ? focus : 1.0f)))
+                                 : 0.0f;
+    return float4(tex2D(Source, uv).rgb * amount, amount);
 }
 
 float4 BlurPS(float2 uv : TEXCOORD0) : COLOR0 {
@@ -53,11 +63,21 @@ float4 BlurPS(float2 uv : TEXCOORD0) : COLOR0 {
 }
 
 float4 CompositePS(float2 uv : TEXCOORD0) : COLOR0 {
-    float4 blurred = tex2D(Blurred, uv);
-    // The gun keeps its own amount, so a sharp front sight stays sharp beside a blurred rear one;
-    // past the gun's edge the blur spreads over what is behind it.
-    float amount = tex2D(WeaponDepth, uv).r < 1.0f ? tex2D(Down, uv).a : saturate(2.0f * blurred.a);
-    amount = smoothstep(0.0f, 1.0f, amount) * Lens.y;
-    clip(amount - 1.0f / 256.0f);
-    return float4(lerp(tex2D(Source, uv).rgb, blurred.rgb, amount), 1.0f);
+    float3 sharp = tex2D(Source, uv).rgb;
+    float4 small = tex2D(Small, uv);
+    float4 large = tex2D(Large, uv);
+    float3 smallColour = small.rgb / max(small.a, 0.0001f);
+    float3 largeColour = large.rgb / max(large.a, 0.0001f);
+
+    // The gun goes from sharp through a little blur to a lot by its own amount, from its own colour
+    // alone; past its edge, its largest blur spreads over what is behind it.
+    float own = tex2D(Down, uv).a;
+    float3 gun = own < 0.5f ? lerp(sharp, smallColour, own * 2.0f)
+                            : lerp(smallColour, largeColour, own * 2.0f - 1.0f);
+    float spread = saturate(2.0f * large.a);
+    bool onGun = tex2D(WeaponDepth, uv).r < 1.0f;
+    float3 blurred = onGun ? gun : lerp(sharp, largeColour, spread);
+
+    clip((onGun ? own : spread) * Lens.y - 1.0f / 256.0f);
+    return float4(lerp(sharp, blurred, Lens.y), 1.0f);
 }

@@ -30,7 +30,7 @@ public:
 
 private:
     static constexpr UINT kMaxConstantRegisters = 8;
-    static constexpr DWORD kSamplers = 4;
+    static constexpr DWORD kSamplers = 6;
 
     static constexpr D3DRENDERSTATETYPE kRenderStates[] = {
         D3DRS_ZENABLE,         D3DRS_ZWRITEENABLE,      D3DRS_ZFUNC,

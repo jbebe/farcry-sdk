@@ -22,6 +22,7 @@ endif()
 
 # source file : entry point : profile : generated header : array name.
 set(SHADER_PASSES
+  "blur.fx:FocusPS:ps_2_b:blur_focus_ps.h:g_blurFocusPixelShader"
   "blur.fx:DownPS:ps_2_b:blur_down_ps.h:g_blurDownPixelShader"
   "blur.fx:BlurPS:ps_2_b:blur_blur_ps.h:g_blurPixelShader"
   "blur.fx:CompositePS:ps_2_b:blur_composite_ps.h:g_blurCompositePixelShader")
