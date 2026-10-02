@@ -2,8 +2,7 @@
 // passes.
 
 // x: turns a difference in the weapon's stored depth into its blur, as a share of the largest.
-// y: how far the eye has settled into the sights. z: the least blur the rear sight is given, and w:
-// the most a gun's blur is scaled up to give it that.
+// y: how far the eye has settled into the sights.
 float4 Lens : register(c0);
 // xy: the blur's step along its axis, in texture coordinates.
 float4 Step : register(c1);
@@ -40,19 +39,16 @@ float4 FocusPS(float2 uv : TEXCOORD0) : COLOR0 {
         }
     }
     float2 previous = tex2D(Focus, kCentre).xy;
-    float2 found = float2(farthest, nearest);
-    float2 eased = previous.x > 0.0f ? lerp(previous, found, Settle.x) : found;
-    return float4(farthest > 0.0f ? eased : previous, 0.0f, 1.0f);
+    float eased = previous.x > 0.0f ? lerp(previous.x, farthest, Settle.x) : farthest;
+    return float4(farthest > 0.0f ? eased : previous.x, nearest < 1.0f ? nearest : previous.y,
+                  0.0f, 1.0f);
 }
 
 float4 DownPS(float2 uv : TEXCOORD0) : COLOR0 {
     float stored = tex2D(WeaponDepth, uv).r;
-    float2 focus = tex2D(Focus, kCentre).xy;
-    focus.x = focus.x > 0.0f ? focus.x : 1.0f;
-    // A gun held far from the eye has its sights close together in dioptres, and little blur.
-    float rear = Lens.x * abs(focus.y - focus.x);
-    float boost = clamp(Lens.z / max(rear, 0.0001f), 1.0f, Lens.w);
-    float amount = stored < 1.0f ? saturate(Lens.x * abs(stored - focus.x) * boost) : 0.0f;
+    float focus = tex2D(Focus, kCentre).x;
+    float amount = stored < 1.0f ? saturate(Lens.x * abs(stored - (focus > 0.0f ? focus : 1.0f)))
+                                 : 0.0f;
     return float4(tex2D(Source, uv).rgb * amount, amount);
 }
 
