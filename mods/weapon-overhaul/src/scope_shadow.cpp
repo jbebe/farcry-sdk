@@ -127,10 +127,10 @@ namespace {
         const float width = static_cast<float>(WeaponOverhaul::Frame::Width());
         const float height = static_cast<float>(WeaponOverhaul::Frame::Height());
         const WeaponOverhaul::Aim::Offset drift = WeaponOverhaul::Aim::Drift();
-        // The eye drifting right leaves the right of the lens dark, which is the clear part moving
-        // left; up, the top, and the clear part moving down the screen.
+        // The rifle turning right carries the eyepiece right of the eye, which leaves the left of
+        // the lens dark: the clear part moves with the turn, up the screen as it turns up.
         const float constants[kConstantCount * 4] = {
-            -drift.right * kShiftPerMetre, drift.up * kShiftPerMetre, scoped, width / height,
+            drift.right * kShiftPerMetre, -drift.up * kShiftPerMetre, scoped, width / height,
             kNearest, (kFarthest - kNearest) / kSteps, height / width, Follow(),
             kSoftEdge, kDarkness, kSmallestLens, 0.0f,
         };

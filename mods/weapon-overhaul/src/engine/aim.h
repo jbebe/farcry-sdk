@@ -12,8 +12,9 @@ struct Offset {
 // The hand's drift this frame, given the seconds since the last.
 using DriftFn = Offset (*)(float seconds);
 
-// Hooks the first-person camera; `drift` then runs once a frame, and down the iron sights the eye
-// follows it. False, and logged, when the camera cannot be hooked.
+// Hooks the first-person camera and the look; `drift` then runs once a frame. Down the iron sights
+// the eye follows it, and through a scope the aim turns with it. False, and logged, when the
+// camera cannot be hooked.
 bool Install(DriftFn drift);
 
 // How far the eye has settled into the iron sights, and into a scope's own sight picture, eased

@@ -9,9 +9,10 @@ Traced in `FarCry2_server` (symbols) and mapped into `Dunia.dll` (Steam v1.03). 
 binary named are Steam `Dunia.dll`. FCSE's address library maps every one of them to GOG.
 :::
 
-:::warning[Not yet tested in a running game]
-Whether moving the eye this way moves it relative to the gun, rather than the gun along with it, is
-the first thing Weapon Overhaul's sway shows.
+:::info[Verified in a running game]
+Moving the eye through the camera's positional offset moves it relative to the gun, not the gun
+along with it: down a G3's iron sights, the rear sight moves further than the front one. Measured
+with Weapon Overhaul's sway on retail GOG v1.03.
 :::
 
 ## Down the sights
@@ -62,6 +63,30 @@ The retail Lua bindings `Game:SetFPCameraOffsetX/Y/Z` (`0x1070C2E0` for X) set o
 `CameraOffset`, or of its `CameraOffsetIronsight` while down the sights. Both go through `0x1070C210`, which returns the player's camera component. They
 are reachable with the console's `#` escape, for example `#Game:SetFPCameraOffsetX(0.01)` (see
 [the developer console](./developer-console.md#--the-lua-escape)).
+
+## The look
+
+The camera's look angle and the direction a first-person shot leaves in both come from part 0 of
+the pawn's body: `CPawnBody::GetBodyPartRot` (server `0x08FD2B80`) is the entity's orientation times
+one skeleton node's rotation.
+
+`CPawnInputListener::UpdateLook` (`0x10143C40`, server `0x08FDE5C0`, `__thiscall`) builds the look
+anew every frame. It runs from the listener's `Update` unless the pawn is in a vehicle, and sets the
+desired look to the effective look plus the mouse axes times the frame time. The listener's pawn is
+at `+0x20`.
+
+The desired data is `*(pawn + 0x10) + 0x140` (`0x1007E1B0`). It holds the look in radians:
+
+| Field | Offset in the desired data |
+|---|---|
+| pitch, up positive | `+0x38`, again at `+0x44` |
+| roll | `+0x3C`, again at `+0x48` |
+| yaw, left positive | `+0x40`, again at `+0x4C` |
+
+:::warning[Not yet tested in a running game]
+Adding to the desired look after `UpdateLook` should move the view, the gun's aim and where shots go
+together, since all three follow it. Weapon Overhaul's scope sway is the first thing to do it.
+:::
 
 ## The first-person body
 
