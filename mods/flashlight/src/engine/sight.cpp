@@ -33,10 +33,10 @@ namespace {
     // The game timer's clock, in seconds.
     constexpr ptrdiff_t kTimerNow = 0x30;
 
-    // AdjustFOV's frame at the hook: whether its target is a player, and the target it was handed.
+    // AdjustFOV's frame at the hook: whether its target is a player, and the target agent, its first
+    // argument. The second argument's slot holds scratch values by then.
     constexpr ptrdiff_t kTargetIsPlayer = 0x0E;
-    constexpr ptrdiff_t kVisualTarget = 0x28;
-    constexpr ptrdiff_t kTargetAgent = 0x08;
+    constexpr ptrdiff_t kTarget = 0x24;
 
     // CVisibilityContext: the cones being set, and the guard's head.
     constexpr ptrdiff_t kCones = 0x04;
@@ -88,7 +88,7 @@ namespace {
             return;
         }
 
-        uint8_t* player = Field<uint8_t*>(Field<uint8_t*>(frame, kVisualTarget), kTargetAgent);
+        uint8_t* player = Field<uint8_t*>(frame, kTarget);
         Field<float>(player, g_flashTime) = static_cast<float>(Field<double>(*g_timer, kTimerNow));
 
         auto* context = reinterpret_cast<uint8_t*>(ctx->esi);
