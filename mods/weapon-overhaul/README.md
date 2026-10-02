@@ -1,7 +1,7 @@
 # Weapon Overhaul
 
-An FCSE plugin for how aiming down the sights looks. Unfinished: the sway and the gun blur are in,
-the scope effects are not.
+An FCSE plugin for how aiming down the sights looks. Unfinished: the sway, the gun blur and the
+scope shadow are in, a picture-in-picture scope is not.
 
 ## What it does
 
@@ -13,12 +13,18 @@ the scope effects are not.
   miniature right at the eye.
 - **Gun blur.** Down the iron sights the eye focuses on the front sight, and the rest of the gun
   goes out of focus by how far it is from it, as through a 4 mm pupil: the rear sight most, and the
-  blur spills a little past the gun's edge. It fades in as the eye settles into the sights.
+  blur spills a little past the gun's edge. It fades in as the eye settles into the sights. A gun
+  held far from the eye, like a pistol, has its sights too close together in dioptres for a blur
+  you could see, and gets none, as a real eye nearly does.
+- **Scope shadow.** Through a scope, the hand's drift takes the eye off the scope's axis, and a dark
+  crescent comes in from the lens's rim on the side the eye moved to. The lens is found on screen as
+  the hole the scope's housing leaves in the gun's depth, so it fits every scope.
 
 The eye is moved through the camera's positional offset, the one the recoil kicks, in
 `src/engine/aim.cpp`. The blur draws the gun's own depth pass a second time into a depth texture of
-its own, in `src/engine/weapon_draws.cpp`, and blurs at the end of the pass the gun's colour is drawn
-in, before the bloom, in `src/blur.cpp`. The engine side is in
+its own, in `src/engine/weapon_draws.cpp`, and the blur and the scope shadow draw at the end of the
+pass the gun's colour is drawn in, before the bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
+The engine side is in
 [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md).
 
 ## Requirements
@@ -34,6 +40,7 @@ On the plugin's page in the Mod Configuration Menu, stored under `[WeaponOverhau
 |---|---|---|
 | Sway | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
+| Scope shadow | Yes / No | Yes |
 
 ## Building
 

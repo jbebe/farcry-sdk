@@ -25,7 +25,10 @@ set(SHADER_PASSES
   "blur.fx:FocusPS:ps_2_b:blur_focus_ps.h:g_blurFocusPixelShader"
   "blur.fx:DownPS:ps_2_b:blur_down_ps.h:g_blurDownPixelShader"
   "blur.fx:BlurPS:ps_2_b:blur_blur_ps.h:g_blurPixelShader"
-  "blur.fx:CompositePS:ps_2_b:blur_composite_ps.h:g_blurCompositePixelShader")
+  "blur.fx:CompositePS:ps_2_b:blur_composite_ps.h:g_blurCompositePixelShader"
+  "scope.fx:RadiusPS:ps_2_b:scope_radius_ps.h:g_scopeRadiusPixelShader"
+  "scope.fx:LensPS:ps_2_b:scope_lens_ps.h:g_scopeLensPixelShader"
+  "scope.fx:ShadowPS:ps_2_b:scope_shadow_ps.h:g_scopeShadowPixelShader")
 
 set(SHADER_HEADERS "")
 foreach(PASS IN LISTS SHADER_PASSES)
@@ -51,6 +54,7 @@ endforeach()
 add_library(WeaponOverhaul SHARED
   "src/main.cpp"
   "src/blur.cpp"
+  "src/scope_shadow.cpp"
   "src/sway.cpp"
   "src/engine/aim.cpp"
   "src/engine/device_reset.cpp"
