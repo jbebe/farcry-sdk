@@ -78,7 +78,7 @@ void Install(ReportFn onReport) {
     }
 
     // The report first: a frame counted with no report to end it is never saved, and costs nothing.
-    // A rejected hook is already logged by FCSE, naming the plugin that owns the address.
+    // A rejected hook is already logged by FCSE.
     if (!api->Hook(reinterpret_cast<void*>(g_save.address()), reinterpret_cast<void*>(&SaveDetour),
                    reinterpret_cast<void**>(&g_originalSave)) ||
         !api->Hook(reinterpret_cast<void*>(g_update.address()),

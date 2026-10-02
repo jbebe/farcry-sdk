@@ -1,9 +1,9 @@
 // Which device is actually in the player's hands.
 //
 // The action map has lost that by the time it reaches gameplay, so the raw drivers are watched
-// instead. Vibration, the aim and sprint toggles, aim assist and look sensitivity all need it, and
-// only this file may hook the input drivers - FCSE gives a site to one claimant, so a second file
-// pattern-matching the same driver would silently lose whichever installed later.
+// instead. Vibration, the aim and sprint toggles, aim assist and look sensitivity all ask this one
+// file, so they share one answer. Its patterns start at the entries it hooks, and FCSE matches
+// patterns against live code, so a second file matching the same driver would find a hook's jump.
 #pragma once
 
 namespace UFCP {

@@ -1,8 +1,7 @@
 // The engine's frame, as somewhere to run code.
 //
 // CCryEngine::Update is the body of one frame; which function that is and why it is the right seam
-// is in docs/docs/engine-internals/developer-console.md. FCSE's Lua tick hooks CXGame::Update one
-// level above, so the two never contend for an address.
+// is in docs/docs/engine-internals/developer-console.md.
 #include "engine/game_thread.h"
 
 #include "fcse_api.h"
@@ -66,7 +65,7 @@ bool Install() {
         return false;
     }
 
-    // A rejected hook is already logged by FCSE, naming the plugin that owns the address.
+    // A rejected hook is already logged by FCSE.
     if (!api->Hook(reinterpret_cast<void*>(g_update.address()),
                    reinterpret_cast<void*>(&UpdateDetour),
                    reinterpret_cast<void**>(&g_originalUpdate))) {

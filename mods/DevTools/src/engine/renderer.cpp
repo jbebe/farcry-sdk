@@ -124,8 +124,8 @@ bool Install(DrawFn draw, FrameFn onFrame, DeviceLostFn onDeviceLost) {
         return false;
     }
 
-    // A rejected hook is already logged by FCSE, naming the plugin that owns the address. Reset
-    // first: Present is what starts drawing, and drawing without Reset is what breaks the game.
+    // A rejected hook is already logged by FCSE. Reset first: Present is what starts drawing, and
+    // drawing without Reset is what breaks the game.
     if (!api->Hook(reset, reinterpret_cast<void*>(&ResetDetour),
                    reinterpret_cast<void**>(&g_originalReset)) ||
         !api->Hook(present, reinterpret_cast<void*>(&PresentDetour),

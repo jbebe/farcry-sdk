@@ -348,7 +348,7 @@ bool SkyOverhaul::DomeDraw::Install(SubstituteFn substitute) {
         api->Log("dome: no Direct3D 9 device could be created to read the vtable from");
         return false;
     }
-    // A rejected hook is already logged by FCSE, naming the plugin that owns the address.
+    // A rejected hook is already logged by FCSE.
     if (!api->Hook(draw, reinterpret_cast<void*>(&DrawIndexedPrimitiveDetour),
                    reinterpret_cast<void**>(&g_original))) {
         return false;

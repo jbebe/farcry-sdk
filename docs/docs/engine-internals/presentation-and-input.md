@@ -506,9 +506,9 @@ Slot 82 is where the sky dome is recognised, by the signature in
 [the sky and cloud system](./sky-and-clouds.md#the-domes-draw-call). The two constant setters see
 every upload of the fog colour at `c49`–`c50`.
 
-FCSE gives an address to one plugin and does not chain detours, so these six are the whole
-contention surface. Everything else on that vtable is free, including `TestCooperativeLevel`, which
-the engine calls before it resets and which is therefore a workable third release seam.
+Since FCSE 1.3.0 a second plugin hooking one of these slots stacks on the first rather than being
+turned away, so the table says who else runs there, not what is taken. `TestCooperativeLevel`, which
+the engine calls before it resets, is a workable third release seam.
 
 ## DirectInput 8, and the mouse messages that never arrive
 

@@ -52,12 +52,13 @@ tools to change engine behavior with:
    `Dunia.dll` before launch — same idea, but any number of plugins can each apply their own
    edit without agreeing on one shared pre-patched binary.
 
-**Conflicts are loud, not silent.** If two plugins target the same name/address, FCSE doesn't try
-to chain their effects together — the second claimant is rejected, and both plugins' identities are
-logged, so a real conflict is always visible and debuggable instead of turning into a
-hard-to-diagnose behavior change. Every run also writes a single `bin\fcse.log`, tagged by source
-and timestamped to 100ns resolution, so tracing exactly what happened (which plugins loaded, what
-each one claimed, what got rejected) never needs a debugger.
+**Conflicts are loud, not silent.** Two plugins hooking the same function both run, the last loaded
+first, and the log says which went ahead of which. A name or a byte edit can't be shared: there the
+second claimant is rejected and both plugins' identities are logged, so a real conflict is always
+visible and debuggable instead of turning into a hard-to-diagnose behavior change. Every run also
+writes a single `bin\fcse.log`, tagged by source and timestamped to 100ns resolution, so tracing
+exactly what happened (which plugins loaded, what each one claimed, what got rejected) never needs a
+debugger.
 
 See
 [`example_plugin.cpp`](https://github.com/jbebe/farcry-sdk/blob/main/tools/FCSE/example_plugin/example_plugin.cpp)

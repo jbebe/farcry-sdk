@@ -136,7 +136,7 @@ bool SkyOverhaul::Frame::Install(PassFn onScenePass, PassFn onFinalPass) {
         return false;
     }
 
-    // A rejected hook is already logged by FCSE, naming the plugin that owns the address.
+    // A rejected hook is already logged by FCSE.
     if (!api->Hook(endScene, reinterpret_cast<void*>(&EndSceneDetour),
                    reinterpret_cast<void**>(&g_originalEndScene))) {
         return false;
