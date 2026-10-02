@@ -1,6 +1,6 @@
 // The guards' sight of the player while the flashlight is on. Hooked where CSensorySystem::AdjustFOV
-// has set one guard's cones for one target, it keeps the player's muzzle flash fresh, and lets a
-// guard inside the beam see all around him.
+// has set one guard's cones for one target, it keeps the player's muzzle flash fresh, lets a guard
+// inside the beam see all around him, and in the dark lets one see the lamp from afar.
 #include "engine/sight.h"
 
 #include "engine/memory.h"
@@ -23,6 +23,13 @@ namespace {
     FCSE::Relocation<uint8_t*> g_conesSet{FCSE::Pattern(
         "8B 45 10 8B 80 ?? ?? ?? ?? 50 E8 ?? ?? ?? ?? 83 C4 04 84 C0 74 ?? 8B 4E 04 F3 0F 10 05 ?? ?? ?? ?? "
         "F3 0F 11 41 0C")};
+
+    // CSensorySystem::GetTimeOfDayFOVMultiplier: 1 by day, down to 1 - fNightTimeMultiplier at night.
+    using NightTermFn = float(__thiscall*)(void* sensory);
+    FCSE::Relocation<NightTermFn> g_nightTerm{FCSE::Pattern(
+        "83 EC 18 56 57 8B F9 8B 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 8B F0 8B CE E8 ?? ?? ?? ?? D9 5C 24 14 8B 0D ?? ?? "
+        "?? ?? 81 C1 E4 04 00 00")};
+    constexpr ptrdiff_t kNightTimeMultiplier = 0x40;
 
     constexpr size_t kTimerGlobal = 0x01;
     constexpr size_t kGetterCall = 0x0F;
@@ -51,6 +58,8 @@ namespace {
     // Cone length in multiples of the guard's distance: the player lands in the first quarter, which
     // every shipped archetype sees in full.
     constexpr float kReach = 4.0f;
+    // Metres from which a guard sees the lamp in his view at full night.
+    constexpr float kSeenFrom = 100.0f;
 
     struct Beam {
         Flashlight::Light::Pose pose;
@@ -78,6 +87,12 @@ namespace {
         return distance <= beam.range && along >= beam.cosHalfAngle * distance;
     }
 
+    // How dark it is for this guard: 0 by day, 1 at night.
+    float Darkness(uint8_t* sensory) {
+        const float multiplier = Field<float>(sensory, kNightTimeMultiplier);
+        return multiplier > 0.0f ? (1.0f - g_nightTerm(sensory)) / multiplier : 0.0f;
+    }
+
     void OnConesSet(FCSE_MidHookContext* ctx) {
         auto* frame = reinterpret_cast<uint8_t*>(ctx->esp);
         if (Field<uint8_t>(frame, kTargetIsPlayer) == 0) {
@@ -93,14 +108,17 @@ namespace {
 
         auto* context = reinterpret_cast<uint8_t*>(ctx->esi);
         float distance = 0.0f;
-        if (!Lit(beam, Vec3(context, kHead), distance)) {
+        const bool inBeam = Lit(beam, Vec3(context, kHead), distance);
+        if (!inBeam && distance > kSeenFrom * Darkness(reinterpret_cast<uint8_t*>(ctx->ebp))) {
             return;
         }
         uint8_t* cones = Field<uint8_t*>(context, kCones);
         for (const ptrdiff_t cone : {kFocusCone, kPeripheralCone}) {
             float& length = Field<float>(cones, cone + kConeLength);
             length = (std::max)(length, kReach * distance);
-            Field<float>(cones, cone + kConeAngle) = kAllAround;
+            if (inBeam) {
+                Field<float>(cones, cone + kConeAngle) = kAllAround;
+            }
         }
     }
 }
@@ -111,7 +129,7 @@ bool Install() {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
     const uint8_t* test = g_muzzleTest.get();
     const uint8_t* getter = test != nullptr ? CallTarget<const uint8_t*>(test + kGetterCall) : nullptr;
-    if (!g_conesSet || getter == nullptr || getter[0] != kFld || getter[1] != kEcxDisp32) {
+    if (!g_conesSet || !g_nightTerm || getter == nullptr || getter[0] != kFld || getter[1] != kEcxDisp32) {
         api->Log("sight: the guards' vision setup was not found in this build");
         return false;
     }

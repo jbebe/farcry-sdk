@@ -11,7 +11,7 @@ Notable changes to Flashlight, loosely following
 - **A real light.** The engine's own spot light, the kind the vehicles' headlights use, sits at your
   head and follows where you look. It is the headlights' warm white, reaches 25 m and casts
   shadows.
-- **Guards see it.** At night a lit flashlight lets guards see you from as far off as by day, and a
+- **Guards see it.** At night a guard looking your way sees a lit flashlight from up to 100 m, and a
   guard you shine it on within 25 m notices you even with his back turned. Switch it off and they
   lose the light about 3 seconds later.
 - **A switch click.** The click plays at once, and the light comes up just after it.
