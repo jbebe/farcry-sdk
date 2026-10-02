@@ -1,6 +1,7 @@
 #include "engine/frame.h"
 
 #include "engine/com.h"
+#include "engine/trace.h"
 #include "engine/vtable.h"
 #include "fcse_api.h"
 
@@ -46,6 +47,7 @@ namespace {
         const bool haveDepth =
             SUCCEEDED(device->GetDepthStencilSurface(&depth.surface)) && depth.surface != nullptr;
         const bool toBackBuffer = target.surface == backBuffer.surface;
+        WeaponOverhaul::Trace::Pass(device, toBackBuffer && !haveDepth, g_pastSky);
 
         // The composite is the only back-buffer pass with no depth attached; the interface after it
         // brings a depth surface of its own.

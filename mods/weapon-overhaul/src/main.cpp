@@ -3,6 +3,7 @@
 #include "engine/aim.h"
 #include "engine/device_reset.h"
 #include "engine/frame.h"
+#include "engine/trace.h"
 #include "engine/weapon_draws.h"
 #include "fcse_api.h"
 #include "sway.h"
@@ -37,6 +38,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         !WeaponOverhaul::WeaponDraws::Install()) {
         api->Log("the gun blur is off: a Direct3D seam it needs could not be hooked");
     }
+    WeaponOverhaul::Trace::Install();
 
     const FCSE_Setting settings[] = {
         {"Sway", FCSE_CHECKBOX(true), &OnSwayChanged, nullptr},

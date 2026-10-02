@@ -3,6 +3,7 @@
 #include "engine/com.h"
 #include "engine/frame.h"
 #include "engine/render_target.h"
+#include "engine/trace.h"
 #include "engine/vtable.h"
 #include "fcse_api.h"
 
@@ -45,6 +46,42 @@ namespace {
     float g_depthOffset = 0.0f;
     uint32_t g_colourFrame = kNone;
     uint32_t g_colourPass = kNone;
+
+    // The gun's parts as its depth pass drew them this frame. Its colour pass draws the same parts
+    // again, through the whole depth range, so that is how it is told from the world's draws.
+    struct Part {
+        UINT startIndex;
+        UINT primitiveCount;
+        UINT numVertices;
+    };
+    constexpr size_t kMaxParts = 64;
+    Part g_parts[kMaxParts] = {};
+    size_t g_partCount = 0;
+    uint32_t g_partsFrame = kNone;
+
+    void Remember(uint32_t frame, const Part& part) {
+        if (g_partsFrame != frame) {
+            g_partsFrame = frame;
+            g_partCount = 0;
+        }
+        if (g_partCount < kMaxParts) {
+            g_parts[g_partCount++] = part;
+        }
+    }
+
+    bool IsGunPart(uint32_t frame, const Part& part) {
+        if (g_partsFrame != frame) {
+            return false;
+        }
+        for (size_t i = 0; i < g_partCount; i++) {
+            if (g_parts[i].startIndex == part.startIndex &&
+                g_parts[i].primitiveCount == part.primitiveCount &&
+                g_parts[i].numVertices == part.numVertices) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     // What a gathered draw changes, put back after it. Every target the engine had bound comes off,
     // since the draw is half the size.
@@ -176,21 +213,26 @@ namespace {
             return g_original(device, type, baseVertexIndex, minVertexIndex, numVertices,
                               startIndex, primitiveCount);
         };
+        WeaponOverhaul::Trace::IndexedDraw(device);
         D3DVIEWPORT9 viewport = {};
-        if (!g_watching || FAILED(device->GetViewport(&viewport)) ||
-            viewport.MaxZ >= kWeaponFarthest) {
+        if (!g_watching || FAILED(device->GetViewport(&viewport))) {
             return draw();
         }
 
         const uint32_t frame = WeaponOverhaul::Frame::Number();
-        if (WeaponOverhaul::Frame::PastSky()) {
-            if (g_colourFrame != frame) {
+        const Part part = {startIndex, primitiveCount, numVertices};
+        if (viewport.MaxZ < kWeaponFarthest) {
+            if (!WeaponOverhaul::Frame::PastSky() && Begin(device, viewport)) {
+                Remember(frame, part);
+                draw();
+                End(device);
+            }
+        } else if (IsGunPart(frame, part)) {
+            WeaponOverhaul::Trace::GunPart();
+            if (WeaponOverhaul::Frame::PastSky() && g_colourFrame != frame) {
                 g_colourFrame = frame;
                 g_colourPass = WeaponOverhaul::Frame::PassSerial();
             }
-        } else if (Begin(device, viewport)) {
-            draw();
-            End(device);
         }
         return draw();
     }
