@@ -54,7 +54,7 @@ internal static class TestSupport
         IContainerSplitter splitter,
         byte[] container,
         string containerPath,
-        ConcurrentQueue<FragmentConflict>? conflicts,
+        ConcurrentQueue<ModConflict>? conflicts,
         params IModLayer[] layers)
     {
         IContainerTree tree = splitter.Open(container);

@@ -52,6 +52,11 @@ interactive way to ask you which edit you meant to keep. Reorder the mods if the
 won, or resolve it by hand in JackAll.App (which shows the same collision as a conflict row instead
 of picking a side automatically).
 
+Whole files are never merged, so two mods shipping different copies of one file are reported the
+same way. So is an entry a fragment replaced inside another mod's whole-file copy of its container: a
+fragment always lands on top of a whole file, whatever the load order. Identical copies, and entries
+the whole-file copy left vanilla or edited the same way, are not reported.
+
 ### What gets recognised
 
 Checked in this order:
@@ -249,7 +254,9 @@ $ jackall-mi mod build --game "C:\Games\Far Cry 2" --layer mods\a --layer mods\b
 After writing the archive pair, the build syncs each layer's reserved `plugins\` folder into
 `bin\plugins\` (see "Packaging a mod"): `pluginsDeployed`/`pluginsRemoved` count that,
 `pluginCollisions` lists paths left untouched because an untracked file already sits there (also
-warned on stderr), and each layer entry reports its own `pluginFiles`.
+warned on stderr), and each layer entry reports its own `pluginFiles`. `conflicts` lists every place
+one layer's version was dropped for another's (see Ordering): a `kind` of `fragment`, `file` or
+`overlaid`, the `winningLayer` and `overruledLayers`, and a `message` that is also warned on stderr.
 
 Building with **no** layers is meaningful: it reproduces the vanilla patch byte for byte and
 removes every previously deployed plugin file. The archives are only mounted when some layer stages

@@ -30,15 +30,20 @@ export interface BuildResult extends Envelope {
   pluginsRemoved: number;
   /** Plugin files whose bin\plugins target exists but isn't JackAll's - left untouched. */
   pluginCollisions: string[];
-  /** Fragments two mods both edited. A headless build has nobody to ask, so load order wins. */
+  /** Places where the build kept one mod's version over another's. A headless build has nobody to ask. */
   conflicts: Array<{
-    /** The container the fragment id is relative to - the id alone names one entity, not its sector. */
+    /** See ConflictKind in JackAll.Core. */
+    kind: 'fragment' | 'file' | 'overlaid';
+    /** The container the fragment id is relative to, or for a `file` conflict the file itself. */
     container: string;
+    /** Empty for a `file` conflict. */
     fragmentId: string;
     /** Both mods added this fragment as new content rather than editing an existing one. */
     isNewEntry: boolean;
     winningLayer: string;
-    earlierLayers: string[];
+    overruledLayers: string[];
+    /** The conflict and what to do about it, as one sentence. */
+    message: string;
   }>;
 }
 

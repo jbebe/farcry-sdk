@@ -162,9 +162,8 @@ function notifyConflicts(
 ): void {
   notify(api, {
     type: 'warning',
-    title: `${conflicts.length} mod conflict(s) resolved by load order`,
-    message: 'These mods change the same part of the same thing differently; the mod lower in '
-      + 'your load order won each time.',
+    title: `${conflicts.length} mod conflict(s)`,
+    message: 'These mods change the same thing differently, so only one version of each survived.',
     allowSuppress: true,
     actions: [{
       title: 'Show conflicts',
@@ -178,20 +177,11 @@ function notifyConflicts(
 }
 
 function showConflicts(api: types.IExtensionApi, conflicts: jackall.BuildResult['conflicts']): void {
-  const lines = conflicts.map(c => {
-    const what = c.isNewEntry
-      ? `both add "${c.fragmentId}" with different content`
-      : `both edit "${c.fragmentId}"`;
-    return `${c.container}: "${c.winningLayer}" and ${c.earlierLayers.join(', ')} ${what} - `
-      + `"${c.winningLayer}" was kept (load order).`;
-  });
-
-  void ask(api, 'info', 'Mod conflicts resolved by load order', {
-    text: 'Each line is one archetype or placed entity two mods changed differently. Mods touching '
-      + 'different parts of the same file never reach this list. The mod lower in your load order '
-      + 'won each time - reorder your mods if that\'s not what you want, or open JackAll.App to '
-      + 'hand-merge the edits.',
-    message: lines.join('\n'),
+  void ask(api, 'info', 'Mod conflicts', {
+    text: 'Each line is one file, archetype or placed entity two mods changed differently, where only '
+      + 'one version survived. Mods touching different archetypes or placed entities of the same file '
+      + 'never reach this list.',
+    message: conflicts.map(c => c.message).join('\n'),
   }, [
     { label: 'Close' },
   ]);

@@ -10,7 +10,7 @@ public sealed record BuildResult(
     int OverriddenEntries,
     int AddedEntries,
     long OutputBytes,
-    IReadOnlyList<FragmentConflict> Conflicts,
+    IReadOnlyList<ModConflict> Conflicts,
     PluginSyncResult Plugins);
 
 /// <summary>
@@ -66,7 +66,7 @@ public static class PatchBuilder
         FcbClassDefinitions? fcbDefinitions = null,
         bool resolveFragmentConflictsWithLoadOrder = false)
     {
-        var conflicts = new ConcurrentQueue<FragmentConflict>();
+        var conflicts = new ConcurrentQueue<ModConflict>();
 
         install.EnsureVanillaBackup();
 
@@ -74,7 +74,8 @@ public static class PatchBuilder
             layers.Where(l => l.Enabled).ToList(),
             readArchiveOriginal,
             fcbDefinitions ?? FcbClassDefinitions.Empty,
-            resolveFragmentConflictsWithLoadOrder ? conflicts : null);
+            conflicts,
+            resolveFragmentConflictsWithLoadOrder);
 
         BuildResult result = WriteArchive(install, replacements, [.. conflicts]);
 
@@ -100,27 +101,36 @@ public static class PatchBuilder
         List<IModLayer> enabled,
         Func<uint, byte[]?>? readArchiveOriginal,
         FcbClassDefinitions defs,
-        ConcurrentQueue<FragmentConflict>? conflicts)
+        ConcurrentQueue<ModConflict> conflicts,
+        bool resolveFragmentConflictsWithLoadOrder)
     {
-        // Later layers win, so walking forward and overwriting gives exactly the documented
-        // "last one wins, no conflict resolution" semantics.
-        var wholeFileOverrides = new Dictionary<uint, IModLayer>();
+        ConcurrentQueue<ModConflict>? fragmentConflicts = resolveFragmentConflictsWithLoadOrder ? conflicts : null;
+
+        // Every layer shipping each whole file, in priority order. The last one wins outright, the
+        // documented "last one wins, no conflict resolution" semantics.
+        var wholeFileOverrides = new Dictionary<uint, List<IModLayer>>();
         foreach (var layer in enabled)
         {
             foreach (uint hash in layer.Hashes)
             {
-                wholeFileOverrides[hash] = layer;
+                if (!wholeFileOverrides.TryGetValue(hash, out List<IModLayer>? shippers))
+                {
+                    wholeFileOverrides[hash] = shippers = [];
+                }
+                shippers.Add(layer);
             }
         }
 
         var replacements = new Dictionary<uint, byte[]>();
         foreach ((uint hash, byte[] bytes) in wholeFileOverrides
             .AsParallel()
-            .Select(kv => (kv.Key, Bytes: kv.Value.Read(kv.Key)))
+            .Select(kv => (kv.Key, Bytes: kv.Value[^1].Read(kv.Key)))
             .ToArray())
         {
             replacements[hash] = bytes;
         }
+
+        ReportFileCollisions(wholeFileOverrides, replacements, conflicts);
 
         // Fragment overlays, one level deeper than whole files: every contributor folds through
         // Diff3 against the vanilla ancestor (see FragmentMerge, shared with GameVfs).
@@ -144,8 +154,12 @@ public static class PatchBuilder
                         "its vanilla ancestor.");
                 string containerPath = RecoveredContainerPath(kv.Key, kv.Value.Values);
                 IContainerSplitter splitter = ContainerFormats.For(containerPath, defs);
+                // A whole-file copy the fragments land on, replacing its own version of their entries.
+                (IModLayer Owner, IContainerTree Tree)? copy = wholeFileOverrides.TryGetValue(kv.Key, out var shippers)
+                    ? (shippers[^1], splitter.Open(replacements[kv.Key]))
+                    : null;
                 return (ContainerHash: kv.Key, VanillaBytes: vanillaBytes, Splitter: splitter,
-                    Tree: splitter.Open(vanillaBytes), Display: containerPath);
+                    Tree: splitter.Open(vanillaBytes), Display: containerPath, Copy: copy);
             })
             .ToDictionary(x => x.ContainerHash);
 
@@ -158,9 +172,14 @@ public static class PatchBuilder
             .Select(item =>
             {
                 var container = vanillaByContainer[item.ContainerHash];
-                return (item.ContainerHash, item.FragmentId, Xml: FragmentMerge.Resolve(
-                    container.Splitter, container.Tree, item.FragmentId, item.Contributors,
-                    conflicts, container.Display));
+                string xml = FragmentMerge.Resolve(container.Splitter, container.Tree, item.FragmentId,
+                    item.Contributors, fragmentConflicts, container.Display);
+                if (container.Copy is { } copy)
+                {
+                    ReportOverlaidEntry(copy.Owner, copy.Tree, container.Tree, item.FragmentId,
+                        item.Contributors[^1].Layer, xml, conflicts, container.Display);
+                }
+                return (item.ContainerHash, item.FragmentId, Xml: xml);
             })
             .GroupBy(x => x.ContainerHash)
             .ToDictionary(g => g.Key, g => g.ToDictionary(x => x.FragmentId, x => x.Xml));
@@ -175,7 +194,7 @@ public static class PatchBuilder
                     ? wholeFileBytes
                     : vanillaByContainer[kv.Key].VanillaBytes;
                 var container = vanillaByContainer[kv.Key];
-                FragmentMerge.ReportContradictions(container.Splitter, kv.Value, conflicts, container.Display);
+                FragmentMerge.ReportContradictions(container.Splitter, kv.Value, fragmentConflicts, container.Display);
                 return (kv.Key, Bytes: container.Splitter.Apply(baseBytes, kv.Value));
             })
             .ToArray())
@@ -207,12 +226,47 @@ public static class PatchBuilder
         return $"_hash\\{containerHash:x8}.fcb";
     }
 
+    /// <summary>Reports each whole file whose winning copy dropped a different one.</summary>
+    private static void ReportFileCollisions(
+        Dictionary<uint, List<IModLayer>> shippersByHash, Dictionary<uint, byte[]> replacements,
+        ConcurrentQueue<ModConflict> conflicts)
+    {
+        shippersByHash.Where(kv => kv.Value.Count > 1).AsParallel().ForAll(kv =>
+        {
+            string[] overruled = [.. kv.Value.SkipLast(1)
+                .Where(l => !l.Read(kv.Key).AsSpan().SequenceEqual(replacements[kv.Key]))
+                .Select(l => l.Name)];
+            if (overruled.Length > 0)
+            {
+                IModLayer winner = kv.Value[^1];
+                conflicts.Enqueue(new ModConflict(winner.PathOf(kv.Key) ?? $"{ModPathHashing.HashFolder}\\{kv.Key:x8}",
+                    winner.Name, overruled, ConflictKind.File));
+            }
+        });
+    }
+
+    /// <summary>Reports a fragment that replaced its entry's own edit in a whole-file copy.</summary>
+    private static void ReportOverlaidEntry(
+        IModLayer copyOwner, IContainerTree copy, IContainerTree vanilla, string fragmentId, IModLayer top,
+        string resolved, ConcurrentQueue<ModConflict> conflicts, string container)
+    {
+        if (top == copyOwner)
+        {
+            return;
+        }
+        string? edited = copy.Extract(fragmentId);
+        if (edited != resolved && edited != vanilla.Extract(fragmentId))
+        {
+            conflicts.Enqueue(new ModConflict(container, top.Name, [copyOwner.Name], ConflictKind.Overlaid, fragmentId));
+        }
+    }
+
     /// <summary>
     /// Streams the vanilla backup plus <paramref name="replacements"/> into a fresh
     /// patch.dat/patch.fat pair, written to temp files and swapped in only once complete.
     /// </summary>
     private static BuildResult WriteArchive(
-        GameInstall install, Dictionary<uint, byte[]> replacements, IReadOnlyList<FragmentConflict> conflicts)
+        GameInstall install, Dictionary<uint, byte[]> replacements, IReadOnlyList<ModConflict> conflicts)
     {
         var vanillaIndex = FatArchive.Read(install.VanillaPatchFat);
         using var vanillaData = File.OpenRead(install.VanillaPatchDat);

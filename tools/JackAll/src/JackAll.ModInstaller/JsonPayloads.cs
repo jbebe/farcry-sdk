@@ -57,14 +57,17 @@ internal sealed record BuildLayerPayload
     public int PluginFiles { get; init; }
 }
 
-/// <summary>A fragment two layers both edited, resolved by load order rather than refusing to build.</summary>
+/// <summary>A place where the build kept one layer's version over another's - see <c>ModConflict</c>.</summary>
 internal sealed record ConflictPayload
 {
+    /// <summary><c>fragment</c>, <c>file</c> or <c>overlaid</c>.</summary>
+    public string Kind { get; init; } = string.Empty;
     public string Container { get; init; } = string.Empty;
     public string FragmentId { get; init; } = string.Empty;
     public bool IsNewEntry { get; init; }
     public string WinningLayer { get; init; } = string.Empty;
-    public IReadOnlyList<string> EarlierLayers { get; init; } = [];
+    public IReadOnlyList<string> OverruledLayers { get; init; } = [];
+    public string Message { get; init; } = string.Empty;
 }
 
 internal sealed record ImportLegacyPayload

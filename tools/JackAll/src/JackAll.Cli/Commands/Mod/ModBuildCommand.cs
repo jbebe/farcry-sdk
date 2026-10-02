@@ -68,11 +68,13 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
                 }),
                 conflicts = result.Conflicts.Select(c => new
                 {
+                    kind = c.KindName,
                     container = c.Container,
                     fragmentId = c.FragmentId,
                     isNewEntry = c.IsNewEntry,
                     winningLayer = c.WinningLayer,
-                    earlierLayers = c.EarlierLayers,
+                    overruledLayers = c.OverruledLayers,
+                    message = c.Describe(),
                 }),
             });
             return 0;
@@ -89,14 +91,9 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
                 + $"{result.Plugins.Removed:N0} removed");
         }
 
-        foreach (FragmentConflict conflict in result.Conflicts)
+        foreach (ModConflict conflict in result.Conflicts)
         {
-            AnsiConsole.MarkupLine(
-                $"[yellow]Warning:[/] '{conflict.WinningLayer.EscapeMarkup()}' overrode "
-                + $"'{string.Join(", ", conflict.EarlierLayers).EscapeMarkup()}' inside "
-                + $"'{conflict.DisplayPath.EscapeMarkup()}' by load order - their edits genuinely "
-                + "conflicted, so only the higher-priority mod's change survived. Verify this in-game "
-                + "or hand-resolve it in JackAll.App.");
+            AnsiConsole.MarkupLine($"[yellow]Warning:[/] {conflict.Describe().EscapeMarkup()}");
         }
         foreach (string collision in result.Plugins.SkippedForeign)
         {

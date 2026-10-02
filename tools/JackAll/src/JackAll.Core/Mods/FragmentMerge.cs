@@ -5,20 +5,6 @@ using JackAll.Core.Format.Fcb;
 namespace JackAll.Core.Mods;
 
 /// <summary>
-/// One fragment where two mods' edits genuinely collided and <see cref="FragmentMerge.Resolve"/> was
-/// told to fall back to load order instead of throwing — see that parameter's remarks. Recorded so a
-/// caller that asked for the lenient mode (currently only <c>jackall-cli mod build</c>, which has no
-/// interactive way to ask a user to hand-fix one) can still surface that it happened. The container's
-/// display path rides along because a fragment id alone names one entity, not which sector it sits in.
-/// </summary>
-public readonly record struct FragmentConflict(
-    string Container, string FragmentId, bool IsNewEntry, string WinningLayer, IReadOnlyList<string> EarlierLayers)
-{
-    /// <summary>Where the fragment sits, as one staged path.</summary>
-    public string DisplayPath => $"{Container}\\{FragmentId}";
-}
-
-/// <summary>
 /// The Milestone 3 (docs/design/fcb-fragment-overlays.md) fragment-merge machinery shared by
 /// <see cref="JackAll.Core.Vfs.GameVfs"/> and <see cref="PatchBuilder"/>. Neither the override index
 /// nor the merge fold itself needs anything specific to either caller — only *obtaining* the vanilla
@@ -73,7 +59,7 @@ public static class FragmentMerge
     /// records and carries on - the same split <see cref="Resolve"/> already makes.</param>
     public static void ReportContradictions(
         IContainerSplitter splitter, IReadOnlyDictionary<string, string> resolved,
-        ConcurrentQueue<FragmentConflict>? conflicts, string container)
+        ConcurrentQueue<ModConflict>? conflicts, string container)
     {
         foreach ((string fragmentId, string kept, string overruled) in splitter.Contradictions(resolved))
         {
@@ -84,8 +70,7 @@ public static class FragmentMerge
                     + "the two to say which you meant.");
             }
 
-            conflicts.Enqueue(new FragmentConflict(
-                container, fragmentId, IsNewEntry: false, WinningLayer: kept, EarlierLayers: [overruled]));
+            conflicts.Enqueue(new ModConflict(container, kept, [overruled], FragmentId: fragmentId));
         }
     }
 
@@ -115,7 +100,7 @@ public static class FragmentMerge
     ///
     /// Non-null switches to "load order wins, but tell someone": the same rule whole-file overrides
     /// already follow (later layer replaces earlier, no questions asked) is applied to the fragment
-    /// too, and one <see cref="FragmentConflict"/> is enqueued per collision instead of throwing. This
+    /// too, and one <see cref="ModConflict"/> is enqueued per collision instead of throwing. This
     /// is what <c>jackall-cli mod build</c> passes - a headless run driven by a mod manager (Vortex)
     /// has nobody to ask and no "Replace on that row" UI to point at, so refusing to build over a
     /// conflict it can't ask a human to resolve on the spot is worse than building with a flagged
@@ -125,12 +110,12 @@ public static class FragmentMerge
     /// different fragments sharing the same queue.
     /// </param>
     /// <param name="container">
-    /// The container's display path, stamped onto every <see cref="FragmentConflict"/> this call
+    /// The container's display path, stamped onto every <see cref="ModConflict"/> this call
     /// enqueues - <paramref name="fragmentId"/> is relative to it and ambiguous on its own.
     /// </param>
     public static string Resolve(IContainerSplitter splitter, IContainerTree vanilla, string fragmentId,
         IReadOnlyList<(IModLayer Layer, uint EntryHash)> layers,
-        ConcurrentQueue<FragmentConflict>? conflicts = null, string container = "")
+        ConcurrentQueue<ModConflict>? conflicts = null, string container = "")
     {
         string? vanillaXml = vanilla.Extract(fragmentId);
         bool isNewEntry = vanillaXml is null;
@@ -198,8 +183,8 @@ public static class FragmentMerge
             // that is the higher-priority layer outright, exactly like a whole-file override; for a
             // format that merges by meaning it is the fold with only the collision decided, so the
             // other layer's untouched edits survive.
-            conflicts.Enqueue(new FragmentConflict(container, fragmentId, isNewEntry, layer.Name,
-                [.. layers.Take(i).Select(l => l.Layer.Name).Distinct()]));
+            conflicts.Enqueue(new ModConflict(container, layer.Name,
+                [.. layers.Take(i).Select(l => l.Layer.Name).Distinct()], FragmentId: fragmentId, IsNewEntry: isNewEntry));
             result = merged;
         }
         return result;

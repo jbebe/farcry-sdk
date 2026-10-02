@@ -159,11 +159,9 @@ internal static class Program
                   + $"{result.Plugins.Removed:N0} removed"
                 : string.Empty));
 
-        foreach (FragmentConflict conflict in result.Conflicts)
+        foreach (ModConflict conflict in result.Conflicts)
         {
-            Report($"Warning: '{conflict.WinningLayer}' overrode '{string.Join(", ", conflict.EarlierLayers)}' "
-                + $"inside '{conflict.DisplayPath}' by load order - their edits genuinely conflicted, so only "
-                + "the higher-priority mod's change survived.");
+            Report($"Warning: {conflict.Describe()}");
         }
         foreach (string collision in result.Plugins.SkippedForeign)
         {
@@ -323,13 +321,15 @@ internal static class Program
     /// <summary>Human-facing progress, always on stderr so it never contaminates the JSON document.</summary>
     private static void Report(string message) => Console.Error.WriteLine(message);
 
-    private static ConflictPayload ToPayload(FragmentConflict c) => new()
+    private static ConflictPayload ToPayload(ModConflict c) => new()
     {
+        Kind = c.KindName,
         Container = c.Container,
         FragmentId = c.FragmentId,
         IsNewEntry = c.IsNewEntry,
         WinningLayer = c.WinningLayer,
-        EarlierLayers = c.EarlierLayers,
+        OverruledLayers = c.OverruledLayers,
+        Message = c.Describe(),
     };
 
     private const string Usage = """

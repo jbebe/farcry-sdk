@@ -196,7 +196,7 @@ public class StringTableContainerSplitterTests : IDisposable
         byte[] container = Table(
             ("Items", "dart_rifle", "Dart Rifle"), ("Items", "m79", "M79"), ("Challenges", "mac10", "MAC-10"));
 
-        var conflicts = new ConcurrentQueue<FragmentConflict>();
+        var conflicts = new ConcurrentQueue<ModConflict>();
         byte[] built = _splitter.Apply(container, Resolve(container, conflicts,
             MakeLayer("mod_a", new OasisStringEdit("Items", "dart_rifle", "VSS Vintorez")),
             MakeLayer("mod_b",
@@ -216,7 +216,7 @@ public class StringTableContainerSplitterTests : IDisposable
     {
         byte[] container = Table(("Items", "dart_rifle", "Dart Rifle"));
 
-        var conflicts = new ConcurrentQueue<FragmentConflict>();
+        var conflicts = new ConcurrentQueue<ModConflict>();
         byte[] built = _splitter.Apply(container, Resolve(container, conflicts,
             MakeLayer("mod_a", new OasisStringEdit("Items", "vss", "VSS Vintorez")),
             MakeLayer("mod_b", new OasisStringEdit("Items", "sks", "SKS"))));
@@ -237,10 +237,10 @@ public class StringTableContainerSplitterTests : IDisposable
 
         Assert.Throws<InvalidDataException>(() => Resolve(container, null, modA, modB));
 
-        var conflicts = new ConcurrentQueue<FragmentConflict>();
+        var conflicts = new ConcurrentQueue<ModConflict>();
         byte[] built = _splitter.Apply(container, Resolve(container, conflicts, modA, modB));
 
-        FragmentConflict reported = Assert.Single(conflicts);
+        ModConflict reported = Assert.Single(conflicts);
         Assert.Equal("mod_b", reported.WinningLayer);
         Assert.Equal("Dragunov", ValueOf(built, "Items", "dart_rifle"));
     }
@@ -282,7 +282,7 @@ public class StringTableContainerSplitterTests : IDisposable
     }
 
     private Dictionary<string, string> Resolve(
-        byte[] container, ConcurrentQueue<FragmentConflict>? conflicts, params FolderModLayer[] layers)
+        byte[] container, ConcurrentQueue<ModConflict>? conflicts, params FolderModLayer[] layers)
         => TestSupport.ResolveFragments(_splitter, container, Container, conflicts, layers);
 
     /// <summary>A layer shipping one patch document, the way a mod actually does.</summary>

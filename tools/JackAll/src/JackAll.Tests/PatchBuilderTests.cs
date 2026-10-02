@@ -375,12 +375,12 @@ public class PatchBuilderTests : IDisposable
                 resolveFragmentConflictsWithLoadOrder: true);
         }
 
-        FragmentConflict conflict = Assert.Single(result.Conflicts);
+        ModConflict conflict = Assert.Single(result.Conflicts);
         Assert.Equal(fragmentId, conflict.FragmentId, ignoreCase: true);
         // The id alone names one entity of one container; the report has to say which container.
         Assert.Equal(container.Path, conflict.Container, ignoreCase: true);
         Assert.Equal("mod_b", conflict.WinningLayer);
-        Assert.Contains("mod_a", conflict.EarlierLayers);
+        Assert.Contains("mod_a", conflict.OverruledLayers);
 
         var patchIndex = FatArchive.Read(_install.PatchFat);
         var entry = patchIndex.Entries.First(e => e.Hash == container.Hash);
@@ -432,8 +432,83 @@ public class PatchBuilderTests : IDisposable
                 resolveFragmentConflictsWithLoadOrder: true);
         }
 
-        FragmentConflict conflict = Assert.Single(result.Conflicts);
+        ModConflict conflict = Assert.Single(result.Conflicts);
         Assert.Equal($"_hash\\{container.Hash:x8}.fcb", conflict.Container);
+    }
+
+    [Fact]
+    public void A_differing_whole_file_copy_is_reported_but_an_identical_one_is_not()
+    {
+        if (_install is null) return;
+
+        const string path = "engine/gamemodes/gamemodesconfig.xml";
+        var first = MakeZipMod("first", ($"mods/{path}", "first"u8.ToArray()));
+        var same = MakeZipMod("same", ($"mods/{path}", "second"u8.ToArray()));
+        var second = MakeZipMod("second", ($"mods/{path}", "second"u8.ToArray()));
+
+        BuildResult result = PatchBuilder.Build(_install, [first, same, second]);
+
+        ModConflict conflict = Assert.Single(result.Conflicts);
+        Assert.Equal(ConflictKind.File, conflict.Kind);
+        Assert.Equal(path.Replace('/', '\\'), conflict.Container, ignoreCase: true);
+        Assert.Equal("second", conflict.WinningLayer);
+        Assert.Equal(["first"], conflict.OverruledLayers);
+    }
+
+    /// <summary>
+    /// A fragment replaces its entry in another layer's whole-file copy even when that layer is later.
+    /// Entries the copy left vanilla, or edited the same way, lose nothing.
+    /// </summary>
+    [Fact]
+    public void A_fragment_over_an_entry_a_whole_file_copy_changed_is_reported_as_overlaid()
+    {
+        if (_install is null) return;
+
+        NameDatabase names = TestSupport.LoadNames();
+        VfsFile container;
+        string[] ids;
+        byte[] vanillaBytes;
+        using (var vfs = GameVfs.Load(_install, names))
+        {
+            VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
+            container = vfs.Files[fragment.ContainerHash!.Value];
+            ids = [.. vfs.Files.Values
+                .Where(f => TestSupport.IsFcbFragment(f) && f.ContainerHash == fragment.ContainerHash)
+                .Select(f => f.FragmentId!)
+                .Take(3)];
+            vanillaBytes = vfs.ReadOriginal((uint)container.Hash)!;
+        }
+        string editedId = ids[0], untouchedId = ids[1], sameId = ids[2];
+
+        FcbObject vanillaTree = FcbDocument.Deserialize(vanillaBytes);
+        byte[] Edited(string id, byte value) => TestSupport.RenderWithValueSetAt(
+            FcbFragments.Find(vanillaTree, id)!, [], 0xAAAA0001, [value, 0x00, 0x00, 0x00]);
+
+        IContainerSplitter splitter = ContainerFormats.For(container.Path, FcbClassDefinitions.Empty);
+        string Canonical(string id, byte value) => splitter.Canonicalize(id, System.Text.Encoding.UTF8.GetString(Edited(id, value)));
+        byte[] copy = splitter.Apply(vanillaBytes, new Dictionary<string, string>
+        {
+            [editedId] = Canonical(editedId, 0x01),
+            [sameId] = Canonical(sameId, 0x02),
+        });
+
+        var fragmentMod = MakeZipMod("fragment_mod",
+            ($"mods/{container.Path}\\{editedId}", Edited(editedId, 0x02)),
+            ($"mods/{container.Path}\\{untouchedId}", Edited(untouchedId, 0x02)),
+            ($"mods/{container.Path}\\{sameId}", Edited(sameId, 0x02)));
+        var wholeFileMod = MakeZipMod("whole_file_mod", ($"mods/{container.Path}", copy));
+
+        BuildResult result;
+        using (var vfsForRead = GameVfs.OpenForOriginalsOnly(_install, names))
+        {
+            result = PatchBuilder.Build(_install, [fragmentMod, wholeFileMod], vfsForRead.ReadOriginal);
+        }
+
+        ModConflict conflict = Assert.Single(result.Conflicts);
+        Assert.Equal(ConflictKind.Overlaid, conflict.Kind);
+        Assert.Equal(editedId, conflict.FragmentId, ignoreCase: true);
+        Assert.Equal("fragment_mod", conflict.WinningLayer);
+        Assert.Equal(["whole_file_mod"], conflict.OverruledLayers);
     }
 
     [Fact]

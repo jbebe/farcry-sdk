@@ -91,14 +91,14 @@ public sealed class MoveFragmentPipelineTests : IDisposable
             MoveContainerSplitter.Instance, vanilla, id, contributors));
 
         // A headless build takes the later layer and records that it did.
-        ConcurrentQueue<FragmentConflict> conflicts = new();
+        ConcurrentQueue<ModConflict> conflicts = new();
         string resolved = FragmentMerge.Resolve(
             MoveContainerSplitter.Instance, vanilla, id, contributors, conflicts, "movemgr.bin");
 
         Assert.Equal(theirs, resolved);
-        FragmentConflict reported = Assert.Single(conflicts);
+        ModConflict reported = Assert.Single(conflicts);
         Assert.Equal("Second", reported.WinningLayer);
-        Assert.Equal(["First"], reported.EarlierLayers);
+        Assert.Equal(["First"], reported.OverruledLayers);
     }
 
     private IModLayer Layer(string name, string containerPath, string fragmentId, string xml)

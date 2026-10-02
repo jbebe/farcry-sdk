@@ -431,7 +431,7 @@ public class WorldSectorFragmentTests : IDisposable
         FcbObject original = FcbDocument.Deserialize(baseFcb);
         ulong[] ids = [.. FcbFragments.List(original).Select(f => IdOf(f.Node)).Take(2)];
         var splitter = new FcbContainerSplitter(FcbClassDefinitions.Empty);
-        var conflicts = new System.Collections.Concurrent.ConcurrentQueue<FragmentConflict>();
+        var conflicts = new System.Collections.Concurrent.ConcurrentQueue<ModConflict>();
 
         Dictionary<string, string> resolved = TestSupport.ResolveFragments(
             splitter, baseFcb, SectorPath, conflicts,
@@ -440,7 +440,7 @@ public class WorldSectorFragmentTests : IDisposable
             MakeLayer("patrols2", ContainerLayout.Id, AppText(Layout(
                 $"<layer path=\"b\"><entity id=\"{ids[0]}\" /></layer>"))));
 
-        FragmentConflict conflict = Assert.Single(conflicts);
+        ModConflict conflict = Assert.Single(conflicts);
         Assert.True(ContainerLayout.IsLayoutId(conflict.FragmentId));
 
         FcbObject rebuilt = FcbDocument.Deserialize(splitter.Apply(baseFcb, resolved));

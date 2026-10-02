@@ -299,11 +299,11 @@ public class DepLoadContainerSplitterTests : IDisposable
         Assert.Throws<InvalidDataException>(() => Resolve(container, modA, modB));
 
         // What `mod build` actually does: load order wins, and the collision is reported.
-        var conflicts = new ConcurrentQueue<FragmentConflict>();
+        var conflicts = new ConcurrentQueue<ModConflict>();
         Dictionary<string, string> resolved = Resolve(container, conflicts, modA, modB);
         DepLoadFile merged = DepLoadDocument.Decode(_splitter.Apply(container, resolved));
 
-        FragmentConflict reported = Assert.Single(conflicts);
+        ModConflict reported = Assert.Single(conflicts);
         Assert.Equal("mod_b", reported.WinningLayer);
         IReadOnlyList<DepLoadChild> children = merged.Parents.Single(p => p.Hash == Dragunov).Children;
         Assert.Contains(children, c => c.Hash == 0xBBBB);
@@ -314,7 +314,7 @@ public class DepLoadContainerSplitterTests : IDisposable
         => Resolve(container, null, layers);
 
     private Dictionary<string, string> Resolve(
-        byte[] container, ConcurrentQueue<FragmentConflict>? conflicts, params FolderModLayer[] layers)
+        byte[] container, ConcurrentQueue<ModConflict>? conflicts, params FolderModLayer[] layers)
         => TestSupport.ResolveFragments(_splitter, container, Container, conflicts, layers);
 
     private FolderModLayer MakeLayer(string name, DepLoadParent parent)
