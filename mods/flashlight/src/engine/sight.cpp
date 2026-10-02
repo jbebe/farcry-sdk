@@ -59,7 +59,7 @@ namespace {
     // every shipped archetype sees in full.
     constexpr float kReach = 4.0f;
     // Metres from which a guard sees the lamp in his view at full night.
-    constexpr float kSeenFrom = 100.0f;
+    constexpr float kSeenFrom = 60.0f;
 
     struct Beam {
         Flashlight::Light::Pose pose;

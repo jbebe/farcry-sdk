@@ -3,13 +3,13 @@
 A flashlight for Far Cry 2: a spot light at the player's head, switched by a new **Flashlight**
 control (L by default, rebindable in Options > Controls), with a switch click and an icon on the HUD.
 There is no battery. At night the light gives you away: a guard looking your way sees it from up to
-100 m, and one you shine it on notices you even with his back turned.
+60 m, and one you shine it on notices you even with his back turned.
 
 The light is one of the engine's own scene lights, made the way the player's vehicle makes its
 headlight and placed every frame from the render camera. Light never reaches the AI in this engine,
 so while it is on the plugin changes the guards' sight of the player directly:
 - He counts as having just fired, which lifts the night's shorter sight.
-- In the dark, a guard's vision cones reach him from up to 100 m, scaled by how dark it is. The
+- In the dark, a guard's vision cones reach him from up to 60 m, scaled by how dark it is. The
   guard's own field of view, cover, stance and movement still decide whether he is seen.
 - A guard inside the beam sees all around him, as one sitting in a vehicle does.
 
