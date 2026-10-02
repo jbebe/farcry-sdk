@@ -182,7 +182,7 @@ The page holds [b]20 rows[/b]. That's a hard limit from the engine's own list wi
 
 [size=4][b]Conflicts[/b][/size]
 
-Two plugins can legitimately want the same name, address or byte range. Rather than build a hook chaining dispatcher, FCSE tracks per resource ownership and [b]rejects the second claimant[/b], logging both names. Loud and debuggable beats silently wrong.
+Two plugins can legitimately want the same name, address or byte range. Hooks on one function [b]stack[/b]: every plugin and script that hooks it runs, the last loaded first, and the log says which went ahead of which. A name or a byte edit can't be shared, so for those FCSE tracks per resource ownership and [b]rejects the second claimant[/b], logging both names. Loud and debuggable beats silently wrong.
 
 Which plugin is calling is resolved automatically from the return address, so a plugin never passes its own identity into an API call and therefore can't get it wrong. FCSE's own stock registrations go through exactly the same tracking as anyone else's.
 

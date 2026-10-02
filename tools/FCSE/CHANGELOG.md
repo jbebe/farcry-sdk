@@ -2,6 +2,16 @@
 
 Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Changed
+- **Mods can hook the same function.** A second plugin or script hooking an address another one
+  already hooked used to be turned away; now both hooks run, the one loaded last first, and
+  `fcse.log` names which went ahead of which. This applies to `Hook` and `MidHook` alike, in any
+  mix, and Lua mods get it through `fcse.hook` and `fcse.midhook`. Hooking into the middle of
+  another hook's bytes is still refused. `FCSE_API_VERSION` is unchanged and existing plugins keep
+  loading.
+
 ## [1.2.1] - 2026-10-01
 
 ### Fixed

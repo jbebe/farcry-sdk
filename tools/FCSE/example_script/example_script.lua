@@ -102,9 +102,9 @@ fcse.on('load', function()
     fcse.log(('hooked magma::CRenderNomadImpl::BeginPageRendering at 0x%08X')
              :format(BeginPageRendering))
   end
-  -- fcse.hook returning nil is already logged by FCSE, naming whoever won the address. `original`
-  -- stays nil in that case, which is exactly why the handler above is never reached: it is only
-  -- ever called through the hook that failed to install.
+  -- fcse.hook returning nil is already logged by FCSE, saying why. `original` stays nil in that
+  -- case, which is exactly why the handler above is never reached: it is only ever called through
+  -- the hook that failed to install.
 end)
 
 --------------------------------------------------------------------------------

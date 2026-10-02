@@ -267,8 +267,9 @@ end
 -- infers __stdcall when *calling* a function but never for a callback, so an unannotated __stdcall
 -- target corrupts the stack on return. This is the one place a script cannot be vague.
 --
--- Returns nil (logged) if another script already owns a hook on that address: FCSE installs one
--- detour per address and the first claimant keeps it.
+-- Hooks stack: other scripts and plugins can hook the same address, the last installed running
+-- first, and `original` leads to the one beneath. Returns nil (logged) if its 5-byte jump would
+-- overlap the bytes another hook displaced without starting exactly where that hook does.
 function fcse.hook(address, signature, handler)
   check_hook_args('fcse.hook', address, handler)
 
@@ -303,8 +304,9 @@ typedef struct {
 --   end)
 --
 -- Writes to the general registers and eflags take effect when the instruction resumes; esp is
--- read-only. The address is any instruction boundary, usually found with mem.scan. Returns false
--- (logged) if another script or plugin already owns a hook there.
+-- read-only. The address is any instruction boundary, usually found with mem.scan. Stacks as
+-- fcse.hook does, returning false where it returns nil, and a handler sees the registers as the
+-- handlers before it left them.
 function fcse.midhook(address, handler)
   check_hook_args('fcse.midhook', address, handler)
 

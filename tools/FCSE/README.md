@@ -204,14 +204,16 @@ where either would do, since a row the player can see but not change says someth
 
 ### Conflict handling
 
-Two plugins can legitimately target the same name/address. Rather than build a composable
-hook-chaining dispatcher, **FCSE tracks per-resource ownership and rejects the second claimant**,
-logging both plugin names - loud and debuggable instead of silently misbehaving:
+Two plugins can legitimately target the same name/address. Hooks stack, because two detours on one
+function can both be honoured. A name or a byte edit cannot be shared, so for those **FCSE tracks
+per-resource ownership and rejects the second claimant**, logging both plugin names - loud and
+debuggable instead of silently misbehaving:
 
 - `AddFunctionCB`: `src/api/function_registry.cpp` tracks name → owning module, independent of (and
   in addition to) `Dunia.dll`'s own silent no-op.
-- `Hook`/`MidHook`: `src/api/hook.cpp` tracks the byte range each hook displaced → owning module,
-  and rejects a new hook whose own jump would overlap one.
+- `Hook`/`MidHook`: `src/api/hook.cpp` tracks the byte range each hook displaced → owning module.
+  A new hook at an existing hook's start stacks on it and runs first - the log line names the hook
+  it went ahead of. One whose jump would land anywhere else in those bytes is rejected.
 - `Patch`: `src/api/patch.cpp` tracks claimed `(address, size)` ranges; a new claim overlapping a
   *different* module's existing claim is rejected. Overlap with your own earlier claim is fine.
 
@@ -319,8 +321,8 @@ forget, mismatch, or lose.
 - *(automated - CI)* `.\build.ps1 -Tests` runs `tests/` via `ctest`: the config file's reader/writer
   (`ini_file_tests.cpp`), the address-library decoder against the table that ships
   (`address_library_tests.cpp`), the byte-pattern compiler and search (`pattern_scan_tests.cpp`),
-  and the script API in this build's own LuaJIT (`lua_runtime_tests.lua`). None of them needs the
-  game or `Dunia.dll`.
+  hook stacking and teardown (`hook_tests.cpp`), and the script API in this build's own LuaJIT
+  (`lua_runtime_tests.lua`). None of them needs the game or `Dunia.dll`.
 - Drop `example_plugin.dll` alone into `bin\plugins\`: `fcse.log` should show it discovered, loaded,
   the running build and mapping version, its hook on
   `magma::CRenderNomadImpl::BeginPageRendering` installed at a named address, and (later, from
@@ -333,15 +335,16 @@ forget, mismatch, or lose.
   game started, not from the plugin's own default.
 - Same mod, two languages: `example_script/example_script.lua` implements exactly the same two
   effects. Installed on its own it should behave identically; installed *alongside* the DLL, the
-  DLL loads first and keeps both the hook and the `toRed` name, and the script's attempts at each
-  are logged as rejected conflicts naming both.
-- Conflict rejection: install a second copy of `example_plugin.dll` under a different filename.
-  Both are loaded (`bin\plugins\` is scanned via `FindFirstFileW`/`FindNextFileW`, so order follows
-  normal directory enumeration, not necessarily alphabetical), and `fcse.log` should show exactly
-  one of them win the `BeginPageRendering` hook and the `toRed` registration, with the other's
-  attempt logged as a rejected conflict naming both. `Patch()`'s overlap-rejection path has no
-  demo in the example any more - it's covered by `tests/` and by inspection (`src/api/patch.cpp`'s
-  interval-overlap check is a few lines).
+  script's hook stacks on the DLL's (logged as `ahead of 'example_plugin'`) and the two shakes add
+  up, while the DLL loads first and keeps the `toRed` name, the script's attempt logged as a
+  rejected conflict naming both.
+- Two copies: install a second copy of `example_plugin.dll` under a different filename. Both are
+  loaded (`bin\plugins\` is scanned via `FindFirstFileW`/`FindNextFileW`, so order follows normal
+  directory enumeration, not necessarily alphabetical). `fcse.log` should show both hook
+  `BeginPageRendering`, the later one `ahead of` the earlier, and exactly one win the `toRed`
+  registration, with the other's attempt logged as a rejected conflict naming both. `Patch()`'s
+  overlap-rejection path has no demo in the example any more - it's covered by `tests/` and by
+  inspection (`src/api/patch.cpp`'s interval-overlap check is a few lines).
 - **Real in-game verification is on you** - same as `tools/misc/modpatcher`'s own README status
   section, whose live-launch testing was done against a real Steam install, not by an agent. A
   real launch + gameplay pass (menu loads, a diamond pickup still increments, malaria curve still

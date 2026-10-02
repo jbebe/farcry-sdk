@@ -155,9 +155,9 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
             FCSE::Logf("example_plugin: hooked magma::CRenderNomadImpl::BeginPageRendering at "
                        "0x%08zX", static_cast<size_t>(g_beginPageRendering.address()));
         }
-        // Hook() having failed is already logged by FCSE, naming the plugin that won the address.
-        // g_originalBeginPageRendering stays null in that case, which is exactly why the detour is
-        // never reached: it is only ever called through the hook that failed to install.
+        // Hook() having failed is already logged by FCSE, saying why. g_originalBeginPageRendering
+        // stays null in that case, which is exactly why the detour is never reached: it is only
+        // ever called through the hook that failed to install.
     }
 
     // Tier 4. Each callback fires once from inside this call carrying whatever bin\fcse.ini holds,

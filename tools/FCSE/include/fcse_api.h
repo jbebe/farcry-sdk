@@ -84,9 +84,12 @@ typedef void (*FCSE_AddFunctionCBFn)(void* fn, const char* name);
 
 // Detours `target` to `detour`. On success, `*original` receives a callable trampoline that runs
 // the original function's overwritten prologue before jumping back into the rest of the original
-// function - call through it to preserve original behavior around your hook. Returns false (and
-// logs why) if `target` is null, its first instructions cannot be relocated, or another plugin's
-// hook already displaced the bytes there - FCSE does not chain hooks, first claimant wins.
+// function - call through it to preserve original behavior around your hook.
+//
+// Hooks stack: any number can share a `target`, the last installed running first, and `*original`
+// leads to the one beneath yours - so a detour that never calls it hides the call from all of them.
+// Returns false (and logs why) if `target` is null, cannot be relocated, or its 5-byte jump would
+// overlap the bytes another hook displaced without starting exactly where that hook does.
 typedef bool (*FCSE_HookFn)(void* target, void* detour, void** original);
 
 typedef union FCSE_Xmm {
@@ -110,8 +113,9 @@ typedef void (*FCSE_MidHookHandler)(FCSE_MidHookContext* ctx);
 // Runs `handler` just before the instruction at `target`, handing it every register of that moment
 // in `ctx`. Writes to the general registers and eflags take effect when the instruction resumes;
 // `esp` is read-only, `eip` is where execution continues. `target` is any instruction boundary,
-// found with FindPattern (the address library only knows function starts). Same first-claimant
-// rule as Hook, over the same displaced byte ranges.
+// found with FindPattern (the address library only knows function starts). Stacks and fails as
+// Hook does: a handler sees the registers as the handlers before it left them, and moving `eip`
+// skips every hook installed before it.
 typedef bool (*FCSE_MidHookFn)(void* target, FCSE_MidHookHandler handler);
 
 // Overwrites `size` bytes at `address` with `data` (handles the VirtualProtect dance so `address`
