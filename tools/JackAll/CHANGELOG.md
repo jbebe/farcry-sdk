@@ -11,8 +11,12 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - **`.spk` sound banks as XML** — `spk decode`, `encode`, `verify` and `new`; every retail bank
   rebuilds byte for byte.
 - **Sound bank editor** — the `.spk` panel edits a bank as a tree of what plays what.
+- **`mod build` reports every change a layer lost** — two layers shipping different copies of one
+  whole file, and a fragment replacing an entry another layer changed in its whole-file copy.
 
 ### Changed
+- **Breaking:** `mod build --json` conflicts name the losing layers `overruledLayers` (was
+  `earlierLayers`) and add a `kind` and a `message`.
 - `spk import` and the App's Import… re-derive a sample's loop length and rate, not only its
   length.
 - Staging an edit keeps its file selected, so its preview stays open.

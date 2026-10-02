@@ -16,6 +16,10 @@ Notable changes to the Vortex Far Cry 2 extension, loosely following
 - **Legacy mods import as the edits they actually made.** Every container is split, not only
   `.fcb`, and an editor's float rounding is ignored, so an old `patch.dat` mod no longer claims
   thousands of edits it never made and merges with the rest of the load order.
+- **The conflicts notification lists every change a mod lost**, not only two mods editing the same
+  part of one entry. It now also lists two mods shipping different copies of one whole file, and an
+  entry a fragment replaced inside another mod's whole-file copy, which load order cannot fix. Each
+  line says which mod won and what to do about it.
 
 ### Changed
 - **Breaking: a whole-file `oasisstrings.rml` override is refused.** Ship an
