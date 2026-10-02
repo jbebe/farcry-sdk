@@ -137,8 +137,9 @@ Three parts of that are not optional and not obvious:
   (verified: one distinct block across the corpus), so the `slot="…"` numbers are constants for this
   build — `101` is always `Page`, `74` always `Image`. Copy the block verbatim and use
   [the slot table](./reference.md#type-slots). Do not renumber it.
-- **`POOLCOUNTS` is 65 memory-pool hints.** All-zero works; they pre-reserve allocation chunks and
-  affect no offset.
+- **`POOLCOUNTS` is 65 memory-pool hints.** All-zero works for a package authored from scratch; they
+  pre-reserve allocation chunks and affect no offset. A retail package's counts are what it holds,
+  so a package edited to hold more [needs them raised](./patterns.md#adding-an-icon-to-the-hud).
 - **The `GENERICOBJECTTABLE` entry is what makes the page reachable.** `CUIPageBase::Init` hashes a
   page-name string and looks it up through `GenericObjectServer::FindGenericObject`. No entry, no
   binding — the package loads and draws nothing.

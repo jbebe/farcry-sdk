@@ -534,6 +534,36 @@ clipping.
 disappears on the next `Display()`.
 :::
 
+## Driving an area's timeline from code
+
+:::info[Verified via reverse engineering]
+Traced in the Steam `Dunia.dll` and used live by `mods/flashlight` on the GOG build through the
+address library. Addresses are Steam.
+:::
+
+How the HUD shows its pills, and how a mod shows anything it authored the same way. `CFCXMainHudUI`
+caches the pills `Area` and, to show it, calls `Area::SetTime(0, true, false)` then the area's virtual
+`SetPlaying(true, false)` (`0x10807740`). The keyframes and the `Stop` action in the layout do the
+rest.
+
+| Call | Address | Signature |
+|---|---|---|
+| `GenericObjectServer` singleton | `[0x10fe3f60]` | read off `CMagmaFacade::GetGenericObject<Keyframe>` (`0x10534500`), whose second instruction loads it |
+| `GenericObjectServer::FindGenericObject` | `0x10aa6f60` | `__thiscall(server, const magma::Id*)` → `GenericObject*`, or null |
+| the object a `GenericObject` resolves to | `0x10aa65c0` | `__thiscall(genericObject + 0xC)` → the last object of its `FullLink` |
+| `magma::Id::Hash` | `0x10aa7150` | CRC32 of the name |
+| `Element::SetVisible` | `0x10ab13f0` | `__thiscall(element, int)` |
+| `Area::SetTime` | `0x10a973e0` | `__thiscall(area, u32 milliseconds, bool executeActions, bool)`, `ret 0xC` |
+| `Area::SetPlaying` | `0x10a973a0` | `__thiscall(area, bool playing, bool)` |
+
+`FindGenericObject` takes the id **by reference**. Passing the hash itself dereferences it as an address
+and crashes in the table lookup **(crashed, 2026-10-02)**.
+
+An `Area` keeps its milliseconds per frame as a `u16` at `+0x18`, its playhead in milliseconds as a
+`u32` at `+0x4C`, and its playing flag as a byte at `+0x54`; the frame is the playhead divided by the
+frame time. After `SetTime` and `SetPlaying` the playhead advances in real time
+**(measured, 2026-10-02)**.
+
 ## Settings rows
 
 Every options screen is a `CSettingsPage`, and its rows are not built widget by widget. Three calls

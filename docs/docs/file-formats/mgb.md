@@ -283,7 +283,9 @@ The whole file body, in order. Everything past the last line is in-memory post-p
 
 ```
 [260 bytes]  65 × 4-byte reads — per-type instance counts feeding the Allocate*PoolChunk family.
-             Pure memory-pool pre-reservation; no effect on any later offset.
+             Pure memory-pool pre-reservation; no effect on any later offset. Retail counts
+             match what the package holds, and a load that needs more crashes in the pool
+             allocator, so an edited retail package must raise them.
 [variable]   UserData        — the Package's own property list (record format below).
 [4 bytes]    PAGESIZE        — u16 width, u16 height
 [4 bytes]    DISPLAYOFFSET   — u16 x, u16 y

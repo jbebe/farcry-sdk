@@ -316,6 +316,54 @@ scaling layer that reconciles them: **if you author one, you author both**, or y
 misaligned for half of players. `CMagmaLocalizationUtil::GetLocalizedPackageName` picks the folder;
 FCSE reads the same flag to pick between two embedded variants.
 
+## Adding an icon to the HUD
+
+The flashlight mod (`mods/flashlight`) adds an on/off icon beside the ammo group by editing the shipped
+`hud.mgb`. Its build script, `mods/flashlight/build/hud.ps1`, does the edits below to the decoded XML.
+
+**Where the HUD's groups live.** The main HUD page is the `Page` whose `USERDATA` is `#F2CDBA4C`. Each
+group on it - ammo, health, pills, phone - is an `AreaInstance` element (slot `33`) placed by a
+`ScaleState` `POSITION` in canvas units, linking a top-level `Area` that ticks its own timeline
+(`TIMING="TickTimingStrategy"`, slot `150`). The ammo group is `a_ammo_object` (`#4FA801E9`) at
+`965,682` on the widescreen canvas. A new icon is the same shape: a top-level `Area` holding the
+images, and an `AreaInstance` of it among the page's children.
+
+**Every variant is its own file.** `hud.mgb` ships once per aspect and per language, and the two aspect
+sets place the groups differently, so take the new instance's position from the ammo group's own
+`POSITION` in each file rather than from one constant. The retail install here has `hud.mgb` for
+`eng`, `fre`, `ger`, `ita` and `spa` in both `pc` and `pcwidescreen`; the `cze`, `hun`, `pol` and
+`rus` folders carry no UI packages at all.
+
+**Raise `POOLCOUNTS`.** A retail package's pool counts match what it holds, and adding objects past
+them crashes the load in Magma's memory-pool allocator, reading through a null free list
+**(crashed, 2026-10-02)**. Adding 64 to every count, the floor FCSE's own package uses, loads.
+
+**The texture.** A material's `texture="\textures\hud\x.png"` resolves to `ui\textures\hud\x.xbt`.
+The stock HUD icons are single-level DXT5, so pad art to a power of two and crop back with the
+material's `REGION`, which is a UV rect read as **x, y, width, height**: a 91×66 icon on a 128×128
+canvas is `REGION="0 0 0.7109375 0.515625"`, and draws uncropped and unstretched **(seen in game)**.
+Every stock HUD texture is listed as a child of the package's `.mgb.desc` in that variant's
+`ui\localized\<aspect>\<lang>\ui\_depload.xml`, as
+`<CTextureResource ID="ui\textures\hud\x.xbt" crc_ID="<CRC32 of the path>" />`; the flashlight's are
+listed the same way. Whether a texture missing from that list fails to load was not isolated.
+
+:::danger[An image's corner colours multiply its alpha]
+`ImageState`'s `COLOR1`-`COLOR4` scale the image, alpha included. The same icon drew with
+`FFFFFFFF` corners and drew nothing with `00FFFFFF` ones, side by side in one area
+**(seen in game, 2026-10-02)**. Some stock HUD images carry `00FFFFFF` corners and still draw; what
+makes them visible is not known. Author new images with `FFFFFFFF`.
+:::
+
+**Showing it on demand.** The icon rests at frame 0, transparent, with a `Stop` on the area there, so
+it is hidden while nothing plays it. Frames 1-5 fade `STATECOLOR` in, 5-75 hold, 75-90 fade out and
+stop again. Code shows the icon by jumping the area to frame 1 and playing it, the call pair
+[engine interop](./engine-interop.md#driving-an-areas-timeline-from-code) describes; the playhead
+then advances in real time **(measured)**, though the finished fade has not yet been seen in game.
+Export the
+area and each image in the `GENERICOBJECTTABLE` through the page's instance, as the stock exports do:
+`IDS="hud <page> <instance> <area> <image>"`. Two images on one timeline give two states; hide one
+with `Element::SetVisible` and the area's fade plays whichever is left.
+
 ## Binding a page to native code
 
 If your package's page is to be driven by a compiled `CUIPageBase` subclass, four things must line
