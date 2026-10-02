@@ -4,16 +4,13 @@
 #include "fcse_api.h"
 
 #include <chrono>
-#include <cstdint>
 
 namespace {
-    // CXGame::Update's last three calls on one object, then
-    // `pop edi; pop esi; mov esp, ebp; pop ebp; ret`.
-    FCSE::Relocation<uint8_t*> g_tail{FCSE::Pattern(
-        "8B 42 4C 6A 01 FF D0 8B 0D ?? ?? ?? ?? 6A 00 E8 ?? ?? ?? ?? 8B 0D ?? ?? ?? ?? 6A 01 E8 ?? "
-        "?? ?? ?? 8B 0D ?? ?? ?? ?? 6A 04 E8 ?? ?? ?? ?? 5F 5E 8B E5 5D C3")};
+    // CXGame::Update: __thiscall with no stack arguments, which a free function spells __fastcall.
+    using UpdateFn = void(__fastcall*)(void* self, void* unused);
 
-    constexpr size_t kEpilogue = 46;
+    FCSE::Relocation<UpdateFn> g_update{FCSE::Uplay(0x0065AEA0)};
+    UpdateFn g_originalUpdate = nullptr;
 
     // Longer steps, a hitch or a load, count as no time at all.
     constexpr float kMaxSeconds = 0.25f;
@@ -21,7 +18,9 @@ namespace {
     Flashlight::Frame::TickFn g_tick = nullptr;
     std::chrono::steady_clock::time_point g_last;
 
-    void OnTail(FCSE_MidHookContext*) {
+    void __fastcall UpdateDetour(void* self, void* unused) {
+        g_originalUpdate(self, unused);
+
         const auto now = std::chrono::steady_clock::now();
         const float seconds = std::chrono::duration<float>(now - g_last).count();
         g_last = now;
@@ -32,12 +31,14 @@ namespace {
 namespace Flashlight::Frame {
 
 bool Install(TickFn tick) {
-    if (!g_tail) {
-        FCSE::ApiPointer()->Log("frame: CXGame::Update's tail was not found in this build");
+    const FCSE_PluginAPI* api = FCSE::ApiPointer();
+    if (!g_update) {
+        api->Log("frame: CXGame::Update was not found in this build");
         return false;
     }
     g_tick = tick;
-    return FCSE::ApiPointer()->MidHook(g_tail.get() + kEpilogue, &OnTail);
+    return api->Hook(reinterpret_cast<void*>(g_update.address()), reinterpret_cast<void*>(&UpdateDetour),
+                     reinterpret_cast<void**>(&g_originalUpdate));
 }
 
 }

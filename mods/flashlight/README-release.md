@@ -23,7 +23,7 @@ Both apply to a light that is already on.
 
 ## Requirements
 
-- **FCSE 1.2.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
+- **FCSE 1.3.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
 
 ## Installing
 
