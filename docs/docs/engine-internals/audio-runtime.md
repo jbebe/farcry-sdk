@@ -704,8 +704,9 @@ rpm = fMinRPM[g] + (fMaxRPM[g] − fMinRPM[g]) × t
 `Update` keeps its own gear index, 0 to 2. It moves up one gear when the speed passes the current gear's
 `fMaxSpeed` and down one when it drops below `fMinSpeed`. The overlap between gears (the Rover's gear 0
 ends at 4 m/s, gear 1 starts at 3.8) is the only hysteresis. The Havok vehicle has an RPM of its own
-(`CPhysWheeledVehicleEntity::GetRPM`); Havok's default transmission derives it from the driven wheels'
-spin and the current gear ratio **(inferred: that Dunia uses the default transmission is not checked)**.
+(`CPhysWheeledVehicleEntity::GetRPM`); Havok's default transmission, which Dunia uses unchanged (see
+[vehicle physics](./vehicle-physics.md)), derives it from the driven wheels' spin and the current gear
+ratio.
 Nothing in the sound or gauge code reads it. `GearEmulation` is read by `ComputeRPM` and by
 `UpdateGauges` for the rev needle, and by nothing in physics.
 
@@ -714,7 +715,8 @@ What follows from that:
 - **The RPM tracks road speed, not the engine.** It does not rise with wheelspin, in the air or when
   revving in place, and there is no neutral.
 - **Above the top gear's `fMaxSpeed` the RPM is flat.** The Rover's gear 2 ends at 15 m/s (54 km/h)
-  and 11,000 RPM, beyond the parameter's 10,000, while the car reaches about 31 m/s.
+  and 11,000 RPM, beyond the parameter's 10,000. A player's car rarely gets past that anyway: a
+  speed limiter holds it near 60 km/h (see [vehicle physics](./vehicle-physics.md#every-step)).
 - **A gear change is timed by its sound.** On a change, `Update` plays the gear-shift event. While that
   sound is playing, the RPM is a blend from the old gear's value to the new gear's, weighted by the
   sound's elapsed time over its duration. With no shift sound (event `0xFFFFFFFF`, as on every retail

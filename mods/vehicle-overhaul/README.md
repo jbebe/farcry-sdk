@@ -1,8 +1,8 @@
 # Vehicle Overhaul
 
 Driving in Far Cry 2 as off-road driving: a third-person camera to watch the car work, off-road
-physics, an engine with real gears, and wrecks revived as drivable vehicles. Unfinished: only the
-third-person camera is started.
+physics, an engine with real gears, and wrecks revived as drivable vehicles. Unfinished: the camera
+and the physics are in; the engine, shooting from the windows and the wrecks are to come.
 
 ## What it does
 
@@ -17,9 +17,33 @@ third-person camera is started.
   - It stays above the terrain, though not out of rocks or buildings.
   - The driver is the game's first-person body: headless and posed for the first-person camera.
 
+- **Off-road physics, on the car you drive.** Every physics step, the car's Havok vehicle is re-tuned
+  from its own retail values. Getting out puts them all back, so AI drivers keep the retail physics.
+  - No speed limiter (retail holds a player's car near 60 km/h), longer gearing and no climb assist.
+  - Weak brakes that lock the wheels into a skid after half a second, as on a car without ABS.
+  - Tyre grip that leaves the ground's own friction to decide, with no extra downforce and little
+    rolling resistance, so a car coasts and slides.
+  - The tyres roll, pitch and yaw the body as physics would, with no damper on spins.
+  - Each car the overhaul knows carries its weight as high as the real vehicle it depicts, set from that
+    vehicle's stability factor: a Land Rover Series III tips over at 0.9 g, a Datsun 1200 at 1.3 g,
+    and the buggy keeps its weight at the axles.
+  - Softer springs and dampers.
+
 The engine's `Cameras.Camera.Third` is put up and its update is taken over to place the camera. Both
 are described in
-[the free camera and noclip](../../docs/docs/engine-internals/free-camera-and-noclip.md).
+[the free camera and noclip](../../docs/docs/engine-internals/free-camera-and-noclip.md). The vehicle
+physics are in [vehicle physics](../../docs/docs/engine-internals/vehicle-physics.md).
+
+## Tuning
+
+With DevTools installed, its overlay has a **Vehicle Overhaul** window:
+- the car's speed, rpm and gear;
+- its centre-of-mass height, the sideways g it tips over at, and the g its tyres hold on the ground
+  under them;
+- a switch for the whole overhaul, one for the real centre of mass, and a slider for every value
+  above.
+
+The values are kept in `bin\vehicle-overhaul.ini`.
 
 ## Layout
 
@@ -27,9 +51,11 @@ are described in
 src\                         the FCSE plugin
   third_person.cpp           the toggle, and putting the first-person camera back
   chase.cpp                  where the chase camera goes each frame
+  physics.cpp                the player's car tuned and put back, and the real vehicles' weight
+  tuning.cpp                 the values, their file and the window
   engine\                    the game's own seams: the signal dispatcher, the input pass, the camera
                              manager and the third camera's update, entities, the seat lookup,
-                             terrain height
+                             terrain height, the Havok vehicle under each car
 layer\mods\
   config\                    the active_camerathird control and its binding, as sections
   languages\                 the control's label, in every language

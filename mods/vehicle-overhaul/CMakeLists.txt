@@ -11,10 +11,17 @@ if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
                       "Select the x86-debug/x86-release preset.")
 endif()
 
+# DevTools' overlay contract and the Dear ImGui it pins. The tuning window appears only with DevTools
+# installed; without it the plugin runs unchanged.
+set(DEVTOOLS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../DevTools/include")
+include("${DEVTOOLS_INCLUDE_DIR}/devtools_imgui.cmake")
+
 add_library(VehicleOverhaul SHARED
   "src/main.cpp"
   "src/chase.cpp"
+  "src/physics.cpp"
   "src/third_person.cpp"
+  "src/tuning.cpp"
   "src/engine/camera.cpp"
   "src/engine/entity.cpp"
   "src/engine/input.cpp"
@@ -22,10 +29,14 @@ add_library(VehicleOverhaul SHARED
   "src/engine/terrain.cpp"
   "src/engine/third_camera.cpp"
   "src/engine/vehicle.cpp"
+  "src/engine/wheeled.cpp"
 )
 
 target_include_directories(VehicleOverhaul PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
   "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/FCSE/include"
+  "${DEVTOOLS_INCLUDE_DIR}"
 )
 target_compile_features(VehicleOverhaul PRIVATE cxx_std_20)
+# Dear ImGui is the core alone, drawing into DevTools' context - the backends are DevTools'.
+target_link_libraries(VehicleOverhaul PRIVATE imgui)
