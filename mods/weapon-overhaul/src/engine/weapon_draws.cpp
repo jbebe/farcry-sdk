@@ -6,13 +6,14 @@
 #include "engine/vtable.h"
 #include "fcse_api.h"
 
-#include <algorithm>
 #include <cmath>
 #include <iterator>
 
 namespace {
     using DrawIndexedPrimitiveFn = HRESULT(__stdcall*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, INT,
                                                        UINT, UINT, UINT, UINT);
+    using WeaponOverhaul::Frame::kNever;
+    using WeaponOverhaul::WeaponDraws::Projection;
 
     // A render target that takes no memory and a depth format a shader can read, both driver
     // formats rather than Direct3D's own.
@@ -22,11 +23,10 @@ namespace {
     // The weapon's depth is drawn through a viewport squeezed this close to the near plane.
     constexpr float kWeaponFarthest = 0.5f;
 
-    // The weapon's projection, unlike the world's, has its near plane a centimetre out.
+    // Where the projection is, and the farthest out the weapon's near plane is taken to be; the
+    // world's is further.
     constexpr UINT kProjectionRegister = 8;
     constexpr float kWeaponNearest = 0.05f;
-
-    constexpr uint32_t kNone = 0xFFFFFFFFu;
 
     DrawIndexedPrimitiveFn g_original = nullptr;
     WeaponOverhaul::WeaponDraws::Listener g_listener = {};
@@ -41,11 +41,11 @@ namespace {
     bool g_refused = false;
 
     // The frame the depth was last cleared for, the pass that began it, and its projection.
-    uint32_t g_depthFrame = kNone;
-    uint32_t g_depthPass = kNone;
-    float g_projection[16] = {};
-    uint32_t g_colourFrame = kNone;
-    uint32_t g_colourPass = kNone;
+    uint32_t g_depthFrame = kNever;
+    uint32_t g_depthPass = kNever;
+    Projection g_projection = {};
+    uint32_t g_colourFrame = kNever;
+    uint32_t g_colourPass = kNever;
 
     // The parts the gun's depth pass drew this frame, which its colour pass draws again.
     struct Part {
@@ -56,7 +56,7 @@ namespace {
     constexpr size_t kMaxParts = 64;
     Part g_parts[kMaxParts] = {};
     size_t g_partCount = 0;
-    uint32_t g_partsFrame = kNone;
+    uint32_t g_partsFrame = kNever;
 
     void Remember(uint32_t frame, const Part& part) {
         if (g_partsFrame != frame) {
@@ -95,7 +95,7 @@ namespace {
     void ReleaseTargets() {
         WeaponOverhaul::Release(g_nullTarget);
         WeaponOverhaul::Release(g_depth);
-        g_depthFrame = kNone;
+        g_depthFrame = kNever;
     }
 
     bool Refuse(const char* what, HRESULT result) {
@@ -131,19 +131,23 @@ namespace {
         return true;
     }
 
-    // The projection a draw is about to use, if it is the weapon's.
-    bool ReadGunProjection(IDirect3DDevice9* device, float (&projection)[16]) {
-        if (FAILED(device->GetVertexShaderConstantF(kProjectionRegister, projection, 4)) ||
-            std::abs(projection[14]) != 1.0f || projection[15] != 0.0f || projection[10] == 0.0f) {
+    // The projection a draw is about to use, if it is the weapon's: one register a row, the last
+    // making clip space's w.
+    bool ReadGunProjection(IDirect3DDevice9* device, Projection& projection) {
+        float rows[16] = {};
+        if (FAILED(device->GetVertexShaderConstantF(kProjectionRegister, rows, 4)) ||
+            std::abs(rows[14]) != 1.0f || rows[15] != 0.0f || rows[10] == 0.0f) {
             return false;
         }
-        const float nearest = -projection[11] / (projection[10] * projection[14]);
+        projection = {rows[0], rows[5], rows[10] * rows[14], rows[11]};
+        const float nearest = -projection.depthOffset / projection.depthScale;
         return nearest > 0.0f && nearest < kWeaponNearest;
     }
 
     // Binds our depth for one of the gun's depth draws, at half size over the whole depth range,
     // with every target the engine had bound taken off.
-    bool Begin(IDirect3DDevice9* device, const D3DVIEWPORT9& viewport, const float* projection) {
+    bool Begin(IDirect3DDevice9* device, const D3DVIEWPORT9& viewport,
+               const Projection& projection) {
         DWORD writes = FALSE;
         if (viewport.Width != WeaponOverhaul::Frame::Width() ||
             viewport.Height != WeaponOverhaul::Frame::Height() ||
@@ -175,7 +179,7 @@ namespace {
             device->Clear(0, nullptr, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 1.0f, 0);
             g_depthFrame = frame;
             g_depthPass = WeaponOverhaul::Frame::PassSerial();
-            std::copy_n(projection, std::size(g_projection), g_projection);
+            g_projection = projection;
         }
         const D3DVIEWPORT9 half = {viewport.X / 2, viewport.Y / 2, g_width, g_height, 0.0f, 1.0f};
         device->SetViewport(&half);
@@ -207,7 +211,7 @@ namespace {
                               startIndex, primitiveCount);
         };
         D3DVIEWPORT9 viewport = {};
-        float projection[16] = {};
+        Projection projection = {};
         const bool squeezed = !WeaponOverhaul::Frame::PastSky();
         if (!g_watching || FAILED(device->GetViewport(&viewport)) ||
             (viewport.MaxZ < kWeaponFarthest) != squeezed ||
@@ -241,9 +245,8 @@ namespace {
         if (!g_watching || g_depthFrame != WeaponOverhaul::Frame::Number()) {
             return;
         }
-        const WeaponOverhaul::WeaponDraws::Depth depth = {
-            g_depth.texture, g_width, g_height, g_projection[5],
-            g_projection[10] * g_projection[14], g_projection[11]};
+        const WeaponOverhaul::WeaponDraws::Depth depth = {g_depth.texture, g_width, g_height,
+                                                          g_projection};
         if (pass.serial == g_depthPass) {
             g_listener.onDepthPass(pass, depth);
         }

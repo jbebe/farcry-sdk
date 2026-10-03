@@ -28,8 +28,9 @@ shadow and the eyepiece are in, a picture-in-picture scope is not.
 - **Eyepiece.** The engine draws a scope as a tube seen down its length, with the reticle and the
   zoomed view far at its end. Only the tube's first centimetre is kept, so the zoomed view fills the
   eyepiece, and the reticle grows with the opening so it sits in it as it sat in the lens. The
-  magnification is unchanged. Each time a scope comes up, its depth is read back once to find the
-  eyepiece and both openings, so it fits every scope the engine draws this way. The reticle sits at
+  magnification is unchanged. Once a scope has come up and settled, its depth is read back until
+  two readings agree, to find the eyepiece and both openings, and what is found is kept for that
+  scope; so it fits every scope the engine draws this way. The reticle sits at
   the scope's far end, so as the look turns it swings off centre with the shadow, centred on the
   shadow's clear circle, and shows only through the opening. Shots still go to the screen's
   centre.
@@ -38,8 +39,8 @@ The eye is moved through the camera's positional offset, the one the recoil kick
 `src/engine/aim.cpp`. The blur draws the gun's own depth pass a second time into a depth texture of
 its own, in `src/engine/weapon_draws.cpp`, and the blur and the scope shadow draw at the end of the
 pass the gun's colour is drawn in, before the bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
-The eyepiece cuts the scope's draws with a clip plane and scales the reticle's in clip space, in
-`src/eyepiece.cpp`.
+The lens is found there too, in `src/scope_lens.cpp`. The eyepiece cuts the scope's draws with a
+clip plane and scales the reticle's in clip space, in `src/eyepiece.cpp`.
 The engine side is in
 [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md).
 

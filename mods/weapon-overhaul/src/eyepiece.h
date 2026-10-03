@@ -11,13 +11,17 @@ namespace WeaponOverhaul::Eyepiece {
 void OnDepthPass(const Frame::Pass& pass, const WeaponDraws::Depth& depth);
 
 // Cuts or grows one of the gun's draws, or drops it, and puts back what that changed.
-bool BeforeGunDraw(IDirect3DDevice9* device, const float* projection, bool depthPass);
+bool BeforeGunDraw(IDirect3DDevice9* device, const WeaponDraws::Projection& projection,
+                   bool depthPass);
 void AfterGunDraw(IDirect3DDevice9* device);
 
 // The stored depth the scope is cut at this frame, one while it is drawn whole.
-float Hole(const WeaponDraws::Depth& depth);
+float Hole(const WeaponDraws::Projection& projection);
 
 void SetEnabled(bool enabled);
+
+// Whether the reticle swings with the shadow's clear circle, as it does while the shadow is on.
+void SetSwinging(bool swinging);
 
 void ReleaseDeviceObjects();
 

@@ -155,7 +155,8 @@ namespace {
         // The blur's diameter is the pupil times the dioptres from focus; dioptres are stored depth
         // over the depth offset, and an angle covers the vertical scale over two of the height.
         const float lens =
-            kPupil * depth.verticalScale / (4.0f * std::abs(depth.depthOffset) * kLargest);
+            kPupil * depth.projection.verticalScale /
+            (4.0f * std::abs(depth.projection.depthOffset) * kLargest);
         const float constants[kConstantCount * 4] = {
             lens, settled, Refocus(), 0.0f,
             0.0f, 0.0f, 0.0f, 0.0f,

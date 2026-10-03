@@ -10,6 +10,19 @@
 
 namespace WeaponOverhaul::WeaponDraws {
 
+// The projection the weapon is drawn with.
+struct Projection {
+    // One over the tangent of half the field of view, across and up.
+    float horizontalScale;
+    float verticalScale;
+    // The two terms of stored depth, depthScale + depthOffset / metres.
+    float depthScale;
+    float depthOffset;
+
+    float Stored(float metres) const { return depthScale + depthOffset / metres; }
+    float Metres(float stored) const { return depthOffset / (stored - depthScale); }
+};
+
 struct Depth {
     // Hardware depth at half the scene's size over the whole depth range, of the gun as the engine
     // draws it, before any listener's changes; one where the weapon is not. Borrowed until
@@ -17,17 +30,13 @@ struct Depth {
     IDirect3DTexture9* texture;
     UINT width;
     UINT height;
-    // From the projection the weapon was drawn with: one over the tangent of half the vertical
-    // field of view, and the two terms of stored depth, depthScale + depthOffset / metres.
-    float verticalScale;
-    float depthScale;
-    float depthOffset;
+    Projection projection;
 };
 
 using GunPassFn = void (*)(const Frame::Pass& pass, const Depth& depth);
-// `projection` is the 16 floats at c8 to c11 the draw projects with, one register a row, and
-// `depthPass` whether the draw is of the gun's depth rather than its colour. False drops the draw.
-using GunDrawFn = bool (*)(IDirect3DDevice9* device, const float* projection, bool depthPass);
+// `depthPass` is whether the draw is of the gun's depth rather than its colour. False drops the
+// draw.
+using GunDrawFn = bool (*)(IDirect3DDevice9* device, const Projection& projection, bool depthPass);
 using RestoreFn = void (*)(IDirect3DDevice9* device);
 
 struct Listener {

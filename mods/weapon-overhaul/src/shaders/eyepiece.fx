@@ -6,7 +6,7 @@ float4 Mask : register(c0);
 
 // The weapon's hardware depth at half resolution, one where the weapon is not.
 sampler2D WeaponDepth : register(s3);
-// The opening as the scope shadow found it: x its radius, yz its centre off the screen's, y down,
+// The opening as ScopeLens found it: x its radius, yz its centre off the screen's, y down,
 // all in screen heights.
 sampler2D Lens : register(s5);
 

@@ -6,6 +6,7 @@
 #include "engine/weapon_draws.h"
 #include "eyepiece.h"
 #include "fcse_api.h"
+#include "scope_lens.h"
 #include "scope_shadow.h"
 #include "sway.h"
 
@@ -15,6 +16,7 @@ namespace {
     void OnDeviceRelease() {
         WeaponOverhaul::Blur::ReleaseDeviceObjects();
         WeaponOverhaul::Eyepiece::ReleaseDeviceObjects();
+        WeaponOverhaul::ScopeLens::ReleaseDeviceObjects();
         WeaponOverhaul::ScopeShadow::ReleaseDeviceObjects();
         WeaponOverhaul::ScreenDraw::ReleaseDeviceObjects();
         WeaponOverhaul::WeaponDraws::ReleaseDeviceObjects();
@@ -23,7 +25,9 @@ namespace {
     void OnGunPass(const WeaponOverhaul::Frame::Pass& pass,
                    const WeaponOverhaul::WeaponDraws::Depth& depth) {
         WeaponOverhaul::Blur::OnGunPass(pass, depth);
-        WeaponOverhaul::ScopeShadow::OnGunPass(pass, depth, WeaponOverhaul::Eyepiece::Hole(depth));
+        const float hole = WeaponOverhaul::Eyepiece::Hole(depth.projection);
+        WeaponOverhaul::ScopeLens::Track(pass, depth, hole);
+        WeaponOverhaul::ScopeShadow::OnGunPass(pass, depth, hole);
     }
 
     void __cdecl OnSwayChanged(const FCSE_SettingValue* value, void*) {
@@ -36,6 +40,7 @@ namespace {
 
     void __cdecl OnScopeShadowChanged(const FCSE_SettingValue* value, void*) {
         WeaponOverhaul::ScopeShadow::SetEnabled(value->asCheckbox);
+        WeaponOverhaul::Eyepiece::SetSwinging(value->asCheckbox);
     }
 
     void __cdecl OnEyepieceChanged(const FCSE_SettingValue* value, void*) {

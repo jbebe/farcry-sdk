@@ -9,6 +9,9 @@
 
 namespace WeaponOverhaul::Frame {
 
+// A frame or pass number nothing has had.
+inline constexpr uint32_t kNever = 0xFFFFFFFFu;
+
 // One of the world's passes, as it ends.
 struct Pass {
     IDirect3DDevice9* device;

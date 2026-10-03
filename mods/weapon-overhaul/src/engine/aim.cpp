@@ -68,12 +68,20 @@ namespace {
     constexpr float kEyeReach = 0.27f;
     constexpr float kCut = 0.5f;
 
+    // The scope's far end swings against the turn. Turns slower than kSlowTurn radians a second
+    // hardly move it; past that it moves kSwingPerTurn opening radii per radian a second, and
+    // kMostSwing at most.
+    constexpr float kSlowTurn = 0.3f;
+    constexpr float kSwingPerTurn = 0.6f;
+    constexpr float kMostSwing = 0.35f;
+
     WeaponOverhaul::Aim::DriftFn g_drift = nullptr;
     float g_sights = 0.0f;
     float g_scope = 0.0f;
     std::atomic<float> g_settled{0.0f};
     std::atomic<float> g_scoped{0.0f};
     std::atomic<bool> g_scopeUp{false};
+    std::atomic<uint32_t> g_scopeUps{0};
     std::atomic<float> g_leadRight{0.0f};
     std::atomic<float> g_leadUp{0.0f};
 
@@ -89,7 +97,12 @@ namespace {
     float g_lookYaw = 0.0f;
     float g_smoothPitch = 0.0f;
     float g_smoothYaw = 0.0f;
-    WeaponOverhaul::Aim::Turn g_turn = {};
+    // Radians a second.
+    struct Turn {
+        float right;
+        float up;
+    };
+    Turn g_turn = {};
     std::atomic<float> g_turnRight{0.0f};
     std::atomic<float> g_turnUp{0.0f};
 
@@ -203,6 +216,9 @@ namespace {
         const float scoped = Ease(g_scope);
         g_settled = settled;
         g_scoped = scoped;
+        if (scope && !g_scopeUp) {
+            g_scopeUps++;
+        }
         g_scopeUp = scope;
         const WeaponOverhaul::Aim::Offset lead = FollowLook(pawn, data, seconds);
         g_leadRight = lead.right * scoped;
@@ -257,12 +273,24 @@ float WeaponOverhaul::Aim::Scoped() {
     return g_scoped;
 }
 
-WeaponOverhaul::Aim::Turn WeaponOverhaul::Aim::Turning() {
-    return {g_turnRight, g_turnUp};
-}
-
 bool WeaponOverhaul::Aim::ScopeUp() {
     return g_scopeUp;
+}
+
+uint32_t WeaponOverhaul::Aim::ScopeUps() {
+    return g_scopeUps;
+}
+
+WeaponOverhaul::Aim::Swing WeaponOverhaul::Aim::ScopeSwing() {
+    const float right = g_turnRight;
+    const float up = g_turnUp;
+    const float speed = std::hypot(right, up);
+    if (speed <= 0.0f) {
+        return {};
+    }
+    const float eased = speed * speed / (speed + kSlowTurn);
+    const float swing = kMostSwing * std::tanh(eased * kSwingPerTurn / kMostSwing) / speed;
+    return {-right * swing, up * swing};
 }
 
 WeaponOverhaul::Aim::Offset WeaponOverhaul::Aim::ScopeLead() {

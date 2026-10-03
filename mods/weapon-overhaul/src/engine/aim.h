@@ -1,6 +1,8 @@
 // The player's aim, as the first-person camera sees it once a frame, and the eye's place off the gun.
 #pragma once
 
+#include <cstdint>
+
 namespace WeaponOverhaul::Aim {
 
 // Metres along the view's own axes.
@@ -9,10 +11,10 @@ struct Offset {
     float up;
 };
 
-// Radians a second.
-struct Turn {
-    float right;
-    float up;
+// A share of the scope's opening radius, x right and y down.
+struct Swing {
+    float x;
+    float y;
 };
 
 // The hand's drift this frame, given the seconds since the last.
@@ -28,13 +30,15 @@ bool Install(DriftFn drift);
 float Settled();
 float Scoped();
 
-// How fast the look turns, smoothed the way the gun trails it.
-Turn Turning();
-
-// Whether a scope's own sight picture is up this frame, which the engine shows at once.
+// Whether a scope's own sight picture is up this frame, which the engine shows at once, and how many
+// times one has come up.
 bool ScopeUp();
+uint32_t ScopeUps();
 
 // How far the eye runs ahead of the scope this frame, which moves the sight picture the other way.
 Offset ScopeLead();
+
+// How far the scope's far end has swung off its opening's centre, against the look's turn.
+Swing ScopeSwing();
 
 }
