@@ -1,7 +1,8 @@
 # Weapon Overhaul
 
-An FCSE plugin for how aiming down the sights looks. Unfinished: the sway, the gun blur, the scope
-shadow and the eyepiece are in, a picture-in-picture scope is not.
+An FCSE plugin for how aiming down the sights looks: sway and a blurred gun down the iron sights; a
+scope that lags, shadows, is seen from its eyepiece, and has the world around it at the eye's own
+field of view.
 
 ## What it does
 
@@ -34,15 +35,21 @@ shadow and the eyepiece are in, a picture-in-picture scope is not.
   the scope's far end, so as the look turns it swings off centre with the shadow, centred on the
   shadow's clear circle, and shows only through the opening. Shots still go to the screen's
   centre.
+- **Surroundings.** Around the eyepiece the world is seen at the field of view the eye has without
+  a scope, as with both eyes open, while the eyepiece keeps the scope's magnified view. The
+  surroundings are a second, cheaper view drawn by the engine's water reflection renderer, at half
+  the screen's size with less detail; the magnified view inside stays the engine's own.
 
 The eye is moved through the camera's positional offset, the one the recoil kicks, in
 `src/engine/aim.cpp`. The blur draws the gun's own depth pass a second time into a depth texture of
 its own, in `src/engine/weapon_draws.cpp`, and the blur and the scope shadow draw at the end of the
 pass the gun's colour is drawn in, before the bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
 The lens is found there too, in `src/scope_lens.cpp`. The eyepiece cuts the scope's draws with a
-clip plane and scales the reticle's in clip space, in `src/eyepiece.cpp`.
-The engine side is in
-[first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md).
+clip plane and scales the reticle's in clip space, in `src/eyepiece.cpp`. The second view is drawn
+in `src/engine/second_view.cpp` and laid down as the gun's colour pass begins, in
+`src/surroundings.cpp`. The engine side is in
+[first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md) and
+[presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).
 
 ## Requirements
 
@@ -59,6 +66,7 @@ On the plugin's page in the Mod Configuration Menu, stored under `[WeaponOverhau
 | Gun blur | Yes / No | Yes |
 | Scope shadow | Yes / No | Yes |
 | Scope eyepiece | Yes / No | Yes |
+| Scope surroundings | Yes / No | Yes |
 
 ## Building
 

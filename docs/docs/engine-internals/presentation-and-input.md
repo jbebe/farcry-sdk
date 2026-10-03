@@ -192,6 +192,86 @@ Cut at a run of distances, the scopes lie at:
 | AS50 | 15–24 cm | 23–24 cm | 23–24 cm |
 | M1903 | 10–19 cm | 18–19 cm | 15–19 cm |
 
+### Drawing the world a second time
+
+:::info[Verified via reverse engineering]
+Read from `Dunia.dll` (Steam v1.03). The functions are annotated in the Ghidra project.
+:::
+
+The water reflection is the only pass that draws the full-colour world from another camera into a
+target of its own. The other secondary views are written out by hand where they are used, and none
+of them is a general "render this camera" function: `Render2DView`, the editor's picking renderer,
+the sector ambient pass and the shadow cascades. The `CSceneViewport*` strings have no code behind
+them.
+
+- **It draws at once.** `CWaterReflectionRenderer::RenderWaterReflection` (`0x103A3250`) fills the
+  shared named passes and executes them immediately. Nothing is deferred to the frame graph.
+- **Where it is called.** `CSceneRenderer::PrepareFrameGraph` (`0x10347040`) calls it at
+  `0x103478A5`, after the shadow cascades. It runs only when `SetupReflectionView` (`0x103A8640`)
+  answers true: there is reflective water at or below the camera and the reflection quality is at
+  least 2.
+- **What it is called with.** `__thiscall` on the renderer at `[[scene+0x38]+0x38]`, 14 arguments,
+  `RET 0x38`. The ones that matter:
+  - the view block;
+  - the viewport;
+  - the camera component, which supplies the render camera at `+0x20` and the culling camera's
+    position at `+0x5E0`;
+  - the level-of-detail and kill-distance scales, both multiplied by the zoom.
+- **It allocates its own targets.** It pushes a "Reflection" scope on its target pool and stores it
+  at `+0x24`. It takes "Color" at the config's `+0x598` × `+0x59C`, 1024 × 1024, and draws with
+  `+0x5A4` samples. The colour ends up at `+0x20`, an engine texture whose `+0x18` is the
+  `IDirect3DTexture9`. The frame function pops the scope later, at `0x10347C6D`.
+- **The view block is `SWaterReflectionView`**, 0x870 bytes and 16-byte aligned, built by
+  `0x103A2C30`. Only these fields are read:
+  - the camera at `+0x3D0`, used for both drawing and culling;
+  - the scissor at `+0x7A0`;
+  - the clip plane at `+0x830`, where (0, 0, 0, 1) turns it off;
+  - a colour tint at `+0x850`;
+  - a quality from 2 to 7 at `+0x868`;
+  - the smallest object radius drawn, at `+0x86C`.
+- **The camera, `CCamera`, is 0x3D0 bytes.**
+  - Fields: aspect at `+0x18`, near and far at `+0x220` and `+0x224`, and the horizontal field of
+    view in radians at `+0x228`. The view-projection is at `+0x170`, and `+0x348` flags the clip
+    plane as a seventh frustum plane.
+  - `0x1040C800` rebuilds it from those fields. `0x1033AEA0` assigns one camera to another and
+    `0x1039FEA0` copy-constructs one.
+- **What it leaves out:**
+  - the depth prepass and linear depth;
+  - the first-person weapon;
+  - distortion and occlusion queries;
+  - objects below the smallest radius;
+  - object classes the quality leaves out.
+
+  Material detail is reduced too.
+
+:::info[Verified in a running game]
+Retail GOG v1.03 at 1920 × 1080, from an FCSE plugin. A mid-hook on the instruction after the call
+ran the reflection's culling and drawing a second time each frame while a scope was up, and the
+image was right.
+:::
+
+Weapon Overhaul's `src/engine/second_view.cpp` does this. Its view block is built by the
+constructor, with:
+
+- the player's render camera assigned to it, not mirrored;
+- the unzoomed field of view written in, and the frustum's clip plane cleared;
+- a full-target scissor, the clip plane off, and a neutral tint.
+
+A fake camera component carries copies of that camera at `+0x20` and `+0x3F0`. Then
+`QueryVisibility` (`0x103A8450`) and the renderer are called, and the "Color" is copied out.
+`0x103A1EF0` pops the scope, and the renderer's `+0x20` and `+0x24` are put back.
+
+- **The second call gets a texture of its own.** The pool only reuses entries not in use, and the
+  water's reflection is still in use. Once restored, the water's own reflection is untouched.
+- **The zoom is in the camera, not the projection alone.** Scoped through the Dart Rifle, the
+  render camera's `+0x228` read 0.398 rad, a vertical scale of 8.82 at 16:9. Unaimed it read
+  1.594 rad.
+- **The scales the reflection is called with carry the zoom.** They read 0.276 scoped. Rebuilt from
+  the scene config's `+0x6B4` and `+0x6B8` times the viewport's `+0x34` and `+0x38`, they are 1.0.
+- **The renderer takes a size and sample count of its own.** Setting the config's `+0x598`,
+  `+0x59C` and `+0x5A4` for the call and putting them back drew it at half the screen without
+  multisampling.
+
 ### Whether there is a render thread
 
 `CThreadingConfig` has a `RENDER_THREAD` entry, `engine\settings\defaultthreadingconfig.xml` ships
