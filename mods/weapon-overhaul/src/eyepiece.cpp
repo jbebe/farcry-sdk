@@ -131,7 +131,7 @@ namespace {
         return a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
     }
 
-    // The circle x² + y² + Dx + Ey + F = 0 nearest the points by least squares.
+    // The circle x^2 + y^2 + Dx + Ey + F = 0 nearest the points by least squares.
     bool Fit(const std::vector<Point>& points, Circle& circle) {
         if (points.size() < kFewestPoints) {
             return false;
@@ -325,11 +325,6 @@ namespace {
         }
     }
 
-    bool Cutting() {
-        return g_enabled && WeaponOverhaul::Aim::ScopeUp() &&
-               g_up.number == WeaponOverhaul::Aim::ScopeUps() && g_up.scope != nullptr;
-    }
-
     // Where a spot of the scope is this frame in clip space, the eye's lead moving it.
     Point At(const Spot& spot, const Projection& projection) {
         const WeaponOverhaul::Aim::Offset lead = WeaponOverhaul::Aim::ScopeLead();
@@ -512,7 +507,11 @@ void WeaponOverhaul::Eyepiece::AfterGunDraw(IDirect3DDevice9* device) {
 }
 
 float WeaponOverhaul::Eyepiece::Hole(const WeaponDraws::Projection& projection) {
-    return Cutting() ? projection.Stored(g_up.scope->keptTo) : 1.0f;
+    return Active() ? projection.Stored(g_up.scope->keptTo) : 1.0f;
+}
+
+bool WeaponOverhaul::Eyepiece::Active() {
+    return g_enabled && Aim::ScopeUp() && g_up.number == Aim::ScopeUps() && g_up.scope != nullptr;
 }
 
 void WeaponOverhaul::Eyepiece::SetEnabled(bool enabled) {

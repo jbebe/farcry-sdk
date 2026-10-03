@@ -15,6 +15,9 @@ bool BeforeGunDraw(IDirect3DDevice9* device, const WeaponDraws::Projection& proj
                    bool depthPass);
 void AfterGunDraw(IDirect3DDevice9* device);
 
+// Whether a scope is cut to its eyepiece this frame.
+bool Active();
+
 // The stored depth the scope is cut at this frame, one while it is drawn whole.
 float Hole(const WeaponDraws::Projection& projection);
 

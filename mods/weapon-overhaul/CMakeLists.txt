@@ -31,7 +31,8 @@ set(SHADER_PASSES
   "lens.fx:LensPS:ps_3_0:scope_lens_ps.h:g_scopeLensPixelShader"
   "scope.fx:ShadowPS:ps_2_b:scope_shadow_ps.h:g_scopeShadowPixelShader"
   "eyepiece.fx:DepthPS:ps_2_0:eyepiece_depth_ps.h:g_eyepieceDepthPixelShader"
-  "eyepiece.fx:MaskPS:ps_2_0:eyepiece_mask_ps.h:g_eyepieceMaskPixelShader")
+  "eyepiece.fx:MaskPS:ps_2_0:eyepiece_mask_ps.h:g_eyepieceMaskPixelShader"
+  "surroundings.fx:SurroundingsPS:ps_2_0:surroundings_ps.h:g_surroundingsPixelShader")
 
 set(SHADER_HEADERS "")
 foreach(PASS IN LISTS SHADER_PASSES)
@@ -60,11 +61,13 @@ add_library(WeaponOverhaul SHARED
   "src/eyepiece.cpp"
   "src/scope_lens.cpp"
   "src/scope_shadow.cpp"
+  "src/surroundings.cpp"
   "src/sway.cpp"
   "src/engine/aim.cpp"
   "src/engine/device_reset.cpp"
   "src/engine/frame.cpp"
   "src/engine/screen_draw.cpp"
+  "src/engine/second_view.cpp"
   "src/engine/shader.cpp"
   "src/engine/vtable.cpp"
   "src/engine/weapon_draws.cpp"

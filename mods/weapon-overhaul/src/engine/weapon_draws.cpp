@@ -44,6 +44,8 @@ namespace {
     uint32_t g_depthFrame = kNever;
     uint32_t g_depthPass = kNever;
     Projection g_projection = {};
+    // The frame the gun's colour last began in, and the frame and pass it was recognised in.
+    uint32_t g_colourStart = kNever;
     uint32_t g_colourFrame = kNever;
     uint32_t g_colourPass = kNever;
 
@@ -227,9 +229,15 @@ namespace {
                 draw();
                 End(device);
             }
-        } else if (g_colourFrame != frame && IsGunPart(frame, part)) {
-            g_colourFrame = frame;
-            g_colourPass = WeaponOverhaul::Frame::PassSerial();
+        } else {
+            if (g_colourStart != frame) {
+                g_colourStart = frame;
+                g_listener.beforeColour(device);
+            }
+            if (g_colourFrame != frame && IsGunPart(frame, part)) {
+                g_colourFrame = frame;
+                g_colourPass = WeaponOverhaul::Frame::PassSerial();
+            }
         }
         if (!g_listener.beforeDraw(device, projection, squeezed)) {
             return D3D_OK;

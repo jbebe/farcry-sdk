@@ -37,18 +37,19 @@ using GunPassFn = void (*)(const Frame::Pass& pass, const Depth& depth);
 // `depthPass` is whether the draw is of the gun's depth rather than its colour. False drops the
 // draw.
 using GunDrawFn = bool (*)(IDirect3DDevice9* device, const Projection& projection, bool depthPass);
-using RestoreFn = void (*)(IDirect3DDevice9* device);
+using DeviceFn = void (*)(IDirect3DDevice9* device);
 
 struct Listener {
     // As the first pass with the gun's depth in it ends, the depth complete but for cut-outs, which
     // come in a pass of their own.
     GunPassFn onDepthPass;
-    // As the gun's colour pass ends.
+    // As the gun's colour pass begins, before its first draw, and as it ends.
+    DeviceFn beforeColour;
     GunPassFn onGunPass;
     // Around each of the gun's draws, depth and colour; `afterDraw` puts back what `beforeDraw`
     // changed, and is not called for a dropped draw.
     GunDrawFn beforeDraw;
-    RestoreFn afterDraw;
+    DeviceFn afterDraw;
 };
 
 // Takes over the frame and the device's indexed draws, and calls `listener` while the player is

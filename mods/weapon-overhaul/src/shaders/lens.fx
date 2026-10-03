@@ -63,7 +63,7 @@ float Determinant(float3 a, float3 b, float3 c) {
     return dot(a, cross(b, c));
 }
 
-// The circle nearest the hits by least squares on x² + y² + Dx + Ey + F = 0, taking only the hits
+// The circle nearest the hits by least squares on x^2 + y^2 + Dx + Ey + F = 0, taking only the hits
 // within `within` of the circle `near`'s radius from its centre, or every hit while `near` has none.
 // xy: its centre, z: its radius, w: how many hits it was fitted to.
 float4 Fit(float3 near, float within) {
