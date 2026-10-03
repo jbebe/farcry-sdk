@@ -11,6 +11,7 @@ bool Install();
 
 // What the player's car is doing and how it stands, for the window.
 struct Status {
+    // With the engine's revs from the drivetrain in place of the wheels'.
     Wheeled::Readout motion;
     // The real vehicle it was matched to, or null for a car the overhaul does not know.
     const char* name;

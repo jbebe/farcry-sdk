@@ -7,7 +7,8 @@ namespace VehicleOverhaul::PawnTick {
 // Zeroing it keeps the pawn's own look still.
 using TickFn = void (*)(void* pawn, float* look);
 
-// Calls `tick` once a frame while a player exists. False, and logged, when the pass is not found.
-bool Install(TickFn tick);
+// Calls `tick` once a frame while a player exists, after any subscribed before it. The first call
+// hooks the pass; false, and logged, when it is not found.
+bool Subscribe(TickFn tick);
 
 }

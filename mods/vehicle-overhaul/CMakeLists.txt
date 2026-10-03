@@ -19,7 +19,9 @@ include("${DEVTOOLS_INCLUDE_DIR}/devtools_imgui.cmake")
 add_library(VehicleOverhaul SHARED
   "src/main.cpp"
   "src/chase.cpp"
+  "src/drivetrain.cpp"
   "src/physics.cpp"
+  "src/real_vehicle.cpp"
   "src/third_person.cpp"
   "src/tuning.cpp"
   "src/engine/camera.cpp"
@@ -29,6 +31,7 @@ add_library(VehicleOverhaul SHARED
   "src/engine/terrain.cpp"
   "src/engine/third_camera.cpp"
   "src/engine/vehicle.cpp"
+  "src/engine/vehicle_sound.cpp"
   "src/engine/wheeled.cpp"
 )
 

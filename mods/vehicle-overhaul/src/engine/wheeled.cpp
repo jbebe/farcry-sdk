@@ -4,6 +4,7 @@
 // See docs/docs/engine-internals/vehicle-physics.md.
 #include "engine/wheeled.h"
 
+#include "engine/memory.h"
 #include "fcse_api.h"
 
 #include <algorithm>
@@ -11,6 +12,7 @@
 #include <cmath>
 
 namespace {
+    using VehicleOverhaul::At;
     using VehicleOverhaul::Wheeled::Car;
     using VehicleOverhaul::Wheeled::kMaxWheels;
 
@@ -32,8 +34,14 @@ namespace {
     constexpr ptrdiff_t kVehicleAerodynamics = 0x38;
     constexpr ptrdiff_t kVehicleDamper = 0x44;
     constexpr ptrdiff_t kVehicleWheelsInfo = 0x48;
+    constexpr ptrdiff_t kVehicleDriverInput = 0x9C;
     constexpr ptrdiff_t kVehicleRpm = 0xB8;
     constexpr ptrdiff_t kVehicleGear = 0xCD;
+
+    // The driver input's forward axis: negative accelerates, which the game sets from its pedal.
+    constexpr ptrdiff_t kDriverInputForward = 0x0C;
+    // hkStepInfo's length of the step.
+    constexpr ptrdiff_t kStepSeconds = 0x08;
 
     constexpr ptrdiff_t kWheelInfoStride = 0xC0;
     constexpr ptrdiff_t kWheelInfoContactFriction = 0x20;
@@ -50,6 +58,7 @@ namespace {
     constexpr ptrdiff_t kDataWheelMaxFriction = 0x14;
 
     constexpr ptrdiff_t kTransmissionPrimaryRatio = 0x10;
+    constexpr ptrdiff_t kTransmissionClutchDelay = 0x14;
 
     constexpr ptrdiff_t kBrakeWheels = 0x08;
     constexpr ptrdiff_t kBrakeWheelStride = 0x0C;
@@ -104,11 +113,6 @@ namespace {
     // Set on the game thread, read on the physics thread.
     std::atomic<Car> g_player{nullptr};
 
-    template <typename T>
-    T& At(const uint8_t* object, ptrdiff_t offset) {
-        return *reinterpret_cast<T*>(const_cast<uint8_t*>(object) + offset);
-    }
-
     uint8_t* Vehicle(Car car) { return At<uint8_t*>(car, kCarVehicle); }
 
     // An hkArray's elements.
@@ -127,7 +131,7 @@ namespace {
     }
 
     void __fastcall ActionDetour(Car car, void* unused, void* stepInfo) {
-        g_step(car);
+        g_step(car, At<float>(static_cast<uint8_t*>(stepInfo), kStepSeconds));
         g_originalAction(car, unused, stepInfo);
     }
 
@@ -180,7 +184,9 @@ Parts PartsOf(Car car) {
     Parts parts{};
     parts.enginePower = &At<float>(car, kCarEnginePower);
     parts.climbPower = &At<float>(car, kCarClimbPower);
-    parts.primaryRatio = &At<float>(At<uint8_t*>(vehicle, kVehicleTransmission), kTransmissionPrimaryRatio);
+    uint8_t* transmission = At<uint8_t*>(vehicle, kVehicleTransmission);
+    parts.primaryRatio = &At<float>(transmission, kTransmissionPrimaryRatio);
+    parts.shiftTime = &At<float>(transmission, kTransmissionClutchDelay);
     parts.retailEnginePower = At<float>(car, kCarRetailEnginePower);
     parts.retailPrimaryRatio = At<float>(car, kCarRetailPrimaryRatio);
     parts.speedLimiter = &At<uint8_t>(aerodynamics, kAerodynamicsSpeedLimiter);
@@ -212,8 +218,9 @@ Parts PartsOf(Car car) {
 Readout ReadoutOf(Car car) {
     uint8_t* vehicle = Vehicle(car);
     const float* velocity = &At<float>(At<uint8_t*>(vehicle, kVehicleChassis), kChassisVelocity);
+    const float forward = At<float>(At<uint8_t*>(vehicle, kVehicleDriverInput), kDriverInputForward);
     return {std::hypot(velocity[0], velocity[1], velocity[2]), At<float>(vehicle, kVehicleRpm),
-            At<int8_t>(vehicle, kVehicleGear)};
+            At<int8_t>(vehicle, kVehicleGear), (std::max)(0.0f, -forward)};
 }
 
 Chassis ChassisOf(Car car) {

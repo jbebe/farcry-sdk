@@ -9,8 +9,9 @@ namespace VehicleOverhaul::Wheeled {
 // A car's CPhysWheeledVehicleEntityImpl, the game's owner of its Havok vehicle.
 using Car = uint8_t*;
 
-// Called on the physics thread for every car, each step before the game and Havok drive it.
-using StepFn = void (*)(Car car);
+// Called on the physics thread for every car, each step of `seconds` before the game and Havok drive
+// it.
+using StepFn = void (*)(Car car, float seconds);
 
 // Called on the physics thread before a car's rolling resistance; the share of it to apply.
 using RollingFn = float (*)(Car car);
@@ -53,8 +54,9 @@ struct Parts {
     float* chassisResponse;
     // The pitch, roll and yaw factors it was derived from.
     float torqueFactors[3];
-    // Seconds a fully pressed brake takes to lock a wheel.
+    // Seconds a fully pressed brake takes to lock a wheel, and a gear change cuts the drive.
     float* lockTime;
+    float* shiftTime;
     int wheels;
     Wheel wheel[kMaxWheels];
     // Which Havok vehicle these belong to, to tell a car from a later one at the same address.
@@ -63,11 +65,14 @@ struct Parts {
 
 Parts PartsOf(Car car);
 
-// What the car is doing, for display.
+// What the car is doing.
 struct Readout {
     float speed;
+    // The driven wheels' spin through the gearbox, signed; the engine's revs once the clutch is in.
     float rpm;
+    // From 0 in first; Havok shifts at once and then cuts the drive for the shift time.
     int gear;
+    float throttle;
 };
 
 Readout ReadoutOf(Car car);

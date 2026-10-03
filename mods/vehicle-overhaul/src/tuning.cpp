@@ -49,6 +49,8 @@ namespace {
          "The torque the game adds while the nose points uphill (the Rover's is 400 on top of 95)."},
         {"Top speed", kEngine, offsetof(Values, topSpeed), 2.0f, 0.5f, 3.0f, "%.2fx",
          "Gearing, as a multiple of the car's own top speed. Higher is faster but pulls less in each gear."},
+        {"Shift time", kEngine, offsetof(Values, shiftTime), 1.0f, 0.0f, 2.0f, "%.2f s",
+         "How long a gear change cuts the drive while the clutch is out. Retail changes gear instantly."},
         {"Brake torque", kBrakes, offsetof(Values, brakeTorque), 0.3f, 0.1f, 1.5f, "%.2fx",
          "The brakes' strength, as a multiple of the car's own."},
         {"Lock-up time", kBrakes, offsetof(Values, lockTime), 0.5f, 0.1f, 5.0f, "%.2f s",
@@ -77,14 +79,36 @@ namespace {
     struct Switch {
         const char* key;
         bool Values::*member;
+        // The label in the window, and the heading it is drawn under; null draws it above them all.
+        const char* label;
+        const char* group;
+        const char* help;
     };
 
     constexpr Switch kSwitches[] = {
-        {"Enabled", &Values::enabled},
-        {"Real centre of mass", &Values::realCentreOfMass},
+        {"Enabled", &Values::enabled, "Overhaul the car you drive", nullptr,
+         "Off puts the car back as the game made it, to compare."},
+        {"Real engine", &Values::realEngine, "Real engine", kEngine,
+         "The engine sound and rev counter follow the real gearbox: idle, revs against the clutch while "
+         "pulling away, and a drop on every gear change. Off leaves the game's revs made up from speed."},
+        {"Real centre of mass", &Values::realCentreOfMass, "Real centre of mass", kChassis,
+         "Carries the car's weight as high as the real vehicle it depicts, from that vehicle's stability "
+         "factor. Off leaves it where the game put it."},
     };
 
     Values g_values{};
+
+    // The switches drawn under `group`. True when one changed.
+    bool DrawSwitches(const char* group) {
+        bool changed = false;
+        for (const Switch& entry : kSwitches) {
+            if (entry.group == group) {
+                changed |= ImGui::Checkbox(entry.label, &(g_values.*entry.member));
+                ImGui::SetItemTooltip("%s", entry.help);
+            }
+        }
+        return changed;
+    }
 
     // Moved sliders are written to the file once they are let go rather than on every frame.
     bool g_unsaved = false;
@@ -197,19 +221,14 @@ void VehicleOverhaul::Tuning::DrawWindow(void*) {
     ImGui::PushItemWidth(-ImGui::GetFontSize() * 10.0f);
 
     DrawReadout();
-    g_unsaved |= ImGui::Checkbox("Overhaul the car you drive", &g_values.enabled);
-    ImGui::SetItemTooltip("Off puts the car back as the game made it, to compare.");
+    g_unsaved |= DrawSwitches(nullptr);
 
     const char* group = nullptr;
     for (const Parameter& parameter : kParameters) {
         if (parameter.group != group) {
             group = parameter.group;
             ImGui::SeparatorText(group);
-            if (group == kChassis) {
-                g_unsaved |= ImGui::Checkbox("Real centre of mass", &g_values.realCentreOfMass);
-                ImGui::SetItemTooltip("Carries the car's weight as high as the real vehicle it depicts, from that "
-                                      "vehicle's stability factor. Off leaves it where the game put it.");
-            }
+            g_unsaved |= DrawSwitches(group);
         }
         g_unsaved |= ImGui::SliderFloat(parameter.key, Field(parameter), parameter.min, parameter.max,
                                         parameter.format, ImGuiSliderFlags_AlwaysClamp);

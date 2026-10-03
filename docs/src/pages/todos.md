@@ -77,8 +77,6 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 
 - [ ] Third-person view: the driver is the headless first-person body. Hide it, or seat a third-person
       stand-in with NPC driving animations
-- [ ] Off-road physics on AI cars too: only the player's car is tuned, so AI drivers still get retail
-      grip, brakes and climb assist
 - [ ] An engine with real gears, its RPM read from the drivetrain, and a shift sound; the sound's
       options are in the
       [design log](/farcry-sdk/docs/design/realistic-sound#7-vehicle-engines--data-plugin-for-a-real-rpm)

@@ -115,7 +115,7 @@ bool Install() {
         return false;
     }
     // A hook is live from here, so the plugin has to stay loaded whatever happens next.
-    PawnTick::Install(&Tick);
+    PawnTick::Subscribe(&Tick);
     Input::Install(&OnSignal);
     return true;
 }

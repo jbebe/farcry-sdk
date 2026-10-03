@@ -1,15 +1,16 @@
 // The off-road physics: the car the player drives, re-tuned every physics step while they drive it
-// and put back as the game made it when they get out.
+// and put back as the game made it when they get out. Each step also moves its engine on.
 //
 // Every value is written from the car's retail one each step, so a moved slider applies at once.
 #include "physics.h"
 
+#include "drivetrain.h"
+#include "real_vehicle.h"
 #include "tuning.h"
 
 #include "fcse_api.h"
 
 #include <algorithm>
-#include <cmath>
 #include <cstdint>
 
 namespace {
@@ -17,39 +18,7 @@ namespace {
     using VehicleOverhaul::Wheeled::Chassis;
     using VehicleOverhaul::Wheeled::kMaxWheels;
     using VehicleOverhaul::Wheeled::Parts;
-
-    // A car of the game's, told apart by its retail mass and engine, and the static stability factor
-    // of the real vehicle it depicts.
-    struct RealVehicle {
-        float mass;
-        float enginePower;
-        const char* name;
-        float stability;
-    };
-
-    // Puts the weight at the wheels' centres.
-    constexpr float kAtTheAxles = 0.0f;
-
-    constexpr RealVehicle kRealVehicles[] = {
-        {1600.0f, 95.0f, "Land Rover Series III", 0.90f},
-        {1000.0f, 90.0f, "Datsun 1200", 1.30f},
-        {800.0f, 87.0f, "Buggy", kAtTheAxles},
-        {1500.0f, 95.0f, "Jeep Liberty", 1.07f},
-        {1200.0f, 88.0f, "Jeep Wrangler", 1.20f},
-        {1200.0f, 50.0f, "Jeep Wrangler taxi", 1.20f},
-        {600.0f, 80.0f, "Quad", 1.00f},
-        {1600.0f, 88.0f, "Unimog", 0.85f},
-        {4000.0f, 150.0f, "ZIL-130", 0.85f},
-    };
-
-    const RealVehicle* Match(const Chassis& chassis) {
-        for (const RealVehicle& real : kRealVehicles) {
-            if (std::abs(real.mass - chassis.mass) < 1.0f && std::abs(real.enginePower - chassis.enginePower) < 0.5f) {
-                return &real;
-            }
-        }
-        return nullptr;
-    }
+    namespace RealVehicle = VehicleOverhaul::RealVehicle;
 
     // The retail values of the car the overhaul is changing, or has yet to put back. Engine power,
     // gearing and the speed limiter are not kept: the game holds its own and resets them with the driver.
@@ -61,6 +30,7 @@ namespace {
         float spinDamping;
         float chassisResponse[3];
         float lockTime;
+        float shiftTime;
         struct {
             float friction;
             float maxFriction;
@@ -83,6 +53,7 @@ namespace {
         Retail retail{car, parts.vehicle, *parts.climbPower, *parts.downforce, *parts.spinDamping};
         std::copy_n(parts.chassisResponse, 3, retail.chassisResponse);
         retail.lockTime = *parts.lockTime;
+        retail.shiftTime = *parts.shiftTime;
         for (int i = 0; i < parts.wheels; ++i) {
             const VehicleOverhaul::Wheeled::Wheel& wheel = parts.wheel[i];
             retail.wheel[i] = {*wheel.friction,       *wheel.maxFriction,         *wheel.brakeTorque,
@@ -100,6 +71,7 @@ namespace {
         *parts.downforce = g_retail.downforce * t.downforce;
         *parts.spinDamping = g_retail.spinDamping * t.spinDamping;
         *parts.lockTime = t.lockTime;
+        *parts.shiftTime = t.shiftTime;
 
         const float responses[3] = {t.pitchResponse, t.rollResponse, t.yawResponse};
         for (int axis = 0; axis < 3; ++axis) {
@@ -131,6 +103,7 @@ namespace {
         *parts.downforce = g_retail.downforce;
         *parts.spinDamping = g_retail.spinDamping;
         *parts.lockTime = g_retail.lockTime;
+        *parts.shiftTime = g_retail.shiftTime;
         std::copy_n(g_retail.chassisResponse, 3, parts.chassisResponse);
 
         for (int i = 0; i < parts.wheels; ++i) {
@@ -147,18 +120,18 @@ namespace {
 
     // Puts the centre of mass where `real` has it, over the car's own track, or with `real` null back
     // where the game had it.
-    void PlaceCentreOfMass(Car car, const Chassis& chassis, const RealVehicle* real) {
+    void PlaceCentreOfMass(Car car, const Chassis& chassis, const RealVehicle::Spec* real) {
         float centre[3];
         std::copy_n(g_retail.centreOfMass, 3, centre);
         if (real != nullptr) {
-            centre[2] = real->stability == kAtTheAxles ? chassis.axles
-                                                       : chassis.ground + chassis.track / (2.0f * real->stability);
+            centre[2] = real->stability == RealVehicle::kAtTheAxles ? chassis.axles
+                                                                    : chassis.ground + chassis.track / (2.0f * real->stability);
         }
         VehicleOverhaul::Wheeled::MoveCentreOfMass(car, centre);
         g_retail.centreMoved = real != nullptr;
     }
 
-    void Step(Car car) {
+    void Step(Car car, float seconds) {
         const Car player = VehicleOverhaul::Wheeled::Player();
         if (car != g_retail.car && car != player) {
             return;
@@ -167,10 +140,12 @@ namespace {
         const VehicleOverhaul::Tuning::Values tuning = VehicleOverhaul::Tuning::Current();
         const bool wanted = car == player && tuning.enabled;
         const Chassis chassis = VehicleOverhaul::Wheeled::ChassisOf(car);
-        const RealVehicle* real = Match(chassis);
+        const RealVehicle::Spec* real = RealVehicle::Match(chassis.mass, chassis.enginePower);
         if (car == player) {
+            VehicleOverhaul::Wheeled::Readout readout = VehicleOverhaul::Wheeled::ReadoutOf(car);
+            readout.rpm = VehicleOverhaul::Drivetrain::Step(car, real, readout, seconds);
             const float height = chassis.centreOfMass[2] - chassis.ground;
-            g_status = {VehicleOverhaul::Wheeled::ReadoutOf(car), real != nullptr ? real->name : nullptr, height,
+            g_status = {readout, real != nullptr ? real->name : nullptr, height,
                         height > 0.0f ? chassis.track / (2.0f * height) : 0.0f, chassis.grip};
         }
         if (car != g_retail.car && !wanted) {
@@ -194,7 +169,7 @@ namespace {
             }
         }
 
-        const RealVehicle* centre = wanted && tuning.realCentreOfMass ? real : nullptr;
+        const RealVehicle::Spec* centre = wanted && tuning.realCentreOfMass ? real : nullptr;
         if ((centre != nullptr) != g_retail.centreMoved) {
             PlaceCentreOfMass(car, chassis, centre);
         }
