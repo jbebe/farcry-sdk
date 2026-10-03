@@ -1,3 +1,5 @@
 # CMake build tree, and the built plugin the layer only carries.
 out/
 layer/plugins/vehicle-overhaul/VehicleOverhaul.dll
+# The recorded takes and the sound builder that reads them stay local; the layer carries the banks.
+assets/vehicle-sounds/

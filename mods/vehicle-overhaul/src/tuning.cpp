@@ -49,7 +49,7 @@ namespace {
          "The torque the game adds while the nose points uphill (the Rover's is 400 on top of 95)."},
         {"Top speed", kEngine, offsetof(Values, topSpeed), 2.0f, 0.5f, 3.0f, "%.2fx",
          "Gearing, as a multiple of the car's own top speed. Higher is faster but pulls less in each gear."},
-        {"Shift time", kEngine, offsetof(Values, shiftTime), 1.0f, 0.0f, 2.0f, "%.2f s",
+        {"Shift time", kEngine, offsetof(Values, shiftTime), 0.7f, 0.0f, 2.0f, "%.2f s",
          "How long a gear change cuts the drive while the clutch is out. Retail changes gear instantly."},
         {"Brake torque", kBrakes, offsetof(Values, brakeTorque), 0.3f, 0.1f, 1.5f, "%.2fx",
          "The brakes' strength, as a multiple of the car's own."},

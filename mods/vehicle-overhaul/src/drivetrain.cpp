@@ -20,13 +20,14 @@
 namespace {
     using VehicleOverhaul::Wheeled::Car;
 
-    // The span of Havok's engine, the same in every car, which is laid over the real engine's idle and
-    // rev limit.
+    // Havok's engine, the same in every car: the bottom of its range and the revs its gearbox shifts up at,
+    // laid over the real engine's idle and redline, so a run in any gear climbs to the redline before it
+    // shifts. In top gear the redline is the limit.
     constexpr float kHavokMin = 1000.0f;
-    constexpr float kHavokMax = 7500.0f;
-    // For a car whose real engine is not known.
+    constexpr float kHavokUpshift = 6500.0f;
+    // For a car whose real engine is not known: Havok's own revs.
     constexpr float kIdle = 850.0f;
-    constexpr float kRedline = kHavokMax;
+    constexpr float kRedline = kHavokUpshift;
     // The revs a slipping clutch lets the engine reach while the car pulls away.
     constexpr float kClutchSlip = 2500.0f;
     // Per second: how fast the engine gains revs, and loses them with the throttle off.
@@ -37,9 +38,14 @@ namespace {
     // +1 up, -1 down.
     std::atomic<float> g_rpm{kIdle};
     std::atomic<int> g_shift{0};
+    std::atomic<uint32_t> g_shiftSound{0};
 
     Car g_car = nullptr;
     int g_gear = 0;
+    // A gear change is sounded halfway through the shift, where the lever goes across: until then it waits
+    // here, with the seconds left.
+    int g_pendingShift = 0;
+    float g_untilSounded = 0.0f;
 
     // The entity of the vehicle the player drives, on the game thread.
     void* g_vehicle = nullptr;
@@ -50,7 +56,7 @@ namespace {
                         : nullptr;
     }
 
-    bool Engine(void* vehicle, int& shift, float& rpm) {
+    bool Heard(void* vehicle, VehicleOverhaul::VehicleSound::Engine& engine) {
         if (vehicle == nullptr || vehicle != g_vehicle) {
             return false;
         }
@@ -58,8 +64,9 @@ namespace {
         if (!tuning.enabled || !tuning.realEngine) {
             return false;
         }
-        shift = g_shift.exchange(0);
-        rpm = g_rpm;
+        engine.shift = g_shift.exchange(0);
+        engine.rpm = g_rpm;
+        engine.shiftSound = g_shiftSound;
         return true;
     }
 }
@@ -67,7 +74,7 @@ namespace {
 namespace VehicleOverhaul::Drivetrain {
 
 bool Install() {
-    return Vehicle::Install() && VehicleSound::Install(&Engine) && PawnTick::Subscribe(&Tick);
+    return Vehicle::Install() && VehicleSound::Install(&Heard) && PawnTick::Subscribe(&Tick);
 }
 
 float Step(Car car, const RealVehicle::Spec* real, const Wheeled::Readout& readout, float seconds) {
@@ -75,15 +82,22 @@ float Step(Car car, const RealVehicle::Spec* real, const Wheeled::Readout& reado
     const float redline = real != nullptr && real->redline > 0.0f ? real->redline : kRedline;
     if (car != g_car) {
         g_car = car;
+        g_shiftSound = real != nullptr ? real->shiftSound : 0;
         g_gear = readout.gear;
+        g_pendingShift = 0;
         g_rpm = idle;
     }
     if (readout.gear != g_gear) {
-        g_shift = readout.gear > g_gear ? 1 : -1;
+        g_pendingShift = readout.gear > g_gear ? 1 : -1;
+        g_untilSounded = 0.5f * Tuning::Current().shiftTime;
         g_gear = readout.gear;
     }
+    if (g_pendingShift != 0 && (g_untilSounded -= seconds) <= 0.0f) {
+        g_shift = g_pendingShift;
+        g_pendingShift = 0;
+    }
 
-    const float wheels = idle + (std::abs(readout.rpm) - kHavokMin) * (redline - idle) / (kHavokMax - kHavokMin);
+    const float wheels = idle + (std::abs(readout.rpm) - kHavokMin) * (redline - idle) / (kHavokUpshift - kHavokMin);
     float target = std::max(idle, wheels);
     if (wheels < kClutchSlip) {
         target = std::max(target, idle + readout.throttle * (kClutchSlip - idle));

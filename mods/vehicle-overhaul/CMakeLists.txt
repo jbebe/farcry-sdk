@@ -28,6 +28,7 @@ add_library(VehicleOverhaul SHARED
   "src/engine/entity.cpp"
   "src/engine/input.cpp"
   "src/engine/pawn_tick.cpp"
+  "src/engine/sound_bank.cpp"
   "src/engine/terrain.cpp"
   "src/engine/third_camera.cpp"
   "src/engine/vehicle.cpp"

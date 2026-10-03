@@ -1,8 +1,9 @@
 # Vehicle Overhaul
 
 Driving in Far Cry 2 as off-road driving: a third-person camera to watch the car work, off-road
-physics, an engine with real gears, and wrecks revived as drivable vehicles. Unfinished: the camera
-and the physics are in; the engine, shooting from the windows and the wrecks are to come.
+physics, an engine with real gears, and wrecks revived as drivable vehicles. Unfinished: the camera,
+the physics and the engine are in, the engine's sound for the Datsun only; shooting from the windows
+and the wrecks are to come.
 
 ## What it does
 
@@ -29,6 +30,17 @@ and the physics are in; the engine, shooting from the windows and the wrecks are
     and the buggy keeps its weight at the axles.
   - Softer springs and dampers.
 
+- **A real engine, on the car you drive.** The game makes up a car's revs for its sound and rev
+  counter from road speed over three pretend gears. Here they come from Havok's gearbox instead.
+  - The engine idles, revs against a slipping clutch as the car pulls away, climbs to the redline in
+    each gear, and runs down while the clutch is out for a gear change (0.7 s).
+  - Havok's engine is the same in every car; its shift point is laid over the real engine's redline.
+    The Datsun runs from a 750 rpm idle to a 6,500 rpm redline.
+- **The Datsun's engine sound.** A new engine sound of five steady-rev recordings, each pitched to the
+  revs and faded into the next, a little quieter off the throttle. Retail's own idle loop plays at
+  idle. A recorded start replaces the ignition, and a gear-change clunk plays halfway through each
+  shift. The new engine sound plays on every Datsun; the clunk only on the one you drive.
+
 The engine's `Cameras.Camera.Third` is put up and its update is taken over to place the camera. Both
 are described in
 [the free camera and noclip](../../docs/docs/engine-internals/free-camera-and-noclip.md). The vehicle
@@ -52,13 +64,17 @@ src\                         the FCSE plugin
   third_person.cpp           the toggle, and putting the first-person camera back
   chase.cpp                  where the chase camera goes each frame
   physics.cpp                the player's car tuned and put back, and the real vehicles' weight
+  drivetrain.cpp             the engine's revs and gear changes, for the sound and rev counter
+  real_vehicle.cpp           the real vehicles the cars depict
   tuning.cpp                 the values, their file and the window
   engine\                    the game's own seams: the signal dispatcher, the input pass, the camera
                              manager and the third camera's update, entities, the seat lookup,
-                             terrain height, the Havok vehicle under each car
+                             terrain height, the Havok vehicle under each car, a vehicle's engine
+                             sound, sound banks
 layer\mods\
   config\                    the active_camerathird control and its binding, as sections
   languages\                 the control's label, in every language
+  soundbinary\               the Datsun's engine, start and gear-change sounds; its pedal sound silenced
 layer\plugins\vehicle-overhaul\   the built plugin, staged here by build.ps1
 ```
 

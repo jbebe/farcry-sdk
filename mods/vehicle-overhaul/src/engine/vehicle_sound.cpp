@@ -6,6 +6,7 @@
 
 #include "engine/entity.h"
 #include "engine/memory.h"
+#include "engine/sound_bank.h"
 #include "fcse_api.h"
 
 #include <cstdint>
@@ -46,17 +47,23 @@ namespace {
 
     void OnGearChoice(FCSE_MidHookContext* ctx) {
         auto* sound = reinterpret_cast<uint8_t*>(ctx->esi);
-        int shift = 0;
-        float rpm = 0.0f;
+        VehicleOverhaul::VehicleSound::Engine engine{};
         g_driven = nullptr;
-        if (!g_engine(VehicleOverhaul::Entity::Of(At<void*>(sound, kSoundComponent)), shift, rpm)) {
+        if (!g_engine(VehicleOverhaul::Entity::Of(At<void*>(sound, kSoundComponent)), engine)) {
             return;
         }
         g_driven = sound;
-        g_rpm = rpm;
+        g_rpm = engine.rpm;
         At<int32_t>(sound, kSoundGear) = kGearSlot;
-        if (shift != 0) {
-            At<int32_t>(sound, kSoundShiftDirection) = shift;
+        if (engine.shiftSound != 0) {
+            VehicleOverhaul::SoundBank::Hold(engine.shiftSound);
+        }
+        if (engine.shift != 0) {
+            At<int32_t>(sound, kSoundShiftDirection) = engine.shift;
+            // EBP holds the event the store goes on to play, picked by the vehicle's reliability.
+            if (engine.shiftSound != 0) {
+                ctx->ebp = engine.shiftSound;
+            }
             ctx->eax = kGearSlot;
             ctx->eip = g_gearChoice.address() + kStoreGear;
         } else {
@@ -80,6 +87,8 @@ bool Install(EngineFn engine) {
         api->Log("vehicle sound: the update's gear and RPM steps were not found in this build");
         return false;
     }
+    // Without it a gear change sound's bank never loads and the change is silent; the engine runs on.
+    SoundBank::Install();
     g_engine = engine;
     return api->MidHook(g_gearChoice.get(), &OnGearChoice) && api->MidHook(g_rpmDone.get(), &OnRpmDone);
 }

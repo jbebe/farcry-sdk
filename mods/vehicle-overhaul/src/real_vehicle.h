@@ -1,6 +1,8 @@
 // The real vehicles the game's cars depict, told apart by their retail mass and engine.
 #pragma once
 
+#include <cstdint>
+
 namespace VehicleOverhaul::RealVehicle {
 
 struct Spec {
@@ -13,6 +15,8 @@ struct Spec {
     // The engine's idle and rev limit, or 0 for the drivetrain's defaults.
     float idle;
     float redline;
+    // The sound of a gear change, or 0 for the vehicle's own.
+    uint32_t shiftSound;
 };
 
 constexpr float kAtTheAxles = 0.0f;
