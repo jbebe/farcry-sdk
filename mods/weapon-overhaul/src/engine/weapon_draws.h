@@ -50,6 +50,8 @@ struct Listener {
     // changed, and is not called for a dropped draw.
     GunDrawFn beforeDraw;
     DeviceFn afterDraw;
+    // As the frame's tone-mapped image is finished in the back buffer, under the interface.
+    DeviceFn onComposite;
 };
 
 // Takes over the frame and the device's indexed draws, and calls `listener` while the player is

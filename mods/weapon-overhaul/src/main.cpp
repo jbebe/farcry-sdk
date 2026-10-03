@@ -50,7 +50,6 @@ namespace {
 
     void __cdecl OnScopeShadowChanged(const FCSE_SettingValue* value, void*) {
         WeaponOverhaul::ScopeShadow::SetEnabled(value->asCheckbox);
-        WeaponOverhaul::Eyepiece::SetSwinging(value->asCheckbox);
     }
 
     void __cdecl OnEyepieceChanged(const FCSE_SettingValue* value, void*) {
@@ -75,6 +74,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         &OnGunPass,
         &WeaponOverhaul::Eyepiece::BeforeGunDraw,
         &WeaponOverhaul::Eyepiece::AfterGunDraw,
+        &WeaponOverhaul::Eyepiece::OnComposite,
     };
     if (!WeaponOverhaul::DeviceReset::Install(&OnDeviceRelease) ||
         !WeaponOverhaul::WeaponDraws::Install(listener)) {

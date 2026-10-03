@@ -21,10 +21,12 @@ struct Pass {
 };
 
 using PassFn = void (*)(const Pass&);
+using CompositeFn = void (*)(IDirect3DDevice9* device);
 
 // Takes over the device's EndScene; `onScenePass` runs as each of the world's passes ends, with its
-// target and depth still bound. False, and logged, when it cannot be hooked.
-bool Install(PassFn onScenePass);
+// target and depth still bound, and `onComposite` as the frame's tone-mapped image is finished in the
+// back buffer, under the interface. False, and logged, when it cannot be hooked.
+bool Install(PassFn onScenePass, CompositeFn onComposite);
 
 // How many passes have ended so far, so two draws with the same serial are in the same pass.
 uint32_t PassSerial();

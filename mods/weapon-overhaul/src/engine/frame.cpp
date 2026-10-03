@@ -10,6 +10,7 @@ namespace {
 
     EndSceneFn g_originalEndScene = nullptr;
     WeaponOverhaul::Frame::PassFn g_onScenePass = nullptr;
+    WeaponOverhaul::Frame::CompositeFn g_onComposite = nullptr;
 
     uint32_t g_passSerial = 0;
     uint32_t g_frame = 0;
@@ -45,6 +46,7 @@ namespace {
             SUCCEEDED(device->GetDepthStencilSurface(&depth.surface)) && depth.surface != nullptr;
         const bool toBackBuffer = target.surface == backBuffer.surface;
         if (toBackBuffer && !haveDepth) {
+            g_onComposite(device);
             g_pastSky = false;
             g_frame++;
             return;
@@ -68,8 +70,9 @@ namespace {
     }
 }
 
-bool WeaponOverhaul::Frame::Install(PassFn onScenePass) {
+bool WeaponOverhaul::Frame::Install(PassFn onScenePass, CompositeFn onComposite) {
     g_onScenePass = onScenePass;
+    g_onComposite = onComposite;
     return Vtable::Hook(Vtable::kEndScene, reinterpret_cast<void*>(&EndSceneDetour),
                         reinterpret_cast<void**>(&g_originalEndScene));
 }

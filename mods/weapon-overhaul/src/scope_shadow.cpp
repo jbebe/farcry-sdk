@@ -12,10 +12,10 @@
 #include <atomic>
 
 namespace {
-    // The shadow is the rim of the magnified tube, a circle a little wider than the lens whose soft
-    // edge just reaches the lens's while it is centred. In lens radii, then how dark it gets.
-    constexpr float kShadowRadius = 1.2f;
-    constexpr float kSoftEdge = 0.2f;
+    // The shadow is the rim of the magnified tube, a circle wider than the lens by its soft edge, so
+    // the edge just reaches the lens's while it is centred. In lens radii, then how dark it gets.
+    constexpr float kSoftEdge = 0.45f;
+    constexpr float kShadowRadius = 1.0f + kSoftEdge;
     constexpr float kDarkness = 0.95f;
 
     constexpr UINT kConstantCount = 3;

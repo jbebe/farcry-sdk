@@ -21,8 +21,7 @@ struct Swing {
 using DriftFn = Offset (*)(float seconds);
 
 // Hooks the first-person camera; `drift` then runs once a frame, and down the iron sights the eye
-// follows it. Through a scope the scope trails the look instead. False, and logged, when the camera
-// cannot be hooked.
+// follows it. False, and logged, when the camera cannot be hooked.
 bool Install(DriftFn drift);
 
 // How far the eye has settled into the iron sights, and into a scope's own sight picture, eased
@@ -35,10 +34,7 @@ float Scoped();
 bool ScopeUp();
 uint32_t ScopeUps();
 
-// How far the eye runs ahead of the scope this frame, which moves the sight picture the other way.
-Offset ScopeLead();
-
-// How far the scope's far end has swung off its opening's centre, against the look's turn.
+// How far the scope's shadow has swung off the opening's centre, against the look's turn.
 Swing ScopeSwing();
 
 }

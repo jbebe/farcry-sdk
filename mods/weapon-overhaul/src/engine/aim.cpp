@@ -47,26 +47,10 @@ namespace {
 
     // Seconds to settle into the sights, and to let go of them.
     constexpr float kSettle = 0.4f;
-    // Seconds for the turn rate to follow the look, which is how the gun trails it. Faster than
-    // this in a frame is a cut, not a turn.
+    // Seconds for the turn rate to follow the look. Faster than this in a frame is a cut, not a
+    // turn.
     constexpr float kTrail = 0.18f;
     constexpr float kFastestTurn = 10.0f;
-
-    // The scope follows the look on a spring, a little under critical damping so a jerk swings it
-    // past and back, simulated in steps of kSpringStep seconds. It follows the look smoothed over
-    // kSmoothing seconds, so the mouse's steps from frame to frame do not kick it. How far it
-    // trails, in radians, fades out below kDeadZone, so small adjustments leave it still, and is
-    // capped softly at kMostLag. The eye then runs ahead of it by kEyeReach metres a radian, which
-    // moves the scope's own sight picture that far behind on screen. Further than kCut behind is a
-    // cut, not a turn, and the scope is put back on the look.
-    constexpr float kStiffness = 13.0f;
-    constexpr float kDamping = 0.8f;
-    constexpr float kSpringStep = 1.0f / 120.0f;
-    constexpr float kSmoothing = 0.05f;
-    constexpr float kDeadZone = 0.005f;
-    constexpr float kMostLag = 0.03f;
-    constexpr float kEyeReach = 0.27f;
-    constexpr float kCut = 0.5f;
 
     // The scope's far end swings against the turn. Turns slower than kSlowTurn radians a second
     // hardly move it; past that it moves kSwingPerTurn opening radii per radian a second, and
@@ -82,36 +66,19 @@ namespace {
     std::atomic<float> g_scoped{0.0f};
     std::atomic<bool> g_scopeUp{false};
     std::atomic<uint32_t> g_scopeUps{0};
-    std::atomic<float> g_leadRight{0.0f};
-    std::atomic<float> g_leadUp{0.0f};
 
     // What was added to the eye during the camera update under way, and to which camera.
     uint8_t* g_addedTo = nullptr;
     WeaponOverhaul::Aim::Offset g_added = {};
 
-    // The look last frame, for which pawn, with its yaw unwound, and smoothed; how fast it has been
-    // turning; and where the scope points, and how fast that moves.
+    // The look last frame, for which pawn, and how fast it has been turning, in radians a second.
     uint8_t* g_lookPawn = nullptr;
     float g_lastPitch = 0.0f;
     float g_lastYaw = 0.0f;
-    float g_lookYaw = 0.0f;
-    float g_smoothPitch = 0.0f;
-    float g_smoothYaw = 0.0f;
-    // Radians a second.
-    struct Turn {
-        float right;
-        float up;
-    };
-    Turn g_turn = {};
-    std::atomic<float> g_turnRight{0.0f};
-    std::atomic<float> g_turnUp{0.0f};
-
-    struct Spring {
-        float at;
-        float speed;
-    };
-    Spring g_scopePitch = {};
-    Spring g_scopeYaw = {};
+    float g_turnRight = 0.0f;
+    float g_turnUp = 0.0f;
+    std::atomic<float> g_turnedRight{0.0f};
+    std::atomic<float> g_turnedUp{0.0f};
 
     template <typename T>
     T& Field(uint8_t* object, ptrdiff_t offset) {
@@ -132,69 +99,28 @@ namespace {
                Field<uint8_t>(weapon, kHiResScope) != 0;
     }
 
-    void Pull(Spring& spring, float toward, float seconds) {
-        const float pull = kStiffness * kStiffness * (toward - spring.at) -
-                           2.0f * kDamping * kStiffness * spring.speed;
-        spring.speed += pull * seconds;
-        spring.at += spring.speed * seconds;
-    }
-
-    // Follows the look: how fast it turns, smoothed the way the gun trails the camera, and how far
-    // the eye runs ahead of the scope that trails it.
-    WeaponOverhaul::Aim::Offset FollowLook(uint8_t* pawn, uint8_t* data, float seconds) {
+    // How fast the look turns, smoothed over kTrail seconds.
+    void FollowLook(uint8_t* pawn, uint8_t* data, float seconds) {
         const float pitch = Field<float>(data, kEffectivePitch);
         const float yaw = Field<float>(data, kEffectiveYaw);
         if (pawn != g_lookPawn || seconds <= 0.0f) {
             g_lookPawn = pawn;
             g_lastPitch = pitch;
             g_lastYaw = yaw;
-            g_lookYaw = yaw;
-            g_smoothPitch = pitch;
-            g_smoothYaw = yaw;
-            g_scopePitch = {pitch, 0.0f};
-            g_scopeYaw = {yaw, 0.0f};
-            return {};
+            return;
         }
-        const float pi = std::numbers::pi_v<float>;
-        const float yawStep = std::remainder(yaw - g_lastYaw, 2.0f * pi);
+        // Yaw is left; it wraps at a turn.
+        const float yawStep = std::remainder(yaw - g_lastYaw, 2.0f * std::numbers::pi_v<float>);
         const float right = std::clamp(-yawStep / seconds, -kFastestTurn, kFastestTurn);
         const float up = std::clamp((pitch - g_lastPitch) / seconds, -kFastestTurn, kFastestTurn);
         g_lastPitch = pitch;
         g_lastYaw = yaw;
-        g_lookYaw += yawStep;
 
         const float follow = 1.0f - std::exp(-seconds / kTrail);
-        g_turn.right += (right - g_turn.right) * follow;
-        g_turn.up += (up - g_turn.up) * follow;
-        g_turnRight = g_turn.right;
-        g_turnUp = g_turn.up;
-
-        const int steps = static_cast<int>(std::ceil(seconds / kSpringStep));
-        const float step = seconds / steps;
-        const float smooth = 1.0f - std::exp(-step / kSmoothing);
-        for (int i = 0; i < steps; i++) {
-            g_smoothPitch += (pitch - g_smoothPitch) * smooth;
-            g_smoothYaw += (g_lookYaw - g_smoothYaw) * smooth;
-            Pull(g_scopePitch, g_smoothPitch, step);
-            Pull(g_scopeYaw, g_smoothYaw, step);
-        }
-        // Where the scope points against the smoothed look, right and up of it; yaw is left.
-        const float scopeRight = g_smoothYaw - g_scopeYaw.at;
-        if (std::hypot(scopeRight, g_scopePitch.at - g_smoothPitch) > kCut) {
-            g_smoothPitch = pitch;
-            g_smoothYaw = g_lookYaw;
-            g_scopePitch = {pitch, 0.0f};
-            g_scopeYaw = {g_lookYaw, 0.0f};
-            return {};
-        }
-        // Never above the look: that would lift the sight picture and show nothing holds it up.
-        const float scopeUp = (std::min)(g_scopePitch.at - g_smoothPitch, 0.0f);
-        const float behind = std::hypot(scopeRight, scopeUp);
-        // The eye moves against the scope, which moves the sight picture with it: hardly at all
-        // for a small trail, and never past kMostLag.
-        const float shown = behind * behind / (behind + kDeadZone);
-        const float lead = behind > 0.0f ? kMostLag * std::tanh(shown / kMostLag) / behind : 0.0f;
-        return {-scopeRight * lead * kEyeReach, -scopeUp * lead * kEyeReach};
+        g_turnRight += (right - g_turnRight) * follow;
+        g_turnUp += (up - g_turnUp) * follow;
+        g_turnedRight = g_turnRight;
+        g_turnedUp = g_turnUp;
     }
 
     void __fastcall UpdateCameraOffsetDetour(uint8_t* camera, void* unused, float seconds,
@@ -220,14 +146,11 @@ namespace {
             g_scopeUps++;
         }
         g_scopeUp = scope;
-        const WeaponOverhaul::Aim::Offset lead = FollowLook(pawn, data, seconds);
-        g_leadRight = lead.right * scoped;
-        g_leadUp = lead.up * scoped;
+        FollowLook(pawn, data, seconds);
 
-        // Down the iron sights the eye drifts off the gun; through a scope it runs ahead of it.
+        // Down the iron sights the eye drifts off the gun.
         const WeaponOverhaul::Aim::Offset drift = g_drift(seconds);
-        g_added = {drift.right * settled + lead.right * scoped,
-                   drift.up * settled + lead.up * scoped};
+        g_added = {drift.right * settled, drift.up * settled};
         Field<float>(camera, kEyeRight) += g_added.right;
         Field<float>(camera, kEyeUp) += g_added.up;
         g_addedTo = camera;
@@ -282,8 +205,8 @@ uint32_t WeaponOverhaul::Aim::ScopeUps() {
 }
 
 WeaponOverhaul::Aim::Swing WeaponOverhaul::Aim::ScopeSwing() {
-    const float right = g_turnRight;
-    const float up = g_turnUp;
+    const float right = g_turnedRight;
+    const float up = g_turnedUp;
     const float speed = std::hypot(right, up);
     if (speed <= 0.0f) {
         return {};
@@ -291,8 +214,4 @@ WeaponOverhaul::Aim::Swing WeaponOverhaul::Aim::ScopeSwing() {
     const float eased = speed * speed / (speed + kSlowTurn);
     const float swing = kMostSwing * std::tanh(eased * kSwingPerTurn / kMostSwing) / speed;
     return {-right * swing, up * swing};
-}
-
-WeaponOverhaul::Aim::Offset WeaponOverhaul::Aim::ScopeLead() {
-    return {g_leadRight, g_leadUp};
 }

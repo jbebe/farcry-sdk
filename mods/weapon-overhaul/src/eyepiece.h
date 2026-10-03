@@ -1,5 +1,5 @@
 // A scope seen from its eyepiece: everything past the scope's first centimetre is cut away so the
-// world fills the opening, and the reticle grows with the opening and swings with the shadow.
+// world fills the opening, and the reticle grows with the opening, black and soft.
 #pragma once
 
 #include "engine/weapon_draws.h"
@@ -10,10 +10,14 @@ namespace WeaponOverhaul::Eyepiece {
 // next time it comes up.
 void OnDepthPass(const Frame::Pass& pass, const WeaponDraws::Depth& depth);
 
-// Cuts or grows one of the gun's draws, or drops it, and puts back what that changed.
+// Cuts one of the gun's draws, sends the reticle's into a mask of its own, or drops them, and puts
+// back what that changed.
 bool BeforeGunDraw(IDirect3DDevice9* device, const WeaponDraws::Projection& projection,
                    bool depthPass);
 void AfterGunDraw(IDirect3DDevice9* device);
+
+// Lays the reticle over the finished frame.
+void OnComposite(IDirect3DDevice9* device);
 
 // Whether a scope is cut to its eyepiece this frame.
 bool Active();
@@ -22,9 +26,6 @@ bool Active();
 float Hole(const WeaponDraws::Projection& projection);
 
 void SetEnabled(bool enabled);
-
-// Whether the reticle swings with the shadow's clear circle, as it does while the shadow is on.
-void SetSwinging(bool swinging);
 
 void ReleaseDeviceObjects();
 

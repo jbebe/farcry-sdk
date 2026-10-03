@@ -262,11 +262,17 @@ namespace {
             g_listener.onGunPass(pass, depth);
         }
     }
+
+    void OnComposite(IDirect3DDevice9* device) {
+        if (g_watching && g_depthFrame == WeaponOverhaul::Frame::Number()) {
+            g_listener.onComposite(device);
+        }
+    }
 }
 
 bool WeaponOverhaul::WeaponDraws::Install(const Listener& listener) {
     g_listener = listener;
-    return Frame::Install(&OnScenePass) &&
+    return Frame::Install(&OnScenePass, &OnComposite) &&
            Vtable::Hook(Vtable::kDrawIndexedPrimitive,
                         reinterpret_cast<void*>(&DrawIndexedPrimitiveDetour),
                         reinterpret_cast<void**>(&g_original));

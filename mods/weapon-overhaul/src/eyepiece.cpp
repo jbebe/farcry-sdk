@@ -1,5 +1,6 @@
 // A scope is measured from its depth, read back each frame once it has settled until two readings
-// agree, and what was found is kept for that scope.
+// agree, and what was found is kept for that scope. The reticle is drawn into a mask of its own and
+// laid over the finished frame, black and soft.
 #include "eyepiece.h"
 
 #include "engine/aim.h"
@@ -10,7 +11,7 @@
 #include "scope_lens.h"
 
 #include "eyepiece_depth_ps.h"
-#include "eyepiece_mask_ps.h"
+#include "eyepiece_reticle_ps.h"
 
 #include <algorithm>
 #include <atomic>
@@ -42,29 +43,30 @@ namespace {
     // Scopes remembered.
     constexpr size_t kScopes = 8;
 
-    // The stencil bit the opening is marked with, clear of the engine's top bit and Sky Overhaul's
-    // 0x40, and how far past the opening's edge it reaches, in its radii; then a reach that covers
-    // the screen.
-    constexpr DWORD kMark = 0x20;
-    constexpr float kMarkReach = 1.05f;
-    constexpr float kEverywhere = 1.0e4f;
+    // The reticle's softness, a radius as a share of the screen's height, and how much its blurred
+    // coverage is strengthened so thin lines stay black.
+    constexpr float kSoftness = 0.0018f;
+    constexpr float kInk = 2.0f;
 
     // Where a mesh's vertex shader finds the camera's rotation and projection, one register for
     // each of clip space's x, y, z and w.
     constexpr UINT kViewRotProjectionRegister = 0;
 
-    // What the reticle's draw is given, to be drawn only where the opening is marked.
-    constexpr D3DRENDERSTATETYPE kThroughStates[] = {
-        D3DRS_STENCILENABLE, D3DRS_STENCILFUNC,      D3DRS_STENCILREF,
-        D3DRS_STENCILMASK,   D3DRS_STENCILWRITEMASK, D3DRS_TWOSIDEDSTENCILMODE,
+    // What a reticle draw is given to be drawn into the mask: nought wherever it lands.
+    constexpr DWORD kTargets = 4;
+    constexpr D3DRENDERSTATETYPE kMaskStates[] = {
+        D3DRS_ZENABLE,          D3DRS_STENCILENABLE, D3DRS_SCISSORTESTENABLE,
+        D3DRS_ALPHABLENDENABLE, D3DRS_SEPARATEALPHABLENDENABLE,
+        D3DRS_SRCBLEND,         D3DRS_DESTBLEND,     D3DRS_BLENDOP,
+        D3DRS_COLORWRITEENABLE, D3DRS_SRGBWRITEENABLE,
     };
-    constexpr DWORD kThrough[] = {TRUE, D3DCMP_EQUAL, kMark, kMark, 0, FALSE};
+    constexpr DWORD kAllColour = D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN |
+                                 D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA;
 
     WeaponOverhaul::PixelShader g_depthShader{"eyepiece depth", g_eyepieceDepthPixelShader};
-    WeaponOverhaul::PixelShader g_maskShader{"eyepiece mask", g_eyepieceMaskPixelShader};
+    WeaponOverhaul::PixelShader g_reticleShader{"eyepiece reticle", g_eyepieceReticlePixelShader};
 
     std::atomic<bool> g_enabled{true};
-    std::atomic<bool> g_swinging{true};
 
     struct Point {
         float x;
@@ -77,8 +79,8 @@ namespace {
         float radius;
     };
 
-    // A point of the scope with the eye on the scope's axis, as a view-space slope, x right and y
-    // up, and how far away it is in metres.
+    // A point of the scope, as a view-space slope, x right and y up, and how far away it is in
+    // metres.
     struct Spot {
         float x;
         float y;
@@ -114,9 +116,14 @@ namespace {
     };
     ScopeUp g_up = {};
 
-    // The frame the opening was last marked in the stencil, and whether that worked.
-    uint32_t g_markedFrame = WeaponOverhaul::Frame::kNever;
-    bool g_marked = false;
+    // The reticle's mask, one where it was not drawn, and the frame it was last drawn in.
+    IDirect3DDevice9* g_maskOwner = nullptr;
+    WeaponOverhaul::Target g_mask;
+    UINT g_maskWidth = 0;
+    UINT g_maskHeight = 0;
+    uint32_t g_maskFrame = WeaponOverhaul::Frame::kNever;
+    // Set once the device refuses the mask; cleared on reset.
+    bool g_maskRefused = false;
 
     // What the draw under way changed, and what was there before.
     enum class Change { None, Cut, Grown };
@@ -124,7 +131,11 @@ namespace {
     float g_savedPlane[4] = {};
     DWORD g_savedPlanes = 0;
     float g_savedRows[8] = {};
-    DWORD g_savedThrough[std::size(kThroughStates)] = {};
+    bool g_intoMask = false;
+    IDirect3DSurface9* g_savedTargets[kTargets] = {};
+    IDirect3DSurface9* g_savedDepth = nullptr;
+    D3DVIEWPORT9 g_savedViewport = {};
+    DWORD g_savedMaskStates[std::size(kMaskStates)] = {};
 
     double Determinant(double a, double b, double c, double d, double e, double f, double g,
                        double h, double i) {
@@ -227,13 +238,9 @@ namespace {
             return false;
         }
 
-        // Slopes from pixels off the centre, taken back to where they are with the eye on the
-        // scope's axis.
-        const WeaponOverhaul::Aim::Offset lead = WeaponOverhaul::Aim::ScopeLead();
         const auto spot = [&](const Circle& circle, float distance) {
-            return Spot{circle.x / centreX / projection.horizontalScale + lead.right / distance,
-                        -circle.y / centreY / projection.verticalScale + lead.up / distance,
-                        distance};
+            return Spot{circle.x / centreX / projection.horizontalScale,
+                        -circle.y / centreY / projection.verticalScale, distance};
         };
         scope.farEnd = spot(before, farDistances / engine.size());
         scope.opening = spot(after, openingDistances / eyepiece.size());
@@ -325,13 +332,6 @@ namespace {
         }
     }
 
-    // Where a spot of the scope is this frame in clip space, the eye's lead moving it.
-    Point At(const Spot& spot, const Projection& projection) {
-        const WeaponOverhaul::Aim::Offset lead = WeaponOverhaul::Aim::ScopeLead();
-        return {(spot.x - lead.right / spot.distance) * projection.horizontalScale,
-                (spot.y - lead.up / spot.distance) * projection.verticalScale};
-    }
-
     // Keeps what lies nearer than the scope's cut: stored depth at most the cut's.
     void Cut(IDirect3DDevice9* device, const Projection& projection) {
         device->GetClipPlane(0, g_savedPlane);
@@ -342,63 +342,99 @@ namespace {
         g_change = Change::Cut;
     }
 
-    // Sets kMark in the stencil inside the opening as ScopeLens found it, and clears it everywhere
-    // else.
-    bool Mark(IDirect3DDevice9* device, const Projection& projection) {
-        IDirect3DPixelShader9* shader = g_maskShader.Get(device);
-        IDirect3DTexture9* lens = WeaponOverhaul::ScopeLens::Found();
-        if (shader == nullptr || lens == nullptr) {
-            return false;
-        }
-        const float aspect = projection.verticalScale / projection.horizontalScale;
-        WeaponOverhaul::ScreenDraw draw(device, 0, 1);
-        device->SetPixelShader(shader);
-        device->SetTexture(5, lens);
-        device->SetRenderState(D3DRS_COLORWRITEENABLE, 0);
-        device->SetRenderState(D3DRS_STENCILENABLE, TRUE);
-        device->SetRenderState(D3DRS_TWOSIDEDSTENCILMODE, FALSE);
-        device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
-        device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
-        device->SetRenderState(D3DRS_STENCILWRITEMASK, kMark);
-        const float width = static_cast<float>(WeaponOverhaul::Frame::Width());
-        const float height = static_cast<float>(WeaponOverhaul::Frame::Height());
-        for (const bool inside : {false, true}) {
-            const float constants[4] = {inside ? kMarkReach : kEverywhere, aspect, 0.0f, 0.0f};
-            device->SetPixelShaderConstantF(0, constants, 1);
-            device->SetRenderState(D3DRS_STENCILREF, inside ? kMark : 0);
-            draw.Quad(0.0f, 0.0f, width, height);
-        }
-        return true;
-    }
-
     // Scales the reticle's draw in clip space about its own centre and moves that centre onto the
-    // opening's, swung with the shadow. Through the stencil, if the opening is marked.
+    // opening's.
     void Grow(IDirect3DDevice9* device, const Projection& projection) {
         const Scope& scope = *g_up.scope;
-        const Point farEnd = At(scope.farEnd, projection);
-        const Point opening = At(scope.opening, projection);
-        const WeaponOverhaul::Aim::Swing swing =
-            g_swinging ? WeaponOverhaul::Aim::ScopeSwing() : WeaponOverhaul::Aim::Swing{};
-        const float x = opening.x + swing.x * scope.radius * projection.horizontalScale;
-        const float y = opening.y - swing.y * scope.radius * projection.verticalScale;
+        const float farX = scope.farEnd.x * projection.horizontalScale;
+        const float farY = scope.farEnd.y * projection.verticalScale;
+        const float x = scope.opening.x * projection.horizontalScale;
+        const float y = scope.opening.y * projection.verticalScale;
         float camera[16] = {};
         device->GetVertexShaderConstantF(kViewRotProjectionRegister, camera, 4);
         float rows[8] = {};
         for (int i = 0; i < 4; i++) {
-            rows[i] = scope.growth * camera[i] + (x - scope.growth * farEnd.x) * camera[12 + i];
-            rows[4 + i] =
-                scope.growth * camera[4 + i] + (y - scope.growth * farEnd.y) * camera[12 + i];
+            rows[i] = scope.growth * camera[i] + (x - scope.growth * farX) * camera[12 + i];
+            rows[4 + i] = scope.growth * camera[4 + i] + (y - scope.growth * farY) * camera[12 + i];
         }
         std::copy_n(camera, std::size(g_savedRows), g_savedRows);
         device->SetVertexShaderConstantF(kViewRotProjectionRegister, rows, 2);
         g_change = Change::Grown;
+    }
 
-        if (g_marked) {
-            for (size_t i = 0; i < std::size(kThroughStates); i++) {
-                device->GetRenderState(kThroughStates[i], &g_savedThrough[i]);
-                device->SetRenderState(kThroughStates[i], kThrough[i]);
+    bool EnsureMask(IDirect3DDevice9* device) {
+        const UINT width = WeaponOverhaul::Frame::Width();
+        const UINT height = WeaponOverhaul::Frame::Height();
+        if (g_maskOwner == device && g_mask.texture != nullptr && g_maskWidth == width &&
+            g_maskHeight == height) {
+            return true;
+        }
+        WeaponOverhaul::Release(g_mask);
+        if (g_maskRefused) {
+            return false;
+        }
+        g_maskOwner = device;
+        g_maskWidth = width;
+        g_maskHeight = height;
+        if (FAILED(WeaponOverhaul::CreateTarget(device, width, height, D3DFMT_A8R8G8B8, g_mask))) {
+            WeaponOverhaul::Release(g_mask);
+            g_maskRefused = true;
+            FCSE::Logf("eyepiece: the device refused a %ux%u reticle mask", width, height);
+            return false;
+        }
+        return true;
+    }
+
+    // Sends the draw under way into the reticle's mask, blended by `destBlend` so it leaves nought
+    // where it lands, and clears the mask first each frame.
+    bool IntoMask(IDirect3DDevice9* device, DWORD destBlend) {
+        if (!EnsureMask(device)) {
+            return false;
+        }
+        for (DWORD i = 0; i < kTargets; i++) {
+            device->GetRenderTarget(i, &g_savedTargets[i]);
+        }
+        device->GetDepthStencilSurface(&g_savedDepth);
+        device->GetViewport(&g_savedViewport);
+        for (size_t i = 0; i < std::size(kMaskStates); i++) {
+            device->GetRenderState(kMaskStates[i], &g_savedMaskStates[i]);
+        }
+
+        device->SetRenderTarget(0, g_mask.surface);
+        for (DWORD i = 1; i < kTargets; i++) {
+            if (g_savedTargets[i] != nullptr) {
+                device->SetRenderTarget(i, nullptr);
             }
         }
+        device->SetDepthStencilSurface(nullptr);
+        const uint32_t frame = WeaponOverhaul::Frame::Number();
+        if (g_maskFrame != frame) {
+            g_maskFrame = frame;
+            device->Clear(0, nullptr, D3DCLEAR_TARGET, 0xFFFFFFFF, 1.0f, 0);
+        }
+        const DWORD states[] = {D3DZB_FALSE, FALSE, FALSE, TRUE, FALSE, D3DBLEND_ZERO,
+                                destBlend, D3DBLENDOP_ADD, kAllColour, FALSE};
+        for (size_t i = 0; i < std::size(kMaskStates); i++) {
+            device->SetRenderState(kMaskStates[i], states[i]);
+        }
+        g_intoMask = true;
+        return true;
+    }
+
+    void OutOfMask(IDirect3DDevice9* device) {
+        for (DWORD i = 0; i < kTargets; i++) {
+            if (i == 0 || g_savedTargets[i] != nullptr) {
+                device->SetRenderTarget(i, g_savedTargets[i]);
+            }
+            WeaponOverhaul::Release(g_savedTargets[i]);
+        }
+        device->SetDepthStencilSurface(g_savedDepth);
+        WeaponOverhaul::Release(g_savedDepth);
+        device->SetViewport(&g_savedViewport);
+        for (size_t i = 0; i < std::size(kMaskStates); i++) {
+            device->SetRenderState(kMaskStates[i], g_savedMaskStates[i]);
+        }
+        g_intoMask = false;
     }
 
     // A COM pointer's identity, without the reference the getter added.
@@ -478,14 +514,13 @@ bool WeaponOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
             return true;
         }
     }
-    // The reticle is left out of the gun's depth.
-    if (depthPass) {
+    // The alpha-tested reticle is masked from the gun's depth pass, where its texels are tested
+    // the same; what is blended is masked by its own alpha.
+    if (alphaTest && !depthPass && !g_maskRefused) {
         return false;
     }
-    const uint32_t frame = Frame::Number();
-    if (g_markedFrame != frame) {
-        g_markedFrame = frame;
-        g_marked = Mark(device, projection);
+    if (!IntoMask(device, alphaTest ? D3DBLEND_ZERO : D3DBLEND_INVSRCALPHA)) {
+        return true;
     }
     Grow(device, projection);
     return true;
@@ -497,13 +532,41 @@ void WeaponOverhaul::Eyepiece::AfterGunDraw(IDirect3DDevice9* device) {
         device->SetRenderState(D3DRS_CLIPPLANEENABLE, g_savedPlanes);
     } else if (g_change == Change::Grown) {
         device->SetVertexShaderConstantF(kViewRotProjectionRegister, g_savedRows, 2);
-        if (g_marked) {
-            for (size_t i = 0; i < std::size(kThroughStates); i++) {
-                device->SetRenderState(kThroughStates[i], g_savedThrough[i]);
-            }
-        }
+    }
+    if (g_intoMask) {
+        OutOfMask(device);
     }
     g_change = Change::None;
+}
+
+void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
+    IDirect3DTexture9* lens = ScopeLens::Found();
+    IDirect3DPixelShader9* shader =
+        g_maskFrame == Frame::Number() && lens != nullptr ? g_reticleShader.Get(device) : nullptr;
+    if (shader == nullptr) {
+        return;
+    }
+    const float width = static_cast<float>(Frame::Width());
+    const float height = static_cast<float>(Frame::Height());
+    const float constants[8] = {
+        1.0f / width, 1.0f / height, kSoftness * height, width / height,
+        kInk, ScopeLens::kSmallest, 0.0f, 0.0f,
+    };
+
+    ScreenDraw draw(device, 0, 2);
+    device->SetPixelShaderConstantF(0, constants, 2);
+    device->SetTexture(0, g_mask.texture);
+    device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    device->SetTexture(5, lens);
+    device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+    device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);
+    device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+    device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
+                                                       D3DCOLORWRITEENABLE_GREEN |
+                                                       D3DCOLORWRITEENABLE_BLUE);
+    device->SetPixelShader(shader);
+    draw.Quad(0.0f, 0.0f, width, height);
 }
 
 float WeaponOverhaul::Eyepiece::Hole(const WeaponDraws::Projection& projection) {
@@ -518,13 +581,13 @@ void WeaponOverhaul::Eyepiece::SetEnabled(bool enabled) {
     g_enabled = enabled;
 }
 
-void WeaponOverhaul::Eyepiece::SetSwinging(bool swinging) {
-    g_swinging = swinging;
-}
-
 void WeaponOverhaul::Eyepiece::ReleaseDeviceObjects() {
     g_depthShader.Release();
-    g_maskShader.Release();
+    g_reticleShader.Release();
+    WeaponOverhaul::Release(g_mask);
+    g_maskOwner = nullptr;
+    g_maskRefused = false;
+    g_maskFrame = Frame::kNever;
     std::fill(std::begin(g_scopes), std::end(g_scopes), Scope{});
     g_up.scope = nullptr;
 }
