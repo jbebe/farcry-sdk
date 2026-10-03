@@ -52,6 +52,18 @@ namespace {
     constexpr float kTrail = 0.12f;
     constexpr float kFastestTurn = 10.0f;
 
+    // The scope follows the look on a spring, a little under critical damping so a jerk swings it
+    // past and back, simulated in steps of kSpringStep seconds. How far it trails, in radians, is
+    // capped softly at kMostLag; the eye then runs ahead of it by kEyeReach metres a radian, which
+    // moves the scope's own sight picture that far behind on screen. Further than kCut behind is a
+    // cut, not a turn, and the scope is put back on the look.
+    constexpr float kStiffness = 10.0f;
+    constexpr float kDamping = 0.65f;
+    constexpr float kSpringStep = 1.0f / 120.0f;
+    constexpr float kMostLag = 0.05f;
+    constexpr float kEyeReach = 0.4f;
+    constexpr float kCut = 0.5f;
+
     WeaponOverhaul::Aim::DriftFn g_drift = nullptr;
     float g_sights = 0.0f;
     float g_scope = 0.0f;
@@ -62,13 +74,22 @@ namespace {
     uint8_t* g_addedTo = nullptr;
     WeaponOverhaul::Aim::Offset g_added = {};
 
-    // The look last frame, for which pawn, and how fast it has been turning.
+    // The look last frame, for which pawn, with its yaw unwound; how fast it has been turning; and
+    // where the scope points, and how fast that moves.
     uint8_t* g_lookPawn = nullptr;
     float g_lastPitch = 0.0f;
     float g_lastYaw = 0.0f;
+    float g_lookYaw = 0.0f;
     WeaponOverhaul::Aim::Turn g_turn = {};
     std::atomic<float> g_turnRight{0.0f};
     std::atomic<float> g_turnUp{0.0f};
+
+    struct Spring {
+        float at;
+        float speed;
+    };
+    Spring g_scopePitch = {};
+    Spring g_scopeYaw = {};
 
     template <typename T>
     T& Field(uint8_t* object, ptrdiff_t offset) {
@@ -89,15 +110,26 @@ namespace {
                Field<uint8_t>(weapon, kHiResScope) != 0;
     }
 
-    // Follows the look's turn rate, smoothed the way the gun trails the camera.
-    void FollowTurn(uint8_t* pawn, uint8_t* data, float seconds) {
+    void Pull(Spring& spring, float toward, float seconds) {
+        const float pull = kStiffness * kStiffness * (toward - spring.at) -
+                           2.0f * kDamping * kStiffness * spring.speed;
+        spring.speed += pull * seconds;
+        spring.at += spring.speed * seconds;
+    }
+
+    // Follows the look: how fast it turns, smoothed the way the gun trails the camera, and how far
+    // the eye runs ahead of the scope that trails it.
+    WeaponOverhaul::Aim::Offset FollowLook(uint8_t* pawn, uint8_t* data, float seconds) {
         const float pitch = Field<float>(data, kEffectivePitch);
         const float yaw = Field<float>(data, kEffectiveYaw);
         if (pawn != g_lookPawn || seconds <= 0.0f) {
             g_lookPawn = pawn;
             g_lastPitch = pitch;
             g_lastYaw = yaw;
-            return;
+            g_lookYaw = yaw;
+            g_scopePitch = {pitch, 0.0f};
+            g_scopeYaw = {yaw, 0.0f};
+            return {};
         }
         const float pi = std::numbers::pi_v<float>;
         const float yawStep = std::remainder(yaw - g_lastYaw, 2.0f * pi);
@@ -105,12 +137,31 @@ namespace {
         const float up = std::clamp((pitch - g_lastPitch) / seconds, -kFastestTurn, kFastestTurn);
         g_lastPitch = pitch;
         g_lastYaw = yaw;
+        g_lookYaw += yawStep;
 
         const float follow = 1.0f - std::exp(-seconds / kTrail);
         g_turn.right += (right - g_turn.right) * follow;
         g_turn.up += (up - g_turn.up) * follow;
         g_turnRight = g_turn.right;
         g_turnUp = g_turn.up;
+
+        const int steps = static_cast<int>(std::ceil(seconds / kSpringStep));
+        for (int i = 0; i < steps; i++) {
+            Pull(g_scopePitch, pitch, seconds / steps);
+            Pull(g_scopeYaw, g_lookYaw, seconds / steps);
+        }
+        // Where the scope points against the look, right and up of it; yaw is left.
+        const float scopeRight = g_lookYaw - g_scopeYaw.at;
+        const float scopeUp = g_scopePitch.at - pitch;
+        const float behind = std::hypot(scopeRight, scopeUp);
+        if (behind > kCut) {
+            g_scopePitch = {pitch, 0.0f};
+            g_scopeYaw = {g_lookYaw, 0.0f};
+            return {};
+        }
+        // The eye moves against the scope, which moves the sight picture with it.
+        const float lead = behind > 0.0f ? kMostLag * std::tanh(behind / kMostLag) / behind : 0.0f;
+        return {-scopeRight * lead * kEyeReach, -scopeUp * lead * kEyeReach};
     }
 
     void __fastcall UpdateCameraOffsetDetour(uint8_t* camera, void* unused, float seconds,
@@ -129,12 +180,15 @@ namespace {
         g_sights = scope ? 0.0f : Approach(g_sights, sights, step);
         g_scope = scope ? Approach(g_scope, true, step) : 0.0f;
         const float settled = Ease(g_sights);
+        const float scoped = Ease(g_scope);
         g_settled = settled;
-        g_scoped = Ease(g_scope);
-        FollowTurn(pawn, data, seconds);
+        g_scoped = scoped;
+        const WeaponOverhaul::Aim::Offset lead = FollowLook(pawn, data, seconds);
 
+        // Down the iron sights the eye drifts off the gun; through a scope it runs ahead of it.
         const WeaponOverhaul::Aim::Offset drift = g_drift(seconds);
-        g_added = {drift.right * settled, drift.up * settled};
+        g_added = {drift.right * settled + lead.right * scoped,
+                   drift.up * settled + lead.up * scoped};
         Field<float>(camera, kEyeRight) += g_added.right;
         Field<float>(camera, kEyeUp) += g_added.up;
         g_addedTo = camera;

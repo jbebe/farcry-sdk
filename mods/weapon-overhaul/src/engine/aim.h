@@ -19,7 +19,8 @@ struct Turn {
 using DriftFn = Offset (*)(float seconds);
 
 // Hooks the first-person camera; `drift` then runs once a frame, and down the iron sights the eye
-// follows it. False, and logged, when the camera cannot be hooked.
+// follows it. Through a scope the scope trails the look instead. False, and logged, when the camera
+// cannot be hooked.
 bool Install(DriftFn drift);
 
 // How far the eye has settled into the iron sights, and into a scope's own sight picture, eased

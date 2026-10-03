@@ -39,6 +39,7 @@ namespace {
     constexpr UINT kConstantCount = 3;
 
     constexpr D3DFORMAT kRadiusFormat = D3DFMT_R32F;
+    constexpr D3DFORMAT kLensFormat = D3DFMT_A32B32G32R32F;
 
     WeaponOverhaul::PixelShader g_radiusShader{"scope radius", g_scopeRadiusPixelShader};
     WeaponOverhaul::PixelShader g_lensShader{"scope lens", g_scopeLensPixelShader};
@@ -65,9 +66,9 @@ namespace {
         g_lensFresh = true;
     }
 
-    bool Create(IDirect3DDevice9* device, UINT width, WeaponOverhaul::Target& target) {
-        const HRESULT created =
-            WeaponOverhaul::CreateTarget(device, width, 1, kRadiusFormat, target);
+    bool Create(IDirect3DDevice9* device, UINT width, D3DFORMAT format,
+                WeaponOverhaul::Target& target) {
+        const HRESULT created = WeaponOverhaul::CreateTarget(device, width, 1, format, target);
         if (FAILED(created)) {
             ReleaseTargets();
             g_refused = true;
@@ -87,8 +88,9 @@ namespace {
             return false;
         }
         g_owner = device;
-        return Create(device, kDirections, g_radii) && Create(device, 1, g_lens[0]) &&
-               Create(device, 1, g_lens[1]);
+        return Create(device, kDirections, kRadiusFormat, g_radii) &&
+               Create(device, 1, kLensFormat, g_lens[0]) &&
+               Create(device, 1, kLensFormat, g_lens[1]);
     }
 
     // How far the lens radius moves toward this frame's, from the time since the last.
@@ -102,7 +104,7 @@ namespace {
     // The lens radius as measured, once, the first time a scope has settled.
     void Report(IDirect3DDevice9* device, const WeaponOverhaul::Target& lens) {
         D3DLOCKED_RECT locked = {};
-        if (FAILED(device->CreateOffscreenPlainSurface(1, 1, kRadiusFormat, D3DPOOL_SYSTEMMEM,
+        if (FAILED(device->CreateOffscreenPlainSurface(1, 1, kLensFormat, D3DPOOL_SYSTEMMEM,
                                                        &g_readback, nullptr)) ||
             FAILED(device->GetRenderTargetData(lens.surface, g_readback)) ||
             FAILED(g_readback->LockRect(&locked, nullptr, D3DLOCK_READONLY))) {
