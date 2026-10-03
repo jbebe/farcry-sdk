@@ -24,7 +24,7 @@ struct Lens {
 void OnGunPass(const Frame::Pass& pass, const WeaponDraws::Depth& depth, const Lens* known);
 
 // How far the shadow's clear circle, the scope's far end, has swung off the lens's centre with the
-// look's speed, less the step it takes at the lightest turn. Nought while the shadow is off.
+// look's speed. Nought while the shadow is off.
 Shift Swing();
 
 void SetEnabled(bool enabled);

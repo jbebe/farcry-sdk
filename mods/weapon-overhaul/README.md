@@ -21,8 +21,8 @@ shadow and the eyepiece are in, a picture-in-picture scope is not.
   through the same camera offset as the sway, which the scope's own sight picture, a miniature at
   the eye, turns into a large shift on screen.
 - **Scope shadow.** The scope trails the camera as the look turns, so the eye runs ahead of it and
-  a dark crescent comes in from the lens's rim on the side turned toward: faint at the lightest
-  move, near a blackout on a fast flick, gone when the look is still or the scope comes down. The
+  a dark crescent comes in from the lens's rim on the side turned toward: hardly any on a slow
+  move, a slight one on a fast flick, gone when the look is still or the scope comes down. The
   lens, its centre and its radius, is found on screen as the hole the scope's housing leaves in the
   gun's depth, so it fits every scope and follows it as it lags.
 - **Eyepiece.** The engine draws a scope as a tube seen down its length, with the reticle and the
@@ -30,10 +30,9 @@ shadow and the eyepiece are in, a picture-in-picture scope is not.
   eyepiece, and the reticle grows with the opening so it sits in it as it sat in the lens. The
   magnification is unchanged. Each time a scope comes up, its depth is read back once to find the
   eyepiece and both openings, so it fits every scope the engine draws this way. The reticle sits at
-  the scope's far end, so as the look turns it swings off centre with the shadow, and shows only
-  through the opening. It follows the part of the shadow's swing that grows with speed, not the step
-  the shadow takes at the lightest move, so small adjustments leave it in place. Shots still go to
-  the screen's centre.
+  the scope's far end, so as the look turns it swings off centre with the shadow, centred on the
+  shadow's clear circle, and shows only through the opening. Shots still go to the screen's
+  centre.
 
 The eye is moved through the camera's positional offset, the one the recoil kicks, in
 `src/engine/aim.cpp`. The blur draws the gun's own depth pass a second time into a depth texture of

@@ -26,15 +26,15 @@ namespace {
     // The smallest radius taken for a lens; anything smaller is the gun itself, not a hole in it.
     constexpr float kSmallestLens = 0.1f;
 
-    // The shadow is the rim of the magnified tube, a circle wider than the lens, hidden behind the
-    // housing while it is centred. On the lightest turn, kFirstTurn radians a second, it moves out
-    // to the rim. From there it moves on per radian a second of turn at first, and at most, which is
-    // near a full blackout. All in lens radii, then how wide its soft edge is and how dark it gets.
-    constexpr float kShadowRadius = 1.5f;
-    constexpr float kFirstTurn = 0.02f;
-    constexpr float kShiftPerTurn = 3.0f;
-    constexpr float kMostShift = 1.2f;
-    constexpr float kSoftEdge = 0.15f;
+    // The shadow is the rim of the magnified tube, a circle a little wider than the lens whose soft
+    // edge just reaches the lens's while it is centred, so the slightest shift shows. Turns slower
+    // than kSlowTurn radians a second hardly move it. Past that it moves per radian a second of
+    // turn, and at most. All in lens radii, then how dark it gets.
+    constexpr float kShadowRadius = 1.2f;
+    constexpr float kSoftEdge = 0.2f;
+    constexpr float kSlowTurn = 0.3f;
+    constexpr float kShiftPerTurn = 0.6f;
+    constexpr float kMostShift = 0.35f;
     constexpr float kDarkness = 0.95f;
     // Seconds for the lens radius to follow most of the way.
     constexpr float kFollow = 0.1f;
@@ -115,7 +115,8 @@ namespace {
     }
 
     float SwingAt(float speed) {
-        return kMostShift * std::tanh(speed * kShiftPerTurn / kMostShift);
+        const float eased = speed * speed / (speed + kSlowTurn);
+        return kMostShift * std::tanh(eased * kShiftPerTurn / kMostShift);
     }
 
     // How far the lens radius moves toward this frame's, from the time since the last.
@@ -161,8 +162,7 @@ namespace {
         // The scope trails the look, so the eye runs ahead of it and the side turned toward goes
         // dark: the clear part moves against the turn, down the screen as the look turns up.
         const Against against = TurnedAgainst();
-        const float distance = (kShadowRadius - 1.0f) * std::tanh(against.speed / kFirstTurn) +
-                               SwingAt(against.speed);
+        const float distance = SwingAt(against.speed);
         const WeaponOverhaul::ScopeShadow::Lens given =
             known != nullptr ? *known : WeaponOverhaul::ScopeShadow::Lens{};
         const float constants[kConstantCount * 4] = {

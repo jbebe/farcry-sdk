@@ -49,7 +49,7 @@ namespace {
     constexpr float kSettle = 0.4f;
     // Seconds for the turn rate to follow the look, which is how the gun trails it. Faster than
     // this in a frame is a cut, not a turn.
-    constexpr float kTrail = 0.12f;
+    constexpr float kTrail = 0.25f;
     constexpr float kFastestTurn = 10.0f;
 
     // The scope follows the look on a spring, a little under critical damping so a jerk swings it
