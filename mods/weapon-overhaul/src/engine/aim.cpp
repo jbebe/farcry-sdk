@@ -49,7 +49,7 @@ namespace {
     constexpr float kSettle = 0.4f;
     // Seconds for the turn rate to follow the look, which is how the gun trails it. Faster than
     // this in a frame is a cut, not a turn.
-    constexpr float kTrail = 0.25f;
+    constexpr float kTrail = 0.18f;
     constexpr float kFastestTurn = 10.0f;
 
     // The scope follows the look on a spring, a little under critical damping so a jerk swings it
@@ -59,7 +59,7 @@ namespace {
     // capped softly at kMostLag. The eye then runs ahead of it by kEyeReach metres a radian, which
     // moves the scope's own sight picture that far behind on screen. Further than kCut behind is a
     // cut, not a turn, and the scope is put back on the look.
-    constexpr float kStiffness = 10.0f;
+    constexpr float kStiffness = 13.0f;
     constexpr float kDamping = 0.8f;
     constexpr float kSpringStep = 1.0f / 120.0f;
     constexpr float kSmoothing = 0.05f;
