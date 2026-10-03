@@ -32,6 +32,8 @@ set(SHADER_PASSES
   "scope.fx:ShadowPS:ps_2_b:scope_shadow_ps.h:g_scopeShadowPixelShader"
   "eyepiece.fx:DepthPS:ps_2_0:eyepiece_depth_ps.h:g_eyepieceDepthPixelShader"
   "eyepiece.fx:ReticlePS:ps_2_b:eyepiece_reticle_ps.h:g_eyepieceReticlePixelShader"
+  "eyepiece.fx:RingPS:ps_2_0:eyepiece_ring_ps.h:g_eyepieceRingPixelShader"
+  "eyepiece.fx:RingInkPS:ps_2_0:eyepiece_ring_ink_ps.h:g_eyepieceRingInkPixelShader"
   "surroundings.fx:SurroundingsPS:ps_2_0:surroundings_ps.h:g_surroundingsPixelShader")
 
 set(SHADER_HEADERS "")

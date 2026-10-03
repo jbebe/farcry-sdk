@@ -1,5 +1,6 @@
 // A scope seen from its eyepiece: everything past the scope's first centimetre is cut away so the
-// world fills the opening, and the reticle grows with the opening, black and soft.
+// world fills the opening, the ring left of it is black and out of focus, and the reticle grows
+// with the opening, black and soft.
 #pragma once
 
 #include "engine/weapon_draws.h"
@@ -16,8 +17,8 @@ bool BeforeGunDraw(IDirect3DDevice9* device, const WeaponDraws::Projection& proj
                    bool depthPass);
 void AfterGunDraw(IDirect3DDevice9* device);
 
-// Lays the reticle over the finished frame.
-void OnComposite(IDirect3DDevice9* device);
+// Lays the ring left of the scope and the reticle over the finished frame, black and soft.
+void OnComposite(IDirect3DDevice9* device, const WeaponDraws::Depth& depth);
 
 // Whether a scope is cut to its eyepiece this frame.
 bool Active();

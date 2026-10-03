@@ -1,5 +1,5 @@
-// The eyepiece's two screen passes: the gun's depth copied where it can be read back, and the
-// reticle laid over the finished frame, black and soft, inside the opening.
+// The eyepiece's screen passes: the gun's depth copied where it can be read back, and the ring left
+// of the scope and the reticle laid over the finished frame, black and soft.
 
 // x, y: one pixel across and down, in texture coordinates. z: the reticle's softness, a radius in
 // pixels. w: the screen's width over its height.
@@ -7,8 +7,10 @@ float4 Soften : register(c0);
 // x: how much the softened coverage is strengthened. y: the smallest radius taken for a lens, in
 // screen heights.
 float4 Ink : register(c1);
+// x: the stored depth the scope is cut at, which only the ring left of it is nearer than.
+float4 Ring : register(c2);
 
-// The reticle's mask, nought where it was drawn.
+// The reticle's mask, nought where it was drawn; or the ring's softened coverage.
 sampler2D Mask : register(s0);
 // The weapon's hardware depth at half resolution, one where the weapon is not.
 sampler2D WeaponDepth : register(s3);
@@ -27,6 +29,18 @@ static const float2 kDisc[12] = {
 // Into a float target, which unlike the depth texture can be read back.
 float4 DepthPS(float2 uv : TEXCOORD0) : COLOR0 {
     return tex2D(WeaponDepth, uv).r;
+}
+
+// One where the ring left of the scope is, at the gun depth's size.
+float4 RingPS(float2 uv : TEXCOORD0) : COLOR0 {
+    return tex2D(WeaponDepth, uv).r < Ring.x ? 1.0f : 0.0f;
+}
+
+// Black, as much as the softened ring covers the pixel.
+float4 RingInkPS(float2 uv : TEXCOORD0) : COLOR0 {
+    float ink = tex2D(Mask, uv).r;
+    clip(ink - 0.002f);
+    return float4(0.0f, 0.0f, 0.0f, ink);
 }
 
 // Black, as much as the softened reticle covers the pixel, and only through the opening.

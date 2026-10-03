@@ -27,9 +27,11 @@ of view.
   eyepiece, and the reticle grows with the opening so it sits in it as it sat in the lens. The
   magnification is unchanged. Once a scope has come up and settled, its depth is read back until
   two readings agree, to find the eyepiece and both openings, and what is found is kept for that
-  scope; so it fits every scope the engine draws this way. The reticle stays on the scope's frame,
-  pitch black and a little soft, and shows only through the opening: it is drawn into a mask of its
-  own and laid over the finished frame, after the tone mapping, so nothing lightens it.
+  scope; so it fits every scope the engine draws this way. The ring left of the scope is far too
+  near the eye to be in focus, so it is pitch black and soft-edged. The reticle stays on the scope's
+  frame, pitch black and a little soft, and shows only through the opening: it is drawn into a mask
+  of its own. Both are laid over the finished frame, after the tone mapping, so nothing lightens
+  them.
 - **Surroundings.** Around the eyepiece the world is seen at the field of view the eye has without
   a scope, as with both eyes open, while the eyepiece keeps the scope's magnified view. The
   surroundings are a second, cheaper view drawn by the engine's water reflection renderer, at half

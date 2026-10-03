@@ -247,25 +247,27 @@ namespace {
         return result;
     }
 
+    WeaponOverhaul::WeaponDraws::Depth ThisDepth() {
+        return {g_depth.texture, g_width, g_height, g_projection};
+    }
+
     void OnScenePass(const WeaponOverhaul::Frame::Pass& pass) {
         g_watching = WeaponOverhaul::Aim::Settled() > 0.0f || WeaponOverhaul::Aim::Scoped() > 0.0f ||
                      WeaponOverhaul::Aim::ScopeUp();
         if (!g_watching || g_depthFrame != WeaponOverhaul::Frame::Number()) {
             return;
         }
-        const WeaponOverhaul::WeaponDraws::Depth depth = {g_depth.texture, g_width, g_height,
-                                                          g_projection};
         if (pass.serial == g_depthPass) {
-            g_listener.onDepthPass(pass, depth);
+            g_listener.onDepthPass(pass, ThisDepth());
         }
         if (pass.serial == g_colourPass) {
-            g_listener.onGunPass(pass, depth);
+            g_listener.onGunPass(pass, ThisDepth());
         }
     }
 
     void OnComposite(IDirect3DDevice9* device) {
         if (g_watching && g_depthFrame == WeaponOverhaul::Frame::Number()) {
-            g_listener.onComposite(device);
+            g_listener.onComposite(device, ThisDepth());
         }
     }
 }

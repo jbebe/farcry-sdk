@@ -38,6 +38,7 @@ using GunPassFn = void (*)(const Frame::Pass& pass, const Depth& depth);
 // draw.
 using GunDrawFn = bool (*)(IDirect3DDevice9* device, const Projection& projection, bool depthPass);
 using DeviceFn = void (*)(IDirect3DDevice9* device);
+using CompositeFn = void (*)(IDirect3DDevice9* device, const Depth& depth);
 
 struct Listener {
     // As the first pass with the gun's depth in it ends, the depth complete but for cut-outs, which
@@ -51,7 +52,7 @@ struct Listener {
     GunDrawFn beforeDraw;
     DeviceFn afterDraw;
     // As the frame's tone-mapped image is finished in the back buffer, under the interface.
-    DeviceFn onComposite;
+    CompositeFn onComposite;
 };
 
 // Takes over the frame and the device's indexed draws, and calls `listener` while the player is

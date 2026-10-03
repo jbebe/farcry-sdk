@@ -10,8 +10,11 @@
 #include "fcse_api.h"
 #include "scope_lens.h"
 
+#include "blur_blur_ps.h"
 #include "eyepiece_depth_ps.h"
 #include "eyepiece_reticle_ps.h"
+#include "eyepiece_ring_ink_ps.h"
+#include "eyepiece_ring_ps.h"
 
 #include <algorithm>
 #include <atomic>
@@ -47,6 +50,10 @@ namespace {
     // coverage is strengthened so thin lines stay black.
     constexpr float kSoftness = 0.0018f;
     constexpr float kInk = 2.0f;
+    // The ring's softness: the reach of its blur, as a share of the screen's height, and the steps
+    // BlurPS takes either side.
+    constexpr float kRingSoftness = 0.025f;
+    constexpr float kBlurSteps = 6.0f;
 
     // Where a mesh's vertex shader finds the camera's rotation and projection, one register for
     // each of clip space's x, y, z and w.
@@ -65,6 +72,9 @@ namespace {
 
     WeaponOverhaul::PixelShader g_depthShader{"eyepiece depth", g_eyepieceDepthPixelShader};
     WeaponOverhaul::PixelShader g_reticleShader{"eyepiece reticle", g_eyepieceReticlePixelShader};
+    WeaponOverhaul::PixelShader g_ringShader{"eyepiece ring", g_eyepieceRingPixelShader};
+    WeaponOverhaul::PixelShader g_ringInkShader{"eyepiece ring ink", g_eyepieceRingInkPixelShader};
+    WeaponOverhaul::PixelShader g_blurShader{"eyepiece blur", g_blurPixelShader};
 
     std::atomic<bool> g_enabled{true};
 
@@ -124,6 +134,12 @@ namespace {
     uint32_t g_maskFrame = WeaponOverhaul::Frame::kNever;
     // Set once the device refuses the mask; cleared on reset.
     bool g_maskRefused = false;
+    // The ring left of the scope, at the gun depth's size: its coverage, softened, and a scratch
+    // target.
+    WeaponOverhaul::Target g_ring[2];
+    UINT g_ringWidth = 0;
+    UINT g_ringHeight = 0;
+    bool g_ringRefused = false;
 
     // What the draw under way changed, and what was there before.
     enum class Change { None, Cut, Grown };
@@ -385,6 +401,76 @@ namespace {
         return true;
     }
 
+    bool EnsureRing(IDirect3DDevice9* device, UINT width, UINT height) {
+        if (g_ring[0].texture != nullptr && g_ringWidth == width && g_ringHeight == height) {
+            return true;
+        }
+        for (WeaponOverhaul::Target& target : g_ring) {
+            WeaponOverhaul::Release(target);
+        }
+        if (g_ringRefused) {
+            return false;
+        }
+        g_ringWidth = width;
+        g_ringHeight = height;
+        for (WeaponOverhaul::Target& target : g_ring) {
+            if (FAILED(WeaponOverhaul::CreateTarget(device, width, height, D3DFMT_A8R8G8B8,
+                                                    target))) {
+                for (WeaponOverhaul::Target& made : g_ring) {
+                    WeaponOverhaul::Release(made);
+                }
+                g_ringRefused = true;
+                FCSE::Logf("eyepiece: the device refused a %ux%u ring target", width, height);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // The ring left of the scope, black and softened, over the finished frame.
+    void InkRing(IDirect3DDevice9* device, const WeaponOverhaul::WeaponDraws::Depth& depth,
+                 WeaponOverhaul::ScreenDraw& draw, IDirect3DSurface9* frame) {
+        IDirect3DPixelShader9* ring = g_ringShader.Get(device);
+        IDirect3DPixelShader9* blur = g_blurShader.Get(device);
+        IDirect3DPixelShader9* ink = g_ringInkShader.Get(device);
+        if (ring == nullptr || blur == nullptr || ink == nullptr ||
+            !EnsureRing(device, depth.width, depth.height)) {
+            return;
+        }
+        const float width = static_cast<float>(depth.width);
+        const float height = static_cast<float>(depth.height);
+        const float step = kRingSoftness * height / kBlurSteps;
+        const float cut[4] = {depth.projection.Stored(g_up.scope->keptTo), 0.0f, 0.0f, 0.0f};
+        const float across[4] = {step / width, 0.0f, 0.0f, 0.0f};
+        const float downward[4] = {0.0f, step / height, 0.0f, 0.0f};
+
+        device->SetDepthStencilSurface(nullptr);
+        device->SetPixelShaderConstantF(2, cut, 1);
+        device->SetRenderTarget(0, g_ring[0].surface);
+        device->SetTexture(3, depth.texture);
+        device->SetPixelShader(ring);
+        draw.Quad(0.0f, 0.0f, width, height);
+
+        device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+        device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+        device->SetPixelShader(blur);
+        device->SetPixelShaderConstantF(1, across, 1);
+        device->SetRenderTarget(0, g_ring[1].surface);
+        device->SetTexture(0, g_ring[0].texture);
+        draw.Quad(0.0f, 0.0f, width, height);
+        device->SetPixelShaderConstantF(1, downward, 1);
+        device->SetRenderTarget(0, g_ring[0].surface);
+        device->SetTexture(0, g_ring[1].texture);
+        draw.Quad(0.0f, 0.0f, width, height);
+
+        device->SetRenderTarget(0, frame);
+        device->SetTexture(0, g_ring[0].texture);
+        device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+        device->SetPixelShader(ink);
+        draw.Quad(0.0f, 0.0f, static_cast<float>(WeaponOverhaul::Frame::Width()),
+                  static_cast<float>(WeaponOverhaul::Frame::Height()));
+    }
+
     // Sends the draw under way into the reticle's mask, blended by `destBlend` so it leaves nought
     // where it lands, and clears the mask first each frame.
     bool IntoMask(IDirect3DDevice9* device, DWORD destBlend) {
@@ -539,11 +625,9 @@ void WeaponOverhaul::Eyepiece::AfterGunDraw(IDirect3DDevice9* device) {
     g_change = Change::None;
 }
 
-void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
-    IDirect3DTexture9* lens = ScopeLens::Found();
-    IDirect3DPixelShader9* shader =
-        g_maskFrame == Frame::Number() && lens != nullptr ? g_reticleShader.Get(device) : nullptr;
-    if (shader == nullptr) {
+void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device,
+                                           const WeaponDraws::Depth& depth) {
+    if (!Active()) {
         return;
     }
     const float width = static_cast<float>(Frame::Width());
@@ -552,20 +636,33 @@ void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
         1.0f / width, 1.0f / height, kSoftness * height, width / height,
         kInk, ScopeLens::kSmallest, 0.0f, 0.0f,
     };
+    IDirect3DSurface9* frame = nullptr;
+    device->GetRenderTarget(0, &frame);
 
-    ScreenDraw draw(device, 0, 2);
+    ScreenDraw draw(device, 0, 3);
+    // Both darken what is there by their coverage.
+    device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);
+    device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+    device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
+                                                       D3DCOLORWRITEENABLE_GREEN |
+                                                       D3DCOLORWRITEENABLE_BLUE);
+    device->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+    InkRing(device, depth, draw, frame);
+    Release(frame);
+
+    IDirect3DTexture9* lens = ScopeLens::Found();
+    IDirect3DPixelShader9* reticle =
+        g_maskFrame == Frame::Number() && lens != nullptr ? g_reticleShader.Get(device) : nullptr;
+    if (reticle == nullptr) {
+        return;
+    }
     device->SetPixelShaderConstantF(0, constants, 2);
     device->SetTexture(0, g_mask.texture);
     device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
     device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
     device->SetTexture(5, lens);
     device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-    device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);
-    device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-    device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
-                                                       D3DCOLORWRITEENABLE_GREEN |
-                                                       D3DCOLORWRITEENABLE_BLUE);
-    device->SetPixelShader(shader);
+    device->SetPixelShader(reticle);
     draw.Quad(0.0f, 0.0f, width, height);
 }
 
@@ -584,6 +681,13 @@ void WeaponOverhaul::Eyepiece::SetEnabled(bool enabled) {
 void WeaponOverhaul::Eyepiece::ReleaseDeviceObjects() {
     g_depthShader.Release();
     g_reticleShader.Release();
+    g_ringShader.Release();
+    g_ringInkShader.Release();
+    g_blurShader.Release();
+    for (Target& target : g_ring) {
+        WeaponOverhaul::Release(target);
+    }
+    g_ringRefused = false;
     WeaponOverhaul::Release(g_mask);
     g_maskOwner = nullptr;
     g_maskRefused = false;

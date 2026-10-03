@@ -55,9 +55,9 @@ namespace {
     // The scope's far end swings against the turn. Turns slower than kSlowTurn radians a second
     // hardly move it; past that it moves kSwingPerTurn opening radii per radian a second, and
     // kMostSwing at most.
-    constexpr float kSlowTurn = 0.3f;
-    constexpr float kSwingPerTurn = 0.6f;
-    constexpr float kMostSwing = 0.35f;
+    constexpr float kSlowTurn = 0.1f;
+    constexpr float kSwingPerTurn = 1.5f;
+    constexpr float kMostSwing = 0.5f;
 
     WeaponOverhaul::Aim::DriftFn g_drift = nullptr;
     float g_sights = 0.0f;
