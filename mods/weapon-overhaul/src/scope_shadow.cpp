@@ -8,7 +8,6 @@
 #include "engine/shader.h"
 #include "fcse_api.h"
 
-#include "scope_known_lens_ps.h"
 #include "scope_lens_ps.h"
 #include "scope_radius_ps.h"
 #include "scope_shadow_ps.h"
@@ -47,7 +46,6 @@ namespace {
 
     WeaponOverhaul::PixelShader g_radiusShader{"scope radius", g_scopeRadiusPixelShader};
     WeaponOverhaul::PixelShader g_lensShader{"scope lens", g_scopeLensPixelShader};
-    WeaponOverhaul::PixelShader g_knownLensShader{"scope known lens", g_scopeKnownLensPixelShader};
     WeaponOverhaul::PixelShader g_shadowShader{"scope shadow", g_scopeShadowPixelShader};
 
     std::atomic<bool> g_enabled{true};
@@ -57,6 +55,9 @@ namespace {
     WeaponOverhaul::Target g_lens[2];
     int g_lensIndex = 0;
     bool g_lensFresh = true;
+    // The lens last found, and the frame it was found in.
+    IDirect3DTexture9* g_found = nullptr;
+    uint32_t g_foundFrame = 0xFFFFFFFFu;
     std::chrono::steady_clock::time_point g_lastDraw;
     // Set once the device refuses something; cleared on reset.
     bool g_refused = false;
@@ -69,6 +70,7 @@ namespace {
             WeaponOverhaul::Release(lens);
         }
         g_lensFresh = true;
+        g_found = nullptr;
     }
 
     bool Create(IDirect3DDevice9* device, UINT width, D3DFORMAT format,
@@ -144,16 +146,14 @@ namespace {
         WeaponOverhaul::Release(g_readback);
     }
 
+    // Finds the lens, and while the shadow is on draws it.
     void Draw(const WeaponOverhaul::Frame::Pass& pass,
-              const WeaponOverhaul::WeaponDraws::Depth& depth,
-              const WeaponOverhaul::ScopeShadow::Lens* known, float scoped) {
+              const WeaponOverhaul::WeaponDraws::Depth& depth, float hole, float scoped) {
         IDirect3DDevice9* device = pass.device;
         IDirect3DPixelShader9* radius = g_radiusShader.Get(device);
         IDirect3DPixelShader9* lens = g_lensShader.Get(device);
-        IDirect3DPixelShader9* knownLens = g_knownLensShader.Get(device);
         IDirect3DPixelShader9* shadow = g_shadowShader.Get(device);
-        if (radius == nullptr || lens == nullptr || knownLens == nullptr || shadow == nullptr ||
-            !EnsureTargets(device)) {
+        if (radius == nullptr || lens == nullptr || shadow == nullptr || !EnsureTargets(device)) {
             return;
         }
 
@@ -163,13 +163,11 @@ namespace {
         // dark: the clear part moves against the turn, down the screen as the look turns up.
         const Against against = TurnedAgainst();
         const float distance = SwingAt(against.speed);
-        const WeaponOverhaul::ScopeShadow::Lens given =
-            known != nullptr ? *known : WeaponOverhaul::ScopeShadow::Lens{};
         const float constants[kConstantCount * 4] = {
             against.x * distance, against.y * distance, scoped, width / height,
             kNearest, (kFarthest - kNearest) / kSteps, height / width, Follow(),
             kSoftEdge, kDarkness, kSmallestLens, kShadowRadius,
-            given.radius, given.x, given.y, known != nullptr ? 0.0f : 1.0f,
+            hole, 0.0f, 0.0f, 0.0f,
         };
         const WeaponOverhaul::Target& lensNow = g_lens[g_lensIndex];
         const WeaponOverhaul::Target& lensBefore = g_lens[g_lensIndex ^ 1];
@@ -187,51 +185,53 @@ namespace {
                 }
                 g_lensFresh = false;
             }
+            device->SetRenderTarget(0, g_radii.surface);
             device->SetTexture(3, depth.texture);
-            if (known != nullptr) {
-                device->SetRenderTarget(0, lensNow.surface);
-                device->SetPixelShader(knownLens);
-                draw.Quad(0.0f, 0.0f, 1.0f, 1.0f);
-            } else {
-                device->SetRenderTarget(0, g_radii.surface);
-                device->SetTexture(5, lensBefore.texture);
-                device->SetPixelShader(radius);
-                if (!draw.FullQuad()) {
-                    return;
-                }
-
-                device->SetRenderTarget(0, lensNow.surface);
-                device->SetTexture(0, g_radii.texture);
-                device->SetPixelShader(lens);
-                draw.Quad(0.0f, 0.0f, 1.0f, 1.0f);
+            device->SetTexture(5, lensBefore.texture);
+            device->SetPixelShader(radius);
+            if (!draw.FullQuad()) {
+                return;
             }
 
-            device->SetRenderTarget(0, pass.target);
-            device->SetTexture(5, lensNow.texture);
-            device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-            device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);
-            device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR);
-            device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
-                                                               D3DCOLORWRITEENABLE_GREEN |
-                                                               D3DCOLORWRITEENABLE_BLUE);
-            device->SetPixelShader(shadow);
-            draw.Quad(0.0f, 0.0f, width, height);
+            device->SetRenderTarget(0, lensNow.surface);
+            device->SetTexture(0, g_radii.texture);
+            device->SetPixelShader(lens);
+            draw.Quad(0.0f, 0.0f, 1.0f, 1.0f);
+
+            if (g_enabled) {
+                device->SetRenderTarget(0, pass.target);
+                device->SetTexture(5, lensNow.texture);
+                device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+                device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);
+                device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR);
+                device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
+                                                                   D3DCOLORWRITEENABLE_GREEN |
+                                                                   D3DCOLORWRITEENABLE_BLUE);
+                device->SetPixelShader(shadow);
+                draw.Quad(0.0f, 0.0f, width, height);
+            }
         }
 
         if (!g_reported && scoped >= 1.0f) {
             g_reported = true;
             Report(device, lensNow);
         }
+        g_found = lensNow.texture;
+        g_foundFrame = WeaponOverhaul::Frame::Number();
         g_lensIndex ^= 1;
     }
 }
 
 void WeaponOverhaul::ScopeShadow::OnGunPass(const Frame::Pass& pass,
-                                            const WeaponDraws::Depth& depth, const Lens* known) {
-    const float scoped = g_enabled ? Aim::Scoped() : 0.0f;
-    if (scoped > 0.0f) {
-        Draw(pass, depth, known, scoped);
+                                            const WeaponDraws::Depth& depth, float hole) {
+    const float scoped = Aim::Scoped();
+    if (scoped > 0.0f && (g_enabled || hole < 1.0f)) {
+        Draw(pass, depth, hole, scoped);
     }
+}
+
+IDirect3DTexture9* WeaponOverhaul::ScopeShadow::FoundLens() {
+    return g_foundFrame == Frame::Number() ? g_found : nullptr;
 }
 
 WeaponOverhaul::ScopeShadow::Shift WeaponOverhaul::ScopeShadow::Swing() {
@@ -253,6 +253,5 @@ void WeaponOverhaul::ScopeShadow::ReleaseDeviceObjects() {
     g_refused = false;
     g_radiusShader.Release();
     g_lensShader.Release();
-    g_knownLensShader.Release();
     g_shadowShader.Release();
 }

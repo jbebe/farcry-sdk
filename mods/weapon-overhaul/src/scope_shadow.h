@@ -12,16 +12,15 @@ struct Shift {
     float y;
 };
 
-// In screen heights, the centre off the screen's, y down.
-struct Lens {
-    float radius;
-    float x;
-    float y;
-};
+// Finds the scope's lens as the gun's colour pass ends, as the hole the housing leaves in the gun's
+// depth where nothing is nearer than the stored depth `hole`: one for the scope as the engine draws
+// it, less where it is cut. While the shadow is on, draws it over the lens before the bloom reads
+// the frame.
+void OnGunPass(const Frame::Pass& pass, const WeaponDraws::Depth& depth, float hole);
 
-// Draws over the scope's lens as the gun's colour pass ends, before the bloom reads the frame. The
-// lens is `known`, all of it glass, or else found as the hole the housing leaves in the gun's depth.
-void OnGunPass(const Frame::Pass& pass, const WeaponDraws::Depth& depth, const Lens* known);
+// The lens found this frame, null before then: one texel holding its radius and its centre off the
+// screen's, in screen heights, y down. Borrowed until ReleaseDeviceObjects.
+IDirect3DTexture9* FoundLens();
 
 // How far the shadow's clear circle, the scope's far end, has swung off the lens's centre with the
 // look's speed. Nought while the shadow is off.

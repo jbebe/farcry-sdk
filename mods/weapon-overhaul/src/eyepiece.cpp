@@ -10,6 +10,7 @@
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "fcse_api.h"
+#include "scope_shadow.h"
 
 #include "eyepiece_depth_ps.h"
 #include "eyepiece_mask_ps.h"
@@ -42,9 +43,11 @@ namespace {
     constexpr size_t kScopes = 8;
 
     // The stencil bit the opening is marked with, clear of the engine's top bit and Sky Overhaul's
-    // 0x40, and how far past the opening's edge it reaches, in its radii.
+    // 0x40, and how far past the opening's edge it reaches, in its radii; then a reach that covers
+    // the screen.
     constexpr DWORD kMark = 0x20;
     constexpr float kMarkReach = 1.05f;
+    constexpr float kEverywhere = 1.0e4f;
 
     // Where a mesh's vertex shader finds the camera's rotation and projection, one register for
     // each of clip space's x, y, z and w.
@@ -349,16 +352,18 @@ namespace {
         g_change = Change::Cut;
     }
 
-    // Sets kMark in the stencil inside the opening and clears it everywhere else.
+    // Sets kMark in the stencil inside the opening as the scope shadow found it, and clears it
+    // everywhere else.
     bool Mark(IDirect3DDevice9* device, const float* projection) {
         IDirect3DPixelShader9* shader = g_maskShader.Get(device);
-        if (shader == nullptr) {
+        IDirect3DTexture9* lens = WeaponOverhaul::ScopeShadow::FoundLens();
+        if (shader == nullptr || lens == nullptr) {
             return false;
         }
-        const Centre opening = At(g_scope->opening, projection[0], projection[5]);
         const float aspect = projection[5] / projection[0];
         WeaponOverhaul::ScreenDraw draw(device, 0, 1);
         device->SetPixelShader(shader);
+        device->SetTexture(5, lens);
         device->SetRenderState(D3DRS_COLORWRITEENABLE, 0);
         device->SetRenderState(D3DRS_STENCILENABLE, TRUE);
         device->SetRenderState(D3DRS_TWOSIDEDSTENCILMODE, FALSE);
@@ -368,9 +373,7 @@ namespace {
         const float width = static_cast<float>(WeaponOverhaul::Frame::Width());
         const float height = static_cast<float>(WeaponOverhaul::Frame::Height());
         for (const bool inside : {false, true}) {
-            const float reach = g_scope->radius * projection[5] / 2.0f * kMarkReach;
-            const float constants[4] = {opening.x * aspect / 2.0f, -opening.y / 2.0f,
-                                        inside ? reach : 2.0f * aspect, aspect};
+            const float constants[4] = {inside ? kMarkReach : kEverywhere, aspect, 0.0f, 0.0f};
             device->SetPixelShaderConstantF(0, constants, 1);
             device->SetRenderState(D3DRS_STENCILREF, inside ? kMark : 0);
             draw.Quad(0.0f, 0.0f, width, height);
@@ -509,16 +512,12 @@ void WeaponOverhaul::Eyepiece::AfterGunDraw(IDirect3DDevice9* device) {
     g_change = Change::None;
 }
 
-bool WeaponOverhaul::Eyepiece::Opening(const WeaponDraws::Depth& depth, ScopeShadow::Lens& lens) {
+float WeaponOverhaul::Eyepiece::Hole(const WeaponDraws::Depth& depth) {
     if (!g_enabled || !Aim::ScopeUp() || g_scope == nullptr ||
         Frame::Number() - g_seenFrame > 1) {
-        return false;
+        return 1.0f;
     }
-    const float horizontalScale = depth.verticalScale * depth.height / depth.width;
-    const Centre opening = At(g_scope->opening, horizontalScale, depth.verticalScale);
-    lens = {g_scope->radius * depth.verticalScale / 2.0f,
-            opening.x * depth.verticalScale / horizontalScale / 2.0f, -opening.y / 2.0f};
-    return true;
+    return depth.depthScale + depth.depthOffset / g_scope->keptTo;
 }
 
 void WeaponOverhaul::Eyepiece::SetEnabled(bool enabled) {

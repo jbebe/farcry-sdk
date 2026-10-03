@@ -3,7 +3,6 @@
 #pragma once
 
 #include "engine/weapon_draws.h"
-#include "scope_shadow.h"
 
 namespace WeaponOverhaul::Eyepiece {
 
@@ -15,8 +14,8 @@ void OnDepthPass(const Frame::Pass& pass, const WeaponDraws::Depth& depth);
 bool BeforeGunDraw(IDirect3DDevice9* device, const float* projection, bool depthPass);
 void AfterGunDraw(IDirect3DDevice9* device);
 
-// The opening this frame, while a scope is cut to its eyepiece.
-bool Opening(const WeaponDraws::Depth& depth, ScopeShadow::Lens& lens);
+// The stored depth the scope is cut at this frame, one while it is drawn whole.
+float Hole(const WeaponDraws::Depth& depth);
 
 void SetEnabled(bool enabled);
 

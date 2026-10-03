@@ -23,9 +23,7 @@ namespace {
     void OnGunPass(const WeaponOverhaul::Frame::Pass& pass,
                    const WeaponOverhaul::WeaponDraws::Depth& depth) {
         WeaponOverhaul::Blur::OnGunPass(pass, depth);
-        WeaponOverhaul::ScopeShadow::Lens opening = {};
-        WeaponOverhaul::ScopeShadow::OnGunPass(
-            pass, depth, WeaponOverhaul::Eyepiece::Opening(depth, opening) ? &opening : nullptr);
+        WeaponOverhaul::ScopeShadow::OnGunPass(pass, depth, WeaponOverhaul::Eyepiece::Hole(depth));
     }
 
     void __cdecl OnSwayChanged(const FCSE_SettingValue* value, void*) {
