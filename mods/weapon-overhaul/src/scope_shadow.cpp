@@ -8,6 +8,7 @@
 #include "engine/shader.h"
 #include "fcse_api.h"
 
+#include "scope_known_lens_ps.h"
 #include "scope_lens_ps.h"
 #include "scope_radius_ps.h"
 #include "scope_shadow_ps.h"
@@ -39,13 +40,14 @@ namespace {
     constexpr float kFollow = 0.1f;
 
     constexpr UINT kShadow = 0;
-    constexpr UINT kConstantCount = 3;
+    constexpr UINT kConstantCount = 4;
 
     constexpr D3DFORMAT kRadiusFormat = D3DFMT_R32F;
     constexpr D3DFORMAT kLensFormat = D3DFMT_A32B32G32R32F;
 
     WeaponOverhaul::PixelShader g_radiusShader{"scope radius", g_scopeRadiusPixelShader};
     WeaponOverhaul::PixelShader g_lensShader{"scope lens", g_scopeLensPixelShader};
+    WeaponOverhaul::PixelShader g_knownLensShader{"scope known lens", g_scopeKnownLensPixelShader};
     WeaponOverhaul::PixelShader g_shadowShader{"scope shadow", g_scopeShadowPixelShader};
 
     std::atomic<bool> g_enabled{true};
@@ -142,12 +144,15 @@ namespace {
     }
 
     void Draw(const WeaponOverhaul::Frame::Pass& pass,
-              const WeaponOverhaul::WeaponDraws::Depth& depth, float scoped) {
+              const WeaponOverhaul::WeaponDraws::Depth& depth,
+              const WeaponOverhaul::ScopeShadow::Lens* known, float scoped) {
         IDirect3DDevice9* device = pass.device;
         IDirect3DPixelShader9* radius = g_radiusShader.Get(device);
         IDirect3DPixelShader9* lens = g_lensShader.Get(device);
+        IDirect3DPixelShader9* knownLens = g_knownLensShader.Get(device);
         IDirect3DPixelShader9* shadow = g_shadowShader.Get(device);
-        if (radius == nullptr || lens == nullptr || shadow == nullptr || !EnsureTargets(device)) {
+        if (radius == nullptr || lens == nullptr || knownLens == nullptr || shadow == nullptr ||
+            !EnsureTargets(device)) {
             return;
         }
 
@@ -158,10 +163,13 @@ namespace {
         const Against against = TurnedAgainst();
         const float distance = (kShadowRadius - 1.0f) * std::tanh(against.speed / kFirstTurn) +
                                SwingAt(against.speed);
+        const WeaponOverhaul::ScopeShadow::Lens given =
+            known != nullptr ? *known : WeaponOverhaul::ScopeShadow::Lens{};
         const float constants[kConstantCount * 4] = {
             against.x * distance, against.y * distance, scoped, width / height,
             kNearest, (kFarthest - kNearest) / kSteps, height / width, Follow(),
             kSoftEdge, kDarkness, kSmallestLens, kShadowRadius,
+            given.radius, given.x, given.y, known != nullptr ? 0.0f : 1.0f,
         };
         const WeaponOverhaul::Target& lensNow = g_lens[g_lensIndex];
         const WeaponOverhaul::Target& lensBefore = g_lens[g_lensIndex ^ 1];
@@ -179,18 +187,24 @@ namespace {
                 }
                 g_lensFresh = false;
             }
-            device->SetRenderTarget(0, g_radii.surface);
             device->SetTexture(3, depth.texture);
-            device->SetTexture(5, lensBefore.texture);
-            device->SetPixelShader(radius);
-            if (!draw.FullQuad()) {
-                return;
-            }
+            if (known != nullptr) {
+                device->SetRenderTarget(0, lensNow.surface);
+                device->SetPixelShader(knownLens);
+                draw.Quad(0.0f, 0.0f, 1.0f, 1.0f);
+            } else {
+                device->SetRenderTarget(0, g_radii.surface);
+                device->SetTexture(5, lensBefore.texture);
+                device->SetPixelShader(radius);
+                if (!draw.FullQuad()) {
+                    return;
+                }
 
-            device->SetRenderTarget(0, lensNow.surface);
-            device->SetTexture(0, g_radii.texture);
-            device->SetPixelShader(lens);
-            draw.Quad(0.0f, 0.0f, 1.0f, 1.0f);
+                device->SetRenderTarget(0, lensNow.surface);
+                device->SetTexture(0, g_radii.texture);
+                device->SetPixelShader(lens);
+                draw.Quad(0.0f, 0.0f, 1.0f, 1.0f);
+            }
 
             device->SetRenderTarget(0, pass.target);
             device->SetTexture(5, lensNow.texture);
@@ -213,10 +227,10 @@ namespace {
 }
 
 void WeaponOverhaul::ScopeShadow::OnGunPass(const Frame::Pass& pass,
-                                            const WeaponDraws::Depth& depth) {
+                                            const WeaponDraws::Depth& depth, const Lens* known) {
     const float scoped = g_enabled ? Aim::Scoped() : 0.0f;
     if (scoped > 0.0f) {
-        Draw(pass, depth, scoped);
+        Draw(pass, depth, known, scoped);
     }
 }
 
@@ -239,5 +253,6 @@ void WeaponOverhaul::ScopeShadow::ReleaseDeviceObjects() {
     g_refused = false;
     g_radiusShader.Release();
     g_lensShader.Release();
+    g_knownLensShader.Release();
     g_shadowShader.Release();
 }

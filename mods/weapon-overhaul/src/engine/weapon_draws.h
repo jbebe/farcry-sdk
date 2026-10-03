@@ -11,8 +11,9 @@
 namespace WeaponOverhaul::WeaponDraws {
 
 struct Depth {
-    // Hardware depth at half the scene's size over the whole depth range; one where the weapon is
-    // not. Borrowed until ReleaseDeviceObjects.
+    // Hardware depth at half the scene's size over the whole depth range, of the gun as the engine
+    // draws it, before any listener's changes; one where the weapon is not. Borrowed until
+    // ReleaseDeviceObjects.
     IDirect3DTexture9* texture;
     UINT width;
     UINT height;
@@ -30,7 +31,8 @@ using GunDrawFn = bool (*)(IDirect3DDevice9* device, const float* projection, bo
 using RestoreFn = void (*)(IDirect3DDevice9* device);
 
 struct Listener {
-    // As the first pass with the gun's depth in it ends, the depth complete but for cut-outs.
+    // As the first pass with the gun's depth in it ends, the depth complete but for cut-outs, which
+    // come in a pass of their own.
     GunPassFn onDepthPass;
     // As the gun's colour pass ends.
     GunPassFn onGunPass;

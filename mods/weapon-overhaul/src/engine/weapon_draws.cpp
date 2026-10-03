@@ -217,9 +217,6 @@ namespace {
 
         const uint32_t frame = WeaponOverhaul::Frame::Number();
         const Part part = {startIndex, primitiveCount, numVertices};
-        if (!g_listener.beforeDraw(device, projection, squeezed)) {
-            return D3D_OK;
-        }
         if (squeezed) {
             if (Begin(device, viewport, projection)) {
                 Remember(frame, part);
@@ -229,6 +226,9 @@ namespace {
         } else if (g_colourFrame != frame && IsGunPart(frame, part)) {
             g_colourFrame = frame;
             g_colourPass = WeaponOverhaul::Frame::PassSerial();
+        }
+        if (!g_listener.beforeDraw(device, projection, squeezed)) {
+            return D3D_OK;
         }
         const HRESULT result = draw();
         g_listener.afterDraw(device);

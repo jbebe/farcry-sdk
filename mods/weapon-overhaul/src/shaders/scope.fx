@@ -11,6 +11,9 @@ float4 Search : register(c1);
 // x: the width of the shadow's soft edge, in lens radii. y: how dark it gets. z: the smallest radius
 // taken for a lens, in screen heights. w: the shadow's clear circle's radius, in lens radii.
 float4 Edge : register(c2);
+// xyz: the lens when it is known, as the lens target holds it. w: one where the glass is told from
+// the gun's depth, nought where the lens is known and all of it glass.
+float4 Known : register(c3);
 
 // The first housing hit along each direction.
 sampler2D Radii : register(s0);
@@ -86,14 +89,18 @@ float4 LensPS(float2 uv : TEXCOORD0) : COLOR0 {
     return float4(lens ? float3(radius, previous.yz + offset) : float3(previous.x, 0.0f, 0.0f), 1.0f);
 }
 
+float4 KnownLensPS(float2 uv : TEXCOORD0) : COLOR0 {
+    return float4(Known.xyz, 1.0f);
+}
+
 // Multiplies the scene: dark where the lens is not covered by the shadow's clear circle, and only
 // through the glass, never over the housing in front of it.
 float4 ShadowPS(float2 uv : TEXCOORD0) : COLOR0 {
     float3 lens = tex2D(Lens, kCentre).xyz;
     float radius = lens.x;
     float2 at = ((uv - kCentre) * float2(Shadow.w, 1.0f) - lens.yz) / max(radius, 0.0001f);
-    float glass = (1.0f - smoothstep(1.0f, 1.05f, length(at))) *
-                  (tex2D(WeaponDepth, uv).r < 1.0f ? 0.0f : 1.0f);
+    float clear = tex2D(WeaponDepth, uv).r < 1.0f ? 0.0f : 1.0f;
+    float glass = (1.0f - smoothstep(1.0f, 1.05f, length(at))) * lerp(1.0f, clear, Known.w);
     float cut = smoothstep(Edge.w - Edge.x, Edge.w, length(at - Shadow.xy));
     float shade = 1.0f - Edge.y * cut * glass * Shadow.z * (radius >= Edge.z ? 1.0f : 0.0f);
     clip(0.999f - shade);

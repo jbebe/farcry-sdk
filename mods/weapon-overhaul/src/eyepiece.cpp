@@ -1,7 +1,8 @@
-// The eyepiece. When a scope comes up its depth is read back once: the nearest point is the tube's
-// eye end, and two circles are fitted along rays from the screen's centre, the opening as the
-// engine draws it and the opening once the tube is cut. The reticle sits at the scope's far end, so
-// it swings with the shadow's clear circle, and only shows through the opening.
+// The eyepiece. Once a scope has come up and settled, its depth is read back: the nearest point is
+// the tube's eye end, and two circles are fitted along rays from the screen's centre, the opening as
+// the engine draws it and the opening once the tube is cut. What is found is kept per scope, so the
+// next time that scope comes up it is cut from the first frame. The reticle sits at the scope's far
+// end, so it swings with the shadow's clear circle, and only shows through the opening.
 #include "eyepiece.h"
 
 #include "engine/aim.h"
@@ -9,7 +10,6 @@
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "fcse_api.h"
-#include "scope_shadow.h"
 
 #include "eyepiece_depth_ps.h"
 #include "eyepiece_mask_ps.h"
@@ -32,8 +32,14 @@ namespace {
     // much wider the eyepiece than the engine's.
     constexpr float kFurthestOff = 0.15f;
     constexpr float kMostGrowth = 4.0f;
-    // Frames a scope-up is measured in before it is left as the engine draws it.
-    constexpr int kAttempts = 5;
+    // Two measurements in a row agree, and the scope has settled, within these: view-space slope,
+    // metres, and a share of the growth. Frames a scope-up is measured in before it is given up on.
+    constexpr float kSlopeAgreement = 0.002f;
+    constexpr float kDistanceAgreement = 0.002f;
+    constexpr float kGrowthAgreement = 0.02f;
+    constexpr int kAttempts = 60;
+    // Scopes remembered.
+    constexpr size_t kScopes = 8;
 
     // The stencil bit the opening is marked with, clear of the engine's top bit and Sky Overhaul's
     // 0x40, and how far past the opening's edge it reaches, in its radii.
@@ -45,7 +51,7 @@ namespace {
 
     // What the reticle's draw is given, to be drawn only where the opening is marked.
     constexpr D3DRENDERSTATETYPE kThroughStates[] = {
-        D3DRS_STENCILENABLE, D3DRS_STENCILFUNC, D3DRS_STENCILREF,
+        D3DRS_STENCILENABLE, D3DRS_STENCILFUNC,      D3DRS_STENCILREF,
         D3DRS_STENCILMASK,   D3DRS_STENCILWRITEMASK, D3DRS_TWOSIDEDSTENCILMODE,
     };
     constexpr DWORD kThrough[] = {TRUE, D3DCMP_EQUAL, kMark, kMark, 0, FALSE};
@@ -55,25 +61,40 @@ namespace {
 
     std::atomic<bool> g_enabled{true};
 
-    // The frame the scope was last seen up in, how many times this scope-up has been measured, and
-    // whether one worked.
+    // A point of the scope with the eye on the scope's axis, as a view-space slope, x right and y
+    // up, and how far away it is in metres.
+    struct Spot {
+        float x;
+        float y;
+        float distance;
+    };
+
+    struct Scope {
+        // The scope's vertex buffer and the reticle's texture, compared, never dereferenced.
+        const void* vertices;
+        const void* reticle;
+        // The distance the scope is cut at, in metres, and how much the reticle grows.
+        float keptTo;
+        float growth;
+        // The reticle's centre at the scope's back end, and the opening's, with its radius as a slope.
+        Spot back;
+        Spot opening;
+        float radius;
+    };
+
+    Scope g_scopes[kScopes] = {};
+    size_t g_nextScope = 0;
+
+    // This scope-up: the frame it was last seen in, the scope's draws as seen, the measurements so
+    // far, and the scope it is cut as, none until one is known.
     uint32_t g_seenFrame = kNone;
-    int g_attempts = 0;
-    bool g_valid = false;
-    // The distance the scope is cut at, in metres.
-    float g_keptTo = 0.0f;
-    // How much the reticle grows.
-    float g_growth = 1.0f;
-    // The opening: its centre at rest in clip space, x right and y up, its radius in screen
-    // heights, and how far away it is in metres.
-    float g_openingX = 0.0f;
-    float g_openingY = 0.0f;
-    float g_openingRadius = 0.0f;
-    float g_openingDistance = 0.0f;
-    // The scope's vertex buffer and the reticle's texture, taken from the reticle's draw, which is
-    // the scope's only alpha-tested one. Compared, never dereferenced.
-    const void* g_scope = nullptr;
+    const void* g_vertices = nullptr;
     const void* g_reticle = nullptr;
+    int g_attempts = 0;
+    bool g_settled = false;
+    bool g_measuredLast = false;
+    Scope g_last = {};
+    Scope* g_scope = nullptr;
     // The frame the opening was last marked in the stencil, and whether that worked.
     uint32_t g_markedFrame = kNone;
     bool g_marked = false;
@@ -96,6 +117,11 @@ namespace {
         float x;
         float y;
         float radius;
+    };
+
+    struct Centre {
+        float x;
+        float y;
     };
 
     double Determinant(double a, double b, double c, double d, double e, double f, double g,
@@ -146,7 +172,8 @@ namespace {
     }
 
     // From the depth read back: where the cut goes, and the two openings.
-    bool Measure(const WeaponOverhaul::WeaponDraws::Depth& depth, const BYTE* bits, INT pitch) {
+    bool Measure(const WeaponOverhaul::WeaponDraws::Depth& depth, const BYTE* bits, INT pitch,
+                 Scope& scope) {
         const auto row = [&](UINT y) { return reinterpret_cast<const float*>(bits + y * pitch); };
         float nearest = 1.0f;
         for (UINT y = 0; y < depth.height; y++) {
@@ -154,18 +181,18 @@ namespace {
             nearest = (std::min)(nearest, *std::min_element(stored, stored + depth.width));
         }
         if (nearest >= 1.0f) {
-            FCSE::ApiPointer()->Log("eyepiece: no scope in the gun's depth");
             return false;
         }
-        g_keptTo = Metres(depth, nearest) + kKept;
-        const float cut = depth.depthScale + depth.depthOffset / g_keptTo;
+        scope.keptTo = Metres(depth, nearest) + kKept;
+        const float cut = depth.depthScale + depth.depthOffset / scope.keptTo;
 
         // Along each ray the scope's far end is met first, then the part that is kept.
         const float centreX = depth.width / 2.0f;
         const float centreY = depth.height / 2.0f;
         std::vector<Point> engine;
         std::vector<Point> eyepiece;
-        float distances = 0.0f;
+        float farDistances = 0.0f;
+        float openingDistances = 0.0f;
         for (int i = 0; i < kRays; i++) {
             const float angle = (i + 0.5f) * 2.0f * std::numbers::pi_v<float> / kRays;
             const float dx = std::cos(angle);
@@ -181,50 +208,42 @@ namespace {
                 if (!met && stored < 1.0f) {
                     met = true;
                     engine.push_back({x - centreX, y - centreY});
+                    farDistances += Metres(depth, stored);
                 }
                 if (stored <= cut) {
                     eyepiece.push_back({x - centreX, y - centreY});
-                    distances += Metres(depth, stored);
+                    openingDistances += Metres(depth, stored);
                     break;
                 }
             }
         }
         Circle before = {};
         Circle after = {};
-        if (!Fit(engine, before) || !Fit(eyepiece, after)) {
-            FCSE::Logf("eyepiece: the openings could not be fitted, %zu and %zu edge points",
-                       engine.size(), eyepiece.size());
-            return false;
-        }
         const float off = kFurthestOff * depth.height;
-        if (std::hypot(before.x, before.y) > off || std::hypot(after.x, after.y) > off ||
+        if (!Fit(engine, before) || !Fit(eyepiece, after) ||
+            std::hypot(before.x, before.y) > off || std::hypot(after.x, after.y) > off ||
             after.radius <= before.radius || after.radius > kMostGrowth * before.radius) {
-            FCSE::Logf("eyepiece: not a scope's openings: %.3f at (%.3f, %.3f) and %.3f at "
-                       "(%.3f, %.3f), in screen heights",
-                       before.radius / depth.height, before.x / depth.height,
-                       before.y / depth.height, after.radius / depth.height,
-                       after.x / depth.height, after.y / depth.height);
             return false;
         }
 
-        g_growth = after.radius / before.radius;
-        g_openingRadius = after.radius / depth.height;
-        g_openingDistance = distances / eyepiece.size();
-        // The centre as found, taken back to where it is with the eye on the scope's axis.
+        // Slopes from pixels off the centre, taken back to where they are with the eye on the
+        // scope's axis.
         const WeaponOverhaul::Aim::Offset lead = WeaponOverhaul::Aim::ScopeLead();
         const float horizontalScale = depth.verticalScale * depth.height / depth.width;
-        g_openingX = after.x / centreX + lead.right * horizontalScale / g_openingDistance;
-        g_openingY = -after.y / centreY + lead.up * depth.verticalScale / g_openingDistance;
-        FCSE::Logf("eyepiece: cut at %.3f m; the opening grows from %.3f to %.3f of the screen's "
-                   "height, x%.2f, and is %.3f m away",
-                   g_keptTo, before.radius / depth.height, g_openingRadius, g_growth,
-                   g_openingDistance);
-        return true;
+        const auto spot = [&](const Circle& circle, float distance) {
+            return Spot{circle.x / centreX / horizontalScale + lead.right / distance,
+                        -circle.y / centreY / depth.verticalScale + lead.up / distance, distance};
+        };
+        scope.back = spot(before, farDistances / engine.size());
+        scope.opening = spot(after, openingDistances / eyepiece.size());
+        scope.radius = after.radius / centreY / depth.verticalScale;
+        scope.growth = after.radius / before.radius;
+        return scope.back.distance > scope.opening.distance;
     }
 
     // Reads the depth back through a float target, which the device can copy to memory.
     bool ReadBack(const WeaponOverhaul::Frame::Pass& pass,
-                  const WeaponOverhaul::WeaponDraws::Depth& depth) {
+                  const WeaponOverhaul::WeaponDraws::Depth& depth, Scope& scope) {
         IDirect3DDevice9* device = pass.device;
         IDirect3DPixelShader9* shader = g_depthShader.Get(device);
         WeaponOverhaul::Target copy;
@@ -253,7 +272,7 @@ namespace {
         D3DLOCKED_RECT locked = {};
         if (SUCCEEDED(device->GetRenderTargetData(copy.surface, memory)) &&
             SUCCEEDED(memory->LockRect(&locked, nullptr, D3DLOCK_READONLY))) {
-            measured = Measure(depth, static_cast<const BYTE*>(locked.pBits), locked.Pitch);
+            measured = Measure(depth, static_cast<const BYTE*>(locked.pBits), locked.Pitch, scope);
             memory->UnlockRect();
         } else {
             FCSE::ApiPointer()->Log("eyepiece: the depth could not be read back");
@@ -263,40 +282,78 @@ namespace {
         return measured;
     }
 
-    bool Current() {
-        return g_valid && WeaponOverhaul::Aim::ScopeUp() &&
-               WeaponOverhaul::Frame::Number() - g_seenFrame <= 1;
+    bool Agree(const Scope& a, const Scope& b) {
+        return std::abs(a.keptTo - b.keptTo) < kDistanceAgreement &&
+               std::abs(a.opening.x - b.opening.x) < kSlopeAgreement &&
+               std::abs(a.opening.y - b.opening.y) < kSlopeAgreement &&
+               std::abs(a.radius - b.radius) < kSlopeAgreement &&
+               std::abs(a.growth - b.growth) < kGrowthAgreement * a.growth;
     }
 
-    // Keeps what lies nearer than g_keptTo: stored depth at most its.
+    Scope* Find(const void* vertices) {
+        for (Scope& scope : g_scopes) {
+            if (vertices != nullptr && scope.vertices == vertices) {
+                return &scope;
+            }
+        }
+        return nullptr;
+    }
+
+    // Keeps a settled measurement under the scope's draws, in place of what was kept for it.
+    void Keep(Scope scope) {
+        scope.vertices = g_vertices;
+        scope.reticle = g_reticle;
+        g_scope = Find(g_vertices);
+        if (g_scope == nullptr) {
+            g_scope = &g_scopes[g_nextScope];
+            g_nextScope = (g_nextScope + 1) % kScopes;
+        }
+        *g_scope = scope;
+        FCSE::Logf("eyepiece: measured after %d frames: cut at %.3f m; the opening is %.3f m away "
+                   "and grows x%.2f to a slope of %.3f; the reticle is %.3f m away",
+                   g_attempts, scope.keptTo, scope.opening.distance, scope.growth, scope.radius,
+                   scope.back.distance);
+    }
+
+    // Starts a scope-up over when the scope was not up the frame before.
+    void Follow() {
+        const uint32_t frame = WeaponOverhaul::Frame::Number();
+        if (frame - g_seenFrame > 1) {
+            g_vertices = nullptr;
+            g_reticle = nullptr;
+            g_attempts = 0;
+            g_settled = false;
+            g_measuredLast = false;
+            g_scope = nullptr;
+        }
+        g_seenFrame = frame;
+    }
+
+    // Where a spot of the scope is this frame in clip space, the eye's lead moving it.
+    Centre At(const Spot& spot, float horizontalScale, float verticalScale) {
+        const WeaponOverhaul::Aim::Offset lead = WeaponOverhaul::Aim::ScopeLead();
+        return {(spot.x - lead.right / spot.distance) * horizontalScale,
+                (spot.y - lead.up / spot.distance) * verticalScale};
+    }
+
+    // Keeps what lies nearer than the scope's cut: stored depth at most the cut's.
     void Cut(IDirect3DDevice9* device, const float* projection) {
         device->GetClipPlane(0, g_savedPlane);
         device->GetRenderState(D3DRS_CLIPPLANEENABLE, &g_savedPlanes);
         const float plane[4] = {0.0f, 0.0f, -1.0f,
-                                projection[10] * projection[14] + projection[11] / g_keptTo};
+                                projection[10] * projection[14] + projection[11] / g_scope->keptTo};
         device->SetClipPlane(0, plane);
         device->SetRenderState(D3DRS_CLIPPLANEENABLE, g_savedPlanes | D3DCLIPPLANE0);
         g_change = Change::Cut;
     }
 
-    struct Centre {
-        float x;
-        float y;
-    };
-
-    // The opening's centre this frame in clip space: where it was measured, moved by the eye's lead.
-    Centre Opening(const float* projection) {
-        const WeaponOverhaul::Aim::Offset lead = WeaponOverhaul::Aim::ScopeLead();
-        return {g_openingX - lead.right * projection[0] / g_openingDistance,
-                g_openingY - lead.up * projection[5] / g_openingDistance};
-    }
-
     // Sets kMark in the stencil inside the opening and clears it everywhere else.
-    bool Mark(IDirect3DDevice9* device, const float* projection, Centre opening) {
+    bool Mark(IDirect3DDevice9* device, const float* projection) {
         IDirect3DPixelShader9* shader = g_maskShader.Get(device);
         if (shader == nullptr) {
             return false;
         }
+        const Centre opening = At(g_scope->opening, projection[0], projection[5]);
         const float aspect = projection[5] / projection[0];
         WeaponOverhaul::ScreenDraw draw(device, 0, 1);
         device->SetPixelShader(shader);
@@ -309,9 +366,9 @@ namespace {
         const float width = static_cast<float>(WeaponOverhaul::Frame::Width());
         const float height = static_cast<float>(WeaponOverhaul::Frame::Height());
         for (const bool inside : {false, true}) {
+            const float reach = g_scope->radius * projection[5] / 2.0f * kMarkReach;
             const float constants[4] = {opening.x * aspect / 2.0f, -opening.y / 2.0f,
-                                        inside ? g_openingRadius * kMarkReach : 2.0f * aspect,
-                                        aspect};
+                                        inside ? reach : 2.0f * aspect, aspect};
             device->SetPixelShaderConstantF(0, constants, 1);
             device->SetRenderState(D3DRS_STENCILREF, inside ? kMark : 0);
             draw.Quad(0.0f, 0.0f, width, height);
@@ -319,17 +376,19 @@ namespace {
         return true;
     }
 
-    // Scales the draw's clip-space x and y about the reticle's centre: the opening's, swung with
-    // the shadow. Through the stencil, if the opening is marked, so it shows only through it.
-    void Grow(IDirect3DDevice9* device, const float* projection, Centre opening) {
+    // Scales the reticle's draw in clip space about its own centre and moves that centre onto the
+    // opening's, swung with the shadow. Through the stencil, if the opening is marked.
+    void Grow(IDirect3DDevice9* device, const float* projection) {
+        const Centre back = At(g_scope->back, projection[0], projection[5]);
+        const Centre opening = At(g_scope->opening, projection[0], projection[5]);
         const WeaponOverhaul::ScopeShadow::Shift swing = WeaponOverhaul::ScopeShadow::Swing();
-        const float reach = 2.0f * g_openingRadius;
-        const float x = opening.x + swing.x * reach * projection[0] / projection[5];
-        const float y = opening.y - swing.y * reach;
+        const float x = opening.x + swing.x * g_scope->radius * projection[0];
+        const float y = opening.y - swing.y * g_scope->radius * projection[5];
+        const float growth = g_scope->growth;
         float rows[8] = {};
         for (int i = 0; i < 4; i++) {
-            rows[i] = g_growth * projection[i] + (1.0f - g_growth) * x * projection[12 + i];
-            rows[4 + i] = g_growth * projection[4 + i] + (1.0f - g_growth) * y * projection[12 + i];
+            rows[i] = growth * projection[i] + (x - growth * back.x) * projection[12 + i];
+            rows[4 + i] = growth * projection[4 + i] + (y - growth * back.y) * projection[12 + i];
         }
         std::copy_n(projection, std::size(g_savedRows), g_savedRows);
         device->SetVertexShaderConstantF(kProjectionRegister, rows, 2);
@@ -359,25 +418,35 @@ void WeaponOverhaul::Eyepiece::OnDepthPass(const Frame::Pass& pass,
     if (!g_enabled || !Aim::ScopeUp()) {
         return;
     }
-    const uint32_t frame = Frame::Number();
-    if (frame - g_seenFrame > 1) {
-        g_attempts = 0;
-        g_valid = false;
-        g_scope = nullptr;
-        g_reticle = nullptr;
+    Follow();
+    // Measured once the eye has settled into the scope, so the scope has stopped coming up.
+    if (g_settled || g_attempts >= kAttempts || Aim::Scoped() < 1.0f || g_vertices == nullptr) {
+        return;
     }
-    g_seenFrame = frame;
-    if (!g_valid && g_attempts < kAttempts) {
-        g_attempts++;
-        g_valid = ReadBack(pass, depth);
+    g_attempts++;
+    Scope scope = {};
+    if (!ReadBack(pass, depth, scope)) {
+        g_measuredLast = false;
+    } else {
+        g_settled = g_measuredLast && Agree(g_last, scope);
+        g_measuredLast = true;
+        g_last = scope;
+        if (g_settled) {
+            Keep(scope);
+        }
+    }
+    if (!g_settled && g_attempts == kAttempts) {
+        FCSE::Logf("eyepiece: the scope did not settle in %d frames, so it is drawn whole",
+                   kAttempts);
     }
 }
 
 bool WeaponOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device, const float* projection,
                                              bool depthPass) {
-    if (!g_enabled || !Current()) {
+    if (!g_enabled || !Aim::ScopeUp()) {
         return true;
     }
+    Follow();
     IDirect3DVertexBuffer9* vertexBuffer = nullptr;
     UINT offset = 0;
     UINT stride = 0;
@@ -389,15 +458,22 @@ bool WeaponOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device, const flo
     DWORD alphaTest = FALSE;
     device->GetRenderState(D3DRS_ALPHATESTENABLE, &alphaTest);
 
+    // The reticle's is the scope's only alpha-tested draw.
     if (alphaTest) {
-        g_scope = vertices;
+        g_vertices = vertices;
         g_reticle = texture;
     }
-    if (vertices == nullptr || vertices != g_scope) {
+    if (g_scope == nullptr) {
+        g_scope = Find(vertices);
+    }
+    if (g_scope == nullptr || vertices != g_scope->vertices) {
         return true;
     }
+    if (alphaTest) {
+        g_scope->reticle = texture;
+    }
     // Beside the reticle some scopes draw markings blended, from the reticle's texture.
-    if (!alphaTest && (texture == nullptr || texture != g_reticle)) {
+    if (!alphaTest && (texture == nullptr || texture != g_scope->reticle)) {
         Cut(device, projection);
         return true;
     }
@@ -405,13 +481,12 @@ bool WeaponOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device, const flo
     if (depthPass) {
         return false;
     }
-    const Centre opening = Opening(projection);
     const uint32_t frame = Frame::Number();
     if (g_markedFrame != frame) {
         g_markedFrame = frame;
-        g_marked = Mark(device, projection, opening);
+        g_marked = Mark(device, projection);
     }
-    Grow(device, projection, opening);
+    Grow(device, projection);
     return true;
 }
 
@@ -430,6 +505,18 @@ void WeaponOverhaul::Eyepiece::AfterGunDraw(IDirect3DDevice9* device) {
     g_change = Change::None;
 }
 
+bool WeaponOverhaul::Eyepiece::Opening(const WeaponDraws::Depth& depth, ScopeShadow::Lens& lens) {
+    if (!g_enabled || !Aim::ScopeUp() || g_scope == nullptr ||
+        Frame::Number() - g_seenFrame > 1) {
+        return false;
+    }
+    const float horizontalScale = depth.verticalScale * depth.height / depth.width;
+    const Centre opening = At(g_scope->opening, horizontalScale, depth.verticalScale);
+    lens = {g_scope->radius * depth.verticalScale / 2.0f,
+            opening.x * depth.verticalScale / horizontalScale / 2.0f, -opening.y / 2.0f};
+    return true;
+}
+
 void WeaponOverhaul::Eyepiece::SetEnabled(bool enabled) {
     g_enabled = enabled;
 }
@@ -437,4 +524,6 @@ void WeaponOverhaul::Eyepiece::SetEnabled(bool enabled) {
 void WeaponOverhaul::Eyepiece::ReleaseDeviceObjects() {
     g_depthShader.Release();
     g_maskShader.Release();
+    std::fill(std::begin(g_scopes), std::end(g_scopes), Scope{});
+    g_scope = nullptr;
 }
