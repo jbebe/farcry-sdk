@@ -53,13 +53,17 @@ namespace {
     constexpr float kFastestTurn = 10.0f;
 
     // The scope follows the look on a spring, a little under critical damping so a jerk swings it
-    // past and back, simulated in steps of kSpringStep seconds. How far it trails, in radians, is
-    // capped softly at kMostLag; the eye then runs ahead of it by kEyeReach metres a radian, which
+    // past and back, simulated in steps of kSpringStep seconds. It follows the look smoothed over
+    // kSmoothing seconds, so the mouse's steps from frame to frame do not kick it. How far it
+    // trails, in radians, fades out below kDeadZone, so small adjustments leave it still, and is
+    // capped softly at kMostLag. The eye then runs ahead of it by kEyeReach metres a radian, which
     // moves the scope's own sight picture that far behind on screen. Further than kCut behind is a
     // cut, not a turn, and the scope is put back on the look.
     constexpr float kStiffness = 10.0f;
-    constexpr float kDamping = 0.65f;
+    constexpr float kDamping = 0.8f;
     constexpr float kSpringStep = 1.0f / 120.0f;
+    constexpr float kSmoothing = 0.05f;
+    constexpr float kDeadZone = 0.005f;
     constexpr float kMostLag = 0.03f;
     constexpr float kEyeReach = 0.27f;
     constexpr float kCut = 0.5f;
@@ -74,12 +78,14 @@ namespace {
     uint8_t* g_addedTo = nullptr;
     WeaponOverhaul::Aim::Offset g_added = {};
 
-    // The look last frame, for which pawn, with its yaw unwound; how fast it has been turning; and
-    // where the scope points, and how fast that moves.
+    // The look last frame, for which pawn, with its yaw unwound, and smoothed; how fast it has been
+    // turning; and where the scope points, and how fast that moves.
     uint8_t* g_lookPawn = nullptr;
     float g_lastPitch = 0.0f;
     float g_lastYaw = 0.0f;
     float g_lookYaw = 0.0f;
+    float g_smoothPitch = 0.0f;
+    float g_smoothYaw = 0.0f;
     WeaponOverhaul::Aim::Turn g_turn = {};
     std::atomic<float> g_turnRight{0.0f};
     std::atomic<float> g_turnUp{0.0f};
@@ -127,6 +133,8 @@ namespace {
             g_lastPitch = pitch;
             g_lastYaw = yaw;
             g_lookYaw = yaw;
+            g_smoothPitch = pitch;
+            g_smoothYaw = yaw;
             g_scopePitch = {pitch, 0.0f};
             g_scopeYaw = {yaw, 0.0f};
             return {};
@@ -146,22 +154,30 @@ namespace {
         g_turnUp = g_turn.up;
 
         const int steps = static_cast<int>(std::ceil(seconds / kSpringStep));
+        const float step = seconds / steps;
+        const float smooth = 1.0f - std::exp(-step / kSmoothing);
         for (int i = 0; i < steps; i++) {
-            Pull(g_scopePitch, pitch, seconds / steps);
-            Pull(g_scopeYaw, g_lookYaw, seconds / steps);
+            g_smoothPitch += (pitch - g_smoothPitch) * smooth;
+            g_smoothYaw += (g_lookYaw - g_smoothYaw) * smooth;
+            Pull(g_scopePitch, g_smoothPitch, step);
+            Pull(g_scopeYaw, g_smoothYaw, step);
         }
-        // Where the scope points against the look, right and up of it; yaw is left.
-        const float scopeRight = g_lookYaw - g_scopeYaw.at;
-        if (std::hypot(scopeRight, g_scopePitch.at - pitch) > kCut) {
+        // Where the scope points against the smoothed look, right and up of it; yaw is left.
+        const float scopeRight = g_smoothYaw - g_scopeYaw.at;
+        if (std::hypot(scopeRight, g_scopePitch.at - g_smoothPitch) > kCut) {
+            g_smoothPitch = pitch;
+            g_smoothYaw = g_lookYaw;
             g_scopePitch = {pitch, 0.0f};
             g_scopeYaw = {g_lookYaw, 0.0f};
             return {};
         }
         // Never above the look: that would lift the sight picture and show nothing holds it up.
-        const float scopeUp = (std::min)(g_scopePitch.at - pitch, 0.0f);
+        const float scopeUp = (std::min)(g_scopePitch.at - g_smoothPitch, 0.0f);
         const float behind = std::hypot(scopeRight, scopeUp);
-        // The eye moves against the scope, which moves the sight picture with it.
-        const float lead = behind > 0.0f ? kMostLag * std::tanh(behind / kMostLag) / behind : 0.0f;
+        // The eye moves against the scope, which moves the sight picture with it: hardly at all
+        // for a small trail, and never past kMostLag.
+        const float shown = behind * behind / (behind + kDeadZone);
+        const float lead = behind > 0.0f ? kMostLag * std::tanh(shown / kMostLag) / behind : 0.0f;
         return {-scopeRight * lead * kEyeReach, -scopeUp * lead * kEyeReach};
     }
 
