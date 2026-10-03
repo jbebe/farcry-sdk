@@ -217,7 +217,9 @@ namespace {
 
         const uint32_t frame = WeaponOverhaul::Frame::Number();
         const Part part = {startIndex, primitiveCount, numVertices};
-        g_listener.beforeDraw(device, projection);
+        if (!g_listener.beforeDraw(device, projection, squeezed)) {
+            return D3D_OK;
+        }
         if (squeezed) {
             if (Begin(device, viewport, projection)) {
                 Remember(frame, part);

@@ -24,8 +24,9 @@ struct Depth {
 };
 
 using GunPassFn = void (*)(const Frame::Pass& pass, const Depth& depth);
-// `projection` is the 16 floats at c8 to c11 the draw projects with, one register a row.
-using GunDrawFn = void (*)(IDirect3DDevice9* device, const float* projection);
+// `projection` is the 16 floats at c8 to c11 the draw projects with, one register a row, and
+// `depthPass` whether the draw is of the gun's depth rather than its colour. False drops the draw.
+using GunDrawFn = bool (*)(IDirect3DDevice9* device, const float* projection, bool depthPass);
 using RestoreFn = void (*)(IDirect3DDevice9* device);
 
 struct Listener {
@@ -34,7 +35,7 @@ struct Listener {
     // As the gun's colour pass ends.
     GunPassFn onGunPass;
     // Around each of the gun's draws, depth and colour; `afterDraw` puts back what `beforeDraw`
-    // changed.
+    // changed, and is not called for a dropped draw.
     GunDrawFn beforeDraw;
     RestoreFn afterDraw;
 };

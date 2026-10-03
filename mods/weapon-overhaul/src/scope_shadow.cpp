@@ -96,6 +96,26 @@ namespace {
                Create(device, 1, kLensFormat, g_lens[1]);
     }
 
+    // The look's turn: the way the clear circle moves, against it and in lens space, and its speed.
+    struct Against {
+        float x;
+        float y;
+        float speed;
+    };
+
+    Against TurnedAgainst() {
+        const WeaponOverhaul::Aim::Turn turn = WeaponOverhaul::Aim::Turning();
+        const float speed = std::hypot(turn.right, turn.up);
+        if (speed <= 0.0f) {
+            return {};
+        }
+        return {-turn.right / speed, turn.up / speed, speed};
+    }
+
+    float SwingAt(float speed) {
+        return kMostShift * std::tanh(speed * kShiftPerTurn / kMostShift);
+    }
+
     // How far the lens radius moves toward this frame's, from the time since the last.
     float Follow() {
         const auto now = std::chrono::steady_clock::now();
@@ -135,13 +155,11 @@ namespace {
         const float height = static_cast<float>(WeaponOverhaul::Frame::Height());
         // The scope trails the look, so the eye runs ahead of it and the side turned toward goes
         // dark: the clear part moves against the turn, down the screen as the look turns up.
-        const WeaponOverhaul::Aim::Turn turn = WeaponOverhaul::Aim::Turning();
-        const float speed = std::hypot(turn.right, turn.up);
-        const float distance = (kShadowRadius - 1.0f) * std::tanh(speed / kFirstTurn) +
-                               kMostShift * std::tanh(speed * kShiftPerTurn / kMostShift);
-        const float shift = speed > 0.0f ? distance / speed : 0.0f;
+        const Against against = TurnedAgainst();
+        const float distance = (kShadowRadius - 1.0f) * std::tanh(against.speed / kFirstTurn) +
+                               SwingAt(against.speed);
         const float constants[kConstantCount * 4] = {
-            -turn.right * shift, turn.up * shift, scoped, width / height,
+            against.x * distance, against.y * distance, scoped, width / height,
             kNearest, (kFarthest - kNearest) / kSteps, height / width, Follow(),
             kSoftEdge, kDarkness, kSmallestLens, kShadowRadius,
         };
@@ -200,6 +218,15 @@ void WeaponOverhaul::ScopeShadow::OnGunPass(const Frame::Pass& pass,
     if (scoped > 0.0f) {
         Draw(pass, depth, scoped);
     }
+}
+
+WeaponOverhaul::ScopeShadow::Shift WeaponOverhaul::ScopeShadow::Swing() {
+    if (!g_enabled) {
+        return {};
+    }
+    const Against against = TurnedAgainst();
+    const float swing = SwingAt(against.speed);
+    return {against.x * swing, against.y * swing};
 }
 
 void WeaponOverhaul::ScopeShadow::SetEnabled(bool enabled) {

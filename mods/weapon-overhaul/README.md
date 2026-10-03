@@ -29,7 +29,11 @@ shadow and the eyepiece are in, a picture-in-picture scope is not.
   zoomed view far at its end. Only the tube's first centimetre is kept, so the zoomed view fills the
   eyepiece, and the reticle grows with the opening so it sits in it as it sat in the lens. The
   magnification is unchanged. Each time a scope comes up, its depth is read back once to find the
-  eyepiece and both openings, so it fits every scope the engine draws this way.
+  eyepiece and both openings, so it fits every scope the engine draws this way. The reticle sits at
+  the scope's far end, so as the look turns it swings off centre with the shadow, and shows only
+  through the opening. It follows the part of the shadow's swing that grows with speed, not the step
+  the shadow takes at the lightest move, so small adjustments leave it in place. Shots still go to
+  the screen's centre.
 
 The eye is moved through the camera's positional offset, the one the recoil kicks, in
 `src/engine/aim.cpp`. The blur draws the gun's own depth pass a second time into a depth texture of
