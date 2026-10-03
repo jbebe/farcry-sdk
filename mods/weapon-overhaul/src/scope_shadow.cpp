@@ -196,7 +196,7 @@ namespace {
             device->SetRenderTarget(0, lensNow.surface);
             device->SetTexture(0, g_radii.texture);
             device->SetPixelShader(lens);
-            draw.Quad(0.0f, 0.0f, 1.0f, 1.0f);
+            draw.FullQuad();
 
             if (g_enabled) {
                 device->SetRenderTarget(0, pass.target);
