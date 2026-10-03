@@ -46,7 +46,9 @@ namespace {
     constexpr DWORD kMark = 0x20;
     constexpr float kMarkReach = 1.05f;
 
-    constexpr UINT kProjectionRegister = 8;
+    // Where a mesh's vertex shader finds the camera's rotation and projection, one register for
+    // each of clip space's x, y, z and w.
+    constexpr UINT kViewRotProjectionRegister = 0;
     constexpr uint32_t kNone = 0xFFFFFFFFu;
 
     // What the reticle's draw is given, to be drawn only where the opening is marked.
@@ -385,13 +387,15 @@ namespace {
         const float x = opening.x + swing.x * g_scope->radius * projection[0];
         const float y = opening.y - swing.y * g_scope->radius * projection[5];
         const float growth = g_scope->growth;
+        float camera[16] = {};
+        device->GetVertexShaderConstantF(kViewRotProjectionRegister, camera, 4);
         float rows[8] = {};
         for (int i = 0; i < 4; i++) {
-            rows[i] = growth * projection[i] + (x - growth * back.x) * projection[12 + i];
-            rows[4 + i] = growth * projection[4 + i] + (y - growth * back.y) * projection[12 + i];
+            rows[i] = growth * camera[i] + (x - growth * back.x) * camera[12 + i];
+            rows[4 + i] = growth * camera[4 + i] + (y - growth * back.y) * camera[12 + i];
         }
-        std::copy_n(projection, std::size(g_savedRows), g_savedRows);
-        device->SetVertexShaderConstantF(kProjectionRegister, rows, 2);
+        std::copy_n(camera, std::size(g_savedRows), g_savedRows);
+        device->SetVertexShaderConstantF(kViewRotProjectionRegister, rows, 2);
         g_change = Change::Grown;
 
         g_through = g_marked;
@@ -495,7 +499,7 @@ void WeaponOverhaul::Eyepiece::AfterGunDraw(IDirect3DDevice9* device) {
         device->SetClipPlane(0, g_savedPlane);
         device->SetRenderState(D3DRS_CLIPPLANEENABLE, g_savedPlanes);
     } else if (g_change == Change::Grown) {
-        device->SetVertexShaderConstantF(kProjectionRegister, g_savedRows, 2);
+        device->SetVertexShaderConstantF(kViewRotProjectionRegister, g_savedRows, 2);
         if (g_through) {
             for (size_t i = 0; i < std::size(kThroughStates); i++) {
                 device->SetRenderState(kThroughStates[i], g_savedThrough[i]);

@@ -174,6 +174,11 @@ plus the arms, which are drawn but land off screen.
 - **The projection's rows are `c8` to `c11`**, `c10` = (0, 0, −1.002, −0.01) and `c11` = (0, 0, −1, 0):
   right-handed, clip `w` is the distance ahead. The vertical scale `c9.y` is 8.82 on the Dart Rifle,
   9.46 on the Dragunov, 13.29 on the AS50 and 9.29 on the M1903.
+- **The position is projected through `c0` to `c3`, not `c8`.** `c8` is `ProjectionMatrix`, which the
+  weapon's draws carry but do not place vertices by. The prototype's mesh shaders, `mesh_weapon.fx`
+  and the generic `aaa.fx` among them, project through `ViewRotProjectionMatrix` at `c0`, one register
+  for each of clip space's x, y, z and w. Changing `c8` for a draw moves nothing; changing `c0` and
+  `c1` scales or shifts it in clip space.
 - **A user clip plane cuts the scope by distance.** Given in clip space as (0, 0, −1, d), with d the
   stored depth `c10.z·c11.z + c10.w / metres` of a distance, it keeps what lies nearer than that
   distance, in both the depth and the colour pass.
