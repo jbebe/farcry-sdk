@@ -75,17 +75,21 @@ anew every frame. It runs from the listener's `Update` unless the pawn is in a v
 desired look to the effective look plus the mouse axes times the frame time. The listener's pawn is
 at `+0x20`.
 
-The desired data is `*(pawn + 0x10) + 0x140` (`0x1007E1B0`). It holds the look in radians:
+The desired data is `*(pawn + 0x10) + 0x140` (`0x1007E1B0`), and the effective data, laid out the
+same, is `+0x2D0`. Both hold the look in radians:
 
-| Field | Offset in the desired data |
+| Field | Offset in either |
 |---|---|
 | pitch, up positive | `+0x38`, again at `+0x44` |
 | roll | `+0x3C`, again at `+0x48` |
 | yaw, left positive | `+0x40`, again at `+0x4C` |
 
+`UpdateLook` reads the effective look from `+0x54` instead while bit 2 (`0x04`) of the effective
+flags at `+4` is set.
+
 :::warning[Not yet tested in a running game]
 Adding to the desired look after `UpdateLook` should move the view, the gun's aim and where shots go
-together, since all three follow it. Weapon Overhaul's scope sway is the first thing to do it.
+together, since all three follow it.
 :::
 
 ## The first-person body

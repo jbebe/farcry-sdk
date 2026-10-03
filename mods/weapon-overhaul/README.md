@@ -16,12 +16,11 @@ scope shadow are in, a picture-in-picture scope is not.
   blur spills a little past the gun's edge. It fades in as the eye settles into the sights. A gun
   held far from the eye, like a pistol, has its sights too close together in dioptres for a blur
   you could see, and gets none, as a real eye nearly does.
-- **Scope sway.** Through a scope, the same drift turns the aim itself, as if the rifle pivoted at
-  the shoulder: the view, the reticle and where the shot goes wander over the target together, and
-  the mouse still has the last word.
-- **Scope shadow.** As the rifle turns, its eyepiece leaves the eye's line, and a dark crescent comes
-  in from the lens's rim opposite the turn. It is gone the moment the scope comes down. The lens is
-  found on screen as the hole the scope's housing leaves in the gun's depth, so it fits every scope.
+- **Scope shadow.** The scope trails the camera as the look turns, so the eye runs ahead of it and
+  a dark crescent comes in from the lens's rim on the side turned toward: faint at the lightest
+  move, near a blackout on a fast flick, gone when the look is still or the scope comes down. The
+  lens is found on screen as the hole the scope's housing leaves in the gun's depth, so it fits
+  every scope.
 
 The eye is moved through the camera's positional offset, the one the recoil kicks, in
 `src/engine/aim.cpp`. The blur draws the gun's own depth pass a second time into a depth texture of

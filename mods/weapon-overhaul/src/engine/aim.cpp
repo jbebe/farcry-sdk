@@ -7,42 +7,39 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <numbers>
 
 namespace {
     // All __thiscall, which a free function spells __fastcall with an unused EDX.
     using UpdateFn = void(__fastcall*)(uint8_t* camera, void* unused, float seconds, uint32_t flags);
     using UpdateCameraOffsetFn = void(__fastcall*)(uint8_t* camera, void* unused, float seconds,
                                                    uint8_t* pawn);
-    using UpdateLookFn = void(__fastcall*)(uint8_t* listener, void* unused);
     using EquippedWeaponFn = uint8_t*(__fastcall*)(uint8_t* inventory);
     using PlayerCameraFn = uint8_t*(__cdecl*)();
 
     FCSE::Relocation<UpdateFn> g_update{FCSE::Uplay(0x00693C00)};
     FCSE::Relocation<UpdateCameraOffsetFn> g_updateCameraOffset{FCSE::Uplay(0x00693490)};
-    FCSE::Relocation<UpdateLookFn> g_updateLook{FCSE::Uplay(0x00143C40)};
     FCSE::Relocation<EquippedWeaponFn> g_equippedWeapon{FCSE::Uplay(0x00127DA0)};
     FCSE::Relocation<PlayerCameraFn> g_playerCamera{FCSE::Uplay(0x0070C210)};
 
     UpdateFn g_originalUpdate = nullptr;
     UpdateCameraOffsetFn g_originalUpdateCameraOffset = nullptr;
-    UpdateLookFn g_originalUpdateLook = nullptr;
 
     // CCameraPawnComponent: the eye's offset in the view's axes, x right, y ahead, z up.
     constexpr ptrdiff_t kEyeRight = 0xE8;
     constexpr ptrdiff_t kEyeUp = 0xF0;
 
-    // CPawn's data, and in it the effective flags, the desired look in radians, and the inventory.
+    // CPawn's data, and in it the effective flags, the effective look in radians (pitch up, yaw
+    // left), and the inventory.
     constexpr ptrdiff_t kPawnData = 0x10;
     constexpr ptrdiff_t kEffectiveFlags = 0x2D4;
     constexpr uint8_t kIronsight = 0x08;
-    constexpr ptrdiff_t kDesiredPitch[] = {0x178, 0x184};
-    constexpr ptrdiff_t kDesiredYaw[] = {0x180, 0x18C};
+    constexpr ptrdiff_t kEffectivePitch = 0x308;
+    constexpr ptrdiff_t kEffectiveYaw = 0x310;
     constexpr ptrdiff_t kInventory = 0x4F0;
-
-    // CPawnInputListener's pawn.
-    constexpr ptrdiff_t kListenerPawn = 0x20;
 
     // CFCXWeapon: the scope picture as last asked for, and whether the weapon has one.
     constexpr ptrdiff_t kScopeShown = 0x84;
@@ -50,28 +47,28 @@ namespace {
 
     // Seconds to settle into the sights, and to let go of them.
     constexpr float kSettle = 0.4f;
-    // Through a scope the drift turns the rifle, and the aim with it, as if about the shoulder.
-    constexpr float kRadiansPerMetre = 2.5f;
+    // Seconds for the turn rate to follow the look, which is how the gun trails it. Faster than
+    // this in a frame is a cut, not a turn.
+    constexpr float kTrail = 0.12f;
+    constexpr float kFastestTurn = 10.0f;
 
     WeaponOverhaul::Aim::DriftFn g_drift = nullptr;
     float g_sights = 0.0f;
     float g_scope = 0.0f;
-    float g_scopeTurn = 0.0f;
     std::atomic<float> g_settled{0.0f};
     std::atomic<float> g_scoped{0.0f};
-    std::atomic<float> g_driftRight{0.0f};
-    std::atomic<float> g_driftUp{0.0f};
 
     // What was added to the eye during the camera update under way, and to which camera.
     uint8_t* g_addedTo = nullptr;
     WeaponOverhaul::Aim::Offset g_added = {};
 
-    // The turn the look should carry, and what it carries already, to which pawn.
-    float g_turnPitch = 0.0f;
-    float g_turnYaw = 0.0f;
-    uint8_t* g_turnedPawn = nullptr;
-    float g_turnedPitch = 0.0f;
-    float g_turnedYaw = 0.0f;
+    // The look last frame, for which pawn, and how fast it has been turning.
+    uint8_t* g_lookPawn = nullptr;
+    float g_lastPitch = 0.0f;
+    float g_lastYaw = 0.0f;
+    WeaponOverhaul::Aim::Turn g_turn = {};
+    std::atomic<float> g_turnRight{0.0f};
+    std::atomic<float> g_turnUp{0.0f};
 
     template <typename T>
     T& Field(uint8_t* object, ptrdiff_t offset) {
@@ -92,6 +89,30 @@ namespace {
                Field<uint8_t>(weapon, kHiResScope) != 0;
     }
 
+    // Follows the look's turn rate, smoothed the way the gun trails the camera.
+    void FollowTurn(uint8_t* pawn, uint8_t* data, float seconds) {
+        const float pitch = Field<float>(data, kEffectivePitch);
+        const float yaw = Field<float>(data, kEffectiveYaw);
+        if (pawn != g_lookPawn || seconds <= 0.0f) {
+            g_lookPawn = pawn;
+            g_lastPitch = pitch;
+            g_lastYaw = yaw;
+            return;
+        }
+        const float pi = std::numbers::pi_v<float>;
+        const float yawStep = std::remainder(yaw - g_lastYaw, 2.0f * pi);
+        const float right = std::clamp(-yawStep / seconds, -kFastestTurn, kFastestTurn);
+        const float up = std::clamp((pitch - g_lastPitch) / seconds, -kFastestTurn, kFastestTurn);
+        g_lastPitch = pitch;
+        g_lastYaw = yaw;
+
+        const float follow = 1.0f - std::exp(-seconds / kTrail);
+        g_turn.right += (right - g_turn.right) * follow;
+        g_turn.up += (up - g_turn.up) * follow;
+        g_turnRight = g_turn.right;
+        g_turnUp = g_turn.up;
+    }
+
     void __fastcall UpdateCameraOffsetDetour(uint8_t* camera, void* unused, float seconds,
                                              uint8_t* pawn) {
         g_originalUpdateCameraOffset(camera, unused, seconds, pawn);
@@ -104,26 +125,19 @@ namespace {
         const bool scope = sights && ScopeShown(data);
         const float step = seconds / kSettle;
         // The iron sights let go at once when a scope's own sight picture comes up, and the scope
-        // when it goes; the turn it gave the aim eases back.
+        // when it goes.
         g_sights = scope ? 0.0f : Approach(g_sights, sights, step);
         g_scope = scope ? Approach(g_scope, true, step) : 0.0f;
-        g_scopeTurn = Approach(g_scopeTurn, scope, step);
         const float settled = Ease(g_sights);
-        const float turn = Ease(g_scopeTurn) * kRadiansPerMetre;
         g_settled = settled;
         g_scoped = Ease(g_scope);
+        FollowTurn(pawn, data, seconds);
 
         const WeaponOverhaul::Aim::Offset drift = g_drift(seconds);
-        g_driftRight = drift.right;
-        g_driftUp = drift.up;
         g_added = {drift.right * settled, drift.up * settled};
         Field<float>(camera, kEyeRight) += g_added.right;
         Field<float>(camera, kEyeUp) += g_added.up;
         g_addedTo = camera;
-
-        // Pitch is up, and yaw turns left.
-        g_turnPitch = drift.up * turn;
-        g_turnYaw = -drift.right * turn;
     }
 
     void __fastcall UpdateDetour(uint8_t* camera, void* unused, float seconds, uint32_t flags) {
@@ -134,56 +148,26 @@ namespace {
             g_addedTo = nullptr;
         }
     }
-
-    // The look is built anew each frame from where it last was, so the turn goes on as it changes.
-    void __fastcall UpdateLookDetour(uint8_t* listener, void* unused) {
-        g_originalUpdateLook(listener, unused);
-        uint8_t* pawn = Field<uint8_t*>(listener, kListenerPawn);
-        if (pawn != g_turnedPawn) {
-            g_turnedPawn = pawn;
-            g_turnedPitch = 0.0f;
-            g_turnedYaw = 0.0f;
-        }
-        if (pawn == nullptr) {
-            return;
-        }
-        uint8_t* data = Field<uint8_t*>(pawn, kPawnData);
-        for (ptrdiff_t pitch : kDesiredPitch) {
-            Field<float>(data, pitch) += g_turnPitch - g_turnedPitch;
-        }
-        for (ptrdiff_t yaw : kDesiredYaw) {
-            Field<float>(data, yaw) += g_turnYaw - g_turnedYaw;
-        }
-        g_turnedPitch = g_turnPitch;
-        g_turnedYaw = g_turnYaw;
-    }
-
-    bool Hook(const FCSE_PluginAPI* api, uintptr_t target, void* detour, void* original) {
-        return api->Hook(reinterpret_cast<void*>(target), detour,
-                         reinterpret_cast<void**>(original));
-    }
 }
 
 bool WeaponOverhaul::Aim::Install(DriftFn drift) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
-    if (!g_update || !g_updateCameraOffset || !g_updateLook || !g_equippedWeapon ||
-        !g_playerCamera) {
+    if (!g_update || !g_updateCameraOffset || !g_equippedWeapon || !g_playerCamera) {
         api->Log("aim: the camera functions were not found in this build");
         return false;
     }
 
     g_drift = drift;
-    if (!Hook(api, g_update.address(), reinterpret_cast<void*>(&UpdateDetour),
-              &g_originalUpdate)) {
+    if (!api->Hook(reinterpret_cast<void*>(g_update.address()),
+                   reinterpret_cast<void*>(&UpdateDetour),
+                   reinterpret_cast<void**>(&g_originalUpdate))) {
         return false;
     }
-    // Past the first hook a refusal would unload the plugin with that hook live, so these only log.
-    if (!Hook(api, g_updateCameraOffset.address(),
-              reinterpret_cast<void*>(&UpdateCameraOffsetDetour), &g_originalUpdateCameraOffset)) {
+    // A plugin refused past its first hook is unloaded with that hook live, so this only logs.
+    if (!api->Hook(reinterpret_cast<void*>(g_updateCameraOffset.address()),
+                   reinterpret_cast<void*>(&UpdateCameraOffsetDetour),
+                   reinterpret_cast<void**>(&g_originalUpdateCameraOffset))) {
         api->Log("aim: the camera offset cannot be hooked, so nothing follows the sights");
-    } else if (!Hook(api, g_updateLook.address(), reinterpret_cast<void*>(&UpdateLookDetour),
-                     &g_originalUpdateLook)) {
-        api->Log("aim: the look cannot be hooked, so a scope does not sway");
     }
     return true;
 }
@@ -196,6 +180,6 @@ float WeaponOverhaul::Aim::Scoped() {
     return g_scoped;
 }
 
-WeaponOverhaul::Aim::Offset WeaponOverhaul::Aim::Drift() {
-    return {g_driftRight, g_driftUp};
+WeaponOverhaul::Aim::Turn WeaponOverhaul::Aim::Turning() {
+    return {g_turnRight, g_turnUp};
 }

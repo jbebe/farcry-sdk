@@ -1,5 +1,5 @@
 // The scope's shadow. The lens is found as the hole the housing leaves in the gun's depth, and a
-// clear disc of its size, pushed off its centre by the hand's drift, leaves the rest of it dark.
+// clear disc of its size, pushed off its centre as the look turns, leaves the rest of it dark.
 #include "scope_shadow.h"
 
 #include "engine/aim.h"
@@ -25,9 +25,11 @@ namespace {
     // The smallest radius taken for a lens; anything smaller is the gun itself, not a hole in it.
     constexpr float kSmallestLens = 0.1f;
 
-    // How far the clear part of the lens moves per metre of drift, in lens radii, how wide the
-    // shadow's soft edge is, in lens radii, and how dark it gets.
-    constexpr float kShiftPerMetre = 70.0f;
+    // How far the clear part of the lens moves, in lens radii: per radian a second of turn at
+    // first, and at most, which is near a full blackout. Then how wide the shadow's soft edge is,
+    // in lens radii, and how dark it gets.
+    constexpr float kShiftPerTurn = 3.0f;
+    constexpr float kMostShift = 1.2f;
     constexpr float kSoftEdge = 0.12f;
     constexpr float kDarkness = 0.95f;
     // Seconds for the lens radius to follow most of the way.
@@ -126,11 +128,15 @@ namespace {
 
         const float width = static_cast<float>(WeaponOverhaul::Frame::Width());
         const float height = static_cast<float>(WeaponOverhaul::Frame::Height());
-        const WeaponOverhaul::Aim::Offset drift = WeaponOverhaul::Aim::Drift();
-        // The rifle turning right carries the eyepiece right of the eye, which leaves the left of
-        // the lens dark: the clear part moves with the turn, up the screen as it turns up.
+        // The scope trails the look, so the eye runs ahead of it and the side turned toward goes
+        // dark: the clear part moves against the turn, down the screen as the look turns up.
+        const WeaponOverhaul::Aim::Turn turn = WeaponOverhaul::Aim::Turning();
+        const float speed = std::hypot(turn.right, turn.up);
+        const float shift = speed > 0.0f
+                                ? kMostShift * std::tanh(speed * kShiftPerTurn / kMostShift) / speed
+                                : 0.0f;
         const float constants[kConstantCount * 4] = {
-            drift.right * kShiftPerMetre, -drift.up * kShiftPerMetre, scoped, width / height,
+            -turn.right * shift, turn.up * shift, scoped, width / height,
             kNearest, (kFarthest - kNearest) / kSteps, height / width, Follow(),
             kSoftEdge, kDarkness, kSmallestLens, 0.0f,
         };
