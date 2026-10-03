@@ -25,12 +25,15 @@ namespace {
     // The smallest radius taken for a lens; anything smaller is the gun itself, not a hole in it.
     constexpr float kSmallestLens = 0.1f;
 
-    // How far the clear part of the lens moves, in lens radii: per radian a second of turn at
-    // first, and at most, which is near a full blackout. Then how wide the shadow's soft edge is,
-    // in lens radii, and how dark it gets.
+    // The shadow is the rim of the magnified tube, a circle wider than the lens, hidden behind the
+    // housing while it is centred. On the lightest turn, kFirstTurn radians a second, it moves out
+    // to the rim. From there it moves on per radian a second of turn at first, and at most, which is
+    // near a full blackout. All in lens radii, then how wide its soft edge is and how dark it gets.
+    constexpr float kShadowRadius = 1.5f;
+    constexpr float kFirstTurn = 0.02f;
     constexpr float kShiftPerTurn = 3.0f;
     constexpr float kMostShift = 1.2f;
-    constexpr float kSoftEdge = 0.12f;
+    constexpr float kSoftEdge = 0.15f;
     constexpr float kDarkness = 0.95f;
     // Seconds for the lens radius to follow most of the way.
     constexpr float kFollow = 0.1f;
@@ -134,13 +137,13 @@ namespace {
         // dark: the clear part moves against the turn, down the screen as the look turns up.
         const WeaponOverhaul::Aim::Turn turn = WeaponOverhaul::Aim::Turning();
         const float speed = std::hypot(turn.right, turn.up);
-        const float shift = speed > 0.0f
-                                ? kMostShift * std::tanh(speed * kShiftPerTurn / kMostShift) / speed
-                                : 0.0f;
+        const float distance = (kShadowRadius - 1.0f) * std::tanh(speed / kFirstTurn) +
+                               kMostShift * std::tanh(speed * kShiftPerTurn / kMostShift);
+        const float shift = speed > 0.0f ? distance / speed : 0.0f;
         const float constants[kConstantCount * 4] = {
             -turn.right * shift, turn.up * shift, scoped, width / height,
             kNearest, (kFarthest - kNearest) / kSteps, height / width, Follow(),
-            kSoftEdge, kDarkness, kSmallestLens, 0.0f,
+            kSoftEdge, kDarkness, kSmallestLens, kShadowRadius,
         };
         const WeaponOverhaul::Target& lensNow = g_lens[g_lensIndex];
         const WeaponOverhaul::Target& lensBefore = g_lens[g_lensIndex ^ 1];
@@ -160,12 +163,14 @@ namespace {
             }
             device->SetRenderTarget(0, g_radii.surface);
             device->SetTexture(3, depth.texture);
+            device->SetTexture(5, lensBefore.texture);
             device->SetPixelShader(radius);
-            draw.Quad(0.0f, 0.0f, static_cast<float>(kDirections), 1.0f);
+            if (!draw.FullQuad()) {
+                return;
+            }
 
             device->SetRenderTarget(0, lensNow.surface);
             device->SetTexture(0, g_radii.texture);
-            device->SetTexture(5, lensBefore.texture);
             device->SetPixelShader(lens);
             draw.Quad(0.0f, 0.0f, 1.0f, 1.0f);
 

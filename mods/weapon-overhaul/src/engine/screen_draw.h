@@ -23,6 +23,13 @@ public:
     // Pairs only with a ps_2_x pixel shader.
     void Quad(float left, float top, float right, float bottom);
 
+    // A quad over the whole viewport through a vertex shader of its own, for a ps_3_0 pixel shader
+    // that finds its pixel by VPOS. False if the device would not make that shader.
+    bool FullQuad();
+
+    // Drops the vertex shader and declaration FullQuad keeps, which its next call makes again.
+    static void ReleaseDeviceObjects();
+
 private:
     static constexpr UINT kMaxConstantRegisters = 8;
     static constexpr DWORD kSamplers = 6;

@@ -2,6 +2,7 @@
 #include "blur.h"
 #include "engine/aim.h"
 #include "engine/device_reset.h"
+#include "engine/screen_draw.h"
 #include "engine/weapon_draws.h"
 #include "fcse_api.h"
 #include "scope_shadow.h"
@@ -13,6 +14,7 @@ namespace {
     void OnDeviceRelease() {
         WeaponOverhaul::Blur::ReleaseDeviceObjects();
         WeaponOverhaul::ScopeShadow::ReleaseDeviceObjects();
+        WeaponOverhaul::ScreenDraw::ReleaseDeviceObjects();
         WeaponOverhaul::WeaponDraws::ReleaseDeviceObjects();
     }
 

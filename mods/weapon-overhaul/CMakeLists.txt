@@ -22,11 +22,12 @@ endif()
 
 # source file : entry point : profile : generated header : array name.
 set(SHADER_PASSES
+  "full_quad.fx:MainVS:vs_3_0:full_quad_vs.h:g_fullQuadVertexShader"
   "blur.fx:FocusPS:ps_2_b:blur_focus_ps.h:g_blurFocusPixelShader"
   "blur.fx:DownPS:ps_2_b:blur_down_ps.h:g_blurDownPixelShader"
   "blur.fx:BlurPS:ps_2_b:blur_blur_ps.h:g_blurPixelShader"
   "blur.fx:CompositePS:ps_2_b:blur_composite_ps.h:g_blurCompositePixelShader"
-  "scope.fx:RadiusPS:ps_2_b:scope_radius_ps.h:g_scopeRadiusPixelShader"
+  "scope.fx:RadiusPS:ps_3_0:scope_radius_ps.h:g_scopeRadiusPixelShader"
   "scope.fx:LensPS:ps_2_b:scope_lens_ps.h:g_scopeLensPixelShader"
   "scope.fx:ShadowPS:ps_2_b:scope_shadow_ps.h:g_scopeShadowPixelShader")
 
