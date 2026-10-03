@@ -39,13 +39,16 @@ namespace {
     std::atomic<float> g_rpm{kIdle};
     std::atomic<int> g_shift{0};
     std::atomic<uint32_t> g_shiftSound{0};
+    // The driver is off the throttle for a gear change.
+    std::atomic<bool> g_lifted{false};
 
     Car g_car = nullptr;
     int g_gear = 0;
-    // A gear change is sounded halfway through the shift, where the lever goes across: until then it waits
-    // here, with the seconds left.
+    // The seconds the last gear change keeps the clutch out, and those gone since. It is sounded halfway,
+    // where the lever goes across; until then it waits here.
+    float g_shiftTime = 0.0f;
+    float g_sinceShift = 0.0f;
     int g_pendingShift = 0;
-    float g_untilSounded = 0.0f;
 
     // The entity of the vehicle the player drives, on the game thread.
     void* g_vehicle = nullptr;
@@ -67,6 +70,7 @@ namespace {
         engine.shift = g_shift.exchange(0);
         engine.rpm = g_rpm;
         engine.shiftSound = g_shiftSound;
+        engine.lifted = g_lifted;
         return true;
     }
 }
@@ -84,18 +88,22 @@ float Step(Car car, const RealVehicle::Spec* real, const Wheeled::Readout& reado
         g_car = car;
         g_shiftSound = real != nullptr ? real->shiftSound : 0;
         g_gear = readout.gear;
+        g_shiftTime = 0.0f;
         g_pendingShift = 0;
         g_rpm = idle;
     }
+    g_sinceShift += seconds;
     if (readout.gear != g_gear) {
         g_pendingShift = readout.gear > g_gear ? 1 : -1;
-        g_untilSounded = 0.5f * Tuning::Current().shiftTime;
+        g_shiftTime = Tuning::Current().shiftTime;
+        g_sinceShift = 0.0f;
         g_gear = readout.gear;
     }
-    if (g_pendingShift != 0 && (g_untilSounded -= seconds) <= 0.0f) {
+    if (g_pendingShift != 0 && g_sinceShift >= 0.5f * g_shiftTime) {
         g_shift = g_pendingShift;
         g_pendingShift = 0;
     }
+    g_lifted = g_sinceShift < g_shiftTime;
 
     const float wheels = idle + (std::abs(readout.rpm) - kHavokMin) * (redline - idle) / (kHavokUpshift - kHavokMin);
     float target = std::max(idle, wheels);

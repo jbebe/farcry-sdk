@@ -3,6 +3,7 @@
 #include "tuning.h"
 
 #include "physics.h"
+#include "sounds.h"
 
 #include "fcse_api.h"
 #include "imgui.h"
@@ -217,34 +218,51 @@ void VehicleOverhaul::Tuning::Load() {
     Save();
 }
 
-void VehicleOverhaul::Tuning::DrawWindow(void*) {
-    ImGui::PushItemWidth(-ImGui::GetFontSize() * 10.0f);
+namespace {
+    void DrawDriving() {
+        ImGui::PushItemWidth(-ImGui::GetFontSize() * 10.0f);
 
-    DrawReadout();
-    g_unsaved |= DrawSwitches(nullptr);
+        DrawReadout();
+        g_unsaved |= DrawSwitches(nullptr);
 
-    const char* group = nullptr;
-    for (const Parameter& parameter : kParameters) {
-        if (parameter.group != group) {
-            group = parameter.group;
-            ImGui::SeparatorText(group);
-            g_unsaved |= DrawSwitches(group);
+        const char* group = nullptr;
+        for (const Parameter& parameter : kParameters) {
+            if (parameter.group != group) {
+                group = parameter.group;
+                ImGui::SeparatorText(group);
+                g_unsaved |= DrawSwitches(group);
+            }
+            g_unsaved |= ImGui::SliderFloat(parameter.key, Field(parameter), parameter.min, parameter.max,
+                                            parameter.format, ImGuiSliderFlags_AlwaysClamp);
+            ImGui::SetItemTooltip("%s", parameter.help);
         }
-        g_unsaved |= ImGui::SliderFloat(parameter.key, Field(parameter), parameter.min, parameter.max,
-                                        parameter.format, ImGuiSliderFlags_AlwaysClamp);
-        ImGui::SetItemTooltip("%s", parameter.help);
-    }
 
-    ImGui::Separator();
-    if (ImGui::Button("Reload")) {
-        Load();
-    }
-    ImGui::SameLine();
-    ImGui::TextDisabled("%s", Path());
-    ImGui::PopItemWidth();
+        ImGui::Separator();
+        if (ImGui::Button("Reload")) {
+            VehicleOverhaul::Tuning::Load();
+        }
+        ImGui::SameLine();
+        ImGui::TextDisabled("%s", Path());
+        ImGui::PopItemWidth();
 
-    if (g_unsaved && !ImGui::IsAnyItemActive()) {
-        Save();
-        g_unsaved = false;
+        if (g_unsaved && !ImGui::IsAnyItemActive()) {
+            Save();
+            g_unsaved = false;
+        }
     }
+}
+
+void VehicleOverhaul::Tuning::DrawWindow(void*) {
+    if (!ImGui::BeginTabBar("tabs")) {
+        return;
+    }
+    if (ImGui::BeginTabItem("Driving")) {
+        DrawDriving();
+        ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("Sounds")) {
+        Sounds::DrawTab();
+        ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
 }
