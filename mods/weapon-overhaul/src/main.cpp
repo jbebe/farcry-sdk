@@ -4,6 +4,7 @@
 #include "engine/device_reset.h"
 #include "engine/screen_draw.h"
 #include "engine/weapon_draws.h"
+#include "eyepiece.h"
 #include "fcse_api.h"
 #include "scope_shadow.h"
 #include "sway.h"
@@ -13,6 +14,7 @@
 namespace {
     void OnDeviceRelease() {
         WeaponOverhaul::Blur::ReleaseDeviceObjects();
+        WeaponOverhaul::Eyepiece::ReleaseDeviceObjects();
         WeaponOverhaul::ScopeShadow::ReleaseDeviceObjects();
         WeaponOverhaul::ScreenDraw::ReleaseDeviceObjects();
         WeaponOverhaul::WeaponDraws::ReleaseDeviceObjects();
@@ -35,6 +37,10 @@ namespace {
     void __cdecl OnScopeShadowChanged(const FCSE_SettingValue* value, void*) {
         WeaponOverhaul::ScopeShadow::SetEnabled(value->asCheckbox);
     }
+
+    void __cdecl OnEyepieceChanged(const FCSE_SettingValue* value, void*) {
+        WeaponOverhaul::Eyepiece::SetEnabled(value->asCheckbox);
+    }
 }
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
@@ -44,8 +50,14 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     }
 
     // Past the first hook a refusal would unload the plugin with that hook live, so this only logs.
+    const WeaponOverhaul::WeaponDraws::Listener listener = {
+        &WeaponOverhaul::Eyepiece::OnDepthPass,
+        &OnGunPass,
+        &WeaponOverhaul::Eyepiece::BeforeGunDraw,
+        &WeaponOverhaul::Eyepiece::AfterGunDraw,
+    };
     if (!WeaponOverhaul::DeviceReset::Install(&OnDeviceRelease) ||
-        !WeaponOverhaul::WeaponDraws::Install(&OnGunPass)) {
+        !WeaponOverhaul::WeaponDraws::Install(listener)) {
         api->Log("nothing is drawn on the gun: a Direct3D seam could not be hooked");
     }
 
@@ -53,6 +65,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Sway", FCSE_CHECKBOX(true), &OnSwayChanged, nullptr},
         {"Gun blur", FCSE_CHECKBOX(true), &OnBlurChanged, nullptr},
         {"Scope shadow", FCSE_CHECKBOX(true), &OnScopeShadowChanged, nullptr},
+        {"Scope eyepiece", FCSE_CHECKBOX(true), &OnEyepieceChanged, nullptr},
     };
     api->RegisterSettings("WeaponOverhaul", settings, std::size(settings));
     return true;

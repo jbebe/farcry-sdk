@@ -20,8 +20,8 @@ namespace {
     // RadiusPS's directions and the radii it looks between, in screen heights.
     constexpr UINT kDirections = 24;
     constexpr float kNearest = 0.05f;
-    constexpr float kFarthest = 0.6f;
-    constexpr float kSteps = 48.0f;
+    constexpr float kFarthest = 1.0f;
+    constexpr float kSteps = 64.0f;
     // The smallest radius taken for a lens; anything smaller is the gun itself, not a hole in it.
     constexpr float kSmallestLens = 0.1f;
 

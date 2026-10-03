@@ -22,7 +22,7 @@ sampler2D Lens : register(s5);
 
 #define DIRECTIONS 24
 #define CHORDS 12
-#define STEPS 48
+#define STEPS 64
 #define TWO_PI 6.28318531f
 
 static const float2 kCentre = float2(0.5f, 0.5f);

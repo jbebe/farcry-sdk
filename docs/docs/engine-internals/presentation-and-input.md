@@ -150,6 +150,43 @@ smaller, through a viewport of 0 to 1, gives the weapon's depth at full precisio
 multisampled original cannot be read. Weapon Overhaul's `src/engine/weapon_draws.cpp` does that, and
 finds the colour pass by the repeated draws.
 
+### While a scope's sight picture is up
+
+:::info[Verified in a running game]
+Retail GOG v1.03 at 1920×1080 with four-sample multisampling, one frame each through the Dart Rifle,
+Dragunov, AS50 and M1903, held still, recorded from an FCSE plugin.
+:::
+
+Only the `SCOPE_HI` part of the weapon is drawn (see
+[replacing a weapon](../modding/replacing-a-weapon.md#e-scope_hi-is-drawn-instead-of-the-rest-of-the-gun)),
+plus the arms, which are drawn but land off screen.
+
+- **Every scope part comes from one vertex buffer**, the weapon's own with a 32-byte stride. The arms
+  are skinned, from a buffer of their own with a 40-byte stride.
+- **The depth pass draws the scope's opaque clusters as one draw**: the Dragunov's tube, rings and
+  housing are a single 2,088-triangle draw. A second squeezed pass follows with the reticle alone,
+  alpha-tested, with NVIDIA's alpha-to-coverage switch on.
+- **The colour pass draws each opaque cluster separately** (three on the Dragunov). The reticle comes
+  in a pass of its own after it, and then the lens in another, blended (`SRCALPHA`,
+  `INVSRCALPHA`) without depth writes. The reticle is the only alpha-tested draw of the scope.
+- **The AS50's red cross and range marks are a blended draw** that samples the reticle's texture, the
+  shared `dragunov_crosshair_d.xbt`.
+- **The projection's rows are `c8` to `c11`**, `c10` = (0, 0, −1.002, −0.01) and `c11` = (0, 0, −1, 0):
+  right-handed, clip `w` is the distance ahead. The vertical scale `c9.y` is 8.82 on the Dart Rifle,
+  9.46 on the Dragunov, 13.29 on the AS50 and 9.29 on the M1903.
+- **A user clip plane cuts the scope by distance.** Given in clip space as (0, 0, −1, d), with d the
+  stored depth `c10.z·c11.z + c10.w / metres` of a distance, it keeps what lies nearer than that
+  distance, in both the depth and the colour pass.
+
+Cut at a run of distances, the scopes lie at:
+
+| Rifle | Opaque scope | Reticle | Lens |
+|---|---|---|---|
+| Dart Rifle | 10–18 cm | 15–18 cm | 15–18 cm |
+| Dragunov | 21–32 cm | 30–32 cm | 28–32 cm |
+| AS50 | 15–24 cm | 23–24 cm | 23–24 cm |
+| M1903 | 10–19 cm | 18–19 cm | 15–19 cm |
+
 ### Whether there is a render thread
 
 `CThreadingConfig` has a `RENDER_THREAD` entry, `engine\settings\defaultthreadingconfig.xml` ships

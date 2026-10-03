@@ -73,6 +73,9 @@ namespace {
     float g_scope = 0.0f;
     std::atomic<float> g_settled{0.0f};
     std::atomic<float> g_scoped{0.0f};
+    std::atomic<bool> g_scopeUp{false};
+    std::atomic<float> g_leadRight{0.0f};
+    std::atomic<float> g_leadUp{0.0f};
 
     // What was added to the eye during the camera update under way, and to which camera.
     uint8_t* g_addedTo = nullptr;
@@ -200,7 +203,10 @@ namespace {
         const float scoped = Ease(g_scope);
         g_settled = settled;
         g_scoped = scoped;
+        g_scopeUp = scope;
         const WeaponOverhaul::Aim::Offset lead = FollowLook(pawn, data, seconds);
+        g_leadRight = lead.right * scoped;
+        g_leadUp = lead.up * scoped;
 
         // Down the iron sights the eye drifts off the gun; through a scope it runs ahead of it.
         const WeaponOverhaul::Aim::Offset drift = g_drift(seconds);
@@ -253,4 +259,12 @@ float WeaponOverhaul::Aim::Scoped() {
 
 WeaponOverhaul::Aim::Turn WeaponOverhaul::Aim::Turning() {
     return {g_turnRight, g_turnUp};
+}
+
+bool WeaponOverhaul::Aim::ScopeUp() {
+    return g_scopeUp;
+}
+
+WeaponOverhaul::Aim::Offset WeaponOverhaul::Aim::ScopeLead() {
+    return {g_leadRight, g_leadUp};
 }

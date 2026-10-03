@@ -31,4 +31,10 @@ float Scoped();
 // How fast the look turns, smoothed the way the gun trails it.
 Turn Turning();
 
+// Whether a scope's own sight picture is up this frame, which the engine shows at once.
+bool ScopeUp();
+
+// How far the eye runs ahead of the scope this frame, which moves the sight picture the other way.
+Offset ScopeLead();
+
 }

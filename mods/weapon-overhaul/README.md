@@ -1,7 +1,7 @@
 # Weapon Overhaul
 
-An FCSE plugin for how aiming down the sights looks. Unfinished: the sway, the gun blur and the
-scope shadow are in, a picture-in-picture scope is not.
+An FCSE plugin for how aiming down the sights looks. Unfinished: the sway, the gun blur, the scope
+shadow and the eyepiece are in, a picture-in-picture scope is not.
 
 ## What it does
 
@@ -25,11 +25,18 @@ scope shadow are in, a picture-in-picture scope is not.
   move, near a blackout on a fast flick, gone when the look is still or the scope comes down. The
   lens, its centre and its radius, is found on screen as the hole the scope's housing leaves in the
   gun's depth, so it fits every scope and follows it as it lags.
+- **Eyepiece.** The engine draws a scope as a tube seen down its length, with the reticle and the
+  zoomed view far at its end. Only the tube's first centimetre is kept, so the zoomed view fills the
+  eyepiece, and the reticle grows with the opening so it sits in it as it sat in the lens. The
+  magnification is unchanged. Each time a scope comes up, its depth is read back once to find the
+  eyepiece and both openings, so it fits every scope the engine draws this way.
 
 The eye is moved through the camera's positional offset, the one the recoil kicks, in
 `src/engine/aim.cpp`. The blur draws the gun's own depth pass a second time into a depth texture of
 its own, in `src/engine/weapon_draws.cpp`, and the blur and the scope shadow draw at the end of the
 pass the gun's colour is drawn in, before the bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
+The eyepiece cuts the scope's draws with a clip plane and scales the reticle's in clip space, in
+`src/eyepiece.cpp`.
 The engine side is in
 [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md).
 
@@ -47,6 +54,7 @@ On the plugin's page in the Mod Configuration Menu, stored under `[WeaponOverhau
 | Sway | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
 | Scope shadow | Yes / No | Yes |
+| Scope eyepiece | Yes / No | Yes |
 
 ## Building
 

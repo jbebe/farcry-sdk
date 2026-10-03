@@ -6,6 +6,7 @@
 #include "engine/vtable.h"
 #include "fcse_api.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iterator>
 
@@ -21,12 +22,14 @@ namespace {
     // The weapon's depth is drawn through a viewport squeezed this close to the near plane.
     constexpr float kWeaponFarthest = 0.5f;
 
+    // The weapon's projection, unlike the world's, has its near plane a centimetre out.
     constexpr UINT kProjectionRegister = 8;
+    constexpr float kWeaponNearest = 0.05f;
 
     constexpr uint32_t kNone = 0xFFFFFFFFu;
 
     DrawIndexedPrimitiveFn g_original = nullptr;
-    WeaponOverhaul::WeaponDraws::GunPassFn g_onGunPass = nullptr;
+    WeaponOverhaul::WeaponDraws::Listener g_listener = {};
     bool g_watching = false;
 
     IDirect3DDevice9* g_owner = nullptr;
@@ -37,11 +40,10 @@ namespace {
     // Set once the device refuses something; cleared on reset.
     bool g_refused = false;
 
-    // The frame the depth was last cleared for, and whether its projection could be read.
+    // The frame the depth was last cleared for, the pass that began it, and its projection.
     uint32_t g_depthFrame = kNone;
-    bool g_projection = false;
-    float g_verticalScale = 0.0f;
-    float g_depthOffset = 0.0f;
+    uint32_t g_depthPass = kNone;
+    float g_projection[16] = {};
     uint32_t g_colourFrame = kNone;
     uint32_t g_colourPass = kNone;
 
@@ -129,21 +131,19 @@ namespace {
         return true;
     }
 
-    // The projection the weapon draws with, if it is a perspective one.
-    bool ReadProjection(IDirect3DDevice9* device) {
-        float projection[16] = {};
+    // The projection a draw is about to use, if it is the weapon's.
+    bool ReadGunProjection(IDirect3DDevice9* device, float (&projection)[16]) {
         if (FAILED(device->GetVertexShaderConstantF(kProjectionRegister, projection, 4)) ||
-            std::abs(projection[14]) != 1.0f || projection[15] != 0.0f || projection[11] == 0.0f) {
+            std::abs(projection[14]) != 1.0f || projection[15] != 0.0f || projection[10] == 0.0f) {
             return false;
         }
-        g_verticalScale = projection[5];
-        g_depthOffset = projection[11];
-        return true;
+        const float nearest = -projection[11] / (projection[10] * projection[14]);
+        return nearest > 0.0f && nearest < kWeaponNearest;
     }
 
     // Binds our depth for one of the gun's depth draws, at half size over the whole depth range,
     // with every target the engine had bound taken off.
-    bool Begin(IDirect3DDevice9* device, const D3DVIEWPORT9& viewport) {
+    bool Begin(IDirect3DDevice9* device, const D3DVIEWPORT9& viewport, const float* projection) {
         DWORD writes = FALSE;
         if (viewport.Width != WeaponOverhaul::Frame::Width() ||
             viewport.Height != WeaponOverhaul::Frame::Height() ||
@@ -174,7 +174,8 @@ namespace {
         if (g_depthFrame != frame) {
             device->Clear(0, nullptr, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 1.0f, 0);
             g_depthFrame = frame;
-            g_projection = ReadProjection(device);
+            g_depthPass = WeaponOverhaul::Frame::PassSerial();
+            std::copy_n(projection, std::size(g_projection), g_projection);
         }
         const D3DVIEWPORT9 half = {viewport.X / 2, viewport.Y / 2, g_width, g_height, 0.0f, 1.0f};
         device->SetViewport(&half);
@@ -206,37 +207,52 @@ namespace {
                               startIndex, primitiveCount);
         };
         D3DVIEWPORT9 viewport = {};
-        if (!g_watching || FAILED(device->GetViewport(&viewport))) {
+        float projection[16] = {};
+        const bool squeezed = !WeaponOverhaul::Frame::PastSky();
+        if (!g_watching || FAILED(device->GetViewport(&viewport)) ||
+            (viewport.MaxZ < kWeaponFarthest) != squeezed ||
+            !ReadGunProjection(device, projection)) {
             return draw();
         }
 
         const uint32_t frame = WeaponOverhaul::Frame::Number();
         const Part part = {startIndex, primitiveCount, numVertices};
-        if (viewport.MaxZ < kWeaponFarthest) {
-            if (!WeaponOverhaul::Frame::PastSky() && Begin(device, viewport)) {
+        g_listener.beforeDraw(device, projection);
+        if (squeezed) {
+            if (Begin(device, viewport, projection)) {
                 Remember(frame, part);
                 draw();
                 End(device);
             }
-        } else if (WeaponOverhaul::Frame::PastSky() && g_colourFrame != frame &&
-                   IsGunPart(frame, part)) {
+        } else if (g_colourFrame != frame && IsGunPart(frame, part)) {
             g_colourFrame = frame;
             g_colourPass = WeaponOverhaul::Frame::PassSerial();
         }
-        return draw();
+        const HRESULT result = draw();
+        g_listener.afterDraw(device);
+        return result;
     }
 
     void OnScenePass(const WeaponOverhaul::Frame::Pass& pass) {
-        g_watching = WeaponOverhaul::Aim::Settled() > 0.0f || WeaponOverhaul::Aim::Scoped() > 0.0f;
-        if (g_watching && pass.serial == g_colourPass &&
-            g_depthFrame == WeaponOverhaul::Frame::Number() && g_projection) {
-            g_onGunPass(pass, {g_depth.texture, g_width, g_height, g_verticalScale, g_depthOffset});
+        g_watching = WeaponOverhaul::Aim::Settled() > 0.0f || WeaponOverhaul::Aim::Scoped() > 0.0f ||
+                     WeaponOverhaul::Aim::ScopeUp();
+        if (!g_watching || g_depthFrame != WeaponOverhaul::Frame::Number()) {
+            return;
+        }
+        const WeaponOverhaul::WeaponDraws::Depth depth = {
+            g_depth.texture, g_width, g_height, g_projection[5],
+            g_projection[10] * g_projection[14], g_projection[11]};
+        if (pass.serial == g_depthPass) {
+            g_listener.onDepthPass(pass, depth);
+        }
+        if (pass.serial == g_colourPass) {
+            g_listener.onGunPass(pass, depth);
         }
     }
 }
 
-bool WeaponOverhaul::WeaponDraws::Install(GunPassFn onGunPass) {
-    g_onGunPass = onGunPass;
+bool WeaponOverhaul::WeaponDraws::Install(const Listener& listener) {
+    g_listener = listener;
     return Frame::Install(&OnScenePass) &&
            Vtable::Hook(Vtable::kDrawIndexedPrimitive,
                         reinterpret_cast<void*>(&DrawIndexedPrimitiveDetour),
