@@ -47,10 +47,13 @@ float4 RadiusPS(float2 uv : TEXCOORD0) : COLOR0 {
 // The lens from twelve chords through the screen's centre, each two opposite hits on its rim. A
 // chord's midpoint is the lens's centre seen along it, and the product of its two halves is the
 // radius squared less the centre's distance squared. Chords a reticle line cut short are left out.
+// The centre is taken as found, so it moves with the scope; only the radius eases.
 float4 LensPS(float2 uv : TEXCOORD0) : COLOR0 {
-    float widest = 0.0f;
-    for (int i = 0; i < DIRECTIONS; i++) {
-        widest = max(widest, Radius(i));
+    float longest = 0.0f;
+    for (int i = 0; i < CHORDS; i++) {
+        float ahead = Radius(i);
+        float behind = Radius(i + CHORDS);
+        longest = max(longest, ahead > 0.0f && behind > 0.0f ? ahead + behind : 0.0f);
     }
     float2 centre = 0.0f;
     float product = 0.0f;
@@ -58,7 +61,7 @@ float4 LensPS(float2 uv : TEXCOORD0) : COLOR0 {
     for (int c = 0; c < CHORDS; c++) {
         float ahead = Radius(c);
         float behind = Radius(c + CHORDS);
-        float whole = ahead > 0.6f * widest && behind > 0.6f * widest ? 1.0f : 0.0f;
+        float whole = ahead > 0.0f && behind > 0.0f && ahead + behind > 0.8f * longest ? 1.0f : 0.0f;
         float angle = (c + 0.5f) / DIRECTIONS * TWO_PI;
         centre += whole * (ahead - behind) * 0.5f * float2(cos(angle), -sin(angle));
         product += whole * ahead * behind;
@@ -68,8 +71,8 @@ float4 LensPS(float2 uv : TEXCOORD0) : COLOR0 {
     float3 found = float3(sqrt(product / max(chords, 1.0f) + dot(centre, centre)), centre);
 
     float3 previous = tex2D(Lens, kCentre).xyz;
-    float3 eased = previous.x > 0.0f ? lerp(previous, found, Search.w) : found;
-    return float4(chords >= 3.0f ? eased : previous, 1.0f);
+    float radius = previous.x > 0.0f ? lerp(previous.x, found.x, Search.w) : found.x;
+    return float4(chords >= 3.0f ? float3(radius, found.yz) : previous, 1.0f);
 }
 
 // Multiplies the scene: dark where the lens is not covered by its clear part.

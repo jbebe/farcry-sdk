@@ -60,8 +60,8 @@ namespace {
     constexpr float kStiffness = 10.0f;
     constexpr float kDamping = 0.65f;
     constexpr float kSpringStep = 1.0f / 120.0f;
-    constexpr float kMostLag = 0.05f;
-    constexpr float kEyeReach = 0.4f;
+    constexpr float kMostLag = 0.03f;
+    constexpr float kEyeReach = 0.27f;
     constexpr float kCut = 0.5f;
 
     WeaponOverhaul::Aim::DriftFn g_drift = nullptr;
@@ -152,13 +152,14 @@ namespace {
         }
         // Where the scope points against the look, right and up of it; yaw is left.
         const float scopeRight = g_lookYaw - g_scopeYaw.at;
-        const float scopeUp = g_scopePitch.at - pitch;
-        const float behind = std::hypot(scopeRight, scopeUp);
-        if (behind > kCut) {
+        if (std::hypot(scopeRight, g_scopePitch.at - pitch) > kCut) {
             g_scopePitch = {pitch, 0.0f};
             g_scopeYaw = {g_lookYaw, 0.0f};
             return {};
         }
+        // Never above the look: that would lift the sight picture and show nothing holds it up.
+        const float scopeUp = (std::min)(g_scopePitch.at - pitch, 0.0f);
+        const float behind = std::hypot(scopeRight, scopeUp);
         // The eye moves against the scope, which moves the sight picture with it.
         const float lead = behind > 0.0f ? kMostLag * std::tanh(behind / kMostLag) / behind : 0.0f;
         return {-scopeRight * lead * kEyeReach, -scopeUp * lead * kEyeReach};
