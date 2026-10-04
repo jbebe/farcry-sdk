@@ -158,6 +158,18 @@ it does anything at all.
 two bytes from. `CInventoryViewPawn::GetEquippedWeapon` (`0x10127DA0`, `__thiscall`) returns it, and
 the pawn's inventory view is `*(pawn + 0x10) + 0x4F0`.
 
+The weapon's entity is behind an entity proxy at `+0x08`, at the proxy's `+0x0C`, and the entity's
+name, a `char*` at its `+0x14`, is its archetype's: `weapons.Primary.M16`, `weapons.Special.Dart_Rifle`,
+and so on. The server's `GetWeaponName` (`0x092F1730`) reads the same chain.
+
+When aiming stops, the iron-sight flag goes a few frames before `+0x84` does, and the sight picture
+is drawn until `+0x84` goes.
+
+:::info[Seen in a running game]
+Retail GOG v1.03, from an FCSE plugin: the names above came back for every weapon taken in hand. Of
+21 scope-ups traced, `+0x84` came on in the frame the iron sights' field-of-view weight reached one.
+:::
+
 What that means for a weapon's mesh is in
 [replacing a weapon](../modding/replacing-a-weapon.md#e-scope_hi-is-drawn-instead-of-the-rest-of-the-gun).
 

@@ -56,9 +56,13 @@ namespace {
     constexpr ptrdiff_t kOtherWeight = 0x10C;
     constexpr ptrdiff_t kOtherFov = 0x110;
 
-    // CFCXWeapon: the scope picture as last asked for, and whether the weapon has one.
+    // CFCXWeapon: the scope picture as last asked for, and whether the weapon has one; and its
+    // entity, through the proxy at +0x08, and that entity's name.
     constexpr ptrdiff_t kScopeShown = 0x84;
     constexpr ptrdiff_t kHiResScope = 0x85;
+    constexpr ptrdiff_t kWeaponProxy = 0x08;
+    constexpr ptrdiff_t kProxyEntity = 0x0C;
+    constexpr ptrdiff_t kEntityName = 0x14;
 
     // Seconds to settle into the sights, and to let go of them.
     constexpr float kSettle = 0.4f;
@@ -84,6 +88,11 @@ namespace {
     std::atomic<bool> g_scopeUp{false};
     std::atomic<uint32_t> g_scopeUps{0};
 
+    // The equipped weapon as last seen, its name, and how many times it has changed.
+    uint8_t* g_weapon = nullptr;
+    char g_weaponName[64] = {};
+    std::atomic<uint32_t> g_weaponChanges{0};
+
     // What was added to the eye during the camera update under way, and to which camera.
     uint8_t* g_addedTo = nullptr;
     WeaponOverhaul::Aim::Offset g_added = {};
@@ -108,6 +117,34 @@ namespace {
 
     float Approach(float value, bool toward, float step) {
         return std::clamp(value + (toward ? step : -step), 0.0f, 1.0f);
+    }
+
+    // Copies the name of the weapon's entity, or leaves it empty where the engine's pointers do not
+    // hold.
+    void ReadName(uint8_t* weapon, char (&name)[64]) {
+        name[0] = '\0';
+        __try {
+            uint8_t* proxy = weapon != nullptr ? Field<uint8_t*>(weapon, kWeaponProxy) : nullptr;
+            uint8_t* entity = proxy != nullptr ? Field<uint8_t*>(proxy, kProxyEntity) : nullptr;
+            const char* text = entity != nullptr ? Field<const char*>(entity, kEntityName) : nullptr;
+            for (size_t i = 0; text != nullptr && i + 1 < sizeof(name) && text[i] != '\0'; i++) {
+                name[i] = text[i];
+                name[i + 1] = '\0';
+            }
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            name[0] = '\0';
+        }
+    }
+
+    // Notes the equipped weapon's name each time it changes.
+    void FollowWeapon(uint8_t* pawnData) {
+        uint8_t* weapon = g_equippedWeapon(pawnData + kInventory);
+        if (weapon == g_weapon) {
+            return;
+        }
+        g_weapon = weapon;
+        ReadName(weapon, g_weaponName);
+        g_weaponChanges++;
     }
 
     // The equipped weapon if it has a scope's sight picture of its own, else null.
@@ -149,8 +186,9 @@ namespace {
 
         uint8_t* data = Field<uint8_t*>(pawn, kPawnData);
         const bool sights = (Field<uint8_t>(data, kEffectiveFlags) & kIronsight) != 0;
+        // The scope's sight picture outlasts the iron sights by a few frames as the scope goes.
         uint8_t* weapon = ScopedWeapon(data);
-        const bool scope = sights && weapon != nullptr && Field<uint8_t>(weapon, kScopeShown) != 0;
+        const bool scope = weapon != nullptr && Field<uint8_t>(weapon, kScopeShown) != 0;
         const float step = seconds / kSettle;
         // The iron sights let go at once when a scope's own sight picture comes up, and the scope
         // when it goes.
@@ -165,6 +203,7 @@ namespace {
         }
         g_scopeUp = scope;
         FollowLook(pawn, data, seconds);
+        FollowWeapon(data);
 
         // Down the iron sights the eye drifts off the gun. To a scope it comes forward as far as
         // the scope has been raised, and all the way once the sight picture is up.
@@ -242,6 +281,14 @@ void WeaponOverhaul::Aim::SetZoomAtOnce(bool atOnce) {
 
 void WeaponOverhaul::Aim::SetRaiseReach(float metres) {
     g_raiseReach = metres;
+}
+
+const char* WeaponOverhaul::Aim::WeaponName() {
+    return g_weaponName;
+}
+
+uint32_t WeaponOverhaul::Aim::WeaponChanges() {
+    return g_weaponChanges;
 }
 
 float WeaponOverhaul::Aim::Settled() {

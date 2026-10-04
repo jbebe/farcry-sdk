@@ -18,7 +18,8 @@ struct Opening {
     float rim;
 };
 
-// Drops the engine's scope once its housing's draw says which scope it is.
+// While its sight picture is up, drops the draws of the weapon in hand, which its name says the
+// scope of.
 bool BeforeGunDraw(IDirect3DDevice9* device, const WeaponDraws::Call& call);
 
 // Lays the reticle and the body over the finished frame.

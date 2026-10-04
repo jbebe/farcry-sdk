@@ -1,9 +1,11 @@
-// Measured off each weapon's SCOPE_HI part from its aim bank's eye: the housing's draw in the gun's
-// depth pass, the lens, and the reticle's triangles, as the engine draws them.
+// Measured off each weapon's meshes from its aim bank's eye: its nearest detail's vertices, the
+// lens, the reticle's triangles as the engine draws them, and the raise.
 #include "scopes.h"
 
 #include "shape_ar16.h"
 #include "shape_mgl140.h"
+
+#include <string_view>
 
 namespace {
     using WeaponOverhaul::Scopes::Look;
@@ -199,29 +201,27 @@ namespace {
     constexpr float kThickRim = 0.5f;
 
     constexpr Scope kScopes[] = {
-        // Dart Rifle
-        {2016, 9541, kThinRim, -0.00284f, -0.00148f, kDartRiflePieces, {}, 0.06f},
-        // M1903
-        {1488, 7332, kThinRim, -0.00061f, -0.00025f, kM1903Pieces, {}, 0.0995f},
-        // Dragunov
-        {2088, 10167, kThickRim, -0.00254f, -0.02073f, kDragunovPieces, {}, 0.1819f},
-        // AS50
-        {1800, 11034, kThickRim, 0.00222f, -0.00248f, kAS50Pieces, {}, 0.1058f},
-        // AR-16, whose eyecup it shares with the MGL-140, seen from further back
-        {3113, 12361, kThinRim, -0.00474f, -0.00087f, kAR16Pieces, g_ar16Shape, 0.01f},
-        // MGL-140
-        {2700, 13074, kThinRim, -0.00275f, 0.00213f, kMGL140Pieces, g_mgl140Shape, 0.0842f},
+        {"weapons.Special.Dart_Rifle", 9541, kThinRim, -0.00284f, -0.00148f, kDartRiflePieces, {},
+         0.06f},
+        {"weapons.Special.M1903", 7332, kThinRim, -0.00061f, -0.00025f, kM1903Pieces, {}, 0.0995f},
+        {"weapons.Primary.Dragunov", 10167, kThickRim, -0.00254f, -0.02073f, kDragunovPieces, {},
+         0.1819f},
+        {"weapons.Primary.AS50", 11034, kThickRim, 0.00222f, -0.00248f, kAS50Pieces, {}, 0.1058f},
+        // The AR-16's eyecup is the MGL-140's, seen from further back.
+        {"weapons.Primary.M16", 12361, kThinRim, -0.00474f, -0.00087f, kAR16Pieces, g_ar16Shape,
+         0.0f},
+        {"weapons.Primary.MGL140", 13074, kThinRim, -0.00275f, 0.00213f, kMGL140Pieces,
+         g_mgl140Shape, 0.0842f},
     };
 }
 
-const WeaponOverhaul::Scopes::Scope* WeaponOverhaul::Scopes::Find(UINT primitives, UINT vertices) {
-    const Scope* scope = InHand(vertices);
-    return scope != nullptr && scope->primitives == primitives ? scope : nullptr;
-}
-
-const WeaponOverhaul::Scopes::Scope* WeaponOverhaul::Scopes::InHand(UINT vertices) {
+const WeaponOverhaul::Scopes::Scope* WeaponOverhaul::Scopes::Find(const char* weaponName) {
+    // The archetype's own name, or one of its variants under it.
+    const std::string_view name = weaponName;
     for (const Scope& scope : kScopes) {
-        if (scope.vertices == vertices) {
+        const std::string_view archetype = scope.weapon;
+        if (name.starts_with(archetype) &&
+            (name.size() == archetype.size() || name[archetype.size()] == '.')) {
             return &scope;
         }
     }

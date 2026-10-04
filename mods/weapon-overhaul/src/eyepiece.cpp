@@ -1,4 +1,4 @@
-// The engine's scope is dropped once its housing's draw says which scope it is; the composite then
+// The engine's scope is dropped once the weapon in hand says which scope it is; the composite then
 // draws that scope's reticle from the textures the engine drew it with, and the body over it.
 #include "eyepiece.h"
 
@@ -41,18 +41,17 @@ namespace {
     // The most pieces a reticle has.
     constexpr size_t kMostPieces = 4;
 
-    // One scope-up, from the engine's draws. Vertex buffers are compared and never dereferenced.
+    // The scope of the weapon in hand, the vertex buffer the weapon draws from once one of its
+    // draws has shown it, compared and never dereferenced, and the change of weapon they are for;
+    // and the change a weapon with an unknown scope was last named for.
+    const Scope* g_inHand = nullptr;
+    const void* g_inHandVertices = nullptr;
+    uint32_t g_inHandFor = WeaponOverhaul::Frame::kNever;
+    uint32_t g_strangerFor = WeaponOverhaul::Frame::kNever;
+
+    // One scope-up, from the engine's draws.
     struct ScopeUp {
         uint32_t number;
-        // The scope, once its housing's draw is known, and the vertex buffer it draws from.
-        const Scope* scope;
-        const void* vertices;
-        // Until then, the vertex buffer an alpha-tested draw used, and the size of its last other
-        // draw in the gun's depth pass, which a scope's housing would be.
-        const void* stranger;
-        UINT primitives;
-        UINT numVertices;
-        bool logged;
         // The texture each piece of the reticle was drawn with, and the frame it was.
         IDirect3DBaseTexture9* textures[kMostPieces];
         uint32_t textureFrames[kMostPieces];
@@ -84,22 +83,26 @@ namespace {
         }
     }
 
-    // How far the eye comes forward as the weapon in hand raises its scope.
-    void FollowRaise(const WeaponOverhaul::WeaponDraws::Call& call) {
-        if (const Scope* scope = WeaponOverhaul::Scopes::InHand(call.numVertices)) {
-            WeaponOverhaul::Aim::SetRaiseReach(scope->raiseReach);
+    // The scope of the weapon in hand, and how far the eye comes forward as it is raised.
+    void FollowWeapon() {
+        const uint32_t changes = WeaponOverhaul::Aim::WeaponChanges();
+        if (changes != g_inHandFor) {
+            g_inHandFor = changes;
+            g_inHand = WeaponOverhaul::Scopes::Find(WeaponOverhaul::Aim::WeaponName());
+            g_inHandVertices = nullptr;
+            WeaponOverhaul::Aim::SetRaiseReach(g_inHand != nullptr ? g_inHand->raiseReach : 0.0f);
         }
     }
 
-    // Names a scope that is drawn as the game draws it for want of being known, once a scope-up.
+    // Names a weapon whose scope is drawn as the game draws it for want of being known, once each
+    // time it is taken in hand.
     void LogStranger() {
-        if (g_up.scope != nullptr || g_up.primitives == 0 || g_up.logged) {
-            return;
+        if (g_strangerFor != g_inHandFor) {
+            g_strangerFor = g_inHandFor;
+            FCSE::Logf("eyepiece: the scope on \"%s\" is not known, so it is drawn as the game "
+                       "draws it",
+                       WeaponOverhaul::Aim::WeaponName());
         }
-        g_up.logged = true;
-        FCSE::Logf("eyepiece: a scope whose housing draws %u primitives over %u vertices is not "
-                   "known, so it is drawn as the game draws it",
-                   g_up.primitives, g_up.numVertices);
     }
 
     // The scope's own shape, made the first time it is asked for; null for a plain ring.
@@ -170,38 +173,29 @@ bool WeaponOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
     if (!g_enabled) {
         return true;
     }
-    if (!Aim::ScopeUp()) {
-        if (call.depthPass) {
-            FollowRaise(call);
+    FollowWeapon();
+    if (g_inHand == nullptr) {
+        if (Aim::ScopeUp()) {
+            LogStranger();
         }
         return true;
     }
-    Follow();
     IDirect3DVertexBuffer9* stream = nullptr;
     UINT offset = 0;
     UINT stride = 0;
     device->GetStreamSource(0, &stream, &offset, &stride);
     const void* vertices = Borrowed(stream);
-    DWORD alphaTest = FALSE;
-    device->GetRenderState(D3DRS_ALPHATESTENABLE, &alphaTest);
-
-    if (g_up.scope == nullptr) {
-        if (alphaTest) {
-            g_up.stranger = vertices;
-        } else if (call.depthPass) {
-            if ((g_up.scope = Scopes::Find(call.primitiveCount, call.numVertices)) != nullptr) {
-                g_up.vertices = vertices;
-            } else if (vertices == g_up.stranger) {
-                g_up.primitives = call.primitiveCount;
-                g_up.numVertices = call.numVertices;
-            }
-        }
+    if (call.numVertices == g_inHand->vertices) {
+        g_inHandVertices = vertices;
     }
-    if (g_up.scope == nullptr || vertices != g_up.vertices) {
+    if (!Aim::ScopeUp() || vertices != g_inHandVertices) {
         return true;
     }
+    Follow();
+    DWORD alphaTest = FALSE;
+    device->GetRenderState(D3DRS_ALPHATESTENABLE, &alphaTest);
     // A piece of the reticle is told by its draw's size and whether the engine alpha-tests it.
-    const std::span<const Scopes::Piece> pieces = g_up.scope->pieces;
+    const std::span<const Scopes::Piece> pieces = g_inHand->pieces;
     for (size_t i = 0; i < pieces.size() && i < kMostPieces; i++) {
         if (pieces[i].triangles.size() / 3 == call.primitiveCount &&
             (pieces[i].look == Scopes::Look::Black) == (alphaTest != FALSE)) {
@@ -215,13 +209,12 @@ bool WeaponOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
 }
 
 void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
-    LogStranger();
     const std::optional<Opening> opening = Open();
     IDirect3DPixelShader9* body = opening ? g_bodyShader.Get(device) : nullptr;
     if (body == nullptr) {
         return;
     }
-    const Scope& scope = *g_up.scope;
+    const Scope& scope = *g_inHand;
     IDirect3DTexture9* shape = ShapeFor(device, scope);
     const float width = static_cast<float>(Frame::Width());
     const float height = static_cast<float>(Frame::Height());
@@ -254,10 +247,10 @@ void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
 }
 
 std::optional<WeaponOverhaul::Eyepiece::Opening> WeaponOverhaul::Eyepiece::Open() {
-    if (!g_enabled || !Aim::ScopeUp() || g_up.number != Aim::ScopeUps() || g_up.scope == nullptr) {
+    if (!g_enabled || !Aim::ScopeUp() || g_inHand == nullptr) {
         return std::nullopt;
     }
-    const Scope& scope = *g_up.scope;
+    const Scope& scope = *g_inHand;
     const float radius = kBodyRadius / (1.0f + scope.rim);
     const Aim::Swing swing = Aim::ScopeSwing();
     return Opening{(kTrail * swing.x + scope.lensX) * radius,

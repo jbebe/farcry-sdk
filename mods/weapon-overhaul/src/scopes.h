@@ -1,5 +1,5 @@
-// The scopes drawn from their eyepiece, told apart by their housing's draw in the gun's depth pass,
-// with what was measured off their meshes from the eye.
+// The scopes drawn from their eyepiece, by the weapon that carries them, with what was measured off
+// their meshes from the eye.
 #pragma once
 
 #include <d3d9.h>
@@ -26,7 +26,10 @@ struct Piece {
 };
 
 struct Scope {
-    UINT primitives;
+    // The weapon's archetype, which its entity is named after.
+    const char* weapon;
+    // How many vertices the weapon's larger draws take, all of its nearest detail's buffer, which
+    // tells that buffer from anything else drawn in first person.
     UINT vertices;
     // The black rim around the opening, as a share of the opening's radius.
     float rim;
@@ -45,10 +48,7 @@ inline constexpr UINT kShapeSize = 128;
 inline constexpr float kShapeReach = 2.0f;
 inline constexpr float kShapeSpan = 0.5f;
 
-// The scope whose housing draws this much, if it is one of them.
-const Scope* Find(UINT primitives, UINT vertices);
-
-// The scope of the weapon whose meshes draw from this many vertices, if it is one of them.
-const Scope* InHand(UINT vertices);
+// The scope of the weapon whose entity has this name, if it is one of them.
+const Scope* Find(const char* weaponName);
 
 }
