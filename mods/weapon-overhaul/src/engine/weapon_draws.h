@@ -1,5 +1,5 @@
-// The first-person weapon's draws: its depth, drawn a second time into a texture of our own, the end
-// of the passes its depth and colour are drawn in, and each of its draws as it happens.
+// The first-person weapon's draws: its depth, drawn a second time into a texture of our own, the
+// pass its colour is drawn in, and each of its draws as it happens.
 //
 // See docs/docs/engine-internals/presentation-and-input.md for the passes.
 #pragma once
@@ -43,20 +43,15 @@ struct Call {
 
 using GunPassFn = void (*)(const Frame::Pass& pass, const Depth& depth);
 // False drops the draw.
-using GunDrawFn = bool (*)(IDirect3DDevice9* device, const Projection& projection, const Call& call);
+using GunDrawFn = bool (*)(IDirect3DDevice9* device, const Call& call);
 using DeviceFn = void (*)(IDirect3DDevice9* device);
 
 struct Listener {
-    // As the first pass with the gun's depth in it ends, the depth complete but for cut-outs, which
-    // come in a pass of their own.
-    GunPassFn onDepthPass;
     // As the gun's colour pass begins, before its first draw, and as it ends.
     DeviceFn beforeColour;
     GunPassFn onGunPass;
-    // Around each of the gun's draws, depth and colour; `afterDraw` puts back what `beforeDraw`
-    // changed, and is not called for a dropped draw.
+    // Before each of the gun's draws, depth and colour.
     GunDrawFn beforeDraw;
-    DeviceFn afterDraw;
     // As the frame's tone-mapped image is finished in the back buffer, under the interface.
     DeviceFn onComposite;
 };

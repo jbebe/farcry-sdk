@@ -22,18 +22,13 @@ endif()
 
 # source file : entry point : profile : generated header : array name.
 set(SHADER_PASSES
-  "full_quad.fx:MainVS:vs_3_0:full_quad_vs.h:g_fullQuadVertexShader"
   "blur.fx:FocusPS:ps_2_b:blur_focus_ps.h:g_blurFocusPixelShader"
   "blur.fx:DownPS:ps_2_b:blur_down_ps.h:g_blurDownPixelShader"
   "blur.fx:BlurPS:ps_2_b:blur_blur_ps.h:g_blurPixelShader"
   "blur.fx:CompositePS:ps_2_b:blur_composite_ps.h:g_blurCompositePixelShader"
-  "lens.fx:RadiusPS:ps_3_0:scope_radius_ps.h:g_scopeRadiusPixelShader"
-  "lens.fx:LensPS:ps_3_0:scope_lens_ps.h:g_scopeLensPixelShader"
-  "scope.fx:ShadowPS:ps_2_b:scope_shadow_ps.h:g_scopeShadowPixelShader"
-  "eyepiece.fx:DepthPS:ps_2_0:eyepiece_depth_ps.h:g_eyepieceDepthPixelShader"
-  "eyepiece.fx:ReticlePS:ps_2_b:eyepiece_reticle_ps.h:g_eyepieceReticlePixelShader"
+  "scope.fx:ShadowPS:ps_2_0:scope_shadow_ps.h:g_scopeShadowPixelShader"
+  "eyepiece.fx:ReticlePS:ps_2_0:eyepiece_reticle_ps.h:g_eyepieceReticlePixelShader"
   "eyepiece.fx:BodyPS:ps_2_0:eyepiece_body_ps.h:g_eyepieceBodyPixelShader"
-  "eyepiece.fx:HousingPS:ps_2_0:eyepiece_housing_ps.h:g_eyepieceHousingPixelShader"
   "surroundings.fx:SurroundingsPS:ps_2_0:surroundings_ps.h:g_surroundingsPixelShader")
 
 set(SHADER_HEADERS "")
@@ -57,12 +52,24 @@ foreach(PASS IN LISTS SHADER_PASSES)
   list(APPEND SHADER_HEADERS "${HEADER}")
 endforeach()
 
+# Each scope's own eyepiece shape, raw bytes, embedded as a header; rewritten only when it changes.
+foreach(SHAPE IN ITEMS ar16 mgl140)
+  set(SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/shapes/${SHAPE}.a8")
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${SOURCE}")
+  file(READ "${SOURCE}" BYTES HEX)
+  string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," BYTES "${BYTES}")
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/shape_${SHAPE}.h.new"
+       "inline constexpr unsigned char g_${SHAPE}Shape[] = {${BYTES}};\n")
+  configure_file("${CMAKE_CURRENT_BINARY_DIR}/shape_${SHAPE}.h.new"
+                 "${CMAKE_CURRENT_BINARY_DIR}/generated/shape_${SHAPE}.h" COPYONLY)
+endforeach()
+
 add_library(WeaponOverhaul SHARED
   "src/main.cpp"
   "src/blur.cpp"
   "src/eyepiece.cpp"
-  "src/scope_lens.cpp"
   "src/scope_shadow.cpp"
+  "src/scopes.cpp"
   "src/surroundings.cpp"
   "src/sway.cpp"
   "src/engine/aim.cpp"

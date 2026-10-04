@@ -17,23 +17,19 @@ of view.
   blur spills a little past the gun's edge. It fades in as the eye settles into the sights. A gun
   held far from the eye, like a pistol, has its sights too close together in dioptres for a blur
   you could see, and gets none, as a real eye nearly does.
-- **Scope shadow.** As the look turns, a soft dark crescent comes in from the lens's rim on the
+- **Scope shadow.** As the look turns, a soft dark crescent comes in from the eyepiece's rim on the
   side turned toward: hardly any on a slow move, a slight one on a fast flick, gone when the look is
-  still or the scope comes down. The scope itself moves only as the game moves it. The lens, its
-  centre and its radius, is found on screen as the hole the scope's housing leaves in the gun's
-  depth, so it fits every scope.
+  still or the scope comes down. It needs the eyepiece, whose opening it shades.
 - **Eyepiece.** The engine draws a scope as a tube seen down its length, with the reticle and the
   zoomed view far at its end. Here the tube is not drawn. Every scope looks the same size instead:
   a pitch-black, out-of-focus body whose outer edge spans 80% of the screen's height, with a black
   mount below it down to the screen's foot, and the zoomed view filling its opening. The sniper
   scopes are a plain ring, thin on the Dart Rifle and the M1903 and thicker on the Dragunov and the
-  AS50. Any other scope, such as the AR-16's and the MGL-140's, which are not round, also shows its
-  own first few centimetres, black and out of focus, shrunk to the same opening. The reticle
-  grows with the opening so it sits in it as it sat in the lens, stays on the scope, and is pitch
-  black and a little soft. The magnification is unchanged. Once a scope has come up and settled, its
-  depth is read back until two readings agree, and what is found is kept for that scope; the body
-  follows the engine's own scope on screen, so it moves only as the game moves it. The body and the
-  reticle are laid over the finished frame, after the tone mapping, so nothing lightens them.
+  AS50; the AR-16's and the MGL-140's, which are not round, also show their eyepiece's own shape. The
+  reticle is the scope's own, drawn from the game's texture in its own colours, and fills the
+  opening as it filled the lens. The magnification is unchanged. The scope is laid over the
+  finished frame, after the tone mapping, and trails the look a little as it turns. A scope the
+  plugin does not know is drawn as the game draws it, and named in `fcse.log`.
 - **Surroundings.** Around the eyepiece the world is seen at the field of view the eye has without
   a scope, as with both eyes open, while the eyepiece keeps the scope's magnified view. The
   surroundings are a second, cheaper view drawn by the engine's water reflection renderer, at half
@@ -43,10 +39,9 @@ The eye is moved through the camera's positional offset, the one the recoil kick
 `src/engine/aim.cpp`. The blur draws the gun's own depth pass a second time into a depth texture of
 its own, in `src/engine/weapon_draws.cpp`, and the blur and the scope shadow draw at the end of the
 pass the gun's colour is drawn in, before the bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
-The lens is found as the gun's depth pass ends, in `src/scope_lens.cpp`. The eyepiece drops the
-scope's housing and scales the reticle's draws in clip space, in `src/eyepiece.cpp`. The second
-view is drawn
-in `src/engine/second_view.cpp` and laid down as the gun's colour pass begins, in
+The eyepiece drops the engine's scope and draws its own over the finished frame, in
+`src/eyepiece.cpp`, from what was measured off each scope's mesh, in `src/scopes.cpp`. The second
+view is drawn in `src/engine/second_view.cpp` and laid down as the gun's colour pass begins, in
 `src/surroundings.cpp`. The engine side is in
 [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md) and
 [presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).

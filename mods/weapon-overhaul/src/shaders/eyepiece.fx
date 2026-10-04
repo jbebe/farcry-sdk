@@ -1,74 +1,44 @@
-// The eyepiece's screen passes: the gun's depth copied where it can be read back, and the scope's
-// body and the reticle laid over the finished frame, black and soft.
+// The scope laid over the finished frame: its reticle, from the texture the engine draws it with,
+// and its body, black and soft. See src/eyepiece.cpp.
 
-// x, y: one pixel across and down, in texture coordinates. z: the reticle's softness, a radius in
-// pixels. w: the screen's width over its height.
-float4 Soften : register(c0);
-// x: how much the softened coverage is strengthened. y: the smallest radius taken for a lens, z: the
-// radius the reticle shows within, both in screen heights.
-float4 Ink : register(c1);
-// The scope's body, in screen heights: x its opening's radius as drawn, y its outer edge's, z the
-// mount's half-width, w its softness.
+// rgb: the colour the reticle's texture is drawn in. w: one for a piece the engine alpha-tests.
+float4 Look : register(c0);
+// x: the screen's width over its height. yz: the lens's centre off the screen's, y down. w: its
+// radius. All in screen heights.
+float4 Lens : register(c1);
+// The body, in lens radii: x its opening's radius as drawn, y its outer edge's, z the mount's
+// half-width, w its softness.
 float4 Body : register(c2);
+// xy: the look's centre off the lens's, in lens radii, y down. z: the shape field's width and w the
+// distances its bytes span, in lens radii; z is nought for a scope with no shape of its own.
+float4 Shape : register(c3);
 
-// The reticle's mask, nought where it was drawn; or the housing's, softened.
-sampler2D Mask : register(s0);
-// The weapon's hardware depth at half resolution, one where the weapon is not.
-sampler2D WeaponDepth : register(s3);
-// The opening as ScopeLens found it: x its radius, yz its centre off the screen's, y down,
-// all in screen heights.
-sampler2D Lens : register(s5);
+sampler2D Reticle : register(s0);
+// The eyepiece's shape as a distance field; see src/scopes.h.
+sampler2D ShapeField : register(s1);
 
-// A disc of taps around the pixel, at half and whole radius.
-static const float2 kDisc[12] = {
-    float2(1.0f, 0.0f),     float2(0.5f, 0.866f),   float2(-0.5f, 0.866f),
-    float2(-1.0f, 0.0f),    float2(-0.5f, -0.866f), float2(0.5f, -0.866f),
-    float2(0.433f, 0.25f),  float2(0.0f, 0.5f),     float2(-0.433f, 0.25f),
-    float2(-0.433f, -0.25f), float2(0.0f, -0.5f),   float2(0.433f, -0.25f),
-};
-
-// Into a float target, which unlike the depth texture can be read back.
-float4 DepthPS(float2 uv : TEXCOORD0) : COLOR0 {
-    return tex2D(WeaponDepth, uv).r;
+// Within the opening only, where the engine's housing would have hidden the rest. Wherever the
+// engine's alpha test passes, at least, the piece is wholly covered; below that its cover fades, so
+// that its edges are smooth and its thin lines kept as the texture is minified.
+float4 ReticlePS(float2 uv : TEXCOORD0, float2 screen : TEXCOORD1) : COLOR0 {
+    float2 at = ((screen - 0.5f) * float2(Lens.x, 1.0f) - Lens.yz) / Lens.w;
+    clip(1.0f - length(at));
+    float4 texel = tex2D(Reticle, uv);
+    float cover = lerp(texel.a, saturate(2.0f * texel.a), Look.w);
+    return float4(texel.rgb * Look.rgb, cover);
 }
 
-// The softened housing covers half of its edge; doubled, it is wholly black from there out, and its
-// soft edge lies over the opening rather than leaving a light seam inside it.
-static const float kHousingInk = 2.0f;
-
-// Black, as much as the softened housing covers the pixel.
-float4 HousingPS(float2 uv : TEXCOORD0) : COLOR0 {
-    float ink = saturate(kHousingInk * (1.0f - tex2D(Mask, uv).r));
-    clip(ink - 0.002f);
-    return float4(0.0f, 0.0f, 0.0f, ink);
-}
-
-// Black over the scope's body, around the lens's centre: a ring around the opening, and a mount from
-// its centre down past the screen's foot, each with a soft edge.
+// Black over the scope's body around the lens: a ring around the opening, a mount from its centre
+// down past the screen's foot, and the eyepiece's own shape, each with a soft edge.
 float4 BodyPS(float2 uv : TEXCOORD0) : COLOR0 {
-    float3 lens = tex2D(Lens, float2(0.5f, 0.5f)).xyz;
-    float2 at = (uv - 0.5f) * float2(Soften.w, 1.0f) - lens.yz;
+    float2 at = ((uv - 0.5f) * float2(Lens.x, 1.0f) - Lens.yz) / Lens.w;
     float distance = length(at);
-    float opening = distance - Body.x;
-    float outside = distance - Body.y;
-    float mount = max(abs(at.x) - Body.z, -at.y);
-    float ink = smoothstep(-Body.w, Body.w, opening) *
-                (1.0f - smoothstep(-Body.w, Body.w, min(outside, mount)));
-    clip(ink - 0.002f);
-    return float4(0.0f, 0.0f, 0.0f, ink);
-}
-
-// Black, as much as the softened reticle covers the pixel, within the scope's body; the body and
-// the housing darken what of it reaches past the opening anyway.
-float4 ReticlePS(float2 uv : TEXCOORD0) : COLOR0 {
-    float3 lens = tex2D(Lens, float2(0.5f, 0.5f)).xyz;
-    float2 at = (uv - 0.5f) * float2(Soften.w, 1.0f) - lens.yz;
-    float inside = lens.x >= Ink.y ? 1.0f - smoothstep(0.98f * Ink.z, Ink.z, length(at)) : 1.0f;
-    float cover = 1.0f - tex2D(Mask, uv).r;
-    for (int i = 0; i < 12; i++) {
-        cover += 1.0f - tex2D(Mask, uv + kDisc[i] * Soften.xy * Soften.z).r;
-    }
-    float ink = saturate(cover / 13.0f * Ink.x) * inside;
+    float ring = smoothstep(-Body.w, Body.w, distance - Body.x) *
+                 (1.0f - smoothstep(-Body.w, Body.w, min(distance - Body.y,
+                                                         max(abs(at.x) - Body.z, -at.y))));
+    float2 field = (at - Shape.xy) / max(Shape.z, 0.001f) + 0.5f;
+    float inside = (tex2D(ShapeField, field).r - 0.5f) * Shape.w;
+    float ink = max(ring, step(0.001f, Shape.z) * smoothstep(-Body.w, Body.w, inside));
     clip(ink - 0.002f);
     return float4(0.0f, 0.0f, 0.0f, ink);
 }

@@ -19,16 +19,19 @@ public:
     ScreenDraw(const ScreenDraw&) = delete;
     ScreenDraw& operator=(const ScreenDraw&) = delete;
 
+    // A point of a draw, in pixels, and its texture coordinates.
+    struct Vertex {
+        float x, y;
+        float u, v;
+    };
+
     // A quad over the rectangle, in pixels, with texture coordinates running zero to one across it.
-    // Pairs only with a ps_2_x pixel shader.
+    // Pairs only with a ps_2_x pixel shader, as Triangles does.
     void Quad(float left, float top, float right, float bottom);
 
-    // A quad over the whole viewport through a vertex shader of its own, for a ps_3_0 pixel shader
-    // that finds its pixel by VPOS. False if the device would not make that shader.
-    bool FullQuad();
-
-    // Drops the vertex shader and declaration FullQuad keeps, which its next call makes again.
-    static void ReleaseDeviceObjects();
+    // A list of triangles, three vertices each. Their second texture coordinates run zero to one
+    // across the viewport.
+    void Triangles(const Vertex* vertices, UINT count);
 
 private:
     static constexpr UINT kMaxConstantRegisters = 8;

@@ -2,14 +2,12 @@
 // scope trails it.
 #pragma once
 
-#include "engine/weapon_draws.h"
-#include "scope_lens.h"
+#include "engine/frame.h"
 
 namespace WeaponOverhaul::ScopeShadow {
 
-// Draws over the lens ScopeLens found as the gun's colour pass ends, before the bloom reads the
-// frame, and only through the glass: where `walls` show no housing.
-void OnGunPass(const Frame::Pass& pass, const ScopeLens::Walls& walls);
+// Draws over the eyepiece's opening as the gun's colour pass ends, before the bloom reads the frame.
+void OnGunPass(const Frame::Pass& pass);
 
 void SetEnabled(bool enabled);
 

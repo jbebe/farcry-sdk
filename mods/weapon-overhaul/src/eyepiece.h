@@ -1,32 +1,31 @@
-// A scope seen from its eyepiece at the same size for every scope: the engine's housing gives way to
-// a black, out-of-focus body with a mount below it, the world fills the opening, and the reticle
-// grows with the opening, black and soft. The shipped sniper scopes are a plain ring; any other
-// keeps its own housing's shape, black and soft too.
+// A scope seen from its eyepiece, the same size for every scope: the engine's scope gives way to a
+// black, soft body with a mount below it and the scope's own reticle in its opening, laid over the
+// finished frame and trailing the look a little as it turns.
 #pragma once
 
 #include "engine/weapon_draws.h"
-#include "scope_lens.h"
+
+#include <optional>
 
 namespace WeaponOverhaul::Eyepiece {
 
-// Measures a scope from its depth once it has come up and settled, and keeps what it found for the
-// next time it comes up.
-void OnDepthPass(const Frame::Pass& pass, const WeaponDraws::Depth& depth);
+// The opening on screen: its centre off the screen's, x right and y down, and its radius, in screen
+// heights; and the body's black rim around it, as a share of its radius.
+struct Opening {
+    float x;
+    float y;
+    float radius;
+    float rim;
+};
 
-// Drops the scope's housing, sends the reticle's draws into a mask of its own, and puts back what
-// that changed.
-bool BeforeGunDraw(IDirect3DDevice9* device, const WeaponDraws::Projection& projection,
-                   const WeaponDraws::Call& call);
-void AfterGunDraw(IDirect3DDevice9* device);
+// Drops the engine's scope once its housing's draw says which scope it is.
+bool BeforeGunDraw(IDirect3DDevice9* device, const WeaponDraws::Call& call);
 
-// Lays the scope's body, its housing and the reticle over the finished frame, black and soft.
+// Lays the reticle and the body over the finished frame.
 void OnComposite(IDirect3DDevice9* device);
 
-// Whether a scope is drawn from its eyepiece this frame.
-bool Active();
-
-// What the lens is found in this frame: the housing as drawn here once it is, else the gun's depth.
-ScopeLens::Walls Walls(const WeaponDraws::Depth& depth);
+// The opening this frame, while a scope is drawn from its eyepiece.
+std::optional<Opening> Open();
 
 void SetEnabled(bool enabled);
 

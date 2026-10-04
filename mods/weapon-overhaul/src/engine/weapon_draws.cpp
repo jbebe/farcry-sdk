@@ -40,9 +40,8 @@ namespace {
     // Set once the device refuses something; cleared on reset.
     bool g_refused = false;
 
-    // The frame the depth was last cleared for, the pass that began it, and its projection.
+    // The frame the depth was last cleared for, and its projection.
     uint32_t g_depthFrame = kNever;
-    uint32_t g_depthPass = kNever;
     Projection g_projection = {};
     // The frame the gun's colour last began in, and the frame and pass it was recognised in.
     uint32_t g_colourStart = kNever;
@@ -180,7 +179,6 @@ namespace {
         if (g_depthFrame != frame) {
             device->Clear(0, nullptr, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 1.0f, 0);
             g_depthFrame = frame;
-            g_depthPass = WeaponOverhaul::Frame::PassSerial();
             g_projection = projection;
         }
         const D3DVIEWPORT9 half = {viewport.X / 2, viewport.Y / 2, g_width, g_height, 0.0f, 1.0f};
@@ -239,12 +237,10 @@ namespace {
                 g_colourPass = WeaponOverhaul::Frame::PassSerial();
             }
         }
-        if (!g_listener.beforeDraw(device, projection, {primitiveCount, numVertices, squeezed})) {
+        if (!g_listener.beforeDraw(device, {primitiveCount, numVertices, squeezed})) {
             return D3D_OK;
         }
-        const HRESULT result = draw();
-        g_listener.afterDraw(device);
-        return result;
+        return draw();
     }
 
     WeaponOverhaul::WeaponDraws::Depth ThisDepth() {
@@ -256,9 +252,6 @@ namespace {
                      WeaponOverhaul::Aim::ScopeUp();
         if (!g_watching || g_depthFrame != WeaponOverhaul::Frame::Number()) {
             return;
-        }
-        if (pass.serial == g_depthPass) {
-            g_listener.onDepthPass(pass, ThisDepth());
         }
         if (pass.serial == g_colourPass) {
             g_listener.onGunPass(pass, ThisDepth());

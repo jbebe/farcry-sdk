@@ -5,7 +5,7 @@
 #include "engine/aim.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
-#include "scope_lens.h"
+#include "eyepiece.h"
 
 #include "scope_shadow_ps.h"
 
@@ -25,29 +25,28 @@ namespace {
     std::atomic<bool> g_enabled{true};
 }
 
-void WeaponOverhaul::ScopeShadow::OnGunPass(const Frame::Pass& pass,
-                                            const ScopeLens::Walls& walls) {
+void WeaponOverhaul::ScopeShadow::OnGunPass(const Frame::Pass& pass) {
     const float scoped = g_enabled ? Aim::Scoped() : 0.0f;
-    IDirect3DTexture9* lens = ScopeLens::Found();
-    IDirect3DPixelShader9* shadow = scoped > 0.0f ? g_shadowShader.Get(pass.device) : nullptr;
-    if (lens == nullptr || shadow == nullptr) {
+    const std::optional<Eyepiece::Opening> opening = Eyepiece::Open();
+    IDirect3DPixelShader9* shadow =
+        scoped > 0.0f && opening ? g_shadowShader.Get(pass.device) : nullptr;
+    if (shadow == nullptr) {
         return;
     }
 
     const float width = static_cast<float>(Frame::Width());
     const float height = static_cast<float>(Frame::Height());
     const Aim::Swing swing = Aim::ScopeSwing();
+    // The glass reaches under the body's rim but not past its outer edge.
     const float constants[kConstantCount * 4] = {
         swing.x, swing.y, scoped, width / height,
-        kSoftEdge, kDarkness, ScopeLens::kSmallest, kShadowRadius,
-        walls.below, walls.reach, 0.0f, 0.0f,
+        kSoftEdge, kDarkness, 1.0f + opening->rim, kShadowRadius,
+        opening->x, opening->y, opening->radius, 0.0f,
     };
 
     IDirect3DDevice9* device = pass.device;
     ScreenDraw draw(device, 0, kConstantCount);
     device->SetPixelShaderConstantF(0, constants, kConstantCount);
-    device->SetTexture(3, walls.texture);
-    device->SetTexture(5, lens);
     device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
     device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);
     device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR);

@@ -1,11 +1,7 @@
 #include "engine/screen_draw.h"
 
 #include "engine/com.h"
-#include "fcse_api.h"
 
-#include "full_quad_vs.h"
-
-#include <cstring>
 #include <vector>
 
 namespace {
@@ -19,41 +15,6 @@ namespace {
     // What the two drivers that overload these render states take as "leave alpha alone".
     constexpr DWORD kAlphaToCoverageOffAmd = MAKEFOURCC('A', '2', 'M', '0');
     constexpr DWORD kAlphaToCoverageOffNvidia = D3DFMT_UNKNOWN;
-
-    // What FullQuad draws through, and the device it was made on.
-    IDirect3DDevice9* g_fullOwner = nullptr;
-    IDirect3DVertexShader9* g_fullShader = nullptr;
-    IDirect3DVertexDeclaration9* g_fullDeclaration = nullptr;
-    bool g_fullRefused = false;
-
-    bool BindFullQuad(IDirect3DDevice9* device) {
-        if (g_fullOwner != device) {
-            WeaponOverhaul::ScreenDraw::ReleaseDeviceObjects();
-            g_fullOwner = device;
-        }
-        if (g_fullRefused) {
-            return false;
-        }
-        if (g_fullDeclaration == nullptr) {
-            const D3DVERTEXELEMENT9 elements[] = {
-                {0, 0, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
-                D3DDECL_END()};
-            device->CreateVertexDeclaration(elements, &g_fullDeclaration);
-        }
-        if (g_fullShader == nullptr) {
-            std::vector<DWORD> tokens(sizeof(g_fullQuadVertexShader) / sizeof(DWORD));
-            std::memcpy(tokens.data(), g_fullQuadVertexShader, tokens.size() * sizeof(DWORD));
-            device->CreateVertexShader(tokens.data(), &g_fullShader);
-        }
-        if (g_fullDeclaration == nullptr || g_fullShader == nullptr) {
-            g_fullRefused = true;
-            FCSE::ApiPointer()->Log("screen draw: the device refused the full-quad vertex shader");
-            return false;
-        }
-        device->SetVertexDeclaration(g_fullDeclaration);
-        device->SetVertexShader(g_fullShader);
-        return true;
-    }
 }
 
 WeaponOverhaul::ScreenDraw::ScreenDraw(IDirect3DDevice9* device, UINT firstConstant,
@@ -181,23 +142,22 @@ void WeaponOverhaul::ScreenDraw::Quad(float left, float top, float right, float 
     m_device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, quad, sizeof(ScreenVertex));
 }
 
-bool WeaponOverhaul::ScreenDraw::FullQuad() {
-    if (!BindFullQuad(m_device)) {
-        return false;
-    }
-    const float quad[4][4] = {
-        {-1.0f, 1.0f, 0.0f, 1.0f},
-        {1.0f, 1.0f, 0.0f, 1.0f},
-        {-1.0f, -1.0f, 0.0f, 1.0f},
-        {1.0f, -1.0f, 0.0f, 1.0f},
+void WeaponOverhaul::ScreenDraw::Triangles(const Vertex* vertices, UINT count) {
+    struct PlacedVertex {
+        float x, y, z, rhw;
+        float u, v;
+        float acrossViewport, downViewport;
     };
-    m_device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, quad, sizeof(quad[0]));
-    return true;
-}
-
-void WeaponOverhaul::ScreenDraw::ReleaseDeviceObjects() {
-    Release(g_fullShader);
-    Release(g_fullDeclaration);
-    g_fullOwner = nullptr;
-    g_fullRefused = false;
+    D3DVIEWPORT9 viewport = {};
+    m_device->GetViewport(&viewport);
+    std::vector<PlacedVertex> placed;
+    placed.reserve(count);
+    for (UINT i = 0; i < count; i++) {
+        const Vertex& vertex = vertices[i];
+        placed.push_back({vertex.x - 0.5f, vertex.y - 0.5f, 0.0f, 1.0f, vertex.u, vertex.v,
+                          (vertex.x - viewport.X) / viewport.Width,
+                          (vertex.y - viewport.Y) / viewport.Height});
+    }
+    m_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_TEX2);
+    m_device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, count / 3, placed.data(), sizeof(PlacedVertex));
 }
