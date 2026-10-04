@@ -200,23 +200,29 @@ namespace {
 
     constexpr Scope kScopes[] = {
         // Dart Rifle
-        {2016, 9541, kThinRim, -0.00284f, -0.00148f, kDartRiflePieces, {}},
+        {2016, 9541, kThinRim, -0.00284f, -0.00148f, kDartRiflePieces, {}, 0.1198f, 0.0163f},
         // M1903
-        {1488, 7332, kThinRim, -0.00061f, -0.00025f, kM1903Pieces, {}},
+        {1488, 7332, kThinRim, -0.00061f, -0.00025f, kM1903Pieces, {}, 0.1351f, 0.0164f},
         // Dragunov
-        {2088, 10167, kThickRim, -0.00254f, -0.02073f, kDragunovPieces, {}},
+        {2088, 10167, kThickRim, -0.00254f, -0.02073f, kDragunovPieces, {}, 0.2349f, 0.0244f},
         // AS50
-        {1800, 11034, kThickRim, 0.00222f, -0.00248f, kAS50Pieces, {}},
+        {1800, 11034, kThickRim, 0.00222f, -0.00248f, kAS50Pieces, {}, 0.1521f, 0.0213f},
         // AR-16, whose eyecup it shares with the MGL-140, seen from further back
-        {3113, 12361, kThinRim, -0.00474f, -0.00087f, kAR16Pieces, g_ar16Shape},
+        {3113, 12361, kThinRim, -0.00474f, -0.00087f, kAR16Pieces, g_ar16Shape, 0.0566f, 0.0155f},
         // MGL-140
-        {2700, 13074, kThinRim, -0.00275f, 0.00213f, kMGL140Pieces, g_mgl140Shape},
+        {2700, 13074, kThinRim, -0.00275f, 0.00213f, kMGL140Pieces, g_mgl140Shape, 0.1287f,
+         0.0205f},
     };
 }
 
 const WeaponOverhaul::Scopes::Scope* WeaponOverhaul::Scopes::Find(UINT primitives, UINT vertices) {
+    const Scope* scope = InHand(vertices);
+    return scope != nullptr && scope->primitives == primitives ? scope : nullptr;
+}
+
+const WeaponOverhaul::Scopes::Scope* WeaponOverhaul::Scopes::InHand(UINT vertices) {
     for (const Scope& scope : kScopes) {
-        if (scope.primitives == primitives && scope.vertices == vertices) {
+        if (scope.vertices == vertices) {
             return &scope;
         }
     }

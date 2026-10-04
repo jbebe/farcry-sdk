@@ -84,6 +84,17 @@ namespace {
         }
     }
 
+    // How far the eye comes forward as the weapon in hand raises its scope: until the eyepiece's
+    // outer edge, in the gun's unzoomed projection, meets the body's.
+    void FollowRaise(const WeaponOverhaul::WeaponDraws::Call& call) {
+        const Scope* scope = WeaponOverhaul::Scopes::InHand(call.numVertices);
+        if (scope != nullptr) {
+            const float meets =
+                scope->eyepieceRadius * call.projection.verticalScale / (2.0f * kBodyRadius);
+            WeaponOverhaul::Aim::SetRaiseReach((std::max)(0.0f, scope->eyepieceDistance - meets));
+        }
+    }
+
     // Names a scope that is drawn as the game draws it for want of being known, once a scope-up.
     void LogStranger() {
         if (g_up.scope != nullptr || g_up.primitives == 0 || g_up.logged) {
@@ -109,7 +120,7 @@ namespace {
                                          nullptr)) ||
             FAILED(g_shape->LockRect(0, &locked, nullptr, 0))) {
             WeaponOverhaul::Release(g_shape);
-            FCSE::ApiPointer()->Log("eyepiece: the device refused a scope's shape, so it is a ring");
+            FCSE::ApiPointer()->Log("eyepiece: the device refused a scope's shape");
             return nullptr;
         }
         for (UINT row = 0; row < size; row++) {
@@ -160,7 +171,13 @@ namespace {
 
 bool WeaponOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
                                              const WeaponDraws::Call& call) {
-    if (!g_enabled || !Aim::ScopeUp()) {
+    if (!g_enabled) {
+        return true;
+    }
+    if (!Aim::ScopeUp()) {
+        if (call.depthPass) {
+            FollowRaise(call);
+        }
         return true;
     }
     Follow();

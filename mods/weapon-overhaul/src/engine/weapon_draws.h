@@ -33,12 +33,13 @@ struct Depth {
     Projection projection;
 };
 
-// One of the gun's draws: how much it draws, and whether it is of the gun's depth rather than its
-// colour.
+// One of the gun's draws: how much it draws, whether it is of the gun's depth rather than its
+// colour, and the projection it is drawn with.
 struct Call {
     UINT primitiveCount;
     UINT numVertices;
     bool depthPass;
+    Projection projection;
 };
 
 using GunPassFn = void (*)(const Frame::Pass& pass, const Depth& depth);

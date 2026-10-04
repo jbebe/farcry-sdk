@@ -237,7 +237,7 @@ namespace {
                 g_colourPass = WeaponOverhaul::Frame::PassSerial();
             }
         }
-        if (!g_listener.beforeDraw(device, {primitiveCount, numVertices, squeezed})) {
+        if (!g_listener.beforeDraw(device, {primitiveCount, numVertices, squeezed, projection})) {
             return D3D_OK;
         }
         return draw();

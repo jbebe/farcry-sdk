@@ -63,26 +63,30 @@ before the next call.
 out this frame's field of view, in radians, at the component's `+0x108`:
 
 1. It starts from the unaimed field of view at `+0x70`.
-2. It blends toward the iron sights' field of view by their weight.
-3. It blends that toward an override's field of view by the override's weight.
+2. It blends toward a second eased field of view by that one's weight.
+3. It blends that toward the iron sights' field of view by their weight.
 4. It adds a Perlin noise term, kept at `+0x11C`.
 
-Those four come from `*(pawn + 0x10) + 0xD8` (`0x1007E1F0`, the server's `CPawn::GetSkills`):
+The skills, `*(pawn + 0x10) + 0xD8` (`0x1007E1F0`, the server's `CPawn::GetSkills`), hold two
+`CPawnFOV` transitions, at `+0x08` and `+0x24`. Each has a time, a curve, a field of view and the
+weight its curve has reached, eased every frame by `BeautifierMaths::UpdateFOV` (server
+`0x09007370`):
 
 | Field | Offset in the pawn's data |
 |---|---|
-| override weight | `+0xF0` |
-| override field of view | `+0xF4` |
-| iron-sight weight | `+0x10C` |
-| iron-sight field of view | `+0x110` |
+| iron-sight weight | `+0xF0` |
+| iron-sight field of view | `+0xF4` |
+| second weight | `+0x10C` |
+| second field of view | `+0x110` |
 
-The iron-sight weight rises from nought to one over the weapon's `fIronsightTransitionTime`, along
-its transition curve, while the view zooms to its `fIronsightFOV` (`+0xE4` in the weapon's
-properties). A scoped weapon's zoom is that same transition, so the whole view zooms in as the
-scope comes up, before `ShowHiResScope` swaps the sight picture in.
+`CWeapon::OnEquip` (server `0x08F49D00`) fills the first transition from the weapon's iron-sight
+properties: its `fIronsightTransitionTime`, its transition curve, and its `fIronsightFOV` (`+0xE4` in
+the weapon's properties). A scoped weapon's zoom is that same transition, so the whole view zooms
+in as the scope comes up.
 
-`Update` then hands `+0x108` to the scene camera at `+0x28`, and as its typical field of view at
-`+0x30`. While `+0x108` is not above nought, those take `+0x104` and `+0x6C` instead.
+`Update` then hands `+0x108` to the scene camera at `+0x28`, and the unaimed `+0x70` as its typical
+field of view at `+0x30`. A debug field of view at `+0x10C` takes both instead while it is above
+nought. `Update` reads these through its own `this`, the component's second base, 4 bytes on.
 
 ### From the console
 

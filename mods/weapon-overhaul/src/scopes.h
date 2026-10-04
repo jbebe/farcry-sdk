@@ -8,8 +8,8 @@
 
 namespace WeaponOverhaul::Scopes {
 
-// A point of a reticle: in lens radii from the look's centre, x right and y up, and where it samples
-// the reticle's texture.
+// A point of a reticle: in lens radii from the look's centre, x right and y up, and where it
+// samples the reticle's texture.
 struct Point {
     float x, y;
     float u, v;
@@ -35,6 +35,11 @@ struct Scope {
     std::span<const Piece> pieces;
     // The eyepiece's own shape as a distance field, kShapeSize square; empty for a plain ring.
     std::span<const BYTE> shape;
+    // The scope on the gun once it is raised: how far ahead of the eye its eyepiece's outer edge
+    // stands, taken over its silhouette where the rim is slanted or stepped, and that edge's
+    // radius, in metres.
+    float eyepieceDistance;
+    float eyepieceRadius;
 };
 
 // The distance field's side in texels, how far it reaches either side of the look's centre, and the
@@ -45,5 +50,8 @@ inline constexpr float kShapeSpan = 0.5f;
 
 // The scope whose housing draws this much, if it is one of them.
 const Scope* Find(UINT primitives, UINT vertices);
+
+// The scope of the weapon whose meshes draw from this many vertices, if it is one of them.
+const Scope* InHand(UINT vertices);
 
 }

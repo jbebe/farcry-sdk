@@ -9,6 +9,7 @@ namespace WeaponOverhaul::Aim {
 struct Offset {
     float right;
     float up;
+    float ahead;
 };
 
 // A share of the scope's opening radius, x right and y down.
@@ -38,7 +39,9 @@ uint32_t ScopeUps();
 Swing ScopeSwing();
 
 // Whether a scope's magnification comes in at once with its sight picture rather than easing in
-// over the raise, so the view outside the eyepiece keeps the field of view it had.
+// over the raise, so the view outside the eyepiece keeps the field of view it had. The eye then
+// comes forward to the scope as it is raised instead, by as many metres as SetRaiseReach gives.
 void SetZoomAtOnce(bool atOnce);
+void SetRaiseReach(float metres);
 
 }
