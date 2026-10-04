@@ -54,9 +54,12 @@ namespace {
     // opening's radius, is a scope's own.
     constexpr float kBodyRadius = 0.4f;
     constexpr float kMountHalfWidth = 0.21f;
-    constexpr float kBodySoftness = 0.025f;
+    constexpr float kBodySoftness = 0.0125f;
     constexpr float kThinRim = 0.15f;
-    constexpr float kThickRim = 0.3f;
+    constexpr float kThickRim = 0.5f;
+    // How far inside the opening the body is wholly black, so that its soft edge lies over the
+    // shadow and the reticle rather than leaving a light seam between them and it.
+    constexpr float kBodyOverlap = 0.005f;
 
     // The shipped sniper scopes, told apart by their housing's draw in the gun's depth pass, are a
     // plain ring with a rim of their own; any other scope also shows its own housing.
@@ -685,7 +688,8 @@ void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
     const float constants[12] = {
         1.0f / width, 1.0f / height, kSoftness * height, width / height,
         kInk, ScopeLens::kSmallest, kBodyRadius, 0.0f,
-        OpeningRadius(), kBodyRadius, kMountHalfWidth, kBodySoftness,
+        OpeningRadius() - kBodyOverlap - kBodySoftness, kBodyRadius, kMountHalfWidth,
+        kBodySoftness,
     };
 
     IDirect3DSurface9* frame = nullptr;

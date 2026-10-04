@@ -7,8 +7,8 @@ float4 Soften : register(c0);
 // x: how much the softened coverage is strengthened. y: the smallest radius taken for a lens, z: the
 // radius the reticle shows within, both in screen heights.
 float4 Ink : register(c1);
-// The scope's body, in screen heights: x its opening's radius, y its outer edge's, z the mount's
-// half-width, w its softness.
+// The scope's body, in screen heights: x its opening's radius as drawn, y its outer edge's, z the
+// mount's half-width, w its softness.
 float4 Body : register(c2);
 
 // The reticle's mask, nought where it was drawn; or the housing's, softened.
