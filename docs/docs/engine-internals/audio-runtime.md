@@ -723,6 +723,9 @@ What follows from that:
   vehicle), the RPM jumps to the new gear's value in one frame. A looping or unknown-length shift sound
   (duration −1) freezes the RPM for as long as it plays.
 
+Far Cry 3 takes the RPM from the physics gearbox instead: see
+[vehicle sound in Far Cry 3](./far-cry-3-vehicle-sound.md).
+
 ### Boats follow the physics RPM
 
 `CVehicleTypeFloatingSoundCB::GetMultiLayer` (server `0x08f152b0`) returns the physics
