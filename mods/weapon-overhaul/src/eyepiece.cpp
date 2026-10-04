@@ -49,14 +49,14 @@ namespace {
     uint32_t g_inHandFor = WeaponOverhaul::Frame::kNever;
     uint32_t g_strangerFor = WeaponOverhaul::Frame::kNever;
 
-    // One scope-up, from the engine's draws.
-    struct ScopeUp {
-        uint32_t number;
-        // The texture each piece of the reticle was drawn with, and the frame it was.
-        IDirect3DBaseTexture9* textures[kMostPieces];
-        uint32_t textureFrames[kMostPieces];
-    };
-    ScopeUp g_up = {};
+    // The frame the weapon in hand last drew its scope's sight picture in, which the render thread
+    // can draw a frame after the game has put it away; and the texture each piece of the reticle
+    // was drawn with, and the frame it was.
+    uint32_t g_drawnFrame = WeaponOverhaul::Frame::kNever;
+    IDirect3DBaseTexture9* g_textures[kMostPieces] = {};
+    uint32_t g_textureFrames[kMostPieces] = {
+        WeaponOverhaul::Frame::kNever, WeaponOverhaul::Frame::kNever,
+        WeaponOverhaul::Frame::kNever, WeaponOverhaul::Frame::kNever};
 
     // The distance field of the scope it was made for, on the device that owns it.
     IDirect3DDevice9* g_shapeOwner = nullptr;
@@ -70,17 +70,6 @@ namespace {
             object->Release();
         }
         return object;
-    }
-
-    // Starts over each time a scope comes up.
-    void Follow() {
-        const uint32_t number = WeaponOverhaul::Aim::ScopeUps();
-        if (g_up.number != number) {
-            g_up = {};
-            g_up.number = number;
-            std::fill(std::begin(g_up.textureFrames), std::end(g_up.textureFrames),
-                      WeaponOverhaul::Frame::kNever);
-        }
     }
 
     // The scope of the weapon in hand, and how far the eye comes forward as it is raised.
@@ -151,10 +140,10 @@ namespace {
         std::vector<WeaponOverhaul::ScreenDraw::Vertex> vertices;
         for (size_t i = 0; i < scope.pieces.size() && i < kMostPieces; i++) {
             const WeaponOverhaul::Scopes::Piece& piece = scope.pieces[i];
-            if (g_up.textureFrames[i] != WeaponOverhaul::Frame::Number()) {
+            if (g_textureFrames[i] != WeaponOverhaul::Frame::Number()) {
                 continue;
             }
-            device->SetTexture(0, g_up.textures[i]);
+            device->SetTexture(0, g_textures[i]);
             const float lit = piece.look == WeaponOverhaul::Scopes::Look::Lit ? 1.0f : 0.0f;
             const float look[4] = {lit, lit, lit, 1.0f - lit};
             device->SetPixelShaderConstantF(0, look, 1);
@@ -188,21 +177,25 @@ bool WeaponOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
     if (call.numVertices == g_inHand->vertices) {
         g_inHandVertices = vertices;
     }
-    if (!Aim::ScopeUp() || vertices != g_inHandVertices) {
+    if (vertices != g_inHandVertices) {
         return true;
     }
-    Follow();
-    DWORD alphaTest = FALSE;
-    device->GetRenderState(D3DRS_ALPHATESTENABLE, &alphaTest);
-    // A piece of the reticle is told by its draw's size and whether the engine alpha-tests it.
+    // Only the sight picture draws the housing in the gun's depth pass, which comes first; the rest
+    // of that frame's draws from the weapon are the sight picture's too.
+    if (call.depthPass && call.primitiveCount == g_inHand->housing) {
+        g_drawnFrame = Frame::Number();
+    }
+    if (g_drawnFrame != Frame::Number()) {
+        return true;
+    }
+    // A piece of the reticle is told by its draw's size, which no other draw of the weapon shares.
     const std::span<const Scopes::Piece> pieces = g_inHand->pieces;
     for (size_t i = 0; i < pieces.size() && i < kMostPieces; i++) {
-        if (pieces[i].triangles.size() / 3 == call.primitiveCount &&
-            (pieces[i].look == Scopes::Look::Black) == (alphaTest != FALSE)) {
+        if (pieces[i].triangles.size() / 3 == call.primitiveCount) {
             IDirect3DBaseTexture9* texture = nullptr;
             device->GetTexture(0, &texture);
-            g_up.textures[i] = Borrowed(texture);
-            g_up.textureFrames[i] = Frame::Number();
+            g_textures[i] = Borrowed(texture);
+            g_textureFrames[i] = Frame::Number();
         }
     }
     return false;
@@ -247,7 +240,7 @@ void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
 }
 
 std::optional<WeaponOverhaul::Eyepiece::Opening> WeaponOverhaul::Eyepiece::Open() {
-    if (!g_enabled || !Aim::ScopeUp() || g_inHand == nullptr) {
+    if (!g_enabled || g_inHand == nullptr || g_drawnFrame != Frame::Number()) {
         return std::nullopt;
     }
     const Scope& scope = *g_inHand;
@@ -255,6 +248,11 @@ std::optional<WeaponOverhaul::Eyepiece::Opening> WeaponOverhaul::Eyepiece::Open(
     const Aim::Swing swing = Aim::ScopeSwing();
     return Opening{(kTrail * swing.x + scope.lensX) * radius,
                    (kTrail * swing.y - scope.lensY) * radius, radius, scope.rim};
+}
+
+bool WeaponOverhaul::Eyepiece::Expected() {
+    return g_enabled && g_inHand != nullptr &&
+           (Aim::ScopeUp() || g_drawnFrame == Frame::Number() || g_drawnFrame + 1 == Frame::Number());
 }
 
 void WeaponOverhaul::Eyepiece::SetEnabled(bool enabled) {
@@ -267,5 +265,5 @@ void WeaponOverhaul::Eyepiece::ReleaseDeviceObjects() {
     Release(g_shape);
     g_shapeOwner = nullptr;
     g_shapeOf = nullptr;
-    std::fill(std::begin(g_up.textureFrames), std::end(g_up.textureFrames), Frame::kNever);
+    std::fill(std::begin(g_textureFrames), std::end(g_textureFrames), Frame::kNever);
 }

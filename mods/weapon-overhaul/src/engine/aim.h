@@ -30,10 +30,8 @@ bool Install(DriftFn drift);
 float Settled();
 float Scoped();
 
-// Whether a scope's own sight picture is up this frame, which the engine shows at once, and how many
-// times one has come up.
+// Whether a scope's own sight picture is up this frame, which the engine shows at once.
 bool ScopeUp();
-uint32_t ScopeUps();
 
 // How far the scope's shadow has swung off the opening's centre, against the look's turn.
 Swing ScopeSwing();

@@ -25,8 +25,12 @@ bool BeforeGunDraw(IDirect3DDevice9* device, const WeaponDraws::Call& call);
 // Lays the reticle and the body over the finished frame.
 void OnComposite(IDirect3DDevice9* device);
 
-// The opening this frame, while a scope is drawn from its eyepiece.
+// The opening this frame, once the gun's depth pass has shown a scope drawn from its eyepiece.
 std::optional<Opening> Open();
+
+// Whether a scope will likely be drawn from its eyepiece this frame, before the gun's draws say:
+// its sight picture is up, or was drawn last frame.
+bool Expected();
 
 void SetEnabled(bool enabled);
 

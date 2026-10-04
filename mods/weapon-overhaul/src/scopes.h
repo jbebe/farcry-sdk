@@ -31,6 +31,9 @@ struct Scope {
     // How many vertices the weapon's larger draws take, all of its nearest detail's buffer, which
     // tells that buffer from anything else drawn in first person.
     UINT vertices;
+    // How many triangles the scope's housing draws in the gun's depth pass, a draw only the sight
+    // picture makes.
+    UINT housing;
     // The black rim around the opening, as a share of the opening's radius.
     float rim;
     // The lens's centre, in lens radii from the look's centre, x right and y up.

@@ -86,7 +86,6 @@ namespace {
     std::atomic<float> g_settled{0.0f};
     std::atomic<float> g_scoped{0.0f};
     std::atomic<bool> g_scopeUp{false};
-    std::atomic<uint32_t> g_scopeUps{0};
 
     // The equipped weapon as last seen, its name, and how many times it has changed.
     uint8_t* g_weapon = nullptr;
@@ -198,9 +197,6 @@ namespace {
         const float scoped = Ease(g_scope);
         g_settled = settled;
         g_scoped = scoped;
-        if (scope && !g_scopeUp) {
-            g_scopeUps++;
-        }
         g_scopeUp = scope;
         FollowLook(pawn, data, seconds);
         FollowWeapon(data);
@@ -301,10 +297,6 @@ float WeaponOverhaul::Aim::Scoped() {
 
 bool WeaponOverhaul::Aim::ScopeUp() {
     return g_scopeUp;
-}
-
-uint32_t WeaponOverhaul::Aim::ScopeUps() {
-    return g_scopeUps;
 }
 
 WeaponOverhaul::Aim::Swing WeaponOverhaul::Aim::ScopeSwing() {

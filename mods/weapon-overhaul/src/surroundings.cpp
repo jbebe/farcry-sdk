@@ -23,7 +23,7 @@ float WeaponOverhaul::Surroundings::Want(float cameraFov) {
     if (Aim::Settled() <= 0.0f && Aim::Scoped() <= 0.0f && !Aim::ScopeUp()) {
         g_ownFov = cameraFov;
     }
-    return g_enabled && Eyepiece::Open() ? g_ownFov : 0.0f;
+    return g_enabled && Eyepiece::Expected() ? g_ownFov : 0.0f;
 }
 
 void WeaponOverhaul::Surroundings::BeforeColour(IDirect3DDevice9* device) {
