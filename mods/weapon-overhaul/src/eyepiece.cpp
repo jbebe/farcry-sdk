@@ -28,8 +28,8 @@
 namespace {
     using WeaponOverhaul::WeaponDraws::Projection;
 
-    // How much of the scope is measured as its eyepiece, and how much of its housing is drawn, in
-    // metres past its nearest point.
+    // How much of the scope is measured as its eyepiece, and how much of a housing shown is drawn,
+    // in metres past its nearest point.
     constexpr float kKept = 0.01f;
     constexpr float kHousingDepth = 0.03f;
 
@@ -629,7 +629,11 @@ bool WeaponOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
         return true;
     }
     const Scope& scope = *g_up.scope;
-    const Point opening = At(scope.opening, projection);
+    // A plain ring is centred on the reticle where the engine draws it, a housing shown on its
+    // opening. The reticle grows to the opening drawn as it was to the engine's lens.
+    const Point farEnd = At(scope.farEnd, projection);
+    const Point centre = g_up.ring != nullptr ? farEnd : At(scope.opening, projection);
+    const float growth = OpeningSlope(projection) / (scope.radius / scope.growth);
     if (alphaTest) {
         g_up.scope->reticle = texture;
     } else {
@@ -637,14 +641,18 @@ bool WeaponOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
         texture = BoundTexture(device);
         if (texture == nullptr || texture != scope.reticle) {
             // The housing is drawn only into its own mask, from the gun's depth pass, where it is
-            // one opaque draw: its first centimetres, shrunk to the opening drawn; under a plain
-            // ring, only as deep as its opening was measured.
+            // one opaque draw. Under a plain ring it is whole and grown with the reticle, so its
+            // innermost hole, the engine's lens, is the opening drawn around the reticle; else
+            // its first centimetres, shrunk to the opening drawn.
             if (!depthPass || !IntoMask(device, g_housingMask, D3DBLEND_ZERO)) {
                 return false;
             }
-            Cut(device, projection,
-                g_up.ring != nullptr ? scope.keptTo : scope.keptTo - kKept + kHousingDepth);
-            Scale(device, OpeningSlope(projection) / scope.radius, opening, opening);
+            if (g_up.ring != nullptr) {
+                Scale(device, growth, farEnd, centre);
+            } else {
+                Cut(device, projection, scope.keptTo - kKept + kHousingDepth);
+                Scale(device, OpeningSlope(projection) / scope.radius, centre, centre);
+            }
             return true;
         }
     }
@@ -656,9 +664,7 @@ bool WeaponOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
     if (!IntoMask(device, g_reticleMask, alphaTest ? D3DBLEND_ZERO : D3DBLEND_INVSRCALPHA)) {
         return true;
     }
-    // Grown to the opening drawn as it was to the engine's lens, and moved onto the opening.
-    const float lens = scope.radius / scope.growth;
-    Scale(device, OpeningSlope(projection) / lens, At(scope.farEnd, projection), opening);
+    Scale(device, growth, farEnd, centre);
     return true;
 }
 
