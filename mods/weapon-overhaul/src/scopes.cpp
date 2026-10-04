@@ -200,7 +200,7 @@ namespace {
 
     constexpr Scope kScopes[] = {
         // Dart Rifle
-        {2016, 9541, kThinRim, -0.00284f, -0.00148f, kDartRiflePieces, {}, 0.04f},
+        {2016, 9541, kThinRim, -0.00284f, -0.00148f, kDartRiflePieces, {}, 0.06f},
         // M1903
         {1488, 7332, kThinRim, -0.00061f, -0.00025f, kM1903Pieces, {}, 0.0995f},
         // Dragunov
