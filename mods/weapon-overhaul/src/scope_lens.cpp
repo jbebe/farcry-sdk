@@ -87,7 +87,7 @@ namespace {
 }
 
 void WeaponOverhaul::ScopeLens::Track(const Frame::Pass& pass, const WeaponDraws::Depth& depth,
-                                      float hole) {
+                                      float hole, float opening) {
     if (Aim::Scoped() <= 0.0f) {
         return;
     }
@@ -102,7 +102,7 @@ void WeaponOverhaul::ScopeLens::Track(const Frame::Pass& pass, const WeaponDraws
     const float height = static_cast<float>(Frame::Height());
     const float constants[kConstantCount * 4] = {
         kNearest, (kFarthest - kNearest) / kSteps, height / width, Follow(),
-        hole, kSmallest, 0.0f, 0.0f,
+        hole, kSmallest, opening, 0.0f,
     };
     const Target& lensNow = g_lens[g_lensIndex];
     const Target& lensBefore = g_lens[g_lensIndex ^ 1];

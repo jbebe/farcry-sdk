@@ -30,7 +30,8 @@ namespace {
                      const WeaponOverhaul::WeaponDraws::Depth& depth) {
         WeaponOverhaul::Eyepiece::OnDepthPass(pass, depth);
         WeaponOverhaul::ScopeLens::Track(pass, depth,
-                                         WeaponOverhaul::Eyepiece::Hole(depth.projection));
+                                         WeaponOverhaul::Eyepiece::Hole(depth.projection),
+                                         WeaponOverhaul::Eyepiece::OpeningRadius());
     }
 
     void OnGunPass(const WeaponOverhaul::Frame::Pass& pass,

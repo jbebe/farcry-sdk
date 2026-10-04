@@ -267,7 +267,7 @@ namespace {
 
     void OnComposite(IDirect3DDevice9* device) {
         if (g_watching && g_depthFrame == WeaponOverhaul::Frame::Number()) {
-            g_listener.onComposite(device, ThisDepth());
+            g_listener.onComposite(device);
         }
     }
 }

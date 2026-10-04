@@ -6,7 +6,8 @@
 // frame's.
 float4 Search : register(c0);
 // x: the stored depth the housing is nearer than; one for the scope as the engine draws it, less
-// where it is cut. y: the smallest radius taken for a lens, in screen heights.
+// where it is cut. y: the smallest radius taken for a lens, z: the radius given the lens in place
+// of the one found, nought for none, both in screen heights.
 float4 Hole : register(c1);
 
 // The first housing hit along each direction.
@@ -102,7 +103,8 @@ float4 LensPS() : COLOR0 {
     float4 found = Fit(closer.xyz, 0.1f);
 
     float3 previous = LastLens();
-    float radius = previous.x > 0.0f ? lerp(previous.x, found.z, Search.w) : found.z;
+    float eased = previous.x > 0.0f ? lerp(previous.x, found.z, Search.w) : found.z;
+    float radius = Hole.z > 0.0f ? Hole.z : eased;
     bool lens = found.w >= FEWEST && found.z >= Hole.y;
     return float4(lens ? float3(radius, previous.yz + found.xy) : float3(previous.x, 0.0f, 0.0f), 1.0f);
 }
