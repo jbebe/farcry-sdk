@@ -17,20 +17,28 @@ namespace {
     using UpdateFn = void(__fastcall*)(uint8_t* camera, void* unused, float seconds, uint32_t flags);
     using UpdateCameraOffsetFn = void(__fastcall*)(uint8_t* camera, void* unused, float seconds,
                                                    uint8_t* pawn);
+    using UpdateFovFn = void(__fastcall*)(uint8_t* camera, void* unused, uint8_t* pawn,
+                                          float seconds);
     using EquippedWeaponFn = uint8_t*(__fastcall*)(uint8_t* inventory);
     using PlayerCameraFn = uint8_t*(__cdecl*)();
 
     FCSE::Relocation<UpdateFn> g_update{FCSE::Uplay(0x00693C00)};
     FCSE::Relocation<UpdateCameraOffsetFn> g_updateCameraOffset{FCSE::Uplay(0x00693490)};
+    FCSE::Relocation<UpdateFovFn> g_updateFov{FCSE::Uplay(0x00692E30)};
     FCSE::Relocation<EquippedWeaponFn> g_equippedWeapon{FCSE::Uplay(0x00127DA0)};
     FCSE::Relocation<PlayerCameraFn> g_playerCamera{FCSE::Uplay(0x0070C210)};
 
     UpdateFn g_originalUpdate = nullptr;
     UpdateCameraOffsetFn g_originalUpdateCameraOffset = nullptr;
+    UpdateFovFn g_originalUpdateFov = nullptr;
 
-    // CCameraPawnComponent: the eye's offset in the view's axes, x right, y ahead, z up.
+    // CCameraPawnComponent: the eye's offset in the view's axes, x right, y ahead, z up; and the
+    // field of view in radians, unaimed, as this frame's, and the noise added to it.
     constexpr ptrdiff_t kEyeRight = 0xE8;
     constexpr ptrdiff_t kEyeUp = 0xF0;
+    constexpr ptrdiff_t kBaseFov = 0x70;
+    constexpr ptrdiff_t kFov = 0x108;
+    constexpr ptrdiff_t kFovNoise = 0x11C;
 
     // CPawn's data, and in it the effective flags, the effective look in radians (pitch up, yaw
     // left), and the inventory.
@@ -40,6 +48,12 @@ namespace {
     constexpr ptrdiff_t kEffectivePitch = 0x308;
     constexpr ptrdiff_t kEffectiveYaw = 0x310;
     constexpr ptrdiff_t kInventory = 0x4F0;
+    // Also in it, the field of view an override takes the view to and how far, and the iron
+    // sights' and how far, which the weapon's transition curve takes from nought to one.
+    constexpr ptrdiff_t kOverrideWeight = 0xF0;
+    constexpr ptrdiff_t kOverrideFov = 0xF4;
+    constexpr ptrdiff_t kIronsightWeight = 0x10C;
+    constexpr ptrdiff_t kIronsightFov = 0x110;
 
     // CFCXWeapon: the scope picture as last asked for, and whether the weapon has one.
     constexpr ptrdiff_t kScopeShown = 0x84;
@@ -60,6 +74,7 @@ namespace {
     constexpr float kMostSwing = 0.5f;
 
     WeaponOverhaul::Aim::DriftFn g_drift = nullptr;
+    std::atomic<bool> g_zoomAtOnce{true};
     float g_sights = 0.0f;
     float g_scope = 0.0f;
     std::atomic<float> g_settled{0.0f};
@@ -156,6 +171,26 @@ namespace {
         g_addedTo = camera;
     }
 
+    // The field of view worked out again with a scope's magnification wholly in while its sight
+    // picture is up and wholly out while it is not, so that it never eases in over the raise.
+    void __fastcall UpdateFovDetour(uint8_t* camera, void* unused, uint8_t* pawn, float seconds) {
+        g_originalUpdateFov(camera, unused, pawn, seconds);
+        if (!g_zoomAtOnce || camera != g_playerCamera()) {
+            return;
+        }
+        uint8_t* data = Field<uint8_t*>(pawn, kPawnData);
+        uint8_t* weapon = g_equippedWeapon(data + kInventory);
+        if (weapon == nullptr || Field<uint8_t>(weapon, kHiResScope) == 0 ||
+            Field<float>(data, kIronsightWeight) <= 0.0f) {
+            return;
+        }
+        const float zoom = Field<uint8_t>(weapon, kScopeShown) != 0 ? 1.0f : 0.0f;
+        const float base = Field<float>(camera, kBaseFov);
+        float fov = base + (Field<float>(data, kIronsightFov) - base) * zoom;
+        fov += (Field<float>(data, kOverrideFov) - fov) * Field<float>(data, kOverrideWeight);
+        Field<float>(camera, kFov) = fov + Field<float>(camera, kFovNoise);
+    }
+
     void __fastcall UpdateDetour(uint8_t* camera, void* unused, float seconds, uint32_t flags) {
         g_originalUpdate(camera, unused, seconds, flags);
         if (g_addedTo != nullptr) {
@@ -185,7 +220,16 @@ bool WeaponOverhaul::Aim::Install(DriftFn drift) {
                    reinterpret_cast<void**>(&g_originalUpdateCameraOffset))) {
         api->Log("aim: the camera offset cannot be hooked, so nothing follows the sights");
     }
+    if (!g_updateFov || !api->Hook(reinterpret_cast<void*>(g_updateFov.address()),
+                                   reinterpret_cast<void*>(&UpdateFovDetour),
+                                   reinterpret_cast<void**>(&g_originalUpdateFov))) {
+        api->Log("aim: the field of view cannot be hooked, so a scope zooms in as it comes up");
+    }
     return true;
+}
+
+void WeaponOverhaul::Aim::SetZoomAtOnce(bool atOnce) {
+    g_zoomAtOnce = atOnce;
 }
 
 float WeaponOverhaul::Aim::Settled() {

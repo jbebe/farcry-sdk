@@ -56,6 +56,34 @@ Most branches of `UpdateCameraOffset` rewrite the positional offset every frame.
 blending an angular kick back leaves it alone, so anything added to it has to be taken out again
 before the next call.
 
+### The field of view
+
+`CCameraPawnComponent::UpdateCurrentFOV` (`0x10692E30`, server `0x08951870`,
+`__thiscall(CPawn* pawn, float seconds)`) is called from `Update` after the camera offset. It works
+out this frame's field of view, in radians, at the component's `+0x108`:
+
+1. It starts from the unaimed field of view at `+0x70`.
+2. It blends toward the iron sights' field of view by their weight.
+3. It blends that toward an override's field of view by the override's weight.
+4. It adds a Perlin noise term, kept at `+0x11C`.
+
+Those four come from `*(pawn + 0x10) + 0xD8` (`0x1007E1F0`, the server's `CPawn::GetSkills`):
+
+| Field | Offset in the pawn's data |
+|---|---|
+| override weight | `+0xF0` |
+| override field of view | `+0xF4` |
+| iron-sight weight | `+0x10C` |
+| iron-sight field of view | `+0x110` |
+
+The iron-sight weight rises from nought to one over the weapon's `fIronsightTransitionTime`, along
+its transition curve, while the view zooms to its `fIronsightFOV` (`+0xE4` in the weapon's
+properties). A scoped weapon's zoom is that same transition, so the whole view zooms in as the
+scope comes up, before `ShowHiResScope` swaps the sight picture in.
+
+`Update` then hands `+0x108` to the scene camera at `+0x28`, and as its typical field of view at
+`+0x30`. While `+0x108` is not above nought, those take `+0x104` and `+0x6C` instead.
+
 ### From the console
 
 The retail Lua bindings `Game:SetFPCameraOffsetX/Y/Z` (`0x1070C2E0` for X) set one axis of

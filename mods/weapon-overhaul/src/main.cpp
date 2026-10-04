@@ -40,12 +40,20 @@ namespace {
         WeaponOverhaul::ScopeShadow::SetEnabled(value->asCheckbox);
     }
 
+    // A scope zooms in at once only where the surroundings keep the view outside it unzoomed.
+    bool g_eyepiece = true;
+    bool g_surroundings = true;
+
     void __cdecl OnEyepieceChanged(const FCSE_SettingValue* value, void*) {
-        WeaponOverhaul::Eyepiece::SetEnabled(value->asCheckbox);
+        g_eyepiece = value->asCheckbox;
+        WeaponOverhaul::Eyepiece::SetEnabled(g_eyepiece);
+        WeaponOverhaul::Aim::SetZoomAtOnce(g_eyepiece && g_surroundings);
     }
 
     void __cdecl OnSurroundingsChanged(const FCSE_SettingValue* value, void*) {
-        WeaponOverhaul::Surroundings::SetEnabled(value->asCheckbox);
+        g_surroundings = value->asCheckbox;
+        WeaponOverhaul::Surroundings::SetEnabled(g_surroundings);
+        WeaponOverhaul::Aim::SetZoomAtOnce(g_eyepiece && g_surroundings);
     }
 }
 

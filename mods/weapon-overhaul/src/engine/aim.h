@@ -37,4 +37,8 @@ uint32_t ScopeUps();
 // How far the scope's shadow has swung off the opening's centre, against the look's turn.
 Swing ScopeSwing();
 
+// Whether a scope's magnification comes in at once with its sight picture rather than easing in
+// over the raise, so the view outside the eyepiece keeps the field of view it had.
+void SetZoomAtOnce(bool atOnce);
+
 }

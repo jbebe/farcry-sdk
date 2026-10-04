@@ -31,7 +31,9 @@ of view.
   finished frame, after the tone mapping, and trails the look a little as it turns. A scope the
   plugin does not know is drawn as the game draws it, and named in `fcse.log`.
 - **Surroundings.** Around the eyepiece the world is seen at the field of view the eye has without
-  a scope, as with both eyes open, while the eyepiece keeps the scope's magnified view. The
+  a scope, as with both eyes open, while the eyepiece keeps the scope's magnified view. The view
+  does not zoom as the scope comes up: the gun comes to the eye, and the magnification is there at
+  once inside the eyepiece, so the world around it never changes. The
   surroundings are a second, cheaper view drawn by the engine's water reflection renderer, at half
   the screen's size with less detail; the magnified view inside stays the engine's own.
 
