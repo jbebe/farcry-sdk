@@ -27,9 +27,11 @@ namespace {
 
 void WeaponOverhaul::ScopeShadow::OnGunPass(const Frame::Pass& pass) {
     const float scoped = g_enabled ? Aim::Scoped() : 0.0f;
+    if (scoped <= 0.0f) {
+        return;
+    }
     const std::optional<Eyepiece::Opening> opening = Eyepiece::Open();
-    IDirect3DPixelShader9* shadow =
-        scoped > 0.0f && opening ? g_shadowShader.Get(pass.device) : nullptr;
+    IDirect3DPixelShader9* shadow = opening ? g_shadowShader.Get(pass.device) : nullptr;
     if (shadow == nullptr) {
         return;
     }
@@ -40,7 +42,7 @@ void WeaponOverhaul::ScopeShadow::OnGunPass(const Frame::Pass& pass) {
     // The glass reaches under the body's rim but not past its outer edge.
     const float constants[kConstantCount * 4] = {
         swing.x, swing.y, scoped, width / height,
-        kSoftEdge, kDarkness, 1.0f + opening->rim, kShadowRadius,
+        kSoftEdge, kDarkness, Eyepiece::kBodyRadius / opening->radius, kShadowRadius,
         opening->x, opening->y, opening->radius, 0.0f,
     };
 

@@ -25,22 +25,23 @@ of view.
   a pitch-black, out-of-focus body whose outer edge spans 80% of the screen's height, with a black
   mount below it down to the screen's foot, and the zoomed view filling its opening. The sniper
   scopes are a plain ring, thin on the Dart Rifle and the M1903 and thicker on the Dragunov and the
-  AS50; the AR-16's and the MGL-140's, which are not round, also show their eyepiece's own shape. The
-  reticle is the scope's own, drawn from the game's texture in its own colours, and fills the
+  AS50; the AR-16's and the MGL-140's, which are not round, also show their eyepiece's own shape.
+  The reticle is the scope's own, drawn from the game's texture in its own colours, and fills the
   opening as it filled the lens. The magnification is unchanged. The scope is laid over the
   finished frame, after the tone mapping, and trails the look a little as it turns. A scope the
   plugin does not know is drawn as the game draws it, and named in `fcse.log`.
 - **Surroundings.** Around the eyepiece the world is seen at the field of view the eye has without
-  a scope, as with both eyes open, while the eyepiece keeps the scope's magnified view. The view
-  does not zoom as the scope comes up: the gun comes to the eye, and the magnification is there at
-  once inside the eyepiece, so the world around it never changes. The
+  a scope, as with both eyes open, while the eyepiece keeps the scope's magnified view. With the
+  eyepiece on too, the view does not zoom as the scope comes up: the gun comes to the eye, and the
+  magnification is there at once inside the eyepiece, so the world around it never changes. The
   surroundings are a second, cheaper view drawn by the engine's water reflection renderer, at half
   the screen's size with less detail; the magnified view inside stays the engine's own.
 
-The eye is moved through the camera's positional offset, the one the recoil kicks, in
-`src/engine/aim.cpp`. The blur draws the gun's own depth pass a second time into a depth texture of
-its own, in `src/engine/weapon_draws.cpp`, and the blur and the scope shadow draw at the end of the
-pass the gun's colour is drawn in, before the bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
+The eye is moved through the camera's positional offset, the one the recoil kicks, and a scope's
+zoom held back until its sight picture is up, in `src/engine/aim.cpp`. The blur draws the gun's own
+depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the
+blur and the scope shadow draw at the end of the pass the gun's colour is drawn in, before the
+bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
 The eyepiece drops the engine's scope and draws its own over the finished frame, in
 `src/eyepiece.cpp`, from what was measured off each scope's mesh, in `src/scopes.cpp`. The second
 view is drawn in `src/engine/second_view.cpp` and laid down as the gun's colour pass begins, in

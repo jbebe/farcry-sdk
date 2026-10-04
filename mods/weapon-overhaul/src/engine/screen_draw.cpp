@@ -146,17 +146,14 @@ void WeaponOverhaul::ScreenDraw::Triangles(const Vertex* vertices, UINT count) {
     struct PlacedVertex {
         float x, y, z, rhw;
         float u, v;
-        float acrossViewport, downViewport;
+        float s, t;
     };
-    D3DVIEWPORT9 viewport = {};
-    m_device->GetViewport(&viewport);
     std::vector<PlacedVertex> placed;
     placed.reserve(count);
     for (UINT i = 0; i < count; i++) {
         const Vertex& vertex = vertices[i];
         placed.push_back({vertex.x - 0.5f, vertex.y - 0.5f, 0.0f, 1.0f, vertex.u, vertex.v,
-                          (vertex.x - viewport.X) / viewport.Width,
-                          (vertex.y - viewport.Y) / viewport.Height});
+                          vertex.s, vertex.t});
     }
     m_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_TEX2);
     m_device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, count / 3, placed.data(), sizeof(PlacedVertex));

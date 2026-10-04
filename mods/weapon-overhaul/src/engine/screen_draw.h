@@ -19,18 +19,18 @@ public:
     ScreenDraw(const ScreenDraw&) = delete;
     ScreenDraw& operator=(const ScreenDraw&) = delete;
 
-    // A point of a draw, in pixels, and its texture coordinates.
+    // A point of a triangle, in pixels, and two pairs of texture coordinates.
     struct Vertex {
         float x, y;
         float u, v;
+        float s, t;
     };
 
     // A quad over the rectangle, in pixels, with texture coordinates running zero to one across it.
     // Pairs only with a ps_2_x pixel shader, as Triangles does.
     void Quad(float left, float top, float right, float bottom);
 
-    // A list of triangles, three vertices each. Their second texture coordinates run zero to one
-    // across the viewport.
+    // A list of triangles, three vertices each.
     void Triangles(const Vertex* vertices, UINT count);
 
 private:

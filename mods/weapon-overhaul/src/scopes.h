@@ -45,10 +45,10 @@ struct Scope {
     float raiseReach;
 };
 
-// The distance field's side in texels, how far it reaches either side of the look's centre, and the
-// distances its bytes span, both in lens radii. Inside the eyepiece is above the middle byte.
+// The distance field's side in texels, its width about the look's centre, and the distances its
+// bytes span, both in lens radii. Inside the eyepiece is above the middle byte.
 inline constexpr UINT kShapeSize = 128;
-inline constexpr float kShapeReach = 2.0f;
+inline constexpr float kShapeWidth = 4.0f;
 inline constexpr float kShapeSpan = 0.5f;
 
 // The scope of the weapon whose entity has this name, if it is one of them.

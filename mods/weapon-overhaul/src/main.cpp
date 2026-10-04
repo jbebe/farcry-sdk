@@ -7,6 +7,7 @@
 #include "eyepiece.h"
 #include "fcse_api.h"
 #include "scope_shadow.h"
+#include "scopes.h"
 #include "surroundings.h"
 #include "sway.h"
 
@@ -40,26 +41,37 @@ namespace {
         WeaponOverhaul::ScopeShadow::SetEnabled(value->asCheckbox);
     }
 
-    // A scope zooms in at once only where the surroundings keep the view outside it unzoomed.
+    // A scope zooms in at once only where the surroundings keep the view outside it unzoomed: both
+    // on, and the seams they draw through hooked.
     bool g_eyepiece = true;
     bool g_surroundings = true;
+    bool g_hooked = false;
+
+    void FollowZoom() {
+        WeaponOverhaul::Aim::SetZoomAtOnce(g_hooked && g_eyepiece && g_surroundings);
+    }
 
     void __cdecl OnEyepieceChanged(const FCSE_SettingValue* value, void*) {
         g_eyepiece = value->asCheckbox;
         WeaponOverhaul::Eyepiece::SetEnabled(g_eyepiece);
-        WeaponOverhaul::Aim::SetZoomAtOnce(g_eyepiece && g_surroundings);
+        FollowZoom();
     }
 
     void __cdecl OnSurroundingsChanged(const FCSE_SettingValue* value, void*) {
         g_surroundings = value->asCheckbox;
         WeaponOverhaul::Surroundings::SetEnabled(g_surroundings);
-        WeaponOverhaul::Aim::SetZoomAtOnce(g_eyepiece && g_surroundings);
+        FollowZoom();
+    }
+
+    float RaiseReach(const char* weaponName) {
+        const WeaponOverhaul::Scopes::Scope* scope = WeaponOverhaul::Scopes::Find(weaponName);
+        return scope != nullptr ? scope->raiseReach : 0.0f;
     }
 }
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION || !FCSE::Bind(api) ||
-        !WeaponOverhaul::Aim::Install(&WeaponOverhaul::Sway::Drift)) {
+        !WeaponOverhaul::Aim::Install(&WeaponOverhaul::Sway::Drift, &RaiseReach)) {
         return false;
     }
 
@@ -70,13 +82,17 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         &WeaponOverhaul::Eyepiece::BeforeGunDraw,
         &WeaponOverhaul::Eyepiece::OnComposite,
     };
+    g_hooked = true;
     if (!WeaponOverhaul::DeviceReset::Install(&OnDeviceRelease) ||
         !WeaponOverhaul::WeaponDraws::Install(listener)) {
         api->Log("nothing is drawn on the gun: a Direct3D seam could not be hooked");
+        g_hooked = false;
     }
     if (!WeaponOverhaul::SecondView::Install(&WeaponOverhaul::Surroundings::Want)) {
         api->Log("a scope's surroundings are not drawn: the second view could not be hooked");
+        g_hooked = false;
     }
+    FollowZoom();
 
     const FCSE_Setting settings[] = {
         {"Sway", FCSE_CHECKBOX(true), &OnSwayChanged, nullptr},

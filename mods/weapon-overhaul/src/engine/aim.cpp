@@ -79,22 +79,26 @@ namespace {
     constexpr float kMostSwing = 0.5f;
 
     WeaponOverhaul::Aim::DriftFn g_drift = nullptr;
+    WeaponOverhaul::Aim::ReachFn g_reach = nullptr;
     std::atomic<bool> g_zoomAtOnce{true};
-    std::atomic<float> g_raiseReach{0.0f};
     float g_sights = 0.0f;
     float g_scope = 0.0f;
     std::atomic<float> g_settled{0.0f};
     std::atomic<float> g_scoped{0.0f};
     std::atomic<bool> g_scopeUp{false};
+    std::atomic<bool> g_aiming{false};
 
-    // The equipped weapon as last seen, its name, and how many times it has changed.
+    // The equipped weapon as last seen, its name, how many times it has changed, and how far the
+    // eye comes forward as its scope is raised.
     uint8_t* g_weapon = nullptr;
     char g_weaponName[64] = {};
     std::atomic<uint32_t> g_weaponChanges{0};
+    float g_raiseReach = 0.0f;
 
     // What was added to the eye during the camera update under way, and to which camera.
     uint8_t* g_addedTo = nullptr;
     WeaponOverhaul::Aim::Offset g_added = {};
+    float g_addedAhead = 0.0f;
 
     // The look last frame, for which pawn, and how fast it has been turning, in radians a second.
     uint8_t* g_lookPawn = nullptr;
@@ -125,7 +129,8 @@ namespace {
         __try {
             uint8_t* proxy = weapon != nullptr ? Field<uint8_t*>(weapon, kWeaponProxy) : nullptr;
             uint8_t* entity = proxy != nullptr ? Field<uint8_t*>(proxy, kProxyEntity) : nullptr;
-            const char* text = entity != nullptr ? Field<const char*>(entity, kEntityName) : nullptr;
+            const char* text =
+                entity != nullptr ? Field<const char*>(entity, kEntityName) : nullptr;
             for (size_t i = 0; text != nullptr && i + 1 < sizeof(name) && text[i] != '\0'; i++) {
                 name[i] = text[i];
                 name[i + 1] = '\0';
@@ -135,21 +140,24 @@ namespace {
         }
     }
 
-    // Notes the equipped weapon's name each time it changes.
-    void FollowWeapon(uint8_t* pawnData) {
-        uint8_t* weapon = g_equippedWeapon(pawnData + kInventory);
+    // Notes the equipped weapon's name, and its scope's raise, each time it changes.
+    void FollowWeapon(uint8_t* weapon) {
         if (weapon == g_weapon) {
             return;
         }
         g_weapon = weapon;
         ReadName(weapon, g_weaponName);
+        g_raiseReach = g_reach(g_weaponName);
         g_weaponChanges++;
     }
 
-    // The equipped weapon if it has a scope's sight picture of its own, else null.
-    uint8_t* ScopedWeapon(uint8_t* pawnData) {
-        uint8_t* weapon = g_equippedWeapon(pawnData + kInventory);
-        return weapon != nullptr && Field<uint8_t>(weapon, kHiResScope) != 0 ? weapon : nullptr;
+    // Whether the weapon has a scope's sight picture of its own, and whether that is up.
+    bool HasScope(uint8_t* weapon) {
+        return weapon != nullptr && Field<uint8_t>(weapon, kHiResScope) != 0;
+    }
+
+    bool SightPictureUp(uint8_t* weapon) {
+        return HasScope(weapon) && Field<uint8_t>(weapon, kScopeShown) != 0;
     }
 
     // How fast the look turns, smoothed over kTrail seconds.
@@ -185,9 +193,10 @@ namespace {
 
         uint8_t* data = Field<uint8_t*>(pawn, kPawnData);
         const bool sights = (Field<uint8_t>(data, kEffectiveFlags) & kIronsight) != 0;
+        uint8_t* weapon = g_equippedWeapon(data + kInventory);
+        FollowWeapon(weapon);
         // The scope's sight picture outlasts the iron sights by a few frames as the scope goes.
-        uint8_t* weapon = ScopedWeapon(data);
-        const bool scope = weapon != nullptr && Field<uint8_t>(weapon, kScopeShown) != 0;
+        const bool scope = SightPictureUp(weapon);
         const float step = seconds / kSettle;
         // The iron sights let go at once when a scope's own sight picture comes up, and the scope
         // when it goes.
@@ -198,19 +207,20 @@ namespace {
         g_settled = settled;
         g_scoped = scoped;
         g_scopeUp = scope;
+        g_aiming = settled > 0.0f || scope;
         FollowLook(pawn, data, seconds);
-        FollowWeapon(data);
 
         // Down the iron sights the eye drifts off the gun. To a scope it comes forward as far as
         // the scope has been raised, and all the way once the sight picture is up.
-        const float raised = weapon == nullptr || !g_zoomAtOnce ? 0.0f
+        const float raised = !HasScope(weapon) || !g_zoomAtOnce ? 0.0f
                              : scope ? 1.0f
                                      : std::clamp(Field<float>(data, kIronsightWeight), 0.0f, 1.0f);
         const WeaponOverhaul::Aim::Offset drift = g_drift(seconds);
-        g_added = {drift.right * settled, drift.up * settled, g_raiseReach * raised};
+        g_added = {drift.right * settled, drift.up * settled};
+        g_addedAhead = g_raiseReach * raised;
         Field<float>(camera, kEyeRight) += g_added.right;
         Field<float>(camera, kEyeUp) += g_added.up;
-        Field<float>(camera, kEyeAhead) += g_added.ahead;
+        Field<float>(camera, kEyeAhead) += g_addedAhead;
         g_addedTo = camera;
     }
 
@@ -222,11 +232,11 @@ namespace {
             return;
         }
         uint8_t* data = Field<uint8_t*>(pawn, kPawnData);
-        uint8_t* weapon = ScopedWeapon(data);
-        if (weapon == nullptr || Field<float>(data, kIronsightWeight) <= 0.0f) {
+        uint8_t* weapon = g_equippedWeapon(data + kInventory);
+        if (!HasScope(weapon) || Field<float>(data, kIronsightWeight) <= 0.0f) {
             return;
         }
-        const float zoom = Field<uint8_t>(weapon, kScopeShown) != 0 ? 1.0f : 0.0f;
+        const float zoom = SightPictureUp(weapon) ? 1.0f : 0.0f;
         float fov = Field<float>(camera, kBaseFov);
         fov += (Field<float>(data, kOtherFov) - fov) * Field<float>(data, kOtherWeight);
         fov += (Field<float>(data, kIronsightFov) - fov) * zoom;
@@ -238,13 +248,13 @@ namespace {
         if (g_addedTo != nullptr) {
             Field<float>(g_addedTo, kEyeRight) -= g_added.right;
             Field<float>(g_addedTo, kEyeUp) -= g_added.up;
-            Field<float>(g_addedTo, kEyeAhead) -= g_added.ahead;
+            Field<float>(g_addedTo, kEyeAhead) -= g_addedAhead;
             g_addedTo = nullptr;
         }
     }
 }
 
-bool WeaponOverhaul::Aim::Install(DriftFn drift) {
+bool WeaponOverhaul::Aim::Install(DriftFn drift, ReachFn reach) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
     if (!g_update || !g_updateCameraOffset || !g_equippedWeapon || !g_playerCamera) {
         api->Log("aim: the camera functions were not found in this build");
@@ -252,6 +262,7 @@ bool WeaponOverhaul::Aim::Install(DriftFn drift) {
     }
 
     g_drift = drift;
+    g_reach = reach;
     if (!api->Hook(reinterpret_cast<void*>(g_update.address()),
                    reinterpret_cast<void*>(&UpdateDetour),
                    reinterpret_cast<void**>(&g_originalUpdate))) {
@@ -275,10 +286,6 @@ void WeaponOverhaul::Aim::SetZoomAtOnce(bool atOnce) {
     g_zoomAtOnce = atOnce;
 }
 
-void WeaponOverhaul::Aim::SetRaiseReach(float metres) {
-    g_raiseReach = metres;
-}
-
 const char* WeaponOverhaul::Aim::WeaponName() {
     return g_weaponName;
 }
@@ -297,6 +304,10 @@ float WeaponOverhaul::Aim::Scoped() {
 
 bool WeaponOverhaul::Aim::ScopeUp() {
     return g_scopeUp;
+}
+
+bool WeaponOverhaul::Aim::Aiming() {
+    return g_aiming;
 }
 
 WeaponOverhaul::Aim::Swing WeaponOverhaul::Aim::ScopeSwing() {

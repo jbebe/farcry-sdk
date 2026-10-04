@@ -30,10 +30,10 @@ namespace {
 
     DrawIndexedPrimitiveFn g_original = nullptr;
     WeaponOverhaul::WeaponDraws::Listener g_listener = {};
-    // Whether the gun's draws are watched; and the frame the player was last aiming in, which the
-    // render thread can draw frames behind, so the gun is watched for a few frames more.
+    // Whether the gun's draws are watched; and the frame a scope's sight picture was last up in,
+    // which the render thread can draw frames behind, so the gun is watched for a few frames more.
     bool g_watching = false;
-    uint32_t g_aimedFrame = kNever;
+    uint32_t g_scopedFrame = kNever;
     constexpr uint32_t kLingerFrames = 8;
 
     IDirect3DDevice9* g_owner = nullptr;
@@ -144,7 +144,7 @@ namespace {
             std::abs(rows[14]) != 1.0f || rows[15] != 0.0f || rows[10] == 0.0f) {
             return false;
         }
-        projection = {rows[0], rows[5], rows[10] * rows[14], rows[11]};
+        projection = {rows[5], rows[10] * rows[14], rows[11]};
         const float nearest = -projection.depthOffset / projection.depthScale;
         return nearest > 0.0f && nearest < kWeaponNearest;
     }
@@ -214,10 +214,13 @@ namespace {
             return g_original(device, type, baseVertexIndex, minVertexIndex, numVertices,
                               startIndex, primitiveCount);
         };
+        if (!g_watching) {
+            return draw();
+        }
         D3DVIEWPORT9 viewport = {};
         Projection projection = {};
         const bool squeezed = !WeaponOverhaul::Frame::PastSky();
-        if (!g_watching || FAILED(device->GetViewport(&viewport)) ||
+        if (FAILED(device->GetViewport(&viewport)) ||
             (viewport.MaxZ < kWeaponFarthest) != squeezed ||
             !ReadGunProjection(device, projection)) {
             return draw();
@@ -253,12 +256,12 @@ namespace {
 
     void OnScenePass(const WeaponOverhaul::Frame::Pass& pass) {
         const uint32_t frame = WeaponOverhaul::Frame::Number();
-        if (WeaponOverhaul::Aim::Settled() > 0.0f || WeaponOverhaul::Aim::Scoped() > 0.0f ||
-            WeaponOverhaul::Aim::ScopeUp()) {
-            g_aimedFrame = frame;
+        if (WeaponOverhaul::Aim::ScopeUp()) {
+            g_scopedFrame = frame;
         }
-        g_watching = g_aimedFrame != kNever && frame - g_aimedFrame <= kLingerFrames;
-        if (!g_watching || g_depthFrame != WeaponOverhaul::Frame::Number()) {
+        g_watching = WeaponOverhaul::Aim::Aiming() ||
+                     WeaponOverhaul::Frame::Within(g_scopedFrame, kLingerFrames);
+        if (!g_watching || g_depthFrame != frame) {
             return;
         }
         if (pass.serial == g_colourPass) {

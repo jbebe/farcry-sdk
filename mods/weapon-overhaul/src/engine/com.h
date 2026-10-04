@@ -11,4 +11,13 @@ void Release(T*& object) {
     }
 }
 
+// A COM pointer without the reference its getter added, for comparing or using in passing.
+template <class T>
+T* Borrowed(T* object) {
+    if (object != nullptr) {
+        object->Release();
+    }
+    return object;
+}
+
 }

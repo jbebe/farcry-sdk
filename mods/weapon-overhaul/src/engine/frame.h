@@ -34,6 +34,11 @@ uint32_t PassSerial();
 // Counts frames, stepping as the composite ends one.
 uint32_t Number();
 
+// Whether `frame` is this one or one of the `frames` before it.
+inline bool Within(uint32_t frame, uint32_t frames) {
+    return frame != kNever && Number() - frame <= frames;
+}
+
 // Whether this frame's sky pass has ended, which puts a draw after the whole world.
 bool PastSky();
 

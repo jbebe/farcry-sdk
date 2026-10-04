@@ -20,7 +20,7 @@ namespace {
 }
 
 float WeaponOverhaul::Surroundings::Want(float cameraFov) {
-    if (Aim::Settled() <= 0.0f && Aim::Scoped() <= 0.0f && !Aim::ScopeUp()) {
+    if (!Aim::Aiming()) {
         g_ownFov = cameraFov;
     }
     return g_enabled && Eyepiece::Expected() ? g_ownFov : 0.0f;
