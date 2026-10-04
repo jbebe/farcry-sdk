@@ -26,7 +26,7 @@ namespace {
 }
 
 void WeaponOverhaul::ScopeShadow::OnGunPass(const Frame::Pass& pass,
-                                            const WeaponDraws::Depth& depth, float hole) {
+                                            const ScopeLens::Walls& walls) {
     const float scoped = g_enabled ? Aim::Scoped() : 0.0f;
     IDirect3DTexture9* lens = ScopeLens::Found();
     IDirect3DPixelShader9* shadow = scoped > 0.0f ? g_shadowShader.Get(pass.device) : nullptr;
@@ -40,13 +40,13 @@ void WeaponOverhaul::ScopeShadow::OnGunPass(const Frame::Pass& pass,
     const float constants[kConstantCount * 4] = {
         swing.x, swing.y, scoped, width / height,
         kSoftEdge, kDarkness, ScopeLens::kSmallest, kShadowRadius,
-        hole, 0.0f, 0.0f, 0.0f,
+        walls.below, walls.reach, 0.0f, 0.0f,
     };
 
     IDirect3DDevice9* device = pass.device;
     ScreenDraw draw(device, 0, kConstantCount);
     device->SetPixelShaderConstantF(0, constants, kConstantCount);
-    device->SetTexture(3, depth.texture);
+    device->SetTexture(3, walls.texture);
     device->SetTexture(5, lens);
     device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
     device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);

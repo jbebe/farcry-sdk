@@ -4,6 +4,7 @@
 #pragma once
 
 #include "engine/weapon_draws.h"
+#include "scope_lens.h"
 
 namespace WeaponOverhaul::Eyepiece {
 
@@ -17,17 +18,14 @@ bool BeforeGunDraw(IDirect3DDevice9* device, const WeaponDraws::Projection& proj
                    bool depthPass);
 void AfterGunDraw(IDirect3DDevice9* device);
 
-// Lays the scope's body and the reticle over the finished frame, black and soft.
+// Lays the scope's body, its housing and the reticle over the finished frame, black and soft.
 void OnComposite(IDirect3DDevice9* device);
 
-// The opening's radius in screen heights while a scope is drawn this way, nought otherwise.
-float OpeningRadius();
-
-// Whether a scope is cut to its eyepiece this frame.
+// Whether a scope is drawn from its eyepiece this frame.
 bool Active();
 
-// The stored depth the scope is cut at this frame, one while it is drawn whole.
-float Hole(const WeaponDraws::Projection& projection);
+// What the lens is found in this frame: the housing as drawn here once it is, else the gun's depth.
+ScopeLens::Walls Walls(const WeaponDraws::Depth& depth);
 
 void SetEnabled(bool enabled);
 

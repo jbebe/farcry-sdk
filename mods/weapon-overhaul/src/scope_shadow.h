@@ -3,12 +3,13 @@
 #pragma once
 
 #include "engine/weapon_draws.h"
+#include "scope_lens.h"
 
 namespace WeaponOverhaul::ScopeShadow {
 
 // Draws over the lens ScopeLens found as the gun's colour pass ends, before the bloom reads the
-// frame, and only through the glass: where nothing is nearer than the stored depth `hole`.
-void OnGunPass(const Frame::Pass& pass, const WeaponDraws::Depth& depth, float hole);
+// frame, and only through the glass: where `walls` show no housing.
+void OnGunPass(const Frame::Pass& pass, const ScopeLens::Walls& walls);
 
 void SetEnabled(bool enabled);
 

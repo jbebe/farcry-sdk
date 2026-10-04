@@ -57,6 +57,9 @@ namespace {
     constexpr float kMountHalfWidth = 0.6f;
     constexpr float kBodySoftness = 0.025f;
     constexpr float kOpeningRadius = kBodyRadius / (1.0f + kRim);
+    // How far past the opening found the glass may reach, in its radii: into the body, which covers
+    // whatever the housing does not.
+    constexpr float kGlassReach = 1.0f + 2.0f * kRim;
     // The housing's softness: the reach of its blur as a share of the screen's height, and the
     // steps BlurPS takes either side.
     constexpr float kHousingSoftness = 2.0f * kBodySoftness;
@@ -639,8 +642,8 @@ void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
     const float height = static_cast<float>(Frame::Height());
     const float constants[12] = {
         1.0f / width, 1.0f / height, kSoftness * height, width / height,
-        kInk, ScopeLens::kSmallest, 0.0f, 0.0f,
-        1.0f + kRim, kMountHalfWidth, kBodySoftness, 0.0f,
+        kInk, ScopeLens::kSmallest, kBodyRadius, 0.0f,
+        kOpeningRadius, kBodyRadius, kMountHalfWidth * kOpeningRadius, kBodySoftness,
     };
 
     IDirect3DSurface9* frame = nullptr;
@@ -674,12 +677,12 @@ void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
     draw.Quad(0.0f, 0.0f, width, height);
 }
 
-float WeaponOverhaul::Eyepiece::OpeningRadius() {
-    return Active() ? kOpeningRadius : 0.0f;
-}
-
-float WeaponOverhaul::Eyepiece::Hole(const WeaponDraws::Projection& projection) {
-    return Active() ? projection.Stored(g_up.scope->keptTo) : 1.0f;
+WeaponOverhaul::ScopeLens::Walls WeaponOverhaul::Eyepiece::Walls(const WeaponDraws::Depth& depth) {
+    // The housing's mask holds nought where the housing is, the gun's depth less than one.
+    if (Active() && g_housingMask.frame == Frame::Number()) {
+        return {g_housingMask.target.texture, 0.5f, kGlassReach};
+    }
+    return {depth.texture, 1.0f, 1.05f};
 }
 
 bool WeaponOverhaul::Eyepiece::Active() {

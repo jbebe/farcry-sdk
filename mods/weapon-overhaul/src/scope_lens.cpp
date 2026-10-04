@@ -86,8 +86,7 @@ namespace {
     }
 }
 
-void WeaponOverhaul::ScopeLens::Track(const Frame::Pass& pass, const WeaponDraws::Depth& depth,
-                                      float hole, float opening) {
+void WeaponOverhaul::ScopeLens::Track(const Frame::Pass& pass, const Walls& walls) {
     if (Aim::Scoped() <= 0.0f) {
         return;
     }
@@ -102,7 +101,7 @@ void WeaponOverhaul::ScopeLens::Track(const Frame::Pass& pass, const WeaponDraws
     const float height = static_cast<float>(Frame::Height());
     const float constants[kConstantCount * 4] = {
         kNearest, (kFarthest - kNearest) / kSteps, height / width, Follow(),
-        hole, kSmallest, opening, 0.0f,
+        walls.below, kSmallest, 0.0f, 0.0f,
     };
     const Target& lensNow = g_lens[g_lensIndex];
     const Target& lensBefore = g_lens[g_lensIndex ^ 1];
@@ -120,7 +119,7 @@ void WeaponOverhaul::ScopeLens::Track(const Frame::Pass& pass, const WeaponDraws
         g_lensFresh = false;
     }
     device->SetRenderTarget(0, g_radii.surface);
-    device->SetTexture(3, depth.texture);
+    device->SetTexture(3, walls.texture);
     device->SetTexture(5, lensBefore.texture);
     device->SetPixelShader(radius);
     if (!draw.FullQuad()) {

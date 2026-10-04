@@ -1,19 +1,18 @@
-// The scope's lens, found on screen as the hole its housing leaves in the gun's depth. See
-// src/scope_lens.cpp for the passes.
+// The scope's lens, found on screen as the hole its housing leaves. See src/scope_lens.cpp for the
+// passes.
 
 // x: the nearest radius looked at for the housing, y: the step between radii, both in screen
 // heights. z: the screen's height over its width. w: how far the lens radius moves toward this
 // frame's.
 float4 Search : register(c0);
-// x: the stored depth the housing is nearer than; one for the scope as the engine draws it, less
-// where it is cut. y: the smallest radius taken for a lens, z: the radius given the lens in place
-// of the one found, nought for none, both in screen heights.
+// x: what the walls' red is below wherever the housing is. y: the smallest radius taken for a lens,
+// in screen heights.
 float4 Hole : register(c1);
 
 // The first housing hit along each direction.
 sampler2D Radii : register(s0);
-// The weapon's hardware depth at half resolution, one where the weapon is not.
-sampler2D WeaponDepth : register(s3);
+// The walls at half resolution: the weapon's hardware depth, or a mask of the housing.
+sampler2D Walls : register(s3);
 // x: the lens radius, nought before there is one. yz: its centre off the screen's, y down. All in
 // screen heights. Last frame's.
 sampler2D Lens : register(s5);
@@ -47,7 +46,7 @@ float4 RadiusPS(float2 pixel : VPOS) : COLOR0 {
     for (int i = 0; i < STEPS; i++) {
         float radius = Search.x + i * Search.y;
         float2 at = origin + direction * radius;
-        float stored = tex2Dlod(WeaponDepth, float4(at, 0.0f, 0.0f)).r;
+        float stored = tex2Dlod(Walls, float4(at, 0.0f, 0.0f)).r;
         bool housing = all(abs(at - kCentre) < 0.5f) && stored < Hole.x;
         hit = hit > 0.0f ? hit : (housing ? radius : 0.0f);
     }
@@ -103,8 +102,7 @@ float4 LensPS() : COLOR0 {
     float4 found = Fit(closer.xyz, 0.1f);
 
     float3 previous = LastLens();
-    float eased = previous.x > 0.0f ? lerp(previous.x, found.z, Search.w) : found.z;
-    float radius = Hole.z > 0.0f ? Hole.z : eased;
+    float radius = previous.x > 0.0f ? lerp(previous.x, found.z, Search.w) : found.z;
     bool lens = found.w >= FEWEST && found.z >= Hole.y;
     return float4(lens ? float3(radius, previous.yz + found.xy) : float3(previous.x, 0.0f, 0.0f), 1.0f);
 }

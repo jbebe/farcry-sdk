@@ -29,16 +29,13 @@ namespace {
     void OnDepthPass(const WeaponOverhaul::Frame::Pass& pass,
                      const WeaponOverhaul::WeaponDraws::Depth& depth) {
         WeaponOverhaul::Eyepiece::OnDepthPass(pass, depth);
-        WeaponOverhaul::ScopeLens::Track(pass, depth,
-                                         WeaponOverhaul::Eyepiece::Hole(depth.projection),
-                                         WeaponOverhaul::Eyepiece::OpeningRadius());
+        WeaponOverhaul::ScopeLens::Track(pass, WeaponOverhaul::Eyepiece::Walls(depth));
     }
 
     void OnGunPass(const WeaponOverhaul::Frame::Pass& pass,
                    const WeaponOverhaul::WeaponDraws::Depth& depth) {
         WeaponOverhaul::Blur::OnGunPass(pass, depth);
-        WeaponOverhaul::ScopeShadow::OnGunPass(pass, depth,
-                                               WeaponOverhaul::Eyepiece::Hole(depth.projection));
+        WeaponOverhaul::ScopeShadow::OnGunPass(pass, WeaponOverhaul::Eyepiece::Walls(depth));
     }
 
     void __cdecl OnSwayChanged(const FCSE_SettingValue* value, void*) {
