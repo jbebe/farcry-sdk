@@ -58,6 +58,13 @@ namespace {
         WeaponOverhaul::Frame::kNever, WeaponOverhaul::Frame::kNever,
         WeaponOverhaul::Frame::kNever, WeaponOverhaul::Frame::kNever};
 
+    // Whether `frame` is this one or the last. The eyepiece outlasts the sight picture by a frame:
+    // the frame it goes in can still be drawn at the scope's field of view.
+    bool Recent(uint32_t frame) {
+        const uint32_t now = WeaponOverhaul::Frame::Number();
+        return frame == now || frame + 1 == now;
+    }
+
     // The distance field of the scope it was made for, on the device that owns it.
     IDirect3DDevice9* g_shapeOwner = nullptr;
     const Scope* g_shapeOf = nullptr;
@@ -140,7 +147,7 @@ namespace {
         std::vector<WeaponOverhaul::ScreenDraw::Vertex> vertices;
         for (size_t i = 0; i < scope.pieces.size() && i < kMostPieces; i++) {
             const WeaponOverhaul::Scopes::Piece& piece = scope.pieces[i];
-            if (g_textureFrames[i] != WeaponOverhaul::Frame::Number()) {
+            if (!Recent(g_textureFrames[i])) {
                 continue;
             }
             device->SetTexture(0, g_textures[i]);
@@ -180,12 +187,12 @@ bool WeaponOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
     if (vertices != g_inHandVertices) {
         return true;
     }
-    // Only the sight picture draws the housing in the gun's depth pass, which comes first; the rest
-    // of that frame's draws from the weapon are the sight picture's too.
+    // Only the sight picture draws the housing in the gun's depth pass, which comes first; the
+    // weapon's draws go with the eyepiece in that frame and the next.
     if (call.depthPass && call.primitiveCount == g_inHand->housing) {
         g_drawnFrame = Frame::Number();
     }
-    if (g_drawnFrame != Frame::Number()) {
+    if (!Recent(g_drawnFrame)) {
         return true;
     }
     // A piece of the reticle is told by its draw's size, which no other draw of the weapon shares.
@@ -240,7 +247,7 @@ void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
 }
 
 std::optional<WeaponOverhaul::Eyepiece::Opening> WeaponOverhaul::Eyepiece::Open() {
-    if (!g_enabled || g_inHand == nullptr || g_drawnFrame != Frame::Number()) {
+    if (!g_enabled || g_inHand == nullptr || !Recent(g_drawnFrame)) {
         return std::nullopt;
     }
     const Scope& scope = *g_inHand;
@@ -252,7 +259,7 @@ std::optional<WeaponOverhaul::Eyepiece::Opening> WeaponOverhaul::Eyepiece::Open(
 
 bool WeaponOverhaul::Eyepiece::Expected() {
     return g_enabled && g_inHand != nullptr &&
-           (Aim::ScopeUp() || g_drawnFrame == Frame::Number() || g_drawnFrame + 1 == Frame::Number());
+           (Aim::ScopeUp() || Recent(g_drawnFrame));
 }
 
 void WeaponOverhaul::Eyepiece::SetEnabled(bool enabled) {
