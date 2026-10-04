@@ -80,8 +80,8 @@ weight its curve has reached, eased every frame by `BeautifierMaths::UpdateFOV` 
 | second field of view | `+0x110` |
 
 `CWeapon::OnEquip` (server `0x08F49D00`) fills the first transition from the weapon's iron-sight
-properties: its `fIronsightTransitionTime`, its transition curve, and its `fIronsightFOV` (`+0xE4` in
-the weapon's properties). A scoped weapon's zoom is that same transition, so the whole view zooms
+properties: its `fIronsightTransitionTime`, its transition curve, and its `fIronsightFOV` (`+0xE4`
+in the weapon's properties). A scoped weapon's zoom is that same transition, so the whole view zooms
 in as the scope comes up.
 
 `Update` then hands `+0x108` to the scene camera at `+0x28`, and the unaimed `+0x70` as its typical
@@ -159,8 +159,8 @@ two bytes from. `CInventoryViewPawn::GetEquippedWeapon` (`0x10127DA0`, `__thisca
 the pawn's inventory view is `*(pawn + 0x10) + 0x4F0`.
 
 The weapon's entity is behind an entity proxy at `+0x08`, at the proxy's `+0x0C`, and the entity's
-name, a `char*` at its `+0x14`, is its archetype's: `weapons.Primary.M16`, `weapons.Special.Dart_Rifle`,
-and so on. The server's `GetWeaponName` (`0x092F1730`) reads the same chain.
+name, a `char*` at its `+0x14`, is its archetype's: `weapons.Primary.M16`,
+`weapons.Special.Dart_Rifle`, and so on. The server's `GetWeaponName` (`0x092F1730`) reads the same chain.
 
 When aiming stops, the iron-sight flag goes a few frames before `+0x84` does, and the sight picture
 is drawn until `+0x84` goes.
