@@ -30,7 +30,11 @@ namespace {
 
     DrawIndexedPrimitiveFn g_original = nullptr;
     WeaponOverhaul::WeaponDraws::Listener g_listener = {};
+    // Whether the gun's draws are watched; and the frame the player was last aiming in, which the
+    // render thread can draw frames behind, so the gun is watched for a few frames more.
     bool g_watching = false;
+    uint32_t g_aimedFrame = kNever;
+    constexpr uint32_t kLingerFrames = 8;
 
     IDirect3DDevice9* g_owner = nullptr;
     IDirect3DSurface9* g_nullTarget = nullptr;
@@ -248,8 +252,12 @@ namespace {
     }
 
     void OnScenePass(const WeaponOverhaul::Frame::Pass& pass) {
-        g_watching = WeaponOverhaul::Aim::Settled() > 0.0f || WeaponOverhaul::Aim::Scoped() > 0.0f ||
-                     WeaponOverhaul::Aim::ScopeUp();
+        const uint32_t frame = WeaponOverhaul::Frame::Number();
+        if (WeaponOverhaul::Aim::Settled() > 0.0f || WeaponOverhaul::Aim::Scoped() > 0.0f ||
+            WeaponOverhaul::Aim::ScopeUp()) {
+            g_aimedFrame = frame;
+        }
+        g_watching = g_aimedFrame != kNever && frame - g_aimedFrame <= kLingerFrames;
         if (!g_watching || g_depthFrame != WeaponOverhaul::Frame::Number()) {
             return;
         }
