@@ -29,9 +29,9 @@ of view.
   The reticle is the scope's own, drawn from the game's texture in its own colours, and fills the
   opening as it filled the lens. The magnification is unchanged. The view inside is seen through
   glass: lines bow slightly toward the rim, colours part there the more the scope magnifies, the
-  rim darkens, the coating tints it faintly, and smudges on the glass catch bright light. The
-  scope is laid over the finished frame, after the tone mapping, and trails the look a little as it
-  turns. A scope the plugin does not know is drawn as the game draws it, and named in `fcse.log`.
+  rim darkens, and the coating tints it faintly. The scope is laid over the finished frame, after
+  the tone mapping, and trails the look a little as it turns. A scope the plugin does not know is
+  drawn as the game draws it, and named in `fcse.log`.
 - **Surroundings.** Around the eyepiece the world is seen at the field of view the eye has without
   a scope, as with both eyes open, while the eyepiece keeps the scope's magnified view. With the
   eyepiece on too, the view does not zoom as the scope comes up: the gun comes to the eye, and the
