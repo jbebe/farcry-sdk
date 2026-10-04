@@ -200,18 +200,17 @@ namespace {
 
     constexpr Scope kScopes[] = {
         // Dart Rifle
-        {2016, 9541, kThinRim, -0.00284f, -0.00148f, kDartRiflePieces, {}, 0.1198f, 0.0163f},
+        {2016, 9541, kThinRim, -0.00284f, -0.00148f, kDartRiflePieces, {}, 0.04f},
         // M1903
-        {1488, 7332, kThinRim, -0.00061f, -0.00025f, kM1903Pieces, {}, 0.1351f, 0.0164f},
+        {1488, 7332, kThinRim, -0.00061f, -0.00025f, kM1903Pieces, {}, 0.0995f},
         // Dragunov
-        {2088, 10167, kThickRim, -0.00254f, -0.02073f, kDragunovPieces, {}, 0.2349f, 0.0244f},
+        {2088, 10167, kThickRim, -0.00254f, -0.02073f, kDragunovPieces, {}, 0.1819f},
         // AS50
-        {1800, 11034, kThickRim, 0.00222f, -0.00248f, kAS50Pieces, {}, 0.1521f, 0.0213f},
+        {1800, 11034, kThickRim, 0.00222f, -0.00248f, kAS50Pieces, {}, 0.1058f},
         // AR-16, whose eyecup it shares with the MGL-140, seen from further back
-        {3113, 12361, kThinRim, -0.00474f, -0.00087f, kAR16Pieces, g_ar16Shape, 0.0566f, 0.0155f},
+        {3113, 12361, kThinRim, -0.00474f, -0.00087f, kAR16Pieces, g_ar16Shape, 0.01f},
         // MGL-140
-        {2700, 13074, kThinRim, -0.00275f, 0.00213f, kMGL140Pieces, g_mgl140Shape, 0.1287f,
-         0.0205f},
+        {2700, 13074, kThinRim, -0.00275f, 0.00213f, kMGL140Pieces, g_mgl140Shape, 0.0842f},
     };
 }
 

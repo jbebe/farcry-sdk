@@ -35,11 +35,8 @@ struct Scope {
     std::span<const Piece> pieces;
     // The eyepiece's own shape as a distance field, kShapeSize square; empty for a plain ring.
     std::span<const BYTE> shape;
-    // The scope on the gun once it is raised: how far ahead of the eye its eyepiece's outer edge
-    // stands, taken over its silhouette where the rim is slanted or stepped, and that edge's
-    // radius, in metres.
-    float eyepieceDistance;
-    float eyepieceRadius;
+    // How far the eye comes forward as the scope is raised, in metres.
+    float raiseReach;
 };
 
 // The distance field's side in texels, how far it reaches either side of the look's centre, and the

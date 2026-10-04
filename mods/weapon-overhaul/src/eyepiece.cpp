@@ -84,14 +84,10 @@ namespace {
         }
     }
 
-    // How far the eye comes forward as the weapon in hand raises its scope: until the eyepiece's
-    // outer edge, in the gun's unzoomed projection, meets the body's.
+    // How far the eye comes forward as the weapon in hand raises its scope.
     void FollowRaise(const WeaponOverhaul::WeaponDraws::Call& call) {
-        const Scope* scope = WeaponOverhaul::Scopes::InHand(call.numVertices);
-        if (scope != nullptr) {
-            const float meets =
-                scope->eyepieceRadius * call.projection.verticalScale / (2.0f * kBodyRadius);
-            WeaponOverhaul::Aim::SetRaiseReach((std::max)(0.0f, scope->eyepieceDistance - meets));
+        if (const Scope* scope = WeaponOverhaul::Scopes::InHand(call.numVertices)) {
+            WeaponOverhaul::Aim::SetRaiseReach(scope->raiseReach);
         }
     }
 
