@@ -26,7 +26,7 @@ namespace {
     using WeaponOverhaul::Scopes::Scope;
 
     // The mount's half-width and the body's softness, as shares of the screen's height.
-    constexpr float kMountHalfWidth = 0.21f;
+    constexpr float kMountHalfWidth = 0.105f;
     constexpr float kBodySoftness = 0.0125f;
     // How far inside the opening the body is wholly black, so that its soft edge lies over the
     // shadow and the reticle rather than leaving a light seam between them and it.
