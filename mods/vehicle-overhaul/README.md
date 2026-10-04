@@ -20,7 +20,8 @@ and the wrecks are to come.
 
 - **Off-road physics, on the car you drive.** Every physics step, the car's Havok vehicle is re-tuned
   from its own retail values. Getting out puts them all back, so AI drivers keep the retail physics.
-  - No speed limiter (retail holds a player's car near 60 km/h), longer gearing and no climb assist.
+  - No speed limiter (retail holds a player's car near 60 km/h), longer gearing, 70% of the engine's
+    torque and no climb assist.
   - Weak brakes that lock the wheels into a skid after half a second, as on a car without ABS.
   - Tyre grip that leaves the ground's own friction to decide, with no extra downforce and little
     rolling resistance, so a car coasts and slides.
@@ -28,18 +29,24 @@ and the wrecks are to come.
   - Each car the overhaul knows carries its weight as high as the real vehicle it depicts, set from that
     vehicle's stability factor: a Land Rover Series III tips over at 0.9 g, a Datsun 1200 at 1.3 g,
     and the buggy keeps its weight at the axles.
-  - Softer springs and dampers.
+  - A wider steering lock: half as far again at a crawl, and twice as far at speed, where the game
+    narrows it. On the Datsun that is 37.5° and 20°.
+  - Softer springs, and softer dampers, softest on the rebound, so the body squats, dives and leans
+    and sways before it settles.
 
 - **A real engine, on the car you drive.** The game makes up a car's revs for its sound and rev
   counter from road speed over three pretend gears. Here they come from Havok's gearbox instead.
   - The engine idles, revs against a slipping clutch as the car pulls away, climbs to the redline in
-    each gear, and runs down while the clutch is out for a gear change (0.7 s).
+    each gear, and runs down while the clutch is out for a gear change (0.6 s).
   - Havok's engine is the same in every car; its shift point is laid over the real engine's redline.
     The Datsun runs from a 750 rpm idle to a 6,500 rpm redline.
-- **The Datsun's engine sound.** A new engine sound of five steady-rev recordings, each pitched to the
-  revs and faded into the next, a little quieter off the throttle. Retail's own idle loop plays at
-  idle. A recorded start replaces the ignition, and a gear-change clunk plays halfway through each
-  shift. The new engine sound plays on every Datsun; the clunk only on the one you drive.
+- **The Datsun's engine sound.** A new engine sound of four steady-rev recordings, each pitched to the
+  revs and faded into the next, a little quieter off the throttle and quieter still while the clutch
+  is out. Retail's own idle loop plays at idle. A recorded start replaces the ignition, and a
+  gear-change clunk plays halfway through each shift. The new engine sound plays on every Datsun; the
+  clunk only on the one you drive.
+- **Quieter tyres.** Every car's tyre sounds on the ground, dirt, gravel, grass and the rest, play
+  10 dB quieter, so they no longer drown out the engine.
 
 The engine's `Cameras.Camera.Third` is put up and its update is taken over to place the camera. Both
 are described in
@@ -57,6 +64,9 @@ With DevTools installed, its overlay has a **Vehicle Overhaul** window:
 
 The values are kept in `bin\vehicle-overhaul.ini`.
 
+Its **Sounds** tab switches each of the car's sounds off and on, to hear what makes which noise. Its
+sliders set how loud each sound type plays while driving, for the session only.
+
 ## Layout
 
 ```
@@ -67,14 +77,16 @@ src\                         the FCSE plugin
   drivetrain.cpp             the engine's revs and gear changes, for the sound and rev counter
   real_vehicle.cpp           the real vehicles the cars depict
   tuning.cpp                 the values, their file and the window
+  sounds.cpp                 the window's Sounds tab
   engine\                    the game's own seams: the signal dispatcher, the input pass, the camera
                              manager and the third camera's update, entities, the seat lookup,
                              terrain height, the Havok vehicle under each car, a vehicle's engine
-                             sound, sound banks
+                             sound, the sound system, sound banks
 layer\mods\
   config\                    the active_camerathird control and its binding, as sections
   languages\                 the control's label, in every language
-  soundbinary\               the Datsun's engine, start and gear-change sounds; its pedal sound silenced
+  soundbinary\               the Datsun's engine, start and gear-change sounds; its pedal sound
+                             silenced; every car's quieter tyre sounds
 layer\plugins\vehicle-overhaul\   the built plugin, staged here by build.ps1
 ```
 

@@ -33,6 +33,8 @@ struct Wheel {
     float* springStrength;
     float* dampingCompression;
     float* dampingRelaxation;
+    // The suspension's length at rest, which is also its travel.
+    float* suspensionLength;
 };
 
 // Every value the overhaul writes on one car.
@@ -57,6 +59,9 @@ struct Parts {
     // Seconds a fully pressed brake takes to lock a wheel, and a gear change cuts the drive.
     float* lockTime;
     float* shiftTime;
+    // How far a held steering key winds the front wheels out standing still, and at speed.
+    float* steeringLock;
+    float* steeringAtSpeed;
     int wheels;
     Wheel wheel[kMaxWheels];
     // Which Havok vehicle these belong to, to tell a car from a later one at the same address.
@@ -93,8 +98,11 @@ struct Chassis {
 
 Chassis ChassisOf(Car car);
 
-// Moves the chassis's centre of mass, keeping the body where it is, and rebuilds the tyre solver
-// around it. Physics thread only.
+// Moves the chassis's centre of mass, keeping the body where it is. Physics thread only.
 void MoveCentreOfMass(Car car, const float* local);
+
+// Rebuilds the tyre solver around the centre of mass and the suspensions' length, keeping the chassis
+// response as it is. Physics thread only.
+void RebuildSolver(Car car);
 
 }

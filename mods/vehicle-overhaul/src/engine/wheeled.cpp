@@ -28,6 +28,7 @@ namespace {
     // hkpVehicleInstance and the parts it points at.
     constexpr ptrdiff_t kVehicleChassis = 0x18;
     constexpr ptrdiff_t kVehicleData = 0x1C;
+    constexpr ptrdiff_t kVehicleSteering = 0x24;
     constexpr ptrdiff_t kVehicleTransmission = 0x2C;
     constexpr ptrdiff_t kVehicleBrake = 0x30;
     constexpr ptrdiff_t kVehicleSuspension = 0x34;
@@ -57,6 +58,11 @@ namespace {
     constexpr ptrdiff_t kDataWheelFriction = 0x0C;
     constexpr ptrdiff_t kDataWheelMaxFriction = 0x14;
 
+    // CHkPhysVehicleSteering: the angles a held steering key winds the wheels out to standing still
+    // (fLowMaxAngle) and at and above its speed (fHighMaxAngle).
+    constexpr ptrdiff_t kSteeringLowMaxAngle = 0x28;
+    constexpr ptrdiff_t kSteeringHighMaxAngle = 0x2C;
+
     constexpr ptrdiff_t kTransmissionPrimaryRatio = 0x10;
     constexpr ptrdiff_t kTransmissionClutchDelay = 0x14;
 
@@ -67,6 +73,7 @@ namespace {
     constexpr ptrdiff_t kSuspensionWheels = 0x08;
     constexpr ptrdiff_t kSuspensionWheelStride = 0x30;
     constexpr ptrdiff_t kSuspensionWheelDirection = 0x10;
+    constexpr ptrdiff_t kSuspensionWheelLength = 0x20;
     constexpr ptrdiff_t kSuspensionSprings = 0x14;
     constexpr ptrdiff_t kSuspensionSpringStride = 0x0C;
     // FC2's own: each wheel's suspension force last step, which rolling resistance scales.
@@ -199,18 +206,23 @@ Parts PartsOf(Car car) {
     parts.torqueFactors[1] = factors[0];
     parts.torqueFactors[2] = factors[2];
     parts.lockTime = &At<float>(brake, kBrakeLockTime);
+    uint8_t* steering = At<uint8_t*>(vehicle, kVehicleSteering);
+    parts.steeringLock = &At<float>(steering, kSteeringLowMaxAngle);
+    parts.steeringAtSpeed = &At<float>(steering, kSteeringHighMaxAngle);
     parts.wheels = WheelCount(car);
     parts.vehicle = vehicle;
 
     uint8_t* wheels = Elements(data, kDataWheels);
     uint8_t* brakes = Elements(brake, kBrakeWheels);
-    uint8_t* springs = Elements(At<uint8_t*>(vehicle, kVehicleSuspension), kSuspensionSprings);
+    uint8_t* suspension = At<uint8_t*>(vehicle, kVehicleSuspension);
+    uint8_t* springs = Elements(suspension, kSuspensionSprings);
+    uint8_t* suspensionWheels = Elements(suspension, kSuspensionWheels);
     for (int i = 0; i < parts.wheels; ++i) {
         uint8_t* wheel = wheels + i * kDataWheelStride;
         float* spring = reinterpret_cast<float*>(springs + i * kSuspensionSpringStride);
         parts.wheel[i] = {&At<float>(wheel, kDataWheelFriction), &At<float>(wheel, kDataWheelMaxFriction),
                           reinterpret_cast<float*>(brakes + i * kBrakeWheelStride), &spring[0], &spring[1],
-                          &spring[2]};
+                          &spring[2], &At<float>(suspensionWheels, i * kSuspensionWheelStride + kSuspensionWheelLength)};
     }
     return parts;
 }
@@ -279,9 +291,17 @@ void MoveCentreOfMass(Car car, const float* local) {
         swept0[axis] += world;
         swept1[axis] += world;
     }
+}
 
-    g_initData(At<uint8_t*>(vehicle, kVehicleData), nullptr, At<uint8_t*>(vehicle, kVehicleSuspension) + kSuspensionWheels,
-               body);
+void RebuildSolver(Car car) {
+    uint8_t* vehicle = Vehicle(car);
+    uint8_t* data = At<uint8_t*>(vehicle, kVehicleData);
+    float* response = &At<float>(data, kDataChassisResponse);
+    float kept[3];
+    std::copy_n(response, 3, kept);
+    g_initData(data, nullptr, At<uint8_t*>(vehicle, kVehicleSuspension) + kSuspensionWheels,
+               At<uint8_t*>(vehicle, kVehicleChassis));
+    std::copy_n(kept, 3, response);
 }
 
 }

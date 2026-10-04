@@ -10,7 +10,6 @@
 #include "fcse_api.h"
 
 #include <atomic>
-#include <chrono>
 #include <cstdint>
 
 namespace {
@@ -81,14 +80,6 @@ namespace {
     uint8_t* g_driven = nullptr;
     float g_rpm = 0.0f;
 
-    // Diagnostic, while the gear change sound goes unheard: how long each one plays. The update keeps its
-    // handle until the sound stops, then puts back the invalid one.
-    constexpr ptrdiff_t kSoundShiftHandle = 0x27C;
-    constexpr uint32_t kNoHandle = 0xFFFFFFFF;
-    bool g_shifted = false;
-    uint32_t g_playing = kNoHandle;
-    std::chrono::steady_clock::time_point g_playingSince;
-
     void OnGearChoice(FCSE_MidHookContext* ctx) {
         auto* sound = reinterpret_cast<uint8_t*>(ctx->esi);
         void* vehicle = VehicleOverhaul::Entity::Of(At<void*>(sound, kSoundComponent));
@@ -105,19 +96,16 @@ namespace {
         g_lifted = engine.lifted ? sound : nullptr;
         if (engine.shiftSound != 0) {
             g_shiftSound = engine.shiftSound;
+            VehicleOverhaul::SoundBank::Hold(engine.shiftSound);
         }
         g_driven = sound;
         g_rpm = engine.rpm;
         At<int32_t>(sound, kSoundGear) = kGearSlot;
-        if (engine.shiftSound != 0) {
-            VehicleOverhaul::SoundBank::Hold(engine.shiftSound);
-        }
         if (engine.shift != 0) {
             At<int32_t>(sound, kSoundShiftDirection) = engine.shift;
             // EBP holds the event the store goes on to play, picked by the vehicle's reliability.
             if (engine.shiftSound != 0) {
                 ctx->ebp = engine.shiftSound;
-                g_shifted = true;
             }
             ctx->eax = kGearSlot;
             ctx->eip = g_gearChoice.address() + kStoreGear;
@@ -126,29 +114,9 @@ namespace {
         }
     }
 
-    void LogShiftSound(uint32_t handle) {
-        const auto now = std::chrono::steady_clock::now();
-        if (g_shifted) {
-            g_shifted = false;
-            if (g_playing != kNoHandle) {
-                FCSE::Logf("vehicle sound: a gear change cut the last one's sound short");
-            }
-            if (handle == kNoHandle) {
-                FCSE::Logf("vehicle sound: gear change sound did not start");
-            }
-            g_playing = handle;
-            g_playingSince = now;
-        } else if (g_playing != kNoHandle && handle != g_playing) {
-            const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - g_playingSince).count();
-            FCSE::Logf("vehicle sound: gear change sound played for %lld ms", static_cast<long long>(ms));
-            g_playing = kNoHandle;
-        }
-    }
-
     void OnRpmDone(FCSE_MidHookContext* ctx) {
         if (reinterpret_cast<uint8_t*>(ctx->esi) == g_driven) {
             At<float>(g_driven, kSoundRpm) = g_rpm;
-            LogShiftSound(At<uint32_t>(g_driven, kSoundShiftHandle));
             g_driven = nullptr;
         }
     }

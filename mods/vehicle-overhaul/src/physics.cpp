@@ -31,6 +31,8 @@ namespace {
         float chassisResponse[3];
         float lockTime;
         float shiftTime;
+        float steeringLock;
+        float steeringAtSpeed;
         struct {
             float friction;
             float maxFriction;
@@ -38,10 +40,13 @@ namespace {
             float springStrength;
             float dampingCompression;
             float dampingRelaxation;
+            float suspensionLength;
         } wheel[kMaxWheels];
         float centreOfMass[3];
         // Whether the centre of mass is where the real vehicle has it rather than where it was.
         bool centreMoved;
+        // The suspension travel the tyre solver was last built for.
+        float solverTravel = 1.0f;
     };
 
     Retail g_retail{};
@@ -54,10 +59,13 @@ namespace {
         std::copy_n(parts.chassisResponse, 3, retail.chassisResponse);
         retail.lockTime = *parts.lockTime;
         retail.shiftTime = *parts.shiftTime;
+        retail.steeringLock = *parts.steeringLock;
+        retail.steeringAtSpeed = *parts.steeringAtSpeed;
         for (int i = 0; i < parts.wheels; ++i) {
             const VehicleOverhaul::Wheeled::Wheel& wheel = parts.wheel[i];
             retail.wheel[i] = {*wheel.friction,       *wheel.maxFriction,         *wheel.brakeTorque,
-                               *wheel.springStrength, *wheel.dampingCompression, *wheel.dampingRelaxation};
+                               *wheel.springStrength, *wheel.dampingCompression, *wheel.dampingRelaxation,
+                               *wheel.suspensionLength};
         }
         std::copy_n(chassis.centreOfMass, 3, retail.centreOfMass);
         return retail;
@@ -72,6 +80,8 @@ namespace {
         *parts.spinDamping = g_retail.spinDamping * t.spinDamping;
         *parts.lockTime = t.lockTime;
         *parts.shiftTime = t.shiftTime;
+        *parts.steeringLock = g_retail.steeringLock * t.steeringLock;
+        *parts.steeringAtSpeed = g_retail.steeringAtSpeed * t.steeringAtSpeed;
 
         const float responses[3] = {t.pitchResponse, t.rollResponse, t.yawResponse};
         for (int axis = 0; axis < 3; ++axis) {
@@ -86,8 +96,9 @@ namespace {
             *wheel.maxFriction = retail.maxFriction * t.tyreGrip;
             *wheel.brakeTorque = retail.brakeTorque * t.brakeTorque;
             *wheel.springStrength = retail.springStrength * t.springs;
-            *wheel.dampingCompression = retail.dampingCompression * t.damping;
-            *wheel.dampingRelaxation = retail.dampingRelaxation * t.damping;
+            *wheel.dampingCompression = retail.dampingCompression * t.compressionDamping;
+            *wheel.dampingRelaxation = retail.dampingRelaxation * t.reboundDamping;
+            *wheel.suspensionLength = retail.suspensionLength * t.suspensionTravel;
         }
     }
 
@@ -104,6 +115,8 @@ namespace {
         *parts.spinDamping = g_retail.spinDamping;
         *parts.lockTime = g_retail.lockTime;
         *parts.shiftTime = g_retail.shiftTime;
+        *parts.steeringLock = g_retail.steeringLock;
+        *parts.steeringAtSpeed = g_retail.steeringAtSpeed;
         std::copy_n(g_retail.chassisResponse, 3, parts.chassisResponse);
 
         for (int i = 0; i < parts.wheels; ++i) {
@@ -115,11 +128,12 @@ namespace {
             *wheel.springStrength = retail.springStrength;
             *wheel.dampingCompression = retail.dampingCompression;
             *wheel.dampingRelaxation = retail.dampingRelaxation;
+            *wheel.suspensionLength = retail.suspensionLength;
         }
     }
 
     // Puts the centre of mass where `real` has it, over the car's own track, or with `real` null back
-    // where the game had it.
+    // where the game had it. The tyre solver is left to be rebuilt.
     void PlaceCentreOfMass(Car car, const Chassis& chassis, const RealVehicle::Spec* real) {
         float centre[3];
         std::copy_n(g_retail.centreOfMass, 3, centre);
@@ -169,14 +183,24 @@ namespace {
             }
         }
 
-        const RealVehicle::Spec* centre = wanted && tuning.realCentreOfMass ? real : nullptr;
-        if ((centre != nullptr) != g_retail.centreMoved) {
-            PlaceCentreOfMass(car, chassis, centre);
-        }
         if (wanted) {
             Write(parts, tuning);
         } else {
             Restore(parts, car == player);
+        }
+
+        // After the values, since the solver is built from the suspensions' length.
+        const RealVehicle::Spec* centre = wanted && tuning.realCentreOfMass ? real : nullptr;
+        const float travel = wanted ? tuning.suspensionTravel : 1.0f;
+        const bool moveCentre = (centre != nullptr) != g_retail.centreMoved;
+        if (moveCentre) {
+            PlaceCentreOfMass(car, chassis, centre);
+        }
+        if (moveCentre || travel != g_retail.solverTravel) {
+            VehicleOverhaul::Wheeled::RebuildSolver(car);
+            g_retail.solverTravel = travel;
+        }
+        if (!wanted) {
             g_retail = {};
         }
     }

@@ -18,6 +18,8 @@ struct Values {
     float shiftTime;
     float brakeTorque;
     float lockTime;
+    float steeringLock;
+    float steeringAtSpeed;
     float tyreGrip;
     float downforce;
     float rollingResistance;
@@ -26,7 +28,9 @@ struct Values {
     float yawResponse;
     float spinDamping;
     float springs;
-    float damping;
+    float suspensionTravel;
+    float compressionDamping;
+    float reboundDamping;
 };
 
 Values Current();

@@ -39,23 +39,31 @@ namespace {
 
     constexpr const char* kEngine = "Engine and gearbox";
     constexpr const char* kBrakes = "Brakes";
+    constexpr const char* kSteering = "Steering";
     constexpr const char* kGrip = "Grip";
     constexpr const char* kChassis = "Chassis";
     constexpr const char* kSuspension = "Suspension";
 
     constexpr Parameter kParameters[] = {
-        {"Engine power", kEngine, offsetof(Values, enginePower), 1.0f, 0.2f, 2.0f, "%.2fx",
+        {"Engine power", kEngine, offsetof(Values, enginePower), 0.7f, 0.2f, 2.0f, "%.2fx",
          "The engine's peak torque, as a multiple of the car's own."},
         {"Climb assist", kEngine, offsetof(Values, climbAssist), 0.0f, 0.0f, 1.0f, "%.2fx",
          "The torque the game adds while the nose points uphill (the Rover's is 400 on top of 95)."},
         {"Top speed", kEngine, offsetof(Values, topSpeed), 2.0f, 0.5f, 3.0f, "%.2fx",
          "Gearing, as a multiple of the car's own top speed. Higher is faster but pulls less in each gear."},
-        {"Shift time", kEngine, offsetof(Values, shiftTime), 0.7f, 0.0f, 2.0f, "%.2f s",
+        {"Shift time", kEngine, offsetof(Values, shiftTime), 0.6f, 0.0f, 2.0f, "%.2f s",
          "How long a gear change cuts the drive while the clutch is out. Retail changes gear instantly."},
         {"Brake torque", kBrakes, offsetof(Values, brakeTorque), 0.3f, 0.1f, 1.5f, "%.2fx",
          "The brakes' strength, as a multiple of the car's own."},
         {"Lock-up time", kBrakes, offsetof(Values, lockTime), 0.5f, 0.1f, 5.0f, "%.2f s",
          "How long a fully pressed brake takes to lock the wheels into a skid. Retail never locks them."},
+        {"Steering lock", kSteering, offsetof(Values, steeringLock), 1.5f, 0.5f, 2.0f, "%.2fx",
+         "How far a held steering key turns the front wheels standing still or crawling, as a multiple of "
+         "the car's own (25 degrees on the Datsun). The wheels wind out to it at the car's own rate."},
+        {"Steering at speed", kSteering, offsetof(Values, steeringAtSpeed), 2.0f, 0.5f, 3.0f, "%.2fx",
+         "How far a held steering key turns the front wheels at speed, as a multiple of the car's own (10 "
+         "degrees on the Datsun, from 43 km/h up). The game narrows the lock towards it as the car speeds "
+         "up."},
         {"Tyre grip", kGrip, offsetof(Values, tyreGrip), 0.3f, 0.1f, 1.5f, "%.2fx",
          "The tyres' grip before the ground's own (retail 3.0, against 0.65 to 0.8 for the ground)."},
         {"Downforce", kGrip, offsetof(Values, downforce), 0.0f, 0.0f, 1.0f, "%.2fx",
@@ -72,8 +80,15 @@ namespace {
          "The game's brake on slow spins of the body, as a multiple of its own."},
         {"Springs", kSuspension, offsetof(Values, springs), 0.6f, 0.3f, 1.5f, "%.2fx",
          "Spring stiffness, as a multiple of the car's own."},
-        {"Damping", kSuspension, offsetof(Values, damping), 0.6f, 0.1f, 1.5f, "%.2fx",
-         "Shock absorbers, as a multiple of the car's own. Lower bounces longer."},
+        {"Travel", kSuspension, offsetof(Values, suspensionTravel), 1.0f, 0.5f, 2.5f, "%.2fx",
+         "How far the wheels can move, as a multiple of the car's own suspension length. Longer lifts the "
+         "body and gives soft springs room before they bottom out."},
+        {"Compression damping", kSuspension, offsetof(Values, compressionDamping), 0.6f, 0.1f, 1.5f, "%.2fx",
+         "How hard the shock absorbers resist being pushed in, as a multiple of the car's own. Lower lets "
+         "the body dip further into a corner, a stop or a bump."},
+        {"Rebound damping", kSuspension, offsetof(Values, reboundDamping), 0.3f, 0.1f, 1.5f, "%.2fx",
+         "How hard they resist springing back out, as a multiple of the car's own. Lower lets the body "
+         "sway and bounce longer before it settles."},
     };
 
     // The switches, kept in the file as 1 or 0 above the values, and on by default.

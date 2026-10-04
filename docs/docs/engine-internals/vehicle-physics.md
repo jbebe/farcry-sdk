@@ -47,7 +47,9 @@ Fixed in code, out of the archetype's reach:
 
 `hkpVehicleData::init` (`0x10BF9C70`) derives the chassis's response to tyre forces at `+0x180`:
 (pitch, roll, yaw factor ÷ unit inertia) ÷ mass. It also derives the friction solver's lever arms
-from the chassis centre of mass. Running it again after moving the centre of mass rebuilds both.
+from the chassis centre of mass and each wheel's axle: its hardpoint plus the suspension direction
+times the suspension length. Running it again after moving the centre of mass or changing a
+suspension length rebuilds both.
 
 ## Every step
 
@@ -88,6 +90,23 @@ wheels while steering. On slopes it fades from full at `fGroundFrictionReduceMin
 `fAccelerationPushFactor` only moves the driver's view with acceleration. `fJumpOutBrakeFactor` is
 the brake pedal left on when the driver gets out.
 
+## Steering
+
+`CHkPhysVehicleSteering::calcMainSteeringAngle` (`0x104C7340`) replaces Havok's steering. It turns
+the front wheels by speed and by how long the key is held, and knows nothing of the tyres' grip:
+
+- `t` is the forward speed over the steering's `fMaxSpeed`, at most 1. It has no lower bound, so it
+  goes negative in reverse.
+- An input under 0.7 sets the angle at once, up to lerp(`fLowDirectMaxAngle`, `fHighDirectMaxAngle`, t).
+- From 0.7 up, as a held key is, the angle starts from the direct one and winds out at
+  lerp(`fLowSteerSpeed`, `fHighSteerSpeed`, t) per second to lerp(`fLowMaxAngle`, `fHighMaxAngle`, t).
+- An AI driver's input sets the angle straight to the maximum times the input. With timed steering
+  off, the steering is Havok's own, which narrows the angle by (`fMaxSpeedFullSteeringAngle` / v)²
+  above that speed.
+
+The Datsun's wheels turn 10° at once and wind out at 10°/s, to 25° standing still and 10° from 12 m/s
+(43 km/h) up, so at speed a held key gets no more than a tap.
+
 ## Who is driving
 
 `CPhysWheeledVehicleEntityImpl::SetDriver(int)` (no function start in the address library; found by
@@ -110,10 +129,13 @@ mode, and resets the AI's boost multipliers, `SetSpecialEnginePowerMultiplier` (
 
 `hkpVehicleInstance`: chassis `+0x18`, data `+0x1C`, steering `+0x24`, engine `+0x28`, transmission
 `+0x2C` (primary ratio `+0x10`), brake `+0x30` (wheels `+0x08`, stride `0x0C`; lock time `+0x14`),
-suspension `+0x34` (wheels `+0x08`, stride `0x30`; springs `+0x14`, stride `0x0C`), aerodynamics
+suspension `+0x34` (wheels `+0x08`, stride `0x30`, length `+0x20`; springs `+0x14`, stride `0x0C`), aerodynamics
 `+0x38` (`extraGravity` `+0x20`, limiter `+0x30`), velocity damper `+0x44` (spin damping `+0x08`),
 wheel infos `+0x48` (stride `0xC0`: ground friction `+0x20`, contact body `+0x24`, suspension length
 `+0x50`), rpm `+0xB8`, gear `+0xCD`.
+
+`CHkPhysVehicleSteering`: direct angles `+0x20` / `+0x24`, maximum angles `+0x28` / `+0x2C`,
+`fMaxSpeed` `+0x30`, steer speeds `+0x34` / `+0x38`, timed steering off `+0x3C`, AI input `+0x3D`.
 
 `hkpVehicleData`: wheel parameters `+0x8C` (stride `0x28`: radius `+0x00`, friction `+0x0C`, maximum
 friction `+0x14`), chassis response `+0x180`, inverse mass `+0x18C`.
