@@ -239,7 +239,7 @@ namespace {
                 g_colourPass = WeaponOverhaul::Frame::PassSerial();
             }
         }
-        if (!g_listener.beforeDraw(device, projection, squeezed)) {
+        if (!g_listener.beforeDraw(device, projection, {primitiveCount, numVertices, squeezed})) {
             return D3D_OK;
         }
         const HRESULT result = draw();

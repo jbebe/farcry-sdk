@@ -1,6 +1,7 @@
 // A scope seen from its eyepiece at the same size for every scope: the engine's housing gives way to
 // a black, out-of-focus body with a mount below it, the world fills the opening, and the reticle
-// grows with the opening, black and soft.
+// grows with the opening, black and soft. The shipped sniper scopes are a plain ring; any other
+// keeps its own housing's shape, black and soft too.
 #pragma once
 
 #include "engine/weapon_draws.h"
@@ -15,7 +16,7 @@ void OnDepthPass(const Frame::Pass& pass, const WeaponDraws::Depth& depth);
 // Drops the scope's housing, sends the reticle's draws into a mask of its own, and puts back what
 // that changed.
 bool BeforeGunDraw(IDirect3DDevice9* device, const WeaponDraws::Projection& projection,
-                   bool depthPass);
+                   const WeaponDraws::Call& call);
 void AfterGunDraw(IDirect3DDevice9* device);
 
 // Lays the scope's body, its housing and the reticle over the finished frame, black and soft.

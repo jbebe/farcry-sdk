@@ -49,17 +49,28 @@ namespace {
     // Scopes remembered.
     constexpr size_t kScopes = 8;
 
-    // The scope's body as it is drawn for every scope: its outer edge's radius as a share of the
-    // screen's height, its rim and the mount below it as shares of the opening's radius, and its
-    // softness, also a share of the screen's height.
+    // The scope's body as it is drawn for every scope: its outer edge's radius, the mount's
+    // half-width and its softness, as shares of the screen's height. Its rim, as a share of the
+    // opening's radius, is a scope's own.
     constexpr float kBodyRadius = 0.4f;
-    constexpr float kRim = 0.15f;
-    constexpr float kMountHalfWidth = 0.6f;
+    constexpr float kMountHalfWidth = 0.21f;
     constexpr float kBodySoftness = 0.025f;
-    constexpr float kOpeningRadius = kBodyRadius / (1.0f + kRim);
-    // How far past the opening found the glass may reach, in its radii: into the body, which covers
-    // whatever the housing does not.
-    constexpr float kGlassReach = 1.0f + 2.0f * kRim;
+    constexpr float kThinRim = 0.15f;
+    constexpr float kThickRim = 0.3f;
+
+    // The shipped sniper scopes, told apart by their housing's draw in the gun's depth pass, are a
+    // plain ring with a rim of their own; any other scope also shows its own housing.
+    struct Ring {
+        UINT primitives;
+        UINT vertices;
+        float rim;
+    };
+    constexpr Ring kRings[] = {
+        {2016, 9541, kThinRim},    // Dart Rifle
+        {1488, 7332, kThinRim},    // M1903
+        {2088, 10167, kThickRim},  // Dragunov, and the VSS that borrows its scope
+        {1800, 11034, kThickRim},  // AS50
+    };
     // The housing's softness: the reach of its blur as a share of the screen's height, and the
     // steps BlurPS takes either side.
     constexpr float kHousingSoftness = 2.0f * kBodySoftness;
@@ -129,7 +140,8 @@ namespace {
     size_t g_nextScope = 0;
 
     // One scope-up: which it is, the scope's draws as seen, the measurements so far, and the scope
-    // it is cut as, none until one is known.
+    // it is cut as, none until one is known; and its housing's draw, with the ring it makes, none
+    // for a scope that shows its housing.
     struct ScopeUp {
         uint32_t number;
         const void* vertices;
@@ -138,8 +150,29 @@ namespace {
         bool settled;
         std::optional<Scope> last;
         Scope* scope;
+        UINT housingPrimitives;
+        UINT housingVertices;
+        const Ring* ring;
     };
     ScopeUp g_up = {};
+
+    const Ring* RingFor(const WeaponOverhaul::WeaponDraws::Call& call) {
+        for (const Ring& ring : kRings) {
+            if (ring.primitives == call.primitiveCount && ring.vertices == call.numVertices) {
+                return &ring;
+            }
+        }
+        return nullptr;
+    }
+
+    float Rim() {
+        return g_up.ring != nullptr ? g_up.ring->rim : kThinRim;
+    }
+
+    // The opening drawn, in screen heights.
+    float OpeningRadius() {
+        return kBodyRadius / (1.0f + Rim());
+    }
 
     // A mask draws are sent into, one where nothing was drawn, at a share of the screen's size; the
     // frame it was last drawn in; and whether the device refused it, until a reset.
@@ -351,9 +384,11 @@ namespace {
         }
         *g_up.scope = scope;
         FCSE::Logf("eyepiece: measured after %d frames: cut at %.3f m; the opening is %.3f m away "
-                   "and grows x%.2f to a slope of %.3f; the reticle is %.3f m away",
+                   "and grows x%.2f to a slope of %.3f; the reticle is %.3f m away; the housing "
+                   "draws %u primitives over %u vertices, %s",
                    g_up.attempts, scope.keptTo, scope.opening.distance, scope.growth, scope.radius,
-                   scope.farEnd.distance);
+                   scope.farEnd.distance, g_up.housingPrimitives, g_up.housingVertices,
+                   g_up.ring != nullptr ? "a plain ring" : "shown");
     }
 
     // Starts over each time a scope comes up.
@@ -372,7 +407,7 @@ namespace {
 
     // The opening drawn, as a slope.
     float OpeningSlope(const Projection& projection) {
-        return 2.0f * kOpeningRadius / projection.verticalScale;
+        return 2.0f * OpeningRadius() / projection.verticalScale;
     }
 
     // Scales the draw under way in clip space by `growth` about `from`, which it moves onto `to`.
@@ -560,7 +595,8 @@ void WeaponOverhaul::Eyepiece::OnDepthPass(const Frame::Pass& pass,
 
 bool WeaponOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
                                              const WeaponDraws::Projection& projection,
-                                             bool depthPass) {
+                                             const WeaponDraws::Call& call) {
+    const bool depthPass = call.depthPass;
     if (!g_enabled || !Aim::ScopeUp()) {
         return true;
     }
@@ -578,6 +614,10 @@ bool WeaponOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
     if (alphaTest) {
         g_up.vertices = vertices;
         g_up.reticle = texture;
+    } else if (depthPass && vertices != nullptr && vertices == g_up.vertices) {
+        g_up.housingPrimitives = call.primitiveCount;
+        g_up.housingVertices = call.numVertices;
+        g_up.ring = RingFor(call);
     }
     if (g_up.scope == nullptr) {
         g_up.scope = Find(vertices);
@@ -594,11 +634,13 @@ bool WeaponOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
         texture = BoundTexture(device);
         if (texture == nullptr || texture != scope.reticle) {
             // The housing is drawn only into its own mask, from the gun's depth pass, where it is
-            // one opaque draw: its first centimetres, shrunk to the opening drawn.
+            // one opaque draw: its first centimetres, shrunk to the opening drawn; under a plain
+            // ring, only as deep as its opening was measured.
             if (!depthPass || !IntoMask(device, g_housingMask, D3DBLEND_ZERO)) {
                 return false;
             }
-            Cut(device, projection, scope.keptTo - kKept + kHousingDepth);
+            Cut(device, projection,
+                g_up.ring != nullptr ? scope.keptTo : scope.keptTo - kKept + kHousingDepth);
             Scale(device, OpeningSlope(projection) / scope.radius, opening, opening);
             return true;
         }
@@ -643,7 +685,7 @@ void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
     const float constants[12] = {
         1.0f / width, 1.0f / height, kSoftness * height, width / height,
         kInk, ScopeLens::kSmallest, kBodyRadius, 0.0f,
-        kOpeningRadius, kBodyRadius, kMountHalfWidth * kOpeningRadius, kBodySoftness,
+        OpeningRadius(), kBodyRadius, kMountHalfWidth, kBodySoftness,
     };
 
     IDirect3DSurface9* frame = nullptr;
@@ -661,7 +703,9 @@ void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
                                                        D3DCOLORWRITEENABLE_BLUE);
     device->SetPixelShader(body);
     draw.Quad(0.0f, 0.0f, width, height);
-    InkHousing(device, draw, frame);
+    if (g_up.ring == nullptr) {
+        InkHousing(device, draw, frame);
+    }
     Release(frame);
 
     IDirect3DPixelShader9* reticle =
@@ -680,7 +724,8 @@ void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
 WeaponOverhaul::ScopeLens::Walls WeaponOverhaul::Eyepiece::Walls(const WeaponDraws::Depth& depth) {
     // The housing's mask holds nought where the housing is, the gun's depth less than one.
     if (Active() && g_housingMask.frame == Frame::Number()) {
-        return {g_housingMask.target.texture, 0.5f, kGlassReach};
+        // The glass may reach into the body, which covers whatever the housing does not.
+        return {g_housingMask.target.texture, 0.5f, 1.0f + 2.0f * Rim()};
     }
     return {depth.texture, 1.0f, 1.05f};
 }

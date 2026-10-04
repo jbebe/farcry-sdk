@@ -33,10 +33,17 @@ struct Depth {
     Projection projection;
 };
 
+// One of the gun's draws: how much it draws, and whether it is of the gun's depth rather than its
+// colour.
+struct Call {
+    UINT primitiveCount;
+    UINT numVertices;
+    bool depthPass;
+};
+
 using GunPassFn = void (*)(const Frame::Pass& pass, const Depth& depth);
-// `depthPass` is whether the draw is of the gun's depth rather than its colour. False drops the
-// draw.
-using GunDrawFn = bool (*)(IDirect3DDevice9* device, const Projection& projection, bool depthPass);
+// False drops the draw.
+using GunDrawFn = bool (*)(IDirect3DDevice9* device, const Projection& projection, const Call& call);
 using DeviceFn = void (*)(IDirect3DDevice9* device);
 
 struct Listener {
