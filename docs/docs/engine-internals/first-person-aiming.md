@@ -165,6 +165,23 @@ name, a `char*` at its `+0x14`, is its archetype's: `weapons.Primary.M16`,
 When aiming stops, the iron-sight flag goes a few frames before `+0x84` does, and the sight picture
 is drawn until `+0x84` goes.
 
+### The scope's post effect
+
+The radial blur toward the screen's edges while a sniper scope is up is a post effect the weapon
+starts itself: its `IronsightFX`, which names `PostFX.Sniper.RadialBlur`, drawn by the
+`PostEffect_RadialBlur` shader.
+
+- `CFCXWeapon::OnEvent` (`0x106D3D00`, server `0x088D7700`) asks `CPostFxManager` for it
+  (`RequestFX`, `0x100B6D30`) on the event that ends the raise. On the events that lower the scope
+  it stops it (`StopFX`, `0x100B6EE0`) and calls `ShowHiResScope(false)`.
+- The effect's id is read from the weapon's properties at `+0x128`, through `0x100F4280`. The
+  properties are `*(*(weapon + 0x24) + 4)` (`CWeapon::GetProperties`, `0x1012E910`).
+- An id of -1 means none: `OnEvent` then neither starts nor stops anything, and the scope comes and
+  goes as before.
+
+Weapon Overhaul writes -1 there for the scopes it draws itself, while the weapon is lowered, so the
+effect is never left running.
+
 :::info[Seen in a running game]
 Retail GOG v1.03, from an FCSE plugin: the names above came back for every weapon taken in hand. Of
 21 scope-ups traced, `+0x84` came on in the frame the iron sights' field-of-view weight reached one.

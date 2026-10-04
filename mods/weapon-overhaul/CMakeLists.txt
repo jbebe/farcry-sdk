@@ -29,6 +29,7 @@ set(SHADER_PASSES
   "scope.fx:ShadowPS:ps_2_0:scope_shadow_ps.h:g_scopeShadowPixelShader"
   "eyepiece.fx:ReticlePS:ps_2_0:eyepiece_reticle_ps.h:g_eyepieceReticlePixelShader"
   "eyepiece.fx:BodyPS:ps_2_0:eyepiece_body_ps.h:g_eyepieceBodyPixelShader"
+  "glass.fx:GlassPS:ps_2_b:glass_ps.h:g_glassPixelShader"
   "surroundings.fx:SurroundingsPS:ps_2_0:surroundings_ps.h:g_surroundingsPixelShader")
 
 set(SHADER_HEADERS "")
