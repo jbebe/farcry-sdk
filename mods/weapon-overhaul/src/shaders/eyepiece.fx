@@ -32,9 +32,13 @@ float4 DepthPS(float2 uv : TEXCOORD0) : COLOR0 {
     return tex2D(WeaponDepth, uv).r;
 }
 
+// The softened housing covers half of its edge; doubled, it is wholly black from there out, and its
+// soft edge lies over the opening rather than leaving a light seam inside it.
+static const float kHousingInk = 2.0f;
+
 // Black, as much as the softened housing covers the pixel.
 float4 HousingPS(float2 uv : TEXCOORD0) : COLOR0 {
-    float ink = 1.0f - tex2D(Mask, uv).r;
+    float ink = saturate(kHousingInk * (1.0f - tex2D(Mask, uv).r));
     clip(ink - 0.002f);
     return float4(0.0f, 0.0f, 0.0f, ink);
 }

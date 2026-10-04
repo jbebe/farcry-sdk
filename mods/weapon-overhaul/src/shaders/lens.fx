@@ -19,6 +19,8 @@ sampler2D Lens : register(s5);
 
 #define DIRECTIONS 24
 #define STEPS 64
+// Halvings of the step a hit is found in.
+#define REFINEMENTS 6
 #define TWO_PI 6.28318531f
 // The fewest hits a lens is fitted to.
 #define FEWEST 5
@@ -37,20 +39,31 @@ float2 Direction(float index) {
     return float2(cos(angle), -sin(angle));
 }
 
+// Whether the housing is at `at`, on the screen.
+bool Housing(float2 at) {
+    return all(abs(at - kCentre) < 0.5f) && tex2Dlod(Walls, float4(at, 0.0f, 0.0f)).r < Hole.x;
+}
+
 // Along this pixel's direction from the lens's last centre, the first of the gun on the screen: the
-// inside of the housing, a reticle line, or nothing.
+// inside of the housing, a reticle line, or nothing. Narrowed within the step it is found in, so that
+// it moves as smoothly as the lens does rather than a step at a time.
 float4 RadiusPS(float2 pixel : VPOS) : COLOR0 {
     float2 direction = Direction(pixel.x) * float2(Search.z, 1.0f);
     float2 origin = kCentre + LastLens().yz * float2(Search.z, 1.0f);
     float hit = 0.0f;
     for (int i = 0; i < STEPS; i++) {
         float radius = Search.x + i * Search.y;
-        float2 at = origin + direction * radius;
-        float stored = tex2Dlod(Walls, float4(at, 0.0f, 0.0f)).r;
-        bool housing = all(abs(at - kCentre) < 0.5f) && stored < Hole.x;
-        hit = hit > 0.0f ? hit : (housing ? radius : 0.0f);
+        hit = hit > 0.0f ? hit : (Housing(origin + direction * radius) ? radius : 0.0f);
     }
-    return float4(hit, 0.0f, 0.0f, 1.0f);
+    float inside = hit;
+    float outside = hit - Search.y;
+    for (int j = 0; j < REFINEMENTS; j++) {
+        float middle = 0.5f * (inside + outside);
+        bool housing = Housing(origin + direction * middle);
+        inside = housing ? middle : inside;
+        outside = housing ? outside : middle;
+    }
+    return float4(hit > 0.0f ? 0.5f * (inside + outside) : 0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 // A direction's hit off the last centre, in screen heights. z: one if there is one.

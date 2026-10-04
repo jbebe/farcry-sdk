@@ -734,8 +734,9 @@ void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
 WeaponOverhaul::ScopeLens::Walls WeaponOverhaul::Eyepiece::Walls(const WeaponDraws::Depth& depth) {
     // The housing's mask holds nought where the housing is, the gun's depth less than one.
     if (Active() && g_housingMask.frame == Frame::Number()) {
-        // The glass may reach into the body, which covers whatever the housing does not.
-        return {g_housingMask.target.texture, 0.5f, 1.0f + 2.0f * Rim()};
+        // The glass may reach into the body, which covers whatever the housing does not, but not
+        // past the body's outer edge.
+        return {g_housingMask.target.texture, 0.5f, 1.0f + Rim()};
     }
     return {depth.texture, 1.0f, 1.05f};
 }
