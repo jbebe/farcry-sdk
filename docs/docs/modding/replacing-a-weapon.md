@@ -1354,6 +1354,7 @@ The PBR-to-legacy conversion, finding a material you are allowed to own, and the
 that decide whether the weapon reads matte or polished are all on [texturing a replaced
 weapon](./texturing-a-weapon.md).
 
-Three things are unwritten rather than impossible: a second material
-for a part of the body, a normal map where a weapon owns no third texture path, and the `.Multi`
-pickup for multiplayer.
+Two things are unwritten rather than impossible: a second material
+for a part of the body, and the `.Multi` pickup for multiplayer. A normal map is a different case —
+the `Weapon` shader samples none, so it is a shader limit, not a texture-path one; see
+[relief](./texturing-a-weapon.md#relief-is-a-specular-pattern-not-a-normal-map).

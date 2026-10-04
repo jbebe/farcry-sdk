@@ -80,8 +80,9 @@ What that means in practice:
   of the path, lowercased, backslash-separated.
 - **`depload` does not gate it.** At least for a texture reached through a material that is itself in
   `depload` — which is the case that matters, since your material is one the replaced weapon owned.
-- **So a weapon can have as many textures as it needs**: a second control map for the degradation
-  look, and a normal map if the shader samples one.
+- **So a weapon can have as many textures as it needs**, a second control map for the degradation
+  look among them. A normal map is not one of them, for a different reason: [the `Weapon` shader
+  samples none](#relief-is-a-specular-pattern-not-a-normal-map).
 
 The one thing you cannot synthesize is the `.xbt` header, which is why the canary borrows one. Take
 it from a texture with **no `_mip0` companion** — a UI icon is ideal — because the header carries the
@@ -249,19 +250,15 @@ equally glossy.
 :::
 
 Specular is a separate additive Blinn term, and the pair `SpecularColorBase`/`SpecularColor1` has the
-same shape as the diffuse pair:
+same shape as the diffuse pair, weighted by the control map's red:
 
 ```
-specular = lerp(SpecularColorBase, SpecularColor1, mask.r) * pow(saturate(N.H), SpecularPower)
+specCol  = lerp(SpecularColorBase, SpecularTexture1 * SpecularColor1, mask.r)
+specular = specCol * pow(saturate(N.H), SpecularPower)
 ```
 
-:::note[The `mask.r` weight is inferred, not traced]
-The additive Blinn term and its three inputs are read out of the engine's own shaders. That **red**
-is what weights the pair is inference from the diffuse pair's shape. What supports it is the retail
-data — the Dragunov's `SpecularColorBase` of 0.043 against a bimodal red channel only makes sense if
-red is the weight — and the fact that acting on it fixed this weapon in game. Treat the numbers below
-as measured and the mechanism as very likely.
-:::
+That is read out of the `Weapon` pixel shader, along with a cube-map term covered
+[below](#metal-is-the-cube-map) — see [`.xbm`](../file-formats/xbm-xbg.md#the-weapon-pixel-shader).
 
 `SpecularColorBase` is what a texel gets when red is zero. Set it high and no mask can make anything
 matte. Measured:
@@ -300,6 +297,67 @@ surface is not metal. Two details decide whether it works:
   is dimmer. Levelling the VSS's mean to the Dragunov's 0.347 dimmed its metal to p95 0.627. Fitting
   the metal band to 0.80 instead puts both ends where they belong, and lets a weapon that happens to
   be 57% metal keep a mean higher than the donor's without that being wrong.
+
+### Metal is the cube map
+
+:::note[Measured on retail, not yet built on the worked example]
+The VSS ships without this term. The material it took, `DART_RIFLE_METAL`, is one of the 30 retail
+weapon materials that declare no `ReflectionTexture`.
+:::
+
+A highlight makes a surface glossy, not metallic: it shows only where the sun's half-vector lines up,
+and the rest of the time the steel reads as paint. What retail uses for metal is a cube map added on
+top of it:
+
+```
+reflection = texCUBE(ReflectionTexture, R) * mask.r * saturate(lighting) * ReflectionPower * specCol
+```
+
+It is gated by the same red as the highlight, so a control map that already separates wood from steel
+already says where it goes — a texel at red 0 reflects nothing. It is multiplied by `specCol`, so the
+tiled `SpecularTexture1` patterns it too, and by the lighting, so it does not glow in shadow.
+
+72 of the 102 `Weapon` materials declare one, and the split by what the material is made of is sharp
+(classed by name, all 102):
+
+| | materials | reflection | `SpecularPower` | tiled `SpecularTexture1` |
+| --- | ---: | --- | --- | --- |
+| metal | 56 | 44 at 0.2–1.0 | 3–30, median 12 | `infra_bridges_metal_s`, `metalweapon02_s` |
+| plastic | 20 | 19 none or ≤ 0.1 | 2–30, median 10 | `infra_bridges_metal_s`, `plasticbump_01_s` |
+| wood | 16 | 11 none or ≤ 0.1 | 3–16, median 5 | `genericwood_02_s`, all 16 |
+
+The Desert Eagle is the far end, and the clearest view of how the look is built. Its control map's
+red is 1.0 over the whole gun, its albedo is dark, and the cube map carries the rest:
+
+| | Desert Eagle chrome | Dragunov metal | VSS, shipped |
+| --- | ---: | ---: | ---: |
+| control red over the metal | 1.00 | ~0.8 | ~0.8 |
+| effective albedo | 0.14 | 0.092 | 0.213 |
+| `ReflectionTexture` | `genericcubemap02` | `genericcubemap01` | none |
+| `ReflectionPower` | 0.8 | 0.4 | — |
+| cube-map weight, `mask.r × ReflectionPower × specCol` | **0.72** | **0.27** | **0** |
+| `SpecularPower` | 15 | 30 | 30 |
+
+The VSS copied the Dragunov's specular triplet and not the reflection that goes with it.
+
+### Relief is a specular pattern, not a normal map
+
+The AR-16's stock looks pebbled — the tops of the bumps lit differently from the valleys. That is not
+a normal map. The gun's plastic, `M16_CAMOE_PLASTIC` — the only material on it with a bump pattern —
+tiles `plasticbump_01_s` 25×25 as its `SpecularTexture1` at `SpecularColor1` 2.0, with
+`genericcubemap01` at 0.1. That texture is a dark field, mean 0.17, with the top of every bump
+painted bright. Since both the highlight and the cube map are multiplied by `specCol`, the tops shine
+wherever the stock is lit and the valleys stay dark.
+
+No `Weapon` material declares `NormalTexture1`, and none of the shader's six permutations samples
+one — the normal it lights with is the interpolated vertex normal. So relief on a weapon material is
+either a tiled specular pattern like that one, or shading baked into the albedo and the control map.
+
+A true normal map needs a `Generic` material. That template does sample one, weapon meshes already
+carry tangents and binormals, and first-person items draw that way in retail — the cell-phone
+detonator and the IED kit. What it costs is the worn look: `Generic` has no `MaskTextureBroken` and
+no condition-driven colours. On wood, which the [worn map](#step-6--give-it-a-degraded-look) leaves
+unrusted anyway, that is only the darkening. Untested on a weapon body.
 
 ## Step 6 — give it a degraded look
 
@@ -413,6 +471,11 @@ the **Dragunov's** `spdra`. The framing is wrong by however far those two eyes d
   makes the whole surface glossy however the mask is painted. The Dragunov ships 0.043.
 - **A working specular control is bimodal**, and its metal band is what to level — not its mean.
 - **`SpecularPower` is lobe width and low is wide.**
+- **Metal reads as metal through `ReflectionTexture`**, a cube map gated by the same red as the
+  highlight. 44 of 56 retail metal materials carry one at 0.2 or more; a highlight alone reads as
+  paint.
+- **The `Weapon` shader samples no normal map.** Relief is a tiled `SpecularTexture1` pattern; a true
+  normal map needs a `Generic` material, which has no worn look.
 - **Set `DiffuseColorBase` equal to `DiffuseColor1`** so no condition or vertex channel re-tints.
 - **The `_mip0` companion is twice the base**, and the pack applier splits it for you.
 - **Ship a weapon at 1024**, a 512² base beside a 1024² `_mip0` — the tier every retail weapon uses.

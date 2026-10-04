@@ -294,18 +294,20 @@ many materials name them: `DiffuseTexture1` 1,964, `SpecularTexture1` 1,889,
 ### The `Weapon` shader's parameter set
 
 The 102 `Weapon` materials add the weapon-degradation system on top of `Generic`'s mask-and-two-layer
-structure. They are **not** a superset of `Generic`'s slots: none of the nine checked across the
-Dragunov, the Dart Rifle and the sawed-off declares `NormalTexture1`, so whether the `Weapon`
-template samples a normal at all is unknown, and a normal map authored into a weapon material has no
-observed effect.
+structure. They are **not** a superset of `Generic`'s slots: no `Weapon` material declares
+`NormalTexture1`, and the template has no permutation that samples one — see
+[the `Weapon` pixel shader](#the-weapon-pixel-shader).
 
 - **`MaskTextureBroken` and `MaskTilingBroken`** — a second mask, alongside `MaskTexture1`.
 - **A `Clean`/`Broken` triplet for every colour.** `DiffuseColor1`, `DiffuseColor1Clean`,
   `DiffuseColor1Broken`, and the same for `DiffuseColorBase`, `DiffuseColor2`, `SpecularColor1` and
   `SpecularColorBase`. The unsuffixed key is what the shader reads; the two suffixed ones are the
-  ends the weapon's condition interpolates between.
-- **`ReflectionTexture` and `ReflectionPower`** on some of them — the sawed-off's black-metal
-  material names `graphics\_textures\cubemap\lens_cubemap.xbt` at power 0.9.
+  ends the weapon's condition interpolates between. The shader declares the suffixed keys and never
+  reads them, so the colours are interpolated before the draw — while the two masks are blended in
+  the shader itself.
+- **`ReflectionTexture` and `ReflectionPower`** on 72 of the 102 — a cube map, `genericcubemap01` on
+  51 of them. The sawed-off's black-metal material names
+  `graphics\_textures\cubemap\lens_cubemap.xbt` at power 0.9.
 
 The mask channels behave as `Generic`'s do, and **the pair is where the degradation lives**. Measured
 on the Dragunov's two masks, they differ in exactly one channel:
@@ -387,6 +389,53 @@ Sampler bindings are `t0` `MaskTexture1`, `t1` `DiffuseTexture1`, `t2` `DiffuseT
 `[3]` `DiffuseColor2`, `[7]` `DiffuseTilingAndGroup1`, `[8]` `DiffuseTilingAndGroup2`,
 `[11]` `MaskTilingAndGroup1`.
 
+### The `Weapon` pixel shader
+
+:::info[Verified via reverse engineering]
+Disassembled from the six `obj10` objects that bind `MaskTextureBroken` and a `Weapon` constant
+buffer: `shadernumber_50018991`, `20788cdb` and `8acbc469` with a cube map, `099960bb`, `a065741b`
+and `c078e7d7` without. They differ in shadow and light type; the material maths is the same in all
+six.
+:::
+
+```
+mask    = lerp(tex2D(MaskTextureBroken, uvM * MaskTilingBroken),
+               tex2D(MaskTexture1,      uvM * MaskTiling1), _Reliability) * vertexColour.rgb
+
+layer1  = tex2D(DiffuseTexture1, uv * DiffuseTiling1).rgb
+        * lerp(DiffuseColorBase, DiffuseColor1, mask.b)
+albedo  = lerp(layer1, tex2D(DiffuseTexture2, uvD2).rgb * DiffuseColor2, mask.g)
+specCol = lerp(SpecularColorBase,
+               tex2D(SpecularTexture1, uv * SpecularTiling1).rgb * SpecularColor1, mask.r)
+
+diffuse = ambient * vertexColour.a + saturate(N·L) * light * shadow
+spec    = pow(saturate(N·H), SpecularPower) * light * shadow
+refl    = texCUBE(ReflectionTexture, R).rgb * mask.r * saturate(spec + diffuse) * ReflectionPower
+
+colour  = albedo * diffuse + (spec + refl) * specCol
+```
+
+What that settles:
+
+- **Red is the specular weight**, and it is applied twice to the reflection — once directly and once
+  inside `specCol`. A texel at red 0 gets `SpecularColorBase` and no reflection at all.
+- **The reflection is multiplied by `specCol`**, so `SpecularTexture1` patterns the cube map as well
+  as the highlight, and it is scaled by how lit the surface is, so it does not glow in shadow.
+- **`N` is the interpolated vertex normal.** None of the six samples a normal map, so a
+  `NormalTexture1` on a `Weapon` material has nothing to bind to. Weapon meshes do carry per-vertex
+  tangents and binormals, and the [`Generic`](#the-generic-pixel-shader) template does sample a
+  normal map — including in permutations alongside specular, reflection and mask. First-person items
+  already draw that way: the cell-phone detonator, the IED kit and the Ithaca's 12-gauge shell are
+  `Generic` materials with normal maps. Retail normal maps are DXT5, read with X in alpha and Y in
+  green.
+- **`_Reliability` blends the two masks**; the `Clean`/`Broken` colour pairs are declared and unread.
+- **Vertex colour weights all three mask channels**, and its alpha scales the ambient term only.
+
+The `Weapon` constant buffer's 16-byte slots are `[0]` `DiffuseColorBase`, `[1]` `DiffuseColor1`,
+`[2]` `DiffuseColor2`, `[3]` `DiffuseTiling1`/`DiffuseTiling2`, `[10]` `MaskTiling1`/
+`MaskTilingBroken`, `[11]` `SpecularColorBase`, `[12]` `SpecularColor1`, `[13]` `SpecularTiling1`
+and `SpecularPower`, `[18].x` `ReflectionPower`, `[19].y` `_Reliability`.
+
 ### The `Cloth` and `Skin` pixel shaders
 
 :::info[Verified via reverse engineering]
@@ -459,10 +508,10 @@ Three structural facts, each visible if a renderer gets it wrong:
 - **Ambient and sun add before the albedo multiplies**, so a fully lit surface runs brighter than
   its texture and a shadowed one keeps colour from the sky term.
 - **Specular is a separate additive Blinn term.** The `.xbm` carries its inputs as
-  `SpecularColorBase`/`SpecularColor1` — the same *pair shape* as the diffuse tints, though **how the
-  two combine is not traced**: only the diffuse half of the pair-lerp is read out of the retail
-  shader, so driving the specular pair by the same mask weight is an assumption. What is measured is the consequence: a high `SpecularColorBase` makes a surface
-  glossy everywhere the mask asks for nothing.
+  `SpecularColorBase`/`SpecularColor1` — the same *pair shape* as the diffuse tints. On `Weapon` and
+  `Cloth` the pair is lerped by the mask's red (see [the `Weapon` pixel
+  shader](#the-weapon-pixel-shader)), which is why a high `SpecularColorBase` makes a surface glossy
+  everywhere the mask asks for nothing.
 
   With `SpecularPower`; measured across the 2,208 retail materials, 2,129 carry a non-zero power —
   mostly 2–20 with a mode of 8, broad lobes — but **weapons run tighter and higher than that band**:

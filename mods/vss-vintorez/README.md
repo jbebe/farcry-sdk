@@ -188,10 +188,16 @@ The donor works in game, so any difference between the two images in the same vi
 - **One material for the whole body.** The stock takes the same specular response as the steel,
   separated only by the control map's red rather than by a material of its own. Splitting it needs
   the transplant re-run, not new textures.
-- **No normal map.** Not for want of a texture path — minting one is proven to work, and the worn
-  control map uses it. **No `Weapon`-shader material declares a `NormalTexture1` slot at all**, across
-  all nine on the Dragunov, the Dart Rifle and the sawed-off, so whether the shader would sample one
-  is unknown. Settling it means disassembling the `Weapon` pixel shader out of `shadersobj.fat`.
+- **No reflection, so the steel does not read as metal.** `DART_RIFLE_METAL` is one of the 30 retail
+  weapon materials that declare no `ReflectionTexture`, so the steel gets a highlight and nothing
+  else. 44 of 56 retail metal materials carry a cube map at 0.2 or more; the Dragunov's is
+  `genericcubemap01` at 0.4. The Dart Rifle's other owned material, `DART_RIFLE_PASTIC`, already
+  declares one. See [metal is the cube
+  map](../../docs/docs/modding/texturing-a-weapon.md#metal-is-the-cube-map).
+- **No normal map, and the `Weapon` shader cannot take one** — none of its six permutations samples
+  `NormalTexture1`. The source's normal map can reach the game only through a `Generic` material,
+  which gives up the worn look, or baked into the control map the way the AR-16's plastic patterns
+  its highlight — the section after the one linked above.
 - **`pickups.Weapons.DartRifle_new.Multi.Dropped`** was skipped on the single-player rule, so a
   dropped VSS in multiplayer still has no barrel.
 
