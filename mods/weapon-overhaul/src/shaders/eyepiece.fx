@@ -11,7 +11,7 @@ float4 Ink : register(c1);
 // softness, in screen heights.
 float4 Body : register(c2);
 
-// The reticle's mask, nought where it was drawn.
+// The reticle's mask, nought where it was drawn; or the housing's, softened.
 sampler2D Mask : register(s0);
 // The weapon's hardware depth at half resolution, one where the weapon is not.
 sampler2D WeaponDepth : register(s3);
@@ -30,6 +30,13 @@ static const float2 kDisc[12] = {
 // Into a float target, which unlike the depth texture can be read back.
 float4 DepthPS(float2 uv : TEXCOORD0) : COLOR0 {
     return tex2D(WeaponDepth, uv).r;
+}
+
+// Black, as much as the softened housing covers the pixel.
+float4 HousingPS(float2 uv : TEXCOORD0) : COLOR0 {
+    float ink = 1.0f - tex2D(Mask, uv).r;
+    clip(ink - 0.002f);
+    return float4(0.0f, 0.0f, 0.0f, ink);
 }
 
 // Black over the scope's body: a ring around the opening, and a mount from its centre down past the

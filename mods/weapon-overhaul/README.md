@@ -25,7 +25,9 @@ of view.
 - **Eyepiece.** The engine draws a scope as a tube seen down its length, with the reticle and the
   zoomed view far at its end. Here the tube is not drawn. Every scope looks the same size instead:
   a pitch-black, out-of-focus body whose outer edge spans 80% of the screen's height, with a black
-  mount below it down to the screen's foot, and the zoomed view filling its opening. The reticle
+  mount below it down to the screen's foot, and the zoomed view filling its opening. Each scope's
+  own first few centimetres, its eyepiece's rims and baffles, are drawn into it black and out of
+  focus too, shrunk to the same opening, so every scope still looks like itself. The reticle
   grows with the opening so it sits in it as it sat in the lens, stays on the scope, and is pitch
   black and a little soft. The magnification is unchanged. Once a scope has come up and settled, its
   depth is read back until two readings agree, and what is found is kept for that scope; the body

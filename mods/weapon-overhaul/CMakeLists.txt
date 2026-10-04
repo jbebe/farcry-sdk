@@ -33,6 +33,7 @@ set(SHADER_PASSES
   "eyepiece.fx:DepthPS:ps_2_0:eyepiece_depth_ps.h:g_eyepieceDepthPixelShader"
   "eyepiece.fx:ReticlePS:ps_2_b:eyepiece_reticle_ps.h:g_eyepieceReticlePixelShader"
   "eyepiece.fx:BodyPS:ps_2_0:eyepiece_body_ps.h:g_eyepieceBodyPixelShader"
+  "eyepiece.fx:HousingPS:ps_2_0:eyepiece_housing_ps.h:g_eyepieceHousingPixelShader"
   "surroundings.fx:SurroundingsPS:ps_2_0:surroundings_ps.h:g_surroundingsPixelShader")
 
 set(SHADER_HEADERS "")
