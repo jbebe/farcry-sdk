@@ -78,6 +78,36 @@ from `physicmaterial.xml` and multiplies it by the wheel's 3.0. The handbrake lo
 wheels while steering. On slopes it fades from full at `fGroundFrictionReduceMinAngle` to nothing at
 `MaxAngle`.
 
+## Suspension
+
+Each wheel is a ray, cast by `CHkPhysVehicleRaycastWheelCollide::collideWheels` from the suspension's
+hardpoint along its direction, for the suspension length plus the wheel radius. With no hit the
+wheel has no contact and hangs at the full length. With a hit its length is the hit distance less the
+radius, unclamped, so it goes negative when the ground is closer than the radius.
+
+The spring is Havok's own. `CHkPhysVehicleSuspension::calcSuspension` (`0x104C76D0`, not marked as a
+function) calls `hkpVehicleDefaultSuspension::calcSuspension` (`0x10BFA510`) and keeps the forces it
+returns at `+0x20`. For each wheel in contact:
+
+```
+force = (strength × (length − current) × clippedInvContactDotSuspension − damping × closingSpeed) × chassis mass
+```
+
+The damping is the compression one while the closing speed is negative, the rebound one otherwise.
+The suspension length is both the ray's reach and where the spring stops pushing, so a wheel droops
+no further than the point where its force reaches zero, and a spring never pulls.
+
+`hkpVehicleInstance::applyAction` (`0x10BF59E0`) pushes the chassis by each force along the contact
+normal, at the suspension's hardpoint rather than at the contact. It solves grip per axle, not per
+wheel. An axle's contact is the average of its wheels' contacts, and its friction the average of
+their friction, with a wheel in the air counting as 0. Its load is the sum of their suspension
+forces, and its drive and brake forces the sums of theirs. A wheel lifting off halves its axle's friction.
+
+`CVehicleWheeledPhysComponent::UpdateWheelBonePositions` places each wheel's bone every frame. The
+position is the hardpoint plus the suspension direction times the current length, from 0 up. The
+rotation combines the wheel's spin, a fixed turn per wheel and the steering angle, which the bone
+eases toward at 3 per second. Wheels never tilt.
+
 ## Driver input
 
 `SVehicleImpl::UpdateInput` (`0x100DD9E0`) turns the controls into pedals every frame:
@@ -131,14 +161,18 @@ mode, and resets the AI's boost multipliers, `SetSpecialEnginePowerMultiplier` (
 `+0x2C` (primary ratio `+0x10`), brake `+0x30` (wheels `+0x08`, stride `0x0C`; lock time `+0x14`),
 suspension `+0x34` (wheels `+0x08`, stride `0x30`, length `+0x20`; springs `+0x14`, stride `0x0C`), aerodynamics
 `+0x38` (`extraGravity` `+0x20`, limiter `+0x30`), velocity damper `+0x44` (spin damping `+0x08`),
-wheel infos `+0x48` (stride `0xC0`: ground friction `+0x20`, contact body `+0x24`, suspension length
-`+0x50`), rpm `+0xB8`, gear `+0xCD`.
+wheel infos `+0x48` (stride `0xC0`: ground friction `+0x20`, contact body `+0x24`, hardpoint `+0x30`,
+ray end `+0x40`, suspension length `+0x50`, spin angle `+0xA4`), rpm `+0xB8`, gear `+0xCD`.
+
+A wheel collide's output, one per wheel (stride `0x40`): contact point `+0x00`, normal `+0x10`,
+ground friction `+0x20`, contact body `+0x24`, suspension length `+0x2C`, closing speed `+0x30`,
+`clippedInvContactDotSuspension` `+0x34`.
 
 `CHkPhysVehicleSteering`: direct angles `+0x20` / `+0x24`, maximum angles `+0x28` / `+0x2C`,
 `fMaxSpeed` `+0x30`, steer speeds `+0x34` / `+0x38`, timed steering off `+0x3C`, AI input `+0x3D`.
 
 `hkpVehicleData`: wheel parameters `+0x8C` (stride `0x28`: radius `+0x00`, friction `+0x0C`, maximum
-friction `+0x14`), chassis response `+0x180`, inverse mass `+0x18C`.
+friction `+0x14`, axle `+0x24`), chassis response `+0x180`, inverse mass `+0x18C`.
 
 The chassis body's motion state starts at `+0xE0`: rotation, the swept centre of mass at `+0x120`
 and `+0x130`, the local centre of mass at `+0x160`, the linear velocity at `+0x1A0`. Moving the
