@@ -99,6 +99,10 @@ red like the highlight, so the wood reflects nothing. The steel's albedo is cut 
 is full, from 0.221 to 0.081 effective, so the reflection adds to a dark base rather than washing it
 out. Everything else, rust layer included, is the material this used to ship on.
 
+The wood is graded in the textures, picked out as what the control map leaves matte and the rust map
+leaves black: about 16% darker and a little redder, with its control red raised from 0.03 to 0.10 for
+a faint varnish highlight. The worn map keeps the old red, so that shine fades as the gun wears.
+
 `weapons.Special.Dart_Rifle` is the Dragunov's entity archetype with the identity and the model path
 changed — that carries the five-part list including `ACCESSORY02`, the Dragunov skeleton,
 `sPartName`, `iAnimationValue` and `bUseHiResScope` across in one piece. The bounding boxes are then
