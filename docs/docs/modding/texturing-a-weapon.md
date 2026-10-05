@@ -284,8 +284,9 @@ Dragunov's 30 is tight enough to keep a highlight on the edge it belongs to. A w
 that is mostly tube spreads one highlight across the whole thing.
 
 **Shinier means a smaller highlight, not a brighter one.** Asked for shinier wood on the VSS, the
-player meant the spot, so the material went from 30 to 80. The spot's width at half brightness goes
-as roughly 1/√`SpecularPower` — about 12° at 30, 7.5° at 80 — and its peak stays the same. The normal
+player meant the spot, so the material went from 30 to 80 and then, asked again, to 150. The spot's
+width at half brightness goes as roughly 1/√`SpecularPower` — about 12° at 30, 7.5° at 80, 5.5° at
+150 — and its peak stays the same; a stronger peak is the control map's red. The normal
 is interpolated across each triangle, so curves get a real spot; a flat face has none to shrink, and
 a higher power only narrows the angles at which the whole face catches the sun.
 
@@ -343,7 +344,7 @@ red is 1.0 over the whole gun, its albedo is dark, and the cube map carries the 
 | `ReflectionTexture` | `genericcubemap02` | `genericcubemap01` | none | `genericcubemap01` |
 | `ReflectionPower` | 0.8 | 0.4 | — | 0.2 |
 | cube-map weight, `mask.r × ReflectionPower × specCol` | **0.72** | **0.27** | **0** | **0.14** |
-| `SpecularPower` | 15 | 30 | 30 | 80 |
+| `SpecularPower` | 15 | 30 | 30 | 150 |
 
 The first build copied the Dragunov's specular triplet and not the reflection that goes with it. A
 second took the Dragunov's reflection too, at 0.4 over steel halved to 0.113, and played too light
