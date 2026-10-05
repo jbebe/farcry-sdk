@@ -8,9 +8,6 @@ Notable changes to the VSS Vintorez, loosely following
 ### Changed
 - **The steel reads as metal.** The body now reflects a faint cube map, on the steel only, and the
   steel's own colour is much darker so the reflection does not wash it out.
-- **The wooden stock, grip and handguard** are darker and a reddish brown, with a varnish
-  shine that fades as the gun wears.
-- **Smaller, sharper highlights** across the whole weapon, so it reads glossier.
 
 ## [1.0.0] - 2026-09-04
 
