@@ -1,5 +1,5 @@
-// Which shots leave a tracer: only those of the M249, the PKM, the Dragunov and the AS50, the
-// player's own first-person shots among them.
+// Which shots leave a tracer: only those of the M249, the PKM, the Dragunov, the AS50 and the
+// mounted M249s and M2s, the player's own first-person shots among them; and how thin one is drawn.
 #pragma once
 
 namespace WeaponOverhaul::Tracers {

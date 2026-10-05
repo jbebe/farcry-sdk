@@ -42,9 +42,13 @@ no weapon's data, so it goes alongside mods that change those.
   radial blur toward the screen's edges is left out. They are a second, cheaper view drawn by the
   engine's water reflection renderer, at half the screen's size with less detail; the magnified
   view inside stays the engine's own.
-- **Tracers.** Only the M249, the PKM, the Dragunov and the AS50 fire them, at the rate the game
-  gives each, the player's own shots included, which the game never draws. The streak is a bright
-  orange glow with a hotter core, which stays as bright far off as near.
+- **Tracers.** Only the M249, the PKM, the Dragunov, the AS50 and the mounted M249s and M2s fire
+  them, at the rate the game gives each, the player's own shots included, which the game never
+  draws. A tracer flies at 350 m/s with a streak short enough to be seen crossing even a near
+  shot, and some ricochet off where they land, anywhere from level to straight up and to either
+  side, never back. The streak is drawn by a shader of the plugin's own: an orange glow with a
+  hotter core, brighter than white so that it blooms, smooth at any angle, and a few pixels wide
+  however far off it is.
 
 The eye is moved through the camera's positional offset, the one the recoil kicks, and a scope's
 zoom held back until its sight picture is up, in `src/engine/aim.cpp`. The blur draws the gun's own
@@ -54,9 +58,11 @@ bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
 The eyepiece drops the engine's scope and draws its own over the finished frame, in
 `src/eyepiece.cpp`, from what was measured off each scope's mesh, in `src/scopes.cpp`. The second
 view is drawn in `src/engine/second_view.cpp` and laid down as the gun's colour pass begins, in
-`src/surroundings.cpp`. Which shots leave a tracer is decided in `src/tracers.cpp`, and the
-tracer's texture, `layer\mods\graphics\gfx\weapons\bullettracer_d.xbt`, is drawn by
-`textures\bullettracer_d.ps1`. The engine side is in
+`src/surroundings.cpp`. Which shots leave a tracer, how it flies and its ricochets are in
+`src/tracers.cpp`, and its streak is drawn in `src/streak.cpp` with `src/shaders/tracer.fx`. The
+tracer's texture, `layer\mods\graphics\gfx\weapons\bullettracer_d.xbt`, drawn by
+`textures\bullettracer_d.ps1`, is what tells a streak's draw apart, and what it looks like with
+Tracers off. The engine side is in
 [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md),
 [bullet tracers](../../docs/docs/engine-internals/bullet-tracers.md) and
 [presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).
@@ -79,7 +85,8 @@ On the plugin's page in the Mod Configuration Menu, stored under `[WeaponOverhau
 | Scope surroundings | Yes / No | Yes |
 | Tracers | Yes / No | Yes |
 
-With Tracers off, the game decides which shots leave one again, and they keep the orange texture.
+With Tracers off, the game decides which shots leave one and how they fly again, and they are drawn
+with the orange texture.
 
 ## Building
 

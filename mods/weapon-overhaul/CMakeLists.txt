@@ -30,7 +30,8 @@ set(SHADER_PASSES
   "eyepiece.fx:ReticlePS:ps_2_0:eyepiece_reticle_ps.h:g_eyepieceReticlePixelShader"
   "eyepiece.fx:BodyPS:ps_2_0:eyepiece_body_ps.h:g_eyepieceBodyPixelShader"
   "glass.fx:GlassPS:ps_2_b:glass_ps.h:g_glassPixelShader"
-  "surroundings.fx:SurroundingsPS:ps_2_0:surroundings_ps.h:g_surroundingsPixelShader")
+  "surroundings.fx:SurroundingsPS:ps_2_0:surroundings_ps.h:g_surroundingsPixelShader"
+  "tracer.fx:TracerPS:ps_3_0:tracer_ps.h:g_tracerPixelShader")
 
 set(SHADER_HEADERS "")
 foreach(PASS IN LISTS SHADER_PASSES)
@@ -73,6 +74,7 @@ add_library(WeaponOverhaul SHARED
   "src/scopes.cpp"
   "src/surroundings.cpp"
   "src/sway.cpp"
+  "src/streak.cpp"
   "src/tracers.cpp"
   "src/engine/aim.cpp"
   "src/engine/device_reset.cpp"

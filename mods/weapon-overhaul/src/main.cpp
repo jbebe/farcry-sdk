@@ -8,6 +8,7 @@
 #include "fcse_api.h"
 #include "scope_shadow.h"
 #include "scopes.h"
+#include "streak.h"
 #include "surroundings.h"
 #include "sway.h"
 #include "tracers.h"
@@ -20,6 +21,7 @@ namespace {
         WeaponOverhaul::Eyepiece::ReleaseDeviceObjects();
         WeaponOverhaul::ScopeShadow::ReleaseDeviceObjects();
         WeaponOverhaul::SecondView::ReleaseDeviceObjects();
+        WeaponOverhaul::Streak::ReleaseDeviceObjects();
         WeaponOverhaul::Surroundings::ReleaseDeviceObjects();
         WeaponOverhaul::WeaponDraws::ReleaseDeviceObjects();
     }
@@ -44,6 +46,7 @@ namespace {
 
     void __cdecl OnTracersChanged(const FCSE_SettingValue* value, void*) {
         WeaponOverhaul::Tracers::SetEnabled(value->asCheckbox);
+        WeaponOverhaul::Streak::SetEnabled(value->asCheckbox);
     }
 
     // A scope zooms in at once only where the surroundings keep the view outside it unzoomed: both
@@ -102,6 +105,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     }
     FollowZoom();
     WeaponOverhaul::Tracers::Install();
+    WeaponOverhaul::Streak::Install();
 
     const FCSE_Setting settings[] = {
         {"Sway", FCSE_CHECKBOX(true), &OnSwayChanged, nullptr},
