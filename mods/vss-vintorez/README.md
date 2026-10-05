@@ -100,8 +100,9 @@ is full, from 0.221 to 0.081 effective, so the reflection adds to a dark base ra
 out. Everything else, rust layer included, is the material this used to ship on.
 
 The wood is graded in the textures, picked out as what the control map leaves matte and the rust map
-leaves black: about 16% darker and a little redder, with its control red raised from 0.03 to 0.25 for
-a varnish highlight. The worn map keeps the old red, so that shine fades as the gun wears.
+leaves black: about 18% darker and reddish-brown (red to green 1.35 → 1.73), with its control red
+raised from 0.03 to 0.25 for a varnish highlight. The worn map keeps the old red, so that shine fades
+as the gun wears.
 `SpecularPower` is 150 rather than the Dragunov's 30, for a small, sharp highlight on wood and steel
 alike — the two share the material, so one cannot be tightened without the other.
 
