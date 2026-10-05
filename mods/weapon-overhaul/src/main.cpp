@@ -1,4 +1,4 @@
-// Weapon Overhaul - how aiming down the sights looks. See README.md.
+// Weapon Overhaul - how aiming and shooting look. See README.md.
 #include "blur.h"
 #include "engine/aim.h"
 #include "engine/device_reset.h"
@@ -10,6 +10,7 @@
 #include "scopes.h"
 #include "surroundings.h"
 #include "sway.h"
+#include "tracers.h"
 
 #include <iterator>
 
@@ -39,6 +40,10 @@ namespace {
 
     void __cdecl OnScopeShadowChanged(const FCSE_SettingValue* value, void*) {
         WeaponOverhaul::ScopeShadow::SetEnabled(value->asCheckbox);
+    }
+
+    void __cdecl OnTracersChanged(const FCSE_SettingValue* value, void*) {
+        WeaponOverhaul::Tracers::SetEnabled(value->asCheckbox);
     }
 
     // A scope zooms in at once only where the surroundings keep the view outside it unzoomed: both
@@ -96,6 +101,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         g_hooked = false;
     }
     FollowZoom();
+    WeaponOverhaul::Tracers::Install();
 
     const FCSE_Setting settings[] = {
         {"Sway", FCSE_CHECKBOX(true), &OnSwayChanged, nullptr},
@@ -103,6 +109,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Scope shadow", FCSE_CHECKBOX(true), &OnScopeShadowChanged, nullptr},
         {"Scope eyepiece", FCSE_CHECKBOX(true), &OnEyepieceChanged, nullptr},
         {"Scope surroundings", FCSE_CHECKBOX(true), &OnSurroundingsChanged, nullptr},
+        {"Tracers", FCSE_CHECKBOX(true), &OnTracersChanged, nullptr},
     };
     api->RegisterSettings("WeaponOverhaul", settings, std::size(settings));
     return true;

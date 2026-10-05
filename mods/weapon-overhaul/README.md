@@ -1,8 +1,9 @@
 # Weapon Overhaul
 
-An FCSE plugin for how aiming down the sights looks: sway and a blurred gun down the iron sights; a
-scope that shadows, is seen from its eyepiece, and has the world around it at the eye's own field
-of view.
+An FCSE plugin, with a data layer, for how aiming and shooting look: sway and a blurred gun down the
+iron sights; a scope that shadows, is seen from its eyepiece, and has the world around it at the
+eye's own field of view; and tracers. It changes only what is drawn: no damage, spread or recoil, and
+no weapon's data, so it goes alongside mods that change those.
 
 ## What it does
 
@@ -41,6 +42,9 @@ of view.
   radial blur toward the screen's edges is left out. They are a second, cheaper view drawn by the
   engine's water reflection renderer, at half the screen's size with less detail; the magnified
   view inside stays the engine's own.
+- **Tracers.** Only the M249, the PKM, the Dragunov and the AS50 fire them, at the rate the game
+  gives each, the player's own shots included, which the game never draws. The streak is a bright
+  orange glow with a hotter core, which stays as bright far off as near.
 
 The eye is moved through the camera's positional offset, the one the recoil kicks, and a scope's
 zoom held back until its sight picture is up, in `src/engine/aim.cpp`. The blur draws the gun's own
@@ -50,8 +54,11 @@ bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
 The eyepiece drops the engine's scope and draws its own over the finished frame, in
 `src/eyepiece.cpp`, from what was measured off each scope's mesh, in `src/scopes.cpp`. The second
 view is drawn in `src/engine/second_view.cpp` and laid down as the gun's colour pass begins, in
-`src/surroundings.cpp`. The engine side is in
-[first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md) and
+`src/surroundings.cpp`. Which shots leave a tracer is decided in `src/tracers.cpp`, and the
+tracer's texture, `layer\mods\graphics\gfx\weapons\bullettracer_d.xbt`, is drawn by
+`textures\bullettracer_d.ps1`. The engine side is in
+[first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md),
+[bullet tracers](../../docs/docs/engine-internals/bullet-tracers.md) and
 [presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).
 
 ## Requirements
@@ -70,12 +77,17 @@ On the plugin's page in the Mod Configuration Menu, stored under `[WeaponOverhau
 | Scope shadow | Yes / No | Yes |
 | Scope eyepiece | Yes / No | Yes |
 | Scope surroundings | Yes / No | Yes |
+| Tracers | Yes / No | Yes |
+
+With Tracers off, the game decides which shots leave one again, and they keep the orange texture.
 
 ## Building
 
 ```
-.\build.ps1                                     # x86 release -> out\build\x86-release\WeaponOverhaul.dll
-.\build.ps1 -Install "C:\Games\Far Cry 2\bin"   # and copy it into bin\plugins\weapon-overhaul\
+.\build.ps1                                     # x86 release -> layer\plugins\weapon-overhaul\
+.\build.ps1 -Install "C:\Games\Far Cry 2\bin"   # and build the layer into the game with jackall-cli
+.\textures\bullettracer_d.ps1                   # redraw the tracer texture into the layer
 ```
 
-`fxc`, from the Windows SDK, compiles the shaders at build time.
+`fxc`, from the Windows SDK, compiles the shaders at build time. `-Install` builds the game's patch
+from this layer alone, dropping any other layer built into it before.

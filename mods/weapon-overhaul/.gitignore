@@ -1,2 +1,3 @@
-# CMake build tree.
+# CMake build tree and the built plugin the layer only carries.
 out/
+layer/plugins/weapon-overhaul/WeaponOverhaul.dll

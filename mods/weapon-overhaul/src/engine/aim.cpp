@@ -3,6 +3,7 @@
 // See docs/docs/engine-internals/first-person-aiming.md.
 #include "engine/aim.h"
 
+#include "engine/entity_name.h"
 #include "fcse_api.h"
 
 #include <algorithm>
@@ -58,13 +59,9 @@ namespace {
     constexpr ptrdiff_t kOtherWeight = 0x10C;
     constexpr ptrdiff_t kOtherFov = 0x110;
 
-    // CFCXWeapon: the scope picture as last asked for, and whether the weapon has one; and its
-    // entity, through the proxy at +0x08, and that entity's name.
+    // CFCXWeapon: the scope picture as last asked for, and whether the weapon has one.
     constexpr ptrdiff_t kScopeShown = 0x84;
     constexpr ptrdiff_t kHiResScope = 0x85;
-    constexpr ptrdiff_t kWeaponProxy = 0x08;
-    constexpr ptrdiff_t kProxyEntity = 0x0C;
-    constexpr ptrdiff_t kEntityName = 0x14;
     // CWeapon's properties, at +0x04 of what +0x24 points to, and in them the post effect the
     // weapon starts once raised to the sights, -1 for none.
     constexpr ptrdiff_t kWeaponImpl = 0x24;
@@ -151,31 +148,13 @@ namespace {
         return std::clamp(value + (toward ? step : -step), 0.0f, 1.0f);
     }
 
-    // Copies the name of the weapon's entity, or leaves it empty where the engine's pointers do not
-    // hold.
-    void ReadName(uint8_t* weapon, char (&name)[64]) {
-        name[0] = '\0';
-        __try {
-            uint8_t* proxy = weapon != nullptr ? Field<uint8_t*>(weapon, kWeaponProxy) : nullptr;
-            uint8_t* entity = proxy != nullptr ? Field<uint8_t*>(proxy, kProxyEntity) : nullptr;
-            const char* text =
-                entity != nullptr ? Field<const char*>(entity, kEntityName) : nullptr;
-            for (size_t i = 0; text != nullptr && i + 1 < sizeof(name) && text[i] != '\0'; i++) {
-                name[i] = text[i];
-                name[i + 1] = '\0';
-            }
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            name[0] = '\0';
-        }
-    }
-
     // Notes the equipped weapon's name, and its scope's raise, each time it changes.
     void FollowWeapon(uint8_t* weapon) {
         if (weapon == g_weapon) {
             return;
         }
         g_weapon = weapon;
-        ReadName(weapon, g_weaponName);
+        WeaponOverhaul::EntityName::Read(weapon, g_weaponName);
         g_raiseReach = 0.0f;
         g_scopeDrawn = g_drawnScope(g_weaponName, &g_raiseReach);
         g_weaponChanges++;

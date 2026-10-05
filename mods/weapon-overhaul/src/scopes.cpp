@@ -2,10 +2,9 @@
 // lens, the reticle's triangles as the engine draws them, and the raise.
 #include "scopes.h"
 
+#include "engine/entity_name.h"
 #include "shape_ar16.h"
 #include "shape_mgl140.h"
-
-#include <string_view>
 
 namespace {
     using WeaponOverhaul::Scopes::Look;
@@ -218,12 +217,8 @@ namespace {
 }
 
 const WeaponOverhaul::Scopes::Scope* WeaponOverhaul::Scopes::Find(const char* weaponName) {
-    // The archetype's own name, or one of its variants under it.
-    const std::string_view name = weaponName;
     for (const Scope& scope : kScopes) {
-        const std::string_view archetype = scope.weapon;
-        if (name.starts_with(archetype) &&
-            (name.size() == archetype.size() || name[archetype.size()] == '.')) {
+        if (EntityName::Is(weaponName, scope.weapon)) {
             return &scope;
         }
     }
