@@ -5,7 +5,8 @@ skeleton and animation set, semi-automatic, ten-round magazine off the sniper am
 
 **Status: complete and confirmed in game** — mesh, LOD tiers, textures at retail's own tier, a worn
 appearance that grimes as the weapon degrades, the weapon on the ground, the muzzle socket, icons,
-name, and jam/break behaviour. The shot sound is replaced but **not yet confirmed in game**. See
+name, and jam/break behaviour. The shot sound and the steel's cube-map reflection are in but **not
+yet confirmed in game**. See
 [what is left](#what-is-left) and [deliberate, not missing](#deliberate-not-missing).
 
 The procedure this mod was built by is written up in
@@ -31,7 +32,7 @@ mods/graphics/weapons/special/dart_rifle/dart_rifle.hkx     the Dragunov's colli
 mods/graphics/weapons/special/dart_rifle/dart_rifle_state_01.xbt   the albedo, + _mip0
 mods/graphics/weapons/special/dart_rifle/dart_rifle_state_02.xbt   the control map, + _mip0
 mods/graphics/weapons/special/dart_rifle/vss_worn_c.xbt     the worn control map, a new path
-mods/graphics/_materials/FBOIVIN2-M-2007050148031384.xbm    DART_RIFLE_METAL, repointed
+mods/graphics/_materials/FBOIVIN2-M-2007050162241150.xbm    DART_RIFLE_PASTIC, repointed
 mods/ui/textures/hud/icons_weapons/hud_icon_sniperdart.xbt  the HUD and bazaar icon
 mods/ui/textures/guns/gun_icon_sniperdart.xbt               the multiplayer weapon select
 mods/languages/<language>/oasisstrings.fragment.xml         the name, ten strings x 11 languages
@@ -86,10 +87,17 @@ byte-length fields were rewritten to the new stream length by hand — `jackall-
 the audio but leaves them describing the old clip.
 
 The mesh was built inside the Dragunov's pack, so it inherited the Dragunov's material table. Its
-body clusters are moved onto `DART_RIFLE_METAL` — a material nothing else uses, already in both
+body clusters are moved onto `DART_RIFLE_PASTIC` — a material nothing else uses, already in both
 worlds' `depload`, and unreferenced once this mod replaces the mesh that was its only reader. The
 material is **appended** to the mesh's list rather than swapped in place, because `SCOPE_HI` draws
 144 triangles through the body's old material and has to keep doing so.
+
+It is the Dart Rifle's plastic rather than its metal because it is the one that declares a cube map,
+and the cube map is what makes steel read as metal. It carries the Dragunov's, `genericcubemap01` at
+0.4, gated by the control map's red like the highlight, so the wood reflects nothing. The steel's
+albedo is halved where the red is full, from 0.221 to 0.113 effective, so the reflection adds to a
+darker base rather than washing it out. Everything else, rust layer included, is the material this
+used to ship on.
 
 `weapons.Special.Dart_Rifle` is the Dragunov's entity archetype with the identity and the model path
 changed — that carries the five-part list including `ACCESSORY02`, the Dragunov skeleton,
@@ -188,16 +196,10 @@ The donor works in game, so any difference between the two images in the same vi
 - **One material for the whole body.** The stock takes the same specular response as the steel,
   separated only by the control map's red rather than by a material of its own. Splitting it needs
   the transplant re-run, not new textures.
-- **No reflection, so the steel does not read as metal.** `DART_RIFLE_METAL` is one of the 30 retail
-  weapon materials that declare no `ReflectionTexture`, so the steel gets a highlight and nothing
-  else. 44 of 56 retail metal materials carry a cube map at 0.2 or more; the Dragunov's is
-  `genericcubemap01` at 0.4. The Dart Rifle's other owned material, `DART_RIFLE_PASTIC`, already
-  declares one. See [metal is the cube
-  map](../../docs/docs/modding/texturing-a-weapon.md#metal-is-the-cube-map).
 - **No normal map, and the `Weapon` shader cannot take one** — none of its six permutations samples
   `NormalTexture1`. The source's normal map can reach the game only through a `Generic` material,
   which gives up the worn look, or baked into the control map the way the AR-16's plastic patterns
-  its highlight — the section after the one linked above.
+  its highlight. See [texturing a replaced weapon](../../docs/docs/modding/texturing-a-weapon.md).
 - **`pickups.Weapons.DartRifle_new.Multi.Dropped`** was skipped on the single-player rule, so a
   dropped VSS in multiplayer still has no barrel.
 

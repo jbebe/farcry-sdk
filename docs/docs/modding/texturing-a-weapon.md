@@ -300,9 +300,10 @@ surface is not metal. Two details decide whether it works:
 
 ### Metal is the cube map
 
-:::note[Measured on retail, not yet built on the worked example]
-The VSS ships without this term. The material it took, `DART_RIFLE_METAL`, is one of the 30 retail
-weapon materials that declare no `ReflectionTexture`.
+:::note[Built on the worked example, not yet confirmed in game]
+The VSS first shipped without this term: the material it took, `DART_RIFLE_METAL`, is one of the 30
+retail weapon materials that declare no `ReflectionTexture`. It now draws through the Dart Rifle's
+other owned material, `DART_RIFLE_PASTIC`, which declares one.
 :::
 
 A highlight makes a surface glossy, not metallic: it shows only where the sun's half-vector lines up,
@@ -329,16 +330,19 @@ tiled `SpecularTexture1` patterns it too, and by the lighting, so it does not gl
 The Desert Eagle is the far end, and the clearest view of how the look is built. Its control map's
 red is 1.0 over the whole gun, its albedo is dark, and the cube map carries the rest:
 
-| | Desert Eagle chrome | Dragunov metal | VSS, shipped |
-| --- | ---: | ---: | ---: |
-| control red over the metal | 1.00 | ~0.8 | ~0.8 |
-| effective albedo | 0.14 | 0.092 | 0.213 |
-| `ReflectionTexture` | `genericcubemap02` | `genericcubemap01` | none |
-| `ReflectionPower` | 0.8 | 0.4 | — |
-| cube-map weight, `mask.r × ReflectionPower × specCol` | **0.72** | **0.27** | **0** |
-| `SpecularPower` | 15 | 30 | 30 |
+| | Desert Eagle chrome | Dragunov metal | VSS, first build | VSS, now |
+| --- | ---: | ---: | ---: | ---: |
+| control red over the metal | 1.00 | ~0.8 | ~0.8 | ~0.8 |
+| effective albedo of the metal | 0.14 | 0.092 | 0.221 | 0.113 |
+| `ReflectionTexture` | `genericcubemap02` | `genericcubemap01` | none | `genericcubemap01` |
+| `ReflectionPower` | 0.8 | 0.4 | — | 0.4 |
+| cube-map weight, `mask.r × ReflectionPower × specCol` | **0.72** | **0.27** | **0** | **0.27** |
+| `SpecularPower` | 15 | 30 | 30 | 30 |
 
-The VSS copied the Dragunov's specular triplet and not the reflection that goes with it.
+The first build copied the Dragunov's specular triplet and not the reflection that goes with it. The
+second takes the reflection too, and halves the steel's albedo by the control map's red — the
+channel that gates the cube map — so what a texel loses in diffuse tracks what it gains in
+reflection.
 
 ### Relief is a specular pattern, not a normal map
 
