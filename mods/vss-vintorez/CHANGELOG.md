@@ -10,6 +10,7 @@ Notable changes to the VSS Vintorez, loosely following
   steel's own colour is much darker so the reflection does not wash it out.
 - **The wooden stock, grip and handguard** are a little darker and redder, with a faint varnish
   shine that fades as the gun wears.
+- **Smaller, sharper highlights** across the whole weapon, so it reads glossier.
 
 ## [1.0.0] - 2026-09-04
 

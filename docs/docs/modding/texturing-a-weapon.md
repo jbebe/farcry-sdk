@@ -263,7 +263,7 @@ That is read out of the `Weapon` pixel shader, along with a cube-map term covere
 `SpecularColorBase` is what a texel gets when red is zero. Set it high and no mask can make anything
 matte. Measured:
 
-| | VSS, glossy build | Dragunov, retail | VSS, shipped |
+| | VSS, glossy build | Dragunov, retail | VSS, 1.0.0 |
 | --- | ---: | ---: | ---: |
 | `SpecularColorBase` | 0.600 | **0.043** | 0.043 |
 | `SpecularColor1` | 2.000 | 2.000 | 2.000 |
@@ -282,6 +282,12 @@ which is exactly what "polished shoe" looks like.
 **`SpecularPower` is lobe width, and low is wide.** Retail runs 2 to 20 with a mode of 8; the
 Dragunov's 30 is tight enough to keep a highlight on the edge it belongs to. A wide lobe on a weapon
 that is mostly tube spreads one highlight across the whole thing.
+
+**Shinier means a smaller highlight, not a brighter one.** Asked for shinier wood on the VSS, the
+player meant the spot, so the material went from 30 to 80. The spot's width at half brightness goes
+as roughly 1/√`SpecularPower` — about 12° at 30, 7.5° at 80 — and its peak stays the same. The normal
+is interpolated across each triangle, so curves get a real spot; a flat face has none to shrink, and
+a higher power only narrows the angles at which the whole face catches the sun.
 
 ### Level the metal band, not the mean
 
@@ -337,7 +343,7 @@ red is 1.0 over the whole gun, its albedo is dark, and the cube map carries the 
 | `ReflectionTexture` | `genericcubemap02` | `genericcubemap01` | none | `genericcubemap01` |
 | `ReflectionPower` | 0.8 | 0.4 | — | 0.2 |
 | cube-map weight, `mask.r × ReflectionPower × specCol` | **0.72** | **0.27** | **0** | **0.14** |
-| `SpecularPower` | 15 | 30 | 30 | 30 |
+| `SpecularPower` | 15 | 30 | 30 | 80 |
 
 The first build copied the Dragunov's specular triplet and not the reflection that goes with it. A
 second took the Dragunov's reflection too, at 0.4 over steel halved to 0.113, and played too light
@@ -475,7 +481,7 @@ the **Dragunov's** `spdra`. The framing is wrong by however far those two eyes d
 - **`SpecularColorBase` is what a texel gets where the mask's red is low**, so a chrome weapon's 0.6
   makes the whole surface glossy however the mask is painted. The Dragunov ships 0.043.
 - **A working specular control is bimodal**, and its metal band is what to level — not its mean.
-- **`SpecularPower` is lobe width and low is wide.**
+- **`SpecularPower` is lobe width and low is wide.** A smaller highlight is what reads as shinier.
 - **Metal reads as metal through `ReflectionTexture`**, a cube map gated by the same red as the
   highlight. 44 of 56 retail metal materials carry one at 0.2 or more; a highlight alone reads as
   paint.

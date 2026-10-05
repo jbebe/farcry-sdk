@@ -102,6 +102,7 @@ out. Everything else, rust layer included, is the material this used to ship on.
 The wood is graded in the textures, picked out as what the control map leaves matte and the rust map
 leaves black: about 16% darker and a little redder, with its control red raised from 0.03 to 0.10 for
 a faint varnish highlight. The worn map keeps the old red, so that shine fades as the gun wears.
+`SpecularPower` is 80 rather than the Dragunov's 30, for a smaller highlight on wood and steel alike.
 
 `weapons.Special.Dart_Rifle` is the Dragunov's entity archetype with the identity and the model path
 changed — that carries the five-part list including `ACCESSORY02`, the Dragunov skeleton,
