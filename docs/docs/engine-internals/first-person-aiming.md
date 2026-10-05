@@ -165,6 +165,29 @@ name, a `char*` at its `+0x14`, is its archetype's: `weapons.Primary.M16`,
 When aiming stops, the iron-sight flag goes a few frames before `+0x84` does, and the sight picture
 is drawn until `+0x84` goes.
 
+### The weapon's events
+
+`CFCXWeapon::OnEvent` (`0x106D3D00`, `__thiscall(CBaseEvent* event)`) receives the weapon's
+events by name. The name is a `std::string` at the event's `+0x08`: its characters are at `+0x0C`,
+inline while the capacity at `+0x20` is below 16, and its length is at `+0x1C`. For the weapon in
+hand these arrive:
+
+| Event | When |
+|---|---|
+| `IronSightOnFinished` | the raise to the sights ends |
+| `IronSightOffBegin` | the sights start to go |
+| `PullTrigger` | the trigger is pulled, once per pull |
+| `WeaponFired` | each round leaves, so more than once for one `PullTrigger` held |
+| `checkMode` | after a shot, and as the sights come and go |
+
+The rounds in the clip are a count at `+0x20` of the weapon's implementation, `*(weapon + 0x24)`,
+and drop by one with each `WeaponFired`.
+
+:::info[Seen in a running game]
+Retail GOG v1.03, from an FCSE plugin: the events above were logged, in that order, while firing
+through a scope, with the count beside them.
+:::
+
 ### The scope's post effect
 
 The radial blur toward the screen's edges while a sniper scope is up is a post effect the weapon

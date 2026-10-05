@@ -47,6 +47,9 @@ Swing ScopeSwing();
 // How many times the scope last raised magnifies the view.
 float Magnification();
 
+// How far a scope has kicked back toward the eye from the last shot, from nought to one.
+float ScopeKick();
+
 // The name of the weapon in hand's entity, empty when there is none, and how many times the weapon
 // in hand has changed, which says when to read the name again.
 const char* WeaponName();

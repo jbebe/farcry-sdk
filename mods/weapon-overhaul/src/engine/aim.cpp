@@ -10,7 +10,9 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <numbers>
+#include <string_view>
 
 namespace {
     // All __thiscall, which a free function spells __fastcall with an unused EDX.
@@ -93,6 +95,14 @@ namespace {
     std::atomic<float> g_scoped{0.0f};
     std::atomic<bool> g_scopeUp{false};
     std::atomic<bool> g_aiming{false};
+
+    // After a shot the scope kicks back over kKickRise seconds and settles over about three
+    // kKickSettle.
+    constexpr float kKickRise = 0.03f;
+    constexpr float kKickSettle = 0.06f;
+    float g_kick = 0.0f;
+    bool g_kicking = false;
+    std::atomic<float> g_scopeKick{0.0f};
     std::atomic<float> g_magnification{1.0f};
 
     // The equipped weapon as last seen, its name, how many times it has changed, whether the plugin
@@ -203,6 +213,47 @@ namespace {
         return HasScope(weapon) && Field<uint8_t>(weapon, kScopeShown) != 0;
     }
 
+    // Whether the event is the one named, read from the std::string at its +0x08, whose characters
+    // are at +0x0C, inline below a capacity of 16. False where the engine's pointers do not hold.
+    bool EventIs(uint8_t* event, std::string_view name) {
+        __try {
+            const uint32_t length = Field<uint32_t>(event, 0x1C);
+            const uint32_t capacity = Field<uint32_t>(event, 0x20);
+            const char* text = capacity < 16 ? reinterpret_cast<const char*>(event + 0x0C)
+                                             : Field<const char*>(event, 0x0C);
+            return length == name.size() && std::memcmp(text, name.data(), length) == 0;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
+    }
+
+    // How far a scope has kicked back from the last shot, from nought to one: a quick rise, then an
+    // eased return, as a stock comes back onto the shoulder. Another shot rises from wherever it is.
+    void FollowShots(bool scope, float seconds) {
+        if (!scope) {
+            g_kick = 0.0f;
+            g_kicking = false;
+        } else if (g_kicking) {
+            g_kick = (std::min)(g_kick + seconds / kKickRise, 1.0f);
+            g_kicking = g_kick < 1.0f;
+        } else {
+            g_kick *= std::exp(-seconds / kKickSettle);
+        }
+        g_scopeKick = g_kick;
+    }
+
+    // The engine tells the weapon in hand of each round it fires.
+    using WeaponEventFn = bool(__fastcall*)(uint8_t* weapon, void* unused, uint8_t* event);
+    FCSE::Relocation<WeaponEventFn> g_weaponEvent{FCSE::Uplay(0x006D3D00)};
+    WeaponEventFn g_originalWeaponEvent = nullptr;
+
+    bool __fastcall WeaponEventDetour(uint8_t* weapon, void* unused, uint8_t* event) {
+        if (weapon == g_weapon && EventIs(event, "WeaponFired")) {
+            g_kicking = true;
+        }
+        return g_originalWeaponEvent(weapon, unused, event);
+    }
+
     // How fast the look turns, smoothed over kTrail seconds.
     void FollowLook(uint8_t* pawn, uint8_t* data, float seconds) {
         const float pitch = Field<float>(data, kEffectivePitch);
@@ -250,6 +301,7 @@ namespace {
         const float scoped = Ease(g_scope);
         g_settled = settled;
         g_scoped = scoped;
+        FollowShots(scope, seconds);
         g_scopeUp = scope;
         g_aiming = settled > 0.0f || scope;
         FollowLook(pawn, data, seconds);
@@ -329,6 +381,11 @@ bool WeaponOverhaul::Aim::Install(DriftFn drift, ScopeFn drawnScope) {
                                    reinterpret_cast<void**>(&g_originalUpdateFov))) {
         api->Log("aim: the field of view cannot be hooked, so a scope zooms in as it comes up");
     }
+    if (!g_weaponEvent || !api->Hook(reinterpret_cast<void*>(g_weaponEvent.address()),
+                                     reinterpret_cast<void*>(&WeaponEventDetour),
+                                     reinterpret_cast<void**>(&g_originalWeaponEvent))) {
+        api->Log("aim: the weapon's events cannot be hooked, so a scope does not kick back");
+    }
     return true;
 }
 
@@ -374,4 +431,8 @@ WeaponOverhaul::Aim::Swing WeaponOverhaul::Aim::ScopeSwing() {
 
 float WeaponOverhaul::Aim::Magnification() {
     return g_magnification;
+}
+
+float WeaponOverhaul::Aim::ScopeKick() {
+    return g_scopeKick;
 }

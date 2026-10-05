@@ -35,6 +35,9 @@ namespace {
     constexpr float kBodyOverlap = 0.005f;
     // How far the scope trails the look's turn, as a share of the shadow's swing.
     constexpr float kTrail = 0.1f;
+    // How much bigger the scope is drawn at the height of a shot's kick, as it comes back toward
+    // the eye.
+    constexpr float kKickGrowth = 0.06f;
     // The eyepiece outlasts the sight picture by a frame: the frame it goes in can still be drawn
     // at the scope's field of view.
     constexpr uint32_t kHeldFrames = 1;
@@ -320,7 +323,7 @@ std::optional<WeaponOverhaul::Eyepiece::Opening> WeaponOverhaul::Eyepiece::Open(
         return std::nullopt;
     }
     const Scope& scope = *g_inHand;
-    const float outer = kBodyRadius * scope.size;
+    const float outer = kBodyRadius * scope.size * (1.0f + kKickGrowth * Aim::ScopeKick());
     const float radius = outer / (1.0f + scope.rim);
     const Aim::Swing swing = Aim::ScopeSwing();
     return Opening{(kTrail * swing.x + scope.lensX) * radius,
