@@ -228,7 +228,7 @@ namespace {
     }
 
     // How far a scope has kicked back from the last shot, from nought to one: a quick rise, then an
-    // eased return, as a stock comes back onto the shoulder. Another shot rises from wherever it is.
+    // eased return, as a stock comes back onto the shoulder. Another shot rises from where it is.
     void FollowShots(bool scope, float seconds) {
         if (!scope) {
             g_kick = 0.0f;
