@@ -211,9 +211,9 @@ namespace {
          0.1058f},
         // The AR-16's eyecup is the MGL-140's, seen from further back.
         {"weapons.Primary.M16", 12361, 3113, kThinRim, -0.00474f, -0.00087f, kAR16Pieces,
-         g_ar16Shape, 0.0f},
+         g_ar16Shape, 0.0f, 0.7f},
         {"weapons.Primary.MGL140", 13074, 2700, kThinRim, -0.00275f, 0.00213f, kMGL140Pieces,
-         g_mgl140Shape, 0.0842f},
+         g_mgl140Shape, 0.065f, 0.7f},
     };
 }
 

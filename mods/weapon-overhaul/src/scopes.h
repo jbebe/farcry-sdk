@@ -43,6 +43,8 @@ struct Scope {
     std::span<const BYTE> shape;
     // How far the eye comes forward as the scope is raised, in metres.
     float raiseReach;
+    // How big the scope is drawn, as a share of the size every scope is drawn at.
+    float size = 1.0f;
 };
 
 // The distance field's side in texels, its width about the look's centre, and the distances its

@@ -9,15 +9,13 @@
 
 namespace WeaponOverhaul::Eyepiece {
 
-// The body's outer edge, the same for every scope, as a share of the screen's height.
-inline constexpr float kBodyRadius = 0.4f;
-
-// The opening on screen: its centre off the screen's, x right and y down, and its radius, in screen
-// heights.
+// The opening on screen: its centre off the screen's, x right and y down, its radius, and the
+// radius of the body's outer edge around it, in screen heights.
 struct Opening {
     float x;
     float y;
     float radius;
+    float outer;
 };
 
 // While its sight picture is up, drops the draws of the weapon in hand, which its name says the

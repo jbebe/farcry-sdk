@@ -42,7 +42,7 @@ void WeaponOverhaul::ScopeShadow::OnGunPass(const Frame::Pass& pass) {
     // The glass reaches under the body's rim but not past its outer edge.
     const float constants[kConstantCount * 4] = {
         swing.x, swing.y, scoped, width / height,
-        kSoftEdge, kDarkness, Eyepiece::kBodyRadius / opening->radius, kShadowRadius,
+        kSoftEdge, kDarkness, opening->outer / opening->radius, kShadowRadius,
         opening->x, opening->y, opening->radius, 0.0f,
     };
 

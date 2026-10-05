@@ -25,7 +25,9 @@
 namespace {
     using WeaponOverhaul::Scopes::Scope;
 
-    // The mount's half-width and the body's softness, as shares of the screen's height.
+    // The body's outer edge at a scope's full size, the mount's half-width and the body's softness,
+    // as shares of the screen's height.
+    constexpr float kBodyRadius = 0.4f;
     constexpr float kMountHalfWidth = 0.105f;
     constexpr float kBodySoftness = 0.0125f;
     // How far inside the opening the body is wholly black, so that its soft edge lies over the
@@ -285,7 +287,7 @@ void WeaponOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
     // c1 to c3: the lens on screen, the body in lens radii, and where the shape is from the lens.
     const float constants[12] = {
         width / height, opening->x, opening->y, radius,
-        1.0f - (kBodyOverlap + kBodySoftness) / radius, kBodyRadius / radius,
+        1.0f - (kBodyOverlap + kBodySoftness) / radius, opening->outer / radius,
         kMountHalfWidth / radius, kBodySoftness / radius,
         -scope.lensX, scope.lensY, shape != nullptr ? Scopes::kShapeWidth : 0.0f,
         Scopes::kShapeSpan,
@@ -318,10 +320,11 @@ std::optional<WeaponOverhaul::Eyepiece::Opening> WeaponOverhaul::Eyepiece::Open(
         return std::nullopt;
     }
     const Scope& scope = *g_inHand;
-    const float radius = kBodyRadius / (1.0f + scope.rim);
+    const float outer = kBodyRadius * scope.size;
+    const float radius = outer / (1.0f + scope.rim);
     const Aim::Swing swing = Aim::ScopeSwing();
     return Opening{(kTrail * swing.x + scope.lensX) * radius,
-                   (kTrail * swing.y - scope.lensY) * radius, radius};
+                   (kTrail * swing.y - scope.lensY) * radius, radius, outer};
 }
 
 bool WeaponOverhaul::Eyepiece::Expected() {
