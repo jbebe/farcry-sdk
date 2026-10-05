@@ -11,6 +11,7 @@ match:
   - "engine/settings/defaultrenderconfig.xml#Terrain/**"
   - "engine/settings/defaultrenderconfig.xml#AntiPortal/**"
   - "engine/settings/defaultrenderconfig.xml#TextureResolution/**"
+  - "worlds/*/generated/world*.game.xml/_environment.xml#FakeTerrain@{Radius,Tesselation}"
 exclude:
   - "**@UnSupportedPlatforms"
   - "**@*MinSizeShadowScale"

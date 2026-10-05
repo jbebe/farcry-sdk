@@ -6,9 +6,10 @@ claims:
   - "Slightly increased the range of all machetes and made their stats consistent"
 status: located
 systems: [weapons]
-match: []
+match:
+  - "**/entitylibrary*.fcb/weaponproperties/handtohand/**#**/{fMaxAttackDistance,fAttackFOV}"
 exclude: []
-requires: [player-machete-copies]
+requires: []
 verified: diff
 ---
 
@@ -28,5 +29,5 @@ On all four machete weapon properties (`Machete`, `Machete_HomeMade`, `Machete_M
 ## Depends on
 
 The values sit in the mod's copies of the four archetypes in
-`generated/entitylibrarypatchoverride.fcb`, whole units shared with `machete-creeping`:
-`player-machete-copies`. This page has no change of its own.
+`generated/entitylibrarypatchoverride.fcb`. The mod adds these copies to the override library, which outranks the world libraries. Each copy is compared with the declaration it overrides, so its values are separate changes and this page can be picked alone; the copy it writes keeps the base game's other values. The same copies carry `machete-creeping`,
+`machete-stealth-kills` (`bIsSilent`) and new entity ids (`noise-player-hash-mangling`).

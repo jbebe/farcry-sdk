@@ -27,7 +27,7 @@ tmp/legacy/<mod>/     the analysis - source, imported layer, changes.jsonl - reb
 | Address | Change |
 |---|---|
 | `downloadcontent/dlc1/generated/entitylibrary.fcb/vehicle/land/dlc_vehicle1_dlc1.xml#Entity/Components/CVehicle/FOV/fFOVAngle` | one value in one archetype |
-| `levels/w1_b_2/generated/worldsectors/worldsector3859.data.fcb/_layout.xml#layer[missions\weaponbazaar\primary\goldak47]` | one mission layer a sector gains |
+| `levels/w1_b_2/generated/worldsectors/worldsector3859.data.fcb/_layout.xml#layer[missions\weaponbazaar\primary\goldak47]/entity[dlc1.weaponcrate_customweapons]` | one entity placed in a mission layer, named by its fragment |
 | `engine/settings/defaultrenderconfig.xml#@MaxFps` | one attribute of a whole XML file |
 | `domino/user/fasttravel/fasttravel.fasttravel.lua@L1314` | one hunk of a script, at its base-game line |
 | `_hash/01257145.lua` | a whole file the base game does not have |
@@ -38,6 +38,11 @@ Inside an XML path an `.fcb` value is named by its name and an object by its typ
 tag and key attribute (`Quality[UltraHigh]`). Siblings sharing a label carry `[i]`, their base-game
 index, or `[+i]` for an addition. Float values the mod's editor merely rounded are not changes, and
 neither is a nested RML value re-encoded with the same content.
+
+A sector layout is compared with where the base game already places each entity, so a layer the mod
+restates whole only yields the entities it really moves. An archetype a mod copies into another
+library (typically the patch override library) is compared with the declaration it overrides, so a
+copy made to change two values yields two changes, not one new unit.
 
 A change to an archetype that a later library declares again carries `shadowedBy`: it edits a copy
 the game never reads. It still belongs to the feature that made it, and that page says it is dead.

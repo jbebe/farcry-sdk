@@ -6,9 +6,10 @@ claims:
   - "Increased swimming speed"
 status: located
 systems: [player]
-match: []
+match:
+  - "**/entitylibrary*.fcb/player/**#**/f{Swimming,Diving}{MaxSpeed,Acceleration}"
 exclude: []
-requires: [player-pawnplayer-copies]
+requires: []
 verified: diff
 ---
 
@@ -25,5 +26,4 @@ The player swims and dives a fifth faster.
 
 ## Depends on
 
-Those copies are whole units, shared with `jump-height`: `player-pawnplayer-copies`. This page has
-no change of its own.
+The mod adds these copies to the override library, which outranks the world libraries. Each copy is compared with the declaration it overrides, so its values are separate changes and this page can be picked alone; the copy it writes keeps the base game's other values. The same copies carry `jump-height`.

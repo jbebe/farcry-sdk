@@ -4,6 +4,7 @@ kind: noise
 claims: []
 match:
   - "config/inputactionmapcommon.xml/common_gameplay.xml#Binding[{+4,+16}]"
+  - "config/inputactionmapcommon.xml/common_briefinginteraction.xml#Binding[+3]"
 exclude: []
 requires: []
 verified: diff

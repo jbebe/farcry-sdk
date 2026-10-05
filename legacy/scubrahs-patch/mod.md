@@ -42,7 +42,24 @@ Outposts" v1.0`.
 
 ## Coverage
 
-Filled in once `legacy check` is clean.
+`legacy check` is clean: all 25,433 changes are claimed by exactly one page, and all 99 lines of the
+published list are covered. 135 pages: 112 components, 6 shared pieces, 7 bundles, 10 noise rules.
+590 changes edit archetype copies a later library overrides, so the game never reads them; the pages
+say which.
+
+- **109 components are located**, 12 of them traced in `Dunia.dll` (`verified: re`), with Steam and
+  GOG addresses and byte patterns for each of the 20 patched sites.
+- **3 stay unresolved**: `input-delay`, `weapon-safe-area-movement` and `act1-final-softlock` have no
+  change in the mod that could be tied to them.
+- **13 components match no line of the list** - things the mod does without saying so, four of them
+  Improved Graphics' "and more" (`graphics-*`); e.g. `persistence-budget`, `ai-fewer-rescues`,
+  `missions-fast-travel-cost`, `economy-mission-rewards`.
+- **Already in this repo**: `jackal-tapes-repeat`, `predecessor-tapes-unlocked` and
+  `machete-type-option` are UFCP fixes, byte for byte or by the same means; the FOV, frame-cap and
+  mouse pages have UFCP options; see each page's `existing`.
+- **Needs an in-game check**: `silent-phone-call` (the DLL half disables the engine's call voice; the
+  claim only holds with the script half) and every `verified: diff` page whose body lists an
+  `Uncertain`.
 
 ## Published feature list
 

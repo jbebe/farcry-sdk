@@ -8,7 +8,7 @@ status: located
 systems: [missions, ai]
 match:
   # the guards' new mission layers: sector layout (what gates spawning) and each entity's filing
-  - "levels/*/generated/worldsectors/worldsector*.data.fcb/_layout.xml#layer[missions\\outposts\\*]"
+  - "levels/*/generated/worldsectors/worldsector*.data.fcb/_layout.xml#layer[missions\\outposts\\*]{,/**}"
   - "levels/*/generated/worldsectors/worldsector*.data.fcb/_layout.xml#remove[*]"
   - "levels/*/generated/worldsectors/worldsector*.data.fcb/*#Components/CMissionComponent"
   - "levels/*/generated/worldsectors/worldsector*.data.fcb/*#Components/CMissionComponent/{hidMissionLayerPath,text_hidMissionLayerPath}"

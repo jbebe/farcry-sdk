@@ -11,6 +11,7 @@ match:
   - "domino/user/a1sm01_townescape.a1sm01_mission.lua@L{721,1785,1814}"
   - "domino/user/openingsequence/openingsequence.taxiride.lua@L1532"
   - "languages/*/oasisstrings.fragment.xml#MessagesBoxContents/SKIP_INTRO_TEXT"
+  - "domino/system/postfx.lua@L{32,39}"
 exclude: []
 requires: [missions-game-globals, functional-outposts]
 verified: diff

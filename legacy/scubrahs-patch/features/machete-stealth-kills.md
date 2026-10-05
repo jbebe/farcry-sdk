@@ -12,6 +12,7 @@ match:
   - "_hash/{140c80b6,19509b46,5ef0e196}.lua"
   - "worlds/*/generated/world*.omnis.fcb/dominoomnientity_{buddykilllistener,townkilllistener_w?}.*"
   - "domino/system/{buddyhealthevents,spawnprimarybuddy}.lua@*"
+  - "**/entitylibrary*.fcb/weaponproperties/handtohand/**#**/bIsSilent"
 exclude: []
 requires: []
 verified: diff
@@ -49,9 +50,8 @@ him wounded on the ground.
 
 - The global `PrimaryBuddyEntityID` and `FinalStoryMissionCompleted` are declared in
   `domino/user/master_gameglobals.globals.lua` (`missions-game-globals`).
-- The machete weapon properties also gain `bIsSilent` `True` (in `player-machete-copies`, whole
-  units shared with the range and creeping changes); whether that matters to the takedown is not
-  known, so this page does not require it.
+- The four machete copies in the override library gain `bIsSilent` `True`, claimed here as the
+  silent part of a stealth kill; whether the takedown needs it is not known.
 
 ## Uncertain
 

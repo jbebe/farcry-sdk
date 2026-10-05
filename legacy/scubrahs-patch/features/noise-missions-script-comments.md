@@ -7,6 +7,7 @@ match:
   - "domino/system/objectivestate.lua@L{1,20,24,28,35,38}"
   - "domino/system/playbark.lua@L97"
   - "domino/system/setsidequestmissionstate.lua@L1"
+  - "domino/system/postfx.lua@L{1,20,24,28,45}"
   - "domino/user/common_buddysidequests.bsq_missionbriefing.lua@L*"
   - "domino/user/common_buddysidequests.bsq_missiondebriefing.lua@L{223,241,258}"
   - "domino/user/common_customboxes.missionacceptedbroadcast.lua@L{240,241,357}"

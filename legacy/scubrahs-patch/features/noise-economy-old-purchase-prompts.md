@@ -5,7 +5,7 @@ systems: [economy]
 match:
   - "levels/*/generated/worldsectors/*.data.fcb/weaponpurchaseproximitytrigger_*.xml"
   - "levels/*/generated/worldsectors/*.data.fcb/diamondtrackerupgradepurchaseinteraction.*.xml"
-  - "levels/*/generated/worldsectors/worldsector{3859,4766,2601,2697,1539,4738,4691,3485,2179,1971}.data.fcb/_layout.xml#layer[main]"
+  - "levels/*/generated/worldsectors/*.data.fcb/_layout.xml#layer[main]*/entity[{weaponpurchaseproximitytrigger*,diamondtrackerupgradepurchaseinteraction}]"
   - "_hash/{44152d6c,03b557bc}.lua"
   - "worlds/*/generated/world*.omnis.fcb/dominoomnientity_bazaarwallpurchasemanager_w?.*.xml"
   - "languages/*/oasisstrings.fragment.xml#MessagesBoxHeaders/{PUR_TITLE,PUR_GPS_TITLE}"

@@ -9,7 +9,7 @@ systems: [vehicles]
 match:
   - "**/entitylibrary*.fcb/vehicle/**#**/FOV/fFOVAngle"
 exclude: []
-requires: [player-vehicle-override-copies, truck-engine-sounds]
+requires: []
 existing: mods/UFCP — src/options/fov.cpp (Vehicle field of view option, at run time)
 verified: diff
 ---
@@ -38,4 +38,4 @@ Libraries load world, then override, then DLC, the later winning. So:
 
 ## Depends on
 
-`player-vehicle-override-copies` and `truck-engine-sounds` own the eleven copies (whole units).
+The override library's vehicle copies are compared with the declarations they override, so each value is a separate change: this page, `vehicle-durability`, `land-vehicle-speed`, `vehicle-fov-100` and `truck-engine-sounds` (the big trucks' engine sound events) can each be picked alone.

@@ -13,7 +13,6 @@ match:
   - "worlds/*/generated/world*.omnis.fcb/dominoomnientity_gpsupgradepurchasemanager.*"
   - "levels/*/generated/worldsectors/worldsector{3080,3160}.data.fcb/playergadgetswap_interaction_*"
   # the sectors' layouts: today one whole layer[main] each; split per entity after a re-analysis
-  - "levels/*/generated/worldsectors/worldsector{3080,3160}.data.fcb/_layout.xml#layer[main]"
   - "levels/*/generated/worldsectors/worldsector{3080,3160}.data.fcb/_layout.xml#layer[main]/entity[{playergadgetswap_interaction_*,furniture.urbantableround01_bk_19}]"
   - "levels/*/generated/worldsectors/worldsector{3080,3160}.data.fcb/_layout.xml#delete[{DetailObjects.GarbageNewpaper_BK_56,StaticObject_60399}.*]"
   - "levels/w1_c_3/generated/worldsectors/worldsector3080.data.fcb/furniture.urbantableround01_bk_19.**"

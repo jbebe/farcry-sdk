@@ -7,7 +7,7 @@ claims:
 status: located
 systems: [player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/gadgets/equipped/monocular.xml"
+  - "generated/entitylibrarypatchoverride.fcb/gadgets/equipped/monocular.xml{,#**}"
 exclude: []
 requires: []
 verified: diff

@@ -4,9 +4,10 @@ kind: component
 bundle: visuals
 claims:
   - "Disabled ADS/iron sight blur effect"
-status: unresolved
+status: located
 systems: [weapons, graphics]
-match: []
+match:
+  - "worlds/*/generated/moviedata.xml#SequenceData/Sequence[{52,53}]/**"
 exclude: []
 requires: []
 verified: diff
@@ -18,8 +19,14 @@ Aiming down the sights no longer blurs the edges of the view.
 
 ## How
 
-No data change found; likely one of the Dunia.dll patches (pending trace).
+The blur is a post effect played as a movie sequence. In `worlds/world1/generated/moviedata.xml` and
+`world2`'s, the sequences `PostFx.Primary.In` (index 52) and `PostFx.Primary.Primary` (53) each lose
+their one track, `ParamId="15"` with the texture `graphics\PostFX\Ironsight.png`. The sequences stay, so
+the engine still plays them on aiming, but they animate nothing.
 
-Searched: no weapon's `IronSight/IronsightFX` changes (the only iron-sight value the mod touches is
-`fIronsightFOV`, see `ads-fov`), the post effects in `PostFXs.PostFXs.Database`
-(`PostFX.Primary.In` and the rest) are untouched, and no render setting or script mentions a blur.
+The weapons' own `IronSight/IronsightFX` values and the `PostFXs.PostFXs.Database` archetype are
+untouched.
+
+## Uncertain
+
+- That index 52 and 53 are the only sequences aiming plays is read from their names.

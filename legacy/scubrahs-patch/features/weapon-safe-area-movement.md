@@ -18,7 +18,8 @@ Weapon safe areas, where the game holsters the player's weapon (the faction head
 bars put the player into weapon-safe mode through scripts), also restrict movement; the mod relaxes
 that restriction.
 
-No data change found; likely one of the Dunia.dll patches (pending trace).
+No change found. None of the mod's twenty `Dunia.dll` patches was traced to weapon safe areas, so
+the DLL patch from update 2.6 that the retired script's header mentions was not identified.
 
 ## Uncertain
 

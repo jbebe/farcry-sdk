@@ -9,6 +9,7 @@ match:
   - "worlds/*/generated/world*.managers.fcb/databaseitemmanager.*#Templates/Template[*]/Template[*]/{fAnimationScale,fWindForce}"
   - "worlds/*/generated/world*.managers.fcb/databaseitemmanager.*#Templates/Template[*]/Template[*]/{FormationLayer1,FormationLayer2,Material}/*"
   - "engine/settings/defaultrenderconfig.xml#@AmbientSkyOcclusion*"
+  - "worlds/*/generated/world*.game.xml/_environment.xml#Sky@{SunRange,SunLightHDRMul,MoonHDRMul}"
 exclude: []
 requires: []
 verified: diff

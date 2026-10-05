@@ -7,7 +7,7 @@ claims:
 status: located
 systems: [weapons, input]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/secondary/ied.xml"
+  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/secondary/ied.xml{,#**}"
   - "config/defaultusercontrols.xml/category_weapons.xml#Control[select_ied]"
   - "config/inputactionmapsingle.xml/weapons.xml#Binding[+4]"
   - "scripts/engine/objects/pawn/statemachine/weapons.gosm.xml#Group[4]/Event[{+4,+5}]"

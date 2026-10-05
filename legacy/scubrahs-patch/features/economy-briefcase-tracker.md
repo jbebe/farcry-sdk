@@ -8,8 +8,9 @@ match:
   - "_hash/05d31928.lua"
   - "worlds/*/generated/world*.omnis.fcb/dominoomnientity_diamondbriefcasetracker_w?.*.xml"
   - "domino/system/pickuplistener.lua@*"
+  - "worlds/*/generated/entitylibrary.fcb/domino/objectives/diamond.xml"
   - "worlds/*/generated/world*.mapsdata.fcb/diamondbriefcaseicon_*.xml"
-  - "worlds/*/generated/world*.mapsdata.fcb/_layout.xml#layer[main][+0]"
+  - "worlds/*/generated/world*.mapsdata.fcb/_layout.xml#layer[main]*/entity[diamondbriefcaseicon*]"
   - "languages/*/oasisstrings.fragment.xml#Diamonds/DiamondPickedSwoosh*"
   - "install/bin/dunia.dll@0x686{dbc,e07}"
 exclude: []
@@ -41,8 +42,8 @@ the published list names this piece; the gadget-swapping features need it.
 - **Map icons.** 224 new `DiamondBriefcaseIcon_<id>` entities in `world1.mapsdata.fcb` (117) and
   `world2.mapsdata.fcb` (107), `tplCreatureType` `Domino.Objectives.Diamond`, each at its briefcase's
   position, disabled until the script enables it. They are map markers, not briefcases and not
-  locator targets. The `_layout.xml` `layer[main][+0]` entry of each world's mapsdata lists them in
-  the `main` layer, together with entities that were already in `main` and one new buddy spawn point.
+  locator targets. Each is placed in its world's `main` layer by one `_layout.xml` change
+  (`layer[main][0]/entity[diamondbriefcaseicon_*]`).
 - **Strings.** `Diamonds/DiamondPickedSwoosh1` ... `DiamondPickedSwoosh221` ("You found N out of 221
   briefcases with diamonds"), English text in all nine languages - 1,989 changes.
 
@@ -70,8 +71,3 @@ Patterns (one match in each build; sites at +17 and +19; `??` masks addresses):
   `domino/user/master_gameglobals.globals.lua@L90` hunk; the counter itself is `economy-diamond-counter`.
 - The +3/+4/+5 match `briefcase-diamonds`.
 
-## Uncertain
-
-The `layer[main][+0]` entry
-also carries a new buddy spawn point (`buddies.spawnpointbuddy_*`), which belongs to another feature
-but cannot be split from this one layout entry; new entities land in `main` by default anyway.

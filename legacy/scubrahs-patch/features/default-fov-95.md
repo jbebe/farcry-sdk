@@ -7,7 +7,7 @@ claims:
 status: located
 systems: [player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/cameras/camera/first.xml"
+  - "generated/entitylibrarypatchoverride.fcb/cameras/**#**/fFOV"
 exclude: []
 requires: []
 existing: mods/UFCP — src/options/fov.cpp (Field of view option, at run time)

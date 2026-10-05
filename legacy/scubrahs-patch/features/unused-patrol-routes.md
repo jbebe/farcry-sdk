@@ -12,7 +12,7 @@ match:
   - "_hash/{6a78eb66,6e5e5d90,a21a9129,e5c4b8ec}.lua"
   - "worlds/world1/generated/world1.omnis.fcb/dominoomnientity_patrols_20564256571554{11111,22222,33333,44444}.*"
   - "worlds/world1/generated/world1.game.xml/missions/ghostpatrols/20564256571554{11111,22222,33333,44444}/**"
-  - 'worlds/world1/generated/world1.mapsdata.fcb/_layout.xml#layer[missions\ghostpatrols\20564256571554{11111,22222,33333,44444}\*]'
+  - 'worlds/world1/generated/world1.mapsdata.fcb/_layout.xml#layer[missions\ghostpatrols\20564256571554{11111,22222,33333,44444}\*]{,/**}'
   - "worlds/world1/generated/world1.mapsdata.fcb/patrols.rover_3_{arena,fishing,lumber,slaughter}.**"
   # the reshaped paths they drive
   - "worlds/world1/generated/world1.mapsdata.fcb/vehiclepatrolpath_*#hidShapePoints/**"

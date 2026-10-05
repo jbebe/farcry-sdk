@@ -24,7 +24,7 @@ match:
   - "domino/user/master_world1.world1.lua@L{955,1150,1186,1192,1194,1239,2987,3258,3259}"
   - "domino/user/master_world2.world2.lua@L{1145,1583,1585,1591,1593,1627,2945,2953}"
   - "worlds/*/generated/world*.mapsdata.fcb/{objectives.*,objective_assassination_*,a1sm03_mikesdefensemarker_*}.xml#**"
-  - 'worlds/*/generated/world*.mapsdata.fcb/_layout.xml#layer[missions\{buddysidequests,assassinationmissions,convoymissions}\*]'
+  - 'worlds/*/generated/world*.mapsdata.fcb/_layout.xml#layer[missions\{buddysidequests,assassinationmissions,convoymissions}\*]{,/**}'
   - "install/bin/dunia.dll@0x855a69"
   - "install/bin/dunia.dll@0xeb0cec"
 exclude:

@@ -6,9 +6,10 @@ claims:
   - "Slightly improved AI visibility of the player at night"
 status: located
 systems: [ai]
-match: []
+match:
+  - "**/entitylibrary*.fcb/enemy_archetypes/**#**/fNightTimeMultiplier"
 exclude: []
-requires: [player-enemy-override-copies]
+requires: []
 verified: diff
 ---
 
@@ -26,8 +27,7 @@ shotgunners, rocket men, snipers, mortar men, the Carl Gustaf gunner and the ass
 
 ## Depends on
 
-The value exists only in those copies, whole units owned by `player-enemy-override-copies`; this
-page has no change of its own.
+The mod adds these copies to the override library, which outranks the world libraries. Each copy is compared with the declaration it overrides, so its values are separate changes and this page can be picked alone; the copy it writes keeps the base game's other values. The same copies carry `ai-stealth-senses` and `bouncing-npcs`.
 
 ## Uncertain
 

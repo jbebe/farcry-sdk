@@ -7,7 +7,7 @@ claims:
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/secondary/m79.xml"
+  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/secondary/m79.xml{,#**}"
 exclude: []
 requires: []
 verified: diff

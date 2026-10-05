@@ -17,7 +17,7 @@ Less latency between input and what is seen on screen.
 
 ## How
 
-No data change found; likely one of the Dunia.dll patches (pending trace).
+No change found. None of the mod's twenty `Dunia.dll` patches is about input or frame pacing.
 
 Searched: `engine/settings/defaultrenderconfig.xml` (`MaxDriverBufferedFrames` stays 0, `VSync` stays
 0), `engine/settings/defaultthreadingconfig.xml` (`RENDER_THREAD` unchanged; the physics and job

@@ -10,7 +10,7 @@ match:
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/WeaponBazaar/Summary/Weapons/Item[{silencedshotgun,sawedoffshotgun,crossbow}]"
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/WeaponBazaar/Item[{silencedshotgun,sawedoffshotgun,crossbow} crate]"
   - "worlds/*/generated/world*.game.xml/missions/weaponbazaar/dlc/*.xml"
-  - "levels/*/generated/worldsectors/*.data.fcb/_layout.xml#layer[missions*weaponbazaar*dlc*]"
+  - "levels/*/generated/worldsectors/*.data.fcb/_layout.xml#layer[missions*weaponbazaar*dlc*]{,/**}"
   - "levels/*/generated/worldsectors/*.data.fcb/missions_weaponbazaar_{crossbow,sawedoffshotgun,silencedshotgun}_new.weaponstorage.*.xml"
   - "domino/system/dlc1weaponsspawn.lua@*"
   - "downloadcontent/dlc1/generated/entitylibrary.fcb/dlc1weapons/dlc1/pickup_*.xml#**/fRespawnTime"

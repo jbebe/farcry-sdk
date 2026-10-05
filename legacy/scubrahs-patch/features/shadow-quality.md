@@ -9,6 +9,7 @@ systems: [graphics]
 match:
   - "engine/settings/defaultrenderconfig.xml#Shadow/quality[*]@*"
   - "engine/settings/defaultrenderconfig.xml#Ambient/quality[*]@*"
+  - "worlds/*/generated/world*.game.xml/_environment.xml#Shadow@DynamicShadowRadius"
 exclude:
   - "**@UnSupportedPlatforms"
 requires: []

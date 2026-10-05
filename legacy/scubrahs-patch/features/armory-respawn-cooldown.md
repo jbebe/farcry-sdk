@@ -9,6 +9,7 @@ systems: [economy, weapons]
 match:
   - "_hash/{07d356ff,40732c2f}.lua"
   - "worlds/*/generated/world*.omnis.fcb/dominoomnientity_weaponrespawncooldownmanager_w?.*.xml"
+  - "generated/entitylibrarypatchoverride.fcb/pickups/weapons/*/{weaponstorage,storageroom}.xml#**/fRespawnTime"
 exclude: []
 requires: [outposts-delay-presets]
 verified: diff

@@ -8,8 +8,9 @@ status: located
 systems: [ai]
 match:
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/FCXAIBehaviorService/{IntimateSocialDistance,MediumSocialDistance}@value"
+  - "**/entitylibrary*.fcb/enemy_archetypes/**#**/FOVMultipliers/f{PlayerInVehicle,PreCombat,Combat,PostCombat}Multiplier"
 exclude: []
-requires: [player-enemy-override-copies]
+requires: []
 verified: diff
 ---
 
@@ -30,7 +31,7 @@ past or away is a bit easier.
 
 ## Depends on
 
-The sensory multipliers exist only in the copies owned by `player-enemy-override-copies`.
+The sensory multipliers exist only in the soldier copies in `generated/entitylibrarypatchoverride.fcb`. Each copy is compared with the declaration it overrides, so these values are separate changes from `ai-night-visibility` and `bouncing-npcs` in the same copies.
 
 ## Uncertain
 

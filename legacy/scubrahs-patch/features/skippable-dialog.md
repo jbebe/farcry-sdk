@@ -10,6 +10,7 @@ match:
   - "domino/system/playanim.lua@L{111,115}"
   - "domino/system/playbark.lua@L{90,95}"
   - "install/bin/dunia.dll@0x97485e"
+  - "config/inputactionmapcommon.xml/common_briefinginteraction.xml#{import[+3],Binding[+4],Binding[+5],Binding[+6],Binding[+7]}"
 exclude: []
 requires: []
 verified: re

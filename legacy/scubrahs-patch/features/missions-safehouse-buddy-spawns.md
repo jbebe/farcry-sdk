@@ -6,8 +6,7 @@ systems: [buddies, world]
 match:
   - "domino/user/savepoints/savepoints.savepoints.lua@L{2034,2040,2070,2130,2160,2166,2292}"
   - "worlds/*/generated/world*.mapsdata.fcb/buddies.spawnpointbuddy_*.xml"
-  - "worlds/world1/generated/world1.mapsdata.fcb/_layout.xml#layer[main][+{1,2,3}]"
-  - "worlds/world2/generated/world2.mapsdata.fcb/_layout.xml#layer[main][+1]"
+  - "worlds/*/generated/world*.mapsdata.fcb/_layout.xml#layer[main]*/entity[buddies.spawnpointbuddy*]"
 exclude: []
 requires: []
 verified: diff

@@ -7,7 +7,7 @@ claims:
 status: located
 systems: [weapons, ai]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/secondary/mac10.xml"
+  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/secondary/mac10.xml{,#**}"
 exclude: []
 requires: []
 verified: diff

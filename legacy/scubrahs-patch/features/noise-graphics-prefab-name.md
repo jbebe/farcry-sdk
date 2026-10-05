@@ -5,6 +5,7 @@ claims: []
 systems: [world]
 match:
   - "worlds/*/generated/world*.managers.fcb/prefabmanager.*#PrefabDescriptions/Description[*]/Name{,@type}"
+  - "worlds/*/generated/world*.managers.fcb/prefabmanager.*#PrefabDescriptions/Description[{005DC34B,4BEFBFBD5D00}]"
 exclude: []
 requires: []
 verified: diff

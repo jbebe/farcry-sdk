@@ -6,9 +6,10 @@ claims:
   - "Added machete \"creeping\" (hold right mouse button) to avoid enemies hearing your footsteps when close behind them (thanks Boggalog)"
 status: located
 systems: [weapons, player]
-match: []
+match:
+  - "**/entitylibrary*.fcb/weaponproperties/handtohand/**#**/IronSight/{bCanIronsight,fMoveSpeedFactor}"
 exclude: []
-requires: [player-machete-copies]
+requires: []
 verified: diff
 ---
 
@@ -27,8 +28,7 @@ keeps the base game's `1.308` (75 degrees, no zoom).
 
 ## Depends on
 
-The values sit in the four machete copies in `generated/entitylibrarypatchoverride.fcb`, whole units
-shared with `machete-range`: `player-machete-copies`. This page has no change of its own.
+The values sit in the four machete copies in `generated/entitylibrarypatchoverride.fcb`. The mod adds these copies to the override library, which outranks the world libraries. Each copy is compared with the declaration it overrides, so its values are separate changes and this page can be picked alone; the copy it writes keeps the base game's other values.
 
 ## Uncertain
 

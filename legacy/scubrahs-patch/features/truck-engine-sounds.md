@@ -7,8 +7,7 @@ claims:
 status: located
 systems: [audio, vehicles]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/land/bigtruck.xml"
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/land/bigtruck/*.xml"
+  - "generated/entitylibrarypatchoverride.fcb/vehicle/land/bigtruck{,/**}.xml#**/Sound/snd*"
 exclude: []
 requires: []
 verified: diff

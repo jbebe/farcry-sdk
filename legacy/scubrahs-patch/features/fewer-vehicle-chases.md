@@ -8,6 +8,7 @@ status: located
 systems: [ai, vehicles]
 match:
   - "scripts/game/newbrains/vehiclebrain.ai.rml"
+  - "engine/gamemodes/gamemodesconfig.xml#**/AdaptativeBehavior/Item[{2,9,10}]@*"
 exclude: []
 requires: []
 verified: diff
@@ -48,7 +49,7 @@ unchanged.
 ## Depends on
 
 The `passengerPriority` key goes with the `Dunia.dll` string edit `passengerPriority` ->
-`gunnerPriority` (pending trace, see `patrol-every-seat`), which makes the engine read passenger
+`gunnerPriority` (traced, see `patrol-every-seat`), which makes the engine read passenger
 seats' priority from `gunnerPriority`.
 
 ## Uncertain

@@ -7,8 +7,7 @@ claims:
 status: located
 systems: [ai, buddies]
 match:
-  - "**/entitylibrary*.fcb/{enemy_archetypes,buddies}/**#**/bUseRigidBased"
-  - "generated/entitylibrarypatchoverride.fcb/buddies/**.xml"
+  - "**#**/CharacterParams/bUseRigidBased"
 exclude: []
 requires: []
 verified: diff
@@ -30,7 +29,7 @@ scubrah's standalone "Fix Bouncing NPCs" folded in.
   buddies, their `_Unarmed`/`_Betrayed`/`.Armed` variants, faction contacts, mission characters,
   `Civilians.Male_Civilian`, `GRIN_Operative`, the Jackal, Reuben). They differ from the world
   libraries only in this flag and `fMaxSlope` `60.000004` -> `60` (rounding), and shadow them.
-- the 21 soldier copies in the override library carry `False` too (`player-enemy-override-copies`).
+- the 21 soldier copies in the override library carry `False` too; compared with the declarations they override, the flag is its own change there.
 
 The override library loads after the world libraries, so 162 of the world-library edits are dead
 in the mod: every `world2` one, and in `world1` the 53 buddies and 16 soldiers the mod also copies

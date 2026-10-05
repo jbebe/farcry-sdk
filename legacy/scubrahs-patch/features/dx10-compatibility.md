@@ -41,5 +41,4 @@ moved to are the base game's weaker ones.
 
 - That the 4096 maps are what DX10 could not run well is an inference from which levels were
   excluded. The mod's notes give no reason.
-- The mod also ships a patched `Dunia.dll`. Whether any of its patches concern DX10 is pending that
-  trace.
+- None of the mod's twenty `Dunia.dll` patches concerns rendering.

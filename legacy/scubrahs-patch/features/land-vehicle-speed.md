@@ -9,7 +9,7 @@ systems: [vehicles]
 match:
   - "**/entitylibrary*.fcb/vehicle/**#**/WheeledParams/{fEnginePower,fGearBoxTopSpeed}"
 exclude: []
-requires: [player-vehicle-override-copies, truck-engine-sounds]
+requires: []
 verified: diff
 ---
 
@@ -34,4 +34,4 @@ DLC variants), so they are dead, with no difference in game.
 
 ## Depends on
 
-`player-vehicle-override-copies` and `truck-engine-sounds` own the copies (whole units).
+The override library's vehicle copies are compared with the declarations they override, so each value is a separate change: this page, `vehicle-durability`, `land-vehicle-speed`, `vehicle-fov-100` and `truck-engine-sounds` (the big trucks' engine sound events) can each be picked alone.

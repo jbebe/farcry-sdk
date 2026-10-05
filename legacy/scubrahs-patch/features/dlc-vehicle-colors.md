@@ -8,6 +8,7 @@ status: located
 systems: [vehicles, graphics]
 match:
   - "downloadcontent/dlc1/generated/entitylibrary.fcb/vehicle/**#**/selVehicleColor"
+  - "graphics/_materials/sdore2-m-*.xbm"
 exclude: []
 requires: []
 verified: diff

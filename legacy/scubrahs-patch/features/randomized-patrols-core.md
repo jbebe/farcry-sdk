@@ -15,14 +15,16 @@ match:
   - "worlds/*/generated/world*.omnis.fcb/dominoomnientity_patrols_*"
   # 17 mission layers per group, the layout that files one vehicle under each, and the vehicles
   - "worlds/*/generated/world*.game.xml/missions/ghostpatrols/**"
-  - 'worlds/*/generated/world*.mapsdata.fcb/_layout.xml#layer[missions\ghostpatrols\*]'
+  - 'worlds/*/generated/world*.mapsdata.fcb/_layout.xml#layer[missions\ghostpatrols\*]{,/**}'
   - "worlds/*/generated/world*.mapsdata.fcb/patrols.**"
   # new patrol archetypes (the red-faction ones are faction-conflicts)
-  - "**/entitylibrary*.fcb/ghostpatrols/patrols/**.xml"
+  - "**/entitylibrary*.fcb/ghostpatrols/patrols/**.xml{,#Entity/disEntityId}"
+  - "worlds/*/generated/entitylibrary.fcb/enemy_archetypes/neutral_faction/**"
+  - "worlds/*/generated/entitylibrary.fcb/buddies/{civilians,grin}/*_patrol.xml"
 exclude:
   - "worlds/world1/generated/world1.omnis.fcb/dominoomnientity_patrols_20564256571554{11111,22222,33333,44444}.*"
   - "worlds/world1/generated/world1.game.xml/missions/ghostpatrols/20564256571554{11111,22222,33333,44444}/**"
-  - 'worlds/world1/generated/world1.mapsdata.fcb/_layout.xml#layer[missions\ghostpatrols\20564256571554{11111,22222,33333,44444}\*]'
+  - 'worlds/world1/generated/world1.mapsdata.fcb/_layout.xml#layer[missions\ghostpatrols\20564256571554{11111,22222,33333,44444}\*]{,/**}'
   - "worlds/world1/generated/world1.mapsdata.fcb/patrols.rover_3_{arena,fishing,lumber,slaughter}.**"
   - "**/entitylibrary*.fcb/ghostpatrols/**_redfaction.xml"
 requires: [faction-conflicts, outposts-delay-presets, patrols-set-mission-state]

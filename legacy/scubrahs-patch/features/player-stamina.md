@@ -7,7 +7,7 @@ claims:
 status: located
 systems: [player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/curves/playersicknesscurves/staminasprintdrain.xml"
+  - "generated/entitylibrarypatchoverride.fcb/curves/playersicknesscurves/staminasprintdrain.xml{,#**}"
 exclude: []
 requires: []
 verified: diff
