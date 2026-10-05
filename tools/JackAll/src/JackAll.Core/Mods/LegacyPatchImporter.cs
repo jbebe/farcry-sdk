@@ -164,18 +164,54 @@ public static class LegacyPatchImporter
         IProgress<string>? progress = null)
     {
         using DuniaArchive legacy = DuniaArchive.Open(fatPath, datPath);
+        return ImportEntries(
+            [.. legacy.Entries.Select(e => new LegacyEntry(e.Hash, null, () => legacy.Read(e)))],
+            workspace, names, fcbDefinitions, readOriginal, readOriginalHash, progress);
+    }
 
+    /// <summary>
+    /// The same import over a loose tree of archive-relative paths (<c>worlds\world1\…</c>), the other
+    /// shape legacy mods ship in: files meant to be packed into the archives by hand.
+    /// </summary>
+    public static LegacyImportResult ImportTree(
+        string root,
+        FolderModLayer workspace,
+        NameDatabase names,
+        FcbClassDefinitions fcbDefinitions,
+        Func<uint, byte[]?> readOriginal,
+        Func<uint, ulong?> readOriginalHash,
+        IProgress<string>? progress = null)
+    {
+        LegacyEntry[] entries = [.. Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+            .Select(file => (File: file, Path: NameHash.Normalize(System.IO.Path.GetRelativePath(root, file))))
+            .Select(f => new LegacyEntry(NameHash.Compute(f.Path), f.Path, () => File.ReadAllBytes(f.File)))];
+        return ImportEntries(entries, workspace, names, fcbDefinitions, readOriginal, readOriginalHash, progress);
+    }
+
+    /// <param name="KnownPath">The entry's path when the mod itself states it, as a loose tree does;
+    /// null to resolve it through the hashlist.</param>
+    private sealed record LegacyEntry(uint Hash, string? KnownPath, Func<byte[]> Read);
+
+    private static LegacyImportResult ImportEntries(
+        IReadOnlyList<LegacyEntry> entries,
+        FolderModLayer workspace,
+        NameDatabase names,
+        FcbClassDefinitions fcbDefinitions,
+        Func<uint, byte[]?> readOriginal,
+        Func<uint, ulong?> readOriginalHash,
+        IProgress<string>? progress)
+    {
         int imported = 0, fragmentsImported = 0, skipped = 0, processed = 0;
         List<LegacyImportNote> refused = [], wholeFile = [], unreachable = [];
-        foreach (FatEntry entry in legacy.Entries)
+        foreach (LegacyEntry entry in entries)
         {
             processed++;
             if (processed % 2_000 == 0)
             {
-                progress?.Report($"Comparing against the base game… ({processed:N0} / {legacy.Entries.Count:N0})");
+                progress?.Report($"Comparing against the base game… ({processed:N0} / {entries.Count:N0})");
             }
 
-            byte[] legacyBytes = legacy.Read(entry);
+            byte[] legacyBytes = entry.Read();
             ulong legacyHash = XxHash64.HashToUInt64(legacyBytes);
             ulong? vanillaHash = readOriginalHash(entry.Hash);
 
@@ -199,7 +235,8 @@ public static class LegacyPatchImporter
 
             byte[]? vanillaBytes = vanillaHash is not null ? readOriginal(entry.Hash) : null;
 
-            bool named = names.TryResolve(entry.Hash, out string path);
+            string path = entry.KnownPath ?? string.Empty;
+            bool named = entry.KnownPath is not null || names.TryResolve(entry.Hash, out path);
 
             FileType type = named
                 ? FileTypeSniffer.Identify(ReadOnlySpan<byte>.Empty, path)
@@ -228,7 +265,7 @@ public static class LegacyPatchImporter
         }
 
         return new LegacyImportResult(
-            legacy.Entries.Count, imported, fragmentsImported, skipped, refused, wholeFile, unreachable);
+            entries.Count, imported, fragmentsImported, skipped, refused, wholeFile, unreachable);
     }
 
     /// <summary>

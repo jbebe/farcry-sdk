@@ -5,6 +5,7 @@ using JackAll.Cli.Commands.DepLoad;
 using JackAll.Cli.Commands.Domino;
 using JackAll.Cli.Commands.Fc2Model;
 using JackAll.Cli.Commands.Fcb;
+using JackAll.Cli.Commands.Legacy;
 using JackAll.Cli.Commands.Mgb;
 using JackAll.Cli.Commands.Mod;
 using JackAll.Cli.Commands.Move;
@@ -60,6 +61,26 @@ app.Configure(config =>
         mod.AddCommand<ModRestoreCommand>("restore")
             .WithDescription("Put the pristine patch.dat/patch.fat back, undoing every build.")
             .WithExample("mod", "restore", "--game", @"C:\Games\Far Cry 2");
+    });
+
+    // --- Legacy mods -----------------------------------------------------
+    // Takes a community mod apart into its changes, so features can be documented in legacy/<mod>/
+    // and picked into new layers. See .claude/skills/legacy-mod/SKILL.md for the procedure.
+    config.AddBranch("legacy", legacy =>
+    {
+        legacy.AddCommand<LegacyAnalyzeCommand>("analyze")
+            .WithDescription("List every change a legacy mod makes to the base game into a work folder.")
+            .WithExample("legacy", "analyze", "--game", @"C:\Games\Far Cry 2", "--from", "oldmod.zip", "--work", @"tmp\legacy\oldmod");
+        legacy.AddCommand<LegacyChangesCommand>("changes")
+            .WithDescription("Query an analysis's changes by address, by feature, or the ones no feature claims.")
+            .WithExample("legacy", "changes", "--work", @"tmp\legacy\oldmod", "--group");
+        legacy.AddCommand<LegacyCheckCommand>("check")
+            .WithDescription("Check that a mod's feature pages claim every change and cover every published claim.")
+            .WithExample("legacy", "check", "--mod", @"legacy\oldmod", "--work", @"tmp\legacy\oldmod");
+        legacy.AddCommand<LegacyPickCommand>("pick")
+            .WithDescription("Build a layer holding only the picked features of an analyzed legacy mod.")
+            .WithExample("legacy", "pick", "--game", @"C:\Games\Far Cry 2", "--mod", @"legacy\oldmod", "--work", @"tmp\legacy\oldmod",
+                "--feature", "swim-speed", "--out", @"tmp\picked");
     });
 
     // --- Archives (.fat/.dat) -------------------------------------------
