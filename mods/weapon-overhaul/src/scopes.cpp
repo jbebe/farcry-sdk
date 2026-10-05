@@ -204,7 +204,7 @@ namespace {
         {"weapons.Special.Dart_Rifle", 9541, 2016, kThinRim, -0.00284f, -0.00148f,
          kDartRiflePieces, {}, 0.06f},
         {"weapons.Special.M1903", 7332, 1488, kThinRim, -0.00061f, -0.00025f, kM1903Pieces, {},
-         0.0995f},
+         0.06f},
         {"weapons.Primary.Dragunov", 10167, 2088, kThickRim, -0.00254f, -0.02073f,
          kDragunovPieces, {}, 0.1819f},
         {"weapons.Primary.AS50", 11034, 1800, kThickRim, 0.00222f, -0.00248f, kAS50Pieces, {},
