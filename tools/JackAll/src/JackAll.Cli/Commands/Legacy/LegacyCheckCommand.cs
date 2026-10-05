@@ -70,7 +70,9 @@ public sealed class LegacyCheckCommand : CliCommand<LegacyCheckCommand.Settings>
         {
             foreach (LegacyFeature feature in catalog.Features)
             {
-                AnsiConsole.MarkupLine($"  {check.PerFeature[feature.Id],7:N0}  {feature.Id.EscapeMarkup()} [grey]({feature.Kind}{(feature.Status is { } s ? ", " + s : string.Empty)})[/]");
+                int dead = changes.Count(c => c.ShadowedBy is not null && feature.ClaimsChanges && feature.Matches(c.Address));
+                string shadowed = dead > 0 ? $", {dead:N0} dead" : string.Empty;
+                AnsiConsole.MarkupLine($"  {check.PerFeature[feature.Id],7:N0}  {feature.Id.EscapeMarkup()} [grey]({feature.Kind}{(feature.Status is { } s ? ", " + s : string.Empty)}{shadowed})[/]");
             }
         }
 

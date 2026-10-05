@@ -43,6 +43,8 @@ public enum ChangeKind
 /// <param name="Whole">The unit can only be picked with every one of its changes.</param>
 /// <param name="Hint">What the unit calls itself - an archetype name, a script's header comment.</param>
 /// <param name="Context">For a byte run, the base game's bytes either side of it.</param>
+/// <param name="ShadowedBy">The library the game reads this archetype from instead, when a later one
+/// declares it again - the change edits a copy nothing loads.</param>
 public sealed record LegacyChange(
     ChangeKind Kind,
     string Unit,
@@ -51,7 +53,8 @@ public sealed record LegacyChange(
     string? New = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Whole = false,
     string? Hint = null,
-    string? Context = null)
+    string? Context = null,
+    string? ShadowedBy = null)
 {
     private static readonly JsonSerializerOptions Json = new()
     {

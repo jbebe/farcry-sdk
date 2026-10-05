@@ -7,6 +7,7 @@ using JackAll.Core.Legacy;
 using JackAll.Core.Mods;
 using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
+using JackAll.Tools.World;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -46,6 +47,7 @@ public sealed class LegacyAnalyzeCommand : CliCommand<LegacyAnalyzeCommand.Setti
         using GameVfs vfs = ModPipeline.OpenOriginals(install, names, progress);
         LegacyAnalysis analysis = LegacyAnalyzer.Analyze(settings.From, settings.Work, install, vfs, names, definitions, progress);
         ModPipeline.SaveCache(vfs, install);
+        int shadowed = MarkShadowed(settings.Work, install, names, definitions, progress);
 
         if (settings.Json)
         {
@@ -77,7 +79,32 @@ public sealed class LegacyAnalyzeCommand : CliCommand<LegacyAnalyzeCommand.Setti
 
         AnsiConsole.MarkupLine(
             $"  changes  : {analysis.Changes:N0} across {analysis.Units:N0} unit(s), {analysis.WholeUnits:N0} of them only takeable whole");
+        if (shadowed > 0)
+        {
+            AnsiConsole.MarkupLine($"  [yellow]shadowed[/] : {shadowed:N0} change(s) edit an archetype copy a later library overrides, so the game never reads them");
+        }
+
         AnsiConsole.MarkupLine($"Next: [blue]legacy changes --work {settings.Work.EscapeMarkup()} --group[/]");
         return 0;
+    }
+
+    /// <summary>Runs the archetype lint over the imported layer and marks every change it finds dead.</summary>
+    private static int MarkShadowed(
+        string workDir, GameInstall install, NameDatabase names, FcbClassDefinitions definitions, SyncProgress progress)
+    {
+        JsonOutput.Report("Checking which edited archetypes a later library overrides…");
+        var layer = new FolderModLayer(Path.Combine(workDir, LegacyAnalyzer.LayerFolder), "legacy");
+        using GameVfs merged = GameVfs.Load(
+            install, names, GameCache.Load(install.CacheFile), definitions, progress, includeFragments: false);
+        merged.Rebuild([layer], includeFragments: false, progress: progress);
+
+        Dictionary<string, string> winners = ArchetypeLint.Run(
+                ArchetypeLint.StagedFragmentsOf([layer]),
+                merged.Files.Values.Where(f => f.NameIsKnown).Select(f => f.Path),
+                merged.ReadByPath, progress)
+            .Where(dead => dead.FragmentId is not null)
+            .GroupBy(dead => $"{dead.EditedPath}\\{dead.FragmentId}".Replace('\\', '/').ToLowerInvariant())
+            .ToDictionary(g => g.Key, g => g.First().WinningPath.Replace('\\', '/'));
+        return LegacyAnalyzer.MarkShadowed(workDir, winners);
     }
 }

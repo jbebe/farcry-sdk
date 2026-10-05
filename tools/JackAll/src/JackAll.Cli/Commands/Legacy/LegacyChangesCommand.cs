@@ -150,7 +150,8 @@ public sealed partial class LegacyChangesCommand : CliCommand<LegacyChangesComma
             ChangeKind.Text => $"-{Clip(change.Old)} +{Clip(change.New)}",
             _ => string.Empty,
         };
-        return change.Hint is { } hint ? $"{text}  [{hint}]" : text;
+        text = change.Hint is { } hint ? $"{text}  [{hint}]" : text;
+        return change.ShadowedBy is { } winner ? $"{text}  (dead: the game reads {winner})" : text;
     }
 
     private static string Clip(string? text)

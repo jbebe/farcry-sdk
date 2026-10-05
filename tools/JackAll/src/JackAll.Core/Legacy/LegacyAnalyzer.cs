@@ -112,6 +112,26 @@ public static class LegacyAnalyzer
         return analysis;
     }
 
+    /// <summary>Marks the changes in units whose archetype a later library declares again, keyed by
+    /// unit address, with that library. Returns how many changes it marked.</summary>
+    public static int MarkShadowed(string workDir, IReadOnlyDictionary<string, string> winnerByUnit)
+    {
+        string path = Path.Combine(workDir, ChangesFile);
+        int marked = 0;
+        List<LegacyChange> changes = [.. LegacyChange.ReadAll(path).Select(change =>
+        {
+            if (!winnerByUnit.TryGetValue(change.Unit, out string? winner))
+            {
+                return change;
+            }
+
+            marked++;
+            return change with { ShadowedBy = winner };
+        })];
+        LegacyChange.WriteAll(path, changes);
+        return marked;
+    }
+
     public static LegacyAnalysis ReadAnalysis(string workDir)
         => JsonSerializer.Deserialize<LegacyAnalysis>(File.ReadAllText(Path.Combine(workDir, AnalysisFile)), Json)
            ?? throw new InvalidDataException($"{AnalysisFile} in '{workDir}' is empty.");
