@@ -56,6 +56,12 @@ Most branches of `UpdateCameraOffset` rewrite the positional offset every frame.
 blending an angular kick back leaves it alone, so anything added to it has to be taken out again
 before the next call.
 
+:::info[Seen in a running game]
+With the eye moved 10.6 cm ahead toward an AS50's scope, each shot's recoil left the weapon wholly
+undrawn for about a third of a second while its sight picture stayed up. Retail GOG v1.03, from an
+FCSE plugin logging the weapon's draws.
+:::
+
 ### The field of view
 
 `CCameraPawnComponent::UpdateCurrentFOV` (`0x10692E30`, server `0x08951870`,

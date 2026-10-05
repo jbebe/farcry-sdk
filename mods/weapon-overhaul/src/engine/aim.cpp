@@ -307,10 +307,11 @@ namespace {
         FollowLook(pawn, data, seconds);
 
         // Down the iron sights the eye drifts off the gun. To a scope it comes forward as far as
-        // the scope has been raised, and all the way once the sight picture is up.
-        const float raised = !HasScope(weapon) || !g_zoomAtOnce ? 0.0f
-                             : scope ? 1.0f
-                                     : std::clamp(Field<float>(data, kIronsightWeight), 0.0f, 1.0f);
+        // the scope has been raised, and goes back while the eyepiece hides the gun, which a shot's
+        // recoil would otherwise bring too near the eye for the engine to draw.
+        const float raised = !HasScope(weapon) || !g_zoomAtOnce || scope
+                                 ? 0.0f
+                                 : std::clamp(Field<float>(data, kIronsightWeight), 0.0f, 1.0f);
         const WeaponOverhaul::Aim::Offset drift = g_drift(seconds);
         g_added = {drift.right * settled, drift.up * settled};
         g_addedAhead = g_raiseReach * raised;
