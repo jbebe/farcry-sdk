@@ -121,11 +121,9 @@ public sealed class LegacyUnits(string layerRoot, GameVfs vfs, NameDatabase name
             XElement modXml = XElement.Parse(Encoding.UTF8.GetString(mod));
             Func<XElement, byte[]> render = merged => Encoding.UTF8.GetBytes(merged.ToString());
 
-            // A sector's layout states only what the mod moved, so its base is an empty one and
-            // every layer, removal and deletion in it is a change of its own.
             if (!ContainerFormats.HasComparableOriginal(containerPath, fragmentId))
             {
-                return new XmlSides(new XElement(modXml.Name), modXml, render);
+                return Layout(containerPath, modXml);
             }
 
             return Container(HashOf(containerPath), containerPath)?.Extract(fragmentId) is { } vanillaXml
@@ -158,6 +156,65 @@ public sealed class LegacyUnits(string layerRoot, GameVfs vfs, NameDatabase name
         }
 
         return new OpaqueSides(vanilla, mod, null);
+    }
+
+    /// <summary>
+    /// A sector's layout states only what the mod moved. Its base declares the mod's populated layers
+    /// with no entities in them, so every entity placed, layer removed and fragment deleted is a change
+    /// of its own; an entity is named after its fragment, since a layer often mixes several features.
+    /// A layer left with no entities by a pick is dropped rather than declared empty.
+    /// </summary>
+    private XmlSides Layout(string containerPath, XElement mod)
+    {
+        Dictionary<string, string> names = EntityNames(containerPath);
+        var named = new XElement(mod);
+        foreach (XElement entity in named.Descendants("entity"))
+        {
+            if ((string?)entity.Attribute("id") is { } id && names.TryGetValue(id, out string? name))
+            {
+                entity.SetAttributeValue("name", name);
+            }
+        }
+
+        static string KeyOf(XElement layer) => $"{(string?)layer.Attribute("under")}|{(string?)layer.Attribute("path")}";
+        List<XElement> populated = [.. named.Elements("layer").Where(l => l.Elements("entity").Any())];
+        var populatedKeys = populated.Select(KeyOf).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var vanilla = new XElement(named.Name, populated.Select(layer =>
+            new XElement(layer.Name, layer.Attributes(), layer.Elements().Where(child => child.Name != "entity"))));
+
+        return new XmlSides(vanilla, named, merged =>
+        {
+            merged.Descendants("entity").Attributes("name").Remove();
+            merged.Elements("layer")
+                .Where(layer => !layer.Elements("entity").Any() && populatedKeys.Contains(KeyOf(layer)))
+                .Remove();
+            return Encoding.UTF8.GetBytes(merged.ToString());
+        });
+    }
+
+    /// <summary>Fragment labels by entity id, from the base container and the mod's staged fragments:
+    /// a placed entity's fragment is <c>&lt;label&gt;.&lt;entity id&gt;.xml</c>.</summary>
+    private Dictionary<string, string> EntityNames(string containerPath)
+    {
+        IEnumerable<string> ids = Container(HashOf(containerPath), containerPath)?.List().Select(row => row.Id) ?? [];
+        string staged = Path.Combine(ModsRoot, containerPath);
+        if (Directory.Exists(staged))
+        {
+            ids = ids.Concat(Directory.EnumerateFiles(staged).Select(Path.GetFileName).OfType<string>());
+        }
+
+        var names = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (string id in ids)
+        {
+            string stem = Path.GetFileNameWithoutExtension(Path.GetFileName(id));
+            int dot = stem.LastIndexOf('.');
+            if (dot > 0 && ulong.TryParse(stem[(dot + 1)..], NumberStyles.None, CultureInfo.InvariantCulture, out _))
+            {
+                names[stem[(dot + 1)..]] = stem[..dot];
+            }
+        }
+
+        return names;
     }
 
     private IContainerTree? Container(uint hash, string containerPath)

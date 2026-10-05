@@ -78,6 +78,20 @@ public class LegacyCatalogTests : IDisposable
     }
 
     [Fact]
+    public void A_feature_living_inside_a_shared_unit_is_located_through_the_page_that_owns_it()
+    {
+        LegacyCatalog catalog = Catalog(
+            ("script", "title: Script\nkind: shared\nmatch: [\"lib.fcb/**\", \"_hash/**\"]"),
+            ("fast", "title: Fast\nstatus: located\nclaims: [\"Faster cars\"]\nrequires: [script]"),
+            ("tough", "title: Tough\nstatus: located\nclaims: [\"Tougher cars\"]\nrequires: [script]"));
+
+        LegacyCheck check = catalog.Check(Changes, null);
+
+        Assert.True(check.Clean, string.Join("; ", check.Problems));
+        Assert.Equal(["script", "fast"], catalog.Expand(["fast"]).Select(f => f.Id));
+    }
+
+    [Fact]
     public void A_page_is_held_to_its_status_its_claims_and_its_references()
     {
         LegacyCatalog catalog = Catalog(

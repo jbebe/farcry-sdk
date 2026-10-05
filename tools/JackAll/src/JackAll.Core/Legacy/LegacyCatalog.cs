@@ -6,12 +6,13 @@ using YamlDotNet.Serialization.NamingConventions;
 namespace JackAll.Core.Legacy;
 
 /// <summary>
-/// One feature page's frontmatter: a reusable component of a legacy mod, a bundle naming several,
-/// or a noise rule claiming changes that do nothing in game.
+/// One feature page's frontmatter: a reusable component of a legacy mod, a shared piece several
+/// components require, a bundle naming several, or a noise rule claiming changes that do nothing in
+/// game.
 /// </summary>
 public sealed class LegacyFeature
 {
-    public static readonly string[] Kinds = ["component", "bundle", "noise"];
+    public static readonly string[] Kinds = ["component", "shared", "bundle", "noise"];
     public static readonly string[] Statuses = ["located", "partial", "no-artifact", "unresolved"];
     public static readonly string[] Verifications = ["diff", "re", "in-game"];
 
@@ -191,13 +192,27 @@ public sealed class LegacyCatalog
         foreach (LegacyFeature feature in Features.Where(f => f.Kind == "component"))
         {
             int count = perFeature[feature.Id];
-            if (count == 0 && feature.Status is "located" or "partial")
+            bool rideShared = feature.Requires.Any(id => Find(id)?.Kind == "shared");
+            if (count == 0 && feature.Status is "located" or "partial" && !rideShared)
             {
-                problems.Add($"{feature.Id}: is {feature.Status} but its rules match no change.");
+                problems.Add($"{feature.Id}: is {feature.Status} but its rules match no change, and it requires no shared page.");
             }
             else if (count > 0 && feature.Status is "no-artifact" or "unresolved")
             {
                 problems.Add($"{feature.Id}: is {feature.Status} but its rules match {count} change(s).");
+            }
+        }
+
+        foreach (LegacyFeature shared in Features.Where(f => f.Kind == "shared"))
+        {
+            if (!Features.Any(f => f.Requires.Contains(shared.Id, StringComparer.OrdinalIgnoreCase)))
+            {
+                problems.Add($"{shared.Id}: is shared, but no page requires it.");
+            }
+
+            if (perFeature[shared.Id] == 0)
+            {
+                problems.Add($"{shared.Id}: is shared, but its rules match no change.");
             }
         }
 

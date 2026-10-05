@@ -41,8 +41,8 @@ public sealed partial class LegacyChangesCommand : CliCommand<LegacyChangesComma
         public bool Group { get; init; }
 
         [CommandOption("--limit <n>")]
-        [Description("Rows to print (default 60; 0 for all).")]
-        public int Limit { get; init; } = 60;
+        [Description("Rows to print (default 60 as text, all as JSON; 0 for all).")]
+        public int? Limit { get; init; }
 
         [CommandOption("--json")]
         [Description("Emit one JSON object on stdout.")]
@@ -80,7 +80,12 @@ public sealed partial class LegacyChangesCommand : CliCommand<LegacyChangesComma
         }
 
         List<LegacyChange> selected = [.. changes];
-        int limit = settings.Limit == 0 ? int.MaxValue : settings.Limit;
+        int limit = settings.Limit switch
+        {
+            0 => int.MaxValue,
+            { } rows => rows,
+            null => settings.Json ? int.MaxValue : 60,
+        };
 
         if (settings.Group)
         {

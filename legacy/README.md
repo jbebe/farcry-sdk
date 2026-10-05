@@ -36,7 +36,11 @@ tmp/legacy/<mod>/     the analysis - source, imported layer, changes.jsonl - reb
 
 Inside an XML path an `.fcb` value is named by its name and an object by its type; anything else by
 tag and key attribute (`Quality[UltraHigh]`). Siblings sharing a label carry `[i]`, their base-game
-index, or `[+i]` for an addition. Float values the mod's editor merely rounded are not changes.
+index, or `[+i]` for an addition. Float values the mod's editor merely rounded are not changes, and
+neither is a nested RML value re-encoded with the same content.
+
+A change to an archetype that a later library declares again carries `shadowedBy`: it edits a copy
+the game never reads. It still belongs to the feature that made it, and that page says it is dead.
 
 ## Feature pages
 
@@ -45,7 +49,7 @@ A page is YAML frontmatter, which `legacy check` and `legacy pick` read, and a b
 ```yaml
 ---
 title: Increased swimming speed
-kind: component            # component | bundle | noise
+kind: component            # component | shared | bundle | noise
 bundle: balancing          # the bundle page this belongs to, if any
 claims:                    # lines of mod.md's published feature list this page covers, verbatim
   - Increased swimming speed
@@ -60,7 +64,10 @@ verified: diff             # diff | re | in-game
 ---
 ```
 
-- **component** — the smallest change worth picking alone. Its rules claim changes.
+- **component** — the smallest change worth picking alone. Its rules claim changes; one whose
+  changes all sit inside a shared unit claims none and `requires` the shared page instead.
+- **shared** — an indivisible unit several components need: a script hunk carrying many fixes, a
+  file of globals, a manager script. Its components `requires` it, so a pick brings it along.
 - **bundle** — a headline feature naming its components in `includes`; claims no changes itself.
 - **noise** — changes that do nothing in game: a re-encoding, an editor leftover, a value written
   back unchanged in meaning. The body says why. Never picked unless named.

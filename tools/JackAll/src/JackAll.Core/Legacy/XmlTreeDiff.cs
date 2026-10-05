@@ -11,8 +11,8 @@ public sealed record XmlChange(ChangeKind Kind, string Path, string? Old, string
 /// them applied - the same walk run twice, so a pick can never disagree with the diff it came from.
 /// </summary>
 /// <remarks>
-/// A path names each element by its label: an <c>.fcb</c> value by its name, an object by its type,
-/// anything else by its tag and first key attribute. Siblings sharing a label are aligned by longest
+/// A path names each element by its label: an <c>.fcb</c> value by its name, an object by its type
+/// and its own Name value when it has one, anything else by its tag and first key attribute. Siblings sharing a label are aligned by longest
 /// common subsequence of their content, so an inserted list entry is one addition rather than every
 /// later entry changing; they carry <c>[i]</c>, the base index, or <c>[+i]</c> for an addition, the
 /// mod's.
@@ -52,7 +52,10 @@ public static class XmlTreeDiff
 
         if (tag == "object" && element.Attribute("type") is { } type)
         {
-            return Clean(type.Value);
+            return element.Elements("value").FirstOrDefault(v => (string?)v.Attribute("name") is "Name" or "hidName") is { } named
+                   && named.Value.Length > 0
+                ? $"{Clean(type.Value)}[{Clean(named.Value)}]"
+                : Clean(type.Value);
         }
 
         foreach (string key in KeyAttributes)
@@ -280,7 +283,10 @@ public static class XmlTreeDiff
     /// </summary>
     private static IEnumerable<(int? Before, int? After)> Align(List<XElement> before, List<XElement> after)
     {
-        List<(int, int)> anchors = (long)before.Count * after.Count <= AlignmentBudget
+        // A list of plain values edited in place keeps its length; matching equal values out of
+        // position there would read every edit as a removal and an addition.
+        bool valuesInPlace = before.Count == after.Count && before.Concat(after).All(e => !e.HasElements);
+        List<(int, int)> anchors = !valuesInPlace && (long)before.Count * after.Count <= AlignmentBudget
             ? CommonSubsequence(
                 [.. before.Select(e => e.ToString(SaveOptions.DisableFormatting))],
                 [.. after.Select(e => e.ToString(SaveOptions.DisableFormatting))])
