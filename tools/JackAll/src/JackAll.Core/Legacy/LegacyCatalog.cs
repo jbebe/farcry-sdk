@@ -57,6 +57,10 @@ public sealed class LegacyModPage
     public string? Baseline { get; set; }
     public string? Analyzed { get; set; }
 
+    /// <summary>Where the published feature list came from - the mod's page, its readme, or none,
+    /// when the list is the analysis's own.</summary>
+    public string? Source { get; set; }
+
     /// <summary>Every bullet under the page's "Published feature list" heading, verbatim.</summary>
     [YamlIgnore]
     public List<string> Claims { get; set; } = [];
