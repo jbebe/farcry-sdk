@@ -11,8 +11,9 @@ namespace VehicleOverhaul::Drivetrain {
 // driven vehicle.
 bool Install();
 
-// Moves the engine on by one physics step of the player's car, the vehicle `real` depicts or null.
-// The engine's revs after it.
-float Step(Wheeled::Car car, const RealVehicle::Spec* real, const Wheeled::Readout& readout, float seconds);
+// Moves the engine on by one physics step of the player's car, the vehicle `real` depicts or null,
+// whose gear changes keep the clutch out for `shiftTime` seconds. The engine's revs after it.
+float Step(Wheeled::Car car, const RealVehicle::Spec* real, float shiftTime, const Wheeled::Readout& readout,
+           float seconds);
 
 }

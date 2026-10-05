@@ -63,8 +63,8 @@ namespace {
         if (vehicle == nullptr || vehicle != g_vehicle) {
             return false;
         }
-        const VehicleOverhaul::Tuning::Values tuning = VehicleOverhaul::Tuning::Current();
-        if (!tuning.enabled || !tuning.realEngine) {
+        const VehicleOverhaul::Tuning::Switches switches = VehicleOverhaul::Tuning::CurrentSwitches();
+        if (!switches.enabled || !switches.realEngine) {
             return false;
         }
         engine.shift = g_shift.exchange(0);
@@ -81,7 +81,8 @@ bool Install() {
     return Vehicle::Install() && VehicleSound::Install(&Heard) && PawnTick::Subscribe(&Tick);
 }
 
-float Step(Car car, const RealVehicle::Spec* real, const Wheeled::Readout& readout, float seconds) {
+float Step(Car car, const RealVehicle::Spec* real, float shiftTime, const Wheeled::Readout& readout,
+           float seconds) {
     const float idle = real != nullptr && real->idle > 0.0f ? real->idle : kIdle;
     const float redline = real != nullptr && real->redline > 0.0f ? real->redline : kRedline;
     if (car != g_car) {
@@ -95,7 +96,7 @@ float Step(Car car, const RealVehicle::Spec* real, const Wheeled::Readout& reado
     g_sinceShift += seconds;
     if (readout.gear != g_gear) {
         g_pendingShift = readout.gear > g_gear ? 1 : -1;
-        g_shiftTime = Tuning::Current().shiftTime;
+        g_shiftTime = shiftTime;
         g_sinceShift = 0.0f;
         g_gear = readout.gear;
     }

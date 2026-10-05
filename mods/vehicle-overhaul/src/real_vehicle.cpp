@@ -15,7 +15,8 @@ namespace {
     constexpr float kRoverSprings = 0.6f;
 
     constexpr Spec kVehicles[] = {
-        {1600.0f, 95.0f, "Land Rover Series III", 0.90f, 0.0f, 0.0f, 0, {kRoverSprings, kRoverSprings}},
+        // The shortest suspension, and a truck that climbs on low gearing.
+        {1600.0f, 95.0f, "Land Rover Series III", 0.90f, 0.0f, 0.0f, 0, {kRoverSprings, kRoverSprings}, 1.2f, 1.0f},
         // Its engine sound bank is pitched for this idle and redline: changing them puts it out of tune.
         {1000.0f, 90.0f, "Datsun 1200", 1.30f, 750.0f, 6500.0f, kDatsunShift},
         {800.0f, 87.0f, "Buggy", kAtTheAxles},
@@ -38,5 +39,7 @@ const Spec* Match(float mass, float enginePower) {
     }
     return nullptr;
 }
+
+std::span<const Spec> All() { return kVehicles; }
 
 }

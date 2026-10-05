@@ -27,6 +27,8 @@ namespace {
     struct Retail {
         Car car;
         const void* vehicle;
+        // The real vehicle it depicts, or null.
+        const RealVehicle::Spec* real;
         float climbPower;
         float downforce;
         float spinDamping;
@@ -47,8 +49,8 @@ namespace {
         float centreOfMass[3];
         // Whether the centre of mass is where the real vehicle has it rather than where it was.
         bool centreMoved;
-        // The real vehicle whose solid axles it rides on, or null.
-        const RealVehicle::Spec* beams;
+        // Whether it rides on the real vehicle's solid axles.
+        bool beams;
         // The suspension travel the tyre solver was last built for.
         float solverTravel = 1.0f;
     };
@@ -58,8 +60,8 @@ namespace {
     // Kept by the physics step, shown by the window.
     VehicleOverhaul::Physics::Status g_status{};
 
-    Retail Capture(Car car, const Parts& parts, const Chassis& chassis) {
-        Retail retail{car, parts.vehicle, *parts.climbPower, *parts.downforce, *parts.spinDamping};
+    Retail Capture(Car car, const RealVehicle::Spec* real, const Parts& parts, const Chassis& chassis) {
+        Retail retail{car, parts.vehicle, real, *parts.climbPower, *parts.downforce, *parts.spinDamping};
         std::copy_n(parts.chassisResponse, 3, retail.chassisResponse);
         retail.lockTime = *parts.lockTime;
         retail.shiftTime = *parts.shiftTime;
@@ -155,17 +157,18 @@ namespace {
             return;
         }
 
-        const VehicleOverhaul::Tuning::Values tuning = VehicleOverhaul::Tuning::Current();
-        const bool wanted = car == player && tuning.enabled;
+        const VehicleOverhaul::Tuning::Switches switches = VehicleOverhaul::Tuning::CurrentSwitches();
+        const bool wanted = car == player && switches.enabled;
         const Chassis chassis = VehicleOverhaul::Wheeled::ChassisOf(car);
         const RealVehicle::Spec* real = RealVehicle::Match(chassis.mass, chassis.enginePower);
-        const RealVehicle::Spec* beams = wanted && tuning.solidAxles ? real : nullptr;
+        const VehicleOverhaul::Tuning::Values tuning = VehicleOverhaul::Tuning::Current(real);
+        const RealVehicle::Spec* beams = wanted && switches.solidAxles ? real : nullptr;
         if (car == player) {
             VehicleOverhaul::Wheeled::Readout readout = VehicleOverhaul::Wheeled::ReadoutOf(car);
-            readout.rpm = VehicleOverhaul::Drivetrain::Step(car, real, readout, seconds);
+            readout.rpm = VehicleOverhaul::Drivetrain::Step(car, real, tuning.shiftTime, readout, seconds);
             const float height = chassis.centreOfMass[2] - chassis.ground;
-            g_status = {readout, real != nullptr ? real->name : nullptr, height,
-                        height > 0.0f ? chassis.track / (2.0f * height) : 0.0f, chassis.grip};
+            g_status = {readout, real, height, height > 0.0f ? chassis.track / (2.0f * height) : 0.0f,
+                        chassis.grip};
             VehicleOverhaul::Axles::Lean(car, beams);
         }
         if (car != g_retail.car && !wanted) {
@@ -181,7 +184,7 @@ namespace {
             if (!wanted) {
                 return;
             }
-            g_retail = Capture(car, parts, chassis);
+            g_retail = Capture(car, real, parts, chassis);
             if (real == nullptr) {
                 FCSE::Logf("physics: a %.0f kg car with %.0f N m is not one the overhaul knows; its centre of "
                            "mass stays the game's",
@@ -196,7 +199,7 @@ namespace {
         }
 
         // After the values, since the solver is built from the suspensions' length.
-        const RealVehicle::Spec* centre = wanted && tuning.realCentreOfMass ? real : nullptr;
+        const RealVehicle::Spec* centre = wanted && switches.realCentreOfMass ? real : nullptr;
         const float travel = wanted ? tuning.suspensionTravel : 1.0f;
         const bool moveCentre = (centre != nullptr) != g_retail.centreMoved;
         if (moveCentre) {
@@ -209,19 +212,19 @@ namespace {
         if (beams != nullptr) {
             VehicleOverhaul::Axles::Hang(parts, *beams);
         }
-        g_retail.beams = beams;
+        g_retail.beams = beams != nullptr;
         if (!wanted) {
             g_retail = {};
         }
     }
 
     float Rolling(Car car) {
-        return car == g_retail.car ? VehicleOverhaul::Tuning::Current().rollingResistance : 1.0f;
+        return car == g_retail.car ? VehicleOverhaul::Tuning::Current(g_retail.real).rollingResistance : 1.0f;
     }
 
     void Suspend(Car car, float mass, const VehicleOverhaul::Wheeled::Suspension* wheels, float* forces) {
-        if (car == g_retail.car && g_retail.beams != nullptr) {
-            VehicleOverhaul::Axles::Spring(mass, *g_retail.beams, wheels, forces);
+        if (car == g_retail.car && g_retail.beams) {
+            VehicleOverhaul::Axles::Spring(mass, *g_retail.real, wheels, forces);
         }
     }
 }

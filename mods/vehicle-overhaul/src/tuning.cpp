@@ -17,8 +17,10 @@
 #include <fstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
+    using VehicleOverhaul::Tuning::Switches;
     using VehicleOverhaul::Tuning::Values;
 
     struct Parameter {
@@ -26,8 +28,7 @@ namespace {
         const char* key;
         // The heading it is drawn under.
         const char* group;
-        // Its member's offsetof in Values.
-        size_t offset;
+        float Values::*member;
         float defaultValue;
         float min;
         float max;
@@ -45,56 +46,56 @@ namespace {
     constexpr const char* kSuspension = "Suspension";
 
     constexpr Parameter kParameters[] = {
-        {"Engine power", kEngine, offsetof(Values, enginePower), 0.7f, 0.2f, 2.0f, "%.2fx",
+        {"Engine power", kEngine, &Values::enginePower, 0.7f, 0.2f, 2.0f, "%.2fx",
          "The engine's peak torque, as a multiple of the car's own."},
-        {"Climb assist", kEngine, offsetof(Values, climbAssist), 0.0f, 0.0f, 1.0f, "%.2fx",
+        {"Climb assist", kEngine, &Values::climbAssist, 0.0f, 0.0f, 1.0f, "%.2fx",
          "The torque the game adds while the nose points uphill (the Rover's is 400 on top of 95)."},
-        {"Top speed", kEngine, offsetof(Values, topSpeed), 2.0f, 0.5f, 3.0f, "%.2fx",
+        {"Top speed", kEngine, &Values::topSpeed, 2.0f, 0.5f, 3.0f, "%.2fx",
          "Gearing, as a multiple of the car's own top speed. Higher is faster but pulls less in each gear."},
-        {"Shift time", kEngine, offsetof(Values, shiftTime), 0.6f, 0.0f, 2.0f, "%.2f s",
+        {"Shift time", kEngine, &Values::shiftTime, 0.6f, 0.0f, 2.0f, "%.2f s",
          "How long a gear change cuts the drive while the clutch is out. Retail changes gear instantly."},
-        {"Brake torque", kBrakes, offsetof(Values, brakeTorque), 0.3f, 0.1f, 1.5f, "%.2fx",
+        {"Brake torque", kBrakes, &Values::brakeTorque, 0.3f, 0.1f, 1.5f, "%.2fx",
          "The brakes' strength, as a multiple of the car's own."},
-        {"Lock-up time", kBrakes, offsetof(Values, lockTime), 0.5f, 0.1f, 5.0f, "%.2f s",
+        {"Lock-up time", kBrakes, &Values::lockTime, 0.5f, 0.1f, 5.0f, "%.2f s",
          "How long a fully pressed brake takes to lock the wheels into a skid. Retail never locks them."},
-        {"Steering lock", kSteering, offsetof(Values, steeringLock), 1.5f, 0.5f, 2.0f, "%.2fx",
+        {"Steering lock", kSteering, &Values::steeringLock, 1.5f, 0.5f, 2.0f, "%.2fx",
          "How far a held steering key turns the front wheels standing still or crawling, as a multiple of "
          "the car's own (25 degrees on the Datsun). The wheels wind out to it at the car's own rate."},
-        {"Steering at speed", kSteering, offsetof(Values, steeringAtSpeed), 2.0f, 0.5f, 3.0f, "%.2fx",
+        {"Steering at speed", kSteering, &Values::steeringAtSpeed, 2.0f, 0.5f, 3.0f, "%.2fx",
          "How far a held steering key turns the front wheels at speed, as a multiple of the car's own (10 "
          "degrees on the Datsun, from 43 km/h up). The game narrows the lock towards it as the car speeds "
          "up."},
-        {"Tyre grip", kGrip, offsetof(Values, tyreGrip), 0.3f, 0.1f, 1.5f, "%.2fx",
+        {"Tyre grip", kGrip, &Values::tyreGrip, 0.3f, 0.1f, 1.5f, "%.2fx",
          "The tyres' grip before the ground's own (retail 3.0, against 0.65 to 0.8 for the ground)."},
-        {"Downforce", kGrip, offsetof(Values, downforce), 0.0f, 0.0f, 1.0f, "%.2fx",
+        {"Downforce", kGrip, &Values::downforce, 0.0f, 0.0f, 1.0f, "%.2fx",
          "The game's extra 5 m/s2 of gravity on every car, which presses the tyres down."},
-        {"Rolling resistance", kGrip, offsetof(Values, rollingResistance), 0.15f, 0.0f, 1.0f, "%.2fx",
+        {"Rolling resistance", kGrip, &Values::rollingResistance, 0.15f, 0.0f, 1.0f, "%.2fx",
          "What slows a coasting car (retail about 1.5 m/s2, ten times a real tyre's)."},
-        {"Pitch response", kChassis, offsetof(Values, pitchResponse), 1.0f, 0.0f, 1.0f, "%.2f",
+        {"Pitch response", kChassis, &Values::pitchResponse, 1.0f, 0.0f, 1.0f, "%.2f",
          "How much the tyres' forces pitch the body nose up or down. 1 is physical, retail 0.5."},
-        {"Roll response", kChassis, offsetof(Values, rollResponse), 1.0f, 0.0f, 1.0f, "%.2f",
+        {"Roll response", kChassis, &Values::rollResponse, 1.0f, 0.0f, 1.0f, "%.2f",
          "How much they lean the body over in a turn, up to a rollover. 1 is physical, retail 0.25."},
-        {"Yaw response", kChassis, offsetof(Values, yawResponse), 1.0f, 0.0f, 1.0f, "%.2f",
+        {"Yaw response", kChassis, &Values::yawResponse, 1.0f, 0.0f, 1.0f, "%.2f",
          "How much they swing the tail out, up to a spin. 1 is physical, retail 0.35."},
-        {"Spin damping", kChassis, offsetof(Values, spinDamping), 0.0f, 0.0f, 1.0f, "%.2fx",
+        {"Spin damping", kChassis, &Values::spinDamping, 0.0f, 0.0f, 1.0f, "%.2fx",
          "The game's brake on slow spins of the body, as a multiple of its own."},
-        {"Springs", kSuspension, offsetof(Values, springs), 0.6f, 0.3f, 1.5f, "%.2fx",
+        {"Springs", kSuspension, &Values::springs, 0.6f, 0.3f, 1.5f, "%.2fx",
          "Spring stiffness, as a multiple of the car's own."},
-        {"Travel", kSuspension, offsetof(Values, suspensionTravel), 1.0f, 0.5f, 2.5f, "%.2fx",
+        {"Travel", kSuspension, &Values::suspensionTravel, 1.0f, 0.5f, 2.5f, "%.2fx",
          "How far the wheels can move, as a multiple of the car's own suspension length. Longer lifts the "
          "body and gives soft springs room before they bottom out."},
-        {"Compression damping", kSuspension, offsetof(Values, compressionDamping), 0.6f, 0.1f, 1.5f, "%.2fx",
+        {"Compression damping", kSuspension, &Values::compressionDamping, 0.6f, 0.1f, 1.5f, "%.2fx",
          "How hard the shock absorbers resist being pushed in, as a multiple of the car's own. Lower lets "
          "the body dip further into a corner, a stop or a bump."},
-        {"Rebound damping", kSuspension, offsetof(Values, reboundDamping), 0.3f, 0.1f, 1.5f, "%.2fx",
+        {"Rebound damping", kSuspension, &Values::reboundDamping, 0.3f, 0.1f, 1.5f, "%.2fx",
          "How hard they resist springing back out, as a multiple of the car's own. Lower lets the body "
          "sway and bounce longer before it settles."},
     };
 
-    // The switches, kept in the file as 1 or 0 above the values, and on by default.
+    // The switches, kept in the file as 1 or 0 above the cars, and on by default.
     struct Switch {
         const char* key;
-        bool Values::*member;
+        bool Switches::*member;
         // The label in the window, and the heading it is drawn under; null draws it above them all.
         const char* label;
         const char* group;
@@ -102,28 +103,42 @@ namespace {
     };
 
     constexpr Switch kSwitches[] = {
-        {"Enabled", &Values::enabled, "Overhaul the car you drive", nullptr,
+        {"Enabled", &Switches::enabled, "Overhaul the car you drive", nullptr,
          "Off puts the car back as the game made it, to compare."},
-        {"Real engine", &Values::realEngine, "Real engine", kEngine,
+        {"Real engine", &Switches::realEngine, "Real engine", kEngine,
          "The engine sound and rev counter follow the real gearbox: idle, revs against the clutch while "
          "pulling away, and a drop on every gear change. Off leaves the game's revs made up from speed."},
-        {"Real centre of mass", &Values::realCentreOfMass, "Real centre of mass", kChassis,
+        {"Real centre of mass", &Switches::realCentreOfMass, "Real centre of mass", kChassis,
          "Carries the car's weight as high as the real vehicle it depicts, from that vehicle's stability "
          "factor. Off leaves it where the game put it."},
-        {"Solid axles", &Values::solidAxles, "Solid axles", kSuspension,
+        {"Solid axles", &Switches::solidAxles, "Solid axles", kSuspension,
          "Springs each solid axle of the real vehicle as one beam, which twists under the body to keep both "
          "wheels down and lets them hang lower. Only the Land Rover so far. Off springs every wheel on its "
          "own, as the game does."},
     };
 
-    Values g_values{};
+    Switches g_switches{};
+    // A set for each vehicle in RealVehicle::All(), in its order, then one for the cars it leaves out.
+    std::vector<Values> g_cars(VehicleOverhaul::RealVehicle::All().size() + 1);
+    // The set the sliders edit.
+    size_t g_edited = 0;
+
+    size_t IndexOf(const VehicleOverhaul::RealVehicle::Spec* real) {
+        return real != nullptr ? static_cast<size_t>(real - VehicleOverhaul::RealVehicle::All().data())
+                               : g_cars.size() - 1;
+    }
+
+    // Also its section in the file.
+    const char* NameOf(size_t car) {
+        return car + 1 < g_cars.size() ? VehicleOverhaul::RealVehicle::All()[car].name : "Other cars";
+    }
 
     // The switches drawn under `group`. True when one changed.
     bool DrawSwitches(const char* group) {
         bool changed = false;
         for (const Switch& entry : kSwitches) {
             if (entry.group == group) {
-                changed |= ImGui::Checkbox(entry.label, &(g_values.*entry.member));
+                changed |= ImGui::Checkbox(entry.label, &(g_switches.*entry.member));
                 ImGui::SetItemTooltip("%s", entry.help);
             }
         }
@@ -132,10 +147,6 @@ namespace {
 
     // Moved sliders are written to the file once they are let go rather than on every frame.
     bool g_unsaved = false;
-
-    float* Field(const Parameter& parameter) {
-        return reinterpret_cast<float*>(reinterpret_cast<char*>(&g_values) + parameter.offset);
-    }
 
     // Beside fcse.ini, in the folder the process was started from.
     const std::filesystem::path& File() {
@@ -167,12 +178,15 @@ namespace {
         std::string text = "; Vehicle Overhaul. Edited in its window in DevTools' overlay; edits made here "
                            "by hand\n; are read at launch or by that window's Reload.\n";
         for (const Switch& entry : kSwitches) {
-            text.append(entry.key).append(g_values.*entry.member ? " = 1\n" : " = 0\n");
+            text.append(entry.key).append(g_switches.*entry.member ? " = 1\n" : " = 0\n");
         }
-        for (const Parameter& parameter : kParameters) {
-            char value[32];
-            const char* end = std::to_chars(value, value + sizeof(value), *Field(parameter)).ptr;
-            text.append(parameter.key).append(" = ").append(value, end - value).append("\n");
+        for (size_t car = 0; car < g_cars.size(); ++car) {
+            text.append("\n[").append(NameOf(car)).append("]\n");
+            for (const Parameter& parameter : kParameters) {
+                char value[32];
+                const char* end = std::to_chars(value, value + sizeof(value), g_cars[car].*parameter.member).ptr;
+                text.append(parameter.key).append(" = ").append(value, end - value).append("\n");
+            }
         }
 
         std::ofstream file(File(), std::ios::trunc);
@@ -182,36 +196,50 @@ namespace {
             FCSE::Logf("tuning: %s could not be written", Path());
         }
     }
-
-    void DrawReadout() {
-        VehicleOverhaul::Physics::Status status{};
-        if (!VehicleOverhaul::Physics::Latest(status)) {
-            ImGui::TextDisabled("Not driving.");
-            return;
-        }
-        ImGui::Text("%s   %.0f km/h   %.0f rpm   gear %d", status.name != nullptr ? status.name : "Unknown car",
-                    status.motion.speed * 3.6f, status.motion.rpm, status.motion.gear + 1);
-        ImGui::Text("Centre of mass %.2f m up, tips over at %.2f g; the tyres hold %.2f g here", status.height,
-                    status.stability, status.grip);
-    }
 }
 
-VehicleOverhaul::Tuning::Values VehicleOverhaul::Tuning::Current() { return g_values; }
+VehicleOverhaul::Tuning::Switches VehicleOverhaul::Tuning::CurrentSwitches() { return g_switches; }
+
+VehicleOverhaul::Tuning::Values VehicleOverhaul::Tuning::Current(const RealVehicle::Spec* real) {
+    return g_cars[IndexOf(real)];
+}
 
 void VehicleOverhaul::Tuning::Load() {
     for (const Switch& entry : kSwitches) {
-        g_values.*entry.member = true;
+        g_switches.*entry.member = true;
     }
+    Values defaults{};
     for (const Parameter& parameter : kParameters) {
-        *Field(parameter) = parameter.defaultValue;
+        defaults.*parameter.member = parameter.defaultValue;
+    }
+    std::fill(g_cars.begin(), g_cars.end(), defaults);
+    for (size_t car = 0; car + 1 < g_cars.size(); ++car) {
+        const RealVehicle::Spec& real = RealVehicle::All()[car];
+        if (real.topSpeed > 0.0f) {
+            g_cars[car].topSpeed = real.topSpeed;
+        }
+        if (real.springs > 0.0f) {
+            g_cars[car].springs = real.springs;
+        }
     }
 
     std::ifstream file(File());
 
-    // A value that is not a number leaves its row at the default.
+    // A value outside a known car's section, or that is not a number, leaves its row at the default.
+    Values* section = nullptr;
     std::string line;
     while (std::getline(file, line)) {
         const std::string_view text = Trim(line);
+        if (text.starts_with('[') && text.ends_with(']')) {
+            const std::string_view name = text.substr(1, text.size() - 2);
+            section = nullptr;
+            for (size_t car = 0; car < g_cars.size() && section == nullptr; ++car) {
+                if (name == NameOf(car)) {
+                    section = &g_cars[car];
+                }
+            }
+            continue;
+        }
         const size_t equals = text.find('=');
         if (equals == std::string_view::npos) {
             continue;
@@ -224,12 +252,12 @@ void VehicleOverhaul::Tuning::Load() {
         }
         for (const Switch& entry : kSwitches) {
             if (key == entry.key) {
-                g_values.*entry.member = read != 0.0f;
+                g_switches.*entry.member = read != 0.0f;
             }
         }
         for (const Parameter& parameter : kParameters) {
-            if (key == parameter.key) {
-                *Field(parameter) = std::clamp(read, parameter.min, parameter.max);
+            if (section != nullptr && key == parameter.key) {
+                (*section).*parameter.member = std::clamp(read, parameter.min, parameter.max);
             }
         }
     }
@@ -241,9 +269,35 @@ namespace {
     void DrawDriving() {
         ImGui::PushItemWidth(-ImGui::GetFontSize() * 10.0f);
 
-        DrawReadout();
+        VehicleOverhaul::Physics::Status status{};
+        const bool driving = VehicleOverhaul::Physics::Latest(status);
+        if (driving) {
+            ImGui::Text("%.0f km/h   %.0f rpm   gear %d", status.motion.speed * 3.6f, status.motion.rpm,
+                        status.motion.gear + 1);
+            ImGui::Text("Centre of mass %.2f m up, tips over at %.2f g; the tyres hold %.2f g here", status.height,
+                        status.stability, status.grip);
+        } else {
+            ImGui::TextDisabled("Not driving.");
+        }
         g_unsaved |= DrawSwitches(nullptr);
 
+        if (driving) {
+            g_edited = IndexOf(status.real);
+        }
+        ImGui::BeginDisabled(driving);
+        if (ImGui::BeginCombo("Car", NameOf(g_edited))) {
+            for (size_t car = 0; car < g_cars.size(); ++car) {
+                if (ImGui::Selectable(NameOf(car), car == g_edited)) {
+                    g_edited = car;
+                }
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::EndDisabled();
+        ImGui::SetItemTooltip("The car the values below are for: the one you drive, or any while you are not "
+                              "driving.");
+
+        Values& values = g_cars[g_edited];
         const char* group = nullptr;
         for (const Parameter& parameter : kParameters) {
             if (parameter.group != group) {
@@ -251,8 +305,8 @@ namespace {
                 ImGui::SeparatorText(group);
                 g_unsaved |= DrawSwitches(group);
             }
-            g_unsaved |= ImGui::SliderFloat(parameter.key, Field(parameter), parameter.min, parameter.max,
-                                            parameter.format, ImGuiSliderFlags_AlwaysClamp);
+            g_unsaved |= ImGui::SliderFloat(parameter.key, &(values.*parameter.member), parameter.min,
+                                            parameter.max, parameter.format, ImGuiSliderFlags_AlwaysClamp);
             ImGui::SetItemTooltip("%s", parameter.help);
         }
 

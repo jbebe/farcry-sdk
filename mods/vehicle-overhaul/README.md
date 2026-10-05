@@ -19,7 +19,9 @@ and the wrecks are to come.
   - The driver is the game's first-person body: headless and posed for the first-person camera.
 
 - **Off-road physics, on the car you drive.** Every physics step, the car's Havok vehicle is re-tuned
-  from its own retail values. Getting out puts them all back, so AI drivers keep the retail physics.
+  from its own retail values, by that car's own set of tunings. Getting out puts them all back, so AI
+  drivers keep the retail physics. The values below were found on the Datsun; the Land Rover starts with
+  its own springs and lower gearing (1.2× its top speed).
   - No speed limiter (retail holds a player's car near 60 km/h), longer gearing, 70% of the engine's
     torque and no climb assist.
   - Weak brakes that lock the wheels into a skid after half a second, as on a car without ABS.
@@ -66,7 +68,9 @@ With DevTools installed, its overlay has a **Vehicle Overhaul** window:
 - a switch for the whole overhaul, one for the real centre of mass, one for the solid axles, and a
   slider for every value above.
 
-The values are kept in `bin\vehicle-overhaul.ini`.
+The sliders keep a set of values for each real vehicle, and one for every car the overhaul does not
+know. They edit the car you drive, or any car picked while you are not driving. The values are kept in
+`bin\vehicle-overhaul.ini`, a section per car.
 
 Its **Sounds** tab switches each of the car's sounds off and on, to hear what makes which noise. Its
 sliders set how loud each sound type plays while driving, for the session only.
