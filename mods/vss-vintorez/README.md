@@ -4,10 +4,10 @@ Replaces the single-player **Dart Rifle** with a VSS Vintorez: the VSS's mesh on
 skeleton and animation set, semi-automatic, ten-round magazine off the sniper ammo pool.
 
 **Status: complete and confirmed in game** — mesh, LOD tiers, textures at retail's own tier, a worn
-appearance that grimes as the weapon degrades, the weapon on the ground, the muzzle socket, icons,
-name, and jam/break behaviour. The shot sound and the steel's cube-map reflection are in but **not
-yet confirmed in game**. See
-[what is left](#what-is-left) and [deliberate, not missing](#deliberate-not-missing).
+appearance that grimes as the weapon degrades, the steel's cube-map reflection and the wood's grade,
+the weapon on the ground, the muzzle socket, icons, name, and jam/break behaviour. The shot sound is
+replaced but **not yet confirmed in game**. See [what is left](#what-is-left) and
+[deliberate, not missing](#deliberate-not-missing).
 
 The procedure this mod was built by is written up in
 [replacing an existing weapon](../../docs/docs/modding/replacing-a-weapon.md) and

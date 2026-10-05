@@ -3,7 +3,7 @@
 Notable changes to the VSS Vintorez, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.1.0] - 2026-10-05
 
 ### Changed
 - **The steel reads as metal.** The body now reflects a faint cube map, on the steel only, and the

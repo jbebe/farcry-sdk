@@ -307,10 +307,10 @@ surface is not metal. Two details decide whether it works:
 
 ### Metal is the cube map
 
-:::note[Built on the worked example, not yet confirmed in game]
-The VSS first shipped without this term: the material it took, `DART_RIFLE_METAL`, is one of the 30
-retail weapon materials that declare no `ReflectionTexture`. It now draws through the Dart Rifle's
-other owned material, `DART_RIFLE_PASTIC`, which declares one.
+:::tip[Built on the worked example and tuned in game]
+The VSS 1.0.0 shipped without this term: the material it took, `DART_RIFLE_METAL`, is one of the 30
+retail weapon materials that declare no `ReflectionTexture`. Since 1.1.0 it draws through the Dart
+Rifle's other owned material, `DART_RIFLE_PASTIC`, which declares one.
 :::
 
 A highlight makes a surface glossy, not metallic: it shows only where the sun's half-vector lines up,
