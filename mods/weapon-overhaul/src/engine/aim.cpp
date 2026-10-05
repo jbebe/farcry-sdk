@@ -106,12 +106,14 @@ namespace {
     std::atomic<float> g_magnification{1.0f};
 
     // The equipped weapon as last seen, its name, how many times it has changed, whether the plugin
-    // draws its scope, and how far the eye comes forward as that is raised.
+    // draws its scope, how far the eye comes forward as that is raised, and the iron sights' weight
+    // the raise began at.
     uint8_t* g_weapon = nullptr;
     char g_weaponName[64] = {};
     std::atomic<uint32_t> g_weaponChanges{0};
     bool g_scopeDrawn = false;
     float g_raiseReach = 0.0f;
+    float g_raiseFrom = 0.0f;
 
     // Weapon properties whose iron-sight effect has been taken out, and what it was.
     struct TakenFx {
@@ -306,12 +308,17 @@ namespace {
         g_aiming = settled > 0.0f || scope;
         FollowLook(pawn, data, seconds);
 
-        // Down the iron sights the eye drifts off the gun. To a scope it comes forward as far as
-        // the scope has been raised, and goes back while the eyepiece hides the gun, which a shot's
-        // recoil would otherwise bring too near the eye for the engine to draw.
-        const float raised = !HasScope(weapon) || !g_zoomAtOnce || scope
-                                 ? 0.0f
-                                 : std::clamp(Field<float>(data, kIronsightWeight), 0.0f, 1.0f);
+        // Down the iron sights the eye drifts off the gun. To a scope it comes forward only while the
+        // scope is raised: the eyepiece hides the gun once it is up, where a shot's recoil would
+        // bring the gun too near the eye for the engine to draw, and the gun is lowered as the game
+        // lowers it.
+        const float weight = std::clamp(Field<float>(data, kIronsightWeight), 0.0f, 1.0f);
+        const bool raising = HasScope(weapon) && g_zoomAtOnce && sights && !scope;
+        if (!raising) {
+            g_raiseFrom = weight;
+        }
+        const float raised =
+            raising && g_raiseFrom < 1.0f ? (weight - g_raiseFrom) / (1.0f - g_raiseFrom) : 0.0f;
         const WeaponOverhaul::Aim::Offset drift = g_drift(seconds);
         g_added = {drift.right * settled, drift.up * settled};
         g_addedAhead = g_raiseReach * raised;
