@@ -97,12 +97,14 @@ public sealed class LegacyUnits(string layerRoot, GameVfs vfs, NameDatabase name
         XElement Vanilla, XElement Mod, Func<XElement, byte[]> Render, Func<XElement, XElement?>? Expand = null,
         string? Base = null) : Sides;
 
+    /// <summary>The libraries an archetype can be declared in, the one the game reads first: the DLC
+    /// library outranks the patch override, which outranks the world libraries.</summary>
     private static readonly string[] EntityLibraries =
     [
-        @"worlds\world1\generated\entitylibrary.fcb",
-        @"worlds\world2\generated\entitylibrary.fcb",
         @"downloadcontent\dlc1\generated\entitylibrary.fcb",
         @"generated\entitylibrarypatchoverride.fcb",
+        @"worlds\world1\generated\entitylibrary.fcb",
+        @"worlds\world2\generated\entitylibrary.fcb",
     ];
 
     /// <summary>
@@ -197,10 +199,11 @@ public sealed class LegacyUnits(string layerRoot, GameVfs vfs, NameDatabase name
     }
 
     /// <summary>
-    /// A sector's layout states only what the mod moved. Its base declares the mod's populated layers
-    /// with no entities in them, so every entity placed, layer removed and fragment deleted is a change
-    /// of its own; an entity is named after its fragment, since a layer often mixes several features.
-    /// A layer left with no entities by a pick is dropped rather than declared empty.
+    /// A sector's layout states only what the mod moved, though a mod's tool often restates a whole
+    /// layer. Its base declares the mod's populated layers holding just the entities the base game
+    /// already places there, so every entity really placed, layer removed and fragment deleted is a
+    /// change of its own; an entity is named after its fragment, since a layer often mixes several
+    /// features. A layer a pick leaves as the base game has it is dropped rather than restated.
     /// </summary>
     private XmlSides Layout(string containerPath, XElement mod)
     {
@@ -215,16 +218,33 @@ public sealed class LegacyUnits(string layerRoot, GameVfs vfs, NameDatabase name
         }
 
         static string KeyOf(XElement layer) => $"{(string?)layer.Attribute("under")}|{(string?)layer.Attribute("path")}";
-        List<XElement> populated = [.. named.Elements("layer").Where(l => l.Elements("entity").Any())];
-        var populatedKeys = populated.Select(KeyOf).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var vanilla = new XElement(named.Name, populated.Select(layer =>
-            new XElement(layer.Name, layer.Attributes(), layer.Elements().Where(child => child.Name != "entity"))));
+        var placed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (Container(HashOf(containerPath), containerPath)?.Extract(ContainerLayout.Id) is { } vanillaLayout)
+        {
+            foreach (XElement layer in XElement.Parse(vanillaLayout).Elements("layer"))
+            {
+                placed.UnionWith(layer.Elements("entity").Select(e => $"{KeyOf(layer)}|{(string?)e.Attribute("id")}"));
+            }
+        }
+
+        Dictionary<string, XElement> bases = named.Elements("layer")
+            .Where(layer => layer.Elements("entity").Any())
+            .GroupBy(KeyOf, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => new XElement(g.First().Name, g.First().Attributes(), g.First().Elements().Where(child =>
+                child.Name != "entity" || placed.Contains($"{KeyOf(g.First())}|{(string?)child.Attribute("id")}"))),
+                StringComparer.OrdinalIgnoreCase);
+        var vanilla = new XElement(named.Name, bases.Values);
 
         return new XmlSides(vanilla, named, merged =>
         {
+            foreach (XElement layer in bases.Values)
+            {
+                layer.Descendants("entity").Attributes("name").Remove();
+            }
+
             merged.Descendants("entity").Attributes("name").Remove();
             merged.Elements("layer")
-                .Where(layer => !layer.Elements("entity").Any() && populatedKeys.Contains(KeyOf(layer)))
+                .Where(layer => bases.TryGetValue(KeyOf(layer), out XElement? unchanged) && XNode.DeepEquals(layer, unchanged))
                 .Remove();
             return Encoding.UTF8.GetBytes(merged.ToString());
         });

@@ -12,7 +12,8 @@ public sealed record XmlChange(ChangeKind Kind, string Path, string? Old, string
 /// </summary>
 /// <remarks>
 /// A path names each element by its label: an <c>.fcb</c> value by its name, an object by its type
-/// and its own Name value when it has one, anything else by its tag and first key attribute. Siblings sharing a label are aligned by longest
+/// (and its own Name value, when its siblings repeat the type), anything else by its tag and first
+/// key attribute. Siblings sharing a label are aligned by longest
 /// common subsequence of their content, so an inserted list entry is one addition rather than every
 /// later entry changing; they carry <c>[i]</c>, the base index, or <c>[+i]</c> for an addition, the
 /// mod's.
@@ -42,7 +43,10 @@ public static class XmlTreeDiff
         => new Walker(take, null, expand).Element(vanilla, mod, string.Empty);
 
     /// <summary>The element's identity among its siblings, without an index.</summary>
-    public static string Label(XElement element)
+    public static string Label(XElement element) => Label(element, named: false);
+
+    /// <param name="named">Tell an object apart by its own Name value, for a type its siblings repeat.</param>
+    private static string Label(XElement element, bool named)
     {
         string tag = element.Name.LocalName;
         if (tag == "value" && element.Attribute("name") is { } name)
@@ -52,9 +56,10 @@ public static class XmlTreeDiff
 
         if (tag == "object" && element.Attribute("type") is { } type)
         {
-            return element.Elements("value").FirstOrDefault(v => (string?)v.Attribute("name") is "Name" or "hidName") is { } named
-                   && named.Value.Length > 0
-                ? $"{Clean(type.Value)}[{Clean(named.Value)}]"
+            return named
+                   && element.Elements("value").FirstOrDefault(v => (string?)v.Attribute("name") is "Name" or "hidName") is { } own
+                   && own.Value.Length > 0
+                ? $"{Clean(type.Value)}[{Clean(own.Value)}]"
                 : Clean(type.Value);
         }
 
@@ -67,6 +72,17 @@ public static class XmlTreeDiff
         }
 
         return tag;
+    }
+
+    /// <summary>How each of these siblings is labelled: by its type alone, unless the type repeats in
+    /// either list, which a Name value then tells apart better than a position.</summary>
+    private static Func<XElement, string> Labels(params IEnumerable<XElement>[] lists)
+    {
+        HashSet<string> repeated = [.. lists.SelectMany(list => list
+            .GroupBy(Label)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key))];
+        return element => repeated.Contains(Label(element)) ? Label(element, named: true) : Label(element);
     }
 
     /// <summary>Path separators inside a label would split it into segments.</summary>
@@ -99,7 +115,7 @@ public static class XmlTreeDiff
         text.Append('>');
         if (element.HasElements)
         {
-            foreach (XElement child in element.Elements().OrderBy(Label, StringComparer.Ordinal))
+            foreach (XElement child in element.Elements().OrderBy(Labels(element.Elements()), StringComparer.Ordinal))
             {
                 AppendCanonical(Expanded(child, expand), text, expand);
             }
@@ -193,8 +209,9 @@ public static class XmlTreeDiff
             var pairedWith = new Dictionary<XElement, XElement>();
             var added = new Dictionary<XElement, XElement>();
 
-            var vanillaByLabel = vanillaChildren.GroupBy(Label).ToDictionary(g => g.Key, g => g.ToList());
-            var modByLabel = modChildren.GroupBy(Label).ToDictionary(g => g.Key, g => g.ToList());
+            Func<XElement, string> labelOf = Labels(vanillaChildren, modChildren);
+            var vanillaByLabel = vanillaChildren.GroupBy(labelOf).ToDictionary(g => g.Key, g => g.ToList());
+            var modByLabel = modChildren.GroupBy(labelOf).ToDictionary(g => g.Key, g => g.ToList());
             foreach (string label in vanillaByLabel.Keys.Concat(modByLabel.Keys).Distinct())
             {
                 List<XElement> before = vanillaByLabel.GetValueOrDefault(label) ?? [];
