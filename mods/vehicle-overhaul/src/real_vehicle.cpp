@@ -11,8 +11,11 @@ namespace {
     // fields, which would also clunk every AI Datsun on its made-up gear changes.
     constexpr uint32_t kDatsunShift = 0x00FD0000;
 
+    // Leaf springs under the chassis rails, about 0.8 m apart on a 1.31 m track: estimated, not measured.
+    constexpr float kRoverSprings = 0.6f;
+
     constexpr Spec kVehicles[] = {
-        {1600.0f, 95.0f, "Land Rover Series III", 0.90f},
+        {1600.0f, 95.0f, "Land Rover Series III", 0.90f, 0.0f, 0.0f, 0, {kRoverSprings, kRoverSprings}},
         // Its engine sound bank is pitched for this idle and redline: changing them puts it out of tune.
         {1000.0f, 90.0f, "Datsun 1200", 1.30f, 750.0f, 6500.0f, kDatsunShift},
         {800.0f, 87.0f, "Buggy", kAtTheAxles},

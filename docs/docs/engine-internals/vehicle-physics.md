@@ -105,8 +105,9 @@ forces, and its drive and brake forces the sums of theirs. A wheel lifting off h
 
 `CVehicleWheeledPhysComponent::UpdateWheelBonePositions` places each wheel's bone every frame. The
 position is the hardpoint plus the suspension direction times the current length, from 0 up. The
-rotation combines the wheel's spin, a fixed turn per wheel and the steering angle, which the bone
-eases toward at 3 per second. Wheels never tilt.
+rotation, from `CPhysWheeledVehicleEntityImpl::GetWheelLocalOrientation` (`0x104AB1E0`), is a fixed
+turn per wheel times its spin times the steering angle, which the bone eases toward at 3 per second.
+The bone is given the inverse of the model's rotation times that one. Wheels never tilt.
 
 ## Driver input
 

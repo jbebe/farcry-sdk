@@ -29,6 +29,10 @@ and the wrecks are to come.
   - Each car the overhaul knows carries its weight as high as the real vehicle it depicts, set from that
     vehicle's stability factor: a Land Rover Series III tips over at 0.9 g, a Datsun 1200 at 1.3 g,
     and the buggy keeps its weight at the axles.
+  - The Land Rover rides on solid axles, as the real one does. Each axle's two wheels are sprung as
+    one beam on springs 60% of the track apart, so the beam twists under the body to keep both wheels
+    down over ruts and rocks. Its wheels hang half their suspension's length lower, and lean with the
+    beam.
   - A wider steering lock: half as far again at a crawl, and twice as far at speed, where the game
     narrows it. On the Datsun that is 37.5° and 20°.
   - Softer springs, and softer dampers, softest on the rebound, so the body squats, dives and leans
@@ -59,8 +63,8 @@ With DevTools installed, its overlay has a **Vehicle Overhaul** window:
 - the car's speed, rpm and gear;
 - its centre-of-mass height, the sideways g it tips over at, and the g its tyres hold on the ground
   under them;
-- a switch for the whole overhaul, one for the real centre of mass, and a slider for every value
-  above.
+- a switch for the whole overhaul, one for the real centre of mass, one for the solid axles, and a
+  slider for every value above.
 
 The values are kept in `bin\vehicle-overhaul.ini`.
 
@@ -74,6 +78,7 @@ src\                         the FCSE plugin
   third_person.cpp           the toggle, and putting the first-person camera back
   chase.cpp                  where the chase camera goes each frame
   physics.cpp                the player's car tuned and put back, and the real vehicles' weight
+  axles.cpp                  the solid axles: springs, dampers and leaning wheels
   drivetrain.cpp             the engine's revs and gear changes, for the sound and rev counter
   real_vehicle.cpp           the real vehicles the cars depict
   tuning.cpp                 the values, their file and the window

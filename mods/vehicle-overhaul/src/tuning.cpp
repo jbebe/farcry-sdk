@@ -110,6 +110,10 @@ namespace {
         {"Real centre of mass", &Values::realCentreOfMass, "Real centre of mass", kChassis,
          "Carries the car's weight as high as the real vehicle it depicts, from that vehicle's stability "
          "factor. Off leaves it where the game put it."},
+        {"Solid axles", &Values::solidAxles, "Solid axles", kSuspension,
+         "Springs each solid axle of the real vehicle as one beam, which twists under the body to keep both "
+         "wheels down and lets them hang lower. Only the Land Rover so far. Off springs every wheel on its "
+         "own, as the game does."},
     };
 
     Values g_values{};

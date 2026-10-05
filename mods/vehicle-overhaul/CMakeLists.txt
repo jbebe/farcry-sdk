@@ -18,6 +18,7 @@ include("${DEVTOOLS_INCLUDE_DIR}/devtools_imgui.cmake")
 
 add_library(VehicleOverhaul SHARED
   "src/main.cpp"
+  "src/axles.cpp"
   "src/chase.cpp"
   "src/drivetrain.cpp"
   "src/physics.cpp"

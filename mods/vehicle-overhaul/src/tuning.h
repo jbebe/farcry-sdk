@@ -7,11 +7,13 @@ namespace VehicleOverhaul::Tuning {
 // Multiples of the car's own retail value, except the responses (Havok's factors, 1 = physical) and
 // the lock and shift times (seconds).
 struct Values {
-    // Whether the player's car is tuned at all, whether its sound follows the real gearbox, and
-    // whether a car the overhaul knows carries its weight as high as the real vehicle it depicts.
+    // Whether the player's car is tuned at all, and whether its sound follows the real gearbox.
     bool enabled;
     bool realEngine;
+    // Whether a car the overhaul knows carries its weight as high as the real vehicle it depicts, and
+    // rides on that vehicle's solid axles.
     bool realCentreOfMass;
+    bool solidAxles;
     float enginePower;
     float climbAssist;
     float topSpeed;

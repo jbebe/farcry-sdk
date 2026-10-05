@@ -16,13 +16,43 @@ using StepFn = void (*)(Car car, float seconds);
 // Called on the physics thread before a car's rolling resistance; the share of it to apply.
 using RollingFn = float (*)(Car car);
 
+// One wheel's suspension as Havok measured it this step, and the spring it worked the force out with.
+struct Suspension {
+    bool touching;
+    // Its length now, the whole of its reach while the wheel hangs free, and how fast it is getting
+    // longer.
+    float length;
+    float extending;
+    // How much harder its spring pushes on ground that meets the wheel at a slant.
+    float slant;
+    float reach;
+    // Per kilogram of chassis.
+    float strength;
+    float compressionDamping;
+    float reboundDamping;
+};
+
+// Called on the physics thread once Havok has worked out the suspension forces of the car the player
+// drives, in newtons, which it may rewrite. `mass` is the chassis's.
+using SuspensionFn = void (*)(Car car, float mass, const Suspension* wheels, float* forces);
+
 // False, and logged, when this build lacks anything the steps need.
-bool Install(StepFn step, RollingFn rolling);
+bool Install(StepFn step, RollingFn rolling, SuspensionFn suspension);
 
 // The car the player is driving, or null. Any thread.
 Car Player();
 
+// The wheels come front left, front right, rear right, rear left: two to an axle.
 constexpr int kMaxWheels = 4;
+constexpr int kAxles = 2;
+constexpr int AxleOf(int wheel) { return wheel / 2; }
+
+// A wheel's centre in chassis space, where the game draws it.
+void WheelCentre(Car car, int wheel, float* centre);
+
+// Leans the drawn wheels of the player's car on each axle by that axle's entry in `angles`, in radians
+// about the chassis's forward axis, positive lowering the right. Any thread.
+void LeanWheels(const float* angles);
 
 struct Wheel {
     // The tyre's grip, multiplied by the ground's own, and the most it may reach.
@@ -33,7 +63,7 @@ struct Wheel {
     float* springStrength;
     float* dampingCompression;
     float* dampingRelaxation;
-    // The suspension's length at rest, which is also its travel.
+    // The suspension's length at rest, which is also its travel and how far down the wheel can reach.
     float* suspensionLength;
 };
 

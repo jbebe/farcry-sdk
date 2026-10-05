@@ -1,9 +1,11 @@
 // The off-road physics: the car the player drives, re-tuned every physics step while they drive it
-// and put back as the game made it when they get out. Each step also moves its engine on.
+// and put back as the game made it when they get out. Each step also moves its engine on and springs
+// its solid axles.
 //
 // Every value is written from the car's retail one each step, so a moved slider applies at once.
 #include "physics.h"
 
+#include "axles.h"
 #include "drivetrain.h"
 #include "real_vehicle.h"
 #include "tuning.h"
@@ -45,6 +47,8 @@ namespace {
         float centreOfMass[3];
         // Whether the centre of mass is where the real vehicle has it rather than where it was.
         bool centreMoved;
+        // The real vehicle whose solid axles it rides on, or null.
+        const RealVehicle::Spec* beams;
         // The suspension travel the tyre solver was last built for.
         float solverTravel = 1.0f;
     };
@@ -155,12 +159,14 @@ namespace {
         const bool wanted = car == player && tuning.enabled;
         const Chassis chassis = VehicleOverhaul::Wheeled::ChassisOf(car);
         const RealVehicle::Spec* real = RealVehicle::Match(chassis.mass, chassis.enginePower);
+        const RealVehicle::Spec* beams = wanted && tuning.solidAxles ? real : nullptr;
         if (car == player) {
             VehicleOverhaul::Wheeled::Readout readout = VehicleOverhaul::Wheeled::ReadoutOf(car);
             readout.rpm = VehicleOverhaul::Drivetrain::Step(car, real, readout, seconds);
             const float height = chassis.centreOfMass[2] - chassis.ground;
             g_status = {readout, real != nullptr ? real->name : nullptr, height,
                         height > 0.0f ? chassis.track / (2.0f * height) : 0.0f, chassis.grip};
+            VehicleOverhaul::Axles::Lean(car, beams);
         }
         if (car != g_retail.car && !wanted) {
             return;
@@ -200,6 +206,10 @@ namespace {
             VehicleOverhaul::Wheeled::RebuildSolver(car);
             g_retail.solverTravel = travel;
         }
+        if (beams != nullptr) {
+            VehicleOverhaul::Axles::Hang(parts, *beams);
+        }
+        g_retail.beams = beams;
         if (!wanted) {
             g_retail = {};
         }
@@ -208,11 +218,17 @@ namespace {
     float Rolling(Car car) {
         return car == g_retail.car ? VehicleOverhaul::Tuning::Current().rollingResistance : 1.0f;
     }
+
+    void Suspend(Car car, float mass, const VehicleOverhaul::Wheeled::Suspension* wheels, float* forces) {
+        if (car == g_retail.car && g_retail.beams != nullptr) {
+            VehicleOverhaul::Axles::Spring(mass, *g_retail.beams, wheels, forces);
+        }
+    }
 }
 
 namespace VehicleOverhaul::Physics {
 
-bool Install() { return Wheeled::Install(&Step, &Rolling); }
+bool Install() { return Wheeled::Install(&Step, &Rolling, &Suspend); }
 
 bool Latest(Status& status) {
     if (Wheeled::Player() == nullptr) {

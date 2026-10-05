@@ -1,6 +1,8 @@
 // The real vehicles the game's cars depict, told apart by their retail mass and engine.
 #pragma once
 
+#include "engine/wheeled.h"
+
 #include <cstdint>
 
 namespace VehicleOverhaul::RealVehicle {
@@ -17,6 +19,9 @@ struct Spec {
     float redline;
     // The sound of a gear change, or 0 for the vehicle's own.
     uint32_t shiftSound;
+    // Each solid axle's spring spacing over its track, front then rear, or 0 for an axle whose wheels
+    // are sprung apart.
+    float solidAxle[Wheeled::kAxles];
 };
 
 constexpr float kAtTheAxles = 0.0f;
