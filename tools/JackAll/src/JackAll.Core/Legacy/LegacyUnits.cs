@@ -48,7 +48,7 @@ public sealed class LegacyUnits(string layerRoot, GameVfs vfs, NameDatabase name
 
             case XmlSides xml:
                 (List<XmlChange> changes, bool exact) = XmlTreeDiff.Diff(xml.Vanilla, xml.Mod, xml.Expand);
-                string hint = NameOf(xml.Mod);
+                string hint = xml.Base is { } based ? $"{NameOf(xml.Mod)}; {based}" : NameOf(xml.Mod);
                 return [.. changes
                     .Where(c => !IsRounding(c))
                     .Select(c => new LegacyChange(c.Kind, unit, $"{unit}#{c.Path}", c.Old, c.New, !exact, hint))];
@@ -92,8 +92,41 @@ public sealed class LegacyUnits(string layerRoot, GameVfs vfs, NameDatabase name
 
     private sealed record StringSides(IReadOnlyList<OasisStringEdit> Edits, Func<OasisStringEdit, string?> Vanilla) : Sides;
 
+    /// <param name="Base">What the base side is when it is not the unit's own base-game version.</param>
     private sealed record XmlSides(
-        XElement Vanilla, XElement Mod, Func<XElement, byte[]> Render, Func<XElement, XElement?>? Expand = null) : Sides;
+        XElement Vanilla, XElement Mod, Func<XElement, byte[]> Render, Func<XElement, XElement?>? Expand = null,
+        string? Base = null) : Sides;
+
+    private static readonly string[] EntityLibraries =
+    [
+        @"worlds\world1\generated\entitylibrary.fcb",
+        @"worlds\world2\generated\entitylibrary.fcb",
+        @"downloadcontent\dlc1\generated\entitylibrary.fcb",
+        @"generated\entitylibrarypatchoverride.fcb",
+    ];
+
+    /// <summary>
+    /// The base-game declaration of an archetype a mod adds to another entity library: an override
+    /// that copies an archetype to change a few of its values. Compared against that copy, each value
+    /// is a change of its own instead of the whole archetype being one new unit.
+    /// </summary>
+    private (string Xml, string Library)? Redeclared(string containerPath, string fragmentId)
+    {
+        if (!EntityLibraries.Contains(containerPath, StringComparer.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        foreach (string library in EntityLibraries.Where(l => !l.Equals(containerPath, StringComparison.OrdinalIgnoreCase)))
+        {
+            if (Container(NameHash.Compute(library), library)?.Extract(fragmentId) is { } xml)
+            {
+                return (xml, library.Replace('\\', '/'));
+            }
+        }
+
+        return null;
+    }
 
     private sealed record TextSides(string Vanilla, string Mod, Func<string, byte[]> Encode) : Sides;
 
@@ -126,8 +159,13 @@ public sealed class LegacyUnits(string layerRoot, GameVfs vfs, NameDatabase name
                 return Layout(containerPath, modXml);
             }
 
-            return Container(HashOf(containerPath), containerPath)?.Extract(fragmentId) is { } vanillaXml
-                ? new XmlSides(XElement.Parse(vanillaXml), modXml, render, NestedRml)
+            if (Container(HashOf(containerPath), containerPath)?.Extract(fragmentId) is { } vanillaXml)
+            {
+                return new XmlSides(XElement.Parse(vanillaXml), modXml, render, NestedRml);
+            }
+
+            return Redeclared(containerPath, fragmentId) is { } shadowed
+                ? new XmlSides(XElement.Parse(shadowed.Xml), modXml, render, NestedRml, $"redeclares {shadowed.Library}")
                 : new OpaqueSides(null, mod, NameOf(modXml));
         }
 

@@ -90,7 +90,7 @@ public sealed partial class LegacyChangesCommand : CliCommand<LegacyChangesComma
         if (settings.Group)
         {
             var groups = selected.GroupBy(c => Shape(c.Address))
-                .Select(g => new { shape = g.Key, count = g.Count(), kinds = string.Join(",", g.Select(c => c.Kind).Distinct()), sample = g.First() })
+                .Select(g => new { shape = g.Key, count = g.Count(), kinds = string.Join(",", g.Select(c => c.Kind).Distinct()), sample = Describe(g.First()), address = g.First().Address })
                 .OrderByDescending(g => g.count)
                 .ToList();
             if (settings.Json)
@@ -101,7 +101,7 @@ public sealed partial class LegacyChangesCommand : CliCommand<LegacyChangesComma
 
             foreach (var group in groups.Take(limit))
             {
-                AnsiConsole.MarkupLine($"{group.count,7:N0}  {group.shape.EscapeMarkup()}  [grey]{group.kinds}  e.g. {Describe(group.sample).EscapeMarkup()}[/]");
+                AnsiConsole.MarkupLine($"{group.count,7:N0}  {group.shape.EscapeMarkup()}  [grey]{group.kinds}  e.g. {group.sample.EscapeMarkup()}[/]");
             }
 
             AnsiConsole.MarkupLine($"[grey]{selected.Count:N0} change(s) in {groups.Count:N0} shape(s).[/]");
