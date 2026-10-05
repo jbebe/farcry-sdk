@@ -6,9 +6,9 @@ Notable changes to the VSS Vintorez, loosely following
 ## [Unreleased]
 
 ### Changed
-- **The steel reads as metal.** The body now reflects a cube map the way the Dragunov does, on the
-  steel only, and the steel's own colour is darker so the reflection does not wash it out. The wood
-  and the worn look are unchanged.
+- **The steel reads as metal.** The body now reflects a faint cube map, on the steel only, and the
+  steel's own colour is much darker so the reflection does not wash it out. The wood and the worn
+  look are unchanged.
 
 ## [1.0.0] - 2026-09-04
 

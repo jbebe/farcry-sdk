@@ -93,11 +93,11 @@ material is **appended** to the mesh's list rather than swapped in place, becaus
 144 triangles through the body's old material and has to keep doing so.
 
 It is the Dart Rifle's plastic rather than its metal because it is the one that declares a cube map,
-and the cube map is what makes steel read as metal. It carries the Dragunov's, `genericcubemap01` at
-0.4, gated by the control map's red like the highlight, so the wood reflects nothing. The steel's
-albedo is halved where the red is full, from 0.221 to 0.113 effective, so the reflection adds to a
-darker base rather than washing it out. Everything else, rust layer included, is the material this
-used to ship on.
+and the cube map is what makes steel read as metal. It carries the Dragunov's, `genericcubemap01`,
+at 0.2 — half the Dragunov's 0.4, which read too reflective in game — gated by the control map's
+red like the highlight, so the wood reflects nothing. The steel's albedo is cut to 35% where the red
+is full, from 0.221 to 0.081 effective, so the reflection adds to a dark base rather than washing it
+out. Everything else, rust layer included, is the material this used to ship on.
 
 `weapons.Special.Dart_Rifle` is the Dragunov's entity archetype with the identity and the model path
 changed — that carries the five-part list including `ACCESSORY02`, the Dragunov skeleton,

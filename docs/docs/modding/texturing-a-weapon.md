@@ -333,16 +333,17 @@ red is 1.0 over the whole gun, its albedo is dark, and the cube map carries the 
 | | Desert Eagle chrome | Dragunov metal | VSS, first build | VSS, now |
 | --- | ---: | ---: | ---: | ---: |
 | control red over the metal | 1.00 | ~0.8 | ~0.8 | ~0.8 |
-| effective albedo of the metal | 0.14 | 0.092 | 0.221 | 0.113 |
+| effective albedo of the metal | 0.14 | 0.092 | 0.221 | 0.081 |
 | `ReflectionTexture` | `genericcubemap02` | `genericcubemap01` | none | `genericcubemap01` |
-| `ReflectionPower` | 0.8 | 0.4 | — | 0.4 |
-| cube-map weight, `mask.r × ReflectionPower × specCol` | **0.72** | **0.27** | **0** | **0.27** |
+| `ReflectionPower` | 0.8 | 0.4 | — | 0.2 |
+| cube-map weight, `mask.r × ReflectionPower × specCol` | **0.72** | **0.27** | **0** | **0.14** |
 | `SpecularPower` | 15 | 30 | 30 | 30 |
 
-The first build copied the Dragunov's specular triplet and not the reflection that goes with it. The
-second takes the reflection too, and halves the steel's albedo by the control map's red — the
-channel that gates the cube map — so what a texel loses in diffuse tracks what it gains in
-reflection.
+The first build copied the Dragunov's specular triplet and not the reflection that goes with it. A
+second took the Dragunov's reflection too, at 0.4 over steel halved to 0.113, and played too light
+and too reflective. What ships cuts the steel's albedo to 35% and the cube map to half the
+Dragunov's. The albedo is scaled by the control map's red — the channel that gates the cube map —
+so what a texel loses in diffuse tracks what it gains in reflection.
 
 ### Relief is a specular pattern, not a normal map
 
