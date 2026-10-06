@@ -82,11 +82,11 @@ namespace {
     constexpr float kLength = 8.0f;
     constexpr float kLengthShare = 0.4f;
 
-    // Every how many tracers one ricochets (this often only for testing), the farthest a shot can
-    // end for it to, since a miss ends in the air at the weapon's range, and the nearest the
-    // camera, since that is a shot at the player. A ricochet flies slower and shorter, anywhere
-    // from level to straight up and from one side of onward to the other, never back.
-    constexpr uint32_t kRicochetEvery = 3;
+    // Every how many tracers one ricochets, the farthest a shot can end for it to, since a miss
+    // ends in the air at the weapon's range, and the nearest the camera, since that is a shot at
+    // the player. A ricochet flies slower and shorter, anywhere from level to straight up and from
+    // one side of onward to the other, never back.
+    constexpr uint32_t kRicochetEvery = 6;
     constexpr float kRicochetFarthestShot = 150.0f;
     constexpr float kRicochetNearestCamera = 3.0f;
     constexpr float kRicochetSpeed = kSpeed / 2.0f;
