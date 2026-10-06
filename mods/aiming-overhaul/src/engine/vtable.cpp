@@ -54,11 +54,14 @@ namespace {
         device->Release();
         d3d->Release();
     }
-}
 
-void* AimingOverhaul::Vtable::Slot(size_t slot) {
-    ReadOnce();
-    return slot < kSlotCount ? g_slots[slot] : nullptr;
+    // The function the game's device will call for `slot`, or null if no Direct3D device could be
+    // created to read it from. Every IDirect3DDevice9 in a process shares one vtable, so a
+    // throwaway device of our own names them all.
+    void* Slot(size_t slot) {
+        ReadOnce();
+        return slot < kSlotCount ? g_slots[slot] : nullptr;
+    }
 }
 
 bool AimingOverhaul::Vtable::Hook(size_t slot, void* detour, void** original) {

@@ -1,14 +1,10 @@
-// A shot decides on its tracer in CWeaponFireBulletStrategy::ApplyDelayBullet, which first skips it
-// for a shooter drawn in first person; the hook sits on that test and jumps past it, so the player's
-// shots leave tracers too. Which guns leave them, how fast they fly and how long their streaks are
-// is the layer's weapon data. CBulletTracerManager then keeps the tracer: a streak is never longer
-// than a share of its shot, some ricochet up into the air when they get there, and each frame's
-// streak is drawn no thinner than a few pixels, however far off.
-//
+// The player's shots leave tracers too, past the engine's first-person test; a streak is never
+// longer than a share of its shot, some ricochet, and each is drawn a few pixels wide however far.
 // See docs/docs/engine-internals/bullet-tracers.md.
 #include "tracers.h"
 
 #include "engine/aim.h"
+#include "engine/memory.h"
 #include "fcse_api.h"
 #include "streak.h"
 
@@ -21,11 +17,12 @@
 #include <random>
 
 namespace {
-    // The test of the shooter's first-person flag and the long jump past the tracer it takes.
+    using AimingOverhaul::Field;
+
+    // The test of the shooter's first-person flag, and the instruction after its long jump.
     FCSE::Relocation<uint8_t*> g_firstPersonTest{FCSE::Pattern(
         "F6 40 04 80 0F 85 ?? ?? ?? ?? 8B 87 68 01 00 00 85 C0 0F 84 ?? ?? ?? ?? 8B 4F 50")};
-    constexpr ptrdiff_t kJump = 4;
-    constexpr ptrdiff_t kJumpLength = 6;
+    constexpr ptrdiff_t kPastTest = 10;
 
     // CBulletTracerManager, all __thiscall: AddTrace(start, end, speed, length, distortion length,
     // width, &texture, &distortion texture); Update(seconds, a second argument it never reads),
@@ -62,14 +59,12 @@ namespace {
     constexpr ptrdiff_t kTraceTexture = 0x58;
     constexpr ptrdiff_t kTraceDistortionTexture = 0x60;
 
-    // A streak's greatest share of its shot. A streak is drawn only until its front reaches the
-    // end, so a shot nearer than the streak is long would show for one frame.
+    // A streak's greatest share of its shot.
     constexpr float kLengthShare = 0.4f;
 
-    // Every how many tracers one ricochets, the farthest a shot can end for it to, since a miss
-    // ends in the air at the weapon's range, and the nearest the camera, since that is a shot at
-    // the player. A ricochet flies slower and shorter, anywhere from level to straight up and from
-    // one side of onward to the other, never back.
+    // Every how many tracers one ricochets, the farthest its shot can end and the nearest the
+    // camera, and its flight: slower and shorter, anywhere from level to straight up and from one
+    // side of onward to the other, never back.
     constexpr uint32_t kRicochetEvery = 6;
     constexpr float kRicochetFarthestShot = 150.0f;
     constexpr float kRicochetNearestCamera = 3.0f;
@@ -82,7 +77,7 @@ namespace {
     constexpr float kRicochetSpread = std::numbers::pi_v<float> / 2.0f;
 
     // The least width a streak is drawn at, in radians of an unmagnified view: about six pixels
-    // at 1080p, where the engine's few centimetres are under one beyond 20 m.
+    // at 1080p.
     constexpr float kLeastWidth = 0.006f;
 
     std::atomic<bool> g_enabled{true};
@@ -93,7 +88,7 @@ namespace {
     // from there.
     struct Ricochet {
         float due;
-        const uint8_t* trace;
+        uint8_t* trace;
         float flight[3];
     };
     constexpr size_t kMostRicochets = 64;
@@ -104,11 +99,6 @@ namespace {
     // Where the camera was when a streak was last drawn.
     float g_camera[3] = {};
     std::minstd_rand g_random{20261005};
-
-    template <class T>
-    T& Field(uint8_t* object, ptrdiff_t offset) {
-        return *reinterpret_cast<T*>(object + offset);
-    }
 
     float Length(const float* v) {
         return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
@@ -163,8 +153,8 @@ namespace {
     // Whether the manager still holds the trace, so its textures are still alive.
     bool Holds(uint8_t* manager, const uint8_t* trace) {
         uint8_t** traces = Field<uint8_t**>(manager, kTraces);
-        return std::find(traces, traces + Field<uint32_t>(manager, kTraceCount), trace) !=
-               traces + Field<uint32_t>(manager, kTraceCount);
+        uint8_t** end = traces + Field<uint32_t>(manager, kTraceCount);
+        return std::find(traces, end, trace) != end;
     }
 
     // Ricochets are added before the manager walks its traces, which adding one would move under
@@ -181,7 +171,7 @@ namespace {
             if (g_manager == nullptr || !Holds(g_manager, ricochet.trace)) {
                 continue;
             }
-            uint8_t* trace = const_cast<uint8_t*>(ricochet.trace);
+            uint8_t* trace = ricochet.trace;
             const float* from = &Field<float>(trace, kTraceEnd);
             const float toCamera[3] = {g_camera[0] - from[0], g_camera[1] - from[1],
                                        g_camera[2] - from[2]};
@@ -212,12 +202,13 @@ namespace {
             toCamera[i] = camera[i] - rear[i];
         }
         const float span = Length(along);
+        if (!(span > 0.0f)) {
+            return Length(toCamera);
+        }
         const float length = (std::min)(span, Field<float>(trace, kTraceLength));
         const float reach =
-            span > 0.0f ? (along[0] * toCamera[0] + along[1] * toCamera[1] +
-                           along[2] * toCamera[2]) / span
-                        : 0.0f;
-        const float t = span > 0.0f ? std::clamp(reach, 0.0f, length) / span : 0.0f;
+            (along[0] * toCamera[0] + along[1] * toCamera[1] + along[2] * toCamera[2]) / span;
+        const float t = std::clamp(reach, 0.0f, length) / span;
         float squared = 0.0f;
         for (int i = 0; i < 3; i++) {
             const float off = toCamera[i] - along[i] * t;
@@ -240,13 +231,6 @@ namespace {
         g_originalBuildTrace(unused, unusedEdx, trace, camera);
         width = own;
     }
-
-    template <class Fn>
-    bool Hook(uintptr_t target, Fn detour, Fn* original) {
-        return target != 0 && FCSE::ApiPointer()->Hook(reinterpret_cast<void*>(target),
-                                                         reinterpret_cast<void*>(detour),
-                                                         reinterpret_cast<void**>(original));
-    }
 }
 
 bool AimingOverhaul::Tracers::Install() {
@@ -254,7 +238,7 @@ bool AimingOverhaul::Tracers::Install() {
         FCSE::Logf("tracers: the shot's tracer test was not found, so tracers are the game's own");
         return false;
     }
-    g_pastTest = g_firstPersonTest.address() + kJump + kJumpLength;
+    g_pastTest = g_firstPersonTest.address() + kPastTest;
     if (!FCSE::ApiPointer()->MidHook(g_firstPersonTest.get(), &OnFirstPersonTest)) {
         FCSE::Logf("tracers: the shot's tracer test cannot be hooked, so tracers are the game's "
                    "own");

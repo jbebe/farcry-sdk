@@ -32,7 +32,6 @@ namespace {
     constexpr float kRefocusIn = 1.5f;
 
     constexpr UINT kLens = 0;
-    constexpr UINT kStep = 1;
     constexpr UINT kConstantCount = 3;
 
     constexpr D3DFORMAT kHalfFormat = D3DFMT_A16B16G16R16F;
@@ -119,20 +118,14 @@ namespace {
     }
 
     // One Gaussian over the half-size gun, across and then down, `step` half-size pixels apart.
-    void BlurInto(IDirect3DDevice9* device, AimingOverhaul::ScreenDraw& draw,
-                  const AimingOverhaul::Target& into, float step) {
+    void BlurInto(AimingOverhaul::ScreenDraw& draw, const AimingOverhaul::Target& into,
+                  float step) {
         const float width = static_cast<float>(g_halfWidth);
         const float height = static_cast<float>(g_halfHeight);
         const float across[4] = {step / width, 0.0f, 0.0f, 0.0f};
         const float downward[4] = {0.0f, step / height, 0.0f, 0.0f};
-        device->SetPixelShaderConstantF(kStep, across, 1);
-        device->SetRenderTarget(0, g_halves[1].surface);
-        device->SetTexture(0, g_halves[0].texture);
-        draw.Quad(0.0f, 0.0f, width, height);
-        device->SetPixelShaderConstantF(kStep, downward, 1);
-        device->SetRenderTarget(0, into.surface);
-        device->SetTexture(0, g_halves[1].texture);
-        draw.Quad(0.0f, 0.0f, width, height);
+        draw.Separable(AimingOverhaul::Blur::kStep, across, downward, g_halves[0].texture,
+                       g_halves[1], into.surface, width, height);
     }
 
     void Draw(const AimingOverhaul::Frame::Pass& pass,
@@ -175,8 +168,7 @@ namespace {
         AimingOverhaul::ScreenDraw draw(device, kLens, kConstantCount);
         device->SetPixelShaderConstantF(kLens, constants, kConstantCount);
         for (DWORD sampler : {0u, 1u, 2u, 4u}) {
-            device->SetSamplerState(sampler, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-            device->SetSamplerState(sampler, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+            draw.Linear(sampler);
         }
         // A half-size target cannot share the scene's multisampled depth.
         device->SetDepthStencilSurface(nullptr);
@@ -201,14 +193,11 @@ namespace {
         draw.Quad(0.0f, 0.0f, halfWidth, halfHeight);
 
         device->SetPixelShader(blur);
-        BlurInto(device, draw, g_halves[2], step * kSmall);
-        BlurInto(device, draw, g_halves[3], step);
+        BlurInto(draw, g_halves[2], step * kSmall);
+        BlurInto(draw, g_halves[3], step);
 
-        // The scene's alpha carries brightness for the bloom, so it is left alone.
         device->SetRenderTarget(0, pass.target);
-        device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
-                                                           D3DCOLORWRITEENABLE_GREEN |
-                                                           D3DCOLORWRITEENABLE_BLUE);
+        draw.KeepAlpha();
         device->SetTexture(0, g_copy.texture);
         device->SetTexture(1, g_halves[2].texture);
         device->SetTexture(2, g_halves[3].texture);

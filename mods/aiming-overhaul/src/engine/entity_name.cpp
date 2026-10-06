@@ -1,19 +1,18 @@
 // See docs/docs/engine-internals/first-person-aiming.md, "A scope's sight picture".
 #include "engine/entity_name.h"
 
+#include "engine/memory.h"
+
 #include <cstddef>
 #include <excpt.h>
 
 namespace {
+    using AimingOverhaul::Field;
+
     // CWeapon's entity, through the proxy at +0x08, and that entity's name.
     constexpr ptrdiff_t kWeaponProxy = 0x08;
     constexpr ptrdiff_t kProxyEntity = 0x0C;
     constexpr ptrdiff_t kEntityName = 0x14;
-
-    template <class T>
-    T Field(uint8_t* object, ptrdiff_t offset) {
-        return *reinterpret_cast<T*>(object + offset);
-    }
 }
 
 void AimingOverhaul::EntityName::Read(uint8_t* weapon, char (&name)[64]) {

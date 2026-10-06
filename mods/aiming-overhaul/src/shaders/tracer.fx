@@ -1,10 +1,6 @@
-// A tracer's streak, drawn in place of the engine's textured quad: an orange glow across it with a
-// hotter core, fading in from its rear and out just short of its front. Every edge of the quad is
-// dark, so no edge shows however the streak is turned, and nothing is sampled, so nothing is lost
-// to a smaller mip. Brighter than white, so that it blooms.
-//
-// The engine's world primitive vertex shader hands on the vertex colour in TEXCOORD0 and the
-// texture coordinate in TEXCOORD1: U along the streak from its rear, V across it.
+// A tracer's streak in place of the engine's textured quad: an orange glow with a hotter core, dark
+// at every edge and sampling nothing, brighter than white so that it blooms. The engine's primitive
+// vertex shaders hand on the vertex colour in TEXCOORD0, and in TEXCOORD1 U along, V across.
 
 static const float3 kGlow = float3(2.0, 0.84, 0.1);
 static const float3 kCore = float3(4.0, 2.4, 0.8);

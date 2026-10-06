@@ -158,3 +158,28 @@ void AimingOverhaul::ScreenDraw::Triangles(const Vertex* vertices, UINT count) {
     m_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_TEX2);
     m_device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, count / 3, placed.data(), sizeof(PlacedVertex));
 }
+
+void AimingOverhaul::ScreenDraw::Separable(UINT step, const float (&across)[4],
+                                           const float (&down)[4], IDirect3DTexture9* from,
+                                           const Target& scratch, IDirect3DSurface9* into,
+                                           float width, float height) {
+    m_device->SetPixelShaderConstantF(step, across, 1);
+    m_device->SetRenderTarget(0, scratch.surface);
+    m_device->SetTexture(0, from);
+    Quad(0.0f, 0.0f, width, height);
+    m_device->SetPixelShaderConstantF(step, down, 1);
+    m_device->SetRenderTarget(0, into);
+    m_device->SetTexture(0, scratch.texture);
+    Quad(0.0f, 0.0f, width, height);
+}
+
+void AimingOverhaul::ScreenDraw::Linear(DWORD sampler) {
+    m_device->SetSamplerState(sampler, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    m_device->SetSamplerState(sampler, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+}
+
+void AimingOverhaul::ScreenDraw::KeepAlpha() {
+    m_device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
+                                                         D3DCOLORWRITEENABLE_GREEN |
+                                                         D3DCOLORWRITEENABLE_BLUE);
+}

@@ -52,9 +52,7 @@ void AimingOverhaul::ScopeShadow::OnGunPass(const Frame::Pass& pass) {
     device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
     device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);
     device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR);
-    device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
-                                                       D3DCOLORWRITEENABLE_GREEN |
-                                                       D3DCOLORWRITEENABLE_BLUE);
+    draw.KeepAlpha();
     device->SetPixelShader(shadow);
     draw.Quad(0.0f, 0.0f, width, height);
 }

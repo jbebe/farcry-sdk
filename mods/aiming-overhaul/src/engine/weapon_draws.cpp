@@ -279,9 +279,7 @@ namespace {
 bool AimingOverhaul::WeaponDraws::Install(const Listener& listener) {
     g_listener = listener;
     return Frame::Install(&OnScenePass, &OnComposite) &&
-           Vtable::Hook(Vtable::kDrawIndexedPrimitive,
-                        reinterpret_cast<void*>(&DrawIndexedPrimitiveDetour),
-                        reinterpret_cast<void**>(&g_original));
+           Vtable::Hook(Vtable::kDrawIndexedPrimitive, &DrawIndexedPrimitiveDetour, &g_original);
 }
 
 void AimingOverhaul::WeaponDraws::ReleaseDeviceObjects() {

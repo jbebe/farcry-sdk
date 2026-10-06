@@ -4,6 +4,7 @@
 #include "engine/aim.h"
 
 #include "engine/entity_name.h"
+#include "engine/memory.h"
 #include "fcse_api.h"
 
 #include <algorithm>
@@ -16,6 +17,8 @@
 #include <string_view>
 
 namespace {
+    using AimingOverhaul::Field;
+
     // All __thiscall, which a free function spells __fastcall with an unused EDX.
     using UpdateFn = void(__fastcall*)(uint8_t* camera, void* unused, float seconds, uint32_t flags);
     using UpdateCameraOffsetFn = void(__fastcall*)(uint8_t* camera, void* unused, float seconds,
@@ -118,11 +121,6 @@ namespace {
     float g_turnUp = 0.0f;
     std::atomic<float> g_turnedRight{0.0f};
     std::atomic<float> g_turnedUp{0.0f};
-
-    template <typename T>
-    T& Field(uint8_t* object, ptrdiff_t offset) {
-        return *reinterpret_cast<T*>(object + offset);
-    }
 
     float Ease(float linear) {
         return linear * linear * (3.0f - 2.0f * linear);
@@ -245,9 +243,7 @@ namespace {
         FollowLook(pawn, data, seconds);
 
         // Down the iron sights the eye drifts off the gun. To a scope it comes forward only while the
-        // scope is raised: the eyepiece hides the gun once it is up, where a shot's recoil would
-        // bring the gun too near the eye for the engine to draw, and the gun is lowered as the game
-        // lowers it.
+        // scope is raised, and the gun is lowered as the game lowers it.
         const float weight = std::clamp(Field<float>(data, kIronsightWeight), 0.0f, 1.0f);
         const bool raising = HasScope(weapon) && g_zoomAtOnce && sights && !scope;
         if (!raising) {
@@ -309,25 +305,18 @@ bool AimingOverhaul::Aim::Install(DriftFn drift, RaiseReachFn raiseReach) {
 
     g_drift = drift;
     g_raiseReachOf = raiseReach;
-    if (!api->Hook(reinterpret_cast<void*>(g_update.address()),
-                   reinterpret_cast<void*>(&UpdateDetour),
-                   reinterpret_cast<void**>(&g_originalUpdate))) {
+    if (!Hook(g_update.address(), &UpdateDetour, &g_originalUpdate)) {
         return false;
     }
     // A plugin refused past its first hook is unloaded with that hook live, so this only logs.
-    if (!api->Hook(reinterpret_cast<void*>(g_updateCameraOffset.address()),
-                   reinterpret_cast<void*>(&UpdateCameraOffsetDetour),
-                   reinterpret_cast<void**>(&g_originalUpdateCameraOffset))) {
+    if (!Hook(g_updateCameraOffset.address(), &UpdateCameraOffsetDetour,
+              &g_originalUpdateCameraOffset)) {
         api->Log("aim: the camera offset cannot be hooked, so nothing follows the sights");
     }
-    if (!g_updateFov || !api->Hook(reinterpret_cast<void*>(g_updateFov.address()),
-                                   reinterpret_cast<void*>(&UpdateFovDetour),
-                                   reinterpret_cast<void**>(&g_originalUpdateFov))) {
+    if (!Hook(g_updateFov.address(), &UpdateFovDetour, &g_originalUpdateFov)) {
         api->Log("aim: the field of view cannot be hooked, so a scope zooms in as it comes up");
     }
-    if (!g_weaponEvent || !api->Hook(reinterpret_cast<void*>(g_weaponEvent.address()),
-                                     reinterpret_cast<void*>(&WeaponEventDetour),
-                                     reinterpret_cast<void**>(&g_originalWeaponEvent))) {
+    if (!Hook(g_weaponEvent.address(), &WeaponEventDetour, &g_originalWeaponEvent)) {
         api->Log("aim: the weapon's events cannot be hooked, so a scope does not kick back");
     }
     return true;

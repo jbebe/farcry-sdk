@@ -18,6 +18,5 @@ namespace {
 
 bool AimingOverhaul::DeviceReset::Install(void (*onRelease)()) {
     g_onRelease = onRelease;
-    return Vtable::Hook(Vtable::kReset, reinterpret_cast<void*>(&ResetDetour),
-                        reinterpret_cast<void**>(&g_originalReset));
+    return Vtable::Hook(Vtable::kReset, &ResetDetour, &g_originalReset);
 }

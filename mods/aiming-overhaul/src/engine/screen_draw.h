@@ -1,6 +1,8 @@
 // A screen-space draw over someone else's frame, and the state it has to put back.
 #pragma once
 
+#include "engine/render_target.h"
+
 #include <d3d9.h>
 
 #include <cstddef>
@@ -32,6 +34,17 @@ public:
 
     // A list of triangles, three vertices each.
     void Triangles(const Vertex* vertices, UINT count);
+
+    // The bound pixel shader over a width-by-height target twice: from `from` into `scratch` with
+    // `across` in constant `step`, then from `scratch` into `into` with `down`.
+    void Separable(UINT step, const float (&across)[4], const float (&down)[4],
+                   IDirect3DTexture9* from, const Target& scratch, IDirect3DSurface9* into,
+                   float width, float height);
+
+    void Linear(DWORD sampler);
+
+    // Writes colour only, leaving the target's alpha.
+    void KeepAlpha();
 
 private:
     static constexpr UINT kMaxConstantRegisters = 8;

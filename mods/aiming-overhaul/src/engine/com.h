@@ -1,8 +1,9 @@
-// Releasing a COM pointer and forgetting it, which is what every teardown here does.
+// Holding COM pointers: releasing one and forgetting it, and using one without keeping it.
 #pragma once
 
 namespace AimingOverhaul {
 
+// Releases the pointer and forgets it.
 template <class T>
 void Release(T*& object) {
     if (object != nullptr) {

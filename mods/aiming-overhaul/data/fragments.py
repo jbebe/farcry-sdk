@@ -32,9 +32,9 @@ TRACER_GUNS = ("Special.M249_Saw", "Special.PKM", "Primary.Dragunov", "Primary.A
 TRACER_SPEED = "350"
 TRACER_LENGTH = "8"
 # The scopes the plugin draws itself, whose iron-sight post effect would blur the world around
-# them.
-DRAWN_SCOPES = ("Special.Dart_Rifle", "Special.M1903", "Primary.Dragunov", "Primary.AS50",
-                "Primary.M16", "Primary.MGL140")
+# them: the weapons in src\scopes.cpp's table.
+with open(os.path.join(HERE, "..", "src", "scopes.cpp"), encoding="utf-8") as _scopes:
+    DRAWN_SCOPES = tuple(re.findall(r'\{"weapons\.([^"]+)"', _scopes.read()))
 
 PREFIX = "WeaponProperties."
 

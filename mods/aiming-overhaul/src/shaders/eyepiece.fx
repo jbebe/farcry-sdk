@@ -17,10 +17,8 @@ sampler2D Reticle : register(s0);
 // The eyepiece's shape as a distance field; see src/scopes.h.
 sampler2D ShapeField : register(s1);
 
-// Within the opening only, where the engine's housing would have hidden the rest; `at` is where
-// the point is from the lens's centre, in lens radii. Wherever the engine's alpha test passes, at
-// least, the piece is wholly covered; below that its cover fades, so that its edges are smooth and
-// its thin lines kept as the texture is minified.
+// Within the opening only; `at` is the point from the lens's centre, in lens radii. Wholly covered
+// wherever the engine's alpha test passes, fading below it, so thin lines survive minification.
 float4 ReticlePS(float2 uv : TEXCOORD0, float2 at : TEXCOORD1) : COLOR0 {
     clip(1.0f - length(at));
     float4 texel = tex2D(Reticle, uv);

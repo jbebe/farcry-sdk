@@ -182,8 +182,7 @@ namespace {
         };
         device->SetPixelShaderConstantF(0, constants, 3);
         device->SetTexture(0, g_copy.texture);
-        device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-        device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+        draw.Linear(0);
         device->SetPixelShader(shader);
         draw.Quad(0.0f, 0.0f, width, height);
     }
@@ -203,8 +202,7 @@ namespace {
         const float centreX = width / 2.0f + opening.x * height - scope.lensX * scale;
         const float centreY = height / 2.0f + opening.y * height + scope.lensY * scale;
 
-        device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-        device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+        draw.Linear(0);
         device->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
         device->SetPixelShader(shader);
         std::vector<AimingOverhaul::ScreenDraw::Vertex> vertices;
@@ -303,17 +301,14 @@ void AimingOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
     device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
     device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
     device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-    device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
-                                                       D3DCOLORWRITEENABLE_GREEN |
-                                                       D3DCOLORWRITEENABLE_BLUE);
+    draw.KeepAlpha();
     DrawGlass(device, draw, *opening, frame);
     Release(frame);
     DrawReticle(device, draw, scope, *opening);
 
     device->SetPixelShaderConstantF(1, constants, 3);
     device->SetTexture(1, shape);
-    device->SetSamplerState(1, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-    device->SetSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    draw.Linear(1);
     device->SetPixelShader(body);
     draw.Quad(0.0f, 0.0f, width, height);
 }

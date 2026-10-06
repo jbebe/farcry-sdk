@@ -32,16 +32,15 @@ namespace {
         AimingOverhaul::ScopeShadow::OnGunPass(pass);
     }
 
-    void __cdecl OnSwayChanged(const FCSE_SettingValue* value, void*) {
-        AimingOverhaul::Sway::SetEnabled(value->asCheckbox);
+    // A checkbox that switches one feature, whose SetEnabled rides in `userdata`.
+    using SetEnabledFn = void (*)(bool enabled);
+
+    void __cdecl OnToggled(const FCSE_SettingValue* value, void* setEnabled) {
+        reinterpret_cast<SetEnabledFn>(setEnabled)(value->asCheckbox);
     }
 
-    void __cdecl OnBlurChanged(const FCSE_SettingValue* value, void*) {
-        AimingOverhaul::Blur::SetEnabled(value->asCheckbox);
-    }
-
-    void __cdecl OnScopeShadowChanged(const FCSE_SettingValue* value, void*) {
-        AimingOverhaul::ScopeShadow::SetEnabled(value->asCheckbox);
+    void* Toggles(SetEnabledFn setEnabled) {
+        return reinterpret_cast<void*>(setEnabled);
     }
 
     void __cdecl OnTracersChanged(const FCSE_SettingValue* value, void*) {
@@ -105,9 +104,10 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     AimingOverhaul::Streak::Install();
 
     const FCSE_Setting settings[] = {
-        {"Sway", FCSE_CHECKBOX(true), &OnSwayChanged, nullptr},
-        {"Gun blur", FCSE_CHECKBOX(true), &OnBlurChanged, nullptr},
-        {"Scope shadow", FCSE_CHECKBOX(true), &OnScopeShadowChanged, nullptr},
+        {"Sway", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Sway::SetEnabled)},
+        {"Gun blur", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Blur::SetEnabled)},
+        {"Scope shadow", FCSE_CHECKBOX(true), &OnToggled,
+         Toggles(&AimingOverhaul::ScopeShadow::SetEnabled)},
         {"Scope eyepiece", FCSE_CHECKBOX(true), &OnEyepieceChanged, nullptr},
         {"Scope surroundings", FCSE_CHECKBOX(true), &OnSurroundingsChanged, nullptr},
         {"Tracers", FCSE_CHECKBOX(true), &OnTracersChanged, nullptr},

@@ -73,8 +73,7 @@ namespace {
 bool AimingOverhaul::Frame::Install(PassFn onScenePass, CompositeFn onComposite) {
     g_onScenePass = onScenePass;
     g_onComposite = onComposite;
-    return Vtable::Hook(Vtable::kEndScene, reinterpret_cast<void*>(&EndSceneDetour),
-                        reinterpret_cast<void**>(&g_originalEndScene));
+    return Vtable::Hook(Vtable::kEndScene, &EndSceneDetour, &g_originalEndScene);
 }
 
 uint32_t AimingOverhaul::Frame::PassSerial() {

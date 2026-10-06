@@ -5,6 +5,9 @@
 
 namespace AimingOverhaul::Blur {
 
+// The constant BlurPS, in src/shaders/blur.fx, reads its step from.
+inline constexpr UINT kStep = 1;
+
 // Draws over the gun as its colour pass ends, before the bloom reads the frame.
 void OnGunPass(const Frame::Pass& pass, const WeaponDraws::Depth& depth);
 

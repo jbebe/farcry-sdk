@@ -1,9 +1,5 @@
-// A streak's draw is the one made with the tracer texture bound: the very Direct3D texture the
-// engine's resource for it holds, read from a trace as it is built, and the device's draws are
-// watched for it at stage 0. Such a draw is made with the plugin's pixel shader in place of the
-// engine's, for that draw alone, while the bound vertex shader is one of the engine's primitive
-// permutations that hands the shader what it reads.
-//
+// A streak's draw, the one binding the engine's own tracer texture at stage 0, is made with the
+// plugin's pixel shader while the bound vertex shader hands on what that reads.
 // See docs/docs/engine-internals/bullet-tracers.md.
 #include "streak.h"
 
@@ -171,23 +167,18 @@ namespace {
         });
     }
 
-    template <class Fn>
-    bool HookSlot(size_t slot, Fn detour, Fn* original) {
-        return AimingOverhaul::Vtable::Hook(slot, reinterpret_cast<void*>(detour),
-                                            reinterpret_cast<void**>(original));
-    }
 }
 
 bool AimingOverhaul::Streak::Install() {
-    using namespace AimingOverhaul::Vtable;
     const bool hooked =
-        HookSlot(kDrawPrimitive, &DrawPrimitiveDetour, &g_originalDrawPrimitive) &&
-        HookSlot(kDrawIndexedPrimitive, &DrawIndexedPrimitiveDetour,
-                 &g_originalDrawIndexedPrimitive) &&
-        HookSlot(kDrawPrimitiveUP, &DrawPrimitiveUPDetour, &g_originalDrawPrimitiveUP) &&
-        HookSlot(kDrawIndexedPrimitiveUP, &DrawIndexedPrimitiveUPDetour,
-                 &g_originalDrawIndexedPrimitiveUP) &&
-        HookSlot(kSetTexture, &SetTextureDetour, &g_originalSetTexture);
+        Vtable::Hook(Vtable::kDrawPrimitive, &DrawPrimitiveDetour, &g_originalDrawPrimitive) &&
+        Vtable::Hook(Vtable::kDrawIndexedPrimitive, &DrawIndexedPrimitiveDetour,
+                     &g_originalDrawIndexedPrimitive) &&
+        Vtable::Hook(Vtable::kDrawPrimitiveUP, &DrawPrimitiveUPDetour,
+                     &g_originalDrawPrimitiveUP) &&
+        Vtable::Hook(Vtable::kDrawIndexedPrimitiveUP, &DrawIndexedPrimitiveUPDetour,
+                     &g_originalDrawIndexedPrimitiveUP) &&
+        Vtable::Hook(Vtable::kSetTexture, &SetTextureDetour, &g_originalSetTexture);
     if (!hooked) {
         FCSE::Logf("streak: the device cannot be hooked, so tracers are drawn with their texture");
     }

@@ -2,6 +2,7 @@
 
 #include "engine/com.h"
 #include "engine/frame.h"
+#include "engine/memory.h"
 #include "engine/render_target.h"
 #include "fcse_api.h"
 
@@ -9,6 +10,8 @@
 #include <cstdint>
 
 namespace {
+    using AimingOverhaul::Field;
+
     // All __thiscall, which a free function spells __fastcall with an unused EDX.
     using ViewCtorFn = void(__fastcall*)(uint8_t* view, void* unused);
     using CameraCopyFn = uint8_t*(__fastcall*)(uint8_t* to, void* unused, const uint8_t* from);
@@ -106,11 +109,6 @@ namespace {
     // Set once the device refuses the copy's target; cleared on reset.
     bool g_refused = false;
     bool g_reported = false;
-
-    template <typename T>
-    T& Field(uint8_t* object, ptrdiff_t offset) {
-        return *reinterpret_cast<T*>(object + offset);
-    }
 
     // The reflection renderer's last colour, copied into a texture of our own.
     bool Copy(uint8_t* renderer) {

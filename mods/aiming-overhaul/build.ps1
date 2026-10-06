@@ -11,9 +11,9 @@
     "release" or "debug" - selects the x86-release/x86-debug CMake preset. Defaults to "release".
 
 .PARAMETER Install
-    Path to the game's bin folder (the one holding FarCry2.exe and FCSE.exe). The layer, the plugin
-    alone, is then built into the game's patch with jackall-cli, which needs a Release build of
-    tools\JackAll. That patch holds the vanilla files plus this layer alone, so any other layer
+    Path to the game's bin folder (the one holding FarCry2.exe and FCSE.exe). The layer, plugin and
+    weapon data, is then built into the game's patch with jackall-cli, which needs a Release build
+    of tools\JackAll. That patch holds the vanilla files plus this layer alone, so any other layer
     built into it before is dropped. Off by default.
 
 .EXAMPLE

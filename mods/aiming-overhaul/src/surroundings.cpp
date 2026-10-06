@@ -2,6 +2,7 @@
 // past the scope, before it is laid down outside the eyepiece.
 #include "surroundings.h"
 
+#include "blur.h"
 #include "engine/aim.h"
 #include "engine/frame.h"
 #include "engine/render_target.h"
@@ -78,7 +79,7 @@ namespace {
         if (blur == nullptr || !EnsureTargets(device, view)) {
             return nullptr;
         }
-        AimingOverhaul::ScreenDraw draw(device, 1, 1);
+        AimingOverhaul::ScreenDraw draw(device, AimingOverhaul::Blur::kStep, 1);
         // A target of our own cannot share the scene's multisampled depth.
         device->SetDepthStencilSurface(nullptr);
         IDirect3DSurface9* source = nullptr;
@@ -92,19 +93,10 @@ namespace {
                                      AimingOverhaul::Frame::Width(),
                                  0.0f, 0.0f, 0.0f};
         const float downward[4] = {0.0f, down, 0.0f, 0.0f};
-        const float width = static_cast<float>(g_width);
-        const float height = static_cast<float>(g_height);
-        device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-        device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+        draw.Linear(0);
         device->SetPixelShader(blur);
-        device->SetPixelShaderConstantF(1, across, 1);
-        device->SetRenderTarget(0, g_across.surface);
-        device->SetTexture(0, g_soft.texture);
-        draw.Quad(0.0f, 0.0f, width, height);
-        device->SetPixelShaderConstantF(1, downward, 1);
-        device->SetRenderTarget(0, g_soft.surface);
-        device->SetTexture(0, g_across.texture);
-        draw.Quad(0.0f, 0.0f, width, height);
+        draw.Separable(AimingOverhaul::Blur::kStep, across, downward, g_soft.texture, g_across,
+                       g_soft.surface, static_cast<float>(g_width), static_cast<float>(g_height));
         return g_soft.texture;
     }
 }
@@ -132,12 +124,8 @@ void AimingOverhaul::Surroundings::BeforeColour(IDirect3DDevice9* device) {
     ScreenDraw draw(device, 0, 1);
     device->SetPixelShaderConstantF(0, constants, 1);
     device->SetTexture(0, soft);
-    device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-    device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-    // The scene's alpha carries brightness for the bloom, so it is left alone.
-    device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
-                                                       D3DCOLORWRITEENABLE_GREEN |
-                                                       D3DCOLORWRITEENABLE_BLUE);
+    draw.Linear(0);
+    draw.KeepAlpha();
     device->SetPixelShader(shader);
     draw.Quad(0.0f, 0.0f, width, height);
 }
