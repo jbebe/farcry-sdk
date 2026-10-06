@@ -1,8 +1,8 @@
-// A streak's draw is the one made with the tracer texture bound, which the layer ships at a size
-// and format no other texture has: it is told apart as the device creates it, and the device's
-// draws are watched for it at stage 0. Such a draw is made with the plugin's pixel shader in place
-// of the engine's, for that draw alone, while the bound vertex shader is one of the engine's
-// primitive permutations that hands the shader what it reads.
+// A streak's draw is the one made with the tracer texture bound: the very Direct3D texture the
+// engine's resource for it holds, read from a trace as it is built, and the device's draws are
+// watched for it at stage 0. Such a draw is made with the plugin's pixel shader in place of the
+// engine's, for that draw alone, while the bound vertex shader is one of the engine's primitive
+// permutations that hands the shader what it reads.
 //
 // See docs/docs/engine-internals/bullet-tracers.md.
 #include "streak.h"
@@ -16,15 +16,12 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <vector>
 
 namespace {
-    using CreateTextureFn = HRESULT(__stdcall*)(IDirect3DDevice9* device, UINT width, UINT height,
-                                                UINT levels, DWORD usage, D3DFORMAT format,
-                                                D3DPOOL pool, IDirect3DTexture9** texture,
-                                                HANDLE* shared);
     using SetTextureFn = HRESULT(__stdcall*)(IDirect3DDevice9* device, DWORD stage,
                                              IDirect3DBaseTexture9* texture);
     using DrawPrimitiveFn = HRESULT(__stdcall*)(IDirect3DDevice9* device, D3DPRIMITIVETYPE type,
@@ -41,17 +38,17 @@ namespace {
                                                          const void* indices, D3DFORMAT format,
                                                          const void* data, UINT stride);
 
-    CreateTextureFn g_originalCreateTexture = nullptr;
     SetTextureFn g_originalSetTexture = nullptr;
     DrawPrimitiveFn g_originalDrawPrimitive = nullptr;
     DrawIndexedPrimitiveFn g_originalDrawIndexedPrimitive = nullptr;
     DrawPrimitiveUPFn g_originalDrawPrimitiveUP = nullptr;
     DrawIndexedPrimitiveUPFn g_originalDrawIndexedPrimitiveUP = nullptr;
 
-    // The tracer texture as textures\bullettracer_d.ps1 draws it.
-    constexpr UINT kTextureWidth = 64;
-    constexpr UINT kTextureHeight = 16;
-    constexpr D3DFORMAT kTextureFormat = D3DFMT_A16B16G16R16F;
+    // CTextureResource: the texture it hands the renderer; that one's device texture, a
+    // CTextureD3D9; and that one's Direct3D texture.
+    constexpr ptrdiff_t kResourceTexture = 0x28;
+    constexpr ptrdiff_t kTextureDevice = 0x0C;
+    constexpr ptrdiff_t kDeviceDirect3D = 0x18;
 
     // The CRC-32s of the bytecode of the primitive vertex shaders that hand on the vertex colour in
     // TEXCOORD0 and the texture coordinate in TEXCOORD1: the world one, and the screen one.
@@ -61,11 +58,23 @@ namespace {
     std::atomic<bool> g_enabled{true};
     AimingOverhaul::PixelShader g_shader{"tracer", g_tracerPixelShader};
 
-    // What stage 0 holds, and the vertex shader last asked about and whether it is readable; all on
-    // the render thread.
+    // What stage 0 holds, the vertex shader last asked about and whether it is readable, and
+    // whether a streak has been drawn yet; all on the render thread.
     IDirect3DBaseTexture9* g_stage0 = nullptr;
     IDirect3DVertexShader9* g_vertexShader = nullptr;
     bool g_readable = false;
+    bool g_drawnOne = false;
+
+    // Null where the engine's pointers do not hold.
+    IDirect3DBaseTexture9* Direct3DTextureOf(const uint8_t* resource) {
+        __try {
+            const uint8_t* texture = *reinterpret_cast<uint8_t* const*>(resource + kResourceTexture);
+            const uint8_t* device = *reinterpret_cast<uint8_t* const*>(texture + kTextureDevice);
+            return *reinterpret_cast<IDirect3DBaseTexture9* const*>(device + kDeviceDirect3D);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return nullptr;
+        }
+    }
 
     uint32_t Crc32(const uint8_t* data, size_t size) {
         uint32_t crc = 0xFFFFFFFF;
@@ -115,19 +124,9 @@ namespace {
         const HRESULT result = draw();
         device->SetPixelShader(engine);
         AimingOverhaul::Release(engine);
-        return result;
-    }
-
-    HRESULT __stdcall CreateTextureDetour(IDirect3DDevice9* device, UINT width, UINT height,
-                                          UINT levels, DWORD usage, D3DFORMAT format,
-                                          D3DPOOL pool, IDirect3DTexture9** texture,
-                                          HANDLE* shared) {
-        const HRESULT result = g_originalCreateTexture(device, width, height, levels, usage,
-                                                       format, pool, texture, shared);
-        if (SUCCEEDED(result) && texture != nullptr && width == kTextureWidth &&
-            height == kTextureHeight && format == kTextureFormat && pool != D3DPOOL_SYSTEMMEM &&
-            pool != D3DPOOL_SCRATCH) {
-            g_texture = *texture;
+        if (!g_drawnOne) {
+            g_drawnOne = true;
+            FCSE::Logf("streak: drawing tracers with the plugin's shader");
         }
         return result;
     }
@@ -181,7 +180,6 @@ namespace {
 
 bool AimingOverhaul::Streak::Install() {
     using namespace AimingOverhaul::Vtable;
-    // The draws go first, so that the texture is never told apart while they cannot swap.
     const bool hooked =
         HookSlot(kDrawPrimitive, &DrawPrimitiveDetour, &g_originalDrawPrimitive) &&
         HookSlot(kDrawIndexedPrimitive, &DrawIndexedPrimitiveDetour,
@@ -189,12 +187,17 @@ bool AimingOverhaul::Streak::Install() {
         HookSlot(kDrawPrimitiveUP, &DrawPrimitiveUPDetour, &g_originalDrawPrimitiveUP) &&
         HookSlot(kDrawIndexedPrimitiveUP, &DrawIndexedPrimitiveUPDetour,
                  &g_originalDrawIndexedPrimitiveUP) &&
-        HookSlot(kSetTexture, &SetTextureDetour, &g_originalSetTexture) &&
-        HookSlot(kCreateTexture, &CreateTextureDetour, &g_originalCreateTexture);
+        HookSlot(kSetTexture, &SetTextureDetour, &g_originalSetTexture);
     if (!hooked) {
         FCSE::Logf("streak: the device cannot be hooked, so tracers are drawn with their texture");
     }
     return hooked;
+}
+
+void AimingOverhaul::Streak::FollowTexture(const uint8_t* resource) {
+    if (resource != nullptr) {
+        g_texture = Direct3DTextureOf(resource);
+    }
 }
 
 void AimingOverhaul::Streak::SetEnabled(bool enabled) {

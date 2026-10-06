@@ -1,9 +1,9 @@
 # Aiming Overhaul
 
-An FCSE plugin, with a data layer, for how aiming and shooting look: sway and a blurred gun down the
-iron sights; a scope that shadows, is seen from its eyepiece, and has the world around it at the
-eye's own field of view; and tracers. It changes only what is drawn: no damage, spread or recoil, and
-no weapon's data, so it goes alongside mods that change those.
+An FCSE plugin for how aiming and shooting look: sway and a blurred gun down the iron sights; a scope
+that shadows, is seen from its eyepiece, and has the world around it at the eye's own field of view;
+and tracers. It changes only what is drawn: no damage, spread or recoil, and no game file, so it goes
+alongside mods that change those.
 
 ## What it does
 
@@ -60,10 +60,9 @@ The eyepiece drops the engine's scope and draws its own over the finished frame,
 `src/eyepiece.cpp`, from what was measured off each scope's mesh, in `src/scopes.cpp`. The second
 view is drawn in `src/engine/second_view.cpp` and laid down as the gun's colour pass begins, in
 `src/surroundings.cpp`. Which shots leave a tracer, how it flies and its ricochets are in
-`src/tracers.cpp`, and its streak is drawn in `src/streak.cpp` with `src/shaders/tracer.fx`. The
-tracer's texture, `layer\mods\graphics\gfx\weapons\bullettracer_d.xbt`, drawn by
-`textures\bullettracer_d.ps1`, is what tells a streak's draw apart, and what it looks like with
-Tracers off. The engine side is in
+`src/tracers.cpp`, and its streak is drawn in `src/streak.cpp` with `src/shaders/tracer.fx`, in the
+draws that bind the Direct3D texture the engine's tracer texture resource holds. The engine side is
+in
 [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md),
 [bullet tracers](../../docs/docs/engine-internals/bullet-tracers.md) and
 [presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).
@@ -86,15 +85,13 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Scope surroundings | Yes / No | Yes |
 | Tracers | Yes / No | Yes |
 
-With Tracers off, the game decides which shots leave one and how they fly again, and they are drawn
-with the orange texture.
+With Tracers off, the game decides which shots leave one, how they fly and how they look again.
 
 ## Building
 
 ```
 .\build.ps1                                     # x86 release -> layer\plugins\aiming-overhaul\
 .\build.ps1 -Install "C:\Games\Far Cry 2\bin"   # and build the layer into the game with jackall-cli
-.\textures\bullettracer_d.ps1                   # redraw the tracer texture into the layer
 ```
 
 `fxc`, from the Windows SDK, compiles the shaders at build time. `-Install` builds the game's patch

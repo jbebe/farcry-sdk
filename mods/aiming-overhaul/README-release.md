@@ -1,8 +1,8 @@
 # Aiming Overhaul
 
 How aiming and shooting look in Far Cry 2: sway and a blurred gun down the iron sights, scopes seen
-from the eyepiece with the world around them, and tracers. It changes only what is drawn: no
-damage, spread, recoil or weapon data, so it goes alongside mods that change those.
+from the eyepiece with the world around them, and tracers. It changes only what is drawn, and no
+game file: no damage, spread, recoil or weapon data, so it goes alongside mods that change those.
 
 - **Sway.** Down the iron sights the eye drifts a couple of millimetres off the gun and rises and
   falls with a slow breath, so the rear and front sights drift out of line as on a real gun. Shots
@@ -45,8 +45,8 @@ which shots leave one again, and they are drawn orange.
 
 ## Installing
 
-This archive is a JackAll layer: `mods\` at its root is game data, `plugins\` is the FCSE plugin, and
-both installers read that same shape.
+This archive is a JackAll layer holding only `plugins\`, the FCSE plugin, a shape both installers
+read.
 
 - **Vortex** — with the Far Cry 2 extension installed, drop the zip in and enable it.
 - **JackAll** — add the zip in the app, or from the command line:
@@ -60,6 +60,5 @@ jackall-cli mod restore --game "C:\Games\Far Cry 2"
 
 ## Compatibility
 
-- **Mods that change weapons' stats or data** work alongside it: it changes none.
-- **Mods that replace the tracer texture**, `graphics\gfx\weapons\bullettracer_d.xbt`, conflict. If
-  the other mod wins, tracers are drawn with its texture rather than as the plugin's streak.
+- **It ships no game files**, so no other mod's files conflict with it.
+- **Mods that change weapons' stats or data** work alongside it.

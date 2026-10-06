@@ -11,6 +11,7 @@
 #include "engine/aim.h"
 #include "engine/entity_name.h"
 #include "fcse_api.h"
+#include "streak.h"
 
 #include <algorithm>
 #include <atomic>
@@ -257,6 +258,7 @@ namespace {
         float& width = Field<float>(trace, kTraceWidth);
         const float own = width;
         std::copy(camera, camera + 3, g_camera);
+        AimingOverhaul::Streak::FollowTexture(Field<uint8_t*>(trace, kTraceTexture));
         if (g_enabled) {
             using namespace AimingOverhaul;
             const float magnification = Aim::ScopeUp() ? Aim::Magnification() : 1.0f;

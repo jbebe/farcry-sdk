@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
-    Builds AimingOverhaul.dll with the 32-bit toolchain, and optionally installs it and the data
-    layer into the game.
+    Builds AimingOverhaul.dll with the 32-bit toolchain, and optionally installs its layer into the
+    game.
 
 .DESCRIPTION
     Builds with the x86 toolchain and stages the DLL into layer\plugins\aiming-overhaul\, where
@@ -11,8 +11,8 @@
     "release" or "debug" - selects the x86-release/x86-debug CMake preset. Defaults to "release".
 
 .PARAMETER Install
-    Path to the game's bin folder (the one holding FarCry2.exe and FCSE.exe). The layer, plugin
-    included, is then built into the game's patch with jackall-cli, which needs a Release build of
+    Path to the game's bin folder (the one holding FarCry2.exe and FCSE.exe). The layer, the plugin
+    alone, is then built into the game's patch with jackall-cli, which needs a Release build of
     tools\JackAll. That patch holds the vanilla files plus this layer alone, so any other layer
     built into it before is dropped. Off by default.
 

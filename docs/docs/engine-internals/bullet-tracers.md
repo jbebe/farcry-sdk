@@ -99,3 +99,13 @@ bloom; that order is read from `CSceneRenderer_ExecuteViewPasses` (`0x10342360`)
 The retail `bullettracer_d.xbt` is a 32×8 DXT1 lit on 2 of its 8 rows, a dim grey about 23% bright
 with one near-white texel at the leading end. Each smaller mip level averages those two rows with the
 dark ones, so a far tracer is dimmer still.
+
+## Which Direct3D texture a streak binds
+
+A trace's texture at `+0x58` is a `CTextureResource`. `BuildTrace` hands its `+0x28` to
+`CScenePrimitives_BeginGroup` (`0x1045C0A0`) as the group's texture, which the group keeps at
+`+0x1C`. `CScenePrimitivesRenderer_CreateFrameJob` (`0x103AFC60`) binds that object's `+0x0C`.
+
+That is a `CTextureD3D9`, which keeps its `IDirect3DTexture9` at `+0x18`. The type was not traced
+through the engine's virtual calls, but confirmed in a running game (GOG v1.03): the device's draws
+that bind the `IDirect3DTexture9` found this way are the streaks.
