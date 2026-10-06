@@ -2,7 +2,8 @@
 // passes.
 
 // x: turns a difference in the weapon's stored depth into its blur, as a share of the largest.
-// y: how far the eye has settled into the sights. z: how far the focus moves toward this frame's.
+// y: how far the eye has settled into the sights. z, w: how far the focus moves toward this frame's
+// when that is farther, and when it is nearer.
 float4 Lens : register(c0);
 // xy: the blur's step along its axis, in texture coordinates.
 float4 Step : register(c1);
@@ -24,7 +25,8 @@ sampler2D Focus : register(s5);
 static const float2 kCentre = float2(0.5f, 0.5f);
 
 // The farthest of the gun on the front sight's line, just below the aim point, which is the front
-// sight beyond the rear one. The eye eases toward it, and keeps its focus while the gun is not there.
+// sight beyond the rear one. The eye eases out to it fast and in slowly, a nearer reading being the
+// line slipping off the front sight, and keeps its focus while the gun is not there.
 float4 FocusPS(float2 uv : TEXCOORD0) : COLOR0 {
     float farthest = 0.0f;
     for (int x = -2; x <= 2; x++) {
@@ -34,7 +36,8 @@ float4 FocusPS(float2 uv : TEXCOORD0) : COLOR0 {
         }
     }
     float previous = tex2D(Focus, kCentre).r;
-    float eased = previous > 0.0f ? lerp(previous, farthest, Lens.z) : farthest;
+    float rate = farthest > previous ? Lens.z : Lens.w;
+    float eased = previous > 0.0f ? lerp(previous, farthest, rate) : farthest;
     return float4(farthest > 0.0f ? eased : previous, 0.0f, 0.0f, 1.0f);
 }
 

@@ -16,6 +16,7 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 
 namespace {
     // The eye's pupil, in metres, which is how fast the blur grows away from the front sight.
@@ -26,8 +27,9 @@ namespace {
     constexpr float kSmall = 1.0f / 3.0f;
     // BlurPS's steps either side.
     constexpr float kSteps = 6.0f;
-    // Seconds for the eye to refocus most of the way.
-    constexpr float kRefocus = 0.1f;
+    // Seconds for the eye to refocus most of the way out to the front sight, and in from it.
+    constexpr float kRefocusOut = 0.1f;
+    constexpr float kRefocusIn = 1.5f;
 
     constexpr UINT kLens = 0;
     constexpr UINT kStep = 1;
@@ -51,9 +53,11 @@ namespace {
     D3DSURFACE_DESC g_copyDesc = {};
     UINT g_halfWidth = 0;
     UINT g_halfHeight = 0;
-    // Which focus target this frame writes, and whether both still hold whatever they were made with.
+    // Which focus target this frame writes, whether both still hold whatever they were made with,
+    // and the count of weapon changes the focus belongs to.
     int g_focusIndex = 0;
     bool g_focusFresh = true;
+    uint32_t g_focusWeapon = 0;
     std::chrono::steady_clock::time_point g_lastDraw;
     // Set once the device refuses something; cleared on reset.
     bool g_refused = false;
@@ -107,12 +111,11 @@ namespace {
         return made;
     }
 
-    // How far the focus moves toward this frame's, from the time since the last.
-    float Refocus() {
+    float SecondsSinceLastDraw() {
         const auto now = std::chrono::steady_clock::now();
         const float seconds = std::chrono::duration<float>(now - g_lastDraw).count();
         g_lastDraw = now;
-        return 1.0f - std::exp(-seconds / kRefocus);
+        return seconds;
     }
 
     // One Gaussian over the half-size gun, across and then down, `step` half-size pixels apart.
@@ -157,8 +160,12 @@ namespace {
         const float lens =
             kPupil * depth.projection.verticalScale /
             (4.0f * std::abs(depth.projection.depthOffset) * kLargest);
+        // How far the focus moves toward this frame's when that is farther, and when it is nearer.
+        const float seconds = SecondsSinceLastDraw();
+        const float refocusOut = 1.0f - std::exp(-seconds / kRefocusOut);
+        const float refocusIn = 1.0f - std::exp(-seconds / kRefocusIn);
         const float constants[kConstantCount * 4] = {
-            lens, settled, Refocus(), 0.0f,
+            lens, settled, refocusOut, refocusIn,
             0.0f, 0.0f, 0.0f, 0.0f,
             1.0f / halfWidth, 1.0f / halfHeight, 0.0f, 0.0f,
         };
@@ -215,9 +222,16 @@ namespace {
 
 void WeaponOverhaul::Blur::OnGunPass(const Frame::Pass& pass, const WeaponDraws::Depth& depth) {
     const float settled = g_enabled ? Aim::Settled() : 0.0f;
-    if (settled > 0.0f) {
-        Draw(pass, depth, settled);
+    if (settled <= 0.0f) {
+        return;
     }
+    // Another gun's front sight is somewhere else, so its focus is found afresh.
+    const uint32_t changes = Aim::WeaponChanges();
+    if (changes != g_focusWeapon) {
+        g_focusWeapon = changes;
+        g_focusFresh = true;
+    }
+    Draw(pass, depth, settled);
 }
 
 void WeaponOverhaul::Blur::SetEnabled(bool enabled) {

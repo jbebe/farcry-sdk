@@ -14,10 +14,11 @@ no weapon's data, so it goes alongside mods that change those.
   real gun. While a scope's own sight picture is up there is no sway, because that picture is a
   miniature right at the eye.
 - **Gun blur.** Down the iron sights the eye focuses on the front sight, and the rest of the gun
-  goes out of focus by how far it is from it, as through a 4 mm pupil: the rear sight most, and the
-  blur spills a little past the gun's edge. It fades in as the eye settles into the sights. A gun
-  held far from the eye, like a pistol, has its sights too close together in dioptres for a blur
-  you could see, and gets none, as a real eye nearly does.
+  goes out of focus by how far it is from it, as through an 8 mm pupil: the rear sight most, and the
+  blur spills a little past the gun's edge. The focus holds on the front sight while a fast turn
+  swings the gun. It fades in as the eye settles into the sights. A gun held far from the eye, like
+  a pistol, has its sights too close together in dioptres for a blur you could see, and gets none,
+  as a real eye nearly does.
 - **Scope shadow.** As the look turns, a soft dark crescent comes in from the eyepiece's rim on the
   side turned toward: hardly any on a slow move, a slight one on a fast flick, gone when the look is
   still or the scope comes down. It needs the eyepiece, whose opening it shades.
