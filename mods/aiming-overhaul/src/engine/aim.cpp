@@ -62,12 +62,6 @@ namespace {
     // CFCXWeapon: the scope picture as last asked for, and whether the weapon has one.
     constexpr ptrdiff_t kScopeShown = 0x84;
     constexpr ptrdiff_t kHiResScope = 0x85;
-    // CWeapon's properties, at +0x04 of what +0x24 points to, and in them the post effect the
-    // weapon starts once raised to the sights, -1 for none.
-    constexpr ptrdiff_t kWeaponImpl = 0x24;
-    constexpr ptrdiff_t kImplProperties = 0x04;
-    constexpr ptrdiff_t kIronsightFx = 0x128;
-    constexpr int32_t kNoFx = -1;
 
     // Seconds to settle into the sights, and to let go of them.
     constexpr float kSettle = 0.4f;
@@ -84,7 +78,7 @@ namespace {
     constexpr float kMostSwing = 0.5f;
 
     AimingOverhaul::Aim::DriftFn g_drift = nullptr;
-    AimingOverhaul::Aim::ScopeFn g_drawnScope = nullptr;
+    AimingOverhaul::Aim::RaiseReachFn g_raiseReachOf = nullptr;
     std::atomic<bool> g_zoomAtOnce{true};
     float g_sights = 0.0f;
     float g_scope = 0.0f;
@@ -102,24 +96,14 @@ namespace {
     std::atomic<float> g_scopeKick{0.0f};
     std::atomic<float> g_magnification{1.0f};
 
-    // The equipped weapon as last seen, its name, how many times it has changed, whether the plugin
-    // draws its scope, how far the eye comes forward as that is raised, and the iron sights' weight
+    // The equipped weapon as last seen, its name, how many times it has changed, how far the eye
+    // comes forward as its scope is raised, if the plugin draws that, and the iron sights' weight
     // the raise began at.
     uint8_t* g_weapon = nullptr;
     char g_weaponName[64] = {};
     std::atomic<uint32_t> g_weaponChanges{0};
-    bool g_scopeDrawn = false;
     float g_raiseReach = 0.0f;
     float g_raiseFrom = 0.0f;
-
-    // Weapon properties whose iron-sight effect has been taken out, and what it was.
-    struct TakenFx {
-        uint8_t* properties;
-        int32_t fx;
-    };
-    constexpr size_t kMostTaken = 16;
-    TakenFx g_taken[kMostTaken] = {};
-    size_t g_takenCount = 0;
 
     // What was added to the eye during the camera update under way, and to which camera.
     uint8_t* g_addedTo = nullptr;
@@ -155,34 +139,8 @@ namespace {
         }
         g_weapon = weapon;
         AimingOverhaul::EntityName::Read(weapon, g_weaponName);
-        g_raiseReach = 0.0f;
-        g_scopeDrawn = g_drawnScope(g_weaponName, &g_raiseReach);
+        g_raiseReach = g_raiseReachOf(g_weaponName);
         g_weaponChanges++;
-    }
-
-    // The engine's own scope effect, a radial blur toward the screen's edges, is taken out of a
-    // scope the plugin draws while it blurs the surroundings itself, and put back otherwise. Only
-    // while the weapon is lowered, so the effect is never started and then left unstopped.
-    void FollowIronsightFx(uint8_t* weapon, bool lowered) {
-        uint8_t* impl = weapon != nullptr ? Field<uint8_t*>(weapon, kWeaponImpl) : nullptr;
-        uint8_t* properties = impl != nullptr ? Field<uint8_t*>(impl, kImplProperties) : nullptr;
-        if (!lowered || properties == nullptr) {
-            return;
-        }
-        TakenFx* taken = nullptr;
-        for (size_t i = 0; i < g_takenCount; i++) {
-            if (g_taken[i].properties == properties) {
-                taken = &g_taken[i];
-            }
-        }
-        const bool takeOut = g_zoomAtOnce && g_scopeDrawn;
-        if (takeOut && taken == nullptr && g_takenCount < kMostTaken) {
-            g_taken[g_takenCount++] = {properties, Field<int32_t>(properties, kIronsightFx)};
-            Field<int32_t>(properties, kIronsightFx) = kNoFx;
-        } else if (!takeOut && taken != nullptr) {
-            Field<int32_t>(properties, kIronsightFx) = taken->fx;
-            *taken = g_taken[--g_takenCount];
-        }
     }
 
     // Whether the weapon has a scope's sight picture of its own, and whether that is up.
@@ -272,7 +230,6 @@ namespace {
         FollowWeapon(weapon);
         // The scope's sight picture outlasts the iron sights by a few frames as the scope goes.
         const bool scope = SightPictureUp(weapon);
-        FollowIronsightFx(weapon, !scope && Field<float>(data, kIronsightWeight) <= 0.0f);
         const float step = seconds / kSettle;
         // The iron sights let go at once when a scope's own sight picture comes up, and the scope
         // when it goes.
@@ -343,7 +300,7 @@ namespace {
     }
 }
 
-bool AimingOverhaul::Aim::Install(DriftFn drift, ScopeFn drawnScope) {
+bool AimingOverhaul::Aim::Install(DriftFn drift, RaiseReachFn raiseReach) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
     if (!g_update || !g_updateCameraOffset || !g_equippedWeapon || !g_playerCamera) {
         api->Log("aim: the camera functions were not found in this build");
@@ -351,7 +308,7 @@ bool AimingOverhaul::Aim::Install(DriftFn drift, ScopeFn drawnScope) {
     }
 
     g_drift = drift;
-    g_drawnScope = drawnScope;
+    g_raiseReachOf = raiseReach;
     if (!api->Hook(reinterpret_cast<void*>(g_update.address()),
                    reinterpret_cast<void*>(&UpdateDetour),
                    reinterpret_cast<void**>(&g_originalUpdate))) {

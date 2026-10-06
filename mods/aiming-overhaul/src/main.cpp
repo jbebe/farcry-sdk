@@ -71,18 +71,15 @@ namespace {
         FollowZoom();
     }
 
-    bool DrawnScope(const char* weaponName, float* raiseReach) {
+    float RaiseReach(const char* weaponName) {
         const AimingOverhaul::Scopes::Scope* scope = AimingOverhaul::Scopes::Find(weaponName);
-        if (scope != nullptr) {
-            *raiseReach = scope->raiseReach;
-        }
-        return scope != nullptr;
+        return scope != nullptr ? scope->raiseReach : 0.0f;
     }
 }
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION || !FCSE::Bind(api) ||
-        !AimingOverhaul::Aim::Install(&AimingOverhaul::Sway::Drift, &DrawnScope)) {
+        !AimingOverhaul::Aim::Install(&AimingOverhaul::Sway::Drift, &RaiseReach)) {
         return false;
     }
 

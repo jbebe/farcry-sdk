@@ -208,8 +208,9 @@ starts itself: its `IronsightFX`, which names `PostFX.Sniper.RadialBlur`, drawn 
 - An id of -1 means none: `OnEvent` then neither starts nor stops anything, and the scope comes and
   goes as before.
 
-Aiming Overhaul writes -1 there for the scopes it draws itself, while the weapon is lowered, so the
-effect is never left running.
+In data the field is the weapon's `IronsightFX`, a hash naming an effect in the post-effect
+database: `ironsightfx` on every retail weapon, `FFFFFFFF` for none. Aiming Overhaul's weapon data
+sets none on the scopes it draws itself.
 
 :::info[Seen in a running game]
 Retail GOG v1.03, from an FCSE plugin: the names above came back for every weapon taken in hand. Of

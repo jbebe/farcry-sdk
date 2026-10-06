@@ -1,15 +1,14 @@
 // A shot decides on its tracer in CWeaponFireBulletStrategy::ApplyDelayBullet, which first skips it
-// for a shooter drawn in first person. The hook sits on that test: a weapon not listed jumps past
-// the tracer, and a listed one past the test alone. CBulletTracerManager then keeps the tracer: it
-// is added slower and shorter than the weapon says, so it is seen crossing the distance, some
-// ricochet up into the air when they get there, and each frame's streak is drawn no thinner than a
-// few pixels, however far off.
+// for a shooter drawn in first person; the hook sits on that test and jumps past it, so the player's
+// shots leave tracers too. Which guns leave them, how fast they fly and how long their streaks are
+// is the layer's weapon data. CBulletTracerManager then keeps the tracer: a streak is never longer
+// than a share of its shot, some ricochet up into the air when they get there, and each frame's
+// streak is drawn no thinner than a few pixels, however far off.
 //
 // See docs/docs/engine-internals/bullet-tracers.md.
 #include "tracers.h"
 
 #include "engine/aim.h"
-#include "engine/entity_name.h"
 #include "fcse_api.h"
 #include "streak.h"
 
@@ -20,27 +19,13 @@
 #include <cstdint>
 #include <numbers>
 #include <random>
-#include <string_view>
 
 namespace {
-    // What the entity names of the weapons that leave tracers start with: an archetype, with its
-    // variants under it, or a family of mounted guns.
-    constexpr std::string_view kTracerWeapons[] = {
-        "weapons.Special.M249_Saw",
-        "weapons.Special.PKM",
-        "weapons.Primary.Dragunov",
-        "weapons.Primary.AS50",
-        "weapons.MountedWeapons.M249_",
-        "weapons.MountedWeapons.M2_",
-    };
-
-    // The test of the shooter's first-person flag and the long jump past the tracer it takes, with
-    // the fire strategy in EDI; and the strategy's weapon.
+    // The test of the shooter's first-person flag and the long jump past the tracer it takes.
     FCSE::Relocation<uint8_t*> g_firstPersonTest{FCSE::Pattern(
         "F6 40 04 80 0F 85 ?? ?? ?? ?? 8B 87 68 01 00 00 85 C0 0F 84 ?? ?? ?? ?? 8B 4F 50")};
     constexpr ptrdiff_t kJump = 4;
     constexpr ptrdiff_t kJumpLength = 6;
-    constexpr ptrdiff_t kStrategyWeapon = 0x40;
 
     // CBulletTracerManager, all __thiscall: AddTrace(start, end, speed, length, distortion length,
     // width, &texture, &distortion texture); Update(seconds, a second argument it never reads),
@@ -66,21 +51,19 @@ namespace {
     constexpr ptrdiff_t kTraces = 0xE0;
     constexpr ptrdiff_t kTraceCount = 0xE4;
     // A trace: the end it flies to, the rear of its streak, which runs forward from it toward the
-    // end and is the start when added, the streak's width and longest length, and its textures.
+    // end and is the start when added, the streak's width, its speed and longest length, and its
+    // textures.
     constexpr ptrdiff_t kTraceEnd = 0x0C;
     constexpr ptrdiff_t kTraceRear = 0x18;
     constexpr ptrdiff_t kTraceWidth = 0x48;
+    constexpr ptrdiff_t kTraceSpeed = 0x4C;
     constexpr ptrdiff_t kTraceLength = 0x50;
     constexpr ptrdiff_t kTraceDistortionLength = 0x54;
     constexpr ptrdiff_t kTraceTexture = 0x58;
     constexpr ptrdiff_t kTraceDistortionTexture = 0x60;
 
-    // A tracer's speed, and its streak's longest length and its greatest share of the shot, in
-    // metres. A streak is drawn only until its front reaches the end, so a shot nearer than the
-    // streak is long would show for one frame; and one shorter than a frame's flight is seen in
-    // separate dashes.
-    constexpr float kSpeed = 350.0f;
-    constexpr float kLength = 8.0f;
+    // A streak's greatest share of its shot. A streak is drawn only until its front reaches the
+    // end, so a shot nearer than the streak is long would show for one frame.
     constexpr float kLengthShare = 0.4f;
 
     // Every how many tracers one ricochets, the farthest a shot can end for it to, since a miss
@@ -90,7 +73,7 @@ namespace {
     constexpr uint32_t kRicochetEvery = 6;
     constexpr float kRicochetFarthestShot = 150.0f;
     constexpr float kRicochetNearestCamera = 3.0f;
-    constexpr float kRicochetSpeed = kSpeed / 2.0f;
+    constexpr float kRicochetSlowing = 0.5f;
     constexpr float kRicochetLength = 4.0f;
     constexpr float kRicochetNearest = 20.0f;
     constexpr float kRicochetFarthest = 45.0f;
@@ -104,7 +87,6 @@ namespace {
 
     std::atomic<bool> g_enabled{true};
     uintptr_t g_pastTest = 0;
-    uintptr_t g_pastTracer = 0;
 
     // A ricochet waiting for its tracer to reach the end: the seconds left, the tracer, which it
     // takes its place and textures from while the manager still holds it, and where it flies to
@@ -132,20 +114,10 @@ namespace {
         return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
     }
 
-    bool LeavesTracers(uint8_t* weapon) {
-        char name[64];
-        AimingOverhaul::EntityName::Read(weapon, name);
-        return std::ranges::any_of(kTracerWeapons, [&](std::string_view start) {
-            return std::string_view(name).starts_with(start);
-        });
-    }
-
     void OnFirstPersonTest(FCSE_MidHookContext* ctx) {
-        if (!g_enabled) {
-            return;
+        if (g_enabled) {
+            ctx->eip = g_pastTest;
         }
-        uint8_t* weapon = *reinterpret_cast<uint8_t**>(ctx->edi + kStrategyWeapon);
-        ctx->eip = LeavesTracers(weapon) ? g_pastTest : g_pastTracer;
     }
 
     // Where a ricochet off the end of a shot flies, from that end.
@@ -173,8 +145,8 @@ namespace {
         }
         const float shot[3] = {end[0] - start[0], end[1] - start[1], end[2] - start[2]};
         const float distance = Length(shot);
-        const float streak = (std::min)(kLength, distance * kLengthShare);
-        g_originalAddTrace(manager, unused, start, end, kSpeed, streak, distortionLength, width,
+        const float streak = (std::min)(length, distance * kLengthShare);
+        g_originalAddTrace(manager, unused, start, end, speed, streak, distortionLength, width,
                            texture, distortionTexture);
         g_manager = manager;
         const uint32_t count = Field<uint32_t>(manager, kTraceCount);
@@ -183,7 +155,7 @@ namespace {
             return;
         }
         Ricochet& ricochet = g_ricochets[g_ricochetCount++];
-        ricochet.due = (distance - streak) / kSpeed;
+        ricochet.due = (distance - streak) / speed;
         ricochet.trace = Field<uint8_t**>(manager, kTraces)[count - 1];
         Bounce(start, end, ricochet.flight);
     }
@@ -218,7 +190,8 @@ namespace {
             }
             const float to[3] = {from[0] + ricochet.flight[0], from[1] + ricochet.flight[1],
                                  from[2] + ricochet.flight[2]};
-            g_originalAddTrace(g_manager, unused, from, to, kRicochetSpeed, kRicochetLength,
+            g_originalAddTrace(g_manager, unused, from, to,
+                               Field<float>(trace, kTraceSpeed) * kRicochetSlowing, kRicochetLength,
                                Field<float>(trace, kTraceDistortionLength),
                                Field<float>(trace, kTraceWidth),
                                &Field<uint32_t>(trace, kTraceTexture),
@@ -281,9 +254,7 @@ bool AimingOverhaul::Tracers::Install() {
         FCSE::Logf("tracers: the shot's tracer test was not found, so tracers are the game's own");
         return false;
     }
-    const uintptr_t jump = g_firstPersonTest.address() + kJump;
-    g_pastTest = jump + kJumpLength;
-    g_pastTracer = g_pastTest + *reinterpret_cast<const int32_t*>(jump + 2);
+    g_pastTest = g_firstPersonTest.address() + kJump + kJumpLength;
     if (!FCSE::ApiPointer()->MidHook(g_firstPersonTest.get(), &OnFirstPersonTest)) {
         FCSE::Logf("tracers: the shot's tracer test cannot be hooked, so tracers are the game's "
                    "own");

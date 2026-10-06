@@ -1,8 +1,9 @@
 # Aiming Overhaul
 
 How aiming and shooting look in Far Cry 2: sway and a blurred gun down the iron sights, scopes seen
-from the eyepiece with the world around them, and tracers. It changes only what is drawn, and no
-game file: no damage, spread, recoil or weapon data, so it goes alongside mods that change those.
+from the eyepiece with the world around them, and tracers. It changes only how things look: no
+damage, spread or recoil. Its weapon data sets only which guns fire tracers, how fast they fly, and
+the scopes' iron-sight effect, so it merges with mods that change anything else about a weapon.
 
 - **Sway.** Down the iron sights the eye drifts a couple of millimetres off the gun and rises and
   falls with a slow breath, so the rear and front sights drift out of line as on a real gun. Shots
@@ -35,8 +36,9 @@ In the **Mod Configuration** menu, and under `[AimingOverhaul]` in `bin\fcse.ini
 | Scope surroundings | Yes / No | Yes |
 | Tracers | Yes / No | Yes |
 
-The scope shadow needs the eyepiece, whose opening it shades. With Tracers off, the game decides
-which shots leave one again, and they are drawn orange.
+The scope shadow needs the eyepiece, whose opening it shades. With Tracers off, your own shots leave
+none, none ricochets, and they are drawn as the game draws them; which guns fire them and how fast
+they fly stay as the mod's weapon data sets them.
 
 ## Requirements
 
@@ -45,8 +47,8 @@ which shots leave one again, and they are drawn orange.
 
 ## Installing
 
-This archive is a JackAll layer holding only `plugins\`, the FCSE plugin, a shape both installers
-read.
+This archive is a JackAll layer: `mods\` at its root is the weapon data, `plugins\` is the FCSE
+plugin, and both installers read that same shape.
 
 - **Vortex** — with the Far Cry 2 extension installed, drop the zip in and enable it.
 - **JackAll** — add the zip in the app, or from the command line:
@@ -60,5 +62,6 @@ jackall-cli mod restore --game "C:\Games\Far Cry 2"
 
 ## Compatibility
 
-- **It ships no game files**, so no other mod's files conflict with it.
-- **Mods that change weapons' stats or data** work alongside it.
+- **Mods that change weapons' stats or data** merge with it field by field.
+- **Mods that change the same fields** — a weapon's tracer settings or its iron-sight effect — clash
+  on those fields, and the installer reports it.

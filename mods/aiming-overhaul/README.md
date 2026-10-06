@@ -1,9 +1,10 @@
 # Aiming Overhaul
 
-An FCSE plugin for how aiming and shooting look: sway and a blurred gun down the iron sights; a scope
-that shadows, is seen from its eyepiece, and has the world around it at the eye's own field of view;
-and tracers. It changes only what is drawn: no damage, spread or recoil, and no game file, so it goes
-alongside mods that change those.
+An FCSE plugin, with weapon data, for how aiming and shooting look: sway and a blurred gun down the
+iron sights; a scope that shadows, is seen from its eyepiece, and has the world around it at the
+eye's own field of view; and tracers. It changes only how things look: no damage, spread or recoil.
+Its weapon data sets only tracer and scope-effect fields, which JackAll merges field by field with
+other mods' weapon edits, reporting any clash.
 
 ## What it does
 
@@ -59,10 +60,12 @@ bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
 The eyepiece drops the engine's scope and draws its own over the finished frame, in
 `src/eyepiece.cpp`, from what was measured off each scope's mesh, in `src/scopes.cpp`. The second
 view is drawn in `src/engine/second_view.cpp` and laid down as the gun's colour pass begins, in
-`src/surroundings.cpp`. Which shots leave a tracer, how it flies and its ricochets are in
-`src/tracers.cpp`, and its streak is drawn in `src/streak.cpp` with `src/shaders/tracer.fx`, in the
-draws that bind the Direct3D texture the engine's tracer texture resource holds. The engine side is
-in
+`src/surroundings.cpp`. The player's own tracers, a streak's length against its shot, and the
+ricochets are in `src/tracers.cpp`, and the streak is drawn in `src/streak.cpp` with
+`src/shaders/tracer.fx`, in the draws that bind the Direct3D texture the engine's tracer texture
+resource holds. Which guns fire tracers, their speed and their streaks' longest length, and the
+scopes the plugin draws losing the engine's iron-sight effect, are weapon data: `WeaponProperties`
+fragments under `layer\mods\`, written by `data\fragments.py`. The engine side is in
 [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md),
 [bullet tracers](../../docs/docs/engine-internals/bullet-tracers.md) and
 [presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).
@@ -85,13 +88,16 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Scope surroundings | Yes / No | Yes |
 | Tracers | Yes / No | Yes |
 
-With Tracers off, the game decides which shots leave one, how they fly and how they look again.
+With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game
+draws them. Which guns fire them and how fast they fly are the weapon data's, and stay; so does the
+scopes' lost iron-sight effect, whatever the scope settings.
 
 ## Building
 
 ```
 .\build.ps1                                     # x86 release -> layer\plugins\aiming-overhaul\
 .\build.ps1 -Install "C:\Games\Far Cry 2\bin"   # and build the layer into the game with jackall-cli
+python data\fragments.py world1.xml world2.xml dlc1.xml   # rewrite the weapon data, see the script
 ```
 
 `fxc`, from the Windows SDK, compiles the shaders at build time. `-Install` builds the game's patch

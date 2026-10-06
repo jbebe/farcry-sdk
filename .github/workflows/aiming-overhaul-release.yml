@@ -39,9 +39,9 @@ jobs:
 
       - name: Stage release contents
         shell: pwsh
-        # A JackAll layer holding only plugins\, which both installers read as-is and JackAll deploys
-        # into bin\plugins. README-release.md rather than README.md, which links to the docs by
-        # relative path, dead once the file is alone inside a zip.
+        # A JackAll layer, which both installers read as-is: mods\ is the weapon data and plugins\ is
+        # what JackAll deploys into bin\plugins. README-release.md rather than README.md, which links
+        # to the docs by relative path, dead once the file is alone inside a zip.
         run: |
           if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7+ is required - older Compress-Archive writes backslash entry paths, which no installer reads.' }
           Copy-Item "layer" "stage" -Recurse
