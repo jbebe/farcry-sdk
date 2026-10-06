@@ -147,7 +147,7 @@ The weapon is drawn twice, and only its depth goes through the squeezed viewport
 
 Drawing each depth draw a second time into a single-sampled `INTZ` texture of the screen's size or
 smaller, through a viewport of 0 to 1, gives the weapon's depth at full precision, since the
-multisampled original cannot be read. Weapon Overhaul's `src/engine/weapon_draws.cpp` does that, and
+multisampled original cannot be read. Aiming Overhaul's `src/engine/weapon_draws.cpp` does that, and
 finds the colour pass by the repeated draws.
 
 ### While a scope's sight picture is up
@@ -250,7 +250,7 @@ ran the reflection's culling and drawing a second time each frame while a scope 
 image was right.
 :::
 
-Weapon Overhaul's `src/engine/second_view.cpp` does this. Its view block is built by the
+Aiming Overhaul's `src/engine/second_view.cpp` does this. Its view block is built by the
 constructor, with:
 
 - the player's render camera assigned to it, not mirrored;

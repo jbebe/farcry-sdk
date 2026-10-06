@@ -12,7 +12,7 @@ binary named are Steam `Dunia.dll`. FCSE's address library maps every one of the
 :::info[Verified in a running game]
 Moving the eye through the camera's positional offset moves it relative to the gun, not the gun
 along with it: down a G3's iron sights, the rear sight moves further than the front one. Measured
-with Weapon Overhaul's sway on retail GOG v1.03.
+with Aiming Overhaul's sway on retail GOG v1.03.
 :::
 
 ## Down the sights
@@ -208,7 +208,7 @@ starts itself: its `IronsightFX`, which names `PostFX.Sniper.RadialBlur`, drawn 
 - An id of -1 means none: `OnEvent` then neither starts nor stops anything, and the scope comes and
   goes as before.
 
-Weapon Overhaul writes -1 there for the scopes it draws itself, while the weapon is lowered, so the
+Aiming Overhaul writes -1 there for the scopes it draws itself, while the weapon is lowered, so the
 effect is never left running.
 
 :::info[Seen in a running game]
