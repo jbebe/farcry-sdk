@@ -197,7 +197,7 @@ namespace {
     // The black rim around the opening, as a share of its radius: thin, or thick on the Dragunov
     // and the AS50.
     constexpr float kThinRim = 0.15f;
-    constexpr float kThickRim = 0.5f;
+    constexpr float kThickRim = 0.36f;
 
     constexpr Scope kScopes[] = {
         {"weapons.Special.Dart_Rifle", 9541, 2016, kThinRim, -0.00284f, -0.00148f,
