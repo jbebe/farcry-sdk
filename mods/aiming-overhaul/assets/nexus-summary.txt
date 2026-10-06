@@ -1,1 +1,1 @@
-Visual-only weapon effects: sway and a blurred gun down the iron sights, scopes seen from the eyepiece with the world around them, and tracers that ricochet. No damage or stats changed.
+Sway, blurred iron sights, picture-in-picture scopes with new reticles, tracers with ricochet.

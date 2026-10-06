@@ -12,9 +12,11 @@ the scopes' iron-sight effect, so it merges with mods that change anything else 
   out of focus by how far it is from it, the rear sight most. A pistol's sights are too close
   together to blur.
 - **Scope eyepiece.** Instead of a long tube, every scope is a black, out-of-focus eyepiece spanning
-  80% of the screen, with the zoomed view and the scope's own reticle filling its opening. The view
-  inside is seen through glass, and the scope trails the look a little and kicks back with each
-  shot.
+  80% of the screen, with the zoomed view filling its opening. The view inside is seen through
+  glass, and the scope trails the look a little and kicks back with each shot.
+- **Reticles**, new in every scope: a hunting duplex on the Dart Rifle and the M1903, a PSO-1 with
+  its rangefinder on the Dragunov, a red tactical mil-scale on the AS50, and a lit holographic
+  chevron on the AR-16 and the MGL-140.
 - **Scope surroundings.** Around the eyepiece the world stays at your normal field of view, slightly
   out of focus, as with both eyes open. The magnification is there at once inside the eyepiece, so
   the view no longer zooms as the scope comes up.

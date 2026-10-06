@@ -29,8 +29,11 @@ other mods' weapon edits, reporting any clash.
   mount below it down to the screen's foot, and the zoomed view filling its opening. The sniper
   scopes are a plain ring, thin on the Dart Rifle and the M1903 and thicker on the Dragunov and the
   AS50; the AR-16's and the MGL-140's, which are not round, also show their eyepiece's own shape.
-  The reticle is the scope's own, drawn from the game's texture in its own colours, and fills the
-  opening as it filled the lens. The magnification is unchanged. The view inside is seen through
+  The reticle is a new one, an image with its centre on the point of aim and its edge on the lens's
+  rim: a hunting duplex on the Dart Rifle and the M1903, a PSO-1 with its rangefinder on the
+  Dragunov, a red tactical mil-scale on the AS50, and a holographic chevron on the AR-16 and the
+  MGL-140. The holographic one is lit: its strokes burn toward a hotter shade of their colour inside
+  and glow past their edges, adding light rather than covering. The magnification is unchanged. The view inside is seen through
   glass: lines bow slightly toward the rim, colours part there the more the scope magnifies, the
   rim darkens, and the coating tints it faintly. The scope is laid over the finished frame, after
   the tone mapping, and trails the look a little as it turns. Each round fired kicks it back toward
@@ -58,7 +61,8 @@ depth pass a second time into a depth texture of its own, in `src/engine/weapon_
 blur and the scope shadow draw at the end of the pass the gun's colour is drawn in, before the
 bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
 The eyepiece drops the engine's scope and draws its own over the finished frame, in
-`src/eyepiece.cpp`, from what was measured off each scope's mesh, in `src/scopes.cpp`. The second
+`src/eyepiece.cpp`, from what was measured off each scope's mesh, in `src/scopes.cpp`. The reticles
+are `assets\*-reticle.png`, built into the plugin through `src/aiming_overhaul.rc`. The second
 view is drawn in `src/engine/second_view.cpp` and laid down as the gun's colour pass begins, in
 `src/surroundings.cpp`. The player's own tracers, a streak's length against its shot, and the
 ricochets are in `src/tracers.cpp`, and the streak is drawn in `src/streak.cpp` with
@@ -100,5 +104,6 @@ scopes' lost iron-sight effect, whatever the scope settings.
 python data\fragments.py world1.xml world2.xml dlc1.xml   # rewrite the weapon data, see the script
 ```
 
-`fxc`, from the Windows SDK, compiles the shaders at build time. `-Install` builds the game's patch
+`fxc`, from the Windows SDK, compiles the shaders at build time, and the reticle images in `assets\`
+are built into the DLL, an edited one by the next build. `-Install` builds the game's patch
 from this layer alone, dropping any other layer built into it before.

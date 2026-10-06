@@ -13,9 +13,12 @@ Notable changes to Aiming Overhaul, loosely following
   gun goes out of focus by how far it is from it, the rear sight most. It holds through fast turns.
   A pistol's sights are too close together to blur.
 - **Scopes seen from the eyepiece.** Instead of a long tube, every scope is a black, out-of-focus
-  eyepiece spanning 80% of the screen, with the zoomed view and the scope's own reticle filling its
-  opening. The view inside is seen through glass, bowing and fringing slightly toward the rim, and
-  the scope trails the look a little and kicks back with each shot.
+  eyepiece spanning 80% of the screen, with the zoomed view filling its opening. The view inside is
+  seen through glass, bowing and fringing slightly toward the rim, and the scope trails the look a
+  little and kicks back with each shot.
+- **New reticles**: a hunting duplex on the Dart Rifle and the M1903, a PSO-1 with its rangefinder
+  on the Dragunov, a red tactical mil-scale on the AS50, and a lit holographic chevron on the AR-16
+  and the MGL-140 that burns brighter inside its strokes and glows past them.
 - **The world around a scope**, at your normal field of view and slightly out of focus, as with both
   eyes open. The magnification is there at once inside the eyepiece, so the view no longer zooms as
   the scope comes up, and the game's radial blur around scopes is left out.
@@ -24,3 +27,6 @@ Notable changes to Aiming Overhaul, loosely following
   shots included: bright orange streaks at 350 m/s, smooth at any angle and visible however far
   off. One in six glances off where it lands, up into the air.
 - **A switch for each** in the Mod Configuration menu.
+- **Weapon data that merges.** Which guns fire tracers, how fast they fly and the scopes' iron-sight
+  effect are set as weapon data, so other weapon mods merge with it field by field, and a clash on
+  the same field is reported by the installer.
