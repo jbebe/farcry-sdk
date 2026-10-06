@@ -1,5 +1,5 @@
 // The scopes drawn from their eyepiece, by the weapon that carries them, with what was measured off
-// their meshes from the eye.
+// their meshes from the eye and the reticle each is drawn with.
 #pragma once
 
 #include <d3d9.h>
@@ -8,21 +8,12 @@
 
 namespace AimingOverhaul::Scopes {
 
-// A point of a reticle: in lens radii from the look's centre, x right and y up, and where it
-// samples the reticle's texture.
-struct Point {
-    float x, y;
-    float u, v;
-};
-
-// Black wherever the texture's alpha passes, as the engine alpha-tests it; or the texture's own
-// colours, blended by its alpha.
-enum class Look { Black, Lit };
-
-struct Piece {
-    Look look;
-    // Three points a triangle.
-    std::span<const Point> triangles;
+struct Reticle {
+    // The image's resource name in src/aiming_overhaul.rc: square, its centre on the look's and its
+    // edge on the lens's.
+    const char* image;
+    // Whether it is lit from within, as a holographic sight's is.
+    bool illuminated;
 };
 
 struct Scope {
@@ -38,7 +29,7 @@ struct Scope {
     float rim;
     // The lens's centre, in lens radii from the look's centre, x right and y up.
     float lensX, lensY;
-    std::span<const Piece> pieces;
+    const Reticle* reticle;
     // The eyepiece's own shape as a distance field, kShapeSize square; empty for a plain ring.
     std::span<const BYTE> shape;
     // How far the eye comes forward as the scope is raised, in metres.

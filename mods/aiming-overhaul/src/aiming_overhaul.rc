@@ -1,0 +1,5 @@
+// The scopes' reticles, 1024 square, named in src/scopes.cpp.
+RETICLE_HUNTER RCDATA "../assets/hunter-reticle.png"
+RETICLE_PSO RCDATA "../assets/pso-reticle.png"
+RETICLE_TACTICAL RCDATA "../assets/tactical-reticle.png"
+RETICLE_HOLOSIGHT RCDATA "../assets/holosight-reticle.png"

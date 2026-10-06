@@ -1,8 +1,9 @@
-// The scope laid over the finished frame: its reticle, from the texture the engine draws it with,
-// and its body, black and soft. See src/eyepiece.cpp.
+// The scope laid over the finished frame: its reticle, from the scope's image, and its body, black
+// and soft. See src/eyepiece.cpp.
 
-// rgb: the colour the reticle's texture is drawn in. w: one for a piece the engine alpha-tests.
-float4 Look : register(c0);
+// An illuminated reticle's light: x how much it spreads around its strokes, y how far their insides
+// burn toward a hotter shade of their colour. Both nought for a printed one.
+float4 Light : register(c0);
 // x: the screen's width over its height. yz: the lens's centre off the screen's, y down. w: its
 // radius. All in screen heights.
 float4 Lens : register(c1);
@@ -13,17 +14,23 @@ float4 Body : register(c2);
 // distances its bytes span, in lens radii; z is nought for a scope with no shape of its own.
 float4 Shape : register(c3);
 
+// Colour multiplied by cover, with its mip chain.
 sampler2D Reticle : register(s0);
 // The eyepiece's shape as a distance field; see src/scopes.h.
 sampler2D ShapeField : register(s1);
 
-// Within the opening only; `at` is the point from the lens's centre, in lens radii. Wholly covered
-// wherever the engine's alpha test passes, fading below it, so thin lines survive minification.
+// Within the opening only; `at` is the point from the lens's centre, in lens radii. A stroke's
+// inside is where it still covers wholly blurred over a couple of pixels; it burns brighter than
+// its edge, past its colour toward white. Its light is its own colour blurred wide, added where
+// nothing is covered too.
 float4 ReticlePS(float2 uv : TEXCOORD0, float2 at : TEXCOORD1) : COLOR0 {
     clip(1.0f - length(at));
     float4 texel = tex2D(Reticle, uv);
-    float cover = lerp(texel.a, saturate(2.0f * texel.a), Look.w);
-    return float4(texel.rgb * Look.rgb, cover);
+    float inside = smoothstep(0.5f, 1.0f, tex2Dbias(Reticle, float4(uv, 0.0f, 1.0f)).a);
+    float3 hot = saturate(texel.rgb * 2.0f + 0.2f * texel.a);
+    float3 halo = tex2Dbias(Reticle, float4(uv, 0.0f, 2.5f)).rgb +
+                  tex2Dbias(Reticle, float4(uv, 0.0f, 4.0f)).rgb;
+    return float4(lerp(texel.rgb, hot, inside * Light.y) + halo * Light.x, texel.a);
 }
 
 // Black over the scope's body around the lens: a ring around the opening, a mount from its centre

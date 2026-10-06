@@ -1,10 +1,11 @@
 // The engine's scope is dropped once the weapon in hand says which scope it is; the composite then
-// redraws the view inside the opening through the scope's glass, draws the scope's reticle from the
-// textures the engine drew it with, and the body over both.
+// redraws the view inside the opening through the scope's glass, lays the scope's reticle over it
+// and the body over both.
 #include "eyepiece.h"
 
 #include "engine/aim.h"
 #include "engine/com.h"
+#include "engine/embedded_image.h"
 #include "engine/frame.h"
 #include "engine/render_target.h"
 #include "engine/screen_draw.h"
@@ -16,11 +17,8 @@
 #include "eyepiece_reticle_ps.h"
 #include "glass_ps.h"
 
-#include <algorithm>
 #include <atomic>
 #include <cstring>
-#include <iterator>
-#include <vector>
 
 namespace {
     using AimingOverhaul::Scopes::Scope;
@@ -50,6 +48,11 @@ namespace {
     constexpr float kRimDarkening = 0.5f;
     constexpr float kTint[3] = {0.92f, 0.96f, 0.93f};
 
+    // An illuminated reticle: how much light it spreads around its strokes, and how far their
+    // insides burn toward a hotter shade of their colour.
+    constexpr float kHalo = 0.35f;
+    constexpr float kHeat = 1.0f;
+
     AimingOverhaul::PixelShader g_reticleShader{"eyepiece reticle", g_eyepieceReticlePixelShader};
     AimingOverhaul::PixelShader g_bodyShader{"eyepiece body", g_eyepieceBodyPixelShader};
     AimingOverhaul::PixelShader g_glassShader{"eyepiece glass", g_glassPixelShader};
@@ -75,13 +78,10 @@ namespace {
     // can draw a frame after the game has put it away.
     uint32_t g_drawnFrame = AimingOverhaul::Frame::kNever;
 
-    // The most pieces a reticle has, and the texture each was last drawn with, and when.
-    constexpr size_t kMostPieces = 2;
-    struct Seen {
-        IDirect3DBaseTexture9* texture = nullptr;
-        uint32_t frame = AimingOverhaul::Frame::kNever;
-    };
-    Seen g_seen[kMostPieces];
+    // The texture made for this reticle, on the device that owns it.
+    IDirect3DDevice9* g_reticleOwner = nullptr;
+    const AimingOverhaul::Scopes::Reticle* g_reticleOf = nullptr;
+    IDirect3DTexture9* g_reticle = nullptr;
 
     // The distance field of the scope it was made for, on the device that owns it.
     IDirect3DDevice9* g_shapeOwner = nullptr;
@@ -141,6 +141,20 @@ namespace {
         return g_shape;
     }
 
+    // The scope's reticle, made the first time it is asked for after another's.
+    IDirect3DTexture9* ReticleFor(IDirect3DDevice9* device, const Scope& scope) {
+        if (g_reticleOwner == device && g_reticleOf == scope.reticle) {
+            return g_reticle;
+        }
+        AimingOverhaul::Release(g_reticle);
+        g_reticleOwner = device;
+        g_reticleOf = scope.reticle;
+        const ULONGLONG start = GetTickCount64();
+        g_reticle = AimingOverhaul::EmbeddedImage::Texture(device, scope.reticle->image);
+        FCSE::Logf("eyepiece: %s made in %llu ms", scope.reticle->image, GetTickCount64() - start);
+        return g_reticle;
+    }
+
     bool EnsureCopy(IDirect3DDevice9* device, IDirect3DSurface9* frame) {
         D3DSURFACE_DESC desc = {};
         frame->GetDesc(&desc);
@@ -187,13 +201,14 @@ namespace {
         draw.Quad(0.0f, 0.0f, width, height);
     }
 
-    // The scope's reticle, each piece from the texture the engine drew it with, placed about the
-    // look's centre as the opening is. Each point also carries where it is from the lens's centre,
-    // which the shader keeps the reticle within.
+    // The scope's reticle, its image's centre on the look's and its edge a lens radius out. Each
+    // corner also carries where it is from the lens's centre, which the shader keeps the reticle
+    // within.
     void DrawReticle(IDirect3DDevice9* device, AimingOverhaul::ScreenDraw& draw, const Scope& scope,
                      const AimingOverhaul::Eyepiece::Opening& opening) {
         IDirect3DPixelShader9* shader = g_reticleShader.Get(device);
-        if (shader == nullptr) {
+        IDirect3DTexture9* reticle = shader != nullptr ? ReticleFor(device, scope) : nullptr;
+        if (reticle == nullptr) {
             return;
         }
         const float width = static_cast<float>(AimingOverhaul::Frame::Width());
@@ -202,27 +217,23 @@ namespace {
         const float centreX = width / 2.0f + opening.x * height - scope.lensX * scale;
         const float centreY = height / 2.0f + opening.y * height + scope.lensY * scale;
 
+        // The image's corners in lens radii from the look's centre, x right and y up.
+        constexpr float kCorners[6][2] = {{-1, 1}, {1, 1}, {1, -1}, {1, -1}, {-1, -1}, {-1, 1}};
+        AimingOverhaul::ScreenDraw::Vertex vertices[6];
+        for (size_t i = 0; i < 6; i++) {
+            const float x = kCorners[i][0];
+            const float y = kCorners[i][1];
+            vertices[i] = {centreX + x * scale, centreY - y * scale, (x + 1.0f) / 2.0f,
+                           (1.0f - y) / 2.0f, x - scope.lensX, scope.lensY - y};
+        }
+        const float lit = scope.reticle->illuminated ? 1.0f : 0.0f;
+        const float light[4] = {lit * kHalo, lit * kHeat, 0.0f, 0.0f};
+        device->SetPixelShaderConstantF(0, light, 1);
         draw.Linear(0);
         device->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
+        device->SetTexture(0, reticle);
         device->SetPixelShader(shader);
-        std::vector<AimingOverhaul::ScreenDraw::Vertex> vertices;
-        for (size_t i = 0; i < scope.pieces.size() && i < kMostPieces; i++) {
-            const AimingOverhaul::Scopes::Piece& piece = scope.pieces[i];
-            if (!Held(g_seen[i].frame)) {
-                continue;
-            }
-            device->SetTexture(0, g_seen[i].texture);
-            const float lit = piece.look == AimingOverhaul::Scopes::Look::Lit ? 1.0f : 0.0f;
-            const float look[4] = {lit, lit, lit, 1.0f - lit};
-            device->SetPixelShaderConstantF(0, look, 1);
-            vertices.clear();
-            vertices.reserve(piece.triangles.size());
-            for (const AimingOverhaul::Scopes::Point& point : piece.triangles) {
-                vertices.push_back({centreX + point.x * scale, centreY - point.y * scale, point.u,
-                                    point.v, point.x - scope.lensX, scope.lensY - point.y});
-            }
-            draw.Triangles(vertices.data(), static_cast<UINT>(vertices.size()));
-        }
+        draw.Triangles(vertices, 6);
     }
 }
 
@@ -259,19 +270,7 @@ bool AimingOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
     if (call.depthPass && call.primitiveCount == g_inHand->housing) {
         g_drawnFrame = Frame::Number();
     }
-    if (!Held(g_drawnFrame)) {
-        return true;
-    }
-    // A piece of the reticle is told by its draw's size, which no other draw of the weapon shares.
-    const std::span<const Scopes::Piece> pieces = g_inHand->pieces;
-    for (size_t i = 0; i < pieces.size() && i < kMostPieces; i++) {
-        if (pieces[i].triangles.size() / 3 == call.primitiveCount) {
-            IDirect3DBaseTexture9* texture = nullptr;
-            device->GetTexture(0, &texture);
-            g_seen[i] = {Borrowed(texture), Frame::Number()};
-        }
-    }
-    return false;
+    return !Held(g_drawnFrame);
 }
 
 void AimingOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
@@ -304,7 +303,10 @@ void AimingOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
     draw.KeepAlpha();
     DrawGlass(device, draw, *opening, frame);
     Release(frame);
+    // The reticle's colour is already multiplied by its cover, and a lit one adds light past it.
+    device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
     DrawReticle(device, draw, scope, *opening);
+    device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
 
     device->SetPixelShaderConstantF(1, constants, 3);
     device->SetTexture(1, shape);
@@ -340,8 +342,10 @@ void AimingOverhaul::Eyepiece::ReleaseDeviceObjects() {
     Release(g_shape);
     g_shapeOwner = nullptr;
     g_shapeOf = nullptr;
+    Release(g_reticle);
+    g_reticleOwner = nullptr;
+    g_reticleOf = nullptr;
     Release(g_copy);
     g_copyOwner = nullptr;
     g_copyRefused = false;
-    std::fill(std::begin(g_seen), std::end(g_seen), Seen{});
 }

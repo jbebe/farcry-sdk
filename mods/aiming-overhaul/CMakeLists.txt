@@ -6,6 +6,10 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 project ("AimingOverhaul")
 
+# For the reticles in src/aiming_overhaul.rc: a .rc added to a project without RC enabled is
+# skipped silently, and the plugin would build without them.
+enable_language(RC)
+
 if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "AimingOverhaul must be built 32-bit (x86) - Far Cry 2 is a 32-bit process. "
                       "Select the x86-debug/x86-release preset.")
@@ -66,8 +70,13 @@ foreach(SHAPE IN ITEMS ar16 mgl140)
                  "${CMAKE_CURRENT_BINARY_DIR}/generated/shape_${SHAPE}.h" COPYONLY)
 endforeach()
 
+# The resource compiler does not see the files a .rc embeds, so an edited reticle needs naming.
+file(GLOB RETICLES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/assets/*-reticle.png")
+set_source_files_properties("src/aiming_overhaul.rc" PROPERTIES OBJECT_DEPENDS "${RETICLES}")
+
 add_library(AimingOverhaul SHARED
   "src/main.cpp"
+  "src/aiming_overhaul.rc"
   "src/blur.cpp"
   "src/eyepiece.cpp"
   "src/scope_shadow.cpp"
@@ -78,6 +87,7 @@ add_library(AimingOverhaul SHARED
   "src/tracers.cpp"
   "src/engine/aim.cpp"
   "src/engine/device_reset.cpp"
+  "src/engine/embedded_image.cpp"
   "src/engine/entity_name.cpp"
   "src/engine/frame.cpp"
   "src/engine/screen_draw.cpp"
@@ -93,5 +103,5 @@ target_include_directories(AimingOverhaul PRIVATE
   "${CMAKE_CURRENT_BINARY_DIR}/generated"
   "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/FCSE/include"
 )
-target_link_libraries(AimingOverhaul PRIVATE d3d9)
+target_link_libraries(AimingOverhaul PRIVATE d3d9 ole32 windowscodecs)
 target_compile_features(AimingOverhaul PRIVATE cxx_std_20)
