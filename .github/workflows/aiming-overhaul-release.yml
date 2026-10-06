@@ -7,11 +7,11 @@ permissions:
   contents: write
 
 env:
-  # No Nexus page yet. Once there is one, NEXUS_MOD_ID is the internal ID that
-  # v3/games/farcry2/mods/<id> answers with, not the ID in the URL; the file ID is on the mod's Files
-  # tab under "API Info". An empty file ID skips the upload.
-  NEXUS_MOD_ID: ''
-  NEXUS_FILE_AIMING_OVERHAUL: ''
+  # Nexus Mods identifiers for the Aiming Overhaul mod page. NEXUS_MOD_ID is the internal ID that
+  # v3/games/farcry2/mods/{id in the page URL} answers with, not the ID in the URL; the file ID is
+  # on the mod's Files tab under "API Info". An empty file ID skips the upload.
+  NEXUS_MOD_ID: '6317896892798'
+  NEXUS_FILE_AIMING_OVERHAUL: '8096526'
 
 jobs:
   release:
