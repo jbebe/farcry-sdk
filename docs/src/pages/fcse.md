@@ -52,6 +52,12 @@ tools to change engine behavior with:
    `Dunia.dll` before launch — same idea, but any number of plugins can each apply their own
    edit without agreeing on one shared pre-patched binary.
 
+Beyond those, a plugin can **keep its own values on game entities** (`EntityData`): a count on a
+weapon, a flag on a car. They live in an entity component FCSE adds to the engine, so the game saves
+them with the entity and restores them on load, and a mod can give an archetype starting values in
+the entity library. The engine side is in
+[FCSE's entity data ABI](/docs/engine-internals/fcse-entity-data-abi).
+
 **Conflicts are loud, not silent.** Two plugins hooking the same function both run, the last loaded
 first, and the log says which went ahead of which. A name or a byte edit can't be shared: there the
 second claimant is rejected and both plugins' identities are logged, so a real conflict is always

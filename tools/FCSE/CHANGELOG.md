@@ -2,7 +2,7 @@
 
 Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.4.0] - 2026-10-08
 
 ### Added
 - **Mods can keep their own values on game entities** — a count on a weapon, a flag on a car — that
@@ -14,8 +14,10 @@ Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachang
   the engine does, at compile time if you like, or any run of bytes. Header-only, C++14 and later.
 
 ### Changed
-- Plugin ABI is now `FCSE_API_VERSION` 8: `FCSE_PluginAPI` gained `EntityData`. Existing plugins
-  need no source change but must be rebuilt.
+- **Plugin DLLs built for an earlier FCSE no longer load** until their authors rebuild them, so
+  update your plugins along with FCSE. `fcse.log` names each one that did not load. Lua scripts are
+  not affected. For authors: the plugin ABI is now `FCSE_API_VERSION` 8, since `FCSE_PluginAPI`
+  gained `EntityData`; a rebuild is all a plugin needs.
 
 ## [1.3.0] - 2026-10-02
 
