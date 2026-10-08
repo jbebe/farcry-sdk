@@ -387,8 +387,8 @@ public class PatchBuilderTests : IDisposable
         using var rebuilt = DuniaArchive.Open(_install.PatchFat);
         FcbObject rebuiltContainer = FcbDocument.Deserialize(rebuilt.Read(entry));
 
-        // mod_b (later in the layer list, so higher priority) won outright - not some Diff3 partial
-        // merge of the two, and not mod_a's value either.
+        // mod_b (later in the layer list, so higher priority) won the field - not a merge of the two,
+        // and not mod_a's value either.
         FcbObject rebuiltFragment = FcbFragments.Find(rebuiltContainer, fragmentId)!;
         Assert.Equal([0x02, 0x00, 0x00, 0x00], TestSupport.NodeAt(rebuiltFragment, targetPath).Values[existingHash]);
     }

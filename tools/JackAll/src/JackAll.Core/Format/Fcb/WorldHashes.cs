@@ -90,4 +90,7 @@ public static class WorldHashes
     /// <summary>Where an archetype embeds its kit descriptor, as an Rml <see cref="HidDescriptor"/>.</summary>
     public static readonly uint CFileDescriptorComponent = FcbClassDefinitions.Crc32Ascii("CFileDescriptorComponent");
     public static readonly uint HidDescriptor = FcbClassDefinitions.Crc32Ascii("hidDescriptor");
+
+    /// <summary>FCSE's entity-data component, which a mod adds - see <see cref="FcseEntityData"/>.</summary>
+    public static readonly uint CFCSEDataComponent = FcbClassDefinitions.Crc32Ascii("CFCSEDataComponent");
 }

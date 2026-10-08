@@ -127,12 +127,8 @@ public static class XmlListMerge
         }
     }
 
-    /// <summary>
-    /// Every child of <paramref name="side"/> under the key it is paired by, with the label a conflict
-    /// path names it by. A child whose key is in <paramref name="lists"/> is a list item, keyed by the
-    /// <paramref name="original"/> item it matches; one the original lacks is keyed by its content, so
-    /// two sides adding the same item add it once.
-    /// </summary>
+    /// <summary>Every child of <paramref name="side"/> with the key it pairs by and the label a conflict
+    /// names it by: a list item keyed by the original item it aligns with, an addition by its content.</summary>
     private static List<(string Key, string Label, XElement Element)> Keyed(
         XElement original, XElement side, Func<XElement, string> keyOf, HashSet<string> lists)
     {
@@ -140,10 +136,10 @@ public static class XmlListMerge
         foreach (IGrouping<string, XElement> list in side.Elements().GroupBy(keyOf).Where(g => lists.Contains(g.Key)))
         {
             List<XElement> after = [.. list];
-            List<XElement> before = side == original ? after : [.. original.Elements().Where(e => keyOf(e) == list.Key)];
             IEnumerable<(int? Before, int? After)> pairs = side == original
-                ? Enumerable.Range(0, after.Count).Select(i => ((int?)i, (int?)i))
-                : SiblingAlignment.Align(before, after, item => Identity(item, keyOf));
+                ? after.Select((_, i) => ((int?)i, (int?)i))
+                : SiblingAlignment.Align(
+                    [.. original.Elements().Where(e => keyOf(e) == list.Key)], after, item => Identity(item, keyOf));
             var additions = new Dictionary<string, int>();
             foreach ((int? b, int? a) in pairs)
             {
@@ -162,9 +158,15 @@ public static class XmlListMerge
             }
         }
 
-        return [.. side.Elements().Select(child => items.TryGetValue(child, out (string Key, string Label) item)
-            ? (item.Key, item.Label, child)
-            : (keyOf(child), keyOf(child), child))];
+        return [.. side.Elements().Select(child =>
+        {
+            if (items.TryGetValue(child, out (string Key, string Label) item))
+            {
+                return (item.Key, item.Label, child);
+            }
+            string key = keyOf(child);
+            return (key, key, child);
+        })];
     }
 
     /// <summary>An element as text in which the order of differently keyed siblings does not count, so

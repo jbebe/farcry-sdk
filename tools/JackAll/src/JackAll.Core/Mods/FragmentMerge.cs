@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text;
+using System.Xml;
 using JackAll.Core.Format.Fcb;
 
 namespace JackAll.Core.Mods;
@@ -126,7 +127,7 @@ public static class FragmentMerge
             {
                 theirs = splitter.Canonicalize(fragmentId, Encoding.UTF8.GetString(layer.Read(entryHash)));
             }
-            catch (Exception ex) when (ex is not InvalidDataException)
+            catch (Exception ex)
             {
                 // A splitter's parser throws a bare XmlException - "Data at the
                 // root level is invalid. Line 1, position 1." for an empty file, and similarly opaque
@@ -136,9 +137,10 @@ public static class FragmentMerge
                 // spot in this loop actually worth naming a path for.
                 string where = layer.PathOf(entryHash) ?? fragmentId;
                 throw new InvalidDataException(
-                    $"'{layer.Name}' has an unreadable fragment override at '{where}': {ex.Message} " +
-                    "Check that file's contents in the mod - it's expected to be JackAll-exported " +
-                    "fragment XML, not raw/binary data.", ex);
+                    $"'{layer.Name}' has an invalid fragment override at '{where}': {ex.Message} " +
+                    "Check that file's contents in the mod" +
+                    (ex is XmlException ? " - it's expected to be JackAll-exported fragment XML, not raw/binary data." : "."),
+                    ex);
             }
 
             if (i == 0)

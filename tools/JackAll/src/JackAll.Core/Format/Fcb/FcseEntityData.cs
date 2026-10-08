@@ -8,25 +8,22 @@ namespace JackAll.Core.Format.Fcb;
 /// </summary>
 public static class FcseEntityData
 {
-    private static readonly string ComponentHash = FcbClassDefinitions.Crc32Ascii("CFCSEDataComponent").ToString("X8");
-
-    /// <summary>Whether this object is the component, spelled by name or by hash.</summary>
-    public static bool IsComponent(XElement element)
-        => (string?)element.Attribute("type") == "CFCSEDataComponent"
-        || string.Equals((string?)element.Attribute("hash"), ComponentHash, StringComparison.OrdinalIgnoreCase);
+    public static bool IsComponent(XElement element) => FcbXml.TypeHashOf(element) == WorldHashes.CFCSEDataComponent;
 
     /// <summary>Throws when a component in <paramref name="fragment"/> lists one key twice, which
     /// FCSE would read as whichever came last.</summary>
     public static void CheckKeys(XElement fragment)
     {
-        foreach (XElement component in fragment.DescendantsAndSelf("object").Where(IsComponent))
+        if (Objects(fragment).Where(IsComponent)
+                .SelectMany(component => component.Elements("object").GroupBy(FcbXml.TypeHashOf))
+                .FirstOrDefault(key => key.Count() > 1) is { } twice)
         {
-            if (component.Elements("object").GroupBy(FcbXml.HashOf).FirstOrDefault(key => key.Count() > 1) is { } twice)
-            {
-                throw new FormatException(
-                    $"Its CFCSEDataComponent lists the key '{FcbXml.KeyOf(twice.First())}' {twice.Count()} times - "
-                    + "a key may appear once.");
-            }
+            throw new InvalidDataException(
+                $"A CFCSEDataComponent lists the key '{FcbXml.KeyOf(twice.First())}' {twice.Count()} times - "
+                + "a key may appear once.");
         }
+
+        // The object tree alone: a value's own content, such as decoded Rml, is not FCB objects.
+        static IEnumerable<XElement> Objects(XElement obj) => obj.Elements("object").SelectMany(Objects).Prepend(obj);
     }
 }

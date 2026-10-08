@@ -4,9 +4,9 @@ using DiffPlex.Chunkers;
 namespace JackAll.Core.Format.Fcb;
 
 /// <summary>
-/// A 3-way text merge — the core of docs/design/fcb-fragment-overlays.md's Milestone 3. Pure text,
-/// no FCB/mod-layer knowledge, so it's independently testable against plain strings; its caller feeds
-/// it the canonicalized fragments of a text format (see <see cref="Mods.IContainerSplitter.Merge"/>).
+/// A 3-way text merge. Pure text, no FCB/mod-layer knowledge, so it's independently testable against
+/// plain strings; its caller feeds it the canonicalized fragments of a text format (see
+/// <see cref="Mods.IContainerSplitter.Merge"/>).
 /// </summary>
 public static class Diff3
 {
@@ -24,19 +24,15 @@ public static class Diff3
     /// <remarks>
     /// Delegates to DiffPlex's own <see cref="ThreeWayDiffer"/> rather than a hand-rolled diff3 —
     /// it already implements exactly this algorithm, including the conflict-marker format. When
-    /// <paramref name="ours"/> equals <paramref name="ancestor"/> (the common case: exactly one
-    /// layer touches this fragment), every change is "theirs-only" and is taken outright with no
-    /// conflict, for any input — this is what keeps a single contributing layer's fold a no-op
-    /// pass-through, unconditionally.
+    /// <paramref name="ours"/> equals <paramref name="ancestor"/>, every change is "theirs-only" and
+    /// is taken outright with no conflict, for any input.
     /// </remarks>
     public static (string Merged, bool HasConflict) Merge(string ancestor, string ours, string theirs)
     {
         DiffPlex.Model.ThreeWayMergeResult result =
             ThreeWayDiffer.Instance.CreateMerge(ancestor, ours, theirs, ignoreWhiteSpace: false, ignoreCase: false, Chunker);
 
-        // LineChunker strips each line's own terminator on the way in, so rejoining has to supply one
-        // back - Environment.NewLine matches what FcbXml.Render's XDocument.ToString() itself emits,
-        // which is what keeps a fragment touched by exactly one layer byte-for-byte identical to what
-        // it was before Milestone 3 (see the no-op guarantee above), not just line-for-line equal.
+        // LineChunker drops each line's terminator; rejoin with the Environment.NewLine FragmentXml writes.
         return (string.Join(Environment.NewLine, result.MergedPieces), !result.IsSuccessful);
-    }}
+    }
+}

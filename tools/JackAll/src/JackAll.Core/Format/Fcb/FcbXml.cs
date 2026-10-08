@@ -132,8 +132,8 @@ public static class FcbXml
     public static string? KeyOf(XElement child)
         => (string?)child.Attribute("name") ?? (string?)child.Attribute("hash") ?? (string?)child.Attribute("type");
 
-    /// <summary>The hash a value's name or an object's type stands for, however it is spelled.</summary>
-    public static uint HashOf(XElement element) => LoadNameOrHash(element, element.Name == "value" ? "name" : "type");
+    /// <summary>The hash an object's type stands for, whether spelled by name or by hash.</summary>
+    public static uint TypeHashOf(XElement obj) => LoadNameOrHash(obj, "type");
 
     /// <summary>Reverse of <see cref="ToXml"/>.</summary>
     public static FcbObject FromXml(string xml) => ReadNode(Parse(xml));

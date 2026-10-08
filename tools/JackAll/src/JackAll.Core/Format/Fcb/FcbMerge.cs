@@ -24,7 +24,6 @@ public static class FcbMerge
 
     private static (XElement Merged, IReadOnlyList<string> Conflicts) Merge(XElement? ancestor, XElement ours, XElement theirs)
     {
-        // A value is decided whole, and so is an entity-data key.
         bool keys = FcseEntityData.IsComponent(ours);
         return XmlListMerge.Merge(ancestor, ours, theirs, KeyOf,
             (a, o, t) => !keys && o.Name == "object" && t.Name == "object" ? Merge(a, o, t) : (t, [""]));

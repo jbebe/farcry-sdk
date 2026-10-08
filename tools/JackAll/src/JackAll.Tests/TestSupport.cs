@@ -149,8 +149,8 @@ internal static class TestSupport
     }
 
     /// <summary>Index paths to the first pair of sibling subtrees below <paramref name="fragment"/> —
-    /// two edit targets whose rendered XML is far enough apart for diff3 to merge cleanly. Null when
-    /// the tree never branches (a fragment too small to prove non-overlapping edits on).</summary>
+    /// two edit targets that merge independently. Null when the tree never branches (a fragment too
+    /// small to prove non-overlapping edits on).</summary>
     public static (int[] A, int[] B)? TwoDistantEditPaths(FcbObject fragment)
     {
         var prefix = new List<int>();

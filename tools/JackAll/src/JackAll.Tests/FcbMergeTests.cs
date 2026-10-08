@@ -131,17 +131,18 @@ public class FcbMergeTests : IDisposable
     [Fact]
     public void Both_layers_appending_the_same_record_keep_it_once()
     {
-        string ours = Edit(Ancestor, root =>
+        string ours = Edit(Ancestor, root => Links(root).Last().AddAfterSelf(Link("OnJam", 3)));
+        string theirs = Edit(Ancestor, root =>
         {
             Links(root).Last().AddAfterSelf(Link("OnJam", 3));
-            At(root, "Entity/Components").Add(DataComponent(Key("ModA.Key", 1)));
+            Target(Links(root).First()).Value = "7";
         });
-        string theirs = Edit(Ancestor, root => Links(root).Last().AddAfterSelf(Link("OnJam", 3)));
 
         (string merged, IReadOnlyList<string> conflicts) = FcbMerge.Merge(Ancestor, ours, theirs);
 
         Assert.Empty(conflicts);
         Assert.Equal(["OnFire", "OnReload", "OnJam"], Events(merged));
+        Assert.Equal("7", Target(Links(XElement.Parse(merged)).First()).Value);
     }
 
     /// <summary>A record whose fields one layer lists in another order is still the same record, so
@@ -209,7 +210,7 @@ public class FcbMergeTests : IDisposable
 
         FcbObject archetype = FcbFragments.Find(FcbDocument.Deserialize(Splitter.Apply(library, resolved)), id)!;
         FcbObject data = FcbEntityFields.FindComponent(
-            archetype.Children.Single(c => c.TypeHash == WorldHashes.Entity), Hash("CFCSEDataComponent"))!;
+            archetype.Children.Single(c => c.TypeHash == WorldHashes.Entity), WorldHashes.CFCSEDataComponent)!;
         Assert.Equal([Hash("ModA.Key"), Hash("ModB.Key")], data.Children.Select(c => c.TypeHash));
     }
 
