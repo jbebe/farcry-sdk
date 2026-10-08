@@ -3,15 +3,14 @@ import * as nodeFs from 'fs';
 import * as path from 'path';
 import { fs, log, types, util } from 'vortex-api';
 
-import { GAME_ID, MODTYPE_FCSE_LOADER } from './constants';
+import { FCSE_LOADER, GAME_ID, MODTYPE_FCSE_LOADER } from './constants';
+import { installFcse } from './fcse';
 import { gamePath } from './game';
 import * as jackall from './jackall';
 import { ask, dismiss, notify } from './ui';
 
-const FCSE_LOADER = 'fcse.exe';
 const PLUGINS_DIR = 'plugins';
 const MODS_DIR = 'mods';
-const FCSE_PAGE_URL = 'https://jbebe.github.io/farcry-sdk/fcse';
 
 /** The game's own binaries. No content mod, FCSE loader or plugin has any reason to ship these. */
 const SUSPICIOUS_BINARIES = ['farcry2.exe', 'dunia.dll', 'fc2.dll'];
@@ -85,8 +84,9 @@ export function makeInstaller(api: types.IExtensionApi) {
 
     const roots = layerRoots(plainFiles);
     if (roots.length > 0) {
+      // Not awaited: this mod's install shouldn't wait on a download.
       if (roots.includes(PLUGINS_DIR)) {
-        await warnIfFcseMissing(api, gamePath(api));
+        void installFcse(api, modName);
       }
       log('info', 'Far Cry 2: staging mod layer', { roots });
       return { instructions: roots.flatMap(root => copyUnder(plainFiles, root)) };
@@ -171,28 +171,6 @@ async function warnIfBundlingGameBinaries(
     + 'Installing it as-is will not do anything useful through this extension, and overwriting your '
     + 'own FarCry2.exe/Dunia.dll with an unknown copy is risky on its own. Only continue if you '
     + 'understand exactly what this file changes and trust where it came from.');
-}
-
-/**
- * Detects the file on disk rather than checking mod state, so this catches FCSE installed by hand
- * (outside Vortex) just as well as FCSE installed as a mod.
- */
-async function warnIfFcseMissing(api: types.IExtensionApi, gameRoot: string | undefined): Promise<void> {
-  if (gameRoot === undefined || nodeFs.existsSync(path.join(gameRoot, 'bin', FCSE_LOADER))) {
-    return;
-  }
-
-  const result = await ask(api, 'question', 'Far Cry Script Extender (FCSE) not found', {
-    text: 'This mod contains an FCSE plugin, but FCSE itself doesn\'t look installed - without it, '
-      + 'plugin files are deployed but never loaded by the game.',
-  }, [
-    { label: 'Download' },
-    { label: 'Continue' },
-  ]);
-
-  if (result.action === 'Download') {
-    await util.opn(FCSE_PAGE_URL).catch(() => undefined);
-  }
 }
 
 /** Real downloads bundle readmes and screenshots alongside the pair, and only the pair converts. */

@@ -12,3 +12,4 @@ export const MODTYPE_LAYER = '';
 
 // FCSE itself, deployed beside FarCry2.exe.
 export const MODTYPE_FCSE_LOADER = 'farcry2-fcse-loader';
+export const FCSE_LOADER = 'fcse.exe';

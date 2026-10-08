@@ -3,6 +3,13 @@
 Notable changes to the Vortex Far Cry 2 extension, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **Installing a mod that contains an FCSE plugin now installs FCSE too**, downloaded from Nexus
+  Mods and enabled, if it isn't already there. With a free Nexus account, which can't download
+  directly, FCSE's Nexus page opens instead.
+
 ## [0.3.0] - 2026-10-02
 
 ### Added

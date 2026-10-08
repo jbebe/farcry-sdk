@@ -76,6 +76,12 @@ Only bucket 1 ever calls `jackall-mi` at install time (`mod import-legacy`) - co
 patch genuinely needs the game's archives to diff against. The others don't need the game
 discovered at all.
 
+A mod with a `plugins\` folder needs FCSE. If neither `bin\FCSE.exe` nor an installed FCSE mod is
+there, the extension downloads FCSE's newest main file from
+[Nexus Mods](https://www.nexusmods.com/farcry2/mods/368), installs it and enables it. Nexus serves
+direct downloads to premium accounts only, so for anyone else, or if the download fails, the file's
+page opens instead, to download it from with "Mod Manager Download". It tries once per session.
+
 ## Building
 
 ```powershell
@@ -111,6 +117,7 @@ bin\
 | `src/game.ts` | discovery, `requiredFiles`, setup, the vanilla-baseline dialog |
 | `src/jackall.ts` | the only place that runs `jackall-mi` and parses its `--json` output |
 | `src/installers.ts` | classifying an archive and turning it into install instructions |
+| `src/fcse.ts` | fetching FCSE from Nexus when a plugin mod needs it |
 | `src/loadOrder.ts` | the load order page, and the ordered layer list the build consumes |
 | `src/deploy.ts` | `did-deploy` → build, `did-purge` → restore |
 | `src/ui.ts` | notification/dialog wrappers |
