@@ -7,7 +7,7 @@ namespace JackAll.Tests;
 
 /// <summary>
 /// Two layers' edits to one `.fcb` fragment merged as a tree: a value paired by its name, an object by
-/// its type, and a list of same-typed siblings line by line as the whole fragment used to be.
+/// its type, and a list of same-typed siblings record by record, each matched to its ancestor by content.
 /// </summary>
 public class FcbMergeTests : IDisposable
 {
@@ -27,9 +27,11 @@ public class FcbMergeTests : IDisposable
                 <object type="hidLinks">
                   <object type="Link">
                     <value name="InputEvent" type="String">OnFire</value>
+                    <value name="TargetEntityId" type="Int64">1</value>
                   </object>
                   <object type="Link">
                     <value name="InputEvent" type="String">OnReload</value>
+                    <value name="TargetEntityId" type="Int64">2</value>
                   </object>
                 </object>
               </object>
@@ -102,40 +104,96 @@ public class FcbMergeTests : IDisposable
         Assert.Equal(["CEventComponent", "CFCSEDataComponent", "CSoundComponent"], Components(merged).Select(TypeOf));
     }
 
-    /// <summary><c>Link</c> records have nothing to pair by, so their list folds exactly as the text
-    /// of the whole fragment did: edits on separate lines merge.</summary>
     [Fact]
-    public void A_list_of_repeated_types_merges_line_by_line_as_before()
+    public void Edits_to_different_records_of_a_list_both_land()
     {
-        string ours = Edit(Ancestor, root => Links(root).First().Element("value")!.Value = "OnFireStart");
-        string theirs = Edit(Ancestor, root => Links(root).Last().Element("value")!.Value = "OnReloadEnd");
+        string ours = Edit(Ancestor, root => Event(Links(root).First()).Value = "OnFireStart");
+        string theirs = Edit(Ancestor, root => Event(Links(root).Last()).Value = "OnReloadEnd");
 
         (string merged, IReadOnlyList<string> conflicts) = FcbMerge.Merge(Ancestor, ours, theirs);
 
-        (string asText, bool textConflict) = Diff3.Merge(Ancestor, ours, theirs);
-        Assert.False(textConflict);
         Assert.Empty(conflicts);
-        Assert.True(XNode.DeepEquals(XElement.Parse(asText), XElement.Parse(merged)));
+        Assert.Equal(["OnFireStart", "OnReloadEnd"], Events(merged));
     }
 
-    /// <summary>...and two records appended at one place collide, as text always did, but only the
-    /// list is decided by load order.</summary>
     [Fact]
-    public void Two_layers_appending_to_a_list_conflict_on_the_list_alone()
+    public void Two_layers_appending_to_a_list_keep_both_records_in_fold_order()
+    {
+        string ours = Edit(Ancestor, root => Links(root).Last().AddAfterSelf(Link("OnJam", 3)));
+        string theirs = Edit(Ancestor, root => Links(root).Last().AddAfterSelf(Link("OnEmpty", 4)));
+
+        (string merged, IReadOnlyList<string> conflicts) = FcbMerge.Merge(Ancestor, ours, theirs);
+
+        Assert.Empty(conflicts);
+        Assert.Equal(["OnFire", "OnReload", "OnJam", "OnEmpty"], Events(merged));
+    }
+
+    [Fact]
+    public void Both_layers_appending_the_same_record_keep_it_once()
     {
         string ours = Edit(Ancestor, root =>
         {
-            Links(root).Last().AddAfterSelf(Link("OnJam"));
+            Links(root).Last().AddAfterSelf(Link("OnJam", 3));
             At(root, "Entity/Components").Add(DataComponent(Key("ModA.Key", 1)));
         });
-        string theirs = Edit(Ancestor, root => Links(root).Last().AddAfterSelf(Link("OnEmpty")));
+        string theirs = Edit(Ancestor, root => Links(root).Last().AddAfterSelf(Link("OnJam", 3)));
 
         (string merged, IReadOnlyList<string> conflicts) = FcbMerge.Merge(Ancestor, ours, theirs);
 
-        Assert.True(Diff3.Merge(Ancestor, ours, theirs).HasConflict);
-        Assert.Equal(["Entity/Components/CEventComponent/hidLinks"], conflicts);
-        Assert.Equal(["OnFire", "OnReload", "OnEmpty"], Links(XElement.Parse(merged)).Select(l => l.Element("value")!.Value));
-        Assert.Contains(Components(merged), c => TypeOf(c) == "CFCSEDataComponent");
+        Assert.Empty(conflicts);
+        Assert.Equal(["OnFire", "OnReload", "OnJam"], Events(merged));
+    }
+
+    /// <summary>A record whose fields one layer lists in another order is still the same record, so
+    /// an insertion beside it does not throw off which ancestor record the other layer edited.</summary>
+    [Fact]
+    public void A_record_matches_its_ancestor_whatever_order_its_fields_are_in()
+    {
+        string ours = Edit(Ancestor, root =>
+        {
+            foreach (XElement link in Links(root))
+            {
+                XElement first = link.Elements("value").First();
+                first.Remove();
+                link.Add(first);
+            }
+            Links(root).First().AddBeforeSelf(Link("OnDraw", 5));
+        });
+        string theirs = Edit(Ancestor, root => Target(Links(root).Last()).Value = "9");
+
+        (string merged, IReadOnlyList<string> conflicts) = FcbMerge.Merge(Ancestor, ours, theirs);
+
+        Assert.Empty(conflicts);
+        Assert.Equal(["OnDraw", "OnFire", "OnReload"], Events(merged));
+        Assert.Equal("9", Target(Links(XElement.Parse(merged)).Last()).Value);
+    }
+
+    [Fact]
+    public void Both_layers_editing_one_record_differently_conflict_at_its_index()
+    {
+        string ours = Edit(Ancestor, root => Event(Links(root).Last()).Value = "OnReloadStart");
+        string theirs = Edit(Ancestor, root => Event(Links(root).Last()).Value = "OnReloadEnd");
+
+        (string merged, IReadOnlyList<string> conflicts) = FcbMerge.Merge(Ancestor, ours, theirs);
+
+        Assert.Equal(["Entity/Components/CEventComponent/hidLinks/Link[1]/InputEvent"], conflicts);
+        Assert.Equal(["OnFire", "OnReloadEnd"], Events(merged));
+    }
+
+    /// <summary>An archetype can hold several occlusion volumes; they are a list, and the components
+    /// beside them still pair by type.</summary>
+    [Fact]
+    public void Repeated_components_leave_entity_data_to_merge_by_key()
+    {
+        string withVolumes = Edit(Ancestor, root => At(root, "Entity/Components").Add(Volume(1), Volume(2)));
+
+        (string merged, IReadOnlyList<string> conflicts) = FcbMerge.Merge(withVolumes,
+            Adding(DataComponent(Key("ModA.Key", 1)), withVolumes), Adding(DataComponent(Key("ModB.Key", 2)), withVolumes));
+
+        Assert.Empty(conflicts);
+        XElement component = Assert.Single(Components(merged), c => TypeOf(c) == "CFCSEDataComponent");
+        Assert.Equal(["ModA.Key", "ModB.Key"], component.Elements("object").Select(TypeOf));
+        Assert.Equal(2, Components(merged).Count(c => TypeOf(c) == "CVisibilityOcclusionVolumeComponent"));
     }
 
     /// <summary>The case that motivated the tree merge, through the build's own fold and splice.</summary>
@@ -214,6 +272,15 @@ public class FcbMergeTests : IDisposable
     private static IEnumerable<XElement> Links(XElement root)
         => At(root, "Entity/Components/CEventComponent/hidLinks").Elements("object");
 
+    private static IEnumerable<string> Events(string xml) => Links(XElement.Parse(xml)).Select(link => Event(link).Value);
+
+    private static XElement Event(XElement link) => ValueOf(link, "InputEvent");
+
+    private static XElement Target(XElement link) => ValueOf(link, "TargetEntityId");
+
+    private static XElement ValueOf(XElement parent, string name)
+        => parent.Elements("value").Single(v => (string?)v.Attribute("name") == name);
+
     private static string Edit(string xml, Action<XElement> edit)
     {
         XElement root = XElement.Parse(xml);
@@ -221,7 +288,8 @@ public class FcbMergeTests : IDisposable
         return root.ToString();
     }
 
-    private static string Adding(XElement component) => Edit(Ancestor, root => At(root, "Entity/Components").Add(component));
+    private static string Adding(XElement component, string? onto = null)
+        => Edit(onto ?? Ancestor, root => At(root, "Entity/Components").Add(component));
 
     private static XElement DataComponent(params XElement[] keys)
         => new("object", new XAttribute("type", "CFCSEDataComponent"), keys);
@@ -234,9 +302,14 @@ public class FcbMergeTests : IDisposable
         => new("object", new XAttribute("type", name),
             new XElement("value", new XAttribute("name", "Float"), new XAttribute("type", "Float"), value));
 
-    private static XElement Link(string inputEvent)
+    private static XElement Link(string inputEvent, long target)
         => new("object", new XAttribute("type", "Link"),
-            new XElement("value", new XAttribute("name", "InputEvent"), new XAttribute("type", "String"), inputEvent));
+            new XElement("value", new XAttribute("name", "InputEvent"), new XAttribute("type", "String"), inputEvent),
+            new XElement("value", new XAttribute("name", "TargetEntityId"), new XAttribute("type", "Int64"), target));
+
+    private static XElement Volume(float radius)
+        => new("object", new XAttribute("type", "CVisibilityOcclusionVolumeComponent"),
+            new XElement("value", new XAttribute("name", "fRadius"), new XAttribute("type", "Float"), radius));
 
     /// <summary>An entity library holding just <see cref="Ancestor"/>.</summary>
     private static byte[] Library()

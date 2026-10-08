@@ -5,14 +5,16 @@ namespace JackAll.Core.Format;
 /// <summary>
 /// A three-way merge of one element whose children form a list, each child matched by a key the
 /// caller supplies. Additions from both sides land, the ancestor's order is kept, and only two
-/// different versions of one child conflict.
+/// different versions of one child conflict. Children sharing a key are a list, whose items are
+/// matched to the ancestor's by content, then by position.
 /// </summary>
 public static class XmlListMerge
 {
     /// <summary>
     /// Folds <paramref name="theirs"/> into <paramref name="ours"/> attribute by attribute and child
     /// by child. A conflict keeps theirs and is reported by where it sits: <c>@attribute</c>, or a
-    /// child's key followed by any path inside it. A null ancestor means both sides added the element.
+    /// child's key - a list item's with its index, <c>Link[2]</c> - followed by any path inside it. A
+    /// null ancestor means both sides added the element.
     /// </summary>
     /// <param name="mergeChild">Merges a child both sides changed, which otherwise conflicts whole.</param>
     public static (XElement Merged, IReadOnlyList<string> Conflicts) Merge(
@@ -31,18 +33,21 @@ public static class XmlListMerge
                 string.Equals, $"@{name.LocalName}"));
         }
 
-        Dictionary<string, XElement> originals = Keyed(original, keyOf).ToDictionary(c => c.Key, c => c.Element);
-        List<(string Key, XElement Element)> theirChildren = Keyed(theirs, keyOf);
+        // A key repeated on any side is a list on all three, so each keys its items the same way.
+        HashSet<string> lists = [.. new[] { original, ours, theirs }
+            .SelectMany(side => side.Elements().CountBy(keyOf)).Where(count => count.Value > 1).Select(count => count.Key)];
+        Dictionary<string, XElement> originals = Keyed(original, original, keyOf, lists).ToDictionary(c => c.Key, c => c.Element);
+        List<(string Key, string Label, XElement Element)> theirChildren = Keyed(original, theirs, keyOf, lists);
         Dictionary<string, XElement> theirsByKey = theirChildren.ToDictionary(c => c.Key, c => c.Element);
 
         // Where each of our children ended up, null when the merge drops it, and which only we added.
         var kept = new Dictionary<string, XElement?>();
         var ourAdditions = new HashSet<XElement>();
-        foreach ((string key, XElement mine) in Keyed(merged, keyOf))
+        foreach ((string key, string label, XElement mine) in Keyed(original, merged, keyOf, lists))
         {
             XElement? before = originals.GetValueOrDefault(key);
             XElement? their = theirsByKey.GetValueOrDefault(key);
-            XElement? version = Fold(before, mine, their, XNode.DeepEquals, keyOf(mine), mergeChild);
+            XElement? version = Fold(before, mine, their, XNode.DeepEquals, label, mergeChild);
             if (version is null)
             {
                 mine.Remove();
@@ -65,14 +70,14 @@ public static class XmlListMerge
         // Each addition follows the last of their children already in the merge, after any of ours
         // added at the same place.
         XElement? anchor = null;
-        foreach ((string key, XElement child) in theirChildren)
+        foreach ((string key, string label, XElement child) in theirChildren)
         {
             if (kept.TryGetValue(key, out XElement? at))
             {
                 anchor = at ?? anchor;
                 continue;
             }
-            if (Fold(originals.GetValueOrDefault(key), null, child, XNode.DeepEquals, keyOf(child)) is not { } added)
+            if (Fold(originals.GetValueOrDefault(key), null, child, XNode.DeepEquals, label) is not { } added)
             {
                 continue;
             }
@@ -122,18 +127,52 @@ public static class XmlListMerge
         }
     }
 
-    /// <summary>Every child under its key, a repeated key numbered by occurrence so identical siblings
-    /// stay distinct.</summary>
-    private static List<(string Key, XElement Element)> Keyed(XElement parent, Func<XElement, string> keyOf)
+    /// <summary>
+    /// Every child of <paramref name="side"/> under the key it is paired by, with the label a conflict
+    /// path names it by. A child whose key is in <paramref name="lists"/> is a list item, keyed by the
+    /// <paramref name="original"/> item it matches; one the original lacks is keyed by its content, so
+    /// two sides adding the same item add it once.
+    /// </summary>
+    private static List<(string Key, string Label, XElement Element)> Keyed(
+        XElement original, XElement side, Func<XElement, string> keyOf, HashSet<string> lists)
     {
-        var occurrences = new Dictionary<string, int>();
-        var keyed = new List<(string Key, XElement Element)>();
-        foreach (XElement child in parent.Elements())
+        var items = new Dictionary<XElement, (string Key, string Label)>();
+        foreach (IGrouping<string, XElement> list in side.Elements().GroupBy(keyOf).Where(g => lists.Contains(g.Key)))
         {
-            string key = keyOf(child);
-            int occurrence = occurrences[key] = occurrences.GetValueOrDefault(key) + 1;
-            keyed.Add(($"{key}#{occurrence}", child));
+            List<XElement> after = [.. list];
+            List<XElement> before = side == original ? after : [.. original.Elements().Where(e => keyOf(e) == list.Key)];
+            IEnumerable<(int? Before, int? After)> pairs = side == original
+                ? Enumerable.Range(0, after.Count).Select(i => ((int?)i, (int?)i))
+                : SiblingAlignment.Align(before, after, item => Identity(item, keyOf));
+            var additions = new Dictionary<string, int>();
+            foreach ((int? b, int? a) in pairs)
+            {
+                if (a is not { } at)
+                {
+                    continue;
+                }
+                if (b is { } match)
+                {
+                    items[after[at]] = ($"{list.Key}#{match}", $"{list.Key}[{match}]");
+                    continue;
+                }
+                string content = Identity(after[at], keyOf);
+                int copy = additions[content] = additions.GetValueOrDefault(content) + 1;
+                items[after[at]] = ($"{list.Key}+{copy}{content}", $"{list.Key}[+{at}]");
+            }
         }
-        return keyed;
+
+        return [.. side.Elements().Select(child => items.TryGetValue(child, out (string Key, string Label) item)
+            ? (item.Key, item.Label, child)
+            : (keyOf(child), keyOf(child), child))];
     }
+
+    /// <summary>An element as text in which the order of differently keyed siblings does not count, so
+    /// a list item matches its ancestor however its fields are ordered.</summary>
+    private static string Identity(XElement element, Func<XElement, string> keyOf)
+        => element.HasElements
+            ? $"<{element.Name}{string.Concat(element.Attributes().Select(a => $" {a}"))}>"
+                + string.Concat(element.Elements().OrderBy(keyOf, StringComparer.Ordinal).Select(child => Identity(child, keyOf)))
+                + "</>"
+            : element.ToString(SaveOptions.DisableFormatting);
 }

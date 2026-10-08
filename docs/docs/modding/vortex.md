@@ -46,8 +46,9 @@ rule, and literally the order of `--layer` arguments passed to the build. Two mo
 different placed entities of a worldsector — see the id space below) never meet at all, and two mods
 editing *different parts of the same fragment* are 3-way merged rather than fought over. An `.fcb`
 fragment merges as a tree, fields paired by name and child objects by type, so two mods that each add
-a component or an entity-data key to one archetype both keep theirs; a list of same-typed records,
-such as an entity's event links, still merges line by line. So ordering only decides genuine
+a component or an entity-data key to one archetype both keep theirs. A list of same-typed records,
+such as an entity's event links, merges record by record, each matched to the original by content,
+so two mods adding links to one entity both keep theirs too. So ordering only decides genuine
 conflicts: two mods giving the *exact same* field different values. For those, the lower mod in your
 load order wins — that field of an `.fcb` fragment, the whole of a text one — same rule as a
 whole-file override, and Vortex shows a warning notification naming the fragment, where inside it
@@ -271,8 +272,8 @@ After writing the archive pair, the build syncs each layer's reserved `plugins\`
 warned on stderr), and each layer entry reports its own `pluginFiles`. `conflicts` lists every place
 one layer's version was dropped for another's (see Ordering): a `kind` of `fragment`, `file` or
 `overlaid`, the `winningLayer` and `overruledLayers`, the `paths` inside the fragment where they
-disagreed (`Entity/Components/CEventComponent/hidLinks`) when the merge can say, and a `message` that
-is also warned on stderr.
+disagreed (`Entity/Components/CEventComponent/hidLinks/Link[1]/InputEvent`) when the merge can say,
+and a `message` that is also warned on stderr.
 
 Building with **no** layers is meaningful: it reproduces the vanilla patch byte for byte and
 removes every previously deployed plugin file. The archives are only mounted when some layer stages

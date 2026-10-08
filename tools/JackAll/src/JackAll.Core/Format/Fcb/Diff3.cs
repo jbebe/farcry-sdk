@@ -5,8 +5,8 @@ namespace JackAll.Core.Format.Fcb;
 
 /// <summary>
 /// A 3-way text merge — the core of docs/design/fcb-fragment-overlays.md's Milestone 3. Pure text,
-/// no FCB/mod-layer knowledge, so it's independently testable against plain strings; its only real
-/// caller feeds it canonicalized fragment XML (see <see cref="FcbXml.CanonicalizeFragment"/>).
+/// no FCB/mod-layer knowledge, so it's independently testable against plain strings; its caller feeds
+/// it the canonicalized fragments of a text format (see <see cref="Mods.IContainerSplitter.Merge"/>).
 /// </summary>
 public static class Diff3
 {
@@ -39,13 +39,4 @@ public static class Diff3
         // which is what keeps a fragment touched by exactly one layer byte-for-byte identical to what
         // it was before Milestone 3 (see the no-op guarantee above), not just line-for-line equal.
         return (string.Join(Environment.NewLine, result.MergedPieces), !result.IsSuccessful);
-    }
-
-    /// <summary><see cref="Merge"/> resolved by load order: a conflict yields <paramref name="theirs"/>
-    /// whole, since conflict markers are not a container and cannot be built.</summary>
-    public static (string Merged, bool HasConflict) Resolve(string ancestor, string ours, string theirs)
-    {
-        (string merged, bool conflict) = Merge(ancestor, ours, theirs);
-        return (conflict ? theirs : merged, conflict);
-    }
-}
+    }}

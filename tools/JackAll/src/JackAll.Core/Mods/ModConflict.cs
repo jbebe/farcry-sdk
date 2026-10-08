@@ -23,7 +23,8 @@ public readonly record struct ModConflict(
     ConflictKind Kind = ConflictKind.Fragment, string FragmentId = "", bool IsNewEntry = false)
 {
     /// <summary>Where inside the fragment the layers disagreed, as paths of names and types below its
-    /// root - <c>Entity/Components/CEventComponent/hidLinks</c>. Empty when the merge cannot say.</summary>
+    /// root - <c>Entity/Components/CEventComponent/hidLinks/Link[1]/InputEvent</c>. Empty when the
+    /// merge cannot say.</summary>
     public IReadOnlyList<string> Paths { get; init; } = [];
 
     /// <summary>Where the fragment sits, as one staged path.</summary>

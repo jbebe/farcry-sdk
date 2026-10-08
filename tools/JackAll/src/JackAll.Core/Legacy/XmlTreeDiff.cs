@@ -1,5 +1,6 @@
 using System.Text;
 using System.Xml.Linq;
+using JackAll.Core.Format;
 
 namespace JackAll.Core.Legacy;
 
@@ -21,9 +22,6 @@ public sealed record XmlChange(ChangeKind Kind, string Path, string? Old, string
 public static class XmlTreeDiff
 {
     private static readonly string[] KeyAttributes = ["name", "id", "path", "class", "type", "enum", "key", "hash"];
-
-    /// <summary>Beyond this many sibling pairs, same-label siblings are paired by position.</summary>
-    private const long AlignmentBudget = 4_000_000;
 
     /// <summary>Every difference, and whether applying all of them rebuilds <paramref name="mod"/>.</summary>
     /// <param name="expand">The document a leaf's text encodes, when it encodes one - a nested format
@@ -218,7 +216,7 @@ public static class XmlTreeDiff
                 List<XElement> after = modByLabel.GetValueOrDefault(label) ?? [];
                 bool indexed = before.Count > 1 || after.Count > 1;
 
-                foreach ((int? b, int? a) in Align(before, after))
+                foreach ((int? b, int? a) in SiblingAlignment.Align(before, after, e => e.ToString(SaveOptions.DisableFormatting)))
                 {
                     if (b is { } bi && a is { } ai)
                     {
@@ -292,79 +290,5 @@ public static class XmlTreeDiff
         }
 
         private static string Join(string path, string segment) => path.Length == 0 ? segment : $"{path}/{segment}";
-    }
-
-    /// <summary>
-    /// Pairs two sibling lists: equal content first, by longest common subsequence, then whatever
-    /// sits between two such anchors by position. Unpaired entries are removals or additions.
-    /// </summary>
-    private static IEnumerable<(int? Before, int? After)> Align(List<XElement> before, List<XElement> after)
-    {
-        // A list of plain values edited in place keeps its length; matching equal values out of
-        // position there would read every edit as a removal and an addition.
-        bool valuesInPlace = before.Count == after.Count && before.Concat(after).All(e => !e.HasElements);
-        List<(int, int)> anchors = !valuesInPlace && (long)before.Count * after.Count <= AlignmentBudget
-            ? CommonSubsequence(
-                [.. before.Select(e => e.ToString(SaveOptions.DisableFormatting))],
-                [.. after.Select(e => e.ToString(SaveOptions.DisableFormatting))])
-            : [];
-        anchors.Add((before.Count, after.Count));
-
-        int b = 0, a = 0;
-        foreach ((int nextB, int nextA) in anchors)
-        {
-            while (b < nextB && a < nextA)
-            {
-                yield return (b++, a++);
-            }
-
-            while (b < nextB)
-            {
-                yield return (b++, null);
-            }
-
-            while (a < nextA)
-            {
-                yield return (null, a++);
-            }
-
-            if (nextB < before.Count)
-            {
-                yield return (b++, a++);
-            }
-        }
-    }
-
-    private static List<(int, int)> CommonSubsequence(string[] before, string[] after)
-    {
-        int[,] length = new int[before.Length + 1, after.Length + 1];
-        for (int i = before.Length - 1; i >= 0; i--)
-        {
-            for (int j = after.Length - 1; j >= 0; j--)
-            {
-                length[i, j] = before[i] == after[j]
-                    ? length[i + 1, j + 1] + 1
-                    : Math.Max(length[i + 1, j], length[i, j + 1]);
-            }
-        }
-
-        List<(int, int)> pairs = [];
-        for (int i = 0, j = 0; i < before.Length && j < after.Length;)
-        {
-            if (before[i] == after[j])
-            {
-                pairs.Add((i++, j++));
-            }
-            else if (length[i + 1, j] >= length[i, j + 1])
-            {
-                i++;
-            }
-            else
-            {
-                j++;
-            }
-        }
-
-        return pairs;
     }
 }
