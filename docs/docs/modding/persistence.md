@@ -49,11 +49,8 @@ Variants are separate archetypes: `weapons.Special.RPG7` and `weapons.Special.RP
 need the block, as does the archetype in each library the game reads — world1, world2 and the DLC
 library. `jackall-cli mod lint` says whether the copy you edited is the one the game reads.
 
-:::caution[Two mods, one archetype]
-JackAll merges two layers' edits to one archetype line by line, so two mods that each add
-`CFCSEDataComponent` to the same archetype are reported as a conflict. Until that merge pairs child
-objects by tag, keep each archetype's entity data in one mod.
-:::
+Two mods can add keys to the same archetype. JackAll merges their `CFCSEDataComponent` blocks key by
+key and reports a conflict only when both give the same key different values.
 
 ## FCSE entity data: per entity
 

@@ -12,8 +12,9 @@ Every number below was measured against a retail Steam install (214,097 VFS rows
 
 ## Two thresholds decide everything
 
-Granularity is **not** a merge-correctness question. `Diff3` already merges textually distant edits
-*inside* one fragment, so splitting finer buys no conflict resolution. Splitting exists to keep the
+Granularity is **not** a merge-correctness question. The three-way merge already folds separate
+edits *inside* one fragment - an `.fcb` one as a tree, a text one by line - so splitting finer buys
+no conflict resolution. Splitting exists to keep the
 **shipping payload** small and the folder **navigable** — and those two pull in opposite directions.
 
 So the whole decision reduces to two numbers per container:
@@ -98,7 +99,7 @@ That is the whole addition. Two recognisers.
 
 **`WorldSector` is the one exception to the payload rule**, and it is worth being honest about: at a
 4.3 KB median file and 4× amplification it would not pass Rule 1 today. It splits because whole-file
-overrides are *last-wins* while fragment overrides get Diff3-merged, so per-entity fragments are what
+overrides are *last-wins* while fragment overrides get three-way merged, so per-entity fragments are what
 let two mods edit different entities in one sector. The 364 KB tail also justifies it. It stays — but it
 is the precedent for "conflict merge", not for "payload", and nothing else should cite it as one.
 
