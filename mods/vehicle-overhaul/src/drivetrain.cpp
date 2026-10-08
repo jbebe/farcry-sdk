@@ -28,11 +28,12 @@ namespace {
     // For a car whose real engine is not known: Havok's own revs.
     constexpr float kIdle = 850.0f;
     constexpr float kRedline = kHavokUpshift;
-    // The revs a slipping clutch lets the engine reach while the car pulls away.
-    constexpr float kClutchSlip = 2500.0f;
-    // Per second: how fast the engine gains revs, and loses them with the throttle off.
-    constexpr float kRiseRate = 7000.0f;
-    constexpr float kFallRate = 3000.0f;
+    // As shares of the way from idle to the redline, so each engine keeps the Datsun's character over its own
+    // range: how far a slipping clutch lets the engine rev while the car pulls away (2,500 rpm on the Datsun),
+    // and per second how fast the engine gains revs and loses them with the throttle off (7,000 and 3,000).
+    constexpr float kClutchSlip = 1750.0f / 5750.0f;
+    constexpr float kRiseRate = 7000.0f / 5750.0f;
+    constexpr float kFallRate = 3000.0f / 5750.0f;
 
     // Kept by the physics step, read by the sound. The shift is the last gear change not yet sounded:
     // +1 up, -1 down.
@@ -106,14 +107,16 @@ float Step(Car car, const RealVehicle::Spec* real, float shiftTime, const Wheele
     }
     g_lifted = g_sinceShift < g_shiftTime;
 
-    const float wheels = idle + (std::abs(readout.rpm) - kHavokMin) * (redline - idle) / (kHavokUpshift - kHavokMin);
+    const float range = redline - idle;
+    const float wheels = idle + (std::abs(readout.rpm) - kHavokMin) * range / (kHavokUpshift - kHavokMin);
     float target = std::max(idle, wheels);
-    if (wheels < kClutchSlip) {
-        target = std::max(target, idle + readout.throttle * (kClutchSlip - idle));
+    const float slip = idle + kClutchSlip * range;
+    if (wheels < slip) {
+        target = std::max(target, idle + readout.throttle * (slip - idle));
     }
     target = std::min(target, redline);
 
-    const float rpm = g_rpm + std::clamp(target - g_rpm, -kFallRate * seconds, kRiseRate * seconds);
+    const float rpm = g_rpm + std::clamp(target - g_rpm, -kFallRate * range * seconds, kRiseRate * range * seconds);
     g_rpm = rpm;
     return rpm;
 }
