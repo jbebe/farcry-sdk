@@ -565,10 +565,10 @@ public class WorldSectorFragmentTests : IDisposable
         Assert.Equal(["42.xml"], ContainerLayout.Parse(once).Deleted);
 
         // Two mods deleting different entities of one sector both get their way.
-        (string merged, bool conflict) = splitter.Merge(
+        (string merged, IReadOnlyList<string> conflicts) = splitter.Merge(
             ContainerLayout.Id, Layout(""), Layout("<delete id=\"42\" />"), Layout("<delete id=\"43\" />"));
 
-        Assert.False(conflict);
+        Assert.Empty(conflicts);
         Assert.Equal(["42.xml", "43.xml"], ContainerLayout.Parse(merged).Deleted.Order(StringComparer.Ordinal));
     }
 

@@ -11,34 +11,40 @@ public static class XmlListMerge
 {
     /// <summary>
     /// Folds <paramref name="theirs"/> into <paramref name="ours"/> attribute by attribute and child
-    /// by child. A conflict keeps theirs and is flagged. A null ancestor means both sides added the
-    /// element.
+    /// by child. A conflict keeps theirs and is reported by where it sits: <c>@attribute</c>, or a
+    /// child's key followed by any path <paramref name="mergeChild"/> reports inside it. A null
+    /// ancestor means both sides added the element.
     /// </summary>
-    public static (XElement Merged, bool Conflict) Merge(
-        XElement? ancestor, XElement ours, XElement theirs, Func<XElement, string> keyOf)
+    /// <param name="mergeChild">Merges a child both sides changed within itself, or returns null to
+    /// leave it a conflict as a whole. The paths it returns are relative to that child.</param>
+    public static (XElement Merged, IReadOnlyList<string> Conflicts) Merge(
+        XElement? ancestor, XElement ours, XElement theirs, Func<XElement, string> keyOf,
+        Func<XElement?, XElement, XElement, (XElement Merged, IReadOnlyList<string> Conflicts)?>? mergeChild = null)
     {
         var merged = new XElement(ours);
         XElement original = ancestor ?? new XElement(theirs.Name);
-        bool conflict = false;
+        List<string> conflicts = [];
 
         foreach (XName name in original.Attributes().Concat(merged.Attributes()).Concat(theirs.Attributes())
             .Select(a => a.Name).Distinct().ToList())
         {
             merged.SetAttributeValue(name, Fold(
                 (string?)original.Attribute(name), (string?)merged.Attribute(name), (string?)theirs.Attribute(name),
-                string.Equals));
+                string.Equals, $"@{name.LocalName}"));
         }
 
         Dictionary<string, XElement> originals = Keyed(original, keyOf).ToDictionary(c => c.Key, c => c.Element);
         List<(string Key, XElement Element)> theirChildren = Keyed(theirs, keyOf);
         Dictionary<string, XElement> theirsByKey = theirChildren.ToDictionary(c => c.Key, c => c.Element);
 
-        // Where each of our children ended up, null when the merge drops it.
+        // Where each of our children ended up, null when the merge drops it, and which only we added.
         var kept = new Dictionary<string, XElement?>();
+        var ourAdditions = new HashSet<XElement>();
         foreach ((string key, XElement mine) in Keyed(merged, keyOf))
         {
-            XElement? version = Fold(originals.GetValueOrDefault(key), mine, theirsByKey.GetValueOrDefault(key),
-                XNode.DeepEquals);
+            XElement? before = originals.GetValueOrDefault(key);
+            XElement? their = theirsByKey.GetValueOrDefault(key);
+            XElement? version = Fold(before, mine, their, XNode.DeepEquals, keyOf(mine), mergeChild);
             if (version is null)
             {
                 mine.Remove();
@@ -48,10 +54,15 @@ public static class XmlListMerge
                 version = new XElement(version);
                 mine.ReplaceWith(version);
             }
+            else if (before is null && their is null)
+            {
+                ourAdditions.Add(mine);
+            }
             kept[key] = version;
         }
 
-        // Each addition follows the last of their children already in the merge.
+        // Each addition follows the last of their children already in the merge, after any of ours
+        // added at the same place.
         XElement? anchor = null;
         foreach ((string key, XElement child) in theirChildren)
         {
@@ -60,9 +71,16 @@ public static class XmlListMerge
                 anchor = at ?? anchor;
                 continue;
             }
-            if (Fold(originals.GetValueOrDefault(key), null, child, XNode.DeepEquals) is not { } added)
+            if (Fold(originals.GetValueOrDefault(key), null, child, XNode.DeepEquals, keyOf(child)) is not { } added)
             {
                 continue;
+            }
+
+            XElement? next = anchor is null ? merged.Elements().FirstOrDefault() : anchor.ElementsAfterSelf().FirstOrDefault();
+            while (next is not null && ourAdditions.Contains(next))
+            {
+                anchor = next;
+                next = next.ElementsAfterSelf().FirstOrDefault();
             }
 
             var addition = new XElement(added);
@@ -70,9 +88,9 @@ public static class XmlListMerge
             {
                 anchor.AddAfterSelf(addition);
             }
-            else if (merged.Elements().FirstOrDefault() is { } first)
+            else if (next is not null)
             {
-                first.AddBeforeSelf(addition);
+                next.AddBeforeSelf(addition);
             }
             else
             {
@@ -81,20 +99,27 @@ public static class XmlListMerge
             anchor = addition;
         }
 
-        return (merged, conflict);
+        return (merged, conflicts);
 
         // The changed side's version when only one side changed it, the shared one when both made the
-        // same change, and theirs, flagged, when the two disagree.
-        T? Fold<T>(T? ancestorSide, T? ourSide, T? theirSide, Func<T?, T?, bool> same) where T : class
+        // same change, and when the two disagree, what within makes of them, else theirs, flagged.
+        T? Fold<T>(T? ancestorSide, T? ourSide, T? theirSide, Func<T?, T?, bool> same, string at,
+            Func<T?, T, T, (T Merged, IReadOnlyList<string> Conflicts)?>? within = null) where T : class
         {
             if (same(theirSide, ancestorSide) || same(ourSide, theirSide))
             {
                 return ourSide;
             }
-            if (!same(ourSide, ancestorSide))
+            if (same(ourSide, ancestorSide))
             {
-                conflict = true;
+                return theirSide;
             }
+            if (ourSide is not null && theirSide is not null && within?.Invoke(ancestorSide, ourSide, theirSide) is { } inner)
+            {
+                conflicts.AddRange(inner.Conflicts.Select(path => path.Length == 0 ? at : $"{at}/{path}"));
+                return inner.Merged;
+            }
+            conflicts.Add(at);
             return theirSide;
         }
     }

@@ -123,17 +123,15 @@ public interface IContainerSplitter
     /// Folds two layers' versions of one fragment against their common ancestor. Text by default,
     /// which is right for anything whose lines are independent; a format with an override unit whose
     /// meaning is not line-shaped overrides this. The merged text is always usable as-is, even when
-    /// the fold conflicted - the flag says a decision was made, not that the result is unfinished.
+    /// the fold conflicted - the conflicts say where a decision was made, not that the result is
+    /// unfinished. Each is a path inside the fragment, empty for the fragment as a whole.
     /// </summary>
-    (string Merged, bool Conflict) Merge(string fragmentId, string ancestor, string ours, string theirs)
-        => TextMerge(ancestor, ours, theirs);
-
-    /// <summary>Line-based three-way merge, resolved by load order rather than left carrying
-    /// conflict markers - which are not a container and cannot be built.</summary>
-    static (string Merged, bool Conflict) TextMerge(string ancestor, string ours, string theirs)
+    /// <remarks>A text conflict is resolved by load order rather than left carrying conflict markers,
+    /// which are not a container and cannot be built.</remarks>
+    (string Merged, IReadOnlyList<string> Conflicts) Merge(string fragmentId, string ancestor, string ours, string theirs)
     {
         (string merged, bool conflict) = Diff3.Merge(ancestor, ours, theirs);
-        return conflict ? (theirs, true) : (merged, false);
+        return conflict ? (theirs, [""]) : (merged, []);
     }
 
     /// <summary>

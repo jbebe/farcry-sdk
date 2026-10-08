@@ -24,20 +24,20 @@ public sealed class FcbContainerSplitter(FcbClassDefinitions definitions) : ICon
             : FcbXml.CanonicalizeFragment(fragmentXml, definitions);
 
     /// <summary>
-    /// A mission-layer layout is merged by what it means - which entity belongs to which layer -
-    /// rather than as text, because two mods moving different entities touch neighbouring lines of
-    /// the same document and a line-based merge would call that a conflict.
+    /// Both shapes merge by what they mean rather than as text, because two mods making unrelated
+    /// changes touch neighbouring lines: an entity as a tree (see <see cref="FcbMerge"/>), a
+    /// mission-layer layout by which entity belongs to which layer.
     /// </summary>
-    public (string Merged, bool Conflict) Merge(string fragmentId, string ancestor, string ours, string theirs)
+    public (string Merged, IReadOnlyList<string> Conflicts) Merge(string fragmentId, string ancestor, string ours, string theirs)
     {
         if (!ContainerLayout.IsLayoutId(fragmentId))
         {
-            return IContainerSplitter.TextMerge(ancestor, ours, theirs);
+            return FcbMerge.Merge(ancestor, ours, theirs);
         }
 
         (ContainerLayout merged, bool conflict) = ContainerLayout.Merge(
             ParseLayout(ancestor), ParseLayout(ours), ParseLayout(theirs));
-        return (merged.Render(), conflict);
+        return (merged.Render(), conflict ? [""] : []);
     }
 
     /// <summary>An absent ancestor is a sector nobody has re-filed yet, which is an empty layout

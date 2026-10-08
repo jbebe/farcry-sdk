@@ -71,6 +71,7 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
                     kind = c.KindName,
                     container = c.Container,
                     fragmentId = c.FragmentId,
+                    paths = c.Paths,
                     isNewEntry = c.IsNewEntry,
                     winningLayer = c.WinningLayer,
                     overruledLayers = c.OverruledLayers,

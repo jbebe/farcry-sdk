@@ -326,6 +326,7 @@ internal static class Program
         Kind = c.KindName,
         Container = c.Container,
         FragmentId = c.FragmentId,
+        Paths = c.Paths,
         IsNewEntry = c.IsNewEntry,
         WinningLayer = c.WinningLayer,
         OverruledLayers = c.OverruledLayers,

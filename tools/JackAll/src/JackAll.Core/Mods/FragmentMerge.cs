@@ -76,19 +76,16 @@ public static class FragmentMerge
 
     /// <summary>
     /// The final XML for one fragment, folding every enabled layer touching it (in priority order)
-    /// via a chain of 3-way merges against the vanilla ancestor. Starting <c>result</c> at the
-    /// ancestor makes the first fold <c>Diff3.Merge(ancestor, ancestor, layer's text)</c>, which is a
-    /// no-op pass-through for any input (see <see cref="Diff3"/>'s remarks) — so a fragment touched
-    /// by exactly one layer behaves exactly as it did before Milestone 3, with no special-casing.
+    /// via a chain of 3-way merges (<see cref="IContainerSplitter.Merge"/>) against the vanilla
+    /// ancestor. The first layer is taken outright, as its canonical text - what a fold against an
+    /// unchanged "ours" means - so a fragment touched by exactly one layer is a byte-identical
+    /// pass-through whatever the splitter's merge does.
     /// <paramref name="fragmentId"/> not matching anything in <paramref name="vanilla"/> is not an
     /// error: it means every contributing layer is adding a genuinely new entry rather than overriding
     /// an existing one (normal modding — see <see cref="IContainerSplitter.Apply"/>, which is what
-    /// actually splices an added child in). There's no ancestor to fold the first contributor's content
-    /// against in that case, so it's taken outright instead of going through <see cref="Diff3"/> at all
-    /// — same byte-for-byte guarantee a single layer touching an existing fragment already gets, rather
-    /// than relying on <see cref="Diff3"/>'s empty-ancestor behavior to happen to line up with it. A
+    /// actually splices an added child in). The first contributor is taken outright the same way. A
     /// second layer contributing the same brand-new id then folds normally, against an empty ancestor,
-    /// so different content from two mods adding the same id is a real conflict, not one silently
+    /// so what two mods adding the same id give differently is a real conflict, not one silently
     /// clobbering the other.
     /// </summary>
     /// <param name="conflicts">
@@ -147,34 +144,33 @@ public static class FragmentMerge
 
             if (i == 0)
             {
-                // Diff3.Merge(ancestor, ancestor, theirs) is documented (Diff3.cs's remarks, pinned by
-                // Diff3Tests.Ours_unchanged_from_ancestor_means_theirs_wins_outright_with_no_conflict)
-                // to always resolve to theirs with no conflict whenever "ours" equals "ancestor" - true
-                // here unconditionally at i == 0: either there's no ancestor at all (a brand-new entry),
-                // or "ours" would just be Canonicalize(ancestor), which is ancestor's own text
-                // back again (ancestor already went through this same WriteObject/Render pipeline via
-                // ExtractFragment). Take that documented outcome directly instead of spending a real
-                // XML round-trip and a full 3-way text diff to re-derive it - this is the dominant cost
-                // for a fragment touched by exactly one layer, the overwhelmingly common case.
+                // "Ours" is the ancestor itself here, so nothing can disagree with theirs. Taking it
+                // directly is what keeps a single layer's fragment byte-identical - a tree merge would
+                // re-render it - and skips a merge for the overwhelmingly common case.
                 result = theirs;
                 continue;
             }
 
             string ours = splitter.Canonicalize(fragmentId, result);
-            (string merged, bool conflict) = splitter.Merge(fragmentId, ancestor, ours, theirs);
-            if (!conflict)
+            (string merged, IReadOnlyList<string> at) = splitter.Merge(fragmentId, ancestor, ours, theirs);
+            if (at.Count == 0)
             {
                 result = merged;
                 continue;
             }
 
+            var conflict = new ModConflict(container, layer.Name,
+                [.. layers.Take(i).Select(l => l.Layer.Name).Distinct()], FragmentId: fragmentId, IsNewEntry: isNewEntry)
+            {
+                Paths = [.. at.Where(path => path.Length > 0)],
+            };
             if (conflicts is null)
             {
                 throw new InvalidDataException(isNewEntry
                     ? $"'{layer.Name}' conflicts with another enabled mod, both adding a new entry " +
-                      $"'{fragmentId}' with different content. Hand-fix the fragment (Replace on that row) " +
-                      "and re-stage it - your fix wins outright since the workspace is always highest priority."
-                    : $"'{layer.Name}' conflicts with an earlier enabled mod inside '{fragmentId}'. " +
+                      $"'{fragmentId}' with different content{conflict.AtPaths}. Hand-fix the fragment (Replace on " +
+                      "that row) and re-stage it - your fix wins outright since the workspace is always highest priority."
+                    : $"'{layer.Name}' conflicts with an earlier enabled mod inside '{fragmentId}'{conflict.AtPaths}. " +
                       "Hand-fix the fragment (Replace on that row) and re-stage it - your fix wins outright " +
                       "since the workspace is always highest priority.");
             }
@@ -183,8 +179,7 @@ public static class FragmentMerge
             // that is the higher-priority layer outright, exactly like a whole-file override; for a
             // format that merges by meaning it is the fold with only the collision decided, so the
             // other layer's untouched edits survive.
-            conflicts.Enqueue(new ModConflict(container, layer.Name,
-                [.. layers.Take(i).Select(l => l.Layer.Name).Distinct()], FragmentId: fragmentId, IsNewEntry: isNewEntry));
+            conflicts.Enqueue(conflict);
             result = merged;
         }
         return result;

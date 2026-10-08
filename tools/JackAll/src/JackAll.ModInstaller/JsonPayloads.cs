@@ -64,6 +64,9 @@ internal sealed record ConflictPayload
     public string Kind { get; init; } = string.Empty;
     public string Container { get; init; } = string.Empty;
     public string FragmentId { get; init; } = string.Empty;
+
+    /// <summary>Where inside the fragment the layers disagreed - see <c>ModConflict.Paths</c>.</summary>
+    public IReadOnlyList<string> Paths { get; init; } = [];
     public bool IsNewEntry { get; init; }
     public string WinningLayer { get; init; } = string.Empty;
     public IReadOnlyList<string> OverruledLayers { get; init; } = [];

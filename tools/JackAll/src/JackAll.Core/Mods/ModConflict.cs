@@ -3,7 +3,7 @@ namespace JackAll.Core.Mods;
 /// <summary>What two layers collided on.</summary>
 public enum ConflictKind
 {
-    /// <summary>Both edited the same lines of one fragment.</summary>
+    /// <summary>Both changed the same part of one fragment differently.</summary>
     Fragment,
 
     /// <summary>Both shipped a whole file, with different bytes.</summary>
@@ -22,8 +22,15 @@ public readonly record struct ModConflict(
     string Container, string WinningLayer, IReadOnlyList<string> OverruledLayers,
     ConflictKind Kind = ConflictKind.Fragment, string FragmentId = "", bool IsNewEntry = false)
 {
+    /// <summary>Where inside the fragment the layers disagreed, as paths of names and types below its
+    /// root - <c>Entity/Components/CEventComponent/hidLinks</c>. Empty when the merge cannot say.</summary>
+    public IReadOnlyList<string> Paths { get; init; } = [];
+
     /// <summary>Where the fragment sits, as one staged path.</summary>
     public string DisplayPath => $"{Container}\\{FragmentId}";
+
+    /// <summary><see cref="Paths"/> as a phrase to follow the fragment's name, empty when there are none.</summary>
+    public string AtPaths => Paths.Count == 0 ? "" : $" at {string.Join(", ", Paths)}";
 
     /// <summary><see cref="Kind"/> as the JSON output spells it.</summary>
     public string KindName => Kind.ToString().ToLowerInvariant();
@@ -41,10 +48,10 @@ public readonly record struct ModConflict(
                 $"'{WinningLayer}' overrode '{overruled}''s own edit of '{DisplayPath}' - a fragment lands on "
                 + "top of a whole-file copy of its container, whatever the load order.",
             _ when IsNewEntry =>
-                $"'{WinningLayer}' and '{overruled}' both add '{DisplayPath}' with different content, so only "
-                + "the higher-priority mod's survived. Reorder the mods, or hand-merge it in JackAll.App.",
+                $"'{WinningLayer}' and '{overruled}' both add '{DisplayPath}' with different content{AtPaths}, "
+                + "so only the higher-priority mod's survived. Reorder the mods, or hand-merge it in JackAll.App.",
             _ =>
-                $"'{WinningLayer}' overrode '{overruled}' inside '{DisplayPath}' by load order - their edits "
+                $"'{WinningLayer}' overrode '{overruled}' inside '{DisplayPath}'{AtPaths} by load order - their edits "
                 + "genuinely conflicted, so only the higher-priority mod's change survived. Reorder the mods, "
                 + "or hand-merge it in JackAll.App.",
         };

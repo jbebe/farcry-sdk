@@ -34,12 +34,12 @@ public sealed class InputConfigContainerSplitter : IContainerSplitter
 
     public string Canonicalize(string fragmentId, string fragmentXml) => Render(XElement.Parse(fragmentXml));
 
-    public (string Merged, bool Conflict) Merge(string fragmentId, string ancestor, string ours, string theirs)
+    public (string Merged, IReadOnlyList<string> Conflicts) Merge(string fragmentId, string ancestor, string ours, string theirs)
     {
-        (XElement merged, bool conflict) = XmlListMerge.Merge(
+        (XElement merged, IReadOnlyList<string> conflicts) = XmlListMerge.Merge(
             ancestor.Length == 0 ? null : XElement.Parse(ancestor), XElement.Parse(ours), XElement.Parse(theirs),
             KeyOf);
-        return (Render(merged), conflict);
+        return (Render(merged), conflicts);
     }
 
     public byte[] Apply(byte[] baseBytes, IReadOnlyDictionary<string, string> fragmentXmlById)
