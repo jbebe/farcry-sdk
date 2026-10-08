@@ -32,11 +32,12 @@ namespace {
     };
     constexpr NamedShape kShapes[] = {{"ar16", g_ar16Shape}, {"mgl140", g_mgl140Shape}};
 
-    // The weapon last followed and its entity, and whether its data says the plugin draws its
-    // scope but its mesh is still to be read.
+    // The weapon last followed and its entity, whether its data says the plugin draws its scope but
+    // its mesh is still to be read, and what was last missing from that.
     uint8_t* g_weapon = nullptr;
     void* g_entity = nullptr;
     bool g_unread = false;
+    char g_missing[192] = {};
 
     // The scope being read, and the ones before it, which the render thread can still be using.
     Scope g_scopes[4] = {};
@@ -50,7 +51,8 @@ namespace {
                 return &entry;
             }
         }
-        FCSE::Logf("scopes: nothing is called \"%s\"", name);
+        FCSE::Logf("scopes: %s: nothing a scope can show is called \"%s\"",
+                   AimingOverhaul::Aim::WeaponName(), name);
         return nullptr;
     }
 
@@ -67,9 +69,11 @@ namespace {
         }
         scope = {&reticle->reticle};
         if (data->GetString(entity, "AimingOverhaul.ScopeShape", name, sizeof(name))) {
-            if (const NamedShape* shape = Named(kShapes, name)) {
-                scope.shape = shape->shape;
+            const NamedShape* shape = Named(kShapes, name);
+            if (shape == nullptr) {
+                return false;
             }
+            scope.shape = shape->shape;
         }
         data->GetFloat(entity, "AimingOverhaul.ScopeRim", &scope.rim);
         data->GetFloat(entity, "AimingOverhaul.ScopeLensX", &scope.lensX);
@@ -87,14 +91,22 @@ const Scope* AimingOverhaul::Scopes::Follow(uint8_t* weapon) {
         g_inHand = nullptr;
         g_reading = (g_reading + 1) % std::size(g_scopes);
         g_unread = g_entity != nullptr && ReadData(g_entity, g_scopes[g_reading]);
+        g_missing[0] = '\0';
+    }
+    if (!g_unread) {
+        return g_inHand;
     }
     Scope& reading = g_scopes[g_reading];
-    if (g_unread && WeaponMesh::Read(g_entity, reading.part)) {
+    const char* missing = WeaponMesh::Read(g_entity, reading.part);
+    if (missing == nullptr) {
         g_unread = false;
         g_inHand = &reading;
         FCSE::Logf("scopes: %s is drawn from its eyepiece; its scope is %zu draws, the first from "
                    "index %u",
                    Aim::WeaponName(), reading.part.startCount, reading.part.starts[0]);
+    } else if (std::strcmp(missing, g_missing) != 0) {
+        std::strncpy(g_missing, missing, sizeof(g_missing) - 1);
+        FCSE::Logf("scopes: %s: %s", Aim::WeaponName(), missing);
     }
     return g_inHand;
 }

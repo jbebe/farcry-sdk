@@ -5,6 +5,8 @@
 #include "fcse_api.h"
 
 #include <algorithm>
+#include <cstdarg>
+#include <cstdio>
 #include <excpt.h>
 #include <iterator>
 
@@ -20,13 +22,13 @@ namespace {
 
     constexpr uint32_t kGraphicComponent = FCSE::Crc32("CGraphicComponent");
     constexpr uint32_t kScopePart = FCSE::Crc32("SCOPE_HI");
+    constexpr uint32_t kNearestScopeNode = FCSE::Crc32("SCOPE_HI_LOD0");
 
-    // CGraphicComponent: its parts and how many. A part: its name's hash, the hash of the node its
-    // nearest detail is drawn by, and the helper holding its geometry resource.
+    // CGraphicComponent: its parts and how many. A part: its name's hash, and the helper holding
+    // its geometry resource.
     constexpr ptrdiff_t kParts = 0x30;
     constexpr ptrdiff_t kPartCount = 0x34;
     constexpr ptrdiff_t kPartName = 0x0C;
-    constexpr ptrdiff_t kPartNearestNode = 0x2C;
     constexpr ptrdiff_t kPartHelper = 0x34;
     constexpr ptrdiff_t kHelperGeometry = 0x10;
 
@@ -61,10 +63,22 @@ namespace {
         return nullptr;
     }
 
-    // The draws of the node at the nearest detail of the loaded mesh.
-    bool ReadNearest(uint8_t* loaded, uint32_t node, AimingOverhaul::WeaponMesh::ScopePart& part) {
-        if (Field<uint32_t>(loaded, kDetailCount) == 0) {
-            return false;
+    // What Read last found missing.
+    char g_missing[192];
+
+    const char* Missing(const char* format, ...) {
+        va_list args;
+        va_start(args, format);
+        std::vsnprintf(g_missing, sizeof(g_missing), format, args);
+        va_end(args);
+        return g_missing;
+    }
+
+    // The scope's draws at the nearest detail of the loaded mesh; what is missing, if any.
+    const char* ReadNearest(uint8_t* loaded, AimingOverhaul::WeaponMesh::ScopePart& part) {
+        const uint32_t details = Field<uint32_t>(loaded, kDetailCount);
+        if (details == 0) {
+            return "no detail in its loaded mesh";
         }
         uint8_t* nearest = Field<uint8_t*>(loaded, kDetails);
         uint8_t* table = Field<uint8_t*>(loaded, kPartTable);
@@ -73,12 +87,18 @@ namespace {
         for (uint32_t i = 0; i < count && part.startCount < std::size(part.starts); i++) {
             uint8_t* draw = draws + i * kDrawEntry;
             const uint32_t entry = Field<uint32_t>(draw, kDrawPart);
-            if (Field<uint32_t>(table + entry * kPartEntry, 0) == node) {
+            if (Field<uint32_t>(table + entry * kPartEntry, 0) == kNearestScopeNode) {
                 part.starts[part.startCount++] = Field<uint32_t>(draw, kDrawStart);
             }
         }
         part.vertices = Field<uint8_t*>(nearest, kDetailVertices);
-        return part.vertices != nullptr && part.startCount > 0;
+        if (part.startCount == 0) {
+            const uint32_t first = count > 0 ? Field<uint32_t>(draws, kDrawPart) : 0;
+            return Missing("no SCOPE_HI_LOD0 draw among the %u at the nearest of %u details; the "
+                           "first is of node %08X",
+                           count, details, Field<uint32_t>(table + first * kPartEntry, 0));
+        }
+        return part.vertices == nullptr ? "no vertex resource at the nearest detail" : nullptr;
     }
 }
 
@@ -86,23 +106,34 @@ bool AimingOverhaul::WeaponMesh::ScopePart::Draws(uint32_t start) const {
     return std::find(starts, starts + startCount, start) != starts + startCount;
 }
 
-bool AimingOverhaul::WeaponMesh::Read(void* entity, ScopePart& part) {
+const char* AimingOverhaul::WeaponMesh::Read(void* entity, ScopePart& part) {
     part = {};
-    if (entity == nullptr || !g_lock || !g_getComponent) {
-        return false;
+    if (!g_lock || !g_getComponent) {
+        return "CEntity::Lock or GetComponent is not mapped on this build";
     }
     __try {
         g_lock(entity, nullptr);
         uint8_t* graphic = g_getComponent(entity, nullptr, &kGraphicComponent);
-        uint8_t* scope = graphic != nullptr ? FindScope(graphic) : nullptr;
-        uint8_t* helper = scope != nullptr ? Field<uint8_t*>(scope, kPartHelper) : nullptr;
+        if (graphic == nullptr) {
+            return "no graphic component";
+        }
+        uint8_t* scope = FindScope(graphic);
+        if (scope == nullptr) {
+            return Missing("no SCOPE_HI among its %u parts", Field<uint32_t>(graphic, kPartCount));
+        }
+        uint8_t* helper = Field<uint8_t*>(scope, kPartHelper);
         uint8_t* geometry = helper != nullptr ? Field<uint8_t*>(helper, kHelperGeometry) : nullptr;
-        uint8_t* loaded = geometry != nullptr ? Field<uint8_t*>(geometry, kLoaded) : nullptr;
-        return loaded != nullptr &&
-               ReadNearest(loaded, Field<uint32_t>(scope, kPartNearestNode), part);
+        if (geometry == nullptr) {
+            return Missing("no geometry resource on SCOPE_HI (helper %p)", helper);
+        }
+        uint8_t* loaded = Field<uint8_t*>(geometry, kLoaded);
+        if (loaded == nullptr) {
+            return Missing("geometry resource %p has no loaded mesh", geometry);
+        }
+        return ReadNearest(loaded, part);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         part = {};
-        return false;
+        return "a fault walking the engine's objects";
     }
 }
 

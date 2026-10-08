@@ -183,18 +183,14 @@ has not yet been run in game.
 
 `ShowHiResScope` takes the weapon entity's `CGraphicComponent` (`CEntity::GetComponent`,
 `0x104E2CC0`, by the CRC-32 of the class name) and walks its parts: an array at `+0x30`, `+0x34` of
-them. A part starts with the fields its archetype's `object` entry sets
-(`SGraphicComponentObjectDescriptor::RegisterProperties`, `0x10519510`):
+them. A part keeps the hash of its name at `+0x0C`, which is how `SCOPE_HI` is found, whether it is
+shown at `+0x30`, and at `+0x34` a helper holding the part's `CGeometryResource` at `+0x10`. Every
+part of a weapon is drawn from the one resource, its `.xbg`.
 
-| Offset | |
-|---|---|
-| `+0x0C` | the hash of `hidMeshName`, which is how `ShowHiResScope` finds `SCOPE_HI` |
-| `+0x28` | `hidNodeName` |
-| `+0x2C` | `hidNodeNameLOD0`, the node its nearest detail is drawn by: `SCOPE_HI_LOD0` |
-| `+0x30` | whether it is shown |
-| `+0x34` | a helper holding the part's `CGeometryResource` at `+0x10` |
-
-Every part of a weapon is drawn from the one resource, its `.xbg`.
+The part's `+0x2C` is not its `hidNodeNameLOD0`, though `SGraphicComponentObjectDescriptor::
+RegisterProperties` (`0x10519510`) registers that field at `+0x2C` of the descriptor: in a running
+game it held a heap pointer. When the engine builds a part from the mesh's file descriptor, it names
+the node of its nearest detail after the part with `_LOD0` added (`0x1051DE56`).
 
 The resource keeps the mesh as loaded at `+0x38`. In it:
 
@@ -217,8 +213,7 @@ buffer keeps the `IDirect3DVertexBuffer9` at `+0x08`: it is what the engine hand
 (`0x10430180`). A draw's first index is the `startIndex` of its `DrawIndexedPrimitive`.
 
 So the gun in first person is drawn from its nearest detail's vertex buffer, and the sight picture
-by the draws whose `DIKS` entry is the `SCOPE_HI` part's `hidNodeNameLOD0`. The gun's depth pass
-joins draws that follow one
+by the draws whose `DIKS` entry is `SCOPE_HI_LOD0`. The gun's depth pass joins draws that follow one
 another in the index buffer: the Dragunov's single 2,088-triangle draw there is three of its scope's,
 1,008 + 936 + 144 triangles, and starts at the first one's index.
 

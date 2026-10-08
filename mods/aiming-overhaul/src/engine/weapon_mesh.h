@@ -22,9 +22,9 @@ struct ScopePart {
     bool Draws(uint32_t start) const;
 };
 
-// The scope part in the mesh of the weapon's entity, on the game thread. False where it has none,
-// or the engine's objects do not hold.
-bool Read(void* entity, ScopePart& part);
+// Reads the scope part in the mesh of the weapon's entity, on the game thread. Null once read, else
+// what was missing, until the next call.
+const char* Read(void* entity, ScopePart& part);
 
 // The Direct3D vertex buffer the engine's resource holds now, compared and never used; null while it
 // holds none.
