@@ -62,22 +62,22 @@ export async function requireFcse(api: types.IExtensionApi, requiredBy?: string)
 }
 
 /**
- * The first time FCSE appears in bin\, registers it as a found tool and makes it what Play starts,
- * unless the player already picked a primary tool. Found once, it is never promoted again.
+ * On installing the FCSE mod: registers FCSE as a found tool, ahead of its deploy, and makes it what
+ * Play starts unless the player already picked a primary tool.
  */
-export function promoteFcse(api: types.IExtensionApi): void {
+export function promoteFcse(api: types.IExtensionApi, modId: string): void {
   const state = api.getState();
-  const tool = fcseTool(api);
-  const bin = tool.queryPath!() as string;
-  const found = util.getSafe(
-    state, ['settings', 'gameMode', 'discovered', GAME_ID, 'tools', FCSE_TOOL_ID, 'path'], undefined);
-  if (bin === '' || found !== undefined) {
+  const gameRoot = gamePath(api);
+  const mod = util.getSafe<types.IMod | undefined>(
+    state, ['persistent', 'mods', GAME_ID, modId], undefined);
+  if (gameRoot === undefined || mod?.type !== MODTYPE_FCSE_LOADER) {
     return;
   }
 
+  const tool = fcseTool(api);
   api.store?.dispatch(actions.addDiscoveredTool(GAME_ID, FCSE_TOOL_ID, {
     ...tool,
-    path: path.join(bin, tool.executable()),
+    path: path.join(gameRoot, 'bin', tool.executable()),
     hidden: false,
     parameters: [],
     custom: false,
