@@ -262,12 +262,9 @@ same treatment a splitting `.fcb` gets.
 A fragment deliberately carries no `childIndex`: that is a whole-file layout detail which shifts
 whenever anything earlier in the file changes, so including it would make every fragment churn.
 
-Two mods registering clips under **different** packages compose without either noticing. Under the
-**same** package they do not: the merge is line-based, both edits append at the same line, and it
-lands as a real conflict. A build resolves it by load order and *reports* it, so the losing clip is
-at least named rather than vanishing the way a whole-file override would. Making those merge would
-mean canonicalizing children into hash order, and 30% of shipped parents store them in some other
-order — not worth trading that fidelity for while the meaning of the order is unknown.
+Two mods registering clips under **different** packages compose without either noticing, and so do
+two under the **same** package: a package's dependencies are matched by hash, so both mods' additions
+land after the shipped ones, in load order, and the shipped order is kept.
 
 Three properties of all 27 shipped files are what let the encoder rebuild from the model alone, and
 JackAll's tests pin each one:

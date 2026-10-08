@@ -44,18 +44,21 @@ Layers apply top to bottom and **the bottom one wins** — identical to JackAll'
 rule, and literally the order of `--layer` arguments passed to the build. Two mods overriding
 *different fragments* of the same `.fcb` container (different archetypes of an entity library,
 different placed entities of a worldsector — see the id space below) never meet at all, and two mods
-editing *different parts of the same fragment* are 3-way merged rather than fought over. An `.fcb`
-fragment merges as a tree, fields paired by name and child objects by type, so two mods that each add
-a component or an entity-data key to one archetype both keep theirs. A list of same-typed records,
-such as an entity's event links, merges record by record, each matched to the original by content,
-so two mods adding links to one entity both keep theirs too. So ordering only decides genuine
-conflicts: two mods giving the *exact same* field different values. For those, the lower mod in your
-load order wins — that field of an `.fcb` fragment, the whole of a text one — same rule as a
-whole-file override, and Vortex shows a warning notification naming the fragment, where inside it
-the two disagreed, and the mods involved, since a headless build has no interactive way to ask you
-which edit you meant to keep. Reorder the mods if the loser should have won, or resolve it by hand in
-JackAll.App (which shows the same collision as a conflict row instead of picking a side
-automatically).
+editing *different parts of the same fragment* are 3-way merged rather than fought over. A fragment
+merges as a tree, each field and child paired by what names it - an `.fcb` field by name and child
+object by type, a dependency by its hash, a MOVE op by its field, a mission layer by its name - so two
+mods that each add a component or an entity-data key to one archetype, or a dependency to one
+package, both keep theirs. A list of same-typed records, such as an entity's event links, merges
+record by record, each matched to the original by content, so two mods adding links to one entity
+both keep theirs too. So ordering only decides genuine conflicts: two mods giving the *exact same*
+field different values. For those, the lower mod in your load order wins that field — same rule as a
+whole-file override. The one exception is a MOVE state that holds references between its own
+objects: if both mods restructure it, the lower mod's whole state wins, since one mod's references
+could otherwise land on objects the other moved. Either way Vortex shows a warning notification
+naming the fragment, where inside it the two disagreed, and the mods involved, since a headless build
+has no interactive way to ask you which edit you meant to keep. Reorder the mods if the loser should
+have won, or resolve it by hand in JackAll.App (which shows the same collision as a conflict row
+instead of picking a side automatically).
 
 Whole files are never merged, so two mods shipping different copies of one file are reported the
 same way. So is an entry a fragment replaced inside another mod's whole-file copy of its container: a

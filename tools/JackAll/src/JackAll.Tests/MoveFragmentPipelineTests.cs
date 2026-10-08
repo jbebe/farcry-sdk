@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Xml.Linq;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Format.Move;
 using JackAll.Core.Mods;
@@ -99,6 +100,134 @@ public sealed class MoveFragmentPipelineTests : IDisposable
         ModConflict reported = Assert.Single(conflicts);
         Assert.Equal("Second", reported.WinningLayer);
         Assert.Equal(["First"], reported.OverruledLayers);
+    }
+
+    /// <summary>A state merges op by op, so two mods retargeting different clips in it both land.</summary>
+    [Theory]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
+    public void Two_mods_editing_different_clips_of_one_state_both_land(string path)
+    {
+        if (Fixture.Read(path) is not { } original) return;
+
+        IContainerTree vanilla = MoveContainerSplitter.Instance.Open(original);
+        (string id, string xml) = vanilla.List().Select(row => (row.Id, Xml: vanilla.Extract(row.Id)!))
+            .First(fragment => UniqueClips(fragment.Xml).Count >= 2);
+        (string first, string second) = (UniqueClips(xml)[0], UniqueClips(xml)[1]);
+
+        (string resolved, ConcurrentQueue<ModConflict> conflicts) = Resolve(vanilla, path, id,
+            Retarget(xml, first, 0x0BADC0DE), Retarget(xml, second, 0x0DEFACED));
+
+        Assert.Empty(conflicts);
+        Assert.Equal(Canonical(id, Retarget(Retarget(xml, first, 0x0BADC0DE), second, 0x0DEFACED)), resolved);
+    }
+
+    /// <summary>
+    /// Object ids are positions and a reference names one by id, so a mod that removes an object
+    /// renumbers everything after it. Merged with another mod's clip edit, every reference still
+    /// lands on the object it named.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
+    public void A_state_one_mod_reshapes_keeps_its_references_through_a_merge(string path)
+    {
+        if (Fixture.Read(path) is not { } original) return;
+
+        IContainerTree vanilla = MoveContainerSplitter.Instance.Open(original);
+        (string id, string xml, List<int> removable) = Referencing(vanilla);
+        string clip = UniqueClips(xml)[0];
+        string ours = Canonical(id, Nulled(xml, removable[0]));
+
+        (string resolved, ConcurrentQueue<ModConflict> conflicts) = Resolve(vanilla, path, id,
+            ours, Retarget(xml, clip, 0x0BADC0DE));
+
+        Assert.Empty(conflicts);
+        Assert.Equal(Canonical(id, Retarget(ours, clip, 0x0BADC0DE)), resolved);
+    }
+
+    /// <summary>Two mods both reshaping a state that holds references could leave one naming the
+    /// wrong object, so the higher-priority mod's state is kept whole and the collision reported.</summary>
+    [Theory]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
+    public void Two_mods_reshaping_a_state_with_references_keep_theirs_whole(string path)
+    {
+        if (Fixture.Read(path) is not { } original) return;
+
+        IContainerTree vanilla = MoveContainerSplitter.Instance.Open(original);
+        (string id, string xml, List<int> removable) = Referencing(vanilla);
+        string theirs = Canonical(id, Nulled(xml, removable[^1]));
+
+        (string resolved, ConcurrentQueue<ModConflict> conflicts) = Resolve(vanilla, path, id,
+            Canonical(id, Nulled(xml, removable[0])), theirs);
+
+        Assert.Equal(theirs, resolved);
+        Assert.Empty(Assert.Single(conflicts).Paths);
+    }
+
+    private (string Resolved, ConcurrentQueue<ModConflict> Conflicts) Resolve(
+        IContainerTree vanilla, string path, string id, string mine, string theirs)
+    {
+        IModLayer first = Layer("First", path, id, mine);
+        IModLayer second = Layer("Second", path, id, theirs);
+        ConcurrentQueue<ModConflict> conflicts = new();
+        string resolved = FragmentMerge.Resolve(MoveContainerSplitter.Instance, vanilla, id,
+            [(first, first.FragmentOverrides.Values.Single()[0].EntryHash),
+             (second, second.FragmentOverrides.Values.Single()[0].EntryHash)],
+            conflicts, "movemgr.bin");
+        return (resolved, conflicts);
+    }
+
+    private static string Canonical(string id, string xml) => MoveContainerSplitter.Instance.Canonicalize(id, xml);
+
+    private const string ClipMarker = "<u32 n=\"m_animNameHash\" v=\"";
+
+    /// <summary>Clip hashes a fragment names exactly once.</summary>
+    private static List<string> UniqueClips(string xml)
+        => [.. xml.Split(ClipMarker).Skip(1).Select(rest => rest[..rest.IndexOf('"')])
+            .Where(clip => xml.Split($"v=\"{clip}\"").Length == 2)];
+
+    private static string Retarget(string xml, string clip, uint replacement)
+        => xml.Replace($"{ClipMarker}{clip}\" />", $"{ClipMarker}{replacement}\" />");
+
+    /// <summary>
+    /// A state holding references, with the objects in it that no reference points into and that
+    /// hold no clip - the ones a mod can null out - each ahead of some referenced object, so removing
+    /// one renumbers. By their position among the fragment's objects; at least two that do not nest.
+    /// </summary>
+    private static (string Id, string Xml, List<int> Removable) Referencing(IContainerTree tree)
+    {
+        foreach (FcbFragmentInfo row in tree.List())
+        {
+            string xml = tree.Extract(row.Id)!;
+            XElement root = XElement.Parse(xml);
+            HashSet<string> targets = [.. root.Descendants("ref").Select(r => (string)r.Attribute("id")!)];
+            if (targets.Count == 0 || UniqueClips(xml).Count == 0)
+            {
+                continue;
+            }
+
+            int last = targets.Max(int.Parse);
+            List<XElement> objects = [.. root.Descendants("obj")];
+            List<int> removable = [.. objects.Index()
+                .Where(o => !o.Item.DescendantsAndSelf("obj").Any(d => targets.Contains((string)d.Attribute("id")!))
+                    && !o.Item.Descendants().Any(d => (string?)d.Attribute("n") == "m_animNameHash")
+                    && o.Item.DescendantsAndSelf("obj").Max(d => int.Parse((string)d.Attribute("id")!)) < last)
+                .Select(o => o.Index)];
+            if (removable.Count >= 2 && !objects[removable[0]].DescendantsAndSelf().Contains(objects[removable[^1]]))
+            {
+                return (row.Id, xml, removable);
+            }
+        }
+
+        throw new InvalidOperationException("no state holds references and two objects to remove ahead of them");
+    }
+
+    /// <summary>The fragment with its <paramref name="index"/>-th object replaced by a null pointer.</summary>
+    private static string Nulled(string xml, int index)
+    {
+        XElement root = XElement.Parse(xml);
+        XElement obj = root.Descendants("obj").ElementAt(index);
+        obj.ReplaceWith(new XElement("null", new XAttribute("n", (string)obj.Attribute("n")!)));
+        return root.ToString();
     }
 
     private IModLayer Layer(string name, string containerPath, string fragmentId, string xml)

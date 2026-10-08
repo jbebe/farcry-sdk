@@ -144,6 +144,57 @@ public class WorldDescriptorSplitterTests
         Assert.All(staged.Keys, id => Assert.NotNull(after.Extract(id)));
     }
 
+    /// <summary>A layer is matched by its name, so two mods adding layers to one mission both keep
+    /// theirs, after the shipped ones.</summary>
+    [Fact]
+    public void Two_mods_adding_layers_to_one_mission_both_land()
+    {
+        if (Fixture.Read(Compiled) is not { } original) return;
+
+        (string id, string ancestor) = FirstMission(original);
+        string ours = Edited(ancestor, mission => mission.Element("Layers")!.Add(Layer("ModA")));
+        string theirs = Edited(ancestor, mission => mission.Element("Layers")!.Add(Layer("ModB")));
+
+        (string merged, IReadOnlyList<string> conflicts) = Splitter.Merge(id, ancestor, ours, theirs);
+
+        Assert.Empty(conflicts);
+        IEnumerable<string?> names = XElement.Parse(merged).Element("Layers")!.Elements("Layer").Select(l => (string?)l.Attribute("Name"));
+        Assert.Equal(["ModA", "ModB"], names.TakeLast(2));
+    }
+
+    [Fact]
+    public void Two_mods_changing_different_attributes_of_one_layer_both_land()
+    {
+        if (Fixture.Read(Compiled) is not { } original) return;
+
+        (string id, string ancestor) = FirstMission(original);
+        string ours = Edited(ancestor, mission => mission.Descendants("Layer").First().SetAttributeValue("Hidden", "1"));
+        string theirs = Edited(ancestor, mission => mission.Descendants("Layer").First().SetAttributeValue("Frozen", "1"));
+
+        (string merged, IReadOnlyList<string> conflicts) = Splitter.Merge(id, ancestor, ours, theirs);
+
+        Assert.Empty(conflicts);
+        XElement layer = XElement.Parse(merged).Descendants("Layer").First();
+        Assert.Equal(("1", "1"), ((string?)layer.Attribute("Hidden"), (string?)layer.Attribute("Frozen")));
+    }
+
+    private static (string Id, string Xml) FirstMission(byte[] descriptor)
+    {
+        IContainerTree tree = Splitter.Open(descriptor);
+        string id = tree.List().First(row => XElement.Parse(tree.Extract(row.Id)!).Name == "Mission").Id;
+        return (id, tree.Extract(id)!);
+    }
+
+    private static string Edited(string mission, Action<XElement> edit)
+    {
+        XElement root = XElement.Parse(mission);
+        edit(root);
+        return Splitter.Canonicalize("", root.ToString());
+    }
+
+    private static XElement Layer(string name)
+        => new("Layer", new XAttribute("Name", name), new XAttribute("PathId", name.ToLowerInvariant()));
+
     /// <summary>A descriptor nobody edited compares equal to itself, and one mission's change shows
     /// up as exactly that mission differing.</summary>
     [Fact]

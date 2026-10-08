@@ -276,17 +276,11 @@ public class DepLoadContainerSplitterTests : IDisposable
     }
 
     /// <summary>
-    /// Two mods appending to the *same* package do **not** merge, and this pins that rather than
-    /// wishing otherwise. Diff3 is line-based and both edits insert at the same place, so it is a
-    /// genuine textual conflict. It could be made to merge by canonicalizing children into hash
-    /// order, but 30% of shipped parents store them in some other order, and trading that fidelity
-    /// for a merge convenience is not worth it while the meaning of the order is unknown.
-    ///
-    /// The saving grace is that a build reports the collision instead of swallowing it - unlike a
-    /// whole-file override, where the later mod wins in silence.
+    /// Two mods appending to the *same* package both keep theirs: a dependency is matched by its
+    /// hash, the shipped order stays as it was, and each mod's additions follow it in load order.
     /// </summary>
     [Fact]
-    public void Two_mods_appending_to_one_package_collide_loudly()
+    public void Two_mods_appending_to_one_package_both_land()
     {
         var vanilla = new DepLoadParent(Dragunov, 0, [new DepLoadChild(0xA1, Animation)]);
         byte[] container = DepLoadDocument.Encode(new DepLoadFile([vanilla]));
@@ -296,18 +290,12 @@ public class DepLoadContainerSplitterTests : IDisposable
         FolderModLayer modB = MakeLayer("mod_b",
             vanilla with { Children = [.. vanilla.Children, new DepLoadChild(0xBBBB, Animation)] });
 
-        Assert.Throws<InvalidDataException>(() => Resolve(container, modA, modB));
-
-        // What `mod build` actually does: load order wins, and the collision is reported.
         var conflicts = new ConcurrentQueue<ModConflict>();
-        Dictionary<string, string> resolved = Resolve(container, conflicts, modA, modB);
-        DepLoadFile merged = DepLoadDocument.Decode(_splitter.Apply(container, resolved));
+        DepLoadFile merged = DepLoadDocument.Decode(_splitter.Apply(container, Resolve(container, conflicts, modA, modB)));
 
-        ModConflict reported = Assert.Single(conflicts);
-        Assert.Equal("mod_b", reported.WinningLayer);
-        IReadOnlyList<DepLoadChild> children = merged.Parents.Single(p => p.Hash == Dragunov).Children;
-        Assert.Contains(children, c => c.Hash == 0xBBBB);
-        Assert.DoesNotContain(children, c => c.Hash == 0xAAAA);
+        Assert.Empty(conflicts);
+        Assert.Equal([0xA1u, 0xAAAAu, 0xBBBBu], merged.Parents.Single(p => p.Hash == Dragunov).Children.Select(c => c.Hash));
+        Assert.Empty(DepLoadValidate.Problems(merged));
     }
 
     private Dictionary<string, string> Resolve(byte[] container, params FolderModLayer[] layers)

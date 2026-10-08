@@ -127,6 +127,25 @@ public static class XmlListMerge
         }
     }
 
+    /// <summary>
+    /// <see cref="Merge"/> all the way down: a child both sides changed is merged within itself, unless
+    /// it holds text or <paramref name="whole"/> calls it one value, which is decided as a whole.
+    /// </summary>
+    public static (XElement Merged, IReadOnlyList<string> Conflicts) MergeTree(
+        string ancestor, string ours, string theirs, Func<XElement, string> keyOf, Func<XElement, bool>? whole = null)
+        => MergeTree(ancestor.Length == 0 ? null : XElement.Parse(ancestor), XElement.Parse(ours), XElement.Parse(theirs),
+            keyOf, whole);
+
+    public static (XElement Merged, IReadOnlyList<string> Conflicts) MergeTree(
+        XElement? ancestor, XElement ours, XElement theirs, Func<XElement, string> keyOf, Func<XElement, bool>? whole = null)
+    {
+        return Merge(ancestor, ours, theirs, keyOf, (a, o, t) => o.Name == t.Name && Divisible(o) && Divisible(t)
+            ? MergeTree(a, o, t, keyOf, whole)
+            : (t, [""]));
+
+        bool Divisible(XElement element) => whole?.Invoke(element) != true && !element.Nodes().OfType<XText>().Any();
+    }
+
     /// <summary>Every child of <paramref name="side"/> with the key it pairs by and the label a conflict
     /// names it by: a list item keyed by the original item it aligns with, an addition by its content.</summary>
     private static List<(string Key, string Label, XElement Element)> Keyed(

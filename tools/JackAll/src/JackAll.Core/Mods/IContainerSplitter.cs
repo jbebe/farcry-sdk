@@ -120,19 +120,12 @@ public interface IContainerSplitter
     byte[] Apply(byte[] baseBytes, IReadOnlyDictionary<string, string> fragmentXmlById);
 
     /// <summary>
-    /// Folds two layers' versions of one fragment against their common ancestor. Text by default,
-    /// which is right for anything whose lines are independent; a format with an override unit whose
-    /// meaning is not line-shaped overrides this. The merged text is always usable as-is, even when
-    /// the fold conflicted - the conflicts say where a decision was made, not that the result is
-    /// unfinished. Each is a path inside the fragment, empty for the fragment as a whole.
+    /// Folds two layers' versions of one fragment against their common ancestor, an empty one meaning
+    /// both added it. The merged text is always usable as-is, even when the fold conflicted - the
+    /// conflicts say where theirs was kept, not that the result is unfinished. Each is a path inside
+    /// the fragment, empty for the fragment as a whole.
     /// </summary>
-    /// <remarks>A text conflict keeps theirs whole rather than conflict markers, which are not a
-    /// container and cannot be built.</remarks>
-    (string Merged, IReadOnlyList<string> Conflicts) Merge(string fragmentId, string ancestor, string ours, string theirs)
-    {
-        (string merged, bool conflict) = Diff3.Merge(ancestor, ours, theirs);
-        return conflict ? (theirs, [""]) : (merged, []);
-    }
+    (string Merged, IReadOnlyList<string> Conflicts) Merge(string fragmentId, string ancestor, string ours, string theirs);
 
     /// <summary>
     /// Fragments of one container whose resolved overrides contradict each other, which no merge of

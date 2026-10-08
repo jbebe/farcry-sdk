@@ -17,17 +17,11 @@ public static class FcbMerge
     /// </summary>
     public static (string Merged, IReadOnlyList<string> Conflicts) Merge(string ancestor, string ours, string theirs)
     {
-        (XElement merged, IReadOnlyList<string> conflicts) = Merge(
-            ancestor.Length == 0 ? null : XElement.Parse(ancestor), XElement.Parse(ours), XElement.Parse(theirs));
+        (XElement merged, IReadOnlyList<string> conflicts) = XmlListMerge.MergeTree(
+            ancestor, ours, theirs, child => FcbXml.KeyOf(child) ?? "", Whole);
         return (merged.ToString(), conflicts);
     }
 
-    private static (XElement Merged, IReadOnlyList<string> Conflicts) Merge(XElement? ancestor, XElement ours, XElement theirs)
-    {
-        bool keys = FcseEntityData.IsComponent(ours);
-        return XmlListMerge.Merge(ancestor, ours, theirs, KeyOf,
-            (a, o, t) => !keys && o.Name == "object" && t.Name == "object" ? Merge(a, o, t) : (t, [""]));
-    }
-
-    private static string KeyOf(XElement child) => FcbXml.KeyOf(child) ?? "";
+    private static bool Whole(XElement child)
+        => child.Name == "value" || child.Parent is { } parent && FcseEntityData.IsComponent(parent);
 }

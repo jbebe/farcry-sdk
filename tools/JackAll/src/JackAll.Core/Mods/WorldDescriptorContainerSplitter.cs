@@ -61,6 +61,14 @@ public sealed class WorldDescriptorContainerSplitter : IContainerSplitter
     public string Canonicalize(string fragmentId, string fragmentXml)
         => Render(XElement.Parse(fragmentXml));
 
+    /// <summary>A mission merges as a tree, a layer matched by its name.</summary>
+    public (string Merged, IReadOnlyList<string> Conflicts) Merge(string fragmentId, string ancestor, string ours, string theirs)
+    {
+        (XElement merged, IReadOnlyList<string> conflicts) = XmlListMerge.MergeTree(ancestor, ours, theirs,
+            child => child.Attribute(NameAttribute) is { } name ? $"{child.Name.LocalName}[{name.Value}]" : child.Name.LocalName);
+        return (Render(merged), conflicts);
+    }
+
     public byte[] Apply(byte[] baseBytes, IReadOnlyDictionary<string, string> fragmentXmlById)
     {
         if (fragmentXmlById.Count == 0)

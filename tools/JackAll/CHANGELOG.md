@@ -10,6 +10,10 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   to one archetype both keep theirs. A list of same-typed records merges record by record, each
   matched to the original by content, so two mods adding event links to one entity both keep theirs.
 - An FCSE entity-data key merges as one value, and a fragment listing one key twice is refused.
+- **Every fragment merges as a tree, none line by line** — `depload.dat` packages (two mods adding
+  dependencies to one package both keep them), MOVE states (op by op; two mods both restructuring a
+  state that holds internal references keep the higher-priority one whole), world-descriptor missions
+  (layers matched by name) and string-table entries.
 - `mod build` names where inside a fragment two mods conflicted, and `--json` conflicts add `paths`.
 
 ## [1.3.0] - 2026-10-02

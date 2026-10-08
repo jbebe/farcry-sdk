@@ -13,7 +13,7 @@ Every number below was measured against a retail Steam install (214,097 VFS rows
 ## Two thresholds decide everything
 
 Granularity is **not** a merge-correctness question. The three-way merge already folds separate
-edits *inside* one fragment - an `.fcb` one as a tree, a text one by line - so splitting finer buys
+edits *inside* one fragment, as a tree of its named fields and children - so splitting finer buys
 no conflict resolution. Splitting exists to keep the
 **shipping payload** small and the folder **navigable** — and those two pull in opposite directions.
 
@@ -420,12 +420,12 @@ one's control. That is the conflict-merge argument `WorldSector` was admitted on
 | depth | stop at the section |
 
 The section is the override unit, but it does not merge as text. Two mods adding a binding to one
-action map insert at the same place, which a line merge calls a conflict - the one `depload` pins in its
-tests. A section therefore merges as a list: a child is matched by its `name`, else the action map it
+action map insert at the same place, which a line merge calls a conflict. A section therefore merges
+as a list: a child is matched by its `name`, else the action map it
 imports, else its whole text, so additions from both sides land, the ancestor's order is kept, and only
-two different edits of one named control conflict. No reordering, so `depload`'s worry about unknown
-order does not apply. The shipped data repeats one child exactly (the console map binds `kb:-` twice),
-so equal keys are numbered by occurrence.
+two different edits of one named control conflict. Nothing is reordered. The shipped data repeats one
+child exactly (the console map binds `kb:-` twice), so a repeated key is a list, its items matched by
+content.
 
 The files declare `ISO-8859-1` (all ASCII), and an assembled one is written back in that encoding.
 Sections nobody overrides keep their own formatting; only a self-closing tag's spacing is normalized.
