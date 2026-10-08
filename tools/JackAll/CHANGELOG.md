@@ -2,7 +2,16 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.4.0] - 2026-10-08
+
+### Added
+- **`mod build` reports every change a layer lost** — two layers shipping different copies of one
+  whole file, and a fragment replacing an entry another layer changed in its whole-file copy.
+- **The control config files split per section** — one fragment per `<Category>` of
+  `defaultusercontrols.xml` and per `<ActionMap>` of an `inputactionmap*.xml`, merged child by child,
+  so two mods adding a control or binding to the same section both keep it.
+- **`legacy analyze`, `changes`, `check` and `pick`** — list every change an old full-patch mod
+  makes, group them into features, and build a layer holding only the features you pick.
 
 ### Changed
 - **Two mods adding to one `.fcb` entity merge** — a fragment merges as a tree, fields paired by
@@ -15,6 +24,8 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   state that holds internal references keep the higher-priority one whole), world-descriptor missions
   (layers matched by name) and string-table entries.
 - `mod build` names where inside a fragment two mods conflicted, and `--json` conflicts add `paths`.
+- **Breaking:** `mod build --json` conflicts name the losing layers `overruledLayers` (was
+  `earlierLayers`) and add a `kind` and a `message`.
 
 ## [1.3.0] - 2026-10-02
 
@@ -25,15 +36,8 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - **`.spk` sound banks as XML** — `spk decode`, `encode`, `verify` and `new`; every retail bank
   rebuilds byte for byte.
 - **Sound bank editor** — the `.spk` panel edits a bank as a tree of what plays what.
-- **`mod build` reports every change a layer lost** — two layers shipping different copies of one
-  whole file, and a fragment replacing an entry another layer changed in its whole-file copy.
-- **The control config files split per section** — one fragment per `<Category>` of
-  `defaultusercontrols.xml` and per `<ActionMap>` of an `inputactionmap*.xml`, merged child by child,
-  so two mods adding a control or binding to the same section both keep it.
 
 ### Changed
-- **Breaking:** `mod build --json` conflicts name the losing layers `overruledLayers` (was
-  `earlierLayers`) and add a `kind` and a `message`.
 - `spk import` and the App's Import… re-derive a sample's loop length and rate, not only its
   length.
 - Staging an edit keeps its file selected, so its preview stays open.
