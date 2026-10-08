@@ -29,11 +29,10 @@ struct Depth {
     Projection projection;
 };
 
-// One of the gun's draws: how much it draws, and whether it is of the gun's depth rather than its
+// One of the gun's draws: its first index, and whether it is of the gun's depth rather than its
 // colour.
 struct Call {
-    UINT primitiveCount;
-    UINT numVertices;
+    UINT startIndex;
     bool depthPass;
 };
 

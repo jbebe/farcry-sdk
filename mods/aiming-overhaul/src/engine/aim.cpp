@@ -83,7 +83,7 @@ namespace {
     constexpr float kMostSwing = 0.5f;
 
     AimingOverhaul::Aim::DriftFn g_drift = nullptr;
-    AimingOverhaul::Aim::RaiseReachFn g_raiseReachOf = nullptr;
+    AimingOverhaul::Aim::FollowWeaponFn g_followWeapon = nullptr;
     std::atomic<bool> g_zoomAtOnce{true};
     float g_sights = 0.0f;
     float g_scope = 0.0f;
@@ -132,15 +132,14 @@ namespace {
         return std::clamp(value + (toward ? step : -step), 0.0f, 1.0f);
     }
 
-    // Notes the equipped weapon's name, and its scope's raise, each time it changes.
+    // Notes the equipped weapon's name each time it changes, and its scope's raise.
     void FollowWeapon(uint8_t* weapon) {
-        if (weapon == g_weapon) {
-            return;
+        if (weapon != g_weapon) {
+            g_weapon = weapon;
+            AimingOverhaul::EntityName::Read(weapon, g_weaponName);
+            g_weaponChanges++;
         }
-        g_weapon = weapon;
-        AimingOverhaul::EntityName::Read(weapon, g_weaponName);
-        g_raiseReach = g_raiseReachOf(g_weaponName);
-        g_weaponChanges++;
+        g_raiseReach = g_followWeapon(weapon);
     }
 
     // Whether the weapon has a scope's sight picture of its own, and whether that is up.
@@ -298,7 +297,7 @@ namespace {
     }
 }
 
-bool AimingOverhaul::Aim::Install(DriftFn drift, RaiseReachFn raiseReach) {
+bool AimingOverhaul::Aim::Install(DriftFn drift, FollowWeaponFn followWeapon) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
     if (!g_update || !g_updateCameraOffset || !g_equippedWeapon || !g_playerCamera) {
         api->Log("aim: the camera functions were not found in this build");
@@ -306,7 +305,7 @@ bool AimingOverhaul::Aim::Install(DriftFn drift, RaiseReachFn raiseReach) {
     }
 
     g_drift = drift;
-    g_raiseReachOf = raiseReach;
+    g_followWeapon = followWeapon;
     if (!Hook(g_update.address(), &UpdateDetour, &g_originalUpdate)) {
         return false;
     }

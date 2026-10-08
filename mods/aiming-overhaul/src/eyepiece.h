@@ -18,8 +18,7 @@ struct Opening {
     float outer;
 };
 
-// While its sight picture is up, drops the draws of the weapon in hand, which its name says the
-// scope of.
+// While its sight picture is up, drops the draws of the weapon in hand.
 bool BeforeGunDraw(IDirect3DDevice9* device, const WeaponDraws::Call& call);
 
 // Lays the reticle and the body over the finished frame.

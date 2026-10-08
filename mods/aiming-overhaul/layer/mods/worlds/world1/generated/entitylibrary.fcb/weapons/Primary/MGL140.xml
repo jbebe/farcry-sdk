@@ -1,0 +1,225 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">Primary.MGL140</value>
+      <object type="Entity">
+        <value name="hidName" type="String">weapons.Primary.MGL140</value>
+        <value name="disEntityId" type="Int64">5660</value>
+        <value name="text_hidEntityClass" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">4</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CFileDescriptorComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileName" type="String">graphics\weapons\primary\mgl140\mgl140.xml</value>
+            <value name="fileName" type="Hash">1A37E7D2</value>
+            <value name="hidDescriptor" type="Rml">
+              <hidDescriptor>
+                <component class="GraphicComponent" version="2" detail="0">
+                  <object index="0" meshName="FRAME" boneName="FRAME" bboxMin="-0.0644054,-0.135453,-0.0518134" bboxMax="0.0644054,0.314004,0.16982" />
+                  <object index="1" meshName="ACCESSORY" boneName="ACCESSORY" bboxMin="-0.08526,-0.0236479,-0.216477" bboxMax="0.08526,0.450763,0.109157" />
+                  <object index="2" meshName="SCOPE_HI" boneName="SCOPE_HI" bboxMin="-0.0237553,-0.018573,-0.0246717" bboxMax="0.0237552,0.0206786,0.0246719" />
+                  <object index="3" meshName="BARIL" boneName="BARIL" bboxMin="-0.0769846,-0.192285,-0.0769846" bboxMax="0.0769846,-0.0606198,0.0769847" />
+                  <resource fileName="graphics\Weapons\Primary\MGL140\MGL140.xbg" bboxMin="-0.08526,-0.288624,-0.0674474" bboxMax="0.08526,0.608678,0.258186" />
+                  <skeleton name="MGL140" pos="0,0,0" rot="1,-0,-0,-0">
+                    <bone name="FRAME" pos="0,-0.153172,-0.001361" rot="1,0,0,0" />
+                    <bone name="ACCESSORY" pos="0,0.157914,0.149029" rot="1,0,0,0" />
+                    <bone name="SCOPE_HI" pos="-0.000458,0.154605,0.224383" rot="1,0,0,0" />
+                    <bone name="FX_FIRE" pos="0,0.576529,0.095047" rot="1,0,0,0" />
+                    <bone name="CLIP" pos="0,0.316227,0.048017" rot="1,0,0,0">
+                      <bone name="BARIL" pos="0,0,0" rot="1,0,0,0">
+                        <bone name="Grenade_Placement_01" pos="0,-0.180113,0.051662" rot="1,0,0,0" />
+                        <bone name="Grenade_Placement_02" pos="0.051662,-0.183114,0" rot="1,0,0,0" />
+                        <bone name="Grenade_Placement_04" pos="-0.051662,-0.183114,0" rot="1,0,0,0" />
+                        <bone name="Grenade_Placement_03" pos="0,-0.183114,-0.051662" rot="1,0,0,0" />
+                      </bone>
+                    </bone>
+                    <bone name="Weapon_Break" pos="0,0,0" rot="1,0,0,0" />
+                  </skeleton>
+                </component>
+                <component class="RigidPhysComponent">
+                  <resource fileName="graphics\Weapons\Primary\MGL140\MGL140.hkx" />
+                </component>
+                <component class="ParticleFXComponent">
+                  <Grenade_Placement_01 psEmitter="" />
+                  <Grenade_Placement_02 psEmitter="" />
+                  <Grenade_Placement_04 psEmitter="" />
+                  <Grenade_Placement_03 psEmitter="" />
+                </component>
+              </hidDescriptor>
+            </value>
+          </object>
+          <object type="CGraphicComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bCastShadow" type="Bool">True</value>
+            <value name="bReceiveShadow" type="Bool">True</value>
+            <value name="bCastAmbientShadow" type="Bool">True</value>
+            <value name="olgLightGroup" type="Hash">00000501</value>
+            <value name="bAllowCullBySize" type="Bool">True</value>
+            <value name="agAmbientGroup" type="Hash">00000000</value>
+            <value name="bBehaveLikeAPickup" type="Bool">False</value>
+            <value name="bShowInReflection" type="Bool">True</value>
+            <value name="bAlwaysShowInReflection" type="Bool">False</value>
+            <value name="bOverrideLODSphere" type="Bool">False</value>
+            <value name="fLODSphereRadius" type="Float">0</value>
+            <value name="hidSkyOcclusion0" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion1" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion2" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion3" type="Hash">FFFFFFFF</value>
+            <value name="hidGroundColor" type="Hash">FFFFFFFF</value>
+            <value name="hidObjectHeight" type="Float">3</value>
+            <value name="hidHeightAbove" type="Float">0</value>
+            <value name="hidHasAmbientValues" type="Bool">False</value>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">0</value>
+              <value name="text_objModel" type="String">graphics\weapons\primary\mgl140\mgl140.xbg</value>
+              <value name="objModel" type="Hash">0A7D2295</value>
+              <value name="hidMeshName" type="String">FRAME</value>
+              <value name="text_hidNodeName" type="String">FRAME</value>
+              <value name="hidNodeName" type="Hash">42ACFE7D</value>
+              <value name="text_hidNodeNameLOD0" type="String">FRAME_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">117FF4BB</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">1</value>
+              <value name="text_objModel" type="String">graphics\weapons\primary\mgl140\mgl140.xbg</value>
+              <value name="objModel" type="Hash">0A7D2295</value>
+              <value name="hidMeshName" type="String">ACCESSORY</value>
+              <value name="text_hidNodeName" type="String">ACCESSORY</value>
+              <value name="hidNodeName" type="Hash">E5733BF3</value>
+              <value name="text_hidNodeNameLOD0" type="String">ACCESSORY_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">39A9BC5F</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">2</value>
+              <value name="text_objModel" type="String">graphics\weapons\primary\mgl140\mgl140.xbg</value>
+              <value name="objModel" type="Hash">0A7D2295</value>
+              <value name="hidMeshName" type="String">SCOPE_HI</value>
+              <value name="text_hidNodeName" type="String">SCOPE_HI</value>
+              <value name="hidNodeName" type="Hash">F1FFCE61</value>
+              <value name="text_hidNodeNameLOD0" type="String">SCOPE_HI_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">E5561B0B</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">3</value>
+              <value name="text_objModel" type="String">graphics\weapons\primary\mgl140\mgl140.xbg</value>
+              <value name="objModel" type="Hash">0A7D2295</value>
+              <value name="hidMeshName" type="String">BARIL</value>
+              <value name="text_hidNodeName" type="String">BARIL</value>
+              <value name="hidNodeName" type="Hash">F650C045</value>
+              <value name="text_hidNodeNameLOD0" type="String">BARIL_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">ACAD6966</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+          </object>
+          <object type="CSimpleAnimationComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileSkeleton" type="String">graphics\weapons\primary\mgl140\mgl140_ref.skeleton</value>
+            <value name="fileSkeleton" type="Hash">4819F8D6</value>
+            <value name="sPartName" type="String">mgl140</value>
+          </object>
+          <object type="CFCXWeapon">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="iAnimationValue" type="UInt32">40</value>
+            <value name="sndswtpWeaponStatusSoundSwitchType" type="Hash">00000004</value>
+            <value name="WeaponStatusSwitchValues" type="Rml">
+              <WeaponStatusSwitchValues Failure="4294967295" LowReliability="4294967295" MediumReliability="4294967295" HighReliability="4294967295" />
+            </value>
+            <value name="bUseHiResScope" type="Bool">True</value>
+            <value name="fHiResLowResScopeSwitchTransitionPoint" type="Float">0.9</value>
+            <object type="FireStrategy" />
+            <object type="ReliabilityLevelsData">
+              <object type="Failure">
+                <value name="fHorizontalRecoilPerShot" type="Float">1.4</value>
+                <value name="fVerticalRecoilPerShot" type="Float">3.6</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.16</value>
+              </object>
+              <object type="Low">
+                <value name="fHorizontalRecoilPerShot" type="Float">1.2</value>
+                <value name="fVerticalRecoilPerShot" type="Float">3.4</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.08</value>
+              </object>
+              <object type="Medium">
+                <value name="fHorizontalRecoilPerShot" type="Float">1</value>
+                <value name="fVerticalRecoilPerShot" type="Float">3.2</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.04</value>
+              </object>
+              <object type="High">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.8</value>
+                <value name="fVerticalRecoilPerShot" type="Float">3</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0</value>
+              </object>
+            </object>
+          </object>
+          <object type="CWeaponNetworkComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+          <object type="CCountersComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="archStimEffectTable" type="String">tables.StimEffectTables.WeaponDefault</value>
+          </object>
+          <object type="CPersistComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selLevel" type="UInt32">2</value>
+            <object type="enumLevel">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Limited</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Full</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Critical</value>
+              </object>
+            </object>
+          </object>
+          <object type="CFCSEDataComponent">
+            <object type="AimingOverhaul.ScopeReticle">
+              <value name="String" type="String">holosight</value>
+            </object>
+            <object type="AimingOverhaul.ScopeShape">
+              <value name="String" type="String">mgl140</value>
+            </object>
+            <object type="AimingOverhaul.ScopeRim">
+              <value name="Float" type="Float">0.15</value>
+            </object>
+            <object type="AimingOverhaul.ScopeLensX">
+              <value name="Float" type="Float">-0.00275</value>
+            </object>
+            <object type="AimingOverhaul.ScopeLensY">
+              <value name="Float" type="Float">0.00213</value>
+            </object>
+            <object type="AimingOverhaul.ScopeRaise">
+              <value name="Float" type="Float">0.073</value>
+            </object>
+            <object type="AimingOverhaul.ScopeSize">
+              <value name="Float" type="Float">0.8</value>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>

@@ -171,6 +171,57 @@ name, a `char*` at its `+0x14`, is its archetype's: `weapons.Primary.M16`,
 When aiming stops, the iron-sight flag goes a few frames before `+0x84` does, and the sight picture
 is drawn until `+0x84` goes.
 
+### Where the scope is drawn from
+
+:::info[Verified via reverse engineering]
+Read out of `ShowHiResScope`, `CGraphicComponentObject::SetIsVisible` (`0x10519010`), the geometry
+loader (`0x103D2E50`, its `SDOL` chunk at `0x103D2700`) and `CGeometryResource::ClientProcessRawData`
+(`0x1035F080`, server `0x097FB3F0`). For all six scoped rifles, the counts this gives from the retail
+`.xbg` files are the ones Aiming Overhaul measured off their draws in a running game. The walk below
+has not yet been run in game.
+:::
+
+`ShowHiResScope` takes the weapon entity's `CGraphicComponent` (`CEntity::GetComponent`,
+`0x104E2CC0`, by the CRC-32 of the class name) and walks its parts: an array at `+0x30`, `+0x34` of
+them. A part starts with the fields its archetype's `object` entry sets
+(`SGraphicComponentObjectDescriptor::RegisterProperties`, `0x10519510`):
+
+| Offset | |
+|---|---|
+| `+0x0C` | the hash of `hidMeshName`, which is how `ShowHiResScope` finds `SCOPE_HI` |
+| `+0x28` | `hidNodeName` |
+| `+0x2C` | `hidNodeNameLOD0`, the node its nearest detail is drawn by: `SCOPE_HI_LOD0` |
+| `+0x30` | whether it is shown |
+| `+0x34` | a helper holding the part's `CGeometryResource` at `+0x10` |
+
+Every part of a weapon is drawn from the one resource, its `.xbg`.
+
+The resource keeps the mesh as loaded at `+0x38`. In it:
+
+| Offset | |
+|---|---|
+| `+0x04`, `+0x08` | how many details there are, and the details, `0x24` bytes each, nearest first |
+| `+0x60` | the file's `DIKS` table, 8 bytes an entry: the CRC-32 of a node's name, such as `SCOPE_HI_LOD0`, then its part and node as two `uint16` |
+
+A detail:
+
+| Offset | |
+|---|---|
+| `+0x00`, `+0x04` | its vertex blocks, 16 bytes each: format, stride, vertex count, byte offset |
+| `+0x0C`, `+0x10` | its draws, `0x1C` bytes each: vertex block, `DIKS` entry, cluster, first index, last vertex, byte offset |
+| `+0x18` | the distance it is drawn from |
+| `+0x1C`, `+0x20` | the resources holding its vertices and its indices |
+
+The loader makes both resources. The vertex one keeps the device's buffer at `+0x0C`, and that
+buffer keeps the `IDirect3DVertexBuffer9` at `+0x08`: it is what the engine hands `SetStreamSource`
+(`0x10430180`). A draw's first index is the `startIndex` of its `DrawIndexedPrimitive`.
+
+So the gun in first person is drawn from its nearest detail's vertex buffer, and the sight picture
+by the draws whose `DIKS` entry is the `SCOPE_HI` part's `hidNodeNameLOD0`. The gun's depth pass
+joins draws that follow one
+another in the index buffer: the Dragunov's single 2,088-triangle draw there is three of its scope's,
+1,008 + 936 + 144 triangles, and starts at the first one's index.
+
 ### The weapon's events
 
 `CFCXWeapon::OnEvent` (`0x106D3D00`, `__thiscall(CBaseEvent* event)`) receives the weapon's

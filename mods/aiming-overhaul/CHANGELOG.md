@@ -7,6 +7,10 @@ Notable changes to Aiming Overhaul, loosely following
 
 ### Changed
 - **Needs FCSE 1.4.0**, rebuilt for its new plugin interface. Older FCSE no longer loads it.
+- **Scopes are weapon data.** How each scope is drawn, its reticle, rim, lens and how far the eye
+  comes to it, is now set on the weapon in the mod's data, and the mod finds the scope in the
+  weapon's own mesh instead of recognising each rifle's model. A weapon mod can give its own gun a
+  scope the same way.
 
 ## [1.0.0] - 2026-10-06
 

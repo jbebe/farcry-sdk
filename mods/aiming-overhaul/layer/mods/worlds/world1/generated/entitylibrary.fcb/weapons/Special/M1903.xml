@@ -1,0 +1,207 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">Special.M1903</value>
+      <object type="Entity">
+        <value name="hidName" type="String">weapons.Special.M1903</value>
+        <value name="disEntityId" type="Int64">5711</value>
+        <value name="text_hidEntityClass" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">4</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CFileDescriptorComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileName" type="String">graphics\weapons\special\sniper_m1903\sniper_m1903.xml</value>
+            <value name="fileName" type="Hash">923A3EC7</value>
+            <value name="hidDescriptor" type="Rml">
+              <hidDescriptor>
+                <component class="GraphicComponent" version="2" detail="0">
+                  <object index="0" meshName="CLIP" boneName="CLIP" bboxMin="-0.00497179,-0.0387826,-0.0330515" bboxMax="0.00533708,0.0443327,0.0160379" />
+                  <object index="1" meshName="FRAME" boneName="FRAME" bboxMin="-0.0257926,-0.203426,-0.119656" bboxMax="0.0256497,1.01161,0.147233" />
+                  <object index="2" meshName="SCOPE_HI" boneName="SCOPE_HI" bboxMin="-0.0165723,-0.017652,-0.0161532" bboxMax="0.016572,0.0400366,0.0161529" />
+                  <object index="3" meshName="SLIDE" boneName="SLIDE" bboxMin="-0.0403765,-0.0383377,-0.0461942" bboxMax="0.0103946,0.144946,0.0104374" />
+                  <resource fileName="graphics\Weapons\Special\Sniper_M1903\Sniper_M1903.xbg" bboxMin="-0.0472083,-0.323564,-0.117807" bboxMax="0.0187235,0.891474,0.149082" />
+                  <skeleton name="Sniper_M1903" pos="0,0,0" rot="1,-0,-0,-0">
+                    <bone name="CLIP" pos="-0.006926,0.158105,0.055863" rot="1,0,0,0" />
+                    <bone name="FRAME" pos="-0.006926,-0.120138,0.001848" rot="1,0,0,0" />
+                    <bone name="FX_CASING" pos="-0.006926,0.162076,0.084521" rot="0.653281,0.270598,0.270598,0.653281" />
+                    <bone name="FX_FIRE" pos="-0.006926,0.891686,0.078112" rot="1,0,0,0" />
+                    <bone name="SCOPE_HI" pos="-0.00799,0.053045,0.131165" rot="1,0,0,0" />
+                    <bone name="SLIDE" pos="-0.006832,0.085129,0.078119" rot="1,0,0,0" />
+                    <bone name="Weapon_Break" pos="-0,0,0" rot="1,0,0,0" />
+                  </skeleton>
+                </component>
+                <component class="RigidPhysComponent">
+                  <resource fileName="graphics\Weapons\Special\Sniper_M1903\Sniper_M1903.hkx" />
+                </component>
+              </hidDescriptor>
+            </value>
+          </object>
+          <object type="CGraphicComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bCastShadow" type="Bool">True</value>
+            <value name="bReceiveShadow" type="Bool">True</value>
+            <value name="bCastAmbientShadow" type="Bool">True</value>
+            <value name="olgLightGroup" type="Hash">00000501</value>
+            <value name="bAllowCullBySize" type="Bool">True</value>
+            <value name="agAmbientGroup" type="Hash">00000000</value>
+            <value name="bBehaveLikeAPickup" type="Bool">False</value>
+            <value name="bShowInReflection" type="Bool">True</value>
+            <value name="bAlwaysShowInReflection" type="Bool">False</value>
+            <value name="bOverrideLODSphere" type="Bool">False</value>
+            <value name="fLODSphereRadius" type="Float">0</value>
+            <value name="hidSkyOcclusion0" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion1" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion2" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion3" type="Hash">FFFFFFFF</value>
+            <value name="hidGroundColor" type="Hash">FFFFFFFF</value>
+            <value name="hidObjectHeight" type="Float">3</value>
+            <value name="hidHeightAbove" type="Float">0</value>
+            <value name="hidHasAmbientValues" type="Bool">False</value>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">0</value>
+              <value name="text_objModel" type="String">graphics\weapons\special\sniper_m1903\sniper_m1903.xbg</value>
+              <value name="objModel" type="Hash">8270FB80</value>
+              <value name="hidMeshName" type="String">CLIP</value>
+              <value name="text_hidNodeName" type="String">CLIP</value>
+              <value name="hidNodeName" type="Hash">9BB5F9D3</value>
+              <value name="text_hidNodeNameLOD0" type="String">CLIP_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">00B20B5C</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">1</value>
+              <value name="text_objModel" type="String">graphics\weapons\special\sniper_m1903\sniper_m1903.xbg</value>
+              <value name="objModel" type="Hash">8270FB80</value>
+              <value name="hidMeshName" type="String">FRAME</value>
+              <value name="text_hidNodeName" type="String">FRAME</value>
+              <value name="hidNodeName" type="Hash">42ACFE7D</value>
+              <value name="text_hidNodeNameLOD0" type="String">FRAME_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">117FF4BB</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">2</value>
+              <value name="text_objModel" type="String">graphics\weapons\special\sniper_m1903\sniper_m1903.xbg</value>
+              <value name="objModel" type="Hash">8270FB80</value>
+              <value name="hidMeshName" type="String">SCOPE_HI</value>
+              <value name="text_hidNodeName" type="String">SCOPE_HI</value>
+              <value name="hidNodeName" type="Hash">F1FFCE61</value>
+              <value name="text_hidNodeNameLOD0" type="String">SCOPE_HI_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">E5561B0B</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">3</value>
+              <value name="text_objModel" type="String">graphics\weapons\special\sniper_m1903\sniper_m1903.xbg</value>
+              <value name="objModel" type="Hash">8270FB80</value>
+              <value name="hidMeshName" type="String">SLIDE</value>
+              <value name="text_hidNodeName" type="String">SLIDE</value>
+              <value name="hidNodeName" type="Hash">85BB2CD2</value>
+              <value name="text_hidNodeNameLOD0" type="String">SLIDE_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">F2877992</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+          </object>
+          <object type="CSimpleAnimationComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileSkeleton" type="String">graphics\weapons\special\sniper_m1903\sniper_m1903_ref.skeleton</value>
+            <value name="fileSkeleton" type="Hash">242865AA</value>
+            <value name="sPartName" type="String">sniper_m1903</value>
+          </object>
+          <object type="CFCXWeapon">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="iAnimationValue" type="UInt32">8</value>
+            <value name="sndswtpWeaponStatusSoundSwitchType" type="Hash">00000004</value>
+            <value name="WeaponStatusSwitchValues" type="Rml">
+              <WeaponStatusSwitchValues Failure="4294967295" LowReliability="4294967295" MediumReliability="4294967295" HighReliability="4294967295" />
+            </value>
+            <value name="bUseHiResScope" type="Bool">True</value>
+            <value name="fHiResLowResScopeSwitchTransitionPoint" type="Float">0.99</value>
+            <object type="FireStrategy" />
+            <object type="ReliabilityLevelsData">
+              <object type="Failure">
+                <value name="fHorizontalRecoilPerShot" type="Float">2.6</value>
+                <value name="fVerticalRecoilPerShot" type="Float">2.6</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.12</value>
+              </object>
+              <object type="Low">
+                <value name="fHorizontalRecoilPerShot" type="Float">2.4</value>
+                <value name="fVerticalRecoilPerShot" type="Float">2.4</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.06</value>
+              </object>
+              <object type="Medium">
+                <value name="fHorizontalRecoilPerShot" type="Float">2.2</value>
+                <value name="fVerticalRecoilPerShot" type="Float">2.2</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.03</value>
+              </object>
+              <object type="High">
+                <value name="fHorizontalRecoilPerShot" type="Float">2</value>
+                <value name="fVerticalRecoilPerShot" type="Float">2</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0</value>
+              </object>
+            </object>
+          </object>
+          <object type="CWeaponNetworkComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+          <object type="CCountersComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="archStimEffectTable" type="String">tables.StimEffectTables.WeaponDefault</value>
+          </object>
+          <object type="CPersistComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selLevel" type="UInt32">2</value>
+            <object type="enumLevel">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Limited</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Full</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Critical</value>
+              </object>
+            </object>
+          </object>
+          <object type="CFCSEDataComponent">
+            <object type="AimingOverhaul.ScopeReticle">
+              <value name="String" type="String">hunter</value>
+            </object>
+            <object type="AimingOverhaul.ScopeRim">
+              <value name="Float" type="Float">0.15</value>
+            </object>
+            <object type="AimingOverhaul.ScopeLensX">
+              <value name="Float" type="Float">-0.00061</value>
+            </object>
+            <object type="AimingOverhaul.ScopeLensY">
+              <value name="Float" type="Float">-0.00025</value>
+            </object>
+            <object type="AimingOverhaul.ScopeRaise">
+              <value name="Float" type="Float">0.06</value>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>

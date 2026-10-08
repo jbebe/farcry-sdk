@@ -95,6 +95,7 @@ add_library(AimingOverhaul SHARED
   "src/engine/shader.cpp"
   "src/engine/vtable.cpp"
   "src/engine/weapon_draws.cpp"
+  "src/engine/weapon_mesh.cpp"
   ${SHADER_HEADERS}
 )
 

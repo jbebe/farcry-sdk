@@ -3,8 +3,9 @@
 An FCSE plugin, with weapon data, for how aiming and shooting look: sway and a blurred gun down the
 iron sights; a scope that shadows, is seen from its eyepiece, and has the world around it at the
 eye's own field of view; and tracers. It changes only how things look: no damage, spread or recoil.
-Its weapon data sets only tracer and scope-effect fields, which JackAll merges field by field with
-other mods' weapon edits, reporting any clash.
+Its weapon data sets only tracer and scope-effect fields, and gives each scoped weapon entity data
+of the plugin's own; JackAll merges both field by field with other mods' weapon edits, reporting
+any clash.
 
 ## What it does
 
@@ -37,8 +38,9 @@ other mods' weapon edits, reporting any clash.
   glass: lines bow slightly toward the rim, colours part there the more the scope magnifies, the
   rim darkens, and the coating tints it faintly. The scope is laid over the finished frame, after
   the tone mapping, and trails the look a little as it turns. Each round fired kicks it back toward
-  the eye for a moment, as the stock comes back onto the shoulder. A scope the plugin does not know
-  is drawn as the game draws it, and named in `fcse.log`.
+  the eye for a moment, as the stock comes back onto the shoulder. A scope on a weapon without the
+  plugin's scope data, or whose mesh has no `SCOPE_HI` part, is drawn as the game draws it, and
+  named in `fcse.log`.
 - **Surroundings.** Around the eyepiece the world is seen at the field of view the eye has without
   a scope, as with both eyes open, while the eyepiece keeps the scope's magnified view. With the
   eyepiece on too, the view does not zoom as the scope comes up: the gun comes to the eye, and the
@@ -61,7 +63,9 @@ depth pass a second time into a depth texture of its own, in `src/engine/weapon_
 blur and the scope shadow draw at the end of the pass the gun's colour is drawn in, before the
 bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
 The eyepiece drops the engine's scope and draws its own over the finished frame, in
-`src/eyepiece.cpp`, from what was measured off each scope's mesh, in `src/scopes.cpp`. The reticles
+`src/eyepiece.cpp`. What it draws for a scope is its weapon's archetype's entity data, read in
+`src/scopes.cpp`, and which of the weapon's draws are the scope is read from the engine's own
+mesh, in `src/engine/weapon_mesh.cpp`. The reticles
 are `assets\*-reticle.png`, built into the plugin through `src/aiming_overhaul.rc`. The second
 view is drawn in `src/engine/second_view.cpp` and laid down as the gun's colour pass begins, in
 `src/surroundings.cpp`. The player's own tracers, a streak's length against its shot, and the
@@ -69,7 +73,9 @@ ricochets are in `src/tracers.cpp`, and the streak is drawn in `src/streak.cpp` 
 `src/shaders/tracer.fx`, in the draws that bind the Direct3D texture the engine's tracer texture
 resource holds. Which guns fire tracers, their speed and their streaks' longest length, and the
 scopes the plugin draws losing the engine's iron-sight effect, are weapon data: `WeaponProperties`
-fragments under `layer\mods\`, written by `data\fragments.py`. The engine side is in
+fragments under `layer\mods\`. So is each scope's reticle, eyepiece shape, rim, lens centre, raise
+and size: `AimingOverhaul.Scope*` keys in a `CFCSEDataComponent` on its `weapons` archetype. Both
+are written by `data\fragments.py`. The engine side is in
 [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md),
 [bullet tracers](../../docs/docs/engine-internals/bullet-tracers.md) and
 [presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).

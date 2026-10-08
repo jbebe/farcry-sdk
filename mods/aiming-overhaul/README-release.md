@@ -2,8 +2,9 @@
 
 How aiming and shooting look in Far Cry 2: sway and a blurred gun down the iron sights, scopes seen
 from the eyepiece with the world around them, and tracers. It changes only how things look: no
-damage, spread or recoil. Its weapon data sets only which guns fire tracers, how fast they fly, and
-the scopes' iron-sight effect, so it merges with mods that change anything else about a weapon.
+damage, spread or recoil. Its weapon data sets only which guns fire tracers, how fast they fly,
+the scopes' iron-sight effect and how the mod draws each scope, so it merges with mods that change
+anything else about a weapon.
 
 - **Sway.** Down the iron sights the eye drifts a couple of millimetres off the gun and rises and
   falls with a slow breath, so the rear and front sights drift out of line as on a real gun. Shots

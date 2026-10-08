@@ -10,6 +10,7 @@
 #include "engine/render_target.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
+#include "engine/weapon_mesh.h"
 #include "fcse_api.h"
 #include "scopes.h"
 
@@ -66,12 +67,9 @@ namespace {
 
     std::atomic<bool> g_enabled{true};
 
-    // The scope of the weapon in hand, the vertex buffer the weapon draws from once one of its
-    // draws has shown it, compared and never dereferenced, and the change of weapon they are for;
-    // and the change a weapon with an unknown scope was last named for.
+    // The scope of the weapon in hand as of its last draw, and the change of weapon a weapon whose
+    // scope the plugin does not draw was last named for.
     const Scope* g_inHand = nullptr;
-    const void* g_inHandVertices = nullptr;
-    uint32_t g_inHandFor = AimingOverhaul::Frame::kNever;
     uint32_t g_strangerFor = AimingOverhaul::Frame::kNever;
 
     // The frame the weapon in hand last drew its scope's sight picture in, which the render thread
@@ -83,32 +81,23 @@ namespace {
     const AimingOverhaul::Scopes::Reticle* g_reticleOf = nullptr;
     IDirect3DTexture9* g_reticle = nullptr;
 
-    // The distance field of the scope it was made for, on the device that owns it.
+    // The distance field, the shape it was made from, and the device that owns it.
     IDirect3DDevice9* g_shapeOwner = nullptr;
-    const Scope* g_shapeOf = nullptr;
+    const BYTE* g_shapeOf = nullptr;
     IDirect3DTexture9* g_shape = nullptr;
 
     bool Held(uint32_t frame) {
         return AimingOverhaul::Frame::Within(frame, kHeldFrames);
     }
 
-    // The scope of the weapon in hand.
-    void FollowWeapon() {
-        const uint32_t changes = AimingOverhaul::Aim::WeaponChanges();
-        if (changes != g_inHandFor) {
-            g_inHandFor = changes;
-            g_inHand = AimingOverhaul::Scopes::Find(AimingOverhaul::Aim::WeaponName());
-            g_inHandVertices = nullptr;
-        }
-    }
-
-    // Names a weapon whose scope is drawn as the game draws it for want of being known, once each
-    // time it is taken in hand.
+    // Names a weapon whose scope is drawn as the game draws it, for want of scope data or of a
+    // SCOPE_HI part found in its mesh, once each time it is taken in hand.
     void LogStranger() {
-        if (g_strangerFor != g_inHandFor) {
-            g_strangerFor = g_inHandFor;
-            FCSE::Logf("eyepiece: the scope on \"%s\" is not known, so it is drawn as the game "
-                       "draws it",
+        const uint32_t changes = AimingOverhaul::Aim::WeaponChanges();
+        if (g_strangerFor != changes) {
+            g_strangerFor = changes;
+            FCSE::Logf("eyepiece: the scope on \"%s\" is drawn as the game draws it: it has no "
+                       "scope data, or no SCOPE_HI part was found in its mesh",
                        AimingOverhaul::Aim::WeaponName());
         }
     }
@@ -118,12 +107,12 @@ namespace {
         if (scope.shape.empty()) {
             return nullptr;
         }
-        if (g_shapeOwner == device && g_shapeOf == &scope) {
+        if (g_shapeOwner == device && g_shapeOf == scope.shape.data()) {
             return g_shape;
         }
         AimingOverhaul::Release(g_shape);
         g_shapeOwner = device;
-        g_shapeOf = &scope;
+        g_shapeOf = scope.shape.data();
         constexpr UINT size = AimingOverhaul::Scopes::kShapeSize;
         D3DLOCKED_RECT locked = {};
         if (FAILED(device->CreateTexture(size, size, 1, 0, D3DFMT_L8, D3DPOOL_MANAGED, &g_shape,
@@ -242,32 +231,27 @@ bool AimingOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
     if (!g_enabled) {
         return true;
     }
-    FollowWeapon();
+    g_inHand = Scopes::InHand();
     if (g_inHand == nullptr) {
         if (Aim::ScopeUp()) {
             LogStranger();
         }
         return true;
     }
-    // The buffer only matters for a draw from the whole of it, which shows which it is, or while
-    // the eyepiece is up.
-    if (call.numVertices != g_inHand->vertices && !Held(g_drawnFrame)) {
+    // Only the sight picture draws the scope's part, in the gun's depth pass first; the weapon's
+    // draws go with the eyepiece while it is held.
+    const bool sightPicture = call.depthPass && g_inHand->part.Draws(call.startIndex);
+    if (!sightPicture && !Held(g_drawnFrame)) {
         return true;
     }
     IDirect3DVertexBuffer9* stream = nullptr;
     UINT offset = 0;
     UINT stride = 0;
     device->GetStreamSource(0, &stream, &offset, &stride);
-    const void* vertices = Borrowed(stream);
-    if (call.numVertices == g_inHand->vertices) {
-        g_inHandVertices = vertices;
-    }
-    if (vertices != g_inHandVertices) {
+    if (Borrowed(stream) != WeaponMesh::VertexBuffer(g_inHand->part.vertices)) {
         return true;
     }
-    // Only the sight picture draws the housing in the gun's depth pass, which comes first; the
-    // weapon's draws go with the eyepiece while it is held.
-    if (call.depthPass && call.primitiveCount == g_inHand->housing) {
+    if (sightPicture) {
         g_drawnFrame = Frame::Number();
     }
     return !Held(g_drawnFrame);

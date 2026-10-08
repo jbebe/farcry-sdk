@@ -29,8 +29,3 @@ void AimingOverhaul::EntityName::Read(uint8_t* weapon, char (&name)[64]) {
         name[0] = '\0';
     }
 }
-
-bool AimingOverhaul::EntityName::Is(std::string_view name, std::string_view archetype) {
-    return name.starts_with(archetype) &&
-           (name.size() == archetype.size() || name[archetype.size()] == '.');
-}

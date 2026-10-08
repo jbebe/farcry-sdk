@@ -244,7 +244,7 @@ namespace {
                 g_colourPass = AimingOverhaul::Frame::PassSerial();
             }
         }
-        if (!g_listener.beforeDraw(device, {primitiveCount, numVertices, squeezed})) {
+        if (!g_listener.beforeDraw(device, {startIndex, squeezed})) {
             return D3D_OK;
         }
         return draw();

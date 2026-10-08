@@ -20,14 +20,13 @@ struct Swing {
 // The hand's drift this frame, given the seconds since the last.
 using DriftFn = Offset (*)(float seconds);
 
-// How far the eye comes forward, in metres, as the scope of the weapon with this entity name is
+// Follows the weapon in hand, or null: how far the eye comes forward, in metres, as its scope is
 // raised; nought unless the plugin draws that scope.
-using RaiseReachFn = float (*)(const char* weaponName);
+using FollowWeaponFn = float (*)(uint8_t* weapon);
 
-// Hooks the first-person camera; `drift` then runs once a frame, and down the iron sights the eye
-// follows it, and `raiseReach` each time the weapon in hand changes. False, and logged, when the
-// camera cannot be hooked.
-bool Install(DriftFn drift, RaiseReachFn raiseReach);
+// Hooks the first-person camera; `drift` and `followWeapon` then run once a frame, and down the iron
+// sights the eye follows the drift. False, and logged, when the camera cannot be hooked.
+bool Install(DriftFn drift, FollowWeaponFn followWeapon);
 
 // How far the eye has settled into the iron sights, and into a scope's own sight picture, eased
 // from nought to one. At most one of them is above nought.
