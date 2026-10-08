@@ -75,6 +75,8 @@ typedef const DevTools_OverlayAPI* (*DevTools_GetOverlayAPIFn)(void);
 #include "imgui.h"
 #include "imgui_internal.h"
 
+#include <windows.h>
+
 namespace DevTools::Overlay {
 
 // This module's Dear ImGui, described for DevTools to compare against its own.

@@ -18,6 +18,9 @@ Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachang
   update your plugins along with FCSE. `fcse.log` names each one that did not load. Lua scripts are
   not affected. For authors: the plugin ABI is now `FCSE_API_VERSION` 8, since `FCSE_PluginAPI`
   gained `EntityData`; a rebuild is all a plugin needs.
+- For authors: `fcse_api.h` no longer includes `<windows.h>`, so its `min` and `max` macros no
+  longer reach every plugin. A file that used Windows names through it includes `<windows.h>`
+  itself, and `duniaModule` is a `void*` - cast it to `HMODULE`.
 
 ## [1.3.0] - 2026-10-02
 

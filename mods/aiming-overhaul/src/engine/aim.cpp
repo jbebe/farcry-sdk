@@ -7,6 +7,8 @@
 #include "engine/memory.h"
 #include "fcse_api.h"
 
+#include <windows.h>
+
 #include <algorithm>
 #include <atomic>
 #include <cmath>

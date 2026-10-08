@@ -16,10 +16,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -301,11 +297,8 @@ typedef struct FCSE_PluginAPI {
     uint32_t apiVersion; // Always FCSE_API_VERSION for this struct layout - compare before using
                          // any field below, in case a future loader version adds/reorders fields.
 
-#ifdef _WIN32
-    HMODULE duniaModule;
-#else
+    // Dunia.dll's HMODULE.
     void* duniaModule;
-#endif
     // Dunia.dll's load base and on-disk size. Still here, and still correct, but adding your own
     // hardcoded RVA to duniaBase is what makes a plugin work on one build and crash on the other -
     // and duniaSize is no longer the right version gate, because two files of different sizes can

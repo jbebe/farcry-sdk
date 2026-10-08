@@ -7,6 +7,8 @@
 
 #include "imgui.h"
 
+#include <windows.h>
+
 #include <algorithm>
 #include <charconv>
 #include <cstddef>
