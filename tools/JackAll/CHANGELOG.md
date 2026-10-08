@@ -8,6 +8,7 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - **Two mods adding to one `.fcb` entity merge** — a fragment merges as a tree, fields paired by
   name and child objects by type, so two mods that each add a component or an FCSE entity-data key
   to one archetype both keep theirs. A list of same-typed records still merges line by line.
+- An FCSE entity-data key merges as one value, and a fragment listing one key twice is refused.
 - `mod build` names where inside a fragment two mods conflicted, and `--json` conflicts add `paths`.
 
 ## [1.3.0] - 2026-10-02

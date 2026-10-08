@@ -132,13 +132,15 @@ public static class FcbXml
     public static string? KeyOf(XElement child)
         => (string?)child.Attribute("name") ?? (string?)child.Attribute("hash") ?? (string?)child.Attribute("type");
 
+    /// <summary>The hash a value's name or an object's type stands for, however it is spelled.</summary>
+    public static uint HashOf(XElement element) => LoadNameOrHash(element, element.Name == "value" ? "name" : "type");
+
     /// <summary>Reverse of <see cref="ToXml"/>.</summary>
-    public static FcbObject FromXml(string xml)
-    {
-        XElement root = XDocument.Parse(xml).Root
-            ?? throw new InvalidDataException("Empty FCB XML document.");
-        return ReadNode(root);
-    }
+    public static FcbObject FromXml(string xml) => ReadNode(Parse(xml));
+
+    /// <summary>The root object of an FCB XML document, still as XML.</summary>
+    public static XElement Parse(string xml)
+        => XDocument.Parse(xml).Root ?? throw new InvalidDataException("Empty FCB XML document.");
 
     /// <summary>
     /// Re-renders one fragment's XML through this class's own writer, so two texts that mean the same
@@ -149,8 +151,8 @@ public static class FcbXml
     /// <see cref="FcbObject.Values"/>/<see cref="FcbObject.Children"/> insertion order affects the
     /// actual rendered output.
     /// </summary>
-    public static string CanonicalizeFragment(string fragmentXml, FcbClassDefinitions defs)
-        => ToXml(FromXml(fragmentXml), defs);
+    public static string CanonicalizeFragment(XElement fragment, FcbClassDefinitions defs)
+        => ToXml(ReadNode(fragment), defs);
 
     private static XElement WriteObject(FcbObject obj, IFcbClassScope scope, IFcbNames? fallback)
     {

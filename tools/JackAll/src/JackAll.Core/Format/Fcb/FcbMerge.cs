@@ -5,7 +5,8 @@ namespace JackAll.Core.Format.Fcb;
 /// <summary>
 /// A three-way merge of one canonical fragment as a tree, pairing children the way the engine lays a
 /// placed instance over its archetype: a value by its name, an object by its type, each object merged
-/// again within itself. Siblings sharing a type are a list with nothing to pair by, so the element
+/// again within itself but an FCSE entity-data key, which is one value. Siblings sharing a type are a
+/// list with nothing to pair by, so the element
 /// holding them merges line by line through <see cref="Diff3"/>.
 /// </summary>
 public static class FcbMerge
@@ -26,8 +27,10 @@ public static class FcbMerge
     {
         if (!Repeats(ancestor) && !Repeats(ours) && !Repeats(theirs))
         {
+            // A value is decided whole, and so is an entity-data key.
+            bool keys = FcseEntityData.IsComponent(ours);
             return XmlListMerge.Merge(ancestor, ours, theirs, KeyOf,
-                (a, o, t) => o.Name == "object" && t.Name == "object" ? Merge(a, o, t) : (t, [""]));
+                (a, o, t) => !keys && o.Name == "object" && t.Name == "object" ? Merge(a, o, t) : (t, [""]));
         }
 
         (string text, bool conflict) = Diff3.Resolve(ancestor?.ToString() ?? "", ours.ToString(), theirs.ToString());

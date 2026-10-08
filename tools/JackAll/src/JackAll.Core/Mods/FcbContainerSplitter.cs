@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using JackAll.Core.Format.Fcb;
 
 namespace JackAll.Core.Mods;
@@ -15,9 +16,16 @@ public sealed class FcbContainerSplitter(FcbClassDefinitions definitions) : ICon
     public IContainerTree Open(FcbObject root) => new Tree(root, definitions);
 
     public string Canonicalize(string fragmentId, string fragmentXml)
-        => ContainerLayout.IsLayoutId(fragmentId)
-            ? ContainerLayout.Parse(fragmentXml).Render()
-            : FcbXml.CanonicalizeFragment(fragmentXml, definitions);
+    {
+        if (ContainerLayout.IsLayoutId(fragmentId))
+        {
+            return ContainerLayout.Parse(fragmentXml).Render();
+        }
+
+        XElement fragment = FcbXml.Parse(fragmentXml);
+        FcseEntityData.CheckKeys(fragment);
+        return FcbXml.CanonicalizeFragment(fragment, definitions);
+    }
 
     /// <summary>An entity merges as a tree (see <see cref="FcbMerge"/>), a mission-layer layout by
     /// which entity belongs to which layer.</summary>

@@ -75,9 +75,21 @@ public class FcbMergeTests : IDisposable
         (string merged, IReadOnlyList<string> conflicts) = FcbMerge.Merge(
             Ancestor, Adding(DataComponent(Key("Shared.Key", 1))), Adding(DataComponent(Key("Shared.Key", 2))));
 
-        Assert.Equal(["Entity/Components/CFCSEDataComponent/Shared.Key/Int"], conflicts);
+        Assert.Equal(["Entity/Components/CFCSEDataComponent/Shared.Key"], conflicts);
         XElement key = Components(merged).Single(c => TypeOf(c) == "CFCSEDataComponent").Element("object")!;
         Assert.Equal("2", key.Element("value")!.Value);
+    }
+
+    /// <summary>A key is one value: given two types, it is not merged into a key holding both.</summary>
+    [Fact]
+    public void The_same_key_with_different_types_conflicts_as_one_value()
+    {
+        (string merged, IReadOnlyList<string> conflicts) = FcbMerge.Merge(
+            Ancestor, Adding(DataComponent(Key("Shared.Key", 1))), Adding(DataComponent(Key("Shared.Key", 1f))));
+
+        Assert.Equal(["Entity/Components/CFCSEDataComponent/Shared.Key"], conflicts);
+        XElement key = Components(merged).Single(c => TypeOf(c) == "CFCSEDataComponent").Element("object")!;
+        Assert.Equal("Float", (string?)Assert.Single(key.Elements("value")).Attribute("name"));
     }
 
     [Fact]
@@ -151,7 +163,7 @@ public class FcbMergeTests : IDisposable
         FolderModLayer modA = Stage("mod_a", id, Adding(DataComponent(Key("Shared.Key", 1))));
         FolderModLayer modB = Stage("mod_b", id, Adding(DataComponent(Key("Shared.Key", 2))));
         // Names the class definitions do not know are rendered as their hashes.
-        string path = string.Join('/', new[] { "Entity", "Components", "CFCSEDataComponent", "Shared.Key", "Int" }
+        string path = string.Join('/', new[] { "Entity", "Components", "CFCSEDataComponent", "Shared.Key" }
             .Select(name => Hash(name).ToString("X8")));
 
         var conflicts = new ConcurrentQueue<ModConflict>();
@@ -162,6 +174,20 @@ public class FcbMergeTests : IDisposable
         Assert.Contains(path, reported.Describe(), StringComparison.Ordinal);
         Assert.Contains(path, Assert.Throws<InvalidDataException>(() => Resolve(library, null, modA, modB)).Message,
             StringComparison.Ordinal);
+    }
+
+    /// <summary>FCSE would silently keep the last copy, so even a layer nobody merges with is refused.</summary>
+    [Fact]
+    public void A_key_listed_twice_is_an_error_naming_the_mod_and_the_key()
+    {
+        byte[] library = Library();
+        string id = FragmentIdOf(library);
+        FolderModLayer mod = Stage("mod_a", id, Adding(DataComponent(Key("Twice.Key", 1), Key("Twice.Key", 2))));
+
+        string message = Assert.Throws<InvalidDataException>(() => Resolve(library, null, mod)).Message;
+
+        Assert.Contains("mod_a", message, StringComparison.Ordinal);
+        Assert.Contains("'Twice.Key' 2 times", message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -203,6 +229,10 @@ public class FcbMergeTests : IDisposable
     private static XElement Key(string name, int value)
         => new("object", new XAttribute("type", name),
             new XElement("value", new XAttribute("name", "Int"), new XAttribute("type", "Int32"), value));
+
+    private static XElement Key(string name, float value)
+        => new("object", new XAttribute("type", name),
+            new XElement("value", new XAttribute("name", "Float"), new XAttribute("type", "Float"), value));
 
     private static XElement Link(string inputEvent)
         => new("object", new XAttribute("type", "Link"),

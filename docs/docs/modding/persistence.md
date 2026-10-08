@@ -50,7 +50,8 @@ need the block, as does the archetype in each library the game reads — world1,
 library. `jackall-cli mod lint` says whether the copy you edited is the one the game reads.
 
 Two mods can add keys to the same archetype. JackAll merges their `CFCSEDataComponent` blocks key by
-key and reports a conflict only when both give the same key different values.
+key and reports a conflict only when both give the same key different values. A key appears once in
+a component; JackAll refuses a fragment that lists one twice.
 
 ## FCSE entity data: per entity
 
