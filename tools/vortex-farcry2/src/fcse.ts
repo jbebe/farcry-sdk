@@ -6,7 +6,7 @@ import { actions, log, selectors, tooltip, types, util } from 'vortex-api';
 import { FCSE_LOADER, GAME_ID, MODTYPE_FCSE_LOADER, MODTYPE_LAYER, PLUGINS_DIR } from './constants';
 import { activeProfile, gamePath } from './game';
 import { enabledLayerMods } from './loadOrder';
-import { dismiss, notify } from './ui';
+import { ask, dismiss, notify } from './ui';
 
 // https://www.nexusmods.com/farcry2/mods/368
 const FCSE_NEXUS_ID = 368;
@@ -85,15 +85,25 @@ export function fcseColumn(api: types.IExtensionApi): types.ITableAttribute<type
   };
 }
 
-/**
- * Downloads FCSE's newest main file from Nexus, installs and enables it. Nexus serves direct
- * downloads to premium accounts only, so anyone else gets the file's page to download it from.
- */
+/** Premium accounts get FCSE installed; Nexus serves anyone else its page only, so that's offered. */
 async function installFcse(api: types.IExtensionApi, requiredBy: string): Promise<void> {
   if (installing || isFcseAvailable(api)) {
     return;
   }
   installing = true;
+  try {
+    const premium = util.getSafe<boolean>(
+      api.getState(), ['persistent', 'nexus', 'userInfo', 'isPremium'], false);
+    if (!premium || !await downloadFcse(api, requiredBy)) {
+      await offerFcsePage(api, requiredBy);
+    }
+  } finally {
+    installing = false;
+  }
+}
+
+/** Downloads FCSE's newest main file, installs and enables it; false when that failed. */
+async function downloadFcse(api: types.IExtensionApi, requiredBy: string): Promise<boolean> {
   notify(api, {
     id: NOTIFICATION_ID,
     type: 'activity',
@@ -101,40 +111,45 @@ async function installFcse(api: types.IExtensionApi, requiredBy: string): Promis
     message: `"${requiredBy}" contains an FCSE plugin, which needs the Far Cry Script Extender.`,
     noDismiss: true,
   });
-
-  let fileId: number | undefined;
   try {
     const files = await api.ext.nexusGetModFiles!(GAME_ID, FCSE_NEXUS_ID) as INexusFile[];
-    fileId = files
+    const fileId = files
       .filter(file => file.category_id === MAIN_FILE_CATEGORY)
       .sort((lhs, rhs) => rhs.uploaded_timestamp - lhs.uploaded_timestamp)[0]?.file_id;
 
     // Undefined on failure, which nexusDownload has already reported.
     const downloadId: string | undefined = fileId === undefined ? undefined
       : await api.ext.nexusDownload!(GAME_ID, FCSE_NEXUS_ID, fileId, undefined, false);
-    if (downloadId !== undefined) {
-      const modId = await util.toPromise<string>(cb => api.events.emit(
-        'start-install-download', downloadId, { allowAutoEnable: false }, cb));
-      const profile = activeProfile(api);
-      if (profile !== undefined) {
-        await actions.setModsEnabled(api, profile.id, [modId], true,
-          { allowAutoDeploy: true, installed: true });
-      }
-      return;
+    if (downloadId === undefined) {
+      return false;
     }
+    const modId = await util.toPromise<string>(cb => api.events.emit(
+      'start-install-download', downloadId, { allowAutoEnable: false }, cb));
+    const profile = activeProfile(api);
+    if (profile !== undefined) {
+      await actions.setModsEnabled(api, profile.id, [modId], true,
+        { allowAutoDeploy: true, installed: true });
+    }
+    return true;
   } catch (err) {
     log('warn', 'Far Cry 2: FCSE download failed', { error: (err as Error).message });
+    return false;
   } finally {
-    installing = false;
     dismiss(api, NOTIFICATION_ID);
   }
+}
 
-  notify(api, {
-    type: 'warning',
-    title: 'Download FCSE from Nexus Mods',
-    message: `"${requiredBy}" contains an FCSE plugin, which the game only loads with FCSE `
-      + 'installed. Its page is open - use "Mod Manager Download" there.',
-  });
-  const page = `https://www.nexusmods.com/${GAME_ID}/mods/${FCSE_NEXUS_ID}?tab=files`;
-  await util.opn(fileId === undefined ? page : `${page}&file_id=${fileId}`).catch(() => undefined);
+async function offerFcsePage(api: types.IExtensionApi, requiredBy: string): Promise<void> {
+  const result = await ask(api, 'question', 'FCSE is required', {
+    text: `"${requiredBy}" contains an FCSE plugin, which the game only loads with the Far Cry `
+      + 'Script Extender (FCSE) installed.\n\n'
+      + 'Open FCSE\'s Nexus Mods page and use "Mod Manager Download" there to install it.',
+  }, [
+    { label: 'Cancel' },
+    { label: 'Open FCSE page' },
+  ]);
+  if (result.action === 'Open FCSE page') {
+    await util.opn(`https://www.nexusmods.com/${GAME_ID}/mods/${FCSE_NEXUS_ID}?tab=files`)
+      .catch(() => undefined);
+  }
 }
