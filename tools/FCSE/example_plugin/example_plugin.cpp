@@ -1,12 +1,15 @@
 // example_plugin - a complete, working FCSE plugin in one file: two toggleable rendering effects,
-// both reachable from the in-game Mod Configuration Menu, both surviving a restart.
+// both reachable from the in-game Mod Configuration Menu, both surviving a restart, and a count kept
+// on every gun the player draws.
 //
 //   Shake the UI    every menu, the HUD and the map jitter a few pixels each frame
 //   Red UI          the entire 2D layer renders red-channel-only
+//   Draw count      each weapon remembers, through saves, how often it has been drawn
 //
-// `example_script/example_script.lua` is the same mod written in Lua. The two files are meant to
+// `example_script/example_script.lua` is the two effects written in Lua. The two files are meant to
 // be read side by side - they use the same seams in the same order, so the comparison answers
-// "what does the script API give up?" directly. (For this mod: nothing.)
+// "what does the script API give up?" directly. (For the effects: nothing. Scripts have no entity
+// data yet, so the draw count is C++ only.)
 //
 // Copy this file as a starting point for a real plugin; `include/fcse_api.h` is the only header
 // you need, and it documents the whole ABI inline.
@@ -123,6 +126,74 @@ namespace {
                                     : "example_plugin: red UI is OFF");
         }
     }
+
+    // ==========================================================================================
+    // Draw count (entity data: values kept on a game entity)
+    // ==========================================================================================
+    //
+    // A count kept on the weapon entity itself rather than in the plugin, so it follows that gun:
+    // the game saves it with the weapon and restores it on load. A weapon whose archetype authors
+    // an "example_plugin.Nickname" in the entity library (see the FCSE README) logs that too.
+    //
+    // The camera's per-frame offset update is where to look at the gun in hand: the engine hands it
+    // the pawn whose view it is, and the player's camera is the one PlayerCamera returns.
+    using UpdateCameraOffsetFn = void(__fastcall*)(void* camera, void* unused, float seconds,
+                                                   void* pawn);
+    using EquippedWeaponFn = void*(__fastcall*)(void* inventory);
+    using PlayerCameraFn = void*(__cdecl*)();
+
+    FCSE::Relocation<UpdateCameraOffsetFn> g_updateCameraOffset{FCSE::Uplay(0x00693490)};
+    FCSE::Relocation<EquippedWeaponFn> g_equippedWeapon{FCSE::Uplay(0x00127DA0)};
+    FCSE::Relocation<PlayerCameraFn> g_playerCamera{FCSE::Uplay(0x0070C210)};
+    UpdateCameraOffsetFn g_originalUpdateCameraOffset = nullptr;
+
+    // CPawn's data and the inventory in it; a CEntity's name.
+    constexpr uintptr_t kPawnData = 0x10;
+    constexpr uintptr_t kInventory = 0x4F0;
+    constexpr uintptr_t kEntityName = 0x14;
+
+    // Prefixed with the plugin's name: every plugin shares an entity's keys.
+    constexpr char kDrawsKey[] = "example_plugin.Draws";
+    constexpr char kNicknameKey[] = "example_plugin.Nickname";
+
+    void* g_weaponInHand = nullptr;
+
+    void CountDraw(void* weapon) {
+        const FCSE_EntityDataAPI* data = g_api->EntityData;
+        void* entity = data->EntityOf(weapon);
+        if (entity == nullptr) {
+            return;
+        }
+
+        // Absent the first time a gun is drawn, so the count starts from the 0 it was given here.
+        int32_t draws = 0;
+        data->GetInt(entity, kDrawsKey, &draws);
+        data->SetInt(entity, kDrawsKey, ++draws);
+
+        const char* name = *reinterpret_cast<const char**>(static_cast<char*>(entity) + kEntityName);
+        char nickname[64];
+        if (data->GetString(entity, kNicknameKey, nickname, sizeof(nickname))) {
+            FCSE::Logf("example_plugin: %s \"%s\" drawn %d times", name, nickname, draws);
+        } else {
+            FCSE::Logf("example_plugin: %s drawn %d times", name, draws);
+        }
+    }
+
+    void __fastcall UpdateCameraOffsetDetour(void* camera, void* unused, float seconds,
+                                             void* pawn) {
+        g_originalUpdateCameraOffset(camera, unused, seconds, pawn);
+        if (pawn == nullptr || camera != g_playerCamera()) {
+            return;
+        }
+        auto* pawnData = *reinterpret_cast<char**>(static_cast<char*>(pawn) + kPawnData);
+        void* weapon = g_equippedWeapon(pawnData + kInventory);
+        if (weapon != g_weaponInHand) {
+            g_weaponInHand = weapon;
+            if (weapon != nullptr) {
+                CountDraw(weapon);
+            }
+        }
+    }
 }
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
@@ -158,6 +229,15 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         // Hook() having failed is already logged by FCSE, saying why. g_originalBeginPageRendering
         // stays null in that case, which is exactly why the detour is never reached: it is only
         // ever called through the hook that failed to install.
+
+        if (!g_updateCameraOffset || !g_equippedWeapon || !g_playerCamera) {
+            api->Log("example_plugin: the camera or inventory is not mapped on this build - draw "
+                     "count disabled");
+        } else {
+            api->Hook(reinterpret_cast<void*>(g_updateCameraOffset.address()),
+                      reinterpret_cast<void*>(&UpdateCameraOffsetDetour),
+                      reinterpret_cast<void**>(&g_originalUpdateCameraOffset));
+        }
     }
 
     // Tier 4. Each callback fires once from inside this call carrying whatever bin\fcse.ini holds,
