@@ -13,6 +13,8 @@ Notable changes to the Vortex Far Cry 2 extension, loosely following
   list that gets FCSE when clicked.
 - **Starting the game without FCSE while a mod has a plugin asks first**, offering to start it with
   FCSE instead, since the game on its own never loads plugins.
+- **Installing FCSE makes it what Vortex's Play button starts**, unless you already picked another
+  primary tool.
 
 ## [0.3.0] - 2026-10-02
 
