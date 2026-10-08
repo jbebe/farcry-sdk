@@ -2,8 +2,8 @@
 
 Driving in Far Cry 2 as off-road driving: a third-person camera to watch the car work, off-road
 physics, an engine with real gears, and wrecks revived as drivable vehicles. Unfinished: the camera,
-the physics and the engine are in, the engine's sound for the Datsun only; shooting from the windows
-and the wrecks are to come.
+the physics and the engine are in, the engine's sound for the Datsun and the big truck only; shooting
+from the windows and the wrecks are to come.
 
 ## What it does
 
@@ -45,12 +45,15 @@ and the wrecks are to come.
   - The engine idles, revs against a slipping clutch as the car pulls away, climbs to the redline in
     each gear, and runs down while the clutch is out for a gear change (0.6 s).
   - Havok's engine is the same in every car; its shift point is laid over the real engine's redline.
-    The Datsun runs from a 750 rpm idle to a 6,500 rpm redline.
+    The Datsun runs from a 750 rpm idle to a 6,500 rpm redline, the big truck from 560 rpm to 2,700.
 - **The Datsun's engine sound.** A new engine sound of four steady-rev recordings, each pitched to the
   revs and faded into the next, a little quieter off the throttle and quieter still while the clutch
   is out. Retail's own idle loop plays at idle. A recorded start replaces the ignition, and a
   gear-change clunk plays halfway through each shift. The new engine sound plays on every Datsun; the
   clunk only on the one you drive.
+- **The big truck's engine sound.** The same, from an idle and six steady-rev recordings, the idle
+  one the lowest of them in place of retail's idle loop. It has its own recorded start, and the
+  Datsun's clunk on gear changes. The DLC's big truck, in the DLC's multiplayer maps, keeps its own.
 - **Quieter tyres.** Every car's tyre sounds on the ground, dirt, gravel, grass and the rest, play
   10 dB quieter, so they no longer drown out the engine.
 
@@ -94,8 +97,9 @@ src\                         the FCSE plugin
 layer\mods\
   config\                    the active_camerathird control and its binding, as sections
   languages\                 the control's label, in every language
-  soundbinary\               the Datsun's engine, start and gear-change sounds; its pedal sound
-                             silenced; every car's quieter tyre sounds
+  soundbinary\               the Datsun's and the big truck's engine and start sounds, the gear-change
+                             clunks; their pedal sounds and the truck's idle silenced; every car's
+                             quieter tyre sounds
 layer\plugins\vehicle-overhaul\   the built plugin, staged here by build.ps1
 ```
 

@@ -16,7 +16,8 @@ struct Spec {
     // The static stability factor: half the track over the centre of mass's height. kAtTheAxles puts
     // the weight at the wheels' centres instead.
     float stability;
-    // The engine's idle and rev limit, or 0 for the drivetrain's defaults.
+    // The engine's idle and rev limit, or 0 for the drivetrain's defaults. A car with an engine sound of
+    // the layer's own has it pitched for these: changing them puts it out of tune.
     float idle;
     float redline;
     // The sound of a gear change, or 0 for the vehicle's own.
