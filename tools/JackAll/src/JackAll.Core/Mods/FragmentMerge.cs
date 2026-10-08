@@ -150,11 +150,10 @@ public static class FragmentMerge
                 continue;
             }
 
-            string ours = splitter.Canonicalize(fragmentId, result);
-            (string merged, IReadOnlyList<string> at) = splitter.Merge(fragmentId, ancestor, ours, theirs);
+            (string merged, IReadOnlyList<string> at) = splitter.Merge(fragmentId, ancestor, result, theirs);
+            result = splitter.Canonicalize(fragmentId, merged);
             if (at.Count == 0)
             {
-                result = merged;
                 continue;
             }
 
@@ -174,12 +173,8 @@ public static class FragmentMerge
                       "since the workspace is always highest priority.");
             }
 
-            // Lenient mode: keep the splitter's own resolution of the collision. For a text fragment
-            // that is the higher-priority layer outright, exactly like a whole-file override; for a
-            // format that merges by meaning it is the fold with only the collision decided, so the
-            // other layer's untouched edits survive.
+            // Lenient mode: keep the splitter's fold, with only the collision decided.
             conflicts.Enqueue(conflict);
-            result = merged;
         }
         return result;
     }

@@ -117,7 +117,7 @@ public sealed class MoveFragment(MoveUnit unit, List<MoveObject> roots)
 public static class MoveFragmentXml
 {
     private const string StateRoot = "MoveState";
-    private const string BranchRoot = "MoveBranch";
+    internal const string BranchRoot = "MoveBranch";
     private const string SectionRoot = "MoveSection";
 
     /// <summary>The class name of a section's synthetic holder; never written to a binary.</summary>

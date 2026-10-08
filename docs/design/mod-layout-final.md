@@ -419,13 +419,11 @@ one's control. That is the conflict-merge argument `WorldSector` was admitted on
 | identity | the section's `name`, unique in every file. The root's unnamed `<Import file>` and `<Config>` stay with the base file |
 | depth | stop at the section |
 
-The section is the override unit, but it does not merge as text. Two mods adding a binding to one
-action map insert at the same place, which a line merge calls a conflict. A section therefore merges
-as a list: a child is matched by its `name`, else the action map it
-imports, else its whole text, so additions from both sides land, the ancestor's order is kept, and only
-two different edits of one named control conflict. Nothing is reordered. The shipped data repeats one
-child exactly (the console map binds `kb:-` twice), so a repeated key is a list, its items matched by
-content.
+The section is the override unit and merges as a list: a child is matched by its `name`, else the
+action map it imports, else its whole text, so additions from both sides land, the ancestor's order
+is kept, and only two different edits of one named control conflict. Nothing is reordered. The
+shipped data repeats one child exactly (the console map binds `kb:-` twice), so a repeated key is a
+list, its items matched by content.
 
 The files declare `ISO-8859-1` (all ASCII), and an assembled one is written back in that encoding.
 Sections nobody overrides keep their own formatting; only a self-closing tag's spacing is normalized.

@@ -7,8 +7,8 @@ using JackAll.Core.Mods;
 namespace JackAll.Tests;
 
 /// <summary>
-/// A MOVE fragment as the mod pipeline sees it: staged at a path, merged by load order, and
-/// colliding loudly when two mods edit one state.
+/// A MOVE fragment as the mod pipeline sees it: staged at a path, merged op by op, and colliding
+/// loudly when two mods edit one clip.
 /// </summary>
 /// <remarks>
 /// This is the point of the whole exercise. Before it, a mod that retargets one animation clip ships
@@ -66,12 +66,12 @@ public sealed class MoveFragmentPipelineTests : IDisposable
     }
 
     /// <summary>
-    /// Two mods editing one state is a real conflict. A build resolves it by load order and reports
+    /// Two mods retargeting one clip is a real conflict. A build resolves it by load order and reports
     /// it, so the losing edit is named rather than vanishing the way a whole-file override would.
     /// </summary>
     [Theory]
     [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
-    public void Two_mods_editing_one_state_collide_loudly(string path)
+    public void Two_mods_editing_one_clip_collide_loudly(string path)
     {
         if (Fixture.Read(path) is not { } original) return;
 
@@ -114,7 +114,7 @@ public sealed class MoveFragmentPipelineTests : IDisposable
             .First(fragment => UniqueClips(fragment.Xml).Count >= 2);
         (string first, string second) = (UniqueClips(xml)[0], UniqueClips(xml)[1]);
 
-        (string resolved, ConcurrentQueue<ModConflict> conflicts) = Resolve(vanilla, path, id,
+        (string resolved, ConcurrentQueue<ModConflict> conflicts) = Resolve(original, path, id,
             Retarget(xml, first, 0x0BADC0DE), Retarget(xml, second, 0x0DEFACED));
 
         Assert.Empty(conflicts);
@@ -137,7 +137,7 @@ public sealed class MoveFragmentPipelineTests : IDisposable
         string clip = UniqueClips(xml)[0];
         string ours = Canonical(id, Nulled(xml, removable[0]));
 
-        (string resolved, ConcurrentQueue<ModConflict> conflicts) = Resolve(vanilla, path, id,
+        (string resolved, ConcurrentQueue<ModConflict> conflicts) = Resolve(original, path, id,
             ours, Retarget(xml, clip, 0x0BADC0DE));
 
         Assert.Empty(conflicts);
@@ -156,7 +156,7 @@ public sealed class MoveFragmentPipelineTests : IDisposable
         (string id, string xml, List<int> removable) = Referencing(vanilla);
         string theirs = Canonical(id, Nulled(xml, removable[^1]));
 
-        (string resolved, ConcurrentQueue<ModConflict> conflicts) = Resolve(vanilla, path, id,
+        (string resolved, ConcurrentQueue<ModConflict> conflicts) = Resolve(original, path, id,
             Canonical(id, Nulled(xml, removable[0])), theirs);
 
         Assert.Equal(theirs, resolved);
@@ -164,16 +164,13 @@ public sealed class MoveFragmentPipelineTests : IDisposable
     }
 
     private (string Resolved, ConcurrentQueue<ModConflict> Conflicts) Resolve(
-        IContainerTree vanilla, string path, string id, string mine, string theirs)
+        byte[] original, string path, string id, string mine, string theirs)
     {
-        IModLayer first = Layer("First", path, id, mine);
-        IModLayer second = Layer("Second", path, id, theirs);
         ConcurrentQueue<ModConflict> conflicts = new();
-        string resolved = FragmentMerge.Resolve(MoveContainerSplitter.Instance, vanilla, id,
-            [(first, first.FragmentOverrides.Values.Single()[0].EntryHash),
-             (second, second.FragmentOverrides.Values.Single()[0].EntryHash)],
-            conflicts, "movemgr.bin");
-        return (resolved, conflicts);
+        Dictionary<string, string> resolved = TestSupport.ResolveFragments(
+            MoveContainerSplitter.Instance, original, $@"graphics\move\{Path.GetFileName(path)}", conflicts,
+            Layer("First", path, id, mine), Layer("Second", path, id, theirs));
+        return (Assert.Single(resolved).Value, conflicts);
     }
 
     private static string Canonical(string id, string xml) => MoveContainerSplitter.Instance.Canonicalize(id, xml);
@@ -188,11 +185,8 @@ public sealed class MoveFragmentPipelineTests : IDisposable
     private static string Retarget(string xml, string clip, uint replacement)
         => xml.Replace($"{ClipMarker}{clip}\" />", $"{ClipMarker}{replacement}\" />");
 
-    /// <summary>
-    /// A state holding references, with the objects in it that no reference points into and that
-    /// hold no clip - the ones a mod can null out - each ahead of some referenced object, so removing
-    /// one renumbers. By their position among the fragment's objects; at least two that do not nest.
-    /// </summary>
+    /// <summary>A state holding references, and the positions of its objects a mod can null out ahead
+    /// of a referenced one (no target or clip inside); at least two that do not nest.</summary>
     private static (string Id, string Xml, List<int> Removable) Referencing(IContainerTree tree)
     {
         foreach (FcbFragmentInfo row in tree.List())
@@ -244,19 +238,18 @@ public sealed class MoveFragmentPipelineTests : IDisposable
     /// fragment that has one.</summary>
     private static (string Id, string Xml) EditAClip(IContainerTree tree, int skip, uint replacement)
     {
-        const string marker = "<u32 n=\"m_animNameHash\" v=\"";
         foreach (FcbFragmentInfo row in tree.List())
         {
             string xml = tree.Extract(row.Id)!;
-            int at = xml.IndexOf(marker, StringComparison.Ordinal);
+            int at = xml.IndexOf(ClipMarker, StringComparison.Ordinal);
             if (at < 0) continue;
 
-            int start = at + marker.Length;
+            int start = at + ClipMarker.Length;
             string clip = xml[start..xml.IndexOf('"', start)];
             if (xml.Split($"v=\"{clip}\"").Length != 2) continue;
             if (skip-- > 0) continue;
 
-            return (row.Id, xml.Replace($"{marker}{clip}\" />", $"{marker}{replacement}\" />"));
+            return (row.Id, Retarget(xml, clip, replacement));
         }
 
         throw new InvalidOperationException("not enough fragments hold a unique clip reference");

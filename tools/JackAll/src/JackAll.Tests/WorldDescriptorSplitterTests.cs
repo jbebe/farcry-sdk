@@ -181,7 +181,7 @@ public class WorldDescriptorSplitterTests
     private static (string Id, string Xml) FirstMission(byte[] descriptor)
     {
         IContainerTree tree = Splitter.Open(descriptor);
-        string id = tree.List().First(row => XElement.Parse(tree.Extract(row.Id)!).Name == "Mission").Id;
+        string id = tree.List()[0].Id;
         return (id, tree.Extract(id)!);
     }
 

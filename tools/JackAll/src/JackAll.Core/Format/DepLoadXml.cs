@@ -25,7 +25,7 @@ public static class DepLoadXml
 {
     private const string ParentElement = "Resource";
     private const string IdAttribute = "ID";
-    private const string HashAttribute = "crc_ID";
+    internal const string HashAttribute = "crc_ID";
     private const string TypeAttribute = "crc_Type";
     private const string BlockAttribute = "childIndex";
 

@@ -120,10 +120,10 @@ public interface IContainerSplitter
     byte[] Apply(byte[] baseBytes, IReadOnlyDictionary<string, string> fragmentXmlById);
 
     /// <summary>
-    /// Folds two layers' versions of one fragment against their common ancestor, an empty one meaning
-    /// both added it. The merged text is always usable as-is, even when the fold conflicted - the
-    /// conflicts say where theirs was kept, not that the result is unfinished. Each is a path inside
-    /// the fragment, empty for the fragment as a whole.
+    /// Folds two layers' canonical versions of one fragment against their common ancestor, an empty one
+    /// meaning both added it. The merged text need not be canonical, and is usable even when the fold
+    /// conflicted - the conflicts say where theirs was kept, each a path inside the fragment, empty
+    /// for the fragment as a whole.
     /// </summary>
     (string Merged, IReadOnlyList<string> Conflicts) Merge(string fragmentId, string ancestor, string ours, string theirs);
 

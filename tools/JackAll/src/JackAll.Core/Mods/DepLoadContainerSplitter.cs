@@ -1,4 +1,3 @@
-using System.Xml.Linq;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Naming;
@@ -37,11 +36,7 @@ public sealed class DepLoadContainerSplitter(NameDatabase? names = null) : ICont
     /// <summary>A resource's dependencies are a list matched by hash, so two mods adding to one package
     /// both keep theirs.</summary>
     public (string Merged, IReadOnlyList<string> Conflicts) Merge(string fragmentId, string ancestor, string ours, string theirs)
-    {
-        (XElement merged, IReadOnlyList<string> conflicts) = XmlListMerge.MergeTree(
-            ancestor, ours, theirs, child => (string?)child.Attribute("crc_ID") ?? child.Name.LocalName);
-        return (Canonicalize(fragmentId, merged.ToString()), conflicts);
-    }
+        => XmlListMerge.MergeTree(ancestor, ours, theirs, child => (string)child.Attribute(DepLoadXml.HashAttribute)!);
 
     public byte[] Apply(byte[] baseBytes, IReadOnlyDictionary<string, string> fragmentXmlById)
     {

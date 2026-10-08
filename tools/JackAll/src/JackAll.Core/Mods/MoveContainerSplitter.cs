@@ -1,5 +1,4 @@
 using System.Text;
-using System.Xml.Linq;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Format.Move;
 using JackAll.Core.Format;
@@ -74,102 +73,9 @@ public sealed class MoveContainerSplitter(MoveNames? names = null) : IContainerS
     public string Canonicalize(string fragmentId, string fragmentXml)
         => MoveFragmentXml.Render(MoveFragmentXml.Parse(fragmentXml));
 
-    /// <summary>
-    /// A fragment merges as a tree of ops, each matched by its field name and a repeated one as a list.
-    /// Object ids are positions, so they are dropped for the merge and renumbered after, a reference
-    /// naming its target by path meanwhile.
-    /// </summary>
-    /// <remarks>A path names the right object only in a shape one side produced, so a merge that
-    /// reshapes a fragment holding references both ways keeps theirs whole.</remarks>
+    /// <summary>See <see cref="MoveMerge"/>.</summary>
     public (string Merged, IReadOnlyList<string> Conflicts) Merge(string fragmentId, string ancestor, string ours, string theirs)
-    {
-        XElement mine = Addressed(ours);
-        XElement their = Addressed(theirs);
-        (XElement merged, IReadOnlyList<string> conflicts) = XmlListMerge.MergeTree(
-            ancestor.Length == 0 ? null : Addressed(ancestor), mine, their, OpKey);
-
-        return merged.Descendants("ref").Any() && Shape(merged) != Shape(mine) && Shape(merged) != Shape(their)
-            ? (theirs, [""])
-            : (Canonicalize(fragmentId, Numbered(merged).ToString()), conflicts);
-    }
-
-    private const string BranchRoot = "MoveBranch";
-
-    private static string OpKey(XElement op) => (string?)op.Attribute("n") ?? op.Name.LocalName;
-
-    /// <summary>A fragment with its object ids dropped and each reference naming its target by path.
-    /// The root is object 0, unless it holds a branch's roots.</summary>
-    private static XElement Addressed(string xml)
-    {
-        XElement root = XElement.Parse(xml);
-        Dictionary<XElement, string> paths = Paths(root);
-        Dictionary<string, XElement> byId = root.Descendants("obj").ToDictionary(obj => (string)obj.Attribute("id")!);
-        if (root.Name != BranchRoot)
-        {
-            byId["0"] = root;
-        }
-
-        foreach (XElement reference in root.Descendants("ref"))
-        {
-            reference.SetAttributeValue("to", paths[byId[(string)reference.Attribute("id")!]]);
-            reference.SetAttributeValue("id", null);
-        }
-        foreach (XElement obj in root.Descendants("obj"))
-        {
-            obj.SetAttributeValue("id", null);
-        }
-        return root;
-    }
-
-    /// <summary>The reverse of <see cref="Addressed"/>: ids in the order a reader recreates the objects.</summary>
-    private static XElement Numbered(XElement root)
-    {
-        Dictionary<XElement, string> paths = Paths(root);
-        var ids = new Dictionary<string, int>();
-        int next = 0;
-        if (root.Name != BranchRoot)
-        {
-            ids[""] = next++;
-        }
-
-        foreach (XElement obj in root.Descendants("obj"))
-        {
-            obj.SetAttributeValue("id", next);
-            ids[paths[obj]] = next++;
-        }
-        foreach (XElement reference in root.Descendants("ref"))
-        {
-            reference.SetAttributeValue("id", ids[(string)reference.Attribute("to")!]);
-            reference.SetAttributeValue("to", null);
-        }
-        return root;
-    }
-
-    /// <summary>Every element's path from the root: each op's field name and its occurrence among
-    /// siblings of that name.</summary>
-    private static Dictionary<XElement, string> Paths(XElement root)
-    {
-        var paths = new Dictionary<XElement, string>();
-        Walk(root, "");
-        return paths;
-
-        void Walk(XElement element, string path)
-        {
-            paths[element] = path;
-            var seen = new Dictionary<string, int>();
-            foreach (XElement child in element.Elements())
-            {
-                string key = OpKey(child);
-                int occurrence = seen[key] = seen.GetValueOrDefault(key, -1) + 1;
-                Walk(child, $"{path}/{key}#{occurrence}");
-            }
-        }
-    }
-
-    /// <summary>A fragment without its values: which objects sit where, and what each reference names.</summary>
-    private static string Shape(XElement element)
-        => $"<{element.Name}{element.Attribute("n")}{element.Attribute("class")}{element.Attribute("unit")}{element.Attribute("to")}>"
-            + string.Concat(element.Elements().Select(Shape)) + "</>";
+        => MoveMerge.Merge(ancestor, ours, theirs);
 
     public byte[] Apply(byte[] baseBytes, IReadOnlyDictionary<string, string> fragmentXmlById)
     {

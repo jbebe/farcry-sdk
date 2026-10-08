@@ -1,3 +1,4 @@
+using System.Text;
 using System.Xml.Linq;
 
 namespace JackAll.Core.Format;
@@ -12,14 +13,35 @@ public static class XmlListMerge
 {
     /// <summary>
     /// Folds <paramref name="theirs"/> into <paramref name="ours"/> attribute by attribute and child
-    /// by child. A conflict keeps theirs and is reported by where it sits: <c>@attribute</c>, or a
-    /// child's key - a list item's with its index, <c>Link[2]</c> - followed by any path inside it. A
-    /// null ancestor means both sides added the element.
+    /// by child, a child both sides changed merged within itself unless it holds text or
+    /// <paramref name="whole"/> calls it one value. A conflict keeps theirs and is reported by where it
+    /// sits: <c>@attribute</c>, or a child's key - a list item's with its index, <c>Link[2]</c> -
+    /// followed by any path inside it. An empty ancestor means both sides added the element.
     /// </summary>
-    /// <param name="mergeChild">Merges a child both sides changed, which otherwise conflicts whole.</param>
-    public static (XElement Merged, IReadOnlyList<string> Conflicts) Merge(
+    public static (string Merged, IReadOnlyList<string> Conflicts) MergeTree(
+        string ancestor, string ours, string theirs, Func<XElement, string> keyOf, Func<XElement, bool>? whole = null)
+    {
+        (XElement merged, IReadOnlyList<string> conflicts) = MergeTree(
+            ancestor.Length == 0 ? null : XElement.Parse(ancestor), XElement.Parse(ours), XElement.Parse(theirs),
+            keyOf, whole);
+        return (merged.ToString(), conflicts);
+    }
+
+    public static (XElement Merged, IReadOnlyList<string> Conflicts) MergeTree(
+        XElement? ancestor, XElement ours, XElement theirs, Func<XElement, string> keyOf, Func<XElement, bool>? whole = null)
+    {
+        return Merge(ancestor, ours, theirs, keyOf, (a, o, t) => o.Name == t.Name && Divisible(o) && Divisible(t)
+            ? MergeTree(a, o, t, keyOf, whole)
+            : (t, [""]));
+
+        bool Divisible(XElement element) => whole?.Invoke(element) != true && !element.Nodes().OfType<XText>().Any();
+    }
+
+    /// <summary>One level of <see cref="MergeTree"/>, <paramref name="mergeChild"/> taking a child both
+    /// sides changed.</summary>
+    private static (XElement Merged, IReadOnlyList<string> Conflicts) Merge(
         XElement? ancestor, XElement ours, XElement theirs, Func<XElement, string> keyOf,
-        Func<XElement?, XElement, XElement, (XElement Merged, IReadOnlyList<string> Conflicts)>? mergeChild = null)
+        Func<XElement?, XElement, XElement, (XElement Merged, IReadOnlyList<string> Conflicts)> mergeChild)
     {
         var merged = new XElement(ours);
         XElement original = ancestor ?? new XElement(theirs.Name);
@@ -127,25 +149,6 @@ public static class XmlListMerge
         }
     }
 
-    /// <summary>
-    /// <see cref="Merge"/> all the way down: a child both sides changed is merged within itself, unless
-    /// it holds text or <paramref name="whole"/> calls it one value, which is decided as a whole.
-    /// </summary>
-    public static (XElement Merged, IReadOnlyList<string> Conflicts) MergeTree(
-        string ancestor, string ours, string theirs, Func<XElement, string> keyOf, Func<XElement, bool>? whole = null)
-        => MergeTree(ancestor.Length == 0 ? null : XElement.Parse(ancestor), XElement.Parse(ours), XElement.Parse(theirs),
-            keyOf, whole);
-
-    public static (XElement Merged, IReadOnlyList<string> Conflicts) MergeTree(
-        XElement? ancestor, XElement ours, XElement theirs, Func<XElement, string> keyOf, Func<XElement, bool>? whole = null)
-    {
-        return Merge(ancestor, ours, theirs, keyOf, (a, o, t) => o.Name == t.Name && Divisible(o) && Divisible(t)
-            ? MergeTree(a, o, t, keyOf, whole)
-            : (t, [""]));
-
-        bool Divisible(XElement element) => whole?.Invoke(element) != true && !element.Nodes().OfType<XText>().Any();
-    }
-
     /// <summary>Every child of <paramref name="side"/> with the key it pairs by and the label a conflict
     /// names it by: a list item keyed by the original item it aligns with, an addition by its content.</summary>
     private static List<(string Key, string Label, XElement Element)> Keyed(
@@ -191,9 +194,32 @@ public static class XmlListMerge
     /// <summary>An element as text in which the order of differently keyed siblings does not count, so
     /// a list item matches its ancestor however its fields are ordered.</summary>
     private static string Identity(XElement element, Func<XElement, string> keyOf)
-        => element.HasElements
-            ? $"<{element.Name}{string.Concat(element.Attributes().Select(a => $" {a}"))}>"
-                + string.Concat(element.Elements().OrderBy(keyOf, StringComparer.Ordinal).Select(child => Identity(child, keyOf)))
-                + "</>"
-            : element.ToString(SaveOptions.DisableFormatting);
+    {
+        // '\0' cannot occur in XML, so it marks structure no name or value can imitate.
+        var text = new StringBuilder();
+        Append(element);
+        return text.ToString();
+
+        void Append(XElement node)
+        {
+            text.Append("\0<").Append(node.Name);
+            foreach (XAttribute attribute in node.Attributes())
+            {
+                text.Append("\0@").Append(attribute.Name).Append("\0=").Append(attribute.Value);
+            }
+            text.Append("\0>");
+            if (node.HasElements)
+            {
+                foreach (XElement child in node.Elements().OrderBy(keyOf, StringComparer.Ordinal))
+                {
+                    Append(child);
+                }
+            }
+            else
+            {
+                text.Append(node.Value);
+            }
+            text.Append("\0/");
+        }
+    }
 }

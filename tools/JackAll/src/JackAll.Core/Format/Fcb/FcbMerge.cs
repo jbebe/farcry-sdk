@@ -16,11 +16,7 @@ public static class FcbMerge
     /// sides added the fragment.
     /// </summary>
     public static (string Merged, IReadOnlyList<string> Conflicts) Merge(string ancestor, string ours, string theirs)
-    {
-        (XElement merged, IReadOnlyList<string> conflicts) = XmlListMerge.MergeTree(
-            ancestor, ours, theirs, child => FcbXml.KeyOf(child) ?? "", Whole);
-        return (merged.ToString(), conflicts);
-    }
+        => XmlListMerge.MergeTree(ancestor, ours, theirs, child => FcbXml.KeyOf(child) ?? "", Whole);
 
     private static bool Whole(XElement child)
         => child.Name == "value" || child.Parent is { } parent && FcseEntityData.IsComponent(parent);

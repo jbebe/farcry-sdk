@@ -60,12 +60,9 @@ public sealed class StringTableContainerSplitter : IContainerSplitter
     public string Canonicalize(string fragmentId, string fragmentXml)
         => OasisStringsPatch.FragmentToXml(OasisStringsPatch.FragmentFromXml(fragmentXml));
 
+    /// <summary>A fragment is one element, so this folds its attributes.</summary>
     public (string Merged, IReadOnlyList<string> Conflicts) Merge(string fragmentId, string ancestor, string ours, string theirs)
-    {
-        (XElement merged, IReadOnlyList<string> conflicts) = XmlListMerge.MergeTree(
-            ancestor, ours, theirs, child => child.Name.LocalName);
-        return (Canonicalize(fragmentId, merged.ToString()), conflicts);
-    }
+        => XmlListMerge.MergeTree(ancestor, ours, theirs, child => child.Name.LocalName);
 
     public byte[] Apply(byte[] baseBytes, IReadOnlyDictionary<string, string> fragmentXmlById)
     {

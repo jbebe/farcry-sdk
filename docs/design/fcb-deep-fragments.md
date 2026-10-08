@@ -14,7 +14,7 @@ shape, so:
   **whole-file** override. Two mods editing *different entities in the same sector* conflict at file
   level with no merge attempted. This is the gap worth closing.
 - **Entity libraries split only into their ~37 `NN_Name.xml` groups.** Editing one weapon stages a
-  whole group. `Diff3` already 3-way merges textually distant edits inside a fragment, so this mostly
+  whole group. The three-way merge already folds separate edits inside a fragment, so this mostly
   costs robustness rather than capability.
 
 Goal: fragment ids become **paths**, so an override unit can be one archetype or one placed entity.

@@ -34,13 +34,9 @@ public sealed class InputConfigContainerSplitter : IContainerSplitter
 
     public string Canonicalize(string fragmentId, string fragmentXml) => Render(XElement.Parse(fragmentXml));
 
+    /// <summary>A section's children are each decided whole.</summary>
     public (string Merged, IReadOnlyList<string> Conflicts) Merge(string fragmentId, string ancestor, string ours, string theirs)
-    {
-        (XElement merged, IReadOnlyList<string> conflicts) = XmlListMerge.Merge(
-            ancestor.Length == 0 ? null : XElement.Parse(ancestor), XElement.Parse(ours), XElement.Parse(theirs),
-            KeyOf);
-        return (Render(merged), conflicts);
-    }
+        => XmlListMerge.MergeTree(ancestor, ours, theirs, KeyOf, whole: _ => true);
 
     public byte[] Apply(byte[] baseBytes, IReadOnlyDictionary<string, string> fragmentXmlById)
     {
