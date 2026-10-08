@@ -1,7 +1,7 @@
 import * as crypto from 'crypto';
 import * as nodeFs from 'fs';
 import * as path from 'path';
-import { log, selectors, types } from 'vortex-api';
+import { log, selectors, types, util } from 'vortex-api';
 
 import { GAME_ID } from './constants';
 import { requireFcse } from './fcse';
@@ -11,9 +11,47 @@ import { orderedLayerMods } from './loadOrder';
 import { ask, dismiss, notify, notifyError } from './ui';
 
 const NOTIFICATION_ID = 'farcry2-jackall-build';
+const BUILD_TITLE = 'Applying mods to Far Cry 2 - don\'t start the game yet';
+const WAIT_NOTIFICATION_ID = 'farcry2-wait-for-build';
 
 /** Signature of the last build this session. Undefined always misses, forcing a real one. */
 let lastSignature: string | undefined;
+
+/** The patch.dat build or restore in progress, which a game launch waits for. */
+let pending: Promise<void> | undefined;
+
+function track(work: () => Promise<void>): Promise<void> {
+  const run: Promise<void> = work().finally(() => {
+    if (pending === run) {
+      pending = undefined;
+    }
+  });
+  pending = run;
+  return run;
+}
+
+/** A start hook: holds a launch until patch.dat is fully written. */
+export async function waitForBuild(
+  api: types.IExtensionApi, call: types.IRunParameters,
+): Promise<types.IRunParameters> {
+  if (pending === undefined) {
+    return call;
+  }
+  notify(api, {
+    id: WAIT_NOTIFICATION_ID,
+    type: 'activity',
+    title: 'Waiting for mods to finish applying…',
+    message: 'The game starts as soon as patch.dat is ready.',
+  });
+  try {
+    while (pending !== undefined) {
+      await pending;
+    }
+  } finally {
+    dismiss(api, WAIT_NOTIFICATION_ID);
+  }
+  return call;
+}
 
 /**
  * The engine reads mods out of Data_Win32\patch.dat and nowhere else, so deploying files is only half
@@ -44,7 +82,11 @@ function isOurProfile(api: types.IExtensionApi, profileId: string): boolean {
  * Recompiles patch.dat from the enabled layers, in load order, always starting from the vanilla
  * backup - so deploying twice produces identical bytes and a disabled mod genuinely disappears.
  */
-export async function rebuild(api: types.IExtensionApi, trigger: 'deploy' | 'manual'): Promise<void> {
+export function rebuild(api: types.IExtensionApi, trigger: 'deploy' | 'manual'): Promise<void> {
+  return track(() => buildPatch(api, trigger));
+}
+
+async function buildPatch(api: types.IExtensionApi, trigger: 'deploy' | 'manual'): Promise<void> {
   const gameRoot = gamePath(api);
   if (gameRoot === undefined) {
     return;
@@ -59,8 +101,8 @@ export async function rebuild(api: types.IExtensionApi, trigger: 'deploy' | 'man
       notifyError(api,
         'Far Cry 2 mods were not applied',
         'patch.dat already looks modded and there is no pristine backup to build from. Restore the '
-        + 'original game files (in Steam: right-click the game, Verify integrity of game files), '
-        + 'then deploy again.',
+        + 'original game files (in Steam: right-click the game, Verify integrity of game files; in '
+        + 'GOG Galaxy: the game\'s settings, Manage installation, Verify / Repair), then deploy again.',
         { allowReport: false });
       return;
     }
@@ -78,14 +120,14 @@ export async function rebuild(api: types.IExtensionApi, trigger: 'deploy' | 'man
     notify(api, {
       id: NOTIFICATION_ID,
       type: 'activity',
-      title: 'Building patch.dat',
-      message: `Applying ${layers.length} mod(s)…`,
+      title: BUILD_TITLE,
+      message: `Building patch.dat from ${layers.length} mod(s)…`,
     });
 
     const result = await jackall.build(gameRoot, layers, {
       onProgress: message => {
         log('info', `Far Cry 2 (jackall-mi): ${message}`);
-        notify(api, { id: NOTIFICATION_ID, type: 'activity', title: 'Building patch.dat', message });
+        notify(api, { id: NOTIFICATION_ID, type: 'activity', title: BUILD_TITLE, message });
       },
     });
     lastSignature = signature;
@@ -108,7 +150,7 @@ export async function rebuild(api: types.IExtensionApi, trigger: 'deploy' | 'man
       notifyConflicts(api, result.conflicts);
     }
     if (result.pluginCollisions.length > 0) {
-      notifyPluginCollisions(api, result.pluginCollisions);
+      notifyPluginCollisions(api, gameRoot, result.pluginCollisions);
     }
   } catch (err) {
     dismiss(api, NOTIFICATION_ID);
@@ -121,7 +163,11 @@ export async function rebuild(api: types.IExtensionApi, trigger: 'deploy' | 'man
 }
 
 /** Restores the pristine patch archive, undoing every build. */
-export async function restore(api: types.IExtensionApi): Promise<void> {
+export function restore(api: types.IExtensionApi): Promise<void> {
+  return track(() => restorePatch(api));
+}
+
+async function restorePatch(api: types.IExtensionApi): Promise<void> {
   const gameRoot = gamePath(api);
   if (gameRoot === undefined) {
     return;
@@ -149,13 +195,19 @@ export async function restore(api: types.IExtensionApi): Promise<void> {
   }
 }
 
-function notifyPluginCollisions(api: types.IExtensionApi, collisions: string[]): void {
+function notifyPluginCollisions(
+  api: types.IExtensionApi, gameRoot: string, collisions: string[],
+): void {
   notify(api, {
     type: 'warning',
     title: `${collisions.length} plugin file(s) not deployed`,
     message: `Already in bin\\plugins but not put there by JackAll, so left untouched: `
-      + `${collisions.join(', ')}. Remove the existing file(s) manually if the mod's copy should apply.`,
+      + `${collisions.join(', ')}. Remove the existing file(s) if the mod's copy should apply.`,
     allowSuppress: true,
+    actions: [{
+      title: 'Open folder',
+      action: () => { void util.opn(path.join(gameRoot, 'bin', 'plugins')).catch(() => undefined); },
+    }],
   });
 }
 

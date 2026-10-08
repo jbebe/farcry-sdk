@@ -70,8 +70,9 @@ assert.deepStrictEqual(registered.tableAttributes.map(a => `${a.tableId}/${a.att
   ['mods/farcry2-fcse'], 'the missing-FCSE warning icon column');
 assert.deepStrictEqual(registered.tableAttributes[0].attribute.edit, {},
   'edit is required; an empty object makes the column read-only');
-assert.deepStrictEqual(registered.startHooks.map(h => h.id), ['farcry2-fcse-launch'],
-  'the plugins-won\'t-load warning before FarCry2.exe starts');
+assert.deepStrictEqual(registered.startHooks.map(h => h.id),
+  ['farcry2-wait-for-build', 'farcry2-fcse-launch'],
+  'a launch waits for patch.dat, then warns when FarCry2.exe would skip the plugins');
 assert.strictEqual(registered.onceCallbacks.length, 1, 'event handlers belong in context.once');
 
 // --- the load order page ---------------------------------------------------

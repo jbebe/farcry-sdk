@@ -67,7 +67,8 @@ async function confirmVanillaBaseline(api: types.IExtensionApi, gameRoot: string
       + 'If that mod is captured as the baseline it becomes part of every build from now on, and '
       + 'the only way to undo it is to reinstall the game.\n\n'
       + 'The safe route is to restore the original files first — in Steam, right-click the game and '
-      + 'use Verify integrity of game files — then come back.',
+      + 'use Verify integrity of game files; in GOG Galaxy, open the game\'s settings and use Manage '
+      + 'installation, Verify / Repair — then come back.',
   }, [
     { label: "I'll restore the game files first" },
     { label: 'Use the current patch.dat as the baseline' },

@@ -15,6 +15,15 @@ Notable changes to the Vortex Far Cry 2 extension, loosely following
   FCSE instead, since the game on its own never loads plugins.
 - **Installing FCSE makes it what Vortex's Play button starts**, unless you already picked another
   primary tool.
+- **Starting the game while mods are still being applied waits for them.** Vortex reports a mod
+  installed before its files are built into `patch.dat`; the game now starts once that is done.
+- **A plugin file that couldn't be deployed has an "Open folder" button** on its warning.
+
+### Changed
+- **The notification while mods are applied says not to start the game yet**, so Vortex's earlier
+  "installed" message is no longer mistaken for the end.
+- **The modded-`patch.dat` warning tells GOG players how to restore the game files**, not only
+  Steam players.
 
 ## [0.3.0] - 2026-10-02
 

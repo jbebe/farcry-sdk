@@ -43,7 +43,8 @@ That single rule buys a lot:
 - deploying twice produces identical bytes,
 - disabling a mod and redeploying genuinely removes it,
 - purge is a true restore, not an unwind,
-- a failed build leaves the game untouched (JackAll writes a temp file and swaps it in at the end).
+- a failed build leaves the game untouched (JackAll writes a temp file and swaps it in at the end),
+- starting the game from Vortex mid-build waits for the build to finish.
 
 The one situation that can't be undone is capturing an *already modded* `patch.dat` as the vanilla
 baseline. The extension checks for it when the game is activated and asks, rather than guessing, and
