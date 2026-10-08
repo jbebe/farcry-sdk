@@ -27,7 +27,7 @@ async function readSavedOrder(profileId: string): Promise<string[]> {
   }
 }
 
-function enabledLayerMods(api: types.IExtensionApi): types.IMod[] {
+export function enabledLayerMods(api: types.IExtensionApi): types.IMod[] {
   const profile = activeProfile(api);
   if (profile === undefined) {
     return [];

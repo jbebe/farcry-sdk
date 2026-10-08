@@ -1,9 +1,10 @@
 import * as nodeFs from 'fs';
 import * as path from 'path';
-import { actions, log, types, util } from 'vortex-api';
+import { actions, log, selectors, types, util } from 'vortex-api';
 
-import { FCSE_LOADER, GAME_ID, MODTYPE_FCSE_LOADER } from './constants';
+import { FCSE_LOADER, GAME_ID, MODTYPE_FCSE_LOADER, PLUGINS_DIR } from './constants';
 import { activeProfile, gamePath } from './game';
+import { enabledLayerMods } from './loadOrder';
 import { dismiss, notify } from './ui';
 
 // https://www.nexusmods.com/farcry2/mods/368
@@ -31,6 +32,19 @@ function isFcseAvailable(api: types.IExtensionApi): boolean {
   }
   const gameRoot = gamePath(api);
   return gameRoot === undefined || nodeFs.existsSync(path.join(gameRoot, 'bin', FCSE_LOADER));
+}
+
+/** Every session, so a player who ignored the first prompt is asked again on the next launch. */
+export async function requireFcse(api: types.IExtensionApi): Promise<void> {
+  if (attempted || isFcseAvailable(api)) {
+    return;
+  }
+  const staging = selectors.installPathForGame(api.getState(), GAME_ID);
+  const needing = enabledLayerMods(api).find(mod =>
+    nodeFs.existsSync(path.join(staging, mod.installationPath, PLUGINS_DIR)));
+  if (needing !== undefined) {
+    await installFcse(api, util.renderModName(needing));
+  }
 }
 
 /**

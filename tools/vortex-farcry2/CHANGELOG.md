@@ -8,7 +8,8 @@ Notable changes to the Vortex Far Cry 2 extension, loosely following
 ### Added
 - **Installing a mod that contains an FCSE plugin now installs FCSE too**, downloaded from Nexus
   Mods and enabled, if it isn't already there. With a free Nexus account, which can't download
-  directly, FCSE's Nexus page opens instead.
+  directly, FCSE's Nexus page opens instead. While an enabled mod has a plugin and FCSE is still
+  missing, this repeats every time Vortex starts.
 
 ## [0.3.0] - 2026-10-02
 

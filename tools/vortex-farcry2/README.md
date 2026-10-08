@@ -80,7 +80,9 @@ A mod with a `plugins\` folder needs FCSE. If neither `bin\FCSE.exe` nor an inst
 there, the extension downloads FCSE's newest main file from
 [Nexus Mods](https://www.nexusmods.com/farcry2/mods/368), installs it and enables it. Nexus serves
 direct downloads to premium accounts only, so for anyone else, or if the download fails, the file's
-page opens instead, to download it from with "Mod Manager Download". It tries once per session.
+page opens instead, to download it from with "Mod Manager Download". The same check runs when
+Vortex starts with Far Cry 2 active and after every deploy, at most once per session, so a player
+who ignored the first prompt is asked again on the next launch.
 
 ## Building
 

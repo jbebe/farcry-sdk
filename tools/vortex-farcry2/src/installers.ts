@@ -3,13 +3,12 @@ import * as nodeFs from 'fs';
 import * as path from 'path';
 import { fs, log, types, util } from 'vortex-api';
 
-import { FCSE_LOADER, GAME_ID, MODTYPE_FCSE_LOADER } from './constants';
+import { FCSE_LOADER, GAME_ID, MODTYPE_FCSE_LOADER, PLUGINS_DIR } from './constants';
 import { installFcse } from './fcse';
 import { gamePath } from './game';
 import * as jackall from './jackall';
 import { ask, dismiss, notify } from './ui';
 
-const PLUGINS_DIR = 'plugins';
 const MODS_DIR = 'mods';
 
 /** The game's own binaries. No content mod, FCSE loader or plugin has any reason to ship these. */

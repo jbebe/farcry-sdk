@@ -2,6 +2,7 @@ import { selectors, types } from 'vortex-api';
 
 import { GAME_ID } from './constants';
 import { rebuild, registerEvents, restore } from './deploy';
+import { requireFcse } from './fcse';
 import { gameDefinition } from './game';
 import { makeInstaller, registerModTypes, testSupported } from './installers';
 import { loadOrderInfo } from './loadOrder';
@@ -30,7 +31,14 @@ function main(context: types.IExtensionContext): boolean {
     () => isActive(context.api));
 
   // In once() so every other extension has finished registering first.
-  context.once(() => registerEvents(context.api));
+  context.once(() => {
+    registerEvents(context.api);
+    context.api.events.on('gamemode-activated', (gameId: string) => {
+      if (gameId === GAME_ID) {
+        void requireFcse(context.api);
+      }
+    });
+  });
 
   return true;
 }
