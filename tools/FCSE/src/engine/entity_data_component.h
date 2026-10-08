@@ -1,30 +1,26 @@
 #pragma once
 
-#include "api/entity_data_store.h"
+#include "engine/entity_data_store.h"
 
-#include <mutex>
+#include <cstdint>
+#include <optional>
 
-// CFCSEDataComponent: FCSE's own entity component, which carries an EntityDataStore on any entity.
-// The engine creates it from an archetype's data, saves it with the entity and recreates it on
-// load, through the same factory and property registry as its own components - see
+// CFCSEDataComponent: FCSE's own entity component, carrying an EntityDataStore on any entity. See
 // docs/docs/engine-internals/fcse-entity-data-abi.md.
 namespace FCSE {
 
 class EntityDataComponent {
 public:
-    // Registers the class with the engine's component factory. Call once, after InitDuniaEngine
-    // and before a world loads; a failure is logged and leaves every store lookup returning null.
+    // Registers the class with the engine's component factory; logs why and returns false if not.
     static bool Install();
 
-    // Held around every StoreOf and every use of what it returns: the engine reads and writes the
-    // stores from its own threads when it loads and saves.
-    static std::unique_lock<std::recursive_mutex> Lock();
+    // A value on the entity, by the CRC-32 of its key. Write gives the entity the component if it
+    // has none; Erase drops a value set at runtime.
+    static std::optional<EntityValue> Read(void* entity, uint32_t key);
+    static bool Write(void* entity, uint32_t key, EntityValue value);
+    static bool Erase(void* entity, uint32_t key);
 
-    // The entity's store, or null. With `create`, an entity without the component is given one.
-    static EntityDataStore* StoreOf(void* entity, bool create);
-
-    // Gives the entity a CPersistComponent at the level the engine uses for entities it carries
-    // between worlds, so that it is saved with the game.
+    // Gives the entity a CPersistComponent at the level the engine keeps world-travelling entities at.
     static bool Persist(void* entity);
 
     // The entity a component belongs to, or null.

@@ -11,21 +11,25 @@
 #include <algorithm>
 #include <array>
 #include <cstdio>
+#include <mutex>
 #include <new>
-#include <variant>
+#include <string>
+#include <utility>
 
 namespace FCSE {
 
 namespace {
+
+    constexpr SerializationId Key(const char* name) { return {name, Crc32(name)}; }
 
     constexpr char kClassName[] = "CFCSEDataComponent";
     constexpr uint32_t kClassId = Crc32(kClassName);
     constexpr uint32_t kPersistClassId = Crc32("CPersistComponent");
 
     // An entry's value, under the name of its type.
-    constexpr SerializationId kIntValue{"Int", Crc32("Int")};
-    constexpr SerializationId kFloatValue{"Float", Crc32("Float")};
-    constexpr SerializationId kStringValue{"String", Crc32("String")};
+    constexpr SerializationId kIntValue = Key("Int");
+    constexpr SerializationId kFloatValue = Key("Float");
+    constexpr SerializationId kStringValue = Key("String");
 
     using CreateFn = void*(__cdecl*)(const uint32_t* classId);
     using DestroyFn = void*(__thiscall*)(void* component, uint32_t flags);
@@ -39,7 +43,7 @@ namespace {
         CreateFn create;
     };
 
-    std::recursive_mutex g_lock;
+    std::mutex g_lock;
     bool g_ready = false;
 
     CreateFn g_createPersist = nullptr;
@@ -50,10 +54,10 @@ namespace {
 
     std::array<const void*, kComponentVtableSlots> g_vtable{};
     std::array<const void*, kMemberVtableSlots> g_memberVtable{};
-    HierarchyInfo<3> g_hierarchy{kClassName, 3, {}};
-    const Member g_member{g_memberVtable.data(), "Entries", Crc32("Entries"), 0, 0};
+    HierarchyInfo g_hierarchy{};
+    const Member g_member{g_memberVtable.data(), Key("Entries")};
     const Member* const g_members[] = {&g_member};
-    const Descriptor g_descriptor{g_members, 1, 0};
+    const Descriptor g_descriptor{g_members, 1};
 
     template <typename T>
     T& Field(void* object, ptrdiff_t offset) {
@@ -62,6 +66,17 @@ namespace {
 
     EntityDataStore*& StoreField(void* component) {
         return Field<EntityDataStore*>(component, kStoreOffset);
+    }
+
+    // Runs `fn` on the component's store under the store lock; false if there is none.
+    template <typename Fn>
+    bool WithStore(void* component, Fn fn) {
+        if (component == nullptr) {
+            return false;
+        }
+        std::lock_guard lock(g_lock);
+        EntityDataStore* store = StoreField(component);
+        return store != nullptr && fn(*store);
     }
 
     template <typename Ret, typename... Args>
@@ -113,11 +128,11 @@ namespace {
         }
     }
 
-    // The overridden component slots. MSVC will not let a free function be __thiscall, so each is a
-    // member of a type never instantiated: `this` is always the engine's component.
+    // The overridden component slots, as members of a type never instantiated: `this` is always the
+    // engine's component.
     struct ComponentThunk {
         void* Destroy(uint32_t flags);
-        const HierarchyInfo<3>* Hierarchy();
+        const HierarchyInfo* Hierarchy();
         const Descriptor* GetDescriptor();
     };
 
@@ -125,18 +140,16 @@ namespace {
         void* component = this;
         {
             std::lock_guard lock(g_lock);
-            delete StoreField(component);
-            StoreField(component) = nullptr;
+            delete std::exchange(StoreField(component), nullptr);
         }
         return g_destroyBase(component, flags);
     }
 
-    const HierarchyInfo<3>* ComponentThunk::Hierarchy() { return &g_hierarchy; }
+    const HierarchyInfo* ComponentThunk::Hierarchy() { return &g_hierarchy; }
 
     const Descriptor* ComponentThunk::GetDescriptor() { return &g_descriptor; }
 
-    // The one member, which reads and writes the component node's children as entries. `this` is
-    // g_member.
+    // The one member, which reads and writes the component node's children as entries.
     struct MemberThunk {
         void Load(void* component, void* node);
         void Save(void* component, void* node);
@@ -149,38 +162,37 @@ namespace {
     };
 
     void MemberThunk::Load(void* component, void* node) {
-        std::lock_guard lock(g_lock);
-        if (EntityDataStore* store = StoreField(component)) {
-            ReadEntries(node, store->authored);
-        }
+        WithStore(component, [&](EntityDataStore& store) {
+            ReadEntries(node, store.authored);
+            return true;
+        });
     }
 
     void MemberThunk::Save(void* component, void* node) {
-        std::lock_guard lock(g_lock);
-        if (const EntityDataStore* store = StoreField(component)) {
-            WriteEntries(node, store->Merged());
-        }
+        WithStore(component, [&](EntityDataStore& store) {
+            WriteEntries(node, store.Merged());
+            return true;
+        });
     }
 
     void MemberThunk::LoadState(void* component, void* node) {
-        std::lock_guard lock(g_lock);
-        if (EntityDataStore* store = StoreField(component)) {
-            ReadEntries(node, store->state);
-        }
+        WithStore(component, [&](EntityDataStore& store) {
+            ReadEntries(node, store.state);
+            return true;
+        });
     }
 
     void MemberThunk::SaveState(void* component, void* node) {
-        std::lock_guard lock(g_lock);
-        if (const EntityDataStore* store = StoreField(component)) {
-            WriteEntries(node, store->state);
-        }
+        WithStore(component, [&](EntityDataStore& store) {
+            WriteEntries(node, store.state);
+            return true;
+        });
     }
 
     void MemberThunk::Describe(void*, void*) {}
 
     SerializationId* MemberThunk::Id(SerializationId* out) {
-        const auto* member = reinterpret_cast<const Member*>(this);
-        *out = {member->name, member->id};
+        *out = g_member.key;
         return out;
     }
 
@@ -188,9 +200,8 @@ namespace {
 
     void* MemberThunk::Get(void*) { return nullptr; }
 
-    // Registered with the factory under kClassId. The engine's CPersistComponent is the starting
-    // point because it is a complete component that needs nothing: its own fields are given over
-    // to the store once its vtable is replaced.
+    // Registered under kClassId: a CPersistComponent the engine creates, whose own fields the store
+    // takes over once its vtable is FCSE's.
     void* __cdecl CreateDataComponent(const uint32_t*) {
         void* component = g_createPersist(&kPersistClassId);
         if (component == nullptr) {
@@ -206,10 +217,30 @@ namespace {
         return component;
     }
 
-    void LogFault(const char* what, DWORD code) {
-        char line[160];
-        std::snprintf(line, sizeof(line), "EntityData: %s faulted (0x%08lX)", what, code);
-        Log::Loader(line);
+    // The entity's component of a class, or null; with `create`, an entity without one is given one.
+    void* ComponentOf(void* entity, uint32_t classId, bool create) {
+        if (!g_ready || entity == nullptr) {
+            return nullptr;
+        }
+        DWORD code = 0;
+        void* component = nullptr;
+        if (!SehCall(&code, g_lockEntity, entity) ||
+            !SehCallRet(&code, &component, g_getComponent, entity, &classId) ||
+            (component == nullptr && create &&
+             !SehCallRet(&code, &component, g_createComponent, entity, &classId))) {
+            char line[128];
+            std::snprintf(line, sizeof(line),
+                           "EntityData: reaching an entity's components faulted (0x%08lX)", code);
+            Log::Loader(line);
+            return nullptr;
+        }
+        return component;
+    }
+
+    bool Fail(const char* why) {
+        Log::Loader(std::string("EntityData: ") + why +
+                    " - plugins cannot keep data on entities this run");
+        return false;
     }
 
 }
@@ -223,16 +254,14 @@ bool EntityDataComponent::Install() {
     g_lockEntity = AddressLibrary::Function<LockFn>(Symbols::kEntityLock);
     if (system == 0 || registerClass == nullptr || g_getComponent == nullptr ||
         g_createComponent == nullptr || g_lockEntity == nullptr) {
-        Log::Loader("EntityData: the entity system has no address on this game build - plugins "
-                    "cannot keep data on entities this run");
-        return false;
+        return Fail("the entity system has no address on this game build");
     }
 
-    void* entitySystem = *reinterpret_cast<void**>(system);
-    if (entitySystem == nullptr) {
-        Log::Loader("EntityData: the entity system does not exist yet - plugins cannot keep data "
-                    "on entities this run");
-        return false;
+    DWORD code = 0;
+    void* entitySystem = nullptr;
+    if (!SehReadPointer(reinterpret_cast<void*>(system), 0, &entitySystem, &code) ||
+        entitySystem == nullptr) {
+        return Fail("the entity system cannot be read");
     }
     void* factory = static_cast<char*>(entitySystem) + kComponentFactoryOffset;
 
@@ -244,36 +273,24 @@ bool EntityDataComponent::Install() {
         }
     }
     if (g_createPersist == nullptr) {
-        Log::Loader("EntityData: CPersistComponent is not in the component factory - plugins "
-                    "cannot keep data on entities this run");
-        return false;
+        return Fail("CPersistComponent is not in the component factory");
     }
 
-    // A throwaway CPersistComponent supplies the vtable to copy, the base destructor, and the
-    // hierarchy ids above its own.
+    // A throwaway CPersistComponent supplies the vtable, the base destructor and the ids above it.
     void* probe = g_createPersist(&kPersistClassId);
     if (probe == nullptr) {
-        Log::Loader("EntityData: the engine would not create a CPersistComponent");
-        return false;
+        return Fail("the engine would not create a CPersistComponent");
     }
     const auto* persistVtable = *static_cast<const void* const* const*>(probe);
-    const auto* persistHierarchy = CallSlot<const HierarchyInfo<3>*>(probe, kComponentHierarchySlot);
+    const HierarchyInfo persist = *CallSlot<const HierarchyInfo*>(probe, kComponentHierarchySlot);
+    std::copy_n(persistVtable, kComponentVtableSlots, g_vtable.begin());
     g_destroyBase = reinterpret_cast<DestroyFn>(persistVtable[kComponentDestroySlot]);
-    const bool shapeAsExpected =
-        persistHierarchy->count == 3 && persistHierarchy->ids[2] == kPersistClassId;
-    if (shapeAsExpected) {
-        std::copy_n(persistVtable, kComponentVtableSlots, g_vtable.begin());
-        g_hierarchy.ids[0] = persistHierarchy->ids[0];
-        g_hierarchy.ids[1] = persistHierarchy->ids[1];
-        g_hierarchy.ids[2] = kClassId;
-    }
     g_destroyBase(probe, 1);
-    if (!shapeAsExpected) {
-        Log::Loader("EntityData: CPersistComponent is not shaped as expected on this game build - "
-                    "plugins cannot keep data on entities this run");
-        return false;
+    if (persist.count != 3 || persist.ids[2] != kPersistClassId) {
+        return Fail("CPersistComponent is not shaped as expected on this game build");
     }
 
+    g_hierarchy = {kClassName, 3, {persist.ids[0], persist.ids[1], kClassId}};
     g_vtable[kComponentDestroySlot] = RawFunctionPointer(&ComponentThunk::Destroy);
     g_vtable[kComponentHierarchySlot] = RawFunctionPointer(&ComponentThunk::Hierarchy);
     g_vtable[kComponentDescriptorSlot] = RawFunctionPointer(&ComponentThunk::GetDescriptor);
@@ -285,9 +302,7 @@ bool EntityDataComponent::Install() {
     };
 
     if (!registerClass(factory, &kClassId, &CreateDataComponent, false)) {
-        Log::Loader("EntityData: another component already claims CFCSEDataComponent's class id - "
-                    "plugins cannot keep data on entities this run");
-        return false;
+        return Fail("another component already claims CFCSEDataComponent's class id");
     }
 
     g_ready = true;
@@ -298,49 +313,36 @@ bool EntityDataComponent::Install() {
     return true;
 }
 
-std::unique_lock<std::recursive_mutex> EntityDataComponent::Lock() {
-    return std::unique_lock(g_lock);
+std::optional<EntityValue> EntityDataComponent::Read(void* entity, uint32_t key) {
+    std::optional<EntityValue> found;
+    WithStore(ComponentOf(entity, kClassId, false), [&](EntityDataStore& store) {
+        if (const EntityValue* value = store.Find(key)) {
+            found = *value;
+        }
+        return true;
+    });
+    return found;
 }
 
-EntityDataStore* EntityDataComponent::StoreOf(void* entity, bool create) {
-    if (!g_ready || entity == nullptr) {
-        return nullptr;
-    }
-    DWORD code = 0;
-    void* component = nullptr;
-    if (!SehCall(&code, g_lockEntity, entity) ||
-        !SehCallRet(&code, &component, g_getComponent, entity, &kClassId)) {
-        LogFault("looking up an entity's data", code);
-        return nullptr;
-    }
-    if (component == nullptr && create &&
-        !SehCallRet(&code, &component, g_createComponent, entity, &kClassId)) {
-        LogFault("giving an entity its data component", code);
-        return nullptr;
-    }
-    return component != nullptr ? StoreField(component) : nullptr;
+bool EntityDataComponent::Write(void* entity, uint32_t key, EntityValue value) {
+    return WithStore(ComponentOf(entity, kClassId, true), [&](EntityDataStore& store) {
+        store.state.insert_or_assign(key, std::move(value));
+        return true;
+    });
+}
+
+bool EntityDataComponent::Erase(void* entity, uint32_t key) {
+    return WithStore(ComponentOf(entity, kClassId, false),
+                     [&](EntityDataStore& store) { return store.state.erase(key) > 0; });
 }
 
 bool EntityDataComponent::Persist(void* entity) {
-    if (!g_ready || entity == nullptr) {
-        return false;
-    }
-    DWORD code = 0;
-    void* persist = nullptr;
-    if (!SehCall(&code, g_lockEntity, entity) ||
-        !SehCallRet(&code, &persist, g_getComponent, entity, &kPersistClassId) ||
-        (persist == nullptr &&
-         !SehCallRet(&code, &persist, g_createComponent, entity, &kPersistClassId))) {
-        LogFault("persisting an entity", code);
-        return false;
-    }
+    void* persist = ComponentOf(entity, kPersistClassId, true);
     if (persist == nullptr) {
         return false;
     }
     uint32_t& level = Field<uint32_t>(persist, kPersistLevelOffset);
-    if (level < kPersistLevelFull) {
-        level = kPersistLevelFull;
-    }
+    level = (std::max)(level, kPersistLevelFull);
     return true;
 }
 

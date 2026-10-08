@@ -202,7 +202,7 @@ add_library(fcse_core STATIC
   "src/engine/address_symbols.h"
   "src/engine/dunia_api.cpp"
   "src/engine/dunia_api.h"
-  "src/api/entity_data_store.h"
+  "src/engine/entity_data_store.h"
   "src/api/hook.cpp"
   "src/api/hook.h"
   "src/api/pattern_scan.cpp"

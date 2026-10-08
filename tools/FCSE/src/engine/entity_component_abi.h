@@ -3,18 +3,13 @@
 #include <cstddef>
 #include <cstdint>
 
-// The engine ABI FCSE's entity-data component is built on: the component factory, a component's
-// vtable and fields, a property member, and the serializable node the members read and write.
-//
-// What each number is and how it was established lives in
-// docs/docs/engine-internals/fcse-entity-data-abi.md - this header is the list, not the reasoning.
-// Retail MSVC layouts throughout: the dedicated server orders the same vtables differently.
+// The engine ABI FCSE's entity-data component is built on - retail MSVC layouts, which the dedicated
+// server orders differently. What each number is, and how it was established, is in
+// docs/docs/engine-internals/fcse-entity-data-abi.md.
 namespace FCSE {
 
-// CEntitySystem holds the component factory; the factory's CreateObject slot and its
-// {class id, create function} array.
+// The component factory inside CEntitySystem, and its {class id, create function} array.
 constexpr ptrdiff_t kComponentFactoryOffset = 0x5c;
-constexpr size_t kFactoryCreateSlot = 1;
 constexpr ptrdiff_t kFactoryEntriesOffset = 0x20;
 constexpr ptrdiff_t kFactoryCountOffset = 0x24;
 
@@ -28,12 +23,11 @@ constexpr size_t kComponentDescriptorSlot = 3;
 constexpr ptrdiff_t kComponentProxyOffset = 0x08;
 constexpr ptrdiff_t kProxyEntityOffset = 0x0c;
 
-// CPersistComponent, which FCSE's component is built from: its persistence level, and the value
-// the engine sets for an entity it carries between worlds. FCSE's component reuses the field to
-// hold its store once its vtable has replaced CPersistComponent's.
+// CPersistComponent's persistence level, and the level the engine keeps world-travelling entities
+// at. FCSE's component, built from one, keeps its store in that field.
 constexpr ptrdiff_t kPersistLevelOffset = 0x10;
 constexpr uint32_t kPersistLevelFull = 2;
-constexpr ptrdiff_t kStoreOffset = 0x10;
+constexpr ptrdiff_t kStoreOffset = kPersistLevelOffset;
 
 // ISerializableNode.
 constexpr size_t kNodeChildCountSlot = 5;
@@ -58,26 +52,24 @@ constexpr size_t kMemberVtableSlots = 8;
 
 struct Member {
     const void* const* vtable;
-    const char* name;
-    uint32_t id;
+    SerializationId key;
     uint32_t offset;
     uint32_t extra;
 };
 
-// CNomadObjectDescriptor: the list of a class's members. FCSE's is never grown.
+// CNomadObjectDescriptor: the list of a class's members.
 struct Descriptor {
     const Member* const* members;
     uint32_t count;
     uint32_t capacity;
 };
 
-// What GetHierarchyInfo returns: the class's name and the ids of every class from CNomadObject
-// down to its own, which is the last.
-template <size_t Depth>
+// What GetHierarchyInfo returns for a component directly below CEntityComponent: its name, and the
+// ids of CNomadObject, CEntityComponent and its own class.
 struct HierarchyInfo {
     const char* name;
     uint32_t count;
-    uint32_t ids[Depth];
+    uint32_t ids[3];
 };
 
 }

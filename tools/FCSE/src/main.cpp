@@ -37,11 +37,10 @@ namespace {
     // The order is the whole override mechanism: FunctionRegistry_Insert is first-claimant-wins, so
     // plugins claim names before scripts, and both before FCSE's own stock handlers.
     void __cdecl ProvideGameFunctions() {
-        Log::Loader("provider callback invoked by Dunia.dll - running plugin registrations, then "
-                    "stock handlers");
+        Log::Loader("provider callback invoked by Dunia.dll - registering FCSE's entity component, "
+                    "then plugin registrations, then stock handlers");
 
-        // First, so a plugin's FCSE_OnRegisterFunctions can already use entity data, and well before
-        // any world spawns an entity that carries the component.
+        // First, so a plugin's FCSE_OnRegisterFunctions can already use entity data.
         EntityDataComponent::Install();
         PluginLoader::RunOnRegisterFunctions();
         LuaHost::OnRegisterFunctions();

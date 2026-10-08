@@ -187,11 +187,12 @@ namespace {
         }
         auto* pawnData = *reinterpret_cast<char**>(static_cast<char*>(pawn) + kPawnData);
         void* weapon = g_equippedWeapon(pawnData + kInventory);
-        if (weapon != g_weaponInHand) {
-            g_weaponInHand = weapon;
-            if (weapon != nullptr) {
-                CountDraw(weapon);
-            }
+        if (weapon == g_weaponInHand) {
+            return;
+        }
+        g_weaponInHand = weapon;
+        if (weapon != nullptr) {
+            CountDraw(weapon);
         }
     }
 }

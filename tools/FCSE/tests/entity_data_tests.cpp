@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "api/entity_data_store.h"
+#include "engine/entity_data_store.h"
 #include "util/crc32.h"
 
 namespace {

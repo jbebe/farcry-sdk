@@ -42,8 +42,8 @@ Grouped by what a file talks to.
 | --- | --- |
 | `src/` | The entry point (`main.cpp`), and the pieces everything uses: `log`, `loader_paths`, `crash_log`, `caller_identity`, `ini_file` |
 | `src/util/` | Leaf Win32 helpers with no FCSE state - string conversion, directory walking, PE headers, embedded resources, the SEH guards and the member-pointer cast |
-| `src/engine/` | Anything that reaches into the running game: `dunia_api`, `build_id`, `address_library`, `debug_commands`, `entity_data_component`, `splash`, `stock_constants` |
-| `src/api/` | What plugins and scripts both call: `plugin_api` (the struct they receive), `plugin_loader`, `hook`, `patch`, `function_registry`, `pattern_scan`, `settings_registry`, `entity_data` and its store |
+| `src/engine/` | Anything that reaches into the running game: `dunia_api`, `build_id`, `address_library`, `debug_commands`, `entity_data_component` and its store, `splash`, `stock_constants` |
+| `src/api/` | What plugins and scripts both call: `plugin_api` (the struct they receive), `plugin_loader`, `hook`, `patch`, `function_registry`, `pattern_scan`, `settings_registry`, `entity_data` |
 | `src/ui/` | FCSE's own settings page - see below |
 | `src/lua/` | The script host: `lua_host`, `lua_api`, `tick_source`, and `runtime/fcse.lua` |
 

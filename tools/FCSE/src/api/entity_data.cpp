@@ -16,10 +16,8 @@ namespace {
         if (key == nullptr || out == nullptr) {
             return false;
         }
-        auto lock = EntityDataComponent::Lock();
-        const EntityDataStore* store = EntityDataComponent::StoreOf(entity, false);
-        const EntityValue* value = store != nullptr ? store->Find(Crc32(key)) : nullptr;
-        const T* typed = value != nullptr ? std::get_if<T>(value) : nullptr;
+        const std::optional<EntityValue> value = EntityDataComponent::Read(entity, Crc32(key));
+        const T* typed = value ? std::get_if<T>(&*value) : nullptr;
         if (typed == nullptr) {
             return false;
         }
@@ -29,29 +27,11 @@ namespace {
 
     template <typename T>
     bool Set(void* entity, const char* key, T value) {
-        if (key == nullptr) {
-            return false;
-        }
-        auto lock = EntityDataComponent::Lock();
-        EntityDataStore* store = EntityDataComponent::StoreOf(entity, true);
-        if (store == nullptr) {
-            return false;
-        }
-        store->state.insert_or_assign(Crc32(key), EntityValue(std::move(value)));
-        return true;
+        return key != nullptr &&
+               EntityDataComponent::Write(entity, Crc32(key), EntityValue(std::move(value)));
     }
 
-    void* __cdecl EntityOf(void* component) { return EntityDataComponent::EntityOf(component); }
-
-    bool __cdecl GetInt(void* entity, const char* key, int32_t* value) {
-        return Get(entity, key, value);
-    }
-
-    bool __cdecl GetFloat(void* entity, const char* key, float* value) {
-        return Get(entity, key, value);
-    }
-
-    bool __cdecl GetString(void* entity, const char* key, char* buffer, size_t capacity) {
+    bool GetString(void* entity, const char* key, char* buffer, size_t capacity) {
         std::string text;
         if (buffer == nullptr || capacity == 0 || !Get(entity, key, &text)) {
             return false;
@@ -62,35 +42,20 @@ namespace {
         return true;
     }
 
-    bool __cdecl SetInt(void* entity, const char* key, int32_t value) {
-        return Set(entity, key, value);
-    }
-
-    bool __cdecl SetFloat(void* entity, const char* key, float value) {
-        return Set(entity, key, value);
-    }
-
-    bool __cdecl SetString(void* entity, const char* key, const char* value) {
+    bool SetString(void* entity, const char* key, const char* value) {
         return value != nullptr && Set(entity, key, std::string(value));
     }
 
-    bool __cdecl Remove(void* entity, const char* key) {
-        if (key == nullptr) {
-            return false;
-        }
-        auto lock = EntityDataComponent::Lock();
-        EntityDataStore* store = EntityDataComponent::StoreOf(entity, false);
-        return store != nullptr && store->state.erase(Crc32(key)) > 0;
+    bool Remove(void* entity, const char* key) {
+        return key != nullptr && EntityDataComponent::Erase(entity, Crc32(key));
     }
-
-    bool __cdecl Persist(void* entity) { return EntityDataComponent::Persist(entity); }
 
 }
 
 const FCSE_EntityDataAPI* EntityDataApi::Table() {
     static const FCSE_EntityDataAPI table{
-        &EntityOf, &GetInt, &GetFloat, &GetString, &SetInt,
-        &SetFloat, &SetString, &Remove, &Persist,
+        &EntityDataComponent::EntityOf, &Get<int32_t>, &Get<float>, &GetString,
+        &Set<int32_t>, &Set<float>, &SetString, &Remove, &EntityDataComponent::Persist,
     };
     return &table;
 }
