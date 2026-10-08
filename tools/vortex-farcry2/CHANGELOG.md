@@ -8,15 +8,21 @@ Notable changes to the Vortex Far Cry 2 extension, loosely following
 ### Added
 - **Installing a mod that contains an FCSE plugin now installs FCSE too**, downloaded from Nexus
   Mods and enabled, if it isn't already there. With a free Nexus account, which can't download
-  directly, a prompt offers to open FCSE's Nexus page instead. While an enabled mod has a plugin and FCSE is still
-  missing, this repeats every time Vortex starts, and the mod shows a warning icon in the mods
-  list that gets FCSE when clicked.
+  directly, a prompt offers to open FCSE's Nexus page instead. While an enabled mod has a plugin
+  and FCSE is still missing, this repeats every time Vortex starts, and the mod shows a warning icon
+  in the mods list that gets FCSE when clicked.
+- **Installing FCSE makes it what Vortex's Play button starts**, unless you already picked another
+  default launcher.
 - **Starting the game without FCSE while a mod has a plugin asks first**, offering to start it with
   FCSE instead, since the game on its own never loads plugins.
-- **Installing FCSE makes it what Vortex's Play button starts**, unless you already picked another
-  primary tool.
 - **Starting the game while mods are still being applied waits for them.** Vortex reports a mod
   installed before its files are built into `patch.dat`; the game now starts once that is done.
+- **Mods that add controls combine.** A mod can ship just the controls category and action map it
+  adds to, and two mods adding to the same one both keep theirs.
+- **The conflicts notification lists every change a mod lost**, not only two mods editing the same
+  part of one entry. It now also lists two mods shipping different copies of one whole file, and an
+  entry a fragment replaced inside another mod's whole-file copy, which load order cannot fix. Each
+  line says which mod won and what to do about it.
 - **A plugin file that couldn't be deployed has an "Open folder" button** on its warning.
 
 ### Changed
@@ -38,12 +44,6 @@ Notable changes to the Vortex Far Cry 2 extension, loosely following
 - **Legacy mods import as the edits they actually made.** Every container is split, not only
   `.fcb`, and an editor's float rounding is ignored, so an old `patch.dat` mod no longer claims
   thousands of edits it never made and merges with the rest of the load order.
-- **Mods that add controls combine.** A mod can ship just the controls category and action map it
-  adds to, and two mods adding to the same one both keep theirs.
-- **The conflicts notification lists every change a mod lost**, not only two mods editing the same
-  part of one entry. It now also lists two mods shipping different copies of one whole file, and an
-  entry a fragment replaced inside another mod's whole-file copy, which load order cannot fix. Each
-  line says which mod won and what to do about it.
 
 ### Changed
 - **Breaking: a whole-file `oasisstrings.rml` override is refused.** Ship an
