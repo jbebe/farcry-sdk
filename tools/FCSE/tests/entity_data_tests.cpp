@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 
 #include "engine/entity_data_store.h"
-#include "util/crc32.h"
+#include "fcse_api.h"
 
 namespace {
 
@@ -17,6 +17,11 @@ TEST(Crc32, MatchesTheEnginesNameHashes) {
     EXPECT_EQ(Crc32("CGraphicComponent"), 0x035982C6u);
     EXPECT_EQ(Crc32("hidComponentClassName"), 0x431EBA8Eu);
     EXPECT_EQ(Crc32("hidHasAliasName"), 0xFEE21F0Du);
+}
+
+TEST(Crc32, BytesHashAsTheNameDoesAndContinueAcrossPieces) {
+    EXPECT_EQ(Crc32("CGraphicComponent", 17), 0x035982C6u);
+    EXPECT_EQ(Crc32("Component", 9, Crc32("CGraphic", 8)), 0x035982C6u);
 }
 
 TEST(EntityDataStore, StateOverridesAuthored) {

@@ -547,6 +547,51 @@ inline T* Data(Retail a) {
                                 api->ResolveFrom(FCSE_GAME_BUILD_103_RETAIL, a.rva));
 }
 
+// C++14 and later: the loops below are constexpr.
+#if (defined(_MSVC_LANG) ? _MSVC_LANG : __cplusplus) >= 201402L
+
+// The hash the engine names things by - a CStringID, a magma::Id, an action-map signal, an entity
+// data key - which is standard CRC-32 of the name, case-sensitive. constexpr, so a name can be
+// hashed at compile time:
+//     constexpr uint32_t kToggle = FCSE::Crc32("toggle_flashlight");
+constexpr uint32_t Crc32(const char* text) {
+    uint32_t crc = 0xFFFFFFFFu;
+    for (; *text != '\0'; ++text) {
+        crc ^= static_cast<uint8_t>(*text);
+        for (int bit = 0; bit < 8; ++bit) {
+            crc = (crc >> 1) ^ (0xEDB88320u & (0u - (crc & 1u)));
+        }
+    }
+    return ~crc;
+}
+
+// The same over raw bytes, such as shader bytecode or a texture's rows. Pass the previous result as
+// `crc` to continue a hash across pieces.
+inline uint32_t Crc32(const void* data, size_t size, uint32_t crc = 0) {
+    struct Table {
+        uint32_t entries[256];
+        Table() : entries() {
+            for (uint32_t i = 0; i < 256; ++i) {
+                uint32_t value = i;
+                for (int bit = 0; bit < 8; ++bit) {
+                    value = (value >> 1) ^ (0xEDB88320u & (0u - (value & 1u)));
+                }
+                entries[i] = value;
+            }
+        }
+    };
+    static const Table table;
+
+    const uint8_t* bytes = static_cast<const uint8_t*>(data);
+    crc = ~crc;
+    for (size_t i = 0; i < size; ++i) {
+        crc = table.entries[(crc ^ bytes[i]) & 0xFFu] ^ (crc >> 8);
+    }
+    return ~crc;
+}
+
+#endif
+
 } // namespace FCSE
 
 #endif // __cplusplus

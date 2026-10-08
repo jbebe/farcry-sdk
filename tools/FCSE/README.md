@@ -223,8 +223,9 @@ data->GetInt(entity, "MyMod.Kills", &kills);     // false if absent
 data->SetInt(entity, "MyMod.Kills", kills + 1);  // adds the component if the entity has none
 ```
 
-Values are `int32_t`, `float` or strings, under keys whose CRC-32 is what is stored. All plugins
-share an entity's keys, so prefix yours. Call from the game thread, with an entity the engine handed
+Values are `int32_t`, `float` or strings, under keys whose CRC-32 is what is stored - the engine's
+own name hash, which C++ plugins also get as `FCSE::Crc32` in `fcse_api.h`. All plugins share an
+entity's keys, so prefix yours. Call from the game thread, with an entity the engine handed
 you this frame.
 
 A mod can also author values in data, in the archetype's `Components` in an entity-library fragment

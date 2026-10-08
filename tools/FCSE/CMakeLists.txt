@@ -209,7 +209,6 @@ add_library(fcse_core STATIC
   "src/api/pattern_scan.h"
   "src/api/settings_registry.cpp"
   "src/api/settings_registry.h"
-  "src/util/crc32.h"
   "src/util/dir_walk.cpp"
   "src/util/dir_walk.h"
   "src/util/member_fn.h"

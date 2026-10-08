@@ -1,7 +1,6 @@
 #include "api/entity_data.h"
 
 #include "engine/entity_data_component.h"
-#include "util/crc32.h"
 
 #include <algorithm>
 #include <cstring>

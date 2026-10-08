@@ -10,6 +10,8 @@ Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachang
   entity library. The values live in a new engine component, `CFCSEDataComponent`; a game without
   FCSE skips it and still loads. C++ plugins get it as `FCSE_PluginAPI::EntityData`.
 - The example plugin keeps a draw count on every weapon the player carries, to show how.
+- **The engine's name hash for C++ plugins** — `FCSE::Crc32` in `fcse_api.h` hashes a name the way
+  the engine does, at compile time if you like, or any run of bytes. Header-only, C++14 and later.
 
 ### Changed
 - Plugin ABI is now `FCSE_API_VERSION` 8: `FCSE_PluginAPI` gained `EntityData`. Existing plugins

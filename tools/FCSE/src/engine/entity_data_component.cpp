@@ -4,7 +4,7 @@
 #include "engine/address_symbols.h"
 #include "engine/entity_component_abi.h"
 #include "log.h"
-#include "util/crc32.h"
+#include "fcse_api.h"
 #include "util/member_fn.h"
 #include "util/seh.h"
 
