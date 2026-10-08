@@ -289,3 +289,35 @@ real bug.
 | `undeclared-out`, `literal-type` | warning | 0 | A wire on an undeclared control-out, or a literal of the wrong kind for its data-in. |
 | `stale-twin`, `unparseable-twin` | warning | 0 | A debug twin whose code no longer matches its release file, or that doesn't parse. |
 | `unfired-out-anchor` | info | 160 | A declared control-out the graph never fires. |
+
+## Script state in the savegame
+
+:::info[Verified via reverse engineering]
+Traced in `FarCry2_server` (`CDominoService::RegisterProperties`, `GetLuaGlobals`, `SetLuaGlobals`,
+`CSerializableScriptObject::SaveFromScript` and `LoadToScript`) and matched in retail `Dunia.dll`,
+whose Domino service registers the same `LuaGlobals` property (`0x10596b80`). The table and its keys
+are in a save the retail game wrote.
+:::
+
+Domino keeps two kinds of script state through a save and reload:
+
+- **The `Globals` table.** The Domino service has a property, `LuaGlobals`, written only to
+  savegames. Saving serializes the Lua global named `Globals`, and loading writes the saved values
+  back into it. It is the one piece of script state that belongs to the playthrough rather than to an
+  entity. The game keeps its story progress there: `Globals.MASTER_GameGlobals`, defined in
+  `domino\user\master_gameglobals.globals.lua` and used 1,033 times across the shipped graphs, holds
+  flags for both worlds, such as `CarverTapes_World1_Closed` and `AcceptedMissionID`.
+- **Each Domino entity's own state.** `CDominoComponent` has a savegame-only property of the same
+  type, `LuaState`, so a Domino host's script state is saved with its entity.
+
+Both go through `CSerializableScriptObject`, which stores each value as text with a type tag:
+
+| Lua value | Saved as |
+|---|---|
+| number | text, formatted `"%f"`: six decimal places |
+| string | the string |
+| table | a nested object, recursively |
+
+Functions are not saved as values; callbacks, listeners and delays a script registered are kept in
+lists of their own. The traced value branches cover only strings, numbers and tables, so booleans are
+not among them, and the shipped globals use 0 and 1 instead.
