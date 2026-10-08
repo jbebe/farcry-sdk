@@ -2,7 +2,7 @@ import { selectors, types } from 'vortex-api';
 
 import { GAME_ID } from './constants';
 import { rebuild, registerEvents, restore } from './deploy';
-import { checkLaunch, fcseColumn, promoteFcse, requireFcse } from './fcse';
+import { checkLaunch, fcseColumn, requireFcse } from './fcse';
 import { gameDefinition } from './game';
 import { makeInstaller, registerModTypes, testSupported } from './installers';
 import { loadOrderInfo } from './loadOrder';
@@ -38,11 +38,6 @@ function main(context: types.IExtensionContext): boolean {
     context.api.events.on('gamemode-activated', (gameId: string) => {
       if (gameId === GAME_ID) {
         void requireFcse(context.api);
-      }
-    });
-    context.api.events.on('did-install-mod', (gameId: string, _archiveId: string, modId: string) => {
-      if (gameId === GAME_ID) {
-        promoteFcse(context.api, modId);
       }
     });
   });

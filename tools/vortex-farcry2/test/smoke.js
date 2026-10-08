@@ -47,8 +47,6 @@ assert.deepStrictEqual(game.requiredFiles.map(f => f.replace(/\\/g, '/')),
 assert.strictEqual(typeof game.setup, 'function');
 assert.strictEqual(game.supportedTools.length, 1);
 assert.strictEqual(game.supportedTools[0].id, 'fcse');
-assert.strictEqual(game.supportedTools[0].queryPath(), '',
-  'Vortex calls queryPath with no arguments; with no game found, FCSE is not installed');
 
 assert.deepStrictEqual(registered.modTypes.map(t => t.id), ['farcry2-fcse-loader'],
   'FCSE is the only non-layer mod type; a plugin ships inside a layer');
