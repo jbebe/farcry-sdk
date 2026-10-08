@@ -2,7 +2,7 @@ import { selectors, types } from 'vortex-api';
 
 import { GAME_ID } from './constants';
 import { rebuild, registerEvents, restore, waitForBuild } from './deploy';
-import { checkLaunch, fcseColumn, promoteFcse, requireFcse } from './fcse';
+import { checkLaunch, fcseColumn, requireFcse, syncFcseLauncher } from './fcse';
 import { gameDefinition } from './game';
 import { makeInstaller, registerModTypes, testSupported } from './installers';
 import { loadOrderInfo } from './loadOrder';
@@ -38,14 +38,16 @@ function main(context: types.IExtensionContext): boolean {
     registerEvents(context.api);
     context.api.events.on('gamemode-activated', (gameId: string) => {
       if (gameId === GAME_ID) {
+        syncFcseLauncher(context.api);
         void requireFcse(context.api);
       }
     });
-    context.api.events.on('did-install-mod', (gameId: string, _archiveId: string, modId: string) => {
-      if (gameId === GAME_ID) {
-        promoteFcse(context.api, modId);
-      }
-    });
+    // Installing, enabling, disabling and removing a mod, and switching profile.
+    for (const statePath of [
+      ['persistent', 'mods', GAME_ID], ['persistent', 'profiles'], ['settings', 'profiles'],
+    ]) {
+      context.api.onStateChange?.(statePath, () => syncFcseLauncher(context.api));
+    }
   });
 
   return true;

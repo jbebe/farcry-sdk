@@ -12,7 +12,7 @@ Notable changes to the Vortex Far Cry 2 extension, loosely following
   and FCSE is still missing, this repeats every time Vortex starts, and the mod shows a warning icon
   in the mods list that gets FCSE when clicked.
 - **Installing FCSE makes it what Vortex's Play button starts**, unless you already picked another
-  default launcher.
+  default launcher. Disabling or removing it hands Play back to the game straight away.
 - **Starting the game without FCSE while a mod has a plugin asks first**, offering to start it with
   FCSE instead, since the game on its own never loads plugins.
 - **Starting the game while mods are still being applied waits for them.** Vortex reports a mod

@@ -86,8 +86,10 @@ Vortex starts with Far Cry 2 active and after every deploy, at most once per ses
 who ignored the first prompt is asked again on the next launch. Until then, every plugin mod shows a
 warning icon in the mods table's FCSE column, and clicking it starts the same download.
 
-Installing FCSE through Vortex also makes it the tool Vortex's Play button starts, unless a primary
-tool was already chosen. Starting `FarCry2.exe` from Vortex while an enabled mod has a plugin asks first, since only FCSE
+Enabling FCSE in Vortex, installing it included, also makes it the default launcher Vortex's Play
+button starts, unless one was already chosen; disabling or removing it hands Play back to the game.
+
+Starting `FarCry2.exe` from Vortex while an enabled mod has a plugin asks first, since only FCSE
 loads plugins: play with FCSE instead (or get it, when it's missing), play without plugins, or
 cancel.
 

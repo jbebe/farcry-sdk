@@ -61,29 +61,48 @@ export async function requireFcse(api: types.IExtensionApi, requiredBy?: string)
   }
 }
 
+/** Whether the active profile has the FCSE mod enabled; undefined outside Far Cry 2. */
+function fcseModEnabled(api: types.IExtensionApi): boolean | undefined {
+  const profile = activeProfile(api);
+  if (profile === undefined) {
+    return undefined;
+  }
+  const mods = util.getSafe(api.getState(), ['persistent', 'mods', GAME_ID], {}) as
+    Record<string, types.IMod>;
+  return Object.values(mods).some(mod => mod.type === MODTYPE_FCSE_LOADER
+    && util.getSafe<boolean>(profile, ['modState', mod.id, 'enabled'], false));
+}
+
+let fcseWasEnabled: boolean | undefined;
+
 /**
- * On installing the FCSE mod: registers FCSE as a found tool, ahead of its deploy, and makes it what
- * Play starts unless the player already picked a primary tool.
+ * Keeps Play on FCSE only while its mod is enabled. Enabling it (installing included) makes it the
+ * default launcher unless the player chose one, which Vortex stores as null rather than undefined;
+ * disabling or removing it hands Play back to the game.
  */
-export function promoteFcse(api: types.IExtensionApi, modId: string): void {
-  const state = api.getState();
+export function syncFcseLauncher(api: types.IExtensionApi): void {
+  const enabled = fcseModEnabled(api);
   const gameRoot = gamePath(api);
-  const mod = util.getSafe<types.IMod | undefined>(
-    state, ['persistent', 'mods', GAME_ID, modId], undefined);
-  if (gameRoot === undefined || mod?.type !== MODTYPE_FCSE_LOADER) {
+  if (enabled === undefined || gameRoot === undefined) {
     return;
   }
+  const primary = util.getSafe<string | null | undefined>(
+    api.getState(), ['settings', 'interface', 'primaryTool', GAME_ID], undefined);
 
-  api.store?.dispatch(actions.addDiscoveredTool(GAME_ID, FCSE_TOOL_ID, {
-    ...FCSE_TOOL,
-    path: path.join(gameRoot, 'bin', FCSE_TOOL.executable()),
-    hidden: false,
-    parameters: [],
-    custom: false,
-  } as types.IDiscoveredTool, false));
-  if (util.getSafe(state, ['settings', 'interface', 'primaryTool', GAME_ID], undefined) === undefined) {
+  if (enabled && fcseWasEnabled === false && primary === undefined) {
+    api.store?.dispatch(actions.addDiscoveredTool(GAME_ID, FCSE_TOOL_ID, {
+      ...FCSE_TOOL,
+      path: path.join(gameRoot, 'bin', FCSE_TOOL.executable()),
+      hidden: false,
+      parameters: [],
+      custom: false,
+    } as types.IDiscoveredTool, false));
     api.store?.dispatch(actions.setPrimaryTool(GAME_ID, FCSE_TOOL_ID));
+  } else if (!enabled && primary === FCSE_TOOL_ID) {
+    // Undefined, as Vortex itself resets a missing tool, so enabling FCSE again promotes it again.
+    api.store?.dispatch(actions.setPrimaryTool(GAME_ID, undefined as unknown as string));
   }
+  fcseWasEnabled = enabled;
 }
 
 function enabledPluginMods(api: types.IExtensionApi): types.IMod[] {
