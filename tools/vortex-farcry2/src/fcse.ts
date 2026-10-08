@@ -51,12 +51,51 @@ export async function requireFcse(api: types.IExtensionApi, requiredBy?: string)
   if (prompted || isFcseAvailable(api)) {
     return;
   }
-  const needing = enabledLayerMods(api).find(mod => hasPlugins(api, mod));
+  const needing = enabledPluginMods(api)[0];
   const name = requiredBy ?? (needing === undefined ? undefined : util.renderModName(needing));
   if (name !== undefined) {
     prompted = true;
     await installFcse(api, name);
   }
+}
+
+function enabledPluginMods(api: types.IExtensionApi): types.IMod[] {
+  return enabledLayerMods(api).filter(mod => hasPlugins(api, mod));
+}
+
+/** A start hook: FarCry2.exe on its own never loads plugins, so offer FCSE in its place. */
+export async function checkLaunch(
+  api: types.IExtensionApi, call: types.IRunParameters,
+): Promise<types.IRunParameters> {
+  const gameRoot = gamePath(api);
+  const needing = path.basename(call.executable).toLowerCase() === 'farcry2.exe'
+    ? enabledPluginMods(api) : [];
+  if (gameRoot === undefined || needing.length === 0) {
+    return call;
+  }
+
+  const fcse = path.join(gameRoot, 'bin', FCSE_LOADER);
+  const installed = nodeFs.existsSync(fcse);
+  const result = await ask(api, 'question', 'These mods\' plugins won\'t load', {
+    text: 'FarCry2.exe on its own doesn\'t load FCSE plugins, which these enabled mods contain. '
+      + (installed ? 'Start the game with FCSE to use them.' : 'FCSE isn\'t installed yet.'),
+    message: needing.map(mod => util.renderModName(mod)).join('\n'),
+  }, [
+    { label: 'Cancel' },
+    { label: 'Play without plugins' },
+    { label: installed ? 'Play with FCSE' : 'Get FCSE', default: true },
+  ]);
+
+  if (result.action === 'Play without plugins') {
+    return call;
+  }
+  if (result.action === 'Play with FCSE') {
+    return { ...call, executable: fcse };
+  }
+  if (result.action === 'Get FCSE') {
+    void installFcse(api, util.renderModName(needing[0]));
+  }
+  throw new util.UserCanceled();
 }
 
 /** A warning icon in the mods table on each plugin mod while FCSE is missing; a click gets it. */

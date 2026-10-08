@@ -11,6 +11,8 @@ Notable changes to the Vortex Far Cry 2 extension, loosely following
   directly, a prompt offers to open FCSE's Nexus page instead. While an enabled mod has a plugin and FCSE is still
   missing, this repeats every time Vortex starts, and the mod shows a warning icon in the mods
   list that gets FCSE when clicked.
+- **Starting the game without FCSE while a mod has a plugin asks first**, offering to start it with
+  FCSE instead, since the game on its own never loads plugins.
 
 ## [0.3.0] - 2026-10-02
 

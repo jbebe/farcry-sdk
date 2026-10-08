@@ -26,7 +26,7 @@ assert.strictEqual(typeof main, 'function', 'Vortex calls the default export; th
 
 const registered = {
   games: [], modTypes: [], installers: [], loadOrders: [], actions: [], onceCallbacks: [],
-  tableAttributes: [],
+  tableAttributes: [], startHooks: [],
 };
 const api = makeApi();
 
@@ -70,6 +70,8 @@ assert.deepStrictEqual(registered.tableAttributes.map(a => `${a.tableId}/${a.att
   ['mods/farcry2-fcse'], 'the missing-FCSE warning icon column');
 assert.deepStrictEqual(registered.tableAttributes[0].attribute.edit, {},
   'edit is required; an empty object makes the column read-only');
+assert.deepStrictEqual(registered.startHooks.map(h => h.id), ['farcry2-fcse-launch'],
+  'the plugins-won\'t-load warning before FarCry2.exe starts');
 assert.strictEqual(registered.onceCallbacks.length, 1, 'event handlers belong in context.once');
 
 // --- the load order page ---------------------------------------------------
@@ -230,6 +232,7 @@ function makeContext(registered, api) {
     registerLoadOrder: info => registered.loadOrders.push(info),
     registerTableAttribute: (tableId, attribute) =>
       registered.tableAttributes.push({ tableId, attribute }),
+    registerStartHook: (priority, id, hook) => registered.startHooks.push({ priority, id, hook }),
     registerAction: (group, position, icon, options, title, action, condition) =>
       registered.actions.push({ group, position, icon, options, title, action, condition }),
     once: cb => registered.onceCallbacks.push(cb),
