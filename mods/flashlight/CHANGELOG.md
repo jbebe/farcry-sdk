@@ -9,6 +9,7 @@ Notable changes to Flashlight, loosely following
 - **Combines with other mods that add controls.** It ships only the controls category and the action
   map it adds to, rather than whole copies of both control files, so another mod's control no longer
   replaces the Flashlight's, or the other way round. Needs JackAll 1.3.0 or the Vortex extension 0.3.0.
+- **Needs FCSE 1.4.0**, rebuilt for its new plugin interface. Older FCSE no longer loads it.
 
 ## [1.0.0] - 2026-10-02
 

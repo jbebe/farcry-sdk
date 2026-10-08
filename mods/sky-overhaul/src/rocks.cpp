@@ -2,7 +2,6 @@
 
 #include "engine/camera.h"
 #include "engine/com.h"
-#include "engine/crc32.h"
 #include "engine/dome_draw.h"
 #include "engine/known_shaders.h"
 #include "engine/known_textures.h"
@@ -180,7 +179,7 @@ namespace {
 
         Patched patched = {engine, semantic, nullptr, 0};
         const std::vector<DWORD> tokens = SkyOverhaul::Bytecode(engine);
-        const uint32_t crc = SkyOverhaul::Crc32(tokens.data(), tokens.size() * sizeof(DWORD));
+        const uint32_t crc = FCSE::Crc32(tokens.data(), tokens.size() * sizeof(DWORD));
         const auto light = std::find_if(
             std::begin(kLightRegisters), std::end(kLightRegisters),
             [crc](const LightRegister& entry) { return entry.vertex == crc; });

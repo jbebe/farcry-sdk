@@ -76,7 +76,7 @@ fragments under `layer\mods\`, written by `data\fragments.py`. The engine side i
 
 ## Requirements
 
-FCSE 1.3.0 or later: the blur hooks Direct3D functions other plugins hook too.
+FCSE 1.4.0 or later.
 
 ## Settings
 

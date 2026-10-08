@@ -1,7 +1,7 @@
 #include "engine/known_shaders.h"
 
-#include "engine/crc32.h"
 #include "engine/shader.h"
+#include "fcse_api.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -123,7 +123,7 @@ namespace {
     template <class Shader>
     bool BytecodeCrc(Shader* shader, uint32_t& crc) {
         const std::vector<DWORD> tokens = SkyOverhaul::Bytecode(shader);
-        crc = SkyOverhaul::Crc32(tokens.data(), tokens.size() * sizeof(DWORD));
+        crc = FCSE::Crc32(tokens.data(), tokens.size() * sizeof(DWORD));
         return !tokens.empty();
     }
 

@@ -6,7 +6,6 @@
 #include "third_person.h"
 
 #include "chase.h"
-#include "crc32.h"
 #include "engine/camera.h"
 #include "engine/entity.h"
 #include "engine/input.h"
@@ -20,7 +19,7 @@
 #include <cstdint>
 
 namespace {
-    constexpr uint32_t kToggleSignal = VehicleOverhaul::Crc32("active_camerathird");
+    constexpr uint32_t kToggleSignal = FCSE::Crc32("active_camerathird");
 
     // Counted on the dispatcher, spent on the pawn tick.
     std::atomic<int> g_toggles{0};

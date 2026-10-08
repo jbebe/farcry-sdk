@@ -3,6 +3,11 @@
 Notable changes to Aiming Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Changed
+- **Needs FCSE 1.4.0**, rebuilt for its new plugin interface. Older FCSE no longer loads it.
+
 ## [1.0.0] - 2026-10-06
 
 ### Added

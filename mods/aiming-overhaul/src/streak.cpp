@@ -72,17 +72,6 @@ namespace {
         }
     }
 
-    uint32_t Crc32(const uint8_t* data, size_t size) {
-        uint32_t crc = 0xFFFFFFFF;
-        for (size_t i = 0; i < size; i++) {
-            crc ^= data[i];
-            for (int bit = 0; bit < 8; bit++) {
-                crc = (crc >> 1) ^ (0xEDB88320 & (0u - (crc & 1)));
-            }
-        }
-        return ~crc;
-    }
-
     bool Readable(IDirect3DVertexShader9* shader) {
         if (shader == g_vertexShader) {
             return g_readable;
@@ -97,7 +86,7 @@ namespace {
         if (FAILED(shader->GetFunction(bytecode.data(), &size))) {
             return false;
         }
-        g_readable = std::ranges::find(kReadableVertexShaders, Crc32(bytecode.data(), size)) !=
+        g_readable = std::ranges::find(kReadableVertexShaders, FCSE::Crc32(bytecode.data(), size)) !=
                      std::end(kReadableVertexShaders);
         return g_readable;
     }

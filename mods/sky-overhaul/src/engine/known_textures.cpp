@@ -1,6 +1,5 @@
 #include "engine/known_textures.h"
 
-#include "engine/crc32.h"
 #include "fcse_api.h"
 
 #include <algorithm>
@@ -51,8 +50,8 @@ namespace {
         }
         uint32_t crc = 0;
         for (UINT row = 0; row < kBlockRows; row++) {
-            crc = SkyOverhaul::Crc32(static_cast<const uint8_t*>(rect.pBits) + row * rect.Pitch,
-                                     kBlockRowBytes, crc);
+            crc = FCSE::Crc32(static_cast<const uint8_t*>(rect.pBits) + row * rect.Pitch,
+                              kBlockRowBytes, crc);
         }
         texture->UnlockRect(level);
         return std::find(std::begin(kRockNormals), std::end(kRockNormals), crc) !=

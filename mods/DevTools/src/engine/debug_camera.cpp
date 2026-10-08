@@ -60,10 +60,10 @@ namespace {
     constexpr ptrdiff_t kPawnFallFrames = 0x4A0;
     constexpr size_t kFallUpdateTail = 0x303;
 
-    // The signals noclip refuses, by dispatcher CRC32.
-    constexpr uint32_t kSignalPauseMenu = 0x04127107;
-    constexpr uint32_t kSignalQuickSave = 0xEFEF8B90;
-    constexpr uint32_t kSignalQuickLoad = 0x9F8F5553;
+    // The signals noclip refuses.
+    constexpr uint32_t kSignalPauseMenu = FCSE::Crc32("show_pausemenu");
+    constexpr uint32_t kSignalQuickSave = FCSE::Crc32("quicksave");
+    constexpr uint32_t kSignalQuickLoad = FCSE::Crc32("quickload");
 
     using GameSignalFn = bool(__fastcall*)(void* dispatcher, void* unused, const uint32_t* signal,
                                            void* context);

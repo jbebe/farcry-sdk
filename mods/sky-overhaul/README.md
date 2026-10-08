@@ -90,9 +90,7 @@ without it, but the sun it sits beside is a flat disc until bloom runs.
 `DepthPassQuality` high or above for the cloud shadows: below it the engine writes no linear depth,
 and `fcse.log` says so once.
 
-FCSE 1.3.0 or later to share a Direct3D function with another plugin: older versions refuse the
-second plugin's hook, and `fcse.log` names both. DevTools hooks `Present` and `Reset`, which this
-does not, so the two coexist on any version.
+Needs FCSE 1.4.0 or later.
 
 ## Building
 

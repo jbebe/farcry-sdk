@@ -99,8 +99,7 @@ layer\mods\
 layer\plugins\vehicle-overhaul\   the built plugin, staged here by build.ps1
 ```
 
-Needs FCSE 1.3.0 or later: the dispatcher and the input pass are hooked at the same instructions as
-DevTools. The control sections need JackAll 1.3.0 or later.
+Needs FCSE 1.4.0 or later. The control sections need JackAll 1.3.0 or later.
 
 ## Building
 

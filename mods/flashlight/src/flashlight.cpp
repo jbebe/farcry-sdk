@@ -5,7 +5,6 @@
 // HUD icon for the new state fades in and out again after the stock HUD's delay.
 #include "flashlight.h"
 
-#include "crc32.h"
 #include "engine/frame.h"
 #include "engine/hud.h"
 #include "engine/input.h"
@@ -13,6 +12,7 @@
 #include "engine/player.h"
 #include "engine/sight.h"
 #include "engine/sound.h"
+#include "fcse_api.h"
 
 #include <algorithm>
 #include <atomic>
@@ -22,7 +22,7 @@
 #include <optional>
 
 namespace {
-    constexpr uint32_t kToggleSignal = Flashlight::Crc32("toggle_flashlight");
+    constexpr uint32_t kToggleSignal = FCSE::Crc32("toggle_flashlight");
 
     // The switch, a bank of this layer's own, played through the player's own foley.
     constexpr uint32_t kClick = 0x00FC0A00;
@@ -51,9 +51,9 @@ namespace {
     static_assert(std::size(kCones) == std::size(Flashlight::kConeLabels));
 
     // What this layer's hud.mgb exports: the flashlight's own group, and its icon per state.
-    constexpr uint32_t kHudGroup = Flashlight::Crc32("HUD_FLASHLIGHT_FADE");
-    constexpr uint32_t kHudOn = Flashlight::Crc32("HUD_FLASHLIGHT_ON");
-    constexpr uint32_t kHudOff = Flashlight::Crc32("HUD_FLASHLIGHT_OFF");
+    constexpr uint32_t kHudGroup = FCSE::Crc32("HUD_FLASHLIGHT_FADE");
+    constexpr uint32_t kHudOn = FCSE::Crc32("HUD_FLASHLIGHT_ON");
+    constexpr uint32_t kHudOff = FCSE::Crc32("HUD_FLASHLIGHT_OFF");
     // The group fades in from frame 1 and holds at 5, and fades out from 6.
     constexpr int kHudShowFrame = 1;
     constexpr int kHudHideFrame = 6;

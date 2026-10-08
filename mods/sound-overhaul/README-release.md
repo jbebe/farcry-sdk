@@ -25,7 +25,7 @@ fire or echoes, to hear the rest of a fight on its own.
 
 ## Requirements
 
-- **FCSE**, on Far Cry 2 1.03 (Steam or GOG).
+- **FCSE 1.4.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
 
 ## Installing
 
