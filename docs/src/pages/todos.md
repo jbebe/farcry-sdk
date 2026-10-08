@@ -55,23 +55,15 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
   prompt. The two needs conflict, so the fix is FCSE registering its own `IMagmaActionListener`
   rather than relying on the inherited one — and probably narrowing the dirty-flag clear at the same
   time. Values still save; only the Enter gesture is missing.
-- [ ] **Hook chaining, for more than one rendering plugin.** FCSE gives an address to one plugin, but certain parts of Dunia must share logic extensibility to plugins.
-
 ## Tools/vortex-farcry2
 
-*nothing*
-
+- [ ] Add the real url to the FCSE download prompt
 ## Mods/vss-vintorez
 
-- [ ] VSS: split the body into steel and stock materials, so the stock stops sharing the steel's
-      specular response. Needs the transplant re-run, not new textures
-- [ ] Whether the `Weapon` shader samples a normal map at all. No `NormalTexture1` slot appears on any
-      of the nine `Weapon` materials across three weapons, even though weapons seemingly have a normal map.
-      Disassemble the template out of `shadersobj.fat`'s `obj10` tree, which keeps its reflection data
-
+- [ ] Release it, as we made improvements
 ## Mods/DevTools
 
-- [ ] The correct scale for `Game:SetHealth` — 100 and 25 both kill the player
+- [ ] Dev console bug: `Game:SetHealth`100 and 25 both kill the player
 
 ## Mods/vehicle-overhaul
 
@@ -82,12 +74,12 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 
 ## Mods/sound-overhaul
 
-- [ ] 
+*nothing* 
 
 ## Mod ideas
 
 - [ ] Binoculars with a distance meter
-- [ ] Flashlight
+- [x] Flashlight
 - [ ] **Downed enemies soak too much lead; change it in some way.** A shot that takes a soldier to
   49 health or below can down him instead of killing him. His health is then set to 49, even when
   the shot would have killed him. For 0.4 s after that, hits do nothing
@@ -97,7 +89,7 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
   (`CFCXCountersComponentAI::DamageHealth`); not cross-checked in `Dunia.dll`
 - [ ] Better explosion effects
 - [ ] Better smoke during a bushfire and from an exploded car
-- [ ] Tracer round effect. US tracers are red/orange, Soviet ones green
+- [x] Tracer round effect. US tracers are red/orange, Soviet ones green
 - [ ] Reuse the taxi driver as a quest giver
 - [ ] **Revamp the map to be more realistic.** Generate a real map from the cartoonish one with AI.
   Make the right hand point at where we are, or point at it with the GPS antenna
