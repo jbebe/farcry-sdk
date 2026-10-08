@@ -1,8 +1,11 @@
 import Bluebird from 'bluebird';
+import * as nodeFs from 'fs';
 import * as path from 'path';
 import { fs, log, selectors, types, util } from 'vortex-api';
 
-import { GAME_ID, GOG_APP_ID, LAYERS_FOLDER, STEAM_APP_ID } from './constants';
+import {
+  FCSE_LOADER, FCSE_TOOL_ID, GAME_ID, GOG_APP_ID, LAYERS_FOLDER, STEAM_APP_ID,
+} from './constants';
 import * as jackall from './jackall';
 import { ask, notify } from './ui';
 
@@ -86,6 +89,23 @@ async function confirmVanillaBaseline(api: types.IExtensionApi, gameRoot: string
   });
 }
 
+export function fcseTool(api: types.IExtensionApi): types.ITool {
+  return {
+    id: FCSE_TOOL_ID,
+    name: 'Far Cry Script Extender (FCSE)',
+    shortName: 'FCSE',
+    executable: () => 'FCSE.exe',
+    requiredFiles: ['FCSE.exe'],
+    // Vortex calls this with no arguments; an empty path means not installed.
+    queryPath: () => {
+      const gameRoot = gamePath(api);
+      const bin = gameRoot === undefined ? '' : path.join(gameRoot, 'bin');
+      return bin !== '' && nodeFs.existsSync(path.join(bin, FCSE_LOADER)) ? bin : '';
+    },
+    relative: true,
+  };
+}
+
 export function gameDefinition(api: types.IExtensionApi): types.IGame {
   return {
     id: GAME_ID,
@@ -106,20 +126,7 @@ export function gameDefinition(api: types.IExtensionApi): types.IGame {
     // can reconstruct each layer path exactly instead of guessing what Vortex chose.
     mergeMods: (mod: types.IMod) => mod.id,
     requiresCleanup: true,
-    supportedTools: [
-      {
-        id: 'fcse',
-        name: 'Far Cry Script Extender (FCSE)',
-        shortName: 'FCSE',
-        executable: () => 'FCSE.exe',
-        requiredFiles: ['FCSE.exe'],
-        queryPath: (gameRoot: string) => path.join(gameRoot, 'bin'),
-        relative: true,
-        // FCSE launches the game alongside FarCry2.exe rather than replacing it, so it must not
-        // take over as *the* way to start the game.
-        exclusive: false,
-      } as types.ITool,
-    ],
+    supportedTools: [fcseTool(api)],
     environment: { SteamAPPId: STEAM_APP_ID },
     details: { steamAppId: parseInt(STEAM_APP_ID, 10) },
   };

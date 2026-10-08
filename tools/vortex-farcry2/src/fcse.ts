@@ -3,8 +3,10 @@ import * as path from 'path';
 import * as React from 'react';
 import { actions, log, selectors, tooltip, types, util } from 'vortex-api';
 
-import { FCSE_LOADER, GAME_ID, MODTYPE_FCSE_LOADER, MODTYPE_LAYER, PLUGINS_DIR } from './constants';
-import { activeProfile, gamePath } from './game';
+import {
+  FCSE_LOADER, FCSE_TOOL_ID, GAME_ID, MODTYPE_FCSE_LOADER, MODTYPE_LAYER, PLUGINS_DIR,
+} from './constants';
+import { activeProfile, fcseTool, gamePath } from './game';
 import { enabledLayerMods } from './loadOrder';
 import { ask, dismiss, notify } from './ui';
 
@@ -56,6 +58,32 @@ export async function requireFcse(api: types.IExtensionApi, requiredBy?: string)
   if (name !== undefined) {
     prompted = true;
     await installFcse(api, name);
+  }
+}
+
+/**
+ * The first time FCSE appears in bin\, registers it as a found tool and makes it what Play starts,
+ * unless the player already picked a primary tool. Found once, it is never promoted again.
+ */
+export function promoteFcse(api: types.IExtensionApi): void {
+  const state = api.getState();
+  const tool = fcseTool(api);
+  const bin = tool.queryPath!() as string;
+  const found = util.getSafe(
+    state, ['settings', 'gameMode', 'discovered', GAME_ID, 'tools', FCSE_TOOL_ID, 'path'], undefined);
+  if (bin === '' || found !== undefined) {
+    return;
+  }
+
+  api.store?.dispatch(actions.addDiscoveredTool(GAME_ID, FCSE_TOOL_ID, {
+    ...tool,
+    path: path.join(bin, tool.executable()),
+    hidden: false,
+    parameters: [],
+    custom: false,
+  } as types.IDiscoveredTool, false));
+  if (util.getSafe(state, ['settings', 'interface', 'primaryTool', GAME_ID], undefined) === undefined) {
+    api.store?.dispatch(actions.setPrimaryTool(GAME_ID, FCSE_TOOL_ID));
   }
 }
 

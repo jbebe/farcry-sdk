@@ -4,7 +4,7 @@ import * as path from 'path';
 import { log, selectors, types } from 'vortex-api';
 
 import { GAME_ID } from './constants';
-import { requireFcse } from './fcse';
+import { promoteFcse, requireFcse } from './fcse';
 import { gamePath, layersPath } from './game';
 import * as jackall from './jackall';
 import { orderedLayerMods } from './loadOrder';
@@ -24,6 +24,7 @@ export function registerEvents(api: types.IExtensionApi): void {
   api.onAsync('did-deploy', async (profileId: string) => {
     if (isOurProfile(api, profileId)) {
       await rebuild(api, 'deploy');
+      promoteFcse(api);
       void requireFcse(api);
     }
   });
