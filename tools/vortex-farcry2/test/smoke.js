@@ -11,11 +11,12 @@ const Module = require('module');
 
 const GAME_ID = 'farcry2';
 
-// Vortex injects this module at runtime, which is why the bundle leaves it external.
+// Vortex injects these modules at runtime, which is why the bundle leaves them external.
 const stub = makeStub();
+const injected = { 'vortex-api': stub, react: { createElement: () => ({}) } };
 const originalLoad = Module._load;
 Module._load = function load(request, parent, isMain) {
-  return request === 'vortex-api' ? stub : originalLoad(request, parent, isMain);
+  return injected[request] ?? originalLoad(request, parent, isMain);
 };
 
 const extension = require(path.join(__dirname, '..', 'dist', 'index.js'));
@@ -25,6 +26,7 @@ assert.strictEqual(typeof main, 'function', 'Vortex calls the default export; th
 
 const registered = {
   games: [], modTypes: [], installers: [], loadOrders: [], actions: [], onceCallbacks: [],
+  tableAttributes: [],
 };
 const api = makeApi();
 
@@ -64,6 +66,10 @@ assert.strictEqual(loadOrder.toggleableEntries, false);
 assert.match(loadOrder.usageInstructions, /BOTTOM/, 'users have to be told which end wins');
 
 assert.strictEqual(registered.actions.length, 2, 'rebuild + restore toolbar actions');
+assert.deepStrictEqual(registered.tableAttributes.map(a => `${a.tableId}/${a.attribute.id}`),
+  ['mods/farcry2-fcse'], 'the missing-FCSE warning icon column');
+assert.deepStrictEqual(registered.tableAttributes[0].attribute.edit, {},
+  'edit is required; an empty object makes the column read-only');
 assert.strictEqual(registered.onceCallbacks.length, 1, 'event handlers belong in context.once');
 
 // --- the load order page ---------------------------------------------------
@@ -222,6 +228,8 @@ function makeContext(registered, api) {
     registerInstaller: (id, priority, testSupported, install) =>
       registered.installers.push({ id, priority, testSupported, install }),
     registerLoadOrder: info => registered.loadOrders.push(info),
+    registerTableAttribute: (tableId, attribute) =>
+      registered.tableAttributes.push({ tableId, attribute }),
     registerAction: (group, position, icon, options, title, action, condition) =>
       registered.actions.push({ group, position, icon, options, title, action, condition }),
     once: cb => registered.onceCallbacks.push(cb),

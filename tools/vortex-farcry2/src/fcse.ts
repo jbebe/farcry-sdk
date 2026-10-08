@@ -1,8 +1,9 @@
 import * as nodeFs from 'fs';
 import * as path from 'path';
-import { actions, log, selectors, types, util } from 'vortex-api';
+import * as React from 'react';
+import { actions, log, selectors, tooltip, types, util } from 'vortex-api';
 
-import { FCSE_LOADER, GAME_ID, MODTYPE_FCSE_LOADER, PLUGINS_DIR } from './constants';
+import { FCSE_LOADER, GAME_ID, MODTYPE_FCSE_LOADER, MODTYPE_LAYER, PLUGINS_DIR } from './constants';
 import { activeProfile, gamePath } from './game';
 import { enabledLayerMods } from './loadOrder';
 import { dismiss, notify } from './ui';
@@ -19,8 +20,10 @@ interface INexusFile {
   uploaded_timestamp: number;
 }
 
-/** Once per session, so a failure doesn't reopen the browser for every plugin mod after it. */
-let attempted = false;
+/** Once per session, so a failure doesn't reopen the browser for every plugin mod after it. The
+ * warning icon still gets FCSE on click after that. */
+let prompted = false;
+let installing = false;
 
 /** FCSE as a Vortex mod, deployed or not, or on disk (also when installed by hand). Without a
  * discovered game there is nowhere to put it, so that counts as available too. */
@@ -34,28 +37,63 @@ function isFcseAvailable(api: types.IExtensionApi): boolean {
   return gameRoot === undefined || nodeFs.existsSync(path.join(gameRoot, 'bin', FCSE_LOADER));
 }
 
-/** Every session, so a player who ignored the first prompt is asked again on the next launch. */
-export async function requireFcse(api: types.IExtensionApi): Promise<void> {
-  if (attempted || isFcseAvailable(api)) {
+function hasPlugins(api: types.IExtensionApi, mod: types.IMod): boolean {
+  const staging = selectors.installPathForGame(api.getState(), GAME_ID);
+  return (mod.type ?? MODTYPE_LAYER) === MODTYPE_LAYER && mod.installationPath !== undefined
+    && nodeFs.existsSync(path.join(staging, mod.installationPath, PLUGINS_DIR));
+}
+
+/**
+ * Every session, so a player who ignored the first prompt is asked again on the next launch.
+ * `requiredBy` names a mod still installing; otherwise the first enabled plugin mod is used.
+ */
+export async function requireFcse(api: types.IExtensionApi, requiredBy?: string): Promise<void> {
+  if (prompted || isFcseAvailable(api)) {
     return;
   }
-  const staging = selectors.installPathForGame(api.getState(), GAME_ID);
-  const needing = enabledLayerMods(api).find(mod =>
-    nodeFs.existsSync(path.join(staging, mod.installationPath, PLUGINS_DIR)));
-  if (needing !== undefined) {
-    await installFcse(api, util.renderModName(needing));
+  const needing = enabledLayerMods(api).find(mod => hasPlugins(api, mod));
+  const name = requiredBy ?? (needing === undefined ? undefined : util.renderModName(needing));
+  if (name !== undefined) {
+    prompted = true;
+    await installFcse(api, name);
   }
+}
+
+/** A warning icon in the mods table on each plugin mod while FCSE is missing; a click gets it. */
+export function fcseColumn(api: types.IExtensionApi): types.ITableAttribute<types.IMod> {
+  const lacksFcse = (mod: types.IMod) => hasPlugins(api, mod) && !isFcseAvailable(api);
+  return {
+    id: 'farcry2-fcse',
+    name: 'FCSE',
+    description: 'Warns about a mod whose plugin needs FCSE, which is not installed',
+    placement: 'table',
+    isToggleable: true,
+    isDefaultVisible: true,
+    isSortable: false,
+    edit: {},
+    condition: () => selectors.activeGameId(api.getState()) === GAME_ID,
+    // The plugin mod's own row doesn't change when FCSE is installed.
+    externalData: onChanged => api.onStateChange?.(['persistent', 'mods', GAME_ID], onChanged),
+    calc: lacksFcse,
+    customRenderer: mod => (Array.isArray(mod) || !lacksFcse(mod)
+      ? React.createElement('span')
+      : React.createElement(tooltip.IconButton, {
+        icon: 'feedback-warning',
+        tooltip: 'This mod\'s plugin only loads with FCSE, which isn\'t installed. Click to get it.',
+        onClick: () => void installFcse(api, util.renderModName(mod)),
+      })),
+  };
 }
 
 /**
  * Downloads FCSE's newest main file from Nexus, installs and enables it. Nexus serves direct
  * downloads to premium accounts only, so anyone else gets the file's page to download it from.
  */
-export async function installFcse(api: types.IExtensionApi, requiredBy: string): Promise<void> {
-  if (attempted || isFcseAvailable(api)) {
+async function installFcse(api: types.IExtensionApi, requiredBy: string): Promise<void> {
+  if (installing || isFcseAvailable(api)) {
     return;
   }
-  attempted = true;
+  installing = true;
   notify(api, {
     id: NOTIFICATION_ID,
     type: 'activity',
@@ -87,6 +125,7 @@ export async function installFcse(api: types.IExtensionApi, requiredBy: string):
   } catch (err) {
     log('warn', 'Far Cry 2: FCSE download failed', { error: (err as Error).message });
   } finally {
+    installing = false;
     dismiss(api, NOTIFICATION_ID);
   }
 

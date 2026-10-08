@@ -33,6 +33,8 @@ module.exports = {
     // mode. It's only needed at all because several Vortex API signatures are typed as returning
     // Bluebird rather than a plain promise.
     'vortex-api': 'commonjs2 vortex-api',
+    // Vortex's own copy: a second React can't render into its tree.
+    react: 'commonjs2 react',
   },
   devtool: 'source-map',
   // Node built-ins are external automatically with target: 'node'.

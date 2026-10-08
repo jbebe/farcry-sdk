@@ -4,7 +4,7 @@ import * as path from 'path';
 import { fs, log, types, util } from 'vortex-api';
 
 import { FCSE_LOADER, GAME_ID, MODTYPE_FCSE_LOADER, PLUGINS_DIR } from './constants';
-import { installFcse } from './fcse';
+import { requireFcse } from './fcse';
 import { gamePath } from './game';
 import * as jackall from './jackall';
 import { ask, dismiss, notify } from './ui';
@@ -85,7 +85,7 @@ export function makeInstaller(api: types.IExtensionApi) {
     if (roots.length > 0) {
       // Not awaited: this mod's install shouldn't wait on a download.
       if (roots.includes(PLUGINS_DIR)) {
-        void installFcse(api, modName);
+        void requireFcse(api, modName);
       }
       log('info', 'Far Cry 2: staging mod layer', { roots });
       return { instructions: roots.flatMap(root => copyUnder(plainFiles, root)) };

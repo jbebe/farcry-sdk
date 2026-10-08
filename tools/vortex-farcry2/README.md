@@ -82,7 +82,8 @@ there, the extension downloads FCSE's newest main file from
 direct downloads to premium accounts only, so for anyone else, or if the download fails, the file's
 page opens instead, to download it from with "Mod Manager Download". The same check runs when
 Vortex starts with Far Cry 2 active and after every deploy, at most once per session, so a player
-who ignored the first prompt is asked again on the next launch.
+who ignored the first prompt is asked again on the next launch. Until then, every plugin mod shows a
+warning icon in the mods table's FCSE column, and clicking it starts the same download.
 
 ## Building
 

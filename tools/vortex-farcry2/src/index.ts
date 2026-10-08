@@ -2,7 +2,7 @@ import { selectors, types } from 'vortex-api';
 
 import { GAME_ID } from './constants';
 import { rebuild, registerEvents, restore } from './deploy';
-import { requireFcse } from './fcse';
+import { fcseColumn, requireFcse } from './fcse';
 import { gameDefinition } from './game';
 import { makeInstaller, registerModTypes, testSupported } from './installers';
 import { loadOrderInfo } from './loadOrder';
@@ -21,6 +21,7 @@ function main(context: types.IExtensionContext): boolean {
   context.registerInstaller('farcry2-jackall', 25, testSupported, makeInstaller(context.api));
 
   context.registerLoadOrder(loadOrderInfo(context.api));
+  context.registerTableAttribute('mods', fcseColumn(context.api));
 
   context.registerAction('mod-icons', 300, 'refresh', {}, 'Rebuild patch.dat',
     () => { void rebuild(context.api, 'manual'); },
