@@ -83,10 +83,9 @@ public static class FragmentMerge
     /// <paramref name="fragmentId"/> not matching anything in <paramref name="vanilla"/> is not an
     /// error: it means every contributing layer is adding a genuinely new entry rather than overriding
     /// an existing one (normal modding — see <see cref="IContainerSplitter.Apply"/>, which is what
-    /// actually splices an added child in). The first contributor is taken outright the same way. A
-    /// second layer contributing the same brand-new id then folds normally, against an empty ancestor,
-    /// so what two mods adding the same id give differently is a real conflict, not one silently
-    /// clobbering the other.
+    /// actually splices an added child in). A second layer contributing the same brand-new id then
+    /// folds normally, against an empty ancestor, so what two mods adding the same id give differently
+    /// is a real conflict, not one silently clobbering the other.
     /// </summary>
     /// <param name="conflicts">
     /// Null (the default) keeps the original behavior: a genuine collision throws
@@ -144,9 +143,7 @@ public static class FragmentMerge
 
             if (i == 0)
             {
-                // "Ours" is the ancestor itself here, so nothing can disagree with theirs. Taking it
-                // directly is what keeps a single layer's fragment byte-identical - a tree merge would
-                // re-render it - and skips a merge for the overwhelmingly common case.
+                // "Ours" is the ancestor itself, so theirs wins outright.
                 result = theirs;
                 continue;
             }

@@ -1,7 +1,5 @@
 using System.Collections.Concurrent;
-using System.Text;
 using System.Xml.Linq;
-using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
 
@@ -140,9 +138,8 @@ public class FcbMergeTests : IDisposable
             Stage("mod_b", id, Adding(DataComponent(Key("ModB.Key", 2)))));
 
         FcbObject archetype = FcbFragments.Find(FcbDocument.Deserialize(Splitter.Apply(library, resolved)), id)!;
-        FcbObject components = archetype.Children.Single(c => c.TypeHash == WorldHashes.Entity)
-            .Children.Single(c => c.TypeHash == WorldHashes.Components);
-        FcbObject data = components.Children.Single(c => c.TypeHash == Hash("CFCSEDataComponent"));
+        FcbObject data = FcbEntityFields.FindComponent(
+            archetype.Children.Single(c => c.TypeHash == WorldHashes.Entity), Hash("CFCSEDataComponent"))!;
         Assert.Equal([Hash("ModA.Key"), Hash("ModB.Key")], data.Children.Select(c => c.TypeHash));
     }
 
@@ -227,12 +224,5 @@ public class FcbMergeTests : IDisposable
         => TestSupport.ResolveFragments(Splitter, library, ContainerPath, conflicts, layers);
 
     private FolderModLayer Stage(string name, string id, string xml)
-    {
-        string dir = Path.Combine(_sandbox, name);
-        Directory.CreateDirectory(dir);
-        var layer = new FolderModLayer(dir, name);
-        string staged = $@"{ContainerPath}\{id}";
-        layer.Stage(NameHash.Compute(staged), staged, "xml", Encoding.UTF8.GetBytes(xml));
-        return layer;
-    }
+        => TestSupport.StageFragment(_sandbox, name, ContainerPath, id, xml);
 }

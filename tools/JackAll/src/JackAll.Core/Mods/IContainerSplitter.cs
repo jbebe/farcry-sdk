@@ -126,12 +126,10 @@ public interface IContainerSplitter
     /// the fold conflicted - the conflicts say where a decision was made, not that the result is
     /// unfinished. Each is a path inside the fragment, empty for the fragment as a whole.
     /// </summary>
-    /// <remarks>A text conflict is resolved by load order rather than left carrying conflict markers,
-    /// which are not a container and cannot be built.</remarks>
     (string Merged, IReadOnlyList<string> Conflicts) Merge(string fragmentId, string ancestor, string ours, string theirs)
     {
-        (string merged, bool conflict) = Diff3.Merge(ancestor, ours, theirs);
-        return conflict ? (theirs, [""]) : (merged, []);
+        (string merged, bool conflict) = Diff3.Resolve(ancestor, ours, theirs);
+        return (merged, conflict ? [""] : []);
     }
 
     /// <summary>

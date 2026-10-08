@@ -126,8 +126,9 @@ public sealed class GameVfs : IDisposable
     /// Container hash -&gt; fragment id -&gt; every enabled layer overriding it, in priority order (later
     /// in the list = higher priority, same order <see cref="_layers"/> is walked everywhere else) —
     /// rebuilt every <see cref="Rebuild"/> from <see cref="_layers"/>' <see cref="IModLayer.FragmentOverrides"/>.
-    /// Milestone 3 (docs/design/fcb-fragment-overlays.md): every contributing layer is folded through
-    /// <see cref="Diff3"/> against the vanilla ancestor instead of only the last one winning outright.
+    /// Milestone 3 (docs/design/fcb-fragment-overlays.md): every contributing layer is folded three-way
+    /// against the vanilla ancestor (see <see cref="FragmentMerge"/>) instead of only the last one
+    /// winning outright.
     /// Drives both <see cref="ReadContainer"/> (splicing overrides into a container's bytes) and
     /// <see cref="MergeFragments"/> (showing overridden fragment rows as modded).
     /// </summary>

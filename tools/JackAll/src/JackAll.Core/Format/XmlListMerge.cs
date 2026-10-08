@@ -12,14 +12,12 @@ public static class XmlListMerge
     /// <summary>
     /// Folds <paramref name="theirs"/> into <paramref name="ours"/> attribute by attribute and child
     /// by child. A conflict keeps theirs and is reported by where it sits: <c>@attribute</c>, or a
-    /// child's key followed by any path <paramref name="mergeChild"/> reports inside it. A null
-    /// ancestor means both sides added the element.
+    /// child's key followed by any path inside it. A null ancestor means both sides added the element.
     /// </summary>
-    /// <param name="mergeChild">Merges a child both sides changed within itself, or returns null to
-    /// leave it a conflict as a whole. The paths it returns are relative to that child.</param>
+    /// <param name="mergeChild">Merges a child both sides changed, which otherwise conflicts whole.</param>
     public static (XElement Merged, IReadOnlyList<string> Conflicts) Merge(
         XElement? ancestor, XElement ours, XElement theirs, Func<XElement, string> keyOf,
-        Func<XElement?, XElement, XElement, (XElement Merged, IReadOnlyList<string> Conflicts)?>? mergeChild = null)
+        Func<XElement?, XElement, XElement, (XElement Merged, IReadOnlyList<string> Conflicts)>? mergeChild = null)
     {
         var merged = new XElement(ours);
         XElement original = ancestor ?? new XElement(theirs.Name);
@@ -51,7 +49,10 @@ public static class XmlListMerge
             }
             else if (version != mine)
             {
-                version = new XElement(version);
+                if (version.Parent is not null)
+                {
+                    version = new XElement(version);
+                }
                 mine.ReplaceWith(version);
             }
             else if (before is null && their is null)
@@ -76,21 +77,17 @@ public static class XmlListMerge
                 continue;
             }
 
-            XElement? next = anchor is null ? merged.Elements().FirstOrDefault() : anchor.ElementsAfterSelf().FirstOrDefault();
-            while (next is not null && ourAdditions.Contains(next))
-            {
-                anchor = next;
-                next = next.ElementsAfterSelf().FirstOrDefault();
-            }
+            anchor = (anchor is null ? merged.Elements() : anchor.ElementsAfterSelf())
+                .TakeWhile(ourAdditions.Contains).LastOrDefault() ?? anchor;
 
             var addition = new XElement(added);
             if (anchor is not null)
             {
                 anchor.AddAfterSelf(addition);
             }
-            else if (next is not null)
+            else if (merged.Elements().FirstOrDefault() is { } first)
             {
-                next.AddBeforeSelf(addition);
+                first.AddBeforeSelf(addition);
             }
             else
             {
@@ -104,7 +101,7 @@ public static class XmlListMerge
         // The changed side's version when only one side changed it, the shared one when both made the
         // same change, and when the two disagree, what within makes of them, else theirs, flagged.
         T? Fold<T>(T? ancestorSide, T? ourSide, T? theirSide, Func<T?, T?, bool> same, string at,
-            Func<T?, T, T, (T Merged, IReadOnlyList<string> Conflicts)?>? within = null) where T : class
+            Func<T?, T, T, (T Merged, IReadOnlyList<string> Conflicts)>? within = null) where T : class
         {
             if (same(theirSide, ancestorSide) || same(ourSide, theirSide))
             {
@@ -114,8 +111,9 @@ public static class XmlListMerge
             {
                 return theirSide;
             }
-            if (ourSide is not null && theirSide is not null && within?.Invoke(ancestorSide, ourSide, theirSide) is { } inner)
+            if (ourSide is not null && theirSide is not null && within is not null)
             {
+                (T Merged, IReadOnlyList<string> Conflicts) inner = within(ancestorSide, ourSide, theirSide);
                 conflicts.AddRange(inner.Conflicts.Select(path => path.Length == 0 ? at : $"{at}/{path}"));
                 return inner.Merged;
             }

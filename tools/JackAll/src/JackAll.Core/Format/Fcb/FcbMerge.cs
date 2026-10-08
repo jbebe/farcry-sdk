@@ -27,17 +27,14 @@ public static class FcbMerge
         if (!Repeats(ancestor) && !Repeats(ours) && !Repeats(theirs))
         {
             return XmlListMerge.Merge(ancestor, ours, theirs, KeyOf,
-                (a, o, t) => o.Name == "object" && t.Name == "object" ? Merge(a, o, t) : null);
+                (a, o, t) => o.Name == "object" && t.Name == "object" ? Merge(a, o, t) : (t, [""]));
         }
 
-        (string text, bool conflict) = Diff3.Merge(ancestor?.ToString() ?? "", ours.ToString(), theirs.ToString());
-        return conflict ? (theirs, [""]) : (XElement.Parse(text), []);
+        (string text, bool conflict) = Diff3.Resolve(ancestor?.ToString() ?? "", ours.ToString(), theirs.ToString());
+        return (XElement.Parse(text), conflict ? [""] : []);
     }
 
-    /// <summary>What a child is paired by: a value's name, an object's type, else the hash spelling
-    /// either.</summary>
-    private static string KeyOf(XElement child)
-        => (string?)child.Attribute(child.Name == "value" ? "name" : "type") ?? (string?)child.Attribute("hash") ?? "";
+    private static string KeyOf(XElement child) => FcbXml.KeyOf(child) ?? "";
 
     private static bool Repeats(XElement? element)
         => element is not null && element.Elements().CountBy(KeyOf).Any(count => count.Value > 1);

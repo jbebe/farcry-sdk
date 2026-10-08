@@ -132,8 +132,8 @@ public static class PatchBuilder
 
         ReportFileCollisions(wholeFileOverrides, replacements, conflicts);
 
-        // Fragment overlays, one level deeper than whole files: every contributor folds through
-        // Diff3 against the vanilla ancestor (see FragmentMerge, shared with GameVfs).
+        // Fragment overlays, one level deeper than whole files: every contributor folds three-way
+        // against the vanilla ancestor (see FragmentMerge, shared with GameVfs).
         var fragmentOverrides = FragmentMerge.BuildOverrideIndex(enabled);
         var containersWithFragments = fragmentOverrides.Where(kv => kv.Value.Count > 0).ToList();
         if (containersWithFragments.Count == 0)

@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text;
 using System.Xml.Linq;
-using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
 
@@ -158,12 +157,5 @@ public class InputConfigSplitterTests : IDisposable
         => TestSupport.ResolveFragments(Splitter, file, containerPath, conflicts, layers);
 
     private FolderModLayer Stage(string name, string containerPath, string id, string xml)
-    {
-        string dir = Path.Combine(_sandbox, name);
-        Directory.CreateDirectory(dir);
-        var layer = new FolderModLayer(dir, name);
-        string staged = $@"{containerPath}\{id}";
-        layer.Stage(NameHash.Compute(staged), staged, "xml", Encoding.UTF8.GetBytes(xml));
-        return layer;
-    }
+        => TestSupport.StageFragment(_sandbox, name, containerPath, id, xml);
 }

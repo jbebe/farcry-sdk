@@ -62,6 +62,18 @@ internal static class TestSupport
             .ToDictionary(kv => kv.Key, kv => FragmentMerge.Resolve(splitter, tree, kv.Key, kv.Value, conflicts));
     }
 
+    /// <summary>A layer in its own folder under <paramref name="sandbox"/>, staging one fragment of
+    /// one container.</summary>
+    public static FolderModLayer StageFragment(string sandbox, string name, string containerPath, string id, string xml)
+    {
+        string dir = Path.Combine(sandbox, name);
+        Directory.CreateDirectory(dir);
+        var layer = new FolderModLayer(dir, name);
+        string staged = $@"{containerPath}\{id}";
+        layer.Stage(NameHash.Compute(staged), staged, "xml", System.Text.Encoding.UTF8.GetBytes(xml));
+        return layer;
+    }
+
     /// <summary>Walks up from the test runner's own output directory (e.g. bin\Debug\net10.0) to
     /// find the repo's checked-in <c>assets\fc2.hashlist</c> — it only ever lives under
     /// JackAll.App's output, not this project's own, so every caller needs to search for it rather

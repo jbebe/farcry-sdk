@@ -557,7 +557,7 @@ public static class LegacyPatchImporter
             foreach (XElement child in legacy.Elements())
             {
                 // Removing as it matches keeps one vanilla child from restoring two legacy ones.
-                if (KeyOf(child) is { } key && byKey.Remove((child.Name, key), out XElement? twin))
+                if (FcbXml.KeyOf(child) is { } key && byKey.Remove((child.Name, key), out XElement? twin))
                 {
                     yield return (twin, child);
                 }
@@ -581,7 +581,7 @@ public static class LegacyPatchImporter
         var byKey = new Dictionary<(XName, string), XElement>();
         foreach (XElement child in parent.Elements())
         {
-            if (KeyOf(child) is not { } key || !byKey.TryAdd((child.Name, key), child))
+            if (FcbXml.KeyOf(child) is not { } key || !byKey.TryAdd((child.Name, key), child))
             {
                 return null;
             }
@@ -589,11 +589,6 @@ public static class LegacyPatchImporter
 
         return byKey;
     }
-
-    private static string? KeyOf(XElement element)
-        => (string?)element.Attribute("name")
-           ?? (string?)element.Attribute("hash")
-           ?? (string?)element.Attribute("type");
 
     private static bool SameAttributes(XElement a, XElement b)
         => a.Attributes().Select(x => (x.Name, x.Value))

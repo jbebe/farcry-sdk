@@ -6,10 +6,6 @@ namespace JackAll.Core.Mods;
 /// The `.fcb` container format as an <see cref="IContainerSplitter"/> - entity libraries split per
 /// archetype, world sectors per placed entity.
 /// </summary>
-/// <remarks>
-/// Nothing here is new behaviour; it is the wiring that used to be spelled out inline in
-/// <c>PatchBuilder</c> and <c>GameVfs</c>, so a second format could exist alongside it.
-/// </remarks>
 public sealed class FcbContainerSplitter(FcbClassDefinitions definitions) : IContainerSplitter
 {
     public IContainerTree Open(byte[] container) => Open(FcbDocument.Deserialize(container));
@@ -23,11 +19,8 @@ public sealed class FcbContainerSplitter(FcbClassDefinitions definitions) : ICon
             ? ContainerLayout.Parse(fragmentXml).Render()
             : FcbXml.CanonicalizeFragment(fragmentXml, definitions);
 
-    /// <summary>
-    /// Both shapes merge by what they mean rather than as text, because two mods making unrelated
-    /// changes touch neighbouring lines: an entity as a tree (see <see cref="FcbMerge"/>), a
-    /// mission-layer layout by which entity belongs to which layer.
-    /// </summary>
+    /// <summary>An entity merges as a tree (see <see cref="FcbMerge"/>), a mission-layer layout by
+    /// which entity belongs to which layer.</summary>
     public (string Merged, IReadOnlyList<string> Conflicts) Merge(string fragmentId, string ancestor, string ours, string theirs)
     {
         if (!ContainerLayout.IsLayoutId(fragmentId))

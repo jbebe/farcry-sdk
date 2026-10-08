@@ -40,4 +40,12 @@ public static class Diff3
         // it was before Milestone 3 (see the no-op guarantee above), not just line-for-line equal.
         return (string.Join(Environment.NewLine, result.MergedPieces), !result.IsSuccessful);
     }
+
+    /// <summary><see cref="Merge"/> resolved by load order: a conflict yields <paramref name="theirs"/>
+    /// whole, since conflict markers are not a container and cannot be built.</summary>
+    public static (string Merged, bool HasConflict) Resolve(string ancestor, string ours, string theirs)
+    {
+        (string merged, bool conflict) = Merge(ancestor, ours, theirs);
+        return (conflict ? theirs : merged, conflict);
+    }
 }
