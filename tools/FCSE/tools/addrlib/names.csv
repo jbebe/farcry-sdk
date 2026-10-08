@@ -1,9 +1,13 @@
 steam_rva,kind,name,notes
+0x00043410,func,kRegisterComponentClassRva,CFactory<CEntityComponent>::Register
 0x0007D770,func,kTextBaseSetTextRva,
 0x00108C10,func,kBaseUpdateRva,
 0x00109410,func,kUiPageBaseInitRva,
 0x001D1990,func,kSwitchPageRva,
 0x0032D910,func,kDisplayConfigRva,
+0x004DD4F0,func,kEntityLockRva,CEntity::Lock
+0x004E12F0,func,kCreateComponentRva,CEntity::CreateComponent(CStringID const&)
+0x004E2CC0,func,kGetComponentRva,CEntity::GetComponent(CStringID const&)
 0x005E8800,func,kFileNameCtorRva,
 0x005E8CE0,func,kFileNameSetIdentifierRva,
 0x0061D3F0,func,kReaderGetFileSizeRva,
@@ -26,5 +30,6 @@ steam_rva,kind,name,notes
 0x00FD42D1,data,kEmptyStringProxyRva,
 0x00FE3178,data,kEngineSingletonRva,
 0x01606360,data,kTimeBlockRva,
+0x01644E80,data,kEntitySystemRva,CEntitySystem::ms_instance
 0x0164FCA0,data,kNoTextGlobalRva,
 0x0164FCA4,data,kYesTextGlobalRva,

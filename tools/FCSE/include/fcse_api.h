@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#define FCSE_API_VERSION 7
+#define FCSE_API_VERSION 8
 
 // Which Dunia.dll the game is running. Far Cry 2 v1.03 shipped as two different PC builds whose
 // images place the same code at different addresses, so a raw RVA is only ever true of one of them.
@@ -270,6 +270,33 @@ typedef struct FCSE_Setting {
 typedef bool (*FCSE_RegisterSettingsFn)(const char* pluginName, const FCSE_Setting* settings,
                                          size_t settingCount);
 
+// Values a plugin keeps on a game entity - the gun in the player's hands, a car, an NPC - under keys
+// of its own. They live in FCSE's entity component, CFCSEDataComponent, which the engine loads from
+// the entity's archetype data and saves with the entity, so they survive a save and reload. The
+// FCSE README shows how to author them in an entity library.
+//
+// `entity` is a CEntity*; EntityOf gives the entity of a component such as a CWeapon. Call from the
+// game thread, with an entity the engine handed you this frame. A key's CRC-32 is what is stored,
+// and all plugins share an entity's keys, so prefix yours: "MyMod.Kills". A Get fails when the key
+// is absent or holds another type. Set gives the entity the component if needed; a value set at
+// runtime overrides the data's and is saved, and Remove returns the key to the data's value.
+//
+// A value is saved only if its entity is: the player's weapons are, an untouched prop is not until
+// Persist asks the engine to keep it. Valid from FCSE_OnRegisterFunctions on; if FCSE could not
+// register its component on this build, every call fails and fcse.log says why.
+typedef struct FCSE_EntityDataAPI {
+    void* (*EntityOf)(void* component);
+    bool (*GetInt)(void* entity, const char* key, int32_t* value);
+    bool (*GetFloat)(void* entity, const char* key, float* value);
+    // Copies the string into `buffer`, cut to `capacity - 1` characters and always terminated.
+    bool (*GetString)(void* entity, const char* key, char* buffer, size_t capacity);
+    bool (*SetInt)(void* entity, const char* key, int32_t value);
+    bool (*SetFloat)(void* entity, const char* key, float value);
+    bool (*SetString)(void* entity, const char* key, const char* value);
+    bool (*Remove)(void* entity, const char* key);
+    bool (*Persist)(void* entity);
+} FCSE_EntityDataAPI;
+
 typedef struct FCSE_PluginAPI {
     uint32_t apiVersion; // Always FCSE_API_VERSION for this struct layout - compare before using
                          // any field below, in case a future loader version adds/reorders fields.
@@ -315,6 +342,9 @@ typedef struct FCSE_PluginAPI {
 
     // Tier 2: valid to call from FCSE_Load (or later).
     FCSE_MidHookFn MidHook;
+
+    // See FCSE_EntityDataAPI above. Never NULL.
+    const FCSE_EntityDataAPI* EntityData;
 } FCSE_PluginAPI;
 
 // Required export. Called once per plugin, right after FCSE.exe loads Dunia.dll and before any

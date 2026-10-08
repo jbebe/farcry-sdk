@@ -123,6 +123,20 @@ endif()
 
 gtest_discover_tests(hook_tests)
 
+# The entity-data store and the CRC-32 its keys and class id are hashed with. A hash that drifts
+# from the engine's names nothing the engine can find, and a layering mistake freezes data edits
+# into old saves - both silent until someone notices in game.
+add_executable(entity_data_tests
+  "entity_data_tests.cpp"
+)
+target_link_libraries(entity_data_tests PRIVATE fcse_core GTest::gtest_main)
+
+if (CMAKE_VERSION VERSION_GREATER 3.12)
+  set_property(TARGET entity_data_tests PROPERTY CXX_STANDARD 20)
+endif()
+
+gtest_discover_tests(entity_data_tests)
+
 # Runs the real src/lua/runtime/fcse.lua against a stubbed native table, in the very interpreter
 # this build produced - so the dialect, the FFI behaviour and the runtime under test are all the
 # ones that will ship, not an approximation of them. Not wrapped in GoogleTest: the thing under test

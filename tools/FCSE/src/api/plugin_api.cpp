@@ -1,5 +1,6 @@
 #include "api/plugin_api.h"
 
+#include "api/entity_data.h"
 #include "api/function_registry.h"
 #include "api/hook.h"
 #include "api/patch.h"
@@ -81,6 +82,7 @@ const FCSE_PluginAPI* PluginApi::Build(const BuildInfo& build) {
     api.Patch = &PatchManager::Patch;
     api.RegisterSettings = &SettingsRegistry::RegisterSettings;
     api.MidHook = &HookManager::MidHook;
+    api.EntityData = EntityDataApi::Table();
 
     return &api;
 }

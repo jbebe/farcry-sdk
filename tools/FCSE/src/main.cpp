@@ -17,6 +17,7 @@
 #include "engine/build_id.h"
 #include "engine/debug_commands.h"
 #include "engine/dunia_api.h"
+#include "engine/entity_data_component.h"
 #include "engine/splash.h"
 #include "loader_paths.h"
 #include "log.h"
@@ -39,6 +40,9 @@ namespace {
         Log::Loader("provider callback invoked by Dunia.dll - running plugin registrations, then "
                     "stock handlers");
 
+        // First, so a plugin's FCSE_OnRegisterFunctions can already use entity data, and well before
+        // any world spawns an entity that carries the component.
+        EntityDataComponent::Install();
         PluginLoader::RunOnRegisterFunctions();
         LuaHost::OnRegisterFunctions();
         DebugCommands::RegisterStockHandlers();
