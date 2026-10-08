@@ -198,6 +198,23 @@
               </object>
             </object>
           </object>
+          <object type="CFCSEDataComponent">
+            <object type="AimingOverhaul.ScopeReticle">
+              <value name="String" type="String">pso</value>
+            </object>
+            <object type="AimingOverhaul.ScopeRim">
+              <value name="Float" type="Float">0.36</value>
+            </object>
+            <object type="AimingOverhaul.ScopeLensX">
+              <value name="Float" type="Float">-0.00254</value>
+            </object>
+            <object type="AimingOverhaul.ScopeLensY">
+              <value name="Float" type="Float">-0.02073</value>
+            </object>
+            <object type="AimingOverhaul.ScopeRaise">
+              <value name="Float" type="Float">0.1819</value>
+            </object>
+          </object>
         </object>
       </object>
     </object>
