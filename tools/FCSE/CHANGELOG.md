@@ -2,6 +2,19 @@
 
 Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **Mods can keep their own values on game entities** — a count on a weapon, a flag on a car — that
+  travel with the entity through the savegame. A mod can also give an entity starting values in the
+  entity library. The values live in a new engine component, `CFCSEDataComponent`; a game without
+  FCSE skips it and still loads. C++ plugins get it as `FCSE_PluginAPI::EntityData`.
+- The example plugin keeps a draw count on every weapon the player carries, to show how.
+
+### Changed
+- Plugin ABI is now `FCSE_API_VERSION` 8: `FCSE_PluginAPI` gained `EntityData`. Existing plugins
+  need no source change but must be rebuilt.
+
 ## [1.3.0] - 2026-10-02
 
 ### Changed

@@ -130,6 +130,31 @@ A placed instance merges over its archetype child by child, pairing by tag
 instance that adds a component the archetype already has does not add a second one: it overrides the
 archetype's.
 
+## Adding a class, and what a restore does
+
+:::info[Verified via reverse engineering, and seen in a running game]
+Traced in `FarCry2_server` (`CFactory<CEntityComponent>::Register` and `CreateObject`,
+`CEntitySystem::Init`, `CXGame::Init`, `CEntity::CreateComponent`, the `Components` container's
+`Load`, `SaveState` and `LoadState`) and matched in retail `Dunia.dll`. FCSE's own component class
+exercised each point on GOG v1.03 — see [its ABI](./fcse-entity-data-abi.md).
+:::
+
+- **The factory is open.** It is a flat list of `{class id, create function}` pairs inside
+  `CEntitySystem`, searched under a lock. `Register(id, create, replace)` appends, and refuses an id
+  already there unless told to replace it. The engine fills the list once while it starts —
+  `CEntitySystem::Init` and `CXGame::Init`, both under `InitDuniaEngine` — but nothing closes it, and
+  a class registered later is created like any other.
+- **A live entity can gain a component.** `CEntity::CreateComponent(classId)` creates one through the
+  factory and attaches it with `AddAndInitComponent`. The game does this itself: a dropped gadget,
+  a Domino spawn and `CTravelDB::PreSaveEntity` all attach a `CPersistComponent` at runtime.
+- **A restore recreates what the save names.** Saving writes every component an entity has, each
+  under its class id. Restoring walks those and, for each one the freshly spawned entity lacks,
+  creates it through the factory, initialises and attaches it, then loads its saved state. A
+  component added at runtime therefore comes back after a reload.
+- **An unknown class is skipped.** An id the factory does not know creates nothing, and that entry is
+  passed over — on load from data and on restore alike. Data or a save naming a class that is not
+  registered still loads; only that component is lost.
+
 ## What a component needs
 
 No component declares a dependency. `ValidateOtherComponents` is empty on every class that has it,

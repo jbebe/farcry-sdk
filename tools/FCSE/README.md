@@ -8,9 +8,9 @@ that DLL - which works for exactly one mod at a time, since two patched copies c
 This README is for people building/maintaining the loader itself. If you just want to write a
 plugin, see [`include/fcse_api.h`](include/fcse_api.h) (the full ABI, documented inline) and
 [`example_plugin/example_plugin.cpp`](example_plugin/example_plugin.cpp) - a working mod that adds
-two toggleable rendering effects (shake the UI, and render it red-channel-only).
-[`example_script/example_script.lua`](example_script/example_script.lua) is the same mod in Lua;
-the two are written to be read side by side.
+two toggleable rendering effects (shake the UI, and render it red-channel-only) and keeps a draw
+count on every weapon. [`example_script/example_script.lua`](example_script/example_script.lua) is
+the two effects in Lua; the two are written to be read side by side.
 If you just want to install plugins into the game, see [`include/README.md`](include/README.md).
 
 ## How it works
@@ -42,8 +42,8 @@ Grouped by what a file talks to.
 | --- | --- |
 | `src/` | The entry point (`main.cpp`), and the pieces everything uses: `log`, `loader_paths`, `crash_log`, `caller_identity`, `ini_file` |
 | `src/util/` | Leaf Win32 helpers with no FCSE state - string conversion, directory walking, PE headers, embedded resources, the SEH guards and the member-pointer cast |
-| `src/engine/` | Anything that reaches into the running game: `dunia_api`, `build_id`, `address_library`, `debug_commands`, `splash`, `stock_constants` |
-| `src/api/` | What plugins and scripts both call: `plugin_api` (the struct they receive), `plugin_loader`, `hook`, `patch`, `function_registry`, `pattern_scan`, `settings_registry` |
+| `src/engine/` | Anything that reaches into the running game: `dunia_api`, `build_id`, `address_library`, `debug_commands`, `entity_data_component`, `splash`, `stock_constants` |
+| `src/api/` | What plugins and scripts both call: `plugin_api` (the struct they receive), `plugin_loader`, `hook`, `patch`, `function_registry`, `pattern_scan`, `settings_registry`, `entity_data` and its store |
 | `src/ui/` | FCSE's own settings page - see below |
 | `src/lua/` | The script host: `lua_host`, `lua_api`, `tick_source`, and `runtime/fcse.lua` |
 
@@ -79,8 +79,10 @@ testable.
    `Dunia.dll` invokes later, from inside `RunGame`, once `InitDuniaEngine` has succeeded (the only
    point at which `Dunia.dll`'s function registry is guaranteed constructed). It runs, **in this
    order**:
-   a. every loaded plugin's optional `FCSE_OnRegisterFunctions` export, then
-   b. this loader's own reimplementation of the 12 stock handlers.
+   a. the registration of FCSE's own entity component (see [Entity data](#entity-data)), so it is
+      in the engine's factory before any plugin can use it and before any world loads, then
+   b. every loaded plugin's optional `FCSE_OnRegisterFunctions` export, then
+   c. this loader's own reimplementation of the 12 stock handlers.
 
    The order matters: `FunctionRegistry_Insert` (confirmed via live decompile, `0x10299430`) is a
    find-first insert - the *first* registrant for a name wins, a second registration of an
@@ -125,6 +127,9 @@ See `include/fcse_api.h` for the authoritative, documented ABI. Summary, from "n
 4. **`RegisterSettings(pluginName, settings, count)`** - persistent, player-editable settings, both
    in `bin\fcse.ini` and as rows in the in-game Mod Configuration Menu. Zero address knowledge
    needed. See below.
+
+Alongside the tiers, **`EntityData`** keeps a plugin's own values on game entities, loaded from the
+entity library and carried through savegames - see [Entity data](#entity-data).
 
 ### Settings and `bin\fcse.ini`
 
@@ -201,6 +206,51 @@ underneath), so a plugin built against 5 must be rebuilt too. `FCSE_API_VERSION`
 `FCSE_SettingFlag_Hidden` keeps it off the page entirely. Both leave the value in `fcse.ini` and
 still deliver it through `onChanged` - they change the menu and nothing else. Prefer `Disabled`
 where either would do, since a row the player can see but not change says something is holding it.
+
+### Entity data
+
+`api->EntityData` lets a plugin keep values of its own on a game entity - the gun in the player's
+hands, a car, an NPC. The values live in an entity component FCSE registers with the engine,
+`CFCSEDataComponent`, so the engine handles them as it handles its own properties: it loads them
+from the entity's archetype, saves the ones a plugin sets with the entity, and restores them when the
+save is loaded.
+
+```c
+const FCSE_EntityDataAPI* data = api->EntityData;
+void* entity = data->EntityOf(weapon);           // any component -> its CEntity
+int32_t kills = 0;
+data->GetInt(entity, "MyMod.Kills", &kills);     // false if absent
+data->SetInt(entity, "MyMod.Kills", kills + 1);  // adds the component if the entity has none
+```
+
+Values are `int32_t`, `float` or strings, under keys whose CRC-32 is what is stored. All plugins
+share an entity's keys, so prefix yours. Call from the game thread, with an entity the engine handed
+you this frame.
+
+A mod can also author values in data, in the archetype's `Components` in an entity-library fragment
+of a JackAll layer - the example plugin's test gave the Makarov a nickname this way:
+
+```xml
+<object type="CFCSEDataComponent">
+  <object type="example_plugin.Nickname">
+    <value name="String" type="String">Old Faithful</value>
+  </object>
+</object>
+```
+
+Each key is a child named after it, holding one `Int` (`Int32`), `Float` or `String` value. A value
+set at runtime overrides the authored one and is the only one saved, so a later data edit still
+reaches entities in an old save; `Remove` drops the runtime value again. A value is saved only if its
+entity is - the player's weapons are, an untouched prop is not - and `Persist(entity)` asks the
+engine to keep an entity as it does the ones it carries between worlds. That last call has not been
+tried in game yet.
+
+Without FCSE, data and saves naming the component still load: the engine skips a component class it
+does not know, so only these values are lost. The engine side is in
+[`docs/docs/engine-internals/fcse-entity-data-abi.md`](../../docs/docs/engine-internals/fcse-entity-data-abi.md).
+Lua scripts have no entity data yet.
+
+`FCSE_API_VERSION` 8 appended `EntityData`, so a plugin built against 7 must be rebuilt.
 
 ### Conflict handling
 
