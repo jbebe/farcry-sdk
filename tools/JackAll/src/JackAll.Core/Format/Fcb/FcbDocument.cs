@@ -18,13 +18,10 @@ namespace JackAll.Core.Format.Fcb;
 /// 0x10234260 - see reverse/dunia/fcb_format.md) via GhidraMCP, not just inferred from the community
 /// tool (JackAll.Tests/FcbDocumentTests.cs).
 ///
-/// Wire format: "FCbn"(4) + version=2(u16) + flags(u16, only bit 0 meaningful) + totalObjectCount(u32)
-/// + totalValueCount(u32), then the root <see cref="FcbObject"/> tree. The two counts are written on
-/// output but not relied on when reading: <c>totalObjectCount</c> does match the number of distinct
-/// (backreference-deduplicated) objects exactly, confirmed against 5 real shipped .fcb files, but
-/// <c>totalValueCount</c> does not match a simple "value slots across the unique object graph" tally
-/// against those same files and what it precisely counts is still unresolved (see fcb_format.md) -
-/// harmless to this class either way, since nothing here depends on it.
+/// Wire format: "FCbn"(4) + version=2(u16) + flags(u16, only bit 0 meaningful) + objectCount(u32)
+/// + childSlotCount(u32), then the root <see cref="FcbObject"/> tree. objectCount is every distinct
+/// object including the root, childSlotCount every child-list entry including backreferences. The
+/// engine sizes its object pool from both, so a writer must get them right; this reader ignores them.
 ///
 /// flags bit 0, when set, changes how TypeHash is read (confirmed in Fcb_ReadTypeHash): the leading
 /// u32 becomes a fallback raw hash (used only if the string below turns out too long to hash), then a
@@ -145,22 +142,22 @@ public static class FcbDocument
                 "not a plain hash - not implemented (no real sample has been seen using it).");
         }
 
-        ReadU32(input); // totalObjectCount - informational only
-        ReadU32(input); // totalValueCount  - informational only
+        ReadU32(input); // objectCount - the engine sizes its object pool from these two
+        ReadU32(input); // childSlotCount
     }
 
     public static byte[] Serialize(FcbObject root)
     {
         using var body = new MemoryStream();
-        uint totalObjectCount = 0, totalValueCount = 0;
-        SerializeObject(root, body, ref totalObjectCount, ref totalValueCount);
+        uint objectCount = 0, childSlotCount = 0;
+        SerializeObject(root, body, ref objectCount, ref childSlotCount);
 
         using var output = new MemoryStream();
         WriteU32(output, Signature);
         WriteU16(output, SupportedVersion);
         WriteU16(output, 0);
-        WriteU32(output, totalObjectCount);
-        WriteU32(output, totalValueCount);
+        WriteU32(output, objectCount);
+        WriteU32(output, childSlotCount);
         body.Position = 0;
         body.CopyTo(output);
         return output.ToArray();
@@ -233,10 +230,10 @@ public static class FcbDocument
     }
 
     private static void SerializeObject(
-        FcbObject obj, Stream output, ref uint totalObjectCount, ref uint totalValueCount)
+        FcbObject obj, Stream output, ref uint objectCount, ref uint childSlotCount)
     {
-        totalObjectCount += (uint)obj.Children.Count;
-        totalValueCount += (uint)obj.Values.Count;
+        objectCount++;
+        childSlotCount += (uint)obj.Children.Count;
 
         WriteCount(output, (uint)obj.Children.Count, isOffset: false);
         WriteU32(output, obj.TypeHash);
@@ -251,7 +248,7 @@ public static class FcbDocument
 
         foreach (FcbObject child in obj.Children)
         {
-            SerializeObject(child, output, ref totalObjectCount, ref totalValueCount);
+            SerializeObject(child, output, ref objectCount, ref childSlotCount);
         }
     }
 

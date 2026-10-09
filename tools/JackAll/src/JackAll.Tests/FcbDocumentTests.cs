@@ -47,19 +47,20 @@ public class FcbDocumentTests
     }
 
     /// <summary>
-    /// The strongest correctness signal available without a spec: the header's totalObjectCount
-    /// field, written by whatever compiler produced the real shipped file, counts distinct
-    /// (backreference-deduplicated) objects - if this class's object-level backreference handling
-    /// were wrong in any way, walking the parsed tree by reference identity would not land on the
-    /// same number the file itself claims.
+    /// The strongest correctness signal available without a spec: the header's two counts, written
+    /// by whatever compiler produced the real shipped file, are the distinct (backreference-
+    /// deduplicated) objects and their child slots - if this class's object-level backreference
+    /// handling were wrong in any way, walking the parsed tree by reference identity would not land
+    /// on the numbers the file itself claims.
     /// </summary>
     [Theory]
     [MemberData(nameof(EntityLibraries))]
-    public void The_headers_object_count_matches_the_number_of_distinct_parsed_objects(string fixture)
+    public void The_headers_counts_match_the_distinct_parsed_objects_and_their_child_slots(string fixture)
     {
         if (Fixture.Read(fixture) is not { } data) return;
 
         uint headerObjectCount = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(8, 4));
+        uint headerChildSlotCount = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(12, 4));
 
         FcbObject root = FcbDocument.Deserialize(data);
 
@@ -67,6 +68,23 @@ public class FcbDocumentTests
         int uniqueObjectCount = CountUniqueObjects(root, visited);
 
         Assert.Equal((int)headerObjectCount, uniqueObjectCount);
+        Assert.Equal((int)headerChildSlotCount, visited.Sum(o => o.Children.Count));
+    }
+
+    [Fact]
+    public void Serialize_writes_the_object_count_with_the_root_and_the_child_slot_count()
+    {
+        var shared = new FcbObject { TypeHash = 3 };
+        var root = new FcbObject { TypeHash = 1 };
+        root.Children.Add(new FcbObject { TypeHash = 2 });
+        root.Children[0].Children.Add(shared);
+        root.Children.Add(shared);
+
+        byte[] data = FcbDocument.Serialize(root);
+
+        // The writer expands the shared object, so it lands twice: 4 objects, 3 child slots.
+        Assert.Equal(4u, BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(8, 4)));
+        Assert.Equal(3u, BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(12, 4)));
     }
 
     [Theory]
@@ -269,8 +287,8 @@ public class FcbDocumentTests
         WriteU32(output, 0x4643626Eu); // "FCbn"
         WriteU16(output, 2);
         WriteU16(output, 0);
-        WriteU32(output, 0); // totalObjectCount - not consulted on read
-        WriteU32(output, 0); // totalValueCount  - not consulted on read
+        WriteU32(output, 0); // objectCount - not consulted on read
+        WriteU32(output, 0); // childSlotCount
         output.Write(rootBytes);
         return output.ToArray();
     }

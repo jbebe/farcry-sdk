@@ -112,13 +112,8 @@ public static class SaveGameDocument
     /// is acceptable.
     /// </summary>
     /// <remarks>
-    /// <see cref="FcbDocument.Serialize"/> is a generic, already-production-proven `.fcb` writer (see
-    /// its own remarks) - reused as-is here, no savegame-specific binary work needed, since the embedded
-    /// blob is a plain, ordinary `.fcb` (see reverse/dunia/savegame_format.md). Its two header count
-    /// fields (`totalObjectCount`/`totalValueCount`) won't necessarily match what the original save's
-    /// own writer put there - both are read-side "informational only" per <see cref="FcbDocument"/>'s
-    /// own remarks (confirmed against the real engine's header reader, not just this reader), so a
-    /// mismatch there is expected and harmless, not a sign of corruption.
+    /// The embedded blob is a plain `.fcb`, so <see cref="FcbDocument.Serialize"/> writes it, header
+    /// counts included.
     /// </remarks>
     public static void WriteFcbRoot(SaveGameInfo info, FcbObject root, string destPath)
     {

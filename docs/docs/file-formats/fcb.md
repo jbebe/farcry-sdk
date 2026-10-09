@@ -32,8 +32,8 @@ offset  size  field
 0       4     magic (u32) — must equal 0x4643626E ("FCbn" LE)
 4       2     version (u16) — must equal 2, no other value accepted
 6       2     flags (u16) — only bit 0 is read; everything else ignored
-8       4     totalObjectCount (u32)
-12      4     totalValueCount (u32)
+8       4     objectCount (u32) — every distinct object, the root included
+12      4     childSlotCount (u32) — every child-list entry, backreferences included
 16      —     root object tree starts here
 ```
 
@@ -81,21 +81,18 @@ mishandling a file that needs it.
 
 ## `Fcb_AllocateTree` — pool sizing
 
-Allocates `(totalObjectCount * 6 + totalValueCount) * 4` bytes up front. The `*6` term is the 24-byte
-fixed object struct; the `totalValueCount` term is consumed only as each object's trailing
+Allocates `(objectCount * 6 + childSlotCount) * 4` bytes up front. The `*6` term is the 24-byte
+fixed object struct; the `childSlotCount` term is consumed only as each object's trailing
 child-pointer-slot array (`childCount` dwords per object) — never as storage for primitive value bytes
-(values are read from the retained raw file buffer, not copied into this pool). This is the strongest
-lead on what `totalValueCount` counts: at the pool-usage level it behaves like "total child-link slots
-across the tree," not "total named-field values" the way the community's tooling uses the term.
+(values are read from the retained raw file buffer, not copied into this pool).
 
-Cross-checked against 5 real shipped files (`patch_entitylibrary.fcb`,
-`patch_entitylibrarypatchoverride.fcb`, `worlds_entitylibrary.fcb`, `dlc1_entitylibrary.fcb`,
-`dlc_jungle_entitylibrary.fcb`): `totalObjectCount` matches JackAll's own unique-object count exactly in
-all 5 — strong confirmation the backreference handling is correct. `totalValueCount` does not match a
-naive "value slots across the unique object graph" tally in any of them (consistently ~3x lower) —
-consistent with it counting something narrower than "every named field," though not independently
-proven beyond the pool-usage argument. This has no bearing on correctness — nothing in `FcbDocument.cs`
-depends on this field's precise meaning; it's written on output purely for structural completeness.
+The two counts are exactly the distinct objects, the root included, and the sum of every object's
+`childCount`, backreference slots included — in all 12 shipped files checked (entity libraries,
+`omnis`, `mapsdata`, `managers`, world sectors and a landmark) **(seen in data)**. So for a file with no
+backreferences, `childSlotCount` is `objectCount − 1`.
+
+A writer must get both right: the pool is sized from them, and a count too small leaves the parser
+writing past it.
 
 ## Member names and their `text_` twins
 
@@ -124,8 +121,5 @@ left unnamed, it names 218 with no ambiguous candidate. The one string it does n
 
 ## Unknowns
 
-- The exact original semantics of `totalValueCount` — would need either a real sample with a nonzero
-  count-to-childslot mismatch to falsify the current hypothesis, or the original offline compiler
-  (`.fcb` compilation happens in an external build tool, not the shipped game).
 - A real `.fcb` sample with flags bit 0 set (the string-hashed TypeHash path) — none is known, so
   `Fcb_ReadTypeHash`'s alternate branch is understood from static analysis only.
