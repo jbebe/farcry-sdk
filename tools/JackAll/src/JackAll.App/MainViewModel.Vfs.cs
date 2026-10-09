@@ -239,6 +239,26 @@ public sealed partial class MainViewModel
         Reindex();
     }
 
+    /// <summary>
+    /// Stages an edited Magma package as the fragments that differ from what the game loads now, so
+    /// it merges with other mods' HUD and menu edits; whole when the edit reaches outside every fragment.
+    /// </summary>
+    public void StageMgb(VfsFile file, byte[] edited)
+    {
+        MgbContainerSplitter splitter = MgbContainerSplitter.Instance;
+        IContainerTree current = splitter.Open(Read(file));
+        IContainerTree mine = splitter.Open(edited);
+        if (!FragmentDiff.IsExpressible(mine, current))
+        {
+            Replace(file, edited);
+            return;
+        }
+
+        IContainerTree? original = ReadOriginal(file) is { } bytes ? splitter.Open(bytes) : null;
+        StageFragments(file, FragmentDiff.Changed(mine, current, mine.List().Select(r => r.Id))
+            .Select(c => (c.Id, c.Xml, original?.Extract(c.Id) == c.Xml)));
+    }
+
     private void StageFragmentsOf(VfsFile container, IEnumerable<(string Id, string Xml, bool IsVanilla)> fragments)
     {
         FolderModLayer workspace = Workspace!;

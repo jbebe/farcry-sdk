@@ -1,3 +1,5 @@
+using JackAll.Core.Format.Fcb;
+
 namespace JackAll.Core.Mods;
 
 /// <summary>One fragment whose text differs from the container it is compared against.</summary>
@@ -30,5 +32,16 @@ public static class FragmentDiff
         }
 
         return changed;
+    }
+
+    /// <summary>
+    /// Whether fragments can carry everything <paramref name="mine"/> changes from
+    /// <paramref name="baseline"/>: false when it removes a fragment or changes what lies around them,
+    /// or the format does not compare by shape.
+    /// </summary>
+    public static bool IsExpressible(IContainerTree mine, IContainerTree baseline)
+    {
+        HashSet<string> shared = new(baseline.List().Select(r => r.Id), FcbFragments.IdComparer);
+        return mine.Skeleton(shared.Contains) is { } shape && shape == baseline.Skeleton(shared.Contains);
     }
 }

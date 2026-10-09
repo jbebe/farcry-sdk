@@ -245,7 +245,7 @@ public partial class MainWindow
 
     /// <summary>The Files tab's "Open in MGB Editor…" launcher. Unlike the fragment and save editors
     /// there's no XML in between: <see cref="MgbTabView"/> edits the decoded package model directly and
-    /// its own Save reserialises it straight into the workspace via <see cref="MainViewModel.Replace"/>.</summary>
+    /// its own Save reserialises it into the workspace via <see cref="MainViewModel.StageMgb"/>.</summary>
     private void OpenMgbEditorTab(VfsFile file)
         => OpenOrFocusEditorTab(_openMgbEditors, file.Hash, onRemoved =>
         {
@@ -260,7 +260,13 @@ public partial class MainWindow
                 return null;
             }
 
-            var view = new MgbTabView(file.FileName, content, bytes => ReplaceGuarded(file, bytes), _vm.ReadByPath);
+            var view = new MgbTabView(file.FileName, content, bytes =>
+            {
+                if (ConfirmUnusedEdit(file))
+                {
+                    _vm.StageMgb(file, bytes);
+                }
+            }, _vm.ReadByPath);
             var tab = new TabItem { Content = view };
             MakeClosable(tab, view.Title, () => CloseMgbEditorTab(tab, view, onRemoved));
             view.DirtyChanged += () => ItemState.SetIsChanged(tab, view.IsDirty);

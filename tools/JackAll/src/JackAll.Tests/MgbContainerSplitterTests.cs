@@ -164,6 +164,24 @@ public class MgbContainerSplitterTests : IDisposable
         Assert.Equal(exports, Splitter.Open(built).Extract("_exports.xml"));
     }
 
+    /// <summary>An added area and raised pool counts fit in fragments; a new page size does not.</summary>
+    [Fact]
+    public void Only_a_change_inside_the_fragments_is_expressible()
+    {
+        if (Fixture.Read(Controller) is not { } controller) return;
+
+        MgbPackage package = MgbPackage.Read(controller);
+        MgbArea added = MgbPackage.Read(controller).Areas[0];
+        added.UserData.NameId = MgbTypeTable.Hash("a_added");
+        package.Areas.Add(added);
+        package.PoolCounts[0]++;
+        IContainerTree vanilla = Splitter.Open(controller);
+
+        Assert.True(FragmentDiff.IsExpressible(Splitter.Open(package.Write()), vanilla));
+        package.PageWidth++;
+        Assert.False(FragmentDiff.IsExpressible(Splitter.Open(package.Write()), vanilla));
+    }
+
     [Fact]
     public void A_fragment_filed_under_the_wrong_area_is_refused()
     {

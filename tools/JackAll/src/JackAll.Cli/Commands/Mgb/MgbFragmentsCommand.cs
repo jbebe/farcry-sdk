@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using JackAll.Cli.Infrastructure;
-using JackAll.Core.Format.Fcb;
 using JackAll.Core.Format.Mgb;
 using JackAll.Core.Mods;
 using Spectre.Console;
@@ -51,16 +50,12 @@ public sealed class MgbFragmentsCommand : CliCommand<MgbFragmentsCommand.Setting
             ? null
             : splitter.Open(CliIO.ReadInput(settings.Base), names.Names);
 
-        if (vanilla is not null)
+        if (vanilla is not null && !FragmentDiff.IsExpressible(mine, vanilla))
         {
-            HashSet<string> shared = new(vanilla.List().Select(r => r.Id), FcbFragments.IdComparer);
-            if (mine.Skeleton(shared.Contains) != vanilla.Skeleton(shared.Contains))
-            {
-                AnsiConsole.MarkupLine(
-                    "[red]This package changes something outside every area and list - the header, the "
-                    + "type table or the fonts - which no fragment carries. Ship the whole package.[/]");
-                return 1;
-            }
+            AnsiConsole.MarkupLine(
+                "[red]This package removes an area or list, or changes something outside them - the "
+                + "header, the type table or the fonts - which no fragment carries. Ship the whole package.[/]");
+            return 1;
         }
 
         return FragmentExport.Run(mine, vanilla, settings.Input, settings.Out, settings.List,
