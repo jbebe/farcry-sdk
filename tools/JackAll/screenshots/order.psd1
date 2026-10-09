@@ -24,5 +24,6 @@
         'missions'
         'animations'
         'ai'
+        'legacy-import'
     )
 }
