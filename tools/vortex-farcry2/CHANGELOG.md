@@ -19,6 +19,8 @@ Notable changes to the Vortex Far Cry 2 extension, loosely following
   installed before its files are built into `patch.dat`; the game now starts once that is done.
 - **Mods that add controls combine.** A mod can ship just the controls category and action map it
   adds to, and two mods adding to the same one both keep theirs.
+- **Mods that change the HUD or menus combine.** A mod can ship just the parts of a `.mgb` it
+  changes, and two mods adding to the HUD both keep theirs.
 - **Mods that add to the same entry combine.** Two mods adding components or FCSE entity data to one
   archetype, event links to one entity, dependencies to one level package, or edits to different
   parts of one animation state both keep theirs. Only two mods giving the same field different

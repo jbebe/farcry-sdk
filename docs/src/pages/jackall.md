@@ -190,7 +190,7 @@ game actually ships. The format notes are under [File Formats](/docs/category/fi
 | `.fat` / `.dat` | The archive pair, LZO compressed, indexed by hash | Reads every entry, rebuilds `patch.dat`/`patch.fat`. Every shipped `.fat` comes back byte for byte identical |
 | `.fcb` | Binary object trees: entities, weapons, AI, world sectors | Decodes and encodes, splits into one piece per entity, property tree editor, merges edits coming from different mods |
 | `.rml` | Binary XML, used for manifests and the translated text table | Decodes and encodes, text editor with a diff against the original |
-| `.mgb` (+ `.mgb.desc`) | Magma UI packages: menus and HUD | Full decode and encode plus a real editor. `verify` checks that a package only uses names it declares |
+| `.mgb` (+ `.mgb.desc`) | Magma UI packages: menus and HUD | Full decode and encode plus a real editor, splits into one piece per area, merges edits coming from different mods. `verify` checks that a package only uses names it declares |
 | `.xbt` (+ `.dds`) | Textures, block compressed, with a streaming header | Splits and rebuilds, decodes BCn to pixels for previews and model packs, encodes back with the same compression |
 | `.xbm` | Materials: shader, texture slots, parameters | Fully decoded and shown, written back through a model pack |
 | `.xbg` (+ `.xbgmip`) | Models, with LODs, damage states and skinning | Decodes and encodes, 3D preview, `.obj` export, editable through a model pack |
@@ -287,7 +287,7 @@ jackall-cli mod build --game "C:\Games\Far Cry 2" --layer mods\bettersights --la
 | `archive extract <file.fat> [--names] [--filter <s>]` | Unpacks and decompresses an archive. `--names` turns hashes back into real paths |
 | `fcb decode` / `fcb encode` | An `.fcb` object tree to XML and back |
 | `rml decode` / `rml encode` | A binary `.rml` to plain XML and back |
-| `mgb decode` / `mgb encode` / `mgb verify` | A Magma UI package to editable XML and back. `verify` checks it only uses names it declares |
+| `mgb decode` / `mgb encode` / `mgb verify` / `mgb fragments` | A Magma UI package to editable XML and back. `verify` checks it only uses names it declares, `fragments` writes the parts that differ from retail for a mod to ship |
 | `xbt extract` / `xbt build` | Splits an `.xbt` into `.dds` plus header XML, and puts it back together |
 | `xbg export <mesh.xbg>` | Converts a model's geometry to a Wavefront `.obj` |
 | `fc2model export` / `extract` / `inspect` | Builds a model pack, writes a changed pack back out as game files laid out as a mod layer, or lists what's in a pack |

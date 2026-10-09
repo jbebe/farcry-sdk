@@ -283,9 +283,9 @@ The whole file body, in order. Everything past the last line is in-memory post-p
 
 ```
 [260 bytes]  65 × 4-byte reads — per-type instance counts feeding the Allocate*PoolChunk family.
-             Pure memory-pool pre-reservation; no effect on any later offset. Retail counts
-             match what the package holds, and a load that needs more crashes in the pool
-             allocator, so an edited retail package must raise them.
+             Pure memory-pool pre-reservation; no effect on any later offset. Each counts one
+             kind of object the package holds (see Pool counts below), and a load that needs
+             more crashes in the pool allocator, so an edited retail package must raise them.
 [variable]   UserData        — the Package's own property list (record format below).
 [4 bytes]    PAGESIZE        — u16 width, u16 height
 [4 bytes]    DISPLAYOFFSET   — u16 x, u16 y
@@ -331,6 +331,34 @@ rather than the type table, so no type byte identifies them. Slot `+0x18` is
 
 Both are commonly empty (`count == 0`, 8 bytes). `options.mgb`'s string
 table holds one entry, the string `"0123456789"`; its generic-object table holds 16 objects.
+
+### Pool counts
+
+Each of the 65 counts is how many objects of one kind the package holds. Counted this way, the
+table below reproduces the block of **all 570 retail packages that set one**; the other 20 are all
+zero. Element names are the [XML interchange format](#the-xml-interchange-format)'s.
+**(measured over the retail corpus, 2026-10-09)**
+
+| Pool | Counts |
+|---|---|
+| 0–4 | Top-level areas of class `Area`, `Page`, `Button`, `CheckBox`, `Cursor` |
+| 5, 6 | Elements whose wrapper is `Element`, `Focusable` |
+| 7, 29 | `CheckBoxInstance` elements |
+| 11, 12, 13, 15, 16 | `ScaleState`, `RectState`, `TextState`, `ImageState`, `RectShapeState`: one per keyframe, plus one per element whose widget uses that state |
+| 17, 18, 20–24 | `Image`, `Text`, `RectShape`, `EditBox`, `ListBox`, `Slider`, `Placeholder` elements |
+| 26, 28 | `AreaInstance`, `ButtonInstance` elements |
+| 31 | Keyframes |
+| 49 | String-table strings |
+| 50, 51 | `PageInstance` elements |
+| 52 | `UserData` records holding at least one property |
+| 53 | Properties of a link type (`0x11`, `0x12`, `0x15`) |
+| 54 | Properties |
+| 55, 58–63 | Action executers of class `ActionExecuter`, `…Focusable`, `…Page`, `…Editbox`, `…Listbox`, `…PageInstance`, `…Slider` |
+| 64 | Entries of the executers' event tables |
+
+The pairs 7/29 and 50/51 are equal in every package, so which of each pair counts the widget and
+which its wrapper is not separated. The other 27 pools are zero in every retail package, and what
+they count is not known.
 
 ## Shared records
 
@@ -657,6 +685,49 @@ is written as `0x…`; string bytes that can't survive an XML attribute become `
 absent optional is an omitted attribute, never an empty one, because `null` and present-with-zero are
 different bytes. Reading is strict — a misspelled attribute or an undefined element is an error
 naming the offender, rather than the silent degradation Magma's own XML loader does.
+
+### Splitting a package for mods
+
+A mod that ships a whole package is a whole-file override, and those are **last-wins and silent**.
+The HUD is one `hud.mgb` per aspect and language that every HUD mod has to change, so two of them
+could not coexist. JackAll splits a package into fragments the way it splits
+[MOVE graphs](./move.md#splitting-a-graph-for-mods), staged under the same
+`<container>.<ext>\<fragmentId>` convention:
+
+| Fragment | Holds |
+|---|---|
+| `<name>.<hash>.xml` | One top-level area with its elements, keyframes and actions |
+| `_materials.xml` | The material list |
+| `_strings.xml` | The string table |
+| `_exports.xml` | The `GENERICOBJECTTABLE` |
+
+The number is the area's name hash in decimal and is what binds; the label is the name, when the
+package spells one. A fragment is written in the XML interchange format. The header, the type table,
+the fonts and the package's own `USERDATA` are in no fragment, so a mod that changes them still
+ships the whole package.
+
+Names are unique in every scope a merge pairs by, across all 590 retail packages: areas in a
+package, elements in an area, keyframes in an element, materials, exports and strings. A merge
+therefore matches children by name. Two mods each adding an element to one page both keep it, and
+only two mods giving one field different values conflict. An action executer merges whole, because
+its event table indexes its actions by position.
+
+Two header fields are derived when a build applies fragments, so no fragment carries them. The
+[pool counts](#pool-counts) become what the built package holds, never lower than they were, and
+`materialExtra` becomes the distinct texture count again when the material list changed. A package
+built with exact counts has **not been loaded in game yet**; retail's own packages carry exact
+counts, and the one edited package that has loaded carried 64 more in every pool.
+
+The Flashlight's HUD icon is 4 fragments per variant, 35 KB of XML in place of a 191 KB binary, and
+a build from them gives the package it used to ship whole, apart from the pool counts.
+
+```
+jackall-cli mgb fragments hud.xml --base <retail>\hud.mgb --out layer\mods\ui\localized\pc\eng\ui\hud.mgb
+```
+
+The input may be the XML the package is built from, so the names it declares label the fragments.
+The command refuses a package that changes anything outside them. JackAll's package editor saves the
+same way.
 
 ## Class hierarchy and load flow
 

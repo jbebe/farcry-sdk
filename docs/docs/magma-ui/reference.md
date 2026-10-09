@@ -42,7 +42,7 @@ unless marked optional, including the empty ones.
 | `sentinel` | `CD0000AB`. Only the last byte is checked; a different value flips the reader to big-endian. |
 | `version` | `2010000` exactly. Any other value fails the load with error 5. |
 | `flag` | Header byte 13. `false` everywhere in the corpus; purpose unknown. |
-| `POOLCOUNTS` | 65 space-separated `u32` memory-pool hints. All-zero is safe for a new package. Counts below what a package holds crash its load, so raise them when adding to a retail one. |
+| `POOLCOUNTS` | 65 space-separated `u32` memory-pool hints, [each the number of one kind of object](../file-formats/mgb.md#pool-counts). All-zero is safe for a new package. Counts below what a package holds crash its load, so raise them when adding to a retail one. |
 | `PAGESIZE.w/h` | The design canvas. `1280×800` in 49/50 shipped packages (`fonts.mgb` is `1280×720`); the 4:3 `pc` set uses `1024×768`. |
 | `DISPLAYOFFSET.x/y` | `160 40` on the widescreen set, `32 24` on 4:3. |
 | `DEFAULTMATERIAL` | Usually empty. |

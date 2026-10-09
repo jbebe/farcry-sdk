@@ -430,3 +430,28 @@ Sections nobody overrides keep their own formatting; only a self-closing tag's s
 
 Measured on the Flashlight: two whole-file overrides, 4.8 KB and 42.9 KB, become one 0.8 KB category and
 one 1.7 KB action map.
+
+## Reopened: `.mgb` splits per area
+
+`.mgb` was rejected above among the small files. Most are: the median package is 8.5 KB. But the HUD
+is one `hud.mgb` per aspect and language, 191 KB each, and every mod that adds to the HUD has to
+change it, so the Flashlight's icon and the next HUD mod's change cannot both ship whole. That is the
+conflict-merge argument again, as for `WorldSector` and the control files.
+
+| | measured over the 590 shipped packages |
+|---|---|
+| sizes | median 8.5 KB, max 191 KB (`hud.mgb`) |
+| unit | a top-level area: 12,042 of them, median 8.9 KB as XML, p90 19 KB, max 141 KB |
+| identity | the area's name hash, unique in every package; so are elements within an area, keyframes within an element, materials, exports and strings |
+| depth | stop at the area. The HUD page a HUD mod adds to is 14 KB, and a merge pairs its elements by name |
+
+Three package-level lists are a fragment each under reserved ids, `_materials.xml`, `_strings.xml`
+and `_exports.xml`, merged entry by entry. The header, type table and fonts stay with the base file.
+
+Two header fields are counts of the content, so no fragment states them and the build derives them:
+the 65 pool counts, which a census reproduces in all 570 retail packages that set them, and the
+distinct-texture count beside the material list. Without that, every mod adding to one package
+would have to state its own pool counts, and two of them would conflict on numbers neither chose.
+
+Measured on the Flashlight: ten whole `hud.mgb` overrides of 191 KB become four fragments per
+variant, 35 KB of XML.

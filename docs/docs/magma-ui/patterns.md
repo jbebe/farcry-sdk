@@ -337,6 +337,12 @@ sets place the groups differently, so take the new instance's position from the 
 **Raise `POOLCOUNTS`.** A retail package's pool counts match what it holds, and adding objects past
 them crashes the load in Magma's memory-pool allocator, reading through a null free list
 **(crashed, 2026-10-02)**. Adding 64 to every count, the floor FCSE's own package uses, loads.
+Shipped as fragments (below), it need not: the build raises each count to what the package holds.
+
+**Ship the changed parts, not the package.** `jackall-cli mgb fragments` writes only the areas and
+lists the edit changed - here the page, the new group's area, the materials and the exports - as
+[fragments](../file-formats/mgb.md#splitting-a-package-for-mods), so another mod adding to the HUD
+merges with the icon instead of replacing it.
 
 **The texture.** A material's `texture="\textures\hud\x.png"` resolves to `ui\textures\hud\x.xbt`.
 The stock HUD icons are single-level DXT5, so pad art to a power of two and crop back with the
