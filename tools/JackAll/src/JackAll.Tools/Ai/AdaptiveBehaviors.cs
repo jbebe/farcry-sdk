@@ -17,18 +17,20 @@ public static partial class AdaptiveBehaviors
 
     public const int Levels = 28;
 
+    private const string Unread = "Read by no shipped brain - editing it changes nothing.";
+
     /// <summary>What each behaviour gates, as far as it is known.</summary>
     public static IReadOnlyDictionary<string, string> Descriptions { get; } = new Dictionary<string, string>
     {
-        ["Grenade"] = "Throws a grenade at the player in the open.",
-        ["GrenadeAndBuilding"] = "Throws a grenade into the building the player hides in.",
-        ["ChaseWithVehicle"] = "Chases the player by car after he drives through a checkpoint.",
-        ["ReachSniperWithVehicle"] = "Drives towards a player who snipes from far away.",
+        ["Grenade"] = Unread,
+        ["GrenadeAndBuilding"] = Unread,
+        ["ChaseWithVehicle"] = "Takes a vehicle after a target who is in one.",
+        ["ReachSniperWithVehicle"] = "Takes a vehicle to escape a mortar, or to reach the player as an alerted sniper.",
         ["MountedWeapon"] = "Mans a mounted gun.",
-        ["ShootFlare"] = "Fires a flare to call reinforcements.",
+        ["ShootFlare"] = Unread,
         ["ShootInterestingObject"] = "Shoots explosive barrels and similar objects near the player.",
-        ["RescueVictim"] = "Drags a wounded friend to cover and heals him.",
-        ["RangeWeapon"] = "Mortar crews fire a ranging smoke shell before the explosive one.",
+        ["RescueVictim"] = Unread,
+        ["RangeWeapon"] = Unread,
         ["VehicleChaseLevel2"] = "Vehicle chase, second escalation.",
         ["VehicleChaseLevel3"] = "Vehicle chase, third escalation.",
         ["LongRangeVehicle"] = "Engages from vehicles at long range.",

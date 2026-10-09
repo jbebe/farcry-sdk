@@ -58,7 +58,7 @@
                     <DockPanel Grid.Column="0">
                         <TextBlock DockPanel.Dock="Top" Text="Curves" Style="{StaticResource PanelTitle}" />
                         <TextBlock DockPanel.Dock="Top" Style="{StaticResource Note}" Margin="0,2,0,8"
-                                   Text="The curves weapon properties name. DistanceAccuracy_* is a weapon's hit-chance factor against distance in metres; GroupNumber the factor against how many soldiers already shoot at the same target." />
+                                   Text="The curves weapon properties name. DistanceAccuracy is the hit-chance factor against distance in metres that every weapon but the mounted M249 shares; the DistanceAccuracy_* per-weapon curves are named by no weapon. GroupNumber is the factor against how many soldiers already shoot at the same target." />
                         <TextBox DockPanel.Dock="Top" Style="{StaticResource SearchBox}" Margin="0,0,0,6" Tag="Filter by name"
                                  Text="{Binding Curves.Filter, UpdateSourceTrigger=PropertyChanged}"
                                  AutomationProperties.AutomationId="AiCurveFilter" />
