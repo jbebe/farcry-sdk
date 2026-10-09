@@ -92,8 +92,8 @@ is only compared against `"playback"` to decide whether `-benchmarkinputname` ma
 | `-editorpc` | Remote-editor/PC connection mode — routes into `Process`'s editorpc branch (`FUN_10661b40`, not further explored) |
 | `-xpos <n>` / `-ypos <n>` | Window position (only read when not `-host`/`-client`) |
 | `-host` / `-client` | Presence checked here to build a window-title suffix; real network handling happens later in `DispatchNetworkMode` |
-| `-d3dmts` | Sets a D3D multithread-safety flag (`DAT_10f92043 = 1`) |
-| `-3dplatform <d3d10a\|d3d10\|d3d9>` | Forces the render backend. The three accepted value strings sit next to the flag at `0x10e09d1c`–`0x10e09d3c` |
+| `-d3dmts` | Creates the D3D9 device with `D3DCREATE_MULTITHREADED`. It reads the token after it as a value, so as the last token it does nothing — use `-d3dmts 1` |
+| `-3dplatform <d3d10a\|d3d10\|d3d9>` | Forces the render backend. The three accepted value strings sit next to the flag at `0x10e09d1c`–`0x10e09d3c`. Without it the `RenderProfile` `Platform` setting decides (default `d3d9`); either way D3D10 is used only when the hardware probe passes — see [presentation and input](./presentation-and-input.md) |
 
 ## Engine flags (`CCryEngine::Initialize`, `0x104d0510`)
 
@@ -107,23 +107,23 @@ The strings live together at `0x10e6a334`–`0x10e6a3d0` and are read via `FUN_1
 | `-16bitbroadphase` | Physics: 16-bit broadphase |
 | `-nospuheightfield` | Physics: disables the SPU heightfield path (PS3-era naming, still parsed on PC) |
 | `-norigidchars` | Physics: disables rigid-body characters |
-| `-nomovecache` | Disables a movement cache |
+| `-nomovecache` | No effect: it calls an empty function |
 
 ## Config toggles (`ParseGameConfigFlags`, `0x10662c70` — runs first, at `InitDuniaEngine+0x74`)
 
 | Flag | Effect |
 |---|---|
-| `-cmdfile <path>` | Intended to load additional arguments from a file (`FUN_10661cf0`) — **non-functional in retail, see below** |
+| `-cmdfile <name>` | Appends a file's contents to the command line (`FUN_10661cf0`) — the file must sit in `Documents\My Games\Far Cry 2\`, see below |
 | `-logFile <path>` | Parsed but non-functional in retail — see below |
 | `-nomouse` | Disable mouse |
-| `-noexmouse` | Disable "extended" mouse (raw input?) |
+| `-noexmouse` | Acquires the DirectInput mouse non-exclusively (`NONEXCLUSIVE \| FOREGROUND`) instead of exclusively |
 | `-nopad` | Disable gamepad |
-| `-nobf` | Boolean toggle, name unexplored |
+| `-nobf` | Mounts no archives: every resource is then opened as a loose file named `Data_Win32\<decimal path key>` |
 | `-nocompile` | Disable shader (or script) compilation |
 | `-norender` | Also read here (duplicate of the bootstrap check above) |
 | `-runscriptindebug` | Run Lua scripts in debug mode |
-| `-zombieai` | Boolean AI toggle, name unexplored |
-| `-usearchivecache` / `-noarchivecache` | Force-enable/disable the packed-archive read cache |
+| `-zombieai` | Agents running `MercBrain.ai.xml` or `AnimalBrain.ai.xml` never start their brain; buddies, vehicles and scripted brains still run |
+| `-usearchivecache` / `-noarchivecache` | No effect: the value is stored and never read |
 
 ## World / spawn (`CreateBenchmarkNode`, `0x10662f90` — reachable only via `-benchmark`)
 
@@ -277,28 +277,44 @@ DevTools' Diagnostics tab finds it by pattern instead, and measures over this sa
 
 | Flag | Effect |
 |---|---|
-| `-exec <file>` | Execute a console/Lua command file at boot (read in `Process` before branching). The console it feeds is real and reachable — see [the developer console](./developer-console.md) — but this flag itself is untested |
+| `-exec <file>` | Execute a console/Lua command file at boot (read in `Process` before branching). The file is found as given if absolute, else in `Documents\My Games\Far Cry 2\`, else in `Data\scripts\Console\`, and each line is run as a console line. The console it feeds is real and reachable — see [the developer console](./developer-console.md) — but this flag itself is untested |
 | `-notracking` | Disables the telemetry/tracking client (read in `Process` before branching) |
 | `-ubidays` | Requests a `"ubidays"` UI mode in `CreateMainMenuNode` (`0x106622f0`) — a trade-show/kiosk build hook. No visible effect in retail |
-| `-openautomate` | QA automation path, below |
+| `-openautomate` | NVIDIA OpenAutomate benchmarking, below |
 
-## QA automation path (`-openautomate`, handled entirely separately by `FUN_10005fa0`)
+## OpenAutomate (`-openautomate`, handled entirely separately by `FUN_10005fa0`)
 
 If `-openautomate` is present, `RunGame` skips the normal game loop entirely and enters a
 numeric-command dispatch loop (`FUN_10299a00` returns a case 0–6, dispatching to
-`FUN_10006710`/`FUN_10008620`/`FUN_10007050`/`FUN_100075a0`/`FUN_100065b0`/`FUN_10006600`) — an
-internal QA/automation harness, not reachable through normal `-flag` parsing. None of these 6 handlers
-have been examined.
+`FUN_10006710`/`FUN_10008620`/`FUN_10007050`/`FUN_100075a0`/`FUN_100065b0`/`FUN_10006600`). It is
+NVIDIA's OpenAutomate SDK, which lets a benchmarking tool drive the game: the SDK's own messages
+(`"oaInit() called more than once."`, `"OpenAutomate PluginPath was undefined"`) are in the binary.
+None of the 6 handlers have been examined.
 
-## `-cmdfile` appears dead in the retail build
+## `-cmdfile` needs a file in `My Games\Far Cry 2\`
 
-Live-tested with a file containing `-nomouse`: `FarCry2.exe -nomouse` disables the mouse, but
-`FarCry2.exe -cmdfile <that file>` does not. The file's contents are never applied.
+`CFCXGameCmdLineParser::AppendCmdFile` (`0x10653fd0` in the GOG build, **RE-verified**) reads the file
+and appends its contents to the command line before any other switch is read, so every switch works
+from it — the window switches `-borderless` and `-xpos` too. Four details decide whether it works:
 
-Note that this test has to use a flag consumed *through the config object* `ParseGameConfigFlags`
-builds. Testing `-cmdfile` with `-borderless` or `-xpos` proves nothing either way, because those are
-read directly off the raw command-line string in `InitDuniaEngine` and could never be injected by a
-file regardless of whether `-cmdfile` works.
+- **Location.** The name is glued onto `Documents\My Games\Far Cry 2\` with no check for an absolute
+  path, so give a bare file name (or a path relative to that folder). An absolute path fails silently.
+- **Last byte.** The engine overwrites the file's last byte with a terminator, so end the file with a
+  newline or a space. Without one the last switch loses its last letter.
+- **Encoding.** ANSI or UTF-8. A UTF-16 file — what Windows PowerShell 5.1's `>` and `Out-File` write —
+  stops at its first zero byte.
+- **Precedence.** A switch on both the real command line and in the file takes the command line's value.
+
+The live test this page used to report — a file containing `-nomouse` had no effect — did not meet
+these conditions. A test that should work:
+
+```powershell
+Set-Content -Encoding ASCII -Path "$([Environment]::GetFolderPath('MyDocuments'))\My Games\Far Cry 2\fc2args.txt" -Value '-nomouse -borderless '
+.\FarCry2.exe -cmdfile fc2args.txt
+```
+
+The mouse should be dead in the menu and the window style `0x94000000`; the same file written with
+`-NoNewline -Value '-nomouse'` should leave the mouse working.
 
 ## `-logFile` appears dead in the retail build
 
@@ -356,7 +372,7 @@ usage errors surface as a real window titled `Error`; `-borderless` shows up as 
 | `-ubidays` | **No visible effect** |
 | `-load <name>.sav` | **Works with DevTools.** Boots into the save at ~840 MB. Unpatched it faults at `0x104DBB80` |
 | `-load <name>` *(no extension)* | File not found — faults at `0x106621B8` |
-| `-cmdfile <file>` | **Broken.** File contents never applied |
+| `-cmdfile <file>` | File contents not applied — but the test file did not meet [the conditions above](#-cmdfile-needs-a-file-in-my-gamesfar-cry-2) |
 | `-zzznotaflag` | Unknown flags are harmless — boots normally |
 
 `-3dplatform` is unverified: a 64-bit host cannot enumerate a WOW64 process's loaded modules
@@ -365,10 +381,10 @@ usage errors surface as a real window titled `Error`; `-borderless` shows up as 
 ## Flags this page does not cover behaviourally
 
 These are parsed for certain but have no signal observable from outside the process, and are not
-individually verified: `-noexmouse`, `-nopad`, `-nobf`, `-nocompile`, `-runscriptindebug`,
-`-zombieai`, `-usearchivecache`, `-noarchivecache`, `-d3dmts`, `-nosndocc`, `-novoicechat`,
-`-nomovecache`, `-norigidchars`, `-nospuheightfield`, `-16bitbroadphase`, the `-benchmark*`
-sub-flags, and the multiplayer flags beyond the `-login` gate.
+live-tested — the tables above give what the code does where it was traced: `-noexmouse`, `-nopad`,
+`-nobf`, `-nocompile`, `-runscriptindebug`, `-zombieai`, `-usearchivecache`, `-noarchivecache`,
+`-d3dmts`, `-nosndocc`, `-novoicechat`, `-nomovecache`, `-norigidchars`, `-nospuheightfield`,
+`-16bitbroadphase`, the `-benchmark*` sub-flags, and the multiplayer flags beyond the `-login` gate.
 
 ## Flags that exist only in `FC2ServerLauncher.exe`
 
@@ -394,8 +410,6 @@ null-terminated runs directly, not by searching the string table.
 
 ## Unknowns
 
-- The exact semantics of `-nobf` and `-zombieai` — booleans read but never named beyond their flag
-  string.
 - The `-editorpc` handler `FUN_10661b40` itself, which shows no observable effect in retail.
 - Whether `-3dplatform` actually switches backend on a retail install.
 - The six `-openautomate` sub-handlers.
