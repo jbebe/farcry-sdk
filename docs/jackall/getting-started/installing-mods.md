@@ -1,4 +1,6 @@
 ---
+slug: /installing-mods
+sidebar_position: 1
 title: Installing mods with JackAll
 description: Step by step, how to install a JackAll mod zip, FCSE and its plugins while the Nexus Mod Manager button is not available yet
 ---

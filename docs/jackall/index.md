@@ -1,4 +1,7 @@
 ---
+slug: /
+sidebar_position: 0
+sidebar_label: Overview
 title: JackAll
 description: Introduce JackAll, the Far Cry 2 mod installer, file explorer and editor
 ---

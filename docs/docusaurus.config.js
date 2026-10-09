@@ -8,6 +8,15 @@ import {themes as prismThemes} from 'prism-react-renderer';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
+// Docusaurus's default excludes, plus CLAUDE.md files that live inside the content trees.
+const contentExclude = [
+  '**/_*.{js,jsx,ts,tsx,md,mdx}',
+  '**/_*/**',
+  '**/*.test.{js,jsx,ts,tsx}',
+  '**/__tests__/**',
+  '**/CLAUDE.md',
+];
+
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Far Cry 2 Modding',
@@ -47,20 +56,28 @@ const config = {
         docs: {
           routeBasePath: 'docs',
           sidebarPath: './sidebars.js',
-          // Docusaurus's default excludes, plus CLAUDE.md files that live inside the content tree.
-          exclude: [
-            '**/_*.{js,jsx,ts,tsx,md,mdx}',
-            '**/_*/**',
-            '**/*.test.{js,jsx,ts,tsx}',
-            '**/__tests__/**',
-            '**/CLAUDE.md',
-          ],
+          exclude: contentExclude,
           editUrl: 'https://github.com/jbebe/farcry-sdk/edit/main/docs/docs/',
         },
         blog: false,
         theme: {
           customCss: './src/css/custom.css',
         },
+      }),
+    ],
+  ],
+
+  plugins: [
+    [
+      '@docusaurus/plugin-content-docs',
+      /** @type {import('@docusaurus/plugin-content-docs').Options} */
+      ({
+        id: 'jackall',
+        path: 'jackall',
+        routeBasePath: 'jackall',
+        sidebarPath: './sidebarsJackall.js',
+        exclude: contentExclude,
+        editUrl: 'https://github.com/jbebe/farcry-sdk/edit/main/docs/jackall/',
       }),
     ],
   ],
@@ -72,6 +89,8 @@ const config = {
       ({
         hashed: true,
         indexBlog: false,
+        docsRouteBasePath: ['docs', 'jackall'],
+        docsDir: ['docs', 'jackall'],
       }),
     ],
   ],
@@ -101,7 +120,9 @@ const config = {
             label: 'Tools',
           },
           {
-            to: '/jackall',
+            type: 'docSidebar',
+            docsPluginId: 'jackall',
+            sidebarId: 'jackallSidebar',
             position: 'left',
             label: 'JackAll',
           },
