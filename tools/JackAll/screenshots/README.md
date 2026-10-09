@@ -8,6 +8,7 @@ changes; an image is only rewritten when its pixels changed.
 .\run-all.ps1                         # build, then every tutorial in order.psd1
 .\run-all.ps1 -Only first-mod -SkipBuild
 .\restore.ps1                         # after a crash: put the game folder back
+.\verify-in-game.ps1                  # deploy a batch of the examples to play; restore.ps1 after
 ```
 
 ## What a run touches
