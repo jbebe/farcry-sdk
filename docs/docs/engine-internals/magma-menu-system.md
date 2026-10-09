@@ -170,6 +170,40 @@ layer-related accessor, not `GetLayer` itself). The only real `PushPage` in this
 `.mgb`-file `Action` class, not a native `CUIPageBase` method; see
 [how Magma actions execute](#how-magma-actions-execute).
 
+### Back is a parent pointer, not a stack
+
+Each page stores its parent when `CGameMenu` adds it **(RE-verified on GOG)**. Every `AddXxxPage`
+instantiation writes the owning menu to `page+0x140` and the parent to `page+0xEC`. The first page
+added becomes `menu+0x38`, and the intro pages are added with no parent.
+
+Going back:
+
+1. `GoBack` (GOG `0x10CA1C60`) needs both pointers set. It marks the page and queues a deferred
+   action.
+2. That action (`0x10CA1D70`) requests the parent page, switches to it, and plays the sound named
+   by `SOUNDEVENT_BACK` in `ui\common.mgb`.
+
+So Back always leads to the page a page was added under, whichever way the player arrived. There is
+no history to unwind.
+
+## The boot pages
+
+The pages before the main menu are `CFCXMoviePage`s that each hold a duration and the next page's
+hash **(RE-verified on GOG)**. The durations are float constants in each page's constructor, not
+data:
+
+| Page | Constructor | Duration |
+|---|---|---|
+| Rating (ESRB) | `0x10841DB0` | 2 s, or 5 s when the language is Chinese |
+| Ubisoft | `0x10841C90` | 8.17 s |
+| Dunia | `0x10841B70` | 5 s |
+| Partners | `0x10841A50` | 0.1 s |
+| Presentation | `0x10842090` | 4 s |
+
+Then comes the splash page, which has no timer and waits for input, and then the main menu. A
+movie page's update (`0x108B6F60`) moves on when its timer reaches the duration, or earlier when the
+player skips.
+
 ### `CGameMenu`'s page hashtable — `Find`/`GetOrCreatePageSlot`/`InsertNode`
 
 Since `AddPage<T>` is compile-time-only, a new C++ page class can't be registered through the normal
@@ -512,5 +546,7 @@ cannot be added from a `.mgb`.
    the tab selector specifically.
 4. **`CGameMenu_PageTable_InsertNode`'s real use of `this+0x14`.** Which of its three readings of the
    field reflects the compiled logic. Nothing a private page does depends on it.
-5. **How a raised Magma action signal reaches one particular listener.** `CUIPageBase::RegisterModule`
-   /`AddListener` are the likely mechanism, not followed.
+
+How a raised signal reaches one particular page, once an open question here, is answered: a page
+registers with the dispatcher when it is shown and leaves when it is hidden, and the newest
+registrant is asked first. See [the routing](../magma-ui/engine-interop.md#the-routing).

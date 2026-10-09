@@ -198,22 +198,29 @@ magma::Action*)`** (`0x095f6370`). Decompiled, it does four things in this order
    temporary before anything is called, so a handler may register or unregister listeners mid-signal
    without invalidating the walk.
 2. **Handles five actions itself, before any listener sees them** — see below.
-3. **Otherwise broadcasts**, in list order, to every registered `IMagmaActionListener`:
+3. **Otherwise broadcasts**, newest registration first, to every registered
+   `IMagmaActionListener`:
 
    ```cpp
    if (m_listenersEnabled)                          // byte at dispatcher+4
-       for (IMagmaActionListener* l : snapshot)
+       for (IMagmaActionListener* l : reverse(snapshot))
            if (l->IsActionListenerEnabled())        // vtable slot 0
                if (l->OnActionSignal(id, action))   // vtable slot 1
                    return;                          // consumed — no one else runs
    ```
 4. Frees the snapshot.
 
-So dispatch is a **global, ordered chain of responsibility, not page scoping**. Four facts follow:
+So dispatch is a **global, ordered chain of responsibility, not page scoping**. Five facts follow:
 
-- **Registration order is dispatch order.** `CMagmaActionDispatcher::AddListener` (`0x095f4780`)
-  scans for the pointer first and appends only if absent — registration is idempotent, and the
-  earliest registrant gets first refusal on every signal.
+- **The newest registration is asked first.** `CMagmaActionDispatcher::AddListener` (`0x095f4780`)
+  scans for the pointer first and appends only if absent, so registration is idempotent. The walk
+  starts at the list's tail and follows the back links: the most recent registrant gets first
+  refusal on every signal. Both builds walk it this way **(RE-verified)**: server `0x095f6370`, GOG
+  `0x104F5A70`.
+- **A page registers when it is shown.** `CUIPageBase::Show` (GOG `0x10108730`) adds the page to
+  the dispatcher, but only when its Magma page is bound and not already visible. `Hide` (GOG
+  `0x10108860`) removes it. So the page shown last is offered every signal before the pages
+  beneath it **(RE-verified on GOG)**.
 - **The first listener returning true consumes the signal.** Nothing downstream runs. A listener
   that handles an action it did not author will silently starve the screen that owns it.
 - **`IsActionListenerEnabled()` is the gate that makes a global broadcast behave like page scoping.**
@@ -271,7 +278,7 @@ element raises ACTIONNAME
   → ActionServer::MakeAction builds the registered Action object (its UserData = the arguments)
     → CMagmaActionDispatcher::OnActionSignal(CStringID(name), action)
        ├── one of the five built-ins?  handle inline, done
-       └── else, in registration order, to each enabled IMagmaActionListener
+       └── else, newest registration first, to each enabled IMagmaActionListener
             └── CUIPageBase::OnActionSignal
                  ├── the derived page's own handling
                  └── each registered IUIModule, until one returns true
