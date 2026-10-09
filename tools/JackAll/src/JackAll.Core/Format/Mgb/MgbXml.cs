@@ -29,10 +29,13 @@ public static class MgbXml
     private const string BigEndianAttribute = "bigEndian";
 
     /// <summary>Renders a package as an XML document.</summary>
+    public static string ToXml(MgbPackage package) => new XDocument(ToElement(package)).ToString();
+
+    /// <summary>A package as the root element of its XML document.</summary>
     /// <param name="package">The package.</param>
     /// <param name="names">Optional: names to spell out beyond those the package itself recovers - what
-    /// <see cref="FromXml"/> collected from the document it was built from.</param>
-    public static string ToXml(MgbPackage package, IEnumerable<string>? names = null)
+    /// <see cref="FromXml(string, MgbNameLookup?)"/> collected from the document it was built from.</param>
+    public static XElement ToElement(MgbPackage package, IEnumerable<string>? names = null)
     {
         var root = new XElement(RootName);
 
@@ -52,7 +55,7 @@ public static class MgbXml
 
         var codec = new MgbXmlWriteCodec(root, lookup);
         package.SerializeBody(codec);
-        return new XDocument(root).ToString();
+        return root;
     }
 
     /// <summary>Rebuilds a package from a document produced by <see cref="ToXml"/>.</summary>
@@ -72,8 +75,12 @@ public static class MgbXml
             throw new MgbFormatException($"not well-formed XML: {ex.Message}");
         }
 
-        XElement root = document.Root
-            ?? throw new MgbFormatException("the XML document is empty");
+        return FromXml(document.Root ?? throw new MgbFormatException("the XML document is empty"), names);
+    }
+
+    /// <summary>Rebuilds a package from the root element <see cref="ToElement"/> gives.</summary>
+    public static MgbPackage FromXml(XElement root, MgbNameLookup? names = null)
+    {
         if (root.Name.LocalName != RootName)
         {
             throw new MgbFormatException(

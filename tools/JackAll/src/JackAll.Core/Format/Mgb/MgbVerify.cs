@@ -42,7 +42,7 @@ public static class MgbVerify
     /// <param name="package">The package to check.</param>
     /// <param name="requiredPages">Page names the game will ask this package for.</param>
     /// <param name="names">Names to report in rather than raw hashes - what
-    /// <see cref="MgbXml.FromXml"/> collected, when the package came from an XML source.</param>
+    /// <see cref="MgbXml.FromXml(string, MgbNameLookup?)"/> collected, when the package came from an XML source.</param>
     public static MgbVerifyResult Check(
         MgbPackage package,
         IEnumerable<string>? requiredPages = null,

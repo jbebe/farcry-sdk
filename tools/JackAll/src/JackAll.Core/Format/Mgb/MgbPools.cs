@@ -9,55 +9,56 @@ namespace JackAll.Core.Format.Mgb;
 /// <remarks>
 /// Counted over the package's XML form, because the codec that renders it is already a complete walk
 /// of every record. Every retail package that sets its counts sets exactly these; a pool no retail
-/// package uses has no known kind and is left as found. See docs/docs/file-formats/mgb.md.
+/// package uses has no known kind, counts zero here, and so is left as found. See
+/// docs/docs/file-formats/mgb.md.
 /// </remarks>
 public static class MgbPools
 {
     public const int Count = 65;
 
-    private const string PoolsAttribute = "POOLCOUNTS";
+    public const string Attribute = "POOLCOUNTS";
 
-    /// <summary>Which pools each kind of object is counted in, keyed <c>&lt;scope&gt;:&lt;class&gt;</c>.</summary>
-    private static readonly Dictionary<string, int[]> PoolsOf = new(StringComparer.Ordinal)
+    /// <summary>The pool each kind of object is counted in, keyed <c>&lt;scope&gt;:&lt;class&gt;</c>.</summary>
+    private static readonly Dictionary<string, int> PoolOf = new(StringComparer.Ordinal)
     {
-        ["area:Area"] = [0],
-        ["area:Page"] = [1],
-        ["area:Button"] = [2],
-        ["area:CheckBox"] = [3],
-        ["area:Cursor"] = [4],
-        ["wrapper:Element"] = [5],
-        ["wrapper:Focusable"] = [6],
-        ["wrapper:Checkable"] = [7],
-        ["wrapper:PageFocusable"] = [51],
-        ["state:ScaleState"] = [11],
-        ["state:RectState"] = [12],
-        ["state:TextState"] = [13],
-        ["state:ImageState"] = [15],
-        ["state:RectShapeState"] = [16],
-        ["widget:Image"] = [17],
-        ["widget:Text"] = [18],
-        ["widget:RectShape"] = [20],
-        ["widget:EditBox"] = [21],
-        ["widget:ListBox"] = [22],
-        ["widget:Slider"] = [23],
-        ["widget:Placeholder"] = [24],
-        ["widget:AreaInstance"] = [26],
-        ["widget:ButtonInstance"] = [28],
-        ["widget:CheckBoxInstance"] = [29],
-        ["widget:PageInstance"] = [50],
-        ["Keyframe"] = [31],
-        ["STRING"] = [49],
-        ["USERDATA"] = [52],
-        ["PROPERTY"] = [54],
-        ["PROPERTY:link"] = [53],
-        ["executer:ActionExecuter"] = [55],
-        ["executer:ActionExecuterFocusable"] = [58],
-        ["executer:ActionExecuterPage"] = [59],
-        ["executer:ActionExecuterEditbox"] = [60],
-        ["executer:ActionExecuterListbox"] = [61],
-        ["executer:ActionExecuterPageInstance"] = [62],
-        ["executer:ActionExecuterSlider"] = [63],
-        ["EVENT"] = [64],
+        ["area:Area"] = 0,
+        ["area:Page"] = 1,
+        ["area:Button"] = 2,
+        ["area:CheckBox"] = 3,
+        ["area:Cursor"] = 4,
+        ["wrapper:Element"] = 5,
+        ["wrapper:Focusable"] = 6,
+        ["wrapper:Checkable"] = 7,
+        ["wrapper:PageFocusable"] = 51,
+        ["state:ScaleState"] = 11,
+        ["state:RectState"] = 12,
+        ["state:TextState"] = 13,
+        ["state:ImageState"] = 15,
+        ["state:RectShapeState"] = 16,
+        ["widget:Image"] = 17,
+        ["widget:Text"] = 18,
+        ["widget:RectShape"] = 20,
+        ["widget:EditBox"] = 21,
+        ["widget:ListBox"] = 22,
+        ["widget:Slider"] = 23,
+        ["widget:Placeholder"] = 24,
+        ["widget:AreaInstance"] = 26,
+        ["widget:ButtonInstance"] = 28,
+        ["widget:CheckBoxInstance"] = 29,
+        ["widget:PageInstance"] = 50,
+        ["Keyframe"] = 31,
+        ["STRING"] = 49,
+        ["USERDATA"] = 52,
+        ["PROPERTY"] = 54,
+        ["PROPERTY:link"] = 53,
+        ["executer:ActionExecuter"] = 55,
+        ["executer:ActionExecuterFocusable"] = 58,
+        ["executer:ActionExecuterPage"] = 59,
+        ["executer:ActionExecuterEditbox"] = 60,
+        ["executer:ActionExecuterListbox"] = 61,
+        ["executer:ActionExecuterPageInstance"] = 62,
+        ["executer:ActionExecuterSlider"] = 63,
+        ["EVENT"] = 64,
     };
 
     private static readonly HashSet<string> StateClasses = [.. MgbSchema.WidgetState.Values];
@@ -68,15 +69,10 @@ public static class MgbPools
             .Select(tag => tag.ToString(CultureInfo.InvariantCulture)),
     ];
 
-    /// <summary>The counts <paramref name="package"/> needs; null for a pool of no known kind.</summary>
-    public static uint?[] Of(XElement package)
+    /// <summary>The counts <paramref name="package"/> needs.</summary>
+    public static uint[] Of(XElement package)
     {
-        var counts = new uint?[Count];
-        foreach (int pool in PoolsOf.Values.SelectMany(p => p))
-        {
-            counts[pool] = 0;
-        }
-
+        var counts = new uint[Count];
         foreach (XElement area in package.Element("CHILDREN")?.Elements() ?? [])
         {
             Add("area:" + (string?)area.Attribute("type"));
@@ -120,37 +116,26 @@ public static class MgbPools
 
         void Add(string kind)
         {
-            foreach (int pool in PoolsOf.GetValueOrDefault(kind, []))
+            if (PoolOf.TryGetValue(kind, out int pool))
             {
                 counts[pool]++;
             }
         }
     }
 
-    public static uint?[] Of(MgbPackage package) => Of(XElement.Parse(MgbXml.ToXml(package)));
+    public static uint[] Of(MgbPackage package) => Of(MgbXml.ToElement(package));
 
     /// <summary>Raises every pool of a package document to what it holds. None is lowered: headroom a
     /// package already carries is the author's.</summary>
     public static void Raise(XElement package)
     {
-        uint[] declared = Declared(package);
-        uint?[] needed = Of(package);
-        for (int i = 0; i < Count; i++)
+        uint[] declared = [.. MgbXmlValue.Tokens((string?)package.Attribute(Attribute) ?? "").Select(MgbXmlValue.ParseInteger)];
+        if (declared.Length != Count)
         {
-            declared[i] = Math.Max(declared[i], needed[i] ?? 0);
+            throw new MgbFormatException($"{Attribute} holds {declared.Length} counts, not {Count}");
         }
-        package.SetAttributeValue(PoolsAttribute, string.Join(' ', declared));
-    }
 
-    private static uint[] Declared(XElement package)
-    {
-        string text = (string?)package.Attribute(PoolsAttribute) ?? "";
-        uint[] pools = [.. text.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Select(v => uint.Parse(v, CultureInfo.InvariantCulture))];
-        if (pools.Length != Count)
-        {
-            throw new MgbFormatException($"{PoolsAttribute} holds {pools.Length} counts, not {Count}");
-        }
-        return pools;
+        uint[] needed = Of(package);
+        package.SetAttributeValue(Attribute, string.Join(' ', declared.Select((d, i) => MgbXmlValue.Integer(Math.Max(d, needed[i])))));
     }
 }

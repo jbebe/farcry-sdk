@@ -17,7 +17,9 @@ namespace JackAll.Core.Mods;
 /// distinct-texture count are derived from content, so no fragment carries them. See
 /// docs/docs/file-formats/mgb.md.
 /// </remarks>
-public sealed class MgbContainerSplitter : IContainerSplitter
+/// <param name="names">Names to spell out where a package keeps only their hashes - the names its XML
+/// source declared.</param>
+public sealed class MgbContainerSplitter(IEnumerable<string>? names = null) : IContainerSplitter
 {
     private const string Extension = ".mgb";
     private const string AreasElement = "CHILDREN";
@@ -44,12 +46,7 @@ public sealed class MgbContainerSplitter : IContainerSplitter
         return FragmentId.Of(MgbXmlValue.ParseName(name), name.StartsWith('#') ? null : name);
     }
 
-    public IContainerTree Open(byte[] container) => Open(container, []);
-
-    /// <summary>A package with <paramref name="names"/> spelled out where it keeps only their hashes -
-    /// the names its XML source declared.</summary>
-    public IContainerTree Open(byte[] container, IEnumerable<string> names)
-        => new Tree(XElement.Parse(MgbXml.ToXml(MgbPackage.Read(container), names)));
+    public IContainerTree Open(byte[] container) => new Tree(Decode(container));
 
     public string Canonicalize(string fragmentId, string fragmentXml) => Render(XElement.Parse(fragmentXml));
 
@@ -64,11 +61,10 @@ public sealed class MgbContainerSplitter : IContainerSplitter
             return baseBytes;
         }
 
-        XElement package = XElement.Parse(MgbXml.Decode(baseBytes));
+        XElement package = Decode(baseBytes);
         XElement areas = package.Element(AreasElement)
             ?? throw new InvalidDataException("This package has no area list.");
         Dictionary<uint, XElement> byNumber = areas.Elements().ToDictionary(NumberOf);
-        bool materialsChanged = false;
 
         foreach ((string id, string xml) in fragmentXmlById.OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
@@ -82,7 +78,6 @@ public sealed class MgbContainerSplitter : IContainerSplitter
                 }
 
                 Place(package, section, fragment);
-                materialsChanged |= section == MaterialsElement;
                 continue;
             }
 
@@ -106,17 +101,16 @@ public sealed class MgbContainerSplitter : IContainerSplitter
             byNumber[number] = fragment;
         }
 
-        // The engine is handed the number of distinct texture paths, so an edited list re-derives it.
-        if (materialsChanged)
-        {
-            XElement materials = package.Element(MaterialsElement)!;
-            materials.SetAttributeValue(DistinctTexturesAttribute,
-                materials.Elements().Select(m => (string?)m.Attribute("texture")).Distinct(StringComparer.Ordinal).Count());
-        }
+        // The engine is handed the number of distinct texture paths, which every retail package states exactly.
+        XElement materials = package.Element(MaterialsElement)!;
+        materials.SetAttributeValue(DistinctTexturesAttribute,
+            materials.Elements().Select(m => (string?)m.Attribute("texture")).Distinct(StringComparer.Ordinal).Count());
 
         MgbPools.Raise(package);
-        return MgbXml.Encode(package.ToString());
+        return MgbXml.FromXml(package).Write();
     }
+
+    private XElement Decode(byte[] container) => MgbXml.ToElement(MgbPackage.Read(container), names);
 
     /// <summary>A section in place of the package's own, or added where the file keeps it.</summary>
     private static void Place(XElement package, string section, XElement fragment)
@@ -124,20 +118,23 @@ public sealed class MgbContainerSplitter : IContainerSplitter
         if (package.Element(section) is { } existing)
         {
             existing.ReplaceWith(fragment);
+            return;
         }
-        else if (Sections.SkipWhile(s => s.Element != section).Skip(1)
-                     .Select(s => package.Element(s.Element)).OfType<XElement>().FirstOrDefault() is { } next)
+
+        int at = Array.FindIndex(Sections, s => s.Element == section);
+        foreach ((_, string later) in Sections[(at + 1)..])
         {
-            next.AddBeforeSelf(fragment);
+            if (package.Element(later) is { } next)
+            {
+                next.AddBeforeSelf(fragment);
+                return;
+            }
         }
-        else
-        {
-            package.Add(fragment);
-        }
+        package.Add(fragment);
     }
 
     private static string? SectionOf(string fragmentId)
-        => Sections.FirstOrDefault(s => s.Id.Equals(fragmentId, StringComparison.OrdinalIgnoreCase)).Element;
+        => Sections.FirstOrDefault(s => FcbFragments.IdComparer.Equals(s.Id, fragmentId)).Element;
 
     /// <summary>What a child is matched by in a merge: the name of what it is, else its tag.</summary>
     private static string KeyOf(XElement child)
@@ -155,9 +152,12 @@ public sealed class MgbContainerSplitter : IContainerSplitter
     /// <summary>One fragment as staged, without the count the build derives.</summary>
     private static string Render(XElement fragment)
     {
-        var copy = new XElement(fragment);
-        copy.Attribute(DistinctTexturesAttribute)?.Remove();
-        return FragmentXml.Render(copy, Indent);
+        if (fragment.Attribute(DistinctTexturesAttribute) is not null)
+        {
+            fragment = new XElement(fragment);
+            fragment.Attribute(DistinctTexturesAttribute)!.Remove();
+        }
+        return FragmentXml.Render(fragment, Indent);
     }
 
     private sealed class Tree(XElement package) : IContainerTree
@@ -165,24 +165,17 @@ public sealed class MgbContainerSplitter : IContainerSplitter
         private readonly Dictionary<string, XElement> _byId = Index(package);
 
         public string? Extract(string fragmentId)
-        {
-            string key = SectionOf(fragmentId) is null && FragmentId.NumberOf(fragmentId) is { } number
-                ? FragmentId.Of(number)
-                : fragmentId;
-            return _byId.TryGetValue(key, out XElement? fragment) ? Render(fragment) : null;
-        }
+            => _byId.TryGetValue(fragmentId, out XElement? fragment) ? Render(fragment) : null;
 
         public IReadOnlyList<FcbFragmentInfo> List()
-            => [.. _byId.Values.Select(e => new FcbFragmentInfo(
-                e.Name.LocalName == "Area" ? IdOf(e) : Sections.First(s => s.Element == e.Name.LocalName).Id,
-                e.ToString(SaveOptions.DisableFormatting).Length))];
+            => [.. _byId.Select(kv => new FcbFragmentInfo(kv.Key, kv.Value.ToString(SaveOptions.DisableFormatting).Length))];
 
         /// <summary>The package with every kept fragment reduced to a marker, the rest dropped, and the
         /// derived counts removed - so an importer can tell a changed fragment from a change around them.</summary>
         public string? Skeleton(Func<string, bool> keep)
         {
             var clone = new XElement(package);
-            clone.Attribute("POOLCOUNTS")?.Remove();
+            clone.Attribute(MgbPools.Attribute)?.Remove();
             foreach ((string id, string element) in Sections)
             {
                 clone.Element(element)?.ReplaceWith(keep(id) ? new XElement(element) : null);
@@ -195,10 +188,10 @@ public sealed class MgbContainerSplitter : IContainerSplitter
             return clone.ToString();
         }
 
-        /// <summary>Every fragment, an area under its bare number so any label finds it.</summary>
+        /// <summary>Every fragment under the id it is listed by.</summary>
         private static Dictionary<string, XElement> Index(XElement package)
         {
-            var byId = new Dictionary<string, XElement>(StringComparer.OrdinalIgnoreCase);
+            var byId = new Dictionary<string, XElement>(FcbFragments.IdComparer);
             foreach ((string id, string element) in Sections)
             {
                 if (package.Element(element) is { } section)
@@ -208,7 +201,7 @@ public sealed class MgbContainerSplitter : IContainerSplitter
             }
             foreach (XElement area in package.Element(AreasElement)?.Elements() ?? [])
             {
-                byId[FragmentId.Of(NumberOf(area))] = area;
+                byId[IdOf(area)] = area;
             }
             return byId;
         }

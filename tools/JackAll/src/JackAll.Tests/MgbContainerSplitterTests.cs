@@ -147,8 +147,8 @@ public class MgbContainerSplitterTests : IDisposable
         MgbPackage after = MgbPackage.Read(built);
         Assert.Equal(before.Areas.Count + 1, after.Areas.Count);
         Assert.Equal(before.MaterialExtra + 1, after.MaterialExtra);
-        uint?[] needed = MgbPools.Of(after);
-        Assert.All(Enumerable.Range(0, MgbPools.Count), i => Assert.True(after.PoolCounts[i] >= (needed[i] ?? 0), $"pool {i}"));
+        uint[] needed = MgbPools.Of(after);
+        Assert.All(Enumerable.Range(0, MgbPools.Count), i => Assert.True(after.PoolCounts[i] >= needed[i], $"pool {i}"));
         Assert.Contains(Enumerable.Range(0, MgbPools.Count), i => after.PoolCounts[i] > before.PoolCounts[i]);
     }
 
@@ -207,18 +207,14 @@ public class MgbContainerSplitterTests : IDisposable
 
     /// <summary>The area with an empty placeholder named <paramref name="name"/> on the end.</summary>
     private static string WithElement(IContainerTree tree, string id, string name)
-    {
-        XElement area = XElement.Parse(tree.Extract(id)!);
-        area.Element("CHILDREN")!.Add(XElement.Parse(
+        => Edited(tree, id, area => area.Element("CHILDREN")!.Add(XElement.Parse(
             $"""
             <Element slot="77" type="Placeholder" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
               <USERDATA name="{name}"><PROPERTIES /></USERDATA>
               <KEYFRAMES />
               <Placeholder />
             </Element>
-            """));
-        return area.ToString();
-    }
+            """)));
 
     private static string Edited(IContainerTree tree, string id, Action<XElement> edit)
     {

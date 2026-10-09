@@ -311,6 +311,16 @@ public partial class MainWindow
         return true;
     }
 
+    /// <summary>The same guard in front of <see cref="MainViewModel.StageContainer"/>, for an editor
+    /// that rewrites a whole splitting container.</summary>
+    private void StageContainerGuarded(VfsFile file, byte[] content)
+    {
+        if (ConfirmUnusedEdit(file))
+        {
+            _vm.StageContainer(file, content);
+        }
+    }
+
     private bool ConfirmUnusedEdit(VfsFile file)
     {
         // Keyed on the VFS key, not the engine hash: a fragment row has no engine hash of its own.

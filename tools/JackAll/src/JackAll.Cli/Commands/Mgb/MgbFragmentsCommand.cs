@@ -38,17 +38,12 @@ public sealed class MgbFragmentsCommand : CliCommand<MgbFragmentsCommand.Setting
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
-        byte[] input = CliIO.ReadInput(settings.Input);
         var names = new MgbNameLookup();
-        byte[] bytes = "MAGMA"u8.SequenceEqual(input.AsSpan(0, Math.Min(5, input.Length)))
-            ? input
-            : MgbXml.Encode(CliIO.ReadInputText(settings.Input), names);
+        byte[] bytes = MgbInput.Read(settings.Input, names);
 
-        MgbContainerSplitter splitter = MgbContainerSplitter.Instance;
-        IContainerTree mine = splitter.Open(bytes, names.Names);
-        IContainerTree? vanilla = settings.Base is null
-            ? null
-            : splitter.Open(CliIO.ReadInput(settings.Base), names.Names);
+        var splitter = new MgbContainerSplitter(names.Names);
+        IContainerTree mine = splitter.Open(bytes);
+        IContainerTree? vanilla = settings.Base is null ? null : splitter.Open(CliIO.ReadInput(settings.Base));
 
         if (vanilla is not null && !FragmentDiff.IsExpressible(mine, vanilla))
         {

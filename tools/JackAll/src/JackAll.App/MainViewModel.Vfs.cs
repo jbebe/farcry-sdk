@@ -240,12 +240,12 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
-    /// Stages an edited Magma package as the fragments that differ from what the game loads now, so
-    /// it merges with other mods' HUD and menu edits; whole when the edit reaches outside every fragment.
+    /// Stages an edited splitting container as the fragments that differ from what the game loads now,
+    /// so it merges with other mods' edits; whole when the edit reaches outside every fragment.
     /// </summary>
-    public void StageMgb(VfsFile file, byte[] edited)
+    public void StageContainer(VfsFile file, byte[] edited)
     {
-        MgbContainerSplitter splitter = MgbContainerSplitter.Instance;
+        IContainerSplitter splitter = ContainerFormats.For(file.Path, FcbDefinitionsProvider.Value.Value, _names);
         IContainerTree current = splitter.Open(Read(file));
         IContainerTree mine = splitter.Open(edited);
         if (!FragmentDiff.IsExpressible(mine, current))

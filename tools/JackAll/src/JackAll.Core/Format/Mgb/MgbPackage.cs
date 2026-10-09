@@ -188,7 +188,7 @@ public sealed class MgbPackage
 
     /// <summary>65 per-type instance counts feeding the <c>Allocate*PoolChunk</c> family. Pure
     /// memory-pool pre-reservation - no effect on any later offset.</summary>
-    public uint[] PoolCounts = new uint[65];
+    public uint[] PoolCounts = new uint[MgbPools.Count];
 
     public MgbUserData UserData = new();
 
@@ -212,13 +212,16 @@ public sealed class MgbPackage
     /// <summary>Empty when the length field is zero.</summary>
     public byte[] DefaultMaterialName = [];
 
+    /// <summary>Whether <paramref name="bytes"/> start the way a binary package does, rather than being its XML.</summary>
+    public static bool HasMagic(ReadOnlySpan<byte> bytes) => bytes.StartsWith(Magic);
+
     public static MgbPackage Read(byte[] bytes)
     {
         if (bytes.Length < 15)
         {
             throw new MgbFormatException("file is too small to be a .mgb package");
         }
-        if (!bytes.AsSpan(0, 5).SequenceEqual(Magic))
+        if (!HasMagic(bytes))
         {
             throw new MgbFormatException("not a .mgb package (missing \"MAGMA\" magic)");
         }

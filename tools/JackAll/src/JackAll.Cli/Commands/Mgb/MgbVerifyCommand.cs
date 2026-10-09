@@ -29,18 +29,10 @@ public sealed class MgbVerifyCommand : CliCommand<MgbVerifyCommand.Settings>
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
-        byte[] input = CliIO.ReadInput(settings.Input);
-
-        // The magic is the discriminator rather than the extension, so a .mgb saved under another
-        // name still checks as one and an XML document is never fed to the binary reader. XML is
-        // re-read as text rather than decoded from these bytes so its encoding declaration counts.
-        bool binary = input.Length >= 5 && "MAGMA"u8.SequenceEqual(input.AsSpan(0, 5));
-
-        // Names live in the XML and nowhere else - the binary keeps CRC32s - so they are caught on
-        // the way through and handed to the check, which is the difference between "element
-        // FCSE_SLOT_03" and "element #F14488EE" in a message the author has to act on.
+        // Names are handed to the check, which is the difference between "element FCSE_SLOT_03" and
+        // "element #F14488EE" in a message the author has to act on.
         var names = new MgbNameLookup();
-        byte[] bytes = binary ? input : MgbXml.Encode(CliIO.ReadInputText(settings.Input), names);
+        byte[] bytes = MgbInput.Read(settings.Input, names);
 
         // Reading it back is what makes this meaningful for XML input: the source is only as good
         // as the package it builds, and this format has no lengths and no sentinels to catch a
