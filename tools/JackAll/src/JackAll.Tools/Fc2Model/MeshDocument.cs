@@ -130,7 +130,7 @@ public sealed class MeshDocument
     /// <summary>The vertex components this can express; a buffer using anything else is refused.</summary>
     public const uint SupportedComponents =
         XbgFile.PosInt16 | XbgFile.Uv0 | XbgFile.Uv1 | XbgFile.Normal
-        | XbgFile.Colour | XbgFile.Tangent | XbgFile.Binormal | XbgFile.BoneWeights1;
+        | XbgFile.Colour | XbgFile.Tangent | XbgFile.Binormal | XbgFile.BoneWeights;
 
     public required uint HeaderWord { get; init; }
 

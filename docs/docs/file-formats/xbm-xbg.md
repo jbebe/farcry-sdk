@@ -139,14 +139,13 @@ material inlined into the mesh instead of referenced by path, carrying names lik
 `Torch01_587110454_0.fakemat`. `LTMR` (`RMTL`) is the ordinary path-reference material list, and it
 carries a trailing word after mesh version 41.3, which FC2 (42.6) has.
 
-**An inline `LTMD` is not laid out like an `.xbm`'s.** A standalone `.xbm` opens its `LTMD` payload
-with five bytes, then the material name, then the shader name. An embedded one has no such preamble:
-it opens with the name the mesh's `LTMR` list references, then the `DNKS` part that name belongs to
-(`BAT`, `WOODTORCH01`, `CLOTHTORCH01`, `RAG01`), then the shader name. From there the two run the
-same body — counted texture slots, property groups of one, two, three and four floats, integers,
-then a trailing word. Reading an embedded chunk with the standalone layout desynchronises on the
-first field. Measured on all four shipped chunks, each consuming its payload exactly; the three
-meshes carrying one resolve their textures only through this path.
+**An inline `LTMD` has the same layout as an `.xbm`'s; only its first string is filled in.** The
+engine reads every `LTMD` payload as a string it discards, the material's name, the shader name, then
+the body below (`CMaterialResource::LoadMaterial`, `0x09802320` in the Linux server, **RE-verified**). A
+standalone `.xbm` leaves the first string empty. An embedded one puts the name the mesh's `LTMR` list
+references there, and its material name is the `DNKS` part the material applies to (`BAT`,
+`WOODTORCH01`, `CLOTHTORCH01`, `RAG01`). Measured on all four shipped chunks, each consuming its payload
+exactly; the three meshes carrying one resolve their textures only through this path.
 
 ### `DIKS` is the part table, and it names each part's placement node
 
@@ -202,6 +201,22 @@ them, which quietly makes a re-export differ from the original.
 
 **`cluster.stride` always equals its buffer's stride**, so it is a duplicate, not an override.
 
+### Vertex flags
+
+A buffer's flags word becomes the vertex declaration in `0x1041d5e0` (GOG), which lays the elements
+out in this order **(RE-verified)**:
+
+| Flag | Element | Bytes |
+|---|---|---|
+| `0x0001`, else `0x0002` | position: float3, else four int16 | 12, else 8 |
+| `0x0004`, else `0x0008` | texcoord 0: float2, else short2 | 8, else 4 |
+| `0x0800`, `0x1000`, `0x2000` | texcoords 1 to 3, short2 — only under `0x0008` without `0x0004` | 4 each |
+| `0x0010` | four weights and four palette indices | 8 |
+| `0x0040`, `0x0080`, `0x0100`, `0x0200` | normal, colour, tangent, binormal | 4 each |
+
+`0x0020`, `0x0400` and every bit above `0x2000` add no element. Shipped meshes use only `0x0BCA`,
+`0x0BDA` and `0x008A`.
+
 ### `EDON` node record
 
 68 bytes, `memcpy`'d wholesale by the engine, then a length-prefixed NUL-terminated name:
@@ -246,14 +261,14 @@ its own serialiser.
 That payload is a run of counted sections:
 
 ```
-u8[5]           preamble, which no traced code path reads
+cstring         discarded by the engine; empty in every .xbm, so 5 zero bytes
 cstring         material name          e.g. SAWEDOFF_SHOTGUN_METAL_CHROME
 cstring         shader name            e.g. Weapon
 u32 count, then count x (cstring path, cstring slot)      textures — path first, then its slot
 for width in 1, 2, 3, 4:
   u32 count, then count x (cstring key, f32[width])       float properties, grouped by width
 u32 count, then count x (cstring key, u32)                integer properties
-u32             trailing — 0 in all 2,379
+u32 count, then count x (cstring key, u8)                 boolean properties — count 0 in all 2,379
 ```
 
 `cstring` is the same length-prefixed, NUL-terminated form the `.xbg` chunks use. The float sections

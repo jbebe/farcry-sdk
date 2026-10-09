@@ -39,19 +39,19 @@ public sealed class XbmEntry
 /// </summary>
 /// <remarks>
 /// An `.xbm` is the same chunk container as an <see cref="XbgFile"/>; everything that matters sits
-/// in its <c>LTMD</c> chunk, which an `.xbg` may also carry inline. Either way the body is a run of
-/// counted sections: texture maps first, then property groups of one, two, three and four floats,
-/// then a group of integers. The two differ only in what precedes that body - a standalone chunk
-/// opens with five bytes nothing traced reads, an embedded one with the name its geometry
-/// references and the part that name belongs to. Read one with the other's layout and it
-/// desynchronises on the first field.
+/// in its <c>LTMD</c> chunk, which an `.xbg` may also carry inline. The engine reads both alike: a
+/// string it discards, the material's name, the shader, then counted sections - texture maps,
+/// property groups of one, two, three and four floats, integers and booleans. A standalone chunk's
+/// discarded string is empty, which is the five bytes kept as <see cref="Preamble"/>; an embedded
+/// one's is the name its geometry references, kept as <see cref="Name"/> with the material's own
+/// name as <see cref="Part"/>.
 /// <para>
 /// <see cref="XbmMaterial"/> flattens this into display-formatted text for the file viewer.
 /// </para>
 /// </remarks>
 public sealed class XbmFile
 {
-    /// <summary>Bytes a standalone LTMD opens with that nothing traced reads.</summary>
+    /// <summary>A standalone LTMD opens with an empty string: a zero length and its NUL.</summary>
     public const int PreambleLength = 5;
 
     /// <summary>Property group widths, in the order the sections appear.</summary>
@@ -67,13 +67,15 @@ public sealed class XbmFile
 
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>The part an embedded material applies to; empty for a standalone one.</summary>
+    /// <summary>An embedded material's own name, which every shipped one shares with the part it
+    /// applies to; empty for a standalone one.</summary>
     public string Part { get; set; } = string.Empty;
 
     public string Shader { get; set; } = string.Empty;
 
     public byte[] Preamble { get; set; } = new byte[PreambleLength];
 
+    /// <summary>The boolean section's count, 0 in every shipped material, so its entries are never read.</summary>
     public uint Trailing { get; set; }
 
     public List<XbmEntry> Entries { get; } = [];
@@ -95,7 +97,7 @@ public sealed class XbmFile
         return self;
     }
 
-    /// <summary>A standalone `.xbm`'s LTMD, which opens with five bytes nothing reads.</summary>
+    /// <summary>A standalone `.xbm`'s LTMD, which opens with an empty string.</summary>
     public static XbmFile ParseLtmd(byte[] raw)
     {
         var self = new XbmFile();
@@ -109,7 +111,7 @@ public sealed class XbmFile
 
     /// <summary>
     /// The LTMD an `.xbg` embeds, whose body is preceded by the name its geometry references and the
-    /// part that name belongs to.
+    /// material's own name.
     /// </summary>
     public static XbmFile ParseInline(byte[] raw)
     {

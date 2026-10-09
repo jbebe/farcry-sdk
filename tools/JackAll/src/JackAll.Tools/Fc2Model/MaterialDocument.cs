@@ -47,9 +47,11 @@ public sealed class MaterialDocument
 
     public required string Shader { get; init; }
 
-    /// <summary>Five bytes the material body opens with that no traced code path reads.</summary>
+    /// <summary>The material body's first field, a string the engine discards; empty in every shipped
+    /// material, so these are always five zero bytes.</summary>
     public required byte[] Preamble { get; init; }
 
+    /// <summary>The count of boolean properties, 0 in every shipped material.</summary>
     public required uint Trailing { get; init; }
 
     public List<MaterialTexture> Textures { get; init; } = [];

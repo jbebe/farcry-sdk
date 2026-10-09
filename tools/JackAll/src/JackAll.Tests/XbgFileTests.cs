@@ -27,6 +27,20 @@ public sealed class XbgFileTests
         Fixture.AssertSameBytes(fixture, original, XbgFile.Parse(original).Write());
     }
 
+    [Theory]
+    // The shipped static layout.
+    [InlineData(0x0BCAu, "pos uv0 uv1 normal color tangent binormal", 32)]
+    // 0x4 is a float2 texcoord that shuts the short2 ones out; 0x20 and 0x400 add nothing.
+    [InlineData(0x0C2Eu, "pos uv0_float", 16)]
+    [InlineData(0x2008u, "uv0 uv3", 8)]
+    public void The_vertex_layout_follows_the_engines_declaration(uint flags, string names, int stride)
+    {
+        (List<(string Name, int Offset, int Size)> layout, int actualStride) = XbgFile.VertexLayout(flags);
+
+        Assert.Equal(names, string.Join(' ', layout.Select(c => c.Name)));
+        Assert.Equal(stride, actualStride);
+    }
+
     /// <summary>
     /// The AK-47, as a named check that the decode means something rather than merely surviving.
     /// </summary>

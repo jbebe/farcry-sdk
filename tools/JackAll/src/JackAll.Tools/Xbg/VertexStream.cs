@@ -102,10 +102,6 @@ public sealed class VertexStream
             }
             return out_;
         }
-        if ((Flags & XbgFile.PosHalf) != 0)
-        {
-            throw new NotSupportedException("Half-float positions; no shipped file uses them.");
-        }
         for (int i = 0; i < Count; i++)
         {
             ReadOnlySpan<byte> v = run.AsSpan(i * 8, 8);
@@ -190,21 +186,16 @@ public sealed class VertexStream
     /// <summary>(weight, palette slot) pairs per vertex, zero-weight entries dropped.</summary>
     public List<(float Weight, int Slot)>[]? Skin()
     {
-        if (!_components.TryGetValue("bone_wts1", out byte[]? first))
+        if (!_components.TryGetValue("bone_wts", out byte[]? weights))
         {
             return null;
         }
 
-        _components.TryGetValue("bone_wts2", out byte[]? second);
         var out_ = new List<(float, int)>[Count];
         for (int i = 0; i < Count; i++)
         {
             List<(float, int)> pairs = [];
-            AddWeights(pairs, first, i);
-            if (second is not null)
-            {
-                AddWeights(pairs, second, i);
-            }
+            AddWeights(pairs, weights, i);
             out_[i] = pairs;
         }
         return out_;

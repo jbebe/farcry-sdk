@@ -46,8 +46,8 @@ public static class VertexEncoder
     /// <summary>int16 positions, so a coordinate is this many scale steps at most.</summary>
     public const int PositionLimit = 32767;
 
-    /// <summary>Weights are stored in four slots per set, two sets at most.</summary>
-    public const int SlotsPerSet = 4;
+    /// <summary>A vertex carries four weights and four palette slots.</summary>
+    public const int WeightSlots = 4;
 
     /// <summary>Slots carrying the same value in all 14,319,419 shipped vertices.</summary>
     public const short PositionW = 1;
@@ -65,17 +65,15 @@ public static class VertexEncoder
         ["tangent"] = [255, DirectionW, DirectionW, DirectionW],
         ["binormal"] = [DirectionW, 255, DirectionW, DirectionW],
         ["color"] = [255, 255, 255, 255],
-        ["unk400"] = [0, 0, 0, 0],
-        ["bone_wts1"] = [255, 0, 0, 0, 0, 0, 0, 0],
-        ["bone_wts2"] = [0, 0, 0, 0, 0, 0, 0, 0],
+        ["bone_wts"] = [255, 0, 0, 0, 0, 0, 0, 0],
     };
 
     public static VertexStream Encode(
         uint flags, int count, VertexScales scales, VertexData data, VertexStream? template = null)
     {
-        if ((flags & (XbgFile.PosFloat | XbgFile.PosHalf)) != 0)
+        if ((flags & (XbgFile.PosFloat | XbgFile.Uv0Float)) != 0)
         {
-            throw new NotSupportedException("Only int16 positions are written.");
+            throw new NotSupportedException("Only int16 positions and short2 texcoords are written.");
         }
         if (template is not null && template.Count != count)
         {
@@ -114,9 +112,9 @@ public static class VertexEncoder
             }
         }
 
-        if (data.Skin is { } skin && components.ContainsKey("bone_wts1"))
+        if (data.Skin is { } skin && components.TryGetValue("bone_wts", out byte[]? weights))
         {
-            WriteSkin(components, skin, (flags & XbgFile.BoneWeights2) != 0 ? 2 : 1);
+            WriteSkin(weights, skin);
         }
 
         return VertexStream.FromComponents(flags, count, components);
@@ -198,28 +196,18 @@ public static class VertexEncoder
         }
     }
 
-    /// <summary>Split (weight, slot) pairs across the one or two weight components.</summary>
-    private static void WriteSkin(
-        Dictionary<string, byte[]> components, List<(float Weight, int Slot)>[] skin, int sets)
+    /// <summary>Write each vertex's first four (weight, slot) pairs into the weight component.</summary>
+    private static void WriteSkin(byte[] run, List<(float Weight, int Slot)>[] skin)
     {
         for (int vertex = 0; vertex < skin.Length; vertex++)
         {
             List<(float Weight, int Slot)> pairs = skin[vertex];
-            for (int set = 0; set < sets; set++)
+            Span<byte> block = run.AsSpan(vertex * 8, 8);
+            for (int slot = 0; slot < WeightSlots; slot++)
             {
-                if (!components.TryGetValue(set == 0 ? "bone_wts1" : "bone_wts2", out byte[]? run))
-                {
-                    continue;
-                }
-
-                Span<byte> block = run.AsSpan(vertex * 8, 8);
-                for (int slot = 0; slot < SlotsPerSet; slot++)
-                {
-                    int at = (set * SlotsPerSet) + slot;
-                    (float weight, int bone) = at < pairs.Count ? pairs[at] : (0.0f, 0);
-                    block[slot] = ToByte(weight);
-                    block[SlotsPerSet + slot] = (byte)bone;
-                }
+                (float weight, int bone) = slot < pairs.Count ? pairs[slot] : (0.0f, 0);
+                block[slot] = ToByte(weight);
+                block[WeightSlots + slot] = (byte)bone;
             }
         }
     }

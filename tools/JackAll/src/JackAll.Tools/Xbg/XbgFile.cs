@@ -99,7 +99,7 @@ public sealed class XbgCluster
 
     public required short[] Palette { get; init; }
 
-    public bool IsSkinned => (Flags & XbgFile.BoneWeights1) != 0;
+    public bool IsSkinned => (Flags & XbgFile.BoneWeights) != 0;
 }
 
 /// <summary>
@@ -183,64 +183,73 @@ public sealed class XbgFile
     public const uint NoPlacement = 0xFFFF;
 
     /// <summary>
-    /// Vertex component flags. The position is one of the first three; the rest are independent
-    /// bits, and a buffer lays its components out in this fixed order.
+    /// Vertex component flags, as the engine turns them into a vertex declaration. Bits 0x20, 0x400
+    /// and those above 0x2000 add nothing.
     /// </summary>
     public const uint PosFloat = 0x0001;
     public const uint PosInt16 = 0x0002;
-    public const uint PosHalf = 0x0004;
+    public const uint Uv0Float = 0x0004;
     public const uint Uv0 = 0x0008;
-    public const uint BoneWeights1 = 0x0010;
-    public const uint BoneWeights2 = 0x0020;
+    public const uint BoneWeights = 0x0010;
     public const uint Normal = 0x0040;
     public const uint Colour = 0x0080;
     public const uint Tangent = 0x0100;
     public const uint Binormal = 0x0200;
-    public const uint Unk400 = 0x0400;
     public const uint Uv1 = 0x0800;
     public const uint Uv2 = 0x1000;
+    public const uint Uv3 = 0x2000;
 
-    /// <summary>The position encodings, in the order a buffer's flags are tested.</summary>
-    private static readonly (uint Bit, string Name, int Size)[] PositionKinds =
-    [
-        (PosFloat, "pos_float", 12), (PosInt16, "pos_int16", 8), (PosHalf, "pos_half", 8),
-    ];
+    private static readonly (uint Bit, string Name)[] ExtraUvs = [(Uv1, "uv1"), (Uv2, "uv2"), (Uv3, "uv3")];
 
     private static readonly (uint Bit, string Name, int Size)[] Components =
     [
-        (Uv0, "uv0", 4), (Uv1, "uv1", 4), (Uv2, "uv2", 4),
-        (BoneWeights1, "bone_wts1", 8), (BoneWeights2, "bone_wts2", 8),
-        (Normal, "normal", 4), (Colour, "color", 4),
-        (Tangent, "tangent", 4), (Binormal, "binormal", 4), (Unk400, "unk400", 4),
+        (BoneWeights, "bone_wts", 8), (Normal, "normal", 4), (Colour, "color", 4),
+        (Tangent, "tangent", 4), (Binormal, "binormal", 4),
     ];
 
     /// <summary>
     /// Where each component sits inside one vertex, and the stride the flags imply.
     /// </summary>
     /// <remarks>
-    /// The position is reported under the name <c>pos</c> whichever encoding it uses, so callers
-    /// can find it without testing the flags again. Every shipped buffer stores int16 positions.
+    /// The position is float3 under 0x1, else int16x4 under 0x2, and is reported as <c>pos</c> either
+    /// way. Texcoord 0 is float2 under 0x4, else short2 under 0x8, and only the short2 form carries
+    /// texcoords 1 to 3. Every shipped buffer stores int16 positions and short2 texcoords.
     /// </remarks>
     public static (List<(string Name, int Offset, int Size)> Layout, int Stride) VertexLayout(uint flags)
     {
         List<(string, int, int)> layout = [];
         int cursor = 0;
-        foreach ((uint bit, _, int size) in PositionKinds)
+        void Add(string name, int size)
         {
-            if ((flags & bit) != 0)
+            layout.Add((name, cursor, size));
+            cursor += size;
+        }
+
+        if ((flags & PosFloat) != 0)
+        {
+            Add("pos", 12);
+        }
+        else if ((flags & PosInt16) != 0)
+        {
+            Add("pos", 8);
+        }
+
+        if ((flags & Uv0Float) != 0)
+        {
+            Add("uv0_float", 8);
+        }
+        else if ((flags & Uv0) != 0)
+        {
+            Add("uv0", 4);
+            foreach ((_, string name) in ExtraUvs.Where(uv => (flags & uv.Bit) != 0))
             {
-                layout.Add(("pos", cursor, size));
-                cursor += size;
-                break;
+                Add(name, 4);
             }
         }
-        foreach ((uint bit, string name, int size) in Components)
+
+        foreach ((_, string name, int size) in Components.Where(c => (flags & c.Bit) != 0))
         {
-            if ((flags & bit) != 0)
-            {
-                layout.Add((name, cursor, size));
-                cursor += size;
-            }
+            Add(name, size);
         }
         return (layout, cursor);
     }
