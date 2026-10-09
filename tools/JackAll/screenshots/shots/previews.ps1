@@ -7,18 +7,14 @@ Select-UiTab 'Files'
 $filter = Find-Ui -Scope (Find-Ui -Id FilesTabItem) -Type Edit
 $grid = Find-Ui -Id FileGrid
 
-# Selects one file by its path and returns what frames the details pane: its heading and the note
-# at the bottom.
+# Selects one file by its path and returns what frames its details pane.
 function Open-Preview([string]$Query, [string]$PathLike) {
     Set-UiValue $filter $Query
     # An exact path is looked up by the list itself, which also finds rows scrolled out of view.
     if ($PathLike.Contains('*')) { $row = Select-UiRow $PathLike $grid } else { $row = Wait-Ui { $r = Get-UiItem $grid $PathLike; Select-Ui $r; $r } -Timeout 30 -What $PathLike; Start-Sleep -Milliseconds 300 }
     Click-Ui $row
     Start-Sleep -Milliseconds 800
-    $name = Split-Path $PathLike -Leaf
-    $heading = Wait-Ui { @(Find-Ui -Type Text -Name $name -All -Optional) | Where-Object { $_.Current.BoundingRectangle.X -gt 880 } | Select-Object -First 1 } -What "the details of $name"
-    $note = Find-Ui -Type Text -Like 'Replacing a file stages it*'
-    return @($heading, $note)
+    return Get-DetailsFrame (Split-Path $PathLike -Leaf)
 }
 
 $frame = Open-Preview 'hash:585ACE93' '*\ak47.xbg'

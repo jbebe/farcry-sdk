@@ -442,6 +442,12 @@ function Find-UiFieldButton([string]$Label, [string]$Button, $Scope) {
     return Find-Ui -Scope $row -Type Button -Name $Button -Children
 }
 
+# What frames the Files tab's details pane for one file: its heading and the note at the bottom.
+function Get-DetailsFrame([string]$FileName) {
+    $heading = Wait-Ui { @(Find-Ui -Type Text -Name $FileName -All -Optional) | Where-Object { $_.Current.BoundingRectangle.X -gt 880 } | Select-Object -First 1 } -What "the details of $FileName"
+    return @($heading, (Find-Ui -Type Text -Like 'Replacing a file stages it*'))
+}
+
 # Selects a grid or list row by its shown text, retrying while the list is being refilled.
 function Select-UiRow([string]$Like, $Scope, [string]$Type = 'DataItem') {
     return Wait-Ui { $row = Find-UiByText -Scope $Scope -Type $Type -Like $Like -Timeout 2; Select-Ui $row; $row } -What "row '$Like'"

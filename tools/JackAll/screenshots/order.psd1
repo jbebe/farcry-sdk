@@ -14,5 +14,6 @@
         'saves'
         'previews'
         'textures'
+        'sound-effects'
     )
 }
