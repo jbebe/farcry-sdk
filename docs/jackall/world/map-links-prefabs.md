@@ -56,7 +56,7 @@ other campaign map.
 ![Two triggers grouped into a prefab and saved to the library](/img/jackall/map-links-prefabs/03-prefab.png)
 
 **Ungroup** (Ctrl+Shift+G) dissolves a prefab and leaves its members where they are. A layer's
-right-click menu also has **New ▸ Prefab**, an empty one to fill.
+right-click menu also has **New ▸ Prefab**.
 
 ## Hide and lock
 
