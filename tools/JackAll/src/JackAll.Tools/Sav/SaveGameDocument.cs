@@ -24,16 +24,24 @@ public sealed class SaveGameInfo
     public required string WorldName { get; init; }
     public required string PlayerName { get; init; }
 
+    /// <summary>The campaign act, 1 to 3.</summary>
+    public required uint Act { get; init; }
+
+    /// <summary>Campaign completion, 0 to 100.</summary>
+    public required uint CompletionPercent { get; init; }
+
+    /// <summary>The difficulty, 0 (Casual) to 3 (Infamous).</summary>
+    public required uint Difficulty { get; init; }
+
+    public string DifficultyName => Difficulty < DifficultyNames.Length ? DifficultyNames[Difficulty] : $"difficulty {Difficulty}";
+
+    private static readonly string[] DifficultyNames = ["Casual", "Experienced", "Hardcore", "Infamous"];
+
     /// <summary>Thumbnail dimensions in pixels.</summary>
     public required int ThumbnailWidth { get; init; }
     public required int ThumbnailHeight { get; init; }
 
-    /// <summary>
-    /// Raw pixel bytes, 4 bytes/pixel, tightly packed rows, top-to-bottom order not independently
-    /// confirmed either — the actual channel order (RGBA vs BGRA) wasn't pinned down (see
-    /// savegame_format.md, Section 3); callers currently assume BGRA, the more common convention for
-    /// this engine generation's raw pixel dumps.
-    /// </summary>
+    /// <summary>Raw pixel bytes: BGRA, 4 bytes/pixel, tightly packed rows, top row first.</summary>
     public required byte[] ThumbnailPixels { get; init; }
 
     public required IReadOnlyList<string> ActiveDlcIds { get; init; }
@@ -59,6 +67,9 @@ public sealed class SaveGameInfo
 public static class SaveGameDocument
 {
     private const uint FcbMagic = 0x4643626E; // "FCbn", little-endian — Fcb_MagicConstant()
+
+    // The base header's version, and its type: CRC32("CCampaignGameFile"). The engine rejects any other.
+    private const uint Version = 10, CampaignGameFileType = 0x63AF73F3;
 
     public static SaveGameInfo Read(string path)
     {
@@ -144,15 +155,22 @@ public static class SaveGameDocument
     {
         using var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true);
 
-        // Section 1 — CGameFileHeader base: fixed 20 bytes. Field semantics (plausibly a save-type
-        // tag plus the player's world position) aren't confirmed well enough to expose individually —
-        // see savegame_format.md Section 1 — so this just skips past them.
-        RequireBytes(reader, 20, path, "the base header");
+        // Section 1 — CGameFileHeader base: version, type, then the player's position (3 floats).
+        byte[] baseHeader = ReadExactly(reader, 20, path, "the base header");
+        uint version = BitConverter.ToUInt32(baseHeader, 0);
+        uint type = BitConverter.ToUInt32(baseHeader, 4);
+        if (version != Version || type != CampaignGameFileType)
+        {
+            throw new InvalidDataException(
+                $"'{path}' is not a campaign save (version {version}, type 0x{type:x8}).");
+        }
 
         // Section 2 — CCampaignGameFileHeader extension.
         string worldName = ReadLengthPrefixedString(reader, path);
         string playerName = ReadLengthPrefixedString(reader, path);
-        RequireBytes(reader, 12, path, "the header's trailing fields"); // 3 unconfirmed u32s
+        uint act = reader.ReadUInt32();
+        uint completion = reader.ReadUInt32();
+        uint difficulty = reader.ReadUInt32();
 
         // Section 3 — CScreenShot (thumbnail).
         int width = checked((int)reader.ReadUInt32());
@@ -162,25 +180,22 @@ public static class SaveGameDocument
         long pixelByteCount = (long)width * height * channels * bitsPerChannel / 8;
         byte[] pixels = ReadExactly(reader, pixelByteCount, path, "the thumbnail pixel data");
 
+        // Screenshot metadata: u32 key, then a length-prefixed string, per entry.
         uint metadataCount = reader.ReadUInt32();
-        if (metadataCount != 0)
+        for (uint i = 0; i < metadataCount; i++)
         {
-            // ScreenShot::WriteMetaDataInfoToFile's per-entry format was never traced (no real save
-            // sample seen had a nonzero count) — rather than guess and silently misparse everything
-            // after it, refuse outright instead of returning wrong data.
-            throw new NotSupportedException(
-                $"'{path}' has {metadataCount} screenshot metadata entries — that per-entry format " +
-                "isn't understood yet, so this save can't be parsed past its thumbnail.");
+            reader.ReadUInt32();
+            ReadLengthPrefixedString(reader, path);
         }
 
-        // Section 4 — CCampaignGameFileData: DLC list, then the embedded .fcb blob.
+        // Section 4 — CCampaignGameFileData: DLC list, the gamer-profile value, then the embedded .fcb blob.
         uint dlcCount = reader.ReadUInt32();
         var dlcIds = new List<string>((int)Math.Min(dlcCount, 64));
         for (uint i = 0; i < dlcCount; i++)
         {
             dlcIds.Add(ReadLengthPrefixedString(reader, path));
         }
-        RequireBytes(reader, 4, path, "the field before the embedded .fcb blob"); // unconfirmed, see savegame_format.md
+        RequireBytes(reader, 4, path, "the gamer-profile value before the embedded .fcb blob");
 
         long fcbOffset = reader.BaseStream.Position;
         uint magic = reader.ReadUInt32();
@@ -198,6 +213,9 @@ public static class SaveGameDocument
             FilePath = path,
             WorldName = worldName,
             PlayerName = playerName,
+            Act = act,
+            CompletionPercent = completion,
+            Difficulty = difficulty,
             ThumbnailWidth = width,
             ThumbnailHeight = height,
             ThumbnailPixels = pixels,

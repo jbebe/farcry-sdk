@@ -217,27 +217,37 @@ internal static class TestSupport
     /// embedded `.fcb` blob. A real .sav is a player's own save data, so every savegame test builds one
     /// rather than checking a fixture in.</summary>
     public static void WriteSaveWrapper(
-        BinaryWriter writer, string world, string player, int thumbWidth, int thumbHeight, string[] dlcIds)
+        BinaryWriter writer, string world, string player, int thumbWidth, int thumbHeight, string[] dlcIds,
+        (uint Key, string Value)[]? metadata = null)
     {
-        writer.Write(new byte[20]); // CGameFileHeader base
+        writer.Write(10u);          // version
+        writer.Write(0x63AF73F3u);  // CRC32("CCampaignGameFile")
+        writer.Write(new byte[12]); // player position
 
         WriteLengthPrefixedString(writer, world);
         WriteLengthPrefixedString(writer, player);
-        writer.Write(new byte[12]); // 3 unconfirmed trailing u32s
+        writer.Write(2u);  // act
+        writer.Write(73u); // completion percent
+        writer.Write(3u);  // difficulty
 
         writer.Write((uint)thumbWidth);
         writer.Write((uint)thumbHeight);
         writer.Write((uint)4); // channels
         writer.Write((uint)8); // bits per channel
         writer.Write(new byte[thumbWidth * thumbHeight * 4]);
-        writer.Write((uint)0); // metadata entry count
+        writer.Write((uint)(metadata?.Length ?? 0));
+        foreach ((uint key, string value) in metadata ?? [])
+        {
+            writer.Write(key);
+            WriteLengthPrefixedString(writer, value);
+        }
 
         writer.Write((uint)dlcIds.Length);
         foreach (string dlc in dlcIds)
         {
             WriteLengthPrefixedString(writer, dlc);
         }
-        writer.Write((uint)0); // unconfirmed extra field
+        writer.Write((uint)0); // gamer-profile value
     }
 
     /// <summary>A complete, readable .sav whose embedded blob is <paramref name="root"/>.</summary>

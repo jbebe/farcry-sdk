@@ -52,19 +52,18 @@ independently re-verified against the real Windows-written save file regardless.
 ## Section 1 — `CGameFileHeader` base (20 bytes, offset `0x00`)
 
 `CGameFileHeader::GetSaveSize()` (`0x091e3810`) hardcodes a return of `0x14` — this base header is
-always exactly 20 bytes. Its `WriteToFile`/`ReadFromFile` are not located under that name, so the
-field meanings below are inferred from the real bytes rather than decompiled directly:
+always exactly 20 bytes. The writer (`0x10ca1b30` in the GOG `Dunia.dll`) writes the version, the
+file type, then 12 bytes of position:
 
-| Offset | Size | Field | Measured value | Confidence |
-|---|---|---|---|---|
-| `0x00` | 4 | u32, ID/tag | `0x0000000A` (10) | low — not a plausible timestamp; likely a small save-type/slot enum or a leftover `InvalidID` sentinel |
-| `0x04` | 4 | float, likely player X | ≈2621.3 | medium |
-| `0x08` | 4 | float, likely player Y | ≈2109.1 | medium |
-| `0x0C` | 4 | float, likely player Z | ≈17.9 | medium — plausible elevation on world1 |
+| Offset | Size | Field | Measured value |
+|---|---|---|---|
+| `0x00` | 4 | u32, version: `GetVersion()` | `10` |
+| `0x04` | 4 | u32, file type: CRC32 of the file class's name | `0x63AF73F3` = CRC32(`"CCampaignGameFile"`) |
+| `0x08` | 12 | 3 floats, the player's position | e.g. `(3241.6, 3796.5, 47.2)` |
 
-The 3-float reading is circumstantial: [command-line args](../engine-internals/command-line-args.md)
-notes that a `PlayerPos`-shaped property is read back after `-load`, and the X/Y magnitudes match
-`world1`'s map extents. It is a strong hypothesis, not a confirmed field mapping.
+The campaign save builder (`0x10721e10`, GOG) fills the position from the player's `GetPos`
+**(RE-verified)**. All 14 saves checked carry version `10` and type `0x63AF73F3` **(seen in data)**. A
+custom map ([`.fc2map`](./fc2map.md)) shares this header with version `11`.
 
 ## Section 2 — `CCampaignGameFileHeader` extension (offset `0x14`)
 
@@ -83,14 +82,18 @@ strings inside the embedded `.fcb` blob, which are null-terminated). Measured:
 |---|---|---|---|
 | `0x14` | 4+6 | length-prefixed string | `"world1"` |
 | `0x1E` | 4+11 | length-prefixed string | `"Paul_Ferenc"` (player/character name) |
-| `0x2D` | 4 | u32 | 1 |
-| `0x31` | 4 | u32 | 8 |
-| `0x35` | 4 | u32 | 2 |
+| `0x2D` | 4 | u32, act: `CFCXMissionManager.CurrentAct` | 1 |
+| `0x31` | 4 | u32, campaign completion in percent, 0–100 | 8 |
+| `0x35` | 4 | u32, difficulty: `CFCXGameplayManager.DifficultyLevel`, `0` Casual to `3` Infamous | 2 |
 
-No `GetDifficulty`/`GetAct`/`GetChapter` accessor on this class pins down the trailing three u32s
-definitively (a `Difficulty`-named accessor cluster exists elsewhere in the engine, but is not
-confirmed wired to this class). Plausible reading of `(1, 8, 2)`: difficulty tier, an
-act/chapter progress marker, and a third small enum — not confirmed.
+The writer (`0x10722a30`, GOG) writes the two strings, then the three u32s. The save builder
+(`0x10721e10`) fills them **(RE-verified)**:
+
+- the act is the mission manager's `CurrentAct`, the reflected byte at `+0x40`;
+- the completion is the campaign progress fraction times 100, rounded and clamped to 0–100;
+- the difficulty is the gameplay manager's `DifficultyLevel` at `+0x40`.
+
+The three are for display: the save list shows them, and the body carries its own copies.
 
 ## Section 3 — `CScreenShot` (thumbnail, offset `0x39`)
 
@@ -101,16 +104,17 @@ mirrors of each other and both match the real file byte-for-byte:
 |---|---|---|---|
 | `0x39` | 4 | width (u32) | 128 |
 | `0x3D` | 4 | height (u32) | 90 |
-| `0x41` | 4 | channels (u32) | 4 (RGBA/BGRA) |
+| `0x41` | 4 | channels (u32) | 4 (BGRA) |
 | `0x45` | 4 | bits per channel (u32) | 8 |
-| `0x49` | W·H·ch·bpc/8 | raw pixel bytes | 46,080 bytes |
+| `0x49` | W·H·ch·bpc/8 | raw pixel bytes, BGRA, top row first | 46,080 bytes |
 | `0xB449` | 4 | metadata-entry count (u32) | 0 |
+| | per entry | u32 key, then a length-prefixed string | — |
 
-Size formula confirmed exactly: `width * height * channels * bitsPerChannel / 8`. Pixel channel order
-(RGBA vs BGRA) is not distinguished from this one sample — low, similar-magnitude values across all 3
-channels are consistent with either, matching a dark/foliage-heavy screenshot. The per-entry metadata
-format (`WriteMetaDataInfoToFile`/`ReadMetaDataInfoFromFile`) is not traced — this sample has zero
-entries. Capture-side entry points (`CGameFilesService::GrabScreenshotEv`, `CScreenShot::Capture`)
+Size formula confirmed exactly: `width * height * channels * bitsPerChannel / 8`. Read as BGRA with the
+top row first, a thumbnail shows the scene upright in natural colour **(seen in data)**. Each metadata
+entry is a u32 key followed by a u32 length and that many bytes, with no terminator
+(`ScreenShot::WriteMetaDataInfoToFile` `0x091ea9a0` and its reader, **RE-verified**). No save checked
+has an entry. Capture-side entry points (`CGameFilesService::GrabScreenshotEv`, `CScreenShot::Capture`)
 are not decompiled.
 
 ## Section 4 — `CCampaignGameFileData` (offset `0xB44D`): DLC list + embedded `.fcb` blob
@@ -120,7 +124,7 @@ are not decompiled.
 ```c
 GetSaveSize() = 4                                        // DLC-string count
               + Σ GameFileUtils::GetStringSaveSize(dlc)   // one entry per active DLC id
-              + 4                                         // extra fixed field, purpose unconfirmed
+              + 4                                         // gamer-profile value
               + persistenceObj->GetSaveSize();            // virtual call — the embedded FCB blob
 ```
 
@@ -128,8 +132,12 @@ GetSaveSize() = 4                                        // DLC-string count
 |---|---|---|---|
 | `0xB44D` | 4 | DLC count (u32) | 1 |
 | `0xB451` | 4+4 | length-prefixed string | `"dlc1"` |
-| `0xB459` | 4 | u32 | 0 (purpose unconfirmed) |
+| `0xB459` | 4 | u32, copied from the gamer profile's `+0x74` | 0 |
 | `0xB45D` | — | embedded `.fcb` blob starts here, runs to EOF | — |
+
+The save builder (`0x10721e10`, GOG) copies the u32 from `+0x74` of the object a profile accessor
+returns, and leaves it `0` when the accessor returns nothing **(RE-verified)**. It is `0` in every save
+checked **(seen in data)**.
 
 ### The embedded blob is an ordinary `.fcb` file
 
@@ -1119,15 +1127,7 @@ class names, 2,009 member names).
 
 ## Unknowns
 
-- `CGameFileHeader`'s own `WriteToFile`/`ReadFromFile` are not located under that name — Section 1's
-  field meanings are inferred from real bytes, not decompiled directly.
-- `CCampaignGameFileHeader`'s trailing three u32s (guessed: difficulty/act/chapter) have no traced
-  accessor confirming their meaning.
-- The `u32 = 0` field between the DLC list and the embedded `.fcb` blob — present and measured,
-  purpose unknown.
-- Screenshot pixel channel order (RGBA vs BGRA) — not distinguished from the one sample checked.
-- Whether the three Section-1 floats are really `PlayerPos` — plausible but not cross-checked against
-  a live `-load`-and-read-back test or a decompiled accessor.
+- What the gamer-profile `+0x74` value means; it is `0` in every save checked.
 - 23 of the 1,046 distinct hashes in the sample save remain unresolved.
 - Whether the four-section container layout is identical for quicksaves, manual saves, and checkpoint
   autosaves — only one save file was inspected byte-for-byte.

@@ -126,12 +126,10 @@ public sealed class SaveRow(SaveGameInfo info)
     public string PersistedObjectCountText => $"{Info.PersistedObjectCount:N0} persisted entities";
     public string DlcText => Info.ActiveDlcIds.Count > 0 ? string.Join(", ", Info.ActiveDlcIds) : "none";
 
-    /// <summary>
-    /// Null if the thumbnail couldn't be decoded — shown as "no preview" rather than failing the
-    /// whole row, since the thumbnail is the one part of the format
-    /// (reverse/dunia/savegame_format.md, Section 3) whose exact pixel layout is a best guess, not
-    /// fully confirmed.
-    /// </summary>
+    public string ProgressText => $"Act {Info.Act}, {Info.CompletionPercent}% complete, {Info.DifficultyName}";
+
+    /// <summary>Null if the thumbnail couldn't be decoded — shown as "no preview" rather than failing
+    /// the whole row.</summary>
     public BitmapSource? Thumbnail { get; } = TryDecodeThumbnail(info);
     public bool HasThumbnail => Thumbnail is not null;
 
@@ -139,9 +137,6 @@ public sealed class SaveRow(SaveGameInfo info)
     {
         try
         {
-            // Channel order (BGRA vs RGBA) was never independently confirmed — BGRA is the guess
-            // savegame_format.md settles on; a swapped-looking preview is the visible symptom if
-            // that guess is wrong, not a crash.
             var bitmap = new WriteableBitmap(info.ThumbnailWidth, info.ThumbnailHeight, 96, 96, PixelFormats.Bgra32, null);
             bitmap.WritePixels(
                 new Int32Rect(0, 0, info.ThumbnailWidth, info.ThumbnailHeight),

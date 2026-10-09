@@ -313,7 +313,7 @@
                                         </Grid.ColumnDefinitions>
                                         <Grid.RowDefinitions>
                                             <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
-                                            <RowDefinition /><RowDefinition /><RowDefinition />
+                                            <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
                                         </Grid.RowDefinitions>
 
                                         <TextBlock Grid.Row="0" Grid.Column="0" Text="World" Style="{StaticResource Secondary}" />
@@ -322,24 +322,27 @@
                                         <TextBlock Grid.Row="1" Grid.Column="0" Text="Player" Style="{StaticResource Secondary}" />
                                         <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedSave.PlayerName}" TextWrapping="Wrap" />
 
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Saved" Style="{StaticResource Secondary}" />
-                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedSave.LastWriteTimeText}" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Progress" Style="{StaticResource Secondary}" />
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedSave.ProgressText}" TextWrapping="Wrap" />
 
-                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Thumbnail" Style="{StaticResource Secondary}" />
-                                        <TextBlock Grid.Row="3" Grid.Column="1" TextWrapping="Wrap">
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Saved" Style="{StaticResource Secondary}" />
+                                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedSave.LastWriteTimeText}" TextWrapping="Wrap" />
+
+                                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Thumbnail" Style="{StaticResource Secondary}" />
+                                        <TextBlock Grid.Row="4" Grid.Column="1" TextWrapping="Wrap">
                                             <Run Text="{Binding SelectedSave.Info.ThumbnailWidth, Mode=OneWay}" />
                                             <Run Text="×" />
                                             <Run Text="{Binding SelectedSave.Info.ThumbnailHeight, Mode=OneWay}" />
                                         </TextBlock>
 
-                                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Persisted" Style="{StaticResource Secondary}" />
-                                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedSave.PersistedObjectCountText}" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Persisted" Style="{StaticResource Secondary}" />
+                                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SelectedSave.PersistedObjectCountText}" TextWrapping="Wrap" />
 
-                                        <TextBlock Grid.Row="5" Grid.Column="0" Text="DLC" Style="{StaticResource Secondary}" />
-                                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SelectedSave.DlcText}" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Row="6" Grid.Column="0" Text="DLC" Style="{StaticResource Secondary}" />
+                                        <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedSave.DlcText}" TextWrapping="Wrap" />
 
-                                        <TextBlock Grid.Row="6" Grid.Column="0" Text="File" Style="{StaticResource Secondary}" />
-                                        <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedSave.Info.FilePath}"
+                                        <TextBlock Grid.Row="7" Grid.Column="0" Text="File" Style="{StaticResource Secondary}" />
+                                        <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding SelectedSave.Info.FilePath}"
                                                    Style="{StaticResource Note}" />
                                     </Grid>
 

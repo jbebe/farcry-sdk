@@ -21,7 +21,8 @@ public sealed class SavListCommand : CliCommand<SavListCommand.Settings>
     }
 
     private sealed record SaveListing(
-        string FileName, string World, string Player, uint PersistedObjects, DateTime Modified);
+        string FileName, string World, string Player, uint Act, uint CompletionPercent, string Difficulty,
+        uint PersistedObjects, DateTime Modified);
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
@@ -35,8 +36,8 @@ public sealed class SavListCommand : CliCommand<SavListCommand.Settings>
             {
                 SaveGameInfo info = SaveGameDocument.Read(path);
                 saves.Add(new SaveListing(
-                    Path.GetFileName(path), info.WorldName, info.PlayerName,
-                    info.PersistedObjectCount, File.GetLastWriteTime(path)));
+                    Path.GetFileName(path), info.WorldName, info.PlayerName, info.Act, info.CompletionPercent,
+                    info.DifficultyName, info.PersistedObjectCount, File.GetLastWriteTime(path)));
             }
             catch
             {
@@ -57,11 +58,12 @@ public sealed class SavListCommand : CliCommand<SavListCommand.Settings>
             return 0;
         }
 
-        var table = new Table().AddColumns("File", "World", "Player", "Persisted objects", "Modified");
+        var table = new Table().AddColumns("File", "World", "Player", "Act", "Complete", "Difficulty", "Persisted objects", "Modified");
         foreach (SaveListing save in saves)
         {
             table.AddRow(
                 save.FileName.EscapeMarkup(), save.World.EscapeMarkup(), save.Player.EscapeMarkup(),
+                $"{save.Act}", $"{save.CompletionPercent}%", save.Difficulty,
                 $"{save.PersistedObjects:N0}", $"{save.Modified:yyyy-MM-dd HH:mm}");
         }
         AnsiConsole.Write(table);

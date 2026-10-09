@@ -16,12 +16,12 @@ public class SaveGameDocumentTests
     private static byte[] BuildMinimalSaveGame(
         string world = "world1", string player = "Paul_Ferenc",
         int thumbWidth = 2, int thumbHeight = 2,
-        string[]? dlcIds = null, uint persistedObjectCount = 42)
+        string[]? dlcIds = null, uint persistedObjectCount = 42, (uint, string)[]? metadata = null)
     {
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream);
 
-        TestSupport.WriteSaveWrapper(writer, world, player, thumbWidth, thumbHeight, dlcIds ?? ["dlc1"]);
+        TestSupport.WriteSaveWrapper(writer, world, player, thumbWidth, thumbHeight, dlcIds ?? ["dlc1"], metadata);
 
         writer.Write(0x4643626Eu); // "FCbn"
         writer.Write((ushort)2);   // version
@@ -39,6 +39,25 @@ public class SaveGameDocumentTests
 
         Assert.Equal("world1", info.WorldName);
         Assert.Equal("Paul_Ferenc", info.PlayerName);
+    }
+
+    [Fact]
+    public void Reads_act_completion_and_difficulty()
+    {
+        SaveGameInfo info = SaveGameDocument.Read(new MemoryStream(BuildMinimalSaveGame()), "test.sav");
+
+        Assert.Equal(2u, info.Act);
+        Assert.Equal(73u, info.CompletionPercent);
+        Assert.Equal("Infamous", info.DifficultyName);
+    }
+
+    [Fact]
+    public void Rejects_a_game_file_that_is_not_a_campaign_save()
+    {
+        byte[] file = BuildMinimalSaveGame();
+        BitConverter.GetBytes(0xD2FD0A6Bu).CopyTo(file, 4);
+
+        Assert.Throws<InvalidDataException>(() => SaveGameDocument.Read(new MemoryStream(file), "test.sav"));
     }
 
     [Fact]
@@ -91,16 +110,14 @@ public class SaveGameDocumentTests
     }
 
     [Fact]
-    public void Rejects_nonzero_screenshot_metadata_rather_than_misparse_past_it()
+    public void Reads_past_screenshot_metadata_entries()
     {
-        byte[] file = BuildMinimalSaveGame();
+        byte[] file = BuildMinimalSaveGame(dlcIds: ["dlc1", "dlc_jungle"], metadata: [(7, "author"), (9, "")]);
 
-        // The metadata count is the 4 bytes immediately after the thumbnail pixel data: header(20) +
-        // world(4+6) + player(4+11) + trailer(12) + screenshotHeader(16) + pixels(2*2*4=16).
-        int metadataCountOffset = 20 + (4 + 6) + (4 + 11) + 12 + 16 + 16;
-        BitConverter.GetBytes((uint)1).CopyTo(file, metadataCountOffset);
+        SaveGameInfo info = SaveGameDocument.Read(new MemoryStream(file), "test.sav");
 
-        Assert.Throws<NotSupportedException>(() => SaveGameDocument.Read(new MemoryStream(file), "test.sav"));
+        Assert.Equal(["dlc1", "dlc_jungle"], info.ActiveDlcIds);
+        Assert.Equal(0x4643626Eu, BitConverter.ToUInt32(file, (int)info.FcbBlobOffset));
     }
 
     /// <summary>Builds a tiny, real, decodable <c>FcbObject</c> tree - one root with one String value

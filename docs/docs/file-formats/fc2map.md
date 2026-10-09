@@ -17,15 +17,17 @@ types the retail game loads, wrapped in the engine's ordinary game-file containe
 ## Container
 
 A `.fc2map` is a **`CCustomMapGameFile`** — the same `CGameFileHeader` family as a campaign save (see
-[savegame](./savegame.md)), distinguished by the type tag in the first word:
+[savegame](./savegame.md)), distinguished by the version in the first word:
 
-| Tag at `0x00` | File |
+| Version at `0x00` | File |
 |---|---|
 | `10` | campaign save |
 | `11` | custom map (`.fc2map`) |
 
-`CGameFileHeader::SaveToFile` writes the 20-byte base as `u32` type tag, `u32` version and 12 further
-bytes. `CCustomMapGameFileHeader::SaveToFile` then writes, in this order:
+`CGameFileHeader::SaveToFile` writes the 20-byte base as `u32` version (`GetVersion()`), `u32` file
+type and 12 further bytes (`0x10ca1b30` in the GOG `Dunia.dll`, **RE-verified**). In a campaign save the
+file type is the CRC32 of the class name. `CCustomMapGameFileHeader::SaveToFile` then writes, in this
+order:
 
 ```
 u8[8]                     two IDs; 0xFFFFFFFF/0xFFFFFFFF when unset
