@@ -1,4 +1,4 @@
-﻿---
+---
 slug: /first-mod
 sidebar_position: 3
 title: "Your first mod: a bigger AK-47 magazine"
