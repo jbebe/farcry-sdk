@@ -72,8 +72,8 @@ out again.
   first-person sounds aren't positioned.
 - A **Rolloff curve** decides how the volume falls with distance. Banks with curves show a chart
   you can edit point by point.
-- A **Switch** record plays different things depending on a game value, such as the surface you walk
-  on. Its cases are listed under it.
+- A **Switch** record plays different things depending on a value the game sets. Its cases are
+  listed under it, each with what it plays.
 - **Go to →** follows a record that points into another bank.
 - **Show raw technical details** shows every field, including the ones JackAll doesn't explain.
 
