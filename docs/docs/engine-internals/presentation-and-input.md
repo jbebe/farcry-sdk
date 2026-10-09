@@ -715,6 +715,29 @@ wrong: a refused read looks like a lost device and sends the engine off to reacq
 `GetDeviceData` still has to be drained and then reported as empty, or the events queue up and all
 arrive at once when the overlay closes.
 
+### Gamepads are XInput only
+
+DirectInput creates only the system mouse and the system keyboard; no joystick device is ever made.
+Gamepads come from `XINPUT1_3.dll` alone: `XInputGetState` in the poll (GOG `0x102C7A60`) and
+`XInputSetState` for rumble. The pad slot is claimed per process. The engine probes the mutexes
+`LocalNomadPadInput0` to `3`, takes the first that does not exist yet, and creates it. All of this
+is **RE-verified on GOG**.
+
+### Where rebinds are kept
+
+Rebound controls live in a file of their own, `%APPDATA%InputUserActionMap.xml`, not in the
+shipped action maps. The keyboard and controller options page (GOG constructor `0x10818E10`) is the
+only code that names it. It writes the file, creating the folders on the way, and reads it back
+when the file exists. The shipped `config\inputactionmapcommon.xml`, in both `common` and `patch`,
+imports it as an optional file right after the console's map:
+
+```xml
+<Import file="%APPDATA%InputUserActionMap.xml" optional=""/>
+```
+
+This is **RE-verified on GOG** and seen in data. Which folder `%APPDATA%` expands to was not
+traced.
+
 ## What this is enough to build
 
 DevTools' overlay is exactly the above and nothing else: a throwaway device for the vtable, `Present`
