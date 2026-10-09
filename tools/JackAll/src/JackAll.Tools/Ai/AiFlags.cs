@@ -52,7 +52,7 @@ public static class AiFlags
         [43] = "Rush target → combat: RushTarget",
         [44] = "Formation point changed",
         [45] = "Need to relocate → combat: Relocate",
-        [46] = "Dynamic-zone combat",
+        [46] = "Discretionary-zone combat",
         [47] = "Silent sniper alert",
         [48] = "Is under fire",
         [49] = "Shot blocked by a friend",

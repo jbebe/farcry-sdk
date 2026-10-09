@@ -44,15 +44,13 @@ public static class SoldierFields
         new(Perception, "Weight: vegetation", "How much grass and bushes hide the player.", Weights, "fVegetationEvaluatorWeight"),
         new(Perception, "Weight: stance", "How much crouching hides the player.", Weights, "fStanceEvaluatorWeight"),
         new(Perception, "Weight: movement", "How much moving gives the player away.", Weights, "fSpeedEvaluatorWeight"),
-        new(Perception, "Weight: light", "How much darkness hides the player.", Weights, "fAmbientLightEvaluatorWeight"),
         new(Perception, "Full visibility inside", "Fraction of the cone length inside which distance no longer hides the player.", Internals, "fDistanceEvaluator_FullVisibilityRatio"),
         new(Perception, "Visibility at cone end", "What is left of visibility at the far end of the cone.", Internals, "fDistanceEvaluator_MinVisibilityAtMaxFOVRange"),
         new(Perception, "Standing still factor", "Visibility of a motionless player, relative to a moving one.", Internals, "fSpeedEvaluator_StandingStillVisibilityFactor"),
         new(Perception, "Visibility at cone edge", "Visibility at the side edge of the cone.", Internals, "fFOVEvaluator_VisibilityFactorAtFOVLimit"),
 
-        .. Cones("Desert", "DesertFOV"),
-        .. Cones("Savannah", "SavannahFOV"),
-        .. Cones("Jungle", "JungleFOV"),
+        // The engine reads only the DesertFOV cones, in every kind of terrain.
+        .. Cones("DesertFOV"),
 
         new(Marksmanship, "Reaction time (s)", "Every shot misses for this long after he picks the player as target. The single biggest lever against instant, aimbot-like hits.", Shooting, "fTimerToMissTarget"),
         new(Marksmanship, "Miss spread, width (m)", "Width of the area around the player where missed shots land.", Shooting, "fMissWidth"),
@@ -105,13 +103,13 @@ public static class SoldierFields
         yield return new(Detection, $"{state}: sees you at", $"How visible (0-1) the player must be before a soldier {where} positively spots him. Lower detects sooner.", Agent, prefix + "ClearVal");
     }
 
-    private static IEnumerable<TuningField> Cones(string biome, string node)
+    private static IEnumerable<TuningField> Cones(string node)
     {
         string[] fov = [.. Senses, "FOVParameters", node];
-        yield return new(Vision, $"{biome}: focus range (m)", $"How far he sees straight ahead in {biome.ToLowerInvariant()} terrain.", [.. fov, "FocusFOV"], "fLength");
-        yield return new(Vision, $"{biome}: focus angle (°)", "Width of the sharp central cone.", [.. fov, "FocusFOV"], "fAngle");
-        yield return new(Vision, $"{biome}: side range (m)", $"How far his peripheral vision reaches in {biome.ToLowerInvariant()} terrain.", [.. fov, "PeripheralFOV"], "fLength");
-        yield return new(Vision, $"{biome}: side angle (°)", "Width of the peripheral cone.", [.. fov, "PeripheralFOV"], "fAngle");
+        yield return new(Vision, "Focus range (m)", "How far he sees straight ahead.", [.. fov, "FocusFOV"], "fLength");
+        yield return new(Vision, "Focus angle (°)", "Width of the sharp central cone.", [.. fov, "FocusFOV"], "fAngle");
+        yield return new(Vision, "Side range (m)", "How far his peripheral vision reaches.", [.. fov, "PeripheralFOV"], "fLength");
+        yield return new(Vision, "Side angle (°)", "Width of the peripheral cone.", [.. fov, "PeripheralFOV"], "fAngle");
     }
 
     private static IEnumerable<TuningField> Status(string who, string node, string whose)

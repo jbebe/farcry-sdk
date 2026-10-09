@@ -127,17 +127,21 @@ only through the orders and flags the lieutenant sends.
 
 ## Seeing
 
-The archetype's `SensorySystem` gives a focus cone and a wider peripheral cone per region type -
+The archetype's `SensorySystem` gives a focus cone and a wider peripheral cone under three names -
 `DesertFOV`, `SavannahFOV`, `JungleFOV`, each with `fLength` and `fAngle`, the full angle in degrees.
-`CSensorySystem::AdjustFOV` sets both cones again for every target on every update:
+Only `DesertFOV` is ever read, in every kind of terrain: the target scan passes the sensory system's
+first cone pair (`+0x88`), and the one cone getter returns that same pair with no region argument
+(`0x109f3e50`, `0x109f1d50` in the GOG build, **RE-verified**). The other two are loaded and never used,
+so editing `SavannahFOV` or `JungleFOV` changes nothing. `CSensorySystem::AdjustFOV` sets both cones
+again for every target on every update:
 
-- **Length** is the region's `fLength` times the night term. In combat it is also times
+- **Length** is `DesertFOV`'s `fLength` times the night term. In combat it is also times
   `fCombatMultiplier`, and when alerted before or after a fight times `fPreCombatMultiplier` or
   `fPostCombatMultiplier`; when idle there is no state multiplier. While he aims a sniper rifle it is
   times `fSniperLengthMultiplier`. Against the player in a vehicle it is times
   `fPlayerInVehicleMultiplier`, by day or with the vehicle's headlights on. Then it is capped: 150 m
   against the player, 350 m through a scope, less against other soldiers.
-- **Angle** is the region's `fAngle`, times `fSniperAngleMultiplier` through a scope. A soldier
+- **Angle** is `DesertFOV`'s `fAngle`, times `fSniperAngleMultiplier` through a scope. A soldier
   sitting in a vehicle sees all around him: both angles become 360°.
 
 The **night term** is `1 − night × fNightTimeMultiplier`. *night* is 0 by day and 1 at night, and

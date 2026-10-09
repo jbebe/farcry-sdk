@@ -62,8 +62,8 @@ public class AiTuningTests
 
         Assert.Equal(0xC2199C86u, FcbClassDefinitions.Crc32Ascii("fLength"));
         Assert.Equal(0x680DD0F4u, FcbClassDefinitions.Crc32Ascii("fAngle"));
-        Assert.Equal(60, Field("Desert: focus range (m)").Read(entity));
-        Assert.Equal(120, Field("Desert: side angle (°)").Read(entity));
+        Assert.Equal(60, Field("Focus range (m)").Read(entity));
+        Assert.Equal(120, Field("Side angle (°)").Read(entity));
     }
 
     [Fact]

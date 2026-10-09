@@ -54,7 +54,7 @@ public static class AiTaskHelp
         ["CTaskCheckIsInDistance"] = "Branches on a distance.",
         ["CTaskCheckTargetVisible"] = "Branches on whether he can see the target.",
         ["CTaskCheckUnderFire"] = "Branches on whether he is being shot at.",
-        ["CTaskCheckDifficultyLevel"] = "Branches on the game difficulty.",
+        ["CTaskCheckDifficultyLevel"] = "Rolls an AdaptativeBehavior chance at the campaign progression level, not the difficulty setting.",
         ["CTaskCheckFireRange"] = "Branches on the range band.",
         ["CTaskCheckAmmoStatus"] = "Branches on ammunition left.",
         ["CTaskSelectBestTarget"] = "Picks the best target.",
