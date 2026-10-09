@@ -9,5 +9,6 @@
         'references'
         'export-replace-revert'
         'archetypes'
+        'value-editor'
     )
 }
