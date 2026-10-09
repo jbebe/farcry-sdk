@@ -84,9 +84,9 @@ Then **Deploy mods**.
 ## Every copy of the package
 
 The game ships each UI package once per language and once per screen shape: `ui\localized\pc\<lang>\`
-and `ui\localized\pcwidescreen\<lang>\`, for `eng`, `fre`, `ger`, `ita` and `spa`. A player sees the
-copy for their language and screen, so a HUD change for everyone means the same edit in all ten.
-Flashlight's HUD icon ships that way.
+and `ui\localized\pcwidescreen\<lang>\`. The usual install has five languages, `eng`, `fre`, `ger`,
+`ita` and `spa`, so ten copies. A player sees the copy for their language and screen, so a HUD change
+for everyone means the same edit in all of them. Flashlight's HUD icon ships that way.
 
 For the same change across ten packages, **Export XML…** and **Import XML…** are faster than the tree:
 edit the XML in a text editor, import it into each copy, and save. Everything about the format and
