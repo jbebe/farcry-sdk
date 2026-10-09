@@ -113,6 +113,10 @@ public sealed class GameVfs : IDisposable
     /// linear scan of <see cref="_archives"/> for every file.</summary>
     private Dictionary<string, DuniaArchive[]> _archivesByName = [];
 
+    /// <summary>Archive bare name -&gt; its rank in the engine's search order, higher first: patch, then
+    /// the DLC archives a campaign mounts. Every other archive ranks 0.</summary>
+    private Dictionary<string, int> _priorityByName = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>
     /// Fragment rows already synthesized for a container, keyed by the container's hash — reused
     /// across <see cref="Rebuild"/>/<see cref="LoadFragments"/> calls as long as that container's
@@ -285,6 +289,13 @@ public sealed class GameVfs : IDisposable
             .ToDictionary(g => g.Key, g => g.Any(vfs.IsVolatile));
 
         vfs._archivesByName = IndexByName(vfs._archives);
+
+        IReadOnlySet<string> campaignDlc = install.CampaignDlcArchiveFats();
+        foreach (DuniaArchive archive in vfs._archives.Where(a => campaignDlc.Contains(Path.GetFullPath(a.FatPath))))
+        {
+            vfs._priorityByName[archive.Name] = 1;
+        }
+        vfs._priorityByName["patch"] = 2;
 
         return vfs;
     }
@@ -460,8 +471,7 @@ public sealed class GameVfs : IDisposable
 
             foreach (var entry in archive.Entries)
             {
-                // patch.dat is the engine's highest-priority archive, so when two archives carry
-                // the same hash it wins — matching the search order the engine actually uses.
+                // When two archives carry the same hash, the one the engine searches first wins.
                 bool overriding = files.TryGetValue(entry.Hash, out var existing);
                 if (overriding && !IsHigherPriority(archive.Name, existing!.SourceName))
                 {
@@ -1122,11 +1132,10 @@ public sealed class GameVfs : IDisposable
         return memo.Tree.AncestryOf(row.FragmentId!);
     }
 
-    /// <summary>patch beats everything else; otherwise mount order doesn't matter (no collisions).</summary>
-    private static int PriorityOf(string archiveName)
-        => archiveName.Equals("patch", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+    /// <summary>An archive's rank in the engine's search order; within one rank the first mounted wins.</summary>
+    private int PriorityOf(string archiveName) => _priorityByName.GetValueOrDefault(archiveName);
 
-    private static bool IsHigherPriority(string candidate, string incumbent)
+    private bool IsHigherPriority(string candidate, string incumbent)
         => PriorityOf(candidate) > PriorityOf(incumbent);
 
     /// <summary>

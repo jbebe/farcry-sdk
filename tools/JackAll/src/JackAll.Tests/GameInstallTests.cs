@@ -110,6 +110,50 @@ public class GameInstallTests : IDisposable
     }
 
     [Fact]
+    public void EnumerateArchiveFats_leaves_out_folders_the_engine_never_mounts()
+    {
+        GameInstall? install = MakeInstall("folders");
+        if (install is null) return;
+
+        string worlds = CopyPatchFatTo(install, "worlds", "worlds.fat");
+        string dlc = CopyPatchFatTo(install, @"downloadcontent\dlc1", "dominos.fat");
+        string mods = CopyPatchFatTo(install, "mods", "mymod.fat");
+
+        string[] fats = [.. install.EnumerateArchiveFats()];
+        Assert.Contains(worlds, fats);
+        Assert.Contains(dlc, fats);
+        Assert.DoesNotContain(mods, fats);
+    }
+
+    [Fact]
+    public void CampaignDlcArchiveFats_lists_the_archives_toc_rml_mounts_in_single_player()
+    {
+        GameInstall? install = MakeInstall("campaign-dlc");
+        if (install is null
+            || Fixture.Locate("Rml/dlc1_toc.rml") is not { } dlc1Toc
+            || Fixture.Locate("Rml/dlc_jungle_toc.rml") is not { } jungleToc) return;
+
+        string dlc1 = Path.Combine(install.DataDir, "downloadcontent", "dlc1");
+        string jungle = Path.Combine(install.DataDir, "downloadcontent", "dlc_jungle");
+        Directory.CreateDirectory(dlc1);
+        Directory.CreateDirectory(jungle);
+        File.Copy(dlc1Toc, Path.Combine(dlc1, "toc.rml"));
+        File.Copy(jungleToc, Path.Combine(jungle, "toc.rml"));
+
+        Assert.Equal(
+            [Path.Combine(dlc1, "dominos.fat"), Path.Combine(dlc1, "entitylibrary.fat")],
+            install.CampaignDlcArchiveFats().Order(StringComparer.OrdinalIgnoreCase));
+    }
+
+    private static string CopyPatchFatTo(GameInstall install, string folder, string name)
+    {
+        string path = Path.Combine(install.DataDir, folder, name);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.Copy(install.PatchFat, path);
+        return path;
+    }
+
+    [Fact]
     public void ReadBaseGameHashes_reads_the_backup_not_the_live_patch_once_one_exists()
     {
         GameInstall? install = MakeInstall("base-hashes");

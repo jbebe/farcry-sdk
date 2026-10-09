@@ -1,3 +1,5 @@
+using System.Xml.Linq;
+
 namespace JackAll.Core;
 
 /// <summary>
@@ -131,12 +133,57 @@ public sealed class GameInstall
         return install;
     }
 
-    /// <summary>Every .fat under Data_Win32, including DLC — none of them are special. The
-    /// `.vanilla` backup pair is excluded: it's JackAll's own file, not a mountable archive (and
-    /// Windows' 3-character-extension glob quirk would otherwise let "*.fat" match it).</summary>
+    /// <summary>Every .fat the engine can mount: those in Data_Win32 itself, its worlds folder and each
+    /// DLC folder. The `.vanilla` backup pair is excluded: it's JackAll's own file, not a mountable
+    /// archive (and Windows' 3-character-extension glob quirk would otherwise let "*.fat" match it).</summary>
     public IEnumerable<string> EnumerateArchiveFats()
         => Directory.EnumerateFiles(DataDir, "*.fat", SearchOption.AllDirectories)
-            .Where(fat => !fat.EndsWith(VanillaSuffix, StringComparison.OrdinalIgnoreCase));
+            .Where(fat => !fat.EndsWith(VanillaSuffix, StringComparison.OrdinalIgnoreCase) && IsInArchiveFolder(fat));
+
+    private bool IsInArchiveFolder(string fat)
+    {
+        string folder = Path.GetDirectoryName(Path.GetRelativePath(DataDir, fat)) ?? "";
+        string top = folder.Split(Path.DirectorySeparatorChar)[0];
+        return top.Length == 0
+            || top.Equals("worlds", StringComparison.OrdinalIgnoreCase)
+            || top.Equals(DlcFolder, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private const string DlcFolder = "downloadcontent";
+
+    /// <summary>The DLC archives a campaign mounts: each DLC's <c>toc.rml</c> lists them under the
+    /// <c>FCXSingle</c> game mode. The engine searches them after patch.dat and before the base game.</summary>
+    public IReadOnlySet<string> CampaignDlcArchiveFats()
+    {
+        var fats = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        string root = Path.Combine(DataDir, DlcFolder);
+        if (!Directory.Exists(root))
+        {
+            return fats;
+        }
+
+        foreach (string dlc in Directory.EnumerateDirectories(root))
+        {
+            string toc = Path.Combine(dlc, "toc.rml");
+            if (!File.Exists(toc) || !Format.Rml.RmlDocument.TryDeserialize(File.ReadAllBytes(toc), out var xml))
+            {
+                continue;
+            }
+
+            var bigFiles = xml.Descendants("Desc")
+                .Where(desc => (string?)desc.Attribute("name") == "FCXSingle")
+                .Elements("BigFile")
+                .Select(bigFile => (string?)bigFile.Attribute("path"));
+            foreach (string? name in bigFiles)
+            {
+                if (!string.IsNullOrEmpty(name))
+                {
+                    fats.Add(Path.GetFullPath(Path.Combine(dlc, name + ".fat")));
+                }
+            }
+        }
+        return fats;
+    }
 
     /// <summary>
     /// Every .dat/.fat archive under Data_Win32 except patch.dat/.fat itself, as paths relative to
