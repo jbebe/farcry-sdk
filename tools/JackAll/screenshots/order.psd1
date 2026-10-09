@@ -6,5 +6,7 @@
         'managing-mods'
         'sharing-a-mod'
         'finding-files'
+        'references'
+        'export-replace-revert'
     )
 }

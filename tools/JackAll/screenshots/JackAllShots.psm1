@@ -215,6 +215,18 @@ function Find-ShotWindow([string]$Title) {
     return $null
 }
 
+# An open context menu or drop-down of the shots app: WPF hosts each in its own popup window.
+function Find-ShotMenu {
+    $cond = New-Object System.Windows.Automation.PropertyCondition($AE::ProcessIdProperty, $script:Process.Id)
+    $menus = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, $CT::Menu)
+    foreach ($w in $AE::RootElement.FindAll($TS::Children, $cond)) {
+        if ($w.Current.ControlType -eq $CT::Menu) { return $w }
+        $menu = $w.FindFirst($TS::Descendants, $menus)
+        if ($menu) { return $menu }
+    }
+    return $null
+}
+
 # The status line at the bottom of the window.
 function Get-ShotStatusElement {
     $cond = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, $CT::Text)
@@ -295,6 +307,11 @@ function Find-Ui {
     }
     if ($Optional) { $result = & $find; return $result }
     return Wait-Ui $find -Timeout $Timeout -What "element Id=$Id Name=$Name Like=$Like Type=$Type"
+}
+
+# A button by its label; '...' in the label stands for the ellipsis character JackAll's labels use.
+function Find-UiButton([string]$Label, $Scope) {
+    Find-Ui -Scope $Scope -Type Button -Name $Label.Replace('...', [string][char]0x2026)
 }
 
 function Invoke-Ui($Element) {
@@ -425,6 +442,37 @@ function Find-UiFieldButton([string]$Label, [string]$Button, $Scope) {
     return Find-Ui -Scope $row -Type Button -Name $Button -Children
 }
 
+# Selects a grid or list row by its shown text, retrying while the list is being refilled.
+function Select-UiRow([string]$Like, $Scope, [string]$Type = 'DataItem') {
+    return Wait-Ui { $row = Find-UiByText -Scope $Scope -Type $Type -Like $Like -Timeout 2; Select-Ui $row; $row } -What "row '$Like'"
+}
+
+# Opens a folder of the Files tab's tree, e.g. 'graphics\weapons\primary\ak47', and selects it.
+function Open-FilesFolder([string]$Path) {
+    $tree = Find-Ui -Id FolderTree
+    $parts = $Path.Split('\')
+    # The tree recycles its rows, so each level is looked up again from the top rather than kept.
+    $find = {
+        param([int]$depth)
+        $scope = $tree
+        for ($i = 0; $i -le $depth; $i++) {
+            $scope = Find-Ui -Scope $scope -Type TreeItem -Name $parts[$i] -Children
+        }
+        $scope
+    }
+    for ($d = 0; $d -lt $parts.Count; $d++) {
+        $node = & $find $d
+        Show-Ui $node
+        $p = $null
+        if ($d -lt $parts.Count - 1 -and $node.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$p) -and $p.Current.ExpandCollapseState -eq 'Collapsed') { $p.Expand() }
+        Start-Sleep -Milliseconds 200
+    }
+    $node = & $find ($parts.Count - 1)
+    Select-Ui $node
+    Start-Sleep -Milliseconds 400
+    return (& $find ($parts.Count - 1))
+}
+
 # Brings a row of a virtualized grid or tree into existence by its name.
 function Get-UiItem($Container, [string]$Name) {
     $p = $null
@@ -442,10 +490,30 @@ function Get-UiItem($Container, [string]$Name) {
 # Fills a Windows file or folder dialog and confirms it.
 function Complete-FileDialog([string]$Title, [string]$Path) {
     $dialog = Wait-Ui { Find-ShotWindow $Title } -Timeout 20 -What "dialog '$Title'"
-    $edit = Wait-Ui { @(Find-Win32Control $dialog 'Edit' | Where-Object { $_.Current.AutomationId -in '1148', '1152' })[0] } -What 'the file name box'
+    # Folder pickers use 1152, open dialogs 1148, save dialogs 1001 (which a search box can also carry).
+    $edit = Wait-Ui {
+        $edits = @(Find-Win32Control $dialog 'Edit')
+        foreach ($id in '1152', '1148', '1001') {
+            $match = $edits | Where-Object { $_.Current.AutomationId -eq $id } | Select-Object -First 1
+            if ($match) { return $match }
+        }
+    } -What 'the file name box'
     [ShotNative]::SetText([IntPtr]$edit.Current.NativeWindowHandle, $Path)
     Start-Sleep -Milliseconds 200
-    Push-ShotButton $dialog '1'
+    # A real click: a folder picker ignores a posted OK. The first click on a typed folder may only
+    # open it, so click until the dialog is gone.
+    $ok = Find-Win32Control $dialog 'Button' | Where-Object { $_.Current.AutomationId -eq '1' } | Select-Object -First 1
+    $r = $ok.Current.BoundingRectangle
+    $hwnd = [IntPtr]$dialog.Current.NativeWindowHandle
+    for ($i = 0; $i -lt 3; $i++) {
+        [ShotNative]::Front($hwnd)
+        Start-Sleep -Milliseconds 200
+        [ShotNative]::Click([int]($r.X + $r.Width / 2), [int]($r.Y + $r.Height / 2), $false)
+        Start-Sleep -Milliseconds 700
+        $still = Find-ShotWindow $Title
+        if (-not $still -or $still.Current.NativeWindowHandle -ne $hwnd.ToInt32()) { return }
+    }
+    throw "Dialog '$Title' did not accept $Path"
 }
 
 # Win32 child controls of a dialog by window class, e.g. 'Edit' or 'Button'.
@@ -484,11 +552,14 @@ function Send-ShotKeys([string]$Chord) {
     Start-Sleep -Milliseconds 200
 }
 
-function Click-Ui($Element, [switch]$Right, [double]$X = 0.5, [double]$Y = 0.5) {
+function Click-Ui($Element, [switch]$Right, [switch]$Double, [double]$X = 0.5, [double]$Y = 0.5) {
     [ShotNative]::Front([IntPtr]$script:Window.Current.NativeWindowHandle)
     Start-Sleep -Milliseconds 150
     $r = $Element.Current.BoundingRectangle
-    [ShotNative]::Click([int]($r.X + $r.Width * $X), [int]($r.Y + $r.Height * $Y), [bool]$Right)
+    $px = [int]($r.X + $r.Width * $X)
+    $py = [int]($r.Y + $r.Height * $Y)
+    [ShotNative]::Click($px, $py, [bool]$Right)
+    if ($Double) { [ShotNative]::Click($px, $py, [bool]$Right) }
     Start-Sleep -Milliseconds 250
 }
 
