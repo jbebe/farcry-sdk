@@ -2,6 +2,7 @@
     # A tutorial that reuses another's result (bin\results\<slug>) comes after it.
     Tutorials = @(
         'installing-mods'
+        'tour'
         'first-mod'
         'managing-mods'
         'sharing-a-mod'
