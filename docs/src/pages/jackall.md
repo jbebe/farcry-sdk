@@ -288,7 +288,7 @@ jackall-cli mod build --game "C:\Games\Far Cry 2" --layer mods\bettersights --la
 | `fcb decode` / `fcb encode` | An `.fcb` object tree to XML and back |
 | `rml decode` / `rml encode` | A binary `.rml` to plain XML and back |
 | `mgb decode` / `mgb encode` / `mgb verify` / `mgb fragments` | A Magma UI package to editable XML and back. `verify` checks it only uses names it declares, `fragments` writes the parts that differ from retail for a mod to ship |
-| `xbt extract` / `xbt build` | Splits an `.xbt` into `.dds` plus header XML, and puts it back together |
+| `xbt extract` / `xbt build` | Splits an `.xbt` into `.dds` plus header XML, and puts it back together; `xbt build` with no header XML writes a fresh header |
 | `xbg export <mesh.xbg>` | Converts a model's geometry to a Wavefront `.obj` |
 | `fc2model export` / `extract` / `inspect` | Builds a model pack, writes a changed pack back out as game files laid out as a mod layer, or lists what's in a pack |
 | `sbao extract` / `sbao build` | Splits an `.sbao` into `.ogg` plus header, and puts it back together |

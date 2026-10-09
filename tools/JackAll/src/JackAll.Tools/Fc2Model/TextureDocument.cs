@@ -7,8 +7,7 @@ using JackAll.Tools.Xbt;
 namespace JackAll.Tools.Fc2Model;
 
 /// <summary>
-/// A texture with no Dunia bytes in it: one PNG at full resolution, plus the header bytes nothing
-/// can synthesize.
+/// A texture with no Dunia bytes in it but its header: one PNG at full resolution.
 /// </summary>
 /// <remarks>
 /// Around half of all textures split their top level into a sibling <c>_mip0.xbt</c>, and the two
@@ -18,8 +17,7 @@ namespace JackAll.Tools.Fc2Model;
 /// loads the companion and shows the right thing either way. So the pack carries the merged image
 /// and the split is rebuilt here.
 /// <para>
-/// The header travels verbatim because <c>Reserved</c> is a bitfield the streaming loader consumes
-/// and <c>Hash</c> is a per-asset id nothing derives - see docs/docs/file-formats/xbt.md.
+/// The header travels verbatim so a rebuilt texture keeps its flags and names the same companion.
 /// </para>
 /// </remarks>
 public sealed class TextureDocument

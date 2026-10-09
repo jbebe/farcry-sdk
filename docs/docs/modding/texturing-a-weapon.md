@@ -84,12 +84,12 @@ What that means in practice:
   look among them. A normal map is not one of them, for a different reason: [the `Weapon` shader
   samples none](#relief-is-a-specular-pattern-not-a-normal-map).
 
-The canary borrows an `.xbt` header rather than writing one, though one could be written from scratch
-([`.xbt`](../file-formats/xbt.md#header)). Take it from a texture with **no `_mip0` companion** — a UI
-icon is ideal — because the header carries the companion's path and a borrowed one would send the
-engine looking for the wrong sibling. That gives
-you a single self-contained file; put the whole mip chain in it with `texconv -m 0` rather than
-splitting the pair by hand.
+The canary borrowed its `.xbt` header from a UI icon, a texture with no `_mip0` companion. A texture at
+a new path no longer needs a donor: `jackall-cli xbt build <name>.dds` with no header XML beside it
+writes a fresh header that names no companion ([`.xbt`](../file-formats/xbt.md#header)). That is
+backed by the engine's code, but a fresh header has not been tried in game yet. Either way you get a
+single self-contained file; put the whole mip chain in it with `texconv -m 0` rather than splitting
+the pair by hand.
 
 ## Step 1 — find a material you are allowed to own
 
@@ -468,7 +468,8 @@ the **Dragunov's** `spdra`. The framing is wrong by however far those two eyes d
 - **A weapon owns two texture paths**, its damage-state masks — but it is not limited to them. A
   texture at an invented path loads from `patch.dat` with no hashlist and no `depload` entry.
 - **A borrowed `.xbt` header must come from a texture with no `_mip0` companion**, or it sends the
-  engine looking for a sibling that is not yours.
+  engine looking for a sibling that is not yours. `xbt build` without a header XML writes one that
+  names none.
 - **Green on the control map is the rust weight**, and it is 0 on every clean mask. Pinning
   `MaskTextureBroken` to the same map is what stops a weapon ever looking used.
 - **A transplanted mesh keeps its donor's material table.** Take a material the replaced weapon owned

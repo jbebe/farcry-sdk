@@ -347,7 +347,7 @@ it wrong misbehaves animations *without crashing*, so it is easy to miss until p
 | Checking nothing shadows your archetype | `jackall-cli mod lint` | models the real override chain |
 | Finding what references what | `jackall-cli xref build` then `xref to` / `xref from` | |
 | Mesh, materials, textures, animation | `jackall-cli fc2model export` → Blender → `fc2model extract` | one decoded file; see [below](#geometry-materials-and-textures-one-file-one-plugin) |
-| A HUD icon, or any texture outside a model | `jackall-cli xbt extract` → edit DDS → `xbt build` | header XML is required, not optional — every header byte must come from a real file. A model's own textures travel as PNG in the pack instead |
+| A HUD icon, or any texture outside a model | `jackall-cli xbt extract` → edit DDS → `xbt build` | the extracted header XML keeps the original's flags and `_mip0` companion; without one, `xbt build` writes a fresh header naming no companion. A model's own textures travel as PNG in the pack instead |
 | Shop / menu UI | `jackall-cli mgb decode` / `encode` / `verify` | byte-exact round trip |
 | Sounds | `jackall-cli spk list/extract/import`, `sbao build` | |
 | Packaging | `jackall-cli mod build -g <game> -l <layer>`, `mod restore` to undo | there is no loose-file override; a mod is a rebuilt `patch.dat`/`patch.fat` — see [getting-started](./getting-started.md) and [vortex](./vortex.md) |

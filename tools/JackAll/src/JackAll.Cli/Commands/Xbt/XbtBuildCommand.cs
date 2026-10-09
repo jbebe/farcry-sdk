@@ -1,15 +1,16 @@
 using JackAll.Cli.Infrastructure;
 using JackAll.Tools.Xbt;
+using Spectre.Console;
 using Spectre.Console.Cli;
 using System.ComponentModel;
 
 namespace JackAll.Cli.Commands.Xbt;
 
 /// <summary>
-/// Reassembles an .xbt from a replacement <c>.dds</c> and the <c>.xml</c> header produced by
-/// <c>xbt extract</c> — the CLI counterpart of the App's Xbt import. Validates the result by
-/// round-tripping it back through <see cref="XbtTexture.Split"/>, exactly as the App does before
-/// staging.
+/// Builds an .xbt from a <c>.dds</c>, under the <c>.xml</c> header <c>xbt extract</c> produced or,
+/// without one, a fresh header that names no companion - the CLI counterpart of the App's Xbt import.
+/// Validates the result by round-tripping it back through <see cref="XbtTexture.Split"/>, exactly as
+/// the App does before staging.
 /// </summary>
 public sealed class XbtBuildCommand : CliCommand<XbtBuildCommand.Settings>
 {
@@ -20,7 +21,8 @@ public sealed class XbtBuildCommand : CliCommand<XbtBuildCommand.Settings>
         public string Dds { get; init; } = null!;
 
         [CommandArgument(1, "[file.xml]")]
-        [Description("The header XML from `xbt extract` (default: the .dds path with a .xml extension).")]
+        [Description("The header XML from `xbt extract` (default: the .dds path with a .xml extension; "
+            + "when that does not exist either, a new header is written and the .dds must carry the whole mip chain).")]
         public string? Xml { get; init; }
 
         [CommandOption("-o|--out <file.xbt>")]
@@ -34,7 +36,8 @@ public sealed class XbtBuildCommand : CliCommand<XbtBuildCommand.Settings>
         string outPath = settings.Out ?? Path.ChangeExtension(settings.Dds, ".xbt");
 
         byte[] dds = CliIO.ReadInput(settings.Dds);
-        byte[] header = XbtTexture.HeaderFromXml(CliIO.ReadInputText(xmlPath));
+        bool fresh = settings.Xml is null && !File.Exists(xmlPath);
+        byte[] header = fresh ? XbtTexture.NewHeader() : XbtTexture.HeaderFromXml(CliIO.ReadInputText(xmlPath));
         byte[] combined = XbtTexture.Combine(header, dds);
 
         // Same validity check the App runs before staging: this throws the way a corrupt .xbt would
@@ -42,6 +45,10 @@ public sealed class XbtBuildCommand : CliCommand<XbtBuildCommand.Settings>
         XbtTexture.Split(combined);
 
         CliIO.WriteOutput(outPath, combined);
+        if (fresh)
+        {
+            AnsiConsole.MarkupLine($"No {Path.GetFileName(xmlPath).EscapeMarkup()} beside the .dds: wrote a new header.");
+        }
         CliIO.ReportWrote(outPath);
         return 0;
     }

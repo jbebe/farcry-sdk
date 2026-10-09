@@ -191,8 +191,8 @@ A texture is stored as **one PNG at full resolution**, plus the `.xbt` header ve
 `.header.bin` beside it.
 
 The header is carried so a rebuilt texture keeps the original's flags: its resolution factor, and
-the bit that pins an atlas's mip chain. The rest could be written fresh, since the engine never reads
-the hash — see [`.xbt`](./xbt.md#header).
+the bit that pins an atlas's mip chain. An entry with no header gets a fresh one that names no
+companion, since the engine never reads the hash — see [`.xbt`](./xbt.md#header).
 
 `mip0` is the trap this design removes. Around half of all textures split their top level into a
 sibling `<name>_mip0.xbt`, and the two are not what they look like: the **base file holds the

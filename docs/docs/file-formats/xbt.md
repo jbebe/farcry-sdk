@@ -44,6 +44,11 @@ All of the above is **(RE-verified)** on the GOG build (`Xbt_ParseHeader` `0x103
 engine's own `.xbt` writer (`0x1032BDC0`) writes flags 1, a zero hash and an empty path, so a header
 can be synthesized the same way.
 
+JackAll does this. `jackall-cli xbt build <file.dds>` with no header XML writes flags 1, a zero hash
+and no companion. Importing a lone `.dds` in the app does the same, keeping the replaced texture's
+flags. Either way the `.dds` has to carry the whole mip chain. A fresh header has not yet been loaded
+in a running game.
+
 **A borrowed header works, with one condition.** Nothing ties a header to its own asset, and the
 header carries no dimensions, so a 1024² DDS behind a UI icon's header loads correctly. The
 condition is that the donor must have **no `_mip0` companion** — the header names the companion, and

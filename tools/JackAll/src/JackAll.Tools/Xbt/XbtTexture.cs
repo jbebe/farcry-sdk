@@ -10,8 +10,8 @@ namespace JackAll.Tools.Xbt;
 /// <remarks>
 /// The header is "TBX\0", <c>Version</c>, <c>HeaderSize</c> (the DDS payload's offset), a flags
 /// dword, a 12-byte hash (v11 only) and the null-terminated path of the "_mip0.xbt" companion, or
-/// an empty one. Every header byte here comes from a real .xbt, read via <see cref="Split"/> or
-/// restored via <see cref="HeaderFromXml"/>; docs/docs/file-formats/xbt.md has what the engine reads.
+/// an empty one. A header comes from a real .xbt via <see cref="Split"/> or <see cref="HeaderFromXml"/>,
+/// or is written fresh by <see cref="NewHeader"/>; docs/docs/file-formats/xbt.md has what the engine reads.
 /// </remarks>
 public static class XbtTexture
 {
@@ -25,6 +25,27 @@ public static class XbtTexture
 
     /// <summary>Fixed portion of a v10 header: signature(4) + version(4) + headerSize(4) + reserved(4) + one dword(4).</summary>
     private const int V10FixedHeaderSize = 20;
+
+    /// <summary>A resolution factor of 1, what the engine's own writer and 92% of retail textures carry.</summary>
+    public const uint DefaultFlags = 1;
+
+    /// <summary>The flags dword: the resolution factor in the low byte, and 0x100 pinning the mip chain.</summary>
+    public static uint Flags(byte[] header) => ByteCursor.U32(header, 12);
+
+    /// <summary>
+    /// A v11 header written from scratch, the way the engine's own writer makes one: a zero hash,
+    /// which the engine never reads, and no companion, so the file carries the whole mip chain.
+    /// </summary>
+    public static byte[] NewHeader(uint flags = DefaultFlags)
+    {
+        var w = new ByteWriter();
+        w.WriteU32(Signature);
+        w.WriteU32(CurrentVersion);
+        w.WriteU32(V11FixedHeaderSize + 4);
+        w.WriteU32(flags);
+        w.WriteRaw(new byte[12 + 4]);
+        return w.ToArray();
+    }
 
     /// <summary>Splits raw .xbt bytes into the header (everything before the DDS payload) and the DDS payload.</summary>
     public static (byte[] Header, byte[] Dds) Split(byte[] xbt)
@@ -75,7 +96,7 @@ public static class XbtTexture
             metadata.Add(
                 new XElement("Version", version),
                 new XElement("StoredHeaderSize", ByteCursor.U32(header, 8)),
-                new XElement("Reserved", ByteCursor.U32(header, 12)));
+                new XElement("Reserved", Flags(header)));
 
             int fixedEnd = version == LegacyVersion ? V10FixedHeaderSize : V11FixedHeaderSize;
             if (version != LegacyVersion && header.Length >= V11FixedHeaderSize)

@@ -9,14 +9,14 @@ namespace JackAll.App.FileHandlers.Xbt;
 /// <summary>
 /// The file handler for .xbt textures. Splits the file into its DDS payload and a companion header
 /// XML on load, previews the DDS, and offers both export (DDS + XML pair) and import (rebuilding an
-/// .xbt from a replacement DDS + its header XML, staged into the workspace).
+/// .xbt from a replacement DDS, under its header XML or a fresh header, staged into the workspace).
 /// </summary>
 public partial class XbtFileHandler : UserControl
 {
     private readonly string _fileName;
     private readonly Action<byte[]> _replaceContent;
+    private byte[]? _header;
     private byte[]? _dds;
-    private string? _xml;
 
     public XbtFileHandler(string fileName, byte[] content, Action<byte[]> replaceContent)
     {
@@ -31,8 +31,8 @@ public partial class XbtFileHandler : UserControl
         try
         {
             (byte[] header, byte[] dds) = XbtTexture.Split(content);
+            _header = header;
             _dds = dds;
-            _xml = XbtTexture.ToXml(header);
 
             StatusText.Text =
                 $"{_fileName}\n\n" +
@@ -49,8 +49,8 @@ public partial class XbtFileHandler : UserControl
         }
         catch (Exception ex)
         {
+            _header = null;
             _dds = null;
-            _xml = null;
             StatusText.Text = $"Couldn't read this file: {ex.Message}";
             ExportButton.IsEnabled = false;
             Preview.Source = null;
@@ -59,7 +59,7 @@ public partial class XbtFileHandler : UserControl
 
     private void Export_Click(object sender, RoutedEventArgs e)
     {
-        if (_dds is null || _xml is null)
+        if (_dds is null || _header is null)
         {
             return;
         }
@@ -81,7 +81,7 @@ public partial class XbtFileHandler : UserControl
         try
         {
             File.WriteAllBytes(ddsPath, _dds);
-            File.WriteAllText(xmlPath, _xml);
+            File.WriteAllText(xmlPath, XbtTexture.ToXml(_header));
             StatusText.Text += $"\n\nExported:\n{ddsPath}\n{xmlPath}";
         }
         catch (Exception ex)
@@ -95,7 +95,7 @@ public partial class XbtFileHandler : UserControl
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Import - select the replacement .dds and its .xml header",
+            Title = "Import - select the replacement .dds, and its .xml header if it has one",
             Filter = "DDS + XML|*.dds;*.xml",
             Multiselect = true,
         };
@@ -109,10 +109,10 @@ public partial class XbtFileHandler : UserControl
         string? xmlPath = dialog.FileNames.FirstOrDefault(
             p => Path.GetExtension(p).Equals(".xml", StringComparison.OrdinalIgnoreCase));
 
-        if (dialog.FileNames.Length != 2 || ddsPath is null || xmlPath is null)
+        if (ddsPath is null || dialog.FileNames.Length != (xmlPath is null ? 1 : 2))
         {
             MessageBox.Show(Window.GetWindow(this),
-                "Select exactly one .dds file and its matching .xml header file.",
+                "Select one .dds file, and its matching .xml header file if it has one.",
                 "JackAll", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -120,7 +120,10 @@ public partial class XbtFileHandler : UserControl
         try
         {
             byte[] dds = File.ReadAllBytes(ddsPath);
-            byte[] header = XbtTexture.HeaderFromXml(File.ReadAllText(xmlPath));
+            // A lone .dds keeps this texture's flags but names no companion, so it carries the whole chain.
+            byte[] header = xmlPath is null
+                ? XbtTexture.NewHeader(_header is null ? XbtTexture.DefaultFlags : XbtTexture.Flags(_header))
+                : XbtTexture.HeaderFromXml(File.ReadAllText(xmlPath));
             byte[] combined = XbtTexture.Combine(header, dds);
 
             // Round-trips the freshly built file back through Split as a validity check — this
@@ -129,7 +132,7 @@ public partial class XbtFileHandler : UserControl
 
             _replaceContent(combined);
             Load(combined);
-            StatusText.Text += $"\n\nImported from:\n{ddsPath}\n{xmlPath}\n\nStaged in your workspace.";
+            StatusText.Text += $"\n\nImported from:\n{ddsPath}\n{xmlPath ?? "a new header"}\n\nStaged in your workspace.";
         }
         catch (Exception ex)
         {

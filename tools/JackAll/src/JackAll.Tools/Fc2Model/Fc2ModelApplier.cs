@@ -127,7 +127,7 @@ public static class Fc2ModelApplier
             Height = height,
             Codec = entry.Codec ?? throw new InvalidDataException($"'{entry.Path}' names no codec."),
             Levels = entry.Levels ?? 1,
-            Header = bundle.Files[entry.Header ?? throw new InvalidDataException($"'{entry.Path}' carries no header.")],
+            Header = entry.Header is { } header ? bundle.Files[header] : XbtTexture.NewHeader(),
             CompanionHeader = entry.CompanionHeader is { } companion ? bundle.Files[companion] : null,
             Rgba = rgba,
         };

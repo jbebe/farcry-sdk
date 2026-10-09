@@ -58,6 +58,21 @@ public class XbtTextureTests
         Assert.Equal(header, roundTripped);
     }
 
+    /// <summary>A header written from scratch is a shipped one with its unread hash zeroed.</summary>
+    [Theory]
+    [InlineData(Hud)]
+    [InlineData(Normal)]
+    public void A_new_header_matches_a_shipped_one_but_for_the_hash(string fixture)
+    {
+        if (Fixture.Read(fixture) is not { } xbt) return;
+
+        (byte[] header, _) = XbtTexture.Split(xbt);
+        byte[] expected = [.. header];
+        Array.Clear(expected, 16, 12);
+
+        Assert.Equal(expected, XbtTexture.NewHeader(XbtTexture.Flags(header)));
+    }
+
     [Fact]
     public void Split_rejects_a_file_without_the_TBX_signature()
         => Assert.Throws<InvalidDataException>(() => XbtTexture.Split("DDS not-an-xbt-file"u8.ToArray()));
