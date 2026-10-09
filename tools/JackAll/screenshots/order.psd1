@@ -18,5 +18,6 @@
         'music'
         'blender'
         'hud-and-menus'
+        'map-viewer'
     )
 }

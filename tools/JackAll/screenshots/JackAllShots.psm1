@@ -227,6 +227,14 @@ function Find-ShotMenu {
     return $null
 }
 
+# An open popup of the shots app (a drop-down panel such as the Map tab's Layers): any top-level
+# window of the process other than the main one.
+function Find-ShotPopup {
+    $cond = New-Object System.Windows.Automation.PropertyCondition($AE::ProcessIdProperty, $script:Process.Id)
+    $main = $script:Window.Current.NativeWindowHandle
+    return $AE::RootElement.FindAll($TS::Children, $cond) | Where-Object { $_.Current.NativeWindowHandle -ne $main } | Select-Object -First 1
+}
+
 # The status line at the bottom of the window.
 function Get-ShotStatusElement {
     $cond = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, $CT::Text)
