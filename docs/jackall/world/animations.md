@@ -45,9 +45,8 @@ can be interrupted. Set Speed to `1.25` and click **Apply clip changes** (4).
 **Add to this rule**, **Change selected** or **Remove selected**. **ORDER** has **Duplicate**,
 **Move up**, **Move down** and **Delete**, since order decides which rule wins.
 
-Check the **Also used by** column before you change a rule. This one says **Mortar**: the mortar plays
-through the same rule, so it reloads faster too. Duplicate the rule and narrow the copy's conditions
-when you want a change for one weapon only.
+Check the **Also used by** column before you change a rule: it lists what else plays through the
+same rule, and a change reaches all of it. This one says **Mortar**.
 
 ## Save
 
