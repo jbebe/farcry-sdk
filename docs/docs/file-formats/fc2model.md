@@ -190,8 +190,9 @@ graphics-only scan is a **lower bound**: `bullettracer_d.xbt` is named from a we
 A texture is stored as **one PNG at full resolution**, plus the `.xbt` header verbatim, as a
 `.header.bin` beside it.
 
-The header is carried because it cannot be synthesized: `Reserved` is a bitfield the streaming
-loader consumes, and `Hash` is a stable per-asset id nothing derives — see [`.xbt`](./xbt.md#header).
+The header is carried so a rebuilt texture keeps the original's flags: its resolution factor, and
+the bit that pins an atlas's mip chain. The rest could be written fresh, since the engine never reads
+the hash — see [`.xbt`](./xbt.md#header).
 
 `mip0` is the trap this design removes. Around half of all textures split their top level into a
 sibling `<name>_mip0.xbt`, and the two are not what they look like: the **base file holds the

@@ -7,10 +7,9 @@ namespace JackAll.Cli.Commands.Xbt;
 
 /// <summary>
 /// Reassembles an .xbt from a replacement <c>.dds</c> and the <c>.xml</c> header produced by
-/// <c>xbt extract</c> — the CLI counterpart of the App's Xbt import. The header carries bytes that
-/// can't be synthesized from a DDS alone (see <see cref="XbtTexture"/>), so a real <c>.xml</c> header
-/// is required, not optional. Validates the result by round-tripping it back through
-/// <see cref="XbtTexture.Split"/>, exactly as the App does before staging.
+/// <c>xbt extract</c> — the CLI counterpart of the App's Xbt import. Validates the result by
+/// round-tripping it back through <see cref="XbtTexture.Split"/>, exactly as the App does before
+/// staging.
 /// </summary>
 public sealed class XbtBuildCommand : CliCommand<XbtBuildCommand.Settings>
 {

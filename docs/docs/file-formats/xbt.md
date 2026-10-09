@@ -18,26 +18,37 @@ header and any DDS tool opens the rest.
 | Offset | Size | Field |
 | --- | --- | --- |
 | 0 | 4 | `"TBX\0"` signature |
-| 4 | 4 | `Version` — 11 in every real sample; 10 is an older, shorter variant the loader still accepts |
+| 4 | 4 | `Version` — 11 in all 30,470 retail files; 10 is an older variant the loader still accepts |
 | 8 | 4 | `HeaderSize` — **the byte offset of the DDS payload**; the engine computes `dds = buffer + HeaderSize`, it never scans for `"DDS "` |
-| 12 | 4 | `Reserved` — a bitfield the streaming loader really does consume (see below) |
-| 16 | 12 | `Hash` — v11 only; leading 4 bytes are a stable per-asset id shared between a texture's resolution tiers. No traced caller reads it back |
+| 12 | 4 | `Flags` — the low byte is the resolution factor, bit `0x100` pins the mip chain (see below) |
+| 16 | 12 | `Hash` — v11 only; never read by the engine |
 | 28 | … | Null-terminated ASCII path, up to `HeaderSize`: the companion described below, or empty |
 
-`Reserved` is not decoration. Of `Xbt_ParseHeader`'s five callers, four only take the computed DDS
-pointer and size, but the streaming-texture loader reads `Reserved` as flags: bit `0x100` resets two
-LOD-tracking fields on the resource object, and the low byte is stored and consumed later for
-streaming decisions. It varies per asset (1, 2 and 4 all appear across ~130 sampled files) with no
-correlation found to DDS format, companion presence, or naming. Because neither `Reserved` nor
-`Hash` can be synthesized, there is no honest "build an `.xbt` from a bare `.dds`" path — every
-header byte has to come from a real file.
+A version 10 header lacks both v11 words at `0x14` and `0x18`, so its path starts at `0x14`. No
+retail file uses it.
 
-**A borrowed header works, with one condition.** Nothing ties a header to its own asset: neither
-value is read back in a way that cares, and the header carries no dimensions, so a 1024² DDS behind a
-UI icon's header loads correctly. That is how a texture at a **new** path gets made, since there is
-no original to extract from. The condition is that the donor must have **no `_mip0` companion** — the
-header names the companion, and a borrowed one sends the engine after a sibling that is not yours.
-So take a header from a single-file texture and put the whole mip chain in that one file.
+`HeaderSize` is always `align4(0x1C + strlen(path) + 1)`, and the DDS starts exactly there. That holds
+in every one of the 30,470 retail files.
+
+**The flags.** The low byte is what the engine's own debug dump prints as `ResolutionFactor`. It is 1
+in 28,084 files, 2 in 2,179, 4 in 203 and 8 in four flora textures. The loader stores it, but its
+consumer was not traced. Bit `0x100` pins the mip chain: the loader forces the texture's skip count to
+zero, so no level is ever dropped. It is set on exactly the 11,223 `sdat\atlas*` textures and on
+nothing else.
+
+**The hash is never read.** None of `Xbt_ParseHeader`'s five callers reads `0x10`–`0x1B`. Its first
+word matches between a texture and its `_mip0` in all 1,141 pairs, but no code looks at it.
+
+All of the above is **(RE-verified)** on the GOG build (`Xbt_ParseHeader` `0x1032BD20`,
+`CTextureResource::Load` `0x1032C670`) and measured over all 30,478 `.xbt` in the retail data. The
+engine's own `.xbt` writer (`0x1032BDC0`) writes flags 1, a zero hash and an empty path, so a header
+can be synthesized the same way.
+
+**A borrowed header works, with one condition.** Nothing ties a header to its own asset, and the
+header carries no dimensions, so a 1024² DDS behind a UI icon's header loads correctly. The
+condition is that the donor must have **no `_mip0` companion** — the header names the companion, and
+a borrowed one sends the engine after a sibling that is not yours. So take a header from a
+single-file texture and put the whole mip chain in that one file.
 
 ## The top mip level lives in a second file
 
@@ -64,6 +75,21 @@ the DDS.
 
 Sizes cluster tightly: base textures are mostly 256×256 (487 files) or 512×512 (91), and companions
 mostly 512×512 (253) or 1024×1024 (91).
+
+### When the companion loads, and when levels are dropped
+
+Three render settings decide how much of a chain is loaded **(RE-verified on GOG)**:
+
+- **`SkipMips` drops the top N levels**, counting the `_mip0` level as the first. A texture with a
+  companion is opened with N − 1 levels dropped from the base file. A texture with flag `0x100`
+  ignores the setting.
+- **The drop stops at a floor.** A level is dropped only while the current top has both dimensions
+  at least 9 and the larger at least 65. For power-of-two sizes that leaves the larger side at 64 or
+  more and the smaller at 8 or more.
+- **With `SkipMips` at 1 or more, `_mip0` is never loaded.** With it at 0, the first high-resolution
+  reference loads the companion.
+- **`AlwaysMip0Loading`** loads the companion straight away, and only matters when `SkipMips` is 0.
+- **`DisableMip0Loading`** never creates it.
 
 ## What a shipped texture looks like
 

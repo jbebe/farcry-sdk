@@ -84,9 +84,10 @@ What that means in practice:
   look among them. A normal map is not one of them, for a different reason: [the `Weapon` shader
   samples none](#relief-is-a-specular-pattern-not-a-normal-map).
 
-The one thing you cannot synthesize is the `.xbt` header, which is why the canary borrows one. Take
-it from a texture with **no `_mip0` companion** — a UI icon is ideal — because the header carries the
-companion's path and a borrowed one would send the engine looking for the wrong sibling. That gives
+The canary borrows an `.xbt` header rather than writing one, though one could be written from scratch
+([`.xbt`](../file-formats/xbt.md#header)). Take it from a texture with **no `_mip0` companion** — a UI
+icon is ideal — because the header carries the companion's path and a borrowed one would send the
+engine looking for the wrong sibling. That gives
 you a single self-contained file; put the whole mip chain in it with `texconv -m 0` rather than
 splitting the pair by hand.
 
@@ -420,10 +421,9 @@ jackall-cli mod build --game "C:\Games\Far Cry 2" --layer mylayer
 
 It re-encodes each PNG in the codec the entry records, generates the mip chain, and **splits it
 itself** — level 0 to the `_mip0` companion, the rest to the base file. That removes the whole
-`xbt extract` / `xbt build` step and its trap, which is that
-[every header byte has to come from a real file](../file-formats/xbt.md#header): `Reserved` is a
-bitfield the streaming loader consumes and `Hash` is an id nothing derives, so there is no honest
-path from a bare `.dds`.
+`xbt extract` / `xbt build` step and its trap: a hand-made pair whose
+[header](../file-formats/xbt.md#header) names the wrong companion, or splits the levels the wrong way
+round.
 
 The applier also refuses to write a `shared` entry that was edited, which is the gate that keeps
 step 1 honest.

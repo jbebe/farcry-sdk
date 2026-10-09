@@ -6,9 +6,8 @@ using System.ComponentModel;
 namespace JackAll.Cli.Commands.Xbt;
 
 /// <summary>
-/// Splits an .xbt into its embedded, fully valid <c>.dds</c> and a companion <c>.xml</c> header (the
-/// engine-specific bytes the App can't synthesize from a bare DDS — see <see cref="XbtTexture"/>'s
-/// remarks). Same pair the App's Xbt handler exports; <c>xbt build</c> reassembles them.
+/// Splits an .xbt into its embedded, fully valid <c>.dds</c> and a companion <c>.xml</c> header.
+/// Same pair the App's Xbt handler exports; <c>xbt build</c> reassembles them.
 /// </summary>
 public sealed class XbtExtractCommand : CliCommand<XbtExtractCommand.Settings>
 {

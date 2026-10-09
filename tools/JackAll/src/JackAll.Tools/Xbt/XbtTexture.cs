@@ -8,30 +8,10 @@ namespace JackAll.Tools.Xbt;
 /// payload, and reassembles the two back into a byte-identical .xbt.
 /// </summary>
 /// <remarks>
-/// Field layout confirmed directly against the shipped engine (Dunia.dll, <c>Xbt_ParseHeader</c> @
-/// 0x10339b40, via GhidraMCP): "TBX\0" signature, a format <c>Version</c> (11 in every real sample;
-/// 10 is an older, shorter variant the loader still accepts), a <c>HeaderSize</c> field that IS the
-/// byte offset of the embedded DDS payload — the engine computes <c>dds = buffer + HeaderSize</c>
-/// directly, it never scans for "DDS " the way this class used to — a <c>Reserved</c> dword, and,
-/// for v11 only, a 12-byte <c>Hash</c>. Whatever bytes remain up to <c>HeaderSize</c> are a
-/// null-terminated embedded path: when present, it's the archive-relative path of the file's own
-/// "_mip0.xbt" streaming companion (empty for textures with no separate mip stream).
-///
-/// <c>Reserved</c> and <c>Hash</c> are NOT understood well enough to synthesize. Traced every one of
-/// Xbt_ParseHeader's 5 callers in Dunia.dll: 4 of them (including the plain 2D/cube texture creation
-/// path) only ever read the computed DDS pointer/size and ignore Reserved/Hash entirely, but one —
-/// the streaming-texture loader that decides whether to pull in a "_mip0" companion — genuinely
-/// consumes <c>Reserved</c> as a bitfield: bit 0x100 is a flag that resets two LOD-tracking fields on
-/// the resource object, and the low byte is stored into the object and consumed later for streaming
-/// decisions elsewhere in that class. So a wrong <c>Reserved</c> value is not just untidy, it can
-/// alter real streaming/LOD behavior. A survey of ~130 real .xbt files shows it varies per-asset (1,
-/// 2, and 4 all appear) with no correlation found yet to DDS format, mip-companion presence, or
-/// texture naming. <c>Hash</c>'s leading 4 bytes are a stable per-asset ID (shared between a
-/// texture's resolution tiers, e.g. a file and its own "_mip0" sibling) that does not match a CRC32
-/// of the resource path or any other tested derivation, and — unlike Reserved — no traced caller
-/// reads it back at all; its purpose is still unknown. Because of both gaps, this class deliberately
-/// does NOT offer a "build an XBT from just a DDS" path — every header byte here comes from a real
-/// .xbt, either read via <see cref="Split"/> or restored from XML via <see cref="HeaderFromXml"/>.
+/// The header is "TBX\0", <c>Version</c>, <c>HeaderSize</c> (the DDS payload's offset), a flags
+/// dword, a 12-byte hash (v11 only) and the null-terminated path of the "_mip0.xbt" companion, or
+/// an empty one. Every header byte here comes from a real .xbt, read via <see cref="Split"/> or
+/// restored via <see cref="HeaderFromXml"/>; docs/docs/file-formats/xbt.md has what the engine reads.
 /// </remarks>
 public static class XbtTexture
 {
