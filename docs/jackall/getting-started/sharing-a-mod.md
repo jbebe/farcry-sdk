@@ -14,7 +14,8 @@ inside, testing the zip, and uploading it.
 This page packages the [bigger AK-47 magazine](/jackall/first-mod) from the first tutorial.
 
 :::info[Same files as a mod confirmed in game]
-VSS Vintorez, Flashlight and Sky Overhaul ship in exactly this zip layout and were played from it.
+VSS Vintorez, Flashlight and Sky Overhaul ship in exactly this zip layout, and the same files were
+played in game.
 :::
 
 ## 1. Open the workspace folder
