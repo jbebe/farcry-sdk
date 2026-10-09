@@ -61,6 +61,47 @@ FCSE copies `CPersistComponent`'s table from a throwaway instance and replaces t
 The original destructor releases the entity proxy, resets the object to `CNomadObject`'s vtable and
 frees it when bit 0 of `flags` is set.
 
+### What the other slots are
+
+Retail slot `g` is the server's slot `g + 1` up to slot 21, because GCC emits two destructors where
+MSVC emits one. Two more virtuals are missing from retail's table: the server's slot 23,
+`Update(float, EEntityUpdateFlags)`, and slot 29, `GetParent()`. Both override `IEntityTask`, and
+MSVC keeps those only in the interface's own table at `+4`. So retail 22–26 are the server's 24–28,
+and retail 27–29 are its 30–32. The same rule gives `CEntity` 13 retail slots against the server's
+17.
+
+The names below come from that alignment, measured on the GOG base table (`0x10D88B58`). The
+alignment is anchored by the base bodies that match the server's exactly **(RE-verified)**:
+
+| Slot | Server name | Base behaviour |
+|---|---|---|
+| 4 | `SetEntity` | stores the owner |
+| 6 | `OnSpawn` | |
+| 7 | `FinalizeLoad` | returns true |
+| 8 | `Finalize` | |
+| 9 | `CanFinalizeOnLoad` | returns false |
+| 10 | `UnloadAsynchData` | |
+| 11 | `PreUnload` | |
+| 12 | `ShutDown` | |
+| 14 | `SetIsVisible(bool)` | |
+| 15 | `SetIsActiveInTheEditor(bool)` | |
+| 16 | `OnMarkAsGarbage` | |
+| 17 | `PreSave` | returns false |
+| 18 | `SetupDynamicFromSource` | |
+| 19 | `OnEntityMove` | |
+| 20 | `GetWantedEventMask` | returns `0xFFFFFF81` |
+| 21 | `OnEvent` | returns false |
+| 22 | `GetTasks` | adds the component's task when `GetUpdateFlags` matches |
+| 23 | `GetUpdateFlags` | returns 1 |
+| 24 | `SimulationEnabled` | |
+| 25 | `StartOrStopSimulation` | |
+| 26 | `DestroySimulation` | |
+| 27 | `GetAliasName` | returns `""` |
+| 28 | `GetPriorityForUpdate` | returns 5.0 |
+| 29 | `SetObjectTypeName(const char*)` | does nothing |
+
+Slots 2, 5 and 13 were not named.
+
 ## Class identity
 
 `GetHierarchyInfo` returns `{const char* name; uint32 count; uint32 ids[count]}`: the CRC-32 of every
@@ -150,6 +191,26 @@ ones the name. The engine reads its `unsigned int` properties through the `int` 
 `AddComponent` clears the entity's component lookup cache at `+0x74`, so a component added at
 runtime is found by the next lookup.
 
+The word just before it, `+0x70`, holds the entity's state flags. The server keeps the same bits at
+`+0x60`. Names are the server's setters and getters; offsets are checked on GOG **(RE-verified)**:
+
+| Bit | Meaning |
+|---|---|
+| `0x4` | asleep (`SetSleep`) |
+| `0x8` | loaded: set by `FinalizeLoad`, cleared by `UnloadAsynchData` |
+| `0x10` | marked as garbage, cleared by `Reset` |
+| `0x80` | destroyable |
+| `0x100` | visible |
+| `0x400` | bound |
+| `0x800` | should update |
+| `0x1000` | initialized |
+| `0x2000` | static |
+| `0x8000` | from an archetype |
+| `0x10000` | being removed |
+
+`GetUpdateFlags` asks for updates only when `(flags & 0x1410) == 0x1000`: initialized, not garbage,
+not bound.
+
 ## `Persist`
 
 `Persist` gives the entity a `CPersistComponent` through `CreateComponent` if it has none, and raises
@@ -159,4 +220,3 @@ between worlds.
 ## Unknowns
 
 - Whether a `Full` `CPersistComponent` alone gives a world entity nobody has touched a save record.
-- Which virtuals the PC build lacks relative to the server's component vtable.
