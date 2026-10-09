@@ -3,15 +3,19 @@
 Notable changes to Flashlight, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.1] - 2026-10-09
+
+### Changed
+- **Combines with other mods that change the HUD.** It ships only the parts of `hud.mgb` the icon
+  changes rather than whole copies of it, so another HUD mod that does the same keeps both its own
+  changes and the icon. Needs JackAll 1.4.1 or the Vortex extension 0.4.0.
+
 ## [1.1.0] - 2026-10-09
 
 ### Changed
 - **Combines with other mods that add controls.** It ships only the controls category and the action
   map it adds to, rather than whole copies of both control files, so another mod's control no longer
   replaces the Flashlight's, or the other way round. Needs JackAll 1.3.0 or the Vortex extension 0.3.0.
-- **Combines with other mods that change the HUD.** It ships only the parts of `hud.mgb` the icon
-  changes rather than whole copies of it, so another HUD mod that does the same keeps both its own
-  changes and the icon. Needs JackAll 1.4.0 or the Vortex extension 0.4.0.
 - **Needs FCSE 1.4.0**, rebuilt for its new plugin interface. Older FCSE no longer loads it.
 
 ## [1.0.0] - 2026-10-02

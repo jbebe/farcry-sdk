@@ -2,6 +2,14 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.4.1] - 2026-10-09
+
+### Added
+- **Magma UI packages split per area** — one fragment per top-level area of a `.mgb`, plus its
+  materials, string table and exported objects, merged element by element, so two mods adding to the
+  HUD both keep theirs. A build sets the package's pool counts to what it holds. `mgb fragments`
+  writes a package's changes as fragments, and the package editor saves them that way.
+
 ## [1.4.0] - 2026-10-08
 
 ### Added
@@ -10,10 +18,6 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - **The control config files split per section** — one fragment per `<Category>` of
   `defaultusercontrols.xml` and per `<ActionMap>` of an `inputactionmap*.xml`, merged child by child,
   so two mods adding a control or binding to the same section both keep it.
-- **Magma UI packages split per area** — one fragment per top-level area of a `.mgb`, plus its
-  materials, string table and exported objects, merged element by element, so two mods adding to the
-  HUD both keep theirs. A build sets the package's pool counts to what it holds. `mgb fragments`
-  writes a package's changes as fragments, and the package editor saves them that way.
 - **`legacy analyze`, `changes`, `check` and `pick`** — list every change an old full-patch mod
   makes, group them into features, and build a layer holding only the features you pick.
 
