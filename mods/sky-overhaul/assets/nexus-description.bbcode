@@ -1,49 +1,41 @@
-Replaces Far Cry 2's sky, clouds and the light they cast with an atmosphere that follows the sun through the whole day, the weather and the night.
+A new sky, new clouds and better light for Far Cry 2, from sunrise through storms to the middle of the night.
 
 [size=4][b]What it changes[/b][/size]
 [list]
-[*][b]The sky[/b] - the engine's painted dome is replaced by a sky worked out from the sun's position: deep blue at noon, orange and purple sunsets, a lingering twilight, and stars that stay out all night. The land's distant fog takes on the sky's own horizon colour, and darkens with it at dusk.[/*]
-[*][b]Volumetric clouds[/b] - a layer of real, lit cumulus with silver linings and dark bases, a high sheet of cirrus above it, and aircraft trails.[/*]
-[*][b]A sky that belongs to your save[/b] - the clouds drift with the game's clock, so loading a save shows the sky you left, and the hours you spend (or sleep through) move it on. Every midnight rolls a new set of one to three aircraft trails.[/*]
-[*][b]Storms[/b] - the clouds thicken, the cirrus closes over the whole sky and the light goes grey, without the land drowning in grey fog.[/*]
-[*][b]Clear days that aren't blown out[/b] - once the sun is well up, the sky stays blue instead of clipping to white-cyan, clouds keep their form, and shade is lit enough to read.[/*]
-[*][b]The sun[/b] - light shafts that stop where the clouds stand, a glare around the sun that clouds cover and that washes out the whole view only when you look straight at it, and a fading afterimage if you stare.[/*]
-[*][b]Cloud shadows[/b] - the ground under a cloud loses the sun as it drifts over.[/*]
-[*][b]Sun shadows[/b] - they reach further from you and follow a low sun toward the horizon, and they turn with the sun in small steps, so thin shadows on buildings hold still instead of crawling.[/*]
-[*][b]Ambient occlusion[/b] - the corners and creases the light doesn't reach darken, worked out from a depth of the world drawn a second time without its grass, leaves or your own weapon.[/*]
-[*][b]Grass[/b] - lit by the sun, with dark roots, a sheen across the blades and light glowing through them.[/*]
-[*][b]Tree leaves[/b] - lit one by one: a crown shades its own far side, each leaf tilts its own way, and leaves glint in the sun and glow with it behind them.[/*]
-[*][b]Rocks and cliffs[/b] - shaded as the faceted stone their meshes are, with a fine detail texture from a CC0 rock scan by Poly Haven and a tight glint off their faces.[/*]
-[*][b]The night[/b] - a smaller moon lit on the clouds and no longer hidden by fog, darker blue-grey nights with moonlight that throws shadows once the moon is up, and the world's colour draining where it is dark while fires and lamps keep theirs.[/*]
-[*][b]The colour grade[/b] - the game's yellow cast replaced by a neutral grade you can tune.[/*]
+[*][b]The sky[/b] follows the sun: deep blue at noon, orange and purple sunsets, and stars all night.[/*]
+[*][b]Real clouds[/b], lit by the sun, with thin high clouds and plane trails above them. They move with the game's clock, so a loaded save shows the sky you left.[/*]
+[*][b]Storms[/b] bring thick clouds and grey light, without the land vanishing into fog.[/*]
+[*][b]Clear days look clear[/b]: a blue sky instead of a washed-out white one, and shade you can see into.[/*]
+[*][b]The sun[/b] throws light shafts past the clouds, and its glare only blinds you when you look straight at it.[/*]
+[*][b]Shadows[/b]: clouds shade the ground as they pass, and sun shadows reach further and stop flickering on buildings.[/*]
+[*][b]Grass, leaves and rocks[/b] catch the sun properly. Grass and leaves glow with the sun behind them, rocks look like stone.[/*]
+[*][b]Nights[/b] are darker, with a smaller moon whose light casts shadows. Colours fade in the dark, while fires and lamps stay bright.[/*]
+[*][b]No more yellow tint[/b] over everything, and a faint film grain.[/*]
+[*][b]Ambient occlusion[/b]: corners and creases go darker. Off by default.[/*]
 [/list]
 
-Each part can be switched back to the engine's own in the [b]Mod Configuration[/b] menu: Sky, Clouds, Sun, Night, Shadows, Occlusion, Grade, Grass, Leaves, Sun shadows and Rocks. Every effect's values sit in [b]bin\sky-overhaul.ini[/b], and with [b]DevTools[/b] installed a window with sliders for all of them opens in its overlay.
+Every part can be switched on or off in the game: [b]Options → Mod Configuration Menu[/b].
 
-[b]Upgrading from 1.1.0:[/b] delete [b]bin\sky-overhaul.ini[/b] once, or it keeps the old values and the new glare and grade won't take effect.
+[b]Coming from 1.1.0 or older?[/b] Delete [b]bin\sky-overhaul.ini[/b] once, or the new look won't fully take effect.
 
-[size=4][b]Requirements[/b][/size]
+[size=4][b]How to install (Vortex)[/b][/size]
+
+[list=1]
+[*]Install [url=https://www.nexusmods.com/about/vortex/]Vortex[/url] and its Far Cry 2 extension.[/*]
+[*]Click [b]Mod Manager Download[/b] on this page and enable the mod. Vortex also offers to get [url=https://www.nexusmods.com/farcry2/mods/368]FCSE[/url], which this mod needs.[/*]
+[*]Start the game with the [b]Play[/b] button in Vortex.[/*]
+[/list]
+Not using Vortex? Install it with JackAll instead, [url=https://jbebe.github.io/farcry-sdk/jackall/installing-mods/]here's a detailed instruction[/url] for JackAll installation.
+
+[size=4][b]Good to know[/b][/size]
 [list]
-[*][url=https://www.nexusmods.com/farcry2/mods/368]FCSE[/url] 1.4.0 or later, the plugin loader this runs in. Far Cry 2 1.03, Steam or GOG.[/*]
-[*][b]Bloom on[/b] in Options, Video. Without it the sun beside the glare is a flat disc.[/*]
-[*][b]Depth pass quality high[/b] or above for the cloud shadows. Below it the rest still works.[/*]
+[*][b]Needs Far Cry 2 patch 1.03[/b], Steam or GOG, and FCSE 1.4.0 or later.[/*]
+[*][b]Turn Bloom on[/b] in Options → Video, or the sun is a flat disc.[/*]
+[*][b]Cloud shadows need Depth pass quality on High[/b] or above. Everything else works without it.[/*]
+[*][b]Doesn't mix with other lighting, fog or weather mods.[/b] Whichever loads last wins.[/*]
+[*][b]Want to fine-tune it?[/b] Every value is in [b]bin\sky-overhaul.ini[/b], and with DevTools installed a window with sliders for all of them opens in its overlay.[/*]
+[*][b]Known issue:[/b] colours also fade in the dark indoors.[/*]
 [/list]
 
-[size=4][b]Installing[/b][/size]
-
-The download is a JackAll layer, which both installers read as-is:
-[list]
-[*][b]Vortex[/b] - with the [url=https://www.nexusmods.com/site/mods/2143]Far Cry 2 extension[/url] installed, drop the zip in and enable it.[/*]
-[*][b]or JackAll[/b] - add the zip in [url=https://www.nexusmods.com/farcry2/mods/370]JackAll[/url].[/*]
-[/list]
-If you're stuck, [url=https://jbebe.github.io/farcry-sdk/jackall/installing-mods/]here's a detailed instruction[/url] until Nexus turns on the automatic installer for Vortex. 
-
-[size=4][b]Compatibility[/b][/size]
-[list]
-[*][b]Lighting, fog and weather mods[/b] - the night and clear-day lighting ship as the world's whole preset library, and the moon and storm changes as the world's whole environment block, so any other mod that edits either will conflict. Whichever loads last wins.[/*]
-[/list]
-
-[size=4][b]Known issues[/b][/size]
-[list]
-[*]The night's colour drain also applies indoors.[/*]
-[/list]
+[size=4][b]Credit[/b][/size]
+The rock detail texture is a CC0 scan from Poly Haven.
