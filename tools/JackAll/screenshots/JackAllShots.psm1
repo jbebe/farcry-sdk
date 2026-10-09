@@ -547,7 +547,7 @@ $script:VirtualKeys = @{ Ctrl = 0x11; Shift = 0x10; Alt = 0x12; Left = 0x25; Rig
 function Send-ShotKeys([string]$Chord) {
     [ShotNative]::Front([IntPtr]$script:Window.Current.NativeWindowHandle)
     Start-Sleep -Milliseconds 150
-    $vks = [uint16[]]@($Chord.Split('+') | ForEach-Object { $script:VirtualKeys[$_] })
+    $vks = [uint16[]]@($Chord.Split('+') | ForEach-Object { if ($script:VirtualKeys.ContainsKey($_)) { $script:VirtualKeys[$_] } else { [int][char]$_.ToUpper() } })
     [ShotNative]::Keys($vks)
     Start-Sleep -Milliseconds 200
 }

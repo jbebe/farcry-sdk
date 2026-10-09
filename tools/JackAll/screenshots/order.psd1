@@ -11,5 +11,6 @@
         'archetypes'
         'value-editor'
         'renaming'
+        'saves'
     )
 }
