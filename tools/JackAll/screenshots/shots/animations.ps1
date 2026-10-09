@@ -2,7 +2,7 @@
 $slug = 'animations'
 
 Reset-ShotState
-Start-ShotApp -Width 1600 -Height 1000 | Out-Null
+Start-ShotApp -Width 1600 -Height 1000
 Select-UiTab 'Animations'
 $weapon = Wait-Ui { $x = Find-Ui -Id MoveWeaponPicker -Optional; if ($x -and $x.Current.IsEnabled) { $x } } -Timeout 120 -What 'the weapon list'
 Select-UiCombo $weapon 'AK47'
@@ -34,9 +34,6 @@ Start-Sleep 1
 $staged = Wait-Ui { Find-Ui -Type Text -Like 'Staged *' -Optional } -What 'the staged message'
 Save-Shot $slug '03-saved' -Callouts $save, $staged -Region (Find-Ui -Id MoveGraphPicker), $staged
 
-Select-UiTab 'Mods'
-Invoke-Ui (Find-UiButton 'Deploy mods')
-Wait-ShotStatus 'Built patch.dat*' | Out-Null
-Add-SessionPatch
+Invoke-ShotDeploy
 Save-ShotResult $slug
 Stop-ShotApp

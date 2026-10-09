@@ -2,7 +2,7 @@
 $slug = 'missions'
 
 Reset-ShotState
-Start-ShotApp -Width 1600 -Height 1000 | Out-Null
+Start-ShotApp -Width 1600 -Height 1000
 Select-UiTab 'Files'
 Set-UiValue (Find-Ui -Scope (Find-Ui -Id FilesTabItem) -Type Edit) 'ext:lua a1sm01_mission'
 Click-Ui (Select-UiRow '*\a1sm01_townescape.a1sm01_mission.lua' (Find-Ui -Id FileGrid))

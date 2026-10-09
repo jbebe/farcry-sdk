@@ -1,10 +1,10 @@
 # Installing mods: import a mod zip, deploy, a plugin mod, revert.
 $slug = 'installing-mods'
-$vss = 'C:\Projects\FarCry2\mods\vss-vintorez\vss-vintorez-1.1.0.zip'
-$flashlight = New-ShotZip 'flashlight-1.1.1.zip' 'C:\Projects\FarCry2\mods\flashlight\layer'
+$vss = Join-Path (Get-ShotPaths).Repo 'mods\vss-vintorez\vss-vintorez-1.1.0.zip'
+$flashlight = New-ShotZip 'flashlight-1.1.1.zip' (Join-Path (Get-ShotPaths).Repo 'mods\flashlight\layer')
 
 Reset-ShotState
-Start-ShotApp | Out-Null
+Start-ShotApp
 
 $import = Find-Ui -Type Button -Name 'Import mod'
 Invoke-Ui $import
@@ -28,7 +28,7 @@ Add-SessionPatch
 $row = Find-UiByText -Scope (Find-Ui -Id ModGrid) -Type DataItem -Like 'flashlight*'
 Select-Ui $row
 Save-Shot $slug '03-plugins' -Callouts $row, (Get-ShotStatusElement)
-if (-not (Test-Path 'C:\Games\Far Cry 2\bin\plugins\flashlight\Flashlight.dll')) { throw 'Deploy did not put the plugin in bin\plugins' }
+if (-not (Test-Path (Join-Path (Get-ShotPaths).Game 'bin\plugins\flashlight\Flashlight.dll'))) { throw 'Deploy did not put the plugin in bin\plugins' }
 
 Invoke-Ui (Find-Ui -Type Button -Name 'Revert to original')
 $dialog = Wait-Ui { Find-ShotWindow 'Remove all mods' } -What 'the revert dialog'
@@ -42,6 +42,6 @@ if ($gog -ne 'none') {
 }
 Wait-ShotStatus 'All mods removed*' | Out-Null
 Add-SessionPatch
-if (Test-Path 'C:\Games\Far Cry 2\bin\plugins\flashlight\Flashlight.dll') { throw 'Revert left the plugin behind' }
+if (Test-Path (Join-Path (Get-ShotPaths).Game 'bin\plugins\flashlight\Flashlight.dll')) { throw 'Revert left the plugin behind' }
 
 Stop-ShotApp

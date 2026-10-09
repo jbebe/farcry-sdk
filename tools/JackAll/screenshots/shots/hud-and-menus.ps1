@@ -2,7 +2,7 @@
 $slug = 'hud-and-menus'
 
 Reset-ShotState
-Start-ShotApp -Width 1600 -Height 1000 | Out-Null
+Start-ShotApp -Width 1600 -Height 1000
 Select-UiTab 'Files'
 Set-UiValue (Find-Ui -Scope (Find-Ui -Id FilesTabItem) -Type Edit) 'ext:mgb hud'
 $row = Wait-Ui { $r = Get-UiItem (Find-Ui -Id FileGrid) 'ui\localized\pc\eng\ui\hud.mgb'; Select-Ui $r; $r } -Timeout 30 -What 'hud.mgb'
@@ -57,18 +57,10 @@ Save-Shot $slug '04-saved' -Callouts (Find-UiButton 'Save changes'), (Find-Ui -I
 Select-UiTab 'Mods'
 Select-Ui (Find-UiByText -Scope (Find-Ui -Id ModGrid) -Type DataItem -Like 'workspace*')
 $files = Find-Ui -Id ModFileTree
-for ($i = 0; $i -lt 10; $i++) {
-    foreach ($node in @(Find-Ui -Scope $files -Type TreeItem -All -Optional)) {
-        $p = $null
-        if ($node.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$p) -and $p.Current.ExpandCollapseState -eq 'Collapsed') { $p.Expand() }
-    }
-    Start-Sleep -Milliseconds 200
-}
+Expand-UiTree $files
 $fragment = Find-UiByText -Scope $files -Like '*.xml*'
 Save-Shot $slug '05-fragments' -Callouts $fragment -Region @(Find-Ui -Scope $files -Type TreeItem -All)[0], $fragment -Pad 30
 
-Invoke-Ui (Find-UiButton 'Deploy mods')
-Wait-ShotStatus 'Built patch.dat*' | Out-Null
-Add-SessionPatch
+Invoke-ShotDeploy
 Save-ShotResult $slug
 Stop-ShotApp

@@ -4,19 +4,18 @@ $slug = 'cli-formats'
 $paths = Get-ShotPaths
 $game = $paths.Game
 $data = Join-Path $game 'Data_Win32'
-$dir = Join-Path $paths.Bin 'inputs\formats'
+$dir = Join-Path $paths.Inputs 'formats'
 if (Test-Path $dir) { Remove-Item -LiteralPath $dir -Recurse -Force }
 New-Item -ItemType Directory -Force $dir | Out-Null
-Copy-Item (Join-Path $paths.Bin 'inputs\ak47.fc2model'), (Join-Path $paths.Bin 'inputs\ak47-longer-mag.fc2model') $dir
+Copy-Item (Join-Path $paths.Inputs 'ak47.fc2model'), (Join-Path $paths.Inputs 'ak47-longer-mag.fc2model') $dir
 
 function Step([string[]]$Arguments) {
-    if (Invoke-ShotCli $Arguments) { throw "Failed: jackall-cli $($Arguments -join ' ')" }
+    Invoke-ShotCli $Arguments -Check
 }
 
 # Pulls more inputs out of an archive without adding them to the transcript.
 function Get-GameFile([string]$Archive, [string[]]$Filters) {
-    $ErrorActionPreference = 'Continue'
-    foreach ($f in $Filters) { & $paths.Cli archive extract "$data\$Archive" --names --filter $f --out-dir game 2>$null | Out-Null }
+    foreach ($f in $Filters) { Invoke-ShotCli 'archive', 'extract', "$data\$Archive", '--names', '--filter', $f, '--out-dir', 'game' -Quiet | Out-Null }
 }
 
 Push-Location $dir

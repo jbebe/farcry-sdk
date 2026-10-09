@@ -2,7 +2,7 @@
 $slug = 'references'
 
 Reset-ShotState
-Start-ShotApp -Width 1440 -Height 900 | Out-Null
+Start-ShotApp -Width 1440 -Height 900
 Select-UiTab 'Files'
 Click-Ui (Open-FilesFolder 'graphics\weapons\primary\ak47') -X 0.3
 $grid = Find-Ui -Id FileGrid

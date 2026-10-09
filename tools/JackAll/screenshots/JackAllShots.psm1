@@ -13,10 +13,12 @@ if (-not ('ShotNative' -as [type])) {
 [ShotNative]::Init()
 
 $script:Game = if ($env:JACKALL_SHOTS_GAME) { $env:JACKALL_SHOTS_GAME } else { 'C:\Games\Far Cry 2' }
+$script:Plugins = Join-Path $script:Game 'bin\plugins'
+$script:Repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 $script:Bin = Join-Path $PSScriptRoot 'bin'
 $script:AppDir = Join-Path $script:Bin 'app'
 $script:Cli = Join-Path $script:Bin 'cli\jackall-cli.exe'
-$script:ImageRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..\docs\static\img\jackall'))
+$script:ImageRoot = Join-Path $script:Repo 'docs\static\img\jackall'
 $script:SessionRoot = Join-Path $env:LOCALAPPDATA 'JackAllShots'
 $script:SessionFile = Join-Path $script:SessionRoot 'session.json'
 $script:Ffmpeg = if (Test-Path 'C:\Programs\ffmpeg\bin\ffmpeg.exe') { 'C:\Programs\ffmpeg\bin\ffmpeg.exe' } else { Join-Path $script:AppDir 'data\ffmpeg.exe' }
@@ -28,7 +30,7 @@ $CT = [System.Windows.Automation.ControlType]
 $TS = [System.Windows.Automation.TreeScope]
 
 function Get-ShotPaths {
-    [pscustomobject]@{ Game = $script:Game; Bin = $script:Bin; App = $script:AppDir; Cli = $script:Cli; Images = $script:ImageRoot; Ffmpeg = $script:Ffmpeg }
+    [pscustomobject]@{ Game = $script:Game; Repo = $script:Repo; Bin = $script:Bin; Inputs = (Join-Path $script:Bin 'inputs'); App = $script:AppDir; Cli = $script:Cli; Images = $script:ImageRoot; Ffmpeg = $script:Ffmpeg }
 }
 
 # ---------------------------------------------------------------- session safety
@@ -84,8 +86,7 @@ function Enter-ShotSession {
             Copy-Item -LiteralPath $src $dst
         }
     }
-    $plugins = Join-Path $script:Game 'bin\plugins'
-    if (Test-Path $plugins) { Copy-Item -LiteralPath $plugins (Join-Path $snapshot 'bin\plugins') -Recurse -Force }
+    if (Test-Path $script:Plugins) { Copy-Item -LiteralPath $script:Plugins (Join-Path $snapshot 'bin\plugins') -Recurse -Force }
 
     $manifest = @(Get-TreeManifest $script:Game $script:Guarded 'bin\plugins')
     $copied = @(Get-TreeManifest $snapshot $script:Guarded 'bin\plugins')
@@ -110,9 +111,12 @@ function Set-ShotBaseline {
     $data = Join-Path $script:Game 'Data_Win32'
     Copy-Item -LiteralPath (Join-Path $data 'patch.dat.vanilla') (Join-Path $data 'patch.dat') -Force
     Copy-Item -LiteralPath (Join-Path $data 'patch.fat.vanilla') (Join-Path $data 'patch.fat') -Force
-    $plugins = Join-Path $script:Game 'bin\plugins'
-    if (Test-Path $plugins) { Get-ChildItem -LiteralPath $plugins -Force | Remove-Item -Recurse -Force }
+    Clear-ShotPlugins
     Add-SessionPatch
+}
+
+function Clear-ShotPlugins {
+    if (Test-Path $script:Plugins) { Get-ChildItem -LiteralPath $script:Plugins -Force | Remove-Item -Recurse -Force }
 }
 
 # Puts the snapshot back and proves it byte for byte. Refuses when someone else deployed meanwhile.
@@ -132,17 +136,18 @@ function Exit-ShotSession([switch]$Force) {
         if (Test-Path -LiteralPath $src) { Copy-Item -LiteralPath $src $dst -Force }
         elseif (Test-Path -LiteralPath $dst) { Remove-Item -LiteralPath $dst -Force }
     }
-    $plugins = Join-Path $script:Game 'bin\plugins'
-    if (Test-Path $plugins) { Get-ChildItem -LiteralPath $plugins -Force | Remove-Item -Recurse -Force }
+    Clear-ShotPlugins
     $saved = Join-Path $snapshot 'bin\plugins'
     if (Test-Path $saved) {
-        New-Item -ItemType Directory -Force $plugins | Out-Null
-        Get-ChildItem -LiteralPath $saved -Force | Copy-Item -Destination $plugins -Recurse -Force
+        New-Item -ItemType Directory -Force $script:Plugins | Out-Null
+        Get-ChildItem -LiteralPath $saved -Force | Copy-Item -Destination $script:Plugins -Recurse -Force
     }
 
     $diff = @(Compare-Manifest @($session.Manifest) @(Get-TreeManifest $script:Game $script:Guarded 'bin\plugins'))
     if ($diff.Count) { throw "Restore did not verify: $($diff -join '; '). Snapshot kept in $snapshot." }
     Remove-Item $script:SessionFile
+    # Verified byte for byte, so the copy has done its job.
+    Remove-Item -LiteralPath $snapshot -Recurse -Force
     Write-Host "Restored and verified $(@($session.Manifest).Count) file(s) in $script:Game"
 }
 
@@ -150,7 +155,7 @@ function Exit-ShotSession([switch]$Force) {
 
 # Clean workspace and config for one tutorial: the game folder, these mod zips, the dark theme.
 # -Workspace starts from another tutorial's saved result instead of an empty workspace.
-function Reset-ShotState([string[]]$Mods = @(), [string]$Theme = 'dark', [string]$Workspace) {
+function Reset-ShotState([string[]]$Mods = @(), [string]$Workspace) {
     Stop-ShotApp
     Set-ShotBaseline
     foreach ($dir in 'workspace', 'data\prefabs') {
@@ -162,14 +167,14 @@ function Reset-ShotState([string[]]$Mods = @(), [string]$Theme = 'dark', [string
         if (-not (Test-Path $from)) { throw "No saved result for '$Workspace' - run that tutorial first." }
         Copy-Item -LiteralPath $from (Join-Path $script:AppDir 'workspace') -Recurse
     }
-    Set-ShotConfig -Mods $Mods -Theme $Theme
+    Set-ShotConfig -Mods $Mods
 }
 
-function Set-ShotConfig([string[]]$Mods = @(), [string]$Theme = 'dark', [string]$GamePath = $script:Game) {
+function Set-ShotConfig([string[]]$Mods = @(), [string]$GamePath = $script:Game) {
     $lines = @('[game]', "path = $GamePath", '', '[mods]', '0 = workspace')
     $i = 1
     foreach ($m in $Mods) { $lines += "$i = $m"; $i++ }
-    $lines += @('', '[ui]', "theme = $Theme")
+    $lines += @('', '[ui]', 'theme = dark')
     Set-Content -Encoding UTF8 (Join-Path $script:AppDir 'config.ini') $lines
 }
 
@@ -179,18 +184,9 @@ function Start-ShotApp([switch]$NoWait, [int]$Width = 1280, [int]$Height = 800) 
     $script:Window = Wait-Ui { Find-ShotWindow 'JackAll*' } -Timeout 60 -What 'the JackAll window'
     Set-ShotWindowSize $Width $Height
     if (-not $NoWait) { Wait-ShotReady }
-    return $script:Window
 }
 
-# Re-attaches to a shots app started by an earlier script.
-function Connect-ShotApp {
-    $script:Process = Get-Process JackAll -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($script:AppDir, 'OrdinalIgnoreCase') } | Select-Object -First 1
-    if (-not $script:Process) { throw 'The shots app is not running.' }
-    $script:Window = Find-ShotWindow 'JackAll*'
-    return $script:Window
-}
-
-function Set-ShotWindowSize([int]$Width = 1280, [int]$Height = 800) {
+function Set-ShotWindowSize([int]$Width, [int]$Height) {
     [ShotNative]::Place([IntPtr]$script:Window.Current.NativeWindowHandle, 24, 24, $Width, $Height)
     Start-Sleep -Milliseconds 300
 }
@@ -227,14 +223,6 @@ function Find-ShotMenu {
     return $null
 }
 
-# An open popup of the shots app (a drop-down panel such as the Map tab's Layers): any top-level
-# window of the process other than the main one.
-function Find-ShotPopup {
-    $cond = New-Object System.Windows.Automation.PropertyCondition($AE::ProcessIdProperty, $script:Process.Id)
-    $main = $script:Window.Current.NativeWindowHandle
-    return $AE::RootElement.FindAll($TS::Children, $cond) | Where-Object { $_.Current.NativeWindowHandle -ne $main } | Select-Object -First 1
-}
-
 # The status line at the bottom of the window.
 function Get-ShotStatusElement {
     $cond = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, $CT::Text)
@@ -254,8 +242,8 @@ function Test-ShotBusy {
 }
 
 # Loaded, every .fcb indexed, nothing running.
-function Wait-ShotReady([int]$Timeout = 900) {
-    Wait-Ui { (Get-ShotStatus) -match '^[\d,]+ files across \d+ archives\s+.\s+[\d,]+ with unknown names$' -and -not (Test-ShotBusy) } -Timeout $Timeout -What 'JackAll to finish loading' | Out-Null
+function Wait-ShotReady {
+    Wait-Ui { (Get-ShotStatus) -match '^[\d,]+ files across \d+ archives\s+.\s+[\d,]+ with unknown names$' -and -not (Test-ShotBusy) } -Timeout 900 -What 'JackAll to finish loading' | Out-Null
 }
 
 function Wait-ShotStatus([string]$Like, [int]$Timeout = 300) {
@@ -263,10 +251,18 @@ function Wait-ShotStatus([string]$Like, [int]$Timeout = 300) {
     return Get-ShotStatus
 }
 
+# Deploy mods on the Mods tab, and the patch it builds recorded as the session's own.
+function Invoke-ShotDeploy([string]$Like = 'Built patch.dat*') {
+    Select-UiTab 'Mods'
+    Invoke-Ui (Find-UiButton 'Deploy mods')
+    Wait-ShotStatus $Like | Out-Null
+    Add-SessionPatch
+}
+
 # Zips a layer folder (mods\ and/or plugins\ at its root) into bin\inputs, as a player downloads it.
 function New-ShotZip([string]$Name, [string]$LayerDir) {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $dir = Join-Path $script:Bin 'inputs'
+    $dir = (Get-ShotPaths).Inputs
     New-Item -ItemType Directory -Force $dir | Out-Null
     $zip = Join-Path $dir $Name
     if (Test-Path $zip) { Remove-Item $zip }
@@ -286,16 +282,19 @@ function Save-ShotResult([string]$Slug) {
 
 $script:Transcript = New-Object System.Text.StringBuilder
 
-# Runs jackall-cli, adds the command and what it printed on stdout to the transcript, and returns
-# its exit code.
-function Invoke-ShotCli([string[]]$Arguments) {
-    $shown = ($Arguments | ForEach-Object { if ($_ -match ' ') { "`"$_`"" } else { $_ } }) -join ' '
-    [void]$script:Transcript.AppendLine("> jackall-cli $shown")
+# Runs jackall-cli and adds the command and what it printed on stdout to the transcript, unless
+# -Quiet. Returns the exit code; -Check throws on a non-zero one instead.
+function Invoke-ShotCli([string[]]$Arguments, [switch]$Check, [switch]$Quiet) {
     # Progress goes to stderr, which PowerShell 5.1 turns into an error under Stop.
     $ErrorActionPreference = 'Continue'
     $text = & $script:Cli @Arguments 2>$null | Out-String -Width 400
-    [void]$script:Transcript.AppendLine($text.TrimEnd()).AppendLine("[exit $LASTEXITCODE]").AppendLine()
-    return $LASTEXITCODE
+    $code = $LASTEXITCODE
+    if (-not $Quiet) {
+        $shown = ($Arguments | ForEach-Object { if ($_ -match ' ') { "`"$_`"" } else { $_ } }) -join ' '
+        [void]$script:Transcript.AppendLine("> jackall-cli $shown").AppendLine($text.TrimEnd()).AppendLine("[exit $code]").AppendLine()
+    }
+    if ($Check -and $code) { throw "jackall-cli $($Arguments -join ' ') exited with $code" }
+    if (-not $Check) { return $code }
 }
 
 function Save-ShotTranscript([string]$Slug) {
@@ -321,7 +320,7 @@ function Wait-Ui([scriptblock]$Check, [int]$Timeout = 15, [string]$What = 'condi
 
 # Finds one element (or -All) below Scope by AutomationId, exact name, name pattern and/or control type.
 function Find-Ui {
-    param([string]$Id, [string]$Name, [string]$Like, [string]$Type, $Scope, [int]$Timeout = 15, [switch]$All, [switch]$Optional, [switch]$Children)
+    param([string]$Id, [string]$Name, [string]$Like, [string]$Type, $Scope, [switch]$All, [switch]$Optional, [switch]$Children)
     if (-not $Scope) { $Scope = $script:Window }
     $conds = @()
     if ($Id) { $conds += New-Object System.Windows.Automation.PropertyCondition($AE::AutomationIdProperty, $Id) }
@@ -334,11 +333,13 @@ function Find-Ui {
     }
     $scopeKind = if ($Children) { $TS::Children } else { $TS::Descendants }
     $find = {
+        # One element needs no name test: the first match in tree order stops the walk early.
+        if (-not $All -and -not $Like) { return $Scope.FindFirst($scopeKind, $cond) }
         $found = @($Scope.FindAll($scopeKind, $cond) | Where-Object { -not $Like -or $_.Current.Name -like $Like })
-        if ($All) { if ($found.Count) { , $found } } elseif ($found.Count) { $found[0] }
+        if ($found.Count) { if ($All) { , $found } else { $found[0] } }
     }
-    if ($Optional) { $result = & $find; return $result }
-    return Wait-Ui $find -Timeout $Timeout -What "element Id=$Id Name=$Name Like=$Like Type=$Type"
+    if ($Optional) { return & $find }
+    return Wait-Ui $find -What "element Id=$Id Name=$Name Like=$Like Type=$Type"
 }
 
 # A button by its label; '...' in the label stands for the ellipsis character JackAll's labels use.
@@ -485,6 +486,28 @@ function Select-UiRow([string]$Like, $Scope, [string]$Type = 'DataItem') {
     return Wait-Ui { $row = Find-UiByText -Scope $Scope -Type $Type -Like $Like -Timeout 2; Select-Ui $row; $row } -What "row '$Like'"
 }
 
+# Expands an element if it can be and is collapsed; true when it did.
+function Expand-UiCollapsed($Element) {
+    $p = $null
+    if ($Element.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$p) -and $p.Current.ExpandCollapseState -eq 'Collapsed') {
+        $p.Expand()
+        return $true
+    }
+    return $false
+}
+
+# Expands every node of a tree, level by level, until a pass finds nothing left collapsed.
+function Expand-UiTree($Tree) {
+    for ($i = 0; $i -lt 12; $i++) {
+        $expanded = $false
+        foreach ($node in @(Find-Ui -Scope $Tree -Type TreeItem -All -Optional)) {
+            if (Expand-UiCollapsed $node) { $expanded = $true }
+        }
+        if (-not $expanded) { return }
+        Start-Sleep -Milliseconds 200
+    }
+}
+
 # Opens a folder of the Files tab's tree, e.g. 'graphics\weapons\primary\ak47', and selects it.
 function Open-FilesFolder([string]$Path) {
     $tree = Find-Ui -Id FolderTree
@@ -501,8 +524,7 @@ function Open-FilesFolder([string]$Path) {
     for ($d = 0; $d -lt $parts.Count; $d++) {
         $node = & $find $d
         Show-Ui $node
-        $p = $null
-        if ($d -lt $parts.Count - 1 -and $node.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$p) -and $p.Current.ExpandCollapseState -eq 'Collapsed') { $p.Expand() }
+        if ($d -lt $parts.Count - 1) { Expand-UiCollapsed $node | Out-Null }
         Start-Sleep -Milliseconds 200
     }
     $node = & $find ($parts.Count - 1)
@@ -603,9 +625,10 @@ function Get-DialogText($Dialog) {
 
 # ---------------------------------------------------------------- real input
 
-$script:VirtualKeys = @{ Ctrl = 0x11; Shift = 0x10; Alt = 0x12; Left = 0x25; Right = 0x27; Up = 0x26; Down = 0x28; Del = 0x2E; Esc = 0x1B; Enter = 0x0D; Tab = 0x09; Space = 0x20; F = 0x46; T = 0x54; R = 0x52; C = 0x43; V = 0x56; X = 0x58; Z = 0x5A; Y = 0x59; G = 0x47 }
+# Named keys; a letter's virtual-key code is its uppercase character code.
+$script:VirtualKeys = @{ Ctrl = 0x11; Shift = 0x10; Alt = 0x12; Left = 0x25; Right = 0x27; Up = 0x26; Down = 0x28; Del = 0x2E; Esc = 0x1B; Enter = 0x0D; Tab = 0x09; Space = 0x20 }
 
-# Sends a key chord such as 'Ctrl+Z' to the foreground window.
+# Sends a key chord such as 'Ctrl+Z' to the shots app's main window.
 function Send-ShotKeys([string]$Chord) {
     [ShotNative]::Front([IntPtr]$script:Window.Current.NativeWindowHandle)
     Start-Sleep -Milliseconds 150
@@ -614,7 +637,7 @@ function Send-ShotKeys([string]$Chord) {
     Start-Sleep -Milliseconds 200
 }
 
-function Click-Ui($Element, [switch]$Right, [switch]$Double, [switch]$Ctrl, [double]$X = 0.5, [double]$Y = 0.5) {
+function Click-Ui($Element, [switch]$Right, [switch]$Ctrl, [double]$X = 0.5, [double]$Y = 0.5) {
     [ShotNative]::Front([IntPtr]$script:Window.Current.NativeWindowHandle)
     Start-Sleep -Milliseconds 150
     $r = $Element.Current.BoundingRectangle
@@ -623,7 +646,6 @@ function Click-Ui($Element, [switch]$Right, [switch]$Double, [switch]$Ctrl, [dou
     if ($Ctrl) { [ShotNative]::KeyState($script:VirtualKeys.Ctrl, $false) }
     try {
         [ShotNative]::Click($px, $py, [bool]$Right)
-        if ($Double) { [ShotNative]::Click($px, $py, [bool]$Right) }
     }
     finally {
         if ($Ctrl) { [ShotNative]::KeyState($script:VirtualKeys.Ctrl, $true) }
@@ -700,4 +722,4 @@ function Add-ShotManifest([string]$Slug, $Entry) {
     ConvertTo-Json -Depth 3 -InputObject @($entries + $Entry) | Set-Content -Encoding UTF8 $path
 }
 
-Export-ModuleMember -Function * -Variable AE, CT, TS
+Export-ModuleMember -Function *

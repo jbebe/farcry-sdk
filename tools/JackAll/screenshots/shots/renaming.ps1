@@ -1,9 +1,9 @@
 # Renaming a weapon: the HUD name in the archetype, the rest in the string table as a fragment.
 $slug = 'renaming'
-$inputs = Join-Path (Get-ShotPaths).Bin 'inputs'
+$inputs = (Get-ShotPaths).Inputs
 
 Reset-ShotState
-Start-ShotApp -Width 1440 -Height 900 | Out-Null
+Start-ShotApp -Width 1440 -Height 900
 
 function Set-DisplayName([string]$World) {
     Select-UiTab 'Archetypes'
@@ -62,13 +62,7 @@ Invoke-Ui $rescan
 Wait-ShotStatus 'Mods rescanned*' | Out-Null
 Select-Ui (Find-UiByText -Scope (Find-Ui -Id ModGrid) -Type DataItem -Like 'workspace*')
 $files = Find-Ui -Id ModFileTree
-for ($i = 0; $i -lt 8; $i++) {
-    foreach ($node in @(Find-Ui -Scope $files -Type TreeItem -All -Optional)) {
-        $p = $null
-        if ($node.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$p) -and $p.Current.ExpandCollapseState -eq 'Collapsed') { $p.Expand() }
-    }
-    Start-Sleep -Milliseconds 200
-}
+Expand-UiTree $files
 Save-Shot $slug '03-rescan' -Callouts $rescan, (Find-UiByText -Scope $files -Like '*oasisstrings*')
 
 Select-UiTab 'Files'
@@ -78,9 +72,6 @@ Click-Ui (Select-UiRow '*oasisstrings.rml' (Find-Ui -Id FileGrid))
 $diff = Wait-Ui { Find-Ui -Type Text -Like 'Showing only the changed lines*' -Optional } -What 'the diff'
 Save-Shot $slug '04-diff' -Callouts (Find-Ui -Type Text -Like 'Mod: workspace*'), $diff
 
-Select-UiTab 'Mods'
-Invoke-Ui (Find-UiButton 'Deploy mods')
-Wait-ShotStatus 'Built patch.dat*' | Out-Null
-Add-SessionPatch
+Invoke-ShotDeploy
 Save-ShotResult $slug
 Stop-ShotApp

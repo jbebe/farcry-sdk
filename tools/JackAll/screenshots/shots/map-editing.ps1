@@ -4,7 +4,7 @@ $slug = 'map-editing'
 $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
 
 Reset-ShotState
-Start-ShotApp -Width 1600 -Height 1000 | Out-Null
+Start-ShotApp -Width 1600 -Height 1000
 Select-UiTab 'Map'
 $picker = Find-Ui -Id MapPicker
 Wait-Ui { $picker.Current.IsEnabled } -Timeout 60 -What 'the map list' | Out-Null
@@ -98,9 +98,6 @@ foreach ($expected in 'JeepLiberty_0', 'BarrelBeerStack', '_layout') { if ($text
 Save-Shot $slug '06-saved' -Window $saved -Screen
 Push-ShotButton $saved 'OK'
 
-Select-UiTab 'Mods'
-Invoke-Ui (Find-UiButton 'Deploy mods')
-Wait-ShotStatus 'Built patch.dat*' | Out-Null
-Add-SessionPatch
+Invoke-ShotDeploy
 Save-ShotResult $slug
 Stop-ShotApp

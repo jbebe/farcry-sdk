@@ -3,7 +3,7 @@
 $slug = 'value-editor'
 
 Reset-ShotState
-Start-ShotApp -Width 1440 -Height 900 | Out-Null
+Start-ShotApp -Width 1440 -Height 900
 Select-UiTab 'Archetypes'
 $picker = Find-Ui -Id WorldPicker
 Wait-Ui { $picker.Current.IsEnabled } -Timeout 60 -What 'the world picker' | Out-Null

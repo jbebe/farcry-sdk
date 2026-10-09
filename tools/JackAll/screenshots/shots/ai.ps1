@@ -26,7 +26,7 @@ function Wait-Archetypes {
 }
 
 Reset-ShotState
-Start-ShotApp -Width 1600 -Height 1000 | Out-Null
+Start-ShotApp -Width 1600 -Height 1000
 Select-UiTab 'AI'
 
 # One archetype only: ticking several saves just the first of them (see the page's warning).
@@ -96,9 +96,6 @@ foreach ($file in 'engine\gamemodes\gamemodesconfig.xml', 'scripts\game\newbrain
     if (-not (Test-Path (Join-Path $mods $file))) { throw "$file was not staged" }
 }
 
-Select-UiTab 'Mods'
-Invoke-Ui (Find-UiButton 'Deploy mods')
-Wait-ShotStatus 'Built patch.dat*' | Out-Null
-Add-SessionPatch
+Invoke-ShotDeploy
 Save-ShotResult $slug
 Stop-ShotApp

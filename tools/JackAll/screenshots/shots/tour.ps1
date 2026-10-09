@@ -3,7 +3,7 @@ $slug = 'tour'
 
 Reset-ShotState
 Set-ShotConfig -GamePath ''
-Start-ShotApp -NoWait -Width 1440 -Height 900 | Out-Null
+Start-ShotApp -NoWait -Width 1440 -Height 900
 $question = 'Where is Far Cry 2 installed?'
 $dialog = Wait-Ui { Find-ShotWindow $question } -Timeout 60 -What 'the folder question'
 Save-Shot $slug '01-first-run' -Window $dialog -Screen

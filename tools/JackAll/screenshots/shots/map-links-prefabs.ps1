@@ -4,7 +4,7 @@ $slug = 'map-links-prefabs'
 $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
 
 Reset-ShotState
-Start-ShotApp -Width 1600 -Height 1000 | Out-Null
+Start-ShotApp -Width 1600 -Height 1000
 Select-UiTab 'Map'
 $picker = Find-Ui -Id MapPicker
 Wait-Ui { $picker.Current.IsEnabled } -Timeout 60 -What 'the map list' | Out-Null

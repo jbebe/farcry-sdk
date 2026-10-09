@@ -2,7 +2,7 @@
 $slug = 'previews'
 
 Reset-ShotState
-Start-ShotApp -Width 1440 -Height 900 | Out-Null
+Start-ShotApp -Width 1440 -Height 900
 Select-UiTab 'Files'
 $filter = Find-Ui -Scope (Find-Ui -Id FilesTabItem) -Type Edit
 $grid = Find-Ui -Id FileGrid

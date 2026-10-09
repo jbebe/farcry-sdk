@@ -2,7 +2,7 @@
 $slug = 'first-mod'
 
 Reset-ShotState
-Start-ShotApp -Width 1440 -Height 900 | Out-Null
+Start-ShotApp -Width 1440 -Height 900
 Select-UiTab 'Archetypes'
 
 function Open-Ak47([string]$World) {
@@ -58,17 +58,9 @@ Wait-Ui { Test-Path ($fragment -replace 'world1', 'world2') } -What 'the world2 
 Select-UiTab 'Mods'
 Select-Ui (Find-UiByText -Scope (Find-Ui -Id ModGrid) -Type DataItem -Like 'workspace*')
 $files = Find-Ui -Id ModFileTree
-for ($i = 0; $i -lt 8; $i++) {
-    foreach ($node in @(Find-Ui -Scope $files -Type TreeItem -All -Optional)) {
-        $p = $null
-        if ($node.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$p) -and $p.Current.ExpandCollapseState -eq 'Collapsed') { $p.Expand() }
-    }
-    Start-Sleep -Milliseconds 200
-}
+Expand-UiTree $files
 Save-Shot $slug '05-workspace' -Callouts (Find-UiByText -Scope (Find-Ui -Id ModGrid) -Type DataItem -Like 'workspace*'), $files
 
-Invoke-Ui (Find-Ui -Type Button -Name 'Deploy mods')
-Wait-ShotStatus 'Built patch.dat*' | Out-Null
-Add-SessionPatch
+Invoke-ShotDeploy
 Save-ShotResult $slug
 Stop-ShotApp

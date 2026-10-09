@@ -1,7 +1,7 @@
 # Edit a model in Blender: the AK-47 out as a model pack, its magazine lengthened by the add-on
 # (headless, standing in for the hand edit), and the pack applied back.
 $slug = 'blender'
-$inputs = Join-Path (Get-ShotPaths).Bin 'inputs'
+$inputs = (Get-ShotPaths).Inputs
 $pack = Join-Path $inputs 'ak47.fc2model'
 $edited = Join-Path $inputs 'ak47-longer-mag.fc2model'
 foreach ($f in $pack, $edited) { if (Test-Path $f) { Remove-Item $f } }
@@ -17,7 +17,7 @@ Copy-Item (Join-Path $assets 'outliner.png') (Join-Path $out '04-outliner.png')
 Copy-Item (Join-Path $assets 'export-model.png') (Join-Path $out '05-export.png')
 
 Reset-ShotState
-Start-ShotApp -Width 1440 -Height 900 | Out-Null
+Start-ShotApp -Width 1440 -Height 900
 Select-UiTab 'Files'
 Set-UiValue (Find-Ui -Scope (Find-Ui -Id FilesTabItem) -Type Edit) 'hash:585ACE93'
 $grid = Find-Ui -Id FileGrid
@@ -47,9 +47,6 @@ $frame = Get-DetailsFrame 'ak47.xbg'
 Start-Sleep 2
 Save-Shot $slug '07-result' -Callouts (Find-Ui -Type Text -Like 'Mod: workspace*') -Region $frame
 
-Select-UiTab 'Mods'
-Invoke-Ui (Find-UiButton 'Deploy mods')
-Wait-ShotStatus 'Built patch.dat*' | Out-Null
-Add-SessionPatch
+Invoke-ShotDeploy
 Save-ShotResult $slug
 Stop-ShotApp

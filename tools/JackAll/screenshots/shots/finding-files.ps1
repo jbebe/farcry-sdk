@@ -1,8 +1,8 @@
 # Finding files: the merged tree, the filter words, mod files, unused files.
 $slug = 'finding-files'
 
-Reset-ShotState -Mods 'C:\Projects\FarCry2\mods\vss-vintorez\vss-vintorez-1.1.0.zip'
-Start-ShotApp -Width 1440 -Height 900 | Out-Null
+Reset-ShotState -Mods (Join-Path (Get-ShotPaths).Repo 'mods\vss-vintorez\vss-vintorez-1.1.0.zip')
+Start-ShotApp -Width 1440 -Height 900
 Select-UiTab 'Files'
 $filter = Find-Ui -Scope (Find-Ui -Id FilesTabItem) -Type Edit
 $grid = Find-Ui -Id FileGrid

@@ -1,13 +1,13 @@
 # Replace a sound effect: the Dart Rifle's first-person shot bank, its audio swapped for a test tone
 # and a second tone added as a random variation. Nothing is played aloud.
 $slug = 'sound-effects'
-$inputs = Join-Path (Get-ShotPaths).Bin 'inputs'
+$inputs = (Get-ShotPaths).Inputs
 foreach ($tone in @(@('shot-a.wav', 660), @('shot-b.wav', 880))) {
     & (Get-ShotPaths).Ffmpeg -y -v error -f lavfi -i "sine=f=$($tone[1]):d=0.35,afade=t=out:st=0.2:d=0.15" -ac 1 -ar 44100 -c:a pcm_s16le (Join-Path $inputs $tone[0])
 }
 
 Reset-ShotState
-Start-ShotApp -Width 1600 -Height 1000 | Out-Null
+Start-ShotApp -Width 1600 -Height 1000
 Select-UiTab 'Files'
 Set-UiValue (Find-Ui -Scope (Find-Ui -Id FilesTabItem) -Type Edit) 'ext:spk 004bf5e9'
 Click-Ui (Select-UiRow '*\004bf5e9.spk' (Find-Ui -Id FileGrid))

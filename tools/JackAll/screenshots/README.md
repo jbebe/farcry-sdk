@@ -18,15 +18,17 @@ The screenshots are taken against the real game in `C:\Games\Far Cry 2` (overrid
 - **The game folder.** `Enter-ShotSession` first copies `patch.dat`/`patch.fat`, their `.vanilla`
   backups, `.jackallcache` and all of `bin\plugins\` to `%LOCALAPPDATA%\JackAllShots\snapshots\`, and
   checks the copy by SHA-256. Each tutorial starts from the vanilla patch with no plugins. At the end
-  everything is copied back and checked again. If `patch.dat` changed in a way the session didn't
-  cause (another deploy in the meantime), nothing is restored and `restore.ps1 -Force` decides.
+  everything is copied back and checked again, and the snapshot is deleted once it verifies. If
+  `patch.dat` changed in a way the session didn't cause (another deploy in the meantime), nothing is
+  restored and `restore.ps1 -Force` decides. A deploy in a script goes through `Invoke-ShotDeploy`,
+  or `Add-SessionPatch` after it, so the session knows the patch it built.
 - **JackAll.** A separate build in `bin\app` and `bin\cli` (`build.ps1`) with its own `config.ini`
   and `workspace\`. Your own JackAll, its settings and its workspace are never touched.
 - **Saves.** The Saves tab shows your real saves. The only file written there is a purged copy,
   which is deleted again.
 - **Mouse and keyboard.** Most captures use `PrintWindow`, so the window may be covered. Popups and
-  menus are separate windows and need the app in front, and a few Map tab steps send real clicks
-  and keys, so leave the mouse alone while a run is going.
+  menus are separate windows and need the app in front, and many steps send real clicks and keys
+  (file dialogs, context menus, the Map tab), so leave the mouse alone while a run is going.
 
 Nothing starts the game.
 

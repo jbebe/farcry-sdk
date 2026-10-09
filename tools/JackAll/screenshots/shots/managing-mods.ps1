@@ -1,6 +1,6 @@
 # Managing mods: load order, turning mods on and off, and two mods that change the same value.
 $slug = 'managing-mods'
-$inputs = Join-Path (Get-ShotPaths).Bin 'inputs'
+$inputs = (Get-ShotPaths).Inputs
 
 # Two one-file mods from the first-mod result: the world1 AK-47 magazine at 40 and at 50 rounds.
 $source = Join-Path (Get-ShotPaths).Bin 'results\first-mod\workspace\mods\worlds\world1\generated\entitylibrary.fcb\weaponproperties\primary\ak47.xml'
@@ -12,10 +12,10 @@ $zips = foreach ($n in 40, 50) {
     [IO.File]::WriteAllText($file, $xml, (New-Object Text.UTF8Encoding $false))
     New-ShotZip "ak47-$n-rounds.zip" $layer
 }
-$vss = 'C:\Projects\FarCry2\mods\vss-vintorez\vss-vintorez-1.1.0.zip'
+$vss = Join-Path (Get-ShotPaths).Repo 'mods\vss-vintorez\vss-vintorez-1.1.0.zip'
 
 Reset-ShotState -Mods (@($vss) + $zips)
-Start-ShotApp | Out-Null
+Start-ShotApp
 
 $grid = Find-Ui -Id ModGrid
 $row = Find-UiByText -Scope $grid -Type DataItem -Like 'ak47-40*'

@@ -2,7 +2,7 @@
 # then trimmed to the mod's own files. On a GOG install the import also carries every difference
 # between the Steam patch the mod was built on and GOG's; the trim removes those.
 $slug = 'legacy-import'
-$zip = 'C:\Projects\FarCry2\tmp\mods\FC2 Skip Intro-320-1-1-1651917084.zip'
+$zip = Join-Path (Get-ShotPaths).Repo 'tmp\mods\FC2 Skip Intro-320-1-1-1651917084.zip'
 
 function Show-TopFolders($Tree) {
     foreach ($node in @(Find-Ui -Scope $Tree -Type TreeItem -Children -All -Optional)) {
@@ -11,18 +11,8 @@ function Show-TopFolders($Tree) {
     }
 }
 
-function Expand-All($Tree) {
-    for ($i = 0; $i -lt 8; $i++) {
-        foreach ($node in @(Find-Ui -Scope $Tree -Type TreeItem -All -Optional)) {
-            $p = $null
-            if ($node.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$p) -and $p.Current.ExpandCollapseState -eq 'Collapsed') { $p.Expand() }
-        }
-        Start-Sleep -Milliseconds 200
-    }
-}
-
 Reset-ShotState
-Start-ShotApp -Width 1440 -Height 900 | Out-Null
+Start-ShotApp -Width 1440 -Height 900
 
 $import = Find-UiButton 'Import legacy mod'
 Invoke-Ui $import
@@ -53,7 +43,7 @@ Wait-ShotStatus 'Mods rescanned*' | Out-Null
 $workspace = Find-UiByText -Scope $grid -Type DataItem -Like 'workspace*'
 Select-Ui $workspace
 $files = Find-Ui -Id ModFileTree
-Expand-All $files
+Expand-UiTree $files
 Wait-Ui { Find-Ui -Type Text -Like '7 files' -Optional } -What 'the trimmed workspace' | Out-Null
 Save-Shot $slug '03-trimmed' -Callouts (Find-Ui -Type Button -Name 'Open location'), $rescan, $files
 
@@ -67,9 +57,6 @@ Start-Sleep 1
 $frame = Get-DetailsFrame 'master_world1.world1.lua'
 Save-Shot $slug '04-diff' -Callouts (Find-Ui -Type CheckBox -Name 'Show only mod files'), $row -Region $frame
 
-Select-UiTab 'Mods'
-Invoke-Ui (Find-UiButton 'Deploy mods')
-Wait-ShotStatus 'Built patch.dat*' | Out-Null
-Add-SessionPatch
+Invoke-ShotDeploy
 Save-ShotResult $slug
 Stop-ShotApp

@@ -2,7 +2,7 @@
 $slug = 'archetypes'
 
 Reset-ShotState
-Start-ShotApp -Width 1440 -Height 900 | Out-Null
+Start-ShotApp -Width 1440 -Height 900
 
 function Set-DustFactor([string]$Section) {
     $cv = Open-UiSection $Section $null

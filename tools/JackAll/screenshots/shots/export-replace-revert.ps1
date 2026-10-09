@@ -4,8 +4,8 @@ $out = Join-Path (Get-ShotPaths).Bin 'inputs\exports'
 if (Test-Path $out) { Remove-Item $out -Recurse -Force }
 New-Item -ItemType Directory -Force $out | Out-Null
 
-Reset-ShotState -Mods 'C:\Projects\FarCry2\mods\vss-vintorez\vss-vintorez-1.1.0.zip'
-Start-ShotApp -Width 1440 -Height 900 | Out-Null
+Reset-ShotState -Mods (Join-Path (Get-ShotPaths).Repo 'mods\vss-vintorez\vss-vintorez-1.1.0.zip')
+Start-ShotApp -Width 1440 -Height 900
 Select-UiTab 'Files'
 $filter = Find-Ui -Scope (Find-Ui -Id FilesTabItem) -Type Edit
 $grid = Find-Ui -Id FileGrid

@@ -5,7 +5,7 @@ $folder = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'My Games\Far 
 $before = @(Get-TreeManifest $folder @() '.')
 
 Reset-ShotState
-Start-ShotApp -Width 1440 -Height 900 | Out-Null
+Start-ShotApp -Width 1440 -Height 900
 Select-UiTab 'Saves'
 $grid = Find-Ui -Id SavesGrid
 $first = @(Find-Ui -Scope $grid -Type DataItem -All)[0]
