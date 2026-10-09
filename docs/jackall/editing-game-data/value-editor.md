@@ -78,7 +78,8 @@ so a broken value never reaches your workspace. **Restore** puts the old value b
 ## Objects placed in a world
 
 An object on the map, a particular car at a particular gas station, is an *instance* of an
-archetype: it keeps only the fields where it differs from it. Opened from the Map tab, a field that
+archetype: it keeps only the fields where it differs from it. Opened from the Map tab (see
+[Explore a world](/jackall/map-viewer)), a field that
 the instance overrides has a **Revert** button, which removes the override so the archetype's value
 applies again.
 

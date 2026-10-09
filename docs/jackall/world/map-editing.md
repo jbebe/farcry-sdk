@@ -64,7 +64,7 @@ says where it went (1), and the inspector shows the new object (2), ready to mov
 ![The new barrel stack, placed and selected](/img/jackall/map-editing/05-placed.png)
 
 **New ▸ Standalone** adds an object of a bare engine class, without an archetype, and **New ▸ Prefab**
-is on the next page.
+is on the next page, [Links, triggers, lights and prefabs](/jackall/map-links-prefabs#prefabs).
 
 ## Mission layers
 

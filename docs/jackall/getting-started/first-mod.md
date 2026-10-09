@@ -13,7 +13,7 @@ how to change any weapon, vehicle, price or AI value: find the definition the ga
 the field, save, deploy, play.
 
 :::info[Same files as a mod confirmed in game]
-VSS Vintorez changes this same field on the Dart Rifle (`iAmmoInClip`, 1 â†’ 10) in exactly this kind
+VSS Vintorez changes this same field on the Dart Rifle (`iAmmoInClip`, 1 → 10) in exactly this kind
 of file, and it was played. This AK-47 change itself hasn't been played yet.
 :::
 
@@ -31,7 +31,7 @@ archetypes the world has.
 
 ## 2. Find the AK-47
 
-Type `AK47` into the search box (1). The tree keeps only what matches. Open **WeaponProperties** â–¸
+Type `AK47` into the search box (1). The tree keeps only what matches. Open **WeaponProperties** ▸
 **Primary** and click **AK47** (2).
 
 ![Searching for AK47 and selecting its weapon properties](/img/jackall/first-mod/02-find.png)
@@ -48,7 +48,7 @@ its real name and type, grouped the way the game groups them.
 
 ## 3. Change the magazine
 
-In the value editor, open **CWeaponProperties** â–¸ **CommonProperties** â–¸ **Ammo**. Click into
+In the value editor, open **CWeaponProperties** ▸ **CommonProperties** ▸ **Ammo**. Click into
 **iAmmoInClip** (1), type `60` and click somewhere else. The field turns highlighted and gets a
 **Restore** button, which puts the original value back if you change your mind. Click **Save** (2).
 

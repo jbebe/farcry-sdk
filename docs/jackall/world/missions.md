@@ -60,4 +60,5 @@ The **Lua source** tab next to the Inspector shows the generated script itself.
 ![The mission's Lua source](/img/jackall/missions/03-lua.png)
 
 That's the file a mod that changes a mission has to edit by hand, for example to skip a cutscene.
+[Import an old patch.dat mod](/jackall/legacy-import#look-at-a-change) looks at one that does.
 The graph tells you which part of it to change.

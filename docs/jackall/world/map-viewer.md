@@ -10,7 +10,7 @@ description: Load a Far Cry 2 world in JackAll's Map tab, fly around it, choose 
 The **Map** tab loads a whole Far Cry 2 world and lets you fly through it: the terrain with its
 textures, water, roads and vegetation, every object placed in it, and the markers the game uses but
 never shows, such as trigger zones, AI spots and the navmesh the AI walks on. This page is about
-looking; changing the world is the next page.
+looking; changing the world is the next page, [Move, add and delete objects](/jackall/map-editing).
 
 :::note[Nothing to confirm in game]
 Looking around changes nothing.
