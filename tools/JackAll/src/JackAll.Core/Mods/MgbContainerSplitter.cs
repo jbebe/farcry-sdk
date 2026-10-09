@@ -44,7 +44,12 @@ public sealed class MgbContainerSplitter : IContainerSplitter
         return FragmentId.Of(MgbXmlValue.ParseName(name), name.StartsWith('#') ? null : name);
     }
 
-    public IContainerTree Open(byte[] container) => new Tree(XElement.Parse(MgbXml.Decode(container)));
+    public IContainerTree Open(byte[] container) => Open(container, []);
+
+    /// <summary>A package with <paramref name="names"/> spelled out where it keeps only their hashes -
+    /// the names its XML source declared.</summary>
+    public IContainerTree Open(byte[] container, IEnumerable<string> names)
+        => new Tree(XElement.Parse(MgbXml.ToXml(MgbPackage.Read(container), names)));
 
     public string Canonicalize(string fragmentId, string fragmentXml) => Render(XElement.Parse(fragmentXml));
 

@@ -29,7 +29,10 @@ public static class MgbXml
     private const string BigEndianAttribute = "bigEndian";
 
     /// <summary>Renders a package as an XML document.</summary>
-    public static string ToXml(MgbPackage package)
+    /// <param name="package">The package.</param>
+    /// <param name="names">Optional: names to spell out beyond those the package itself recovers - what
+    /// <see cref="FromXml"/> collected from the document it was built from.</param>
+    public static string ToXml(MgbPackage package, IEnumerable<string>? names = null)
     {
         var root = new XElement(RootName);
 
@@ -41,7 +44,13 @@ public static class MgbXml
             root.Add(new XAttribute(BigEndianAttribute, "true"));
         }
 
-        var codec = new MgbXmlWriteCodec(root, MgbNameLookup.For(package));
+        MgbNameLookup lookup = MgbNameLookup.For(package);
+        foreach (string name in names ?? [])
+        {
+            lookup.Offer(name);
+        }
+
+        var codec = new MgbXmlWriteCodec(root, lookup);
         package.SerializeBody(codec);
         return new XDocument(root).ToString();
     }

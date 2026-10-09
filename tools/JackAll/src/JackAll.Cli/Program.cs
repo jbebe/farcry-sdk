@@ -237,6 +237,11 @@ app.Configure(config =>
         mgb.AddCommand<MgbVerifyCommand>("verify")
             .WithDescription("Check that a .mgb, or the XML it is built from, references only names it declares.")
             .WithExample("mgb", "verify", "fcse.mgb.xml", "--page", "FCSE_PAGE");
+        mgb.AddCommand<MgbFragmentsCommand>("fragments")
+            .WithDescription(
+                "Write a .mgb, or the XML it is built from, out as per-area fragments a mod can stage, "
+                + "keeping only those that differ from --base.")
+            .WithExample("mgb", "fragments", "hud.xml", "--base", "vanilla\\hud.mgb", "--out", "layer\\hud.mgb");
     });
 
     // --- Domino mission scripts ------------------------------------------

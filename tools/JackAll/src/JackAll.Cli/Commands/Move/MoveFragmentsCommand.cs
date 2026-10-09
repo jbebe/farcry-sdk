@@ -1,9 +1,7 @@
 using System.ComponentModel;
 using JackAll.Cli.Infrastructure;
 using JackAll.Core;
-using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
-using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace JackAll.Cli.Commands.Move;
@@ -50,49 +48,7 @@ public sealed class MoveFragmentsCommand : CliCommand<MoveFragmentsCommand.Setti
             ? null
             : splitter.Open(CliIO.ReadInput(settings.Base));
 
-        IReadOnlyList<FcbFragmentInfo> rows = mine.List();
-        IReadOnlyList<FragmentChange> changed = FragmentDiff.Changed(mine, vanilla, rows.Select(r => r.Id));
-        int added = changed.Count(c => c.Added);
-
-        AnsiConsole.MarkupLine(
-            $"[grey]{settings.Input.EscapeMarkup()}[/]: {rows.Count} units, "
-            + (vanilla is null
-                ? $"writing all {changed.Count}"
-                : $"[green]{changed.Count} differ from vanilla[/] ({added} new)"));
-
-        if (changed.Count == 0)
-        {
-            AnsiConsole.MarkupLine("  [yellow]nothing to stage - this graph matches the base[/]");
-            return 0;
-        }
-
-        long bytes = changed.Sum(c => (long)c.Xml.Length);
-        foreach (FragmentChange change in changed.Take(settings.List ? int.MaxValue : 10))
-        {
-            AnsiConsole.MarkupLine($"    {change.Id.EscapeMarkup()}  [grey]{change.Xml.Length:N0} B[/]");
-        }
-
-        if (!settings.List && changed.Count > 10)
-        {
-            AnsiConsole.MarkupLine($"    [grey]... and {changed.Count - 10} more; pass --list[/]");
-        }
-
-        if (settings.List)
-        {
-            return 0;
-        }
-
-        string directory = settings.Out ?? settings.Input + ".fragments";
-        foreach (FragmentChange change in changed)
-        {
-            CliIO.WriteOutput(Path.Combine(directory, change.Id), change.Xml);
-        }
-
-        AnsiConsole.MarkupLine(
-            $"  wrote [green]{changed.Count}[/] fragments ({bytes:N0} B) to "
-            + $"[grey]{directory.EscapeMarkup()}[/]");
-        AnsiConsole.MarkupLine(
-            $"  [grey]stage them under mods\\graphics\\move\\{Path.GetFileName(settings.Input).EscapeMarkup()}\\[/]");
-        return 0;
+        return FragmentExport.Run(mine, vanilla, settings.Input, settings.Out, settings.List,
+            $@"mods\graphics\move\{Path.GetFileName(settings.Input)}\");
     }
 }
