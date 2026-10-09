@@ -37,9 +37,17 @@ Fixed in code, out of the archetype's reach:
   resistance 0.05 / 0.1 / 0. Gears 1.5, 1.2, 0.9, 0.75, then each 0.75 of the last; shifts at
   6,500 up and 3,500 down; reverse 1.75.
 - **Tyres**: friction **3.0**, at most 6.0; width 0.2. The radius is half the wheel body's height in
-  the `.hkx`.
+  the `.hkx`. Viscosity friction 0.05, slip angle 0, force feedback 0.1, and a contact body may be
+  pushed at up to twice gravity.
+- **Friction solver**: `frictionEqualizer` **0.5**, where Havok's default is 0, so FC2 chose it.
+  `maxVelocityForPositionalFriction` stays at Havok's 10.
+- **Drive**: the torque is split evenly over the wheels whose `bDriving` is set, and the rest get
+  none. All four of the Datsun's are set, so it is four-wheel drive at 0.25 each.
+- **Axles**: wheels 0 and 1 are the front axle, 2 and 3 the rear (`PostSerialize` sets each wheel's
+  axle to its index ÷ 2). `hkpVehicleData::init` takes each axle's lever point from the last wheel
+  on it, not from an average.
 - **Brakes**: a full pedal locks a wheel only after `wheelsMinTimeToBlock`, set to **1,000 s**, so the
-  wheels never lock.
+  wheels never lock. The pedal input that counts as blocking is 0.9.
 - **Aerodynamics**: air density 1.3, frontal area 1, drag 0.7, lift −0.3, and `extraGravity`
   (0, 0, **−5**): five more m/s² of downward pull on every car.
 - **Velocity damper**: spin damping 1.0 under 4 rad/s, which stops slow spins.
@@ -50,6 +58,40 @@ Fixed in code, out of the archetype's reach:
 from the chassis centre of mass and each wheel's axle: its hardpoint plus the suspension direction
 times the suspension length. Running it again after moving the centre of mass or changing a
 suspension length rebuilds both.
+
+The new constants above were read on GOG (`SetupVehicleData` `0x1049DA20`) against the Havok class
+tables in the server's symbols **(RE-verified)**.
+
+### What a car's model has to satisfy
+
+The wheels are matched to the model in `SetupWheels` (GOG `0x1006EC90`, server
+`CVehicleWheeledPhysComponent::SetupWheels`). Each wheel node is put in a slot by its quadrant in
+model space:
+
+| Slot | Quadrant |
+|---|---|
+| 0 | y ≥ 0, x ≤ 0 |
+| 1 | y ≥ 0, x > 0 |
+| 2 | y < 0, x ≥ 0 |
+| 3 | y < 0, x < 0 |
+
+**A car whose model breaks a rule gets no physics, and nothing says so.** `CreatePhysics` frees the
+descriptor and returns without a physics entity, and neither function logs. It happens when:
+
+- two wheels land in the same quadrant
+- a wheel's body index is past the `.hkx`'s body count, which includes a rigid-body name the `.hkx`
+  does not have
+- there are more wheel primitives than `[Wheels]` entries, or the counts differ
+- a node's position or matrix cannot be found
+
+**The chassis body should be unrotated.** Wheel hardpoints are brought into the body's frame as
+`conj(q)·p − t` and back out as `R·p + t`. These agree only when `t = R·t`, so a rotated body that is
+also offset gets wrong hardpoints in Havok itself, not just wrongly drawn wheels. All of this is
+**RE-verified on GOG**.
+
+`.hkx` files are a 16-byte Dunia prefix and then a Havok 5.5.0-r1 packfile: all 2,745 retail files
+carry `57E0E057 10C0C010` at `+0x10`. The loader reads from `+0x10` and refuses packfile versions
+below 4.
 
 ## Every step
 
@@ -77,6 +119,66 @@ and clears it for AI.
 from `physicmaterial.xml` and multiplies it by the wheel's 3.0. The handbrake lowers it on the rear
 wheels while steering. On slopes it fades from full at `fGroundFrictionReduceMinAngle` to nothing at
 `MaxAngle`.
+
+The retail tyre frictions are Default 0.8, Metal 0.8, Grass 0.75, Stone 0.7, Wood 0.68 and Sand 0.65.
+The normal and terrain tyres are identical, and a rigid body's friction is 0.4. So a car's grip is
+3.0 × 0.65–0.8, the same front and rear, capped at 6.0.
+
+## Engine start and fire
+
+A car's engine starts after a delay set by its damage level (GOG `0x1006E4F0`; offsets from the
+server's `RegisterProperties`) **(RE-verified)**:
+
+| Level | Health ratio | Starts once `EngineStartTimer` passes | Power scale |
+|---|---|---|---|
+| 0 | above `MinorDamageLevel` | `MintEngineStartTime` | 1.0 |
+| 1 | above `MajorDamageLevel` | `MinorDamageEngineStartTime` | `MinorDamageEngineScale` |
+| 2 | above 0 | `MajorDamageEngineStartTime` | `MajorDamageEngineScale` |
+| 3, broken | 0 | never | — |
+
+A damaged level also needs its scale above 0, and the car needs its ignition. The scale goes to the
+physics entity every frame; that it scales engine power is likely but was not traced. Retail uses
+0.5 / 0.8 / 1.2 s on 19 archetypes and 0.8 / 1.2 / 1.5 s on 5. The scales are 0.66 and 0.33 on 22
+archetypes.
+
+When the engine breaks, `CVehicleTypeEngine::Update` starts a fire timer. After `fFireDelay` the
+engine catches fire, and after `fExplosionDelay` more it explodes. The fire delay is 30 s and the
+explosion delay 5 s on all 22 engines.
+
+## Paint
+
+`CVehicleMaterialComponent::ApplyChanges` (GOG `0x105487A0`) paints a car from a fixed table of **61**
+colours, 0x50 bytes each **(RE-verified)**. Each entry is five colours, written to both the clean and
+the broken parameter of the same name: `DiffuseColorBase`, `DiffuseColor1`, `DiffuseColor2`,
+`SpecularColorBase` and `SpecularColor1`. The table is used only when `ColorOverride` is set and
+`Destroyed` is not. A destroyed car gets the burnt colours whatever its override says. Entry 60 is
+forced, with its own dust and dirt values, by a flag on the graphic component whose meaning is
+unknown.
+
+## Collision layers
+
+A collision filter word holds the layer in bits 0–14 and the system group in bits 17–31. Bit 15
+marks a mask rather than a layer and bit 16 pairing. Layer 3 is the character capsules. Some
+queries filter by a mask of layers, layer `n` being bit `n − 1` **(RE-verified on GOG)**:
+
+| Query | Mask | Layers |
+|---|---|---|
+| Bullets | `0x5BB` | 1, 2, 4, 5, 6, 8, 9, 11 — not 3 |
+| AI sight | `0x5BF` | the same plus 3 |
+| Wheel rays | `0x33` | 1, 2, 5, 6 |
+
+## Mounted guns overheat
+
+A mounted gun's heat rises by a fixed amount per bullet, up to 100 (GOG `0x100C4EC0`). At 100 its
+heat state goes up and the heat resets to 0. After a delay it cools at a rate per second, and at 0 the
+state goes down and the heat is set back to 100 (`0x100C4F20`). The last state locks the weapon. The
+data per gun **(RE-verified)**:
+
+| Gun | Heat per bullet | Cooling | Delay |
+|---|---|---|---|
+| M2 | 4 | 50 / s | 2 s |
+| M249 | 2 | not checked | not checked |
+| MK19 | 30, or 35 on some variants | not checked | 3 s on those variants |
 
 ## Suspension
 
