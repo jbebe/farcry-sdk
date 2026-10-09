@@ -122,6 +122,18 @@ loads, but no longer matches the original byte for byte.
 Chunk tags are **not unique within a file** — `objects\lights\torch01.xbg` carries two `LTMD` chunks.
 A parser that keys chunks by tag silently drops data.
 
+The PC loader reads less than the format carries, and changes two values as it loads. This is
+`CGeometryResource::Load`, GOG `0x10351480`, **(RE-verified)**:
+
+- **The header.** It checks only the major version at `+4` (42), the root chunk size at `+0x14` and
+  the child count at `+0x1C`. The hash at `+0x08` is never read, and the `HSEM` magic is never
+  checked.
+- **Ignored chunks.** `CMTL` and `UTXU` are skipped.
+- **Primitives.** At most 128 primitives per LOD are taken; the count is clamped.
+- **Skinned meshes.** A mesh with a bone palette entry is treated as skinned. The loader grows its
+  `XOBB` box by 1 m on every side and doubles its copy of the sphere radius, once per load. The box
+  is the mesh's own, not a copy.
+
 ### Chunk census
 
 Every shipped `.xbg` is version `0x0006002A` and carries these ten chunks exactly once:
@@ -231,13 +243,24 @@ out in this order **(RE-verified)**:
 +0x2C  f32[3]  local scale
 +0x38  i32     skinIndex — -1, or an index into MB2O
 +0x3C  f32     1.0 in all 16,738 shipped nodes
-+0x40  f32     constant per file in 3,123 of 3,133 files, median 0.97x the XOBB bbox diagonal
++0x40  f32     the square of the model's HPSB sphere radius — see below
 +0x44  u32     name length, then the name, then a NUL
 ```
 
 `CGeomResource::GenerateMatrices` (`0x097fc880`) builds each node's world transform as
 `parent_world x TRS(scale, rotation, translation)`, so the scale at `+0x2C` is live — 121 shipped
 nodes carry a non-unit value.
+
+`+0x40` is the same in every node of a file: the squared radius of the whole model's bounding
+sphere. It matches `HPSB`'s radius squared to within a relative 3e-5 in every node of 3,124 of the
+3,133 shipped files. Only 51 nodes match bit for bit, so a writer should compute `r * r` and accept
+the drift. The exceptions:
+
+- the three meshes that embed their material (`bat`, `torch01`, `rag_animready`), which hold
+  `0x000000FF`
+- six more that do not match, `w2c4_breakpce_02` among them with `2.3e14`
+
+Whether the engine reads the value was not checked.
 
 ## The `.xbm` body, and writing one back
 
@@ -305,6 +328,22 @@ many materials name them: `DiffuseTexture1` 1,964, `SpecularTexture1` 1,889,
 `BloodTexture` 393, `FabricTexture` 264, `PrintTexture` 239, `ReflectionTexture` 222, `SkinTexture`
 142, `NormalTexture2` 135, `MaskTextureBroken` 102, `BurntDiffuseTexture` 51, `MaskTexture0` 34,
 `SpecularID` 25.
+
+### How the shader name and the parameters are resolved
+
+The shader name picks a **descriptor** from `engine\providerdescriptors\descriptors.xml`. It ships
+21 of them, with `RealTreeLeafPure` an alias of `Leaf` and `RealTreeLeafHybrid` of `BigLeaf`. The
+material's keys are matched against what that descriptor declares. The rules, **(RE-verified on
+GOG)** (`SetShaderName` `0x1044EAE0`, the material loader at `0x10357420`):
+
+- **Names are case-sensitive.** Shader names and parameter names are both matched by plain,
+  case-sensitive CRC32. A shader name that matches no descriptor falls back to `Error`.
+- **Undeclared keys do nothing.** A key the descriptor does not declare writes nothing to the
+  shader. It is not reported either, so a misspelt parameter fails silently.
+- **Widths are converted.** A float written to a `float2`, `float3` or `float4` parameter fills
+  every component. Written to an int it is truncated, and to a bool it becomes "not zero".
+- **Water loads caustics.** An exact `Water` or `WaterRiver` shader whose descriptor declares
+  `CausticsTexture` also loads the 32 frames `AnimatedCaustics_001.xbt` to `_032.xbt`.
 
 ### The `Weapon` shader's parameter set
 
