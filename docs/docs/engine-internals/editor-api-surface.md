@@ -207,6 +207,20 @@ checks referenced by `ToolValidation.cs`. `ValidationReport`: `GetCount`, `GetRe
 `MemoryUsage` (int) / `ObjectUsage` (float, fraction-of-budget) — the resource-budget meters shown in
 the editor UI.
 
+The budgets behind them are constants, set in the budget manager's constructor (GOG `0x1082A040`)
+**(RE-verified)**:
+
+| Budget | Limit | Checked by |
+|---|---|---|
+| Memory | 100 MiB | `IsMemoryWithinBudget` (`0x1082A550`) |
+| Objects | 40,000 cost units | `CanAddObjectCost` (`0x1082A180`) |
+| Objects per area | 10,000 cost units | `Validate` (`0x1082E740`) |
+| Undo history | 5 MiB, each state charged its size plus 1 KiB | `TrimToBudget` (`0x107D3370`) |
+
+The first three are skipped when `CFCXEditor::Init` was given its `pcHosted` flag; the undo budget
+always applies. By its name the flag marks a PC-hosted editor such as FC2Editor, but what FC2Editor
+passes was not traced. Areas are indexed `x + 1 + y·8`; their size in metres was not checked.
+
 ### Wilderness (procedural terrain generation)
 `GenerateDesert(gradientWidth, gradientHeight, distorsion, noiseAdd, blurRadius)`. Three ways to run a
 "Wilderness script" against the terrain: `RunScript(scriptName)`, `RunScriptBuffer(buffer,
@@ -240,8 +254,10 @@ Constraints that follow from the API shape rather than from any one function:
   [data-root derivation](./data-root-derivation.md) for the exact rule. Setting the working directory
   has no effect; a host started from outside the install reaches `InitDuniaEngine` and dies there
   with an access violation.
-- **Calling conventions differ by direction.** Exports are `__stdcall`; the callbacks registered
-  through `FCE_Editor_*_Callback` are invoked `__cdecl`.
+- **Everything is `__cdecl`.** Every one of the 312 distinct `FCE_*` export bodies in the GOG build,
+  and every target of the ones that tail-jump, ends in a plain `ret`, never `ret imm`, so the caller
+  cleans the stack **(RE-verified)**. The callbacks registered through `FCE_Editor_*_Callback` are
+  invoked `__cdecl` too.
 - **String marshalling is not uniform.** Document paths are passed as explicit UTF-8 byte arrays
   split into directory and filename; other string parameters are plain ANSI. `LocalizeText` takes
   ANSI and returns UTF-16.
@@ -302,8 +318,20 @@ sharing addresses with unrelated trivial functions through identical-COMDAT fold
 `FCE_Inventory_Object_GetParent` and `FCE_ScriptFunction_GetPrototype` at `0x108808b0`;
 `FCE_PhysEntityVector_Create` at `0x10883530`.
 
-The export table carries **818 entries** in total, addressing 1:1 with ordinals, so a name that
-appears missing is more likely folded onto a shared address than genuinely absent.
+The PE export table holds **404 names at 375 distinct addresses**, so a name that appears missing is
+more likely folded onto a shared address than genuinely absent. The names break down as:
+
+- 334 `FCE_*`
+- 32 `FCS_Server_*`
+- 8 `FCB_Benchmark_*`
+- 6 `SND_*`
+- 12 C++-mangled
+- 12 plain: the engine lifecycle (`InitDuniaEngine`, `RunDuniaEngine`, `TickDuniaEngine`,
+  `CloseDuniaEngine`, `ShutdownDuniaEngine`), `AddFunctionCB`, `RegisterGameFunctionProvider`,
+  `GetCRCFromString`, `GetExePath`, `LocalizeText`, `PrintToConsole` and `SwitchContext`
+
+Ghidra's export listing shows 818 because it lists each export twice, by name and by ordinal, and adds
+demangled aliases.
 
 When reading other decompiled signatures in this DLL: a `void`-looking C#
 wrapper doesn't always mean the native function is `void` — `FCE_SplineZone_Reset` and the

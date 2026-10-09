@@ -45,6 +45,11 @@ u32, u32, u32
 fixed fields sum to exactly `8+8+44+44+4+4+4 = 124 = 0x7c`. `LoadFromFile` mirrors this field for
 field, so the layout is fixed from both directions.
 
+A custom map's 64-bit id is generated with its top four bits forced to `2` (`GenerateMapIdCustom`,
+GOG `0x107BA6B0`); the rest is a hash whose last input is a random number. The world-load operation
+tells a custom map apart by testing `id >> 60 == 2` (`0x10792745`) **(RE-verified on GOG)**. Which
+of the header's ID pairs carries it was not checked.
+
 The 44-byte blocks are 11 `u32`s — the same shape as the three time blocks `CMapInfo` carries, each
 copied as an eleven-word loop. The first decodes to the real save time: a map saved on 14 August 2026
 at 12:01:34 yields `sec=34, min=1, hour=12, mday=14, mon=7, year=126, wday=5, yday=225`, all
