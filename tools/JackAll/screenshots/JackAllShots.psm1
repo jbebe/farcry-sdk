@@ -192,7 +192,15 @@ function Set-ShotWindowSize([int]$Width, [int]$Height) {
 }
 
 function Stop-ShotApp {
-    Get-Process JackAll -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($script:AppDir, 'OrdinalIgnoreCase') } | Stop-Process -Force
+    # A process that is exiting can lose its Path between two reads, so it is read once, and each
+    # kill is waited out so the next call doesn't find the same process half gone.
+    foreach ($p in @(Get-Process JackAll -ErrorAction SilentlyContinue)) {
+        $path = $p.Path
+        if ($path -and $path.StartsWith($script:AppDir, 'OrdinalIgnoreCase')) {
+            $p | Stop-Process -Force
+            $p.WaitForExit(10000) | Out-Null
+        }
+    }
     $script:Process = $null
     $script:Window = $null
 }
