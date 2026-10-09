@@ -47,8 +47,8 @@ jackall-cli mod restore --game "C:\Games\Far Cry 2"
 
 - **Lighting, fog and weather mods** conflict: the night and clear-day lighting ship as the world's
   whole preset library, and the moon and storm changes as its whole environment block.
-- **Other rendering plugins** that hook the same Direct3D calls are refused by FCSE. DevTools and
-  UFCP work alongside it.
+- **Other rendering plugins** can hook the same Direct3D calls; FCSE runs both. DevTools and UFCP
+  work alongside it.
 
 ## Known issues
 
