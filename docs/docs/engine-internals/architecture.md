@@ -111,7 +111,7 @@ category ("environment simulation"), not fanning out to further subsystems.
 ### `CCryEngine::Update()` — subsystem dispatch table
 
 The real hub. Most calls are gated behind bits of an update-flags word (`param_1 & this->mask`), which
-is presumably how the editor/server/client trim which phases run. Categorized:
+the running game operation supplies — see [the update mask](#which-subsystems-a-frame-runs). Categorized:
 
 | Category | Calls |
 |---|---|
@@ -128,6 +128,52 @@ is presumably how the editor/server/client trim which phases run. Categorized:
 | **Console / debug** | `CXConsole` update, `CDebugInfoManager::Update`, `CErrorImpl::Update`, `FatalError::Display()` (polled — see threading below) |
 | **Async job join** | `CJobScheduler::Wait(...)` + `CParticlesSystemMgr::FinalizeUpdate()` — the main thread blocks here for particle work queued on the job system |
 | **Game mode** | `CGameModeManager::Update` / `PostUpdate` — SP vs. the `CFCXGameMode{DeathMatch,CTF,TeamDeathMatch,VIP,Benchmark,Single,Editor}` family |
+
+### Which subsystems a frame runs
+
+The update-flags word is the flags of whichever game operation is running. `UpdateState` (GOG
+`0x100419E0`) takes them from the operation, or from the first child of an operation container.
+While the game is paused the tick replaces them with `0x1E53`. The bits, as `CEngine::Update`
+(GOG `0x104C2510`) tests them **(RE-verified on GOG)**:
+
+| Bit | Gates |
+|---|---|
+| `0x1` | graphics |
+| `0x2` | console |
+| `0x4` | the physics step |
+| `0x8` | Domino, AI pre- and post-update, the physics listener |
+| `0x10` | movies |
+| `0x20` | the two entity tick lists and RealTree |
+| `0x80` | a flag passed on into `CEngineCore::Update` |
+| `0x200` | subtitles |
+| `0x400` | session |
+| `0x800` | net |
+
+So a paused frame keeps graphics, console, movies, subtitles, session and net running and stops
+physics, Domino, AI and the entity ticks.
+
+### The game clock
+
+The clock is `CTimer` in the server's symbols; on GOG the instance is at `0x11555A60`. Each tick
+(GOG `0x10299360`) does the following **(RE-verified on GOG)**:
+
+- **The delta is clamped.** The real delta is capped at a maximum, `0.1` s by default. A `settings`
+  value `MaxDeltaTime` can change it (floored at `0.001`); no shipped config sets it.
+- **Two deltas are kept.** The clamped delta is kept at `+0x40`, and that delta times a scale is the
+  frame time at `+0x38` that the engine hands its subsystems. The scale (`+0x50`) is `1.0` and
+  nothing but the constructor writes it.
+- **Pausing stops game time, not the frame time.** Game time at `+0x30` advances only while the
+  pause flag (`+0x48`) is clear. `+0x38` keeps updating while paused, but `GetFrameTime` returns 0.
+
+On the Linux server the same fields sit 4 bytes earlier.
+
+### Physics substeps
+
+`CPhysicsSystem::Step` (GOG `0x10480970`) steps only when `0 < dt ≤ 1.0`. `CPhysWorld::Step`
+(`0x1048FBF0`) works in fixed **1/60 s** substeps, at most **12** per call. The remainder carries
+to the next frame, except when the cap is hit; then the extra time is dropped. Physics is given
+the clock's frame time, which the 0.1 s clamp holds to six substeps at most, so neither guard is
+reached with stock settings **(RE-verified on GOG)**.
 
 ### Two class families, not one
 
