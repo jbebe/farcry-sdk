@@ -5,5 +5,6 @@
         'first-mod'
         'managing-mods'
         'sharing-a-mod'
+        'finding-files'
     )
 }

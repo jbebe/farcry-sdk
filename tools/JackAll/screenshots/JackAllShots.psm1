@@ -501,6 +501,8 @@ function Save-Shot {
           [object[]]$Callouts = @(), [object[]]$Region = @(), $Window, [switch]$Screen, [switch]$Photo,
           [int]$Pad = 16, [switch]$NoPark)
     if (-not $Window) { $Window = $script:Window }
+    $Callouts = @($Callouts | Where-Object { $_ })
+    $Region = @($Region | Where-Object { $_ })
     $hwnd = [IntPtr]$Window.Current.NativeWindowHandle
     if ($Screen) { [ShotNative]::Front($hwnd); Start-Sleep -Milliseconds 300 }
     if (-not $NoPark) { [ShotNative]::Park(2500, 1400) }
