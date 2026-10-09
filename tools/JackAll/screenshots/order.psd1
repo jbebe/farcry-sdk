@@ -25,5 +25,7 @@
         'animations'
         'ai'
         'legacy-import'
+        'cli-mods'
+        'cli-legacy'
     )
 }

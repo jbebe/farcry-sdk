@@ -282,6 +282,30 @@ function Save-ShotResult([string]$Slug) {
     if (Test-Path $ws) { Get-ChildItem -LiteralPath $ws -Force | Copy-Item -Destination $dst -Recurse -Force }
 }
 
+# ---------------------------------------------------------------- command-line transcripts
+
+$script:Transcript = New-Object System.Text.StringBuilder
+
+# Runs jackall-cli, adds the command and what it printed on stdout to the transcript, and returns
+# its exit code.
+function Invoke-ShotCli([string[]]$Arguments) {
+    $shown = ($Arguments | ForEach-Object { if ($_ -match ' ') { "`"$_`"" } else { $_ } }) -join ' '
+    [void]$script:Transcript.AppendLine("> jackall-cli $shown")
+    # Progress goes to stderr, which PowerShell 5.1 turns into an error under Stop.
+    $ErrorActionPreference = 'Continue'
+    $text = & $script:Cli @Arguments 2>$null | Out-String -Width 400
+    [void]$script:Transcript.AppendLine($text.TrimEnd()).AppendLine("[exit $LASTEXITCODE]").AppendLine()
+    return $LASTEXITCODE
+}
+
+function Save-ShotTranscript([string]$Slug) {
+    $out = Join-Path $script:Bin "transcripts\$Slug.txt"
+    New-Item -ItemType Directory -Force (Split-Path $out) | Out-Null
+    [IO.File]::WriteAllText($out, $script:Transcript.ToString(), (New-Object Text.UTF8Encoding $false))
+    [void]$script:Transcript.Clear()
+    Write-Host "  $out"
+}
+
 # ---------------------------------------------------------------- UI Automation
 
 function Wait-Ui([scriptblock]$Check, [int]$Timeout = 15, [string]$What = 'condition') {
