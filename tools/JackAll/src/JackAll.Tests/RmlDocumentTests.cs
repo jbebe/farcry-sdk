@@ -31,6 +31,18 @@ public class RmlDocumentTests
     }
 
     [Fact]
+    public void A_0xFE_marker_reads_a_u32_like_0xFF_does()
+    {
+        var root = new XElement("Root", new XAttribute("text", new string('x', 300)));
+        byte[] rml = RmlDocument.Serialize(root);
+        // The string table outgrows a one-byte count, so its size is the first marked value.
+        Assert.Equal(0xFF, rml[2]);
+        rml[2] = 0xFE;
+
+        Assert.Equal(root.ToString(), RmlDocument.Deserialize(rml).ToString());
+    }
+
+    [Fact]
     public void Decoding_the_jungle_dlc_manifest_produces_the_expected_content()
     {
         if (Fixture.Read("Rml/dlc_jungle_toc.rml") is not { } original) return;

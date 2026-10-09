@@ -32,13 +32,14 @@ namespace JackAll.Core.Format.Rml;
 ///
 /// Each node is: nameOffset(packed u32) + valueOffset(packed u32) into the string table, then
 /// attributeCount(packed u32) + childCount(packed u32), then that many attributes, then that many
-/// child nodes recursively. An attribute is: a reserved packed u32 that must be 0 (checked strictly,
-/// same as Gibbed's own reader), then nameOffset + valueOffset exactly like a node's.
+/// child nodes recursively. An attribute is: a type (packed u32, of which the engine keeps the low
+/// byte), then nameOffset + valueOffset exactly like a node's. Every shipped attribute's type is 0, the
+/// only one the XML can carry, so any other is refused rather than dropped.
 ///
-/// "Packed u32": one byte if the value is under 0xFE, else 0xFF followed by a plain little-endian u32.
-/// 0xFE alone is invalid here - unlike .fcb's very similar-looking count encoding, nothing in .rml
-/// uses it for backreferences; the only dedup this format does is string-table interning (see
-/// <see cref="StringTableWriter"/>).
+/// "Packed u32": one byte if the value is under 0xFE, else 0xFE or 0xFF followed by a plain
+/// little-endian u32 - the engine treats the two markers alike, and this writer emits 0xFF. Unlike
+/// .fcb's similar-looking encoding nothing here is a backreference; the only dedup this format does
+/// is string-table interning (see <see cref="StringTableWriter"/>).
 ///
 /// The string table is built in a fixed traversal order - a node's own name then value, then each
 /// attribute's name/value, then children recursively, left to right - matching Gibbed's writer
@@ -48,7 +49,7 @@ namespace JackAll.Core.Format.Rml;
 public static class RmlDocument
 {
     private const byte LargeValueMarker = 0xFF;
-    private const byte InvalidMarker = 0xFE;
+    private const byte FirstLargeValueMarker = 0xFE;
 
     /// <summary>Throwing wrapper around <see cref="TryDeserialize"/> for callers that only ever see
     /// deliberately-chosen, top-level .rml files (a standalone .rml the user opened, an Import) where a
@@ -175,10 +176,10 @@ public static class RmlDocument
 
         for (int i = 0; i < attributeCount; i++)
         {
-            if (!reader.TryReadPackedU32(out uint reserved) || reserved != 0
+            if (!reader.TryReadPackedU32(out uint type) || type != 0
                 || !reader.TryReadPackedU32(out uint attrNameOffset) || !reader.TryReadPackedU32(out uint attrValueOffset))
             {
-                return false; // ran out of data, or an attribute's reserved field is non-zero
+                return false; // ran out of data, or an attribute type the XML cannot carry
             }
             result.Attributes.Add((attrNameOffset, attrValueOffset));
         }
@@ -357,15 +358,10 @@ public static class RmlDocument
                 value = 0;
                 return false;
             }
-            if (marker < InvalidMarker)
+            if (marker < FirstLargeValueMarker)
             {
                 value = marker;
                 return true;
-            }
-            if (marker == InvalidMarker) // 0xFE - not a valid marker here, see class remarks
-            {
-                value = 0;
-                return false;
             }
             return TryReadU32(out value);
         }
@@ -385,7 +381,7 @@ public static class RmlDocument
 
     private static void WritePackedU32(Stream output, uint value)
     {
-        if (value >= InvalidMarker)
+        if (value >= FirstLargeValueMarker)
         {
             WriteU8(output, LargeValueMarker);
             WriteU32(output, value);

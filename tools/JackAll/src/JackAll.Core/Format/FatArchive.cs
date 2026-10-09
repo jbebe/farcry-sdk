@@ -32,7 +32,8 @@ public readonly record struct FatEntry(
 /// Header (little-endian):
 ///   0  u32  magic 'FAT2' (0x46415432)
 ///   4  u32  version (5)
-///   8  u32  flags: platform in byte 0 (3 = Windows), compression version in byte 1
+///   8  u32  flags: platform in byte 0 (1 = PC), compression version in byte 1 (3) - 0x301, or 0 on
+///           the uncompressed sound and shader archives
 ///   12 s32  entry count
 ///   16 ..   entry table, 16 bytes each, sorted ascending by hash (the engine binary-searches it)
 ///   ..  u32 localization count (0 for FC2)
@@ -51,8 +52,8 @@ public sealed class FatArchive
     public uint Flags { get; private init; }
     public IReadOnlyList<FatEntry> Entries { get; private init; } = [];
 
-    /// <summary>Windows platform (3), compression version 0 — what FC2's own archives carry.</summary>
-    public const uint DefaultWindowsFlags = 3;
+    /// <summary>PC platform (1), compression version 3 — what FC2's compressed archives carry.</summary>
+    public const uint RetailFlags = 0x301;
 
     public static FatArchive Read(Stream input)
     {
@@ -112,7 +113,7 @@ public sealed class FatArchive
         return Read(stream);
     }
 
-    public static FatArchive FromEntries(IEnumerable<FatEntry> entries, uint flags = DefaultWindowsFlags)
+    public static FatArchive FromEntries(IEnumerable<FatEntry> entries, uint flags = RetailFlags)
         => new()
         {
             Flags = flags,
