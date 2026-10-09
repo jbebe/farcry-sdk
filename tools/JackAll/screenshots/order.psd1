@@ -10,5 +10,6 @@
         'export-replace-revert'
         'archetypes'
         'value-editor'
+        'renaming'
     )
 }

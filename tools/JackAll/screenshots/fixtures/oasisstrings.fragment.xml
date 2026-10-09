@@ -1,0 +1,21 @@
+<oasisstrings>
+  <section name="WeaponBazaar">
+    <string enum="WEAPONBAZAAR_AK47_CRATE_NAME" value="AK-47 Drum" />
+    <string enum="WEAPONBAZAAR_AK47_OPERATION_MANUAL_NAME" value="AK-47 Drum" />
+    <string enum="WEAPONBAZAAR_AK47_REPAIR_MANUAL_NAME" value="AK-47 Drum" />
+  </section>
+  <section name="Tutorial">
+    <string enum="WEAPONBAZAAR_AK47_CRATE_NAME" value="AK-47 Drum" />
+  </section>
+  <section name="Items">
+    <string enum="ak47" value="AK-47 Drum" />
+  </section>
+  <section name="Challenges">
+    <string enum="ak47" value="AK-47 Drum" />
+  </section>
+  <section name="StatisticService">
+    <string enum="Executions_ak47" value="AK-47 Drum Executions" />
+    <string enum="Kills_ak47" value="AK-47 Drum Kills" />
+    <string enum="Headshots_ak47" value="AK-47 Drum Headshots" />
+  </section>
+</oasisstrings>
