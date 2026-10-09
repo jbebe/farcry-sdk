@@ -33,28 +33,68 @@ derived class; not load-bearing for the resolver below.
 
 ## The archive list
 
-A fixed-size table, one 132-byte slot per known top-level archive (name string + an id/index field +
-a priority/"unlimited" sentinel `0x7fffffff` on most slots):
+A fixed table of 42 slots, 132 bytes each: `char name[0x78]`, the mounted archive at `+0x78`, a flags
+word at `+0x7C` and a priority at `+0x80`. The constructor (`0x10cb7180` in the GOG `Dunia.dll`) fills
+the first ten **(RE-verified)**:
 
-```
-patch.dat        (id 0x2b, priority field = 1 — the one non-sentinel value, loads first)
-common.dat       (id 0x3f)
-sound.dat        (id 0x2e)
-sound_%lang%.dat (id 0x2e)
-soundcache.dat   (id 0x28)
-shadersobj.dat   (id 0x24)
-[~30 unused reserved slots]
-```
+| Slot | Archive | Flags | Priority |
+|---|---|---|---|
+| 0 | `patch.dat` | `0x2B` | 1 |
+| 1 | `common.dat` | `0x3F` | `0x7FFFFFFF` |
+| 2 | — | 0 | 0 |
+| 3 | `sound.dat` | `0x2E` | `0x7FFFFFFF` |
+| 4 | `sound_%lang%.dat` | `0x2E` | `0x7FFFFFFF` |
+| 5 | `soundcache.dat` | `0x28` | `0x7FFFFFFF` |
+| 6, 7 | named later | `0x2D` | `0x7FFFFFFF` |
+| 8 | named later | `0x24` | `0x7FFFFFFF` |
+| 9 | `shadersobj.dat` | `0x0E` | `0x7FFFFFFF` |
+| 10–41 | — | 0 | `0x7FFFFFFF` |
 
-A separate dynamic vector is then populated with six more names: `worlds/tmpla/tmpla.dat`,
-`worlds/world1/world1.dat`, `worlds/world2/world2.dat`, `worlds/multicommon/multicommon.dat`, and the
-`_%lang%` variant of each. These are pre-merge components of what ships as the single
-`worlds.dat`/`worlds.fat` pair; DLC archives are handled by a separate mechanism not covered here.
+The flags are not ids: `0x24` is slot 8, and `shadersobj.dat` carries `0x0E`. A separate dynamic vector
+is then populated with six more names: `worlds/tmpla/tmpla.dat`, `worlds/world1/world1.dat`,
+`worlds/world2/world2.dat`, `worlds/multicommon/multicommon.dat`, and the `_%lang%` variant of each.
+These are pre-merge components of what ships as the single `worlds.dat`/`worlds.fat` pair.
 
-**Per-archive open** (`FUN_102a6c40`, indexed by slot, stride `0x84`): opens the underlying `.dat` via
-a cached-open helper (`FUN_102358a0`, mode `8`) and, if buffering is enabled for that slot, wraps it in
-an async double-buffered reader (`FUN_1022a220`, 64KB buffer) backed by a `CreateFileA`-descended I/O
-ring (`FUN_1023c5b0`).
+**Search order is priority order.** Registering an archive (`0x10233420`, GOG) inserts it after every
+archive whose priority is at or below its own, so a lower number is searched first and equal priorities
+keep mount order **(RE-verified)**. `patch.dat` at 1 is searched before everything; the stock archives
+share `0x7FFFFFFF`.
+
+**DLC archives** come from each DLC folder's `toc.rml`. Each game mode lists `BigFile` names there, and
+the engine mounts `<name>.dat` — plus `<name>_<language>.dat` when that exists — into a free slot from 12
+upward with flags `0x29` and priority 3, or `0x69` and priority 2 when the entry asks for it (`0x102a5200`
+and `0x10cb6e00`, GOG, **RE-verified**). Either way a mounted DLC archive is searched after `patch.dat`
+and before every stock archive. The game mode decides what mounts: the campaign (`FCXSingle`) mounts
+only `dlc1`'s `entitylibrary` and `dominos`; `dlc1.dat`, `dlc_jungle.dat` and both `menus` archives are
+listed only for multiplayer modes and the main menu **(seen in data)**. On a DLC1 install those two
+campaign archives shadow 2 `common.dat` entries (the DLC weapon graph scripts) and 11 `worlds.dat`
+entries.
+
+**Per-archive open** (`FUN_102a6c40`, indexed by slot, stride `0x84`): opens the underlying `.dat`
+through `FUN_102358a0` with mode `8` — `GENERIC_READ` with `FILE_FLAG_NO_BUFFERING`, so archive reads
+bypass the Windows file cache (`0x1022f1c0`, GOG, **RE-verified**) — and, if buffering is enabled for that
+slot, wraps it in an async double-buffered reader (`FUN_1022a220`, 64KB buffer) backed by a
+`CreateFileA`-descended I/O ring (`FUN_1023c5b0`).
+
+A `.fat` opens with the magic `FAT2`, version `5`, a flags word and the entry count, then 16-byte
+entries sorted by hash, then a localisation count. The flags word is `0x0301` — platform 1 (PC) in
+byte 0, compression version 3 in byte 1 — on every compressed archive, and `0` on `sound.fat`,
+`sound_english.fat` and `shadersobj.fat` **(seen in data)**.
+
+### How a path becomes a key
+
+`CPathID::SetContent` (`0x09c8fe50` in the Linux server, **RE-verified**) turns a path into the key:
+
+1. `CFileManager::FormatPath` lowercases it, turns every run of `/` and `\` into one `\`, and drops a
+   single leading `\` — but keeps a leading `\\`, and keeps a leading `/` as `\`.
+2. If the extension — everything from the **first** dot of the last component — is a source extension
+   in `config/resourceconfig.xml`, it is replaced by the cooked one: `.dds`/`.png` → `.xbt`, `.glm` →
+   `.xbg`, `.mlm` → `.xbm`, `.mac` → `.mab`, `.skel.xml` → `.skeleton`, `.fxa`/`.fxe` → `.lfa`/`.lfe`,
+   `.hkr` → `.hkx`, `.rta` → `.rtx`, `.frank` → `.apm`, `.gsdat` → `.sdat`, `.ai.xml` → `.ai.rml`.
+3. The result is CRC32-hashed; an empty path gives `0xFFFFFFFF`.
+
+So a reference to `ui/textures/common/hardcore.dds` finds the entry `ui\textures\common\hardcore.xbt`
+(`0xD580E9A0`), and `foo.v2.dds` is not swapped at all. A second constructor form skips step 2.
 
 There is no `.fat` string literal anywhere in the binary — archive entries are indexed by CRC32 hash,
 not filename. The engine only opens the literal `X.dat` file by name; the paired `X.fat` index loads as
@@ -100,9 +140,10 @@ an ordered override chain**, the same shape as a Bethesda BSA load order or a ST
 path. Retail just never populates that list with anything but packed archives.
 
 This confirms the archive search order behind the
-[`gamemodesconfig.xml`-in-two-archives gotcha](../modding/gotchas.md): `patch.dat` > `common.dat` >
-`sound*.dat`/`soundcache.dat`/`shadersobj.dat` > `worlds/*.dat`, first match wins — `common.dat` is
-checked before any `worlds/*.dat`, so its copy of a colliding hash wins over `World.dat`'s.
+[`gamemodesconfig.xml`-in-two-archives gotcha](../modding/gotchas.md): `patch.dat` > mounted DLC
+archives > `common.dat` > `sound*.dat`/`soundcache.dat`/`shadersobj.dat` > `worlds/*.dat`, first match
+wins — `common.dat` is checked before any `worlds/*.dat`, so its copy of a colliding hash wins over
+`World.dat`'s.
 
 ## Existing override precedent in the engine
 
@@ -132,7 +173,7 @@ whose uncompressed-size bits are non-zero — a 3-way dispatch on a 2-bit scheme
 
 | Scheme | Handler | Status |
 |---|---|---|
-| 0 | `0x10258c50` | Unreachable in practice — real `Compression=None` entries always carry `UncompressedSize=0`, so they never reach the dispatcher. Parses its own variable-length prefix; not traced further in `Dunia.dll` itself — the `FarCry2_server` cross-reference below names this handler's likely real codec. |
+| 0 | `0x10258c50` | LZMA: a 7-bit varint, five LZMA property bytes, then the range-coded stream (`0x10256380` → `LZMA_DecompressInPlace` `0x1025a850` in the GOG build, **RE-verified**). Unreachable in practice — real `Compression=None` entries always carry `UncompressedSize=0`, so they never reach the dispatcher. |
 | 1 | `ArchiveEntry_DecompressLzo1x` (`0x10258d60`) → `Lzo1x_Decompress` (`0x1025a620`) | Confirmed LZO1X — matches JackAll's `Lzo1x.cs` state machine constant-for-constant. |
 | 2 | `ArchiveEntry_DecompressZlib` (`0x10258d00`) → `Zlib_DecompressChunked` (`0x1025d1c0`) → `Zlib_InflateRawBlock` (`0x1025d110`) | Confirmed real zlib (raw DEFLATE, `windowBits=-15`), unrelated to the separate Quazal-networking zlib instance elsewhere in the binary. |
 
@@ -150,13 +191,9 @@ dispatch, and it names real codecs for all three branches: **`scheme == 0` → `
 `scheme == 1` → `LZO_DecompressInPlace` (matches scheme 1 above), `scheme == 2` →
 `EdgeZlib_DecompressInPlace` (Sony's SPU-accelerated, bitstream-compatible reimplementation of zlib —
 the same DEFLATE bitstream as scheme 2 above, a different concrete library backing it, plausible given
-this source tree is shared across platforms). Scheme 0 dispatching to a real codec (LZMA) rather than
-"no compression" lines up with `Dunia.dll`: the actual "uncompressed" case is signaled by
-`UncompressedSize=0` and short-circuits before this dispatch ever runs, so scheme value `0` itself is
-not confirmed to mean "none", and `Dunia.dll`'s own scheme-0 handler (`0x10258c50`) is not traced.
-"Scheme 0 is LZMA" is a strong lead, not a final confirmation — the two binaries' scheme dispatchers
-are not cross-checked byte-for-byte against each other, only matched by structure and consistent
-behavior.
+this source tree is shared across platforms). `Dunia.dll` agrees: its scheme-0 branch is LZMA too (see
+the table above), and the actual "uncompressed" case is signaled by `UncompressedSize=0` and
+short-circuits before this dispatch ever runs.
 
 Every shipped FC2 archive (~215k entries scanned via JackAll) uses only schemes 0 and 1 — scheme 2
 never appears in real data, so it is known from disassembly alone.
