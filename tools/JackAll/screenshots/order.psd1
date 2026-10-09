@@ -22,5 +22,6 @@
         'map-editing'
         'map-links-prefabs'
         'missions'
+        'animations'
     )
 }
