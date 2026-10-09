@@ -1,4 +1,4 @@
-namespace JackAll.Tools.Mgb;
+namespace JackAll.Core.Format.Mgb;
 
 /// <summary>
 /// The widget an <see cref="MgbElement"/> wraps. Read from the tail of <c>VisitElement</c> via

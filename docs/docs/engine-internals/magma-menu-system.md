@@ -467,7 +467,7 @@ shipped menu files (`common.mgb`, `common_mp.mgb`, `options.mgb`, `sp_menus.mgb`
   constant for a given build, not per-file content. An `.mgb` writer can copy this prefix verbatim
   rather than reconstructing the type table.
 - `PAGESIZE`/`DISPLAYOFFSET`/materials/`VisitUserData` all decode correctly via JackAll's
-  `MgbReader`/`MgbBody` parser (`tools/JackAll/src/JackAll.Tools/Mgb/`), matching real,
+  `MgbReader`/`MgbBody` parser (`tools/JackAll/src/JackAll.Core/Format/Mgb/`), matching real,
   cross-checkable content (e.g. `sp_menus.mgb`'s materials decode to real texture paths matching its
   own `.desc` sidecar exactly).
 

@@ -1,7 +1,7 @@
 using System.IO.Hashing;
 using System.Text;
 
-namespace JackAll.Tools.Mgb;
+namespace JackAll.Core.Format.Mgb;
 
 /// <summary>
 /// The closed sets of classes the engine's three <c>Factory</c> dispatchers accept, and the fixed

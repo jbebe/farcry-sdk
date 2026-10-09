@@ -1,4 +1,4 @@
-namespace JackAll.Tools.Mgb;
+namespace JackAll.Core.Format.Mgb;
 
 /// <summary>
 /// One entry of an <see cref="MgbActionExecuter"/>'s flat action list.

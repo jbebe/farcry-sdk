@@ -1,4 +1,4 @@
-namespace JackAll.Tools.Mgb;
+namespace JackAll.Core.Format.Mgb;
 
 /// <summary>One <c>NEIGHBOR</c> entry of a focusable element.</summary>
 public sealed class MgbNeighbor : MgbRecord

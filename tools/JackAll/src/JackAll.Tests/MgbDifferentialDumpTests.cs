@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text;
-using JackAll.Tools.Mgb;
+using JackAll.Core.Format.Mgb;
 
 namespace JackAll.Tests;
 

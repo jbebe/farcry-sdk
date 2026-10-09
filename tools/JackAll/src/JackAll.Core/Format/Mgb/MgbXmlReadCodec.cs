@@ -1,6 +1,6 @@
 using System.Xml.Linq;
 
-namespace JackAll.Tools.Mgb;
+namespace JackAll.Core.Format.Mgb;
 
 /// <summary>
 /// Rebuilds a package from XML, driven by the same <c>Serialize</c> descriptions as the binary

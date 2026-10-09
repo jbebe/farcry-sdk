@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace JackAll.Tools.Mgb;
+namespace JackAll.Core.Format.Mgb;
 
 /// <summary><c>VisitMaterial</c> (<c>0x0a0606a0</c>): a named texture reference plus the UV region
 /// of it this material uses.</summary>

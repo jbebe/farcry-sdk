@@ -1,6 +1,6 @@
 using System.ComponentModel;
 using JackAll.Cli.Infrastructure;
-using JackAll.Tools.Mgb;
+using JackAll.Core.Format.Mgb;
 using Spectre.Console;
 using Spectre.Console.Cli;
 

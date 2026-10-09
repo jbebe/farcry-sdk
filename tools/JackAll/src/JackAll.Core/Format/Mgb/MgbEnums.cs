@@ -1,4 +1,4 @@
-namespace JackAll.Tools.Mgb;
+namespace JackAll.Core.Format.Mgb;
 
 /// <summary>One named value set from <c>magma::Util</c>'s tag table.</summary>
 /// <remarks>Entries are held as explicit value/name pairs rather than a bare array indexed by value:

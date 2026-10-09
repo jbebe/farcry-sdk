@@ -562,7 +562,7 @@ Two independent implementations of this spec live in the repo, and they check ea
 
 - **`tools/JackAll/src/JackAll.Tools/Mgb/mgb_parser.py`** — the reference decoder, and the
   implementation the live-trace validation above was done against. Read-only.
-- **`tools/JackAll/src/JackAll.Tools/Mgb/`** — the production C# codec and object model,
+- **`tools/JackAll/src/JackAll.Core/Format/Mgb/`** — the production C# codec and object model,
   used by JackAll's `.mgb` editor, its `mgb decode`/`mgb encode` CLI verbs, and the XML interchange
   format below.
 

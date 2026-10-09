@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
-using JackAll.Tools.Mgb;
+using JackAll.Core.Format.Mgb;
 
 namespace JackAll.App.FileHandlers.Mgb;
 

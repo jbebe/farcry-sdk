@@ -1,6 +1,6 @@
 using System.Xml.Linq;
 
-namespace JackAll.Tools.Mgb;
+namespace JackAll.Core.Format.Mgb;
 
 /// <summary>
 /// Converts a <c>.mgb</c> package to and from an editable XML document.

@@ -1,4 +1,4 @@
-namespace JackAll.Tools.Mgb;
+namespace JackAll.Core.Format.Mgb;
 
 /// <summary>
 /// Base of every record in a <c>.mgb</c> package.

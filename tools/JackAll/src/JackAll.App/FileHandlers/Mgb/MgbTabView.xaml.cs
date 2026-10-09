@@ -5,7 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using JackAll.App.Picker;
 using JackAll.Core.Format.Rml;
-using JackAll.Tools.Mgb;
+using JackAll.Core.Format.Mgb;
 using Microsoft.Win32;
 
 namespace JackAll.App.FileHandlers.Mgb;

@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace JackAll.Tools.Mgb;
+namespace JackAll.Core.Format.Mgb;
 
 /// <summary>
 /// Shared value formatting for the two XML codecs.

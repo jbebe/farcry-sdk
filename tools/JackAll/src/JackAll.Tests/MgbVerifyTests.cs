@@ -1,4 +1,4 @@
-using JackAll.Tools.Mgb;
+using JackAll.Core.Format.Mgb;
 
 namespace JackAll.Tests;
 

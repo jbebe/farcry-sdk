@@ -1,4 +1,4 @@
-namespace JackAll.Tools.Mgb;
+namespace JackAll.Core.Format.Mgb;
 
 /// <summary>
 /// <c>VisitState</c> (<c>0x0a05dc90</c>) - the root of the keyframe animation-state hierarchy.

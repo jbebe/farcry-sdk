@@ -1,8 +1,7 @@
 using JackAll.Core.Vfs;
-using JackAll.Core.Xrefs;
-using JackAll.Tools.Mgb;
+using JackAll.Core.Format.Mgb;
 
-namespace JackAll.Tools.Xrefs;
+namespace JackAll.Core.Xrefs;
 
 /// <summary>
 /// References inside a `.mgb` Magma UI package: texture paths, every <c>NameId</c> the format

@@ -1,4 +1,4 @@
-namespace JackAll.Tools.Mgb;
+namespace JackAll.Core.Format.Mgb;
 
 /// <summary>
 /// A packed <c>.mgb</c> colour word - <c>0xAARRGGBB</c>, alpha in the high byte.

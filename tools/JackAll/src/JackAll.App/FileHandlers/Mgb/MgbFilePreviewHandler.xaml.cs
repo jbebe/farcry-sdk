@@ -1,6 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
-using JackAll.Tools.Mgb;
+using JackAll.Core.Format.Mgb;
 
 namespace JackAll.App.FileHandlers.Mgb;
 

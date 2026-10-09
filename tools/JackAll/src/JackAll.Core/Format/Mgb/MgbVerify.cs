@@ -1,4 +1,4 @@
-namespace JackAll.Tools.Mgb;
+namespace JackAll.Core.Format.Mgb;
 
 /// <summary>One problem <see cref="MgbVerify"/> found, with the path through the package that
 /// locates it.</summary>

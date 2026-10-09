@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace JackAll.Tools.Mgb;
+namespace JackAll.Core.Format.Mgb;
 
 /// <summary>How a list carries its length on the binary wire.</summary>
 public enum MgbCountWidth

@@ -1,5 +1,5 @@
 using System.Xml.Linq;
-using JackAll.Tools.Mgb;
+using JackAll.Core.Format.Mgb;
 
 namespace JackAll.Tests;
 
