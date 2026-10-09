@@ -34,9 +34,8 @@ On Steam, right click Far Cry 2 → **Manage** → **Browse local files** opens 
 
 ## 1. Get JackAll
 
-1. Download the latest JackAll tool from [JackAll's Nexus page](https://www.nexusmods.com/farcry2/mods/370)
-. You
-   want the app, not `jackall-cli`.
+1. Download the latest JackAll tool from [JackAll's Nexus page](https://www.nexusmods.com/farcry2/mods/370).
+   You want the app, not `jackall-cli`.
 2. Make a folder for it, for example `C:\Programs\JackAll`, and unzip it there. Don't put it in
    `Program Files`, because JackAll saves its settings next to itself and Windows doesn't let it
  write there.
@@ -54,19 +53,32 @@ later will not give you back a clean game.
 
 ## 3. Add the mod
 
-1. Put the mod zip somewhere it can stay, for example `C:\Games\Far Cry 2 mods\`. **Don't unzip it.** JackAll reads the zip directly and remembers where it is, so if you delete it from your
-   Downloads folder later, the mod is gone from JackAll too.
-2. In JackAll, on the **Mods** tab, click **Import mod** and pick the zip. You can pick several at once.
-3. The mod shows up in the list with its checkbox ticked.
+1. Put the mod zip somewhere it can stay, for example `C:\Games\Far Cry 2 mods\`. **Don't unzip it.**
+   JackAll reads the zip directly and remembers where it is, so if you delete it from your Downloads
+   folder later, the mod is gone from JackAll too.
+2. In JackAll, on the **Mods** tab, click **Import mod** (1) and pick the zip. You can pick several at
+   once.
+3. The mod shows up in the list with its checkbox ticked (2). On the right you see what's inside it.
 
-There's always a row called **workspace** at the bottom. That's where your own edits go if you ever make any. Leave it alone.
+![The Mods tab after importing VSS Vintorez](/img/jackall/installing-mods/01-import.png)
+
+There's always a row called **workspace** at the bottom (3). That's where your own edits go if you
+ever make any. Leave it alone.
 
 If you have more than one mod, the order only matters when two of them change the same thing: the one lower in the list wins. Sky Overhaul, Sound Overhaul and VSS Vintorez don't touch each other, so any order is fine for them.
 
 ## 4. Deploy
 
-Click **Deploy mods**. It takes a few seconds, sometimes up to a minute. When the status line at the bottom says **Built patch.dat**, the mod is in the game. You can close JackAll now, the game doesn't
-need it running.
+Click **Deploy mods** (1). It takes a few seconds, sometimes up to a minute. When the status line at
+the bottom says **Built patch.dat** (2), the mod is in the game. You can close JackAll now, the game
+doesn't need it running.
+
+![Deploy mods and the status line after a build](/img/jackall/installing-mods/02-deploy.png)
+
+:::info[Same build as the mods confirmed in game]
+**Deploy mods** runs the same patch builder that installed VSS Vintorez, Flashlight and Sky Overhaul
+for their in-game tests.
+:::
 
 The first time you deploy, JackAll saves a copy of the original files as `patch.dat.vanilla` and
 `patch.fat.vanilla` in the game's `Data_Win32` folder. Never delete those, they are how JackAll gets
@@ -93,9 +105,18 @@ Read the mod's changelog on Nexus too. Sometimes an update asks you to delete a 
 ## Removing mods
 
 - **One mod:** untick it, or select it and click **Remove**, then **Deploy mods**.
-- **Everything:** click **Revert to original**. The game gets its original files back and every FCSE
-  plugin JackAll installed is taken out of `bin\plugins\`. Your mod list stays in JackAll, so you
-  can deploy it again later.
+- **Everything:** click **Revert to original** and confirm. The game gets its original files back
+  and every FCSE plugin JackAll installed is taken out of `bin\plugins\`. Your mod list stays in
+  JackAll, so you can deploy it again later.
+
+![The confirmation Revert to original asks for](/img/jackall/installing-mods/04-revert.png)
+
+**On the GOG version**, a second message follows: the restored files "still don't match the known
+hash for a clean 1.03 Far Cry 2". JackAll's reference hashes come from the Steam version, and GOG
+ships a different `patch.dat`. If your game was clean when JackAll first deployed, this message is
+harmless and the original files really are back.
+
+![The hash message the GOG version shows after Revert to original](/img/jackall/installing-mods/05-gog-warning.png)
 
 When the Nexus button arrives and you want to move to Vortex, click **Revert to original** in
 JackAll first, then install the mods again through Vortex.
@@ -130,7 +151,10 @@ FCSE itself can't go into JackAll's mod list. It's one exe, so you copy it by ha
 **Plugins that come inside a JackAll mod install themselves.** A mod zip with a `plugins\` folder
 in it, like Sky Overhaul and Sound Overhaul, puts its plugin into `bin\plugins\` when you click
 **Deploy mods**, and takes it out again when you remove the mod and deploy, or click **Revert to
-original**. You don't copy anything.
+original**. You don't copy anything. The status line counts the plugin files it deployed (2); here
+it's Flashlight (1), which brings one.
+
+![Deploying a mod that carries an FCSE plugin](/img/jackall/installing-mods/03-plugins.png)
 
 **A zip that only has a `plugins\` folder** works the same way: **Import mod** it in JackAll and
 deploy. You can also install one by hand: copy what's inside its `plugins\` folder into the game's
