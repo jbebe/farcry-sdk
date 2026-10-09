@@ -7,7 +7,7 @@ FCSE lets Far Cry 2 run mods that change how the game itself works, not just its
 [size=4][b]How to install (Vortex)[/b][/size]
 
 [list=1]
-[*]Install [url=https://www.nexusmods.com/about/vortex/]Vortex[/url] and its [url=https://www.nexusmods.com/site/mods/2143]Far Cry 2 extension[/url].[/*]
+[*]Install [url=https://www.nexusmods.com/about/vortex/]Vortex[/url] and its Far Cry 2 extension.[/*]
 [*]Click [b]Mod Manager Download[/b] on this page. Vortex installs FCSE and turns it on.[/*]
 [*]Start the game with the [b]Play[/b] button in Vortex.[/*]
 [/list]
@@ -41,8 +41,7 @@ To confirm it worked: start the game, the splash screen is black and white and i
 
 To [b]uninstall[/b]: delete [font=Courier New]FCSE.exe[/font].
 
-Steam and other launchers: FCSE is an ordinary executable, so anything that can launch FarCry2.exe can launch FCSE.exe instead. Add it as a non Steam game, repoint your shortcut, or just run it directly.
-[/spoiler]
+Steam and other launchers: FCSE is an ordinary executable, so anything that can launch FarCry2.exe can launch FCSE.exe instead. Add it as a non Steam game, repoint your shortcut, or just run it directly.[/spoiler]
 
 [line]
 
@@ -184,9 +183,9 @@ The page holds [b]20 rows[/b]. That's a hard limit from the engine's own list wi
 A plugin can keep values of its own on any entity (the gun in the player's hands, a car, an NPC) under keys it names:
 
 [code]const FCSE_EntityDataAPI* data = api->EntityData;
-void* entity = data->EntityOf(weapon);          // any component -> its entity
+void* entity = data->EntityOf(weapon);          // any component -> its entity
 int32_t kills = 0;
-data->GetInt(entity, "MyMod.Kills", &kills);    // false if absent
+data->GetInt(entity, "MyMod.Kills", &kills);    // false if absent
 data->SetInt(entity, "MyMod.Kills", kills + 1);[/code]
 
 The values live in an entity component FCSE adds to the engine, so the engine saves them with the entity and restores them when the save loads, the way it handles its own properties. A mod can also give an archetype starting values in the entity library, and every entity spawned from it begins with them. A save or a data file that names the component still loads without FCSE; only those values are lost.
