@@ -400,13 +400,25 @@ function Open-UiSection([string]$Like, $Scope) {
 function Find-UiField([string]$Label, $Scope) {
     $row = Wait-Ui { @(Find-Ui -Scope $Scope -Type DataItem -All -Optional | Where-Object { (Find-Ui -Scope $_ -Type Text -Children -All -Optional | ForEach-Object { $_.Current.Name }) -contains $Label })[0] } -What "field '$Label'"
     Show-Ui $row
+    # A changed field also carries Restore/Revert buttons; the editor is the input control.
     $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
     $child = $walker.GetFirstChild($row)
+    $fallback = $null
     while ($child) {
-        if ($child.Current.ControlType -ne $CT::Text) { return $child }
+        $type = $child.Current.ControlType
+        if ($type -in @($CT::Edit, $CT::ComboBox, $CT::CheckBox)) { return $child }
+        if (-not $fallback -and $type -notin @($CT::Text, $CT::Button)) { $fallback = $child }
         $child = $walker.GetNextSibling($child)
     }
+    if ($fallback) { return $fallback }
     return $row
+}
+
+# The Restore (or Revert) button a changed field shows, by the field's name.
+function Find-UiFieldButton([string]$Label, [string]$Button, $Scope) {
+    $editor = Find-UiField $Label $Scope
+    $row = [System.Windows.Automation.TreeWalker]::ControlViewWalker.GetParent($editor)
+    return Find-Ui -Scope $row -Type Button -Name $Button -Children
 }
 
 # Brings a row of a virtualized grid or tree into existence by its name.

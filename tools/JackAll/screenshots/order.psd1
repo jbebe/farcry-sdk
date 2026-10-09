@@ -3,5 +3,6 @@
     Tutorials = @(
         'installing-mods'
         'first-mod'
+        'managing-mods'
     )
 }
