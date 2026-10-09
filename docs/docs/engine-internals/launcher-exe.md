@@ -69,11 +69,11 @@ beyond what the decompiler infers.
 | `LoadGame_Stub` | `0x401020` | `mapJoke`, `LoadGame` | `return 1`, no params. Pure stub — real load logic lives inside `Dunia.dll`. |
 | `SelectStoryMission` | `0x401030` | `SelectStoryMission` | `return *param_1 + 10`. Mission-ID offset. |
 | `SelectLibraryMission` | `0x401040` | `SelectLibraryMission` | `return *param_1 + 0x15` (21). Mission-ID offset. |
-| `MalariaCurve` | `0x401050` | `MalariaCurve` | `*param_1 *= <float constant @ 0x4020fc>`. In-place curve multiplier — a candidate for a "reduce malaria mechanic" tweak if the constant is patchable. |
+| `MalariaCurve` | `0x401050` | `MalariaCurve` | `*param_1 *= 60.0f`, the float at `0x4020fc`. In-place curve multiplier — a candidate for a "reduce malaria mechanic" tweak if the constant is patchable. |
 | `AddDiamond` | `0x401070` | `AddDiamond` | `*param_1 += *param_2`. Accumulator (diamond-case pickup count). |
 | `SetDefaultTimeOut` | `0x401080` | `SetDefaultTimeOut` | `*param_1 = *param_2`. Plain copy. |
 | `SetLoadingText` | `0x401090` | `SetLoadingText` | `*param_1 = 0` (16-bit write). Clears/null-terminates a text buffer. |
-| `PlayerSPFinalize` | `0x4010a0` | `PlayerSPFinalize` | `*param_1 = <constant @ 0x402100>`. Writes a fixed status/finalize code. |
+| `PlayerSPFinalize` | `0x4010a0` | `PlayerSPFinalize` | `*param_1 = 1.0f`, the dword `0x3F800000` at `0x402100`. |
 | `InitializeUseableEvent_Stub` | `0x4010c0` | `InitializeUseableEvent`, `CheckDomino` | `*param_1 = 1` (byte write). Pure stub. |
 | `SaveGame_Stub` | `0x4010d0` | `incHB`, `SaveGame` | `return 0`, no params. Pure no-op — real save logic lives inside `Dunia.dll`. |
 
@@ -127,8 +127,9 @@ launching the game. Two consequences:
   [command-line args](./command-line-args.md) survives a launch made through it.
 - Redirecting what gets launched needs no binary edit — it is the registry's `execPath` value.
 
+Both constants were read from the GOG and the Steam `FarCry2.exe` and are the same in both. `FCSE.exe`
+uses them directly.
+
 ## Unknowns
 
-- The float constant behind `MalariaCurve` (`0x4020fc`) and the constant behind `PlayerSPFinalize`
-  (`0x402100`) aren't read or typed.
 - What `menuJoke` actually gates in the main-menu construction it's called from.

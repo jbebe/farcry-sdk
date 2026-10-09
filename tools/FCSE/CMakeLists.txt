@@ -241,8 +241,6 @@ add_executable(FCSE WIN32
   "src/main.cpp"
   "src/crash_log.cpp"
   "src/crash_log.h"
-  "src/engine/stock_constants.cpp"
-  "src/engine/stock_constants.h"
   "src/engine/debug_commands.cpp"
   "src/engine/debug_commands.h"
   "src/engine/entity_component_abi.h"

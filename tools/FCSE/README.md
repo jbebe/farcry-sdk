@@ -42,7 +42,7 @@ Grouped by what a file talks to.
 | --- | --- |
 | `src/` | The entry point (`main.cpp`), and the pieces everything uses: `log`, `loader_paths`, `crash_log`, `caller_identity`, `ini_file` |
 | `src/util/` | Leaf Win32 helpers with no FCSE state - string conversion, directory walking, PE headers, embedded resources, the SEH guards and the member-pointer cast |
-| `src/engine/` | Anything that reaches into the running game: `dunia_api`, `build_id`, `address_library`, `debug_commands`, `entity_data_component` and its store, `splash`, `stock_constants` |
+| `src/engine/` | Anything that reaches into the running game: `dunia_api`, `build_id`, `address_library`, `debug_commands`, `entity_data_component` and its store, `splash` |
 | `src/api/` | What plugins and scripts both call: `plugin_api` (the struct they receive), `plugin_loader`, `hook`, `patch`, `function_registry`, `pattern_scan`, `settings_registry`, `entity_data` |
 | `src/ui/` | FCSE's own settings page - see below |
 | `src/lua/` | The script host: `lua_host`, `lua_api`, `tick_source`, and `runtime/fcse.lua` |
@@ -62,20 +62,17 @@ testable.
 
 1. Resolve `Dunia.dll` next to the loader, `GetProcAddress` the 3 exports above
    (`src/engine/dunia_api.cpp`).
-2. Read the real `MalariaCurve`/`PlayerSPFinalize` constants straight out of the real
-   `FarCry2.exe` (`src/engine/stock_constants.cpp`) - see "Reimplementing the 12 stock handlers"
-   below for why this is read at runtime instead of hardcoded.
-3. Read `bin\fcse.ini` into memory (`src/api/settings_registry.cpp`). Must happen before any plugin
+2. Read `bin\fcse.ini` into memory (`src/api/settings_registry.cpp`). Must happen before any plugin
    loads: registration resolves each setting against this file and calls the plugin back with the
    result, so the file has to be there first. A missing file is the normal first-run case.
-4. Build the `FCSE_PluginAPI` struct (`src/api/plugin_api.cpp`) and load every `*.dll` in
+3. Build the `FCSE_PluginAPI` struct (`src/api/plugin_api.cpp`) and load every `*.dll` in
    `bin\plugins\` (`src/api/plugin_loader.cpp`), calling each one's required `FCSE_Load` export. This is the
    earliest safe point for a plugin to install `Hook()`/`Patch()` calls - nothing in `Dunia.dll`
    beyond its own `DllMain`/CRT init has run yet, and it's where plugins declare their settings.
-5. Write `bin\fcse.ini` back if anything changed. Every plugin has now declared what it has, so
+4. Write `bin\fcse.ini` back if anything changed. Every plugin has now declared what it has, so
    one write completes the file - a first run leaves a fully hand-editable config without the
    player ever opening the in-game menu.
-6. `RegisterGameFunctionProvider(&DebugCommands::Provider)` - `Provider()` is the callback
+5. `RegisterGameFunctionProvider(&DebugCommands::Provider)` - `Provider()` is the callback
    `Dunia.dll` invokes later, from inside `RunGame`, once `InitDuniaEngine` has succeeded (the only
    point at which `Dunia.dll`'s function registry is guaranteed constructed). It runs, **in this
    order**:
@@ -89,7 +86,7 @@ testable.
    already-claimed name is a **silent no-op** inside `Dunia.dll` itself. Running plugins first is
    what lets a plugin override one of the 12 stock names (e.g. change `AddDiamond`'s effect) -
    registering stock handlers first would make that impossible.
-7. `RunGame(hInstance, cmdLine)` - the game proceeds normally from here.
+6. `RunGame(hInstance, cmdLine)` - the game proceeds normally from here.
 
 ### Reimplementing the 12 stock handlers (`src/engine/debug_commands.cpp`)
 
@@ -98,11 +95,8 @@ testable.
 confirms several of its 12 handlers are live gameplay hooks (diamond pickups, malaria progression,
 main-menu construction, loading-screen text), not just QA stubs. `FCSE.exe` reproduces all 12
 byte-for-byte so nothing regresses versus the stock exe. Two of them (`MalariaCurve`,
-`PlayerSPFinalize`) depend on float/int constants baked into `FarCry2.exe`'s own data section
-that were never RE'd to an exact value - rather than hardcode a guess,
-`src/engine/stock_constants.cpp` maps the real `FarCry2.exe` (via
-`LoadLibraryExW(..., DONT_RESOLVE_DLL_REFERENCES)`) and reads them directly by VA at startup, so
-the reimplementation is exactly as faithful as whatever build is actually installed.
+`PlayerSPFinalize`) use constants from `FarCry2.exe`'s data section, `60.0f` and `1.0f`, the same in
+the GOG and Steam launchers.
 
 ## The plugin API - four tiers
 

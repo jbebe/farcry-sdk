@@ -1,14 +1,15 @@
 #include "engine/debug_commands.h"
 
 #include "api/function_registry.h"
-#include "engine/stock_constants.h"
 
 #include <cstdint>
 
 namespace FCSE {
 
 namespace {
-    StockConstants g_constants;
+    // FarCry2.exe's constants at 0x4020fc and 0x402100, the same in the GOG and Steam launchers.
+    constexpr float kMalariaCurveMultiplier = 60.0f;
+    constexpr float kPlayerSPFinalizeValue = 1.0f;
 
     // FunctionRegistry_Invoke always calls the stored handler with exactly 2 raw args (see
     // docs/docs/engine-internals/function-registry.md's decompiled dispatch): every handler below
@@ -37,7 +38,7 @@ namespace {
     }
 
     int __cdecl MalariaCurve(void* param1, void* /*param2*/) {
-        *reinterpret_cast<float*>(param1) *= g_constants.malariaCurveMultiplier;
+        *reinterpret_cast<float*>(param1) *= kMalariaCurveMultiplier;
         return 0;
     }
 
@@ -57,7 +58,7 @@ namespace {
     }
 
     int __cdecl PlayerSPFinalize(void* param1, void* /*param2*/) {
-        *reinterpret_cast<int*>(param1) = g_constants.playerSPFinalizeValue;
+        *reinterpret_cast<float*>(param1) = kPlayerSPFinalizeValue;
         return 0;
     }
 
@@ -69,10 +70,6 @@ namespace {
     int __cdecl SaveGame_Stub(void* /*param1*/, void* /*param2*/) {
         return 0;
     }
-}
-
-void DebugCommands::Init(const std::wstring& directory) {
-    g_constants = LoadStockConstants(directory);
 }
 
 void DebugCommands::RegisterStockHandlers() {

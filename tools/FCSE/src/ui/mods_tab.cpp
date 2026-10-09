@@ -14,8 +14,7 @@
 namespace FCSE {
 
 namespace {
-    // Dunia.dll (Steam v1.03) RVAs, relative to the DLL's preferred image base - same
-    // base-plus-RVA convention stock_constants.cpp uses for FarCry2.exe.
+    // Dunia.dll (Steam v1.03) RVAs, relative to the DLL's preferred image base.
     //
     // kOptionsMenuRva = 0x1081aee0 - confirmed (via disassembly, not just decompile) to be the
     // real "build Options' row of category buttons" function: takes exactly one implicit arg
