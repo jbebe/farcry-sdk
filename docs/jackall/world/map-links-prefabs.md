@@ -28,8 +28,8 @@ The inspector (2) has a **LINKS** section with what the object sends. Each link 
 (when it fires, on this object) and an **event** (what the target does), picked from the two
 drop-downs, and **×** removes it.
 
-**A trigger zone** is the yellow box. The small squares on its faces are handles: drag one to move
-that face, and the zone grows or shrinks on that side only. **A light** shows a ring for its reach,
+**A trigger zone** is the yellow box. The small squares on its faces are handles: drag one to resize the
+zone in that direction. **A light** shows a ring for its reach,
 and a spot light also its cone; drag the ring to change the radius.
 
 ## Add a link
@@ -49,8 +49,9 @@ together with its furniture and its triggers. Many of the game's own objects alr
 the hierarchy lists them under **Prefabs**.
 
 To make one, select the objects (Ctrl+click in the hierarchy or the view) and click **Group** (1), or
-press Ctrl+G. **Save prefab** (2) keeps it in the library (3), under **Prefabs** at the bottom left
-(4), where you can drag it onto the ground in any world, including the other campaign map.
+press Ctrl+G. **Save prefab** (2) keeps it in the library, as the status line says (3). It's listed under
+**Prefabs** at the bottom left (4), and you can drag it onto the ground in any world, including the
+other campaign map.
 
 ![Two triggers grouped into a prefab and saved to the library](/img/jackall/map-links-prefabs/03-prefab.png)
 
