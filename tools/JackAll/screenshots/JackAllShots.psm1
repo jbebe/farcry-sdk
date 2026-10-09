@@ -533,7 +533,7 @@ function Complete-FileDialog([string]$Title, [string[]]$Path) {
     # A real click: a folder picker ignores a posted OK. The first click on a typed folder may only
     # open it, so click until the dialog is gone.
     $ok = Find-Win32Control $dialog 'Button' | Where-Object { $_.Current.AutomationId -eq '1' } | Select-Object -First 1
-    $r = $ok.Current.BoundingRectangle
+    $r = Wait-Ui { $b = $ok.Current.BoundingRectangle; if (-not $b.IsEmpty -and $b.Width -gt 0) { $b } } -What 'the dialog to lay out'
     $hwnd = [IntPtr]$dialog.Current.NativeWindowHandle
     for ($i = 0; $i -lt 3; $i++) {
         [ShotNative]::Front($hwnd)
