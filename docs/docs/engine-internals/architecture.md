@@ -86,8 +86,9 @@ CXGame::Run(bool& outRestart)             0x08882ce0
   }
 ```
 
-Straightforward fixed-ish-rate loop with a sleep-based limiter, no separate render thread — render is
-called inline from the same `Update` (see below), gated by `HasRenderer()`.
+Straightforward fixed-ish-rate loop with a sleep-based limiter. In this server binary render is called
+inline from the same `Update` (see below), gated by `HasRenderer()`; the PC client hands each frame to
+a render thread instead — see [presentation and input](./presentation-and-input.md#whether-there-is-a-render-thread).
 
 ### `CXGame::Update()` — per-frame fan-out
 
@@ -152,7 +153,8 @@ both the engine core and the low-level `CGame` update.
 
 ## Background threads
 
-The main loop itself is single-threaded (no separate render thread), but the engine is not: the
+The server's main loop itself is single-threaded (the PC client adds a render thread), but the engine
+is not: the
 named-thread call sites (`InternalSetThreadName`, which every one of these passes its own literal
 name string to) give a fixed roster of long-lived worker threads:
 
