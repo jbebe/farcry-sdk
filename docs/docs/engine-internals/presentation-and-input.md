@@ -303,9 +303,10 @@ is submitted from inside the frame graph's preparation, in the same call that th
 plugin that reads game state from a render-side hook reads it one frame late, and needs to publish
 state across the boundary.
 
-While a loading screen is up the render thread runs on its own instead: it redraws the last frame
-about 30 times a second, polling with `Sleep(2)`, and takes no new work from the main thread until
-loading ends.
+While a loading screen is up the render thread mostly runs on its own instead: it redraws the last
+frame about 30 times a second, polling with `Sleep(2)`, and takes no new work from the main thread.
+The exception is the renderer-preparation step at the end of a load, which drives it frame by frame
+again; see [loading a save](./loading-a-save.md#who-draws-while-it-loads).
 
 ### The scene's depth is gone by the time the frame is
 
