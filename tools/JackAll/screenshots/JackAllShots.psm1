@@ -590,14 +590,20 @@ function Send-ShotKeys([string]$Chord) {
     Start-Sleep -Milliseconds 200
 }
 
-function Click-Ui($Element, [switch]$Right, [switch]$Double, [double]$X = 0.5, [double]$Y = 0.5) {
+function Click-Ui($Element, [switch]$Right, [switch]$Double, [switch]$Ctrl, [double]$X = 0.5, [double]$Y = 0.5) {
     [ShotNative]::Front([IntPtr]$script:Window.Current.NativeWindowHandle)
     Start-Sleep -Milliseconds 150
     $r = $Element.Current.BoundingRectangle
     $px = [int]($r.X + $r.Width * $X)
     $py = [int]($r.Y + $r.Height * $Y)
-    [ShotNative]::Click($px, $py, [bool]$Right)
-    if ($Double) { [ShotNative]::Click($px, $py, [bool]$Right) }
+    if ($Ctrl) { [ShotNative]::KeyState($script:VirtualKeys.Ctrl, $false) }
+    try {
+        [ShotNative]::Click($px, $py, [bool]$Right)
+        if ($Double) { [ShotNative]::Click($px, $py, [bool]$Right) }
+    }
+    finally {
+        if ($Ctrl) { [ShotNative]::KeyState($script:VirtualKeys.Ctrl, $true) }
+    }
     Start-Sleep -Milliseconds 250
 }
 

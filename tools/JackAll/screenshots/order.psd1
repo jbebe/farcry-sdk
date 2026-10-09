@@ -20,5 +20,6 @@
         'hud-and-menus'
         'map-viewer'
         'map-editing'
+        'map-links-prefabs'
     )
 }

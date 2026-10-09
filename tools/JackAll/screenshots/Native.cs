@@ -213,6 +213,11 @@ public static class ShotNative
         SetCursorPos(x, y);
     }
 
+    public static void KeyState(ushort vk, bool up)
+    {
+        Send(new INPUT[] { Key(vk, up) });
+    }
+
     // Presses the virtual keys in order and releases them in reverse, e.g. Ctrl+Shift+Z.
     public static void Keys(ushort[] vks)
     {
