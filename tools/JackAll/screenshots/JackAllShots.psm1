@@ -484,7 +484,19 @@ function Get-UiItem($Container, [string]$Name) {
             return $item
         }
     }
-    return Find-Ui -Scope $Container -Name $Name
+    # Some lists don't support that lookup: scroll through until the row exists.
+    $found = Find-Ui -Scope $Container -Name $Name -Optional
+    if ($found) { return $found }
+    $scroll = $null
+    if ($Container.TryGetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern, [ref]$scroll) -and $scroll.Current.VerticallyScrollable) {
+        for ($v = 0; $v -le 100; $v += 2) {
+            $scroll.SetScrollPercent([System.Windows.Automation.ScrollPattern]::NoScroll, $v)
+            Start-Sleep -Milliseconds 100
+            $found = Find-Ui -Scope $Container -Name $Name -Optional
+            if ($found) { return $found }
+        }
+    }
+    throw "No item '$Name'"
 }
 
 # Fills a Windows file or folder dialog and confirms it.

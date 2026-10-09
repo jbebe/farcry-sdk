@@ -12,5 +12,6 @@
         'value-editor'
         'renaming'
         'saves'
+        'previews'
     )
 }
