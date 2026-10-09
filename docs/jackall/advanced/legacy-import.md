@@ -58,7 +58,7 @@ mods** (2). Seven files are left (3).
 ![The workspace trimmed to Skip Intro's own files](/img/jackall/legacy-import/03-trimmed.png)
 
 A mod's description usually says what it changes. To see every change with its exact place, use
-the command line's `legacy analyze`.
+the command line; see [Take features out of an old mod](/jackall/cli-legacy).
 
 ## Look at a change
 
