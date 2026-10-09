@@ -149,6 +149,25 @@ cooker emits.
 Two of those are trivial to synthesize: `.srl` is exactly 1024 bytes and `.zsr` exactly 4096 bytes,
 both raw fixed-size memory dumps with no header.
 
+### The map textures
+
+The in-game map draws from three sets of `.xbt` textures (seen in data, with the UV code
+**RE-verified on GOG**):
+
+| Set | Files | Scale |
+|---|---|---|
+| The world map | `worlds\<world>\mapcompass.xbt` and `_mip0`, 1024² at full size | 3 m per pixel over X and Y from 1024 to 4096 |
+| Area maps, one per level cell | `levels\w<n>_<row a–e>_<column 1–5>\mapcompass.xbt` and `_mip0`, 25 per world | 1 m per pixel |
+| Detail maps | 45 `majorlocation_*.xbt` (21 in world 1, 24 in world 2), mostly with a `_mip0` | the entity's own `fWidth` × `fHeight` |
+
+Row `a` is the band with the highest Y, and columns run from low X to high X. The world map's UV
+(`0x106DF7E0`) is `(X − M) / (W − 2M)`, with the margin and the width taken from the world
+descriptor. A detail map is centred on its entity (`0x106D7D80`). Whether +Y is north on screen
+depends on the map gadget's quad, which was not read.
+
+`CGameConfig`'s `UseCompassMiniMap` and `UseRoadSignHilight` are registered but read by no code
+found, so they do nothing.
+
 ## Shipping a world
 
 Archive resolution is CRC32-of-path across the mounted archives with `patch.dat` first, and the

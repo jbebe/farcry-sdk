@@ -219,6 +219,11 @@ Off-the-shelf Microsoft/legacy redistributables — no FC2-specific content.
 
 Per-language UI resource folders for the launcher/benchmark tooling (distinct from in-game text, which lives in each language's `oasisstrings.rml` — subtitles in its `Subtitles` section, keyed by the decimal sound id).
 
+Inside `oasisstrings`, a key with the platform suffix wins on PC: `SPLASH_PROMPT_WIN32` replaces
+`SPLASH_PROMPT` whichever comes first, and keys ending `_XENON` or `_PS3` are dropped. English
+carries 35 `_WIN32` keys. A string the table lacks displays as a single space, not as its key.
+This is **RE-verified on GOG**: `ParseStringTable` at `0x104C4DB0`, the lookup at `0x104C4600`.
+
 - `bin/Resources/{cs,de,es,fr,it,nl,pl,ru,uk,us}/`
 
 Not investigated — likely satellite `.resources.dll`-style assemblies for the .NET launcher/benchmark tools, not gameplay-relevant.
