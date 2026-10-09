@@ -84,8 +84,9 @@ regenerated from the UVs — Blender's frame agrees with the file's convention, 
 `tests/blender_export.py` subdivides a part from 805 vertices to 2,637 and checks the result.
 
 Whenever geometry moves, each part's sphere and box are refitted, and so are the model's. Culling
-reads them, so a stale one makes a part vanish in game. Nothing is refitted when nothing moved, which
-is what keeps the untouched round trip byte-exact.
+reads them, so a stale one makes a part vanish in game. Every node's `extent` follows the model's
+sphere, as its radius squared. Nothing is refitted when nothing moved, which is what keeps the
+untouched round trip byte-exact.
 
 What it cannot do yet:
 

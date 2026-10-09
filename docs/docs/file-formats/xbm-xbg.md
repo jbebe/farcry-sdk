@@ -260,7 +260,8 @@ the drift. The exceptions:
   `0x000000FF`
 - six more that do not match, `w2c4_breakpce_02` among them with `2.3e14`
 
-Whether the engine reads the value was not checked.
+Whether the engine reads the value was not checked. JackAll carries it as it shipped, and BlenderFC2's
+export rewrites every node's value with the new radius squared whenever it refits the sphere.
 
 ## The `.xbm` body, and writing one back
 

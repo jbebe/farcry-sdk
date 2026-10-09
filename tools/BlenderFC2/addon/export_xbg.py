@@ -217,6 +217,9 @@ def refit_bounds(mesh):
         fitted = _bounds(placed)
         mesh["sphere"] = fitted[:4]
         mesh["box"] = fitted[4:]
+        extent = fitted[3] ** 2
+        for node in mesh["nodes"]:
+            node["extent"] = extent
 
 
 def _bounds(points):

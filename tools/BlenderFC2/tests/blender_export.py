@@ -175,6 +175,9 @@ def topology_change(label, game_path, directory):
         if any(not low[a] - 1e-3 <= point[a] <= high[a] + 1e-3 for a in range(3)):
             errors += fail("%s: a vertex sits outside the part's refitted box" % label)
             break
+    squared = written["mesh"]["sphere"][3] ** 2
+    if any(abs(node["extent"] - squared) > 1e-6 * squared for node in written["mesh"]["nodes"]):
+        errors += fail("%s: a node's extent did not follow the refitted sphere" % label)
     if not errors:
         print("%s: %d vertices became %d, bounds refitted" % (label, before, grown))
     return errors
