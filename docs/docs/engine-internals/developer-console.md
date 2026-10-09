@@ -274,9 +274,14 @@ These are the names that reach nothing:
 | `hack_draw_counters` | Registered as a variable with no reader anywhere in either build. |
 | `set_weather`, `set_windForce`, `set_windDir`, `set_stormFactor`, `set_weatherHour`, `set_weatherTimeScale`, `debug_showWeatherInfo`, `debug_envNetwork`, `gfx_EnableManualWeatherDemo` | Static `CVarCommand` objects belonging to the environment manager. Their values are written once by the static initialiser and read by nothing, in both builds. The live routes are the `env_*` settings and `CDynamicEnvironmentManager`'s own Lua methods. |
 
-`set_health` is a subtler case: the handler runs, but it passes the value to the health component's
-vtable slot `+0x10` with two `0xffffffff` sentinels and a constant hash, which is a stim rather than
-an assignment — matching the live result that every value tested kills.
+`set_health` is a subtler case. The handler runs and assigns the value directly, yet every value
+tested kills. On GOG the handler (`0x10700180`) calls the health counter's vtable slot `+0x10`, which
+is `CCounter::SetCurrentValue(float, EntityId instigator, CStringID reason)` in the server's symbols
+(that build's slot `+0x14`, one slot later as elsewhere). The function clamps to the counter's
+maximum, stores the instigator, writes the value and sends a `CCounterEvent` to the owner and its
+script callback. The two `0xffffffff` words are an invalid instigator id. The hash `0x59f2984f` is
+the default reason, which `CCounter::SetMaxValue` and `CFCXCountersComponentPlayer::SetHealth` pass
+too **(RE-verified)**. Why a direct assignment kills is open; see Unknowns.
 
 Most of the rest do work. The cheats, the `env_*` time and wind values, the buddy and mission
 setters, the camera nudges, the RealTree effects, `teleport_to_current_objective`, `hit_me`,
@@ -348,7 +353,7 @@ Two startup hooks exist:
 | `console_dump_elements` | `unknown command` — developer-gated. With the gate lifted it runs and writes 416 command names to `ConsoleElementsDump.txt` |
 | `#Game:AddDiamonds(500)` | Works; diamond count increases |
 | `#CDynamicEnvironmentManager_GetInstance():SetScriptedTimeOfDay(h, m)` | Works; time of day changes immediately |
-| `#Game:SetHealth(100)`, `(25)`, `(0.5)` | All kill the player. The handler reads a **float** defaulting to `1.0f`, so the argument is a 0.0–1.0 fraction rather than a percentage — but partial values still kill, so the working range is not established |
+| `#Game:SetHealth(100)`, `(25)`, `(0.5)` | All kill the player. The handler reads a **float** defaulting to `1.0f` and assigns it to the health counter directly, so the working range is not established |
 | `#Game:ChangeFOV(n)` | A **preset index, not degrees**: `-1` default, `1` narrow, `2` wide, `3` very wide. `100` is rejected |
 | `#System:Log("…")` | No visible effect — the binding exists, the sink does not |
 | `#SwitchCamera(…)` | Silent no-op, no error — see below |
@@ -405,10 +410,10 @@ may still be reachable, because the name it answers to can live in the data. A D
 
 - Whether the *ghost* camera can be activated the same way the free camera can. `SwitchCamera` stays
   ruled out from the console, and whether a Domino box can drive it is untested.
-- The working range for `Game:SetHealth`. The handler reads a float defaulting to `1.0f`, which
-  implies a 0.0–1.0 fraction, yet `0.5` still kills. The value is passed on with two `0xffffffff`
-  sentinels and a constant hash (`0x59f2984f`), suggesting it routes through the stim/damage system
-  rather than writing a health field directly — which would explain why no partial value survives.
+- The working range for `Game:SetHealth`. The handler reads a float defaulting to `1.0f` and writes
+  it with `CCounter::SetCurrentValue`, a plain clamped assignment whose default maximum is `100.0`.
+  Yet `100`, `25` and `0.5` all kill. The `CCounterEvent` it sends is the likely place, but the GOG
+  handler for it (`0x10703940`) shows no obvious death path.
 - Whether `-exec` and the `ConsoleCommands` config section function in retail; both are traced but
   neither has been run.
 - The context mask semantics of `element+0x3c` versus `console+0x64`. The console starts at `1`, and
