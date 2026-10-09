@@ -23,5 +23,6 @@
         'map-links-prefabs'
         'missions'
         'animations'
+        'ai'
     )
 }
