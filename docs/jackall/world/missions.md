@@ -30,7 +30,7 @@ The line at the top counts the mission's boxes and wires. "twin: all 288 fires m
 checked its graph against the `.debug.lua` file next to the script, which records what the original
 graph did, and they agree. Then:
 
-- **Fit** (1) zooms to show the whole graph. Scroll to zoom and drag to move around; the small map
+- **Fit** (1) zooms to show the whole graph. Scroll to zoom and drag with the right mouse button to move around; the small map
   at the top right shows where you are.
 - **Focus** (2) dims everything more than 1, 2, 3 or 5 wires away from the selected box, so you can
   follow one thread through a big mission.
