@@ -217,7 +217,7 @@ Off-the-shelf Microsoft/legacy redistributables — no FC2-specific content.
 
 ## 15. Localization Resources — Out of scope
 
-Per-language UI resource folders for the launcher/benchmark tooling (distinct from in-game text, which lives inside `sound_english.*`/worlds data as subtitle strings).
+Per-language UI resource folders for the launcher/benchmark tooling (distinct from in-game text, which lives in each language's `oasisstrings.rml` — subtitles in its `Subtitles` section, keyed by the decimal sound id).
 
 - `bin/Resources/{cs,de,es,fr,it,nl,pl,ru,uk,us}/`
 

@@ -186,8 +186,9 @@ in one world — with the parent/child relation spelled out:
 
 The child list is **wider than the tail**: three banks resident against one dispatched to. The tail is
 the immediate play list; `depload` is the transitive set the event can reach (`00449311`'s own word[2]
-points at `004e1b35`, and `804e1b35` is that id's localized variant — the high-bit form from the
-[loading pipeline](#loading-pipeline)). It matches the corpus from the other side too: the three banks
+points at `004e1b35`, and `804e1b35.spk` is the bank holding `004e1b35` itself: each of the 353 retail
+banks whose name has bit 31 set holds the record named by the same id without it **(seen in data)**).
+It matches the corpus from the other side too: the three banks
 listed here are exactly the three whose record preambles carry `0x004BF5EA` — see
 [preamble words](#preamble-words-and-the-extra-field).
 

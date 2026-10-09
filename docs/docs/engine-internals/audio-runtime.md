@@ -686,7 +686,7 @@ parameter. `GetMultiLayer` matches the parameter id against the archetype's `snd
 | `sndmlThrustPedalSoundMultilayer` | `0x0044F4D0` | 0–100 | the physics pedal (−1…1), clamped to 0…1, × 100 |
 | `sndmlExtraTorqueSoundMultilayer` | `0x0044025B` | 0–100 | the physics `GetCurrentExtraClimbFactor` × 100 |
 | `sndmlWheelSlipSoundMultilayer` | `0x00440257` | 0–15 | the largest slip speed of any wheel on the ground, √(side² + forward²) |
-| `sndmlDamageSoundMultilayer` | `0x00450C23` | 0–100 | a value from the vehicle's physics component × 100 |
+| `sndmlDamageSoundMultilayer` | `0x00450C23` | 0–100 | the vehicle's health × 100 — 100 new, 0 broken (`0x10105360` in the GOG build) |
 
 The ranges are the ones declared in `7fffffff.bao`. Speed is an unsigned magnitude, so reversing
 sounds like driving forward, and a car in the air keeps the speed it had.
@@ -742,7 +742,8 @@ over the whole RPM range by a 2-point curve. The Land Rover's `sndEngineLoop` (`
 
 - one loop that fades in with RPM, pitched 0.90 at 0 RPM to 1.08 at 10,000;
 - one loop that fades in with speed, pitched 0.85 to 1.13 by RPM;
-- a damage layer that fades out as damage rises.
+- a damage layer at full volume on a wrecked car that fades out as its health rises, silent above about
+  56%.
 
 Its `sndThrustPedal` (`0x0044F150`) is a multilayer inside a multilayer: throttle drives the inner
 layer's volume and pitch, and the outer layer fades it out above 15 m/s. Across all vehicle banks, pitch
