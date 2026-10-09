@@ -138,6 +138,16 @@ and sub-state 3's wait.
 - **The `-load` option** uses `CFCXGOBuilderSingleLoad`, which adds `CFCXLoadGameStartOperation`;
   see [the command line](./command-line-args.md#save-loading---load).
 
+## Taking the waits out
+
+DevTools' **Fast loading** option removes the fixed waits above (`mods/DevTools/src/options/fast_loading.cpp`):
+
+- The request thread checks again at once instead of sleeping.
+- The shader budget is raised to 1,000, and the second camera pass is skipped.
+- An offline session deletes without its linger.
+- Continue starts as soon as the save is read.
+- An unplugged gamepad is polled every two seconds.
+
 ## Unknowns
 
 - How long any step takes. Nothing here was timed.

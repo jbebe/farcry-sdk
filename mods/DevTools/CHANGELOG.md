@@ -6,6 +6,14 @@ Notable changes to DevTools, loosely following
 ## [Unreleased]
 
 ### Added
+- **Fast loading** option, on by default. A save load stops waiting for things a single-player
+  reload never needs:
+  - the request thread's sleep between passes, on four or more processors
+  - a 10-a-frame shader budget, raised to 1,000
+  - the renderer's second camera pass
+  - the session delete's one-second linger
+  - Continue's 1.5 s pause
+  - polling an unplugged gamepad on every frame
 - First release. DevTools is the developer half of what UFCP was carrying, split into a plugin of
   its own: UFCP is what a player installs, this is what a modder or a reverse engineer installs.
 - **Savegame launch** fix. `-load <name>.sav` quit to desktop instead of booting straight into the

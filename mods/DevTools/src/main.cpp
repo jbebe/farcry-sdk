@@ -40,6 +40,7 @@ void InstallInvincibilityHooks();
 void InstallInfiniteAmmoHooks();
 void InstallDiamondsHooks();
 void InstallSkipSystemDetectionHook();
+void InstallFastLoadingHooks();
 
 namespace {
     // One callback for every option: which one it is arrives as the userdata FCSE hands back.
@@ -142,6 +143,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     DevTools::PawnTick::Install();
 
     InstallSkipSystemDetectionHook();
+    InstallFastLoadingHooks();
     RegisterOptions(api);
 
     return true;

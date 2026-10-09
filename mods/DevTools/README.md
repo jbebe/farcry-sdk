@@ -21,10 +21,10 @@ Applied unconditionally, with no setting.
 One row each in the Mod Configuration Menu, saved under `[DevTools]` in `bin\fcse.ini`. FCSE owns
 the stored value, so whatever you set survives a relaunch.
 
-**Four are on out of the box** — the developer console, the FPS readout, the startup skip and the
-free camera on `F2` — because they are what the plugin is installed for. **Everything that changes
-how the game plays is off**: god mode, infinite ammo, unlocked weapons and diamonds. So installing
-DevTools opens the game up without altering a playthrough until you ask it to.
+**Five are on out of the box** — the developer console, the FPS readout, the startup skip, fast
+loading and the free camera on `F2` — because they are what the plugin is installed for.
+**Everything that changes how the game plays is off**: god mode, infinite ammo, unlocked weapons and
+diamonds. So installing DevTools opens the game up without altering a playthrough until you ask it to.
 
 **Developer console**, off by default, lifts the `ConsoleDeveloperOnly` filter from Far Cry 2's own
 console, which opens on `~` whether DevTools is installed or not. About 57 commands — `load_level`, `set_health`,
@@ -82,6 +82,22 @@ worth a risk no player should be asked to take.
 
 The probe runs once and early, before the menu, so switching this on has no effect on the launch you
 are in — it is saved and applies to the next one. The log says as much.
+
+**Fast loading**, on by default, takes out the waits a save load spends doing nothing. None of them
+changes what loads; they only stop the game waiting for things a single-player reload never needs:
+
+- **The request thread** stops sleeping between passes while a loading screen is up, so the files
+  arrive as fast as the disk can serve them. It keeps one core busy while loading, so it applies only
+  with four or more processors.
+- **Shaders** are created 1,000 a loading-screen frame instead of 10.
+- **The renderer's second camera pass** is skipped, because the shaders it waits for are already made.
+- **Deleting the session** no longer lingers a second for clients an offline session never has.
+- **Continue** no longer waits 1.5 s after the save is read.
+- **An unplugged gamepad** is asked whether it is there every two seconds instead of on every poll,
+  each of which costs a device enumeration.
+
+Each part finds its own site and is left as shipped if it cannot; the log says which. See
+[loading a save](../../docs/docs/engine-internals/loading-a-save.md) for what each wait is.
 
 ## Camera modes
 

@@ -20,6 +20,8 @@ int GetFpsCounter();
 void SetFpsCounter(int value);
 int GetSkipSystemDetection();
 void SetSkipSystemDetection(int value);
+int GetFastLoading();
+void SetFastLoading(int value);
 
 namespace {
     using DevTools::Options::Kind;
@@ -28,10 +30,10 @@ namespace {
     // Display order, which is also the order they appear in fcse.ini. What each one does is in
     // README.md and in the file that implements it.
     //
-    // Four of these default to on, which is the one place DevTools does not leave the game as it
-    // shipped: a developer console, a frame rate readout, a shorter launch and a camera key are what
-    // this plugin is installed for, so having to switch them on before it is useful is friction with
-    // no upside. The cheats all still default to off - those change how the game plays.
+    // Several of these default to on, which is the one place DevTools does not leave the game as it
+    // shipped: a developer console, a frame rate readout, a shorter launch, faster loads and a camera
+    // key are what this plugin is installed for, so having to switch them on before it is useful is
+    // friction with no upside. The cheats all still default to off - those change how the game plays.
     constexpr Option kOptions[] = {
         {"Developer console", Kind::Toggle, 1, 0, 1, &GetDeveloperConsole, &SetDeveloperConsole},
         {"Invincibility", Kind::Toggle, 0, 0, 1, &GetInvincibility, &SetInvincibility},
@@ -43,6 +45,7 @@ namespace {
         {"FPS counter", Kind::Toggle, 1, 0, 1, &GetFpsCounter, &SetFpsCounter},
         {"Skip system detection", Kind::Toggle, 1, 0, 1, &GetSkipSystemDetection,
          &SetSkipSystemDetection},
+        {"Fast loading", Kind::Toggle, 1, 0, 1, &GetFastLoading, &SetFastLoading},
     };
 }
 
