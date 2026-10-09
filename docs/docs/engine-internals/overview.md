@@ -28,9 +28,22 @@ Create Function pass in the GUI first — the MCP tool surface has no "create fu
   powers *Avatar: The Game* (2009) — confirmed at the asset level (shared skeleton/rig tooling works
   across both titles, see [`.xbm`/`.xbg`](../file-formats/xbm-xbg.md)), not confirmed at the
   binary level.
-- **MSVC 2008-era toolchain** (the launcher exe links `MSVCR80.dll`). A real C++ engine core — RTTI,
-  vtables, and class hierarchies throughout, unlike the launcher's flat C-style code. Keep Ghidra's
-  RTTI Analyzer and Demangler on.
+- **Visual C++ 2005 SP1.** The DLL imports `MSVCR80.dll` and `MSVCP80.dll`, and its manifest asks for
+  `Microsoft.VC80.CRT` 8.0.50727.762. The GOG file's PDB path is
+  `d:\CastorVersions\FCX-PC-0053\fcx-branches\milestones-b\bin\Dunia.pdb`, built 2009-05-01.
+- **A C++ engine core whose own classes carry no MSVC RTTI.** Vtables and class hierarchies run
+  throughout, unlike the launcher's flat C-style code. But the 1,240 MSVC type descriptors in the GOG
+  file all belong to libraries:
+  - Magma, 470
+  - Havok, about 373
+  - Ubisoft's online services (`Os`), 240
+  - DemonWare, 98
+  - MassiveAdClient3, 47
+  - a handful from `std` and Gear
+
+  `CEntity`, `CPawnAgent`, `CNomadObject` and every other engine or game class have none; the engine
+  keeps its own `GetHierarchyInfo` type data instead. Ghidra's RTTI Analyzer therefore names
+  middleware, not the game. Measured on the GOG build **(RE-verified)**.
 - **Confirmed exports** (recovered from the launcher's import table — see [launcher
   exe](./launcher-exe.md)): `RunGame(HINSTANCE*, const char*)`, `RegisterGameFunctionProvider(void*)`,
   `AddFunctionCB(void* fn, const char* name)`. Known-good entry points for navigating this DLL, rather
@@ -45,20 +58,28 @@ Create Function pass in the GUI first — the MCP tool surface has no "create fu
   surface](./lua-api-surface.md) for the full exposed API map.
 - **Also links licensed Havok middleware** for physics/animation, confirmed via string: `"Havok
   Physics evaluation key has expired or is invalid...Please contact Havok.com..."` (and an equivalent
-  Havok Animation string) — not a from-scratch physics/animation system.
-  :::note[Community-reported]
-  Community sources give a specific version (Discord): **Havok 5.5.0 r1**. Not
-  cross-checked against the binary by disassembly, but consistent with the evaluation-key string and a
-  useful starting point for `.hkx`/physics RE.
-  :::
+  Havok Animation string) — not a from-scratch physics/animation system. The version is **Havok
+  5.5.0-r1**: the string `Havok-5.5.0-r1` is in the binary, and all 2,745 retail `.hkx` files carry
+  the same version **(RE-verified)**.
+- **The other libraries it links**, with the versions the GOG binary states verbatim:
+
+  | Library | Version string |
+  |---|---|
+  | zlib | `deflate 1.2.3`, `inflate 1.2.3` |
+  | libpng | `1.2.15` |
+  | Lua | `Lua 4.1 (alpha)` |
+  | Gear (Ubisoft's allocators and threads) | `3.10.01` |
+
+  Expat, an LZMA decoder, Ogg/Vorbis, MassiveAdClient3, amBX, PunkBuster, NVAPI and OpenAutomate are
+  present too, with no version string. Bink is a DLL import, `binkw32.dll`.
 - **Architecture picture**: native C++ core for performance-critical systems (weapons, AI, entities) +
   licensed Havok for physics/animation + a genuinely embedded Lua layer scoped to a narrower band of
   designer-tunable behavior (mission sequencing, reinforcement/respawn timers, some sound/music
   triggers) + external `.fcb`/XML data files for stat tuning. Not "everything hardcoded," but nowhere
   near a fully-scripted authoring model either. Three separate extension mechanisms coexist in this one
   binary: the Lua layer above; the pure-native, CRC32-keyed [function-callback
-  registry](./function-registry.md) (unrelated to Lua); and a large flat C export surface (~338
-  `FCE_*`-prefixed functions) the stock map editor drives directly via P/Invoke, not scripting at all
+  registry](./function-registry.md) (unrelated to Lua); and a large flat C export surface (334
+  exported `FCE_*` functions) the stock map editor drives directly via P/Invoke, not scripting at all
   — see [the editor-facing API surface](./editor-api-surface.md).
 
 ### `FarCry2_server` — the Linux dedicated-server build
