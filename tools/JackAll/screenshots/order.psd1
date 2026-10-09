@@ -16,5 +16,6 @@
         'textures'
         'sound-effects'
         'music'
+        'blender'
     )
 }
