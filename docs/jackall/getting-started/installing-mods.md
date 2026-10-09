@@ -65,7 +65,10 @@ later will not give you back a clean game.
 There's always a row called **workspace** at the bottom (3). That's where your own edits go if you
 ever make any. Leave it alone.
 
-If you have more than one mod, the order only matters when two of them change the same thing: the one lower in the list wins. Sky Overhaul, Sound Overhaul and VSS Vintorez don't touch each other, so any order is fine for them.
+If you have more than one mod, the order only matters when two of them replace the same file: the
+one lower in the list wins. Two mods that set the same value differently stop the deploy instead;
+see [Load order, conflicts and plugins](/jackall/managing-mods). Sky Overhaul, Sound Overhaul and
+VSS Vintorez don't touch each other, so any order is fine for them.
 
 ## 4. Deploy
 

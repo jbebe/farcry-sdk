@@ -26,33 +26,40 @@ a single exe. You don't need .NET installed and there is nothing to set up.
 **Just want to install a mod?** [Installing mods with JackAll](/jackall/installing-mods) walks you
 through it step by step, FCSE and its plugins included.
 
+**Making one?** Start with [A tour of the window](/jackall/tour) and
+[Your first mod](/jackall/first-mod), or look up what you want in
+[I want to change…](/jackall/i-want-to-change). The sidebar has a tutorial for every part of JackAll.
+
 Source code: [`tools/JackAll`](https://github.com/jbebe/farcry-sdk/tree/main/tools/JackAll).
 
 ## What it can do
 
 ### Mods
 
-![JackAll's Mods tab](/img/screenshots/jackall-mods-tab.png)
+![JackAll's Mods tab](/img/jackall/managing-mods/01-mods.png)
 
 This is your load order. Mods apply from top to bottom, and if two of them change the same file the
 lower one wins. Every mod has a checkbox, so you can turn one off without deleting it. A mod here is
-just a folder or a zip with game paths inside it (`worlds\world1\generated\…`), which is exactly what
-you get when you unpack an archive, so old community mods work as they are. If a mod is the old kind
-that ships a full replacement `patch.dat` and `patch.fat`, and most FC2 mods are, use **Import legacy
-mod**: it compares that mod to a clean game and keeps only the files it really changed.
+a zip with the game files it changes on their real paths in a `mods\` folder
+(`mods\worlds\world1\generated\…`). If a mod is the old kind that ships a full replacement
+`patch.dat` and `patch.fat`, and most FC2 mods are, use **Import legacy mod**: it compares that mod
+to your game and stages only what it changed into your workspace. See
+[Import an old patch.dat mod](/jackall/legacy-import).
 
 **Deploy mods** builds everything into the game, **Revert to original** puts the clean archive back.
 JackAll saves your original `patch.dat` once as `patch.dat.vanilla`, and every build starts from that
 backup again, never from the file that happens to be there. So building twice gives you the exact
 same bytes, turning a mod off really removes it, and a failed build leaves the game untouched. If
 two mods change different parts of the same file they get merged instead of one of them winning
-silently. **Check for dead edits** finds edits that a later entity library overrides, which is the
-kind of change that looks fine in the tool and does nothing in game. A mod can also carry a
-`plugins\` folder, and that one goes to `bin\plugins\` for [FCSE](/fcse) instead of into the archive.
+silently; if they set the same value differently, **Deploy mods** stops and names it. **Check for
+dead edits** finds edits that a later entity library overrides, which is the kind of change that
+looks fine in the tool and does nothing in game. A mod can also carry a `plugins\` folder, and that
+one goes to `bin\plugins\` for [FCSE](/fcse) instead of into the archive. See
+[Load order, conflicts and plugins](/jackall/managing-mods).
 
 ### Files
 
-![JackAll's Files tab](/img/screenshots/jackall-files-tab.png)
+![JackAll's Files tab](/img/jackall/finding-files/01-filter.png)
 
 All 13 archives merged into one tree, resolved in the same order the game resolves them. Over
 150,000 files, and anything a mod changed is highlighted, so you can see what you actually touched
@@ -60,15 +67,16 @@ instead of guessing. Click a file to preview it, export it, replace it or revert
 can be diffed against the original, and **Export original** always gets you the clean version back.
 The filter box matches any word, and you can narrow it with `ext:`, `arch:` and `hash:`.
 
-More than 50,000 files in the game have no known name, only a hash. You can still mod those. JackAll
-guesses the type from the first bytes, puts them under `_unknown\`, and saves your edit as
-`_hash\<crc32>.<ext>`, which the builder writes back at exactly that hash. Every file also gets a
+A file with no known name, only a hash, can still be modded; the status line counts how many there
+are. JackAll guesses the type from the first bytes, puts them under `_unknown\`, and saves your edit
+as `_hash\<crc32>.<ext>`, which the builder writes back at exactly that hash. Every file also gets a
 references panel: what points at this file, and what this file points at, both clickable. For a file
-nobody can decode, that is usually the only real information you get about it.
+nobody can decode, that is usually the only real information you get about it. See
+[Finding any file](/jackall/finding-files) and [What uses this file?](/jackall/references).
 
 ### The value editor
 
-![The FCB value editor](/img/screenshots/jackall-fcb-editor.png)
+![The FCB value editor](/img/jackall/value-editor/01-layout.png)
 
 Almost everything people want to mod (weapons, AI, prices, vehicles, patrols) sits in `.fcb` files.
 JackAll decodes them into a normal property tree with real field names and types, so you edit values
@@ -79,11 +87,11 @@ you press save.
 When you save, only that one entity piece lands in your workspace, as a small file. That is what
 lets two mods live together; see [How to use](#how-to-use). The
 same editor also opens the `PersistenceDB` inside a savegame, because a save is the same kind of
-file.
+file. See [The value editor in depth](/jackall/value-editor).
 
 ### Textures, audio and models
 
-![Texture, audio and mesh previews](/img/screenshots/jackall-asset-previews.png)
+![The AK-47 model in the Files tab's preview](/img/jackall/previews/01-model.png)
 
 Most file types get a real viewer instead of a hex dump. `.xbt` textures show a preview and split
 into a `.dds` plus a small XML header, and you can build that pair back into a working `.xbt`. `.xbm`
@@ -95,11 +103,13 @@ with the app and converts it to the 48 kHz stereo ogg the engine wants.
 `.spk` banks are grouped, one row per sound with its settings under it, and you can play, export and
 replace the audio in each record. The game uses two codecs in there (ogg vorbis and IMA ADPCM) and
 JackAll figures out which one it's looking at. Everything you change here goes into your workspace
-first. Nothing reaches the game until you press Deploy.
+first. Nothing reaches the game until you press Deploy. See
+[Looking inside any file](/jackall/previews), [Replace a texture](/jackall/textures),
+[Replace a sound effect](/jackall/sound-effects) and [Replace music and speech](/jackall/music).
 
 ### Model export for Blender
 
-![Exporting a model as .fc2model](/img/screenshots/jackall-fc2model-export.png)
+![Exporting a model as .fc2model](/img/jackall/blender/01-export.png)
 
 **Export as .fc2model** on any `.xbg` collects the model, its materials, its textures, the skeleton
 next to it and, if you want, every animation bank that uses it. All of that goes into one file with
@@ -111,11 +121,12 @@ The split is on purpose. JackAll knows the byte layouts, and the Blender add-on
 ([`tools/BlenderFC2`](https://github.com/jbebe/farcry-sdk/tree/main/tools/BlenderFC2)) knows what a
 scene should look like. The add-on has no format code in it at all. In practice this means the art
 half of a custom weapon is one file and one plugin, instead of twenty small scripts. See
-[Adding a weapon](/docs/modding/adding-a-weapon) and [`.fc2model`](/docs/file-formats/fc2model).
+[Edit a model in Blender](/jackall/blender), [Adding a weapon](/docs/modding/adding-a-weapon) and
+[`.fc2model`](/docs/file-formats/fc2model).
 
 ### Map
 
-![The Map tab](/img/screenshots/jackall-map-tab.png)
+![The Map tab](/img/jackall/map-viewer/01-overview.png)
 
 The Map tab loads a world and lets you fly around it in 3D. On the side you get the list of layers a
 FC2 map is built from, and you can toggle each one. The terrain draws with its real textures and its
@@ -141,26 +152,44 @@ events to which, and the inspector adds a link by clicking its target. A prefab 
 and deletes together with its members. Group makes one from the selection, and Save prefab keeps it
 in the library to drag into any world. Check lists what would fail in game before you save, such as
 a character placed where there is no navmesh. Terrain, roads and vegetation are still view only.
+Deploy from the **Mods** tab; the Map tab's own Deploy button doesn't do anything yet. See
+[Explore a world](/jackall/map-viewer), [Move, add and delete objects](/jackall/map-editing) and
+[Links, triggers, lights and prefabs](/jackall/map-links-prefabs).
 
-### Library
+### Archetypes
 
-![The Library tab](/img/screenshots/jackall-library-tab.png)
+![The Archetypes tab](/img/jackall/archetypes/03-dead.png)
 
 Every object placed in the world is a small difference on top of an archetype, and archetypes are
-declared in several libraries that override each other in a fixed order. The Library tab resolves
+declared in several libraries that override each other in a fixed order. The Archetypes tab resolves
 that for you, so the definition you edit is the one the game really reads. If a later library
-overrides it, you see straight away that it's dead instead of losing an hour on it. The whole
-override chain is listed next to the archetype and you can open each layer on its own. Editing opens
-the normal value editor on the piece where the winning definition lives.
+overrides it, you see straight away that it's dead instead of losing an hour on it: **Mods editing
+this** marks each edit **the game reads this** or **dead**. The whole override chain is listed next
+to the archetype and you can open each layer on its own. Editing opens the normal value editor on
+the piece where the winning definition lives. See [Your first mod](/jackall/first-mod) and
+[Which copy does the game read?](/jackall/archetypes)
+
+### Animations and AI
+
+![The AI tab](/img/jackall/ai/01-soldiers.png)
+
+The **Animations** tab shows the rule graph that decides which animation plays when, as tables:
+per situation, the rules the game tries in order, each with its clip and how it plays. The **AI**
+tab collects how soldiers see, shoot and behave: soldier and weapon settings, the curves they name,
+the odds of optional tactics and the brains' own parameters. Both save into your workspace like
+everything else. See [Change which animation plays](/jackall/animations) and
+[Tune the AI](/jackall/ai).
 
 ### Saves
 
-![The Saves tab](/img/screenshots/jackall-saves-tab.png)
+![The Saves tab](/img/jackall/saves/01-list.png)
 
 The Saves tab finds your `.sav` files and shows the in game screenshot, the world, your character
 name, the save time, the DLC it uses and how many objects it stores. The `PersistenceDB` inside opens
 in the same value editor as everything else and writes straight back into the `.sav`, so a value that
-got stuck is fixable without starting the campaign over.
+got stuck is fixable without starting the campaign over. **Purge persisted entities…** writes a copy
+of a save without its stored entities, so the copy picks up your mods, and **Delete…** removes a
+save. See [Savegames](/jackall/saves).
 
 It's also here to explain something that has confused FC2 modders for about fifteen years: a save
 stores values that overlap with almost every entity library, and an `.fcb` mod cannot override what
@@ -169,19 +198,22 @@ nothing, start a new game before you decide the mod is broken.
 
 ### Menus and mission logic
 
-![The .mgb editor and the Domino graph viewer](/img/screenshots/jackall-mgb-domino.png)
+![The .mgb editor](/img/jackall/hud-and-menus/01-editor.png)
 
 `.mgb` files are the game's own UI format. JackAll decodes one into a full tree with a property grid,
 so every widget, action, state and color is reachable. The "Add" list only offers the classes the
 engine itself accepts in that spot, and saving rewrites the whole package, so adding an element or
 declaring a new class is a normal edit instead of an impossible one. This is what makes a custom
-options page inside the game possible at all. See [Magma UI](/docs/category/magma-ui).
+options page inside the game possible at all. See [Edit the HUD and menus](/jackall/hud-and-menus)
+and [Magma UI](/docs/category/magma-ui).
+
+![The Domino graph viewer](/img/jackall/missions/01-graph.png)
 
 Domino is the mission scripting system, and it ships as generated Lua. JackAll rebuilds a script from
 `domino\user\` into the box and wire graph it was made in, lays it out for you, takes the pin names
 from the node scripts and the original names from the `*.debug.lua` file next to it. It's read only:
-you can see what a mission does, but there's no way back to the Lua. It says viewer on purpose, so
-nobody spends an evening editing and then loses it.
+you can see what a mission does, but there's no way back to the Lua. The button that opens it says
+Editor, but nothing you do in it changes the mission. See [Read a mission](/jackall/missions).
 
 ## Format support
 
@@ -239,10 +271,11 @@ work than one person can do, which is exactly why the source is public.
 ## How to use
 
 **First run.** Point JackAll at the folder that has `bin\FarCry2.exe` in it. It checks your archives
-against the hashes of a clean 1.03 install and tells you if something is already different. It still
-works in that case, but then "original" means whatever you gave it. The tool writes three things next
-to the exe: `config.ini` (your game folder and mod list, you can edit it by hand), `data\`
-(dictionaries and caches, don't touch it), and `workspace\`.
+against the hashes of a clean Steam 1.03 install and tells you if something is already different; a
+GOG install passes too. It still works in that case, but then "original" means whatever you gave it.
+The tool writes three things next to the exe: `config.ini` (your game folder and mod list, you can
+edit it by hand), `data\` (the ffmpeg it converts audio with, and your saved prefabs), and
+`workspace\`. See [What JackAll keeps where](/jackall/tour#what-jackall-keeps-where).
 
 **The workspace is where your edits live.** Everything you change inside JackAll, a texture, an
 entity, an applied model, gets written into `workspace\` as a normal file on its real game path. It's
@@ -255,16 +288,21 @@ drop into JackAll or install through Vortex.
 Gibbed way. With Gibbed's tools you convert a whole `.fcb` to XML, edit it, and ship the whole file
 back, which means two mods that both touch the entity library always conflict, even when one changed
 a rifle and the other changed a jeep. JackAll splits the file into one piece per entity and saves
-only that piece, on a path like `entitylibrary.fcb\vehicle\land\jeep.xml`. Two mods on different
+only that piece, on a path like
+`worlds\world1\generated\entitylibrary.fcb\weaponproperties\primary\ak47.xml`. Two mods on different
 entities never meet. Two mods on different fields of the same entity get merged against the original
-version. Only a real conflict, same field with two different values, needs you, and then JackAll
-shows it as a conflict instead of quietly picking one.
+version. Only a real conflict, same field with two different values, needs you: **Deploy mods**
+stops and names the field instead of quietly picking one. The command line builds anyway, keeps the
+later mod's value and warns.
 
 ## CLI
 
 `jackall-cli.exe` is the same thing without a window. It's a separate download, most of the format
 commands don't even need the game installed, and every `mod` command takes `--json`: one JSON object
-on stdout, progress on stderr, so your script never has to read text meant for humans.
+on stdout, progress on stderr, so your script never has to read text meant for humans. Worked
+examples are in [Manage mods from the command line](/jackall/cli-mods),
+[Take features out of an old mod](/jackall/cli-legacy) and
+[Convert game files on the command line](/jackall/cli-formats).
 
 ### Mod commands
 
@@ -296,11 +334,19 @@ jackall-cli mod build --game "C:\Games\Far Cry 2" --layer mods\bettersights --la
 | `fc2model export` / `extract` / `inspect` | Builds a model pack, writes a changed pack back out as game files laid out as a mod layer, or lists what's in a pack |
 | `sbao extract` / `sbao build` | Splits an `.sbao` into `.ogg` plus header, and puts it back together |
 | `spk list` / `spk extract` / `spk import` | Lists a sound bank, pulls one record out as `.ogg`/`.wav`, or replaces one |
-| `xref build` / `xref to` / `xref from` | Indexes every hash reference in the game, then answers what points at a file and what a file points at |
+| `spk decode` / `spk encode` / `spk verify` / `spk new` | A whole bank to XML with its audio and back, a check that a bank rebuilds unchanged, and a new bank from your own audio |
+| `move decode` / `encode` / `clips` / `repoint` / `fragments` and more | The animation graph to XML and back, the clips a weapon plays, a weapon pointed at other clips, and the per-situation pieces a mod ships |
+| `depload decode` / `encode` / `add` / `validate` | A world's dependency list to XML and back, a new resource registered in it, and a check of its order |
+| `ai unpack` / `ai verify` / `ai lint` | A brain's source as XML, a check that brains recompile unchanged, and the parameters a brain sets that the game never reads |
+| `domino check` | Looks for what would break a mission script in game |
+| `shader extract` / `build` / `index` | Splits a shader object into its bytecode and binding table and back; `index` finds the object a shader permutation uses |
+| `sav list` / `sav clean` | Lists your saves, and writes a copy of one without its stored entities |
+| `xref build` / `xref to` / `xref from` / `xref reach` | Indexes every hash reference in the game, then answers what points at a file and what a file points at; `reach` sorts every file into used and unused |
+| `legacy analyze` / `changes` / `check` / `pick` | Lists every change an old mod makes, sorts the changes into features, and builds a layer with only the ones you pick |
 
 ```
 jackall-cli fc2model export graphics/weapons/primary/ak47/ak47.xbg -g "C:\Games\Far Cry 2" --clips
-jackall-cli xref to "graphics\_common\weapons\ak47\ak47_d.xbt" --game "C:\Games\Far Cry 2"
+jackall-cli xref to "graphics\weapons\primary\ak47\ak47_state01_m.xbt" --game "C:\Games\Far Cry 2"
 ```
 
 ### Who it's for
