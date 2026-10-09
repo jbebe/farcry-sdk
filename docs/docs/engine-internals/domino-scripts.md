@@ -265,6 +265,21 @@ become `en_N`/`ex_N`, `_sld_Pin_box_X_N` becomes `_sld_Pin_N`, and sub-graphs na
 includes pooled boxes and the graph's own control-ins. `jackall-cli domino check <extracted>\domino\user`
 repeats the comparison over a full extraction, and `DebugTwinTests` runs it on named fixtures.
 
+### How the engine loads a graph
+
+Nothing in the loader checks that a graph is the one Ubisoft shipped, so an edited file loads as it
+stands **(RE-verified on GOG)**:
+
+- **Source or bytecode.** `lua_loadbuffer` (`0x102BEA10`) treats a buffer whose first byte is
+  `0x1B` as precompiled bytecode and anything else as source. Retail ships only source.
+- **What the file must define.** The graph loader (`0x105EDE60`) executes the buffer and then
+  requires a global `export` table; without one the load fails. It reads `_compilerVersion` and
+  throws the value away. There is no checksum or hash step. 729 of the 732 release graphs under
+  `domino\user\` define both.
+- **Debug twins in saves.** `CDominoComponent::SerializeEvent` (`0x105B3F50`) erases `.debug` from
+  any path that starts with `domino\user` or `domino/user`. A saved event therefore names the
+  release graph, never its twin.
+
 ### Checking a graph before it ships
 
 `jackall-cli domino check` and `jackall-cli mod lint` check user graphs with the rules below. For a graph
