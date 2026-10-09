@@ -74,6 +74,22 @@ Steps 1–8 are generic-engine bring-up; 9–15 are FC2-game bring-up layered on
 gating (10–11) is the cleanest evidence in this function that client and dedicated-server builds share
 one `InitDuniaEngine`, branching only on a handful of flags.
 
+On the PC client, step 8's `CCryEngine::Initialize` (GOG `0x104C2D90`) brings the subsystems up in
+this order, with other managers interleaved between them **(RE-verified on GOG)**:
+
+1. graphics
+2. network
+3. sound, honouring `-nosound` and `-nosndocc`
+4. session
+5. AI
+6. the entity system
+7. physics
+8. `CWorld`, the world loader
+9. the `ConsoleCommands` config section, then the console commands
+10. Massive's in-game advertising, last
+
+The server's order differs: it creates `CWorld` last.
+
 ## The main loop (`CXGame::Run`)
 
 ```
@@ -215,6 +231,23 @@ name string to) give a fixed roster of long-lived worker threads:
 | `CLoadingScreenImpl` | Keeps the loading screen animating during a blocking level load on another thread (`LoadGameFile`/`BlockingLoadGameFile`/`SaveGameFile` also route through named-thread setup, i.e. save/load I/O is its own thread too) |
 | `bdThread` | Bink video decode (matches the Bink video format noted as out-of-scope/third-party in the [file manifest](../modding/file-manifest.md#8-video-bink--out-of-scope)) |
 | Havok internal pool (`hkpMultithreadingUtil::initMultithreading`/`setNumThreads`/`addThread`) | Havok manages its own worker threads separately from `CJobScheduler` |
+
+The PC client names its threads with the same mechanism. The GOG `Dunia.dll` carries these
+thread names:
+
+- `RenderThread`, `RequestThread`, `StreamingThread`, `DecompressionThread`
+- `PhysTimeStep`, `LoadingScreen`, `CJobScheduler_%d`, `MassiveThread`
+- `VoiceThread`, `CTCPLayerThread`, `NetFileServerThread`, `CCommandManagerThread`, `NetThread`,
+  `NetworkThread`, `RemoteObjectThread`
+- `GameFileLoadThread` and `GameFileSaveThread`, each with a blocking variant
+- `MovieFrameSaveThread`, `MovieFrameCompressThread`, `MovieFrameCopyThread`
+- `CMobileEventPollingThread`, `Gear::LeechThread`
+
+How many job workers there are comes from `engine\settings\defaultthreadingconfig.xml`, and the
+`patch` copy overrides `common`'s. Its `JOB_THREADS` asks for cores − 3, clamped to 0..1
+(`0x102B2370`). So there is one worker on four or more cores and none below that. The same file
+enables `RENDER_THREAD` and `PHYSIC_TIMESTEP_THREAD` and sets `PHYSIC_THREADS` to 0. All of this is
+**RE-verified on GOG** and seen in data.
 
 `FatalError::IsSecondaryThreadWaitingForDisplay()`, polled once per frame in `CCryEngine::Update`,
 confirms the engine's crash/error-dialog path is deliberately thread-aware: a background thread can hit
