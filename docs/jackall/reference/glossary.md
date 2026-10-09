@@ -30,6 +30,9 @@ behaviour. [The value editor in depth](/jackall/value-editor#the-layout)
 **Conflict.** Two mods that set the same field to different values. **Deploy mods** stops and names
 it. [When two mods conflict](/jackall/managing-mods#when-two-mods-conflict)
 
+**Container.** A game file JackAll keeps in pieces, such as an entity library, the text table or a
+HUD package, so a mod ships only the pieces it changes. [Containers and fragments](/jackall/fragments)
+
 **Curve.** A setting that maps an input to a value, such as hit chance by distance, as points
 joined by straight lines. [Tune the AI](/jackall/ai#curves)
 
@@ -63,9 +66,9 @@ sender and an **event** on the target. [Links, triggers, lights and prefabs](/ja
 **File override.** A mod's copy of a whole game file. The lowest mod in the list that has one wins.
 [How two mods combine](/jackall/managing-mods#how-two-mods-combine)
 
-**Fragment.** A small file holding one piece of a game file, such as one archetype of an entity
+**Fragment.** A small file holding one piece of a container, such as one archetype of an entity
 library, one area of a menu or one situation of the animation graph. Mods that change different
-pieces of the same file merge. [How two mods combine](/jackall/managing-mods#how-two-mods-combine)
+pieces of the same file merge. [Containers and fragments](/jackall/fragments)
 
 **Hash.** The number the game computes from a file's path, or from a name, and stores instead of the
 text. [What a file's details tell you](/jackall/finding-files#what-a-files-details-tell-you)

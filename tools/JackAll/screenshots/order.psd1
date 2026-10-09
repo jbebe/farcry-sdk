@@ -29,5 +29,6 @@
         'cli-mods'
         'cli-legacy'
         'cli-formats'
+        'fragments'
     )
 }

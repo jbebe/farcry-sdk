@@ -50,6 +50,7 @@ Find what you want to change, and the page that shows how. Every change ends up 
 | Find a file first | [Finding any file](/jackall/finding-files) |
 | Know what uses a file, before I change it | [What uses this file?](/jackall/references) |
 | Replace a whole file of any kind | [Export, replace, mirror and revert](/jackall/export-replace-revert) |
+| Make my mod work next to other mods that change the same files | [Containers and fragments](/jackall/fragments) |
 | Change a value an old save keeps | [Savegames](/jackall/saves) |
 | Keep part of an old mod that ships its own `patch.dat` | [Import an old patch.dat mod](/jackall/legacy-import), [Take features out of an old mod](/jackall/cli-legacy) |
 | Change what the engine itself does | A plugin for FCSE; see [FCSE and plugins](/jackall/installing-mods#fcse-and-plugins) |

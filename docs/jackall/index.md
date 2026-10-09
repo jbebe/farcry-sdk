@@ -293,7 +293,8 @@ only that piece, on a path like
 entities never meet. Two mods on different fields of the same entity get merged against the original
 version. Only a real conflict, same field with two different values, needs you: **Deploy mods**
 stops and names the field instead of quietly picking one. The command line builds anyway, keeps the
-later mod's value and warns.
+later mod's value and warns. Entity libraries aren't the only files kept in pieces; see
+[Containers and fragments](/jackall/fragments).
 
 ## CLI
 

@@ -29,8 +29,9 @@ stages the changes into your **workspace** (2) and lists them on the right (3). 
 ![Skip Intro imported into the workspace](/img/jackall/legacy-import/01-imported.png)
 
 A file that splits into pieces, like an entity library or an input map, comes in as only the pieces
-the mod changed. A file the import can only take whole is listed in a notice, because a whole file
-outranks every other mod that changes it instead of merging with them:
+the mod changed (see [Containers and fragments](/jackall/fragments)). A file the import can only take
+whole is listed in a notice, because a whole file doesn't merge: it replaces other mods' whole copies
+of it.
 
 ![The notice about a file taken whole](/img/jackall/legacy-import/02-whole-file.png)
 

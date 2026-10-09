@@ -1,6 +1,6 @@
 ---
 slug: /sharing-a-mod
-sidebar_position: 5
+sidebar_position: 6
 title: Package and share your mod
 description: Turn your JackAll workspace into a mod zip other players can install with JackAll or Vortex
 ---

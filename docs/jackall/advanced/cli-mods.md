@@ -46,7 +46,8 @@ Mod layer (52 file(s))
 ```
 
 **File overrides** replace a whole game file, **.fcb fragments** change one entry of a game file and
-merge with other mods. A mod with an FCSE plugin counts it under **plugin files**:
+merge with other mods (see [Containers and fragments](/jackall/fragments)). A mod with an FCSE plugin
+counts it under **plugin files**:
 
 ```
 > jackall-cli mod inspect flashlight-1.1.1.zip --game "C:\Games\Far Cry 2"

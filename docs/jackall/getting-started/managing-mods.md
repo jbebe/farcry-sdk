@@ -49,6 +49,9 @@ mod with the original game and combines the differences:
 - Two mods that change **the same field to different values** are a real conflict. JackAll won't
   guess which one you meant.
 
+Entities aren't the only files kept in pieces. Which files are, and how to make your mod work next to
+others, is on [Containers and fragments](/jackall/fragments).
+
 ## When two mods conflict
 
 Click **Deploy mods** with both test mods ticked, and the build stops. The message names the mod,
