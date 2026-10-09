@@ -456,7 +456,7 @@ function Open-FilesFolder([string]$Path) {
         param([int]$depth)
         $scope = $tree
         for ($i = 0; $i -le $depth; $i++) {
-            $scope = Find-Ui -Scope $scope -Type TreeItem -Name $parts[$i] -Children
+            $scope = Get-UiItem $scope $parts[$i]
         }
         $scope
     }

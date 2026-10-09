@@ -8,5 +8,6 @@
         'finding-files'
         'references'
         'export-replace-revert'
+        'archetypes'
     )
 }
