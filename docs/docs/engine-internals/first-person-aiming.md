@@ -94,6 +94,19 @@ in as the scope comes up.
 field of view at `+0x30`. A debug field of view at `+0x10C` takes both instead while it is above
 nought. `Update` reads these through its own `this`, the component's second base, 4 bytes on.
 
+The console variable `gfx_widescreenmode` decides which way that angle is applied to a wide screen.
+With `x` and `y` the half-extents of the projection at unit distance and `fov` the camera's angle
+(`0x103ff2c0` in the GOG build, **RE-verified**):
+
+| Mode | Projection |
+|---|---|
+| 0 (default) | `x = tan(fov/2)`, `y = x / aspect` — the angle is horizontal |
+| 1 | `y = tan(fov/2) · 0.75`, `x = y · aspect` — the angle is a 4:3 screen's horizontal one |
+| 2 | `y = tan(fov/2) · 0.5625`, `x = y · aspect` — the angle is a 16:9 screen's horizontal one |
+
+Any other value leaves the projection unchanged. The render profile's `ForceWidescreen` letterboxes a
+screen narrower than 16:9 into a centred 16:9 band.
+
 ### From the console
 
 The retail Lua bindings `Game:SetFPCameraOffsetX/Y/Z` (`0x1070C2E0` for X) set one axis of

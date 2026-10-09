@@ -9,16 +9,32 @@ Confirmed against retail Far Cry 2 (GOG v1.03, `fc2_103_retail`). The addresses 
 see [the overview](./overview.md) for binary identification.
 :::
 
-Far Cry 2 draws with Direct3D 9 and reads the player with DirectInput 8. Neither is negotiable from
-outside: both are chosen in `Dunia.dll` before any plugin gets a say.
+Far Cry 2 draws with Direct3D 9 — or 10, where its hardware probe allows — and reads the player with
+DirectInput 8. Both are chosen in `Dunia.dll` before any plugin gets a say.
 
-## Direct3D 9, and a second renderer that is not there
+## Direct3D 9, and a Direct3D 10 renderer it loads itself
 
 `Direct3DCreate9` is a **static import** of `Dunia.dll`, so the D3D9 path is linked in and always
-present. `d3d10` is selectable — `GamerProfile.xml`'s `RenderProfile` carries
-`Platform="d3d9"` and the quality block has a `customd3d10` sibling — but no D3D10 or DXGI symbol is
-imported anywhere in the DLL, so that path is reached, if at all, through code that resolves it
-itself.
+present. A complete Direct3D 10 backend is there too, though no D3D10 or DXGI symbol is imported: it
+loads its libraries itself. Traced in the GOG build **(RE-verified)**:
+
+- **Choosing it.** `InitDuniaEngine` takes `-3dplatform d3d10` (or `d3d10a`), or, without the switch,
+  the `RenderProfile` `Platform` setting, whose default is `d3d9`. D3D10 is used only if
+  `IsD3D10Supported` (`0x103f8630`) passes: it asks `systemdetection.dll` for adapter 0 and wants
+  field `+8` to be 3. Otherwise the game runs on D3D9 and writes `d3d9` back into the profile.
+- **Loading it.** The backend `LoadLibraryA`s `dxgi.dll`, `d3d10_1.dll` (optional), `d3d10.dll` and
+  `d3dx10_38.dll` and resolves everything with `GetProcAddress` (`0x104116f0`). The device is
+  created as Direct3D 10.1, else through NvAPI where present, else as 10.0. Once D3D10 is chosen there
+  is no fallback to D3D9.
+- **Presenting.** Both backends sit behind the engine's own device class, whose `Present(HWND)` is
+  vtable slot 16 in both (`__thiscall`, `ret 4`): D3D9 `0x10416310` calls
+  `IDirect3DDevice9::Present`, D3D10 `0x10412f10` calls `IDXGISwapChain::Present(SyncInterval, 0)`.
+  A hook on slot 16 of the engine's device sees either; a hook on `IDirect3DDevice9` sees D3D9 only.
+- **V-sync** applies only in fullscreen, on both backends: a window always presents immediately.
+
+So every plugin that works through `IDirect3DDevice9` — the Sky Overhaul, the aiming overhaul,
+DevTools' overlay — does nothing for a player on whose machine the game picked D3D10. Which backend a
+given install actually runs has not been observed in game.
 
 Two windows exist before the game's own, and neither is the one to draw into:
 
@@ -274,15 +290,22 @@ A fake camera component carries copies of that camera at `+0x20` and `+0x3F0`. T
 
 ### Whether there is a render thread
 
-`CThreadingConfig` has a `RENDER_THREAD` entry, `engine\settings\defaultthreadingconfig.xml` ships
-it enabled (`ThreadCnt="1"`), and `Dunia.dll:0x103430A0` reads it and builds a `RenderThread`
-(`0x103B20A0`) when it is nonzero.
+There is. `CThreadingConfig` has a `RENDER_THREAD` entry, `engine\settings\defaultthreadingconfig.xml`
+ships it enabled (`ThreadCnt="1"`), and `Dunia.dll:0x103430A0` reads it and builds a `RenderThread`
+(`0x103B20A0`), a real OS thread. Each frame the main thread's `RunFrame` posts `RenderLoop` to it,
+and the render thread runs `RenderFrame` — which prepares and executes the frame graph — and
+`Present`. The next frame's tick first waits for the previous frame to finish, so the render thread
+draws frame N while the game simulates frame N+1 (traced in the GOG build, **RE-verified**).
 
-Measured, `EndScene` nonetheless runs on **the same thread** as the game's own update: a hook on the
-sky's submission and a hook on `EndScene` report the same thread id. So on
-this build and machine the frame graph is executed inline and a plugin needs no cross-thread
-handling for Direct3D. Do not assume that holds everywhere — publish state across the boundary
-anyway if it is cheap, since the configuration that separates them plainly exists.
+The measurement this page used to give against it — a hook on the sky's submission and a hook on
+`EndScene` report the same thread id — compared two hooks that are both on the render thread: the sky
+is submitted from inside the frame graph's preparation, in the same call that then executes it. A
+plugin that reads game state from a render-side hook reads it one frame late, and needs to publish
+state across the boundary.
+
+While a loading screen is up the render thread runs on its own instead: it redraws the last frame
+about 30 times a second, polling with `Sleep(2)`, and takes no new work from the main thread until
+loading ends.
 
 ### The scene's depth is gone by the time the frame is
 
@@ -667,7 +690,9 @@ matching the rest of the engine's Win32 use (`RegisterClassExA`, `CreateWindowEx
 `PeekMessageA`). Only the ANSI device vtable is ever created, so only `IDirectInputDevice8A` needs
 attention.
 
-The mouse is held **exclusively**, and that has a consequence nothing in the API announces:
+The mouse is held **exclusively** — `SetCooperativeLevel` with `DISCL_EXCLUSIVE | DISCL_FOREGROUND`,
+or non-exclusive with `-noexmouse` or `-nomouse` (`0x102c5e30` in the GOG build, **RE-verified**) — and
+that has a consequence nothing in the API announces:
 
 :::info[Verified in a running game]
 Windows delivers **no mouse button or movement messages** to a window whose mouse is held
@@ -706,12 +731,7 @@ state, and letting go before a reset — in modules that know nothing about the 
 
 ## Unknowns
 
-- Whether the `d3d10` platform is reachable in retail at all, and what resolves it if so. No D3D10 or
-  DXGI import exists, and nothing has been traced loading one.
-- Whether the game ever presents through a swap chain rather than `IDirect3DDevice9::Present`. The
-  device-level hook fires, so if a second path exists it is not the one in use.
-- Which cooperative-level flags the mouse is actually acquired with. The behaviour observed is
-  exclusive, but the `SetCooperativeLevel` call itself has not been read.
+- Which backend a given install runs: whether the D3D10 probe passes on a modern machine.
 - Whether substituting a single-sampled `INTZ` depth surface at creation actually yields readable
   scene depth here. The multisampling that rules out the direct route is measured; the substitution
   is untried, and it would also have to force the colour targets to match.

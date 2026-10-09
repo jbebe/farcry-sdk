@@ -205,13 +205,22 @@ differ only in a define with no effect on the PC build (`TEXKILL`) share one fil
 confirmed for 30 shaders, and it is how a named shader is located at all. Shaders whose option domain
 has no empty case — `cloudlayer`, which requires `LAYER1` or `LAYER2` — correctly have no such entry.
 
-:::note[Open]
-How the engine folds a permutation's `#define`s into the key is not known. Option-bearing
-permutations can be enumerated and their objects read, but not addressed by name. Every scheme tried
-against a known set of keys (chaining or concatenating the option names in bit order or
-alphabetically, XOR or sum of their CRC32s, CRC32 over the 64-bit option mask) reproduces the
-no-option key and nothing else.
-:::
+**An option-bearing permutation keys on the CRC32 of a string built from its options**
+(`BuildPermutationKey`, `0x104267a0` in the GOG build, **RE-verified**):
+
+```
+<shader name>, then for each option the permutation sets, in ascending CRC32 of the option's name:
+    "_" + the option's index in the shader's define list
+    + "-" + (value - 1) + "of" + max      only for an option that has a maximum value
+```
+
+The index counts the shader's `<define>`s in declaration order — the order of the second name list in
+`fastinitdata_d3d9.bin`. A boolean option has no maximum and adds only `_<index>`. So
+`celestialbody_3_4_2_5` is `celestialbody` with `TEXKILL`, `ADDITIVE`, `TOD_COLOR` and `FAKEHDR` set,
+and `burnterrain_0-0of31` to `burnterrain_0-31of31` are the 32 values of a ranged option. Checked
+against the retail `.pso`/`.vso` index: all 26 `celestialbody` permutations and all 32 `burnterrain`
+ones are found **(seen in data)**. How the define list is built for a shader whose defines come through
+`xi:include` or carry a `platform=` attribute (`aaaleaf`, for one) is not checked.
 
 ## What `fastinitdata_d3d9.bin` holds
 
