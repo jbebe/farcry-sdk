@@ -9,7 +9,7 @@ See [the overview](./overview.md) for binary identification and toolchain notes 
 note set.
 :::
 
-Compiled with MSVC 2008 (confirmed via `___tmainCRTStartup` library-function match). This binary is a
+Compiled with Visual C++ 2005: it imports `MSVCR80.dll`, the same runtime as `Dunia.dll`. This binary is a
 thin launcher stub — essentially all real game/engine logic lives in `Dunia.dll`, loaded and driven
 through a handful of imported entry points. There is very little FC2-specific code in the exe itself.
 
@@ -55,31 +55,32 @@ stack cleanup (`ADD ESP, 0x40`/`0x38`) across runs of consecutive calls rather t
 each one individually, characteristic of cdecl caller-side coalescing (a callee-cleans convention like
 stdcall would never produce this).
 
-## Registered debug commands
+## Registered callbacks
 
-Most of these are dead stubs in the retail build — the real implementations likely live elsewhere, or
-these hooks are QA-only and unused in shipped gameplay. Only a handful do real arithmetic. `param_1`/
-`param_2` are raw pointers passed by whatever calls the callback; their target types aren't recovered
-beyond what the decompiler infers.
+These are the `CSecurityManager` copy-protection hooks (see [the function registry](./function-registry.md)):
+the engine passes a deliberately wrong value and the stock handler repairs it, so most of these small
+bodies are load-bearing, not debug leftovers. 13 of the 15 names are invoked by live engine code
+**(RE-verified)**. The table gives what each handler does; the registry page gives what the engine
+does with the result.
 
 | Function (renamed) | Address | Registered name(s) | Behavior |
 |---|---|---|---|
 | `ToRed` | `0x401000` | `toRed` | `*param_1 = 1`. **Tested live in-game**: flipping this to `*param_1 = 0` made all 2D graphics render red-channel-only — a UI/HUD color-channel toggle. See [function registry](./function-registry.md). |
-| `MenuJoke` | `0x401010` | `menuJoke` | `return *param_1`. Trivial passthrough getter. |
-| `LoadGame_Stub` | `0x401020` | `mapJoke`, `LoadGame` | `return 1`, no params. Pure stub — real load logic lives inside `Dunia.dll`. |
-| `SelectStoryMission` | `0x401030` | `SelectStoryMission` | `return *param_1 + 10`. Mission-ID offset. |
-| `SelectLibraryMission` | `0x401040` | `SelectLibraryMission` | `return *param_1 + 0x15` (21). Mission-ID offset. |
-| `MalariaCurve` | `0x401050` | `MalariaCurve` | `*param_1 *= 60.0f`, the float at `0x4020fc`. In-place curve multiplier — a candidate for a "reduce malaria mechanic" tweak if the constant is patchable. |
-| `AddDiamond` | `0x401070` | `AddDiamond` | `*param_1 += *param_2`. Accumulator (diamond-case pickup count). |
-| `SetDefaultTimeOut` | `0x401080` | `SetDefaultTimeOut` | `*param_1 = *param_2`. Plain copy. |
-| `SetLoadingText` | `0x401090` | `SetLoadingText` | `*param_1 = 0` (16-bit write). Clears/null-terminates a text buffer. |
-| `PlayerSPFinalize` | `0x4010a0` | `PlayerSPFinalize` | `*param_1 = 1.0f`, the dword `0x3F800000` at `0x402100`. |
-| `InitializeUseableEvent_Stub` | `0x4010c0` | `InitializeUseableEvent`, `CheckDomino` | `*param_1 = 1` (byte write). Pure stub. |
-| `SaveGame_Stub` | `0x4010d0` | `incHB`, `SaveGame` | `return 0`, no params. Pure no-op — real save logic lives inside `Dunia.dll`. |
+| `MenuJoke` | `0x401010` | `menuJoke` | `return *param_1`: hands back the Story Mode page the main menu passes in. |
+| `LoadGame_Stub` | `0x401020` | `mapJoke`, `LoadGame` | `return 1`: lets a save load and a map marker spawn. |
+| `SelectStoryMission` | `0x401030` | `SelectStoryMission` | `return *param_1 + 10`: undoes the engine's −10 on the completed-story-mission count. |
+| `SelectLibraryMission` | `0x401040` | `SelectLibraryMission` | `return *param_1 + 0x15` (21): the same for library missions. |
+| `MalariaCurve` | `0x401050` | `MalariaCurve` | `*param_1 *= 60.0f`, the float at `0x4020fc`: turns the three malaria time curves from minutes into seconds. |
+| `AddDiamond` | `0x401070` | `AddDiamond` | `*param_1 += *param_2`: adds a pickup to the diamond wallet. |
+| `SetDefaultTimeOut` | `0x401080` | `SetDefaultTimeOut` | `*param_1 = *param_2`. Never invoked. |
+| `SetLoadingText` | `0x401090` | `SetLoadingText` | `*param_1 = 0` (16-bit write): leaves the loading screen its localized default text. |
+| `PlayerSPFinalize` | `0x4010a0` | `PlayerSPFinalize` | `*param_1 = 1.0f`, the dword `0x3F800000` at `0x402100`: a multiplier the player's damage handling reads. |
+| `InitializeUseableEvent_Stub` | `0x4010c0` | `InitializeUseableEvent`, `CheckDomino` | `*param_1 = 1` (byte write): lets doors be used; `CheckDomino`'s result is ignored. |
+| `SaveGame_Stub` | `0x4010d0` | `incHB`, `SaveGame` | `return 0`: keeps the AI running every frame; `SaveGame` is never invoked. |
 
 Three addresses answer to two registered names each (`LoadGame_Stub`, `InitializeUseableEvent_Stub`,
-`SaveGame_Stub`) — one stub implementation wired to multiple debug-console command names, consistent
-with these being disabled/no-op paths in the shipped build rather than active dispatchers.
+`SaveGame_Stub`): the names share a body because they need the same answer. The two constants were
+read from the GOG and the Steam `FarCry2.exe` and are the same in both; `FCSE.exe` uses them directly.
 
 ## `tools/FCSE`: a reimplementation of this exe's own `WinMain`
 
@@ -126,10 +127,3 @@ launching the game. Two consequences:
 - `lpParameters` is `NULL`: the launcher forwards **no** command-line arguments, so nothing in
   [command-line args](./command-line-args.md) survives a launch made through it.
 - Redirecting what gets launched needs no binary edit — it is the registry's `execPath` value.
-
-Both constants were read from the GOG and the Steam `FarCry2.exe` and are the same in both. `FCSE.exe`
-uses them directly.
-
-## Unknowns
-
-- What `menuJoke` actually gates in the main-menu construction it's called from.
