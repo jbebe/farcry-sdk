@@ -17,5 +17,6 @@
         'sound-effects'
         'music'
         'blender'
+        'hud-and-menus'
     )
 }
