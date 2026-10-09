@@ -53,14 +53,12 @@ public static class VertexEncoder
     public const short PositionW = 1;
     public const byte DirectionW = 128;
 
-    /// <summary>What one vertex of each component holds before anything is written into it.</summary>
+    /// <summary>What one vertex of each component holds before anything is written into it; any other
+    /// component starts zeroed.</summary>
     private static readonly Dictionary<string, byte[]> Defaults = new(StringComparer.Ordinal)
     {
         // Four int16s: x, y, z, then PositionW.
         ["pos"] = [0, 0, 0, 0, 0, 0, 1, 0],
-        ["uv0"] = [0, 0, 0, 0],
-        ["uv1"] = [0, 0, 0, 0],
-        ["uv2"] = [0, 0, 0, 0],
         ["normal"] = [DirectionW, DirectionW, 255, DirectionW],
         ["tangent"] = [255, DirectionW, DirectionW, DirectionW],
         ["binormal"] = [DirectionW, 255, DirectionW, DirectionW],

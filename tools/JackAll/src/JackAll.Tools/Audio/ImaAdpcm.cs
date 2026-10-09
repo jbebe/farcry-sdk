@@ -113,27 +113,32 @@ public static class ImaAdpcm
                 $"TImaAdpcm: IMA-ADPCM version seems to be too old (got {version}, expected {ExpectedVersion}).");
         }
 
-        bool stereo = Channels(stream) == 2;
-        int rawEnd = Math.Min(stream.Length, RawEnd(stereo ? 2 : 1));
-        short[] raw = MemoryMarshal.Cast<byte, short>(stream.AsSpan(HeaderSize, (rawEnd - HeaderSize) & ~1)).ToArray();
+        int channels = Channels(stream);
+        int rawEnd = Math.Min(stream.Length, RawEnd(channels));
+        ReadOnlySpan<short> raw = MemoryMarshal.Cast<byte, short>(stream.AsSpan(HeaderSize, (rawEnd - HeaderSize) & ~1));
+        ReadOnlySpan<byte> body = stream.AsSpan(rawEnd);
+        bool odd = HasOddSample(stream);
+
+        var samples = new short[raw.Length + (body.Length * 2) + (odd ? 1 : 0)];
+        raw.CopyTo(samples);
+        Span<short> decoded = samples.AsSpan(raw.Length, body.Length * 2);
         short predictorA = (short)BinaryPrimitives.ReadUInt16LittleEndian(stream.AsSpan(PredictorAOffset));
         int stepIndexA = stream[StepIndexAOffset];
-
-        var body = stream.AsSpan(rawEnd);
-
-        if (!stereo)
+        if (channels == 1)
         {
-            short[] odd = HasOddSample(stream) ? [BinaryPrimitives.ReadInt16LittleEndian(stream.AsSpan(OddSampleOffset))] : [];
-            return new DecodedAudio { Samples = [.. raw, .. DecodeMono(body, predictorA, stepIndexA), .. odd], Channels = 1 };
+            DecodeMono(body, decoded, predictorA, stepIndexA);
+        }
+        else
+        {
+            short predictorB = (short)BinaryPrimitives.ReadUInt16LittleEndian(stream.AsSpan(PredictorBOffset));
+            DecodeStereoInterleaved(body, decoded, predictorA, stepIndexA, predictorB, stream[StepIndexBOffset]);
+        }
+        if (odd)
+        {
+            samples[^1] = BinaryPrimitives.ReadInt16LittleEndian(stream.AsSpan(OddSampleOffset));
         }
 
-        short predictorB = (short)BinaryPrimitives.ReadUInt16LittleEndian(stream.AsSpan(PredictorBOffset));
-        int stepIndexB = stream[StepIndexBOffset];
-        return new DecodedAudio
-        {
-            Samples = [.. raw, .. DecodeStereoInterleaved(body, predictorA, stepIndexA, predictorB, stepIndexB)],
-            Channels = 2,
-        };
+        return new DecodedAudio { Samples = samples, Channels = channels };
     }
 
     /// <summary>
@@ -180,7 +185,7 @@ public static class ImaAdpcm
             ? EncodeStereoInterleaved(rest, predictorA, stepIndexA, predictorB, stepIndexB)
             : EncodeMono(rest, predictorA, stepIndexA);
 
-        return [.. header, .. MemoryMarshal.AsBytes(raw).ToArray(), .. body];
+        return [.. header, .. MemoryMarshal.AsBytes(raw), .. body];
     }
 
     /// <summary>The state the nibbles start from: the last raw sample, and the step index the encoder
@@ -198,9 +203,8 @@ public static class ImaAdpcm
 
     /// <summary>Mono block decode - byte-for-byte port of `Dunia.dll`'s `0x10a85150`: each input byte
     /// yields two output samples, high nibble first.</summary>
-    private static short[] DecodeMono(ReadOnlySpan<byte> data, int predictor, int stepIndex)
+    private static void DecodeMono(ReadOnlySpan<byte> data, Span<short> samples, int predictor, int stepIndex)
     {
-        var samples = new short[data.Length * 2];
         int step = StepTable[stepIndex];
 
         for (int i = 0; i < data.Length; i++)
@@ -211,17 +215,14 @@ public static class ImaAdpcm
             (predictor, stepIndex, step) = DecodeNibble(b & 0xf, predictor, stepIndex, step);
             samples[i * 2 + 1] = (short)predictor;
         }
-
-        return samples;
     }
 
     /// <summary>Stereo decode - byte-for-byte port of `Dunia.dll`'s `0x10a85240`: each input byte's
     /// high nibble is channel A's next sample and low nibble is channel B's, so the output is already
     /// interleaved `L,R,L,R,...` one frame per input byte ("4 bits separate" per-channel encoding).</summary>
-    private static short[] DecodeStereoInterleaved(
-        ReadOnlySpan<byte> data, int predictorA, int stepIndexA, int predictorB, int stepIndexB)
+    private static void DecodeStereoInterleaved(
+        ReadOnlySpan<byte> data, Span<short> samples, int predictorA, int stepIndexA, int predictorB, int stepIndexB)
     {
-        var samples = new short[data.Length * 2];
         int stepA = StepTable[stepIndexA];
         int stepB = StepTable[stepIndexB];
 
@@ -233,8 +234,6 @@ public static class ImaAdpcm
             (predictorB, stepIndexB, stepB) = DecodeNibble(b & 0xf, predictorB, stepIndexB, stepB);
             samples[i * 2 + 1] = (short)predictorB;
         }
-
-        return samples;
     }
 
     /// <summary>Mono encode - the inverse of <see cref="DecodeMono"/>: two samples packed per output

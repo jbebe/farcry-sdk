@@ -12,11 +12,7 @@ namespace JackAll.Tools.Sav;
 /// <see cref="FcbBlobOffset"/> and hand the rest of the stream to <see cref="Fcb.FcbDocument"/>.
 /// </summary>
 /// <remarks>
-/// Field layout confirmed byte-for-byte against a real save file via GhidraMCP, decompiling
-/// `FarCry2_server`'s (the Linux dedicated-server binary, see reverse/dunia/overview.md) unstripped
-/// `CGameFileHeader`/`CCampaignGameFileHeader`/`CScreenShot`/`CCampaignGameFileData` classes — see
-/// reverse/dunia/savegame_format.md for the full derivation, including which fields below are still
-/// unconfirmed (flagged in that doc; not re-litigated in code comments here beyond a pointer).
+/// Layout: docs/docs/file-formats/savegame.md.
 /// </remarks>
 public sealed class SaveGameInfo
 {
@@ -30,12 +26,10 @@ public sealed class SaveGameInfo
     /// <summary>Campaign completion, 0 to 100.</summary>
     public required uint CompletionPercent { get; init; }
 
-    /// <summary>The difficulty, 0 (Casual) to 3 (Infamous).</summary>
+    /// <summary>The difficulty, 0 (Easy) to 3 (Infamous).</summary>
     public required uint Difficulty { get; init; }
 
-    public string DifficultyName => Difficulty < DifficultyNames.Length ? DifficultyNames[Difficulty] : $"difficulty {Difficulty}";
-
-    private static readonly string[] DifficultyNames = ["Casual", "Experienced", "Hardcore", "Infamous"];
+    public string DifficultyName => Tools.Difficulty.NameOf(Difficulty);
 
     /// <summary>Thumbnail dimensions in pixels.</summary>
     public required int ThumbnailWidth { get; init; }
@@ -47,7 +41,7 @@ public sealed class SaveGameInfo
     public required IReadOnlyList<string> ActiveDlcIds { get; init; }
 
     /// <summary>
-    /// The `totalObjectCount` header field of this save's embedded PersistenceDB `.fcb` dump — a
+    /// The `objectCount` header field of this save's embedded PersistenceDB `.fcb` dump — a
     /// rough proxy for "how much of the game world this save has permanently recorded state for", not
     /// a precise one. Entities never persisted here still spawn fresh from the game's *current*
     /// entitylibrary.fcb every time it's loaded; entities that ARE counted here keep whatever specific
@@ -68,8 +62,9 @@ public static class SaveGameDocument
 {
     private const uint FcbMagic = 0x4643626E; // "FCbn", little-endian — Fcb_MagicConstant()
 
-    // The base header's version, and its type: CRC32("CCampaignGameFile"). The engine rejects any other.
-    private const uint Version = 10, CampaignGameFileType = 0x63AF73F3;
+    // The engine rejects a base header with any other version or type.
+    private const uint Version = 10;
+    private static readonly uint CampaignGameFileType = FcbClassDefinitions.Crc32Ascii("CCampaignGameFile");
 
     public static SaveGameInfo Read(string path)
     {
@@ -151,14 +146,14 @@ public static class SaveGameDocument
         using var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true);
 
         // Section 1 — CGameFileHeader base: version, type, then the player's position (3 floats).
-        byte[] baseHeader = ReadExactly(reader, 20, path, "the base header");
-        uint version = BitConverter.ToUInt32(baseHeader, 0);
-        uint type = BitConverter.ToUInt32(baseHeader, 4);
+        uint version = reader.ReadUInt32();
+        uint type = reader.ReadUInt32();
         if (version != Version || type != CampaignGameFileType)
         {
             throw new InvalidDataException(
                 $"'{path}' is not a campaign save (version {version}, type 0x{type:x8}).");
         }
+        ReadExactly(reader, 12, path, "the player position");
 
         // Section 2 — CCampaignGameFileHeader extension.
         string worldName = ReadLengthPrefixedString(reader, path);
@@ -190,7 +185,7 @@ public static class SaveGameDocument
         {
             dlcIds.Add(ReadLengthPrefixedString(reader, path));
         }
-        RequireBytes(reader, 4, path, "the gamer-profile value before the embedded .fcb blob");
+        reader.ReadUInt32();
 
         long fcbOffset = reader.BaseStream.Position;
         uint magic = reader.ReadUInt32();
@@ -201,7 +196,7 @@ public static class SaveGameDocument
         }
         reader.ReadUInt16(); // version — always 2, not checked here; Fcb.FcbDocument validates it if the caller decodes the blob
         reader.ReadUInt16(); // flags
-        uint totalObjectCount = reader.ReadUInt32();
+        uint objectCount = reader.ReadUInt32();
 
         return new SaveGameInfo
         {
@@ -215,7 +210,7 @@ public static class SaveGameDocument
             ThumbnailHeight = height,
             ThumbnailPixels = pixels,
             ActiveDlcIds = dlcIds,
-            PersistedObjectCount = totalObjectCount,
+            PersistedObjectCount = objectCount,
             FcbBlobOffset = fcbOffset,
         };
     }
@@ -230,8 +225,6 @@ public static class SaveGameDocument
         return Encoding.UTF8.GetString(bytes);
     }
 
-    private static void RequireBytes(BinaryReader reader, int count, string path, string what)
-        => ReadExactly(reader, count, path, what);
 
     private static byte[] ReadExactly(BinaryReader reader, long count, string path, string what)
     {

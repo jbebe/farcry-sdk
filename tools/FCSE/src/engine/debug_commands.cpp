@@ -7,10 +7,6 @@
 namespace FCSE {
 
 namespace {
-    // FarCry2.exe's constants at 0x4020fc and 0x402100, the same in the GOG and Steam launchers.
-    constexpr float kMalariaCurveMultiplier = 60.0f;
-    constexpr float kPlayerSPFinalizeValue = 1.0f;
-
     // FunctionRegistry_Invoke always calls the stored handler with exactly 2 raw args (see
     // docs/docs/engine-internals/function-registry.md's decompiled dispatch): every handler below
     // uses this same 2-parameter shape regardless of how many it actually reads, matching the
@@ -37,8 +33,9 @@ namespace {
         return *reinterpret_cast<int*>(param1) + 0x15;
     }
 
+    // 60.0f is FarCry2.exe's constant at 0x4020fc, the same in the GOG and Steam launchers.
     int __cdecl MalariaCurve(void* param1, void* /*param2*/) {
-        *reinterpret_cast<float*>(param1) *= kMalariaCurveMultiplier;
+        *reinterpret_cast<float*>(param1) *= 60.0f;
         return 0;
     }
 
@@ -57,8 +54,9 @@ namespace {
         return 0;
     }
 
+    // 1.0f is FarCry2.exe's constant at 0x402100, the same in the GOG and Steam launchers.
     int __cdecl PlayerSPFinalize(void* param1, void* /*param2*/) {
-        *reinterpret_cast<float*>(param1) = kPlayerSPFinalizeValue;
+        *reinterpret_cast<float*>(param1) = 1.0f;
         return 0;
     }
 

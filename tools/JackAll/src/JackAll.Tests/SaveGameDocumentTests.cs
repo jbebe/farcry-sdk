@@ -27,7 +27,7 @@ public class SaveGameDocumentTests
         writer.Write((ushort)2);   // version
         writer.Write((ushort)0);   // flags
         writer.Write(persistedObjectCount);
-        writer.Write((uint)0);     // totalValueCount — not read by SaveGameDocument
+        writer.Write((uint)0);     // childSlotCount — not read by SaveGameDocument
 
         return stream.ToArray();
     }

@@ -191,11 +191,19 @@ public sealed class VertexStream
             return null;
         }
 
+        const int slots = VertexEncoder.WeightSlots;
         var out_ = new List<(float, int)>[Count];
         for (int i = 0; i < Count; i++)
         {
+            ReadOnlySpan<byte> vertex = weights.AsSpan(i * 2 * slots, 2 * slots);
             List<(float, int)> pairs = [];
-            AddWeights(pairs, weights, i);
+            for (int slot = 0; slot < slots; slot++)
+            {
+                if (vertex[slot] != 0)
+                {
+                    pairs.Add((vertex[slot] / 255.0f, vertex[slots + slot]));
+                }
+            }
             out_[i] = pairs;
         }
         return out_;
@@ -218,18 +226,6 @@ public sealed class VertexStream
             out_[i] = (Signed(run[(i * 4) + 2]), Signed(run[(i * 4) + 1]), Signed(run[i * 4]));
         }
         return out_;
-    }
-
-    private static void AddWeights(List<(float, int)> pairs, byte[] run, int vertex)
-    {
-        for (int slot = 0; slot < 4; slot++)
-        {
-            byte weight = run[(vertex * 8) + slot];
-            if (weight != 0)
-            {
-                pairs.Add((weight / 255.0f, run[(vertex * 8) + 4 + slot]));
-            }
-        }
     }
 
     private static float Signed(byte value) => (value / 255.0f * 2.0f) - 1.0f;

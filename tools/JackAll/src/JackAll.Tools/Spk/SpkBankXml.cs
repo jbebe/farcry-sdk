@@ -50,23 +50,16 @@ public static partial class SpkBankXml
         }
 
         var bank = new SpkBank { Preamble = ParseIds(root.Attribute("preamble")?.Value) };
-        var wavs = new Dictionary<SpkBankRecord, WavAudio.Pcm16Audio>();
         foreach (XElement element in root.Elements())
         {
             var reader = new AttributeReader(element);
-            SpkBankRecord record = FromElement(reader, readFile, wavs);
+            SpkBankRecord record = FromElement(reader, readFile);
             reader.RejectUnread();
             if (bank.Find(record.Id) is not null)
             {
                 throw new InvalidDataException($"Record 0x{record.Id:x8} appears twice.");
             }
             bank.Records.Add(record);
-        }
-
-        foreach ((SpkBankRecord audio, WavAudio.Pcm16Audio pcm) in wavs)
-        {
-            audio.Data = ImaAdpcm.Encode(pcm.Samples, pcm.Channels);
-            audio.SampleRate = pcm.SampleRate;
         }
         return bank;
     }
@@ -239,8 +232,7 @@ public static partial class SpkBankXml
             : [.. values.Select(v => (uint)Math.Floor(v * SpkLayout.One / total))];
     }
 
-    private static SpkBankRecord FromElement(AttributeReader reader, Func<string, byte[]> readFile,
-        Dictionary<SpkBankRecord, WavAudio.Pcm16Audio> wavs)
+    private static SpkBankRecord FromElement(AttributeReader reader, Func<string, byte[]> readFile)
     {
         XElement element = reader.Element;
         string name = element.Name.LocalName;
@@ -273,7 +265,9 @@ public static partial class SpkBankXml
             record.SampleRate = reader.Optional("rate") is { } rate ? int.Parse(rate, Invariant) : null;
             if (Path.GetExtension(file).Equals(".wav", StringComparison.OrdinalIgnoreCase))
             {
-                wavs[record] = WavAudio.ReadPcm16(bytes);
+                WavAudio.Pcm16Audio pcm = WavAudio.ReadPcm16(bytes);
+                record.Data = ImaAdpcm.Encode(pcm.Samples, pcm.Channels);
+                record.SampleRate = pcm.SampleRate;
             }
             else
             {

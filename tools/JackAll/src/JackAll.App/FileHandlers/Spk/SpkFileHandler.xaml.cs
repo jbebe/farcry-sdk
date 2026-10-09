@@ -397,8 +397,7 @@ public partial class SpkFileHandler : UserControl
             return;
         }
 
-        SpkBankRecord? template = sound.Layout == SpkLayout.Random ? _bank!.TemplateSample(sound) : sound;
-        SpkBankRecord? like = AudioOf(template);
+        SpkBankRecord? like = AudioOf(sound.Layout == SpkLayout.Random ? _bank!.TemplateSample(sound) : sound);
 
         AddVariationButton.IsEnabled = false;
         try

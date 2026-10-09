@@ -15,6 +15,10 @@ public static class SoldierFields
     private static readonly string[] Shooting = [.. Agent, "ShootingSystem"];
     private static readonly string[] Senses = [.. Agent, "SensorySystem"];
     private static readonly string[] Multipliers = [.. Senses, "FOVParameters", "FOVMultipliers"];
+
+    // The engine reads only the DesertFOV cones, in every kind of terrain.
+    private static readonly string[] Focus = [.. Senses, "FOVParameters", "DesertFOV", "FocusFOV"];
+    private static readonly string[] Peripheral = [.. Senses, "FOVParameters", "DesertFOV", "PeripheralFOV"];
     private static readonly string[] Weights = [.. Senses, "VisibilityEvaluatorParameters", "Weights"];
     private static readonly string[] Internals = [.. Senses, "VisibilityEvaluatorParameters", "InternalValues"];
     private static readonly string[] Social = [.. Senses, "SocialMechanic"];
@@ -49,8 +53,10 @@ public static class SoldierFields
         new(Perception, "Standing still factor", "Visibility of a motionless player, relative to a moving one.", Internals, "fSpeedEvaluator_StandingStillVisibilityFactor"),
         new(Perception, "Visibility at cone edge", "Visibility at the side edge of the cone.", Internals, "fFOVEvaluator_VisibilityFactorAtFOVLimit"),
 
-        // The engine reads only the DesertFOV cones, in every kind of terrain.
-        .. Cones("DesertFOV"),
+        new(Vision, "Focus range (m)", "How far he sees straight ahead.", Focus, "fLength"),
+        new(Vision, "Focus angle (°)", "Width of the sharp central cone.", Focus, "fAngle"),
+        new(Vision, "Side range (m)", "How far his peripheral vision reaches.", Peripheral, "fLength"),
+        new(Vision, "Side angle (°)", "Width of the peripheral cone.", Peripheral, "fAngle"),
 
         new(Marksmanship, "Reaction time (s)", "Every shot misses for this long after he picks the player as target. The single biggest lever against instant, aimbot-like hits.", Shooting, "fTimerToMissTarget"),
         new(Marksmanship, "Miss spread, width (m)", "Width of the area around the player where missed shots land.", Shooting, "fMissWidth"),
@@ -101,15 +107,6 @@ public static class SoldierFields
         string where = state == "In a vehicle" ? "in a vehicle" : $"in the {state.ToLowerInvariant()} state";
         yield return new(Detection, $"{state}: senses something at", $"How visible (0-1) the player must be before a soldier {where} starts to notice. Lower detects sooner.", Agent, prefix + "FuzzyVal");
         yield return new(Detection, $"{state}: sees you at", $"How visible (0-1) the player must be before a soldier {where} positively spots him. Lower detects sooner.", Agent, prefix + "ClearVal");
-    }
-
-    private static IEnumerable<TuningField> Cones(string node)
-    {
-        string[] fov = [.. Senses, "FOVParameters", node];
-        yield return new(Vision, "Focus range (m)", "How far he sees straight ahead.", [.. fov, "FocusFOV"], "fLength");
-        yield return new(Vision, "Focus angle (°)", "Width of the sharp central cone.", [.. fov, "FocusFOV"], "fAngle");
-        yield return new(Vision, "Side range (m)", "How far his peripheral vision reaches.", [.. fov, "PeripheralFOV"], "fLength");
-        yield return new(Vision, "Side angle (°)", "Width of the peripheral cone.", [.. fov, "PeripheralFOV"], "fAngle");
     }
 
     private static IEnumerable<TuningField> Status(string who, string node, string whose)

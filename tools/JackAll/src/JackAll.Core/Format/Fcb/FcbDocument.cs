@@ -142,8 +142,9 @@ public static class FcbDocument
                 "not a plain hash - not implemented (no real sample has been seen using it).");
         }
 
-        ReadU32(input); // objectCount - the engine sizes its object pool from these two
-        ReadU32(input); // childSlotCount
+        // objectCount and childSlotCount
+        ReadU32(input);
+        ReadU32(input);
     }
 
     public static byte[] Serialize(FcbObject root)

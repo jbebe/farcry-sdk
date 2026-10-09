@@ -9,7 +9,7 @@ public static class WeaponFields
     private static readonly string[] Shooting = ["CWeaponProperties", "CommonProperties", "AIShootingSystem"];
 
     private static readonly (string Label, string Suffix)[] Difficulties =
-        [("Casual", "Causal"), ("Normal", "Experimented"), ("Hardcore", "Hardcore"), ("Infamous", "Infamous")];
+        [.. Difficulty.Names.Zip(["Causal", "Experimented", "Hardcore", "Infamous"])];
 
     public static IReadOnlyList<TuningField> All { get; } =
     [

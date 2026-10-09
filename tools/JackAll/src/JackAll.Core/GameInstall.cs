@@ -170,17 +170,12 @@ public sealed class GameInstall
                 continue;
             }
 
-            var bigFiles = xml.Descendants("Desc")
+            fats.UnionWith(xml.Descendants("Desc")
                 .Where(desc => (string?)desc.Attribute("name") == "FCXSingle")
                 .Elements("BigFile")
-                .Select(bigFile => (string?)bigFile.Attribute("path"));
-            foreach (string? name in bigFiles)
-            {
-                if (!string.IsNullOrEmpty(name))
-                {
-                    fats.Add(Path.GetFullPath(Path.Combine(dlc, name + ".fat")));
-                }
-            }
+                .Select(bigFile => (string?)bigFile.Attribute("path"))
+                .Where(name => !string.IsNullOrEmpty(name))
+                .Select(name => Path.GetFullPath(Path.Combine(dlc, name + ".fat"))));
         }
         return fats;
     }

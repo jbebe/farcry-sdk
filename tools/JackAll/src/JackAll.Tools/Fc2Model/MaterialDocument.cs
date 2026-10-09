@@ -68,7 +68,7 @@ public sealed class MaterialDocument
             Name = material.Name,
             Shader = material.Shader,
             Preamble = [.. material.Preamble],
-            Trailing = material.Trailing,
+            Trailing = material.BooleanCount,
         };
 
         foreach (XbmEntry entry in material.Entries)
@@ -103,7 +103,7 @@ public sealed class MaterialDocument
             Name = Name,
             Shader = Shader,
             Preamble = [.. Preamble],
-            Trailing = Trailing,
+            BooleanCount = Trailing,
         };
         foreach (MaterialTexture texture in Textures)
         {

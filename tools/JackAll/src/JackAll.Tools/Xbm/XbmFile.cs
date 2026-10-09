@@ -75,8 +75,8 @@ public sealed class XbmFile
 
     public byte[] Preamble { get; set; } = new byte[PreambleLength];
 
-    /// <summary>The boolean section's count, 0 in every shipped material, so its entries are never read.</summary>
-    public uint Trailing { get; set; }
+    /// <summary>0 in every shipped material, so the boolean entries themselves are never read.</summary>
+    public uint BooleanCount { get; set; }
 
     public List<XbmEntry> Entries { get; } = [];
 
@@ -171,7 +171,7 @@ public sealed class XbmFile
             w.WriteU32(entry.Integer);
         }
 
-        w.WriteU32(Trailing);
+        w.WriteU32(BooleanCount);
         return w.ToArray();
     }
 
@@ -246,7 +246,7 @@ public sealed class XbmFile
             Add(new XbmEntry { Section = XbmSection.Integer, Key = key, Integer = r.ReadU32() });
         }
 
-        Trailing = r.ReadU32();
+        BooleanCount = r.ReadU32();
         if (r.Position != length)
         {
             throw new InvalidDataException($"{what} consumed {r.Position} of {length} bytes.");

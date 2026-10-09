@@ -55,7 +55,7 @@ public sealed class MeshPart
 /// </remarks>
 public sealed class MeshGeometry
 {
-    /// <summary>Weight and slot pairs per vertex, zero-padded to the wider of the two sets.</summary>
+    /// <summary>Weight and slot pairs per vertex in the pack; a vertex buffer stores only the first four.</summary>
     public const int SkinStride = 8;
 
     public required uint Buffer { get; init; }

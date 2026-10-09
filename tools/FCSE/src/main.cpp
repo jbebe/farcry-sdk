@@ -99,7 +99,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
         return 1;
     }
 
-
     // FCSE's own hook, not a plugin's - installed here so it's in place well before the player
     // could ever reach the Options screen. See mods_tab.h for the full mechanism.
     ModsTab::Install();
