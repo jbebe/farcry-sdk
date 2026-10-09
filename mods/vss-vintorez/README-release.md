@@ -27,7 +27,7 @@ jackall-cli mod restore --game "C:\Games\Far Cry 2"
 was acquired with, so a save that already holds a Dart Rifle shows the new model on the old
 behaviour.
 
-**With Aiming Overhaul, load the VSS after it.** Both set how the Dart Rifle's scope is drawn, and
+**With Aiming Overhaul 1.1.0 or later, load the VSS after it.** Both set how the Dart Rifle's scope is drawn, and
 whichever loads later wins; the VSS's PSO-1 should win over the Dart Rifle's hunting scope.
 
 ## Known limitations

@@ -3,14 +3,12 @@
 Notable changes to the VSS Vintorez, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.1.0] - 2026-10-09
 
 ### Added
 - **Aiming Overhaul draws its scope as the Dragunov's PSO-1** rather than the Dart Rifle's hunting
   scope: the reticle, rim and eye position the VSS's scope measures to, which are the Dragunov's.
-  Load the VSS after Aiming Overhaul.
-
-## [1.1.0] - 2026-10-05
+  Needs Aiming Overhaul 1.1.0 or later, loaded before the VSS.
 
 ### Changed
 - **The steel reads as metal.** The body now reflects a faint cube map, on the steel only, and the

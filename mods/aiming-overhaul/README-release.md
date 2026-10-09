@@ -17,7 +17,8 @@ anything else about a weapon.
   glass, and the scope trails the look a little and kicks back with each shot.
 - **Reticles**, new in every scope: a hunting duplex on the Dart Rifle and the M1903, a PSO-1 with
   its rangefinder on the Dragunov, a red tactical mil-scale on the AS50, and a lit holographic
-  chevron on the AR-16 and the MGL-140.
+  chevron on the AR-16 and the MGL-140. They are plain PNG files in
+  `bin\plugins\aiming-overhaul\reticles\`, so you can swap in your own.
 - **Scope surroundings.** Around the eyepiece the world stays at your normal field of view, slightly
   out of focus, as with both eyes open. The magnification is there at once inside the eyepiece, so
   the view no longer zooms as the scope comes up.
