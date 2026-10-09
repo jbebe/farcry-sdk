@@ -149,6 +149,22 @@ cooker emits.
 Two of those are trivial to synthesize: `.srl` is exactly 1024 bytes and `.zsr` exactly 4096 bytes,
 both raw fixed-size memory dumps with no header.
 
+### How far around the player each kind loads
+
+`engine\settings\defaultengineconfig.xml` sets the streaming rings in sectors. The file's own comments
+name each value:
+
+```xml
+RingData="4,5,10,20,1"   <!-- entities, landmarkNear, landmarkFar, terrain, preload -->
+RingLod="2,4"            <!-- Hires, physic -->
+```
+
+The PS3 and Xbox 360 configs use `4,4,10,20,1`. On the server, `CLoadRings::Init` takes `RingData`
+only with exactly five values and `RingLod` only with exactly two. A ring is a square, not a circle:
+`CWorldRegion::SubRegion` builds `[x − r, x + r] × [y − r, y + r]` around the player's sector, clamped
+to the world. So entities load within a 9 × 9 sector box, ±256 m at 64 m per sector **(RE-verified on
+the server; values seen in data)**.
+
 ### The map textures
 
 The in-game map draws from three sets of `.xbt` textures (seen in data, with the UV code

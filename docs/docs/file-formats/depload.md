@@ -50,6 +50,21 @@ null. See [what loads the child bank](./spk.md#what-loads-the-child-bank-depload
 2. Then walks every installed DLC via `CDlcService::GetDepLoads()` and loads each one's own
    `depload.dat` the same way, with `isPrimary = false`.
 
+### The particle library
+
+On the PC client, `LoadParticleDepLoad` (GOG `0x1064D890`) loads the world's
+`<world>_deploadnewparticles.rml` as the world's particle library, then each DLC's own **(RE-verified
+on GOG)**:
+
+- **Overridable.** It goes through the ordinary XML loader and the archive resolver, so a copy in
+  `patch.dat` replaces the shipped one.
+- **Layout.** The root must be `NewPartLib`. Each `PartSys` child is one particle system, keyed by
+  its `Name` attribute, and each `PartEmit` under it one emitter.
+- **Resource id.** A system's resource id is the `CPathID` of its `Name`: the path rule, lowercased
+  and CRC32'd. An effect therefore names a particle system the way a file names a path.
+
+`mp_02_s_shanty`'s library, for scale, holds 236 systems and 641 emitters.
+
 Both paths bottom out in `CResourceManager::LoadDep(IFile*, bool isPrimary)` (`0x09c07f50`) →
 **`CResourceDataBase::LoadBinaryFile(IFile*, bool isPrimary)`** (`0x09c594c0`), the actual binary
 reader — its `IFile::Read` call sequence is the ground truth for the layout below. `isPrimary` only
