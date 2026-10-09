@@ -2,7 +2,7 @@
 slug: /map-editing
 sidebar_position: 2
 title: Move, add and delete objects
-description: Edit a Far Cry 2 world on JackAll's Map tab: move, rotate, copy, add and delete placed objects, check for mistakes, and save
+description: "Edit a Far Cry 2 world on JackAll's Map tab: move, rotate, copy, add and delete placed objects, check for mistakes, and save"
 ---
 
 # Move, add and delete objects
