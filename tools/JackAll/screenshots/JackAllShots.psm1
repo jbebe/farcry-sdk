@@ -499,8 +499,20 @@ function Get-UiItem($Container, [string]$Name) {
     throw "No item '$Name'"
 }
 
-# Fills a Windows file or folder dialog and confirms it.
-function Complete-FileDialog([string]$Title, [string]$Path) {
+# Fills a Windows file or folder dialog and confirms it. Several paths must share a folder: the
+# dialog is first sent into it, then given the quoted names.
+function Complete-FileDialog([string]$Title, [string[]]$Path) {
+    if ($Path.Count -gt 1) {
+        $dialog = Wait-Ui { Find-ShotWindow $Title } -Timeout 20 -What "dialog '$Title'"
+        $edit = Wait-Ui { Find-Win32Control $dialog 'Edit' | Where-Object { $_.Current.AutomationId -eq '1148' } | Select-Object -First 1 } -What 'the file name box'
+        [ShotNative]::SetText([IntPtr]$edit.Current.NativeWindowHandle, (Split-Path $Path[0]))
+        Push-ShotButton $dialog '1'
+        Start-Sleep -Milliseconds 700
+        $names = ($Path | ForEach-Object { '"' + (Split-Path $_ -Leaf) + '"' }) -join ' '
+        Complete-FileDialog $Title $names
+        return
+    }
+    $Path = $Path[0]
     $dialog = Wait-Ui { Find-ShotWindow $Title } -Timeout 20 -What "dialog '$Title'"
     # Folder pickers use 1152, open dialogs 1148, save dialogs 1001 (which a search box can also carry).
     $edit = Wait-Ui {
