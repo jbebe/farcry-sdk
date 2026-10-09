@@ -26,7 +26,7 @@ Both apply to a light that is already on.
 ## Requirements
 
 - **FCSE 1.4.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
-- **JackAll 1.3.0 or the Vortex extension 0.3.0, or later**, to install it.
+- **JackAll 1.4.0 or the Vortex extension 0.4.0, or later**, to install it.
 
 ## Installing
 
@@ -49,5 +49,7 @@ jackall-cli mod restore --game "C:\Games\Far Cry 2"
   the way this one does. One that ships `config\defaultusercontrols.xml` or
   `config\inputactionmapcommon.xml` whole still gets the Flashlight control, but loses its own changes
   to the Misc controls and the gameplay action map, and the installer says so.
-- **Mods that replace the HUD**, `ui\localized\...\hud.mgb`, conflict the same way. If the other mod
-  wins, the flashlight works without its icon.
+- **Mods that change the HUD** combine with it the same way when they ship only the parts of
+  `ui\localized\...\hud.mgb` they change. One that ships `hud.mgb` whole still gets the Flashlight
+  icon, but loses its own changes to the main HUD page, the HUD's materials and its exported objects,
+  and the installer says so.

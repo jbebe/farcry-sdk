@@ -1,0 +1,107 @@
+<Area slot="44" type="Area" FRAMERATE="30" CURRENTFRAME="0" STATICBOX="0 91 0 66">
+  <USERDATA name="a_flashlight_object">
+    <PROPERTIES />
+  </USERDATA>
+  <CHILDREN>
+    <Element slot="77" type="Placeholder" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="action">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_flashlight_action_0" IDX="0" INTERPOLATION="None">
+          <ACTIONEXECUTER slot="133" type="ActionExecuter">
+            <ACTIONS>
+              <ACTION ACTIONNAME="Stop">
+                <USERDATA name="Stop">
+                  <PROPERTIES>
+                    <PROPERTY key="Area to stop" type="17">
+                      <LINK slot="44" LASTOBJECTTYPE="Area" IDS="#A1126B78 a_flashlight_object" />
+                    </PROPERTY>
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+          </ACTIONEXECUTER>
+          <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+        </Keyframe>
+        <Keyframe name="kf_flashlight_action_1" IDX="1" INTERPOLATION="None">
+          <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+        </Keyframe>
+        <Keyframe name="kf_flashlight_action_5" IDX="5" INTERPOLATION="None">
+          <ACTIONEXECUTER slot="133" type="ActionExecuter">
+            <ACTIONS>
+              <ACTION ACTIONNAME="Stop">
+                <USERDATA name="Stop">
+                  <PROPERTIES>
+                    <PROPERTY key="Area to stop" type="17">
+                      <LINK slot="44" LASTOBJECTTYPE="Area" IDS="#A1126B78 a_flashlight_object" />
+                    </PROPERTY>
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+          </ACTIONEXECUTER>
+          <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+        </Keyframe>
+        <Keyframe name="kf_flashlight_action_6" IDX="6" INTERPOLATION="None">
+          <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+        </Keyframe>
+        <Keyframe name="kf_flashlight_action_11" IDX="11" INTERPOLATION="None">
+          <ACTIONEXECUTER slot="133" type="ActionExecuter">
+            <ACTIONS>
+              <ACTION ACTIONNAME="Stop">
+                <USERDATA name="Stop">
+                  <PROPERTIES>
+                    <PROPERTY key="Area to stop" type="17">
+                      <LINK slot="44" LASTOBJECTTYPE="Area" IDS="#A1126B78 a_flashlight_object" />
+                    </PROPERTY>
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+          </ACTIONEXECUTER>
+          <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Placeholder />
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_flashlight_on">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_flashlight_on_hidden" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="0" RIGHT="91" TOP="0" BOTTOM="66" SHADOWCOLOR="FF000000" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="00FFFFFF" COLOR2="00FFFFFF" COLOR3="00FFFFFF" COLOR4="00FFFFFF" />
+        </Keyframe>
+        <Keyframe name="kf_i_flashlight_on_shown" IDX="5" INTERPOLATION="Linear">
+          <ImageState INTERPOLATIONFLAGS="125829121" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="0" RIGHT="91" TOP="0" BOTTOM="66" SHADOWCOLOR="FF000000" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+        <Keyframe name="kf_i_flashlight_on_faded" IDX="11" INTERPOLATION="Linear">
+          <ImageState INTERPOLATIONFLAGS="125829121" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="0" RIGHT="91" TOP="0" BOTTOM="66" SHADOWCOLOR="FF000000" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="00FFFFFF" COLOR2="00FFFFFF" COLOR3="00FFFFFF" COLOR4="00FFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="flashlight_hud_on" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_flashlight_off">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_flashlight_off_hidden" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="0" RIGHT="91" TOP="0" BOTTOM="66" SHADOWCOLOR="FF000000" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="00FFFFFF" COLOR2="00FFFFFF" COLOR3="00FFFFFF" COLOR4="00FFFFFF" />
+        </Keyframe>
+        <Keyframe name="kf_i_flashlight_off_shown" IDX="5" INTERPOLATION="Linear">
+          <ImageState INTERPOLATIONFLAGS="125829121" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="0" RIGHT="91" TOP="0" BOTTOM="66" SHADOWCOLOR="FF000000" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+        <Keyframe name="kf_i_flashlight_off_faded" IDX="11" INTERPOLATION="Linear">
+          <ImageState INTERPOLATIONFLAGS="125829121" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="0" RIGHT="91" TOP="0" BOTTOM="66" SHADOWCOLOR="FF000000" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="00FFFFFF" COLOR2="00FFFFFF" COLOR3="00FFFFFF" COLOR4="00FFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="flashlight_hud_off" PACKAGE="" />
+      </Image>
+    </Element>
+  </CHILDREN>
+</Area>
