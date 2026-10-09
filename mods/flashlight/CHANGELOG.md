@@ -3,7 +3,7 @@
 Notable changes to Flashlight, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.1.0] - 2026-10-09
 
 ### Changed
 - **Combines with other mods that add controls.** It ships only the controls category and the action
