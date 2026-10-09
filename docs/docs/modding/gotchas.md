@@ -163,6 +163,22 @@ quicksave/reload correctly — the only way to reset an outpost's cleared-timer 
 - **The hang glider has never been successfully modded** — see [Data Recipes](./data-recipes.md#player).
 - Retail PC XML files contain entire unused sections for other platforms (AGORA, Xbox)
   bundled in alongside the PC data — the shipped data files were not platform-trimmed.
+- **Several AI edits the [guide](./guide/enemies.md) describes reach nothing:**
+  - `SavannahFOV` and `JungleFOV` are loaded and never read. Every soldier sees with `DesertFOV`, in
+    every terrain.
+  - Five `AdaptativeBehavior` rows have no reader: `Grenade`, `GrenadeAndBuilding`, `ShootFlare`,
+    `RescueVictim` and `RangeWeapon`. Grenades, flares, rescues and mortar ranging are not gated by
+    this table.
+  - `ReinforcementArchetypes` feeds only a separate spawn path. A reinforcement point's waves bring
+    the archetypes named on the point itself. Whether editing the list changes anything visible in
+    play is untested.
+  - The per-weapon `DistanceAccuracy_<weapon>` curves are named by no weapon. Every weapon but the
+    mounted M249 uses the shared `Curves.ShootingSystem.DistanceAccuracy`.
+
+  :::info[Verified via reverse engineering]
+  Each is traced in code or checked against every shipped brain and archetype; see
+  [AI](../engine-internals/ai.md).
+  :::
 
 ## NPCs and multiplayer
 

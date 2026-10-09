@@ -34,6 +34,13 @@ full provenance note.
   while — a middle ground *is* technically possible at the engine-data level, though no public mod in
   the reviewed sources implements it. A separate experiment found only a binary on/off toggle (mercs
   stay dead forever, globally, once cleared).
+
+  :::info[Verified via reverse engineering — contradicts the first sentence]
+  The code refills posts. Soldiers are not saved at the shipped `PersistenceBudget` of 1000. A dead
+  one is only remembered as deleted in his sector, and that memory is wiped when the sector unloads,
+  so the next load spawns the full garrison. A budget of −1 would save them, which may be the binary
+  toggle above; that is untested. See [AI](../engine-internals/ai.md#garrisons-and-patrols).
+  :::
 - **The infamous "11MB player.xml" bloat is not evidence of sloppy original development** — Gibbed
   clarified this directly: the original binary (`entitylibrarypatchoverride.fcb`) is only ~2.5MiB. The
   binary format supports referencing shared/duplicated data, and the original developers used that
