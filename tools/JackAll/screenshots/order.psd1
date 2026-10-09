@@ -27,5 +27,6 @@
         'legacy-import'
         'cli-mods'
         'cli-legacy'
+        'cli-formats'
     )
 }
