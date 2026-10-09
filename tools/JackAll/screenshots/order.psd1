@@ -4,5 +4,6 @@
         'installing-mods'
         'first-mod'
         'managing-mods'
+        'sharing-a-mod'
     )
 }

@@ -149,14 +149,18 @@ function Exit-ShotSession([switch]$Force) {
 # ---------------------------------------------------------------- the app
 
 # Clean workspace and config for one tutorial: the game folder, these mod zips, the dark theme.
-function Reset-ShotState([string[]]$Mods = @(), [string]$Theme = 'dark', [switch]$KeepWorkspace) {
+# -Workspace starts from another tutorial's saved result instead of an empty workspace.
+function Reset-ShotState([string[]]$Mods = @(), [string]$Theme = 'dark', [string]$Workspace) {
     Stop-ShotApp
     Set-ShotBaseline
-    if (-not $KeepWorkspace) {
-        foreach ($dir in 'workspace', 'data\prefabs') {
-            $path = Join-Path $script:AppDir $dir
-            if (Test-Path $path) { Remove-Item -LiteralPath $path -Recurse -Force }
-        }
+    foreach ($dir in 'workspace', 'data\prefabs') {
+        $path = Join-Path $script:AppDir $dir
+        if (Test-Path $path) { Remove-Item -LiteralPath $path -Recurse -Force }
+    }
+    if ($Workspace) {
+        $from = Join-Path $script:Bin "results\$Workspace\workspace"
+        if (-not (Test-Path $from)) { throw "No saved result for '$Workspace' - run that tutorial first." }
+        Copy-Item -LiteralPath $from (Join-Path $script:AppDir 'workspace') -Recurse
     }
     Set-ShotConfig -Mods $Mods -Theme $Theme
 }
