@@ -112,13 +112,14 @@ changed — that carries the five-part list including `ACCESSORY02`, the Draguno
 regenerated from the shipped mesh.
 
 It also carries [Aiming Overhaul](../aiming-overhaul/README.md)'s scope data, a `CFCSEDataComponent`
-with the Dragunov's values: the `pso` reticle, rim 0.36, lens centre (−0.00254, −0.02073) and a raise
-of 0.1819 m. The Dragunov's measurements are the VSS's own: its `SCOPE_HI_LOD0` decodes to the
-Dragunov's positions vertex for vertex, on the same `SCOPE_HI` node, moved by the same skeleton and
-aim clips, and its weapon properties keep the Dragunov's iron-sight field of view. Without Aiming
-Overhaul the component does nothing, and without FCSE the engine skips it. With Aiming Overhaul both
-mods add the component to the Dart Rifle, and JackAll keeps the later layer's without a warning, so
-the VSS has to come after Aiming Overhaul in the load order.
+with the Dragunov's values: Aiming Overhaul's own `aiming-overhaul\reticles\pso.png` reticle, rim
+0.36, lens centre (−0.00254, −0.02073) and a raise of 0.1819 m. The Dragunov's measurements are the
+VSS's own: its `SCOPE_HI_LOD0` decodes to the Dragunov's positions vertex for vertex, on the same
+`SCOPE_HI` node, moved by the same skeleton and aim clips, and its weapon properties keep the
+Dragunov's iron-sight field of view. Without Aiming Overhaul the component does nothing, and without
+FCSE the engine skips it. With Aiming Overhaul both mods set the Dart Rifle's scope keys, JackAll
+reports each and keeps the later layer's, so the VSS has to come after Aiming Overhaul in the load
+order.
 
 `WeaponProperties.Special.Dart_Rifle` is the vanilla Dart Rifle with nineteen values changed:
 
