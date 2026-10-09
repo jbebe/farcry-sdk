@@ -209,9 +209,12 @@ The base is either/or, never both. Three containers that look like the answer an
 
 - **`entitylibrary_full.fcb`** is the client-only library, absent from the dedicated server binary.
   That makes it not a *server* library; it does not make it what the campaign reads, and it is not.
-- **`EntityLibraryPatchOverride.fcb`** does not exist in every edition. It is absent from the GOG
-  Fortune's Edition, whose `patch.fat` holds 215 entries with exactly one entity library. Its name
-  is in the hashlist, so a present file would have been resolved — it is genuinely not there.
+- **`EntityLibraryPatchOverride.fcb`** does not exist in every edition, so it is not where the
+  shipped values live. It is absent from the GOG Fortune's Edition, whose `patch.fat` holds 215
+  entries with exactly one entity library. Its name is in the hashlist, so a present file would have
+  been resolved — it is genuinely not there. The engine still tries to load it after the base library
+  and lets it win by name, so a mod may ship one
+  ([which libraries load](../engine-internals/entity-instancing.md#which-libraries-load-and-in-what-order)).
 - **`worlds\tmpla\generated\entitylibrary.fcb`** is the retail patch's only entity-library entry,
   which looks like strong evidence that `tmpla` is the campaign world. Whatever `tmpla` is for, the
   campaign does not read it.
@@ -545,9 +548,25 @@ fVerticalRecoilPerShot      1      1.25    1.5    1.75
 **It is exactly zero at `High`.** A pristine weapon cannot jam at any number of rounds. To force one
 for testing, set `fJamProbabilityPerReload` to 1 at every level and reload.
 
+The roll happens when rounds go into the magazine, not on each shot. Several things go into it:
+
+- **The probability:** the level's value scaled by the wielder, and a game rule can veto it.
+- **When the jam comes:** a hit only marks the magazine. With `n` rounds loaded and
+  `k = ⌈0.33·n⌉`, the jamming round is `k + max(1, rand mod 2k)`, capped at `n`. So the jam comes
+  partway through the magazine, not at the reload.
+- **AI:** weapons in AI hands never jam, because the check at fire time skips AI pawns.
+
+All three are **(RE-verified)**: `CWeapon::CheckForJam`, GOG `0x1012F040`, called from
+`SetAmmoInClip` `0x1012F490` and the reload at `0x10131140`.
+
 **Breaking is a plain counter** on `WeaponProperties`: `iClipsForSelfDestruct`, 20 on a normal
 weapon. At a ten-round magazine that is 200 rounds, so a weapon will not come apart during casual
 testing.
+
+The counter counts full magazines. Each shot takes `MaxReliability ÷ iClipsForSelfDestruct ÷ clip
+size` off the weapon's reliability. The clip size is the difficulty's own clip plus any `MaxAmmo`
+bonus. A weapon that is indestructible, or not breakable, has its reliability reset to 1.0 whenever
+it would reach zero **(RE-verified)**: server `ApplyShootReliability` and `SetReliability`.
 
 The whole recipe for a decrepit weapon is two fields.
 `WeaponProperties.Primary.Dragunov.Mikes_Rusty` is the story weapon Ubisoft authored to be falling
