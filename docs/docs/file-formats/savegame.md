@@ -331,8 +331,9 @@ State}` (server `SaveMissionStates`). The fields are:
 - **`Name`** is the CRC32 of the layer path, lowercased and with backslashes.
   `missions\safehouse\ai\w1b2\w1b2_sp01` is `0x7744D81F`, found once in each save checked; the
   mixed-case and forward-slash spellings are never found.
-- **`State`** is the layer's state bits: 0 never switched on, 1 enabled, 2 disabled. Bits 4 and 8
-  (complete, fail) exist too.
+- **`State`** is the layer's state bits: 0 off, 1 enabled, 2 disabled. Bits 4 and 8 (complete, fail)
+  exist too. The world's `game.xml` lists every layer with the same CRC in its `crc_PathId`, so that
+  file names the save's entries.
 
 The layers themselves are described in [world loading](../engine-internals/world-loading.md).
 
