@@ -1,4 +1,4 @@
-#include "engine/embedded_image.h"
+#include "engine/image_file.h"
 
 #include "engine/com.h"
 #include "fcse_api.h"
@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <filesystem>
 #include <vector>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
@@ -20,9 +21,8 @@ namespace {
         std::vector<BYTE> texels;
     };
 
-    bool Read(void* bytes, DWORD size, Level& level) {
+    bool Read(const wchar_t* file, Level& level) {
         IWICImagingFactory* factory = nullptr;
-        IWICStream* stream = nullptr;
         IWICBitmapDecoder* decoder = nullptr;
         IWICBitmapFrameDecode* frame = nullptr;
         IWICFormatConverter* converter = nullptr;
@@ -30,10 +30,8 @@ namespace {
         bool read =
             SUCCEEDED(CoCreateInstance(CLSID_WICImagingFactory1, nullptr, CLSCTX_INPROC_SERVER,
                                        IID_PPV_ARGS(&factory))) &&
-            SUCCEEDED(factory->CreateStream(&stream)) &&
-            SUCCEEDED(stream->InitializeFromMemory(static_cast<BYTE*>(bytes), size)) &&
-            SUCCEEDED(factory->CreateDecoderFromStream(stream, nullptr,
-                                                       WICDecodeMetadataCacheOnDemand, &decoder)) &&
+            SUCCEEDED(factory->CreateDecoderFromFilename(
+                file, nullptr, GENERIC_READ, WICDecodeMetadataCacheOnDemand, &decoder)) &&
             SUCCEEDED(decoder->GetFrame(0, &frame)) &&
             SUCCEEDED(factory->CreateFormatConverter(&converter)) &&
             SUCCEEDED(converter->Initialize(frame, GUID_WICPixelFormat32bppPBGRA,
@@ -49,22 +47,22 @@ namespace {
         AimingOverhaul::Release(converter);
         AimingOverhaul::Release(frame);
         AimingOverhaul::Release(decoder);
-        AimingOverhaul::Release(stream);
         AimingOverhaul::Release(factory);
         return read;
     }
 
-    bool Decode(const char* name, Level& level) {
-        const HMODULE module = reinterpret_cast<HMODULE>(&__ImageBase);
-        // RT_RCDATA, spelt for the ANSI call.
-        const HRSRC found = FindResourceA(module, name, MAKEINTRESOURCEA(10));
-        void* bytes = found != nullptr ? LockResource(LoadResource(module, found)) : nullptr;
-        if (bytes == nullptr) {
-            return false;
-        }
+    // bin\plugins, the folder above the one this plugin is in.
+    std::filesystem::path PluginsFolder() {
+        wchar_t module[MAX_PATH] = {};
+        GetModuleFileNameW(reinterpret_cast<HMODULE>(&__ImageBase), module, MAX_PATH);
+        return std::filesystem::path(module).parent_path().parent_path();
+    }
+
+    bool Decode(const char* path, Level& level) {
+        const std::filesystem::path file = PluginsFolder() / path;
         // The calling thread may have no COM yet; one it has already, in either model, serves.
         const HRESULT com = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-        const bool read = Read(bytes, SizeofResource(module, found), level);
+        const bool read = Read(file.c_str(), level);
         if (SUCCEEDED(com)) {
             CoUninitialize();
         }
@@ -95,11 +93,11 @@ namespace {
     }
 }
 
-IDirect3DTexture9* AimingOverhaul::EmbeddedImage::Texture(IDirect3DDevice9* device,
-                                                          const char* name) {
+IDirect3DTexture9* AimingOverhaul::ImageFile::Texture(IDirect3DDevice9* device,
+                                                      const char* path) {
     Level level;
-    if (!Decode(name, level)) {
-        FCSE::Logf("embedded image: %s could not be read", name);
+    if (!Decode(path, level)) {
+        FCSE::Logf("image file: bin\\plugins\\%s could not be read", path);
         return nullptr;
     }
     UINT levels = 1;
@@ -109,7 +107,7 @@ IDirect3DTexture9* AimingOverhaul::EmbeddedImage::Texture(IDirect3DDevice9* devi
     IDirect3DTexture9* texture = nullptr;
     if (FAILED(device->CreateTexture(level.width, level.height, levels, 0, D3DFMT_A8R8G8B8,
                                      D3DPOOL_MANAGED, &texture, nullptr))) {
-        FCSE::Logf("embedded image: the device refused %s", name);
+        FCSE::Logf("image file: the device refused %s", path);
         return nullptr;
     }
     for (UINT at = 0; at < levels; at++) {
@@ -119,7 +117,7 @@ IDirect3DTexture9* AimingOverhaul::EmbeddedImage::Texture(IDirect3DDevice9* devi
         D3DLOCKED_RECT locked = {};
         if (FAILED(texture->LockRect(at, &locked, nullptr, 0))) {
             Release(texture);
-            FCSE::Logf("embedded image: the device refused %s", name);
+            FCSE::Logf("image file: the device refused %s", path);
             return nullptr;
         }
         for (UINT row = 0; row < level.height; row++) {

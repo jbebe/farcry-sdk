@@ -65,8 +65,9 @@ bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
 The eyepiece drops the engine's scope and draws its own over the finished frame, in
 `src/eyepiece.cpp`. What it draws for a scope is its weapon's archetype's entity data, read in
 `src/scopes.cpp`, and which of the weapon's draws are the scope is read from the engine's own
-mesh, in `src/engine/weapon_mesh.cpp`. The reticles
-are `assets\*-reticle.png`, built into the plugin through `src/aiming_overhaul.rc`. The second
+mesh, in `src/engine/weapon_mesh.cpp`. The reticles are plain PNGs beside the plugin,
+`layer\plugins\aiming-overhaul\reticles\*.png`, installed into `bin\plugins\aiming-overhaul\reticles\`
+and read in `src/engine/image_file.cpp`; replacing one replaces what that scope shows. The second
 view is drawn in `src/engine/second_view.cpp` and laid down as the gun's colour pass begins, in
 `src/surroundings.cpp`. The player's own tracers, a streak's length against its shot, and the
 ricochets are in `src/tracers.cpp`, and the streak is drawn in `src/streak.cpp` with
@@ -74,8 +75,9 @@ ricochets are in `src/tracers.cpp`, and the streak is drawn in `src/streak.cpp` 
 resource holds. Which guns fire tracers, their speed and their streaks' longest length, and the
 scopes the plugin draws losing the engine's iron-sight effect, are weapon data: `WeaponProperties`
 fragments under `layer\mods\`. So is each scope's reticle, eyepiece shape, rim, lens centre, raise
-and size: `AimingOverhaul.Scope*` keys in a `CFCSEDataComponent` on its `weapons` archetype. Both
-are written by `data\fragments.py`. The engine side is in
+and size: `AimingOverhaul.Scope*` keys in a `CFCSEDataComponent` on its `weapons` archetype, the
+reticle as an image path under `bin\plugins` with `ScopeReticleLit` for one lit from within. Both are
+written by `data\fragments.py`. The engine side is in
 [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md),
 [bullet tracers](../../docs/docs/engine-internals/bullet-tracers.md) and
 [presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).
@@ -110,6 +112,5 @@ scopes' lost iron-sight effect, whatever the scope settings.
 python data\fragments.py world1.xml world2.xml dlc1.xml   # rewrite the weapon data, see the script
 ```
 
-`fxc`, from the Windows SDK, compiles the shaders at build time, and the reticle images in `assets\`
-are built into the DLL, an edited one by the next build. `-Install` builds the game's patch
+`fxc`, from the Windows SDK, compiles the shaders at build time. `-Install` builds the game's patch
 from this layer alone, dropping any other layer built into it before.

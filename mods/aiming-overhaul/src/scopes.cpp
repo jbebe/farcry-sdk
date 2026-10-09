@@ -12,20 +12,9 @@
 #include <iterator>
 
 namespace {
-    using AimingOverhaul::Scopes::Reticle;
     using AimingOverhaul::Scopes::Scope;
 
-    // The reticles and eyepiece shapes a scope's data can name.
-    struct NamedReticle {
-        const char* name;
-        Reticle reticle;
-    };
-    constexpr NamedReticle kReticles[] = {
-        {"hunter", {"RETICLE_HUNTER", false}},
-        {"pso", {"RETICLE_PSO", false}},
-        {"tactical", {"RETICLE_TACTICAL", false}},
-        {"holosight", {"RETICLE_HOLOSIGHT", true}},
-    };
+    // The eyepiece shapes a scope's data can name.
     struct NamedShape {
         const char* name;
         std::span<const BYTE> shape;
@@ -44,32 +33,32 @@ namespace {
     size_t g_reading = 0;
     std::atomic<const Scope*> g_inHand{nullptr};
 
-    template <class Entry, size_t N>
-    const Entry* Named(const Entry (&entries)[N], const char* name) {
-        for (const Entry& entry : entries) {
-            if (std::strcmp(entry.name, name) == 0) {
-                return &entry;
+    // The shape called `name`, or null, and logged.
+    const NamedShape* ShapeCalled(const char* name) {
+        for (const NamedShape& shape : kShapes) {
+            if (std::strcmp(shape.name, name) == 0) {
+                return &shape;
             }
         }
-        FCSE::Logf("scopes: %s: nothing a scope can show is called \"%s\"",
+        FCSE::Logf("scopes: %s: no eyepiece shape is called \"%s\"",
                    AimingOverhaul::Aim::WeaponName(), name);
         return nullptr;
     }
 
-    // The scope the entity's data describes, if it names a reticle the plugin has.
+    // The scope the entity's data describes, if it names a reticle.
     bool ReadData(void* entity, Scope& scope) {
         const FCSE_EntityDataAPI* data = FCSE::ApiPointer()->EntityData;
-        char name[32];
-        const NamedReticle* reticle =
-            data->GetString(entity, "AimingOverhaul.ScopeReticle", name, sizeof(name))
-                ? Named(kReticles, name)
-                : nullptr;
-        if (reticle == nullptr) {
+        scope = {};
+        if (!data->GetString(entity, "AimingOverhaul.ScopeReticle", scope.reticle,
+                             sizeof(scope.reticle))) {
             return false;
         }
-        scope = {&reticle->reticle};
+        int32_t lit = 0;
+        data->GetInt(entity, "AimingOverhaul.ScopeReticleLit", &lit);
+        scope.lit = lit != 0;
+        char name[32];
         if (data->GetString(entity, "AimingOverhaul.ScopeShape", name, sizeof(name))) {
-            const NamedShape* shape = Named(kShapes, name);
+            const NamedShape* shape = ShapeCalled(name);
             if (shape == nullptr) {
                 return false;
             }

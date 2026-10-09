@@ -10,16 +10,12 @@
 
 namespace AimingOverhaul::Scopes {
 
-struct Reticle {
-    // The image's resource name in src/aiming_overhaul.rc: square, its centre on the look's and its
-    // edge on the lens's.
-    const char* image;
-    // Whether it is lit from within, as a holographic sight's is.
-    bool illuminated;
-};
-
 struct Scope {
-    const Reticle* reticle;
+    // The reticle's image under bin\plugins: square, its centre on the look's and its edge on the
+    // lens's.
+    char reticle[96];
+    // Whether the reticle is lit from within, as a holographic sight's is.
+    bool lit;
     // The eyepiece's own shape as a distance field, kShapeSize square; empty for a plain ring.
     std::span<const BYTE> shape;
     // The black rim around the opening, as a share of the opening's radius.

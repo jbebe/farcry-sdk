@@ -5,7 +5,7 @@
 
 #include "engine/aim.h"
 #include "engine/com.h"
-#include "engine/embedded_image.h"
+#include "engine/image_file.h"
 #include "engine/frame.h"
 #include "engine/render_target.h"
 #include "engine/screen_draw.h"
@@ -76,9 +76,9 @@ namespace {
     // can draw a frame after the game has put it away.
     uint32_t g_drawnFrame = AimingOverhaul::Frame::kNever;
 
-    // The texture made for this reticle, on the device that owns it.
+    // The texture made from this reticle's image, on the device that owns it.
     IDirect3DDevice9* g_reticleOwner = nullptr;
-    const AimingOverhaul::Scopes::Reticle* g_reticleOf = nullptr;
+    char g_reticleOf[sizeof(AimingOverhaul::Scopes::Scope::reticle)] = {};
     IDirect3DTexture9* g_reticle = nullptr;
 
     // The distance field, the shape it was made from, and the device that owns it.
@@ -132,15 +132,17 @@ namespace {
 
     // The scope's reticle, made the first time it is asked for after another's.
     IDirect3DTexture9* ReticleFor(IDirect3DDevice9* device, const Scope& scope) {
-        if (g_reticleOwner == device && g_reticleOf == scope.reticle) {
+        if (g_reticleOwner == device && std::strcmp(g_reticleOf, scope.reticle) == 0) {
             return g_reticle;
         }
         AimingOverhaul::Release(g_reticle);
         g_reticleOwner = device;
-        g_reticleOf = scope.reticle;
+        std::strcpy(g_reticleOf, scope.reticle);
         const ULONGLONG start = GetTickCount64();
-        g_reticle = AimingOverhaul::EmbeddedImage::Texture(device, scope.reticle->image);
-        FCSE::Logf("eyepiece: %s made in %llu ms", scope.reticle->image, GetTickCount64() - start);
+        g_reticle = AimingOverhaul::ImageFile::Texture(device, scope.reticle);
+        if (g_reticle != nullptr) {
+            FCSE::Logf("eyepiece: %s made in %llu ms", scope.reticle, GetTickCount64() - start);
+        }
         return g_reticle;
     }
 
@@ -215,7 +217,7 @@ namespace {
             vertices[i] = {centreX + x * scale, centreY - y * scale, (x + 1.0f) / 2.0f,
                            (1.0f - y) / 2.0f, x - scope.lensX, scope.lensY - y};
         }
-        const float lit = scope.reticle->illuminated ? 1.0f : 0.0f;
+        const float lit = scope.lit ? 1.0f : 0.0f;
         const float light[4] = {lit * kHalo, lit * kHeat, 0.0f, 0.0f};
         device->SetPixelShaderConstantF(0, light, 1);
         draw.Linear(0);
@@ -328,7 +330,7 @@ void AimingOverhaul::Eyepiece::ReleaseDeviceObjects() {
     g_shapeOf = nullptr;
     Release(g_reticle);
     g_reticleOwner = nullptr;
-    g_reticleOf = nullptr;
+    g_reticleOf[0] = '\0';
     Release(g_copy);
     g_copyOwner = nullptr;
     g_copyRefused = false;

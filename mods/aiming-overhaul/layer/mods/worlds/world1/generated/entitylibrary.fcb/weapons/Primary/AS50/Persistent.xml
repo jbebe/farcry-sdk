@@ -200,7 +200,7 @@
           </object>
           <object type="CFCSEDataComponent">
             <object type="AimingOverhaul.ScopeReticle">
-              <value name="String" type="String">tactical</value>
+              <value name="String" type="String">aiming-overhaul\reticles\tactical.png</value>
             </object>
             <object type="AimingOverhaul.ScopeRim">
               <value name="Float" type="Float">0.36</value>

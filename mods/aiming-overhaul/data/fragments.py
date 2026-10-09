@@ -34,21 +34,24 @@ TRACER_GUNS = ("Special.M249_Saw", "Special.PKM", "Primary.Dragunov", "Primary.A
 TRACER_SPEED = "350"
 TRACER_LENGTH = "8"
 # The scopes the plugin draws from their eyepiece, an archetype and its variants each, as the entity
-# data src\scopes.h's Scope is read from; they lose their iron-sight post effect.
+# data src\scopes.h's Scope is read from; they lose their iron-sight post effect. A reticle is an
+# image under bin\plugins, which layer\plugins\ installs.
+RETICLES = "aiming-overhaul\\reticles\\"
 SCOPES = {
-    "Special.Dart_Rifle": {"Reticle": "hunter", "Rim": 0.15, "LensX": -0.00284,
+    "Special.Dart_Rifle": {"Reticle": RETICLES + "hunter.png", "Rim": 0.15, "LensX": -0.00284,
                            "LensY": -0.00148, "Raise": 0.06},
-    "Special.M1903": {"Reticle": "hunter", "Rim": 0.15, "LensX": -0.00061, "LensY": -0.00025,
-                      "Raise": 0.06},
-    "Primary.Dragunov": {"Reticle": "pso", "Rim": 0.36, "LensX": -0.00254, "LensY": -0.02073,
-                         "Raise": 0.1819},
-    "Primary.AS50": {"Reticle": "tactical", "Rim": 0.36, "LensX": 0.00222, "LensY": -0.00248,
-                     "Raise": 0.1058},
+    "Special.M1903": {"Reticle": RETICLES + "hunter.png", "Rim": 0.15, "LensX": -0.00061,
+                      "LensY": -0.00025, "Raise": 0.06},
+    "Primary.Dragunov": {"Reticle": RETICLES + "pso.png", "Rim": 0.36, "LensX": -0.00254,
+                         "LensY": -0.02073, "Raise": 0.1819},
+    "Primary.AS50": {"Reticle": RETICLES + "tactical.png", "Rim": 0.36, "LensX": 0.00222,
+                     "LensY": -0.00248, "Raise": 0.1058},
     # The AR-16's eyecup is the MGL-140's, seen from further back.
-    "Primary.M16": {"Reticle": "holosight", "Shape": "ar16", "Rim": 0.15, "LensX": -0.00474,
-                    "LensY": -0.00087, "Size": 0.8},
-    "Primary.MGL140": {"Reticle": "holosight", "Shape": "mgl140", "Rim": 0.15, "LensX": -0.00275,
-                       "LensY": 0.00213, "Raise": 0.073, "Size": 0.8},
+    "Primary.M16": {"Reticle": RETICLES + "holosight.png", "ReticleLit": 1, "Shape": "ar16",
+                    "Rim": 0.15, "LensX": -0.00474, "LensY": -0.00087, "Size": 0.8},
+    "Primary.MGL140": {"Reticle": RETICLES + "holosight.png", "ReticleLit": 1, "Shape": "mgl140",
+                       "Rim": 0.15, "LensX": -0.00275, "LensY": 0.00213, "Raise": 0.073,
+                       "Size": 0.8},
 }
 SCOPE_KEY = "AimingOverhaul.Scope"
 
@@ -116,9 +119,11 @@ def add_entity_data(block, values):
     inner = indent + "  "
     added = [inner + '<object type="CFCSEDataComponent">']
     for key, value in values.items():
-        kind = "Float" if isinstance(value, float) else "String"
+        name, kind = (("Float", "Float") if isinstance(value, float)
+                      else ("Int", "Int32") if isinstance(value, int)
+                      else ("String", "String"))
         added += [inner + '  <object type="%s%s">' % (SCOPE_KEY, key),
-                  inner + '    <value name="%s" type="%s">%s</value>' % (kind, kind, value),
+                  inner + '    <value name="%s" type="%s">%s</value>' % (name, kind, value),
                   inner + "  </object>"]
     block[last:last] = added + [inner + "</object>"]
 

@@ -226,7 +226,10 @@
           </object>
           <object type="CFCSEDataComponent">
             <object type="AimingOverhaul.ScopeReticle">
-              <value name="String" type="String">holosight</value>
+              <value name="String" type="String">aiming-overhaul\reticles\holosight.png</value>
+            </object>
+            <object type="AimingOverhaul.ScopeReticleLit">
+              <value name="Int" type="Int32">1</value>
             </object>
             <object type="AimingOverhaul.ScopeShape">
               <value name="String" type="String">ar16</value>
