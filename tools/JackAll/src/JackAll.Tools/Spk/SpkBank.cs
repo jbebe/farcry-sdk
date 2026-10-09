@@ -127,9 +127,6 @@ public sealed class SpkBank
     private const int KeyOffset = 0x08, KeyLength = 16;
     private const int LayerSize = 28, CurveSize = 24, PointSize = 8;
 
-    /// <summary>A retail IMA-ADPCM sample declares this many frames fewer than its stream holds (29 or 30).</summary>
-    private const int ImaFrameShortfall = 30;
-
     private const uint OggCodec = 4, ImaCodec = 3;
 
     /// <summary>The bank's own id plus every parent that pulls it in; see the spk page.</summary>
@@ -165,9 +162,6 @@ public sealed class SpkBank
     /// <summary>The samples that play an audio record.</summary>
     public IEnumerable<SpkBankRecord> SamplesPlaying(uint audioId) =>
         Records.Where(r => r.Layout == SpkLayout.Sample && r.Word(SpkLayout.SampleAudio) == audioId);
-
-    /// <summary>Whether a sample playing this audio loops, so its stream is encoded to restart seamlessly.</summary>
-    public bool Loops(uint audioId) => SamplesPlaying(audioId).Any(s => s.Word(SpkLayout.SampleLoop) == 1);
 
     /// <summary>
     /// The audio <paramref name="start"/> reaches inside this bank, a random container taking a choice
@@ -331,9 +325,7 @@ public sealed class SpkBank
         {
             return null;
         }
-        int channels = ImaAdpcm.Channels(data);
-        long frames = Math.Max(0, (data.Length - ImaAdpcm.HeaderSize) * 2L / channels - ImaFrameShortfall);
-        return (false, channels, audio.SampleRate ?? 0, frames);
+        return (false, ImaAdpcm.Channels(data), audio.SampleRate ?? 0, ImaAdpcm.FrameCount(data));
     }
 
     private static void DeriveSample(uint[] words, SpkBankRecord? audio)

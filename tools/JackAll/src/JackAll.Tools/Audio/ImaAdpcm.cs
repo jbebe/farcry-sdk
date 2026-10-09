@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Runtime.InteropServices;
 using JackAll.Tools.Sbao;
 using JackAll.Tools.Spk;
 
@@ -32,19 +33,26 @@ public static class ImaAdpcm
     /// isn't (or isn't a supported version of) a `TImaAdpcm` stream.</summary>
     public const byte ExpectedVersion = 5;
 
-    /// <summary>Size of the per-stream header before the packed nibble data begins.</summary>
+    /// <summary>Size of the per-stream header before the raw frames begin.</summary>
     public const int HeaderSize = 0x1c;
 
+    /// <summary>Frames stored as raw 16-bit PCM between the header and the nibbles. The engine hard-codes
+    /// the count; the header's byte at 0x0E only records it.</summary>
+    public const int RawFrames = 10;
+
     private const int ChannelFlagOffset = 0x0c;
+    private const int RawFrameCountOffset = 0x0e;
     private const int PredictorAOffset = 0x10;
     private const int StepIndexAOffset = 0x12;
     private const int PredictorBOffset = 0x14;
     private const int StepIndexBOffset = 0x16;
 
-    private const int MaxStepIndex = 0x58; // 88 - the last valid index into StepTable (89 entries)
+    // A mono stream with an odd sample count after the raw frames sets this flag and carries the last
+    // sample here, played after the nibbles.
+    private const int OddFlagOffset = 0x18;
+    private const int OddSampleOffset = 0x1a;
 
-    // Enough for the step index to climb from 0 to its maximum and settle.
-    private const int TailFrames = 64;
+    private const int MaxStepIndex = 0x58; // 88 - the last valid index into StepTable (89 entries)
 
     /// <summary>The canonical IMA-ADPCM step-index adjustment table - confirmed byte-for-byte at
     /// Dunia.dll VA 0x10ee3928 (stored there as int32, not the more common int16).</summary>
@@ -72,11 +80,23 @@ public static class ImaAdpcm
     /// <summary>The channel count a stream's header declares.</summary>
     public static int Channels(ReadOnlySpan<byte> stream) => stream[ChannelFlagOffset] != 0 ? 2 : 1;
 
+    /// <summary>The frames the engine plays from a stream: the raw frames, the nibbles and the odd sample.</summary>
+    public static long FrameCount(ReadOnlySpan<byte> stream)
+    {
+        int channels = Channels(stream);
+        long nibbleBytes = Math.Max(0, stream.Length - RawEnd(channels));
+        return RawFrames + nibbleBytes * 2 / channels + (HasOddSample(stream) ? 1 : 0);
+    }
+
+    private static int RawEnd(int channels) => HeaderSize + RawFrames * channels * sizeof(short);
+
+    private static bool HasOddSample(ReadOnlySpan<byte> stream) => Channels(stream) == 1 && stream[OddFlagOffset] == 1;
+
     /// <summary>
-    /// Parses the 28-byte `TImaAdpcm` stream header and decodes every packed nibble that follows it.
-    /// Throws if the version byte isn't <see cref="ExpectedVersion"/> - matching the engine's own
-    /// "IMA-ADPCM version seems to be too old" rejection - or if the stream is too short to hold a
-    /// header at all.
+    /// Parses the 28-byte `TImaAdpcm` stream header, then returns the raw frames, the decoded nibbles and
+    /// the odd sample. Throws if the version byte isn't <see cref="ExpectedVersion"/> - matching the
+    /// engine's own "IMA-ADPCM version seems to be too old" rejection - or if the stream is too short to
+    /// hold a header at all.
     /// </summary>
     public static DecodedAudio Decode(byte[] stream)
     {
@@ -94,69 +114,86 @@ public static class ImaAdpcm
         }
 
         bool stereo = Channels(stream) == 2;
+        int rawEnd = Math.Min(stream.Length, RawEnd(stereo ? 2 : 1));
+        short[] raw = MemoryMarshal.Cast<byte, short>(stream.AsSpan(HeaderSize, (rawEnd - HeaderSize) & ~1)).ToArray();
         short predictorA = (short)BinaryPrimitives.ReadUInt16LittleEndian(stream.AsSpan(PredictorAOffset));
         int stepIndexA = stream[StepIndexAOffset];
 
-        var body = stream.AsSpan(HeaderSize);
+        var body = stream.AsSpan(rawEnd);
 
         if (!stereo)
         {
-            return new DecodedAudio { Samples = DecodeMono(body, predictorA, stepIndexA), Channels = 1 };
+            short[] odd = HasOddSample(stream) ? [BinaryPrimitives.ReadInt16LittleEndian(stream.AsSpan(OddSampleOffset))] : [];
+            return new DecodedAudio { Samples = [.. raw, .. DecodeMono(body, predictorA, stepIndexA), .. odd], Channels = 1 };
         }
 
         short predictorB = (short)BinaryPrimitives.ReadUInt16LittleEndian(stream.AsSpan(PredictorBOffset));
         int stepIndexB = stream[StepIndexBOffset];
         return new DecodedAudio
         {
-            Samples = DecodeStereoInterleaved(body, predictorA, stepIndexA, predictorB, stepIndexB),
+            Samples = [.. raw, .. DecodeStereoInterleaved(body, predictorA, stepIndexA, predictorB, stepIndexB)],
             Channels = 2,
         };
     }
 
     /// <summary>
     /// Encodes 16-bit PCM samples (mono, or interleaved `L,R,L,R,...` for stereo) into a `TImaAdpcm`
-    /// stream - a full 28-byte header followed by packed nibbles, ready to drop straight into an
-    /// `.spk` `FlatCopy` record's payload (after that record's unchanged 40-byte core). A one-shot
-    /// starts from a predictor/step-index of `0`/`0`; a <paramref name="looping"/> clip starts from the
-    /// state its own tail leaves, so each restart continues the wave instead of slewing up from zero.
+    /// stream laid out as retail ones are - header, <see cref="RawFrames"/> raw frames, packed nibbles -
+    /// ready to drop straight into an `.spk` `FlatCopy` record's payload (after that record's unchanged
+    /// 40-byte core). A clip shorter than the raw frames is padded with silence.
     /// </summary>
-    public static byte[] Encode(short[] samples, int channels, bool looping = false)
+    public static byte[] Encode(short[] samples, int channels)
     {
         if (channels is not (1 or 2))
         {
             throw new ArgumentOutOfRangeException(nameof(channels), channels, "Only mono (1) or stereo (2) audio is supported.");
         }
 
-        (int predictorA, int stepIndexA) = looping ? TailState(samples, channels, channel: 0) : (0, 0);
-        (int predictorB, int stepIndexB) = looping && channels == 2 ? TailState(samples, channels, channel: 1) : (0, 0);
+        int rawSamples = RawFrames * channels;
+        short[] padded = samples.Length >= rawSamples ? samples : [.. samples, .. new short[rawSamples - samples.Length]];
+        ReadOnlySpan<short> raw = padded.AsSpan(0, rawSamples);
+        ReadOnlySpan<short> rest = padded.AsSpan(rawSamples);
+        bool odd = channels == 1 && rest.Length % 2 == 1;
+        if (odd)
+        {
+            rest = rest[..^1];
+        }
+
+        (int predictorA, int stepIndexA) = PrimedState(raw, channels, channel: 0);
+        (int predictorB, int stepIndexB) = channels == 2 ? PrimedState(raw, channels, channel: 1) : (0, 0);
 
         byte[] header = new byte[HeaderSize];
         header[0] = ExpectedVersion;
         header[ChannelFlagOffset] = (byte)(channels - 1);
+        header[RawFrameCountOffset] = RawFrames;
         BinaryPrimitives.WriteInt16LittleEndian(header.AsSpan(PredictorAOffset), (short)predictorA);
         header[StepIndexAOffset] = (byte)stepIndexA;
         BinaryPrimitives.WriteInt16LittleEndian(header.AsSpan(PredictorBOffset), (short)predictorB);
         header[StepIndexBOffset] = (byte)stepIndexB;
-
-        byte[] body = channels == 2
-            ? EncodeStereoInterleaved(samples, predictorA, stepIndexA, predictorB, stepIndexB)
-            : EncodeMono(samples, predictorA, stepIndexA);
-
-        return [.. header, .. body];
-    }
-
-    /// <summary>The encoder's predictor/step-index after the last <see cref="TailFrames"/> frames of one
-    /// channel, starting from `0`/`0`.</summary>
-    private static (int Predictor, int StepIndex) TailState(short[] interleaved, int channels, int channel)
-    {
-        int frames = interleaved.Length / channels;
-        int predictor = 0, stepIndex = 0, step = StepTable[0];
-        for (int f = Math.Max(0, frames - TailFrames); f < frames; f++)
+        if (odd)
         {
-            EncodeNibble(interleaved[f * channels + channel], ref predictor, ref stepIndex, ref step);
+            header[OddFlagOffset] = 1;
+            BinaryPrimitives.WriteInt16LittleEndian(header.AsSpan(OddSampleOffset), padded[^1]);
         }
 
-        return (predictor, stepIndex);
+        byte[] body = channels == 2
+            ? EncodeStereoInterleaved(rest, predictorA, stepIndexA, predictorB, stepIndexB)
+            : EncodeMono(rest, predictorA, stepIndexA);
+
+        return [.. header, .. MemoryMarshal.AsBytes(raw).ToArray(), .. body];
+    }
+
+    /// <summary>The state the nibbles start from: the last raw sample, and the step index the encoder
+    /// reaches tracking one channel's raw frames.</summary>
+    private static (int Predictor, int StepIndex) PrimedState(ReadOnlySpan<short> raw, int channels, int channel)
+    {
+        int predictor = raw[channel], stepIndex = 0, step = StepTable[0];
+        for (int f = 1; f < RawFrames; f++)
+        {
+            EncodeNibble(raw[f * channels + channel], ref predictor, ref stepIndex, ref step);
+        }
+
+        return (raw[(RawFrames - 1) * channels + channel], stepIndex);
     }
 
     /// <summary>Mono block decode - byte-for-byte port of `Dunia.dll`'s `0x10a85150`: each input byte
@@ -201,20 +238,16 @@ public static class ImaAdpcm
     }
 
     /// <summary>Mono encode - the inverse of <see cref="DecodeMono"/>: two samples packed per output
-    /// byte, high nibble first. An odd sample count fills its final half-nibble by re-targeting the
-    /// then-current predictor (asking for "no change"), since there's no real sample left to encode
-    /// there but the byte still needs both nibbles filled.</summary>
+    /// byte, high nibble first, so the sample count must be even.</summary>
     private static byte[] EncodeMono(ReadOnlySpan<short> samples, int predictor, int stepIndex)
     {
         int step = StepTable[stepIndex];
-        var data = new byte[(samples.Length + 1) / 2];
+        var data = new byte[samples.Length / 2];
 
         for (int i = 0; i < data.Length; i++)
         {
             int hi = EncodeNibble(samples[i * 2], ref predictor, ref stepIndex, ref step);
-            int lo = i * 2 + 1 < samples.Length
-                ? EncodeNibble(samples[i * 2 + 1], ref predictor, ref stepIndex, ref step)
-                : EncodeNibble(predictor, ref predictor, ref stepIndex, ref step);
+            int lo = EncodeNibble(samples[i * 2 + 1], ref predictor, ref stepIndex, ref step);
             data[i] = (byte)((hi << 4) | lo);
         }
 

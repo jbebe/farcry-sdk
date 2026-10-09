@@ -63,8 +63,7 @@ public sealed class SpkImportCommand : CliCommand<SpkImportCommand.Settings>
         {
             WavAudio.Pcm16Audio pcm = WavAudio.ReadPcm16(replacement);
             WarnIfChanged(current.SampleRate, current.Channels, pcm.SampleRate, pcm.Channels);
-            bool looping = bank.Loops(id);
-            bank.ReplaceAudio(audio, ImaAdpcm.Encode(pcm.Samples, pcm.Channels, looping), pcm.SampleRate);
+            bank.ReplaceAudio(audio, ImaAdpcm.Encode(pcm.Samples, pcm.Channels), pcm.SampleRate);
         }
 
         byte[] patched = bank.Write();

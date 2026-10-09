@@ -399,7 +399,6 @@ public partial class SpkFileHandler : UserControl
 
         SpkBankRecord? template = sound.Layout == SpkLayout.Random ? _bank!.TemplateSample(sound) : sound;
         SpkBankRecord? like = AudioOf(template);
-        bool looping = template?.Word(SpkLayout.SampleLoop) == 1;
 
         AddVariationButton.IsEnabled = false;
         try
@@ -408,7 +407,7 @@ public partial class SpkFileHandler : UserControl
             foreach (string file in dialog.FileNames)
             {
                 StatusText.Text = $"Encoding {Path.GetFileName(file)}…";
-                encoded.Add(await EncodeLikeAsync(like, file, looping));
+                encoded.Add(await EncodeLikeAsync(like, file));
             }
             EditSelecting(() =>
             {
@@ -430,7 +429,7 @@ public partial class SpkFileHandler : UserControl
 
     /// <summary>Transcodes a file to the codec, rate and channels of <paramref name="like"/>, or to
     /// 44.1 kHz mono IMA-ADPCM when there is nothing to match.</summary>
-    private static async Task<(byte[] Stream, int? Rate)> EncodeLikeAsync(SpkBankRecord? like, string source, bool looping)
+    private static async Task<(byte[] Stream, int? Rate)> EncodeLikeAsync(SpkBankRecord? like, string source)
     {
         var info = SpkBank.DescribeAudio(like);
         string ogg = SoundPreview.TempPath(".ogg");
@@ -446,7 +445,7 @@ public partial class SpkFileHandler : UserControl
             int rate = info is { SampleRate: > 0 } ? info.Value.SampleRate : 44100;
             await FfmpegAudio.TranscodeToPcmWavAsync(source, wav, rate, info?.Channels ?? 1);
             WavAudio.Pcm16Audio pcm = WavAudio.ReadPcm16(await File.ReadAllBytesAsync(wav));
-            return (ImaAdpcm.Encode(pcm.Samples, pcm.Channels, looping), pcm.SampleRate);
+            return (ImaAdpcm.Encode(pcm.Samples, pcm.Channels), pcm.SampleRate);
         }
         finally
         {
@@ -533,7 +532,7 @@ public partial class SpkFileHandler : UserControl
         try
         {
             StatusText.Text = "Encoding…";
-            (byte[] stream, int? rate) = await EncodeLikeAsync(audio, dialog.FileName, _bank!.Loops(audio.Id));
+            (byte[] stream, int? rate) = await EncodeLikeAsync(audio, dialog.FileName);
             Edit(() => _bank.ReplaceAudio(audio, stream, rate));
         }
         catch (Exception ex)

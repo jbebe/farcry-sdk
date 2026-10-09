@@ -284,7 +284,7 @@ that points at it; giving one event its own falloff means a new curve record and
 | `[19]` | `+0x4C` | **sample rate** — always a standard real-world rate: `32000` (44%), `22050` (42%), `48000` (10%), `44100` (3%), rarer `24000`/`16000`/`12000`/`8000`/`6000` |
 | `[13]` | `+0x34` | **loop flag**: `1` on the 219 samples that must loop, such as every automatic weapon's fire loop, `0` on the other 5,170. It decides which of the two length pairs below is filled **(seen in data; the reading code is not traced)** |
 | `[20]` | `+0x50` | the average **byte rate**: `floor(bytes × rate / frames)` in 91% of samples, off by 1–2 in the rest. The game does not read it (see [playback length](#playback-length-comes-from-the-descriptor)) |
-| `[21]`, `[22]` | `+0x54`, `+0x58` | one-shot length: `[21]` the frame count, `[22]` the byte length, equal to `[2]`. Both `0` when `[13]` is `1`. For Ogg Vorbis the frame count is the last page's granule position exactly; for IMA-ADPCM it is the stream's frames less 29 or 30 |
+| `[21]`, `[22]` | `+0x54`, `+0x58` | one-shot length: `[21]` the frame count, `[22]` the byte length, equal to `[2]`. Both `0` when `[13]` is `1`. For Ogg Vorbis the frame count is the last page's granule position exactly; for IMA-ADPCM it is the 10 raw frames plus the nibbles plus the odd sample (see [IMA-ADPCM](#ima-adpcm-26)), exactly, in all 120 samples of the test banks |
 | `[23]`, `[24]` | `+0x5C`, `+0x60` | loop length, the same pair: set only when `[13]` is `1`, and `0` otherwise. Across all 5,389 retail samples the split has no exception |
 | `[25]` | `+0x64` | **codec**: `3` for IMA-ADPCM, `4` for Ogg Vorbis, without exception |
 | `[28]` | `+0x70` | `7` (99.8%) |
@@ -456,26 +456,34 @@ switching into steady-state decode:
 | `0x01` | 11 | `0` in every retail stream |
 | `0x0C` | 1 | channel-mode flag (`0` = mono, `1` = stereo) |
 | `0x0D` | 1 | `0` in every retail stream |
-| `0x0E` | 1 | `10` in every retail stream; the header parse never reads it |
+| `0x0E` | 1 | `10` in every retail stream: the number of raw frames that follow the header. The engine never reads it |
 | `0x0F` | 1 | `0` in every retail stream |
-| `0x10` | 2 | initial predictor, channel A (u16 LE) |
-| `0x12` | 1 | initial step-index, channel A (u8) |
+| `0x10` | 2 | predictor the nibbles start from, channel A (u16 LE) |
+| `0x12` | 1 | step-index the nibbles start from, channel A (u8) |
 | `0x13` | 1 | unidentified/padding |
-| `0x14` | 2 | initial predictor, channel B (u16 LE) — meaningful only when stereo |
-| `0x16` | 1 | initial step-index, channel B (u8) |
-| `0x17` | 5 | unidentified/padding (header total `0x1C` = 28 bytes) |
+| `0x14` | 2 | predictor the nibbles start from, channel B (u16 LE) — meaningful only when stereo |
+| `0x16` | 1 | step-index the nibbles start from, channel B (u8) |
+| `0x17` | 1 | unidentified/padding |
+| `0x18` | 1 | odd-sample flag: `1` when a mono stream's sample count after the raw frames is odd |
+| `0x19` | 1 | unidentified/padding |
+| `0x1A` | 2 | the odd sample (s16 LE), played after the last nibble when `0x18` is `1` |
 
-After the header, the rest of the stream is packed IMA-ADPCM nibbles.
+After the header come **10 raw frames of 16-bit PCM** (20 bytes mono, 40 bytes stereo, interleaved),
+then the packed IMA-ADPCM nibbles, high nibble first. A stream plays `10 + nibbles + odd` frames.
 
-The header parse (at `0x10a7fbae`) reads only the version, the channel-mode flag, and each channel's
-initial predictor and step index **(RE-verified)**. It checks the flag against the channel count and
-fails with the "Incoherency" error on a mismatch. The constant bytes above are from all 2,885 retail
-IMA-ADPCM streams **(seen in data)**.
+The decoder object hard-codes the 10: its constructor and its reset both set the raw-frame counter to
+`10` (`0x10a6e6ca`, `0x10a6e780` in the GOG build). Each read copies `min(requested, remaining)` raw
+frames with `memcpy` and subtracts them, then decodes nibbles **(RE-verified)**. The header parse reads
+the version, the channel-mode flag, each channel's predictor and step index, and the odd-sample pair. It
+checks the flag against the channel count and fails with the "Incoherency" error on a mismatch. The
+constant bytes above are from all 2,885 retail IMA-ADPCM streams **(seen in data)**.
 
-Retail headers that start on a loud sample are primed: the predictor sits near the clip's first sample
-with a large step index (the MAC-10's loop: `22836`/`80` against a first sample of `32767`), so decoding
-does not slew up from zero **(seen in data)**. `spk import` primes a sample whose loop flag is set with
-the state its own tail ends on, so the restart continues the wave. It starts a one-shot from `0`/`0`.
+The header's predictor is the encoder's state after the raw frames, so it sits next to the tenth raw
+sample: `-4503` against `-4524`, `23` against `20` **(seen in data)**. Decoding therefore starts on the
+clip's own first ten samples and never slews up from zero. `spk import` writes the same layout: the
+first ten frames raw, the nibbles starting from the tenth sample and the step index the encoder reaches
+tracking the raw frames, and an odd final sample in the header. A loop restart replays the raw frames,
+so looping and one-shot clips are encoded alike.
 
 **Verified against real data**: checked against two real IMA-ADPCM `FlatCopy` payloads (one mono, one
 stereo) — version byte `5` in both, channel-mode flag correctly predicted mono/stereo (matching the
@@ -486,7 +494,7 @@ written out as playable `.wav` files using the sample rate from each record's `T
 sibling.
 
 This is a standard, publicly documented algorithm — any off-the-shelf IMA-ADPCM decoder applies once
-the 28-byte header is skipped. It's a different codec family from Ubisoft's older in-house "Ubi Sound
+the 28-byte header and the 10 raw frames are skipped. It's a different codec family from Ubisoft's older in-house "Ubi Sound
 Tools" ADPCM dialects (decodable by the third-party tool `Ubitunedec`, used in older titles like *XIII*
 and *Splinter Cell*) — a coincidence of both being "an ADPCM," not the same codec.
 
@@ -505,8 +513,8 @@ no trailing noise **(heard in game, 2026-09-26)**. That clip was not also played
 the noise is the symptom reported before.
 
 Word `[20]` is not it: patching it to the replacement's real sample count changes nothing. The counter
-at `+0x30` in `TImaAdpcm_DecodeStream` (`0x10a7f9e0`) is not a remaining length either, but the
-decoder's look-ahead buffer, refilled and drained every call.
+at `+0x30` in `TImaAdpcm_DecodeStream` (`0x10a7f9e0`) is not a remaining length either, but the count
+of raw frames still to copy, which starts at 10 and reaches 0 within the first read.
 
 `jackall-cli spk import` and `spk encode`, and the App's Import…, derive every audio word of the
 samples that play the new stream: `[2]`, the one-shot or loop pair, the rate, the channels and the

@@ -24,6 +24,8 @@ public class ImaAdpcmTests
         return header;
     }
 
+    private static int RawBytes(int channels) => ImaAdpcm.RawFrames * channels * sizeof(short);
+
     [Fact]
     public void Decode_rejects_a_stream_shorter_than_the_header()
         => Assert.Throws<InvalidDataException>(() => ImaAdpcm.Decode(new byte[ImaAdpcm.HeaderSize - 1]));
@@ -45,8 +47,8 @@ public class ImaAdpcmTests
         // for the smallest step-table entry (7); step-index also stays clamped at 0 (index delta -1,
         // already at the floor) - so this is a fixed point, not a coincidence of the first sample only.
         byte[] header = BuildHeader(stereo: false, predictorA: 0, stepIndexA: 0);
-        // Sixteen 0x00 bytes -> 32 zero nibbles
-        byte[] stream = header.Concat(new byte[16]).ToArray();
+        // Ten zero raw frames, then sixteen 0x00 bytes -> 32 zero nibbles
+        byte[] stream = header.Concat(new byte[RawBytes(1) + 16]).ToArray();
 
         ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(stream);
 
@@ -55,30 +57,43 @@ public class ImaAdpcmTests
     }
 
     [Fact]
-    public void Mono_decode_produces_two_samples_per_input_byte()
+    public void Mono_decode_yields_the_raw_frames_then_two_samples_per_nibble_byte()
     {
-        byte[] header = BuildHeader(stereo: false);
+        short[] raw = [1, -2, 3, -4, 5, -6, 7, -8, 9, -10];
         byte[] body = [0x12, 0x34, 0x56];
-        byte[] stream = header.Concat(body).ToArray();
+        byte[] stream = [.. BuildHeader(stereo: false), .. raw.SelectMany(BitConverter.GetBytes), .. body];
 
         ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(stream);
 
         Assert.Equal(1, decoded.Channels);
-        Assert.Equal(body.Length * 2, decoded.Samples.Length);
+        Assert.Equal(raw, decoded.Samples[..ImaAdpcm.RawFrames]);
+        Assert.Equal(ImaAdpcm.RawFrames + body.Length * 2, decoded.Samples.Length);
     }
 
     [Fact]
-    public void Stereo_decode_produces_one_interleaved_LR_frame_per_input_byte()
+    public void Stereo_decode_yields_the_raw_frames_then_one_interleaved_LR_frame_per_nibble_byte()
     {
-        byte[] header = BuildHeader(stereo: true);
         byte[] body = [0x12, 0x34, 0x56, 0x78];
-        byte[] stream = header.Concat(body).ToArray();
+        byte[] stream = BuildHeader(stereo: true).Concat(new byte[RawBytes(2)]).Concat(body).ToArray();
 
         ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(stream);
 
         Assert.Equal(2, decoded.Channels);
-        // L,R per byte = 2 samples per byte
-        Assert.Equal(body.Length * 2, decoded.Samples.Length);
+        Assert.Equal((ImaAdpcm.RawFrames + body.Length) * 2, decoded.Samples.Length);
+    }
+
+    [Fact]
+    public void A_mono_odd_sample_plays_after_the_nibbles()
+    {
+        byte[] header = BuildHeader(stereo: false);
+        header[0x18] = 1;
+        BitConverter.GetBytes((short)1234).CopyTo(header, 0x1a);
+        byte[] stream = header.Concat(new byte[RawBytes(1) + 4]).ToArray();
+
+        short[] samples = ImaAdpcm.Decode(stream).Samples;
+
+        Assert.Equal(ImaAdpcm.RawFrames + 8 + 1, samples.Length);
+        Assert.Equal(1234, samples[^1]);
     }
 
     [Fact]
@@ -97,9 +112,30 @@ public class ImaAdpcmTests
         ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(mono.FlatCopyAudioStream);
 
         Assert.Equal(1, decoded.Channels);
-        Assert.Equal((mono.FlatCopyAudioStream.Length - ImaAdpcm.HeaderSize) * 2, decoded.Samples.Length);
+        Assert.Equal(ImaAdpcm.FrameCount(mono.FlatCopyAudioStream), decoded.Samples.Length);
         // Real audio, not a silent/degenerate stream
         Assert.Contains(decoded.Samples, s => s != 0);
+    }
+
+    /// <summary>Banks whose samples' declared frame counts the stream layout must reproduce; the second
+    /// carries odd-sample streams.</summary>
+    public static TheoryData<string> DeclaringBanks => new() { SpkPackageTests.WithAudio, "Spk/004565a3.spk" };
+
+    [Theory]
+    [MemberData(nameof(DeclaringBanks))]
+    public void The_frame_count_matches_what_every_retail_sample_declares(string fixture)
+    {
+        if (Fixture.Read(fixture) is not { } bytes) return;
+
+        SpkBank bank = SpkBank.Parse(bytes);
+        var samples = bank.Records.Where(r => r.Layout == SpkLayout.Sample && bank.Find(r.Word(SpkLayout.SampleAudio)) is { IsAudio: true, Data: [ImaAdpcm.ExpectedVersion, ..] }).ToList();
+
+        Assert.NotEmpty(samples);
+        Assert.All(samples, sample =>
+        {
+            uint declared = Math.Max(sample.Word(SpkLayout.SampleOneShotFrames), sample.Word(SpkLayout.SampleLoopFrames));
+            Assert.Equal(declared, ImaAdpcm.FrameCount(bank.Find(sample.Word(SpkLayout.SampleAudio))!.Data));
+        });
     }
 
     [Fact]
@@ -150,43 +186,34 @@ public class ImaAdpcmTests
     }
 
     [Fact]
-    public void A_one_shot_header_starts_from_zero()
+    public void The_first_frames_are_stored_raw_so_a_loud_start_or_a_loop_restart_has_no_slew()
     {
+        // Starts at full amplitude, where a predictor slewing up from zero would miss by thousands.
         short[] samples = BuildSineWave(frequency: 400, sampleRate: 8000, seconds: 0.25, amplitude: 12000, phase: Math.PI / 2);
 
         byte[] stream = ImaAdpcm.Encode(samples, channels: 1);
+        short[] decoded = ImaAdpcm.Decode(stream).Samples;
 
-        Assert.All(stream[0x10..0x18], b => Assert.Equal(0, b));
+        Assert.Equal(ImaAdpcm.RawFrames, stream[0x0e]);
+        Assert.Equal(samples[..ImaAdpcm.RawFrames], decoded[..ImaAdpcm.RawFrames]);
+        int steadyState = MaxError(samples, decoded, 32, samples.Length);
+        Assert.True(MaxError(samples, decoded, ImaAdpcm.RawFrames, 32) <= steadyState * 3 / 2);
     }
 
     [Fact]
-    public void A_looping_clip_restarts_from_its_tail_without_a_slew()
-    {
-        // A cosine that fits the clip a whole number of times, so the restart lands mid-wave at full amplitude.
-        short[] loop = BuildSineWave(frequency: 400, sampleRate: 8000, seconds: 0.25, amplitude: 12000, phase: Math.PI / 2);
-
-        short[] primed = ImaAdpcm.Decode(ImaAdpcm.Encode(loop, channels: 1, looping: true)).Samples;
-        short[] unprimed = ImaAdpcm.Decode(ImaAdpcm.Encode(loop, channels: 1)).Samples;
-
-        int steadyState = MaxError(loop, primed, 32, loop.Length);
-        Assert.True(MaxError(loop, primed, 0, 32) <= steadyState * 3 / 2);
-        Assert.True(MaxError(loop, unprimed, 0, 32) > steadyState * 4);
-    }
-
-    [Fact]
-    public void Encoding_an_odd_number_of_mono_samples_still_produces_a_whole_number_of_bytes()
+    public void An_odd_number_of_mono_samples_round_trips_through_the_odd_sample()
     {
         short[] samples = BuildSineWave(frequency: 440, sampleRate: 8000, seconds: 0.1, amplitude: 12000);
-        // Force an odd count
-        short[] odd = samples[..(samples.Length - 1)];
-        Assert.True(odd.Length % 2 == 1);
+        short[] odd = samples.Length % 2 == 0 ? samples[..^1] : samples;
+        Assert.True((odd.Length - ImaAdpcm.RawFrames) % 2 == 1);
 
         byte[] stream = ImaAdpcm.Encode(odd, channels: 1);
+        short[] decoded = ImaAdpcm.Decode(stream).Samples;
 
-        // one extra (padding) sample decodes back out - the format has no separate sample-count field,
-        // so a consumer already has to tolerate this same one-sample ambiguity on real files.
-        ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(stream);
-        Assert.Equal(odd.Length + 1, decoded.Samples.Length);
+        Assert.Equal(1, stream[0x18]);
+        Assert.Equal(odd.Length, decoded.Length);
+        Assert.Equal(odd.Length, ImaAdpcm.FrameCount(stream));
+        Assert.Equal(odd[^1], decoded[^1]);
     }
 
     [Fact]

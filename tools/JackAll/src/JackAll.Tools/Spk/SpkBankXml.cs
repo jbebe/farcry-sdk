@@ -63,11 +63,9 @@ public static partial class SpkBankXml
             bank.Records.Add(record);
         }
 
-        // A .wav loops seamlessly only when encoded knowing it loops, which the samples playing it say.
         foreach ((SpkBankRecord audio, WavAudio.Pcm16Audio pcm) in wavs)
         {
-            bool looping = bank.Loops(audio.Id);
-            audio.Data = ImaAdpcm.Encode(pcm.Samples, pcm.Channels, looping);
+            audio.Data = ImaAdpcm.Encode(pcm.Samples, pcm.Channels);
             audio.SampleRate = pcm.SampleRate;
         }
         return bank;
