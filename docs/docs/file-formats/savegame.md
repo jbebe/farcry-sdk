@@ -352,6 +352,27 @@ unique ID, not a timestamp, slot number, or hash. It carries no ordering or date
 `CFCXEditorGameFilesService::GenerateSaveFileName` (the custom-map/editor path) is a sibling using
 `GameFileUtils::GenerateCustomMapFileName`, presumed to follow the same pattern but not decompiled.
 
+### Quick save and quick load
+
+All of this is **(RE-verified on GOG)**.
+
+**F5 writes a new numbered save every time**, never a fixed quicksave file. The `quicksave` signal
+(`0x1070DEA3`) shows `QUICK_SAVING` and raises a flag. The next tick calls `CreateSaveGame`
+(`0x10728A50`) with argument 1, which names the file as above. Only argument 0 would use the
+`quicksave.` name, and the key does not pass it.
+
+Quick saving needs all of these at once:
+
+- a local player
+- the quick-save flag on the save service. The cinematic UI mode turns it off, and so does code
+  that names the bazaar computer, though its class was not confirmed.
+- neither `Event_ReadyToPositon` nor `Event_DominoStarted` active
+- a player who is not dead
+
+**F9 loads one campaign save.** The `quickload` signal lists the campaign saves, sorts them by a
+64-bit value at entry `+0x40`, largest first, and loads the first (`0x10728940`). That value looks
+like the save's time, which would make it the newest save, but it was not checked.
+
 ## Entity-Library Overlap
 
 Which specific `entitylibrary.fcb` classes and fields `RestoreEntity`'s overlay touches in a real save
