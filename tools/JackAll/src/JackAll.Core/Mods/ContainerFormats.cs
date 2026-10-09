@@ -29,11 +29,15 @@ public static class ContainerFormats
            || IsMoveGraph(segment)
            || IsStringTable(segment)
            || IsWorldDescriptor(segment)
-           || IsInputConfig(segment);
+           || IsInputConfig(segment)
+           || IsMagmaPackage(segment);
 
     /// <summary>A world or map descriptor, which splits per mission.</summary>
     public static bool IsWorldDescriptor(string fileName)
         => WorldDescriptorContainerSplitter.IsWorldDescriptor(fileName);
+
+    /// <summary>A Magma UI package, which splits per area.</summary>
+    public static bool IsMagmaPackage(string fileName) => MgbContainerSplitter.IsPackage(fileName);
 
     /// <summary>The control list or an action map, which split per named section.</summary>
     public static bool IsInputConfig(string path)
@@ -44,7 +48,7 @@ public static class ContainerFormats
     /// value tree, and so belongs in a text view instead of the value editor.
     /// </summary>
     public static bool IsPlainDocumentFragment(string container, string fragmentId)
-        => IsDepLoad(container) || IsWorldDescriptor(container) || IsInputConfig(container)
+        => IsDepLoad(container) || IsWorldDescriptor(container) || IsInputConfig(container) || IsMagmaPackage(container)
            || ContainerLayout.IsLayoutId(fragmentId);
 
     /// <summary>
@@ -116,6 +120,11 @@ public static class ContainerFormats
         if (IsInputConfig(fileName))
         {
             return InputConfigContainerSplitter.Instance;
+        }
+
+        if (IsMagmaPackage(fileName))
+        {
+            return MgbContainerSplitter.Instance;
         }
 
         return IsStringTable(fileName)
