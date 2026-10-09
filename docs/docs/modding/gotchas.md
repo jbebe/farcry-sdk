@@ -19,6 +19,16 @@ the full provenance note.
   *new copy* of the weapon (e.g. buying one) rather than reloading a save. Don't assume a mod "doesn't
   work" from one quick test with an old save. See [savegame](../file-formats/savegame.md) for the
   confirmed mechanism (a per-entity, per-property overlay, not a global freeze).
+- **Mission rewards edited in `gamemodesconfig.xml` need a new campaign.** A save carries its own
+  copy of every story, library, buddy and side-quest record, diamonds and reputation bonus included,
+  and loading replaces the config's list with it. The assassination rewards and the mission caps are
+  never saved, so edits to those apply to an existing save.
+
+  :::info[Verified via reverse engineering]
+  The record lists' save loader clears and rebuilds them; the scalars have no save slot. See
+  [savegame](../file-formats/savegame.md#campaign-state-outside-the-entities).
+  :::
+
 - **Directly setting a high reputation via save-edit doesn't reproduce organic NPC reactions** — see
   [Data Recipes](./data-recipes.md#economy--progression).
 

@@ -308,6 +308,34 @@ Practical consequences for modding `entitylibrary.fcb` against an existing save:
 See [Entity-Library Overlap](#entity-library-overlap) below for which classes/fields this mechanism
 actually touches in a real save, measured directly.
 
+## Campaign state outside the entities
+
+Two top-level sections carry the campaign itself, and both are read back over what the config or
+the world data says.
+
+**`MissionManagement` carries the mission records.** `CFCXMissionManager` (`RegisterProperties`,
+GOG `0x10749250`) registers each field with separate config and save loaders. A record list's
+save loader (GOG `0x10747E50`) clears the list and rebuilds it from the save. That covers the
+story, library, buddy and BSQ records with their `DiamondReward`, `InfBonus`, `BuddyUnlock`,
+`Achievement`, `Faction` and `CompletionOrder`. A save therefore brings back its own copy of every
+record, and an edit to those attributes in `gamemodesconfig.xml` reaches only a new campaign.
+
+Some fields have no-op save slots and come from the config every time: `AssassinationReward*`,
+`Max*Missions`, `Inf*Coefficient` and `MinHistoryPointsForPrimaryBuddy`. All of this is
+**(RE-verified)** and matched in 14 retail saves: every save holds 27 `DiamondReward` values (15 story
+and 12 library), and none of them holds any of those config-only names.
+
+**`MissionManager` carries the mission-layer states**, as `MissionList {ListId}` → `Mission {Name,
+State}` (server `SaveMissionStates`). The fields are:
+
+- **`Name`** is the CRC32 of the layer path, lowercased and with backslashes.
+  `missions\safehouse\ai\w1b2\w1b2_sp01` is `0x7744D81F`, found once in each save checked; the
+  mixed-case and forward-slash spellings are never found.
+- **`State`** is the layer's state bits: 0 never switched on, 1 enabled, 2 disabled. Bits 4 and 8
+  (complete, fail) exist too.
+
+The layers themselves are described in [world loading](../engine-internals/world-loading.md).
+
 ## Why the save filename is a bare number
 
 **`GameFileUtils::GenerateCampaignGameFileName`** (`0x091ea6b0`) produces the `<digits>.sav` name. It
