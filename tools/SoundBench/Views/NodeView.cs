@@ -3,25 +3,34 @@ using SoundBench.Dare;
 
 namespace SoundBench.Views;
 
-/// <summary>A row of the voice tree: one node of a playing event, its numbers copied out under the bench's lock
-/// and formatted after it.</summary>
+/// <summary>A row of the voice tree: one node of a played event, its numbers copied out under the bench's lock
+/// and formatted after it. Once the event ends the row keeps its last values.</summary>
 public sealed class NodeView : Observable
 {
     private readonly Bench _bench;
+    private readonly SoundInstance? _instance;
     private readonly string[] _curveNames;
     private readonly float[] _inputs, _outputs;
     private float _volumeDb, _pitch, _heardDb, _peakDb;
-    private bool _virtual, _done;
+    private bool _virtual, _done, _stopping;
     private string? _problem;
-    private string _values = "", _curves = "", _problemText = "";
+    private string _values = "", _curves = "", _problemText = "", _state = "";
     private double _meter;
     private bool _muted, _soloed;
 
-    public NodeView(Bench bench, SoundNode node, Func<uint, string> parameterName, string? field = null)
+    /// <summary>The row of a whole play of an event.</summary>
+    public NodeView(Bench bench, SoundInstance instance, Func<uint, string> parameterName)
+        : this(bench, instance.Root, parameterName)
+    {
+        _instance = instance;
+        Title = $"{Title} · started at {instance.StartedAt:0.00} s";
+    }
+
+    public NodeView(Bench bench, SoundNode node, Func<uint, string> parameterName)
     {
         _bench = bench;
         Node = node;
-        Title = $"{(field is null ? "" : field + ": ")}{node.Kind} 0x{node.Id:x8}";
+        Title = $"{node.Kind} 0x{node.Id:x8}";
         Detail = string.Join(" · ", new[] { node.Detail, node.Bank }.Where(s => s.Length > 0));
         _curveNames = [.. node.Curves.Select(c => parameterName(c.Parameter))];
         _inputs = new float[node.Curves.Count];
@@ -39,8 +48,11 @@ public sealed class NodeView : Observable
     public IReadOnlyList<NodeView> Subtree { get; }
     public bool IsVoice => Node.Voice is not null;
 
-    /// <summary>An event that plays under the engine's, listed after them.</summary>
-    public bool Background { get; init; }
+    /// <summary>The play has finished, so its rows no longer change.</summary>
+    public bool Ended { get; private set; }
+
+    /// <summary>A play's row: playing, fading out or ended.</summary>
+    public string State { get => _state; private set => Set(ref _state, value); }
 
     public string Values { get => _values; private set => Set(ref _values, value); }
     public string Curves { get => _curves; private set => Set(ref _curves, value); }
@@ -61,8 +73,22 @@ public sealed class NodeView : Observable
         set => Toggle(ref _soloed, value, _bench.Soloed);
     }
 
-    /// <summary>Copies the node's numbers out; call under <see cref="Bench.Sync"/>.</summary>
-    public void Capture()
+    /// <summary>Copies a play's numbers out, the last time once it has finished; call under <see cref="Bench.Sync"/>.</summary>
+    public void CapturePlay()
+    {
+        if (Ended || _instance is null)
+        {
+            return;
+        }
+        _stopping = _instance.Stopping;
+        Ended = _instance.Finished;
+        foreach (NodeView row in Subtree)
+        {
+            row.Capture();
+        }
+    }
+
+    private void Capture()
     {
         _volumeDb = Node.VolumeDb;
         _pitch = Node.Pitch;
@@ -78,8 +104,17 @@ public sealed class NodeView : Observable
         }
     }
 
-    /// <summary>Formats what <see cref="Capture"/> copied, raising only what changed.</summary>
-    public void Publish()
+    /// <summary>Formats what a play's rows copied, raising only what changed.</summary>
+    public void PublishPlay()
+    {
+        State = Ended ? "ended" : _stopping ? "fading out" : "playing";
+        foreach (NodeView row in Subtree)
+        {
+            row.Publish(Ended);
+        }
+    }
+
+    private void Publish(bool ended)
     {
         Problem = _problem ?? "";
         Curves = string.Join("   ", Node.Curves.Select((c, i) =>
@@ -90,7 +125,7 @@ public sealed class NodeView : Observable
         {
             Values = $"{gain}{Math.Clamp(_volumeDb, -96, 0):0.0} dB{(_volumeDb > 0 ? " (clamped at 0)" : "")}, heard {_heardDb:0.0} dB, " +
                      $"pitch ×{_pitch:0.000}{(_virtual ? $", virtual: under {Voice.AudibleFloorDb} dB" : "")}{(_done ? ", ended" : "")}";
-            Meter = Math.Clamp((_peakDb + 60) / 60, 0, 1);
+            Meter = ended ? 0 : Math.Clamp((_peakDb + 60) / 60, 0, 1);
         }
         else
         {

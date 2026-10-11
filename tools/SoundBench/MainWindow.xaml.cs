@@ -19,7 +19,9 @@ public partial class MainWindow : Window
 {
     private readonly Settings _settings = Settings.Load();
     private readonly Bench _bench = new();
-    private readonly ObservableCollection<NodeView> _voices = [];
+    private readonly ObservableCollection<SlotView> _slots = [];
+    private readonly Dictionary<string, SlotView> _slotByField = [];
+    private readonly List<(NodeView Play, SlotView Slot)> _playing = [];
     private readonly List<CurvePlot> _plots = [];
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(50) };
     private IReadOnlyList<ParameterView> _parameters = [];
@@ -33,7 +35,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         GamePath.Text = _settings.GamePath;
         LayerPaths.Text = string.Join("; ", _settings.Layers);
-        Voices.ItemsSource = _voices;
+        Voices.ItemsSource = _slots;
         OnControls(this, new RoutedEventArgs());
         _timer.Tick += (_, _) => RefreshViews();
         Loaded += (_, _) => OnOpen(this, new RoutedEventArgs());
@@ -99,6 +101,7 @@ public partial class MainWindow : Window
             _bench.Select(car, tuning, registry);
         }
 
+        ShowSlots(car);
         ShiftTime.Value = tuning.ShiftTime;
         CarInfo.Text = $"{string.Join(", ", car.Archetypes)}\n{car.Physics.Mass:0} kg, {car.Physics.EnginePower:0} N·m, " +
                        $"{car.Physics.Gears} gears, top {car.Physics.TopSpeedMph:0} mph · tuning [{car.Real?.Name ?? OverhaulTuning.OtherCars}]: " +
@@ -124,6 +127,7 @@ public partial class MainWindow : Window
         {
             _bench.Load(registry);
         }
+        ShowSlots(car);
         BankProblems.Text = string.Join("\n", registry.Problems);
         Status.Text = $"Banks reloaded at {DateTime.Now:T}";
     }
@@ -132,11 +136,25 @@ public partial class MainWindow : Window
     private static SoundRegistry Prepare(GameFiles files, Car car)
     {
         var registry = new SoundRegistry(files);
-        foreach (uint id in VehicleSounds.Events(car))
+        foreach (SoundSlot slot in CarSlots.Of(car).All)
         {
-            registry.Hold(id);
+            registry.Hold(slot.Id);
         }
         return registry;
+    }
+
+    /// <summary>One row per event the car plays, in a fixed order, empty until it plays.</summary>
+    private void ShowSlots(Car car)
+    {
+        _slots.Clear();
+        _slotByField.Clear();
+        _playing.Clear();
+        foreach (SoundSlot slot in CarSlots.Of(car).All)
+        {
+            var view = new SlotView(slot);
+            _slots.Add(view);
+            _slotByField[slot.Field] = view;
+        }
     }
 
     private void OnStart(object sender, RoutedEventArgs e)
@@ -174,10 +192,14 @@ public partial class MainWindow : Window
 
     private void OnSurface(object sender, SelectionChangedEventArgs e)
     {
+        uint? surface = (Surfaces.SelectedItem as Surface)?.Value;
         lock (_bench.Sync)
         {
-            _bench.Surface = (Surfaces.SelectedItem as Surface)?.Value;
-            _bench.Sounds?.RestartTyres();
+            if (_bench.Surface != surface)
+            {
+                _bench.Surface = surface;
+                _bench.Sounds?.RestartTyres();
+            }
         }
     }
 
@@ -223,17 +245,21 @@ public partial class MainWindow : Window
 
     private void RefreshViews()
     {
-        NodeView[] gone, added;
+        List<(NodeView Play, SlotView Slot)> started = [];
         float[] inputs;
         lock (_bench.Sync)
         {
-            List<SoundInstance> playing = _bench.Mixer.Playing;
-            gone = [.. _voices.Where(v => !playing.Any(i => i.Root == v.Node))];
-            added = [.. playing.Where(i => !_voices.Any(v => v.Node == i.Root))
-                .Select(i => new NodeView(_bench, i.Root, ParameterName, i.Field) { Background = i.Background })];
-            foreach (NodeView node in _voices.Concat(added).SelectMany(v => v.Subtree))
+            foreach (SoundInstance instance in _bench.TakeStarted())
             {
-                node.Capture();
+                if (_slotByField.TryGetValue(instance.Field, out SlotView? slot))
+                {
+                    started.Add((new NodeView(_bench, instance, ParameterName), slot));
+                }
+            }
+            _playing.AddRange(started);
+            foreach ((NodeView play, _) in _playing)
+            {
+                play.CapturePlay();
             }
             foreach (ParameterView parameter in _parameters)
             {
@@ -243,18 +269,19 @@ public partial class MainWindow : Window
             ShowGauges();
         }
 
-        foreach (NodeView view in gone)
+        foreach ((NodeView play, SlotView slot) in started)
         {
-            _voices.Remove(view);
+            slot.Add(play);
         }
-        foreach (NodeView view in added)
+        foreach ((NodeView play, SlotView slot) in _playing)
         {
-            _voices.Insert(view.Background ? _voices.Count : _voices.TakeWhile(v => !v.Background).Count(), view);
+            play.PublishPlay();
+            if (play.Ended)
+            {
+                slot.Prune();
+            }
         }
-        foreach (NodeView node in _voices.SelectMany(v => v.Subtree))
-        {
-            node.Publish();
-        }
+        _playing.RemoveAll(p => p.Play.Ended);
         foreach (ParameterView parameter in _parameters)
         {
             parameter.Publish();

@@ -23,6 +23,7 @@ public sealed class Bench : ISampleProvider
     private const float LiftedPedal = -100;
 
     private readonly float[] _block = new float[Mixer.BlockFrames * 2];
+    private readonly List<SoundInstance> _started = [];
     private int _blockAt = Mixer.BlockFrames * 2;
     private SoundGraph? _graph;
     private Dictionary<uint, GameParameter> _parameterById = [];
@@ -32,6 +33,9 @@ public sealed class Bench : ISampleProvider
     public WaveFormat WaveFormat { get; } = WaveFormat.CreateIeeeFloatWaveFormat(Mixer.Rate, 2);
 
     public Mixer Mixer { get; } = new();
+
+    /// <summary>Seconds the bench has run.</summary>
+    public float Time { get; private set; }
 
     public Car? Car { get; private set; }
     public HavokStandIn? Havok { get; private set; }
@@ -87,7 +91,16 @@ public sealed class Bench : ISampleProvider
     {
         _graph = new SoundGraph(registry, SwitchValue, new RandomPicks());
         Mixer.Playing.Clear();
+        _started.Clear();
         Sounds?.Restart();
+    }
+
+    /// <summary>The events started since the last call, finished or not.</summary>
+    public IReadOnlyList<SoundInstance> TakeStarted()
+    {
+        SoundInstance[] started = [.. _started];
+        _started.Clear();
+        return started;
     }
 
     /// <summary>The value a game parameter has for the car now; null for one a car does not answer.</summary>
@@ -129,16 +142,18 @@ public sealed class Bench : ISampleProvider
             }
         }
         Mixer.Render(_block, Volume);
+        Time += Mixer.BlockSeconds;
     }
 
-    private SoundInstance? Play(uint id, string field)
+    private SoundInstance? Play(SoundSlot slot)
     {
-        if (id == SpkLayout.NoId || _graph is null)
+        if (slot.Id == SpkLayout.NoId || _graph is null)
         {
             return null;
         }
-        var instance = new SoundInstance(field, _graph.Event(id));
+        var instance = new SoundInstance(slot.Field, _graph.Event(slot.Id), Time);
         Mixer.Playing.Add(instance);
+        _started.Add(instance);
         return instance;
     }
 

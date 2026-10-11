@@ -32,7 +32,7 @@ library. Audio goes out through WASAPI (NAudio), and Ogg Vorbis is decoded by NV
 | Distance | Metres to the car, through each event's rolloff curve: 0 m is the cab, about 5 m the chase camera |
 | Master, Output | The mix level, and its peak. Red means the bench itself is clipping, so lower Master. |
 | Surface | The material switch value the tyres roll on |
-| Voice tree | **M** mutes and **S** solos a record and everything under it. Select a layer to plot its curves with the parameter's current value marked. |
+| Voice tree | One row per event the car plays, in a fixed order, under the field that names it. A play stays after it ends, with its last values, until the next one ends. **M** mutes and **S** solos a record and everything under it. Select a layer to plot its curves with the parameter's current value marked. |
 
 Two problems show in red under a record:
 

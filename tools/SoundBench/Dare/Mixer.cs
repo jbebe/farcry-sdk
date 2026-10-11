@@ -31,7 +31,7 @@ public sealed class Mixer
                 Render(voice, from, to, block);
             }
         }
-        Playing.RemoveAll(i => i.Gone);
+        Playing.RemoveAll(i => i.Finished);
 
         for (int i = 0; i < block.Length; i++)
         {
