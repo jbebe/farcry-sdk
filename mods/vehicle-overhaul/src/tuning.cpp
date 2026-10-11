@@ -128,8 +128,8 @@ namespace {
          &KnownCar},
         {"Solid axles", &Values::solidAxles, "Solid axles", kSuspension,
          "Springs each solid axle of the real vehicle as one beam, which twists under the body to keep both "
-         "wheels down and lets them hang lower. Only the Land Rover so far. Off springs every wheel on its "
-         "own, as the game does.",
+         "wheels down and lets them hang lower: the Land Rover, the big truck and the Unimog. Off springs "
+         "every wheel on its own, as the game does.",
          &HasSolidAxle},
     };
 

@@ -12,8 +12,12 @@ namespace {
     // archetypes' sndGearShift fields, which would also clunk every AI car on its made-up gear changes.
     constexpr uint32_t kShiftClunks = 0x00FD0000;
 
-    // Leaf springs under the chassis rails, about 0.8 m apart on a 1.31 m track: estimated, not measured.
+    // Each solid axle's springs under the chassis rails, estimated, not measured: the Rover's leaf springs about 0.8 m
+    // apart on a 1.31 m track, the ZIL's about 0.87 m, a usual truck frame, on 1.8 m, and the Unimog's coil springs
+    // about 0.8 m on 1.6 m.
     constexpr float kRoverSprings = 0.6f;
+    constexpr float kZilSprings = 0.5f;
+    constexpr float kUnimogSprings = 0.5f;
 
     // The shortest suspension, and a truck that climbs on low gearing.
     constexpr Start kRoverTuning[] = {{"Top speed", 1.2f}, {"Springs", 1.0f}};
@@ -37,9 +41,9 @@ namespace {
         {1200.0f, 88.0f, "Jeep Wrangler", 1.20f},
         {1200.0f, 50.0f, "Jeep Wrangler taxi", 1.20f},
         {600.0f, 80.0f, "Quad", 1.00f},
-        {1600.0f, 88.0f, "Unimog", 0.85f},
-        {4000.0f, 150.0f, "ZIL-130", 0.85f, 560.0f, 3200.0f, kShiftClunks, 0.7f, {}, kZilTuning, kZilFrontWeight,
-         kZilGears, 1300.0f},
+        {1600.0f, 88.0f, "Unimog", 0.85f, 0.0f, 0.0f, 0, 0.0f, {kUnimogSprings, kUnimogSprings}},
+        {4000.0f, 150.0f, "ZIL-130", 0.85f, 560.0f, 3200.0f, kShiftClunks, 0.7f, {kZilSprings, kZilSprings}, kZilTuning,
+         kZilFrontWeight, kZilGears, 1300.0f},
     };
 }
 
