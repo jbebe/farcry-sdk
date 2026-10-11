@@ -273,7 +273,7 @@ public partial class MainWindow
             Warn("All mods were removed, but the restored patch.dat/patch.fat still don't match the " +
                  "known hash for a clean 1.03 Far Cry 2. This can happen if the backup JackAll made " +
                  "was already modded before this tool ever saw it, or if your game is a different " +
-                 "version. Verifying game files in Steam is the safest way back to a truly clean install.");
+                 "version. Verifying the game files in Steam or GOG Galaxy is the safest way back to a truly clean install.");
         }
 
         _vm.Status = "All mods removed - the game's original files are back. Your mods are still listed here.";

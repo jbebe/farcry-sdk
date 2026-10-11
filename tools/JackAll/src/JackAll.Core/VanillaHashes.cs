@@ -3,8 +3,8 @@ using System.IO.Hashing;
 namespace JackAll.Core;
 
 /// <summary>
-/// Known-good XxHash3 digests of a clean, Steam-patched-to-1.03 Far Cry 2 install's .dat/.fat
-/// archives (see assets/vanilla_hashes.ini) — the reference <see cref="GameInstall"/>'s files are
+/// Known-good XxHash3 digests of a clean 1.03 Far Cry 2 install's .dat/.fat archives, Steam's and
+/// GOG's (see assets/vanilla_hashes.ini) — the reference <see cref="GameInstall"/>'s files are
 /// checked against before this tool trusts them as a base to build from or revert to.
 /// </summary>
 /// <remarks>
@@ -21,15 +21,16 @@ namespace JackAll.Core;
 /// </remarks>
 public sealed class VanillaHashes
 {
-    private readonly Dictionary<string, string> _hashes;
+    /// <summary>Every known-good hash per archive: a path listed twice has two clean releases.</summary>
+    private readonly Dictionary<string, HashSet<string>> _hashes;
 
-    private VanillaHashes(Dictionary<string, string> hashes) => _hashes = hashes;
+    private VanillaHashes(Dictionary<string, HashSet<string>> hashes) => _hashes = hashes;
 
     /// <summary>Missing or unreadable yields an empty instance — every mismatch check below then
     /// simply finds nothing to compare against, rather than failing the load it's guarding.</summary>
     public static VanillaHashes Load(string path)
     {
-        var hashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var hashes = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
         if (File.Exists(path))
         {
@@ -51,7 +52,11 @@ public sealed class VanillaHashes
                 string hash = line[(eq + 1)..].Trim();
                 if (relativePath.Length > 0 && hash.Length > 0)
                 {
-                    hashes[relativePath] = hash;
+                    if (!hashes.TryGetValue(relativePath, out HashSet<string>? known))
+                    {
+                        hashes[relativePath] = known = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    }
+                    known.Add(hash);
                 }
             }
         }
@@ -70,13 +75,13 @@ public sealed class VanillaHashes
         List<string> mismatches = [];
         foreach (string relative in relativePaths)
         {
-            if (!_hashes.TryGetValue(relative, out string? expected))
+            if (!_hashes.TryGetValue(relative, out HashSet<string>? expected))
             {
                 continue;
             }
 
             string full = Path.Combine(dataDir, relative);
-            if (!File.Exists(full) || !string.Equals(ComputeHash(full), expected, StringComparison.OrdinalIgnoreCase))
+            if (!File.Exists(full) || !expected.Contains(ComputeHash(full)))
             {
                 mismatches.Add(relative);
             }
