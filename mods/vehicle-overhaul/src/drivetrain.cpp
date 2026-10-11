@@ -106,8 +106,7 @@ bool Install() {
     return Vehicle::Install() && VehicleSound::Install(&Heard) && PawnTick::Subscribe(&Tick);
 }
 
-float Step(Car car, const RealVehicle::Spec* real, float shiftTime, const Wheeled::Readout& readout,
-           float seconds) {
+float Step(Car car, const RealVehicle::Spec* real, const Wheeled::Readout& readout, float seconds) {
     const float idle = IdleOf(real);
     const float redline = RedlineOf(real);
     if (car != g_car) {
@@ -125,7 +124,8 @@ float Step(Car car, const RealVehicle::Spec* real, float shiftTime, const Wheele
     g_sinceShift += seconds;
     if (readout.gear != g_gear) {
         g_pendingShift = readout.gear > g_gear ? 1 : -1;
-        g_shiftTime = shiftTime;
+        // The change came a step ago, which Havok has counted off its clutch time.
+        g_shiftTime = readout.clutchLeft + seconds;
         g_sinceShift = 0.0f;
         g_gear = readout.gear;
     }

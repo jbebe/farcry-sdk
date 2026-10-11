@@ -53,7 +53,8 @@ namespace {
         {"Top speed", kEngine, &Values::topSpeed, 2.0f, 0.5f, 3.0f, "%.2fx",
          "Gearing, as a multiple of the car's own top speed. Higher is faster but pulls less in each gear."},
         {"Shift time", kEngine, &Values::shiftTime, 0.6f, 0.0f, 2.0f, "%.2f s",
-         "How long a gear change cuts the drive while the clutch is out. Retail changes gear instantly."},
+         "How long a change up cuts the drive while the clutch is out; a change down takes 0.1 s. Retail "
+         "changes gear instantly."},
         {"Brake torque", kBrakes, &Values::brakeTorque, 0.3f, 0.1f, 1.5f, "%.2fx",
          "The brakes' strength, as a multiple of the car's own."},
         {"Lock-up time", kBrakes, &Values::lockTime, 0.5f, 0.1f, 5.0f, "%.2f s",

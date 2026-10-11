@@ -39,7 +39,11 @@ namespace {
     constexpr ptrdiff_t kVehicleWheelsInfo = 0x48;
     constexpr ptrdiff_t kVehicleDriverInput = 0x9C;
     constexpr ptrdiff_t kVehicleRpm = 0xB8;
+    // The gearbox's state, which the transmission takes in and gives back each step.
+    constexpr ptrdiff_t kVehicleReversing = 0xCC;
     constexpr ptrdiff_t kVehicleGear = 0xCD;
+    constexpr ptrdiff_t kVehicleClutchOut = 0xCE;
+    constexpr ptrdiff_t kVehicleClutchLeft = 0xD0;
 
     // The driver input's forward axis: negative accelerates, which the game sets from its pedal.
     constexpr ptrdiff_t kDriverInputForward = 0x0C;
@@ -74,8 +78,8 @@ namespace {
 
     // hkpVehicleDefaultTransmission; the forward gears' ratios are an hkArray, its size after.
     constexpr ptrdiff_t kTransmissionDownshift = 0x08;
+    constexpr ptrdiff_t kTransmissionUpshift = 0x0C;
     constexpr ptrdiff_t kTransmissionPrimaryRatio = 0x10;
-    constexpr ptrdiff_t kTransmissionClutchDelay = 0x14;
     constexpr ptrdiff_t kTransmissionGears = 0x1C;
     constexpr ptrdiff_t kTransmissionGearCount = 0x20;
 
@@ -92,19 +96,23 @@ namespace {
     // FC2's own: each wheel's suspension force last step, which rolling resistance scales.
     constexpr ptrdiff_t kSuspensionForces = 0x20;
 
+    // The z of extraGravity.
     constexpr ptrdiff_t kAerodynamicsDownforce = 0x28;
     constexpr ptrdiff_t kAerodynamicsSpeedLimiter = 0x30;
     constexpr ptrdiff_t kDamperSpinDamping = 0x08;
 
-    // The chassis hkpRigidBody's motion state: its rotation's columns, the swept centre of mass at
-    // both ends of the step, and the centre of mass in the body's own space. Then its motion's inverse
-    // inertia about x, y and z.
+    // The chassis hkpRigidBody: the hkpWorld it is in. Its motion state: its rotation's columns, the swept
+    // centre of mass at both ends of the step, and the centre of mass in the body's own space. Then its
+    // motion's inverse inertia about x, y and z.
+    constexpr ptrdiff_t kChassisWorld = 0x08;
     constexpr ptrdiff_t kChassisRotation = 0xE0;
     constexpr ptrdiff_t kChassisCentreOfMass0 = 0x120;
     constexpr ptrdiff_t kChassisCentreOfMass1 = 0x130;
     constexpr ptrdiff_t kChassisLocalCentreOfMass = 0x160;
     constexpr ptrdiff_t kChassisInverseInertia = 0x190;
     constexpr ptrdiff_t kChassisVelocity = 0x1A0;
+
+    constexpr ptrdiff_t kWorldGravity = 0x10;
 
     // The wheels in the order the game sorts them: front left, front right, rear right, rear left.
     enum { kFrontLeft, kFrontRight, kRearRight, kRearLeft };
@@ -298,11 +306,14 @@ Parts PartsOf(Car car) {
     parts.climbPower = &At<float>(car, kCarClimbPower);
     uint8_t* transmission = At<uint8_t*>(vehicle, kVehicleTransmission);
     parts.primaryRatio = &At<float>(transmission, kTransmissionPrimaryRatio);
-    parts.shiftTime = &At<float>(transmission, kTransmissionClutchDelay);
+    parts.upshift = &At<float>(transmission, kTransmissionUpshift);
     parts.downshift = &At<float>(transmission, kTransmissionDownshift);
     parts.gears = reinterpret_cast<float*>(Elements(transmission, kTransmissionGears));
     parts.gearCount = &At<int32_t>(transmission, kTransmissionGearCount);
     parts.gear = &At<int8_t>(vehicle, kVehicleGear);
+    parts.reversing = &At<uint8_t>(vehicle, kVehicleReversing);
+    parts.clutchOut = &At<uint8_t>(vehicle, kVehicleClutchOut);
+    parts.clutchLeft = &At<float>(vehicle, kVehicleClutchLeft);
     parts.retailEnginePower = At<float>(car, kCarRetailEnginePower);
     parts.retailPrimaryRatio = At<float>(car, kCarRetailPrimaryRatio);
     parts.speedLimiter = &At<uint8_t>(aerodynamics, kAerodynamicsSpeedLimiter);
@@ -339,10 +350,23 @@ Parts PartsOf(Car car) {
 
 Readout ReadoutOf(Car car) {
     uint8_t* vehicle = Vehicle(car);
-    const float* velocity = &At<float>(At<uint8_t*>(vehicle, kVehicleChassis), kChassisVelocity);
+    const uint8_t* body = At<uint8_t*>(vehicle, kVehicleChassis);
+    const float* velocity = &At<float>(body, kChassisVelocity);
     const float forward = At<float>(At<uint8_t*>(vehicle, kVehicleDriverInput), kDriverInputForward);
-    return {std::hypot(velocity[0], velocity[1], velocity[2]), At<float>(vehicle, kVehicleRpm),
-            At<int8_t>(vehicle, kVehicleGear), (std::max)(0.0f, -forward)};
+    Readout readout{std::hypot(velocity[0], velocity[1], velocity[2]), At<float>(vehicle, kVehicleRpm),
+                    At<int8_t>(vehicle, kVehicleGear),
+                    At<uint8_t>(vehicle, kVehicleClutchOut) != 0 ? At<float>(vehicle, kVehicleClutchLeft) : 0.0f,
+                    (std::max)(0.0f, -forward)};
+
+    float gravity[3];
+    std::copy_n(&At<float>(At<uint8_t*>(body, kChassisWorld), kWorldGravity), 3, gravity);
+    gravity[2] += At<float>(At<uint8_t*>(vehicle, kVehicleAerodynamics), kAerodynamicsDownforce);
+    if (readout.speed > 0.0f) {
+        readout.gravityAlong =
+            (gravity[0] * velocity[0] + gravity[1] * velocity[1] + gravity[2] * velocity[2]) / readout.speed;
+    }
+    readout.gravityDown = -gravity[2];
+    return readout;
 }
 
 Chassis ChassisOf(Car car) {

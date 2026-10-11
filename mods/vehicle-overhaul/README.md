@@ -48,7 +48,11 @@ from the windows and the wrecks are to come.
 - **A real engine, on the car you drive.** The game makes up a car's revs for its sound and rev
   counter from road speed over three pretend gears. Here they come from Havok's gearbox instead.
   - The engine idles, revs against a slipping clutch as the car pulls away, climbs to the redline in
-    each gear, and runs down while the clutch is out for a gear change (0.6 s).
+    each gear, and runs down while the clutch is out for a change up (0.6 s).
+  - Gears change as in Far Cry 3, not as Havok changes them, which is even while the clutch is out:
+    never while it is out, down in 0.1 s, and up only if the revs in the next gear will stay above
+    the change-down point once the slope and the tyres' drag have slowed the car for the clutch time.
+    So a car climbing a hill holds its gear rather than changing up and straight back down.
   - Where the slipping clutch holds the revs wanders slowly up and down, as a driver's foot does, so
     no two pull-aways sound the same.
   - Havok's engine is the same in every car; its shift point is laid over the real engine's redline.
@@ -103,6 +107,7 @@ src\                         the FCSE plugin
   physics.cpp                the player's car tuned and put back, and the real vehicles' weight
   axles.cpp                  the solid axles: springs, dampers and leaning wheels
   drivetrain.cpp             the engine's revs and gear changes, for the sound and rev counter
+  gearbox.cpp                when the car changes gear, as in Far Cry 3
   real_vehicle.cpp           the real vehicles the cars depict
   tuning.cpp                 the values, their file and the window
   sounds.cpp                 the window's Sounds tab

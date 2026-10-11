@@ -4,12 +4,19 @@ namespace SoundBench.Vehicle;
 
 /// <summary>
 /// Havok's engine and gearbox with FC2's constants, driving a car on flat ground with no wheelspin: the
-/// revs, gear and speed the vehicle overhaul reads from the physics. The engine's resistance off the pedal
-/// is approximated.
+/// revs, gear and speed the vehicle overhaul reads from the physics. It changes gear as the overhaul's
+/// gearbox does. The engine's resistance off the pedal is approximated.
 /// </summary>
+/// <remarks>The gear changes mirror <c>mods/vehicle-overhaul/src/gearbox.cpp</c>.</remarks>
 public sealed class HavokStandIn
 {
     public const float MinRpm = 1000, OptRpm = 5500, MaxRpm = 7500, UpshiftRpm = 6500, DownshiftRpm = 3500;
+
+    /// <summary>How long a change down has the clutch out, as on Far Cry 3's cars.</summary>
+    public const float DownshiftTime = 0.1f;
+
+    /// <summary>Below this speed, in m/s, a change up is not weighed.</summary>
+    private const float MinUpshiftSpeed = 1;
 
     private const float WheelRadius = 0.4f, Gravity = 9.81f, MetresPerSecondPerMph = 0.44704f;
     private const float GroundFriction = 0.8f, TyreFriction = 3.0f, RollResist = 0.1f;
@@ -53,9 +60,12 @@ public sealed class HavokStandIn
 
     public bool ClutchOut => _clutch > 0;
 
+    /// <summary>The seconds a gear change still has the clutch out.</summary>
+    public float ClutchLeft => Math.Max(0, _clutch);
+
     /// <param name="throttle">0..1.</param>
     /// <param name="brake">0..1.</param>
-    /// <param name="clutchTime">How long a gear change cuts the drive: the overhaul's shift time.</param>
+    /// <param name="clutchTime">How long a change up cuts the drive: the overhaul's shift time.</param>
     /// <param name="holdGear">Keeps the gear it is in, whatever the revs.</param>
     public void Step(float seconds, float throttle, float brake, float clutchTime, bool holdGear)
     {
@@ -66,13 +76,14 @@ public sealed class HavokStandIn
         }
         else if (!holdGear)
         {
-            if (Rpm > UpshiftRpm && Gear < _gears.Length - 1)
+            if (Rpm < _downshiftRpm && Gear > 0)
+            {
+                Shift(-1, DownshiftTime);
+            }
+            else if (Rpm > UpshiftRpm && Gear < _gears.Length - 1 && Speed >= MinUpshiftSpeed &&
+                     Rpm * _gears[Gear + 1] / _gears[Gear] * Math.Max(0, 1 - _rolling * clutchTime / Speed) > _downshiftRpm)
             {
                 Shift(+1, clutchTime);
-            }
-            else if (Rpm < _downshiftRpm && Gear > 0)
-            {
-                Shift(-1, clutchTime);
             }
         }
 

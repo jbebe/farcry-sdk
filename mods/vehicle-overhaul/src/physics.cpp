@@ -1,12 +1,13 @@
 // The off-road physics: the car the player drives, re-tuned every physics step while they drive it
-// and put back as the game made it when they get out. Each step also moves its engine on and springs
-// its solid axles.
+// and put back as the game made it when they get out. Each step also moves its engine on, changes its
+// gear and springs its solid axles.
 //
 // Every value is written from the car's retail one each step, so a moved slider applies at once.
 #include "physics.h"
 
 #include "axles.h"
 #include "drivetrain.h"
+#include "gearbox.h"
 #include "real_vehicle.h"
 #include "tuning.h"
 
@@ -14,6 +15,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <limits>
 
 namespace {
     using VehicleOverhaul::Wheeled::Car;
@@ -24,6 +26,8 @@ namespace {
 
     // The most forward gears a retail gearbox may have for the overhaul to replace it.
     constexpr int kMaxGears = 8;
+    // The ground's rolling resistance, 0.1 on every material in retail physicmaterial.xml.
+    constexpr float kGroundRollResist = 0.1f;
 
     // The retail values of the car the overhaul is changing, or has yet to put back. Engine power,
     // gearing and the speed limiter are not kept: the game holds its own and resets them with the driver.
@@ -38,7 +42,7 @@ namespace {
         float chassisResponse[3];
         float inverseInertia[3];
         float lockTime;
-        float shiftTime;
+        float upshift;
         float downshift;
         int gearCount;
         // The first kMaxGears of its gears.
@@ -73,7 +77,7 @@ namespace {
         std::copy_n(parts.chassisResponse, 3, retail.chassisResponse);
         std::copy_n(parts.inverseInertia, 3, retail.inverseInertia);
         retail.lockTime = *parts.lockTime;
-        retail.shiftTime = *parts.shiftTime;
+        retail.upshift = *parts.upshift;
         retail.downshift = *parts.downshift;
         retail.gearCount = *parts.gearCount;
         std::copy_n(parts.gears, (std::min)(retail.gearCount, kMaxGears), retail.gears);
@@ -99,9 +103,12 @@ namespace {
         *parts.downforce = g_retail.downforce * t.downforce;
         *parts.spinDamping = g_retail.spinDamping * t.spinDamping;
         *parts.lockTime = t.lockTime;
-        *parts.shiftTime = t.shiftTime;
         *parts.steeringLock = g_retail.steeringLock * t.steeringLock;
+        *parts.steeringAtSpeed = g_retail.steeringAtSpeed * t.steeringAtSpeed;
 
+        // Havok never changes gear itself: the gearbox does it.
+        *parts.upshift = std::numeric_limits<float>::max();
+        *parts.downshift = -std::numeric_limits<float>::max();
         // The real vehicle's gearbox in place of Havok's, with Havok's top gear, so the car keeps its top speed.
         const RealVehicle::Spec* real = g_retail.real;
         const int gears = real != nullptr ? static_cast<int>(real->gears.size()) : 0;
@@ -112,9 +119,7 @@ namespace {
             }
             *parts.gearCount = gears;
             *parts.gear = static_cast<int8_t>((std::min)(static_cast<int>(*parts.gear), gears - 1));
-            *parts.downshift = VehicleOverhaul::Drivetrain::HavokRpm(real, real->downshift);
         }
-        *parts.steeringAtSpeed = g_retail.steeringAtSpeed * t.steeringAtSpeed;
 
         // The tyre solver's response is the body's inverse inertia times the factor, so both scale with it.
         const float responses[3] = {t.pitchResponse, t.rollResponse, t.yawResponse};
@@ -150,7 +155,7 @@ namespace {
         *parts.downforce = g_retail.downforce;
         *parts.spinDamping = g_retail.spinDamping;
         *parts.lockTime = g_retail.lockTime;
-        *parts.shiftTime = g_retail.shiftTime;
+        *parts.upshift = g_retail.upshift;
         *parts.downshift = g_retail.downshift;
         *parts.gearCount = g_retail.gearCount;
         std::copy_n(g_retail.gears, (std::min)(g_retail.gearCount, kMaxGears), parts.gears);
@@ -201,14 +206,15 @@ namespace {
         const VehicleOverhaul::Tuning::Values tuning = VehicleOverhaul::Tuning::Current(real);
         const RealVehicle::Spec* beams = wanted && switches.solidAxles ? real : nullptr;
         bool redline = false;
+        VehicleOverhaul::Wheeled::Readout readout{};
         if (car == player) {
-            VehicleOverhaul::Wheeled::Readout readout = VehicleOverhaul::Wheeled::ReadoutOf(car);
+            readout = VehicleOverhaul::Wheeled::ReadoutOf(car);
             redline = VehicleOverhaul::Drivetrain::AtRedline(readout);
-            readout.rpm = VehicleOverhaul::Drivetrain::Step(car, real, tuning.shiftTime, readout, seconds);
             const float height = chassis.centreOfMass[2] - chassis.ground;
             g_status = {readout, real, height,
                         chassis.wheelbase > 0.0f ? (chassis.centreOfMass[1] - chassis.rear) / chassis.wheelbase : 0.0f,
                         height > 0.0f ? chassis.track / (2.0f * height) : 0.0f, chassis.grip};
+            g_status.motion.rpm = VehicleOverhaul::Drivetrain::Step(car, real, readout, seconds);
             VehicleOverhaul::Axles::Lean(car, beams);
         }
         if (car != g_retail.car && !wanted) {
@@ -234,6 +240,14 @@ namespace {
 
         if (wanted) {
             Write(parts, tuning, redline);
+            const VehicleOverhaul::Gearbox::Shifts shifts{
+                g_retail.upshift,
+                real != nullptr && real->downshift > 0.0f ? VehicleOverhaul::Drivetrain::HavokRpm(real, real->downshift)
+                                                          : g_retail.downshift,
+                tuning.shiftTime};
+            VehicleOverhaul::Gearbox::Step(parts, readout, shifts,
+                                           kGroundRollResist * tuning.rollingResistance * readout.gravityDown,
+                                           chassis.grip > 0.0f);
         } else {
             Restore(parts, car == player);
         }

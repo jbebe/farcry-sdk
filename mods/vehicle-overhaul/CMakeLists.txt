@@ -21,6 +21,7 @@ add_library(VehicleOverhaul SHARED
   "src/axles.cpp"
   "src/chase.cpp"
   "src/drivetrain.cpp"
+  "src/gearbox.cpp"
   "src/physics.cpp"
   "src/real_vehicle.cpp"
   "src/sounds.cpp"

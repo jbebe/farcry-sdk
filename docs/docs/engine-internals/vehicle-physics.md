@@ -116,6 +116,12 @@ archetype's assist for hills: 400 on top of the Rover's 95.
 `fRollResist` times its suspension force. Retail `physicmaterial.xml` has 0.1 everywhere, about
 1.5 m/s² on a coasting car.
 
+**Gear changes**: Havok's own `hkpVehicleDefaultTransmission::updateCurrentGear` changes down below
+the downshift rpm and up above the upshift rpm whenever the car is not reversing, even while a change
+already has the clutch out. Each change starts the clutch delay again. On a hill this hunts: the car
+slows while the clutch is out after a change up, and changes back down before the clutch is in. The
+gear count is read every step **(RE-verified in the server)**.
+
 **Speed limiter**: `CHkPhysVehicleAerodynamics::calcAerodynamics` (`0x104C7FB0`) adds
 `10 × mass × (v − 16.667)²` against the horizontal velocity above 16.667 m/s when aerodynamics `+0x30`
 is set. That is a hard ceiling at about 60 km/h. `SetDriver` sets the flag for a human driver or none,
@@ -273,7 +279,9 @@ setup at `0x1049DE10`), brake `+0x30` (wheels `+0x08`, stride `0x0C`; lock time 
 suspension `+0x34` (wheels `+0x08`, stride `0x30`, length `+0x20`; springs `+0x14`, stride `0x0C`), aerodynamics
 `+0x38` (`extraGravity` `+0x20`, limiter `+0x30`), velocity damper `+0x44` (spin damping `+0x08`),
 wheel infos `+0x48` (stride `0xC0`: ground friction `+0x20`, contact body `+0x24`, hardpoint `+0x30`,
-ray end `+0x40`, suspension length `+0x50`, spin angle `+0xA4`), rpm `+0xB8`, gear `+0xCD`.
+ray end `+0x40`, suspension length `+0x50`, spin angle `+0xA4`), rpm `+0xB8`. The gearbox's state, which
+the instance hands the transmission and takes back each step: reversing `+0xCC`, gear `+0xCD`, clutch
+out `+0xCE`, seconds left of the clutch delay `+0xD0`.
 
 A wheel collide's output, one per wheel (stride `0x40`): contact point `+0x00`, normal `+0x10`,
 ground friction `+0x20`, contact body `+0x24`, suspension length `+0x2C`, closing speed `+0x30`,
@@ -285,7 +293,8 @@ ground friction `+0x20`, contact body `+0x24`, suspension length `+0x2C`, closin
 `hkpVehicleData`: wheel parameters `+0x8C` (stride `0x28`: radius `+0x00`, friction `+0x0C`, maximum
 friction `+0x14`, axle `+0x24`), chassis response `+0x180`, inverse mass `+0x18C`.
 
-The chassis body's motion state starts at `+0xE0`: rotation, the swept centre of mass at `+0x120`
+The chassis body's `hkpWorld` is at `+0x08`, and the world's gravity at its own `+0x10`. The chassis
+body's motion state starts at `+0xE0`: rotation, the swept centre of mass at `+0x120`
 and `+0x130`, the local centre of mass at `+0x160`, the inverse inertia about x, y and z at `+0x190`
 with the inverse mass at `+0x19C`, the linear velocity at `+0x1A0`. Moving the
 centre of mass is what `hkSweptTransformUtil::setCentreOfRotationLocal` does: store the new local

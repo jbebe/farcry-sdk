@@ -108,8 +108,10 @@ The vehicle overhaul's side:
 
 - **Revs.** The drivetrain is ported from `mods/vehicle-overhaul/src/drivetrain.cpp`. That code covers
   the idle and redline mapping, the clutch slip and its slow wander, and the rise and fall rates.
-- **Gear changes.** The pedal reads −100 for the shift time, and the shift sound plays halfway through
-  it.
+- **Gear changes.** They come as `gearbox.cpp` makes them: never while the clutch is out, down with a
+  0.1 s clutch, and up only if the revs in the next gear stay above the change-down point after the
+  clutch time. The pedal reads −100 while the clutch is out, the shift time for a change up, and the
+  shift sound plays halfway through it.
 - **Starting.** On a car with a catch time, the Datsun's 0.816 s or the ZIL's 0.7 s, the pedal reads −200 from the key until
   the engine catches, then comes up to the driver's over 0.5 s.
 - **Real vehicles.** The table is mirrored from `real_vehicle.cpp`. Keep both mirrors in step with
@@ -123,7 +125,8 @@ The vehicle overhaul's side:
 - **Havok.** A stand-in replaces Havok. It keeps FC2's engine and gearbox constants: 1000/5500/7500
   rpm, gears 1.5/1.2/0.9/0.75…, and shifts at 6500 up and 3500 down, where the overhaul's rev limiter
   also cuts the drive. A car the overhaul gives a real gearbox, the ZIL-130, drives on that gearbox and
-  changes down where the overhaul has it change down. It drives on flat ground, so
+  changes down where the overhaul has it change down. It drives on flat ground, so the change-up check
+  weighs only the tyres' drag, and
   there is no wheelspin, no gear hunting and no air time. How the engine resists off the pedal is an
   approximation.
 - **Not emulated:**

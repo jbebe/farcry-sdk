@@ -88,15 +88,20 @@ struct Parts {
     float torqueFactors[3];
     // The chassis body's inverse inertia about its pitch, roll and yaw axes.
     float* inverseInertia;
-    // Seconds a fully pressed brake takes to lock a wheel, and a gear change cuts the drive.
+    // Seconds a fully pressed brake takes to lock a wheel.
     float* lockTime;
-    float* shiftTime;
-    // Havok's gearbox: the revs it changes down at, its forward gears' ratios and how many there are, and
-    // the gear it is in, from 0.
+    // Havok's gearbox: the revs it changes up and down at, and its forward gears' ratios and how many
+    // there are.
+    float* upshift;
     float* downshift;
     float* gears;
     int32_t* gearCount;
+    // The gear it is in, from 0; whether it is in reverse; and whether a gear change has the clutch out,
+    // and for how many seconds more.
     int8_t* gear;
+    uint8_t* reversing;
+    uint8_t* clutchOut;
+    float* clutchLeft;
     // How far a held steering key winds the front wheels out standing still, and at speed.
     float* steeringLock;
     float* steeringAtSpeed;
@@ -113,9 +118,14 @@ struct Readout {
     float speed;
     // The driven wheels' spin through the gearbox, signed; the engine's revs once the clutch is in.
     float rpm;
-    // From 0 in first; Havok shifts at once and then cuts the drive for the shift time.
+    // From 0 in first, and the seconds a gear change still has the clutch out.
     int gear;
+    float clutchLeft;
     float throttle;
+    // Gravity, with the game's extra pull down, along the car's path (negative climbing) and straight
+    // down, in m/s².
+    float gravityAlong;
+    float gravityDown;
 };
 
 Readout ReadoutOf(Car car);
