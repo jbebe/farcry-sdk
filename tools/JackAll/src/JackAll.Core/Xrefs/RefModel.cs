@@ -16,7 +16,7 @@ public enum RefSpace : byte
 
     /// <summary><see cref="Format.Fcb.FcbClassDefinitions.Crc32Ascii"/> of a raw, case-sensitive
     /// name - an `.fcb` <c>Hash</c>-typed value (a bone, tag, material or bark-event name), an
-    /// `.mgb` object id/page tag/UserData key, an `.xbg` material name. Often unresolvable: nothing
+    /// `.mgb` object id/page tag/UserData key. Often unresolvable: nothing
     /// in the shipped data stores the name itself, only its hash.</summary>
     EngineName = 1,
 
@@ -59,7 +59,7 @@ public enum RefKind : byte
     /// <summary>An `.xbm` material's texture-slot binding to an `.xbt`.</summary>
     XbmTexture = 4,
 
-    /// <summary>An `.xbg` mesh's material name.</summary>
+    /// <summary>An `.xbg` mesh's material path.</summary>
     XbgMaterial = 5,
 
     /// <summary>An `.mgb` material's texture path.</summary>

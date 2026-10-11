@@ -32,10 +32,10 @@ namespace JackAll.Core.Xrefs;
 /// </remarks>
 public sealed class ReferenceIndex
 {
-    // Version 2: the extractor set grew (.xbt/.rtx/movemgr edges). Bumping forces a clean rebuild,
+    // Version 3: .xbg materials became file edges. Bumping forces a clean rebuild,
     // because an incremental one reuses every previously visited file and would never re-extract.
     private const uint Magic = 0x3158414A; // 'JAX1'
-    private const int Version = 2;
+    private const int Version = 3;
 
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
     private struct EdgeRecord : IKeyedRecord
@@ -178,9 +178,9 @@ public sealed class ReferenceIndex
 
     /// <summary>
     /// The whole hash → name table. Carried over wholesale by an incremental rebuild: a name can be
-    /// attached to an edge's site *or* to an <see cref="RefSpace.EngineName"/> target (an `.xbg`
-    /// material name is the latter), so reconstructing the table by walking only the reused edges'
-    /// site keys silently drops the second kind.
+    /// attached to an edge's site *or* to an <see cref="RefSpace.EngineName"/> target, so
+    /// reconstructing the table by walking only the reused edges' site keys silently drops the
+    /// second kind.
     /// </summary>
     public IReadOnlyDictionary<uint, string> AllNames()
     {

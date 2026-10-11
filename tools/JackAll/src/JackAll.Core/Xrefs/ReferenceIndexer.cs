@@ -96,8 +96,8 @@ public static class ReferenceIndexer
         var definitions = new List<RefDefinition>(harvest.Definitions);
 
         // The previous name table comes over wholesale rather than being reconstructed from the
-        // reused edges' site keys: a name can also belong to an EngineName *target* (an `.xbg`
-        // material name is one), which no walk over site keys would ever find. The table is tens of
+        // reused edges' site keys: a name can also belong to an EngineName *target*, which no walk
+        // over site keys would ever find. The table is tens of
         // thousands of entries against millions of edges, so keeping all of it is free.
         var names = new Dictionary<uint, string>(previous.AllNames());
         foreach ((uint key, string name) in harvest.Names)

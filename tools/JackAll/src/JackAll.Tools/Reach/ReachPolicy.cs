@@ -15,15 +15,16 @@ public static class ReachPolicy
     /// <summary>Edge kinds whose target is a file the engine would load.</summary>
     public static bool PropagatesToFile(RefKind kind) => kind is
         RefKind.FcbPathValue or RefKind.XbmTexture or RefKind.MgbTexture or
-        RefKind.XbtMipCompanion or RefKind.RtxMaterial or RefKind.MoveClip or RefKind.TextPath;
+        RefKind.XbtMipCompanion or RefKind.RtxMaterial or RefKind.MoveClip or RefKind.TextPath or
+        RefKind.XbgMaterial;
 
     /// <summary>Edge kinds whose target is a non-file id worth carrying flags for - its defining
-    /// file (an `.xbm`, an `.spk` bank) becomes reachable through the definitions table.
+    /// file (an `.spk` bank) becomes reachable through the definitions table.
     /// <see cref="RefKind.DepLoadDependency"/> is handled separately (doubly gated), and
     /// <see cref="RefKind.DepLoadTypeTag"/>/<see cref="RefKind.MgbStringResource"/> never
     /// propagate - one groups by anonymous type, the other names a localised string.</summary>
     public static bool PropagatesToName(RefKind kind) => kind is
-        RefKind.FcbNameValue or RefKind.MgbNameId or RefKind.XbgMaterial or
+        RefKind.FcbNameValue or RefKind.MgbNameId or
         RefKind.SpkRecordLink or RefKind.SpkCategory or RefKind.SpkFlatCopySibling or
         RefKind.SpkEventChild;
 

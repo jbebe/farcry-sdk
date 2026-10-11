@@ -96,6 +96,20 @@ public sealed class ReferenceExtractorTests
     }
 
     [Fact]
+    public void Xbg_extractor_reports_each_material_as_its_file()
+    {
+        if (Fixture.Read(XbgFixtures.Ak47) is not { } content) return;
+
+        ReferenceSink sink = Extract(new XbgReferenceExtractor(), "graphics\\weapons\\primary\\ak47\\ak47.xbg", content);
+
+        Assert.Contains(sink.Edges, e =>
+            e.Kind == RefKind.XbgMaterial
+            && e.TargetSpace == RefSpace.FilePath
+            && e.Target == JackAll.Core.Format.NameHash.Compute(@"graphics\_materials\sdore2-m-2007073066669286.xbm"));
+        Assert.Equal(3, sink.Edges.Count);
+    }
+
+    [Fact]
     public void Spk_extractor_defines_every_record_id()
     {
         if (Fixture.Read(SpkFixture) is not { } content) return;

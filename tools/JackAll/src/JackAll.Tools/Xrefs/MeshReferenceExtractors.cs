@@ -30,15 +30,8 @@ public sealed class XbmReferenceExtractor : IReferenceExtractor
 }
 
 /// <summary>
-/// References inside an `.xbg` mesh: the material each submesh is drawn with.
+/// References inside an `.xbg` mesh: the `.xbm` each submesh is drawn with, named by its path.
 /// </summary>
-/// <remarks>
-/// A mesh names its materials rather than pointing at a file, so these land in
-/// <see cref="RefSpace.EngineName"/>, not <see cref="RefSpace.FilePath"/> - the same name an `.xbm`
-/// defines. Following one to an actual material file therefore depends on the `.xbm` side being
-/// indexed too, which is why the two extractors are worth having as a pair even though the mesh half
-/// looks thin on its own.
-/// </remarks>
 public sealed class XbgReferenceExtractor : IReferenceExtractor
 {
     public bool CanHandle(VfsFile file) => file.Type.Extension is "xbg";
@@ -46,19 +39,9 @@ public sealed class XbgReferenceExtractor : IReferenceExtractor
     public void Extract(VfsFile file, byte[] content, ReferenceSink sink)
     {
         XbgModel model = XbgModel.Parse(content);
-        uint site = sink.Intern("material");
-
         for (int i = 0; i < model.Materials.Count; i++)
         {
-            string name = model.Materials[i];
-            if (name.Length == 0)
-            {
-                continue;
-            }
-
-            // The mesh spells the name out, so it can be interned as its own site vocabulary entry -
-            // that's what lets an unresolved material hash still render as a readable name later.
-            sink.Add(RefSpace.EngineName, sink.Intern(name), RefKind.XbgMaterial, site, i);
+            sink.AddNamedPath(model.Materials[i], RefKind.XbgMaterial, "material", i);
         }
     }
 }
