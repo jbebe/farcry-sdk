@@ -140,6 +140,6 @@ public partial class MainWindow
             Mouse.OverrideCursor = null;
         }
 
-        RescanMods_Click(sender, e);
+        _vm.Reindex();
     }
 }
