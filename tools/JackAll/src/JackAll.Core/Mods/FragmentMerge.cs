@@ -115,7 +115,8 @@ public static class FragmentMerge
             string theirs;
             try
             {
-                theirs = splitter.Canonicalize(fragmentId, Encoding.UTF8.GetString(layer.Read(entryHash)));
+                // Editors that save "UTF-8 with BOM" put a byte order mark in front, which the XML parser refuses.
+                theirs = splitter.Canonicalize(fragmentId, Encoding.UTF8.GetString(layer.Read(entryHash)).TrimStart('\uFEFF'));
             }
             catch (Exception ex)
             {

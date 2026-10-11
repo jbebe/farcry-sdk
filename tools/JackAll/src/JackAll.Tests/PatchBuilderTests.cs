@@ -388,6 +388,16 @@ public class PatchBuilderTests : IDisposable
         Assert.Equal(3, clash.RebuiltValue(_install, clash.Field));
     }
 
+    [Fact]
+    public void A_fragment_saved_with_a_byte_order_mark_still_builds()
+    {
+        if (_install is null || MakeFieldClash() is not { } clash) return;
+
+        Build(false, clash.Mod("bom_mod", clash.Field, 4, byteOrderMark: true));
+
+        Assert.Equal(4, clash.RebuiltValue(_install, clash.Field));
+    }
+
     private BuildResult Build(bool lenient, params IModLayer[] layers)
     {
         using var vfsForRead = GameVfs.OpenForOriginalsOnly(_install!, TestSupport.LoadNames());
@@ -432,7 +442,8 @@ public class PatchBuilderTests : IDisposable
 
         private byte[] With(uint field, byte value) => TestSupport.RenderWithValueSetAt(Vanilla, Target, field, [value, 0, 0, 0]);
 
-        public IModLayer Mod(string name, uint field, byte value) => Owner.MakeZipMod(name, ($"mods/{FragmentPath}", With(field, value)));
+        public IModLayer Mod(string name, uint field, byte value, bool byteOrderMark = false)
+            => Owner.MakeZipMod(name, ($"mods/{FragmentPath}", byteOrderMark ? [0xEF, 0xBB, 0xBF, .. With(field, value)] : With(field, value)));
 
         public IModLayer Workspace(uint field, byte value)
         {
@@ -775,6 +786,40 @@ public class PatchBuilderTests : IDisposable
         // Changed() sees no removals, so the count pins that half.
         Assert.Equal(before.Count, after.Count);
         Assert.Equal([renamed], OasisStringsPatch.Changed(after, before));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_localization_patch_saved_with_a_byte_order_mark_still_applies(bool inWorkspaceFolder)
+    {
+        if (_install is null) return;
+
+        const string table = @"languages\english\oasisstrings.rml";
+        var renamed = new OasisStringEdit("Items", "dart_rifle", "VSS Vintorez");
+        byte[] content = [0xEF, 0xBB, 0xBF, .. System.Text.Encoding.UTF8.GetBytes(OasisStringsPatch.Render([renamed]))];
+        string patchPath = OasisStringsPatch.PatchPathOf(table);
+        IModLayer mod;
+        if (inWorkspaceFolder)
+        {
+            string file = Path.Combine(_sandbox, "workspace_bom", "mods", patchPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+            File.WriteAllBytes(file, content);
+            mod = new FolderModLayer(Path.Combine(_sandbox, "workspace_bom"), "workspace") { IsWorkspace = true };
+        }
+        else
+        {
+            mod = MakeZipMod("localized_bom", ($"mods/{patchPath}", content));
+        }
+
+        uint tableHash = NameHash.Compute(table);
+        using (var vfs = GameVfs.OpenForOriginalsOnly(_install, NameDatabase.LoadFrom([])))
+        {
+            PatchBuilder.Build(_install, [mod], vfs.ReadOriginal);
+        }
+
+        using var rebuilt = DuniaArchive.Open(_install.PatchFat);
+        Assert.Contains(renamed, StringTableContainerSplitter.Strings(RmlDocument.Deserialize(rebuilt.Read(tableHash))));
     }
 
     [Fact]
