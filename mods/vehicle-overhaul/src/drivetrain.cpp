@@ -50,6 +50,8 @@ namespace {
     std::atomic<bool> g_lifted{false};
     // How far the engine sound has faded in since the engine caught: 0 before, 1 once in.
     std::atomic<float> g_caught{1.0f};
+    // Whether the car's tuning has the overhaul and its real engine on, so the sound hears these revs.
+    std::atomic<bool> g_heard{false};
 
     // The car the player drives, or null once they are out, so getting back in starts it afresh.
     std::atomic<Car> g_car{nullptr};
@@ -84,11 +86,7 @@ namespace {
     }
 
     bool Heard(void* vehicle, VehicleOverhaul::VehicleSound::Engine& engine) {
-        if (vehicle == nullptr || vehicle != g_vehicle) {
-            return false;
-        }
-        const VehicleOverhaul::Tuning::Switches switches = VehicleOverhaul::Tuning::CurrentSwitches();
-        if (!switches.enabled || !switches.realEngine) {
+        if (vehicle == nullptr || vehicle != g_vehicle || !g_heard) {
             return false;
         }
         engine.shift = g_shift.exchange(0);
@@ -109,6 +107,8 @@ bool Install() {
 float Step(Car car, const RealVehicle::Spec* real, const Wheeled::Readout& readout, float seconds) {
     const float idle = IdleOf(real);
     const float redline = RedlineOf(real);
+    const Tuning::Values tuning = Tuning::Current(real);
+    g_heard = tuning.enabled && tuning.realEngine;
     if (car != g_car) {
         g_car = car;
         g_shiftSound = real != nullptr ? real->shiftSound : 0;

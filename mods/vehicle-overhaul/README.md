@@ -89,12 +89,13 @@ With DevTools installed, its overlay has a **Vehicle Overhaul** window:
 - the car's speed, rpm and gear;
 - its centre-of-mass height, its share of the weight on the front axle, the sideways g it tips over
   at, and the g its tyres hold on the ground under them;
-- a switch for the whole overhaul, one for the real centre of mass, one for the solid axles, and a
-  slider for every value above.
+- a switch for the whole overhaul, one for the real engine, one for the real centre of mass, one for
+  the solid axles, and a slider for every value above.
 
-The sliders keep a set of values for each real vehicle, and one for every car the overhaul does not
-know. They edit the car you drive, or any car picked while you are not driving. The values are kept in
-`bin\vehicle-overhaul.ini`, a section per car.
+The switches and sliders keep a set of values for each real vehicle, and one for every car the overhaul
+does not know. They edit the car you drive, or any car picked while you are not driving. A switch that
+does nothing on the picked car, such as solid axles on a car with none, is greyed out. The values are
+kept in `bin\vehicle-overhaul.ini`, a section per car.
 
 Its **Sounds** tab switches each of the car's sounds off and on, to hear what makes which noise. Its
 sliders set how loud each sound type plays while driving, for the session only.

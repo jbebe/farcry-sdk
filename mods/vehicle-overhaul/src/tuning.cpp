@@ -20,7 +20,6 @@
 #include <vector>
 
 namespace {
-    using VehicleOverhaul::Tuning::Switches;
     using VehicleOverhaul::Tuning::Values;
 
     struct Parameter {
@@ -98,32 +97,42 @@ namespace {
          "sway and bounce longer before it settles."},
     };
 
-    // The switches, kept in the file as 1 or 0 above the cars, and on by default.
+    bool KnownCar(const VehicleOverhaul::RealVehicle::Spec* real) { return real != nullptr; }
+
+    bool HasSolidAxle(const VehicleOverhaul::RealVehicle::Spec* real) {
+        return real != nullptr && std::ranges::any_of(real->solidAxle, [](float spacing) { return spacing > 0.0f; });
+    }
+
+    // The switches, kept in each car's section as 1 or 0, and on by default.
     struct Switch {
         const char* key;
-        bool Switches::*member;
+        bool Values::*member;
         // The label in the window, and the heading it is drawn under; null draws it above them all.
         const char* label;
         const char* group;
         const char* help;
+        // Whether it does anything on a car depicting `real`; null when it always does.
+        bool (*applies)(const VehicleOverhaul::RealVehicle::Spec* real);
     };
 
     constexpr Switch kSwitches[] = {
-        {"Enabled", &Switches::enabled, "Overhaul the car you drive", nullptr,
-         "Off puts the car back as the game made it, to compare."},
-        {"Real engine", &Switches::realEngine, "Real engine", kEngine,
+        {"Enabled", &Values::enabled, "Overhaul this car", nullptr,
+         "Off puts the car back as the game made it, to compare.", nullptr},
+        {"Real engine", &Values::realEngine, "Real engine", kEngine,
          "The engine sound and rev counter follow the real gearbox: idle, revs against the clutch while "
-         "pulling away, and a drop on every gear change. Off leaves the game's revs made up from speed."},
-        {"Real centre of mass", &Switches::realCentreOfMass, "Real centre of mass", kChassis,
+         "pulling away, and a drop on every gear change. Off leaves the game's revs made up from speed.",
+         nullptr},
+        {"Real centre of mass", &Values::realCentreOfMass, "Real centre of mass", kChassis,
          "Carries the car's weight as high as the real vehicle it depicts, from that vehicle's stability "
-         "factor, and the big truck's as far forward. Off leaves it where the game put it."},
-        {"Solid axles", &Switches::solidAxles, "Solid axles", kSuspension,
+         "factor, and the big truck's as far forward. Off leaves it where the game put it.",
+         &KnownCar},
+        {"Solid axles", &Values::solidAxles, "Solid axles", kSuspension,
          "Springs each solid axle of the real vehicle as one beam, which twists under the body to keep both "
          "wheels down and lets them hang lower. Only the Land Rover so far. Off springs every wheel on its "
-         "own, as the game does."},
+         "own, as the game does.",
+         &HasSolidAxle},
     };
 
-    Switches g_switches{};
     // A set for each vehicle in RealVehicle::All(), in its order, then one for the cars it leaves out.
     std::vector<Values> g_cars(VehicleOverhaul::RealVehicle::All().size() + 1);
     // The set the sliders edit.
@@ -134,17 +143,24 @@ namespace {
                                : g_cars.size() - 1;
     }
 
-    // Also its section in the file.
-    const char* NameOf(size_t car) {
-        return car + 1 < g_cars.size() ? VehicleOverhaul::RealVehicle::All()[car].name : "Other cars";
+    const VehicleOverhaul::RealVehicle::Spec* SpecOf(size_t car) {
+        return car + 1 < g_cars.size() ? &VehicleOverhaul::RealVehicle::All()[car] : nullptr;
     }
 
-    // The switches drawn under `group`. True when one changed.
-    bool DrawSwitches(const char* group) {
+    // Also its section in the file.
+    const char* NameOf(size_t car) {
+        const VehicleOverhaul::RealVehicle::Spec* real = SpecOf(car);
+        return real != nullptr ? real->name : "Other cars";
+    }
+
+    // The switches of `car` drawn under `group`, greyed out where they do nothing on it. True when one changed.
+    bool DrawSwitches(size_t car, const char* group) {
         bool changed = false;
         for (const Switch& entry : kSwitches) {
             if (entry.group == group) {
-                changed |= ImGui::Checkbox(entry.label, &(g_switches.*entry.member));
+                ImGui::BeginDisabled(entry.applies != nullptr && !entry.applies(SpecOf(car)));
+                changed |= ImGui::Checkbox(entry.label, &(g_cars[car].*entry.member));
+                ImGui::EndDisabled();
                 ImGui::SetItemTooltip("%s", entry.help);
             }
         }
@@ -183,11 +199,11 @@ namespace {
     void Save() {
         std::string text = "; Vehicle Overhaul. Edited in its window in DevTools' overlay; edits made here "
                            "by hand\n; are read at launch or by that window's Reload.\n";
-        for (const Switch& entry : kSwitches) {
-            text.append(entry.key).append(g_switches.*entry.member ? " = 1\n" : " = 0\n");
-        }
         for (size_t car = 0; car < g_cars.size(); ++car) {
             text.append("\n[").append(NameOf(car)).append("]\n");
+            for (const Switch& entry : kSwitches) {
+                text.append(entry.key).append(g_cars[car].*entry.member ? " = 1\n" : " = 0\n");
+            }
             for (const Parameter& parameter : kParameters) {
                 char value[32];
                 const char* end = std::to_chars(value, value + sizeof(value), g_cars[car].*parameter.member).ptr;
@@ -204,17 +220,15 @@ namespace {
     }
 }
 
-VehicleOverhaul::Tuning::Switches VehicleOverhaul::Tuning::CurrentSwitches() { return g_switches; }
-
 VehicleOverhaul::Tuning::Values VehicleOverhaul::Tuning::Current(const RealVehicle::Spec* real) {
     return g_cars[IndexOf(real)];
 }
 
 void VehicleOverhaul::Tuning::Load() {
-    for (const Switch& entry : kSwitches) {
-        g_switches.*entry.member = true;
-    }
     Values defaults{};
+    for (const Switch& entry : kSwitches) {
+        defaults.*entry.member = true;
+    }
     for (const Parameter& parameter : kParameters) {
         defaults.*parameter.member = parameter.defaultValue;
     }
@@ -231,14 +245,17 @@ void VehicleOverhaul::Tuning::Load() {
 
     std::ifstream file(File());
 
-    // A value outside a known car's section, or that is not a number, leaves its row at the default.
+    // A value outside a known car's section, or that is not a number, leaves its row at the default. A switch above
+    // every section, where files before 2026-10-12 kept them, sets it for every car.
     Values* section = nullptr;
+    bool aboveSections = true;
     std::string line;
     while (std::getline(file, line)) {
         const std::string_view text = Trim(line);
         if (text.starts_with('[') && text.ends_with(']')) {
             const std::string_view name = text.substr(1, text.size() - 2);
             section = nullptr;
+            aboveSections = false;
             for (size_t car = 0; car < g_cars.size() && section == nullptr; ++car) {
                 if (name == NameOf(car)) {
                     section = &g_cars[car];
@@ -257,8 +274,15 @@ void VehicleOverhaul::Tuning::Load() {
             continue;
         }
         for (const Switch& entry : kSwitches) {
-            if (key == entry.key) {
-                g_switches.*entry.member = read != 0.0f;
+            if (key != entry.key) {
+                continue;
+            }
+            if (section != nullptr) {
+                (*section).*entry.member = read != 0.0f;
+            } else if (aboveSections) {
+                for (Values& car : g_cars) {
+                    car.*entry.member = read != 0.0f;
+                }
             }
         }
         for (const Parameter& parameter : kParameters) {
@@ -286,7 +310,6 @@ namespace {
         } else {
             ImGui::TextDisabled("Not driving.");
         }
-        g_unsaved |= DrawSwitches(nullptr);
 
         if (driving) {
             g_edited = IndexOf(status.real);
@@ -303,6 +326,7 @@ namespace {
         ImGui::EndDisabled();
         ImGui::SetItemTooltip("The car the values below are for: the one you drive, or any while you are not "
                               "driving.");
+        g_unsaved |= DrawSwitches(g_edited, nullptr);
 
         Values& values = g_cars[g_edited];
         const char* group = nullptr;
@@ -310,7 +334,7 @@ namespace {
             if (parameter.group != group) {
                 group = parameter.group;
                 ImGui::SeparatorText(group);
-                g_unsaved |= DrawSwitches(group);
+                g_unsaved |= DrawSwitches(g_edited, group);
             }
             g_unsaved |= ImGui::SliderFloat(parameter.key, &(values.*parameter.member), parameter.min,
                                             parameter.max, parameter.format, ImGuiSliderFlags_AlwaysClamp);

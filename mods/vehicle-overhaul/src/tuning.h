@@ -6,20 +6,16 @@
 
 namespace VehicleOverhaul::Tuning {
 
-// What the overhaul does at all, the same for every car.
-struct Switches {
-    // Whether the player's car is tuned at all, and whether its sound follows the real gearbox.
+// How a car drives, kept for each real vehicle. The switches, then multiples of the car's own retail value,
+// except the responses (Havok's factors, 1 = physical) and the lock and gear change times (seconds).
+struct Values {
+    // Whether the car is tuned at all, and whether its sound follows the real gearbox.
     bool enabled;
     bool realEngine;
     // Whether a car the overhaul knows carries its weight where the real vehicle it depicts does, and
     // rides on that vehicle's solid axles.
     bool realCentreOfMass;
     bool solidAxles;
-};
-
-// How a car drives, kept for each real vehicle. Multiples of the car's own retail value, except the
-// responses (Havok's factors, 1 = physical) and the lock and gear change times (seconds).
-struct Values {
     float enginePower;
     float climbAssist;
     float topSpeed;
@@ -42,8 +38,6 @@ struct Values {
     float compressionDamping;
     float reboundDamping;
 };
-
-Switches CurrentSwitches();
 
 // The values of a car depicting `real`, or of a car the overhaul does not know for null.
 Values Current(const RealVehicle::Spec* real);

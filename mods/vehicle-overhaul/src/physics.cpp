@@ -199,12 +199,11 @@ namespace {
             return;
         }
 
-        const VehicleOverhaul::Tuning::Switches switches = VehicleOverhaul::Tuning::CurrentSwitches();
-        const bool wanted = car == player && switches.enabled;
         const Chassis chassis = VehicleOverhaul::Wheeled::ChassisOf(car);
         const RealVehicle::Spec* real = RealVehicle::Match(chassis.mass, chassis.enginePower);
         const VehicleOverhaul::Tuning::Values tuning = VehicleOverhaul::Tuning::Current(real);
-        const RealVehicle::Spec* beams = wanted && switches.solidAxles ? real : nullptr;
+        const bool wanted = car == player && tuning.enabled;
+        const RealVehicle::Spec* beams = wanted && tuning.solidAxles ? real : nullptr;
         bool redline = false;
         VehicleOverhaul::Wheeled::Readout readout{};
         if (car == player) {
@@ -253,7 +252,7 @@ namespace {
         }
 
         // After the values, since the solver is built from the suspensions' length.
-        const RealVehicle::Spec* centre = wanted && switches.realCentreOfMass ? real : nullptr;
+        const RealVehicle::Spec* centre = wanted && tuning.realCentreOfMass ? real : nullptr;
         const float travel = wanted ? tuning.suspensionTravel : 1.0f;
         const bool moveCentre = (centre != nullptr) != g_retail.centreMoved;
         if (moveCentre) {
