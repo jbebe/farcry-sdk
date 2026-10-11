@@ -135,4 +135,6 @@ float Step(Car car, const RealVehicle::Spec* real, float shiftTime, const Wheele
     return rpm;
 }
 
+bool AtRedline(const Wheeled::Readout& readout) { return std::abs(readout.rpm) >= kHavokUpshift; }
+
 }

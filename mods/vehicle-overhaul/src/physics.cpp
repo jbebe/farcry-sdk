@@ -77,9 +77,11 @@ namespace {
         return retail;
     }
 
-    void Write(const Parts& parts, const VehicleOverhaul::Tuning::Values& t) {
-        *parts.enginePower = parts.retailEnginePower * t.enginePower;
-        *parts.climbPower = g_retail.climbPower * t.climbAssist;
+    // At the redline the engine gives no drive, as a rev limiter cuts it, so no gear runs the car on past it.
+    void Write(const Parts& parts, const VehicleOverhaul::Tuning::Values& t, bool redline) {
+        const float drive = redline ? 0.0f : 1.0f;
+        *parts.enginePower = parts.retailEnginePower * t.enginePower * drive;
+        *parts.climbPower = g_retail.climbPower * t.climbAssist * drive;
         *parts.primaryRatio = parts.retailPrimaryRatio / t.topSpeed;
         *parts.speedLimiter = 0;
         *parts.downforce = g_retail.downforce * t.downforce;
@@ -163,8 +165,10 @@ namespace {
         const RealVehicle::Spec* real = RealVehicle::Match(chassis.mass, chassis.enginePower);
         const VehicleOverhaul::Tuning::Values tuning = VehicleOverhaul::Tuning::Current(real);
         const RealVehicle::Spec* beams = wanted && switches.solidAxles ? real : nullptr;
+        bool redline = false;
         if (car == player) {
             VehicleOverhaul::Wheeled::Readout readout = VehicleOverhaul::Wheeled::ReadoutOf(car);
+            redline = VehicleOverhaul::Drivetrain::AtRedline(readout);
             readout.rpm = VehicleOverhaul::Drivetrain::Step(car, real, tuning.shiftTime, readout, seconds);
             const float height = chassis.centreOfMass[2] - chassis.ground;
             g_status = {readout, real, height, height > 0.0f ? chassis.track / (2.0f * height) : 0.0f,
@@ -193,7 +197,7 @@ namespace {
         }
 
         if (wanted) {
-            Write(parts, tuning);
+            Write(parts, tuning, redline);
         } else {
             Restore(parts, car == player);
         }

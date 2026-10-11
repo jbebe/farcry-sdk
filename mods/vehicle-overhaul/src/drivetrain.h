@@ -16,4 +16,8 @@ bool Install();
 float Step(Wheeled::Car car, const RealVehicle::Spec* real, float shiftTime, const Wheeled::Readout& readout,
            float seconds);
 
+// Whether the engine is at its redline, where a rev limiter cuts the drive: Havok's revs at the shift point
+// the redline is laid over.
+bool AtRedline(const Wheeled::Readout& readout);
+
 }
