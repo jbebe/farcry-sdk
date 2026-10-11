@@ -79,7 +79,7 @@ public sealed class Bench : ISampleProvider
         Parameters =
         [
             new("Speed (m/s)", ids.Speed, 0, 20, () => havok.Speed),
-            new("RPM", ids.Rpm, 0, 10000, () => drivetrain.Rpm),
+            new("RPM", ids.Rpm, 0, drivetrain.Redline, () => drivetrain.Rpm),
             new("Pedal", ids.ThrustPedal, CrankingPedal, 100,
                 () => drivetrain.Lifted ? LiftedPedal : float.Lerp(CrankingPedal, Throttle * 100, drivetrain.Caught)),
             new("Extra torque", ids.ExtraTorque, 0, 100, () => 0),

@@ -32,7 +32,7 @@ library. Audio goes out through WASAPI (NAudio), and Ogg Vorbis is decoded by NV
 | Accelerate / Coast / Brake | The pedal: W, Space and S do the same. Throttle sets how far Accelerate presses. |
 | Hold gear | No gear changes (H): the revs run from idle up to the redline in the gear the car is in, and stay there on the rev limiter |
 | Shift time | How long a gear change keeps the clutch out, read from the car's section of `bin\vehicle-overhaul.ini` |
-| Parameters | The six values a car's multilayers ask for. **Pin** one to hold it at the slider's value whatever the drive does. |
+| Parameters | The six values a car's multilayers ask for. **Pin** one to hold it at the slider's value whatever the drive does. The RPM slider stops at the car's redline. |
 | Distance | Metres to the car, through each event's rolloff curve: 0 m is the cab, about 5 m the chase camera |
 | Master, Output | The mix level, and its peak. Red means the bench itself is clipping, so lower Master. |
 | Surface | The material switch value the tyres roll on |
