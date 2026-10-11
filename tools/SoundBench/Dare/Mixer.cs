@@ -7,12 +7,11 @@ public sealed class Mixer
     public const int BlockFrames = 480;
     public const float BlockSeconds = BlockFrames / (float)Rate;
 
-    public List<SoundInstance> Playing { get; } = [];
-
-    /// <summary>The loudest output sample since <see cref="TakeOutputPeak"/>, after the volume, before the clip.</summary>
     private float _outputPeak;
 
-    /// <summary>The output's peak in dBFS since the last call, above 0 when the mix clipped.</summary>
+    public List<SoundInstance> Playing { get; } = [];
+
+    /// <summary>The output's peak in dBFS since the last call, after the volume: above 0 when the mix clipped.</summary>
     public float TakeOutputPeak()
     {
         float peak = _outputPeak;
@@ -52,17 +51,25 @@ public sealed class Mixer
             return;
         }
 
-        float[] samples = voice.Pcm.Samples;
-        int channels = voice.Pcm.Channels;
+        int frames = block.Length / 2;
         double step = voice.Pitch * voice.Pcm.Rate / Rate;
         float from = voice.Gain * fadeFrom, to = voice.TargetGain * fadeTo;
-        int frames = block.Length / 2;
+        voice.Gain = voice.TargetGain;
+        if (from == 0 && to == 0)
+        {
+            Skip(voice, step * frames);
+            return;
+        }
+
+        float[] samples = voice.Pcm.Samples;
+        int channels = voice.Pcm.Channels;
+        double position = voice.Position;
         float peak = 0;
         for (int i = 0; i < frames; i++)
         {
-            int at = (int)voice.Position;
+            int at = (int)position;
             int next = at + 1 < voice.Frames ? at + 1 : voice.Loop ? 0 : at;
-            float t = (float)(voice.Position - at);
+            float t = (float)(position - at);
             float gain = from + (to - from) * i / frames;
             float left = samples[at * channels] + (samples[next * channels] - samples[at * channels]) * t;
             float right = channels == 1 ? left : samples[at * 2 + 1] + (samples[next * 2 + 1] - samples[at * 2 + 1]) * t;
@@ -70,18 +77,36 @@ public sealed class Mixer
             block[i * 2 + 1] += right * gain;
             peak = Math.Max(peak, Math.Max(Math.Abs(left), Math.Abs(right)) * gain);
 
-            voice.Position += step;
-            if (voice.Position >= voice.Frames)
+            position += step;
+            if (position >= voice.Frames)
             {
                 if (!voice.Loop)
                 {
                     voice.Done = true;
                     break;
                 }
-                voice.Position %= voice.Frames;
+                position %= voice.Frames;
             }
         }
-        voice.Gain = voice.TargetGain;
+        voice.Position = position;
         voice.PeakDb = peak > 0 ? Math.Max(-96, 20 * MathF.Log10(peak)) : -96;
+    }
+
+    /// <summary>Moves a silent voice on as if it had played.</summary>
+    private static void Skip(Voice voice, double frames)
+    {
+        voice.Position += frames;
+        if (voice.Position < voice.Frames)
+        {
+            return;
+        }
+        if (voice.Loop)
+        {
+            voice.Position %= voice.Frames;
+        }
+        else
+        {
+            voice.Done = true;
+        }
     }
 }

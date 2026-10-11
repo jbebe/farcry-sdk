@@ -3,8 +3,8 @@ using JackAll.Tools.Spk;
 namespace SoundBench.Dare;
 
 /// <summary>One sample playing: its audio, where it has got to, and the gain it ramps to over a block.</summary>
-/// <param name="Frames">The frames the game plays, from the sample's declared length rather than the stream's.</param>
-/// <param name="Rolloff">The rolloff of the event playing it; null with <paramref name="Positioned"/> set is a
+/// <param name="frames">The frames the game plays, from the sample's declared length rather than the stream's.</param>
+/// <param name="rolloff">The rolloff of the event playing it; null with <paramref name="positioned"/> set is a
 /// positioned voice with no curve.</param>
 public sealed class Voice(Pcm pcm, bool loop, int frames, bool positioned, IReadOnlyList<SpkPoint>? rolloff)
 {
@@ -14,7 +14,6 @@ public sealed class Voice(Pcm pcm, bool loop, int frames, bool positioned, IRead
     public Pcm Pcm { get; } = pcm;
     public bool Loop { get; } = loop;
     public int Frames { get; } = frames;
-    public bool Positioned { get; } = positioned;
 
     public double Position { get; set; }
     public bool Done { get; set; }
@@ -22,10 +21,8 @@ public sealed class Voice(Pcm pcm, bool loop, int frames, bool positioned, IRead
     public float Gain { get; set; }
     public float TargetGain { get; private set; }
 
-    /// <summary>Its volume after DARE's clamp to -96..0 dB, then after the distance's rolloff.</summary>
-    public float LevelDb { get; private set; } = -96;
+    /// <summary>Its volume after DARE's clamp to -96..0 dB and the rolloff at the listener's distance.</summary>
     public float HeardDb { get; private set; } = -96;
-    public bool Clamped { get; private set; }
     public bool Virtual { get; private set; }
 
     /// <summary>The loudest sample it put out in the last block.</summary>
@@ -33,11 +30,9 @@ public sealed class Voice(Pcm pcm, bool loop, int frames, bool positioned, IRead
 
     public void Update(float volumeDb, float pitch, bool audible, float distance)
     {
-        Clamped = volumeDb > 0;
-        LevelDb = Math.Clamp(volumeDb, -96, 0);
-        float rolloffDb = !Positioned ? 0 : rolloff is null ? -96 : SpkCurve.Evaluate(rolloff, distance);
-        HeardDb = Math.Max(-96, LevelDb + rolloffDb);
-        Virtual = Positioned && HeardDb < AudibleFloorDb;
+        float rolloffDb = !positioned ? 0 : rolloff is null ? -96 : SpkCurve.Evaluate(rolloff, distance);
+        HeardDb = Math.Max(-96, Math.Clamp(volumeDb, -96, 0) + rolloffDb);
+        Virtual = positioned && HeardDb < AudibleFloorDb;
         Pitch = Math.Max(pitch, 0.01f);
         TargetGain = audible && !Virtual && HeardDb > -96 ? MathF.Pow(10, HeardDb / 20) : 0;
     }

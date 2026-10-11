@@ -3,9 +3,9 @@ using SoundBench.Game;
 namespace SoundBench.Vehicle;
 
 /// <summary>
-/// Stands in for Havok's engine and gearbox driving a car on flat ground with no wheelspin: the revs, gear
-/// and speed the vehicle overhaul reads from the physics. Constants are FC2's, from
-/// docs/docs/engine-internals/vehicle-physics.md; how the engine resists off the pedal is approximated.
+/// Havok's engine and gearbox with FC2's constants, driving a car on flat ground with no wheelspin: the
+/// revs, gear and speed the vehicle overhaul reads from the physics. The engine's resistance off the pedal
+/// is approximated.
 /// </summary>
 public sealed class HavokStandIn
 {

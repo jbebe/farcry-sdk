@@ -4,43 +4,49 @@ using SoundBench.Game;
 
 namespace SoundBench.Vehicle;
 
+public enum EngineState
+{
+    Off,
+    Starting,
+    Running,
+}
+
 /// <summary>
-/// What <c>CVehicleTypeWheeled::UpdateSounds</c> starts and stops as the engine and pedal change
-/// (docs/docs/engine-internals/audio-runtime.md, "What plays when"), with the vehicle overhaul's gear-change sound.
+/// The events a car starts and stops as its engine and pedal change, as <c>UpdateSounds</c> does (see
+/// audio-runtime.md, "What plays when"), with the vehicle overhaul's gear-change sound, and its tyres.
 /// </summary>
 /// <param name="play">Starts an event under the field that names it; null for an unset one.</param>
 public sealed class VehicleSounds(Car car, Func<uint, string, SoundInstance?> play)
 {
-    /// <summary>How quickly a loop the engine stops fades, so it does not click.</summary>
+    /// <summary>The fade of a loop the engine cuts.</summary>
     private const float CutFade = 0.02f;
 
     private readonly List<SoundInstance> _loops = [];
+    private readonly List<SoundInstance> _tyres = [];
     private SoundInstance? _pedal;
-    private float _startIn = -1;
+    private float _startIn;
     private bool _braking;
 
-    public bool Running { get; private set; }
-
-    public bool Starting => _startIn >= 0;
+    public EngineState Engine { get; private set; }
 
     public void StartEngine()
     {
-        if (Running || Starting)
+        if (Engine != EngineState.Off)
         {
             return;
         }
         play(car.Sounds.Ignition, "sndEngineIgnition");
+        Engine = EngineState.Starting;
         _startIn = car.Physics.StartTime;
     }
 
     public void StopEngine()
     {
-        if (!Running && !Starting)
+        if (Engine == EngineState.Off)
         {
             return;
         }
-        _startIn = -1;
-        Running = false;
+        Engine = EngineState.Off;
         _loops.ForEach(l => l.Stop(CutFade));
         _loops.Clear();
         _pedal?.Stop(CutFade);
@@ -49,14 +55,30 @@ public sealed class VehicleSounds(Car car, Func<uint, string, SoundInstance?> pl
         play(car.Sounds.StopIdleLoop, "sndStopEngineIdleLoop");
     }
 
-    /// <summary>Starts the engine's loops again, for banks reloaded while it runs.</summary>
+    /// <summary>Starts what plays continuously again, after the playing events were dropped.</summary>
     public void Restart()
     {
         _loops.Clear();
         _pedal = null;
-        if (Running)
+        if (Engine == EngineState.Running)
         {
             StartLoops();
+        }
+        RestartTyres();
+    }
+
+    /// <summary>Starts the tyres again, which roll as long as the car is on the bench.</summary>
+    public void RestartTyres()
+    {
+        _tyres.ForEach(t => t.Stop(CutFade));
+        _tyres.Clear();
+        for (int wheel = 0; wheel < car.Sounds.WheelRolls.Count; wheel++)
+        {
+            if (play(car.Sounds.WheelRolls[wheel], $"sndWheelRoll_{wheel + 1}") is { } tyre)
+            {
+                tyre.Background = true;
+                _tyres.Add(tyre);
+            }
         }
     }
 
@@ -64,13 +86,12 @@ public sealed class VehicleSounds(Car car, Func<uint, string, SoundInstance?> pl
     /// <param name="shift">A gear change to be heard now, or 0.</param>
     public void Step(float seconds, float pedal, int shift)
     {
-        if (Starting && (_startIn -= seconds) < 0)
+        if (Engine == EngineState.Starting && (_startIn -= seconds) < 0)
         {
-            _startIn = -1;
-            Running = true;
+            Engine = EngineState.Running;
             StartLoops();
         }
-        if (!Running)
+        if (Engine != EngineState.Running)
         {
             return;
         }

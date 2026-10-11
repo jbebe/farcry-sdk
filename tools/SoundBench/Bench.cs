@@ -6,6 +6,9 @@ using SoundBench.Vehicle;
 
 namespace SoundBench;
 
+/// <summary>A game parameter the car's multilayers ask for: the range the bench offers and where its value comes from.</summary>
+public sealed record GameParameter(string Name, uint Id, float Min, float Max, Func<float> Live);
+
 /// <summary>
 /// A car driven and heard. The audio device pulls it a block at a time, and each block first steps the
 /// drive, the engine and its sounds, then evaluates every playing tree at the new parameters. Everything
@@ -13,11 +16,16 @@ namespace SoundBench;
 /// </summary>
 public sealed class Bench : ISampleProvider
 {
+    /// <summary>The damage parameter is health × 100.</summary>
+    private const float Undamaged = 100;
+
+    /// <summary>What the vehicle overhaul answers for the pedal during a gear change (kLiftedPedal in vehicle_sound.cpp).</summary>
+    private const float LiftedPedal = -100;
+
     private readonly float[] _block = new float[Mixer.BlockFrames * 2];
-    private readonly List<SoundInstance> _wheels = [];
     private int _blockAt = Mixer.BlockFrames * 2;
-    private RandomPicks _picks = new();
-    private SoundRegistry? _registry;
+    private SoundGraph? _graph;
+    private Dictionary<uint, GameParameter> _parameterById = [];
 
     public object Sync { get; } = new();
 
@@ -26,10 +34,10 @@ public sealed class Bench : ISampleProvider
     public Mixer Mixer { get; } = new();
 
     public Car? Car { get; private set; }
-    public OverhaulTuning Tuning { get; private set; } = new();
     public HavokStandIn? Havok { get; private set; }
     public Drivetrain? Drivetrain { get; private set; }
     public VehicleSounds? Sounds { get; private set; }
+    public IReadOnlyList<GameParameter> Parameters { get; private set; } = [];
 
     /// <summary>The pedals, each 0..1.</summary>
     public float Throttle { get; set; }
@@ -51,56 +59,42 @@ public sealed class Bench : ISampleProvider
 
     public float Volume { get; set; } = 1;
 
-    /// <summary>A health of 0..100 for the damage parameter; 100 is new.</summary>
-    public const float Undamaged = 100;
-
     public void Select(Car car, OverhaulTuning tuning, SoundRegistry registry)
     {
         Car = car;
-        Tuning = tuning;
         ShiftTime = tuning.ShiftTime;
-        Havok = new HavokStandIn(car.Physics, tuning);
-        Drivetrain = new Drivetrain(car.Real?.Idle ?? 0, car.Real?.Redline ?? 0);
+        HavokStandIn havok = Havok = new HavokStandIn(car.Physics, tuning);
+        Drivetrain drivetrain = Drivetrain = new Drivetrain(car.Real?.Idle ?? 0, car.Real?.Redline ?? 0);
         Sounds = new VehicleSounds(car, Play);
+
+        CarParameters ids = car.Sounds.Parameters;
+        Parameters =
+        [
+            new("Speed (m/s)", ids.Speed, 0, 20, () => havok.Speed),
+            new("RPM", ids.Rpm, 0, 10000, () => drivetrain.Rpm),
+            new("Pedal", ids.ThrustPedal, -100, 100, () => drivetrain.Lifted ? LiftedPedal : Throttle * 100),
+            new("Extra torque", ids.ExtraTorque, 0, 100, () => 0),
+            new("Wheel slip", ids.WheelSlip, 0, 15, () => 0),
+            new("Damage", ids.Damage, 0, 100, () => Undamaged),
+        ];
+        _parameterById = Parameters.DistinctBy(p => p.Id).ToDictionary(p => p.Id);
+        Pins.Clear();
         Load(registry);
     }
 
     /// <summary>Swaps in a registry of freshly read banks, restarting what was playing.</summary>
     public void Load(SoundRegistry registry)
     {
-        _registry = registry;
-        _picks = new RandomPicks();
+        _graph = new SoundGraph(registry, SwitchValue, new RandomPicks());
         Mixer.Playing.Clear();
-        _wheels.Clear();
-        if (Car is not null)
-        {
-            foreach (uint id in VehicleSounds.Events(Car))
-            {
-                registry.Hold(id);
-            }
-        }
-        RestartWheels();
         Sounds?.Restart();
     }
 
     /// <summary>The value a game parameter has for the car now; null for one a car does not answer.</summary>
     public float? Parameter(uint id)
-    {
-        if (Pins.TryGetValue(id, out float pinned))
-        {
-            return pinned;
-        }
-        if (Car?.Sounds.Parameters is not { } p || Havok is null || Drivetrain is null)
-        {
-            return null;
-        }
-        return id == p.Speed ? Havok.Speed
-            : id == p.Rpm ? Drivetrain.Rpm
-            : id == p.ThrustPedal ? (Drivetrain.Lifted ? -100 : Throttle * 100)
-            : id == p.ExtraTorque || id == p.WheelSlip ? 0
-            : id == p.Damage ? Undamaged
+        => Pins.TryGetValue(id, out float pinned) ? pinned
+            : _parameterById.TryGetValue(id, out GameParameter? parameter) ? parameter.Live()
             : null;
-    }
 
     public int Read(float[] buffer, int offset, int count)
     {
@@ -123,7 +117,7 @@ public sealed class Bench : ISampleProvider
     {
         if (Havok is not null && Drivetrain is not null && Sounds is not null)
         {
-            float throttle = Sounds.Running ? Throttle : 0;
+            float throttle = Sounds.Engine == EngineState.Running ? Throttle : 0;
             Havok.Step(Mixer.BlockSeconds, throttle, Brake, ShiftTime);
             int shift = Drivetrain.Step(Havok.Rpm, Havok.Gear, throttle, ShiftTime, Mixer.BlockSeconds);
             Sounds.Step(Mixer.BlockSeconds, throttle > 0 ? throttle : -Brake, shift);
@@ -139,12 +133,11 @@ public sealed class Bench : ISampleProvider
 
     private SoundInstance? Play(uint id, string field)
     {
-        if (id == SpkLayout.NoId || _registry is null || Car is null)
+        if (id == SpkLayout.NoId || _graph is null)
         {
             return null;
         }
-        var graph = new SoundGraph(_registry, SwitchValue, _picks);
-        var instance = new SoundInstance(field, graph.Event(id));
+        var instance = new SoundInstance(field, _graph.Event(id));
         Mixer.Playing.Add(instance);
         return instance;
     }
@@ -153,19 +146,4 @@ public sealed class Bench : ISampleProvider
         => group == Car?.Sounds.ReliabilitySwitch ? Car.Sounds.NoDamage
             : group == Car?.Sounds.MaterialSwitch ? Surface
             : null;
-
-    /// <summary>Starts the tyres again, as a switch picks its case only when its event starts. They roll for as
-    /// long as the car is on the bench; their multilayers fade them with speed.</summary>
-    public void RestartWheels()
-    {
-        _wheels.ForEach(w => w.Stop(0.05f));
-        _wheels.Clear();
-        foreach ((uint id, int wheel) in (Car?.Sounds.WheelRolls ?? []).Select((id, i) => (id, i)))
-        {
-            if (Play(id, $"sndWheelRoll_{wheel + 1}") is { } instance)
-            {
-                _wheels.Add(instance);
-            }
-        }
-    }
 }

@@ -1,12 +1,9 @@
 namespace SoundBench.Vehicle;
 
-/// <summary>
-/// The vehicle overhaul's engine: <c>Drivetrain::Step</c> in mods/vehicle-overhaul/src/drivetrain.cpp, fed
-/// by the stand-in instead of Havok. Keep the two in step.
-/// </summary>
-public sealed class Drivetrain(float idle, float redline)
+/// <summary>The vehicle overhaul's engine, fed by the stand-in instead of Havok.</summary>
+/// <remarks>Mirrors <c>Drivetrain::Step</c> in <c>mods/vehicle-overhaul/src/drivetrain.cpp</c>.</remarks>
+public sealed class Drivetrain
 {
-    private const float HavokMin = HavokStandIn.MinRpm, HavokUpshift = HavokStandIn.UpshiftRpm;
     private const float ClutchSlip = 1750f / 5750f, RiseRate = 7000f / 5750f, FallRate = 3000f / 5750f;
 
     private int _gear;
@@ -14,9 +11,18 @@ public sealed class Drivetrain(float idle, float redline)
     private float _sinceShift;
     private int _pendingShift;
 
-    public float Idle { get; } = idle > 0 ? idle : 850;
-    public float Redline { get; } = redline > 0 ? redline : HavokUpshift;
-    public float Rpm { get; private set; } = idle > 0 ? idle : 850;
+    /// <param name="idle">0 for the overhaul's default.</param>
+    /// <param name="redline">0 for Havok's upshift revs.</param>
+    public Drivetrain(float idle, float redline)
+    {
+        Idle = idle > 0 ? idle : 850;
+        Redline = redline > 0 ? redline : HavokStandIn.UpshiftRpm;
+        Rpm = Idle;
+    }
+
+    public float Idle { get; }
+    public float Redline { get; }
+    public float Rpm { get; private set; }
 
     /// <summary>The driver is off the throttle for a gear change.</summary>
     public bool Lifted { get; private set; }
@@ -41,7 +47,7 @@ public sealed class Drivetrain(float idle, float redline)
         Lifted = _sinceShift < _shiftTime;
 
         float range = Redline - Idle;
-        float wheels = Idle + (Math.Abs(havokRpm) - HavokMin) * range / (HavokUpshift - HavokMin);
+        float wheels = Idle + (Math.Abs(havokRpm) - HavokStandIn.MinRpm) * range / (HavokStandIn.UpshiftRpm - HavokStandIn.MinRpm);
         float target = Math.Max(Idle, wheels);
         float slip = Idle + ClutchSlip * range;
         if (wheels < slip)

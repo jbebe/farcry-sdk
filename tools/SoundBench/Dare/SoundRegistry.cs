@@ -1,5 +1,6 @@
 using JackAll.Core.Format;
 using JackAll.Tools.Spk;
+using JackAll.Tools.World;
 using SoundBench.Game;
 
 namespace SoundBench.Dare;
@@ -9,8 +10,8 @@ public sealed record Registered(SpkBankRecord Record, string Bank);
 
 /// <summary>
 /// The sound records the game has registered, by id. A bank loads by the id an event field names, and
-/// with it the banks a world's depload lists under that bank; a record in no loaded bank stays missing,
-/// as the game's "Atomic object has not been loaded".
+/// with it the banks world1's depload lists under that bank; a record in no loaded bank stays missing,
+/// as the game's "Atomic object has not been loaded". Audio is decoded as its bank loads.
 /// </summary>
 public sealed class SoundRegistry
 {
@@ -21,52 +22,32 @@ public sealed class SoundRegistry
     private readonly HashSet<uint> _banks = [];
     private readonly Dictionary<uint, Registered> _records = [];
     private readonly Dictionary<uint, Pcm> _audio = [];
+    private readonly List<string> _problems = [];
 
-    public SoundRegistry(GameFiles files, string world = "world1")
+    public SoundRegistry(GameFiles files)
     {
         _files = files;
-        _children = files.Read($@"worlds\{world}\generated\{world}_depload.dat") is { } depload
+        _children = files.Read(WorldEditDependencies.DepLoadPathOf("world1")) is { } depload
             ? DepLoadDocument.Decode(depload).Parents.ToDictionary(p => p.Hash, p => p.Children)
             : [];
-        Hold(RolloffPack);
+        Hold(SpkBank.RolloffPackId);
     }
 
-    /// <summary>The bank of every retail rolloff curve, <see cref="SpkBank.RolloffPackPath"/>.</summary>
-    private const uint RolloffPack = 0x2FFFFFFF;
+    /// <summary>The errors and warnings the bank lint finds in the banks loaded.</summary>
+    public IReadOnlyList<string> Problems => _problems;
 
     /// <summary>Loads the bank an id names, as <c>CSoundResource::GetFromSoundId</c> does.</summary>
     public void Hold(uint id)
     {
         if (id != SpkLayout.NoId)
         {
-            Load(NameHash.Compute($@"soundbinary\{id:x8}.spk"));
+            Load(NameHash.Compute(SpkBank.PathOf(id)));
         }
     }
 
     public Registered? Find(uint id) => _records.GetValueOrDefault(id);
 
-    /// <summary>The audio a sample plays, decoded once.</summary>
-    public Pcm? Audio(uint id)
-    {
-        if (_audio.TryGetValue(id, out Pcm? pcm))
-        {
-            return pcm;
-        }
-        if (Find(id) is not { Record.IsAudio: true } audio)
-        {
-            return null;
-        }
-        return _audio[id] = Pcm.Decode(audio.Record);
-    }
-
-    /// <summary>Decodes every audio record loaded so far, so a play never waits on a decode.</summary>
-    public void DecodeAll()
-    {
-        foreach (uint id in _records.Values.Where(r => r.Record.IsAudio).Select(r => r.Record.Id).ToList())
-        {
-            Audio(id);
-        }
-    }
+    public Pcm? Audio(uint id) => _audio.GetValueOrDefault(id);
 
     private void Load(uint hash)
     {
@@ -75,11 +56,19 @@ public sealed class SoundRegistry
             return;
         }
 
-        string bank = _files.Describe(hash);
-        foreach (SpkBankRecord record in SpkBank.Parse(bytes).Records)
+        string name = _files.Describe(hash);
+        SpkBank bank = SpkBank.Parse(bytes);
+        foreach (SpkBankRecord record in bank.Records)
         {
-            _records.TryAdd(record.Id, new Registered(record, bank));
+            if (_records.TryAdd(record.Id, new Registered(record, name)) && record.IsAudio && Pcm.Decode(record) is { } pcm)
+            {
+                _audio[record.Id] = pcm;
+            }
         }
+        _problems.AddRange(SpkBankLint.Check(bank, null)
+            .Where(p => p.Severity != SpkProblemSeverity.Note)
+            .Select(p => $"{name}: {p.Message}"));
+
         foreach (DepLoadChild child in _children.GetValueOrDefault(hash, []).Where(c => c.TypeHash == SoundResource))
         {
             Load(child.Hash);

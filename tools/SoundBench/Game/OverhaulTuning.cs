@@ -4,19 +4,15 @@ using System.IO;
 namespace SoundBench.Game;
 
 /// <summary>The vehicle overhaul's tuning of one car that moves its engine: <c>bin\vehicle-overhaul.ini</c>,
-/// with the overhaul's defaults (<c>tuning.cpp</c>) where the file is silent.</summary>
+/// with the defaults of <c>tuning.cpp</c> where the file is silent.</summary>
 public sealed record OverhaulTuning(
-    float EnginePower = 0.7f,
-    float TopSpeed = 2f,
-    float ShiftTime = 0.6f,
-    float BrakeTorque = 0.3f,
-    float TyreGrip = 0.3f,
-    float RollingResistance = 0.15f)
+    float EnginePower, float TopSpeed, float ShiftTime, float BrakeTorque, float TyreGrip, float RollingResistance)
 {
     public const string OtherCars = "Other cars";
 
-    public static OverhaulTuning Read(string iniPath, string section)
+    public static OverhaulTuning Read(string iniPath, RealVehicle? real)
     {
+        string section = real?.Name ?? OtherCars;
         var values = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
         if (File.Exists(iniPath))
         {
@@ -37,14 +33,12 @@ public sealed record OverhaulTuning(
             }
         }
 
-        var defaults = new OverhaulTuning();
-        float Get(string key, float fallback) => values.GetValueOrDefault(key, fallback);
         return new OverhaulTuning(
-            Get("Engine power", defaults.EnginePower),
-            Get("Top speed", defaults.TopSpeed),
-            Get("Shift time", defaults.ShiftTime),
-            Get("Brake torque", defaults.BrakeTorque),
-            Get("Tyre grip", defaults.TyreGrip),
-            Get("Rolling resistance", defaults.RollingResistance));
+            values.GetValueOrDefault("Engine power", 0.7f),
+            values.GetValueOrDefault("Top speed", real?.TopSpeed > 0 ? real.TopSpeed : 2f),
+            values.GetValueOrDefault("Shift time", 0.6f),
+            values.GetValueOrDefault("Brake torque", 0.3f),
+            values.GetValueOrDefault("Tyre grip", 0.3f),
+            values.GetValueOrDefault("Rolling resistance", 0.15f));
     }
 }

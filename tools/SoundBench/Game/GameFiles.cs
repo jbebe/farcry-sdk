@@ -1,6 +1,7 @@
 using System.IO;
 using JackAll.Core;
 using JackAll.Core.Mods;
+using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
 
 namespace SoundBench.Game;
@@ -23,8 +24,9 @@ public sealed class GameFiles : IDisposable
     public static GameFiles Open(string gamePath, IReadOnlyList<string> layerFolders, IProgress<string> progress)
     {
         GameInstall install = GameInstall.TryOpen(gamePath, out string error) ?? throw new InvalidOperationException(error);
-        GameVfs vfs = GameVfs.Load(
-            install, BundledAssets.LoadNames(), GameCache.Load(install.CacheFile), progress: progress, includeFragments: false);
+        Task<NameDatabase> names = Task.Run(BundledAssets.LoadNames);
+        GameCache cache = GameCache.Load(install.CacheFile);
+        GameVfs vfs = GameVfs.OpenForOriginalsOnly(install, names.Result, cache, progress);
         FolderModLayer[] layers = [.. layerFolders.Select(folder => new FolderModLayer(folder, Path.GetFileName(Path.GetDirectoryName(folder)) ?? folder))];
         vfs.Rebuild(layers, includeFragments: false, progress);
         return new GameFiles(install, vfs, layers);
@@ -44,11 +46,9 @@ public sealed class GameFiles : IDisposable
 
     public byte[]? Read(uint hash) => _vfs.Files.TryGetValue(hash, out VfsFile? file) ? _vfs.Read(file.Hash) : null;
 
-    /// <summary>A file's name and what provides it: a layer, or "game" for the installed archives.</summary>
+    /// <summary>A file's name and what provides it: a layer, or the archive it comes from.</summary>
     public string Describe(uint hash)
-        => _vfs.Files.TryGetValue(hash, out VfsFile? file)
-            ? $"{file.FileName} ({(file.SourceKind == SourceKind.Mod ? file.SourceName : "game")})"
-            : $"{hash:x8}";
+        => _vfs.Files.TryGetValue(hash, out VfsFile? file) ? $"{file.FileName} ({_vfs.DisplayModuleName(file)})" : $"{hash:x8}";
 
     public IEnumerable<string> KnownPaths => _vfs.Files.Values.Where(f => f.NameIsKnown).Select(f => f.Path);
 

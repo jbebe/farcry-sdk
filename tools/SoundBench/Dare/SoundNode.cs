@@ -27,7 +27,7 @@ public sealed class SoundNode
 
     public List<SoundNode> Children { get; } = [];
 
-    public Voice? Voice { get; init; }
+    public Voice? Voice { get; set; }
 
     public string? Problem { get; set; }
 
@@ -57,7 +57,7 @@ public sealed class SoundNode
             float? x = at.Parameter(curve.Parameter);
             if (x is null)
             {
-                Problem = $"reads parameter 0x{curve.Parameter:x8}, which a car does not answer";
+                Problem ??= $"reads parameter 0x{curve.Parameter:x8}, which a car does not answer";
             }
             CurveInputs[i] = x ?? 0;
             CurveOutputs[i] = curve.Evaluate(x ?? 0);
@@ -71,7 +71,7 @@ public sealed class SoundNode
             }
             else
             {
-                Problem = $"has a curve of unknown target {curve.Target}";
+                Problem ??= $"has a curve of unknown target {curve.Target}";
             }
         }
 

@@ -35,20 +35,20 @@ public sealed class SoundGraph(SoundRegistry registry, Func<uint, uint?> switchV
                 bool positioned = record.Word(SpkLayout.PlayPositioned) == 1;
                 node.Detail = !positioned ? "unpositioned" : rolloff == SpkLayout.NoId ? "positioned, no rolloff" : $"rolloff 0x{rolloff:x8}";
                 var placement = new Placement(positioned, rolloff == SpkLayout.NoId ? null : registry.Find(rolloff)?.Record.Points);
-                node.Children.Add(Resource(record.Word(2), [], placement, depth + 1));
+                node.Children.Add(Resource(record.Word(SpkLayout.PlaySound), [], placement, depth + 1));
                 break;
             case SpkEventType.Switch:
-                uint group = record.Word(3);
+                uint group = record.Word(SpkLayout.SwitchEventGroup);
                 uint? value = switchValue(group);
                 SpkEntry? match = value is null ? null : record.Entries.FirstOrDefault(e => e.Value == value);
                 node.Detail = $"group 0x{group:x8} = {(value is { } v ? $"0x{v:x8}" : "unset")}{(match is null ? ", default" : "")}";
-                node.Children.Add(Event(match?.Ref ?? record.Word(4), depth + 1));
+                node.Children.Add(Event(match?.Ref ?? record.Word(SpkLayout.SwitchEventDefault), depth + 1));
                 break;
             case SpkEventType.List:
                 node.Children.AddRange(record.Entries.Select(e => Event(e.Ref, depth + 1)));
                 break;
             case SpkEventType.NoOpLinked:
-                node.Detail = $"plays nothing, names 0x{record.Word(2):x8}";
+                node.Detail = $"plays nothing, names 0x{record.Word(SpkLayout.EventTarget):x8}";
                 break;
             default:
                 node.Problem = $"event type {record.Kind} is not emulated";
@@ -64,22 +64,28 @@ public sealed class SoundGraph(SoundRegistry registry, Func<uint, uint?> switchV
             return Missing(id, curves);
         }
 
-        float gainDb = (int)record.Word(SpkLayout.SampleGain) / 65536f;
-        if (record.Layout == SpkLayout.Sample)
+        SpkLayout layout = record.Layout!;
+        var node = new SoundNode
         {
-            return Sample(id, record, found.Bank, gainDb, curves, placement);
-        }
-
-        var node = new SoundNode { Id = id, Kind = record.Layout!.Element, Bank = found.Bank, GainDb = gainDb, Curves = curves };
+            Id = id,
+            Kind = layout.Element,
+            Bank = found.Bank,
+            GainDb = (float)SpkLayout.FromQ16(record.Word(SpkLayout.SampleGain)),
+            Curves = curves,
+        };
         if (depth > MaxDepth)
         {
             node.Problem = "nests too deep";
         }
-        else if (record.Layout == SpkLayout.Multilayer)
+        else if (layout == SpkLayout.Sample)
+        {
+            AddVoice(node, record, placement);
+        }
+        else if (layout == SpkLayout.Multilayer)
         {
             node.Children.AddRange(record.Layers.Select(l => Resource(l.Resource, l.Curves, placement, depth + 1)));
         }
-        else if (record.Layout == SpkLayout.Random)
+        else if (layout == SpkLayout.Random)
         {
             SpkEntry? pick = picks.Pick(record);
             node.Detail = pick is null ? "picked silence" : $"picked 1 of {record.Entries.Count}";
@@ -88,10 +94,10 @@ public sealed class SoundGraph(SoundRegistry registry, Func<uint, uint?> switchV
                 node.Children.Add(Resource(pick.Ref, [], placement, depth + 1));
             }
         }
-        else if (record.Layout == SpkLayout.Switch)
+        else if (layout == SpkLayout.Switch)
         {
-            uint group = record.Word(8);
-            uint value = switchValue(group) ?? record.Word(9);
+            uint group = record.Word(SpkLayout.SwitchGroup);
+            uint value = switchValue(group) ?? record.Word(SpkLayout.SwitchDefault);
             node.Detail = $"group 0x{group:x8} = 0x{value:x8}";
             if (record.Entries.FirstOrDefault(e => e.Value == value) is { } match)
             {
@@ -109,41 +115,27 @@ public sealed class SoundGraph(SoundRegistry registry, Func<uint, uint?> switchV
         return node;
     }
 
-    private SoundNode Sample(uint id, SpkBankRecord record, string bank, float gainDb, IReadOnlyList<SpkCurve> curves, Placement placement)
+    private void AddVoice(SoundNode node, SpkBankRecord sample, Placement placement)
     {
-        uint audioId = record.Word(SpkLayout.SampleAudio);
-        if (registry.Find(audioId) is not { Record.IsAudio: true } audio || registry.Audio(audioId) is not { } pcm)
+        uint audioId = sample.Word(SpkLayout.SampleAudio);
+        if (registry.Audio(audioId) is not { } pcm)
         {
-            return new SoundNode
-            {
-                Id = id, Kind = "Sample", Bank = bank, GainDb = gainDb, Curves = curves,
-                Problem = $"plays audio 0x{audioId:x8}, which has not been loaded",
-            };
+            node.Problem = $"plays audio 0x{audioId:x8}, which has not been loaded";
+            return;
         }
 
         int frames = pcm.Frames;
-        long declared = record.Word(SpkLayout.SampleByteLength);
-        long stream = audio.Record.Data.Length;
-        string? problem = null;
+        long declared = sample.Word(SpkLayout.SampleByteLength);
+        long stream = registry.Find(audioId)!.Record.Data.Length;
         if (declared != stream)
         {
-            problem = $"declares {declared:N0} bytes of a {stream:N0}-byte stream{(declared > stream ? ": the game plays noise past its end" : "")}";
+            node.Problem = $"declares {declared:N0} bytes of a {stream:N0}-byte stream{(declared > stream ? ": the game plays noise past its end" : "")}";
             frames = (int)Math.Min(frames, frames * declared / Math.Max(1, stream));
         }
 
-        bool loop = record.Word(SpkLayout.SampleLoop) == 1;
-        bool positioned = placement.Positioned && pcm.Channels == 1;
-        return new SoundNode
-        {
-            Id = id,
-            Kind = "Sample",
-            Bank = bank,
-            GainDb = gainDb,
-            Curves = curves,
-            Detail = $"{pcm.Rate} Hz {(pcm.Channels == 2 ? "stereo" : "mono")}, {frames / (double)pcm.Rate:0.00} s{(loop ? ", loops" : "")}",
-            Problem = problem,
-            Voice = new Voice(pcm, loop, frames, positioned, placement.Rolloff),
-        };
+        bool loop = sample.Word(SpkLayout.SampleLoop) == 1;
+        node.Detail = $"{pcm.Rate} Hz {(pcm.Channels == 2 ? "stereo" : "mono")}, {frames / (double)pcm.Rate:0.00} s{(loop ? ", loops" : "")}";
+        node.Voice = new Voice(pcm, loop, frames, placement.Positioned && pcm.Channels == 1, placement.Rolloff);
     }
 
     private static SoundNode Missing(uint id, IReadOnlyList<SpkCurve> curves) => new()

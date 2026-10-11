@@ -1,40 +1,29 @@
+using JackAll.App;
+
 namespace SoundBench.Views;
 
 /// <summary>A game parameter the car answers: its live value, or a pinned one that overrides the drive.</summary>
-/// <param name="Max">The range <c>7fffffff.bao</c> declares for it, which the slider covers.</param>
-public sealed class ParameterView(Bench bench, string name, uint id, float min, float max) : Observable
+public sealed class ParameterView(Bench bench, GameParameter parameter) : Observable
 {
-    private float _pinValue = min;
+    private float _pinValue = parameter.Min;
+    private bool _pinned;
+    private float? _live;
+    private string _value = "";
 
-    public string Name { get; } = name;
-    public uint Id { get; } = id;
-    public float Min { get; } = min;
-    public float Max { get; } = max;
-    public string Value { get; private set; } = "";
+    public string Name => parameter.Name;
+    public float Min => parameter.Min;
+    public float Max => parameter.Max;
+    public string Value { get => _value; private set => Set(ref _value, value); }
 
     public bool Pinned
     {
-        get
-        {
-            lock (bench.Sync)
-            {
-                return bench.Pins.ContainsKey(Id);
-            }
-        }
+        get => _pinned;
         set
         {
-            lock (bench.Sync)
+            if (Set(ref _pinned, value))
             {
-                if (value)
-                {
-                    bench.Pins[Id] = _pinValue;
-                }
-                else
-                {
-                    bench.Pins.Remove(Id);
-                }
+                Write();
             }
-            Notify();
         }
     }
 
@@ -43,32 +32,38 @@ public sealed class ParameterView(Bench bench, string name, uint id, float min, 
         get => _pinValue;
         set
         {
-            _pinValue = value;
-            lock (bench.Sync)
+            if (Set(ref _pinValue, value) && _pinned)
             {
-                if (bench.Pins.ContainsKey(Id))
-                {
-                    bench.Pins[Id] = value;
-                }
+                Write();
             }
-            Notify();
         }
     }
 
     /// <summary>Reads the value; call under <see cref="Bench.Sync"/>.</summary>
-    public void Refresh()
+    public void Capture() => _live = bench.Parameter(parameter.Id);
+
+    /// <summary>Shows what <see cref="Capture"/> read; an unpinned slider follows it.</summary>
+    public void Publish()
     {
-        float? value = bench.Parameter(Id);
-        Value = value is { } v ? $"{v:0.##}" : "-";
-        if (!bench.Pins.ContainsKey(Id) && value is { } live)
+        Value = _live is { } v ? $"{v:0.##}" : "-";
+        if (!_pinned && _live is { } live)
         {
-            _pinValue = Math.Clamp(live, Min, Max);
+            Set(ref _pinValue, Math.Clamp(live, Min, Max), nameof(PinValue));
         }
     }
 
-    public void Publish()
+    private void Write()
     {
-        Notify(nameof(Value));
-        Notify(nameof(PinValue));
+        lock (bench.Sync)
+        {
+            if (_pinned)
+            {
+                bench.Pins[parameter.Id] = _pinValue;
+            }
+            else
+            {
+                bench.Pins.Remove(parameter.Id);
+            }
+        }
     }
 }

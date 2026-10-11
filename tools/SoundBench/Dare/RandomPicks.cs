@@ -4,8 +4,8 @@ namespace SoundBench.Dare;
 
 /// <summary>
 /// Picks a random container's entry by the traced rules (docs/docs/file-formats/spk.md, "How a random
-/// container picks"): word [8] is the chance of silence, never twice in a row unless word [9]; the last
-/// pick is skipped unless its entry's flag; word [10] steps through the entries from a random start.
+/// container picks"): a chance of silence, never twice in a row unless allowed; the last pick skipped
+/// unless its entry's flag; a sequence stepping through the entries from a random start.
 /// </summary>
 public sealed class RandomPicks
 {
@@ -23,16 +23,17 @@ public sealed class RandomPicks
         }
 
         bool played = _last.TryGetValue(random.Id, out int last);
-        if (random.Word(10) == 1)
+        if (random.Word(SpkLayout.RandomSequence) == 1)
         {
             int next = !played || last == Silence ? System.Random.Shared.Next(entries.Count) : (last + 1) % entries.Count;
             _last[random.Id] = next;
             return entries[next];
         }
 
-        double silence = played && last == Silence && random.Word(9) != 1 ? 0 : random.Word(8) / 65536.0;
-        double[] weights = [.. entries.Select((e, i) =>
-            played && i == last && e.Extra != 1 && entries.Count > 1 ? 0 : e.Value / 65536.0)];
+        double silence = played && last == Silence && random.Word(SpkLayout.RandomRepeatSilence) != 1
+            ? 0
+            : random.Word(SpkLayout.RandomSilence);
+        double[] weights = [.. entries.Select((e, i) => played && i == last && e.Extra != 1 && entries.Count > 1 ? 0 : (double)e.Value)];
         double draw = System.Random.Shared.NextDouble() * (silence + weights.Sum());
         for (int i = 0; i < weights.Length; i++)
         {

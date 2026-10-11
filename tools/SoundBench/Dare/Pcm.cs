@@ -10,22 +10,32 @@ public sealed record Pcm(float[] Samples, int Channels, int Rate)
 {
     public int Frames => Samples.Length / Channels;
 
-    public static Pcm Decode(SpkBankRecord audio)
+    /// <summary>Null for a record that is neither Ogg Vorbis nor IMA-ADPCM.</summary>
+    public static Pcm? Decode(SpkBankRecord audio)
     {
-        if (SpkBank.DescribeAudio(audio) is { Ogg: true })
+        switch (SpkBank.DescribeAudio(audio))
         {
-            using var reader = new VorbisReader(new MemoryStream(audio.Data), closeOnDispose: true);
-            var samples = new List<float>();
-            var buffer = new float[4096 * reader.Channels];
-            int read;
-            while ((read = reader.ReadSamples(buffer, 0, buffer.Length)) > 0)
-            {
-                samples.AddRange(buffer.AsSpan(0, read));
-            }
-            return new Pcm([.. samples], reader.Channels, reader.SampleRate);
+            case { Ogg: true }:
+                using (var reader = new VorbisReader(new MemoryStream(audio.Data), closeOnDispose: true))
+                {
+                    var samples = new float[reader.TotalSamples * reader.Channels];
+                    int read = 0, got;
+                    while (read < samples.Length && (got = reader.ReadSamples(samples, read, samples.Length - read)) > 0)
+                    {
+                        read += got;
+                    }
+                    return new Pcm(samples[..read], reader.Channels, reader.SampleRate);
+                }
+            case { Ogg: false }:
+                ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(audio.Data);
+                var pcm = new float[decoded.Samples.Length];
+                for (int i = 0; i < pcm.Length; i++)
+                {
+                    pcm[i] = decoded.Samples[i] / 32768f;
+                }
+                return new Pcm(pcm, decoded.Channels, audio.SampleRate ?? SpkBank.FallbackSampleRate);
+            default:
+                return null;
         }
-
-        ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(audio.Data);
-        return new Pcm([.. decoded.Samples.Select(s => s / 32768f)], decoded.Channels, audio.SampleRate ?? SpkBank.FallbackSampleRate);
     }
 }

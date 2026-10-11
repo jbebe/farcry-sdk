@@ -32,8 +32,7 @@ public sealed class Settings
         File.WriteAllText(FilePath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
     }
 
-    /// <summary>The vehicle overhaul's layer in the repo this exe was built in, so a rebuilt bank is heard
-    /// before it is deployed.</summary>
+    /// <summary>The vehicle overhaul's layer in the repo this exe was built in.</summary>
     private static Settings Default()
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)

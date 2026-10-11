@@ -24,7 +24,7 @@
             <Setter Property="Padding" Value="10,10" />
             <Setter Property="Margin" Value="0,0,4,4" />
             <Setter Property="GroupName" Value="Drive" />
-            <EventSetter Event="Checked" Handler="OnDrive" />
+            <EventSetter Event="Checked" Handler="OnControls" />
         </Style>
     </Window.Resources>
 
@@ -60,6 +60,8 @@
                     <TextBlock Text="Car" Style="{StaticResource Heading}" Margin="0,0,0,4" />
                     <ComboBox x:Name="Cars" SelectionChanged="OnCarSelected" AutomationProperties.AutomationId="Cars" />
                     <TextBlock x:Name="CarInfo" TextWrapping="Wrap" Margin="0,4" Foreground="{StaticResource TextMutedBrush}" />
+                    <TextBlock x:Name="BankProblems" Style="{StaticResource Optional}" TextWrapping="Wrap" Margin="0,0,0,4"
+                               Foreground="{StaticResource ProblemBrush}" AutomationProperties.AutomationId="BankProblems" />
                     <Button Content="Reload banks" Click="OnReload" HorizontalAlignment="Left"
                             AutomationProperties.AutomationId="Reload" />
 
@@ -83,13 +85,13 @@
                     <DockPanel>
                         <TextBlock Text="Throttle" Width="80" />
                         <TextBlock DockPanel.Dock="Right" Width="50" Text="{Binding Value, ElementName=ThrottleSlider, StringFormat={}{0:0} %}" />
-                        <Slider x:Name="ThrottleSlider" Minimum="0" Maximum="100" Value="100" ValueChanged="OnDrive"
+                        <Slider x:Name="ThrottleSlider" Minimum="0" Maximum="100" Value="100" ValueChanged="OnControls"
                                 AutomationProperties.AutomationId="Throttle" />
                     </DockPanel>
                     <DockPanel>
                         <TextBlock Text="Shift time" Width="80" />
                         <TextBlock DockPanel.Dock="Right" Width="50" Text="{Binding Value, ElementName=ShiftTime, StringFormat={}{0:0.00} s}" />
-                        <Slider x:Name="ShiftTime" Minimum="0" Maximum="2" ValueChanged="OnShiftTime"
+                        <Slider x:Name="ShiftTime" Minimum="0" Maximum="2" ValueChanged="OnControls"
                                 AutomationProperties.AutomationId="ShiftTime" />
                     </DockPanel>
 
@@ -142,13 +144,13 @@
                     <DockPanel>
                         <TextBlock Text="Distance" Width="80" />
                         <TextBlock DockPanel.Dock="Right" Width="50" Text="{Binding Value, ElementName=Distance, StringFormat={}{0:0.0} m}" />
-                        <Slider x:Name="Distance" Minimum="0" Maximum="40" Value="0" ValueChanged="OnListening"
+                        <Slider x:Name="Distance" Minimum="0" Maximum="40" Value="0" ValueChanged="OnControls"
                                 AutomationProperties.AutomationId="Distance" />
                     </DockPanel>
                     <DockPanel>
                         <TextBlock Text="Master" Width="80" />
                         <TextBlock DockPanel.Dock="Right" Width="50" Text="{Binding Value, ElementName=Master, StringFormat={}{0:0} dB}" />
-                        <Slider x:Name="Master" Minimum="-40" Maximum="0" Value="-12" ValueChanged="OnListening"
+                        <Slider x:Name="Master" Minimum="-40" Maximum="0" Value="-12" ValueChanged="OnControls"
                                 AutomationProperties.AutomationId="Master" />
                     </DockPanel>
                     <DockPanel>
@@ -187,8 +189,7 @@
                                 </StackPanel>
                                 <TextBlock Text="{Binding Curves}" Style="{StaticResource Optional}" Foreground="{StaticResource VolumeCurveBrush}" />
                                 <TextBlock Text="{Binding Detail}" Style="{StaticResource Optional}" Foreground="{StaticResource TextMutedBrush}" />
-                                <TextBlock Text="{Binding Problem}" Style="{StaticResource Optional}" Foreground="{StaticResource ProblemBrush}"
-                                           Visibility="{Binding HasProblem, Converter={StaticResource Shown}}" />
+                                <TextBlock Text="{Binding Problem}" Style="{StaticResource Optional}" Foreground="{StaticResource ProblemBrush}" />
                             </StackPanel>
                         </HierarchicalDataTemplate>
                     </TreeView.ItemTemplate>

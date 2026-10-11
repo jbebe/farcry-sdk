@@ -1,4 +1,3 @@
-using System.Globalization;
 using JackAll.Core.Format.Fcb;
 using JackAll.Tools.Spk;
 using JackAll.Tools.World;
@@ -13,42 +12,34 @@ public static class CarCatalog
         ArchetypeIndex index = ArchetypeIndex.Load(
             "world1", files.Read, progress, ArchetypeIndex.DiscoverDlcLibraries(files.KnownPaths));
 
-        var cars = new Dictionary<string, Car>();
-        foreach (string name in index.Names.Order(StringComparer.OrdinalIgnoreCase))
-        {
-            if (Read(name, index.Winner(name)!.Node) is not { } car)
-            {
-                continue;
-            }
-            string key = $"{car.Sounds with { WheelRolls = [] }}|{string.Join(",", car.Sounds.WheelRolls)}|{car.Physics}";
-            cars[key] = cars.TryGetValue(key, out Car? first) ? first with { Archetypes = [.. first.Archetypes, name] } : car;
-        }
-
-        return [.. cars.Values
-            .Select(c => c with { Label = c.Archetypes.Count > 1 ? $"{c.Label} ({c.Archetypes.Count} archetypes)" : c.Label })
+        return [.. index.Names.Order(StringComparer.OrdinalIgnoreCase)
+            .Select(name => Read(name, index.Winner(name)!.Node))
+            .OfType<Car>()
+            .GroupBy(c => (Sounds: c.Sounds with { WheelRolls = Array.Empty<uint>() }, Wheels: string.Join(",", c.Sounds.WheelRolls), c.Physics))
+            .Select(g => g.First() with { Archetypes = [.. g.Select(c => c.Archetypes[0])] })
             .OrderBy(c => c.Real is null)
             .ThenBy(c => c.Label, StringComparer.OrdinalIgnoreCase)];
     }
 
     private static Car? Read(string name, FcbObject entity)
     {
-        if (Find(entity, "Sound", "sndEngineLoop") is not { } sound
+        if (Find(entity, Hash("Sound"), Hash("sndEngineLoop")) is not { } sound
             || Id(sound, "sndEngineLoop") == SpkLayout.NoId
-            || Find(entity, "WheeledParams", "fMass") is not { } wheeled
-            || Find(entity, "SoundSettings", "sndmlRPMSoundMultilayer") is not { } settings)
+            || Find(entity, Hash("WheeledParams"), Hash("fMass")) is not { } wheeled
+            || Find(entity, Hash("SoundSettings"), Hash("sndmlRPMSoundMultilayer")) is not { } settings)
         {
             return null;
         }
 
-        FcbObject pedal = Find(sound, "Settings", "fThrustPedalStopThreshold") ?? sound;
-        FcbObject start = Find(entity, null, "MintEngineStartTime") ?? entity;
-        FcbObject reliability = Find(entity, null, "sndswtpReliabilitySoundSwitchType") ?? entity;
+        FcbObject pedal = Find(sound, Hash("Settings"), Hash("fThrustPedalStopThreshold")) ?? sound;
+        FcbObject start = Find(entity, null, Hash("MintEngineStartTime")) ?? entity;
+        FcbObject reliability = Find(entity, null, Hash("sndswtpReliabilitySoundSwitchType")) ?? entity;
         var physics = new CarPhysics(
             Float(wheeled, "fMass"),
             Float(wheeled, "fEnginePower"),
             Float(wheeled, "fGearBoxTopSpeed"),
             (int)(FcbEntityFields.ReadU32(wheeled, Hash("nGears")) ?? 4),
-            All(wheeled, "Wheel").Sum(w => Float(w, "fBrakingTorque")),
+            Wheels(wheeled).Sum(w => Float(w, "fBrakingTorque")),
             Float(start, "MintEngineStartTime"));
         var sounds = new CarSounds(
             Id(sound, "sndEngineIgnition"),
@@ -74,23 +65,31 @@ public static class CarCatalog
             Word(reliability, "sndswvlNoDamageSoundSwitchValue"),
             Word(settings, "sndswtpMaterialSoundSwitchType"));
 
-        RealVehicle? real = RealVehicle.Match(physics.Mass, physics.EnginePower);
-        string label = real?.Name ?? (name.StartsWith("vehicle.", StringComparison.OrdinalIgnoreCase) ? name[8..] : name);
-        return new Car(label, [name], real, sounds, physics);
+        return new Car([name], RealVehicle.Match(physics.Mass, physics.EnginePower), sounds, physics);
     }
 
     /// <summary>The first node under <paramref name="root"/> of a class (any, for null) that holds a field.</summary>
-    private static FcbObject? Find(FcbObject root, string? type, string field)
+    private static FcbObject? Find(FcbObject root, uint? type, uint field)
     {
-        if ((type is null || root.TypeHash == Hash(type)) && root.Values.ContainsKey(Hash(field)))
+        if ((type is null || root.TypeHash == type) && root.Values.ContainsKey(field))
         {
             return root;
         }
-        return root.Children.Select(child => Find(child, type, field)).FirstOrDefault(found => found is not null);
+        foreach (FcbObject child in root.Children)
+        {
+            if (Find(child, type, field) is { } found)
+            {
+                return found;
+            }
+        }
+        return null;
     }
 
-    private static IEnumerable<FcbObject> All(FcbObject root, string type)
-        => root.Children.SelectMany(child => All(child, type)).Prepend(root).Where(n => n.TypeHash == Hash(type));
+    private static IEnumerable<FcbObject> Wheels(FcbObject wheeled)
+    {
+        uint wheel = Hash("Wheel");
+        return wheeled.Children.SelectMany(c => c.Children.Prepend(c)).Where(n => n.TypeHash == wheel);
+    }
 
     private static uint Hash(string name) => FcbClassDefinitions.Crc32Ascii(name);
 
@@ -100,11 +99,5 @@ public static class CarCatalog
 
     /// <summary>A sound id field, which the library keeps as text: <c>0x0045CBD8</c>.</summary>
     private static uint Id(FcbObject node, string field)
-    {
-        string text = FcbEntityFields.ReadString(node, Hash(field)).Trim();
-        return text.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
-               && uint.TryParse(text[2..], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint id)
-            ? id
-            : SpkLayout.NoId;
-    }
+        => FcbEntityFields.ReadString(node, Hash(field)) is { Length: > 0 } text ? SpkBank.ParseId(text) : SpkLayout.NoId;
 }

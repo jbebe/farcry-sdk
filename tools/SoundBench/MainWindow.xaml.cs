@@ -20,10 +20,10 @@ public partial class MainWindow : Window
     private readonly Settings _settings = Settings.Load();
     private readonly Bench _bench = new();
     private readonly ObservableCollection<NodeView> _voices = [];
-    private readonly Dictionary<SoundInstance, NodeView> _views = [];
-    private readonly List<ParameterView> _parameters = [];
-    private readonly List<(SpkCurve Curve, CurvePlot Plot)> _plots = [];
+    private readonly List<CurvePlot> _plots = [];
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(50) };
+    private IReadOnlyList<ParameterView> _parameters = [];
+    private float[] _plotted = [];
     private GameFiles? _files;
     private WasapiOut? _output;
     private NodeView? _selected;
@@ -34,8 +34,7 @@ public partial class MainWindow : Window
         GamePath.Text = _settings.GamePath;
         LayerPaths.Text = string.Join("; ", _settings.Layers);
         Voices.ItemsSource = _voices;
-        Parameters.ItemsSource = _parameters;
-        ApplyListening();
+        OnControls(this, new RoutedEventArgs());
         _timer.Tick += (_, _) => RefreshViews();
         Loaded += (_, _) => OnOpen(this, new RoutedEventArgs());
         Closed += (_, _) =>
@@ -55,10 +54,9 @@ public partial class MainWindow : Window
         var progress = new Progress<string>(s => Status.Text = s);
         try
         {
-            Settings settings = _settings;
             (GameFiles files, IReadOnlyList<Car> cars) = await Task.Run(() =>
             {
-                GameFiles opened = GameFiles.Open(settings.GamePath, settings.Layers, progress);
+                GameFiles opened = GameFiles.Open(_settings.GamePath, _settings.Layers, progress);
                 return (opened, CarCatalog.Load(opened, progress));
             });
             _files?.Dispose();
@@ -94,8 +92,7 @@ public partial class MainWindow : Window
         }
 
         Status.Text = $"Loading {car.Label}…";
-        OverhaulTuning tuning = OverhaulTuning.Read(
-            Path.Combine(files.Install.BinDir, "vehicle-overhaul.ini"), car.Real?.Name ?? OverhaulTuning.OtherCars);
+        OverhaulTuning tuning = OverhaulTuning.Read(Path.Combine(files.Install.BinDir, "vehicle-overhaul.ini"), car.Real);
         SoundRegistry registry = await Task.Run(() => Prepare(files, car));
         lock (_bench.Sync)
         {
@@ -106,9 +103,9 @@ public partial class MainWindow : Window
         CarInfo.Text = $"{string.Join(", ", car.Archetypes)}\n{car.Physics.Mass:0} kg, {car.Physics.EnginePower:0} N·m, " +
                        $"{car.Physics.Gears} gears, top {car.Physics.TopSpeedMph:0} mph · tuning [{car.Real?.Name ?? OverhaulTuning.OtherCars}]: " +
                        $"power {tuning.EnginePower}x, top speed {tuning.TopSpeed}x, brakes {tuning.BrakeTorque}x";
-        ShowParameters(car);
+        BankProblems.Text = string.Join("\n", registry.Problems);
+        Parameters.ItemsSource = _parameters = [.. _bench.Parameters.Select(p => new ParameterView(_bench, p))];
         ShowSurfaces(car, registry);
-        OnDrive(this, new RoutedEventArgs());
         Status.Text = $"{car.Label}: start the engine";
     }
 
@@ -127,10 +124,11 @@ public partial class MainWindow : Window
         {
             _bench.Load(registry);
         }
+        BankProblems.Text = string.Join("\n", registry.Problems);
         Status.Text = $"Banks reloaded at {DateTime.Now:T}";
     }
 
-    /// <summary>A registry with the car's banks loaded and decoded, so the audio thread never waits on a file.</summary>
+    /// <summary>A registry with the car's banks loaded, off the audio thread.</summary>
     private static SoundRegistry Prepare(GameFiles files, Car car)
     {
         var registry = new SoundRegistry(files);
@@ -138,7 +136,6 @@ public partial class MainWindow : Window
         {
             registry.Hold(id);
         }
-        registry.DecodeAll();
         return registry;
     }
 
@@ -159,7 +156,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnDrive(object sender, RoutedEventArgs e)
+    private void OnControls(object sender, RoutedEventArgs e)
     {
         if (!IsInitialized)
         {
@@ -169,27 +166,7 @@ public partial class MainWindow : Window
         {
             _bench.Throttle = Accelerate.IsChecked == true ? (float)ThrottleSlider.Value / 100 : 0;
             _bench.Brake = Brake.IsChecked == true ? 1 : 0;
-        }
-    }
-
-    private void OnShiftTime(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        lock (_bench.Sync)
-        {
-            _bench.ShiftTime = (float)e.NewValue;
-        }
-    }
-
-    private void OnListening(object sender, RoutedPropertyChangedEventArgs<double> e) => ApplyListening();
-
-    private void ApplyListening()
-    {
-        if (!IsInitialized)
-        {
-            return;
-        }
-        lock (_bench.Sync)
-        {
+            _bench.ShiftTime = (float)ShiftTime.Value;
             _bench.Distance = (float)Distance.Value;
             _bench.Volume = MathF.Pow(10, (float)Master.Value / 20);
         }
@@ -200,7 +177,7 @@ public partial class MainWindow : Window
         lock (_bench.Sync)
         {
             _bench.Surface = (Surfaces.SelectedItem as Surface)?.Value;
-            _bench.RestartWheels();
+            _bench.Sounds?.RestartTyres();
         }
     }
 
@@ -228,6 +205,7 @@ public partial class MainWindow : Window
     {
         _selected = e.NewValue as NodeView;
         _plots.Clear();
+        _plotted = [];
         CurvePlots.Children.Clear();
         foreach (SpkCurve curve in _selected?.Node.Curves ?? [])
         {
@@ -239,105 +217,96 @@ public partial class MainWindow : Window
             };
             DockPanel.SetDock(title, Dock.Top);
             CurvePlots.Children.Add(new DockPanel { Children = { title, plot } });
-            _plots.Add((curve, plot));
+            _plots.Add(plot);
         }
     }
 
     private void RefreshViews()
     {
+        NodeView[] gone, added;
         float[] inputs;
-        float outputPeak;
-        string speed, rpm, gear, havok, clutch, engine;
-        double rpmShare;
-        var added = new List<NodeView>();
-        var removed = new List<NodeView>();
         lock (_bench.Sync)
         {
-            foreach (SoundInstance instance in _bench.Mixer.Playing.Where(i => !_views.ContainsKey(i)))
+            List<SoundInstance> playing = _bench.Mixer.Playing;
+            gone = [.. _voices.Where(v => !playing.Any(i => i.Root == v.Node))];
+            added = [.. playing.Where(i => !_voices.Any(v => v.Node == i.Root))
+                .Select(i => new NodeView(_bench, i.Root, ParameterName, i.Field) { Background = i.Background })];
+            foreach (NodeView node in _voices.Concat(added).SelectMany(v => v.Subtree))
             {
-                var view = new NodeView(_bench, instance.Root, ParameterName, instance.Field);
-                _views[instance] = view;
-                added.Add(view);
+                node.Capture();
             }
-            foreach (SoundInstance gone in _views.Keys.Where(i => !_bench.Mixer.Playing.Contains(i)).ToList())
+            foreach (ParameterView parameter in _parameters)
             {
-                removed.Add(_views[gone]);
-                _views.Remove(gone);
+                parameter.Capture();
             }
-            foreach (NodeView node in _views.Values.SelectMany(v => v.Subtree()))
-            {
-                node.Refresh();
-            }
-            _parameters.ForEach(p => p.Refresh());
             inputs = _selected?.Node.CurveInputs.ToArray() ?? [];
-
-            HavokStandIn? car = _bench.Havok;
-            Drivetrain? drivetrain = _bench.Drivetrain;
-            speed = car is null ? "" : $"{car.Speed * 3.6f:0} km/h  ({car.Speed:0.0} m/s)";
-            rpm = drivetrain is null ? "" : $"{drivetrain.Rpm:0}  (idle {drivetrain.Idle:0}, redline {drivetrain.Redline:0})";
-            rpmShare = drivetrain is null ? 0 : drivetrain.Rpm / (drivetrain.Redline * 1.05);
-            gear = car is null ? "" : $"{car.Gear + 1}";
-            havok = car is null ? "" : $"{car.Rpm:0}";
-            clutch = car is null || drivetrain is null ? "" : $"{(car.ClutchOut ? "out" : "in")}{(drivetrain.Lifted ? ", off the throttle for the shift" : "")}";
-            engine = _bench.Sounds is not { } sounds ? "" : sounds.Running ? "running" : sounds.Starting ? "starting…" : "off";
-            outputPeak = _bench.Mixer.TakeOutputPeak();
+            ShowGauges();
         }
 
-        removed.ForEach(v => _voices.Remove(v));
+        foreach (NodeView view in gone)
+        {
+            _voices.Remove(view);
+        }
         foreach (NodeView view in added)
         {
-            // The tyres roll the whole time, so the engine's events go above them.
-            int tyres = _voices.TakeWhile(v => !IsTyre(v)).Count();
-            _voices.Insert(IsTyre(view) ? _voices.Count : tyres, view);
+            _voices.Insert(view.Background ? _voices.Count : _voices.TakeWhile(v => !v.Background).Count(), view);
         }
-        foreach (NodeView node in _voices.SelectMany(v => v.Subtree()))
+        foreach (NodeView node in _voices.SelectMany(v => v.Subtree))
         {
             node.Publish();
         }
-        _parameters.ForEach(p => p.Publish());
-        for (int i = 0; i < _plots.Count && i < inputs.Length; i++)
+        foreach (ParameterView parameter in _parameters)
         {
-            (SpkCurve curve, CurvePlot plot) = _plots[i];
-            plot.Show(NodeView.Plot(curve, inputs[i], curve.Target == 0 ? "VolumeCurveBrush" : "PitchCurveBrush"));
+            parameter.Publish();
         }
-
-        SpeedText.Text = speed;
-        RpmText.Text = rpm;
-        RpmBar.Value = rpmShare * 100;
-        GearText.Text = gear;
-        HavokText.Text = havok;
-        ClutchText.Text = clutch;
-        EngineState.Text = engine;
-        OutputText.Text = outputPeak > 0
-            ? $"{outputPeak:+0.0} dBFS: clipping, lower Master"
-            : $"{outputPeak:0.0} dBFS peak";
-        OutputText.Foreground = (System.Windows.Media.Brush)FindResource(outputPeak > 0 ? "ProblemBrush" : "TextMutedBrush");
+        ShowPlots(inputs);
     }
 
-    private void ShowParameters(Car car)
+    /// <summary>Call under <see cref="Bench.Sync"/>.</summary>
+    private void ShowGauges()
     {
-        CarParameters p = car.Sounds.Parameters;
-        lock (_bench.Sync)
+        if (_bench is { Havok: { } car, Drivetrain: { } drivetrain, Sounds: { } sounds })
         {
-            _bench.Pins.Clear();
+            SpeedText.Text = $"{car.Speed * 3.6f:0} km/h  ({car.Speed:0.0} m/s)";
+            RpmText.Text = $"{drivetrain.Rpm:0}  (idle {drivetrain.Idle:0}, redline {drivetrain.Redline:0})";
+            RpmBar.Value = drivetrain.Rpm / (drivetrain.Redline * 1.05) * 100;
+            GearText.Text = $"{car.Gear + 1}";
+            HavokText.Text = $"{car.Rpm:0}";
+            ClutchText.Text = $"{(car.ClutchOut ? "out" : "in")}{(drivetrain.Lifted ? ", off the throttle for the shift" : "")}";
+            EngineState.Text = sounds.Engine.ToString().ToLowerInvariant();
         }
-        _parameters.Clear();
-        _parameters.AddRange(
-        [
-            new ParameterView(_bench, "Speed (m/s)", p.Speed, 0, 20),
-            new ParameterView(_bench, "RPM", p.Rpm, 0, 10000),
-            new ParameterView(_bench, "Pedal", p.ThrustPedal, -100, 100),
-            new ParameterView(_bench, "Extra torque", p.ExtraTorque, 0, 100),
-            new ParameterView(_bench, "Wheel slip", p.WheelSlip, 0, 15),
-            new ParameterView(_bench, "Damage", p.Damage, 0, 100),
-        ]);
-        Parameters.ItemsSource = null;
-        Parameters.ItemsSource = _parameters;
+
+        float peak = _bench.Mixer.TakeOutputPeak();
+        OutputText.Text = peak > 0 ? $"{peak:+0.0} dBFS: clipping, lower Master" : $"{peak:0.0} dBFS peak";
+        OutputText.Foreground = (System.Windows.Media.Brush)FindResource(peak > 0 ? "ProblemBrush" : "TextMutedBrush");
     }
 
-    private static bool IsTyre(NodeView view) => view.Field?.StartsWith("sndWheelRoll") == true;
+    /// <summary>Redraws the selected layer's curves whose parameter has moved.</summary>
+    private void ShowPlots(float[] inputs)
+    {
+        if (_selected is null || inputs.Length < _plots.Count || inputs.AsSpan(0, _plots.Count).SequenceEqual(_plotted))
+        {
+            return;
+        }
+        for (int i = 0; i < _plots.Count; i++)
+        {
+            SpkCurve curve = _selected.Node.Curves[i];
+            System.Windows.Point[] points = [.. curve.Points.Select(p => new System.Windows.Point(p.X, p.Y))];
+            double low = curve.Points.Min(p => p.Y), high = curve.Points.Max(p => p.Y);
+            double tick = Math.Max(1e-3, (curve.Points.Max(p => p.X) - curve.Points.Min(p => p.X)) * 0.015);
+            float x = inputs[i];
+            double y = curve.Evaluate(x);
+            _plots[i].Show(
+            [
+                new(points, curve.Target == 0 ? "VolumeCurveBrush" : "PitchCurveBrush"),
+                new([new(x, low), new(x, high)], "CursorBrush", 1, Dashed: true),
+                new([new(x - tick, y), new(x + tick, y)], "CursorBrush", 4),
+            ]);
+        }
+        _plotted = inputs[.._plots.Count];
+    }
 
-    private string ParameterName(uint id) => _parameters.FirstOrDefault(p => p.Id == id)?.Name ?? $"0x{id:x8}";
+    private string ParameterName(uint id) => _bench.Parameters.FirstOrDefault(p => p.Id == id)?.Name ?? $"0x{id:x8}";
 
     /// <summary>A material switch value the tyres can roll on.</summary>
     private sealed record Surface(uint? Value)

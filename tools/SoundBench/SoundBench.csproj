@@ -20,7 +20,8 @@
 
   <ItemGroup>
     <Compile Include="..\JackAll\src\JackAll.App\CurvePlot.cs" Link="Views\CurvePlot.cs" />
-    <!-- Beside the exe under the name BundledAssets looks for, as the JackAll CLIs ship it. -->
+    <Compile Include="..\JackAll\src\JackAll.App\Observable.cs" Link="Views\Observable.cs" />
+    <!-- The hashlist, under the name BundledAssets looks for beside the exe. -->
     <Content Include="..\JackAll\assets\fc2.hashlist" Link=".itemhashes">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
