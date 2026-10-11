@@ -3,6 +3,8 @@
 // The beam rides on two springs closer together than its wheels. Both wheels rising alike meet the
 // springs as two wheels sprung apart would; one rising and the other falling twist the beam, which the
 // springs resist only from where they sit, so the axle twists under the body and keeps both wheels down.
+// The dampers act at the wheels, as a leaf spring's friction and shock absorbers at the axle's ends do, so
+// the body stops rocking as quickly as on wheels sprung apart.
 #include "axles.h"
 
 #include <algorithm>
@@ -47,23 +49,17 @@ void Spring(float mass, const RealVehicle::Spec& real, const Wheeled::Suspension
         }
         const float heave = (compression[0] + compression[1]) / 2.0f;
         const float twist = (compression[0] - compression[1]) / 2.0f;
-        const float heaveSpeed = (wheel[0].extending + wheel[1].extending) / 2.0f;
-        const float twistSpeed = (wheel[0].extending - wheel[1].extending) / 2.0f;
 
-        // The push of each side's spring and damper, which sit `spacing` of the way out from the axle's
-        // middle to its wheel.
+        // The push of each side's spring, which sits `spacing` of the way out from the axle's middle to its
+        // wheel.
         float spring[2];
-        float damper[2];
         for (int side = 0; side < 2; ++side) {
             const float out = side == 0 ? spacing : -spacing;
-            const float extending = heaveSpeed + out * twistSpeed;
             spring[side] = wheel[side].strength * (std::max)(0.0f, heave + out * twist);
-            damper[side] =
-                -(extending < 0.0f ? wheel[side].compressionDamping : wheel[side].reboundDamping) * extending;
         }
 
-        // The beam hands each side's push to both wheels, the more to the nearer. A wheel in the air keeps
-        // Havok's none.
+        // The beam hands each side's spring push to both wheels, the more to the nearer; each wheel's damper
+        // pushes on its own. A wheel in the air keeps Havok's none.
         const float nearer = (1.0f + spacing) / 2.0f;
         for (int side = 0; side < 2; ++side) {
             if (!wheel[side].touching) {
@@ -71,9 +67,11 @@ void Spring(float mass, const RealVehicle::Spec& real, const Wheeled::Suspension
             }
             const int other = 1 - side;
             const float across = (1.0f - spacing) / 2.0f * farShare[side];
-            forces[first + side] = (wheel[side].slant * (nearer * spring[side] + across * spring[other]) +
-                                    nearer * damper[side] + across * damper[other]) *
-                                   mass;
+            const float extending = wheel[side].extending;
+            const float damper =
+                -(extending < 0.0f ? wheel[side].compressionDamping : wheel[side].reboundDamping) * extending;
+            forces[first + side] =
+                (wheel[side].slant * (nearer * spring[side] + across * spring[other]) + damper) * mass;
         }
     }
 }

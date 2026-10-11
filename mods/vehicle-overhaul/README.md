@@ -39,7 +39,9 @@ from the windows and the wrecks are to come.
   - The Land Rover, the big truck and the Unimog ride on solid axles, as the real ones do. Each axle's
     two wheels are sprung as one beam on springs under the chassis rails: 60% of the track apart on the
     Land Rover, half on the trucks. The beam twists under the body to keep both wheels down over ruts
-    and rocks. The wheels hang half their suspension's length lower, and lean with the beam.
+    and rocks. The dampers act at the wheels, as a leaf spring's friction and shock absorbers at the
+    axle's ends do, so the body stops rocking as quickly as on wheels sprung apart. The wheels hang half
+    their suspension's length lower, and lean with the beam.
   - A wider steering lock: half as far again at a crawl, and twice as far at speed, where the game
     narrows it. On the Datsun that is 37.5° and 20°.
   - Softer springs, and softer dampers, softest on the rebound, so the body squats, dives and leans
