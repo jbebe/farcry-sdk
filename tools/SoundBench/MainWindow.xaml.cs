@@ -161,7 +161,7 @@ public partial class MainWindow : Window
     {
         lock (_bench.Sync)
         {
-            _bench.Sounds?.StartEngine();
+            _bench.StartEngine();
         }
         Status.Text = "";
     }

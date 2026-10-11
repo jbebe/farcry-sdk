@@ -19,8 +19,9 @@ public sealed class Bench : ISampleProvider
     /// <summary>The damage parameter is health × 100.</summary>
     private const float Undamaged = 100;
 
-    /// <summary>What the vehicle overhaul answers for the pedal during a gear change (kLiftedPedal in vehicle_sound.cpp).</summary>
-    private const float LiftedPedal = -100;
+    /// <summary>What the vehicle overhaul answers for the pedal during a gear change, and before the engine catches
+    /// (kLiftedPedal and kCrankingPedal in vehicle_sound.cpp).</summary>
+    private const float LiftedPedal = -100, CrankingPedal = -200;
 
     private readonly float[] _block = new float[Mixer.BlockFrames * 2];
     private readonly List<SoundInstance> _started = [];
@@ -68,7 +69,7 @@ public sealed class Bench : ISampleProvider
         Car = car;
         ShiftTime = tuning.ShiftTime;
         HavokStandIn havok = Havok = new HavokStandIn(car.Physics, tuning);
-        Drivetrain drivetrain = Drivetrain = new Drivetrain(car.Real?.Idle ?? 0, car.Real?.Redline ?? 0);
+        Drivetrain drivetrain = Drivetrain = new Drivetrain(car.Real?.Idle ?? 0, car.Real?.Redline ?? 0, car.Real?.CatchTime ?? 0);
         Sounds = new VehicleSounds(car, Play);
 
         CarParameters ids = car.Sounds.Parameters;
@@ -76,7 +77,8 @@ public sealed class Bench : ISampleProvider
         [
             new("Speed (m/s)", ids.Speed, 0, 20, () => havok.Speed),
             new("RPM", ids.Rpm, 0, 10000, () => drivetrain.Rpm),
-            new("Pedal", ids.ThrustPedal, -100, 100, () => drivetrain.Lifted ? LiftedPedal : Throttle * 100),
+            new("Pedal", ids.ThrustPedal, CrankingPedal, 100,
+                () => drivetrain.Lifted ? LiftedPedal : float.Lerp(CrankingPedal, Throttle * 100, drivetrain.Caught)),
             new("Extra torque", ids.ExtraTorque, 0, 100, () => 0),
             new("Wheel slip", ids.WheelSlip, 0, 15, () => 0),
             new("Damage", ids.Damage, 0, 100, () => Undamaged),
@@ -93,6 +95,16 @@ public sealed class Bench : ISampleProvider
         Mixer.Playing.Clear();
         _started.Clear();
         Sounds?.Restart();
+    }
+
+    /// <summary>The driver gets in and turns the key.</summary>
+    public void StartEngine()
+    {
+        if (Sounds is { Engine: EngineState.Off })
+        {
+            Drivetrain?.Enter();
+            Sounds.StartEngine();
+        }
     }
 
     /// <summary>The events started since the last call, finished or not.</summary>
