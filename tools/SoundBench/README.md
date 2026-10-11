@@ -110,7 +110,7 @@ The vehicle overhaul's side:
   the idle and redline mapping, the clutch slip and its slow wander, and the rise and fall rates.
 - **Gear changes.** The pedal reads −100 for the shift time, and the shift sound plays halfway through
   it.
-- **Starting.** On a car with a catch time, the Datsun's 0.816 s, the pedal reads −200 from the key until
+- **Starting.** On a car with a catch time, the Datsun's 0.816 s or the ZIL's 0.7 s, the pedal reads −200 from the key until
   the engine catches, then comes up to the driver's over 0.5 s.
 - **Real vehicles.** The table is mirrored from `real_vehicle.cpp`. Keep both mirrors in step with
   their sources.
