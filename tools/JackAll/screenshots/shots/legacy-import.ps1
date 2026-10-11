@@ -11,7 +11,7 @@ Invoke-Ui $import
 Complete-FileDialog 'Import a legacy mod*' $zip
 Wait-Ui { (Get-ShotStatus) -like 'Imported *' } -Timeout 300 -What 'the import' | Out-Null
 Start-Sleep 1
-if (Find-ShotWindow 'JackAll') { throw "The import raised a notice: $(Get-DialogText (Find-ShotWindow 'JackAll'))" }
+if ($notice = Find-ShotWindow 'JackAll') { throw "The import raised a notice: $(Get-DialogText $notice)" }
 
 # Skip Intro's own changes: the two Domino scripts and the mouse filter in five input maps.
 $grid = Find-Ui -Id ModGrid

@@ -344,10 +344,9 @@ function Find-Ui {
         # One element needs no name test: the first match in tree order stops the walk early.
         if (-not $All -and -not $Like) { return $Scope.FindFirst($scopeKind, $cond) }
         $found = @($Scope.FindAll($scopeKind, $cond) | Where-Object { -not $Like -or $_.Current.Name -like $Like })
-        if ($found.Count) { if ($All) { , $found } else { $found[0] } }
+        if ($found.Count) { if ($All) { $found } else { $found[0] } }
     }
-    # Collected before returning, so -All hands its matches over one by one as Wait-Ui's path does.
-    if ($Optional) { $found = & $find; return $found }
+    if ($Optional) { return & $find }
     return Wait-Ui $find -What "element Id=$Id Name=$Name Like=$Like Type=$Type"
 }
 

@@ -25,9 +25,8 @@ function Get-SelectedRow($Grid) {
         Where-Object { $_.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Current.IsSelected } |
         Select-Object -First 1
 }
-$selected = { Get-SelectedRow $users }
-for ($i = 0; $i -lt 140 -and (Get-UiText (& $selected)) -notlike 'worlds\world1\generated\entitylibrary.fcb*'; $i++) { Send-ShotKeys 'Down' }
-$user = & $selected
+for ($i = 0; $i -lt 140 -and (Get-UiText (Get-SelectedRow $users)) -notlike 'worlds\world1\generated\entitylibrary.fcb*'; $i++) { Send-ShotKeys 'Down' }
+$user = Get-SelectedRow $users
 if ((Get-UiText $user) -notlike 'worlds\world1\generated\entitylibrary.fcb*') { throw "world1's library isn't among the model's users" }
 Save-Shot $slug '02-user' -Callouts $user -Region $incoming, $outgoing
 
@@ -41,6 +40,8 @@ $path = Wait-Ui { Find-Ui -Type Text -Name 'worlds\world1\generated\entitylibrar
 $listed = Wait-Ui { Get-SelectedRow (Find-Ui -Id FileGrid) | Where-Object { (Get-UiText $_) -like 'entitylibrary.fcb*' } } -What 'the file list to follow the jump'
 Save-Shot $slug '04-followed' -Callouts (Get-DetailsFrame 'entitylibrary.fcb')[0], $path, $listed
 
+# From a focused row, where a window key binding never sees the key.
+Click-Ui $listed -X 0.3
 Send-ShotKeys 'Alt+Left'
 Wait-Ui { Find-Ui -Type Text -Name 'graphics\weapons\primary\ak47\ak47.xbg' -Optional } -What 'Alt+Left to go back' | Out-Null
 
