@@ -22,7 +22,9 @@ public partial class MainWindow : Window
     private readonly Dictionary<string, SlotView> _slotByField = [];
     private readonly List<(NodeView Play, SlotView Slot)> _playing = [];
     private readonly List<CurveEditor> _editors = [];
-    private readonly Stack<CurveEdit> _undo = [];
+
+    /// <summary>Each restores what an edit changed: a curve's points or a gain.</summary>
+    private readonly Stack<Action> _undo = [];
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(50) };
     private IReadOnlyList<ParameterView> _parameters = [];
     private GameFiles? _files;
@@ -30,14 +32,15 @@ public partial class MainWindow : Window
     private WasapiOut? _output;
     private NodeView? _selected;
 
-    /// <summary>Points for a curve to have: an edit, or what it had before one.</summary>
-    private sealed record CurveEdit(SpkCurve Curve, SpkPoint[] Points);
+    /// <summary>A WAV refresh is running.</summary>
+    private bool _refreshing;
 
     public MainWindow()
     {
         InitializeComponent();
         GamePath.Text = _settings.GamePath;
         LayerPaths.Text = string.Join("; ", _settings.Layers);
+        WavPaths.Text = string.Join("; ", _settings.Wavs);
         Voices.ItemsSource = _slots;
         OnControls(this, new RoutedEventArgs());
         _timer.Tick += (_, _) => RefreshViews();
@@ -57,7 +60,8 @@ public partial class MainWindow : Window
             return;
         }
         _settings.GamePath = GamePath.Text.Trim();
-        _settings.Layers = [.. LayerPaths.Text.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)];
+        _settings.Layers = Folders(LayerPaths);
+        _settings.Wavs = Folders(WavPaths);
         _settings.Save();
 
         OpenButton.IsEnabled = false;
@@ -86,6 +90,8 @@ public partial class MainWindow : Window
         }
     }
 
+    private static List<string> Folders(TextBox box) => [.. box.Text.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)];
+
     private WasapiOut StartOutput()
     {
         var output = new WasapiOut(AudioClientShareMode.Shared, useEventSync: true, latency: 40);
@@ -108,7 +114,8 @@ public partial class MainWindow : Window
 
         Status.Text = $"Loading {car.Label}…";
         OverhaulTuning tuning = OverhaulTuning.Read(Path.Combine(files.Install.BinDir, "vehicle-overhaul.ini"), car.Real);
-        SoundRegistry registry = await Task.Run(() => Prepare(files, car));
+        List<string> wavs = _settings.Wavs;
+        (SoundRegistry registry, IReadOnlyList<string> swapped) = await Task.Run(() => Prepare(files, car, wavs));
         lock (_bench.Sync)
         {
             _bench.Select(car, tuning, registry);
@@ -123,7 +130,7 @@ public partial class MainWindow : Window
         BankProblems.Text = string.Join("\n", registry.Problems);
         Parameters.ItemsSource = _parameters = [.. _bench.Parameters.Select(p => new ParameterView(_bench, p))];
         ShowSurfaces(car, registry);
-        Status.Text = $"{car.Label}: start the engine";
+        Status.Text = Report($"{car.Label}: start the engine", swapped);
     }
 
     private async void OnReload(object sender, RoutedEventArgs e)
@@ -132,10 +139,11 @@ public partial class MainWindow : Window
         {
             return;
         }
-        SoundRegistry registry = await Task.Run(() =>
+        List<string> wavs = _settings.Wavs;
+        (SoundRegistry registry, IReadOnlyList<string> swapped) = await Task.Run(() =>
         {
             files.Reload();
-            return Prepare(files, car);
+            return Prepare(files, car, wavs);
         });
         lock (_bench.Sync)
         {
@@ -144,18 +152,61 @@ public partial class MainWindow : Window
         UseRegistry(registry);
         ShowSlots(car);
         BankProblems.Text = string.Join("\n", registry.Problems);
-        Status.Text = $"Banks reloaded at {DateTime.Now:T}";
+        Status.Text = Report($"Banks reloaded at {DateTime.Now:T}", swapped);
     }
 
-    /// <summary>A registry with the car's banks loaded, off the audio thread.</summary>
-    private static SoundRegistry Prepare(GameFiles files, Car car)
+    /// <summary>A registry with the car's banks loaded and the tagged WAVs under <paramref name="wavs"/> swapped in,
+    /// off the audio thread; with a line for each WAV swapped in or refused.</summary>
+    private static (SoundRegistry Registry, IReadOnlyList<string> Swapped) Prepare(GameFiles files, Car car, List<string> wavs)
     {
         var registry = new SoundRegistry(files);
         foreach (SoundSlot slot in CarSlots.Of(car).All)
         {
             registry.Hold(slot.Id);
         }
-        return registry;
+        List<string> problems = [];
+        IReadOnlyList<AudioSwap> swaps = registry.Refresh(WavSources.In(wavs), problems);
+        // Nothing plays from the registry yet, so it takes the audio with no lock.
+        registry.Apply(swaps);
+        return (registry, [.. swaps.Select(Line), .. problems]);
+    }
+
+    private static string Line(AudioSwap swap) => $"{swap.Wav} into {swap.Bank}";
+
+    private static string Report(string head, IEnumerable<string> lines) => string.Join("; ", [head, .. lines]);
+
+    private void OnRefreshWavs(object sender, RoutedEventArgs e) => RefreshWavs();
+
+    /// <summary>Swaps in the WAVs edited since, and starts what was playing again on them.</summary>
+    private async void RefreshWavs()
+    {
+        if (_refreshing || _registry is not { } registry || _bench.Car is not { } car)
+        {
+            return;
+        }
+        _refreshing = true;
+        List<string> problems = [];
+        List<string> wavs = _settings.Wavs;
+        IReadOnlyList<AudioSwap> swaps;
+        try
+        {
+            swaps = await Task.Run(() => registry.Refresh(WavSources.In(wavs), problems));
+        }
+        finally
+        {
+            _refreshing = false;
+        }
+        if (swaps.Count > 0 && registry == _registry)
+        {
+            lock (_bench.Sync)
+            {
+                registry.Apply(swaps);
+                _bench.Load(registry);
+            }
+            ShowSlots(car);
+        }
+        string[] lines = [.. swaps.Select(Line), .. problems];
+        Status.Text = lines.Length > 0 ? string.Join("; ", lines) : $"No WAV changed since ({DateTime.Now:T})";
     }
 
     /// <summary>One row per event the car plays, in a fixed order, empty until it plays.</summary>
@@ -221,6 +272,15 @@ public partial class MainWindow : Window
 
     private void OnKey(object sender, KeyEventArgs e)
     {
+        if (e.Key == Key.F5)
+        {
+            if (!e.IsRepeat)
+            {
+                RefreshWavs();
+            }
+            e.Handled = true;
+            return;
+        }
         if (Keyboard.FocusedElement is TextBox)
         {
             return;
@@ -249,10 +309,12 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>One editor per curve of the selected layer, each over its sibling layers' curves on the same parameter.</summary>
+    /// <summary>The selected row's gain, and an editor per curve of a selected layer, each over its sibling layers' curves
+    /// on the same parameter.</summary>
     private void OnVoiceSelected(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
         _selected = e.NewValue as NodeView;
+        ShowGain();
         _editors.Clear();
         CurveEditors.Children.Clear();
         if (_selected is not { Parent: { } owner } layer)
@@ -268,8 +330,12 @@ public partial class MainWindow : Window
             ];
             GameParameter? parameter = _bench.Parameters.FirstOrDefault(p => p.Id == curve.Parameter);
             var editor = new CurveEditor(curve, background, parameter is null ? null : (parameter.Min, parameter.Max));
-            editor.Editing += () => _undo.Push(new CurveEdit(curve, [.. curve.Points]));
-            editor.Edited += points => Apply(new CurveEdit(curve, points));
+            editor.Editing += () =>
+            {
+                SpkPoint[] before = [.. curve.Points];
+                _undo.Push(() => Apply(curve, before));
+            };
+            editor.Edited += points => Apply(curve, points);
 
             var title = new TextBlock
             {
@@ -283,24 +349,81 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Gives a curve its points, heard from the next block on.</summary>
-    private void Apply(CurveEdit edit)
+    private void Apply(SpkCurve curve, SpkPoint[] points)
     {
         lock (_bench.Sync)
         {
-            edit.Curve.Points.Clear();
-            edit.Curve.Points.AddRange(edit.Points);
+            curve.Points.Clear();
+            curve.Points.AddRange(points);
         }
-        if (_registry?.Edited(edit.Curve) == true)
+        if (_registry?.Edited(curve) == true)
         {
             ShowUnsaved();
         }
     }
 
+    /// <summary>The selected row's node when it plays a resource, whose gain word adds to its level.</summary>
+    private SoundNode? SelectedResource => _selected?.Node is { Resource: not null } node ? node : null;
+
+    private void ShowGain()
+    {
+        SoundNode? node = SelectedResource;
+        GainPanel.Visibility = node is null ? Visibility.Collapsed : Visibility.Visible;
+        if (node is not null)
+        {
+            GainTitle.Text = $"Gain of {node.Kind} 0x{node.Id:x8}";
+            GainBox.Text = $"{node.GainDb:0.##}";
+        }
+    }
+
+    private void OnGainDown(object sender, RoutedEventArgs e) => StepGain(-1);
+
+    private void OnGainUp(object sender, RoutedEventArgs e) => StepGain(+1);
+
+    private void StepGain(double by)
+    {
+        if (SelectedResource is { } node)
+        {
+            SetGain(node, node.GainDb + by);
+        }
+    }
+
+    private void OnGainEntered(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && SelectedResource is { } node && double.TryParse(GainBox.Text, out double db))
+        {
+            SetGain(node, db);
+            e.Handled = true;
+        }
+    }
+
+    private void SetGain(SoundNode node, double db)
+    {
+        SpkBankRecord record = node.Resource!;
+        double before = node.GainDb;
+        _undo.Push(() => ApplyGain(record, before));
+        ApplyGain(record, db);
+    }
+
+    /// <summary>Gives a resource its gain, which every node playing it reads from the next block on.</summary>
+    private void ApplyGain(SpkBankRecord record, double db)
+    {
+        lock (_bench.Sync)
+        {
+            record.Words[SpkLayout.SampleGain] = SpkLayout.ToQ16(db);
+        }
+        if (_registry?.Edited(record) == true)
+        {
+            ShowUnsaved();
+        }
+        ShowGain();
+    }
+
     private void Undo()
     {
-        if (_undo.TryPop(out CurveEdit? edit))
+        if (_undo.TryPop(out Action? restore))
         {
-            Apply(edit);
+            restore();
             _editors.ForEach(e => e.Refit());
         }
     }
@@ -333,7 +456,7 @@ public partial class MainWindow : Window
         if (unsaved.Length > 0)
         {
             MessageBoxResult answer = MessageBox.Show(
-                this, $"Save the curve edits to {unsaved} before {action}?", Title, MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                this, $"Save the edits to {unsaved} before {action}?", Title, MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
             if (answer == MessageBoxResult.Cancel)
             {
                 return false;

@@ -66,11 +66,16 @@
                         <ColumnDefinition Width="2*" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="3*" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Game" VerticalAlignment="Center" Margin="0,0,6,0" />
                     <TextBox x:Name="GamePath" Grid.Column="1" AutomationProperties.AutomationId="GamePath" />
                     <TextBlock Grid.Column="2" Text="Layers (;)" VerticalAlignment="Center" Margin="12,0,6,0" />
                     <TextBox x:Name="LayerPaths" Grid.Column="3" AutomationProperties.AutomationId="LayerPaths" />
+                    <TextBlock Grid.Column="4" Text="WAVs (;)" VerticalAlignment="Center" Margin="12,0,6,0"
+                               ToolTip="Folders searched for WAVs named with an audio record's id, as rpm-2 [0045cb51].wav, which play in place of that record's audio" />
+                    <TextBox x:Name="WavPaths" Grid.Column="5" AutomationProperties.AutomationId="WavPaths" />
                 </Grid>
             </DockPanel>
         </Border>
@@ -89,8 +94,11 @@
                     <TextBlock x:Name="CarInfo" TextWrapping="Wrap" Margin="0,4" Foreground="{StaticResource TextMutedBrush}" />
                     <TextBlock x:Name="BankProblems" Style="{StaticResource Optional}" TextWrapping="Wrap" Margin="0,0,0,4"
                                Foreground="{StaticResource ProblemBrush}" AutomationProperties.AutomationId="BankProblems" />
-                    <Button Content="Reload banks" Click="OnReload" HorizontalAlignment="Left"
-                            AutomationProperties.AutomationId="Reload" />
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Reload banks" Click="OnReload" AutomationProperties.AutomationId="Reload" />
+                        <Button Content="Refresh WAVs (F5)" Click="OnRefreshWavs" AutomationProperties.AutomationId="RefreshWavs"
+                                ToolTip="Plays the WAVs edited since, and writes them into their banks in the layer" />
+                    </StackPanel>
 
                     <TextBlock Text="Engine" Style="{StaticResource Heading}" />
                     <StackPanel Orientation="Horizontal">
@@ -198,6 +206,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="240" />
                 </Grid.RowDefinitions>
                 <TreeView x:Name="Voices" SelectedItemChanged="OnVoiceSelected" AutomationProperties.AutomationId="Voices">
@@ -239,7 +248,16 @@
                     <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}"
                                Text="Select a layer to edit its curves, drawn over the other layers' in grey: drag a point (Shift: only its value), double-click to add one, right-click to remove one, Ctrl+Z to undo. The wheel zooms, dragging the background pans. The red line is the parameter's value now." />
                 </DockPanel>
-                <UniformGrid x:Name="CurveEditors" Grid.Row="2" Rows="1" />
+                <StackPanel x:Name="GainPanel" Grid.Row="2" Orientation="Horizontal" Margin="6,0,6,4" Visibility="Collapsed">
+                    <TextBlock x:Name="GainTitle" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <Button Content="−1 dB" Click="OnGainDown" Padding="6,2" Margin="0" AutomationProperties.AutomationId="GainDown" />
+                    <TextBox x:Name="GainBox" Width="56" Margin="4,0" VerticalContentAlignment="Center" KeyDown="OnGainEntered"
+                             AutomationProperties.AutomationId="Gain" />
+                    <Button Content="+1 dB" Click="OnGainUp" Padding="6,2" Margin="0" AutomationProperties.AutomationId="GainUp" />
+                    <TextBlock Text="dB, added to its level wherever it plays (type a value and press Enter, or step it)"
+                               VerticalAlignment="Center" Margin="8,0,0,0" Foreground="{StaticResource TextMutedBrush}" />
+                </StackPanel>
+                <UniformGrid x:Name="CurveEditors" Grid.Row="3" Rows="1" />
             </Grid>
         </Grid>
     </DockPanel>

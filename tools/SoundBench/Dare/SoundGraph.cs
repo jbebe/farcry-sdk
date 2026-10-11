@@ -70,7 +70,7 @@ public sealed class SoundGraph(SoundRegistry registry, Func<uint, uint?> switchV
             Id = id,
             Kind = layout.Element,
             Bank = found.Bank,
-            GainDb = (float)SpkLayout.FromQ16(record.Word(SpkLayout.SampleGain)),
+            Resource = record,
             Curves = curves,
         };
         if (depth > MaxDepth)

@@ -19,8 +19,11 @@ public sealed class SoundNode
     /// <summary>The bank the record came from.</summary>
     public string Bank { get; init; } = "";
 
+    /// <summary>The resource record this node plays, read as it is now; null for an event.</summary>
+    public SpkBankRecord? Resource { get; init; }
+
     /// <summary>The resource's word [5], added to everything under it.</summary>
-    public float GainDb { get; init; }
+    public float GainDb => Resource is null ? 0 : (float)SpkLayout.FromQ16(Resource.Word(SpkLayout.SampleGain));
 
     /// <summary>The curves of the multilayer layer this node plays in.</summary>
     public IReadOnlyList<SpkCurve> Curves { get; init; } = [];

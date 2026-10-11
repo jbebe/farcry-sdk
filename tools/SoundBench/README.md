@@ -5,9 +5,10 @@ game running. Pick a car, start the engine, and click **Accelerate**, **Coast** 
 event the car plays is listed down to its samples, with the curve values, gains, pitch and level of
 each one.
 
-It reads the installed game as deployed, with mod layer folders on top. A bank rebuilt by the vehicle
-overhaul's build scripts (`mods/vehicle-overhaul/assets/vehicle-sounds/build_scripts/`) is heard after
-**Reload banks**, with no deploy and no launch. A layer's curves can also be edited while the car drives,
+It reads the installed game as deployed, with mod layer folders on top, and plays the vehicle overhaul's
+WAVs in place of the audio built from them. A WAV edited in Audacity is heard after **Refresh WAVs**, and a
+bank rebuilt by the build scripts (`mods/vehicle-overhaul/assets/vehicle-sounds/build_scripts/`) after
+**Reload banks**, with no deploy and no launch. Curves and gains can also be edited while the car drives,
 and saved into the layer.
 
 ## Build and run
@@ -24,7 +25,8 @@ library. Audio goes out through WASAPI (NAudio), and Ogg Vorbis is decoded by NV
 
 | Control | What it does |
 |---|---|
-| Game, Layers | The install (default `C:\Games\Far Cry 2`) and layer folders read over it, separated by `;`. The default layer is `mods/vehicle-overhaul/layer` in this repo. Kept in `%LOCALAPPDATA%\SoundBench\settings.json`. |
+| Game, Layers, WAVs | The install (default `C:\Games\Far Cry 2`), the layer folders read over it, and the folders searched for WAVs (see [Editing the audio](#editing-the-audio)), each list separated by `;`. The defaults are this repo's `mods/vehicle-overhaul/layer` and `mods/vehicle-overhaul/assets/vehicle-sounds`. Kept in `%LOCALAPPDATA%\SoundBench\settings.json`. |
+| Reload banks, Refresh WAVs | Reload reads every bank again, as after a build script ran. Refresh (F5) swaps in the WAVs edited since. |
 | Car | Every wheeled archetype with an engine loop, one entry per sound setup, named after the real vehicle the overhaul matches it to. Archetypes that share their sounds share an entry, which drives with the first one's physics. |
 | Start / Stop engine | Ignition, then the idle, engine and extra-torque loops after the archetype's start time. Stop plays the engine-off events and cuts the loops. |
 | Accelerate / Coast / Brake | The pedal: W, Space and S do the same. Throttle sets how far Accelerate presses. |
@@ -34,7 +36,7 @@ library. Audio goes out through WASAPI (NAudio), and Ogg Vorbis is decoded by NV
 | Distance | Metres to the car, through each event's rolloff curve: 0 m is the cab, about 5 m the chase camera |
 | Master, Output | The mix level, and its peak. Red means the bench itself is clipping, so lower Master. |
 | Surface | The material switch value the tyres roll on |
-| Voice tree | One row per event the car plays, in a fixed order, under the field that names it. A play stays after it ends, with its last values, until the next one ends. **M** mutes and **S** solos a record and everything under it. Select a layer to edit its curves. |
+| Voice tree | One row per event the car plays, in a fixed order, under the field that names it. A play stays after it ends, with its last values, until the next one ends. **M** mutes and **S** solos a record and everything under it. Select a record to edit its gain, a layer to edit its curves. |
 
 Two problems show in red under a record:
 
@@ -43,6 +45,26 @@ Two problems show in red under a record:
 
 A voice's own line also says when it is clamped at 0 dB. A positioned voice under −48 dB reads
 *virtual*, as DARE drops it.
+
+## Editing the audio
+
+The vehicle overhaul's build scripts write every audio they build as a WAV in `game\` beside its take,
+named for its record: `datsun\game\rpm-2 [0045cb51].wav` is the audio record `0x0045CB51`. The bench plays
+any WAV named that way in place of the record's audio. To change one:
+
+1. Open it in Audacity, edit it, and export it over itself as 16-bit PCM WAV. A loop repeats the whole file,
+   so its end has to run into its start.
+2. Press **F5** (Refresh WAVs). Each WAV that changed is encoded into its bank, which is written into the
+   layer at once with nothing else in it changed, and what was playing starts again on the new audio.
+
+A build script starts over from the takes: running it again overwrites the WAVs in `game\` and their banks.
+
+## Editing gains
+
+Select any record in the voice tree but an event, such as a sample, a multilayer, a switch or a random container,
+and its gain shows under the tree: the dB it adds to the level of everything under it, wherever it plays.
+**−1 dB** and **+1 dB** step it; a value typed in and Enter sets it. The game clamps a voice at 0 dB, so a
+gain above 0 only lifts what other gains or curves hold below it. Gains save and undo as curves do.
 
 ## Editing curves
 
@@ -58,12 +80,12 @@ red line marks the parameter's value now.
 | Undo | Ctrl+Z, one gesture at a time |
 | Zoom, pan | The wheel zooms into the parameter around the mouse; dragging the background pans |
 
-An edit is heard from the next 10 ms block. **Save banks** writes every edited bank into the layer
-that provides it, or into the top layer for a retail bank. Everything else in the bank is written back
-byte for byte. Reloading, switching car or closing asks first when there are unsaved edits.
+An edit is heard from the next 10 ms block. **Save banks** writes every bank with edited curves or gains
+into the layer that provides it, or into the top layer for a retail bank. Everything else in the bank is
+written back byte for byte. Reloading, switching car or closing asks first when there are unsaved edits.
 
 A build script that generates a bank, such as `datsun.py` for the Datsun's engine, regenerates its
-curves too and drops what was edited here. Settle the takes first, then tune the curves.
+curves and gains too and drops what was edited here.
 
 ## What it reproduces
 
