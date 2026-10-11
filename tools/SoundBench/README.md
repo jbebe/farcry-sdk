@@ -107,7 +107,7 @@ The game's side:
 The vehicle overhaul's side:
 
 - **Revs.** The drivetrain is ported from `mods/vehicle-overhaul/src/drivetrain.cpp`. That code covers
-  the idle and redline mapping, the clutch slip and the rise and fall rates.
+  the idle and redline mapping, the clutch slip and its slow wander, and the rise and fall rates.
 - **Gear changes.** The pedal reads −100 for the shift time, and the shift sound plays halfway through
   it.
 - **Starting.** On a car with a catch time, the Datsun's 0.816 s, the pedal reads −200 from the key until

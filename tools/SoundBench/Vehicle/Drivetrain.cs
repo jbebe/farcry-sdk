@@ -9,8 +9,14 @@ public sealed class Drivetrain
     /// <summary>The seconds the engine sound takes to fade in once the engine catches.</summary>
     private const float CatchFade = 0.5f;
 
+    /// <summary>How far, as a share of the range, and how slowly, as two waves' periods in seconds, the revs a
+    /// slipping clutch holds wander: a driver's foot is no machine.</summary>
+    private const float SlipWander = 0.03f;
+    private static readonly double[] WanderPeriods = [2.2, 1.25];
+
     private readonly float _catchTime;
     private float _sinceEntry;
+    private double _clock;
     private int _gear;
     private float _shiftTime;
     private float _sinceShift;
@@ -61,10 +67,14 @@ public sealed class Drivetrain
         }
         Lifted = _sinceShift < _shiftTime;
 
+        _clock += seconds;
+        double turn = 2 * Math.PI * _clock;
+        float wander = (float)(0.6 * Math.Sin(turn / WanderPeriods[0]) + 0.4 * Math.Sin(turn / WanderPeriods[1] + 1.3));
+
         float range = Redline - Idle;
         float wheels = Idle + (Math.Abs(havokRpm) - HavokStandIn.MinRpm) * range / (HavokStandIn.UpshiftRpm - HavokStandIn.MinRpm);
         float target = Math.Max(Idle, wheels);
-        float slip = Idle + ClutchSlip * range;
+        float slip = Idle + (ClutchSlip + SlipWander * wander) * range;
         if (wheels < slip)
         {
             target = Math.Max(target, Idle + throttle * (slip - Idle));
