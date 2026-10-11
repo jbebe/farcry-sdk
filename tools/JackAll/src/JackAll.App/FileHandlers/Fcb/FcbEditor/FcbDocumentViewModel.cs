@@ -49,6 +49,8 @@ public sealed class FcbDocumentViewModel : Observable
 
     public string Title { get; }
 
+    /// <summary>Raised after the persist delegate accepted the edits.</summary>
+    public event Action? Saved;
 
     public OutlineNode Root { get; }
 
@@ -167,6 +169,7 @@ public sealed class FcbDocumentViewModel : Observable
             if (error is null)
             {
                 IsDirty = false;
+                Saved?.Invoke();
             }
             return error;
         }

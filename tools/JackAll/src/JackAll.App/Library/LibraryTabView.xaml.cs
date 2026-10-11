@@ -132,7 +132,13 @@ public partial class LibraryTabView : UserControl
             return;
         }
 
-        IReadOnlyList<ArchetypeDefinition> declarations = _index.DefinitionsOf(name);
+        ListMods(_index, name);
+        ShowDeclaration(_index.DefinitionsOf(name)[^1]);
+    }
+
+    private void ListMods(ArchetypeIndex index, string name)
+    {
+        IReadOnlyList<ArchetypeDefinition> declarations = index.DefinitionsOf(name);
         List<ModRow> mods =
         [
             .. declarations.SelectMany(d => _edits.SourcesOf(d).Select(mod => new ModRow(mod, d, d == declarations[^1]))),
@@ -141,8 +147,14 @@ public partial class LibraryTabView : UserControl
         ModHint.Text = mods.Count == 0
             ? "No enabled mod edits this archetype."
             : "In load order - a later mod wins where two touch the same field. Click one to open the copy it edits.";
+    }
 
-        ShowDeclaration(declarations[^1]);
+    /// <summary>Marks a just-saved edit in the tree and the mods list without another Load.</summary>
+    private void ShowSavedEdits(MainViewModel vm, ArchetypeIndex index, string name)
+    {
+        _edits = new StagedEdits(vm.Layers);
+        _root?.ShowEdits(index, _edits);
+        ListMods(index, name);
     }
 
     private void ModList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -164,7 +176,7 @@ public partial class LibraryTabView : UserControl
     /// <summary>Loads the fragment this declaration lives in, positioned on the declaration itself.</summary>
     private void ShowDeclaration(ArchetypeDefinition definition)
     {
-        if (_vm is not { } vm || _index?.Winner(definition.Name) is not { } winner) return;
+        if (_vm is not { } vm || _index is not { } index || index.Winner(definition.Name) is not { } winner) return;
 
         if (FindFragment(vm, definition) is not { } fragment)
         {
@@ -179,6 +191,7 @@ public partial class LibraryTabView : UserControl
                 ? null
                 : $"'{definition.Name}' is declared again by {winner.Layer.Path}, which loads later. "
                   + "That copy is what the game reads, so editing this one changes the file and nothing in game.";
+            editor.Saved += () => ShowSavedEdits(vm, index, definition.Name);
 
             EditorHost.Content = new FcbDocumentView(editor);
             EditorPlaceholder.Visibility = Visibility.Collapsed;

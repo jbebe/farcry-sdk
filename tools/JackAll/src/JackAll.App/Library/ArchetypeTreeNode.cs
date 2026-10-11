@@ -9,6 +9,9 @@ namespace JackAll.App.Library;
 /// </summary>
 public sealed class ArchetypeTreeNode : TreeNodeBase<ArchetypeTreeNode>
 {
+    private string? _mods;
+    private bool _containsModded;
+
     private ArchetypeTreeNode(string label, string? fullName)
     {
         Label = label;
@@ -21,12 +24,25 @@ public sealed class ArchetypeTreeNode : TreeNodeBase<ArchetypeTreeNode>
     public string? FullName { get; }
 
     /// <summary>The mods editing this archetype, in load order - null for a group row.</summary>
-    public string? Mods { get; private set; }
+    public string? Mods
+    {
+        get => _mods;
+        private set
+        {
+            _mods = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsModded));
+        }
+    }
 
     public bool IsModded => !string.IsNullOrEmpty(Mods);
 
     /// <summary>True for a group holding any modded archetype, so a collapsed branch still shows it.</summary>
-    public bool ContainsModded { get; private set; }
+    public bool ContainsModded
+    {
+        get => _containsModded;
+        private set => Set(ref _containsModded, value);
+    }
 
     /// <summary>The group rows directly below this one, for a tree that shows folders only.</summary>
     public IEnumerable<ArchetypeTreeNode> Groups => Children.Where(c => c.FullName is null);
@@ -49,23 +65,31 @@ public sealed class ArchetypeTreeNode : TreeNodeBase<ArchetypeTreeNode>
                 parent = parent.GroupFor(group);
             }
 
-            var leaf = new ArchetypeTreeNode(label, name)
-            {
-                Mods = edits is null
-                    ? null
-                    : string.Join(", ", index.DefinitionsOf(name).SelectMany(edits.SourcesOf).Distinct()),
-            };
-            parent.AddChild(leaf);
+            parent.AddChild(new ArchetypeTreeNode(label, name));
+        }
 
-            if (leaf.IsModded)
-            {
-                for (ArchetypeTreeNode? node = leaf; node is not null; node = node.Parent)
-                {
-                    node.ContainsModded = true;
-                }
-            }
+        if (edits is not null)
+        {
+            root.ShowEdits(index, edits);
         }
         return root;
+    }
+
+    /// <summary>Re-reads which mods edit every archetype at or below this row.</summary>
+    public void ShowEdits(ArchetypeIndex index, StagedEdits edits)
+    {
+        if (FullName is not null)
+        {
+            Mods = string.Join(", ", index.DefinitionsOf(FullName).SelectMany(edits.SourcesOf).Distinct());
+            ContainsModded = IsModded;
+            return;
+        }
+
+        foreach (ArchetypeTreeNode child in Children)
+        {
+            child.ShowEdits(index, edits);
+        }
+        ContainsModded = Children.Any(c => c.ContainsModded);
     }
 
     private ArchetypeTreeNode GroupFor(string label)
