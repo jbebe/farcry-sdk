@@ -8,6 +8,12 @@
 
 namespace VehicleOverhaul::RealVehicle {
 
+// A tuning a car starts at, by its key in the tuning file.
+struct Start {
+    const char* key;
+    float value;
+};
+
 struct Spec {
     float mass;
     float enginePower;
@@ -28,9 +34,8 @@ struct Spec {
     // Each solid axle's spring spacing over its track, front then rear, or 0 for an axle whose wheels
     // are sprung apart.
     float solidAxle[Wheeled::kAxles];
-    // Where its Top speed and Springs tunings start, or 0 for the defaults, which were found on the Datsun.
-    float topSpeed;
-    float springs;
+    // Where its tunings start, for those that differ from everyone's defaults.
+    std::span<const Start> tuning;
 };
 
 constexpr float kAtTheAxles = 0.0f;

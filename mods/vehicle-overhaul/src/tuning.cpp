@@ -214,12 +214,12 @@ void VehicleOverhaul::Tuning::Load() {
     }
     std::fill(g_cars.begin(), g_cars.end(), defaults);
     for (size_t car = 0; car + 1 < g_cars.size(); ++car) {
-        const RealVehicle::Spec& real = RealVehicle::All()[car];
-        if (real.topSpeed > 0.0f) {
-            g_cars[car].topSpeed = real.topSpeed;
-        }
-        if (real.springs > 0.0f) {
-            g_cars[car].springs = real.springs;
+        for (const RealVehicle::Start& start : RealVehicle::All()[car].tuning) {
+            const auto parameter = std::find_if(std::begin(kParameters), std::end(kParameters),
+                                                [&](const Parameter& p) { return std::string_view(p.key) == start.key; });
+            if (parameter != std::end(kParameters)) {
+                g_cars[car].*parameter->member = start.value;
+            }
         }
     }
 

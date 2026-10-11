@@ -20,8 +20,9 @@ from the windows and the wrecks are to come.
 
 - **Off-road physics, on the car you drive.** Every physics step, the car's Havok vehicle is re-tuned
   from its own retail values, by that car's own set of tunings. Getting out puts them all back, so AI
-  drivers keep the retail physics. The values below were found on the Datsun; the Land Rover starts with
-  its own springs and lower gearing (1.2× its top speed).
+  drivers keep the retail physics. The values below are every car's defaults. The Land Rover starts with
+  its own springs and lower gearing (1.2× its top speed); the Datsun with full engine torque, 0.5 s gear
+  changes, more tyre grip (0.5×) and no rolling resistance, as tuned in game.
   - No speed limiter (retail holds a player's car near 60 km/h), longer gearing, 70% of the engine's
     torque and no climb assist.
   - Weak brakes that lock the wheels into a skid after half a second, as on a car without ABS.
