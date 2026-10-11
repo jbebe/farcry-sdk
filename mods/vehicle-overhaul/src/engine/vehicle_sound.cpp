@@ -10,6 +10,7 @@
 #include "fcse_api.h"
 
 #include <atomic>
+#include <cmath>
 #include <cstdint>
 
 namespace {
@@ -54,22 +55,28 @@ namespace {
     GetMultiLayerFn g_originalGetMultiLayer = nullptr;
     constexpr ptrdiff_t kCallbacksSound = 0x0C;
 
-    // The sound of the vehicle whose driver is off the throttle for a gear change, or null. Asked from
-    // the sound mixer.
-    std::atomic<uint8_t*> g_lifted{nullptr};
+    // The sound of the vehicle the plugin sets the engine of, or null, and what its pedal hears: lifted
+    // for a gear change, and faded in as the engine catches. Asked from the sound mixer.
+    std::atomic<uint8_t*> g_driving{nullptr};
+    std::atomic<bool> g_lifted{false};
+    std::atomic<float> g_caught{1.0f};
 
-    // The pedal a lifted driver's sound hears: below anything the game answers (0 to 100), so a pedal
-    // curve can give a gear change a dip of its own. One without such a point holds its 0 value.
+    // The pedals a lifted driver's sound and a cranking engine's hear: below anything the game answers (0
+    // to 100), so a pedal curve can give a gear change a dip of its own and keep an engine silent until it
+    // catches. One without such points holds its 0 value.
     constexpr float kLiftedPedal = -100.0f;
+    constexpr float kCrankingPedal = -200.0f;
 
     float __fastcall GetMultiLayerDetour(uint8_t* callbacks, void* unused, uint32_t parameter) {
         const float value = g_originalGetMultiLayer(callbacks, unused, parameter);
-        uint8_t* lifted = g_lifted.load(std::memory_order_relaxed);
-        if (lifted != nullptr && At<uint8_t*>(callbacks, kCallbacksSound) == lifted &&
-            parameter == At<uint32_t>(lifted, kSoundPedalParameter)) {
-            return kLiftedPedal;
+        uint8_t* driving = g_driving.load(std::memory_order_relaxed);
+        if (driving == nullptr || At<uint8_t*>(callbacks, kCallbacksSound) != driving ||
+            parameter != At<uint32_t>(driving, kSoundPedalParameter)) {
+            return value;
         }
-        return value;
+        return g_lifted.load(std::memory_order_relaxed)
+                   ? kLiftedPedal
+                   : std::lerp(kCrankingPedal, value, g_caught.load(std::memory_order_relaxed));
     }
 
     VehicleOverhaul::VehicleSound::EngineFn g_engine = nullptr;
@@ -90,10 +97,12 @@ namespace {
         g_driven = nullptr;
         if (!g_engine(vehicle, engine)) {
             uint8_t* expected = sound;
-            g_lifted.compare_exchange_strong(expected, nullptr);
+            g_driving.compare_exchange_strong(expected, nullptr);
             return;
         }
-        g_lifted = engine.lifted ? sound : nullptr;
+        g_lifted = engine.lifted;
+        g_caught = engine.caught;
+        g_driving = sound;
         if (engine.shiftSound != 0) {
             g_shiftSound = engine.shiftSound;
             VehicleOverhaul::SoundBank::Hold(engine.shiftSound);
@@ -136,9 +145,11 @@ bool Install(EngineFn engine) {
     if (!api->MidHook(g_gearChoice.get(), &OnGearChoice) || !api->MidHook(g_rpmDone.get(), &OnRpmDone)) {
         return false;
     }
-    // Without it the engine keeps its throttle sound through a gear change; it runs on.
+    // Without it the engine keeps its throttle sound through a gear change and sounds before it catches;
+    // it runs on.
     if (!g_getMultiLayer) {
-        api->Log("vehicle sound: GetMultiLayer was not found in this build; gear changes keep the throttle on");
+        api->Log("vehicle sound: GetMultiLayer was not found in this build; gear changes keep the throttle on "
+                 "and engines sound before they catch");
     } else {
         api->Hook(reinterpret_cast<void*>(g_getMultiLayer.address()), reinterpret_cast<void*>(&GetMultiLayerDetour),
                   reinterpret_cast<void**>(&g_originalGetMultiLayer));

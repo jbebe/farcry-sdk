@@ -15,6 +15,8 @@ struct Engine {
     uint32_t shiftSound;
     // Off the throttle for a gear change: the sound hears the pedal up.
     bool lifted;
+    // How far the engine sound has faded in since the engine caught, 0 to 1.
+    float caught;
 };
 
 // For the vehicle entity a sound belongs to: false leaves it to the game; true sets its engine.

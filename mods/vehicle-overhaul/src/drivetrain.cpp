@@ -34,6 +34,8 @@ namespace {
     constexpr float kClutchSlip = 1750.0f / 5750.0f;
     constexpr float kRiseRate = 7000.0f / 5750.0f;
     constexpr float kFallRate = 3000.0f / 5750.0f;
+    // The seconds the engine sound takes to fade in once the engine catches.
+    constexpr float kCatchFade = 0.5f;
 
     // Kept by the physics step, read by the sound. The shift is the last gear change not yet sounded:
     // +1 up, -1 down.
@@ -42,8 +44,12 @@ namespace {
     std::atomic<uint32_t> g_shiftSound{0};
     // The driver is off the throttle for a gear change.
     std::atomic<bool> g_lifted{false};
+    // How far the engine sound has faded in since the engine caught: 0 before, 1 once in.
+    std::atomic<float> g_caught{1.0f};
 
-    Car g_car = nullptr;
+    // The car the player drives, or null once they are out, so getting back in starts it afresh.
+    std::atomic<Car> g_car{nullptr};
+    float g_sinceEntry = 0.0f;
     int g_gear = 0;
     // The seconds the last gear change keeps the clutch out, and those gone since. It is sounded halfway,
     // where the lever goes across; until then it waits here.
@@ -58,6 +64,9 @@ namespace {
         g_vehicle = VehicleOverhaul::Wheeled::Player() != nullptr
                         ? VehicleOverhaul::Entity::Of(VehicleOverhaul::Vehicle::Current(pawn))
                         : nullptr;
+        if (g_vehicle == nullptr) {
+            g_car = nullptr;
+        }
     }
 
     bool Heard(void* vehicle, VehicleOverhaul::VehicleSound::Engine& engine) {
@@ -72,6 +81,7 @@ namespace {
         engine.rpm = g_rpm;
         engine.shiftSound = g_shiftSound;
         engine.lifted = g_lifted;
+        engine.caught = g_caught;
         return true;
     }
 }
@@ -93,7 +103,11 @@ float Step(Car car, const RealVehicle::Spec* real, float shiftTime, const Wheele
         g_shiftTime = 0.0f;
         g_pendingShift = 0;
         g_rpm = idle;
+        g_sinceEntry = 0.0f;
     }
+    g_sinceEntry += seconds;
+    const float catchTime = real != nullptr ? real->catchTime : 0.0f;
+    g_caught = catchTime > 0.0f ? std::clamp((g_sinceEntry - catchTime) / kCatchFade, 0.0f, 1.0f) : 1.0f;
     g_sinceShift += seconds;
     if (readout.gear != g_gear) {
         g_pendingShift = readout.gear > g_gear ? 1 : -1;

@@ -22,6 +22,9 @@ struct Spec {
     float redline;
     // The sound of a gear change, or 0 for the vehicle's own.
     uint32_t shiftSound;
+    // Seconds from the driver getting in to the engine catching in the layer's start sound, or 0: the
+    // engine sound is silent until then, and fades in after.
+    float catchTime;
     // Each solid axle's spring spacing over its track, front then rear, or 0 for an axle whose wheels
     // are sprung apart.
     float solidAxle[Wheeled::kAxles];
