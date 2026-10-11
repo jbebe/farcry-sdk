@@ -12,9 +12,6 @@ public sealed class HavokStandIn
 {
     public const float MinRpm = 1000, OptRpm = 5500, MaxRpm = 7500, UpshiftRpm = 6500, DownshiftRpm = 3500;
 
-    /// <summary>How long a change down has the clutch out, as on Far Cry 3's cars.</summary>
-    public const float DownshiftTime = 0.1f;
-
     /// <summary>Below this speed, in m/s, a change up is not weighed.</summary>
     private const float MinUpshiftSpeed = 1;
 
@@ -24,7 +21,8 @@ public sealed class HavokStandIn
     private const float RpmPerRadianPerSecond = 60 / (2 * MathF.PI);
 
     private readonly float[] _gears;
-    private readonly float _primaryRatio, _mass, _maxTorque, _brakeTorque, _grip, _rolling, _downshiftRpm = DownshiftRpm;
+    private readonly float _primaryRatio, _mass, _maxTorque, _brakeTorque, _grip, _rolling, _downshiftTime;
+    private readonly float _downshiftRpm = DownshiftRpm;
     private float _clutch;
 
     /// <param name="realGears">The real gearbox's forward ratios, which the vehicle overhaul puts in place of Havok's
@@ -46,6 +44,7 @@ public sealed class HavokStandIn
         _brakeTorque = car.BrakingTorque * tuning.BrakeTorque;
         _grip = TyreFriction * GroundFriction * tuning.TyreGrip * Gravity;
         _rolling = RollResist * tuning.RollingResistance * Gravity;
+        _downshiftTime = tuning.DownshiftTime;
     }
 
     /// <summary>Metres per second, forwards only.</summary>
@@ -78,7 +77,7 @@ public sealed class HavokStandIn
         {
             if (Rpm < _downshiftRpm && Gear > 0)
             {
-                Shift(-1, DownshiftTime);
+                Shift(-1, _downshiftTime);
             }
             else if (Rpm > UpshiftRpm && Gear < _gears.Length - 1 && Speed >= MinUpshiftSpeed &&
                      Rpm * _gears[Gear + 1] / _gears[Gear] * Math.Max(0, 1 - _rolling * clutchTime / Speed) > _downshiftRpm)

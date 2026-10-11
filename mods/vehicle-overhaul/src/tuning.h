@@ -18,12 +18,13 @@ struct Switches {
 };
 
 // How a car drives, kept for each real vehicle. Multiples of the car's own retail value, except the
-// responses (Havok's factors, 1 = physical) and the lock and shift times (seconds).
+// responses (Havok's factors, 1 = physical) and the lock and gear change times (seconds).
 struct Values {
     float enginePower;
     float climbAssist;
     float topSpeed;
     float shiftTime;
+    float downshiftTime;
     float brakeTorque;
     float lockTime;
     float steeringLock;

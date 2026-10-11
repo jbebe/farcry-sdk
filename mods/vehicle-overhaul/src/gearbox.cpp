@@ -25,7 +25,7 @@ void Step(const Wheeled::Parts& parts, const Wheeled::Readout& readout, const Sh
     const float rpm = std::abs(readout.rpm);
     const int gear = *parts.gear;
     if (rpm < shifts.downshift && gear > 0) {
-        Change(parts, gear - 1, kDownshiftTime);
+        Change(parts, gear - 1, shifts.downshiftTime);
         return;
     }
     if (rpm <= shifts.upshift || gear + 1 >= *parts.gearCount || !grounded || readout.speed < kMinUpshiftSpeed) {

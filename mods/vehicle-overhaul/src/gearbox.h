@@ -6,14 +6,12 @@
 
 namespace VehicleOverhaul::Gearbox {
 
-// How long a change down has the clutch out, as on Far Cry 3's cars.
-constexpr float kDownshiftTime = 0.1f;
-
-// Where the car changes gear, in Havok's revs, and how long a change up has the clutch out.
+// Where the car changes gear, in Havok's revs, and how long a change up and down has the clutch out.
 struct Shifts {
     float upshift;
     float downshift;
     float upshiftTime;
+    float downshiftTime;
 };
 
 // Changes gear for one physics step: never while the clutch is out or in reverse, down below the

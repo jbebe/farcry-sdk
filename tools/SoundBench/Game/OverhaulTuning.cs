@@ -6,14 +6,15 @@ namespace SoundBench.Game;
 /// <summary>The vehicle overhaul's tuning of one car that moves its engine: <c>bin\vehicle-overhaul.ini</c>,
 /// with the defaults of <c>tuning.cpp</c> and the car's own starting tunings where the file is silent.</summary>
 public sealed record OverhaulTuning(
-    float EnginePower, float TopSpeed, float ShiftTime, float BrakeTorque, float TyreGrip, float RollingResistance)
+    float EnginePower, float TopSpeed, float ShiftTime, float DownshiftTime, float BrakeTorque, float TyreGrip,
+    float RollingResistance)
 {
     public const string OtherCars = "Other cars";
 
     private static readonly Dictionary<string, float> Defaults = new()
     {
-        ["Engine power"] = 0.7f, ["Top speed"] = 2f, ["Shift time"] = 0.6f, ["Brake torque"] = 0.3f, ["Tyre grip"] = 0.3f,
-        ["Rolling resistance"] = 0.15f,
+        ["Engine power"] = 0.7f, ["Top speed"] = 2f, ["Shift time"] = 0.6f, ["Downshift time"] = 0.1f, ["Brake torque"] = 0.3f,
+        ["Tyre grip"] = 0.3f, ["Rolling resistance"] = 0.15f,
     };
 
     public static OverhaulTuning Read(string iniPath, RealVehicle? real)
@@ -44,7 +45,7 @@ public sealed record OverhaulTuning(
         }
 
         return new OverhaulTuning(
-            values["Engine power"], values["Top speed"], values["Shift time"], values["Brake torque"], values["Tyre grip"],
-            values["Rolling resistance"]);
+            values["Engine power"], values["Top speed"], values["Shift time"], values["Downshift time"], values["Brake torque"],
+            values["Tyre grip"], values["Rolling resistance"]);
     }
 }

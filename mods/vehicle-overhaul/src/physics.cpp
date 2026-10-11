@@ -244,7 +244,7 @@ namespace {
                 g_retail.upshift,
                 real != nullptr && real->downshift > 0.0f ? VehicleOverhaul::Drivetrain::HavokRpm(real, real->downshift)
                                                           : g_retail.downshift,
-                tuning.shiftTime};
+                tuning.shiftTime, tuning.downshiftTime};
             VehicleOverhaul::Gearbox::Step(parts, readout, shifts,
                                            kGroundRollResist * tuning.rollingResistance * readout.gravityDown,
                                            chassis.grip > 0.0f);

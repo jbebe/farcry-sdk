@@ -31,7 +31,7 @@ library. Audio goes out through WASAPI (NAudio), and Ogg Vorbis is decoded by NV
 | Start / Stop engine | Ignition, then the idle, engine and extra-torque loops after the archetype's start time. Stop plays the engine-off events and cuts the loops. |
 | Accelerate / Coast / Brake | The pedal: W, Space and S do the same. Throttle sets how far Accelerate presses. |
 | Hold gear | No gear changes (H): the revs run from idle up to the redline in the gear the car is in, and stay there on the rev limiter |
-| Shift time | How long a gear change keeps the clutch out, read from the car's section of `bin\vehicle-overhaul.ini` |
+| Shift time | How long a change up keeps the clutch out, read from the car's section of `bin\vehicle-overhaul.ini`. A change down takes that section's Downshift time. |
 | Parameters | The six values a car's multilayers ask for. **Pin** one to hold it at the slider's value whatever the drive does. The RPM slider stops at the car's redline. |
 | Distance | Metres to the car, through each event's rolloff curve: 0 m is the cab, about 5 m the chase camera |
 | Master, Output | The mix level, and its peak. Red means the bench itself is clipping, so lower Master. |
@@ -108,10 +108,10 @@ The vehicle overhaul's side:
 
 - **Revs.** The drivetrain is ported from `mods/vehicle-overhaul/src/drivetrain.cpp`. That code covers
   the idle and redline mapping, the clutch slip and its slow wander, and the rise and fall rates.
-- **Gear changes.** They come as `gearbox.cpp` makes them: never while the clutch is out, down with a
-  0.1 s clutch, and up only if the revs in the next gear stay above the change-down point after the
-  clutch time. The pedal reads −100 while the clutch is out, the shift time for a change up, and the
-  shift sound plays halfway through it.
+- **Gear changes.** They come as `gearbox.cpp` makes them: never while the clutch is out, down with the
+  downshift time's clutch, and up only if the revs in the next gear stay above the change-down point
+  after the clutch time. The pedal reads −100 while the clutch is out, and the shift sound plays
+  halfway through it.
 - **Starting.** On a car with a catch time, the Datsun's 0.816 s or the ZIL's 0.7 s, the pedal reads −200 from the key until
   the engine catches, then comes up to the driver's over 0.5 s.
 - **Real vehicles.** The table is mirrored from `real_vehicle.cpp`. Keep both mirrors in step with
