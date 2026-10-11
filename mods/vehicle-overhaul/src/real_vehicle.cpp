@@ -12,9 +12,9 @@ namespace {
     // archetypes' sndGearShift fields, which would also clunk every AI car on its made-up gear changes.
     constexpr uint32_t kShiftClunks = 0x00FD0000;
 
-    // Each solid axle's springs under the chassis rails, estimated, not measured: the Rover's leaf springs about 0.8 m
-    // apart on a 1.31 m track, the ZIL's about 0.87 m, a usual truck frame, on 1.8 m, and the Unimog's coil springs
-    // about 0.8 m on 1.6 m.
+    // A solid axle's springs apart over its wheels apart, the springs under the chassis rails; estimated, not
+    // measured. The Rover's leaf springs about 0.8 m apart on a 1.31 m track, the ZIL's about 0.87 m, a usual truck
+    // frame, on 1.8 m, and the Unimog's coil springs about 0.8 m on 1.6 m.
     constexpr float kRoverSprings = 0.6f;
     constexpr float kZilSprings = 0.5f;
     constexpr float kUnimogSprings = 0.5f;
