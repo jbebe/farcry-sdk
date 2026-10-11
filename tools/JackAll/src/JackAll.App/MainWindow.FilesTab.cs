@@ -25,35 +25,17 @@ public partial class MainWindow
         _vm.SelectedFolder = e.NewValue as FolderNode;
     }
 
-    /// <summary>True while <see cref="ShowSelectedFileInGrid"/> selects a row the view model already has.</summary>
-    private bool _showingSelectedFile;
-
     private void FileGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (!_showingSelectedFile)
-        {
-            _vm.SetSelectedFiles(FileGrid.SelectedItems.Cast<VfsFile>().ToList());
-        }
-    }
+        => _vm.SetSelectedFiles(FileGrid.SelectedItems.Cast<VfsFile>().ToList());
 
     /// <summary>Selects and scrolls to a file selected from code, such as a followed reference.</summary>
     private void ShowSelectedFileInGrid()
     {
-        if (_vm.SelectedFile is not { } file || FileGrid.SelectedItems.Contains(file) || !_vm.VisibleFiles.Contains(file))
-        {
-            return;
-        }
-
-        _showingSelectedFile = true;
-        try
+        if (_vm.SelectedFile is { } file && !FileGrid.SelectedItems.Contains(file) && _vm.VisibleFiles.Contains(file))
         {
             FileGrid.SelectedItem = file;
+            FileGrid.ScrollIntoView(file);
         }
-        finally
-        {
-            _showingSelectedFile = false;
-        }
-        FileGrid.ScrollIntoView(file);
     }
 
     private void ExportAll_Click(object sender, RoutedEventArgs e)

@@ -3,7 +3,6 @@ using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
 using JackAll.Core.Vfs;
 using JackAll.Tools.World;
-using System.IO;
 
 namespace JackAll.App;
 
@@ -45,24 +44,37 @@ public sealed partial class MainViewModel
     /// <summary>
     /// <see cref="DeadCopyNote"/> for a library fragment a later library shadows, or null. A world's
     /// own library is shadowed only within its world; the shared libraries after it are the same in
-    /// every world, so any world's index answers for them.
+    /// every world, so they resolve on their own.
     /// </summary>
     public async Task<string?> DeadCopyNoteFor(VfsFile fragment)
     {
         if (fragment is not { ContainerHash: { } container, FragmentId: { } id }
-            || ContainerFormats.ContainerPathOf(fragment.Path) is not { } library
-            || !Path.GetFileName(library).StartsWith("entitylibrary", StringComparison.OrdinalIgnoreCase)
-            || (TerrainMap.MapOfPath(library) ?? ArchetypeIndex.DiscoverWorlds(AllKnownPaths).FirstOrDefault())
-                is not { } world)
+            || ContainerFormats.ContainerPathOf(fragment.Path) is not { } library)
         {
             return null;
         }
 
-        ArchetypeIndex index = await ArchetypesOf(world);
+        Task<ArchetypeIndex>? chain = TerrainMap.MapOfPath(library) is { } world
+                                      && library.Equals(ArchetypeIndex.BaseLayer(world).Path, StringComparison.OrdinalIgnoreCase)
+            ? ArchetypesOf(world)
+            : ArchetypeIndex.IsSharedLayer(library) ? SharedArchetypes() : null;
+        if (chain is null)
+        {
+            return null;
+        }
+
+        ArchetypeIndex index = await chain;
         return index.DeadDeclarationsIn(container, id).FirstOrDefault() is { } dead
             ? DeadCopyNote(dead.Name, index.Winner(dead.Name)!.Layer.Path)
             : null;
     }
+
+    /// <summary>No world is named this, so the shared layers can be cached beside the worlds.</summary>
+    private const string SharedLayersKey = "";
+
+    private Task<ArchetypeIndex> SharedArchetypes()
+        => Cached(_archetypeIndexes, SharedLayersKey,
+            () => ArchetypeIndex.Load(ArchetypeIndex.SharedLayers(ArchetypeIndex.DiscoverDlcLibraries(AllKnownPaths)), ReadByPath));
 
     /// <summary>A fragment as an editable document, compared against its vanilla content.</summary>
     public FcbDocumentViewModel OpenFragmentDocument(VfsFile fragment)

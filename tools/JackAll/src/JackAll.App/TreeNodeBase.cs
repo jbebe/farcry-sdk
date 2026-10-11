@@ -87,13 +87,15 @@ public abstract class TreeNodeBase<T> : INotifyPropertyChanged
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-    protected void Set(ref bool field, bool value, [CallerMemberName] string? name = null)
+    /// <summary>Assigns and notifies; false when the value didn't change.</summary>
+    protected bool Set<TValue>(ref TValue field, TValue value, [CallerMemberName] string? name = null)
     {
-        if (field == value)
+        if (EqualityComparer<TValue>.Default.Equals(field, value))
         {
-            return;
+            return false;
         }
         field = value;
         OnPropertyChanged(name);
+        return true;
     }
 }

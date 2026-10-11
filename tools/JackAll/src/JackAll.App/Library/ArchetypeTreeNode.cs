@@ -29,9 +29,10 @@ public sealed class ArchetypeTreeNode : TreeNodeBase<ArchetypeTreeNode>
         get => _mods;
         private set
         {
-            _mods = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(IsModded));
+            if (Set(ref _mods, value))
+            {
+                OnPropertyChanged(nameof(IsModded));
+            }
         }
     }
 
@@ -81,15 +82,13 @@ public sealed class ArchetypeTreeNode : TreeNodeBase<ArchetypeTreeNode>
         if (FullName is not null)
         {
             Mods = string.Join(", ", index.DefinitionsOf(FullName).SelectMany(edits.SourcesOf).Distinct());
-            ContainsModded = IsModded;
-            return;
         }
 
         foreach (ArchetypeTreeNode child in Children)
         {
             child.ShowEdits(index, edits);
         }
-        ContainsModded = Children.Any(c => c.ContainsModded);
+        ContainsModded = IsModded || Children.Any(c => c.ContainsModded);
     }
 
     private ArchetypeTreeNode GroupFor(string label)

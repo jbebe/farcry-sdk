@@ -38,6 +38,7 @@ public partial class LibraryTabView : UserControl
     public void Initialize(MainViewModel vm)
     {
         _vm = vm;
+        vm.Reindexed += ShowStagedEdits;
         IReadOnlyList<string> worlds = ArchetypeIndex.DiscoverWorlds(vm.AllKnownPaths);
 
         WorldPicker.ItemsSource = worlds;
@@ -149,12 +150,17 @@ public partial class LibraryTabView : UserControl
             : "In load order - a later mod wins where two touch the same field. Click one to open the copy it edits.";
     }
 
-    /// <summary>Marks a just-saved edit in the tree and the mods list without another Load.</summary>
-    private void ShowSavedEdits(MainViewModel vm, ArchetypeIndex index, string name)
+    /// <summary>Re-marks what the mods edit once the layers changed, so a save shows without another Load.</summary>
+    private void ShowStagedEdits()
     {
-        _edits = new StagedEdits(vm.Layers);
-        _root?.ShowEdits(index, _edits);
-        ListMods(index, name);
+        if (_vm is null || _index is null || _root is null) return;
+
+        _edits = new StagedEdits(_vm.Layers);
+        _root.ShowEdits(_index, _edits);
+        if (ArchetypeTree.SelectedItem is ArchetypeTreeNode { FullName: { } name })
+        {
+            ListMods(_index, name);
+        }
     }
 
     private void ModList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -176,7 +182,7 @@ public partial class LibraryTabView : UserControl
     /// <summary>Loads the fragment this declaration lives in, positioned on the declaration itself.</summary>
     private void ShowDeclaration(ArchetypeDefinition definition)
     {
-        if (_vm is not { } vm || _index is not { } index || index.Winner(definition.Name) is not { } winner) return;
+        if (_vm is not { } vm || _index?.Winner(definition.Name) is not { } winner) return;
 
         if (FindFragment(vm, definition) is not { } fragment)
         {
@@ -188,7 +194,6 @@ public partial class LibraryTabView : UserControl
         {
             FcbDocumentViewModel editor = vm.OpenFragmentDocument(fragment);
             editor.Notice = definition == winner ? null : MainViewModel.DeadCopyNote(definition.Name, winner.Layer.Path);
-            editor.Saved += () => ShowSavedEdits(vm, index, definition.Name);
 
             EditorHost.Content = new FcbDocumentView(editor);
             EditorPlaceholder.Visibility = Visibility.Collapsed;

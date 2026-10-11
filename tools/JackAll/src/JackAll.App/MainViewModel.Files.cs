@@ -169,7 +169,9 @@ public sealed partial class MainViewModel
     /// <summary>Called from code-behind whenever the Files tab's grid selection changes.</summary>
     public void SetSelectedFiles(IReadOnlyList<VfsFile> files)
     {
-        if (_refilling && files.Count == 0)
+        // The grid echoes a selection made from code; the same rows again change nothing.
+        if ((_refilling && files.Count == 0)
+            || (files.Count == _selectedFiles.Count && files.Zip(_selectedFiles).All(p => ReferenceEquals(p.First, p.Second))))
         {
             return;
         }
@@ -382,13 +384,17 @@ public sealed partial class MainViewModel
         string root = folder.FullPath;
         string prefix = PathPrefixOf(root);
 
+        bool onlyMods = OnlyMods, hideUnused = HideUnused;
         return _vfs.Files.Values
-            .Where(f => IsUnder(f, root, prefix)
-                        && (!OnlyMods || f.IsModded)
-                        && (!HideUnused || !IsUnusedFile(f)))
+            .Where(f => IsUnder(f, root, prefix) && PassesToggles(f, onlyMods, hideUnused))
             .OrderBy(f => f.Path, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
+
+    /// <summary>Whether the view toggles (<see cref="OnlyMods"/>, <see cref="HideUnused"/>) let the
+    /// file list show <paramref name="file"/>.</summary>
+    private static bool PassesToggles(VfsFile file, bool onlyMods, bool hideUnused)
+        => (!onlyMods || file.IsModded) && (!hideUnused || !IsUnusedFile(file));
 
     /// <summary>What every path at or below <paramref name="root"/> starts with — empty for the
     /// (unselectable) tree root, so it matches the whole VFS rather than nothing.</summary>
@@ -569,18 +575,11 @@ public sealed partial class MainViewModel
                     return null;
                 }
 
-                if (onlyMods)
-                {
-                    files = files.Where(f => f.IsModded);
-                }
-
-                if (hideUnused)
-                {
-                    files = files.Where(f => !IsUnusedFile(f));
-                }
-
                 token.ThrowIfCancellationRequested();
-                return files.OrderBy(f => f.FileName, StringComparer.OrdinalIgnoreCase).ToList();
+                return files
+                    .Where(f => PassesToggles(f, onlyMods, hideUnused))
+                    .OrderBy(f => f.FileName, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
             }, token);
         }
         catch (OperationCanceledException)

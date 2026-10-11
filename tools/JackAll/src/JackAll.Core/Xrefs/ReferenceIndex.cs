@@ -177,10 +177,7 @@ public sealed class ReferenceIndex
     }
 
     /// <summary>
-    /// The whole hash → name table. Carried over wholesale by an incremental rebuild: a name can be
-    /// attached to an edge's site *or* to an <see cref="RefSpace.EngineName"/> target, so
-    /// reconstructing the table by walking only the reused edges' site keys silently drops the
-    /// second kind.
+    /// The whole hash → name table, which an incremental rebuild carries over wholesale.
     /// </summary>
     public IReadOnlyDictionary<uint, string> AllNames()
     {

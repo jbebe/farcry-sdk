@@ -174,6 +174,10 @@ public sealed partial class MainViewModel
     /// </summary>
     public void Reindex() => _ = ReindexAsync(includeFragments: true);
 
+    /// <summary>Raised once a reindex has applied the current layer stack: a save, a revert, a mod
+    /// toggled or rescanned.</summary>
+    public event Action? Reindexed;
+
     /// <summary>
     /// Re-reads every configured mod's zip from disk (see <see cref="LoadModsFromConfig"/>) and
     /// re-scans the workspace folder (via <see cref="Reindex"/>'s own <c>Workspace.Rescan</c> call) -
@@ -226,6 +230,7 @@ public sealed partial class MainViewModel
         {
             row.NotifyFileCountChanged();
         }
+        Reindexed?.Invoke();
 
         // The layer stack just changed, so the xref overlay describing it is stale. Only the overlay
         // is rebuilt - the base-archive index underneath it is unaffected by any mod toggle.

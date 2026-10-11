@@ -115,10 +115,19 @@ public sealed partial class ArchetypeIndex
     /// </summary>
     public static IReadOnlyList<string> DiscoverDlcLibraries(IEnumerable<string> candidatePaths)
         => [.. candidatePaths
-            .Where(p => Path.GetFileName(p).Equals("entitylibrary.fcb", StringComparison.OrdinalIgnoreCase)
-                        && !p.StartsWith(@"worlds\", StringComparison.OrdinalIgnoreCase))
+            .Where(IsDlcLibrary)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)];
+
+    private static bool IsDlcLibrary(string path)
+        => Path.GetFileName(path).Equals("entitylibrary.fcb", StringComparison.OrdinalIgnoreCase)
+           && !path.StartsWith(@"worlds\", StringComparison.OrdinalIgnoreCase);
+
+    private const string PatchOverride = @"generated\entitylibrarypatchoverride.fcb";
+
+    /// <summary>Whether <paramref name="path"/> is one of the <see cref="SharedLayers"/>.</summary>
+    public static bool IsSharedLayer(string path)
+        => path.Equals(PatchOverride, StringComparison.OrdinalIgnoreCase) || IsDlcLibrary(path);
 
     /// <summary>
     /// The libraries a world resolves against, in the order <c>CXGame::LoadArchetypes</c> loads them:
@@ -141,7 +150,7 @@ public sealed partial class ArchetypeIndex
     public static IReadOnlyList<ArchetypeLayer> SharedLayers(IEnumerable<string>? dlcLibraries = null)
         =>
         [
-            new(@"generated\entitylibrarypatchoverride.fcb"),
+            new(PatchOverride),
             .. (dlcLibraries ?? [])
                 .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                 .Select(dlc => new ArchetypeLayer(dlc)),

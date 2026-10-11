@@ -78,8 +78,8 @@ public sealed partial class MainViewModel
 
         // Without a search the list shows one folder, so the jump opens the target's and selects it
         // there once the list is refilled.
-        if (FilterText.Length == 0
-            && (!OnlyMods || file.IsModded) && (!HideUnused || !IsUnusedFile(file))
+        if (FileFilter.Parse(FilterText).IsEmpty
+            && PassesToggles(file, OnlyMods, HideUnused)
             && FindFolder(file.Directory) is { } folder && folder != SelectedFolder)
         {
             _reselectPath = file.Path;
