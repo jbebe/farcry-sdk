@@ -92,12 +92,19 @@ public sealed partial class MainViewModel
         get => _selectedFolder;
         set
         {
-            _selectedFolder = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(HasSelectedFolder));
-            OnPropertyChanged(nameof(NoSelectedFolder));
+            FollowFolder(value);
             RefreshFileList();
         }
+    }
+
+    /// <summary>Moves the folder selection without relisting files - for the tree following a search
+    /// result, where the search is what lists them.</summary>
+    public void FollowFolder(FolderNode? folder)
+    {
+        _selectedFolder = folder;
+        OnPropertyChanged(nameof(SelectedFolder));
+        OnPropertyChanged(nameof(HasSelectedFolder));
+        OnPropertyChanged(nameof(NoSelectedFolder));
     }
 
     /// <summary>Whether the details pane has a folder to offer "Export folder…" for. Only consulted

@@ -75,6 +75,17 @@ public sealed partial class MainViewModel
         // grid doesn't, which is deliberate: the history is for following references, and mixing
         // scroll-and-click browsing into it would bury the one step the user actually wants back.
         PushNavigationHistory(SelectedFile);
+
+        // Without a search the list shows one folder, so the jump opens the target's and selects it
+        // there once the list is refilled.
+        if (FilterText.Length == 0
+            && (!OnlyMods || file.IsModded) && (!HideUnused || !IsUnusedFile(file))
+            && FindFolder(file.Directory) is { } folder && folder != SelectedFolder)
+        {
+            _reselectPath = file.Path;
+            SelectedFolder = folder;
+            return;
+        }
         SetSelectedFiles([file]);
     }
 

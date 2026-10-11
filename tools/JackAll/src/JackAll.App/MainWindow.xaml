@@ -11,13 +11,6 @@
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextPrimaryBrush}">
 
-    <!-- Browser-style history for following references. Bound at the window so they work wherever
-         focus happens to be after a jump, not only while the Xrefs grid has it. -->
-    <Window.InputBindings>
-        <KeyBinding Key="Left" Modifiers="Alt" Command="{x:Static local:MainWindow.NavigateBackCommand}" />
-        <KeyBinding Key="Right" Modifiers="Alt" Command="{x:Static local:MainWindow.NavigateForwardCommand}" />
-    </Window.InputBindings>
-
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <local:ModuleNameMultiConverter x:Key="ModuleNameConverter" />

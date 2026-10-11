@@ -18,12 +18,6 @@ public partial class MainWindow : Window
 {
     private readonly MainViewModel _vm = new();
 
-    /// <summary>Alt+Left / Alt+Right, for stepping back and forth through followed references. Static
-    /// so the XAML <c>KeyBinding</c>s can name them with <c>x:Static</c>; the handlers are wired per
-    /// instance in the constructor.</summary>
-    public static readonly RoutedCommand NavigateBackCommand = new();
-    public static readonly RoutedCommand NavigateForwardCommand = new();
-
     public static readonly RoutedCommand CloseDocumentTabCommand = new();
     private static readonly RoutedCommand SelectTabCommand = new();
 
@@ -46,14 +40,6 @@ public partial class MainWindow : Window
         Closing += OnClosing;
         _vm.PropertyChanged += OnViewModelPropertyChanged;
 
-        CommandBindings.Add(new CommandBinding(
-            NavigateBackCommand,
-            (_, _) => _vm.NavigateBack(),
-            (_, e) => e.CanExecute = _vm.CanNavigateBack));
-        CommandBindings.Add(new CommandBinding(
-            NavigateForwardCommand,
-            (_, _) => _vm.NavigateForward(),
-            (_, e) => e.CanExecute = _vm.CanNavigateForward));
         CommandBindings.Add(new CommandBinding(CloseDocumentTabCommand, (_, e) => CloseDocumentTab(e.Parameter as TabItem)));
         CommandBindings.Add(new CommandBinding(SelectTabCommand, (_, e) => MainTabs.SelectedIndex = (int)e.Parameter));
 
@@ -83,6 +69,7 @@ public partial class MainWindow : Window
         {
             RefreshPreview();
             RevealSelectedFileInTree();
+            ShowSelectedFileInGrid();
         }
         else if (e.PropertyName is nameof(MainViewModel.XrefsReady) or nameof(MainViewModel.XrefStatus))
         {
@@ -90,6 +77,28 @@ public partial class MainWindow : Window
             // for the current file and needs to become the real lists.
             XrefsPanel.Show(_vm, _vm.SelectedFile);
         }
+    }
+
+    /// <summary>
+    /// Alt+Left and Alt+Right step through followed references. Taken on the way down, because a
+    /// focused grid row handles them before a window key binding would see them.
+    /// </summary>
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        if (Keyboard.Modifiers == ModifierKeys.Alt && e.SystemKey is Key.Left or Key.Right)
+        {
+            if (e.SystemKey == Key.Left)
+            {
+                _vm.NavigateBack();
+            }
+            else
+            {
+                _vm.NavigateForward();
+            }
+            e.Handled = true;
+            return;
+        }
+        base.OnPreviewKeyDown(e);
     }
 
     /// <summary>
@@ -101,21 +110,15 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Expands and selects the tree node for the selected file's folder, without disturbing the file
-    /// grid's own selection or keyboard focus. Mostly matters while the text filter is active — that
-    /// shows matches from every folder, so the folder actually holding whichever one you clicked is
-    /// often not the one already open in the tree.
+    /// grid's own selection or keyboard focus. A search shows matches from every folder, and a followed
+    /// reference lands in another one, so the folder holding the file is often not the one open.
     /// </summary>
     private void RevealSelectedFileInTree()
     {
-        // Only the filtered, cross-folder view can point at a file outside the folder already open
-        // in the tree - plain browsing never needs a jump, so skip it rather than rely on the target-
-        // equals-current-folder check below to happen to no-op.
-        if (string.IsNullOrWhiteSpace(_vm.FilterText)) return;
-
         if (_vm.SelectedFile is not { } file) return;
 
         FolderNode? target = _vm.FindFolder(file.Directory);
-        if (target is null || target == _vm.SelectedFolder) return;
+        if (target is null || FolderTree.SelectedItem == target) return;
 
         // Null when a level was virtualized out of existence or the tree changed underneath us.
         if (TreeViewBehaviors.RealizePath(FolderTree, _vm.GetAncestorChain(target), c => c.IsExpanded = true)

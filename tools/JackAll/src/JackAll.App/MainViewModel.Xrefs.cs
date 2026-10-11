@@ -286,9 +286,6 @@ public sealed partial class MainViewModel
     /// of the same entry and the stacks would never drain.</summary>
     private bool _replayingNavigation;
 
-    public bool CanNavigateBack => _navigationBack.Count > 0;
-    public bool CanNavigateForward => _navigationForward.Count > 0;
-
     /// <summary>Records the file being left, called by <see cref="NavigateTo"/> before it moves.</summary>
     private void PushNavigationHistory(VfsFile? leaving)
     {
@@ -310,7 +307,6 @@ public sealed partial class MainViewModel
 
         // A fresh navigation invalidates the forward chain, the same way a browser's does.
         _navigationForward.Clear();
-        RaiseNavigationState();
     }
 
     public void NavigateBack() => Step(_navigationBack, _navigationForward);
@@ -346,12 +342,5 @@ public sealed partial class MainViewModel
             }
             break;
         }
-        RaiseNavigationState();
-    }
-
-    private void RaiseNavigationState()
-    {
-        OnPropertyChanged(nameof(CanNavigateBack));
-        OnPropertyChanged(nameof(CanNavigateForward));
     }
 }
