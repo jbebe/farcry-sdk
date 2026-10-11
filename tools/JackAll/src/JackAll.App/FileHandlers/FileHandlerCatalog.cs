@@ -80,8 +80,8 @@ public static class FileHandlerCatalog
             // is just a small hand-written function, already well served by the plain text/diff view.
             { Type.Extension: "lua" } when file.Directory.StartsWith(@"domino\user", StringComparison.OrdinalIgnoreCase)
                 => BuildLauncherPreview(file, readContent, readOriginal, openDominoEditor,
-                    "A Domino mission-graph script - open it in the graph editor to see it as boxes and connections instead of generated Lua.",
-                    "Open in Domino Editor…", "lua"),
+                    "A Domino mission-graph script - open it in the graph viewer to see it as boxes and connections instead of generated Lua.",
+                    "Open in Domino Viewer…", "lua"),
             // "desc" is a known-path .mgb.desc (Path.GetExtension only keeps the last segment);
             // "mgb.desc" is the same file content-sniffed by its "<package>" root (see
             // FileTypeSniffer.IdentifyByContent) when no filelist entry named it. Both are plain XML.

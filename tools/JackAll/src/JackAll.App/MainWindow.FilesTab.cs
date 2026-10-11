@@ -226,7 +226,7 @@ public partial class MainWindow
         try
         {
             if (!ReplaceGuarded(file, File.ReadAllBytes(dialog.FileName))) return;
-            _vm.Status = $"{file.FileName} staged in your workspace. Press Deploy all mods to put it into the game.";
+            _vm.Status = $"{file.FileName} staged in your workspace. Press Deploy mods on the Mods tab to put it into the game.";
         }
         catch (Exception ex)
         {
@@ -247,7 +247,7 @@ public partial class MainWindow
         try
         {
             if (!ReplaceGuarded(file, _vm.Read(file))) return;
-            _vm.Status = $"{file.FileName} mirrored into your workspace. Press Deploy all mods to put it into the game.";
+            _vm.Status = $"{file.FileName} mirrored into your workspace. Press Deploy mods on the Mods tab to put it into the game.";
         }
         catch (Exception ex)
         {
@@ -275,7 +275,7 @@ public partial class MainWindow
         try
         {
             if (!ReplaceGuarded(file, original)) return;
-            _vm.Status = $"{file.FileName} (original) mirrored into your workspace. Press Deploy all mods to put it into the game.";
+            _vm.Status = $"{file.FileName} (original) mirrored into your workspace. Press Deploy mods on the Mods tab to put it into the game.";
         }
         catch (Exception ex)
         {
@@ -367,7 +367,7 @@ public partial class MainWindow
 
         if (_vm.Revert(file))
         {
-            _vm.Status = $"{file.FileName} is back to the game's original. Deploy all mods to make it so in-game.";
+            _vm.Status = $"{file.FileName} is back to the game's original. Press Deploy mods on the Mods tab to make it so in game.";
         }
         else
         {

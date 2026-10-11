@@ -92,14 +92,14 @@ public partial class MainWindow
                 : string.Empty;
             _vm.Status =
                 $"Imported '{Path.GetFileName(dialog.FileName)}': {result.Imported:N0} changed files{fragmentsNote} " +
-                $"staged to your workspace ({result.Skipped:N0} of {result.TotalEntries:N0} were identical to the " +
-                "base game and left out). Open workspace to review, then zip it up to share.";
+                $"staged to your workspace, {result.Skipped:N0} files and fragments identical to the base game left " +
+                "out. Select the workspace row to review them, then zip it up to share.";
 
             if (result.Refused.Count > 0)
             {
                 Warn(
-                    "This mod changed these in a way a fragment override can't express, and overriding the whole "
-                    + "file would silently outrank every other mod that touches them, so they were left out:\n\n"
+                    "This mod changed these in a way a fragment override can't express, and shipping the whole "
+                    + "file would replace every other mod's copy of it, so they were left out:\n\n"
                     + string.Join('\n', result.Refused.Select(r => $"  {r.ContainerPath} — {r.Reason}")));
             }
 
@@ -108,7 +108,7 @@ public partial class MainWindow
                 const int shown = 10;
                 Warn(
                     $"{result.WholeFile.Count:N0} file(s) were imported whole rather than one fragment at a time, "
-                    + "so they will outrank other mods touching the same files instead of merging with them:\n\n"
+                    + "so they replace other mods' whole copies of these files instead of merging with them:\n\n"
                     + string.Join('\n', result.WholeFile.Take(shown).Select(r => $"  {r.ContainerPath} — {r.Reason}"))
                     + (result.WholeFile.Count > shown ? $"\n  ... and {result.WholeFile.Count - shown:N0} more" : ""));
             }

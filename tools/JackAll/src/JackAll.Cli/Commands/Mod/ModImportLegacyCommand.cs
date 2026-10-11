@@ -103,21 +103,21 @@ public sealed class ModImportLegacyCommand : CliCommand<ModImportLegacyCommand.S
 
         AnsiConsole.MarkupLine(
             $"[green]Imported[/] {result.Imported:N0} file(s) and {result.FragmentsImported:N0} fragment(s) "
-            + $"into {settings.Out.EscapeMarkup()} (out of {result.TotalEntries:N0} entries; "
-            + $"{result.Skipped:N0} matched the base game and were skipped).");
+            + $"into {settings.Out.EscapeMarkup()} from {result.TotalEntries:N0} archive entries; "
+            + $"{result.Skipped:N0} files and fragments matched the base game and were skipped.");
 
         foreach (LegacyImportNote refusal in result.Refused)
         {
             AnsiConsole.MarkupLine(
                 $"[yellow]Left out[/] {refusal.ContainerPath.EscapeMarkup()}: {refusal.Reason.EscapeMarkup()}. "
-                + "Overriding the whole file would silently outrank every other mod that touches it.");
+                + "Shipping the whole file would replace every other mod's copy of it.");
         }
 
         foreach (LegacyImportNote coarsened in result.WholeFile)
         {
             AnsiConsole.MarkupLine(
                 $"[yellow]Staged whole[/] {coarsened.ContainerPath.EscapeMarkup()}: "
-                + $"{coarsened.Reason.EscapeMarkup()}. It will outrank other mods touching that file.");
+                + $"{coarsened.Reason.EscapeMarkup()}. It replaces other mods' whole copies of that file.");
         }
 
         foreach (LegacyImportNote dropped in result.Unreachable)

@@ -29,7 +29,7 @@
             <TextBlock Style="{StaticResource StatusText}" Text="{Binding Status}" />
             <Button Content="Save" Margin="20,0,0,0" VerticalAlignment="Center" Style="{StaticResource PrimaryButton}"
                     IsEnabled="{Binding CanSave}" Click="Save_Click" AutomationProperties.AutomationId="AiSaveButton"
-                    ToolTip="Stage every edit on this tab into the workspace; Build then puts it in the game." />
+                    ToolTip="Stage every edit on this tab into the workspace; Deploy mods on the Mods tab then puts it in the game." />
             <Button Content="Revert" Margin="8,0,0,0" VerticalAlignment="Center" IsEnabled="{Binding IsDirty}"
                     Click="Revert_Click" AutomationProperties.AutomationId="AiRevertButton"
                     ToolTip="Throw away the edits made since the last save." />
