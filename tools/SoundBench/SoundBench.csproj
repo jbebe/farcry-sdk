@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JackAll\src\JackAll.Core\JackAll.Core.csproj" />
+    <ProjectReference Include="..\JackAll\src\JackAll.Tools\JackAll.Tools.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+    <PackageReference Include="NVorbis" Version="0.10.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\JackAll\src\JackAll.App\CurvePlot.cs" Link="Views\CurvePlot.cs" />
+    <!-- Beside the exe under the name BundledAssets looks for, as the JackAll CLIs ship it. -->
+    <Content Include="..\JackAll\assets\fc2.hashlist" Link=".itemhashes">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>
