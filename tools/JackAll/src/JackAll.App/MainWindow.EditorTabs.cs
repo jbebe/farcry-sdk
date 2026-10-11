@@ -87,8 +87,25 @@ public partial class MainWindow
                 return null;
             }
             vm.Notice = _vm.LayerMismatchNoteFor(file);
+            ShowDeadCopyNote(vm, file);
             return DocumentTab(vm, onRemoved);
         });
+
+    /// <summary>Warns once the world's archetypes are resolved, which takes a moment the first time.</summary>
+    private async void ShowDeadCopyNote(FcbDocumentViewModel editor, VfsFile file)
+    {
+        try
+        {
+            if (await _vm.DeadCopyNoteFor(file) is { } note)
+            {
+                editor.Notice = note;
+            }
+        }
+        catch (Exception)
+        {
+            // Advisory only; the Archetypes tab reports a world whose libraries won't load.
+        }
+    }
 
     private TabItem DocumentTab(FcbDocumentViewModel vm, Action onRemoved)
     {

@@ -187,10 +187,7 @@ public partial class LibraryTabView : UserControl
         try
         {
             FcbDocumentViewModel editor = vm.OpenFragmentDocument(fragment);
-            editor.Notice = definition == winner
-                ? null
-                : $"'{definition.Name}' is declared again by {winner.Layer.Path}, which loads later. "
-                  + "That copy is what the game reads, so editing this one changes the file and nothing in game.";
+            editor.Notice = definition == winner ? null : MainViewModel.DeadCopyNote(definition.Name, winner.Layer.Path);
             editor.Saved += () => ShowSavedEdits(vm, index, definition.Name);
 
             EditorHost.Content = new FcbDocumentView(editor);
