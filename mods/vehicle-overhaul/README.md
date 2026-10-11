@@ -56,9 +56,11 @@ from the windows and the wrecks are to come.
   replaces the ignition, and on the Datsun you drive the engine fades in as the start catches, 0.8 s
   after the key. A gear-change clunk plays halfway through each shift. The new engine sound plays on
   every Datsun; the fade-in and the clunk only on the one you drive.
-- **The big truck's engine sound.** The same, from an idle and six steady-rev recordings, the idle
-  one the lowest of them in place of retail's idle loop. It has its own recorded start, and the
-  Datsun's clunk on gear changes. The DLC's big truck, in the DLC's multiplayer maps, keeps its own.
+- **The big truck's engine sound.** The same, from a ZIL-130's own V8: an idle and seven steady-rev
+  recordings from about 460 to 1,050 rpm, the idle one the lowest of them in place of retail's idle
+  loop, laid over the truck's revs compressed as the Datsun's are. It has its own recorded start, an
+  engine-off sound where retail's truck stops silently, and the Datsun's clunk on gear changes. The
+  DLC's big truck, in the DLC's multiplayer maps, keeps its own.
 - **Quieter tyres.** Every car's tyre sounds on the ground, dirt, gravel, grass and the rest, play
   10 dB quieter, so they no longer drown out the engine.
 
@@ -102,9 +104,11 @@ src\                         the FCSE plugin
 layer\mods\
   config\                    the active_camerathird control and its binding, as sections
   languages\                 the control's label, in every language
-  soundbinary\               the Datsun's and the big truck's engine and start sounds, the gear-change
-                             clunks; their pedal sounds and idles silenced; every car's quieter tyre
-                             sounds
+  soundbinary\               the Datsun's and the big truck's engine and start sounds, the truck's
+                             engine-off sound, the gear-change clunks; their pedal sounds and idles
+                             silenced; every car's quieter tyre sounds
+  worlds\                    the big truck's archetypes in each world's entity library, which name its
+                             engine-off sound
 layer\plugins\vehicle-overhaul\   the built plugin, staged here by build.ps1
 ```
 
