@@ -34,6 +34,10 @@ namespace {
     constexpr float kClutchSlip = 1750.0f / 5750.0f;
     constexpr float kRiseRate = 7000.0f / 5750.0f;
     constexpr float kFallRate = 3000.0f / 5750.0f;
+    // A driver's foot is no machine: where the slipping clutch holds the revs wanders by up to this share of the
+    // range, slowly, as two waves of these periods in seconds.
+    constexpr float kSlipWander = 0.03f;
+    constexpr double kWanderPeriods[2] = {2.2, 1.25};
     // The seconds the engine sound takes to fade in once the engine catches.
     constexpr float kCatchFade = 0.5f;
 
@@ -50,6 +54,8 @@ namespace {
     // The car the player drives, or null once they are out, so getting back in starts it afresh.
     std::atomic<Car> g_car{nullptr};
     float g_sinceEntry = 0.0f;
+    // Seconds driven, in any car, which the clutch's wander follows.
+    double g_clock = 0.0;
     int g_gear = 0;
     // The seconds the last gear change keeps the clutch out, and those gone since. It is sounded halfway,
     // where the lever goes across; until then it waits here.
@@ -121,10 +127,15 @@ float Step(Car car, const RealVehicle::Spec* real, float shiftTime, const Wheele
     }
     g_lifted = g_sinceShift < g_shiftTime;
 
+    g_clock += seconds;
+    const double turn = 2.0 * 3.14159265358979 * g_clock;
+    const float wander =
+        static_cast<float>(0.6 * std::sin(turn / kWanderPeriods[0]) + 0.4 * std::sin(turn / kWanderPeriods[1] + 1.3));
+
     const float range = redline - idle;
     const float wheels = idle + (std::abs(readout.rpm) - kHavokMin) * range / (kHavokUpshift - kHavokMin);
     float target = std::max(idle, wheels);
-    const float slip = idle + kClutchSlip * range;
+    const float slip = idle + (kClutchSlip + kSlipWander * wander) * range;
     if (wheels < slip) {
         target = std::max(target, idle + readout.throttle * (slip - idle));
     }
