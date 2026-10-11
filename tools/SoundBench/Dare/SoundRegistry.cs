@@ -19,7 +19,11 @@ public sealed class SoundRegistry
 
     private readonly GameFiles _files;
     private readonly Dictionary<uint, IReadOnlyList<DepLoadChild>> _children;
-    private readonly HashSet<uint> _banks = [];
+    private readonly Dictionary<uint, SpkBank> _banks = [];
+    private readonly HashSet<uint> _unsaved = [];
+
+    /// <summary>The bank file each multilayer curve sits in.</summary>
+    private readonly Dictionary<SpkCurve, uint> _curveBanks = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<uint, Registered> _records = [];
     private readonly Dictionary<uint, Pcm> _audio = [];
     private readonly List<string> _problems = [];
@@ -49,17 +53,44 @@ public sealed class SoundRegistry
 
     public Pcm? Audio(uint id) => _audio.GetValueOrDefault(id);
 
+    /// <summary>The banks edited since they were read or saved.</summary>
+    public IEnumerable<string> Unsaved => _unsaved.Select(_files.Describe);
+
+    /// <summary>Notes that a curve's bank no longer matches its file; true when that bank had no edits before.</summary>
+    public bool Edited(SpkCurve curve) => _curveBanks.TryGetValue(curve, out uint bank) && _unsaved.Add(bank);
+
+    /// <summary>Writes every edited bank into the layers.</summary>
+    /// <returns>Each edited bank, with the layer folder it went to, or null where there was none; those stay unsaved.</returns>
+    public IReadOnlyList<(string Bank, string? Layer)> Save()
+    {
+        List<(string, string?)> saved = [];
+        foreach (uint hash in _unsaved.ToList())
+        {
+            string? layer = _files.Save(hash, _banks[hash].Write());
+            saved.Add((_files.Describe(hash), layer));
+            if (layer is not null)
+            {
+                _unsaved.Remove(hash);
+            }
+        }
+        return saved;
+    }
+
     private void Load(uint hash)
     {
-        if (!_banks.Add(hash) || _files.Read(hash) is not { } bytes)
+        if (_banks.ContainsKey(hash) || _files.Read(hash) is not { } bytes)
         {
             return;
         }
 
         string name = _files.Describe(hash);
-        SpkBank bank = SpkBank.Parse(bytes);
+        SpkBank bank = _banks[hash] = SpkBank.Parse(bytes);
         foreach (SpkBankRecord record in bank.Records)
         {
+            foreach (SpkCurve curve in record.Layers.SelectMany(l => l.Curves))
+            {
+                _curveBanks[curve] = hash;
+            }
             if (_records.TryAdd(record.Id, new Registered(record, name)) && record.IsAudio && Pcm.Decode(record) is { } pcm)
             {
                 _audio[record.Id] = pcm;

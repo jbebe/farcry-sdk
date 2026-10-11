@@ -6,6 +6,7 @@
         <SolidColorBrush x:Key="TextMutedBrush" Color="#777777" />
         <SolidColorBrush x:Key="VolumeCurveBrush" Color="#2E7DD7" />
         <SolidColorBrush x:Key="PitchCurveBrush" Color="#D7832E" />
+        <SolidColorBrush x:Key="BackgroundCurveBrush" Color="#C4C4C4" />
         <SolidColorBrush x:Key="CursorBrush" Color="#C02040" />
         <SolidColorBrush x:Key="ProblemBrush" Color="#C02040" />
     </Application.Resources>

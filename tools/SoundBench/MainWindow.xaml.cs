@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
-using JackAll.App;
 using JackAll.Tools.Spk;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
@@ -22,13 +21,17 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<SlotView> _slots = [];
     private readonly Dictionary<string, SlotView> _slotByField = [];
     private readonly List<(NodeView Play, SlotView Slot)> _playing = [];
-    private readonly List<CurvePlot> _plots = [];
+    private readonly List<CurveEditor> _editors = [];
+    private readonly Stack<CurveEdit> _undo = [];
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(50) };
     private IReadOnlyList<ParameterView> _parameters = [];
-    private float[] _plotted = [];
     private GameFiles? _files;
+    private SoundRegistry? _registry;
     private WasapiOut? _output;
     private NodeView? _selected;
+
+    /// <summary>Points for a curve to have: an edit, or what it had before one.</summary>
+    private sealed record CurveEdit(SpkCurve Curve, SpkPoint[] Points);
 
     public MainWindow()
     {
@@ -39,6 +42,7 @@ public partial class MainWindow : Window
         OnControls(this, new RoutedEventArgs());
         _timer.Tick += (_, _) => RefreshViews();
         Loaded += (_, _) => OnOpen(this, new RoutedEventArgs());
+        Closing += (_, e) => e.Cancel = !Release("closing");
         Closed += (_, _) =>
         {
             _output?.Dispose();
@@ -48,6 +52,10 @@ public partial class MainWindow : Window
 
     private async void OnOpen(object sender, RoutedEventArgs e)
     {
+        if (!Release("opening the game again"))
+        {
+            return;
+        }
         _settings.GamePath = GamePath.Text.Trim();
         _settings.Layers = [.. LayerPaths.Text.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)];
         _settings.Save();
@@ -88,8 +96,13 @@ public partial class MainWindow : Window
 
     private async void OnCarSelected(object sender, SelectionChangedEventArgs e)
     {
-        if (Cars.SelectedItem is not Car car || _files is not { } files)
+        if (Cars.SelectedItem is not Car car || _files is not { } files || car == _bench.Car)
         {
+            return;
+        }
+        if (!Release("switching car"))
+        {
+            Cars.SelectedItem = _bench.Car;
             return;
         }
 
@@ -101,6 +114,7 @@ public partial class MainWindow : Window
             _bench.Select(car, tuning, registry);
         }
 
+        UseRegistry(registry);
         ShowSlots(car);
         ShiftTime.Value = tuning.ShiftTime;
         CarInfo.Text = $"{string.Join(", ", car.Archetypes)}\n{car.Physics.Mass:0} kg, {car.Physics.EnginePower:0} N·m, " +
@@ -114,7 +128,7 @@ public partial class MainWindow : Window
 
     private async void OnReload(object sender, RoutedEventArgs e)
     {
-        if (_files is not { } files || _bench.Car is not { } car)
+        if (_files is not { } files || _bench.Car is not { } car || !Release("reloading the banks"))
         {
             return;
         }
@@ -127,6 +141,7 @@ public partial class MainWindow : Window
         {
             _bench.Load(registry);
         }
+        UseRegistry(registry);
         ShowSlots(car);
         BankProblems.Text = string.Join("\n", registry.Problems);
         Status.Text = $"Banks reloaded at {DateTime.Now:T}";
@@ -185,6 +200,7 @@ public partial class MainWindow : Window
             _bench.Throttle = Accelerate.IsChecked == true ? (float)ThrottleSlider.Value / 100 : 0;
             _bench.Brake = Brake.IsChecked == true ? 1 : 0;
             _bench.ShiftTime = (float)ShiftTime.Value;
+            _bench.HoldGear = HoldGear.IsChecked == true;
             _bench.Distance = (float)Distance.Value;
             _bench.Volume = MathF.Pow(10, (float)Master.Value / 20);
         }
@@ -221,26 +237,122 @@ public partial class MainWindow : Window
             pedal.IsChecked = true;
             e.Handled = true;
         }
+        else if (e.Key == Key.H)
+        {
+            HoldGear.IsChecked = HoldGear.IsChecked != true;
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Z && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            Undo();
+            e.Handled = true;
+        }
     }
 
+    /// <summary>One editor per curve of the selected layer, each over its sibling layers' curves on the same parameter.</summary>
     private void OnVoiceSelected(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
         _selected = e.NewValue as NodeView;
-        _plots.Clear();
-        _plotted = [];
-        CurvePlots.Children.Clear();
-        foreach (SpkCurve curve in _selected?.Node.Curves ?? [])
+        _editors.Clear();
+        CurveEditors.Children.Clear();
+        if (_selected is not { Parent: { } owner } layer)
         {
-            var plot = new CurvePlot();
+            return;
+        }
+        foreach (SpkCurve curve in layer.Node.Curves)
+        {
+            SpkCurve[] background =
+            [
+                .. owner.Children.Where(c => c != layer).SelectMany(c => c.Node.Curves)
+                    .Where(c => c.Target == curve.Target && c.Parameter == curve.Parameter),
+            ];
+            GameParameter? parameter = _bench.Parameters.FirstOrDefault(p => p.Id == curve.Parameter);
+            var editor = new CurveEditor(curve, background, parameter is null ? null : (parameter.Min, parameter.Max));
+            editor.Editing += () => _undo.Push(new CurveEdit(curve, [.. curve.Points]));
+            editor.Edited += points => Apply(new CurveEdit(curve, points));
+
             var title = new TextBlock
             {
                 Text = $"{(curve.Target == 0 ? "volume (dB)" : "pitch (ratio)")} on {ParameterName(curve.Parameter)}",
                 Margin = new Thickness(6, 2, 0, 0),
             };
             DockPanel.SetDock(title, Dock.Top);
-            CurvePlots.Children.Add(new DockPanel { Children = { title, plot } });
-            _plots.Add(plot);
+            CurveEditors.Children.Add(new DockPanel { Children = { title, editor } });
+            _editors.Add(editor);
         }
+    }
+
+    /// <summary>Gives a curve its points, heard from the next block on.</summary>
+    private void Apply(CurveEdit edit)
+    {
+        lock (_bench.Sync)
+        {
+            edit.Curve.Points.Clear();
+            edit.Curve.Points.AddRange(edit.Points);
+        }
+        if (_registry?.Edited(edit.Curve) == true)
+        {
+            ShowUnsaved();
+        }
+    }
+
+    private void Undo()
+    {
+        if (_undo.TryPop(out CurveEdit? edit))
+        {
+            Apply(edit);
+            _editors.ForEach(e => e.Refit());
+        }
+    }
+
+    private void OnSave(object sender, RoutedEventArgs e) => Save();
+
+    private void Save()
+    {
+        if (_registry is { } registry)
+        {
+            Status.Text = string.Join("; ", registry.Save().Select(s => s.Layer is null ? $"{s.Bank}: no layer folder to save it into" : $"Saved {s.Bank} into {s.Layer}"));
+            ShowUnsaved();
+        }
+    }
+
+    /// <summary>The banks with edits not yet saved, by name.</summary>
+    private string Unsaved => string.Join(", ", _registry?.Unsaved ?? []);
+
+    private void ShowUnsaved()
+    {
+        string unsaved = Unsaved;
+        UnsavedText.Text = unsaved.Length > 0 ? $"unsaved: {unsaved}" : "";
+        SaveButton.IsEnabled = unsaved.Length > 0;
+    }
+
+    /// <summary>Lets go of the banks being edited, offering to save their edits first; false when the user cancels.</summary>
+    private bool Release(string action)
+    {
+        string unsaved = Unsaved;
+        if (unsaved.Length > 0)
+        {
+            MessageBoxResult answer = MessageBox.Show(
+                this, $"Save the curve edits to {unsaved} before {action}?", Title, MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+            if (answer == MessageBoxResult.Cancel)
+            {
+                return false;
+            }
+            if (answer == MessageBoxResult.Yes)
+            {
+                Save();
+            }
+        }
+        UseRegistry(null);
+        return true;
+    }
+
+    /// <summary>Edits from here on go to this registry's banks, with nothing to undo.</summary>
+    private void UseRegistry(SoundRegistry? registry)
+    {
+        _registry = registry;
+        _undo.Clear();
+        ShowUnsaved();
     }
 
     private void RefreshViews()
@@ -286,7 +398,10 @@ public partial class MainWindow : Window
         {
             parameter.Publish();
         }
-        ShowPlots(inputs);
+        for (int i = 0; i < Math.Min(_editors.Count, inputs.Length); i++)
+        {
+            _editors[i].Mark(inputs[i]);
+        }
     }
 
     /// <summary>Call under <see cref="Bench.Sync"/>.</summary>
@@ -306,31 +421,6 @@ public partial class MainWindow : Window
         float peak = _bench.Mixer.TakeOutputPeak();
         OutputText.Text = peak > 0 ? $"{peak:+0.0} dBFS: clipping, lower Master" : $"{peak:0.0} dBFS peak";
         OutputText.Foreground = (System.Windows.Media.Brush)FindResource(peak > 0 ? "ProblemBrush" : "TextMutedBrush");
-    }
-
-    /// <summary>Redraws the selected layer's curves whose parameter has moved.</summary>
-    private void ShowPlots(float[] inputs)
-    {
-        if (_selected is null || inputs.Length < _plots.Count || inputs.AsSpan(0, _plots.Count).SequenceEqual(_plotted))
-        {
-            return;
-        }
-        for (int i = 0; i < _plots.Count; i++)
-        {
-            SpkCurve curve = _selected.Node.Curves[i];
-            System.Windows.Point[] points = [.. curve.Points.Select(p => new System.Windows.Point(p.X, p.Y))];
-            double low = curve.Points.Min(p => p.Y), high = curve.Points.Max(p => p.Y);
-            double tick = Math.Max(1e-3, (curve.Points.Max(p => p.X) - curve.Points.Min(p => p.X)) * 0.015);
-            float x = inputs[i];
-            double y = curve.Evaluate(x);
-            _plots[i].Show(
-            [
-                new(points, curve.Target == 0 ? "VolumeCurveBrush" : "PitchCurveBrush"),
-                new([new(x, low), new(x, high)], "CursorBrush", 1, Dashed: true),
-                new([new(x - tick, y), new(x + tick, y)], "CursorBrush", 4),
-            ]);
-        }
-        _plotted = inputs[.._plots.Count];
     }
 
     private string ParameterName(uint id) => _bench.Parameters.FirstOrDefault(p => p.Id == id)?.Name ?? $"0x{id:x8}";

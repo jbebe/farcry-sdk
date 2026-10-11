@@ -19,7 +19,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\JackAll\src\JackAll.App\CurvePlot.cs" Link="Views\CurvePlot.cs" />
     <Compile Include="..\JackAll\src\JackAll.App\Observable.cs" Link="Views\Observable.cs" />
     <!-- The hashlist, under the name BundledAssets looks for beside the exe. -->
     <Content Include="..\JackAll\assets\fc2.hashlist" Link=".itemhashes">

@@ -100,7 +100,7 @@
                                    AutomationProperties.AutomationId="EngineState" />
                     </StackPanel>
 
-                    <TextBlock Text="Drive  (W accelerate, Space coast, S brake)" Style="{StaticResource Heading}" />
+                    <TextBlock Text="Drive  (W accelerate, Space coast, S brake, H hold gear)" Style="{StaticResource Heading}" />
                     <UniformGrid Columns="3">
                         <RadioButton x:Name="Accelerate" Content="Accelerate" Style="{StaticResource Pedal}"
                                      AutomationProperties.AutomationId="Accelerate" />
@@ -109,6 +109,9 @@
                         <RadioButton x:Name="Brake" Content="Brake" Style="{StaticResource Pedal}"
                                      AutomationProperties.AutomationId="Brake" />
                     </UniformGrid>
+                    <CheckBox x:Name="HoldGear" Content="Hold gear: no shifts, so the revs run up to the redline in this gear"
+                              Checked="OnControls" Unchecked="OnControls" Margin="0,2,0,6"
+                              AutomationProperties.AutomationId="HoldGear" />
                     <DockPanel>
                         <TextBlock Text="Throttle" Width="80" />
                         <TextBlock DockPanel.Dock="Right" Width="50" Text="{Binding Value, ElementName=ThrottleSlider, StringFormat={}{0:0} %}" />
@@ -228,9 +231,15 @@
                         </HierarchicalDataTemplate>
                     </TreeView.Resources>
                 </TreeView>
-                <TextBlock Grid.Row="1" Margin="6,4" Foreground="{StaticResource TextMutedBrush}"
-                           Text="Select a layer to plot its curves; the red line is the parameter's value now." />
-                <UniformGrid x:Name="CurvePlots" Grid.Row="2" Rows="1" />
+                <DockPanel Grid.Row="1" Margin="6,4">
+                    <Button x:Name="SaveButton" DockPanel.Dock="Right" Content="Save banks" Click="OnSave" IsEnabled="False"
+                            Margin="8,0,0,0" AutomationProperties.AutomationId="Save" />
+                    <TextBlock x:Name="UnsavedText" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="8,0,0,0"
+                               Foreground="{StaticResource ProblemBrush}" AutomationProperties.AutomationId="Unsaved" />
+                    <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}"
+                               Text="Select a layer to edit its curves, drawn over the other layers' in grey: drag a point (Shift: only its value), double-click to add one, right-click to remove one, Ctrl+Z to undo. The wheel zooms, dragging the background pans. The red line is the parameter's value now." />
+                </DockPanel>
+                <UniformGrid x:Name="CurveEditors" Grid.Row="2" Rows="1" />
             </Grid>
         </Grid>
     </DockPanel>

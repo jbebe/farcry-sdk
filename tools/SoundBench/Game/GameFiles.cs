@@ -12,6 +12,9 @@ public sealed class GameFiles : IDisposable
     private readonly GameVfs _vfs;
     private readonly FolderModLayer[] _layers;
 
+    /// <summary>A file was saved into a layer since the files were last built.</summary>
+    private bool _staged;
+
     private GameFiles(GameInstall install, GameVfs vfs, FolderModLayer[] layers)
     {
         Install = install;
@@ -39,12 +42,45 @@ public sealed class GameFiles : IDisposable
         {
             layer.Rescan();
         }
+        _staged = false;
         _vfs.Rebuild(_layers, includeFragments: false);
     }
 
-    public byte[]? Read(string path) => _vfs.ReadByPath(path);
+    /// <summary>Writes a file into the top layer that provides it, else the top layer; the next read sees it.</summary>
+    /// <returns>The layer's folder, or null with no layer or no such file.</returns>
+    public string? Save(uint hash, byte[] content)
+    {
+        FolderModLayer? layer = _layers.LastOrDefault(l => l.Hashes.Contains(hash)) ?? _layers.LastOrDefault();
+        if (layer is null || !_vfs.Files.TryGetValue(hash, out VfsFile? file))
+        {
+            return null;
+        }
+        layer.Stage(hash, file.NameIsKnown ? file.Path : null, file.Type.Extension, content);
+        _staged = true;
+        return layer.RootPath;
+    }
 
-    public byte[]? Read(uint hash) => _vfs.Files.TryGetValue(hash, out VfsFile? file) ? _vfs.Read(file.Hash) : null;
+    public byte[]? Read(string path)
+    {
+        Serve();
+        return _vfs.ReadByPath(path);
+    }
+
+    public byte[]? Read(uint hash)
+    {
+        Serve();
+        return _vfs.Files.TryGetValue(hash, out VfsFile? file) ? _vfs.Read(file.Hash) : null;
+    }
+
+    /// <summary>Has the files resolve to what was saved since they were last built.</summary>
+    private void Serve()
+    {
+        if (_staged)
+        {
+            _staged = false;
+            _vfs.Rebuild(_layers, includeFragments: false);
+        }
+    }
 
     /// <summary>A file's name and what provides it: a layer, or the archive it comes from.</summary>
     public string Describe(uint hash)

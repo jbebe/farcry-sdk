@@ -50,6 +50,9 @@ public sealed class Bench : ISampleProvider
 
     public float ShiftTime { get; set; }
 
+    /// <summary>The gearbox keeps its gear, so the revs run from idle to the redline in it.</summary>
+    public bool HoldGear { get; set; }
+
     /// <summary>Parameter values that override what the drive gives.</summary>
     public Dictionary<uint, float> Pins { get; } = [];
 
@@ -143,7 +146,7 @@ public sealed class Bench : ISampleProvider
         if (Havok is not null && Drivetrain is not null && Sounds is not null)
         {
             float throttle = Sounds.Engine == EngineState.Running ? Throttle : 0;
-            Havok.Step(Mixer.BlockSeconds, throttle, Brake, ShiftTime);
+            Havok.Step(Mixer.BlockSeconds, throttle, Brake, ShiftTime, HoldGear);
             int shift = Drivetrain.Step(Havok.Rpm, Havok.Gear, throttle, ShiftTime, Mixer.BlockSeconds);
             Sounds.Step(Mixer.BlockSeconds, throttle > 0 ? throttle : -Brake, shift);
 

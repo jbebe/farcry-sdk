@@ -45,20 +45,24 @@ public sealed class HavokStandIn
     /// <param name="throttle">0..1.</param>
     /// <param name="brake">0..1.</param>
     /// <param name="clutchTime">How long a gear change cuts the drive: the overhaul's shift time.</param>
-    public void Step(float seconds, float throttle, float brake, float clutchTime)
+    /// <param name="holdGear">Keeps the gear it is in, whatever the revs.</param>
+    public void Step(float seconds, float throttle, float brake, float clutchTime, bool holdGear)
     {
         Rpm = WheelRpm(Gear);
         if (_clutch > 0)
         {
             _clutch -= seconds;
         }
-        else if (Rpm > UpshiftRpm && Gear < _gears.Length - 1)
+        else if (!holdGear)
         {
-            Shift(+1, clutchTime);
-        }
-        else if (Rpm < DownshiftRpm && Gear > 0)
-        {
-            Shift(-1, clutchTime);
+            if (Rpm > UpshiftRpm && Gear < _gears.Length - 1)
+            {
+                Shift(+1, clutchTime);
+            }
+            else if (Rpm < DownshiftRpm && Gear > 0)
+            {
+                Shift(-1, clutchTime);
+            }
         }
 
         float drive = _clutch > 0 ? 0 : EngineTorque(throttle) * _gears[Gear] * _primaryRatio / WheelRadius / _mass;

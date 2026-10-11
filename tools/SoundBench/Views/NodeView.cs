@@ -26,10 +26,11 @@ public sealed class NodeView : Observable
         Title = $"{Title} · started at {instance.StartedAt:0.00} s";
     }
 
-    public NodeView(Bench bench, SoundNode node, Func<uint, string> parameterName)
+    public NodeView(Bench bench, SoundNode node, Func<uint, string> parameterName, NodeView? parent = null)
     {
         _bench = bench;
         Node = node;
+        Parent = parent;
         Title = $"{node.Kind} 0x{node.Id:x8}";
         Detail = string.Join(" · ", new[] { node.Detail, node.Bank }.Where(s => s.Length > 0));
         _curveNames = [.. node.Curves.Select(c => parameterName(c.Parameter))];
@@ -37,11 +38,14 @@ public sealed class NodeView : Observable
         _outputs = new float[node.Curves.Count];
         _muted = bench.Muted.Contains(node.Id);
         _soloed = bench.Soloed.Contains(node.Id);
-        Children = [.. node.Children.Select(c => new NodeView(bench, c, parameterName))];
+        Children = [.. node.Children.Select(c => new NodeView(bench, c, parameterName, this))];
         Subtree = [this, .. Children.SelectMany(c => c.Subtree)];
     }
 
     public SoundNode Node { get; }
+
+    /// <summary>The row this one plays under: for a layer, its multilayer.</summary>
+    public NodeView? Parent { get; }
     public string Title { get; }
     public string Detail { get; }
     public IReadOnlyList<NodeView> Children { get; }
