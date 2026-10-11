@@ -131,7 +131,7 @@ public sealed class GameVfs : IDisposable
     /// Container hash -&gt; fragment id -&gt; every enabled layer overriding it, in priority order (later
     /// in the list = higher priority, same order <see cref="_layers"/> is walked everywhere else) —
     /// rebuilt every <see cref="Rebuild"/> from <see cref="_layers"/>' <see cref="IModLayer.FragmentOverrides"/>.
-    /// Milestone 3 (docs/design/fcb-fragment-overlays.md): every contributing layer is folded three-way
+    /// Every contributing layer is folded three-way
     /// against the vanilla ancestor (see <see cref="FragmentMerge"/>) instead of only the last one
     /// winning outright.
     /// Drives both <see cref="ReadContainer"/> (splicing overrides into a container's bytes) and
@@ -166,7 +166,7 @@ public sealed class GameVfs : IDisposable
 
     /// <summary>The class config this instance decodes `.fcb` fragments with — <c>PatchBuilder.Build</c>
     /// needs the same one to extract a fragment's vanilla ancestor text the same way <see cref="Read"/>
-    /// does (see docs/design/fcb-fragment-overlays.md Milestone 3).</summary>
+    /// does.</summary>
     public FcbClassDefinitions Definitions => _fcbDefinitions;
 
     /// <summary>
@@ -601,7 +601,7 @@ public sealed class GameVfs : IDisposable
     /// <summary>
     /// Adds fragment rows for container files that split (see <see cref="IContainerSplitter"/>) — this is what lets
     /// the tree/file view browse into one with no dedicated UI, since a fragment's path is just the
-    /// container's own path plus one more segment (docs/design/fcb-fragment-overlays.md). Mutates
+    /// container's own path plus one more segment. Mutates
     /// <paramref name="files"/> in place and refreshes <see cref="_fragmentMemo"/> to match.
     /// </summary>
     private void MergeFragments(Dictionary<ulong, VfsFile> files, IProgress<string>? progress)

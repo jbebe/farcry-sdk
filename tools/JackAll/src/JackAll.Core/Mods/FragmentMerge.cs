@@ -6,7 +6,7 @@ using JackAll.Core.Format.Fcb;
 namespace JackAll.Core.Mods;
 
 /// <summary>
-/// The Milestone 3 (docs/design/fcb-fragment-overlays.md) fragment-merge machinery shared by
+/// The fragment-merge machinery (docs/jackall/getting-started/fragments.md) shared by
 /// <see cref="JackAll.Core.Vfs.GameVfs"/> and <see cref="PatchBuilder"/>. Neither the override index
 /// nor the merge fold itself needs anything specific to either caller — only *obtaining* the vanilla
 /// bytes to decode genuinely differs (<c>GameVfs.ReadOriginal</c> vs. <c>PatchBuilder</c>'s
@@ -55,9 +55,8 @@ public static class FragmentMerge
     /// deletion of something a sibling override also edits. <see cref="IContainerSplitter.Apply"/>
     /// keeps the entity either way; this is what stops that being a silent decision.
     /// </summary>
-    /// <param name="conflicts">Null for the strict mode <see cref="JackAll.Core.Vfs.GameVfs"/> uses,
-    /// which throws so the App can offer the row to hand-fix; a queue for the headless build, which
-    /// records and carries on - the same split <see cref="Resolve"/> already makes.</param>
+    /// <param name="conflicts">Null for the App's build, which throws; a queue for the headless build,
+    /// which records and carries on - the same split <see cref="Resolve"/> makes.</param>
     public static void ReportContradictions(
         IContainerSplitter splitter, IReadOnlyDictionary<string, string> resolved,
         ConcurrentQueue<ModConflict>? conflicts, string container)

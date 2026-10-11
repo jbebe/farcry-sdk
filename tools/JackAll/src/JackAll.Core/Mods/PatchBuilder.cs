@@ -49,8 +49,7 @@ public static class PatchBuilder
     /// <paramref name="readArchiveOriginal"/> resolves a hash to the archives' own current bytes for
     /// it (ignoring mods) — needed for a container with a fragment override, both as the base
     /// <see cref="IContainerSplitter.Apply"/> splices onto when there is no whole-file override, and as the vanilla
-    /// ancestor every contributing layer's edit is merged against (docs/design/
-    /// fcb-fragment-overlays.md Milestone 3) — since nearly every real `.fcb` lives in an archive
+    /// ancestor every contributing layer's edit is merged against — since nearly every real `.fcb` lives in an archive
     /// other than <c>patch.dat</c> and this method otherwise only ever touches the vanilla patch
     /// archive. <c>GameVfs.ReadOriginal</c> is exactly this; callers with a live
     /// <see cref="JackAll.Core.Vfs.GameVfs"/> pass that. Null (the default) is fine as long as no

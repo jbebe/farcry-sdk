@@ -8,8 +8,7 @@ using JackAll.Core.Vfs;
 namespace JackAll.Tests;
 
 /// <summary>
-/// Milestone 2 of docs/design/fcb-fragment-overlays.md: a fragment row (Milestone 1's read-only
-/// browsing) becomes a real, stageable override, composed into its container instead of requiring a
+/// A fragment row is a stageable override, composed into its container instead of requiring a
 /// whole-file replacement. These tests cover the <see cref="GameVfs"/> side specifically — display
 /// attribution and <see cref="GameVfs.Read"/> — leaving the on-disk build itself to
 /// <c>PatchBuilderTests</c>.

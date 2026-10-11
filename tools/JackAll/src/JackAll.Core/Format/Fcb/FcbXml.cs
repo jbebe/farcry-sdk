@@ -145,8 +145,7 @@ public static class FcbXml
     /// <summary>
     /// Re-renders one fragment's XML through this class's own writer, so two texts that mean the same
     /// thing but came from different editors (attribute order, quoting, indentation, self-closing
-    /// tags) compare equal before <see cref="FcbMerge"/> ever sees them — see docs/design/
-    /// fcb-fragment-overlays.md's Milestone 3 "canonicalize before diffing" note. A genuine content
+    /// tags) compare equal before <see cref="FcbMerge"/> ever sees them. A genuine content
     /// change (e.g. a reordered <c>&lt;value&gt;</c>) still round-trips as a real difference, since
     /// <see cref="FcbObject.Values"/>/<see cref="FcbObject.Children"/> insertion order affects the
     /// actual rendered output.

@@ -209,8 +209,7 @@ public sealed partial class MainViewModel
 
     /// <summary>
     /// Puts a replacement file into the workspace, so it wins over everything below it. For a
-    /// fragment row this stages just that one child of a splitting `.fcb` (docs/design/
-    /// fcb-fragment-overlays.md, Milestone 2) — <see cref="GameVfs"/> composes it into the container
+    /// fragment row this stages just that one child of a splitting container — <see cref="GameVfs"/> composes it into the container
     /// at read/build time instead of requiring a whole-file replacement for a one-entity edit.
     /// </summary>
     public void Replace(VfsFile file, byte[] content)
@@ -336,7 +335,7 @@ public sealed partial class MainViewModel
     /// Compiles the enabled layers into patch.dat/patch.fat, on a background thread. Wraps
     /// <see cref="PatchBuilder.Build"/> rather than letting <c>MainWindow</c> call it directly so it
     /// can supply <see cref="GameVfs.ReadOriginal"/> without exposing <see cref="_vfs"/> itself —
-    /// needed as the base a fragment override (see docs/design/fcb-fragment-overlays.md) splices onto
+    /// needed as the base a fragment override splices onto
     /// when its container has no whole-file override of its own. On success, also re-opens <c>_vfs</c>'s
     /// mounted patch.fat/.dat — the one archive this build just replaced — since holding onto the old
     /// handle isn't just stale, it throws on the next read that happens to land on it (see the remarks

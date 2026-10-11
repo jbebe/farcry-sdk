@@ -275,9 +275,8 @@ public class PatchBuilderTests : IDisposable
     }
 
     /// <summary>
-    /// Milestone 3 (docs/design/fcb-fragment-overlays.md): two mods editing different, non-adjacent
-    /// parts of the same fragment both survive in the built patch, instead of the second one silently
-    /// clobbering the first's edit outright (Milestone 2's "last layer wins" rule for fragments).
+    /// Two mods editing different, non-adjacent parts of the same fragment both survive in the built
+    /// patch, instead of the second one silently clobbering the first's edit.
     /// </summary>
     [Fact]
     public void Two_mods_editing_different_children_of_the_same_fragment_both_survive_the_build()

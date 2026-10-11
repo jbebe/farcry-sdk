@@ -103,7 +103,7 @@ internal static class TestSupport
     /// <summary>Renders <paramref name="vanilla"/> with one value set on the node at
     /// <paramref name="childPath"/> (an index path from the fragment's own root; empty edits the root
     /// itself), leaving everything else byte-for-byte untouched — used by the merge tests
-    /// (docs/design/fcb-fragment-overlays.md Milestone 3) to build two mods' edits that land in
+    /// to build two mods' edits that land in
     /// genuinely different regions of the rendered XML, or, aimed at the same existing value, a
     /// genuine collision.</summary>
     /// <summary>The id the deleted group-per-file export gave <paramref name="library"/>'s child at
