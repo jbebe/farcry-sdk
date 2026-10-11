@@ -30,7 +30,7 @@ library. Audio goes out through WASAPI (NAudio), and Ogg Vorbis is decoded by NV
 | Car | Every wheeled archetype with an engine loop, one entry per sound setup, named after the real vehicle the overhaul matches it to. Archetypes that share their sounds share an entry, which drives with the first one's physics. |
 | Start / Stop engine | Ignition, then the idle, engine and extra-torque loops after the archetype's start time. Stop plays the engine-off events and cuts the loops. |
 | Accelerate / Coast / Brake | The pedal: W, Space and S do the same. Throttle sets how far Accelerate presses. |
-| Hold gear | No gear changes (H): the revs run from idle up to the redline in the gear the car is in, and stay there |
+| Hold gear | No gear changes (H): the revs run from idle up to the redline in the gear the car is in, and stay there on the rev limiter |
 | Shift time | How long a gear change keeps the clutch out, read from the car's section of `bin\vehicle-overhaul.ini` |
 | Parameters | The six values a car's multilayers ask for. **Pin** one to hold it at the slider's value whatever the drive does. |
 | Distance | Metres to the car, through each event's rolloff curve: 0 m is the cab, about 5 m the chase camera |
@@ -121,7 +121,8 @@ The vehicle overhaul's side:
   How nested multilayers combine is inferred: their dB add and their pitch ratios multiply. Pitch is
   linear resampling, but DARE's own resampler and its pitch limit are not traced.
 - **Havok.** A stand-in replaces Havok. It keeps FC2's engine and gearbox constants: 1000/5500/7500
-  rpm, gears 1.5/1.2/0.9/0.75…, and shifts at 6500 up and 3500 down. It drives on flat ground, so
+  rpm, gears 1.5/1.2/0.9/0.75…, and shifts at 6500 up and 3500 down, where the overhaul's rev limiter
+  also cuts the drive. It drives on flat ground, so
   there is no wheelspin, no gear hunting and no air time. How the engine resists off the pedal is an
   approximation.
 - **Not emulated:**

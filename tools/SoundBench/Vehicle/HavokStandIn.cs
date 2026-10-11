@@ -65,7 +65,8 @@ public sealed class HavokStandIn
             }
         }
 
-        float drive = _clutch > 0 ? 0 : EngineTorque(throttle) * _gears[Gear] * _primaryRatio / WheelRadius / _mass;
+        // The vehicle overhaul's rev limiter cuts the drive at the shift point, which it lays over the redline.
+        float drive = _clutch > 0 || Rpm >= UpshiftRpm ? 0 : EngineTorque(throttle) * _gears[Gear] * _primaryRatio / WheelRadius / _mass;
         float braking = Math.Min(brake * _brakeTorque / WheelRadius / _mass, _grip);
         float resistance = Drag * Speed * Speed / _mass + (Speed > 1 ? _rolling : 0);
         Speed = Math.Max(0, Speed + (Math.Clamp(drive, -_grip, _grip) - braking - resistance) * seconds);
