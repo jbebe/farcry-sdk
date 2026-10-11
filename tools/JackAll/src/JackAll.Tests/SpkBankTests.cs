@@ -70,6 +70,21 @@ public class SpkBankTests
     }
 
     [Fact]
+    public void A_curve_interpolates_between_points_and_holds_past_its_ends()
+    {
+        if (Fixture.Read(Multilayer) is not { } bytes) return;
+
+        SpkLayer revs = SpkBank.Parse(bytes).Records.Single(r => r.Layout == SpkLayout.Multilayer).Layers[0];
+        SpkCurve volume = revs.Curves.Single(c => c.Target == 0);
+        SpkCurve pitch = revs.Curves.Single(c => c.Target == 1);
+
+        Assert.Equal(0.98703f, pitch.Evaluate(5000), 4);
+        Assert.Equal(-81.70815f, volume.Evaluate(-100), 4);
+        Assert.Equal(-35.185184f, volume.Evaluate(20000), 4);
+        Assert.Equal(-23.32444f, volume.Evaluate((336.4427f + 759.661f) / 2), 4);
+    }
+
+    [Fact]
     public void A_material_switch_picks_between_random_containers()
     {
         if (Fixture.Read(Impacts) is not { } bytes) return;

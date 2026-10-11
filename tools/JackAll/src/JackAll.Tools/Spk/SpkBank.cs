@@ -15,7 +15,33 @@ public sealed record SpkEntry(uint Ref, uint Value = 0, uint Extra = 0);
 
 /// <summary>One curve of a multilayer layer: <see cref="Target"/> 0 maps the game parameter to dB,
 /// 1 to a pitch ratio.</summary>
-public sealed record SpkCurve(uint Target, uint Parameter, List<SpkPoint> Points);
+public sealed record SpkCurve(uint Target, uint Parameter, List<SpkPoint> Points)
+{
+    public float Evaluate(float x) => Evaluate(Points, x);
+
+    /// <summary>The value at <paramref name="x"/> as DARE reads a curve: linear between points, held past
+    /// the ends; 0 with no points. Rolloffs read the same way.</summary>
+    public static float Evaluate(IReadOnlyList<SpkPoint> points, float x)
+    {
+        if (points.Count == 0)
+        {
+            return 0;
+        }
+        if (x <= points[0].X)
+        {
+            return points[0].Y;
+        }
+        for (int i = 1; i < points.Count; i++)
+        {
+            if (x < points[i].X)
+            {
+                SpkPoint a = points[i - 1], b = points[i];
+                return a.Y + (b.Y - a.Y) * (x - a.X) / (b.X - a.X);
+            }
+        }
+        return points[^1].Y;
+    }
+}
 
 public sealed record SpkLayer(uint Resource, List<SpkCurve> Curves);
 
