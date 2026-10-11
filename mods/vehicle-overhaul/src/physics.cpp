@@ -33,6 +33,7 @@ namespace {
         float downforce;
         float spinDamping;
         float chassisResponse[3];
+        float inverseInertia[3];
         float lockTime;
         float shiftTime;
         float steeringLock;
@@ -63,6 +64,7 @@ namespace {
     Retail Capture(Car car, const RealVehicle::Spec* real, const Parts& parts, const Chassis& chassis) {
         Retail retail{car, parts.vehicle, real, *parts.climbPower, *parts.downforce, *parts.spinDamping};
         std::copy_n(parts.chassisResponse, 3, retail.chassisResponse);
+        std::copy_n(parts.inverseInertia, 3, retail.inverseInertia);
         retail.lockTime = *parts.lockTime;
         retail.shiftTime = *parts.shiftTime;
         retail.steeringLock = *parts.steeringLock;
@@ -91,10 +93,13 @@ namespace {
         *parts.steeringLock = g_retail.steeringLock * t.steeringLock;
         *parts.steeringAtSpeed = g_retail.steeringAtSpeed * t.steeringAtSpeed;
 
+        // The tyre solver's response is the body's inverse inertia times the factor, so both scale with it.
         const float responses[3] = {t.pitchResponse, t.rollResponse, t.yawResponse};
         for (int axis = 0; axis < 3; ++axis) {
             const float factor = parts.torqueFactors[axis];
-            parts.chassisResponse[axis] = g_retail.chassisResponse[axis] * (factor > 0.0f ? responses[axis] / factor : 1.0f);
+            parts.chassisResponse[axis] =
+                g_retail.chassisResponse[axis] * (factor > 0.0f ? responses[axis] / factor : 1.0f) / t.inertia;
+            parts.inverseInertia[axis] = g_retail.inverseInertia[axis] / t.inertia;
         }
 
         for (int i = 0; i < parts.wheels; ++i) {
@@ -126,6 +131,7 @@ namespace {
         *parts.steeringLock = g_retail.steeringLock;
         *parts.steeringAtSpeed = g_retail.steeringAtSpeed;
         std::copy_n(g_retail.chassisResponse, 3, parts.chassisResponse);
+        std::copy_n(g_retail.inverseInertia, 3, parts.inverseInertia);
 
         for (int i = 0; i < parts.wheels; ++i) {
             const VehicleOverhaul::Wheeled::Wheel& wheel = parts.wheel[i];
@@ -140,12 +146,15 @@ namespace {
         }
     }
 
-    // Puts the centre of mass where `real` has it, over the car's own track, or with `real` null back
-    // where the game had it. The tyre solver is left to be rebuilt.
+    // Puts the centre of mass where `real` has it, over the car's own track and between its own axles, or
+    // with `real` null back where the game had it. The tyre solver is left to be rebuilt.
     void PlaceCentreOfMass(Car car, const Chassis& chassis, const RealVehicle::Spec* real) {
         float centre[3];
         std::copy_n(g_retail.centreOfMass, 3, centre);
         if (real != nullptr) {
+            if (real->frontWeight > 0.0f) {
+                centre[1] = chassis.rear + real->frontWeight * chassis.wheelbase;
+            }
             centre[2] = real->stability == RealVehicle::kAtTheAxles ? chassis.axles
                                                                     : chassis.ground + chassis.track / (2.0f * real->stability);
         }
@@ -171,8 +180,9 @@ namespace {
             redline = VehicleOverhaul::Drivetrain::AtRedline(readout);
             readout.rpm = VehicleOverhaul::Drivetrain::Step(car, real, tuning.shiftTime, readout, seconds);
             const float height = chassis.centreOfMass[2] - chassis.ground;
-            g_status = {readout, real, height, height > 0.0f ? chassis.track / (2.0f * height) : 0.0f,
-                        chassis.grip};
+            g_status = {readout, real, height,
+                        chassis.wheelbase > 0.0f ? (chassis.centreOfMass[1] - chassis.rear) / chassis.wheelbase : 0.0f,
+                        height > 0.0f ? chassis.track / (2.0f * height) : 0.0f, chassis.grip};
             VehicleOverhaul::Axles::Lean(car, beams);
         }
         if (car != g_retail.car && !wanted) {

@@ -11,7 +11,7 @@ struct Switches {
     // Whether the player's car is tuned at all, and whether its sound follows the real gearbox.
     bool enabled;
     bool realEngine;
-    // Whether a car the overhaul knows carries its weight as high as the real vehicle it depicts, and
+    // Whether a car the overhaul knows carries its weight where the real vehicle it depicts does, and
     // rides on that vehicle's solid axles.
     bool realCentreOfMass;
     bool solidAxles;
@@ -31,6 +31,7 @@ struct Values {
     float tyreGrip;
     float downforce;
     float rollingResistance;
+    float inertia;
     float pitchResponse;
     float rollResponse;
     float yawResponse;

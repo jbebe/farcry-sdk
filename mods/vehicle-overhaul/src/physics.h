@@ -16,8 +16,10 @@ struct Status {
     Wheeled::Readout motion;
     // The real vehicle it was matched to, or null for a car the overhaul does not know.
     const RealVehicle::Spec* real;
-    // The centre of mass above the ground under the wheels, in metres.
+    // The centre of mass above the ground under the wheels, in metres, and the share of the weight on
+    // the front axle.
     float height;
+    float frontWeight;
     // Half the track over that height: the sideways g at which it tips over.
     float stability;
     // The sideways g the tyres can hold on what they stand on.

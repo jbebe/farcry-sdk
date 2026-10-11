@@ -71,6 +71,10 @@ namespace {
          "The game's extra 5 m/s2 of gravity on every car, which presses the tyres down."},
         {"Rolling resistance", kGrip, &Values::rollingResistance, 0.15f, 0.0f, 1.0f, "%.2fx",
          "What slows a coasting car (retail about 1.5 m/s2, ten times a real tyre's)."},
+        {"Inertia", kChassis, &Values::inertia, 1.0f, 0.5f, 5.0f, "%.2fx",
+         "How hard the body is to pitch, roll and turn, as a multiple of the car's own. The game gives every "
+         "car a small car's for its weight, so a big truck rocks on its springs as quickly; higher leans "
+         "and turns slower."},
         {"Pitch response", kChassis, &Values::pitchResponse, 1.0f, 0.0f, 1.0f, "%.2f",
          "How much the tyres' forces pitch the body nose up or down. 1 is physical, retail 0.5."},
         {"Roll response", kChassis, &Values::rollResponse, 1.0f, 0.0f, 1.0f, "%.2f",
@@ -110,7 +114,7 @@ namespace {
          "pulling away, and a drop on every gear change. Off leaves the game's revs made up from speed."},
         {"Real centre of mass", &Switches::realCentreOfMass, "Real centre of mass", kChassis,
          "Carries the car's weight as high as the real vehicle it depicts, from that vehicle's stability "
-         "factor. Off leaves it where the game put it."},
+         "factor, and the big truck's as far forward. Off leaves it where the game put it."},
         {"Solid axles", &Switches::solidAxles, "Solid axles", kSuspension,
          "Springs each solid axle of the real vehicle as one beam, which twists under the body to keep both "
          "wheels down and lets them hang lower. Only the Land Rover so far. Off springs every wheel on its "
@@ -274,8 +278,9 @@ namespace {
         if (driving) {
             ImGui::Text("%.0f km/h   %.0f rpm   gear %d", status.motion.speed * 3.6f, status.motion.rpm,
                         status.motion.gear + 1);
-            ImGui::Text("Centre of mass %.2f m up, tips over at %.2f g; the tyres hold %.2f g here", status.height,
-                        status.stability, status.grip);
+            ImGui::Text("Centre of mass %.2f m up, %.0f%% on the front axle, tips over at %.2f g; the tyres hold "
+                        "%.2f g here",
+                        status.height, status.frontWeight * 100.0f, status.stability, status.grip);
         } else {
             ImGui::TextDisabled("Not driving.");
         }

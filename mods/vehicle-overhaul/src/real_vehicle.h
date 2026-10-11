@@ -36,6 +36,8 @@ struct Spec {
     float solidAxle[Wheeled::kAxles];
     // Where its tunings start, for those that differ from everyone's defaults.
     std::span<const Start> tuning;
+    // The share of its weight on the front axle, or 0 to leave it as far forward as the game put it.
+    float frontWeight;
 };
 
 constexpr float kAtTheAxles = 0.0f;

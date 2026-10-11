@@ -93,11 +93,13 @@ namespace {
     constexpr ptrdiff_t kDamperSpinDamping = 0x08;
 
     // The chassis hkpRigidBody's motion state: its rotation's columns, the swept centre of mass at
-    // both ends of the step, and the centre of mass in the body's own space.
+    // both ends of the step, and the centre of mass in the body's own space. Then its motion's inverse
+    // inertia about x, y and z.
     constexpr ptrdiff_t kChassisRotation = 0xE0;
     constexpr ptrdiff_t kChassisCentreOfMass0 = 0x120;
     constexpr ptrdiff_t kChassisCentreOfMass1 = 0x130;
     constexpr ptrdiff_t kChassisLocalCentreOfMass = 0x160;
+    constexpr ptrdiff_t kChassisInverseInertia = 0x190;
     constexpr ptrdiff_t kChassisVelocity = 0x1A0;
 
     // The wheels in the order the game sorts them: front left, front right, rear right, rear left.
@@ -304,6 +306,7 @@ Parts PartsOf(Car car) {
     parts.torqueFactors[0] = factors[1];
     parts.torqueFactors[1] = factors[0];
     parts.torqueFactors[2] = factors[2];
+    parts.inverseInertia = &At<float>(At<uint8_t*>(vehicle, kVehicleChassis), kChassisInverseInertia);
     parts.lockTime = &At<float>(brake, kBrakeLockTime);
     uint8_t* steering = At<uint8_t*>(vehicle, kVehicleSteering);
     parts.steeringLock = &At<float>(steering, kSteeringLowMaxAngle);
@@ -350,6 +353,7 @@ Chassis ChassisOf(Car car) {
         return chassis;
     }
     float x[kMaxWheels];
+    float front = 0.0f;
     int touching = 0;
     for (int i = 0; i < wheels; ++i) {
         float centre[3];
@@ -358,6 +362,7 @@ Chassis ChassisOf(Car car) {
         const uint8_t* info = wheelInfo + i * kWheelInfoStride;
         const float radius = At<float>(wheelData, i * kDataWheelStride + kDataWheelRadius);
         x[i] = centre[0];
+        (AxleOf(i) == 0 ? front : chassis.rear) += centre[1] / 2.0f;
         chassis.axles += centre[2] / wheels;
         chassis.ground += (centre[2] + direction[2] * radius) / wheels;
         if (At<void*>(info, kWheelInfoContactBody) != nullptr) {
@@ -368,6 +373,7 @@ Chassis ChassisOf(Car car) {
     }
     chassis.grip = touching > 0 ? chassis.grip / touching : 0.0f;
     chassis.track = (std::abs(x[kFrontRight] - x[kFrontLeft]) + std::abs(x[kRearRight] - x[kRearLeft])) / 2.0f;
+    chassis.wheelbase = front - chassis.rear;
     return chassis;
 }
 

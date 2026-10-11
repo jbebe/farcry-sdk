@@ -31,7 +31,11 @@ from the windows and the wrecks are to come.
   - The tyres roll, pitch and yaw the body as physics would, with no damper on spins.
   - Each car the overhaul knows carries its weight as high as the real vehicle it depicts, set from that
     vehicle's stability factor: a Land Rover Series III tips over at 0.9 g, a Datsun 1200 at 1.3 g,
-    and the buggy keeps its weight at the axles.
+    and the buggy keeps its weight at the axles. The big truck also carries it as far forward as an
+    empty ZIL-130, 49% on the front axle, where the game put it far back.
+  - The game gives every car a small car's inertia for its weight, so the big truck rocked on its
+    springs as quickly as the Datsun. It starts at 3.6 times its own, about a real ZIL-130's, so it
+    leans and turns slowly.
   - The Land Rover rides on solid axles, as the real one does. Each axle's two wheels are sprung as
     one beam on springs 60% of the track apart, so the beam twists under the body to keep both wheels
     down over ruts and rocks. Its wheels hang half their suspension's length lower, and lean with the
@@ -74,8 +78,8 @@ physics are in [vehicle physics](../../docs/docs/engine-internals/vehicle-physic
 
 With DevTools installed, its overlay has a **Vehicle Overhaul** window:
 - the car's speed, rpm and gear;
-- its centre-of-mass height, the sideways g it tips over at, and the g its tyres hold on the ground
-  under them;
+- its centre-of-mass height, its share of the weight on the front axle, the sideways g it tips over
+  at, and the g its tyres hold on the ground under them;
 - a switch for the whole overhaul, one for the real centre of mass, one for the solid axles, and a
   slider for every value above.
 

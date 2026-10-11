@@ -25,7 +25,7 @@ plain `hkpUnaryAction`s and do not use the kit.
 | `fEnginePower` | engine `maxTorque` | peak torque in N·m at 5,500 rpm, not power |
 | `fGearBoxTopSpeed`, `nGears` | `primaryTransmissionRatio` | `calculatePrimaryTransmissionRatio(fGearBoxTopSpeed, 0.4, 7500, topGear)`: the speed is in mph and the wheel radius a fixed 0.4 m |
 | `fTorqueRoll/Pitch/YawFactor` | `hkpVehicleData` `+0x60/+0x64/+0x68` | how much tyre forces roll, pitch and yaw the chassis; 1 is physical |
-| `fChassisUnitInertia*` | `+0x74/+0x78/+0x7C` | |
+| `fChassisUnitInertiaYaw/Roll/Pitch` | `+0x74/+0x78/+0x7C` | the chassis body's inertia per kilogram: `hkpVehicleInstance::init` sets the body's to the mass times each |
 | Wheel `fBrakingTorque` | brake `maxBreakingTorque` | |
 | Wheel `fSuspStrength`, damping | suspension spring parameters | per kilogram of chassis mass |
 | Wheel `fSuspLength` | suspension length | |
@@ -61,6 +61,12 @@ suspension length rebuilds both.
 
 The new constants above were read on GOG (`SetupVehicleData` `0x1049DA20`) against the Havok class
 tables in the server's symbols **(RE-verified)**.
+
+The springs, the dampers and the body's inertia all scale with the chassis mass, so the mass cancels
+out of how the body moves on its suspension. A heavy car rocks as a light one does unless its
+per-kilogram values or wheel positions differ. Retail gives the 4,000 kg big truck the Datsun's unit
+inertias, 1 / 0.8 / 1, so the truck pitches and rolls as readily as the Datsun. The inertia is set in
+the server's `hkpVehicleInstance::init` **(RE-verified)**.
 
 ### What a car's model has to satisfy
 
@@ -278,6 +284,7 @@ ground friction `+0x20`, contact body `+0x24`, suspension length `+0x2C`, closin
 friction `+0x14`, axle `+0x24`), chassis response `+0x180`, inverse mass `+0x18C`.
 
 The chassis body's motion state starts at `+0xE0`: rotation, the swept centre of mass at `+0x120`
-and `+0x130`, the local centre of mass at `+0x160`, the linear velocity at `+0x1A0`. Moving the
+and `+0x130`, the local centre of mass at `+0x160`, the inverse inertia about x, y and z at `+0x190`
+with the inverse mass at `+0x19C`, the linear velocity at `+0x1A0`. Moving the
 centre of mass is what `hkSweptTransformUtil::setCentreOfRotationLocal` does: store the new local
 centre, rotate the change into world space, and add it to both swept centres.

@@ -20,6 +20,12 @@ namespace {
     // As the user tuned it in game (2026-10-11).
     constexpr Start kDatsunTuning[] = {
         {"Engine power", 1.0f}, {"Shift time", 0.5f}, {"Tyre grip", 0.5f}, {"Rolling resistance", 0.0f}};
+    // About a real ZIL-130's pitch and yaw for its weight: the axles' distances from the centre of mass
+    // multiplied, 1.9 m each on its 3.8 m wheelbase, against the game's 1 m².
+    constexpr Start kZilTuning[] = {{"Inertia", 3.6f}};
+
+    // 2,120 of its 4,300 kg, empty.
+    constexpr float kZilFrontWeight = 0.49f;
 
     constexpr Spec kVehicles[] = {
         {1600.0f, 95.0f, "Land Rover Series III", 0.90f, 0.0f, 0.0f, 0, 0.0f, {kRoverSprings, kRoverSprings},
@@ -31,7 +37,7 @@ namespace {
         {1200.0f, 50.0f, "Jeep Wrangler taxi", 1.20f},
         {600.0f, 80.0f, "Quad", 1.00f},
         {1600.0f, 88.0f, "Unimog", 0.85f},
-        {4000.0f, 150.0f, "ZIL-130", 0.85f, 560.0f, 3200.0f, kShiftClunks, 0.7f},
+        {4000.0f, 150.0f, "ZIL-130", 0.85f, 560.0f, 3200.0f, kShiftClunks, 0.7f, {}, kZilTuning, kZilFrontWeight},
     };
 }
 

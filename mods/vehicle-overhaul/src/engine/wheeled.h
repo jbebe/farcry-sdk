@@ -86,6 +86,8 @@ struct Parts {
     float* chassisResponse;
     // The pitch, roll and yaw factors it was derived from.
     float torqueFactors[3];
+    // The chassis body's inverse inertia about its pitch, roll and yaw axes.
+    float* inverseInertia;
     // Seconds a fully pressed brake takes to lock a wheel, and a gear change cuts the drive.
     float* lockTime;
     float* shiftTime;
@@ -122,6 +124,9 @@ struct Chassis {
     float ground;
     float axles;
     float track;
+    // How far forward the rear axle is, and the front one past it.
+    float rear;
+    float wheelbase;
     // The tyres' friction times the ground's, over the wheels touching it; 0 in the air.
     float grip;
 };
