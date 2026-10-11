@@ -89,22 +89,10 @@ public static class FragmentMerge
     /// is a real conflict, not one silently clobbering the other.
     /// </summary>
     /// <param name="conflicts">
-    /// Null (the default) keeps the original behavior: a genuine collision throws
-    /// <see cref="InvalidDataException"/>, which is right for <see cref="JackAll.Core.Vfs.GameVfs"/> -
-    /// JackAll.App has an interactive row to hand-fix a conflict on, so silently picking a winner there
-    /// would hide a real authoring decision from the person best placed to make it (and
-    /// <c>GameVfsFragmentOverrideTests</c> pins exactly this throw).
-    ///
-    /// Non-null switches to "load order wins, but tell someone": the same rule whole-file overrides
-    /// already follow (later layer replaces earlier, no questions asked) is applied to the fragment
-    /// too, and one <see cref="ModConflict"/> is enqueued per collision instead of throwing. This
-    /// is what <c>jackall-cli mod build</c> passes - a headless run driven by a mod manager (Vortex)
-    /// has nobody to ask and no "Replace on that row" UI to point at, so refusing to build over a
-    /// conflict it can't ask a human to resolve on the spot is worse than building with a flagged
-    /// warning the mod manager can surface after the fact. <see cref="ConcurrentQueue{T}"/> rather than
-    /// a plain list because <see cref="PatchBuilder"/> resolves every fragment across every container
-    /// in one flat parallel pass - <c>Resolve</c> itself has to tolerate being called concurrently for
-    /// different fragments sharing the same queue.
+    /// Null makes a collision the workspace doesn't settle throw <see cref="InvalidDataException"/>,
+    /// which is how the app's Deploy refuses to pick a winner. A queue keeps the later layer's version
+    /// and records the collision instead, for browsing and <c>jackall-cli mod build</c>; it is shared by
+    /// concurrent calls.
     /// </param>
     /// <param name="container">
     /// The container's display path, stamped onto every <see cref="ModConflict"/> this call
@@ -119,6 +107,8 @@ public static class FragmentMerge
         string ancestor = vanillaXml ?? "";
 
         string result = ancestor;
+        string? workspace = null;
+        List<(string Ours, string Theirs, IReadOnlyList<string> At, ModConflict Conflict)> collisions = [];
         for (int i = 0; i < layers.Count; i++)
         {
             (IModLayer layer, uint entryHash) = layers[i];
@@ -143,6 +133,10 @@ public static class FragmentMerge
                     ex);
             }
 
+            if (layer.IsWorkspace)
+            {
+                workspace = theirs;
+            }
             if (i == 0)
             {
                 // "Ours" is the ancestor itself, so theirs wins outright.
@@ -150,32 +144,55 @@ public static class FragmentMerge
                 continue;
             }
 
-            (string merged, IReadOnlyList<string> at) = splitter.Merge(fragmentId, ancestor, result, theirs);
+            string ours = result;
+            (string merged, IReadOnlyList<string> at) = splitter.Merge(fragmentId, ancestor, ours, theirs);
+            // The fold keeps theirs where the two disagree; whether that settles the collision is decided below.
             result = splitter.Canonicalize(fragmentId, merged);
-            if (at.Count == 0)
+            if (at.Count > 0)
+            {
+                collisions.Add((ours, theirs, at, new ModConflict(container, layer.Name,
+                    [.. layers.Take(i).Select(l => l.Layer.Name).Distinct()], FragmentId: fragmentId, IsNewEntry: isNewEntry)));
+            }
+        }
+
+        foreach ((string ours, string theirs, IReadOnlyList<string> at, ModConflict collision) in collisions)
+        {
+            IReadOnlyList<string> open = workspace is null ? at : Unsettled(splitter, fragmentId, ancestor, ours, theirs, workspace, at);
+            if (open.Count == 0)
             {
                 continue;
             }
 
-            var conflict = new ModConflict(container, layer.Name,
-                [.. layers.Take(i).Select(l => l.Layer.Name).Distinct()], FragmentId: fragmentId, IsNewEntry: isNewEntry)
-            {
-                Paths = [.. at.Where(path => path.Length > 0)],
-            };
+            ModConflict conflict = collision with { Paths = [.. open.Where(path => path.Length > 0)] };
             if (conflicts is null)
             {
                 throw new InvalidDataException(isNewEntry
-                    ? $"'{layer.Name}' conflicts with another enabled mod, both adding a new entry " +
-                      $"'{fragmentId}' with different content{conflict.AtPaths}. Hand-fix the fragment (Replace on " +
-                      "that row) and re-stage it - your fix wins outright since the workspace is always highest priority."
-                    : $"'{layer.Name}' conflicts with an earlier enabled mod inside '{fragmentId}'{conflict.AtPaths}. " +
-                      "Hand-fix the fragment (Replace on that row) and re-stage it - your fix wins outright " +
-                      "since the workspace is always highest priority.");
+                    ? $"'{conflict.WinningLayer}' and '{string.Join("', '", conflict.OverruledLayers)}' both add " +
+                      $"'{conflict.DisplayPath}' with different content{conflict.AtPaths}. Untick one of them, or " +
+                      "save the version you want in your workspace."
+                    : $"'{conflict.WinningLayer}' and '{string.Join("', '", conflict.OverruledLayers)}' change " +
+                      $"'{conflict.DisplayPath}'{conflict.AtPaths} to different values. Untick one of them, or set " +
+                      "the value you want in your workspace - its value settles the conflict.");
             }
 
             // Lenient mode: keep the splitter's fold, with only the collision decided.
             conflicts.Enqueue(conflict);
         }
         return result;
+    }
+
+    /// <summary>
+    /// The places a collision between <paramref name="ours"/> and <paramref name="theirs"/> stays
+    /// open: those where the workspace set no value of its own, so it disagrees with neither side.
+    /// </summary>
+    private static IReadOnlyList<string> Unsettled(IContainerSplitter splitter, string fragmentId,
+        string ancestor, string ours, string theirs, string workspace, IReadOnlyList<string> at)
+    {
+        HashSet<string> decided =
+        [
+            .. splitter.Merge(fragmentId, ancestor, ours, workspace).Conflicts,
+            .. splitter.Merge(fragmentId, ancestor, theirs, workspace).Conflicts,
+        ];
+        return [.. at.Where(path => !decided.Contains(path))];
     }
 }

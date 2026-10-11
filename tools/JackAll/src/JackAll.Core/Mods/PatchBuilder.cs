@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.ExceptionServices;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 
@@ -70,12 +71,22 @@ public static class PatchBuilder
 
         install.EnsureVanillaBackup();
 
-        Dictionary<uint, byte[]> replacements = ComputeReplacements(
-            layers.Where(l => l.Enabled).ToList(),
-            readArchiveOriginal,
-            fcbDefinitions ?? FcbClassDefinitions.Empty,
-            conflicts,
-            resolveFragmentConflictsWithLoadOrder);
+        Dictionary<uint, byte[]> replacements;
+        try
+        {
+            replacements = ComputeReplacements(
+                layers.Where(l => l.Enabled).ToList(),
+                readArchiveOriginal,
+                fcbDefinitions ?? FcbClassDefinitions.Empty,
+                conflicts,
+                resolveFragmentConflictsWithLoadOrder);
+        }
+        catch (AggregateException ex) when (ex.InnerExceptions.Count > 0)
+        {
+            // The parallel passes wrap what failed; the cause is what a modder needs to read.
+            ExceptionDispatchInfo.Capture(ex.InnerExceptions[0]).Throw();
+            throw;
+        }
 
         BuildResult result = WriteArchive(install, replacements, [.. conflicts]);
 

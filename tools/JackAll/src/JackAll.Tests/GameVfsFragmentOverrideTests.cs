@@ -342,8 +342,10 @@ public class GameVfsFragmentOverrideTests : IDisposable
         Assert.Equal([0x02, 0x00, 0x00, 0x00], TestSupport.NodeAt(composed, paths.B).Values[0xAAAA0002]);
     }
 
+    /// <summary>Browsing keeps a conflicting fragment readable, showing the later mod's value; the
+    /// build is what stops on it (<see cref="PatchBuilderTests"/>).</summary>
     [Fact]
-    public void Two_mods_editing_the_same_field_differently_throws_a_conflict_naming_the_mod()
+    public void Two_mods_editing_the_same_field_differently_read_as_the_later_mods_value()
     {
         if (_install is null) return;
 
@@ -375,8 +377,8 @@ public class GameVfsFragmentOverrideTests : IDisposable
 
         vfs.Rebuild([zipMod, workspace]);
 
-        InvalidDataException ex = Assert.Throws<InvalidDataException>(() => vfs.Read(fragment.Hash));
-        Assert.Contains("workspace", ex.Message);
+        FcbObject merged = FcbXml.FromXml(System.Text.Encoding.UTF8.GetString(vfs.Read(fragment.Hash)));
+        Assert.Equal([0xFF, 0x00, 0x00, 0x00], TestSupport.NodeAt(merged, targetPath).Values[existingHash]);
     }
 
     /// <summary>A synthetic row's key lives above the engine's 32-bit space (bit 63 set - see

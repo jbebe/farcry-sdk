@@ -120,7 +120,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
 
             try
             {
-                Workspace = new FolderModLayer(AppConfig.WorkspaceDir, "workspace");
+                Workspace = new FolderModLayer(AppConfig.WorkspaceDir, "workspace") { IsWorkspace = true };
             }
             catch (InvalidDataException ex)
             {

@@ -19,6 +19,7 @@ public sealed class FolderModLayer : IModLayer
 
     public string Name { get; }
     public bool Enabled { get; set; } = true;
+    public bool IsWorkspace { get; init; }
     public string RootPath { get; }
     public IReadOnlyCollection<uint> Hashes => _hashes;
     public IReadOnlyDictionary<uint, IReadOnlyList<FragmentOverride>> FragmentOverrides { get; private set; } =

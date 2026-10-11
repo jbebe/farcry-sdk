@@ -326,71 +326,131 @@ public class PatchBuilderTests : IDisposable
     }
 
     /// <summary>
-    /// <c>jackall-cli mod build</c> is the one caller with nobody to ask when two mods genuinely
-    /// collide inside the same fragment - unlike JackAll.App, which has an interactive row to hand-fix
-    /// one on (<see cref="GameVfsFragmentOverrideTests.Two_mods_editing_the_same_field_differently_throws_a_conflict_naming_the_mod"/>
-    /// pins that throw). <see cref="PatchBuilder.Build"/>'s <c>resolveFragmentConflictsWithLoadOrder</c>
-    /// makes the build succeed anyway - the higher-priority layer's edit wins outright, same as a
-    /// whole-file override - and records what happened on <see cref="BuildResult.Conflicts"/> instead.
+    /// <c>jackall-cli mod build</c> has nobody to ask when two mods collide inside one fragment, so
+    /// <c>resolveFragmentConflictsWithLoadOrder</c> keeps the higher-priority layer's value and records
+    /// the collision on <see cref="BuildResult.Conflicts"/> instead of failing.
     /// </summary>
     [Fact]
     public void Lenient_mode_resolves_a_genuine_fragment_conflict_with_load_order_and_reports_it()
     {
-        if (_install is null) return;
+        if (_install is null || MakeFieldClash() is not { } clash) return;
 
-        NameDatabase names = TestSupport.LoadNames();
-        VfsFile container;
-        string fragmentId;
-        FcbObject vanillaFragment;
-        using (var vfs = GameVfs.Load(_install, names))
-        {
-            VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
-            container = vfs.Files[fragment.ContainerHash!.Value];
-            fragmentId = fragment.FragmentId!;
-
-            FcbObject baseTree = FcbDocument.Deserialize(vfs.ReadOriginal((uint)container.Hash)!);
-            vanillaFragment = FcbFragments.Find(baseTree, fragmentId)!;
-        }
-
-        // Same existing field, different content from both mods - a genuine collision, not two
-        // independent, non-overlapping edits (which Milestone 3 already merges cleanly). A prototype
-        // fragment's own value table can be empty - its Entity child's never is. Identity fields are
-        // excluded so the fragment's id survives the garbage value and stays resolvable below.
-        int[] targetPath = vanillaFragment.Values.Count > 0 ? [] : [0];
-        FcbObject target = TestSupport.NodeAt(vanillaFragment, targetPath);
-        uint existingHash = target.Values.Keys.FirstOrDefault(
-            k => k != WorldHashes.HidName && k != WorldHashes.DisEntityId);
-        // Fixture has nothing existing to collide on
-        if (existingHash == 0) return;
-        string fragmentPath = $"{container.Path}\\{fragmentId}";
-        var modA = MakeZipMod("mod_a",
-            ($"mods/{fragmentPath}", TestSupport.RenderWithValueSetAt(vanillaFragment, targetPath, existingHash, [0x01, 0x00, 0x00, 0x00])));
-        var modB = MakeZipMod("mod_b",
-            ($"mods/{fragmentPath}", TestSupport.RenderWithValueSetAt(vanillaFragment, targetPath, existingHash, [0x02, 0x00, 0x00, 0x00])));
-
-        BuildResult result;
-        using (var vfsForRead = GameVfs.OpenForOriginalsOnly(_install, names))
-        {
-            result = PatchBuilder.Build(_install, [modA, modB], vfsForRead.ReadOriginal,
-                resolveFragmentConflictsWithLoadOrder: true);
-        }
+        BuildResult result = Build(true, clash.Mod("mod_a", clash.Field, 1), clash.Mod("mod_b", clash.Field, 2));
 
         ModConflict conflict = Assert.Single(result.Conflicts);
-        Assert.Equal(fragmentId, conflict.FragmentId, ignoreCase: true);
+        Assert.Equal(clash.FragmentId, conflict.FragmentId, ignoreCase: true);
         // The id alone names one entity of one container; the report has to say which container.
-        Assert.Equal(container.Path, conflict.Container, ignoreCase: true);
+        Assert.Equal(clash.Container.Path, conflict.Container, ignoreCase: true);
         Assert.Equal("mod_b", conflict.WinningLayer);
         Assert.Contains("mod_a", conflict.OverruledLayers);
+        Assert.Equal(2, clash.RebuiltValue(_install, clash.Field));
+    }
 
-        var patchIndex = FatArchive.Read(_install.PatchFat);
-        var entry = patchIndex.Entries.First(e => e.Hash == container.Hash);
-        using var rebuilt = DuniaArchive.Open(_install.PatchFat);
-        FcbObject rebuiltContainer = FcbDocument.Deserialize(rebuilt.Read(entry));
+    [Fact]
+    public void Two_mods_changing_one_field_differently_stop_the_build_and_say_how_to_settle_it()
+    {
+        if (_install is null || MakeFieldClash() is not { } clash) return;
 
-        // mod_b (later in the layer list, so higher priority) won the field - not a merge of the two,
-        // and not mod_a's value either.
-        FcbObject rebuiltFragment = FcbFragments.Find(rebuiltContainer, fragmentId)!;
-        Assert.Equal([0x02, 0x00, 0x00, 0x00], TestSupport.NodeAt(rebuiltFragment, targetPath).Values[existingHash]);
+        var ex = Assert.Throws<InvalidDataException>(
+            () => Build(false, clash.Mod("mod_a", clash.Field, 1), clash.Mod("mod_b", clash.Field, 2)));
+
+        Assert.Contains("'mod_b' and 'mod_a'", ex.Message);
+        Assert.Contains("workspace", ex.Message);
+    }
+
+    [Fact]
+    public void The_workspace_settles_a_conflict_between_two_mods_with_its_own_value()
+    {
+        if (_install is null || MakeFieldClash() is not { } clash) return;
+
+        Build(false, clash.Mod("mod_a", clash.Field, 1), clash.Mod("mod_b", clash.Field, 2),
+            clash.Workspace(clash.Field, 3));
+
+        Assert.Equal(3, clash.RebuiltValue(_install, clash.Field));
+    }
+
+    [Fact]
+    public void A_workspace_that_leaves_the_conflicting_field_alone_does_not_settle_it()
+    {
+        if (_install is null || MakeFieldClash() is not { } clash) return;
+
+        Assert.Throws<InvalidDataException>(() => Build(false, clash.Mod("mod_a", clash.Field, 1),
+            clash.Mod("mod_b", clash.Field, 2), clash.Workspace(clash.OtherField, 3)));
+    }
+
+    [Fact]
+    public void The_workspace_wins_over_a_mod_on_the_same_field()
+    {
+        if (_install is null || MakeFieldClash() is not { } clash) return;
+
+        Build(false, clash.Mod("mod_a", clash.Field, 1), clash.Workspace(clash.Field, 3));
+
+        Assert.Equal(3, clash.RebuiltValue(_install, clash.Field));
+    }
+
+    private BuildResult Build(bool lenient, params IModLayer[] layers)
+    {
+        using var vfsForRead = GameVfs.OpenForOriginalsOnly(_install!, TestSupport.LoadNames());
+        return PatchBuilder.Build(_install!, layers, vfsForRead.ReadOriginal, resolveFragmentConflictsWithLoadOrder: lenient);
+    }
+
+    /// <summary>Two existing fields of one object in the first named fragment, for layers to set, or
+    /// null when it has none. Identity fields are left alone so the fragment's id survives.</summary>
+    private FieldClash? MakeFieldClash()
+    {
+        using var vfs = GameVfs.Load(_install!, TestSupport.LoadNames());
+        VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
+        VfsFile container = vfs.Files[fragment.ContainerHash!.Value];
+        FcbObject vanilla = FcbFragments.Find(FcbDocument.Deserialize(vfs.ReadOriginal((uint)container.Hash)!), fragment.FragmentId!)!;
+        return TwoFields(vanilla, []) is { } found
+            ? new FieldClash(this, container, fragment.FragmentId!, vanilla, found.Path, found.Fields[0], found.Fields[1])
+            : null;
+    }
+
+    /// <summary>The first object, depth first, with two fields that aren't identity fields.</summary>
+    private static (int[] Path, uint[] Fields)? TwoFields(FcbObject node, int[] path)
+    {
+        uint[] fields = [.. node.Values.Keys.Where(k => k != WorldHashes.HidName && k != WorldHashes.DisEntityId)];
+        if (fields.Length >= 2)
+        {
+            return (path, fields);
+        }
+        for (int i = 0; i < node.Children.Count; i++)
+        {
+            if (TwoFields(node.Children[i], [.. path, i]) is { } found)
+            {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    private sealed record FieldClash(PatchBuilderTests Owner, VfsFile Container, string FragmentId, FcbObject Vanilla,
+        int[] Target, uint Field, uint OtherField)
+    {
+        private string FragmentPath => $"{Container.Path}\\{FragmentId}";
+
+        private byte[] With(uint field, byte value) => TestSupport.RenderWithValueSetAt(Vanilla, Target, field, [value, 0, 0, 0]);
+
+        public IModLayer Mod(string name, uint field, byte value) => Owner.MakeZipMod(name, ($"mods/{FragmentPath}", With(field, value)));
+
+        public IModLayer Workspace(uint field, byte value)
+        {
+            string root = System.IO.Path.Combine(Owner._sandbox, "workspace");
+            string file = System.IO.Path.Combine(root, "mods", FragmentPath);
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(file)!);
+            File.WriteAllBytes(file, With(field, value));
+            return new FolderModLayer(root, "workspace") { IsWorkspace = true };
+        }
+
+        /// <summary>The field's first byte in the patch the last build wrote.</summary>
+        public byte RebuiltValue(GameInstall install, uint field)
+        {
+            var entry = FatArchive.Read(install.PatchFat).Entries.First(e => e.Hash == Container.Hash);
+            using var rebuilt = DuniaArchive.Open(install.PatchFat);
+            FcbObject fragment = FcbFragments.Find(FcbDocument.Deserialize(rebuilt.Read(entry)), FragmentId)!;
+            return TestSupport.NodeAt(fragment, Target).Values[field][0];
+        }
     }
 
     /// <summary>A layer that addressed the container by hash has no path to recover a name from, so

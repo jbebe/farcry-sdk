@@ -2,13 +2,16 @@ namespace JackAll.Core.Mods;
 
 /// <summary>
 /// A set of file overrides, keyed by the same CRC32 the engine uses. A zip on disk and the user's
-/// workspace folder are the same thing to everything downstream — which is why the workspace needs
-/// no special-casing anywhere except being pinned last in the order.
+/// workspace folder are the same thing to everything downstream, except that the workspace is pinned
+/// last and its edits win the fragment merge (<see cref="IsWorkspace"/>).
 /// </summary>
 public interface IModLayer
 {
     string Name { get; }
     bool Enabled { get; set; }
+
+    /// <summary>The user's own edits: they win over the mods below and settle those mods' conflicts.</summary>
+    bool IsWorkspace => false;
 
     /// <summary>Every hash this layer overrides as a standalone archive entry. Disjoint from
     /// <see cref="FragmentOverrides"/> — a fragment path never appears here, since replacing one

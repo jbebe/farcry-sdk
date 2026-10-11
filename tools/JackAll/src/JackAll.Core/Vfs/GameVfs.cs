@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.IO.Hashing;
 using System.Text;
 using JackAll.Core.Format;
@@ -427,7 +428,7 @@ public sealed class GameVfs : IDisposable
         try
         {
             return Encoding.UTF8.GetByteCount(
-                FragmentMerge.Resolve(vanilla.Value.Splitter, vanilla.Value.Tree, fragmentId, layers));
+                Browse(vanilla.Value, fragmentId, layers));
         }
         catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException)
         {
@@ -920,9 +921,7 @@ public sealed class GameVfs : IDisposable
                 && byFragment.TryGetValue(file.FragmentId!, out List<(IModLayer Layer, uint EntryHash)>? contributors))
             {
                 ContainerAncestor vanilla = OpenOriginal(files[file.ContainerHash!.Value]);
-                string merged = FragmentMerge.Resolve(
-                    vanilla.Splitter, vanilla.Tree, file.FragmentId!, contributors);
-                return new UTF8Encoding(false).GetBytes(merged);
+                return new UTF8Encoding(false).GetBytes(Browse(vanilla, file.FragmentId!, contributors));
             }
 
             VfsFile owner = files[file.ContainerHash!.Value];
@@ -951,10 +950,16 @@ public sealed class GameVfs : IDisposable
 
         ContainerAncestor vanilla = OpenOriginal(container);
         Dictionary<string, string> xmlByFragment = byFragment.ToDictionary(
-            kv => kv.Key, kv => FragmentMerge.Resolve(vanilla.Splitter, vanilla.Tree, kv.Key, kv.Value));
-        FragmentMerge.ReportContradictions(vanilla.Splitter, xmlByFragment, null, container.Path);
+            kv => kv.Key, kv => Browse(vanilla, kv.Key, kv.Value));
         return vanilla.Splitter.Apply(baseBytes, xmlByFragment);
     }
+
+    /// <summary>
+    /// One fragment as the merged view shows it: a conflict keeps the later mod's version, so the row
+    /// and its container stay readable; Deploy is what stops on it.
+    /// </summary>
+    private static string Browse(ContainerAncestor vanilla, string fragmentId, IReadOnlyList<(IModLayer Layer, uint EntryHash)> layers)
+        => FragmentMerge.Resolve(vanilla.Splitter, vanilla.Tree, fragmentId, layers, new ConcurrentQueue<ModConflict>());
 
     /// <summary>
     /// The name to show a modder for where a file came from. A base-game archive (one sitting
