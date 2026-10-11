@@ -46,7 +46,7 @@ from the windows and the wrecks are to come.
     each gear, and runs down while the clutch is out for a gear change (0.6 s).
   - Havok's engine is the same in every car; its shift point is laid over the real engine's redline.
     The Datsun runs from a 750 rpm idle to a 6,500 rpm redline, the big truck from 560 rpm to 2,700.
-- **The Datsun's engine sound.** A new engine sound of an idle and four steady-rev recordings, each
+- **The Datsun's engine sound.** A new engine sound of an idle and seven steady-rev recordings, each
   pitched to the revs and faded into the next, a little quieter off the throttle and quieter still while
   the clutch is out. The idle plays as the idle loop, in place of retail's. A recorded start
   replaces the ignition, and on the Datsun you drive the engine fades in as the start catches, 0.8 s
