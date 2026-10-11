@@ -88,4 +88,12 @@ public sealed class SoundNode
         }
         Voice?.Update(VolumeDb, Pitch, audible && (at.Soloed.Count == 0 || soloed), at.Distance);
     }
+
+    /// <summary>The loudest voice under this node in dB, before DARE's clamp, from <paramref name="above"/> down
+    /// with the gains and curves as they are now, at the parameters last evaluated; null with no voice.</summary>
+    public float? LoudestVoice(float above)
+    {
+        float db = above + GainDb + Curves.Select((c, i) => c.Target == 0 ? c.Evaluate(CurveInputs.ElementAtOrDefault(i)) : 0).Sum();
+        return Children.Select(c => c.LoudestVoice(db)).Append(Voice is null ? null : db).Max();
+    }
 }

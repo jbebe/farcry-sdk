@@ -63,8 +63,11 @@ A build script starts over from the takes: running it again overwrites the WAVs 
 
 Select any record in the voice tree but an event, such as a sample, a multilayer, a switch or a random container,
 and its gain shows under the tree: the dB it adds to the level of everything under it, wherever it plays.
-**−1 dB** and **+1 dB** step it; a value typed in and Enter sets it. The game clamps a voice at 0 dB, so a
-gain above 0 only lifts what other gains or curves hold below it. Gains save and undo as curves do.
+**−1 dB** and **+1 dB** step it; a value typed in and Enter sets it. Gains save and undo as curves do.
+
+The game clamps a voice at 0 dB, the level of its audio as it is, so no gain makes a voice louder than its
+WAV: gains only lift what other gains or curves hold below that. A red note under the gain says when a
+voice under the selected record is over the cap, and by how much. Past it, make the WAV itself louder.
 
 ## Editing curves
 

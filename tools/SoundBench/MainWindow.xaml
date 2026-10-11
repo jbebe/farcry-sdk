@@ -248,14 +248,18 @@
                     <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}"
                                Text="Select a layer to edit its curves, drawn over the other layers' in grey: drag a point (Shift: only its value), double-click to add one, right-click to remove one, Ctrl+Z to undo. The wheel zooms, dragging the background pans. The red line is the parameter's value now." />
                 </DockPanel>
-                <StackPanel x:Name="GainPanel" Grid.Row="2" Orientation="Horizontal" Margin="6,0,6,4" Visibility="Collapsed">
-                    <TextBlock x:Name="GainTitle" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <Button Content="−1 dB" Click="OnGainDown" Padding="6,2" Margin="0" AutomationProperties.AutomationId="GainDown" />
-                    <TextBox x:Name="GainBox" Width="56" Margin="4,0" VerticalContentAlignment="Center" KeyDown="OnGainEntered"
-                             AutomationProperties.AutomationId="Gain" />
-                    <Button Content="+1 dB" Click="OnGainUp" Padding="6,2" Margin="0" AutomationProperties.AutomationId="GainUp" />
-                    <TextBlock Text="dB, added to its level wherever it plays (type a value and press Enter, or step it)"
-                               VerticalAlignment="Center" Margin="8,0,0,0" Foreground="{StaticResource TextMutedBrush}" />
+                <StackPanel x:Name="GainPanel" Grid.Row="2" Margin="6,0,6,4" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="GainTitle" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <Button Content="−1 dB" Click="OnGainDown" Padding="6,2" Margin="0" AutomationProperties.AutomationId="GainDown" />
+                        <TextBox x:Name="GainBox" Width="56" Margin="4,0" VerticalContentAlignment="Center" KeyDown="OnGainEntered"
+                                 AutomationProperties.AutomationId="Gain" />
+                        <Button Content="+1 dB" Click="OnGainUp" Padding="6,2" Margin="0" AutomationProperties.AutomationId="GainUp" />
+                        <TextBlock Text="dB, added to its level wherever it plays (type a value and press Enter, or step it)"
+                                   VerticalAlignment="Center" Margin="8,0,0,0" Foreground="{StaticResource TextMutedBrush}" />
+                    </StackPanel>
+                    <TextBlock x:Name="GainNote" Style="{StaticResource Optional}" TextWrapping="Wrap" Margin="0,4,0,0"
+                               Foreground="{StaticResource ProblemBrush}" AutomationProperties.AutomationId="GainNote" />
                 </StackPanel>
                 <UniformGrid x:Name="CurveEditors" Grid.Row="3" Rows="1" />
             </Grid>

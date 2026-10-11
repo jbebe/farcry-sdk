@@ -482,6 +482,7 @@ public partial class MainWindow : Window
     {
         List<(NodeView Play, SlotView Slot)> started = [];
         float[] inputs;
+        float? loudest;
         lock (_bench.Sync)
         {
             foreach (SoundInstance instance in _bench.TakeStarted())
@@ -501,8 +502,14 @@ public partial class MainWindow : Window
                 parameter.Capture();
             }
             inputs = _selected?.Node.CurveInputs.ToArray() ?? [];
+            loudest = SelectedResource?.LoudestVoice(_selected!.Parent?.Node.VolumeDb ?? 0);
             ShowGauges();
         }
+
+        GainNote.Text = loudest > 0
+            ? $"Its voice comes to {loudest:+0.#} dB, but the game caps a voice at 0 dB, so that much is not heard. " +
+              "Louder needs a louder WAV: a limiter in Audacity keeps its peaks under 0 dB."
+            : "";
 
         foreach ((NodeView play, SlotView slot) in started)
         {
