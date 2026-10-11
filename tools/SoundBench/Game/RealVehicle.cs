@@ -19,7 +19,7 @@ public sealed record RealVehicle(
         new("Jeep Wrangler taxi", 1200, 50),
         new("Quad", 600, 80),
         new("Unimog", 1600, 88),
-        new("ZIL-130", 4000, 150, 560, 2700, ShiftClunks),
+        new("ZIL-130", 4000, 150, 560, 3200, ShiftClunks),
     ];
 
     public static RealVehicle? Match(float mass, float enginePower)
