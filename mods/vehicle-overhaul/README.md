@@ -58,8 +58,9 @@ from the windows and the wrecks are to come.
   every Datsun; the fade-in and the clunk only on the one you drive.
 - **The big truck's engine sound.** The same, from a ZIL-130's own V8: an idle and seven steady-rev
   recordings from about 460 to 1,050 rpm, the idle one the lowest of them in place of retail's idle
-  loop, laid over the truck's revs compressed as the Datsun's are. It has its own recorded start, an
-  engine-off sound where retail's truck stops silently, and the Datsun's clunk on gear changes. The
+  loop, laid over the truck's revs compressed as the Datsun's are. It has its own recorded start, which
+  its engine fades in after as it catches, 0.7 s after the key; an engine-off sound where retail's
+  truck stops silently; and the Datsun's clunk on gear changes. The
   DLC's big truck, in the DLC's multiplayer maps, keeps its own.
 - **Quieter tyres.** Every car's tyre sounds on the ground, dirt, gravel, grass and the rest, play
   10 dB quieter, so they no longer drown out the engine.

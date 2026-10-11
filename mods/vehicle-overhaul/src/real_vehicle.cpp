@@ -31,7 +31,7 @@ namespace {
         {1200.0f, 50.0f, "Jeep Wrangler taxi", 1.20f},
         {600.0f, 80.0f, "Quad", 1.00f},
         {1600.0f, 88.0f, "Unimog", 0.85f},
-        {4000.0f, 150.0f, "ZIL-130", 0.85f, 560.0f, 3200.0f, kShiftClunks},
+        {4000.0f, 150.0f, "ZIL-130", 0.85f, 560.0f, 3200.0f, kShiftClunks, 0.7f},
     };
 }
 
