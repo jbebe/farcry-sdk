@@ -20,7 +20,7 @@ public sealed record SpkCurve(uint Target, uint Parameter, List<SpkPoint> Points
     public float Evaluate(float x) => Evaluate(Points, x);
 
     /// <summary>The value at <paramref name="x"/> as DARE reads a curve: linear between points, held past
-    /// the ends; 0 with no points. Rolloffs read the same way.</summary>
+    /// the ends; 0 with no points.</summary>
     public static float Evaluate(IReadOnlyList<SpkPoint> points, float x)
     {
         if (points.Count == 0)
@@ -164,6 +164,12 @@ public sealed class SpkBank
 
     /// <summary>Where the retail rolloff curves live, for an id no bank holds.</summary>
     public const string RolloffPackPath = @"common\soundbinary\2fffffff.spk";
+
+    /// <summary>The id the rolloff pack loads by: <see cref="PathOf"/> of it is its path in the archives.</summary>
+    public const uint RolloffPackId = 0x2FFFFFFF;
+
+    /// <summary>The path the game loads the bank of an id from, <c>soundbinary\004569c9.spk</c>; the inverse of <see cref="LoadIdOf"/>.</summary>
+    public static string PathOf(uint id) => $@"soundbinary\{id:x8}.spk";
 
     /// <summary>The rate for an IMA-ADPCM stream nothing declares one for: the commonest retail rate.</summary>
     public const int FallbackSampleRate = 32000;

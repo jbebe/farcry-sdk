@@ -52,10 +52,19 @@ public sealed class SpkLayout
     /// every event with a rolloff; one that is set fails to play through a first-person sound type.</summary>
     public const int PlayRolloff = 7, PlayPositioned = 14;
 
+    /// <summary>What a Play plays, or what any other event type names.</summary>
+    public const int PlaySound = 2, EventTarget = 2;
+
+    public const int SwitchEventGroup = 3, SwitchEventDefault = 4;
+
+    public const int SwitchGroup = 8, SwitchDefault = 9;
+
+    public const int RandomSilence = 8, RandomRepeatSilence = 9, RandomSequence = 10;
+
     private static readonly SpkWordField Gain = new("gainDb", SampleGain, SpkWordFormat.Q16);
 
     public static readonly SpkLayout Play = new("Play", (uint)SpkEventType.Leaf,
-        [new("sound", 2, SpkWordFormat.Id, SpkReference.Resource),
+        [new("sound", PlaySound, SpkWordFormat.Id, SpkReference.Resource),
             new("rolloff", PlayRolloff, SpkWordFormat.Id, SpkReference.Rolloff),
             new("positioned", PlayPositioned, SpkWordFormat.Bool)],
         defaults: new() { [4] = One, [PlayRolloff] = NoId });
@@ -67,14 +76,14 @@ public sealed class SpkLayout
         [new("effect", 2, SpkWordFormat.Id)]);
 
     public static readonly SpkLayout SwitchEvent = new("SwitchEvent", (uint)SpkEventType.Switch,
-        [new("group", 3, SpkWordFormat.Id), new("default", 4, SpkWordFormat.Id, SpkReference.Event)],
+        [new("group", SwitchEventGroup, SpkWordFormat.Id), new("default", SwitchEventDefault, SpkWordFormat.Id, SpkReference.Event)],
         derived: [5], childCount: 6, children: new(12, 8, -1, "Case", "event", SpkReference.Event));
 
     public static readonly SpkLayout MultiEvent = new("MultiEvent", (uint)SpkEventType.List, [],
         derived: [2], childCount: 3, children: new(4, -1, -1, "Child", "event", SpkReference.Event));
 
     /// <summary>Any other event type; which of them <c>target</c> points at is <see cref="TargetOf"/>.</summary>
-    public static readonly SpkLayout OtherEvent = new("Event", null, [new("target", 2, SpkWordFormat.Id)]);
+    public static readonly SpkLayout OtherEvent = new("Event", null, [new("target", EventTarget, SpkWordFormat.Id)]);
 
     public static readonly SpkLayout Sample = new("Sample", (uint)SpkResourceKind.Sample,
         [Gain, new("audio", SampleAudio, SpkWordFormat.Id, SpkReference.Audio), new("loop", SampleLoop, SpkWordFormat.Bool)],
@@ -83,15 +92,15 @@ public sealed class SpkLayout
         defaults: new() { [9] = 1, [12] = 1, [28] = 7, [30] = 1, [31] = NoId });
 
     public static readonly SpkLayout Switch = new("Switch", (uint)SpkResourceKind.Switch,
-        [Gain, new("group", 8, SpkWordFormat.Id), new("default", 9, SpkWordFormat.Id, SpkReference.Resource)],
+        [Gain, new("group", SwitchGroup, SpkWordFormat.Id), new("default", SwitchDefault, SpkWordFormat.Id, SpkReference.Resource)],
         childCount: 7, children: new(8, 4, -1, "Case", "resource", SpkReference.Resource));
 
     /// <summary>Word [8] is the chance of playing nothing: with it, the entry weights sum to 1.0.
     /// <c>repeatSilence</c> allows two silent plays in a row; <c>sequence</c> steps through the entries
     /// per emitter from a random start, ignoring weights and silence. Word [3] is the entries' offset.</summary>
     public static readonly SpkLayout Random = new("Random", (uint)SpkResourceKind.Random,
-        [Gain, new("silence", 8, SpkWordFormat.Weight), new("repeatSilence", 9, SpkWordFormat.Bool),
-            new("sequence", 10, SpkWordFormat.Bool)],
+        [Gain, new("silence", RandomSilence, SpkWordFormat.Weight), new("repeatSilence", RandomRepeatSilence, SpkWordFormat.Bool),
+            new("sequence", RandomSequence, SpkWordFormat.Bool)],
         derived: [3], childCount: 7, children: new(16, 4, 8, "Choice", "resource", SpkReference.Resource));
 
     /// <summary>Its layers are written by hand: each nests curves of points.</summary>
