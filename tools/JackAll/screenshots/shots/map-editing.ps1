@@ -76,7 +76,8 @@ Save-Shot $slug '03-new' -Screen -NoPark -Callouts $fromArchetype -Region $main,
 Invoke-Ui $fromArchetype
 $search = Wait-Ui { Find-Ui -Id ArchetypePickerSearch -Optional } -What 'the archetype picker'
 Set-UiValue $search 'BarrelBeerStack'
-$item = Wait-Ui { @(Find-Ui -Scope (Find-Ui -Id ArchetypePickerList) -Type ListItem -All -Optional)[0] } -What 'a barrel stack'
+# The list filters a moment after typing; a row taken before that is gone by the time it's shot.
+$item = Wait-Ui { Find-Ui -Scope (Find-Ui -Id ArchetypePickerList) -Type ListItem -All -Optional | Where-Object { (Get-UiText $_) -like '*BarrelBeerStack*' } | Select-Object -First 1 } -What 'a barrel stack'
 Select-Ui $item
 $window = Find-ShotWindow 'New entity from archetype'
 Save-Shot $slug '04-picker' -Window $window -Callouts $search, $item, (Find-Ui -Id ArchetypePickerOk)

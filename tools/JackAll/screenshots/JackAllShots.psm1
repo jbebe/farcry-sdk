@@ -346,7 +346,8 @@ function Find-Ui {
         $found = @($Scope.FindAll($scopeKind, $cond) | Where-Object { -not $Like -or $_.Current.Name -like $Like })
         if ($found.Count) { if ($All) { , $found } else { $found[0] } }
     }
-    if ($Optional) { return & $find }
+    # Collected before returning, so -All hands its matches over one by one as Wait-Ui's path does.
+    if ($Optional) { $found = & $find; return $found }
     return Wait-Ui $find -What "element Id=$Id Name=$Name Like=$Like Type=$Type"
 }
 

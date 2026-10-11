@@ -52,7 +52,12 @@ try {
     Step 'fcb', 'decode', $sector, '--out', 'worldsector3160.xml'
     Step 'fcb', 'encode', 'worldsector3160.xml', '--out', 'worldsector3160.data.fcb'
     Step 'rml', 'decode', (& $find 'oasisstrings.rml'), '--out', 'oasisstrings.xml'
-    Invoke-ShotCli 'rml', 'fragments', 'oasisstrings.rml' | Out-Null
+    # The edit a modder makes in a text editor: the AK-47's name.
+    $strings = Join-Path $dir 'oasisstrings.xml'
+    $renamed = [IO.File]::ReadAllText($strings).Replace('<string enum="ak47" value="AK-47" />', '<string enum="ak47" value="AK-47 Drum" />')
+    [IO.File]::WriteAllText($strings, $renamed, (New-Object Text.UTF8Encoding($false)))
+    Step 'rml', 'encode', 'oasisstrings.xml', '--out', 'oasisstrings-drum.rml'
+    Step 'rml', 'fragments', 'oasisstrings-drum.rml', '--base', (& $find 'oasisstrings.rml')
 
     # Menus
     Step 'mgb', 'decode', (& $find 'hud.mgb'), '--out', 'hud.xml'

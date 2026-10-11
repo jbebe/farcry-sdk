@@ -241,6 +241,9 @@ public static class ShotNative
         input.type = 1;
         input.u.ki.wVk = vk;
         input.u.ki.dwFlags = up ? 0x0002u : 0u;
+        // Arrows, Delete and the navigation block are extended keys. Sent without the flag they are
+        // the numpad's, which Alt turns into a character code instead of a shortcut.
+        if ((vk >= 0x21 && vk <= 0x28) || vk == 0x2D || vk == 0x2E) input.u.ki.dwFlags |= 0x0001u;
         return input;
     }
 

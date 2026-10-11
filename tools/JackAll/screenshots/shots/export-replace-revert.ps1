@@ -32,15 +32,15 @@ Invoke-Ui (Find-UiButton 'Replace...')
 Complete-FileDialog 'Replace*' (Join-Path $out 'gun_icon_sniperdart.original.xbt')
 Wait-ShotStatus '*staged in your workspace*' | Out-Null
 
-# A folder the search didn't already highlight, so the click really selects it.
-$guns = Open-FilesFolder 'ui\textures\hud'
+# The folder the search result highlighted, so the click doesn't change the selection.
+$guns = Open-FilesFolder 'ui\textures\guns'
 Click-Ui $guns -Right
 $menu = Wait-Ui { Find-ShotMenu } -What 'the folder menu'
 Save-Shot $slug '03-folder-menu' -Screen -NoPark -Callouts (Find-Ui -Scope $menu -Type MenuItem -Like 'Export folder*') -Region $guns, $menu
 Invoke-Ui (Find-Ui -Scope $menu -Type MenuItem -Like 'Export folder*')
 Complete-FileDialog 'Export *' $out
 Close-ShotDialog 'Export folder' 'OK'
-if ((Wait-ShotStatus 'Exported*') -notlike '*from ui\textures\hud *') { throw 'Export folder exported the wrong folder' }
+if ((Wait-ShotStatus 'Exported*') -notlike '*from ui\textures\guns *') { throw 'Export folder exported the wrong folder' }
 
 Set-UiValue $filter 'ext:xbt sniperdart'
 $rows = @(Find-UiByText -Scope $grid -Type DataItem -Like '*_icon_sniperdart.xbt*' -All | Select-Object -First 2)

@@ -43,7 +43,8 @@ Select-Ui (Find-UiByText -Scope $outline -Like 'Entity*')
 $field = Set-DustFactor 'CVehicle - datsun*'
 $save = Find-Ui -Type Button -Name 'Save'
 Wait-Ui { $save.Current.IsEnabled } -What 'Save to enable' | Out-Null
-Save-Shot $slug '02-edit' -Callouts $field, $save
+$notice = Wait-Ui { Find-Ui -Type Text -Like "'vehicle.Land.DLC_Vehicle1_DLC1' is declared again by downloadcontent*" -Optional } -Timeout 120 -What 'the dead copy warning'
+Save-Shot $slug '02-edit' -Callouts $field, $save, $notice
 Invoke-Ui $save
 $dead = Join-Path (Get-ShotPaths).App 'workspace\mods\worlds\world1\generated\entitylibrary.fcb\vehicle\land\dlc_vehicle1_dlc1.xml'
 Wait-Ui { Test-Path $dead } -What 'the world1 fragment' | Out-Null
@@ -61,14 +62,13 @@ if ((Get-DialogText $lint) -notmatch 'DLC_Vehicle1_DLC1') { throw 'Check for dea
 Save-Shot $slug '04-lint' -Window $lint -Screen
 Push-ShotButton $lint 'OK'
 
-# 4. The fix: the same edit on the copy the game reads.
-Open-Quad | Out-Null
+# 4. The fix: the same edit on the copy the game reads, listed as soon as it's saved.
+$item = Open-Quad
 Set-DustFactor 'CVehicle - quad*' | Out-Null
 Invoke-Ui (Find-Ui -Type Button -Name 'Save')
 Wait-Ui { Test-Path (Join-Path (Get-ShotPaths).App 'workspace\mods\downloadcontent\dlc1\generated\entitylibrary.fcb\vehicle\land\dlc_vehicle1_dlc1.xml') } -What 'the DLC fragment' | Out-Null
-$item = Open-Quad
-$deadRow = Find-UiByText -Scope (Find-Ui -Id ModList) -Type ListItem -Like 'dead*'
 $live = Find-UiByText -Scope (Find-Ui -Id ModList) -Type ListItem -Like 'the game reads this*'
+$deadRow = Find-UiByText -Scope (Find-Ui -Id ModList) -Type ListItem -Like 'dead*'
 Save-Shot $slug '05-fixed' -Callouts $deadRow, $live -Region $item, $deadRow, $live
 
 # 5. Drop the dead copy again.
