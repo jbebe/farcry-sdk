@@ -90,12 +90,6 @@ Open your workspace folder (**Mods** tab, **workspace** row, **Open location**) 
 Each `<section>` and `enum` has to match the table exactly; the `value` is your text. Save it as
 UTF-8. Notepad does that by default.
 
-:::warning[Not "UTF-8 with BOM"]
-Some editors, and PowerShell's `Set-Content -Encoding UTF8`, put an invisible marker at the start of
-the file. JackAll rejects a file that starts with one ("Data at the root level is invalid. Line 1,
-position 1"). Save as plain UTF-8.
-:::
-
 ## 5. Rescan
 
 JackAll doesn't watch the workspace folder, so tell it you changed something: click **Rescan mods**

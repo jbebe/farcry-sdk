@@ -87,7 +87,7 @@ it. See [Edit the HUD and menus](/jackall/hud-and-menus).
 
 ## Mission scripts (`domino\user\*.lua`)
 
-The generated Lua of a mission. **Open in Domino Editor…** (1) rebuilds the box-and-wire graph it
+The generated Lua of a mission. **Open in Domino Viewer…** (1) rebuilds the box-and-wire graph it
 came from, see [Read a mission](/jackall/missions).
 
 ![A mission script](/img/jackall/previews/10-mission.png)

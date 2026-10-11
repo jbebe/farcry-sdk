@@ -51,7 +51,8 @@ JackAll saves your original `patch.dat` once as `patch.dat.vanilla`, and every b
 backup again, never from the file that happens to be there. So building twice gives you the exact
 same bytes, turning a mod off really removes it, and a failed build leaves the game untouched. If
 two mods change different parts of the same file they get merged instead of one of them winning
-silently; if they set the same value differently, **Deploy mods** stops and names it. **Check for
+silently; if they set the same value differently, **Deploy mods** stops and names it, unless your
+workspace sets that value too. **Check for
 dead edits** finds edits that a later entity library overrides, which is the kind of change that
 looks fine in the tool and does nothing in game. A mod can also carry a `plugins\` folder, and that
 one goes to `bin\plugins\` for [FCSE](/fcse) instead of into the archive. See
@@ -152,7 +153,7 @@ events to which, and the inspector adds a link by clicking its target. A prefab 
 and deletes together with its members. Group makes one from the selection, and Save prefab keeps it
 in the library to drag into any world. Check lists what would fail in game before you save, such as
 a character placed where there is no navmesh. Terrain, roads and vegetation are still view only.
-Deploy from the **Mods** tab; the Map tab's own Deploy button doesn't do anything yet. See
+Deploy from the **Mods** tab. See
 [Explore a world](/jackall/map-viewer), [Move, add and delete objects](/jackall/map-editing) and
 [Links, triggers, lights and prefabs](/jackall/map-links-prefabs).
 
@@ -271,8 +272,8 @@ work than one person can do, which is exactly why the source is public.
 ## How to use
 
 **First run.** Point JackAll at the folder that has `bin\FarCry2.exe` in it. It checks your archives
-against the hashes of a clean Steam 1.03 install and tells you if something is already different; a
-GOG install passes too. It still works in that case, but then "original" means whatever you gave it.
+against the hashes of a clean 1.03 install, Steam's or GOG's, and tells you if something is already
+different. It still works in that case, but then "original" means whatever you gave it.
 The tool writes three things next to the exe: `config.ini` (your game folder and mod list, you can
 edit it by hand), `data\` (the ffmpeg it converts audio with, and your saved prefabs), and
 `workspace\`. See [What JackAll keeps where](/jackall/tour#what-jackall-keeps-where).
@@ -292,7 +293,8 @@ only that piece, on a path like
 `worlds\world1\generated\entitylibrary.fcb\weaponproperties\primary\ak47.xml`. Two mods on different
 entities never meet. Two mods on different fields of the same entity get merged against the original
 version. Only a real conflict, same field with two different values, needs you: **Deploy mods**
-stops and names the field instead of quietly picking one. The command line builds anyway, keeps the
+stops and names the field instead of quietly picking one, and a value you set in your workspace
+settles it. The command line builds anyway, keeps the
 later mod's value and warns. Entity libraries aren't the only files kept in pieces; see
 [Containers and fragments](/jackall/fragments).
 

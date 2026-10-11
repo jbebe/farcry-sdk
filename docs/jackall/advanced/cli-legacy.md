@@ -58,11 +58,11 @@ b2ff54faab Text   domino/user/a1sm01_townescape.a1sm01_mission.lua@L1816  -self[
 
 `--match` narrows the list to addresses that match a pattern, such as `"**/entitylibrary*.fcb/**"`.
 
-:::warning[On a GOG install]
-Analyzing a whole `patch.dat` built on the Steam version also lists every difference between the
-Steam and GOG patches as changes. The Nexus release of Skip Intro gives 6,154 changes on GOG, where
-the mod itself makes 11. See
-[Import an old patch.dat mod](/jackall/legacy-import#keep-only-the-mods-changes).
+:::note[A whole `patch.dat`]
+A whole `patch.dat` is compared with your install's patch and with Steam's 1.03 patch, so the Nexus
+release of Skip Intro gives its 11 changes on Steam and GOG alike. A `patch.dat` built on any other
+release lists that release's differences as changes too. See
+[Import an old patch.dat mod](/jackall/legacy-import#check-what-came-in).
 :::
 
 ## Sort them into features

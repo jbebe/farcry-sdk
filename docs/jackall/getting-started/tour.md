@@ -21,9 +21,9 @@ The first time you start it, JackAll asks where the game is. Pick the folder tha
 
 ![The folder question on the first start](/img/jackall/tour/01-first-run.png)
 
-JackAll then compares the game's archives with a clean Steam 1.03 game, and warns if they differ.
-A GOG install passes this check. Then it reads the archives. That takes a while the first time and
-is faster after, because JackAll keeps an index of them.
+JackAll then compares the game's archives with a clean 1.03 game, Steam's or GOG's, and warns if
+they differ. Then it reads the archives. That takes a while the first time and is faster after,
+because JackAll keeps an index of them.
 
 ## The window
 

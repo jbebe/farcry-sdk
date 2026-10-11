@@ -22,7 +22,7 @@ mission. The launcher button says "Editor", but everything on this page is readi
 ## Open a mission
 
 On the **Files** tab, search `ext:lua a1sm01_mission`, select the mission's `.lua` and click **Open in
-Domino Editor…**. The graph opens in its own tab.
+Domino Viewer…**. The graph opens in its own tab.
 
 ![The town escape mission as a graph](/img/jackall/missions/01-graph.png)
 

@@ -32,7 +32,7 @@ Until it's done, the lists say they're still indexing.
 
 Each row also says *where* in the file the reference is (**site**, for example the `text_objModel`
 field of an archetype) and what kind of value holds it. A row in grey points at something JackAll
-can't open as a file, so it can't be followed. The three materials above are like that.
+can't open as a file, so it can't be followed.
 
 ## Follow a reference
 
@@ -40,8 +40,8 @@ Click a row, here world1's entity library (1), and press Enter, or double-click 
 
 ![World1's entity library among the AK-47 model's users](/img/jackall/references/02-user.png)
 
-The details switch to that file (1), with its full path (2). Its own references are under it, so you
-can keep going.
+The details switch to that file (1), with its full path (2), and the file list opens its folder with
+the file selected (3). Its own references are under it, so you can keep going.
 
 ![The details of the entity library the reference led to](/img/jackall/references/04-followed.png)
 

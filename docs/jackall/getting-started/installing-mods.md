@@ -114,13 +114,6 @@ Read the mod's changelog on Nexus too. Sometimes an update asks you to delete a 
 
 ![The confirmation Revert to original asks for](/img/jackall/installing-mods/04-revert.png)
 
-**On the GOG version**, a second message follows: the restored files "still don't match the known
-hash for a clean 1.03 Far Cry 2". JackAll's reference hashes come from the Steam version, and GOG
-ships a different `patch.dat`. If your game was clean when JackAll first deployed, this message is
-harmless and the original files really are back.
-
-![The hash message the GOG version shows after Revert to original](/img/jackall/installing-mods/05-gog-warning.png)
-
 When the Nexus button arrives and you want to move to Vortex, click **Revert to original** in
 JackAll first, then install the mods again through Vortex.
 

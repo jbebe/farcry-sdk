@@ -142,34 +142,32 @@ Wrote worldsector3160.xml
 Wrote worldsector3160.data.fcb
 ```
 
-A whole `.fcb` in a mod outranks every other mod that changes the same file instead of merging with
+A whole `.fcb` in a mod replaces every other mod's copy of the same file instead of merging with
 them. The app saves a change as a fragment of the file, which merges; see
 [The value editor in depth](/jackall/value-editor).
 
 `rml decode` and `rml encode` do the same for `.rml` documents, such as the game's text in
-`languages\<language>\oasisstrings.rml`:
+`languages\<language>\oasisstrings.rml`. A mod shouldn't ship that whole table, though. After you
+change strings in the XML and encode it again, `rml fragments` compares it with the game's own table
+and writes only the strings you changed, as the `oasisstrings.fragment.xml` a mod stages. Here the
+AK-47 is renamed:
 
 ```
 > jackall-cli rml decode game\languages\english\oasisstrings.rml --out oasisstrings.xml
 Wrote oasisstrings.xml
+
+> jackall-cli rml encode oasisstrings.xml --out oasisstrings-drum.rml
+Wrote oasisstrings-drum.rml
+
+> jackall-cli rml fragments oasisstrings-drum.rml --base game\languages\english\oasisstrings.rml
+oasisstrings-drum.rml: 2 string(s) differ from vanilla, in 2 section(s)
+    Challenges;ak47  AK-47 Drum
+    Items;ak47  AK-47 Drum
+  wrote 2 edit(s) (210 B) to oasisstrings.fragment.xml
+  stage it as mods\languages\<language>\oasisstrings.fragment.xml
 ```
 
-:::warning[`rml fragments` can't be run]
-JackAll has a command, `rml fragments`, that turns an edited `oasisstrings.rml` into the few strings
-a mod needs. It sits in a second command group also named `rml`, which the first one hides:
-
-```
-> jackall-cli rml fragments oasisstrings.rml
-
-Error: Unknown command 'fragments'.
-
-       rml fragments oasisstrings.rml
-           ^^^^^^^^^ No such command
-```
-
-Until that's fixed, write the strings file by hand as
-[Rename a weapon](/jackall/renaming) shows.
-:::
+[Rename a weapon](/jackall/renaming) writes the same file by hand.
 
 ## Menus
 
@@ -255,12 +253,12 @@ See [Read a mission](/jackall/missions).
 
 ```
 > jackall-cli xref build --game "C:\Games\Far Cry 2"
-Indexed 213,881 files in 14.7s
-  edges            : 2,985,738
+Indexed 213,879 files in 11.7s
+  edges            : 2,985,587
   definitions      : 39,369
-  file refs resolve: 1,005,622/1,162,609 (86.5%)
-  written to       : …\.xrefs (58.6 MB)
-  215 file(s) come from patch.dat/mods and are indexed per session, not persisted
+  file refs resolve: 1,012,633/1,169,618 (86.6%)
+  written to       : …\.xrefs (58.4 MB)
+  217 file(s) come from patch.dat/mods and are indexed per session, not persisted
 8 file(s) failed to decode
 …
 ```

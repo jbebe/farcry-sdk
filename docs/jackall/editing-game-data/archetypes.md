@@ -32,8 +32,9 @@ On the **Files** tab, open `worlds\world1\generated\entitylibrary.fcb\vehicle\La
 ![World1's copy of the DLC quad on the Files tab](/img/jackall/archetypes/01-files.png)
 
 Open **CVehicle**, change **fDustFactor** from 0.15 to 0.5 (1), and **Save** (2). What the field does
-doesn't matter here; the point is which copy you're changing. Nothing warns you: as far as the Files
-tab knows, you edited a file.
+doesn't matter here; the point is which copy you're changing. A moment after the tab opens, a strip
+at the top warns that the DLC's library declares the archetype again (3). Save anyway, to see how
+the rest of JackAll treats a dead edit.
 
 ![Changing a value on world1's copy](/img/jackall/archetypes/02-edit.png)
 
@@ -62,8 +63,8 @@ Run it before you share a mod. `jackall-cli mod lint` does the same on the comma
 ## The fix
 
 Back on the **Archetypes** tab, with the quad selected, make the same change in the editor and
-save. Load the world again: the list now has two entries, the old one still **dead** (1) and the new
-one, in the DLC's library, marked **the game reads this** (2).
+save. The list updates straight away: two entries, the old one still **dead** (1) and the new one, in
+the DLC's library, marked **the game reads this** (2).
 
 ![The dead copy and the live copy](/img/jackall/archetypes/05-fixed.png)
 

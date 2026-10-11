@@ -54,7 +54,7 @@ others, is on [Containers and fragments](/jackall/fragments).
 
 ## When two mods conflict
 
-Click **Deploy mods** with both test mods ticked, and the build stops. The message names the mod,
+Click **Deploy mods** with both test mods ticked, and the build stops. The message names both mods,
 the entity file and the exact field that clash, here `…/Ammo/iAmmoInClip`.
 
 ![The build fails and names the field both mods change](/img/jackall/managing-mods/02-conflict.png)
@@ -67,16 +67,12 @@ status line says **Built patch.dat** (3).
 
 ![One of the two mods unticked, and the build goes through](/img/jackall/managing-mods/03-one-off.png)
 
-:::caution[The message suggests a fix that doesn't clear the conflict]
-The message says you can save your own version of the entity into the workspace and it will win.
-In the current version that is not enough: the build still stops at the two mods. Untick one of
-them first. While the conflict is there, the **Archetypes** tab can also show far fewer archetypes
-for that world than it has. Once you've unticked one of the mods, restart JackAll to get the full
-list back.
-:::
+To keep both mods ticked, set the field to the value you want in your own workspace instead, for
+example on the **Archetypes** tab. Your workspace's value settles the conflict, and the rest of
+both mods still applies. A workspace edit that leaves that field alone doesn't settle it.
 
-Moving one of the mods up or down doesn't fix a conflict either. Order decides between whole files,
-not between two values of one field.
+Moving one of the mods up or down doesn't fix a conflict. Order decides between whole files, not
+between two values of one field.
 
 ## Plugins
 
@@ -86,8 +82,8 @@ a list of the plugin files it put there and never deletes anything else, so plug
 hand stay where they are.
 
 One case to know about: if you already copied a plugin by hand to the exact path a mod wants to put
-its own, JackAll leaves your file alone and skips the mod's. Delete the hand-copied one and deploy
-again. Installing FCSE itself is covered in
+its own, JackAll leaves your file alone, skips the mod's, and says so when the deploy finishes.
+Delete the hand-copied one and deploy again. Installing FCSE itself is covered in
 [Installing mods with JackAll](/jackall/installing-mods#fcse-and-plugins).
 
 ## A mod that does nothing

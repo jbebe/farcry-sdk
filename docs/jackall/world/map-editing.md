@@ -83,7 +83,6 @@ layer ▸**.
 - for an object pasted from the other world, the archetype and the dependency entries it needs.
 
 Because every object is its own piece, two mods that edit different objects in the same sector
-merge. Then go to the **Mods** tab and **Deploy mods**. The Map tab's own **Deploy** button doesn't
-do anything yet.
+merge. Then go to the **Mods** tab and **Deploy mods**.
 
 Terrain, roads, rivers and vegetation are view only.

@@ -31,13 +31,8 @@ archetype turns green in the list. The change goes to the archetype's copy in bo
 
 ![A sniper's reaction time raised to one second](/img/jackall/ai/01-soldiers.png)
 
-:::warning[Change one archetype at a time]
-**Tick shown** ticks every archetype the filter shows, so that one change reaches them all. Today
-only the first of them is saved. Archetypes whose settings start out identical share them inside
-JackAll: the others show the new value but are never saved, and an archetype you haven't touched can
-show another one's change. Until this is fixed, tick one archetype, **Save**, and restart JackAll
-before you change the next. The same goes for **Weapons**.
-:::
+**Tick shown** ticks every archetype the filter shows, so that one change reaches them all. The same
+goes for **Weapons**.
 
 ## Weapons
 

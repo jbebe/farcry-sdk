@@ -103,21 +103,23 @@ order, comparing each with the original:
 - **Different fragments of one file** all land.
 - **Different values in the same fragment** all land.
 - **The same value changed to the same thing** is fine.
-- **The same value changed to different things** is a conflict. **Deploy mods** stops and names it;
-  see [When two mods conflict](/jackall/managing-mods#when-two-mods-conflict). The command line keeps
-  the later mod's value and warns.
+- **The same value changed to different things** is a conflict. **Deploy mods** stops and names it,
+  unless your workspace sets that value too: your workspace's value settles it. See
+  [When two mods conflict](/jackall/managing-mods#when-two-mods-conflict). The command line keeps
+  the later mod's value and warns, and the Files tab shows the later mod's value.
 - **Two mods adding the same new fragment** with different contents is a conflict too.
 - **Items added to the same list,** such as dependencies of one resource, are all kept.
 
 Because a value that matches the game's own counts as unchanged, a later mod can't put a value back
-to the original over an earlier mod's change. Untick the earlier mod instead.
+to the original over an earlier mod's change, and neither can your workspace. Untick the earlier mod
+instead.
 
 ## Whole files and fragments together
 
 - **Two mods ship the same whole file:** the lowest in the list wins.
 - **One ships the whole file, another ships fragments of it:** the fragments are applied on top of
-  the whole file, whatever the order. Where both change the same piece, the fragment wins. The
-  command line reports this; the app doesn't.
+  the whole file, whatever the order. Where both change the same piece, the fragment wins, and
+  **Deploy mods** and the command line both say so.
 - **The text table can't be shipped whole.** A mod with a whole `oasisstrings.rml` is refused.
 
 So an old mod that ships a whole entity library still works, but it replaces every other whole copy
@@ -178,4 +180,3 @@ language, as Flashlight has. [Rename a weapon](/jackall/renaming) walks through 
 - **Check archetypes.** A fragment of an archetype that a later library declares again does nothing.
   **Check for dead edits** on the Mods tab finds them; see
   [Which copy does the game read?](/jackall/archetypes)
-- **Save hand-written fragments as plain UTF-8,** without a byte order mark.
