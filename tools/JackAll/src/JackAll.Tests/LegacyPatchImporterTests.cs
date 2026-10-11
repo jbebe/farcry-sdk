@@ -100,6 +100,28 @@ public class LegacyPatchImporterTests : IDisposable
         Assert.Equal(fragmentReplacementXml, workspace.Read(staged.EntryHash));
     }
 
+    /// <summary>On an install that ships another patch (GOG), an entry the mod left at its retail
+    /// version is the patch the mod was built on, not a change.</summary>
+    [Fact]
+    public void An_entry_at_its_retail_version_is_not_a_change_on_an_install_with_another_patch()
+    {
+        if (LegacySourceInstall is null || CleanInstall is null) return;
+
+        NameDatabase names = TestSupport.LoadNames();
+        uint other = FatArchive.Read(CleanInstall.PatchFat).Entries[0].Hash;
+        string legacyZipPath = BuildLegacyPatch("retail_based", names,
+            MakeZipMod("retail_based_source", ("engine/gamemodes/gamemodesconfig.xml", "a real change"u8.ToArray())));
+
+        using var cleanVfs = GameVfs.OpenForOriginalsOnly(CleanInstall, names);
+        LegacyImportResult result = LegacyPatchImporter.Import(
+            legacyZipPath, MakeWorkspace("other_patch"), names, FcbClassDefinitions.Empty,
+            hash => hash == other ? "another release"u8.ToArray() : cleanVfs.ReadOriginal(hash),
+            hash => hash == other ? 0 : cleanVfs.ReadOriginalHash(hash));
+
+        Assert.Equal(1, result.Imported);
+        Assert.Equal(0, result.FragmentsImported);
+    }
+
     /// <summary>
     /// A `depload.dat` a legacy mod changed comes back as the one resource whose dependencies moved,
     /// not as the whole manifest - the granularity two mods need in order to coexist.

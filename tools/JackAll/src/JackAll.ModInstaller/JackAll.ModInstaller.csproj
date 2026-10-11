@@ -54,8 +54,9 @@
     <InternalsVisibleTo Include="JackAll.Tests" />
   </ItemGroup>
 
-  <!-- The same two assets jackall-cli ships: the hash dictionary gives entries real filenames, and
-       the class config lets a fragment merge resolve .fcb member names instead of raw BinHex. -->
+  <!-- Assets jackall-cli ships too: the hash dictionary gives entries real filenames, the class config
+       lets a fragment merge resolve .fcb member names, and the retail patch table lets a legacy import
+       tell a mod's changes from the patch it was built on. -->
   <ItemGroup>
     <Content Include="..\..\assets\fc2.hashlist" Link=".itemhashes">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -64,6 +65,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\..\assets\component_schema.json" Link=".componentschema">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\retail_patch.tsv" Link=".retailpatch">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

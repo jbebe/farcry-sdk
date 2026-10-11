@@ -85,6 +85,8 @@ public static class LegacyPatchImporter
     /// thousands of them for a large mod.</summary>
     private static readonly UTF8Encoding Utf8 = new(encoderShouldEmitUTF8Identifier: false);
 
+    private static readonly Lazy<IReadOnlyDictionary<uint, ulong>> RetailPatch = new(BundledAssets.LoadRetailPatch);
+
     /// <summary>
     /// Extracts the patch.fat/patch.dat pair from <paramref name="zipPath"/>, diffs every entry against
     /// <paramref name="readOriginal"/>, and stages whatever differs into <paramref name="workspace"/>.
@@ -227,7 +229,9 @@ public static class LegacyPatchImporter
             // this doesn't touch at all - a mismatch still falls through to the full decoded comparison
             // below, exactly as before, now paying for the vanilla decompress only when it's actually
             // needed.
-            if (vanillaHash == legacyHash)
+            // Unchanged from the install's patch, or from the retail patch the mod was built on where the
+            // install ships another one (GOG): either way, not the mod's change.
+            if (vanillaHash == legacyHash || (RetailPatch.Value.TryGetValue(entry.Hash, out ulong retail) && retail == legacyHash))
             {
                 skipped++;
                 continue;

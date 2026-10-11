@@ -1,3 +1,4 @@
+using System.Globalization;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Naming;
 
@@ -46,6 +47,21 @@ public static class BundledAssets
     {
         string? path = FindAsset(".componentschema", Path.Combine("assets", "component_schema.json"));
         return path is null ? ComponentSchema.Empty : ComponentSchema.Load(path);
+    }
+
+    /// <summary>The retail (Steam) 1.03 patch's entries: name hash to the XxHash64 of their bytes.</summary>
+    public static IReadOnlyDictionary<uint, ulong> LoadRetailPatch()
+    {
+        var entries = new Dictionary<uint, ulong>();
+        if (FindAsset(".retailpatch", Path.Combine("assets", "retail_patch.tsv")) is { } path)
+        {
+            foreach (string line in File.ReadLines(path).Where(l => l.Length > 0 && l[0] != '#'))
+            {
+                string[] columns = line.Split('\t');
+                entries[uint.Parse(columns[0], NumberStyles.HexNumber)] = ulong.Parse(columns[1], NumberStyles.HexNumber);
+            }
+        }
+        return entries;
     }
 
     /// <summary>Resolves a bundled asset by its name beside the exe or in its <c>data</c> folder, then by
