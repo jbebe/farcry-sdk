@@ -13,7 +13,6 @@ using JackAll.Cli.Commands.Rml;
 using JackAll.Cli.Commands.Sav;
 using JackAll.Cli.Commands.Sbao;
 using JackAll.Cli.Commands.Spk;
-using JackAll.Cli.Commands.Rml;
 using JackAll.Cli.Commands.Shader;
 using JackAll.Cli.Commands.Xbg;
 using JackAll.Cli.Commands.Xbt;
@@ -126,6 +125,11 @@ app.Configure(config =>
         rml.AddCommand<RmlEncodeCommand>("encode")
             .WithDescription("Recompile decoded XML back into an RML document.")
             .WithExample("rml", "encode", "world1.decoded.xml");
+        rml.AddCommand<RmlFragmentsCommand>("fragments")
+            .WithDescription(
+                "Write the strings an edited string table changes against --base as the "
+                + "oasisstrings.fragment.xml a mod stages, instead of the whole 946 KB table.")
+            .WithExample("rml", "fragments", "oasisstrings.rml", "--base", "vanilla.rml");
     });
 
     // --- compiled shaders ------------------------------------------------
@@ -320,22 +324,6 @@ app.Configure(config =>
             .WithExample("move", "hash", @"graphics\characters\clip.mab");
     });
 
-    // --- .rml resource manifests ----------------------------------------
-    config.AddBranch("rml", rml =>
-    {
-        rml.AddCommand<RmlDecodeCommand>("decode")
-            .WithDescription("Decode a binary .rml to plain XML.")
-            .WithExample("rml", "decode", "toc.rml");
-        rml.AddCommand<RmlEncodeCommand>("encode")
-            .WithDescription("Re-encode an XML document back into a binary .rml.")
-            .WithExample("rml", "encode", "toc.xml");
-        rml.AddCommand<RmlFragmentsCommand>("fragments")
-            .WithDescription(
-                "Write a string table out as per-section fragments a mod can stage, keeping only the "
-                + "sections that differ from --base. Turns a 946 KB whole-file override into a diff.")
-            .WithExample("rml", "fragments", "oasisstrings.rml", "--base", "vanilla.rml", "--out", "layer");
-    });
-
     // --- Hash reference graph --------------------------------------------
     // The headless half of the app's Xrefs panel. `build` is also the only way to see what the
     // index actually costs - counts, timing, and how many file references resolve to a real entry.
@@ -346,10 +334,10 @@ app.Configure(config =>
             .WithExample("xref", "build", "--game", @"C:\Games\Far Cry 2");
         xref.AddCommand<XrefToCommand>("to")
             .WithDescription("List everything that references a path or hash.")
-            .WithExample("xref", "to", @"graphics\_common\weapons\ak47\ak47_d.xbt", "--game", @"C:\Games\Far Cry 2");
+            .WithExample("xref", "to", @"graphics\weapons\primary\ak47\ak47_state01_m.xbt", "--game", @"C:\Games\Far Cry 2");
         xref.AddCommand<XrefFromCommand>("from")
             .WithDescription("List everything a file references.")
-            .WithExample("xref", "from", @"graphics\_common\weapons\ak47\ak47.xbm", "--game", @"C:\Games\Far Cry 2");
+            .WithExample("xref", "from", @"graphics\_materials\sdore2-m-2008050631030648.xbm", "--game", @"C:\Games\Far Cry 2");
         xref.AddCommand<XrefReachCommand>("reach")
             .WithDescription("Classify every file as used / used-sp-only / used-mp-only / unused / unknown by reachability from engine roots.")
             .WithExample("xref", "reach", "--game", @"C:\Games\Far Cry 2", "--build", "--out", "fc2.reach.tsv");
