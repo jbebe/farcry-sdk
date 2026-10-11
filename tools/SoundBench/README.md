@@ -24,7 +24,7 @@ library. Audio goes out through WASAPI (NAudio), and Ogg Vorbis is decoded by NV
 | Control | What it does |
 |---|---|
 | Game, Layers | The install (default `C:\Games\Far Cry 2`) and layer folders read over it, separated by `;`. The default layer is `mods/vehicle-overhaul/layer` in this repo. Kept in `%LOCALAPPDATA%\SoundBench\settings.json`. |
-| Car | Every wheeled archetype with an engine loop, one entry per sound and physics setup, named after the real vehicle the overhaul matches it to |
+| Car | Every wheeled archetype with an engine loop, one entry per sound setup, named after the real vehicle the overhaul matches it to. Archetypes that share their sounds share an entry, which drives with the first one's physics. |
 | Start / Stop engine | Ignition, then the idle, engine and extra-torque loops after the archetype's start time. Stop plays the engine-off events and cuts the loops. |
 | Accelerate / Coast / Brake | The pedal: W, Space and S do the same. Throttle sets how far Accelerate presses. |
 | Shift time | How long a gear change keeps the clutch out, read from the car's section of `bin\vehicle-overhaul.ini` |

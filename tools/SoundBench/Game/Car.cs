@@ -1,7 +1,7 @@
 namespace SoundBench.Game;
 
 /// <summary>A wheeled vehicle as its archetype sets it up, plus the real vehicle the overhaul knows it as.</summary>
-/// <param name="Archetypes">Every archetype sharing this sound and physics setup.</param>
+/// <param name="Archetypes">Every archetype sharing this sound setup; the physics and real vehicle are the first one's.</param>
 public sealed record Car(IReadOnlyList<string> Archetypes, RealVehicle? Real, CarSounds Sounds, CarPhysics Physics)
 {
     public string Label => (Real?.Name ?? Archetypes[0].Replace("vehicle.", "", StringComparison.OrdinalIgnoreCase))

@@ -4,7 +4,7 @@ using JackAll.Tools.World;
 
 namespace SoundBench.Game;
 
-/// <summary>Every wheeled vehicle a world can spawn with an engine sound, one per distinct setup.</summary>
+/// <summary>Every wheeled vehicle a world can spawn with an engine sound, one per sound setup.</summary>
 public static class CarCatalog
 {
     public static IReadOnlyList<Car> Load(GameFiles files, IProgress<string> progress)
@@ -15,7 +15,7 @@ public static class CarCatalog
         return [.. index.Names.Order(StringComparer.OrdinalIgnoreCase)
             .Select(name => Read(name, index.Winner(name)!.Node))
             .OfType<Car>()
-            .GroupBy(c => (Sounds: c.Sounds with { WheelRolls = Array.Empty<uint>() }, Wheels: string.Join(",", c.Sounds.WheelRolls), c.Physics))
+            .GroupBy(c => (Sounds: c.Sounds with { WheelRolls = Array.Empty<uint>() }, Wheels: string.Join(",", c.Sounds.WheelRolls)))
             .Select(g => g.First() with { Archetypes = [.. g.Select(c => c.Archetypes[0])] })
             .OrderBy(c => c.Real is null)
             .ThenBy(c => c.Label, StringComparer.OrdinalIgnoreCase)];
