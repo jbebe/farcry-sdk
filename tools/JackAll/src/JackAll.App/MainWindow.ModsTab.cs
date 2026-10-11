@@ -230,6 +230,15 @@ public partial class MainWindow
                 + $"{MainViewModel.FormatSize(result.OutputBytes)}{pluginsNote}). Launch the game to see it.";
 
             _vm.SaveConfig();
+
+            List<string> warnings = [.. result.Warnings()];
+            if (warnings.Count > 0)
+            {
+                const int shown = 10;
+                Warn("Deployed, with something to know:\n\n"
+                     + string.Join("\n\n", warnings.Take(shown))
+                     + (warnings.Count > shown ? $"\n\n... and {warnings.Count - shown:N0} more" : ""));
+            }
         }
         catch (Exception ex)
         {

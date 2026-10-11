@@ -12,7 +12,14 @@ public sealed record BuildResult(
     int AddedEntries,
     long OutputBytes,
     IReadOnlyList<ModConflict> Conflicts,
-    PluginSyncResult Plugins);
+    PluginSyncResult Plugins)
+{
+    /// <summary>What the build decided on its own that a modder should hear about, one sentence each.</summary>
+    public IEnumerable<string> Warnings()
+        => Conflicts.Select(c => c.Describe()).Concat(Plugins.SkippedForeign.Select(path =>
+            $"bin\\plugins\\{path} already exists and wasn't deployed by JackAll - left untouched. "
+            + "Remove it if the mod's copy should apply."));
+}
 
 /// <summary>
 /// Compiles the vanilla patch archive plus the enabled mod layers into a new patch.dat/patch.fat,

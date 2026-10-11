@@ -92,15 +92,9 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
                 + $"{result.Plugins.Removed:N0} removed");
         }
 
-        foreach (ModConflict conflict in result.Conflicts)
+        foreach (string warning in result.Warnings())
         {
-            AnsiConsole.MarkupLine($"[yellow]Warning:[/] {conflict.Describe().EscapeMarkup()}");
-        }
-        foreach (string collision in result.Plugins.SkippedForeign)
-        {
-            AnsiConsole.MarkupLine(
-                $"[yellow]Warning:[/] bin\\plugins\\{collision.EscapeMarkup()} already exists and wasn't "
-                + "deployed by JackAll - left untouched. Remove it manually if the mod's copy should apply.");
+            AnsiConsole.MarkupLine($"[yellow]Warning:[/] {warning.EscapeMarkup()}");
         }
         return 0;
     }
