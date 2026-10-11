@@ -125,7 +125,7 @@ public partial class MainWindow : Window
         ShowSlots(car);
         ShiftTime.Value = tuning.ShiftTime;
         CarInfo.Text = $"{string.Join(", ", car.Archetypes)}\n{car.Physics.Mass:0} kg, {car.Physics.EnginePower:0} N·m, " +
-                       $"{car.Physics.Gears} gears, top {car.Physics.TopSpeedMph:0} mph · tuning [{car.Real?.Name ?? OverhaulTuning.OtherCars}]: " +
+                       $"{_bench.Havok!.Gears} gears, top {car.Physics.TopSpeedMph:0} mph · tuning [{car.Real?.Name ?? OverhaulTuning.OtherCars}]: " +
                        $"power {tuning.EnginePower}x, top speed {tuning.TopSpeed}x, brakes {tuning.BrakeTorque}x";
         BankProblems.Text = string.Join("\n", registry.Problems);
         Parameters.ItemsSource = _parameters = [.. _bench.Parameters.Select(p => new ParameterView(_bench, p))];

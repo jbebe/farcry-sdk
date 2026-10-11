@@ -91,6 +91,12 @@ struct Parts {
     // Seconds a fully pressed brake takes to lock a wheel, and a gear change cuts the drive.
     float* lockTime;
     float* shiftTime;
+    // Havok's gearbox: the revs it changes down at, its forward gears' ratios and how many there are, and
+    // the gear it is in, from 0.
+    float* downshift;
+    float* gears;
+    int32_t* gearCount;
+    int8_t* gear;
     // How far a held steering key winds the front wheels out standing still, and at speed.
     float* steeringLock;
     float* steeringAtSpeed;

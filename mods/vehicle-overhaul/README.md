@@ -54,6 +54,10 @@ from the windows and the wrecks are to come.
   - Havok's engine is the same in every car; its shift point is laid over the real engine's redline.
     The Datsun runs from a 750 rpm idle to a 6,500 rpm redline, the big truck from 560 rpm to 3,200.
   - A rev limiter cuts the drive at the redline, so no car runs on past it, in top gear or reverse.
+  - The big truck drives on a ZIL-130's five-speed gearbox, from 7.45:1 down to direct, in place of the
+    game's seven close gears, and keeps the game's top gear, so its top speed is unchanged. First gear
+    pulls half as hard again, and each change up drops the revs to about 1,800. It changes down at
+    1,300 rpm.
 - **The Datsun's engine sound.** A new engine sound of an idle and seven steady-rev recordings, each
   pitched to the revs and faded into the next, a little quieter off the throttle and quieter still while
   the clutch is out. The idle plays as the idle loop, in place of retail's. A recorded start

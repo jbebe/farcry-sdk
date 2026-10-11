@@ -267,7 +267,9 @@ mode, and resets the AI's boost multipliers, `SetSpecialEnginePowerMultiplier` (
 | `+0x1DC` / `+0x1E0` | the retail primary ratio and engine power |
 
 `hkpVehicleInstance`: chassis `+0x18`, data `+0x1C`, steering `+0x24`, engine `+0x28`, transmission
-`+0x2C` (primary ratio `+0x10`), brake `+0x30` (wheels `+0x08`, stride `0x0C`; lock time `+0x14`),
+`+0x2C` (downshift rpm `+0x08`, upshift rpm `+0x0C`, primary ratio `+0x10`, clutch delay `+0x14`, reverse
+ratio `+0x18`, the forward gears' ratios `+0x1C` and their count `+0x20`; read on GOG in the transmission's
+setup at `0x1049DE10`), brake `+0x30` (wheels `+0x08`, stride `0x0C`; lock time `+0x14`),
 suspension `+0x34` (wheels `+0x08`, stride `0x30`, length `+0x20`; springs `+0x14`, stride `0x0C`), aerodynamics
 `+0x38` (`extraGravity` `+0x20`, limiter `+0x30`), velocity damper `+0x44` (spin damping `+0x08`),
 wheel infos `+0x48` (stride `0xC0`: ground friction `+0x20`, contact body `+0x24`, hardpoint `+0x30`,

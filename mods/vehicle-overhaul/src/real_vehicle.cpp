@@ -26,6 +26,7 @@ namespace {
 
     // 2,120 of its 4,300 kg, empty.
     constexpr float kZilFrontWeight = 0.49f;
+    constexpr float kZilGears[] = {7.45f, 4.10f, 2.29f, 1.47f, 1.00f};
 
     constexpr Spec kVehicles[] = {
         {1600.0f, 95.0f, "Land Rover Series III", 0.90f, 0.0f, 0.0f, 0, 0.0f, {kRoverSprings, kRoverSprings},
@@ -37,7 +38,8 @@ namespace {
         {1200.0f, 50.0f, "Jeep Wrangler taxi", 1.20f},
         {600.0f, 80.0f, "Quad", 1.00f},
         {1600.0f, 88.0f, "Unimog", 0.85f},
-        {4000.0f, 150.0f, "ZIL-130", 0.85f, 560.0f, 3200.0f, kShiftClunks, 0.7f, {}, kZilTuning, kZilFrontWeight},
+        {4000.0f, 150.0f, "ZIL-130", 0.85f, 560.0f, 3200.0f, kShiftClunks, 0.7f, {}, kZilTuning, kZilFrontWeight,
+         kZilGears, 1300.0f},
     };
 }
 

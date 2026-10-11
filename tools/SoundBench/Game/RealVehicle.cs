@@ -2,12 +2,13 @@ namespace SoundBench.Game;
 
 /// <summary>A real vehicle the vehicle overhaul matches the game's cars to: its engine's idle and redline
 /// (0 for the overhaul's defaults), the bank it plays on a gear change, the seconds from the ignition to its
-/// engine catching (0 for none), and where its tunings start, by their keys in the tuning file, for those
-/// that differ from everyone's defaults.</summary>
+/// engine catching (0 for none), where its tunings start, by their keys in the tuning file, for those
+/// that differ from everyone's defaults, and its gearbox's forward ratios and the revs it changes down at
+/// (null for Havok's).</summary>
 /// <remarks>Mirrors <c>mods/vehicle-overhaul/src/real_vehicle.cpp</c>.</remarks>
 public sealed record RealVehicle(
     string Name, float Mass, float EnginePower, float Idle = 0, float Redline = 0, uint? ShiftSound = null, float CatchTime = 0,
-    IReadOnlyDictionary<string, float>? Tuning = null)
+    IReadOnlyDictionary<string, float>? Tuning = null, IReadOnlyList<float>? Gears = null, float Downshift = 0)
 {
     private const uint ShiftClunks = 0x00FD0000;
 
@@ -24,7 +25,8 @@ public sealed record RealVehicle(
         new("Jeep Wrangler taxi", 1200, 50),
         new("Quad", 600, 80),
         new("Unimog", 1600, 88),
-        new("ZIL-130", 4000, 150, 560, 3200, ShiftClunks, 0.7f, new Dictionary<string, float> { ["Inertia"] = 3.6f }),
+        new("ZIL-130", 4000, 150, 560, 3200, ShiftClunks, 0.7f, new Dictionary<string, float> { ["Inertia"] = 3.6f },
+            [7.45f, 4.10f, 2.29f, 1.47f, 1.00f], 1300),
     ];
 
     public static RealVehicle? Match(float mass, float enginePower)

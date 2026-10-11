@@ -122,7 +122,8 @@ The vehicle overhaul's side:
   linear resampling, but DARE's own resampler and its pitch limit are not traced.
 - **Havok.** A stand-in replaces Havok. It keeps FC2's engine and gearbox constants: 1000/5500/7500
   rpm, gears 1.5/1.2/0.9/0.75…, and shifts at 6500 up and 3500 down, where the overhaul's rev limiter
-  also cuts the drive. It drives on flat ground, so
+  also cuts the drive. A car the overhaul gives a real gearbox, the ZIL-130, drives on that gearbox and
+  changes down where the overhaul has it change down. It drives on flat ground, so
   there is no wheelspin, no gear hunting and no air time. How the engine resists off the pedal is an
   approximation.
 - **Not emulated:**

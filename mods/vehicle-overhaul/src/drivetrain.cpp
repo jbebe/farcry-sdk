@@ -66,6 +66,14 @@ namespace {
     // The entity of the vehicle the player drives, on the game thread.
     void* g_vehicle = nullptr;
 
+    float IdleOf(const VehicleOverhaul::RealVehicle::Spec* real) {
+        return real != nullptr && real->idle > 0.0f ? real->idle : kIdle;
+    }
+
+    float RedlineOf(const VehicleOverhaul::RealVehicle::Spec* real) {
+        return real != nullptr && real->redline > 0.0f ? real->redline : kRedline;
+    }
+
     void Tick(void* pawn, float*) {
         g_vehicle = VehicleOverhaul::Wheeled::Player() != nullptr
                         ? VehicleOverhaul::Entity::Of(VehicleOverhaul::Vehicle::Current(pawn))
@@ -100,8 +108,8 @@ bool Install() {
 
 float Step(Car car, const RealVehicle::Spec* real, float shiftTime, const Wheeled::Readout& readout,
            float seconds) {
-    const float idle = real != nullptr && real->idle > 0.0f ? real->idle : kIdle;
-    const float redline = real != nullptr && real->redline > 0.0f ? real->redline : kRedline;
+    const float idle = IdleOf(real);
+    const float redline = RedlineOf(real);
     if (car != g_car) {
         g_car = car;
         g_shiftSound = real != nullptr ? real->shiftSound : 0;
@@ -147,5 +155,10 @@ float Step(Car car, const RealVehicle::Spec* real, float shiftTime, const Wheele
 }
 
 bool AtRedline(const Wheeled::Readout& readout) { return std::abs(readout.rpm) >= kHavokUpshift; }
+
+float HavokRpm(const RealVehicle::Spec* real, float rpm) {
+    const float idle = IdleOf(real);
+    return kHavokMin + (rpm - idle) * (kHavokUpshift - kHavokMin) / (RedlineOf(real) - idle);
+}
 
 }

@@ -71,8 +71,8 @@ public sealed class Bench : ISampleProvider
     {
         Car = car;
         ShiftTime = tuning.ShiftTime;
-        HavokStandIn havok = Havok = new HavokStandIn(car.Physics, tuning);
         Drivetrain drivetrain = Drivetrain = new Drivetrain(car.Real?.Idle ?? 0, car.Real?.Redline ?? 0, car.Real?.CatchTime ?? 0);
+        HavokStandIn havok = Havok = new HavokStandIn(car.Physics, tuning, car.Real?.Gears, drivetrain.HavokRpm(car.Real?.Downshift ?? 0));
         Sounds = new VehicleSounds(car, Play);
 
         CarParameters ids = car.Sounds.Parameters;

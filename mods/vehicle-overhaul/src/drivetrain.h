@@ -20,4 +20,7 @@ float Step(Wheeled::Car car, const RealVehicle::Spec* real, float shiftTime, con
 // the redline is laid over.
 bool AtRedline(const Wheeled::Readout& readout);
 
+// Havok's revs while the engine of the vehicle `real` depicts, or null, turns at `rpm`.
+float HavokRpm(const RealVehicle::Spec* real, float rpm);
+
 }

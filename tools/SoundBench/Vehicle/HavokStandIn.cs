@@ -17,14 +17,23 @@ public sealed class HavokStandIn
     private const float RpmPerRadianPerSecond = 60 / (2 * MathF.PI);
 
     private readonly float[] _gears;
-    private readonly float _primaryRatio, _mass, _maxTorque, _brakeTorque, _grip, _rolling;
+    private readonly float _primaryRatio, _mass, _maxTorque, _brakeTorque, _grip, _rolling, _downshiftRpm = DownshiftRpm;
     private float _clutch;
 
-    public HavokStandIn(CarPhysics car, OverhaulTuning tuning)
+    /// <param name="realGears">The real gearbox's forward ratios, which the vehicle overhaul puts in place of Havok's
+    /// with Havok's top gear, or null.</param>
+    /// <param name="realDownshift">The revs, Havok's, that the real gearbox changes down at.</param>
+    public HavokStandIn(CarPhysics car, OverhaulTuning tuning, IReadOnlyList<float>? realGears, float realDownshift)
     {
         _gears = GearRatios(Math.Max(1, car.Gears));
         float topSpeed = Math.Max(1, car.TopSpeedMph) * MetresPerSecondPerMph;
         _primaryRatio = MaxRpm / RpmPerRadianPerSecond * WheelRadius / (topSpeed * _gears[^1]) / tuning.TopSpeed;
+        if (realGears is { Count: > 0 } && realGears.Count <= _gears.Length)
+        {
+            float top = _gears[^1];
+            _gears = realGears.Select(ratio => top * ratio / realGears[^1]).ToArray();
+            _downshiftRpm = realDownshift;
+        }
         _mass = Math.Max(1, car.Mass);
         _maxTorque = car.EnginePower * tuning.EnginePower;
         _brakeTorque = car.BrakingTorque * tuning.BrakeTorque;
@@ -37,6 +46,8 @@ public sealed class HavokStandIn
 
     /// <summary>0 is first gear.</summary>
     public int Gear { get; private set; }
+
+    public int Gears => _gears.Length;
 
     public float Rpm { get; private set; }
 
@@ -59,7 +70,7 @@ public sealed class HavokStandIn
             {
                 Shift(+1, clutchTime);
             }
-            else if (Rpm < DownshiftRpm && Gear > 0)
+            else if (Rpm < _downshiftRpm && Gear > 0)
             {
                 Shift(-1, clutchTime);
             }

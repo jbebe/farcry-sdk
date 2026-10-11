@@ -46,6 +46,10 @@ public sealed class Drivetrain
     /// <summary>The driver gets in, and the engine catches the catch time from now.</summary>
     public void Enter() => _sinceEntry = 0;
 
+    /// <summary>Havok's revs while this engine turns at <paramref name="rpm"/>.</summary>
+    public float HavokRpm(float rpm) =>
+        HavokStandIn.MinRpm + (rpm - Idle) * (HavokStandIn.UpshiftRpm - HavokStandIn.MinRpm) / (Redline - Idle);
+
     /// <summary>Moves the revs on; returns a gear change due to be heard now, +1 up or -1 down, else 0.</summary>
     public int Step(float havokRpm, int gear, float throttle, float shiftTime, float seconds)
     {

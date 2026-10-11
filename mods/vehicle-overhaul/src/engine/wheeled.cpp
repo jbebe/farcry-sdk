@@ -72,8 +72,12 @@ namespace {
     constexpr ptrdiff_t kSteeringLowMaxAngle = 0x28;
     constexpr ptrdiff_t kSteeringHighMaxAngle = 0x2C;
 
+    // hkpVehicleDefaultTransmission; the forward gears' ratios are an hkArray, its size after.
+    constexpr ptrdiff_t kTransmissionDownshift = 0x08;
     constexpr ptrdiff_t kTransmissionPrimaryRatio = 0x10;
     constexpr ptrdiff_t kTransmissionClutchDelay = 0x14;
+    constexpr ptrdiff_t kTransmissionGears = 0x1C;
+    constexpr ptrdiff_t kTransmissionGearCount = 0x20;
 
     constexpr ptrdiff_t kBrakeWheels = 0x08;
     constexpr ptrdiff_t kBrakeWheelStride = 0x0C;
@@ -295,6 +299,10 @@ Parts PartsOf(Car car) {
     uint8_t* transmission = At<uint8_t*>(vehicle, kVehicleTransmission);
     parts.primaryRatio = &At<float>(transmission, kTransmissionPrimaryRatio);
     parts.shiftTime = &At<float>(transmission, kTransmissionClutchDelay);
+    parts.downshift = &At<float>(transmission, kTransmissionDownshift);
+    parts.gears = reinterpret_cast<float*>(Elements(transmission, kTransmissionGears));
+    parts.gearCount = &At<int32_t>(transmission, kTransmissionGearCount);
+    parts.gear = &At<int8_t>(vehicle, kVehicleGear);
     parts.retailEnginePower = At<float>(car, kCarRetailEnginePower);
     parts.retailPrimaryRatio = At<float>(car, kCarRetailPrimaryRatio);
     parts.speedLimiter = &At<uint8_t>(aerodynamics, kAerodynamicsSpeedLimiter);

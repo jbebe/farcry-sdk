@@ -22,6 +22,9 @@ namespace {
     using VehicleOverhaul::Wheeled::Parts;
     namespace RealVehicle = VehicleOverhaul::RealVehicle;
 
+    // The most forward gears a retail gearbox may have for the overhaul to replace it.
+    constexpr int kMaxGears = 8;
+
     // The retail values of the car the overhaul is changing, or has yet to put back. Engine power,
     // gearing and the speed limiter are not kept: the game holds its own and resets them with the driver.
     struct Retail {
@@ -36,6 +39,10 @@ namespace {
         float inverseInertia[3];
         float lockTime;
         float shiftTime;
+        float downshift;
+        int gearCount;
+        // The first kMaxGears of its gears.
+        float gears[kMaxGears];
         float steeringLock;
         float steeringAtSpeed;
         struct {
@@ -67,6 +74,9 @@ namespace {
         std::copy_n(parts.inverseInertia, 3, retail.inverseInertia);
         retail.lockTime = *parts.lockTime;
         retail.shiftTime = *parts.shiftTime;
+        retail.downshift = *parts.downshift;
+        retail.gearCount = *parts.gearCount;
+        std::copy_n(parts.gears, (std::min)(retail.gearCount, kMaxGears), retail.gears);
         retail.steeringLock = *parts.steeringLock;
         retail.steeringAtSpeed = *parts.steeringAtSpeed;
         for (int i = 0; i < parts.wheels; ++i) {
@@ -91,6 +101,19 @@ namespace {
         *parts.lockTime = t.lockTime;
         *parts.shiftTime = t.shiftTime;
         *parts.steeringLock = g_retail.steeringLock * t.steeringLock;
+
+        // The real vehicle's gearbox in place of Havok's, with Havok's top gear, so the car keeps its top speed.
+        const RealVehicle::Spec* real = g_retail.real;
+        const int gears = real != nullptr ? static_cast<int>(real->gears.size()) : 0;
+        if (gears > 0 && gears <= g_retail.gearCount && g_retail.gearCount <= kMaxGears) {
+            const float top = g_retail.gears[g_retail.gearCount - 1];
+            for (int i = 0; i < gears; ++i) {
+                parts.gears[i] = top * real->gears[i] / real->gears.back();
+            }
+            *parts.gearCount = gears;
+            *parts.gear = static_cast<int8_t>((std::min)(static_cast<int>(*parts.gear), gears - 1));
+            *parts.downshift = VehicleOverhaul::Drivetrain::HavokRpm(real, real->downshift);
+        }
         *parts.steeringAtSpeed = g_retail.steeringAtSpeed * t.steeringAtSpeed;
 
         // The tyre solver's response is the body's inverse inertia times the factor, so both scale with it.
@@ -128,6 +151,9 @@ namespace {
         *parts.spinDamping = g_retail.spinDamping;
         *parts.lockTime = g_retail.lockTime;
         *parts.shiftTime = g_retail.shiftTime;
+        *parts.downshift = g_retail.downshift;
+        *parts.gearCount = g_retail.gearCount;
+        std::copy_n(g_retail.gears, (std::min)(g_retail.gearCount, kMaxGears), parts.gears);
         *parts.steeringLock = g_retail.steeringLock;
         *parts.steeringAtSpeed = g_retail.steeringAtSpeed;
         std::copy_n(g_retail.chassisResponse, 3, parts.chassisResponse);

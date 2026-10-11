@@ -38,6 +38,9 @@ struct Spec {
     std::span<const Start> tuning;
     // The share of its weight on the front axle, or 0 to leave it as far forward as the game put it.
     float frontWeight;
+    // Its gearbox's forward ratios, first to top, and the revs it changes down at; empty for Havok's.
+    std::span<const float> gears;
+    float downshift;
 };
 
 constexpr float kAtTheAxles = 0.0f;
