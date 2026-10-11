@@ -66,6 +66,22 @@ public class AiTuningTests
         Assert.Equal(120, Field("Side angle (°)").Read(entity));
     }
 
+    /// <summary>The two snipers' identical settings decode as one shared object; an edit to one must
+    /// stay in that one.</summary>
+    [Fact]
+    public void Writing_one_soldier_leaves_another_with_the_same_settings_alone()
+    {
+        if (World1.Value is not { } index || Fixture.Read(FcbDocumentTests.World1) is not { } library) return;
+
+        IReadOnlyList<TuningCopy> copies = TuningLibrary.Open(
+            [index.Winner("enemy_archetypes.Blue_Faction.Sniper_Caucasian")!, index.Winner("enemy_archetypes.Blue_Faction.Sniper_Nubian")!],
+            library, null);
+        TuningField reaction = Field("Reaction time (s)");
+
+        Assert.True(reaction.Write(copies[0].Entity, 1));
+        Assert.Equal(0.2, reaction.Read(copies[1].Entity)!.Value, 5);
+    }
+
     [Fact]
     public void Writing_a_field_changes_only_that_member()
     {

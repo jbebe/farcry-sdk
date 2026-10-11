@@ -162,7 +162,8 @@ public partial class MainWindow
             FcbObject root;
             try
             {
-                root = SaveGameDocument.ReadFcbRoot(save.Info);
+                // Identical subtrees decode as one shared object; editing needs each occurrence on its own.
+                root = SaveGameDocument.ReadFcbRoot(save.Info).Clone();
             }
             catch (Exception ex)
             {

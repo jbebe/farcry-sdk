@@ -66,10 +66,12 @@ public static class TuningLibrary
         List<TuningCopy> copies = [];
         foreach (ArchetypeDefinition definition in archetypes)
         {
-            if (definition.FragmentId is not { } id || !prototypes.TryGetValue(id, out FcbObject? root))
+            if (definition.FragmentId is not { } id || !prototypes.TryGetValue(id, out FcbObject? decoded))
             {
                 continue;
             }
+            // Identical subtrees decode as one object shared between prototypes; each copy gets its own.
+            FcbObject root = decoded.Clone();
             FcbObject vanillaRoot = vanillaPrototypes?.GetValueOrDefault(id) ?? root.Clone();
             if (EntityNamed(root, definition.Name) is { } entity && EntityNamed(vanillaRoot, definition.Name) is { } vanillaEntity)
             {

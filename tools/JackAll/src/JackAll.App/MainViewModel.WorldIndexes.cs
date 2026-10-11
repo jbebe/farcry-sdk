@@ -45,11 +45,12 @@ public sealed partial class MainViewModel
             StageFragmentEdits(fragment),
             EntitiesUnder(fragment.Path));
 
-    /// <summary>A whole container as an editable document, staged back as binary.</summary>
+    /// <summary>A whole container as an editable document, staged back as binary. Cloned, because
+    /// identical subtrees decode as one shared object that an edit would change everywhere.</summary>
     public FcbDocumentViewModel OpenContainerDocument(VfsFile container)
         => new(
             container.FileName,
-            FcbDocument.Deserialize(Read(container)),
+            FcbDocument.Deserialize(Read(container)).Clone(),
             ReadOriginal(container) is { } original ? FcbDocument.Deserialize(original) : null,
             new FcbEditContext(),
             StageContainerEdits(container),
