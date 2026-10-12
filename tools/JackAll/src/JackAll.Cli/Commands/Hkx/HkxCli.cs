@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Numerics;
 using JackAll.Cli.Infrastructure;
 using JackAll.Tools.Hkx;
+using JackAll.Tools.World;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -16,7 +17,7 @@ public class HkxShapeSettings : CommandSettings
     public string Input { get; init; } = null!;
 
     [CommandArgument(1, "<shape>")]
-    [Description("The shape, as #n from hkx tree: a box, hull, sphere or capsule, or the translate or transform shape around it.")]
+    [Description("The shape, as #n from hkx tree: a box, hull, sphere or capsule, or the translate or transform shape around one.")]
     public string Shape { get; init; } = null!;
 
     [CommandOption("-o|--out <file.hkx>")]
@@ -27,33 +28,19 @@ public class HkxShapeSettings : CommandSettings
 /// <summary>What the hkx commands share: naming an object, and refreshing, checking and writing an edited file.</summary>
 internal static class HkxCli
 {
-    /// <summary>The object <paramref name="spec"/> names: <c>#n</c> as <c>hkx dump</c> and <c>hkx tree</c> number it, or a body's name.</summary>
-    public static HkxObject Find(HkxFile file, string spec)
+    /// <summary>
+    /// The convex shape <paramref name="spec"/> names, as <c>#n</c> from <c>hkx tree</c>: the member placing it, where
+    /// it lands in the model, and where the space that member places it in does.
+    /// </summary>
+    public static (HkxLink Link, Matrix4x4 ToModel, Matrix4x4 ParentToModel) Shape(HkxFile file, string spec)
     {
-        List<HkxObject> objects = [.. file.Objects()];
-        if (spec.StartsWith('#'))
-        {
-            return int.TryParse(spec[1..], out int n) && n >= 0 && n < objects.Count
-                ? objects[n]
-                : throw new ArgumentException($"There is no object {spec}; the file has #0 to #{objects.Count - 1}.");
-        }
-        List<HkxObject> bodies = [.. objects.Where(o => o.Class.Name == "hkpRigidBody" && o.GetString("name") == spec)];
-        return bodies.Count switch
-        {
-            1 => bodies[0],
-            0 => throw new ArgumentException($"No body is named '{spec}'; name an object by its number, as #n."),
-            _ => throw new ArgumentException($"{bodies.Count} bodies are named '{spec}'; name the one meant by its number, as #n."),
-        };
-    }
-
-    /// <summary>The convex shape <paramref name="spec"/> names, by its own number or its translate or transform shape's, and where it lands.</summary>
-    public static (HkxLink Link, HkxPrimitive Primitive) Shape(HkxFile file, string spec)
-    {
-        HkxObject o = Find(file, spec);
-        return HkxShapes.Read(file).SelectMany(n => n.Descendants())
-            .FirstOrDefault(n => n is { Link: { } link, Primitive: not null } && (n.Object == o || link.Target == o)) is { } node
-                ? (node.Link!.Value, node.Primitive!)
-                : throw new ArgumentException($"{spec} is not a drawn box, hull, sphere or capsule, or the translate or transform shape around one; hkx tree lists them.");
+        List<HkxObject> objects = file.Objects();
+        HkxObject o = spec.StartsWith('#') && int.TryParse(spec[1..], out int number) && number >= 0 && number < objects.Count
+            ? objects[number]
+            : throw new ArgumentException($"There is no object {spec}; the file has #0 to #{objects.Count - 1}.");
+        return HkxShapes.Read(file).SelectMany(n => n.Descendants()).Where(n => n.Object == o).Select(HkxShapeEdit.Placed).FirstOrDefault(p => p is not null) is { } placed
+            ? (placed.Link, placed.Primitive.ToModel, HkxShapeEdit.ParentToModel(placed.Link, placed.Primitive.ToModel))
+            : throw new ArgumentException($"{spec} is not a drawn box, hull, sphere or capsule, or the translate or transform shape around one; hkx tree lists them.");
     }
 
     /// <summary>A vector typed as <c>x,y,z</c>.</summary>
@@ -73,10 +60,10 @@ internal static class HkxCli
     }
 
     /// <summary>
-    /// Brings the caches of <paramref name="file"/> in line with how its shapes changed since <paramref name="before"/>,
-    /// checks it, and writes it unless the check found an error. 0 when written.
+    /// Brings the caches of <paramref name="file"/> in line with how its shapes changed since <paramref name="before"/>
+    /// (only its copies, without one), checks it, and writes it unless the check found an error. 0 when written.
     /// </summary>
-    public static int Save(HkxFile file, HkxFile before, string outPath)
+    public static int Save(HkxFile file, HkxFile? before, string outPath)
     {
         foreach (string written in HkxCaches.Refresh(file, before))
         {
@@ -101,12 +88,12 @@ internal static class HkxCli
         {
             string label = problem.Severity switch
             {
-                HkxProblemSeverity.Error => "[red]error[/]",
-                HkxProblemSeverity.Warning => "[yellow]warning[/]",
+                LintSeverity.Error => "[red]error[/]",
+                LintSeverity.Warning => "[yellow]warning[/]",
                 _ => "[grey]note[/]",
             };
             AnsiConsole.MarkupLine($"  {label} {problem.Message.EscapeMarkup()}");
         }
-        return problems.All(p => p.Severity != HkxProblemSeverity.Error);
+        return problems.All(p => p.Severity != LintSeverity.Error);
     }
 }

@@ -17,6 +17,17 @@ public static class HkxShapeEdit
     /// <summary>The matrix placing a shape in its parent's space: a translate or transform shape's own, identity for any other.</summary>
     public static Matrix4x4 Local(HkxObject shape) => HkxShapes.Unwrap(shape)?.Local ?? Matrix4x4.Identity;
 
+    /// <summary>
+    /// The member placing a node's convex shape and where the shape lands, when the node is a drawn convex shape that
+    /// hangs from a member of its own, or the translate or transform shape around one.
+    /// </summary>
+    public static (HkxLink Link, HkxPrimitive Primitive)? Placed(HkxNode node) => node switch
+    {
+        { Link: { } link, Primitive: { } primitive } => (link, primitive),
+        { Object: { } o, Children: [{ } child] } when HkxShapes.IsWrapper(o) => Placed(child),
+        _ => null,
+    };
+
     /// <summary>The convex shape a link places: the one its translate or transform shape wraps, or the linked shape itself.</summary>
     public static HkxObject Leaf(HkxLink link) => link.Target is { } target && HkxShapes.IsWrapper(target) ? HkxShapes.Unwrap(target)!.Value.Child! : link.Target!;
 

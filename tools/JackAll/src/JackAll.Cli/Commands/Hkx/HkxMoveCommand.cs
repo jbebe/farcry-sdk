@@ -26,9 +26,9 @@ public sealed class HkxMoveCommand : CliCommand<HkxMoveCommand.Settings>
 
     protected override int Run(Settings settings, CancellationToken cancellationToken) => HkxCli.Edit(settings.Input, settings.Out, file =>
     {
-        (HkxLink link, HkxPrimitive shape) = HkxCli.Shape(file, settings.Shape);
-        Matrix4x4 toModel = shape.ToModel;
-        toModel.Translation = settings.To is { } to ? HkxCli.Vector(to, "--to") : toModel.Translation + HkxCli.Vector(settings.By!, "--by");
-        HkxShapeEdit.PlaceInModel(link, HkxShapeEdit.ParentToModel(link, shape.ToModel), toModel);
+        (HkxLink link, Matrix4x4 toModel, Matrix4x4 parentToModel) = HkxCli.Shape(file, settings.Shape);
+        Matrix4x4 moved = toModel;
+        moved.Translation = settings.To is { } to ? HkxCli.Vector(to, "--to") : toModel.Translation + HkxCli.Vector(settings.By!, "--by");
+        HkxShapeEdit.PlaceInModel(link, parentToModel, moved);
     });
 }

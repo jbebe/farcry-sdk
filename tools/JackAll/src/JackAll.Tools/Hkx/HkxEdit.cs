@@ -10,13 +10,24 @@ namespace JackAll.Tools.Hkx;
 /// </summary>
 public static class HkxEdit
 {
-    /// <summary>Arrays a packfile saves carry this in their capacity word, beside the element count.</summary>
-    private const uint SavedArrayFlags = 0xC0000000;
+    /// <summary>Arrays a packfile saves carry this in their capacity word, beside the element count; unsaved ones only the top bit.</summary>
+    private const uint SavedArrayFlags = 0xC0000000, UnsavedArrayFlags = 0x80000000;
 
     public static HkxObject Create(string className)
     {
         HkClass c = HavokClasses.Default[className];
-        return new HkxObject(c, new byte[c.Size]);
+        var o = new HkxObject(c, new byte[c.Size]);
+        Blank(o, 0, c);
+        return o;
+    }
+
+    /// <summary>Marks the arrays Havok does not save in a zeroed struct of class <paramref name="c"/>, as every shipped file holds them.</summary>
+    internal static void Blank(HkxBlock block, int at, HkClass c)
+    {
+        foreach (HkSlot s in HavokClasses.Default.Slots(c).Where(s => s.Member.Ignored && s.Member.Type == HkType.Array))
+        {
+            BinaryPrimitives.WriteUInt32LittleEndian(block.Bytes.AsSpan(at + s.Offset + 8), UnsavedArrayFlags);
+        }
     }
 
     /// <summary>Every float the member holds: one for a real, four for a vector, sixteen for a transform.</summary>
@@ -163,12 +174,17 @@ public static class HkxEdit
         {
             throw new ArgumentOutOfRangeException(nameof(index), $"'{path}' has {count} elements; there is no place {index}.");
         }
-        int size = HavokClasses.Default.SizeOf(s.Member.Element.Type, HkType.Void, s.Member.Element.Class), cut = index * size;
+        HkMember element = s.Member.Element;
+        int size = HavokClasses.Default.SizeOf(element.Type, HkType.Void, element.Class), cut = index * size;
         var elements = new HkxBlock(new byte[(count + by) * size]);
         old?.Bytes.AsSpan(0, cut).CopyTo(elements.Bytes);
         if (by > 0)
         {
             old?.Bytes.AsSpan(cut).CopyTo(elements.Bytes.AsSpan(cut + size));
+            if (element.Type == HkType.Struct)
+            {
+                Blank(elements, cut, HavokClasses.Default[element.Class!]);
+            }
         }
         else
         {
@@ -210,8 +226,8 @@ public static class HkxEdit
     /// <summary>The data an array or string slot owns.</summary>
     internal static HkxBlock? Elements(HkxBlock block, int at) => (block.Refs.GetValueOrDefault(at) as HkxData)?.Block;
 
-    // Points an array slot at new elements and writes its count, and for an hkArray its capacity.
-    private static void Resize(HkxBlock block, int at, HkSlot s, HkxBlock? elements, int count)
+    /// <summary>Points an array slot at new elements and writes its count, and for an hkArray its capacity.</summary>
+    internal static void Resize(HkxBlock block, int at, HkSlot s, HkxBlock? elements, int count)
     {
         SetRef(block, at, elements is null ? null : new HkxData(elements));
         BinaryPrimitives.WriteInt32LittleEndian(block.Bytes.AsSpan(at + 4), count);
@@ -260,8 +276,7 @@ public static class HkxEdit
     private static (HkxBlock Block, int At, HkSlot Slot)? Locate(HkxBlock block, HkClass c, int at, string path)
     {
         HavokClasses classes = HavokClasses.Default;
-        IReadOnlyList<HkSlot> slots = classes.Slots(c);
-        if (slots.FirstOrDefault(s => s.Path == path) is { } exact)
+        if (classes.Slot(c, path) is { } exact)
         {
             return (block, at + exact.Offset, exact);
         }
@@ -269,7 +284,7 @@ public static class HkxEdit
         for (int open = path.IndexOf('['); open > 0; open = path.IndexOf('[', open + 1))
         {
             int close = path.IndexOf(']', open);
-            if (close < 0 || slots.FirstOrDefault(s => s.Path == path[..open]) is not { Member.Type: HkType.Array or HkType.SimpleArray } array)
+            if (close < 0 || classes.Slot(c, path[..open]) is not { Member.Type: HkType.Array or HkType.SimpleArray } array)
             {
                 continue;
             }

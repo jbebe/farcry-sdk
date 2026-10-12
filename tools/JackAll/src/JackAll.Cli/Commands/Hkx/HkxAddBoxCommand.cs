@@ -26,8 +26,7 @@ public sealed class HkxAddBoxCommand : CliCommand<HkxAddBoxCommand.Settings>
 
     protected override int Run(Settings settings, CancellationToken cancellationToken) => HkxCli.Edit(settings.Input, settings.Out, file =>
     {
-        (HkxLink beside, HkxPrimitive shape) = HkxCli.Shape(file, settings.Shape);
-        HkxShapeEdit.AddBox(beside, HkxShapeEdit.ParentToModel(beside, shape.ToModel), HkxCli.Vector(settings.Size!, "--size"),
-            Matrix4x4.CreateTranslation(HkxCli.Vector(settings.At!, "--at")));
+        (HkxLink beside, _, Matrix4x4 parentToModel) = HkxCli.Shape(file, settings.Shape);
+        HkxShapeEdit.AddBox(beside, parentToModel, HkxCli.Vector(settings.Size!, "--size"), Matrix4x4.CreateTranslation(HkxCli.Vector(settings.At!, "--at")));
     });
 }

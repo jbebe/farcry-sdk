@@ -66,6 +66,7 @@ public sealed class HavokClasses
 {
     private readonly Dictionary<string, HkClass> _classes;
     private readonly ConcurrentDictionary<HkClass, IReadOnlyList<HkSlot>> _slots = [];
+    private readonly ConcurrentDictionary<HkClass, Dictionary<string, HkSlot>> _paths = [];
 
     private HavokClasses(Dictionary<string, HkClass> classes) => _classes = classes;
 
@@ -93,6 +94,10 @@ public sealed class HavokClasses
 
     /// <summary>Every value the class stores inline, in member order.</summary>
     public IReadOnlyList<HkSlot> Slots(HkClass c) => _slots.GetOrAdd(c, k => [.. Flatten(k, "", 0)]);
+
+    /// <summary>The value the class stores inline under a member path, or null.</summary>
+    public HkSlot? Slot(HkClass c, string path)
+        => _paths.GetOrAdd(c, k => Slots(k).DistinctBy(s => s.Path).ToDictionary(s => s.Path)).GetValueOrDefault(path);
 
     private IEnumerable<HkSlot> Flatten(HkClass c, string prefix, int at)
     {

@@ -52,12 +52,6 @@ public static class HkxMopp
     public static void Rebuild(HkxObject mopp)
     {
         (Vector4 info, byte[] data) = Build(Items(mopp));
-        Write(mopp, info, data);
-    }
-
-    /// <summary>Sets a MOPP shape's grid info and code.</summary>
-    public static void Write(HkxObject mopp, Vector4 info, byte[] data)
-    {
         HkxObject code = mopp.GetPointer("code")!;
         code.SetReals("info.offset", info.X, info.Y, info.Z, info.W);
         code.SetBytes("data", data);
@@ -101,9 +95,17 @@ public static class HkxMopp
             [.. reached.Except(keys), .. reached.GroupBy(k => k).Where(g => g.Count() > 1).Select(g => g.Key)], lost);
     }
 
-    /// <summary>The items a query at their own centre does not find: children the code has lost where they now are.</summary>
-    public static List<HkxChild> Misses(IEnumerable<HkxChild> items, Vector4 info, byte[] code)
-        => [.. items.Where(i => !Query(info, code, (i.Min + i.Max) / 2, (i.Min + i.Max) / 2).Contains(i.Key))];
+    /// <summary>
+    /// The children a query at their own centre does not find: ones the code has lost where they now are. An extended
+    /// mesh's triangles are left out, as some shipped breakable pieces hold code built for triangles they do not store.
+    /// </summary>
+    public static List<HkxChild> Lost(HkxObject mopp)
+    {
+        (Vector4 info, byte[] code) = Code(mopp);
+        bool mesh = mopp.GetPointer("child.childShape")!.Class.Name == "hkpStorageExtendedMeshShape";
+        return [.. Items(mopp).Where(i => (!mesh || (i.Key & HkxShapes.ShapesSubpartKey) != 0)
+            && !Query(info, code, (i.Min + i.Max) / 2, (i.Min + i.Max) / 2).Contains(i.Key))];
+    }
 
     private static (Vector3 Min, Vector3 Max) Bounds(IReadOnlyList<HkxChild> items) => XbgModel.Bounds(items.SelectMany(i => new[] { i.Min, i.Max }));
 

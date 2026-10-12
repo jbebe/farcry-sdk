@@ -11,9 +11,6 @@ namespace JackAll.Tools.Hkx;
 /// </summary>
 public static class HkxXml
 {
-    // A saved hkArray's capacity word carries these with its count; an unsaved one is empty with only the first.
-    private const uint SavedArrayFlags = 0xC0000000, UnsavedArrayFlags = 0x80000000;
-
     private static readonly HavokClasses Classes = HavokClasses.Default;
     private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
 
@@ -104,7 +101,7 @@ public static class HkxXml
 
         var array = new XElement("array", name);
         int count = BinaryPrimitives.ReadInt32LittleEndian(block.Bytes.AsSpan(at + 4));
-        if (block.Refs.GetValueOrDefault(at) is not HkxData { Block: var elements } || count == 0)
+        if (HkxEdit.Elements(block, at) is not { } elements || count == 0)
         {
             return array;
         }
@@ -151,18 +148,13 @@ public static class HkxXml
         };
     }
 
-    // Writes each member element of `e` into the struct of class `c` at `at`, and marks the unsaved arrays as Havok does.
+    // Writes each member element of `e` into the struct of class `c` at `at`.
     private static void Fill(HkxBlock block, int at, HkClass c, XElement e, IReadOnlyDictionary<int, HkxObject> objects)
     {
-        IReadOnlyList<HkSlot> slots = Classes.Slots(c);
-        foreach (HkSlot s in slots.Where(s => s.Member.Ignored && s.Member.Type == HkType.Array))
-        {
-            BinaryPrimitives.WriteUInt32LittleEndian(block.Bytes.AsSpan(at + s.Offset + 8), UnsavedArrayFlags);
-        }
         foreach (XElement member in e.Elements())
         {
             string path = Text(member, "name");
-            HkSlot s = slots.FirstOrDefault(s => s.Path == path) ?? throw new FormatException($"{c.Name} has no member '{path}'.");
+            HkSlot s = Classes.Slot(c, path) ?? throw new FormatException($"{c.Name} has no member '{path}'.");
             if (member.Name == "array")
             {
                 Array(block, at + s.Offset, s, member, objects);
@@ -196,7 +188,7 @@ public static class HkxXml
                 }
                 break;
             default:
-                Parse(e.Value, m, s.Path).CopyTo(block.Bytes.AsSpan(at));
+                Parse(e.Value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries), m, s.Path).CopyTo(block.Bytes.AsSpan(at));
                 break;
         }
     }
@@ -214,6 +206,7 @@ public static class HkxXml
                 elements = new HkxBlock(new byte[items.Count * size]);
                 for (int i = 0; i < items.Count; i++)
                 {
+                    HkxEdit.Blank(elements, i * size, Classes[element.Class!]);
                     Fill(elements, i * size, Classes[element.Class!], items[i], objects);
                 }
                 break;
@@ -241,28 +234,19 @@ public static class HkxXml
                 elements = new HkxBlock(new byte[words.Length / per * size]);
                 for (int i = 0; i < words.Length / per; i++)
                 {
-                    Parse(string.Join(' ', words[(i * per)..((i + 1) * per)]), element, s.Path).CopyTo(elements.Bytes.AsSpan(i * size));
+                    Parse(words.AsSpan(i * per, per), element, s.Path).CopyTo(elements.Bytes.AsSpan(i * size));
                 }
                 break;
             }
         }
 
         int count = elements.Bytes.Length / size;
-        if (count > 0)
-        {
-            block.Refs[at] = new HkxData(elements);
-        }
-        BinaryPrimitives.WriteInt32LittleEndian(block.Bytes.AsSpan(at + 4), count);
-        if (s.Member.Type == HkType.Array)
-        {
-            BinaryPrimitives.WriteUInt32LittleEndian(block.Bytes.AsSpan(at + 8), (uint)count | SavedArrayFlags);
-        }
+        HkxEdit.Resize(block, at, s, count == 0 ? null : elements, count);
     }
 
-    /// <summary>A value's bytes from its text: floats for reals and vectors, a name or number for an enum, true or false, or an integer in decimal or 0x hex.</summary>
-    public static byte[] Parse(string text, HkMember m, string path)
+    // A value's bytes from its words: floats for reals and vectors, a name or number for an enum, true or false, or an integer in decimal or 0x hex.
+    private static byte[] Parse(ReadOnlySpan<string> words, HkMember m, string path)
     {
-        string[] words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
         int size = Classes.SizeOf(m.Type, m.Subtype, m.Class);
         var bytes = new byte[size];
         if (HkxEdit.IsReal(m.Type))
@@ -277,7 +261,7 @@ public static class HkxXml
             }
             return bytes;
         }
-        string word = words.Length == 1 ? words[0] : throw new FormatException($"'{path}' takes one value, not '{text}'.");
+        string word = words.Length == 1 ? words[0] : throw new FormatException($"'{path}' takes one value, not '{string.Join(' ', words)}'.");
         long value = m.Type switch
         {
             HkType.Bool => word switch { "true" or "1" => 1, "false" or "0" => 0, _ => throw new FormatException($"'{path}' takes true or false, not '{word}'.") },

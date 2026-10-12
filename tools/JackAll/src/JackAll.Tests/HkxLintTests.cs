@@ -1,4 +1,5 @@
 using JackAll.Tools.Hkx;
+using JackAll.Tools.World;
 
 namespace JackAll.Tests;
 
@@ -48,8 +49,8 @@ public sealed class HkxLintTests
         IReadOnlyList<HkxProblem> stale = HkxLint.Check(file);
         HkxCaches.Refresh(file, HkxFile.Parse(bytes));
 
-        Assert.Contains(stale, p => p.Severity == HkxProblemSeverity.Error && p.Message.Contains("MOPP"));
-        Assert.Contains(stale, p => p.Severity == HkxProblemSeverity.Error && p.Message.Contains("cached bounds"));
+        Assert.Contains(stale, p => p.Severity == LintSeverity.Error && p.Message.Contains("MOPP"));
+        Assert.Contains(stale, p => p.Severity == LintSeverity.Error && p.Message.Contains("cached bounds"));
         Assert.Empty(HkxLint.Check(file));
     }
 
@@ -65,7 +66,7 @@ public sealed class HkxLintTests
         HkxObject chassis = system.GetPointers("rigidBodies")[0]!;
         system.Append("rigidBodies", chassis);
 
-        Assert.Contains(HkxLint.Check(file), p => p.Severity == HkxProblemSeverity.Error && p.Message.Contains("comes after"));
+        Assert.Contains(HkxLint.Check(file), p => p.Severity == LintSeverity.Error && p.Message.Contains("comes after"));
     }
 
     [Fact]

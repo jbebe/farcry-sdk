@@ -144,11 +144,12 @@ public sealed class HkxShapeEditTests
     [InlineData(Garage, "shapesSubparts[0].childShapes[3]", "shapesSubparts[0].childShapes[36]")]
     public void A_box_added_beside_a_shape_lands_where_asked_and_saves_clean(string fixture, string like, string path)
     {
-        if (Read(fixture) is not { } file || Fixture.Read(fixture) is not { } bytes)
+        if (Fixture.Read(fixture) is not { } bytes)
         {
             return;
         }
 
+        HkxFile file = HkxFile.Parse(bytes);
         HkxNode sibling = Node(file, like);
         Matrix4x4 parent = HkxShapeEdit.ParentToModel(sibling.Link!.Value, sibling.Primitive!.ToModel);
         int before = HkxMopp.Items(Mopp(file)).Count;
@@ -168,11 +169,12 @@ public sealed class HkxShapeEditTests
     [InlineData(Garage, "shapesSubparts[0].childShapes[3]")]
     public void A_shape_taken_out_saves_clean(string fixture, string path)
     {
-        if (Read(fixture) is not { } file || Fixture.Read(fixture) is not { } bytes)
+        if (Fixture.Read(fixture) is not { } bytes)
         {
             return;
         }
 
+        HkxFile file = HkxFile.Parse(bytes);
         int before = HkxMopp.Items(Mopp(file)).Count;
 
         HkxShapeEdit.Remove(Node(file, path).Link!.Value);

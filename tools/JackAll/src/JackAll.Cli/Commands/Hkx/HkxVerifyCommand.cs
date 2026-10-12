@@ -45,7 +45,8 @@ public sealed class HkxVerifyCommand : CliCommand<HkxVerifyCommand.Settings>
             }
         }
 
-        Console.WriteLine($"{settings.Inputs.Length * (settings.Xml ? 2 : 1) - failed} of {settings.Inputs.Length * (settings.Xml ? 2 : 1)} rebuilds byte for byte");
+        int rebuilds = settings.Inputs.Length * (settings.Xml ? 2 : 1);
+        Console.WriteLine($"{rebuilds - failed} of {rebuilds} rebuilds byte for byte");
         if (settings.Mopp)
         {
             Console.WriteLine($"{mopps.Checked - mopps.Broken} of {mopps.Checked} rebuilt MOPPs hold ({mopps.BuiltBytes:N0} bytes of code, against {mopps.ShippedBytes:N0} shipped)");

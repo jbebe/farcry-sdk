@@ -38,21 +38,21 @@ public sealed class HkxResizeCommand : CliCommand<HkxResizeCommand.Settings>
 
     protected override int Run(Settings settings, CancellationToken cancellationToken) => HkxCli.Edit(settings.Input, settings.Out, file =>
     {
-        (HkxLink link, HkxPrimitive shape) = HkxCli.Shape(file, settings.Shape);
+        (HkxLink link, Matrix4x4 toModel, Matrix4x4 parentToModel) = HkxCli.Shape(file, settings.Shape);
         HkxObject box = HkxShapeEdit.Leaf(link);
         if (box.Class.Name != "hkpBoxShape")
         {
             throw new ArgumentException($"{settings.Shape} is a {box.Class.Name}; only boxes resize.");
         }
-        Vector3 size = HkxShapeEdit.Size(box);
         if (settings.Size is { } wanted)
         {
             HkxShapeEdit.Resize(box, HkxCli.Vector(wanted, "--size"));
         }
         else
         {
+            Vector3 size = HkxShapeEdit.Size(box);
             int face = Array.IndexOf(FaceNames, settings.Face);
-            HkxShapeEdit.Stretch(link, HkxShapeEdit.ParentToModel(link, shape.ToModel), shape.ToModel, size, face, size[face / 2] + settings.By!.Value);
+            HkxShapeEdit.Stretch(link, parentToModel, toModel, size, face, size[face / 2] + settings.By!.Value);
         }
         Vector3 now = HkxShapeEdit.Size(box);
         AnsiConsole.MarkupLine(string.Create(CultureInfo.InvariantCulture, $"  [grey]size[/] {now.X:0.###} x {now.Y:0.###} x {now.Z:0.###}"));

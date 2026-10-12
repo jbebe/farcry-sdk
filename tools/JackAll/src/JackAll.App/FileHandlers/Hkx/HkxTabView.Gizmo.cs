@@ -34,12 +34,9 @@ public partial class HkxTabView
         HkxFrame.LostMouseCapture += (_, _) => EndDrag(keep: true);
     }
 
-    // The selected node's shape when the gizmo can place it: a convex shape hanging from a member of its own.
     private void Target(HkxTreeNode? node)
     {
-        _target = node?.Node is { Link: { } link } n && n.Primitives().ToList() is [{ Kind: not HkxShapeKind.Mesh } primitive]
-            ? (link, primitive)
-            : null;
+        _target = node?.Node is { } n ? HkxShapeEdit.Placed(n) : null;
         ShowGizmo();
     }
 
@@ -108,10 +105,7 @@ public partial class HkxTabView
                 HkxShapeEdit.PlaceInModel(target.Link, drag.ParentToModel, drag.ToModel * Matrix4x4.CreateTranslation(position - move.Origin));
                 break;
             case RotateGrab turn when RotateGizmo.Follow(turn, origin, direction) is { } degrees:
-                Matrix4x4 about = Matrix4x4.CreateTranslation(-turn.Origin)
-                    * Matrix4x4.CreateFromAxisAngle(TranslateGizmo.Direction(turn.Axis), degrees * MathF.PI / 180)
-                    * Matrix4x4.CreateTranslation(turn.Origin);
-                HkxShapeEdit.PlaceInModel(target.Link, drag.ParentToModel, drag.ToModel * about);
+                HkxShapeEdit.PlaceInModel(target.Link, drag.ParentToModel, RotateGizmo.About(drag.ToModel, turn.Origin, turn.Axis, degrees));
                 break;
             case BoxFace face when TranslateGizmo.ClosestApproach(origin, direction, face.Grab.Handle.Centre, face.Grab.Handle.Direction) is { } approach:
                 HkxShapeEdit.Stretch(target.Link, drag.ParentToModel, drag.ToModel, face.Size, face.Face, face.Grab.Handle.Extent + approach.Arm - face.Grab.Grip);

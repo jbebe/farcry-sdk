@@ -3,23 +3,21 @@ using System.Numerics;
 namespace JackAll.Tools.Hkx;
 
 /// <summary>
-/// The values Havok works out from a body's shapes and saves beside them: the MOPP's code, the list's or extended
-/// mesh's bounds, the body's object radius, and the copies a file keeps of a wrapped shape's radius, a list's child
-/// count and a storage mesh's shapes. The game reads them as saved, so an edited shape leaves them stale.
-/// Shipped bounds and radii often differ from what the shapes give, so where a body's shapes changed each value
-/// moves by as much as the shapes' own value did; where they did not, it is left alone.
+/// The values Havok works out from a body's shapes and saves beside them, which the game reads as saved: the MOPP's
+/// code, the list's or extended mesh's bounds, the body's object radius, and the copies a file keeps of a wrapped
+/// shape's radius, a list's child count and a storage mesh's shapes.
 /// </summary>
 public static class HkxCaches
 {
     /// <summary>
-    /// Brings the caches of every body, matched by name to <paramref name="original"/>, in line with how its shapes
-    /// changed since then; a body the original lacks gets them worked out afresh. Returns the members written, as
-    /// <c>body: path</c>. Bodies over shapes this cannot bound keep theirs.
+    /// Sets the copies right, then brings the caches of every body, matched by name to <paramref name="original"/>, in
+    /// line with how its shapes changed since then: each moves by as much as the shapes' own value did. A body the
+    /// original lacks gets them worked out afresh; without an original, bodies keep theirs. Returns the members
+    /// written, as <c>body: path</c>. Bodies over shapes this cannot bound keep theirs.
     /// </summary>
     /// <exception cref="InvalidOperationException">A MOPP that has to be rebuilt belongs to a file whose part modifiers point into its code.</exception>
-    public static List<string> Refresh(HkxFile file, HkxFile original)
+    public static List<string> Refresh(HkxFile file, HkxFile? original)
     {
-        Dictionary<string, HkxObject> before = Bodies(original);
         bool modified = file.Objects().Any(o => o.Class.Name == "nomadPartModifiersGroup");
         var written = new List<string>();
         foreach ((HkxObject owner, string member, Action fix) in StaleCopies(file).ToList())
@@ -27,6 +25,11 @@ public static class HkxCaches
             fix();
             written.Add($"{owner.Class.Name}: {member}");
         }
+        if (original is null)
+        {
+            return written;
+        }
+        Dictionary<string, HkxObject> before = Bodies(original);
         foreach ((string name, HkxObject body) in Bodies(file))
         {
             if (body.GetPointer("collidable.shape") is not { } shape)
@@ -55,32 +58,38 @@ public static class HkxCaches
     {
         foreach (HkxObject o in file.Objects())
         {
-            if (HkxShapes.IsWrapper(o) && o.GetPointer("childShape.childShape") is { } child && !child.GetReals("radius").AsSpan().SequenceEqual(o.GetReals("radius")))
+            switch (o.Class.Name)
             {
-                yield return (o, "radius", () => o.SetReals("radius", child.GetReals("radius")));
-            }
-            else if (o.Class.Name == "hkpListShape" && o.Count("childInfo") is var count
-                && Enumerable.Range(0, count).Any(i => o.GetInt($"childInfo[{i}].numChildShapes") != count))
-            {
-                yield return (o, "childInfo[*].numChildShapes", () =>
-                {
-                    for (int i = 0; i < count; i++)
+                case "hkpConvexTranslateShape" or "hkpConvexTransformShape":
+                    if (o.GetPointer("childShape.childShape") is { } child && !child.GetReals("radius").AsSpan().SequenceEqual(o.GetReals("radius")))
                     {
-                        o.SetRaw($"childInfo[{i}].numChildShapes", BitConverter.GetBytes(count));
+                        yield return (o, "radius", () => o.SetReals("radius", child.GetReals("radius")));
                     }
-                });
-            }
-            else if (o.Class.Name == "hkpStorageExtendedMeshShape")
-            {
-                List<HkxObject?> storage = o.GetPointers("shapestorage");
-                for (int k = 0; k < storage.Count; k++)
-                {
-                    List<HkxObject?> shapes = o.GetPointers($"shapesSubparts[{k}].childShapes");
-                    if (storage[k] is { } copy && !copy.GetPointers("shapes").SequenceEqual(shapes))
+                    break;
+                case "hkpListShape":
+                    int count = o.Count("childInfo");
+                    if (Enumerable.Range(0, count).Any(i => o.GetInt($"childInfo[{i}].numChildShapes") != count))
                     {
-                        yield return (o, $"shapestorage[{k}].shapes", () => copy.SetPointers("shapes", shapes));
+                        yield return (o, "childInfo[*].numChildShapes", () =>
+                        {
+                            for (int i = 0; i < count; i++)
+                            {
+                                o.SetRaw($"childInfo[{i}].numChildShapes", BitConverter.GetBytes(count));
+                            }
+                        });
                     }
-                }
+                    break;
+                case "hkpStorageExtendedMeshShape":
+                    List<HkxObject?> storage = o.GetPointers("shapestorage");
+                    for (int k = 0; k < storage.Count; k++)
+                    {
+                        List<HkxObject?> shapes = o.GetPointers($"shapesSubparts[{k}].childShapes");
+                        if (storage[k] is { } copy && !copy.GetPointers("shapes").SequenceEqual(shapes))
+                        {
+                            yield return (o, $"shapestorage[{k}].shapes", () => copy.SetPointers("shapes", shapes));
+                        }
+                    }
+                    break;
             }
         }
     }
@@ -95,9 +104,8 @@ public static class HkxCaches
             (Vector3 oldMin, Vector3 oldMax) = HkxShapes.Bounds(oldCollection);
             if (min != oldMin || max != oldMax)
             {
-                float[] half = oldCollection.GetReals("aabbHalfExtents"), centre = oldCollection.GetReals("aabbCenter");
-                Vector3 low = HkxShapes.Vec(centre) - HkxShapes.Vec(half) + min - oldMin, high = HkxShapes.Vec(centre) + HkxShapes.Vec(half) + max - oldMax;
-                written.AddRange(Bounds(collection, low, high));
+                Vector3 half = HkxShapes.Vec(oldCollection.GetReals("aabbHalfExtents")), centre = HkxShapes.Vec(oldCollection.GetReals("aabbCenter"));
+                written.AddRange(Bounds(collection, centre - half + min - oldMin, centre + half + max - oldMax));
             }
             if (shape.Class.Name == "hkpMoppBvTreeShape" && !HkxMopp.Items(shape).SequenceEqual(HkxMopp.Items(oldShape)))
             {
@@ -121,7 +129,7 @@ public static class HkxCaches
         {
             (Vector3 min, Vector3 max) = HkxShapes.Bounds(collection);
             written.AddRange(Bounds(collection, min, max));
-            if (shape.Class.Name == "hkpMoppBvTreeShape" && HkxMopp.Code(shape) is var (info, code) && HkxMopp.Misses(HkxMopp.Items(shape), info, code).Count > 0)
+            if (shape.Class.Name == "hkpMoppBvTreeShape" && HkxMopp.Lost(shape).Count > 0)
             {
                 written.AddRange(Rebuild(shape, modified));
             }
@@ -146,7 +154,7 @@ public static class HkxCaches
     }
 
     /// <summary>Havok's object radius: from the centre of mass to the centre of the shape's bounds, plus half their diagonal.</summary>
-    internal static float Radius(HkxObject body, HkxObject shape)
+    private static float Radius(HkxObject body, HkxObject shape)
     {
         (Vector3 min, Vector3 max) = HkxShapes.Bounds(shape);
         return Vector3.Distance((min + max) / 2, HkxShapes.Vec(body.GetReals("motion.motionState.sweptTransform.centerOfMassLocal")))

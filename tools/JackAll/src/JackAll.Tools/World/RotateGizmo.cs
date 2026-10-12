@@ -54,8 +54,15 @@ public static class RotateGizmo
     /// <summary>Turns an orientation by <paramref name="degrees"/> about a world axis, counter-clockwise
     /// looking down it, and returns it as angles again.</summary>
     public static Vector3 Apply(Vector3 angles, GizmoAxis axis, float degrees)
-        => EulerZxy.FromMatrix(EulerZxy.ToMatrix(angles)
-            * Matrix4x4.CreateFromAxisAngle(TranslateGizmo.Direction(axis), degrees * (MathF.PI / 180f)));
+        => EulerZxy.FromMatrix(EulerZxy.ToMatrix(angles) * Turn(axis, degrees));
+
+    /// <summary>Turns a placement by <paramref name="degrees"/> about a world axis through <paramref name="pivot"/>,
+    /// counter-clockwise looking down it.</summary>
+    public static Matrix4x4 About(Matrix4x4 placement, Vector3 pivot, GizmoAxis axis, float degrees)
+        => placement * Matrix4x4.CreateTranslation(-pivot) * Turn(axis, degrees) * Matrix4x4.CreateTranslation(pivot);
+
+    private static Matrix4x4 Turn(GizmoAxis axis, float degrees)
+        => Matrix4x4.CreateFromAxisAngle(TranslateGizmo.Direction(axis), degrees * (MathF.PI / 180f));
 
     /// <summary>The angle of <paramref name="offset"/> round the axis, counter-clockwise looking down
     /// it, measured in the same basis the ring is drawn in.</summary>

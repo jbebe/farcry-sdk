@@ -52,7 +52,7 @@ public static class HkxShapes
     private const int Int32Indices = 2;
     private const int SphereSegments = 16, SphereRings = 8;
     private const float DegenerateArea = 1e-7f;
-    private const uint ShapesSubpartKey = 0x80000000;
+    internal const uint ShapesSubpartKey = 0x80000000;
 
     public static List<HkxNode> Read(HkxFile file)
     {

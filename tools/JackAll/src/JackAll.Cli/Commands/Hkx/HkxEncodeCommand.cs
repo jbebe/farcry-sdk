@@ -29,7 +29,6 @@ public sealed class HkxEncodeCommand : CliCommand<HkxEncodeCommand.Settings>
         string outPath = settings.Out ?? Path.ChangeExtension(settings.Input, ".hkx");
         CliIO.GuardNotOverwritingInput(settings.Input, outPath);
         HkxFile file = HkxXml.FromXml(CliIO.ReadInputText(settings.Input));
-        HkxFile before = settings.Original is null ? HkxFile.Parse(file.Write()) : HkxFile.Parse(CliIO.ReadInput(settings.Original));
-        return HkxCli.Save(file, before, outPath);
+        return HkxCli.Save(file, settings.Original is null ? null : HkxFile.Parse(CliIO.ReadInput(settings.Original)), outPath);
     }
 }

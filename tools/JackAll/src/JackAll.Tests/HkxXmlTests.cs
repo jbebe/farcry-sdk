@@ -30,7 +30,7 @@ public sealed class HkxXmlTests
             return;
         }
 
-        Assert.Equal(bytes, HkxXml.FromXml(HkxXml.ToXml(HkxFile.Parse(bytes))).Write());
+        Fixture.AssertSameBytes(fixture, bytes, HkxXml.FromXml(HkxXml.ToXml(HkxFile.Parse(bytes))).Write());
     }
 
     [Fact]
