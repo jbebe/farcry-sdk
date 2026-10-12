@@ -68,8 +68,8 @@ Notable changes to DevTools, loosely following
   Dear ImGui, or a title already taken, is refused in `fcse.log`. The same header lets a plugin post
   a line to the game's console, which runs at the end of the next frame.
 - **Spawner tab** in the overlay. A button per vehicle - every land vehicle, boat and the hang
-  glider, plus the Rover and both boats with each mounted gun - spawns one a few metres ahead of the
-  player, facing the way they face.
+  glider, the DLC's ATV and Unimog, plus the Rover, both boats and the Unimog with each mounted gun -
+  spawns one a few metres ahead of the player, facing the way they face.
 - **Command API**, which the overlay is written against. One call runs a
   console line or a Lua chunk on the game thread, from anywhere, with developer-only commands
   reachable regardless of the option above; a catalog of 277 commands describes what to offer and

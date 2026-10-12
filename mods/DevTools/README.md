@@ -255,8 +255,8 @@ a crash that follows them.
 ### Spawner
 
 The Spawner tab, next to Lua, puts things into the world in front of you. For now that is vehicles:
-every land vehicle, boat and the hang glider, and the Rover and both boats once per mounted gun as
-well. A click spawns one 8 m ahead at the end of the next frame, facing the way you face, and drops
+every land vehicle, boat and the hang glider, the DLC's ATV and Unimog, and the Rover, both boats
+and the Unimog once per mounted gun. A click spawns one 8 m ahead at the end of the next frame, facing the way you face, and drops
 it from 1.5 m above your feet, because the game's spawn call does not find the ground. Hovering a
 button shows the archetype it spawns.
 

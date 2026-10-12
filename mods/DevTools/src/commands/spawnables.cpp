@@ -34,7 +34,16 @@ namespace {
         {"Hang glider", "vehicle.Air.Paraglider"},
     };
 
-    constexpr Group kGroups[] = {{"Land", kLand}, {"Water", kWater}, {"Air", kAir}};
+    // The Unimog carries an M2 as it stands; its other guns exist only as Multi variants.
+    constexpr Spawnable kDlc[] = {
+        {"ATV", "vehicle.Land.DLC_Vehicle1_DLC1"},
+        {"Unimog, M2", "vehicle.Land.DLC_Vehicle2_DLC1"},
+        {"Unimog, M249", "vehicle.Land.DLC_Vehicle2_DLC1.Multi_M249_Mounted"},
+        {"Unimog, MK19", "vehicle.Land.DLC_Vehicle2_DLC1.Multi_MK19_Mounted"},
+    };
+
+    constexpr Group kGroups[] = {
+        {"Land", kLand}, {"Water", kWater}, {"Air", kAir}, {"DLC", kDlc}};
 }
 
 namespace DevTools::Spawnables {
