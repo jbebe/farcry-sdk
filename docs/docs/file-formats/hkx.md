@@ -203,4 +203,24 @@ it writes uses only rescales, axis splits, cuts and terminals, and comes out abo
 Havok's.
 
 In the JackAll app, **Open in HKX Editor…** on the Files tab draws a file's collision over the model
-filed beside it, with boxes and hulls grown by their convex radius. It only shows for now.
+filed beside it, with boxes and hulls grown by their convex radius. Shapes can be edited there: their
+values, where they sit, and a box's size.
+
+### What a save has to refresh
+
+Havok works some values out from the shapes once and saves them, and the game reads them back as
+saved:
+
+| Value | Worked out by | From |
+|---|---|---|
+| A list's `aabbHalfExtents`, `aabbCenter` | `hkpListShape::recalcAabbExtents` (`0x09de8a30`) | The union of its children's boxes |
+| An extended mesh's bounds | `hkpExtendedMeshShape::recalcAabbExtents` (`0x09dee1f0`) | Triangles grown by `triangleRadius`, shapes placed by their subpart |
+| A body's `motion.motionState.objectRadius` | `hkpRigidBody::updateCachedShapeInfo` (`0x09d4e030`) | Distance from the centre of mass to the centre of the shape's box, plus half the box's diagonal |
+| A MOPP's code | (see above) | Its collection's children |
+| A translate or transform shape's `radius` | The exporter | Its child's radius: all 28,709 shipped ones match exactly |
+
+Loading does not recompute any of them; `finishLoadedObject` only sets vtables. The shipped radii
+and list bounds of bodies with hulls are often larger than the formula gives, by about the hulls'
+convex radius. The exporter probably measured them before shrinking the hulls. So JackAll does not
+recompute these values from scratch. It moves each one from the original file's value by how much
+the shapes' own value changed, and an unedited file saves back byte for byte.

@@ -95,8 +95,21 @@ came from, see [Read a mission](/jackall/missions).
 ## Collision (`.hkx`)
 
 The physics as text: every object and its values. **Open in HKX Editor…** opens the file in its own
-tab, with the collision drawn over the model filed beside it, the bodies and shapes as a tree, and the
-selected one's values. Click a shape to select it. The editor only shows for now.
+tab. The collision is drawn over the model filed beside it, the bodies and shapes form a tree, and the
+selected object's values are listed beside them. Click a shape to select it.
+
+- **Change a value:** type over it in the list: numbers, flags, vectors and named choices. Pointers,
+  arrays and matrices only show.
+- **Move or turn a shape:** drag the arrows or squares (**Move**, T), or the rings (**Turn**, R). A
+  translate shape that is turned becomes a transform shape. A shape without either gets one of its own.
+- **Resize a box:** drag the knob on one of its faces. The opposite face stays where it is.
+- **Undo, redo and save:** **Undo** and **Redo** (Ctrl+Z, Ctrl+Y) step back and forth through the
+  edits. **Save** (Ctrl+S) stages the file in the workspace. Saving also refreshes the values Havok
+  works out from the shapes, so the game sees the new collision: the MOPP index, the list's bounds,
+  the body's radius, and a wrapper's radius.
+
+Files whose part modifiers point into a MOPP, as on some vehicles, can't be saved once a shape under
+that MOPP has moved.
 
 ## Text (`.xml`, `.lua`, `.desc`)
 
