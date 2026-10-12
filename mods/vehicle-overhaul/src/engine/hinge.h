@@ -5,8 +5,7 @@
 
 namespace VehicleOverhaul::Hinge {
 
-// The hkpConstraintInstance of the first limited hinge with a velocity motor whose second body is
-// `body`, or null.
+// The hkpConstraintInstance of the first limited hinge with a velocity motor on `body`, or null.
 uint8_t* WithVelocityMotor(uint8_t* body);
 
 // What hkpLimitedHingeConstraintData::setMotorActive does to the data: the motor drives the hinge, or
