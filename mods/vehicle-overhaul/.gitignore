@@ -3,3 +3,5 @@ out/
 layer/plugins/vehicle-overhaul/VehicleOverhaul.dll
 # The recorded takes and the sound builder that reads them stay local; the layer carries the banks.
 assets/vehicle-sounds/
+# So does the physics builder; the layer carries the .hkx it writes.
+assets/physics/
