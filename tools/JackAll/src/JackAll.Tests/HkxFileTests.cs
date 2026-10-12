@@ -71,4 +71,47 @@ public sealed class HkxFileTests
         Assert.Single(reread.Objects(), o => o.Class == velocity);
         Assert.Equal(2, reread.Objects().Count(o => o.Class.Name == "hkpPositionConstraintMotor"));
     }
+
+    [Fact]
+    public void A_cloned_body_edited_by_member_name_survives_a_write_and_leaves_its_original_alone()
+    {
+        if (Fixture.Read(Vehicle) is not { } bytes)
+        {
+            return;
+        }
+
+        HkxFile file = HkxFile.Parse(bytes);
+        HkxObject system = file.Objects().Single(o => o.Class.Name == "hkpPhysicsSystem");
+        HkxObject door = Body(file, "DoorLeftState02");
+        HkxObject fan = door.Clone();
+        fan.SetString("name", "Fan");
+        fan.SetReals("motion.motionState.sweptTransform.centerOfMassLocal", 1, 2, 3, 0);
+        system.Append("rigidBodies", fan);
+
+        HkxFile reread = HkxFile.Parse(file.Write());
+        HkxObject written = Body(reread, "Fan");
+
+        Assert.Equal([1f, 2f, 3f, 0f], written.GetReals("motion.motionState.sweptTransform.centerOfMassLocal"));
+        Assert.Equal("hkpConvexVerticesShape", written.GetPointer("collidable.shape")!.Class.Name);
+        Assert.Equal(32, reread.Objects().Count(o => o.Class.Name == "hkpRigidBody"));
+        Assert.NotEqual(1f, Body(reread, "DoorLeftState02").GetReals("motion.motionState.sweptTransform.centerOfMassLocal")[0]);
+    }
+
+    [Fact]
+    public void The_dump_names_members_and_numbers_pointers()
+    {
+        if (Fixture.Read(Vehicle) is not { } bytes)
+        {
+            return;
+        }
+
+        string text = HkxDump.Write(HkxFile.Parse(bytes));
+
+        Assert.Contains("  name: \"DoorLeftState02\"", text);
+        Assert.Contains("  motion.motionState.maxAngularVelocity: 86", text);
+        Assert.Contains("entities[1]: -> #3 hkpRigidBody", text);
+    }
+
+    private static HkxObject Body(HkxFile file, string name)
+        => file.Objects().Single(o => o.Class.Name == "hkpRigidBody" && o.GetString("name") == name);
 }

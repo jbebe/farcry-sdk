@@ -198,6 +198,9 @@ app.Configure(config =>
         hkx.AddCommand<HkxVerifyCommand>("verify")
             .WithDescription("Check that .hkx files survive parse and write byte for byte.")
             .WithExample("hkx", "verify", "bigtruck.hkx");
+        hkx.AddCommand<HkxDumpCommand>("dump")
+            .WithDescription("Print an .hkx's objects and their members by name.")
+            .WithExample("hkx", "dump", "bigtruck.hkx", "-o", "bigtruck.txt");
     });
 
     // --- .ai.rml brain workspaces ----------------------------------------

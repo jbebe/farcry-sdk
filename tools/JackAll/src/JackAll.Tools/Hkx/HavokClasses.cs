@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.IO.Hashing;
 using System.Reflection;
 using System.Text;
@@ -16,6 +17,13 @@ public enum HkType : byte
 
 /// <summary>An enum the reflection declares, with its items as (value, name).</summary>
 public sealed record HkEnum(string Name, IReadOnlyList<(int Value, string Name)> Items);
+
+/// <summary>
+/// A value an object stores inline, at <see cref="Offset"/> from its start: a member, or one element of a fixed
+/// C array, with embedded structs flattened into theirs. <see cref="Path"/> reads like <c>motion.motionState.transform</c>
+/// or <c>entities[1]</c>.
+/// </summary>
+public sealed record HkSlot(string Path, int Offset, int Size, HkMember Member);
 
 /// <summary>A declared member. <see cref="Count"/> is a fixed C array's length, 0 for a scalar.</summary>
 public sealed record HkMember(
@@ -54,6 +62,7 @@ public sealed class HkClass
 public sealed class HavokClasses
 {
     private readonly Dictionary<string, HkClass> _classes;
+    private readonly ConcurrentDictionary<HkClass, IReadOnlyList<HkSlot>> _slots = [];
 
     private HavokClasses(Dictionary<string, HkClass> classes) => _classes = classes;
 
@@ -78,6 +87,33 @@ public sealed class HavokClasses
         HkType.Struct => this[className!].Size,
         _ => throw new NotSupportedException($"No size for a Havok {type}."),
     };
+
+    /// <summary>Every value the class stores inline, in member order.</summary>
+    public IReadOnlyList<HkSlot> Slots(HkClass c) => _slots.GetOrAdd(c, k => [.. Flatten(k, "", 0)]);
+
+    private IEnumerable<HkSlot> Flatten(HkClass c, string prefix, int at)
+    {
+        foreach (HkMember m in c.Members)
+        {
+            int size = SizeOf(m.Type, m.Subtype, m.Class);
+            for (int k = 0; k < Math.Max(1, (int)m.Count); k++)
+            {
+                string path = prefix + (m.Count > 0 ? $"{m.Name}[{k}]" : m.Name);
+                int offset = at + m.Offset + k * size;
+                if (m.Type == HkType.Struct)
+                {
+                    foreach (HkSlot slot in Flatten(this[m.Class!], path + ".", offset))
+                    {
+                        yield return slot;
+                    }
+                }
+                else
+                {
+                    yield return new HkSlot(path, offset, size, m);
+                }
+            }
+        }
+    }
 
     // hkClass::writeSignature for the class and then each parent; the signature is its CRC-32.
     private void WriteSignature(ByteWriter w, HkClass c)

@@ -10,6 +10,11 @@ public abstract class HkxRef;
 public sealed class HkxData(HkxBlock block) : HkxRef
 {
     public HkxBlock Block { get; } = block;
+
+    /// <summary>The owned data read as a NUL-terminated string.</summary>
+    public string Text => HkxFile.CString(Block.Bytes);
+
+    public static HkxData FromText(string text) => new(new HkxBlock(Encoding.ASCII.GetBytes(text + "\0")));
 }
 
 public sealed class HkxPointer(HkxObject target) : HkxRef
@@ -35,11 +40,29 @@ public class HkxBlock(byte[] bytes)
     public byte[] Bytes { get; } = bytes;
 
     public SortedDictionary<int, HkxRef> Refs { get; } = [];
+
+    // Owned data is copied, so the copy writes its own; pointers are kept, so it points where this does.
+    private protected T CopyRefsInto<T>(T copy) where T : HkxBlock
+    {
+        foreach ((int at, HkxRef r) in Refs)
+        {
+            copy.Refs[at] = r switch
+            {
+                HkxPointer p => new HkxPointer(p.Target),
+                HkxData d => new HkxData(d.Block.CopyRefsInto(new HkxBlock((byte[])d.Block.Bytes.Clone()))),
+                _ => r,
+            };
+        }
+        return copy;
+    }
 }
 
 public sealed class HkxObject(HkClass hkClass, byte[] bytes) : HkxBlock(bytes)
 {
     public HkClass Class { get; } = hkClass;
+
+    /// <summary>A copy that owns copies of this object's arrays and strings and points where it points.</summary>
+    public HkxObject Clone() => CopyRefsInto(new HkxObject(Class, (byte[])Bytes.Clone()));
 
     public override string ToString() => Class.Name;
 }
@@ -107,7 +130,7 @@ public sealed class HkxFile
         _ => Enumerable.Empty<HkxObject>(),
     });
 
-    private static string CString(ReadOnlySpan<byte> field)
+    internal static string CString(ReadOnlySpan<byte> field)
     {
         int end = field.IndexOf((byte)0);
         return Encoding.ASCII.GetString(end < 0 ? field : field[..end]);
@@ -225,13 +248,9 @@ public sealed class HkxFile
         // `at` is a data-section offset; `blockAt` is where the block holding it starts.
         private void WalkStruct(HkxBlock block, int blockAt, int at, HkClass c)
         {
-            foreach (HkMember m in c.Members)
+            foreach (HkSlot s in classes.Slots(c))
             {
-                int size = classes.SizeOf(m.Type, m.Subtype, m.Class);
-                for (int k = 0; k < Math.Max(1, (int)m.Count); k++)
-                {
-                    WalkValue(block, blockAt, at + m.Offset + k * size, m.Type, m.Subtype, m.Class);
-                }
+                WalkValue(block, blockAt, at + s.Offset, s.Member.Type, s.Member.Subtype, s.Member.Class);
             }
         }
 

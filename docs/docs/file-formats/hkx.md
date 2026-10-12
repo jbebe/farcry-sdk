@@ -116,4 +116,9 @@ the one named `NAV_X`.
 ## Tools
 
 `jackall-cli hkx verify <file.hkx>...` parses and rewrites files and reports any that differ.
-Editing bodies, shapes and constraints is not built yet.
+`jackall-cli hkx dump <file.hkx>` prints every object, each value under its member path
+(`motion.motionState.transform`, `entities[1]`).
+
+In code, `HkxEdit` reads and writes members by those paths, and appends to arrays of pointers;
+`HkxObject.Clone` copies an object. That is enough to add a body and a constraint to a file. There is
+no editable text form of a whole file yet.
