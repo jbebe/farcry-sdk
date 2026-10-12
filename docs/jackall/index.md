@@ -237,6 +237,7 @@ game actually ships. The format notes are under [File Formats](/docs/category/fi
 | `.sbao` | Streamed audio: music and dialogue | Splits into header and ogg, plays it, exports ogg or mp3, imports anything ffmpeg reads |
 | `.spk` | Sound banks | Lists and groups the records, extracts and imports ogg vorbis and IMA ADPCM |
 | `.sdat` | Terrain per sector: heights, surface types, water, baked light | Read only. It's what the map viewport draws, plus a grayscale height preview per file |
+| `.hkx` | Havok collision: bodies, shapes, constraints | Decodes and encodes, draws the collision over its model, moves, turns, resizes, adds and removes shapes, and refreshes the values Havok saves beside them. Every shipped file comes back byte for byte identical |
 | `.nvm` | AI navmesh | Read only: the walkable triangles, their corners and the links between them |
 | `.sav` | Savegames | Reads the header, screenshot and DLC list, edits and writes the `PersistenceDB` |
 | `depload.dat` | Dependency list per asset | Parsed. Feeds the reference panel and has its own view |
@@ -245,7 +246,7 @@ game actually ships. The format notes are under [File Formats](/docs/category/fi
 | `.xml`, `.lua`, `.desc` | Plain text files | Highlighted view, with a diff against the original when modded |
 
 These are only recognized, not decoded. You can still browse, export and replace them, they just stay
-raw bytes: `.hkx` (Havok collision), `.bik` (video), `.feu` (old UI), `.wem`, shader binaries, `.srl`
+raw bytes: `.bik` (video), `.feu` (old UI), `.wem`, shader binaries, `.srl`
 and `.zsr` (streaming data), `.luab` and `.luac` (compiled Lua), `.loc`, `.material.bin`, `.sctr`,
 `.tree`, `.cbatch`, `.terrainnode.bdl` and `.dpax`.
 
@@ -341,6 +342,7 @@ jackall-cli mod build --game "C:\Games\Far Cry 2" --layer mods\bettersights --la
 | `move decode` / `encode` / `clips` / `repoint` / `fragments` and more | The animation graph to XML and back, the clips a weapon plays, a weapon pointed at other clips, and the per-situation pieces a mod ships |
 | `depload decode` / `encode` / `add` / `validate` | A world's dependency list to XML and back, a new resource registered in it, and a check of its order |
 | `ai unpack` / `ai verify` / `ai lint` | A brain's source as XML, a check that brains recompile unchanged, and the parameters a brain sets that the game never reads |
+| `hkx tree` / `move` / `turn` / `resize` / `add-box` / `remove` / `check` and more | A collision file's shapes by number, edits to them that keep Havok's saved values in step, the whole file to XML and back, and a check for what would break in game |
 | `domino check` | Looks for what would break a mission script in game |
 | `shader extract` / `build` / `index` | Splits a shader object into its bytecode and binding table and back; `index` finds the object a shader permutation uses |
 | `sav list` / `sav clean` | Lists your saves, and writes a copy of one without its stored entities |

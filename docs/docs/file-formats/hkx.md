@@ -184,22 +184,42 @@ The game also builds MOPP code itself. `SetupMopp` wraps any list of more than f
 
 ## Tools
 
-`jackall-cli hkx verify <file.hkx>...` parses and rewrites files and reports any that differ.
-With `--mopp`, it also runs every MOPP's code and checks two things: that the code reaches exactly
-its collection's children, and that code rebuilt from those children keeps every child a box
-touches. All 4,547 shipped MOPPs over lists and extended meshes rebuild that way. In nine shipped
-mesh MOPPs, Havok's code leaves out or keeps one or two sliver triangles that sit right at the
-degeneracy limit, where the two float roundings disagree. Two MOPPs over `hkpSimpleMeshShape` are
-not rebuilt.
-`jackall-cli hkx dump <file.hkx>` prints every object, each value under its member path
-(`motion.motionState.transform`, `entities[1]`).
+`jackall-cli hkx` makes a collision edit without the app:
 
-In code, `HkxEdit` reads and writes members by those paths. It also reads arrays of pointers and
-inserts or appends to them, and `HkxObject.Clone` copies an object. That is enough to add a body and a
+| Command | What it does |
+|---|---|
+| `tree <file>` | Prints the bodies, shapes and constraints, each by its number `#n`, and where each shape sits in the model |
+| `move <file> <#n> --by x,y,z` (or `--to`) | Moves a shape in the model, Z up |
+| `turn <file> <#n> --degrees d [--axis z]` | Turns a shape about a model axis through where it sits |
+| `resize <file> <#n> --size x,y,z` (or `--face +z --by d`) | Resizes a box about its centre, or moves one face and keeps the opposite one |
+| `add-box <file> <#n> --size x,y,z --at x,y,z` | Adds a box to the list or extended mesh group holding shape `#n`, with that shape's material and collision filter |
+| `remove <file> <#n>` | Takes a shape out of its list or extended mesh group |
+| `decode <file>`, `encode <xml> --original <file>` | The whole file as XML and back: every object by number, every saved member by path |
+| `refresh <file> --original <file>` | Brings an edited file's saved values in line with its shapes, as [below](#what-a-save-has-to-refresh) |
+| `check <file>...` | Reports what would break in game: a body after the first `HIGH_` or `NAV_` one, a constraint joining a body from another system, list bounds short of the children, MOPP code that no longer finds a shape, and stale copies |
+| `dump <file>` | Prints every object, each value under its member path (`motion.motionState.transform`, `entities[1]`) |
+| `verify <file>...` | Parses and rewrites files and reports any that differ |
+
+`#n` names a convex shape or the translate or transform shape around it. The edit commands write in
+place unless given `-o`. Each one refreshes what it changed, runs `check`, and writes nothing if the
+check finds an error. An edit that adds or removes objects renumbers them, so run `tree` again after
+one. `encode` refreshes the same way against `--original`.
+
+`check` finds nothing on any of the 2,745 shipped files, and all of them decode and encode back byte
+for byte (`verify --xml`). With `--mopp`, `verify` also runs every MOPP's code and checks two
+things: that the code reaches exactly its collection's children, and that code rebuilt from those
+children keeps every child a box touches. All 4,547 shipped MOPPs over lists and extended meshes
+rebuild that way. In nine shipped mesh MOPPs, Havok's code leaves out or keeps one or two sliver
+triangles that sit right at the degeneracy limit, where the two float roundings disagree. Two MOPPs
+over `hkpSimpleMeshShape` are not rebuilt.
+
+In code, `HkxEdit` reads and writes members by those paths. It also inserts, appends and removes
+array elements, and `HkxObject.Clone` copies an object. That is enough to add a body and a
 constraint to a file; [adding a moving part to a vehicle](../modding/adding-a-moving-vehicle-part.md)
-does both. There is no editable text form of a whole file yet. `HkxMopp` runs MOPP code as the game's box
-query does, and `HkxMopp.Rebuild` rewrites a MOPP's code from where its children are now. The code
-it writes uses only rescales, axis splits, cuts and terminals, and comes out about twice the size of
+does both. `HkxShapeEdit` places, resizes, adds and removes shapes, `HkxCaches.Refresh` refreshes a
+file against its original, and `HkxLint` is `check`. `HkxMopp` runs MOPP code as the game's box query
+does, and `HkxMopp.Rebuild` rewrites a MOPP's code from where its children are now. The code it
+writes uses only rescales, axis splits, cuts and terminals, and comes out about twice the size of
 Havok's.
 
 In the JackAll app, **Open in HKX Editor…** on the Files tab draws a file's collision over the model
@@ -218,8 +238,11 @@ saved:
 | A body's `motion.motionState.objectRadius` | `hkpRigidBody::updateCachedShapeInfo` (`0x09d4e030`) | Distance from the centre of mass to the centre of the shape's box, plus half the box's diagonal |
 | A MOPP's code | (see above) | Its collection's children |
 | A translate or transform shape's `radius` | The exporter | Its child's radius: all 28,709 shipped ones match exactly |
+| A list child's `numChildShapes` | The exporter | The list's child count: all 20,567 shipped ones match |
+| A storage mesh's `shapestorage[k].shapes` | The exporter | Its `shapesSubparts[k].childShapes`, in order: all 205 shipped ones match |
 
-Loading does not recompute any of them; `finishLoadedObject` only sets vtables. The shipped radii
+Which of a storage mesh's two shape arrays the game reads has not been traced; JackAll keeps them
+equal. Loading does not recompute the other values; `finishLoadedObject` only sets vtables. The shipped radii
 and list bounds of bodies with hulls are often larger than the formula gives, by about the hulls'
 convex radius. The exporter probably measured them before shrinking the hulls. So JackAll does not
 recompute these values from scratch. It moves each one from the original file's value by how much
