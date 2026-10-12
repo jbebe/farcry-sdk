@@ -201,6 +201,12 @@ app.Configure(config =>
         hkx.AddCommand<HkxDumpCommand>("dump")
             .WithDescription("Print an .hkx's objects and their members by name.")
             .WithExample("hkx", "dump", "bigtruck.hkx", "-o", "bigtruck.txt");
+        hkx.AddCommand<HkxDecodeCommand>("decode")
+            .WithDescription("Write an .hkx as editable XML: every object by number, every saved member by path.")
+            .WithExample("hkx", "decode", "chairbar01.hkx", "-o", "chairbar01.xml");
+        hkx.AddCommand<HkxEncodeCommand>("encode")
+            .WithDescription("Build XML from hkx decode back into an .hkx, refreshing its caches against --original and checking it.")
+            .WithExample("hkx", "encode", "chairbar01.xml", "--original", "chairbar01.hkx", "-o", "layer\\chairbar01.hkx");
         hkx.AddCommand<HkxTreeCommand>("tree")
             .WithDescription("Print an .hkx's bodies, shapes and constraints as a tree, numbered as the edit commands name them.")
             .WithExample("hkx", "tree", "chairbar01.hkx");

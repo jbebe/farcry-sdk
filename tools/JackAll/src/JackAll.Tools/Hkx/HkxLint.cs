@@ -81,7 +81,7 @@ public static class HkxLint
             if (MathF.Max(MathF.Max(below.X, below.Y), MathF.Max(below.Z, MathF.Max(MathF.Max(above.X, above.Y), above.Z))) > Tolerance)
             {
                 add(HkxProblemSeverity.Error, $"Body '{name}': its list's cached bounds do not cover its children, so the game misses "
-                    + "collisions outside them. Run hkx refresh.");
+                    + "collisions outside them. Refresh it against the original: hkx refresh, or hkx encode --original.");
             }
         }
         if (shape.Class.Name == "hkpMoppBvTreeShape")
@@ -91,7 +91,7 @@ public static class HkxLint
             if (HkxMopp.Misses(children, info, code) is { Count: > 0 } lost)
             {
                 add(HkxProblemSeverity.Error, $"Body '{name}': its MOPP does not find {lost.Count} of its shapes where they now are, so the "
-                    + "game never collides with them there. Run hkx refresh.");
+                    + "game never collides with them there. Refresh it against the original: hkx refresh, or hkx encode --original.");
             }
         }
     }

@@ -20,6 +20,10 @@ public sealed class HkxVerifyCommand : CliCommand<HkxVerifyCommand.Settings>
         [CommandOption("--mopp")]
         [Description("Also check each MOPP: that its code reaches exactly its collection's children, and that code rebuilt from them keeps every child a box touches.")]
         public bool Mopp { get; init; }
+
+        [CommandOption("--xml")]
+        [Description("Also build each file back from the XML hkx decode writes, and compare it byte for byte.")]
+        public bool Xml { get; init; }
     }
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
@@ -30,12 +34,10 @@ public sealed class HkxVerifyCommand : CliCommand<HkxVerifyCommand.Settings>
         {
             byte[] original = CliIO.ReadInput(input);
             HkxFile file = HkxFile.Parse(original);
-            byte[] rebuilt = file.Write();
-            int same = original.AsSpan().CommonPrefixLength(rebuilt);
-            if (same != original.Length || same != rebuilt.Length)
+            failed += Differs(input, "", original, file.Write()) ? 1 : 0;
+            if (settings.Xml)
             {
-                Console.WriteLine($"{input}: differs at 0x{same:X} ({original.Length:N0} bytes in, {rebuilt.Length:N0} out)");
-                failed++;
+                failed += Differs(input, " from its XML", original, HkxXml.FromXml(HkxXml.ToXml(file)).Write()) ? 1 : 0;
             }
             if (settings.Mopp)
             {
@@ -43,7 +45,7 @@ public sealed class HkxVerifyCommand : CliCommand<HkxVerifyCommand.Settings>
             }
         }
 
-        Console.WriteLine($"{settings.Inputs.Length - failed} of {settings.Inputs.Length} rebuild byte for byte");
+        Console.WriteLine($"{settings.Inputs.Length * (settings.Xml ? 2 : 1) - failed} of {settings.Inputs.Length * (settings.Xml ? 2 : 1)} rebuilds byte for byte");
         if (settings.Mopp)
         {
             Console.WriteLine($"{mopps.Checked - mopps.Broken} of {mopps.Checked} rebuilt MOPPs hold ({mopps.BuiltBytes:N0} bytes of code, against {mopps.ShippedBytes:N0} shipped)");
@@ -54,6 +56,17 @@ public sealed class HkxVerifyCommand : CliCommand<HkxVerifyCommand.Settings>
             }
         }
         return failed + mopps.Broken == 0 ? 0 : 1;
+    }
+
+    private static bool Differs(string input, string how, byte[] original, byte[] rebuilt)
+    {
+        int same = original.AsSpan().CommonPrefixLength(rebuilt);
+        if (same == original.Length && same == rebuilt.Length)
+        {
+            return false;
+        }
+        Console.WriteLine($"{input}: rebuilt{how}, differs at 0x{same:X} ({original.Length:N0} bytes in, {rebuilt.Length:N0} out)");
+        return true;
     }
 
     private static void CheckMopps(string input, HkxFile file, MoppTally tally)
