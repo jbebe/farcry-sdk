@@ -1,6 +1,8 @@
-// Grass lit by the headlight. The engine draws a spot light's pass over grass but lights a clump by
-// its ground's slope toward the light, which leaves grass a headlight skims across nearly black. Its
-// own shaders are drawn with that one term wrapped round the blades, (n.l + 1) / 2.
+// Grass lit by the headlight. The engine draws a spot light's pass over grass, but lights a clump by
+// its ground's slope toward the light, which leaves grass a headlight skims across nearly black, and
+// scales the light by the fog's amount rather than by what the fog leaves, which leaves grass short
+// of the fog unlit at all. Its own shaders are drawn with the slope wrapped round the blades,
+// (n.l + 1) / 2, and the fog turned round.
 #pragma once
 
 namespace VehicleOverhaul::GrassLight {
