@@ -101,6 +101,45 @@ public sealed class HkxFileTests
     }
 
     [Fact]
+    public void A_path_reaches_into_the_elements_of_an_array()
+    {
+        if (Fixture.Read(Building) is not { } bytes)
+        {
+            return;
+        }
+
+        HkxObject mesh = HkxFile.Parse(bytes).Objects().Single(o => o.Class.Name == "hkpStorageExtendedMeshShape");
+        HkxObject subpart = mesh.GetPointers("meshstorage")[0]!;
+
+        Assert.Equal(20, mesh.Count("meshstorage"));
+        Assert.Equal(36, mesh.GetPointers("shapesSubparts[0].childShapes").Count);
+        Assert.Equal(12, mesh.GetInt("trianglesSubparts[0].numTriangleShapes"));
+        Assert.Equal(32, subpart.GetRealArray("vertices").Length);
+        Assert.Equal(subpart.GetRealArray("vertices")[4..8], subpart.GetReals("vertices[1]"));
+        Assert.Equal(-0.8900536f, subpart.GetReals("vertices[0]")[2], 5);
+        Assert.Equal(48, subpart.GetIntArray("indices16").Length);
+    }
+
+    [Fact]
+    public void A_pointer_inside_an_array_element_survives_a_write()
+    {
+        if (Fixture.Read(Vehicle) is not { } bytes)
+        {
+            return;
+        }
+
+        HkxFile file = HkxFile.Parse(bytes);
+        HkxObject list = file.Objects().First(o => o.Class.Name == "hkpListShape");
+        HkxObject second = list.GetPointer("childInfo[1].shape")!;
+        list.SetPointer("childInfo[0].shape", second);
+
+        HkxObject reread = HkxFile.Parse(file.Write()).Objects().First(o => o.Class.Name == "hkpListShape");
+
+        Assert.Equal(12, reread.Count("childInfo"));
+        Assert.Same(reread.GetPointer("childInfo[1].shape"), reread.GetPointer("childInfo[0].shape"));
+    }
+
+    [Fact]
     public void The_dump_names_members_and_numbers_pointers()
     {
         if (Fixture.Read(Vehicle) is not { } bytes)

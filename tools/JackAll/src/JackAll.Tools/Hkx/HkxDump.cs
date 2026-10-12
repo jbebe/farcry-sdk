@@ -78,28 +78,19 @@ public static class HkxDump
             {
                 HkType.Bool => (b[0] != 0).ToString(),
                 HkType.Char or HkType.Int8 or HkType.UInt8 or HkType.Int16 or HkType.UInt16 or HkType.Int32
-                    => Integer(b, type).ToString(CultureInfo.InvariantCulture),
+                    => HkxEdit.Integer(b, type).ToString(CultureInfo.InvariantCulture),
                 HkType.UInt32 or HkType.ULong => $"0x{ByteCursor.U32(b, 0):X8}",
                 HkType.Int64 => BinaryPrimitives.ReadInt64LittleEndian(b).ToString(CultureInfo.InvariantCulture),
                 HkType.UInt64 => $"0x{BinaryPrimitives.ReadUInt64LittleEndian(b):X16}",
                 HkType.Real or HkType.Vector4 or HkType.Quaternion or HkType.Matrix3 or HkType.Rotation or HkType.QsTransform
                     or HkType.Matrix4 or HkType.Transform => Reals(b, classes.SizeOf(type, subtype, null) / 4),
-                HkType.Enum or HkType.Flags => Enum(Integer(b, subtype), hkEnum),
+                HkType.Enum or HkType.Flags => Enum(HkxEdit.Integer(b, subtype), hkEnum),
                 HkType.Pointer or HkType.Variant => block.Refs.GetValueOrDefault(at) is HkxPointer p ? $"-> #{number[p.Target]} {p.Target.Class.Name}" : "null",
                 HkType.CString => block.Refs.GetValueOrDefault(at) is HkxData s ? $"\"{s.Text}\"" : "null",
                 _ => $"({type})",
             };
         }
     }
-
-    private static int Integer(ReadOnlySpan<byte> b, HkType type) => type switch
-    {
-        HkType.Char or HkType.Int8 => (sbyte)b[0],
-        HkType.UInt8 => b[0],
-        HkType.Int16 => BinaryPrimitives.ReadInt16LittleEndian(b),
-        HkType.UInt16 => BinaryPrimitives.ReadUInt16LittleEndian(b),
-        _ => ByteCursor.I32(b, 0),
-    };
 
     private static string Enum(int value, HkEnum? hkEnum)
         => hkEnum?.Items.FirstOrDefault(i => i.Value == value).Name is { } name ? $"{name} ({value})" : value.ToString(CultureInfo.InvariantCulture);
