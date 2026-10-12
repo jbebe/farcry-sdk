@@ -259,7 +259,73 @@ pattern) is told 0 for no driver, 1 for a human and 2 for AI. It sets the speed 
 mode, and resets the AI's boost multipliers, `SetSpecialEnginePowerMultiplier` (`0x104AACF0`,
 `+0x1C4 = +0x1E0 × m`) and `SetSpecialPrimaryRatioMultiplier` (`0x104AAD10`).
 
+## Breakable parts
+
+`CVehiclePhysComponent` holds a vehicle's parts: doors, hood, bumpers, cargo boxes. Each part is a
+list of states, and each state names a body in the `.hkx`, a graphic object and a part id. Damage
+moves a part on to a later state, never back. Traced in `FarCry2_server` and matched in Steam
+`Dunia.dll` **(RE-verified)**:
+
+- **Hinged parts**: `Finalize` (server `0x090BA320`) makes a part hinged (type 3) when any `.hkx`
+  constraint names the body of its current state. `CreateConstrainedPart` (server `0x090B3110`) then
+  spawns that body as a rigid entity of its own, hinged to the frame part, at the entity's position
+  plus `CPhysResource::GetBodyPos`. `CPart::GotoStateIndex` (Steam `0x1006D920`) does the same when a
+  part moves into such a state, but only while `bKeepAttached` is false.
+- **Drawing**: `OnMove` (server `0x090B8C00`, Steam `0x1006EE10`) runs every frame. It copies each
+  hinged body's transform, relative to the vehicle, onto its graphic object's node with
+  `SetNodeMatrix`. It also sets the engine-running flag once `EngineStartTimer` passes the damage
+  level's start time ([engine start](#engine-start-and-fire)).
+- **Bodies by name**: a state's body is looked up by name (`SetupRigidBodyIndices`,
+  `GetBodyIndexFromName`).
+- **Getting in and out**: `AttachToSeat` and `TryLeaveVehicle` call `PushConstrainedPart`, an impulse
+  of 3.0 on every hinged part.
+- **Saves**: `GetSavedParts` (Steam `0x1006E120`) appends each part's health (float) and state index
+  (u32).
+
+**The retail game never reads a vehicle's baked descriptor** (`CFileDescriptorComponent.hidDescriptor`):
+
+- `CGraphicComponent::IsLoadingFromFileDescriptor` is true only while `CRequestManager+0x2E1` is
+  clear. That byte is the engine's switch for loading from archives, set from
+  `SEngineParameters+0x1D`, and it also gates `InitBigFile`.
+- So the skeleton comes from the `.xbg`'s nodes (`AddGeomNodesToSkeleton`), the objects from the
+  serialized `CGraphicComponent` list and the parts from the serialized `Parts`.
+- The big truck confirmed it in game: a bone added only to the descriptor was not drawn, and the same
+  bone as an `.xbg` node was.
+
+[Adding a moving part to a vehicle](../modding/adding-a-moving-vehicle-part.md) builds a part on all
+of this.
+
 ## Layout
+
+`CVehiclePhysComponent`: parts `+0x3C` (stride `0x84`), part count `+0x40`, frame part `+0x80`,
+`EngineStartTimer` `+0xB8`, engine running `+0x100`. A part: what holds its body `+0x00`, states
+`+0x08` (stride `0x18`: body index `+0x08`, high-res body index `+0x0C`, graphic object `+0x10`, part
+id `+0x14`), name hash `+0x58`, state `+0x5C`, health `+0x6C`, type `+0x7C` (2 still, 3 hinged, 4
+detached), `bKeepAttached` `+0x80`.
+
+The frame part's body is a `CPhysEntity`. Its vtable slot `0x28` returns its `CPhysVehicleEntity`, or
+null. A car's is a `CPhysWheeledVehicleEntity` (Steam vtable `0x10E659B0`, `0x60` bytes), a wrapper
+with the `CPhysWheeledVehicleEntityImpl` at `+0x5C`.
+
+A body's constraints are in two lists on its `hkpEntity`:
+
+- **Master list**: `+0x98` data and `+0x9C` a u16 count. The entries are 0x30-byte
+  `hkConstraintInternal`s, each starting with its instance.
+- **Slave list**: `+0xA0` pointers to the instances and `+0xA4` their count.
+
+A part's hinge was found in the chassis's master list.
+
+`hkpLimitedHingeConstraintData`:
+
+| Offset | Field |
+|---|---|
+| `+0x10` | first atom's type (2) |
+| `+0xA0` | angular motor atom (type 18) |
+| `+0xA2` | motor enabled |
+| `+0xB0` | motor; its type byte at `+0x08` is 2 for a velocity motor |
+| `+0xB6` | angular friction enabled |
+
+`setMotorActive` writes the motor flag and the opposite friction flag.
 
 `CPhysWheeledVehicleEntityImpl`:
 

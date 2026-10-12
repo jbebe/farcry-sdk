@@ -113,12 +113,28 @@ constraints, named after the part's damage state (`DoorLeftState02`, `HoodState0
 `X`, `Init` also records the index of the body named `HIGH_X` (returned by `GetHighresIndex`) and of
 the one named `NAV_X`.
 
+**`Init` keeps a position, rotation and mass only for the bodies listed before the first one whose
+name contains `HIGH_` or `NAV_`.** These go in a table of `SRigidBodyData`, 0x40 bytes each:
+position at `+0x00`, rotation at `+0x10`, mass at `+0x20`. `GetBodyPos` and `GetBodyRotation` index
+that table without a bounds check. A body added after the first `HIGH_` body therefore reads past
+its end, and a part hinged on it spawns somewhere different on every load. Insert new bodies before
+it.
+
+Two members of a body are packed and easy to set wrong:
+
+- **`motion.motionState.maxAngularVelocity` is an `hkUFloat8` byte, not a float.** The doors' 86 is
+  13.3 rad/s and 110 is 65.6 rad/s.
+- **`material.responseType` 3 is `RESPONSE_NONE`.** `hkpWorld`'s contact-manager setup registers its
+  null contact manager for 3 last, against every other response type. So a pair with such a body gets
+  no contact forces, even when it sits inside another body's hull.
+
 ## Tools
 
 `jackall-cli hkx verify <file.hkx>...` parses and rewrites files and reports any that differ.
 `jackall-cli hkx dump <file.hkx>` prints every object, each value under its member path
 (`motion.motionState.transform`, `entities[1]`).
 
-In code, `HkxEdit` reads and writes members by those paths, and appends to arrays of pointers;
-`HkxObject.Clone` copies an object. That is enough to add a body and a constraint to a file. There is
-no editable text form of a whole file yet.
+In code, `HkxEdit` reads and writes members by those paths. It also reads arrays of pointers and
+inserts or appends to them, and `HkxObject.Clone` copies an object. That is enough to add a body and a
+constraint to a file; [adding a moving part to a vehicle](../modding/adding-a-moving-vehicle-part.md)
+does both. There is no editable text form of a whole file yet.
