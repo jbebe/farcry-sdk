@@ -27,9 +27,7 @@ endif()
 
 # source file : entry point : profile : generated header : array name
 set(SHADER_PASSES
-  "lamp_glow.fx:MainPS:ps_2_0:lamp_glow_ps.h:g_lampGlowPixelShader"
-  "grass_light.fx:MainVS:vs_3_0:grass_light_vs.h:g_grassLightVertexShader"
-  "grass_light.fx:MainPS:ps_3_0:grass_light_ps.h:g_grassLightPixelShader")
+  "lamp_glow.fx:MainPS:ps_2_0:lamp_glow_ps.h:g_lampGlowPixelShader")
 
 set(SHADER_HEADERS "")
 foreach(PASS IN LISTS SHADER_PASSES)

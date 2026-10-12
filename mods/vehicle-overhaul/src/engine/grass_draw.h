@@ -1,34 +1,20 @@
-// The engine's draws of grass lit by the sun, recognised by their shaders as they are submitted, with
-// room for a draw of the same grass straight after each.
+// The engine's additive pass of a spot light over grass, recognised by its vertex shaders as each
+// draw is submitted, and drawn through a vertex shader of the caller's instead.
 //
-// The lit vertex shaders are ones the engine builds for itself, named by their bytecode's CRC-32.
-// See docs/docs/file-formats/shader-objects.md.
-//
-// Sky Overhaul swaps those vertex shaders for its own inside its hook on the same call, so this hook
-// has to run before its: FCSE runs the last installed first, and Sky Overhaul's DLL at the root of
-// bin\plugins loads before this one's folder. Run after it, this sees Sky Overhaul's shader and
-// leaves the grass unlit.
+// The engine builds those shaders for itself, one for upright clumps and one for bent, named by
+// their bytecode's CRC-32. See docs/docs/file-formats/shader-objects.md.
 #pragma once
 
 #include <d3d9.h>
 
 namespace VehicleOverhaul::GrassDraw {
 
-// Draws the grass draw that has just been made once more, with whatever is bound now.
-using RedrawFn = HRESULT (*)(IDirect3DDevice9* device);
-
-// Whether to look at the draws at all, asked on every indexed draw, so it has to be cheap.
-using WantedFn = bool (*)();
-
-// Called after each lit grass draw whose placement matches grass_light.fx, with the device as that
-// draw left it.
-using AfterFn = void (*)(IDirect3DDevice9* device, RedrawFn redraw);
+// The vertex shader to draw a spot light's grass pass with, given the engine's; null leaves the
+// engine's.
+using SubstituteFn = IDirect3DVertexShader9* (*)(IDirect3DDevice9* device, IDirect3DVertexShader9* engine);
 
 // Takes over the device's DrawIndexedPrimitive. False, and logged, when it cannot be hooked.
-//
-// While `wanted` holds, the vertex shaders of the grass draws it cannot follow are written to
-// VehicleOverhaul-shaders beside the plugin once each, and logged, so they can be read.
-bool Install(WantedFn wanted, AfterFn after);
+bool Install(SubstituteFn substitute);
 
 // Forgets every shader seen, whose addresses a new device may reuse.
 void Forget();

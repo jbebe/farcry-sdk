@@ -1,5 +1,4 @@
-// Car lights: every lit headlamp seen as a bright point, and the headlight of the car the player
-// drives lighting the grass.
+// Car lights: every lit headlamp seen as a bright point, and the headlight lighting the grass.
 #pragma once
 
 namespace VehicleOverhaul::Lights {

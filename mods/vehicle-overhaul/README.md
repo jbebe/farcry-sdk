@@ -92,8 +92,10 @@ from the windows and the wrecks are to come.
   lens from afar, never smaller than a pixel or so, and a glare that dazzles a little up close in front
   of it, narrowing to the lamp's beam. Whatever stands in the way hides it. The game lit the lenses
   of AI cars only.
-- **Headlights on the grass.** The headlight of the car you drive lights the grass in its beam, which
-  the game left dark. The game's own light is unchanged. Grass a car is bending down is not lit yet.
+- **Headlights on the grass.** The game draws its headlight over the grass, but lit each clump only as
+  far as the ground under it faced the lamp, so grass the beam skims across stayed nearly black. Its
+  own pass now wraps the light round the blades, upright or bent. The light itself is unchanged, and
+  any spot light on grass gets the same.
 
 The engine's `Cameras.Camera.Third` is put up and its update is taken over to place the camera. Both
 are described in
@@ -132,8 +134,8 @@ src\                         the FCSE plugin
   sounds.cpp                 the window's Sounds tab
   lights.cpp                 the car lights, put together
   lamp_glow.cpp              each lit headlamp's bright point and glare
-  grass_light.cpp            the headlight's second pass over the grass
-  shaders\                   the glow's and the grass pass's shaders
+  grass_light.cpp            the engine's spot light pass over grass, rewritten to light the blades
+  shaders\                   the glow's shader
   engine\                    the game's own seams: the signal dispatcher, the input pass, the camera
                              manager and the third camera's update, entities, the seat lookup,
                              terrain height, the Havok vehicle under each car, a vehicle's engine

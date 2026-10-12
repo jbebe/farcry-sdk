@@ -1,5 +1,6 @@
-// The headlight of the car the player drives lighting the grass, which the engine leaves dark: each
-// of the engine's draws of grass lit by the sun is drawn again with the headlight's light added.
+// Grass lit by the headlight. The engine draws a spot light's pass over grass but lights a clump by
+// its ground's slope toward the light, which leaves grass a headlight skims across nearly black. Its
+// own shaders are drawn with that one term wrapped round the blades, (n.l + 1) / 2.
 #pragma once
 
 namespace VehicleOverhaul::GrassLight {
