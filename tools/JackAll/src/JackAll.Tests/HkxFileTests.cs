@@ -147,11 +147,15 @@ public sealed class HkxFileTests
             return;
         }
 
-        string text = HkxDump.Write(HkxFile.Parse(bytes));
+        HkxFile file = HkxFile.Parse(bytes);
+        string text = HkxDump.Write(file);
+        var numbers = file.Objects().Index().ToDictionary(p => p.Item, p => p.Index);
+        HkxDumpLine shape = HkxDump.Members(Body(file, "DoorLeftState02"), numbers).Single(l => l.Path == "collidable.shape");
 
         Assert.Contains("  name: \"DoorLeftState02\"", text);
         Assert.Contains("  motion.motionState.maxAngularVelocity: 86", text);
         Assert.Contains("entities[1]: -> #3 hkpRigidBody", text);
+        Assert.Equal("hkpConvexVerticesShape", shape.Target?.Class.Name);
     }
 
     private static HkxObject Body(HkxFile file, string name)
