@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Media3D;
+using JackAll.Tools.World;
 
 namespace JackAll.App.FileHandlers;
 
@@ -56,6 +57,35 @@ public sealed class OrbitViewport
     /// <summary>A left click that did not turn the view, at its position in the viewport.</summary>
     public event Action<Point>? Clicked;
 
+    /// <summary>Raised whenever the camera moves.</summary>
+    public event Action? Moved;
+
+    /// <summary>The ray from the camera through a point of the viewport.</summary>
+    public (Vector3 Origin, Vector3 Direction) Ray(Point at)
+    {
+        Vector3 forward = Vector3.Normalize(Vec(_camera.LookDirection));
+        Vector3 right = Vector3.Normalize(Vector3.Cross(forward, Vec(_camera.UpDirection)));
+        Vector3 up = Vector3.Cross(right, forward);
+        (double halfWidth, double halfHeight) = HalfAngles();
+        float x = (float)((2 * at.X / _viewport.ActualWidth - 1) * halfWidth), y = (float)((1 - 2 * at.Y / _viewport.ActualHeight) * halfHeight);
+        return (Vec(_camera.Position), Vector3.Normalize(forward + right * x + up * y));
+    }
+
+    /// <summary>The length that spans <paramref name="pixels"/> of the viewport's height at <paramref name="at"/>.</summary>
+    public float Scale(Vector3 at, float pixels)
+        => TranslateGizmo.Scale(at, Vec(_camera.Position), (float)(2 * Math.Atan(HalfAngles().HalfHeight)), (float)_viewport.ActualHeight, pixels);
+
+    // The tangents of half the view's horizontal and vertical angles; FieldOfView is the horizontal one.
+    private (double HalfWidth, double HalfHeight) HalfAngles()
+    {
+        double halfWidth = Math.Tan(_camera.FieldOfView * Math.PI / 360);
+        return (halfWidth, halfWidth * _viewport.ActualHeight / Math.Max(_viewport.ActualWidth, 1));
+    }
+
+    private static Vector3 Vec(Point3D p) => new((float)p.X, (float)p.Y, (float)p.Z);
+
+    private static Vector3 Vec(Vector3D v) => new((float)v.X, (float)v.Y, (float)v.Z);
+
     /// <summary>
     /// Puts the whole of a bounding box in view, from the default angle. Before the viewport has a
     /// size the fit waits for one, because the tighter of its two angles decides the distance.
@@ -71,9 +101,7 @@ public sealed class OrbitViewport
 
         Vector3 center = (min + max) / 2f;
         float radius = Math.Max(0.01f, (max - min).Length() / 2f);
-        // FieldOfView is the horizontal angle; the vertical one is narrower on a wide viewport.
-        double halfWidth = Math.Tan(_camera.FieldOfView * Math.PI / 360);
-        double halfHeight = halfWidth * _viewport.ActualHeight / _viewport.ActualWidth;
+        (double halfWidth, double halfHeight) = HalfAngles();
 
         _target = Scene3D.Point(center);
         _distance = radius * 1.1 / Math.Min(halfWidth, halfHeight);
@@ -94,6 +122,7 @@ public sealed class OrbitViewport
         _camera.UpDirection = new Vector3D(0, 0, 1);
         _camera.NearPlaneDistance = _near;
         _camera.FarPlaneDistance = _far;
+        Moved?.Invoke();
     }
 
     private void OnMouseDown(object sender, MouseButtonEventArgs e)

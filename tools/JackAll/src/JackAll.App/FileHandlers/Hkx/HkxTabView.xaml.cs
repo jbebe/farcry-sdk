@@ -48,6 +48,7 @@ public partial class HkxTabView : UserControl, ISavableTab
         _scene = new HkxScene(HkxViewport, _model) { ModelOpacity = HkxModelOpacity.Value };
         _orbit = new OrbitViewport(HkxViewport, tilt: true);
         _orbit.Clicked += Pick;
+        StartGizmo();
         HkxModelOpacity.ValueChanged += (_, e) => _scene.ModelOpacity = e.NewValue;
 
         try
@@ -94,6 +95,10 @@ public partial class HkxTabView : UserControl, ISavableTab
         if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && e.Key == Key.S)
         {
             SaveOrWarn();
+            e.Handled = true;
+        }
+        else if (GizmoKey(e.Key))
+        {
             e.Handled = true;
         }
         // A text box keeps its own Ctrl+Z.
@@ -160,9 +165,13 @@ public partial class HkxTabView : UserControl, ISavableTab
         _scene.Show(Shown());
 
         HkxObject? again = Carry(inspected);
-        if ((again is null || HkxTreeNode.Reveal(_roots, n => n.Node.Object == again) is null) && !_writing)
+        if (again is null || HkxTreeNode.Reveal(_roots, n => n.Node.Object == again) is null)
         {
-            Inspect(again);
+            Target(null);
+            if (!_writing)
+            {
+                Inspect(again);
+            }
         }
         DirtyChanged?.Invoke();
         RefreshButtons();
@@ -220,6 +229,7 @@ public partial class HkxTabView : UserControl, ISavableTab
     {
         var node = e.NewValue as HkxTreeNode;
         _scene.Highlight(node is null ? new HashSet<HkxPrimitive>() : [.. node.Node.Primitives()]);
+        Target(node);
         if (!_writing)
         {
             Inspect(node?.Node.Object);

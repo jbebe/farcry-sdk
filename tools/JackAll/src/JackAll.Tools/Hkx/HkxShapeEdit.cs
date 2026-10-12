@@ -51,6 +51,20 @@ public static class HkxShapeEdit
         }
     }
 
+    /// <summary>Where the space a link's owner places its shape in sits in the model, from where the shape itself lands there.</summary>
+    public static Matrix4x4 ParentToModel(HkxLink link, Matrix4x4 toModel)
+    {
+        Matrix4x4.Invert(Local(link.Target!), out Matrix4x4 inverse);
+        return inverse * toModel;
+    }
+
+    /// <summary>Places the convex shape behind a link so that it lands at <paramref name="toModel"/> in the model.</summary>
+    public static void PlaceInModel(HkxLink link, Matrix4x4 parentToModel, Matrix4x4 toModel)
+    {
+        Matrix4x4.Invert(parentToModel, out Matrix4x4 toParent);
+        Place(link, toModel * toParent);
+    }
+
     /// <summary>A box's size from surface to surface.</summary>
     public static Vector3 Size(HkxObject box)
     {

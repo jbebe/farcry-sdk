@@ -76,15 +76,22 @@
                     <Slider x:Name="HkxModelOpacity" Minimum="0" Maximum="1" Value="0.35" Width="120" VerticalAlignment="Center"
                             ToolTip="How solid the model is drawn over the collision" />
                     <Button x:Name="HkxResetView" Content="Reset view" Margin="12,0,0,0" Click="ResetView_Click" />
-                    <TextBlock Text="Drag to turn, wheel to zoom, click a shape to select it" Style="{StaticResource Muted}"
-                               VerticalAlignment="Center" Margin="12,0,0,0" />
+                    <ToggleButton x:Name="HkxMove" Content="Move" Margin="12,0,0,0" IsChecked="True" Click="Move_Click"
+                                  ToolTip="Move the selected shape with the arrows (T)" />
+                    <ToggleButton x:Name="HkxTurn" Content="Turn" Margin="6,0,0,0" Click="Turn_Click"
+                                  ToolTip="Turn the selected shape with the rings (R)" />
+                    <TextBlock Text="Drag to orbit, wheel to zoom, click a shape to select it; drag a box's knobs to resize it"
+                               Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="12,0,0,0" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
                 <Border x:Name="HkxFrame" Style="{StaticResource PreviewFrame}" Background="{DynamicResource WellBrush}">
-                    <Viewport3D x:Name="HkxViewport" ClipToBounds="True">
-                        <Viewport3D.Camera>
-                            <PerspectiveCamera FieldOfView="45" />
-                        </Viewport3D.Camera>
-                    </Viewport3D>
+                    <Grid Background="Transparent">
+                        <Viewport3D x:Name="HkxViewport" ClipToBounds="True">
+                            <Viewport3D.Camera>
+                                <PerspectiveCamera FieldOfView="45" />
+                            </Viewport3D.Camera>
+                        </Viewport3D>
+                        <Viewport3D x:Name="HkxGizmos" ClipToBounds="True" IsHitTestVisible="False" />
+                    </Grid>
                 </Border>
             </DockPanel>
 

@@ -108,6 +108,30 @@ public sealed class HkxShapeEditTests
         Assert.Equal(before.Max(v => v.Z) + 0.1f, after.Max(v => v.Z), 5);
     }
 
+    /// <summary>With the body tilted, a placement that ignored the parent would land the seat elsewhere.</summary>
+    [Fact]
+    public void A_shape_placed_in_the_model_lands_there_under_a_tilted_body()
+    {
+        if (Read(Chair) is not { } file)
+        {
+            return;
+        }
+
+        Matrix4x4 tilt = Matrix4x4.CreateRotationX(0.6f) * Matrix4x4.CreateTranslation(1, 2, 3);
+        file.Objects().Single(o => o.Class.Name == "hkpRigidBody").SetReals("motion.motionState.transform",
+            tilt.M11, tilt.M12, tilt.M13, 0, tilt.M21, tilt.M22, tilt.M23, 0, tilt.M31, tilt.M32, tilt.M33, 0, tilt.M41, tilt.M42, tilt.M43, 1);
+        HkxNode seat = SeatBox(file);
+        Matrix4x4 now = seat.Primitive!.ToModel;
+        Matrix4x4 parent = HkxShapeEdit.ParentToModel(seat.Link!.Value, now);
+        Matrix4x4 wanted = now * Matrix4x4.CreateTranslation(-now.Translation) * Matrix4x4.CreateRotationZ(0.5f)
+            * Matrix4x4.CreateTranslation(now.Translation + Vector3.UnitZ);
+
+        HkxShapeEdit.PlaceInModel(seat.Link.Value, parent, wanted);
+
+        Assert.True(Distance(tilt, parent) < 1e-5f);
+        Assert.True(Distance(wanted, SeatBox(file).Primitive!.ToModel) < 1e-4f);
+    }
+
     [Fact]
     public void A_box_never_shrinks_below_twice_its_radius()
     {

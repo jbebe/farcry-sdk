@@ -48,6 +48,9 @@ public sealed class HkxEditSession
         Settle(after, reparsed: false);
     }
 
+    /// <summary>Drops the changes made to <see cref="File"/> since it was written as <paramref name="before"/>.</summary>
+    public void Revert(byte[] before) => Load(before);
+
     public void Undo() => History.Undo();
 
     public void Redo() => History.Redo();
