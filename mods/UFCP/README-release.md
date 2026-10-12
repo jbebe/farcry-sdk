@@ -3,10 +3,11 @@
 Bugs Ubisoft never patched, fixed in the running game instead of in the files on disk. Nothing is
 overwritten, nothing survives uninstalling it, and it stacks with the data mods you already have.
 
-Requires FCSE (the Far Cry Script Extender), the plugin loader, released from the same place as this
-archive — and Far Cry 2 v1.03, either the Steam/Ubisoft Connect build or the GOG/retail one.
-DevTools, released from the same place, is the separate plugin for working on the game rather than
-playing it: it holds the developer console and booting straight into a save with `-load`.
+Requires FCSE (the Far Cry Script Extender) 1.4.0 or later, the plugin loader, released from the
+same place as this archive — and Far Cry 2 v1.03, either the Steam/Ubisoft Connect build or the
+GOG/retail one. DevTools, a separate plugin from the same project, is for working on the game rather
+than playing it: it holds the developer console, booting straight into a save with `-load`, and
+skipping the intro movies and title screen.
 
 ## Installing
 
@@ -29,6 +30,7 @@ Always applied. A fix that needs a switch is a preference in disguise.
 - **Mouse speed cap** — a fast flick turned the view less far than a slow one, because the gamepad's
   output ceiling was applied to the mouse as well.
 - **High-precision timer** — loading screens ran far below the 30 FPS they are paced for.
+- **Grass under spot lights** — headlights and flashlights left grass black however close it was.
 - **CPU and GPU utilisation** — the job pool was sized for two-core machines, idle workers spun in
   the queue's critical section, the GPU could never run a frame ahead, and with a frame cap set the
   limiter burned a whole core busy-waiting for its deadline.
@@ -56,6 +58,30 @@ box, one row away from the stock behaviour.
 
 ## Credits
 
-Much of the input, field-of-view, frame-rate and utilisation work is ported from **FC2JackalFix** by
-Joshhhuaaa and TGP482 (MIT), whose field-of-view work in turn credits **FoxAhead's Far Cry 2 Multi
-Fixer**.
+Much of the input, field-of-view, frame-rate and utilisation work is ported from **FC2JackalFix**
+(https://github.com/TGP482/FC2JackalFix) by Joshhhuaaa and TGP482, whose field-of-view work in turn
+credits **FoxAhead's Far Cry 2 Multi Fixer**. That code is covered by FC2JackalFix's licence:
+
+```
+MIT License
+
+Copyright (c) 2026 Joshhhuaaa, TGP482
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```

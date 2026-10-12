@@ -10,8 +10,8 @@ env:
   # Nexus Mods identifiers for the UFCP mod page. NEXUS_MOD_ID is the internal ID that
   # v3/games/farcry2/mods/{id in the page URL} answers with, not the ID in the URL; the file ID is
   # on the mod's Files tab under "API Info". An empty file ID skips the upload.
-  NEXUS_MOD_ID: ''
-  NEXUS_FILE_UFCP: ''
+  NEXUS_MOD_ID: '6317896892804'
+  NEXUS_FILE_UFCP: '8140368'
 
 jobs:
   release:
