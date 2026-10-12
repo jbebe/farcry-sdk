@@ -5,7 +5,6 @@
 #include "fcse_api.h"
 
 #include <bit>
-#include <cmath>
 #include <iterator>
 #include <unordered_map>
 #include <vector>
@@ -100,31 +99,11 @@ namespace {
         return out;
     }
 
-    // The first draws are logged with the light they are drawn for, so a run shows whose it is.
-    constexpr int kLoggedDraws = 3;
-    int g_loggedDraws = 0;
-
-    void LogLight(IDirect3DDevice9* device) {
-        // c45 the camera, c72.x one over the range squared, c74 the colour, c75 where the light is.
-        float camera[4] = {};
-        float light[4 * 4] = {};
-        device->GetVertexShaderConstantF(45, camera, 1);
-        device->GetVertexShaderConstantF(72, light, 4);
-        const float range = light[0] > 0.0f ? 1.0f / std::sqrt(light[0]) : 0.0f;
-        FCSE::Logf("grass light: a spot light at (%.1f, %.1f, %.1f), the camera at (%.1f, %.1f, %.1f), "
-                   "colour (%.2f, %.2f, %.2f), range %.1f m",
-                   light[12], light[13], light[14], camera[0], camera[1], camera[2], light[8], light[9],
-                   light[10], range);
-    }
 
     // Ours per engine shader, null where the engine's could not be rewritten. Render thread only.
     std::unordered_map<const void*, IDirect3DVertexShader9*> g_wrapped;
 
     IDirect3DVertexShader9* Substitute(IDirect3DDevice9* device, IDirect3DVertexShader9* engine) {
-        if (g_loggedDraws < kLoggedDraws) {
-            g_loggedDraws++;
-            LogLight(device);
-        }
         const auto found = g_wrapped.find(engine);
         if (found != g_wrapped.end()) {
             return found->second;

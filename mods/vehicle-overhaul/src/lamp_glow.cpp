@@ -22,6 +22,10 @@ namespace {
     constexpr float kLensRadius = 0.09f;
     // The least a lens is drawn across, in pixels, so a car far off still shows its lamps.
     constexpr float kMinLensPixels = 1.2f;
+    // The cosines off the lamp's axis past which the lit lens is gone (70 degrees), and within which
+    // it shows whole (55), so it comes in over a short turn rather than lingering faint side on.
+    constexpr float kLensGone = 0.342f;
+    constexpr float kLensWhole = 0.574f;
     // The occlusion patch: lifted towards the eye so the lamp's own housing does not hide it, and
     // never smaller than this many pixels from its centre.
     constexpr float kPatchLift = 0.25f;
@@ -251,8 +255,8 @@ void OnSkyPass(const Frame::Pass& pass) {
         const float facing =
             (toEye[0] * lamp.forward[0] + toEye[1] * lamp.forward[1] + toEye[2] * lamp.forward[2]) /
             (distance * forwardLength);
-        // A lens seen from behind is the back of the housing.
-        const float lensShows = Saturate((facing + 0.15f) / 0.5f);
+        const float turned = Saturate((facing - kLensGone) / (kLensWhole - kLensGone));
+        const float lensShows = turned * turned * (3.0f - 2.0f * turned);
         const Clip clip = Project(camera, lamp.position);
         if (lensShows <= 0.0f || clip.w <= 0.05f) {
             continue;
