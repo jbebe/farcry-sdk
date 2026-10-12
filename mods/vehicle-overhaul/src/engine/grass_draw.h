@@ -3,6 +3,11 @@
 //
 // The lit vertex shaders are ones the engine builds for itself, named by their bytecode's CRC-32.
 // See docs/docs/file-formats/shader-objects.md.
+//
+// Sky Overhaul swaps those vertex shaders for its own inside its hook on the same call, so this hook
+// has to run before its: FCSE runs the last installed first, and Sky Overhaul's DLL at the root of
+// bin\plugins loads before this one's folder. Run after it, this sees Sky Overhaul's shader and
+// leaves the grass unlit.
 #pragma once
 
 #include <d3d9.h>
