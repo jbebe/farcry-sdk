@@ -38,8 +38,9 @@ public static class FileHandlerCatalog
     /// Builds the view for <paramref name="file"/>, or null if no handler covers its type.
     /// <paramref name="readContent"/> is only invoked once a handler is found to actually need it.
     /// <paramref name="replaceContent"/> lets a handler stage an edited replacement into the workspace.
-    /// <paramref name="openEditor"/> is only used by the fragment case, to hand off to the host
-    /// window's tab-based XML editor rather than anything embedded in this compact preview column.
+    /// <paramref name="openEditor"/> hands the file to the host window's editor tab for its kind - a
+    /// fragment's value editor, a Domino graph, an mgb package - rather than anything embedded in this
+    /// compact preview column.
     /// <paramref name="readOriginal"/> is used by the text, fragment, fcb and rml cases, to diff a
     /// modded file against its
     /// base game version (see <see cref="BuildTextHandler"/>, <see cref="BuildLauncherPreview"/>,
@@ -47,17 +48,13 @@ public static class FileHandlerCatalog
     /// and <paramref name="navigateTo"/> are used by the spk case, for a row's cross-reference to a
     /// different bank entirely (see <see cref="SpkFileHandler"/>); it takes a *sound id*, not a path
     /// hash - the two are different spaces, and resolving one as the other silently finds nothing.
-    /// <paramref name="openDominoEditor"/>
-    /// is the domino\user\ case's counterpart to <paramref name="openEditor"/>, handing off to the
-    /// graph-reconstruction tab, and <paramref name="openMgbEditor"/> is the mgb case's, handing off
-    /// to the Magma UI package editor tab (see <see cref="MgbFilePreviewHandler"/>).
     /// <paramref name="findRigs"/> is the mab case's, resolving the rigs a bank plays on, which are
     /// filed elsewhere (see <see cref="MabPlayer"/>).
     /// </summary>
     public static UserControl? CreateView(
         VfsFile file, Func<byte[]> readContent, Action<byte[]> replaceContent, Action openEditor,
         Func<byte[]?> readOriginal, Func<uint, VfsFile?> resolveSoundId, Action<VfsFile> navigateTo,
-        Action openDominoEditor, Action openMgbEditor, Func<MabFile, BankRigs> findRigs)
+        Func<MabFile, BankRigs> findRigs)
         => file switch
         {
             // A dependency list, a mission element and a sector's layer placement are all small
@@ -79,7 +76,7 @@ public static class FileHandlerCatalog
             // Only user\ graphs reconstruct into a box graph worth viewing - a system\ node's own body
             // is just a small hand-written function, already well served by the plain text/diff view.
             { Type.Extension: "lua" } when file.Directory.StartsWith(@"domino\user", StringComparison.OrdinalIgnoreCase)
-                => BuildLauncherPreview(file, readContent, readOriginal, openDominoEditor,
+                => BuildLauncherPreview(file, readContent, readOriginal, openEditor,
                     "A Domino mission-graph script - open it in the graph viewer to see it as boxes and connections instead of generated Lua.",
                     "Open in Domino Viewer…", "lua"),
             // "desc" is a known-path .mgb.desc (Path.GetExtension only keeps the last segment);
@@ -95,7 +92,7 @@ public static class FileHandlerCatalog
             { Type.Extension: "rml" } => new RmlFileHandler(file, readContent(), replaceContent, readOriginal),
             { Type.Extension: "sdat" } => new SdatFileHandler(file.FileName, readContent()),
             { Type.Extension: "spk" } => new SpkFileHandler(file.FileName, readContent(), replaceContent, resolveSoundId, navigateTo),
-            { Type.Extension: "mgb" } => new MgbFilePreviewHandler(readContent(), openMgbEditor),
+            { Type.Extension: "mgb" } => new MgbFilePreviewHandler(readContent(), openEditor),
             // Matched by filename suffix, not bare extension - "dat" alone is also the archive-container
             // extension, so this must not fire for anything else that happens to carry a literal .dat
             // extension in the VFS content tree. Sibling "_deploadnewparticles.rml" files are unaffected

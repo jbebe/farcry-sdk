@@ -67,6 +67,37 @@ public partial class MainWindow
     /// document tab keeps its close action in <c>Tag</c>, fixed tabs have none.</summary>
     private void CloseDocumentTab(TabItem? tab) => ((tab ?? MainTabs.SelectedItem as TabItem)?.Tag as Action)?.Invoke();
 
+    /// <summary>The Files tab's launcher: the editor tab for this kind of file.</summary>
+    private void OpenEditorTab(VfsFile file)
+    {
+        switch (file)
+        {
+            case { IsFragment: true }:
+                OpenFcbEditorTab(file);
+                break;
+            case { Type.Extension: "lua" }:
+                OpenDominoEditorTab(file);
+                break;
+            case { Type.Extension: "mgb" }:
+                OpenMgbEditorTab(file);
+                break;
+        }
+    }
+
+    /// <summary>The file's bytes for an editor tab, or null once the user has been told why not.</summary>
+    private byte[]? ReadForEditor(VfsFile file)
+    {
+        try
+        {
+            return _vm.Read(file);
+        }
+        catch (Exception ex)
+        {
+            Warn($"Couldn't open '{file.FileName}': {ex.Message}");
+            return null;
+        }
+    }
+
     // ------------------------------------------------------------ fragment XML editor tabs
 
     /// <summary>Open editor tabs, keyed by the fragment's own VFS key - lets "Open in FCB Editor…" just
@@ -219,18 +250,12 @@ public partial class MainWindow
     private void OpenDominoEditorTab(VfsFile file)
         => OpenOrFocusEditorTab(_openDominoEditors, file.Hash, onRemoved =>
         {
-            string source;
-            try
+            if (ReadForEditor(file) is not { } content)
             {
-                source = AppText.DecodeUtf8(_vm.Read(file));
-            }
-            catch (Exception ex)
-            {
-                Warn($"Couldn't open '{file.FileName}': {ex.Message}");
                 return null;
             }
 
-            var vm = new DominoTabViewModel(file.FileName, source, file.NameIsKnown ? file.Path : null, DominoServices);
+            var vm = new DominoTabViewModel(file.FileName, AppText.DecodeUtf8(content), file.NameIsKnown ? file.Path : null, DominoServices);
             var view = new DominoTabView(vm);
             var tab = new TabItem { Content = view };
             // No dirty-tracking wrapper like the XML and MGB editors get: this tab is read-only, so
@@ -267,14 +292,8 @@ public partial class MainWindow
     private void OpenMgbEditorTab(VfsFile file)
         => OpenOrFocusEditorTab(_openMgbEditors, file.Hash, onRemoved =>
         {
-            byte[] content;
-            try
+            if (ReadForEditor(file) is not { } content)
             {
-                content = _vm.Read(file);
-            }
-            catch (Exception ex)
-            {
-                Warn($"Couldn't open '{file.FileName}': {ex.Message}");
                 return null;
             }
 
