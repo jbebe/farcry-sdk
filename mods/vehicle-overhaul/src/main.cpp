@@ -2,6 +2,7 @@
 #include "devtools_api.h"
 #include "drivetrain.h"
 #include "fcse_api.h"
+#include "lights.h"
 #include "physics.h"
 #include "sounds.h"
 #include "third_person.h"
@@ -18,7 +19,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     const bool physics = VehicleOverhaul::Physics::Install();
     const bool drivetrain = VehicleOverhaul::Drivetrain::Install();
     const bool sounds = VehicleOverhaul::Sounds::Install();
-    return thirdPerson || physics || drivetrain || sounds;
+    const bool lights = VehicleOverhaul::Lights::Install();
+    return thirdPerson || physics || drivetrain || sounds || lights;
 }
 
 // Runs after every plugin's FCSE_Load, so DevTools has loaded by now if it is installed at all.
