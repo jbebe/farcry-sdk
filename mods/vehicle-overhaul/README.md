@@ -37,7 +37,9 @@ from the windows and the wrecks are to come.
     vehicle's stability factor: a Land Rover Series III tips over at 0.9 g, a Datsun 1200 at 1.3 g,
     and the buggy keeps its weight at the axles. The big truck tips at 1.1 g, lower than a real ZIL-130's
     0.85, which rolled it over in left-right turns on its soft solid axles. It also carries its weight as
-    far forward as an empty ZIL-130, 49% on the front axle, where the game put it far back.
+    far forward as an empty ZIL-130, 49% on the front axle, where the game put it far back. The Datsun
+    carries 54% on its front axle, a small front-engined car's, where the game put it so far forward
+    that the rear hopped about.
   - The game gives every car a small car's inertia for its weight, so the big truck rocked on its
     springs as quickly as the Datsun. It starts at 3.6 times its own, about a real ZIL-130's, so it
     leans and turns slowly.

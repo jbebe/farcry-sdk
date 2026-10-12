@@ -42,7 +42,9 @@ namespace {
     constexpr Spec kVehicles[] = {
         {1600.0f, 95.0f, "Land Rover Series III", 0.90f, 0.0f, 0.0f, 0, 0.0f, {kRoverSprings, kRoverSprings},
          kRoverTuning},
-        {1000.0f, 90.0f, "Datsun 1200", 1.30f, 750.0f, 6500.0f, kShiftClunks, 0.816f, {}, kDatsunTuning},
+        // 54% on the front axle, a small front-engined car's; the game's put it so far forward that the rear hopped
+        // about (2026-10-12).
+        {1000.0f, 90.0f, "Datsun 1200", 1.30f, 750.0f, 6500.0f, kShiftClunks, 0.816f, {}, kDatsunTuning, 0.54f},
         {800.0f, 87.0f, "Buggy", kAtTheAxles},
         {1500.0f, 95.0f, "Jeep Liberty", 1.07f},
         {1200.0f, 88.0f, "Jeep Wrangler", 1.20f},

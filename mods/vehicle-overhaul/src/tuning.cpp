@@ -124,7 +124,7 @@ namespace {
          nullptr},
         {"Real centre of mass", &Values::realCentreOfMass, "Real centre of mass", kChassis,
          "Carries the car's weight as high as the real vehicle it depicts, from that vehicle's stability "
-         "factor, and the big truck's as far forward. Off leaves it where the game put it.",
+         "factor, and the big truck's and the Datsun's as far forward. Off leaves it where the game put it.",
          &KnownCar},
         {"Solid axles", &Values::solidAxles, "Solid axles", kSuspension,
          "Springs each solid axle of the real vehicle as one beam, which twists under the body to keep both "
