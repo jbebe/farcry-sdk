@@ -24,13 +24,14 @@ namespace {
     // As the user tuned it in game (2026-10-11).
     constexpr Start kDatsunTuning[] = {
         {"Engine power", 1.0f}, {"Shift time", 0.5f}, {"Tyre grip", 0.5f}, {"Rolling resistance", 0.0f}};
-    // A real empty ZIL-130 (2026-10-12): its 402 N m and 90 km/h through its own gearbox on the truck's 0.53 m
-    // wheels; a truck driver's gear changes; air brakes; 30 degrees of lock; the ground's own grip; 2% rolling drag;
-    // its pitch and yaw for its 3.8 m wheelbase; leaf springs at 2 Hz on about 15 cm of travel.
+    // A real empty ZIL-130 (2026-10-12): 90 km/h through its own gearbox on the truck's 0.53 m wheels; a truck
+    // driver's gear changes; air brakes; 30 degrees of lock; 2% rolling drag; its pitch and yaw for its 3.8 m
+    // wheelbase; leaf springs at 2 Hz on about 15 cm of travel. Its 402 N m (1.3) and the ground's own grip (0.33)
+    // spun the wheels, so the engine and grip are as the user set them.
     constexpr Start kZilTuning[] = {
-        {"Engine power", 1.3f},      {"Top speed", 1.55f},         {"Shift time", 1.0f},
+        {"Engine power", 1.0f},      {"Top speed", 1.55f},         {"Shift time", 1.0f},
         {"Downshift time", 1.0f},    {"Brake torque", 0.75f},      {"Steering lock", 0.85f},
-        {"Steering at speed", 1.0f}, {"Tyre grip", 0.33f},         {"Rolling resistance", 0.2f},
+        {"Steering at speed", 1.0f}, {"Tyre grip", 0.6f},          {"Rolling resistance", 0.2f},
         {"Inertia", 3.6f},           {"Springs", 0.8f},            {"Travel", 1.5f},
         {"Compression damping", 0.65f}, {"Rebound damping", 0.65f}};
 

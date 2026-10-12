@@ -27,8 +27,8 @@ public sealed record RealVehicle(
         new("Unimog", 1600, 88),
         new("ZIL-130", 4000, 150, 560, 3200, ShiftClunks, 0.7f, new Dictionary<string, float>
         {
-            ["Engine power"] = 1.3f, ["Top speed"] = 1.55f, ["Shift time"] = 1.0f, ["Downshift time"] = 1.0f,
-            ["Brake torque"] = 0.75f, ["Steering lock"] = 0.85f, ["Steering at speed"] = 1.0f, ["Tyre grip"] = 0.33f,
+            ["Engine power"] = 1.0f, ["Top speed"] = 1.55f, ["Shift time"] = 1.0f, ["Downshift time"] = 1.0f,
+            ["Brake torque"] = 0.75f, ["Steering lock"] = 0.85f, ["Steering at speed"] = 1.0f, ["Tyre grip"] = 0.6f,
             ["Rolling resistance"] = 0.2f, ["Inertia"] = 3.6f, ["Springs"] = 0.8f, ["Travel"] = 1.5f,
             ["Compression damping"] = 0.65f, ["Rebound damping"] = 0.65f,
         },
