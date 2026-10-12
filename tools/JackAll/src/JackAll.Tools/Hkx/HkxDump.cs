@@ -5,8 +5,11 @@ using JackAll.Core.Format;
 
 namespace JackAll.Tools.Hkx;
 
-/// <summary>One saved value of an object: its path, the value as text, and the object a pointer leads to.</summary>
-public sealed record HkxDumpLine(int Depth, string Path, string Value, HkxObject? Target);
+/// <summary>
+/// One saved value of an object: its path as listed (an array element's relative to its array), the value as text,
+/// the object a pointer leads to, and the member with the full path <see cref="HkxEdit"/> takes.
+/// </summary>
+public sealed record HkxDumpLine(int Depth, string Path, string Value, HkxObject? Target, HkMember Member, string FullPath);
 
 /// <summary>
 /// An <c>.hkx</c> as readable text: every object by number and each saved value under the path
@@ -39,27 +42,30 @@ public static class HkxDump
 
     /// <summary>An object's saved values, an array's elements one level deeper than the array.</summary>
     public static IEnumerable<HkxDumpLine> Members(HkxObject o, IReadOnlyDictionary<HkxObject, int> numbers)
-        => Slots(o, 0, o.Class, 0, "", numbers);
+        => Slots(o, 0, o.Class, 0, ("", ""), numbers);
 
-    private static IEnumerable<HkxDumpLine> Slots(HkxBlock block, int at, HkClass c, int depth, string prefix, IReadOnlyDictionary<HkxObject, int> numbers)
+    // `prefix` is what goes before each slot's path as listed, and in full.
+    private static IEnumerable<HkxDumpLine> Slots(HkxBlock block, int at, HkClass c, int depth, (string Listed, string Full) prefix,
+        IReadOnlyDictionary<HkxObject, int> numbers)
         => Classes.Slots(c)
             .Where(s => !s.Member.Ignored && s.Member.Type != HkType.FunctionPointer)
-            .SelectMany(s => Value(block, at + s.Offset, s.Member, prefix + s.Path, depth, numbers));
+            .SelectMany(s => Value(block, at + s.Offset, s.Member, (prefix.Listed + s.Path, prefix.Full + s.Path), depth, numbers));
 
-    private static IEnumerable<HkxDumpLine> Value(HkxBlock block, int at, HkMember m, string name, int depth, IReadOnlyDictionary<HkxObject, int> numbers)
+    private static IEnumerable<HkxDumpLine> Value(HkxBlock block, int at, HkMember m, (string Listed, string Full) name, int depth,
+        IReadOnlyDictionary<HkxObject, int> numbers)
     {
         if (m.Type is not (HkType.Array or HkType.SimpleArray))
         {
             HkxObject? target = m.Type is HkType.Pointer or HkType.Variant ? (block.Refs.GetValueOrDefault(at) as HkxPointer)?.Target : null;
             string value = target is null ? Scalar(block, at, m.Type, m.Subtype, m.Enum) : $"-> #{numbers[target]} {target.Class.Name}";
-            yield return new HkxDumpLine(depth, name, value, target);
+            yield return new HkxDumpLine(depth, name.Listed, value, target, m, name.Full);
             yield break;
         }
 
         int count = ByteCursor.I32(block.Bytes, at + 4);
         HkxBlock? elements = HkxEdit.Elements(block, at);
         bool listed = m.Subtype is HkType.Struct or HkType.Pointer || count <= ShownElements;
-        yield return new HkxDumpLine(depth, name, listed || elements is null ? $"[{count}]" : $"[{count}] ...", null);
+        yield return new HkxDumpLine(depth, name.Listed, listed || elements is null ? $"[{count}]" : $"[{count}] ...", null, m, name.Full);
         if (!listed || elements is null)
         {
             yield break;
@@ -70,8 +76,8 @@ public static class HkxDump
         for (int i = 0; i < count; i++)
         {
             IEnumerable<HkxDumpLine> lines = element.Type == HkType.Struct
-                ? Slots(elements, i * size, Classes[element.Class!], depth + 1, $"[{i}].", numbers)
-                : Value(elements, i * size, element, $"[{i}]", depth + 1, numbers);
+                ? Slots(elements, i * size, Classes[element.Class!], depth + 1, ($"[{i}].", $"{name.Full}[{i}]."), numbers)
+                : Value(elements, i * size, element, ($"[{i}]", $"{name.Full}[{i}]"), depth + 1, numbers);
             foreach (HkxDumpLine line in lines)
             {
                 yield return line;

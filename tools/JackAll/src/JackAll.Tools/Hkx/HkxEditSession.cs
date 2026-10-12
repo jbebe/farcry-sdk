@@ -53,15 +53,21 @@ public sealed class HkxEditSession
     public void Redo() => History.Redo();
 
     /// <summary>
-    /// Brings every cache in line with the shapes and returns the bytes to save, which become the new save point.
+    /// Brings every cache in line with the shapes and hands the file's bytes to <paramref name="store"/>; when it
+    /// takes them, they become the new save point.
     /// </summary>
     /// <exception cref="InvalidOperationException">A MOPP that cannot be rebuilt would have to be.</exception>
-    public byte[] Save()
+    public bool Save(Func<byte[], bool> store)
     {
         HkxCaches.Refresh(File, HkxFile.Parse(_opened));
-        _saved = File.Write();
-        Settle(_saved, reparsed: false);
-        return _saved;
+        byte[] bytes = File.Write();
+        if (!store(bytes))
+        {
+            return false;
+        }
+        _saved = bytes;
+        Settle(bytes, reparsed: false);
+        return true;
     }
 
     private void Load(byte[] bytes)

@@ -31,7 +31,7 @@ internal sealed class HkxScene
     private readonly ModelVisual3D _shapes = new();
     private readonly ModelVisual3D _ghost = new();
     private readonly SolidColorBrush _ghostBrush = new(Color.FromRgb(0xD8, 0xD8, 0xD8));
-    private readonly Dictionary<HkxPrimitive, GeometryModel3D> _built = [];
+    private Dictionary<HkxPrimitive, GeometryModel3D> _built = [];
     private IReadOnlySet<HkxPrimitive> _selected = new HashSet<HkxPrimitive>();
 
     public HkxScene(Viewport3D viewport, IReadOnlyList<XbgSubmesh>? model)
@@ -60,10 +60,13 @@ internal sealed class HkxScene
     public void Show(IEnumerable<HkxPrimitive> primitives)
     {
         Model3DGroup shapes = Scene3D.Lit();
+        Dictionary<HkxPrimitive, GeometryModel3D> built = [];
         foreach (HkxPrimitive p in primitives)
         {
-            shapes.Children.Add(Model(p));
+            built[p] = _built.GetValueOrDefault(p) ?? Model(p);
+            shapes.Children.Add(built[p]);
         }
+        _built = built;
         _shapes.Content = shapes;
     }
 
@@ -97,19 +100,14 @@ internal sealed class HkxScene
     // Each triangle's own three corners, placed in the model, so WPF lights every face flat.
     private GeometryModel3D Model(HkxPrimitive p)
     {
-        if (!_built.TryGetValue(p, out GeometryModel3D? shape))
+        System.Numerics.Vector3[] placed = [.. p.ModelVertices()];
+        var mesh = new MeshGeometry3D { Positions = new Point3DCollection(p.Triangles.Length) };
+        foreach (int i in p.Triangles)
         {
-            System.Numerics.Vector3[] placed = [.. p.ModelVertices()];
-            var mesh = new MeshGeometry3D { Positions = new Point3DCollection(p.Triangles.Length) };
-            foreach (int i in p.Triangles)
-            {
-                mesh.Positions.Add(Scene3D.Point(placed[i]));
-            }
-            mesh.Freeze();
-            shape = new GeometryModel3D(mesh, MaterialOf(p)) { BackMaterial = MaterialOf(p) };
-            _built[p] = shape;
+            mesh.Positions.Add(Scene3D.Point(placed[i]));
         }
-        return shape;
+        mesh.Freeze();
+        return new GeometryModel3D(mesh, MaterialOf(p)) { BackMaterial = MaterialOf(p) };
     }
 
     private Material MaterialOf(HkxPrimitive p) => _selected.Contains(p) ? Selected : Solid[p.Kind];

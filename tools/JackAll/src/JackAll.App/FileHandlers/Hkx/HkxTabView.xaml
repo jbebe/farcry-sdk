@@ -1,30 +1,47 @@
 <UserControl x:Class="JackAll.App.FileHandlers.Hkx.HkxTabView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:JackAll.App.FileHandlers.Hkx">
+             xmlns:local="clr-namespace:JackAll.App.FileHandlers.Hkx"
+             xmlns:fcbEditor="clr-namespace:JackAll.App.FileHandlers.Fcb.FcbEditor">
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="Visible" />
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <fcbEditor:PropertyEditorTemplates />
+            </ResourceDictionary.MergedDictionaries>
 
-        <DataTemplate x:Key="InspectorRow" DataType="{x:Type local:HkxInspectorRow}">
-            <Grid Margin="{Binding Indent}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Line.Path, StringFormat={}{0}:}" Style="{StaticResource Mono}" Margin="0,0,6,0"
-                           Foreground="{DynamicResource TextSecondaryBrush}" />
-                <TextBlock Grid.Column="1" Text="{Binding Line.Value}" Style="{StaticResource Mono}" TextWrapping="Wrap"
-                           Visibility="{Binding IsPlain, Converter={StaticResource Visible}}" />
-                <TextBlock Grid.Column="1" Style="{StaticResource Mono}" TextWrapping="Wrap"
-                           Visibility="{Binding IsLink, Converter={StaticResource Visible}}">
-                    <Hyperlink Click="Target_Click" Foreground="{DynamicResource LinkBrush}"><Run Text="{Binding Line.Value, Mode=OneWay}" /></Hyperlink>
-                </TextBlock>
-            </Grid>
-        </DataTemplate>
+            <BooleanToVisibilityConverter x:Key="Visible" />
+
+            <DataTemplate x:Key="InspectorRow" DataType="{x:Type local:HkxInspectorRow}">
+                <Grid Margin="{Binding Indent}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Line.Path, StringFormat={}{0}:}" Style="{StaticResource Mono}" Margin="0,0,6,0"
+                               VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock Grid.Column="1" Text="{Binding Line.Value}" Style="{StaticResource Mono}" TextWrapping="Wrap"
+                               Visibility="{Binding IsPlain, Converter={StaticResource Visible}}" />
+                    <TextBlock Grid.Column="1" Style="{StaticResource Mono}" TextWrapping="Wrap"
+                               Visibility="{Binding IsLink, Converter={StaticResource Visible}}">
+                        <Hyperlink Click="Target_Click" Foreground="{DynamicResource LinkBrush}"><Run Text="{Binding Line.Value, Mode=OneWay}" /></Hyperlink>
+                    </TextBlock>
+                    <ContentControl Grid.Column="1" Content="{Binding Editor}" Focusable="False"
+                                    Visibility="{Binding IsEditable, Converter={StaticResource Visible}}" />
+                </Grid>
+            </DataTemplate>
+        </ResourceDictionary>
     </UserControl.Resources>
 
     <DockPanel Margin="12">
-        <TextBlock x:Name="HkxHeader" DockPanel.Dock="Top" Style="{StaticResource Mono}" TextWrapping="Wrap" Margin="0,0,0,8" />
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                <Button x:Name="HkxUndo" Content="Undo" Click="Undo_Click" IsEnabled="False" />
+                <Button x:Name="HkxRedo" Content="Redo" Click="Redo_Click" IsEnabled="False" Margin="6,0,0,0" />
+                <Button x:Name="HkxSave" Content="Save" Click="Save_Click" IsEnabled="False" Margin="6,0,0,0"
+                        ToolTip="Save the edits to the workspace (Ctrl+S)" />
+            </StackPanel>
+            <TextBlock x:Name="HkxHeader" Style="{StaticResource Mono}" TextWrapping="Wrap" />
+        </DockPanel>
 
         <Grid>
             <Grid.ColumnDefinitions>
@@ -62,7 +79,7 @@
                     <TextBlock Text="Drag to turn, wheel to zoom, click a shape to select it" Style="{StaticResource Muted}"
                                VerticalAlignment="Center" Margin="12,0,0,0" />
                 </StackPanel>
-                <Border Style="{StaticResource PreviewFrame}" Background="{DynamicResource WellBrush}">
+                <Border x:Name="HkxFrame" Style="{StaticResource PreviewFrame}" Background="{DynamicResource WellBrush}">
                     <Viewport3D x:Name="HkxViewport" ClipToBounds="True">
                         <Viewport3D.Camera>
                             <PerspectiveCamera FieldOfView="45" />

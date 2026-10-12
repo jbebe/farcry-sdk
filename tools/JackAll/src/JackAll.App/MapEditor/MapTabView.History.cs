@@ -1,4 +1,3 @@
-using System.Windows.Input;
 using JackAll.Tools.World;
 
 namespace JackAll.App.MapEditor;
@@ -17,22 +16,7 @@ public partial class MapTabView
         RefreshHistoryButtons();
     }
 
-    private void RefreshHistoryButtons()
-    {
-        UndoButton.IsEnabled = _history.CanUndo;
-        RedoButton.IsEnabled = _history.CanRedo;
-        UndoButton.ToolTip = _history.UndoLabel is { } undo ? $"Undo {undo} (Ctrl+Z)" : "Undo (Ctrl+Z)";
-        RedoButton.ToolTip = _history.RedoLabel is { } redo ? $"Redo {redo} (Ctrl+Y)" : "Redo (Ctrl+Y)";
-    }
-
-    /// <summary>Ctrl+Z undoes; Ctrl+Y and Ctrl+Shift+Z redo.</summary>
-    private static bool IsUndoKey(Key key, out bool redo)
-    {
-        ModifierKeys modifiers = Keyboard.Modifiers;
-        redo = (key == Key.Y && modifiers == ModifierKeys.Control)
-            || (key == Key.Z && modifiers == (ModifierKeys.Control | ModifierKeys.Shift));
-        return redo || (key == Key.Z && modifiers == ModifierKeys.Control);
-    }
+    private void RefreshHistoryButtons() => UndoChrome.Refresh(UndoButton, RedoButton, _history);
 
     private void Undo_Click(object sender, System.Windows.RoutedEventArgs e) => Undo();
 

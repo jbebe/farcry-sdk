@@ -303,25 +303,25 @@ public partial class MainWindow
 
             var view = new MgbTabView(file.FileName, content, bytes => StageContainerGuarded(file, bytes), _vm.ReadByPath);
             var tab = new TabItem { Content = view };
-            MakeClosable(tab, view.Title, () => CloseMgbEditorTab(tab, view, onRemoved));
-            view.DirtyChanged += () => ItemState.SetIsChanged(tab, view.IsDirty);
+            MakeSavable(tab, view.Title, view, onRemoved);
             return tab;
         });
 
-    /// <summary>The <see cref="MgbTabView"/> counterpart to <see cref="CloseEditorTabAsync"/>: same
-    /// prompt, same leave-the-tab-open-on-failure rule, just against the package editor's own
-    /// synchronous <see cref="MgbTabView.Save"/>.</summary>
-    private void CloseMgbEditorTab(TabItem tab, MgbTabView view, Action onRemoved)
+    /// <summary>
+    /// The <see cref="ISavableTab"/> counterpart to <see cref="CloseEditorTabAsync"/>: same prompt, same
+    /// leave-the-tab-open-on-failure rule, against the tab's own save.
+    /// </summary>
+    private async void CloseSavableTab(TabItem tab, string title, ISavableTab view, Action onRemoved)
     {
         if (view.IsDirty)
         {
             MessageBoxResult choice = MessageBox.Show(this,
-                $"'{view.Title}' has unsaved changes.\n\nSave before closing?",
+                $"'{title}' has unsaved changes.\n\nSave before closing?",
                 "Unsaved changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
 
             if (choice == MessageBoxResult.Cancel) return;
 
-            if (choice == MessageBoxResult.Yes && view.Save() is { } error)
+            if (choice == MessageBoxResult.Yes && await view.SaveAsync() is { } error)
             {
                 Warn(error);
                 return;
@@ -336,7 +336,7 @@ public partial class MainWindow
     /// <summary>Open HKX editor tabs, keyed by the file's own hash.</summary>
     private readonly Dictionary<ulong, TabItem> _openHkxEditors = [];
 
-    /// <summary>The Files tab's "Open in HKX Editor…". The tab only shows, so closing never prompts.</summary>
+    /// <summary>The Files tab's "Open in HKX Editor…"; its Save stages the whole file in the workspace.</summary>
     private void OpenHkxEditorTab(VfsFile file)
         => OpenOrFocusEditorTab(_openHkxEditors, file.Hash, onRemoved =>
         {
@@ -345,14 +345,18 @@ public partial class MainWindow
                 return null;
             }
 
-            var tab = new TabItem
-            {
-                Content = new HkxTabView(file.FileName, file.NameIsKnown ? file.Path : null, content, _vm.ReadByPath),
-                ToolTip = file.Path,
-            };
-            MakeClosable(tab, file.FileName, () => RemoveTab(tab, onRemoved));
+            var view = new HkxTabView(file.FileName, file.NameIsKnown ? file.Path : null, content, _vm.ReadByPath, bytes => ReplaceGuarded(file, bytes));
+            var tab = new TabItem { Content = view, ToolTip = file.Path };
+            MakeSavable(tab, file.FileName, view, onRemoved);
             return tab;
         });
+
+    // A document tab that marks its unsaved edits and asks about them when it closes.
+    private void MakeSavable(TabItem tab, string title, ISavableTab view, Action onRemoved)
+    {
+        MakeClosable(tab, title, () => CloseSavableTab(tab, title, view, onRemoved));
+        view.DirtyChanged += () => ItemState.SetIsChanged(tab, view.IsDirty);
+    }
 
     // ------------------------------------------------------------ tab chrome
 

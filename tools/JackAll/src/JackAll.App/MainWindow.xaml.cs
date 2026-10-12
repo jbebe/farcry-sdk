@@ -189,12 +189,14 @@ public partial class MainWindow : Window
     private (TabItem Item, ISavableTab Tab)[] SavableTabs => [(MoveTabItem, MoveTab), (AiTabItem, AiTab)];
 
     /// <summary>
-    /// Fixed tabs have no close of their own, so their unsaved edits are asked about here. Saving is
-    /// asynchronous, so the first close is cancelled and repeated once it is done.
+    /// The unsaved edits of the fixed tabs, which have no close of their own, and of the open editor tabs are
+    /// asked about here. Saving is asynchronous, so the first close is cancelled and repeated once it is done.
     /// </summary>
     private async void OnClosing(object? sender, CancelEventArgs e)
     {
-        List<(TabItem Item, ISavableTab Tab)> dirty = [.. SavableTabs.Where(t => t.Tab.IsDirty)];
+        IEnumerable<(TabItem Item, ISavableTab Tab)> documents = MainTabs.Items.OfType<TabItem>()
+            .Where(t => t.Content is ISavableTab).Select(t => (t, (ISavableTab)t.Content));
+        List<(TabItem Item, ISavableTab Tab)> dirty = [.. SavableTabs.Concat(documents).Where(t => t.Tab.IsDirty)];
         if (!_closeConfirmed && dirty.Count > 0)
         {
             e.Cancel = true;

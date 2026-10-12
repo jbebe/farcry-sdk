@@ -42,6 +42,20 @@ public static class HkxEdit
         return Integer(block.Bytes.AsSpan(at), s.Member.Type is HkType.Enum or HkType.Flags ? s.Member.Subtype : s.Member.Type);
     }
 
+    /// <summary>A member's bytes as saved.</summary>
+    public static byte[] GetRaw(this HkxObject o, string path)
+    {
+        (HkxBlock block, int at, HkSlot s) = Locate(o, path);
+        return block.Bytes[at..(at + s.Size)];
+    }
+
+    /// <summary>Writes a member's bytes as saved: no more than it holds.</summary>
+    public static void SetRaw(this HkxObject o, string path, ReadOnlySpan<byte> value)
+    {
+        (HkxBlock block, int at, _) = Locate(o, path, value.Length);
+        value.CopyTo(block.Bytes.AsSpan(at));
+    }
+
     public static void SetInt(this HkxObject o, string path, int value)
     {
         (HkxBlock block, int at, _) = Locate(o, path, 4);

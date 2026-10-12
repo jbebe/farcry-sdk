@@ -335,7 +335,7 @@ public partial class MapTabView : UserControl
             CancelLinkPick();
             e.Handled = true;
         }
-        else if ((viewport || Hierarchy.IsKeyboardFocusWithin) && IsUndoKey(e.Key, out bool redo))
+        else if ((viewport || Hierarchy.IsKeyboardFocusWithin) && UndoChrome.IsUndoKey(e.Key, out bool redo))
         {
             if (redo)
             {

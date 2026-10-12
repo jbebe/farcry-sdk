@@ -1,6 +1,6 @@
 namespace JackAll.App;
 
-/// <summary>A fixed tab that holds edits of its own until the user saves them.</summary>
+/// <summary>A tab that holds edits of its own until the user saves them.</summary>
 public interface ISavableTab
 {
     bool IsDirty { get; }

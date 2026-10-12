@@ -68,6 +68,23 @@ public sealed class HkxCachesTests
     }
 
     [Fact]
+    public void A_wrapper_takes_the_radius_of_the_box_it_wraps()
+    {
+        if (Fixture.Read(Chair) is not { } bytes)
+        {
+            return;
+        }
+
+        HkxFile file = HkxFile.Parse(bytes);
+        HkxObject wrapper = file.Objects().First(o => o.Class.Name == "hkpListShape").GetPointer("childInfo[4].shape")!;
+        wrapper.GetPointer("childShape.childShape")!.SetReals("radius", 0.05f);
+
+        HkxCaches.Refresh(file, HkxFile.Parse(bytes));
+
+        Assert.Equal(0.05f, wrapper.GetReals("radius")[0]);
+    }
+
+    [Fact]
     public void A_mopp_that_part_modifiers_point_into_is_not_rebuilt()
     {
         if (Fixture.Read(Truck) is not { } bytes)

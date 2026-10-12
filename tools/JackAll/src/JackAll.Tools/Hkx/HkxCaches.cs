@@ -4,7 +4,8 @@ namespace JackAll.Tools.Hkx;
 
 /// <summary>
 /// The values Havok works out from a body's shapes and saves beside them: the MOPP's code, the list's or extended
-/// mesh's bounds, and the body's object radius. The game reads them as saved, so an edited shape leaves them stale.
+/// mesh's bounds, the body's object radius, and each translate or transform shape's copy of its child's radius.
+/// The game reads them as saved, so an edited shape leaves them stale.
 /// Shipped bounds and radii often differ from what the shapes give, so each is set to the original file's value,
 /// moved by how much the shapes' own value changed since then.
 /// </summary>
@@ -20,6 +21,12 @@ public static class HkxCaches
         Dictionary<string, HkxObject> before = Bodies(original);
         bool modified = file.Objects().Any(o => o.Class.Name == "nomadPartModifiersGroup");
         var written = new List<string>();
+        // Every shipped translate and transform shape carries exactly the radius of the shape it wraps.
+        foreach (HkxObject wrapper in file.Objects().Where(o => o.Class.Name is "hkpConvexTranslateShape" or "hkpConvexTransformShape"))
+        {
+            float[] radius = wrapper.GetPointer("childShape.childShape")?.GetReals("radius") ?? wrapper.GetReals("radius");
+            written.AddRange(Set(wrapper, "radius", radius).Select(path => $"{wrapper.Class.Name}: {path}"));
+        }
         foreach ((string name, HkxObject body) in Bodies(file))
         {
             if (before.GetValueOrDefault(name)?.GetPointer("collidable.shape") is not { } was || body.GetPointer("collidable.shape") is not { } shape)

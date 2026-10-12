@@ -31,7 +31,7 @@ namespace JackAll.App.FileHandlers.Mgb;
 /// room, and an editor with pending unsaved changes must not be thrown away by clicking the next row
 /// in the file list.
 /// </remarks>
-public partial class MgbTabView : UserControl
+public partial class MgbTabView : UserControl, ISavableTab
 {
     private readonly string _fileName;
     private readonly Action<byte[]> _replaceContent;
@@ -410,6 +410,8 @@ public partial class MgbTabView : UserControl
             SetStatus(error, ok: false);
         }
     }
+
+    public Task<string?> SaveAsync() => Task.FromResult(Save());
 
     /// <summary>Reserialises the package and stages it in the workspace, or returns why it couldn't -
     /// the same path the Save button and the host's close-with-unsaved-changes prompt both take.</summary>

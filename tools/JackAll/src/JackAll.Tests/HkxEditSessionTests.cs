@@ -68,7 +68,8 @@ public sealed class HkxEditSessionTests
         var session = new HkxEditSession(bytes);
         float[] start = Seat(session.File).GetReals("translation");
         session.Edit("Raise the seat", () => Raise(session.File, 2));
-        byte[] saved = session.Save();
+        byte[] saved = [];
+        Assert.True(session.Save(b => (saved = b) is not null));
         Assert.False(session.IsDirty);
 
         HkxObject mopp = HkxFile.Parse(saved).Objects().First(o => o.Class.Name == "hkpMoppBvTreeShape");
@@ -78,7 +79,23 @@ public sealed class HkxEditSessionTests
         Assert.Equal([4u], HkxMopp.Query(info, code, seat - new Vector3(0.01f), seat + new Vector3(0.01f)));
 
         session.Edit("Put the seat back", () => Seat(session.File).SetReals("translation", start));
-        Assert.Equal(bytes, session.Save());
+        session.Save(b => (saved = b) is not null);
+        Assert.Equal(bytes, saved);
+    }
+
+    [Fact]
+    public void A_save_the_store_turns_down_leaves_the_edits_unsaved()
+    {
+        if (Fixture.Read(Chair) is not { } bytes)
+        {
+            return;
+        }
+
+        var session = new HkxEditSession(bytes);
+        session.Edit("Raise the seat", () => Raise(session.File, 2));
+
+        Assert.False(session.Save(_ => false));
+        Assert.True(session.IsDirty);
     }
 
     private static void Raise(HkxFile file, float by)
