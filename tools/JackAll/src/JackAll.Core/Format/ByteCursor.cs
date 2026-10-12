@@ -159,6 +159,9 @@ public ref struct ByteCursor
     public static uint U32(ReadOnlySpan<byte> data, int offset)
         => BinaryPrimitives.ReadUInt32LittleEndian(data[offset..]);
 
+    public static int I32(ReadOnlySpan<byte> data, int offset)
+        => BinaryPrimitives.ReadInt32LittleEndian(data[offset..]);
+
     public static float F32(ReadOnlySpan<byte> data, int offset)
         => BinaryPrimitives.ReadSingleLittleEndian(data[offset..]);
 

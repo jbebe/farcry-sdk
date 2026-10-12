@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Domino\Nodes\DominoBoxDocs.json" LogicalName="JackAll.Tools.Domino.Nodes.DominoBoxDocs.json" />
+    <EmbeddedResource Include="Hkx\HavokClasses.json" LogicalName="JackAll.Tools.Hkx.HavokClasses.json" />
   </ItemGroup>
 
 </Project>

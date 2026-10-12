@@ -14,6 +14,9 @@ public enum AlignFill
 
     /// <summary>Nine bytes of padding are written 09 08 07 06 05 04 03 02 01.</summary>
     DescendingCounter,
+
+    /// <summary>Every padding byte is 0xFF, as in a Havok packfile's tables.</summary>
+    Ones,
 }
 
 /// <summary>
@@ -123,7 +126,12 @@ public sealed class ByteWriter
         int padding = (boundary - (_buffer.Count % boundary)) % boundary;
         for (int i = padding; i > 0; i--)
         {
-            _buffer.Add(fill == AlignFill.DescendingCounter ? (byte)i : (byte)0);
+            _buffer.Add(fill switch
+            {
+                AlignFill.DescendingCounter => (byte)i,
+                AlignFill.Ones => 0xFF,
+                _ => 0,
+            });
         }
     }
 

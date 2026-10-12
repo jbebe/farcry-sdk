@@ -5,6 +5,7 @@ using JackAll.Cli.Commands.DepLoad;
 using JackAll.Cli.Commands.Domino;
 using JackAll.Cli.Commands.Fc2Model;
 using JackAll.Cli.Commands.Fcb;
+using JackAll.Cli.Commands.Hkx;
 using JackAll.Cli.Commands.Legacy;
 using JackAll.Cli.Commands.Mgb;
 using JackAll.Cli.Commands.Mod;
@@ -189,6 +190,14 @@ app.Configure(config =>
         spk.AddCommand<SpkNewCommand>("new")
             .WithDescription("Scaffold a bank's XML: an event playing one clip, or a random pick of several.")
             .WithExample("spk", "new", "0x00fc0200", "shot_a.wav", "shot_b.wav", "--rolloff", "0x00442c37");
+    });
+
+    // --- .hkx Havok physics ------------------------------------------------
+    config.AddBranch("hkx", hkx =>
+    {
+        hkx.AddCommand<HkxVerifyCommand>("verify")
+            .WithDescription("Check that .hkx files survive parse and write byte for byte.")
+            .WithExample("hkx", "verify", "bigtruck.hkx");
     });
 
     // --- .ai.rml brain workspaces ----------------------------------------
