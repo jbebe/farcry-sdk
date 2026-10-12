@@ -108,6 +108,24 @@ public static class HkxEdit
         return [.. Enumerable.Range(0, count).Select(i => Integer(elements!.Bytes.AsSpan(i * size), s.Member.Subtype))];
     }
 
+    /// <summary>What an array of bytes holds.</summary>
+    public static byte[] GetBytes(this HkxObject o, string path)
+    {
+        (_, _, HkSlot s, HkxBlock? elements, int count) = Array(o, path);
+        return s.Member.Subtype is HkType.UInt8 or HkType.Int8 ? elements?.Bytes[..count] ?? []
+            : throw new ArgumentException($"'{path}' does not hold bytes.");
+    }
+
+    public static void SetBytes(this HkxObject o, string path, byte[] bytes)
+    {
+        (HkxBlock block, int at, HkSlot s, _, _) = Array(o, path);
+        if (s.Member.Subtype is not (HkType.UInt8 or HkType.Int8))
+        {
+            throw new ArgumentException($"'{path}' does not hold bytes.");
+        }
+        Resize(block, at, s, bytes.Length == 0 ? null : new HkxBlock((byte[])bytes.Clone()), bytes.Length);
+    }
+
     /// <summary>Puts an element into an array of pointers at <paramref name="index"/>, moving those from there on up.</summary>
     public static void Insert(this HkxObject o, string path, int index, HkxObject element)
     {
@@ -118,12 +136,7 @@ public static class HkxEdit
             elements.Refs[offset < index * 4 ? offset : offset + 4] = r;
         }
         elements.Refs[index * 4] = new HkxPointer(element);
-        block.Refs[at] = new HkxData(elements);
-        BinaryPrimitives.WriteInt32LittleEndian(block.Bytes.AsSpan(at + 4), count + 1);
-        if (s.Member.Type == HkType.Array)
-        {
-            BinaryPrimitives.WriteUInt32LittleEndian(block.Bytes.AsSpan(at + 8), (uint)(count + 1) | SavedArrayFlags);
-        }
+        Resize(block, at, s, elements, count + 1);
     }
 
     public static void Append(this HkxObject o, string path, HkxObject element) => o.Insert(path, o.Count(path), element);
@@ -152,6 +165,24 @@ public static class HkxEdit
 
     /// <summary>The data an array or string slot owns.</summary>
     internal static HkxBlock? Elements(HkxBlock block, int at) => (block.Refs.GetValueOrDefault(at) as HkxData)?.Block;
+
+    // Points an array slot at new elements and writes its count, and for an hkArray its capacity.
+    private static void Resize(HkxBlock block, int at, HkSlot s, HkxBlock? elements, int count)
+    {
+        if (elements is null)
+        {
+            block.Refs.Remove(at);
+        }
+        else
+        {
+            block.Refs[at] = new HkxData(elements);
+        }
+        BinaryPrimitives.WriteInt32LittleEndian(block.Bytes.AsSpan(at + 4), count);
+        if (s.Member.Type == HkType.Array)
+        {
+            BinaryPrimitives.WriteUInt32LittleEndian(block.Bytes.AsSpan(at + 8), (uint)count | SavedArrayFlags);
+        }
+    }
 
     private static (HkxBlock Block, int At, HkSlot Slot, HkxBlock? Elements, int Count) Array(HkxObject o, string path)
     {

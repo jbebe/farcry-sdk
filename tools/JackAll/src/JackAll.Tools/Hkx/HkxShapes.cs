@@ -41,6 +41,13 @@ public static class HkxShapes
     private const int Int32Indices = 2;
     private const int SphereSegments = 16, SphereRings = 8;
 
+    private static readonly Dictionary<string, string> WrapperLabels = new()
+    {
+        ["hkpMoppBvTreeShape"] = "MOPP",
+        ["hkpConvexTransformShape"] = "Transform",
+        ["hkpConvexTranslateShape"] = "Translate",
+    };
+
     public static List<HkxNode> Read(HkxFile file)
     {
         HkxObject root = file.Root;
@@ -88,6 +95,63 @@ public static class HkxShapes
         return Planes(vertices, faces);
     }
 
+    /// <summary>The shape a MOPP, transform or translate shape wraps, and the matrix placing it in the wrapper's space.</summary>
+    internal static (HkxObject? Child, Matrix4x4 Local)? Unwrap(HkxObject shape) => shape.Class.Name switch
+    {
+        "hkpMoppBvTreeShape" => (shape.GetPointer("child.childShape"), Matrix4x4.Identity),
+        "hkpConvexTransformShape" => (shape.GetPointer("childShape.childShape"), Transform(shape.GetReals("transform"))),
+        "hkpConvexTranslateShape" => (shape.GetPointer("childShape.childShape"), Matrix4x4.CreateTranslation(Vec(shape.GetReals("translation")))),
+        _ => null,
+    };
+
+    /// <summary>A triangle subpart's vertices, scaled as its mesh scales them, and three indices into them per triangle.</summary>
+    internal static (Vector3[] Vertices, int[] Triangles) Triangles(HkxObject mesh, int subpart)
+    {
+        string part = $"trianglesSubparts[{subpart}].";
+        bool wide = mesh.GetInt(part + "stridingType") == Int32Indices;
+        int stride = mesh.GetInt(part + "indexStriding") / (wide ? 4 : 2);
+        int count = mesh.GetInt(part + "numTriangleShapes");
+        HkxObject storage = mesh.GetPointers("meshstorage")[subpart]!;
+        int[] indices = storage.GetIntArray(wide ? "indices32" : "indices16");
+        float[] v = storage.GetRealArray("vertices");
+        Vector3 scale = Vec(mesh.GetReals("scaling"));
+        Vector3[] vertices = [.. Enumerable.Range(0, v.Length / 4).Select(k => new Vector3(v[k * 4], v[k * 4 + 1], v[k * 4 + 2]) * scale)];
+        int[] triangles = new int[count * 3];
+        for (int t = 0; t < count; t++)
+        {
+            indices.AsSpan(t * stride, 3).CopyTo(triangles.AsSpan(t * 3));
+        }
+        return (vertices, triangles);
+    }
+
+    /// <summary>The matrix placing a shape subpart's children in its mesh's space.</summary>
+    internal static Matrix4x4 Placement(HkxObject mesh, int subpart)
+    {
+        string part = $"shapesSubparts[{subpart}].";
+        Matrix4x4 local = mesh.GetInt(part + "rotationSet") != 0
+            ? Matrix4x4.CreateFromQuaternion(Quat(mesh.GetReals(part + "rotation")))
+            : Matrix4x4.Identity;
+        return mesh.GetInt(part + "offsetSet") != 0 ? local * Matrix4x4.CreateTranslation(Vec(mesh.GetReals(part + "translation"))) : local;
+    }
+
+    /// <summary>A hull's vertices as stored, before its convex radius grows them.</summary>
+    internal static Vector3[] HullVertices(HkxObject hull)
+    {
+        float[] packed = hull.GetRealArray("rotatedVertices");
+        // Four vertices per block of twelve floats: their x values, then their y values, then their z values.
+        return [.. Enumerable.Range(0, hull.GetInt("numVertices")).Select(k =>
+        {
+            int block = k / 4 * 12, lane = k % 4;
+            return new Vector3(packed[block + lane], packed[block + 4 + lane], packed[block + 8 + lane]);
+        })];
+    }
+
+    /// <summary>The eight corners of a box centred on the origin.</summary>
+    internal static Vector3[] Corners(Vector3 half) => [.. Enumerable.Range(0, 8).Select(i => new Vector3(
+        (i & 1) != 0 ? half.X : -half.X, (i & 2) != 0 ? half.Y : -half.Y, (i & 4) != 0 ? half.Z : -half.Z))];
+
+    internal static Vector3 Vec(float[] f) => new(f[0], f[1], f[2]);
+
     private static HkxNode Body(HkxObject body)
     {
         var node = new HkxNode(HkxNodeKind.Body, body, body.GetString("name") ?? "(unnamed body)");
@@ -113,15 +177,18 @@ public static class HkxShapes
 
     private static HkxNode Shape(HkxObject shape, Matrix4x4 toModel)
     {
+        if (Unwrap(shape) is var (wrapped, local))
+        {
+            var wrapper = new HkxNode(HkxNodeKind.Shape, shape, WrapperLabels[shape.Class.Name]);
+            if (wrapped is not null)
+            {
+                wrapper.Children.Add(Shape(wrapped, local * toModel));
+            }
+            return wrapper;
+        }
+
         switch (shape.Class.Name)
         {
-            case "hkpMoppBvTreeShape":
-                return Wrapper(shape, "MOPP", shape.GetPointer("child.childShape"), toModel);
-            case "hkpConvexTransformShape":
-                return Wrapper(shape, "Transform", shape.GetPointer("childShape.childShape"), Transform(shape.GetReals("transform")) * toModel);
-            case "hkpConvexTranslateShape":
-                return Wrapper(shape, "Translate", shape.GetPointer("childShape.childShape"),
-                    Matrix4x4.CreateTranslation(Vec(shape.GetReals("translation"))) * toModel);
             case "hkpListShape":
                 int count = shape.Count("childInfo");
                 var list = new HkxNode(HkxNodeKind.Shape, shape, $"List ({count})");
@@ -142,54 +209,24 @@ public static class HkxShapes
         }
     }
 
-    private static HkxNode Wrapper(HkxObject shape, string label, HkxObject? child, Matrix4x4 toModel)
-    {
-        var node = new HkxNode(HkxNodeKind.Shape, shape, label);
-        if (child is not null)
-        {
-            node.Children.Add(Shape(child, toModel));
-        }
-        return node;
-    }
-
     private static HkxNode Mesh(HkxObject mesh, Matrix4x4 toModel)
     {
         var node = new HkxNode(HkxNodeKind.Shape, mesh, "Extended mesh");
-        Vector3 scale = Vec(mesh.GetReals("scaling"));
         List<HkxObject?> storage = mesh.GetPointers("meshstorage");
         for (int i = 0; i < storage.Count; i++)
         {
-            string part = $"trianglesSubparts[{i}].";
-            bool wide = mesh.GetInt(part + "stridingType") == Int32Indices;
-            int stride = mesh.GetInt(part + "indexStriding") / (wide ? 4 : 2);
-            int count = mesh.GetInt(part + "numTriangleShapes");
-            HkxObject subpart = storage[i]!;
-            int[] indices = subpart.GetIntArray(wide ? "indices32" : "indices16");
-            float[] v = subpart.GetRealArray("vertices");
-            Vector3[] vertices = [.. Enumerable.Range(0, v.Length / 4).Select(k => new Vector3(v[k * 4], v[k * 4 + 1], v[k * 4 + 2]) * scale)];
-            int[] triangles = new int[count * 3];
-            for (int t = 0; t < count; t++)
+            (Vector3[] vertices, int[] triangles) = Triangles(mesh, i);
+            node.Children.Add(new HkxNode(HkxNodeKind.Shape, storage[i], $"Triangles ({triangles.Length / 3})")
             {
-                indices.AsSpan(t * stride, 3).CopyTo(triangles.AsSpan(t * 3));
-            }
-            node.Children.Add(new HkxNode(HkxNodeKind.Shape, subpart, $"Triangles ({count})")
-            {
-                Primitive = new HkxPrimitive(subpart, HkxShapeKind.Mesh, toModel, vertices, triangles),
+                Primitive = new HkxPrimitive(storage[i]!, HkxShapeKind.Mesh, toModel, vertices, triangles),
             });
         }
 
         int groups = mesh.Count("shapesSubparts");
         for (int k = 0; k < groups; k++)
         {
-            string part = $"shapesSubparts[{k}].";
-            Matrix4x4 local = mesh.GetInt(part + "rotationSet") != 0
-                ? Matrix4x4.CreateFromQuaternion(Quat(mesh.GetReals(part + "rotation")))
-                : Matrix4x4.Identity;
-            if (mesh.GetInt(part + "offsetSet") != 0)
-            {
-                local *= Matrix4x4.CreateTranslation(Vec(mesh.GetReals(part + "translation")));
-            }
-            List<HkxObject?> shapes = mesh.GetPointers(part + "childShapes");
+            Matrix4x4 local = Placement(mesh, k);
+            List<HkxObject?> shapes = mesh.GetPointers($"shapesSubparts[{k}].childShapes");
             var group = new HkxNode(HkxNodeKind.Shape, mesh, $"Shapes ({shapes.Count})");
             group.Children.AddRange(shapes.OfType<HkxObject>().Select(s => Shape(s, local * toModel)));
             node.Children.Add(group);
@@ -199,10 +236,8 @@ public static class HkxShapes
 
     private static HkxPrimitive Box(HkxObject shape, Vector3 half, Matrix4x4 toModel)
     {
-        Vector3[] corners = [.. Enumerable.Range(0, 8).Select(i => new Vector3(
-            (i & 1) != 0 ? half.X : -half.X, (i & 2) != 0 ? half.Y : -half.Y, (i & 4) != 0 ? half.Z : -half.Z))];
         int[][] faces = [[4, 5, 7, 6], [0, 2, 3, 1], [1, 3, 7, 5], [0, 4, 6, 2], [2, 6, 7, 3], [0, 1, 5, 4]];
-        return new HkxPrimitive(shape, HkxShapeKind.Box, toModel, corners, Fan(faces));
+        return new HkxPrimitive(shape, HkxShapeKind.Box, toModel, Corners(half), Fan(faces));
     }
 
     // A sphere split at its equator, each half centred on one end of the A-B segment.
@@ -243,14 +278,7 @@ public static class HkxShapes
 
     private static (Vector3[] Vertices, int[][] Faces) HullFaces(HkxObject hull)
     {
-        float[] packed = hull.GetRealArray("rotatedVertices");
-        // Four vertices per block of twelve floats: their x values, then their y values, then their z values.
-        Vector3[] vertices = [.. Enumerable.Range(0, hull.GetInt("numVertices")).Select(k =>
-        {
-            int block = k / 4 * 12, lane = k % 4;
-            return new Vector3(packed[block + lane], packed[block + 4 + lane], packed[block + 8 + lane]);
-        })];
-
+        Vector3[] vertices = HullVertices(hull);
         HkxObject connectivity = hull.GetPointer("connectivity")!;
         int[] indices = connectivity.GetIntArray("vertexIndices");
         int start = 0;
@@ -312,8 +340,6 @@ public static class HkxShapes
         f[0], f[1], f[2], 0, f[4], f[5], f[6], 0, f[8], f[9], f[10], 0, f[12], f[13], f[14], 1);
 
     private static bool Derives(HkClass c, string name) => c.Name == name || (c.Parent is { } p && Derives(p, name));
-
-    private static Vector3 Vec(float[] f) => new(f[0], f[1], f[2]);
 
     private static Quaternion Quat(float[] f) => new(f[0], f[1], f[2], f[3]);
 
