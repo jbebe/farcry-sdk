@@ -149,6 +149,9 @@ struct Chassis {
 
 Chassis ChassisOf(Car car);
 
+// The chassis's hkpRigidBody.
+uint8_t* ChassisBody(Car car);
+
 // Moves the chassis's centre of mass, keeping the body where it is. Physics thread only.
 void MoveCentreOfMass(Car car, const float* local);
 

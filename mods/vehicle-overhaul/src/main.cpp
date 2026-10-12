@@ -1,6 +1,7 @@
 // Vehicle Overhaul - driving in Far Cry 2. See README.md.
 #include "devtools_api.h"
 #include "drivetrain.h"
+#include "fan.h"
 #include "fcse_api.h"
 #include "lights.h"
 #include "physics.h"
@@ -20,7 +21,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     const bool drivetrain = VehicleOverhaul::Drivetrain::Install();
     const bool sounds = VehicleOverhaul::Sounds::Install();
     const bool lights = VehicleOverhaul::Lights::Install();
-    return thirdPerson || physics || drivetrain || sounds || lights;
+    const bool fan = VehicleOverhaul::Fan::Install();
+    return thirdPerson || physics || drivetrain || sounds || lights || fan;
 }
 
 // Runs after every plugin's FCSE_Load, so DevTools has loaded by now if it is installed at all.

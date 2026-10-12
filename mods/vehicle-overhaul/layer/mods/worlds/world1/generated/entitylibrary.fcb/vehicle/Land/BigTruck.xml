@@ -76,6 +76,7 @@
                   <object index="43" meshName="Bumper_State02" boneName="Bumper_State02" bboxMin="-1.2009,-0.32116,-0.0789593" bboxMax="1.20839,-0.040342,1.00723" />
                   <object index="44" meshName="Bumper_State01" boneName="Bumper_State01" bboxMin="-1.19352,-0.293264,-0.0799993" bboxMax="1.19352,-0.0435373,0.987859" />
                   <object index="45" meshName="Fan" boneName="Fan" bboxMin="-0.378491,2.23008,0.922819" bboxMax="0.330485,2.29753,1.6679" />
+                  <object index="46" meshName="Fan" boneName="Fan" bboxMin="-0.378491,2.23008,0.922819" bboxMax="0.330485,2.29753,1.6679" />
                   <resource fileName="graphics\Vehicles\Land\BigTruck\BigTruck.xbg" bboxMin="-3.45046,-4.86167,-2.49965" bboxMax="2.9616,16,2.85004" />
                   <skeleton name="BigTruck" pos="0,0,0" rot="1,-0,-0,-0">
                     <bone name="D_Entry_LD" pos="-1.67646,1.17424,1.14871" rot="0.707107,0,0,-0.707107" />
@@ -274,7 +275,8 @@
                         <body onlyHighresCol="1" rigidbodyName="Bumper_State02" partId="35" objectIndex="43" stateIndex="1" />
                       </states>
                       <states>
-                        <accessory rigidbodyName="Fan" partId="37" objectIndex="45" stateIndex="0" />
+                        <accessory rigidbodyName="FanState01" partId="37" objectIndex="45" stateIndex="0" />
+                        <accessory rigidbodyName="Fan" partId="37" objectIndex="46" stateIndex="1" />
                       </states>
                     </parts>
                   </nodes>
@@ -836,6 +838,17 @@
             </object>
             <object type="object">
               <value name="hidIndex" type="UInt32">45</value>
+              <value name="text_objModel" type="String">graphics\vehicles\land\bigtruck\bigtruck.xbg</value>
+              <value name="objModel" type="Hash">A2241D1E</value>
+              <value name="hidMeshName" type="String">Fan</value>
+              <value name="text_hidNodeName" type="String">Fan</value>
+              <value name="hidNodeName" type="Hash">5DBA3ED9</value>
+              <value name="text_hidNodeNameLOD0" type="String">Fan_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">3764F2B7</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">46</value>
               <value name="text_objModel" type="String">graphics\vehicles\land\bigtruck\bigtruck.xbg</value>
               <value name="objModel" type="Hash">A2241D1E</value>
               <value name="hidMeshName" type="String">Fan</value>
@@ -1796,7 +1809,7 @@
                 <value name="hidTypeNameIndex" type="Int32">-1</value>
                 <value name="hidIsFrame" type="Bool">False</value>
                 <value name="fHealth" type="Float">5000</value>
-                <value name="bKeepAttached" type="Bool">True</value>
+                <value name="bKeepAttached" type="Bool">False</value>
                 <value name="bImpulseOnDetach" type="Bool">False</value>
                 <value name="nStartStateIndex" type="UInt32">0</value>
                 <value name="fFloatingScale" type="Float">0.25</value>
@@ -1812,8 +1825,17 @@
                 <object type="Sounds" />
                 <object type="hidStates">
                   <object type="hidState">
-                    <value name="hidRigidbodyIndex" type="Int32">37</value>
+                    <value name="hidRigidbodyIndex" type="Int32">-1</value>
                     <value name="hidGraphicIndex" type="UInt32">45</value>
+                    <value name="text_hidRigidbodyName" type="String">FanState01</value>
+                    <value name="hidRigidbodyName" type="Hash">FC52D236</value>
+                    <value name="text_hidHighresRigidbodyName" type="String">HIGH_FanState01</value>
+                    <value name="hidHighresRigidbodyName" type="Hash">3F4179F3</value>
+                    <value name="hidPartId" type="Int32">37</value>
+                  </object>
+                  <object type="hidState">
+                    <value name="hidRigidbodyIndex" type="Int32">37</value>
+                    <value name="hidGraphicIndex" type="UInt32">46</value>
                     <value name="text_hidRigidbodyName" type="String">Fan</value>
                     <value name="hidRigidbodyName" type="Hash">5DBA3ED9</value>
                     <value name="text_hidHighresRigidbodyName" type="String">HIGH_Fan</value>
@@ -1822,6 +1844,10 @@
                   </object>
                 </object>
                 <object type="hidStateFXs">
+                  <object type="hidStateFX">
+                    <value name="text_hidFXNode" type="String" />
+                    <value name="hidFXNode" type="Hash">FFFFFFFF</value>
+                  </object>
                   <object type="hidStateFX">
                     <value name="text_hidFXNode" type="String" />
                     <value name="hidFXNode" type="Hash">FFFFFFFF</value>

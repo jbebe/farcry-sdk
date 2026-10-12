@@ -369,6 +369,8 @@ Readout ReadoutOf(Car car) {
     return readout;
 }
 
+uint8_t* ChassisBody(Car car) { return At<uint8_t*>(Vehicle(car), kVehicleChassis); }
+
 Chassis ChassisOf(Car car) {
     uint8_t* vehicle = Vehicle(car);
     uint8_t* data = At<uint8_t*>(vehicle, kVehicleData);
