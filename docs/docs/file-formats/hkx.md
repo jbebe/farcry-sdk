@@ -138,3 +138,6 @@ In code, `HkxEdit` reads and writes members by those paths. It also reads arrays
 inserts or appends to them, and `HkxObject.Clone` copies an object. That is enough to add a body and a
 constraint to a file; [adding a moving part to a vehicle](../modding/adding-a-moving-vehicle-part.md)
 does both. There is no editable text form of a whole file yet.
+
+In the JackAll app, **Open in HKX Editor…** on the Files tab draws a file's collision over the model
+filed beside it, with boxes and hulls grown by their convex radius. It only shows for now.

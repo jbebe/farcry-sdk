@@ -92,6 +92,12 @@ came from, see [Read a mission](/jackall/missions).
 
 ![A mission script](/img/jackall/previews/10-mission.png)
 
+## Collision (`.hkx`)
+
+The physics as text: every object and its values. **Open in HKX Editor…** opens the file in its own
+tab, with the collision drawn over the model filed beside it, the bodies and shapes as a tree, and the
+selected one's values. Click a shape to select it. The editor only shows for now.
+
 ## Text (`.xml`, `.lua`, `.desc`)
 
 Plain text with syntax colours. When a mod changes the file, the preview shows only the changed
@@ -101,7 +107,7 @@ lines, old and new, like the string table in [Rename a weapon](/jackall/renaming
 
 ## Everything else
 
-Some formats have no preview: collision (`.hkx`), video (`.bik`), skeletons, the procedural trees
+Some formats have no preview: video (`.bik`), skeletons, the procedural trees
 (`.rtx`, drawn on the Map tab instead) and a few others. They still have a size, a hash,
 references, and the export and replace buttons; the preview just says there's nothing to show (1).
 
