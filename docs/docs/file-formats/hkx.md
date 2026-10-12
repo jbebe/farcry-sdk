@@ -128,16 +128,79 @@ Two members of a body are packed and easy to set wrong:
   null contact manager for 3 last, against every other response type. So a pair with such a body gets
   no contact forces, even when it sits inside another body's hull.
 
+## MOPP code
+
+An `hkpMoppBvTreeShape` wraps a shape collection (a list, or an extended mesh) with MOPP code: a
+byte-coded tree that culls the collection's children by region before any of them is tested. The
+game's queries never return a child where the code does not cover it, so a child moved without
+rebuilding the code stops colliding where it went. The code lives in an `hkpMoppCode`:
+
+| Member | Holds |
+|---|---|
+| `info.offset` | xyz: the corner of the grid; w: grid steps per unit |
+| `data` | The code bytes |
+| `buildType` | 1, built without chunks; no shipped code uses chunks |
+
+The shape's own `moppData`, `moppDataSize` and `codeInfoCopy` are not saved. They are copied from
+the code when the file loads.
+
+The grid has 2^24 steps per axis. A coordinate's step is `(x - offset) * scale`. In the shipped
+code checked so far (`chairbar01`), the corner is the collection's bounding-box minimum and
+`scale = 0xFE0000 / longest side`. A box
+query rounds its minimum's step down by one and its maximum's up by one. The code starts on the top
+byte grid (`step >> 16`), and a rescale moves it onto finer grids.
+
+The opcodes, as the game's box query (`hkpMoppObbVirtualMachine::queryAabbOnTree`, `0x09e936b0`)
+and ray query (`hkpMoppLongRayVirtualMachine::queryRayOnTree`, `0x09e92120`) in `FarCry2_server`
+run them:
+
+| Opcode | Bytes | Does |
+|---|---|---|
+| `00` | 1 | Return |
+| `01`-`04` | 4 | Rescale: a grid that many halvings finer, its origin at the three bytes that follow |
+| `05`, `06`, `07` | 2, 3, 4 | Jump forward by an 8-, 16- or 24-bit offset |
+| `09`, `0A` | 2, 3 | Add an 8- or 16-bit value to the keys of the terminals below |
+| `0B` | 5 | Set the value added to the keys of the terminals below |
+| `0C` | 3 | Jump to a 512-byte chunk; only chunked builds use it, and none ship |
+| `10`-`12` | 4 | Split on x, y or z: the left side if the box's min is below the first byte, the right side (8-bit jump) if its max is above the second |
+| `13`-`1C` | 4 | The same split on a diagonal: y±z, x±z, x±y (bytes doubled, minus 255 for a difference), x±y±z (bytes tripled) |
+| `20`-`22` | 3 | Split on one value |
+| `23`-`25` | 7 | Split as `10`-`12`, with 16-bit jumps to both sides |
+| `26`-`28` | 3 | Cut: return unless the box reaches `[lo, hi)` on x, y or z |
+| `29`-`2B` | 7 | Cut on 24-bit top-grid steps |
+| `30`-`4F` | 1 | Terminal: key 0-31 |
+| `50`-`53` | 2-5 | Terminal: an 8-, 16-, 24- or 32-bit key |
+| `60`-`6B` | 2-5 | Set a property; the box query skips it |
+
+A terminal's key names one child of the collection:
+
+- In a list, it is the child's index.
+- In an extended mesh, it is `subpart << (32 - numBitsForSubpartIndex) | index`, with the top bit
+  set for a shapes subpart. Degenerate triangles have no key. These are triangles whose doubled area
+  squared is below `1e-7`, by `hkpTriangleUtil::isDegenerate` (`0x09e077d0`).
+
+The game also builds MOPP code itself. `SetupMopp` wraps any list of more than five shapes that
+`CreateShapeFromArray` assembles at runtime, through Havok's own `hkpMoppUtility::buildCode`.
+
 ## Tools
 
 `jackall-cli hkx verify <file.hkx>...` parses and rewrites files and reports any that differ.
+With `--mopp`, it also runs every MOPP's code and checks two things: that the code reaches exactly
+its collection's children, and that code rebuilt from those children keeps every child a box
+touches. All 4,547 shipped MOPPs over lists and extended meshes rebuild that way. In nine shipped
+mesh MOPPs, Havok's code leaves out or keeps one or two sliver triangles that sit right at the
+degeneracy limit, where the two float roundings disagree. Two MOPPs over `hkpSimpleMeshShape` are
+not rebuilt.
 `jackall-cli hkx dump <file.hkx>` prints every object, each value under its member path
 (`motion.motionState.transform`, `entities[1]`).
 
 In code, `HkxEdit` reads and writes members by those paths. It also reads arrays of pointers and
 inserts or appends to them, and `HkxObject.Clone` copies an object. That is enough to add a body and a
 constraint to a file; [adding a moving part to a vehicle](../modding/adding-a-moving-vehicle-part.md)
-does both. There is no editable text form of a whole file yet.
+does both. There is no editable text form of a whole file yet. `HkxMopp` runs MOPP code as the game's box
+query does, and `HkxMopp.Rebuild` rewrites a MOPP's code from where its children are now. The code
+it writes uses only rescales, axis splits, cuts and terminals, and comes out about twice the size of
+Havok's.
 
 In the JackAll app, **Open in HKX Editor…** on the Files tab draws a file's collision over the model
 filed beside it, with boxes and hulls grown by their convex radius. It only shows for now.
