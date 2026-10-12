@@ -93,9 +93,8 @@ from the windows and the wrecks are to come.
   of it, narrowing to the lamp's beam. Whatever stands in the way hides it. The game lit the lenses
   of AI cars only.
 - **Headlights on the grass.** The game draws its headlight over the grass, but scaled the light by
-  how foggy the grass is, so grass nearer than the fog got none, and lit each clump only as far as the
-  ground under it faced the lamp. Its own pass now scales the light by what the fog leaves and wraps
-  it round the blades, upright or bent. The light itself is unchanged, and any spot light on grass
+  how foggy the grass is, so grass nearer than the fog got none. Its own pass, upright or bent, now
+  scales the light by what the fog leaves. The light itself is unchanged, and any spot light on grass
   gets the same.
 
 The engine's `Cameras.Camera.Third` is put up and its update is taken over to place the camera. Both
