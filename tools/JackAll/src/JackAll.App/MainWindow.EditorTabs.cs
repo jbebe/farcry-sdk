@@ -11,7 +11,6 @@ using JackAll.Core.Vfs;
 using JackAll.Tools.Sav;
 using JackAll.Tools.World;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows;
 
 namespace JackAll.App;
@@ -357,19 +356,13 @@ public partial class MainWindow
 
     // ------------------------------------------------------------ tab chrome
 
-    /// <summary>Styles <paramref name="tab"/> as a document tab, whose ×, middle-click and Ctrl+W all run
+    /// <summary>Styles <paramref name="tab"/> as a document tab, whose × and Ctrl+W both run
     /// <paramref name="onClose"/>. An editor marks unsaved changes with <see cref="ItemState"/>.</summary>
     private void MakeClosable(TabItem tab, string title, Action onClose)
     {
         tab.Style = (Style)FindResource("DocumentTab");
         tab.Header = title;
         tab.Tag = onClose;
-        tab.MouseDown += (_, e) =>
-        {
-            if (e.ChangedButton != MouseButton.Middle) return;
-            onClose();
-            e.Handled = true;
-        };
     }
 
     /// <summary>Prompts for unsaved changes before closing - Save runs the exact same
