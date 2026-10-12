@@ -97,7 +97,7 @@ also offset gets wrong hardpoints in Havok itself, not just wrongly drawn wheels
 
 `.hkx` files are a 16-byte Dunia prefix and then a Havok 5.5.0-r1 packfile: all 2,745 retail files
 carry `57E0E057 10C0C010` at `+0x10`. The loader reads from `+0x10` and refuses packfile versions
-below 4.
+below 4. See [`.hkx`](../file-formats/hkx.md) for the whole format.
 
 ## Every step
 

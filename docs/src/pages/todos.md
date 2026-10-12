@@ -38,7 +38,7 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
   one and every shipped mesh takes it with its own parts unchanged (3,133 of 3,133). A node and a
   whole LOD tier still have no scene-to-document path, and neither does removing a part. An added
   part also lives only at the LOD it was added to, so it vanishes at distance.
-- [ ] **`.hkx` collision.** Not parsed at all, so a reshaped weapon keeps the donor's collision shape.
+- [ ] **`.hkx` collision.** Read and rewritten byte for byte (see [`.hkx`](/farcry-sdk/docs/file-formats/hkx)), but nothing edits it yet, so a reshaped weapon keeps the donor's collision shape.
   This is the last format in a weapon's file set with nothing behind it.
 - [ ] **A material a mesh embeds cannot be edited.** Four material names of 7,496, across three
   meshes, none of them weapons — they travel inside the mesh document as an opaque chunk, so an

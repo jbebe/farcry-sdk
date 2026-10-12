@@ -524,7 +524,7 @@ see, because it is about where you make the cut.
 | Piece | Detail |
 |---|---|
 | **`.xbm` materials** | Solved, in JackAll. All 2,379 shipped materials round-trip byte-identically and rewritten ones load in game — see [xbm-xbg](../file-formats/xbm-xbg.md#the-xbm-body-and-writing-one-back). A pack carries them as JSON, so nothing outside JackAll parses one. |
-| **`.hkx` collision** | Not parsed at all. Reuse the donor's — a reshaped weapon keeps its collision shape. |
+| **`.hkx` collision** | Read and rewritten by JackAll (see [`.hkx`](../file-formats/hkx.md)), but nothing edits it yet. Reuse the donor's — a reshaped weapon keeps its collision shape. |
 | **`.mab` authoring** | Solved. Pose the rig and **Write Animation** puts the Action back into the bank, rewriting only the clip that fits this model and leaving the character's byte for byte. See [rewriting one clip](../file-formats/mab.md#rewriting-one-clip-and-leaving-the-rest-alone). |
 | **Adding a part** | Solved. **Add as New Part** appends a Blender mesh to the model, and every shipped mesh takes one with its own parts unchanged, 3,133 of 3,133 — see [adding a part](../file-formats/xbm-xbg.md#adding-a-part-to-a-model-that-shipped-without-one). The part lives at the LOD you imported, and nothing outside the mesh binds to its name. |
 | **Adding a node or an LOD** | The container [carries either](../file-formats/xbm-xbg.md#a-container-can-be-authored-not-just-edited), but nothing turns a Blender bone into a node or generates a new LOD tier. |
@@ -545,7 +545,7 @@ AK-47 and a 1911**, so re-verify before relying on any of it.
 2. `fc2model export` the donor, reshape it in Blender, **Check**, and export the pack back. Its
    materials, textures and animation come with it. Keep every internal part and bone name
    byte-identical.
-3. Clone the donor's `.hkx` under the new path — nothing parses it, so the collision shape is the
+3. Clone the donor's `.hkx` under the new path — nothing edits it yet, so the collision shape is the
    donor's whatever the mesh became.
 4. *(Optional, for your own tooling.)* Append the new paths to `tools/JackAll/assets/fc2.hashlist` and run `jackall-cli system hash archiveitems`, so `archive extract --names` can name them later. The game does not need it — a brand-new asset path loads from `patch.dat` on its hash alone.
 5. Author the seven archetypes as FCB fragments. Set `sName` to `dlc1` (or 2–6).

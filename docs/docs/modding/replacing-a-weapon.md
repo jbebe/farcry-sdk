@@ -78,7 +78,7 @@ The donor decides more than the silhouette. It fixes, and you inherit whether yo
 | Hand and arm motion | the `.mab` character clip | **No** — see [aligning to the hands](#h-align-to-the-hands-not-to-the-origin) |
 | Which parts animate, and how | the `.mab` weapon clip, addressed by **bone id** | Only by swapping the whole set |
 | Part names | `CGraphicComponent`, CRC32 **exact-case** | No |
-| Collision shape | the `.hkx`, which no tool parses | No |
+| Collision shape | the `.hkx`, which no tool edits yet | No |
 | Inventory slot, shop entry, HUD icon | `gamemodesconfig.xml`, `sName` | Yes, but each is its own edit |
 
 So pick for **behaviour first, silhouette second**. A donor whose animation set already does what
@@ -1348,7 +1348,7 @@ acquired with. Then check the five things the whole job was aiming at:
 - **Engine units are metres, but scale to the donor anyway.** Match its envelope and hand span, not
   your weapon's real-world spec — the hands are baked into the clips.
 - **A part can be added but not removed**, and an added part exists only at the LOD it was added to.
-- **Collision keeps the donor's shape** — `.hkx` is not parsed by any tool here.
+- **Collision keeps the donor's shape** — nothing here edits an `.hkx` yet.
 - **`.Multi` is the multiplayer twin.** Single-player needs only the base archetype.
 - **An already-owned weapon keeps its old archetype.** Re-acquire it after installing.
 - **`fIronsightFOV` frames the optic**, and lives on `WeaponProperties`. Take it from whichever
