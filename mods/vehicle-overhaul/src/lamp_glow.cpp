@@ -22,9 +22,9 @@ namespace {
     constexpr float kLensRadius = 0.09f;
     // The least a lens is drawn across, in pixels, so a car far off still shows its lamps.
     constexpr float kMinLensPixels = 1.2f;
-    // The cosines off the lamp's axis past which the lit lens is gone (70 degrees), and within which
-    // it shows whole (55), so it comes in over a short turn rather than lingering faint side on.
-    constexpr float kLensGone = 0.342f;
+    // The cosines off the lamp's axis past which the lit lens is gone (85 degrees), and within which
+    // it shows whole (55).
+    constexpr float kLensGone = 0.0872f;
     constexpr float kLensWhole = 0.574f;
     // The occlusion patch: lifted towards the eye so the lamp's own housing does not hide it, and
     // never smaller than this many pixels from its centre.
