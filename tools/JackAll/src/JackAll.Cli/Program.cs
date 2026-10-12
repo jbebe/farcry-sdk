@@ -216,6 +216,21 @@ app.Configure(config =>
         hkx.AddCommand<HkxRefreshCommand>("refresh")
             .WithDescription("Bring an edited .hkx's MOPP code, cached bounds and radii in line with its shapes.")
             .WithExample("hkx", "refresh", "chairbar01.hkx", "--original", "retail\\chairbar01.hkx");
+        hkx.AddCommand<HkxMoveCommand>("move")
+            .WithDescription("Move a collision shape in the model, refreshing the caches the move leaves stale.")
+            .WithExample("hkx", "move", "chairbar01.hkx", "#7", "--by", "0,0,0.2");
+        hkx.AddCommand<HkxTurnCommand>("turn")
+            .WithDescription("Turn a collision shape about a model axis through where it sits, refreshing the caches the turn leaves stale.")
+            .WithExample("hkx", "turn", "chairbar01.hkx", "#7", "--degrees", "30");
+        hkx.AddCommand<HkxResizeCommand>("resize")
+            .WithDescription("Resize a collision box about its centre or by moving one face, refreshing the caches the change leaves stale.")
+            .WithExample("hkx", "resize", "chairbar01.hkx", "#7", "--face", "+z", "--by", "0.1");
+        hkx.AddCommand<HkxAddBoxCommand>("add-box")
+            .WithDescription("Add a collision box to the list or extended mesh group holding <shape>, with that shape's material and collision filter.")
+            .WithExample("hkx", "add-box", "chairbar01.hkx", "#7", "--size", "0.5,0.5,0.1", "--at", "0,0,1.2");
+        hkx.AddCommand<HkxRemoveCommand>("remove")
+            .WithDescription("Take a collision shape out of its list or extended mesh group, refreshing the caches that leaves stale.")
+            .WithExample("hkx", "remove", "chairbar01.hkx", "#7");
     });
 
     // --- .ai.rml brain workspaces ----------------------------------------
