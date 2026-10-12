@@ -22,7 +22,11 @@ from the windows and the wrecks are to come.
   from its own retail values, by that car's own set of tunings. Getting out puts them all back, so AI
   drivers keep the retail physics. The values below are every car's defaults. The Land Rover starts with
   its own springs and lower gearing (1.2× its top speed); the Datsun with full engine torque, 0.5 s gear
-  changes, more tyre grip (0.5×) and no rolling resistance, as tuned in game.
+  changes, more tyre grip (0.5×) and no rolling resistance, as tuned in game. The big truck starts as a
+  real empty ZIL-130: its engine's 402 N·m and 90 km/h through its own gearbox (1.3× the engine, 1.55×
+  the top speed), 1 s gear changes, air brakes (0.75×), about 30° of steering lock, the ground's own
+  grip (0.33×), 2% rolling drag (0.2×), and leaf springs bouncing at 2 Hz (0.8×) on about 15 cm of
+  travel (1.5×), damped at 0.65× both ways.
   - No speed limiter (retail holds a player's car near 60 km/h), longer gearing, 70% of the engine's
     torque and no climb assist.
   - Weak brakes that lock the wheels into a skid after half a second, as on a car without ABS.

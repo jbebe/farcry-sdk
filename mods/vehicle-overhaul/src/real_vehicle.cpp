@@ -24,9 +24,15 @@ namespace {
     // As the user tuned it in game (2026-10-11).
     constexpr Start kDatsunTuning[] = {
         {"Engine power", 1.0f}, {"Shift time", 0.5f}, {"Tyre grip", 0.5f}, {"Rolling resistance", 0.0f}};
-    // About a real ZIL-130's pitch and yaw for its weight: the axles' distances from the centre of mass
-    // multiplied, 1.9 m each on its 3.8 m wheelbase, against the game's 1 m².
-    constexpr Start kZilTuning[] = {{"Inertia", 3.6f}};
+    // A real empty ZIL-130 (2026-10-12): its 402 N m and 90 km/h through its own gearbox on the truck's 0.53 m
+    // wheels; a truck driver's gear changes; air brakes; 30 degrees of lock; the ground's own grip; 2% rolling drag;
+    // its pitch and yaw for its 3.8 m wheelbase; leaf springs at 2 Hz on about 15 cm of travel.
+    constexpr Start kZilTuning[] = {
+        {"Engine power", 1.3f},      {"Top speed", 1.55f},         {"Shift time", 1.0f},
+        {"Downshift time", 1.0f},    {"Brake torque", 0.75f},      {"Steering lock", 0.85f},
+        {"Steering at speed", 1.0f}, {"Tyre grip", 0.33f},         {"Rolling resistance", 0.2f},
+        {"Inertia", 3.6f},           {"Springs", 0.8f},            {"Travel", 1.5f},
+        {"Compression damping", 0.65f}, {"Rebound damping", 0.65f}};
 
     // 2,120 of its 4,300 kg, empty.
     constexpr float kZilFrontWeight = 0.49f;
