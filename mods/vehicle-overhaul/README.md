@@ -88,8 +88,8 @@ only; shooting from the windows and the wrecks are to come.
   truck stops silently; and the Datsun's clunk on gear changes.
 - **The Unimog's engine sound.** The same, from an OM 352 six-cylinder diesel: an idle at about
   590 rpm and one steady take at 2,470, laid over its 600 to 2,800 rpm unpitched at their own revs, with
-  its own recorded start, which its engine fades in after 0.4 s after the key. Its engine-off is still
-  the retail truck's sound.
+  its own recorded start, which its engine fades in after 0.4 s after the key. Its engine-off is the
+  Datsun's.
 - **Quieter tyres.** Every car's tyre sounds on the ground, dirt, gravel, grass and the rest, play
   10 dB quieter, so they no longer drown out the engine.
 - **Headlamps you can see.** Every lit headlamp, on any car, shows as a bright point: a lit white
