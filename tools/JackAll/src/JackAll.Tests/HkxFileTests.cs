@@ -86,14 +86,17 @@ public sealed class HkxFileTests
         HkxObject fan = door.Clone();
         fan.SetString("name", "Fan");
         fan.SetReals("motion.motionState.sweptTransform.centerOfMassLocal", 1, 2, 3, 0);
-        system.Append("rigidBodies", fan);
+        system.Insert("rigidBodies", 1, fan);
 
         HkxFile reread = HkxFile.Parse(file.Write());
         HkxObject written = Body(reread, "Fan");
+        List<string?> names = [.. reread.Objects().Single(o => o.Class.Name == "hkpPhysicsSystem")
+            .GetPointers("rigidBodies").Select(b => b?.GetString("name"))];
 
         Assert.Equal([1f, 2f, 3f, 0f], written.GetReals("motion.motionState.sweptTransform.centerOfMassLocal"));
         Assert.Equal("hkpConvexVerticesShape", written.GetPointer("collidable.shape")!.Class.Name);
-        Assert.Equal(32, reread.Objects().Count(o => o.Class.Name == "hkpRigidBody"));
+        Assert.Equal(["Chassis", "Fan", "DoorLeftState02"], names.Take(3));
+        Assert.Equal(32, names.Count);
         Assert.NotEqual(1f, Body(reread, "DoorLeftState02").GetReals("motion.motionState.sweptTransform.centerOfMassLocal")[0]);
     }
 

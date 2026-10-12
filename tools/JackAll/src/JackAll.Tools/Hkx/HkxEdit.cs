@@ -58,21 +58,33 @@ public static class HkxEdit
 
     public static void SetString(this HkxObject o, string path, string text) => o.Refs[Locate(o, path, 4)] = HkxData.FromText(text);
 
-    /// <summary>Adds an element to an array of pointers.</summary>
-    public static void Append(this HkxObject o, string path, HkxObject element)
+    /// <summary>What an array of pointers points at, in order.</summary>
+    public static List<HkxObject?> GetPointers(this HkxObject o, string path)
+    {
+        int at = Locate(o, path, 12);
+        HkxBlock? elements = (o.Refs.GetValueOrDefault(at) as HkxData)?.Block;
+        return [.. Enumerable.Range(0, ByteCursor.I32(o.Bytes, at + 4))
+            .Select(i => (elements?.Refs.GetValueOrDefault(i * 4) as HkxPointer)?.Target)];
+    }
+
+    /// <summary>Puts an element into an array of pointers at <paramref name="index"/>, moving those from there on up.</summary>
+    public static void Insert(this HkxObject o, string path, int index, HkxObject element)
     {
         int at = Locate(o, path, 12);
         int count = ByteCursor.I32(o.Bytes, at + 4);
         var elements = new HkxBlock(new byte[(count + 1) * 4]);
         foreach ((int offset, HkxRef r) in (o.Refs.GetValueOrDefault(at) as HkxData)?.Block.Refs ?? [])
         {
-            elements.Refs[offset] = r;
+            elements.Refs[offset < index * 4 ? offset : offset + 4] = r;
         }
-        elements.Refs[count * 4] = new HkxPointer(element);
+        elements.Refs[index * 4] = new HkxPointer(element);
         o.Refs[at] = new HkxData(elements);
         BinaryPrimitives.WriteInt32LittleEndian(o.Bytes.AsSpan(at + 4), count + 1);
         BinaryPrimitives.WriteUInt32LittleEndian(o.Bytes.AsSpan(at + 8), (uint)(count + 1) | SavedArrayFlags);
     }
+
+    public static void Append(this HkxObject o, string path, HkxObject element)
+        => o.Insert(path, ByteCursor.I32(o.Bytes, Locate(o, path, 12) + 4), element);
 
     private static HkSlot Slot(HkxObject o, string path)
         => HavokClasses.Default.Slots(o.Class).FirstOrDefault(s => s.Path == path) ?? throw new KeyNotFoundException($"{o.Class.Name} has no member '{path}'.");
