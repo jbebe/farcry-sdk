@@ -49,7 +49,8 @@ namespace {
         {1200.0f, 50.0f, "Jeep Wrangler taxi", 1.20f},
         {600.0f, 80.0f, "Quad", 1.00f},
         {1600.0f, 88.0f, "Unimog", 0.85f, 0.0f, 0.0f, 0, 0.0f, {kUnimogSprings, kUnimogSprings}},
-        {4000.0f, 150.0f, "ZIL-130", 0.85f, 560.0f, 3200.0f, kShiftClunks, 0.7f, {kZilSprings, kZilSprings}, kZilTuning,
+        // Above the real truck's 0.85, at which it rolled over in left-right turns (2026-10-12).
+        {4000.0f, 150.0f, "ZIL-130", 1.1f, 560.0f, 3200.0f, kShiftClunks, 0.7f, {kZilSprings, kZilSprings}, kZilTuning,
          kZilFrontWeight, kZilGears, 1300.0f},
     };
 }

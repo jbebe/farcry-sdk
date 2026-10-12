@@ -35,8 +35,9 @@ from the windows and the wrecks are to come.
   - The tyres roll, pitch and yaw the body as physics would, with no damper on spins.
   - Each car the overhaul knows carries its weight as high as the real vehicle it depicts, set from that
     vehicle's stability factor: a Land Rover Series III tips over at 0.9 g, a Datsun 1200 at 1.3 g,
-    and the buggy keeps its weight at the axles. The big truck also carries it as far forward as an
-    empty ZIL-130, 49% on the front axle, where the game put it far back.
+    and the buggy keeps its weight at the axles. The big truck tips at 1.1 g, lower than a real ZIL-130's
+    0.85, which rolled it over in left-right turns on its soft solid axles. It also carries its weight as
+    far forward as an empty ZIL-130, 49% on the front axle, where the game put it far back.
   - The game gives every car a small car's inertia for its weight, so the big truck rocked on its
     springs as quickly as the Datsun. It starts at 3.6 times its own, about a real ZIL-130's, so it
     leans and turns slowly.
