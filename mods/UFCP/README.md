@@ -40,7 +40,7 @@ disagree.
 
 | Option | Range | Default |
 |---|---|---|
-| Field of view | 65–120 degrees | **75** — the game's own |
+| Field of view | 65–140 degrees | **75** — the game's own |
 | Maximum frame rate | Game default · Unlocked · Screen refresh · 30–240 Hz | **60 Hz** |
 | Display mode | Game default · Borderless | **Game default** |
 | Processor affinity | All cores · Physical cores only · 4 cores · 1 core | **All cores** |
