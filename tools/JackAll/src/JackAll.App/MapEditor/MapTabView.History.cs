@@ -27,9 +27,9 @@ public partial class MapTabView
     private void Redo() => Replayed(IsDragging ? null : _history.Redo(), "Redid");
 
     /// <summary>Brings every view back in line with the world after a step was undone or redone.</summary>
-    private void Replayed(IEditStep? step, string verb)
+    private void Replayed(IEditStep? replayed, string verb)
     {
-        if (step is null || _edits is null)
+        if (replayed is not IWorldEditStep step || _edits is null)
         {
             return;
         }

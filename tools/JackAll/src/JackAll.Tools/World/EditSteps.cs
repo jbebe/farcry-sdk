@@ -20,7 +20,7 @@ public readonly record struct Placement(Vector3 Position, Vector3 Angles)
 /// transform field is one step; a gizmo drag passes null.</param>
 public sealed class MoveStep(
     WorldEditSession session, IReadOnlyDictionary<WorldEntity, (Placement Before, Placement After)> moves,
-    string? mergeKey = null) : IEditStep
+    string? mergeKey = null) : IWorldEditStep
 {
     private readonly string? _mergeKey = mergeKey;
     private IReadOnlyDictionary<WorldEntity, (Placement Before, Placement After)> _moves = moves;
@@ -63,7 +63,7 @@ public sealed class MoveStep(
 }
 
 /// <summary>Entities refiled under another mission layer.</summary>
-public sealed class LayerStep : IEditStep
+public sealed class LayerStep : IWorldEditStep
 {
     private readonly WorldEditSession _session;
     private readonly IReadOnlyDictionary<WorldEntity, string> _from;
@@ -108,7 +108,7 @@ public sealed class LayerStep : IEditStep
 
 /// <summary>A change to an entity's node: a field, a component added or removed, a handle dragged.</summary>
 public sealed class NodeEditStep(WorldEditSession session, WorldEntity entity, FcbObject before, FcbObject after, string label)
-    : IEditStep
+    : IWorldEditStep
 {
     private readonly WorldEntity _entity = entity;
     private FcbObject _after = after;
@@ -183,7 +183,7 @@ public sealed class NodeEditStep(WorldEditSession session, WorldEntity entity, F
 }
 
 /// <summary>Entities added or deleted. Undoing one is doing the other, so this one step toggles.</summary>
-public sealed class PresenceStep : IEditStep
+public sealed class PresenceStep : IWorldEditStep
 {
     private readonly WorldEditSession _session;
     private readonly IReadOnlyList<WorldEntity> _entities;

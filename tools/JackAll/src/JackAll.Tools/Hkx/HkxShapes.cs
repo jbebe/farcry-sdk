@@ -37,6 +37,9 @@ public sealed class HkxNode(HkxNodeKind kind, HkxObject? obj, string label)
     /// <summary>This node's surface and every one beneath it.</summary>
     public IEnumerable<HkxPrimitive> Primitives()
         => (Primitive is null ? Array.Empty<HkxPrimitive>() : [Primitive]).Concat(Children.SelectMany(c => c.Primitives()));
+
+    /// <summary>This node and every one beneath it.</summary>
+    public IEnumerable<HkxNode> Descendants() => Children.SelectMany(c => c.Descendants()).Prepend(this);
 }
 
 /// <summary>
@@ -99,12 +102,10 @@ public static class HkxShapes
     }
 
     /// <summary>The box around a shape's collision in its own space.</summary>
-    public static (Vector3 Min, Vector3 Max) Bounds(HkxObject shape) => shape.Class.Name switch
-    {
-        "hkpMoppBvTreeShape" => Bounds(shape.GetPointer("child.childShape")!),
-        "hkpListShape" or "hkpStorageExtendedMeshShape" => XbgModel.Bounds(Children(shape).SelectMany(c => new[] { c.Min, c.Max })),
-        _ => Bounds(shape, Matrix4x4.Identity),
-    };
+    public static (Vector3 Min, Vector3 Max) Bounds(HkxObject shape)
+        => Collection(shape) is { } collection
+            ? XbgModel.Bounds(Children(collection).SelectMany(c => new[] { c.Min, c.Max }))
+            : Bounds(shape, Matrix4x4.Identity);
 
     /// <summary>The children of a list or extended mesh, each by the shape key the collection gives it.</summary>
     public static List<HkxChild> Children(HkxObject collection) => collection.Class.Name switch
@@ -210,7 +211,21 @@ public static class HkxShapes
         return mesh.GetInt(part + "offsetSet") != 0 ? local * Matrix4x4.CreateTranslation(Vec(mesh.GetReals(part + "translation"))) : local;
     }
 
-    private static Vector3 Vec(float[] f) => new(f[0], f[1], f[2]);
+    internal static Vector3 Vec(float[] f) => new(f[0], f[1], f[2]);
+
+    /// <summary>A vector's xyz followed by <paramref name="w"/>, as a member stores it.</summary>
+    internal static float[] Lanes(Vector3 v, float w) => [v.X, v.Y, v.Z, w];
+
+    /// <summary>Whether a shape is a translate or transform shape: one that places the shape it wraps.</summary>
+    internal static bool IsWrapper(HkxObject shape) => shape.Class.Name is "hkpConvexTranslateShape" or "hkpConvexTransformShape";
+
+    /// <summary>The list or extended mesh a shape is, or that its MOPP wraps.</summary>
+    internal static HkxObject? Collection(HkxObject shape) => shape.Class.Name switch
+    {
+        "hkpMoppBvTreeShape" => shape.GetPointer("child.childShape"),
+        "hkpListShape" or "hkpStorageExtendedMeshShape" => shape,
+        _ => null,
+    };
 
     /// <summary>The shape a MOPP, transform or translate shape wraps, the matrix placing it in the wrapper's space, and the wrapper's label.</summary>
     internal static (HkxObject? Child, Matrix4x4 Local, string Label)? Unwrap(HkxObject shape) => shape.Class.Name switch
@@ -326,10 +341,14 @@ public static class HkxShapes
         return node;
     }
 
+    /// <summary>A box centred on the origin as corners and three indices into them per triangle.</summary>
+    public static (Vector3[] Vertices, int[] Triangles) BoxMesh(Vector3 half)
+        => (Corners(half), Fan([[4, 5, 7, 6], [0, 2, 3, 1], [1, 3, 7, 5], [0, 4, 6, 2], [2, 6, 7, 3], [0, 1, 5, 4]]));
+
     private static HkxPrimitive Box(HkxObject shape, Vector3 half, Matrix4x4 toModel)
     {
-        int[][] faces = [[4, 5, 7, 6], [0, 2, 3, 1], [1, 3, 7, 5], [0, 4, 6, 2], [2, 6, 7, 3], [0, 1, 5, 4]];
-        return new HkxPrimitive(shape, HkxShapeKind.Box, toModel, Corners(half), Fan(faces));
+        (Vector3[] corners, int[] triangles) = BoxMesh(half);
+        return new HkxPrimitive(shape, HkxShapeKind.Box, toModel, corners, triangles);
     }
 
     // A sphere split at its equator, each half centred on one end of the A-B segment.
@@ -426,8 +445,13 @@ public static class HkxShapes
     private static int[] Fan(int[][] faces)
         => [.. faces.SelectMany(f => Enumerable.Range(1, f.Length - 2).SelectMany(i => new[] { f[0], f[i], f[i + 1] }))];
 
-    // An hkTransform's three rotation columns and translation, each stored as a vector: the rows of a
-    // System.Numerics matrix, which transforms row vectors.
+    /// <summary>
+    /// The sixteen floats of an hkTransform: its three rotation columns and translation, each stored as a vector,
+    /// which are the rows of a System.Numerics matrix (one that transforms row vectors).
+    /// </summary>
+    public static float[] TransformReals(Matrix4x4 m)
+        => [m.M11, m.M12, m.M13, 0, m.M21, m.M22, m.M23, 0, m.M31, m.M32, m.M33, 0, m.M41, m.M42, m.M43, 0];
+
     private static Matrix4x4 Transform(float[] f) => new(
         f[0], f[1], f[2], 0, f[4], f[5], f[6], 0, f[8], f[9], f[10], 0, f[12], f[13], f[14], 1);
 

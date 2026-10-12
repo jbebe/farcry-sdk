@@ -8,13 +8,15 @@ namespace JackAll.Tools.Hkx;
 /// </summary>
 public sealed class HkxEditSession
 {
-    private readonly byte[] _opened;
+    private readonly HkxFile _original;
     private byte[] _saved;
+    private byte[] _current;
 
     public HkxEditSession(byte[] bytes)
     {
-        _opened = _saved = bytes;
+        _saved = _current = bytes;
         File = HkxFile.Parse(bytes);
+        _original = HkxFile.Parse(bytes);
     }
 
     public HkxFile File { get; private set; }
@@ -22,6 +24,9 @@ public sealed class HkxEditSession
     public EditHistory History { get; } = new();
 
     public bool IsDirty { get; private set; }
+
+    /// <summary>The file as it stood after the last edit, undo, redo or revert.</summary>
+    public byte[] Bytes => _current;
 
     /// <summary>
     /// Raised after an edit, undo, redo or save, with <c>true</c> when <see cref="File"/> was parsed anew, so that
@@ -32,9 +37,8 @@ public sealed class HkxEditSession
     /// <summary>Makes a change as one undoable step. Steps with the same merge key in quick succession fold into one.</summary>
     public void Edit(string label, Action change, string? mergeKey = null)
     {
-        byte[] before = File.Write();
         change();
-        Commit(label, before, mergeKey);
+        Commit(label, _current, mergeKey);
     }
 
     /// <summary>Records the changes made to <see cref="File"/> since it was written as <paramref name="before"/> as one step.</summary>
@@ -48,39 +52,34 @@ public sealed class HkxEditSession
         Settle(after, reparsed: false);
     }
 
-    /// <summary>Drops the changes made to <see cref="File"/> since it was written as <paramref name="before"/>.</summary>
-    public void Revert(byte[] before) => Load(before);
-
-    public void Undo() => History.Undo();
-
-    public void Redo() => History.Redo();
-
-    /// <summary>
-    /// Brings every cache in line with the shapes and hands the file's bytes to <paramref name="store"/>; when it
-    /// takes them, they become the new save point.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">A MOPP that cannot be rebuilt would have to be.</exception>
-    public bool Save(Func<byte[], bool> store)
-    {
-        HkxCaches.Refresh(File, HkxFile.Parse(_opened));
-        byte[] bytes = File.Write();
-        if (!store(bytes))
-        {
-            return false;
-        }
-        _saved = bytes;
-        Settle(bytes, reparsed: false);
-        return true;
-    }
-
-    private void Load(byte[] bytes)
+    /// <summary>Puts <see cref="File"/> back to bytes it was written as, parsing them anew.</summary>
+    public void Revert(byte[] bytes)
     {
         File = HkxFile.Parse(bytes);
         Settle(bytes, reparsed: true);
     }
 
+    /// <summary>
+    /// Hands <paramref name="store"/> the file with every cache brought in line with its shapes; when it takes them,
+    /// the file as edited becomes the new save point.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">A MOPP that cannot be rebuilt would have to be.</exception>
+    public bool Save(Func<byte[], bool> store)
+    {
+        HkxFile refreshed = HkxFile.Parse(_current);
+        HkxCaches.Refresh(refreshed, _original);
+        if (!store(refreshed.Write()))
+        {
+            return false;
+        }
+        _saved = _current;
+        Settle(_current, reparsed: false);
+        return true;
+    }
+
     private void Settle(byte[] bytes, bool reparsed)
     {
+        _current = bytes;
         IsDirty = !bytes.AsSpan().SequenceEqual(_saved);
         Changed?.Invoke(reparsed);
     }
@@ -92,13 +91,9 @@ public sealed class HkxEditSession
 
         public string Label => label;
 
-        public IReadOnlyCollection<WorldEntity> Entities => [];
+        public void Undo() => session.Revert(before);
 
-        public bool ChangesMembership => false;
-
-        public void Undo() => session.Load(before);
-
-        public void Redo() => session.Load(_after);
+        public void Redo() => session.Revert(_after);
 
         public bool TryMerge(IEditStep next)
         {

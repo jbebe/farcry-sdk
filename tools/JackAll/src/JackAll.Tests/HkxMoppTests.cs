@@ -129,7 +129,7 @@ public sealed class HkxMoppTests
     // Each child's surface by its key, as drawn in model space; each fixture's one body sits at the origin.
     private static Dictionary<uint, (Vector3[] Points, int[] Triangles)> Surfaces(HkxFile file, HkxObject mopp)
     {
-        HkxNode collection = HkxShapes.Read(file).SelectMany(Flatten).Single(n => n.Object == mopp).Children.Single();
+        HkxNode collection = HkxShapes.Read(file).SelectMany(n => n.Descendants()).Single(n => n.Object == mopp).Children.Single();
         var surfaces = new Dictionary<uint, (Vector3[] Points, int[] Triangles)>();
         static (Vector3[], int[]) Surface(HkxNode n)
         {
@@ -167,7 +167,6 @@ public sealed class HkxMoppTests
         return surfaces;
     }
 
-    private static IEnumerable<HkxNode> Flatten(HkxNode node) => node.Children.SelectMany(Flatten).Prepend(node);
 
     private static HkxFile? Read(string fixture) => Fixture.Read(fixture) is { } bytes ? HkxFile.Parse(bytes) : null;
 

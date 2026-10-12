@@ -97,11 +97,16 @@ public sealed class HkxShapeEditTests
             return;
         }
 
-        HkxLink link = SeatBox(file).Link!.Value;
-        Vector3[] before = [.. SeatBox(file).Primitive!.ModelVertices()];
-        float height = HkxShapeEdit.Size(HkxShapeEdit.Leaf(link)).Z;
+        HkxNode seat = SeatBox(file);
+        HkxLink link = seat.Link!.Value;
+        Vector3[] before = [.. seat.Primitive!.ModelVertices()];
+        Matrix4x4 toModel = seat.Primitive.ToModel;
+        Vector3 size = HkxShapeEdit.Size(HkxShapeEdit.Leaf(link));
+        const int top = 4;
 
-        HkxShapeEdit.Stretch(link, axis: 2, side: 1, height + 0.1f);
+        Assert.Equal(before.Max(v => v.Z), HkxShapeEdit.Faces(HkxShapeEdit.Leaf(link), toModel)[top].Point.Z, 5);
+
+        HkxShapeEdit.Stretch(link, HkxShapeEdit.ParentToModel(link, toModel), toModel, size, top, size.Z + 0.1f);
         Vector3[] after = [.. SeatBox(file).Primitive!.ModelVertices()];
 
         Assert.Equal(before.Min(v => v.Z), after.Min(v => v.Z), 5);
@@ -118,8 +123,7 @@ public sealed class HkxShapeEditTests
         }
 
         Matrix4x4 tilt = Matrix4x4.CreateRotationX(0.6f) * Matrix4x4.CreateTranslation(1, 2, 3);
-        file.Objects().Single(o => o.Class.Name == "hkpRigidBody").SetReals("motion.motionState.transform",
-            tilt.M11, tilt.M12, tilt.M13, 0, tilt.M21, tilt.M22, tilt.M23, 0, tilt.M31, tilt.M32, tilt.M33, 0, tilt.M41, tilt.M42, tilt.M43, 1);
+        file.Objects().Single(o => o.Class.Name == "hkpRigidBody").SetReals("motion.motionState.transform", HkxShapes.TransformReals(tilt));
         HkxNode seat = SeatBox(file);
         Matrix4x4 now = seat.Primitive!.ToModel;
         Matrix4x4 parent = HkxShapeEdit.ParentToModel(seat.Link!.Value, now);
@@ -149,9 +153,8 @@ public sealed class HkxShapeEditTests
     }
 
     private static HkxNode SeatBox(HkxFile file)
-        => Flatten(HkxShapes.Read(file)[0]).Single(n => n.Primitive is not null && n.Link is { Path: "childInfo[4].shape" });
+        => HkxShapes.Read(file)[0].Descendants().Single(n => n.Primitive is not null && n.Link is { Path: "childInfo[4].shape" });
 
-    private static IEnumerable<HkxNode> Flatten(HkxNode node) => node.Children.SelectMany(Flatten).Prepend(node);
 
     private static float Distance(Matrix4x4 a, Matrix4x4 b) => Enumerable.Range(0, 16).Max(i => MathF.Abs(a[i / 4, i % 4] - b[i / 4, i % 4]));
 

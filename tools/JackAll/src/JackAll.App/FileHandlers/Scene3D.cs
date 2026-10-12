@@ -18,6 +18,10 @@ public static class Scene3D
 
     public static Point3D Point(Vector3 v) => new(v.X, v.Y, v.Z);
 
+    public static Vector3 Vec(Point3D p) => new((float)p.X, (float)p.Y, (float)p.Z);
+
+    public static Vector3 Vec(Vector3D v) => new((float)v.X, (float)v.Y, (float)v.Z);
+
     public static Matrix3D Matrix(Matrix4x4 m)
         => new(m.M11, m.M12, m.M13, m.M14, m.M21, m.M22, m.M23, m.M24, m.M31, m.M32, m.M33, m.M34, m.M41, m.M42, m.M43, m.M44);
 

@@ -145,7 +145,7 @@ public partial class MainWindow
     private TabItem DocumentTab(FcbDocumentViewModel vm, Action onRemoved)
     {
         var tab = new TabItem { Content = new FcbDocumentView(vm) };
-        MakeClosable(tab, vm.Title, async () => await CloseEditorTabAsync(tab, vm, onRemoved));
+        MakeClosable(tab, vm.Title, async () => await CloseEditorTabAsync(tab, vm.Title, vm.IsDirty, vm.SaveAsync, onRemoved));
         vm.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(FcbDocumentViewModel.IsDirty))
@@ -307,30 +307,6 @@ public partial class MainWindow
             return tab;
         });
 
-    /// <summary>
-    /// The <see cref="ISavableTab"/> counterpart to <see cref="CloseEditorTabAsync"/>: same prompt, same
-    /// leave-the-tab-open-on-failure rule, against the tab's own save.
-    /// </summary>
-    private async void CloseSavableTab(TabItem tab, string title, ISavableTab view, Action onRemoved)
-    {
-        if (view.IsDirty)
-        {
-            MessageBoxResult choice = MessageBox.Show(this,
-                $"'{title}' has unsaved changes.\n\nSave before closing?",
-                "Unsaved changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
-
-            if (choice == MessageBoxResult.Cancel) return;
-
-            if (choice == MessageBoxResult.Yes && await view.SaveAsync() is { } error)
-            {
-                Warn(error);
-                return;
-            }
-        }
-
-        RemoveTab(tab, onRemoved);
-    }
-
     // ------------------------------------------------------------ hkx editor tabs
 
     /// <summary>Open HKX editor tabs, keyed by the file's own hash.</summary>
@@ -354,7 +330,7 @@ public partial class MainWindow
     // A document tab that marks its unsaved edits and asks about them when it closes.
     private void MakeSavable(TabItem tab, string title, ISavableTab view, Action onRemoved)
     {
-        MakeClosable(tab, title, () => CloseSavableTab(tab, title, view, onRemoved));
+        MakeClosable(tab, title, async () => await CloseEditorTabAsync(tab, title, view.IsDirty, view.SaveAsync, onRemoved));
         view.DirtyChanged += () => ItemState.SetIsChanged(tab, view.IsDirty);
     }
 
@@ -369,22 +345,22 @@ public partial class MainWindow
         tab.Tag = onClose;
     }
 
-    /// <summary>Prompts for unsaved changes before closing - Save runs the exact same
-    /// <see cref="FcbDocumentViewModel.SaveAsync"/> path as the tab's own Save button. A failed save
-    /// leaves the tab open rather than closing anyway, so a bad edit is never silently discarded.</summary>
-    private async Task CloseEditorTabAsync(TabItem tab, FcbDocumentViewModel vm, Action onRemoved)
+    /// <summary>Prompts for unsaved changes before closing - Save runs the exact same path as the tab's
+    /// own Save button. A failed save leaves the tab open rather than closing anyway, so a bad edit is
+    /// never silently discarded.</summary>
+    private async Task CloseEditorTabAsync(TabItem tab, string title, bool dirty, Func<Task<string?>> save, Action onRemoved)
     {
-        if (vm.IsDirty)
+        if (dirty)
         {
             MessageBoxResult choice = MessageBox.Show(this,
-                $"'{vm.Title}' has unsaved changes.\n\nSave before closing?",
+                $"'{title}' has unsaved changes.\n\nSave before closing?",
                 "Unsaved changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
 
             if (choice == MessageBoxResult.Cancel) return;
 
             if (choice == MessageBoxResult.Yes)
             {
-                string? error = await vm.SaveAsync();
+                string? error = await save();
                 if (error is not null)
                 {
                     Warn(error);

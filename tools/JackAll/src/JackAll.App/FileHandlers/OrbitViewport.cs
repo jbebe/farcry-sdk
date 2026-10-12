@@ -28,6 +28,7 @@ public sealed class OrbitViewport
     private readonly UIElement _input;
     private readonly PerspectiveCamera _camera;
     private readonly bool _tilt;
+    private readonly List<PerspectiveCamera> _overlays = [];
     private double _yaw = -0.7, _elevation = DefaultElevation, _distance = 5, _near = 0.01, _far = 100;
     private Point3D _target;
     private Point _lastMouse, _pressedAt;
@@ -60,20 +61,29 @@ public sealed class OrbitViewport
     /// <summary>Raised whenever the camera moves.</summary>
     public event Action? Moved;
 
+    /// <summary>Has <paramref name="overlay"/> look through a camera that follows this one, so what it draws lies over the view.</summary>
+    public void Overlay(Viewport3D overlay)
+    {
+        var camera = new PerspectiveCamera();
+        overlay.Camera = camera;
+        _overlays.Add(camera);
+        Update();
+    }
+
     /// <summary>The ray from the camera through a point of the viewport.</summary>
     public (Vector3 Origin, Vector3 Direction) Ray(Point at)
     {
-        Vector3 forward = Vector3.Normalize(Vec(_camera.LookDirection));
-        Vector3 right = Vector3.Normalize(Vector3.Cross(forward, Vec(_camera.UpDirection)));
+        Vector3 forward = Vector3.Normalize(Scene3D.Vec(_camera.LookDirection));
+        Vector3 right = Vector3.Normalize(Vector3.Cross(forward, Scene3D.Vec(_camera.UpDirection)));
         Vector3 up = Vector3.Cross(right, forward);
         (double halfWidth, double halfHeight) = HalfAngles();
         float x = (float)((2 * at.X / _viewport.ActualWidth - 1) * halfWidth), y = (float)((1 - 2 * at.Y / _viewport.ActualHeight) * halfHeight);
-        return (Vec(_camera.Position), Vector3.Normalize(forward + right * x + up * y));
+        return (Scene3D.Vec(_camera.Position), Vector3.Normalize(forward + right * x + up * y));
     }
 
     /// <summary>The length that spans <paramref name="pixels"/> of the viewport's height at <paramref name="at"/>.</summary>
     public float Scale(Vector3 at, float pixels)
-        => TranslateGizmo.Scale(at, Vec(_camera.Position), (float)(2 * Math.Atan(HalfAngles().HalfHeight)), (float)_viewport.ActualHeight, pixels);
+        => TranslateGizmo.Scale(at, Scene3D.Vec(_camera.Position), (float)(2 * Math.Atan(HalfAngles().HalfHeight)), (float)_viewport.ActualHeight, pixels);
 
     // The tangents of half the view's horizontal and vertical angles; FieldOfView is the horizontal one.
     private (double HalfWidth, double HalfHeight) HalfAngles()
@@ -81,10 +91,6 @@ public sealed class OrbitViewport
         double halfWidth = Math.Tan(_camera.FieldOfView * Math.PI / 360);
         return (halfWidth, halfWidth * _viewport.ActualHeight / Math.Max(_viewport.ActualWidth, 1));
     }
-
-    private static Vector3 Vec(Point3D p) => new((float)p.X, (float)p.Y, (float)p.Z);
-
-    private static Vector3 Vec(Vector3D v) => new((float)v.X, (float)v.Y, (float)v.Z);
 
     /// <summary>
     /// Puts the whole of a bounding box in view, from the default angle. Before the viewport has a
@@ -122,6 +128,11 @@ public sealed class OrbitViewport
         _camera.UpDirection = new Vector3D(0, 0, 1);
         _camera.NearPlaneDistance = _near;
         _camera.FarPlaneDistance = _far;
+        foreach (PerspectiveCamera overlay in _overlays)
+        {
+            (overlay.Position, overlay.LookDirection, overlay.UpDirection) = (_camera.Position, _camera.LookDirection, _camera.UpDirection);
+            (overlay.FieldOfView, overlay.NearPlaneDistance, overlay.FarPlaneDistance) = (_camera.FieldOfView, _near, _far);
+        }
         Moved?.Invoke();
     }
 

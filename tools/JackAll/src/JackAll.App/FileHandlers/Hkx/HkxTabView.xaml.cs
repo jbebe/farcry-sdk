@@ -36,7 +36,6 @@ public partial class HkxTabView : UserControl, ISavableTab
     private List<HkxTreeNode> _roots = [];
     private Dictionary<HkxObject, int> _numbers = [];
     private HkxObject? _inspected;
-    // Set while the inspector writes a value, so its rows, and the focus in them, stay.
     private bool _writing;
 
     public HkxTabView(string fileName, string? path, byte[] content, Func<string, byte[]?> readByPath, Func<byte[], bool> store)
@@ -48,6 +47,7 @@ public partial class HkxTabView : UserControl, ISavableTab
         _scene = new HkxScene(HkxViewport, _model) { ModelOpacity = HkxModelOpacity.Value };
         _orbit = new OrbitViewport(HkxViewport, tilt: true);
         _orbit.Clicked += Pick;
+        _gizmo = new HkxGizmo(HkxGizmos);
         StartGizmo();
         HkxModelOpacity.ValueChanged += (_, e) => _scene.ModelOpacity = e.NewValue;
 
@@ -104,7 +104,14 @@ public partial class HkxTabView : UserControl, ISavableTab
         // A text box keeps its own Ctrl+Z.
         else if (_session is not null && Keyboard.FocusedElement is not TextBox && UndoChrome.IsUndoKey(e.Key, out bool redo))
         {
-            (redo ? (Action)_session.Redo : _session.Undo)();
+            if (redo)
+            {
+                _session.History.Redo();
+            }
+            else
+            {
+                _session.History.Undo();
+            }
             e.Handled = true;
         }
     }
@@ -137,14 +144,13 @@ public partial class HkxTabView : UserControl, ISavableTab
         HkxFile file = _session!.File;
         Dictionary<HkxObject, int> numbers = _numbers;
         HkxObject? inspected = _inspected;
-        HashSet<HkxObject> expanded = [.. All(_roots).Where(n => n.IsExpanded && n.Node.Object is not null).Select(n => n.Node.Object!)];
         HashSet<string> shown = [.. _roots.SelectMany(r => r.Bodies()).Where(b => b.IsShown).Select(b => b.Node.Label)];
         bool first = _roots.Count == 0;
 
         _numbers = HkxDump.Numbers(file);
-        Dictionary<int, HkxObject> byNumber = _numbers.ToDictionary(p => p.Value, p => p.Key);
-        HkxObject? Carry(HkxObject? o) => o is null ? null : !reparsed ? o : numbers.TryGetValue(o, out int n) ? byNumber.GetValueOrDefault(n) : null;
-        HashSet<HkxObject> open = [.. expanded.Select(Carry).OfType<HkxObject>()];
+        Dictionary<int, HkxObject>? byNumber = reparsed ? _numbers.ToDictionary(p => p.Value, p => p.Key) : null;
+        HkxObject? Carry(HkxObject? o) => o is null || byNumber is null ? o : numbers.TryGetValue(o, out int n) ? byNumber.GetValueOrDefault(n) : null;
+        HashSet<HkxObject> open = [.. All(_roots).Where(n => n.IsExpanded).Select(n => Carry(n.Node.Object)).OfType<HkxObject>()];
 
         _roots = [.. HkxShapes.Read(file).Select(n => new HkxTreeNode(n))];
         foreach (HkxTreeNode node in All(_roots))
@@ -168,10 +174,7 @@ public partial class HkxTabView : UserControl, ISavableTab
         if (again is null || HkxTreeNode.Reveal(_roots, n => n.Node.Object == again) is null)
         {
             Target(null);
-            if (!_writing)
-            {
-                Inspect(again);
-            }
+            Inspect(again);
         }
         DirtyChanged?.Invoke();
         RefreshButtons();
@@ -219,9 +222,9 @@ public partial class HkxTabView : UserControl, ISavableTab
         }
     }
 
-    private void Undo_Click(object sender, RoutedEventArgs e) => _session?.Undo();
+    private void Undo_Click(object sender, RoutedEventArgs e) => _session?.History.Undo();
 
-    private void Redo_Click(object sender, RoutedEventArgs e) => _session?.Redo();
+    private void Redo_Click(object sender, RoutedEventArgs e) => _session?.History.Redo();
 
     private void Save_Click(object sender, RoutedEventArgs e) => SaveOrWarn();
 
@@ -230,10 +233,7 @@ public partial class HkxTabView : UserControl, ISavableTab
         var node = e.NewValue as HkxTreeNode;
         _scene.Highlight(node is null ? new HashSet<HkxPrimitive>() : [.. node.Node.Primitives()]);
         Target(node);
-        if (!_writing)
-        {
-            Inspect(node?.Node.Object);
-        }
+        Inspect(node?.Node.Object);
     }
 
     private void Tree_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -257,8 +257,13 @@ public partial class HkxTabView : UserControl, ISavableTab
         }
     }
 
+    // Lists an object's values, unless the inspector is writing one, whose rows and focus then stay.
     private void Inspect(HkxObject? o)
     {
+        if (_writing)
+        {
+            return;
+        }
         _inspected = o;
         HkxSelection.Text = o is null ? "" : $"#{_numbers[o]} {o.Class.Name}";
         HkxInspector.ItemsSource = o is null ? null

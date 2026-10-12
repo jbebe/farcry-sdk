@@ -1,4 +1,5 @@
 using System.Numerics;
+using JackAll.Tools.World;
 
 namespace JackAll.Tools.Hkx;
 
@@ -14,10 +15,10 @@ public static class HkxShapeEdit
     private const float Tolerance = 1e-6f;
 
     /// <summary>The matrix placing a shape in its parent's space: a translate or transform shape's own, identity for any other.</summary>
-    public static Matrix4x4 Local(HkxObject shape) => IsWrapper(shape) ? HkxShapes.Unwrap(shape)!.Value.Local : Matrix4x4.Identity;
+    public static Matrix4x4 Local(HkxObject shape) => HkxShapes.Unwrap(shape)?.Local ?? Matrix4x4.Identity;
 
     /// <summary>The convex shape a link places: the one its translate or transform shape wraps, or the linked shape itself.</summary>
-    public static HkxObject Leaf(HkxLink link) => link.Target is { } target && IsWrapper(target) ? target.GetPointer("childShape.childShape")! : link.Target!;
+    public static HkxObject Leaf(HkxLink link) => link.Target is { } target && HkxShapes.IsWrapper(target) ? HkxShapes.Unwrap(target)!.Value.Child! : link.Target!;
 
     /// <summary>
     /// Places the convex shape behind a link at <paramref name="local"/> in the link owner's space. A translate shape
@@ -30,11 +31,10 @@ public static class HkxShapeEdit
         switch (target.Class.Name)
         {
             case "hkpConvexTransformShape":
-                target.SetReals("transform", local.M11, local.M12, local.M13, 0, local.M21, local.M22, local.M23, 0,
-                    local.M31, local.M32, local.M33, 0, local.M41, local.M42, local.M43, 0);
+                target.SetReals("transform", HkxShapes.TransformReals(local));
                 return;
             case "hkpConvexTranslateShape" when !turns:
-                target.SetReals("translation", local.M41, local.M42, local.M43, 0);
+                target.SetReals("translation", HkxShapes.Lanes(local.Translation, 0));
                 return;
             default:
                 if (target == leaf && local.IsIdentity)
@@ -42,7 +42,7 @@ public static class HkxShapeEdit
                     return;
                 }
                 HkxObject wrapper = HkxEdit.Create(turns ? "hkpConvexTransformShape" : "hkpConvexTranslateShape");
-                wrapper.SetInt("userData", leaf.GetInt("userData"));
+                wrapper.SetRaw("userData", leaf.GetRaw("userData"));
                 wrapper.SetReals("radius", leaf.GetReals("radius")[0]);
                 wrapper.SetPointer("childShape.childShape", leaf);
                 link.Owner.SetPointer(link.Path, wrapper);
@@ -66,36 +66,38 @@ public static class HkxShapeEdit
     }
 
     /// <summary>A box's size from surface to surface.</summary>
-    public static Vector3 Size(HkxObject box)
-    {
-        float[] half = box.GetReals("halfExtents");
-        return (new Vector3(half[0], half[1], half[2]) + new Vector3(box.GetReals("radius")[0])) * 2;
-    }
+    public static Vector3 Size(HkxObject box) => (HkxShapes.Vec(box.GetReals("halfExtents")) + new Vector3(box.GetReals("radius")[0])) * 2;
 
     /// <summary>Sets a box's size from surface to surface, about its centre; no side goes below twice its convex radius.</summary>
     public static void Resize(HkxObject box, Vector3 size)
     {
-        float radius = box.GetReals("radius")[0];
-        Vector3 half = Vector3.Max(size / 2 - new Vector3(radius), Vector3.Zero);
-        box.SetReals("halfExtents", half.X, half.Y, half.Z, box.GetReals("halfExtents")[3]);
+        Vector3 half = Vector3.Max(size / 2 - new Vector3(box.GetReals("radius")[0]), Vector3.Zero);
+        box.SetReals("halfExtents", HkxShapes.Lanes(half, box.GetReals("halfExtents")[3]));
+    }
+
+    /// <summary>A handle on each face of a box landing at <paramref name="toModel"/>, numbered as <see cref="EntityHandles.BoxFaces"/> numbers them.</summary>
+    public static IReadOnlyList<EntityHandle> Faces(HkxObject box, Matrix4x4 toModel)
+    {
+        Vector3[] axes = [new(toModel.M11, toModel.M12, toModel.M13), new(toModel.M21, toModel.M22, toModel.M23), new(toModel.M31, toModel.M32, toModel.M33)];
+        return EntityHandles.BoxFaces(toModel.Translation, [.. axes.Select(Vector3.Normalize)], Size(box) / 2);
     }
 
     /// <summary>
-    /// Moves one face of the box behind a link, across its own <paramref name="axis"/> on the <paramref name="side"/>
-    /// (1 or -1), so that the box is <paramref name="size"/> across and the opposite face stays where it was.
+    /// Makes the box behind a link <paramref name="across"/> wide through face <paramref name="face"/> (numbered as
+    /// <see cref="EntityHandles.BoxFaces"/> numbers them), starting from <paramref name="size"/> where it lands at
+    /// <paramref name="toModel"/>, so that the opposite face stays where it was.
     /// </summary>
-    public static void Stretch(HkxLink link, int axis, int side, float size)
+    public static void Stretch(HkxLink link, Matrix4x4 parentToModel, Matrix4x4 toModel, Vector3 size, int face, float across)
     {
         HkxObject box = Leaf(link);
-        Vector3 was = Size(box), next = was;
-        next[axis] = size;
+        int axis = face / 2;
+        Vector3 next = size;
+        next[axis] = across;
         Resize(box, next);
         Vector3 shift = Vector3.Zero;
-        shift[axis] = side * (Size(box)[axis] - was[axis]) / 2;
-        Place(link, Matrix4x4.CreateTranslation(shift) * Local(link.Target!));
+        shift[axis] = (face % 2 == 0 ? 1 : -1) * (Size(box)[axis] - size[axis]) / 2;
+        PlaceInModel(link, parentToModel, Matrix4x4.CreateTranslation(shift) * toModel);
     }
-
-    private static bool IsWrapper(HkxObject shape) => shape.Class.Name is "hkpConvexTranslateShape" or "hkpConvexTransformShape";
 
     private static bool IsTranslation(Matrix4x4 m)
         => Matrix4x4.CreateTranslation(m.Translation) is var t && Enumerable.Range(0, 16).All(i => MathF.Abs(m[i / 4, i % 4] - t[i / 4, i % 4]) < Tolerance);

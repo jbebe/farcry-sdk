@@ -31,7 +31,7 @@ internal sealed class HkxScene
     private readonly ModelVisual3D _shapes = new();
     private readonly ModelVisual3D _ghost = new();
     private readonly SolidColorBrush _ghostBrush = new(Color.FromRgb(0xD8, 0xD8, 0xD8));
-    private Dictionary<HkxPrimitive, GeometryModel3D> _built = [];
+    private List<(HkxPrimitive Primitive, GeometryModel3D Model)> _built = [];
     private IReadOnlySet<HkxPrimitive> _selected = new HashSet<HkxPrimitive>();
 
     public HkxScene(Viewport3D viewport, IReadOnlyList<XbgSubmesh>? model)
@@ -57,14 +57,32 @@ internal sealed class HkxScene
         set => _ghostBrush.Opacity = value;
     }
 
+    /// <summary>Draws the primitives. A shape whose own triangles are unchanged keeps its mesh and is only placed again.</summary>
     public void Show(IEnumerable<HkxPrimitive> primitives)
     {
+        Dictionary<HkxObject, Queue<(HkxPrimitive Primitive, GeometryModel3D Model)>> drawn = [];
+        foreach ((HkxPrimitive Primitive, GeometryModel3D Model) old in _built)
+        {
+            if (!drawn.TryGetValue(old.Primitive.Shape, out var queue))
+            {
+                drawn[old.Primitive.Shape] = queue = new();
+            }
+            queue.Enqueue(old);
+        }
+        (_shapes.Content as Model3DGroup)?.Children.Clear();
+
         Model3DGroup shapes = Scene3D.Lit();
-        Dictionary<HkxPrimitive, GeometryModel3D> built = [];
+        List<(HkxPrimitive, GeometryModel3D)> built = [];
         foreach (HkxPrimitive p in primitives)
         {
-            built[p] = _built.GetValueOrDefault(p) ?? Model(p);
-            shapes.Children.Add(built[p]);
+            GeometryModel3D model = drawn.GetValueOrDefault(p.Shape) is { } queue && queue.TryDequeue(out var old)
+                && old.Primitive.Vertices.AsSpan().SequenceEqual(p.Vertices) && old.Primitive.Triangles.AsSpan().SequenceEqual(p.Triangles)
+                ? old.Model
+                : Model(p);
+            model.Transform = new MatrixTransform3D(Scene3D.Matrix(p.ToModel));
+            model.Material = model.BackMaterial = MaterialOf(p);
+            built.Add((p, model));
+            shapes.Children.Add(model);
         }
         _built = built;
         _shapes.Content = shapes;
@@ -89,7 +107,7 @@ internal sealed class HkxScene
             {
                 if (result is RayMeshGeometry3DHitTestResult { ModelHit: GeometryModel3D hit })
                 {
-                    found = _built.FirstOrDefault(b => b.Value == hit).Key;
+                    found = _built.FirstOrDefault(b => b.Model == hit).Primitive;
                 }
                 return found is null ? HitTestResultBehavior.Continue : HitTestResultBehavior.Stop;
             },
@@ -97,17 +115,16 @@ internal sealed class HkxScene
         return found;
     }
 
-    // Each triangle's own three corners, placed in the model, so WPF lights every face flat.
-    private GeometryModel3D Model(HkxPrimitive p)
+    // Each triangle's own three corners, in the shape's own space, so WPF lights every face flat.
+    private static GeometryModel3D Model(HkxPrimitive p)
     {
-        System.Numerics.Vector3[] placed = [.. p.ModelVertices()];
         var mesh = new MeshGeometry3D { Positions = new Point3DCollection(p.Triangles.Length) };
         foreach (int i in p.Triangles)
         {
-            mesh.Positions.Add(Scene3D.Point(placed[i]));
+            mesh.Positions.Add(Scene3D.Point(p.Vertices[i]));
         }
         mesh.Freeze();
-        return new GeometryModel3D(mesh, MaterialOf(p)) { BackMaterial = MaterialOf(p) };
+        return new GeometryModel3D { Geometry = mesh };
     }
 
     private Material MaterialOf(HkxPrimitive p) => _selected.Contains(p) ? Selected : Solid[p.Kind];

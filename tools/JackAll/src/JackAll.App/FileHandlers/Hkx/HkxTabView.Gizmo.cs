@@ -2,7 +2,6 @@ using System.Numerics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media.Media3D;
 using JackAll.Tools.Hkx;
 using JackAll.Tools.World;
 
@@ -13,19 +12,21 @@ public partial class HkxTabView
 {
     private const float GizmoPixels = 110, KnobPixels = 9;
 
-    private HkxGizmo _gizmo = null!;
+    private readonly HkxGizmo _gizmo;
     private HkxTool _tool = HkxTool.Move;
     private (HkxLink Link, HkxPrimitive Primitive)? _target;
     private Drag? _drag;
 
-    // A drag in progress: the file before it, where the shape and its parent sat in the model then, the box's size,
-    // and the handle held.
-    private sealed record Drag(byte[] Before, Matrix4x4 ToModel, Matrix4x4 ParentToModel, Vector3 Size, GizmoGrab? Move, RotateGrab? Turn,
-        HandleGrab? Face, int FaceIndex);
+    // A drag in progress: the file before it, where the shape and its parent landed in the model then, and what is
+    // held: a GizmoGrab, a RotateGrab or a BoxFace.
+    private sealed record Drag(byte[] Before, Matrix4x4 ToModel, Matrix4x4 ParentToModel, object Held);
+
+    // A box's face held, numbered as EntityHandles.BoxFaces numbers them, and the box's size when it was taken.
+    private sealed record BoxFace(HandleGrab Grab, int Face, Vector3 Size);
 
     private void StartGizmo()
     {
-        _gizmo = new HkxGizmo(HkxGizmos);
+        _orbit.Overlay(HkxGizmos);
         _orbit.Moved += ShowGizmo;
         HkxFrame.PreviewMouseLeftButtonDown += Frame_PreviewMouseLeftButtonDown;
         HkxFrame.PreviewMouseMove += Frame_PreviewMouseMove;
@@ -44,31 +45,19 @@ public partial class HkxTabView
 
     private void ShowGizmo()
     {
-        // A camera can't be shared, so the overlay's copies the scene's.
-        HkxGizmos.Camera = ((PerspectiveCamera)HkxViewport.Camera).Clone();
         if (_target is not { } target || !IsLoaded)
         {
             _gizmo.Hide();
             return;
         }
         Vector3 origin = target.Primitive.ToModel.Translation;
-        _gizmo.Show(_tool, origin, _orbit.Scale(origin, GizmoPixels), _drag?.Move?.Axis ?? _drag?.Turn?.Axis ?? GizmoAxis.None,
-            Faces(target), _drag?.Face?.Handle, _orbit.Scale(origin, KnobPixels));
+        GizmoAxis held = _drag?.Held switch { GizmoGrab move => move.Axis, RotateGrab turn => turn.Axis, _ => GizmoAxis.None };
+        _gizmo.Show(_tool, origin, _orbit.Scale(origin, GizmoPixels), held, Faces(target), (_drag?.Held as BoxFace)?.Face ?? -1,
+            _orbit.Scale(origin, KnobPixels));
     }
 
-    // A box's faces in the model, as handles in the order face 2k + (0 for the + side, 1 for the - side) is axis k.
-    private static List<EntityHandle> Faces((HkxLink Link, HkxPrimitive Primitive) target)
-    {
-        if (HkxShapeEdit.Leaf(target.Link) is not { Class.Name: "hkpBoxShape" } box)
-        {
-            return [];
-        }
-        Matrix4x4 m = target.Primitive.ToModel;
-        Vector3 half = HkxShapeEdit.Size(box) / 2;
-        Vector3[] axes = [new(m.M11, m.M12, m.M13), new(m.M21, m.M22, m.M23), new(m.M31, m.M32, m.M33)];
-        return [.. Enumerable.Range(0, 6).Select(f => new EntityHandle(HandleKind.Face, f / 2, m.Translation,
-            Vector3.Normalize(f % 2 == 0 ? axes[f / 2] : -axes[f / 2]), half[f / 2]))];
-    }
+    private static IReadOnlyList<EntityHandle> Faces((HkxLink Link, HkxPrimitive Primitive) target)
+        => HkxShapeEdit.Leaf(target.Link) is { Class.Name: "hkpBoxShape" } box ? HkxShapeEdit.Faces(box, target.Primitive.ToModel) : [];
 
     private void SetTool(HkxTool tool)
     {
@@ -90,18 +79,17 @@ public partial class HkxTabView
         }
         (Vector3 origin, Vector3 direction) = _orbit.Ray(e.GetPosition(HkxViewport));
         Vector3 at = target.Primitive.ToModel.Translation;
-        List<EntityHandle> faces = Faces(target);
-        HandleGrab? face = EntityHandles.Grab(faces, origin, direction, p => _orbit.Scale(p, KnobPixels) / EntityHandles.GrabRadius);
-        GizmoGrab? move = face is null && _tool == HkxTool.Move ? TranslateGizmo.Grab(origin, direction, at, _orbit.Scale(at, GizmoPixels)) : null;
-        RotateGrab? turn = face is null && _tool == HkxTool.Turn ? RotateGizmo.Grab(origin, direction, at, _orbit.Scale(at, GizmoPixels)) : null;
-        if (face is null && move is null && turn is null)
+        float scale = _orbit.Scale(at, GizmoPixels);
+        List<EntityHandle> faces = [.. Faces(target)];
+        object? held = EntityHandles.Grab(faces, origin, direction, p => _orbit.Scale(p, KnobPixels) / EntityHandles.GrabRadius) is { } face
+            ? new BoxFace(face, faces.IndexOf(face.Handle), HkxShapeEdit.Size(HkxShapeEdit.Leaf(target.Link)))
+            : _tool == HkxTool.Move ? (object?)TranslateGizmo.Grab(origin, direction, at, scale) : RotateGizmo.Grab(origin, direction, at, scale);
+        if (held is null)
         {
             return;
         }
 
-        HkxObject leaf = HkxShapeEdit.Leaf(target.Link);
-        _drag = new Drag(_session.File.Write(), target.Primitive.ToModel, HkxShapeEdit.ParentToModel(target.Link, target.Primitive.ToModel),
-            leaf.Class.Name == "hkpBoxShape" ? HkxShapeEdit.Size(leaf) : default, move, turn, face, face is { } held ? faces.IndexOf(held.Handle) : -1);
+        _drag = new Drag(_session.Bytes, target.Primitive.ToModel, HkxShapeEdit.ParentToModel(target.Link, target.Primitive.ToModel), held);
         HkxFrame.CaptureMouse();
         ShowGizmo();
         e.Handled = true;
@@ -114,34 +102,27 @@ public partial class HkxTabView
             return;
         }
         (Vector3 origin, Vector3 direction) = _orbit.Ray(e.GetPosition(HkxViewport));
-        HkxObject leaf = HkxShapeEdit.Leaf(target.Link);
-        if (drag.Move is { } move && TranslateGizmo.Follow(move, origin, direction) is { } position)
+        switch (drag.Held)
         {
-            HkxShapeEdit.PlaceInModel(target.Link, drag.ParentToModel, drag.ToModel * Matrix4x4.CreateTranslation(position - move.Origin));
-        }
-        else if (drag.Turn is { } turn && RotateGizmo.Follow(turn, origin, direction) is { } degrees)
-        {
-            Matrix4x4 about = Matrix4x4.CreateTranslation(-turn.Origin)
-                * Matrix4x4.CreateFromAxisAngle(TranslateGizmo.Direction(turn.Axis), degrees * MathF.PI / 180)
-                * Matrix4x4.CreateTranslation(turn.Origin);
-            HkxShapeEdit.PlaceInModel(target.Link, drag.ParentToModel, drag.ToModel * about);
-        }
-        else if (drag.Face is { } face
-            && TranslateGizmo.ClosestApproach(origin, direction, face.Handle.Centre, face.Handle.Direction) is { } approach)
-        {
-            // From where the box started, so that each step moves its face from the opposite one rather than adding up.
-            HkxShapeEdit.Resize(leaf, drag.Size);
-            HkxShapeEdit.PlaceInModel(target.Link, drag.ParentToModel, drag.ToModel);
-            HkxShapeEdit.Stretch(target.Link, face.Handle.Axis, drag.FaceIndex % 2 == 0 ? 1 : -1, face.Handle.Extent + approach.Arm - face.Grip);
-        }
-        else
-        {
-            return;
+            case GizmoGrab move when TranslateGizmo.Follow(move, origin, direction) is { } position:
+                HkxShapeEdit.PlaceInModel(target.Link, drag.ParentToModel, drag.ToModel * Matrix4x4.CreateTranslation(position - move.Origin));
+                break;
+            case RotateGrab turn when RotateGizmo.Follow(turn, origin, direction) is { } degrees:
+                Matrix4x4 about = Matrix4x4.CreateTranslation(-turn.Origin)
+                    * Matrix4x4.CreateFromAxisAngle(TranslateGizmo.Direction(turn.Axis), degrees * MathF.PI / 180)
+                    * Matrix4x4.CreateTranslation(turn.Origin);
+                HkxShapeEdit.PlaceInModel(target.Link, drag.ParentToModel, drag.ToModel * about);
+                break;
+            case BoxFace face when TranslateGizmo.ClosestApproach(origin, direction, face.Grab.Handle.Centre, face.Grab.Handle.Direction) is { } approach:
+                HkxShapeEdit.Stretch(target.Link, drag.ParentToModel, drag.ToModel, face.Size, face.Face, face.Grab.Handle.Extent + approach.Arm - face.Grab.Grip);
+                break;
+            default:
+                return;
         }
 
-        List<HkxPrimitive> live = [.. HkxShapes.Read(_session!.File).SelectMany(BodiesOf).Where(b => IsShownBody(b.Label)).SelectMany(b => b.Primitives())];
-        _scene.Show(live);
-        HkxPrimitive moved = live.FirstOrDefault(p => p.Shape == leaf) ?? target.Primitive;
+        HkxObject leaf = HkxShapeEdit.Leaf(target.Link);
+        HkxPrimitive moved = HkxShapes.Leaf(leaf, HkxShapeEdit.Local(target.Link.Target!) * drag.ParentToModel)!;
+        _scene.Show(Shown().Select(p => p.Shape == leaf ? moved : p));
         _scene.Highlight(new HashSet<HkxPrimitive> { moved });
         _target = (target.Link, moved);
         ShowGizmo();
@@ -169,10 +150,9 @@ public partial class HkxTabView
         {
             HkxFrame.ReleaseMouseCapture();
         }
-        string label = drag.Face is not null ? "resize a box" : drag.Turn is not null ? "turn a shape" : "move a shape";
         if (keep)
         {
-            _session!.Commit(label, drag.Before);
+            _session!.Commit(drag.Held switch { BoxFace => "resize a box", RotateGrab => "turn a shape", _ => "move a shape" }, drag.Before);
         }
         else
         {
@@ -195,9 +175,4 @@ public partial class HkxTabView
         SetTool(key == Key.T ? HkxTool.Move : HkxTool.Turn);
         return true;
     }
-
-    private static IEnumerable<HkxNode> BodiesOf(HkxNode node)
-        => node.Kind == HkxNodeKind.Body ? [node] : node.Children.SelectMany(BodiesOf);
-
-    private bool IsShownBody(string label) => _roots.SelectMany(r => r.Bodies()).Any(b => b.IsShown && b.Node.Label == label);
 }

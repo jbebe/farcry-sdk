@@ -64,13 +64,7 @@ public static class EntityHandles
         if (FcbEntityFields.FindComponent(node, WorldHashes.CProximityTriggerComponent) is { } trigger
             && FcbEntityFields.ReadVector3(trigger, WorldHashes.VectorSize) is { } size)
         {
-            Vector3[] axes = TriggerVolume.Axes(entity.Angles.Z);
-            for (int face = 0; face < 6; face++)
-            {
-                int axis = face / 2;
-                handles.Add(new EntityHandle(HandleKind.Face, axis, position,
-                    face % 2 == 0 ? axes[axis] : -axes[axis], size[axis] * 0.5f));
-            }
+            handles.AddRange(BoxFaces(position, TriggerVolume.Axes(entity.Angles.Z), size * 0.5f));
         }
 
         if (FcbEntityFields.FindComponent(node, WorldHashes.CDynamicLightComponent) is { } light)
@@ -87,6 +81,14 @@ public static class EntityHandles
         }
         return handles;
     }
+
+    /// <summary>
+    /// A handle on each face of a box: face 2k on the + side of axis k, face 2k + 1 on the - side.
+    /// <paramref name="axes"/> are the box's own unit axes, <paramref name="half"/> its half size along each.
+    /// </summary>
+    public static IReadOnlyList<EntityHandle> BoxFaces(Vector3 centre, Vector3[] axes, Vector3 half)
+        => [.. Enumerable.Range(0, 6).Select(face => new EntityHandle(HandleKind.Face, face / 2, centre,
+            face % 2 == 0 ? axes[face / 2] : -axes[face / 2], half[face / 2]))];
 
     /// <summary>Which way a spot shines: its local +Y, which is why every ceiling spot is turned -90
     /// about X.</summary>

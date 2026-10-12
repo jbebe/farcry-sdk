@@ -29,11 +29,11 @@ public sealed class HkxEditSessionTests
         byte[] edited = session.File.Write();
         Assert.True(session.IsDirty);
 
-        session.Undo();
+        session.History.Undo();
         Assert.False(session.IsDirty);
         Assert.Equal(bytes, session.File.Write());
 
-        session.Redo();
+        session.History.Redo();
         Assert.True(session.IsDirty);
         Assert.Equal(edited, session.File.Write());
         Assert.Equal([false, true, true], reparsed);
@@ -51,7 +51,7 @@ public sealed class HkxEditSessionTests
         session.Edit("Raise the seat", () => Raise(session.File, 1), mergeKey: "seat");
         session.Edit("Raise the seat", () => Raise(session.File, 1), mergeKey: "seat");
 
-        session.Undo();
+        session.History.Undo();
 
         Assert.False(session.History.CanUndo);
         Assert.Equal(bytes, session.File.Write());

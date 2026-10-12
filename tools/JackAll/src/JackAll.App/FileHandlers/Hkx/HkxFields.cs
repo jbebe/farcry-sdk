@@ -13,45 +13,35 @@ internal static class HkxFields
     /// </summary>
     public static PropertyRow? For(HkxObject o, HkxDumpLine line, Action<byte[]> write)
     {
-        HkMember m = line.Member;
-        if (m.Type == HkType.Enum)
-        {
-            return m.Enum is { } choices ? Choice(o, line, choices, write) : null;
-        }
-        if (Type(m.Type) is not { } type)
+        if (Field(o, line) is not var (type, bytes, names, save))
         {
             return null;
         }
-        PropertyRow row = PropertyRow.Build(0, line.Path, type, o.GetRaw(line.FullPath), null);
+        PropertyRow row = PropertyRow.Build(0, line.Path, type, bytes, null, names);
         row.Changed += () =>
         {
             if (row.IsRowValid)
             {
-                write(row.EncodeValue());
+                write(save(row.EncodeValue()));
             }
         };
         return row;
     }
 
-    // An enum as a pick of its names; the row holds the pick's index, the member the value of that name.
-    private static PropertyRow? Choice(HkxObject o, HkxDumpLine line, HkEnum choices, Action<byte[]> write)
+    // The type a value is edited as, its bytes as that type, an enum's names, and how an edit's bytes are saved.
+    private static (FcbMemberType Type, byte[] Bytes, string[]? Names, Func<byte[], byte[]> Save)? Field(HkxObject o, HkxDumpLine line)
     {
-        byte[] saved = o.GetRaw(line.FullPath);
-        int value = o.GetInt(line.FullPath);
-        int index = choices.Items.Select(i => i.Value).ToList().IndexOf(value);
-        if (index < 0)
+        HkMember m = line.Member;
+        if (m.Type != HkType.Enum)
         {
-            return null;
+            return Type(m.Type) is { } type ? (type, o.GetRaw(line.FullPath), null, bytes => bytes) : null;
         }
-        PropertyRow row = PropertyRow.Build(0, line.Path, FcbMemberType.Enum, BitConverter.GetBytes((uint)index), null, [.. choices.Items.Select(i => i.Name)]);
-        row.Changed += () =>
-        {
-            if (row.IsRowValid)
-            {
-                write(BitConverter.GetBytes(choices.Items[(int)BitConverter.ToUInt32(row.EncodeValue())].Value)[..saved.Length]);
-            }
-        };
-        return row;
+        // An enum is a pick of its names: the row holds the pick's index, the member the value of that name.
+        int width = o.GetRaw(line.FullPath).Length;
+        int[] values = [.. m.Enum?.Items.Select(i => i.Value) ?? []];
+        int index = Array.IndexOf(values, o.GetInt(line.FullPath));
+        return index < 0 ? null : (FcbMemberType.Enum, BitConverter.GetBytes((uint)index), [.. m.Enum!.Items.Select(i => i.Name)],
+            bytes => BitConverter.GetBytes(values[BitConverter.ToUInt32(bytes)])[..width]);
     }
 
     private static FcbMemberType? Type(HkType type) => type switch

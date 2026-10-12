@@ -22,20 +22,20 @@ public static class HkxCaches
         bool modified = file.Objects().Any(o => o.Class.Name == "nomadPartModifiersGroup");
         var written = new List<string>();
         // Every shipped translate and transform shape carries exactly the radius of the shape it wraps.
-        foreach (HkxObject wrapper in file.Objects().Where(o => o.Class.Name is "hkpConvexTranslateShape" or "hkpConvexTransformShape"))
+        foreach (HkxObject wrapper in file.Objects().Where(HkxShapes.IsWrapper))
         {
             float[] radius = wrapper.GetPointer("childShape.childShape")?.GetReals("radius") ?? wrapper.GetReals("radius");
             written.AddRange(Set(wrapper, "radius", radius).Select(path => $"{wrapper.Class.Name}: {path}"));
         }
         foreach ((string name, HkxObject body) in Bodies(file))
         {
-            if (before.GetValueOrDefault(name)?.GetPointer("collidable.shape") is not { } was || body.GetPointer("collidable.shape") is not { } shape)
+            if (before.GetValueOrDefault(name) is not { } oldBody || oldBody.GetPointer("collidable.shape") is not { } was || body.GetPointer("collidable.shape") is not { } shape)
             {
                 continue;
             }
             try
             {
-                written.AddRange(Refresh(body, shape, before[name], was, modified).Select(path => $"{name}: {path}"));
+                written.AddRange(Refresh(body, shape, oldBody, was, modified).Select(path => $"{name}: {path}"));
             }
             catch (NotSupportedException)
             {
@@ -47,15 +47,15 @@ public static class HkxCaches
     private static IEnumerable<string> Refresh(HkxObject body, HkxObject shape, HkxObject oldBody, HkxObject oldShape, bool modified)
     {
         var written = new List<string>();
-        if (Collection(shape) is { } collection && Collection(oldShape) is { } oldCollection && collection.Class == oldCollection.Class)
+        if (HkxShapes.Collection(shape) is { } collection && HkxShapes.Collection(oldShape) is { } oldCollection && collection.Class == oldCollection.Class)
         {
             (Vector3 min, Vector3 max) = HkxShapes.Bounds(collection);
             (Vector3 oldMin, Vector3 oldMax) = HkxShapes.Bounds(oldCollection);
             float[] half = oldCollection.GetReals("aabbHalfExtents"), centre = oldCollection.GetReals("aabbCenter");
             if (min != oldMin || max != oldMax)
             {
-                Vector3 low = Vec(centre) - Vec(half) + min - oldMin, high = Vec(centre) + Vec(half) + max - oldMax;
-                (half, centre) = ([.. Lanes((high - low) / 2), half[3]], [.. Lanes((low + high) / 2), centre[3]]);
+                Vector3 low = HkxShapes.Vec(centre) - HkxShapes.Vec(half) + min - oldMin, high = HkxShapes.Vec(centre) + HkxShapes.Vec(half) + max - oldMax;
+                (half, centre) = (HkxShapes.Lanes((high - low) / 2, half[3]), HkxShapes.Lanes((low + high) / 2, centre[3]));
             }
             written.AddRange(Set(collection, "aabbHalfExtents", half).Concat(Set(collection, "aabbCenter", centre)));
             if (shape.Class.Name == "hkpMoppBvTreeShape")
@@ -91,17 +91,9 @@ public static class HkxCaches
     private static float Radius(HkxObject body, HkxObject shape)
     {
         (Vector3 min, Vector3 max) = HkxShapes.Bounds(shape);
-        return Vector3.Distance((min + max) / 2, Vec(body.GetReals("motion.motionState.sweptTransform.centerOfMassLocal")))
+        return Vector3.Distance((min + max) / 2, HkxShapes.Vec(body.GetReals("motion.motionState.sweptTransform.centerOfMassLocal")))
             + Vector3.Distance(min, max) / 2;
     }
-
-    // The list or extended mesh a body's shape is, or that its MOPP wraps.
-    private static HkxObject? Collection(HkxObject shape) => shape.Class.Name switch
-    {
-        "hkpMoppBvTreeShape" => shape.GetPointer("child.childShape"),
-        "hkpListShape" or "hkpStorageExtendedMeshShape" => shape,
-        _ => null,
-    };
 
     // Each rigid body by its name, with an occurrence number after a repeated one.
     private static Dictionary<string, HkxObject> Bodies(HkxFile file)
@@ -130,7 +122,4 @@ public static class HkxCaches
         return [path];
     }
 
-    private static Vector3 Vec(float[] f) => new(f[0], f[1], f[2]);
-
-    private static float[] Lanes(Vector3 v) => [v.X, v.Y, v.Z];
 }

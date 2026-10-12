@@ -1,15 +1,9 @@
 namespace JackAll.Tools.World;
 
-/// <summary>One undoable change to a loaded world or an edited file, already applied when it is pushed.</summary>
+/// <summary>One undoable change, already applied when it is pushed.</summary>
 public interface IEditStep
 {
     string Label { get; }
-
-    /// <summary>The entities the step touches.</summary>
-    IReadOnlyCollection<WorldEntity> Entities { get; }
-
-    /// <summary>Whether undoing or redoing it adds or removes entities, rather than changing them.</summary>
-    bool ChangesMembership { get; }
 
     void Undo();
 
@@ -18,6 +12,16 @@ public interface IEditStep
     /// <summary>Folds <paramref name="next"/> into this step when both are one continuous edit, such as
     /// keystrokes into the same field.</summary>
     bool TryMerge(IEditStep next);
+}
+
+/// <summary>One undoable change to a loaded world.</summary>
+public interface IWorldEditStep : IEditStep
+{
+    /// <summary>The entities the step touches.</summary>
+    IReadOnlyCollection<WorldEntity> Entities { get; }
+
+    /// <summary>Whether undoing or redoing it adds or removes entities, rather than changing them.</summary>
+    bool ChangesMembership { get; }
 }
 
 /// <summary>Undo and redo stacks: the Map tab's for one loaded world, an editor tab's for one file.</summary>
