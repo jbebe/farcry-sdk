@@ -10,7 +10,6 @@ match:
   - "**/entitylibrary*.fcb/vehicle/**#**/FOV/fFOVAngle"
 exclude: []
 requires: []
-existing: mods/UFCP — src/options/fov.cpp (Vehicle field of view option, at run time)
 verified: diff
 ---
 

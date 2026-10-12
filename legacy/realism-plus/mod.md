@@ -109,8 +109,8 @@ lines are covered. 134 pages: 114 components, 2 shared pieces, 8 bundles, 10 noi
 - **Dead edits:** 1,355 changes edit archetype copies the game never reads. All of them are on two
   noise pages: placeholder DLC vehicles and DLC weapon stubs copied into the override library.
 - **One no-artifact page:** the machete unlock lives in a registry file, outside the game files.
-- **Already in this repo:** the Jackal tapes, predecessor tapes and machetes (UFCP), the mouse cap,
-  frame cap and iron-sight FOV (UFCP options), and the rim light and grade (Sky Overhaul).
+- **Already in this repo:** the Jackal tapes, predecessor tapes and machetes (UFCP), the mouse cap
+  and frame cap (UFCP options), and the rim light and grade (Sky Overhaul).
 - **The detailed v2.1 notes promise some things the data does not show.** Those notes are not the
   published claims, so they are not coverage gaps:
   - no "Colt 1911" rename;

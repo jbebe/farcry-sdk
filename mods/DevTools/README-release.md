@@ -24,6 +24,8 @@ Always applied.
   instead of booting straight into that save. It is the command line's own way to skip the menus,
   and the fastest way to test the same spot in the game over and over. The name needs its `.sav`
   extension.
+- **Skip intro** — the logo and rating movies no longer play on every launch.
+- **Skip title screen** — the menu appears without waiting behind "press any key".
 
 ## Options
 
@@ -35,3 +37,7 @@ exactly as it shipped until you change it.
   Turning this on lists and runs them: loading a level, setting health, teleporting to the current
   objective, the AI debug view and about fifty more. Commands meant for multiplayer or the editor
   stay hidden, because that is a separate filter this does not touch.
+
+## Credits
+
+Skip intro and skip title screen are ported from **FC2JackalFix** by Joshhhuaaa and TGP482 (MIT).

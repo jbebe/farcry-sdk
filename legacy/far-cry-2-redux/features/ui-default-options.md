@@ -10,7 +10,7 @@ match:
   - "engine/settings/defaultsoundconfig.xml#@MusicEnabled"
 exclude: []
 requires: []
-existing: mods/UFCP — Skip intro videos option (SkipIntroMovies only)
+existing: mods/DevTools — src/fixes/skip_intro.cpp (SkipIntroMovies only)
 verified: diff
 ---
 

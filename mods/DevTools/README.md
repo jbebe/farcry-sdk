@@ -15,6 +15,10 @@ Applied unconditionally, with no setting.
 - **Savegame launch** — `-load <name>.sav` quit to desktop in a fraction of a second instead of
   booting straight into the save. The command line's own way to skip the menus, unusable as shipped,
   and the difference between testing a change in seconds and clicking through them every time.
+- **Skip intro** — the Ubisoft, Dunia and rating movies no longer play on every launch. The splash
+  page's own `SkipIntroMovies` path is taken unconditionally; the profile flag is left alone.
+- **Skip title screen** — the menu appears without waiting behind "press any key". The main menu's
+  initial state falls straight through into the next.
 
 ## Options
 
@@ -289,6 +293,36 @@ The save name needs its extension — `-load <name>.sav`, not `-load <name>`. Th
 the parser takes the basename verbatim and appends nothing, so a name without `.sav` genuinely
 matches no file.
 
+## Credits and licences
+
+Skip intro and skip title screen are ported from [FC2JackalFix](../../tools/third-party/FC2JackalFix)
+by Joshhhuaaa and TGP482, and each file names the module it came from. Those files are covered by
+FC2JackalFix's licence, reproduced in full:
+
+```
+MIT License
+
+Copyright (c) 2026 Joshhhuaaa, TGP482
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## How a feature finds the code it patches
 
 Every site *in `Dunia.dll`* is found one of two ways. The fixes and options patch code inside a
@@ -358,7 +392,7 @@ of the game in the repository. Run it after touching a pattern.
 Everything below needs a real install:
 
 - `bin\fcse.log` shows `DevTools loaded`, then `-load: savegame launches skip the post-load pass
-  until the engine exists`.
+  until the engine exists`, `intro videos skipped` and `title screen skipped`.
 - **Savegame launch** *(run, works)*: `FCSE.exe -load <name>.sav` boots straight into that save.
 - `bin\fcse.ini` gains a `[DevTools]` group with `Developer console = false`.
 - Toggling Developer console logs `developer console: on` or `off`; a build where a gate could not

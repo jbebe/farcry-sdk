@@ -10,7 +10,6 @@ match:
   - "**/entitylibrary*.fcb/weaponproperties/**#**/fIronsightFOV"
 exclude: []
 requires: []
-existing: mods/UFCP — src/options/fov.cpp (Ironsight field of view option, at run time)
 verified: diff
 ---
 

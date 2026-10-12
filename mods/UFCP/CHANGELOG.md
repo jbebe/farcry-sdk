@@ -8,20 +8,17 @@ Most of this is ported from FC2JackalFix (MIT, Joshhhuaaa and TGP482) — see th
 
 ### Added
 
-- Fixes: the mouse speed cap, controller vibration, the loading screen's timer resolution, and the
-  engine's CPU and GPU utilisation.
+- Fixes: the mouse speed cap, the loading screen's timer resolution, and the engine's CPU and GPU
+  utilisation.
 - Fix: grass lit under spot lights. Headlights and flashlights now light the grass they shine on.
-- Options: viewmodel, ironsight and vehicle fields of view; mouse and controller look sensitivity;
-  controller aim assist; aim, controller aim and sprint toggles; full turn rate while sprinting;
-  skip intro videos; skip title screen; maximum frame rate; borderless display mode.
-- `src/engine/`, for seams shared by more than one feature: which input device is in use, the single
-  `RunGame` detour, and a byte patch an option can turn off again.
+- Options: mouse and controller look sensitivity; maximum frame rate; borderless display mode.
+- `src/engine/`, for seams shared by more than one feature: the single `RunGame` detour, and whether
+  an engine pointer is still readable.
 
 ### Changed
 
-- **Three options now default to changing the game**, where every option previously defaulted to
-  leaving it as it shipped: skip intro videos, skip title screen, and a 60 Hz frame cap. Each is one
-  row away from the stock behaviour.
-- **Field of view** is now the whole feature rather than the base value alone. It covers the weapon
-  and arms, the sights and vehicles, and carries the compensations that keep cutscenes, ladders, the
+- **The frame cap now defaults to 60 Hz**, where every option previously defaulted to leaving the
+  game as it shipped. It is one row away from the stock behaviour.
+- **Field of view** is now the whole feature rather than the base value alone. One slider sets the
+  view on foot, and carries the compensations that keep the weapon and arms, cutscenes, ladders, the
   hang glider, muzzle particles and the map's markers correct at a raised field of view.

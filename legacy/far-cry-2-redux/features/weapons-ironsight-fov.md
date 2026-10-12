@@ -17,7 +17,6 @@ exclude:
   - "**/weaponproperties/dlc1/crossbow{,/*}.xml#**"
   - "**/weaponproperties/special/lpo50/multi.xml#**"
 requires: []
-existing: mods/UFCP — src/options/fov.cpp (Ironsight field of view option, at run time)
 verified: diff
 ---
 

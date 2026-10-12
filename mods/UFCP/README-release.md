@@ -28,8 +28,6 @@ Always applied. A fix that needs a switch is a preference in disguise.
 - **Exit crash** — quitting through Exit Game faulted instead of closing cleanly.
 - **Mouse speed cap** — a fast flick turned the view less far than a slow one, because the gamepad's
   output ceiling was applied to the mouse as well.
-- **Controller vibration** — no pad ever rumbled on PC. Everything for it was there; the two motor
-  amplitudes were pushed as zeroes.
 - **High-precision timer** — loading screens ran far below the 30 FPS they are paced for.
 - **CPU and GPU utilisation** — the job pool was sized for two-core machines, idle workers spun in
   the queue's critical section, the GPU could never run a frame ahead, and with a frame cap set the
@@ -41,20 +39,15 @@ and registry key they depended on are gone. Nothing anyone can still buy is bypa
 
 ## Options
 
-In the Mod Configuration Menu, on the Options screen, saved in `bin\fcse.ini`. All but three leave
-the game exactly as it shipped until you change them — the intro and title screen are skipped and
-the frame rate is capped at 60 out of the box, each one row away from the stock behaviour.
+In the Mod Configuration Menu, on the Options screen, saved in `bin\fcse.ini`. All but one leave
+the game exactly as it shipped until you change them — the frame rate is capped at 60 out of the
+box, one row away from the stock behaviour.
 
-- **Field of view** — 65 to 120 degrees, default 75, the game's own. Separate rows set the weapon
-  and arms, the sights and vehicles. Scopes keep their zoom, and cutscenes, ladders and the hang
+- **Field of view** — 65 to 120 degrees, default 75, the game's own. The view on foot; the weapon
+  and arms, the sights, scopes and vehicles keep their own, and cutscenes, ladders and the hang
   glider keep their own framing.
 - **Mouse and controller look sensitivity** — on top of the in-game slider and past its ceiling,
   separately per device.
-- **Controller aim assist** — on by default, which is the game's own behaviour.
-- **Aim toggle, controller aim toggle, sprint toggle** — tap to hold the state, tap again to drop
-  it. Holding the button still works exactly as before.
-- **Full turn rate while sprinting** — removes the yaw slowdown the game applies while running.
-- **Skip intro videos** and **Skip title screen** — both on by default.
 - **Maximum frame rate** — the engine's own limiter, capped at 60 by default. Takes effect without
   a restart.
 - **Display mode** — borderless, applied on the next launch.
@@ -65,6 +58,6 @@ the frame rate is capped at 60 out of the box, each one row away from the stock 
 
 ## Credits
 
-Much of the input, field-of-view, startup and utilisation work is ported from **FC2JackalFix** by
+Much of the input, field-of-view, frame-rate and utilisation work is ported from **FC2JackalFix** by
 Joshhhuaaa and TGP482 (MIT), whose field-of-view work in turn credits **FoxAhead's Far Cry 2 Multi
 Fixer**.

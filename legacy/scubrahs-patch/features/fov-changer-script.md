@@ -10,7 +10,7 @@ match:
   - "install/far cry 2 fov changer.vbs"
 exclude: []
 requires: []
-existing: mods/UFCP — src/options/fov.cpp (the same two fields of view, set at run time)
+existing: mods/UFCP — src/options/fov.cpp (the on-foot field of view only, set at run time)
 verified: diff
 ---
 

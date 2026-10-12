@@ -56,7 +56,8 @@ say which.
   `missions-fast-travel-cost`, `economy-mission-rewards`.
 - **Already in this repo**: `jackal-tapes-repeat`, `predecessor-tapes-unlocked` and
   `machete-type-option` are UFCP fixes, byte for byte or by the same means; the FOV, frame-cap and
-  mouse pages have UFCP options; see each page's `existing`.
+  mouse pages have UFCP options, except the iron-sight and vehicle FOV pages; see each page's
+  `existing`.
 - **Needs an in-game check**: `silent-phone-call` (the DLL half disables the engine's call voice; the
   claim only holds with the script half) and every `verified: diff` page whose body lists an
   `Uncertain`.

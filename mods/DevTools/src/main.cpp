@@ -34,6 +34,10 @@
 
 // -load <save>.sav crashes to desktop instead of launching into the save.
 void ApplyLoadSavegameFix();
+// The Ubisoft, Dunia and rating movies play before the menu on every launch.
+void ApplySkipIntroFix();
+// The menu waits behind a "press any key" title screen on every launch.
+void ApplySkipTitleScreenFix();
 
 // Options that hook rather than patch. Each finds its sites at load; the overlay only flips them.
 void InstallInvincibilityHooks();
@@ -112,9 +116,11 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
 
     api->Log("DevTools loaded");
 
-    // FCSE_Load runs before any Dunia.dll engine code, so the fix is in place before the game that
+    // FCSE_Load runs before any Dunia.dll engine code, so every fix is in place before the game that
     // would read it starts.
     ApplyLoadSavegameFix();
+    ApplySkipIntroFix();
+    ApplySkipTitleScreenFix();
 
     // The frame the work runs on, the console it runs through, and the overlay that drives both.
     // Each needs the one before it, so none of them is installed alone. All three are independent of

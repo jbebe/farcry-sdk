@@ -7,14 +7,8 @@
 //
 //     76 11    jbe +11h    ; play the movie
 //
-// and NOPping it takes the skip path unconditionally. The profile flag is left alone, so a player
-// who set it themselves is unaffected either way.
-//
-// This is a preference rather than a fix: the intro is what the game shipped doing, and the default
-// here leaves it playing.
+// and NOPping it takes the skip path unconditionally. The profile flag is left alone.
 #include "fcse_api.h"
-
-#include "engine/toggle_patch.h"
 
 #include <cstdint>
 
@@ -26,23 +20,18 @@ namespace {
 
     FCSE::Relocation<uint8_t*> g_splashUpdate{FCSE::Pattern(
         "80 BE 64 01 00 00 00 75 1B A1 ?? ?? ?? ?? 83 B8 90 00 00 00 00 76 11")};
-
-    UFCP::TogglePatch g_patch{kNopBranch};
 }
 
-void InstallSkipIntroHook() {
+void ApplySkipIntroFix() {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
     if (!g_splashUpdate) {
         api->Log("skip intro: the splash page's movie branch was not found in this build - the "
-                 "intro cannot be skipped");
+                 "intro plays");
         return;
     }
 
-    g_patch.Resolve(g_splashUpdate.address() + kMovieBranch);
-}
-
-void __cdecl OnSkipIntroChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    g_patch.Set(value->asCheckbox);
-    FCSE::ApiPointer()->Log(value->asCheckbox ? "skip intro: on" : "skip intro: off");
+    if (api->Patch(g_splashUpdate.get() + kMovieBranch, kNopBranch, sizeof(kNopBranch))) {
+        api->Log("intro videos skipped");
+    }
 }

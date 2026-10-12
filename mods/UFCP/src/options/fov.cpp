@@ -1,4 +1,4 @@
-// Field of view, for the world, the weapon in hand, the sights and vehicles.
+// Field of view, on foot. The weapon and arms, the sights and vehicles keep the game's own.
 //
 // Ported from FC2JackalFix (MIT, (c) 2026 Joshhhuaaa, TGP482) - source/display/fov.ixx, which in
 // turn credits FoxAhead's Far Cry 2 Multi Fixer for the original fFOV substitution.
@@ -36,12 +36,8 @@
 namespace {
     constexpr float kPi = 3.14159265f;
 
-    // Degrees, as the settings deliver them. Zero means "leave the engine's own value alone" for
-    // the two that have no sensible stock number of their own.
+    // Degrees, as the setting delivers it.
     float g_fieldOfView = 75.0f;
-    float g_viewmodelFieldOfView = 75.0f;
-    float g_ironsightFieldOfView = 0.0f;
-    float g_vehicleFieldOfView = 0.0f;
 
     // Cutscenes, ladders and gliders break above the stock 75 - reframed shots, and the first
     // person body's own edges coming into view. 45 is the floor the engine itself clamps to.
@@ -64,10 +60,6 @@ namespace {
 
     float DegreesToRadians(float degrees) {
         return degrees * (kPi / 180.0f);
-    }
-
-    float RadiansToDegrees(float radians) {
-        return radians * (180.0f / kPi);
     }
 
     // Narrows only. Spelled out rather than std::min, which Windows.h's own macro breaks.
@@ -254,9 +246,8 @@ namespace {
     // The engine's own widescreen stretch factor.
     constexpr float kWidescreenStretch = 0.75f;
 
-    // tan(viewmodel FOV / 2), kept because the near pass wants it every frame and the setting moves
-    // at human speed.
-    std::atomic<float> g_viewmodelHalfTangent{1.0f};
+    // tan(viewmodel FOV / 2) for the game's own 75 degrees.
+    constexpr float kViewmodelHalfTangent = 0.76732699f;
 
     // How far the sights are up, sampled once a frame: zero down, one fully raised.
     std::atomic<float> g_ironsightBlend{0.0f};
@@ -277,7 +268,7 @@ namespace {
             return 1.0f;
         }
 
-        float viewmodelTan = g_viewmodelHalfTangent.load(std::memory_order_relaxed) *
+        float viewmodelTan = kViewmodelHalfTangent *
                              g_narrowTangentScale.load(std::memory_order_relaxed) *
                              kWidescreenStretch * aspect;
 
@@ -301,14 +292,9 @@ namespace {
         return g_ironsightBlend.load(std::memory_order_relaxed) > 0.0f ? 1.0f : scale;
     }
 
-    // Magnified optics use the same property, and are left alone so scopes keep their zoom.
-    constexpr float kMagnifiedOpticCutoff = 40.0f;
-
-    // The weapon property object's ironsight FOV, in radians unlike the vehicle's degrees.
-    constexpr uintptr_t kWeaponIronsightFieldOfView = 0xE4;
-
-    // Past the FLD and the FSTP that copy it into the channel, six bytes and three.
-    constexpr ptrdiff_t kIronsightFovCopied = 9;
+    // Weapon setup, past the FLD and the FSTP that copy the weapon's ironsight FOV into the pawn's
+    // channel, six bytes and three.
+    constexpr ptrdiff_t kWeaponSetupReady = 9;
 
     // The first-person camera's own FOV, on the primary base. Not 0x6C, the model's FOV: writing
     // that ties the world's field of view to the viewmodel's.
@@ -316,91 +302,19 @@ namespace {
 
     // The pawn's FOV channels, blended from a CPawnFOV rather than read where they are set. Two
     // 0x1C records: ironsight at 0x08, base at 0x24.
-    constexpr uintptr_t kPawnFovIronsightValue = 0x1C;
     constexpr uintptr_t kPawnFovIronsightWeight = 0x18;
     constexpr uintptr_t kPawnFovBaseValue = 0x38;
     constexpr uintptr_t kPawnFovBaseWeight = 0x34;
     constexpr uintptr_t kPawnFovBaseArmed = 0x29;
-    constexpr size_t kPawnFovSize = 0x60;
 
-    // No path to the struct from a global, so it is remembered where the engine hands it over, and
-    // vtable-checked before reuse: the owning pawn does not survive a load.
+    // The player's FOV channels as of the last camera frame, compared but never dereferenced.
     std::atomic<uintptr_t> g_pawnFieldOfView{0};
-    std::atomic<uintptr_t> g_pawnFieldOfViewVTable{0};
-
-    void RememberPawnFieldOfView(uintptr_t block) {
-        // Called once a frame from the blend, so a repeat pointer costs a compare rather than a
-        // page query.
-        if (block == 0 || block == g_pawnFieldOfView.load(std::memory_order_relaxed)) {
-            return;
-        }
-
-        if (!IsReadableStruct(block, kPawnFovSize)) {
-            return;
-        }
-
-        g_pawnFieldOfView.store(block, std::memory_order_relaxed);
-
-        // Learned from the first struct handed over, so no pattern is spent finding the vtable.
-        if (g_pawnFieldOfViewVTable.load(std::memory_order_relaxed) == 0) {
-            g_pawnFieldOfViewVTable.store(*reinterpret_cast<uintptr_t*>(block),
-                                          std::memory_order_relaxed);
-        }
-    }
-
-    uintptr_t LivePawnFieldOfView() {
-        const uintptr_t block = g_pawnFieldOfView.load(std::memory_order_relaxed);
-        const uintptr_t vtable = g_pawnFieldOfViewVTable.load(std::memory_order_relaxed);
-
-        if (block == 0 || vtable == 0 || !IsReadableStruct(block, kPawnFovSize)) {
-            return 0;
-        }
-
-        return *reinterpret_cast<uintptr_t*>(block) == vtable ? block : 0;
-    }
-
-    // Whether the player's own weapon is a magnified optic. An already-pushed value reads back as a
-    // scope, so the push cannot judge it; the setup hook decides and leaves the answer here.
-    std::atomic<bool> g_ironsightIsMagnifiedOptic{false};
 
     // The seat FOV push is the only place the paraglider is identified, so the answer is kept.
     std::atomic<bool> g_seatIsParaglider{false};
 
-    // Re-pushes both channels from the settings, so a change reaches the pawn without waiting for
-    // the next weapon setup or seat. Armed flags are only set where one already was, so a player on
-    // foot is never handed a vehicle's field of view.
-    void PushPawnFieldOfView() {
-        const uintptr_t block = LivePawnFieldOfView();
-        if (block == 0) {
-            return;
-        }
-
-        if (g_ironsightFieldOfView > 0.0f &&
-            !g_ironsightIsMagnifiedOptic.load(std::memory_order_relaxed)) {
-            *reinterpret_cast<float*>(block + kPawnFovIronsightValue) =
-                DegreesToRadians(g_ironsightFieldOfView);
-        }
-
-        if (*reinterpret_cast<uint8_t*>(block + kPawnFovBaseArmed) == 0) {
-            return;
-        }
-
-        // The paraglider takes the glider ceiling and never the vehicle setting, because this push
-        // lands after the seat clamp. Written outright, since narrowing could not raise it back.
-        if (g_seatIsParaglider.load(std::memory_order_relaxed) &&
-            g_vehicleFovWeight.load(std::memory_order_relaxed) > 0.0f) {
-            *reinterpret_cast<float*>(block + kPawnFovBaseValue) =
-                DegreesToRadians(GliderCeiling());
-            *reinterpret_cast<uint8_t*>(block + kPawnFovBaseArmed) = 1;
-            return;
-        }
-
-        if (g_vehicleFieldOfView > 0.0f) {
-            *reinterpret_cast<float*>(block + kPawnFovBaseValue) =
-                DegreesToRadians(g_vehicleFieldOfView);
-            *reinterpret_cast<uint8_t*>(block + kPawnFovBaseArmed) = 1;
-        }
-    }
+    // Set by a change of the setting, for the next camera frame to re-push the glider ceiling.
+    std::atomic<bool> g_gliderPushPending{false};
 
     // Muzzle particles: the weapon draws in the near pass and its flash and smoke in the world one,
     // so the two come apart once the fields of view differ. The mask is read from the owner - one
@@ -851,9 +765,10 @@ namespace {
         return 2.0f * std::atan(nearTan + (cameraTan - nearTan) * seat);
     }
 
-    // Shared by the two inlined copies of the seat FOV push. The paraglider is clamped to the
-    // glider ceiling; every other vehicle takes the setting outright.
-    void ApplySeatFieldOfView(uintptr_t vehicle) {
+    // Both seat hooks, ESI the vehicle. The paraglider is clamped to the glider ceiling; every other
+    // vehicle keeps its own.
+    void SeatFieldOfViewHandler(FCSE_MidHookContext* ctx) {
+        const uintptr_t vehicle = ctx->esi;
         const bool paraglider =
             *reinterpret_cast<uint32_t*>(vehicle + kVehicleName) == kVehicleNameParaglider;
 
@@ -862,18 +777,7 @@ namespace {
         if (paraglider) {
             NarrowFieldOfView(reinterpret_cast<float*>(vehicle + kVehicleFieldOfViewAngle),
                               GliderCeiling());
-            return;
         }
-
-        if (g_vehicleFieldOfView > 0.0f) {
-            *reinterpret_cast<float*>(vehicle + kVehicleFieldOfViewAngle) = g_vehicleFieldOfView;
-        }
-    }
-
-    // Both seat hooks: EAX the pawn's FOV channels, ESI the vehicle.
-    void SeatFieldOfViewHandler(FCSE_MidHookContext* ctx) {
-        RememberPawnFieldOfView(ctx->eax);
-        ApplySeatFieldOfView(ctx->esi);
     }
 
     void FieldOfViewSetterHandler(FCSE_MidHookContext* ctx) {
@@ -943,11 +847,22 @@ namespace {
         *reinterpret_cast<float*>(ctx->esi + kPawnCameraFieldOfView) =
             DegreesToRadians(g_fieldOfView);
 
-        RememberPawnFieldOfView(ctx->eax);
-        g_ironsightBlend.store(*reinterpret_cast<float*>(ctx->eax + kPawnFovIronsightWeight),
+        const uintptr_t block = ctx->eax;
+        const float seat = *reinterpret_cast<float*>(block + kPawnFovBaseWeight);
+
+        g_pawnFieldOfView.store(block, std::memory_order_relaxed);
+        g_ironsightBlend.store(*reinterpret_cast<float*>(block + kPawnFovIronsightWeight),
                                std::memory_order_relaxed);
-        g_vehicleFovWeight.store(*reinterpret_cast<float*>(ctx->eax + kPawnFovBaseWeight),
-                                 std::memory_order_relaxed);
+        g_vehicleFovWeight.store(seat, std::memory_order_relaxed);
+
+        // A changed setting reaches a player already in the air rather than waiting for the next
+        // seat. Written outright, since narrowing could not raise it back.
+        if (g_gliderPushPending.exchange(false, std::memory_order_relaxed) &&
+            g_seatIsParaglider.load(std::memory_order_relaxed) && seat > 0.0f &&
+            *reinterpret_cast<uint8_t*>(block + kPawnFovBaseArmed) != 0) {
+            *reinterpret_cast<float*>(block + kPawnFovBaseValue) =
+                DegreesToRadians(GliderCeiling());
+        }
 
         // The swing deadline, and the scene's layer bookkeeping: this is the one hook running every
         // frame on the gameplay thread, and the set's first-use allocation faults from the near
@@ -1035,9 +950,9 @@ namespace {
         g_narrowViewmodelCeiling.store(fov, std::memory_order_relaxed);
     }
 
-    // Ironsight FOV, taken where the weapon hands it to the pawn: the property is copied into the
-    // channel, both in radians. Never the weapon's own field, which breaks every other holder.
-    void IronsightHandler(FCSE_MidHookContext* ctx) {
+    // Weapon setup, where the weapon hands its ironsight FOV to the pawn: whether a melee weapon is
+    // now in hand. EAX is the weapon's properties.
+    void WeaponSetupHandler(FCSE_MidHookContext* ctx) {
         // Every pawn arms itself through here, so the player's channel is picked out first. An
         // unset handle is accepted, the session's first setup being his.
         const uintptr_t player = g_pawnFieldOfView.load(std::memory_order_relaxed);
@@ -1045,24 +960,9 @@ namespace {
             return;
         }
 
-        // EDI is the pawn's FOV channels, taken whether or not the setting is in use: it is the
-        // handle a later change needs.
-        RememberPawnFieldOfView(ctx->edi);
+        // EDI is the pawn's FOV channels, taken so the filter holds before the first camera frame.
+        g_pawnFieldOfView.store(ctx->edi, std::memory_order_relaxed);
         RememberMeleeWeapon(*reinterpret_cast<uint32_t*>(ctx->eax + kWeaponClass));
-
-        // In degrees for the comparison, both ends of this path being radians. Decided either way,
-        // since the push needs the answer for whatever is in hand.
-        const float weapon = *reinterpret_cast<const float*>(ctx->eax + kWeaponIronsightFieldOfView);
-        const bool optic = RadiansToDegrees(weapon) < kMagnifiedOpticCutoff;
-
-        g_ironsightIsMagnifiedOptic.store(optic, std::memory_order_relaxed);
-
-        if (g_ironsightFieldOfView <= 0.0f || optic) {
-            return;
-        }
-
-        *reinterpret_cast<float*>(ctx->edi + kPawnFovIronsightValue) =
-            DegreesToRadians(g_ironsightFieldOfView);
     }
 
     FCSE::Relocation<uint8_t*> g_setter{
@@ -1100,7 +1000,7 @@ namespace {
     FCSE::Relocation<uint8_t*> g_gliderSeatFov{FCSE::Pattern(
         "8B 4C 24 08 74 ?? E8 ?? ?? ?? ?? D9 86 30 02 00 00 D9 58 2C 8B 8E 54 02 00 00 89 48 3C "
         "F3 0F 10 86 34 02 00 00 F3 0F 59 05 ?? ?? ?? ?? F3 0F 11 40 38 C6 40 29 01")};
-    FCSE::Relocation<uint8_t*> g_ironsightFov{FCSE::Pattern("D9 80 E4 00 00 00 D9 5F 1C")};
+    FCSE::Relocation<uint8_t*> g_weaponSetup{FCSE::Pattern("D9 80 E4 00 00 00 D9 5F 1C")};
 
     // Offsets into the matches above, each naming the instruction the hook stands on.
     constexpr ptrdiff_t kViewmodelFovPushed = 9;
@@ -1202,9 +1102,9 @@ void InstallFovHook() {
                      &SeatFieldOfViewHandler);
     }
 
-    if (g_ironsightFov) {
-        api->MidHook(reinterpret_cast<void*>(g_ironsightFov.address() + kIronsightFovCopied),
-                     &IronsightHandler);
+    if (g_weaponSetup) {
+        api->MidHook(reinterpret_cast<void*>(g_weaponSetup.address() + kWeaponSetupReady),
+                     &WeaponSetupHandler);
     }
 
     FCSE::Logf("fov: hooked the camera at 0x%08zX", static_cast<size_t>(g_setter.address()));
@@ -1212,21 +1112,5 @@ void InstallFovHook() {
 
 void __cdecl OnFovChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
     g_fieldOfView = static_cast<float>(value->asSlider);
-    PushPawnFieldOfView();
-}
-
-void __cdecl OnViewmodelFovChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    g_viewmodelFieldOfView = static_cast<float>(value->asSlider);
-    g_viewmodelHalfTangent.store(std::tan(g_viewmodelFieldOfView * (kPi / 360.0f)),
-                                 std::memory_order_relaxed);
-}
-
-void __cdecl OnIronsightFovChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    g_ironsightFieldOfView = static_cast<float>(value->asSlider);
-    PushPawnFieldOfView();
-}
-
-void __cdecl OnVehicleFovChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    g_vehicleFieldOfView = static_cast<float>(value->asSlider);
-    PushPawnFieldOfView();
+    g_gliderPushPending.store(true, std::memory_order_relaxed);
 }

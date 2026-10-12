@@ -6,6 +6,9 @@ Notable changes to DevTools, loosely following
 ## [Unreleased]
 
 ### Added
+- **Skip intro** and **skip title screen** fixes, moved from UFCP and always applied: the logo and
+  rating movies and the "press any key" screen no longer stand between a launch and the menu. Ported
+  from FC2JackalFix (MIT, Joshhhuaaa and TGP482).
 - **Fast loading** option, on by default. A save load stops waiting for things a single-player
   reload never needs:
   - the request thread's sleep between passes, on four or more processors

@@ -78,8 +78,8 @@ lines are covered. 122 pages: 104 components, 8 bundles, 10 noise rules.
   file, and the women's models by copies with their head materials renamed
   ([`nav-no-gps-safehouses`](features/nav-no-gps-safehouses.md),
   [`player-roster-women`](features/player-roster-women.md)).
-- **Already in this repo:** the Multi-Fixer's fixes and options, the mouse cap, the frame cap,
-  skip intro and the iron-sight FOV (all in UFCP); the rim light and the night sky (Sky Overhaul).
+- **Already in this repo:** the Multi-Fixer's fixes and options, the mouse cap and the frame cap
+  (all in UFCP); skip intro (DevTools); the rim light and the night sky (Sky Overhaul).
 - **Needs an in-game check:**
   - whether Black Mamba starts the usual way: the HQ doorman's graph still offers A2BU07, and the
     mission's shutdown removes a buddy id nothing sets;

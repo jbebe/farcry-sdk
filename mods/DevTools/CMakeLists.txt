@@ -59,6 +59,8 @@ add_library(DevTools SHARED
   "src/engine/renderer.cpp"
   "src/engine/weather.cpp"
   "src/fixes/load_savegame.cpp"
+  "src/fixes/skip_intro.cpp"
+  "src/fixes/skip_title_screen.cpp"
   "src/options/developer_console.cpp"
   "src/options/diamonds.cpp"
   "src/options/fast_loading.cpp"

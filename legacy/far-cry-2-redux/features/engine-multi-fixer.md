@@ -12,7 +12,7 @@ match:
   - "install/bin/farcry2mflauncher.exe"
 exclude: []
 requires: []
-existing: mods/UFCP — jackal_tapes.cpp, bonus_content.cpp, skip_intro.cpp, max_frame_rate.cpp, fov.cpp (the same fixes and options, as an FCSE plugin)
+existing: mods/UFCP — jackal_tapes.cpp, bonus_content.cpp, max_frame_rate.cpp, fov.cpp; mods/DevTools — skip_intro.cpp (the same fixes and options, as FCSE plugins)
 verified: diff
 ---
 
@@ -52,4 +52,5 @@ unlocks, not data changes.
 - The bundled version is not stamped. The launcher reports `0.0.0.0`; the files are dated
   2021-07-23, the release date of Redux 3.3.
 - The tool is third-party and open source. What each patch writes in memory is in its repository,
-  not traced here. UFCP implements the same fixes and options independently as an FCSE plugin.
+  not traced here. UFCP and DevTools implement the same fixes and options independently as FCSE
+  plugins.

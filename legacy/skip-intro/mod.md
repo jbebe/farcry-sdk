@@ -46,7 +46,7 @@ have to be packed into `patch.dat` (`jackall-cli mod build`, or `legacy pick` fr
 
 `legacy check` is clean: all 6 changes are claimed by exactly one page, and all 3 lines of the
 inferred list are covered. 4 pages: 3 components, 1 bundle. Nothing is unresolved. None of it is in
-this repo already. UFCP's skip intro skips the logo movies before the menu, not the opening
+this repo already. DevTools' skip intro skips the logo movies before the menu, not the opening
 sequence.
 
 ## Published feature list

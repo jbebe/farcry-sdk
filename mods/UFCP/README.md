@@ -21,7 +21,6 @@ Applied unconditionally, with no setting — a fix that needs a switch is a pref
 | Machetes | Restores the Primitive and Homemade machete variants, held behind the same kind of check. Pick one in the game's own Options → Game → Machete Type. |
 | Exit crash | Quitting through Exit Game faulted instead of closing cleanly — the reason "Far Cry 2 crashes on exit" is folklore, and a guaranteed false positive on top of any real crash you are trying to read. |
 | Mouse speed cap | A fast flick turned the view less far than a slow one: the gamepad filter's output ceiling was applied to the mouse too, so quick movement saturated. |
-| Controller vibration | No pad ever rumbled on PC. The curves are evaluated and the dispatcher calls XInput — the two motor amplitudes were simply pushed as zeroes. |
 | High-precision timer | Loading screens ran far below the 30 FPS they are paced for, because the default 15.6 ms timer resolution overshoots every sleep. |
 | Grass under spot lights | Headlights and flashlights left grass black however close it was. The game's light pass over grass scaled the light by the fog's amount instead of by what the fog leaves, so only grass already lost in fog was lit. It also lit each clump only as far as the ground under it faced the lamp, a tenth of the light where a headlight skims along the ground. |
 | CPU and GPU utilisation | The job pool was sized for two-core machines, idle workers spun in the queue's critical section, the GPU could never run ahead a frame, and with a frame cap set the limiter burned a whole core busy-waiting. |
@@ -34,26 +33,16 @@ content is unreachable in every copy of the game.
 ## Options
 
 Preferences, where the right answer depends on the player or their hardware. One row each in the Mod
-Configuration Menu, saved under `[UFCP]` in `bin\fcse.ini`. **All but three default to leaving the
-game exactly as it shipped.** The exceptions are skip intro, skip title screen and a 60 Hz frame
-cap, which are on out of the box because they are what someone installing a patch is asking for —
-each is one row away from the stock behaviour if you disagree.
+Configuration Menu, saved under `[UFCP]` in `bin\fcse.ini`. **All but one default to leaving the
+game exactly as it shipped.** The exception is a 60 Hz frame cap, which is on out of the box because
+it is what someone installing a patch is asking for — one row away from the stock behaviour if you
+disagree.
 
 | Option | Range | Default |
 |---|---|---|
 | Field of view | 65–120 degrees | **75** — the game's own |
-| Viewmodel field of view | 45–140 degrees | **75** — the game's own |
-| Ironsight field of view | 0–140 degrees | **0** — the weapon's own |
-| Vehicle field of view | 0–140 degrees | **0** — the vehicle's own |
 | Mouse look sensitivity | 0.10×–5.00× | **1.00×** |
 | Controller look sensitivity | 0.05×–2.00× | **1.00×** |
-| Controller aim assist | on · off | **on** — the game's own helpers |
-| Aim toggle | on · off | **off** |
-| Controller aim toggle | on · off | **off** |
-| Sprint toggle | on · off | **off** |
-| Full turn rate while sprinting | on · off | **off** |
-| Skip intro videos | on · off | **on** |
-| Skip title screen | on · off | **on** |
 | Maximum frame rate | Game default · Unlocked · Screen refresh · 30–240 Hz | **60 Hz** |
 | Display mode | Game default · Borderless | **Game default** |
 | Processor affinity | All cores · Physical cores only · 4 cores · 1 core | **All cores** |
@@ -63,19 +52,14 @@ each is one row away from the stock behaviour if you disagree.
 fifteen further sites exist only to keep it honest: the weapon and arms draw in a nearer pass with
 their own projection, ladders and cutscenes frame shots a wide view spoils, the hang glider's own
 angle wins, muzzle particles are split between the two passes and come apart once the two
-projections differ, and the map's markers change pass inside a vehicle. Sights keep their own value
-unless the ironsight row is moved, and magnified optics are skipped entirely so scopes keep their
-zoom.
+projections differ, and the map's markers change pass inside a vehicle. It is the view on foot
+only: the weapon and arms stay at the game's own 75 degrees, and the sights, scopes and vehicles
+keep their own.
 
 **The two sensitivity rows** scale the value the game already loaded, so the in-game slider is left
 alone and either device can go past its ceiling. Which one applies follows what the player is
 actually looking with: pushing the right stick past the engine's dead zone claims the look, and any
 mouse or keyboard input hands it back.
-
-**Aim and sprint toggle** turn a tap into a latch by suppressing the button-up the engine would act
-on. A press longer than a quarter second still behaves exactly as it always did, tapping sprint
-while standing still cannot arm a run that never starts, and a latch is dropped when the action
-leaves the map — which is what brings the sights down on entering a vehicle.
 
 **Maximum frame rate** uses the engine's own limiter, `gfx_MaxFps`. It is set on the command line at
 launch and written into the render profile afterwards, which is what lets a change made from the
@@ -83,9 +67,6 @@ menu take effect without a restart.
 
 **Display mode** asks the engine for `-borderless`, a flag it already understands, so it applies on
 the next launch. Fullscreen and windowed are on the game's own video page already.
-
-**Full turn rate while sprinting** is a preference rather than a fix: the yaw slowdown is an
-authored value the console builds have too.
 
 **Processor affinity** is a workaround, not a fix: the engine misbehaves on machines far larger than
 anything it was tested on (the reported symptom is NPCs visibly bouncing), and giving it a smaller
@@ -141,7 +122,7 @@ package never loaded, the guard still skipped a destroyed object.
 
 ## Credits and licences
 
-Most of the input, field-of-view, startup and utilisation work here is ported from
+Most of the input, field-of-view, frame-rate and utilisation work here is ported from
 [FC2JackalFix](../../tools/third-party/FC2JackalFix) by Joshhhuaaa and TGP482, which found every one
 of those sites and documented them unusually well. Each ported file names the module it came from.
 FC2JackalFix's own field-of-view work credits FoxAhead's
