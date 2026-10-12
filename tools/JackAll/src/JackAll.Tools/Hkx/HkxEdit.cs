@@ -42,6 +42,12 @@ public static class HkxEdit
         return Integer(block.Bytes.AsSpan(at), s.Member.Type is HkType.Enum or HkType.Flags ? s.Member.Subtype : s.Member.Type);
     }
 
+    public static void SetInt(this HkxObject o, string path, int value)
+    {
+        (HkxBlock block, int at, _) = Locate(o, path, 4);
+        BinaryPrimitives.WriteInt32LittleEndian(block.Bytes.AsSpan(at), value);
+    }
+
     /// <summary>Writes a one-byte member: a bool, an 8-bit integer or enum, or a packed <c>hkUFloat8</c>.</summary>
     public static void SetByte(this HkxObject o, string path, byte value)
     {

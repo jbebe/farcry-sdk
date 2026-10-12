@@ -24,6 +24,10 @@ public sealed class HkxNode(HkxNodeKind kind, HkxObject? obj, string label)
     public HkxObject? Object { get; } = obj;
     public string Label { get; } = label;
     public HkxPrimitive? Primitive { get; init; }
+
+    /// <summary>The member that places a shape: its translate or transform shape's when it has one, else its own.</summary>
+    public HkxLink? Link { get; init; }
+
     public List<HkxNode> Children { get; } = [];
 
     /// <summary>A body's <c>HIGH_</c> or <c>NAV_</c> twin, which the game pairs with the body it is named after.</summary>
@@ -208,8 +212,8 @@ public static class HkxShapes
 
     private static Vector3 Vec(float[] f) => new(f[0], f[1], f[2]);
 
-    // The shape a MOPP, transform or translate shape wraps, the matrix placing it in the wrapper's space, and the wrapper's label.
-    private static (HkxObject? Child, Matrix4x4 Local, string Label)? Unwrap(HkxObject shape) => shape.Class.Name switch
+    /// <summary>The shape a MOPP, transform or translate shape wraps, the matrix placing it in the wrapper's space, and the wrapper's label.</summary>
+    internal static (HkxObject? Child, Matrix4x4 Local, string Label)? Unwrap(HkxObject shape) => shape.Class.Name switch
     {
         "hkpMoppBvTreeShape" => (shape.GetPointer("child.childShape"), Matrix4x4.Identity, "MOPP"),
         "hkpConvexTransformShape" => (shape.GetPointer("childShape.childShape"), Transform(shape.GetReals("transform")), "Transform"),
@@ -238,7 +242,7 @@ public static class HkxShapes
         var node = new HkxNode(HkxNodeKind.Body, body, body.GetString("name") ?? "(unnamed body)");
         if (body.GetPointer("collidable.shape") is { } shape)
         {
-            node.Children.Add(Shape(shape, Transform(body.GetReals("motion.motionState.transform"))));
+            node.Children.Add(Shape(shape, Transform(body.GetReals("motion.motionState.transform")), new HkxLink(body, "collidable.shape")));
         }
         return node;
     }
@@ -256,14 +260,15 @@ public static class HkxShapes
         return node;
     }
 
-    private static HkxNode Shape(HkxObject shape, Matrix4x4 toModel)
+    // A shape's node, `link` being the member it hangs from; a translate or transform shape passes its own on to the shape it wraps.
+    private static HkxNode Shape(HkxObject shape, Matrix4x4 toModel, HkxLink link)
     {
         if (Unwrap(shape) is var (wrapped, local, label))
         {
-            var wrapper = new HkxNode(HkxNodeKind.Shape, shape, label);
+            var wrapper = new HkxNode(HkxNodeKind.Shape, shape, label) { Link = link };
             if (wrapped is not null)
             {
-                wrapper.Children.Add(Shape(wrapped, local * toModel));
+                wrapper.Children.Add(Shape(wrapped, local * toModel, shape.Class.Name == "hkpMoppBvTreeShape" ? new HkxLink(shape, "child.childShape") : link));
             }
             return wrapper;
         }
@@ -272,27 +277,27 @@ public static class HkxShapes
         {
             case "hkpListShape":
                 int count = shape.Count("childInfo");
-                var list = new HkxNode(HkxNodeKind.Shape, shape, $"List ({count})");
+                var list = new HkxNode(HkxNodeKind.Shape, shape, $"List ({count})") { Link = link };
                 for (int i = 0; i < count; i++)
                 {
                     if (shape.GetPointer($"childInfo[{i}].shape") is { } child)
                     {
-                        list.Children.Add(Shape(child, toModel));
+                        list.Children.Add(Shape(child, toModel, new HkxLink(shape, $"childInfo[{i}].shape")));
                     }
                 }
                 return list;
             case "hkpStorageExtendedMeshShape":
-                return Mesh(shape, toModel);
+                return Mesh(shape, toModel, link);
             default:
                 return Leaf(shape, toModel) is { } primitive
-                    ? new HkxNode(HkxNodeKind.Shape, shape, Label(primitive)) { Primitive = primitive }
-                    : new HkxNode(HkxNodeKind.Shape, shape, $"{Short(shape)} (not drawn)");
+                    ? new HkxNode(HkxNodeKind.Shape, shape, Label(primitive)) { Primitive = primitive, Link = link }
+                    : new HkxNode(HkxNodeKind.Shape, shape, $"{Short(shape)} (not drawn)") { Link = link };
         }
     }
 
-    private static HkxNode Mesh(HkxObject mesh, Matrix4x4 toModel)
+    private static HkxNode Mesh(HkxObject mesh, Matrix4x4 toModel, HkxLink link)
     {
-        var node = new HkxNode(HkxNodeKind.Shape, mesh, "Extended mesh");
+        var node = new HkxNode(HkxNodeKind.Shape, mesh, "Extended mesh") { Link = link };
         List<HkxObject?> storage = mesh.GetPointers("meshstorage");
         for (int i = 0; i < storage.Count; i++)
         {
@@ -309,7 +314,13 @@ public static class HkxShapes
             Matrix4x4 local = Placement(mesh, k);
             List<HkxObject?> shapes = mesh.GetPointers($"shapesSubparts[{k}].childShapes");
             var group = new HkxNode(HkxNodeKind.Shape, mesh, $"Shapes ({shapes.Count})");
-            group.Children.AddRange(shapes.OfType<HkxObject>().Select(s => Shape(s, local * toModel)));
+            for (int j = 0; j < shapes.Count; j++)
+            {
+                if (shapes[j] is { } child)
+                {
+                    group.Children.Add(Shape(child, local * toModel, new HkxLink(mesh, $"shapesSubparts[{k}].childShapes[{j}]")));
+                }
+            }
             node.Children.Add(group);
         }
         return node;
