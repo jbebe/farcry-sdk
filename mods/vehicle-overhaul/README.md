@@ -28,7 +28,11 @@ only; shooting from the windows and the wrecks are to come.
   real empty ZIL-130: 90 km/h through its own gearbox (1.55× the top speed), 1 s gear changes, air
   brakes (0.75×), about 30° of steering lock, 2% rolling drag (0.2×), and leaf springs bouncing at
   2 Hz (0.8×) on about 15 cm of travel (1.5×), damped at 0.65× both ways. Its engine (1×) and tyre grip
-  (0.6×) are as tuned in game: the real engine on the ground's own grip spun the wheels.
+  (0.6×) are as tuned in game: the real engine on the ground's own grip spun the wheels. The Unimog
+  starts as a real Unimog 406, worked out the same way: its engine scaled to the game's 1,600 kg for the
+  real 3,900 (0.5×), 71 km/h (1.65×), 0.8 s gear changes, air brakes (0.45×), about 28° of lock (0.95×),
+  the truck's grip (0.6×) and rolling drag (0.2×), twice the inertia for its 3 m wheelbase, and coil
+  springs at 1.5 Hz (0.65×) on long travel (2×), damped at 0.5× both ways.
   - No speed limiter (retail holds a player's car near 60 km/h), longer gearing, 70% of the engine's
     torque and no climb assist.
   - Weak brakes that lock the wheels into a skid after half a second, as on a car without ABS.
@@ -39,7 +43,9 @@ only; shooting from the windows and the wrecks are to come.
     vehicle's stability factor: a Land Rover Series III tips over at 0.9 g, a Datsun 1200 at 1.3 g,
     and the buggy keeps its weight at the axles. The big truck tips at 1.1 g, lower than a real ZIL-130's
     0.85, which rolled it over in left-right turns on its soft solid axles. It also carries its weight as
-    far forward as an empty ZIL-130, 49% on the front axle, where the game put it far back. The Datsun
+    far forward as an empty ZIL-130, 49% on the front axle, where the game put it far back. The Unimog
+    tips at 1.1 g too, on the same soft solid axles; the game already puts 60% of its weight on the
+    front axle, as on a real one. The Datsun
     carries 54% on its front axle, a small front-engined car's, where the game put it so far forward
     that the rear hopped about.
   - The game gives every car a small car's inertia for its weight, so the big truck rocked on its
@@ -86,9 +92,10 @@ only; shooting from the windows and the wrecks are to come.
   loop, laid over the truck's revs compressed as the Datsun's are. It has its own recorded start, which
   its engine fades in after as it catches, 0.7 s after the key; an engine-off sound where retail's
   truck stops silently; and the Datsun's clunk on gear changes.
-- **The Unimog's engine sound.** The same, from an OM 352 six-cylinder diesel: an idle at about
-  590 rpm and one steady take at 2,470, laid over its 600 to 2,800 rpm unpitched at their own revs, with
-  its own recorded start, which its engine fades in after 0.4 s after the key. Its engine-off is the
+- **The Unimog's engine sound.** From an OM 352 six-cylinder diesel, over its 600 to 2,800 rpm: an
+  idle take heard only at idle, at its own pitch, gone by 750 rpm, and one steady take at 2,470 that
+  spans every rev above, pitched from half its rev just above idle to 1.13× at the redline. It has its
+  own recorded start, which its engine fades in after 0.4 s after the key. Its engine-off is the
   Datsun's.
 - **Quieter tyres.** Every car's tyre sounds on the ground, dirt, gravel, grass and the rest, play
   10 dB quieter, so they no longer drown out the engine.

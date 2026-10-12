@@ -38,6 +38,16 @@ namespace {
         {"Inertia", 3.6f},           {"Springs", 0.8f},            {"Travel", 1.5f},
         {"Compression damping", 0.65f}, {"Rebound damping", 0.65f}};
 
+    // A real Unimog 406 (2026-10-12), as the ZIL-130 was worked out: its OM 352's 235 N m at 71 km/h on the game's
+    // 0.54 m wheels, scaled to the game's 1,600 kg for the real 3,900; synchromesh gear changes; air brakes; about
+    // 28 degrees of lock; its pitch and yaw for its 3 m wheelbase; coil springs at 1.5 Hz on long travel.
+    constexpr Start kUnimogTuning[] = {
+        {"Engine power", 0.5f},      {"Top speed", 1.65f},         {"Shift time", 0.8f},
+        {"Downshift time", 0.8f},    {"Brake torque", 0.45f},      {"Steering lock", 0.95f},
+        {"Steering at speed", 1.0f}, {"Tyre grip", 0.6f},          {"Rolling resistance", 0.2f},
+        {"Inertia", 2.0f},           {"Springs", 0.65f},           {"Travel", 2.0f},
+        {"Compression damping", 0.5f}, {"Rebound damping", 0.5f}};
+
     // 2,120 of its 4,300 kg, empty.
     constexpr float kZilFrontWeight = 0.49f;
     constexpr float kZilGears[] = {7.45f, 4.10f, 2.29f, 1.47f, 1.00f};
@@ -53,8 +63,10 @@ namespace {
         {1200.0f, 88.0f, "Jeep Wrangler", 1.20f},
         {1200.0f, 50.0f, "Jeep Wrangler taxi", 1.20f},
         {600.0f, 80.0f, "Quad", 1.00f},
-        // An OM 352 diesel's idle and governed top, and its start take's catch, estimated from its loudness.
-        {1600.0f, 88.0f, "Unimog", 0.85f, 600.0f, 2800.0f, kShiftClunks, 0.4f, {kUnimogSprings, kUnimogSprings}},
+        // An OM 352 diesel's idle and governed top, and its start take's catch, estimated from its loudness. It tips at
+        // 1.1 g as the big truck does, on the same soft solid axles. The game's 60% on the front axle is a Unimog's.
+        {1600.0f, 88.0f, "Unimog", 1.1f, 600.0f, 2800.0f, kShiftClunks, 0.4f, {kUnimogSprings, kUnimogSprings},
+         kUnimogTuning},
         // Above the real truck's 0.85, at which it rolled over in left-right turns (2026-10-12).
         {4000.0f, 150.0f, "ZIL-130", 1.1f, 560.0f, 3200.0f, kShiftClunks, 0.7f, {kZilSprings, kZilSprings}, kZilTuning,
          kZilFrontWeight, kZilGears, 1300.0f},

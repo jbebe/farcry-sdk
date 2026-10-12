@@ -26,7 +26,13 @@ public sealed record RealVehicle(
         new("Jeep Wrangler", 1200, 88),
         new("Jeep Wrangler taxi", 1200, 50),
         new("Quad", 600, 80),
-        new("Unimog", 1600, 88, 600, 2800, ShiftClunks, 0.4f),
+        new("Unimog", 1600, 88, 600, 2800, ShiftClunks, 0.4f, new Dictionary<string, float>
+        {
+            ["Engine power"] = 0.5f, ["Top speed"] = 1.65f, ["Shift time"] = 0.8f, ["Downshift time"] = 0.8f,
+            ["Brake torque"] = 0.45f, ["Steering lock"] = 0.95f, ["Steering at speed"] = 1.0f, ["Tyre grip"] = 0.6f,
+            ["Rolling resistance"] = 0.2f, ["Inertia"] = 2.0f, ["Springs"] = 0.65f, ["Travel"] = 2.0f,
+            ["Compression damping"] = 0.5f, ["Rebound damping"] = 0.5f,
+        }),
         new("ZIL-130", 4000, 150, 560, 3200, ShiftClunks, 0.7f, new Dictionary<string, float>
         {
             ["Engine power"] = 1.0f, ["Top speed"] = 1.55f, ["Shift time"] = 1.0f, ["Downshift time"] = 1.0f,
