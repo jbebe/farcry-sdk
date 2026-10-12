@@ -1,0 +1,315 @@
+using System.Globalization;
+using System.Numerics;
+
+namespace JackAll.Tools.Hkx;
+
+public enum HkxShapeKind { Box, Hull, Mesh, Capsule }
+
+/// <summary>A drawable collision surface: triangles in the shape's own space, and the matrix placing them in the model.</summary>
+public sealed record HkxPrimitive(HkxObject Shape, HkxShapeKind Kind, Matrix4x4 ToModel, Vector3[] Vertices, int[] Triangles)
+{
+    public IEnumerable<Vector3> ModelVertices() => Vertices.Select(v => Vector3.Transform(v, ToModel));
+}
+
+/// <summary>A row of an <c>.hkx</c>'s collision tree: a variant, body, shape or constraint.</summary>
+public sealed class HkxNode(HkxObject? obj, string label)
+{
+    public HkxObject? Object { get; } = obj;
+    public string Label { get; } = label;
+    public HkxPrimitive? Primitive { get; init; }
+    public List<HkxNode> Children { get; } = [];
+
+    /// <summary>This node's surface and every one beneath it.</summary>
+    public IEnumerable<HkxPrimitive> Primitives()
+        => (Primitive is null ? Array.Empty<HkxPrimitive>() : [Primitive]).Concat(Children.SelectMany(c => c.Primitives()));
+}
+
+/// <summary>
+/// An <c>.hkx</c>'s bodies, shapes and constraints as a tree, each shape's collision surface placed in model
+/// space (Z up, as the <c>.xbg</c>). Boxes and hulls are drawn grown by their convex radius, which is where
+/// Havok collides.
+/// </summary>
+public static class HkxShapes
+{
+    private const int Int32Indices = 2;
+    private const int SphereSegments = 16, SphereRings = 8;
+
+    public static List<HkxNode> Read(HkxFile file)
+    {
+        HkxObject root = file.Root;
+        var nodes = new List<HkxNode>();
+        for (int i = 0; i < root.Count("namedVariants"); i++)
+        {
+            HkxObject? variant = root.GetPointer($"namedVariants[{i}].variant");
+            var node = new HkxNode(variant, root.GetString($"namedVariants[{i}].name") ?? variant?.Class.Name ?? "?");
+            foreach (HkxObject system in variant?.Class.Name == "hkpPhysicsData" ? variant.GetPointers("systems").OfType<HkxObject>() : Enumerable.Empty<HkxObject>())
+            {
+                node.Children.AddRange(system.GetPointers("rigidBodies").OfType<HkxObject>().Select(Body));
+                node.Children.AddRange(system.GetPointers("constraints").OfType<HkxObject>().Select(Constraint));
+            }
+            nodes.Add(node);
+        }
+        return nodes;
+    }
+
+    /// <summary>The surface of one convex shape that wraps nothing, or null for a class this does not draw.</summary>
+    public static HkxPrimitive? Leaf(HkxObject shape, Matrix4x4 toModel)
+    {
+        if (!Derives(shape.Class, "hkpConvexShape"))
+        {
+            return null;
+        }
+        float radius = shape.GetReals("radius")[0];
+        return shape.Class.Name switch
+        {
+            "hkpBoxShape" => Box(shape, Vec(shape.GetReals("halfExtents")) + new Vector3(radius), toModel),
+            "hkpSphereShape" => Capsule(shape, Vector3.Zero, Vector3.Zero, radius, toModel),
+            "hkpCapsuleShape" => Capsule(shape, Vec(shape.GetReals("vertexA")), Vec(shape.GetReals("vertexB")), radius, toModel),
+            "hkpConvexVerticesShape" when shape.GetPointer("connectivity") is not null => Hull(shape, radius, toModel),
+            _ => null,
+        };
+    }
+
+    /// <summary>
+    /// A hull's face planes from its unshrunk vertices, as Havok stores them in <c>planeEquations</c>: an outward
+    /// unit normal and the distance that puts a vertex on its face at zero.
+    /// </summary>
+    public static Vector4[] HullPlanes(HkxObject hull)
+    {
+        (Vector3[] vertices, int[][] faces) = HullFaces(hull);
+        Vector3 centre = vertices.Aggregate(Vector3.Zero, (a, v) => a + v) / vertices.Length;
+        return [.. faces.Select(f => Plane(vertices, f, centre))];
+    }
+
+    private static HkxNode Body(HkxObject body)
+    {
+        var node = new HkxNode(body, body.GetString("name") ?? "(unnamed body)");
+        if (body.GetPointer("collidable.shape") is { } shape)
+        {
+            node.Children.Add(Shape(shape, Transform(body.GetReals("motion.motionState.transform"))));
+        }
+        return node;
+    }
+
+    private static HkxNode Constraint(HkxObject constraint)
+    {
+        HkxObject? data = constraint.GetPointer("data");
+        string a = constraint.GetPointer("entities[0]")?.GetString("name") ?? "?";
+        string b = constraint.GetPointer("entities[1]")?.GetString("name") ?? "?";
+        var node = new HkxNode(constraint, $"{constraint.GetString("name")}: {Short(data)} ({a} -> {b})");
+        if (data is not null)
+        {
+            node.Children.Add(new HkxNode(data, Short(data)));
+        }
+        return node;
+    }
+
+    private static HkxNode Shape(HkxObject shape, Matrix4x4 toModel)
+    {
+        switch (shape.Class.Name)
+        {
+            case "hkpMoppBvTreeShape":
+                return Wrapper(shape, "MOPP", shape.GetPointer("child.childShape"), toModel);
+            case "hkpConvexTransformShape":
+                return Wrapper(shape, "Transform", shape.GetPointer("childShape.childShape"), Transform(shape.GetReals("transform")) * toModel);
+            case "hkpConvexTranslateShape":
+                return Wrapper(shape, "Translate", shape.GetPointer("childShape.childShape"),
+                    Matrix4x4.CreateTranslation(Vec(shape.GetReals("translation"))) * toModel);
+            case "hkpListShape":
+                var list = new HkxNode(shape, $"List ({shape.Count("childInfo")})");
+                for (int i = 0; i < shape.Count("childInfo"); i++)
+                {
+                    if (shape.GetPointer($"childInfo[{i}].shape") is { } child)
+                    {
+                        list.Children.Add(Shape(child, toModel));
+                    }
+                }
+                return list;
+            case "hkpStorageExtendedMeshShape":
+                return Mesh(shape, toModel);
+            default:
+                return Leaf(shape, toModel) is { } primitive
+                    ? new HkxNode(shape, Label(primitive)) { Primitive = primitive }
+                    : new HkxNode(shape, $"{Short(shape)} (not drawn)");
+        }
+    }
+
+    private static HkxNode Wrapper(HkxObject shape, string label, HkxObject? child, Matrix4x4 toModel)
+    {
+        var node = new HkxNode(shape, label);
+        if (child is not null)
+        {
+            node.Children.Add(Shape(child, toModel));
+        }
+        return node;
+    }
+
+    private static HkxNode Mesh(HkxObject mesh, Matrix4x4 toModel)
+    {
+        var node = new HkxNode(mesh, "Extended mesh");
+        Vector3 scale = Vec(mesh.GetReals("scaling"));
+        List<HkxObject?> storage = mesh.GetPointers("meshstorage");
+        for (int i = 0; i < mesh.Count("trianglesSubparts"); i++)
+        {
+            string part = $"trianglesSubparts[{i}].";
+            bool wide = mesh.GetInt(part + "stridingType") == Int32Indices;
+            int stride = mesh.GetInt(part + "indexStriding") / (wide ? 4 : 2);
+            int count = mesh.GetInt(part + "numTriangleShapes");
+            HkxObject subpart = storage[i]!;
+            int[] indices = subpart.GetIntArray(wide ? "indices32" : "indices16");
+            float[] v = subpart.GetRealArray("vertices");
+            Vector3[] vertices = [.. Enumerable.Range(0, v.Length / 4).Select(k => new Vector3(v[k * 4], v[k * 4 + 1], v[k * 4 + 2]) * scale)];
+            int[] triangles = [.. Enumerable.Range(0, count).SelectMany(t => indices.AsSpan(t * stride, 3).ToArray())];
+            node.Children.Add(new HkxNode(subpart, $"Triangles ({count})")
+            {
+                Primitive = new HkxPrimitive(subpart, HkxShapeKind.Mesh, toModel, vertices, triangles),
+            });
+        }
+
+        for (int k = 0; k < mesh.Count("shapesSubparts"); k++)
+        {
+            string part = $"shapesSubparts[{k}].";
+            Matrix4x4 local = mesh.GetInt(part + "rotationSet") != 0
+                ? Matrix4x4.CreateFromQuaternion(Quat(mesh.GetReals(part + "rotation")))
+                : Matrix4x4.Identity;
+            if (mesh.GetInt(part + "offsetSet") != 0)
+            {
+                local *= Matrix4x4.CreateTranslation(Vec(mesh.GetReals(part + "translation")));
+            }
+            List<HkxObject?> shapes = mesh.GetPointers(part + "childShapes");
+            var group = new HkxNode(mesh, $"Shapes ({shapes.Count})");
+            group.Children.AddRange(shapes.OfType<HkxObject>().Select(s => Shape(s, local * toModel)));
+            node.Children.Add(group);
+        }
+        return node;
+    }
+
+    private static HkxPrimitive Box(HkxObject shape, Vector3 half, Matrix4x4 toModel)
+    {
+        Vector3[] corners = [.. Enumerable.Range(0, 8).Select(i => new Vector3(
+            (i & 1) != 0 ? half.X : -half.X, (i & 2) != 0 ? half.Y : -half.Y, (i & 4) != 0 ? half.Z : -half.Z))];
+        int[][] faces = [[4, 5, 7, 6], [0, 2, 3, 1], [1, 3, 7, 5], [0, 4, 6, 2], [2, 6, 7, 3], [0, 1, 5, 4]];
+        return new HkxPrimitive(shape, HkxShapeKind.Box, toModel, corners, Fan(faces));
+    }
+
+    // A sphere split at its equator, each half centred on one end of the A-B segment.
+    private static HkxPrimitive Capsule(HkxObject shape, Vector3 a, Vector3 b, float radius, Matrix4x4 toModel)
+    {
+        Vector3 axis = a == b ? Vector3.UnitZ : Vector3.Normalize(b - a);
+        var vertices = new List<Vector3>();
+        for (int ring = 0; ring <= SphereRings; ring++)
+        {
+            float polar = MathF.PI * ring / SphereRings;
+            for (int segment = 0; segment < SphereSegments; segment++)
+            {
+                float around = 2 * MathF.PI * segment / SphereSegments;
+                var unit = new Vector3(MathF.Sin(polar) * MathF.Cos(around), MathF.Sin(polar) * MathF.Sin(around), MathF.Cos(polar));
+                vertices.Add((Vector3.Dot(unit, axis) >= 0 ? b : a) + unit * radius);
+            }
+        }
+        var triangles = new List<int>();
+        for (int ring = 0; ring < SphereRings; ring++)
+        {
+            for (int segment = 0; segment < SphereSegments; segment++)
+            {
+                int i = ring * SphereSegments + segment, j = ring * SphereSegments + (segment + 1) % SphereSegments;
+                triangles.AddRange([i, i + SphereSegments, j, j, i + SphereSegments, j + SphereSegments]);
+            }
+        }
+        return new HkxPrimitive(shape, HkxShapeKind.Capsule, toModel, [.. vertices], [.. triangles]);
+    }
+
+    // Each vertex moves out to where its faces, pushed out by the radius, meet.
+    private static HkxPrimitive Hull(HkxObject shape, float radius, Matrix4x4 toModel)
+    {
+        (Vector3[] vertices, int[][] faces) = HullFaces(shape);
+        Vector3 centre = vertices.Aggregate(Vector3.Zero, (a, v) => a + v) / vertices.Length;
+        Vector3[] normals = [.. faces.Select(f => { Vector4 p = Plane(vertices, f, centre); return new Vector3(p.X, p.Y, p.Z); })];
+        Vector3[] grown = [.. vertices.Select((v, i) => v + Push(normals.Where((_, f) => faces[f].Contains(i)), radius))];
+        return new HkxPrimitive(shape, HkxShapeKind.Hull, toModel, grown, Fan(faces));
+    }
+
+    private static (Vector3[] Vertices, int[][] Faces) HullFaces(HkxObject hull)
+    {
+        float[] packed = hull.GetRealArray("rotatedVertices");
+        // Four vertices per block of twelve floats: their x values, then their y values, then their z values.
+        Vector3[] vertices = [.. Enumerable.Range(0, hull.GetInt("numVertices")).Select(k =>
+        {
+            int block = k / 4 * 12, lane = k % 4;
+            return new Vector3(packed[block + lane], packed[block + 4 + lane], packed[block + 8 + lane]);
+        })];
+
+        HkxObject connectivity = hull.GetPointer("connectivity")!;
+        int[] indices = connectivity.GetIntArray("vertexIndices");
+        int start = 0;
+        int[][] faces = [.. connectivity.GetIntArray("numVerticesPerFace").Select(n =>
+        {
+            int[] face = indices[start..(start + n)];
+            start += n;
+            return face;
+        })];
+        return (vertices, faces);
+    }
+
+    // Newell's normal, turned to face away from the centre.
+    private static Vector4 Plane(Vector3[] vertices, int[] face, Vector3 centre)
+    {
+        Vector3 normal = default, mean = default;
+        for (int i = 0; i < face.Length; i++)
+        {
+            Vector3 p = vertices[face[i]], q = vertices[face[(i + 1) % face.Length]];
+            normal += new Vector3((p.Y - q.Y) * (p.Z + q.Z), (p.Z - q.Z) * (p.X + q.X), (p.X - q.X) * (p.Y + q.Y));
+            mean += p;
+        }
+        mean /= face.Length;
+        normal = Vector3.Normalize(normal);
+        if (Vector3.Dot(normal, mean - centre) < 0)
+        {
+            normal = -normal;
+        }
+        return new Vector4(normal, -Vector3.Dot(normal, mean));
+    }
+
+    // The offset whose distance along every face normal is the radius: least squares over the vertex's faces.
+    private static Vector3 Push(IEnumerable<Vector3> normals, float radius)
+    {
+        Matrix4x4 a = default;
+        Vector3 sum = default;
+        foreach (Vector3 n in normals)
+        {
+            a.M11 += n.X * n.X; a.M12 += n.X * n.Y; a.M13 += n.X * n.Z;
+            a.M22 += n.Y * n.Y; a.M23 += n.Y * n.Z; a.M33 += n.Z * n.Z;
+            sum += n;
+        }
+        (a.M21, a.M31, a.M32, a.M44) = (a.M12, a.M13, a.M23, 1);
+        return Matrix4x4.Invert(a, out Matrix4x4 inverse) && MathF.Abs(a.GetDeterminant()) > 1e-6f
+            ? Vector3.TransformNormal(sum * radius, inverse)
+            : Vector3.Normalize(sum) * radius;
+    }
+
+    private static int[] Fan(int[][] faces)
+        => [.. faces.SelectMany(f => Enumerable.Range(1, f.Length - 2).SelectMany(i => new[] { f[0], f[i], f[i + 1] }))];
+
+    // An hkTransform's three rotation columns and translation, each stored as a vector: the rows of a
+    // System.Numerics matrix, which transforms row vectors.
+    private static Matrix4x4 Transform(float[] f) => new(
+        f[0], f[1], f[2], 0, f[4], f[5], f[6], 0, f[8], f[9], f[10], 0, f[12], f[13], f[14], 1);
+
+    private static bool Derives(HkClass c, string name) => c.Name == name || (c.Parent is { } p && Derives(p, name));
+
+    private static Vector3 Vec(float[] f) => new(f[0], f[1], f[2]);
+
+    private static Quaternion Quat(float[] f) => new(f[0], f[1], f[2], f[3]);
+
+    private static string Short(HkxObject? o) => o?.Class.Name.Replace("hkp", "") ?? "?";
+
+    private static string Label(HkxPrimitive p) => p.Kind switch
+    {
+        HkxShapeKind.Box => $"Box {Size(p.Vertices[7] - p.Vertices[0])}",
+        HkxShapeKind.Hull => $"Hull ({p.Vertices.Length} vertices)",
+        _ => p.Shape.Class.Name == "hkpSphereShape" ? "Sphere" : "Capsule",
+    };
+
+    private static string Size(Vector3 v)
+        => string.Join(" x ", new[] { v.X, v.Y, v.Z }.Select(x => x.ToString("0.###", CultureInfo.InvariantCulture)));
+}
