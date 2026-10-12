@@ -1,3 +1,4 @@
+using System.Text;
 using System.Windows.Controls;
 using JackAll.App.FileHandlers.DepLoad;
 using JackAll.App.FileHandlers.Fcb;
@@ -14,6 +15,7 @@ using JackAll.App.FileHandlers.Xbt;
 using JackAll.Core.Mods;
 using JackAll.Core.Vfs;
 using JackAll.Tools.Fc2Model;
+using JackAll.Tools.Hkx;
 using JackAll.Tools.Mab;
 
 namespace JackAll.App.FileHandlers;
@@ -93,6 +95,10 @@ public static class FileHandlerCatalog
             { Type.Extension: "sdat" } => new SdatFileHandler(file.FileName, readContent()),
             { Type.Extension: "spk" } => new SpkFileHandler(file.FileName, readContent(), replaceContent, resolveSoundId, navigateTo),
             { Type.Extension: "mgb" } => new MgbFilePreviewHandler(readContent(), openEditor),
+            { Type.Extension: "hkx" } => BuildLauncherPreview(file, () => HkxText(readContent()),
+                () => readOriginal() is { } original ? HkxText(original) : null, openEditor,
+                "Havok collision and physics bodies - open it in the HKX editor to see them over the model.",
+                "Open in HKX Editor…", "hkx"),
             // Matched by filename suffix, not bare extension - "dat" alone is also the archive-container
             // extension, so this must not fire for anything else that happens to carry a literal .dat
             // extension in the VFS content tree. Sibling "_deploadnewparticles.rml" files are unaffected
@@ -101,6 +107,9 @@ public static class FileHandlerCatalog
                 => new DepLoadFileHandler(file.FileName, readContent()),
             _ => null,
         };
+
+    /// <summary>An <c>.hkx</c> as its dump, which is what the launcher shows and diffs.</summary>
+    private static byte[] HkxText(byte[] hkx) => Encoding.UTF8.GetBytes(HkxDump.Write(HkxFile.Parse(hkx)));
 
     /// <summary>The container a fragment row's staged path names.</summary>
     private static string ContainerOf(VfsFile file) => ContainerFormats.ContainerPathOf(file.Path) ?? "";

@@ -1,6 +1,7 @@
 using JackAll.App.FileHandlers.Domino;
 using JackAll.App.FileHandlers.Fcb;
 using JackAll.App.FileHandlers.Fcb.FcbEditor;
+using JackAll.App.FileHandlers.Hkx;
 using JackAll.App.FileHandlers.Mgb;
 using JackAll.App.FileHandlers.Sav;
 using JackAll.Core.Format;
@@ -80,6 +81,9 @@ public partial class MainWindow
                 break;
             case { Type.Extension: "mgb" }:
                 OpenMgbEditorTab(file);
+                break;
+            case { Type.Extension: "hkx" }:
+                OpenHkxEditorTab(file);
                 break;
         }
     }
@@ -326,6 +330,26 @@ public partial class MainWindow
 
         RemoveTab(tab, onRemoved);
     }
+
+    // ------------------------------------------------------------ hkx editor tabs
+
+    /// <summary>Open HKX editor tabs, keyed by the file's own hash.</summary>
+    private readonly Dictionary<ulong, TabItem> _openHkxEditors = [];
+
+    /// <summary>The Files tab's "Open in HKX Editor…". Read-only for now, so closing never prompts.</summary>
+    private void OpenHkxEditorTab(VfsFile file)
+        => OpenOrFocusEditorTab(_openHkxEditors, file.Hash, onRemoved =>
+        {
+            if (ReadForEditor(file) is not { } content)
+            {
+                return null;
+            }
+
+            var view = new HkxTabView(file.FileName, file.NameIsKnown ? file.Path : null, content);
+            var tab = new TabItem { Content = view, ToolTip = file.Path };
+            MakeClosable(tab, view.Title, () => RemoveTab(tab, onRemoved));
+            return tab;
+        });
 
     // ------------------------------------------------------------ tab chrome
 

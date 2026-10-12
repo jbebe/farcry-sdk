@@ -1,0 +1,68 @@
+<UserControl x:Class="JackAll.App.FileHandlers.Hkx.HkxTabView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:JackAll.App.FileHandlers.Hkx">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="Visible" />
+
+        <DataTemplate x:Key="InspectorRow" DataType="{x:Type local:HkxInspectorRow}">
+            <Grid Margin="{Binding Indent}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding Path, StringFormat={}{0}:}" Style="{StaticResource Mono}" Margin="0,0,6,0"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Grid.Column="1" Text="{Binding Value}" Style="{StaticResource Mono}" TextWrapping="Wrap"
+                           Visibility="{Binding IsPlain, Converter={StaticResource Visible}}" />
+                <TextBlock Grid.Column="1" Style="{StaticResource Mono}" TextWrapping="Wrap"
+                           Visibility="{Binding IsLink, Converter={StaticResource Visible}}">
+                    <Hyperlink Click="Target_Click"><Run Text="{Binding Value, Mode=OneWay}" /></Hyperlink>
+                </TextBlock>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <DockPanel Margin="12">
+        <TextBlock x:Name="HkxHeader" DockPanel.Dock="Top" Style="{StaticResource Mono}" TextWrapping="Wrap" Margin="0,0,0,8" />
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" MinWidth="200" />
+                <ColumnDefinition Width="{StaticResource SplitterSize}" />
+                <ColumnDefinition Width="4*" MinWidth="260" />
+                <ColumnDefinition Width="{StaticResource SplitterSize}" />
+                <ColumnDefinition Width="3*" MinWidth="240" />
+            </Grid.ColumnDefinitions>
+
+            <TreeView x:Name="HkxTree" SelectedItemChanged="Tree_SelectedItemChanged"
+                      ItemContainerStyle="{StaticResource BoundTreeItem}"
+                      BorderBrush="{DynamicResource BorderHairlineBrush}">
+                <TreeView.ItemTemplate>
+                    <HierarchicalDataTemplate DataType="{x:Type local:HkxTreeNode}" ItemsSource="{Binding Children}">
+                        <DockPanel>
+                            <CheckBox DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,4,0" Focusable="False"
+                                      Visibility="{Binding IsBody, Converter={StaticResource Visible}}"
+                                      IsChecked="{Binding IsShown}"
+                                      ToolTip="Draw this body's collision" />
+                            <TextBlock Text="{Binding Label}" Style="{StaticResource Mono}" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </HierarchicalDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+
+            <GridSplitter Grid.Column="1" />
+
+            <Border x:Name="HkxViewportFrame" Grid.Column="2" Style="{StaticResource PreviewFrame}" />
+
+            <GridSplitter Grid.Column="3" />
+
+            <DockPanel Grid.Column="4">
+                <TextBlock x:Name="HkxSelection" DockPanel.Dock="Top" FontWeight="Bold" Margin="8,0,0,6" />
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl x:Name="HkxInspector" Margin="8,0,0,0" ItemTemplate="{StaticResource InspectorRow}" />
+                </ScrollViewer>
+            </DockPanel>
+        </Grid>
+    </DockPanel>
+</UserControl>
