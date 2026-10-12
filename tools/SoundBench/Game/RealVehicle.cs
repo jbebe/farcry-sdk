@@ -17,7 +17,9 @@ public sealed record RealVehicle(
         new("Land Rover Series III", 1600, 95, Tuning: new Dictionary<string, float> { ["Top speed"] = 1.2f, ["Springs"] = 1.0f }),
         new("Datsun 1200", 1000, 90, 750, 6500, ShiftClunks, 0.816f, new Dictionary<string, float>
         {
-            ["Engine power"] = 1.0f, ["Shift time"] = 0.5f, ["Tyre grip"] = 0.5f, ["Rolling resistance"] = 0.0f,
+            ["Engine power"] = 0.8f, ["Shift time"] = 0.5f, ["Downshift time"] = 0.5f, ["Steering at speed"] = 1.0f,
+            ["Tyre grip"] = 0.4f, ["Rolling resistance"] = 0.0f, ["Inertia"] = 1.02f, ["Springs"] = 0.55f,
+            ["Compression damping"] = 0.48f, ["Rebound damping"] = 0.4f,
         }),
         new("Buggy", 800, 87),
         new("Jeep Liberty", 1500, 95),

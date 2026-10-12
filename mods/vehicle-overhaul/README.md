@@ -21,8 +21,10 @@ from the windows and the wrecks are to come.
 - **Off-road physics, on the car you drive.** Every physics step, the car's Havok vehicle is re-tuned
   from its own retail values, by that car's own set of tunings. Getting out puts them all back, so AI
   drivers keep the retail physics. The values below are every car's defaults. The Land Rover starts with
-  its own springs and lower gearing (1.2× its top speed); the Datsun with full engine torque, 0.5 s gear
-  changes, more tyre grip (0.5×) and no rolling resistance, as tuned in game. The big truck starts as a
+  its own springs and lower gearing (1.2× its top speed). The Datsun starts as tuned in game: 80% of its
+  engine's torque, 0.5 s gear changes both ways, its own lock at speed (1×), more tyre grip (0.4×), no
+  rolling resistance, a little more inertia (1.02×), slightly softer springs (0.55×), and dampers at
+  0.48× on compression and 0.4× on rebound. The big truck starts as a
   real empty ZIL-130: 90 km/h through its own gearbox (1.55× the top speed), 1 s gear changes, air
   brakes (0.75×), about 30° of steering lock, 2% rolling drag (0.2×), and leaf springs bouncing at
   2 Hz (0.8×) on about 15 cm of travel (1.5×), damped at 0.65× both ways. Its engine (1×) and tyre grip
@@ -50,7 +52,7 @@ from the windows and the wrecks are to come.
     axle's ends do, so the body stops rocking as quickly as on wheels sprung apart. The wheels hang half
     their suspension's length lower, and lean with the beam.
   - A wider steering lock: half as far again at a crawl, and twice as far at speed, where the game
-    narrows it. On the Datsun that is 37.5° and 20°.
+    narrows it. On a car with the Datsun's 25° and 10°, that is 37.5° and 20°.
   - Softer springs, and softer dampers, softest on the rebound, so the body squats, dives and leans
     and sways before it settles.
 
