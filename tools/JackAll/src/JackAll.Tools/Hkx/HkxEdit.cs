@@ -131,17 +131,47 @@ public static class HkxEdit
     /// <summary>Puts an element into an array of pointers at <paramref name="index"/>, moving those from there on up.</summary>
     public static void Insert(this HkxObject o, string path, int index, HkxObject element)
     {
-        (HkxBlock block, int at, HkSlot s, HkxBlock? old, int count) = Array(o, path);
-        var elements = new HkxBlock(new byte[(count + 1) * 4]);
-        foreach ((int offset, HkxRef r) in old?.Refs ?? [])
-        {
-            elements.Refs[offset < index * 4 ? offset : offset + 4] = r;
-        }
+        HkxBlock elements = Splice(o, path, index, 1);
         elements.Refs[index * 4] = new HkxPointer(element);
-        Resize(block, at, s, elements, count + 1);
     }
 
     public static void Append(this HkxObject o, string path, HkxObject element) => o.Insert(path, o.Count(path), element);
+
+    /// <summary>Puts a zeroed element into an array of structs at <paramref name="index"/>, moving those from there on up.</summary>
+    public static void InsertItem(this HkxObject o, string path, int index) => Splice(o, path, index, 1);
+
+    /// <summary>Takes the element at <paramref name="index"/> out of an array, moving those after it down.</summary>
+    public static void RemoveAt(this HkxObject o, string path, int index) => Splice(o, path, index, -1);
+
+    // An array with one zeroed element put in at `index` (by 1) or the one there taken out (by -1); the refs move with their bytes.
+    private static HkxBlock Splice(HkxObject o, string path, int index, int by)
+    {
+        (HkxBlock block, int at, HkSlot s, HkxBlock? old, int count) = Array(o, path);
+        if (index < 0 || index > count - (by < 0 ? 1 : 0))
+        {
+            throw new ArgumentOutOfRangeException(nameof(index), $"'{path}' has {count} elements; there is no place {index}.");
+        }
+        int size = HavokClasses.Default.SizeOf(s.Member.Element.Type, HkType.Void, s.Member.Element.Class), cut = index * size;
+        var elements = new HkxBlock(new byte[(count + by) * size]);
+        old?.Bytes.AsSpan(0, cut).CopyTo(elements.Bytes);
+        if (by > 0)
+        {
+            old?.Bytes.AsSpan(cut).CopyTo(elements.Bytes.AsSpan(cut + size));
+        }
+        else
+        {
+            old?.Bytes.AsSpan(cut + size).CopyTo(elements.Bytes.AsSpan(cut));
+        }
+        foreach ((int offset, HkxRef r) in old?.Refs ?? [])
+        {
+            if (offset < cut || offset >= cut + size || by > 0)
+            {
+                elements.Refs[offset < cut ? offset : offset + by * size] = r;
+            }
+        }
+        Resize(block, at, s, count + by == 0 ? null : elements, count + by);
+        return elements;
+    }
 
     internal static int Integer(ReadOnlySpan<byte> b, HkType type) => type switch
     {

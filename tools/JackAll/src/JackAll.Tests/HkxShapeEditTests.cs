@@ -9,9 +9,12 @@ public sealed class HkxShapeEditTests
     // One body at the origin: a MOPP over a list of six boxes, the seat (child 4) under a translate shape.
     private const string Chair = "Hkx/chairbar01.hkx";
 
+    // A MOPP over an extended mesh with a subpart of 36 boxes.
+    private const string Garage = "Hkx/colonialgarage02_ruin.hkx";
+
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_fixture_was_actually_found() => Fixture.AssertPresent(Chair);
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(Chair, Garage);
 
     [Fact]
     public void Each_shape_node_links_to_the_member_that_places_it()
@@ -134,6 +137,52 @@ public sealed class HkxShapeEditTests
 
         Assert.True(Distance(tilt, parent) < 1e-5f);
         Assert.True(Distance(wanted, SeatBox(file).Primitive!.ToModel) < 1e-4f);
+    }
+
+    [Fact]
+    public void A_box_added_to_the_chair_lands_where_asked_and_saves_clean()
+    {
+        if (Fixture.Read(Chair) is not { } bytes)
+        {
+            return;
+        }
+
+        HkxFile file = HkxFile.Parse(bytes);
+        HkxNode seat = SeatBox(file);
+        HkxObject list = seat.Link!.Value.Owner;
+        Matrix4x4 parent = HkxShapeEdit.ParentToModel(seat.Link.Value, seat.Primitive!.ToModel);
+
+        HkxObject box = HkxShapeEdit.AddBox(list, 4, parent, new Vector3(0.2f, 0.3f, 0.4f), Matrix4x4.CreateTranslation(0, 0, 1.5f));
+        HkxCaches.Refresh(file, HkxFile.Parse(bytes));
+        HkxFile reread = HkxFile.Parse(file.Write());
+        HkxPrimitive added = HkxShapes.Read(reread)[0].Descendants().Single(n => n.Link is { Path: "childInfo[6].shape" } && n.Primitive is not null).Primitive!;
+
+        Assert.Equal(7, list.Count("childInfo"));
+        Assert.All(Enumerable.Range(0, 7), i => Assert.Equal(7, list.GetInt($"childInfo[{i}].numChildShapes")));
+        Assert.Equal(new Vector3(0, 0, 1.5f), added.ToModel.Translation);
+        Assert.Equal(new Vector3(0.2f, 0.3f, 0.4f), HkxShapeEdit.Size(box));
+        Assert.Empty(HkxLint.Check(reread));
+    }
+
+    [Theory]
+    [InlineData(Chair, "childInfo[0].shape")]
+    [InlineData(Garage, "shapesSubparts[0].childShapes[3]")]
+    public void A_shape_taken_out_saves_clean(string fixture, string path)
+    {
+        if (Read(fixture) is not { } file || Fixture.Read(fixture) is not { } bytes)
+        {
+            return;
+        }
+
+        HkxNode node = HkxShapes.Read(file).SelectMany(n => n.Descendants()).First(n => n.Link?.Path == path);
+        int before = HkxMopp.Items(file.Objects().First(o => o.Class.Name == "hkpMoppBvTreeShape")).Count;
+
+        HkxShapeEdit.Remove(node.Link!.Value);
+        HkxCaches.Refresh(file, HkxFile.Parse(bytes));
+        HkxFile reread = HkxFile.Parse(file.Write());
+
+        Assert.Equal(before - 1, HkxMopp.Items(reread.Objects().First(o => o.Class.Name == "hkpMoppBvTreeShape")).Count);
+        Assert.Empty(HkxLint.Check(reread));
     }
 
     [Fact]

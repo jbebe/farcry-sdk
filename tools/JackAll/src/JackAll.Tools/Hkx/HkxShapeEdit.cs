@@ -99,6 +99,59 @@ public static class HkxShapeEdit
         PlaceInModel(link, parentToModel, Matrix4x4.CreateTranslation(shift) * toModel);
     }
 
+    /// <summary>
+    /// Adds a box to a list, <paramref name="size"/> from surface to surface and landing at <paramref name="toModel"/>
+    /// in the model, with the convex radius, user data and collision filter of the list's child <paramref name="like"/>.
+    /// </summary>
+    public static HkxObject AddBox(HkxObject list, int like, Matrix4x4 parentToModel, Vector3 size, Matrix4x4 toModel)
+    {
+        HkxObject sibling = Leaf(new HkxLink(list, $"childInfo[{like}].shape"));
+        float radius = sibling.GetReals("radius")[0];
+        HkxObject box = HkxEdit.Create("hkpBoxShape");
+        box.SetRaw("userData", sibling.GetRaw("userData"));
+        box.SetReals("radius", radius);
+        box.SetReals("halfExtents", 0, 0, 0, radius);
+        Resize(box, size);
+
+        int index = list.Count("childInfo");
+        list.InsertItem("childInfo", index);
+        list.SetPointer($"childInfo[{index}].shape", box);
+        list.SetRaw($"childInfo[{index}].collisionFilterInfo", list.GetRaw($"childInfo[{like}].collisionFilterInfo"));
+        Recount(list);
+        PlaceInModel(new HkxLink(list, $"childInfo[{index}].shape"), parentToModel, toModel);
+        return box;
+    }
+
+    /// <summary>Takes the shape a link places out of its list or extended mesh.</summary>
+    public static void Remove(HkxLink link)
+    {
+        int open = link.Path.LastIndexOf('['), close = link.Path.LastIndexOf(']');
+        string array = link.Path[..open];
+        int index = int.Parse(link.Path[(open + 1)..close], System.Globalization.CultureInfo.InvariantCulture);
+        switch (link.Owner.Class.Name)
+        {
+            case "hkpListShape" when array == "childInfo":
+                link.Owner.RemoveAt("childInfo", index);
+                Recount(link.Owner);
+                return;
+            case "hkpStorageExtendedMeshShape" when array.EndsWith(".childShapes", StringComparison.Ordinal):
+                link.Owner.RemoveAt(array, index);
+                return;
+            default:
+                throw new NotSupportedException($"Only a list's children and an extended mesh's shapes can be taken out, not a shape a {link.Owner.Class.Name} holds.");
+        }
+    }
+
+    // Every shipped list stores its child count in each child's numChildShapes.
+    private static void Recount(HkxObject list)
+    {
+        int count = list.Count("childInfo");
+        for (int i = 0; i < count; i++)
+        {
+            list.SetRaw($"childInfo[{i}].numChildShapes", BitConverter.GetBytes(count));
+        }
+    }
+
     private static bool IsTranslation(Matrix4x4 m)
         => Matrix4x4.CreateTranslation(m.Translation) is var t && Enumerable.Range(0, 16).All(i => MathF.Abs(m[i / 4, i % 4] - t[i / 4, i % 4]) < Tolerance);
 }
