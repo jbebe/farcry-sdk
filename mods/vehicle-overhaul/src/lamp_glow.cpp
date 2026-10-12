@@ -50,7 +50,7 @@ namespace {
 
     // Enough measurements in flight that one is always ready without waiting on the hardware.
     constexpr int kBatches = 3;
-    constexpr UINT kConstantRegisters = 2;
+    constexpr UINT kConstantRegisters = 3;
 
     // A lamp placed on screen at the sky pass, drawn at the composite. Both run in that order on the
     // render thread.
@@ -63,6 +63,9 @@ namespace {
         float glareRadius;
         float lensBrightness;
         float glareBrightness;
+        // The lamp's axis across the screen, and the cosine the lens is foreshortened by along it.
+        float axis[2];
+        float foreshortened;
     };
 
     Placed g_placed[kMaxLamps];
@@ -276,6 +279,19 @@ void OnSkyPass(const Frame::Pass& pass) {
         placed.lensBrightness = lensShows * clear;
         placed.glareBrightness = (kHaloBrightness * lensShows + kGlareBrightness * glare) * clear;
 
+        // Where a point a little along the lamp's axis lands, which way that is from the lamp.
+        float along[3];
+        for (int a = 0; a < 3; a++) {
+            along[a] = lamp.position[a] + lamp.forward[a] / forwardLength * 0.1f;
+        }
+        const Clip tip = Project(camera, along);
+        const float axisX = tip.w > 0.05f ? (tip.x / tip.w - clip.x / clip.w) * width : 0.0f;
+        const float axisY = tip.w > 0.05f ? (clip.y / clip.w - tip.y / tip.w) * height : 0.0f;
+        const float axisLength = std::sqrt(axisX * axisX + axisY * axisY);
+        placed.axis[0] = axisLength > 0.0001f ? axisX / axisLength : 1.0f;
+        placed.axis[1] = axisLength > 0.0001f ? axisY / axisLength : 0.0f;
+        placed.foreshortened = facing;
+
         Remember(lamp.id).frame = g_frame;
         if (batch == nullptr) {
             continue;
@@ -341,8 +357,9 @@ void OnComposite(const Frame::Pass& pass) {
             continue;
         }
         const float constants[kConstantRegisters * 4] = {
-            placed.halfSize, placed.lens, placed.glareRadius, placed.lensBrightness * shown,
-            kColour[0],      kColour[1],  kColour[2],         placed.glareBrightness * shown,
+            placed.halfSize, placed.lens,    placed.glareRadius,   placed.lensBrightness * shown,
+            kColour[0],      kColour[1],     kColour[2],           placed.glareBrightness * shown,
+            placed.axis[0],  placed.axis[1], placed.foreshortened, 0.0f,
         };
         pass.device->SetPixelShaderConstantF(0, constants, kConstantRegisters);
         draw.Quad(placed.x - placed.halfSize, placed.y - placed.halfSize, placed.x + placed.halfSize,
