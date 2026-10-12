@@ -101,6 +101,10 @@ public static class HkxMopp
             [.. reached.Except(keys), .. reached.GroupBy(k => k).Where(g => g.Count() > 1).Select(g => g.Key)], lost);
     }
 
+    /// <summary>The items a query at their own centre does not find: children the code has lost where they now are.</summary>
+    public static List<HkxChild> Misses(IEnumerable<HkxChild> items, Vector4 info, byte[] code)
+        => [.. items.Where(i => !Query(info, code, (i.Min + i.Max) / 2, (i.Min + i.Max) / 2).Contains(i.Key))];
+
     private static (Vector3 Min, Vector3 Max) Bounds(IReadOnlyList<HkxChild> items) => XbgModel.Bounds(items.SelectMany(i => new[] { i.Min, i.Max }));
 
     // Random boxes over the items, and thin ones just touching each face of the bounds of up to `count` items.

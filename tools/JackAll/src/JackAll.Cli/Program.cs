@@ -201,6 +201,15 @@ app.Configure(config =>
         hkx.AddCommand<HkxDumpCommand>("dump")
             .WithDescription("Print an .hkx's objects and their members by name.")
             .WithExample("hkx", "dump", "bigtruck.hkx", "-o", "bigtruck.txt");
+        hkx.AddCommand<HkxTreeCommand>("tree")
+            .WithDescription("Print an .hkx's bodies, shapes and constraints as a tree, numbered as the edit commands name them.")
+            .WithExample("hkx", "tree", "chairbar01.hkx");
+        hkx.AddCommand<HkxCheckCommand>("check")
+            .WithDescription("Report what would break .hkx files in game: body order, stale caches, MOPPs that lost a shape.")
+            .WithExample("hkx", "check", "chairbar01.hkx");
+        hkx.AddCommand<HkxRefreshCommand>("refresh")
+            .WithDescription("Bring an edited .hkx's MOPP code, cached bounds and radii in line with its shapes.")
+            .WithExample("hkx", "refresh", "chairbar01.hkx", "--original", "retail\\chairbar01.hkx");
     });
 
     // --- .ai.rml brain workspaces ----------------------------------------
