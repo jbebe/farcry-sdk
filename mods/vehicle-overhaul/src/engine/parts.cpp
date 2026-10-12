@@ -19,8 +19,10 @@ namespace {
     constexpr ptrdiff_t kPartName = 0x58;
     constexpr ptrdiff_t kPartState = 0x5C;
 
-    // The frame part's body, a CPhysEntity, answers the car it drives here.
+    // The frame part's body, a CPhysEntity, answers here the CPhysVehicleEntity it is, or null.
     constexpr size_t kGetVehicleSlot = 0x28 / sizeof(void*);
+    // CPhysWheeledVehicleEntity: the impl its physics runs as.
+    constexpr ptrdiff_t kVehicleImpl = 0x5C;
 
     // What CVehiclePhysComponent::GetSavedParts appends for each part, in order.
     struct SavedPart {
@@ -119,7 +121,8 @@ Wheeled::Car Car(void* component) {
         return nullptr;
     }
     void* body = *holder;
-    return reinterpret_cast<GetVehicleFn>((*reinterpret_cast<void***>(body))[kGetVehicleSlot])(body);
+    uint8_t* vehicle = reinterpret_cast<GetVehicleFn>((*reinterpret_cast<void***>(body))[kGetVehicleSlot])(body);
+    return vehicle != nullptr ? At<Wheeled::Car>(vehicle, kVehicleImpl) : nullptr;
 }
 
 }
