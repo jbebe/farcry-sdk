@@ -1,4 +1,4 @@
-// Car lights: every lit headlamp seen as a bright point, and the headlight lighting the grass.
+// Car lights: every lit headlamp seen as a bright point.
 #pragma once
 
 namespace VehicleOverhaul::Lights {

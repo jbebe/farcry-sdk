@@ -91,11 +91,8 @@ from the windows and the wrecks are to come.
 - **Headlamps you can see.** Every lit headlamp, on any car, shows as a bright point: a lit white
   lens from afar, never smaller than a pixel or so, and a glare that dazzles a little up close in front
   of it, narrowing to the lamp's beam. Whatever stands in the way hides it. The game lit the lenses
-  of AI cars only.
-- **Headlights on the grass.** The game draws its headlight over the grass, but scaled the light by
-  how foggy the grass is, so grass nearer than the fog got none. Its own pass, upright or bent, now
-  scales the light by what the fog leaves. The light itself is unchanged, and any spot light on grass
-  gets the same.
+  of AI cars only. Headlights lighting the grass are a UFCP fix, since the game's grass is dark under
+  any spot light.
 
 The engine's `Cameras.Camera.Third` is put up and its update is taken over to place the camera. Both
 are described in
@@ -134,14 +131,12 @@ src\                         the FCSE plugin
   sounds.cpp                 the window's Sounds tab
   lights.cpp                 the car lights, put together
   lamp_glow.cpp              each lit headlamp's bright point and glare
-  grass_light.cpp            the engine's spot light pass over grass, rewritten to light the blades
   shaders\                   the glow's shader
   engine\                    the game's own seams: the signal dispatcher, the input pass, the camera
                              manager and the third camera's update, entities, the seat lookup,
                              terrain height, the Havok vehicle under each car, a vehicle's engine
                              sound, the sound system, sound banks, each car's headlights, the
-                             frame handed to the render thread, the Direct3D device's passes and
-                             grass draws
+                             frame handed to the render thread, the Direct3D device's passes
 layer\mods\
   config\                    the active_camerathird control and its binding, as sections
   languages\                 the control's label, in every language

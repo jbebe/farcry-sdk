@@ -40,6 +40,7 @@ add_library(UFCP SHARED
   "src/fixes/jackal_tapes.cpp"
   "src/fixes/bonus_content.cpp"
   "src/fixes/exit_teardown.cpp"
+  "src/fixes/grass_spot_light.cpp"
   "src/fixes/high_precision_timer.cpp"
   "src/fixes/mouse_speed_cap.cpp"
   "src/fixes/utilisation.cpp"
@@ -56,8 +57,8 @@ add_library(UFCP SHARED
   "src/options/sprint_turn.cpp"
 )
 
-# timeBeginPeriod, for the loading screen's frame pacing.
-target_link_libraries(UFCP PRIVATE winmm)
+# timeBeginPeriod, for the loading screen's frame pacing; Direct3DCreate9, for the device's draw call.
+target_link_libraries(UFCP PRIVATE winmm d3d9)
 
 # src/ on the path so every #include reads from the root of this tree - "fixes/fixes.h", never
 # "../fixes/fixes.h" - and moving a file between folders does not rewrite anyone's includes.

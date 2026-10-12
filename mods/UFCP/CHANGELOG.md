@@ -10,6 +10,7 @@ Most of this is ported from FC2JackalFix (MIT, Joshhhuaaa and TGP482) — see th
 
 - Fixes: the mouse speed cap, controller vibration, the loading screen's timer resolution, and the
   engine's CPU and GPU utilisation.
+- Fix: grass lit under spot lights. Headlights and flashlights now light the grass they shine on.
 - Options: viewmodel, ironsight and vehicle fields of view; mouse and controller look sensitivity;
   controller aim assist; aim, controller aim and sprint toggles; full turn rate while sprinting;
   skip intro videos; skip title screen; maximum frame rate; borderless display mode.

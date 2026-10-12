@@ -23,6 +23,7 @@ Applied unconditionally, with no setting — a fix that needs a switch is a pref
 | Mouse speed cap | A fast flick turned the view less far than a slow one: the gamepad filter's output ceiling was applied to the mouse too, so quick movement saturated. |
 | Controller vibration | No pad ever rumbled on PC. The curves are evaluated and the dispatcher calls XInput — the two motor amplitudes were simply pushed as zeroes. |
 | High-precision timer | Loading screens ran far below the 30 FPS they are paced for, because the default 15.6 ms timer resolution overshoots every sleep. |
+| Grass under spot lights | Headlights and flashlights left grass black however close it was. The game's light pass over grass scaled the light by the fog's amount instead of by what the fog leaves, so only grass already lost in fog was lit. It also lit each clump only as far as the ground under it faced the lamp, a tenth of the light where a headlight skims along the ground. |
 | CPU and GPU utilisation | The job pool was sized for two-core machines, idle workers spun in the queue's critical section, the GPU could never run ahead a frame, and with a frame cap set the limiter burned a whole core busy-waiting. |
 
 The two restorations are not a bypass of anything anyone can still buy. Both were Ubisoft promotions

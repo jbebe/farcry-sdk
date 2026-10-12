@@ -36,6 +36,8 @@ void ApplyHighPrecisionTimerFix();
 void ApplyVibrationFix();
 // The engine leaves processors idle and busy-waits for its own frame cap.
 void ApplyUtilisationFix();
+// Grass stays dark under a spot light - headlights, a flashlight - however close it is.
+void ApplyGrassSpotLightFix();
 
 // Options. The hook has to exist before the setting that drives it is registered, because
 // registration is what delivers the saved value.
@@ -115,6 +117,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     ApplyMouseSpeedCapFix();
     ApplyHighPrecisionTimerFix();
     ApplyUtilisationFix();
+    ApplyGrassSpotLightFix();
 
     // Before the fixes and options that ask which device is in the player's hands.
     UFCP::InstallInputDeviceTracking();
