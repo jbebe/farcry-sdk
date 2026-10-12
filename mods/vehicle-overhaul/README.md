@@ -2,8 +2,8 @@
 
 Driving in Far Cry 2 as off-road driving: a third-person camera to watch the car work, off-road
 physics, an engine with real gears, and wrecks revived as drivable vehicles. Unfinished: the camera,
-the physics and the engine are in, the engine's sound for the Datsun and the big truck only; shooting
-from the windows and the wrecks are to come.
+the physics and the engine are in, the engine's sound for the Datsun, the big truck and the Unimog
+only; shooting from the windows and the wrecks are to come.
 
 ## What it does
 
@@ -68,7 +68,8 @@ from the windows and the wrecks are to come.
   - Where the slipping clutch holds the revs wanders slowly up and down, as a driver's foot does, so
     no two pull-aways sound the same.
   - Havok's engine is the same in every car; its shift point is laid over the real engine's redline.
-    The Datsun runs from a 750 rpm idle to a 6,500 rpm redline, the big truck from 560 rpm to 3,200.
+    The Datsun runs from a 750 rpm idle to a 6,500 rpm redline, the big truck from 560 rpm to 3,200,
+    the Unimog from 600 to 2,800.
   - A rev limiter cuts the drive at the redline, so no car runs on past it, in top gear or reverse.
   - The big truck drives on a ZIL-130's five-speed gearbox, from 7.45:1 down to direct, in place of the
     game's seven close gears, and keeps the game's top gear, so its top speed is unchanged. First gear
@@ -84,8 +85,11 @@ from the windows and the wrecks are to come.
   recordings from about 460 to 1,050 rpm, the idle one the lowest of them in place of retail's idle
   loop, laid over the truck's revs compressed as the Datsun's are. It has its own recorded start, which
   its engine fades in after as it catches, 0.7 s after the key; an engine-off sound where retail's
-  truck stops silently; and the Datsun's clunk on gear changes. The
-  DLC's big truck, in the DLC's multiplayer maps, keeps its own.
+  truck stops silently; and the Datsun's clunk on gear changes.
+- **The Unimog's engine sound.** The same, from an OM 352 six-cylinder diesel: an idle at about
+  590 rpm and one steady take at 2,470, laid over its 600 to 2,800 rpm unpitched at their own revs, with
+  its own recorded start, which its engine fades in after 0.4 s after the key. Its engine-off is still
+  the retail truck's sound.
 - **Quieter tyres.** Every car's tyre sounds on the ground, dirt, gravel, grass and the rest, play
   10 dB quieter, so they no longer drown out the engine.
 - **Headlamps you can see.** Every lit headlamp, on any car, shows as a bright point: a lit white
@@ -140,8 +144,8 @@ src\                         the FCSE plugin
 layer\mods\
   config\                    the active_camerathird control and its binding, as sections
   languages\                 the control's label, in every language
-  soundbinary\               the Datsun's and the big truck's engine and start sounds, the truck's
-                             engine-off sound, the gear-change clunks; their pedal sounds and idles
+  soundbinary\               the Datsun's, the big truck's and the Unimog's engine and start sounds,
+                             the truck's engine-off sound, the gear-change clunks; their pedal sounds and idles
                              silenced; every car's quieter tyre sounds
   worlds\                    the big truck's archetypes in each world's entity library, which name its
                              engine-off sound
