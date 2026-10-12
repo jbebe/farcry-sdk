@@ -60,7 +60,7 @@ public sealed class HkxVerifyCommand : CliCommand<HkxVerifyCommand.Settings>
     {
         foreach (HkxObject mopp in file.Objects().Where(o => o.Class.Name == "hkpMoppBvTreeShape"))
         {
-            List<HkxMoppItem> items;
+            List<HkxChild> items;
             try
             {
                 items = HkxMopp.Items(mopp);

@@ -14,6 +14,9 @@ public sealed record HkxPrimitive(HkxObject Shape, HkxShapeKind Kind, Matrix4x4 
     public IEnumerable<Vector3> ModelVertices() => Vertices.Select(v => Vector3.Transform(v, ToModel));
 }
 
+/// <summary>A shape collection's child by its shape key, and the box around its collision in the collection's space.</summary>
+public readonly record struct HkxChild(uint Key, Vector3 Min, Vector3 Max);
+
 /// <summary>A row of an <c>.hkx</c>'s collision tree: a variant, body, shape or constraint.</summary>
 public sealed class HkxNode(HkxNodeKind kind, HkxObject? obj, string label)
 {
@@ -41,6 +44,8 @@ public static class HkxShapes
 {
     private const int Int32Indices = 2;
     private const int SphereSegments = 16, SphereRings = 8;
+    private const float DegenerateArea = 1e-7f;
+    private const uint ShapesSubpartKey = 0x80000000;
 
     public static List<HkxNode> Read(HkxFile file)
     {
@@ -89,8 +94,66 @@ public static class HkxShapes
         return Planes(vertices, faces);
     }
 
-    /// <summary>The box around a convex shape's collision placed by <paramref name="toSpace"/>: its core points there, grown by its radius.</summary>
-    internal static (Vector3 Min, Vector3 Max) Bounds(HkxObject shape, Matrix4x4 toSpace)
+    /// <summary>The box around a shape's collision in its own space.</summary>
+    public static (Vector3 Min, Vector3 Max) Bounds(HkxObject shape) => shape.Class.Name switch
+    {
+        "hkpMoppBvTreeShape" => Bounds(shape.GetPointer("child.childShape")!),
+        "hkpListShape" or "hkpStorageExtendedMeshShape" => XbgModel.Bounds(Children(shape).SelectMany(c => new[] { c.Min, c.Max })),
+        _ => Bounds(shape, Matrix4x4.Identity),
+    };
+
+    /// <summary>The children of a list or extended mesh, each by the shape key the collection gives it.</summary>
+    public static List<HkxChild> Children(HkxObject collection) => collection.Class.Name switch
+    {
+        "hkpListShape" => [.. Enumerable.Range(0, collection.Count("childInfo"))
+            .Select(i => Child((uint)i, Bounds(collection.GetPointer($"childInfo[{i}].shape")!, Matrix4x4.Identity)))],
+        "hkpStorageExtendedMeshShape" => MeshChildren(collection),
+        _ => throw new NotSupportedException($"{collection.Class.Name} is not a collection this reads."),
+    };
+
+    private static List<HkxChild> MeshChildren(HkxObject mesh)
+    {
+        int subpartShift = 32 - mesh.GetInt("numBitsForSubpartIndex");
+        float radius = mesh.GetReals("triangleRadius")[0];
+        var children = new List<HkxChild>();
+        for (int s = 0; s < mesh.Count("trianglesSubparts"); s++)
+        {
+            (Vector3[] v, int[] t) = Triangles(mesh, s);
+            Vector3 extrusion = Vec(mesh.GetReals($"trianglesSubparts[{s}].extrusion"));
+            for (int k = 0; k < t.Length / 3; k++)
+            {
+                Vector3 a = v[t[k * 3]], b = v[t[k * 3 + 1]], c = v[t[k * 3 + 2]];
+                if (!IsDegenerate(a, b, c))
+                {
+                    children.Add(Child((uint)s << subpartShift | (uint)k, Grown([a, b, c, a + extrusion, b + extrusion, c + extrusion], radius)));
+                }
+            }
+        }
+        for (int s = 0; s < mesh.Count("shapesSubparts"); s++)
+        {
+            Matrix4x4 placement = Placement(mesh, s);
+            List<HkxObject?> shapes = mesh.GetPointers($"shapesSubparts[{s}].childShapes");
+            for (int k = 0; k < shapes.Count; k++)
+            {
+                children.Add(Child(ShapesSubpartKey | (uint)s << subpartShift | (uint)k, Bounds(shapes[k]!, placement)));
+            }
+        }
+        return children;
+    }
+
+    private static HkxChild Child(uint key, (Vector3 Min, Vector3 Max) bounds) => new(key, bounds.Min, bounds.Max);
+
+    // A triangle the mesh leaves out when it lists its keys, by Havok's own test.
+    private static bool IsDegenerate(Vector3 a, Vector3 b, Vector3 c)
+    {
+        Vector3 u = a - b, v = c - b;
+        float dot = Vector3.Dot(u, v);
+        return Vector3.Cross(a - b, a - c).LengthSquared() < DegenerateArea || Vector3.Cross(b - a, b - c).LengthSquared() < DegenerateArea
+            || u.LengthSquared() * v.LengthSquared() - dot * dot == 0;
+    }
+
+    // The box around a convex shape's collision placed by `toSpace`: its core points there, grown by its radius.
+    private static (Vector3 Min, Vector3 Max) Bounds(HkxObject shape, Matrix4x4 toSpace)
     {
         if (Unwrap(shape) is var (child, local, _))
         {
@@ -107,15 +170,14 @@ public static class HkxShapes
         return Grown(core.Select(p => Vector3.Transform(p, toSpace)), shape.GetReals("radius")[0]);
     }
 
-    /// <summary>The box around points, grown on every side by a radius.</summary>
-    internal static (Vector3 Min, Vector3 Max) Grown(IEnumerable<Vector3> points, float radius)
+    private static (Vector3 Min, Vector3 Max) Grown(IEnumerable<Vector3> points, float radius)
     {
         (Vector3 min, Vector3 max) = XbgModel.Bounds(points);
         return (min - new Vector3(radius), max + new Vector3(radius));
     }
 
-    /// <summary>A triangle subpart's vertices, scaled as its mesh scales them, and three indices into them per triangle.</summary>
-    internal static (Vector3[] Vertices, int[] Triangles) Triangles(HkxObject mesh, int subpart)
+    // A triangle subpart's vertices, scaled as its mesh scales them, and three indices into them per triangle.
+    private static (Vector3[] Vertices, int[] Triangles) Triangles(HkxObject mesh, int subpart)
     {
         string part = $"trianglesSubparts[{subpart}].";
         bool wide = mesh.GetInt(part + "stridingType") == Int32Indices;
@@ -134,8 +196,8 @@ public static class HkxShapes
         return (vertices, triangles);
     }
 
-    /// <summary>The matrix placing a shape subpart's children in its mesh's space.</summary>
-    internal static Matrix4x4 Placement(HkxObject mesh, int subpart)
+    // The matrix placing a shape subpart's children in its mesh's space.
+    private static Matrix4x4 Placement(HkxObject mesh, int subpart)
     {
         string part = $"shapesSubparts[{subpart}].";
         Matrix4x4 local = mesh.GetInt(part + "rotationSet") != 0
@@ -144,7 +206,7 @@ public static class HkxShapes
         return mesh.GetInt(part + "offsetSet") != 0 ? local * Matrix4x4.CreateTranslation(Vec(mesh.GetReals(part + "translation"))) : local;
     }
 
-    internal static Vector3 Vec(float[] f) => new(f[0], f[1], f[2]);
+    private static Vector3 Vec(float[] f) => new(f[0], f[1], f[2]);
 
     // The shape a MOPP, transform or translate shape wraps, the matrix placing it in the wrapper's space, and the wrapper's label.
     private static (HkxObject? Child, Matrix4x4 Local, string Label)? Unwrap(HkxObject shape) => shape.Class.Name switch

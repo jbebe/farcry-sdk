@@ -3,14 +3,11 @@ using JackAll.Tools.Xbg;
 
 namespace JackAll.Tools.Hkx;
 
-/// <summary>A shape collection's child by its shape key, and the box around its collision in the collection's space.</summary>
-public readonly record struct HkxMoppItem(uint Key, Vector3 Min, Vector3 Max);
-
 /// <summary>
 /// How MOPP code measures up to its children: the keys it never reaches, the keys it reaches that are no child's or
 /// that it reaches twice, and each child it leaves out of a probe box touching the child's bounds.
 /// </summary>
-public sealed record HkxMoppCheck(List<uint> Unreached, List<uint> Stray, List<(HkxMoppItem Item, Vector3 Min, Vector3 Max)> Lost)
+public sealed record HkxMoppCheck(List<uint> Unreached, List<uint> Stray, List<(HkxChild Item, Vector3 Min, Vector3 Max)> Lost)
 {
     public bool Holds => Unreached.Count == 0 && Stray.Count == 0 && Lost.Count == 0;
 }
@@ -29,8 +26,6 @@ public static class HkxMopp
     // Steps each child's bounds grow by, to cover the float rounding of the game's queries.
     private const int Slack = 64;
 
-    private const float DegenerateArea = 1e-7f;
-    private const uint ShapesSubpartKey = 0x80000000;
     private const byte WithoutChunks = 1;
 
     // The diagonal splits 0x13-0x1C by the sign each axis adds with. A split's bytes scale by the number of axes
@@ -64,20 +59,10 @@ public static class HkxMopp
     }
 
     /// <summary>The children of the list or extended mesh a MOPP shape wraps, each by the key the collection gives it.</summary>
-    public static List<HkxMoppItem> Items(HkxObject mopp)
-    {
-        HkxObject collection = mopp.GetPointer("child.childShape")!;
-        return collection.Class.Name switch
-        {
-            "hkpListShape" => [.. Enumerable.Range(0, collection.Count("childInfo"))
-                .Select(i => Item((uint)i, HkxShapes.Bounds(collection.GetPointer($"childInfo[{i}].shape")!, Matrix4x4.Identity)))],
-            "hkpStorageExtendedMeshShape" => Mesh(collection),
-            _ => throw new NotSupportedException($"A MOPP over {collection.Class.Name} is not one this builds."),
-        };
-    }
+    public static List<HkxChild> Items(HkxObject mopp) => HkxShapes.Children(mopp.GetPointer("child.childShape")!);
 
     /// <summary>Code that keeps every item a query box touches, and the info laying its grid over them.</summary>
-    public static (Vector4 Info, byte[] Code) Build(IReadOnlyList<HkxMoppItem> items)
+    public static (Vector4 Info, byte[] Code) Build(IReadOnlyList<HkxChild> items)
     {
         if (items.Count == 0)
         {
@@ -98,10 +83,10 @@ public static class HkxMopp
     /// Measures code against its items, by every key it reaches and by probe boxes: random ones over the items, and
     /// thin ones touching each face of the bounds of up to <paramref name="probes"/> items.
     /// </summary>
-    public static HkxMoppCheck Check(IReadOnlyList<HkxMoppItem> items, Vector4 info, byte[] code, int probes)
+    public static HkxMoppCheck Check(IReadOnlyList<HkxChild> items, Vector4 info, byte[] code, int probes)
     {
         List<uint> keys = [.. items.Select(i => i.Key)], reached = Keys(code);
-        List<(HkxMoppItem, Vector3, Vector3)> lost = [.. Probes(items, probes).SelectMany(box =>
+        List<(HkxChild, Vector3, Vector3)> lost = [.. Probes(items, probes).SelectMany(box =>
         {
             HashSet<uint> kept = [.. Query(info, code, box.Min, box.Max)];
             return items.Where(i => Touches(i, box.Min, box.Max) && !kept.Contains(i.Key)).Select(i => (i, box.Min, box.Max));
@@ -110,51 +95,10 @@ public static class HkxMopp
             [.. reached.Except(keys), .. reached.GroupBy(k => k).Where(g => g.Count() > 1).Select(g => g.Key)], lost);
     }
 
-    private static List<HkxMoppItem> Mesh(HkxObject mesh)
-    {
-        int subpartShift = 32 - mesh.GetInt("numBitsForSubpartIndex");
-        float radius = mesh.GetReals("triangleRadius")[0];
-        var items = new List<HkxMoppItem>();
-        for (int s = 0; s < mesh.Count("trianglesSubparts"); s++)
-        {
-            (Vector3[] v, int[] t) = HkxShapes.Triangles(mesh, s);
-            Vector3 extrusion = HkxShapes.Vec(mesh.GetReals($"trianglesSubparts[{s}].extrusion"));
-            for (int k = 0; k < t.Length / 3; k++)
-            {
-                Vector3 a = v[t[k * 3]], b = v[t[k * 3 + 1]], c = v[t[k * 3 + 2]];
-                if (!IsDegenerate(a, b, c))
-                {
-                    items.Add(Item((uint)s << subpartShift | (uint)k, HkxShapes.Grown([a, b, c, a + extrusion, b + extrusion, c + extrusion], radius)));
-                }
-            }
-        }
-        for (int s = 0; s < mesh.Count("shapesSubparts"); s++)
-        {
-            Matrix4x4 placement = HkxShapes.Placement(mesh, s);
-            List<HkxObject?> children = mesh.GetPointers($"shapesSubparts[{s}].childShapes");
-            for (int k = 0; k < children.Count; k++)
-            {
-                items.Add(Item(ShapesSubpartKey | (uint)s << subpartShift | (uint)k, HkxShapes.Bounds(children[k]!, placement)));
-            }
-        }
-        return items;
-    }
-
-    private static HkxMoppItem Item(uint key, (Vector3 Min, Vector3 Max) bounds) => new(key, bounds.Min, bounds.Max);
-
-    private static (Vector3 Min, Vector3 Max) Bounds(IReadOnlyList<HkxMoppItem> items) => XbgModel.Bounds(items.SelectMany(i => new[] { i.Min, i.Max }));
-
-    // A triangle the mesh leaves out when it lists its keys, by Havok's own test.
-    private static bool IsDegenerate(Vector3 a, Vector3 b, Vector3 c)
-    {
-        Vector3 u = a - b, v = c - b;
-        float dot = Vector3.Dot(u, v);
-        return Vector3.Cross(a - b, a - c).LengthSquared() < DegenerateArea || Vector3.Cross(b - a, b - c).LengthSquared() < DegenerateArea
-            || u.LengthSquared() * v.LengthSquared() - dot * dot == 0;
-    }
+    private static (Vector3 Min, Vector3 Max) Bounds(IReadOnlyList<HkxChild> items) => XbgModel.Bounds(items.SelectMany(i => new[] { i.Min, i.Max }));
 
     // Random boxes over the items, and thin ones just touching each face of the bounds of up to `count` items.
-    private static IEnumerable<(Vector3 Min, Vector3 Max)> Probes(IReadOnlyList<HkxMoppItem> items, int count)
+    private static IEnumerable<(Vector3 Min, Vector3 Max)> Probes(IReadOnlyList<HkxChild> items, int count)
     {
         (Vector3 min, Vector3 max) = Bounds(items);
         Vector3 size = max - min, thin = size * 0.01f;
@@ -166,7 +110,7 @@ public static class HkxMopp
             Vector3 centre = min - size * 0.25f + Next() * size * 1.5f, half = Next() * size * 0.2f;
             yield return (centre - half, centre + half);
         }
-        foreach (HkxMoppItem item in items.Count <= count ? items : items.OrderBy(_ => random.Next()).Take(count))
+        foreach (HkxChild item in items.Count <= count ? items : items.OrderBy(_ => random.Next()).Take(count))
         {
             Vector3 centre = (item.Min + item.Max) / 2;
             (Vector3, Vector3) Face(int axis, float from, float to)
@@ -183,7 +127,7 @@ public static class HkxMopp
         }
     }
 
-    private static bool Touches(HkxMoppItem i, Vector3 min, Vector3 max)
+    private static bool Touches(HkxChild i, Vector3 min, Vector3 max)
         => i.Min.X <= max.X && i.Min.Y <= max.Y && i.Min.Z <= max.Z && min.X <= i.Max.X && min.Y <= i.Max.Y && min.Z <= i.Max.Z;
 
     // Code for `cells` on the byte grid `shift` halvings below the top one, whose origin in its own steps is `origin`.

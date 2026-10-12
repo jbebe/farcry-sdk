@@ -45,7 +45,7 @@ public sealed class HkxMoppTests
 
         Assert.Empty(check.Unreached);
         Assert.Empty(check.Stray);
-        Assert.Empty(check.Lost.Where(l => Touches(surfaces[l.Item.Key], l.Min, l.Max)));
+        Assert.DoesNotContain(check.Lost, l => Touches(surfaces[l.Item.Key], l.Min, l.Max));
     }
 
     [Theory]
@@ -58,7 +58,7 @@ public sealed class HkxMoppTests
             return;
         }
 
-        List<HkxMoppItem> items = HkxMopp.Items(Mopp(file));
+        List<HkxChild> items = HkxMopp.Items(Mopp(file));
         (Vector4 info, byte[] code) = HkxMopp.Build(items);
 
         HkxMoppCheck check = HkxMopp.Check(items, info, code, Probes);
@@ -76,7 +76,7 @@ public sealed class HkxMoppTests
             return;
         }
 
-        List<HkxMoppItem> items = HkxMopp.Items(Mopp(file));
+        List<HkxChild> items = HkxMopp.Items(Mopp(file));
         (Vector4 info, byte[] code) = HkxMopp.Build(items);
         Vector3 centre = (items[(int)Seat].Min + items[(int)Seat].Max) / 2;
 
