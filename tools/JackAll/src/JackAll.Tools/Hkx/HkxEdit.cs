@@ -58,14 +58,7 @@ public static class HkxEdit
     public static void SetPointer(this HkxObject o, string path, HkxObject? target)
     {
         (HkxBlock block, int at, _) = Locate(o, path, 4);
-        if (target is null)
-        {
-            block.Refs.Remove(at);
-        }
-        else
-        {
-            block.Refs[at] = new HkxPointer(target);
-        }
+        SetRef(block, at, target is null ? null : new HkxPointer(target));
     }
 
     public static string? GetString(this HkxObject o, string path)
@@ -111,18 +104,13 @@ public static class HkxEdit
     /// <summary>What an array of bytes holds.</summary>
     public static byte[] GetBytes(this HkxObject o, string path)
     {
-        (_, _, HkSlot s, HkxBlock? elements, int count) = Array(o, path);
-        return s.Member.Subtype is HkType.UInt8 or HkType.Int8 ? elements?.Bytes[..count] ?? []
-            : throw new ArgumentException($"'{path}' does not hold bytes.");
+        (_, _, _, HkxBlock? elements, int count) = ByteArray(o, path);
+        return elements?.Bytes[..count] ?? [];
     }
 
     public static void SetBytes(this HkxObject o, string path, byte[] bytes)
     {
-        (HkxBlock block, int at, HkSlot s, _, _) = Array(o, path);
-        if (s.Member.Subtype is not (HkType.UInt8 or HkType.Int8))
-        {
-            throw new ArgumentException($"'{path}' does not hold bytes.");
-        }
+        (HkxBlock block, int at, HkSlot s, _, _) = ByteArray(o, path);
         Resize(block, at, s, bytes.Length == 0 ? null : new HkxBlock((byte[])bytes.Clone()), bytes.Length);
     }
 
@@ -169,19 +157,30 @@ public static class HkxEdit
     // Points an array slot at new elements and writes its count, and for an hkArray its capacity.
     private static void Resize(HkxBlock block, int at, HkSlot s, HkxBlock? elements, int count)
     {
-        if (elements is null)
-        {
-            block.Refs.Remove(at);
-        }
-        else
-        {
-            block.Refs[at] = new HkxData(elements);
-        }
+        SetRef(block, at, elements is null ? null : new HkxData(elements));
         BinaryPrimitives.WriteInt32LittleEndian(block.Bytes.AsSpan(at + 4), count);
         if (s.Member.Type == HkType.Array)
         {
             BinaryPrimitives.WriteUInt32LittleEndian(block.Bytes.AsSpan(at + 8), (uint)count | SavedArrayFlags);
         }
+    }
+
+    private static void SetRef(HkxBlock block, int at, HkxRef? r)
+    {
+        if (r is null)
+        {
+            block.Refs.Remove(at);
+        }
+        else
+        {
+            block.Refs[at] = r;
+        }
+    }
+
+    private static (HkxBlock Block, int At, HkSlot Slot, HkxBlock? Elements, int Count) ByteArray(HkxObject o, string path)
+    {
+        var array = Array(o, path);
+        return array.Slot.Member.Subtype is HkType.UInt8 or HkType.Int8 ? array : throw new ArgumentException($"'{path}' does not hold bytes.");
     }
 
     private static (HkxBlock Block, int At, HkSlot Slot, HkxBlock? Elements, int Count) Array(HkxObject o, string path)

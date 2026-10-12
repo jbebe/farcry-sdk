@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Numerics;
+using JackAll.Tools.Xbg;
 
 namespace JackAll.Tools.Hkx;
 
@@ -40,13 +41,6 @@ public static class HkxShapes
 {
     private const int Int32Indices = 2;
     private const int SphereSegments = 16, SphereRings = 8;
-
-    private static readonly Dictionary<string, string> WrapperLabels = new()
-    {
-        ["hkpMoppBvTreeShape"] = "MOPP",
-        ["hkpConvexTransformShape"] = "Transform",
-        ["hkpConvexTranslateShape"] = "Translate",
-    };
 
     public static List<HkxNode> Read(HkxFile file)
     {
@@ -95,14 +89,30 @@ public static class HkxShapes
         return Planes(vertices, faces);
     }
 
-    /// <summary>The shape a MOPP, transform or translate shape wraps, and the matrix placing it in the wrapper's space.</summary>
-    internal static (HkxObject? Child, Matrix4x4 Local)? Unwrap(HkxObject shape) => shape.Class.Name switch
+    /// <summary>The box around a convex shape's collision placed by <paramref name="toSpace"/>: its core points there, grown by its radius.</summary>
+    internal static (Vector3 Min, Vector3 Max) Bounds(HkxObject shape, Matrix4x4 toSpace)
     {
-        "hkpMoppBvTreeShape" => (shape.GetPointer("child.childShape"), Matrix4x4.Identity),
-        "hkpConvexTransformShape" => (shape.GetPointer("childShape.childShape"), Transform(shape.GetReals("transform"))),
-        "hkpConvexTranslateShape" => (shape.GetPointer("childShape.childShape"), Matrix4x4.CreateTranslation(Vec(shape.GetReals("translation")))),
-        _ => null,
-    };
+        if (Unwrap(shape) is var (child, local, _))
+        {
+            return Bounds(child!, local * toSpace);
+        }
+        Vector3[] core = shape.Class.Name switch
+        {
+            "hkpBoxShape" => Corners(Vec(shape.GetReals("halfExtents"))),
+            "hkpConvexVerticesShape" => HullVertices(shape),
+            "hkpSphereShape" => [Vector3.Zero],
+            "hkpCapsuleShape" => [Vec(shape.GetReals("vertexA")), Vec(shape.GetReals("vertexB"))],
+            _ => throw new NotSupportedException($"No bounds for a {shape.Class.Name}."),
+        };
+        return Grown(core.Select(p => Vector3.Transform(p, toSpace)), shape.GetReals("radius")[0]);
+    }
+
+    /// <summary>The box around points, grown on every side by a radius.</summary>
+    internal static (Vector3 Min, Vector3 Max) Grown(IEnumerable<Vector3> points, float radius)
+    {
+        (Vector3 min, Vector3 max) = XbgModel.Bounds(points);
+        return (min - new Vector3(radius), max + new Vector3(radius));
+    }
 
     /// <summary>A triangle subpart's vertices, scaled as its mesh scales them, and three indices into them per triangle.</summary>
     internal static (Vector3[] Vertices, int[] Triangles) Triangles(HkxObject mesh, int subpart)
@@ -134,8 +144,19 @@ public static class HkxShapes
         return mesh.GetInt(part + "offsetSet") != 0 ? local * Matrix4x4.CreateTranslation(Vec(mesh.GetReals(part + "translation"))) : local;
     }
 
-    /// <summary>A hull's vertices as stored, before its convex radius grows them.</summary>
-    internal static Vector3[] HullVertices(HkxObject hull)
+    internal static Vector3 Vec(float[] f) => new(f[0], f[1], f[2]);
+
+    // The shape a MOPP, transform or translate shape wraps, the matrix placing it in the wrapper's space, and the wrapper's label.
+    private static (HkxObject? Child, Matrix4x4 Local, string Label)? Unwrap(HkxObject shape) => shape.Class.Name switch
+    {
+        "hkpMoppBvTreeShape" => (shape.GetPointer("child.childShape"), Matrix4x4.Identity, "MOPP"),
+        "hkpConvexTransformShape" => (shape.GetPointer("childShape.childShape"), Transform(shape.GetReals("transform")), "Transform"),
+        "hkpConvexTranslateShape" => (shape.GetPointer("childShape.childShape"), Matrix4x4.CreateTranslation(Vec(shape.GetReals("translation"))), "Translate"),
+        _ => null,
+    };
+
+    // A hull's vertices as stored, before its convex radius grows them.
+    private static Vector3[] HullVertices(HkxObject hull)
     {
         float[] packed = hull.GetRealArray("rotatedVertices");
         // Four vertices per block of twelve floats: their x values, then their y values, then their z values.
@@ -146,11 +167,9 @@ public static class HkxShapes
         })];
     }
 
-    /// <summary>The eight corners of a box centred on the origin.</summary>
-    internal static Vector3[] Corners(Vector3 half) => [.. Enumerable.Range(0, 8).Select(i => new Vector3(
+    // The eight corners of a box centred on the origin.
+    private static Vector3[] Corners(Vector3 half) => [.. Enumerable.Range(0, 8).Select(i => new Vector3(
         (i & 1) != 0 ? half.X : -half.X, (i & 2) != 0 ? half.Y : -half.Y, (i & 4) != 0 ? half.Z : -half.Z))];
-
-    internal static Vector3 Vec(float[] f) => new(f[0], f[1], f[2]);
 
     private static HkxNode Body(HkxObject body)
     {
@@ -177,9 +196,9 @@ public static class HkxShapes
 
     private static HkxNode Shape(HkxObject shape, Matrix4x4 toModel)
     {
-        if (Unwrap(shape) is var (wrapped, local))
+        if (Unwrap(shape) is var (wrapped, local, label))
         {
-            var wrapper = new HkxNode(HkxNodeKind.Shape, shape, WrapperLabels[shape.Class.Name]);
+            var wrapper = new HkxNode(HkxNodeKind.Shape, shape, label);
             if (wrapped is not null)
             {
                 wrapper.Children.Add(Shape(wrapped, local * toModel));

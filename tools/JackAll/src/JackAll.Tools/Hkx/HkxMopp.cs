@@ -1,9 +1,19 @@
 using System.Numerics;
+using JackAll.Tools.Xbg;
 
 namespace JackAll.Tools.Hkx;
 
 /// <summary>A shape collection's child by its shape key, and the box around its collision in the collection's space.</summary>
 public readonly record struct HkxMoppItem(uint Key, Vector3 Min, Vector3 Max);
+
+/// <summary>
+/// How MOPP code measures up to its children: the keys it never reaches, the keys it reaches that are no child's or
+/// that it reaches twice, and each child it leaves out of a probe box touching the child's bounds.
+/// </summary>
+public sealed record HkxMoppCheck(List<uint> Unreached, List<uint> Stray, List<(HkxMoppItem Item, Vector3 Min, Vector3 Max)> Lost)
+{
+    public bool Holds => Unreached.Count == 0 && Stray.Count == 0 && Lost.Count == 0;
+}
 
 /// <summary>
 /// Havok's MOPP code: a byte-coded tree that culls a shape collection's children by region, on a grid of 2^24 steps
@@ -23,12 +33,10 @@ public static class HkxMopp
     private const uint ShapesSubpartKey = 0x80000000;
     private const byte WithoutChunks = 1;
 
-    // The diagonal splits 0x13-0x1C: the sign each axis adds with, and how the split's two bytes scale onto that sum.
-    private static readonly (int[] Signs, int Scale, int Bias)[] Diagonals =
-    [
-        ([0, 1, 1], 2, 0), ([0, 1, -1], 2, -255), ([1, 0, 1], 2, 0), ([1, 0, -1], 2, -255), ([1, 1, 0], 2, 0),
-        ([1, -1, 0], 2, -255), ([1, 1, 1], 3, 0), ([1, 1, -1], 3, -255), ([1, -1, 1], 3, -255), ([1, -1, -1], 3, -510),
-    ];
+    // The diagonal splits 0x13-0x1C by the sign each axis adds with. A split's bytes scale by the number of axes
+    // summed, less 255 for each one subtracted.
+    private static readonly int[][] Diagonals =
+        [[0, 1, 1], [0, 1, -1], [1, 0, 1], [1, 0, -1], [1, 1, 0], [1, -1, 0], [1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1]];
 
     /// <summary>The keys of the children a query box may touch, as the game's box query finds them.</summary>
     public static List<uint> Query(Vector4 info, byte[] code, Vector3 min, Vector3 max)
@@ -48,21 +56,25 @@ public static class HkxMopp
     /// <summary>Rewrites a MOPP shape's code from where its collection's children are now.</summary>
     public static void Rebuild(HkxObject mopp)
     {
-        (Vector4 info, byte[] data) = Build(Items(mopp.GetPointer("child.childShape")!));
+        (Vector4 info, byte[] data) = Build(Items(mopp));
         HkxObject code = mopp.GetPointer("code")!;
         code.SetReals("info.offset", info.X, info.Y, info.Z, info.W);
         code.SetBytes("data", data);
         code.SetByte("buildType", WithoutChunks);
     }
 
-    /// <summary>The children of a list or extended mesh, each by the key the collection gives it.</summary>
-    public static List<HkxMoppItem> Items(HkxObject collection) => collection.Class.Name switch
+    /// <summary>The children of the list or extended mesh a MOPP shape wraps, each by the key the collection gives it.</summary>
+    public static List<HkxMoppItem> Items(HkxObject mopp)
     {
-        "hkpListShape" => [.. Enumerable.Range(0, collection.Count("childInfo"))
-            .Select(i => Item((uint)i, collection.GetPointer($"childInfo[{i}].shape")!, Matrix4x4.Identity))],
-        "hkpStorageExtendedMeshShape" => Mesh(collection),
-        _ => throw new NotSupportedException($"A MOPP over {collection.Class.Name} is not one this builds."),
-    };
+        HkxObject collection = mopp.GetPointer("child.childShape")!;
+        return collection.Class.Name switch
+        {
+            "hkpListShape" => [.. Enumerable.Range(0, collection.Count("childInfo"))
+                .Select(i => Item((uint)i, HkxShapes.Bounds(collection.GetPointer($"childInfo[{i}].shape")!, Matrix4x4.Identity)))],
+            "hkpStorageExtendedMeshShape" => Mesh(collection),
+            _ => throw new NotSupportedException($"A MOPP over {collection.Class.Name} is not one this builds."),
+        };
+    }
 
     /// <summary>Code that keeps every item a query box touches, and the info laying its grid over them.</summary>
     public static (Vector4 Info, byte[] Code) Build(IReadOnlyList<HkxMoppItem> items)
@@ -71,7 +83,8 @@ public static class HkxMopp
         {
             return (new Vector4(0, 0, 0, 1), [0x00]);
         }
-        Vector3 min = items.Select(i => i.Min).Aggregate(Vector3.Min), size = items.Select(i => i.Max).Aggregate(Vector3.Max) - min;
+        (Vector3 min, Vector3 max) = Bounds(items);
+        Vector3 size = max - min;
         float scale = GridTop / MathF.Max(MathF.Max(size.X, size.Y), MathF.Max(size.Z, 1e-4f));
         // The corner sits two slacks below the items, so every grown bound stays on the grid.
         Vector3 corner = min - new Vector3(2 * Slack / scale);
@@ -82,42 +95,19 @@ public static class HkxMopp
     }
 
     /// <summary>
-    /// Boxes to check code with: random ones over the items, and thin ones just touching each face of the bounds of up
-    /// to <paramref name="count"/> items.
+    /// Measures code against its items, by every key it reaches and by probe boxes: random ones over the items, and
+    /// thin ones touching each face of the bounds of up to <paramref name="probes"/> items.
     /// </summary>
-    public static List<(Vector3 Min, Vector3 Max)> Probes(IReadOnlyList<HkxMoppItem> items, int count, int seed = 1)
+    public static HkxMoppCheck Check(IReadOnlyList<HkxMoppItem> items, Vector4 info, byte[] code, int probes)
     {
-        Vector3 min = items.Select(i => i.Min).Aggregate(Vector3.Min), size = items.Select(i => i.Max).Aggregate(Vector3.Max) - min;
-        var random = new Random(seed);
-        Vector3 Next() => new(random.NextSingle(), random.NextSingle(), random.NextSingle());
-
-        List<(Vector3 Min, Vector3 Max)> probes = [];
-        for (int i = 0; i < count; i++)
+        List<uint> keys = [.. items.Select(i => i.Key)], reached = Keys(code);
+        List<(HkxMoppItem, Vector3, Vector3)> lost = [.. Probes(items, probes).SelectMany(box =>
         {
-            Vector3 centre = min - size * 0.25f + Next() * size * 1.5f, half = Next() * size * 0.2f;
-            probes.Add((centre - half, centre + half));
-        }
-        foreach (HkxMoppItem item in items.Count <= count ? items : items.OrderBy(_ => random.Next()).Take(count))
-        {
-            Vector3 thin = size * 0.01f, low = (item.Min + item.Max) / 2 - thin, high = (item.Min + item.Max) / 2 + thin;
-            for (int axis = 0; axis < 3; axis++)
-            {
-                (Vector3 belowMin, Vector3 belowMax, Vector3 aboveMin, Vector3 aboveMax) = (low, high, low, high);
-                (belowMin[axis], belowMax[axis]) = (item.Min[axis] - thin[axis], item.Min[axis]);
-                (aboveMin[axis], aboveMax[axis]) = (item.Max[axis], item.Max[axis] + thin[axis]);
-                probes.Add((belowMin, belowMax));
-                probes.Add((aboveMin, aboveMax));
-            }
-        }
-        return probes;
-    }
-
-    /// <summary>The items whose bounds a box touches that the code does not keep.</summary>
-    public static IEnumerable<HkxMoppItem> Lost(IReadOnlyList<HkxMoppItem> items, Vector4 info, byte[] code, (Vector3 Min, Vector3 Max) box)
-    {
-        HashSet<uint> kept = [.. Query(info, code, box.Min, box.Max)];
-        return items.Where(i => i.Min.X <= box.Max.X && i.Min.Y <= box.Max.Y && i.Min.Z <= box.Max.Z
-            && box.Min.X <= i.Max.X && box.Min.Y <= i.Max.Y && box.Min.Z <= i.Max.Z && !kept.Contains(i.Key));
+            HashSet<uint> kept = [.. Query(info, code, box.Min, box.Max)];
+            return items.Where(i => Touches(i, box.Min, box.Max) && !kept.Contains(i.Key)).Select(i => (i, box.Min, box.Max));
+        })];
+        return new HkxMoppCheck([.. keys.Except(reached)],
+            [.. reached.Except(keys), .. reached.GroupBy(k => k).Where(g => g.Count() > 1).Select(g => g.Key)], lost);
     }
 
     private static List<HkxMoppItem> Mesh(HkxObject mesh)
@@ -134,7 +124,7 @@ public static class HkxMopp
                 Vector3 a = v[t[k * 3]], b = v[t[k * 3 + 1]], c = v[t[k * 3 + 2]];
                 if (!IsDegenerate(a, b, c))
                 {
-                    items.Add(Item((uint)s << subpartShift | (uint)k, [a, b, c, a + extrusion, b + extrusion, c + extrusion], radius));
+                    items.Add(Item((uint)s << subpartShift | (uint)k, HkxShapes.Grown([a, b, c, a + extrusion, b + extrusion, c + extrusion], radius)));
                 }
             }
         }
@@ -144,32 +134,15 @@ public static class HkxMopp
             List<HkxObject?> children = mesh.GetPointers($"shapesSubparts[{s}].childShapes");
             for (int k = 0; k < children.Count; k++)
             {
-                items.Add(Item(ShapesSubpartKey | (uint)s << subpartShift | (uint)k, children[k]!, placement));
+                items.Add(Item(ShapesSubpartKey | (uint)s << subpartShift | (uint)k, HkxShapes.Bounds(children[k]!, placement)));
             }
         }
         return items;
     }
 
-    // A convex shape's core points placed by `toSpace`, grown by its radius.
-    private static HkxMoppItem Item(uint key, HkxObject shape, Matrix4x4 toSpace)
-    {
-        if (HkxShapes.Unwrap(shape) is var (child, local))
-        {
-            return Item(key, child!, local * toSpace);
-        }
-        Vector3[] core = shape.Class.Name switch
-        {
-            "hkpBoxShape" => HkxShapes.Corners(HkxShapes.Vec(shape.GetReals("halfExtents"))),
-            "hkpConvexVerticesShape" => HkxShapes.HullVertices(shape),
-            "hkpSphereShape" => [Vector3.Zero],
-            "hkpCapsuleShape" => [HkxShapes.Vec(shape.GetReals("vertexA")), HkxShapes.Vec(shape.GetReals("vertexB"))],
-            _ => throw new NotSupportedException($"A {shape.Class.Name} under a MOPP is not one this bounds."),
-        };
-        return Item(key, [.. core.Select(p => Vector3.Transform(p, toSpace))], shape.GetReals("radius")[0]);
-    }
+    private static HkxMoppItem Item(uint key, (Vector3 Min, Vector3 Max) bounds) => new(key, bounds.Min, bounds.Max);
 
-    private static HkxMoppItem Item(uint key, Vector3[] points, float radius)
-        => new(key, points.Aggregate(Vector3.Min) - new Vector3(radius), points.Aggregate(Vector3.Max) + new Vector3(radius));
+    private static (Vector3 Min, Vector3 Max) Bounds(IReadOnlyList<HkxMoppItem> items) => XbgModel.Bounds(items.SelectMany(i => new[] { i.Min, i.Max }));
 
     // A triangle the mesh leaves out when it lists its keys, by Havok's own test.
     private static bool IsDegenerate(Vector3 a, Vector3 b, Vector3 c)
@@ -179,6 +152,39 @@ public static class HkxMopp
         return Vector3.Cross(a - b, a - c).LengthSquared() < DegenerateArea || Vector3.Cross(b - a, b - c).LengthSquared() < DegenerateArea
             || u.LengthSquared() * v.LengthSquared() - dot * dot == 0;
     }
+
+    // Random boxes over the items, and thin ones just touching each face of the bounds of up to `count` items.
+    private static IEnumerable<(Vector3 Min, Vector3 Max)> Probes(IReadOnlyList<HkxMoppItem> items, int count)
+    {
+        (Vector3 min, Vector3 max) = Bounds(items);
+        Vector3 size = max - min, thin = size * 0.01f;
+        var random = new Random(1);
+        Vector3 Next() => new(random.NextSingle(), random.NextSingle(), random.NextSingle());
+
+        for (int i = 0; i < count; i++)
+        {
+            Vector3 centre = min - size * 0.25f + Next() * size * 1.5f, half = Next() * size * 0.2f;
+            yield return (centre - half, centre + half);
+        }
+        foreach (HkxMoppItem item in items.Count <= count ? items : items.OrderBy(_ => random.Next()).Take(count))
+        {
+            Vector3 centre = (item.Min + item.Max) / 2;
+            (Vector3, Vector3) Face(int axis, float from, float to)
+            {
+                (Vector3 low, Vector3 high) = (centre - thin, centre + thin);
+                (low[axis], high[axis]) = (from, to);
+                return (low, high);
+            }
+            for (int axis = 0; axis < 3; axis++)
+            {
+                yield return Face(axis, item.Min[axis] - thin[axis], item.Min[axis]);
+                yield return Face(axis, item.Max[axis], item.Max[axis] + thin[axis]);
+            }
+        }
+    }
+
+    private static bool Touches(HkxMoppItem i, Vector3 min, Vector3 max)
+        => i.Min.X <= max.X && i.Min.Y <= max.Y && i.Min.Z <= max.Z && min.X <= i.Max.X && min.Y <= i.Max.Y && min.Z <= i.Max.Z;
 
     // Code for `cells` on the byte grid `shift` halvings below the top one, whose origin in its own steps is `origin`.
     private static List<byte> Node(List<Cell> cells, int shift, int[] origin)
@@ -204,20 +210,19 @@ public static class HkxMopp
         return l.Count switch
         {
             <= 0xFF => [(byte)(0x10 + axis), below, above, (byte)l.Count, .. l, .. r],
-            <= 0xFFFF => [(byte)(0x23 + axis), below, above, 0, 0, (byte)(l.Count >> 8), (byte)l.Count, .. l, .. r],
+            <= 0xFFFF => [(byte)(0x23 + axis), below, above, 0, 0, .. BigEndian((uint)l.Count, 2), .. l, .. r],
             // Past a 16-bit jump the right side is reached through a 24-bit one, placed before the left.
-            _ => [(byte)(0x23 + axis), below, above, 0, 4, 0, 0, 0x07, (byte)(l.Count >> 16), (byte)(l.Count >> 8), (byte)l.Count, .. l, .. r],
+            _ => [(byte)(0x23 + axis), below, above, 0, 4, 0, 0, 0x07, .. BigEndian((uint)l.Count, 3), .. l, .. r],
         };
     }
 
-    private static byte[] Terminal(uint key) => key switch
+    private static byte[] Terminal(uint key)
     {
-        < 0x20 => [(byte)(0x30 + key)],
-        <= 0xFF => [0x50, (byte)key],
-        <= 0xFFFF => [0x51, (byte)(key >> 8), (byte)key],
-        <= 0xFFFFFF => [0x52, (byte)(key >> 16), (byte)(key >> 8), (byte)key],
-        _ => [0x53, (byte)(key >> 24), (byte)(key >> 16), (byte)(key >> 8), (byte)key],
-    };
+        int width = key <= 0xFF ? 1 : key <= 0xFFFF ? 2 : key <= 0xFFFFFF ? 3 : 4;
+        return key < 0x20 ? [(byte)(0x30 + key)] : [(byte)(0x4F + width), .. BigEndian(key, width)];
+    }
+
+    private static byte[] BigEndian(uint value, int count) => [.. Enumerable.Range(0, count).Select(i => (byte)(value >> (8 * (count - 1 - i))))];
 
     // A top-grid step on the byte grid `shift` halvings down, relative to that grid's origin.
     private static int On(int step, int shift, int origin) => (step >> (16 - shift)) - origin;
@@ -242,7 +247,7 @@ public static class HkxMopp
         public Machine(byte[] code, int[] low, int[] high)
         {
             (_code, _low, _high) = (code, low, high);
-            Run(0, new Frame(Axes(a => low[a] >> 16), Axes(a => (high[a] >> 16) + 1), [0, 0, 0], 0, 0));
+            Run(0, At(0, [0, 0, 0], 0));
         }
 
         public List<uint> Keys { get; } = [];
@@ -257,59 +262,59 @@ public static class HkxMopp
                     case 0x00:
                         return;
                     case <= 0x04:
-                        f = Zoom(f, op, pc);
+                        f = At(f.Shift + op, Axes(a => (_code[pc + 1 + a] + f.Origin[a]) << op), f.KeyBase);
                         pc += 4;
                         break;
                     case 0x05:
                         pc += 2 + _code[pc + 1];
                         break;
                     case 0x06:
-                        pc += 3 + (int)Be(pc + 1, 2);
+                        pc += 3 + (int)Read(pc + 1, 2);
                         break;
                     case 0x07:
-                        pc += 4 + (int)Be(pc + 1, 3);
+                        pc += 4 + (int)Read(pc + 1, 3);
                         break;
                     case 0x09:
                         f = f with { KeyBase = f.KeyBase + _code[pc + 1] };
                         pc += 2;
                         break;
                     case 0x0A:
-                        f = f with { KeyBase = f.KeyBase + Be(pc + 1, 2) };
+                        f = f with { KeyBase = f.KeyBase + Read(pc + 1, 2) };
                         pc += 3;
                         break;
                     case 0x0B:
-                        f = f with { KeyBase = Be(pc + 1, 4) };
+                        f = f with { KeyBase = Read(pc + 1, 4) };
                         pc += 5;
                         break;
                     case 0x0D:
                         pc += 5;
                         break;
                     case >= 0x10 and <= 0x12:
-                        pc = Fork(f, f.Min[op - 0x10] < _code[pc + 1], pc + 4, _code[pc + 2] < f.Max[op - 0x10], pc + 4 + _code[pc + 3]);
+                        pc = Split(f, op - 0x10, _code[pc + 1], _code[pc + 2], pc + 4, pc + 4 + _code[pc + 3]);
                         break;
                     case >= 0x13 and <= 0x1C:
-                        (int[] signs, int scale, int bias) = Diagonals[op - 0x13];
-                        int low = Sum(signs, f.Min, f.Max), high = Sum(signs, f.Max, f.Min);
-                        pc = Fork(f, low < _code[pc + 1] * scale + bias, pc + 4, _code[pc + 2] * scale + bias < high, pc + 4 + _code[pc + 3]);
+                        int[] signs = Diagonals[op - 0x13];
+                        int scale = signs.Count(s => s != 0), bias = -255 * signs.Count(s => s < 0);
+                        pc = Fork(f, Sum(signs, f.Min, f.Max) < _code[pc + 1] * scale + bias, pc + 4,
+                            _code[pc + 2] * scale + bias < Sum(signs, f.Max, f.Min), pc + 4 + _code[pc + 3]);
                         break;
                     case >= 0x20 and <= 0x22:
-                        pc = Fork(f, f.Min[op - 0x20] <= _code[pc + 1], pc + 3, _code[pc + 1] < f.Max[op - 0x20], pc + 3 + _code[pc + 2]);
+                        pc = Split(f, op - 0x20, _code[pc + 1] + 1, _code[pc + 1], pc + 3, pc + 3 + _code[pc + 2]);
                         break;
                     case >= 0x23 and <= 0x25:
-                        pc = Fork(f, f.Min[op - 0x23] < _code[pc + 1], pc + 7 + (int)Be(pc + 3, 2),
-                            _code[pc + 2] < f.Max[op - 0x23], pc + 7 + (int)Be(pc + 5, 2));
+                        pc = Split(f, op - 0x23, _code[pc + 1], _code[pc + 2], pc + 7 + (int)Read(pc + 3, 2), pc + 7 + (int)Read(pc + 5, 2));
                         break;
                     case >= 0x26 and <= 0x28:
                         pc = f.Max[op - 0x26] < _code[pc + 1] || _code[pc + 2] <= f.Min[op - 0x26] ? -1 : pc + 3;
                         break;
                     case >= 0x29 and <= 0x2B:
-                        pc = _high[op - 0x29] < Be(pc + 1, 3) || Be(pc + 4, 3) < _low[op - 0x29] ? -1 : pc + 7;
+                        pc = _high[op - 0x29] < Read(pc + 1, 3) || Read(pc + 4, 3) < _low[op - 0x29] ? -1 : pc + 7;
                         break;
                     case >= 0x30 and <= 0x4F:
                         Keys.Add(f.KeyBase + op - 0x30u);
                         return;
                     case >= 0x50 and <= 0x53:
-                        Keys.Add(f.KeyBase + Be(pc + 1, op - 0x4F));
+                        Keys.Add(f.KeyBase + Read(pc + 1, op - 0x4F));
                         return;
                     case >= 0x60 and <= 0x63:
                         pc += 2;
@@ -326,6 +331,14 @@ public static class HkxMopp
             }
         }
 
+        // The query's box on the byte grid `shift` halvings below the top one, relative to that grid's origin.
+        private Frame At(int shift, int[] origin, uint keyBase)
+            => new(Axes(a => (_low[a] >> (16 - shift)) - origin[a]), Axes(a => (_high[a] >> (16 - shift)) - origin[a] + 1), origin, shift, keyBase);
+
+        // A split on one axis: the left side if the box's min is below `below`, the right if its max is above `above`.
+        private int Split(Frame f, int axis, int below, int above, int leftAt, int rightAt)
+            => Fork(f, f.Min[axis] < below, leftAt, above < f.Max[axis], rightAt);
+
         // Follows each side of a split the box reaches, the left by recursion when both are; the next pc, or -1 for neither.
         private int Fork(Frame f, bool left, int leftAt, bool right, int rightAt)
         {
@@ -336,20 +349,11 @@ public static class HkxMopp
             return right ? rightAt : left ? leftAt : -1;
         }
 
-        // The grid `by` halvings finer whose origin is the three bytes after `pc` on the current one.
-        private Frame Zoom(Frame f, int by, int pc)
-        {
-            int shift = f.Shift + by;
-            int[] origin = Axes(a => (_code[pc + 1 + a] + f.Origin[a]) << by);
-            return new Frame(Axes(a => (_low[a] >> (16 - shift)) - origin[a]), Axes(a => (_high[a] >> (16 - shift)) - origin[a] + 1),
-                origin, shift, f.KeyBase);
-        }
-
         // A diagonal's sum over the box: each axis's `same` bound where it adds, minus its `other` bound where it subtracts.
         private static int Sum(int[] signs, int[] same, int[] other)
             => Enumerable.Range(0, 3).Sum(a => signs[a] > 0 ? same[a] : signs[a] < 0 ? -other[a] : 0);
 
-        private uint Be(int at, int count)
+        private uint Read(int at, int count)
         {
             uint value = 0;
             for (int i = 0; i < count; i++)

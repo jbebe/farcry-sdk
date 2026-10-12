@@ -24,8 +24,8 @@ public sealed class HkxVerifyCommand : CliCommand<HkxVerifyCommand.Settings>
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
-        int failed = 0, broken = 0, differ = 0, mopps = 0, shippedBytes = 0, builtBytes = 0;
-        Dictionary<string, int> skipped = [];
+        int failed = 0;
+        var mopps = new MoppTally();
         foreach (string input in settings.Inputs)
         {
             byte[] original = CliIO.ReadInput(input);
@@ -37,57 +37,65 @@ public sealed class HkxVerifyCommand : CliCommand<HkxVerifyCommand.Settings>
                 Console.WriteLine($"{input}: differs at 0x{same:X} ({original.Length:N0} bytes in, {rebuilt.Length:N0} out)");
                 failed++;
             }
-            if (!settings.Mopp)
+            if (settings.Mopp)
             {
-                continue;
-            }
-
-            foreach (HkxObject mopp in file.Objects().Where(o => o.Class.Name == "hkpMoppBvTreeShape"))
-            {
-                List<HkxMoppItem> items;
-                try
-                {
-                    items = HkxMopp.Items(mopp.GetPointer("child.childShape")!);
-                }
-                catch (NotSupportedException ex)
-                {
-                    skipped[ex.Message] = skipped.GetValueOrDefault(ex.Message) + 1;
-                    continue;
-                }
-
-                mopps++;
-                byte[] shipped = HkxMopp.Code(mopp).Code;
-                (Vector4 info, byte[] built) = HkxMopp.Build(items);
-                (shippedBytes, builtBytes) = (shippedBytes + shipped.Length, builtBytes + built.Length);
-                List<uint> keys = [.. items.Select(i => i.Key).Order()];
-                List<uint> reached = [.. HkxMopp.Keys(shipped).Order()];
-                if (!reached.SequenceEqual(keys))
-                {
-                    Console.WriteLine($"{input}: shipped code over {items.Count} children skips {keys.Except(reached).Count()} of them and reaches {reached.Except(keys).Count()} others");
-                    differ++;
-                }
-                int lost = HkxMopp.Probes(items, ProbesPerMopp).Sum(p => HkxMopp.Lost(items, info, built, p).Count());
-                string? problem = !HkxMopp.Keys(built).Order().SequenceEqual(keys) ? "reaches other keys than its children"
-                    : lost > 0 ? $"lost {lost} children to boxes touching them"
-                    : null;
-                if (problem is not null)
-                {
-                    Console.WriteLine($"{input}: rebuilt code over {items.Count} children {problem}");
-                    broken++;
-                }
+                CheckMopps(input, file, mopps);
             }
         }
 
         Console.WriteLine($"{settings.Inputs.Length - failed} of {settings.Inputs.Length} rebuild byte for byte");
         if (settings.Mopp)
         {
-            Console.WriteLine($"{mopps - broken} of {mopps} rebuilt MOPPs hold ({builtBytes:N0} bytes of code, against {shippedBytes:N0} shipped)");
-            Console.WriteLine($"{differ} shipped MOPPs reach other keys than their children");
-            foreach ((string reason, int count) in skipped)
+            Console.WriteLine($"{mopps.Checked - mopps.Broken} of {mopps.Checked} rebuilt MOPPs hold ({mopps.BuiltBytes:N0} bytes of code, against {mopps.ShippedBytes:N0} shipped)");
+            Console.WriteLine($"{mopps.Differ} shipped MOPPs reach other keys than their children");
+            foreach ((string reason, int count) in mopps.Skipped)
             {
                 Console.WriteLine($"{count} skipped: {reason}");
             }
         }
-        return failed + broken == 0 ? 0 : 1;
+        return failed + mopps.Broken == 0 ? 0 : 1;
+    }
+
+    private static void CheckMopps(string input, HkxFile file, MoppTally tally)
+    {
+        foreach (HkxObject mopp in file.Objects().Where(o => o.Class.Name == "hkpMoppBvTreeShape"))
+        {
+            List<HkxMoppItem> items;
+            try
+            {
+                items = HkxMopp.Items(mopp);
+            }
+            catch (NotSupportedException ex)
+            {
+                tally.Skipped[ex.Message] = tally.Skipped.GetValueOrDefault(ex.Message) + 1;
+                continue;
+            }
+
+            (Vector4 shippedInfo, byte[] shipped) = HkxMopp.Code(mopp);
+            (Vector4 info, byte[] built) = HkxMopp.Build(items);
+            tally.Checked++;
+            tally.ShippedBytes += shipped.Length;
+            tally.BuiltBytes += built.Length;
+
+            HkxMoppCheck original = HkxMopp.Check(items, shippedInfo, shipped, probes: 0);
+            if (!original.Holds)
+            {
+                Console.WriteLine($"{input}: shipped code over {items.Count} children never reaches {original.Unreached.Count} of them and reaches {original.Stray.Count} others");
+                tally.Differ++;
+            }
+            HkxMoppCheck rebuilt = HkxMopp.Check(items, info, built, ProbesPerMopp);
+            if (!rebuilt.Holds)
+            {
+                Console.WriteLine($"{input}: rebuilt code over {items.Count} children never reaches {rebuilt.Unreached.Count} of them, "
+                    + $"reaches {rebuilt.Stray.Count} others, and loses {rebuilt.Lost.Count} to boxes touching them");
+                tally.Broken++;
+            }
+        }
+    }
+
+    private sealed class MoppTally
+    {
+        public int Checked, Broken, Differ, ShippedBytes, BuiltBytes;
+        public Dictionary<string, int> Skipped { get; } = [];
     }
 }
