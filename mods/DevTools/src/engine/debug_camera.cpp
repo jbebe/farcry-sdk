@@ -154,9 +154,8 @@ namespace {
 
         DevTools::Entity::SetPhysicsEnabled(physics, false);
 
-        // Seeded from the body's facing; local +Y is forward, hence the quarter turn.
-        const float* matrix = DevTools::Entity::Matrix(entity);
-        g_noclipYaw = std::atan2(matrix[5], matrix[4]) - 1.57079633f;
+        // Seeded from the body's facing.
+        g_noclipYaw = DevTools::Entity::Yaw(entity);
 
         // Pitch only exists on the camera.
         g_noclipPitch = 0.0f;

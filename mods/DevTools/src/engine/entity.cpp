@@ -6,9 +6,12 @@
 
 #include "fcse_api.h"
 
+#include <cmath>
 #include <cstdint>
 
 namespace {
+    constexpr float kQuarterTurn = 1.57079633f;
+
     constexpr ptrdiff_t kRefCount = 0x08;
     constexpr ptrdiff_t kRefEntity = 0x0C;
     constexpr ptrdiff_t kEntityMatrix = 0x30;
@@ -157,6 +160,12 @@ void AddRef(void* ref) {
 
 const float* Matrix(void* entity) {
     return reinterpret_cast<const float*>(static_cast<uint8_t*>(entity) + kEntityMatrix);
+}
+
+float Yaw(void* entity) {
+    // Local +Y is forward and yaw is measured from +X, hence the quarter turn.
+    const float* matrix = Matrix(entity);
+    return std::atan2(matrix[5], matrix[4]) - kQuarterTurn;
 }
 
 void SetPosition(void* entity, float x, float y, float z) {

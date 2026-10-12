@@ -20,6 +20,7 @@
 #include "overlay/baseline.h"
 #include "overlay/diagnostics.h"
 #include "overlay/lua_console.h"
+#include "overlay/spawner.h"
 
 #include "imgui.h"
 #include "imgui_impl_dx9.h"
@@ -45,9 +46,17 @@ namespace {
 
     constexpr int kToggleKey = VK_HOME;
 
+    // A tab drawn by a function of its own, or as a command table when `draw` is null.
+    struct Tab {
+        const char* name;
+        void (*draw)();
+    };
+
     // Tabs of their own rather than command categories, so they have no commands under them.
-    constexpr const char* kDiagnostics = "Diagnostics";
-    constexpr const char* kLua = "Lua";
+    constexpr Tab kOwnTabs[] = {{"Diagnostics", &DevTools::Diagnostics::Draw},
+                                {"Lua", &DevTools::LuaConsole::Draw},
+                                {"Spawner", &DevTools::Spawner::Draw}};
+
     constexpr size_t kHistoryMax = 12;
 
     struct QueuedMessage {
@@ -103,9 +112,9 @@ namespace {
     // The weather the Environment tab forces, for this session only.
     DevTools::Weather::Wanted g_weather;
 
-    // Which category tab is open, as an index into the labels below. 0 is "All".
+    // Which tab is open, as an index into the tabs below. 0 is "All".
     int g_category = 0;
-    std::vector<const char*> g_categories;
+    std::vector<Tab> g_tabs;
 
     // Whether the overlay is up is the same question as whether it has the input, so it is only
     // stored once - two flags for one state can disagree, and did.
@@ -224,17 +233,18 @@ namespace {
                          g_registered.end());
     }
 
-    void BuildCategories() {
-        g_categories.push_back("All");
-        g_categories.push_back(kDiagnostics);
-        g_categories.push_back(kLua);
+    void BuildTabs() {
+        g_tabs.push_back({"All", nullptr});
+        for (const Tab& tab : kOwnTabs) {
+            g_tabs.push_back(tab);
+        }
         for (const Command& command : DevTools::Commands::All()) {
             bool seen = false;
-            for (const char* known : g_categories) {
-                seen = seen || std::strcmp(known, command.category) == 0;
+            for (const Tab& known : g_tabs) {
+                seen = seen || std::strcmp(known.name, command.category) == 0;
             }
             if (!seen) {
-                g_categories.push_back(command.category);
+                g_tabs.push_back({command.category, nullptr});
             }
         }
     }
@@ -274,7 +284,7 @@ namespace {
         DevTools::Input::Install(created.hFocusWindow, &OnMessage);
 
         g_arguments.resize(DevTools::Commands::All().size());
-        BuildCategories();
+        BuildTabs();
 
         // Whether presenting and updating happen on one thread is an open question in
         // docs/docs/engine-internals/architecture.md, which reads the dedicated-server binary where
@@ -287,7 +297,7 @@ namespace {
 
     // Category 0 is "All".
     bool Matches(const Command& command) {
-        return g_category == 0 || std::strcmp(command.category, g_categories[g_category]) == 0;
+        return g_category == 0 || std::strcmp(command.category, g_tabs[g_category].name) == 0;
     }
 
     void Send(const Command& command, const char* argument) {
@@ -466,16 +476,15 @@ namespace {
         // the popup button is the way to reach one that has scrolled off.
         if (ImGui::BeginTabBar("categories", ImGuiTabBarFlags_FittingPolicyScroll |
                                                  ImGuiTabBarFlags_TabListPopupButton)) {
-            for (size_t category = 0; category < g_categories.size(); ++category) {
-                if (ImGui::BeginTabItem(g_categories[category])) {
+            for (size_t category = 0; category < g_tabs.size(); ++category) {
+                const Tab& tab = g_tabs[category];
+                if (ImGui::BeginTabItem(tab.name)) {
                     g_category = static_cast<int>(category);
                     ImGui::BeginChild("tab", ImVec2(0.0f, -historyHeight));
-                    if (std::strcmp(g_categories[category], "Environment") == 0) {
+                    if (tab.draw != nullptr) {
+                        tab.draw();
+                    } else if (std::strcmp(tab.name, "Environment") == 0) {
                         DrawEnvironment();
-                    } else if (std::strcmp(g_categories[category], kDiagnostics) == 0) {
-                        DevTools::Diagnostics::Draw();
-                    } else if (std::strcmp(g_categories[category], kLua) == 0) {
-                        DevTools::LuaConsole::Draw();
                     } else {
                         DrawCommandTable();
                     }

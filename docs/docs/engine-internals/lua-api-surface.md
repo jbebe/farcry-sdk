@@ -31,6 +31,12 @@ and friends.
 one unnamed-string-literal binding, `UnBind`, `GetGlobalString`, `GetGlobalNumber`,
 `SpawnEntityFromArchetype`.
 
+`SpawnEntityFromArchetype(name, x, y, z, ax, ay, az)` (`FarCry2_server` `0x093c2640`) spawns the
+archetype named by its fully qualified `hidName` into the mission component's default layer, then
+`SetPos` and `SetAngles` it. The three angles are degrees, the third being yaw. It returns the new
+entity's id, or the invalid id when the name resolves to nothing. It does not find the ground:
+the entity starts exactly at `z`.
+
 **Gameplay/mission scripting, batch 1** (`0x109fc830`, 70 fns — the single largest registration site,
 almost certainly backing `SCRIPTS\MissionTools.lua`): `SpawnPickupMissionItem`, `AddWeapon`,
 `AddGadget`, `CameraShakeAndGamePadRumble`, `SpawnWeapon`, `RefillWeaponAmmo`, `RefillSyrettes`,

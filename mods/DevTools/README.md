@@ -252,6 +252,18 @@ The retail build drops script errors and `System:Log` lines. Both are caught her
 failing function, file and line for an error, and are written to `fcse.log` as well, so they survive
 a crash that follows them.
 
+### Spawner
+
+The Spawner tab, next to Lua, puts things into the world in front of you. For now that is vehicles:
+every land vehicle, boat and the hang glider, and the Rover and both boats once per mounted gun as
+well. A click spawns one 8 m ahead at the end of the next frame, facing the way you face, and drops
+it from 1.5 m above your feet, because the game's spawn call does not find the ground. Hovering a
+button shows the archetype it spawns.
+
+A spawn is a call to `SpawnEntityFromArchetype`, the Lua global the game's own scripts use, and the
+line it runs lands in the Lua tab along with any error. In a menu there is no one to spawn in front
+of, so nothing happens and `fcse.log` says so.
+
 ### Adding a window from another plugin
 
 `include/devtools_api.h` is the contract, the way `fcse_api.h` is FCSE's, and says what DevTools does
@@ -426,3 +438,6 @@ Everything below needs a real install:
   override weight 1.00 and the sky turns stormy; Rain On under a clear sky starts rain at once, its
   intensity climbing over five seconds; Wind Off stills the trees, and 250 bends them and slants the
   rain.
+- **Spawner** *(not yet run)*: on the Spawner tab, Datsun puts a Datsun 8 m ahead, facing the way
+  the player faces, which drops onto its wheels and can be driven. The Lua tab shows the
+  `SpawnEntityFromArchetype` line it ran.

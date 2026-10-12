@@ -41,6 +41,7 @@ include("${DEVTOOLS_INCLUDE_DIR}/devtools_imgui.cmake")
 add_library(DevTools SHARED
   "src/main.cpp"
   "src/commands/catalog.cpp"
+  "src/commands/spawnables.cpp"
   "src/engine/benchmark.cpp"
   "src/engine/camera.cpp"
   "src/engine/console.cpp"
@@ -57,6 +58,7 @@ add_library(DevTools SHARED
   "src/engine/player.cpp"
   "src/engine/process_stats.cpp"
   "src/engine/renderer.cpp"
+  "src/engine/spawn.cpp"
   "src/engine/weather.cpp"
   "src/fixes/load_savegame.cpp"
   "src/fixes/skip_intro.cpp"
@@ -76,6 +78,7 @@ add_library(DevTools SHARED
   "src/overlay/diagnostics.cpp"
   "src/overlay/lua_console.cpp"
   "src/overlay/overlay.cpp"
+  "src/overlay/spawner.cpp"
   "${imgui_SOURCE_DIR}/backends/imgui_impl_dx9.cpp"
   "${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp"
 )

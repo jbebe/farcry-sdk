@@ -25,6 +25,9 @@ void AddRef(void* ref);
 // The entity's world transform: 4x4 row-major, rows 0-2 the basis, row 3 the position.
 const float* Matrix(void* entity);
 
+// The yaw SetEuler takes for the way the entity faces now, in radians.
+float Yaw(void* entity);
+
 void SetPosition(void* entity, float x, float y, float z);
 void SetEuler(void* entity, float pitch, float roll, float yaw);
 

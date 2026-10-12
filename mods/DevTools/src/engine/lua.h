@@ -13,7 +13,10 @@ namespace DevTools::Lua {
 // Resolves the script system and hooks its error and System:Log sinks. Call once from FCSE_Load.
 void Install();
 
-// Runs `code` as one chunk at the end of the next frame. Its errors arrive as lines.
+// Runs `code` as one chunk, now. Game thread only. Its errors arrive as lines.
+void Run(const std::string& code);
+
+// Run, from any thread, at the end of the next frame.
 void Post(const std::string& code);
 
 // Evaluates `expression` at the end of the next frame and adds its value as a line, as tostring

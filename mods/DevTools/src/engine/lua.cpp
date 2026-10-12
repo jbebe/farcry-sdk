@@ -132,7 +132,7 @@ namespace {
     }
 
     // Runs on the game thread. False when the chunk did not run, or raised an error.
-    bool Run(const std::string& code) {
+    bool Execute(const std::string& code) {
         void* scripts = g_executeBuffer != nullptr ? g_getScriptSystem() : nullptr;
         if (scripts == nullptr) {
             AddLines("devtools", "no script system yet");
@@ -178,17 +178,19 @@ void Install() {
              "CDominoInputListener::Execute");
 }
 
+void Run(const std::string& code) {
+    AddLines(">", code.c_str());
+    Execute(code);
+}
+
 void Post(const std::string& code) {
-    GameThread::Post([code] {
-        AddLines(">", code.c_str());
-        Run(code);
-    });
+    GameThread::Post([code] { Run(code); });
 }
 
 void PostEvaluate(const std::string& expression) {
     GameThread::Post([expression] {
         AddLines("=", expression.c_str());
-        if (!Run(std::string(kResultGlobal) + " = tostring(" + expression + ")")) {
+        if (!Execute(std::string(kResultGlobal) + " = tostring(" + expression + ")")) {
             return;
         }
 
