@@ -46,8 +46,6 @@ box, one row away from the stock behaviour.
 - **Field of view** — 65 to 120 degrees, default 75, the game's own. The view on foot; the weapon
   and arms, the sights, scopes and vehicles keep their own, and cutscenes, ladders and the hang
   glider keep their own framing.
-- **Mouse and controller look sensitivity** — on top of the in-game slider and past its ceiling,
-  separately per device.
 - **Maximum frame rate** — the engine's own limiter, capped at 60 by default. Takes effect without
   a restart.
 - **Display mode** — borderless, applied on the next launch.

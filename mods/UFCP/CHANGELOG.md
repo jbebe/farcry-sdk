@@ -11,7 +11,7 @@ Most of this is ported from FC2JackalFix (MIT, Joshhhuaaa and TGP482) — see th
 - Fixes: the mouse speed cap, the loading screen's timer resolution, and the engine's CPU and GPU
   utilisation.
 - Fix: grass lit under spot lights. Headlights and flashlights now light the grass they shine on.
-- Options: mouse and controller look sensitivity; maximum frame rate; borderless display mode.
+- Options: maximum frame rate; borderless display mode.
 - `src/engine/`, for seams shared by more than one feature: the single `RunGame` detour, and whether
   an engine pointer is still readable.
 

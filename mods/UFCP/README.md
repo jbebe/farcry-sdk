@@ -41,8 +41,6 @@ disagree.
 | Option | Range | Default |
 |---|---|---|
 | Field of view | 65–120 degrees | **75** — the game's own |
-| Mouse look sensitivity | 0.10×–5.00× | **1.00×** |
-| Controller look sensitivity | 0.05×–2.00× | **1.00×** |
 | Maximum frame rate | Game default · Unlocked · Screen refresh · 30–240 Hz | **60 Hz** |
 | Display mode | Game default · Borderless | **Game default** |
 | Processor affinity | All cores · Physical cores only · 4 cores · 1 core | **All cores** |
@@ -55,11 +53,6 @@ angle wins, muzzle particles are split between the two passes and come apart onc
 projections differ, and the map's markers change pass inside a vehicle. It is the view on foot
 only: the weapon and arms stay at the game's own 75 degrees, and the sights, scopes and vehicles
 keep their own.
-
-**The two sensitivity rows** scale the value the game already loaded, so the in-game slider is left
-alone and either device can go past its ceiling. Which one applies follows what the player is
-actually looking with: pushing the right stick past the engine's dead zone claims the look, and any
-mouse or keyboard input hands it back.
 
 **Maximum frame rate** uses the engine's own limiter, `gfx_MaxFps`. It is set on the command line at
 launch and written into the render profile afterwards, which is what lets a change made from the

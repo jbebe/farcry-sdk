@@ -45,7 +45,6 @@ add_library(UFCP SHARED
   "src/options/affinity.cpp"
   "src/options/display_mode.cpp"
   "src/options/fov.cpp"
-  "src/options/look_sensitivity.cpp"
   "src/options/max_frame_rate.cpp"
 )
 

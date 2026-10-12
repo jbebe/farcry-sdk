@@ -41,10 +41,6 @@ void ApplyGrassSpotLightFix();
 void InstallFovHook();
 void __cdecl OnFovChanged(const FCSE_SettingValue* value, void* userdata);
 
-void InstallLookSensitivityHook();
-void __cdecl OnMouseSensitivityChanged(const FCSE_SettingValue* value, void* userdata);
-void __cdecl OnControllerSensitivityChanged(const FCSE_SettingValue* value, void* userdata);
-
 void InstallMaxFrameRateHook();
 void __cdecl OnMaxFrameRateChanged(const FCSE_SettingValue* value, void* userdata);
 
@@ -97,7 +93,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     ApplyGrassSpotLightFix();
 
     InstallFovHook();
-    InstallLookSensitivityHook();
     InstallMaxFrameRateHook();
     UFCP::InstallRunGameHook();
 
@@ -110,11 +105,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // stock behaviour.
     static const FCSE_Setting settings[] = {
         {"Field of view", FCSE_SLIDER(75), &OnFovChanged, nullptr, nullptr, 0, 65, 120},
-        // Hundredths, because FCSE has no float setting; 100 is the game's own value.
-        {"Mouse look sensitivity", FCSE_SLIDER(100), &OnMouseSensitivityChanged, nullptr, nullptr,
-         0, 10, 500},
-        {"Controller look sensitivity", FCSE_SLIDER(100), &OnControllerSensitivityChanged, nullptr,
-         nullptr, 0, 5, 200},
         {"Maximum frame rate", FCSE_CHOICE(kMaxFrameRate60Hz), &OnMaxFrameRateChanged, nullptr,
          kMaxFrameRates, std::size(kMaxFrameRates)},
         {"Display mode", FCSE_CHOICE(0), &OnDisplayModeChanged, nullptr, kDisplayModes, std::size(kDisplayModes)},
