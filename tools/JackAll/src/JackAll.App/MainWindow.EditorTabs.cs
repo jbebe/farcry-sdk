@@ -1,3 +1,4 @@
+using JackAll.App.FileHandlers;
 using JackAll.App.FileHandlers.Domino;
 using JackAll.App.FileHandlers.Fcb;
 using JackAll.App.FileHandlers.Fcb.FcbEditor;
@@ -68,21 +69,21 @@ public partial class MainWindow
     /// document tab keeps its close action in <c>Tag</c>, fixed tabs have none.</summary>
     private void CloseDocumentTab(TabItem? tab) => ((tab ?? MainTabs.SelectedItem as TabItem)?.Tag as Action)?.Invoke();
 
-    /// <summary>The Files tab's launcher: the editor tab for this kind of file.</summary>
-    private void OpenEditorTab(VfsFile file)
+    /// <summary>The Files tab's launcher: the editor tab the preview asked for.</summary>
+    private void OpenEditorTab(VfsFile file, EditorKind kind)
     {
-        switch (file)
+        switch (kind)
         {
-            case { IsFragment: true }:
+            case EditorKind.Fcb:
                 OpenFcbEditorTab(file);
                 break;
-            case { Type.Extension: "lua" }:
+            case EditorKind.Domino:
                 OpenDominoEditorTab(file);
                 break;
-            case { Type.Extension: "mgb" }:
+            case EditorKind.Mgb:
                 OpenMgbEditorTab(file);
                 break;
-            case { Type.Extension: "hkx" }:
+            case EditorKind.Hkx:
                 OpenHkxEditorTab(file);
                 break;
         }
@@ -336,7 +337,7 @@ public partial class MainWindow
     /// <summary>Open HKX editor tabs, keyed by the file's own hash.</summary>
     private readonly Dictionary<ulong, TabItem> _openHkxEditors = [];
 
-    /// <summary>The Files tab's "Open in HKX Editor…". Read-only for now, so closing never prompts.</summary>
+    /// <summary>The Files tab's "Open in HKX Editor…". The tab only shows, so closing never prompts.</summary>
     private void OpenHkxEditorTab(VfsFile file)
         => OpenOrFocusEditorTab(_openHkxEditors, file.Hash, onRemoved =>
         {
@@ -345,9 +346,12 @@ public partial class MainWindow
                 return null;
             }
 
-            var view = new HkxTabView(file.FileName, file.NameIsKnown ? file.Path : null, content, _vm.ReadByPath);
-            var tab = new TabItem { Content = view, ToolTip = file.Path };
-            MakeClosable(tab, view.Title, () => RemoveTab(tab, onRemoved));
+            var tab = new TabItem
+            {
+                Content = new HkxTabView(file.FileName, file.NameIsKnown ? file.Path : null, content, _vm.ReadByPath),
+                ToolTip = file.Path,
+            };
+            MakeClosable(tab, file.FileName, () => RemoveTab(tab, onRemoved));
             return tab;
         });
 

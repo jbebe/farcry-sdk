@@ -5,8 +5,8 @@ namespace JackAll.Tools.Hkx;
 
 /// <summary>
 /// Reads and writes an object's members by <see cref="HkSlot.Path"/>, such as <c>motion.motionState.transform</c>
-/// or <c>entities[1]</c>: the paths <see cref="HkxDump"/> prints. An index after an array member reaches into
-/// its elements, as in <c>childInfo[2].shape</c>. Values are written as the 32-bit little-endian layout stores them.
+/// or <c>entities[1]</c>. An index after an array member reaches into its elements, as in
+/// <c>childInfo[2].shape</c>. Values are written as the 32-bit little-endian layout stores them.
 /// </summary>
 public static class HkxEdit
 {
@@ -80,52 +80,40 @@ public static class HkxEdit
         block.Refs[at] = HkxData.FromText(text);
     }
 
-    public static int Count(this HkxObject o, string path)
-    {
-        (HkxBlock block, int at, _) = Array(o, path);
-        return ByteCursor.I32(block.Bytes, at + 4);
-    }
+    public static int Count(this HkxObject o, string path) => Array(o, path).Count;
 
     /// <summary>What an array of pointers points at, in order.</summary>
     public static List<HkxObject?> GetPointers(this HkxObject o, string path)
     {
-        (HkxBlock block, int at, _) = Array(o, path);
-        HkxBlock? elements = Elements(block, at);
-        return [.. Enumerable.Range(0, ByteCursor.I32(block.Bytes, at + 4))
-            .Select(i => (elements?.Refs.GetValueOrDefault(i * 4) as HkxPointer)?.Target)];
+        (_, _, _, HkxBlock? elements, int count) = Array(o, path);
+        return [.. Enumerable.Range(0, count).Select(i => (elements?.Refs.GetValueOrDefault(i * 4) as HkxPointer)?.Target)];
     }
 
     /// <summary>Every float an array's elements hold, one element after another: reals, vectors, or structs of them.</summary>
     public static float[] GetRealArray(this HkxObject o, string path)
     {
-        (HkxBlock block, int at, HkSlot s) = Array(o, path);
+        (_, _, HkSlot s, HkxBlock? elements, _) = Array(o, path);
         HkMember m = s.Member;
         bool reals = m.Subtype == HkType.Struct
             ? HavokClasses.Default.Slots(HavokClasses.Default[m.Class!]).All(e => IsReal(e.Member.Type))
             : IsReal(m.Subtype);
-        if (!reals)
-        {
-            throw new ArgumentException($"'{path}' does not hold reals.");
-        }
-        return Elements(block, at) is { } elements ? Reals(elements.Bytes) : [];
+        return reals ? Reals(elements?.Bytes ?? []) : throw new ArgumentException($"'{path}' does not hold reals.");
     }
 
     /// <summary>An array of integers or enums, widened.</summary>
     public static int[] GetIntArray(this HkxObject o, string path)
     {
-        (HkxBlock block, int at, HkSlot s) = Array(o, path);
+        (_, _, HkSlot s, HkxBlock? elements, int count) = Array(o, path);
         int size = HavokClasses.Default.SizeOf(s.Member.Subtype, HkType.Void, null);
-        byte[] elements = Elements(block, at)?.Bytes ?? [];
-        return [.. Enumerable.Range(0, elements.Length / size).Select(i => Integer(elements.AsSpan(i * size), s.Member.Subtype))];
+        return [.. Enumerable.Range(0, count).Select(i => Integer(elements!.Bytes.AsSpan(i * size), s.Member.Subtype))];
     }
 
     /// <summary>Puts an element into an array of pointers at <paramref name="index"/>, moving those from there on up.</summary>
     public static void Insert(this HkxObject o, string path, int index, HkxObject element)
     {
-        (HkxBlock block, int at, HkSlot s) = Array(o, path);
-        int count = ByteCursor.I32(block.Bytes, at + 4);
+        (HkxBlock block, int at, HkSlot s, HkxBlock? old, int count) = Array(o, path);
         var elements = new HkxBlock(new byte[(count + 1) * 4]);
-        foreach ((int offset, HkxRef r) in Elements(block, at)?.Refs ?? [])
+        foreach ((int offset, HkxRef r) in old?.Refs ?? [])
         {
             elements.Refs[offset < index * 4 ? offset : offset + 4] = r;
         }
@@ -149,10 +137,10 @@ public static class HkxEdit
         _ => ByteCursor.I32(b, 0),
     };
 
-    private static bool IsReal(HkType type) => type is HkType.Real or HkType.Vector4 or HkType.Quaternion or HkType.Matrix3
+    internal static bool IsReal(HkType type) => type is HkType.Real or HkType.Vector4 or HkType.Quaternion or HkType.Matrix3
         or HkType.Rotation or HkType.QsTransform or HkType.Matrix4 or HkType.Transform;
 
-    private static float[] Reals(ReadOnlySpan<byte> bytes)
+    internal static float[] Reals(ReadOnlySpan<byte> bytes)
     {
         var reals = new float[bytes.Length / 4];
         for (int i = 0; i < reals.Length; i++)
@@ -162,25 +150,25 @@ public static class HkxEdit
         return reals;
     }
 
-    private static HkxBlock? Elements(HkxBlock block, int at) => (block.Refs.GetValueOrDefault(at) as HkxData)?.Block;
+    /// <summary>The data an array or string slot owns.</summary>
+    internal static HkxBlock? Elements(HkxBlock block, int at) => (block.Refs.GetValueOrDefault(at) as HkxData)?.Block;
 
-    private static (HkxBlock Block, int At, HkSlot Slot) Array(HkxObject o, string path)
+    private static (HkxBlock Block, int At, HkSlot Slot, HkxBlock? Elements, int Count) Array(HkxObject o, string path)
     {
-        (HkxBlock Block, int At, HkSlot Slot) located = Locate(o, path);
-        return located.Slot.Member.Type is HkType.Array or HkType.SimpleArray ? located
+        (HkxBlock block, int at, HkSlot slot) = Locate(o, path);
+        return slot.Member.Type is HkType.Array or HkType.SimpleArray
+            ? (block, at, slot, Elements(block, at), ByteCursor.I32(block.Bytes, at + 4))
             : throw new ArgumentException($"'{path}' is not an array.");
     }
 
-    // The member, checked to hold `size` bytes.
-    private static (HkxBlock Block, int At, HkSlot Slot) Locate(HkxObject o, string path, int size)
+    // The member, checked to hold at least `size` bytes.
+    private static (HkxBlock Block, int At, HkSlot Slot) Locate(HkxObject o, string path, int size = 0)
     {
-        (HkxBlock Block, int At, HkSlot Slot) located = Locate(o, path);
+        (HkxBlock Block, int At, HkSlot Slot) located = Locate(o, o.Class, 0, path)
+            ?? throw new KeyNotFoundException($"{o.Class.Name} has no member '{path}'.");
         return size <= located.Slot.Size ? located
             : throw new ArgumentException($"'{path}' holds {located.Slot.Size} bytes, not {size}.");
     }
-
-    private static (HkxBlock Block, int At, HkSlot Slot) Locate(HkxObject o, string path)
-        => Locate(o, o.Class, 0, path) ?? throw new KeyNotFoundException($"{o.Class.Name} has no member '{path}'.");
 
     // The block holding the member and its offset there: a slot of the struct at `at`, or one inside an array's elements.
     private static (HkxBlock Block, int At, HkSlot Slot)? Locate(HkxBlock block, HkClass c, int at, string path)
@@ -202,19 +190,17 @@ public static class HkxEdit
 
             int index = int.Parse(path[(open + 1)..close]);
             string rest = path[(close + 1)..].TrimStart('.');
-            HkMember m = array.Member;
-            int size = classes.SizeOf(m.Subtype, HkType.Void, m.Class);
+            HkMember element = array.Member.Element;
+            int size = classes.SizeOf(element.Type, HkType.Void, element.Class);
             if (index < 0 || index >= ByteCursor.I32(block.Bytes, at + array.Offset + 4) || Elements(block, at + array.Offset) is not { } elements)
             {
                 throw new ArgumentOutOfRangeException(nameof(path), $"'{path[..close]}]' is past the end of the array.");
             }
-            if (m.Subtype == HkType.Struct)
+            if (element.Type == HkType.Struct)
             {
-                return Locate(elements, classes[m.Class!], index * size, rest);
+                return Locate(elements, classes[element.Class!], index * size, rest);
             }
-            return rest.Length == 0
-                ? (elements, index * size, new HkSlot(path, index * size, size, m with { Type = m.Subtype, Subtype = HkType.Void, Count = 0 }))
-                : null;
+            return rest.Length == 0 ? (elements, index * size, new HkSlot(path, index * size, size, element)) : null;
         }
         return null;
     }

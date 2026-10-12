@@ -110,7 +110,7 @@ public sealed class HkxShapesTests
             return;
         }
 
-        HkxNode[] hinges = [.. Physics(nodes).Children.Where(n => n.Object?.Class.Name == "hkpConstraintInstance")];
+        HkxNode[] hinges = [.. Physics(nodes).Children.Where(n => n.Kind == HkxNodeKind.Constraint)];
 
         Assert.Equal(3, hinges.Length);
         Assert.Contains(hinges, h => h.Label.Contains("(DoorLeftState02 -> Chassis)") || h.Label.Contains("(Chassis -> DoorLeftState02)"));

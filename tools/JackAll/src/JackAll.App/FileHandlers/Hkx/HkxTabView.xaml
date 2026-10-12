@@ -11,13 +11,13 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Path, StringFormat={}{0}:}" Style="{StaticResource Mono}" Margin="0,0,6,0"
+                <TextBlock Text="{Binding Line.Path, StringFormat={}{0}:}" Style="{StaticResource Mono}" Margin="0,0,6,0"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
-                <TextBlock Grid.Column="1" Text="{Binding Value}" Style="{StaticResource Mono}" TextWrapping="Wrap"
+                <TextBlock Grid.Column="1" Text="{Binding Line.Value}" Style="{StaticResource Mono}" TextWrapping="Wrap"
                            Visibility="{Binding IsPlain, Converter={StaticResource Visible}}" />
                 <TextBlock Grid.Column="1" Style="{StaticResource Mono}" TextWrapping="Wrap"
                            Visibility="{Binding IsLink, Converter={StaticResource Visible}}">
-                    <Hyperlink Click="Target_Click"><Run Text="{Binding Value, Mode=OneWay}" /></Hyperlink>
+                    <Hyperlink Click="Target_Click" Foreground="{DynamicResource LinkBrush}"><Run Text="{Binding Line.Value, Mode=OneWay}" /></Hyperlink>
                 </TextBlock>
             </Grid>
         </DataTemplate>
@@ -45,7 +45,7 @@
                                       Visibility="{Binding IsBody, Converter={StaticResource Visible}}"
                                       IsChecked="{Binding IsShown}" Click="Shown_Click"
                                       ToolTip="Draw this body's collision" />
-                            <TextBlock Text="{Binding Label}" Style="{StaticResource Mono}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Node.Label}" Style="{StaticResource Mono}" VerticalAlignment="Center" />
                         </DockPanel>
                     </HierarchicalDataTemplate>
                 </TreeView.ItemTemplate>

@@ -23,9 +23,6 @@ public sealed class OrbitViewport
     /// <summary>Short of straight up or down, where the up direction would flip.</summary>
     private const double MaxElevation = 1.5;
 
-    /// <summary>How far, in pixels, a press may move and still count as a click.</summary>
-    private const double ClickSlop = 4;
-
     private readonly Viewport3D _viewport;
     private readonly UIElement _input;
     private readonly PerspectiveCamera _camera;
@@ -78,7 +75,7 @@ public sealed class OrbitViewport
         double halfWidth = Math.Tan(_camera.FieldOfView * Math.PI / 360);
         double halfHeight = halfWidth * _viewport.ActualHeight / _viewport.ActualWidth;
 
-        _target = new Point3D(center.X, center.Y, center.Z);
+        _target = Scene3D.Point(center);
         _distance = radius * 1.1 / Math.Min(halfWidth, halfHeight);
         _near = radius * 0.01;
         _far = radius * 20;
@@ -121,7 +118,8 @@ public sealed class OrbitViewport
         _dragging = false;
         _input.ReleaseMouseCapture();
         Point at = e.GetPosition(_viewport);
-        if ((at - _pressedAt).Length < ClickSlop)
+        if (Math.Abs(at.X - _pressedAt.X) < SystemParameters.MinimumHorizontalDragDistance
+            && Math.Abs(at.Y - _pressedAt.Y) < SystemParameters.MinimumVerticalDragDistance)
         {
             Clicked?.Invoke(at);
         }

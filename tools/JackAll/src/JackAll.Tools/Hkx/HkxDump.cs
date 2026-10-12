@@ -10,8 +10,8 @@ public sealed record HkxDumpLine(int Depth, string Path, string Value, HkxObject
 
 /// <summary>
 /// An <c>.hkx</c> as readable text: every object by number and each saved value under the path
-/// <see cref="HkxEdit"/> takes, with pointers as <c>-&gt; #n</c>. Arrays of more than
-/// <see cref="ShownElements"/> plain values print only their count.
+/// <see cref="HkxEdit"/> takes, with pointers as <c>-&gt; #n</c>. An array's elements are listed under it,
+/// and arrays of more than <see cref="ShownElements"/> plain values print only their count.
 /// </summary>
 public static class HkxDump
 {
@@ -21,19 +21,21 @@ public static class HkxDump
 
     public static string Write(HkxFile file)
     {
-        List<HkxObject> objects = file.Objects();
-        Dictionary<HkxObject, int> number = objects.Index().ToDictionary(p => p.Item, p => p.Index);
+        Dictionary<HkxObject, int> numbers = Numbers(file);
         var text = new StringBuilder();
-        foreach ((int i, HkxObject o) in objects.Index())
+        foreach ((HkxObject o, int i) in numbers.OrderBy(p => p.Value))
         {
             text.Append('#').Append(i).Append(' ').AppendLine(o.Class.Name);
-            foreach (HkxDumpLine line in Members(o, number))
+            foreach (HkxDumpLine line in Members(o, numbers))
             {
                 text.Append(' ', 2 + 2 * line.Depth).Append(line.Path).Append(": ").AppendLine(line.Value);
             }
         }
         return text.ToString();
     }
+
+    /// <summary>Each object's number, in the order the writer places them.</summary>
+    public static Dictionary<HkxObject, int> Numbers(HkxFile file) => file.Objects().Index().ToDictionary(p => p.Item, p => p.Index);
 
     /// <summary>An object's saved values, an array's elements one level deeper than the array.</summary>
     public static IEnumerable<HkxDumpLine> Members(HkxObject o, IReadOnlyDictionary<HkxObject, int> numbers)
@@ -49,25 +51,27 @@ public static class HkxDump
         if (m.Type is not (HkType.Array or HkType.SimpleArray))
         {
             HkxObject? target = m.Type is HkType.Pointer or HkType.Variant ? (block.Refs.GetValueOrDefault(at) as HkxPointer)?.Target : null;
-            yield return new HkxDumpLine(depth, name, Scalar(block, at, m.Type, m.Subtype, m.Enum, numbers), target);
+            string value = target is null ? Scalar(block, at, m.Type, m.Subtype, m.Enum) : $"-> #{numbers[target]} {target.Class.Name}";
+            yield return new HkxDumpLine(depth, name, value, target);
             yield break;
         }
 
         int count = ByteCursor.I32(block.Bytes, at + 4);
-        var elements = block.Refs.GetValueOrDefault(at) as HkxData;
-        bool listed = elements is not null && (m.Subtype is HkType.Struct or HkType.Pointer || count <= ShownElements);
-        yield return new HkxDumpLine(depth, name, elements is null || listed ? $"[{count}]" : $"[{count}] ...", null);
-        if (!listed)
+        HkxBlock? elements = HkxEdit.Elements(block, at);
+        bool listed = m.Subtype is HkType.Struct or HkType.Pointer || count <= ShownElements;
+        yield return new HkxDumpLine(depth, name, listed || elements is null ? $"[{count}]" : $"[{count}] ...", null);
+        if (!listed || elements is null)
         {
             yield break;
         }
 
-        int size = Classes.SizeOf(m.Subtype, HkType.Void, m.Class);
+        HkMember element = m.Element;
+        int size = Classes.SizeOf(element.Type, HkType.Void, element.Class);
         for (int i = 0; i < count; i++)
         {
-            IEnumerable<HkxDumpLine> lines = m.Subtype == HkType.Struct
-                ? Slots(elements!.Block, i * size, Classes[m.Class!], depth + 1, $"[{i}].", numbers)
-                : Value(elements!.Block, i * size, m with { Type = m.Subtype, Subtype = HkType.Void, Enum = null }, $"[{i}]", depth + 1, numbers);
+            IEnumerable<HkxDumpLine> lines = element.Type == HkType.Struct
+                ? Slots(elements, i * size, Classes[element.Class!], depth + 1, $"[{i}].", numbers)
+                : Value(elements, i * size, element, $"[{i}]", depth + 1, numbers);
             foreach (HkxDumpLine line in lines)
             {
                 yield return line;
@@ -75,7 +79,7 @@ public static class HkxDump
         }
     }
 
-    private static string Scalar(HkxBlock block, int at, HkType type, HkType subtype, HkEnum? hkEnum, IReadOnlyDictionary<HkxObject, int> numbers)
+    private static string Scalar(HkxBlock block, int at, HkType type, HkType subtype, HkEnum? hkEnum)
     {
         ReadOnlySpan<byte> b = block.Bytes.AsSpan(at);
         return type switch
@@ -86,25 +90,15 @@ public static class HkxDump
             HkType.UInt32 or HkType.ULong => $"0x{ByteCursor.U32(b, 0):X8}",
             HkType.Int64 => BinaryPrimitives.ReadInt64LittleEndian(b).ToString(CultureInfo.InvariantCulture),
             HkType.UInt64 => $"0x{BinaryPrimitives.ReadUInt64LittleEndian(b):X16}",
-            HkType.Real or HkType.Vector4 or HkType.Quaternion or HkType.Matrix3 or HkType.Rotation or HkType.QsTransform
-                or HkType.Matrix4 or HkType.Transform => Reals(b, Classes.SizeOf(type, subtype, null) / 4),
             HkType.Enum or HkType.Flags => Enum(HkxEdit.Integer(b, subtype), hkEnum),
-            HkType.Pointer or HkType.Variant => block.Refs.GetValueOrDefault(at) is HkxPointer p ? $"-> #{numbers[p.Target]} {p.Target.Class.Name}" : "null",
+            HkType.Pointer or HkType.Variant => "null",
             HkType.CString => block.Refs.GetValueOrDefault(at) is HkxData s ? $"\"{s.Text}\"" : "null",
+            _ when HkxEdit.IsReal(type)
+                => string.Join(' ', HkxEdit.Reals(b[..Classes.SizeOf(type, subtype, null)]).Select(r => r.ToString("G7", CultureInfo.InvariantCulture))),
             _ => $"({type})",
         };
     }
 
     private static string Enum(int value, HkEnum? hkEnum)
         => hkEnum?.Items.FirstOrDefault(i => i.Value == value).Name is { } name ? $"{name} ({value})" : value.ToString(CultureInfo.InvariantCulture);
-
-    private static string Reals(ReadOnlySpan<byte> b, int count)
-    {
-        var reals = new string[count];
-        for (int i = 0; i < count; i++)
-        {
-            reals[i] = ByteCursor.F32(b, i * 4).ToString("G7", CultureInfo.InvariantCulture);
-        }
-        return string.Join(' ', reals);
-    }
 }

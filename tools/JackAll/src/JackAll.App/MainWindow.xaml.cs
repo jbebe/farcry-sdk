@@ -169,7 +169,7 @@ public partial class MainWindow : Window
                     {
                         _stagedByPreview = file.Path;
                     }
-                }, () => OpenEditorTab(file),
+                }, kind => OpenEditorTab(file, kind),
                 () => _vm.ReadOriginal(file), id => _vm.ResolveSoundResource(id), _vm.NavigateTo, bank => _vm.FindRigs(file.Path, bank))
             : null;
 

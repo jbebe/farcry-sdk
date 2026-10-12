@@ -11,14 +11,15 @@ namespace JackAll.App.FileHandlers.Hkx;
 /// The HKX editor's 3D view: each collision shape a solid in its kind's colour, the model a see-through
 /// ghost drawn over them, and the selected shapes lit up.
 /// </summary>
-internal sealed class HkxScene(Viewport3D viewport)
+internal sealed class HkxScene
 {
     private static readonly Dictionary<HkxShapeKind, Material> Solid = new()
     {
-        [HkxShapeKind.Box] = Flat(Color.FromRgb(0xC9, 0x6A, 0x4A)),
-        [HkxShapeKind.Hull] = Flat(Color.FromRgb(0x4A, 0x8F, 0xC9)),
-        [HkxShapeKind.Mesh] = Flat(Color.FromRgb(0x6A, 0xC9, 0x4A)),
-        [HkxShapeKind.Capsule] = Flat(Color.FromRgb(0x9A, 0x4A, 0xC9)),
+        [HkxShapeKind.Box] = Flat(Scene3D.Palette[0]),
+        [HkxShapeKind.Hull] = Flat(Scene3D.Palette[1]),
+        [HkxShapeKind.Mesh] = Flat(Scene3D.Palette[2]),
+        [HkxShapeKind.Capsule] = Flat(Scene3D.Palette[4]),
+        [HkxShapeKind.Sphere] = Flat(Scene3D.Palette[4]),
     };
 
     private static readonly Material Selected = new MaterialGroup
@@ -26,51 +27,52 @@ internal sealed class HkxScene(Viewport3D viewport)
         Children = { new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(0xF0, 0xD0, 0x40))), new EmissiveMaterial(new SolidColorBrush(Color.FromRgb(0x60, 0x50, 0x10))) },
     };
 
-    private readonly Dictionary<GeometryModel3D, HkxPrimitive> _shapes = [];
-    private readonly SolidColorBrush _ghost = new(Color.FromRgb(0xD8, 0xD8, 0xD8)) { Opacity = 0.35 };
+    private readonly Viewport3D _viewport;
+    private readonly ModelVisual3D _shapes = new();
+    private readonly ModelVisual3D _ghost = new();
+    private readonly SolidColorBrush _ghostBrush = new(Color.FromRgb(0xD8, 0xD8, 0xD8));
+    private readonly Dictionary<HkxPrimitive, GeometryModel3D> _built = [];
+    private IReadOnlySet<HkxPrimitive> _selected = new HashSet<HkxPrimitive>();
+
+    public HkxScene(Viewport3D viewport, IReadOnlyList<XbgSubmesh>? model)
+    {
+        _viewport = viewport;
+        var material = new DiffuseMaterial(_ghostBrush);
+        var ghost = new Model3DGroup();
+        foreach (XbgSubmesh submesh in model ?? [])
+        {
+            ghost.Children.Add(new GeometryModel3D(Scene3D.Mesh(submesh), material) { BackMaterial = material });
+        }
+        _ghost.Content = ghost;
+        viewport.Children.Clear();
+        viewport.Children.Add(_shapes);
+        // Last, so the translucent ghost blends over the shapes already drawn.
+        viewport.Children.Add(_ghost);
+    }
 
     /// <summary>How solid the model is drawn over the collision, from 0 (hidden) to 1.</summary>
     public double ModelOpacity
     {
-        get => _ghost.Opacity;
-        set => _ghost.Opacity = value;
+        get => _ghostBrush.Opacity;
+        set => _ghostBrush.Opacity = value;
     }
 
-    public void Show(IReadOnlyList<XbgSubmesh>? model, IEnumerable<HkxPrimitive> primitives)
+    public void Show(IEnumerable<HkxPrimitive> primitives)
     {
-        _shapes.Clear();
-        var shapes = new Model3DGroup();
-        foreach (Model3D light in Scene3D.Lights())
-        {
-            shapes.Children.Add(light);
-        }
+        Model3DGroup shapes = Scene3D.Lit();
         foreach (HkxPrimitive p in primitives)
         {
-            var shape = new GeometryModel3D(Faces(p), Solid[p.Kind]) { BackMaterial = Solid[p.Kind], Transform = new MatrixTransform3D(Matrix(p.ToModel)) };
-            _shapes[shape] = p;
-            shapes.Children.Add(shape);
+            shapes.Children.Add(Model(p));
         }
-
-        viewport.Children.Clear();
-        viewport.Children.Add(new ModelVisual3D { Content = shapes });
-        if (model is not null)
-        {
-            // Last, so the translucent ghost blends over the shapes already drawn.
-            var ghost = new Model3DGroup();
-            var material = new DiffuseMaterial(_ghost);
-            foreach (XbgSubmesh submesh in model)
-            {
-                ghost.Children.Add(new GeometryModel3D(Scene3D.Mesh(submesh), material) { BackMaterial = material });
-            }
-            viewport.Children.Add(new ModelVisual3D { Content = ghost });
-        }
+        _shapes.Content = shapes;
     }
 
     public void Highlight(IReadOnlySet<HkxPrimitive> selected)
     {
-        foreach ((GeometryModel3D shape, HkxPrimitive p) in _shapes)
+        _selected = selected;
+        foreach ((HkxPrimitive p, GeometryModel3D shape) in _built)
         {
-            shape.Material = shape.BackMaterial = selected.Contains(p) ? Selected : Solid[p.Kind];
+            shape.Material = shape.BackMaterial = MaterialOf(p);
         }
     }
 
@@ -78,31 +80,39 @@ internal sealed class HkxScene(Viewport3D viewport)
     public HkxPrimitive? PrimitiveAt(Point at)
     {
         HkxPrimitive? found = null;
-        VisualTreeHelper.HitTest(viewport, null, result =>
-        {
-            if (result is RayMeshGeometry3DHitTestResult { ModelHit: GeometryModel3D model } && _shapes.TryGetValue(model, out HkxPrimitive? p))
+        VisualTreeHelper.HitTest(_viewport,
+            o => o == _ghost ? HitTestFilterBehavior.ContinueSkipSelfAndChildren : HitTestFilterBehavior.Continue,
+            result =>
             {
-                found = p;
-                return HitTestResultBehavior.Stop;
-            }
-            return HitTestResultBehavior.Continue;
-        }, new PointHitTestParameters(at));
+                if (result is RayMeshGeometry3DHitTestResult { ModelHit: GeometryModel3D hit })
+                {
+                    found = _built.FirstOrDefault(b => b.Value == hit).Key;
+                }
+                return found is null ? HitTestResultBehavior.Continue : HitTestResultBehavior.Stop;
+            },
+            new PointHitTestParameters(at));
         return found;
     }
 
-    // Each triangle's own three corners, so WPF lights every face flat.
-    private static MeshGeometry3D Faces(HkxPrimitive p)
+    // Each triangle's own three corners, placed in the model, so WPF lights every face flat.
+    private GeometryModel3D Model(HkxPrimitive p)
     {
-        var mesh = new MeshGeometry3D { Positions = new Point3DCollection(p.Triangles.Length) };
-        foreach (int i in p.Triangles)
+        if (!_built.TryGetValue(p, out GeometryModel3D? shape))
         {
-            mesh.Positions.Add(Scene3D.Point(p.Vertices[i]));
+            System.Numerics.Vector3[] placed = [.. p.ModelVertices()];
+            var mesh = new MeshGeometry3D { Positions = new Point3DCollection(p.Triangles.Length) };
+            foreach (int i in p.Triangles)
+            {
+                mesh.Positions.Add(Scene3D.Point(placed[i]));
+            }
+            mesh.Freeze();
+            shape = new GeometryModel3D(mesh, MaterialOf(p)) { BackMaterial = MaterialOf(p) };
+            _built[p] = shape;
         }
-        return mesh;
+        return shape;
     }
 
-    private static Matrix3D Matrix(System.Numerics.Matrix4x4 m)
-        => new(m.M11, m.M12, m.M13, m.M14, m.M21, m.M22, m.M23, m.M24, m.M31, m.M32, m.M33, m.M34, m.M41, m.M42, m.M43, m.M44);
+    private Material MaterialOf(HkxPrimitive p) => _selected.Contains(p) ? Selected : Solid[p.Kind];
 
     private static Material Flat(Color colour)
     {

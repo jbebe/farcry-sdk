@@ -33,6 +33,9 @@ public sealed record HkMember(
 
     /// <summary>Runtime-only state Havok zeroes rather than saves.</summary>
     public bool Ignored => (Flags & SerializeIgnored) != 0;
+
+    /// <summary>One element of this array member, as a member of its own.</summary>
+    public HkMember Element => this with { Type = Subtype, Subtype = HkType.Void, Enum = null, Count = 0 };
 }
 
 public sealed class HkClass

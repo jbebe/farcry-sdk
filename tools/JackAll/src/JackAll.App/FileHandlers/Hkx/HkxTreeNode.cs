@@ -10,9 +10,8 @@ public sealed class HkxTreeNode : TreeNodeBase<HkxTreeNode>
     public HkxTreeNode(HkxNode node)
     {
         Node = node;
-        IsBody = node.Object?.Class.Name == "hkpRigidBody";
-        // The game's high-detail and navigation twins overlap the body they copy.
-        _isShown = IsBody && !node.Label.StartsWith("HIGH_", StringComparison.Ordinal) && !node.Label.StartsWith("NAV_", StringComparison.Ordinal);
+        // A twin overlaps the body it copies.
+        _isShown = IsBody && !node.IsTwin;
         foreach (HkxNode child in node.Children)
         {
             AddChild(new HkxTreeNode(child));
@@ -21,9 +20,7 @@ public sealed class HkxTreeNode : TreeNodeBase<HkxTreeNode>
 
     public HkxNode Node { get; }
 
-    public string Label => Node.Label;
-
-    public bool IsBody { get; }
+    public bool IsBody => Node.Kind == HkxNodeKind.Body;
 
     /// <summary>Whether this body's collision is drawn.</summary>
     public bool IsShown
@@ -32,8 +29,9 @@ public sealed class HkxTreeNode : TreeNodeBase<HkxTreeNode>
         set => Set(ref _isShown, value);
     }
 
-    /// <summary>Selects the first node under this one that <paramref name="matches"/>, expanding the way to it.</summary>
-    public HkxTreeNode? RevealWhere(Func<HkxTreeNode, bool> matches) => Reveal(this, matches);
+    /// <summary>Selects the first node that <paramref name="matches"/> under any of the roots, expanding the way to it.</summary>
+    public static HkxTreeNode? Reveal(IEnumerable<HkxTreeNode> roots, Func<HkxTreeNode, bool> matches)
+        => roots.Select(r => Reveal(r, matches)).FirstOrDefault(n => n is not null);
 
     public IEnumerable<HkxTreeNode> Bodies()
         => (IsBody ? new[] { this } : []).Concat(Children.SelectMany(c => c.Bodies()));

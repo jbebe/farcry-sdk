@@ -149,7 +149,7 @@ public sealed class HkxFileTests
 
         HkxFile file = HkxFile.Parse(bytes);
         string text = HkxDump.Write(file);
-        var numbers = file.Objects().Index().ToDictionary(p => p.Item, p => p.Index);
+        var numbers = HkxDump.Numbers(file);
         HkxDumpLine shape = HkxDump.Members(Body(file, "DoorLeftState02"), numbers).Single(l => l.Path == "collidable.shape");
 
         Assert.Contains("  name: \"DoorLeftState02\"", text);

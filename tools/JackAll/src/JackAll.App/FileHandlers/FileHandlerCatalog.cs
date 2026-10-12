@@ -1,4 +1,3 @@
-using System.Text;
 using System.Windows.Controls;
 using JackAll.App.FileHandlers.DepLoad;
 using JackAll.App.FileHandlers.Fcb;
@@ -20,6 +19,9 @@ using JackAll.Tools.Mab;
 
 namespace JackAll.App.FileHandlers;
 
+/// <summary>The editor tab a preview's launcher button opens.</summary>
+public enum EditorKind { Fcb, Domino, Mgb, Hkx }
+
 /// <summary>
 /// Picks and builds the preview view for a file's type, if any. New handlers are added here: a
 /// case below that constructs the handler's UserControl.
@@ -40,9 +42,8 @@ public static class FileHandlerCatalog
     /// Builds the view for <paramref name="file"/>, or null if no handler covers its type.
     /// <paramref name="readContent"/> is only invoked once a handler is found to actually need it.
     /// <paramref name="replaceContent"/> lets a handler stage an edited replacement into the workspace.
-    /// <paramref name="openEditor"/> hands the file to the host window's editor tab for its kind - a
-    /// fragment's value editor, a Domino graph, an mgb package - rather than anything embedded in this
-    /// compact preview column.
+    /// <paramref name="openEditor"/> hands the file to the host window's editor tab of the given kind,
+    /// rather than anything embedded in this compact preview column.
     /// <paramref name="readOriginal"/> is used by the text, fragment, fcb and rml cases, to diff a
     /// modded file against its
     /// base game version (see <see cref="BuildTextHandler"/>, <see cref="BuildLauncherPreview"/>,
@@ -54,7 +55,7 @@ public static class FileHandlerCatalog
     /// filed elsewhere (see <see cref="MabPlayer"/>).
     /// </summary>
     public static UserControl? CreateView(
-        VfsFile file, Func<byte[]> readContent, Action<byte[]> replaceContent, Action openEditor,
+        VfsFile file, Func<byte[]> readContent, Action<byte[]> replaceContent, Action<EditorKind> openEditor,
         Func<byte[]?> readOriginal, Func<uint, VfsFile?> resolveSoundId, Action<VfsFile> navigateTo,
         Func<MabFile, BankRigs> findRigs)
         => file switch
@@ -71,14 +72,14 @@ public static class FileHandlerCatalog
             // Checked before the plain "xml" case below - a fragment's own VfsFile.Type.Extension is
             // also "xml" (see GameVfs.MergeFragments), but it needs the dedicated editor tab, not the
             // generic read-only text viewer.
-            { IsFragment: true } => BuildLauncherPreview(file, readContent, readOriginal, openEditor,
+            { IsFragment: true } => BuildLauncherPreview(file, readContent, readOriginal, () => openEditor(EditorKind.Fcb),
                 "This is one piece of a splitting .fcb - open it in the XML editor to browse and edit its structure.",
                 "Open value editor…", "xml",
                 "No changes from the base game - not shown here since a fragment can be huge. Open in FCB Editor to browse it."),
             // Only user\ graphs reconstruct into a box graph worth viewing - a system\ node's own body
             // is just a small hand-written function, already well served by the plain text/diff view.
             { Type.Extension: "lua" } when file.Directory.StartsWith(@"domino\user", StringComparison.OrdinalIgnoreCase)
-                => BuildLauncherPreview(file, readContent, readOriginal, openEditor,
+                => BuildLauncherPreview(file, readContent, readOriginal, () => openEditor(EditorKind.Domino),
                     "A Domino mission-graph script - open it in the graph viewer to see it as boxes and connections instead of generated Lua.",
                     "Open in Domino Viewer…", "lua"),
             // "desc" is a known-path .mgb.desc (Path.GetExtension only keeps the last segment);
@@ -94,9 +95,9 @@ public static class FileHandlerCatalog
             { Type.Extension: "rml" } => new RmlFileHandler(file, readContent(), replaceContent, readOriginal),
             { Type.Extension: "sdat" } => new SdatFileHandler(file.FileName, readContent()),
             { Type.Extension: "spk" } => new SpkFileHandler(file.FileName, readContent(), replaceContent, resolveSoundId, navigateTo),
-            { Type.Extension: "mgb" } => new MgbFilePreviewHandler(readContent(), openEditor),
+            { Type.Extension: "mgb" } => new MgbFilePreviewHandler(readContent(), () => openEditor(EditorKind.Mgb)),
             { Type.Extension: "hkx" } => BuildLauncherPreview(file, () => HkxText(readContent()),
-                () => readOriginal() is { } original ? HkxText(original) : null, openEditor,
+                () => readOriginal() is { } original ? HkxText(original) : null, () => openEditor(EditorKind.Hkx),
                 "Havok collision and physics bodies - open it in the HKX editor to see them over the model.",
                 "Open in HKX Editor…", "hkx"),
             // Matched by filename suffix, not bare extension - "dat" alone is also the archive-container
@@ -109,7 +110,7 @@ public static class FileHandlerCatalog
         };
 
     /// <summary>An <c>.hkx</c> as its dump, which is what the launcher shows and diffs.</summary>
-    private static byte[] HkxText(byte[] hkx) => Encoding.UTF8.GetBytes(HkxDump.Write(HkxFile.Parse(hkx)));
+    private static byte[] HkxText(byte[] hkx) => AppText.EncodeUtf8(HkxDump.Write(HkxFile.Parse(hkx)));
 
     /// <summary>The container a fragment row's staged path names.</summary>
     private static string ContainerOf(VfsFile file) => ContainerFormats.ContainerPathOf(file.Path) ?? "";

@@ -17,21 +17,12 @@ namespace JackAll.App.FileHandlers.Xbg;
 /// the selected LOD falls back to its nearest instead of vanishing.
 /// <para>
 /// Where it deliberately differs is presentation: the map editor renders textured through its own
-/// shader, and this draws one flat colour per material so parts stay distinguishable without needing
-/// archive access to resolve them.
+/// shader, and this draws one <see cref="Scene3D.Palette"/> colour per material so parts stay
+/// distinguishable without needing archive access to resolve them.
 /// </para>
 /// </remarks>
 public partial class XbgFileHandler : UserControl
 {
-    // A small fixed palette rather than per-material texture lookups - this preview has no access to
-    // the game's actual material colours/textures, just enough visual separation to tell parts apart.
-    private static readonly Color[] Palette =
-    [
-        Color.FromRgb(0xC9, 0x6A, 0x4A), Color.FromRgb(0x4A, 0x8F, 0xC9), Color.FromRgb(0x6A, 0xC9, 0x4A),
-        Color.FromRgb(0xC9, 0xB0, 0x4A), Color.FromRgb(0x9A, 0x4A, 0xC9), Color.FromRgb(0x4A, 0xC9, 0xB0),
-        Color.FromRgb(0xC9, 0x4A, 0x8F), Color.FromRgb(0x8F, 0xC9, 0x4A),
-    ];
-
     private XbgModel? _model;
     private int _selectedLod;
     private readonly OrbitViewport _orbit;
@@ -106,16 +97,12 @@ public partial class XbgFileHandler : UserControl
 
     private void BuildScene(List<XbgSubmesh> submeshes)
     {
-        var root = new Model3DGroup();
-        foreach (Model3D light in Scene3D.Lights())
-        {
-            root.Children.Add(light);
-        }
-
+        Model3DGroup root = Scene3D.Lit();
+        Color[] palette = Scene3D.Palette;
         foreach (XbgSubmesh sm in submeshes)
         {
             MeshGeometry3D mesh = Scene3D.Mesh(sm);
-            Color color = Palette[((sm.MaterialIndex % Palette.Length) + Palette.Length) % Palette.Length];
+            Color color = palette[((sm.MaterialIndex % palette.Length) + palette.Length) % palette.Length];
             var material = new MaterialGroup();
             material.Children.Add(new DiffuseMaterial(new SolidColorBrush(color)));
             material.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF)), 24));

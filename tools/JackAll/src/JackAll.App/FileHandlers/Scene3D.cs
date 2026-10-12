@@ -8,15 +8,26 @@ namespace JackAll.App.FileHandlers;
 /// <summary>The WPF 3D pieces the model previews share. Z is up, as in the mesh data.</summary>
 public static class Scene3D
 {
+    /// <summary>Colours that tell parts apart, since a preview draws no textures.</summary>
+    public static readonly Color[] Palette =
+    [
+        Color.FromRgb(0xC9, 0x6A, 0x4A), Color.FromRgb(0x4A, 0x8F, 0xC9), Color.FromRgb(0x6A, 0xC9, 0x4A),
+        Color.FromRgb(0xC9, 0xB0, 0x4A), Color.FromRgb(0x9A, 0x4A, 0xC9), Color.FromRgb(0x4A, 0xC9, 0xB0),
+        Color.FromRgb(0xC9, 0x4A, 0x8F), Color.FromRgb(0x8F, 0xC9, 0x4A),
+    ];
+
     public static Point3D Point(Vector3 v) => new(v.X, v.Y, v.Z);
 
-    /// <summary>Ambient, a key light shining down, and a dim fill from below.</summary>
-    public static Model3D[] Lights() =>
-    [
-        new AmbientLight(Color.FromRgb(0x60, 0x60, 0x60)),
-        new DirectionalLight(Color.FromRgb(0xB0, 0xB0, 0xB0), new Vector3D(-0.5, -0.3, -0.8)),
-        new DirectionalLight(Color.FromRgb(0x40, 0x40, 0x40), new Vector3D(0.6, 0.7, 0.2)),
-    ];
+    /// <summary>A group lit by ambient light, a key light shining down and a dim fill from below.</summary>
+    public static Model3DGroup Lit() => new()
+    {
+        Children =
+        {
+            new AmbientLight(Color.FromRgb(0x60, 0x60, 0x60)),
+            new DirectionalLight(Color.FromRgb(0xB0, 0xB0, 0xB0), new Vector3D(-0.5, -0.3, -0.8)),
+            new DirectionalLight(Color.FromRgb(0x40, 0x40, 0x40), new Vector3D(0.6, 0.7, 0.2)),
+        },
+    };
 
     /// <summary>A submesh placed in model space, with smooth normals where the file stores none.</summary>
     public static MeshGeometry3D Mesh(XbgSubmesh submesh)
