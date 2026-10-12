@@ -12,6 +12,7 @@ public static class HkxLint
     // Cached bounds and radii this far inside what the shapes give are taken as rounding.
     private const float Tolerance = 1e-3f;
     private const uint ShapesSubpartKey = 0x80000000;
+    private const string RefreshAdvice = "Refresh it against the original: hkx refresh, or hkx encode --original.";
 
     public static IReadOnlyList<HkxProblem> Check(HkxFile file)
     {
@@ -44,12 +45,9 @@ public static class HkxLint
             Add(HkxProblemSeverity.Warning, $"{twice.Count()} bodies are named '{twice.Key}'.");
         }
 
-        foreach (HkxObject wrapper in file.Objects().Where(HkxShapes.IsWrapper))
+        foreach ((HkxObject owner, string member, _) in HkxCaches.StaleCopies(file))
         {
-            if (wrapper.GetPointer("childShape.childShape") is { } child && wrapper.GetReals("radius")[0] != child.GetReals("radius")[0])
-            {
-                Add(HkxProblemSeverity.Warning, $"A {wrapper.Class.Name} has a radius other than the shape it wraps; every shipped one carries its child's.");
-            }
+            Add(HkxProblemSeverity.Warning, $"A {owner.Class.Name}'s {member} no longer copies what it does in every shipped file. {RefreshAdvice}");
         }
 
         foreach ((string name, HkxObject body) in HkxCaches.Bodies(file))
@@ -81,7 +79,7 @@ public static class HkxLint
             if (MathF.Max(MathF.Max(below.X, below.Y), MathF.Max(below.Z, MathF.Max(MathF.Max(above.X, above.Y), above.Z))) > Tolerance)
             {
                 add(HkxProblemSeverity.Error, $"Body '{name}': its list's cached bounds do not cover its children, so the game misses "
-                    + "collisions outside them. Refresh it against the original: hkx refresh, or hkx encode --original.");
+                    + $"collisions outside them. {RefreshAdvice}");
             }
         }
         if (shape.Class.Name == "hkpMoppBvTreeShape")
@@ -91,7 +89,7 @@ public static class HkxLint
             if (HkxMopp.Misses(children, info, code) is { Count: > 0 } lost)
             {
                 add(HkxProblemSeverity.Error, $"Body '{name}': its MOPP does not find {lost.Count} of its shapes where they now are, so the "
-                    + "game never collides with them there. Refresh it against the original: hkx refresh, or hkx encode --original.");
+                    + $"game never collides with them there. {RefreshAdvice}");
             }
         }
     }

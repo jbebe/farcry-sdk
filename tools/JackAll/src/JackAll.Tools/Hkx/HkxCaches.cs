@@ -4,8 +4,8 @@ namespace JackAll.Tools.Hkx;
 
 /// <summary>
 /// The values Havok works out from a body's shapes and saves beside them: the MOPP's code, the list's or extended
-/// mesh's bounds, the body's object radius, and each translate or transform shape's copy of its child's radius.
-/// The game reads them as saved, so an edited shape leaves them stale.
+/// mesh's bounds, the body's object radius, and the copies a file keeps of a wrapped shape's radius, a list's child
+/// count and a storage mesh's shapes. The game reads them as saved, so an edited shape leaves them stale.
 /// Shipped bounds and radii often differ from what the shapes give, so where a body's shapes changed each value
 /// moves by as much as the shapes' own value did; where they did not, it is left alone.
 /// </summary>
@@ -22,11 +22,10 @@ public static class HkxCaches
         Dictionary<string, HkxObject> before = Bodies(original);
         bool modified = file.Objects().Any(o => o.Class.Name == "nomadPartModifiersGroup");
         var written = new List<string>();
-        // Every shipped translate and transform shape carries exactly the radius of the shape it wraps.
-        foreach (HkxObject wrapper in file.Objects().Where(HkxShapes.IsWrapper))
+        foreach ((HkxObject owner, string member, Action fix) in StaleCopies(file).ToList())
         {
-            float[] radius = wrapper.GetPointer("childShape.childShape")?.GetReals("radius") ?? wrapper.GetReals("radius");
-            written.AddRange(Set(wrapper, "radius", radius).Select(path => $"{wrapper.Class.Name}: {path}"));
+            fix();
+            written.Add($"{owner.Class.Name}: {member}");
         }
         foreach ((string name, HkxObject body) in Bodies(file))
         {
@@ -46,6 +45,44 @@ public static class HkxCaches
             }
         }
         return written;
+    }
+
+    /// <summary>
+    /// The members every shipped file holds as an exact copy of another, where this file's no longer do: a wrapper's
+    /// radius, a list's child count in each child, a storage mesh's shapes. Each comes with what sets it right.
+    /// </summary>
+    internal static IEnumerable<(HkxObject Owner, string Member, Action Fix)> StaleCopies(HkxFile file)
+    {
+        foreach (HkxObject o in file.Objects())
+        {
+            if (HkxShapes.IsWrapper(o) && o.GetPointer("childShape.childShape") is { } child && !child.GetReals("radius").AsSpan().SequenceEqual(o.GetReals("radius")))
+            {
+                yield return (o, "radius", () => o.SetReals("radius", child.GetReals("radius")));
+            }
+            else if (o.Class.Name == "hkpListShape" && o.Count("childInfo") is var count
+                && Enumerable.Range(0, count).Any(i => o.GetInt($"childInfo[{i}].numChildShapes") != count))
+            {
+                yield return (o, "childInfo[*].numChildShapes", () =>
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        o.SetRaw($"childInfo[{i}].numChildShapes", BitConverter.GetBytes(count));
+                    }
+                });
+            }
+            else if (o.Class.Name == "hkpStorageExtendedMeshShape")
+            {
+                List<HkxObject?> storage = o.GetPointers("shapestorage");
+                for (int k = 0; k < storage.Count; k++)
+                {
+                    List<HkxObject?> shapes = o.GetPointers($"shapesSubparts[{k}].childShapes");
+                    if (storage[k] is { } copy && !copy.GetPointers("shapes").SequenceEqual(shapes))
+                    {
+                        yield return (o, $"shapestorage[{k}].shapes", () => copy.SetPointers("shapes", shapes));
+                    }
+                }
+            }
+        }
     }
 
     // A body's caches, each moved by as much as its shapes' own value changed since the original.

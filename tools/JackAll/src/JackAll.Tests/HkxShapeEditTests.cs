@@ -139,27 +139,26 @@ public sealed class HkxShapeEditTests
         Assert.True(Distance(wanted, SeatBox(file).Primitive!.ToModel) < 1e-4f);
     }
 
-    [Fact]
-    public void A_box_added_to_the_chair_lands_where_asked_and_saves_clean()
+    [Theory]
+    [InlineData(Chair, "childInfo[4].shape", "childInfo[6].shape")]
+    [InlineData(Garage, "shapesSubparts[0].childShapes[3]", "shapesSubparts[0].childShapes[36]")]
+    public void A_box_added_beside_a_shape_lands_where_asked_and_saves_clean(string fixture, string like, string path)
     {
-        if (Fixture.Read(Chair) is not { } bytes)
+        if (Read(fixture) is not { } file || Fixture.Read(fixture) is not { } bytes)
         {
             return;
         }
 
-        HkxFile file = HkxFile.Parse(bytes);
-        HkxNode seat = SeatBox(file);
-        HkxObject list = seat.Link!.Value.Owner;
-        Matrix4x4 parent = HkxShapeEdit.ParentToModel(seat.Link.Value, seat.Primitive!.ToModel);
+        HkxNode sibling = Node(file, like);
+        Matrix4x4 parent = HkxShapeEdit.ParentToModel(sibling.Link!.Value, sibling.Primitive!.ToModel);
+        int before = HkxMopp.Items(Mopp(file)).Count;
 
-        HkxObject box = HkxShapeEdit.AddBox(list, 4, parent, new Vector3(0.2f, 0.3f, 0.4f), Matrix4x4.CreateTranslation(0, 0, 1.5f));
+        HkxObject box = HkxShapeEdit.AddBox(sibling.Link.Value, parent, new Vector3(0.2f, 0.3f, 0.4f), Matrix4x4.CreateTranslation(0, 0, 1.5f));
         HkxCaches.Refresh(file, HkxFile.Parse(bytes));
         HkxFile reread = HkxFile.Parse(file.Write());
-        HkxPrimitive added = HkxShapes.Read(reread)[0].Descendants().Single(n => n.Link is { Path: "childInfo[6].shape" } && n.Primitive is not null).Primitive!;
 
-        Assert.Equal(7, list.Count("childInfo"));
-        Assert.All(Enumerable.Range(0, 7), i => Assert.Equal(7, list.GetInt($"childInfo[{i}].numChildShapes")));
-        Assert.Equal(new Vector3(0, 0, 1.5f), added.ToModel.Translation);
+        Assert.Equal(before + 1, HkxMopp.Items(Mopp(reread)).Count);
+        Assert.True(Vector3.Distance(new Vector3(0, 0, 1.5f), Node(reread, path).Primitive!.ToModel.Translation) < 1e-4f);
         Assert.Equal(new Vector3(0.2f, 0.3f, 0.4f), HkxShapeEdit.Size(box));
         Assert.Empty(HkxLint.Check(reread));
     }
@@ -174,14 +173,13 @@ public sealed class HkxShapeEditTests
             return;
         }
 
-        HkxNode node = HkxShapes.Read(file).SelectMany(n => n.Descendants()).First(n => n.Link?.Path == path);
-        int before = HkxMopp.Items(file.Objects().First(o => o.Class.Name == "hkpMoppBvTreeShape")).Count;
+        int before = HkxMopp.Items(Mopp(file)).Count;
 
-        HkxShapeEdit.Remove(node.Link!.Value);
+        HkxShapeEdit.Remove(Node(file, path).Link!.Value);
         HkxCaches.Refresh(file, HkxFile.Parse(bytes));
         HkxFile reread = HkxFile.Parse(file.Write());
 
-        Assert.Equal(before - 1, HkxMopp.Items(reread.Objects().First(o => o.Class.Name == "hkpMoppBvTreeShape")).Count);
+        Assert.Equal(before - 1, HkxMopp.Items(Mopp(reread)).Count);
         Assert.Empty(HkxLint.Check(reread));
     }
 
@@ -201,9 +199,13 @@ public sealed class HkxShapeEditTests
         Assert.Equal(new Vector3(radius * 2), HkxShapeEdit.Size(box));
     }
 
-    private static HkxNode SeatBox(HkxFile file)
-        => HkxShapes.Read(file)[0].Descendants().Single(n => n.Primitive is not null && n.Link is { Path: "childInfo[4].shape" });
+    private static HkxNode SeatBox(HkxFile file) => Node(file, "childInfo[4].shape");
 
+    // The drawn shape a member places.
+    private static HkxNode Node(HkxFile file, string path)
+        => HkxShapes.Read(file).SelectMany(n => n.Descendants()).Single(n => n.Primitive is not null && n.Link?.Path == path);
+
+    private static HkxObject Mopp(HkxFile file) => file.Objects().First(o => o.Class.Name == "hkpMoppBvTreeShape");
 
     private static float Distance(Matrix4x4 a, Matrix4x4 b) => Enumerable.Range(0, 16).Max(i => MathF.Abs(a[i / 4, i % 4] - b[i / 4, i % 4]));
 

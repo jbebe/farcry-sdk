@@ -137,6 +137,18 @@ public static class HkxEdit
 
     public static void Append(this HkxObject o, string path, HkxObject element) => o.Insert(path, o.Count(path), element);
 
+    /// <summary>Makes an array of pointers point at <paramref name="targets"/>, in order.</summary>
+    public static void SetPointers(this HkxObject o, string path, IReadOnlyList<HkxObject?> targets)
+    {
+        (HkxBlock block, int at, HkSlot s, _, _) = Array(o, path);
+        var elements = new HkxBlock(new byte[targets.Count * 4]);
+        for (int i = 0; i < targets.Count; i++)
+        {
+            SetRef(elements, i * 4, targets[i] is { } t ? new HkxPointer(t) : null);
+        }
+        Resize(block, at, s, targets.Count == 0 ? null : elements, targets.Count);
+    }
+
     /// <summary>Puts a zeroed element into an array of structs at <paramref name="index"/>, moving those from there on up.</summary>
     public static void InsertItem(this HkxObject o, string path, int index) => Splice(o, path, index, 1);
 
