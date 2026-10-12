@@ -7,7 +7,9 @@ using System.Windows.Media.Media3D;
 namespace JackAll.App.FileHandlers;
 
 /// <summary>
-/// A horizontal orbit around whatever a preview viewport frames: dragging turns it, the wheel zooms.
+/// An orbit around whatever a preview viewport frames: dragging turns it, the wheel zooms, and a click that
+/// turned nothing is reported as <see cref="Clicked"/>. With tilt, dragging up and down raises and lowers the
+/// camera as well.
 /// </summary>
 /// <remarks>
 /// Z is up, matching the mesh data - the map editor's world is X east, Y north, Z up and vertices
@@ -15,26 +17,36 @@ namespace JackAll.App.FileHandlers;
 /// </remarks>
 public sealed class OrbitViewport
 {
-    /// <summary>How far above the target the camera sits, in radians. Fixed: the orbit is
-    /// horizontal-only, so nothing changes this.</summary>
-    private const double Elevation = 0.35;
+    /// <summary>How far above the target the camera starts, in radians.</summary>
+    private const double DefaultElevation = 0.35;
+
+    /// <summary>Short of straight up or down, where the up direction would flip.</summary>
+    private const double MaxElevation = 1.5;
+
+    /// <summary>How far, in pixels, a press may move and still count as a click.</summary>
+    private const double ClickSlop = 4;
 
     private readonly Viewport3D _viewport;
+    private readonly UIElement _input;
     private readonly PerspectiveCamera _camera;
-    private double _yaw = -0.7, _distance = 5, _near = 0.01, _far = 100;
+    private readonly bool _tilt;
+    private double _yaw = -0.7, _elevation = DefaultElevation, _distance = 5, _near = 0.01, _far = 100;
     private Point3D _target;
-    private Point _lastMouse;
+    private Point _lastMouse, _pressedAt;
     private bool _dragging;
     private (Vector3 Min, Vector3 Max)? _pending;
 
-    public OrbitViewport(Viewport3D viewport)
+    public OrbitViewport(Viewport3D viewport, bool tilt = false)
     {
         _viewport = viewport;
+        _tilt = tilt;
         _camera = (PerspectiveCamera)viewport.Camera;
-        viewport.MouseDown += OnMouseDown;
-        viewport.MouseUp += OnMouseUp;
-        viewport.MouseMove += OnMouseMove;
-        viewport.MouseWheel += OnMouseWheel;
+        // A Viewport3D only sees the mouse over what it draws; the frame around it sees it everywhere.
+        _input = viewport.Parent as UIElement ?? viewport;
+        _input.MouseDown += OnMouseDown;
+        _input.MouseUp += OnMouseUp;
+        _input.MouseMove += OnMouseMove;
+        _input.MouseWheel += OnMouseWheel;
         viewport.SizeChanged += (_, _) =>
         {
             if (_pending is { } box)
@@ -43,6 +55,9 @@ public sealed class OrbitViewport
             }
         };
     }
+
+    /// <summary>A left click that did not turn the view, at its position in the viewport.</summary>
+    public event Action<Point>? Clicked;
 
     /// <summary>
     /// Puts the whole of a bounding box in view, from the default angle. Before the viewport has a
@@ -68,13 +83,14 @@ public sealed class OrbitViewport
         _near = radius * 0.01;
         _far = radius * 20;
         _yaw = -0.7;
+        _elevation = DefaultElevation;
         Update();
     }
 
     private void Update()
     {
         double cy = Math.Cos(_yaw), sy = Math.Sin(_yaw);
-        double cp = Math.Cos(Elevation), sp = Math.Sin(Elevation);
+        double cp = Math.Cos(_elevation), sp = Math.Sin(_elevation);
         var dir = new Vector3D(cy * cp, sy * cp, sp);
         _camera.Position = _target + dir * _distance;
         _camera.LookDirection = -dir;
@@ -91,19 +107,24 @@ public sealed class OrbitViewport
         }
 
         _dragging = true;
-        _lastMouse = e.GetPosition(_viewport);
-        _viewport.CaptureMouse();
+        _lastMouse = _pressedAt = e.GetPosition(_viewport);
+        _input.CaptureMouse();
     }
 
     private void OnMouseUp(object sender, MouseButtonEventArgs e)
     {
-        if (e.ChangedButton != MouseButton.Left)
+        if (e.ChangedButton != MouseButton.Left || !_dragging)
         {
             return;
         }
 
         _dragging = false;
-        _viewport.ReleaseMouseCapture();
+        _input.ReleaseMouseCapture();
+        Point at = e.GetPosition(_viewport);
+        if ((at - _pressedAt).Length < ClickSlop)
+        {
+            Clicked?.Invoke(at);
+        }
     }
 
     private void OnMouseMove(object sender, MouseEventArgs e)
@@ -114,8 +135,11 @@ public sealed class OrbitViewport
         }
 
         Point pos = e.GetPosition(_viewport);
-        // Horizontal only - the model turns on the spot, and there is no elevation to lose track of.
         _yaw += (pos.X - _lastMouse.X) * 0.01;
+        if (_tilt)
+        {
+            _elevation = Math.Clamp(_elevation + (pos.Y - _lastMouse.Y) * 0.01, -MaxElevation, MaxElevation);
+        }
         _lastMouse = pos;
         Update();
     }

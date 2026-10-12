@@ -107,30 +107,14 @@ public partial class XbgFileHandler : UserControl
     private void BuildScene(List<XbgSubmesh> submeshes)
     {
         var root = new Model3DGroup();
-        root.Children.Add(new AmbientLight(Color.FromRgb(0x60, 0x60, 0x60)));
-        // Z-up, so the key light shines downwards along -Z with the fill coming back up from below.
-        root.Children.Add(new DirectionalLight(Color.FromRgb(0xB0, 0xB0, 0xB0), new Vector3D(-0.5, -0.3, -0.8)));
-        root.Children.Add(new DirectionalLight(Color.FromRgb(0x40, 0x40, 0x40), new Vector3D(0.6, 0.7, 0.2)));
+        foreach (Model3D light in Scene3D.Lights())
+        {
+            root.Children.Add(light);
+        }
 
         foreach (XbgSubmesh sm in submeshes)
         {
-            var mesh = new MeshGeometry3D { Positions = new Point3DCollection(sm.Positions.Length) };
-            foreach (System.Numerics.Vector3 p in sm.Positions)
-            {
-                System.Numerics.Vector3 placed = sm.Place(p);
-                mesh.Positions.Add(new Point3D(placed.X, placed.Y, placed.Z));
-            }
-
-            System.Numerics.Vector3[] normals = sm.Normals ?? XbgModel.ComputeSmoothNormals(sm.Positions, sm.Indices);
-            mesh.Normals = new Vector3DCollection(normals.Length);
-            foreach (System.Numerics.Vector3 n in normals)
-            {
-                System.Numerics.Vector3 placed = sm.PlaceNormal(n);
-                mesh.Normals.Add(new Vector3D(placed.X, placed.Y, placed.Z));
-            }
-
-            mesh.TriangleIndices = new Int32Collection(sm.Indices);
-
+            MeshGeometry3D mesh = Scene3D.Mesh(sm);
             Color color = Palette[((sm.MaterialIndex % Palette.Length) + Palette.Length) % Palette.Length];
             var material = new MaterialGroup();
             material.Children.Add(new DiffuseMaterial(new SolidColorBrush(color)));

@@ -204,14 +204,12 @@ public partial class MabPlayer : UserControl
 
         void Quad(Vector3 width)
         {
-            positions.Add(Point(from - width));
-            positions.Add(Point(from + width));
-            positions.Add(Point(to + width));
-            positions.Add(Point(to - width));
+            positions.Add(Scene3D.Point(from - width));
+            positions.Add(Scene3D.Point(from + width));
+            positions.Add(Scene3D.Point(to + width));
+            positions.Add(Scene3D.Point(to - width));
         }
     }
-
-    private static Point3D Point(Vector3 v) => new(v.X, v.Y, v.Z);
 
     private void PlayToggle_Changed(object sender, RoutedEventArgs e)
     {
