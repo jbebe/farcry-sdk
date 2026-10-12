@@ -345,7 +345,7 @@ public partial class MainWindow
                 return null;
             }
 
-            var view = new HkxTabView(file.FileName, file.NameIsKnown ? file.Path : null, content);
+            var view = new HkxTabView(file.FileName, file.NameIsKnown ? file.Path : null, content, _vm.ReadByPath);
             var tab = new TabItem { Content = view, ToolTip = file.Path };
             MakeClosable(tab, view.Title, () => RemoveTab(tab, onRemoved));
             return tab;

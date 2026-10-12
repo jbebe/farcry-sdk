@@ -35,7 +35,7 @@
                 <ColumnDefinition Width="3*" MinWidth="240" />
             </Grid.ColumnDefinitions>
 
-            <TreeView x:Name="HkxTree" SelectedItemChanged="Tree_SelectedItemChanged"
+            <TreeView x:Name="HkxTree" SelectedItemChanged="Tree_SelectedItemChanged" MouseDoubleClick="Tree_MouseDoubleClick"
                       ItemContainerStyle="{StaticResource BoundTreeItem}"
                       BorderBrush="{DynamicResource BorderHairlineBrush}">
                 <TreeView.ItemTemplate>
@@ -43,7 +43,7 @@
                         <DockPanel>
                             <CheckBox DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,4,0" Focusable="False"
                                       Visibility="{Binding IsBody, Converter={StaticResource Visible}}"
-                                      IsChecked="{Binding IsShown}"
+                                      IsChecked="{Binding IsShown}" Click="Shown_Click"
                                       ToolTip="Draw this body's collision" />
                             <TextBlock Text="{Binding Label}" Style="{StaticResource Mono}" VerticalAlignment="Center" />
                         </DockPanel>
@@ -53,7 +53,23 @@
 
             <GridSplitter Grid.Column="1" />
 
-            <Border x:Name="HkxViewportFrame" Grid.Column="2" Style="{StaticResource PreviewFrame}" />
+            <DockPanel Grid.Column="2">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock Text="Model" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <Slider x:Name="HkxModelOpacity" Minimum="0" Maximum="1" Value="0.35" Width="120" VerticalAlignment="Center"
+                            ToolTip="How solid the model is drawn over the collision" />
+                    <Button x:Name="HkxResetView" Content="Reset view" Margin="12,0,0,0" Click="ResetView_Click" />
+                    <TextBlock Text="Drag to turn, wheel to zoom, click a shape to select it" Style="{StaticResource Muted}"
+                               VerticalAlignment="Center" Margin="12,0,0,0" />
+                </StackPanel>
+                <Border Style="{StaticResource PreviewFrame}" Background="{DynamicResource WellBrush}">
+                    <Viewport3D x:Name="HkxViewport" ClipToBounds="True">
+                        <Viewport3D.Camera>
+                            <PerspectiveCamera FieldOfView="45" />
+                        </Viewport3D.Camera>
+                    </Viewport3D>
+                </Border>
+            </DockPanel>
 
             <GridSplitter Grid.Column="3" />
 
