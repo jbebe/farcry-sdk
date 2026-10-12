@@ -18,8 +18,8 @@
 namespace {
     using VehicleOverhaul::Headlights::kMaxLamps;
 
-    // Half the width of the retail cars' lenses.
-    constexpr float kLensRadius = 0.09f;
+    // A centimetre past the edge of the retail cars' 18 cm lenses.
+    constexpr float kLensRadius = 0.10f;
     // The least a lens is drawn across, in pixels, so a car far off still shows its lamps.
     constexpr float kMinLensPixels = 1.2f;
     // The cosines off the lamp's axis past which the lit lens is gone (85 degrees), and within which
