@@ -1,6 +1,6 @@
 namespace JackAll.Tools.World;
 
-/// <summary>One undoable change to a loaded world, already applied when it is pushed.</summary>
+/// <summary>One undoable change to a loaded world or an edited file, already applied when it is pushed.</summary>
 public interface IEditStep
 {
     string Label { get; }
@@ -20,7 +20,7 @@ public interface IEditStep
     bool TryMerge(IEditStep next);
 }
 
-/// <summary>The Map tab's undo and redo stacks for one loaded world.</summary>
+/// <summary>Undo and redo stacks: the Map tab's for one loaded world, an editor tab's for one file.</summary>
 /// <param name="now">The clock merging is timed against.</param>
 public sealed class EditHistory(Func<DateTime>? now = null)
 {

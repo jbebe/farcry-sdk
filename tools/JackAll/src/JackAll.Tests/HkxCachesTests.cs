@@ -55,7 +55,7 @@ public sealed class HkxCachesTests
         List<string> written = HkxCaches.Refresh(file, HkxFile.Parse(bytes));
 
         float[] newHalf = list.GetReals("aabbHalfExtents"), newCentre = list.GetReals("aabbCenter");
-        Assert.Contains("ChairBar01: collidable.shape (MOPP code)", written);
+        Assert.Contains("ChairBar01: MOPP code", written);
         Assert.Equal(centre[2] + half[2] + 2, newCentre[2] + newHalf[2], 4);
         Assert.Equal(centre[2] - half[2], newCentre[2] - newHalf[2], 4);
         Assert.Equal(half[0], newHalf[0]);

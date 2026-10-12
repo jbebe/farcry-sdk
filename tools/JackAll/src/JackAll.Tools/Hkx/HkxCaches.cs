@@ -5,14 +5,14 @@ namespace JackAll.Tools.Hkx;
 /// <summary>
 /// The values Havok works out from a body's shapes and saves beside them: the MOPP's code, the list's or extended
 /// mesh's bounds, and the body's object radius. The game reads them as saved, so an edited shape leaves them stale.
-/// Shipped bounds and radii often differ from what the shapes give, so a refresh moves each saved value by how much
-/// the shapes' own value changed since the file it is given as the original.
+/// Shipped bounds and radii often differ from what the shapes give, so each is set to the original file's value,
+/// moved by how much the shapes' own value changed since then.
 /// </summary>
 public static class HkxCaches
 {
     /// <summary>
-    /// Refreshes the caches of every body whose shapes changed since <paramref name="original"/>, matching bodies by
-    /// name; the members written, as <c>body: path</c>. Bodies over shapes this cannot bound keep theirs.
+    /// Sets the caches of every body, matched by name to <paramref name="original"/>, from how its shapes differ from
+    /// the original's; the members written, as <c>body: path</c>. Bodies over shapes this cannot bound keep theirs.
     /// </summary>
     /// <exception cref="InvalidOperationException">A MOPP whose children moved belongs to a file whose part modifiers point into its code.</exception>
     public static List<string> Refresh(HkxFile file, HkxFile original)
@@ -44,32 +44,40 @@ public static class HkxCaches
         {
             (Vector3 min, Vector3 max) = HkxShapes.Bounds(collection);
             (Vector3 oldMin, Vector3 oldMax) = HkxShapes.Bounds(oldCollection);
+            float[] half = oldCollection.GetReals("aabbHalfExtents"), centre = oldCollection.GetReals("aabbCenter");
             if (min != oldMin || max != oldMax)
             {
-                float[] half = collection.GetReals("aabbHalfExtents"), centre = collection.GetReals("aabbCenter");
                 Vector3 low = Vec(centre) - Vec(half) + min - oldMin, high = Vec(centre) + Vec(half) + max - oldMax;
-                collection.SetReals("aabbHalfExtents", [.. Lanes((high - low) / 2), half[3]]);
-                collection.SetReals("aabbCenter", [.. Lanes((low + high) / 2), centre[3]]);
-                written.AddRange(["aabbHalfExtents", "aabbCenter"]);
+                (half, centre) = ([.. Lanes((high - low) / 2), half[3]], [.. Lanes((low + high) / 2), centre[3]]);
             }
-            if (shape.Class.Name == "hkpMoppBvTreeShape" && !HkxMopp.Items(shape).SequenceEqual(HkxMopp.Items(oldShape)))
+            written.AddRange(Set(collection, "aabbHalfExtents", half).Concat(Set(collection, "aabbCenter", centre)));
+            if (shape.Class.Name == "hkpMoppBvTreeShape")
             {
-                if (modified)
-                {
-                    throw new InvalidOperationException("This file's part modifiers point into the MOPP code of a body whose shapes moved, so the code cannot be rebuilt.");
-                }
-                HkxMopp.Rebuild(shape);
-                written.Add("collidable.shape (MOPP code)");
+                written.AddRange(Mopp(shape, oldShape, modified));
             }
         }
 
-        float radius = Radius(body, shape) - Radius(oldBody, oldShape);
-        if (radius != 0)
-        {
-            body.SetReals("motion.motionState.objectRadius", body.GetReals("motion.motionState.objectRadius")[0] + radius);
-            written.Add("motion.motionState.objectRadius");
-        }
+        float radius = oldBody.GetReals("motion.motionState.objectRadius")[0], moved = Radius(body, shape) - Radius(oldBody, oldShape);
+        written.AddRange(Set(body, "motion.motionState.objectRadius", [moved == 0 ? radius : radius + moved]));
         return written;
+    }
+
+    // The original code while the MOPP's children stand where they did, code built for where they are otherwise.
+    private static IEnumerable<string> Mopp(HkxObject mopp, HkxObject original, bool modified)
+    {
+        List<HkxChild> children = HkxMopp.Items(mopp);
+        (Vector4 info, byte[] data) = children.SequenceEqual(HkxMopp.Items(original)) ? HkxMopp.Code(original) : HkxMopp.Build(children);
+        (Vector4 savedInfo, byte[] saved) = HkxMopp.Code(mopp);
+        if (info == savedInfo && data.AsSpan().SequenceEqual(saved))
+        {
+            return [];
+        }
+        if (modified)
+        {
+            throw new InvalidOperationException("This file's part modifiers point into the MOPP code of a body whose shapes moved, so the code cannot be rebuilt.");
+        }
+        HkxMopp.Write(mopp, info, data);
+        return ["MOPP code"];
     }
 
     // Havok's object radius: from the centre of mass to the centre of the shape's bounds, plus half their diagonal.
@@ -103,6 +111,16 @@ public static class HkxCaches
             bodies[key] = body;
         }
         return bodies;
+    }
+
+    private static IEnumerable<string> Set(HkxObject o, string path, float[] value)
+    {
+        if (o.GetReals(path).AsSpan().SequenceEqual(value))
+        {
+            return [];
+        }
+        o.SetReals(path, value);
+        return [path];
     }
 
     private static Vector3 Vec(float[] f) => new(f[0], f[1], f[2]);

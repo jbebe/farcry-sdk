@@ -52,6 +52,12 @@ public static class HkxMopp
     public static void Rebuild(HkxObject mopp)
     {
         (Vector4 info, byte[] data) = Build(Items(mopp));
+        Write(mopp, info, data);
+    }
+
+    /// <summary>Sets a MOPP shape's grid info and code.</summary>
+    public static void Write(HkxObject mopp, Vector4 info, byte[] data)
+    {
         HkxObject code = mopp.GetPointer("code")!;
         code.SetReals("info.offset", info.X, info.Y, info.Z, info.W);
         code.SetBytes("data", data);
