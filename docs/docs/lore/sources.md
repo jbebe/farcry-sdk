@@ -67,8 +67,7 @@ Every page separates two kinds of claim:
 - **Who sent the player.** The orders cite "the Joint Signatory Framework" (`4577324`). No string
   names the employer, the earlier hunter, or the voice that offers "target of opportunity" contracts
   (`5175655`).
-- **The predecessor's side story.** Its script, `sidemissions.carvertapes_missions`, is in world 1's
-  dependency list (`world1_depload.xml`). Whether every part of it is reachable in a retail game,
+- **The predecessor's side story.** It runs in the `partnerspecialmissions` scripts. Whether every part of it is reachable in a retail game,
   with its briefings (`5124037`, `5124224`) and the invitation to Sehlakalase Island (`5123973`), has
   not been checked in play.
 - **Reuben's dead interviewee.** "This man I interviewed here, he died a few months ago. These are

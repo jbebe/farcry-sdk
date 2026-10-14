@@ -152,8 +152,8 @@ Who the game's people are, in the game's own words. The faction chains of comman
 
 **Implied**
 
-- The predecessor went over to the Jackal ("my friend, the Jackal") before he died. The script that
-  runs his tapes is `sidemissions.carvertapes_missions`, so his internal name is Carver.
+- The predecessor went over to the Jackal ("my friend, the Jackal") before he died. His side story
+  runs in the `partnerspecialmissions` scripts.
 
 ## Faction leaders
 
