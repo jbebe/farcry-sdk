@@ -41,7 +41,7 @@ each named place:
 
 | Mostly APR | Mostly UFLL | Both |
 | --- | --- | --- |
-| Fort (28), "Private Property" (19), Mokuba (15), Lumber (10), Cock-Fights (9), OCG greenhouses (9), Rail Xing (7), Sediko (6), Airfield `w1` (4), Outpost (4), Polytechnic (4), Claes Products (3), Sepoko (3) | Shwasana (22), Petrosahel (14), Weelegol Village (14), North Railyard (11), M-S Pipeline (11), Cattle Xing (10), Slaughter House (9), Police Station (8), Fresh Fish (8), Taemoco Mine (8), Scrap Salvage (7), Bowaseko Brewing Co. (4) | Mosate Selao (56 APR, 54 UFLL), Pala (33, 44), Goka Falls (7, 5), Sefapane (20, 2) |
+| Fort (28), "Private Property" (19), Mokuba (15), Lumber (10), Cock-Fights (9), OGC greenhouses (9), Rail Xing (7), Sediko (6), Airfield `w1` (4), Outpost (4), Polytechnic (4), Claes Products (3), Sepoko (3) | Shwasana (22), Petrosahel (14), Weelegol Village (14), North Railyard (11), M-S Pipeline (11), Cattle Xing (10), Slaughter House (9), Police Station (8), Fresh Fish (8), Taemoco Mine (8), Scrap Salvage (7), Bowaseko Brewing Co. (4) | Mosate Selao (56 APR, 54 UFLL), Pala (33, 44), Goka Falls (7, 5), Sefapane (20, 2) |
 
 On the map this draws two clean territories. In Leboa-Sako the UFLL papers the north-west and the APR
 the east and south; in Bowa-Seko the UFLL papers the south and west and the APR the north and east.

@@ -131,7 +131,7 @@ fences, sidewalks and a concrete bridge. 19 APR posters. It is the informant's v
 `Objectives/A1LM04_03`. *Implied:* a wealthy man's house, kept in quotation marks on the map because
 everyone knows whose it is.
 
-**OCG greenhouses.** A foreign agribusiness under guard: 26 greenhouse tables, 42 `PlantSpurs`, 13
+**OGC greenhouses.** A foreign agribusiness under guard: 26 greenhouse tables, 42 `PlantSpurs`, 13
 fertiliser sacks, hedge cutters and garden claws, two `WatchTowerLeipzig` towers, and the company's
 own two billboards (`pubogc_02`). APR posters.
 
