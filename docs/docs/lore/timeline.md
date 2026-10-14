@@ -30,8 +30,8 @@ they differ.
   Source: `JackalTapes/A1JT00_DESC`…`A2JT16_DESC`. Tapes 00–08 are found in Leboa-Sako (`A1`), 09–16
   in Bowa-Seko (`A2`).
 - **Durations.**
-  - The war "has been going on for a long time" (`4558579`, Gakumba?).
-  - Reuben has been "interviewing people for months now" (`4577477`, Reuben?).
+  - The war "has been going on for a long time" (`4558579`, Gakumba).
+  - Reuben has been "interviewing people for months now" (`4577477`, Reuben).
   - Refugees have waited "for weeks" for their papers (`4890908`, Underground refugee).
   - The purges come "After weeks of killing each other off" (`LoadScreens/CuSyn_13`).
   - A rumour gives the Jackal "three months to live" (`4557923`).
@@ -50,9 +50,9 @@ they differ.
 
 **The game states**
 
-- **There was a King.** "You know this FUBAR country used to have a king?" (`4558420`, Carbonell?).
+- **There was a King.** "You know this FUBAR country used to have a king?" (`4558420`, Carbonell).
   - "The hombre got a boatload of money from Europe, back in the day. And then he took off."
-    (`4558425`, Carbonell?).
+    (`4558425`, Carbonell).
   - "He abandoned it a long time ago." (`4932774`, Flora Guillen).
   - "I mean he gutted it, man! Took it for everything it's worth!" (`4884388`, Marty Alencar).
 - **The country was once rich.** "You know, it looks like poor African country NOW. But this place
@@ -61,18 +61,18 @@ they differ.
   and "Bungled the evacuation of his clients after collapse of the government"
   (`Buddies/QUARBANI_SINGH_DESCRIPTION_1`, `_3`).
 - **The factions' war is old and settled into habit.** "Both sides tolerate the conflict, because
-  we understand it." (`4558579`, Gakumba?); "Both sides are used to it!" (`4558660`, Kouassi?).
+  we understand it." (`4558579`, Gakumba); "Both sides are used to it!" (`4558660`, Kouassi).
 - **Arms were embargoed, and nobody abroad cared.** "It wasn't so long ago that this was another one
   of those dirty little wars that barely rated a sidebar. There was an arms embargo in place, and
   everyone back home could just cluck their tongues" (`LoadScreens/ChSyn_AA`).
 - **Then the Jackal came.** "When The Jackal showed up here with containers full of AKs and RPGs -
   That set off some alarm bells somewhere." (`LoadScreens/MiSyn_AA`). The player's orders blame him
   for "the recent influx of weapons into the country, in clear violation of the Joint Signatory
-  Framework" (`4577324`, Jackal?).
+  Framework" (`4577324`, Jackal).
 - **A first hunter failed.** "You're not the first to be sent after the Jackal - there was another man
   before you." (`5124037`, handler?).
 - **Foreigners were leaving.** At the airport: "That's probably the last one out of this country.
-  Full of rich people. Only money and connections get you out now." (`5160475`, taxi driver?).
+  Full of rich people. Only money and connections get you out now." (`5160475`, taxi driver).
 - **A cease-fire was meant to hold.** "There was supposed to be cease-fire, but that's all out the
   window now." (`4547658`, Kankaras).
 
@@ -87,10 +87,10 @@ they differ.
 ### Act 1: Leboa-Sako
 
 1. **Arrival.** The player lands at the airport and takes a taxi to Pala, which "only has one hotel
-   still working" (`5160146`, taxi driver?). On the way he is told "Everyone's trying to find a way
+   still working" (`5160146`, taxi driver). On the way he is told "Everyone's trying to find a way
    out of the country" (`5160098`).
 2. **The hotel.** The Jackal enters the player's room, reads out his orders and leaves him alive:
-   "I'm still breathing. And YOU'RE the one with malaria." (`4577353`, Jackal?;
+   "I'm still breathing. And YOU'RE the one with malaria." (`4577353`, Jackal;
    `LoadScreens/CuSyn_00`).
 3. **Pala erupts.** "There's fighting all over the streets." (`Objectives/A1SM01_02`). The player
    wakes in a faction lieutenant's camp. Each of the four lieutenants blames him for men killed "at
@@ -100,7 +100,7 @@ they differ.
    `LoadScreens/ChSyn_01`).
 5. **Medicine.**
    - At Mike's bar the player meets Reuben, who sends him to Father Maliya's church for pills
-     (`4577402`, Reuben?).
+     (`4577402`, Reuben).
    - The priest asks for help in return: "there are folks trapped in Leboa-Sako who need his help more
      than I do" (`LoadScreens/MiSyn_A1GM00`).
 6. **Both factions' jobs.**
@@ -122,13 +122,13 @@ they differ.
    hauling the dead out to some mass grave in the desert… looks like I'm the only one in this truck
    with a pulse" (`Objectives/A2SM04_APR_01`).
 10. **The sandstorm.** The Jackal finds him in the desert and drags him to shelter: "I thought you'd
-    be dead by now." (`4577582`, Jackal?). Then the losing faction's column, "proceeding south"
+    be dead by now." (`4577582`, Jackal). Then the losing faction's column, "proceeding south"
     under Greaves or Voorhees, takes him in (`4558817`; `LoadScreens/MiSyn_A2SM05`).
 
 ### Act 2: Bowa-Seko
 
 11. **Revenge.** The column's leader sends the player back north to kill the winning boss at his
-    victory rally: "Standing on a truck. Wide open." (`4973102`, Greaves?;
+    victory rally: "Standing on a truck. Wide open." (`4973102`, Greaves;
     `Objectives/A2SM05_APR_01`).
 12. **Sefapane and the southern cease-fire.**
     - The player meets his new patron at Sefapane, a town "split down the middle between the
@@ -152,7 +152,7 @@ they differ.
     (`Objectives/A2LM07_01`–`A2LM12_01`.)
 15. **The peace.**
     - "This battle of ours is going to end. Oliver Tambossa and I have talked, and we agree."
-      (`4561167`, Mbantuwe?).
+      (`4561167`, Mbantuwe).
     - The player carries one warlord's acceptance to the other and is to bring back "a 'good-faith'
       tribute of diamonds" (`Objectives/A2SM08_APR_02`).
     - His buddies want those diamonds for an evacuation flight: "This cease-fire the warlords are
@@ -161,7 +161,7 @@ they differ.
 16. **The murder.** The Jackal is there first. "He murdered Mbantuwe. And when I showed up, he
     sucker-punched me and let me take the fall." (`Objectives/A2SM09_APR_01`, or Tambossa in the
     UFLL version). In his words: "They're going to think YOU did this… It means the war will start
-    all over again." (`4577714`, Jackal?).
+    all over again." (`4577714`, Jackal).
 17. **Prison.**
     - The player wakes "in some cell, god knows where" (`Objectives/A2SM09_APR_01`).
     - The buddies are caught too: "The factions are blaming the assassination on us… all the
@@ -196,9 +196,9 @@ they differ.
 23. **The pass.**
     - One man must carry the diamonds to the Border Patrol camp. "Then, when the handoff's complete,
       that guy - you, or me - is going to put a bullet into his own head." (`4973291`, `4973210`,
-      Jackal?).
+      Jackal).
     - The other must set off the dynamite above the canyon by hand, with a car battery: "And it'll
-      kill the poor bastard that takes the job." (`4577966`, `4973018`, Jackal?).
+      kill the poor bastard that takes the job." (`4577966`, `4973018`, Jackal).
     - The player chooses: "Either pick up the battery or the briefcase." (`Objectives/A3SM15_03_BBM_01`).
     - The commandant takes the bribe: "I think we can reach an accommodation." (`5161548`, Border
       Patrol Commandant).
@@ -210,7 +210,7 @@ they differ.
 
 - **The Jackal's turn.**
   - In Act 1 he sells cheaply to both sides (`4557681`). In Act 2 he gives weapons away (`4560002`,
-    Greaves?), then kills a peacemaker to restart the war (`4577714`).
+    Greaves), then kills a peacemaker to restart the war (`4577714`).
   - In Act 3 he empties the country of civilians: "We're have to isolate this disease, so we can
     destroy it." (`4920067`, Jackal).
   - Read together, his plan from the peace meeting on is to keep the factions fighting until they

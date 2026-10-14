@@ -17,7 +17,7 @@ Who the game's people are, in the game's own words. The faction chains of comman
   can turn up as a buddy. Flora Guillen, Michele Dachss and Nasreen Davar have buddy dossiers only.
 - **A hired killer sent for the Jackal.** The orders, read aloud to the player: "His reputation as a
   dangerous arms dealer is well-deserved. Orders - are - to - terminate." (`4577324`, `4577329`,
-  Jackal?). The opening load screen: "My mission is simple - to kill 'The Jackal' - the bastard that
+  Jackal). The opening load screen: "My mission is simple - to kill 'The Jackal' - the bastard that
   armed both sides." (`LoadScreens/CuSyn_AA`).
 - **Sick from the first night.** "I'm sick. Malaria. Somehow the Jackal managed to track me down to
   my hotel… not sure why he didn't kill me" (`LoadScreens/CuSyn_00`). The journal tracks the illness
@@ -26,17 +26,17 @@ Who the game's people are, in the game's own words. The faction chains of comman
 - **A growing reputation.** The journal's reputation levels run from "Nobody knows me here. I'm just
   another stiff with a gun." to "People believe I'm the Devil himself." (`PauseMenu/REPUTATION_INFAMY_DESCRIPTION_0`–`_5`).
 - **What others call him.**
-  - "a no-name scumbag like you" (`4558381`, Carbonell?).
+  - "a no-name scumbag like you" (`4558381`, Carbonell).
   - "a dog. Hungry for a bone." (`4889179`, Mbantuwe).
-  - "It's The Butcher himself." (`4559644`, Greaves?).
+  - "It's The Butcher himself." (`4559644`, Greaves).
   - Father Maliya, to a feared player: "the devil's apprentice" (`4889298`, Father Maliya).
-- **The Jackal's verdict.** "Wake up. I used to BE you." (`4577731`, Jackal?). "You're a terminal
-  case. Same as me." (`4973240`, Jackal?).
+- **The Jackal's verdict.** "Wake up. I used to BE you." (`4577731`, Jackal). "You're a terminal
+  case. Same as me." (`4973240`, Jackal).
 
 **Implied**
 
 - The player has served in an army before. The taxi driver says "Just boys letting off steam, right?
-  You remember how it is." (`5160045`, taxi driver?). Every avatar dossier lists military or security
+  You remember how it is." (`5160045`, taxi driver). Every avatar dossier lists military or security
   work.
 
 ## The Jackal
@@ -45,38 +45,38 @@ Who the game's people are, in the game's own words. The faction chains of comman
 
 - **Name and trade.** No string gives him another name. His guns carry the brand: "Look at this gun.
   - 'The Jackal.' What kind of name is that. - Guy is crazy! He practically give these things away!"
-  (`4557681`, APR man?). They were "cheap for the UFLL, too" (`4557685`).
+  (`4557681`, Kouassi). They were "cheap for the UFLL, too" (`4557685`).
 - **He arms both sides.** "Somewhere out there is an arms dealer known only as the Jackal. He has
   been selling guns to both the UFLL and the APR. Every gun, every bullet, and every corpse you have
   seen can be traced directly back to him." (`Tutorial/TU67B_MESSAGE`).
 - **Reuben's charge.** "I have covered sixteen wars across Africa. Sixteen. And every time, he has
   been there. Selling his weapons and making a fortune while millions of people suffer and die."
-  (`5108707`, Reuben?).
+  (`5108707`, Reuben).
 - **The first night.** He finds the player in his hotel room and does not kill him:
   - "What your old clients don't seem to understand is that they can't kill me." (`4577341`,
-    Jackal?).
-  - "I'm still breathing. And YOU'RE the one with malaria." (`4577353`, Jackal?).
+    Jackal).
+  - "I'm still breathing. And YOU'RE the one with malaria." (`4577353`, Jackal).
   - "You're fired… since men like you only work for money, you're no longer my problem." (`4577361`,
-    Jackal?).
+    Jackal).
 - **The book he quotes.** "there's a book I read, a long time ago. I still think about it, every day.
-  … 'Life itself is will to power. Nothing else matters.'" (`4577369`, `4973284`, Jackal?).
+  … 'Life itself is will to power. Nothing else matters.'" (`4577369`, `4973284`, Jackal).
 - **Rumours.** "I heard he's got cancer, and only three months to live." / "I also heard that somebody
-  was paid to come here and kill him." (`4557923`, `4557931`, unnamed men?).
+  was paid to come here and kill him." (`4557923`, `4557931`, Kouassi).
 - **The disease speech.** He finds the betrayed player alive in the desert. Then he names his diagnosis:
   "It's a goddamn disease is what it is. It's a cancer… They just TAKE and TAKE until it kills them.
   And once they're gone, someone else takes their place, and they're diseased, too." (`4577606`,
-  Jackal?). His prediction: "Rob the banks, the stores. Then the men will be lined up against the
-  wall and shot. They'll chop the children's arms off" (`4577631`, Jackal?).
+  Jackal). His prediction: "Rob the banks, the stores. Then the men will be lined up against the
+  wall and shot. They'll chop the children's arms off" (`4577631`, Jackal).
 - **He stops selling.** "He didn't SELL the weapons this time. He GAVE them away… And now he's gone.
-  He's up to something." (`4560002`, `4560014`, Greaves?).
+  He's up to something." (`4560002`, `4560014`, Greaves).
 - **The peace meeting.**
   - On the warlords' peace: "They wanted privacy, is what they wanted… so they could go on with their
-    raping and pillaging. - In peace, you see." (`4577695`, Jackal?).
+    raping and pillaging. - In peace, you see." (`4577695`, Jackal).
   - He kills the warlord who received it and leaves the player to take the blame: "They're going to
     think YOU did this… That's good. It means the war will start all over again." (`4577714`,
     Jackal?; `Objectives/A2SM09_APR_01`).
 - **His home.** He keeps a weapons cache and a house on Sehlakalase Island in Lake Segolo (`4559182`,
-  Greaves?). Late in the war he "burned his own house to the ground" (`5106733`, Reuben).
+  Greaves). Late in the war he "burned his own house to the ground" (`5106733`, Reuben).
 - **The endgame.**
   - He kills the arms vendor's escort at the airport, takes "the mine's TNT. All six tons of it", and
     starts moving the whole civilian population to the border (`4911274`, `4911284`, `4911306`,
@@ -86,7 +86,7 @@ Who the game's people are, in the game's own words. The faction chains of comman
 - **His view of outsiders.** "people back home say they want to help… But they're lying… They wear
   their halos and they stand by, wringing their hands." (`4973442`, `4973447`, `4973477`, Jackal).
 - **His end.** "Every cell of this cancer has to be destroyed. That includes you, AND me." (`4973416`,
-  Jackal?). "I'll be dead in an hour. And so will you." (`4578027`, Jackal?). The closing text: "The
+  Jackal). "I'll be dead in an hour. And so will you." (`4578027`, Jackal). The closing text: "The
   identity of the Jackal remains a mystery. Officials insist he was killed during the conflict. His
   body has never been found." (`Coda/Para4`).
 - **The tapes.** Reuben recorded interviews with him between 17 September and 30 October 2008. Their
@@ -114,16 +114,16 @@ Who the game's people are, in the game's own words. The faction chains of comman
 
 - **Who he is.** "I'm Reuben Oluwagembi. What you call a stringer… I'm persona non grata around here.
   The warlords want me out of the country. They don't like the story I'm writing." (`4577502`,
-  Reuben?).
+  Reuben).
 - **His story.** "It's about the war… But mostly it's about that famous arms dealer, the Jackal."
-  (`4577497`, Reuben?). He means to expose "The Jackal's. And the warlords'. The soldiers, the boy
-  soldiers, even the NGOs." (`5108702`, Reuben?).
+  (`4577497`, Reuben). He means to expose "The Jackal's. And the warlords'. The soldiers, the boy
+  soldiers, even the NGOs." (`5108702`, Reuben).
 - **His tapes.** Soldiers took them: "I've been interviewing people for months now. Diplomats,
-  warlords, civilians… Then the soldiers confiscated my tapes." (`4577477`, Reuben?). The player finds
+  warlords, civilians… Then the soldiers confiscated my tapes." (`4577477`, Reuben). The player finds
   them one by one and brings them back to him at the bar (`4911444`, Reuben).
 - **What he gives.** He cannot pay ("journalists are paid next to nothing in this brave new world of
   ours", `4911534`, Reuben). He sends the player to the priest for malaria pills (`4577402`,
-  Reuben?) and warns him before each turn of the war (`4911034`, `4911306`, Reuben).
+  Reuben) and warns him before each turn of the war (`4911034`, `4911306`, Reuben).
 - **His family.** "I'm African. This is my home… These are for my family. My wife Mikela, and my
   little daughter." (`5107230`, Reuben).
 - **His end.** "Reuben Oluwagembi's coverage of events has been ignored by the International Press.
@@ -163,17 +163,17 @@ Who the game's people are, in the game's own words. The faction chains of comman
 - **Leon Gakumba**, UFLL boss in Leboa-Sako.
   - "You'll call me Doctor Gakumba." (`4971256`, Gakumba).
   - He has a cabin on Thabamolaetsa above Goka Falls "He thinks it is hidden." (`4558689`,
-    Kouassi?).
+    Kouassi).
   - He fears being seen as rich: "Gakumba is rich, taking their money and hiding it in secret bank
-    accounts!" (`4558094`, Gakumba?).
+    accounts!" (`4558094`, Gakumba).
   - He dies at his own victory rally on the APR path ("Nice work, with Gakumba. The man deserved
-    it.", `4559146`, Greaves?).
+    it.", `4559146`, Greaves).
 - **Prosper Kouassi**, APR boss in Leboa-Sako.
   - "But you know ME! I am the famous Prosper Kouassi!" (`4888848`, Kouassi).
-  - Tambossa called him "a man of vision" (`4558669`, Kouassi?).
+  - Tambossa called him "a man of vision" (`4558669`, Kouassi).
   - At Goka Falls he bargains for his life: "Guy like you, your skills, you could get a lot done with
     a man like me." (`4559037`, Kouassi).
-  - He dies at his rally on the UFLL path ("And Kouassi's dead.", `4560333`, Voorhees?).
+  - He dies at his rally on the UFLL path ("And Kouassi's dead.", `4560333`, Voorhees).
 - **Addi Mbantuwe**, UFLL warlord in Bowa-Seko.
   - He speaks of himself in the third person: "Maybe Addi Mbantuwe can give you what you are looking
     for" (`4889184`, Mbantuwe).
@@ -186,13 +186,13 @@ Who the game's people are, in the game's own words. The faction chains of comman
   - His brother has just been murdered, and the killer took a trophy that Mbantuwe wants (`4908196`,
     `4908296`, Andre Hyppolite).
   - When the people defy him: "THEY are the threat, Greaves. Not this Jackal person." (`4560022`,
-    Tambossa?).
+    Tambossa).
 
 **Implied**
 
 - The two warlords agree the peace for their own safety, not the people's. Both say "Too much
-  unrest" (`4560243`, Tambossa?; `4561167`, Mbantuwe?), and both have lost control of the streets
-  ("They dare to show me anger. Defy my orders.", `4560767`, Mbantuwe?). This is also the Jackal's
+  unrest" (`4560243`, Tambossa; `4561167`, Mbantuwe), and both have lost control of the streets
+  ("They dare to show me anger. Defy my orders.", `4560767`, Mbantuwe). This is also the Jackal's
   reading.
 
 ## Lieutenants
@@ -201,7 +201,7 @@ Who the game's people are, in the game's own words. The faction chains of comman
 
 - **Joaquin Carbonell (UFLL).**
   - "the Spaniard" (`5123505`, Purefoy); he swears in Spanish.
-  - Of the King: "You know this FUBAR country used to have a king?" (`4558420`, Carbonell?).
+  - Of the King: "You know this FUBAR country used to have a king?" (`4558420`, Carbonell).
   - In the purge: "I'm gonna get rid of Voorhees AND Kankaras. Then they GOT to put me in charge."
     (`4562657`, Carbonell).
 - **Anto Kankaras (UFLL).**
@@ -219,16 +219,16 @@ Who the game's people are, in the game's own words. The faction chains of comman
 - **Nick Greaves (APR).**
   - "You limey fuck" (`5180594`, Quiepo); "You're a glorified airline pilot." (`5180307`, Purefoy).
   - He goes behind Tambossa's back: "The big boss, Major Tambossa, doesn't know anything about it"
-    (`4559163`, Greaves?).
-  - Then he takes over: "Me, in charge of the whole operation." (`4561651`, Greaves?).
+    (`4559163`, Greaves).
+  - Then he takes over: "Me, in charge of the whole operation." (`4561651`, Greaves).
   - In the purge: "I OWN this country. You kill me, you're just killing yourself." (`4939967`,
     Greaves).
 - **Hector Voorhees (UFLL).**
   - "Bastion UK packed up and left the country… I spent ten years leading most of those boys in
-    Angola, and look how they repay me." (`4560354`, Voorhees?).
+    Angola, and look how they repay me." (`4560354`, Voorhees).
   - He calls the player "china" and "bru" (`4939895`, `4939915`, Voorhees).
   - "I don't want to be a bloody warlord… That means no more Tambossa." (`4561566`, `4561574`,
-    Voorhees?).
+    Voorhees).
 
 **Implied**
 
@@ -256,9 +256,9 @@ Who the game's people are, in the game's own words. The faction chains of comman
   - "You are lucky I took an oath, sir." (`4890107`, Doctor Obua).
 - **King Nnyere Kgosi** (also "Nnyele").
   - "The hombre got a boatload of money from Europe, back in the day. And then he took off. But he's
-    back and he brought his gold with him." (`4558425`, Carbonell?).
+    back and he brought his gold with him." (`4558425`, Carbonell).
   - "He has always played both ends against the middle. That is why he has the gold and we have this
-    war." (`4558360`, Gakumba?).
+    war." (`4558360`, Gakumba).
   - His own claim: "My people NEED me! They need their father to protect them!" (`4910387`, King).
 - **Prince Oeduard**, the King's son.
   - He wants his father's signet ring for "control over the bank accounts back in Belgium"
@@ -274,16 +274,16 @@ Who the game's people are, in the game's own words. The faction chains of comman
   Special Forces team's radio liaison (`4932366`, Marty Alencar). He knows who the player is: "You're
   that guy, aren't you. The one that's looking for the Jackal." (`4910365`, the Belgian).
 - **Yabek.** "He's a Jordanian. He's selling his trash out of a barge on the Noga River." (`4560855`,
-  Voorhees?).
+  Voorhees).
 - **Seth Uniya.** "Uniya used to be a shop teacher. Now he teaches the APR how to build roadside
-  bombs." (`4561015`, Mbantuwe?). The character tag spells him `Seth_Unyia`.
+  bombs." (`4561015`, Mbantuwe). The character tag spells him `Seth_Unyia`.
 - **DJ Lord Haw-Haw**, Liberation Radio's voice. "There is a delay on the broadcast. A censor monitors
   everything." (`4910647`, DJ Lord Haw-Haw).
 - **The taxi driver** of the opening ride.
   - "Everyone's trying to find a way out of the country. Only fools stay now." (`5160098`, taxi
-    driver?).
+    driver).
   - "These militia; they come into our country, steal everything, and leave us nothing." (`5160055`,
-    taxi driver?).
+    taxi driver).
 - **The Border Patrol Commandant.** He lets the refugees through after "an accommodation": "for the
   sake of those souls outside, I hope there's more to your plan than THIS." (`5161548`, `5161630`,
   Border Patrol Commandant).

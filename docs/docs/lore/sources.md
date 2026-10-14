@@ -21,8 +21,9 @@ claim has no basis in the game's text, the pages say so.
 | Scene animations | `worlds\<world>\generated\<world>_depload.xml` in `worlds.dat` | which choreographed scene plays each line, so whose line it is |
 
 The bark banks attribute 5,222 of the 6,334 subtitle lines to a speaker and a mission. The other 1,112
-are phone calls, scripted scenes, radio broadcasts and multiplayer announcements; for those the pages
-name the speaker only when the line itself does, and otherwise mark the speaker as inferred.
+are phone calls, scripted scenes, radio broadcasts and multiplayer announcements. The scene
+animations name the speaker of 577 of them: each animation belongs to one character, and the pages
+name him without a `?`. The rest are marked as inferred.
 
 The patched table differs from the 1.00 one (`common.dat`) in typo fixes, multiplayer strings and two
 added Liberation Radio broadcasts (`5119680`, `5160431`); no story text changed.
@@ -36,10 +37,10 @@ transcription, marked community-reported.
 Each claim ends with where it comes from:
 
 - `4561963` — a subtitle, by its sound id, with the speaker the bark banks record for it:
-  (`4561963`, Purefoy). A mission tag such as `A3SM13_SE01` is added when it matters. A speaker
-  followed by `?` — (`4577714`, Jackal?) — is a line in no bark bank, whose speaker was identified
-  from the scene: the line names the person addressed, or its neighbouring sound ids belong to a
-  scene whose speaker is known.
+  (`4561963`, Purefoy). A mission tag such as `A3SM13_SE01` is added when it matters. A line in no
+  bark bank that a scene animation plays is given that animation's character, without a mark; the
+  mission pages also name the scene. A speaker followed by `?` — (`5123973`, predecessor?) — is a line
+  that neither a bank nor a scene attributes, identified from what it says or who it addresses.
 - `Objectives/A1LM06_03` — another string-table entry, as `<section>/<key>`. `LoadScreens` holds the
   player's diary-style chapter synopses, `Objectives` the journal, `Buddies` and `MainMenu` the
   character dossiers, `JackalTapes` the tape descriptions, `Coda` the closing text.
@@ -73,9 +74,10 @@ Every page separates two kinds of claim:
   against the recordings. Checking it needs the map from tape to sound, which `CJackalTapeManager`
   holds (`world1.managers.fcb`, 50 resources) and nobody has traced; the tapes' audio was not found in
   the archives.
-- **The 1,112 unattributed lines.** Their speakers are inferred from the scene. Phone calls take
-  their sound from the Domino `PhoneCall` box's `PhonecallSound` input, wired in the mission layers.
-  Tracing those wires would turn many inferred speakers into recorded ones.
+- **The lines no bank or scene attributes.** About 535 remain, mostly phone calls, radio and
+  multiplayer. The mission scripts name the sound of each phone call, so a call's mission is known,
+  but not who speaks it: the employer's and the predecessor's calls (`5124037`, `5123973`) and the
+  contract broker (`5175655`) stay unnamed.
 - **Who sent the player.** The orders cite "the Joint Signatory Framework" (`4577324`). No string
   names the employer, the earlier hunter, or the voice that offers "target of opportunity" contracts
   (`5175655`).
@@ -86,16 +88,18 @@ Every page separates two kinds of claim:
   not played. What the engine decides on its own, such as which faction wins an act, which buddy it
   assigns, and whether two phone calls issued together both play, is not traced.
 - **Reuben's dead interviewee.** "This man I interviewed here, he died a few months ago. These are
-  his famous last words" (`4911521`) does not fit the living Jackal.
+  his famous last words" (`4911521`) does not fit the living Jackal. The tapes add only the reverse:
+  the Jackal unsure whether Reuben died (see [The Jackal tapes](./jackal-tapes.md)).
 - **Names.**
   - Is "Kgosi" a family name or a title?
   - Why is the capital "Mosate Selao" on the map and "Port Selao" in speech?
   - What does the Underground's internal name, GRIN, stand for?
 - **The "party leader".** Gakumba answers to an unnamed "party leader" (`4558591`). Mbantuwe is the
   likely man, but nothing names him.
-- **Buddy outcomes.** The meanings of the `WAG_*_SRV`, `_LOS` and `_ABN` banks, and of the `IL=ILL`
-  and `IL=ILH` gates (low and high reputation), are read from the lines' content. The code that sets
-  them is not traced.
+- **Reputation gates.** The meaning of the `IL=ILL` and `IL=ILH` gates (low and high reputation) is read
+  from the lines' content; the engine code that picks between them is not traced. The `WAG_*_SRV`,
+  `_LOS` and `_ABN` banks are settled by the scripts: survived, lost, abandoned (see
+  [How the campaign runs](./missions/overview.md#how-a-buddy-fares-in-his-fight)).
 - **Other languages.** Only the English table was read. The other nine may name or phrase things
   differently.
 - **Leftovers.** `Objectives/UbidaysLongDemo_*` is a demo version of the Weelegol radio and pipeline

@@ -22,15 +22,15 @@ Citations follow [Sources and citations](./sources.md). A map citation names the
 - **It is inland.** "Hundreds of miles from any kind of ocean… It's a strange place for an Algerian
   navy man to meet his fate." (`5107630`, Frank Bilders).
 - **It has neighbours.**
-  - One to the west buys its natural gas by rail (`4559291`, Kouassi?) and its fresh water by
-    pipeline (`4559888`, Tambossa?).
+  - One to the west buys its natural gas by rail (`4559291`, Greaves) and its fresh water by
+    pipeline (`4559888`, Tambossa).
   - Arms come "over the border north of here" (`4912995`, arms merchant).
   - The refugees end up "displaced to neighboring countries" (`Coda/Para1`).
 - **It is hard to get into or out of.**
-  - "Nobody can come into country these days." (`4558110`, UFLL lieutenant?).
-  - "Everyone's trying to find a way out of the country." (`5160098`, taxi driver?).
+  - "Nobody can come into country these days." (`4558110`, Kankaras).
+  - "Everyone's trying to find a way out of the country." (`5160098`, taxi driver).
 - **It has deserts.** Dialogue speaks of desert, wadis and oases (`4906964`, Quarbani Singh;
-  `4558461`, Carbonell?).
+  `4558461`, Carbonell).
 
 ## Regions
 
@@ -39,9 +39,9 @@ Citations follow [Sources and citations](./sources.md). A map citation names the
 - **Leboa-Sako is the north, Act 1.**
   - "Leboa-Sako fell to the APR" (`Objectives/A2SM04_APR_01`).
   - "the northern district" (`4911034`, Reuben).
-  - It is spelled "Leboa-Seko" once (`4558791`, Greaves?).
+  - It is spelled "Leboa-Seko" once (`4558791`, Greaves).
 - **Bowa-Seko is the south, Act 2.**
-  - "Welcome to Bowa-Seko." (`4559146`, Greaves?).
+  - "Welcome to Bowa-Seko." (`4559146`, Greaves).
   - "Playing the factions in Bowa-Seko turned out to be just as dangerous as it was up north."
     (`LoadScreens/CuSyn_12`).
 - **Pelo-Laboso** is named once, as the refugees' way out: "They are coming from Bowa-Seko, moving
@@ -59,7 +59,7 @@ Citations follow [Sources and citations](./sources.md). A map citation names the
 **The game states**
 
 - Bowa-Seko is south of Leboa-Sako. Reuben flees "to Mosate-Selao, in the south" (`4911115`,
-  Reuben). The retreating column is "proceeding south" (`4558817`, Greaves?). The losing faction
+  Reuben). The retreating column is "proceeding south" (`4558817`, Greaves). The losing faction
   will "meet up with Greaves at Sefapane in the south" (`Objectives/A2SM05_APR_01`).
 - The player crosses between them as a body in a truck: "They're hauling the dead out to some mass
   grave in the desert" (`Objectives/A2SM04_APR_01`). Before that, the game warns that "Once you move
@@ -88,7 +88,7 @@ Citations follow [Sources and citations](./sources.md). A map citation names the
 
 | Map label | Page | What the game says |
 | --- | --- | --- |
-| Pala | `w1_c_3` | The town. "Pala only has one hotel still working." (`5160146`, taxi driver?). Father Maliya's church is here (`4577402`, Reuben?), and both factions' offices (`4967789`, Quiepo; `4972806`, Kankaras). Gakumba's office is "the abandoned bus station" and Kouassi's "the former bordello" (`Objectives/A1LM00_03`, `A1LM00_02`). |
+| Pala | `w1_c_3` | The town. "Pala only has one hotel still working." (`5160146`, taxi driver). Father Maliya's church is here (`4577402`, Reuben), and both factions' offices (`4967789`, Quiepo; `4972806`, Kankaras). Gakumba's office is "the abandoned bus station" and Kouassi's "the former bordello" (`Objectives/A1LM00_03`, `A1LM00_02`). |
 | Mike's Bar | `w1_c_3` | "an expat bar -- good source for all sorts of shit" (`4967789`, Quiepo); "Lots of independent contractors there." (`4972806`, Kankaras). The buddies' base in Act 1. |
 | Slaughter House | `w1_c_3` | Kankaras's camp, north of Pala (`5123416`, Kankaras). |
 | Fresh Fish | `w1_c_3` | Carbonell's "fishing pier" or "fishing camp", north of Pala (`5123400`, Carbonell; `Objectives/A1BU03_01`). |
@@ -98,9 +98,9 @@ Citations follow [Sources and citations](./sources.md). A map citation names the
 | PetroSahel | `w1_b_2` | The fuel terminal the UFLL occupies. Every subtitle spells it "PetroSehel" (`4560449`, Marty Alencar). |
 | North Railyard | `w1_b_2` | The railyard with the natural-gas tank cars (`Objectives/A1LM02_01`). |
 | Cattle Xing | `w1_b_2` | — |
-| Goka Falls | `w1_b_4` | "the Goka Falls retreat - north side of Mt. Thabamolaetsa" (`Objectives/A1SM02_APR_01`), with a lodge (`4973244`, Gakumba?). |
+| Goka Falls | `w1_b_4` | "the Goka Falls retreat - north side of Mt. Thabamolaetsa" (`Objectives/A1SM02_APR_01`), with a lodge (`4973244`, Gakumba). |
 | Fort | `w1_b_4` | "the legion fort", where the returned King stays (`4885625`, Flora Guillen). Earlier the base of "Commander Davenport" (`Objectives/BSQ05_01`). |
-| Oasis | `w1_b_5` | "an oasis in the northeastern desert", where the King's gold sits "under a tarp" (`4558461`, Carbonell?). |
+| Oasis | `w1_b_5` | "an oasis in the northeastern desert", where the King's gold sits "under a tarp" (`4558461`, Carbonell). |
 | "Private Property" | `w1_c_4` | — |
 | OGC (Occidental Growers Company) | `w1_c_4` | The greenhouses "in the foothills to the east", guarded by the APR (`Objectives/A1LM05_01`). |
 | Police Station | `w1_c_2` | The police chief's base (`Objectives/A1LM01_04`). The prototype ammunition is in its garage (`Objectives/BSQ08_01`). |
@@ -133,24 +133,24 @@ Citations follow [Sources and citations](./sources.md). A map citation names the
 
 | Map label | Page | What the game says |
 | --- | --- | --- |
-| Mosate Selao | `w2_c_3` | Called "Port Selao" in the journal and nearly all dialogue. "Mosate-Selao" is used only by Reuben (`4911115`) and one briefing (`4560094`, Tambossa?). A cease-fire zone (`Tutorial/TU42_MESSAGE`), with both warlords' headquarters (`Objectives/A2LM00_01`) and Doctor Obua's clinic (`Objectives/A2SM06_APR_04`). |
+| Mosate Selao | `w2_c_3` | Called "Port Selao" in the journal and nearly all dialogue. "Mosate-Selao" is used only by Reuben (`4911115`) and one briefing (`4560094`, Tambossa). A cease-fire zone (`Tutorial/TU42_MESSAGE`), with both warlords' headquarters (`Objectives/A2LM00_01`) and Doctor Obua's clinic (`Objectives/A2SM06_APR_04`). |
 | Sefapane | `w2_b_2` | "Town's split down the middle between the factions" (`Objectives/A2SM06_APR_01`). The APR and the UFLL each keep a command post here (`Objectives/BSQ20_01`, `BSQ21_01`), and there is a garage (`Objectives/A2LM09_03`). |
 | Dogon Village | `w2_b_3` | The cliff village where the APR dries artemisia in kilns (`Objectives/A2LM10_01`): "Like a maze, all up and down the hill" (`4934434`, Xianyong Bai). |
-| Sediko | `w2_b_3` | "the Dogon Sediko", Tambossa's base (`4561187`, Mbantuwe?), where the APR holds a foreigner (`Objectives/A2BU07_01`). |
+| Sediko | `w2_b_3` | "the Dogon Sediko", Tambossa's base (`4561187`, Mbantuwe), where the APR holds a foreigner (`Objectives/A2BU07_01`). |
 | Outpost | `w2_b_3` | The APR outpost where the medicine courier stops (`Objectives/A2LM10_03`). |
 | Crash Site | `w2_b_4` | The salvage site of a wrecked Hind with a 500 lb bomb (`Objectives/A2LM11_03`). |
 | Sepoko | `w2_b_5` | "an old border crossing" (`4561837`, Purefoy); "that sad excuse for a border crossing" (`4936185`, Marty Alencar). It has an Afreqa Telecom office (`Objectives/A2LM12_03_UAT_01`). |
 | Polytechnic | `w2_c_4` | Where Seth Uniya teaches the APR bomb-making (`Objectives/A2LM12_01`). |
 | Airfield | `w2_c_4` | The airport. Relief drops land here (`Objectives/A2LM12_05`), journalists are detained here at the end (`Objectives/A3SM14_01`), and the buddies' escape plane was to leave from here (`4898039`, Nasreen Davar). |
 | Rail Xing | `w2_c_5` | — |
-| Dental Clinic | `w2_c_2` | "an old dental clinic, west of Port Selao", with the nitrous oxide (`4560086`, Greaves?). |
+| Dental Clinic | `w2_c_2` | "an old dental clinic, west of Port Selao", with the nitrous oxide (`4560086`, Greaves). |
 | Ranger Station | `w2_c_2` | — |
 | Post Office | `w2_c_2` | "One kilometer to the west of Port Selao" (`5124224`, handler?). |
-| Sehlakalase | `w2_c_3` | "Sehlakalase Island. Middle of Lake Segolo." (`5123973`, predecessor?): the Jackal's island, with his weapons cache and his house (`4559182`, Greaves?; `5106733`, Reuben). |
+| Sehlakalase | `w2_c_3` | "Sehlakalase Island. Middle of Lake Segolo." (`5123973`, predecessor?): the Jackal's island, with his weapons cache and his house (`4559182`, Greaves; `5106733`, Reuben). |
 | TaeMoCo Mine | `w2_d_2` | "the TaeMoCo diamond mine" (`Objectives/A2LM08_01`), which the buddies call a sham (`4933814`, Nasreen Davar). |
 | Weelegol Village | `w2_d_2` | "the dried-up fishing village of Weelegol", where Liberation Radio's transmitter is parked (`Objectives/A2LM07_01`). |
 | Mertens-Segolo Pipeline Company, M-S Pipeline | `w2_d_3` | The pipeline that pumps "fresh water out of Lake Segolo" to sell abroad (`Objectives/A2LM08_01`). |
-| Bowaseko Brewing Co. | `w2_d_3` | "the Seko Brewery" (`Objectives/A2BU06_01`), Mbantuwe's base (`4560255`, Tambossa?). |
+| Bowaseko Brewing Co. | `w2_d_3` | "the Seko Brewery" (`Objectives/A2BU06_01`), Mbantuwe's base (`4560255`, Tambossa). |
 | Prison | `w2_d_3` | Where the player and his buddies are held, and later the Jackal's way-station for the exodus (`LoadScreens/MiSyn_A3SM15`). |
 | Marina | `w2_d_4` | "the Marina bar" (`Objectives/A3SM13_APR_01`), the buddies' base in Act 2 (`Objectives/BSQ14_02`). |
 | Swamp, Heart of Darkness | `w2_d_4` | — |
@@ -160,8 +160,8 @@ Citations follow [Sources and citations](./sources.md). A map citation names the
 
 - **Lake Segolo**, the large lake at the map's centre (`Objectives/A2SM06_APR_02`).
 - **The Noga River.** Yabek sits "on the East Branch of the Noga River now. Under the rail crossing."
-  (`4560872`, Voorhees?).
-- **The Crossroads**, where the Voorhees column regroups (`4558910`, Voorhees?).
+  (`4560872`, Mbantuwe).
+- **The Crossroads**, where the Voorhees column regroups (`4558910`, Voorhees).
 - **A tourist resort**, home of the UFLL Propaganda Minister (`Objectives/A2LM07_03`).
 - **The canyon pass and the Border Patrol camp**, at the end of the road out (`Objectives/A3SM15_04`,
   `A3SM15_05`).
@@ -170,8 +170,8 @@ Citations follow [Sources and citations](./sources.md). A map citation names the
 
 - **Port Selao is the capital.**
   - Its map page texture is `majorlocation_capital` (`levels\w2_c_3`).
-  - It is "the city" (`4559182`, Greaves?; `4560386`, Voorhees?) and the seat of both warlords.
-  - It has the country's working airport, and the warlords say "the Port" (`4561603`, Voorhees?).
+  - It is "the city" (`4559182`, Greaves; `4560386`, Voorhees) and the seat of both warlords.
+  - It has the country's working airport, and the warlords say "the Port" (`4561603`, Voorhees).
   - "Mosate Selao" on the map and "Port Selao" in speech are one town: both are the place west of
     which the dental clinic stands (`4560094`, `4560086`).
 - **Labels with no dialogue match it to a story site by texture name.**

@@ -19,7 +19,7 @@ world data the UFLL's soldiers are the red faction and the APR's the blue; see
   "This is the United Front. I'm Doctor Gakumba." (`4888993`, Gakumba). Kankaras: "Local boss for the
   United Front" (`4547658`, Kankaras).
 - Neither acronym is ever spelled out. Kouassi mocks the other side's name: "The U-F-blah-blah is
-  getting a lot of medicine from next door" (`4559279`, Kouassi?).
+  getting a lot of medicine from next door" (`4559279`, Kouassi).
 - `CharacterNames/UFLL` and `CharacterNames/APR` hold only the acronyms.
 
 **Cross-check.** Wikipedia gives "United Front for Liberation and Labour" and "Alliance for Popular
@@ -47,9 +47,9 @@ English string table.
   guy named Kouassi. Runs muscle for the APR" (`4547806`, Quiepo); "Street muscle for the APR"
   (`4547737`, Purefoy).
 - Kouassi answers to Tambossa: "The big man - Major Tambossa - said so himself" (`4558669`,
-  Kouassi?). Orders reach him by phone: "Boss called. Said, 'kill constable.'" (`4557784`, Kouassi?).
+  Kouassi). Orders reach him by phone: "Boss called. Said, 'kill constable.'" (`4557784`, Kouassi).
 - Gakumba answers to a "party leader": "The UFLL is almost unstoppable here - Even the party leader
-  doesn't realize." (`4558591`, Gakumba?). At his rally he credits "Gakumba - and Mbantuwe!"
+  doesn't realize." (`4558591`, Gakumba). At his rally he credits "Gakumba - and Mbantuwe!"
   (`4559066`, Gakumba).
 - Tambossa uses two titles: "I am Tambossa. National leader of the APR." (`4889114`, Tambossa) and
   "I am Major Tambossa." (`4889128`, Tambossa).
@@ -57,7 +57,7 @@ English string table.
   (`4889167`, Tambossa), and Mbantuwe says "Go ahead, Hector." (`4889241`, Mbantuwe). Both
   warlords' headquarters are in Port Selao: "as long as I'm here in Port Selao at least they can keep an eye on me"
   (`Objectives/A2LM00_01`); "I'll move back into the HQ in the Port"
-  (`4561603`, Voorhees?).
+  (`4561603`, Voorhees).
 - Gakumba insists on the title "Doctor": "You'll call me Doctor Gakumba." (`4971256`, Gakumba).
 
 **Implied**
@@ -70,7 +70,7 @@ English string table.
   - Kankaras is "mafiya" (`5121241`, Quiepo) and swears in Serbo-Croatian (`4939787`, Kankaras).
   - Purefoy was in the Navy and Quiepo in the Marines (`5180307`, Purefoy; `5180594`, Quiepo).
   - Greaves is called "limey" and "a glorified airline pilot" (`5180594`; `5180307`).
-  - Voorhees spent "ten years leading most of those boys in Angola" (`4560354`, Voorhees?).
+  - Voorhees spent "ten years leading most of those boys in Angola" (`4560354`, Voorhees).
 
   So both factions' rhetoric is "Africa for Africans" while their wars are run by hired outsiders.
 
@@ -80,8 +80,8 @@ English string table.
 
 - **UFLL.**
   - "This is OUR struggle. Africa is for Africans. We do not need outside involvement!" (`4558255`,
-    Gakumba?).
-  - "The effort to build a stronger Africa" (`4559406`, Gakumba?).
+    Gakumba).
+  - "The effort to build a stronger Africa" (`4559406`, Gakumba).
   - After taking Leboa-Sako: "WE - have brought peace to this country! Now we begin a time of milk and
     honey! A chicken in every pot!" (`4559066`, Gakumba).
   - "THIS is when we take control of this country, and bring Order!!!! Stability!!! Strength!!!"
@@ -93,13 +93,13 @@ English string table.
   "The APR snakes have entered the Lake Road preserve, south of the Airport… Take off their heads"
   (`4559557`).
 - **APR.**
-  - "APR is the greatest!" (`4557821`, Kouassi?). "One faction! One leader!" (`4973224`, Kouassi?).
-  - "This is a very rich country. And soon it will be - our country!" (`4558702`, Kouassi?).
+  - "APR is the greatest!" (`4557821`, Kouassi). "One faction! One leader!" (`4973224`, Kouassi).
+  - "This is a very rich country. And soon it will be - our country!" (`4558702`, Kouassi).
   - At his victory rally: "We are an independent - AFRICAN - country! We are free men!" (`4889047`,
     Kouassi). "Get ready to take what is yours! The money! The women! ALL of it!" (`4972769`,
     Kouassi).
-  - Tambossa: "This will UNITE us. One Africa." (`4559819`, Tambossa?). "It is for the greater good.
-    For a stronger Africa." (`4559957`, Tambossa?).
+  - Tambossa: "This will UNITE us. One Africa." (`4559819`, Tambossa). "It is for the greater good.
+    For a stronger Africa." (`4559957`, Tambossa).
 - **Both.** Each side's victory speech turns on the civilians who stayed out of the fighting:
   - "If you did not fight with us, you are not with us!" (`4889042`, Kouassi).
   - "those spineless cowards that hide in their homes… THEY are the enemy" (`4971042`, Gakumba).
@@ -119,18 +119,18 @@ English string table.
   When you work for the APR – you get paid in stones." (`4921591`, Quiepo). The UFLL says the same
   (`4921493`, Kankaras).
 - **They hire deniable outsiders.**
-  - "We cannot send our men on this job. It must be an outside party." (`4558513`, Gakumba?).
+  - "We cannot send our men on this job. It must be an outside party." (`4558513`, Gakumba).
   - "Of course we would never be involved in such a thing. It must be the work of a free agent."
-    (`4559912`, Tambossa?).
+    (`4559912`, Tambossa).
 - **They take foreign hostages.** Both hold foreigners in "bricked-up" buildings, not sure who they
   are, "But if the APR has him, he might be useful" (`4912235`, guard; `Objectives/A1BU01_01_UBM_01`).
 - **The UFLL's money.**
   - It occupies the PetroSehel fuel terminal and moves its fuel reserve in disguised tankers on
     routes that change daily (`4933270`, Paul Ferenc; `4560459`, Marty Alencar).
   - It holds natural gas the neighbouring country needs, "blackmailing our friends to the west for
-    medical supplies" (`4973169`, APR lieutenant?; `4559284`, Kouassi?).
+    medical supplies" (`4973169`, Greaves; `4559284`, Kouassi).
   - Mbantuwe pumps fresh water out of Lake Segolo and sells it over the border "in exchange for large
-    cash payments" (`4559872`, Greaves?; `Objectives/A2LM08_01`).
+    cash payments" (`4559872`, Greaves; `Objectives/A2LM08_01`).
 - **The UFLL's mine.** It runs the TaeMoCo diamond mine, which every buddy who worked there calls a
   sham: "TaeMoCo is a sham. There are no diamonds. Mbantuwe tells the soldiers they will be rich… if
   they just stay with him." (`4933814`, Nasreen Davar; `4887838`, Andre Hyppolite).
@@ -141,20 +141,21 @@ English string table.
   - It has bribed the Leboa-Sako police chief "over the years", and he keeps a ledger
     (`Objectives/A1LM01_03`; `4932718`, Flora Guillen).
   - It guards a European agribusiness's greenhouses in exchange for food: "Bloody fighters over
-    there are eating like kings these days." (`4559446`, Voorhees?).
+    there are eating like kings these days." (`4559446`, Voorhees).
   - It guards the returned King's gold (`Objectives/A1LM06_01`).
 - **The APR's medicine.** It holds the region's malaria remedy: artemisia dried in kilns at the Dogon
-  cliff village and kept in a secret store (`4560641`, Mbantuwe?; `Objectives/A2LM10_01`).
+  cliff village and kept in a secret store (`4560641`, Mbantuwe; `Objectives/A2LM10_01`).
 - **The APR's weapons.**
   - The gun-runner Yabek sells "exclusively to the APR" (`Objectives/A2LM11_01`).
-  - The shop teacher Seth Uniya teaches it to build roadside bombs (`4561015`, Mbantuwe?).
+  - The shop teacher Seth Uniya teaches it to build roadside bombs (`4561015`, Mbantuwe).
 - **The APR and aid.**
-  - It diverts air-dropped relief through a bribed pilot who navigates by cell towers (`4932314`,
-    Marty Alencar; `Objectives/A2LM12_03`).
-  - Tambossa says of aid money: "it has to come to US first. We know how to handle it." (`4559227`,
-    Tambossa?).
+  - Its bomb instructor, Seth Uniya, diverts air-dropped relief through a bribed pilot who navigates
+    by cell towers, and sells it: "the teacher sells it at a profit." (`4932314`, Marty Alencar;
+    `4934074`, Hakim Echebbi; `Objectives/A2LM12_03`).
+  - In Leboa-Sako, Kouassi says of aid: "it has to come to US first. We know how to handle it."
+    (`4559227`, Kouassi).
   - He means to cut off anaesthetic: "When we shoot our enemies, we want them to die in the street."
-    (`4560079`, Tambossa?).
+    (`4560079`, Tambossa).
 - **Partisan accusations.** Michele Dachss says "the UFLL kidnaps children" and sells boys
   (`4933654`), and that the APR sells girls (`4887076`). Paul Ferenc says the APR uses a defoliant
   called "Agent Yellow" (`4906620`). Nobody else confirms either claim.
@@ -165,8 +166,8 @@ English string table.
 
 - **A long, tolerated stalemate.** Both northern bosses describe it the same way:
   - "This conflict with the APR. It has been going on for a long time. - Both sides tolerate the
-    conflict, because we understand it." (`4558579`, Gakumba?).
-  - "Both sides are used to it! Everybody understands it!" (`4558660`, Kouassi?).
+    conflict, because we understand it." (`4558579`, Gakumba).
+  - "Both sides are used to it! Everybody understands it!" (`4558660`, Kouassi).
 - **Cease-fires that don't hold.**
   - The game opens on a broken one: "There was supposed to be cease-fire, but that's all out the window
     now." (`4547658`, Kankaras).
@@ -174,15 +175,15 @@ English string table.
   - Port Selao is a cease-fire zone where nobody may shoot (`Tutorial/TU42_MESSAGE`,
     `DZMessages/DZ_ESCAPE`).
 - **A balance the player tips.** Both bosses blame the player for upsetting it: "things have
-  changed. You have changed them." (`4558591`, Gakumba?); "stronger now than ever before! - Thanks to
-  YOU" (`4558676`, Kouassi?).
+  changed. You have changed them." (`4558591`, Gakumba); "stronger now than ever before! - Thanks to
+  YOU" (`4558676`, Kouassi).
 
 **Implied**
 
 - The lieutenants' interest is in war, not victory. Greaves and Voorhees each fear the southern
-  warlords making peace ("blokes like you and I are out of a job. Or worse", `4559170`, Greaves?;
-  `4560365`, Voorhees?). Each then sails the Jackal's weapons into Port Selao under the *other*
-  side's flag to restart the fighting (`4559182`, Greaves?; `4560386`, Voorhees?;
+  warlords making peace ("blokes like you and I are out of a job. Or worse", `4559170`, Greaves;
+  `4560365`, Voorhees). Each then sails the Jackal's weapons into Port Selao under the *other*
+  side's flag to restart the fighting (`4559182`, Greaves; `4560386`, Voorhees;
   `Objectives/A2SM06_APR_02`).
 
 ## How the factions end
@@ -196,8 +197,8 @@ The full sequence is on the [Timeline](./timeline.md). In outline:
    the UFLL, by the player's choice (`Objectives/A2SM04_APR_01`).
 2. **The losing faction regroups in the south** under Greaves or Voorhees. It sends the player back
    to kill the winning boss at his victory rally (`Objectives/A2SM05_APR_01`).
-3. **The warlords die.** Tambossa and Mbantuwe agree a peace (`4560243`, Tambossa?; `4561167`,
-   Mbantuwe?). The Jackal kills the warlord who receives the player's peace letter
+3. **The warlords die.** Tambossa and Mbantuwe agree a peace (`4560243`, Tambossa; `4561167`,
+   Mbantuwe). The Jackal kills the warlord who receives the player's peace letter
    (`Objectives/A2SM09_APR_01`). The player kills the other on his lieutenant's orders
    (`Objectives/A3SM11_APR_02`).
 4. **The Act 1 lieutenants turn on their own leadership**, each faction in turn
@@ -228,9 +229,9 @@ The full sequence is on the [Timeline](./timeline.md). In outline:
     (`Coda/Para1`).
 - **Bastion UK.**
   - A private military company the UFLL paid: "The money brought Bastion to Africa. No more money,
-    no more PMC." (`4559398`, Gakumba?).
+    no more PMC." (`4559398`, Gakumba).
   - It "packed up and left the country" in Act 2, leaving Voorhees "high and dry" (`4560354`;
-    `4560755`, Voorhees?).
+    `4560755`, Voorhees).
 - **Macgrudder-Powell.** A PMC that fired Marty Alencar (`4891036`, Marty Alencar). Warren Clyde calls
   it a "clown-school outfit" (`4580015`). By Act 2 it "couldn't cut it here" (`4885124`, Marty
   Alencar).
@@ -242,7 +243,7 @@ The full sequence is on the [Timeline](./timeline.md). In outline:
   - Who sent it changes with the buddy telling the story: an NGO, a client, Israel.
 - **Arms dealers.**
   - The Jackal, who sold to both factions.
-  - Yabek, a Jordanian on a barge (`4560855`, Voorhees?).
+  - Yabek, a Jordanian on a barge (`4560855`, Voorhees).
   - The two weapon-shop vendors, whose rivals include "This Ukrainian" (`4913015`, arms merchant) and
     competitors "from Moldova" (`4913179`, arms merchant).
 - **Foreign companies.**
@@ -257,7 +258,7 @@ The full sequence is on the [Timeline](./timeline.md). In outline:
   | Afreqa Telecom | an office at Sepoko | `Objectives/A2LM12_03_UAT_01` |
   | Bowaseko Brewing Co. | the "Seko Brewery", Mbantuwe's base | map `w2_d_3`; `Objectives/A2BU06_01` |
 - **The international side.** The player's orders cite "the Joint Signatory Framework", which the
-  Jackal's "recent influx of weapons" violates (`4577324`, read aloud by the Jackal?). "There was an
+  Jackal's "recent influx of weapons" violates (`4577324`, read aloud by the Jackal). "There was an
   arms embargo in place" (`LoadScreens/ChSyn_AA`).
 
 **Implied**
