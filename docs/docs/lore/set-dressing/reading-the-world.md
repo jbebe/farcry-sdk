@@ -39,7 +39,7 @@ Positions are global metres: `x` runs east, `y` runs north. The playable map cov
 
 ## How claims are cited
 
-These pages follow the convention of the lore section's sources page, with placements in place of
+These pages follow the convention of the [sources page](../sources.md), with placements in place of
 strings:
 
 - **Placed** — the world data contains it. The claim names the asset or archetype and, where it
@@ -55,7 +55,8 @@ props only make sense with the mission that uses them.
 Each named place on the in-game map is a `CMajorLocationEntity` named `MajorLocation_*`, and each one
 points at a `levels\<level>\majorlocation_<name>.xbt` texture: the zoomed map tile, with the place's
 name printed in its corner. The texture's file name is the designers' name for the place; the printed
-label is the player's. There are 45.
+label is the player's. There are 45. What the dialogue and the paper map call these places, and how
+the two maps join, is on [Places](../places.md).
 
 ### Leboa-Sako (`world1`)
 
