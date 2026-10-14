@@ -20,17 +20,26 @@ Marks: **(proven)** seen in a running game; **(RE-verified)** read in `FarCry2_s
 
 No tool or format is missing for a world built from `tmpla`, the editor's template. It is flat,
 empty and complete ([`tmpla`](../engine-internals/world-loading.md#tmpla-is-a-flat-empty-world)).
-What stands between it and a loaded world is one launch, which answers three open questions:
+What stands between it and a loaded world is one launch, which answers two open questions:
 
 1. **Does the engine load a single-player world it does not ship?** Nothing enumerates or
    whitelists worlds **(RE-verified)**, but no such world has been seen loading.
-2. **Does the player arrive on the ground?** Travel must name a spawn point. With no spawn point
-   named, the player lands at an undefined position. With one named, the player arrives at the spawn
-   point's stored height, and nothing on that path snaps to the ground
-   ([where the player arrives](../engine-internals/world-loading.md#where-the-player-arrives),
-   **RE-verified**). `tmpla`'s only spawn point sits 16 m below its ground.
-3. **Is a one-sector grid enough?** `CWorld::Create` checks no minimum **(RE-verified)**, but
+2. **Is a one-sector grid enough?** `CWorld::Create` checks no minimum **(RE-verified)**, but
    nothing after it was read.
+
+Where the player lands is settled, and it follows world 2, not world 1
+([where the player arrives](../engine-internals/world-loading.md#where-the-player-arrives),
+**RE-verified**):
+
+- A new game in world 1 spawns the player at the spawn point marked `bWorldStart`, moved down to
+  the ground.
+- Travel, which is how world 2 is entered, spawns the player at the named spawn point's stored
+  position, with no ground snap.
+
+Both retail start points are stored at ground level: 3 cm and 62 cm above the terrain under them.
+So a new world reached by travel needs a spawn point placed on its ground. `newworld_tile`'s is
+44 cm above. `tmpla`'s only spawn point sits 16 m below its ground, so travel there puts the player
+under the terrain.
 
 Anything beyond an empty flat world runs into gaps that do have names: terrain heights cannot be
 generated, vegetation cannot be packed, and the navmesh has no writer. See
@@ -127,9 +136,9 @@ No files. `tmpla` ships a complete world and level tree, so this tests only whet
 loads a world the campaign never visits. Use world 2 as the control: it is known to load. Both
 commands name a spawn point.
 
-**Success:** a loading screen, then the player in a flat, empty plain, and the game still running a
-minute later. The player probably arrives 16 m under the ground. Whether they fall, stand, or are
-lifted out answers question 2.
+**Success:** a loading screen, and the game still running a minute later. The player arrives at
+z 0, 16 m under the flat plain: expect to fall or be stuck under it. DevTools' noclip lifts them out
+to see the plain.
 
 ### Step 2: the same world under a new name
 
@@ -199,12 +208,12 @@ Each run is one launch. Load a world 1 save, press `~`, and enter the line:
 | Run | Console line | Look for |
 |---|---|---|
 | 1, control | `#GameChangeWorld("world2", "2051908267268899174")` | world 2 at its act 2 start |
-| 2 | `#GameChangeWorld("tmpla", "2054037628277228842")` | a load, a flat plain, the player's height |
+| 2 | `#GameChangeWorld("tmpla", "2054037628277228842")` | a load, with the player 16 m under a flat plain; noclip up to see it |
 | 3 | `#GameChangeWorld("newworld_clone", "2054037628277228842")` | the same as run 2 |
 | 4 | `#GameChangeWorld("newworld_tile", "2054037628277228842")` | standing on a 64 m square of ground |
 | 5 | in run 4's world: `#GameChangeWorld("world1", "2056971616016942572")` | back in world 1 |
 
-DevTools' noclip helps if the player arrives under the ground. After each run, `bin\fcse.log` holds
+After each run, `bin\fcse.log` holds
 what the plugins saw. A crash or a hang on the loading screen is a result: note at which run it
 happened.
 
@@ -220,7 +229,8 @@ tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe mod build --ga
 
 ## Open questions
 
-- Does the player spawn function snap to the ground on arrival? Run 2 shows it.
+- What does the engine do with a player spawned under the terrain: fall forever, or stand on
+  nothing? Run 2 shows it.
 - Is a one-sector grid accepted past `CWorld::Create`? The streaming rings clamp to the world, sound
   sets up a 32 × 32 cell grid per sector, and `CAIEngine::LevelLoaded` was not read.
 - Was emptying the sector descriptor's list right, and what is its leading value (123, member

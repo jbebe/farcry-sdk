@@ -228,22 +228,43 @@ missing sector file is tolerated. `tmpla` ships no `worldsector` file at all **(
 
 ## Where the player arrives
 
-**After travel.** `CWorldTravel::SpawnPlayer` (`0x092630b0`) asks `RetrieveTargetPos`
-(`0x092627d0`) for the position. That returns an explicit target position if the travel set one
-(same-world travel does). Otherwise it returns the position of the `CSpawnPoint` whose entity id
-equals the travel's spawn-point id. If no spawn point matches, the position is never written, and
-the player is spawned at whatever was on the stack. The invalid id from
-`GameChangeWorldDefaultSpawnPoint` matches nothing, so **default-spawn travel places the player at an
-undefined position**. Nothing on this path snaps to the ground: the player arrives at the spawn
-point's stored height.
+The single-player game spawns the player when they join, in
+`CFCXGRStateSinglePreGame::ProcessGenericEventOnPlayer` (`0x08983860`). It takes one of three
+branches:
+
+| Entry | Branch | Position |
+|---|---|---|
+| Loading a save | the player entity comes back from the save | the saved one |
+| New game (world 1) | `CSpawnPointService::GetDefaultSpawnPoint` (`0x0940ac80`) | the spawn point with `bWorldStart` set, else the first one, moved to the ground by `GetPositionOnGround`. With no spawn point at all the call fails and the player is never spawned. |
+| Travel (world 2) | `CWorldTravel::SpawnPlayer` (`0x092630b0`) | the named spawn point's stored position, unchanged |
+
+`bWorldStart` is `CSpawnPoint`'s member at `+0xbc` (`CSpawnPoint::RegisterProperties`,
+`0x096cef70`). Both branches that spawn a player end in `CPlayer::DoSpawnPlayer` (`0x0919c650`),
+which sets the pawn's position as given and does not touch the ground.
+
+**After travel.** `CWorldTravel::RetrieveTargetPos` (`0x092627d0`) returns an explicit target
+position if the travel set one (same-world travel does). Otherwise it returns the position of the
+`CSpawnPoint` whose entity id equals the travel's spawn-point id. If no spawn point matches, the
+position is never written, and the player is spawned at whatever was on the stack. The invalid id
+from `GameChangeWorldDefaultSpawnPoint` matches nothing, so **default-spawn travel places the player
+at an undefined position**. Travel never snaps to the ground, so a travel target has to be stored at
+ground height.
 
 Retail never travels without a spawn point. `master_world1` sets `SpawnPoint` to
-`"2051908267268899174"`, which is `SpawnPoint_W2A2_A03_MapStart` in `world2.mapsdata.fcb`, stored at
-z 25.06 on the ground. The string goes straight into `GameChangeWorld`, so the binding must accept
-an entity id written as a string **(inferred from retail use)**.
+`"2051908267268899174"`, which is `SpawnPoint_W2A2_A03_MapStart` in `world2.mapsdata.fcb`. The
+string goes straight into `GameChangeWorld`, so the binding must accept an entity id written as a
+string **(inferred from retail use)**.
 
-**Without travel.** `CEntitySystemService::OnLoadWorld` (`0x091be350`) centres the streaming loader
-on one of these:
+Each campaign world has exactly one `bWorldStart` spawn point, and both are stored just above the
+terrain under them, sampled from the sector's `.sdat` **(seen in data)**:
+
+| World | Spawn point | Stored z | Ground |
+|---|---|---|---|
+| world 1 | `OpeningSequence_SpawnPoint`, `2056971616016942572`, at (2509.36, 1190.10) | 20.887 | 20.857 |
+| world 2 | `SpawnPoint_W2A2_A03_MapStart`, at (1169.25, 4636.81) | 25.056 | 24.435 |
+
+**Streaming.** `CEntitySystemService::OnLoadWorld` (`0x091be350`) centres the streaming loader on
+one of these:
 
 - the spawn-point service's default: `CSpawnPointService::GetDefaultSpawnPoint` (`0x0940ac80`), which
   snaps to the ground and fails when the world has no spawn point
