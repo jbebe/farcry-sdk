@@ -20,6 +20,9 @@ formats, and engine internals — in one place.
 - **[Engine Internals](/docs/category/engine-internals)** — notes from reverse-engineering `Dunia.dll` and
   the `FarCry2`/`FarCry2_server` executables: the function-callback registry, command-line parsing,
   the Lua API surface exposed to mods, and more.
+- **[Lore](/docs/category/lore)** — what the game itself says about its world, rebuilt from the
+  retail text: factions, characters, timeline, places and themes. Every claim cites a string and is
+  marked as stated by the game or implied.
 
 ## Reading the provenance callouts
 
