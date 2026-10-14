@@ -129,6 +129,12 @@ Citations follow [Sources and citations](./sources.md). A map citation names the
   APR to the south (Cock-Fights, Lumber), as the lieutenants say: "APR position south of you"
   (`5121717`, Kankaras).
 
+**The game states (Underground cells)**
+
+Four shops around Pala hide refugee families for the Underground: a veterinarian's clinic north-west of
+Pala, a general store a mile south-west of it, an undertaker half a mile south of Mokuba, and a
+well-and-windmill shop near the base of Mt. Thabamolaesta (`Objectives/A1GM01_01`–`A1GM04_01`).
+
 ## Bowa-Seko
 
 | Map label | Page | What the game says |
@@ -164,7 +170,13 @@ Citations follow [Sources and citations](./sources.md). A map citation names the
 - **The Crossroads**, where the Voorhees column regroups (`4558910`, Voorhees).
 - **A tourist resort**, home of the UFLL Propaganda Minister (`Objectives/A2LM07_03`).
 - **The canyon pass and the Border Patrol camp**, at the end of the road out (`Objectives/A3SM15_04`,
-  `A3SM15_05`).
+  `A3SM15_05`). The Jackal waits for the diamonds "at a small hut just past the canyon truck pass"
+  (`Objectives/A3SM15_02`).
+- **The old prison** lies south of the airport: "You need to go to the Prison South of here"
+  (`a3sm14_heartofdarkeness.a3sm14_mission:f_13_Out`, a designer note shown on screen).
+- **Underground cells**: a general store at the Dogon River delta north of Port Selao, a phone-card
+  shop a kilometre west of it, a hardware store north-west of the TaeMoCo mine, and a tobacconist on
+  the east shore of Lake Segolo (`Objectives/A2GM01_01`–`A2GM04_01`).
 
 **Implied**
 
@@ -183,6 +195,41 @@ Citations follow [Sources and citations](./sources.md). A map citation names the
   buddies debrief there as the Act 1 buddies do at Mike's (`Objectives/BSQ14_02`, `BSQ02_02`).
 - **"Seko" is the local beer.** Paul's "cases of Seko" (`5108747`, Paul Ferenc) and the Bowaseko
   Brewing Co. on the map point to it.
+- **"The Crossroads" is Sefapane.** Voorhees's column says it will be "at the Crossroads"
+  (`4558910`, Voorhees), and the player next meets him at Sefapane (`Objectives/A2SM06_UFLL_01`). The
+  scripts name the Sefapane command posts and garage "Crossroads" (`A2SM00/BLUE_HQdoorman_Crossroads`,
+  `A05Crossroads_EnemiesSTP`).
+- **"Dust Town" is Weelegol.** The radio job's designer note says "Go to the Dust Town" for the
+  transmitter at Weelegol (`a2lm07_radioarmageddon.a2lm07_mission:f_4_Out`; `Objectives/A2LM07_01`).
+
+## What the war changes on the map
+
+**The game states**
+
+The mission scripts switch some places to a new state for the rest of the game:
+
+| Where | What changes | When |
+| --- | --- | --- |
+| all of Leboa-Sako | the whole map turns to the colour of the faction that won Act 1 | `A2SM05` starts (`a2sm05_reprisal1.a2sm05_mission_forblue:In`) |
+| the troop train's line, Leboa-Sako | the derailed train stays where it fell | `A1LM02`, on the buddy's plan (`a1lm02_reapsew.a1lm02_mission:f_34_Out`) |
+| near the airstrip, Leboa-Sako | the wreck of the buddy's crop-duster stays | `A1LM05`, on the buddy's plan |
+| the old marina's inlet | the arms barge lies sunk | `A2SM07` (`A2SM07_WreckedBarge`) |
+| the TaeMoCo mine and dry riverbed | flooded | `A2LM08`, on the buddy's plan |
+| Sefapane | the UFLL garage is destroyed | `A2LM09`, on the buddy's plan |
+| the Dogon ruins | the APR's buried artemisia store is blown up and burns | `A2LM10`, on the buddy's plan |
+| the Noga rail crossing | the rail span lies in the river | `A2LM11`, on the buddy's plan |
+| the airport | the air drop's crates lie on the airfield | after `A2LM12`, either way |
+
+Details and script citations are on [Act 1](./missions/act-1.md) and [Act 2](./missions/act-2.md). The
+fallen rail span, the flooded mine and the burned store are not in a new game; they appear only once
+those plans are carried out.
+
+## Getting around
+
+**The game states**
+
+Each map has five bus stations: the town and stops in the four corner squares B2,
+B4, D2 and D4. A ride takes four hours (`fasttravel.fasttravel:f_96_Use` onward).
 
 ## Spelling variants
 

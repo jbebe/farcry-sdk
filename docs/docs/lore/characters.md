@@ -74,7 +74,9 @@ Who the game's people are, in the game's own words. The faction chains of comman
     raping and pillaging. - In peace, you see." (`4577695`, Jackal).
   - He kills the warlord who received it and leaves the player to take the blame: "They're going to
     think YOU did this… That's good. It means the war will start all over again." (`4577714`,
-    Jackal?; `Objectives/A2SM09_APR_01`).
+    Jackal; `Objectives/A2SM09_APR_01`).
+  - He eyes the peace offering, "What have you got there? Diamonds?" (`4577771`, Jackal), and knocks
+    the player out (`a2sm08_warlordassassination.a2sm08_mission_forblue:f_59_TimeElapsed`).
 - **His home.** He keeps a weapons cache and a house on Sehlakalase Island in Lake Segolo (`4559182`,
   Greaves). Late in the war he "burned his own house to the ground" (`5106733`, Reuben).
 - **The endgame.**
@@ -107,6 +109,11 @@ Who the game's people are, in the game's own words. The faction chains of comman
 - The quoted book is Nietzsche. The game never names it.
 - The cancer rumour and his "terminal case. Same as me" (`4973240`) agree: by the end both men are
   dying, the player of malaria and the Jackal of something he does not name.
+- The tapes, as fans transcribed them, fill in his past: a navy that ran covert guns, a year in Black
+  Beach prison, and the name itself, the jackal that "steals the lion's share" (see
+  [The Jackal tapes](./jackal-tapes.md); community-reported).
+- No ending shows him dead. Both endings cut to black and then to the same closing scene at the border
+  (`a3sm15_buddiesbetrayalfinalbattle.a3sm15_closingscene`).
 
 ## Reuben Oluwagembi
 
@@ -126,8 +133,14 @@ Who the game's people are, in the game's own words. The faction chains of comman
   Reuben) and warns him before each turn of the war (`4911034`, `4911306`, Reuben).
 - **His family.** "I'm African. This is my home… These are for my family. My wife Mikela, and my
   little daughter." (`5107230`, Reuben).
+- **The endgame.** He pays the player's lieutenant "a lot of money so that you and I could talk"
+  (`4911159`, Reuben). Then he is rounded up with the other journalists at the airport: "They say
+  they're going to deport us. Or worse…" (`4934582`, Reuben). Rescued, he stays: "This is my last
+  war, for better or for worse." (`5107230`, Reuben).
 - **His end.** "Reuben Oluwagembi's coverage of events has been ignored by the International Press.
-  He plans to publish the story independently on his personal blog." (`Coda/Para3`).
+  He plans to publish the story independently on his personal blog." (`Coda/Para3`). In the closing
+  scene he stands at the border with a camera as the civilians cross
+  (`a3sm15_buddiesbetrayalfinalbattle.a3sm15_closingscene`).
 
 **Implied**
 
@@ -154,7 +167,8 @@ Who the game's people are, in the game's own words. The faction chains of comman
 **Implied**
 
 - The predecessor went over to the Jackal ("my friend, the Jackal") before he died. His side story
-  runs in the `partnerspecialmissions` scripts.
+  is locked behind a promotional password; it ends at his body, with a Desert Eagle and his last
+  tape (see [Side missions](./missions/side-missions.md#the-predecessors-trail)).
 
 ## Faction leaders
 
@@ -166,6 +180,8 @@ Who the game's people are, in the game's own words. The faction chains of comman
     Kouassi).
   - He fears being seen as rich: "Gakumba is rich, taking their money and hiding it in secret bank
     accounts!" (`4558094`, Gakumba).
+  - His men are named in passing: "Samuel. Open the door." (`4558629`, Gakumba); "Simon! Tell me
+    what's happen --" (`4558935`, Gakumba).
   - He dies at his own victory rally on the APR path ("Nice work, with Gakumba. The man deserved
     it.", `4559146`, Greaves).
 - **Prosper Kouassi**, APR boss in Leboa-Sako.
@@ -181,12 +197,21 @@ Who the game's people are, in the game's own words. The faction chains of comman
   - Flora Guillen: "His people starve in the street, and he buys gold-plated dishes." (`4905744`,
     Flora Guillen).
   - Nasreen Davar: "He is a liar. He always has been." (`4887498`, Nasreen Davar).
+  - Marty Alencar: "It's hilarious that Mbantuwe thinks he can trust ME to set this up. - Me. After
+    what I did to his girl." (`4907732`, Marty Alencar).
+  - His last words to the player: "This is my house, my country, my continent! You are a scavenger and
+    a trespasser!" (`4909607`, Mbantuwe).
 - **Oliver Tambossa**, APR warlord in Bowa-Seko.
   - "National leader of the APR" and "Major Tambossa" (`4889114`, `4889128`, Tambossa).
   - His brother has just been murdered, and the killer took a trophy that Mbantuwe wants (`4908196`,
     `4908296`, Andre Hyppolite).
   - When the people defy him: "THEY are the threat, Greaves. Not this Jackal person." (`4560022`,
     Tambossa).
+  - His last words to the player: "Let's clear the air. A misunderstanding. It happens… You yourself
+    have made mistakes." (`4909566`, Tambossa).
+- **How the warlords die.** The Jackal kills the one who receives the peace letter, and the player
+  kills the other for the dead man's lieutenant (see [Act 2](./missions/act-2.md) and
+  [Act 3](./missions/act-3.md)).
 
 **Implied**
 
@@ -220,13 +245,20 @@ Who the game's people are, in the game's own words. The faction chains of comman
   - "You limey fuck" (`5180594`, Quiepo); "You're a glorified airline pilot." (`5180307`, Purefoy).
   - He goes behind Tambossa's back: "The big boss, Major Tambossa, doesn't know anything about it"
     (`4559163`, Greaves).
+  - He is against the warlords' peace: "This is the worst idea I've heard in a long time."
+    (`4560193`, Greaves).
   - Then he takes over: "Me, in charge of the whole operation." (`4561651`, Greaves).
+  - He keeps his meeting notes in his sleeping quarters at the APR post in Sefapane (`4908604`,
+    Hakim Echebbi; `Objectives/BSQ20_01`).
   - In the purge: "I OWN this country. You kill me, you're just killing yourself." (`4939967`,
     Greaves).
 - **Hector Voorhees (UFLL).**
   - "Bastion UK packed up and left the country… I spent ten years leading most of those boys in
     Angola, and look how they repay me." (`4560354`, Voorhees).
   - He calls the player "china" and "bru" (`4939895`, `4939915`, Voorhees).
+  - He sees what the peace means for men like him: "when the big dogs join forces, they're usually
+    doing it to take out the REST of the pack." (`4561108`, Voorhees). One of his men is Piet ("Piet,
+    you're riding with me", `4558915`, Voorhees).
   - "I don't want to be a bloody warlord… That means no more Tambossa." (`4561566`, `4561574`,
     Voorhees).
 
@@ -237,8 +269,10 @@ Who the game's people are, in the game's own words. The faction chains of comman
 - Kankaras is from the former Yugoslavia, from his swearing (`4939787`, Kankaras).
 - Carbonell's "Hasta pronto, wey" (`4562621`, Carbonell) is Mexican slang, despite "the Spaniard".
 - `FIRST_LT` in the strings is the Leboa-Sako lieutenant who took the player in at the start, and
-  `SECOND_LT` his rival who poached him (`LoadScreens/CuSyn_01`, `CuSyn_03`). Both resurface in Act 3,
-  in the south, to seize their factions (`Objectives/A3SM12_APR_02`, `Objectives/A3SM13_APR_02`).
+  `SECOND_LT` his rival who poached him (`LoadScreens/CuSyn_01`, `CuSyn_03`). The scripts confirm the
+  pairs: Carbonell with Purefoy, Kankaras with Quiepo (`common_customboxes.set_helperfromstory`). Both
+  resurface in Act 3, in the south, to seize their factions (`Objectives/A3SM12_APR_02`,
+  `Objectives/A3SM13_APR_02`).
 
 ## Civilians and others
 
@@ -254,6 +288,9 @@ Who the game's people are, in the game's own words. The faction chains of comman
 - **Doctor Obua**, Port Selao.
   - "I'm Obua. I'm the only doctor here." (`4939212`, Doctor Obua).
   - "You are lucky I took an oath, sir." (`4890107`, Doctor Obua).
+  - The player is sent to warn him that the cease-fire is about to break, and the fighting starts
+    while they talk: "At least *you* bothered to warn us." (`4939226`, Doctor Obua;
+    `Objectives/A2SM06_APR_04`, `A2SM06_APR_05`).
 - **King Nnyere Kgosi** (also "Nnyele").
   - "The hombre got a boatload of money from Europe, back in the day. And then he took off. But he's
     back and he brought his gold with him." (`4558425`, Carbonell).
@@ -287,6 +324,13 @@ Who the game's people are, in the game's own words. The faction chains of comman
 - **The Border Patrol Commandant.** He lets the refugees through after "an accommodation": "for the
   sake of those souls outside, I hope there's more to your plan than THIS." (`5161548`, `5161630`,
   Border Patrol Commandant).
+- **The arms merchant of the endgame.** The Jackal says he waits at a landing zone "with another
+  briefcase full of diamonds" (`4920105`, Jackal). The player finds him already dead there, the buddies
+  holding his case (`Corpses.ArmsMerchantCorpse`, `a3sm15_buddiesbetrayalfinalbattle.a3sm15_buddiesfight`).
+- **Names heard once.** Commander Davenport, whose small supply crew at the Legion Fort was wiped out
+  (`Objectives/BSQ05_01`); Alessi, an APR commander whose mercs took Marty's cargo
+  (`Objectives/BSQ06_01`); Kagame and Mutara, soldiers in a cut march through the sandstorm
+  (`4558753`, `4558761`).
 
 **Implied**
 
@@ -388,18 +432,29 @@ STORYMODE_AVATAR_<NAME>`.
   "Are ye mad? He's one of us!" (`4900605`, Frank Bilders).
 - The player's two best buddies die at his hand: "PRIMARY_BUDDY_NAME and SECONDARY_BUDDY_NAME decided
   they couldn't forgive me and they paid for it with their lives." (`LoadScreens/ChSyn_14`).
+- The script is narrower than that text. It spawns the best buddy and up to six buddies the player
+  betrayed, never the second-best one, and taking the case is enough: no script waits for any buddy's
+  death (`a3sm15_buddiesbetrayalfinalbattle.a3sm15_buddiesfight`).
+- How each buddy fares earlier depends on the player. A buddy left to die in his fight calls one last
+  time: "You left me here to die. You are the lowest form of scum -" (`5109611`, Quarbani Singh). In the
+  prison the best buddy dies if the player walks past him
+  (`a2sm09_prison.a2sm09_mission:f_118_Is_not_nil`). See
+  [How the campaign runs](./missions/overview.md#how-a-buddy-fares-in-his-fight).
 
 **Implied**
 
 - **Two pools, one per map.** Act 1's plane-crash rescues (mission `BU0Y_SE02`) and Mike's bar scenes
-  exist for Flora, Josip, Marty, Michele, Paul, Quarbani and Warren. Act 2's snake-bite rescues
-  (`A2BU05_SE01`) exist for Andre, Frank, Hakim, Marty, Nasreen and Xianyong, who introduce
-  themselves there. Marty is the only one in both. The buddies' comments on each other's fates follow
-  the same split.
+  exist for Flora, Josip, Marty, Michele, Paul, Quarbani and Warren. Act 2's banks exist for Andre,
+  Frank, Hakim, Marty, Nasreen and Xianyong. Marty is the only one in both. The buddies' comments on
+  each other's fates follow the same split. The southern buddies meet the player as strangers: the
+  barge skipper ("I'm Andre Hyppolite. I'll be your captain tonight.", `4897158`, Andre Hyppolite), the
+  stranger at Obua's clinic, and the captives at the Brewery and the Dogon Sediko. A snake-bite rescue
+  for them is voiced but cut (see [Cut and unused content](./missions/cut-content.md)).
 - **Three outcomes for a buddy job.** The `WAG_<buddy>_SRV`, `_LOS` and `_ABN` banks hold other
-  buddies' remarks on a buddy's last job:
+  buddies' remarks on a buddy's last job. The scripts confirm what each means
+  (`savepoints.savehouse_bark_selectificationalizer`):
   - SRV: the player saved them. "He is alive today because of you" (`5109828`, Hakim Echebbi).
-  - LOS: they died with the player at their side. "at least you were there to fight at his side"
+  - LOS: they went down and the player finished them. "at least you were there to fight at his side"
     (`5106289`, Hakim Echebbi).
   - ABN: they died after the player never came. "I just heard that Hyppolite is dead" (`5106375`,
     Nasreen Davar).

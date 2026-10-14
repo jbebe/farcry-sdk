@@ -16,7 +16,8 @@ what the strings state, then what they imply when read together. Citations follo
   every bullet, and every corpse you have seen can be traced directly back to him."
   (`Tutorial/TU67B_MESSAGE`). His guns are cheap on purpose: "Guy could have made way more money if
   he wanted to." (`4557672`, Kouassi).
-- **His tapes.** As their descriptions summarise them:
+- **His tapes.** As their descriptions summarise them (the words themselves are on
+  [The Jackal tapes](./jackal-tapes.md)):
   - "Taking advantage of cease-fires, the Jackal circulates old weapons to fresh conflicts elsewhere."
     (`JackalTapes/A1JT02_DESC`).
   - "No moral code. Jackal equates illegal arms with portable radios. Everything reduced to
@@ -98,6 +99,11 @@ what the strings state, then what they imply when read together. Citations follo
   to step up from time to time and help his people." (`LoadScreens/MiSyn_A1GM00`). A refugee
   family shares its own: "You have the fever. My daughter too. We will share our medicine."
   (`4890043`, Underground refugee).
+- **The infamous go without.** The Underground's people speak coldly to a feared player: "With these
+  travel papers, he'll turn a blind eye to the horrors you've committed." (`5123551`, Underground
+  operative); "Take these and go. My associates want nothing more to do with you." (`4890290`, Doctor
+  Obua). Once the engine judges the player beyond help, the Underground gives him one last job and
+  then no more (`sidemissions.grin_missions:f_197_No`, `f_184_A_is_True`).
 
 **Implied**
 
@@ -191,6 +197,37 @@ what the strings state, then what they imply when read together. Citations follo
 - The buddies' arc mirrors the player's. They come for money, they are used by both factions, and in
   the end they cut a deal and turn on him. "I'm sorry, mate. Just business." (`5009973`, Frank
   Bilders).
+
+## Betrayal and mercy
+
+**The game states**
+
+- **Every patron turns on the player.** The boss who sends him to Goka Falls has his own gunmen waiting
+  ("I've been set up.", `Objectives/A1SM02_APR_02`). The faction he helped win Leboa-Sako comes for him,
+  and he wakes on a truck of corpses bound for a mass grave (`4911034`, Reuben;
+  `Objectives/A2SM04_APR_01`). The Jackal lets him take the blame for the warlord's
+  murder (`Objectives/A2SM09_APR_01`).
+- **Every purge is a counter-offer.** The man marked to die offers his employer's head instead, and
+  the player may take it: "There's always a counter offer." (`Objectives/A3SM13_APR_03`).
+- **Buddies are owed a rescue.** A buddy left alone in his fight calls once more before he dies: "Why
+  didn't you come? Why did you leave me here to die like this? I thought we were friends -"
+  (`5009883`, Xianyong Bai). The next buddy the player meets has heard: "Your pal Andre got a raw deal,
+  didn't he?" (`5107293`, Frank Bilders).
+- **Mercy is a choice.** A downed buddy can be healed or put out of his misery
+  (`common_customboxes.wager_v3`). The next buddy then offers condolence, not blame: "I heard you did
+  what you could for him." (`5009634`, Marty Alencar).
+- **The last betrayal.** The buddies the player left behind come back for the diamonds with his best
+  buddy: "Shut up. We made our deal. He's on his own." (`5107821`, Michele Dachss)
+  (`a3sm15_buddiesbetrayalfinalbattle.a3sm15_buddiesfight`).
+
+**Implied**
+
+- The game keeps its own score of the player's betrayals: the buddies who turn on him at the end are
+  the ones it marked as betrayed. Every betrayal he suffers is one he could also commit: a patron's
+  ambush, the purges' counter-offers, the buddy left to die.
+- The tape *Gutshot*, as fans transcribed it, describes a dying man begging to be finished (see
+  [The Jackal tapes](./jackal-tapes.md); community-reported). It is the buddy's mercy kill told from
+  the Jackal's side.
 
 ## Disease as the war
 

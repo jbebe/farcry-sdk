@@ -44,7 +44,12 @@ they differ.
   Jackal while it went on.
 - Reuben says of a taped interviewee "he died a few months ago. These are his famous last words"
   (`4911521`, Reuben, `A2JT03_SE01`). That does not fit the Jackal, who is alive, so either the line
-  means someone else or the tapes are older than their labels say. Left open.
+  means someone else or the tapes are older than their labels say. Left open. The last-dated tape,
+  as fans transcribed it, has the Jackal finding Reuben's truck burned and not knowing whether Reuben
+  is alive (see [The Jackal tapes](./jackal-tapes.md); community-reported).
+- The player may lie ill in the hotel for some time before the Jackal comes. The opening's last
+  designer label reads "EVENT 160 10 days later", a time skip no shipped text shows
+  (`openingsequence.taxiride:f_280_Out`).
 
 ## Before the game
 
@@ -116,7 +121,9 @@ they differ.
 8. **The purge of Pala.**
    - The winning faction launches "a massive offensive in the northern district", with the player
      its "first target" (`4911034`, Reuben). Foreigners are "declared spies" (`4911066`, Reuben).
-   - The player can save Mike's bar or the church, not both (`Objectives/A1SM03_02`).
+   - The player can save Mike's bar or the church, not both (`Objectives/A1SM03_02`). Either way he is
+     shot down and knocked out, and nothing in the scripts destroys the place he did not defend
+     (`a1sm03_defensereversal.mikesassault`, `churchassault`).
    - Reuben leaves "to Mosate-Selao, in the south" (`4911115`, Reuben).
 9. **Left for dead.** "Leboa-Sako fell to the APR, and me with it." — or to the UFLL. "They're
    hauling the dead out to some mass grave in the desert… looks like I'm the only one in this truck
@@ -127,9 +134,10 @@ they differ.
 
 ### Act 2: Bowa-Seko
 
-11. **Revenge.** The column's leader sends the player back north to kill the winning boss at his
-    victory rally: "Standing on a truck. Wide open." (`4973102`, Greaves;
-    `Objectives/A2SM05_APR_01`).
+11. **Revenge.** The column's leader sends the player back north, armed with only a machete, to kill
+    the winning boss at his victory rally: "Standing on a truck. Wide open." (`4973102`, Greaves;
+    `Objectives/A2SM05_APR_01`). By now the whole northern map is the winner's
+    (`a2sm05_reprisal1.a2sm05_mission_forblue:In`, `ChangeMapArmy`).
 12. **Sefapane and the southern cease-fire.**
     - The player meets his new patron at Sefapane, a town "split down the middle between the
       factions" (`Objectives/A2SM06_APR_01`).
@@ -141,6 +149,9 @@ they differ.
       (`4939226`, Doctor Obua).
     - Port Selao's cease-fire collapses: "I had soldiers from both factions firing on me."
       (`4897741`, Hakim Echebbi).
+    - The barge's skipper, a stranger who becomes the player's buddy, scuttles it at the old marina and
+      settles there (`4897680`, Andre Hyppolite). After that the capital is a cease-fire zone again and
+      the faction HQs open for work (`a2sm07_jacksbuddy.a2sm07_mission`, close-out).
 14. **The warlords' jobs.** The player now works for Tambossa and Mbantuwe:
     - silencing Liberation Radio;
     - rupturing the water pipeline;
@@ -149,7 +160,9 @@ they differ.
     - the gun-runner Yabek;
     - the bomb teacher Uniya.
 
-    (`Objectives/A2LM07_01`–`A2LM12_01`.)
+    (`Objectives/A2LM07_01`–`A2LM12_01`.) Where the player follows his buddy's plan instead, some of
+    them leave lasting marks: the TaeMoCo mine flooded, the APR's artemisia store burned, the rail
+    bridge over the Noga dropped (see [Act 2](./missions/act-2.md)).
 15. **The peace.**
     - "This battle of ours is going to end. Oliver Tambossa and I have talked, and we agree."
       (`4561167`, Mbantuwe).
@@ -165,8 +178,13 @@ they differ.
 17. **Prison.**
     - The player wakes "in some cell, god knows where" (`Objectives/A2SM09_APR_01`).
     - The buddies are caught too: "The factions are blaming the assassination on us… all the
-      foreigners" (`4899395`, Andre Hyppolite).
-    - He breaks out (`LoadScreens/ChSyn_12`).
+      foreigners" (`4899395`, Andre Hyppolite). Their pilot "left us right there on the tarmac"
+      (`4899983`, Frank Bilders).
+    - His weapons are gone. His best buddy, in the next cell, is taken away by the guards, and the
+      player finds him later, beaten (`a2sm09_prison.a2sm09_mission:f_62_Out`; `4898913`, Nasreen
+      Davar). Walking past him without a word kills him (`f_118_Is_not_nil`).
+    - He breaks out through the wall his buddy loosened, with a machete (`LoadScreens/ChSyn_12`;
+      `a2sm09_prison.a2sm09_mission:f_86_Use`).
 
 ### Act 3: the endgame
 
@@ -178,6 +196,8 @@ they differ.
       (`Objectives/A3SM12_APR_02`).
     - Then, at the Marina bar, `SECOND_LT` asks the same of the other faction (`Objectives/A3SM13_APR_02`).
     - At each site, the man marked to die offers to give up his employer instead (`Objectives/A3SM12_APR_03`).
+    - Whichever of a faction's three men the player leaves alive leads it to the end
+      (`common_customboxes.setfinalwarlord`; see [Act 3](./missions/act-3.md#who-is-who-in-act-3)).
 20. **The truce and the airport.**
     - "The APR and UFLL have called a truce. Unity at last, eh?" (`4911264`, Reuben).
     - Reuben is held at the airport with the other journalists (`4934582`, Reuben).
@@ -188,8 +208,9 @@ they differ.
     (`LoadScreens/MiSyn_A3SM15`). He sends the player for two jobs: the arms merchant's diamonds at a
     landing zone, and the two united leaders at their bivouac (`4920105`, `4969696`, Jackal).
 22. **The betrayal.**
-    - At the landing zone the surviving buddies have the diamonds and have made their own deal: "We
-      made our deal. He's on his own." (`5106412`, Nasreen Davar).
+    - At the landing zone the arms merchant is already dead. The best buddy and the buddies the
+      player betrayed have the diamonds and have made their own deal: "We made our deal. He's on his
+      own." (`5106412`, Nasreen Davar; `a3sm15_buddiesbetrayalfinalbattle.a3sm15_buddiesfight`).
     - Reuben had warned of this: "They've become bloody collaborators." (`4911316`, Reuben).
     - "It's done. Everyone's dead. Enemies… friends. Everyone except me and The Jackal."
       (`Objectives/A3SM15_02`).
@@ -202,6 +223,9 @@ they differ.
     - The player chooses: "Either pick up the battery or the briefcase." (`Objectives/A3SM15_03_BBM_01`).
     - The commandant takes the bribe: "I think we can reach an accommodation." (`5161548`, Border
       Patrol Commandant).
+    - Both choices end in the same closing scene: civilians crossing the border, Reuben with a camera,
+      and the pass blowing (`a3sm15_buddiesbetrayalfinalbattle.a3sm15_closingscene`). Neither shows the
+      player die.
 24. **Afterwards.** "Following the exodus, over two million refugees were displaced to neighboring
     countries." An interim government of the factions' remnants fails; "Anarchy rules to this day."
     The Jackal's body "has never been found." (`Coda/Para1`, `Para2`, `Para4`).

@@ -198,23 +198,42 @@ The full sequence is on the [Timeline](./timeline.md). In outline:
 2. **The losing faction regroups in the south** under Greaves or Voorhees. It sends the player back
    to kill the winning boss at his victory rally (`Objectives/A2SM05_APR_01`).
 3. **The warlords die.** Tambossa and Mbantuwe agree a peace (`4560243`, Tambossa; `4561167`,
-   Mbantuwe). The Jackal kills the warlord who receives the player's peace letter
-   (`Objectives/A2SM09_APR_01`). The player kills the other on his lieutenant's orders
-   (`Objectives/A3SM11_APR_02`).
+   Mbantuwe). Their lieutenants are against it: "This is the worst idea I've heard in a long time."
+   (`4560193`, Greaves); "when the big dogs join forces, they're usually doing it to take out the REST
+   of the pack." (`4561108`, Voorhees). The Jackal kills the warlord who receives the player's peace
+   letter (`Objectives/A2SM09_APR_01`). The dead warlord's lieutenant then takes over his faction and
+   hires the player to kill the other: "So here's what it's come to. Me, in charge of the whole
+   operation." (`4561651`, Greaves); "I need a man on the other side of the table that I can do
+   business with." (`4561570`, Voorhees) (`Objectives/A3SM11_APR_02`; `master_world2.world2:f_204_A_eq_B`).
 4. **The Act 1 lieutenants turn on their own leadership**, each faction in turn
-   (`Objectives/A3SM12_APR_02`, `Objectives/A3SM13_APR_02`).
+   (`Objectives/A3SM12_APR_02`, `Objectives/A3SM13_APR_02`). Each purge leaves one of a faction's three
+   men alive, and he leads it to the end (`common_customboxes.setfinalwarlord`):
+
+   | | Its three men | Who leads at the end |
+   | --- | --- | --- |
+   | APR | Greaves, Purefoy, Quiepo | whichever one the player leaves alive |
+   | UFLL | Voorhees, Carbonell, Kankaras | whichever one the player leaves alive |
+
+   Which purge hits which faction, and who survives which choice, is on
+   [Act 3](./missions/act-3.md#who-is-who-in-act-3).
 5. **The factions unite.** "The APR and UFLL have called a truce. Unity at last, eh?" (`4911264`,
-   Reuben). Their first act together is to stop the civilian exodus (`Objectives/A3SM14_02`). The
-   player kills their two leaders at the joint camp (`Objectives/A3SM15_01_BBM_01`).
+   Reuben). Their first act together is to stop the civilian exodus (`Objectives/A3SM14_02`). Their two
+   leaders plan the hunt from one camp: "Intel taken off those stragglers near the old crossing puts
+   the slower group here… No word back from the team at the prison." (`4972219`, Greaves). The
+   player kills both (`Objectives/A3SM15_01_BBM_01`).
 6. **The closing text.** "The remaining leadership of the APR and the UFLL united to form an interim
    government in an effort to impose order on the fractured country. They failed. Anarchy rules to
    this day." (`Coda/Para2`).
 
 **Implied**
 
-- Which faction wins each act is the player's choice. The strings are templates
-  (`WINNING_FACTION_BOSS`, `LOSING_FACTION_HELPER_A1`, …) filled in from it. By the end, every named
-  leader of both factions is dead, whichever choices were made.
+- Which faction wins each act is decided by the engine, not by any mission script
+  (`GetWinningFactionPerAct`; see [How the campaign runs](./missions/overview.md#which-variant-you-get)).
+  The strings are templates (`WINNING_FACTION_BOSS`, `LOSING_FACTION_HELPER_A1`, …) filled in from it.
+  By the end, every named leader of both factions is dead, whichever choices were made.
+- Before the end the two sides already behave alike. The APR men at Sepoko puzzle over villagers who
+  are "Not hiding. Just gone." (`4944068`, Purefoy), while the UFLL men strip the TaeMoCo mine of
+  bulldozers and steamshovels for a barge (`4939814`, `A3SMUU_SE02C`).
 
 ## Other organised groups
 
