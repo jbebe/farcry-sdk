@@ -152,7 +152,13 @@ forced. A layer id of -1 counts as always on (`SBindingHierarchyEntry::IsLayerEn
 `CEntitySystem::SpawnEntityFromNode` (`0x09453010`) has four callers: `CGlobalSpawn::Spawn` for
 world scope, `SBindingHierarchyEntry::Spawn`, `RespawnEntities`, and the editor's
 `CreateFromArchetype` **(RE-verified, server)**. So sector entities reach it through the binding
-hierarchy **(inferred)**. It does three things **(RE-verified, server)**:
+hierarchy **(inferred)**. The data does not account for that alone: a `MissionLayer` node can carry a
+`BindingHierarchy` child of `Root` entries, each an entity with bound `Child` entries (bone name,
+layer). But only bound groups have one. In `worldsector3160` the 809 `main` entities have no root, and
+the assassination target's layer has one root with one child bound at `R Thigh` **(seen in data)**.
+Whether the loader builds a root at runtime for every entity without one is not read.
+
+`SpawnEntityFromNode` does three things **(RE-verified, server)**:
 
 1. **Merge.** With `tplCreatureType`, the node becomes a merge of archetype and instance; a name
    that resolves to nothing drops the entity. See
@@ -313,7 +319,8 @@ Two consequences for choosing a point:
   slots are.
 - **When a save's layer states apply.** Whether the save's `MissionManager` states are in place
   before the first sector streams, or arrive after and switch layers that already spawned.
-- **What feeds the binding hierarchy**, and which sector entities carry bound children.
+- **How unbound sector entities reach the spawn.** Bound groups are listed in each layer's
+  `BindingHierarchy` node; the rest have no entry in the data (stage 4).
 - **Duplicate ids across classes.** The per-class id map overwrites within a class. What happens
   between classes was not read; retail `world1` ships 32 duplicate ids and loads.
 
