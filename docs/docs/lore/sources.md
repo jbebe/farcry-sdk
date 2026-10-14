@@ -16,7 +16,9 @@ claim has no basis in the game's text, the pages say so.
 | Subtitles | the table's `Subtitles` section | 6,334 spoken lines, keyed by sound id |
 | Bark banks | `scripts\game\BarkData\<N>.bank` in `worlds.dat` | who says each line, in which mission, at which moment; see [Bark banks](../file-formats/bark-banks.md) |
 | Map pages | `levels\w1_*\mapcompass.xbt`, `levels\w2_*\mapcompass.xbt` in `worlds.dat` | the paper map, 5×5 pages per world, with place names printed on it |
-| Mission scripts | `domino\user\*.lua` in `worlds.dat` | the missions' internal names |
+| Mission scripts | `domino\user\*.lua` in `worlds.dat` | every mission's logic: what it asks, how it branches and how it ends; see [Domino scripts](../engine-internals/domino-scripts.md) |
+| Mission table | `engine\gamemodes\gamemodesconfig.xml` in `patch.dat` | every mission's id, internal name, act, faction and reward, with comments on cut ones |
+| Scene animations | `worlds\<world>\generated\<world>_depload.xml` in `worlds.dat` | which choreographed scene plays each line, so whose line it is |
 
 The bark banks attribute 5,222 of the 6,334 subtitle lines to a speaker and a mission. The other 1,112
 are phone calls, scripted scenes, radio broadcasts and multiplayer announcements; for those the pages
@@ -41,6 +43,12 @@ Each claim ends with where it comes from:
   player's diary-style chapter synopses, `Objectives` the journal, `Buddies` and `MainMenu` the
   character dossiers, `JackalTapes` the tape descriptions, `Coda` the closing text.
 - `map w2_c_3` — a printed label on that map page.
+- `a1lm01_copkiller.a1lm01_mission:f_9_Out` — a mission script and the handler in it that does the
+  thing: the file `domino\user\a1lm01_copkiller.a1lm01_mission.lua`, function `f_9_Out`. What a
+  script does is stated; what it was meant for is implied.
+- `scene sm01_se01_jackc_brief_all` — the choreographed animation that plays a line. Its name gives
+  the mission, the scene and often the character (`jackc` is the Jackal), so a line it plays has a
+  stated speaker even when no bark bank lists it.
 
 Many strings are templates. `FIRST_LT`, `WINNING_FACTION_BOSS`, `PRIMARY_BUDDY_NAME` and the like are
 filled in from the player's choices, so a sentence such as "WINNING_FACTION_BOSS betrayed me" is true
@@ -67,9 +75,12 @@ Every page separates two kinds of claim:
 - **Who sent the player.** The orders cite "the Joint Signatory Framework" (`4577324`). No string
   names the employer, the earlier hunter, or the voice that offers "target of opportunity" contracts
   (`5175655`).
-- **The predecessor's side story.** It runs in the `partnerspecialmissions` scripts. Whether every part of it is reachable in a retail game,
-  with its briefings (`5124037`, `5124224`) and the invitation to Sehlakalase Island (`5123973`), has
-  not been checked in play.
+- **The predecessor's side story.** It runs in the `partnerspecialmissions` scripts once a password
+  is entered under Additional Content (see [Side missions](./missions/side-missions.md#the-predecessors-trail)).
+  The unlock was traced on the Linux server binary only, and the trail has not been played through.
+- **The mission scripts.** The pages under [Missions](./missions/overview.md) were read from the scripts,
+  not played. What the engine decides on its own, such as which faction wins an act, which buddy it
+  assigns, and whether two phone calls issued together both play, is not traced.
 - **Reuben's dead interviewee.** "This man I interviewed here, he died a few months ago. These are
   his famous last words" (`4911521`) does not fit the living Jackal.
 - **Names.**

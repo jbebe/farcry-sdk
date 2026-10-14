@@ -130,10 +130,13 @@ economy component.
 
 **Safe-house upgrades** come from subverted missions:
 
-- **World 1:** `SubvertRewardW1` enables `Missions/SafeHouse/Upgrades/W1/Level_01` to `06`, by
-  `Globals.MASTER_GameGlobals.SH_W1Level`, and disables the level before.
-- **World 2:** `SubvertRewardW2` does the same with `Missions/SafeHouse/W2/Level_00` to `06`.
-  `Level_00` is on by default.
+- **World 1:** `SubvertRewardW1` enables one layer of `Missions/SafeHouse/Upgrades/W1/` per subverted
+  job, counted in `Globals.MASTER_GameGlobals.SH_W1Level`. The order is not numeric: `Level_01`,
+  `02`, `06`, `03`, `05`, then `04`, which also disables `Level_01` (the armed vehicle replaces the
+  plain one).
+- **World 2:** `SubvertRewardW2` does the same with `Missions/SafeHouse/W2/`: `Level_04`, `01`, then
+  `02` (disabling `Level_00`, on by default), `03`, `06`, then `05` (disabling `Level_02`). Only the
+  vehicle tiers are ever disabled.
 
 ## Enemy loadouts follow campaign progress
 
