@@ -100,9 +100,10 @@ label is the only clinic there is.
 ## The east: the river and the airfield
 
 **Rail Xing** (`armsbazaar`). Yabek's arms barge "on the Noga River, just under the big rail span"
-(`Objectives/A2LM11_01`). The span is shipped already fallen, as the layers
-`staticfallenbridgepieces` (132) and `misnsubv_wreckedbridgebargepieces` (144), with
-`NewParticlesEffect_A2LM11_BridgeExplosion`. About 80 sandbag walls, three `M2` machine guns, APR
+(`Objectives/A2LM11_01`). The span stands at the start. Its fallen state ships
+as the layers `staticfallenbridgepieces` (132) and `misnsubv_wreckedbridgebargepieces` (144), with
+`NewParticlesEffect_A2LM11_BridgeExplosion`, which are off by default and switched on only when the
+player drops the span in `A2LM11` (see [Act 2](../missions/act-2.md)). About 80 sandbag walls, three `M2` machine guns, APR
 posters.
 
 **Airfield.** Hangars, a windsock, two crashed white Cessnas, wrecked cars. Five of the 55 placed

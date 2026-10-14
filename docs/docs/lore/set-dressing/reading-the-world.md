@@ -177,8 +177,8 @@ The set dressing uses this heavily:
   (111).
 - Taemoco Mine has `diamond_mine_not_flooded_gameplay` (240) and `diamond_mine_flooded_gameplay`
   (51).
-- Rail Xing's bridge is shipped already fallen, in `staticfallenbridgepieces` (132) and
-  `misnsubv_wreckedbridgebargepieces` (144).
+- Rail Xing's bridge has a fallen state, `staticfallenbridgepieces` (132) and
+  `misnsubv_wreckedbridgebargepieces` (144), off until `A2LM11` drops the span.
 - Mosate Selao has a whole after-state, `leveldesign\w2c3\a10_capital\post_hornestnest` (646).
 
 So a count on these pages is the sum of every state of a place. Where a prop belongs to one state,
