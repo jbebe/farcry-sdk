@@ -131,7 +131,8 @@ The internal names were working titles, and several say more than the label does
   `MissionObjectiveSigns.DogFightsSign`, though the sign reads "Cock-Fights".
 
 The spellings drift between assets as well. The greenhouse company is "OGC" on its sign
-(`ogc_m.xbt`) and billboard but "OCG" on its map tile. The capital is "Mosate Selao" on its sign and
+(`ogc_m.xbt`), its billboard and the paper map page `w1_c_4`, but "OCG (Occidental growers Company)"
+on its zoomed location tile, `majorlocation_greenhouses.xbt`. The capital is "Mosate Selao" on its sign and
 tile, while every line of dialogue calls it Port Selao (`4897437`, "Welcome to Port Selao!"). The
 brewery is `bowaseko_d.xbt` ("Bowaseko breweries"), `sakobreweries_m.xbt` ("SAKO BREWERIES") and
 `sekobeer_billboard_d.xbt` ("SEKO Pilsner").
