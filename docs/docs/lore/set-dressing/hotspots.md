@@ -206,6 +206,279 @@ nothing to play in it. They are the strongest candidates for new stories.
 The [catalogue](./catalogue.md#burial) and the region pages cover the cemeteries and the corpse sites
 in more detail.
 
+## Room for new events
+
+Which places are free for new missions and small events? A site counts as **mission-linked** if it
+holds an entity in a mission layer (story, faction contract, buddy unlock or side quest,
+assassination, convoy, gun-shop, Underground, Carver tape, opening sequence, random encounter, or a
+`_disableformission` layer), or a mission marker in `mapsdata.fcb`. The radius is 200 m for a named
+place and 60 m for a hotspot. Safe houses, the weapon bazaar, guard-post supply piles and the
+benchmark do not count as missions.
+
+| | Leboa-Sako | Bowa-Seko |
+| --- | --- | --- |
+| named places used by one or two missions | 5 of 21 | 8 of 24 |
+| mission-free dressed scenes | 34 | 48 |
+| mission-free safe houses, guard posts and bus stops | 32 | 31 |
+| 64 m squares of the playable map with no authored prop | 1,603 of 2,304 (70%) | 1,511 of 2,304 (66%) |
+| squares holding any mission entity | 202 (9%) | 187 (8%) |
+| quiet road (three props or fewer, no mission in the 64 m squares around it) | about 9 km | about 12 km |
+
+Every named place is used by at least one mission, but missions run once. After its mission, a place
+stays dressed and garrisoned and nothing else happens there. The empty squares include lake, cliff
+and steep slope; they were not checked against the AI navigation mesh.
+
+### How to find a site
+
+Every entry below gives the same four locators:
+
+- **Position** in global metres, as in an entity's `hidPos`: `x` runs east, `y` north, `z` is height.
+- **Level** and **sector**: the site's objects are in
+  `levels\<level>\generated\worldsectors\worldsector<sector>.data.fcb`. The sector is
+  `floor(y / 64) × 80 + floor(x / 64)`. In the level name the letter runs north to south (`a` covers
+  `y` 4,096 to 5,119, `e` covers 0 to 1,023) and the number west to east (`1` covers `x` 0 to 1,023).
+- **Map tab key**: an object placed at the site. In JackAll's [Map tab](/jackall/map-viewer),
+  load the world, type the key into the hierarchy filter and click the match; the camera flies there.
+  "One of N" means N objects share the name; pick the one whose inspector shows the listed sector.
+- **In game**, nothing yet teleports to a coordinate. DevTools has `teleport_to_current_objective`
+  and a free camera only.
+
+### Start here
+
+Dressed, story-ready, and attached to nothing. The two marked `carvertapes` hold only a collectible
+tape.
+
+| World | Site | Missions within 60 m | Level | Sector | Position (x, y, z) | Map tab key |
+| --- | --- | --- | --- | --- | --- | --- |
+| Bowa-Seko | the derailed freight train | none | `w2_b_2` | 4736 | 1,079, 3,780, 25 | `StaticObject_107559` (one of 4) |
+| Bowa-Seko | the burial on the hill | none | `w2_d_2` | 2511 | 2,024, 2,008, 84 | `DetailObjects.Shovel02_203` |
+| Bowa-Seko | the crashed glider | none | `w2_d_2` | 1628 | 1,800, 1,320, 45 | `VisualObject_31419` |
+| Bowa-Seko | the bus execution | none | `w2_d_2` | 1300 | 1,338, 1,040, 15 | `Vehicle.BusBurned_628` |
+| Bowa-Seko | the field of crosses | none | `w2_c_2` | 3539 | 1,227, 2,875, 28 | `StaticObject_10394` |
+| Bowa-Seko | the lone water tower | none | `w2_c_2` | 2591 | 1,999, 2,061, 68 | `StaticObject_7077` (one of 2) |
+| Bowa-Seko | the livestock market | none | `w2_d_2` | 1865 | 1,608, 1,528, 37 | `Buildings.Kiosk_W2_Medium_B_2` |
+| Bowa-Seko | the riverside landing | none | `w2_c_3` | 3640 | 2,600, 2,920, 16 | `StaticObject_74067` |
+| Bowa-Seko | the courier plane | `carvertapes` | `w2_c_4` | 3581 | 3,940, 2,829, 19 | `StaticObject_49050` (one of 2) |
+| Bowa-Seko | the truck wreck with its dead | none | `w2_b_4` | 4208 | 3,120, 3,330, 45 | `StaticObject_26844` |
+| Leboa-Sako | the fishing hamlet | none | `w1_b_4` | 4062 | 3,970, 3,240, 16 | `FishingVillage.fishingsmbuilding_335` |
+| Leboa-Sako | the shanty settlement | none | `w1_b_3` | 4203 | 2,808, 3,352, 30 | `Furniture.Bed1_0` |
+| Leboa-Sako | the broken bridge | none | `w1_c_2` | 3705 | 1,656, 2,984, 35 | `StaticObject_8851` |
+| Leboa-Sako | a TV shack | none | `w1_d_4` | 2133 | 3,416, 1,672, 26 | `Appliances.TvBIG_On_0` |
+| Leboa-Sako | a second TV shack | none | `w1_d_4` | 1731 | 3,320, 1,368, 59 | `Appliances.TvBIG_On_2` |
+| Leboa-Sako | the lone BA4B | `carvertapes` | `w1_d_2` | 1783 | 1,498, 1,416, 34 | `StaticObject_10166` (one of 5) |
+
+### Lightly used named places
+
+Named places that one or two missions use. `keylocationtriggers` is the random-encounter system's
+trigger, not a mission; `bsq` are buddy side quests, `a1lm`/`a2lm` faction contracts, `a2vm` a
+gun-shop mission, `a3sm15` the finale.
+
+| World | Place | Missions using it | Level | Sector | Position (x, y, z) | Map tab key |
+| --- | --- | --- | --- | --- | --- | --- |
+| Bowa-Seko | the warlords camp | `a3sm15` | `w2_d_4` | 1817 | 3,678, 1,472, 77 | `MajorLocation_Warlords` |
+| Bowa-Seko | Heart of Darkness | `a3sm15` | `w2_d_4` | 1489 | 3,160, 1,202, 86 | `MajorLocation_MouthOfDarkness` |
+| Bowa-Seko | Landing Zone | `a3sm15` | `w2_d_4` | 1578 | 3,754, 1,222, 82 | `MajorLocation_LZ` |
+| Bowa-Seko | Outpost | `a2lm10` | `w2_b_3` | 4683 | 2,801, 3,760, 20 | `MajorLocation_Outpost` |
+| Bowa-Seko | Swamp | `a3sm15` | `w2_d_4` | 1493 | 3,454, 1,214, 73 | `MajorLocation_Swamp` |
+| Leboa-Sako | "Private Property" | `bsq06`, `a1lm04` | `w1_c_4` | 3411 | 3,325, 2,713, 17 | `MajorLocation_Villa` |
+| Leboa-Sako | Claes Products | `bsq10`, `a1lm05` | `w1_d_3` | 2195 | 2,302, 1,786, 21 | `MajorLocation_W1D3_Chem_Depot` |
+| Leboa-Sako | Oasis (north) | `a1lm06`, `keylocationtriggers` | `w1_b_4` | 5021 | 3,961, 3,974, 17 | `MajorLocation_3` |
+| Leboa-Sako | Oasis (south-east) | `bsq13`, `a1lm04` | `w1_d_4` | 1501 | 3,937, 1,196, 30 | `MajorLocation_W1D4_DSOasis` |
+| Leboa-Sako | Police Station | `bsq08`, `a1lm01` | `w1_c_2` | 3220 | 1,281, 2,620, 18 | `MajorLocation_GnCamp` |
+| Bowa-Seko | M-S Pipeline | `bsq16`, `a2lm08` | `w2_d_3` | 1874 | 2,231, 1,514, 32 | `MajorLocation_Pipeline` |
+| Bowa-Seko | Post Office | `a2lm09`, `a2vm05` | `w2_c_2` | 2906 | 1,688, 2,367, 26 | `MajorLocation_PostOffice` |
+| Bowa-Seko | Ranger Station | `bsq18`, `a2lm07` | `w2_c_2` | 3141 | 1,387, 2,529, 23 | `MajorLocation_TouristResort` |
+
+### Dressed scenes with no mission
+
+All 82 hotspots that no mission touches, by world and score. The props are the four with the highest
+rarity weight.
+
+| World | Score: what is there | Level | Sector | Position (x, y, z) | Map tab key |
+| --- | --- | --- | --- | --- | --- |
+| Leboa-Sako | 583: `Can6` x4, `Box05` x7, `PlasticBarrel01` x4, `Can01` x4 | `w1_b_4` | 4142 | 3,992, 3,272, 18 | `DetailObjects.Box05_10` |
+| Leboa-Sako | 483: `Bed1` x4, `shantymd01wall_03` x4, `Shanty.ShantyMd01Wall` x11, `shantymd01roof_01t` x3 | `w1_b_3` | 4203 | 2,808, 3,352, 27 | `Shanty.ShantyMd01Wall_471` |
+| Leboa-Sako | 478: `Cage02` x4, `Box03` x4, `MissionObjectiveSignsSafeHouse.SafeHouse_A1LM05` x2, `roadsign_pole_01` x3 | `w1_d_3` | 2043 | 2,792, 1,624, 26 | `DetailObjects.Box03_8` |
+| Leboa-Sako | 429: `Box05` x5, `Banana01` x2, `ShelvesMedium` x3, `ChairWood01` x4 | `w1_b_4` | 3981 | 3,944, 3,192, 20 | `CoverObjects.WoodCrateSquare_62` |
+| Leboa-Sako | 374: `ChairWood01_BK` x4, `Blue_Faction.Assault_Nubian` x4, `pumpmobileblue_a` x2, `MetalBarrel02` x3 | `w1_b_3` | 4281 | 2,648, 3,432, 78 | `Blue_Faction.Assault_Nubian_4` |
+| Leboa-Sako | 227: `MissionObjectiveSigns.PetroSahelSign` x3, `MissionObjectiveSigns.PoliceStationSign` x3, `MissionObjectiveSigns.ScrapSalvageSign` x3, `MissionObjectiveSigns.SlaughterhouseSign` x3 | `w1_c_2` | 3629 | 1,896, 2,920, 37 | `MissionObjectiveSigns.SlaughterhouseSign_8` |
+| Leboa-Sako | 210: `shantymd01shelves_01` x3, `Burnable.CardboxSmallFull01` x3, `Shanty.ShantyMd01Wall` x3, `PlasticBarrel` x5 | `w1_d_4` | 2133 | 3,416, 1,672, 29 | `Burnable.CardboxMediumFull01_11` |
+| Leboa-Sako | 185: `Quadrupeds.Gazelle` x3, `ChairPlastic05` x3, `PlasticBarrel` x3, `RustyBarrel` x2 | `w1_d_2` | 1710 | 1,960, 1,368, 35 | `CoverObjects.WoodCrateSquare_799` |
+| Leboa-Sako | 157: `ChairWood01_BK` x4, `bookshelf2panes`, `TamTam01`, `fertilizerbags01` | `w1_b_3` | 4761 | 2,664, 3,800, 59 | `Furniture.ChairWood01_BK_9` |
+| Leboa-Sako | 155: `CardboxBigFull01_BK.Paper` x3, `PlasticBarrel` x5, `Kiosk_W1_Small` x2, `MetalBarrel01` x3 | `w1_d_4` | 1976 | 3,640, 1,576, 19 | `DetailObjects.CardboxBigFull01_BK.Paper_10` |
+| Leboa-Sako | 151: `metalbridge_mid` x5, `WoodBridge_P01_PREFAB` x7, `metalbridge_midbrk` x2, `metalbridge_base01` x2 | `w1_c_2` | 3705 | 1,656, 2,984, 35 | `StaticObject_8851` |
+| Leboa-Sako | 149: `RustyBarrel` x4, `PlasticBarrel` x5, `quayconnect01`, `StreetSigns.UrbanStreetSignStop` | `w1_d_4` | 1892 | 3,384, 1,528, 16 | `CoverObjects.PlasticBarrel_50` |
+| Leboa-Sako | 133: `TireMedium01` x2, `CardboxSmallFull01_BK.Paper` x2, `BeerBox01` x3, `Bottle1` x3 | `w1_b_2` | 4751 | 2,040, 3,784, 24 | `DetailObjects.TireMedium01_1` |
+| Leboa-Sako | 130: `Appliances.TvBIG_On`, `bedroll_04`, `PlasticBarrel` x2, `StreetSigns.UrbanStreetSignStop` | `w1_d_4` | 1731 | 3,320, 1,368, 59 | `DetailObjects.Can02_6` |
+| Leboa-Sako | 105: `roadsign_pole_01` x3, `StreetSigns.CountryStreetSignOneWay` x2, `roadsign_base_01` x3, `MissionObjectiveSigns.FortSign` x2 | `w1_b_3` | 4926 | 2,952, 3,928, 20 | `StaticObject_32949` |
+| Leboa-Sako | 103: `MetalBarrel02` x5, `TolloyRuinPart3` x2, `TolloyRuinPart2`, `gazelleskull01` | `w1_b_3` | 5004 | 2,840, 4,024, 20 | `CoverObjects.MetalBarrel02_22` |
+| Leboa-Sako | 97: `trainplatform01` x4, `StreetSigns.CountryStreetSignRailRoad` x2, `CheckpointBarrier01_Open_BK` x2, `StaticObject` x2 | `w1_e_2` | 1065 | 1,656, 872, 21 | `StreetSigns.CountryStreetSignRailRoad_1` |
+| Leboa-Sako | 92: `sandbags01`, `shantymd01roof_01`, `shantymd01wall_03`, `generictable01` | `w1_b_2` | 4266 | 1,688, 3,400, 51 | `Shanty.ShantyMd01Wall_455` |
+| Leboa-Sako | 88: `Box01` x3, `fishingsmgazebo_02`, `fishingsmroof_02`, `fishingsmbuilding_01` | `w1_b_4` | 4461 | 3,928, 3,560, 21 | `Industrial.Boxes01_476` |
+| Leboa-Sako | 84: `EntitySpawner`, `shantymd01wall_02`, `shantymd01roof_03r`, `Burnable.BasketStraw02` | `w1_c_4` | 2621 | 3,928, 2,088, 39 | `Burnable.BasketStraw02_72` |
+| Leboa-Sako | 84: `roadsign_pole_01` x3, `roadsign_base_01` x3, `StreetSigns.CountryStreetSignNoEntry` x2, `MissionObjectiveSigns.ClaesProductsSign` x2 | `w1_d_3` | 1878 | 2,456, 1,528, 42 | `MissionObjectiveSigns.ClaesProductsSign_3` |
+| Leboa-Sako | 84: `metalbridge_end` x2, `metalbridge_mid` x2, `MissionObjectiveSigns.PoliceStationSign`, `MissionObjectiveSigns.ScrapSalvageSign` | `w1_c_2` | 3550 | 1,960, 2,824, 32 | `MissionObjectiveSigns.ScrapSalvageSign_7` |
+| Leboa-Sako | 78: `Quadrupeds.Zebra` x5, `Quadrupeds.Gazelle` x4, `Animal.SavannahAnimals` x5 | `w1_b_3` | 4913 | 2,168, 3,928, 23 | `Quadrupeds.Gazelle_29` |
+| Leboa-Sako | 77: `MissionObjectiveSignsSafeHouse.SafeHouse_A1LM02`, `MissionObjectiveSignsSafeHouse.SafeHouse_A1LM03`, `MissionObjectiveSigns.VeterinarianSign`, `MissionObjectiveSigns.PetroSahelSign` | `w1_b_2` | 4022 | 1,448, 3,240, 45 | `MissionObjectiveSigns.PetroSahelSign_6` |
+| Leboa-Sako | 75: `Bottle1` x2, `WoodCrateSquare` x2, `fishingsmroof_02`, `WalkieTalkie01` | `w1_d_2` | 2420 | 1,288, 1,944, 23 | `CoverObjects.WoodCrateSquare_803` |
+| Leboa-Sako | 74: `StreetSigns.UrbanStreetSignLimit50`, `MissionObjectiveSigns.WellandWindmillShopSign`, `MissionObjectiveSignsSafeHouse.SafeHouse_A1LM04`, `StreetSigns.CountryStreetSignSinuousRoad` | `w1_c_4` | 2859 | 3,816, 2,248, 56 | `StreetSigns.UrbanStreetSignLimit50_4` |
+| Leboa-Sako | 72: `potatostack`, `BBQ01`, `potatogroup01`, `ShantySm01Dest` | `w1_d_4` | 1894 | 3,480, 1,480, 16 | `Buildings.ShantySm01Dest_19` |
+| Leboa-Sako | 70: `StreetSigns.UrbanStreetSignRailRoad`, `kiosk_w1_large2`, `StreetSigns.CountryStreetSignRailRoad`, `bridgetrack01` | `w1_d_3` | 1875 | 2,280, 1,496, 22 | `StreetSigns.UrbanStreetSignRailRoad_0` |
+| Leboa-Sako | 69: `StreetSigns.UrbanStreetSignOneWay`, `tearoad`, `pubmertensegolo_01`, `MissionObjectiveSigns.UndertakerSign` | `w1_d_4` | 1978 | 3,736, 1,544, 21 | `StreetSigns.UrbanStreetSignOneWay_0` |
+| Leboa-Sako | 67: `Quadrupeds.Gazelle` x2, `fishingsmgazebo_02`, `fishingsmroof_02`, `fishingsmbuilding_01` | `w1_d_2` | 2180 | 1,320, 1,784, 18 | `Quadrupeds.Gazelle_11` |
+| Leboa-Sako | 66: `BonesRibcageWildebeest` x4, `PickupTruckWreck04` x2, `PlasticBarrelCut` x2, `StaticObject` x2 | `w1_e_2` | 1146 | 1,720, 920, 24 | `StaticObject_1000` |
+| Leboa-Sako | 66: `Bottle5` x2, `Kiosk_W1_Medium`, `Can7`, `Can4` | `w1_d_2` | 1949 | 1,896, 1,560, 42 | `Buildings.ShantyShelter01_7` (one of 2) |
+| Leboa-Sako | 61: `PlasticBarrel` x2, `StreetSigns.CountryStreetSignLimit50`, `bedframe01`, `DiamondBriefcase_LVL1` | `w1_d_4` | 1729 | 3,176, 1,368, 16 | `CoverObjects.PlasticBarrel_46` |
+| Leboa-Sako | 60: `CardboxSmallFull02_BK.Paper`, `ShantySm01Dest`, `CardboxBigFull01_BK.Paper`, `TiresCulumns02_BK` | `w1_d_4` | 2379 | 3,816, 1,880, 21 | `DetailObjects.CardboxBigFull01_BK.Paper_13` |
+| Bowa-Seko | 419: `EthiopianBasket01_BK` x4, `Kiosk_W2_Medium_B` x4, `Cage04` x6, `Cage02` x10 | `w2_d_2` | 1865 | 1,608, 1,528, 38 | `DetailObjects.EthiopianBasket01_BK_0` |
+| Bowa-Seko | 389: `Can00` x3, `dogonwindow03` x2, `Can01` x3, `foodpile03` x3 | `w2_a_2` | 5940 | 1,288, 4,776, 19 | `StaticObject_119231` |
+| Bowa-Seko | 387: `woodbridge_base` x5, `WoodBridge_P02` x3, `sandbagscover06` x4, `WoodBridge_P01` x7 | `w2_c_3` | 2754 | 2,216, 2,216, 32 | `Infrastructures.WoodBridge_P01_830` |
+| Bowa-Seko | 382: `PlasticBarrel01` x5, `Cage04` x9, `piroguebig01_dt` x3, `LivestockCage` x10 | `w2_b_3` | 4195 | 2,280, 3,384, 16 | `StaticObject_93774` |
+| Bowa-Seko | 275: `woodcross03` x17, `woodcross02` x10, `woodcross01` x14, `Awnings_Straw_Sm01_BK` | `w2_c_2` | 3539 | 1,224, 2,872, 29 | `StaticObject_10361` |
+| Bowa-Seko | 239: `dzpole02` x7, `metalbridge_base01` x4, `metalbridge_base02` x4, `sign_ceasefire` x8 | `w2_c_3` | 3163 | 2,792, 2,536, 22 | `StaticObject_8805` |
+| Bowa-Seko | 216: `dogonmattress01` x3, `BenchStatue01` x3, `BuildingShelterStraw01` x2, `buildingshelterpilars01` x2 | `w2_b_3` | 3958 | 2,488, 3,160, 47 | `Furniture.BenchStatue01_70` |
+| Bowa-Seko | 204: `LivestockCage` x8, `Box03` x4, `benchrocksmall01` x2, `ShantyShelterW2` x2 | `w2_b_4` | 4928 | 3,128, 3,912, 34 | `StaticObject_26834` |
+| Bowa-Seko | 202: `woodcross02` x5, `woodcross01` x10, `hutsm04wallwood_01` x2, `NewParticlesEffect` x4 | `w2_d_4` | 2129 | 3,144, 1,672, 22 | `StaticObject_10506` |
+| Bowa-Seko | 197: `hutmdstorage01` x3, `hutsm02wallwood_01` x2, `NewParticlesEffect` x5, `Burnable.CampfireLogs` x3 | `w2_b_2` | 4743 | 1,496, 3,832, 17 | `StaticObject_9796` |
+| Bowa-Seko | 174: `WoodCrateRectangular` x6, `LivestockCage` x5, `PlasticBarrel` x4, `WoodCrateSquare` x4 | `w2_c_4` | 3499 | 3,832, 2,760, 45 | `Ammo.Small_Ammo_Pickup_EX_03_1` |
+| Bowa-Seko | 170: `WreckDoor01` x3, `MetalBarrel4` x5, `wreckbumper01` x2, `PlasticBarrel` x3 | `w2_b_4` | 4781 | 3,960, 3,832, 23 | `CoverObjects.MetalBarrel4_28` |
+| Bowa-Seko | 169: `ruinswall02` x2, `granarysmall02` x2, `ruinswall01` x2, `pirogue02_dt` x2 | `w2_b_3` | 4846 | 2,968, 3,880, 17 | `StaticObject_106619` |
+| Bowa-Seko | 157: `foodpile03` x6, `BucketWood` x3, `hutsm04wallwood_04` x2, `JungleFootPatrol` | `w2_d_4` | 2215 | 3,560, 1,768, 41 | `StaticObject_49074` |
+| Bowa-Seko | 147: `foodpile03` x5, `hutsm04wallwood_04` x2, `sandbagscover06` x2, `BucketWood` x2 | `w2_d_4` | 2448 | 3,096, 1,944, 18 | `StaticObject_52734` |
+| Bowa-Seko | 136: `dzpole02` x4, `sign_ceasefire` x6, `WoodBridge_P01` x9, `woodbridge_base` x3 | `w2_c_3` | 2918 | 2,472, 2,312, 23 | `Infrastructures.WoodBridge_P01_753` |
+| Bowa-Seko | 131: `BeerBox01` x5, `Animal.GenericMultiUser` x2, `PlasticBarrel01` x2, `CardboxSmallFull01_BK` x2 | `w2_c_3` | 3314 | 2,184, 2,680, 19 | `DetailObjects.CardboxBigFull01_BK_92` |
+| Bowa-Seko | 130: `hutsm04wallwood_04` x2, `ShantyMd01DestDoor` x2, `hutsm02roofframe_02`, `hutsm01wallwood_05` | `w2_c_2` | 3544 | 1,544, 2,840, 25 | `Furniture.ChairWood01_2231` |
+| Bowa-Seko | 127: `WoodBridge_P01_PREFAB` x8, `foundation_bridge` x2, `woodbridge_base` x2, `afriqatelecom` | `w2_b_3` | 4360 | 2,584, 3,464, 21 | `StaticObject_7664` |
+| Bowa-Seko | 127: `trainmetalwagondoor01` x4, `trainplatform01` x3, `trainmetalwagonopen01` x2, `Quadrupeds.Gazelle` x3 | `w2_b_2` | 4656 | 1,080, 3,768, 24 | `StaticObject_6486` |
+| Bowa-Seko | 114: `MissionObjectiveSigns.SedikoSign` x2, `MissionObjectiveSigns.GeneralStoreSign` x2, `roadsign_pole_01` x3, `roadsign_base_01` x3 | `w2_b_3` | 4042 | 2,712, 3,224, 37 | `StaticObject_36288` |
+| Bowa-Seko | 112: `LivestockCage` x7, `military_metalbox_small` x3, `BenchStatue01` x2, `BucketWood` x2 | `w2_b_3` | 4446 | 3,000, 3,544, 45 | `Furniture.BenchStatue01_156` |
+| Bowa-Seko | 110: `Corpses.Corpse` x10, `Carver's tape 7`, `BonesRibcageWildebeest` x2, `Vehicle.BusBurned` | `w2_d_2` | 1300 | 1,336, 1,032, 16 | `Carver's tape 7` |
+| Bowa-Seko | 108: `WoodBridge_P01_PREFAB` x8, `woodbridge_base` x6, `foundation_bridge` x2, `StreetSigns.ForkRoad_BK` | `w2_c_2` | 3228 | 1,816, 2,568, 17 | `StaticObject_7267` |
+| Bowa-Seko | 108: `hutsm04wallwood_04` x2, `hutsm01wallwood_05`, `hutsm04wallwood_05`, `HutMd01Roof_02a_BK` | `w2_c_2` | 2820 | 1,320, 2,280, 23 | `StaticObject_112271` |
+| Bowa-Seko | 106: `Shovel02` x3, `NewParticlesEffect` x5, `Burnable.CampfireLogs` x3, `Shovel01` x2 | `w2_d_2` | 2511 | 2,024, 2,008, 84 | `DetailObjects.Shovel01_72` |
+| Bowa-Seko | 106: `passport_blue` x9, `passport_red` x3, `NewParticlesEffect` x4, `DiamondBiefcase_LVL1` | `w2_d_2` | 2498 | 1,208, 2,040, 42 | `VisualObject_31393` |
+| Bowa-Seko | 102: `logopanel02` x4, `dzpole01` x2, `MissionObjectiveSigns.AfriQaTelecomSign`, `MissionObjectiveSigns.DentalClinicSign` | `w2_c_3` | 3236 | 2,344, 2,584, 26 | `MissionObjectiveSigns.AfriQaTelecomSign_0` |
+| Bowa-Seko | 99: `BucketWood` x2, `HutSm04Roof_02a`, `hutsm04wallwood_01`, `hutsm04roofframe_02` | `w2_d_4` | 2208 | 3,112, 1,752, 17 | `StaticObject_107562` (one of 4) |
+| Bowa-Seko | 98: `Cage04` x6, `Cage02` x3, `Ammo.Small_Explosive_Pickup_EX_07`, `PlasticBarrel` x2 | `w2_c_4` | 2769 | 3,176, 2,216, 21 | `DetailObjects.Cage04_20` |
+| Bowa-Seko | 91: `trainplatform01` x4, `CheckpointBarrier01_Open_BK` x2, `StaticObject` x2, `MissionObjectives.TrainFuelCar` | `w2_a_2` | 6185 | 1,656, 4,968, 21 | `StaticObject_859` |
+| Bowa-Seko | 90: `BonesRibcageGazelle` x7, `NewParticlesEffect` x7, `MeatBbq01` x2, `Meat05` x2 | `w2_d_2` | 1389 | 1,880, 1,144, 21 | `Buildings.ShantySm02Dest_02W2_BK_46` |
+| Bowa-Seko | 86: `metalbridgeroad_mid` x4, `Winged.Birds` x3, `metalbridgeroad_end` x2, `metalbridge_base01` x2 | `w2_d_4` | 2212 | 3,384, 1,784, 70 | `Winged.Birds_6` (one of 3) |
+| Bowa-Seko | 82: `WoodBridge_P01_PREFAB` x8, `foundation_bridge` x2, `woodbridge_base` x2 | `w2_b_3` | 4118 | 2,440, 3,272, 22 | `Infrastructures.WoodBridge_P01_PREFAB_13` |
+| Bowa-Seko | 74: `awnings_struct_lg` x7, `pirogue02` x2, `DiamondBriefcase_LVL3`, `Corpses.Corpse` | `w2_c_3` | 2601 | 2,664, 2,088, 17 | `StaticObject_122060` (one of 2) |
+| Bowa-Seko | 70: `platewood_broken_01`, `basketstrawgroup01`, `ChariotBox02_BK`, `ricebag_pile` | `w2_b_4` | 4215 | 3,560, 3,352, 54 | `StaticObject_15193` |
+| Bowa-Seko | 70: `StaticObject` x27, `BonesRibcageGazelle` x2, `Land.BigTruck`, `BonesRibcageWildebeest` | `w2_a_2` | 6099 | 1,272, 4,904, 22 | `StaticObject_1124` |
+| Bowa-Seko | 68: `MissionObjectiveSigns.GeneralStoreSign` x2, `roadsign_pole_01` x3, `roadsign_base_01` x3, `MissionObjectiveSigns.DogonVillageSign` x2 | `w2_b_3` | 4519 | 2,520, 3,608, 28 | `MissionObjectiveSigns.DogonVillageSign_3` |
+| Bowa-Seko | 67: `BranchesShelterStraw04` x2, `Animal.SavannahAnimals` x3, `hutmd02frame_01`, `buildingshelterpilars01` | `w2_b_3` | 5075 | 2,296, 4,056, 19 | `Buildings.BranchesShelterStraw04_10` |
+| Bowa-Seko | 67: `StreetSigns.UrbanStreetSignSinuousRoad`, `pubclaesprod_01`, `MissionObjectiveSigns.WeelegolVillage`, `MissionObjectiveSigns.TaemoCoSign` | `w2_d_2` | 2343 | 1,480, 1,880, 63 | `StreetSigns.UrbanStreetSignSinuousRoad_0` |
+| Bowa-Seko | 66: `BonesRibcageWildebeest` x4, `PickupTruckWreck04` x2, `PlasticBarrelCut` x2, `StaticObject` x2 | `w2_a_2` | 6266 | 1,720, 5,016, 24 | `StaticObject_1000` |
+| Bowa-Seko | 65: `MetalBarrel4` x6, `WoodCrateRectangular` x3, `Sea.SwampBoat`, `DiamondBriefcase_LVL2` | `w2_c_4` | 3417 | 3,688, 2,696, 17 | `CoverObjects.WoodCrateRectangular_122` |
+| Bowa-Seko | 65: `MissionObjectiveSignsSafeHouse.SafeHouse_A1LM11`, `pubclaesprod_01`, `MissionObjectiveSigns.SepokoSign`, `MissionObjectiveSigns.MosateSelaoSign` | `w2_b_4` | 4294 | 3,512, 3,416, 48 | `StaticObject_92855` |
+| Bowa-Seko | 64: `Quadrupeds.Wildebeest` x5, `Animal.SavannahAnimals` x6 | `w2_d_2` | 1387 | 1,768, 1,128, 14 | `Quadrupeds.Wildebeest_4` (one of 2) |
+| Bowa-Seko | 64: `StreetSigns.CrossRoadSign_BK` x4, `MissionObjectiveSignsSafeHouse.SafeHouse_A1LM11`, `MissionObjectiveSigns.RailXingSign`, `MissionObjectiveSigns.PolytechnicSign` | `w2_c_4` | 3574 | 3,496, 2,872, 35 | `MissionObjectiveSigns.RailXingSign_0` |
+| Bowa-Seko | 62: `Corpses.Corpse` x2, `CarverTape_W2B4`, `WoodCrateSquare` x2, `truckwrecked01` | `w2_b_4` | 4208 | 3,128, 3,336, 45 | `StaticObject_26844` |
+| Bowa-Seko | 62: `WoodBridge_P01` x6, `foundation_bridge` x2, `woodbridge_base` x2 | `w2_c_3` | 3643 | 2,776, 2,920, 20 | `StaticObject_8846` |
+| Bowa-Seko | 60: `StreetSigns.CountryStreetSignRailRoad` x4, `logopanel02`, `bridgetrack01`, `urbanelectricpole01a` | `w2_c_3` | 3472 | 2,088, 2,808, 23 | `StreetSigns.CountryStreetSignRailRoad_3` |
+
+### Safe houses, guard posts and bus stops with no mission
+
+Places the player already passes, where a small event (a raid, an ambush, a meeting) would be found
+naturally.
+
+| World | Kind, nearest place | Level | Sector | Position (x, y, z) | Map tab key |
+| --- | --- | --- | --- | --- | --- |
+| Leboa-Sako | bus stop, Oasis (south-east) 424 m | `w1_d_4` | 1979 | 3,784, 1,592, 19 | `VisualObject_34126` |
+| Leboa-Sako | bus stop, Oasis (north) 469 m | `w1_b_4` | 4383 | 4,040, 3,512, 23 | `VisualObject_34116` |
+| Leboa-Sako | bus stop, Cattle Xing 415 m | `w1_b_2` | 4830 | 1,960, 3,896, 50 | `VisualObject_117` |
+| Leboa-Sako | guard post, Fort 343 m | `w1_b_4` | 4539 | 3,816, 3,608, 29 | `DetailObjects.Box02_14` |
+| Leboa-Sako | guard post, Oasis (south-east) 402 m | `w1_d_4` | 1816 | 3,624, 1,448, 41 | `CoverObjects.PlasticBarrel_57` |
+| Leboa-Sako | guard post, Mokuba 376 m | `w1_d_4` | 2216 | 3,640, 1,736, 20 | `CoverObjects.Checkpoint03_BK_11` |
+| Leboa-Sako | guard post, Shwasana 272 m | `w1_b_3` | 3959 | 2,504, 3,144, 16 | `StaticObject_57786` |
+| Leboa-Sako | guard post, OGC greenhouses 590 m | `w1_b_4` | 4059 | 3,832, 3,208, 21 | `DetailObjects.Bottle10_8` |
+| Leboa-Sako | guard post, Shwasana 326 m | `w1_b_3` | 4040 | 2,616, 3,224, 56 | `StaticObject_18022` |
+| Leboa-Sako | guard post, Fort 239 m | `w1_b_4` | 4932 | 3,336, 3,928, 21 | `Industrial.Boxes01_565` |
+| Leboa-Sako | guard post, Mike's Bar 252 m | `w1_d_3` | 2442 | 2,728, 1,928, 34 | `PGP.ExplosivePile_211` |
+| Leboa-Sako | safe house, Airfield (Leboa-Sako) 683 m | `w1_d_2` | 1388 | 1,848, 1,112, 22 | `StaticObject_6011` |
+| Leboa-Sako | safe house, Oasis (south-east) 525 m | `w1_d_4` | 1413 | 3,416, 1,128, 20 | `StaticObject_34318` (one of 6) |
+| Leboa-Sako | safe house, Fort 221 m | `w1_b_4` | 4778 | 3,720, 3,832, 20 | `StaticObject_9499` |
+| Leboa-Sako | safe house, Mokuba 253 m | `w1_d_3` | 2447 | 3,048, 1,944, 67 | `DetailObjects.Can7_8` |
+| Leboa-Sako | safe house, Airfield (Leboa-Sako) 279 m | `w1_d_3` | 1801 | 2,664, 1,432, 21 | `Props.Sandal01_0` |
+| Leboa-Sako | safe house, OGC greenhouses 482 m | `w1_c_4` | 3663 | 4,072, 2,888, 24 | `DetailObjects.CigarettePack_2` (one of 2) |
+| Leboa-Sako | safe house, Lumber 274 m | `w1_c_4` | 2849 | 3,176, 2,264, 52 | `DetailObjects.Can5_27` |
+| Leboa-Sako | safe house, Scrap Salvage 494 m | `w1_d_2` | 2262 | 1,432, 1,816, 17 | `StaticObject_16376` (one of 3) |
+| Leboa-Sako | safe house, Mokuba 496 m | `w1_d_3` | 1807 | 3,048, 1,448, 31 | `StaticObject_33024` |
+| Leboa-Sako | safe house, Oasis (south-east) 321 m | `w1_d_4` | 1900 | 3,880, 1,512, 28 | `Burnable.CampfireLogs_180` (one of 3) |
+| Leboa-Sako | safe house, "Private Property" 233 m | `w1_c_4` | 3649 | 3,192, 2,904, 18 | `Blue_Faction.Assault_Caucasian_30` (one of 2) |
+| Leboa-Sako | safe house, Scrap Salvage 311 m | `w1_d_2` | 2427 | 1,752, 1,944, 44 | `Blue_Faction.Assault_Nubian_SH02_2` |
+| Leboa-Sako | safe house, Fresh Fish 321 m | `w1_b_3` | 4045 | 2,920, 3,208, 42 | `StaticObject_6880` |
+| Leboa-Sako | safe house, Shwasana 503 m | `w1_b_3` | 4759 | 2,536, 3,784, 61 | `Blue_Faction.Assault_Caucasian_79` (one of 2) |
+| Leboa-Sako | safe house, Goka Falls 327 m | `w1_b_3` | 4444 | 2,856, 3,560, 64 | `Burnable.CampfireLogs_185` (one of 2) |
+| Leboa-Sako | safe house, Cattle Xing 477 m | `w1_b_3` | 4834 | 2,200, 3,848, 32 | `Blue_Faction.Assault_Caucasian_77` (one of 2) |
+| Leboa-Sako | safe house, Shwasana 240 m | `w1_b_3` | 4358 | 2,488, 3,496, 20 | `Burnable.CampfireLogs_175` (one of 5) |
+| Leboa-Sako | safe house, Slaughter House 336 m | `w1_c_2` | 3469 | 1,864, 2,808, 31 | `Building.SP_Int_Urban_209` |
+| Leboa-Sako | safe house, Goka Falls 277 m | `w1_b_3` | 4365 | 2,936, 3,464, 38 | `housesafe10` |
+| Leboa-Sako | safe house, Petrosahel (fuel depot) 304 m | `w1_b_2` | 5057 | 1,128, 4,040, 19 | `housesave3` |
+| Leboa-Sako | safe house, Cattle Xing 308 m | `w1_b_2` | 3950 | 1,976, 3,192, 62 | `housesave1` |
+| Bowa-Seko | bus stop, Crash Site 258 m | `w2_b_4` | 4693 | 3,448, 3,736, 34 | `VisualObject_34135` |
+| Bowa-Seko | bus stop, Weelegol Village 382 m | `w2_d_2` | 1386 | 1,704, 1,096, 20 | `VisualObject_34143` |
+| Bowa-Seko | guard post, Sediko 296 m | `w2_b_3` | 4282 | 2,712, 3,448, 19 | `StaticObject_36282` |
+| Bowa-Seko | guard post, Airfield (Bowa-Seko) 224 m | `w2_c_4` | 3410 | 3,240, 2,728, 23 | `RR_AM_Duty.Guard_1` |
+| Bowa-Seko | guard post, Dental Clinic 479 m | `w2_c_3` | 3715 | 2,296, 2,968, 20 | `DetailObjects.CardboxBigFull01_BK_107` |
+| Bowa-Seko | guard post, Dogon Village 228 m | `w2_b_3` | 4598 | 2,456, 3,656, 27 | `VisualObject_6791` |
+| Bowa-Seko | guard post, Ranger Station 628 m | `w2_d_2` | 2418 | 1,160, 1,944, 34 | `Wreck.CarWrecked01_BK_4` |
+| Bowa-Seko | guard post, Mertens-Segolo pump house 311 m | `w2_d_3` | 2357 | 2,392, 1,864, 19 | `Buildings.JUNGLE_HutSm05WallWood_01_Part01_BK_7` |
+| Bowa-Seko | guard post, Post Office 290 m | `w2_c_2` | 2750 | 1,944, 2,232, 32 | `StaticObject_6262` |
+| Bowa-Seko | guard post, Mosate Selao 353 m | `w2_c_3` | 3075 | 2,248, 2,440, 21 | `BuildingAccessories.Colonial_Large_Window_BK_4` |
+| Bowa-Seko | guard post, Polytechnic 263 m | `w2_b_4` | 4053 | 3,432, 3,208, 49 | `CoverObjects.MetalBarrel02_34` |
+| Bowa-Seko | guard post, Sefapane 554 m | `w2_b_2` | 4579 | 1,240, 3,704, 22 | `Infrastructures.StaticOutPost01_3` |
+| Bowa-Seko | guard post, Dental Clinic 251 m | `w2_c_2` | 3310 | 1,928, 2,648, 22 | `StaticObject_44690` |
+| Bowa-Seko | guard post, Ranger Station 235 m | `w2_c_2` | 2899 | 1,224, 2,360, 17 | `CoverObjects.WoodCrateSquare_48` |
+| Bowa-Seko | safe house, Mosate Selao 472 m | `w2_c_3` | 2913 | 2,168, 2,312, 38 | `StaticObject_104569` |
+| Bowa-Seko | safe house, Outpost 272 m | `w2_b_3` | 4926 | 2,984, 3,960, 33 | `StaticObject_48763` |
+| Bowa-Seko | safe house, Sefapane 558 m | `w2_b_2` | 4179 | 1,256, 3,336, 30 | `CoverObjects.MetalBarrel_57` |
+| Bowa-Seko | safe house, Sediko 262 m | `w2_c_3` | 3725 | 2,904, 2,968, 55 | `DetailObjects.PlasticBowlRed01_118` |
+| Bowa-Seko | safe house, Sepoko 309 m | `w2_b_4` | 4778 | 3,736, 3,816, 26 | `CoverObjects.PlasticBarrel_88` |
+| Bowa-Seko | safe house, Dental Clinic 379 m | `w2_c_3` | 3634 | 2,200, 2,936, 65 | `StaticObject_74079` |
+| Bowa-Seko | safe house, Dogon Village 392 m | `w2_b_3` | 4997 | 2,392, 3,976, 21 | `VisualObject_24524` |
+| Bowa-Seko | safe house, Polytechnic 565 m | `w2_c_4` | 3820 | 3,864, 3,016, 32 | `CoverObjects.WoodCrateRectangular_141` |
+| Bowa-Seko | safe house, Marina 409 m | `w2_d_4` | 2376 | 3,608, 1,880, 76 | `DetailObjects.Cage02_6` |
+| Bowa-Seko | safe house, Taemoco Mine 488 m | `w2_d_2` | 2421 | 1,368, 1,960, 70 | `InteractiveDoors.Dogon_AnimatedDoor_North` |
+| Bowa-Seko | safe house, Weelegol Village 257 m | `w2_d_2` | 1944 | 1,544, 1,560, 36 | `Burnable.CampfireLogs_192` |
+| Bowa-Seko | safe house, Marina 345 m | `w2_d_4` | 2295 | 3,544, 1,848, 23 | `VisualObject_34145` |
+| Bowa-Seko | safe house, Sepoko 384 m | `w2_b_4` | 4216 | 3,640, 3,336, 59 | `StreetSigns.SafeHouseSign_1` (one of 6) |
+| Bowa-Seko | safe house, Sefapane 336 m | `w2_b_2` | 4104 | 1,560, 3,288, 26 | `StaticObject_9832` (one of 2) |
+| Bowa-Seko | safe house, M-S Pipeline 329 m | `w2_d_2` | 1710 | 1,944, 1,352, 52 | `Blue_Faction.Assault_Caucasian_02_East` |
+| Bowa-Seko | safe house, Ranger Station 311 m | `w2_c_2` | 3541 | 1,384, 2,840, 31 | `StaticObject_49265` (one of 3) |
+| Bowa-Seko | safe house, Weelegol Village 231 m | `w2_d_2` | 1778 | 1,192, 1,416, 32 | `Blue_Faction.Assault_Nubian_01_West` |
+
+### Quiet roads
+
+The ten longest stretches per world where the road crosses no square of more than three authored
+props and no mission entity stands in that square or the eight around it. The splines are short
+segments, so a stretch rarely runs past 400 m; neighbouring stretches often continue the same road.
+
+| World | Quiet stretch | Length | Level | Sector | Midpoint (x, y, z) | Map tab key |
+| --- | --- | --- | --- | --- | --- | --- |
+| Leboa-Sako | (1,211, 3,585) to (1,275, 3,928) | 386 m | `w1_b_2` | 4738 | 1,206, 3,783, 22 | `StaticObject_14202` |
+| Leboa-Sako | (2,500, 3,961) to (2,744, 3,997) | 274 m | `w1_b_3` | 5001 | 2,627, 4,023, 20 | `VisualObject_1720` |
+| Leboa-Sako | (3,591, 1,401) to (3,349, 1,344) | 270 m | `w1_d_4` | 1734 | 3,473, 1,362, 58 | `StaticObject_97981` |
+| Leboa-Sako | (3,462, 3,930) to (3,701, 3,905) | 269 m | `w1_b_4` | 4936 | 3,588, 3,930, 22 | `Vehicle.BusBurned_331` |
+| Leboa-Sako | (1,972, 2,302) to (1,963, 2,048) | 255 m | `w1_c_2` | 2670 | 1,967, 2,174, 40 | `StaticObject_43234` |
+| Leboa-Sako | (2,875, 3,841) to (2,834, 3,649) | 236 m | `w1_b_3` | 4685 | 2,890, 3,745, 48 | `StaticObject_17993` |
+| Leboa-Sako | (2,374, 3,585) to (2,553, 3,689) | 236 m | `w1_b_3` | 4519 | 2,497, 3,611, 76 | `StaticObject_12674` |
+| Leboa-Sako | (2,317, 3,886) to (2,217, 3,716) | 227 m | `w1_b_3` | 4755 | 2,275, 3,794, 41 | `VisualObject_1755` |
+| Leboa-Sako | (3,636, 2,004) to (3,613, 1,793) | 226 m | `w1_d_4` | 2376 | 3,639, 1,896, 22 | `StreetSigns.CountryStreetSignLimit100_0` (one of 2) |
+| Leboa-Sako | (3,264, 2,337) to (3,080, 2,389) | 208 m | `w1_c_4` | 3009 | 3,170, 2,374, 38 | `StaticObject_64794` |
+| Bowa-Seko | (1,833, 3,093) to (2,041, 2,805) | 399 m | `w2_c_2` | 3710 | 1,972, 2,972, 23 | `Tracks.Tracks40MCurve_288` |
+| Bowa-Seko | (2,312, 2,965) to (2,400, 2,690) | 395 m | `w2_c_3` | 3558 | 2,452, 2,859, 24 | `StaticObject_68226` |
+| Bowa-Seko | (2,683, 4,041) to (2,461, 3,890) | 342 m | `w2_b_3` | 4999 | 2,516, 4,015, 22 | `SpecialEventPoint_999` |
+| Bowa-Seko | (1,662, 1,112) to (1,412, 1,038) | 271 m | `w2_d_2` | 1304 | 1,544, 1,044, 16 | `SpecialEventPoint_South_795` |
+| Bowa-Seko | (3,373, 3,248) to (3,137, 3,228) | 246 m | `w2_b_4` | 4050 | 3,245, 3,256, 46 | `StaticObject_18159` |
+| Bowa-Seko | (1,237, 2,624) to (1,176, 2,439) | 235 m | `w2_c_2` | 3138 | 1,175, 2,545, 20 | `SpecialEventPoint_13` (one of 4) |
+| Bowa-Seko | (2,775, 3,096) to (2,790, 2,946) | 235 m | `w2_c_3` | 3804 | 2,844, 3,010, 42 | `Land.Rover.M2_Mounted_2` (one of 6) |
+| Bowa-Seko | (2,040, 3,416) to (2,235, 3,451) | 230 m | `w2_b_3` | 4193 | 2,150, 3,390, 45 | `StaticObject_22841` |
+| Bowa-Seko | (1,925, 3,567) to (2,046, 3,416) | 219 m | `w2_b_2` | 4350 | 1,967, 3,466, 38 | `Infrastructures.FenceWoodWire03_BK_3` (one of 6) |
+| Bowa-Seko | (2,585, 3,388) to (2,683, 3,236) | 217 m | `w2_b_3` | 4120 | 2,597, 3,286, 37 | `SpecialEventPoint_1530` |
+
 ## Every unexplained hotspot
 
 All 116, by world and score. "Most telling props" are the six with the highest rarity weight, with
