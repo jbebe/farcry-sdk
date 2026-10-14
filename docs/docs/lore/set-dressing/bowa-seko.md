@@ -105,8 +105,9 @@ label is the only clinic there is.
 `NewParticlesEffect_A2LM11_BridgeExplosion`. About 80 sandbag walls, three `M2` machine guns, APR
 posters.
 
-**Airfield.** Hangars, a windsock, two crashed white Cessnas, wrecked cars. Five of the world's 30
-placed civilians are here (`Civilians.Male_Civilian`, `Female_Civilian`), with the soldiers' `Duty.Loot`
+**Airfield.** Hangars, a windsock, two crashed white Cessnas, wrecked cars. Five of the 55 placed
+civilians in both worlds are here (`Civilians.Male_Civilian`, `Female_Civilian`), the most outside
+the Underground cells and the opening's village, with the soldiers' `Duty.Loot`
 x4 and `Duty.Welding`. Reuben waits in the hangar (`Objectives/A3SM14_01_NBM_01`). *Implied:* people
 gathering to leave by air.
 

@@ -13,6 +13,7 @@ This page covers the method, the names of the places, and two keys you need befo
 which faction is which in the data, and how mission state changes a place. The
 [catalogue](./catalogue.md) lists the recurring props and what they signal. The two region pages,
 [Leboa-Sako](./leboa-sako.md) and [Bowa-Seko](./bowa-seko.md), go place by place.
+[Hotspots and landmarks](./hotspots.md) finds the dressed scenes the map does not name.
 
 :::info[Read from the retail world data]
 Every `worldsector*.data.fcb` and `landmarknear*.data.fcb` of both campaign worlds, `world1` and

@@ -251,7 +251,14 @@ fought mostly by bored men waiting, who live off the land they hold.
 
 ## Civilians
 
-30 placed civilians in both worlds: `Civilians.Male_Civilian` 19, `Female_Civilian` 6,
-`Female_Civilian_WithDress` 4, and one for a mission. Five of them are at the Bowa-Seko Airfield.
-Against about a thousand soldiers, this is the strongest statement in the data. *Implied:* the
-country has emptied; the people who are left are waiting to leave.
+55 placed civilians in both worlds, against about a thousand soldiers:
+
+| Where | Civilians |
+| --- | --- |
+| the eight Underground cells, three each (`1_Female_Civilian_NoDress`, `2_Male_Civilian`, `3_Female_Civilian_NoDress`), plus one `GRIN_Refugee` | 25 |
+| the opening's roadside village in Leboa-Sako (`A1SM00.Event_40_Civilians`) | 10 |
+| the Bowa-Seko Airfield | 5 |
+| scattered elsewhere (`Civilians.Male_Civilian`, `Female_Civilian`) | 15 |
+
+This is the strongest statement in the data. *Implied:* the country has emptied. Of the people left,
+nearly half are hidden by the Underground, and the rest are passing through or waiting to leave.
