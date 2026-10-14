@@ -51,7 +51,7 @@ job says and pays, as the player meets it, is in [side missions](../lore/mission
 | The phone: assassinations | `SideMissions/Assassination_Missions` | four **cell towers** per world are pickups; using one plays a phone call and starts a random contract. Worked through [below](#worked-example-a-phone-assassination). |
 | The gun shop: convoys | `SideMissions/ConvoyMissions` | `SelectRandomMission` picks one of four convoys per world, then `Convoy_PawnBriefing` has the arms dealer brief it. Success runs `UnlockWeapons`; a failed convoy is offered again. |
 | Faction HQs: library missions | `MASTER_World1.World1_HQdoorman`, `BASEBRIEF_LIB-MISSION_LOADING` boxes | the HQ doorman and a briefing graph; `LibraryMission_Accepted` starts the mission graph. See [which missions are offered](../engine-internals/campaign.md#which-missions-are-offered). |
-| Buddies: side quests | `SideMissions/MikesPlace_BSQManager_W1/W2`, `BSQ_AssignMission` | between faction jobs, a buddy at Mike's in Leboa-Sako or the Marina in Bowa-Seko offers a `BSQ<nn>` job; accepting any other job cancels it. |
+| Buddies: side quests | `SideMissions/MikesPlace_BSQManager_W1/W2`, `BSQ_AssignMission` | between faction jobs, a buddy at Mike's in Leboa-Sako or the Marina in Bowa-Seko offers a `BSQ<nn>` job; accepting any other job cancels it. Taken apart in [authoring a multi-stage quest](./authoring-a-quest.md). |
 | Story | `MASTER_World1.World1`, `MASTER_World2.World2` | `StartScript` boxes in the master graph start each story and buddy mission graph. See [how a mission's graph starts](../engine-internals/campaign.md#how-a-missions-graph-starts). |
 
 **One job at a time.** `Globals.MASTER_GameGlobals.AcceptedMissionID` holds the accepted mission's
