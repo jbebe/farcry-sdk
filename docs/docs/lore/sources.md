@@ -27,8 +27,9 @@ name the speaker only when the line itself does, and otherwise mark the speaker 
 The patched table differs from the 1.00 one (`common.dat`) in typo fixes, multiplayer strings and two
 added Liberation Radio broadcasts (`5119680`, `5160431`); no story text changed.
 
-The Jackal tapes have no text beyond their titles and one-line descriptions: the recordings are not
-subtitled.
+The Jackal tapes have no text in the game beyond their titles and one-line descriptions: the
+recordings are not subtitled. [The Jackal tapes](./jackal-tapes.md) adds their words from a fan
+transcription, marked community-reported.
 
 ## How claims are cited
 
@@ -49,6 +50,8 @@ Each claim ends with where it comes from:
 - `scene sm01_se01_jackc_brief_all` — the choreographed animation that plays a line. Its name gives
   the mission, the scene and often the character (`jackc` is the Jackal), so a line it plays has a
   stated speaker even when no bark bank lists it.
+- (wiki, *Infamy*) — the Far Cry wiki's transcript of that Jackal tape. Community-reported: not read
+  from the game's files.
 
 Many strings are templates. `FIRST_LT`, `WINNING_FACTION_BOSS`, `PRIMARY_BUDDY_NAME` and the like are
 filled in from the player's choices, so a sentence such as "WINNING_FACTION_BOSS betrayed me" is true
@@ -66,9 +69,10 @@ Every page separates two kinds of claim:
 
 ## Open questions
 
-- **The Jackal tapes' words.** The recordings are not subtitled. A transcript needs the map from tape
-  to sound, which `CJackalTapeManager` holds (`world1.managers.fcb`, 50 resources) and nobody has
-  traced, and then a transcription of the audio.
+- **The Jackal tapes' audio.** The words come from a fan transcription that nobody here has checked
+  against the recordings. Checking it needs the map from tape to sound, which `CJackalTapeManager`
+  holds (`world1.managers.fcb`, 50 resources) and nobody has traced; the tapes' audio was not found in
+  the archives.
 - **The 1,112 unattributed lines.** Their speakers are inferred from the scene. Phone calls take
   their sound from the Domino `PhoneCall` box's `PhonecallSound` input, wired in the mission layers.
   Tracing those wires would turn many inferred speakers into recorded ones.

@@ -90,7 +90,8 @@ Who the game's people are, in the game's own words. The faction chains of comman
   identity of the Jackal remains a mystery. Officials insist he was killed during the conflict. His
   body has never been found." (`Coda/Para4`).
 - **The tapes.** Reuben recorded interviews with him between 17 September and 30 October 2008. Their
-  descriptions are the game's only summary of his views (`JackalTapes/*_DESC`). Among them:
+  descriptions are the game's only text on his views (`JackalTapes/*_DESC`); what he says on them is
+  on [The Jackal tapes](./jackal-tapes.md), from a fan transcription. Among the descriptions:
   - he "circulates old weapons to fresh conflicts" during cease-fires;
   - he "equates illegal arms with portable radios";
   - he "blames Africans for their misery";
