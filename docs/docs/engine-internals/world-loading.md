@@ -25,7 +25,7 @@ set a world **name** on it, and hand it to `CGame::SwitchContext`:
 |---|---|---|
 | `CFCXStoryAvatarSelectionPage::LaunchGame` | `0x08ec7f80` | The New Game button. Sets the avatar name, `SetWaitPlayGame(true)`, then `CryStringBase<char>("world1")` → `CGOContextNode::SetWorld` → `CGame::SwitchContext`. |
 | `GameChangeWorld(CryStringBase<char>, EntityId)` | `0x088a0730` | The Lua binding. Builds a `CGOTravelNode`, `SetWorld(name)`, `SetSpawnPointId(id)`, `SetKeepPlayerState(true)` → `CGame::SwitchContext`. |
-| `GameChangeWorldDefaultSpawnPoint(CryStringBase<char>)` | `0x088a0890` | Copies the string and calls `GameChangeWorld` with an invalid (`0xFFFFFFFF`) spawn-point id. |
+| `GameChangeWorldDefaultSpawnPoint(CryStringBase<char>)` | `0x088a0890` | Copies the string and calls `GameChangeWorld` with an invalid (`0xFFFFFFFF`) spawn-point id, which no spawn point matches: see [where the player arrives](#where-the-player-arrives). |
 
 The act 1 → act 2 transition is therefore **not** a special-cased story event; it is the general
 travel node with `"world2"` in it. `GameChangeWorld` also calls
@@ -184,6 +184,87 @@ depends on the map gadget's quad, which was not read.
 `CGameConfig`'s `UseCompassMiniMap` and `UseRoadSignHilight` are registered but read by no code
 found, so they do nothing.
 
+## What the loader requires
+
+`CXGame::LoadWorld` (`0x08888f90`) loads the world-level files in this order. Its last argument is a
+flag set that switches some steps on.
+
+| Step | File | If it is missing |
+|---|---|---|
+| 1 | `Worlds\<name>\generated\<name>.game.xml` | `LoadWorld` returns false: `CFileManager::FileExists` gates everything else |
+| 2 | `<name>_depload.dat`, else `<name>_depload.xml`, then a localised pass (`CWorldDescriptorImpl::LoadDep`, `0x09c2b0c0`) | skipped |
+| 3 | `<name>.sectorsdep.fcb`, one group per map, found by the map's name | skipped |
+| 4 | the descriptor's `Grids`, `Environment` (`CWorld::Create`, `0x095e18c0`) | — |
+| 5 | `moviedata.xml`, the world's and each map's (flag 4) | not established |
+| 6 | `entitylibrary.fcb` (flag 8, `CXGame::LoadArchetypes`, `0x08888750`), then the DLC libraries as overrides | loaded anyway: an empty library, so no archetypes |
+| 7 | `<name>.managers.fcb`, `<name>.omnis.fcb` (flag 2) | skipped |
+| 8 | `<name>.mapsdata.fcb`, then each map's group in it, found by the map's name | opened with no null check, so treat it as required |
+| 9 | the `main` layer spawns; `MissionsDef` goes to `CGameMissionMgr::FromXML` | — |
+| 10 | `CAIEngine::LevelLoaded` (flag `0x20`) | not traced |
+
+`entitylibrary_full.fcb` is never opened. `XmlParser::parse` reads the descriptor whether it is
+plain text (`tmpla`) or binary (the retail worlds). The world name never picks a script:
+`CXSystemBase::LoadLuaScripts` (`0x088c34d0`) runs only `SCRIPTS\MissionTools.lua`. A world's master
+graph is an omni entity in its `omnis.fcb` ([campaign](./campaign.md#how-a-missions-graph-starts)).
+
+`CWorld::Create` sizes everything from `GridMapSectors`: `CBaseGrid::Init(CountX, CountY, 64)` and a
+terrain of `CountX × 64` by `CountY × 64` metres. It checks no minimum, so a one-sector grid is not
+rejected there.
+
+### Per-sector paths
+
+`CSector::GetFilePaths` (`0x097e95c0`) builds each sector's terrain paths from its map's level
+folder:
+
+- `sdat\sd<id>.sdat` and `sdat\sd<id>_shadow.xbt`, one of each per sector
+- `sdat\atlas<a>_diffuse.xbt`, `_mask.xbt` and `_color.xbt`, shared by a 2 × 2 block of sectors
+  (`CTerrain::kAtlasTextureSectorSideCount` is 2). For a world `w` sectors wide,
+  `a = 2w × ⌊row / 2⌋ + 2 × ⌊column / 2⌋`, the id of the block's first sector.
+- If neither an atlas `.xbt` nor a `.png` of the same name exists, a sector-named
+  `sd<id>_diffuse.xbt` (and `_mask`, `_color`) is tried instead.
+
+Campaign levels are missing some `.sdat` files and most `worldsector<n>.data.fcb` files, so a
+missing sector file is tolerated. `tmpla` ships no `worldsector` file at all **(seen in data)**.
+
+## Where the player arrives
+
+**After travel.** `CWorldTravel::SpawnPlayer` (`0x092630b0`) asks `RetrieveTargetPos`
+(`0x092627d0`) for the position. That returns an explicit target position if the travel set one
+(same-world travel does). Otherwise it returns the position of the `CSpawnPoint` whose entity id
+equals the travel's spawn-point id. If no spawn point matches, the position is never written, and
+the player is spawned at whatever was on the stack. The invalid id from
+`GameChangeWorldDefaultSpawnPoint` matches nothing, so **default-spawn travel places the player at an
+undefined position**. Nothing on this path snaps to the ground: the player arrives at the spawn
+point's stored height.
+
+Retail never travels without a spawn point. `master_world1` sets `SpawnPoint` to
+`"2051908267268899174"`, which is `SpawnPoint_W2A2_A03_MapStart` in `world2.mapsdata.fcb`, stored at
+z 25.06 on the ground. The string goes straight into `GameChangeWorld`, so the binding must accept
+an entity id written as a string **(inferred from retail use)**.
+
+**Without travel.** `CEntitySystemService::OnLoadWorld` (`0x091be350`) centres the streaming loader
+on one of these:
+
+- the spawn-point service's default: `CSpawnPointService::GetDefaultSpawnPoint` (`0x0940ac80`), which
+  snaps to the ground and fails when the world has no spawn point
+- with no such service, the first `CSpawnPoint` found
+- otherwise (0, 0, 0)
+
+A loaded save's spawn position overrides all three.
+
+## `tmpla` is a flat, empty world
+
+Seen in data:
+
+- All 64 terrain sectors are flat at 16.0625 m. The `.sdat` files differ only in header fields:
+  sector id, X and Y, and the environment snapshot. Every sector's `.srl`, `.zsr` and
+  `_shadow.xbt` are byte-identical.
+- No entity sectors and no landmark files. `tmpla.omnis.fcb` is empty (22 bytes).
+- `tmpla.mapsdata.fcb` holds an empty spline collection and one spawn point, `SpawnPoint_0`
+  (id `2054037628277228842`), at (28, 32, 0), 16 m below its own ground.
+- Its six mission layers are the multiplayer modes, all off by default.
+- `sector<n>.desc.fcb` lists every other sector of the map with a flags byte (53 in all of them).
+
 ## Shipping a world
 
 Archive resolution is CRC32-of-path across the mounted archives with `patch.dat` first, and the
@@ -206,25 +287,8 @@ Everything above is the mechanism. None of it amounts to a demonstration that a 
   navmesh-less world crash the engine roughly 30 s after load, deterministically. Animals
   (`CAnimalAgent`) and interactables are unaffected. The generator (`CNavmeshGenerator`,
   `BuildNavMeshLevel0`, ~226 symbols) is compiled in but has no `FCE_Nav*` export.
-- **Spawn-point semantics.** `SetSpawnPointId` takes an `EntityId`; which entity kind qualifies, and
-  what `GameChangeWorldDefaultSpawnPoint`'s invalid id resolves to in a world with no mission
-  definition, are both untraced.
-- **Terrain authoring.** `SdatSector.Encode` exists in JackAll but is called only from tests; cropping
-  and re-stitching shipped sectors (`SdatTerrainCrop`) is the proven path.
+- **A one-sector grid** passes `CWorld::Create`, but nothing downstream of it was read for a
+  minimum.
 
-## A staged plan for testing this
-
-Ordered so that the cheapest step falsifies the biggest assumption first.
-
-1. **Travel to a world the campaign never visits.** Override a Domino graph in `patch.dat` to call
-   `GameChangeWorldDefaultSpawnPoint`. Run it against `world2` first as a control — that target is
-   known-good, so it isolates the hook — then against `tmpla` or an `mp_*` world, each of which ships
-   a complete world *and* level tree. Costs one file edit and answers the load-path question with no
-   authoring.
-2. **Clone a shipped world under a new name.** Rename the tree per the table above, ship in
-   `patch.dat`, travel to it. Separates "a name the engine has never seen" from "content the engine
-   has never seen".
-3. **Replace the clone's content.** One small map: cropped campaign terrain, hand-placed props, no
-   AI.
-4. **The portal itself.** A `CProximityTriggerComponent` entity wired to a `ChangeWorld` box, plus the
-   return trip from a master graph in the new world.
+The file-by-file checklist, the plan to a player standing in a new world, and a prepared test layer
+are in [building a new world](../modding/building-a-new-world.md).

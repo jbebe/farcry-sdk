@@ -295,7 +295,7 @@ the point has been exercised in a running game.
 | 6 | Archetype `Brain` / `aiwsBrainWorkspace`; the workspace itself | give an NPC type other behaviour | data layer, JackAll AI tab | 2 | not seen in game |
 | 7 | A new or edited Domino graph | missions, triggers, layer switches, spawns | data layer (plain Lua in `patch.dat`) | 2 | loader RE-verified on GOG; an edited graph not seen in game |
 | 7 | Event links | wire entity to entity without a graph | JackAll Map tab | 2 | not seen in game |
-| all | A whole new world | everything above in a new tree | data layer + JackAll world writing | 5 | see [entering a world](./world-loading.md#a-staged-plan-for-testing-this) |
+| all | A whole new world | everything above in a new tree | data layer + JackAll world writing | 5 | see [building a new world](../modding/building-a-new-world.md) |
 
 Two consequences for choosing a point:
 
@@ -382,16 +382,9 @@ Look for:
 
 ### 3. Travel to a world the campaign never visits
 
-No files. This is step 1 of [the world plan](./world-loading.md#a-staged-plan-for-testing-this),
-which no longer needs a graph override. Run the control in one launch and the target in a second.
-
-- Control: `#GameChangeWorldDefaultSpawnPoint("world2")` — a loading screen, then world 2.
-- Target: `#GameChangeWorldDefaultSpawnPoint("tmpla")` — the editor's template world, which ships a
-  complete world and level tree.
-
-Look for whether the target loads at all, where the player stands, and whether the game is still
-running a minute later. A hang or crash on `tmpla` while the control works points at a single-player
-assumption about known worlds. Then read `bin\fcse.log`.
+No files. This is step 1 of [building a new world](../modding/building-a-new-world.md#step-1-travel-to-tmpla),
+which has the commands. They name a spawn point, because `GameChangeWorldDefaultSpawnPoint` leaves
+the arrival position undefined ([where the player arrives](./world-loading.md#where-the-player-arrives)).
 
 ### 4. The mission-layer override, already built
 
