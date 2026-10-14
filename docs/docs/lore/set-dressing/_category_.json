@@ -1,0 +1,8 @@
+{
+  "label": "Set dressing",
+  "position": 10,
+  "link": {
+    "type": "generated-index",
+    "description": "What the designers placed where, read from the retail world data: who holds each place, how poor it is, and how recent its violence."
+  }
+}
