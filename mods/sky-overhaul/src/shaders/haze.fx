@@ -18,7 +18,6 @@ sampler3D Turbulence : register(s5);
 // x  how far one sheet of hot air SHEET_REFERENCE metres deep bends a look, in radians
 // y  how much of the ground a mirage replaces
 // z  the sine of the steepest look onto bare level ground that still shows a mirage
-// w  the height over which the air's heat falls away from the ground, in metres
 float4 Heat : register(c96);
 
 // x  seconds, for the shimmer's motion
@@ -53,11 +52,12 @@ float4 Axis : register(c101);
 static const float NEAREST_SHEET = 10.0f;
 
 // The depth of air a sheet stands for at which it bends a look as hard as Heat.x says; deeper
-// sheets bend harder, as the root of their depth.
+// sheets bend harder, as this power of their depth.
 static const float SHEET_REFERENCE = 100.0f;
+static const float SHEET_GROWTH = 0.75f;
 
-// The eye's height over the ground, in metres, from which a sheet's height is reckoned.
-static const float EYE_HEIGHT = 1.8f;
+// The smallest a wave may get on screen, across and up, in pixels: finer ones would average away.
+static const float2 SMALLEST_WAVE = float2(3.0f, 1.5f);
 
 // Cells across the turbulence volume, on every axis.
 static const float TILE = 16.0f;
@@ -119,34 +119,29 @@ static const float NEAR_SHARE = 0.5f;
 
 // The turbulence of the sheet `distance` metres out where a look `around` radians round the
 // horizon and `rise` up (a sine) crosses it, at `time`: three fields in [-0.5, 0.5). Its eddies keep
-// their size in the world, so a far sheet's are small on screen; the whole is scaled by the zoom,
-// so they keep their size on screen through a scope.
+// their size in the world, so a far sheet's are small on screen, down to SMALLEST_WAVE; the whole
+// is scaled by the zoom, so they keep their size on screen through a scope.
 float3 Sheet(float around, float rise, float distance, float time, float index)
 {
-    float scale = distance * Time.y;
-    float cellsAround = max(round(2.0f * PI * scale / (Time.z * TILE)), 1.0f) * TILE;
-    float3 at = float3(around * cellsAround / (2.0f * PI) - time * DRIFT, rise * scale / Time.w,
+    float pixel = 2.0f * Lens.y * Lens.w * Time.y;
+    float2 wave = max(Time.zw / distance, SMALLEST_WAVE * pixel) / Time.y;
+    float cellsAround = max(round(2.0f * PI / (wave.x * TILE)), 1.0f) * TILE;
+    float3 at = float3(around * cellsAround / (2.0f * PI) - time * DRIFT, rise / wave.y,
                        time * CHURN + index * 5.3f);
     return tex3Dlod(Turbulence, float4(at / TILE, 0.0f)).rgb - 0.5f;
 }
 
-// How hot the air is `height` metres above the ground under the eye, against the ground's own.
-float Hotness(float height)
-{
-    return exp(-max(height, 0.0f) / Heat.w);
-}
-
 // How far the air pushes a look `distance` metres long at `time`, in radians, and how ragged it is
 // in z: every sheet it crosses before it gets there, each the more the farther it stands from what
-// is seen, as a lever.
+// is seen. A look that ends on the ground runs near it the whole way, so every sheet is hot.
 float3 Push(float around, float rise, float distance, float time)
 {
     float3 sum = 0.0f;
     [unroll] for (int k = 0; k < SHEETS; k++)
     {
         float sheet = NEAREST_SHEET * exp2(k);
-        float lever = saturate(1.0f - sheet / distance);
-        float weight = sqrt(sheet / SHEET_REFERENCE) * lever * Hotness(EYE_HEIGHT + sheet * rise);
+        float lever = sqrt(saturate(1.0f - sheet / distance));
+        float weight = pow(sheet / SHEET_REFERENCE, SHEET_GROWTH) * lever;
         sum += Sheet(around, rise, sheet, time, k) * weight;
     }
     return sum * SHIMMER_GAIN * float3(Heat.x, Heat.x, 1.0f);

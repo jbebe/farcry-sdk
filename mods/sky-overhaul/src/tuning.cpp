@@ -209,7 +209,7 @@ namespace {
         {"Grain colour", &kFilmGrain, offsetof(Values, grainColour), 0.0f, 0.0f, 1.0f, "%.2f",
          "How much each colour's grain differs from the others'. Zero is grey grain."},
 
-        {"Heat haze strength", &kHeatHaze, offsetof(Values, hazeStrength), 1.0f, 0.0f, 4.0f,
+        {"Heat haze strength", &kHeatHaze, offsetof(Values, hazeStrength), 1.2f, 0.0f, 4.0f,
          "%.2f",
          "How hard the hot air over sunlit ground pushes and smears what is seen through it. The "
          "farther off a thing is, the more air it is seen through, so the more it is pushed "
@@ -223,9 +223,9 @@ namespace {
          "How tall one wave of the shimmer looks 100 m off, unzoomed. A degree is 60."},
         {"Heat haze far blur", &kHeatHaze, offsetof(Values, hazeFarBlur), 1.0f, 0.0f, 1.0f, "%.2f",
          "How far land melts into blobs that dance with the shimmer. Near things stay sharp."},
-        {"Heat haze blur start", &kHeatHaze, offsetof(Values, hazeBlurStart), 100.0f, 10.0f,
+        {"Heat haze blur start", &kHeatHaze, offsetof(Values, hazeBlurStart), 150.0f, 10.0f,
          1000.0f, "%.0f m", "How far off land starts to melt into the far blur."},
-        {"Heat haze blur end", &kHeatHaze, offsetof(Values, hazeBlurEnd), 400.0f, 10.0f, 1000.0f,
+        {"Heat haze blur end", &kHeatHaze, offsetof(Values, hazeBlurEnd), 450.0f, 10.0f, 1000.0f,
          "%.0f m", "How far off land has wholly melted into the far blur."},
         {"Mirage strength", &kHeatHaze, offsetof(Values, mirageStrength), 1.0f, 0.0f, 1.0f, "%.2f",
          "How much of the sky a mirage shows on bare level ground far off, seen within about a "
