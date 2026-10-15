@@ -26,23 +26,23 @@ In menu order.
 
 | Row | Type | Default | File | Source | Status |
 |---|---|---|---|---|---|
-| Briefings keep control | checkbox | off | `briefing_control.cpp` | Scubrah's Patch, [skippable-dialog](../../legacy/scubrahs-patch/features/skippable-dialog.md) | planned |
-| Keep weapon on rescue | checkbox | off | `rescue_keeps_weapon.cpp` | Scubrah's Patch, [buddy-rescue-fluid](../../legacy/scubrahs-patch/features/buddy-rescue-fluid.md) | planned |
-| No forced buddy rescues (new game) | checkbox | off | `no_forced_rescue.cpp` | Scubrah's Patch, [buddy-rescue-optional](../../legacy/scubrahs-patch/features/buddy-rescue-optional.md) | planned |
-| No reputation drop | checkbox | off | `reputation_kept.cpp` | Scubrah's Patch, [reputation-kept](../../legacy/scubrahs-patch/features/reputation-kept.md) | planned |
-| Hide diamond message | checkbox | off | `no_diamond_message.cpp` | Scubrah's Patch, [economy-briefcase-tracker](../../legacy/scubrahs-patch/features/economy-briefcase-tracker.md) | planned |
-| No blinking pickups | checkbox | off | `no_blinking_items.cpp` | Realism Plus, [graphics-no-flashing-items](../../legacy/realism-plus/features/graphics-no-flashing-items.md); FC2JackalFix `gameplay/blinkingitems.ixx` | planned |
-| No save icons on map | checkbox | off | `no_save_icons.cpp` | Realism Plus, [nav-no-save-icons](../../legacy/realism-plus/features/nav-no-save-icons.md) | planned |
-| Limited saving | checkbox | off | `limited_saving.cpp` | Realism Plus, [saving-no-pause-save](../../legacy/realism-plus/features/saving-no-pause-save.md); FC2JackalFix `gameplay/limitedsaving.ixx` | planned |
-| Brown filter | checkbox | **on** | `brown_filter.cpp` | Scubrah's Patch, [original-colorgrading](../../legacy/scubrahs-patch/features/original-colorgrading.md); FC2JackalFix `graphics/saturation.ixx` | planned |
-| No hit indicator | checkbox | off | `no_hit_indicator.cpp` | FC2JackalFix `gameplay/hitindicator.ixx` | planned |
-| HUD fade-out | Always hidden · 1–60 s · Always shown | 3 s (game default) | `hud_fade.cpp` | FC2JackalFix `gameplay/hudfadeout.ixx` | planned |
-| Skip tutorial pop-ups | Off · Pop-ups · Pop-ups and hints | Off | `skip_tutorials.cpp` | FC2JackalFix `gameplay/tutorialmessages.ixx` | planned |
-| Aim toggle | checkbox | off | `aim_toggle.cpp` | FC2JackalFix `input/inputtoggles.ixx` | planned |
-| Sprint toggle | checkbox | off | `sprint_toggle.cpp` | FC2JackalFix `input/inputtoggles.ixx` | planned |
-| Sprint turn | checkbox | off | `sprint_turn.cpp` | FC2JackalFix `input/looksensitivity.ixx` | planned |
-| No rim lighting | checkbox | off | `no_rim_light.cpp` | FC2JackalFix `graphics/rimlighting.ixx` | planned |
-| No sprint and aim blur | checkbox | off | `no_blur.cpp` | FC2JackalFix `graphics/postfx.ixx` | planned |
+| Briefings keep control | checkbox | off | `briefing_control.cpp` | Scubrah's Patch, [skippable-dialog](../../legacy/scubrahs-patch/features/skippable-dialog.md) | built, not checked in game |
+| Keep weapon on rescue | checkbox | off | `rescue_keeps_weapon.cpp` | Scubrah's Patch, [buddy-rescue-fluid](../../legacy/scubrahs-patch/features/buddy-rescue-fluid.md) | built, not checked in game |
+| No forced buddy rescues (new game) | checkbox | off | `no_forced_rescue.cpp` | Scubrah's Patch, [buddy-rescue-optional](../../legacy/scubrahs-patch/features/buddy-rescue-optional.md) | built, not checked in game |
+| No reputation drop | checkbox | off | `reputation_kept.cpp` | Scubrah's Patch, [reputation-kept](../../legacy/scubrahs-patch/features/reputation-kept.md) | built, not checked in game |
+| Hide diamond message | checkbox | off | `no_diamond_message.cpp` | Scubrah's Patch, [economy-briefcase-tracker](../../legacy/scubrahs-patch/features/economy-briefcase-tracker.md) | built, not checked in game |
+| No blinking pickups | checkbox | off | `no_blinking_items.cpp` | Realism Plus, [graphics-no-flashing-items](../../legacy/realism-plus/features/graphics-no-flashing-items.md); FC2JackalFix `gameplay/blinkingitems.ixx` | built, not checked in game |
+| No save icons on map | checkbox | off | `no_save_icons.cpp` | Realism Plus, [nav-no-save-icons](../../legacy/realism-plus/features/nav-no-save-icons.md) | built, not checked in game |
+| Limited saving | checkbox | off | `limited_saving.cpp` | Realism Plus, [saving-no-pause-save](../../legacy/realism-plus/features/saving-no-pause-save.md); FC2JackalFix `gameplay/limitedsaving.ixx` | built, not checked in game |
+| Brown filter | checkbox | **on** | `brown_filter.cpp` | Scubrah's Patch, [original-colorgrading](../../legacy/scubrahs-patch/features/original-colorgrading.md); FC2JackalFix `graphics/saturation.ixx` | built, not checked in game |
+| No hit indicator | checkbox | off | `no_hit_indicator.cpp` | FC2JackalFix `gameplay/hitindicator.ixx` | built, not checked in game |
+| HUD fade-out | Always hidden · 1–60 s · Always shown | 3 s (game default) | `hud_fade.cpp` | FC2JackalFix `gameplay/hudfadeout.ixx` | built, not checked in game |
+| Skip tutorial pop-ups | Off · Pop-ups · Pop-ups and hints | Off | `skip_tutorials.cpp` | FC2JackalFix `gameplay/tutorialmessages.ixx` | built, not checked in game |
+| Aim toggle | checkbox | off | `aim_toggle.cpp` | FC2JackalFix `input/inputtoggles.ixx` | built, not checked in game |
+| Sprint toggle | checkbox | off | `sprint_toggle.cpp` | FC2JackalFix `input/inputtoggles.ixx` | built, not checked in game |
+| Sprint turn | checkbox | off | `sprint_turn.cpp` | FC2JackalFix `input/looksensitivity.ixx` | built, not checked in game |
+| No rim lighting | checkbox | off | `no_rim_light.cpp` | FC2JackalFix `graphics/rimlighting.ixx` | built, not checked in game |
+| No sprint and aim blur | checkbox | off | `no_blur.cpp` | FC2JackalFix `graphics/postfx.ixx` | built, not checked in game |
 
 The FC2JackalFix modules are under [`tools/third-party/FC2JackalFix/source/`](../../tools/third-party/FC2JackalFix/source).
 
