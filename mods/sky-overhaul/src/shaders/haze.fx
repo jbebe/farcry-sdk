@@ -5,10 +5,13 @@
 #include "hash.inc.fx"
 #include "solid.inc.fx"
 
-// The world in MainPS; the mask being blurred in MaskBlurPS.
+// The world in MainPS and DownPS; what is being blurred in BlurPS.
 sampler2D Scene : register(s0);
 // Where a mirage shows, blurred, at half resolution: red is how much.
 sampler2D Mask : register(s2);
+// The far world blurred, at quarter resolution, its colour multiplied by alpha: how much of what
+// went into it was far.
+sampler2D Blurred : register(s4);
 
 // x  how far the air bends a look over REFERENCE_PATH of hot air, in radians
 // y  how much of the ground a mirage replaces
@@ -24,7 +27,7 @@ float4 Heat : register(c96);
 float4 Time : register(c97);
 
 // xy  what the solid depth is linearised with
-// zw  one pixel of the mask, in texture coordinates
+// zw  one pixel of the mirage's mask, in texture coordinates
 float4 Solid : register(c98);
 
 // x  the up component of the steepest ground's normal that still shows a mirage
@@ -32,8 +35,14 @@ float4 Solid : register(c98);
 // zw the distances over which a mirage comes in, in metres
 float4 Level : register(c99);
 
-// xy  the mask blur's axis, one pixel of the mask long
-float4 Axis : register(c100);
+// x  the distance at which the far world starts to blur, in metres
+// y  the distance at which it is wholly blurred
+// z  how far it blurs at the most
+float4 Far : register(c100);
+
+// xy  the axis of a blur pass, one pixel of its target long
+// zw  one pixel of that target, in texture coordinates
+float4 Axis : register(c101);
 
 #define PI 3.14159265f
 
@@ -83,9 +92,12 @@ static const float GRASS_HEIGHT = 0.2f;
 // it fills small gaps and reaches a little past its edge.
 static const float2 SPREAD = float2(0.1f, 0.5f);
 
-// The mask blur's half width, in pixels of the mask, and its weights from the centre out.
-#define MASK_RADIUS 4
-static const float MASK_WEIGHTS[MASK_RADIUS + 1] = {1.0f, 0.88f, 0.61f, 0.32f, 0.14f};
+// A blur pass's half width, in pixels of its target, and its weights from the centre out.
+#define BLUR_RADIUS 4
+static const float BLUR_WEIGHTS[BLUR_RADIUS + 1] = {1.0f, 0.88f, 0.61f, 0.32f, 0.14f};
+
+// The distance from which things go into the far world's blur at all, as a share of Far.x.
+static const float NEAR_SHARE = 0.5f;
 
 // Noise in [-0.5, 0.5) per channel, flat within each cell and quick between them, repeating every
 // `period` along x.
@@ -223,19 +235,44 @@ float4 MaskPS(float2 screen : VPOS) : COLOR0
     return float4(mirage, 0.0f, 0.0f, 1.0f);
 }
 
-// One axis of the mask's blur.
-float4 MaskBlurPS(float2 screen : VPOS) : COLOR0
+// One axis of a blur, of the mask or of the far world.
+float4 BlurPS(float2 screen : VPOS) : COLOR0
 {
-    float sum = 0.0f;
+    float4 sum = 0.0f;
     float weight = 0.0f;
-    [unroll] for (int i = -MASK_RADIUS; i <= MASK_RADIUS; i++)
+    [unroll] for (int i = -BLUR_RADIUS; i <= BLUR_RADIUS; i++)
     {
-        float w = MASK_WEIGHTS[abs(i)];
-        float2 at = (screen + 0.5f + Axis.xy * i) * Solid.zw;
-        sum += tex2Dlod(Scene, float4(at, 0.0f, 0.0f)).r * w;
+        float w = BLUR_WEIGHTS[abs(i)];
+        float2 at = (screen + 0.5f + Axis.xy * i) * Axis.zw;
+        sum += tex2Dlod(Scene, float4(at, 0.0f, 0.0f)) * w;
         weight += w;
     }
-    return float4(sum / weight, 0.0f, 0.0f, 1.0f);
+    return sum / weight;
+}
+
+// How far off what was drawn at `uv` is, from nought where it is near enough to stay sharp to one
+// for the sky. The weapon is nought.
+float Farness(float2 uv)
+{
+    float stored = Stored(uv);
+    return IsSky(stored) ? 1.0f
+                         : smoothstep(NEAR_SHARE * Far.x, Far.x, stored * length(ViewRay(uv)));
+}
+
+// The far world at quarter resolution, its colour multiplied by how far it is, so near things never
+// spread into the blur.
+float4 DownPS(float2 screen : VPOS) : COLOR0
+{
+    float2 centre = (screen + 0.5f) * Axis.zw;
+    float4 sum = 0.0f;
+    // Four filtered taps, each the mean of a two by two block, over the four by four this covers.
+    [unroll] for (int i = 0; i < 4; i++)
+    {
+        float2 at = centre + float2(i % 2 == 0 ? -1.0f : 1.0f, i < 2 ? -1.0f : 1.0f) * Lens.zw;
+        float far = Farness(at);
+        sum += float4(tex2Dlod(Scene, float4(at, 0.0f, 0.0f)).rgb * far, far);
+    }
+    return sum * 0.25f;
 }
 
 float4 MainPS(float2 screen : VPOS) : COLOR0
@@ -269,6 +306,15 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
     float2 bent = MayCover(Stored(uv + shift), z) ? uv + shift : uv;
     float turn = Dither(screen);
     float3 colour = Look(bent, BLUR_SHARE * toUv, turn, z);
+
+    // Far off, the land melts into blobs that dance with the air as far as it ever bends a look.
+    [branch] if (Far.z > 0.0f)
+    {
+        float2 dance = shimmer.xy * float2(SIDEWAYS, 1.0f) * Heat.x * MOST_GROWTH / (2.0f * Lens.xy);
+        float4 blurred = tex2Dlod(Blurred, float4(uv + dance, 0.0f, 0.0f));
+        float melt = Far.z * smoothstep(Far.x, Far.y, length(at)) * saturate(2.0f * blurred.a);
+        colour = lerp(colour, blurred.rgb / max(blurred.a, 1e-3f), melt);
+    }
 
     // Soft at its edges, and over whatever small stands inside or beside it.
     [branch] if (Heat.y > 0.0f)

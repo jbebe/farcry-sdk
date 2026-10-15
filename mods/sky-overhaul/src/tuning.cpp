@@ -220,6 +220,9 @@ namespace {
         {"Heat haze wave height", &kHeatHaze, offsetof(Values, hazeWaveHeight), 2.86f, 0.5f, 20.0f,
          "%.2f arcmin",
          "How tall one wave of the shimmer is, as an angle of the unzoomed view. A degree is 60."},
+        {"Heat haze far blur", &kHeatHaze, offsetof(Values, hazeFarBlur), 1.0f, 0.0f, 1.0f, "%.2f",
+         "How far land melts into blobs that dance with the shimmer: from 300 m, wholly by 1.5 km. "
+         "Near things stay sharp."},
         {"Mirage strength", &kHeatHaze, offsetof(Values, mirageStrength), 1.0f, 0.0f, 1.0f, "%.2f",
          "How much of the sky a mirage shows on bare level ground far off, seen within about a "
          "degree of it."},

@@ -4,12 +4,13 @@
 #include "engine/render_target.h"
 #include "fcse_api.h"
 
-bool SkyOverhaul::BlurTargets::Ensure(IDirect3DDevice9* device, UINT width, UINT height) {
+bool SkyOverhaul::BlurTargets::Ensure(IDirect3DDevice9* device, UINT width, UINT height,
+                                      D3DFORMAT format) {
     if (m_refused) {
         return false;
     }
     if (m_device == device && m_targets[0].texture != nullptr && m_width == width &&
-        m_height == height) {
+        m_height == height && m_format == format) {
         return true;
     }
     Release();
@@ -17,19 +18,20 @@ bool SkyOverhaul::BlurTargets::Ensure(IDirect3DDevice9* device, UINT width, UINT
     D3DSURFACE_DESC desc = {};
     desc.Width = width;
     desc.Height = height;
-    desc.Format = D3DFMT_A8R8G8B8;
+    desc.Format = format;
     for (Target& target : m_targets) {
         const HRESULT created = CreateTarget(device, desc, &target.texture, &target.surface);
         if (FAILED(created)) {
             Release();
             m_refused = true;
-            FCSE::Logf("%s: no %ux%u target, 0x%08lX", m_owner, width, height,
-                       static_cast<unsigned long>(created));
+            FCSE::Logf("%s: no %ux%u target in format %u, 0x%08lX", m_owner, width, height,
+                       static_cast<unsigned>(format), static_cast<unsigned long>(created));
             return false;
         }
     }
     m_width = width;
     m_height = height;
+    m_format = format;
     return true;
 }
 
@@ -41,6 +43,7 @@ void SkyOverhaul::BlurTargets::Release() {
     m_device = nullptr;
     m_width = 0;
     m_height = 0;
+    m_format = D3DFMT_UNKNOWN;
     m_refused = false;
 }
 
