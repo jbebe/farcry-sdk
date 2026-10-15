@@ -8,18 +8,16 @@
 // radians at this+0x70, so substituting the argument is all the base setting takes.
 //
 // The rest of this file is what makes that safe. A raised field of view is not one number: the
-// weapon and arms draw in a second, nearer pass with a projection of their own; ladders and
-// cutscenes frame shots that a wide view spoils; the hang glider is a vehicle whose own fFOVAngle
-// wins; muzzle particles are split between the two passes and come apart the moment the two
-// projections differ; and the map's markers move between passes when the player is in a vehicle.
-// Each of those is one more site here, and skipping any of them ships a visible break rather than a
-// wider view.
+// weapon and arms draw in a second, nearer pass with a projection of their own, which has to follow
+// the camera wherever a first-person scene puts the hands on the world; muzzle particles are split
+// between the two passes and come apart the moment the two projections differ; and the map's
+// markers move between passes when the player is in a vehicle. Each of those is one more site here,
+// and skipping any of them ships a visible break rather than a wider view.
 //
-// Three principles hold throughout. Fields of view are scaled in tangent space, because that is how
-// the engine's own widescreen stretch works and anything else disagrees with it at the edges.
-// Clamps narrow only, so a context can pull the view in but never push it out past what the player
-// asked for. And every pointer taken out of the engine is page-checked and vtable-checked before
-// use, because the pawn that owned it does not survive a load.
+// Two principles hold throughout. Fields of view are scaled in tangent space, because that is how
+// the engine's own widescreen stretch works and anything else disagrees with it at the edges. And
+// every pointer taken out of the engine is page-checked and vtable-checked before use, because the
+// pawn that owned it does not survive a load.
 #include "fcse_api.h"
 
 #include "engine/memory_probe.h"
@@ -39,51 +37,9 @@ namespace {
     // Degrees, as the setting delivers it.
     float g_fieldOfView = 75.0f;
 
-    // Cutscenes, ladders and gliders break above the stock 75 - reframed shots, and the first
-    // person body's own edges coming into view. 45 is the floor the engine itself clamps to.
-    constexpr float kFieldOfViewFloor = 45.0f;
-
-    // Hang gliders. Measured before the engine's Hor+ stretch, so this renders as 91.31 on 16:9.
-    constexpr float kGliderFieldOfViewMax = 75.0f;
-
-    // Cutscenes and ladders. 59.85 comes back out at 75 after the stretch. One ceiling for both,
-    // because a ladder mount enters a scene context and separate ceilings pull the view twice.
-    constexpr float kNarrowFieldOfViewMax = 59.85f;
-
-    float GliderCeiling() {
-        return std::clamp(g_fieldOfView, kFieldOfViewFloor, kGliderFieldOfViewMax);
-    }
-
-    float NarrowCeiling() {
-        return std::clamp(g_fieldOfView, kFieldOfViewFloor, kNarrowFieldOfViewMax);
-    }
-
     float DegreesToRadians(float degrees) {
         return degrees * (kPi / 180.0f);
     }
-
-    // Narrows only. Spelled out rather than std::min, which Windows.h's own macro breaks.
-    void NarrowFieldOfView(float* fov, float cap) {
-        if (*fov > cap) {
-            *fov = cap;
-        }
-    }
-
-    // Partway to the cap, for a clamp that has to arrive over several frames.
-    void BlendFieldOfView(float* fov, float cap, float weight) {
-        if (*fov > cap) {
-            *fov += (cap - *fov) * weight;
-        }
-    }
-
-    // CCameraBoneComponent::Update gets the secondary base, +4, so fFOV (+0x70, radians) is at
-    // +0x6C.
-    constexpr uintptr_t kBoneCameraFieldOfView = 0x6C;
-
-    // The camera state CCameraPawnComponent::Update fills in: world FOV and model FOV, both in
-    // radians and both untransformed here.
-    constexpr uintptr_t kCameraStateFieldOfView = 0x28;
-    constexpr uintptr_t kCameraStateViewmodelFieldOfView = 0x30;
 
     // Active, on CCameraComponent, reached from the secondary base the update is handed.
     constexpr uintptr_t kCameraActive = 0x0C;
@@ -91,17 +47,18 @@ namespace {
     // The frame delta, the update's first argument.
     constexpr uintptr_t kCameraDeltaTime = 0x08;
 
-    // Roughly the mount animation's length, so the clamp arrives over it instead of snapping.
-    constexpr float kNarrowBlendSeconds = 0.35f;
+    // Roughly a mount animation's length: the near pass keeps following the camera this long after
+    // a scene, or as long as the scene lasted if that was shorter.
+    constexpr float kSceneHoldSeconds = 0.35f;
 
-    // A frame delta past this is a load or a hitch, and stepping the blend by it would snap.
-    constexpr float kNarrowBlendMaxStep = 0.1f;
+    // A frame delta past this is a load or a hitch, and stepping by it would snap.
+    constexpr float kMaxFrameStep = 0.1f;
 
     // First-person camera update only, so no atomics. Keyed on the component and never on the
     // pooled camera state, where an owner test only passes on the frames the buffer is reused.
-    float g_narrowBlend = 0.0f;
-    uintptr_t g_narrowBlendCamera = 0;
-    uint32_t g_narrowBlendContext = 0;
+    float g_sceneHold = 0.0f;
+    uintptr_t g_sceneHoldCamera = 0;
+    bool g_sceneHoldFromCutscene = false;
 
     // CPawnBeautifierComponent. The context instance names the situation, the type instance names
     // whose pawn it is, so one classifier covers both.
@@ -115,25 +72,19 @@ namespace {
         kKindPlayer,
     };
 
-    enum NarrowContext : uint32_t {
-        kNarrowNone = 0,
-        kNarrowLadder,
-        kNarrowCutscene,
+    enum SceneContext : uint32_t {
+        kSceneNone = 0,
+        kSceneLadder,
+        kSceneCutscene,
     };
 
-    // CVehicle's FOV block; the paraglider is named by its own hash.
-    constexpr uintptr_t kVehicleName = 0x00;
-    constexpr uintptr_t kVehicleFieldOfViewAngle = 0x234;
-    constexpr uint32_t kVehicleNameParaglider = 0x7B2D589C;
+    // The player's pawn only, so an AI on a ladder does not count. Stamped with an expiry rather
+    // than latched: quickloading out of a scene destroys the pawn with no transition to clear it.
+    std::atomic<uint32_t> g_sceneContext{kSceneNone};
+    std::atomic<uint32_t> g_sceneStamp{0};
 
-    // The player's pawn only, so an AI on a ladder cannot narrow the view. Stamped with an expiry
-    // rather than latched: quickloading out of a scene destroys the pawn with no transition to
-    // clear it.
-    std::atomic<uint32_t> g_narrowContext{kNarrowNone};
-    std::atomic<uint32_t> g_narrowStamp{0};
-
-    // Long enough to ride out a stutter, short enough that a load releases the clamp unseen.
-    constexpr uint32_t kNarrowFreshnessMs = 250;
+    // Long enough to ride out a stutter, short enough that a load ends the scene unseen.
+    constexpr uint32_t kSceneFreshnessMs = 250;
 
     // Whether the near pass follows the camera this frame, published by the pawn camera hook.
     std::atomic<bool> g_nearPassFollowsCamera{false};
@@ -141,8 +92,8 @@ namespace {
     // The vehicle channel's weight, sampled once a frame: zero on foot, one in a seat.
     std::atomic<float> g_vehicleFovWeight{0.0f};
 
-    bool NarrowStateIsStale() {
-        return GetTickCount() - g_narrowStamp.load(std::memory_order_relaxed) > kNarrowFreshnessMs;
+    bool SceneStateIsStale() {
+        return GetTickCount() - g_sceneStamp.load(std::memory_order_relaxed) > kSceneFreshnessMs;
     }
 
     // Adapter only: this file works in uintptr_t throughout.
@@ -234,15 +185,6 @@ namespace {
         return kind;
     }
 
-    // Scaled in tangent space, to match the game's own widescreen scaling.
-    float ScaleFov(float fovRadians, float scale) {
-        if (scale == 1.0f) {
-            return fovRadians;
-        }
-
-        return 2.0f * std::atan(std::tan(fovRadians * 0.5f) * scale);
-    }
-
     // The engine's own widescreen stretch factor.
     constexpr float kWidescreenStretch = 0.75f;
 
@@ -251,46 +193,6 @@ namespace {
 
     // How far the sights are up, sampled once a frame: zero down, one fully raised.
     std::atomic<float> g_ironsightBlend{0.0f};
-
-    // How far the clamp has pulled the world in, in tangent space, and the ceiling it heads for.
-    // One is zero exactly when the other is.
-    std::atomic<float> g_narrowTangentScale{1.0f};
-    std::atomic<float> g_narrowViewmodelCeiling{0.0f};
-
-    void ClearNarrowViewmodel() {
-        g_narrowTangentScale.store(1.0f, std::memory_order_relaxed);
-        g_narrowViewmodelCeiling.store(0.0f, std::memory_order_relaxed);
-    }
-
-    float ViewmodelScaleFor(float fovRadians, float aspect) {
-        const float cameraTan = std::tan(fovRadians * 0.5f);
-        if (cameraTan <= 0.0f) {
-            return 1.0f;
-        }
-
-        float viewmodelTan = kViewmodelHalfTangent *
-                             g_narrowTangentScale.load(std::memory_order_relaxed) *
-                             kWidescreenStretch * aspect;
-
-        // The camera state is clamped before the widescreen stretch, so the ceiling takes it here.
-        const float ceiling = g_narrowViewmodelCeiling.load(std::memory_order_relaxed);
-        if (ceiling > 0.0f) {
-            const float ceilingTan = std::tan(ceiling * 0.5f) * kWidescreenStretch * aspect;
-            if (viewmodelTan > ceilingTan) {
-                viewmodelTan = ceilingTan;
-            }
-        }
-
-        const float scale = viewmodelTan / cameraTan;
-        if (scale <= 1.0f) {
-            return scale;
-        }
-
-        // A viewmodel FOV above the world's is legitimate, so there is no flat ceiling of one -
-        // except with the sights up, where widening the near pass back out holds the gun off the
-        // eye.
-        return g_ironsightBlend.load(std::memory_order_relaxed) > 0.0f ? 1.0f : scale;
-    }
 
     // Weapon setup, past the FLD and the FSTP that copy the weapon's ironsight FOV into the pawn's
     // channel, six bytes and three.
@@ -303,18 +205,10 @@ namespace {
     // The pawn's FOV channels, blended from a CPawnFOV rather than read where they are set. Two
     // 0x1C records: ironsight at 0x08, base at 0x24.
     constexpr uintptr_t kPawnFovIronsightWeight = 0x18;
-    constexpr uintptr_t kPawnFovBaseValue = 0x38;
     constexpr uintptr_t kPawnFovBaseWeight = 0x34;
-    constexpr uintptr_t kPawnFovBaseArmed = 0x29;
 
     // The player's FOV channels as of the last camera frame, compared but never dereferenced.
     std::atomic<uintptr_t> g_pawnFieldOfView{0};
-
-    // The seat FOV push is the only place the paraglider is identified, so the answer is kept.
-    std::atomic<bool> g_seatIsParaglider{false};
-
-    // Set by a change of the setting, for the next camera frame to re-push the glider ceiling.
-    std::atomic<bool> g_gliderPushPending{false};
 
     // Muzzle particles: the weapon draws in the near pass and its flash and smoke in the world one,
     // so the two come apart once the fields of view differ. The mask is read from the owner - one
@@ -569,9 +463,9 @@ namespace {
     // Once a frame on the gameplay thread, keyed on the context rather than the hide, because
     // either can arrive first.
     void UpdateFirstPersonSetForScene() {
-        // A stale narrow state is a load or a teardown, so the table is dropped and the census
+        // A stale scene state is a load or a teardown, so the table is dropped and the census
         // fills it again.
-        if (NarrowStateIsStale()) {
+        if (SceneStateIsStale()) {
             RestoreFirstPersonSet();
             ForgetFirstPersonSet();
             return;
@@ -579,7 +473,7 @@ namespace {
 
         // A seat is the engine's own split, already answered by the near pass fade, and suppressing
         // there fights it. Boats and gliders reach a scene context while mounting.
-        const bool scene = g_narrowContext.load(std::memory_order_relaxed) == kNarrowCutscene &&
+        const bool scene = g_sceneContext.load(std::memory_order_relaxed) == kSceneCutscene &&
                            g_vehicleFovWeight.load(std::memory_order_relaxed) <= 0.0f;
 
         if (scene) {
@@ -621,11 +515,11 @@ namespace {
             return true;
         }
 
-        if (NarrowStateIsStale()) {
+        if (SceneStateIsStale()) {
             return false;
         }
 
-        return g_narrowContext.load(std::memory_order_relaxed) != kNarrowNone;
+        return g_sceneContext.load(std::memory_order_relaxed) != kSceneNone;
     }
 
     // The deadline, on the gameplay thread the delta comes from. A swing is back in about 1.3
@@ -743,15 +637,21 @@ namespace {
             return cameraFov;
         }
 
-        // Not named `near`: windef.h still defines that as a macro.
-        const float nearFov = ScaleFov(cameraFov, ViewmodelScaleFor(cameraFov, aspect));
+        // In tangent space, to match the game's own widescreen scaling. Not named `near`: windef.h
+        // still defines that as a macro.
+        const float cameraTan = std::tan(cameraFov * 0.5f);
+        const float nearTan = kViewmodelHalfTangent * kWidescreenStretch * aspect;
+
+        // A viewmodel FOV above the world's is legitimate, except with the sights up, where
+        // widening the near pass back out holds the gun off the eye.
+        if (cameraTan <= 0.0f ||
+            (nearTan > cameraTan && g_ironsightBlend.load(std::memory_order_relaxed) > 0.0f)) {
+            return cameraFov;
+        }
 
         // In a seat the near pass follows the camera, or the hands are not where the wheel is.
-        // Faded over the seat's own transition time rather than switched, in tangent space.
+        // Faded over the seat's own transition time rather than switched.
         const float seat = std::clamp(g_vehicleFovWeight.load(std::memory_order_relaxed), 0.0f, 1.0f);
-        if (seat <= 0.0f) {
-            return nearFov;
-        }
 
         // Seated, the camera's own number rather than the arithmetic that arrives at it: the
         // tan/atan round trip lands a few ulps away.
@@ -759,25 +659,7 @@ namespace {
             return cameraFov;
         }
 
-        const float nearTan = std::tan(nearFov * 0.5f);
-        const float cameraTan = std::tan(cameraFov * 0.5f);
-
         return 2.0f * std::atan(nearTan + (cameraTan - nearTan) * seat);
-    }
-
-    // Both seat hooks, ESI the vehicle. The paraglider is clamped to the glider ceiling; every other
-    // vehicle keeps its own.
-    void SeatFieldOfViewHandler(FCSE_MidHookContext* ctx) {
-        const uintptr_t vehicle = ctx->esi;
-        const bool paraglider =
-            *reinterpret_cast<uint32_t*>(vehicle + kVehicleName) == kVehicleNameParaglider;
-
-        g_seatIsParaglider.store(paraglider, std::memory_order_relaxed);
-
-        if (paraglider) {
-            NarrowFieldOfView(reinterpret_cast<float*>(vehicle + kVehicleFieldOfViewAngle),
-                              GliderCeiling());
-        }
     }
 
     void FieldOfViewSetterHandler(FCSE_MidHookContext* ctx) {
@@ -807,15 +689,8 @@ namespace {
         *reinterpret_cast<float*>(ctx->edi + 0x58) = 1.0f;
     }
 
-    // Cutscenes. CCameraBoneComponent::Update stores fFOV into both the world and model fields, so
-    // rewriting it ahead of the first FLD covers both.
-    void CinematicHandler(FCSE_MidHookContext* ctx) {
-        NarrowFieldOfView(reinterpret_cast<float*>(ctx->edi + kBoneCameraFieldOfView),
-                          DegreesToRadians(NarrowCeiling()));
-    }
-
-    // Ladders and first-person scenes carry no field of view to intercept, so the beautifier's
-    // context is read at its update's entry, one frame old.
+    // Whether the player is on a ladder or in a first-person scene, read from the beautifier's
+    // context at its update's entry, one frame old.
     void BeautifierHandler(FCSE_MidHookContext* ctx) {
         const uintptr_t component = ctx->ecx - 4;
 
@@ -824,20 +699,20 @@ namespace {
             return;
         }
 
-        uint32_t context = kNarrowNone;
+        uint32_t context = kSceneNone;
         switch (KindOf(*reinterpret_cast<uintptr_t*>(component + kContextBeautifier))) {
         case kKindLadder:
-            context = kNarrowLadder;
+            context = kSceneLadder;
             break;
         case kKindCutscene:
-            context = kNarrowCutscene;
+            context = kSceneCutscene;
             break;
         default:
             break;
         }
 
-        g_narrowContext.store(context, std::memory_order_relaxed);
-        g_narrowStamp.store(GetTickCount(), std::memory_order_relaxed);
+        g_sceneContext.store(context, std::memory_order_relaxed);
+        g_sceneStamp.store(GetTickCount(), std::memory_order_relaxed);
     }
 
     // At the head of the frame's FOV blend: the camera's own field is rebuilt every frame and the
@@ -848,21 +723,12 @@ namespace {
             DegreesToRadians(g_fieldOfView);
 
         const uintptr_t block = ctx->eax;
-        const float seat = *reinterpret_cast<float*>(block + kPawnFovBaseWeight);
 
         g_pawnFieldOfView.store(block, std::memory_order_relaxed);
         g_ironsightBlend.store(*reinterpret_cast<float*>(block + kPawnFovIronsightWeight),
                                std::memory_order_relaxed);
-        g_vehicleFovWeight.store(seat, std::memory_order_relaxed);
-
-        // A changed setting reaches a player already in the air rather than waiting for the next
-        // seat. Written outright, since narrowing could not raise it back.
-        if (g_gliderPushPending.exchange(false, std::memory_order_relaxed) &&
-            g_seatIsParaglider.load(std::memory_order_relaxed) && seat > 0.0f &&
-            *reinterpret_cast<uint8_t*>(block + kPawnFovBaseArmed) != 0) {
-            *reinterpret_cast<float*>(block + kPawnFovBaseValue) =
-                DegreesToRadians(GliderCeiling());
-        }
+        g_vehicleFovWeight.store(*reinterpret_cast<float*>(block + kPawnFovBaseWeight),
+                                 std::memory_order_relaxed);
 
         // The swing deadline, and the scene's layer bookkeeping: this is the one hook running every
         // frame on the gameplay thread, and the set's first-use allocation faults from the near
@@ -871,83 +737,51 @@ namespace {
         UpdateFirstPersonSetForScene();
     }
 
-    // CCameraPawnComponent::Update for first person, both stores landed and before the widescreen
-    // transform. The blend is tied to the camera it raised.
-    void NarrowHandler(FCSE_MidHookContext* ctx) {
+    // CCameraPawnComponent::Update for first person. The scene hold is tied to the camera it started
+    // on.
+    void PawnCameraHandler(FCSE_MidHookContext* ctx) {
         // Only the camera actually driving the view; an inactive one still updates.
         if (*reinterpret_cast<uint8_t*>(ctx->edi + kCameraActive) == 0) {
             return;
         }
 
         // On the update's own delta, so a paused game does not age the hold.
-        const float frame = *reinterpret_cast<float*>(ctx->ebp + kCameraDeltaTime);
-        StepWithheldLayer(std::clamp(frame, 0.0f, kNarrowBlendMaxStep));
+        const float frame =
+            std::clamp(*reinterpret_cast<float*>(ctx->ebp + kCameraDeltaTime), 0.0f, kMaxFrameStep);
+        StepWithheldLayer(frame);
 
-        // The pawn that owned the state is gone, so the clamp is dropped outright.
-        if (NarrowStateIsStale()) {
-            g_narrowBlend = 0.0f;
-            g_narrowBlendCamera = 0;
-            g_narrowBlendContext = kNarrowNone;
-            ClearNarrowViewmodel();
+        // The pawn that owned the state is gone, so the scene is dropped outright.
+        if (SceneStateIsStale()) {
+            g_sceneHold = 0.0f;
+            g_sceneHoldFromCutscene = false;
             g_nearPassFollowsCamera.store(false, std::memory_order_relaxed);
             return;
         }
 
-        const uint32_t context = g_narrowContext.load(std::memory_order_relaxed);
-        const bool narrow = context != kNarrowNone;
+        const uint32_t context = g_sceneContext.load(std::memory_order_relaxed);
 
-        // A different active camera starts again rather than carrying a weight across views, and
-        // never holds a pointer that is not coming back.
-        if (g_narrowBlendCamera != ctx->edi) {
-            g_narrowBlendCamera = ctx->edi;
-            g_narrowBlend = 0.0f;
+        // A different active camera starts again rather than carrying a hold across views.
+        if (g_sceneHoldCamera != ctx->edi) {
+            g_sceneHoldCamera = ctx->edi;
+            g_sceneHold = 0.0f;
         }
 
-        // So the near pass follows the camera on exactly the frames the world is clamped. The blend
-        // out counts, or the viewmodel jumps out of every scene.
-        if (context == kNarrowCutscene) {
-            g_narrowBlendContext = kNarrowCutscene;
+        // The near pass follows the camera through a scene, a ladder mounted through one, and the
+        // hold after, or the viewmodel jumps out of every scene.
+        if (context == kSceneCutscene) {
+            g_sceneHoldFromCutscene = true;
         }
 
-        g_nearPassFollowsCamera.store(context == kNarrowCutscene ||
-                                          (g_narrowBlend > 0.0f &&
-                                           g_narrowBlendContext == kNarrowCutscene),
+        g_nearPassFollowsCamera.store(context == kSceneCutscene ||
+                                          (g_sceneHold > 0.0f && g_sceneHoldFromCutscene),
                                       std::memory_order_relaxed);
 
-        if (!narrow && g_narrowBlend <= 0.0f) {
-            ClearNarrowViewmodel();
-            return;
-        }
-
-        const float step = std::clamp(frame, 0.0f, kNarrowBlendMaxStep) / kNarrowBlendSeconds;
-
-        g_narrowBlend = std::clamp(g_narrowBlend + (narrow ? step : -step), 0.0f, 1.0f);
-        if (g_narrowBlend <= 0.0f) {
-            g_narrowBlendContext = kNarrowNone;
-            ClearNarrowViewmodel();
+        g_sceneHold = std::clamp(g_sceneHold + (context != kSceneNone ? frame : -frame), 0.0f,
+                                 kSceneHoldSeconds);
+        if (g_sceneHold <= 0.0f) {
+            g_sceneHoldFromCutscene = false;
             g_nearPassFollowsCamera.store(false, std::memory_order_relaxed);
-            return;
         }
-
-        // Smoothstep, so the move leaves and arrives at rest. Both contexts take the same ceiling;
-        // the context still tells them apart.
-        const float weight = g_narrowBlend * g_narrowBlend * (3.0f - 2.0f * g_narrowBlend);
-        const float fov = DegreesToRadians(NarrowCeiling());
-
-        float* worldFov = reinterpret_cast<float*>(ctx->esi + kCameraStateFieldOfView);
-        const float before = *worldFov;
-
-        BlendFieldOfView(worldFov, fov, weight);
-        BlendFieldOfView(reinterpret_cast<float*>(ctx->esi + kCameraStateViewmodelFieldOfView), fov,
-                         weight);
-
-        // Off the world FOV rather than the blend, so an unmoved frame carries a scale of one.
-        const float beforeTan = std::tan(before * 0.5f);
-        g_narrowTangentScale.store(
-            beforeTan > 0.0f ? std::tan(*worldFov * 0.5f) / beforeTan : 1.0f,
-            std::memory_order_relaxed);
-
-        g_narrowViewmodelCeiling.store(fov, std::memory_order_relaxed);
     }
 
     // Weapon setup, where the weapon hands its ironsight FOV to the pawn: whether a melee weapon is
@@ -985,8 +819,6 @@ namespace {
         FCSE::Pattern("55 8B EC 83 E4 F0 81 EC 84 00 00 00 53 56 57 8B 7D 10 8B 77 0C 8B D9")};
     FCSE::Relocation<uint8_t*> g_widescreen{FCSE::Pattern(
         "8B 0D ?? ?? ?? ?? 83 79 40 00 0F 84 C4 00 00 00 E8 ?? ?? ?? ?? F3 0F 10 40 10")};
-    FCSE::Relocation<uint8_t*> g_cinematic{
-        FCSE::Pattern("D9 47 6C 8B 54 24 40 D9 5E 28 D9 47 6C 52 D9 5E 30")};
     FCSE::Relocation<uint8_t*> g_beautifier{FCSE::Pattern(
         "55 56 8B E9 57 8B 7D 04 8B 77 0C 83 47 08 01 8B CE E8 ?? ?? ?? ?? 83 3D ?? ?? ?? ?? 00 "
         "75 07")};
@@ -994,12 +826,6 @@ namespace {
         FCSE::Pattern("F3 0F 10 4E 70 F3 0F 10 47 14 0F 57 D2 F3 0F 5C C1 F3 0F 59 47 10")};
     FCSE::Relocation<uint8_t*> g_pawnCamera{
         FCSE::Pattern("D9 47 6C 8B 4C 24 3C D9 5E 30 8A 9E 80 00 00 00")};
-    FCSE::Relocation<uint8_t*> g_gliderFov{FCSE::Pattern(
-        "8B CB E8 ?? ?? ?? ?? D9 86 30 02 00 00 D9 58 2C 8B 8E 54 02 00 00 89 48 3C F3 0F 10 86 "
-        "34 02 00 00 F3 0F 59 05 ?? ?? ?? ?? F3 0F 11 40 38 C6 40 29 01")};
-    FCSE::Relocation<uint8_t*> g_gliderSeatFov{FCSE::Pattern(
-        "8B 4C 24 08 74 ?? E8 ?? ?? ?? ?? D9 86 30 02 00 00 D9 58 2C 8B 8E 54 02 00 00 89 48 3C "
-        "F3 0F 10 86 34 02 00 00 F3 0F 59 05 ?? ?? ?? ?? F3 0F 11 40 38 C6 40 29 01")};
     FCSE::Relocation<uint8_t*> g_weaponSetup{FCSE::Pattern("D9 80 E4 00 00 00 D9 5F 1C")};
 
     // Offsets into the matches above, each naming the instruction the hook stands on.
@@ -1008,8 +834,6 @@ namespace {
     constexpr ptrdiff_t kMuzzleInstanceReady = 0x22;
     constexpr ptrdiff_t kWidescreenBranch = 10;
     constexpr ptrdiff_t kPawnCameraStored = 10;
-    constexpr ptrdiff_t kGliderSeat = 0x19;
-    constexpr ptrdiff_t kGliderSeatAlternate = 0x1D;
 
     // Resolves a call's target from its displacement.
     uint8_t* CallTarget(uint8_t* call) {
@@ -1074,10 +898,6 @@ void InstallFovHook() {
                      &WidescreenHandler);
     }
 
-    if (g_cinematic) {
-        api->MidHook(reinterpret_cast<void*>(g_cinematic.address()), &CinematicHandler);
-    }
-
     if (g_beautifier) {
         api->MidHook(reinterpret_cast<void*>(g_beautifier.address()), &BeautifierHandler);
     }
@@ -1088,18 +908,7 @@ void InstallFovHook() {
 
     if (g_pawnCamera) {
         api->MidHook(reinterpret_cast<void*>(g_pawnCamera.address() + kPawnCameraStored),
-                     &NarrowHandler);
-    }
-
-    // Hang gliders: the camera's FOV is the vehicle's own angle, pushed into the pawn's base
-    // channel as a blend target. Inlined twice, hence two patterns.
-    if (g_gliderFov) {
-        api->MidHook(reinterpret_cast<void*>(g_gliderFov.address() + kGliderSeat),
-                     &SeatFieldOfViewHandler);
-    }
-    if (g_gliderSeatFov) {
-        api->MidHook(reinterpret_cast<void*>(g_gliderSeatFov.address() + kGliderSeatAlternate),
-                     &SeatFieldOfViewHandler);
+                     &PawnCameraHandler);
     }
 
     if (g_weaponSetup) {
@@ -1112,5 +921,4 @@ void InstallFovHook() {
 
 void __cdecl OnFovChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
     g_fieldOfView = static_cast<float>(value->asSlider);
-    g_gliderPushPending.store(true, std::memory_order_relaxed);
 }

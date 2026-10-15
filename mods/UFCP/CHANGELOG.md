@@ -2,6 +2,13 @@
 
 Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Changed
+- **Field of view** now applies in cutscene-style first-person animations (healing, repairs, doors,
+  getting in and out of vehicles) and on ladders, which used to pull it back to a narrower framing.
+  The hang glider is no longer narrowed either and flies at its own angle, as the game shipped.
+
 ## [1.0.0] - 2026-10-12
 
 First release. UFCP fixes bugs Ubisoft never patched, in the running game rather than in the files

@@ -47,12 +47,12 @@ disagree.
 
 **Field of view** is not one number. The base setting substitutes the argument to
 `CCameraComponent`'s `fFOV` property setter, but a wider view alone breaks things around it, so
-fifteen further sites exist only to keep it honest: the weapon and arms draw in a nearer pass with
-their own projection, ladders and cutscenes frame shots a wide view spoils, the hang glider's own
-angle wins, muzzle particles are split between the two passes and come apart once the two
-projections differ, and the map's markers change pass inside a vehicle. It is the view on foot
-only: the weapon and arms stay at the game's own 75 degrees, and the sights, scopes and vehicles
-keep their own.
+twelve further sites exist only to keep it honest: the weapon and arms draw in a nearer pass with
+their own projection, which follows the camera wherever a first-person scene puts the hands on the
+world, muzzle particles are split between the two passes and come apart once the two projections
+differ, and the map's markers change pass inside a vehicle. It is the view on foot, cutscenes and
+ladders included: the weapon and arms stay at the game's own 75 degrees, and the sights, scopes and
+vehicles, the hang glider among them, keep their own.
 
 **Maximum frame rate** uses the engine's own limiter, `gfx_MaxFps`. It is set on the command line at
 launch and written into the render profile afterwards, which is what lets a change made from the

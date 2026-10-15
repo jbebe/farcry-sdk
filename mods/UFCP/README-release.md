@@ -45,9 +45,8 @@ In the Mod Configuration Menu, on the Options screen, saved in `bin\fcse.ini`. A
 the game exactly as it shipped until you change them — the frame rate is capped at 60 out of the
 box, one row away from the stock behaviour.
 
-- **Field of view** — 65 to 140 degrees, default 75, the game's own. The view on foot; the weapon
-  and arms, the sights, scopes and vehicles keep their own, and cutscenes, ladders and the hang
-  glider keep their own framing.
+- **Field of view** — 65 to 140 degrees, default 75, the game's own. The view on foot, cutscenes
+  and ladders included; the weapon and arms, the sights, scopes and vehicles keep their own.
 - **Maximum frame rate** — the engine's own limiter, capped at 60 by default. Takes effect without
   a restart.
 - **Display mode** — borderless, applied on the next launch.
