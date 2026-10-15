@@ -2,18 +2,80 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.5.0] - 2026-10-15
 
 ### Added
+- **HKX editor for Havok collision** — **Open in HKX Editor…** on an `.hkx` opens it in its own tab:
+  the collision drawn over the model filed beside it, the bodies and shapes as a tree, and the
+  selected object's values beside them. Type over a number, flag, vector or named choice; drag a
+  shape's arrows or rings to move or turn it, or a box's face knob to resize it; Undo, Redo and Save
+  (Ctrl+S) as in the other editors. The Files tab previews an `.hkx` as text, with a diff when a mod
+  changes it.
+- **Saving collision keeps Havok's saved values in step** — the MOPP index is rebuilt from the
+  shapes, and the list's bounds, the body's radius and a wrapper's radius are refreshed, so the game
+  sees the new collision.
+- **`hkx` commands** — `verify` and `dump`; `decode` writes a file as editable XML and `encode`
+  builds it back; `tree` numbers the shapes, and `move`, `turn`, `resize`, `add-box` and `remove`
+  edit them by number. `refresh` brings an edited file's saved values in line with its shapes, and
+  `check` reports what would break in game: a body after the first `HIGH_` or `NAV_` one, stale
+  bounds, a MOPP that lost a shape.
 - **Replacing a file with the wrong kind of file warns first** — the Files tab's Replace… compares
   the picked file's header with the one it replaces, and asks before putting, say, a WAV where a
   sound bank belongs, naming the button that imports audio instead.
+- **A texture builds from a bare `.dds`** — `xbt build`, the Files tab's Import… on an `.xbt` and an
+  `.fc2model` pack no longer need the `.xml` header; without one a fresh header is written, and the
+  `.dds` must carry its whole mip chain.
+- **Saves show their progress** — the Saves tab and `sav list` show the act, how much of the game is
+  complete, and the difficulty.
+- **Deploy says what it decided on its own** — the app now lists each file where one mod's whole
+  copy replaced another's, and each plugin left alone because `bin\plugins` already held a copy
+  JackAll didn't deploy, as `mod build` does.
+
+### Changed
+- **Your workspace settles a conflict between mods** — when two enabled mods set one value
+  differently, setting it in the workspace decides it and Deploy goes ahead. Browsing shows the later
+  mod's value instead of failing, and Deploy's message names both mods and says how to settle it:
+  untick one, or set the value in your workspace.
+- **Campaign DLC archives rank above the base game** — where a DLC the campaign mounts carries its
+  own copy of a file, JackAll reads that copy, as the game does. Only the folders the game mounts
+  archives from are read, so a stray `.fat` elsewhere under `Data_Win32` no longer shows up.
+- **A mesh's materials are references you can follow** — an `.xbg` links to the `.xbm` files it
+  names, so following a material opens it, and `xref to` on an `.xbm` lists the meshes using it. The
+  reference index rebuilds once.
+- **The AI tab shows what the game reads** — one set of vision cones, since the game reads only the
+  DesertFOV ones in every terrain; no light weight, which nothing reads; five adaptive behaviours
+  marked as read by no shipped brain, and two vehicle ones described as the game uses them. The
+  Curves note says every weapon but the mounted M249 shares the one `DistanceAccuracy` curve.
+- **Document tabs close from their × or Ctrl+W** — a middle-click no longer closes one.
 
 ### Fixed
 - **Sound imported into an IMA-ADPCM bank plays in step** — the encoder writes the 10 raw PCM frames
   and the odd sample the game expects, so the game no longer starts decoding out of step.
 - **Unnamed `.sbao` files are recognised as `.sbao`**, from a corrected signature that matches the
   retail files.
+- **An edit lands only in the object you edit** — on the AI tab, in a save and in a whole `.fcb` in
+  the value editor, identical parts of a file were one shared object, so changing one changed every
+  twin.
+- **The value editor warns on an archetype copy the game doesn't read** — opening an entity library
+  fragment on the Files tab whose archetype a later library declares again shows the notice the
+  Archetypes tab does.
+- **The Archetypes tab keeps up** — a save, a revert, a mod ticked or a rescan marks which mods edit
+  each archetype without another Load.
+- **Following references** — Alt+Left and Alt+Right work while a row has focus; a followed reference
+  opens its folder in the file list and selects the file there; Export folder… acts on the folder the
+  tree shows.
+- **Fragments saved as UTF-8 with a byte order mark are accepted** instead of refused.
+- **Revert to original stops warning on GOG** — JackAll knows GOG's clean patch, which differs from
+  Steam's.
+- **A Steam-built legacy mod imports clean on GOG** — entries the mod left as Steam's patch has
+  them are no longer staged as its changes.
+- **`.fcb` files JackAll writes carry the right header counts**, the ones the game sizes its object
+  pool from.
+- **`rml fragments` runs** — a second `rml` command group hid it.
+- **Messages name the buttons as they are** — Deploy mods on the Mods tab, and the Domino Viewer.
+  Apply .fc2model keeps its Staged message, and a legacy import no longer counts the files and
+  fragments it skipped against the archive's entries. The Map tab's Deploy button, which never did
+  anything, is gone.
 
 ## [1.4.1] - 2026-10-09
 
