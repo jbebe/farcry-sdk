@@ -3,6 +3,20 @@
 Notable changes to the Vortex Far Cry 2 extension, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.4.1] - 2026-10-15
+
+### Fixed
+- **A clean GOG install no longer looks modded.** Vortex asked to accept the current `patch.dat` as
+  the original on GOG installs that were untouched, because only Steam's original was recognised.
+- **A mod that changes part of a file the campaign DLC also carries changes the DLC's copy**, the
+  one the game reads, instead of the base game's.
+- **Combined `.fcb` files carry the right header counts**, the ones the game sizes its object pool
+  from, when two mods add to the same entry.
+- **Mod files saved as UTF-8 with a byte order mark install** instead of failing the build.
+- **An old full-patch mod built on Steam installs clean on GOG**: entries it left as Steam's patch
+  has them are no longer taken for its changes.
+- **A failed build says what went wrong** rather than a generic error.
+
 ## [0.4.0] - 2026-10-08
 
 ### Added
