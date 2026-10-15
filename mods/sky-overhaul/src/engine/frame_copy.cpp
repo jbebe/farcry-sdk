@@ -2,46 +2,87 @@
 
 #include "engine/com.h"
 #include "engine/render_target.h"
+#include "fcse_api.h"
 
 namespace {
-    IDirect3DDevice9* g_owner = nullptr;
-    IDirect3DTexture9* g_copy = nullptr;
-    IDirect3DSurface9* g_surface = nullptr;
-    D3DSURFACE_DESC g_desc = {};
+    // The world's two formats with HDR on, which it alternates between, and the composite's.
+    constexpr size_t kCopyCount = 3;
 
-    void ReleaseCopy() {
-        SkyOverhaul::Release(g_surface);
-        SkyOverhaul::Release(g_copy);
+    struct Copy {
+        IDirect3DTexture9* texture;
+        IDirect3DSurface9* surface;
+        D3DSURFACE_DESC desc;
+        // Set once the device refuses this format; cleared on reset.
+        bool refused;
+    };
+
+    IDirect3DDevice9* g_owner = nullptr;
+    Copy g_copies[kCopyCount] = {};
+
+    void ReleaseCopies() {
+        for (Copy& copy : g_copies) {
+            SkyOverhaul::Release(copy.surface);
+            SkyOverhaul::Release(copy.texture);
+            copy = {};
+        }
     }
 
-    bool Ensure(IDirect3DDevice9* device, const D3DSURFACE_DESC& backBuffer) {
+    // The copy matching `target`, made on first use. Null if the device refused its format.
+    Copy* Ensure(IDirect3DDevice9* device, const D3DSURFACE_DESC& target) {
         if (g_owner != device) {
-            ReleaseCopy();
+            ReleaseCopies();
             g_owner = device;
         }
-        if (g_copy != nullptr && g_desc.Width == backBuffer.Width &&
-            g_desc.Height == backBuffer.Height && g_desc.Format == backBuffer.Format) {
-            return true;
+        Copy* empty = nullptr;
+        for (Copy& copy : g_copies) {
+            const bool used = copy.texture != nullptr || copy.refused;
+            if (!used) {
+                empty = empty != nullptr ? empty : &copy;
+            } else if (copy.desc.Width == target.Width && copy.desc.Height == target.Height &&
+                       copy.desc.Format == target.Format) {
+                return copy.refused ? nullptr : &copy;
+            }
         }
-        ReleaseCopy();
-        if (FAILED(SkyOverhaul::CreateTarget(device, backBuffer, &g_copy, &g_surface))) {
-            ReleaseCopy();
-            return false;
+        if (empty == nullptr) {
+            ReleaseCopies();
+            empty = &g_copies[0];
         }
-        g_desc = backBuffer;
-        return true;
+
+        empty->desc = target;
+        const HRESULT created =
+            SkyOverhaul::CreateTarget(device, target, &empty->texture, &empty->surface);
+        if (FAILED(created)) {
+            empty->refused = true;
+            FCSE::Logf("frame copy: no %ux%u copy in format %u, 0x%08lX", target.Width,
+                       target.Height, static_cast<unsigned>(target.Format),
+                       static_cast<unsigned long>(created));
+            return nullptr;
+        }
+        return empty;
     }
 }
 
 IDirect3DTexture9* SkyOverhaul::FrameCopy::Take(const Frame::Pass& pass) {
-    if (!Ensure(pass.device, pass.backBuffer) ||
-        FAILED(pass.device->StretchRect(pass.target, nullptr, g_surface, nullptr, D3DTEXF_NONE))) {
+    D3DSURFACE_DESC desc;
+    if (FAILED(pass.target->GetDesc(&desc))) {
         return nullptr;
     }
-    return g_copy;
+    Copy* copy = Ensure(pass.device, desc);
+    if (copy == nullptr) {
+        return nullptr;
+    }
+    const HRESULT copied =
+        pass.device->StretchRect(pass.target, nullptr, copy->surface, nullptr, D3DTEXF_NONE);
+    if (FAILED(copied)) {
+        copy->refused = true;
+        FCSE::Logf("frame copy: format %u would not copy, 0x%08lX",
+                   static_cast<unsigned>(desc.Format), static_cast<unsigned long>(copied));
+        return nullptr;
+    }
+    return copy->texture;
 }
 
 void SkyOverhaul::FrameCopy::ReleaseDeviceObjects() {
-    ReleaseCopy();
+    ReleaseCopies();
     g_owner = nullptr;
 }

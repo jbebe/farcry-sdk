@@ -66,6 +66,7 @@ set(SHADER_PASSES
   "sky.fx:MainPS:ps_3_0:sky_ps.h:g_skyPixelShader"
   "night.fx:MainPS:ps_3_0:night_ps.h:g_nightPixelShader"
   "grain.fx:MainPS:ps_2_b:grain_ps.h:g_grainPixelShader"
+  "haze.fx:MainPS:ps_3_0:haze_ps.h:g_hazePixelShader"
   "shadows.fx:BlurPS:ps_3_0:shadows_blur_ps.h:g_shadowsBlurPixelShader"
   "shadows.fx:ApplyPS:ps_3_0:shadows_apply_ps.h:g_shadowsApplyPixelShader"
   "occlusion.fx:GtaoPS:ps_3_0:occlusion_gtao_ps.h:g_occlusionGtaoPixelShader"
@@ -89,6 +90,7 @@ set(SHADER_PASSES
 set(SHADER_INCLUDES
   "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/depth.inc.fx"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/foliage.inc.fx"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/hash.inc.fx"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/shadows.inc.fx")
 
 set(SHADER_HEADERS "")
@@ -120,6 +122,7 @@ add_library(SkyOverhaul SHARED
   "src/foliage.cpp"
   "src/grade.cpp"
   "src/grain.cpp"
+  "src/haze.cpp"
   "src/night.cpp"
   "src/occlusion.cpp"
   "src/rocks.cpp"

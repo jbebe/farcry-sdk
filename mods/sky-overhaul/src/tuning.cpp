@@ -76,6 +76,7 @@ namespace {
     constexpr Group kAmbientOcclusion = {"Ambient occlusion", &kShadows};
     constexpr Group kColourGrade = {"Colour grade", &kPostFx, &DrawGreys};
     constexpr Group kFilmGrain = {"Film grain", &kPostFx};
+    constexpr Group kHeatHaze = {"Heat haze", &kPostFx};
     constexpr Group kGrass = {"Grass", &kFoliage};
     constexpr Group kLeaves = {"Leaves", &kFoliage};
     constexpr Group kRockShading = {"Rock and cliff", &kRock};
@@ -207,6 +208,13 @@ namespace {
          "How wide one grain is."},
         {"Grain colour", &kFilmGrain, offsetof(Values, grainColour), 0.0f, 0.0f, 1.0f, "%.2f",
          "How much each colour's grain differs from the others'. Zero is grey grain."},
+
+        {"Heat haze strength", &kHeatHaze, offsetof(Values, hazeStrength), 1.0f, 0.0f, 4.0f,
+         "%.2f",
+         "How far the hot air over sunlit ground bends what is seen through it. One shimmers far "
+         "land by about two pixels at 1080 lines."},
+        {"Mirage strength", &kHeatHaze, offsetof(Values, mirageStrength), 1.0f, 0.0f, 1.0f, "%.2f",
+         "How much of the sky a mirage shows on flat ground seen within about a degree of level."},
 
         {"Grass root shade", &kGrass, offsetof(Values, grassRootShade), 0.9f, 0.0f, 1.0f, "%.2f",
          "How much of the light the foot of a blade keeps against its tip."},

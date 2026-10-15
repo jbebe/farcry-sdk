@@ -19,6 +19,7 @@
 #include "foliage.h"
 #include "grade.h"
 #include "grain.h"
+#include "haze.h"
 #include "night.h"
 #include "occlusion.h"
 #include "rocks.h"
@@ -44,6 +45,7 @@ namespace {
         SkyOverhaul::Foliage::ReleaseDeviceObjects();
         SkyOverhaul::Rocks::ReleaseDeviceObjects();
         SkyOverhaul::Grain::ReleaseDeviceObjects();
+        SkyOverhaul::Haze::ReleaseDeviceObjects();
         SkyOverhaul::KnownShaders::Forget();
     }
 
@@ -54,6 +56,7 @@ namespace {
         SkyOverhaul::Shadows::OnScenePass(pass);
         SkyOverhaul::SolidDepth::OnScenePass(pass);
         SkyOverhaul::Occlusion::OnScenePass(pass);
+        SkyOverhaul::Haze::OnScenePass(pass);
         SkyOverhaul::Dazzle::OnScenePass(pass);
         SkyOverhaul::Night::OnScenePass(pass);
         SkyOverhaul::SunShadows::OnScenePass(pass);
@@ -90,12 +93,13 @@ namespace {
         SkyOverhaul::Night::SetEnabled(value->asChoice == 1);
     }
 
-    // The two parts that read the engine's linear depth, which is only found while one of them is on.
+    // The parts that read the engine's linear depth, which is only found while one of them is on.
     bool g_shadows = false;
     bool g_occlusion = false;
+    bool g_haze = false;
 
     void WatchDepth() {
-        SkyOverhaul::DomeDraw::SetWatchDepth(g_shadows || g_occlusion);
+        SkyOverhaul::DomeDraw::SetWatchDepth(g_shadows || g_occlusion || g_haze);
     }
 
     void __cdecl OnShadowsChanged(const FCSE_SettingValue* value, void*) {
@@ -115,6 +119,12 @@ namespace {
     void __cdecl OnOcclusionChanged(const FCSE_SettingValue* value, void*) {
         g_occlusion = value->asChoice == 1;
         SkyOverhaul::Occlusion::SetEnabled(g_occlusion);
+        WatchDepth();
+    }
+
+    void __cdecl OnHazeChanged(const FCSE_SettingValue* value, void*) {
+        g_haze = value->asChoice == 1;
+        SkyOverhaul::Haze::SetEnabled(g_haze);
         WatchDepth();
     }
 
@@ -177,6 +187,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Grade", FCSE_CHOICE(1), &OnGradeChanged, nullptr, kModes, std::size(kModes)},
         {"Grain", FCSE_CHOICE(1), &OnGrainChanged, nullptr, kSwitchModes, std::size(kSwitchModes)},
         {"Occlusion", FCSE_CHOICE(0), &OnOcclusionChanged, nullptr, kSwitchModes,
+         std::size(kSwitchModes)},
+        {"Heat haze", FCSE_CHOICE(0), &OnHazeChanged, nullptr, kSwitchModes,
          std::size(kSwitchModes)},
         {"Grass", FCSE_CHOICE(1), &OnGrassChanged, nullptr, kModes, std::size(kModes)},
         {"Leaves", FCSE_CHOICE(1), &OnLeavesChanged, nullptr, kModes, std::size(kModes)},

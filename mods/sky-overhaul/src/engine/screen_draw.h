@@ -30,10 +30,13 @@ public:
     // vertex pipeline, so it pairs only with a pixel shader.
     void Quad(float left, float top, float right, float bottom, float depth = 0.0f);
 
+    // No directions, for a shader that reads its place from the rasteriser.
+    static constexpr float kNoRays[4][3] = {};
+
     // A quad over the whole viewport at `depth` in clip space, carrying one direction per corner
     // to a ps_3_0 pixel shader's TEXCOORD0 through a vertex shader of its own. False if the device
     // would not make that shader or its declaration.
-    bool ClipQuad(float depth, const float corners[4][3]);
+    bool ClipQuad(float depth, const float corners[4][3] = kNoRays);
 
     // The same over a rectangle of the viewport, in pixels, with its edges where Quad puts them and
     // each corner's direction the one the whole quad gives that point of the screen.

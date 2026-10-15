@@ -4,26 +4,20 @@
 
 #include "engine/clock.h"
 #include "engine/cloud_layer.h"
-#include "engine/com.h"
-#include "engine/render_target.h"
+#include "engine/frame_copy.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
-#include "fcse_api.h"
 #include "tuning.h"
 
 #include "night_ps.h"
 
 #include <algorithm>
-#include <cmath>
 
 namespace {
     using SkyOverhaul::Tuning::Values;
 
     constexpr UINT kFirstConstant = 71;
     constexpr UINT kConstantCount = 2;
-
-    // The shader reads its place from the rasteriser, so the quad's rays are unused.
-    constexpr float kNoRays[4][3] = {};
 
     // The sun's height, as a sine, where the rods start to take over and where they have.
     constexpr float kDuskBegins = -0.10f;
@@ -40,15 +34,6 @@ namespace {
     // Below this the grade changes nothing a player could see.
     constexpr float kFaintest = 0.002f;
 
-    // With HDR on the world alternates between two formats frame to frame, so one copy of each.
-    constexpr size_t kResolveCount = 2;
-
-    struct Resolve {
-        IDirect3DTexture9* texture;
-        IDirect3DSurface9* surface;
-        D3DSURFACE_DESC desc;
-    };
-
     // How the eye sees this frame.
     struct Gate {
         float dusk;
@@ -59,54 +44,9 @@ namespace {
     };
 
     bool g_enabled = false;
-
-    IDirect3DDevice9* g_owner = nullptr;
-    Resolve g_resolves[kResolveCount] = {};
-    // Set once the device refuses a resolve; cleared on reset.
-    bool g_refused = false;
     SkyOverhaul::PixelShader g_shader{"night", g_nightPixelShader};
 
     SkyOverhaul::GrainClock g_grain;
-
-    void ReleaseResolves() {
-        for (Resolve& resolve : g_resolves) {
-            SkyOverhaul::Release(resolve.surface);
-            SkyOverhaul::Release(resolve.texture);
-        }
-    }
-
-    // A single-sampled copy matching `target`, made on first use.
-    const Resolve* EnsureResolve(IDirect3DDevice9* device, const D3DSURFACE_DESC& target) {
-        if (g_owner != device) {
-            ReleaseResolves();
-            g_owner = device;
-        }
-        Resolve* empty = nullptr;
-        for (Resolve& resolve : g_resolves) {
-            if (resolve.texture == nullptr) {
-                empty = empty != nullptr ? empty : &resolve;
-            } else if (resolve.desc.Width == target.Width && resolve.desc.Height == target.Height &&
-                       resolve.desc.Format == target.Format) {
-                return &resolve;
-            }
-        }
-        if (empty == nullptr) {
-            ReleaseResolves();
-            empty = &g_resolves[0];
-        }
-
-        const HRESULT created =
-            SkyOverhaul::CreateTarget(device, target, &empty->texture, &empty->surface);
-        if (FAILED(created)) {
-            g_refused = true;
-            FCSE::Logf("night: no %ux%u copy of the world in format %u, 0x%08lX", target.Width,
-                       target.Height, static_cast<unsigned>(target.Format),
-                       static_cast<unsigned long>(created));
-            return nullptr;
-        }
-        empty->desc = target;
-        return empty;
-    }
 
     Gate Measure(const SkyOverhaul::CloudLayer::Lighting& lighting, const Values& v) {
         Gate gate = {};
@@ -125,23 +65,11 @@ namespace {
         return gate;
     }
 
-    // Resolves the world into a copy and paints it back over every sample the world drew.
+    // Copies the world and paints it back over every sample the world drew.
     bool Draw(const SkyOverhaul::Frame::Pass& pass, const Gate& gate, const Values& v) {
         IDirect3DPixelShader9* shader = g_shader.Get(pass.device);
-        D3DSURFACE_DESC desc;
-        if (g_refused || shader == nullptr || FAILED(pass.target->GetDesc(&desc))) {
-            return false;
-        }
-        const Resolve* resolve = EnsureResolve(pass.device, desc);
-        if (resolve == nullptr) {
-            return false;
-        }
-        const HRESULT resolved =
-            pass.device->StretchRect(pass.target, nullptr, resolve->surface, nullptr, D3DTEXF_NONE);
-        if (FAILED(resolved)) {
-            g_refused = true;
-            FCSE::Logf("night: the world would not resolve, format %u, 0x%08lX",
-                       static_cast<unsigned>(desc.Format), static_cast<unsigned long>(resolved));
+        IDirect3DTexture9* world = shader != nullptr ? SkyOverhaul::FrameCopy::Take(pass) : nullptr;
+        if (world == nullptr) {
             return false;
         }
 
@@ -153,8 +81,8 @@ namespace {
 
             gate.grain,
             g_grain.Pattern(),
-            1.0f / static_cast<float>(desc.Width),
-            1.0f / static_cast<float>(desc.Height)};
+            1.0f / static_cast<float>(pass.backBuffer.Width),
+            1.0f / static_cast<float>(pass.backBuffer.Height)};
 
         SkyOverhaul::ScreenDraw draw(pass.device, kFirstConstant, kConstantCount);
         pass.device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
@@ -164,9 +92,9 @@ namespace {
                                                                 D3DCOLORWRITEENABLE_GREEN |
                                                                 D3DCOLORWRITEENABLE_BLUE);
         pass.device->SetPixelShader(shader);
-        pass.device->SetTexture(0, resolve->texture);
+        pass.device->SetTexture(0, world);
         pass.device->SetPixelShaderConstantF(kFirstConstant, constants, kConstantCount);
-        return draw.ClipQuad(SkyOverhaul::Frame::kFarDepth, kNoRays);
+        return draw.ClipQuad(SkyOverhaul::Frame::kFarDepth);
     }
 }
 
@@ -188,10 +116,7 @@ void SkyOverhaul::Night::OnScenePass(const Frame::Pass& pass) {
 }
 
 void SkyOverhaul::Night::ReleaseDeviceObjects() {
-    ReleaseResolves();
     g_shader.Release();
-    g_owner = nullptr;
-    g_refused = false;
 }
 
 void SkyOverhaul::Night::SetEnabled(bool enabled) {

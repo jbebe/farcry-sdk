@@ -51,6 +51,11 @@ collides with any other mod that edits a preset. Nothing here changes how the su
 - **The colour grade.** The final pass's saturation, per-channel powers and contrast curve drawn with
   values of our own, recognised by its shader and put back after its draw. Replaces the weather
   preset's grade in every weather. `src/grade.cpp`.
+- **Heat haze and mirage.** By day the hot air over the ground shimmers what is seen through it, by
+  as much as the look's path through the air's lowest two metres, from the engine's linear depth.
+  Flat ground seen within about a degree of level shows the sky above the horizon mirrored, the
+  inferior mirage. Both grow with the sun's height and go in a storm. Drawn at the sky pass, so
+  the bloom and the glare come after. `src/haze.cpp` and `src/shaders/haze.fx`.
 - **Film grain.** Animated grain painted over the composite after the glare, under the heads-up
   display, strongest in the mid tones and changing pattern at film's 24 a second. `src/grain.cpp`
   and `src/shaders/grain.fx`.
@@ -60,7 +65,7 @@ collides with any other mod that edits a preset. Nothing here changes how the su
 - **Switching each part.** The mod menu, and the `[SkyOverhaul]` group in `fcse.ini`, holds only
   which parts are on: Sky (Engine or Overhaul), Clouds (Engine, Off or Overhaul), Sun (Engine, or
   Overhaul for the glare and the afterimage), Night, Shadows, Grade, Grass, Leaves, Sun shadows and
-  Rocks (each Engine or Overhaul), and Occlusion and Grain (each Off or On).
+  Rocks (each Engine or Overhaul), and Occlusion, Grain and Heat haze (each Off or On).
 - **Tuning.** Every effect's values are kept in `bin\sky-overhaul.ini`, beside `fcse.ini`, which is
   written on the first launch. The sky has none: it follows the sun alone. `src/tuning.cpp`.
 - **A window in DevTools' overlay.** With [DevTools](../DevTools) installed, Home shows a Sky Overhaul
@@ -87,7 +92,7 @@ Bloom on, in Options → Video or on the `<quality>` row in
 `Documents\My Games\Far Cry 2\GamerProfile.xml` matching the profile's `Quality`. The glare works
 without it, but the sun it sits beside is a flat disc until bloom runs.
 
-`DepthPassQuality` high or above for the cloud shadows: below it the engine writes no linear depth,
+`DepthPassQuality` high or above for the cloud shadows and the heat haze: below it the engine writes no linear depth,
 and `fcse.log` says so once.
 
 Needs FCSE 1.4.0 or later.

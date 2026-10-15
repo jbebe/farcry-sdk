@@ -17,10 +17,20 @@ float4 CameraRight : register(c93);
 float4 CameraUp : register(c94);
 float4 CameraForward : register(c95);
 
+// Metres along the camera's axis as the texture holds them: nought on the weapon, past
+// DepthDecode.w on the sky.
+float Stored(float2 uv) {
+    return dot(tex2Dlod(SceneDepth, float4(uv, 0.0f, 0.0f)).rgb, DepthDecode.xyz);
+}
+
+bool IsSky(float stored) {
+    return stored >= DepthDecode.w;
+}
+
 // Metres along the camera's axis to what was drawn at `uv`, or nought where nothing was.
 float Metres(float2 uv) {
-    float z = dot(tex2Dlod(SceneDepth, float4(uv, 0.0f, 0.0f)).rgb, DepthDecode.xyz);
-    return z > NEAREST_GEOMETRY && z < DepthDecode.w ? z : 0.0f;
+    float z = Stored(uv);
+    return z > NEAREST_GEOMETRY && !IsSky(z) ? z : 0.0f;
 }
 
 // The top left of the two by two block of full-resolution depth a half-resolution pixel covers.
@@ -32,4 +42,12 @@ float2 FullFromHalf(float2 halfPixel) {
 float3 ViewRay(float2 uv) {
     return CameraForward.xyz + CameraRight.xyz * ((uv.x * 2.0f - 1.0f) * Lens.x) +
            CameraUp.xyz * ((1.0f - uv.y * 2.0f) * Lens.y);
+}
+
+// Where a direction ahead of the camera lands on screen, in texture coordinates: ViewRay undone.
+float2 OnScreen(float3 direction) {
+    float ahead = max(dot(direction, CameraForward.xyz), 1e-4f);
+    float2 lens = float2(dot(direction, CameraRight.xyz), dot(direction, CameraUp.xyz)) /
+                  (ahead * Lens.xy);
+    return float2(0.5f + 0.5f * lens.x, 0.5f - 0.5f * lens.y);
 }

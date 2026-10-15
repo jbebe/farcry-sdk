@@ -31,9 +31,6 @@ namespace {
     // Sky passes without the depth texture before that is reported.
     constexpr uint32_t kPatience = 300;
 
-    // The shaders read their place from the rasteriser, so the quad's rays are unused.
-    constexpr float kNoRays[4][3] = {};
-
     struct Target {
         IDirect3DTexture9* texture;
         IDirect3DSurface9* surface;
@@ -100,7 +97,7 @@ namespace {
         // Before the target changes, so `into` is never bound to be read and written at once.
         device->SetTexture(0, from.texture);
         device->SetRenderTarget(0, into.surface);
-        draw.ClipQuad(0.0f, kNoRays);
+        draw.ClipQuad(0.0f);
     }
 
     // The shadows at half resolution and blurred, then multiplied into the world.
@@ -158,7 +155,7 @@ namespace {
                                                            D3DCOLORWRITEENABLE_GREEN |
                                                            D3DCOLORWRITEENABLE_BLUE);
         device->SetPixelShader(applyShader);
-        return draw.ClipQuad(0.0f, kNoRays);
+        return draw.ClipQuad(0.0f);
     }
 }
 

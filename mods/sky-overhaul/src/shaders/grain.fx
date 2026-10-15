@@ -11,16 +11,9 @@ float4 Frame : register(c0);
 // y  how far each channel's grain differs from the others', nought for grey grain
 float4 Look : register(c1);
 
-static const float3 LUMA = float3(0.299f, 0.587f, 0.114f);
+#include "hash.inc.fx"
 
-// Three values in [0, 1) per lattice point and moment. No sine, which loses precision at the large
-// arguments a lattice across the screen gives it.
-float3 Hash(float3 p)
-{
-    p = frac(p * float3(0.1031f, 0.1030f, 0.0973f));
-    p += dot(p, p.yxz + 33.33f);
-    return frac((p.xxy + p.yxx) * p.zyx);
-}
+static const float3 LUMA = float3(0.299f, 0.587f, 0.114f);
 
 float4 MainPS(float2 uv : TEXCOORD0) : COLOR0
 {
