@@ -1,3 +1,4 @@
+using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
 using Microsoft.Win32;
 using System.IO;
@@ -238,13 +239,44 @@ public partial class MainWindow
 
         try
         {
-            if (!ReplaceGuarded(file, File.ReadAllBytes(dialog.FileName))) return;
+            byte[] content = File.ReadAllBytes(dialog.FileName);
+            if (!ConfirmFormat(file, dialog.FileName, content) || !ReplaceGuarded(file, content)) return;
             _vm.Status = $"{file.FileName} staged in your workspace. Press Deploy mods on the Mods tab to put it into the game.";
         }
         catch (Exception ex)
         {
             Warn($"Couldn't stage that file: {ex.Message}");
         }
+    }
+
+    /// <summary>True to proceed: the picked file starts the way the file it replaces does, or the user
+    /// chose to replace it anyway.</summary>
+    private bool ConfirmFormat(VfsFile file, string pickedPath, byte[] content)
+    {
+        // A fragment is XML text, which carries no signature to check.
+        if (file.IsFragment || FileTypeSniffer.Mismatch(_vm.ReadOriginal(file) ?? _vm.Read(file), content) is not { } actual)
+        {
+            return true;
+        }
+
+        string target = $".{file.Type.Extension}";
+        string picked = Path.GetExtension(pickedPath).ToLowerInvariant();
+        string looksLike = picked.Length > 0 && picked != target ? $"a {picked} file"
+            : actual != FileType.Unknown ? $"a .{actual.Extension} file"
+            : "something else";
+        string hint = file.Type.Extension switch
+        {
+            "spk" => "To put new audio in a sound bank, open the bank and use Import… on one of its Audio records.\n\n",
+            "sbao" => "To put new audio in an .sbao, open it and use Import….\n\n",
+            "xbt" => "To use a .dds texture, open the .xbt and use Import DDS + XML….\n\n",
+            _ => "",
+        };
+
+        return MessageBox.Show(this,
+            $"'{file.FileName}' is a {target} file, and '{Path.GetFileName(pickedPath)}' doesn't start the way "
+            + $"one does - it looks like {looksLike}. The game can't read it in place of the original.\n\n"
+            + $"{hint}Replace it anyway?",
+            $"This isn't a {target} file", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
     }
 
     private void Mirror_Click(object sender, RoutedEventArgs e)

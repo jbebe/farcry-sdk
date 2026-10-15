@@ -55,6 +55,10 @@ neither yours nor Steam's 1.03, such as GOG's when you have Steam, and the diffe
 Trim the workspace to the mod's own files. See
 [Check what came in](/jackall/legacy-import#check-what-came-in).
 
+**Replace… says the file isn't the right kind.** The file you picked doesn't start the way the one it
+replaces does, so the game can't read it: a WAV or MP3 picked for a sound bank, say. New audio goes
+in through the bank's own **Import…**; see [Replace the audio](/jackall/sound-effects#replace-the-audio).
+
 **Deploy mods stops and names a field.** Two mods set the same value differently. Untick one of
 them, or set the value you want in your workspace, and deploy again. See
 [When two mods conflict](/jackall/managing-mods#when-two-mods-conflict).

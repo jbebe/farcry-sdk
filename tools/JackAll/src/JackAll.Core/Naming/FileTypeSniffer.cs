@@ -47,25 +47,9 @@ public static class FileTypeSniffer
         {
             return new FileType("empty", "bin");
         }
-
-        // Formats whose magic sits at a fixed offset other than 0 have to be checked before the
-        // generic magic-at-0 scan, or a coincidental first word would shadow them.
-        if (StartsWith(header, "MAGMA")) return new FileType("ui", "mgb");
-        if (StartsWith(header, "BIK")) return new FileType("video", "bik");
-        if (StartsWith(header, "UEF")) return new FileType("ui", "feu");
-        if (header.Length >= 15 && StartsWith(header, "SQLite format 3")) return new FileType("db", "sqlite3");
-
-        if (header.Length >= 20 && Matches(header, 16, 'W', 0xE0, 0xE0, 'W')) return new FileType("physics", "hkx");
-        if (header.Length >= 48 && Matches(header, 44, 'S', 'D', 'K', 'V')) return new FileType("physics", "hkx");
-        if (header.Length >= 24 && Matches(header, 20, 0xC8, 0xEF, 0x1D, 0x3E)) return new FileType("terrain", "terrainnode.bdl");
-
-        // Some containers carry their magic at +16 or +4 rather than at 0.
-        foreach (int offset in (int[])[16, 4, 0])
+        if (IdentifyBinary(header) is { } binary)
         {
-            if (header.Length < offset + 4) continue;
-            uint magic = ReadU32(header, offset);
-            FileType? byMagic = FromMagic(magic) ?? FromMagic(Swap(magic));
-            if (byMagic is not null) return byMagic.Value;
+            return binary;
         }
 
         // Text-ish formats last: an XML declaration or a Lua comment is only meaningful once every
@@ -86,6 +70,45 @@ public static class FileTypeSniffer
         return FileType.Unknown;
     }
 
+    /// <summary>
+    /// What <paramref name="replacement"/> looks like when it cannot stand in for <paramref name="replaced"/>:
+    /// the replaced file carries a binary signature and the replacement a different one. Null otherwise.
+    /// </summary>
+    public static FileType? Mismatch(ReadOnlySpan<byte> replaced, ReadOnlySpan<byte> replacement)
+    {
+        if (IdentifyBinary(replaced) is not { } expected)
+        {
+            return null;
+        }
+        FileType actual = IdentifyByContent(replacement);
+        return actual == expected ? null : actual;
+    }
+
+    /// <summary>The binary signatures - the firm ones, unlike the text and short prefixes other formats match by chance.</summary>
+    private static FileType? IdentifyBinary(ReadOnlySpan<byte> header)
+    {
+        // Formats whose magic sits at a fixed offset other than 0 have to be checked before the
+        // generic magic-at-0 scan, or a coincidental first word would shadow them.
+        if (StartsWith(header, "MAGMA")) return new FileType("ui", "mgb");
+        if (StartsWith(header, "BIK")) return new FileType("video", "bik");
+        if (StartsWith(header, "UEF")) return new FileType("ui", "feu");
+        if (header.Length >= 15 && StartsWith(header, "SQLite format 3")) return new FileType("db", "sqlite3");
+
+        if (header.Length >= 20 && Matches(header, 16, 'W', 0xE0, 0xE0, 'W')) return new FileType("physics", "hkx");
+        if (header.Length >= 48 && Matches(header, 44, 'S', 'D', 'K', 'V')) return new FileType("physics", "hkx");
+        if (header.Length >= 24 && Matches(header, 20, 0xC8, 0xEF, 0x1D, 0x3E)) return new FileType("terrain", "terrainnode.bdl");
+
+        // Some containers carry their magic at +16 or +4 rather than at 0.
+        foreach (int offset in (int[])[16, 4, 0])
+        {
+            if (header.Length < offset + 4) continue;
+            uint magic = ReadU32(header, offset);
+            FileType? byMagic = FromMagic(magic) ?? FromMagic(Swap(magic));
+            if (byMagic is not null) return byMagic.Value;
+        }
+        return null;
+    }
+
     private static FileType? FromMagic(uint magic) => magic switch
     {
         0x00584254 => new FileType("textures", "xbt"),   // '\0XBT'
@@ -100,7 +123,8 @@ public static class FileTypeSniffer
         // engine itself rejects anything whose first 4 bytes aren't exactly this): a version byte
         // (0x01) followed by "KPS" - "SPK" stored reversed, same FourCC convention as .xbg/.xbm.
         0x53504B01 => new FileType("sounds", "spk"),
-        0x00032A02 => new FileType("sounds", "sbao"),
+        // The 40-byte record core a .spk record also starts with (SpkBank.CoreMagic).
+        0x10001F02 => new FileType("sounds", "sbao"),
         0x46464952 => new FileType("sounds", "wem"),     // 'RIFF'
         0x4643626E => new FileType("data", "fcb"),       // 'FCbn'
         0x45534142 => new FileType("data", "wlu.fcb"),   // 'BASE'
