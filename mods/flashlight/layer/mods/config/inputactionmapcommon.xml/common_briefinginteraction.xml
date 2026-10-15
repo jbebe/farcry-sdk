@@ -1,0 +1,15 @@
+<ActionMap name="common_briefinginteraction">
+	<import actionmap="common_use_remap" optional="" />
+	<import actionmap="common_heal_remap" optional="" />
+	<import actionmap="common_gadget_remap" optional="" />
+	<import actionmap="common_flashlight_remap" optional="" />
+	<!--Keyboard-->
+	<Binding input="kb:e" action="press" signal="use" />
+	<Binding input="kb:5" action="press" signal="toggle_gadget" />
+	<Binding input="kb:h" action="press" signal="heal" />
+	<Binding input="kb:l" action="press" signal="toggle_flashlight" />
+	<!--Gamepad-->
+	<Binding input="pad:y" action="press" signal="use" />
+	<Binding input="pad:left_shoulder" action="press" signal="heal" />
+	<Binding input="pad:back" action="press" signal="toggle_gadget" />
+</ActionMap>

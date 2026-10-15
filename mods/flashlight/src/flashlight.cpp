@@ -63,8 +63,9 @@ namespace {
 
     constexpr float kNever = -1.0f;
 
-    // Counted on the dispatcher, spent on the frame.
-    std::atomic<int> g_toggles{0};
+    // Set on the dispatcher, spent on the frame. A press arrives once from each active action map
+    // that binds the control, so a frame takes it once however many times it came.
+    std::atomic<bool> g_pressed{false};
 
     // Settings, set before the first frame by their registration and on every change after.
     std::atomic<size_t> g_cone{0};
@@ -135,22 +136,20 @@ namespace {
             g_owner = player;
         }
         if (player == nullptr) {
-            g_toggles = 0;
+            g_pressed = false;
             return;
         }
         Flashlight::Sound::Hold(kClick);
 
-        int toggles = g_toggles.exchange(0);
+        bool toggle = g_pressed.exchange(false);
         // A vehicle switches the light off as a press would, and keeps it off.
         if (Flashlight::Vehicle::Seated()) {
-            toggles = g_wanted ? 1 : 0;
+            toggle = g_wanted;
         }
-        for (int i = 0; i < toggles; ++i) {
+        if (toggle) {
             g_wanted = !g_wanted;
             Flashlight::Sound::Play(kClick, kFoleyPlayer);
             g_switchIn = kSwitchDelay;
-        }
-        if (toggles > 0) {
             g_iconSynced = false;
             PlayGroup(kHudShowFrame);
             g_hideIn = kHudHold;
@@ -190,7 +189,7 @@ namespace {
 
     void OnSignal(uint32_t signal) {
         if (signal == kToggleSignal) {
-            ++g_toggles;
+            g_pressed = true;
         }
     }
 }

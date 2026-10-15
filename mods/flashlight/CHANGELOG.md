@@ -8,6 +8,8 @@ Notable changes to Flashlight, loosely following
 ### Changed
 - **Off in vehicles.** Getting into a vehicle switches the flashlight off, and it stays off until
   you get out.
+- **Works in safe interiors.** The game swaps in its own controls inside safe houses and briefing
+  rooms, which left the flashlight out; it switches there too now.
 
 ### Fixed
 - **No crash at startup when part of the game can't be hooked**, for example with two copies of

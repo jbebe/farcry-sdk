@@ -1,0 +1,9 @@
+<ActionMap name="common_interaction">
+	<import actionmap="common_use_remap" optional="" />
+	<import actionmap="common_flashlight_remap" optional="" />
+	<!--Keyboard-->
+	<Binding input="kb:e" action="press" signal="use" />
+	<Binding input="kb:l" action="press" signal="toggle_flashlight" />
+	<!--Gamepad-->
+	<Binding input="pad:y" action="press" signal="use" />
+</ActionMap>
