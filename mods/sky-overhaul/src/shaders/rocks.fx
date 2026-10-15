@@ -13,7 +13,8 @@ float4 CameraPosition : register(c110);
 float4 ToLight : register(c111);
 
 // How far rock is lit back toward the engine's smooth, normal-mapped surface from flat triangles,
-// how bright the sun's glint off the triangles is, and how tight.
+// how bright the sun's glint off the triangles is, how tight, and the metres at which rock is
+// halfway to wholly smooth.
 float4 Shading : register(c112);
 
 // The detail map's repeats per metre, and how strong its relief, grain and cavity are.
@@ -238,10 +239,6 @@ Rock MakeRock(float3 position, float2 normalUv, float normalStrength, float3 tan
     return r;
 }
 
-// Metres within which rock is as flat as Shading.x leaves it, and past which it is wholly smooth.
-static const float FlatNear = 30;
-static const float FlatFar = 120;
-
 // Each triangle lit flat by the sun, by the sky over it and by the ground under it as far as it
 // faces up, with the detail map's relief, grain and cavity, blended toward the engine's smooth
 // surface by Shading.x and further with distance. No highlight but a small, tight glint of the sun
@@ -253,7 +250,7 @@ float3 RockLight(Rock r, float3 albedo, sampler2D normalMap)
     float3 face = Facing(r.position, dx, dy);
     Detail detail = DetailOn(r.position + CameraPosition.xyz, face, dx, dy);
 
-    float flatness = 1 - saturate((length(r.position) - FlatNear) / (FlatFar - FlatNear));
+    float flatness = saturate(1.5 - length(r.position) / Shading.w);
     float smoothness = lerp(1, Shading.x, flatness);
     float facing = dot(detail.normal, ToLight.xyz);
     float up = detail.normal.z;

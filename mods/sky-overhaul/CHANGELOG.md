@@ -12,9 +12,9 @@ Notable changes to Sky Overhaul, loosely following
 - **Occlusion fades into fog.** It used to darken the fog itself, so in thick fog the creases of
   distant buildings and rocks showed through it. It now weakens as the fog thickens, and is gone
   where the fog hides everything.
-- **Far rocks are no longer faceted.** Rock is as flat as Rock smoothness sets within 30 m and
-  turns smoothly back into the game's own look by 120 m, so distant low-detail rock no longer shows
-  big flat faces.
+- **Far rocks are no longer faceted.** Rock turns smoothly back into the game's own look with
+  distance, so distant low-detail rock no longer shows big flat faces. **Rock flat distance**, on
+  the Rock tab, sets where: 75 m by default, fading from about 37 m to 112 m.
 
 ## [1.3.1] - 2026-10-09
 

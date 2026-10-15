@@ -81,6 +81,7 @@ struct Values {
     float leafGlow;
 
     float rockSmoothness;
+    float rockFlatDistance;
     float rockGlint;
     float rockGlintSharpness;
     float rockDetailSize;

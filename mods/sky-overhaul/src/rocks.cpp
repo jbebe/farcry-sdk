@@ -229,6 +229,7 @@ namespace {
         shading[0] = v.rockSmoothness;
         shading[1] = v.rockGlint * kStoneReflectance * (1.0f - v.rockSmoothness);
         shading[2] = v.rockGlintSharpness;
+        shading[3] = v.rockFlatDistance;
         draw.texture = DetailMap(device);
         if (draw.texture != nullptr) {
             float* detail = draw.parameters + kDetail * 4;
