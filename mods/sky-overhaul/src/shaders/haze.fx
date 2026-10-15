@@ -23,8 +23,12 @@ float4 Time : register(c97);
 // zw  one pixel of the mask, in texture coordinates
 float4 Solid : register(c98);
 
+// x  the up component of the steepest ground's normal that still shows a mirage
+// y  the same where it shows whole
+float4 Level : register(c99);
+
 // xy  the mask blur's axis, one pixel of the mask long
-float4 Axis : register(c99);
+float4 Axis : register(c100);
 
 #define PI 3.14159265f
 
@@ -33,11 +37,14 @@ float4 Axis : register(c99);
 static const float REFERENCE_PATH = 200.0f;
 static const float MOST_GROWTH = 4.0f;
 
-// Shimmer cells across one radian of view, sideways and up: taller than wide, as rising air is.
-static const float2 CELLS = float2(50.0f, 120.0f);
+// Shimmer cells all the way round the horizon, so the pattern meets itself behind the eye, and
+// across one radian of height.
+static const float AROUND = 1600.0f;
+static const float UP = 450.0f;
 
-// How fast the cells rise, in cells a second.
-static const float RISE = 1.5f;
+// How fast the shimmer drifts sideways, in cells a second, and how fast it churns in place.
+static const float DRIFT = 3.0f;
+static const float CHURN = 4.0f;
 
 // How far below a pixel of sky to look for the land it sits over, in pixels.
 static const float SKYLINE_REACH = 12.0f;
@@ -62,9 +69,6 @@ static const float MIRAGE_SEARCH = 0.12f;
 // How far apart the points are, in pixels, that tell level ground from a hill or a rock.
 static const float FOOTPRINT = 6.0f;
 
-// The ground's slope, as the up component of its normal, over which a mirage fades out.
-static const float2 LEVEL = float2(0.97f, 0.995f);
-
 // How far from the plane through its neighbours, in metres and per metre of distance, a point may
 // sit and still be the same level ground.
 static const float2 PLANE_TOLERANCE = float2(0.05f, 0.002f);
@@ -83,25 +87,31 @@ static const float2 SPREAD = float2(0.1f, 0.5f);
 #define MASK_RADIUS 4
 static const float MASK_WEIGHTS[MASK_RADIUS + 1] = {1.0f, 0.88f, 0.61f, 0.32f, 0.14f};
 
-// Smooth noise in [-0.5, 0.5) per channel.
-float3 ValueNoise(float3 p)
+// Smooth noise in [-0.5, 0.5) per channel, repeating every `period` along x.
+float3 ValueNoise(float3 p, float period)
 {
     float3 corner = floor(p);
     float3 f = p - corner;
     f = f * f * (3.0f - 2.0f * f);
-    float3 x00 = lerp(Hash(corner), Hash(corner + float3(1, 0, 0)), f.x);
-    float3 x10 = lerp(Hash(corner + float3(0, 1, 0)), Hash(corner + float3(1, 1, 0)), f.x);
-    float3 x01 = lerp(Hash(corner + float3(0, 0, 1)), Hash(corner + float3(1, 0, 1)), f.x);
-    float3 x11 = lerp(Hash(corner + float3(0, 1, 1)), Hash(corner + float3(1, 1, 1)), f.x);
+    float x0 = corner.x - period * floor(corner.x / period);
+    float x1 = x0 + 1.0f < period ? x0 + 1.0f : 0.0f;
+    float3 a = float3(x0, corner.yz);
+    float3 b = float3(x1, corner.yz);
+    float3 x00 = lerp(Hash(a), Hash(b), f.x);
+    float3 x10 = lerp(Hash(a + float3(0, 1, 0)), Hash(b + float3(0, 1, 0)), f.x);
+    float3 x01 = lerp(Hash(a + float3(0, 0, 1)), Hash(b + float3(0, 0, 1)), f.x);
+    float3 x11 = lerp(Hash(a + float3(0, 1, 1)), Hash(b + float3(0, 1, 1)), f.x);
     return lerp(lerp(x00, x10, f.y), lerp(x01, x11, f.y), f.z) - 0.5f;
 }
 
-// The air's bend along a world direction, so it stays put in the world as the view turns.
+// The air's bend along a world direction, laid round the horizon so it stays put in the world as
+// the view turns, drifting sideways and churning.
 float3 Shimmer(float3 direction)
 {
-    float3 p = float3(direction.xy * CELLS.x, direction.z * CELLS.y - Time.x * RISE);
-    return ValueNoise(p) +
-           0.5f * ValueNoise(p * 2.3f + float3(0.0f, Time.x * 0.7f, -Time.x * RISE));
+    float around = atan2(direction.y, direction.x) * (AROUND / (2.0f * PI));
+    float3 p = float3(around - Time.x * DRIFT, direction.z * UP, Time.x * CHURN);
+    return ValueNoise(p, AROUND) +
+           0.6f * ValueNoise(p * 2.0f + float3(0.0f, 17.0f, 31.0f), 2.0f * AROUND);
 }
 
 bool IsLand(float stored)
@@ -182,7 +192,7 @@ float Mirage(float2 uv, float3 direction, float3 at, float z, float wobble)
     float grazing = -dot(direction, normal);
     float edge = Heat.z * (1.0f + 0.4f * wobble);
     float band = grazing > 0.0f ? smoothstep(edge, 0.5f * edge, grazing) : 0.0f;
-    float level = smoothstep(LEVEL.x, LEVEL.y, normal.z);
+    float level = smoothstep(Level.x, Level.y, normal.z);
     float distance = smoothstep(MIRAGE_DISTANCE.x, MIRAGE_DISTANCE.y, length(at));
 
     // Only what lies beyond the ground it would cover: the sky, or land farther off.

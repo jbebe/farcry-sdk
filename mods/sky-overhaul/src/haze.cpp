@@ -24,7 +24,7 @@
 namespace {
     constexpr UINT kFirstConstant = SkyOverhaul::DepthConstants::kFirst;
     constexpr UINT kOwnConstant = kFirstConstant + SkyOverhaul::DepthConstants::kCount;
-    constexpr UINT kOwnConstants = 3;
+    constexpr UINT kOwnConstants = 4;
     // Set per pass of the mask's blur, after the frame's.
     constexpr UINT kAxisConstant = kOwnConstant + kOwnConstants;
 
@@ -47,6 +47,8 @@ namespace {
 
     // Kept short so the shimmer's coordinates stay precise; it jumps once when the clock wraps.
     constexpr float kClockWrap = 3600.0f;
+
+    constexpr float kRadiansPerDegree = 3.14159265f / 180.0f;
 
     // Below this neither changes anything a player could see.
     constexpr float kFaintest = 0.002f;
@@ -131,12 +133,14 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
     DepthConstants::Set(pass.device, view, depth, pass.backBuffer.Width, pass.backBuffer.Height);
     float projection[2];
     SolidDepth::Projection(view, projection);
-    const float maskWidth = static_cast<float>((pass.backBuffer.Width + 1) / 2);
+    const float slope = v.mirageSlope * kRadiansPerDegree;
+    const float maskWidth =static_cast<float>((pass.backBuffer.Width + 1) / 2);
     const float maskHeight = static_cast<float>((pass.backBuffer.Height + 1) / 2);
     float constants[kOwnConstants * 4] = {
         heat * v.hazeStrength * kFullBend, mirage, kMirageSine, kHotLayer,
         g_seconds, 0.0f, 0.0f, 0.0f,
-        projection[0], projection[1], 1.0f / maskWidth, 1.0f / maskHeight};
+        projection[0], projection[1], 1.0f / maskWidth, 1.0f / maskHeight,
+        std::cos(slope), std::cos(0.5f * slope), 0.0f, 0.0f};
     pass.device->SetPixelShaderConstantF(kOwnConstant, constants, kOwnConstants);
     pass.device->SetTexture(kSolidDepthSampler, solid.texture);
 

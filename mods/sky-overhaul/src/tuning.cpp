@@ -217,6 +217,9 @@ namespace {
         {"Mirage strength", &kHeatHaze, offsetof(Values, mirageStrength), 1.0f, 0.0f, 1.0f, "%.2f",
          "How much of the sky a mirage shows on bare level ground far off, seen within about a "
          "degree of it."},
+        {"Mirage ground slope", &kHeatHaze, offsetof(Values, mirageSlope), 4.0f, 0.5f, 15.0f,
+         "%.1f deg",
+         "The steepest ground a mirage shows on. It fades out over the last half of this angle."},
 
         {"Grass root shade", &kGrass, offsetof(Values, grassRootShade), 0.9f, 0.0f, 1.0f, "%.2f",
          "How much of the light the foot of a blade keeps against its tip."},

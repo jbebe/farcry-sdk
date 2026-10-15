@@ -68,6 +68,7 @@ struct Values {
 
     float hazeStrength;
     float mirageStrength;
+    float mirageSlope;
 
     float grassRootShade;
     float grassSideLight;
