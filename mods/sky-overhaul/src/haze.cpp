@@ -10,6 +10,7 @@
 #include "engine/frame_copy.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
+#include "engine/solid_depth.h"
 #include "tuning.h"
 
 #include "haze_ps.h"
@@ -20,20 +21,22 @@
 namespace {
     constexpr UINT kFirstConstant = SkyOverhaul::DepthConstants::kFirst;
     constexpr UINT kOwnConstant = kFirstConstant + SkyOverhaul::DepthConstants::kCount;
-    constexpr UINT kOwnConstants = 2;
+    constexpr UINT kOwnConstants = 3;
+    constexpr DWORD kSolidDepthSampler = 1;
 
     // The sun's height, as a sine, over which the ground heats up: about 15 to 45 degrees.
     constexpr float kHeatLow = 0.26f;
     constexpr float kHeatHigh = 0.7f;
 
-    // How far the air bends a look at full strength, in radians: about two pixels at 1080 lines.
+    // How far the air bends a look at full strength over 200 m of hot air, in radians: about two
+    // pixels at 1080 lines.
     constexpr float kFullBend = 0.002f;
 
     // The sine of the steepest look onto flat ground that still shows a mirage: about 1.2 degrees.
     constexpr float kMirageSine = 0.021f;
 
-    // How deep the hot air over the ground is, in metres.
-    constexpr float kHotLayer = 2.0f;
+    // How deep the shimmering air over the ground is, in metres.
+    constexpr float kHotLayer = 15.0f;
 
     // Kept short so the shimmer's coordinates stay precise; it jumps once when the clock wraps.
     constexpr float kClockWrap = 3600.0f;
@@ -67,7 +70,11 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
         std::clamp((lighting.sunDirection[2] - kHeatLow) / (kHeatHigh - kHeatLow), 0.0f, 1.0f) *
         (1.0f - SkyModel::Storminess(lighting.storm));
     const Tuning::Values v = Tuning::Current();
-    if (heat * (std::max)(v.hazeStrength, v.mirageStrength) < kFaintest) {
+    // The mirage tells bare ground from grass by the depth without it.
+    SolidDepth::SetWanted(SolidDepth::User::Haze, v.mirageStrength > 0.0f);
+    SolidDepth::Found solid = {};
+    const float mirage = SolidDepth::Latest(solid) ? heat * v.mirageStrength : 0.0f;
+    if ((std::max)(heat * v.hazeStrength, mirage) < kFaintest) {
         return;
     }
     IDirect3DPixelShader9* shader = g_shader.Get(pass.device);
@@ -78,10 +85,14 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
 
     ScreenDraw draw(pass.device, kFirstConstant, kOwnConstant + kOwnConstants - kFirstConstant);
     DepthConstants::Set(pass.device, view, depth, pass.backBuffer.Width, pass.backBuffer.Height);
+    float projection[2];
+    SolidDepth::Projection(view, projection);
     const float constants[kOwnConstants * 4] = {
-        heat * v.hazeStrength * kFullBend, heat * v.mirageStrength, kMirageSine, kHotLayer,
-        g_seconds, 0.0f, 0.0f, 0.0f};
+        heat * v.hazeStrength * kFullBend, mirage, kMirageSine, kHotLayer,
+        g_seconds, 0.0f, 0.0f, 0.0f,
+        projection[0], projection[1], 0.0f, 0.0f};
     pass.device->SetPixelShaderConstantF(kOwnConstant, constants, kOwnConstants);
+    pass.device->SetTexture(kSolidDepthSampler, solid.texture);
 
     // The world target's alpha carries brightness for the bloom.
     pass.device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
@@ -101,4 +112,5 @@ void SkyOverhaul::Haze::ReleaseDeviceObjects() {
 
 void SkyOverhaul::Haze::SetEnabled(bool enabled) {
     g_enabled = enabled;
+    SolidDepth::SetWanted(SolidDepth::User::Haze, enabled);
 }

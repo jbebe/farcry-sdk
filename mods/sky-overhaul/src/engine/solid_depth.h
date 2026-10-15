@@ -6,6 +6,7 @@
 // instead of centimetres. See docs/docs/engine-internals/presentation-and-input.md.
 #pragma once
 
+#include "engine/camera.h"
 #include "engine/frame.h"
 
 #include <d3d9.h>
@@ -38,6 +39,13 @@ bool Latest(Found& out);
 // Frees everything held on the device. Call before the engine resets it.
 void ReleaseDeviceObjects();
 
-void SetEnabled(bool enabled);
+// The effects that read the depth; it is gathered while any of them wants it.
+enum class User : unsigned { Occlusion = 1, Haze = 2 };
+
+void SetWanted(User user, bool wanted);
+
+// What shaders/solid.inc.fx linearises the depth with: the depth scale with w's sign folded in, and
+// the depth offset.
+void Projection(const Camera::View& view, float out[2]);
 
 }

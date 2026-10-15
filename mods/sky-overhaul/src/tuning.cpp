@@ -211,10 +211,12 @@ namespace {
 
         {"Heat haze strength", &kHeatHaze, offsetof(Values, hazeStrength), 1.0f, 0.0f, 4.0f,
          "%.2f",
-         "How far the hot air over sunlit ground bends what is seen through it. One shimmers far "
-         "land by about two pixels at 1080 lines."},
+         "How far the hot air over sunlit ground bends and blurs what is seen through it. One "
+         "moves land 200 m off by about two pixels at 1080 lines, and land 800 m off four times "
+         "as far."},
         {"Mirage strength", &kHeatHaze, offsetof(Values, mirageStrength), 1.0f, 0.0f, 1.0f, "%.2f",
-         "How much of the sky a mirage shows on flat ground seen within about a degree of level."},
+         "How much of the sky a mirage shows on bare level ground far off, seen within about a "
+         "degree of it."},
 
         {"Grass root shade", &kGrass, offsetof(Values, grassRootShade), 0.9f, 0.0f, 1.0f, "%.2f",
          "How much of the light the foot of a blade keeps against its tip."},

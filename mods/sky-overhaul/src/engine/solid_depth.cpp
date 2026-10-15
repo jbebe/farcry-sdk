@@ -14,7 +14,8 @@ namespace {
     // A viewport squeezed this close to the near plane is the first-person weapon's depth pass.
     constexpr float kWeaponFarthest = 0.5f;
 
-    bool g_enabled = false;
+    // A bit per User that wants the depth gathered.
+    unsigned g_users = 0;
     // From the composite to the sky pass, which is when the world's depth pass draws.
     bool g_gathering = false;
     // Whether the frame has drawn into the depth yet, which the first draw clears it for.
@@ -141,13 +142,13 @@ void SkyOverhaul::SolidDepth::OnScenePass(const Frame::Pass& pass) {
     g_gathering = false;
     g_drawn = false;
     g_sceneDepth = pass.depth;
-    if (g_enabled) {
+    if (g_users != 0) {
         EnsureTargets(pass.device, pass.backBuffer);
     }
 }
 
 void SkyOverhaul::SolidDepth::OnFinalPass(const Frame::Pass& pass) {
-    g_gathering = g_enabled && pass.live && g_depthSurface != nullptr;
+    g_gathering = g_users != 0 && pass.live && g_depthSurface != nullptr;
 }
 
 bool SkyOverhaul::SolidDepth::Latest(Found& out) {
@@ -168,7 +169,13 @@ void SkyOverhaul::SolidDepth::ReleaseDeviceObjects() {
     g_refused = false;
 }
 
-void SkyOverhaul::SolidDepth::SetEnabled(bool enabled) {
-    g_enabled = enabled;
-    g_gathering = g_gathering && enabled;
+void SkyOverhaul::SolidDepth::SetWanted(User user, bool wanted) {
+    const unsigned bit = static_cast<unsigned>(user);
+    g_users = wanted ? g_users | bit : g_users & ~bit;
+    g_gathering = g_gathering && g_users != 0;
+}
+
+void SkyOverhaul::SolidDepth::Projection(const Camera::View& view, float out[2]) {
+    out[0] = view.depthScale * view.wFromDepth;
+    out[1] = view.depthOffset;
 }

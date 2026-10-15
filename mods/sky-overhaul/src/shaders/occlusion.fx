@@ -2,6 +2,7 @@
 // without its grass and leaves. See src/occlusion.cpp for the passes.
 
 #include "depth.inc.fx"
+#include "solid.inc.fx"
 
 #define SLICES 2
 #define STEPS 6
@@ -26,8 +27,6 @@ float4 FogHeight : register(c101);
 
 // The half-resolution occlusion: red is the share of the sky a point sees.
 sampler2D Occlusion : register(s0);
-// The world's hardware depth without foliage, at half resolution.
-sampler2D SolidDepth : register(s1);
 
 float2 HalfUv(float2 halfPixel) {
     return (halfPixel + 0.5f) * HalfPixel.xy;
@@ -35,8 +34,7 @@ float2 HalfUv(float2 halfPixel) {
 
 // Metres along the camera's axis to the solid depth at `uv`, or nought where nothing was drawn.
 float SolidMetres(float2 uv) {
-    float stored = tex2Dlod(SolidDepth, float4(uv, 0.0f, 0.0f)).r;
-    return stored < 1.0f ? abs(Projection.y / (stored - Projection.x)) : 0.0f;
+    return SolidMetresWith(uv, Projection.xy);
 }
 
 // How far apart two depths may be, in metres at distance `z`, and still be one surface.

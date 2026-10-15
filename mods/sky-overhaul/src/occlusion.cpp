@@ -105,10 +105,11 @@ namespace {
             return false;
         }
 
-        // The solid depth's linearisation is written with w's sign folded in, and the pixels a
-        // metre covers are given for one metre away.
+        // The pixels a metre covers are given for one metre away.
+        float projection[2];
+        SkyOverhaul::SolidDepth::Projection(view, projection);
         const float own[kOwnConstants * 4] = {
-            view.depthScale * view.wFromDepth, view.depthOffset, 0.0f, v.occlusionRootReach,
+            projection[0], projection[1], 0.0f, v.occlusionRootReach,
             v.occlusionRadius, v.occlusionScreenLimit, v.occlusionFadeDistance, v.occlusionStrength,
             1.0f / static_cast<float>(solid.width), 1.0f / static_cast<float>(solid.height),
             0.5f * view.verticalScale * static_cast<float>(solid.height), 0.0f};
@@ -169,7 +170,7 @@ void SkyOverhaul::Occlusion::OnScenePass(const Frame::Pass& pass) {
     }
     const Tuning::Values v = Tuning::Current();
     const bool wanted = v.occlusionStrength > 0.0f;
-    SolidDepth::SetEnabled(wanted);
+    SolidDepth::SetWanted(SolidDepth::User::Occlusion, wanted);
 
     SolidDepth::Found solid = {};
     DepthTexture::Found engine = {};
@@ -191,5 +192,5 @@ void SkyOverhaul::Occlusion::ReleaseDeviceObjects() {
 
 void SkyOverhaul::Occlusion::SetEnabled(bool enabled) {
     g_enabled = enabled;
-    SolidDepth::SetEnabled(enabled);
+    SolidDepth::SetWanted(SolidDepth::User::Occlusion, enabled);
 }

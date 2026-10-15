@@ -91,7 +91,8 @@ set(SHADER_INCLUDES
   "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/depth.inc.fx"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/foliage.inc.fx"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/hash.inc.fx"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/shadows.inc.fx")
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/shadows.inc.fx"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/solid.inc.fx")
 
 set(SHADER_HEADERS "")
 foreach(PASS IN LISTS SHADER_PASSES)
