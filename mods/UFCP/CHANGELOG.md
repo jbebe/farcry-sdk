@@ -2,6 +2,14 @@
 
 Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.1] - 2026-10-15
+
+### Fixed
+- **Startup crash on many-core PCs.** On a PC with 32 or more logical processors, such as a 16-core
+  CPU with hyperthreading, the game closed a few seconds into the splash screen. The game's own
+  hardware detection counted the processors in a loop that never ended on such a machine; it now
+  stops after the 32nd.
+
 ## [1.1.0] - 2026-10-15
 
 ### Changed

@@ -31,6 +31,8 @@ Always applied. A fix that needs a switch is a preference in disguise.
   output ceiling was applied to the mouse as well.
 - **High-precision timer** — loading screens ran far below the 30 FPS they are paced for.
 - **Grass under spot lights** — headlights and flashlights left grass black however close it was.
+- **Many cores** — on a PC with 32 or more logical processors the game closed at the splash screen,
+  because its hardware detection counted processors in a loop that never ended there.
 - **CPU and GPU utilisation** — the job pool was sized for two-core machines, idle workers spun in
   the queue's critical section, the GPU could never run a frame ahead, and with a frame cap set the
   limiter burned a whole core busy-waiting for its deadline.
