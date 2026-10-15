@@ -52,10 +52,6 @@ namespace {
     // How deep the shimmering air over the ground is, in metres.
     constexpr float kHotLayer = 15.0f;
 
-    // The distances, in metres, at which the far world starts to blur and is wholly blurred.
-    constexpr float kFarBlurStart = 300.0f;
-    constexpr float kFarBlurWhole = 1500.0f;
-
     // Kept short so the shimmer's coordinates stay precise; it jumps once when the clock wraps.
     constexpr float kClockWrap = 3600.0f;
 
@@ -169,7 +165,7 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
         projection[0], projection[1], 1.0f / static_cast<float>(halfWidth),
         1.0f / static_cast<float>(halfHeight),
         std::cos(slope), std::cos(0.5f * slope), v.mirageDistance, 2.0f * v.mirageDistance,
-        kFarBlurStart, kFarBlurWhole, farBlur, 0.0f};
+        v.hazeBlurStart, (std::max)(v.hazeBlurEnd, v.hazeBlurStart + 1.0f), farBlur, 0.0f};
     device->SetPixelShaderConstantF(kOwnConstant, constants, kOwnConstants);
     device->SetTexture(kSolidDepthSampler, solid.texture);
 

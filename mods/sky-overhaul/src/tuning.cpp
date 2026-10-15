@@ -221,8 +221,11 @@ namespace {
          "%.2f arcmin",
          "How tall one wave of the shimmer is, as an angle of the unzoomed view. A degree is 60."},
         {"Heat haze far blur", &kHeatHaze, offsetof(Values, hazeFarBlur), 1.0f, 0.0f, 1.0f, "%.2f",
-         "How far land melts into blobs that dance with the shimmer: from 300 m, wholly by 1.5 km. "
-         "Near things stay sharp."},
+         "How far land melts into blobs that dance with the shimmer. Near things stay sharp."},
+        {"Heat haze blur start", &kHeatHaze, offsetof(Values, hazeBlurStart), 100.0f, 10.0f,
+         1000.0f, "%.0f m", "How far off land starts to melt into the far blur."},
+        {"Heat haze blur end", &kHeatHaze, offsetof(Values, hazeBlurEnd), 400.0f, 10.0f, 1000.0f,
+         "%.0f m", "How far off land has wholly melted into the far blur."},
         {"Mirage strength", &kHeatHaze, offsetof(Values, mirageStrength), 1.0f, 0.0f, 1.0f, "%.2f",
          "How much of the sky a mirage shows on bare level ground far off, seen within about a "
          "degree of it."},
