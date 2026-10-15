@@ -12,7 +12,7 @@ sampler2D Mask : register(s2);
 
 // x  how far the air bends a look over REFERENCE_PATH of hot air, in radians
 // y  how much of the ground a mirage replaces
-// z  the sine of the shallowest look onto bare level ground that still shows a mirage
+// z  the sine of the steepest look onto bare level ground that still shows a mirage
 // w  how deep the shimmering air over the ground is, in metres
 float4 Heat : register(c96);
 
@@ -41,7 +41,7 @@ static const float MOST_GROWTH = 4.0f;
 // Shimmer cells all the way round the horizon, so the pattern meets itself behind the eye, and
 // across one radian of height: flat, several times wider than tall.
 static const float AROUND = 700.0f;
-static const float UP = 600.0f;
+static const float UP = 1200.0f;
 
 // What the shimmer's one layer is scaled by, so it reaches as far as two layers did.
 static const float SHIMMER_GAIN = 1.6f;
@@ -67,8 +67,8 @@ static const float2 BLUR_TAPS[6] = {
     float2(1.0f, 0.0f), float2(0.5f, 0.866f), float2(-0.5f, 0.866f),
     float2(-1.0f, 0.0f), float2(-0.5f, -0.866f), float2(0.5f, -0.866f)};
 
-// The steepest look down, as a sine, worth testing for a mirage at all.
-static const float MIRAGE_SEARCH = 0.12f;
+// How far the ragged edge of a mirage reaches past Heat.z, as a share of it.
+static const float RAGGED = 0.4f;
 
 // How far apart the points are, in pixels, that tell level ground from a hill or a rock.
 static const float FOOTPRINT = 6.0f;
@@ -192,7 +192,7 @@ float Mirage(float2 uv, float3 direction, float3 at, float z, float wobble)
 
     // The look's angle to the ground itself, not to the horizon.
     float grazing = -dot(direction, normal);
-    float edge = Heat.z * (1.0f + 0.4f * wobble);
+    float edge = Heat.z * (1.0f + RAGGED * wobble);
     float band = grazing > 0.0f ? smoothstep(edge, 0.5f * edge, grazing) : 0.0f;
     float level = smoothstep(Level.x, Level.y, normal.z);
     float distance = smoothstep(Level.z, Level.w, length(at));
@@ -214,7 +214,9 @@ float4 MaskPS(float2 screen : VPOS) : COLOR0
     float3 direction = normalize(ray);
     float depression = -direction.z;
     float mirage = 0.0f;
-    [branch] if (IsLand(z) && depression > 0.0f && depression < MIRAGE_SEARCH)
+    // The steepest look that could still meet ground tilted away at the steepest slope allowed.
+    float search = Heat.z * (1.0f + RAGGED * SHIMMER_GAIN) + sqrt(1.0f - Level.x * Level.x);
+    [branch] if (IsLand(z) && depression > 0.0f && depression < search)
     {
         mirage = Mirage(uv, direction, ray * z, z, Shimmer(direction).z);
     }

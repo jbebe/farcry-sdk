@@ -222,7 +222,8 @@ namespace {
          "The steepest ground a mirage shows on. It fades out over the last half of this angle."},
         {"Mirage start distance", &kHeatHaze, offsetof(Values, mirageDistance), 60.0f, 10.0f,
          500.0f, "%.0f m",
-         "How far off a mirage begins. It is whole from twice this distance."},
+         "How far off a mirage begins on level ground, seen standing. It is whole from twice this "
+         "distance, and looks down onto ground from higher up are too steep for one."},
 
         {"Grass root shade", &kGrass, offsetof(Values, grassRootShade), 0.9f, 0.0f, 1.0f, "%.2f",
          "How much of the light the foot of a blade keeps against its tip."},

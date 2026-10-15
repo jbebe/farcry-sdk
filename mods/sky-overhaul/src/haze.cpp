@@ -39,8 +39,9 @@ namespace {
     // pixels at 1080 lines.
     constexpr float kFullBend = 0.002f;
 
-    // The sine of the steepest look onto flat ground that still shows a mirage: about 1.2 degrees.
-    constexpr float kMirageSine = 0.021f;
+    // A standing eye's height over the ground, in metres, which turns the distance a mirage starts
+    // at into the steepest look onto level ground that shows one.
+    constexpr float kStandingEye = 1.8f;
 
     // How deep the shimmering air over the ground is, in metres.
     constexpr float kHotLayer = 15.0f;
@@ -137,7 +138,7 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
     const float maskWidth =static_cast<float>((pass.backBuffer.Width + 1) / 2);
     const float maskHeight = static_cast<float>((pass.backBuffer.Height + 1) / 2);
     float constants[kOwnConstants * 4] = {
-        heat * v.hazeStrength * kFullBend, mirage, kMirageSine, kHotLayer,
+        heat * v.hazeStrength * kFullBend, mirage, kStandingEye / v.mirageDistance, kHotLayer,
         g_seconds, 0.0f, 0.0f, 0.0f,
         projection[0], projection[1], 1.0f / maskWidth, 1.0f / maskHeight,
         std::cos(slope), std::cos(0.5f * slope), v.mirageDistance, 2.0f * v.mirageDistance};
