@@ -23,15 +23,17 @@ In the Mod Configuration Menu, on the Options screen, saved in `bin\fcse.ini`. E
 game exactly as it shipped until you change it.
 
 - **Briefings keep control** — an NPC's briefing no longer stands you up and takes control away.
-- **Keep weapon on rescue** — a buddy rescue no longer swaps your secondary weapon for a pistol.
+- **Keep weapon on rescue** — a buddy rescue no longer swaps out your secondary weapon.
 - **No forced buddy rescues** — the factions stop assigning buddy rescue missions, so a
-  bugged one cannot block the story. Start a new game after changing it.
+  bugged one cannot block the story. Takes effect from the next launch; start a new game after
+  changing it.
 - **No reputation drop** — finishing A1SM03 or A2SM08 no longer lowers your reputation.
 - **Hide diamond message** — picking up diamonds no longer shows the game's own message, for mods
   that show their own.
 - **No blinking pickups** — weapons, ammo, health, diamond cases, beds and other usable things stop
-  flashing.
-- **No save icons on map** — save points lose their icon on the map and the GPS.
+  flashing, and so do map and compass markers.
+- **No save icons on map** — save points lose their icon on the map and the GPS, from the next
+  reload.
 - **Limited saving** — Save Game leaves the pause menu and F5/F9 stop working; save points and
   autosaves still save.
 - **Brown filter** — on by default, the game's own colour grade. Off gives a neutral grade without
@@ -41,7 +43,8 @@ game exactly as it shipped until you change it.
   60 seconds, or always shown. 3 seconds is the game's own.
 - **Skip tutorial pop-ups** — off, the pop-ups that interrupt play, or those and the floating hints.
 - **Aim toggle** — tap aim to stay in the sights, tap again to lower them.
-- **Sprint toggle** — tap sprint to keep running until you tap again or stop.
+- **Sprint toggle** — tap sprint to keep running until you tap again or stop. Keyboard only; the
+  gamepad already has a sprint lock.
 - **Sprint turn** — sprinting no longer slows how fast you turn.
 - **No rim lighting** — removes the glow outlining characters, mostly seen at night.
 - **No sprint and aim blur** — removes the screen blur while sprinting and aiming down the sights.
