@@ -3,6 +3,7 @@
 #include "depth_constants.h"
 #include "sky_model.h"
 
+#include "engine/blur_targets.h"
 #include "engine/camera.h"
 #include "engine/clock.h"
 #include "engine/cloud_layer.h"
@@ -13,6 +14,8 @@
 #include "engine/solid_depth.h"
 #include "tuning.h"
 
+#include "haze_mask_blur_ps.h"
+#include "haze_mask_ps.h"
 #include "haze_ps.h"
 
 #include <algorithm>
@@ -22,7 +25,11 @@ namespace {
     constexpr UINT kFirstConstant = SkyOverhaul::DepthConstants::kFirst;
     constexpr UINT kOwnConstant = kFirstConstant + SkyOverhaul::DepthConstants::kCount;
     constexpr UINT kOwnConstants = 3;
+    // Set per pass of the mask's blur, after the frame's.
+    constexpr UINT kAxisConstant = kOwnConstant + kOwnConstants;
+
     constexpr DWORD kSolidDepthSampler = 1;
+    constexpr DWORD kMaskSampler = 2;
 
     // The sun's height, as a sine, over which the ground heats up: about 15 to 45 degrees.
     constexpr float kHeatLow = 0.26f;
@@ -46,8 +53,45 @@ namespace {
 
     bool g_enabled = false;
     SkyOverhaul::PixelShader g_shader{"haze", g_hazePixelShader};
+    SkyOverhaul::PixelShader g_maskShader{"haze mask", g_hazeMaskPixelShader};
+    SkyOverhaul::PixelShader g_maskBlurShader{"haze mask blur", g_hazeMaskBlurPixelShader};
+    // Where a mirage shows, at half resolution, and the other half of its blur.
+    SkyOverhaul::BlurTargets g_mask{"haze"};
     SkyOverhaul::Stopwatch g_stopwatch;
     float g_seconds = 0.0f;
+
+    // Draws where a mirage shows into the mask and blurs it, leaving the pass's own target, depth,
+    // scissor and depth range bound again. False if the device would not make the mask.
+    bool DrawMask(const SkyOverhaul::Frame::Pass& pass, SkyOverhaul::DrawGuard& draw) {
+        IDirect3DDevice9* device = pass.device;
+        IDirect3DPixelShader9* maskShader = g_maskShader.Get(device);
+        IDirect3DPixelShader9* blurShader = g_maskBlurShader.Get(device);
+        if (maskShader == nullptr || blurShader == nullptr ||
+            !g_mask.Ensure(device, (pass.backBuffer.Width + 1) / 2,
+                           (pass.backBuffer.Height + 1) / 2)) {
+            return false;
+        }
+
+        // A half-resolution target cannot share the world's multisampled depth, and switching
+        // targets resets the scissor rectangle the engine may be counting on.
+        RECT scissor = {};
+        device->GetScissorRect(&scissor);
+        device->SetDepthStencilSurface(nullptr);
+        device->SetRenderTarget(0, g_mask.First().surface);
+        device->SetPixelShader(maskShader);
+        draw.ClipQuad(0.0f);
+        device->SetPixelShader(blurShader);
+        g_mask.Blur(device, draw, kAxisConstant, 0.0f, 0.0f);
+
+        device->SetRenderTarget(0, pass.target);
+        device->SetDepthStencilSurface(pass.depth);
+        device->SetScissorRect(&scissor);
+        D3DVIEWPORT9 wholeRange = pass.viewport;
+        wholeRange.MinZ = 0.0f;
+        wholeRange.MaxZ = 1.0f;
+        device->SetViewport(&wholeRange);
+        return true;
+    }
 }
 
 void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
@@ -83,16 +127,23 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
         return;
     }
 
-    ScreenDraw draw(pass.device, kFirstConstant, kOwnConstant + kOwnConstants - kFirstConstant);
+    ScreenDraw draw(pass.device, kFirstConstant, kAxisConstant + 1 - kFirstConstant);
     DepthConstants::Set(pass.device, view, depth, pass.backBuffer.Width, pass.backBuffer.Height);
     float projection[2];
     SolidDepth::Projection(view, projection);
-    const float constants[kOwnConstants * 4] = {
+    const float maskWidth = static_cast<float>((pass.backBuffer.Width + 1) / 2);
+    const float maskHeight = static_cast<float>((pass.backBuffer.Height + 1) / 2);
+    float constants[kOwnConstants * 4] = {
         heat * v.hazeStrength * kFullBend, mirage, kMirageSine, kHotLayer,
         g_seconds, 0.0f, 0.0f, 0.0f,
-        projection[0], projection[1], 0.0f, 0.0f};
+        projection[0], projection[1], 1.0f / maskWidth, 1.0f / maskHeight};
     pass.device->SetPixelShaderConstantF(kOwnConstant, constants, kOwnConstants);
     pass.device->SetTexture(kSolidDepthSampler, solid.texture);
+
+    if (mirage < kFaintest || !DrawMask(pass, draw)) {
+        constants[1] = 0.0f;
+        pass.device->SetPixelShaderConstantF(kOwnConstant, constants, 1);
+    }
 
     // The world target's alpha carries brightness for the bloom.
     pass.device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
@@ -100,14 +151,20 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
                                                             D3DCOLORWRITEENABLE_BLUE);
     pass.device->SetPixelShader(shader);
     pass.device->SetTexture(0, world);
-    // The bend moves a look by fractions of a pixel.
-    pass.device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-    pass.device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    pass.device->SetTexture(kMaskSampler, g_mask.First().texture);
+    // The bend moves a look by fractions of a pixel, and the mask is half the size.
+    for (DWORD sampler : {DWORD{0}, kMaskSampler}) {
+        pass.device->SetSamplerState(sampler, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+        pass.device->SetSamplerState(sampler, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    }
     draw.ClipQuad(0.0f);
 }
 
 void SkyOverhaul::Haze::ReleaseDeviceObjects() {
+    g_mask.Release();
     g_shader.Release();
+    g_maskShader.Release();
+    g_maskBlurShader.Release();
 }
 
 void SkyOverhaul::Haze::SetEnabled(bool enabled) {

@@ -3,14 +3,12 @@
 #include "depth_constants.h"
 #include "tuning.h"
 
+#include "engine/blur_targets.h"
 #include "engine/camera.h"
-#include "engine/com.h"
 #include "engine/depth_texture.h"
-#include "engine/render_target.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "engine/solid_depth.h"
-#include "fcse_api.h"
 
 #include "occlusion_apply_ps.h"
 #include "occlusion_blur_ps.h"
@@ -27,69 +25,14 @@ namespace {
 
     constexpr DWORD kSolidDepthSampler = 1;
 
-    struct Target {
-        IDirect3DTexture9* texture;
-        IDirect3DSurface9* surface;
-    };
-
     bool g_enabled = false;
 
-    IDirect3DDevice9* g_owner = nullptr;
-    // The occlusion at half resolution, and the other half of its blur.
-    Target g_halves[2] = {};
-    UINT g_width = 0;
-    UINT g_height = 0;
-    // Set once the device refuses a target; cleared on reset.
-    bool g_refused = false;
+    // The occlusion at the solid depth's size, and the other half of its blur.
+    SkyOverhaul::BlurTargets g_halves{"occlusion"};
 
     SkyOverhaul::PixelShader g_gtaoShader{"occlusion", g_occlusionGtaoPixelShader};
     SkyOverhaul::PixelShader g_blurShader{"occlusion blur", g_occlusionBlurPixelShader};
     SkyOverhaul::PixelShader g_applyShader{"occlusion apply", g_occlusionApplyPixelShader};
-
-    void ReleaseTargets() {
-        for (Target& target : g_halves) {
-            SkyOverhaul::Release(target.surface);
-            SkyOverhaul::Release(target.texture);
-        }
-    }
-
-    // Both halves of the blur, the size of the solid depth, made on first use.
-    bool EnsureTargets(IDirect3DDevice9* device, UINT width, UINT height) {
-        if (g_owner == device && g_halves[0].texture != nullptr && g_width == width &&
-            g_height == height) {
-            return true;
-        }
-        ReleaseTargets();
-        g_owner = device;
-        D3DSURFACE_DESC desc = {};
-        desc.Width = width;
-        desc.Height = height;
-        desc.Format = D3DFMT_A8R8G8B8;
-        for (Target& target : g_halves) {
-            const HRESULT created =
-                SkyOverhaul::CreateTarget(device, desc, &target.texture, &target.surface);
-            if (FAILED(created)) {
-                ReleaseTargets();
-                g_refused = true;
-                FCSE::Logf("occlusion: no %ux%u target, 0x%08lX", width, height,
-                           static_cast<unsigned long>(created));
-                return false;
-            }
-        }
-        g_width = width;
-        g_height = height;
-        return true;
-    }
-
-    void BlurInto(IDirect3DDevice9* device, SkyOverhaul::DrawGuard& draw, const Target& from,
-                  const Target& into, float axisX, float axisY) {
-        const float blur[4] = {axisX, axisY, 0.0f, 0.0f};
-        device->SetPixelShaderConstantF(kBlurConstant, blur, 1);
-        // Before the target changes, so `into` is never bound to be read and written at once.
-        device->SetTexture(0, from.texture);
-        device->SetRenderTarget(0, into.surface);
-        draw.ClipQuad(0.0f);
-    }
 
     // The occlusion at half resolution and blurred, then multiplied into the world.
     bool Draw(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
@@ -99,9 +42,9 @@ namespace {
         IDirect3DPixelShader9* gtaoShader = g_gtaoShader.Get(device);
         IDirect3DPixelShader9* blurShader = g_blurShader.Get(device);
         IDirect3DPixelShader9* applyShader = g_applyShader.Get(device);
-        if (g_refused || gtaoShader == nullptr || blurShader == nullptr ||
-            applyShader == nullptr || view.horizontalScale == 0.0f || view.verticalScale == 0.0f ||
-            !EnsureTargets(device, solid.width, solid.height)) {
+        if (gtaoShader == nullptr || blurShader == nullptr || applyShader == nullptr ||
+            view.horizontalScale == 0.0f || view.verticalScale == 0.0f ||
+            !g_halves.Ensure(device, solid.width, solid.height)) {
             return false;
         }
 
@@ -132,13 +75,12 @@ namespace {
         RECT scissor = {};
         device->GetScissorRect(&scissor);
         device->SetDepthStencilSurface(nullptr);
-        device->SetRenderTarget(0, g_halves[0].surface);
+        device->SetRenderTarget(0, g_halves.First().surface);
         device->SetPixelShader(gtaoShader);
         draw.ClipQuad(0.0f);
 
         device->SetPixelShader(blurShader);
-        BlurInto(device, draw, g_halves[0], g_halves[1], 1.0f, 0.0f);
-        BlurInto(device, draw, g_halves[1], g_halves[0], 0.0f, 1.0f);
+        g_halves.Blur(device, draw, kBlurConstant, 0.0f, 0.0f);
 
         device->SetRenderTarget(0, pass.target);
         device->SetDepthStencilSurface(pass.depth);
@@ -150,7 +92,7 @@ namespace {
 
         // Passes the depth test only where the world drew nearer than the occlusion fades out by.
         // The world target's alpha carries brightness for the bloom, so it is left alone.
-        device->SetTexture(0, g_halves[0].texture);
+        device->SetTexture(0, g_halves.First().texture);
         device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
         device->SetRenderState(D3DRS_ZFUNC, D3DCMP_GREATER);
         device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
@@ -182,12 +124,10 @@ void SkyOverhaul::Occlusion::OnScenePass(const Frame::Pass& pass) {
 }
 
 void SkyOverhaul::Occlusion::ReleaseDeviceObjects() {
-    ReleaseTargets();
+    g_halves.Release();
     g_gtaoShader.Release();
     g_blurShader.Release();
     g_applyShader.Release();
-    g_owner = nullptr;
-    g_refused = false;
 }
 
 void SkyOverhaul::Occlusion::SetEnabled(bool enabled) {

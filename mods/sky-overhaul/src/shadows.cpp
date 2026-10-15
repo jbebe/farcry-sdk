@@ -3,11 +3,10 @@
 #include "clouds.h"
 #include "depth_constants.h"
 
+#include "engine/blur_targets.h"
 #include "engine/camera.h"
 #include "engine/cloud_layer.h"
-#include "engine/com.h"
 #include "engine/depth_texture.h"
-#include "engine/render_target.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "fcse_api.h"
@@ -31,74 +30,15 @@ namespace {
     // Sky passes without the depth texture before that is reported.
     constexpr uint32_t kPatience = 300;
 
-    struct Target {
-        IDirect3DTexture9* texture;
-        IDirect3DSurface9* surface;
-    };
-
     bool g_enabled = false;
 
-    IDirect3DDevice9* g_owner = nullptr;
     // The shadows at half resolution, and the other half of their blur.
-    Target g_halves[2] = {};
-    UINT g_width = 0;
-    UINT g_height = 0;
-    // Set once the device refuses a target; cleared on reset.
-    bool g_refused = false;
+    SkyOverhaul::BlurTargets g_halves{"shadows"};
 
     uint32_t g_passesWithoutDepth = 0;
 
     SkyOverhaul::PixelShader g_blurShader{"shadows blur", g_shadowsBlurPixelShader};
     SkyOverhaul::PixelShader g_applyShader{"shadows apply", g_shadowsApplyPixelShader};
-
-    void ReleaseTargets() {
-        for (Target& target : g_halves) {
-            SkyOverhaul::Release(target.surface);
-            SkyOverhaul::Release(target.texture);
-        }
-    }
-
-    // Both halves of the blur at half the back buffer's size, made on first use.
-    bool EnsureTargets(IDirect3DDevice9* device, const D3DSURFACE_DESC& backBuffer) {
-        if (g_owner != device) {
-            ReleaseTargets();
-            g_owner = device;
-        }
-        if (g_halves[0].texture != nullptr && g_width == backBuffer.Width &&
-            g_height == backBuffer.Height) {
-            return true;
-        }
-        ReleaseTargets();
-        D3DSURFACE_DESC desc = {};
-        desc.Width = (backBuffer.Width + 1) / 2;
-        desc.Height = (backBuffer.Height + 1) / 2;
-        desc.Format = D3DFMT_A8R8G8B8;
-        for (Target& target : g_halves) {
-            const HRESULT created =
-                SkyOverhaul::CreateTarget(device, desc, &target.texture, &target.surface);
-            if (FAILED(created)) {
-                ReleaseTargets();
-                g_refused = true;
-                FCSE::Logf("shadows: no %ux%u target, 0x%08lX", desc.Width, desc.Height,
-                           static_cast<unsigned long>(created));
-                return false;
-            }
-        }
-        g_width = backBuffer.Width;
-        g_height = backBuffer.Height;
-        return true;
-    }
-
-    void BlurInto(IDirect3DDevice9* device, SkyOverhaul::DrawGuard& draw, const Target& from,
-                  const Target& into, float axisX, float axisY) {
-        const float blur[4] = {axisX, axisY, 1.0f / static_cast<float>((g_width + 1) / 2),
-                               1.0f / static_cast<float>((g_height + 1) / 2)};
-        device->SetPixelShaderConstantF(kBlurConstant, blur, 1);
-        // Before the target changes, so `into` is never bound to be read and written at once.
-        device->SetTexture(0, from.texture);
-        device->SetRenderTarget(0, into.surface);
-        draw.ClipQuad(0.0f);
-    }
 
     // The shadows at half resolution and blurred, then multiplied into the world.
     bool Draw(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
@@ -106,14 +46,16 @@ namespace {
         IDirect3DDevice9* device = pass.device;
         IDirect3DPixelShader9* blurShader = g_blurShader.Get(device);
         IDirect3DPixelShader9* applyShader = g_applyShader.Get(device);
-        if (strength <= 0.0f || sun <= 0.0f || g_refused || blurShader == nullptr ||
-            applyShader == nullptr || view.horizontalScale == 0.0f || view.verticalScale == 0.0f ||
-            !EnsureTargets(device, pass.backBuffer)) {
+        if (strength <= 0.0f || sun <= 0.0f || blurShader == nullptr || applyShader == nullptr ||
+            view.horizontalScale == 0.0f || view.verticalScale == 0.0f ||
+            !g_halves.Ensure(device, (pass.backBuffer.Width + 1) / 2,
+                             (pass.backBuffer.Height + 1) / 2)) {
             return false;
         }
 
         SkyOverhaul::ScreenDraw draw(device, kFirstConstant, kFrameConstants + 1);
-        SkyOverhaul::DepthConstants::Set(device, view, depth, g_width, g_height);
+        SkyOverhaul::DepthConstants::Set(device, view, depth, pass.backBuffer.Width,
+                                         pass.backBuffer.Height);
         const float shade[4] = {strength, sun, 0.0f, 0.0f};
         device->SetPixelShaderConstantF(kFirstConstant + SkyOverhaul::DepthConstants::kCount, shade,
                                         1);
@@ -123,7 +65,7 @@ namespace {
         RECT scissor = {};
         device->GetScissorRect(&scissor);
         device->SetDepthStencilSurface(nullptr);
-        device->SetRenderTarget(0, g_halves[0].surface);
+        device->SetRenderTarget(0, g_halves.First().surface);
         device->Clear(0, nullptr, D3DCLEAR_TARGET, 0xFFFFFFFF, 1.0f, 0);
 
         device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_ALPHA);
@@ -134,8 +76,8 @@ namespace {
         device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
 
         device->SetPixelShader(blurShader);
-        BlurInto(device, draw, g_halves[0], g_halves[1], 1.0f, 0.0f);
-        BlurInto(device, draw, g_halves[1], g_halves[0], 0.0f, 1.0f);
+        g_halves.Blur(device, draw, kBlurConstant, 1.0f / static_cast<float>(g_halves.Width()),
+                      1.0f / static_cast<float>(g_halves.Height()));
 
         device->SetRenderTarget(0, pass.target);
         device->SetDepthStencilSurface(pass.depth);
@@ -147,7 +89,7 @@ namespace {
 
         // The shader leaves the sky and the weapon alone, which the engine's depth holds nothing
         // for. The world target's alpha carries brightness for the bloom.
-        device->SetTexture(0, g_halves[0].texture);
+        device->SetTexture(0, g_halves.First().texture);
         device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
         device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);
         device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR);
@@ -183,11 +125,9 @@ void SkyOverhaul::Shadows::OnScenePass(const Frame::Pass& pass) {
 }
 
 void SkyOverhaul::Shadows::ReleaseDeviceObjects() {
-    ReleaseTargets();
+    g_halves.Release();
     g_blurShader.Release();
     g_applyShader.Release();
-    g_owner = nullptr;
-    g_refused = false;
 }
 
 void SkyOverhaul::Shadows::SetEnabled(bool enabled) {

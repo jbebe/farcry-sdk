@@ -1,10 +1,14 @@
-// Heat haze and mirage: the world seen through the hot air over sunlit ground.
+// Heat haze and mirage: the world seen through the hot air over sunlit ground. See src/haze.cpp for
+// the passes.
 
 #include "depth.inc.fx"
 #include "hash.inc.fx"
 #include "solid.inc.fx"
 
+// The world in MainPS; the mask being blurred in MaskBlurPS.
 sampler2D Scene : register(s0);
+// Where a mirage shows, blurred, at half resolution: red is how much.
+sampler2D Mask : register(s2);
 
 // x  how far the air bends a look over REFERENCE_PATH of hot air, in radians
 // y  how much of the ground a mirage replaces
@@ -16,7 +20,11 @@ float4 Heat : register(c96);
 float4 Time : register(c97);
 
 // xy  what the solid depth is linearised with
+// zw  one pixel of the mask, in texture coordinates
 float4 Solid : register(c98);
+
+// xy  the mask blur's axis, one pixel of the mask long
+float4 Axis : register(c99);
 
 #define PI 3.14159265f
 
@@ -41,6 +49,9 @@ static const float SIDEWAYS = 0.5f;
 static const float BLUR_SHARE = 0.6f;
 static const float LEAST_BLUR = 0.5f;
 
+// The least blur of a mirage's own picture, in pixels.
+static const float MIRAGE_BLUR = 2.0f;
+
 static const float2 BLUR_TAPS[6] = {
     float2(1.0f, 0.0f), float2(0.5f, 0.866f), float2(-0.5f, 0.866f),
     float2(-1.0f, 0.0f), float2(-0.5f, -0.866f), float2(0.5f, -0.866f)};
@@ -63,6 +74,14 @@ static const float2 MIRAGE_DISTANCE = float2(60.0f, 120.0f);
 
 // How high above the ground without grass a look may land, in metres, and still be the ground.
 static const float GRASS_HEIGHT = 0.2f;
+
+// The blurred mask's values over which a mirage comes in: below half of a whole mirage nearby, so
+// it fills small gaps and reaches a little past its edge.
+static const float2 SPREAD = float2(0.1f, 0.5f);
+
+// The mask blur's half width, in pixels of the mask, and its weights from the centre out.
+#define MASK_RADIUS 4
+static const float MASK_WEIGHTS[MASK_RADIUS + 1] = {1.0f, 0.88f, 0.61f, 0.32f, 0.14f};
 
 // Smooth noise in [-0.5, 0.5) per channel.
 float3 ValueNoise(float3 p)
@@ -119,6 +138,12 @@ float3 Look(float2 centre, float2 radius, float turn, float z)
     return sum / weight;
 }
 
+// Where a look's mirage comes from: the same look turned up as far as it points down.
+float2 Mirror(float3 direction)
+{
+    return OnScreen(float3(direction.xy, abs(direction.z)));
+}
+
 // Whether a look at `uv`, `stored` metres out, lands on bare ground rather than on grass or leaves
 // standing on it.
 bool Bare(float2 uv, float stored, float sine)
@@ -127,11 +152,10 @@ bool Bare(float2 uv, float stored, float sine)
     return IsLand(stored) && solid > 0.0f && (solid - stored) * sine < GRASS_HEIGHT;
 }
 
-// How much a mirage covers a look at `uv` that lands at `at`, and where the look it mirrors lands.
-// Only bare level ground far off has one: not a hill, a rock or grass.
-float Mirage(float2 uv, float3 direction, float3 at, float z, float wobble, out float2 mirror)
+// How much of a mirage a look at `uv` that lands at `at` belongs to, from nought to one. Only bare
+// level ground far off has one: not a hill, a rock or grass.
+float Mirage(float2 uv, float3 direction, float3 at, float z, float wobble)
 {
-    mirror = uv;
     float2 across = float2(FOOTPRINT * Lens.z, 0.0f);
     float2 down = float2(0.0f, FOOTPRINT * Lens.w);
     float left = Stored(uv - across);
@@ -162,11 +186,42 @@ float Mirage(float2 uv, float3 direction, float3 at, float z, float wobble, out 
     float distance = smoothstep(MIRAGE_DISTANCE.x, MIRAGE_DISTANCE.y, length(at));
 
     // Only what lies beyond the ground it would cover: the sky, or land farther off.
-    mirror = OnScreen(float3(direction.xy, -direction.z));
+    float2 mirror = Mirror(direction);
     float shown = Stored(mirror);
     bool far = IsSky(shown) || shown > z;
     bool inside = all(mirror == saturate(mirror));
-    return far && inside ? Heat.y * band * level * distance : 0.0f;
+    return far && inside ? band * level * distance : 0.0f;
+}
+
+// Where a mirage shows, at half resolution.
+float4 MaskPS(float2 screen : VPOS) : COLOR0
+{
+    float2 uv = (screen + 0.5f) * Solid.zw;
+    float z = Stored(uv);
+    float3 ray = ViewRay(uv);
+    float3 direction = normalize(ray);
+    float depression = -direction.z;
+    float mirage = 0.0f;
+    [branch] if (IsLand(z) && depression > 0.0f && depression < MIRAGE_SEARCH)
+    {
+        mirage = Mirage(uv, direction, ray * z, z, Shimmer(direction).z);
+    }
+    return float4(mirage, 0.0f, 0.0f, 1.0f);
+}
+
+// One axis of the mask's blur.
+float4 MaskBlurPS(float2 screen : VPOS) : COLOR0
+{
+    float sum = 0.0f;
+    float weight = 0.0f;
+    [unroll] for (int i = -MASK_RADIUS; i <= MASK_RADIUS; i++)
+    {
+        float w = MASK_WEIGHTS[abs(i)];
+        float2 at = (screen + 0.5f + Axis.xy * i) * Solid.zw;
+        sum += tex2Dlod(Scene, float4(at, 0.0f, 0.0f)).r * w;
+        weight += w;
+    }
+    return float4(sum / weight, 0.0f, 0.0f, 1.0f);
 }
 
 float4 MainPS(float2 screen : VPOS) : COLOR0
@@ -174,11 +229,10 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
     float2 uv = (screen + 0.5f) * Lens.zw;
     float3 ray = ViewRay(uv);
     float stored = Stored(uv);
-    bool sky = IsSky(stored);
 
     // The sky just over a hot skyline shimmers with the land under it.
     float z = stored;
-    [branch] if (sky)
+    [branch] if (IsSky(stored))
     {
         float below = Stored(uv + float2(0.0f, SKYLINE_REACH * Lens.w));
         z = IsSky(below) ? 0.0f : below;
@@ -197,18 +251,19 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
     float path = min(length(at), Heat.w / max(abs(direction.z), 1e-3f));
     float bend = Heat.x * min(path / REFERENCE_PATH, MOST_GROWTH);
     float2 toUv = bend / (2.0f * Lens.xy);
-    float2 bent = uv + shimmer.xy * float2(SIDEWAYS, 1.0f) * toUv;
-    bent = MayCover(Stored(bent), z) ? bent : uv;
+    float2 shift = shimmer.xy * float2(SIDEWAYS, 1.0f) * toUv;
+    float2 bent = MayCover(Stored(uv + shift), z) ? uv + shift : uv;
     float3 colour = Look(bent, BLUR_SHARE * toUv, shimmer.z, z);
 
-    float depression = -direction.z;
-    [branch] if (!sky && Heat.y > 0.0f && depression > 0.0f && depression < MIRAGE_SEARCH)
+    // Soft at its edges, and over whatever small stands inside or beside it.
+    [branch] if (Heat.y > 0.0f)
     {
-        float2 mirror;
-        float mirage = Mirage(uv, direction, at, z, shimmer.z, mirror);
+        float mirage = Heat.y * smoothstep(SPREAD.x, SPREAD.y,
+                                           tex2Dlod(Mask, float4(uv, 0.0f, 0.0f)).r);
         [branch] if (mirage > 0.0f)
         {
-            float3 mirrored = Look(mirror + (bent - uv), BLUR_SHARE * toUv, shimmer.z, 0.0f);
+            float2 radius = max(BLUR_SHARE * toUv, MIRAGE_BLUR * Lens.zw);
+            float3 mirrored = Look(Mirror(direction) + shift, radius, shimmer.z, 0.0f);
             colour = lerp(colour, mirrored, mirage);
         }
     }
