@@ -211,15 +211,16 @@ namespace {
 
         {"Heat haze strength", &kHeatHaze, offsetof(Values, hazeStrength), 1.0f, 0.0f, 4.0f,
          "%.2f",
-         "How far the hot air over sunlit ground bends and blurs what is seen through it. One "
-         "moves land 200 m off by about two pixels at 1080 lines, and land 800 m off four times "
-         "as far."},
+         "How hard the hot air over sunlit ground pushes and smears what is seen through it. The "
+         "farther off a thing is, the more air it is seen through, so the more it is pushed "
+         "around, in ever finer pieces."},
         {"Heat haze wave width", &kHeatHaze, offsetof(Values, hazeWaveWidth), 30.86f, 3.0f, 120.0f,
          "%.1f arcmin",
-         "How wide one wave of the shimmer is, as an angle of the unzoomed view. A degree is 60."},
+         "How wide one wave of the shimmer looks 100 m off, unzoomed. A degree is 60. Nearer air "
+         "makes wider waves, farther air finer ones."},
         {"Heat haze wave height", &kHeatHaze, offsetof(Values, hazeWaveHeight), 2.86f, 0.5f, 20.0f,
          "%.2f arcmin",
-         "How tall one wave of the shimmer is, as an angle of the unzoomed view. A degree is 60."},
+         "How tall one wave of the shimmer looks 100 m off, unzoomed. A degree is 60."},
         {"Heat haze far blur", &kHeatHaze, offsetof(Values, hazeFarBlur), 1.0f, 0.0f, 1.0f, "%.2f",
          "How far land melts into blobs that dance with the shimmer. Near things stay sharp."},
         {"Heat haze blur start", &kHeatHaze, offsetof(Values, hazeBlurStart), 100.0f, 10.0f,

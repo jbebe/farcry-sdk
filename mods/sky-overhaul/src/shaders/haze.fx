@@ -12,18 +12,19 @@ sampler2D Mask : register(s2);
 // The far world blurred, at quarter resolution, its colour multiplied by alpha: how much of what
 // went into it was far.
 sampler2D Blurred : register(s4);
+// Three independent fields of turbulence in [0, 1], TILE cells across, repeating on every axis.
+sampler3D Turbulence : register(s5);
 
-// x  how far the air bends a look over REFERENCE_PATH of hot air, in radians
+// x  how far one sheet of hot air SHEET_REFERENCE metres deep bends a look, in radians
 // y  how much of the ground a mirage replaces
 // z  the sine of the steepest look onto bare level ground that still shows a mirage
-// w  how deep the shimmering air over the ground is, in metres
+// w  the height over which the air's heat falls away from the ground, in metres
 float4 Heat : register(c96);
 
 // x  seconds, for the shimmer's motion
 // y  how far the view is zoomed in, against the widest it has been
-// z  shimmer cells all the way round the horizon, unzoomed, so the pattern meets itself behind the
-//    eye
-// w  shimmer cells across one radian of height, unzoomed
+// z  how wide one eddy of hot air is, in metres
+// w  how tall one is
 float4 Time : register(c97);
 
 // xy  what the solid depth is linearised with
@@ -46,17 +47,32 @@ float4 Axis : register(c101);
 
 #define PI 3.14159265f
 
-// The path through hot air at which the bend is as strong as Heat.x says, and the most it grows
-// past that.
-static const float REFERENCE_PATH = 200.0f;
-static const float MOST_GROWTH = 4.0f;
+// The air between the eye and what it sees, as sheets of turbulence, each twice as far as the one
+// before: a look collects the push of every sheet it crosses.
+#define SHEETS 6
+static const float NEAREST_SHEET = 10.0f;
 
-// What the shimmer's one layer is scaled by, so it reaches as far as two layers did.
+// The depth of air a sheet stands for at which it bends a look as hard as Heat.x says; deeper
+// sheets bend harder, as the root of their depth.
+static const float SHEET_REFERENCE = 100.0f;
+
+// The eye's height over the ground, in metres, from which a sheet's height is reckoned.
+static const float EYE_HEIGHT = 1.8f;
+
+// Cells across the turbulence volume, on every axis.
+static const float TILE = 16.0f;
+
+// What each sheet's turbulence is scaled by.
 static const float SHIMMER_GAIN = 1.6f;
 
 // How fast the shimmer drifts sideways, in cells a second, and how fast it churns in place.
 static const float DRIFT = 3.0f;
 static const float CHURN = 4.0f;
+
+// How long the eye gathers light for, in seconds, and how many moments of it each pixel takes: the
+// air moving within that time smears what is seen through it.
+static const float EXPOSURE = 0.1f;
+#define MOMENTS 3
 
 // How far below a pixel of sky to look for the land it sits over, in pixels.
 static const float SKYLINE_REACH = 12.0f;
@@ -75,8 +91,10 @@ static const float MIRAGE_BLUR = 2.0f;
 #define BLUR_TAPS 6
 static const float GOLDEN_ANGLE = 2.39996323f;
 
-// How far the ragged edge of a mirage reaches past Heat.z, as a share of it.
+// How far the ragged edge of a mirage reaches past Heat.z, as a share of it, and the distance of
+// the sheet of air that makes it ragged.
 static const float RAGGED = 0.4f;
+static const float MIRAGE_SHEET = 80.0f;
 
 // How far apart the points are, in pixels, that tell level ground from a hill or a rock.
 static const float FOOTPRINT = 6.0f;
@@ -99,33 +117,39 @@ static const float BLUR_WEIGHTS[BLUR_RADIUS + 1] = {1.0f, 0.88f, 0.61f, 0.32f, 0
 // The distance from which things go into the far world's blur at all, as a share of Far.x.
 static const float NEAR_SHARE = 0.5f;
 
-// Noise in [-0.5, 0.5) per channel, flat within each cell and quick between them, repeating every
-// `period` along x.
-float3 ValueNoise(float3 p, float period)
+// The turbulence of the sheet `distance` metres out where a look `around` radians round the
+// horizon and `rise` up (a sine) crosses it, at `time`: three fields in [-0.5, 0.5). Its eddies keep
+// their size in the world, so a far sheet's are small on screen; the whole is scaled by the zoom,
+// so they keep their size on screen through a scope.
+float3 Sheet(float around, float rise, float distance, float time, float index)
 {
-    float3 corner = floor(p);
-    float3 f = p - corner;
-    f = f * f * (3.0f - 2.0f * f);
-    f = f * f * (3.0f - 2.0f * f);
-    float x0 = corner.x - period * floor(corner.x / period);
-    float x1 = x0 + 1.0f < period ? x0 + 1.0f : 0.0f;
-    float3 a = float3(x0, corner.yz);
-    float3 b = float3(x1, corner.yz);
-    float3 x00 = lerp(Hash(a), Hash(b), f.x);
-    float3 x10 = lerp(Hash(a + float3(0, 1, 0)), Hash(b + float3(0, 1, 0)), f.x);
-    float3 x01 = lerp(Hash(a + float3(0, 0, 1)), Hash(b + float3(0, 0, 1)), f.x);
-    float3 x11 = lerp(Hash(a + float3(0, 1, 1)), Hash(b + float3(0, 1, 1)), f.x);
-    return lerp(lerp(x00, x10, f.y), lerp(x01, x11, f.y), f.z) - 0.5f;
+    float scale = distance * Time.y;
+    float cellsAround = max(round(2.0f * PI * scale / (Time.z * TILE)), 1.0f) * TILE;
+    float3 at = float3(around * cellsAround / (2.0f * PI) - time * DRIFT, rise * scale / Time.w,
+                       time * CHURN + index * 5.3f);
+    return tex3Dlod(Turbulence, float4(at / TILE, 0.0f)).rgb - 0.5f;
 }
 
-// The air's bend along a world direction, laid round the horizon so it stays put in the world as
-// the view turns, drifting sideways and churning. Its cells keep their size on screen at any zoom.
-float3 Shimmer(float3 direction)
+// How hot the air is `height` metres above the ground under the eye, against the ground's own.
+float Hotness(float height)
 {
-    float period = round(Time.z * Time.y);
-    float around = atan2(direction.y, direction.x) * (period / (2.0f * PI));
-    float3 p = float3(around - Time.x * DRIFT, direction.z * Time.w * Time.y, Time.x * CHURN);
-    return SHIMMER_GAIN * ValueNoise(p, period);
+    return exp(-max(height, 0.0f) / Heat.w);
+}
+
+// How far the air pushes a look `distance` metres long at `time`, in radians, and how ragged it is
+// in z: every sheet it crosses before it gets there, each the more the farther it stands from what
+// is seen, as a lever.
+float3 Push(float around, float rise, float distance, float time)
+{
+    float3 sum = 0.0f;
+    [unroll] for (int k = 0; k < SHEETS; k++)
+    {
+        float sheet = NEAREST_SHEET * exp2(k);
+        float lever = saturate(1.0f - sheet / distance);
+        float weight = sqrt(sheet / SHEET_REFERENCE) * lever * Hotness(EYE_HEIGHT + sheet * rise);
+        sum += Sheet(around, rise, sheet, time, k) * weight;
+    }
+    return sum * SHIMMER_GAIN * float3(Heat.x, Heat.x, 1.0f);
 }
 
 bool IsLand(float stored)
@@ -230,7 +254,9 @@ float4 MaskPS(float2 screen : VPOS) : COLOR0
     float search = Heat.z * (1.0f + RAGGED * SHIMMER_GAIN) + sqrt(1.0f - Level.x * Level.x);
     [branch] if (IsLand(z) && depression > 0.0f && depression < search)
     {
-        mirage = Mirage(uv, direction, ray * z, z, Shimmer(direction).z);
+        float wobble = Sheet(atan2(direction.y, direction.x), direction.z, MIRAGE_SHEET, Time.x,
+                             0.0f).z;
+        mirage = Mirage(uv, direction, ray * z, z, SHIMMER_GAIN * wobble);
     }
     return float4(mirage, 0.0f, 0.0f, 1.0f);
 }
@@ -295,24 +321,39 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
     }
 
     float3 at = ray * z;
-    float3 direction = normalize(ray);
-    float3 shimmer = Shimmer(direction);
-
-    // A look is in the hot air only while it is within its depth of the ground.
-    float path = min(length(at), Heat.w / max(abs(direction.z), 1e-3f));
-    float bend = Heat.x * min(path / REFERENCE_PATH, MOST_GROWTH);
-    float2 toUv = bend / (2.0f * Lens.xy);
-    float2 shift = shimmer.xy * float2(SIDEWAYS, 1.0f) * toUv;
-    float2 bent = MayCover(Stored(uv + shift), z) ? uv + shift : uv;
+    float distance = length(at);
+    float3 direction = at / distance;
+    float around = atan2(direction.y, direction.x);
+    float2 toUv = float2(SIDEWAYS, 1.0f) / (2.0f * Lens.xy);
     float turn = Dither(screen);
-    float3 colour = Look(bent, BLUR_SHARE * toUv, turn, z);
 
-    // Far off, the land melts into blobs that dance with the air as far as it ever bends a look.
+    // Each moment the eye gathers sees the world pushed its own way and blurred by as much, so
+    // what moves within one is smeared along the way it moves. A pixel's moments start at its own
+    // share of the exposure, so neighbours fill in each other's gaps.
+    float3 colour = 0.0f;
+    float weight = 0.0f;
+    float2 shift = 0.0f;
+    float2 spread = 0.0f;
+    [unroll] for (int i = 0; i < MOMENTS; i++)
+    {
+        float time = Time.x - EXPOSURE * (i + turn) / MOMENTS;
+        float2 push = Push(around, direction.z, distance, time).xy * toUv;
+        shift += push / MOMENTS;
+        spread += abs(push) / MOMENTS;
+        float s, c;
+        sincos(i * GOLDEN_ANGLE + turn * 2.0f * PI, s, c);
+        float2 tap = uv + push + float2(c, s) * BLUR_SHARE * abs(push) * sqrt((i + 0.5f) / MOMENTS);
+        float w = MayCover(Stored(tap), z) ? 1.0f : 0.0f;
+        colour += tex2Dlod(Scene, float4(tap, 0.0f, 0.0f)).rgb * w;
+        weight += w;
+    }
+    colour = weight > 0.0f ? colour / weight : tex2Dlod(Scene, float4(uv, 0.0f, 0.0f)).rgb;
+
+    // Far off, the land melts into blobs that dance with the air.
     [branch] if (Far.z > 0.0f)
     {
-        float2 dance = shimmer.xy * float2(SIDEWAYS, 1.0f) * Heat.x * MOST_GROWTH / (2.0f * Lens.xy);
-        float4 blurred = tex2Dlod(Blurred, float4(uv + dance, 0.0f, 0.0f));
-        float melt = Far.z * smoothstep(Far.x, Far.y, length(at)) * saturate(2.0f * blurred.a);
+        float4 blurred = tex2Dlod(Blurred, float4(uv + shift, 0.0f, 0.0f));
+        float melt = Far.z * smoothstep(Far.x, Far.y, distance) * saturate(2.0f * blurred.a);
         colour = lerp(colour, blurred.rgb / max(blurred.a, 1e-3f), melt);
     }
 
@@ -323,7 +364,7 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
                                            tex2Dlod(Mask, float4(uv, 0.0f, 0.0f)).r);
         [branch] if (mirage > 0.0f)
         {
-            float2 radius = max(BLUR_SHARE * toUv, MIRAGE_BLUR * Lens.zw);
+            float2 radius = max(BLUR_SHARE * spread, MIRAGE_BLUR * Lens.zw);
             float3 mirrored = Look(Mirror(direction) + shift, radius, turn, 0.0f);
             colour = lerp(colour, mirrored, mirage);
         }

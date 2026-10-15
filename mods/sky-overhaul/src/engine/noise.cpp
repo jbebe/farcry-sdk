@@ -18,16 +18,22 @@ namespace {
     constexpr int kShapeSize = 128;
     constexpr int kDetailSize = 32;
     constexpr int kWeatherSize = 512;
+    // The heat haze's turbulence: kTurbulenceCells lattice cells over the volume, four texels
+    // each, so the filtering between texels keeps a cell's shape.
+    constexpr int kTurbulenceSize = 64;
+    constexpr int kTurbulenceCells = 16;
 
     std::vector<uint8_t> g_shapeBytes;
     std::vector<uint8_t> g_detailBytes;
     std::vector<uint8_t> g_weatherBytes;
+    std::vector<uint8_t> g_turbulenceBytes;
     std::atomic<bool> g_ready{false};
 
     IDirect3DDevice9* g_owner = nullptr;
     IDirect3DVolumeTexture9* g_shape = nullptr;
     IDirect3DVolumeTexture9* g_detail = nullptr;
     IDirect3DTexture9* g_weather = nullptr;
+    IDirect3DVolumeTexture9* g_turbulence = nullptr;
     bool g_refused = false;
 
     uint32_t Hash(int x, int y, int z, uint32_t seed) {
@@ -56,14 +62,20 @@ namespace {
     }
 
     // Value noise on a lattice that repeats every `period` cells, which is what makes the volume
-    // tile: a cloud drifting off one edge arrives back at the other without a seam.
-    float Value(float x, float y, float z, int period, uint32_t seed) {
+    // tile: a cloud drifting off one edge arrives back at the other without a seam. `sharp` keeps
+    // each cell flat and turns quickly between them.
+    float Value(float x, float y, float z, int period, uint32_t seed, bool sharp = false) {
         const int x0 = static_cast<int>(std::floor(x));
         const int y0 = static_cast<int>(std::floor(y));
         const int z0 = static_cast<int>(std::floor(z));
-        const float fx = Smooth(x - static_cast<float>(x0));
-        const float fy = Smooth(y - static_cast<float>(y0));
-        const float fz = Smooth(z - static_cast<float>(z0));
+        float fx = Smooth(x - static_cast<float>(x0));
+        float fy = Smooth(y - static_cast<float>(y0));
+        float fz = Smooth(z - static_cast<float>(z0));
+        if (sharp) {
+            fx = Smooth(fx);
+            fy = Smooth(fy);
+            fz = Smooth(fz);
+        }
 
         float corner[8];
         for (int i = 0; i < 8; i++) {
@@ -180,6 +192,16 @@ namespace {
             texel[3] = 255;
         });
 
+        g_turbulenceBytes = Volume(
+            kTurbulenceSize, kTurbulenceSize, [](float u, float v, float w, uint8_t* texel) {
+                constexpr float cells = static_cast<float>(kTurbulenceCells);
+                for (int channel = 0; channel < 3; channel++) {
+                    texel[channel] = Byte(Value(u * cells, v * cells, w * cells, kTurbulenceCells,
+                                                1111u + channel, true));
+                }
+                texel[3] = 255;
+            });
+
         g_ready.store(true, std::memory_order_release);
     }
 
@@ -247,7 +269,8 @@ bool SkyOverhaul::Noise::Ensure(IDirect3DDevice9* device) {
 
     if (!UploadVolume(device, kShapeSize, g_shapeBytes, &g_shape) ||
         !UploadVolume(device, kDetailSize, g_detailBytes, &g_detail) ||
-        !UploadPlane(device, kWeatherSize, g_weatherBytes, &g_weather)) {
+        !UploadPlane(device, kWeatherSize, g_weatherBytes, &g_weather) ||
+        !UploadVolume(device, kTurbulenceSize, g_turbulenceBytes, &g_turbulence)) {
         ReleaseDeviceObjects();
         g_owner = device;
         g_refused = true;
@@ -270,6 +293,10 @@ IDirect3DTexture9* SkyOverhaul::Noise::Weather() {
     return g_weather;
 }
 
+IDirect3DVolumeTexture9* SkyOverhaul::Noise::Turbulence() {
+    return g_turbulence;
+}
+
 float SkyOverhaul::Noise::Random(int x, int y, int z, uint32_t seed) {
     return Unit(Hash(x, y, z, seed));
 }
@@ -278,5 +305,6 @@ void SkyOverhaul::Noise::ReleaseDeviceObjects() {
     Release(g_shape);
     Release(g_detail);
     Release(g_weather);
+    Release(g_turbulence);
     g_owner = nullptr;
 }

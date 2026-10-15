@@ -1,4 +1,5 @@
-// The noise the clouds are shaped from, made once and kept for the life of the device.
+// The noise the clouds are shaped from, and the heat haze's, made once and kept for the life of
+// the device.
 //
 // Generated on a worker thread because it is a few seconds of arithmetic, and uploaded into the
 // managed pool, which survives a device reset and so needs nothing surrendered before one.
@@ -22,6 +23,10 @@ bool Ensure(IDirect3DDevice9* device);
 IDirect3DVolumeTexture9* Shape();
 IDirect3DVolumeTexture9* Detail();
 IDirect3DTexture9* Weather();
+
+// Three independent fields in red, green and blue for the heat haze, each flat within a cell and
+// quick between them, repeating every 16 cells across the volume on every axis.
+IDirect3DVolumeTexture9* Turbulence();
 
 // A number from 0 to 1 that depends only on its arguments, from the hash the noise is made with.
 float Random(int x, int y, int z, uint32_t seed);

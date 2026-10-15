@@ -9,6 +9,7 @@
 #include "engine/cloud_layer.h"
 #include "engine/depth_texture.h"
 #include "engine/frame_copy.h"
+#include "engine/noise.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "engine/solid_depth.h"
@@ -36,6 +37,7 @@ namespace {
     constexpr DWORD kSolidDepthSampler = 1;
     constexpr DWORD kMaskSampler = 2;
     constexpr DWORD kBlurredSampler = 4;
+    constexpr DWORD kTurbulenceSampler = 5;
 
     // The sun's height, as a sine, over which the ground heats up: about 15 to 45 degrees.
     constexpr float kHeatLow = 0.26f;
@@ -49,15 +51,17 @@ namespace {
     // at into the steepest look onto level ground that shows one.
     constexpr float kStandingEye = 1.8f;
 
-    // How deep the shimmering air over the ground is, in metres.
+    // The height over which the air's heat falls away from the ground, in metres.
     constexpr float kHotLayer = 15.0f;
+
+    // How far off the waves are the size the wave sliders give, in metres.
+    constexpr float kWaveReference = 100.0f;
 
     // Kept short so the shimmer's coordinates stay precise; it jumps once when the clock wraps.
     constexpr float kClockWrap = 3600.0f;
 
     constexpr float kRadiansPerDegree = 3.14159265f / 180.0f;
-    constexpr float kArcMinutesRound = 360.0f * 60.0f;
-    constexpr float kArcMinutesPerRadian = 60.0f / kRadiansPerDegree;
+    constexpr float kRadiansPerArcMinute = kRadiansPerDegree / 60.0f;
 
     // Below this none of it changes anything a player could see.
     constexpr float kFaintest = 0.002f;
@@ -142,7 +146,8 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
     }
     IDirect3DDevice9* device = pass.device;
     IDirect3DPixelShader9* shader = g_shader.Get(device);
-    IDirect3DTexture9* world = shader != nullptr ? FrameCopy::Take(pass) : nullptr;
+    IDirect3DTexture9* world =
+        shader != nullptr && Noise::Ensure(device) ? FrameCopy::Take(pass) : nullptr;
     if (world == nullptr) {
         return;
     }
@@ -160,8 +165,8 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
     float constants[kOwnConstants * 4] = {
         heat * v.hazeStrength * kFullBend / std::sqrt(zoom), mirage,
         kStandingEye / v.mirageDistance, kHotLayer,
-        g_seconds, zoom, kArcMinutesRound / v.hazeWaveWidth,
-        kArcMinutesPerRadian / v.hazeWaveHeight,
+        g_seconds, zoom, v.hazeWaveWidth * kRadiansPerArcMinute * kWaveReference,
+        v.hazeWaveHeight * kRadiansPerArcMinute * kWaveReference,
         projection[0], projection[1], 1.0f / static_cast<float>(halfWidth),
         1.0f / static_cast<float>(halfHeight),
         std::cos(slope), std::cos(0.5f * slope), v.mirageDistance, 2.0f * v.mirageDistance,
@@ -211,9 +216,14 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
     device->SetTexture(0, world);
     device->SetTexture(kMaskSampler, masked ? g_mask.First().texture : nullptr);
     device->SetTexture(kBlurredSampler, blurred ? g_blurred.First().texture : nullptr);
-    // The bend moves a look by fractions of a pixel, and the mask and the blur are smaller.
-    for (DWORD sampler : {DWORD{0}, kMaskSampler, kBlurredSampler}) {
+    device->SetTexture(kTurbulenceSampler, Noise::Turbulence());
+    // The bend moves a look by fractions of a pixel, the mask and the blur are smaller, and the
+    // turbulence is a few texels a cell.
+    for (DWORD sampler : {DWORD{0}, kMaskSampler, kBlurredSampler, kTurbulenceSampler}) {
         Filter(device, sampler);
+    }
+    for (D3DSAMPLERSTATETYPE axis : {D3DSAMP_ADDRESSU, D3DSAMP_ADDRESSV, D3DSAMP_ADDRESSW}) {
+        device->SetSamplerState(kTurbulenceSampler, axis, D3DTADDRESS_WRAP);
     }
     draw.ClipQuad(0.0f);
 }
