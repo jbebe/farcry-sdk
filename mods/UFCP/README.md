@@ -52,7 +52,9 @@ their own projection, which follows the camera wherever a first-person scene put
 world, muzzle particles are split between the two passes and come apart once the two projections
 differ, and the map's markers change pass inside a vehicle. It is the view on foot, cutscenes and
 ladders included: the weapon and arms stay at the game's own 75 degrees, and the sights, scopes and
-vehicles, the hang glider among them, keep their own.
+vehicles, the hang glider among them, keep their own. At an arms dealer's computer the view eases
+back to the game's own 75 degrees on the same two-second fade as the game's zoom onto the screen,
+and out again as the player gets up.
 
 **Maximum frame rate** uses the engine's own limiter, `gfx_MaxFps`. It is set on the command line at
 launch and written into the render profile afterwards, which is what lets a change made from the

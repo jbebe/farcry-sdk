@@ -8,6 +8,8 @@ Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachang
 - **Field of view** now applies in cutscene-style first-person animations (healing, repairs, doors,
   getting in and out of vehicles) and on ladders, which used to pull it back to a narrower framing.
   The hang glider is no longer narrowed either and flies at its own angle, as the game shipped.
+  At an arms dealer's computer the view is the game's own again, zoom onto the screen included, and
+  eases back to the setting as the player gets up.
 
 ## [1.0.0] - 2026-10-12
 

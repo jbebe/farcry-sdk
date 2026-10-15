@@ -1,4 +1,4 @@
-// Field of view, on foot. The weapon and arms, the sights and vehicles keep the game's own.
+// Field of view, on foot. Weapon and arms, sights, vehicles and computers keep the game's own.
 //
 // Ported from FC2JackalFix (MIT, (c) 2026 Joshhhuaaa, TGP482) - source/display/fov.ixx, which in
 // turn credits FoxAhead's Far Cry 2 Multi Fixer for the original fFOV substitution.
@@ -39,6 +39,18 @@ namespace {
 
     float DegreesToRadians(float degrees) {
         return degrees * (kPi / 180.0f);
+    }
+
+    // From a half-angle tangent `weight` of the way to a field of view, in tangent space as the
+    // engine's own widescreen stretch works. All the way, the target itself: the tan/atan round
+    // trip lands a few ulps off it.
+    float BlendFieldOfView(float fromTan, float to, float weight) {
+        weight = std::clamp(weight, 0.0f, 1.0f);
+        if (weight >= 1.0f) {
+            return to;
+        }
+
+        return 2.0f * std::atan(fromTan + (std::tan(to * 0.5f) - fromTan) * weight);
     }
 
     // Active, on CCameraComponent, reached from the secondary base the update is handed.
@@ -188,8 +200,8 @@ namespace {
     // The engine's own widescreen stretch factor.
     constexpr float kWidescreenStretch = 0.75f;
 
-    // tan(viewmodel FOV / 2) for the game's own 75 degrees.
-    constexpr float kViewmodelHalfTangent = 0.76732699f;
+    // tan(FOV / 2) for the game's own 75 degrees, the world's and the viewmodel's alike.
+    constexpr float kStockHalfTangent = 0.76732699f;
 
     // How far the sights are up, sampled once a frame: zero down, one fully raised.
     std::atomic<float> g_ironsightBlend{0.0f};
@@ -201,6 +213,17 @@ namespace {
     // The first-person camera's own FOV, on the primary base. Not 0x6C, the model's FOV: writing
     // that ties the world's field of view to the viewmodel's.
     constexpr uintptr_t kPawnCameraFieldOfView = 0x70;
+
+    // The camera's widescreen weight, on the primary base. Only a computer fades it: to zero as the
+    // player sits down at one, back to one over two seconds as he gets up.
+    constexpr uintptr_t kPawnCameraWidescreenWeight = 0x5C;
+
+    // The setting, handed back to the game's own as far as a computer has faded that weight, so the
+    // field of view and the game's zoom move as one.
+    float PawnCameraFieldOfView(uintptr_t camera) {
+        return BlendFieldOfView(kStockHalfTangent, DegreesToRadians(g_fieldOfView),
+                                *reinterpret_cast<float*>(camera + kPawnCameraWidescreenWeight));
+    }
 
     // The pawn's FOV channels, blended from a CPawnFOV rather than read where they are set. Two
     // 0x1C records: ironsight at 0x08, base at 0x24.
@@ -640,7 +663,7 @@ namespace {
         // In tangent space, to match the game's own widescreen scaling. Not named `near`: windef.h
         // still defines that as a macro.
         const float cameraTan = std::tan(cameraFov * 0.5f);
-        const float nearTan = kViewmodelHalfTangent * kWidescreenStretch * aspect;
+        const float nearTan = kStockHalfTangent * kWidescreenStretch * aspect;
 
         // A viewmodel FOV above the world's is legitimate, except with the sights up, where
         // widening the near pass back out holds the gun off the eye.
@@ -651,15 +674,8 @@ namespace {
 
         // In a seat the near pass follows the camera, or the hands are not where the wheel is.
         // Faded over the seat's own transition time rather than switched.
-        const float seat = std::clamp(g_vehicleFovWeight.load(std::memory_order_relaxed), 0.0f, 1.0f);
-
-        // Seated, the camera's own number rather than the arithmetic that arrives at it: the
-        // tan/atan round trip lands a few ulps away.
-        if (seat >= 1.0f) {
-            return cameraFov;
-        }
-
-        return 2.0f * std::atan(nearTan + (cameraTan - nearTan) * seat);
+        return BlendFieldOfView(nearTan, cameraFov,
+                                g_vehicleFovWeight.load(std::memory_order_relaxed));
     }
 
     void FieldOfViewSetterHandler(FCSE_MidHookContext* ctx) {
@@ -680,13 +696,12 @@ namespace {
         g_markersStamp.store(GetTickCount(), std::memory_order_relaxed);
     }
 
-    // The Widescreen option's blend weight can stick at zero after a toggle, leaving the field of
-    // view unwidened. The branch is forced and the weight pinned; it is recomputed every frame.
+    // With the Widescreen option off the field of view goes unwidened, so the branch is forced. Its
+    // weight is left to the game, whose only fade of it is a computer's zoom.
     void WidescreenHandler(FCSE_MidHookContext* ctx) {
         constexpr uintptr_t kZeroFlag = 0x40;
 
         ctx->eflags &= ~kZeroFlag;
-        *reinterpret_cast<float*>(ctx->edi + 0x58) = 1.0f;
     }
 
     // Whether the player is on a ladder or in a first-person scene, read from the beautifier's
@@ -720,7 +735,7 @@ namespace {
     void CameraBlendHandler(FCSE_MidHookContext* ctx) {
         // Before the MOVSS this stands on, so the blend uses it on this frame.
         *reinterpret_cast<float*>(ctx->esi + kPawnCameraFieldOfView) =
-            DegreesToRadians(g_fieldOfView);
+            PawnCameraFieldOfView(ctx->esi);
 
         const uintptr_t block = ctx->eax;
 
