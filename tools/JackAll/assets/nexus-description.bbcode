@@ -18,13 +18,13 @@ Source code, if you want to check what it does: [url=https://github.com/jbebe/fa
 
 This is your load order. Mods apply from top to bottom, and if two of them change the same file the lower one wins. Every mod has a checkbox, so you can turn one off without deleting it. A mod here is just a folder or a zip with game paths inside it (worlds\world1\generated\...), which is exactly what you get when you unpack an archive, so old community mods work as they are. If a mod is the old kind that ships a full replacement patch.dat and patch.fat, and most FC2 mods are, use [b]Import legacy mod[/b]: it compares that mod to a clean game and keeps only the files it really changed.
 
-[b]Deploy mods[/b] builds everything into the game, [b]Revert to original[/b] puts the clean archive back. You can't wreck your install by clicking too much. JackAll saves your original patch.dat once as patch.dat.vanilla, and every build starts from that backup again, never from the file that happens to be there. So building twice gives you the exact same bytes, turning a mod off really removes it, and a failed build leaves the game untouched. If two mods change different parts of the same file they get merged instead of one of them winning silently. [b]Check for dead edits[/b] finds edits that a later entity library overrides, which is the kind of change that looks fine in the tool and does nothing in game. A mod can also carry a plugins\ folder, and that one goes to bin\plugins\ for FCSE instead of into the archive.
+[b]Deploy mods[/b] builds everything into the game, [b]Revert to original[/b] puts the clean archive back. You can't wreck your install by clicking too much. JackAll saves your original patch.dat once as patch.dat.vanilla, and every build starts from that backup again, never from the file that happens to be there. So building twice gives you the exact same bytes, turning a mod off really removes it, and a failed build leaves the game untouched. If two mods change different parts of the same file they get merged instead of one of them winning silently, and if they set the same value differently, setting it in your workspace decides it. [b]Check for dead edits[/b] finds edits that a later entity library overrides, which is the kind of change that looks fine in the tool and does nothing in game. A mod can also carry a plugins\ folder, and that one goes to bin\plugins\ for FCSE instead of into the archive.
 
 [size=4][b]Files[/b][/size]
 
 [img]https://staticdelivery.nexusmods.com/mods/1471/images/370/370-1787579405-386245121.png[/img]
 
-All 13 archives merged into one tree, resolved in the same order the game resolves them. Over 150,000 files, and anything a mod changed is highlighted, so you can see what you actually touched instead of guessing. Click a file to preview it, export it, replace it or revert it. A modded file can be diffed against the original, and [b]Export original[/b] always gets you the clean version back. The filter box matches any word, and you can narrow it with ext:, arch: and hash:.
+All 13 archives merged into one tree, resolved in the same order the game resolves them. Over 150,000 files, and anything a mod changed is highlighted, so you can see what you actually touched instead of guessing. Click a file to preview it, export it, replace it or revert it. Replacing a file with the wrong kind of file, say a .wav where a sound bank belongs, asks first. A modded file can be diffed against the original, and [b]Export original[/b] always gets you the clean version back. The filter box matches any word, and you can narrow it with ext:, arch: and hash:.
 
 More than 50,000 files in the game have no known name, only a hash. You can still mod those. JackAll guesses the type from the first bytes, puts them under _unknown\, and saves your edit as _hash\<crc32>.<ext>, which the builder writes back at exactly that hash. Every file also gets a references panel: what points at this file, and what this file points at, both clickable. For a file nobody can decode, that is usually the only real information you get about it.
 
@@ -72,7 +72,7 @@ Every object placed in the world is a small difference on top of an archetype, a
 
 [img]https://staticdelivery.nexusmods.com/mods/1471/images/370/370-1787579416-73000027.png[/img]
 
-The Saves tab finds your .sav files and shows the in game screenshot, the world, your character name, the save time, the DLC it uses and how many objects it stores. The PersistenceDB inside opens in the same value editor as everything else and writes straight back into the .sav, so a value that got stuck is fixable without starting the campaign over.
+The Saves tab finds your .sav files and shows the in game screenshot, the world, your character name, the save time, the act, how much of the game is complete, the difficulty, the DLC it uses and how many objects it stores. The PersistenceDB inside opens in the same value editor as everything else and writes straight back into the .sav, so a value that got stuck is fixable without starting the campaign over.
 
 It's also here to explain something that has confused FC2 modders for about fifteen years: a save stores values that overlap with almost every entity library, and an .fcb mod cannot override what the save already has. That's why a data mod usually needs a new game. Being able to see what your save is holding beats guessing.
 
@@ -83,6 +83,10 @@ It's also here to explain something that has confused FC2 modders for about fift
 .mgb files are the game's own UI format. JackAll decodes one into a full tree with a property grid, so every widget, action, state and color is reachable. The "Add" list only offers the classes the engine itself accepts in that spot, and saving rewrites the whole package, so adding an element or declaring a new class is a normal edit instead of an impossible one. This is what makes a custom options page inside the game possible at all.
 
 Domino is the mission scripting system, and it ships as generated Lua. JackAll rebuilds a script from domino\user\ into the box and wire graph it was made in, lays it out for you, takes the pin names from the node scripts and the original names from the *.debug.lua file next to it. It's read only for now: you can see what a mission does, you just can't change it here yet.
+
+[size=4][b]Collision[/b][/size]
+
+.hkx files are Havok collision: what you bump into, stand on and shoot. [b]Open in HKX Editor[/b] draws an object's collision over its model, lists the bodies and shapes as a tree, and lets you type over any value or drag a shape to move, turn or resize it. Saving keeps Havok's own bookkeeping in step, the MOPP tree and the bounds included, so the game sees the new shape instead of the old one. A reshaped weapon or prop no longer has to keep the donor's collision.
 
 [line]
 
@@ -104,6 +108,7 @@ Everything below is JackAll's own code, one implementation per format, tested ag
 [*][b].fc2model[/b] - JackAll's own model pack: JSON and PNG, no Dunia bytes. Written and read. The only thing the Blender add-on ever sees[/*]
 [*][b].sbao[/b] - streamed audio: music and dialogue. Splits into header and ogg, plays it, exports ogg or mp3, imports anything ffmpeg reads[/*]
 [*][b].spk[/b] - sound banks. Lists and groups the records, extracts and imports ogg vorbis and IMA ADPCM[/*]
+[*][b].hkx[/b] - Havok collision. Reads and writes every shipped file, editor tab with a 3D view, decodes to XML and back, rebuilds the MOPP tree after an edit[/*]
 [*][b].sdat[/b] - terrain per sector: heights, surface types, water, baked light. Read only. It's what the map viewport draws, plus a grayscale height preview per file[/*]
 [*][b].nvm[/b] - AI navmesh. Read only: the walkable triangles, their corners and the links between them[/*]
 [*][b].sav[/b] - savegames. Reads the header, screenshot and DLC list, edits and writes the PersistenceDB[/*]
@@ -113,7 +118,7 @@ Everything below is JackAll's own code, one implementation per format, tested ag
 [*][b].xml, .lua, .desc[/b] - plain text files. Highlighted view, with a diff against the original when modded[/*]
 [/list]
 
-These are only recognized, not decoded. You can still browse, export and replace them, they just stay raw bytes: .hkx (Havok collision), .bik (video), .feu (old UI), .wem, shader binaries, .srl and .zsr (streaming data), .luab and .luac (compiled Lua), .loc, .material.bin, .sctr, .tree, .cbatch, .terrainnode.bdl and .dpax.
+These are only recognized, not decoded. You can still browse, export and replace them, they just stay raw bytes: .bik (video), .feu (old UI), .wem, shader binaries, .srl and .zsr (streaming data), .luab and .luac (compiled Lua), .loc, .material.bin, .sctr, .tree, .cbatch, .terrainnode.bdl and .dpax.
 
 [line]
 
@@ -167,7 +172,8 @@ The same code the Mods tab runs.
 [*][b]fcb decode / fcb encode[/b] - an .fcb object tree to XML and back[/*]
 [*][b]rml decode / rml encode[/b] - a binary .rml to plain XML and back[/*]
 [*][b]mgb decode / mgb encode / mgb verify[/b] - a Magma UI package to editable XML and back. verify checks it only uses names it declares[/*]
-[*][b]xbt extract / xbt build[/b] - splits an .xbt into .dds plus header XML, and puts it back together[/*]
+[*][b]xbt extract / xbt build[/b] - splits an .xbt into .dds plus header XML, and puts it back together. build also takes a bare .dds[/*]
+[*][b]hkx decode / encode / tree / move / turn / resize / add-box / remove / refresh / check[/b] - collision to XML and back, shapes edited by number, and a check for what would break in game[/*]
 [*][b]xbg export <mesh.xbg>[/b] - converts a model's geometry to a Wavefront .obj[/*]
 [*][b]fc2model export / extract / inspect[/b] - builds a model pack, writes a changed pack back out as game files laid out as a mod layer, or lists what's in a pack[/*]
 [*][b]sbao extract / sbao build[/b] - splits an .sbao into .ogg plus header, and puts it back together[/*]
