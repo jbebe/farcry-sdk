@@ -63,14 +63,11 @@ namespace {
 void ApplyPredecessorTapesUnlock() {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
-    // Exactly one of the two implementations exists in any given build, so this is a choice between
-    // them rather than a fallback: the other one's code is genuinely not there to find.
-    uint8_t* gate = nullptr;
-    if (g_bonusPrivileges) {
-        gate = g_bonusPrivileges.get();
-    } else if (g_bonusRegistry) {
-        gate = g_bonusRegistry.get();
-    }
+    // Exactly one of the two implementations exists in any given build, so only the running build's
+    // is looked for: searching for the other would log a miss for code that is genuinely not there.
+    FCSE::Relocation<uint8_t*>& found =
+        api->gameBuild == FCSE_GAME_BUILD_103_RETAIL ? g_bonusRegistry : g_bonusPrivileges;
+    uint8_t* gate = found ? found.get() : nullptr;
 
     if (gate == nullptr) {
         api->Log("bonus content: neither ownership check was found in this build - predecessor "
