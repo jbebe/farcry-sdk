@@ -5,6 +5,10 @@ Notable changes to Flashlight, loosely following
 
 ## [Unreleased]
 
+### Changed
+- **Off in vehicles.** Getting into a vehicle switches the flashlight off, and it stays off until
+  you get out.
+
 ### Fixed
 - **No crash at startup when part of the game can't be hooked**, for example with two copies of
   `Flashlight.dll` installed. The flashlight then leaves out what it couldn't hook and logs it in

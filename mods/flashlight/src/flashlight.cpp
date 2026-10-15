@@ -12,6 +12,7 @@
 #include "engine/player.h"
 #include "engine/sight.h"
 #include "engine/sound.h"
+#include "engine/vehicle.h"
 #include "fcse_api.h"
 
 #include <algorithm>
@@ -139,7 +140,16 @@ namespace {
         }
         Flashlight::Sound::Hold(kClick);
 
-        const int toggles = g_toggles.exchange(0);
+        int toggles = g_toggles.exchange(0);
+        // A vehicle puts the light out at once and keeps it out.
+        if (Flashlight::Vehicle::Seated()) {
+            toggles = 0;
+            if (g_wanted) {
+                g_wanted = false;
+                g_switchIn = 0.0f;
+                g_iconSynced = false;
+            }
+        }
         for (int i = 0; i < toggles; ++i) {
             g_wanted = !g_wanted;
             Flashlight::Sound::Play(kClick, kFoleyPlayer);
@@ -200,6 +210,7 @@ bool Install() {
     Sound::Install();
     Hud::Install();
     Sight::Install();
+    Vehicle::Install();
     Input::Install(&OnSignal);
     return true;
 }

@@ -21,6 +21,7 @@ add_library(Flashlight SHARED
   "src/engine/player.cpp"
   "src/engine/sight.cpp"
   "src/engine/sound.cpp"
+  "src/engine/vehicle.cpp"
 )
 
 target_include_directories(Flashlight PRIVATE
