@@ -46,6 +46,30 @@ namespace {
     // other has to agree with, so a torn read is neither possible nor consequential.
     SkyOverhaul::CloudLayer::Mode g_mode = SkyOverhaul::CloudLayer::Mode::Engine;
 
+    // Submissions the engine's clouds stay suppressed for after the last Replaced(), and how many
+    // MaskOnly may go without one before that is logged.
+    constexpr uint32_t kReplacedLapse = 60;
+    constexpr uint32_t kUnreplacedLog = 3600;
+
+    // The submission count at the last Replaced(), plus one so that zero means never.
+    std::atomic<uint32_t> g_replacedAt{0};
+    std::atomic<uint32_t> g_modeSetAt{0};
+    bool g_loggedUnreplaced = false;
+
+    bool Replacing(uint32_t count) {
+        const uint32_t at = g_replacedAt.load(std::memory_order_relaxed);
+        if (at != 0 && count + 1 - at < kReplacedLapse) {
+            return true;
+        }
+        const uint32_t unreplaced = count - g_modeSetAt.load(std::memory_order_relaxed);
+        if (!g_loggedUnreplaced && unreplaced > kUnreplacedLog) {
+            g_loggedUnreplaced = true;
+            FCSE::ApiPointer()->Log("clouds: ours are not being drawn, so the engine's stay - "
+                                    "another Direct3D tool may be keeping the frame from this plugin");
+        }
+        return false;
+    }
+
     const float* Field(const uint8_t* state, size_t offset) {
         return reinterpret_cast<const float*>(state + offset);
     }
@@ -99,7 +123,9 @@ namespace {
 
         // Returning here is what the engine itself does for a world with no cloud layers enabled:
         // the packets are never appended, so nothing downstream has anything to draw.
-        if (g_mode == Mode::Engine || (g_mode == Mode::MaskOnly && (mask & 0xFF) != 0)) {
+        if (g_mode == Mode::Engine ||
+            (g_mode == Mode::MaskOnly &&
+             ((mask & 0xFF) != 0 || !Replacing(g_submitCount.load(std::memory_order_relaxed))))) {
             g_original(self, unused, a2, a3, a4, a5, a6, state, a8, a9, a10, a11, mask, a13);
         }
     }
@@ -141,5 +167,10 @@ uint32_t SkyOverhaul::CloudLayer::SubmitCount() {
 }
 
 void SkyOverhaul::CloudLayer::SetMode(Mode mode) {
+    g_modeSetAt.store(SubmitCount(), std::memory_order_relaxed);
     g_mode = mode;
+}
+
+void SkyOverhaul::CloudLayer::Replaced() {
+    g_replacedAt.store(SubmitCount() + 1, std::memory_order_relaxed);
 }

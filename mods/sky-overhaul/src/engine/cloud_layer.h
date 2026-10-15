@@ -15,7 +15,8 @@ enum class Mode {
     Engine,
     // Suppressed everywhere, the god-ray mask included.
     Off,
-    // Suppressed everywhere but the god-ray mask pass, whose cloud draw is there to be replaced.
+    // Suppressed everywhere but the god-ray mask pass, whose cloud draw is there to be replaced -
+    // but only while Replaced() keeps being called, so a sky is never left without clouds.
     MaskOnly,
 };
 
@@ -51,5 +52,8 @@ uint32_t SubmitCount();
 
 // Takes effect on the next submission. Safe to call before anything has been submitted.
 void SetMode(Mode mode);
+
+// Other clouds were just drawn in place of the engine's. Call it on every frame that draws them.
+void Replaced();
 
 }

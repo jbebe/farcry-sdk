@@ -249,6 +249,9 @@ namespace {
         // Blended the way the engine's cloud layer blended: colour already multiplied in, alpha
         // what survives.
         g_drawn = DrawSky(device, shader, D3DBLEND_ONE, D3DBLEND_SRCALPHA);
+        if (g_drawn) {
+            SkyOverhaul::CloudLayer::Replaced();
+        }
     }
 }
 
