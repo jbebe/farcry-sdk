@@ -100,3 +100,4 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 - [ ] **Radio(s).** A host created with ElevenLabs, for example
 - [ ] **Steady aim on a button.** The scope moves around unless the button is held, like in Call of
   Duty 2
+- [ ] **Enemy flashlights.** Enemies use flashlights at night
