@@ -2,7 +2,7 @@
 
 Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.1.0] - 2026-10-15
 
 ### Changed
 - **Field of view** now applies in cutscene-style first-person animations (healing, repairs, doors,

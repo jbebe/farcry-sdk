@@ -3,11 +3,11 @@
 Notable changes to Flashlight, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.2.0] - 2026-10-15
 
 ### Changed
-- **Off in vehicles.** Getting into a vehicle switches the flashlight off, and it stays off until
-  you get out.
+- **Off in vehicles.** Getting into a vehicle switches the flashlight off with its click, and it
+  stays off until you get out.
 - **Works in safe interiors.** The game swaps in its own controls inside safe houses and briefing
   rooms, which left the flashlight out; it switches there too now.
 

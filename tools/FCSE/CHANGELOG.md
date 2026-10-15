@@ -2,13 +2,13 @@
 
 Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.4.1] - 2026-10-15
 
 ### Fixed
-- **Malaria and the player's damage handling stay stock when `FarCry2.exe` is missing.** FCSE read
-  two of the game's values from `FarCry2.exe` and, without it, fell back to ones that made malaria
-  attacks come about 60 times too often and zeroed a multiplier the player's damage handling uses.
-  FCSE now carries the stock values itself.
+- **Malaria and the player's damage handling stay stock when FCSE can't read `FarCry2.exe`.** FCSE
+  read two of the game's values from `FarCry2.exe` and, when it couldn't, fell back to ones that
+  made malaria attacks come about 60 times too often and zeroed a multiplier the player's damage
+  handling uses. FCSE now carries the stock values itself.
 
 ## [1.4.0] - 2026-10-08
 
