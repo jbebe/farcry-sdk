@@ -35,12 +35,14 @@ In the **Mod Configuration** menu, and under `[AimingOverhaul]` in `bin\fcse.ini
 |---|---|---|
 | Sway | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
+| Iron sight zoom | Yes / No | Yes |
 | Scope shadow | Yes / No | Yes |
 | Scope eyepiece | Yes / No | Yes |
 | Scope surroundings | Yes / No | Yes |
 | Tracers | Yes / No | Yes |
 
-The scope shadow needs the eyepiece, whose opening it shades. With Tracers off, your own shots leave
+The scope shadow needs the eyepiece, whose opening it shades. With Iron sight zoom off, the view
+doesn't zoom in down iron sights; scopes still magnify. With Tracers off, your own shots leave
 none, none ricochets, and they are drawn as the game draws them; which guns fire them and how fast
 they fly stay as the mod's weapon data sets them.
 

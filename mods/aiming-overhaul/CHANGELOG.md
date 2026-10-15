@@ -3,6 +3,12 @@
 Notable changes to Aiming Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **Iron sight zoom** in the Mod Configuration menu. Switched off, the view no longer zooms in
+  down a gun's iron sights; scopes still magnify. On by default, as the game has it.
+
 ## [1.1.0] - 2026-10-09
 
 ### Changed

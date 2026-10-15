@@ -59,4 +59,7 @@ uint32_t WeaponChanges();
 // comes forward to the scope as it is raised instead.
 void SetZoomAtOnce(bool atOnce);
 
+// Whether the view zooms in down a gun's iron sights, as the game does. A scope is not affected.
+void SetIronsightZoom(bool enabled);
+
 }

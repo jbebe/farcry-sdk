@@ -85,6 +85,7 @@ namespace {
     AimingOverhaul::Aim::DriftFn g_drift = nullptr;
     AimingOverhaul::Aim::FollowWeaponFn g_followWeapon = nullptr;
     std::atomic<bool> g_zoomAtOnce{true};
+    std::atomic<bool> g_ironsightZoom{true};
     float g_sights = 0.0f;
     float g_scope = 0.0f;
     std::atomic<float> g_settled{0.0f};
@@ -261,8 +262,9 @@ namespace {
         g_addedTo = camera;
     }
 
-    // The field of view worked out again with a scope's magnification wholly in while its sight
-    // picture is up and wholly out while it is not, so that it never eases in over the raise.
+    // The field of view worked out again: with a scope's magnification wholly in while its sight
+    // picture is up and wholly out while it is not, so that it never eases in over the raise; and
+    // with no iron-sight zoom at all where that is switched off.
     void __fastcall UpdateFovDetour(uint8_t* camera, void* unused, uint8_t* pawn, float seconds) {
         g_originalUpdateFov(camera, unused, pawn, seconds);
         if (camera != g_playerCamera()) {
@@ -270,19 +272,24 @@ namespace {
         }
         uint8_t* data = Field<uint8_t*>(pawn, kPawnData);
         uint8_t* weapon = g_equippedWeapon(data + kInventory);
-        if (!HasScope(weapon) || Field<float>(data, kIronsightWeight) <= 0.0f) {
+        if (Field<float>(data, kIronsightWeight) <= 0.0f) {
+            return;
+        }
+        const bool scope = HasScope(weapon);
+        if (!scope && g_ironsightZoom) {
             return;
         }
         const float base = Field<float>(camera, kBaseFov);
         const float scoped = Field<float>(data, kIronsightFov);
-        g_magnification = std::tan(0.5f * base) / std::tan(0.5f * scoped);
-        if (!g_zoomAtOnce) {
-            return;
-        }
-        const float zoom = SightPictureUp(weapon) ? 1.0f : 0.0f;
         float fov = base;
         fov += (Field<float>(data, kOtherFov) - fov) * Field<float>(data, kOtherWeight);
-        fov += (scoped - fov) * zoom;
+        if (scope) {
+            g_magnification = std::tan(0.5f * base) / std::tan(0.5f * scoped);
+            if (!g_zoomAtOnce) {
+                return;
+            }
+            fov += (scoped - fov) * (SightPictureUp(weapon) ? 1.0f : 0.0f);
+        }
         Field<float>(camera, kFov) = fov + Field<float>(camera, kFovNoise);
     }
 
@@ -325,6 +332,10 @@ bool AimingOverhaul::Aim::Install(DriftFn drift, FollowWeaponFn followWeapon) {
 
 void AimingOverhaul::Aim::SetZoomAtOnce(bool atOnce) {
     g_zoomAtOnce = atOnce;
+}
+
+void AimingOverhaul::Aim::SetIronsightZoom(bool enabled) {
+    g_ironsightZoom = enabled;
 }
 
 const char* AimingOverhaul::Aim::WeaponName() {

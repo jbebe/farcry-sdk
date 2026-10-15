@@ -95,12 +95,14 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 |---|---|---|
 | Sway | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
+| Iron sight zoom | Yes / No | Yes |
 | Scope shadow | Yes / No | Yes |
 | Scope eyepiece | Yes / No | Yes |
 | Scope surroundings | Yes / No | Yes |
 | Tracers | Yes / No | Yes |
 
-With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game
+With Iron sight zoom off, the view keeps its field of view down a gun's iron sights; a scope still
+magnifies. With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game
 draws them. Which guns fire them and how fast they fly are the weapon data's, and stay; so does the
 scopes' lost iron-sight effect, whatever the scope settings.
 

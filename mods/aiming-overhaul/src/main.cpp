@@ -106,6 +106,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     const FCSE_Setting settings[] = {
         {"Sway", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Sway::SetEnabled)},
         {"Gun blur", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Blur::SetEnabled)},
+        {"Iron sight zoom", FCSE_CHECKBOX(true), &OnToggled,
+         Toggles(&AimingOverhaul::Aim::SetIronsightZoom)},
         {"Scope shadow", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::ScopeShadow::SetEnabled)},
         {"Scope eyepiece", FCSE_CHECKBOX(true), &OnEyepieceChanged, nullptr},
