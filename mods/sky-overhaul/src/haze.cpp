@@ -140,7 +140,7 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
         heat * v.hazeStrength * kFullBend, mirage, kMirageSine, kHotLayer,
         g_seconds, 0.0f, 0.0f, 0.0f,
         projection[0], projection[1], 1.0f / maskWidth, 1.0f / maskHeight,
-        std::cos(slope), std::cos(0.5f * slope), 0.0f, 0.0f};
+        std::cos(slope), std::cos(0.5f * slope), v.mirageDistance, 2.0f * v.mirageDistance};
     pass.device->SetPixelShaderConstantF(kOwnConstant, constants, kOwnConstants);
     pass.device->SetTexture(kSolidDepthSampler, solid.texture);
 

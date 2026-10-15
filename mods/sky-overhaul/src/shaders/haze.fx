@@ -25,6 +25,7 @@ float4 Solid : register(c98);
 
 // x  the up component of the steepest ground's normal that still shows a mirage
 // y  the same where it shows whole
+// zw the distances over which a mirage comes in, in metres
 float4 Level : register(c99);
 
 // xy  the mask blur's axis, one pixel of the mask long
@@ -38,9 +39,12 @@ static const float REFERENCE_PATH = 200.0f;
 static const float MOST_GROWTH = 4.0f;
 
 // Shimmer cells all the way round the horizon, so the pattern meets itself behind the eye, and
-// across one radian of height.
-static const float AROUND = 1600.0f;
-static const float UP = 450.0f;
+// across one radian of height: flat, several times wider than tall.
+static const float AROUND = 700.0f;
+static const float UP = 600.0f;
+
+// What the shimmer's one layer is scaled by, so it reaches as far as two layers did.
+static const float SHIMMER_GAIN = 1.6f;
 
 // How fast the shimmer drifts sideways, in cells a second, and how fast it churns in place.
 static const float DRIFT = 3.0f;
@@ -73,9 +77,6 @@ static const float FOOTPRINT = 6.0f;
 // sit and still be the same level ground.
 static const float2 PLANE_TOLERANCE = float2(0.05f, 0.002f);
 
-// The distances over which a mirage comes in, in metres.
-static const float2 MIRAGE_DISTANCE = float2(60.0f, 120.0f);
-
 // How high above the ground without grass a look may land, in metres, and still be the ground.
 static const float GRASS_HEIGHT = 0.2f;
 
@@ -87,11 +88,13 @@ static const float2 SPREAD = float2(0.1f, 0.5f);
 #define MASK_RADIUS 4
 static const float MASK_WEIGHTS[MASK_RADIUS + 1] = {1.0f, 0.88f, 0.61f, 0.32f, 0.14f};
 
-// Smooth noise in [-0.5, 0.5) per channel, repeating every `period` along x.
+// Noise in [-0.5, 0.5) per channel, flat within each cell and quick between them, repeating every
+// `period` along x.
 float3 ValueNoise(float3 p, float period)
 {
     float3 corner = floor(p);
     float3 f = p - corner;
+    f = f * f * (3.0f - 2.0f * f);
     f = f * f * (3.0f - 2.0f * f);
     float x0 = corner.x - period * floor(corner.x / period);
     float x1 = x0 + 1.0f < period ? x0 + 1.0f : 0.0f;
@@ -110,8 +113,7 @@ float3 Shimmer(float3 direction)
 {
     float around = atan2(direction.y, direction.x) * (AROUND / (2.0f * PI));
     float3 p = float3(around - Time.x * DRIFT, direction.z * UP, Time.x * CHURN);
-    return ValueNoise(p, AROUND) +
-           0.6f * ValueNoise(p * 2.0f + float3(0.0f, 17.0f, 31.0f), 2.0f * AROUND);
+    return SHIMMER_GAIN * ValueNoise(p, AROUND);
 }
 
 bool IsLand(float stored)
@@ -193,7 +195,7 @@ float Mirage(float2 uv, float3 direction, float3 at, float z, float wobble)
     float edge = Heat.z * (1.0f + 0.4f * wobble);
     float band = grazing > 0.0f ? smoothstep(edge, 0.5f * edge, grazing) : 0.0f;
     float level = smoothstep(Level.x, Level.y, normal.z);
-    float distance = smoothstep(MIRAGE_DISTANCE.x, MIRAGE_DISTANCE.y, length(at));
+    float distance = smoothstep(Level.z, Level.w, length(at));
 
     // Only what lies beyond the ground it would cover: the sky, or land farther off.
     float2 mirror = Mirror(direction);
