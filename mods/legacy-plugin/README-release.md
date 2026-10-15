@@ -24,7 +24,7 @@ game exactly as it shipped until you change it.
 
 - **Briefings keep control** — an NPC's briefing no longer stands you up and takes control away.
 - **Keep weapon on rescue** — a buddy rescue no longer swaps your secondary weapon for a pistol.
-- **No forced buddy rescues (new game)** — the factions stop assigning buddy rescue missions, so a
+- **No forced buddy rescues** — the factions stop assigning buddy rescue missions, so a
   bugged one cannot block the story. Start a new game after changing it.
 - **No reputation drop** — finishing A1SM03 or A2SM08 no longer lowers your reputation.
 - **Hide diamond message** — picking up diamonds no longer shows the game's own message, for mods

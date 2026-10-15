@@ -28,7 +28,7 @@ In menu order.
 |---|---|---|---|---|---|
 | Briefings keep control | checkbox | off | `briefing_control.cpp` | Scubrah's Patch, [skippable-dialog](../../legacy/scubrahs-patch/features/skippable-dialog.md) | built, not checked in game |
 | Keep weapon on rescue | checkbox | off | `rescue_keeps_weapon.cpp` | Scubrah's Patch, [buddy-rescue-fluid](../../legacy/scubrahs-patch/features/buddy-rescue-fluid.md) | built, not checked in game |
-| No forced buddy rescues (new game) | checkbox | off | `no_forced_rescue.cpp` | Scubrah's Patch, [buddy-rescue-optional](../../legacy/scubrahs-patch/features/buddy-rescue-optional.md) | built, not checked in game |
+| No forced buddy rescues | checkbox | off | `no_forced_rescue.cpp` | Scubrah's Patch, [buddy-rescue-optional](../../legacy/scubrahs-patch/features/buddy-rescue-optional.md) | built, not checked in game |
 | No reputation drop | checkbox | off | `reputation_kept.cpp` | Scubrah's Patch, [reputation-kept](../../legacy/scubrahs-patch/features/reputation-kept.md) | built, not checked in game |
 | Hide diamond message | checkbox | off | `no_diamond_message.cpp` | Scubrah's Patch, [economy-briefcase-tracker](../../legacy/scubrahs-patch/features/economy-briefcase-tracker.md) | built, not checked in game |
 | No blinking pickups | checkbox | off | `no_blinking_items.cpp` | Realism Plus, [graphics-no-flashing-items](../../legacy/realism-plus/features/graphics-no-flashing-items.md); FC2JackalFix `gameplay/blinkingitems.ixx` | built, not checked in game |

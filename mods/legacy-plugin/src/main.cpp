@@ -91,7 +91,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     static const FCSE_Setting settings[] = {
         {"Briefings keep control", FCSE_CHECKBOX(false), &OnBriefingControlChanged, nullptr},
         {"Keep weapon on rescue", FCSE_CHECKBOX(false), &OnRescueKeepsWeaponChanged, nullptr},
-        {"No forced buddy rescues (new game)", FCSE_CHECKBOX(false), &OnNoForcedRescueChanged, nullptr},
+        {"No forced buddy rescues", FCSE_CHECKBOX(false), &OnNoForcedRescueChanged, nullptr},
         {"No reputation drop", FCSE_CHECKBOX(false), &OnReputationKeptChanged, nullptr},
         {"Hide diamond message", FCSE_CHECKBOX(false), &OnNoDiamondMessageChanged, nullptr},
         {"No blinking pickups", FCSE_CHECKBOX(false), &OnNoBlinkingItemsChanged, nullptr},
