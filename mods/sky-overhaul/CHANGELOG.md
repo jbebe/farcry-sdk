@@ -14,7 +14,7 @@ Notable changes to Sky Overhaul, loosely following
   where the fog hides everything.
 - **Far rocks are no longer faceted.** Rock turns smoothly back into the game's own look with
   distance, so distant low-detail rock no longer shows big flat faces. **Rock flat distance**, on
-  the Rock tab, sets where: 75 m by default, fading from about 37 m to 112 m.
+  the Rock tab, sets where: 69 m by default, fading from about 35 m to 104 m.
 
 ## [1.3.1] - 2026-10-09
 

@@ -235,7 +235,7 @@ namespace {
          "%.2f",
          "How far near rock is lit back toward the engine's smooth surface. Zero lights every "
          "triangle flat; one is the engine's shading, without its sheen."},
-        {"Rock flat distance", &kRockShading, offsetof(Values, rockFlatDistance), 75.0f, 10.0f,
+        {"Rock flat distance", &kRockShading, offsetof(Values, rockFlatDistance), 69.0f, 10.0f,
          400.0f, "%.0f m",
          "Where rock is halfway from flat to the engine's smooth surface. It is as flat as Rock "
          "smoothness sets within half this distance, and wholly smooth past one and a half."},
