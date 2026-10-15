@@ -5,8 +5,8 @@
 
 namespace Flashlight::Sight {
 
-// False, and logged, when this build lacks the guards' vision setup.
-bool Install();
+// Logged when this build lacks the guards' vision setup or it can't be hooked.
+void Install();
 
 // The lit beam, where `pose` puts it and as long and wide as `spot`. Call it every frame the light
 // is on.

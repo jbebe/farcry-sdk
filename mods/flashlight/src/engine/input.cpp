@@ -20,13 +20,11 @@ namespace {
 
 namespace Flashlight::Input {
 
-bool Install(SignalFn onSignal) {
-    if (!g_dispatch) {
-        FCSE::ApiPointer()->Log("input: the signal dispatcher was not found in this build");
-        return false;
-    }
+void Install(SignalFn onSignal) {
     g_onSignal = onSignal;
-    return FCSE::ApiPointer()->MidHook(g_dispatch.get(), &OnDispatch);
+    if (!g_dispatch || !FCSE::ApiPointer()->MidHook(g_dispatch.get(), &OnDispatch)) {
+        FCSE::ApiPointer()->Log("input: the signal dispatcher could not be hooked - the light never toggles");
+    }
 }
 
 }

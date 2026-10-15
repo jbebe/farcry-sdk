@@ -125,18 +125,20 @@ namespace {
 
 namespace Flashlight::Sight {
 
-bool Install() {
+void Install() {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
     const uint8_t* test = g_muzzleTest.get();
     const uint8_t* getter = test != nullptr ? CallTarget<const uint8_t*>(test + kGetterCall) : nullptr;
     if (!g_conesSet || !g_nightTerm || getter == nullptr || getter[0] != kFld || getter[1] != kEcxDisp32) {
         api->Log("sight: the guards' vision setup was not found in this build");
-        return false;
+        return;
     }
 
     g_timer = *reinterpret_cast<uint8_t* const* const*>(test + kTimerGlobal);
     g_flashTime = *reinterpret_cast<const int32_t*>(getter + kGetterField);
-    return api->MidHook(g_conesSet.get(), &OnConesSet);
+    if (!api->MidHook(g_conesSet.get(), &OnConesSet)) {
+        api->Log("sight: the guards' vision setup could not be hooked");
+    }
 }
 
 void SetBeam(const Light::Pose& pose, const Light::Spot& spot) {

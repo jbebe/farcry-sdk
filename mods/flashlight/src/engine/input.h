@@ -8,7 +8,7 @@ namespace Flashlight::Input {
 // Called with each signal's id, the CRC32 of its name in the action map.
 using SignalFn = void (*)(uint32_t signal);
 
-// False, and logged, when this build has no dispatcher to watch.
-bool Install(SignalFn onSignal);
+// Logged when the dispatcher can't be hooked.
+void Install(SignalFn onSignal);
 
 }

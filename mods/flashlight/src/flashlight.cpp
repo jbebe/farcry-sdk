@@ -196,7 +196,7 @@ bool Install() {
     if (!Player::Install() || !Light::Install() || !Frame::Install(&Tick)) {
         return false;
     }
-    // Past the first hook a refusal would unload the plugin with that hook live, so these only log.
+    // Frame placed the first hook: a refusal now would unload the plugin with it live, so these only log.
     Sound::Install();
     Hud::Install();
     Sight::Install();
