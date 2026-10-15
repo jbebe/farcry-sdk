@@ -40,6 +40,7 @@ add_library(UFCP SHARED
   "src/fixes/exit_teardown.cpp"
   "src/fixes/grass_spot_light.cpp"
   "src/fixes/high_precision_timer.cpp"
+  "src/fixes/many_cores.cpp"
   "src/fixes/mouse_speed_cap.cpp"
   "src/fixes/utilisation.cpp"
   "src/options/affinity.cpp"

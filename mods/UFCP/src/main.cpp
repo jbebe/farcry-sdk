@@ -35,6 +35,8 @@ void ApplyHighPrecisionTimerFix();
 void ApplyUtilisationFix();
 // Grass stays dark under a spot light - headlights, a flashlight - however close it is.
 void ApplyGrassSpotLightFix();
+// The game closes at the splash screen on a machine with 32 or more logical processors.
+void ApplyManyCoresFix();
 
 // Options. The hook has to exist before the setting that drives it is registered, because
 // registration is what delivers the saved value.
@@ -91,6 +93,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     ApplyHighPrecisionTimerFix();
     ApplyUtilisationFix();
     ApplyGrassSpotLightFix();
+    ApplyManyCoresFix();
 
     InstallFovHook();
     InstallMaxFrameRateHook();
