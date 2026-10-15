@@ -1,5 +1,7 @@
 // The world at night as the eye sees it, drawn over every sample the world drew and none of the sky.
 
+#include "hash.inc.fx"
+
 sampler2D Scene : register(s0);
 
 // x  how far colour drains where it is darkest
@@ -31,8 +33,7 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
     float rods = lerp(luminance, dot(colour, ROD), Gate.y);
     colour = lerp(colour, rods * lerp(1.0f, ROD_HUE, Gate.y), drain);
 
-    float noise = frac(52.9829189f * frac(dot(screen + Grain.y * float2(1.0f, 1.7f),
-                                              float2(0.06711056f, 0.00583715f))));
+    float noise = Dither(screen + Grain.y * float2(1.0f, 1.7f));
     float dark = 1.0f - smoothstep(0.0f, Gate.z, luminance);
     colour += (noise - 0.5f) * Grain.x * dark;
     return float4(max(colour, 0.0f), 1.0f);

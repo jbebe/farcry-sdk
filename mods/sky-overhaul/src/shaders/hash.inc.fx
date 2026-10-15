@@ -6,3 +6,9 @@ float3 Hash(float3 p)
     p += dot(p, p.yxz + 33.33f);
     return frac((p.xxy + p.yxx) * p.zyx);
 }
+
+// A different value in [0, 1) per pixel, spread so neighbours differ as much as they can.
+float Dither(float2 screen)
+{
+    return frac(52.9829189f * frac(dot(screen, float2(0.06711056f, 0.00583715f))));
+}

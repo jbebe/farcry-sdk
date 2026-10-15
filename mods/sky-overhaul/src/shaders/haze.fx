@@ -17,6 +17,7 @@ sampler2D Mask : register(s2);
 float4 Heat : register(c96);
 
 // x  seconds, for the shimmer's motion
+// y  how far the view is zoomed in, against the widest it has been
 float4 Time : register(c97);
 
 // xy  what the solid depth is linearised with
@@ -39,7 +40,7 @@ static const float REFERENCE_PATH = 200.0f;
 static const float MOST_GROWTH = 4.0f;
 
 // Shimmer cells all the way round the horizon, so the pattern meets itself behind the eye, and
-// across one radian of height: flat, several times wider than tall.
+// across one radian of height, unzoomed: flat, several times wider than tall.
 static const float AROUND = 700.0f;
 static const float UP = 1200.0f;
 
@@ -63,9 +64,9 @@ static const float LEAST_BLUR = 0.5f;
 // The least blur of a mirage's own picture, in pixels.
 static const float MIRAGE_BLUR = 2.0f;
 
-static const float2 BLUR_TAPS[6] = {
-    float2(1.0f, 0.0f), float2(0.5f, 0.866f), float2(-0.5f, 0.866f),
-    float2(-1.0f, 0.0f), float2(-0.5f, -0.866f), float2(0.5f, -0.866f)};
+// The blur's taps beside the centre, laid on a spiral by the golden angle so they cover the disc.
+#define BLUR_TAPS 6
+static const float GOLDEN_ANGLE = 2.39996323f;
 
 // How far the ragged edge of a mirage reaches past Heat.z, as a share of it.
 static const float RAGGED = 0.4f;
@@ -108,12 +109,13 @@ float3 ValueNoise(float3 p, float period)
 }
 
 // The air's bend along a world direction, laid round the horizon so it stays put in the world as
-// the view turns, drifting sideways and churning.
+// the view turns, drifting sideways and churning. Its cells keep their size on screen at any zoom.
 float3 Shimmer(float3 direction)
 {
-    float around = atan2(direction.y, direction.x) * (AROUND / (2.0f * PI));
-    float3 p = float3(around - Time.x * DRIFT, direction.z * UP, Time.x * CHURN);
-    return SHIMMER_GAIN * ValueNoise(p, AROUND);
+    float period = round(AROUND * Time.y);
+    float around = atan2(direction.y, direction.x) * (period / (2.0f * PI));
+    float3 p = float3(around - Time.x * DRIFT, direction.z * UP * Time.y, Time.x * CHURN);
+    return SHIMMER_GAIN * ValueNoise(p, period);
 }
 
 bool IsLand(float stored)
@@ -128,20 +130,20 @@ bool MayCover(float there, float z)
     return there > NEAREST_GEOMETRY && (IsSky(there) || there >= z * 0.9f);
 }
 
-// The world around `centre`, over a disc `radius` across in texture coordinates, turned by `turn`
-// half turns, leaving out whatever may not cover a pixel `z` metres out.
+// The world around `centre`, over a disc `radius` across in texture coordinates, leaving out
+// whatever may not cover a pixel `z` metres out. The taps turn by `turn`, a different share of a
+// turn per pixel, so a wide blur lands as grain rather than as copies.
 float3 Look(float2 centre, float2 radius, float turn, float z)
 {
     float3 sum = tex2Dlod(Scene, float4(centre, 0.0f, 0.0f)).rgb;
     float weight = 1.0f;
     [branch] if (radius.y > LEAST_BLUR * Lens.w)
     {
-        float s, c;
-        sincos(turn * PI, s, c);
-        [unroll] for (int i = 0; i < 6; i++)
+        [unroll] for (int i = 0; i < BLUR_TAPS; i++)
         {
-            float2 tap = BLUR_TAPS[i];
-            float2 at = centre + float2(tap.x * c - tap.y * s, tap.x * s + tap.y * c) * radius;
+            float s, c;
+            sincos(i * GOLDEN_ANGLE + turn * 2.0f * PI, s, c);
+            float2 at = centre + float2(c, s) * sqrt((i + 0.5f) / BLUR_TAPS) * radius;
             float w = MayCover(Stored(at), z) ? 1.0f : 0.0f;
             sum += tex2Dlod(Scene, float4(at, 0.0f, 0.0f)).rgb * w;
             weight += w;
@@ -267,7 +269,8 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
     float2 toUv = bend / (2.0f * Lens.xy);
     float2 shift = shimmer.xy * float2(SIDEWAYS, 1.0f) * toUv;
     float2 bent = MayCover(Stored(uv + shift), z) ? uv + shift : uv;
-    float3 colour = Look(bent, BLUR_SHARE * toUv, shimmer.z, z);
+    float turn = Dither(screen);
+    float3 colour = Look(bent, BLUR_SHARE * toUv, turn, z);
 
     // Soft at its edges, and over whatever small stands inside or beside it.
     [branch] if (Heat.y > 0.0f)
@@ -277,7 +280,7 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
         [branch] if (mirage > 0.0f)
         {
             float2 radius = max(BLUR_SHARE * toUv, MIRAGE_BLUR * Lens.zw);
-            float3 mirrored = Look(Mirror(direction) + shift, radius, shimmer.z, 0.0f);
+            float3 mirrored = Look(Mirror(direction) + shift, radius, turn, 0.0f);
             colour = lerp(colour, mirrored, mirage);
         }
     }

@@ -57,6 +57,7 @@
 #define SHADOW_FADE_START 300.0f
 #define SHADOW_FADE_END 600.0f
 
+#include "hash.inc.fx"
 #include "shadows.inc.fx"
 
 // The low frequencies a cloud's body is carved from, the high ones its edges are eroded by, and
@@ -321,12 +322,6 @@ void Span(float3 ray, out float enter, out float stride, out float reach) {
     stride = min(max(leave - enter, 0.0f) / VIEW_STEPS, MAX_STRIDE);
 }
 
-// A different value per pixel, so that what the coarse sampling misses lands as fine noise instead
-// of as bands. Fixed to the pixel rather than the frame: the game has nothing that would blend a
-// moving pattern away, so a moving one would only flicker.
-float Dither(float2 screen) {
-    return frac(52.9829189f * frac(0.06711056f * screen.x + 0.00583715f * screen.y));
-}
 
 float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float3 ray = normalize(rayIn);

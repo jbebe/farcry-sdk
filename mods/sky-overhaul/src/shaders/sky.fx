@@ -14,6 +14,8 @@
 // between the eye and space, which is why dawn is red and noon is blue without either being
 // written down anywhere.
 
+#include "hash.inc.fx"
+
 // The air, in metres. A planet, because the whole point of a horizon is that the ground curves
 // away from it - a flat atmosphere has no sunset, only a light that switches off.
 #define PLANET_RADIUS 6371000.0f
@@ -344,8 +346,7 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // Half the frames are eight bits a channel, and a sky is the one thing in a game made entirely
     // of gradients - so the last bit is broken up on purpose, which is cheaper than any number of
     // extra bits would be.
-    float dither = frac(52.9829189f * frac(0.06711056f * screen.x + 0.00583715f * screen.y));
-    colour += (dither - 0.5f) / 255.0f;
+    colour += (Dither(screen) - 0.5f) / 255.0f;
 
     return float4(colour * Eye.w, alpha);
 }

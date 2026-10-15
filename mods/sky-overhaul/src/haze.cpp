@@ -62,6 +62,8 @@ namespace {
     SkyOverhaul::BlurTargets g_mask{"haze"};
     SkyOverhaul::Stopwatch g_stopwatch;
     float g_seconds = 0.0f;
+    // The widest view seen, as one over the tangent of half its height: the unzoomed one.
+    float g_widest = 0.0f;
 
     // Draws where a mirage shows into the mask and blurs it, leaving the pass's own target, depth,
     // scissor and depth range bound again. False if the device would not make the mask.
@@ -137,9 +139,13 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
     const float slope = v.mirageSlope * kRadiansPerDegree;
     const float maskWidth =static_cast<float>((pass.backBuffer.Width + 1) / 2);
     const float maskHeight = static_cast<float>((pass.backBuffer.Height + 1) / 2);
+    // A scope magnifies the air's bend less than the world, so the heat stays shimmer.
+    g_widest = g_widest > 0.0f ? (std::min)(g_widest, view.verticalScale) : view.verticalScale;
+    const float zoom = view.verticalScale / g_widest;
     float constants[kOwnConstants * 4] = {
-        heat * v.hazeStrength * kFullBend, mirage, kStandingEye / v.mirageDistance, kHotLayer,
-        g_seconds, 0.0f, 0.0f, 0.0f,
+        heat * v.hazeStrength * kFullBend / std::sqrt(zoom), mirage,
+        kStandingEye / v.mirageDistance, kHotLayer,
+        g_seconds, zoom, 0.0f, 0.0f,
         projection[0], projection[1], 1.0f / maskWidth, 1.0f / maskHeight,
         std::cos(slope), std::cos(0.5f * slope), v.mirageDistance, 2.0f * v.mirageDistance};
     pass.device->SetPixelShaderConstantF(kOwnConstant, constants, kOwnConstants);
