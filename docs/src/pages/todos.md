@@ -75,7 +75,7 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 
 ## Mods/sound-overhaul
 
-*nothing* 
+- [ ] Grade the gunshot echo per gun: an automatic rifle's echo shouldn't be as loud as the Dragunov's
 
 ## Mod ideas
 
