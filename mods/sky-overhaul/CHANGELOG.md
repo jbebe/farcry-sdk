@@ -9,6 +9,9 @@ Notable changes to Sky Overhaul, loosely following
 - **The sky is never left without clouds.** With Clouds on Overhaul, the game's own clouds now stay
   until the mod's are actually drawn, so another Direct3D tool keeping the frame from the mod, such
   as an upscaler injector, no longer leaves an empty sky. `fcse.log` says when that happens.
+- **Occlusion fades into fog.** It used to darken the fog itself, so in thick fog the creases of
+  distant buildings and rocks showed through it. It now weakens as the fog thickens, and is gone
+  where the fog hides everything.
 - **Far rocks are no longer faceted.** Rock is as flat as Rock smoothness sets within 30 m and
   turns smoothly back into the game's own look by 120 m, so distant low-detail rock no longer shows
   big flat faces.

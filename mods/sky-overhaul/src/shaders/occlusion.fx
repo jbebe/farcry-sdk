@@ -19,6 +19,10 @@ float4 Ambient : register(c97);
 float4 HalfPixel : register(c98);
 // xy: the blur's axis, one half-resolution pixel long.
 float4 Blur : register(c99);
+// xyz: the engine's distance fog, as FogAmount in foliage.inc.fx reads it. w: the eye's height.
+float4 Fog : register(c100);
+// The engine's height fog.
+float4 FogHeight : register(c101);
 
 // The half-resolution occlusion: red is the share of the sky a point sees.
 sampler2D Occlusion : register(s0);
@@ -165,11 +169,20 @@ float4 BlurPS(float2 screen : VPOS) : COLOR0 {
     return sum / weight;
 }
 
+// How much of what was drawn at `uv`, `z` metres along the camera's axis, the engine's fog hides.
+float Fogged(float2 uv, float z) {
+    float3 ray = ViewRay(uv) * z;
+    return saturate(saturate(length(ray) * Fog.x + Fog.y) * Fog.z *
+                    (saturate((Fog.w + ray.z) * FogHeight.x + FogHeight.y) * FogHeight.z +
+                     FogHeight.w));
+}
+
 // What the world is multiplied by: the occlusion around this pixel on its own surface, taken less
-// the farther in front of the solid depth the pixel stands, so grass darkens at its roots. The
-// weapon, which the engine's depth holds nothing for, is left alone.
+// the farther in front of the solid depth the pixel stands, so grass darkens at its roots, and less
+// the more fog covers it. The weapon, which the engine's depth holds nothing for, is left alone.
 float4 ApplyPS(float2 screen : VPOS) : COLOR0 {
-    float z = Metres((screen + 0.5f) * Lens.zw);
+    float2 uv = (screen + 0.5f) * Lens.zw;
+    float z = Metres(uv);
     clip(z - NEAREST_GEOMETRY);
     float tolerance = Tolerance(z);
     float2 at = screen * 0.5f - 0.25f;
@@ -191,5 +204,5 @@ float4 ApplyPS(float2 screen : VPOS) : COLOR0 {
         }
     }
     float reach = saturate(1.0f - inFront / Projection.w);
-    return 1.0f - Ambient.w * (1.0f - sum / weight) * reach;
+    return 1.0f - Ambient.w * (1.0f - sum / weight) * reach * (1.0f - Fogged(uv, z));
 }

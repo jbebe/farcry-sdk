@@ -22,6 +22,8 @@ namespace {
     constexpr UINT kOwnConstants = 3;
     // Set per blur pass, after the frame's.
     constexpr UINT kBlurConstant = kOwnConstant + kOwnConstants;
+    constexpr UINT kFogConstant = kBlurConstant + 1;
+    constexpr UINT kFogConstants = 2;
 
     constexpr DWORD kSolidDepthSampler = 1;
 
@@ -114,10 +116,17 @@ namespace {
             1.0f / static_cast<float>(solid.width), 1.0f / static_cast<float>(solid.height),
             0.5f * view.verticalScale * static_cast<float>(solid.height), 0.0f};
 
-        SkyOverhaul::ScreenDraw draw(device, kFirstConstant, kBlurConstant + 1 - kFirstConstant);
+        const float fog[kFogConstants * 4] = {
+            view.fogValues[0], view.fogValues[1], view.fogValues[2], view.eye[2],
+            view.fogHeightValues[0], view.fogHeightValues[1], view.fogHeightValues[2],
+            view.fogHeightValues[3]};
+
+        SkyOverhaul::ScreenDraw draw(device, kFirstConstant,
+                                     kFogConstant + kFogConstants - kFirstConstant);
         SkyOverhaul::DepthConstants::Set(device, view, engine, pass.backBuffer.Width,
                                          pass.backBuffer.Height);
         device->SetPixelShaderConstantF(kOwnConstant, own, kOwnConstants);
+        device->SetPixelShaderConstantF(kFogConstant, fog, kFogConstants);
         device->SetTexture(kSolidDepthSampler, solid.texture);
 
         // A half-resolution target cannot share the world's multisampled depth, and switching
