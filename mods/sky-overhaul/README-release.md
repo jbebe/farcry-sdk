@@ -16,7 +16,7 @@ through the whole day, the weather and the night.
 - **A neutral colour grade** in place of the game's yellow cast, a faint film grain, and ambient
   occlusion in corners and creases.
 - **The world in that light**: grass and tree leaves lit by the sun, rocks and cliffs shaded as
-  faceted stone, and sun shadows that reach further and follow a low sun toward the horizon.
+  faceted stone up close, and sun shadows that reach further and follow a low sun toward the horizon.
 
 Each part switches back to the engine's own in the **Mod Configuration** menu. Every effect's values
 are in `bin\sky-overhaul.ini`, and with DevTools installed its overlay has a window of sliders for

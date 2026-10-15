@@ -9,6 +9,9 @@ Notable changes to Sky Overhaul, loosely following
 - **The sky is never left without clouds.** With Clouds on Overhaul, the game's own clouds now stay
   until the mod's are actually drawn, so another Direct3D tool keeping the frame from the mod, such
   as an upscaler injector, no longer leaves an empty sky. `fcse.log` says when that happens.
+- **Far rocks are no longer faceted.** Rock is as flat as Rock smoothness sets within 30 m and
+  turns smoothly back into the game's own look by 120 m, so distant low-detail rock no longer shows
+  big flat faces.
 
 ## [1.3.1] - 2026-10-09
 

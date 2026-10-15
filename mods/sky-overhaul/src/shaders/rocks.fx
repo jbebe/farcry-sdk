@@ -1,5 +1,5 @@
-// Rock and cliff, drawn in place of the engine's Generic pixel shaders: every triangle flat, lit by
-// the sun and the sky from its own facing, with a detail map laid over it.
+// Rock and cliff, drawn in place of the engine's Generic pixel shaders: every near triangle flat, lit
+// by the sun and the sky from its own facing, with a detail map laid over it.
 //
 // The engine draws rock through five of them, which differ in where their registers sit, what
 // arrives interpolated and how they shadow. Each has an entry point here, with the engine's
@@ -238,9 +238,14 @@ Rock MakeRock(float3 position, float2 normalUv, float normalStrength, float3 tan
     return r;
 }
 
+// Metres within which rock is as flat as Shading.x leaves it, and past which it is wholly smooth.
+static const float FlatNear = 30;
+static const float FlatFar = 120;
+
 // Each triangle lit flat by the sun, by the sky over it and by the ground under it as far as it
 // faces up, with the detail map's relief, grain and cavity, blended toward the engine's smooth
-// surface by Shading.x. No highlight but a small, tight glint of the sun off the triangles.
+// surface by Shading.x and further with distance. No highlight but a small, tight glint of the sun
+// off the triangles.
 float3 RockLight(Rock r, float3 albedo, sampler2D normalMap)
 {
     float3 dx = ddx(r.position);
@@ -248,17 +253,19 @@ float3 RockLight(Rock r, float3 albedo, sampler2D normalMap)
     float3 face = Facing(r.position, dx, dy);
     Detail detail = DetailOn(r.position + CameraPosition.xyz, face, dx, dy);
 
+    float flatness = 1 - saturate((length(r.position) - FlatNear) / (FlatFar - FlatNear));
+    float smoothness = lerp(1, Shading.x, flatness);
     float facing = dot(detail.normal, ToLight.xyz);
     float up = detail.normal.z;
     float2 normalDx = ddx(r.normalUv);
     float2 normalDy = ddy(r.normalUv);
-    [branch] if (Shading.x > 0)
+    [branch] if (smoothness > 0)
     {
         float4 texel = tex2Dgrad(normalMap, r.normalUv, normalDx, normalDy);
         float3 tangentNormal = DecodeNormal(texel, r.normalStrength);
         float3 flattened = normalize(tangentNormal * float3(2, 2, 1));
-        facing = lerp(facing, dot(tangentNormal, -r.tangentLight), Shading.x);
-        up = lerp(up, dot(flattened, r.tangentUp), Shading.x);
+        facing = lerp(facing, dot(tangentNormal, -r.tangentLight), smoothness);
+        up = lerp(up, dot(flattened, r.tangentUp), smoothness);
     }
     float skyward = saturate(up * 0.5 + 0.5 + r.height);
     float3 ambient = lerp(r.ground, r.sky, skyward) * r.occlusion * detail.cavity;
@@ -266,7 +273,8 @@ float3 RockLight(Rock r, float3 albedo, sampler2D normalMap)
 
     float3 halfway = normalize(normalize(-r.position) + ToLight.xyz);
     float glint = facing > 0 ? pow(saturate(dot(detail.normal, halfway)), Shading.z) : 0;
-    return albedo * detail.grain * (ambient + sun) + glint * Shading.y * r.lightColour * r.shadow;
+    return albedo * detail.grain * (ambient + sun) +
+           glint * Shading.y * flatness * r.lightColour * r.shadow;
 }
 
 // The cascaded, single-slice and river shaders' interpolators; the tangent-space half vector at
