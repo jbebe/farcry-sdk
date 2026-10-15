@@ -50,6 +50,8 @@ namespace {
     constexpr float kClockWrap = 3600.0f;
 
     constexpr float kRadiansPerDegree = 3.14159265f / 180.0f;
+    constexpr float kArcMinutesRound = 360.0f * 60.0f;
+    constexpr float kArcMinutesPerRadian = 60.0f / kRadiansPerDegree;
 
     // Below this neither changes anything a player could see.
     constexpr float kFaintest = 0.002f;
@@ -145,7 +147,8 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
     float constants[kOwnConstants * 4] = {
         heat * v.hazeStrength * kFullBend / std::sqrt(zoom), mirage,
         kStandingEye / v.mirageDistance, kHotLayer,
-        g_seconds, zoom, 0.0f, 0.0f,
+        g_seconds, zoom, kArcMinutesRound / v.hazeWaveWidth,
+        kArcMinutesPerRadian / v.hazeWaveHeight,
         projection[0], projection[1], 1.0f / maskWidth, 1.0f / maskHeight,
         std::cos(slope), std::cos(0.5f * slope), v.mirageDistance, 2.0f * v.mirageDistance};
     pass.device->SetPixelShaderConstantF(kOwnConstant, constants, kOwnConstants);

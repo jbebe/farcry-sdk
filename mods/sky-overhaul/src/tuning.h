@@ -67,6 +67,8 @@ struct Values {
     float grainColour;
 
     float hazeStrength;
+    float hazeWaveWidth;
+    float hazeWaveHeight;
     float mirageStrength;
     float mirageSlope;
     float mirageDistance;

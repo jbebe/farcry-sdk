@@ -18,6 +18,9 @@ float4 Heat : register(c96);
 
 // x  seconds, for the shimmer's motion
 // y  how far the view is zoomed in, against the widest it has been
+// z  shimmer cells all the way round the horizon, unzoomed, so the pattern meets itself behind the
+//    eye
+// w  shimmer cells across one radian of height, unzoomed
 float4 Time : register(c97);
 
 // xy  what the solid depth is linearised with
@@ -38,11 +41,6 @@ float4 Axis : register(c100);
 // past that.
 static const float REFERENCE_PATH = 200.0f;
 static const float MOST_GROWTH = 4.0f;
-
-// Shimmer cells all the way round the horizon, so the pattern meets itself behind the eye, and
-// across one radian of height, unzoomed: flat, several times wider than tall.
-static const float AROUND = 700.0f;
-static const float UP = 1200.0f;
 
 // What the shimmer's one layer is scaled by, so it reaches as far as two layers did.
 static const float SHIMMER_GAIN = 1.6f;
@@ -112,9 +110,9 @@ float3 ValueNoise(float3 p, float period)
 // the view turns, drifting sideways and churning. Its cells keep their size on screen at any zoom.
 float3 Shimmer(float3 direction)
 {
-    float period = round(AROUND * Time.y);
+    float period = round(Time.z * Time.y);
     float around = atan2(direction.y, direction.x) * (period / (2.0f * PI));
-    float3 p = float3(around - Time.x * DRIFT, direction.z * UP * Time.y, Time.x * CHURN);
+    float3 p = float3(around - Time.x * DRIFT, direction.z * Time.w * Time.y, Time.x * CHURN);
     return SHIMMER_GAIN * ValueNoise(p, period);
 }
 

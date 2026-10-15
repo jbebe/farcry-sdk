@@ -214,6 +214,12 @@ namespace {
          "How far the hot air over sunlit ground bends and blurs what is seen through it. One "
          "moves land 200 m off by about two pixels at 1080 lines, and land 800 m off four times "
          "as far."},
+        {"Heat haze wave width", &kHeatHaze, offsetof(Values, hazeWaveWidth), 30.86f, 3.0f, 120.0f,
+         "%.1f arcmin",
+         "How wide one wave of the shimmer is, as an angle of the unzoomed view. A degree is 60."},
+        {"Heat haze wave height", &kHeatHaze, offsetof(Values, hazeWaveHeight), 2.86f, 0.5f, 20.0f,
+         "%.2f arcmin",
+         "How tall one wave of the shimmer is, as an angle of the unzoomed view. A degree is 60."},
         {"Mirage strength", &kHeatHaze, offsetof(Values, mirageStrength), 1.0f, 0.0f, 1.0f, "%.2f",
          "How much of the sky a mirage shows on bare level ground far off, seen within about a "
          "degree of it."},
