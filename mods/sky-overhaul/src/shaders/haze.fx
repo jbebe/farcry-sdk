@@ -46,10 +46,10 @@ float4 Axis : register(c101);
 
 #define PI 3.14159265f
 
-// The air between the eye and what it sees, as sheets of turbulence, each twice as far as the one
-// before: a look collects the push of every sheet it crosses.
-#define SHEETS 6
-static const float NEAREST_SHEET = 10.0f;
+// The air between the eye and what it sees, as a few sheets of turbulence, in metres: a look
+// collects the push of every sheet it crosses. Few enough that each one's waves still read.
+#define SHEETS 3
+static const float SHEET_DISTANCES[SHEETS] = {15.0f, 50.0f, 150.0f};
 
 // The depth of air a sheet stands for at which it bends a look as hard as Heat.x says; deeper
 // sheets bend harder, as this power of their depth.
@@ -57,21 +57,21 @@ static const float SHEET_REFERENCE = 100.0f;
 static const float SHEET_GROWTH = 0.75f;
 
 // The smallest a wave may get on screen, across and up, in pixels: finer ones would average away.
-static const float2 SMALLEST_WAVE = float2(3.0f, 1.5f);
+static const float2 SMALLEST_WAVE = float2(4.0f, 2.0f);
 
 // Cells across the turbulence volume, on every axis.
 static const float TILE = 16.0f;
 
 // What each sheet's turbulence is scaled by.
-static const float SHIMMER_GAIN = 1.6f;
+static const float SHIMMER_GAIN = 2.0f;
 
 // How fast the shimmer drifts sideways, in cells a second, and how fast it churns in place.
 static const float DRIFT = 3.0f;
 static const float CHURN = 4.0f;
 
 // How long the eye gathers light for, in seconds, and how many moments of it each pixel takes: the
-// air moving within that time smears what is seen through it.
-static const float EXPOSURE = 0.1f;
+// air moving within that time smears what is seen through it, a little.
+static const float EXPOSURE = 0.04f;
 #define MOMENTS 3
 
 // How far below a pixel of sky to look for the land it sits over, in pixels.
@@ -139,7 +139,7 @@ float3 Push(float around, float rise, float distance, float time)
     float3 sum = 0.0f;
     [unroll] for (int k = 0; k < SHEETS; k++)
     {
-        float sheet = NEAREST_SHEET * exp2(k);
+        float sheet = SHEET_DISTANCES[k];
         float lever = sqrt(saturate(1.0f - sheet / distance));
         float weight = pow(sheet / SHEET_REFERENCE, SHEET_GROWTH) * lever;
         sum += Sheet(around, rise, sheet, time, k) * weight;
@@ -322,9 +322,9 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
     float2 toUv = float2(SIDEWAYS, 1.0f) / (2.0f * Lens.xy);
     float turn = Dither(screen);
 
-    // Each moment the eye gathers sees the world pushed its own way and blurred by as much, so
-    // what moves within one is smeared along the way it moves. A pixel's moments start at its own
-    // share of the exposure, so neighbours fill in each other's gaps.
+    // Each moment the eye gathers sees the world pushed its own way, so what moves within one is
+    // smeared along the way it moves. A pixel's moments start at its own share of the exposure, so
+    // neighbours fill in each other's gaps.
     float3 colour = 0.0f;
     float weight = 0.0f;
     float2 shift = 0.0f;
@@ -335,9 +335,7 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
         float2 push = Push(around, direction.z, distance, time).xy * toUv;
         shift += push / MOMENTS;
         spread += abs(push) / MOMENTS;
-        float s, c;
-        sincos(i * GOLDEN_ANGLE + turn * 2.0f * PI, s, c);
-        float2 tap = uv + push + float2(c, s) * BLUR_SHARE * abs(push) * sqrt((i + 0.5f) / MOMENTS);
+        float2 tap = uv + push;
         float w = MayCover(Stored(tap), z) ? 1.0f : 0.0f;
         colour += tex2Dlod(Scene, float4(tap, 0.0f, 0.0f)).rgb * w;
         weight += w;
