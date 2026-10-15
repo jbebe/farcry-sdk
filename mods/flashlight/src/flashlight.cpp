@@ -193,13 +193,15 @@ namespace {
 namespace Flashlight {
 
 bool Install() {
-    if (!Player::Install() || !Light::Install()) {
+    if (!Player::Install() || !Light::Install() || !Frame::Install(&Tick)) {
         return false;
     }
+    // Past the first hook a refusal would unload the plugin with that hook live, so these only log.
     Sound::Install();
     Hud::Install();
     Sight::Install();
-    return Frame::Install(&Tick) && Input::Install(&OnSignal);
+    Input::Install(&OnSignal);
+    return true;
 }
 
 void SetCone(size_t cone) {

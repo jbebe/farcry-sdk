@@ -3,6 +3,13 @@
 Notable changes to Flashlight, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+- **No crash at startup when part of the game can't be hooked**, for example with two copies of
+  `Flashlight.dll` installed. The flashlight then leaves out what it couldn't hook and logs it in
+  `fcse.log`.
+
 ## [1.1.1] - 2026-10-09
 
 ### Changed
