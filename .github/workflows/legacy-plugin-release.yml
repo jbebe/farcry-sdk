@@ -1,0 +1,70 @@
+name: Legacy Plugin release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # Nexus Mods identifiers for the Legacy Plugin mod page. NEXUS_MOD_ID is the internal ID that
+  # v3/games/farcry2/mods/{id in the page URL} answers with, not the ID in the URL; the file ID is
+  # on the mod's Files tab under "API Info". An empty file ID skips the upload.
+  NEXUS_MOD_ID: '6317896892806'
+  NEXUS_FILE_LEGACY_PLUGIN: '8160264'
+
+jobs:
+  release:
+    # A 32-bit MSVC/CMake build (Far Cry 2 is a 32-bit process), through the project's own build.ps1.
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: mods/legacy-plugin
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare the release
+        id: release
+        uses: ./.github/actions/prepare-release
+        with:
+          directory: mods/legacy-plugin
+          tag_prefix: legacy-plugin
+
+      - name: Build LegacyPlugin.dll
+        shell: pwsh
+        run: .\build.ps1 -Config release
+
+      - name: Verify the release build
+        shell: pwsh
+        # Architecture, static CRT and the FCSE_Load export - see verify_build.ps1.
+        run: .\verify_build.ps1 -Config release
+
+      - name: Stage release contents
+        shell: pwsh
+        # Extracts straight into the game's bin\ folder: FCSE scans bin\plugins\ by name.
+        run: |
+          New-Item -ItemType Directory -Force -Path "stage\plugins" | Out-Null
+          Copy-Item "out\build\x86-release\LegacyPlugin.dll" "stage\plugins\LegacyPlugin.dll"
+          Copy-Item "README-release.md" "stage\README.md"
+
+      - name: Zip release artifact
+        shell: pwsh
+        run: Compress-Archive -Path "stage\*" -DestinationPath "legacy-plugin-${{ steps.release.outputs.version }}.zip"
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ steps.release.outputs.tag }}" "legacy-plugin-${{ steps.release.outputs.version }}.zip" --title "Legacy Plugin ${{ steps.release.outputs.version }}" --target "${{ github.sha }}" --notes-file "${{ steps.release.outputs.notes_file }}"
+
+      - name: Upload Legacy Plugin to Nexus Mods
+        uses: ./.github/actions/nexus-upload
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          mod_id: ${{ env.NEXUS_MOD_ID }}
+          file_id: ${{ env.NEXUS_FILE_LEGACY_PLUGIN }}
+          filename: mods/legacy-plugin/legacy-plugin-${{ steps.release.outputs.version }}.zip
+          version: ${{ steps.release.outputs.version }}
+          display_name: Legacy Plugin
+          changelog: ${{ steps.release.outputs.nexus }}
+          update_mod_version: 'true'
