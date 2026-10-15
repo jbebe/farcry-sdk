@@ -98,3 +98,5 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 - [ ] **Some kind of platformer on a computer.** Opening the computer brings up a Magma UI that
   lets you play a platformer game, with a high score and such
 - [ ] **Radio(s).** A host created with ElevenLabs, for example
+- [ ] **Steady aim on a button.** The scope moves around unless the button is held, like in Call of
+  Duty 2
