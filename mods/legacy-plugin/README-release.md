@@ -1,9 +1,12 @@
 # Legacy Plugin
 
-Preference tweaks from Scubrah's Patch, Realism Plus and FC2JackalFix, switched on and off in game
-instead of by installing a patched `Dunia.dll`. Nothing is overwritten and nothing survives
-uninstalling it. Those mods' own data files still come from the mods themselves; this plugin
-supplies only the engine side.
+The engine-side tweaks of Scubrah's Patch, Realism Plus and FC2JackalFix, switched on and off in
+game. They are not the author's features, nor bug fixes or small quality-of-life improvements
+(those are in UFCP), but opinionated changes players got used to in those mods. The mods made them
+by shipping a patched `Dunia.dll`, which can't be installed alongside FCSE and today's mod
+managers, so this plugin collects them for anyone who still wants them. The mods' own data files
+still come from the mods themselves; this plugin supplies only the engine side. Nothing is
+overwritten and nothing survives uninstalling it.
 
 Requires FCSE (the Far Cry Script Extender) 1.4.0 or later, the plugin loader, released from the
 same place as this archive, and Far Cry 2 v1.03, either the Steam/Ubisoft Connect build or the

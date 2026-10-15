@@ -1,1 +1,1 @@
-Tweaks from Scubrah's Patch, Realism Plus and FC2JackalFix as in-game settings, no patched Dunia.dll needed: brown filter, no blinking pickups, limited saving, aim and sprint toggles, HUD fade-out, no hit indicator, no blur and more.
+The Dunia.dll tweaks older mods made (Scubrah's Patch, Realism Plus, FC2JackalFix), as in-game settings, because a patched Dunia.dll can't be installed alongside FCSE and mod managers. Not fixes, just their opinionated changes, for those used to them.
