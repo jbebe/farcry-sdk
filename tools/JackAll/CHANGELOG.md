@@ -2,6 +2,19 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **Replacing a file with the wrong kind of file warns first** — the Files tab's Replace… compares
+  the picked file's header with the one it replaces, and asks before putting, say, a WAV where a
+  sound bank belongs, naming the button that imports audio instead.
+
+### Fixed
+- **Sound imported into an IMA-ADPCM bank plays in step** — the encoder writes the 10 raw PCM frames
+  and the odd sample the game expects, so the game no longer starts decoding out of step.
+- **Unnamed `.sbao` files are recognised as `.sbao`**, from a corrected signature that matches the
+  retail files.
+
 ## [1.4.1] - 2026-10-09
 
 ### Added
