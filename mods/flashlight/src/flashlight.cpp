@@ -141,14 +141,9 @@ namespace {
         Flashlight::Sound::Hold(kClick);
 
         int toggles = g_toggles.exchange(0);
-        // A vehicle puts the light out at once and keeps it out.
+        // A vehicle switches the light off as a press would, and keeps it off.
         if (Flashlight::Vehicle::Seated()) {
-            toggles = 0;
-            if (g_wanted) {
-                g_wanted = false;
-                g_switchIn = 0.0f;
-                g_iconSynced = false;
-            }
+            toggles = g_wanted ? 1 : 0;
         }
         for (int i = 0; i < toggles; ++i) {
             g_wanted = !g_wanted;
