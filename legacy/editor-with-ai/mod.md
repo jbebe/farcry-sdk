@@ -66,8 +66,12 @@ campaign too.
 
 ## Coverage
 
-`legacy check` is clean: all 92,401 changes are claimed by exactly one page, and all 7 lines of the
+`legacy check` is clean: all 81,145 changes are claimed by exactly one page, and all 7 lines of the
 inferred list are covered. 64 pages: 51 components, 1 shared piece, 7 bundles, 5 noise rules.
+
+- **Left behind:** the template world `tmpla` and the English strings source, which the
+  single-player game never reads. Three components are no-artifact for it: `editor-depload`,
+  `editor-particles` and `graphics-editor-map-sky`.
 
 - **Verified in the engine (`verified: re`):** 4 components. These are the editor mode's services
   (`CGameMode::CreateServices` and the service factory), adaptive behaviour, the routine odds

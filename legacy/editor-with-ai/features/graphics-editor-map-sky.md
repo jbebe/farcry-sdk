@@ -2,10 +2,9 @@
 title: Bigger, brighter sun and busier clouds on editor maps
 kind: component
 bundle: graphics
-status: located
+status: no-artifact
 systems: [graphics, environment]
-match:
-  - "worlds/tmpla/generated/tmpla.game.xml#Environment/**"
+match: []
 exclude: []
 requires: []
 verified: diff
@@ -14,7 +13,8 @@ verified: diff
 # Bigger, brighter sun and busier clouds on editor maps
 
 Maps made with the in-game editor get a larger and brighter sun flare, a brighter sun, clouds that
-move and animate, and a larger shadow depth bias. The campaign worlds are not affected.
+move and animate, and a larger shadow depth bias. The campaign worlds are not affected. The
+single-player game never reads `tmpla`, so the import leaves this behind.
 
 ## How
 

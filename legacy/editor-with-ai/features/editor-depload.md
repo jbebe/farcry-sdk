@@ -2,10 +2,9 @@
 title: World 2's dependency index in the editor's template world
 kind: component
 bundle: editor-content
-status: located
+status: no-artifact
 systems: [engine, world]
-match:
-  - "worlds/tmpla/generated/tmpla_depload.dat"
+match: []
 exclude: []
 requires: []
 verified: diff
@@ -15,7 +14,7 @@ verified: diff
 
 The editor's template world (`tmpla`) loads the campaign's act 2 dependency index in place of its
 own. That index tells the engine which materials, textures, sounds and animations each resource
-pulls in.
+pulls in. The single-player game never reads `tmpla`, so the import leaves this behind.
 
 ## How
 

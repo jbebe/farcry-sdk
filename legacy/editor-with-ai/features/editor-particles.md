@@ -2,10 +2,9 @@
 title: World 2's particle library in the editor's template world
 kind: component
 bundle: editor-content
-status: located
+status: no-artifact
 systems: [graphics, world]
-match:
-  - "worlds/tmpla/generated/tmpla_deploadnewparticles.rml#**"
+match: []
 exclude: []
 requires: [editor-depload]
 verified: diff
@@ -17,7 +16,8 @@ The editor's template world (`tmpla`), which every editor map is built on, gets 
 particle library in place of its own. Effects that only the campaign had now play in editor maps:
 flies and butterflies, fireflies, cockroaches, waterfalls and river foam, campfire smoke, burning car
 hulks, the pipeline and bridge explosions, and the small effects of NPC idle animations (cigarette
-smoke, a zippo, welding sparks).
+smoke, a zippo, welding sparks). The single-player game never reads `tmpla`, so the import leaves
+this behind.
 
 ## How
 
