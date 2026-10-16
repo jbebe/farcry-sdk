@@ -1,0 +1,36 @@
+[b]Far Cry 2 - Vortex Extension[/b]
+Adds full Far Cry 2 support to Vortex: install mods from Nexus, enable/disable them, set load order, deploy, and purge. A normal Vortex workflow, for a game that has no loose-file loading and no plugin list.
+[b]
+Why this exists[/b]
+Far Cry 2 reads everything out of packed archives. The only thing a mod can touch is patch.dat or patch.fat, and "installing a mod" really means [i]recompiling that archive pair[/i] with the mod's files spliced in. This extension handles that recompilation for you. Under the hood it's powered by JackAll, a tool ecosystem made for Far Cry 2, which does the archive work correctly and reversibly.
+
+[b]What it supports[/b]
+Every mod archive is classified automatically into one of three kinds:
+[list]
+[*][b]Legacy patch mods:[/b] the classic patch.dat/patch.fat pair most existing Far Cry 2 mods ship as. Converted at install time, keeping only what actually differs from the base game.[/*]
+[*][b]FCSE plugins[/b]: a .dll under the plugins\ folder, for [url=https://jbebe.github.io/farcry-sdk/fcse]Far Cry Script Extender[/url]. Deployed straight to bin\plugins\.[/*]
+[*][b]Asset mods[/b]: files rooted under Data_Win32\, staged as an ordinary layer.[/*]
+[/list]
+Two mods editing different parts of the same file get merged automatically. If they genuinely conflict on the same part, load order decides, and you'll get a notification telling you exactly what happened.
+[b]
+Requirements[/b]
+[list]
+[*]Vortex[/*]
+[*]Far Cry 2 (Steam or GOG)[/*]
+[*][url=https://jbebe.github.io/farcry-sdk/fcse]FCSE[/url], only if you're installing an FCSE plugin mod. (the extension will prompt you if it's missing)[/*]
+[/list]
+[b]
+Installation[/b]
+[list=1]
+[*]Download this file.[/*]
+[*]In Vortex: [b]Extensions → drag the file in[/b] (or use the manual install button), then restart Vortex.[/*]
+[*]Add Far Cry 2 as a managed game if Vortex hasn't already picked it up automatically.[/*]
+[/list]
+[b]Safety[/b]
+Every build regenerates patch.dat from a pristine backup taken the first time you deploy mods. Never from whatever's currently on disk. That means deploying twice always produces identical results, disabling a mod and redeploying genuinely removes it, and purging is a true restore rather than an unwind. Your original game files are never touched directly. A build only swaps the finished file in once it's done.
+[b]
+Known limitations[/b]
+Some very old Far Cry 2 mods were distributed as manual instructions (readme-driven edits, standalone scripts) rather than a structured archive. Those predate any installer convention and can't be auto-classified. If you hit one, it likely needs manual installation the old-fashioned way.
+[b]
+Feedback / issues[/b]
+This is an early release (0.1.0). If a mod fails to install or behaves unexpectedly, please report it with the mod name and what happened.

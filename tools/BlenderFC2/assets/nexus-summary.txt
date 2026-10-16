@@ -1,0 +1,1 @@
+Blender add-on for Far Cry 2 models. Import a .fc2model pack from JackAll, edit the mesh, materials and animation in Blender, and write it straight back.
