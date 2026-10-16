@@ -72,6 +72,7 @@ struct Values {
     float hazeFarBlur;
     float hazeBlurStart;
     float hazeBlurEnd;
+    float hazeFarSmear;
     float mirageStrength;
     float mirageSlope;
     float mirageDistance;

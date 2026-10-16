@@ -167,7 +167,8 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
         projection[0], projection[1], 1.0f / static_cast<float>(halfWidth),
         1.0f / static_cast<float>(halfHeight),
         std::cos(slope), std::cos(0.5f * slope), v.mirageDistance, 2.0f * v.mirageDistance,
-        v.hazeBlurStart, (std::max)(v.hazeBlurEnd, v.hazeBlurStart + 1.0f), farBlur, 0.0f};
+        v.hazeBlurStart, (std::max)(v.hazeBlurEnd, v.hazeBlurStart + 1.0f), farBlur,
+        v.hazeFarSmear};
     device->SetPixelShaderConstantF(kOwnConstant, constants, kOwnConstants);
     device->SetTexture(kSolidDepthSampler, solid.texture);
 

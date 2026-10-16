@@ -38,6 +38,7 @@ float4 Level : register(c99);
 // x  the distance at which the far world starts to blur, in metres
 // y  the distance at which it is wholly blurred
 // z  how far it blurs at the most
+// w  how long the eye gathers light from the far world for, in seconds
 float4 Far : register(c100);
 
 // xy  the axis of a blur pass, one pixel of its target long
@@ -69,10 +70,10 @@ static const float SHIMMER_GAIN = 2.0f;
 static const float DRIFT = 3.0f;
 static const float CHURN = 4.0f;
 
-// How long the eye gathers light for, in seconds, and how many moments of it each pixel takes: the
-// air moving within that time smears what is seen through it, a little.
+// How long the eye gathers light from near things for, in seconds, and how many moments of it each
+// pixel takes: the air moving within that time smears what is seen through it.
 static const float EXPOSURE = 0.04f;
-#define MOMENTS 3
+#define MOMENTS 5
 
 // How far below a pixel of sky to look for the land it sits over, in pixels.
 static const float SKYLINE_REACH = 12.0f;
@@ -323,15 +324,18 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
     float turn = Dither(screen);
 
     // Each moment the eye gathers sees the world pushed its own way, so what moves within one is
-    // smeared along the way it moves. A pixel's moments start at its own share of the exposure, so
-    // neighbours fill in each other's gaps.
+    // smeared along the way it moves, and the farther off, the longer it gathers. A pixel's moments
+    // start at its own share of the exposure, so neighbours fill in each other's gaps.
+    float far = smoothstep(Far.x, Far.y, distance);
+    float exposure = lerp(EXPOSURE, Far.w, far);
     float3 colour = 0.0f;
     float weight = 0.0f;
+    float4 blurred = 0.0f;
     float2 shift = 0.0f;
     float2 spread = 0.0f;
     [unroll] for (int i = 0; i < MOMENTS; i++)
     {
-        float time = Time.x - EXPOSURE * (i + turn) / MOMENTS;
+        float time = Time.x - exposure * (i + turn) / MOMENTS;
         float2 push = Push(around, direction.z, distance, time).xy * toUv;
         shift += push / MOMENTS;
         spread += abs(push) / MOMENTS;
@@ -339,14 +343,14 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
         float w = MayCover(Stored(tap), z) ? 1.0f : 0.0f;
         colour += tex2Dlod(Scene, float4(tap, 0.0f, 0.0f)).rgb * w;
         weight += w;
+        blurred += tex2Dlod(Blurred, float4(tap, 0.0f, 0.0f)) / MOMENTS;
     }
     colour = weight > 0.0f ? colour / weight : tex2Dlod(Scene, float4(uv, 0.0f, 0.0f)).rgb;
 
-    // Far off, the land melts into blobs that dance with the air.
+    // Far off, the land melts into blobs that smear with the air.
     [branch] if (Far.z > 0.0f)
     {
-        float4 blurred = tex2Dlod(Blurred, float4(uv + shift, 0.0f, 0.0f));
-        float melt = Far.z * smoothstep(Far.x, Far.y, distance) * saturate(2.0f * blurred.a);
+        float melt = Far.z * far * saturate(2.0f * blurred.a);
         colour = lerp(colour, blurred.rgb / max(blurred.a, 1e-3f), melt);
     }
 

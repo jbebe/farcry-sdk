@@ -227,6 +227,10 @@ namespace {
          1000.0f, "%.0f m", "How far off land starts to melt into the far blur."},
         {"Heat haze blur end", &kHeatHaze, offsetof(Values, hazeBlurEnd), 450.0f, 10.0f, 1000.0f,
          "%.0f m", "How far off land has wholly melted into the far blur."},
+        {"Heat haze far smear", &kHeatHaze, offsetof(Values, hazeFarSmear), 0.3f, 0.04f, 1.0f,
+         "%.2f s",
+         "How long the moving air is gathered over at the blur's end, smearing what is seen "
+         "through it. Near things gather over 0.04 s."},
         {"Mirage strength", &kHeatHaze, offsetof(Values, mirageStrength), 1.0f, 0.0f, 1.0f, "%.2f",
          "How much of the sky a mirage shows on bare level ground far off, seen within about a "
          "degree of it."},
