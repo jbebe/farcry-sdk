@@ -329,6 +329,7 @@ class FC2_PT_animation(FC2_PT_base):
 
         layout.operator("object.fc2_load_clip", icon="ARMATURE_DATA")
         layout.operator("object.fc2_write_clip", icon="REC")
+        layout.operator("object.fc2_retime_clip", icon="TIME")
         layout.operator("object.fc2_motion_table", icon="DRIVER_ROTATIONAL_DIFFERENCE")
 
         state = context.scene.fc2

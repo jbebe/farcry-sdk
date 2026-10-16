@@ -324,6 +324,55 @@ def named_bones_only():
     return errors
 
 
+def retimed_bank_stays_in_step(directory):
+    """Double the reload; every clip, window and event follows, and the arms keep their pose.
+
+    Read back through JackAll, so what is checked is the bank the game would get.
+    """
+    pack_object = Pack.load(pack(AK47, clips=[RELOAD]))
+    before = pack_object.clip(RELOAD)
+    was = timing(before["clips"][0])[0]
+
+    export_mab.retime(pack_object, RELOAD, 2 * was, lossless=True)
+    if next(r["frames"] for r in pack_object.clips if r["path"] == RELOAD) != 2 * was:
+        return fail("the manifest still lists the bank at its old length")
+    again = Pack.load(_repack(applied(pack_object, directory, "retimed"), directory))
+    after = again.clip(again.clips[0]["path"])
+
+    errors = 0
+    for index, (old, new) in enumerate(zip(before["clips"], after["clips"])):
+        if timing(new) != (round(timing(old)[0] * 2), timing(old)[1]):
+            errors += fail("clip %d is %s, not twice %s" % (index, timing(new), timing(old)))
+        if abs(new["duration"] - 2 * old["duration"]) > 1e-5:
+            errors += fail("clip %d lasts %f, not twice %f" % (index, new["duration"], old["duration"]))
+    root_old, root_new = before["clips"][0], after["clips"][0]
+    if not _close([t * 2 for w in root_old["tag_windows"] for t in w],
+                  [t for w in root_new["tag_windows"] for t in w]):
+        errors += fail("tag windows %s did not double from %s"
+                       % (root_new["tag_windows"], root_old["tag_windows"]))
+    if not root_old["event_times"] or not _close(
+            [t * 2 for t in root_old["event_times"]], root_new["event_times"]):
+        errors += fail("event times %s did not double from %s"
+                       % (root_new["event_times"], root_old["event_times"]))
+
+    worst = 0.0
+    held = {e["bone"]: e for e in root_old["keyframe_rotations"]}
+    for entry in root_new["keyframe_rotations"]:
+        old = export_mab._resample(held[entry["bone"]], was, float, 4)
+        new = export_mab._resample(entry, 2 * was, float, 4)
+        worst = max([worst] + [1.0 - abs(old[k].dot(new[2 * k])) for k in range(was + 1)])
+    if worst > TOLERANCE:
+        errors += fail("the stretched arms moved by %.3e off their old pose" % worst)
+    elif not errors:
+        print("retimed: %d clips to %d frames, windows and %d events doubled, arms within %.2e"
+              % (len(after["clips"]), 2 * was + 1, len(root_new["event_times"]), worst))
+    return errors
+
+
+def _close(a, b):
+    return len(a) == len(b) and all(abs(x - y) <= 1e-5 for x, y in zip(a, b))
+
+
 def main():
     if not require_pack():
         return 0
@@ -332,6 +381,7 @@ def main():
         errors += other_clips_survive(directory)
         errors += motion_survives(directory)
         errors += named_bones_only()
+        errors += retimed_bank_stays_in_step(directory)
         errors += panel_write_operator(directory)
     print("blender write: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0
@@ -368,6 +418,12 @@ def panel_write_operator(directory):
         status = bpy.ops.object.fc2_write_clip(clip=RELOAD, only_selected=True)
         if status != {"FINISHED"}:
             return fail("the write operator returned %s for only-selected" % status)
+
+        # Retiming reloads the bank, so the scene's range has to come back at the new end.
+        status = bpy.ops.object.fc2_retime_clip(clip=RELOAD, end_frame=FIRST_FRAME + 40)
+        if status != {"FINISHED"} or bpy.context.scene.frame_end != FIRST_FRAME + 40:
+            return fail("the retime operator returned %s and left the scene ending at %d"
+                        % (status, bpy.context.scene.frame_end))
     finally:
         addon.unregister()
 

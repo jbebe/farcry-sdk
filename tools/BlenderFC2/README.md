@@ -182,6 +182,23 @@ resampled bone picks up whatever the curve invented at the frames in between —
 character reload a whole-clip rewrite moves a thumb 0.74° and writes quaternions of norm 0.995.
 Closing that means resampling with slerp on the way in, which is **not done yet**.
 
+### Changing its length
+
+**Far Cry 2 ▸ Animation ▸ Retime Animation** stretches a bank to a new end frame and loads it back
+onto the rigs, so retime first and pose after. It has to be the whole bank: every clip in it shares
+one timeline, each participant plays over a window of it, and its events fire at times on it. So
+every clip is resampled, slerp for rotations and lerp for offsets, and every duration, tag window
+and event time scales by the same factor. Constants and bone masks are untouched.
+`tests/blender_write.py` doubles the rifle's reload and requires every clip, window and event to
+double, with the arms at frame `2k` within `1.6e-05` of their pose at `k`.
+
+A stretch is uniform, so the arms only speed up or slow down. For them to do more, write them from a
+pack rigged to `pelvis_ref`. A single-pose bank has no length to stretch.
+
+The MOVE graph's own copy of each clip's duration (`m_lastAnimDataDuration`) does not get in the
+way: the engine reads it and throws it away. Whether the game plays a retimed bank to its new end
+has still not been seen.
+
 Two layout rules the writer has to respect, and one choice it offers:
 
 - Rotations are stored in groups of eight frames whose first frame always carries a key, so frames

@@ -45,8 +45,8 @@ public sealed class ClipTiming
 /// data, so an editor adding or dropping a bone does not have to know they exist.
 /// <para>
 /// The tag table and the event chain travel as bytes: 140 of the 172 bytes in a tag record are still
-/// undecoded, and an event chain is FCB. They are small opaque fields rather than a container, and
-/// an editor has no reason to touch either.
+/// undecoded, and an event chain is FCB. Their times are the exception, decoded so that an editor
+/// retiming a bank can move them.
 /// </para>
 /// </remarks>
 public sealed class ClipDocument
@@ -80,6 +80,16 @@ public sealed class ClipDocument
     public byte[]? Tags { get; init; }
 
     public byte[]? Events { get; init; }
+
+    /// <summary>
+    /// Each tag record's (start, end) in seconds, the one part of <see cref="Tags"/> an editor
+    /// retiming a bank has to change.
+    /// </summary>
+    /// <remarks>Written over the tag bytes when slot 6 is dropped from <see cref="Raw"/>.</remarks>
+    public List<float[]> TagWindows { get; init; } = [];
+
+    /// <summary>Each event's time in seconds, written over <see cref="Events"/> the same way.</summary>
+    public List<float> EventTimes { get; init; } = [];
 
     /// <summary>Whether the clip named a next-clip slot, which the last one still does.</summary>
     public bool Chained { get; init; }
@@ -146,6 +156,8 @@ public sealed class ClipDocument
         // The event chain's own length is not computable, so its span travels as it stands - which
         // is already aligned, so re-emitting it lands in the same place.
         Events = clip.Section(MabClip.SectionEvents),
+        TagWindows = TagBytes(clip) is { } tags ? MabClip.TagWindows(tags) : [],
+        EventTimes = clip.Events() is { } events ? MabClip.EventTimes(events) : [],
         Chained = clip.Sections[MabClip.SectionNextClip] != 0,
         Sections = [.. Enumerable.Range(0, MabClip.SectionCount)
             .Where(slot => slot != MabClip.SectionNextClip && clip.Sections[slot] != 0)],
@@ -222,8 +234,8 @@ public sealed class ClipDocument
                     RootRotation is null ? [] : Keys(RootRotation, 4),
                     RootRotationTiming?.LastFrame ?? 0, RootRotationTiming?.Rate ?? 0),
 
-                MabClip.SectionTags => Tags ?? [],
-                MabClip.SectionEvents => Events ?? [],
+                MabClip.SectionTags => Tags is null ? [] : MabEncoder.WithTagWindows(Tags, TagWindows),
+                MabClip.SectionEvents => Events is null ? [] : MabEncoder.WithEventTimes(Events, EventTimes),
                 _ => throw new InvalidDataException($"A clip cannot carry section {slot}."),
             };
         }

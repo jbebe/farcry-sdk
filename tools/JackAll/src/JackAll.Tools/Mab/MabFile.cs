@@ -89,7 +89,13 @@ public class MabClip
     public const int TagStride = 0xAC;
     public const int TagKind = 0x00;
     public const int TagClip = 0x0C;
+    public const int TagStart = 0x10;
+    public const int TagEnd = 0x14;
     public const int TagNameBytes = 32;
+
+    /// <summary>An event node opens with its time, and links to the next node from its own start.</summary>
+    public const int EventTime = 0x00;
+    public const int EventNext = 0x0A;
 
     /// <summary>
     /// Four name slots per record, each a CRC32 then 32 NUL-padded bytes: what is animated, the bone
@@ -410,6 +416,37 @@ public class MabClip
 
     public byte[]? Events() => Section(SectionEvents);
 
+    /// <summary>Each tag record's (start, end) in seconds on the bank's timeline, in record order.</summary>
+    public static List<float[]> TagWindows(byte[] tags)
+    {
+        int count = BinaryPrimitives.ReadInt32LittleEndian(tags);
+        return [.. Enumerable.Range(0, count).Select(index =>
+        {
+            int base_ = TagCountBytes + (index * TagStride);
+            return (float[])[F32(tags, base_ + TagStart), F32(tags, base_ + TagEnd)];
+        })];
+    }
+
+    /// <summary>Where each node of an event chain starts, in chain order.</summary>
+    public static List<int> EventNodes(byte[] events)
+    {
+        List<int> nodes = [];
+        for (int at = 0; at + EventNext + 2 <= events.Length;)
+        {
+            nodes.Add(at);
+            int next = U16(events, at + EventNext);
+            if (next == 0)
+            {
+                break;
+            }
+            at += next;
+        }
+        return nodes;
+    }
+
+    public static List<float> EventTimes(byte[] events)
+        => [.. EventNodes(events).Select(at => F32(events, at + EventTime))];
+
     /// <summary>Skeleton bone ids named by a five-word bitmask, in ascending order.</summary>
     public static List<int> MaskBones(uint[] mask)
     {
@@ -600,6 +637,9 @@ public class MabClip
 
     private static int U16(byte[] data, int offset)
         => BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(offset));
+
+    private static float F32(byte[] data, int offset)
+        => BinaryPrimitives.ReadSingleLittleEndian(data.AsSpan(offset));
 
     private Dictionary<int, float[]> Constant(
         int section, int mask, int stride, Func<byte[], int, float[]?> read)

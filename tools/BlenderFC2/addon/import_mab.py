@@ -12,7 +12,7 @@ import bpy
 from mathutils import Matrix, Quaternion, Vector
 
 from . import import_xbg, rig
-from .pack import stem
+from .pack import stem, timing
 
 # Blender counts frames from one, the file from zero.
 FIRST_FRAME = 1
@@ -59,16 +59,6 @@ def clip_for(bank, skeleton):
         if not ids or ids[-1] < count:
             return clip
     return None
-
-
-def timing(clip):
-    """The clip's own last frame and rate, from whichever section carries them."""
-    for key in ("keyframe_timing", "translation_timing",
-                "root_translation_timing", "root_rotation_timing"):
-        found = clip.get(key)
-        if found:
-            return found["last_frame"], found["rate"]
-    return 0, 0
 
 
 def load(pack, bank_path, armature, with_props=False, lod=0, actor=None):

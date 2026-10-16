@@ -83,6 +83,47 @@ public sealed class BankDocumentTests
     }
 
     /// <summary>
+    /// Retimed tag windows and event times land in the bank, and nothing else in either block moves.
+    /// </summary>
+    /// <remarks>The reload's own times are pinned, so a walk that lost a node fails here.</remarks>
+    [Fact]
+    public void Tag_windows_and_event_times_are_written_back()
+    {
+        if (Fixture.Read(MabFixtures.Reload) is not { } original)
+        {
+            return;
+        }
+
+        BankDocument document = BankDocument.From(MabFile.Parse(original));
+        ClipDocument root = document.Clips[0];
+        Assert.Equal([0.2f, 1.0f, 1.7f], root.EventTimes);
+        Assert.Equal([0.0f, 5 / 30.0f, 44 / 30.0f], root.TagWindows.Select(w => w[0]));
+
+        List<float[]> windows = [.. root.TagWindows];
+        List<float> times = [.. root.EventTimes];
+        root.Raw.Remove(MabClip.SectionTags);
+        root.Raw.Remove(MabClip.SectionEvents);
+        for (int index = 0; index < root.TagWindows.Count; index++)
+        {
+            root.TagWindows[index] = [.. root.TagWindows[index].Select(t => t * 2)];
+        }
+        for (int index = 0; index < root.EventTimes.Count; index++)
+        {
+            root.EventTimes[index] *= 2;
+        }
+        byte[] produced = document.ToMab();
+
+        Assert.Equal(original.Length, produced.Length);
+        MabClip after = MabFile.Parse(produced).Clips()[0];
+        Assert.Equal(root.EventTimes, MabClip.EventTimes(after.Events()!));
+        Assert.Equal(root.TagWindows, MabClip.TagWindows(after.Tags()!));
+
+        // Put the original times back and both blocks must be the bytes they were.
+        Assert.Equal(root.Tags, MabEncoder.WithTagWindows(after.Tags()![..root.Tags!.Length], windows));
+        Assert.Equal(root.Events, MabEncoder.WithEventTimes(after.Events()!, times));
+    }
+
+    /// <summary>
     /// A participant's record names the clip that actually moves it.
     /// </summary>
     /// <remarks>

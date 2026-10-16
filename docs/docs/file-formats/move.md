@@ -501,6 +501,12 @@ pre-order, are its priority order.
 A blend group's children are its samples, played together along `m_eAxisValueID`. They are not
 competing choices. What fills a state's `+0x1C` slot has not been traced.
 
+**A parameter does not cache its clip's length.** Each one carries `m_lastAnimDataDuration`, the
+clip's duration at authoring time, but `CMoveDefParameter::Serialize` (`0x09b7eaf0`) reads it into a
+local and never stores it on the object. A clip whose length changed is not held to the old one by
+the graph. The other times, `m_flStartTime`, `m_flStopTime` and `m_flCutTime`, are stored at `+0x44`,
+`+0x48` and `+0x4C`. `m_flStopTime` is zero in 5,791 of 6,517 parameters.
+
 ### State identity
 
 `CMoveBaseState::Serialize` (`0x09b78c60`) is where a state gets its name, and it explains why the

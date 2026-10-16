@@ -284,6 +284,12 @@ because [some rotations were authored on an exact tie](./mab.md#what-is-still-op
 re-encoded to the bytes they came from. Carrying them instead makes the round trip exact for all
 4,436.
 
+The tag table and the event chain travel as bytes, but their times are decoded beside them:
+`tag_windows` is each record's `[start, end]` in seconds and `event_times` each event's time. They
+are what an editor changing a bank's length has to move, and they follow the same contract as
+everything else: dropping slot 6 or 7 from `raw` writes them over the bytes. A pack from before they
+existed has none, so applying one with either slot dropped is refused.
+
 `participants` is derived on the way in and ignored on the way out; the tag block those records came
 from travels in `raw` like any other section. It is there so a reader never has to open that block —
 without it, the one thing a modeler needs from a bank, which bone the gun hangs from, is unreadable

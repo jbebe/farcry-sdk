@@ -180,6 +180,41 @@ public static class MabEncoder
         return section;
     }
 
+    /// <summary>A tag table with each record's (start, end) replaced, everything else kept.</summary>
+    public static byte[] WithTagWindows(byte[] tags, IReadOnlyList<float[]> windows)
+    {
+        byte[] out_ = [.. tags];
+        Require(MabClip.TagWindows(tags).Count, windows.Count, "tag windows");
+        for (int index = 0; index < windows.Count; index++)
+        {
+            int base_ = MabClip.TagCountBytes + (index * MabClip.TagStride);
+            BinaryPrimitives.WriteSingleLittleEndian(out_.AsSpan(base_ + MabClip.TagStart), windows[index][0]);
+            BinaryPrimitives.WriteSingleLittleEndian(out_.AsSpan(base_ + MabClip.TagEnd), windows[index][1]);
+        }
+        return out_;
+    }
+
+    /// <summary>An event chain with each node's time replaced, its payloads kept.</summary>
+    public static byte[] WithEventTimes(byte[] events, IReadOnlyList<float> times)
+    {
+        byte[] out_ = [.. events];
+        List<int> nodes = MabClip.EventNodes(events);
+        Require(nodes.Count, times.Count, "event times");
+        for (int index = 0; index < nodes.Count; index++)
+        {
+            BinaryPrimitives.WriteSingleLittleEndian(out_.AsSpan(nodes[index] + MabClip.EventTime), times[index]);
+        }
+        return out_;
+    }
+
+    private static void Require(int held, int given, string what)
+    {
+        if (held != given)
+        {
+            throw new InvalidDataException($"The clip holds {held} but {given} {what} were given.");
+        }
+    }
+
     /// <summary>The bytes a section occupies once padded to the alignment.</summary>
     public static int Padded(int length) => (length + Alignment - 1) & ~(Alignment - 1);
 

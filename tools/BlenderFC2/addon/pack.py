@@ -53,6 +53,16 @@ def stem(path):
     return posixpath.splitext(posixpath.basename(_key(path)))[0]
 
 
+def timing(clip):
+    """The clip's own last frame and rate, from whichever section carries them."""
+    for key in ("keyframe_timing", "translation_timing",
+                "root_translation_timing", "root_rotation_timing"):
+        found = clip.get(key)
+        if found:
+            return found["last_frame"], found["rate"]
+    return 0, 0
+
+
 def read_manifest(path):
     """What a pack carries, without unpacking any of it."""
     with zipfile.ZipFile(path) as archive:
@@ -216,6 +226,10 @@ class Pack:
         entry.record.setdefault("origin_sha256", entry.record["sha256"])
         entry.record["sha256"] = hashlib.sha256(content).hexdigest()
         self.files[entry.file] = content
+        # The index lists the root clip's length, which a retime changes.
+        for record in self.clips:
+            if same_path(record["path"], game_path):
+                record["frames"] = timing(bank["clips"][0])[0]
         return entry
 
     def replace_document(self, game_path, document):

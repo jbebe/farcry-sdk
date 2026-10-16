@@ -261,6 +261,46 @@ class FC2_OT_write_clip(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class FC2_OT_retime_clip(bpy.types.Operator):
+    """Stretch a whole bank to a new length, then load it back onto the rigs"""
+
+    bl_idname = "object.fc2_retime_clip"
+    bl_label = "Retime Animation"
+    bl_options = {"REGISTER"}
+
+    clip: EnumProperty(name="Animation", items=_clip_items,
+                       description="Which of the pack's banks to stretch")
+    end_frame: IntProperty(
+        name="End frame", min=import_mab.FIRST_FRAME + 1,
+        description="Where the bank ends. Every clip in it, every participant's window and "
+                    "every event stretch by the same factor, so the arms stay in step with "
+                    "the gun")
+
+    @classmethod
+    def poll(cls, context):
+        return _pack_of(context)[0] is not None
+
+    def invoke(self, context, _event):
+        self.end_frame = context.scene.frame_end
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        origin, _collection = _pack_of(context)
+        pack = Pack.load(origin)
+        try:
+            was = export_mab.retime(pack, self.clip, self.end_frame - import_mab.FIRST_FRAME)
+        except Exception as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        pack.save(origin)
+
+        # Reloaded so the scene shows the bank as it now is; posing starts from here.
+        bpy.ops.object.fc2_load_clip(clip=self.clip)
+        self.report({"INFO"}, "Stretched from end frame %d to %d"
+                    % (was + import_mab.FIRST_FRAME, self.end_frame))
+        return {"FINISHED"}
+
+
 # The bone enum's items, kept alive for the callback the way _CLIPS is.
 _BONES = []
 
@@ -381,8 +421,8 @@ def menu_export(self, _context):
                          text="Far Cry 2 Model Pack (%s)" % EXTENSION)
 
 
-CLASSES = (FC2_OT_import_pack, FC2_OT_load_clip, FC2_OT_write_clip, FC2_OT_add_part,
-           FC2_OT_export_pack)
+CLASSES = (FC2_OT_import_pack, FC2_OT_load_clip, FC2_OT_write_clip, FC2_OT_retime_clip,
+           FC2_OT_add_part, FC2_OT_export_pack)
 
 
 def register():
