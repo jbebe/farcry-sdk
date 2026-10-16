@@ -143,7 +143,7 @@ float4 FogColourRange : register(c75);
 float4 FogColourVector : register(c76);
 
 // x: how much the land's fill shows. y: the sine of how far above the horizon it reaches, below it
-// where negative. z: how far the land's fog has hidden the land at the edge of the drawn world.
+// where negative. z: how much of that land is haze rather than earth.
 float4 Fill : register(c77);
 
 // Over how far below its top, as a sine, the filled land gives way to the sky's own horizon.
@@ -347,7 +347,7 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     colour += DawnGlow(farness, below);
 
     // The sky is drawn only where the world drew nothing, so under the horizon it is the land past
-    // the drawn world's edge: earth, as far into the land's fog as that edge.
+    // the drawn world's edge: earth, a little into the haze.
     float3 landFog = FogAlong(heading);
     float3 land = lerp(dot(landFog, LUMA) * EARTH_BRIGHTNESS * GROUND_HUE, landFog, Fill.z);
     float filled = Fill.x * saturate((Fill.y - ray.z) / FILL_SOFTNESS);

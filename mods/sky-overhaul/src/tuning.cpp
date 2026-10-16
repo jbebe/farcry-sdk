@@ -96,6 +96,8 @@ namespace {
         {"Horizon land fill height", &kFog, offsetof(Values, horizonFillHeight), 0.0f, -2.0f, 2.0f,
          "%.2f deg",
          "How far above the true horizon the filled land reaches; below it where negative."},
+        {"Horizon land fill haze", &kFog, offsetof(Values, horizonFillHaze), 0.3f, 0.0f, 1.0f,
+         "%.2f", "How much of the filled land is the horizon's haze rather than earth."},
 
         {"Cloud coverage", &kCloudLayer, offsetof(Values, cloudCoverage), 0.44f, 0.0f, 1.0f, "%.2f",
          "How much of the sky the layer fills."},

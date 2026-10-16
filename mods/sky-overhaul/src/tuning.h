@@ -21,6 +21,7 @@ struct Values {
     float duskFogBrightness;
     float horizonFill;
     float horizonFillHeight;
+    float horizonFillHaze;
 
     float glareStrength;
     float glareSpread;

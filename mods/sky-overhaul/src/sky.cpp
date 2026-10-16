@@ -96,8 +96,6 @@ namespace {
         SkyOverhaul::FogTint::SetDusk(SmoothStep(kDuskStart, kDuskEnd, lighting.sunDirection[2]),
                                       v.duskFogBrightness, lighting.sunDirection);
 
-        // The land below the horizon is fogged as far as the drawn world's edge: the fog's whole
-        // amount, which it reaches long before that edge.
         const float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
@@ -107,8 +105,8 @@ namespace {
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f,
-            v.horizonFill, std::sin(v.horizonFillHeight * kRadiansPerDegree),
-            std::clamp(view.fogValues[2], 0.0f, 1.0f), 0.0f};
+            v.horizonFill, std::sin(v.horizonFillHeight * kRadiansPerDegree), v.horizonFillHaze,
+            0.0f};
 
         SkyOverhaul::DrawGuard guard(device, kFirstConstant, kConstantCount);
         device->SetPixelShader(shader);
