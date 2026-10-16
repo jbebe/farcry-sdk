@@ -49,12 +49,12 @@ public sealed class LegacyPatchOverrideImportTests : IDisposable
         }
 
         string[] kept = [.. workspace.FragmentOverrides[OverrideHash].Select(f => f.FragmentId)];
-        Assert.Equal(2, kept.Length);
+        Assert.Equal(3, kept.Length);
         Assert.Contains(kept, id => FcbFragments.IdComparer.Equals(id, scenario.StockEdited));
         Assert.Contains(kept, id => FcbFragments.IdComparer.Equals(id, AddedId));
+        Assert.Contains(kept, ContainerLayout.IsLayoutId);
 
         Assert.Contains(result.Unreachable, note => note.Reason.Contains("DLC archetype"));
-        Assert.Contains(result.Unreachable, note => note.Reason.Contains("1 archetype deletion"));
     }
 
     /// <summary>GOG ships no override, so what no other library declares stays in one of the mod's

@@ -52,6 +52,9 @@
     <Content Include="..\..\assets\retail_patch.tsv" Link=".retailpatch">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\assets\fc2.unused.tsv" Link=".reachlist">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="..\..\assets\binary_classes.xml" Link=".fcbclasses">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

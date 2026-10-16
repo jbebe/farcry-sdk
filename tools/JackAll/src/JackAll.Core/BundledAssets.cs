@@ -64,6 +64,25 @@ public static class BundledAssets
         return entries;
     }
 
+    /// <summary>The files the reachability list (<c>assets/fc2.unused.tsv</c>) says no engine code
+    /// path reads, by name hash.</summary>
+    public static IReadOnlySet<uint> LoadUnusedFiles()
+    {
+        var unused = new HashSet<uint>();
+        if (FindAsset(".reachlist", Path.Combine("assets", "fc2.unused.tsv")) is { } path)
+        {
+            foreach (string line in File.ReadLines(path).Where(l => l.Length > 0 && l[0] != '#'))
+            {
+                string[] columns = line.Split('\t');
+                if (columns.Length > 2 && columns[2] == "unused")
+                {
+                    unused.Add(uint.Parse(columns[0], NumberStyles.HexNumber));
+                }
+            }
+        }
+        return unused;
+    }
+
     /// <summary>Resolves a bundled asset by its name beside the exe or in its <c>data</c> folder, then by
     /// its in-repo path.</summary>
     public static string? FindAsset(string linkName, string repoRelativePath)

@@ -87,6 +87,8 @@ public static class LegacyPatchImporter
 
     private static readonly Lazy<IReadOnlyDictionary<uint, ulong>> RetailPatch = new(BundledAssets.LoadRetailPatch);
 
+    private static readonly Lazy<IReadOnlySet<uint>> UnusedFiles = new(BundledAssets.LoadUnusedFiles);
+
     public const string PatchOverride = @"generated\entitylibrarypatchoverride.fcb";
 
     public const string DlcLibrary = @"downloadcontent\dlc1\generated\entitylibrary.fcb";
@@ -111,7 +113,8 @@ public static class LegacyPatchImporter
         FcbClassDefinitions fcbDefinitions,
         Func<uint, byte[]?> readOriginal,
         Func<uint, ulong?> readOriginalHash,
-        IProgress<string>? progress = null)
+        IProgress<string>? progress = null,
+        IReadOnlySet<uint>? unusedFiles = null)
     {
         string tempDir = Path.Combine(Path.GetTempPath(), "jackall-legacy-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDir);
@@ -126,7 +129,7 @@ public static class LegacyPatchImporter
                 datEntry.ExtractToFile(tempDat, overwrite: true);
             }
 
-            return Import(tempFat, tempDat, workspace, names, fcbDefinitions, readOriginal, readOriginalHash, progress);
+            return Import(tempFat, tempDat, workspace, names, fcbDefinitions, readOriginal, readOriginalHash, progress, unusedFiles);
         }
         finally
         {
@@ -144,14 +147,15 @@ public static class LegacyPatchImporter
         FcbClassDefinitions fcbDefinitions,
         Func<uint, byte[]?> readOriginal,
         Func<uint, ulong?> readOriginalHash,
-        IProgress<string>? progress = null)
+        IProgress<string>? progress = null,
+        IReadOnlySet<uint>? unusedFiles = null)
     {
         (string Fat, string Dat) pair = FindPatchPair(directory)
             ?? throw new InvalidOperationException(
                 $"No patch.fat/patch.dat pair under '{directory}' - this isn't a legacy full-patch mod. "
                 + "An ordinary community mod (a tree of relative game paths) is used as a layer directly.");
 
-        return Import(pair.Fat, pair.Dat, workspace, names, fcbDefinitions, readOriginal, readOriginalHash, progress);
+        return Import(pair.Fat, pair.Dat, workspace, names, fcbDefinitions, readOriginal, readOriginalHash, progress, unusedFiles);
     }
 
     /// <summary>
@@ -173,12 +177,13 @@ public static class LegacyPatchImporter
         FcbClassDefinitions fcbDefinitions,
         Func<uint, byte[]?> readOriginal,
         Func<uint, ulong?> readOriginalHash,
-        IProgress<string>? progress = null)
+        IProgress<string>? progress = null,
+        IReadOnlySet<uint>? unusedFiles = null)
     {
         using DuniaArchive legacy = DuniaArchive.Open(fatPath, datPath);
         return ImportEntries(
             [.. legacy.Entries.Select(e => new LegacyEntry(e.Hash, null, () => legacy.Read(e)))],
-            workspace, names, fcbDefinitions, readOriginal, readOriginalHash, progress);
+            workspace, names, fcbDefinitions, readOriginal, readOriginalHash, progress, unusedFiles);
     }
 
     /// <summary>
@@ -192,12 +197,13 @@ public static class LegacyPatchImporter
         FcbClassDefinitions fcbDefinitions,
         Func<uint, byte[]?> readOriginal,
         Func<uint, ulong?> readOriginalHash,
-        IProgress<string>? progress = null)
+        IProgress<string>? progress = null,
+        IReadOnlySet<uint>? unusedFiles = null)
     {
         LegacyEntry[] entries = [.. Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
             .Select(file => (File: file, Path: NameHash.Normalize(System.IO.Path.GetRelativePath(root, file))))
             .Select(f => new LegacyEntry(NameHash.Compute(f.Path), f.Path, () => File.ReadAllBytes(f.File)))];
-        return ImportEntries(entries, workspace, names, fcbDefinitions, readOriginal, readOriginalHash, progress);
+        return ImportEntries(entries, workspace, names, fcbDefinitions, readOriginal, readOriginalHash, progress, unusedFiles);
     }
 
     /// <param name="KnownPath">The entry's path when the mod itself states it, as a loose tree does;
@@ -211,7 +217,8 @@ public static class LegacyPatchImporter
         FcbClassDefinitions fcbDefinitions,
         Func<uint, byte[]?> readOriginal,
         Func<uint, ulong?> readOriginalHash,
-        IProgress<string>? progress)
+        IProgress<string>? progress,
+        IReadOnlySet<uint>? unusedFiles)
     {
         int imported = 0, fragmentsImported = 0, skipped = 0, processed = 0;
         List<LegacyImportNote> refused = [], wholeFile = [], unreachable = [];
@@ -248,10 +255,15 @@ public static class LegacyPatchImporter
                 continue;
             }
 
-            byte[]? vanillaBytes = vanillaHash is not null ? readOriginal(entry.Hash) : null;
-
             string path = entry.KnownPath ?? string.Empty;
             bool named = entry.KnownPath is not null || names.TryResolve(entry.Hash, out path);
+            if ((unusedFiles ?? UnusedFiles.Value).Contains(entry.Hash))
+            {
+                unreachable.Add(new LegacyImportNote(named ? path : $"{entry.Hash:x8}", "a file no engine code path reads"));
+                continue;
+            }
+
+            byte[]? vanillaBytes = vanillaHash is not null ? readOriginal(entry.Hash) : null;
 
             FileType type = named
                 ? FileTypeSniffer.Identify(ReadOnlySpan<byte>.Empty, path)
@@ -600,11 +612,10 @@ public static class LegacyPatchImporter
                 $"{outranked} copy(ies) of a DLC archetype, which the DLC library outranks so the engine never reads"));
         }
 
-        int deleted = vanilla?.List().Count(row => !legacyIds.Contains(row.Id)) ?? 0;
-        if (deleted > 0)
+        if (vanilla is not null && legacy.StructuralOverride(vanilla) is { } deletions)
         {
-            unreachable.Add(new LegacyImportNote(PatchOverride,
-                $"{deleted} archetype deletion(s), which a layer cannot express; the base game's copies stay"));
+            workspace.Stage(hash, $"{PatchOverride}\\{deletions.Id}", "xml", Utf8.GetBytes(deletions.Xml));
+            fragmentsImported++;
         }
 
         NoteSuperseded(legacy, vanilla, PatchOverride, unreachable);

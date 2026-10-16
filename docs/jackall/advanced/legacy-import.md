@@ -45,8 +45,8 @@ Up to three notices can follow:
 - files the import could only take whole, which don't merge: each replaces other mods' whole copies
   of it;
 - changes a piece can't express, which are left out;
-- what the layer leaves behind: content the game never reads, such as a declaration that a later one
-  of the same name replaces, and deletions, which an edit can't make.
+- content the game never reads, which is left behind: a declaration that a later one of the same
+  name replaces, or a file no engine code path loads, such as a world's `entitylibrary_full.fcb`.
 
 Skip Intro brings none of these.
 

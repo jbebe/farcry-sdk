@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.IO.Hashing;
 using System.Text;
 using JackAll.Core;
 using JackAll.Core.Format;
@@ -19,6 +20,9 @@ namespace JackAll.Tests;
 /// </summary>
 public class LegacyPatchImporterTests : IDisposable
 {
+    /// <summary>No file ruled out: these tests edit <c>tmpla</c>'s containers, which the game never reads.</summary>
+    private static readonly IReadOnlySet<uint> AllRead = new HashSet<uint>();
+
     private readonly string _sandbox;
     private readonly Lazy<(GameInstall Legacy, GameInstall Clean)?> _installs;
 
@@ -126,6 +130,25 @@ public class LegacyPatchImporterTests : IDisposable
     /// A `depload.dat` a legacy mod changed comes back as the one resource whose dependencies moved,
     /// not as the whole manifest - the granularity two mods need in order to coexist.
     /// </summary>
+    [Fact]
+    public void A_change_to_a_file_the_game_never_reads_is_left_behind()
+    {
+        const string full = @"worlds\world1\generated\entitylibrary_full.fcb";
+        string root = Path.Combine(_sandbox, "unread");
+        Directory.CreateDirectory(Path.Combine(root, Path.GetDirectoryName(full)!));
+        File.WriteAllBytes(Path.Combine(root, full), "the mod's copy"u8.ToArray());
+        byte[] original = "the game's copy"u8.ToArray();
+        uint hash = NameHash.Compute(full);
+
+        FolderModLayer workspace = MakeWorkspace("unread_workspace");
+        LegacyImportResult result = LegacyPatchImporter.ImportTree(
+            root, workspace, TestSupport.LoadNames(), FcbClassDefinitions.Empty,
+            h => h == hash ? original : null, h => h == hash ? XxHash64.HashToUInt64(original) : null);
+
+        Assert.Empty(workspace.Hashes);
+        Assert.Equal(full, Assert.Single(result.Unreachable).ContainerPath);
+    }
+
     [Fact]
     public void A_changed_depload_imports_as_the_resource_that_changed()
     {
@@ -433,7 +456,7 @@ public class LegacyPatchImporterTests : IDisposable
 
         LegacyImportResult fromZip = LegacyPatchImporter.Import(
             legacyZipPath, MakeWorkspace("ws_zip"), names, FcbClassDefinitions.Empty, cleanVfs.ReadOriginal,
-            cleanVfs.ReadOriginalHash);
+            cleanVfs.ReadOriginalHash, unusedFiles: AllRead);
 
         (string Fat, string Dat)? pair = LegacyPatchImporter.FindPatchPair(Path.Combine(_sandbox, "extracted"));
         Assert.NotNull(pair);
@@ -441,7 +464,7 @@ public class LegacyPatchImporterTests : IDisposable
         FolderModLayer folderWorkspace = MakeWorkspace("ws_folder");
         LegacyImportResult fromFolder = LegacyPatchImporter.Import(
             pair!.Value.Fat, pair.Value.Dat, folderWorkspace, names, FcbClassDefinitions.Empty,
-            cleanVfs.ReadOriginal, cleanVfs.ReadOriginalHash);
+            cleanVfs.ReadOriginal, cleanVfs.ReadOriginalHash, unusedFiles: AllRead);
 
         Assert.Equal(fromZip, fromFolder);
         Assert.Equal(1, fromFolder.Imported);
@@ -510,7 +533,7 @@ public class LegacyPatchImporterTests : IDisposable
         using var cleanVfs = GameVfs.OpenForOriginalsOnly(CleanInstall!, names);
         LegacyImportResult result = LegacyPatchImporter.Import(
             zipPath, workspace, names, FcbClassDefinitions.Empty,
-            cleanVfs.ReadOriginal, cleanVfs.ReadOriginalHash);
+            cleanVfs.ReadOriginal, cleanVfs.ReadOriginalHash, unusedFiles: AllRead);
         workspace.Rescan();
         return (result, workspace);
     }
