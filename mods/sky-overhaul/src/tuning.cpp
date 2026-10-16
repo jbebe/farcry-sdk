@@ -221,6 +221,8 @@ namespace {
         {"Heat haze wave height", &kHeatHaze, offsetof(Values, hazeWaveHeight), 2.86f, 0.5f, 20.0f,
          "%.2f arcmin",
          "How tall one wave of the shimmer looks 100 m off, unzoomed. A degree is 60."},
+        {"Heat haze wave speed", &kHeatHaze, offsetof(Values, hazeWaveSpeed), 1.0f, 0.0f, 4.0f,
+         "%.2fx", "How fast the shimmer's waves drift sideways and churn."},
         {"Heat haze far blur", &kHeatHaze, offsetof(Values, hazeFarBlur), 0.35f, 0.0f, 1.0f, "%.2f",
          "How far land melts into blobs that dance with the shimmer. Near things stay sharp."},
         {"Heat haze blur start", &kHeatHaze, offsetof(Values, hazeBlurStart), 150.0f, 10.0f,

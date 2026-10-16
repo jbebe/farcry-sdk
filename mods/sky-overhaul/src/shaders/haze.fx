@@ -18,6 +18,7 @@ sampler3D Turbulence : register(s5);
 // x  how far one sheet of hot air SHEET_REFERENCE metres deep bends a look, in radians
 // y  how much of the ground a mirage replaces
 // z  the sine of the steepest look onto bare level ground that still shows a mirage
+// w  the height over which the air's heat falls away from the ground, in metres
 float4 Heat : register(c96);
 
 // x  seconds, for the shimmer's motion
@@ -56,6 +57,9 @@ static const float SHEET_DISTANCES[SHEETS] = {15.0f, 50.0f, 150.0f};
 // sheets bend harder, as this power of their depth.
 static const float SHEET_REFERENCE = 100.0f;
 static const float SHEET_GROWTH = 0.75f;
+
+// The eye's height over the ground under it, in metres.
+static const float EYE_HEIGHT = 1.8f;
 
 // The smallest a wave may get on screen, across and up, in pixels: finer ones would average away.
 static const float2 SMALLEST_WAVE = float2(4.0f, 2.0f);
@@ -135,17 +139,25 @@ float3 Sheet(float around, float rise, float distance, float time, float index)
     return tex3Dlod(Turbulence, float4(at / TILE, 0.0f)).rgb - 0.5f;
 }
 
+// How hot the air is `height` metres over the ground that heats it, against the ground's own.
+float Hotness(float height)
+{
+    return exp(-max(height, 0.0f) / Heat.w);
+}
+
 // How far the air pushes a look `distance` metres long at `time`, in radians, and how ragged it is
 // in z: every sheet it crosses before it gets there, each the more the farther it stands from what
-// is seen. A look that ends on the ground runs near it the whole way, so every sheet is hot.
-float3 Push(float around, float rise, float distance, float time)
+// is seen, and the hotter the nearer the look runs to `ground`, the height below the eye of the
+// low land the air lies on.
+float3 Push(float around, float rise, float distance, float time, float ground)
 {
     float3 sum = 0.0f;
     [unroll] for (int k = 0; k < SHEETS; k++)
     {
         float sheet = SHEET_DISTANCES[k];
         float lever = sqrt(saturate(1.0f - sheet / distance));
-        float weight = pow(sheet / SHEET_REFERENCE, SHEET_GROWTH) * lever;
+        float weight = pow(sheet / SHEET_REFERENCE, SHEET_GROWTH) * lever *
+                       Hotness(sheet * rise - ground);
         sum += Sheet(around, rise, sheet, time, k) * weight;
     }
     return sum * SHIMMER_GAIN * float3(Heat.x, Heat.x, 1.0f);
@@ -326,11 +338,15 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
     float2 toUv = float2(SIDEWAYS, 1.0f) / (2.0f * Lens.xy);
     float turn = Dither(screen);
 
+    // The hot air lies on the lower of the ground under the eye and the ground looked at, so a
+    // hilltop seen over a plain is seen through cool air and the hill's foot through hot.
+    float ground = min(-EYE_HEIGHT, at.z);
+
     // Each moment the eye gathers sees the world pushed its own way, so what moves within one is
     // smeared along the way it moves. A pixel's moments start at its own share of the exposure, so
     // neighbours fill in each other's gaps. Far off the air pushes harder, and each moment is
     // smudged along its own push, so the smudge moves with the air rather than settling.
-    float far = smoothstep(Far.x, Far.y, distance);
+    float far = smoothstep(Far.x, Far.y, distance) * Hotness(at.z - ground);
     float wobble = lerp(1.0f, Far.w, far);
     float3 colour = 0.0f;
     float weight = 0.0f;
@@ -340,7 +356,7 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
     [unroll] for (int i = 0; i < MOMENTS; i++)
     {
         float time = Time.x - EXPOSURE * (i + turn) / MOMENTS;
-        float2 push = Push(around, direction.z, distance, time).xy * toUv * wobble;
+        float2 push = Push(around, direction.z, distance, time, ground).xy * toUv * wobble;
         shift += push / MOMENTS;
         spread += abs(push) / MOMENTS;
         float along = (i + turn) / MOMENTS * 2.0f - 1.0f;

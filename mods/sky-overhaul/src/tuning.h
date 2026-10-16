@@ -69,6 +69,7 @@ struct Values {
     float hazeStrength;
     float hazeWaveWidth;
     float hazeWaveHeight;
+    float hazeWaveSpeed;
     float hazeFarBlur;
     float hazeBlurStart;
     float hazeBlurEnd;
