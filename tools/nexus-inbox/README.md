@@ -13,8 +13,8 @@ Run `node inbox.mjs link` and save its output as the URL of a bookmark on Chrome
 1. Open a mod's Posts or Bugs tab, or a PM conversation on forums.nexusmods.com, and click the
    bookmark. It downloads the page's items to `Downloads/nexus-*.json`. A Posts tab with several
    pages needs one click per page.
-2. Run `/nexus-inbox` in Claude Code. It files the unhandled bugs and requests as issues labeled
-   `nexus`.
+2. Run `/nexus-inbox` in Claude Code. It proposes which unhandled items should become issues
+   labeled `nexus`, and files only the ones you approve.
 
 An item counts as handled when:
 - it is in `seen.json` (local and gitignored), which fills with everything captured so far
