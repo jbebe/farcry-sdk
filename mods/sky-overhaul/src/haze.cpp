@@ -51,9 +51,6 @@ namespace {
     // at into the steepest look onto level ground that shows one.
     constexpr float kStandingEye = 1.8f;
 
-    // The height over the low ground along a look over which the air's heat falls away, in metres.
-    constexpr float kHotLayer = 10.0f;
-
     // How far off the waves are the size the wave sliders give, in metres.
     constexpr float kWaveReference = 100.0f;
 
@@ -165,7 +162,7 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
     const float zoom = view.verticalScale / g_widest;
     float constants[kOwnConstants * 4] = {
         heat * v.hazeStrength * kFullBend / std::sqrt(zoom), mirage,
-        kStandingEye / v.mirageDistance, kHotLayer,
+        kStandingEye / v.mirageDistance, v.hazeHeight,
         g_seconds, zoom, v.hazeWaveWidth * kRadiansPerArcMinute * kWaveReference,
         v.hazeWaveHeight * kRadiansPerArcMinute * kWaveReference,
         projection[0], projection[1], 1.0f / static_cast<float>(halfWidth),

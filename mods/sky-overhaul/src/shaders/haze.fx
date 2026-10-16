@@ -18,7 +18,7 @@ sampler3D Turbulence : register(s5);
 // x  how far one sheet of hot air SHEET_REFERENCE metres deep bends a look, in radians
 // y  how much of the ground a mirage replaces
 // z  the sine of the steepest look onto bare level ground that still shows a mirage
-// w  the height over which the air's heat falls away from the ground, in metres
+// w  the height over the ground at which the air is half as hot, in metres
 float4 Heat : register(c96);
 
 // x  seconds, for the shimmer's motion
@@ -139,10 +139,12 @@ float3 Sheet(float around, float rise, float distance, float time, float index)
     return tex3Dlod(Turbulence, float4(at / TILE, 0.0f)).rgb - 0.5f;
 }
 
-// How hot the air is `height` metres over the ground that heats it, against the ground's own.
+// How hot the air is `height` metres over the ground that heats it, against the ground's own:
+// half at Heat.w, and falling ever more slowly above it, so the haze thins up a hillside rather
+// than stopping.
 float Hotness(float height)
 {
-    return exp(-max(height, 0.0f) / Heat.w);
+    return 1.0f / (1.0f + max(height, 0.0f) / Heat.w);
 }
 
 // How far the air pushes a look `distance` metres long at `time`, in radians, and how ragged it is
