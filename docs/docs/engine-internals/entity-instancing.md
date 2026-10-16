@@ -121,9 +121,15 @@ only entity library is `worlds\tmpla\generated\entitylibrary.fcb`, and its four 
 208–587-byte XML fragments. The name `generated\entitylibrarypatchoverride.fcb` (`F43E63CB`) is in
 the hashlist, so a present file would have been resolved by name — it is genuinely not there.
 
-The 915-archetype measurement above therefore describes a different edition (the community guides
-reach it through a retail `patch_unpack`). Do not assume the override step exists before checking the
-install in front of you, and do not attribute a dead archetype edit to it.
+Steam's `patch.fat` carries it; the 915-archetype measurement above is that file.
+
+The load step itself is in both builds. GOG's `Dunia.dll` `LoadArchetypes` builds
+`generated\EntityLibraryPatchOverride.fcb` after the base library unconditionally (the string's
+reference is at `0x1064D5FE`) and hands it to the override load only when the file opens. A clean GOG
+install skips it for want of the file; a mod that adds the file wins over the world library on GOG as
+it does on Steam. This is read from the code, not tested in game.
+
+Check the `patch.fat` in front of you before attributing a dead archetype edit to the override.
 :::
 
 ## Instancing merges, it does not replace
