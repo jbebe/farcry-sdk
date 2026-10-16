@@ -144,6 +144,7 @@ float4 FogColourRange : register(c75);
 float4 FogColourVector : register(c76);
 
 // x: how much the land's fill shows, nought where the world drawn so far and its depth are not bound.
+// y: the sine of how far above the horizon the fill reaches, below it where negative.
 float4 Fill : register(c77);
 
 // The world drawn so far in this pass, which the fill carries up to the horizon.
@@ -384,8 +385,8 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // Below the horizon, where the world ends short of it, the land it drew carries on up to it,
     // already as far into the haze as its own edge.
     float3 land;
-    [branch] if (Fill.x > 0.0f && ray.z < 0.0f && LandBelow(screen, land)) {
-        sky = lerp(sky, float4(land, 1.0f), Fill.x * saturate(-ray.z / FILL_SOFTNESS));
+    [branch] if (Fill.x > 0.0f && ray.z < Fill.y && LandBelow(screen, land)) {
+        sky = lerp(sky, float4(land, 1.0f), Fill.x * saturate((Fill.y - ray.z) / FILL_SOFTNESS));
     }
     return sky;
 }

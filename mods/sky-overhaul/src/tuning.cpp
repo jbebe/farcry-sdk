@@ -93,6 +93,9 @@ namespace {
         {"Horizon land fill", &kFog, offsetof(Values, horizonFill), 1.0f, 0.0f, 1.0f, "%.2f",
          "How much of the land drawn just below a gap under the horizon is carried up to fill it. "
          "Zero leaves the sky showing there."},
+        {"Horizon land fill height", &kFog, offsetof(Values, horizonFillHeight), 0.0f, -2.0f, 2.0f,
+         "%.2f deg",
+         "How far above the true horizon the carried land reaches; below it where negative."},
 
         {"Cloud coverage", &kCloudLayer, offsetof(Values, cloudCoverage), 0.44f, 0.0f, 1.0f, "%.2f",
          "How much of the sky the layer fills."},

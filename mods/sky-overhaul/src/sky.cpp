@@ -19,6 +19,7 @@
 #include "sky_ps.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iterator>
 
 namespace {
@@ -32,6 +33,8 @@ namespace {
         SkyOverhaul::DepthConstants::kFirst + SkyOverhaul::DepthConstants::kCount - kFirstConstant;
 
     constexpr DWORD kWorldSampler = 0;
+
+    constexpr float kRadiansPerDegree = 3.14159265f / 180.0f;
 
     // The most the zenith may be lifted, and the height of the sun over which that lift is let go,
     // as sines of its elevation: held in full above twenty-five degrees, gone by five, so that
@@ -184,11 +187,13 @@ namespace {
         SkyOverhaul::DrawGuard guard(device, kFirstConstant, kGuardedCount);
         SamplerGuard worldSampler(device, kWorldSampler);
         SamplerGuard depthSampler(device, SkyOverhaul::DepthConstants::kSampler);
-        const float fill = SkyOverhaul::Tuning::Current().horizonFill;
-        if (fill > 0.0f && BindFill(device, view)) {
+        const SkyOverhaul::Tuning::Values v = SkyOverhaul::Tuning::Current();
+        if (v.horizonFill > 0.0f && BindFill(device, view)) {
             worldSampler.Point();
             depthSampler.Point();
-            constants[(kConstantCount - 1) * 4] = fill;
+            constants[(kConstantCount - 1) * 4] = v.horizonFill;
+            constants[(kConstantCount - 1) * 4 + 1] =
+                std::sin(v.horizonFillHeight * kRadiansPerDegree);
         }
         device->SetPixelShader(shader);
         device->SetPixelShaderConstantF(kFirstConstant, constants, kConstantCount);
