@@ -20,6 +20,9 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "scripts"))
+from entity_fragments import add_entity_data, fragment_path, object_lines, prototypes, write
+
 LAYER = os.path.join(HERE, "..", "layer", "mods")
 LIBRARIES = (
     ("worlds", "world1", "generated", "entitylibrary.fcb"),
@@ -64,27 +67,6 @@ def of(name, archetypes):
     return any(name == a or name.startswith(a + ".") for a in archetypes)
 
 
-def prototypes(lines):
-    """Each EntityPrototype's hidName and the line range of its node."""
-    for start, line in enumerate(lines):
-        if line.strip() != '<object hash="256A1FF9">':
-            continue
-        indent = line[:len(line) - len(line.lstrip())]
-        end = next(i for i in range(start + 1, len(lines))
-                   if lines[i].startswith(indent + "</object>"))
-        name = next(re.search(r">([^<]*)<", l).group(1) for l in lines[start:end]
-                    if '<value name="hidName"' in l)
-        yield name, start, end + 1
-
-
-def object_lines(block, kind):
-    """The lines that open and close the one object of this type in the block, and its indent."""
-    first = next(i for i, l in enumerate(block) if l.strip() == '<object type="%s">' % kind)
-    indent = block[first][:len(block[first]) - len(block[first].lstrip())]
-    last = next(i for i in range(first + 1, len(block)) if block[i].startswith(indent + "</object>"))
-    return first, last, indent
-
-
 def find_value(block, name, within=None):
     """The line of the one value of this name in the block, inside the object of type `within` if
     given."""
@@ -113,21 +95,6 @@ def fires_tracers(block):
             and get_value(block, "iFrequency", "BulletTracer") != "0")
 
 
-def add_entity_data(block, values):
-    """Adds FCSE's entity data component to the archetype's components, a key for each value."""
-    _, last, indent = object_lines(block, "Components")
-    inner = indent + "  "
-    added = [inner + '<object type="CFCSEDataComponent">']
-    for key, value in values.items():
-        name, kind = (("Float", "Float") if isinstance(value, float)
-                      else ("Int", "Int32") if isinstance(value, int)
-                      else ("String", "String"))
-        added += [inner + '  <object type="%s%s">' % (SCOPE_KEY, key),
-                  inner + '    <value name="%s" type="%s">%s</value>' % (name, kind, value),
-                  inner + "  </object>"]
-    block[last:last] = added + [inner + "</object>"]
-
-
 def edit_properties(archetype, block):
     if fires_tracers(block):
         if of(archetype, TRACER_GUNS):
@@ -143,7 +110,7 @@ def edit_properties(archetype, block):
 def edit_weapon(archetype, block):
     scope = next((values for a, values in SCOPES.items() if of(archetype, (a,))), None)
     if scope is not None:
-        add_entity_data(block, scope)
+        add_entity_data(block, {SCOPE_KEY + key: value for key, value in scope.items()})
 
 
 def main(paths):
@@ -161,10 +128,8 @@ def main(paths):
                 edit_weapon(name[len(WEAPONS):], block)
             if block == lines[start:end]:
                 continue
-            out = os.path.join(LAYER, *library, *name.split(".")) + ".xml"
-            os.makedirs(os.path.dirname(out), exist_ok=True)
-            with open(out, "w", encoding="utf-8", newline="\n") as handle:
-                handle.write("\n".join(block) + "\n")
+            out = fragment_path(LAYER, library, name)
+            write(out, block)
             written += 1
             print(os.path.relpath(out, LAYER))
     print("%d fragments" % written)
