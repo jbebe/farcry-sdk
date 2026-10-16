@@ -1,10 +1,11 @@
-// The real vehicles the game's cars depict, named by their archetypes' entity data.
+// The real vehicles the game's cars depict, told apart by their archetypes' iAnimVehicleType.
 #include "real_vehicle.h"
+
+#include "engine/vehicle.h"
 
 #include "fcse_api.h"
 
 #include <atomic>
-#include <cstring>
 
 namespace {
     using VehicleOverhaul::RealVehicle::kAtTheAxles;
@@ -56,60 +57,51 @@ namespace {
     constexpr float kZilGears[] = {7.45f, 4.10f, 2.29f, 1.47f, 1.00f};
 
     constexpr Spec kVehicles[] = {
-        {"Land Rover Series III", 0.90f, 0.0f, 0.0f, 0, 0.0f, {kRoverSprings, kRoverSprings},
+        {"Land Rover Series III", 1, 0.90f, 0.0f, 0.0f, 0, 0.0f, {kRoverSprings, kRoverSprings},
          kRoverTuning},
         // 54% on the front axle, a small front-engined car's; the game's put it so far forward that the rear hopped
         // about (2026-10-12).
-        {"Datsun 1200", 1.30f, 750.0f, 6500.0f, kShiftClunks, 0.816f, {}, kDatsunTuning, 0.54f},
-        {"Buggy", kAtTheAxles},
-        {"Jeep Liberty", 1.07f},
-        {"Jeep Wrangler", 1.20f},
-        {"Jeep Wrangler taxi", 1.20f},
-        {"Quad", 1.00f},
+        {"Datsun 1200", 10, 1.30f, 750.0f, 6500.0f, kShiftClunks, 0.816f, {}, kDatsunTuning, 0.54f},
+        {"Buggy", 3, kAtTheAxles},
+        {"Jeep Liberty", 6, 1.07f},
+        {"Jeep Wrangler", 9, 1.20f},
+        {"Quad", 5, 1.00f},
         // An OM 352 diesel's idle and governed top, and its start take's catch, estimated from its loudness. It tips at
         // 1.1 g as the big truck does, on the same soft solid axles. The game's 60% on the front axle is a Unimog's.
-        {"Unimog", 1.1f, 600.0f, 2800.0f, kShiftClunks, 0.4f, {kUnimogSprings, kUnimogSprings},
+        {"Unimog", 12, 1.1f, 600.0f, 2800.0f, kShiftClunks, 0.4f, {kUnimogSprings, kUnimogSprings},
          kUnimogTuning},
         // Above the real truck's 0.85, at which it rolled over in left-right turns (2026-10-12).
-        {"ZIL-130", 1.1f, 560.0f, 3200.0f, kShiftClunks, 0.7f, {kZilSprings, kZilSprings}, kZilTuning,
+        {"ZIL-130", 8, 1.1f, 560.0f, 3200.0f, kShiftClunks, 0.7f, {kZilSprings, kZilSprings}, kZilTuning,
          kZilFrontWeight, kZilGears, 1300.0f},
     };
-
-    // The entity data key naming the vehicle a car's archetype depicts, which the layer's vehicle fragments set.
-    constexpr const char* kKey = "VehicleOverhaul.Vehicle";
 
     struct Followed {
         VehicleOverhaul::Wheeled::Car car;
         const Spec* spec;
     };
     std::atomic<Followed> g_player{};
-    // The entity Follow last named, on the game thread.
-    void* g_entity = nullptr;
+    // The CVehicle Follow last named, on the game thread.
+    void* g_vehicle = nullptr;
 
-    const Spec* Named(void* entity) {
-        char name[64];
-        if (!FCSE::ApiPointer()->EntityData->GetString(entity, kKey, name, sizeof(name))) {
-            FCSE::Logf("vehicles: this car has no %s data, so the overhaul does not know it", kKey);
-            return nullptr;
-        }
+    const Spec* OfType(int animType) {
         for (const Spec& spec : kVehicles) {
-            if (std::strcmp(spec.name, name) == 0) {
+            if (spec.animType == animType) {
                 return &spec;
             }
         }
-        FCSE::Logf("vehicles: %s names \"%s\", which the overhaul does not know", kKey, name);
+        FCSE::Logf("vehicles: a car of iAnimVehicleType %d is not one the overhaul knows", animType);
         return nullptr;
     }
 }
 
 namespace VehicleOverhaul::RealVehicle {
 
-void Follow(Wheeled::Car car, void* entity) {
-    if (entity == g_entity) {
+void Follow(Wheeled::Car car, void* vehicle) {
+    if (vehicle == g_vehicle) {
         return;
     }
-    g_entity = entity;
-    g_player = {car, entity != nullptr ? Named(entity) : nullptr};
+    g_vehicle = vehicle;
+    g_player = {car, vehicle != nullptr ? OfType(Vehicle::AnimType(vehicle)) : nullptr};
 }
 
 const Spec* OfPlayer(Wheeled::Car car) {

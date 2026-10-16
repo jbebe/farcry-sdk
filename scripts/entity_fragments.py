@@ -47,14 +47,7 @@ def fragment_path(layer, library, archetype):
     return os.path.join(layer, *library, *archetype.split(".")) + ".xml"
 
 
-def read(path):
-    """A fragment file's lines and the line ending it uses."""
-    with open(path, encoding="utf-8", newline="") as handle:
-        text = handle.read()
-    return text.splitlines(), "\r\n" if "\r\n" in text else "\n"
-
-
-def write(path, block, newline="\n"):
+def write(path, block):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8", newline="") as handle:
-        handle.write(newline.join(block) + newline)
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write("\n".join(block) + "\n")

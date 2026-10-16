@@ -1,4 +1,4 @@
-// The real vehicles the game's cars depict, named by their archetypes' entity data.
+// The real vehicles the game's cars depict, told apart by their archetypes' iAnimVehicleType.
 #pragma once
 
 #include "engine/wheeled.h"
@@ -15,9 +15,10 @@ struct Start {
 };
 
 struct Spec {
-    // Also its section in the tuning file and the name its archetypes' entity data gives, so renaming it
-    // drops what was tuned for it and needs the layer's fragments rewritten.
+    // Also its section in the tuning file, so renaming it drops what was tuned for it.
     const char* name;
+    // The iAnimVehicleType its archetypes carry, every variant of it the same.
+    int animType;
     // The static stability factor: half the track over the centre of mass's height. kAtTheAxles puts
     // the weight at the wheels' centres instead.
     float stability;
@@ -44,9 +45,9 @@ struct Spec {
 
 constexpr float kAtTheAxles = 0.0f;
 
-// Names the vehicle the player's `car` depicts from its `entity`'s data, on the game thread; both are
-// null while the player drives nothing.
-void Follow(Wheeled::Car car, void* entity);
+// Names the vehicle the player's `car` depicts from its CVehicle, on the game thread; both are null while
+// the player drives nothing.
+void Follow(Wheeled::Car car, void* vehicle);
 
 // The vehicle the player's `car` depicts, or null for one the overhaul does not know or has yet to name.
 // Any thread.

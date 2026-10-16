@@ -78,8 +78,9 @@ namespace {
 
     void Tick(void* pawn, float*) {
         const VehicleOverhaul::Wheeled::Car car = VehicleOverhaul::Wheeled::Player();
-        g_vehicle = car != nullptr ? VehicleOverhaul::Entity::Of(VehicleOverhaul::Vehicle::Current(pawn)) : nullptr;
-        VehicleOverhaul::RealVehicle::Follow(car, g_vehicle);
+        void* const vehicle = car != nullptr ? VehicleOverhaul::Vehicle::Current(pawn) : nullptr;
+        VehicleOverhaul::RealVehicle::Follow(car, vehicle);
+        g_vehicle = VehicleOverhaul::Entity::Of(vehicle);
         if (g_vehicle == nullptr) {
             g_car = nullptr;
         }
