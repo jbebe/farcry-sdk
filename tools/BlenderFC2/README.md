@@ -167,7 +167,7 @@ tag records' clip deltas, which have to move when a later clip changes size.
 **Which clip fits is decided by the rig, so a character pack rewrites the character's.** An 8-bone
 weapon rig skips past clip 0 to its own; a pack rigged to `pelvis_ref` lands on clip 0 — the arms and
 hands. A weapon pack reaches the arms too: select the body it carries and write, and its rig lands on
-clip 0 the same way.
+clip 0 the same way. Edited arm motion is confirmed in game: the VSS Vintorez reload carries it.
 
 **Only selected bones** preserves the rest of the clip. A rewritten bone gets a fresh keyframe set —
 group boundaries plus whatever the tolerance keeps — so its entry changes even when the motion is
