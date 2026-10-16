@@ -297,7 +297,7 @@ namespace {
 
         {"Flatten start", &kFlatten, offsetof(Values, flattenStart), 250.0f, 0.0f, 1000.0f,
          "%.0f m", "How far off things start to be drawn flatter toward the eye's height."},
-        {"Flatten end", &kFlatten, offsetof(Values, flattenEnd), 600.0f, 10.0f, 2000.0f, "%.0f m",
+        {"Flatten end", &kFlatten, offsetof(Values, flattenEnd), 719.0f, 10.0f, 2000.0f, "%.0f m",
          "How far off things are drawn flattest. Past it they stay as flat as here."},
         {"Flatten stretch", &kFlatten, offsetof(Values, flattenStretch), 3.0f, 1.0f, 10.0f,
          "%.1fx",
