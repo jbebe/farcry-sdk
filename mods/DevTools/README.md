@@ -377,11 +377,8 @@ file to install.
 `.\verify_build.ps1 [-Config debug]` checks the properties of a built `DevTools.dll` that fail
 *silently* — x86, static CRT, the `FCSE_Load` export, and the `DevTools_GetOverlayAPI` export other
 plugins find the overlay by. Each leaves a plugin, or another plugin's window, simply never there,
-with FCSE itself starting up perfectly. Both it and the build run in the release
-configuration on every push and pull request touching `mods/DevTools` or the plugin ABI header
-(`.github/workflows/devtools-ci.yml`), and again before a release is packaged
-(`.github/workflows/devtools-release.yml`, dispatched with a version, producing
-`devtools-{version}.zip`).
+with FCSE itself starting up perfectly. Both it and the build run before a release is packaged
+(`.github/workflows/devtools-release.yml`, producing `devtools-{version}.zip`).
 
 There is no test suite, deliberately. DevTools is byte patches and hooks against a live `Dunia.dll`;
 it holds no pure logic worth a suite, and stubbing the engine to manufacture some would test the

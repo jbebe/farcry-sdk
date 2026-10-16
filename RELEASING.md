@@ -81,9 +81,15 @@ either before releasing, adding `-Section Unreleased` to preview notes still bei
 
 ## The mod page
 
-A release also sets its Nexus Mods page's summary and description, from the project's
-`assets/nexus-summary.txt` and `assets/nexus-description.bbcode`, so the page describes the version
-that just went out. A project without a description file keeps its page as it is.
+Every project released to Nexus Mods keeps its page text in its `assets/` folder:
+
+| File | What it is |
+|---|---|
+| `assets/nexus-summary.txt` | The page's summary, plain text, at most 350 characters |
+| `assets/nexus-description.bbcode` | The page's description, BBCode |
+
+A release also sets its Nexus Mods page's summary and description from these, so the page describes
+the version that just went out. A project without a description file keeps its page as it is.
 
 To change a page's text without a release, run Actions → **Nexus Mods pages** → **Run workflow**,
 with a project directory such as `mods/UFCP`, or empty for every page. To see first which pages
@@ -123,8 +129,9 @@ created by hand on the mod page once. The version it replaces is archived.
 ## Adding a new project
 
 1. Give it a `CHANGELOG.md` with no version sections yet - its first release writes the first one.
-2. Copy the nearest `<project>-release.yml` and change the tag prefix and directory it prepares
-   from, the build steps, the artifact names and the Nexus `env:` block.
+2. Give it `assets/nexus-summary.txt` and `assets/nexus-description.bbcode` (see [The mod page](#the-mod-page)).
+3. Copy the nearest `<project>-release.yml` and change the tag prefix and directory it prepares
+   from, the build steps and tests, the artifact names and the Nexus `env:` block.
 
 A weapon replacement has no build steps to change: it ships the `layer/` that is already checked in.
 Copy `vss-release.yml`, which packages one, and only its directory, tag prefix, artifact name and

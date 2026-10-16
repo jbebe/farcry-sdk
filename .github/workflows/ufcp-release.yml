@@ -40,8 +40,7 @@ jobs:
         # Architecture, static CRT and the FCSE_Load export: the three properties of this build that
         # fail *silently* - the DLL still builds, still loads on a dev machine, and only breaks on a
         # player's install, where the symptom is a plugin that is simply never there. See
-        # verify_build.ps1 for what each check reads. The same script runs on every push and pull
-        # request from ufcp-ci.yml, so a release is not the first place a failure would be noticed.
+        # verify_build.ps1 for what each check reads.
         run: .\verify_build.ps1 -Config release
 
       - name: Stage release contents

@@ -188,10 +188,8 @@ Needs the same x86 MSVC toolchain as FCSE, and nothing else — the whole depend
 
 `.\verify_build.ps1 [-Config debug]` checks the three properties of a built `UFCP.dll` that fail
 *silently* — x86, static CRT, and the `FCSE_Load` export. All three produce a plugin that is simply
-never there, with FCSE itself starting up perfectly. Both it and the build run in both
-configurations on every push and pull request touching `mods/UFCP` or the plugin ABI header
-(`.github/workflows/ufcp-ci.yml`), and again before a release is packaged
-(`.github/workflows/ufcp-release.yml`, dispatched with a version, producing `ufcp-{version}.zip`).
+never there, with FCSE itself starting up perfectly. Both it and the build run before a release is
+packaged (`.github/workflows/ufcp-release.yml`, producing `ufcp-{version}.zip`).
 
 There is no test suite, deliberately. UFCP is byte patches and hooks against a live `Dunia.dll`; it
 holds no pure logic worth a suite, and stubbing the engine to manufacture some would test the stub.

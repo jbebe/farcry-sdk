@@ -50,9 +50,7 @@ jobs:
         # Static CRT and the embedded layouts/Lua runtime: the two properties of this build that fail
         # *silently* - the exe still builds, still runs on a dev machine, and only breaks on a
         # player's install - so they're gated here instead of left to a manual pass before each
-        # release. See verify_build.ps1 for what each check reads out of the image and why; the same
-        # script runs on every push and pull request from fcse-ci.yml, so a release is not the first
-        # place either failure would be noticed.
+        # release. See verify_build.ps1 for what each check reads out of the image and why.
         run: .\verify_build.ps1 -Config release
 
       - name: Stage release contents

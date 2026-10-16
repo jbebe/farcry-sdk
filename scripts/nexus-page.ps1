@@ -76,7 +76,9 @@ foreach ($directory in $projects) {
     }
 
     $body = [ordered]@{ description = $description }
-    if ($summary) {
+    if (-not $summary) {
+        Write-Host "::warning::$directory has no nexus-summary.txt - only its description is set."
+    } else {
         $summary = ($summary -replace '\s+', ' ').Trim()
         if ($summary.Length -gt $summaryLimit) {
             Write-Host "::error::$directory's summary is $($summary.Length) characters; Nexus takes at most $summaryLimit."

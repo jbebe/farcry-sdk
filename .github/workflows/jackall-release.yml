@@ -40,6 +40,11 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Test
+        # Tests that need a real Far Cry 2 install or the (gitignored) archive fixtures are tagged
+        # [Trait("Category", "RequiresFixture")] and excluded, since this runner has neither.
+        run: dotnet test src/JackAll.Tests/JackAll.Tests.csproj --configuration Release --filter "Category!=RequiresFixture"
+
       - name: Publish JackAll.App
         # Self-contained single-file win-x64 publish (see JackAll.App.csproj's _IsPublishing
         # group): output is just JackAll.exe plus data\ (hash dictionary, .fcb class config,

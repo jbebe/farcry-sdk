@@ -47,8 +47,17 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Test the bundled JackAll
+        # build.ps1 publishes jackall-mi from JackAll's own source, so its tests gate this release too.
+        # Tests that need a real Far Cry 2 install or the archive fixtures are excluded, as in JackAll's.
+        working-directory: tools/JackAll
+        run: dotnet test src/JackAll.Tests/JackAll.Tests.csproj --configuration Release --filter "Category!=RequiresFixture"
+
       - name: Install dependencies
         run: npm install --no-audit --no-fund --legacy-peer-deps
+
+      - name: Typecheck
+        run: npm run typecheck
 
       - name: Build
         run: pwsh ./build.ps1
@@ -73,3 +82,10 @@ jobs:
           display_name: Vortex Farcry2
           changelog: ${{ steps.release.outputs.nexus }}
           update_mod_version: 'true'
+
+      - name: Update the Nexus Mods page
+        shell: pwsh
+        env:
+          NEXUSMODS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
+        # The page's summary and description from assets\, going out with the version they describe.
+        run: ${{ github.workspace }}/scripts/nexus-page.ps1 -Project tools/vortex-farcry2
