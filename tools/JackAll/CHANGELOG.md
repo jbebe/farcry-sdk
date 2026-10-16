@@ -2,6 +2,24 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.6.0] - 2026-10-16
+
+### Added
+- **Animations can change length in an `.fc2model` pack** — a pack now carries each animation bank's
+  tag windows and event times beside their bytes, and applying a pack writes edited ones back. That
+  is what lets the Blender add-on's Retime Animation stretch a whole bank, sounds and moving parts
+  included. Export the pack with this version; one from an older JackAll has neither.
+
+### Changed
+- **Legacy import moves archetype copies out of the patch override** — an old mod's copy of an
+  archetype in `entitylibrarypatchoverride.fcb` comes in as the values it changed, in the world
+  libraries the game would otherwise read, so it merges with mods that edit them there. A copy of a
+  DLC archetype is left behind, since the game never read it, and an archetype no other library
+  declares stays in the override. What a copying tool rewrote on its own, such as a float with fewer
+  digits, doesn't count as a change.
+- **Legacy import keeps a mod's deletions from the patch override** instead of leaving them out, and
+  leaves behind files no engine code path loads, such as a world's `entitylibrary_full.fcb`.
+
 ## [1.5.0] - 2026-10-15
 
 ### Added
