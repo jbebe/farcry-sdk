@@ -100,12 +100,7 @@ public sealed class LegacyUnits(string layerRoot, GameVfs vfs, NameDatabase name
     /// <summary>The libraries an archetype can be declared in, the one the game reads first: the DLC
     /// library outranks the patch override, which outranks the world libraries.</summary>
     private static readonly string[] EntityLibraries =
-    [
-        @"downloadcontent\dlc1\generated\entitylibrary.fcb",
-        @"generated\entitylibrarypatchoverride.fcb",
-        @"worlds\world1\generated\entitylibrary.fcb",
-        @"worlds\world2\generated\entitylibrary.fcb",
-    ];
+        [LegacyPatchImporter.DlcLibrary, LegacyPatchImporter.PatchOverride, .. LegacyPatchImporter.WorldLibraries];
 
     /// <summary>
     /// The base-game declaration of an archetype a mod adds to another entity library: an override

@@ -18,9 +18,9 @@ public sealed record LegacyImportNote(string ContainerPath, string Reason);
 /// harm than dropping it.</param>
 /// <param name="WholeFile">Containers staged whole instead. Not a failure, but it costs the mod its
 /// per-fragment merging, so it is reported rather than passed over in silence.</param>
-/// <param name="Unreachable">Content the mod shipped that the import did not carry across, because
-/// the engine cannot reach it either. Reported for the same reason as the above: the layer is not a
-/// byte-for-byte copy of the mod, and where it differs it should say so.</param>
+/// <param name="Unreachable">What the mod shipped that the import did not carry across: content the
+/// engine cannot reach either, or a deletion no layer can express. Reported for the same reason as the
+/// above: the layer is not a byte-for-byte copy of the mod, and where it differs it should say so.</param>
 public sealed record LegacyImportResult(
     int TotalEntries,
     int Imported,
@@ -86,6 +86,16 @@ public static class LegacyPatchImporter
     private static readonly UTF8Encoding Utf8 = new(encoderShouldEmitUTF8Identifier: false);
 
     private static readonly Lazy<IReadOnlyDictionary<uint, ulong>> RetailPatch = new(BundledAssets.LoadRetailPatch);
+
+    public const string PatchOverride = @"generated\entitylibrarypatchoverride.fcb";
+
+    public const string DlcLibrary = @"downloadcontent\dlc1\generated\entitylibrary.fcb";
+
+    public static readonly IReadOnlyList<string> WorldLibraries =
+    [
+        @"worlds\world1\generated\entitylibrary.fcb",
+        @"worlds\world2\generated\entitylibrary.fcb",
+    ];
 
     /// <summary>
     /// Extracts the patch.fat/patch.dat pair from <paramref name="zipPath"/>, diffs every entry against
@@ -205,6 +215,7 @@ public static class LegacyPatchImporter
     {
         int imported = 0, fragmentsImported = 0, skipped = 0, processed = 0;
         List<LegacyImportNote> refused = [], wholeFile = [], unreachable = [];
+        var worldEdits = new WorldEdits();
         foreach (LegacyEntry entry in entries)
         {
             processed++;
@@ -247,6 +258,13 @@ public static class LegacyPatchImporter
                 : FileTypeSniffer.IdentifyByContent(
                     legacyBytes.AsSpan(0, Math.Min(legacyBytes.Length, FileTypeSniffer.HeaderBytes)));
 
+            if (named && path.Equals(PatchOverride, StringComparison.OrdinalIgnoreCase)
+                && TryImportPatchOverride(entry.Hash, legacyBytes, vanillaBytes, ContainerFormats.For(path, fcbDefinitions, names),
+                    readOriginal, workspace, worldEdits, wholeFile, unreachable, ref imported, ref fragmentsImported, ref skipped))
+            {
+                continue;
+            }
+
             // The string table is checked first because it is the one container whose override unit
             // is not a fragment path, so the shared path below could never express it.
             if (named && ContainerFormats.IsStringTable(Path.GetFileName(path)))
@@ -268,6 +286,7 @@ public static class LegacyPatchImporter
             imported++;
         }
 
+        StageWorldEdits(worldEdits, workspace, ref fragmentsImported, ref skipped);
         return new LegacyImportResult(
             entries.Count, imported, fragmentsImported, skipped, refused, wholeFile, unreachable);
     }
@@ -419,33 +438,13 @@ public static class LegacyPatchImporter
                 return $"it lists a fragment, {row.Id}, that it will not then hand over";
             }
 
-            if (vanilla.Extract(row.Id) is { } vanillaXml)
+            if (Normalize(splitter, row.Id, vanilla.Extract(row.Id), xml, fromOtherLibrary: false) is not { } staged)
             {
-                if (vanillaXml == xml)
-                {
-                    unchanged++;
-                    continue;
-                }
-
-                // Parsed once and handed to both walks: the comparison decides whether this is a real
-                // edit, and the restore then strips the editor's rounding off everything else it
-                // carries, which would otherwise overwrite vanilla's own values on build.
-                if (TryParse(vanillaXml) is { } original && TryParse(xml) is { } modded)
-                {
-                    if (SameElement(original, modded))
-                    {
-                        unchanged++;
-                        continue;
-                    }
-
-                    if (RestoreNoisyFloats(original, modded))
-                    {
-                        xml = splitter.Canonicalize(row.Id, modded.ToString());
-                    }
-                }
+                unchanged++;
+                continue;
             }
 
-            changed.Add((row.Id, xml));
+            changed.Add((row.Id, staged));
         }
 
         if (structural is { } extra)
@@ -476,21 +475,274 @@ public static class LegacyPatchImporter
             workspace.Stage(hash, $"{containerPath}\\{id}", "xml", Utf8.GetBytes(xml));
         }
 
-        // Declarations the mod carries that a later one of the same id supersedes. The engine reaches
-        // only the last, so the layer is right without them - but it is no longer a byte-for-byte copy
-        // of what the mod shipped, and that is worth saying out loud.
-        int superseded = legacy.Unreachable().Count - vanilla.Unreachable().Count;
+        NoteSuperseded(legacy, vanilla, containerPath, unreachable);
+        fragmentsImported += changed.Count;
+        skipped += unchanged;
+        return null;
+    }
+
+    /// <summary>Notes the mod's declarations a later one of the same id supersedes.</summary>
+    private static void NoteSuperseded(
+        IContainerTree legacy, IContainerTree? vanilla, string containerPath, List<LegacyImportNote> unreachable)
+    {
+        int superseded = legacy.Unreachable().Count - (vanilla?.Unreachable().Count ?? 0);
         if (superseded > 0)
         {
             unreachable.Add(new LegacyImportNote(
                 containerPath,
                 $"{superseded} declaration(s) a later one supersedes, which the engine never reads"));
         }
-
-        fragmentsImported += changed.Count;
-        skipped += unchanged;
-        return null;
     }
+
+    /// <summary>A legacy patch override's edits to the world libraries, staged after every entry so
+    /// they replace the mod's own edits there.</summary>
+    private sealed class WorldEdits
+    {
+        /// <summary>Archetypes it copied from a world library, as staged there.</summary>
+        public List<(string Library, string Id, string Xml, bool Changed)> Copies { get; } = [];
+
+        /// <summary>World fragments of archetypes the override keeps.</summary>
+        public List<string> Hidden { get; } = [];
+    }
+
+    /// <summary>
+    /// Imports a legacy patch override as edits where the game reads each archetype without the mod:
+    /// the base override, else the world libraries, else the override as new content - whole, when
+    /// there is no base override. Copies of DLC archetypes are left behind. False when it will not decode.
+    /// </summary>
+    private static bool TryImportPatchOverride(
+        uint hash, byte[] legacyBytes, byte[]? vanillaBytes, IContainerSplitter splitter,
+        Func<uint, byte[]?> readOriginal, FolderModLayer workspace, WorldEdits worldEdits,
+        List<LegacyImportNote> wholeFile, List<LegacyImportNote> unreachable,
+        ref int imported, ref int fragmentsImported, ref int skipped)
+    {
+        IContainerTree legacy;
+        IContainerTree? vanilla;
+        try
+        {
+            legacy = splitter.Open(legacyBytes);
+            vanilla = vanillaBytes is null ? null : splitter.Open(vanillaBytes);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException)
+        {
+            return false;
+        }
+
+        IContainerTree? dlc = readOriginal(NameHash.Compute(DlcLibrary)) is { } dlcBytes ? splitter.Open(dlcBytes) : null;
+        List<(string Path, IContainerTree Tree)> worlds = [];
+        foreach (string library in WorldLibraries)
+        {
+            if (readOriginal(NameHash.Compute(library)) is { } bytes)
+            {
+                worlds.Add((library, splitter.Open(bytes)));
+            }
+        }
+
+        var legacyIds = new HashSet<string>(legacy.List().Select(row => row.Id), FcbFragments.IdComparer);
+        var added = new Dictionary<string, string>(FcbFragments.IdComparer);
+        int outranked = 0;
+        foreach (string id in legacyIds)
+        {
+            if (dlc?.AncestryOf(id) is not null)
+            {
+                outranked++;
+                continue;
+            }
+
+            string xml = legacy.Extract(id)!;
+            string? vanillaXml = vanilla?.Extract(id);
+            if (vanillaXml is null)
+            {
+                bool copied = false;
+                foreach ((string library, IContainerTree tree) in worlds)
+                {
+                    if (tree.Extract(id) is { } worldXml)
+                    {
+                        string? staged = Normalize(splitter, id, worldXml, xml, fromOtherLibrary: true);
+                        worldEdits.Copies.Add((library, id, staged ?? worldXml, staged is not null));
+                        copied = true;
+                    }
+                }
+
+                if (copied)
+                {
+                    continue;
+                }
+                worldEdits.Hidden.AddRange(WorldLibraries.Select(library => $"{library}\\{id}"));
+            }
+
+            if (Normalize(splitter, id, vanillaXml, xml, fromOtherLibrary: false) is not { } kept)
+            {
+                skipped++;
+            }
+            else if (vanilla is null)
+            {
+                added[id] = kept;
+            }
+            else
+            {
+                workspace.Stage(hash, $"{PatchOverride}\\{id}", "xml", Utf8.GetBytes(kept));
+                fragmentsImported++;
+            }
+        }
+
+        if (added.Count > 0)
+        {
+            workspace.Stage(hash, PatchOverride, "fcb", LibraryOf(legacyBytes, added));
+            wholeFile.Add(new LegacyImportNote(PatchOverride,
+                $"the base game has none, so the {added.Count} archetype(s) no other library declares stay in one of their own"));
+            imported++;
+        }
+
+        if (outranked > 0)
+        {
+            unreachable.Add(new LegacyImportNote(PatchOverride,
+                $"{outranked} copy(ies) of a DLC archetype, which the DLC library outranks so the engine never reads"));
+        }
+
+        int deleted = vanilla?.List().Count(row => !legacyIds.Contains(row.Id)) ?? 0;
+        if (deleted > 0)
+        {
+            unreachable.Add(new LegacyImportNote(PatchOverride,
+                $"{deleted} archetype deletion(s), which a layer cannot express; the base game's copies stay"));
+        }
+
+        NoteSuperseded(legacy, vanilla, PatchOverride, unreachable);
+        return true;
+    }
+
+    /// <summary>Stages a legacy override's world edits over the mod's own edits to those archetypes.</summary>
+    private static void StageWorldEdits(
+        WorldEdits edits, FolderModLayer workspace, ref int fragmentsImported, ref int skipped)
+    {
+        foreach (string fragment in edits.Hidden)
+        {
+            if (Unstage(workspace, fragment))
+            {
+                fragmentsImported--;
+            }
+        }
+
+        foreach ((string library, string id, string xml, bool changed) in edits.Copies)
+        {
+            string fragment = $"{library}\\{id}";
+            uint libraryHash = NameHash.Compute(library);
+            if (Unstage(workspace, fragment))
+            {
+                fragmentsImported--;
+            }
+
+            // A whole copy of the library carries the mod's own edit, which only a fragment can undo.
+            if (changed || workspace.Hashes.Contains(libraryHash))
+            {
+                workspace.Stage(libraryHash, fragment, "xml", Utf8.GetBytes(xml));
+                fragmentsImported++;
+            }
+            else
+            {
+                skipped++;
+            }
+        }
+    }
+
+    private static bool Unstage(FolderModLayer workspace, string fragment)
+        => workspace.Unstage(FolderModLayer.StorageKeyOf(NameHash.Normalize(fragment)));
+
+    /// <summary>The legacy library cut down to <paramref name="keep"/>, each archetype replaced by
+    /// its staged XML.</summary>
+    private static byte[] LibraryOf(byte[] legacyBytes, IReadOnlyDictionary<string, string> keep)
+    {
+        FcbObject root = FcbDocument.Deserialize(legacyBytes);
+        var kept = new HashSet<FcbObject>(ReferenceEqualityComparer.Instance);
+        foreach (FcbFragments.FragmentSlot slot in FcbFragments.Slots(root))
+        {
+            if (keep.TryGetValue(slot.Id, out string? xml))
+            {
+                slot.Parent.Children[slot.Index] = FcbXml.FromXml(xml);
+                kept.Add(slot.Node);
+            }
+        }
+
+        foreach (FcbObject group in root.Children)
+        {
+            group.Children.RemoveAll(prototype => !kept.Contains(prototype));
+        }
+        root.Children.RemoveAll(group => group.Children.Count == 0);
+        return FcbDocument.Serialize(root);
+    }
+
+    /// <summary>
+    /// The legacy fragment as it should be staged over <paramref name="baseXml"/>, or null when it
+    /// says the same thing: rounded floats, a wrapped rml document and, on a copy from another
+    /// library, the entity id are put back to the base game's own.
+    /// </summary>
+    private static string? Normalize(
+        IContainerSplitter splitter, string id, string? baseXml, string xml, bool fromOtherLibrary)
+    {
+        if (baseXml == xml)
+        {
+            return null;
+        }
+
+        if (baseXml is null && !xml.Contains("<rml>", StringComparison.Ordinal))
+        {
+            return xml;
+        }
+
+        if (TryParse(xml) is not { } modded)
+        {
+            return xml;
+        }
+
+        bool rewritten = UnwrapRml(modded);
+        if (baseXml is not null && TryParse(baseXml) is { } original)
+        {
+            rewritten |= fromOtherLibrary && RestoreEntityId(original, modded);
+            if (SameElement(original, modded))
+            {
+                return null;
+            }
+
+            rewritten |= RestoreNoisyFloats(original, modded);
+        }
+
+        return rewritten ? splitter.Canonicalize(id, modded.ToString()) : xml;
+    }
+
+    /// <summary>Strips the extra <c>rml</c> root some legacy tools wrap an embedded rml document in,
+    /// which the base game never has. Whether anything was stripped.</summary>
+    private static bool UnwrapRml(XElement fragment)
+    {
+        bool unwrapped = false;
+        foreach (XElement value in fragment.Descendants("value").Where(v => (string?)v.Attribute("type") == "Rml").ToList())
+        {
+            while (value.Elements().Count() == 1
+                   && value.Elements().First() is { Name.LocalName: "rml", HasAttributes: false } wrapper
+                   && wrapper.Elements().Count() == 1)
+            {
+                wrapper.ReplaceWith(wrapper.Elements().First());
+                unwrapped = true;
+            }
+        }
+
+        return unwrapped;
+    }
+
+    /// <summary>Puts the base archetype's entity id back on a copy, which carries the id of the
+    /// library it was copied from. Whether it differed.</summary>
+    private static bool RestoreEntityId(XElement original, XElement modded)
+    {
+        if (EntityIdOf(original) is not { } id || EntityIdOf(modded) is not { } copy || copy.Value == id.Value)
+        {
+            return false;
+        }
+
+        copy.Value = id.Value;
+        return true;
+    }
+
+    private static XElement? EntityIdOf(XElement fragment)
+        => fragment.Descendants("value").FirstOrDefault(v => (string?)v.Attribute("name") == "disEntityId");
 
     /// <summary>How far two floats may sit apart, in units in the last place, and still count as the
     /// same value (see docs/modding/vortex.md).</summary>

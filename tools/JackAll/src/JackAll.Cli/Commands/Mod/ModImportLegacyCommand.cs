@@ -124,7 +124,7 @@ public sealed class ModImportLegacyCommand : CliCommand<ModImportLegacyCommand.S
         {
             AnsiConsole.MarkupLine(
                 $"[grey]Left behind[/] in {dropped.ContainerPath.EscapeMarkup()}: "
-                + $"{dropped.Reason.EscapeMarkup()}. The layer is right without them.");
+                + $"{dropped.Reason.EscapeMarkup()}.");
         }
 
         return 0;

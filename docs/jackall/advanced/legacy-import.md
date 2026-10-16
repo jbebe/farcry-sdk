@@ -29,13 +29,24 @@ stages the changes into your **workspace** (2) and lists them on the right (3). 
 ![Skip Intro imported into the workspace](/img/jackall/legacy-import/01-imported.png)
 
 A file that splits into pieces, like an entity library or an input map, comes in as only the pieces
-the mod changed (see [Containers and fragments](/jackall/fragments)). Up to three notices can follow:
+the mod changed (see [Containers and fragments](/jackall/fragments)).
+
+Old mods often copy an archetype into the patch override,
+`generated\entitylibrarypatchoverride.fcb`, to change a few of its values. Such a copy comes in as
+those values, in the world libraries the game would otherwise read it from, so it merges with mods
+that edit them there. A copy of a DLC archetype is left behind, since the DLC library loads after the
+override and the game never read it. An archetype no other library declares stays in the override;
+on GOG, which ships no override, those come in as one whole file. What a copying tool changes on its
+own, such as a float written back with fewer digits, an embedded `rml` document wrapped in an extra
+`<rml>`, or the entity id of the library the copy came from, doesn't count as a change.
+
+Up to three notices can follow:
 
 - files the import could only take whole, which don't merge: each replaces other mods' whole copies
   of it;
 - changes a piece can't express, which are left out;
-- content the game never reads, such as a declaration that a later one of the same name replaces,
-  which is left behind.
+- what the layer leaves behind: content the game never reads, such as a declaration that a later one
+  of the same name replaces, and deletions, which an edit can't make.
 
 Skip Intro brings none of these.
 
