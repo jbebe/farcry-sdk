@@ -166,7 +166,8 @@ tag records' clip deltas, which have to move when a later clip changes size.
 
 **Which clip fits is decided by the rig, so a character pack rewrites the character's.** An 8-bone
 weapon rig skips past clip 0 to its own; a pack rigged to `pelvis_ref` lands on clip 0 — the arms and
-hands. What cannot be edited is the arms *from a weapon pack*.
+hands. A weapon pack reaches the arms too: select the body it carries and write, and its rig lands on
+clip 0 the same way.
 
 **Only selected bones** preserves the rest of the clip. A rewritten bone gets a fresh keyframe set —
 group boundaries plus whatever the tolerance keeps — so its entry changes even when the motion is
@@ -192,8 +193,8 @@ and event time scales by the same factor. Constants and bone masks are untouched
 `tests/blender_write.py` doubles the rifle's reload and requires every clip, window and event to
 double, with the arms at frame `2k` within `1.6e-05` of their pose at `k`.
 
-A stretch is uniform, so the arms only speed up or slow down. For them to do more, write them from a
-pack rigged to `pelvis_ref`. A single-pose bank has no length to stretch.
+A stretch is uniform, so the arms only speed up or slow down. For them to do more, pose the body
+the pack carries and write it too. A single-pose bank has no length to stretch.
 
 The MOVE graph's own copy of each clip's duration (`m_lastAnimDataDuration`) does not get in the
 way: the engine reads it and throws it away. **Confirmed in game:** the AK-47's first-person reload
