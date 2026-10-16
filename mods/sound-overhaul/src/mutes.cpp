@@ -24,7 +24,7 @@ namespace {
 
     // ApplyDelayBullet: everyone else's single shot (ECX).
     FCSE::Relocation<uint8_t*> g_npcShot{FCSE::Pattern(
-        "56 51 8B C8 FF D2 8B 44 24 18 50 8B CF E8 ?? ?? ?? ?? 8B 4C 24 18 E8 ?? ?? ?? ?? F6 40 04 80 0F 85")};
+        "56 51 8B C8 FF D2 8B 44 24 18 50 8B CF E8 ?? ?? ?? ?? 8B 4C 24 18 E8 ?? ?? ?? ??")};
 
     // StartUse: the player's fire loop (ECX), before the start echo from [ECX+0x498].
     FCSE::Relocation<uint8_t*> g_playerLoop{FCSE::Pattern(
