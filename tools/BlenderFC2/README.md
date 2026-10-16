@@ -196,8 +196,9 @@ A stretch is uniform, so the arms only speed up or slow down. For them to do mor
 pack rigged to `pelvis_ref`. A single-pose bank has no length to stretch.
 
 The MOVE graph's own copy of each clip's duration (`m_lastAnimDataDuration`) does not get in the
-way: the engine reads it and throws it away. Whether the game plays a retimed bank to its new end
-has still not been seen.
+way: the engine reads it and throws it away. **Confirmed in game:** the AK-47's first-person reload
+doubled to 5.13 s plays at half speed to its end, and the rifle cannot fire until it does. The
+reload's gameplay events sit at a percentage of the animation, so they follow it.
 
 Two layout rules the writer has to respect, and one choice it offers:
 
