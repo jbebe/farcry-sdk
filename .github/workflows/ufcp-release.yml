@@ -80,3 +80,10 @@ jobs:
           display_name: UFCP
           changelog: ${{ steps.release.outputs.nexus }}
           update_mod_version: 'true'
+
+      - name: Update the Nexus Mods page
+        shell: pwsh
+        env:
+          NEXUSMODS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
+        # The page's summary and description from assets\, going out with the version they describe.
+        run: ${{ github.workspace }}/scripts/nexus-page.ps1 -Project mods/UFCP

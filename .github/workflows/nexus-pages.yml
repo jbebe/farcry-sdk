@@ -1,0 +1,27 @@
+name: Nexus Mods pages
+
+# Sets mod pages' summary and description from each project's assets\ without a release, for a
+# change to the page text alone. A release sets its own page as it goes out.
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: A project directory, such as mods/UFCP. Empty sets every page.
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  pages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update the Nexus Mods pages
+        shell: pwsh
+        env:
+          NEXUSMODS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
+          PROJECT: ${{ inputs.project }}
+        run: ./scripts/nexus-page.ps1 -Project $env:PROJECT

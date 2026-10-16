@@ -79,6 +79,23 @@ either before releasing, adding `-Section Unreleased` to preview notes still bei
   links resolve on GitHub but are dead text on Nexus, so keep changelog links absolute or drop them.
 - `-Render version` — the version alone, which is the one the workflow releases.
 
+## The mod page
+
+A release also sets its Nexus Mods page's summary and description, from the project's
+`assets/nexus-summary.txt` and `assets/nexus-description.bbcode`, so the page describes the version
+that just went out. A project without a description file keeps its page as it is.
+
+To change a page's text without a release, run Actions → **Nexus Mods pages** → **Run workflow**,
+with a project directory such as `mods/UFCP`, or empty for every page. To see first which pages
+would change:
+
+```powershell
+$env:NEXUSMODS_API_KEY = '<key>'; ./scripts/nexus-page.ps1 -Check
+```
+
+The page's ID is the `NEXUS_MOD_ID` in the project's release workflow. The summary takes at most 350
+characters once its line breaks are collapsed; a longer one fails before anything is sent.
+
 ## One-time setup per project
 
 Nexus uploads are the only part that needs configuring. Until it is done the workflow logs a warning
