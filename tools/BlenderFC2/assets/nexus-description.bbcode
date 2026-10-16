@@ -56,6 +56,10 @@ From there it's a normal Action in a normal editor. [b]Far Cry 2 > Animation > W
 
 [b]Only the clip that fits your model's rig is rewritten.[/b] A bank holds the character's motion too, and re-encoding that on every save would quietly degrade the arms holding the gun. After rewriting the rifle's reload, 10,232 of the 10,240 bytes belonging to clips nobody touched are identical, and the eight that move have to.
 
+[b]The hands are yours too.[/b] A pack with animations carries a character body, posed by the same bank. Select it and Write Animation, and its motion goes into the arms and hands clip. Edited arm motion is confirmed in game.
+
+[b]Far Cry 2 > Animation > Retime Animation[/b] makes an animation longer or shorter. It stretches the whole bank to a new end frame - the gun, the arms, the moving parts and the sounds, all by one factor so they stay in step - and loads it back onto the rigs for you to pose. Confirmed in game: an AK-47 reload stretched to twice its length plays to its new end, and the rifle can't fire until it does, because the reload's gameplay follows the animation. Retiming needs a pack exported by JackAll 1.6.0 or newer.
+
 Four things a naive reader gets wrong and this one doesn't: a bank is not one clip, so a weapon rig reaches past the character's clip to its own, picked by bone ids rather than position; the mesh's bone tree is not the tree clips animate, and animating the mesh's tree tears a character into spikes around the knees and elbows; a rotation replaces a bone's rest rotation instead of adding to it; and Blender parents an object to a bone's tail while the clip is written at the head.
 
 [size=5][b]Checking a model before the game finds out[/b][/size]

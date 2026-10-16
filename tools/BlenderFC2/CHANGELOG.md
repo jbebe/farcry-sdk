@@ -3,14 +3,14 @@
 Notable changes to the Far Cry 2 Blender add-on, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.3.0] - 2026-10-16
 
 ### Added
 - **Retime Animation**, which changes a bank's length. It stretches the whole bank to a new end
   frame - every clip in the chain, every participant's window and every event, by one factor, so
-  the arms stay in step with the gun - and loads it back onto the rigs to pose from. Needs a pack
-  exported by a JackAll that decodes tag and event times; an older one is refused rather than
-  written with its events where they were.
+  the arms stay in step with the gun - and loads it back onto the rigs to pose from. Confirmed in
+  game on the AK-47's reload. Needs a pack exported by JackAll 1.6.0 or newer, and applied with it;
+  an older pack is refused rather than written with its events where they were.
 
 ### Changed
 - **Writing an animation keys only what it has to in one pass**, instead of re-scanning every kept
