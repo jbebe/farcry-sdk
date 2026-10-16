@@ -76,8 +76,21 @@ namespace {
     const char* const kCloudModes[] = {"Engine", "Off", "Overhaul"};
     const char* const kSwitchModes[] = {"Off", "On"};
 
+    // The parts that read the engine's linear depth, which is only found while one of them is on.
+    // Our sky reads it to fill the land up to the horizon.
+    bool g_sky = false;
+    bool g_shadows = false;
+    bool g_occlusion = false;
+    bool g_haze = false;
+
+    void WatchDepth() {
+        SkyOverhaul::DomeDraw::SetWatchDepth(g_sky || g_shadows || g_occlusion || g_haze);
+    }
+
     void __cdecl OnSkyChanged(const FCSE_SettingValue* value, void*) {
-        SkyOverhaul::Sky::SetEnabled(value->asChoice == 1);
+        g_sky = value->asChoice == 1;
+        SkyOverhaul::Sky::SetEnabled(g_sky);
+        WatchDepth();
     }
 
     void __cdecl OnCloudsChanged(const FCSE_SettingValue* value, void*) {
@@ -96,14 +109,6 @@ namespace {
         SkyOverhaul::Night::SetEnabled(value->asChoice == 1);
     }
 
-    // The parts that read the engine's linear depth, which is only found while one of them is on.
-    bool g_shadows = false;
-    bool g_occlusion = false;
-    bool g_haze = false;
-
-    void WatchDepth() {
-        SkyOverhaul::DomeDraw::SetWatchDepth(g_shadows || g_occlusion || g_haze);
-    }
 
     void __cdecl OnShadowsChanged(const FCSE_SettingValue* value, void*) {
         g_shadows = value->asChoice == 1;

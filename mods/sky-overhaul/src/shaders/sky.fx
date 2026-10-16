@@ -14,6 +14,7 @@
 // between the eye and space, which is why dawn is red and noon is blue without either being
 // written down anywhere.
 
+#include "depth.inc.fx"
 #include "hash.inc.fx"
 
 // The air, in metres. A planet, because the whole point of a horizon is that the ground curves
@@ -141,6 +142,20 @@ float4 Air : register(c73);
 float4 FogColour : register(c74);
 float4 FogColourRange : register(c75);
 float4 FogColourVector : register(c76);
+
+// x: one where the world drawn so far and its depth are bound for the land's fill, nought where not.
+float4 Fill : register(c77);
+
+// The world drawn so far in this pass, which the fill carries up to the horizon.
+sampler2D World : register(s0);
+
+// How many doubling steps below a pixel under the horizon to look for land the world drew, from one
+// pixel down, and how far past the edge of it to take its colour, clear of the edge's softening.
+#define FILL_TAPS 8
+#define FILL_INSET 2.0f
+
+// Over how far below the horizon, as a sine, the carried land gives way to the sky's own horizon.
+#define FILL_SOFTNESS 0.003f
 
 // How far a ray from inside a sphere runs before it leaves it.
 float SphereExit(float3 origin, float3 ray, float radius) {
@@ -298,6 +313,23 @@ float3 DawnGlow(float farness, float below) {
            (DAWN_GLOW_LUMINANCE * rise * sunward * sunward * pow(below, DAWN_GLOW_FALLOFF));
 }
 
+// The colour of the first land the world drew below `screen`, if any lies within reach.
+bool LandBelow(float2 screen, out float3 land) {
+    land = 0.0f;
+    bool found = false;
+    float reach = 1.0f;
+    [unroll] for (int i = 0; i < FILL_TAPS; i++) {
+        float2 at = (screen + float2(0.5f, 0.5f + reach + FILL_INSET)) * Lens.zw;
+        float stored = Stored(at);
+        if (!found && stored > NEAREST_GEOMETRY && !IsSky(stored)) {
+            land = tex2Dlod(World, float4(at, 0.0f, 0.0f)).rgb;
+            found = true;
+        }
+        reach *= 2.0f;
+    }
+    return found;
+}
+
 float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float3 ray = normalize(rayIn);
     float2 heading = normalize(ray.xy + 0.0001f);
@@ -340,6 +372,13 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // Opaque by day, and at night only as much as the sky is bright, taken before the exposure as
     // the dome takes it. The dome's own alpha keeps covering the stars until the night factor is
     // one, which hides them for hours before dawn.
+    // Below the horizon, where the world ends short of it, the land it drew carries on up to it,
+    // already as far into the haze as its own edge.
+    float3 land;
+    [branch] if (Fill.x > 0.0f && ray.z < 0.0f && LandBelow(screen, land)) {
+        return float4(lerp(colour * Eye.w, land, saturate(-ray.z / FILL_SOFTNESS)), 1.0f);
+    }
+
     float luminance = dot(colour, LUMA);
     float alpha = saturate(saturate(1.0f - Sun.w / STARS_FADE) + luminance * 0.5f);
 

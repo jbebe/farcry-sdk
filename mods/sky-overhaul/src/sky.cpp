@@ -2,11 +2,16 @@
 
 #include "sky_model.h"
 
+#include "depth_constants.h"
+
 #include "engine/camera.h"
 #include "engine/cloud_layer.h"
+#include "engine/com.h"
+#include "engine/depth_texture.h"
 #include "engine/dome_draw.h"
 #include "engine/fog_tint.h"
 #include "engine/frame.h"
+#include "engine/frame_copy.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "tuning.h"
@@ -14,13 +19,19 @@
 #include "sky_ps.h"
 
 #include <algorithm>
+#include <iterator>
 
 namespace {
     // Above the engine's own globals, which occupy c0 to c64 and would be read back stale by the
     // next draw if a plugin wrote over them. The clouds use the same range: the two never draw in
     // one call, and each puts back what it found.
     constexpr UINT kFirstConstant = 71;
-    constexpr UINT kConstantCount = 6;
+    constexpr UINT kConstantCount = 7;
+    // Through the depth's registers, which the fill writes too.
+    constexpr UINT kGuardedCount =
+        SkyOverhaul::DepthConstants::kFirst + SkyOverhaul::DepthConstants::kCount - kFirstConstant;
+
+    constexpr DWORD kWorldSampler = 0;
 
     // The most the zenith may be lifted, and the height of the sun over which that lift is let go,
     // as sines of its elevation: held in full above twenty-five degrees, gone by five, so that
@@ -69,6 +80,72 @@ namespace {
         return 1.0f + (lift - 1.0f) * kept;
     }
 
+    // A sampler's texture and the states the fill sets on it, put back when this goes out of scope.
+    class SamplerGuard {
+    public:
+        SamplerGuard(IDirect3DDevice9* device, DWORD sampler) : m_device(device), m_sampler(sampler) {
+            device->GetTexture(sampler, &m_texture);
+            for (size_t i = 0; i < std::size(kStates); i++) {
+                device->GetSamplerState(sampler, kStates[i], &m_values[i]);
+            }
+        }
+
+        ~SamplerGuard() {
+            m_device->SetTexture(m_sampler, m_texture);
+            for (size_t i = 0; i < std::size(kStates); i++) {
+                m_device->SetSamplerState(m_sampler, kStates[i], m_values[i]);
+            }
+            SkyOverhaul::Release(m_texture);
+        }
+
+        SamplerGuard(const SamplerGuard&) = delete;
+        SamplerGuard& operator=(const SamplerGuard&) = delete;
+
+        // Exact texels, held at the edges.
+        void Point() {
+            m_device->SetSamplerState(m_sampler, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
+            m_device->SetSamplerState(m_sampler, D3DSAMP_MINFILTER, D3DTEXF_POINT);
+            m_device->SetSamplerState(m_sampler, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+            m_device->SetSamplerState(m_sampler, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+        }
+
+    private:
+        static constexpr D3DSAMPLERSTATETYPE kStates[] = {D3DSAMP_MAGFILTER, D3DSAMP_MINFILTER,
+                                                         D3DSAMP_ADDRESSU, D3DSAMP_ADDRESSV};
+        IDirect3DDevice9* m_device;
+        DWORD m_sampler;
+        IDirect3DBaseTexture9* m_texture = nullptr;
+        DWORD m_values[std::size(kStates)] = {};
+    };
+
+    // Binds the world drawn so far and its depth for the land's fill. False leaves the sky to fill
+    // below the horizon alone, as before the world or its depth has been seen.
+    bool BindFill(IDirect3DDevice9* device, const SkyOverhaul::Camera::View& view) {
+        SkyOverhaul::DepthTexture::Found depth = {};
+        IDirect3DSurface9* target = nullptr;
+        if (!SkyOverhaul::DepthTexture::Latest(depth) ||
+            FAILED(device->GetRenderTarget(0, &target)) || target == nullptr) {
+            return false;
+        }
+        // A water reflection draws a sky too, into a target the depth was not drawn for.
+        D3DSURFACE_DESC desc = {};
+        D3DSURFACE_DESC depthDesc = {};
+        const bool matches = SUCCEEDED(target->GetDesc(&desc)) &&
+                             SUCCEEDED(depth.texture->GetLevelDesc(0, &depthDesc)) &&
+                             desc.Width == depthDesc.Width && desc.Height == depthDesc.Height;
+        SkyOverhaul::Frame::Pass pass = {};
+        pass.device = device;
+        pass.target = target;
+        IDirect3DTexture9* world = matches ? SkyOverhaul::FrameCopy::Take(pass) : nullptr;
+        target->Release();
+        if (world == nullptr) {
+            return false;
+        }
+        SkyOverhaul::DepthConstants::Set(device, view, depth, desc.Width, desc.Height);
+        device->SetTexture(kWorldSampler, world);
+        return true;
+    }
+
     // Runs from inside the dome's own draw call, with everything the engine set for it still bound.
     // Nothing here may change a render state, a sampler or a texture: the sun, the moon and the
     // stars are drawn after this with no blend or depth mode of their own, and inherit whatever the
@@ -93,7 +170,7 @@ namespace {
                                       SkyOverhaul::Tuning::Current().duskFogBrightness,
                                       lighting.sunDirection);
 
-        const float constants[kConstantCount * 4] = {
+        float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
             lighting.night,
@@ -101,9 +178,17 @@ namespace {
             SkyOverhaul::SkyModel::Grey(storminess),
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
-            view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f};
+            view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f};
 
-        SkyOverhaul::DrawGuard guard(device, kFirstConstant, kConstantCount);
+        SkyOverhaul::DrawGuard guard(device, kFirstConstant, kGuardedCount);
+        SamplerGuard worldSampler(device, kWorldSampler);
+        SamplerGuard depthSampler(device, SkyOverhaul::DepthConstants::kSampler);
+        if (BindFill(device, view)) {
+            worldSampler.Point();
+            depthSampler.Point();
+            constants[(kConstantCount - 1) * 4] = 1.0f;
+        }
         device->SetPixelShader(shader);
         device->SetPixelShaderConstantF(kFirstConstant, constants, kConstantCount);
         return guard.ClipQuad(SkyOverhaul::Frame::kFarDepth, view.corners);
