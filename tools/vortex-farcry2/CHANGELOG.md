@@ -3,6 +3,17 @@
 Notable changes to the Vortex Far Cry 2 extension, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.5.0] - 2026-10-16
+
+### Changed
+- **Old full-patch mods merge with mods that edit the same weapons, vehicles and characters.** An
+  archetype such a mod copied into the patch override comes in as the values it changed, in the world
+  libraries the game would otherwise read, where newer mods edit them. Before, the copy hid every
+  other mod's edit to it: GORE's weapon copies, for one, turned off Aiming Overhaul's tracers and
+  scopes. Reinstall an old mod for it to come in this way.
+- **An old mod's deletions from the patch override are kept**, and files no engine code path loads,
+  such as a world's `entitylibrary_full.fcb`, are left out.
+
 ## [0.4.1] - 2026-10-15
 
 ### Fixed

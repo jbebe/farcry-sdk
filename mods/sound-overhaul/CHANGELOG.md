@@ -3,6 +3,12 @@
 Notable changes to Sound Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.2] - 2026-10-16
+
+### Fixed
+- **The NPC single shot mute works with Aiming Overhaul installed.** With both installed it could not
+  find its place in the game's code, beside Aiming Overhaul's tracers, and `fcse.log` said so.
+
 ## [1.0.1] - 2026-10-09
 
 ### Changed
