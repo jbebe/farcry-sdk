@@ -17,6 +17,11 @@ through the whole day, the weather and the night.
   occlusion in corners and creases.
 - **The world in that light**: grass and tree leaves lit by the sun, rocks and cliffs shaded as
   faceted stone up close, and sun shadows that reach further and follow a low sun toward the horizon.
+- **Heat haze and mirages**: on sunny days distant land shimmers and smudges in the hot air near the
+  ground, more the farther it is, and bare level ground far off mirrors the sky.
+- **Land to the horizon**: where the game stops drawing the world short of the skyline, the gap is
+  filled with far, hazy land instead of sky.
+- **Flatten**, off by default: distant land drawn flatter, so the world reads bigger than it is.
 
 Each part switches back to the engine's own in the **Mod Configuration** menu. Every effect's values
 are in `bin\sky-overhaul.ini`, and with DevTools installed its overlay has a window of sliders for
@@ -26,7 +31,7 @@ them. **Upgrading from 1.1.0**, delete that file once so the new values take eff
 
 - **FCSE 1.4.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
 - **Bloom on** in Options → Video.
-- **Depth pass quality high** or above, for the cloud shadows only.
+- **Depth pass quality high** or above, for the cloud shadows and the heat haze only.
 
 ## Installing
 
@@ -53,3 +58,5 @@ jackall-cli mod restore --game "C:\Games\Far Cry 2"
 ## Known issues
 
 - The night's colour drain also applies indoors.
+- With Flatten on, things beyond about 250 m are drawn lower or higher than they are, so long shots
+  land slightly off from where they appear.

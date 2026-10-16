@@ -75,10 +75,11 @@ collides with any other mod that edits a preset. Nothing here changes how the su
   Overhaul for the glare and the afterimage), Night, Shadows, Grade, Grass, Leaves, Sun shadows and
   Rocks (each Engine or Overhaul), and Occlusion, Grain, Heat haze and Flatten (each Off or On).
 - **Tuning.** Every effect's values are kept in `bin\sky-overhaul.ini`, beside `fcse.ini`, which is
-  written on the first launch. The sky has none: it follows the sun alone. `src/tuning.cpp`.
+  written on the first launch. The sky has only its fog and the land filled in below its horizon:
+  otherwise it follows the sun alone. `src/tuning.cpp`.
 - **A window in DevTools' overlay.** With [DevTools](../DevTools) installed, Home shows a Sky Overhaul
-  window that edits that file in Sun, Sky, Clouds, Night, Shadows, Post FX, Foliage and Rock tabs
-  of sliders, saving each edit when it is let go. Without DevTools, `fcse.log` says so once and the
+  window that edits that file in Sun, Sky, Clouds, Night, Shadows, Post FX, Foliage, Rock and World
+  tabs of sliders, saving each edit when it is let go. Without DevTools, `fcse.log` says so once and the
   file is the only way in.
 
 ## How it is put together
@@ -100,8 +101,8 @@ Bloom on, in Options → Video or on the `<quality>` row in
 `Documents\My Games\Far Cry 2\GamerProfile.xml` matching the profile's `Quality`. The glare works
 without it, but the sun it sits beside is a flat disc until bloom runs.
 
-`DepthPassQuality` high or above for the cloud shadows and the heat haze: below it the engine writes no linear depth,
-and `fcse.log` says so once.
+`DepthPassQuality` high or above for the cloud shadows and the heat haze: below it the engine writes
+no linear depth, and `fcse.log` says so once.
 
 Needs FCSE 1.4.0 or later.
 

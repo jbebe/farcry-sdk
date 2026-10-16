@@ -3,6 +3,26 @@
 Notable changes to Sky Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.5.0] - 2026-10-16
+
+### Added
+- **Heat haze.** On a sunny day the hot air over the ground shimmers in thin waves that drift
+  sideways. The farther something is, the harder the air pushes and smudges it, so distant land
+  swims while nearby things stay steady. It hugs the low ground: the foot of a hill shimmers, its
+  top stays clear. It follows the sun's height and is gone at night and in storms, and through a
+  scope the waves keep their size on screen. **Heat haze** in the Mod Configuration menu turns it
+  off; its sliders are under **Post FX** in the DevTools window.
+- **Mirages.** Bare, level ground far off shows the sky mirrored in it, softly, like a road
+  shimmering wet in the heat. Grass, slopes and rocks are left alone. Part of the heat haze, with
+  its own strength, slope and start distance sliders.
+- **Land to the horizon.** Where the game stops drawing the world short of the horizon, the gap
+  below it used to show sky; it is now filled with far, hazy land. The **Horizon land fill**
+  sliders, under **Sky**, turn it off or move its edge.
+- **Flatten**, off by default. Distant land is drawn flatter, so the world reads bigger and farther
+  off than it is. Only the picture changes, so with it on, a shot at something beyond about 250 m
+  lands slightly off from where it appears. **Flatten** in the Mod Configuration menu turns it on;
+  its sliders are on the new **World** tab.
+
 ## [1.4.0] - 2026-10-15
 
 ### Fixed
