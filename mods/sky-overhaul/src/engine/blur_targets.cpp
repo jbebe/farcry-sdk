@@ -48,8 +48,8 @@ void SkyOverhaul::BlurTargets::Release() {
 }
 
 void SkyOverhaul::BlurTargets::Blur(IDirect3DDevice9* device, DrawGuard& draw, UINT axisRegister,
-                                    float z, float w) {
-    const float axes[2][2] = {{1.0f, 0.0f}, {0.0f, 1.0f}};
+                                    float z, float w, float spacing) {
+    const float axes[2][2] = {{spacing, 0.0f}, {0.0f, spacing}};
     for (int pass = 0; pass < 2; pass++) {
         const Target& from = m_targets[pass];
         const Target& into = m_targets[1 - pass];

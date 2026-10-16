@@ -78,9 +78,9 @@ namespace {
     float g_widest = 0.0f;
 
     void BlurFrom(IDirect3DDevice9* device, SkyOverhaul::DrawGuard& draw,
-                  SkyOverhaul::BlurTargets& targets) {
+                  SkyOverhaul::BlurTargets& targets, float spacing = 1.0f) {
         targets.Blur(device, draw, kAxisConstant, 1.0f / static_cast<float>(targets.Width()),
-                     1.0f / static_cast<float>(targets.Height()));
+                     1.0f / static_cast<float>(targets.Height()), spacing);
     }
 
     // Where a mirage shows, into the mask, blurred.
@@ -93,9 +93,10 @@ namespace {
         BlurFrom(device, draw, g_mask);
     }
 
-    // The far world from `world`, at quarter resolution, blurred.
+    // The far world from `world`, at quarter resolution, blurred `size` times as wide as one round
+    // would: further rounds at doubling spacing, the last at whatever spacing reaches it.
     void DrawFar(IDirect3DDevice9* device, SkyOverhaul::DrawGuard& draw, IDirect3DTexture9* world,
-                 IDirect3DPixelShader9* downShader, IDirect3DPixelShader9* blurShader) {
+                 IDirect3DPixelShader9* downShader, IDirect3DPixelShader9* blurShader, float size) {
         const float pixel[4] = {0.0f, 0.0f, 1.0f / static_cast<float>(g_blurred.Width()),
                                 1.0f / static_cast<float>(g_blurred.Height())};
         device->SetPixelShaderConstantF(kAxisConstant, pixel, 1);
@@ -105,6 +106,9 @@ namespace {
         draw.ClipQuad(0.0f);
         device->SetPixelShader(blurShader);
         BlurFrom(device, draw, g_blurred);
+        for (float spacing = 2.0f; spacing < 2.0f * size; spacing *= 2.0f) {
+            BlurFrom(device, draw, g_blurred, (std::min)(spacing, size));
+        }
     }
 
     void Filter(IDirect3DDevice9* device, DWORD sampler) {
@@ -138,7 +142,9 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
     SolidDepth::SetWanted(SolidDepth::User::Haze, v.mirageStrength > 0.0f);
     SolidDepth::Found solid = {};
     const float mirage = SolidDepth::Latest(solid) ? heat * v.mirageStrength : 0.0f;
-    const float farBlur = heat * v.hazeFarBlur;
+    // Up to one the far blur covers more of the land; past one it widens instead.
+    const float farBlur = heat * (std::min)(v.hazeFarBlur, 1.0f);
+    const float farBlurSize = (std::max)(v.hazeFarBlur, 1.0f);
     if ((std::max)({heat * v.hazeStrength, mirage, farBlur}) < kFaintest) {
         return;
     }
@@ -193,7 +199,7 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
         }
         if (blurred) {
             Filter(device, 0);
-            DrawFar(device, draw, world, downShader, blurShader);
+            DrawFar(device, draw, world, downShader, blurShader, farBlurSize);
         }
         device->SetRenderTarget(0, pass.target);
         device->SetDepthStencilSurface(pass.depth);
