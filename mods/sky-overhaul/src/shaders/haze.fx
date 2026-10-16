@@ -75,7 +75,7 @@ static const float CHURN = 4.0f;
 static const float EXPOSURE = 0.04f;
 #define MOMENTS 5
 
-// How far either way along its push each moment is smudged at the far blur's end, as a share of it.
+// How far either way along its push each moment is smudged from Far.y on, as a share of it.
 static const float SMUDGE = 0.8f;
 
 // How far below a pixel of sky to look for the land it sits over, in pixels.
@@ -84,7 +84,8 @@ static const float SKYLINE_REACH = 12.0f;
 // The share of the shimmer that moves a look sideways rather than up and down.
 static const float SIDEWAYS = 0.5f;
 
-// The blur's radius as a share of the bend, and the least radius worth blurring, in pixels.
+// How wide a mirage's picture is blurred, as a share of how far the air pushes it, and the least
+// radius worth blurring, in pixels.
 static const float BLUR_SHARE = 0.6f;
 static const float LEAST_BLUR = 0.5f;
 
