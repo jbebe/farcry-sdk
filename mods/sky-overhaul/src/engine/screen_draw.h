@@ -1,9 +1,28 @@
 // A screen-space draw over someone else's frame, and the state it has to put back.
 #pragma once
 
+#include "engine/frame.h"
+
 #include <d3d9.h>
 
 namespace SkyOverhaul {
+
+// While alive, draws go to targets of our own: a smaller one cannot share the pass's multisampled
+// depth, so that is unbound, and switching targets resets the scissor the engine may count on, so
+// that is kept. Going out of scope binds the pass's target, depth and scissor again, over the whole
+// depth range.
+class AwayFromPass {
+public:
+    explicit AwayFromPass(const Frame::Pass& pass);
+    ~AwayFromPass();
+
+    AwayFromPass(const AwayFromPass&) = delete;
+    AwayFromPass& operator=(const AwayFromPass&) = delete;
+
+private:
+    const Frame::Pass& m_pass;
+    RECT m_scissor = {};
+};
 
 // The least a draw of our own can disturb: the shaders, the geometry bindings and one range of
 // pixel shader constants, saved on construction and put back when it goes out of scope. Nothing is

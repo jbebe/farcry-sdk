@@ -50,8 +50,11 @@ void SetMaskSubstitute(SubstituteFn mask);
 using GradeFn = void (*)(const float engine[12], float out[12]);
 void SetGrade(GradeFn grade);
 
-// Whether the draws that read the linear depth are watched for its texture.
-void SetWatchDepth(bool watch);
+// The effects that read the linear depth; the draws that read it are watched for its texture while
+// any of them wants it.
+enum class DepthUser : unsigned { Shadows = 1, Occlusion = 2, Haze = 4 };
+
+void SetWatchDepth(DepthUser user, bool watch);
 
 // How many registers of their own the vertex shaders lighting foliage in the engine's place read.
 constexpr UINT kFoliageParameterRegisters = 2;

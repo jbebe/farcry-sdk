@@ -2,6 +2,7 @@
 // halves of the angle it depends on: the camera is a global, the sun is not.
 #include "dazzle.h"
 
+#include "angles.h"
 #include "clouds.h"
 
 #include "engine/camera.h"
@@ -24,12 +25,8 @@
 #include <cmath>
 
 namespace {
-
-    constexpr float kPi = 3.14159265f;
-
-    constexpr float Radians(float degrees) {
-        return degrees * kPi / 180.0f;
-    }
+    using SkyOverhaul::kPi;
+    using SkyOverhaul::Radians;
 
     // How wide the glare's own gradient is allowed to get, whatever the spread is set to.
     constexpr float kMaxRadiusRadians = Radians(70.0f);

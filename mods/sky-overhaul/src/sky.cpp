@@ -1,5 +1,6 @@
 #include "sky.h"
 
+#include "angles.h"
 #include "sky_model.h"
 
 #include "engine/camera.h"
@@ -23,7 +24,6 @@ namespace {
     constexpr UINT kFirstConstant = 71;
     constexpr UINT kConstantCount = 7;
 
-    constexpr float kRadiansPerDegree = 3.14159265f / 180.0f;
 
     // The most the zenith may be lifted, and the height of the sun over which that lift is let go,
     // as sines of its elevation: held in full above twenty-five degrees, gone by five, so that
@@ -105,7 +105,7 @@ namespace {
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f,
-            v.horizonFill, std::sin(v.horizonFillHeight * kRadiansPerDegree), v.horizonFillHaze,
+            v.horizonFill, std::sin(SkyOverhaul::Radians(v.horizonFillHeight)), v.horizonFillHaze,
             0.0f};
 
         SkyOverhaul::DrawGuard guard(device, kFirstConstant, kConstantCount);

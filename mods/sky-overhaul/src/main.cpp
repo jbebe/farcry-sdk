@@ -10,7 +10,6 @@
 #include "engine/cloud_layer.h"
 #include "engine/depth_texture.h"
 #include "engine/device_reset.h"
-#include "engine/dome_draw.h"
 #include "engine/frame_copy.h"
 #include "engine/frame.h"
 #include "engine/known_shaders.h"
@@ -80,15 +79,6 @@ namespace {
         SkyOverhaul::Sky::SetEnabled(value->asChoice == 1);
     }
 
-    // The parts that read the engine's linear depth, which is only found while one of them is on.
-    bool g_shadows = false;
-    bool g_occlusion = false;
-    bool g_haze = false;
-
-    void WatchDepth() {
-        SkyOverhaul::DomeDraw::SetWatchDepth(g_shadows || g_occlusion || g_haze);
-    }
-
     void __cdecl OnCloudsChanged(const FCSE_SettingValue* value, void*) {
         using SkyOverhaul::CloudLayer::Mode;
         SkyOverhaul::CloudLayer::SetMode(value->asChoice == 0   ? Mode::Engine
@@ -107,9 +97,7 @@ namespace {
 
 
     void __cdecl OnShadowsChanged(const FCSE_SettingValue* value, void*) {
-        g_shadows = value->asChoice == 1;
-        SkyOverhaul::Shadows::SetEnabled(g_shadows);
-        WatchDepth();
+        SkyOverhaul::Shadows::SetEnabled(value->asChoice == 1);
     }
 
     void __cdecl OnGradeChanged(const FCSE_SettingValue* value, void*) {
@@ -121,15 +109,11 @@ namespace {
     }
 
     void __cdecl OnOcclusionChanged(const FCSE_SettingValue* value, void*) {
-        g_occlusion = value->asChoice == 1;
-        SkyOverhaul::Occlusion::SetEnabled(g_occlusion);
-        WatchDepth();
+        SkyOverhaul::Occlusion::SetEnabled(value->asChoice == 1);
     }
 
     void __cdecl OnHazeChanged(const FCSE_SettingValue* value, void*) {
-        g_haze = value->asChoice == 1;
-        SkyOverhaul::Haze::SetEnabled(g_haze);
-        WatchDepth();
+        SkyOverhaul::Haze::SetEnabled(value->asChoice == 1);
     }
 
     void __cdecl OnFlattenChanged(const FCSE_SettingValue* value, void*) {

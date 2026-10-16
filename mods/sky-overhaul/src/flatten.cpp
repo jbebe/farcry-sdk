@@ -23,6 +23,8 @@ namespace {
     // Every engine shader seen, held so its address cannot be reused, and the flattened one drawn in
     // its place, or null where it could not be.
     std::unordered_map<IDirect3DVertexShader9*, IDirect3DVertexShader9*> g_shaders;
+    IDirect3DVertexShader9* g_lastBound = nullptr;
+    IDirect3DVertexShader9* g_lastOurs = nullptr;
     int g_flattened = 0;
     int g_left = 0;
     int g_named = 0;
@@ -35,6 +37,8 @@ namespace {
             engine->Release();
         }
         g_shaders.clear();
+        g_lastBound = nullptr;
+        g_lastOurs = nullptr;
         g_flattened = 0;
         g_left = 0;
         g_reported = -1;
@@ -67,12 +71,18 @@ namespace {
     }
 
     IDirect3DVertexShader9* Pick(IDirect3DDevice9* device, IDirect3DVertexShader9* bound) {
-        const auto found = g_shaders.find(bound);
-        if (found != g_shaders.end()) {
-            return found->second;
+        // Draws in a row mostly share a shader.
+        if (bound == g_lastBound) {
+            return g_lastOurs;
         }
-        bound->AddRef();
-        return g_shaders[bound] = Make(device, bound);
+        const auto [found, added] = g_shaders.try_emplace(bound, nullptr);
+        if (added) {
+            bound->AddRef();
+            found->second = Make(device, bound);
+        }
+        g_lastBound = bound;
+        g_lastOurs = found->second;
+        return g_lastOurs;
     }
 }
 

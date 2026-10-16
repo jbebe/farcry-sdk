@@ -44,13 +44,14 @@ void SkyOverhaul::BlurTargets::Release() {
     m_refused = false;
 }
 
-void SkyOverhaul::BlurTargets::Blur(IDirect3DDevice9* device, DrawGuard& draw, UINT axisRegister,
-                                    float z, float w) {
+void SkyOverhaul::BlurTargets::Blur(IDirect3DDevice9* device, DrawGuard& draw, UINT axisRegister) {
     const float axes[2][2] = {{1.0f, 0.0f}, {0.0f, 1.0f}};
+    const float texelX = 1.0f / static_cast<float>(m_width);
+    const float texelY = 1.0f / static_cast<float>(m_height);
     for (int pass = 0; pass < 2; pass++) {
         const Target& from = m_targets[pass];
         const Target& into = m_targets[1 - pass];
-        const float axis[4] = {axes[pass][0], axes[pass][1], z, w};
+        const float axis[4] = {axes[pass][0], axes[pass][1], texelX, texelY};
         device->SetPixelShaderConstantF(axisRegister, axis, 1);
         // Before the target changes, so `into` is never bound to be read and written at once.
         device->SetTexture(0, from.texture);

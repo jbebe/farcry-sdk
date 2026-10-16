@@ -50,6 +50,22 @@ namespace {
     }
 }
 
+SkyOverhaul::AwayFromPass::AwayFromPass(const Frame::Pass& pass) : m_pass(pass) {
+    pass.device->GetScissorRect(&m_scissor);
+    pass.device->SetDepthStencilSurface(nullptr);
+}
+
+SkyOverhaul::AwayFromPass::~AwayFromPass() {
+    IDirect3DDevice9* device = m_pass.device;
+    device->SetRenderTarget(0, m_pass.target);
+    device->SetDepthStencilSurface(m_pass.depth);
+    device->SetScissorRect(&m_scissor);
+    D3DVIEWPORT9 wholeRange = m_pass.viewport;
+    wholeRange.MinZ = 0.0f;
+    wholeRange.MaxZ = 1.0f;
+    device->SetViewport(&wholeRange);
+}
+
 SkyOverhaul::DrawGuard::DrawGuard(IDirect3DDevice9* device, UINT firstConstant, UINT constantCount)
     : m_device(device), m_firstConstant(firstConstant),
       m_constantCount(constantCount > kMaxConstantRegisters ? kMaxConstantRegisters

@@ -36,6 +36,7 @@ float4 Level : register(c99);
 // x  the distance at which the air starts to push harder and smudge, in metres
 // y  the distance at which it does so wholly
 // z  how many times harder the air pushes a look there than its sheets alone would
+// w  the eye's height over the ground under it, in metres
 float4 Far : register(c100);
 
 // xy  the axis of a blur pass, one pixel of its target long
@@ -44,18 +45,14 @@ float4 Axis : register(c101);
 
 #define PI 3.14159265f
 
-// The air between the eye and what it sees, as a few sheets of turbulence, in metres: a look
-// collects the push of every sheet it crosses. Few enough that each one's waves still read.
+// The sheets of turbulence a look crosses, in metres: few enough that each one's waves still read.
 #define SHEETS 3
 static const float SHEET_DISTANCES[SHEETS] = {15.0f, 50.0f, 150.0f};
 
-// The depth of air a sheet stands for at which it bends a look as hard as Heat.x says; deeper
-// sheets bend harder, as this power of their depth.
+// The depth of air a sheet stands for at which it bends a look as hard as Heat.x says, and the
+// power of its depth that deeper sheets bend harder by.
 static const float SHEET_REFERENCE = 100.0f;
 static const float SHEET_GROWTH = 0.75f;
-
-// The eye's height over the ground under it, in metres.
-static const float EYE_HEIGHT = 1.8f;
 
 // The smallest a wave may get on screen, across and up, in pixels: finer ones would average away.
 static const float2 SMALLEST_WAVE = float2(4.0f, 2.0f);
@@ -84,12 +81,9 @@ static const float SKYLINE_REACH = 12.0f;
 // The share of the shimmer that moves a look sideways rather than up and down.
 static const float SIDEWAYS = 0.5f;
 
-// How wide a mirage's picture is blurred, as a share of how far the air pushes it, and the least
-// radius worth blurring, in pixels.
+// How wide a mirage's picture is blurred, as a share of how far the air pushes it, and at least, in
+// pixels.
 static const float BLUR_SHARE = 0.6f;
-static const float LEAST_BLUR = 0.5f;
-
-// The least blur of a mirage's own picture, in pixels.
 static const float MIRAGE_BLUR = 2.0f;
 
 // The blur's taps beside the centre, laid on a spiral by the golden angle so they cover the disc.
@@ -120,10 +114,8 @@ static const float2 SPREAD = float2(0.1f, 0.5f);
 static const float BLUR_WEIGHTS[BLUR_RADIUS + 1] = {1.0f, 0.88f, 0.61f, 0.32f, 0.14f};
 
 
-// The turbulence of the sheet `distance` metres out where a look `around` radians round the
-// horizon and `rise` up (a sine) crosses it, at `time`: three fields in [-0.5, 0.5). Its eddies keep
-// their size in the world, so a far sheet's are small on screen, down to SMALLEST_WAVE; the whole
-// is scaled by the zoom, so they keep their size on screen through a scope.
+// The sheet `distance` metres out where a look `around` radians round and `rise` up crosses it, at
+// `time`: three fields in [-0.5, 0.5), its eddies world-sized down to SMALLEST_WAVE, through zoom.
 float3 Sheet(float around, float rise, float distance, float time, float index)
 {
     float pixel = 2.0f * Lens.y * Lens.w * Time.y;
@@ -134,35 +126,28 @@ float3 Sheet(float around, float rise, float distance, float time, float index)
     return tex3Dlod(Turbulence, float4(at / TILE, 0.0f)).rgb - 0.5f;
 }
 
-// How hot the air is `height` metres over the ground that heats it, against the ground's own:
-// half at Heat.w, and falling ever more slowly above it, so the haze thins up a hillside rather
-// than stopping.
+// How hot the air is `height` metres over the ground that heats it: half at Heat.w, then thinning
+// ever more slowly, so the haze fades up a hillside rather than stopping.
 float Hotness(float height)
 {
     return 1.0f / (1.0f + max(height, 0.0f) / Heat.w);
 }
 
-// How far the air pushes a look `distance` metres long at `time`, in radians, and how ragged it is
-// in z: every sheet it crosses before it gets there, each the more the farther it stands from what
-// is seen, and the hotter the nearer the look runs to `ground`, the height below the eye of the
-// low land the air lies on.
-float3 Push(float around, float rise, float distance, float time, float ground)
+// How far the air pushes a look `distance` metres long at `time`, in radians: every sheet it crosses
+// first, the more the farther from what is seen, the hotter the nearer it runs to `ground`, the
+// height below the eye of the low land the air lies on.
+float2 Push(float around, float rise, float distance, float time, float ground)
 {
-    float3 sum = 0.0f;
+    float2 sum = 0.0f;
     [unroll] for (int k = 0; k < SHEETS; k++)
     {
         float sheet = SHEET_DISTANCES[k];
         float lever = sqrt(saturate(1.0f - sheet / distance));
         float weight = pow(sheet / SHEET_REFERENCE, SHEET_GROWTH) * lever *
                        Hotness(sheet * rise - ground);
-        sum += Sheet(around, rise, sheet, time, k) * weight;
+        sum += Sheet(around, rise, sheet, time, k).xy * weight;
     }
-    return sum * SHIMMER_GAIN * float3(Heat.x, Heat.x, 1.0f);
-}
-
-bool IsLand(float stored)
-{
-    return stored > NEAREST_GEOMETRY && !IsSky(stored);
+    return sum * SHIMMER_GAIN * Heat.x;
 }
 
 // Whether what was drawn `there` metres out may be pulled over a pixel `z` metres out: never the
@@ -172,24 +157,20 @@ bool MayCover(float there, float z)
     return there > NEAREST_GEOMETRY && (IsSky(there) || there >= z * 0.9f);
 }
 
-// The world around `centre`, over a disc `radius` across in texture coordinates, leaving out
-// whatever may not cover a pixel `z` metres out. The taps turn by `turn`, a different share of a
-// turn per pixel, so a wide blur lands as grain rather than as copies.
-float3 Look(float2 centre, float2 radius, float turn, float z)
+// The world around `centre`, over a disc `radius` across in texture coordinates, leaving out the
+// weapon; turned by `turn` a pixel, so a wide blur lands as grain rather than as copies.
+float3 Look(float2 centre, float2 radius, float turn)
 {
     float3 sum = tex2Dlod(Scene, float4(centre, 0.0f, 0.0f)).rgb;
     float weight = 1.0f;
-    [branch] if (radius.y > LEAST_BLUR * Lens.w)
+    [unroll] for (int i = 0; i < BLUR_TAPS; i++)
     {
-        [unroll] for (int i = 0; i < BLUR_TAPS; i++)
-        {
-            float s, c;
-            sincos(i * GOLDEN_ANGLE + turn * 2.0f * PI, s, c);
-            float2 at = centre + float2(c, s) * sqrt((i + 0.5f) / BLUR_TAPS) * radius;
-            float w = MayCover(Stored(at), z) ? 1.0f : 0.0f;
-            sum += tex2Dlod(Scene, float4(at, 0.0f, 0.0f)).rgb * w;
-            weight += w;
-        }
+        float s, c;
+        sincos(i * GOLDEN_ANGLE + turn * 2.0f * PI, s, c);
+        float2 at = centre + float2(c, s) * sqrt((i + 0.5f) / BLUR_TAPS) * radius;
+        float w = Stored(at) > NEAREST_GEOMETRY ? 1.0f : 0.0f;
+        sum += tex2Dlod(Scene, float4(at, 0.0f, 0.0f)).rgb * w;
+        weight += w;
     }
     return sum / weight;
 }
@@ -312,31 +293,35 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
 
     // The hot air lies on the lower of the ground under the eye and the ground looked at, so a
     // hilltop seen over a plain is seen through cool air and the hill's foot through hot.
-    float ground = min(-EYE_HEIGHT, at.z);
+    float ground = min(-Far.w, at.z);
 
     // Each moment the eye gathers sees the world pushed its own way, so what moves within one is
-    // smeared along the way it moves. A pixel's moments start at its own share of the exposure, so
-    // neighbours fill in each other's gaps. Far off the air pushes harder, and each moment is
-    // smudged along its own push, so the smudge moves with the air rather than settling.
-    float far = smoothstep(Far.x, Far.y, distance) * Hotness(at.z - ground);
-    float wobble = lerp(1.0f, Far.z, far);
-    float3 colour = 0.0f;
-    float weight = 0.0f;
+    // smeared along the way it moves; a pixel's moments start at its own share of the exposure.
+    // Far off the air pushes harder, and each moment smudges along its own push. Nearer than the
+    // first sheet nothing is pushed at all.
+    float3 colour = tex2Dlod(Scene, float4(uv, 0.0f, 0.0f)).rgb;
     float2 shift = 0.0f;
     float2 spread = 0.0f;
-    [unroll] for (int i = 0; i < MOMENTS; i++)
+    [branch] if (Heat.x > 0.0f && distance > SHEET_DISTANCES[0])
     {
-        float time = Time.x - EXPOSURE * (i + turn) / MOMENTS;
-        float2 push = Push(around, direction.z, distance, time, ground).xy * toUv * wobble;
-        shift += push / MOMENTS;
-        spread += abs(push) / MOMENTS;
-        float along = (i + turn) / MOMENTS * 2.0f - 1.0f;
-        float2 tap = uv + push * (1.0f + SMUDGE * far * along);
-        float w = MayCover(Stored(tap), z) ? 1.0f : 0.0f;
-        colour += tex2Dlod(Scene, float4(tap, 0.0f, 0.0f)).rgb * w;
-        weight += w;
+        float far = smoothstep(Far.x, Far.y, distance) * Hotness(at.z - ground);
+        float wobble = lerp(1.0f, Far.z, far);
+        float3 sum = 0.0f;
+        float weight = 0.0f;
+        [unroll] for (int i = 0; i < MOMENTS; i++)
+        {
+            float time = Time.x - EXPOSURE * (i + turn) / MOMENTS;
+            float2 push = Push(around, direction.z, distance, time, ground) * toUv * wobble;
+            shift += push / MOMENTS;
+            spread += abs(push) / MOMENTS;
+            float along = (i + turn) / MOMENTS * 2.0f - 1.0f;
+            float2 tap = uv + push * (1.0f + SMUDGE * far * along);
+            float w = MayCover(Stored(tap), z) ? 1.0f : 0.0f;
+            sum += tex2Dlod(Scene, float4(tap, 0.0f, 0.0f)).rgb * w;
+            weight += w;
+        }
+        colour = weight > 0.0f ? sum / weight : colour;
     }
-    colour = weight > 0.0f ? colour / weight : tex2Dlod(Scene, float4(uv, 0.0f, 0.0f)).rgb;
 
     // Soft at its edges, and over whatever small stands inside or beside it.
     [branch] if (Heat.y > 0.0f)
@@ -346,7 +331,7 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
         [branch] if (mirage > 0.0f)
         {
             float2 radius = max(BLUR_SHARE * spread, MIRAGE_BLUR * Lens.zw);
-            float3 mirrored = Look(Mirror(direction) + shift, radius, turn, 0.0f);
+            float3 mirrored = Look(Mirror(direction) + shift, radius, turn);
             colour = lerp(colour, mirrored, mirage);
         }
     }

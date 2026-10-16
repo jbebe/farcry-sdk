@@ -27,10 +27,15 @@ bool IsSky(float stored) {
     return stored >= DepthDecode.w;
 }
 
+// Whether a stored depth is geometry: neither the weapon nor the sky.
+bool IsLand(float stored) {
+    return stored > NEAREST_GEOMETRY && !IsSky(stored);
+}
+
 // Metres along the camera's axis to what was drawn at `uv`, or nought where nothing was.
 float Metres(float2 uv) {
     float z = Stored(uv);
-    return z > NEAREST_GEOMETRY && !IsSky(z) ? z : 0.0f;
+    return IsLand(z) ? z : 0.0f;
 }
 
 // The top left of the two by two block of full-resolution depth a half-resolution pixel covers.

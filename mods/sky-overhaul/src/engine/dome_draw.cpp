@@ -69,7 +69,8 @@ namespace {
     SkyOverhaul::DomeDraw::FoliageFn g_foliage = nullptr;
     SkyOverhaul::DomeDraw::RockFn g_rocks = nullptr;
     SkyOverhaul::DomeDraw::VertexFn g_vertex = nullptr;
-    bool g_watchDepth = false;
+    // A bit per DepthUser that wants the linear depth watched for.
+    unsigned g_depthUsers = 0;
     SkyOverhaul::DomeDraw::Mode g_mode = SkyOverhaul::DomeDraw::Mode::Engine;
 
     // Which pass was last drawn into, rather than which frame: a frame can hold more than one sky
@@ -300,11 +301,11 @@ namespace {
             }
         }
         const bool gradeShape = g_grade != nullptr && primitives <= kScreenPrimitives;
-        if (!g_watchDepth && !gradeShape) {
+        if (g_depthUsers == 0 && !gradeShape) {
             return draw();
         }
         const SkyOverhaul::KnownShaders::Known known = SkyOverhaul::KnownShaders::Bound(device);
-        if (known.kind == Kind::DepthReader && g_watchDepth) {
+        if (known.kind == Kind::DepthReader && g_depthUsers != 0) {
             SkyOverhaul::DepthTexture::Observe(device);
         }
 
@@ -421,6 +422,7 @@ void SkyOverhaul::DomeDraw::SetVertex(VertexFn vertex) {
     g_vertex = vertex;
 }
 
-void SkyOverhaul::DomeDraw::SetWatchDepth(bool watch) {
-    g_watchDepth = watch;
+void SkyOverhaul::DomeDraw::SetWatchDepth(DepthUser user, bool watch) {
+    const unsigned bit = static_cast<unsigned>(user);
+    g_depthUsers = watch ? g_depthUsers | bit : g_depthUsers & ~bit;
 }

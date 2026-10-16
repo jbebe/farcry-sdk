@@ -1,5 +1,6 @@
 #include "haze.h"
 
+#include "angles.h"
 #include "depth_constants.h"
 #include "sky_model.h"
 
@@ -8,6 +9,7 @@
 #include "engine/clock.h"
 #include "engine/cloud_layer.h"
 #include "engine/depth_texture.h"
+#include "engine/dome_draw.h"
 #include "engine/frame_copy.h"
 #include "engine/noise.h"
 #include "engine/screen_draw.h"
@@ -29,9 +31,6 @@ namespace {
     // Set per pass of the mask's blur, after the frame's.
     constexpr UINT kAxisConstant = kOwnConstant + kOwnConstants;
 
-    // Where in the frame's constants the mirage's strength sits, in floats.
-    constexpr size_t kMirageStrength = 1;
-
     constexpr DWORD kSolidDepthSampler = 1;
     constexpr DWORD kMaskSampler = 2;
     constexpr DWORD kTurbulenceSampler = 4;
@@ -44,8 +43,8 @@ namespace {
     // pixels at 1080 lines.
     constexpr float kFullBend = 0.002f;
 
-    // A standing eye's height over the ground, in metres, which turns the distance a mirage starts
-    // at into the steepest look onto level ground that shows one.
+    // A standing eye's height over the ground, in metres: the height the air's heat is reckoned
+    // from, and what turns a mirage's start distance into the steepest look that shows one.
     constexpr float kStandingEye = 1.8f;
 
     // How far off the waves are the size the wave sliders give, in metres.
@@ -54,8 +53,7 @@ namespace {
     // Kept short so the shimmer's coordinates stay precise; it jumps once when the clock wraps.
     constexpr float kClockWrap = 3600.0f;
 
-    constexpr float kRadiansPerDegree = 3.14159265f / 180.0f;
-    constexpr float kRadiansPerArcMinute = kRadiansPerDegree / 60.0f;
+    constexpr float kRadiansPerArcMinute = SkyOverhaul::Radians(1.0f) / 60.0f;
 
     // Below this none of it changes anything a player could see.
     constexpr float kFaintest = 0.002f;
@@ -71,30 +69,15 @@ namespace {
     // The widest view seen, as one over the tangent of half its height: the unzoomed one.
     float g_widest = 0.0f;
 
-    // Where a mirage shows, into the mask, blurred, leaving the pass's own target, depth, scissor
-    // and depth range bound again.
+    // Where a mirage shows, into the mask, blurred.
     void DrawMask(const SkyOverhaul::Frame::Pass& pass, SkyOverhaul::DrawGuard& draw,
                   IDirect3DPixelShader9* maskShader, IDirect3DPixelShader9* blurShader) {
-        IDirect3DDevice9* device = pass.device;
-        // A smaller target cannot share the world's multisampled depth, and switching targets
-        // resets the scissor rectangle the engine may be counting on.
-        RECT scissor = {};
-        device->GetScissorRect(&scissor);
-        device->SetDepthStencilSurface(nullptr);
-        device->SetRenderTarget(0, g_mask.First().surface);
-        device->SetPixelShader(maskShader);
+        SkyOverhaul::AwayFromPass away(pass);
+        pass.device->SetRenderTarget(0, g_mask.First().surface);
+        pass.device->SetPixelShader(maskShader);
         draw.ClipQuad(0.0f);
-        device->SetPixelShader(blurShader);
-        g_mask.Blur(device, draw, kAxisConstant, 1.0f / static_cast<float>(g_mask.Width()),
-                    1.0f / static_cast<float>(g_mask.Height()));
-
-        device->SetRenderTarget(0, pass.target);
-        device->SetDepthStencilSurface(pass.depth);
-        device->SetScissorRect(&scissor);
-        D3DVIEWPORT9 wholeRange = pass.viewport;
-        wholeRange.MinZ = 0.0f;
-        wholeRange.MaxZ = 1.0f;
-        device->SetViewport(&wholeRange);
+        pass.device->SetPixelShader(blurShader);
+        g_mask.Blur(pass.device, draw, kAxisConstant);
     }
 
     void Filter(IDirect3DDevice9* device, DWORD sampler) {
@@ -139,37 +122,35 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
         return;
     }
 
+    const UINT halfWidth = (pass.backBuffer.Width + 1) / 2;
+    const UINT halfHeight = (pass.backBuffer.Height + 1) / 2;
+    IDirect3DPixelShader9* maskShader = g_maskShader.Get(device);
+    IDirect3DPixelShader9* blurShader = g_blurShader.Get(device);
+    const bool masked = mirage >= kFaintest && maskShader != nullptr && blurShader != nullptr &&
+                        g_mask.Ensure(device, halfWidth, halfHeight);
+
     ScreenDraw draw(device, kFirstConstant, kAxisConstant + 1 - kFirstConstant);
     DepthConstants::Set(device, view, depth, pass.backBuffer.Width, pass.backBuffer.Height);
     float projection[2];
     SolidDepth::Projection(view, projection);
-    const float slope = v.mirageSlope * kRadiansPerDegree;
-    const UINT halfWidth = (pass.backBuffer.Width + 1) / 2;
-    const UINT halfHeight = (pass.backBuffer.Height + 1) / 2;
+    const float slope = Radians(v.mirageSlope);
     // A scope magnifies the air's bend less than the world, so the heat stays shimmer.
     g_widest = g_widest > 0.0f ? (std::min)(g_widest, view.verticalScale) : view.verticalScale;
     const float zoom = view.verticalScale / g_widest;
-    float constants[kOwnConstants * 4] = {
-        heat * v.hazeStrength * kFullBend / std::sqrt(zoom), mirage,
+    const float constants[kOwnConstants * 4] = {
+        heat * v.hazeStrength * kFullBend / std::sqrt(zoom), masked ? mirage : 0.0f,
         kStandingEye / v.mirageDistance, v.hazeHeight,
         g_seconds, zoom, v.hazeWaveWidth * kRadiansPerArcMinute * kWaveReference,
         v.hazeWaveHeight * kRadiansPerArcMinute * kWaveReference,
         projection[0], projection[1], 1.0f / static_cast<float>(halfWidth),
         1.0f / static_cast<float>(halfHeight),
         std::cos(slope), std::cos(0.5f * slope), v.mirageDistance, 2.0f * v.mirageDistance,
-        v.hazeFarStart, (std::max)(v.hazeFarEnd, v.hazeFarStart + 1.0f), v.hazeFarWobble, 0.0f};
+        v.hazeFarStart, (std::max)(v.hazeFarEnd, v.hazeFarStart + 1.0f), v.hazeFarWobble,
+        kStandingEye};
     device->SetPixelShaderConstantF(kOwnConstant, constants, kOwnConstants);
     device->SetTexture(kSolidDepthSampler, solid.texture);
-
-    IDirect3DPixelShader9* maskShader = g_maskShader.Get(device);
-    IDirect3DPixelShader9* blurShader = g_blurShader.Get(device);
-    const bool masked = mirage >= kFaintest && maskShader != nullptr && blurShader != nullptr &&
-                        g_mask.Ensure(device, halfWidth, halfHeight);
     if (masked) {
         DrawMask(pass, draw, maskShader, blurShader);
-    } else {
-        constants[kMirageStrength] = 0.0f;
-        device->SetPixelShaderConstantF(kOwnConstant, constants, 1);
     }
 
     // The world target's alpha carries brightness for the bloom.
@@ -201,4 +182,5 @@ void SkyOverhaul::Haze::ReleaseDeviceObjects() {
 void SkyOverhaul::Haze::SetEnabled(bool enabled) {
     g_enabled = enabled;
     SolidDepth::SetWanted(SolidDepth::User::Haze, enabled);
+    DomeDraw::SetWatchDepth(DomeDraw::DepthUser::Haze, enabled);
 }

@@ -6,6 +6,7 @@
 #include "engine/blur_targets.h"
 #include "engine/camera.h"
 #include "engine/depth_texture.h"
+#include "engine/dome_draw.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "engine/solid_depth.h"
@@ -70,25 +71,15 @@ namespace {
         device->SetPixelShaderConstantF(kFogConstant, fog, kFogConstants);
         device->SetTexture(kSolidDepthSampler, solid.texture);
 
-        // A half-resolution target cannot share the world's multisampled depth, and switching
-        // targets resets the scissor rectangle the engine may be counting on.
-        RECT scissor = {};
-        device->GetScissorRect(&scissor);
-        device->SetDepthStencilSurface(nullptr);
-        device->SetRenderTarget(0, g_halves.First().surface);
-        device->SetPixelShader(gtaoShader);
-        draw.ClipQuad(0.0f);
+        {
+            SkyOverhaul::AwayFromPass away(pass);
+            device->SetRenderTarget(0, g_halves.First().surface);
+            device->SetPixelShader(gtaoShader);
+            draw.ClipQuad(0.0f);
 
-        device->SetPixelShader(blurShader);
-        g_halves.Blur(device, draw, kBlurConstant, 0.0f, 0.0f);
-
-        device->SetRenderTarget(0, pass.target);
-        device->SetDepthStencilSurface(pass.depth);
-        device->SetScissorRect(&scissor);
-        D3DVIEWPORT9 wholeRange = pass.viewport;
-        wholeRange.MinZ = 0.0f;
-        wholeRange.MaxZ = 1.0f;
-        device->SetViewport(&wholeRange);
+            device->SetPixelShader(blurShader);
+            g_halves.Blur(device, draw, kBlurConstant);
+        }
 
         // Passes the depth test only where the world drew nearer than the occlusion fades out by.
         // The world target's alpha carries brightness for the bloom, so it is left alone.
@@ -133,4 +124,5 @@ void SkyOverhaul::Occlusion::ReleaseDeviceObjects() {
 void SkyOverhaul::Occlusion::SetEnabled(bool enabled) {
     g_enabled = enabled;
     SolidDepth::SetWanted(SolidDepth::User::Occlusion, enabled);
+    DomeDraw::SetWatchDepth(DomeDraw::DepthUser::Occlusion, enabled);
 }

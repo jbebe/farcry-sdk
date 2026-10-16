@@ -1,5 +1,7 @@
 #include "engine/vertex_patch.h"
 
+#include "engine/camera.h"
+
 #include <algorithm>
 #include <cstring>
 #include <iterator>
@@ -40,8 +42,10 @@ namespace {
     constexpr DWORD kZzzz = 0xAAu;
     constexpr DWORD kWwww = 0xFFu;
 
-    // The register the engine binds the camera's position to, for every shader in the frame.
-    constexpr UINT kCameraPosition = 45;
+    constexpr UINT kCameraPosition = SkyOverhaul::Camera::kPositionRegister;
+
+    // How many tokens a dp4 takes: the instruction and its three registers.
+    constexpr size_t kDp4Tokens = 4;
 
     DWORD Type(DWORD token) {
         return ((token >> 28) & 7) | ((token >> 8) & 0x18);
@@ -68,8 +72,6 @@ namespace {
     // Where a shader writes its clip position: four dp4 of one temp into o0.
     struct Scan {
         size_t afterDeclarations = 0;
-        size_t firstProjection = 0;
-        size_t afterProjection = 0;
         size_t end = 0;
         size_t projections[4] = {};
         int count = 0;
@@ -138,12 +140,8 @@ namespace {
                     if (scan.count >= 4 || (scan.count > 0 && source != scan.projected)) {
                         return false;
                     }
-                    if (scan.count == 0) {
-                        scan.firstProjection = i;
-                    }
                     scan.projected = source;
                     scan.projections[scan.count++] = i;
-                    scan.afterProjection = next;
                     if (Type(parameters[2]) == kConst && (parameters[2] & kRelative) == 0) {
                         const int row = static_cast<int>(Number(parameters[2]));
                         matrixMin = (std::min)(matrixMin, row);
@@ -192,11 +190,12 @@ std::vector<DWORD> SkyOverhaul::VertexPatch::WithPosition(const DWORD* tokens, s
                            Destination(kOutput, static_cast<UINT>(target), targetMask),
                            Source(kTemp, scan.freeTemp)};
 
+    const DWORD* afterProjection = tokens + scan.projections[3] + kDp4Tokens;
     std::vector<DWORD> patched(tokens, tokens + scan.afterDeclarations);
     patched.insert(patched.end(), declaration.begin(), declaration.end());
-    patched.insert(patched.end(), tokens + scan.afterDeclarations, tokens + scan.afterProjection);
+    patched.insert(patched.end(), tokens + scan.afterDeclarations, afterProjection);
     patched.insert(patched.end(), std::begin(copy), std::end(copy));
-    patched.insert(patched.end(), tokens + scan.afterProjection, tokens + scan.end);
+    patched.insert(patched.end(), afterProjection, tokens + scan.end);
     patched.insert(patched.end(), std::begin(write), std::end(write));
     patched.push_back(kEnd);
     return patched;
@@ -263,10 +262,10 @@ std::vector<DWORD> SkyOverhaul::VertexPatch::Flattened(const DWORD* tokens, size
     // The def goes straight after the version token, ahead of every instruction.
     std::vector<DWORD> patched(tokens, tokens + 1);
     patched.insert(patched.end(), std::begin(def), std::end(def));
-    patched.insert(patched.end(), tokens + 1, tokens + scan.firstProjection);
+    patched.insert(patched.end(), tokens + 1, tokens + scan.projections[0]);
     patched.insert(patched.end(), code.begin(), code.end());
-    const size_t offset = patched.size() - scan.firstProjection;
-    patched.insert(patched.end(), tokens + scan.firstProjection, tokens + scan.end + 1);
+    const size_t offset = patched.size() - scan.projections[0];
+    patched.insert(patched.end(), tokens + scan.projections[0], tokens + scan.end + 1);
     for (size_t projection : scan.projections) {
         DWORD& source = patched[projection + offset + 2];
         source = (source & ~kRegisterBits) | (Source(kTemp, position) & kRegisterBits);

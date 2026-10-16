@@ -7,6 +7,7 @@
 #include "engine/camera.h"
 #include "engine/cloud_layer.h"
 #include "engine/depth_texture.h"
+#include "engine/dome_draw.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "fcse_api.h"
@@ -60,32 +61,21 @@ namespace {
         device->SetPixelShaderConstantF(kFirstConstant + SkyOverhaul::DepthConstants::kCount, shade,
                                         1);
 
-        // A half-resolution target cannot share the world's multisampled depth, and switching
-        // targets resets the scissor rectangle the engine may be counting on.
-        RECT scissor = {};
-        device->GetScissorRect(&scissor);
-        device->SetDepthStencilSurface(nullptr);
-        device->SetRenderTarget(0, g_halves.First().surface);
-        device->Clear(0, nullptr, D3DCLEAR_TARGET, 0xFFFFFFFF, 1.0f, 0);
+        {
+            SkyOverhaul::AwayFromPass away(pass);
+            device->SetRenderTarget(0, g_halves.First().surface);
+            device->Clear(0, nullptr, D3DCLEAR_TARGET, 0xFFFFFFFF, 1.0f, 0);
 
-        device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_ALPHA);
-        SkyOverhaul::Clouds::DrawShadow(device);
-        device->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-        device->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-        device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
-        device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
+            device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_ALPHA);
+            SkyOverhaul::Clouds::DrawShadow(device);
+            device->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+            device->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+            device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
+            device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
 
-        device->SetPixelShader(blurShader);
-        g_halves.Blur(device, draw, kBlurConstant, 1.0f / static_cast<float>(g_halves.Width()),
-                      1.0f / static_cast<float>(g_halves.Height()));
-
-        device->SetRenderTarget(0, pass.target);
-        device->SetDepthStencilSurface(pass.depth);
-        device->SetScissorRect(&scissor);
-        D3DVIEWPORT9 wholeRange = pass.viewport;
-        wholeRange.MinZ = 0.0f;
-        wholeRange.MaxZ = 1.0f;
-        device->SetViewport(&wholeRange);
+            device->SetPixelShader(blurShader);
+            g_halves.Blur(device, draw, kBlurConstant);
+        }
 
         // The shader leaves the sky and the weapon alone, which the engine's depth holds nothing
         // for. The world target's alpha carries brightness for the bloom.
@@ -132,4 +122,5 @@ void SkyOverhaul::Shadows::ReleaseDeviceObjects() {
 
 void SkyOverhaul::Shadows::SetEnabled(bool enabled) {
     g_enabled = enabled;
+    DomeDraw::SetWatchDepth(DomeDraw::DepthUser::Shadows, enabled);
 }

@@ -24,9 +24,9 @@ public:
     void Release();
 
     // Blurs the first target across and then down, back into itself, through the bound pixel
-    // shader: each pass reads s0 and finds its axis, one texel long, in xy of `axisRegister`, with
-    // `zw` in its zw.
-    void Blur(IDirect3DDevice9* device, DrawGuard& draw, UINT axisRegister, float z, float w);
+    // shader: each pass reads s0 and finds its axis, one texel long, in xy of `axisRegister`, and
+    // one texel in texture coordinates in its zw.
+    void Blur(IDirect3DDevice9* device, DrawGuard& draw, UINT axisRegister);
 
     const Target& First() const { return m_targets[0]; }
     UINT Width() const { return m_width; }
