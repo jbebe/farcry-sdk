@@ -93,10 +93,10 @@ namespace {
         {"Horizon land fill", &kFog, offsetof(Values, horizonFill), 1.0f, 0.0f, 1.0f, "%.2f",
          "How much the gap under the horizon past the drawn world is filled with far, fogged "
          "land. Zero leaves the sky showing there."},
-        {"Horizon land fill height", &kFog, offsetof(Values, horizonFillHeight), 0.0f, -2.0f, 2.0f,
+        {"Horizon land fill height", &kFog, offsetof(Values, horizonFillHeight), 0.36f, -2.0f, 2.0f,
          "%.2f deg",
          "How far above the true horizon the filled land reaches; below it where negative."},
-        {"Horizon land fill haze", &kFog, offsetof(Values, horizonFillHaze), 0.3f, 0.0f, 1.0f,
+        {"Horizon land fill haze", &kFog, offsetof(Values, horizonFillHaze), 0.51f, 0.0f, 1.0f,
          "%.2f", "How much of the filled land is the horizon's haze rather than earth."},
 
         {"Cloud coverage", &kCloudLayer, offsetof(Values, cloudCoverage), 0.44f, 0.0f, 1.0f, "%.2f",
@@ -219,39 +219,39 @@ namespace {
         {"Grain colour", &kFilmGrain, offsetof(Values, grainColour), 0.0f, 0.0f, 1.0f, "%.2f",
          "How much each colour's grain differs from the others'. Zero is grey grain."},
 
-        {"Heat haze strength", &kHeatHaze, offsetof(Values, hazeStrength), 1.2f, 0.0f, 4.0f,
+        {"Heat haze strength", &kHeatHaze, offsetof(Values, hazeStrength), 2.05f, 0.0f, 4.0f,
          "%.2f",
          "How hard the hot air over sunlit ground pushes and smears what is seen through it. The "
          "farther off a thing is, the more air it is seen through, so the more it is pushed "
          "around, in ever finer pieces."},
-        {"Heat haze wave width", &kHeatHaze, offsetof(Values, hazeWaveWidth), 30.86f, 3.0f, 120.0f,
+        {"Heat haze wave width", &kHeatHaze, offsetof(Values, hazeWaveWidth), 50.6f, 3.0f, 120.0f,
          "%.1f arcmin",
          "How wide one wave of the shimmer looks 100 m off, unzoomed. A degree is 60. Nearer air "
          "makes wider waves, farther air finer ones."},
-        {"Heat haze wave height", &kHeatHaze, offsetof(Values, hazeWaveHeight), 2.86f, 0.5f, 20.0f,
+        {"Heat haze wave height", &kHeatHaze, offsetof(Values, hazeWaveHeight), 12.59f, 0.5f, 20.0f,
          "%.2f arcmin",
          "How tall one wave of the shimmer looks 100 m off, unzoomed. A degree is 60."},
-        {"Heat haze wave speed", &kHeatHaze, offsetof(Values, hazeWaveSpeed), 1.0f, 0.0f, 4.0f,
+        {"Heat haze wave speed", &kHeatHaze, offsetof(Values, hazeWaveSpeed), 1.09f, 0.0f, 4.0f,
          "%.2fx", "How fast the shimmer's waves drift sideways and churn."},
-        {"Heat haze height", &kHeatHaze, offsetof(Values, hazeHeight), 25.0f, 2.0f, 200.0f,
+        {"Heat haze height", &kHeatHaze, offsetof(Values, hazeHeight), 5.0f, 2.0f, 200.0f,
          "%.0f m",
          "How high over the low ground the air is still half as hot, so how far up a hill the "
          "shimmer reaches. It thins slowly above this, never all at once."},
-        {"Heat haze far start", &kHeatHaze, offsetof(Values, hazeFarStart), 150.0f, 10.0f, 1000.0f,
+        {"Heat haze far start", &kHeatHaze, offsetof(Values, hazeFarStart), 303.0f, 10.0f, 1000.0f,
          "%.0f m", "How far off the air starts to push land harder and smudge it."},
-        {"Heat haze far end", &kHeatHaze, offsetof(Values, hazeFarEnd), 450.0f, 10.0f, 1000.0f,
+        {"Heat haze far end", &kHeatHaze, offsetof(Values, hazeFarEnd), 524.0f, 10.0f, 1000.0f,
          "%.0f m", "How far off the air pushes land as hard as Heat haze far wobble says."},
-        {"Heat haze far wobble", &kHeatHaze, offsetof(Values, hazeFarWobble), 2.0f, 1.0f, 5.0f,
+        {"Heat haze far wobble", &kHeatHaze, offsetof(Values, hazeFarWobble), 1.0f, 1.0f, 5.0f,
          "%.1fx",
          "How many times harder the air pushes and smudges land at Heat haze far end, rising "
          "from Heat haze far start."},
         {"Mirage strength", &kHeatHaze, offsetof(Values, mirageStrength), 1.0f, 0.0f, 1.0f, "%.2f",
          "How much of the sky a mirage shows on bare level ground far off, seen within about a "
          "degree of it."},
-        {"Mirage ground slope", &kHeatHaze, offsetof(Values, mirageSlope), 4.0f, 0.5f, 15.0f,
+        {"Mirage ground slope", &kHeatHaze, offsetof(Values, mirageSlope), 1.0f, 0.5f, 15.0f,
          "%.1f deg",
          "The steepest ground a mirage shows on. It fades out over the last half of this angle."},
-        {"Mirage start distance", &kHeatHaze, offsetof(Values, mirageDistance), 60.0f, 10.0f,
+        {"Mirage start distance", &kHeatHaze, offsetof(Values, mirageDistance), 61.0f, 10.0f,
          500.0f, "%.0f m",
          "How far off a mirage begins on level ground, seen standing. It is whole from twice this "
          "distance, and looks down onto ground from higher up are too steep for one."},
