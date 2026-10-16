@@ -196,7 +196,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Grain", FCSE_CHOICE(1), &OnGrainChanged, nullptr, kSwitchModes, std::size(kSwitchModes)},
         {"Occlusion", FCSE_CHOICE(0), &OnOcclusionChanged, nullptr, kSwitchModes,
          std::size(kSwitchModes)},
-        {"Heat haze", FCSE_CHOICE(0), &OnHazeChanged, nullptr, kSwitchModes,
+        {"Heat haze", FCSE_CHOICE(1), &OnHazeChanged, nullptr, kSwitchModes,
          std::size(kSwitchModes)},
         {"Flatten", FCSE_CHOICE(0), &OnFlattenChanged, nullptr, kSwitchModes,
          std::size(kSwitchModes)},
