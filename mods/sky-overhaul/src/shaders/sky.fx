@@ -14,7 +14,6 @@
 // between the eye and space, which is why dawn is red and noon is blue without either being
 // written down anywhere.
 
-#include "depth.inc.fx"
 #include "hash.inc.fx"
 
 // The air, in metres. A planet, because the whole point of a horizon is that the ground curves
@@ -143,20 +142,15 @@ float4 FogColour : register(c74);
 float4 FogColourRange : register(c75);
 float4 FogColourVector : register(c76);
 
-// x: how much the land's fill shows, nought where the world drawn so far and its depth are not bound.
-// y: the sine of how far above the horizon the fill reaches, below it where negative.
+// x: how much the land's fill shows. y: the sine of how far above the horizon it reaches, below it
+// where negative. z: how far the land's fog has hidden the land at the edge of the drawn world.
 float4 Fill : register(c77);
 
-// The world drawn so far in this pass, which the fill carries up to the horizon.
-sampler2D World : register(s0);
-
-// How many doubling steps below a pixel under the horizon to look for land the world drew, from one
-// pixel down, and how far past the edge of it to take its colour, clear of the edge's softening.
-#define FILL_TAPS 8
-#define FILL_INSET 2.0f
-
-// Over how far below the horizon, as a sine, the carried land gives way to the sky's own horizon.
+// Over how far below its top, as a sine, the filled land gives way to the sky's own horizon.
 #define FILL_SOFTNESS 0.003f
+
+// How bright sunlit earth is against the fog in front of it.
+#define EARTH_BRIGHTNESS 0.7f
 
 // How far a ray from inside a sphere runs before it leaves it.
 float SphereExit(float3 origin, float3 ray, float radius) {
@@ -314,23 +308,6 @@ float3 DawnGlow(float farness, float below) {
            (DAWN_GLOW_LUMINANCE * rise * sunward * sunward * pow(below, DAWN_GLOW_FALLOFF));
 }
 
-// The colour of the first land the world drew below `screen`, if any lies within reach.
-bool LandBelow(float2 screen, out float3 land) {
-    land = 0.0f;
-    bool found = false;
-    float reach = 1.0f;
-    [unroll] for (int i = 0; i < FILL_TAPS; i++) {
-        float2 at = (screen + float2(0.5f, 0.5f + reach + FILL_INSET)) * Lens.zw;
-        float stored = Stored(at);
-        if (!found && stored > NEAREST_GEOMETRY && !IsSky(stored)) {
-            land = tex2Dlod(World, float4(at, 0.0f, 0.0f)).rgb;
-            found = true;
-        }
-        reach *= 2.0f;
-    }
-    return found;
-}
-
 float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float3 ray = normalize(rayIn);
     float2 heading = normalize(ray.xy + 0.0001f);
@@ -368,25 +345,25 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     colour += darkest * fill;
 
     colour += DawnGlow(farness, below);
+
+    // The sky is drawn only where the world drew nothing, so under the horizon it is the land past
+    // the drawn world's edge: earth, as far into the land's fog as that edge.
+    float3 landFog = FogAlong(heading);
+    float3 land = lerp(dot(landFog, LUMA) * EARTH_BRIGHTNESS * GROUND_HUE, landFog, Fill.z);
+    float filled = Fill.x * saturate((Fill.y - ray.z) / FILL_SOFTNESS);
+    colour = lerp(colour, land, filled);
     colour = lerp(colour, dot(colour, LUMA), Air.w);
 
     // Opaque by day, and at night only as much as the sky is bright, taken before the exposure as
     // the dome takes it. The dome's own alpha keeps covering the stars until the night factor is
-    // one, which hides them for hours before dawn.
+    // one, which hides them for hours before dawn. The land is opaque.
     float luminance = dot(colour, LUMA);
     float alpha = saturate(saturate(1.0f - Sun.w / STARS_FADE) + luminance * 0.5f);
+    alpha = lerp(alpha, 1.0f, filled);
 
     // Half the frames are eight bits a channel, and a sky is the one thing in a game made entirely
     // of gradients - so the last bit is broken up on purpose, which is cheaper than any number of
     // extra bits would be.
     colour += (Dither(screen) - 0.5f) / 255.0f;
-    float4 sky = float4(colour * Eye.w, alpha);
-
-    // Below the horizon, where the world ends short of it, the land it drew carries on up to it,
-    // already as far into the haze as its own edge.
-    float3 land;
-    [branch] if (Fill.x > 0.0f && ray.z < Fill.y && LandBelow(screen, land)) {
-        sky = lerp(sky, float4(land, 1.0f), Fill.x * saturate((Fill.y - ray.z) / FILL_SOFTNESS));
-    }
-    return sky;
+    return float4(colour * Eye.w, alpha);
 }
