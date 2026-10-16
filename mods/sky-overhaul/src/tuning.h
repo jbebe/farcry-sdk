@@ -98,6 +98,10 @@ struct Values {
     float rockDetailRelief;
     float rockDetailGrain;
     float rockCavity;
+
+    float flattenStart;
+    float flattenEnd;
+    float flattenStretch;
 };
 
 // What the effects draw with.

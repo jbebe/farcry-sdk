@@ -16,6 +16,7 @@
 #include "engine/known_shaders.h"
 #include "engine/screen_draw.h"
 #include "engine/solid_depth.h"
+#include "flatten.h"
 #include "foliage.h"
 #include "grade.h"
 #include "grain.h"
@@ -46,6 +47,7 @@ namespace {
         SkyOverhaul::Rocks::ReleaseDeviceObjects();
         SkyOverhaul::Grain::ReleaseDeviceObjects();
         SkyOverhaul::Haze::ReleaseDeviceObjects();
+        SkyOverhaul::Flatten::ReleaseDeviceObjects();
         SkyOverhaul::KnownShaders::Forget();
     }
 
@@ -60,6 +62,7 @@ namespace {
         SkyOverhaul::Dazzle::OnScenePass(pass);
         SkyOverhaul::Night::OnScenePass(pass);
         SkyOverhaul::SunShadows::OnScenePass(pass);
+        SkyOverhaul::Flatten::OnScenePass(pass);
     }
 
     void OnFinalPass(const SkyOverhaul::Frame::Pass& pass) {
@@ -128,6 +131,10 @@ namespace {
         WatchDepth();
     }
 
+    void __cdecl OnFlattenChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::Flatten::SetEnabled(value->asChoice == 1);
+    }
+
     void __cdecl OnGrassChanged(const FCSE_SettingValue* value, void*) {
         SkyOverhaul::Foliage::SetGrass(value->asChoice == 1);
     }
@@ -189,6 +196,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Occlusion", FCSE_CHOICE(0), &OnOcclusionChanged, nullptr, kSwitchModes,
          std::size(kSwitchModes)},
         {"Heat haze", FCSE_CHOICE(0), &OnHazeChanged, nullptr, kSwitchModes,
+         std::size(kSwitchModes)},
+        {"Flatten", FCSE_CHOICE(0), &OnFlattenChanged, nullptr, kSwitchModes,
          std::size(kSwitchModes)},
         {"Grass", FCSE_CHOICE(1), &OnGrassChanged, nullptr, kModes, std::size(kModes)},
         {"Leaves", FCSE_CHOICE(1), &OnLeavesChanged, nullptr, kModes, std::size(kModes)},

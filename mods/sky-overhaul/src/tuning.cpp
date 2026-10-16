@@ -60,10 +60,11 @@ namespace {
     constexpr Category kPostFx = {"Post FX"};
     constexpr Category kFoliage = {"Foliage"};
     constexpr Category kRock = {"Rock"};
+    constexpr Category kWorld = {"World"};
 
     // The window's tabs, in order.
-    constexpr const Category* kTabs[] = {&kSun,     &kSky,    &kClouds,  &kNight,
-                                         &kShadows, &kPostFx, &kFoliage, &kRock};
+    constexpr const Category* kTabs[] = {&kSun,    &kSky,     &kClouds, &kNight, &kShadows,
+                                         &kPostFx, &kFoliage, &kRock,   &kWorld};
 
     constexpr Group kFog = {"Fog", &kSky};
     constexpr Group kCloudLayer = {"Cloud layer", &kClouds};
@@ -81,6 +82,7 @@ namespace {
     constexpr Group kLeaves = {"Leaves", &kFoliage};
     constexpr Group kRockShading = {"Rock and cliff", &kRock};
     constexpr Group kRockDetail = {"Detail", &kRock};
+    constexpr Group kFlatten = {"Flatten distance", &kWorld};
 
     // In the order the file and the window list them.
     constexpr Parameter kParameters[] = {
@@ -292,6 +294,15 @@ namespace {
          "How much the detail map's light and dark grain shows through the rock's own colour."},
         {"Cavity", &kRockDetail, offsetof(Values, rockCavity), 0.5f, 0.0f, 1.0f, "%.2f",
          "How much the detail map's cracks darken the light rock takes from the sky."},
+
+        {"Flatten start", &kFlatten, offsetof(Values, flattenStart), 250.0f, 0.0f, 1000.0f,
+         "%.0f m", "How far off things start to be drawn flatter toward the eye's height."},
+        {"Flatten end", &kFlatten, offsetof(Values, flattenEnd), 600.0f, 10.0f, 2000.0f, "%.0f m",
+         "How far off things are drawn flattest. Past it they stay as flat as here."},
+        {"Flatten stretch", &kFlatten, offsetof(Values, flattenStretch), 3.0f, 1.0f, 10.0f,
+         "%.1fx",
+         "How many times farther off things at Flatten end look, by how far their height is "
+         "drawn toward the eye's."},
     };
 
     Values g_values = {};

@@ -83,4 +83,10 @@ struct RockDraw {
 using RockFn = bool (*)(IDirect3DDevice9* device, RockDraw& draw);
 void SetRocks(RockFn rocks);
 
+// The vertex shader to draw with in place of `bound`, asked at the engine's own draw call after
+// every effect above has chosen its shaders; null leaves `bound`. Never asked in the sky pass.
+using VertexFn = IDirect3DVertexShader9* (*)(IDirect3DDevice9* device,
+                                              IDirect3DVertexShader9* bound);
+void SetVertex(VertexFn vertex);
+
 }

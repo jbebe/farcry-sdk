@@ -68,6 +68,7 @@ namespace {
     SkyOverhaul::DomeDraw::GradeFn g_grade = nullptr;
     SkyOverhaul::DomeDraw::FoliageFn g_foliage = nullptr;
     SkyOverhaul::DomeDraw::RockFn g_rocks = nullptr;
+    SkyOverhaul::DomeDraw::VertexFn g_vertex = nullptr;
     bool g_watchDepth = false;
     SkyOverhaul::DomeDraw::Mode g_mode = SkyOverhaul::DomeDraw::Mode::Engine;
 
@@ -157,6 +158,33 @@ namespace {
         }
         using SkyOverhaul::KnownShaders::Kind;
         return SkyOverhaul::KnownShaders::Bound(device).kind == Kind::Moon;
+    }
+
+    // The engine's draw itself, through the vertex shader g_vertex picks, with the bound one put
+    // back after.
+    template <class Draw>
+    HRESULT DrawVertex(IDirect3DDevice9* device, Draw draw) {
+        if (g_vertex == nullptr) {
+            return draw();
+        }
+        D3DVIEWPORT9 viewport = {};
+        IDirect3DVertexShader9* bound = nullptr;
+        if (FAILED(device->GetViewport(&viewport)) ||
+            viewport.MinZ >= SkyOverhaul::Frame::kSkyPassMinZ ||
+            FAILED(device->GetVertexShader(&bound)) || bound == nullptr) {
+            SkyOverhaul::Release(bound);
+            return draw();
+        }
+        IDirect3DVertexShader9* ours = g_vertex(device, bound);
+        if (ours == nullptr) {
+            bound->Release();
+            return draw();
+        }
+        device->SetVertexShader(ours);
+        const HRESULT drawn = draw();
+        device->SetVertexShader(bound);
+        bound->Release();
+        return drawn;
     }
 
     // Lit foliage through our vertex shader and its registers, with the engine's put back after.
@@ -297,7 +325,9 @@ namespace {
                                           UINT startVertex, UINT primitiveCount) {
         SkyOverhaul::FogTint::BeforeDraw(device);
         return WatchShaders(device, primitiveCount, [&] {
-            return g_originalPlain(device, type, startVertex, primitiveCount);
+            return DrawVertex(device, [&] {
+                return g_originalPlain(device, type, startVertex, primitiveCount);
+            });
         });
     }
 
@@ -334,8 +364,10 @@ namespace {
             return drawn;
         }
         return WatchShaders(device, primitiveCount, [&] {
-            return g_original(device, type, baseVertexIndex, minVertexIndex, numVertices,
-                              startIndex, primitiveCount);
+            return DrawVertex(device, [&] {
+                return g_original(device, type, baseVertexIndex, minVertexIndex, numVertices,
+                                  startIndex, primitiveCount);
+            });
         });
     }
 }
@@ -383,6 +415,10 @@ void SkyOverhaul::DomeDraw::SetFoliage(FoliageFn foliage) {
 
 void SkyOverhaul::DomeDraw::SetRocks(RockFn rocks) {
     g_rocks = rocks;
+}
+
+void SkyOverhaul::DomeDraw::SetVertex(VertexFn vertex) {
+    g_vertex = vertex;
 }
 
 void SkyOverhaul::DomeDraw::SetWatchDepth(bool watch) {

@@ -122,6 +122,7 @@ add_library(SkyOverhaul SHARED
   "src/sky_overhaul.rc"
   "src/clouds.cpp"
   "src/dazzle.cpp"
+  "src/flatten.cpp"
   "src/foliage.cpp"
   "src/grade.cpp"
   "src/grain.cpp"
