@@ -16,7 +16,6 @@
 #include "tuning.h"
 
 #include "haze_blur_ps.h"
-#include "haze_down_ps.h"
 #include "haze_mask_ps.h"
 #include "haze_ps.h"
 
@@ -27,17 +26,15 @@ namespace {
     constexpr UINT kFirstConstant = SkyOverhaul::DepthConstants::kFirst;
     constexpr UINT kOwnConstant = kFirstConstant + SkyOverhaul::DepthConstants::kCount;
     constexpr UINT kOwnConstants = 5;
-    // Set per pass of a blur, after the frame's.
+    // Set per pass of the mask's blur, after the frame's.
     constexpr UINT kAxisConstant = kOwnConstant + kOwnConstants;
 
-    // Where in the frame's constants the mirage's and the far blur's strengths sit, in floats.
+    // Where in the frame's constants the mirage's strength sits, in floats.
     constexpr size_t kMirageStrength = 1;
-    constexpr size_t kFarStrength = 4 * 4 + 2;
 
     constexpr DWORD kSolidDepthSampler = 1;
     constexpr DWORD kMaskSampler = 2;
-    constexpr DWORD kBlurredSampler = 4;
-    constexpr DWORD kTurbulenceSampler = 5;
+    constexpr DWORD kTurbulenceSampler = 4;
 
     // The sun's height, as a sine, over which the ground heats up: about 15 to 45 degrees.
     constexpr float kHeatLow = 0.26f;
@@ -66,49 +63,38 @@ namespace {
     bool g_enabled = false;
     SkyOverhaul::PixelShader g_shader{"haze", g_hazePixelShader};
     SkyOverhaul::PixelShader g_maskShader{"haze mask", g_hazeMaskPixelShader};
-    SkyOverhaul::PixelShader g_downShader{"haze down", g_hazeDownPixelShader};
     SkyOverhaul::PixelShader g_blurShader{"haze blur", g_hazeBlurPixelShader};
     // Where a mirage shows, at half resolution, and the other half of its blur.
     SkyOverhaul::BlurTargets g_mask{"haze mask"};
-    // The far world at quarter resolution, in a format that keeps what is brighter than white.
-    SkyOverhaul::BlurTargets g_blurred{"haze far blur"};
     SkyOverhaul::Stopwatch g_stopwatch;
     float g_seconds = 0.0f;
     // The widest view seen, as one over the tangent of half its height: the unzoomed one.
     float g_widest = 0.0f;
 
-    void BlurFrom(IDirect3DDevice9* device, SkyOverhaul::DrawGuard& draw,
-                  SkyOverhaul::BlurTargets& targets, float spacing = 1.0f) {
-        targets.Blur(device, draw, kAxisConstant, 1.0f / static_cast<float>(targets.Width()),
-                     1.0f / static_cast<float>(targets.Height()), spacing);
-    }
-
-    // Where a mirage shows, into the mask, blurred.
-    void DrawMask(IDirect3DDevice9* device, SkyOverhaul::DrawGuard& draw,
+    // Where a mirage shows, into the mask, blurred, leaving the pass's own target, depth, scissor
+    // and depth range bound again.
+    void DrawMask(const SkyOverhaul::Frame::Pass& pass, SkyOverhaul::DrawGuard& draw,
                   IDirect3DPixelShader9* maskShader, IDirect3DPixelShader9* blurShader) {
+        IDirect3DDevice9* device = pass.device;
+        // A smaller target cannot share the world's multisampled depth, and switching targets
+        // resets the scissor rectangle the engine may be counting on.
+        RECT scissor = {};
+        device->GetScissorRect(&scissor);
+        device->SetDepthStencilSurface(nullptr);
         device->SetRenderTarget(0, g_mask.First().surface);
         device->SetPixelShader(maskShader);
         draw.ClipQuad(0.0f);
         device->SetPixelShader(blurShader);
-        BlurFrom(device, draw, g_mask);
-    }
+        g_mask.Blur(device, draw, kAxisConstant, 1.0f / static_cast<float>(g_mask.Width()),
+                    1.0f / static_cast<float>(g_mask.Height()));
 
-    // The far world from `world`, at quarter resolution, blurred `size` times as wide as one round
-    // would: further rounds at doubling spacing, the last at whatever spacing reaches it.
-    void DrawFar(IDirect3DDevice9* device, SkyOverhaul::DrawGuard& draw, IDirect3DTexture9* world,
-                 IDirect3DPixelShader9* downShader, IDirect3DPixelShader9* blurShader, float size) {
-        const float pixel[4] = {0.0f, 0.0f, 1.0f / static_cast<float>(g_blurred.Width()),
-                                1.0f / static_cast<float>(g_blurred.Height())};
-        device->SetPixelShaderConstantF(kAxisConstant, pixel, 1);
-        device->SetTexture(0, world);
-        device->SetRenderTarget(0, g_blurred.First().surface);
-        device->SetPixelShader(downShader);
-        draw.ClipQuad(0.0f);
-        device->SetPixelShader(blurShader);
-        BlurFrom(device, draw, g_blurred);
-        for (float spacing = 2.0f; spacing < 2.0f * size; spacing *= 2.0f) {
-            BlurFrom(device, draw, g_blurred, (std::min)(spacing, size));
-        }
+        device->SetRenderTarget(0, pass.target);
+        device->SetDepthStencilSurface(pass.depth);
+        device->SetScissorRect(&scissor);
+        D3DVIEWPORT9 wholeRange = pass.viewport;
+        wholeRange.MinZ = 0.0f;
+        wholeRange.MaxZ = 1.0f;
+        device->SetViewport(&wholeRange);
     }
 
     void Filter(IDirect3DDevice9* device, DWORD sampler) {
@@ -142,10 +128,7 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
     SolidDepth::SetWanted(SolidDepth::User::Haze, v.mirageStrength > 0.0f);
     SolidDepth::Found solid = {};
     const float mirage = SolidDepth::Latest(solid) ? heat * v.mirageStrength : 0.0f;
-    // Up to one the far blur covers more of the land; past one it widens instead.
-    const float farBlur = heat * (std::min)(v.hazeFarBlur, 1.0f);
-    const float farBlurSize = (std::max)(v.hazeFarBlur, 1.0f);
-    if ((std::max)({heat * v.hazeStrength, mirage, farBlur}) < kFaintest) {
+    if ((std::max)(heat * v.hazeStrength, mirage) < kFaintest) {
         return;
     }
     IDirect3DDevice9* device = pass.device;
@@ -174,44 +157,20 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
         projection[0], projection[1], 1.0f / static_cast<float>(halfWidth),
         1.0f / static_cast<float>(halfHeight),
         std::cos(slope), std::cos(0.5f * slope), v.mirageDistance, 2.0f * v.mirageDistance,
-        v.hazeBlurStart, (std::max)(v.hazeBlurEnd, v.hazeBlurStart + 1.0f), farBlur,
-        v.hazeFarWobble};
+        v.hazeFarStart, (std::max)(v.hazeFarEnd, v.hazeFarStart + 1.0f), v.hazeFarWobble, 0.0f};
     device->SetPixelShaderConstantF(kOwnConstant, constants, kOwnConstants);
     device->SetTexture(kSolidDepthSampler, solid.texture);
 
     IDirect3DPixelShader9* maskShader = g_maskShader.Get(device);
-    IDirect3DPixelShader9* downShader = g_downShader.Get(device);
     IDirect3DPixelShader9* blurShader = g_blurShader.Get(device);
     const bool masked = mirage >= kFaintest && maskShader != nullptr && blurShader != nullptr &&
                         g_mask.Ensure(device, halfWidth, halfHeight);
-    const bool blurred = farBlur >= kFaintest && downShader != nullptr && blurShader != nullptr &&
-                         g_blurred.Ensure(device, (pass.backBuffer.Width + 3) / 4,
-                                          (pass.backBuffer.Height + 3) / 4,
-                                          D3DFMT_A16B16G16R16F);
-    if (masked || blurred) {
-        // A smaller target cannot share the world's multisampled depth, and switching targets
-        // resets the scissor rectangle the engine may be counting on.
-        RECT scissor = {};
-        device->GetScissorRect(&scissor);
-        device->SetDepthStencilSurface(nullptr);
-        if (masked) {
-            DrawMask(device, draw, maskShader, blurShader);
-        }
-        if (blurred) {
-            Filter(device, 0);
-            DrawFar(device, draw, world, downShader, blurShader, farBlurSize);
-        }
-        device->SetRenderTarget(0, pass.target);
-        device->SetDepthStencilSurface(pass.depth);
-        device->SetScissorRect(&scissor);
-        D3DVIEWPORT9 wholeRange = pass.viewport;
-        wholeRange.MinZ = 0.0f;
-        wholeRange.MaxZ = 1.0f;
-        device->SetViewport(&wholeRange);
+    if (masked) {
+        DrawMask(pass, draw, maskShader, blurShader);
+    } else {
+        constants[kMirageStrength] = 0.0f;
+        device->SetPixelShaderConstantF(kOwnConstant, constants, 1);
     }
-    constants[kMirageStrength] = masked ? mirage : 0.0f;
-    constants[kFarStrength] = blurred ? farBlur : 0.0f;
-    device->SetPixelShaderConstantF(kOwnConstant, constants, kOwnConstants);
 
     // The world target's alpha carries brightness for the bloom.
     device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
@@ -220,11 +179,10 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
     device->SetPixelShader(shader);
     device->SetTexture(0, world);
     device->SetTexture(kMaskSampler, masked ? g_mask.First().texture : nullptr);
-    device->SetTexture(kBlurredSampler, blurred ? g_blurred.First().texture : nullptr);
     device->SetTexture(kTurbulenceSampler, Noise::Turbulence());
-    // The bend moves a look by fractions of a pixel, the mask and the blur are smaller, and the
-    // turbulence is a few texels a cell.
-    for (DWORD sampler : {DWORD{0}, kMaskSampler, kBlurredSampler, kTurbulenceSampler}) {
+    // The bend moves a look by fractions of a pixel, the mask is half the size, and the turbulence
+    // is a few texels a cell.
+    for (DWORD sampler : {DWORD{0}, kMaskSampler, kTurbulenceSampler}) {
         Filter(device, sampler);
     }
     for (D3DSAMPLERSTATETYPE axis : {D3DSAMP_ADDRESSU, D3DSAMP_ADDRESSV, D3DSAMP_ADDRESSW}) {
@@ -235,10 +193,8 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
 
 void SkyOverhaul::Haze::ReleaseDeviceObjects() {
     g_mask.Release();
-    g_blurred.Release();
     g_shader.Release();
     g_maskShader.Release();
-    g_downShader.Release();
     g_blurShader.Release();
 }
 

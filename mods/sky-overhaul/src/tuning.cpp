@@ -227,17 +227,14 @@ namespace {
          "%.0f m",
          "How high over the low ground the air is still half as hot, so how far up a hill the "
          "shimmer reaches. It thins slowly above this, never all at once."},
-        {"Heat haze far blur", &kHeatHaze, offsetof(Values, hazeFarBlur), 0.35f, 0.0f, 4.0f, "%.2f",
-         "How far land melts into blobs that dance with the shimmer: up to one, how much of it "
-         "melts; past one, how much wider the blobs are. Near things stay sharp."},
-        {"Heat haze blur start", &kHeatHaze, offsetof(Values, hazeBlurStart), 150.0f, 10.0f,
-         1000.0f, "%.0f m", "How far off land starts to melt into the far blur."},
-        {"Heat haze blur end", &kHeatHaze, offsetof(Values, hazeBlurEnd), 450.0f, 10.0f, 1000.0f,
-         "%.0f m", "How far off land has wholly melted into the far blur."},
+        {"Heat haze far start", &kHeatHaze, offsetof(Values, hazeFarStart), 150.0f, 10.0f, 1000.0f,
+         "%.0f m", "How far off the air starts to push land harder and smudge it."},
+        {"Heat haze far end", &kHeatHaze, offsetof(Values, hazeFarEnd), 450.0f, 10.0f, 1000.0f,
+         "%.0f m", "How far off the air pushes land as hard as Heat haze far wobble says."},
         {"Heat haze far wobble", &kHeatHaze, offsetof(Values, hazeFarWobble), 2.0f, 1.0f, 5.0f,
          "%.1fx",
-         "How many times harder the air pushes and smudges land at the far blur's end, rising "
-         "from its start."},
+         "How many times harder the air pushes and smudges land at Heat haze far end, rising "
+         "from Heat haze far start."},
         {"Mirage strength", &kHeatHaze, offsetof(Values, mirageStrength), 1.0f, 0.0f, 1.0f, "%.2f",
          "How much of the sky a mirage shows on bare level ground far off, seen within about a "
          "degree of it."},

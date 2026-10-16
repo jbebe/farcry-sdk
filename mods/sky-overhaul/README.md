@@ -51,11 +51,13 @@ collides with any other mod that edits a preset. Nothing here changes how the su
 - **The colour grade.** The final pass's saturation, per-channel powers and contrast curve drawn with
   values of our own, recognised by its shader and put back after its draw. Replaces the weather
   preset's grade in every weather. `src/grade.cpp`.
-- **Heat haze and mirage.** By day the hot air over the ground shimmers what is seen through it, by
-  as much as the look's path through the air's lowest two metres, from the engine's linear depth.
-  Flat ground seen within about a degree of level shows the sky above the horizon mirrored, the
-  inferior mirage. Both grow with the sun's height and go in a storm. Drawn at the sky pass, so
-  the bloom and the glare come after. `src/haze.cpp` and `src/shaders/haze.fx`.
+- **Heat haze and mirage.** By day the air between the eye and what it sees is three sheets of
+  drifting turbulence, and a look collects the push of every sheet it crosses, the more the nearer
+  it runs to the low ground the heat lies on. Far things are pushed harder and smudged along the
+  push, steep hilltops hardly at all. Bare level ground far off, seen at a grazing angle, shows the
+  sky mirrored, the inferior mirage, told from grass by the depth drawn without it. Both grow
+  with the sun's height and go in a storm. Drawn at the sky pass from the engine's linear depth,
+  so the bloom and the glare come after. `src/haze.cpp` and `src/shaders/haze.fx`.
 - **Film grain.** Animated grain painted over the composite after the glare, under the heads-up
   display, strongest in the mid tones and changing pattern at film's 24 a second. `src/grain.cpp`
   and `src/shaders/grain.fx`.
