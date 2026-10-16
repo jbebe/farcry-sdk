@@ -9,7 +9,8 @@
     as is every one when NEXUSMODS_API_KEY is unset.
 
 .PARAMETER Project
-    Project directories, such as mods/UFCP. Empty means every project with a description file.
+    Project directories, such as mods/UFCP. Required to update a page; with -Check, empty compares
+    every project with a description file.
 
 .PARAMETER Check
     Compares each page's text with the live one, ignoring line breaks and spacing, and says which
@@ -62,7 +63,13 @@ if (-not $key) {
 $headers = @{ apikey = $key }
 
 $projects = @($Project | Where-Object { $_ })
-if ($projects.Count -eq 0) { $projects = @(Get-PageProjects) }
+if ($projects.Count -eq 0) {
+    if (-not $Check) {
+        Write-Host '::error::Name the project whose page to update with -Project; no page was changed.'
+        exit 1
+    }
+    $projects = @(Get-PageProjects)
+}
 
 $failed = $false
 foreach ($directory in $projects) {

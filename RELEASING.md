@@ -92,8 +92,8 @@ A release also sets its Nexus Mods page's summary and description from these, so
 the version that just went out. A project without a description file keeps its page as it is.
 
 To change a page's text without a release, run Actions → **Nexus Mods pages** → **Run workflow**,
-with a project directory such as `mods/UFCP`, or empty for every page. To see first which pages
-would change:
+with the project directory, such as `mods/UFCP`. A page is only ever changed by naming its project.
+To see first which pages would change:
 
 ```powershell
 $env:NEXUSMODS_API_KEY = '<key>'; ./scripts/nexus-page.ps1 -Check

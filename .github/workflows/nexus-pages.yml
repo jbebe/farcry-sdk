@@ -1,14 +1,13 @@
 name: Nexus Mods pages
 
-# Sets mod pages' summary and description from each project's assets\ without a release, for a
+# Sets one mod page's summary and description from its project's assets\ without a release, for a
 # change to the page text alone. A release sets its own page as it goes out.
 on:
   workflow_dispatch:
     inputs:
       project:
-        description: A project directory, such as mods/UFCP. Empty sets every page.
-        required: false
-        default: ''
+        description: The project directory whose page to set, such as mods/UFCP.
+        required: true
 
 permissions:
   contents: read
