@@ -38,7 +38,7 @@ float4 Level : register(c99);
 // x  the distance at which the far world starts to blur, in metres
 // y  the distance at which it is wholly blurred
 // z  how far it blurs at the most
-// w  how long the eye gathers light from the far world for, in seconds
+// w  how many times harder the air pushes a look there than its sheets alone would
 float4 Far : register(c100);
 
 // xy  the axis of a blur pass, one pixel of its target long
@@ -74,6 +74,9 @@ static const float CHURN = 4.0f;
 // pixel takes: the air moving within that time smears what is seen through it.
 static const float EXPOSURE = 0.04f;
 #define MOMENTS 5
+
+// How far either way along its push each moment is smudged at the far blur's end, as a share of it.
+static const float SMUDGE = 0.8f;
 
 // How far below a pixel of sky to look for the land it sits over, in pixels.
 static const float SKYLINE_REACH = 12.0f;
@@ -324,10 +327,11 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
     float turn = Dither(screen);
 
     // Each moment the eye gathers sees the world pushed its own way, so what moves within one is
-    // smeared along the way it moves, and the farther off, the longer it gathers. A pixel's moments
-    // start at its own share of the exposure, so neighbours fill in each other's gaps.
+    // smeared along the way it moves. A pixel's moments start at its own share of the exposure, so
+    // neighbours fill in each other's gaps. Far off the air pushes harder, and each moment is
+    // smudged along its own push, so the smudge moves with the air rather than settling.
     float far = smoothstep(Far.x, Far.y, distance);
-    float exposure = lerp(EXPOSURE, Far.w, far);
+    float wobble = lerp(1.0f, Far.w, far);
     float3 colour = 0.0f;
     float weight = 0.0f;
     float4 blurred = 0.0f;
@@ -335,11 +339,12 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
     float2 spread = 0.0f;
     [unroll] for (int i = 0; i < MOMENTS; i++)
     {
-        float time = Time.x - exposure * (i + turn) / MOMENTS;
-        float2 push = Push(around, direction.z, distance, time).xy * toUv;
+        float time = Time.x - EXPOSURE * (i + turn) / MOMENTS;
+        float2 push = Push(around, direction.z, distance, time).xy * toUv * wobble;
         shift += push / MOMENTS;
         spread += abs(push) / MOMENTS;
-        float2 tap = uv + push;
+        float along = (i + turn) / MOMENTS * 2.0f - 1.0f;
+        float2 tap = uv + push * (1.0f + SMUDGE * far * along);
         float w = MayCover(Stored(tap), z) ? 1.0f : 0.0f;
         colour += tex2Dlod(Scene, float4(tap, 0.0f, 0.0f)).rgb * w;
         weight += w;
