@@ -5,8 +5,8 @@ bundle: gameplay
 status: located
 systems: [ai]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/enemy_archetypes/{blue,red}_faction/*_caucasian.xml#Entity/Components/CGraphicKitComponent/**"
-  - "generated/entitylibrarypatchoverride.fcb/enemy_archetypes/blue_faction/sniper_caucasian.xml#**/fDecelerationsFast"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/enemy_archetypes/{blue,red}_faction/*_caucasian.xml#Entity/Components/CGraphicKitComponent/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/enemy_archetypes/blue_faction/sniper_caucasian.xml#**/fDecelerationsFast"
 exclude: []
 requires: []
 verified: diff

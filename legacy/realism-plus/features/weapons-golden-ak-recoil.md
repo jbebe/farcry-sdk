@@ -5,7 +5,7 @@ bundle: weapons
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weapons/primary/ak47/ak47_gold.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weapons/primary/ak47/ak47_gold.xml#**"
 exclude: []
 requires: []
 verified: diff

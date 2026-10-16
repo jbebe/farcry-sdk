@@ -5,7 +5,7 @@ bundle: gameplay
 status: located
 systems: [vehicles]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/sea/**#**/BoatParams/*"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/sea/**#**/BoatParams/*"
 exclude: []
 requires: []
 verified: diff

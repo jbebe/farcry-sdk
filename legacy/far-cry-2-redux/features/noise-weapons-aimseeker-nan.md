@@ -3,7 +3,7 @@ title: MK19 aim seeker speed re-encoded as NaN
 kind: noise
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/**#**/AimSeeker/fAimSeekerAngularSpeed"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/**#**/AimSeeker/fAimSeekerAngularSpeed"
 exclude: []
 requires: []
 verified: diff

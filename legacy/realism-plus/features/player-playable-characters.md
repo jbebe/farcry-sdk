@@ -5,8 +5,8 @@ bundle: gameplay
 status: located
 systems: [player, graphics, audio]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/player/maincharacter/pawnplayer/{flora_guillen,michele_dachss,nasreen_davar}.xml#**/{CGraphicComponent,CPlayerSoundAndFXComponent}/**"
-  - "generated/entitylibrarypatchoverride.fcb/player/maincharacter/pawnplayer/anonymous_mercenary.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/player/maincharacter/pawnplayer/{flora_guillen,michele_dachss,nasreen_davar}.xml#**/{CGraphicComponent,CPlayerSoundAndFXComponent}/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/player/maincharacter/pawnplayer/anonymous_mercenary.xml"
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/PlayerService/**"
 exclude: []
 requires: [graphics-avatar-models, ui-avatar-selection]

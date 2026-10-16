@@ -4,9 +4,9 @@ kind: noise
 status: located
 systems: [world]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/oa_streetsigns/streetsigns/*/multi.xml#**"
-  - "generated/entitylibrarypatchoverride.fcb/oa_streetsigns/streetsigns/{urbanstreetsignnoparking,urbanstreetsignwalk}.xml"
-  - "generated/entitylibrarypatchoverride.fcb/oa_streetsigns/missionobjectivesigns/sehlakalasesign.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/oa_streetsigns/streetsigns/*/multi.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/oa_streetsigns/streetsigns/{urbanstreetsignnoparking,urbanstreetsignwalk}.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/oa_streetsigns/missionobjectivesigns/sehlakalasesign.xml"
 exclude: []
 requires: []
 verified: diff

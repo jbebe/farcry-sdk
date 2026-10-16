@@ -6,8 +6,8 @@ claims: []
 status: located
 systems: [ui]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/gadgets/equipped/{compasssingle,compass_vehicle}.xml#Entity/Components/CFCXCompassObjectives/MarkerBlinking/*"
-  - "generated/entitylibrarypatchoverride.fcb/gadgets/equipped/map.xml#Entity/Components/CGadget/UseStrategy/MarkerBlinking/MarkerTypes/Objective"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/gadgets/equipped/{compasssingle,compass_vehicle}.xml#Entity/Components/CFCXCompassObjectives/MarkerBlinking/*"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/gadgets/equipped/map.xml#Entity/Components/CGadget/UseStrategy/MarkerBlinking/MarkerTypes/Objective"
 exclude: []
 requires: []
 verified: diff

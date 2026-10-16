@@ -5,7 +5,7 @@ bundle: weapons
 status: located
 systems: [weapons, economy]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/special/mortar{,/mortar_merc,/persistent}.xml#**/iMaxAmmo*"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/special/mortar{,/mortar_merc,/persistent}.xml#**/iMaxAmmo*"
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/BonusService/Plan[rocketeer_satchel]/bonus[{8,9,10}]@value"
 exclude: []
 requires: []

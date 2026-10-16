@@ -6,7 +6,7 @@ status: located
 systems: [patrols, ai, missions]
 match:
   - "worlds/*/generated/entitylibrary.fcb/ghostpatrols/convoy/{convoytarget,escortvehicle}.xml#Entity/Ghost/Passengers/Passenger[*]/archPassenger"
-  - "generated/entitylibrarypatchoverride.fcb/enemy_archetypes/blue_faction/smuggler_{driver,gunner}.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/enemy_archetypes/blue_faction/smuggler_{driver,gunner}.xml"
   # outside this page's containers, claimed precisely: the kit model
   - "_hash/2899c2ea.xbg"
 exclude: []

@@ -4,7 +4,7 @@ kind: component
 status: located
 systems: [ui, vehicles]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/gadgets/equipped/compass_vehicle.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/gadgets/equipped/compass_vehicle.xml#**"
 exclude: []
 requires: []
 verified: diff

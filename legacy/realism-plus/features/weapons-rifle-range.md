@@ -5,7 +5,7 @@ bundle: weapons
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/primary/{ak47,fnfal,g3ka4,m16,mp5}{,/*}.xml#**/vectorEffectiveRange{,IS}/*"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/primary/{ak47,fnfal,g3ka4,m16,mp5}{,/*}.xml#**/vectorEffectiveRange{,IS}/*"
 exclude:
   - "**/multi.xml#**"
 requires: []

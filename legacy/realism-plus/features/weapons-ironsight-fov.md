@@ -5,11 +5,11 @@ bundle: weapons
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/**#**/fIronsightFOV"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/**#**/fIronsightFOV"
   - "downloadcontent/dlc1/generated/entitylibrary.fcb/weaponproperties/**#**/fIronsightFOV"
 exclude:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/handtohand/**"
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/dlc1/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/handtohand/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/dlc1/**"
   - "**/multi.xml#**"
 requires: []
 verified: diff

@@ -7,7 +7,7 @@ claims:
 status: located
 systems: [player, graphics, audio]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/player/maincharacter/pawnplayer/{flora_guillen,michele_dachss,nasreen_davar}.xml#**/{CGraphicComponent,CPlayerSoundAndFXComponent/PostFXSounds}/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/player/maincharacter/pawnplayer/{flora_guillen,michele_dachss,nasreen_davar}.xml#**/{CGraphicComponent,CPlayerSoundAndFXComponent/PostFXSounds}/**"
   - "_hash/{3b3efb2b,bf8b4f9a,24da6624}.xbg"
 exclude: []
 requires: [ui-avatar-selection]

@@ -5,7 +5,7 @@ bundle: gameplay
 status: located
 systems: [vehicles, player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/sea/swampboat{,/**}.xml#**/vehicleMaxLookAngle/*"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/sea/swampboat{,/**}.xml#**/vehicleMaxLookAngle/*"
 exclude: []
 requires: []
 verified: diff

@@ -6,7 +6,7 @@ claims: []
 status: located
 systems: [weapons, audio]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/primary/fnfal{,/persistent}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/primary/fnfal{,/persistent}.xml#**"
 exclude:
   - "**#**/{bAutoReload,fIronsightFOV,fIronsightTransitionTime,iAmmoInClip}"
 requires: []

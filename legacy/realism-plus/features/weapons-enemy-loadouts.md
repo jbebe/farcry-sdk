@@ -6,8 +6,8 @@ status: located
 systems: [ai, weapons]
 match:
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/WeaponsService/Properties/InventoryPacks/Pack[{assault,shotgun,sniper,RocketLauncher,Mortar,warlord}]/**"
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/special/lpo50/multi.xml#Entity/Components/**"
-  - "generated/entitylibrarypatchoverride.fcb/{weapons,weaponproperties}/primary/as50/as50_merc.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/special/lpo50/multi.xml#Entity/Components/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/{weapons,weaponproperties}/primary/as50/as50_merc.xml"
 exclude:
   - "**/Pack[*]/Gadget@archetype"
 requires: []

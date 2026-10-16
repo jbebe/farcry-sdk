@@ -7,7 +7,7 @@ claims:
 status: located
 systems: [weapons, ai]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/special/lpo50/multi.xml#Entity/Components/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/special/lpo50/multi.xml#Entity/Components/**"
 exclude: []
 requires: []
 verified: diff

@@ -5,7 +5,7 @@ bundle: weapons
 status: located
 systems: [ui, weapons]
 match:
-  - "ui/localized/*/*/ui/hud.mgb"
+  - "ui/localized/*/*/ui/hud.mgb{,/**}"
 exclude: []
 requires: [economy-bazaar-reorder]
 verified: diff

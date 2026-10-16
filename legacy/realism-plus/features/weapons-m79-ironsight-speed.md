@@ -5,7 +5,7 @@ bundle: weapons
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/secondary/m79{,/mikes_rusty}.xml#**/fMoveSpeedFactor"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/secondary/m79{,/mikes_rusty}.xml#**/fMoveSpeedFactor"
 exclude: []
 requires: []
 verified: diff

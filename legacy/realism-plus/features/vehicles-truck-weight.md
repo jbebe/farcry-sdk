@@ -5,7 +5,7 @@ bundle: gameplay
 status: located
 systems: [vehicles]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/land/bigtruck{,/**}.xml#**/WheeledParams/fMass"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/land/bigtruck{,/**}.xml#**/WheeledParams/fMass"
 exclude: []
 requires: []
 verified: diff

@@ -3,10 +3,10 @@ title: Editor-library archetypes copied into the override library
 kind: noise
 systems: [weapons, economy]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/pickups/weapons/*.xml"
-  - "generated/entitylibrarypatchoverride.fcb/pickups/weapons/*/{rusty,dropped}.xml"
-  - "generated/entitylibrarypatchoverride.fcb/pickups/weaponscrate/*.xml"
-  - "generated/entitylibrarypatchoverride.fcb/gadgets/equipped/binoculars.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/pickups/weapons/*.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/pickups/weapons/*/{rusty,dropped}.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/pickups/weaponscrate/*.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/gadgets/equipped/binoculars.xml"
 exclude: []
 requires: []
 verified: diff

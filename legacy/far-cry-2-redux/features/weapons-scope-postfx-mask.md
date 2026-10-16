@@ -3,10 +3,9 @@ title: Scope post-effect mask nearly blanked
 kind: component
 bundle: weapons
 claims: []
-status: located
+status: no-artifact
 systems: [weapons, graphics]
-match:
-  - "graphics/postfx/sniperscope.xbt"
+match: []
 exclude: []
 requires: []
 verified: diff
@@ -14,8 +13,9 @@ verified: diff
 
 # Scope post-effect mask nearly blanked
 
-The screen mask behind the sniper scope's post effect is replaced by an almost uniformly black one,
-so the effect no longer fades in around a soft oval.
+The mod replaces the sniper scope's post-effect mask with an almost uniformly black one. No engine
+code path reads that file (the reachability list marks it unreachable), so the replacement changes
+nothing in game and an import leaves it behind.
 
 ## How
 

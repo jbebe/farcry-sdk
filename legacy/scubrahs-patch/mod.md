@@ -42,9 +42,9 @@ Outposts" v1.0`.
 
 ## Coverage
 
-`legacy check` is clean: all 25,433 changes are claimed by exactly one page, and all 99 lines of the
+`legacy check` is clean: all 25,243 changes are claimed by exactly one page, and all 99 lines of the
 published list are covered. 135 pages: 112 components, 6 shared pieces, 7 bundles, 10 noise rules.
-590 changes edit archetype copies a later library overrides, so the game never reads them; the pages
+100 changes edit archetype copies a later library overrides, so the game never reads them; the pages
 say which.
 
 - **109 components are located**, 12 of them traced in `Dunia.dll` (`verified: re`), with Steam and

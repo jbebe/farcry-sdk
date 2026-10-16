@@ -5,8 +5,8 @@ bundle: weapons
 status: located
 systems: [weapons, economy]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/secondary/{makarov,silencedmakarov_6p9,star45,deserteagle}{,/persistent}.xml#**"
-  - "generated/entitylibrarypatchoverride.fcb/weapons/secondary/deserteagle.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/secondary/{makarov,silencedmakarov_6p9,star45,deserteagle}{,/persistent}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weapons/secondary/deserteagle.xml#**"
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/BonusService/Plan[pistol_belt]/**"
 exclude:
   - "**#**/fIronsightFOV"

@@ -5,7 +5,7 @@ bundle: gameplay
 status: located
 systems: [player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/curves/playersicknesscurves/stamina{sprint,jump}drain.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/curves/playersicknesscurves/stamina{sprint,jump}drain.xml#**"
 exclude: []
 requires: []
 verified: diff

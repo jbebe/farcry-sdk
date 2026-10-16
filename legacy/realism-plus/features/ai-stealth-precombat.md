@@ -5,7 +5,7 @@ bundle: gameplay
 status: located
 systems: [ai]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/enemy_archetypes/**#**/FOVMultipliers/*"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/enemy_archetypes/**#**/FOVMultipliers/*"
 exclude: []
 requires: []
 verified: diff

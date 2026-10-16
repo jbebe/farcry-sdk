@@ -6,7 +6,7 @@ claims: []
 status: located
 systems: [player, graphics]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/player/maincharacter/pawnplayer/*.xml#**/PickupLight/fIntensity"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/player/maincharacter/pawnplayer/*.xml#**/PickupLight/fIntensity"
 exclude: []
 requires: []
 verified: diff

@@ -4,7 +4,7 @@ kind: noise
 status: located
 systems: [vehicles]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/land/dlc_vehicle{1,2}_dlc1{,/**}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/land/dlc_vehicle{1,2}_dlc1{,/**}.xml#**"
 exclude: []
 requires: []
 verified: diff
@@ -12,7 +12,8 @@ verified: diff
 
 # Dead copies of the world library's DLC vehicle placeholders
 
-1,161 dead changes that do nothing in game.
+1,161 dead changes that do nothing in game. The import now leaves copies of DLC archetypes behind,
+so this page claims none.
 
 The world libraries declare `Land.DLC_Vehicle1_DLC1` and `Land.DLC_Vehicle2_DLC1` as placeholders
 built on other vehicles (`datsun.xbg` and the Datsun's engine for the quad, `rover.xbg` and the Land

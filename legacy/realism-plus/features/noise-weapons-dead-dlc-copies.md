@@ -3,7 +3,7 @@ title: Dead copies of the DLC weapons in the override library
 kind: noise
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/dlc1/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/dlc1/**"
 exclude: []
 requires: []
 verified: diff
@@ -12,7 +12,8 @@ verified: diff
 # Dead copies of the DLC weapons in the override library
 
 194 edits that do nothing: the game reads the DLC library after the override library, so its own
-declarations of these three archetypes win.
+declarations of these three archetypes win. The import now leaves such copies behind, so this page
+claims none.
 
 ## How
 

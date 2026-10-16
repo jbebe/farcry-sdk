@@ -6,7 +6,7 @@ claims: []
 status: located
 systems: [weapons, ai]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/handtohand/**#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/handtohand/**#**"
 exclude:
   - "**#**/{fIronsightFOV,disEntityId}"
 requires: []

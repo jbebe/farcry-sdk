@@ -4,9 +4,9 @@ kind: noise
 status: located
 systems: [ai, buddies, vehicles]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/enemy_archetypes/{merctest/*,missions/missionbriefingtest,blue_faction/carlgustaf_caucasian,red_faction/carlgustaf_caucasian,red_faction/carlgustaf_nubian,red_faction/mortarman_caucasian,red_faction/mortarman_nubian,red_faction/sniper_caucasian}.xml"
-  - "generated/entitylibrarypatchoverride.fcb/buddies/**"
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/{air/paraglider/paraglider_lv1,air/paraglider/paraglider_lv2,air/paraglider/paraglider_lv4,land/bigtruck/tanker,land/bigtruck_tanker,land/rover/brokenrover,land/rover/stuckrover,lookcurves/lookpov_leftright,lookcurves/lookpov_updown,sea/fishingboat/m2_mounted,sea/fishingboat/mk19_mounted}.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/enemy_archetypes/{merctest/*,missions/missionbriefingtest,blue_faction/carlgustaf_caucasian,red_faction/carlgustaf_caucasian,red_faction/carlgustaf_nubian,red_faction/mortarman_caucasian,red_faction/mortarman_nubian,red_faction/sniper_caucasian}.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/buddies/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/{air/paraglider/paraglider_lv1,air/paraglider/paraglider_lv2,air/paraglider/paraglider_lv4,land/bigtruck/tanker,land/bigtruck_tanker,land/rover/brokenrover,land/rover/stuckrover,lookcurves/lookpov_leftright,lookcurves/lookpov_updown,sea/fishingboat/m2_mounted,sea/fishingboat/mk19_mounted}.xml"
 exclude: []
 requires: []
 verified: diff

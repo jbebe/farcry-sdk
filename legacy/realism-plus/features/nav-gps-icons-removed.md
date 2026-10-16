@@ -5,7 +5,7 @@ bundle: navigation
 status: located
 systems: [ui, player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/gadgets/objectiveicons/{compassobjective,compassobjective_veh,compasssubvertante,compasssubvertante_veh,compassundergroundobjective,compassundergroundobjective_veh,guardpost_locked,missionarrowgps,missionarrowgps_veh,partnermissionobjective_gps,partnermissionobjective_gps_veh,playerposition,safehouse_locked_gps,safehouse_locked_gps_veh,safehouse_unlocked_gps,safehouse_unlocked_gps_veh,subvertarrowgps,subvertarrowgps_veh,undergroundarrowgps,undergroundarrowgps_veh}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/gadgets/objectiveicons/{compassobjective,compassobjective_veh,compasssubvertante,compasssubvertante_veh,compassundergroundobjective,compassundergroundobjective_veh,guardpost_locked,missionarrowgps,missionarrowgps_veh,partnermissionobjective_gps,partnermissionobjective_gps_veh,playerposition,safehouse_locked_gps,safehouse_locked_gps_veh,safehouse_unlocked_gps,safehouse_unlocked_gps_veh,subvertarrowgps,subvertarrowgps_veh,undergroundarrowgps,undergroundarrowgps_veh}.xml#**"
 exclude: []
 requires: []
 verified: diff

@@ -13,7 +13,8 @@ verified: diff
 # Static objects' descriptors wrapped in extra rml elements by the mod's converter
 
 Not an edit, 110 changes: a by-product of the two Pala sectors the mod rewrote for
-`world-pala-guard-posts-removed`.
+`world-pala-guard-posts-removed`. The import now strips the extra elements, so they no longer show
+as changes and this page claims none.
 
 In `levels/w1_c_3` sectors 2756 and 3315, every `StaticObject_*` and `VisualObject_*` the mod
 keeps - 47 in sector 2756, 8 in 3315, all of the sectors' surviving entities that carry one -

@@ -4,11 +4,11 @@ kind: noise
 status: located
 systems: [vehicles]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/**#Entity/disEntityId"
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/**#Entity/Components/CGraphicComponent/bIntelHackGliderOn"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/**#Entity/disEntityId"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/**#Entity/Components/CGraphicComponent/bIntelHackGliderOn"
 exclude:
   # the dead placeholder copies of the DLC vehicles
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/land/dlc_vehicle{1,2}_dlc1{,/**}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/land/dlc_vehicle{1,2}_dlc1{,/**}.xml#**"
 requires: []
 verified: diff
 ---

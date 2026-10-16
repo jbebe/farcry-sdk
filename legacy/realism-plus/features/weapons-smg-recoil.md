@@ -5,7 +5,7 @@ bundle: weapons
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weapons/secondary/{mac10,uzi}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weapons/secondary/{mac10,uzi}.xml#**"
 exclude: []
 requires: []
 verified: diff

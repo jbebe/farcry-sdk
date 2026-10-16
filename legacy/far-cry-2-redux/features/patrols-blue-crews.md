@@ -5,7 +5,7 @@ bundle: gameplay
 status: located
 systems: [patrols, ai]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/ghostpatrols/{convoy/escortvehicle,missionspecific/copkiller,patrols/datsun,patrols/jeepliberty,patrols/rover/mk19_mounted,patrols/swampboat/m2_mounted}.xml#Entity/Ghost/Passengers/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/ghostpatrols/{convoy/escortvehicle,missionspecific/copkiller,patrols/datsun,patrols/jeepliberty,patrols/rover/mk19_mounted,patrols/swampboat/m2_mounted}.xml#Entity/Ghost/Passengers/**"
 exclude: []
 requires: []
 verified: diff

@@ -97,7 +97,7 @@ any of them to be analysed as its own folder:
 
 ## Coverage
 
-`legacy check` is clean: all 18,636 changes are claimed by exactly one page, and all 6 published
+`legacy check` is clean: all 18,056 changes are claimed by exactly one page, and all 6 published
 lines are covered. 134 pages: 114 components, 2 shared pieces, 8 bundles, 10 noise rules.
 
 - **The engine (`verified: re`):** all nine `Dunia.dll` patches are traced in Ghidra, eight
@@ -106,8 +106,9 @@ lines are covered. 134 pages: 114 components, 2 shared pieces, 8 bundles, 10 noi
     edit that renames the widgets it fills ([`ui-upgrades-page-blank`](features/ui-upgrades-page-blank.md)).
     The sawed-off shotgun is moved onto a spare HUD icon slot
     ([`weapons-sawedoff-hud-icon`](features/weapons-sawedoff-hud-icon.md)).
-- **Dead edits:** 1,355 changes edit archetype copies the game never reads. All of them are on two
-  noise pages: placeholder DLC vehicles and DLC weapon stubs copied into the override library.
+- **Dead edits:** none left. The mod's 1,355 edits to copies the game never reads, placeholder DLC
+  vehicles and DLC weapon stubs in the override library, are left behind by the import; their two
+  noise pages claim nothing.
 - **One no-artifact page:** the machete unlock lives in a registry file, outside the game files.
 - **Already in this repo:** the Jackal tapes, predecessor tapes and machetes (UFCP), the mouse cap
   and frame cap (UFCP options), and the rim light and grade (Sky Overhaul).

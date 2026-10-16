@@ -6,7 +6,7 @@ claims: []
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/primary/ithaca.xml#**/CommonProperties/{fRange,IronSight/fLookSensitivityFactor,IronSight/fIronsightPrepareDelay}"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/primary/ithaca.xml#**/CommonProperties/{fRange,IronSight/fLookSensitivityFactor,IronSight/fIronsightPrepareDelay}"
   - "downloadcontent/dlc1/generated/entitylibrary.fcb/weaponproperties/dlc1/{silencedshotgun,sawedoffshotgun}{,/multi}.xml#**/{iMaxAmmoInfamous,iBulletsShot,ammoAmmoType,text_ammoAmmoType}"
 exclude: []
 requires: []

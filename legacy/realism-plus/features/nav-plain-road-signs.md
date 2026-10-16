@@ -5,7 +5,7 @@ bundle: navigation
 status: located
 systems: [ui, world, missions]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/oa_streetsigns/{missionobjectivesigns,missionobjectivesignssafehouse}/*.xml#Entity/Components/CRoadSign/Colors/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/oa_streetsigns/{missionobjectivesigns,missionobjectivesignssafehouse}/*.xml#Entity/Components/CRoadSign/Colors/**"
 exclude: []
 requires: []
 verified: diff

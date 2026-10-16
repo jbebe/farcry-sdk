@@ -5,11 +5,11 @@ bundle: gameplay
 status: located
 systems: [vehicles]
 match:
-  - "{generated/entitylibrarypatchoverride.fcb,downloadcontent/dlc1/generated/entitylibrary.fcb}/vehicle/**#**/WheeledParams/{fEnginePower,fExtraClimbEnginePower,fGearBoxTopSpeed}"
-  - "{generated/entitylibrarypatchoverride.fcb,downloadcontent/dlc1/generated/entitylibrary.fcb}/vehicle/**#**/Sound/GearEmulation/**"
+  - "{generated/entitylibrarypatchoverride.fcb,worlds/world?/generated/entitylibrary.fcb,downloadcontent/dlc1/generated/entitylibrary.fcb}/vehicle/**#**/WheeledParams/{fEnginePower,fExtraClimbEnginePower,fGearBoxTopSpeed}"
+  - "{generated/entitylibrarypatchoverride.fcb,worlds/world?/generated/entitylibrary.fcb,downloadcontent/dlc1/generated/entitylibrary.fcb}/vehicle/**#**/Sound/GearEmulation/**"
 exclude:
   # the dead placeholder copies of the DLC vehicles
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/land/dlc_vehicle{1,2}_dlc1{,/**}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/land/dlc_vehicle{1,2}_dlc1{,/**}.xml#**"
 requires: []
 verified: diff
 ---

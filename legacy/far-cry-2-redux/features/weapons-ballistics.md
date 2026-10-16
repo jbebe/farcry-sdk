@@ -6,12 +6,12 @@ claims: []
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/primary/as50.xml#**/ImpactStims/**"
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/secondary/deserteagle.xml#**/ImpactStims/**"
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/secondary/silencedmakarov_6p9.xml#**/CommonProperties/{bIsSilent,fRange,iClipsForSelfDestruct}"
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/secondary/mac10.xml#**/CommonProperties/fRange"
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/special/dart_rifle.xml#**/CommonProperties/fRange"
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/special/dart_rifle.xml#**/Ammo/iMaxAmmo*"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/primary/as50.xml#**/ImpactStims/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/secondary/deserteagle.xml#**/ImpactStims/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/secondary/silencedmakarov_6p9.xml#**/CommonProperties/{bIsSilent,fRange,iClipsForSelfDestruct}"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/secondary/mac10.xml#**/CommonProperties/fRange"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/special/dart_rifle.xml#**/CommonProperties/fRange"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/special/dart_rifle.xml#**/Ammo/iMaxAmmo*"
 exclude: []
 requires: []
 verified: diff

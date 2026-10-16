@@ -6,7 +6,7 @@ claims: []
 status: located
 systems: [player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/gadgets/equipped/monocular.xml#**/Zoom/fFOV"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/gadgets/equipped/monocular.xml#**/Zoom/fFOV"
 exclude: []
 requires: []
 verified: diff

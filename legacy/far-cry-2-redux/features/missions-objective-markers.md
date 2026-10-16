@@ -5,7 +5,7 @@ bundle: navigation
 status: located
 systems: [missions, ui]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/domino/objectives/*.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/domino/objectives/*.xml#**"
 exclude: []
 requires: []
 verified: diff

@@ -5,7 +5,7 @@ bundle: improved-graphics
 status: located
 systems: [graphics, player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/cameras/**#**/fFarDistance"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/cameras/**#**/fFarDistance"
   - "worlds/*/generated/world*.game.xml/_environment.xml#Camera@ViewDistance"
 exclude: []
 requires: []

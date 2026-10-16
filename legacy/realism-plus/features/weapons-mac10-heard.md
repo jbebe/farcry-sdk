@@ -5,7 +5,7 @@ bundle: weapons
 status: located
 systems: [weapons, ai]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/secondary/mac10{,/mikes_rusty}.xml#**/MuzzleStims/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/secondary/mac10{,/mikes_rusty}.xml#**/MuzzleStims/**"
 exclude: []
 requires: []
 verified: diff

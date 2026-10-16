@@ -6,7 +6,7 @@ claims: []
 status: located
 systems: [weapons, ai]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/primary/mp5{,/mikes_rusty,/persistent}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/primary/mp5{,/mikes_rusty,/persistent}.xml#**"
 exclude:
   - "**#**/{bAutoReload,fIronsightFOV,fIronsightTransitionTime}"
 requires: []

@@ -5,7 +5,7 @@ bundle: gameplay
 status: located
 systems: [player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/player/**#**/fMaxTerrainSlope"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/player/**#**/fMaxTerrainSlope"
 exclude: []
 requires: []
 verified: diff

@@ -41,8 +41,10 @@ neither is a nested RML value re-encoded with the same content.
 
 A sector layout is compared with where the base game already places each entity, so a layer the mod
 restates whole only yields the entities it really moves. An archetype a mod copies into another
-library (typically the patch override library) is compared with the declaration it overrides, so a
-copy made to change two values yields two changes, not one new unit.
+library is compared with the declaration it overrides, so a copy made to change two values yields
+two changes, not one new unit. A copy in the patch override of a world-library archetype is
+addressed in `worlds/world1` and `worlds/world2`, where a modern mod edits it; a copy of a DLC
+archetype, and any file the game never reads (`assets/fc2.unused.tsv`), is left out.
 
 A change to an archetype that a later library declares again carries `shadowedBy`: it edits a copy
 the game never reads. It still belongs to the feature that made it, and that page says it is dead.

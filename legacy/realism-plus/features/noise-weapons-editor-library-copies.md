@@ -3,16 +3,16 @@ title: Editor-library archetypes copied into the override library
 kind: noise
 systems: [weapons, economy]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/pickups/weapons/*.xml"
-  - "generated/entitylibrarypatchoverride.fcb/pickups/weapons/*/{rusty,dropped}.xml"
-  - "generated/entitylibrarypatchoverride.fcb/pickups/weaponscrate/*.xml"
-  - "generated/entitylibrarypatchoverride.fcb/weapons/**/{persistent,mikes_rusty,ai}.xml"
-  - "generated/entitylibrarypatchoverride.fcb/weapons/special/{m2,mk19}.xml"
-  - "generated/entitylibrarypatchoverride.fcb/weapons/explosives/ied_base.xml"
-  - "generated/entitylibrarypatchoverride.fcb/weapons/grenades/unstablem67.xml"
-  - "generated/entitylibrarypatchoverride.fcb/gadgets/equipped/binoculars.xml"
-  - "generated/entitylibrarypatchoverride.fcb/oa_explosives/explosives/{explodingcar_prefab,explodingtruck_prefab,kiln_thinpropanetank_missionobjective}.xml"
-  - "generated/entitylibrarypatchoverride.fcb/oa_missionpickups/missionpickups/{6vbattery,carvertape_gm00_old,diamondcanister,fieldmanualmnt,fieldmanualopt,test,ziplocdiamonds}.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/pickups/weapons/*.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/pickups/weapons/*/{rusty,dropped}.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/pickups/weaponscrate/*.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weapons/**/{persistent,mikes_rusty,ai}.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weapons/special/{m2,mk19}.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weapons/explosives/ied_base.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weapons/grenades/unstablem67.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/gadgets/equipped/binoculars.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/oa_explosives/explosives/{explodingcar_prefab,explodingtruck_prefab,kiln_thinpropanetank_missionobjective}.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/oa_missionpickups/missionpickups/{6vbattery,carvertape_gm00_old,diamondcanister,fieldmanualmnt,fieldmanualopt,test,ziplocdiamonds}.xml"
 exclude: []
 requires: []
 verified: diff

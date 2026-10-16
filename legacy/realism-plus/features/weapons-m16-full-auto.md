@@ -5,7 +5,7 @@ bundle: weapons
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/primary/m16{,/persistent}.xml#**/{iBurstLength,fAmplitude}"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/primary/m16{,/persistent}.xml#**/{iBurstLength,fAmplitude}"
 exclude: []
 requires: []
 verified: diff

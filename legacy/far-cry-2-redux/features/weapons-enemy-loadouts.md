@@ -7,9 +7,9 @@ status: located
 systems: [ai, weapons]
 match:
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/WeaponsService/Properties/InventoryPacks/Pack[{assault,shotgun,RocketLauncher,Mortar,sniper,warlord}]/**"
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/primary/m16/multi.xml#Entity/Components/CWeaponProperties/FireStrategyProperties/{fAngleYawBulletSpread,fAnglePitchBulletSpread}"
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/primary/m16/multi.xml#Entity/Components/CWeaponProperties/FireStrategyProperties/RangeMultipliers/**"
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/primary/m16/multi.xml#Entity/Components/CWeaponProperties/FireStrategyProperties/FirstPerson/fBulletSpread_MinimumSpreadPercentage"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/primary/m16/multi.xml#Entity/Components/CWeaponProperties/FireStrategyProperties/{fAngleYawBulletSpread,fAnglePitchBulletSpread}"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/primary/m16/multi.xml#Entity/Components/CWeaponProperties/FireStrategyProperties/RangeMultipliers/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/primary/m16/multi.xml#Entity/Components/CWeaponProperties/FireStrategyProperties/FirstPerson/fBulletSpread_MinimumSpreadPercentage"
 exclude: []
 requires: []
 verified: diff

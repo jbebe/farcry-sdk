@@ -5,7 +5,7 @@ bundle: gameplay
 status: located
 systems: [weapons, player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/handtohand/*.xml#**/IronSight/{bCanIronsight,fMoveSpeedFactor,fIronsightFOV}"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/handtohand/*.xml#**/IronSight/{bCanIronsight,fMoveSpeedFactor,fIronsightFOV}"
 exclude: []
 requires: []
 verified: diff

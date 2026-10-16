@@ -5,7 +5,7 @@ bundle: gameplay
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/handtohand/*.xml#**/Stim_ImpactDamage/nLevel"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/handtohand/*.xml#**/Stim_ImpactDamage/nLevel"
 exclude: []
 requires: []
 verified: diff

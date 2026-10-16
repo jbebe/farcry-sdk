@@ -5,7 +5,7 @@ bundle: gameplay
 status: located
 systems: [economy]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/oa_missionpickups/missionpickups/diamondbriefcase_lvl*.xml#**/nDiamonds"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/oa_missionpickups/missionpickups/diamondbriefcase_lvl*.xml#**/nDiamonds"
 exclude: []
 requires: []
 verified: diff

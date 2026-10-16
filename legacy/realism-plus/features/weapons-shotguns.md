@@ -5,7 +5,7 @@ bundle: weapons
 status: located
 systems: [weapons, economy]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/primary/{ithaca,spas12,usas12}{,/persistent}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/primary/{ithaca,spas12,usas12}{,/persistent}.xml#**"
   - "downloadcontent/dlc1/generated/entitylibrary.fcb/weaponproperties/dlc1/silencedshotgun.xml#**"
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/BonusService/Plan[shotgun_bandolier]/bonus[{4,5,6,7}]@value"
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/BonusService/Plan[shotgun_bandolier]/bonus[{+12,+13,+14,+15}]"

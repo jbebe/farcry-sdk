@@ -6,7 +6,7 @@ claims: []
 status: located
 systems: [player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/player/maincharacter/pawnplayer{,/*}.xml#**/CharacterParams/{fMaxSlope,fMaxTerrainSlope}"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/player/maincharacter/pawnplayer{,/*}.xml#**/CharacterParams/{fMaxSlope,fMaxTerrainSlope}"
 exclude: []
 requires: []
 verified: diff

@@ -5,7 +5,7 @@ bundle: weapons
 status: located
 systems: [weapons, economy]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/special/lpo50{,/persistent}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/special/lpo50{,/persistent}.xml#**"
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/BonusService/Plan[{lpo50_oper_manual,lpo50_repair_manual}]@object"
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/BonusService/Plan[pyrotechnic_satchel]/**"
 exclude:

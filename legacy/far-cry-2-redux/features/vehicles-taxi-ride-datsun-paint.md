@@ -5,7 +5,7 @@ bundle: graphics
 status: located
 systems: [vehicles, graphics]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/land/datsun/scripteddatsun.xml#Entity/Components/CVehicle/{fDirtFactor,selVehicleColor}"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/land/datsun/scripteddatsun.xml#Entity/Components/CVehicle/{fDirtFactor,selVehicleColor}"
 exclude: []
 requires: []
 verified: diff

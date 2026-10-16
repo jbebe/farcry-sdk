@@ -4,8 +4,8 @@ kind: noise
 status: located
 systems: [patrols, missions]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/ghostpatrols/patrols/{fishingboat,fishingboat/m2_mounted,fishingboat/mk19_mounted}.xml"
-  - "generated/entitylibrarypatchoverride.fcb/domino/{objectives/objectivepoint_todelete,objectives/pgp,objectives/randomencounterobjective_todelete,objectivestest/test1,objectivestest/test2}.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/ghostpatrols/patrols/{fishingboat,fishingboat/m2_mounted,fishingboat/mk19_mounted}.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/domino/{objectives/objectivepoint_todelete,objectives/pgp,objectives/randomencounterobjective_todelete,objectivestest/test1,objectivestest/test2}.xml"
 exclude: []
 requires: []
 verified: diff

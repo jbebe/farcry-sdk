@@ -5,7 +5,7 @@ bundle: weapons
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/**/persistent.xml#**/fForcedReliability"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/**/persistent.xml#**/fForcedReliability"
 exclude: []
 requires: []
 verified: diff

@@ -5,7 +5,7 @@ bundle: gameplay
 status: located
 systems: [patrols, vehicles]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/ghostpatrols/**#Entity/Ghost/archVehicle"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/ghostpatrols/**#Entity/Ghost/archVehicle"
 exclude: []
 requires: []
 verified: diff

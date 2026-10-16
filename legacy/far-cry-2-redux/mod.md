@@ -58,7 +58,7 @@ published lines are claimed by the component pages directly, so the bundles carr
 
 ## Coverage
 
-`legacy check` is clean: all 6,359 changes are claimed by exactly one page, and all 28 published
+`legacy check` is clean: all 5,154 changes are claimed by exactly one page, and all 28 published
 lines are covered. 122 pages: 104 components, 8 bundles, 10 noise rules.
 
 - **The readme gets a few things wrong:**
@@ -71,9 +71,11 @@ lines are covered. 122 pages: 104 components, 8 bundles, 10 noise rules.
     ([`weapons-scope-fov`](features/weapons-scope-fov.md)).
   - "Reverted default machete" and the boot-instability fix have no change behind them
     ([`graphics-frame-cap`](features/graphics-frame-cap.md), partial).
-- **Dead edits:** 1,154 changes edit archetype copies the game never reads, all on
-  [`noise-world-dlc-placeholder-copies`](features/noise-world-dlc-placeholder-copies.md). The mod
-  even retuned those copies.
+- **Dead edits:** none left. The mod's 1,154 edits to copies of the DLC vehicle placeholders, which
+  the game never reads, are left behind by the import
+  ([`noise-world-dlc-placeholder-copies`](features/noise-world-dlc-placeholder-copies.md)), as is
+  its scope mask, which no engine code reads
+  ([`weapons-scope-postfx-mask`](features/weapons-scope-postfx-mask.md), no-artifact).
 - **Blanking by corruption:** several GPS icon models are replaced by a deliberately unparseable
   file, and the women's models by copies with their head materials renamed
   ([`nav-no-gps-safehouses`](features/nav-no-gps-safehouses.md),

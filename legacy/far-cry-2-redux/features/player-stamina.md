@@ -6,7 +6,7 @@ claims: []
 status: located
 systems: [player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/curves/playersicknesscurves/stamina{highdrain,jumpdrain,sprintdrain}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/curves/playersicknesscurves/stamina{highdrain,jumpdrain,sprintdrain}.xml#**"
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/DefaultCountersService/StaminaDesertDrainFilters/**"
 exclude: []
 requires: []

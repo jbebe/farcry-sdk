@@ -6,7 +6,7 @@ claims: []
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/special/lpo50{,/persistent}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/special/lpo50{,/persistent}.xml#**"
 exclude:
   - "**#**/{bAutoReload,fIronsightFOV,fIronsightTransitionTime}"
 requires: []

@@ -4,7 +4,7 @@ kind: component
 status: located
 systems: [weapons, world]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/oa_explosives/explosives/explosivebarrel_new.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/oa_explosives/explosives/explosivebarrel_new.xml#**"
 exclude: []
 requires: []
 verified: diff

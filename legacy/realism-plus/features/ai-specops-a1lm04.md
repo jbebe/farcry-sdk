@@ -5,7 +5,7 @@ bundle: gameplay
 status: located
 systems: [ai, missions, weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/enemy_archetypes/special/*.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/enemy_archetypes/special/*.xml#**"
   - "levels/w1_d_4/generated/worldsectors/worldsector1500.data.fcb/red_faction.sniper_nubian_0.*.xml#**"
   # outside this page's containers, claimed precisely: the three packs and the kit model
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/WeaponsService/Properties/InventoryPacks/Pack[specops*]"

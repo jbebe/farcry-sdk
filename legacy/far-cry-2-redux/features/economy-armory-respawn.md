@@ -6,7 +6,7 @@ claims: []
 status: located
 systems: [economy, weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/pickups/weapons/*/{weaponstorage,storageroom}.xml#**/fRespawnTime"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/pickups/weapons/*/{weaponstorage,storageroom}.xml#**/fRespawnTime"
 exclude: []
 requires: []
 verified: diff

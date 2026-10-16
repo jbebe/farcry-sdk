@@ -5,7 +5,7 @@ bundle: fixes
 status: located
 systems: [vehicles]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/air/paraglider{,/**}.xml#**/{fDiscardedMass,fUnderWaterMaxDepth}"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/air/paraglider{,/**}.xml#**/{fDiscardedMass,fUnderWaterMaxDepth}"
 exclude: []
 requires: []
 verified: diff

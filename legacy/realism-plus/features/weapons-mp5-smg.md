@@ -5,7 +5,7 @@ bundle: weapons
 status: located
 systems: [weapons, economy]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/primary/mp5{,/mikes_rusty,/persistent}.xml#**/{ammoAmmoType,text_ammoAmmoType}"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/primary/mp5{,/mikes_rusty,/persistent}.xml#**/{ammoAmmoType,text_ammoAmmoType}"
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/BonusService/Plan[{light_assault_webbing,assault_webbing}]/**"
 exclude: []
 requires: []

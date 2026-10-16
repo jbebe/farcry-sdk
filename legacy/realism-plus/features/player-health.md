@@ -4,7 +4,7 @@ kind: component
 status: located
 systems: [player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/curves/playersicknesscurves/health{max,barsize}_*.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/curves/playersicknesscurves/health{max,barsize}_*.xml#**"
 exclude: []
 requires: []
 verified: diff

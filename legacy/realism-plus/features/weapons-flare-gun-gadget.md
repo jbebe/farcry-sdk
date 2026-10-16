@@ -5,7 +5,7 @@ bundle: weapons
 status: located
 systems: [weapons, input]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/special/flare_gun.xml#**/selCategory"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/special/flare_gun.xml#**/selCategory"
 exclude: []
 requires: []
 verified: diff

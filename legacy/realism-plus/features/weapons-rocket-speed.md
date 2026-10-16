@@ -5,7 +5,7 @@ bundle: weapons
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weapons/rockets/{rpg7rocket,carlgustafrocket}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weapons/rockets/{rpg7rocket,carlgustafrocket}.xml#**"
 exclude: []
 requires: []
 verified: diff

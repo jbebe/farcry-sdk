@@ -6,7 +6,7 @@ claims: []
 status: located
 systems: [player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/player/maincharacter/pawnplayer{,/*}.xml#**/CPawn/Body/fWalkingMaxSpeed"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/player/maincharacter/pawnplayer{,/*}.xml#**/CPawn/Body/fWalkingMaxSpeed"
 exclude: []
 requires: []
 verified: diff

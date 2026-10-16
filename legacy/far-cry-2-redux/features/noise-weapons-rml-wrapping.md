@@ -3,7 +3,7 @@ title: Nested descriptors wrapped in extra rml layers
 kind: noise
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/{pickups,weapons,pile_archetypes}/**#**/{hidDescriptor,WeaponStatusSwitchValues}/{hidDescriptor,WeaponStatusSwitchValues,rml}"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/{pickups,weapons,pile_archetypes}/**#**/{hidDescriptor,WeaponStatusSwitchValues}/{hidDescriptor,WeaponStatusSwitchValues,rml}"
   - "downloadcontent/dlc1/generated/entitylibrary.fcb/**#**/WeaponStatusSwitchValues/{WeaponStatusSwitchValues,rml}"
 exclude: []
 requires: []
@@ -13,7 +13,8 @@ verified: diff
 # Nested descriptors wrapped in extra rml layers
 
 504 changes, 252 pairs of a removed and an added nested value, that are the same content re-encoded:
-the mod's export tool wrapped each nested RML value in one or more extra `<rml>` elements.
+the mod's export tool wrapped each nested RML value in one or more extra `<rml>` elements. The
+import now strips the extra elements, so they no longer show as changes and this page claims none.
 
 ## How
 

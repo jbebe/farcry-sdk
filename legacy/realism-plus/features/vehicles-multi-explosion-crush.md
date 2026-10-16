@@ -4,10 +4,10 @@ kind: component
 status: located
 systems: [vehicles]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/**#**/EngineExplosion/*"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/**#**/EngineExplosion/*"
 exclude:
   # the dead placeholder copies of the DLC vehicles
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/land/dlc_vehicle{1,2}_dlc1{,/**}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/land/dlc_vehicle{1,2}_dlc1{,/**}.xml#**"
 requires: []
 verified: diff
 ---

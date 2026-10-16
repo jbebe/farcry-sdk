@@ -5,7 +5,7 @@ bundle: gameplay
 status: located
 systems: [ai, missions]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/enemy_archetypes/missions/assassination_target.xml#**/bIsInvincibleExceptToPlayer"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/enemy_archetypes/missions/assassination_target.xml#**/bIsInvincibleExceptToPlayer"
 exclude: []
 requires: []
 verified: diff

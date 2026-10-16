@@ -7,7 +7,7 @@ status: located
 systems: [weapons, player]
 match:
   - "**/weaponproperties/**#**/CommonProperties/bAutoReload"
-  - "generated/entitylibrarypatchoverride.fcb/player/maincharacter/pawnplayer{,/*}.xml#**/CPawn/Inventory/bAutoReload"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/player/maincharacter/pawnplayer{,/*}.xml#**/CPawn/Inventory/bAutoReload"
 exclude: []
 requires: []
 verified: diff

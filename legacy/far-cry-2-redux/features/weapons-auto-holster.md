@@ -7,7 +7,7 @@ claims:
 status: located
 systems: [weapons, player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/player/maincharacter/pawnplayer{,/*}.xml#**/CPawn/Inventory/bAutoDraw"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/player/maincharacter/pawnplayer{,/*}.xml#**/CPawn/Inventory/bAutoDraw"
 exclude: []
 requires: []
 verified: diff

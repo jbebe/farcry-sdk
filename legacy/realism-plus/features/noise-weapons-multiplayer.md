@@ -3,15 +3,15 @@ title: Multiplayer archetypes the mod's library differs in
 kind: noise
 systems: [weapons, player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/{weaponproperties,weapons,pickups,gadgets,oa_explosives}/**/multi{,_apr,_ufll}.xml#**"
-  - "generated/entitylibrarypatchoverride.fcb/pickups/**/multi/*.xml#**"
-  - "generated/entitylibrarypatchoverride.fcb/player/maincharacter/pawnplayernetwork*.xml"
-  - "generated/entitylibrarypatchoverride.fcb/player/maincharacter/pawnplayernetworkkit/**"
-  - "generated/entitylibrarypatchoverride.fcb/gadgets/equipped/compassmulti.xml"
-  - "generated/entitylibrarypatchoverride.fcb/curves/stimeffectcurves/crushdamagemp.xml{,#**}"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/{weaponproperties,weapons,pickups,gadgets,oa_explosives}/**/multi{,_apr,_ufll}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/pickups/**/multi/*.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/player/maincharacter/pawnplayernetwork*.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/player/maincharacter/pawnplayernetworkkit/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/gadgets/equipped/compassmulti.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/curves/stimeffectcurves/crushdamagemp.xml{,#**}"
 exclude:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/special/lpo50/multi.xml#Entity/Components/**"
-  - "generated/entitylibrarypatchoverride.fcb/gadgets/objectiveicons/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/special/lpo50/multi.xml#Entity/Components/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/gadgets/objectiveicons/**"
 requires: []
 verified: diff
 ---

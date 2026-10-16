@@ -5,8 +5,8 @@ bundle: gameplay
 status: located
 systems: [player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/curves/locomotion/sprint.xml#**"
-  - "generated/entitylibrarypatchoverride.fcb/player/**#**/fSprintingTurnModifier"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/curves/locomotion/sprint.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/player/**#**/fSprintingTurnModifier"
 exclude: []
 requires: []
 verified: diff

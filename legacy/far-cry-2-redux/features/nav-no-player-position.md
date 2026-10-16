@@ -7,7 +7,7 @@ claims:
 status: located
 systems: [ui, player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/gadgets/equipped/map.xml#Entity/Components/CGadget/UseStrategy/{archPlayerMarker,fMarkerPlayerZ}"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/gadgets/equipped/map.xml#Entity/Components/CGadget/UseStrategy/{archPlayerMarker,fMarkerPlayerZ}"
 exclude: []
 requires: []
 verified: diff

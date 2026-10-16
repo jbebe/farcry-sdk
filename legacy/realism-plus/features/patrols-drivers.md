@@ -4,7 +4,7 @@ kind: shared
 status: located
 systems: [patrols, ai, weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/enemy_archetypes/{blue,red}_faction/patrol_driver.xml"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/enemy_archetypes/{blue,red}_faction/patrol_driver.xml"
 exclude: []
 requires: [weapons-new-enemy-packs]
 verified: diff

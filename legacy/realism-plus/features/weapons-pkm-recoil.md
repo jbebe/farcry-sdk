@@ -5,8 +5,8 @@ bundle: weapons
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weapons/special/pkm{,/pkm_merc}.xml#**"
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/special/pkm{,/mikes_rusty,/pkm_merc}.xml#**/iRecoilRecoveryLevel"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weapons/special/pkm{,/pkm_merc}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/special/pkm{,/mikes_rusty,/pkm_merc}.xml#**/iRecoilRecoveryLevel"
 exclude: []
 requires: []
 verified: diff

@@ -8,7 +8,7 @@ match:
   - "**/entitylibrary*.fcb/vehicle/land/jeepliberty{,/**}.xml#**/Parts/Part[{EFBFBD2EEFBFBD00,00FD2EFC}]"
   - "worlds/*/generated/*.managers.fcb/firemanager.*#hidStimEffects/StimEffects[*]/{Name,Name@type}"
   - "worlds/*/generated/*.managers.fcb/firemanager.*#hidStimEffects/StimEffects[{00C21052,5210EFBFBD00}]"
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/handtohand/machete_*.xml#Entity/disEntityId"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/handtohand/machete_*.xml#Entity/disEntityId"
 exclude: []
 requires: []
 verified: diff

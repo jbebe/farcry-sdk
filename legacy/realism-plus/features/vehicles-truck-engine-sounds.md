@@ -5,7 +5,7 @@ bundle: fixes
 status: located
 systems: [audio, vehicles]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/land/bigtruck{,/**}.xml#**/Sound/snd*"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/land/bigtruck{,/**}.xml#**/Sound/snd*"
 exclude: []
 requires: []
 verified: diff

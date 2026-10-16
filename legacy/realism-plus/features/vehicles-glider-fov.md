@@ -5,7 +5,7 @@ bundle: fixes
 status: located
 systems: [vehicles, graphics]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/air/paraglider{,/**}.xml#**/FOV/fFOVAngle"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/air/paraglider{,/**}.xml#**/FOV/fFOVAngle"
 exclude: []
 requires: []
 verified: diff

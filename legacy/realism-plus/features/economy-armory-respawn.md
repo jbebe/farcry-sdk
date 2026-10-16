@@ -4,7 +4,7 @@ kind: component
 status: located
 systems: [economy, weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/pickups/weapons/*/{weaponstorage,storageroom}.xml#**/fRespawnTime"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/pickups/weapons/*/{weaponstorage,storageroom}.xml#**/fRespawnTime"
   - "downloadcontent/dlc1/generated/entitylibrary.fcb/dlc1weapons/dlc1/pickup_*.xml#**/fRespawnTime"
 exclude: []
 requires: []

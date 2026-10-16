@@ -6,8 +6,8 @@ claims: []
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/primary/m16{,/persistent,/multi}.xml#**/FireStrategyProperties/iBurstLength"
-  - "generated/entitylibrarypatchoverride.fcb/weaponproperties/primary/m16.xml#**/CommonProperties/sDisplayName"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/primary/m16{,/persistent,/multi}.xml#**/FireStrategyProperties/iBurstLength"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/weaponproperties/primary/m16.xml#**/CommonProperties/sDisplayName"
 exclude: []
 requires: []
 verified: diff

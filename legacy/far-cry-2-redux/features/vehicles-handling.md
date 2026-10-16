@@ -5,11 +5,11 @@ bundle: gameplay
 status: located
 systems: [vehicles]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/land/**#**/CVehicleWheeledPhysComponent/**"
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/land/**#**/Sound/GearEmulation/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/land/**#**/CVehicleWheeledPhysComponent/**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/land/**#**/Sound/GearEmulation/**"
 exclude:
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/land/bigtruck{,/**}.xml#**"
-  - "generated/entitylibrarypatchoverride.fcb/vehicle/land/dlc_vehicle{1,2}_dlc1{,/**}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/land/bigtruck{,/**}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/vehicle/land/dlc_vehicle{1,2}_dlc1{,/**}.xml#**"
 requires: []
 verified: diff
 ---

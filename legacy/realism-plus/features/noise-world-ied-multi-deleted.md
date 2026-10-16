@@ -4,7 +4,7 @@ kind: noise
 status: located
 systems: [weapons]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/_layout.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/_layout.xml#**"
 exclude: []
 requires: []
 verified: diff

@@ -5,7 +5,7 @@ bundle: gameplay
 status: located
 systems: [player]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/player/**#**/{fJumpHeight,fJumpHeightExhausted}"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/player/**#**/{fJumpHeight,fJumpHeightExhausted}"
   - "engine/gamemodes/gamemodesconfig.xml#GameModeProperties/DefaultCountersService/JumpDamage@*"
 exclude: []
 requires: []

@@ -5,7 +5,7 @@ bundle: navigation
 status: located
 systems: [ui]
 match:
-  - "generated/entitylibrarypatchoverride.fcb/gadgets/objectiveicons/{missionarrow,subvertarrow,undergroundarrow}.xml#**"
+  - "{generated/entitylibrarypatchoverride,worlds/world?/generated/entitylibrary}.fcb/gadgets/objectiveicons/{missionarrow,subvertarrow,undergroundarrow}.xml#**"
 exclude: []
 requires: []
 verified: diff
