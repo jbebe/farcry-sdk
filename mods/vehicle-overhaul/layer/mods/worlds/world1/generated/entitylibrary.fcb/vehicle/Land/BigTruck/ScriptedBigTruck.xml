@@ -2900,6 +2900,11 @@
             <value name="fDirtFactor" type="Float">0</value>
             <value name="nVehicleColor" type="UInt32">0</value>
           </object>
+          <object type="CFCSEDataComponent">
+            <object type="VehicleOverhaul.Vehicle">
+              <value name="String" type="String">ZIL-130</value>
+            </object>
+          </object>
         </object>
       </object>
     </object>

@@ -379,7 +379,7 @@ Chassis ChassisOf(Car car) {
     const uint8_t* wheelData = Elements(data, kDataWheels);
     const uint8_t* wheelInfo = Elements(vehicle, kVehicleWheelsInfo);
 
-    Chassis chassis{Mass(vehicle), At<float>(car, kCarRetailEnginePower)};
+    Chassis chassis{};
     std::copy_n(&At<float>(body, kChassisLocalCentreOfMass), 3, chassis.centreOfMass);
 
     const int wheels = WheelCount(car);

@@ -11,8 +11,6 @@
 #include "real_vehicle.h"
 #include "tuning.h"
 
-#include "fcse_api.h"
-
 #include <algorithm>
 #include <cstdint>
 #include <limits>
@@ -72,8 +70,8 @@ namespace {
     // Kept by the physics step, shown by the window.
     VehicleOverhaul::Physics::Status g_status{};
 
-    Retail Capture(Car car, const RealVehicle::Spec* real, const Parts& parts, const Chassis& chassis) {
-        Retail retail{car, parts.vehicle, real, *parts.climbPower, *parts.downforce, *parts.spinDamping};
+    Retail Capture(Car car, const Parts& parts, const Chassis& chassis) {
+        Retail retail{car, parts.vehicle, nullptr, *parts.climbPower, *parts.downforce, *parts.spinDamping};
         std::copy_n(parts.chassisResponse, 3, retail.chassisResponse);
         std::copy_n(parts.inverseInertia, 3, retail.inverseInertia);
         retail.lockTime = *parts.lockTime;
@@ -200,7 +198,7 @@ namespace {
         }
 
         const Chassis chassis = VehicleOverhaul::Wheeled::ChassisOf(car);
-        const RealVehicle::Spec* real = RealVehicle::Match(chassis.mass, chassis.enginePower);
+        const RealVehicle::Spec* real = car == player ? RealVehicle::OfPlayer(car) : g_retail.real;
         const VehicleOverhaul::Tuning::Values tuning = VehicleOverhaul::Tuning::Current(real);
         const bool wanted = car == player && tuning.enabled;
         const RealVehicle::Spec* beams = wanted && tuning.solidAxles ? real : nullptr;
@@ -229,13 +227,10 @@ namespace {
             if (!wanted) {
                 return;
             }
-            g_retail = Capture(car, real, parts, chassis);
-            if (real == nullptr) {
-                FCSE::Logf("physics: a %.0f kg car with %.0f N m is not one the overhaul knows; its centre of "
-                           "mass stays the game's",
-                           chassis.mass, chassis.enginePower);
-            }
+            g_retail = Capture(car, parts, chassis);
         }
+        // The game thread names the car a step or two after the player gets in.
+        g_retail.real = real;
 
         if (wanted) {
             Write(parts, tuning, redline);

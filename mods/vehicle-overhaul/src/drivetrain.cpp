@@ -77,9 +77,9 @@ namespace {
     }
 
     void Tick(void* pawn, float*) {
-        g_vehicle = VehicleOverhaul::Wheeled::Player() != nullptr
-                        ? VehicleOverhaul::Entity::Of(VehicleOverhaul::Vehicle::Current(pawn))
-                        : nullptr;
+        const VehicleOverhaul::Wheeled::Car car = VehicleOverhaul::Wheeled::Player();
+        g_vehicle = car != nullptr ? VehicleOverhaul::Entity::Of(VehicleOverhaul::Vehicle::Current(pawn)) : nullptr;
+        VehicleOverhaul::RealVehicle::Follow(car, g_vehicle);
         if (g_vehicle == nullptr) {
             g_car = nullptr;
         }
@@ -109,9 +109,9 @@ float Step(Car car, const RealVehicle::Spec* real, const Wheeled::Readout& reado
     const float redline = RedlineOf(real);
     const Tuning::Values tuning = Tuning::Current(real);
     g_heard = tuning.enabled && tuning.realEngine;
+    g_shiftSound = real != nullptr ? real->shiftSound : 0;
     if (car != g_car) {
         g_car = car;
-        g_shiftSound = real != nullptr ? real->shiftSound : 0;
         g_gear = readout.gear;
         g_shiftTime = 0.0f;
         g_pendingShift = 0;

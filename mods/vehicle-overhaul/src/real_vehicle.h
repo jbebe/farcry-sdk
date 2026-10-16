@@ -1,4 +1,4 @@
-// The real vehicles the game's cars depict, told apart by their retail mass and engine.
+// The real vehicles the game's cars depict, named by their archetypes' entity data.
 #pragma once
 
 #include "engine/wheeled.h"
@@ -15,9 +15,8 @@ struct Start {
 };
 
 struct Spec {
-    float mass;
-    float enginePower;
-    // Also its section in the tuning file, so renaming it drops what was tuned for it.
+    // Also its section in the tuning file and the name its archetypes' entity data gives, so renaming it
+    // drops what was tuned for it and needs the layer's fragments rewritten.
     const char* name;
     // The static stability factor: half the track over the centre of mass's height. kAtTheAxles puts
     // the weight at the wheels' centres instead.
@@ -45,9 +44,13 @@ struct Spec {
 
 constexpr float kAtTheAxles = 0.0f;
 
-// The vehicle of All() a car of `mass` and retail `enginePower` depicts, or null for one the overhaul
-// does not know.
-const Spec* Match(float mass, float enginePower);
+// Names the vehicle the player's `car` depicts from its `entity`'s data, on the game thread; both are
+// null while the player drives nothing.
+void Follow(Wheeled::Car car, void* entity);
+
+// The vehicle the player's `car` depicts, or null for one the overhaul does not know or has yet to name.
+// Any thread.
+const Spec* OfPlayer(Wheeled::Car car);
 
 // Every vehicle the overhaul knows.
 std::span<const Spec> All();

@@ -132,9 +132,6 @@ Readout ReadoutOf(Car car);
 
 // The chassis as Havok holds it, in chassis space: x right, y forward, z up.
 struct Chassis {
-    float mass;
-    // The engine's retail peak torque.
-    float enginePower;
     float centreOfMass[3];
     // The height of the wheels' contact with the ground, and of their centres, at their present travel.
     float ground;

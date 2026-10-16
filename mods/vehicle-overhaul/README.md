@@ -137,7 +137,7 @@ src\                         the FCSE plugin
   axles.cpp                  the solid axles: springs, dampers and leaning wheels
   drivetrain.cpp             the engine's revs and gear changes, for the sound and rev counter
   gearbox.cpp                when the car changes gear, as in Far Cry 3
-  real_vehicle.cpp           the real vehicles the cars depict
+  real_vehicle.cpp           the real vehicles the cars depict, named by their archetypes' entity data
   tuning.cpp                 the values, their file and the window
   sounds.cpp                 the window's Sounds tab
   lights.cpp                 the car lights, put together
@@ -154,10 +154,14 @@ layer\mods\
   soundbinary\               the Datsun's, the big truck's and the Unimog's engine and start sounds,
                              the truck's engine-off sound, the gear-change clunks; their pedal sounds and idles
                              silenced; every car's quieter tyre sounds
-  worlds\                    the big truck's archetypes in each world's entity library, which name its
-                             engine-off sound
+  worlds\, downloadcontent\  every single-player car's archetypes, which name the real vehicle each depicts
+                             in a VehicleOverhaul.Vehicle entity data key, and the big truck's its engine-off
+                             sound
 layer\plugins\vehicle-overhaul\   the built plugin, staged here by build.ps1
+data\fragments.py            writes the vehicle keys into the archetype fragments
 ```
+
+A car is known by that key, not by its mass or engine, so a mod that retunes the cars keeps them known.
 
 Needs FCSE 1.4.0 or later. The control sections need JackAll 1.3.0 or later.
 
