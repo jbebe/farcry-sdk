@@ -19,6 +19,7 @@ struct Values {
     float cloudWind;
 
     float duskFogBrightness;
+    float horizonFill;
 
     float glareStrength;
     float glareSpread;

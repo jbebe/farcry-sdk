@@ -184,10 +184,11 @@ namespace {
         SkyOverhaul::DrawGuard guard(device, kFirstConstant, kGuardedCount);
         SamplerGuard worldSampler(device, kWorldSampler);
         SamplerGuard depthSampler(device, SkyOverhaul::DepthConstants::kSampler);
-        if (BindFill(device, view)) {
+        const float fill = SkyOverhaul::Tuning::Current().horizonFill;
+        if (fill > 0.0f && BindFill(device, view)) {
             worldSampler.Point();
             depthSampler.Point();
-            constants[(kConstantCount - 1) * 4] = 1.0f;
+            constants[(kConstantCount - 1) * 4] = fill;
         }
         device->SetPixelShader(shader);
         device->SetPixelShaderConstantF(kFirstConstant, constants, kConstantCount);

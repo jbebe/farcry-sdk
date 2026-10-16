@@ -143,7 +143,7 @@ float4 FogColour : register(c74);
 float4 FogColourRange : register(c75);
 float4 FogColourVector : register(c76);
 
-// x: one where the world drawn so far and its depth are bound for the land's fill, nought where not.
+// x: how much the land's fill shows, nought where the world drawn so far and its depth are not bound.
 float4 Fill : register(c77);
 
 // The world drawn so far in this pass, which the fill carries up to the horizon.
@@ -372,13 +372,6 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // Opaque by day, and at night only as much as the sky is bright, taken before the exposure as
     // the dome takes it. The dome's own alpha keeps covering the stars until the night factor is
     // one, which hides them for hours before dawn.
-    // Below the horizon, where the world ends short of it, the land it drew carries on up to it,
-    // already as far into the haze as its own edge.
-    float3 land;
-    [branch] if (Fill.x > 0.0f && ray.z < 0.0f && LandBelow(screen, land)) {
-        return float4(lerp(colour * Eye.w, land, saturate(-ray.z / FILL_SOFTNESS)), 1.0f);
-    }
-
     float luminance = dot(colour, LUMA);
     float alpha = saturate(saturate(1.0f - Sun.w / STARS_FADE) + luminance * 0.5f);
 
@@ -386,6 +379,13 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // of gradients - so the last bit is broken up on purpose, which is cheaper than any number of
     // extra bits would be.
     colour += (Dither(screen) - 0.5f) / 255.0f;
+    float4 sky = float4(colour * Eye.w, alpha);
 
-    return float4(colour * Eye.w, alpha);
+    // Below the horizon, where the world ends short of it, the land it drew carries on up to it,
+    // already as far into the haze as its own edge.
+    float3 land;
+    [branch] if (Fill.x > 0.0f && ray.z < 0.0f && LandBelow(screen, land)) {
+        sky = lerp(sky, float4(land, 1.0f), Fill.x * saturate(-ray.z / FILL_SOFTNESS));
+    }
+    return sky;
 }

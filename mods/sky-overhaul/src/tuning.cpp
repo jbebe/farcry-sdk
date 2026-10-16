@@ -90,6 +90,9 @@ namespace {
          "%.2f",
          "How bright the fog over the land is kept once the sun is down, against the engine's. "
          "The land then lies in the earth's shadow, and only the sky above it still glows."},
+        {"Horizon land fill", &kFog, offsetof(Values, horizonFill), 1.0f, 0.0f, 1.0f, "%.2f",
+         "How much of the land drawn just below a gap under the horizon is carried up to fill it. "
+         "Zero leaves the sky showing there."},
 
         {"Cloud coverage", &kCloudLayer, offsetof(Values, cloudCoverage), 0.44f, 0.0f, 1.0f, "%.2f",
          "How much of the sky the layer fills."},
