@@ -14,7 +14,8 @@ public sealed record RealVehicle(
 
     public static readonly RealVehicle[] All =
     [
-        new("Land Rover Series III", 1600, 95, Tuning: new Dictionary<string, float> { ["Top speed"] = 1.2f, ["Springs"] = 1.0f }),
+        new("Land Rover Series III", 1600, 95, 525, 4000, null, 0.8f,
+            new Dictionary<string, float> { ["Top speed"] = 1.2f, ["Springs"] = 1.0f }),
         new("Datsun 1200", 1000, 90, 750, 6500, ShiftClunks, 0.816f, new Dictionary<string, float>
         {
             ["Engine power"] = 0.8f, ["Shift time"] = 0.5f, ["Downshift time"] = 0.5f, ["Steering at speed"] = 1.0f,

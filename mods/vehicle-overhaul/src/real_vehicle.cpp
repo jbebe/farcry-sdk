@@ -57,7 +57,9 @@ namespace {
     constexpr float kZilGears[] = {7.45f, 4.10f, 2.29f, 1.47f, 1.00f};
 
     constexpr Spec kVehicles[] = {
-        {"Land Rover Series III", 1, 0.90f, 0.0f, 0.0f, 0, 0.0f, {kRoverSprings, kRoverSprings},
+        // Its four's low idle and its start take's catch, from the takes, and a redline of 4,000, where an old 2.25 makes
+        // its power: the engine is spared revs past it (2026-10-17).
+        {"Land Rover Series III", 1, 0.90f, 525.0f, 4000.0f, 0, 0.8f, {kRoverSprings, kRoverSprings},
          kRoverTuning},
         // 54% on the front axle, a small front-engined car's; the game's put it so far forward that the rear hopped
         // about (2026-10-12).
