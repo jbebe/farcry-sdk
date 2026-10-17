@@ -51,20 +51,22 @@ public sealed class Drivetrain
         HavokStandIn.MinRpm + (rpm - Idle) * (HavokStandIn.UpshiftRpm - HavokStandIn.MinRpm) / (Redline - Idle);
 
     /// <summary>Moves the revs on; returns a gear change due to be heard now, +1 up or -1 down, else 0.</summary>
-    public int Step(float havokRpm, int gear, float clutchLeft, float throttle, float seconds)
+    public int Step(float havokRpm, int gear, float clutchLeft, float speed, float throttle, float seconds)
     {
         int heard = 0;
         _sinceEntry += seconds;
         Caught = _catchTime > 0 ? Math.Clamp((_sinceEntry - _catchTime) / CatchFade, 0, 1) : 1;
         _sinceShift += seconds;
-        if (gear != _gear)
+        // First put in at a stand has no clutch out, and is not heard.
+        bool selected = clutchLeft == 0 && speed < HavokStandIn.StandingSpeed;
+        if (gear != _gear && !selected)
         {
             _pendingShift = gear > _gear ? 1 : -1;
             // The stand-in changed gear this step, so none of its clutch time has gone yet.
             _shiftTime = clutchLeft;
             _sinceShift = 0;
-            _gear = gear;
         }
+        _gear = gear;
         if (_pendingShift != 0 && _sinceShift >= 0.5f * _shiftTime)
         {
             heard = _pendingShift;

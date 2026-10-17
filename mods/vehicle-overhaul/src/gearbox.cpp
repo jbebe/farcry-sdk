@@ -5,9 +5,6 @@
 #include <cmath>
 
 namespace {
-    // Below this speed a change up is not weighed: the revs come from spinning wheels.
-    constexpr float kMinUpshiftSpeed = 1.0f;
-
     void Change(const VehicleOverhaul::Wheeled::Parts& parts, int gear, float clutchTime) {
         *parts.gear = static_cast<int8_t>(gear);
         *parts.clutchOut = 1;
@@ -19,7 +16,13 @@ namespace VehicleOverhaul::Gearbox {
 
 void Step(const Wheeled::Parts& parts, const Wheeled::Readout& readout, const Shifts& shifts, float rolling,
           bool grounded) {
-    if (*parts.clutchOut != 0 || *parts.reversing != 0) {
+    if (*parts.clutchOut != 0) {
+        return;
+    }
+    // A car stopped in a higher gear, or held there by reversing, would pull away in it and change down on
+    // the move.
+    if (*parts.reversing != 0 || readout.speed < kStanding) {
+        *parts.gear = 0;
         return;
     }
     const float rpm = std::abs(readout.rpm);
@@ -28,7 +31,7 @@ void Step(const Wheeled::Parts& parts, const Wheeled::Readout& readout, const Sh
         Change(parts, gear - 1, shifts.downshiftTime);
         return;
     }
-    if (rpm <= shifts.upshift || gear + 1 >= *parts.gearCount || !grounded || readout.speed < kMinUpshiftSpeed) {
+    if (rpm <= shifts.upshift || gear + 1 >= *parts.gearCount || !grounded) {
         return;
     }
     const float slowed = (readout.gravityAlong - rolling) * shifts.upshiftTime;

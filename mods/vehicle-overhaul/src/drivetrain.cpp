@@ -11,6 +11,7 @@
 #include "engine/pawn_tick.h"
 #include "engine/vehicle.h"
 #include "engine/vehicle_sound.h"
+#include "gearbox.h"
 #include "tuning.h"
 
 #include <algorithm>
@@ -123,13 +124,15 @@ float Step(Car car, const RealVehicle::Spec* real, const Wheeled::Readout& reado
     const float catchTime = real != nullptr ? real->catchTime : 0.0f;
     g_caught = catchTime > 0.0f ? std::clamp((g_sinceEntry - catchTime) / kCatchFade, 0.0f, 1.0f) : 1.0f;
     g_sinceShift += seconds;
-    if (readout.gear != g_gear) {
+    // First put in at a stand has no clutch out, and is not heard.
+    const bool selected = readout.clutchLeft == 0.0f && readout.speed < Gearbox::kStanding;
+    if (readout.gear != g_gear && !selected) {
         g_pendingShift = readout.gear > g_gear ? 1 : -1;
         // The change came a step ago, which Havok has counted off its clutch time.
         g_shiftTime = readout.clutchLeft + seconds;
         g_sinceShift = 0.0f;
-        g_gear = readout.gear;
     }
+    g_gear = readout.gear;
     if (g_pendingShift != 0 && g_sinceShift >= 0.5f * g_shiftTime) {
         g_shift = g_pendingShift;
         g_pendingShift = 0;

@@ -12,8 +12,8 @@ public sealed class HavokStandIn
 {
     public const float MinRpm = 1000, OptRpm = 5500, MaxRpm = 7500, UpshiftRpm = 6500, DownshiftRpm = 3500;
 
-    /// <summary>Below this speed, in m/s, a change up is not weighed.</summary>
-    private const float MinUpshiftSpeed = 1;
+    /// <summary>Below this speed, in m/s, the car stands: it is in first, and no change up is weighed.</summary>
+    public const float StandingSpeed = 1;
 
     private const float WheelRadius = 0.4f, Gravity = 9.81f, MetresPerSecondPerMph = 0.44704f;
     private const float GroundFriction = 0.8f, TyreFriction = 3.0f, RollResist = 0.1f;
@@ -75,11 +75,16 @@ public sealed class HavokStandIn
         }
         else if (!holdGear)
         {
-            if (Rpm < _downshiftRpm && Gear > 0)
+            if (Speed < StandingSpeed)
+            {
+                Gear = 0;
+                Rpm = WheelRpm(Gear);
+            }
+            else if (Rpm < _downshiftRpm && Gear > 0)
             {
                 Shift(-1, _downshiftTime);
             }
-            else if (Rpm > UpshiftRpm && Gear < _gears.Length - 1 && Speed >= MinUpshiftSpeed &&
+            else if (Rpm > UpshiftRpm && Gear < _gears.Length - 1 &&
                      Rpm * _gears[Gear + 1] / _gears[Gear] * Math.Max(0, 1 - _rolling * clutchTime / Speed) > _downshiftRpm)
             {
                 Shift(+1, clutchTime);
