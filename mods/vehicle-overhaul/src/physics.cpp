@@ -241,7 +241,7 @@ namespace {
                 tuning.shiftTime, tuning.downshiftTime};
             VehicleOverhaul::Gearbox::Step(parts, readout, shifts,
                                            kGroundRollResist * tuning.rollingResistance * readout.gravityDown,
-                                           chassis.grip > 0.0f, seconds);
+                                           chassis.grip > 0.0f);
         } else {
             Restore(parts, car == player);
         }
