@@ -3,6 +3,13 @@
 Notable changes to Sound Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+- **The M1903's first-person shot is heard again.** It had shipped as a faint click followed by noise,
+  so only its echo came through. The silenced shotgun's shot, as heard from enemies, had the same fault
+  and is fixed too.
+
 ## [1.0.2] - 2026-10-16
 
 ### Fixed
