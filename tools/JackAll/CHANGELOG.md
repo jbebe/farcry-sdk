@@ -2,6 +2,14 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+- **Export as .fc2model with animations now includes the character** — a pack exported from the app
+  with its animation banks left the body out, so the Blender add-on showed the weapon floating alone
+  and its reloads posed no hands. It now carries the same protagonist `jackall-cli fc2model export`
+  always did.
+
 ## [1.6.0] - 2026-10-16
 
 ### Added

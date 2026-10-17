@@ -30,7 +30,8 @@ public sealed partial class MainViewModel
     /// <remarks>
     /// Ownership uses the app's own reference index when it has one. Without it every file outside
     /// the model's folder reads as shared, which refuses edits that would have been safe - wrong,
-    /// but in the direction that cannot break another model.
+    /// but in the direction that cannot break another model. A pack with clips carries the default
+    /// body, so the hands they pose show up in the editor.
     /// </remarks>
     public Fc2ModelBundle BuildPack(
         VfsFile model, IEnumerable<string>? clips = null, string? rig = null)
@@ -39,7 +40,9 @@ public sealed partial class MainViewModel
             ReadByPath,
             ReferenceUsage.Counter(_xrefIndex, model.Path),
             clips,
-            rig);
+            rig,
+            Fc2ModelBuilder.DefaultActor,
+            Fc2ModelBuilder.DefaultActorRig);
 
     /// <summary>Every animation bank that names this model, which is not something its mesh says.</summary>
     public List<string> FindClips(VfsFile model)

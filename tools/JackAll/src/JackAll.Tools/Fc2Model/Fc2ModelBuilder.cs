@@ -20,6 +20,18 @@ public static class Fc2ModelBuilder
     /// <summary>A rig sits beside its model under this suffix.</summary>
     public const string RigSuffix = "_ref.skeleton";
 
+    /// <summary>
+    /// The body a pack carries for its clips to pose.
+    /// </summary>
+    /// <remarks>
+    /// The arms a player sees are whichever protagonist they picked, so there is no one right
+    /// answer; this is the smallest of the fourteen. All of them skin to <see cref="DefaultActorRig"/>.
+    /// </remarks>
+    public const string DefaultActor = @"graphics\actors\principal_yabeck\yabek.xbg";
+
+    /// <summary>The rig every skinned character shares, having none of its own.</summary>
+    public const string DefaultActorRig = @"graphics\characters\_common\pelvis_ref.skeleton";
+
     // Not indented: a document is mostly flat float arrays, and a line per element makes the pack
     // several times its own size for no reader's benefit. The manifest, which is the part a person
     // reads, is indented where it is written.
