@@ -42,11 +42,12 @@ namespace {
         {"Inertia", 3.6f},           {"Springs", 0.8f},            {"Travel", 1.5f},
         {"Compression damping", 0.65f}, {"Rebound damping", 0.65f}};
 
-    // A real Unimog 406 (2026-10-12), as the ZIL-130 was worked out: its OM 352's 235 N m at 71 km/h on the game's
-    // 0.54 m wheels, scaled to the game's 1,600 kg for the real 3,900; synchromesh gear changes; air brakes; about
-    // 28 degrees of lock; its pitch and yaw for its 3 m wheelbase; coil springs at 1.5 Hz on long travel.
+    // A real Unimog 406 (2026-10-12), as the ZIL-130 was worked out: its OM 352's 235 N m on the game's 0.54 m
+    // wheels, scaled to the game's 1,600 kg for the real 3,900; synchromesh gear changes; air brakes; about 28
+    // degrees of lock; its pitch and yaw for its 3 m wheelbase; coil springs at 1.5 Hz on long travel. Geared for
+    // 90 km/h, as the user asked, where 1.65 gave the real one's 71 (2026-10-17).
     constexpr Start kUnimogTuning[] = {
-        {"Engine power", 0.5f},      {"Top speed", 1.65f},         {"Shift time", 0.8f},
+        {"Engine power", 0.5f},      {"Top speed", 2.1f},          {"Shift time", 0.8f},
         {"Downshift time", 0.8f},    {"Brake torque", 0.45f},      {"Steering lock", 0.95f},
         {"Steering at speed", 1.0f}, {"Tyre grip", 0.6f},          {"Rolling resistance", 0.2f},
         {"Inertia", 2.0f},           {"Springs", 0.65f},           {"Travel", 2.0f},

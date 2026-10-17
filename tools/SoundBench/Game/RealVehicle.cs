@@ -28,7 +28,7 @@ public sealed record RealVehicle(
         new("Quad", 600, 80),
         new("Unimog", 1600, 88, 600, 2800, ShiftClunks, 0.4f, new Dictionary<string, float>
         {
-            ["Engine power"] = 0.5f, ["Top speed"] = 1.65f, ["Shift time"] = 0.8f, ["Downshift time"] = 0.8f,
+            ["Engine power"] = 0.5f, ["Top speed"] = 2.1f, ["Shift time"] = 0.8f, ["Downshift time"] = 0.8f,
             ["Brake torque"] = 0.45f, ["Steering lock"] = 0.95f, ["Steering at speed"] = 1.0f, ["Tyre grip"] = 0.6f,
             ["Rolling resistance"] = 0.2f, ["Inertia"] = 2.0f, ["Springs"] = 0.65f, ["Travel"] = 2.0f,
             ["Compression damping"] = 0.5f, ["Rebound damping"] = 0.5f,
