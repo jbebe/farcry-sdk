@@ -17,11 +17,12 @@ struct Shifts {
     float downshiftTime;
 };
 
-// Changes gear for one physics step: never while the clutch is out; straight to first, with no clutch,
-// while the car stands or reverses; down below the downshift, and up past the upshift only if the revs
-// in the next gear stay above the downshift once the slope and `rolling` drag, in m/s², have slowed the
-// car for the clutch time.
+// Changes gear for one physics step of `seconds`: never while the clutch is out; straight to first, with
+// no clutch, while the car stands or reverses; down below the downshift, and up past the upshift only if
+// the revs in the next gear stay clear above the downshift once the slope and `rolling` drag, in m/s², have
+// slowed the car for the clutch time. A change up the car could not pull, undone soon after, is not tried
+// again until the road eases or the car stops.
 void Step(const Wheeled::Parts& parts, const Wheeled::Readout& readout, const Shifts& shifts, float rolling,
-          bool grounded);
+          bool grounded, float seconds);
 
 }

@@ -15,6 +15,10 @@ public sealed class HavokStandIn
     /// <summary>Below this speed, in m/s, the car stands: it is in first, and no change up is weighed.</summary>
     public const float StandingSpeed = 1;
 
+    /// <summary>The share the next gear's revs must clear the downshift by. The gearbox's memory of a change up
+    /// undone on a hill is not mirrored: the ground here is flat.</summary>
+    private const float UpshiftMargin = 0.1f;
+
     private const float WheelRadius = 0.4f, Gravity = 9.81f, MetresPerSecondPerMph = 0.44704f;
     private const float GroundFriction = 0.8f, TyreFriction = 3.0f, RollResist = 0.1f;
     private const float Drag = 0.5f * 1.3f * 1.0f * 0.7f;
@@ -85,7 +89,8 @@ public sealed class HavokStandIn
                 Shift(-1, _downshiftTime);
             }
             else if (Rpm > UpshiftRpm && Gear < _gears.Length - 1 &&
-                     Rpm * _gears[Gear + 1] / _gears[Gear] * Math.Max(0, 1 - _rolling * clutchTime / Speed) > _downshiftRpm)
+                     Rpm * _gears[Gear + 1] / _gears[Gear] * Math.Max(0, 1 - _rolling * clutchTime / Speed) >
+                     _downshiftRpm * (1 + UpshiftMargin))
             {
                 Shift(+1, clutchTime);
             }
