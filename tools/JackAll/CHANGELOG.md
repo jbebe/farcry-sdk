@@ -2,7 +2,7 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.6.1] - 2026-10-17
 
 ### Fixed
 - **Export as .fc2model with animations now includes the character** — a pack exported from the app
