@@ -64,7 +64,8 @@ namespace {
         // 54% on the front axle, a small front-engined car's; the game's put it so far forward that the rear hopped
         // about (2026-10-12).
         {"Datsun 1200", 10, 1.30f, 750.0f, 6500.0f, kShiftClunks, 0.816f, {}, kDatsunTuning, 0.54f},
-        {"Buggy", 3, kAtTheAxles},
+        // Its four's idle and top, and its start take's catch, from the takes (2026-10-17).
+        {"Buggy", 3, kAtTheAxles, 950.0f, 4800.0f, 0, 0.5f},
         {"Jeep Liberty", 6, 1.07f},
         {"Jeep Wrangler", 9, 1.20f},
         // Its four-stroke's idle and top, and its start take's catch, from the takes (2026-10-17).

@@ -22,7 +22,7 @@ public sealed record RealVehicle(
             ["Tyre grip"] = 0.4f, ["Rolling resistance"] = 0.0f, ["Inertia"] = 1.02f, ["Springs"] = 0.55f,
             ["Compression damping"] = 0.48f, ["Rebound damping"] = 0.4f,
         }),
-        new("Buggy", 800, 87),
+        new("Buggy", 800, 87, 950, 4800, null, 0.5f),
         new("Jeep Liberty", 1500, 95),
         new("Jeep Wrangler", 1200, 88),
         new("Jeep Wrangler taxi", 1200, 50),
