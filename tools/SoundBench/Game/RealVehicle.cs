@@ -25,7 +25,7 @@ public sealed record RealVehicle(
         new("Jeep Liberty", 1500, 95),
         new("Jeep Wrangler", 1200, 88),
         new("Jeep Wrangler taxi", 1200, 50),
-        new("Quad", 600, 80),
+        new("Quad", 600, 80, 1580, 9300, null, 0.5f),
         new("Unimog", 1600, 88, 600, 2800, ShiftClunks, 0.4f, new Dictionary<string, float>
         {
             ["Engine power"] = 0.5f, ["Top speed"] = 1.65f, ["Shift time"] = 0.8f, ["Downshift time"] = 0.8f,

@@ -65,7 +65,8 @@ namespace {
         {"Buggy", 3, kAtTheAxles},
         {"Jeep Liberty", 6, 1.07f},
         {"Jeep Wrangler", 9, 1.20f},
-        {"Quad", 5, 1.00f},
+        // Its four-stroke's idle and top, and its start take's catch, from the takes (2026-10-17).
+        {"Quad", 5, 1.00f, 1580.0f, 9300.0f, 0, 0.5f},
         // An OM 352 diesel's idle and governed top, and its start take's catch, estimated from its loudness. It tips at
         // 1.1 g as the big truck does, on the same soft solid axles. The game's 60% on the front axle is a Unimog's.
         {"Unimog", 12, 1.1f, 600.0f, 2800.0f, kShiftClunks, 0.4f, {kUnimogSprings, kUnimogSprings},
