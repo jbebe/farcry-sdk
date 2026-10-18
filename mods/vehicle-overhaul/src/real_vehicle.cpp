@@ -65,8 +65,9 @@ namespace {
 
     constexpr Spec kVehicles[] = {
         // Its four's low idle and its start take's catch, from the takes, and a redline of 4,000, where an old 2.25 makes
-        // its power: the engine is spared revs past it (2026-10-17).
-        {"Land Rover Series III", 1, 0.90f, 525.0f, 4000.0f, 0, 0.8f, {kRoverSprings, kRoverSprings},
+        // its power: the engine is spared revs past it (2026-10-17). It tips at 1.1 g as the big truck and the Unimog
+        // do: at 0.9 it rocked heavily on its soft solid axles, whatever the damping (2026-10-18).
+        {"Land Rover Series III", 1, 1.1f, 525.0f, 4000.0f, 0, 0.8f, {kRoverSprings, kRoverSprings},
          kRoverTuning},
         // 54% on the front axle, a small front-engined car's; the game's put it so far forward that the rear hopped
         // about (2026-10-12).
