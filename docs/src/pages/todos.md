@@ -68,6 +68,9 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 
 ## Mods/vehicle-overhaul
 
+- [ ] Configure every car's physics in game
+- [ ] Release as 1.0, once the physics are configured
+- [ ] New car models, to extend the mod after 1.0
 - [ ] Third-person view: the driver is the headless first-person body. Hide it, or seat a third-person
       stand-in with NPC driving animations
 - [ ] Shooting out of the windows, from a legacy mod
