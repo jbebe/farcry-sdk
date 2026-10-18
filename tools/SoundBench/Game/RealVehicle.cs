@@ -24,8 +24,8 @@ public sealed record RealVehicle(
         }),
         new("Buggy", 800, 87, 950, 4800, null, 0.5f),
         new("Jeep Liberty", 1500, 95),
-        new("Jeep Wrangler", 1200, 88),
-        new("Jeep Wrangler taxi", 1200, 50),
+        new("Jeep Wrangler", 1200, 88, 750, 3000, null, 0.6f),
+        new("Jeep Wrangler taxi", 1200, 50, 750, 3000, null, 0.6f),
         new("Quad", 600, 80, 1580, 9300, null, 0.5f),
         new("Unimog", 1600, 88, 600, 2800, ShiftClunks, 0.4f, new Dictionary<string, float>
         {
