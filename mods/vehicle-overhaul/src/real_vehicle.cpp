@@ -25,10 +25,10 @@ namespace {
 
     // The shortest suspension, and a truck that climbs on low gearing.
     constexpr Start kRoverTuning[] = {{"Top speed", 1.2f}, {"Springs", 1.0f}};
-    // As the user tuned it in game (2026-10-12).
+    // As the user tuned it in game (2026-10-18).
     constexpr Start kDatsunTuning[] = {
         {"Engine power", 0.8f},      {"Shift time", 0.5f},        {"Downshift time", 0.5f},
-        {"Steering at speed", 1.0f}, {"Tyre grip", 0.4f},         {"Rolling resistance", 0.0f},
+        {"Steering at speed", 0.7f}, {"Tyre grip", 0.4f},         {"Rolling resistance", 0.0f},
         {"Inertia", 1.02f},          {"Springs", 0.55f},          {"Compression damping", 0.48f},
         {"Rebound damping", 0.4f}};
     // A real empty ZIL-130 (2026-10-12): 90 km/h through its own gearbox on the truck's 0.53 m wheels; a truck
