@@ -77,8 +77,9 @@ namespace {
         // (2026-10-18).
         {"Jeep Liberty", 6, 1.07f, 690.0f, 4800.0f, 0, 0.9f, {}, kLibertyTuning},
         // Its takes are a 1999 Ram 2500's 5.9 Cummins six: its idle and start take's catch, and the diesel's governed
-        // top (2026-10-18).
-        {"Jeep Wrangler", 9, 1.20f, 750.0f, 3000.0f, 0, 0.6f},
+        // top (2026-10-18). 55% on the front axle, a front-engined Wrangler's: the game's left 59% on the rear, and the
+        // car unstable.
+        {"Jeep Wrangler", 9, 1.20f, 750.0f, 3000.0f, 0, 0.6f, {}, {}, 0.55f},
         // Its four-stroke's idle and top, and its start take's catch, from the takes (2026-10-17).
         {"Quad", 5, 1.00f, 1580.0f, 9300.0f, 0, 0.5f},
         // An OM 352 diesel's idle and governed top, and its start take's catch, estimated from its loudness. It tips at
