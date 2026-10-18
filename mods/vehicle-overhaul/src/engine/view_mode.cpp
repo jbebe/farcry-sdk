@@ -40,6 +40,13 @@ namespace {
     constexpr ptrdiff_t kPawnProxy = 0x08;
     constexpr ptrdiff_t kProxyEntity = 0x0C;
 
+    // The first-person bit in the pawn's desired and effective data. The vehicle beautifier plays the third-person
+    // driving clips while it is clear, and the beautifier component calls ViewModeChanged when the two differ.
+    constexpr ptrdiff_t kPawnImpl = 0x10;
+    constexpr ptrdiff_t kDesiredFlags = 0x140 + 4;
+    constexpr ptrdiff_t kEffectiveFlags = 0x2D0 + 4;
+    constexpr uint8_t kFirstPersonBit = 0x80;
+
     LockFn g_lock = nullptr;
     GetComponentFn g_getComponent = nullptr;
     const void* g_graphicType = nullptr;
@@ -54,6 +61,10 @@ namespace {
     template <class T>
     T At(const void* base, ptrdiff_t offset) {
         return *reinterpret_cast<const T*>(static_cast<const uint8_t*>(base) + offset);
+    }
+
+    void SetFirstPersonBit(uint8_t* flags, bool firstPerson) {
+        *flags = firstPerson ? *flags | kFirstPersonBit : *flags & ~kFirstPersonBit;
     }
 }
 
@@ -81,6 +92,10 @@ bool Install() {
 void Set(void* pawn, bool firstPerson) {
     if (pawn == nullptr || !g_viewModeChanged) {
         return;
+    }
+    if (uint8_t* impl = At<uint8_t*>(pawn, kPawnImpl)) {
+        SetFirstPersonBit(impl + kDesiredFlags, firstPerson);
+        SetFirstPersonBit(impl + kEffectiveFlags, firstPerson);
     }
     reinterpret_cast<ViewModeChangedFn>(g_viewModeChanged.get())(pawn, firstPerson);
     if (firstPerson) {
