@@ -74,8 +74,8 @@ namespace {
         // Its four's idle and top, and its start take's catch, from the takes (2026-10-17).
         {"Buggy", 3, kAtTheAxles, 950.0f, 4800.0f, 0, 0.5f},
         // Its takes are a 2013 Volvo V70's five-cylinder diesel: its idle, its start take's catch and its cut-off
-        // (2026-10-18).
-        {"Jeep Liberty", 6, 1.07f, 690.0f, 4800.0f, 0, 0.9f, {}, kLibertyTuning},
+        // (2026-10-18). 57% on the front axle, a front-engined SUV's, where the game's put 63%.
+        {"Jeep Liberty", 6, 1.07f, 690.0f, 4800.0f, 0, 0.9f, {}, kLibertyTuning, 0.57f},
         // Its takes are a 1999 Ram 2500's 5.9 Cummins six: its idle and start take's catch, and the diesel's governed
         // top (2026-10-18). 55% on the front axle, a front-engined Wrangler's: the game's left 59% on the rear, and the
         // car unstable.
