@@ -1,5 +1,5 @@
 // The third-person camera in a vehicle, switched by the Third-person view control. Leaving the
-// vehicle puts the first-person camera back.
+// vehicle puts the first-person camera back; the view chosen is kept for the next vehicle, for the session.
 //
 // The engine's Cameras.Camera.Third is put up and then placed by the chase camera, which takes the
 // mouse look for itself while it is up. The player's full body is drawn while it is up, the first-person
@@ -26,8 +26,11 @@ namespace {
     // Counted on the dispatcher, spent on the pawn tick.
     std::atomic<int> g_toggles{0};
 
-    // Whether the player asked for the view, the camera while it is up, and the pawn it follows.
-    bool g_wanted = false;
+    // The view the player chose, kept for the game session: every vehicle they get into starts in it. Held is set
+    // while the game has taken the camera, until they next get in or press the control.
+    bool g_thirdPerson = false;
+    bool g_held = false;
+    // The camera while it is up, and the pawn it follows.
     void* g_camera = nullptr;
     void* g_pawn = nullptr;
 
@@ -49,7 +52,7 @@ namespace {
 
         if (camera == nullptr || camera == previous) {
             FCSE::Logf("third person: the manager would not put up %s", VehicleOverhaul::Camera::kThird);
-            g_wanted = false;
+            g_held = true;
             return;
         }
         g_camera = camera;
@@ -64,10 +67,18 @@ namespace {
     }
 
     void Update(void* pawn, float* look) {
-        if (g_toggles.exchange(0) % 2 != 0) {
-            g_wanted = !g_wanted;
+        const bool seated = VehicleOverhaul::Vehicle::Current(pawn) != nullptr;
+        // On foot the control does nothing: retail's F2 sends it too. Held, it brings the chosen view back.
+        if (g_toggles.exchange(0) % 2 != 0 && seated) {
+            if (!g_held) {
+                g_thirdPerson = !g_thirdPerson;
+            }
+            g_held = false;
         }
-        if (!g_wanted && g_camera == nullptr) {
+        if (!seated) {
+            g_held = false;
+        }
+        if (!g_thirdPerson && g_camera == nullptr) {
             return;
         }
 
@@ -77,25 +88,22 @@ namespace {
         if (g_camera != nullptr && VehicleOverhaul::Camera::Active(manager) != g_camera) {
             FCSE::Logf("third person: the camera was taken over, leaving it");
             g_camera = nullptr;
-            g_wanted = false;
+            g_held = true;
             return;
         }
 
         g_pawn = pawn;
-        if (VehicleOverhaul::Vehicle::Current(pawn) == nullptr) {
-            g_wanted = false;
-        }
         // The driver's own view stays where it was while the chase camera has the mouse.
         if (g_camera != nullptr) {
             VehicleOverhaul::Chase::Look(look[0], look[1]);
             look[0] = 0.0f;
             look[1] = 0.0f;
         }
-        if (manager == nullptr || VehicleOverhaul::Camera::Locked(manager) ||
-            g_wanted == (g_camera != nullptr)) {
+        const bool wanted = g_thirdPerson && seated && !g_held;
+        if (manager == nullptr || VehicleOverhaul::Camera::Locked(manager) || wanted == (g_camera != nullptr)) {
             return;
         }
-        if (g_wanted) {
+        if (wanted) {
             Enter(manager);
         } else {
             Leave(manager);
