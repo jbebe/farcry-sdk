@@ -66,7 +66,9 @@ namespace {
         {"Datsun 1200", 10, 1.30f, 750.0f, 6500.0f, kShiftClunks, 0.816f, {}, kDatsunTuning, 0.54f},
         // Its four's idle and top, and its start take's catch, from the takes (2026-10-17).
         {"Buggy", 3, kAtTheAxles, 950.0f, 4800.0f, 0, 0.5f},
-        {"Jeep Liberty", 6, 1.07f},
+        // Its takes are a 2013 Volvo V70's five-cylinder diesel: its idle, its start take's catch and its cut-off
+        // (2026-10-18).
+        {"Jeep Liberty", 6, 1.07f, 690.0f, 4800.0f, 0, 0.9f},
         // Its takes are a 1999 Ram 2500's 5.9 Cummins six: its idle and start take's catch, and the diesel's governed
         // top (2026-10-18).
         {"Jeep Wrangler", 9, 1.20f, 750.0f, 3000.0f, 0, 0.6f},

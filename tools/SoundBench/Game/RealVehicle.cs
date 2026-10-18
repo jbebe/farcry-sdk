@@ -23,7 +23,7 @@ public sealed record RealVehicle(
             ["Compression damping"] = 0.48f, ["Rebound damping"] = 0.4f,
         }),
         new("Buggy", 800, 87, 950, 4800, null, 0.5f),
-        new("Jeep Liberty", 1500, 95),
+        new("Jeep Liberty", 1500, 95, 690, 4800, null, 0.9f),
         new("Jeep Wrangler", 1200, 88, 750, 3000, null, 0.6f),
         new("Jeep Wrangler taxi", 1200, 50, 750, 3000, null, 0.6f),
         new("Quad", 600, 80, 1580, 9300, null, 0.5f),
