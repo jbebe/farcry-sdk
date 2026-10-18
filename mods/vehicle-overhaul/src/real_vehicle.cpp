@@ -23,24 +23,38 @@ namespace {
     constexpr float kZilSprings = 0.5f;
     constexpr float kUnimogSprings = 0.5f;
 
-    // The shortest suspension, and a truck that climbs on low gearing.
-    constexpr Start kRoverTuning[] = {{"Top speed", 1.2f}, {"Springs", 1.0f}};
-    // As the user tuned it in game (2026-10-18).
+    // Each as the user tuned it in game (2026-10-18).
+    constexpr Start kRoverTuning[] = {
+        {"Engine power", 0.9f},      {"Top speed", 1.2f},           {"Downshift time", 0.5f},
+        {"Steering lock", 1.3f},     {"Steering at speed", 1.0f},   {"Inertia", 2.0f},
+        {"Springs", 1.0f},           {"Travel", 0.8f},              {"Compression damping", 0.5f},
+        {"Rebound damping", 0.5f}};
+    constexpr Start kBuggyTuning[] = {
+        {"Engine power", 0.9f},      {"Top speed", 2.5f},           {"Shift time", 0.5f},
+        {"Downshift time", 0.3f},    {"Steering lock", 0.9f},       {"Steering at speed", 1.0f},
+        {"Tyre grip", 0.5f},         {"Inertia", 1.4f}};
+    constexpr Start kWranglerTuning[] = {
+        {"Engine power", 1.4f},      {"Shift time", 0.5f},          {"Downshift time", 0.3f},
+        {"Brake torque", 0.35f},     {"Steering lock", 1.35f},      {"Steering at speed", 0.7f},
+        {"Tyre grip", 0.7f},         {"Inertia", 2.0f},             {"Springs", 0.55f},
+        {"Travel", 1.2f},            {"Compression damping", 0.5f}, {"Rebound damping", 0.5f}};
+    constexpr Start kQuadTuning[] = {
+        {"Engine power", 0.6f},      {"Top speed", 1.7f},           {"Shift time", 0.3f},
+        {"Downshift time", 0.2f},    {"Steering lock", 1.1f},       {"Steering at speed", 1.2f},
+        {"Tyre grip", 0.35f},        {"Rolling resistance", 0.3f},  {"Inertia", 1.3f},
+        {"Travel", 1.7f},            {"Rebound damping", 0.6f}};
     constexpr Start kDatsunTuning[] = {
         {"Engine power", 0.8f},      {"Shift time", 0.5f},        {"Downshift time", 0.5f},
         {"Steering at speed", 0.7f}, {"Tyre grip", 0.4f},         {"Rolling resistance", 0.0f},
         {"Inertia", 1.02f},          {"Springs", 0.55f},          {"Compression damping", 0.48f},
         {"Rebound damping", 0.4f}};
-    // A real empty ZIL-130 (2026-10-12): 90 km/h through its own gearbox on the truck's 0.53 m wheels; a truck
-    // driver's gear changes; air brakes; 30 degrees of lock; 2% rolling drag; its pitch and yaw for its 3.8 m
-    // wheelbase; leaf springs at 2 Hz on about 15 cm of travel. Its 402 N m (1.3) and the ground's own grip (0.33)
-    // spun the wheels, so the engine and grip are as the user set them.
+    // Worked out from a real empty ZIL-130 (2026-10-12): 90 km/h through its own gearbox, leaf springs at 2 Hz on
+    // about 15 cm of travel; then tuned by the user in game (2026-10-18).
     constexpr Start kZilTuning[] = {
-        {"Engine power", 1.0f},      {"Top speed", 1.55f},         {"Shift time", 1.0f},
-        {"Downshift time", 1.0f},    {"Brake torque", 0.75f},      {"Steering lock", 0.85f},
-        {"Steering at speed", 1.0f}, {"Tyre grip", 0.6f},          {"Rolling resistance", 0.2f},
-        {"Inertia", 3.6f},           {"Springs", 0.8f},            {"Travel", 1.5f},
-        {"Compression damping", 0.65f}, {"Rebound damping", 0.65f}};
+        {"Top speed", 1.55f},        {"Downshift time", 0.3f},     {"Brake torque", 0.75f},
+        {"Steering lock", 1.2f},     {"Steering at speed", 0.85f}, {"Tyre grip", 0.6f},
+        {"Rolling resistance", 0.2f}, {"Inertia", 3.6f},           {"Springs", 0.8f},
+        {"Travel", 1.5f},            {"Compression damping", 0.65f}, {"Rebound damping", 0.55f}};
 
     // A real Unimog 406 (2026-10-12), as the ZIL-130 was worked out: its OM 352's 235 N m at 71 km/h on the game's
     // 0.54 m wheels, scaled to the game's 1,600 kg for the real 3,900; synchromesh gear changes; air brakes; about
@@ -52,7 +66,7 @@ namespace {
         {"Inertia", 2.0f},           {"Springs", 0.65f},           {"Travel", 2.0f},
         {"Compression damping", 0.5f}, {"Rebound damping", 0.5f}};
 
-    // As the user tuned it in game (2026-10-18): an automatic, its shift times 0.
+    // An automatic, its shift times 0.
     constexpr Start kLibertyTuning[] = {
         {"Engine power", 1.4f},      {"Shift time", 0.0f},          {"Downshift time", 0.0f},
         {"Brake torque", 0.4f},      {"Steering lock", 1.3f},       {"Tyre grip", 0.35f},
@@ -73,16 +87,16 @@ namespace {
         // about (2026-10-12).
         {"Datsun 1200", 10, 1.30f, 750.0f, 6500.0f, kShiftClunks, 0.816f, {}, kDatsunTuning, 0.54f},
         // Its four's idle and top, and its start take's catch, from the takes (2026-10-17).
-        {"Buggy", 3, kAtTheAxles, 950.0f, 4800.0f, 0, 0.5f},
+        {"Buggy", 3, kAtTheAxles, 950.0f, 4800.0f, 0, 0.5f, {}, kBuggyTuning},
         // Its takes are a 2013 Volvo V70's five-cylinder diesel: its idle, its start take's catch and its cut-off
         // (2026-10-18). 57% on the front axle, a front-engined SUV's, where the game's put 63%.
         {"Jeep Liberty", 6, 1.07f, 690.0f, 4800.0f, 0, 0.9f, {}, kLibertyTuning, 0.57f},
         // Its takes are a 1999 Ram 2500's 5.9 Cummins six: its idle and start take's catch, and the diesel's governed
         // top (2026-10-18). 55% on the front axle, a front-engined Wrangler's: the game's left 59% on the rear, and the
         // car unstable.
-        {"Jeep Wrangler", 9, 1.20f, 750.0f, 3000.0f, 0, 0.6f, {}, {}, 0.55f},
+        {"Jeep Wrangler", 9, 1.20f, 750.0f, 3000.0f, 0, 0.6f, {}, kWranglerTuning, 0.55f},
         // Its four-stroke's idle and top, and its start take's catch, from the takes (2026-10-17).
-        {"Quad", 5, 1.00f, 1580.0f, 9300.0f, 0, 0.5f},
+        {"Quad", 5, 1.00f, 1580.0f, 9300.0f, 0, 0.5f, {}, kQuadTuning},
         // An OM 352 diesel's idle and governed top, and its start take's catch, estimated from its loudness. It tips at
         // 1.1 g as the big truck does, on the same soft solid axles. The game's 60% on the front axle is a Unimog's.
         {"Unimog", 12, 1.1f, 600.0f, 2800.0f, kShiftClunks, 0.4f, {kUnimogSprings, kUnimogSprings},
