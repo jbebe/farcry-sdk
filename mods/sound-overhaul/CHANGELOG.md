@@ -3,7 +3,7 @@
 Notable changes to Sound Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.0.3] - 2026-10-18
 
 ### Fixed
 - **The M1903's first-person shot is heard again.** It had shipped as a faint click followed by noise,
