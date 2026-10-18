@@ -54,9 +54,9 @@ namespace {
 
     // As the user tuned it in game (2026-10-18): an automatic, its shift times 0.
     constexpr Start kLibertyTuning[] = {
-        {"Engine power", 1.0f},      {"Shift time", 0.0f},          {"Downshift time", 0.0f},
+        {"Engine power", 1.4f},      {"Shift time", 0.0f},          {"Downshift time", 0.0f},
         {"Brake torque", 0.4f},      {"Steering lock", 1.3f},       {"Tyre grip", 0.35f},
-        {"Inertia", 2.0f},           {"Springs", 0.5f},             {"Travel", 1.2f},
+        {"Inertia", 1.8f},           {"Springs", 0.5f},             {"Travel", 1.2f},
         {"Compression damping", 0.5f}, {"Rebound damping", 0.4f}};
 
     // 2,120 of its 4,300 kg, empty.

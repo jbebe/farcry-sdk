@@ -25,8 +25,8 @@ public sealed record RealVehicle(
         new("Buggy", 800, 87, 950, 4800, null, 0.5f),
         new("Jeep Liberty", 1500, 95, 690, 4800, null, 0.9f, new Dictionary<string, float>
         {
-            ["Engine power"] = 1.0f, ["Shift time"] = 0.0f, ["Downshift time"] = 0.0f, ["Brake torque"] = 0.4f,
-            ["Steering lock"] = 1.3f, ["Tyre grip"] = 0.35f, ["Inertia"] = 2.0f, ["Springs"] = 0.5f, ["Travel"] = 1.2f,
+            ["Engine power"] = 1.4f, ["Shift time"] = 0.0f, ["Downshift time"] = 0.0f, ["Brake torque"] = 0.4f,
+            ["Steering lock"] = 1.3f, ["Tyre grip"] = 0.35f, ["Inertia"] = 1.8f, ["Springs"] = 0.5f, ["Travel"] = 1.2f,
             ["Compression damping"] = 0.5f, ["Rebound damping"] = 0.4f,
         }),
         new("Jeep Wrangler", 1200, 88, 750, 3000, null, 0.6f),
