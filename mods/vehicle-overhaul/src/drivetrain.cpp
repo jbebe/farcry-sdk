@@ -41,6 +41,8 @@ namespace {
     constexpr double kWanderPeriods[2] = {2.2, 1.25};
     // The seconds the engine sound takes to fade in once the engine catches.
     constexpr float kCatchFade = 0.5f;
+    // The seconds an automatic's torque converter takes to bring the revs to a new gear's.
+    constexpr float kConverterGlide = 0.3f;
 
     // Kept by the physics step, read by the sound. The shift is the last gear change not yet sounded:
     // +1 up, -1 down.
@@ -65,6 +67,9 @@ namespace {
     float g_shiftTime = 0.0f;
     float g_sinceShift = 0.0f;
     int g_pendingShift = 0;
+    // An automatic's last gear change: the revs it glides from, and the seconds since.
+    float g_glideFrom = 0.0f;
+    float g_sinceGlide = kConverterGlide;
 
     // The entity of the vehicle the player drives, on the game thread.
     void* g_vehicle = nullptr;
@@ -117,6 +122,7 @@ float Step(Car car, const RealVehicle::Spec* real, const Wheeled::Readout& reado
         g_gear = readout.gear;
         g_shiftTime = 0.0f;
         g_pendingShift = 0;
+        g_sinceGlide = kConverterGlide;
         g_rpm = idle;
         g_sinceEntry = 0.0f;
     }
@@ -124,20 +130,28 @@ float Step(Car car, const RealVehicle::Spec* real, const Wheeled::Readout& reado
     const float catchTime = real != nullptr ? real->catchTime : 0.0f;
     g_caught = catchTime > 0.0f ? std::clamp((g_sinceEntry - catchTime) / kCatchFade, 0.0f, 1.0f) : 1.0f;
     g_sinceShift += seconds;
+    g_sinceGlide += seconds;
+    // No time to change gear in either way: an automatic, which changes under power with no lever to clunk.
+    const bool automatic = tuning.shiftTime == 0.0f && tuning.downshiftTime == 0.0f;
     // First put in at a stand has no clutch out, and is not heard.
     const bool selected = readout.clutchLeft == 0.0f && readout.speed < Gearbox::kStanding;
     if (readout.gear != g_gear && !selected) {
-        g_pendingShift = readout.gear > g_gear ? 1 : -1;
-        // The change came a step ago, which Havok has counted off its clutch time.
-        g_shiftTime = readout.clutchLeft + seconds;
-        g_sinceShift = 0.0f;
+        if (automatic) {
+            g_glideFrom = g_rpm;
+            g_sinceGlide = 0.0f;
+        } else {
+            g_pendingShift = readout.gear > g_gear ? 1 : -1;
+            // The change came a step ago, which Havok has counted off its clutch time.
+            g_shiftTime = readout.clutchLeft + seconds;
+            g_sinceShift = 0.0f;
+        }
     }
     g_gear = readout.gear;
     if (g_pendingShift != 0 && g_sinceShift >= 0.5f * g_shiftTime) {
         g_shift = g_pendingShift;
         g_pendingShift = 0;
     }
-    g_lifted = g_sinceShift < g_shiftTime;
+    g_lifted = !automatic && g_sinceShift < g_shiftTime;
 
     g_clock += seconds;
     const double turn = 2.0 * 3.14159265358979 * g_clock;
@@ -153,7 +167,12 @@ float Step(Car car, const RealVehicle::Spec* real, const Wheeled::Readout& reado
     }
     target = std::min(target, redline);
 
-    const float rpm = g_rpm + std::clamp(target - g_rpm, -kFallRate * range * seconds, kRiseRate * range * seconds);
+    float rpm = g_rpm + std::clamp(target - g_rpm, -kFallRate * range * seconds, kRiseRate * range * seconds);
+    if (g_sinceGlide < kConverterGlide) {
+        // Eased in and out, onto the new gear's revs as they move.
+        const float t = g_sinceGlide / kConverterGlide;
+        rpm = g_glideFrom + (target - g_glideFrom) * t * t * (3.0f - 2.0f * t);
+    }
     g_rpm = rpm;
     return rpm;
 }

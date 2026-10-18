@@ -9,6 +9,9 @@ public sealed class Drivetrain
     /// <summary>The seconds the engine sound takes to fade in once the engine catches.</summary>
     private const float CatchFade = 0.5f;
 
+    /// <summary>The seconds an automatic's torque converter takes to bring the revs to a new gear's.</summary>
+    private const float ConverterGlide = 0.3f;
+
     /// <summary>How far, as a share of the range, and how slowly, as two waves' periods in seconds, the revs a
     /// slipping clutch holds wander: a driver's foot is no machine.</summary>
     private const float SlipWander = 0.03f;
@@ -21,6 +24,8 @@ public sealed class Drivetrain
     private float _shiftTime;
     private float _sinceShift;
     private int _pendingShift;
+    private float _glideFrom;
+    private float _sinceGlide = ConverterGlide;
 
     /// <param name="idle">0 for the overhaul's default.</param>
     /// <param name="redline">0 for Havok's upshift revs.</param>
@@ -51,20 +56,31 @@ public sealed class Drivetrain
         HavokStandIn.MinRpm + (rpm - Idle) * (HavokStandIn.UpshiftRpm - HavokStandIn.MinRpm) / (Redline - Idle);
 
     /// <summary>Moves the revs on; returns a gear change due to be heard now, +1 up or -1 down, else 0.</summary>
-    public int Step(float havokRpm, int gear, float clutchLeft, float speed, float throttle, float seconds)
+    /// <param name="automatic">No time to change gear in either way: it changes under power, with no lever to
+    /// clunk.</param>
+    public int Step(float havokRpm, int gear, float clutchLeft, float speed, float throttle, bool automatic, float seconds)
     {
         int heard = 0;
         _sinceEntry += seconds;
         Caught = _catchTime > 0 ? Math.Clamp((_sinceEntry - _catchTime) / CatchFade, 0, 1) : 1;
         _sinceShift += seconds;
+        _sinceGlide += seconds;
         // First put in at a stand has no clutch out, and is not heard.
         bool selected = clutchLeft == 0 && speed < HavokStandIn.StandingSpeed;
         if (gear != _gear && !selected)
         {
-            _pendingShift = gear > _gear ? 1 : -1;
-            // The stand-in changed gear this step, so none of its clutch time has gone yet.
-            _shiftTime = clutchLeft;
-            _sinceShift = 0;
+            if (automatic)
+            {
+                _glideFrom = Rpm;
+                _sinceGlide = 0;
+            }
+            else
+            {
+                _pendingShift = gear > _gear ? 1 : -1;
+                // The stand-in changed gear this step, so none of its clutch time has gone yet.
+                _shiftTime = clutchLeft;
+                _sinceShift = 0;
+            }
         }
         _gear = gear;
         if (_pendingShift != 0 && _sinceShift >= 0.5f * _shiftTime)
@@ -72,7 +88,7 @@ public sealed class Drivetrain
             heard = _pendingShift;
             _pendingShift = 0;
         }
-        Lifted = _sinceShift < _shiftTime;
+        Lifted = !automatic && _sinceShift < _shiftTime;
 
         _clock += seconds;
         double turn = 2 * Math.PI * _clock;
@@ -89,6 +105,12 @@ public sealed class Drivetrain
         target = Math.Min(target, Redline);
 
         Rpm += Math.Clamp(target - Rpm, -FallRate * range * seconds, RiseRate * range * seconds);
+        if (_sinceGlide < ConverterGlide)
+        {
+            // Eased in and out, onto the new gear's revs as they move.
+            float t = _sinceGlide / ConverterGlide;
+            Rpm = _glideFrom + (target - _glideFrom) * t * t * (3 - 2 * t);
+        }
         return heard;
     }
 }

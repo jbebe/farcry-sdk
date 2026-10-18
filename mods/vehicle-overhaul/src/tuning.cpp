@@ -52,9 +52,11 @@ namespace {
         {"Top speed", kEngine, &Values::topSpeed, 2.0f, 0.5f, 3.0f, "%.2fx",
          "Gearing, as a multiple of the car's own top speed. Higher is faster but pulls less in each gear."},
         {"Shift time", kEngine, &Values::shiftTime, 0.6f, 0.0f, 2.0f, "%.2f s",
-         "How long a change up cuts the drive while the clutch is out. Retail changes gear instantly."},
+         "How long a change up cuts the drive while the clutch is out. Retail changes gear instantly. 0 with "
+         "Downshift time 0 makes the car an automatic: no clunk, and the revs glide into each gear."},
         {"Downshift time", kEngine, &Values::downshiftTime, 0.1f, 0.0f, 2.0f, "%.2f s",
-         "How long a change down cuts the drive while the clutch is out. Far Cry 3's cars take 0.1 s."},
+         "How long a change down cuts the drive while the clutch is out. Far Cry 3's cars take 0.1 s. 0 with "
+         "Shift time 0 makes the car an automatic."},
         {"Brake torque", kBrakes, &Values::brakeTorque, 0.3f, 0.1f, 1.5f, "%.2fx",
          "The brakes' strength, as a multiple of the car's own."},
         {"Lock-up time", kBrakes, &Values::lockTime, 0.5f, 0.1f, 5.0f, "%.2f s",

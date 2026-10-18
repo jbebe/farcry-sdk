@@ -58,6 +58,9 @@ public sealed class HavokStandIn
 
     public int Gears => _gears.Length;
 
+    /// <summary>How long a change down has the clutch out, in seconds.</summary>
+    public float DownshiftTime => _downshiftTime;
+
     public float Rpm { get; private set; }
 
     public bool ClutchOut => _clutch > 0;

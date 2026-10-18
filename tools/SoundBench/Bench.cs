@@ -147,7 +147,8 @@ public sealed class Bench : ISampleProvider
         {
             float throttle = Sounds.Engine == EngineState.Running ? Throttle : 0;
             Havok.Step(Mixer.BlockSeconds, throttle, Brake, ShiftTime, HoldGear);
-            int shift = Drivetrain.Step(Havok.Rpm, Havok.Gear, Havok.ClutchLeft, Havok.Speed, throttle, Mixer.BlockSeconds);
+            int shift = Drivetrain.Step(Havok.Rpm, Havok.Gear, Havok.ClutchLeft, Havok.Speed, throttle,
+                ShiftTime == 0 && Havok.DownshiftTime == 0, Mixer.BlockSeconds);
             Sounds.Step(Mixer.BlockSeconds, throttle > 0 ? throttle : -Brake, shift);
 
             var listening = new Listening(Parameter, Muted, Soloed, Distance);
