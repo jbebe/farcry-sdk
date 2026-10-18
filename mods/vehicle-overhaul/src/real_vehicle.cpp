@@ -52,6 +52,13 @@ namespace {
         {"Inertia", 2.0f},           {"Springs", 0.65f},           {"Travel", 2.0f},
         {"Compression damping", 0.5f}, {"Rebound damping", 0.5f}};
 
+    // As the user tuned it in game (2026-10-18): an automatic, its shift times 0.
+    constexpr Start kLibertyTuning[] = {
+        {"Engine power", 1.0f},      {"Shift time", 0.0f},          {"Downshift time", 0.0f},
+        {"Brake torque", 0.4f},      {"Steering lock", 1.3f},       {"Tyre grip", 0.35f},
+        {"Inertia", 2.0f},           {"Springs", 0.5f},             {"Travel", 1.2f},
+        {"Compression damping", 0.5f}, {"Rebound damping", 0.4f}};
+
     // 2,120 of its 4,300 kg, empty.
     constexpr float kZilFrontWeight = 0.49f;
     constexpr float kZilGears[] = {7.45f, 4.10f, 2.29f, 1.47f, 1.00f};
@@ -68,7 +75,7 @@ namespace {
         {"Buggy", 3, kAtTheAxles, 950.0f, 4800.0f, 0, 0.5f},
         // Its takes are a 2013 Volvo V70's five-cylinder diesel: its idle, its start take's catch and its cut-off
         // (2026-10-18).
-        {"Jeep Liberty", 6, 1.07f, 690.0f, 4800.0f, 0, 0.9f},
+        {"Jeep Liberty", 6, 1.07f, 690.0f, 4800.0f, 0, 0.9f, {}, kLibertyTuning},
         // Its takes are a 1999 Ram 2500's 5.9 Cummins six: its idle and start take's catch, and the diesel's governed
         // top (2026-10-18).
         {"Jeep Wrangler", 9, 1.20f, 750.0f, 3000.0f, 0, 0.6f},
