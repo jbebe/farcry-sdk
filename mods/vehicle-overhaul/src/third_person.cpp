@@ -2,7 +2,8 @@
 // vehicle puts the first-person camera back.
 //
 // The engine's Cameras.Camera.Third is put up and then placed by the chase camera, which takes the
-// mouse look for itself while it is up.
+// mouse look for itself while it is up. The player's full body is drawn while it is up, the first-person
+// avatar otherwise.
 #include "third_person.h"
 
 #include "chase.h"
@@ -13,6 +14,7 @@
 #include "engine/terrain.h"
 #include "engine/third_camera.h"
 #include "engine/vehicle.h"
+#include "engine/view_mode.h"
 #include "fcse_api.h"
 
 #include <atomic>
@@ -28,6 +30,11 @@ namespace {
     bool g_wanted = false;
     void* g_camera = nullptr;
     void* g_pawn = nullptr;
+
+    // Whether the view mode can be switched, and the pawn last drawn with its full body. A pawn the plugin has
+    // not switched is drawn as the engine left it, from inside.
+    bool g_bodies = false;
+    void* g_fullBody = nullptr;
 
     void OnSignal(uint32_t signal) {
         if (signal == kToggleSignal) {
@@ -56,7 +63,7 @@ namespace {
         }
     }
 
-    void Tick(void* pawn, float* look) {
+    void Update(void* pawn, float* look) {
         if (g_toggles.exchange(0) % 2 != 0) {
             g_wanted = !g_wanted;
         }
@@ -95,6 +102,27 @@ namespace {
         }
     }
 
+    // The full body while the chase camera is up. Only the pawn in hand is ever switched, so one a level load
+    // replaced is left alone.
+    void ShowBody(void* pawn) {
+        const bool outside = g_camera != nullptr;
+        if (!g_bodies || outside == (g_fullBody == pawn)) {
+            return;
+        }
+        if (outside) {
+            VehicleOverhaul::ViewMode::Set(pawn, false);
+            g_fullBody = pawn;
+        } else {
+            VehicleOverhaul::ViewMode::Set(pawn, true);
+            g_fullBody = nullptr;
+        }
+    }
+
+    void Tick(void* pawn, float* look) {
+        Update(pawn, look);
+        ShowBody(pawn);
+    }
+
     bool Place(void* camera, float seconds, VehicleOverhaul::ThirdCamera::Pose& pose) {
         void* vehicle =
             camera == g_camera ? VehicleOverhaul::Entity::Of(VehicleOverhaul::Vehicle::Current(g_pawn)) : nullptr;
@@ -113,6 +141,8 @@ bool Install() {
         !ThirdCamera::Install(&Place)) {
         return false;
     }
+    // Without it the chase camera still works, over the first-person avatar.
+    g_bodies = ViewMode::Install();
     // A hook is live from here, so the plugin has to stay loaded whatever happens next.
     PawnTick::Subscribe(&Tick);
     Input::Install(&OnSignal);

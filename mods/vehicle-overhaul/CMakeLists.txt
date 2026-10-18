@@ -83,6 +83,7 @@ add_library(VehicleOverhaul SHARED
   "src/engine/vehicle.cpp"
   "src/engine/vehicle_sound.cpp"
   "src/engine/view.cpp"
+  "src/engine/view_mode.cpp"
   "src/engine/vtable.cpp"
   "src/engine/wheeled.cpp"
   ${SHADER_HEADERS}
