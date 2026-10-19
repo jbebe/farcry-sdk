@@ -70,6 +70,10 @@ Cape Buffalo 3, Wildebeest 4, Goat 5, Chicken 6.
   affiliation is 5 and its `SupportedAnimalSpecies` list holds the animal's value.
   `CTaskSmartTerrainFinder` copies the value into its query.
 
+Nothing copies one value into the other. `CAnimal +0xD4` is written only by its constructors (0) and
+reflection, from `CAnimal`'s own field, and `CAnimalAgent +0x1E8` likewise from the agent's; the
+agent's copy constructor (`0x0855EEC0`) copies only its own fields.
+
 ### What is archetype data
 
 Sounds (`sndAlertSound`, `sndDeathSound` and their types), speeds and turning, `fPathfindRadius`,
@@ -128,6 +132,17 @@ multi-user `CSmartTerrain` points, run from `smartterrainanimal.ai.rml`, and spa
 `fBroadcastRange` is 50 and `fExecutionRange` 20; placed points often override the broadcast range, up
 to 160. `GenericMultiUser*_TODELETE` points are soldier duty and rest points, not animals.
 
+Each action's `mmsAction` names a MOVE state, which branches on the animation species. Two of them
+send other species elsewhere, so every action plays on every rig:
+
+- **`Pawn_ST_GazelLieDown`** lies down only a gazelle; any other species is redirected to
+  `Quadruped_Eat`.
+- **`Pawn_ST_ChickenSit`** sits only a chicken; any other species is redirected to `Quadruped_Eat`.
+- **`Quadruped_Eat`** has an eat branch for all six species, the chicken's being its pecking clip.
+- **`Quadruped_HeadTwitch`** has one per species; the chicken plays its look-around.
+
+MOVE states are keyed by the CRC-32 of the lowercased name (`quadruped_eat` is `0x8953EA81`).
+
 ### Saves and respawning
 
 Every quadruped archetype has `CPersistComponent.selLevel` 1 (Limited), like soldiers. A level-1 world
@@ -152,8 +167,8 @@ No data or code chooses an animal from a list:
   and RandomArchetype finds nothing else but `CGhostManager` ghost groups and `CBoidsComponent`.
 
 The only randomness on animals: `CAnimal::Finalize` (`0x08B2F290`) sets the graphic component's
-`+0x1BC` to a random 0.9 to 1.1, probably a size jitter *(inferred)*, and fleeing picks among random
-points.
+`+0x1BC` to a random 0.9 to 1.1, a uniform size factor ([the size factor](#the-size-factor)), and
+fleeing picks among random points.
 
 ## How a placed animal is built
 
@@ -306,6 +321,11 @@ clips `00456acb`, which the buffalo's and zebra's gallops share, and its walk cl
 `CAnimationResource::ClientProcessRawData` (`0x09B9E8D0`) creates each event object from the clip's
 event chain and loads it with the clip as its parent.
 
+`TriggerGameEvents` (`0x09B9EAB0`) hands each event whose time falls in the frame to
+`CAnimationComponent::DispatchEvent` (`0x09470B60`). A sound event is queued and played there; any
+other event goes to the animal's own entity through `CEntity::OnEvent`. So a clip event cannot reach
+the player, and a stim from it would be ignored, since the agent drops stims it sent itself.
+
 ### Clip membership
 
 A `CMovementResource` is named after a MOVE state, and depload lists the state's clips under it. Its
@@ -323,6 +343,8 @@ made for.
 
 `Hips` is the only bone with `m_fAnimatedTranslation` on the goat and zebra rigs, and the only bone
 translated in every clip read: all 16 of the goat's, and the walk and run cycles of the other three.
+The chicken's 11-bone `pelvis_ref` rig is the same with `Pelvis`: `Pelvis`, `Neck`, `Head`, `R Wing`,
+`L Wing`, and `Thigh`, `Calf`, `Foot` per side, and all seven of its clips translate `Pelvis` alone.
 Every other bone gets rotations only, so bone lengths come from the `.skeleton` and hip height from the
 clip:
 
@@ -332,8 +354,18 @@ clip:
 | zebra | 1.33–1.43 m | 12.28 m/s (gallop) | 12.28 |
 | cape buffalo | 1.30–1.48 m | 5.90 m/s | 5.9 |
 | wildebeest | 1.08–1.29 m | 8.35 m/s | 7.9 |
+| chicken | 0.285 m standing; 0.165 sitting, 0.544 at the top of its run-jump | 3.75 m/s | 3.75 |
 
-Walk speeds match the same way: the goat's walk clip covers 0.86 m/s, its `fSpeedsWalk` is 0.86.
+Walk speeds match the same way: the goat's walk clip covers 0.86 m/s, its `fSpeedsWalk` is 0.86; the
+chicken's 0.30 m/s, its `fSpeedsWalk` 0.3.
+
+**A clip's translation replaces the rig's offset; it is not added to it.** `EvaluateSingleAnimNode`
+(`0x09BBA350`) writes a translated bone's value into its result slot with a "has translation" flag,
+and the pose builder `GenerateTransformForJointFromParams` (`0x09BB30B0`) takes that value when the
+flag is set and the `.skeleton`'s `m_LocalOffset` when it is not. Every animal rig rests its root at
+offset 0, so the hip height cannot be lifted from the `.skeleton`. That builder is the two-bone IK
+path's; that the per-frame path does the same is *(inferred)*. Posed that way, the chicken's walk keeps
+each planted foot at a steady 0.027 m.
 
 ### Movement comes from the clip
 
@@ -347,4 +379,30 @@ Movement then depends on the animation LOD. When it is 1 or 2 (`UpdatedEveryFram
 component's `+0x1BC` (the 0.9 to 1.1 size jitter `CAnimal::Finalize` rolls) and gives the animal the
 agent's direction at that magnitude. Otherwise `Update` (`0x08E983B0`) moves it by the agent's own
 velocity. So near the player an animal runs at its clip's speed, not its archetype's, and `+0x1BC`
-scales root motion as it would scale the model *(that it scales the model is inferred)*.
+scales root motion as it scales the model ([below](#the-size-factor)).
+
+The gazelle beautifier (`selBeautifier` 0) also writes bool channel 33, `PerformingJump`, from a flag
+`UpdateEffectiveFromDesire` (`0x08E93CF0`) raises when the wanted heading is more than 45° off the
+animal's facing and clears once it has nearly stopped: a hop on a sharp turn. No other code writes
+that channel, so on the generic beautifier the MOVE branches that test it never play.
+
+### The size factor
+
+`CGraphicComponent +0x1BC` is a uniform model scale. `OnEntityMove` (`0x094ABB30`) builds the render
+matrix at `+0x170` as the entity matrix times `diag(s, s, s, 1)` whenever it is not 1, and both
+`GetObjectWorldMatrix` (the mesh) and `GetNodeWorldMatrix` (every skeleton node) go through it. So it
+scales the mesh, the animated pose including the clip's hip height, and, through the beautifier, root
+motion: one scale for the whole animal, with feet that stay planted.
+
+- **Nothing in data sets it.** `CGraphicComponent` has no scale member; the constructors set 1 and
+  only `CAnimal::Finalize` writes the jitter (GOG `0x10683280`, the store at `0x10683353`,
+  `fstp [edi+0x1BC]` with EDI the graphic component). A plugin can write it after `Finalize` runs.
+- **The culling sphere does not grow.** `UpdateTransform` (`0x094AF6A0`) moves the world bounding
+  sphere's centre through the scaled matrix but passes its radius unscaled: the mesh's own, or
+  `fLODSphereRadius` in the branch that overrides it.
+- **Physics does not grow.** The character capsule and `fPathfindRadius` are archetype data and
+  read no scale *(inferred)*.
+- **Ragdolls draw through it.** In ragdoll mode `UpdateRagdollBonesToMeshNodes` (`0x09516540`) writes
+  the ragdoll's pose into the skeleton's node matrices, which are model-space, so a scaled animal's
+  corpse is drawn at the scale times the physical ragdoll, about the entity's origin *(that the pose
+  is entity-relative is inferred)*.

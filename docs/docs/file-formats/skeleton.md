@@ -106,6 +106,9 @@ u16[...]                 m_rgTranslationBoneIds
 The LOD bitmasks are stored **zeroed** in every shipped file; `CSkeleton::FillLODBitmask` regenerates
 all three after load.
 
+**`m_flScaledFactor` does nothing.** `SerializeSkeleton` reads it into a local and drops it, which is
+why the animal rigs all store the same junk denormal (`0x0012E28C`). It cannot scale a rig.
+
 ### Anim handle
 
 Repeated `anim handle count` times. These are attachment sockets, not bones, and their ids continue

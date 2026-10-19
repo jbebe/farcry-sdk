@@ -5,8 +5,8 @@ sidebar_position: 3
 # Attacking Animals
 
 **Status:** feasibility checked 2026-10-19 from data and code; the buffalo charge built in
-`mods/wildlife-overhaul` the same day; [the hyena](#the-hyena) and [fish shoals](#fish-shoals)
-researched as new archetypes the same day; nothing seen in game. The behaviour cannot be copied from Far
+`mods/wildlife-overhaul` the same day; [the hyena](#the-hyena), [fish shoals](#fish-shoals) and
+[the ostrich](#the-ostrich) researched as new archetypes the same day; nothing seen in game. The behaviour cannot be copied from Far
 Cry 3 and has to be rebuilt on Far Cry 2's own agent. New animals can be
 [added alongside the old ones](#adding-instead-of-replacing) with a data layer and a small plugin.
 The first steps are [four experiments](#experiments-in-order).
@@ -90,7 +90,7 @@ Three tools would unblock every animal:
 | crocodile | the crocodile: walk, jog, swim and kill clips | medium-high | no animations, MOVE rules or assets behind the Crocodile species value; waterline ambush only |
 | fish packs | `Fish_FP`, Far Cry 3's own fish flock; river fish (7 bones) | medium | the bird rig instead of a fish rig, a night-climb plugin, a skinning fix in BlenderFC2; [details](#fish-shoals) |
 | snake | the snake (32 bones) | high | a new rig, so the rig exporter |
-| ostrich | the cassowary (two-legged, 51 bones) | high | a new rig, and two-legged animation rules Far Cry 2 does not have |
+| ostrich | the cassowary (two-legged, 51 bones), or Far Cry 2's chicken scaled up | medium via the chicken | a size plugin, a mesh on the chicken rig; [details](#the-ostrich). The cassowary needs a new rig and two-legged animation rules |
 
 Beyond the data-only charge, behaviour lives in one FCSE plugin: chase instead of flee, hits timed to
 an animation event, knockback, a camera hit and per-species sight.
@@ -103,7 +103,7 @@ tests for all of them.
 
 What the ranking leans on, read in Far Cry 2's data:
 
-- **The chicken is a small ostrich.** Its rig is 10 bones: `Pelvis`, `Neck`, `Head`, `R Wing`,
+- **The chicken is a small ostrich.** Its rig is 11 bones: `Pelvis`, `Neck`, `Head`, `R Wing`,
   `L Wing`, and `Thigh`, `Calf`, `Foot` on each side. Its clips are walk, run, run-jump, eat,
   look-around, sit-down and get-up, and it has a ragdoll and its own MOVE branch.
 - **The bird flock is data, but for its night.** `Animals.Winged.Birds`' `CBoidsComponent` holds
@@ -137,10 +137,11 @@ What the ranking leans on, read in Far Cry 2's data:
 
 - **Lion.** A new mesh on the buffalo or zebra rig. A horse's gallop under a big cat will be noticed. A
   pounce can be keyed by hand into a copied bank.
-- **Ostrich.** A chicken clone with an ostrich mesh and the chicken rig's bones lengthened. It inherits
-  all seven chicken clips, and run-jump doubles as a kicking lunge. The chicken clips may carry
-  chicken-sized hip motion, so feet could slide or sink *(inferred)*. Animating as a chicken (5) while
-  behaving as a zebra (2) gives it 25 m sight instead of a chicken's 3 to 5 m.
+- **Ostrich.** A chicken clone with an ostrich mesh, scaled up whole by the engine's per-animal size
+  factor, which a small plugin sets. Lengthened leg bones do not work: the clips fix the hips at
+  chicken height. It inherits all seven chicken clips, and run-jump is already a two-footed forward
+  strike. Animating as a chicken (5) while behaving as a zebra (2) gives it 25 m sight instead of a
+  chicken's 3 to 5 m. See [the ostrich](#the-ostrich).
 - **Snake as a still hazard.** A coiled snake that never moves needs no rig: a hiss and a bite when the
   player steps close, from a trigger and `SendPierceStimWithOrigin`. Far Cry 3 ships stationary snakes
   too.
@@ -493,6 +494,184 @@ The first five share one launch: the stand-in shoal on bird meshes at sector 411
 - whether `fDisappearAtNightSpeed` is the night climb in Far Cry 3, which would confirm the plugin's
   fix as the one Far Cry 3 made;
 - the exact end of the day window: the sun-cycle curve's 0.53 point was not converted to a clock time.
+
+## The ostrich
+
+Researched 2026-10-19 as a scaled-up chicken, `Animals.DLC.Ostrich`: a copy of
+`Animals.Quadrupeds.Chicken` with an ostrich mesh. Nothing was built or seen in game. Lengthening the
+chicken rig's bones does not make an ostrich, because the clips fix the hip height. The engine's own
+per-animal size factor does, but only a plugin can set it. The engine side is in
+[Animals](../engine-internals/animals.md#the-size-factor).
+
+### The chicken's rig and clips
+
+Read in `graphics\characters\animals\chicken\pelvis_ref.skeleton` and the seven clips:
+
+- **11 bones:** `Pelvis` (the root), `Neck`, `Head`, `R Wing`, `L Wing`, and `Thigh`, `Calf`, `Foot`
+  on each side. Only `Pelvis` is marked to translate.
+- **Only `Pelvis` moves in any clip.** All seven translate it and nothing else; the other ten bones
+  get rotations only. The wings are held still in walk, run, eat and look-around, and keyed in get-up,
+  sit-down and run-jump.
+
+| Clip | Length | `Pelvis` height | Root motion |
+|---|---|---|---|
+| walk | 2.07 s | 0.285–0.288 m | 0.30 m/s |
+| run | 0.40 s | 0.285 m | 3.75 m/s |
+| run-jump | 1.47 s | 0.278–0.544 m | 5.49 m in all, 3.74 m/s |
+| eat | 16.7 s | 0.284–0.350 m | none |
+| look-around | 8.0 s | 0.283–0.286 m | none |
+| sit-down, get-up | 0.83 s each | 0.165–0.298 m | none |
+| sit-look-around | 23.3 s | 0.165–0.175 m | none |
+
+Posed from the clips, a planted foot sits at 0.027 m and the head at 0.42 to 0.44 m in the walk
+*(computed)*. The archetype's speeds match the clips (`fSpeedsWalk` 0.3, `fSpeedsRun` 3.75), and
+MOVE's chicken locomotion blends on the Speed channel: look-around at 0, walk at 0.3, run at 3.75.
+
+### Why longer bones are not enough
+
+- **The bones below the hips take their length from the `.skeleton`.** No clip translates them, so
+  a copied rig with longer offsets keeps every clip's rotations.
+- **The hips do not.** A clip's `Pelvis` translation replaces the rig's offset; it is not added to it
+  ([Animals](../engine-internals/animals.md#the-rigs)). Legs four times as long on 0.285 m hips put
+  the planted feet about 0.75 m underground *(computed)*. Raising the hips takes a rescale of every
+  clip's `Pelvis` track and trajectory in copied banks, under species 7 with its own MOVE branches.
+  JackAll's `MabEncoder` re-encodes a section it is given, but no command scales one: new tooling.
+- **The neck can grow.** `Head` is a leaf whose offset is the neck's length, and it is only rotated,
+  so doubling that offset in a copied rig lengthens the neck in every clip.
+- **The mesh must be bound to the longer rig.** Skinning goes through the `.xbg`'s own inverse-bind
+  matrices ([bone palettes](../file-formats/xbm-xbg.md#charactercreature-bone-palettes)), and
+  BlenderFC2 cannot change a bind pose. A mesh bound to the longer rig needs the rig exporter. One
+  bound to the chicken's proportions, with the neck blended from `Neck` to `Head`, would be pulled
+  long at run time by the longer rig *(inferred)*.
+- **The rig's own scale field is dead** ([`m_flScaledFactor`](../file-formats/skeleton.md#remainder)).
+
+### Scaling the whole animal
+
+`CGraphicComponent +0x1BC` scales the mesh, the posed skeleton including the clip's hip height, and
+root motion together *(read in code)*. No archetype field sets it and no Lua binding is named for a
+scale; only `CAnimal::Finalize` writes it, with the 0.9 to 1.1 jitter. So the size takes an FCSE plugin: detour
+`CAnimal::Finalize` (GOG `0x10683280`, `__thiscall`, no arguments) and after it returns, write the
+scale into the entity's graphic component for the ostrich archetype. A few lines.
+
+| Scale | Neck | Hips | Head, walking | Head, running | Walk | Run |
+|---|---|---|---|---|---|---|
+| 3.5 | chicken's | 1.00 m | 1.55 m | 1.42 m | 1.06 m/s | 13.1 m/s |
+| 4 | chicken's | 1.14 m | 1.77 m | 1.62 m | 1.21 m/s | 15.0 m/s |
+| 4 | doubled | 1.14 m | 2.24 m | 2.00 m | 1.21 m/s | 15.0 m/s |
+| 4 | 2.5 times | 1.14 m | 2.47 m | 2.21 m | 1.21 m/s | 15.0 m/s |
+
+*(Computed from the walk and run clips.)* A scale of 4 with a doubled neck is about ostrich size. The
+scale brings its own costs:
+
+- **Keep the archetype's speeds at the chicken's.** MOVE's thresholds (walk at 0.3, run at 3.75, the
+  run-jump gate at 3.6) compare the agent's speed, so `fSpeedsWalk` and `fSpeedsRun` stay 0.3 and
+  3.75. Near the player the scaled root motion moves it at 15 m/s anyway. Far away, where the animal
+  moves by the agent's velocity, it moves four times slower *(inferred)*. Species 7 with MOVE bands
+  scaled by 4 and matching speeds removes that.
+- **Culling.** The bounding sphere's radius is not scaled, so set `bOverrideLODSphere` True and
+  `fLODSphereRadius` to about 2.5 in the archetype, or it can vanish while still on screen.
+- **Physics.** The capsule (points (0, 0.2, 0.4) and (0, 0.1, 0.28), radius 0.27) and
+  `fPathfindRadius` 0.5 are archetype data; multiply them by the scale.
+
+### Two species values
+
+Read in code: `CAnimal.selAnimalSpecies` (`+0xD4`) is read only by the two beautifiers, which hand it
+to MOVE, and `CAnimalAgent.selAnimalSpecies` (`+0x1E8`) only by sight, flee and the smart-terrain
+finder. Nothing copies one into the other
+([two species values](../engine-internals/animals.md#two-species-values)). So 5 and 2 give:
+
+- **Sight and flight of a large animal:** 25 m sight, 35 m once threatened, and a 60 or 20 m flee,
+  instead of the chicken's 5 m sight and 4 m flee.
+- **Savanna points instead of urban ones.** `SavannahAnimals` points take agent values 1 to 4. Each of
+  their four actions has a chicken clip: `Quadruped_Eat` the pecking clip, `_Generic_Movement` the
+  chicken's locomotion, `_HeadTwitch` its look-around, and `Pawn_ST_GazelLieDown` sends every
+  species but the gazelle to `Quadruped_Eat`, so it pecks again *(read in `movemgr.bin`)*. It never
+  sits: `Pawn_ST_ChickenSit` is offered only by urban points.
+- **The chicken's voice.** Its eat clip fires 6 sound events and look-around 3, walk and run-jump one
+  each. Silencing them takes species 7 with copied clips, as for [the hyena](#rig-and-animation).
+  `sndAlertSound` and `sndDeathSound` are unset on the chicken; the ostrich needs its own banks.
+
+### The ragdoll
+
+`chicken_ragdoll.hkx` holds six bodies (`Ragdoll_Pelvis`, the neck, both thighs, both wings) on
+capsules and hulls, five ragdoll constraints whose pivots are the rig's bone offsets (the right
+thigh's is (0.131, 0.0952, 0.033)), an `hkaSkeleton` reference pose, two skeleton mappers with no
+translation, and a fixed 2.5 m `Plane01` body. The calves, feet and head have no body. The bodies
+weigh 1 kg (pelvis), 0.25 (neck) and 0.1 (each thigh and wing) *(read with `jackall-cli hkx dump`)*.
+
+JackAll can scale it: `hkx verify` rebuilds it byte for byte, `hkx check` finds nothing, and `hkx
+decode` / `encode --original` rewrites any member. A uniform scale is every body's translation,
+centre of mass and `objectRadius`, every capsule's ends and radius, every hull's vertices, plane
+distances, bounds and radius, the constraints' pivot translations, the reference pose's translations
+and `allowedPenetrationDepth`, all times the scale, and `inertiaAndMassInv`'s inertia terms divided by
+its square at unchanged mass. There is no `scale` command, so this is a script over the decoded XML:
+new tooling. `hkx tree` throws on this file (`ArgumentOutOfRange`, parameter `count`), a bug in it.
+
+Whether to scale it at all depends on the size factor. The ragdoll writes its pose into model-space
+node matrices, which are drawn through the scaled matrix, so under the plugin's scale the corpse is
+drawn at four times the physical ragdoll about the entity's origin *(inferred)*. A scaled `.hkx` would
+then be drawn four times too large again. Which combination looks right is the
+[check](#obstacles-2) below.
+
+### The kick
+
+**The run-jump is already a strike.** From 0.27 to 0.53 s both feet are tucked forward and raised:
+at 0.40 s the left foot is 0.32 m ahead of the pelvis and 0.32 m up, above the standing hip height,
+and the hips peak at 0.544 m at 0.47 s *(computed from the clip)*. The clip already fires an event at
+0.40 s, whose payload names `PlaySound`. At a scale of 4 the foot reaches 1.3 m ahead at 1.3 m up,
+chest height, 6.1 m into a leap that covers 22 m in 1.47 s, at the running speed.
+
+**How the clip plays today** *(read in `movemgr.bin` and code)*:
+
+- in `Quadruped_Generic_Movement`, at Speed 3.6 or more, 15% of the time (`RandomPercentage` 0 to 15);
+- on `PerformingJump`, which only the gazelle beautifier raises, on a turn sharper than 45°.
+
+Neither can be called by a brain.
+
+**Where the contact moment can come from**, cheapest first:
+
+1. **Distance alone (data).** The buffalo's pattern: run at the player and send Crush within reach.
+   The leap plays at random while it runs and the hit is not tied to it.
+2. **A brain timer (data, with a MOVE and a GOSM edit).** A new MOVE state that plays the run-jump, a
+   GOSM state with a sink on a new signal, and in the brain `CTaskSendActionSignal`, `CTaskWait`
+   0.4 s, then `CTaskBroadcastStims`. The buffalo brain already uses all three tasks. The state's
+   `m_flStartTime` and `m_flStopTime` may trim the clip to the leap *(inferred from the names; every
+   retail value is 0)*. Start the leap when the player is about 7.5 m ahead at a scale of 4. That the
+   brain's wait lands on the frame is *(inferred)*.
+3. **The clip's own event (FCSE).** `CAnimationComponent::DispatchEvent` plays sound events and sends
+   every other event to the animal's own entity, so a clip event cannot hurt the player in data. A
+   plugin that detours it (server `0x09470B60`; the GOG address was not located) can match the 0.40 s
+   event on an ostrich and send Crush to the player if within reach: the exact frame.
+
+JackAll writes `movemgr.bin`, but nothing it wrote has been loaded by the game yet.
+
+### Obstacles
+
+| Obstacle | Solved by | Cheapest one-launch check |
+|---|---|---|
+| Ostrich size | FCSE: write `+0x1BC` after `Finalize` | the plugin at 4 on every retail chicken: do they stand on the ground and walk without sliding |
+| Longer legs | not by the rig; new tooling (a clip rescale) and species 7 | none needed while the whole animal is scaled |
+| Longer neck | data: a copied rig with `Head`'s offset doubled; no CLI writes a `.skeleton`, but JackAll's `SkeletonFile` does | a chicken clone on the copied rig with the chicken mesh: does the head ride out on a stretched neck |
+| The ostrich mesh | art on the chicken rig; the rig exporter (new tooling) if bound to the longer rig | the clone with the mesh |
+| Culling | data: the LOD sphere override | the scale launch: turn until a chicken is at the screen's edge |
+| Far-off speed | inferred only; species 7 removes it | the scale launch: watch a chicken run from 100 m away |
+| 25 m sight, savanna points | data: agent species 2 | walk to 20 m of a chicken clone on species 5 and 2 |
+| Clucking | data: species 7 with copied clips, or accept | the same clone, grazing |
+| Alert and death sounds | data: new banks and the two fields | shoot it |
+| The ragdoll at scale | unknown; scaling the `.hkx` is new tooling | kill a scaled chicken on the retail ragdoll |
+| `hkx tree` on ragdolls | a tooling bug | none needed |
+| The kick's timing | data (a brain timer and a MOVE and GOSM edit) or FCSE (the event) | the buffalo charge covers the stim; the leap needs the MOVE edit first |
+
+The first six visual checks share one launch: the scale plugin on the retail chickens, by day.
+
+### Unknowns
+
+- whether the per-frame pose builder takes a clip's translation in place of the rig's offset, as the
+  IK path does;
+- how a scaled animal's ragdoll looks, and whether its entity follows the ragdoll;
+- whether a far-off scaled animal visibly crawls;
+- whether `m_flStartTime` and `m_flStopTime` play part of a clip;
+- whether the brain's wait lands the hit on the strike frame.
 
 ## Adding instead of replacing
 
