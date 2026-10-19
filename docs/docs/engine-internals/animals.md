@@ -28,9 +28,9 @@ World 1's entity library has eight quadrupeds, the same eight as scripted varian
 | `Animals.Winged.*` | `Bat`, `Bird01`, `Bird02`, `Birds` |
 
 Art exists for bats, birds, cape buffalo, chicken, gazelle, goat, wildebeest and zebra. Zebra,
-wildebeest, cape buffalo and goat each have a 30-bone `hips_ref` rig with 16 clips, though zebra and
-buffalo order the same bone names differently; the gazelle's 29 bones have other names. No animal has
-an attack clip.
+wildebeest, cape buffalo and goat each have a 30-bone `hips_ref` rig with 16 clips, the same bone
+names in four different orders ([the rigs](#the-rigs)); the gazelle's 29 bones have other names. No
+animal has an attack, rear, kick or jump clip on these rigs.
 
 ### A quadruped's components
 
@@ -266,6 +266,22 @@ animal brain built from `CScannerIsInDistance`, `CTaskPathFind` or `CTaskChase` 
 `PlayerPosition`, then a fast `CTaskAnimalPathFollow`, should chase the player *(inferred: the
 mechanism was read, an animal running it was not)*.
 
+**`CTaskCheckVisibleByPlayer` runs on an animal.** It is a `CPawnDecision`, but its `DoRun`
+(`0x084277A0`) uses only the generic agent `CTask::SetAgent` stores at `+0xC`; the pawn pointer
+`CPawnDecision::SetAgent` (`0x082F34F0`) leaves null for a non-pawn sits at `+0x34` and is not read. It
+looks up the agent entity's `COcclusionQueryComponent`, takes the largest `GetCoverageOnViewport`
+over its viewports, and fires the event `Yes` (CRC-32 `0x4DAA7349`) when that is above 0, else `No`
+(`0xF22E0CBD`); an entity without the component always gets `Yes`. Every retail quadruped, scripted
+quadruped and flyer archetype carries `COcclusionQueryComponent` already (19 of world 1's 115). The
+task has no parameters. That coverage means pixels the player's camera actually draws, so that an
+animal behind a wall or a rock reads as unseen, is *(inferred from the names)*; whether grass hides
+it was not read. No retail brain uses the task.
+
+**An animal no smart-terrain point accepts stands still.** The idle sub-brain's
+`CTaskSmartTerrainFinder` has a `NoSTPFound` exit that retail's `animalbrain` connects to nothing, so
+an agent species no point lists, 7 and up for instance, idles in place and never grazes *(read in the
+brain; the standing was not seen)*.
+
 ## How anything damages the player
 
 Soldiers melee by switching to the machete (`FireStrategy/Machete` in `mercbrain`). The swing is
@@ -339,10 +355,21 @@ child list follows the MOVE graph, unlike a weapon's animation package. That a c
 
 ### The rigs
 
-Zebra, wildebeest, cape buffalo and goat each have a 30-bone `hips_ref.skeleton` with the same names.
-The goat lists the right ear, foreleg and hind leg before the left; the zebra lists the left first.
-Clips address bones by id ([`.mab`](../file-formats/mab.md)), so a clip plays only on the rig it was
-made for.
+Zebra, wildebeest, cape buffalo and goat each have a 30-bone `hips_ref.skeleton` with the same names,
+in four different orders. Clips address bones by id ([`.mab`](../file-formats/mab.md)), so a clip
+plays only on the rig it was made for:
+
+| Rig | Ids 5–9 (head) | Ids 10–19 (forelegs) | Ids 20–29 |
+|---|---|---|---|
+| zebra | `Jaw`, ears, eyes | left, then right | left hind leg, right hind leg, `Tail`, `Tail1` |
+| cape buffalo | left ear, left eye, right eye, right ear, `Jaw` | left, then right | left hind leg, `Tail`, `Tail1`, right hind leg |
+| wildebeest | right ear, left ear, `Jaw`, right eye, left eye | right, then left | `Tail`, `Tail1`, left hind leg, right hind leg |
+| goat | `Jaw`, right ear, left ear, left eye, right eye | right, then left | right hind leg, left hind leg, `Tail`, `Tail1` |
+
+Ids 0 to 4 are `Hips`, `Spine`, `Neck`, `Neck1` and `Head` on all four. Mapping a clip to another rig by
+bone name is not enough either: the rigs' bone lengths differ, so the zebra's gallop on the
+wildebeest's lengths lifts the hind hooves 0.12 m above the fore hooves *(computed by posing the clip
+on the wildebeest's offsets)*.
 
 `Hips` is the only bone with `m_fAnimatedTranslation` on the goat and zebra rigs, and the only bone
 translated in every clip read: all 16 of the goat's, and the walk and run cycles of the other three.
@@ -383,6 +410,22 @@ component's `+0x1BC` (the 0.9 to 1.1 size jitter `CAnimal::Finalize` rolls) and 
 agent's direction at that magnitude. Otherwise `Update` (`0x08E983B0`) moves it by the agent's own
 velocity. So near the player an animal runs at its clip's speed, not its archetype's, and `+0x1BC`
 scales root motion as it scales the model ([below](#the-size-factor)).
+
+**The displacement is the clip's trajectory, not its `Hips` track.** `UpdateFromAnimation` gets it
+through `ComputeDisplacement` (`0x08E96310`) and `CAnimationComponent::GetDisplacement`, and
+`EvaluateSingleAnimNode` (`0x09BBA350`) fills it from section 0 of the clip, the root translation.
+Every animal clip keeps that trajectory flat at z 0 and holds `Hips` in place forward: the buffalo's
+run moves its trajectory 3.74 m in 0.633 s, the 5.90 m/s, while `Hips` stays at y −0.49. A clip
+that should carry the animal forward, a leap for instance, has to move its trajectory; moving `Hips`
+forward would leave the entity and its capsule behind *(inferred)*. Every animal bank holds one clip
+and no participants (all 48 buffalo, zebra and wildebeest banks read).
+
+**With zero agent velocity the animal stands, whatever the clip.** Speed comes from the clip and
+direction from the agent, so a clip with a still trajectory, or a brain that stops its path follow,
+halts it. A GOSM state can switch this off: `CGOStateEventAnimal::Activate` (`0x08B0D540`) sets
+`CAnimal +0x5C` to 1 for `EventType` 0 (`UseRotation`) and to 0 for `EventType` 1, and while it is set
+the animal moves by the clip's own displacement and yaw, with no agent velocity. The idle state's
+`IgnoreRotation` event clears it again.
 
 The gazelle beautifier (`selBeautifier` 0) also writes bool channel 33, `PerformingJump`, from a flag
 `UpdateEffectiveFromDesire` (`0x08E93CF0`) raises when the wanted heading is more than 45° off the

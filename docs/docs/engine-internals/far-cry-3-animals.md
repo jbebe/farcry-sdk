@@ -193,10 +193,14 @@ Almost every animal lives in `fc3_main`'s subfats, so a dump that skips them mis
 | river_fish01 to 04 | 16 to 101 KB | 7 | river_fish01 only | 8 |
 | coral-reef fish school, one skinned object | 393 to 555 KB | 125 | — | 15 group clips |
 
-The tiger's normal and mask textures are named in its material but were not among the unpacked files.
+The stock name list misses many textures, the tiger's normal and mask maps among them. Adding the
+names `fc3_main_depload.xml` gives to a copy of the unpacker's list brings them out, with every leopard
+texture and the shared `animal_longfur01`, `animal_shortfur02` and `bloodgore` maps.
 
 The tiger, buffalo, komodo and crocodile rigs use the same bone names as Far Cry 2's 30-bone
-quadruped (`Hips`, `Spine`, `Neck`, `Neck1`, `Head`, `Jaw`, `LeftArm`, …) plus extra bones.
+quadruped (`Hips`, `Spine`, `Neck`, `Neck1`, `Head`, `Jaw`, `LeftArm`, …) plus extra bones. The tiger
+has 29 of the 30: its tail starts at `Tail1`, with no `Tail`. The leopard's `pelvis_ref` has 28: its
+root is `Pelvis`, not `Hips`, and it has no `Tail` either.
 
 ### Formats against Far Cry 2's
 
@@ -209,9 +213,9 @@ JackAll reads none of these Far Cry 3 versions.
 | [`.mab`](../file-formats/mab.md) | `0x4C` | `0x61` | layout unknown |
 | ragdoll [`.hkx`](../file-formats/hkx.md) | Havok 5.5.0-r1, packfile 5 | Havok 2010.2.0-r1, packfile 8 (Skyrim's) | Skyrim tools such as hkxcmd should dump it *(inferred, not run)* |
 | material | `.xbm` | `MAT\0` + FCB, shader `Skin_Advanced` | |
-| [`.xbt`](../file-formats/xbt.md) | header 11 | 104: a 136-byte header, then a plain DDS | same mip-0 split |
+| [`.xbt`](../file-formats/xbt.md) | header 11 | 104: a header of 36 bytes plus the `_mip0` companion's path (36 bytes with none, 124 to 140 with one), then a plain DDS; the DDS offset is the word at `+8`, as in Far Cry 2 | same mip-0 split. `xbt extract` refuses version 104, but a stripped DDS wraps in a Far Cry 2 header with `xbt build` |
 | [`.sbao`](../file-formats/sbao.md) | | Ogg Vorbis after a 40-byte header | `jackall-cli sbao extract` read one: 32 kHz stereo |
-| [`.spk`](../file-formats/spk.md) | | version 4 (`04 4B 50 53`) | 539 of 978 banks embed Ogg; the other 439 use an unknown codec |
+| [`.spk`](../file-formats/spk.md) | | version 4 (`04 4B 50 53`): a count, the ids, then each record as a size and its payload, 4-byte aligned | 1,002 of `fc3_main`'s 5,214 banks embed Ogg; the others checked hold Far Cry 2's own IMA-ADPCM stream at version 6. `spk list` refuses version 4 |
 
 ### The hyena ships no assets
 
@@ -243,7 +247,104 @@ The banks are `soundbinary\<id>.spk` inside `fc3_main`'s subfats, not in `sound.
 | `001ae4c1` | rabid dog and thylacine deaths |
 | `001aa45c` | rabid dog howl |
 
-None of the 22 dog and thylacine banks embeds Ogg. Their audio is a 4-bit ADPCM-like stream that is
-not plain IMA-ADPCM: decoded as IMA it is far smoother than noise but drifts to clipping, where a Far
-Cry 2 IMA bank decodes cleanly *(inferred from that test)*. Reading them needs a v4 bank parser and
-that codec.
+None of the 22 dog and thylacine banks embeds Ogg. An earlier test decoded their 4-bit stream as
+IMA-ADPCM and saw it drift to clipping; that was the nibble order. The big cats' banks hold the same
+kind of stream, and it is Far Cry 2's `TImaAdpcm` at version 6: a 36-byte header (Far Cry 2's has 28),
+ten raw 16-bit samples, then the nibbles, high nibble first. Read that way the stream holds no drift.
+Its size matches the descriptor's sample count exactly. In tiger bank `001aa57e` the first stream sits
+at `+0x114` and begins `06 00 00 00`. Its descriptor gives 15,802 bytes, 22,050 Hz and 31,503 samples,
+which is 10 + (15,802 − 36 − 20) × 2 + 1. A scratch decoder turned all 159 cat streams into WAV, but none
+was listened to. The dog banks were not decoded again; that they use the same codec is *(inferred)*.
+Reading any of them in JackAll takes a version 4 bank parser and this decoder.
+
+### The big cats
+
+The tiger and leopard are the donors for a lion ([the lion](../design/attacking-animals.md#the-lion)).
+Read from the entity library, their personalities, `fc3_main_depload.xml` and the unpacked banks and
+materials.
+
+**Voices.** Every cat stream is mono 22,050 Hz IMA-ADPCM version 6, and none of their 52 banks has Ogg
+or an `.sbao`:
+
+| Field | Tiger | Leopard |
+|---|---|---|
+| idle | `001AA57E`, 6 sounds of 1.4–2.9 s | `001A4011`, 6 of 1.2–2.0 s |
+| tracking, tracing, flee | `001AA57E` | `001A400D`, 4 of 4.1–6.5 s |
+| panic, unreachable | `001AA57E` | `001A4008`, 4 of 0.96 s |
+| aware | unset | `001A400D` |
+| hurt | `001AA57F`, 3 of 0.65–1.05 s | `001A4012`, 4 of 0.6–0.9 s |
+| death | `001AA57C`, 3 of 2.0–2.5 s | `001A400F`, 3 of 0.7–1.1 s |
+| attack | unset | unset |
+| melee paw, bite | `001B023D`, `001B025A` | `001B023D`, `001B024A` |
+
+**On the clips:**
+
+- **tiger:**
+  - attack and alert `001aa577`, alerts left and right `001aa57a`, attack turns `001aa579`;
+  - close-attack success `001aa57b`, pounce success `001aa580`;
+  - a 4 s idle `001aa576`, eating `001aa57d`;
+  - cage alerts `001ae599` to `001ae59d`;
+  - kills `001ae5a5`, `001b080b`, `001b084b`, `001b0846` and `001b0847`.
+- **leopard:**
+  - attacks `001a400a`, attack turns `001a400b` and `001a400c`;
+  - close and critical attacks `001a400e`;
+  - eating `001a4010`;
+  - kills `001b082e`, `001b083f` and `000a47d6`.
+
+Both share `001ae3df` and `001ae484` with the rabid dog, probably foley, and `001ae4c1` for deaths.
+
+**Clips** *(names and sizes only; `.mab` `0x61` is unread)*:
+
+- **tiger, 91:** `pounce_success`, `pouncecritical_success`, `closeattack_success`, attacks at ±90°
+  and ±180°, attack turns, and kills of an NPC, a deer and a buffalo.
+- **leopard, 80:** a `sneakcycle` and two sneak turns (its stalk), `criticalattack`, `attack_success`,
+  `closeattack_success`, attacks at ±90° and ±180°, and kills of an NPC and a goat.
+
+Neither has a clip named jump or stalk.
+
+**Proportions,** from the bind poses:
+
+| | Hip height | Shoulder height | Nose ahead of the hips | Tail joints | Nose to tail end |
+|---|---|---|---|---|---|
+| tiger | 0.74 m | about 0.78 m | 1.52 m | 0.88 m | about 2.5 m |
+| leopard | 0.65 m | about 0.65 m | 1.32 m | 0.76 m | about 2.2 m |
+
+**Materials:**
+
+- **`Sumatran_tiger`** uses `Skin_Advanced` with 1,024² diffuse, normal and mask maps (DXT1, DXT5,
+  DXT1, each with a `_mip0` companion). Its detail maps are `animal_longfur01` `_s` and `_n`, tiled 12
+  times, and `bloodgore`.
+- **`Sumatran_tiger_Alpha`** is a blended, two-sided fur card (256²).
+- **The tiger's eyes** are `Skin_Advanced` too.
+- **`Leopard_Skin`, `Panther_Skin02` and `Puma_Skin`** use `Skin_Cinematic` with 1,024² DXT1 diffuse
+  maps, DXT5 normal maps and 512² specular maps. Their detail map is `animal_shortfur02`, tiled 8
+  times.
+
+Normal maps keep X in alpha and Y in green, as in Far Cry 2. The tiger's mask carries its signal in
+green, which matches Far Cry 2's mask, where specular is green alone. The leopard's specular maps carry
+it in red. The tiger's mesh names three grey `Generic_FC3` placeholders, which its graphic kit swaps.
+
+**Tuning,** from the personalities:
+
+| | Tiger | Leopard |
+|---|---|---|
+| health, head multiplier | 800, 2.3 | 450, 4.5 |
+| mass | 120 | 80 |
+| walk, jog, run, sprint (m/s) | 1.2, 4.27, 6.19, 8 | 1.2, 2.5, 6.5, 10 |
+| damage, critical the same | 40–70, or 50% of the player's health | 35–65, 50% |
+| jump attack distance and angle | 3 m, 45° | 3 m, 20° |
+| critical, on-spot, crouch attack distance | 1.7, 2.5, 3.5 m | 1.8, 2.5, 2.5 m |
+| attack-safe distance | 5.5 m | 3 m |
+| maul chance, cooldown, damage | 50%, 8 s, 30% up to 50 | 100%, 8 s, 30% up to 45 |
+| attack broadcast radius | 50 m | 5 m |
+| delay before facing a threat | 0 s | 2 s |
+
+Both cats share the rest:
+
+- **detection:** smell 25 m (5 m while the player sneaks); immediate detection at 5 m;
+- **tracking:** a trail point every 2.5 s, kept 5 s and at least 5 m apart; tracking broadcast 25 m;
+- **flight:** a flee radius of 30 to 40 m;
+- **sensors:** the `animaldefault` template, sight 5 to 35 m and a 5 m sixth sense.
+
+The `_stp` variants cut smell to 15 m (2 m sneaking) and immediate detection to 2 m. `leopard_boss`,
+the rare panther, does 400 to 500 damage.

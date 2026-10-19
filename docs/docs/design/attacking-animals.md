@@ -6,7 +6,8 @@ sidebar_position: 3
 
 **Status:** feasibility checked 2026-10-19 from data and code; the buffalo charge built in
 `mods/wildlife-overhaul` the same day; [the hyena](#the-hyena), [fish shoals](#fish-shoals),
-[the ostrich](#the-ostrich) and [a still snake](#the-snake) researched as new archetypes the same day;
+[the ostrich](#the-ostrich), [a still snake](#the-snake) and [the lion](#the-lion) researched as new
+archetypes the same day;
 nothing seen in game. The behaviour cannot be copied from Far
 Cry 3 and has to be rebuilt on Far Cry 2's own agent. New animals can be
 [added alongside the old ones](#adding-instead-of-replacing) with a data layer and a small plugin.
@@ -86,7 +87,7 @@ Three tools would unblock every animal:
 | Far Cry 2 animal | Far Cry 3 donor | Difficulty | Blockers |
 |---|---|---|---|
 | cape buffalo | water buffalo, which has attack clips | lowest | an attack clip: keyed by hand now, or retargeted once the decoder exists |
-| lion | tiger or leopard | medium | a new mesh on the Far Cry 2 rig works today; animations as above |
+| lion | tiger or leopard: sounds, textures and tuning; no mesh or clips | medium | a mesh on the wildebeest rig, after a one-line skinning fix in BlenderFC2; hand-keyed pounce and bite; [details](#the-lion) |
 | hyena | none: Far Cry 3's hyena archetype ships no mesh, rig, ragdoll, textures or sounds; the rabid dog and thylacine are the nearest | medium | a mesh made for the goat rig; [details](#the-hyena) |
 | crocodile | the crocodile: walk, jog, swim and kill clips | medium-high | no animations, MOVE rules or assets behind the Crocodile species value; waterline ambush only |
 | fish packs | `Fish_FP`, Far Cry 3's own fish flock; river fish (7 bones) | medium | the bird rig instead of a fish rig, a night-climb plugin, a skinning fix in BlenderFC2; [details](#fish-shoals) |
@@ -139,8 +140,10 @@ What the ranking leans on, read in Far Cry 2's data:
 
 **B: works, but borrowed animation shows**
 
-- **Lion.** A new mesh on the buffalo or zebra rig. A horse's gallop under a big cat will be noticed. A
-  pounce can be keyed by hand into a copied bank.
+- **Lion.** A new mesh on the wildebeest rig, whose canter under a big cat is noticed up close. A
+  pounce and a bite are keyed by hand into copied clips. It stalks the player with an unused retail
+  task that tells whether the player can see it. Far Cry 3's cat sounds and textures carry over. See
+  [the lion](#the-lion).
 - **Ostrich.** A chicken clone with an ostrich mesh, scaled up whole by the engine's per-animal size
   factor, which a small plugin sets. Lengthened leg bones do not work: the clips fix the hips at
   chicken height. It inherits all seven chicken clips, and run-jump is already a two-footed forward
@@ -291,7 +294,8 @@ distance. Far Cry 3's pattern, one attacking while the rest circle, needs an FCS
   these two fields is *(inferred)*.
 - **No donor in Far Cry 3.** Its hyena has no clips and no voice
   ([Far Cry 3's hyena](../engine-internals/far-cry-3-animals.md#the-hyena-ships-no-assets)). Its rabid
-  dog and thylacine banks are the nearest, and they use the codec JackAll cannot read. A recorded
+  dog and thylacine banks are the nearest, in version 4 banks JackAll cannot read yet
+  ([the codec](../engine-internals/far-cry-3-animals.md#animal-sounds)). A recorded
   hyena whoop and growl in a new Far Cry 2 bank is cheaper, and closer to the animal.
 
 ### Placement
@@ -636,8 +640,9 @@ Neither can be called by a brain.
 2. **A brain timer (data, with a MOVE and a GOSM edit).** A new MOVE state that plays the run-jump, a
    GOSM state with a sink on a new signal, and in the brain `CTaskSendActionSignal`, `CTaskWait`
    0.4 s, then `CTaskBroadcastStims`. The buffalo brain already uses all three tasks. The state's
-   `m_flStartTime` and `m_flStopTime` may trim the clip to the leap *(inferred from the names; every
-   retail value is 0)*. Start the leap when the player is about 7.5 m ahead at a scale of 4. That the
+   `m_flStartTime` and `m_flStopTime` trim the clip to the leap: the stop time is cut from the end
+   (read in code, [pounce and bite](#pounce-and-bite)). Every retail animal leaf leaves them at 0;
+   about 550 other leaves set them. Start the leap when the player is about 7.5 m ahead at a scale of 4. That the
    brain's wait lands on the frame is *(inferred)*.
 3. **The clip's own event (FCSE).** `CAnimationComponent::DispatchEvent` plays sound events and sends
    every other event to the animal's own entity, so a clip event cannot hurt the player in data. A
@@ -671,7 +676,6 @@ The first six visual checks share one launch: the scale plugin on the retail chi
   IK path does;
 - how a scaled animal's ragdoll looks, and whether its entity follows the ragdoll;
 - whether a far-off scaled animal visibly crawls;
-- whether `m_flStartTime` and `m_flStopTime` play part of a clip;
 - whether the brain's wait lands the hit on the strike frame.
 
 ## The snake
@@ -850,6 +854,322 @@ hiss.
 - whether `vectorSize` is a full or a half extent;
 - which collision body bullets hit;
 - whether a breakable prop ignores Cut.
+
+## The lion
+
+Researched 2026-10-19 as a new archetype, `Animals.DLC.Lion`: a lion mesh on the wildebeest's rig,
+with a pounce and a bite keyed by hand into copied clips, and a brain that stalks the player
+unprovoked. Nothing was built or seen in game. All of it is data, except two small tooling fixes that
+any new skinned mesh needs. The cost is the gait: a lion that canters like a wildebeest.
+
+### Which rig
+
+The three large rigs, posed from their idle clips' first frame *(computed with JackAll's `MabPose`)*:
+
+| Joint height, standing | cape buffalo | zebra | wildebeest |
+|---|---|---|---|
+| hip joint (`UpLeg`) | 1.25 m | 1.25 m | **1.09 m** |
+| shoulder joint (`Arm`) | 0.91 m | 1.02 m | 0.95 m |
+| elbow (`ForeArm`) | **0.69 m** | 0.88 m | 0.84 m |
+| wrist (`Hand`) | **0.41 m** | 0.54 m | 0.48 m |
+| head | 1.22 m | 1.49 m | 1.30 m |
+| hip to shoulder joint, along the body | 1.55 m | 1.35 m | **1.22 m** |
+| neck, `Neck` to `Head` | 0.67 m | 0.69 m | **0.60 m** |
+| tail, `Tail` to `Tail1`, then a leaf | 0.39 + 0.41 m | 0.35 + 0.50 m | 0.30 + 0.48 m |
+
+A lion stands about 1.0 to 1.2 m at the shoulder with its wrist a hand's width off the ground, a long
+low body and a short neck *(general reference, not game data)*. No rig is close in the legs: every one
+has the hoofed animal's long cannon bone, so the "wrist" sits 0.4 to 0.55 m up. The buffalo has the
+lowest elbow and wrist and carries its head lowest, but it is 15% taller at the hip than the
+wildebeest and its back 27% longer. The **wildebeest** is the best overall: the lowest hips, the shortest back and neck, and
+a head level with its back.
+
+Their locomotion, from 60 poses per cycle *(computed)*:
+
+| Clip | cape buffalo | zebra | wildebeest |
+|---|---|---|---|
+| walk | 0.65 m/s | 1.26 m/s | 1.12 m/s |
+| fast walk | 1.35 m/s | 1.85 m/s | 2.03 m/s |
+| run | 5.90 m/s, a slow gallop with three or four feet down at once | 12.28 m/s, a gallop: each hoof down 10% of the cycle, then 0.23 s in the air | 8.35 m/s, a three-beat canter: one hind, then a diagonal pair, then the leading fore |
+| back flex in the run (hip-to-shoulder distance) | 7% | **20%** | 7% |
+| hips bob in the run | 0.18 m | 0.10 m | 0.21 m |
+| head in the run | 1.07–1.48 m | 1.38–1.67 m | 1.16–1.32 m |
+
+All three walks are lateral-sequence four-beat walks (left hind, left fore, right hind, right fore),
+the footfall order a cat walks with too. The zebra's gallop is the most cat-like run, with its long
+flight and a back that bends, but on the tallest legs with the head held high.
+
+**No other Far Cry 2 clip is closer.** None of the 30-bone rigs has a rear, kick, jump or attack
+clip: each has the same 16 (eat twice, head twitch, idle, three look-ats, run and two run turns, walk,
+fast walk and four walk turns). The zebra's `PerformingJump` branch plays its gallop. The gazelle's
+jump leaf names a clip hash no shipped clip has, probably cut *(inferred)*. The chicken's run-jump is
+on its 11-bone rig. And no clip moves between these rigs: the four orders their bones differently, and
+even mapped by name the zebra's gallop on the wildebeest's bone lengths lifts the hind hooves 0.12 m
+above the fore hooves ([the rigs](../engine-internals/animals.md#the-rigs)). Moving a clip across
+needs a retargeter that corrects the feet: new tooling.
+
+**With a size plugin the zebra becomes an option.** The ostrich's plugin ([scaling the whole
+animal](#scaling-the-whole-animal)) at 0.8 puts the zebra's hip joint at 1.0 m, its back at 1.08 m and
+its gallop at 9.8 m/s, with the 20% back flex kept; the head stays high (1.19 m over 1.14 m hips) and
+the wrist at 0.43 m. Without a plugin, use the wildebeest.
+
+### How bad the hoofed gait looks
+
+| Clip | On a lion mesh | Rating |
+|---|---|---|
+| idle, look-ats, head twitch | straight columns for legs, an ear flick; reads as a lion standing | fine |
+| walk, fast walk | the footfall order is a cat's. The wildebeest's wrist, 0.48 m up, folds by up to 65° in each swing *(computed)*, so the forearm visibly kinks halfway down. The hooves lift only 5 to 7 cm | noticeable within about 20 m |
+| run (the charge) | a rocking-horse canter with a stiff back where a lion gallops with a flexing spine; the hips bob 0.21 m. Head on, as the player mostly sees a charge, the back is least visible | the giveaway, but brief |
+| eat | grazing with the muzzle on the grass | absurd; must never play, [below](#the-lion-archetype) |
+| footfalls and voice | the walk and run clips fire `00456acb`, the switch every gallop shares; the idle fires `00456b60`, three wildebeest grunts *(seen in depload)* | wrong until the clips are copied with their events changed |
+| death | the idle clip, then the ragdoll | fine |
+
+Overall: from 30 m and more, a lion; up close, a big cat walking and cantering like a hoofed animal.
+That matches the tier list's B. The two fixes that help most are species 7 with copied clips, which
+silences the hooves and grunts, and the pounce, which replaces the last seconds of the charge, the
+part the player watches closest.
+
+### The lion archetype
+
+A copy of `Animals.Quadrupeds.Wildebeest` (id 7) with these changes:
+
+| Piece | Value | Basis |
+|---|---|---|
+| Fragment, names, id | `Animals/DLC/Lion.xml` in both worlds' `entitylibrary.fcb`, `Name` `DLC.Lion`, `hidName` `Animals.DLC.Lion`, the next free `disEntityId` | as [the hyena](#the-archetype) |
+| Mesh | `objModel` and its `text_` twin: a new `graphics\characters\animals\lion\lion.xbg` | |
+| Rig | `fileSkeleton`: the wildebeest's own `hips_ref.skeleton`, unchanged | the bind pose cannot change, [below](#the-lion-mesh) |
+| Ragdoll | the wildebeest's `wildebeest_ragdoll.hkx`; `fMass` from 300 to about 190 | 19 capsule bodies whose centres are the rig's bind joints exactly *(read with `hkx dump`)*, so a mesh on the same rig fits it |
+| Animation species | `CAnimal.selAnimalSpecies` 2 (Wildebeest) to start; 7 with its own MOVE branches for the pounce, the bite and silent clips | [pounce and bite](#pounce-and-bite) |
+| Behaviour species | `CAnimalAgent.selAnimalSpecies` 7 | no smart-terrain point lists 7, so it never grazes and idles in place ([no STP](../engine-internals/animals.md#what-a-brain-could-reuse)); 7 still gets the large animals' 25 m sight and 60/20 m flee |
+| Speeds | keep `fSpeedsWalk` 1.125, `fSpeedsRun` 7.9 | MOVE picks clips by these; the clip sets the real speed |
+| Brain, GOSM | the lion brain [below](#stalking-and-hunting); a copy of `animalQuadruped.gosm.xml` with the pounce and bite states | |
+| Sounds | `sndAlertSound`, `sndDeathSound` on new banks (the wildebeest has neither) | [sound](#lion-sound-and-textures) |
+| `Stim_AnimalPanic` | `fRadius` 20 or more | a lion's alarm sends nearby zebras running |
+
+### The lion mesh
+
+Read and run on copies of the three animals with `jackall-cli fc2model` and BlenderFC2 in headless
+Blender 5.2 *(verified unless marked)*:
+
+| | wildebeest | cape buffalo | zebra |
+|---|---|---|---|
+| LOD tiers (switch distance, m) | 4 (15, 28, 68, 140) | 4 (15, 28, 68, 140) | 4 (15, 28, 61, 180) |
+| LOD 0 clusters (vertices) | eye 47, alpha-blended mane 44, body 1,574 | head 38, body 1,448 | eye 36, mane 38, body 1,153 |
+| body vertices, LOD 1 / 2 / 3 | 931 / 473 / 242 | 799 / 415 / 211 | 763 / 355 / 187 |
+| body palette, LOD 0–1 / 2 / 3 | 30 / 28 / 19 bones | 30 / 28 / 19 | 30 / 28 / 26 |
+| position range, each axis | ±2.0 m | ±3.0 m | ±2.0 m |
+
+- **The palette is no limit.** A cluster holds at most 48 bones (`XbgFile.cs`, `rules.py`), and the
+  body's LOD 0 and 1 already use all 30. Weights to a bone outside a part's palette are refused at
+  export (`part.not-encodable`), not dropped, so LOD 2 and 3 must stay on their 28 and 19.
+- **The lion fits the box.** On the wildebeest rig the nose is at +1.39 m and the tail tip at
+  −1.71 m, so a 2.5 m lion with a 0.9 m tail along the rig fits ±2.0 m. A vertex past it fails at
+  extract; Blender's check panel does not test it. `pos_compress` can be raised to the buffalo's by
+  hand in `mesh.json` and re-encodes.
+- **The mane has a home.** Cluster 1 is an alpha-blended `Generic` part on `Spine`, `Neck`, `Neck1`,
+  `Head`, `Jaw` and both shoulders *(its use as a mane is inferred)*.
+- **The tail is two segments,** `Tail` and `Tail1` (0.47 and 0.58 m with `TailNub`, about 1.06 m),
+  straight back at hip height in the bind pose. Clips swing them up to 92° and 112° when idle, 44° and
+  86° in the run. It bends at two joints and never curls; more needs a new rig.
+- **The body's material** is `Skin` with six textures: mask (`_m`, DXT1), skin (`_d`, DXT5), normal
+  (`_n`, DXT5, with a `_mip0` companion), a shared fur-detail normal, `BloodTexture` (the shared fur
+  detail, tiled 14 to 24 times) and a rim-light texture. Eye and mane are `Generic`. The vertex
+  colours are data: blue tints, green sets the fur detail *(which channel does what is inferred)*, so
+  the lion needs authored colours. UV 1 holds junk but must be filled.
+
+What the tools do today, with the code that decides it:
+
+| Step | Today | Fix |
+|---|---|---|
+| a new vertex count | **the skin-width bug** (`export_xbg.py`, `_skin`): the influences per vertex are taken as the old weight array divided by the new count. Growing the wildebeest body from 1,574 to 5,823 vertices extracted without error and put 4,368 vertices fully on `Hips`; shrinking it to 876 failed at extract | tooling: one line, taking the width from `MeshGeometry.SkinStride`; with it simulated, both directions extracted with no wrong weights |
+| more than 4 influences | the pack holds 8, the file 4 (`VertexEncoder.cs`), without renormalising; the fifth is dropped with no warning, since `validate.py` checks 8 | tooling: warn above 4. Retail uses at most 3 |
+| new parts | Add as New Part fails on every animal: it borrows a rigid part's vertex format, and these LODs have none | not needed: reshape the body, eye and mane parts |
+| dropping a LOD | not in Blender; deleting the last LOD from `mesh.json` by hand extracts and reads back as 3 | |
+| a new material | Blender writes none, but editing the pack's material JSON and `mesh.json`'s `materials` list by hand writes a new `.xbm`. [Texturing a weapon](../modding/texturing-a-weapon.md) says nothing creates one; at tool level this does *(not checked in game)* | tooling: a command for it |
+| new textures | replace the pack's PNGs, which are re-encoded with the recorded codec; or `xbt build` | |
+| new game paths | hand edits to `manifest.json`, as for [the fish](#making-the-mesh-today) | tooling: a rename command |
+| the bind pose | never written; only each node's `extent` is | the rig exporter |
+
+Three traps were found on the way:
+
+- **A renamed normal map still writes `c_wildebeest_n_mip0.xbt`,** over the wildebeest's own, because
+  the companion's name is in the carried header (`XbtTexture.cs`, `Fc2ModelApplier.cs`). Dropping
+  `header` and `companion_header` from the entry writes one self-contained file instead (not checked in
+  game).
+- **`--rig` with a full path, then `extract --all`, writes the skeleton back to that path,** outside
+  the layer, because `Path.Combine` with an absolute path drops the layer folder
+  (`Fc2ModelExtractCommand.cs`). Pointed at `tmp/` or the install, it overwrites the original. Export
+  from a scratch copy of the rig, and never pass `--all` with it.
+- **A changed shared entry is refused** (`Fc2ModelApplier.cs`); mark the renamed entries `owned` with
+  their `origin_sha256` instead of passing `--all`.
+
+The route is the fish's ([making the mesh today](#making-the-mesh-today)) with the wildebeest:
+`fc2model export wildebeest.xbg --rig <scratch copy of its hips_ref.skeleton>`, reshape the three
+parts on each LOD in Blender, then extract. Every new skinned mesh with a new vertex count needs the
+skin-width fix first.
+
+### Pounce and bite
+
+Researched on copies: a clip keyed in BlenderFC2, a new MOVE state built with `jackall-cli move`, and
+the GOSM and brain pieces the buffalo already uses. None of it has been loaded by the game.
+
+**The clip.** An animal bank is one clip. Write Animation keeps the source clip's length, rate,
+trajectory, tags and events, and writes all 30 bones, of which only `Hips` translates; Retime changes
+the length and stretches the events and the trajectory with it *(read in `export_mab.py` and run: the
+buffalo run retimed from 10 to 15 frames went from 5.90 to 3.93 m/s)*. A scratch round trip keyed a
+1 m `Hips` arc and a foreleg reach into the retimed buffalo run, wrote it and read it back: 0.95 s,
+`Hips` 1.40 to 2.45 m, the 3.74 m trajectory and the events unchanged.
+
+The leap's forward travel has to be in the trajectory, which carries the animal; `Hips` can carry the
+rise ([the displacement](../engine-internals/animals.md#movement-comes-from-the-clip)). Bases:
+
+| Move | Copy | Why |
+|---|---|---|
+| pounce | the wildebeest run (0.60 s, 5.01 m) | its trajectory already covers a lion's 4 to 6 m leap; key the rise into `Hips`, the forelegs reaching and the hind legs pushing |
+| bite or swipe | the wildebeest head twitch (2.67 s, no sound events) | silent and still; key a head lunge, `Jaw` open and one foreleg raised, then trim |
+
+The run is 0.60 s. Retimed to about 0.9 s for a visible flight, it still covers 5 m, but at 5.6 m/s
+against the 8.35 m/s run before it. A leap that keeps the speed, or covers more ground, needs the
+trajectory edited: a small script over the pack's `root_translation`, new tooling. The writer drops the empty section 4 every retail clip has, which
+`EvaluateSingleAnimNode` skips when no mask bit asks for it *(other readers were not checked)*.
+
+**The MOVE state.** Animal states test `AnimalSpecies` (channel 27) with an EnumEqual per species,
+each leading to a clip leaf, then fall back to `CDoNothing`. `Lion_Pounce` (CRC-32 of the lowercased
+name, `0xF27D0961`) was cloned from `Quadruped_HeadTwitch` with its wildebeest leaf pointed at a new
+clip path; `move assemble` appended it as the 1,701st state, and the graph decodes and verifies byte
+for byte. For a one-shot, copy the chicken run-jump leaf's settings (loop override 0, not
+interruptible, cut behaviour 1, a 0.13 s blend); head twitch loops and blends in over 0.5 to 1 s.
+`m_flStartTime` and `m_flStopTime` do trim a clip: `SetupAnimation` (`0x09B7DF20`) clamps the start
+to the cut time, and `GetStopTime` (`0x09B7D940`) returns the duration minus the stop time. Depload
+lists one `CMovementResource` per GOSM state with its clips; adding the new state's entry with
+`jackall-cli depload add` costs nothing, whether or not it is needed.
+
+**The GOSM state, and why the buffalo's head toss failed.** The head toss stopped every charge task
+and then sent `start_headtwitch`, a clip with a still trajectory: with no agent velocity and no clip
+displacement the buffalo stopped dead, then looped the toss until told to stop. The pounce state
+avoids both:
+
+- a sink on the idle state for `start_pounce`, entering a state whose `animStateID` is `Lion_Pounce`;
+- an animal event `UseRotation` (`EventType` 0), so the lion moves by the clip's own displacement and
+  yaw with no agent velocity ([the flag](../engine-internals/animals.md#movement-comes-from-the-clip));
+- an unconditional connection back to idle, as the smart-terrain states have, which should fire at
+  the clip's end *(inferred)*; idle's `IgnoreRotation` clears the flag.
+
+The alternative is to leave `UseRotation` off and keep the path follow running through the leap, so
+the agent steers while the clip sets the speed. Every animal state is on MOVE layer −1 and no additive
+or upper-body layer was found, so a one-shot cannot play over the run *(inferred)*.
+
+**The brain.** Far Cry 3's tiger jumps from 3 m and swipes from 1.7 to 2.5 m; here the pounce starts
+farther out, because the blend and the flight take time. As the ostrich's kick, with the buffalo's
+numbers: within about 7 m,
+`CTaskSendActionSignal` `start_pounce` (with an empty `actionSignalGroup`), `CTaskWait` for the blend
+plus the time to the strike, then `CTaskBroadcastStims` Crush, level 26, radius 4.5,
+`broadcastToAllAI` 1. A swipe from standing is the same with `start_bite`, Cut (5) and a lower level,
+22 for about 160 health *(inferred from the curve)*. Landing on the exact frame takes the FCSE event
+detour described for [the kick](#the-kick).
+
+### Stalking and hunting
+
+The [hyena's hunt plan](#behaviour) carries over, with the buffalo's charge for the attack. One task
+makes it a stalk: **`CTaskCheckVisibleByPlayer`**, retail code no brain uses, which branches `Yes` or
+`No` on whether the animal covers any pixel of the player's view. It runs on an animal agent, and
+every retail animal archetype already has the `COcclusionQueryComponent` it reads
+([the task](../engine-internals/animals.md#what-a-brain-could-reuse)). So the lion creeps up while
+the player looks away and freezes when looked at:
+
+1. **Idle:** agent species 7 finds no smart-terrain point, so the lion stands where it was placed. An
+   independent `CScannerIsInDistance` on `<PlayerPosition>`, `InDistance` 80, starts the stalk.
+2. **Stalk, beyond 25 m:** `CTaskCheckVisibleByPlayer`.
+   - `No`: path-find to `PlayerPosition` and `CTaskAnimalPathFollow` at `Speed` 1, a walk, for about
+     2 s, then check again;
+   - `Yes`: stop and `CTaskWait` 1 to 2 s, the idle and look-at clips, then check again.
+3. **Charge, inside 25 m:** sight makes the lion threatened and the alert sub-brain takes over: the
+   buffalo's charge, with the world-blackboard claim under its own fact name so one lion attacks at a
+   time, the 8 m overshoot, a turning radius, and avoidance off.
+4. **Strike:** the pounce inside about 7 m, the swipe inside 3.5 m if the pounce missed.
+5. **After:** run on past the player, stand 2.5 to 4 s facing them, charge again; beyond 40 m, or after
+   a set number of hits, the retail flee.
+
+Gunfire threatens the lion as it does any animal, so a shot within 40 m makes it charge at once
+(the buffalo's 40 m test) and one from farther makes it flee.
+
+Two limits, both *(inferred)*: `Yes` is any coverage on any viewport, so a lion at the screen's edge
+counts as seen, where Far Cry 3's tiger tests the player's field of view; and whether grass hides it
+was not read. If the occlusion query never runs on an animal, the task always answers `No` and the
+lion simply walks in without freezing, a harmless failure.
+
+### Lion sound and textures
+
+The donors are Far Cry 3's tiger and leopard ([the big cats](../engine-internals/far-cry-3-animals.md#the-big-cats)).
+Far Cry 2 has no cat sound of its own: no name list mentions a lion, tiger, leopard, growl or roar
+*(banks are named by hash, so this is inferred)*.
+
+**Sound.** Every cat bank holds Far Cry 2's own IMA-ADPCM, mono at 22,050 Hz, inside a version 4 bank
+that `jackall-cli spk list` refuses. A scratch decoder turned all 159 cat streams into WAV files. Six
+tiger idles went back in with `spk new 0x00fc0300 <six wavs> --rolloff 0x00442c37`, then `spk encode`.
+`spk verify` passed on the bank, a random container of six samples. None of the WAVs was listened to.
+Picks, by what Far Cry 3 plays them for:
+
+| Lion sound | Donor bank | Goes to |
+|---|---|---|
+| alert, a growl | leopard `001A400D` (4 of 4.1–6.5 s) or tiger idle `001AA57E` (6 of 1.4–2.9 s) | `sndAlertSound`, played by the brain's `CTaskPlaySound` |
+| death | tiger `001AA57C` (3 of 2.0–2.5 s) | `sndDeathSound` |
+| pounce, swipe | tiger `001aa580` (pounce success), `001aa57b` (close attack) | a `CTaskPlaySound` before the strike, or the clip's own event, copied from a clip that already has one ([sound events](../engine-internals/animals.md#animation)) |
+| footfalls | none needed | the copied clips with the hoof events dropped |
+
+New ids get new banks, named after the event and loaded by path; that this needs no depload entry is
+*(inferred, as for the hyena)*. Getting the decoder into JackAll as a version 4 reader is new tooling.
+Until then the scratch decoder's WAVs and `spk new` do the job. The audio is IMA either way, so nothing
+is transcoded.
+
+**Textures.** The tiger's maps are 1,024² and all present. Its mask carries the signal in green, which
+fits Far Cry 2's `MaskTexture1`, where specular is green alone; the leopard's carries it in red, which
+needs a channel move. Normal maps share Far Cry 2's layout, X in alpha and Y in green *(handedness not
+checked)*. `xbt extract` refuses Far Cry 3's version 104. The DDS strips out at the offset in the
+header's word at `+8`. A tiger diffuse stacked into one 11-mip DDS was wrapped by `xbt build`, once in
+`c_zebra_d.xbt`'s header and once in a fresh one, and both read back byte for byte; neither was loaded
+in game. A lion slots in as:
+
+| Far Cry 2 `Skin` slot | From |
+|---|---|
+| `SkinTexture` | `puma_v2_01_d`, a plain tawny coat, the closest to a lion *(inferred from the image)*; the tiger's stripes would need painting out |
+| `NormalTexture1` | the tiger's or puma's `_n` |
+| `MaskTexture1` | the tiger's `_m`, or the puma's `_s` with red moved to green |
+| `NormalTexture2`, `BloodTexture` | the wildebeest's own fur detail, or Far Cry 3's `animal_shortfur02` |
+| mane (the `Generic` alpha part) | the tiger's `fur_d` and `fur_m` fur card |
+
+The catch is the UVs. Far Cry 3's maps are laid out for its own meshes. A lion mesh made from scratch
+needs its own unwrap and a bake from the cat maps onto it *(inferred)*. Reusing a cat mesh's UV layout
+would need the Far Cry 3 mesh reader, which is new tooling.
+
+### Lion obstacles
+
+| Obstacle | Solved by | Cheapest one-launch check |
+|---|---|---|
+| A new archetype on the wildebeest rig spawns | data | `Animals.DLC.Lion` on the wildebeest's own mesh, spawned from the console as in experiment 2 |
+| The lion mesh | art; the skin-width fix and a rename command (new tooling), or hand edits | the archetype with the mesh: does it walk and run without tearing. The first skinned mesh with new topology seen in game |
+| Never grazing | data: agent species 7 | the stand-in by a savanna point: it stands |
+| Hooves and grunts | data: species 7, copied clips with their events dropped, MOVE branches | stand by the stand-in while it walks |
+| Stalking | data: `CTaskCheckVisibleByPlayer` | the stand-in on the stalk brain, 60 m off: look at it, look away, look again |
+| The charge and the hit | data: the buffalo's | covered by the buffalo |
+| The pounce leap | data: the clip, the MOVE state, the GOSM state; the trajectory edit is a small script | on the deployed buffalo: a `Buffalo_Pounce` state on its retimed run with a `Hips` arc, `UseRotation` and a return to idle, sent at 7 m: does it hop forward and run on |
+| The strike on the frame | FCSE, optional | |
+| Cat sounds | Far Cry 3's banks through a version 4 reader (new tooling), or the scratch WAVs and `spk new` today | shoot the stand-in near: the alert, then the death |
+| Cat textures | data: stripped DDS in Far Cry 2 headers; the leopard's mask channel moved | the archetype with the mesh, in daylight |
+| The lion mesh's UVs | art: a new unwrap and a bake from the cat maps | the same |
+| The canter | accept; or the zebra with a size plugin; or a retargeter (new tooling) | none needed |
+| A two-segment tail | accept, or a new rig | |
+
+The spawn, grazing, hoof and stalking checks share one launch: `Animals.DLC.Lion` on the wildebeest
+mesh with agent species 7 and the stalk brain, spawned 60 m from the player.
+
+### Lion unknowns
+
+- whether the occlusion coverage is computed for an animal, and whether grass or a screen edge counts;
+- whether a skinned mesh with new topology works in game, as for the fish;
+- whether the GOSM's unconditional connection leaves the pounce at the clip's end;
+- whether a MOVE state `move assemble` appended loads, and its clip without a depload entry;
+- whether a `Yes` freeze reads as stalking or as a glitch.
 
 ## Adding instead of replacing
 
