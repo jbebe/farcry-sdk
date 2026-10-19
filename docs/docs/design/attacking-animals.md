@@ -4,10 +4,11 @@ sidebar_position: 3
 
 # Attacking Animals
 
-**Status:** feasibility checked 2026-10-19 from data and code; nothing built, nothing seen in game. The
-behaviour cannot be copied from Far Cry 3 and has to be rebuilt on Far Cry 2's own agent. New animals
-can be [added alongside the old ones](#adding-instead-of-replacing) with a data layer and a small
-plugin. The first steps are [four experiments](#experiments-in-order).
+**Status:** feasibility checked 2026-10-19 from data and code; the buffalo charge built in
+`mods/wildlife-overhaul` the same day; nothing seen in game. The behaviour cannot be copied from Far
+Cry 3 and has to be rebuilt on Far Cry 2's own agent. New animals can be
+[added alongside the old ones](#adding-instead-of-replacing) with a data layer and a small plugin.
+The first steps are [four experiments](#experiments-in-order).
 
 ## The goal
 

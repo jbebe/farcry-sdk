@@ -1,0 +1,454 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">Quadrupeds.CapeBuffalo</value>
+      <object type="Entity">
+        <value name="hidName" type="String">Animals.Quadrupeds.CapeBuffalo</value>
+        <value name="disEntityId" type="Int64">1</value>
+        <value name="text_hidEntityClass" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">5</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CSoundComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="sndptSoundPoint" type="Hash">FFFFFFFF</value>
+          </object>
+          <object type="CFileDescriptorComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileName" type="String">graphics\characters\animals\capebuffalo\capebuffalo.xml</value>
+            <value name="fileName" type="Hash">E94DB827</value>
+            <value name="hidDescriptor" type="Rml">
+              <hidDescriptor>
+                <component class="GraphicComponent" version="2" detail="0">
+                  <resource fileName="graphics\Characters\Animals\CapeBuffalo\CapeBuffalo.xbg" bboxMin="-0.528235,-1.69822,-5.34058e-007" bboxMax="0.528234,2.09325,1.72093" />
+                  <skeleton name="CapeBuffalo" pos="0,0,0" rot="1,-0,-0,-0">
+                    <bone name="Hips" pos="-0,-0.411756,1.45112" rot="0.706352,-0.0326522,0.0326529,0.706353">
+                      <bone name="Spine" pos="0.505732,0,0" rot="0.991277,-5.2718e-007,0.131795,1.31795e-007">
+                        <bone name="Neck" pos="0.782372,-0,0" rot="0.966218,-2.4484e-005,-0.257726,0.000235046">
+                          <bone name="Neck1" pos="0.320617,-0.00015,-0" rot="0.995246,-0.000135959,-0.0973902,-0.00049553">
+                            <bone name="Head" pos="0.351304,0.000181,1e-006" rot="0.895165,-3.29844e-005,0.445735,0.000278139">
+                              <bone name="HeadNub" pos="0.755768,4e-006,-1e-006" rot="0.994422,0.000135531,-0.105472,-1.64536e-005" />
+                              <bone name="LeftEar" pos="0.182437,0.181048,-0.044572" rot="0.700532,-0.293364,-0.0962197,0.643377">
+                                <bone name="LeftEarNub" pos="0.352104,2e-006,0" rot="1,0,0,0" />
+                              </bone>
+                              <bone name="LeftEye" pos="0.324419,0.103431,0.077532" rot="0.768693,-0.0653631,-0.348831,0.532123">
+                                <bone name="LeftEyeNub" pos="0.075,-0,0" rot="1,0,0,0" />
+                              </bone>
+                              <bone name="RightEye" pos="0.324421,-0.10343,0.077528" rot="0.768695,0.0653783,-0.348821,-0.532126">
+                                <bone name="RightEyeNub" pos="0.075,0,0" rot="1,0,0,0" />
+                              </bone>
+                              <bone name="RightEar" pos="0.182439,-0.181048,-0.044578" rot="0.70053,0.293378,-0.0962064,-0.643376">
+                                <bone name="RightEarNub" pos="0.352104,-1e-006,1e-006" rot="1,0,0,0" />
+                              </bone>
+                              <bone name="Jaw" pos="0.148468,-0,0.045136" rot="0.981835,7.20992e-006,0.189735,2.65629e-006">
+                                <bone name="JawNub" pos="0.589806,-0,0" rot="1,0,0,0" />
+                              </bone>
+                            </bone>
+                          </bone>
+                        </bone>
+                        <bone name="LeftShoulder" pos="0.667821,0.221455,0.034586" rot="0.914756,1.21202e-006,0.404007,8.08013e-007">
+                          <bone name="LeftArm" pos="0.304114,-0,-0" rot="0.892935,0,0.450186,-9.00373e-007">
+                            <bone name="LeftForeArm" pos="0.249437,1e-006,4e-006" rot="0.941155,-3.37975e-007,-0.337975,-3.37975e-006">
+                              <bone name="LeftHand" pos="0.294772,0,0" rot="0.996247,-8.39618e-006,0.0865588,1.82639e-005">
+                                <bone name="LeftFingerBase" pos="0.259947,-0,0" rot="0.980574,-1.29458e-005,-0.196148,-1.25535e-005">
+                                  <bone name="LeftHandMiddle1" pos="0.168025,-0,-0" rot="1,0,0,0" />
+                                </bone>
+                              </bone>
+                            </bone>
+                          </bone>
+                        </bone>
+                        <bone name="RightShoulder" pos="0.667821,-0.22145,0.034586" rot="0.914756,-8.08013e-007,0.404007,-8.08013e-007">
+                          <bone name="RightArm" pos="0.304114,0,-0" rot="0.892935,-0,0.450186,9.00373e-007">
+                            <bone name="RightForeArm" pos="0.249437,-1e-006,4e-006" rot="0.941155,3.37975e-007,-0.337975,3.37975e-006">
+                              <bone name="RightHand" pos="0.294772,-0,0" rot="0.996247,8.30962e-006,0.0865589,-1.81773e-005">
+                                <bone name="RightFingerBase" pos="0.259947,0,0" rot="0.980574,1.31419e-005,-0.196149,1.23574e-005">
+                                  <bone name="RightHandMiddle1" pos="0.168025,0,-0" rot="1,0,0,0" />
+                                </bone>
+                              </bone>
+                            </bone>
+                          </bone>
+                        </bone>
+                      </bone>
+                      <bone name="LeftUpLeg" pos="-0.200849,0.238852,-0.173636" rot="0.799306,-6.00924e-007,0.600924,-0">
+                        <bone name="LeftLeg" pos="0.455455,-0,-0" rot="0.916937,3.99033e-007,0.399033,-0">
+                          <bone name="LeftFoot" pos="0.385819,-4e-006,-0" rot="0.95964,-2.81232e-007,-0.281232,-5.62464e-007">
+                            <bone name="LeftToeBase" pos="0.380812,0,-0" rot="0.97491,-1.78081e-006,-0.222601,1.78081e-006">
+                              <bone name="LeftFootMiddle1" pos="0.170634,0,-0" rot="1,0,0,0" />
+                            </bone>
+                          </bone>
+                        </bone>
+                      </bone>
+                      <bone name="Tail" pos="-0.385404,-0,-0.020462" rot="-1.62921e-007,-0.061026,1e-006,0.998136">
+                        <bone name="Tail1" pos="0.406173,0,-0" rot="0.999917,0,-0.0128713,0">
+                          <bone name="TailNub" pos="0.411446,0,1e-006" rot="1,0,0,0" />
+                        </bone>
+                      </bone>
+                      <bone name="RightUpLeg" pos="-0.200849,-0.23885,-0.173636" rot="0.799306,-6.00924e-007,0.600924,-6.00924e-007">
+                        <bone name="RightLeg" pos="0.455455,0,-0" rot="0.916937,-7.98065e-007,0.399033,-0">
+                          <bone name="RightFoot" pos="0.385819,5e-006,-0" rot="0.95964,5.62464e-007,-0.281232,1.12493e-006">
+                            <bone name="RightToeBase" pos="0.380812,0,-0" rot="0.97491,1.78081e-006,-0.222601,-1.55821e-006">
+                              <bone name="RightFootMiddle1" pos="0.170634,-0,0" rot="1,0,0,0" />
+                            </bone>
+                          </bone>
+                        </bone>
+                      </bone>
+                    </bone>
+                  </skeleton>
+                </component>
+              </hidDescriptor>
+            </value>
+          </object>
+          <object type="CGraphicComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bCastShadow" type="Bool">True</value>
+            <value name="bReceiveShadow" type="Bool">True</value>
+            <value name="bCastAmbientShadow" type="Bool">True</value>
+            <value name="olgLightGroup" type="Hash">00000001</value>
+            <value name="bAllowCullBySize" type="Bool">True</value>
+            <value name="agAmbientGroup" type="Hash">00000000</value>
+            <value name="bBehaveLikeAPickup" type="Bool">False</value>
+            <value name="bShowInReflection" type="Bool">True</value>
+            <value name="bAlwaysShowInReflection" type="Bool">False</value>
+            <value name="bOverrideLODSphere" type="Bool">False</value>
+            <value name="fLODSphereRadius" type="Float">0</value>
+            <value name="hidSkyOcclusion0" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion1" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion2" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion3" type="Hash">FFFFFFFF</value>
+            <value name="hidGroundColor" type="Hash">FFFFFFFF</value>
+            <value name="hidObjectHeight" type="Float">3</value>
+            <value name="hidHeightAbove" type="Float">0</value>
+            <value name="hidHasAmbientValues" type="Bool">False</value>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">0</value>
+              <value name="text_objModel" type="String">graphics\characters\animals\capebuffalo\capebuffalo.xbg</value>
+              <value name="objModel" type="Hash">F9077D60</value>
+              <value name="hidMeshName" type="String"></value>
+              <value name="text_hidNodeName" type="String"></value>
+              <value name="hidNodeName" type="Hash">FFFFFFFF</value>
+              <value name="text_hidNodeNameLOD0" type="String"></value>
+              <value name="hidNodeNameLOD0" type="Hash">FFFFFFFF</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+          </object>
+          <object type="CAnimal">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="fileStateMachine" type="String">scripts/Game/Objects/Animals/StateMachine/animalQuadruped.gosm.xml</value>
+            <value name="selAnimalSpecies" type="UInt32">3</value>
+            <object type="enumAnimalSpecies">
+              <object type="enum">
+                <value name="Value" type="String">Gazelle</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Zebra</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Wildebeest</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">CapeBuffalo</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Goat</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Chicken</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Crocodile</value>
+              </object>
+            </object>
+          </object>
+          <object type="CDynamicDeploadComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+          <object type="CAnimationComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileSkeleton" type="String">graphics\characters\animals\capebuffalo\hips_ref.skeleton</value>
+            <value name="fileSkeleton" type="Hash">948E6D86</value>
+            <value name="text_fileFacialFile" type="String"></value>
+            <value name="fileFacialFile" type="Hash">FFFFFFFF</value>
+            <object type="MercKitFacialFiles">
+              <object type="Faces">
+                <value name="text_sHeadTag" type="String"></value>
+                <value name="sHeadTag" type="Hash">FFFFFFFF</value>
+                <value name="text_fileFacialActor" type="String"></value>
+                <value name="fileFacialActor" type="Hash">FFFFFFFF</value>
+              </object>
+            </object>
+          </object>
+          <object type="CCharacterPhysComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_hidResourceId" type="String">graphics\characters\animals\capebuffalo\capebuffalo_ragdoll.hkx</value>
+            <value name="hidResourceId" type="Hash">02752C66</value>
+            <value name="fileRagdoll" type="String">graphics\Characters\Animals\CapeBuffalo\capebuffalo_ragdoll.hkx</value>
+            <value name="RagdollCollideSpeedLimit" type="Float">2</value>
+            <value name="text_LockBone" type="String"></value>
+            <value name="LockBone" type="Hash">FFFFFFFF</value>
+            <object type="CharacterParams">
+              <value name="fMass" type="Float">500</value>
+              <value name="bUpdateRotation" type="Bool">True</value>
+              <value name="bUseRigidBased" type="Bool">True</value>
+              <value name="fMaxSlope" type="Float">60.000004</value>
+              <value name="fMaxTerrainSlope" type="Float">55</value>
+              <object type="StandDimensions">
+                <value name="vecStandCapsulePointA" type="Vector3">
+                  <x>0</x>
+                  <y>-0.4</y>
+                  <z>0.88</z>
+                </value>
+                <value name="vecStandCapsulePointB" type="Vector3">
+                  <x>0</x>
+                  <y>1.2</y>
+                  <z>0.83</z>
+                </value>
+                <value name="fStandCapsuleRadius" type="Float">0.82</value>
+              </object>
+              <object type="CrouchDimensions">
+                <value name="vecStandCapsulePointA" type="Vector3">
+                  <x>0</x>
+                  <y>0</y>
+                  <z>0.45</z>
+                </value>
+                <value name="vecStandCapsulePointB" type="Vector3">
+                  <x>0</x>
+                  <y>0</y>
+                  <z>1.05</z>
+                </value>
+                <value name="fStandCapsuleRadius" type="Float">0.45</value>
+              </object>
+              <object type="SwimDimensions">
+                <value name="vecStandCapsulePointA" type="Vector3">
+                  <x>0</x>
+                  <y>0</y>
+                  <z>0.45</z>
+                </value>
+                <value name="vecStandCapsulePointB" type="Vector3">
+                  <x>0</x>
+                  <y>0</y>
+                  <z>0.5</z>
+                </value>
+                <value name="fStandCapsuleRadius" type="Float">0.45</value>
+              </object>
+            </object>
+          </object>
+          <object type="CAnimalBeautifierSelector">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selBeautifier" type="UInt32">1</value>
+            <object type="enumBeautifier">
+              <object type="enum">
+                <value name="Value" type="String">Gazelle</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">GenericQuadruped</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Undefined</value>
+              </object>
+            </object>
+          </object>
+          <object type="CFCXAIComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_Type" type="String">CAnimalAgent</value>
+            <value name="Type" type="Hash">2C711FE2</value>
+            <object type="AIObject">
+              <object type="CAgent">
+                <value name="text_Brain" type="String">::WildlifeBuffalo/CBrainAnimal</value>
+                <value name="Brain" type="Hash">2EF7C966</value>
+                <value name="text_aiwsBrainWorkspace" type="String">scripts\game\newbrains\wildlifeoverhaul_buffalo.ai.rml</value>
+                <value name="aiwsBrainWorkspace" type="Hash">F9D861CF</value>
+                <object type="PersonalityComponent">
+                  <value name="text_Type" type="String">CAnimalPersonality</value>
+                  <value name="Type" type="Hash">09B196ED</value>
+                </object>
+              </object>
+              <object type="CGameAgent">
+                <value name="bIsScripted" type="Bool">False</value>
+                <value name="fAccelerationsSlow" type="Float">1</value>
+                <value name="fAccelerationsNormal" type="Float">3</value>
+                <value name="fAccelerationsFast" type="Float">5</value>
+                <value name="fDecelerationsSlow" type="Float">-2</value>
+                <value name="fDecelerationsNormal" type="Float">-4</value>
+                <value name="fDecelerationsFast" type="Float">-10</value>
+                <value name="fSpeedsBabyStep" type="Float">0</value>
+                <value name="fSpeedsWalk" type="Float">0.675</value>
+                <value name="fSpeedsJog" type="Float">5.5</value>
+                <value name="fSpeedsRun" type="Float">5.9</value>
+                <value name="fSpeedsSprint" type="Float">0</value>
+                <value name="fVariationBabyStep" type="Float">0</value>
+                <value name="fVariationWalk" type="Float">0.01</value>
+                <value name="fVariationJog" type="Float">0</value>
+                <value name="fVariationRun" type="Float">0.1</value>
+                <value name="fVariationSprint" type="Float">0</value>
+              </object>
+              <object type="DensityManagement">
+                <value name="bNeverDelete" type="Bool">False</value>
+                <value name="bLastToBeDeleted" type="Bool">False</value>
+              </object>
+              <object type="CAnimalAgent">
+                <value name="sndAlertSound" type="String">0xFFFFFFFF</value>
+                <value name="sndtpAlertSoundType" type="Int32">-1</value>
+                <value name="sndDeathSound" type="String">0xFFFFFFFF</value>
+                <value name="sndtpDeathSoundType" type="Int32">-1</value>
+                <value name="fWoundedSpeedLimit" type="Float">5</value>
+                <value name="fThreatAwarenessDistance" type="Float">40</value>
+                <value name="selAnimalSpecies" type="UInt32">3</value>
+                <object type="Stim_AnimalPanic">
+                  <value name="hidEventName" type="String">Stims</value>
+                  <value name="eventMask" type="UInt32">2</value>
+                  <value name="hidTargetEntityId" type="Int64">-1</value>
+                  <value name="text_sDetail" type="String"></value>
+                  <value name="sDetail" type="Hash">FFFFFFFF</value>
+                  <value name="selType" type="UInt32">9</value>
+                  <value name="nLevel" type="UInt32">1</value>
+                  <value name="fRadius" type="Float">20</value>
+                  <value name="bFalloff" type="Bool">False</value>
+                  <value name="nFalloffMinLevel" type="UInt32">1</value>
+                  <value name="hidShowType" type="Bool">True</value>
+                  <value name="hidShowRadius" type="Bool">True</value>
+                  <object type="enumType">
+                    <object type="enum">
+                      <value name="Value" type="String">None</value>
+                    </object>
+                    <object type="enum">
+                      <value name="Value" type="String">Bang</value>
+                    </object>
+                    <object type="enum">
+                      <value name="Value" type="String">Snap</value>
+                    </object>
+                    <object type="enum">
+                      <value name="Value" type="String">Pierce</value>
+                    </object>
+                    <object type="enum">
+                      <value name="Value" type="String">Crush</value>
+                    </object>
+                    <object type="enum">
+                      <value name="Value" type="String">Cut</value>
+                    </object>
+                    <object type="enum">
+                      <value name="Value" type="String">Health</value>
+                    </object>
+                    <object type="enum">
+                      <value name="Value" type="String">Burn</value>
+                    </object>
+                    <object type="enum">
+                      <value name="Value" type="String">Water</value>
+                    </object>
+                    <object type="enum">
+                      <value name="Value" type="String">Panic</value>
+                    </object>
+                    <object type="enum">
+                      <value name="Value" type="String">Fear</value>
+                    </object>
+                    <object type="enum">
+                      <value name="Value" type="String">Morale</value>
+                    </object>
+                    <object type="enum">
+                      <value name="Value" type="String">Dirt</value>
+                    </object>
+                    <object type="enum">
+                      <value name="Value" type="String">Reliability</value>
+                    </object>
+                    <object type="enum">
+                      <value name="Value" type="String">Interest</value>
+                    </object>
+                  </object>
+                </object>
+                <object type="Movement">
+                  <value name="fDesiredTurningSpeed" type="Float">0.1</value>
+                  <value name="fMaxTurningSpeed" type="Float">3</value>
+                  <value name="iNumberOfSteps" type="Int32">10</value>
+                  <value name="fPathfindRadius" type="Float">1.8</value>
+                  <value name="fTargetTokenWalkDistance" type="Float">3</value>
+                  <value name="fTargetTokenRunDistance" type="Float">3</value>
+                  <value name="fAvoidanceTokenWalkDistance" type="Float">4</value>
+                  <value name="fAvoidanceTokenRunDistance" type="Float">6</value>
+                </object>
+                <object type="enumAnimalSpecies">
+                  <object type="enum">
+                    <value name="Value" type="String">Unset</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Gazelle</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Zebra</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Cape Buffalo</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Wildebeest</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Goat</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Chicken</value>
+                  </object>
+                </object>
+              </object>
+            </object>
+          </object>
+          <object type="CFCXCountersComponentAnimal">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="archStimEffectTable" type="String">tables.StimEffectTables.NPCDefault</value>
+            <value name="bIsInvincibleExceptToPlayer" type="Bool">False</value>
+            <value name="bIsInvincibleToAI" type="Bool">False</value>
+            <value name="bIsInvincibleToPlayer" type="Bool">False</value>
+            <value name="WeaponJamProbabilityScale" type="Float">1</value>
+            <value name="bEnableHitLocations" type="Bool">False</value>
+          </object>
+          <object type="CCreatureSoundAndFXComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <object type="Sounds">
+              <object type="Collision">
+                <value name="sndmlSoundMultilayerSpeed" type="Hash">FFFFFFFF</value>
+                <value name="sndtpSoundType" type="Int32">-1</value>
+                <value name="fSmallCollisionSpeed" type="Float">0</value>
+                <value name="fMediumCollisionSpeed" type="Float">0</value>
+                <value name="fBigCollisionSpeed" type="Float">0</value>
+                <value name="sndSmallCollision" type="String">0xFFFFFFFF</value>
+                <value name="sndMediumCollision" type="String">0xFFFFFFFF</value>
+                <value name="sndBigCollision" type="String">0xFFFFFFFF</value>
+              </object>
+            </object>
+          </object>
+          <object type="CPersistComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selLevel" type="UInt32">1</value>
+            <object type="enumLevel">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Limited</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Full</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Critical</value>
+              </object>
+            </object>
+          </object>
+          <object type="COcclusionQueryComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+        </object>
+      </object>
+    </object>
