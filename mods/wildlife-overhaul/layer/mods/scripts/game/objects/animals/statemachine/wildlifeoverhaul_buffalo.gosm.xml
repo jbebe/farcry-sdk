@@ -1,0 +1,152 @@
+<BlackBox.GOStateMachine Version="1.0.0.16">
+	<Track FullName="::Animal Quadruped/AnimationTrack" DefaultState="::Animal Quadruped/Animation Track/Basic Behavior/States/Idle">
+		<Interrupt Signal="die" State="::Animal Quadruped/Animation Track/Basic Behavior/States/Ragdoll" />
+	</Track>
+	<State FullName="::Animal Quadruped/Animation Track/Basic Behavior/States/Ragdoll" Type="CGOStateAnim">
+		<Parameter Name="groups" />
+		<Parameter Name="duration" Value="0" />
+		<Parameter Name="signalpriorities" />
+		<Parameter Name="forceAnim" Value="0" />
+		<Parameter Name="animStateID" Value="Quadruped_Die" />
+		<Parameter Name="MoveLayer" Value="-1" />
+	</State>
+	<State FullName="::Animal Quadruped/Animation Track/Basic Behavior/States/Idle" Type="CGOStateAnim">
+		<Parameter Name="groups" />
+		<Parameter Name="duration" Value="0" />
+		<Parameter Name="signalpriorities" />
+		<Parameter Name="forceAnim" Value="0" />
+		<Parameter Name="animStateID" Value="Quadruped_Generic_Movement" />
+		<Parameter Name="MoveLayer" Value="-1" />
+		<Event Name="IgnoreRotation" Type="CGOStateEventAnimal" Start="0" End="1">
+			<Parameter Name="alwaysTrigger" Value="1" />
+			<Parameter Name="triggerOnce" Value="1" />
+			<Parameter Name="triggeredOnEnd" Value="0" />
+			<Parameter Name="EventType" Value="1" />
+		</Event>
+		<Sink Name="smart terrain" Start="0" End="100">
+			<Connection Target="::Animal Quadruped/Animation Track/Smart Terrain/States/TransitionStart" Signal="start_smart_terrain" />
+		</Sink>
+		<Sink Name="loop smart terrain" Start="0" End="100">
+			<Connection Target="::Animal Quadruped/Animation Track/Smart Terrain/States/LoopTransitionStart" Signal="loop_smart_terrain" />
+		</Sink>
+		<Sink Name="lookat" Start="0" End="100">
+			<Connection Target="::Animal Quadruped/Animation Track/Basic Behavior/States/LookAt" Signal="start_lookat" />
+		</Sink>
+		<Sink Name="headtwitch" Start="0" End="100">
+			<Connection Target="::Animal Quadruped/Animation Track/Basic Behavior/States/HeadTwitch" Signal="start_headtwitch" />
+		</Sink>
+	</State>
+	<State FullName="::Animal Quadruped/Animation Track/Basic Behavior/States/LookAt" Type="CGOStateAnim">
+		<Parameter Name="groups" />
+		<Parameter Name="duration" Value="0" />
+		<Parameter Name="signalpriorities" />
+		<Parameter Name="forceAnim" Value="0" />
+		<Parameter Name="animStateID" Value="Quadruped_LookAt" />
+		<Parameter Name="MoveLayer" Value="-1" />
+		<Sink Name="end lookat" Start="0" End="100">
+			<Connection Target="::Animal Quadruped/Animation Track/Basic Behavior/States/Idle" Signal="stop_lookat" />
+		</Sink>
+	</State>
+	<State FullName="::Animal Quadruped/Animation Track/Basic Behavior/States/Eat" Type="CGOStateAnim">
+		<Parameter Name="groups" />
+		<Parameter Name="duration" Value="0" />
+		<Parameter Name="signalpriorities" />
+		<Parameter Name="forceAnim" Value="0" />
+		<Parameter Name="animStateID" Value="Quadruped_Eat" />
+		<Parameter Name="MoveLayer" Value="-1" />
+	</State>
+	<State FullName="::Animal Quadruped/Animation Track/Basic Behavior/States/HeadTwitch" Type="CGOStateAnim">
+		<Parameter Name="groups" />
+		<Parameter Name="duration" Value="0" />
+		<Parameter Name="signalpriorities" />
+		<Parameter Name="forceAnim" Value="0" />
+		<Parameter Name="animStateID" Value="Quadruped_HeadTwitch" />
+		<Parameter Name="MoveLayer" Value="-1" />
+		<Sink Name="end headtwitch" Start="0" End="100">
+			<Connection Target="::Animal Quadruped/Animation Track/Basic Behavior/States/Idle" Signal="stop_headtwitch" />
+		</Sink>
+	</State>
+	<State FullName="::Animal Quadruped/Animation Track/Smart Terrain/States/TransitionStart" Type="CGOStateSmartTerrain">
+		<Parameter Name="groups" />
+		<Parameter Name="duration" Value="0" />
+		<Parameter Name="signalpriorities" />
+		<Parameter Name="forceAnim" Value="0" />
+		<Parameter Name="animStateID" Value="0" />
+		<Parameter Name="MoveLayer" Value="-1" />
+		<Parameter Name="blackboardMoveStateName" Value="smartterrain_start_moveStateID" />
+		<Connection Target="::Animal Quadruped/Animation Track/Smart Terrain/States/PlaySmartTerrain" />
+		<Event Name="UseRotation" Type="CGOStateEventAnimal" Start="0" End="1">
+			<Parameter Name="alwaysTrigger" Value="1" />
+			<Parameter Name="triggerOnce" Value="1" />
+			<Parameter Name="triggeredOnEnd" Value="0" />
+			<Parameter Name="EventType" Value="0" />
+		</Event>
+		<Sink Name="failure" Start="0" End="100">
+			<Connection Target="::Animal Quadruped/Animation Track/Smart Terrain/States/PlaySmartTerrain" Signal="activation_failure" />
+		</Sink>
+	</State>
+	<State FullName="::Animal Quadruped/Animation Track/Smart Terrain/States/PlaySmartTerrain" Type="CGOStateSmartTerrain">
+		<Parameter Name="groups" />
+		<Parameter Name="duration" Value="0" />
+		<Parameter Name="signalpriorities" />
+		<Parameter Name="forceAnim" Value="0" />
+		<Parameter Name="animStateID" Value="0" />
+		<Parameter Name="MoveLayer" Value="-1" />
+		<Parameter Name="blackboardMoveStateName" Value="smartterrain_moveStateID" />
+		<Connection Target="::Animal Quadruped/Animation Track/Smart Terrain/States/TransitionEnd" />
+	</State>
+	<State FullName="::Animal Quadruped/Animation Track/Smart Terrain/States/TransitionEnd" Type="CGOStateSmartTerrain">
+		<Parameter Name="groups" />
+		<Parameter Name="duration" Value="0" />
+		<Parameter Name="signalpriorities" />
+		<Parameter Name="forceAnim" Value="0" />
+		<Parameter Name="animStateID" Value="0" />
+		<Parameter Name="MoveLayer" Value="-1" />
+		<Parameter Name="blackboardMoveStateName" Value="smartterrain_end_moveStateID" />
+		<Connection Target="::Animal Quadruped/Animation Track/Basic Behavior/States/Idle" />
+		<Sink Name="failure" Start="0" End="100">
+			<Connection Target="::Animal Quadruped/Animation Track/Basic Behavior/States/Idle" Signal="activation_failure" />
+		</Sink>
+	</State>
+	<State FullName="::Animal Quadruped/Animation Track/Smart Terrain/States/LoopTransitionStart" Type="CGOStateSmartTerrain">
+		<Parameter Name="groups" />
+		<Parameter Name="duration" Value="0" />
+		<Parameter Name="signalpriorities" />
+		<Parameter Name="forceAnim" Value="0" />
+		<Parameter Name="animStateID" Value="0" />
+		<Parameter Name="MoveLayer" Value="-1" />
+		<Parameter Name="blackboardMoveStateName" Value="smartterrain_start_moveStateID" />
+		<Connection Target="::Animal Quadruped/Animation Track/Smart Terrain/States/LoopSmartTerrain" />
+		<Event Name="UseRotation" Type="CGOStateEventAnimal" Start="0" End="1">
+			<Parameter Name="alwaysTrigger" Value="1" />
+			<Parameter Name="triggerOnce" Value="1" />
+			<Parameter Name="triggeredOnEnd" Value="0" />
+			<Parameter Name="EventType" Value="0" />
+		</Event>
+		<Sink Name="failure" Start="0" End="100">
+			<Connection Target="::Animal Quadruped/Animation Track/Smart Terrain/States/LoopSmartTerrain" Signal="activation_failure" />
+		</Sink>
+	</State>
+	<State FullName="::Animal Quadruped/Animation Track/Smart Terrain/States/LoopSmartTerrain" Type="CGOStateSmartTerrain">
+		<Parameter Name="groups" />
+		<Parameter Name="duration" Value="0" />
+		<Parameter Name="signalpriorities" />
+		<Parameter Name="forceAnim" Value="0" />
+		<Parameter Name="animStateID" Value="0" />
+		<Parameter Name="MoveLayer" Value="-1" />
+		<Parameter Name="blackboardMoveStateName" Value="smartterrain_moveStateID" />
+	</State>
+	<Group FullName="::Animal Quadruped/Animation Track/Smart Terrain/States/SmartTerrain" Type="BaseGroup">
+		<StateRef Path="::Animal Quadruped/Animation Track/Smart Terrain/States/TransitionStart" />
+		<StateRef Path="::Animal Quadruped/Animation Track/Smart Terrain/States/PlaySmartTerrain" />
+		<StateRef Path="::Animal Quadruped/Animation Track/Smart Terrain/States/TransitionEnd" />
+		<StateRef Path="::Animal Quadruped/Animation Track/Smart Terrain/States/LoopTransitionStart" />
+		<StateRef Path="::Animal Quadruped/Animation Track/Smart Terrain/States/LoopSmartTerrain" />
+		<Sink Name="abort smart terrain" Start="0" End="100">
+			<Connection Target="::Animal Quadruped/Animation Track/Basic Behavior/States/Idle" Signal="abort_smart_terrain" />
+		</Sink>
+		<Sink Name="stop smart terrain" Start="95" End="100">
+			<Connection Target="::Animal Quadruped/Animation Track/Smart Terrain/States/TransitionEnd" Signal="stop_smart_terrain" />
+		</Sink>
+	</Group>
+</BlackBox.GOStateMachine>

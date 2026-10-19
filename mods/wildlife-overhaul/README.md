@@ -22,11 +22,15 @@ is within 40 m, it charges:
 3. within 3.5 m of its centre, before its own steering swerves round the player, it sends one Crush
    stim of level 26 to every pawn within 4.5 m, about 300 health on
    the player's damage curve;
-4. after the hit or 12 s it releases the claim and runs away as retail does. If no path reaches the
-   player, it stands still for 20 s first (a diagnostic).
+4. on a hit it tosses its head (the `HeadTwitch` state, reachable only in its own state machine
+   `wildlifeoverhaul_buffalo.gosm.xml`), then runs on to a point 12 m past the player; after 12 s
+   without a hit it does the same without the toss;
+5. it stands for 2.5 to 4 s looking at the player, the player's chance to act, releases the claim and
+   charges again, so the fight goes on until one of them dies or the player is more than 40 m away.
 
-The claim is also released when the buffalo dies or its alert is interrupted, and a waiting buffalo
-clears a claim older than 15 s. Farther than 40 m, it flees as in retail. The scripted buffalo of the opening taxi ride
+If no path reaches the player, it stands still for 20 s and then runs away (a diagnostic). The claim
+is also released when the buffalo dies or its alert is interrupted, and a waiting buffalo clears a
+claim older than 30 s. Farther than 40 m, it flees as in retail. The scripted buffalo of the opening taxi ride
 (`Animals.Scripted.CapeBuffalo`) is unchanged.
 
 | File | What it is |

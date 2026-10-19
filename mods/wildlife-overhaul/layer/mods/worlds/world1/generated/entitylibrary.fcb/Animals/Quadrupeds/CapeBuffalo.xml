@@ -147,7 +147,7 @@
           </object>
           <object type="CAnimal">
             <value name="hidHasAliasName" type="Bool">False</value>
-            <value name="fileStateMachine" type="String">scripts/Game/Objects/Animals/StateMachine/animalQuadruped.gosm.xml</value>
+            <value name="fileStateMachine" type="String">scripts/game/objects/animals/statemachine/wildlifeoverhaul_buffalo.gosm.xml</value>
             <value name="selAnimalSpecies" type="UInt32">3</value>
             <object type="enumAnimalSpecies">
               <object type="enum">
