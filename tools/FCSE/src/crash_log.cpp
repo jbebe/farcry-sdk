@@ -16,9 +16,9 @@ namespace {
     // beats two handlers interleaving lines into the same file.
     bool g_inHandler = false;
 
-    // Enough to catch the interesting one and its immediate aftermath, few enough that a
-    // first-chance-heavy path cannot fill the disk. Raised only if a real investigation needs it.
-    constexpr int kMaxReports = 8;
+    // Distinct faulting addresses reported per run - a backstop only, about 3 MB of log at most.
+    // Repeats are free, so the crash that takes the game down comes after the noise, not instead of it.
+    constexpr int kMaxReports = 1024;
     int g_reports = 0;
 
     // Faulting addresses already reported. A handled fault that repeats - DxDiag's hardware probe

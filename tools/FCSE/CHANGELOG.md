@@ -8,7 +8,7 @@ Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachang
 - **A crash at the menu is logged on machines whose startup hardware scan trips over itself.** On
   some graphics drivers, Windows' DxDiag scan raises the same harmless fault several times while the
   game starts, and each one used up a slot in `fcse.log`'s crash report, so a real crash later went
-  unlogged. FCSE now reports each fault once.
+  unlogged. FCSE now reports each fault once, and no longer stops after the first eight.
 
 ## [1.4.1] - 2026-10-15
 
