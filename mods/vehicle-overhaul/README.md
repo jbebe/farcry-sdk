@@ -104,9 +104,10 @@ only; shooting from the windows and the wrecks are to come.
   of it, narrowing to the lamp's beam. Whatever stands in the way hides it. The game lit the lenses
   of AI cars only. Headlights lighting the grass are a UFCP fix, since the game's grass is dark under
   any spot light.
-- **The Datsun's paints.** Its six paints are new: a dark green, a beige, a pale blue-grey, an ochre,
-  a dark red and a dark blue. They take the game's own six places in its paint table, so every Datsun
-  shows them, the ones placed in the world included.
+- **New paints.** The Datsun's six paints, the Land Rover's eight and the big truck's five are new, and
+  one of the buggy's, all muted. They take the game's own places in its paint table, so every car
+  shows them, the ones placed in the world included. A taxi that rolls none of the Wrangler's paints
+  takes the Datsun's beige.
 
 The engine's `Cameras.Camera.Third` is put up and its update is taken over to place the camera. Both
 are described in
