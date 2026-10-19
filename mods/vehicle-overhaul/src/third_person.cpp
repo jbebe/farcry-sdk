@@ -1,5 +1,5 @@
-// The third-person camera in a vehicle, switched by the Third-person view control. Leaving the
-// vehicle puts the first-person camera back; the view chosen is kept for the next vehicle, for the session.
+// The third-person camera while driving, switched by the Third-person view control. Leaving the
+// driver's seat puts the first-person camera back; the view chosen is kept for the next drive, for the session.
 //
 // The engine's Cameras.Camera.Third is put up and then placed by the chase camera, which takes the
 // mouse look for itself while it is up. The player's full body is drawn while it is up, the first-person
@@ -15,6 +15,7 @@
 #include "engine/third_camera.h"
 #include "engine/vehicle.h"
 #include "engine/view_mode.h"
+#include "engine/wheeled.h"
 #include "fcse_api.h"
 
 #include <atomic>
@@ -26,8 +27,8 @@ namespace {
     // Counted on the dispatcher, spent on the pawn tick.
     std::atomic<int> g_toggles{0};
 
-    // The view the player chose, kept for the game session: every vehicle they get into starts in it. Held is set
-    // while the game has taken the camera, until they next get in or press the control.
+    // The view the player chose, kept for the game session: every drive starts in it. Held is set while the game
+    // has taken the camera, until they next take the wheel or press the control.
     bool g_thirdPerson = false;
     bool g_held = false;
     // The camera while it is up, and the pawn it follows.
@@ -67,15 +68,16 @@ namespace {
     }
 
     void Update(void* pawn, float* look) {
-        const bool seated = VehicleOverhaul::Vehicle::Current(pawn) != nullptr;
-        // On foot the control does nothing: retail's F2 sends it too. Held, it brings the chosen view back.
-        if (g_toggles.exchange(0) % 2 != 0 && seated) {
+        // A turret or a passenger seat lets the view go as getting out does.
+        const bool driving = VehicleOverhaul::Wheeled::Player() != nullptr;
+        // Off the wheel the control does nothing: retail's F2 sends it too. Held, it brings the chosen view back.
+        if (g_toggles.exchange(0) % 2 != 0 && driving) {
             if (!g_held) {
                 g_thirdPerson = !g_thirdPerson;
             }
             g_held = false;
         }
-        if (!seated) {
+        if (!driving) {
             g_held = false;
         }
         if (!g_thirdPerson && g_camera == nullptr) {
@@ -99,7 +101,7 @@ namespace {
             look[0] = 0.0f;
             look[1] = 0.0f;
         }
-        const bool wanted = g_thirdPerson && seated && !g_held;
+        const bool wanted = g_thirdPerson && driving && !g_held;
         if (manager == nullptr || VehicleOverhaul::Camera::Locked(manager) || wanted == (g_camera != nullptr)) {
             return;
         }
