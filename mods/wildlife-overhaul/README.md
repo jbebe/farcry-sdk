@@ -18,13 +18,14 @@ is within 40 m, it charges:
 1. it claims the world blackboard fact `WildlifeBuffaloCharging`, so only one buffalo charges at a
    time; the others stand their ground and retry every second;
 2. it runs at a point 8 m beyond the player, so it is still at full speed when it arrives, merging a
-   new path toward that point every second without stopping;
+   new path toward that point every second without stopping. The path keeps a 3 to 6 m turning radius,
+   so a buffalo facing away wheels round instead of stalling, and the charge sets
+   `DisableDynamicAvoidance` so the buffalo does not stop and sidestep the player;
 3. within 3.5 m of its centre, before its own steering swerves round the player, it sends one Crush
    stim of level 26 to every pawn within 4.5 m, about 300 health on
    the player's damage curve;
-4. on a hit it tosses its head (the `HeadTwitch` state, reachable only in its own state machine
-   `wildlifeoverhaul_buffalo.gosm.xml`), then runs on to a point 12 m past the player; after 12 s
-   without a hit it does the same without the toss;
+4. on a hit, or after 12 s without one, it runs on to a point 12 m past the player, steering round
+   them again;
 5. it stands for 2.5 to 4 s looking at the player, the player's chance to act, releases the claim and
    charges again, so the fight goes on until one of them dies or the player is more than 40 m away.
 
