@@ -21,6 +21,7 @@ schedule.
 | Sound Overhaul | `mods/sound-overhaul` | `sound-overhaul-<version>` | |
 | Flashlight | `mods/flashlight` | `flashlight-<version>` | |
 | Aiming Overhaul | `mods/aiming-overhaul` | `aiming-overhaul-<version>` | |
+| Vehicle Overhaul | `mods/vehicle-overhaul` | `vehicle-overhaul-<version>` | |
 | Legacy Plugin | `mods/legacy-plugin` | `legacy-plugin-<version>` | |
 
 The Blender add-on's release installs Blender on the runner before it builds. Blender builds its own

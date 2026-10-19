@@ -1,9 +1,11 @@
 # Vehicle Overhaul
 
 Driving in Far Cry 2 as off-road driving: a third-person camera to watch the car work, off-road
-physics, an engine with real gears, and wrecks revived as drivable vehicles. Unfinished: the camera,
-the physics and the engine are in, the engine's sound for the Datsun, the big truck and the Unimog
-only; shooting from the windows and the wrecks are to come.
+physics, an engine with real gears, and every car's engine sound recorded from a real engine.
+Shooting from the windows and the wrecks revived as drivable vehicles are to come, after 1.0.
+
+`README-release.md` is the player's version, shipped in the release zip, and `CHANGELOG.md` the
+release notes; see [RELEASING.md](../../RELEASING.md).
 
 ## What it does
 
@@ -20,34 +22,25 @@ only; shooting from the windows and the wrecks are to come.
 
 - **Off-road physics, on the car you drive.** Every physics step, the car's Havok vehicle is re-tuned
   from its own retail values, by that car's own set of tunings. Getting out puts them all back, so AI
-  drivers keep the retail physics. The values below are every car's defaults. The Land Rover starts with
-  its own springs and lower gearing (1.2× its top speed). The Datsun starts as tuned in game: 80% of its
-  engine's torque, 0.5 s gear changes both ways, its own lock at speed (1×), more tyre grip (0.4×), no
-  rolling resistance, a little more inertia (1.02×), slightly softer springs (0.55×), and dampers at
-  0.48× on compression and 0.4× on rebound. The big truck starts as a
-  real empty ZIL-130: 90 km/h through its own gearbox (1.55× the top speed), 1 s gear changes, air
-  brakes (0.75×), about 30° of steering lock, 2% rolling drag (0.2×), and leaf springs bouncing at
-  2 Hz (0.8×) on about 15 cm of travel (1.5×), damped at 0.65× both ways. Its engine (1×) and tyre grip
-  (0.6×) are as tuned in game: the real engine on the ground's own grip spun the wheels. The Unimog
-  starts as a real Unimog 406, worked out the same way: its engine scaled to the game's 1,600 kg for the
-  real 3,900 (0.5×), 71 km/h (1.65×), 0.8 s gear changes, air brakes (0.45×), about 28° of lock (0.95×),
-  the truck's grip (0.6×) and rolling drag (0.2×), twice the inertia for its 3 m wheelbase, and coil
-  springs at 1.5 Hz (0.65×) on long travel (2×), damped at 0.5× both ways.
+  drivers keep the retail physics. The values below are the defaults for a car the overhaul does not
+  know. Each car it knows starts at the tuning made for it in game, its own list in
+  `src\real_vehicle.cpp`; the ZIL-130's and the Unimog's were first worked out from the real trucks
+  (an empty ZIL-130 does 90 km/h through its own gearbox, a Unimog 406 71 km/h).
   - No speed limiter (retail holds a player's car near 60 km/h), longer gearing, 70% of the engine's
     torque and no climb assist.
   - Weak brakes that lock the wheels into a skid after half a second, as on a car without ABS.
   - Tyre grip that leaves the ground's own friction to decide, with no extra downforce and little
     rolling resistance, so a car coasts and slides.
   - The tyres roll, pitch and yaw the body as physics would, with no damper on spins.
-  - Each car the overhaul knows carries its weight as high as the real vehicle it depicts, set from that
-    vehicle's stability factor: a Land Rover Series III tips over at 0.9 g, a Datsun 1200 at 1.3 g,
-    and the buggy keeps its weight at the axles. The big truck tips at 1.1 g, lower than a real ZIL-130's
-    0.85, which rolled it over in left-right turns on its soft solid axles. It also carries its weight as
-    far forward as an empty ZIL-130, 49% on the front axle, where the game put it far back. The Unimog
-    tips at 1.1 g too, on the same soft solid axles; the game already puts 60% of its weight on the
-    front axle, as on a real one. The Datsun
-    carries 54% on its front axle, a small front-engined car's, where the game put it so far forward
-    that the rear hopped about.
+  - Each car the overhaul knows carries its weight as high as the real vehicle it depicts, set by the
+    sideways g it tips over at: the Datsun 1200 and the Unimog at 1.3 g, the Jeep Wrangler at 1.2, the
+    Land Rover and the ZIL-130 at 1.1, the Jeep Liberty at 1.07, the quad at 1.0, and the buggy keeps
+    its weight at the axles. The cars on solid axles tip higher than the real ones (a ZIL-130's 0.85),
+    which rocked or rolled over on their soft springs.
+  - Some carry their weight further forward or back than the game put it: the ZIL-130 49% on the
+    front axle, as an empty one does, where the game put it far back; the Datsun 54%, the Wrangler 55%
+    and the Liberty 57%, as small front-engined cars do. The Unimog keeps the game's 60%, as a real
+    one has.
   - The game gives every car a small car's inertia for its weight, so the big truck rocked on its
     springs as quickly as the Datsun. It starts at 3.6 times its own, about a real ZIL-130's, so it
     leans and turns slowly.
@@ -81,22 +74,27 @@ only; shooting from the windows and the wrecks are to come.
     game's seven close gears, and keeps the game's top gear, so its top speed is unchanged. First gear
     pulls half as hard again, and each change up drops the revs to about 1,800. It changes down at
     1,300 rpm.
-- **The Datsun's engine sound.** A new engine sound of an idle and seven steady-rev recordings, each
-  pitched to the revs and faded into the next, a little quieter off the throttle and quieter still while
-  the clutch is out. The idle plays as the idle loop, in place of retail's. A recorded start
-  replaces the ignition, and on the Datsun you drive the engine fades in as the start catches, 0.8 s
-  after the key. A gear-change clunk plays halfway through each shift. The new engine sound plays on
-  every Datsun; the fade-in and the clunk only on the one you drive.
-- **The big truck's engine sound.** The same, from a ZIL-130's own V8: an idle and seven steady-rev
-  recordings from about 460 to 1,050 rpm, the idle one the lowest of them in place of retail's idle
-  loop, laid over the truck's revs compressed as the Datsun's are. It has its own recorded start, which
-  its engine fades in after as it catches, 0.7 s after the key; an engine-off sound where retail's
-  truck stops silently; and the Datsun's clunk on gear changes.
-- **The Unimog's engine sound.** From an OM 352 six-cylinder diesel, over its 600 to 2,800 rpm: an
-  idle take heard only at idle, at its own pitch, gone by 750 rpm, and one steady take at 2,470 that
-  spans every rev above, pitched from half its rev just above idle to 1.13× at the redline. It has its
-  own recorded start, which its engine fades in after 0.4 s after the key. Its engine-off is the
-  Datsun's.
+- **Every car's engine sound**, built from recordings of a real engine: an idle in the idle loop, the
+  revs as slices of a recorded sweep (steady takes on the ZIL-130), each pitched to the revs and faded
+  into the next, a little quieter off the throttle and quieter still while the clutch is out, and a
+  recorded start the engine fades in after as it catches. The builds and their recordings stay local
+  (`assets\vehicle-sounds\`); the layer carries the banks.
+
+  | Car | Engine | Idle to redline | Start catches |
+  |---|---|---|---|
+  | Datsun 1200 | four | 750 to 6,500 rpm | 0.8 s |
+  | Land Rover Series III | four | 525 to 4,000 | 0.8 s |
+  | ZIL-130 | V8, its own | 560 to 3,200 | 0.7 s |
+  | Unimog 406 | OM 352 six-cylinder diesel | 600 to 2,800 | 0.4 s |
+  | Jeep Wrangler and the taxi | a Ram 2500's Cummins six | 750 to 3,000 | 0.6 s |
+  | Jeep Liberty | a Volvo V70's diesel five | 690 to 4,800 | 0.9 s |
+  | Buggy | four | 950 to 4,800 | 0.5 s |
+  | Quad | four-stroke | 1,580 to 9,300 | 0.5 s |
+
+  A gear-change clunk, recorded on the Datsun, plays halfway through each shift on the Datsun, the
+  ZIL-130 and the Unimog. The ZIL-130, the Unimog and the quad play their own recorded engine-off, the
+  ZIL-130's where retail's stopped silently; the other cars keep retail's. The new sounds play on every car of a kind; the fade-in and the clunk only on the one
+  you drive.
 - **Quieter tyres.** Every car's tyre sounds on the ground, dirt, gravel, grass and the rest, play
   10 dB quieter, so they no longer drown out the engine.
 - **Headlamps you can see.** Every lit headlamp, on any car, shows as a bright point: a lit white
@@ -161,13 +159,14 @@ src\                         the FCSE plugin
                              paint table, the frame handed to the render thread, the Direct3D
                              device's passes
 layer\mods\
-  graphics\                  the big truck's model, its fan on a node of its own and its grille the user's;
+  graphics\                  the big truck's model and physics, its fan a hinged body on a node of its own
+                             and its grille the user's;
                              the Datsun's model and its two chrome materials; the quad's third-person
                              driving clip
   config\                    the active_camerathird control and its binding, as sections
   languages\                 the control's label, in every language
-  soundbinary\               the Datsun's, the big truck's and the Unimog's engine and start sounds,
-                             the truck's engine-off sound, the gear-change clunks; their pedal sounds and idles
+  soundbinary\               every car's engine, idle and start sounds, the ZIL-130's, the Unimog's and
+                             the quad's engine-off, the gear-change clunks, the retail pedal sounds
                              silenced; every car's quieter tyre sounds
   worlds\                    the big truck's archetypes in each world's entity library, which name its
                              engine-off sound
@@ -177,7 +176,8 @@ layer\plugins\vehicle-overhaul\   the built plugin, staged here by build.ps1
 A car is known by its archetype's `iAnimVehicleType`, one per kind of car, not by its mass or engine, so a
 mod that retunes the cars keeps them known. The taxi shares the Wrangler's.
 
-Needs FCSE 1.4.0 or later. The control sections need JackAll 1.3.0 or later.
+Needs FCSE 1.4.0 or later. The control sections and the archetype fragments need JackAll 1.4.0 or the
+Vortex extension 0.4.0 or later, which merge them with other mods'.
 
 ## Building
 

@@ -74,7 +74,7 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 - [ ] Release as 1.0, once the physics are configured and the third-person view is fixed
 - [ ] Revamp the existing cars, in place of new models, after 1.0
 - [ ] Shooting out of the windows, from a legacy mod
-- [ ] Wrecks revived as drivable vehicles (bus, UAZ, a car); needed for 1.0
+- [ ] Wrecks revived as drivable vehicles (bus, UAZ, a car), after 1.0
 
 ## Mods/sound-overhaul
 
