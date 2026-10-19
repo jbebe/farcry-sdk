@@ -545,6 +545,33 @@ their own conditions and carry nothing to draw.
 `CProximityTriggerComponent::IsInside` is **not** a geometric test — it walks a membership list that
 physics maintains, so the box test lives in collider registration.
 
+**Who sets it off** (read in `FarCry2_server`). When physics reports a contact,
+`CProximityTriggerComponent::OnEvent` (`0x091035F0`) asks `IsValidCollider` (`0x09102B30`), then
+raises `Enter` or `Leave` on the trigger's own entity, carrying the collider. The Domino
+`ProximityTrigger` node hands that collider out as `Collider`.
+
+- The collider must have a `CPawn` component: the player, soldiers and buddies, not animals or props.
+- `selUsableBy` filters entering and leaving as well as use (`IsValidPawn`, `0x09102990`): 2
+  PlayerOnly passes only a pawn that is a terminal's focus, the local player; 1 AIOnly the others;
+  0 everyone.
+- `selLocomotionFilter` 1 needs the pawn in a vehicle, 2 out of one.
+- With `bExclusiveUser`, a second pawn's `Enter` is ignored until the first leaves.
+
+**Switching it.** `CBaseTriggerComponent::OnEvent` (`0x0936E1A0`) takes a `CTriggerEnableEvent` and
+sets `bEnabled` from its `bEnable`; the proximity trigger calls it first and raises `Enter` only while
+enabled. Retail links send it as `CTriggerEnableEvent` `SetDisabled` with `bEnable False` (a street
+bulb that is shot out, `worldsector3860`). The base also registers `Enable`, `SetEnabled`,
+`SetDisabled` and `Reset` as registered events.
+
+**What retail wires to them.** Mostly graphs, through the `ProximityTrigger` node, which name each
+trigger by its entity id as a string. In the 250 sectors of `w1_b_2` only one link listens to a
+trigger, a save point's `Use`. Across every sector file, 50 hold the string `Enter` and 10 `Leave`.
+One such link is the creaking dock in `w1_b_3`'s `worldsector3955`: `ProximityTrigger_Sound_Dock_Creak_14`
+(static, PlayerOnly, `vectorSize` 4 × 4 × 7) links `Enter` to a `CSoundEvent` `PlaySound` of
+`0x004C6529`, `sndtpType` 11 and `bAssignOnEntity`, aimed at `SoundPoint_Dock_Creak_15`, an entity
+holding only an empty `CSoundComponent` and a `CEventComponent`. The DLC Domino hosts `DominoEntity_9` to `_12` are themselves 1 m PlayerOnly
+proximity triggers with a `CDominoComponent`.
+
 :::caution[Open]
 Whether `vectorSize` is the box's full extent or a half-extent, and whether the box is centred on the
 entity, are both unconfirmed — a 2× error either way.

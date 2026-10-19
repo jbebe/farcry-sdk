@@ -5,8 +5,9 @@ sidebar_position: 3
 # Attacking Animals
 
 **Status:** feasibility checked 2026-10-19 from data and code; the buffalo charge built in
-`mods/wildlife-overhaul` the same day; [the hyena](#the-hyena), [fish shoals](#fish-shoals) and
-[the ostrich](#the-ostrich) researched as new archetypes the same day; nothing seen in game. The behaviour cannot be copied from Far
+`mods/wildlife-overhaul` the same day; [the hyena](#the-hyena), [fish shoals](#fish-shoals),
+[the ostrich](#the-ostrich) and [a still snake](#the-snake) researched as new archetypes the same day;
+nothing seen in game. The behaviour cannot be copied from Far
 Cry 3 and has to be rebuilt on Far Cry 2's own agent. New animals can be
 [added alongside the old ones](#adding-instead-of-replacing) with a data layer and a small plugin.
 The first steps are [four experiments](#experiments-in-order).
@@ -89,7 +90,7 @@ Three tools would unblock every animal:
 | hyena | none: Far Cry 3's hyena archetype ships no mesh, rig, ragdoll, textures or sounds; the rabid dog and thylacine are the nearest | medium | a mesh made for the goat rig; [details](#the-hyena) |
 | crocodile | the crocodile: walk, jog, swim and kill clips | medium-high | no animations, MOVE rules or assets behind the Crocodile species value; waterline ambush only |
 | fish packs | `Fish_FP`, Far Cry 3's own fish flock; river fish (7 bones) | medium | the bird rig instead of a fish rig, a night-climb plugin, a skinning fix in BlenderFC2; [details](#fish-shoals) |
-| snake | the snake (32 bones) | high | a new rig, so the rig exporter |
+| snake | the snake (32 bones) | high to move; medium for a still one | moving: a new rig, so the rig exporter. Still: a rigid mesh, two sounds and data; [details](#the-snake) |
 | ostrich | the cassowary (two-legged, 51 bones), or Far Cry 2's chicken scaled up | medium via the chicken | a size plugin, a mesh on the chicken rig; [details](#the-ostrich). The cassowary needs a new rig and two-legged animation rules |
 
 Beyond the data-only charge, behaviour lives in one FCSE plugin: chase instead of flee, hits timed to
@@ -132,6 +133,9 @@ What the ranking leans on, read in Far Cry 2's data:
 - **Hyena.** A new mesh on the goat rig, on the goat's clips. The zebra rig does not take goat clips.
   The herd panic and per-animal sight make the pack: hyenas placed together with a hunting brain. See
   [the hyena](#the-hyena).
+- **Snake as a still hazard.** No rig and no animation at all: a rigid coil built as a breakable prop,
+  a stim emitter for the bite, and a trigger linked to the hiss, each copied from retail. Far Cry 3
+  ships stationary snakes too. See [the snake](#the-snake).
 
 **B: works, but borrowed animation shows**
 
@@ -142,9 +146,6 @@ What the ranking leans on, read in Far Cry 2's data:
   chicken height. It inherits all seven chicken clips, and run-jump is already a two-footed forward
   strike. Animating as a chicken (5) while behaving as a zebra (2) gives it 25 m sight instead of a
   chicken's 3 to 5 m. See [the ostrich](#the-ostrich).
-- **Snake as a still hazard.** A coiled snake that never moves needs no rig: a hiss and a bite when the
-  player steps close, from a trigger and `SendPierceStimWithOrigin`. Far Cry 3 ships stationary snakes
-  too.
 
 **C: all its animation keyed by hand**
 
@@ -672,6 +673,183 @@ The first six visual checks share one launch: the scale plugin on the retail chi
 - whether a far-off scaled animal visibly crawls;
 - whether `m_flStartTime` and `m_flStopTime` play part of a clip;
 - whether the brain's wait lands the hit on the strike frame.
+
+## The snake
+
+Researched 2026-10-19 as a still hazard: a coiled snake that never moves, hisses when the player comes
+near, bites on contact and can be shot dead. Nothing was built or seen in game. Engine detail is in
+[stims and damage](../engine-internals/stims-and-damage.md) and
+[proximity triggers](../engine-internals/entity-instancing.md#cproximitytriggercomponent--the-only-trigger-with-geometry).
+
+The cheapest route needs no graph, script or plugin. Each behaviour copies something retail already
+places:
+
+- **the bite** is a stim emitter, the component a campfire burns with;
+- **the hiss** is a trigger linked to a sound, as on the creaking dock in `w1_b_3`;
+- **the death** is a breakable prop changing state, whose links switch the rest off, as a campfire's
+  logs and a shot-out street bulb do.
+
+Only the mesh and two sounds are new. Far Cry 3 has stationary snakes too (`_Stationary` variants),
+with health 2 and damage 100 to 120.
+
+### Why not a graph
+
+The brief's route works on paper. A `ProximityTrigger` node's `Enter` hands out the entering pawn as
+`Collider`, which can feed `SendPierceStim`'s `Target` directly, so `GetLocalPlayerId` is not
+needed. `SendPierceStimWithOrigin` delivers one bullet hit of the given level straight to the target
+*(read in code)*. But the graph needs a host entity, names each trigger by its literal entity id, and
+bites once per entry unless it loops on a timer. The emitter does all of that from data. The graph
+stays the fallback if [the first check](#obstacles-3) shows that an emitter does not reach the player.
+
+The mines are no shortcut: the IED mine has no trigger and does no damage by proximity
+([mines](../engine-internals/stims-and-damage.md#mines)).
+
+### The pieces
+
+Three placed entities per snake, grouped like the campfire prefab:
+
+| Entity | Made from | What it does |
+|---|---|---|
+| the snake | a new archetype, `Animals.DLC.Snake`, copied from a two-state breakable prop | draws the coil, is shot and dies, plays the hiss |
+| the bite | a new archetype, `StimEmitters.DLC.SnakeBite`, copied from `StimEmitters.Burn.BurnEmitter` | sends Pierce to everything within 1 m once a second |
+| the hiss trigger | placed only, copied from `ProximityTrigger_Sound_Dock_Creak_14` | its `Enter` plays the hiss on the snake |
+
+Every retail proximity trigger is an entity of its own, so this keeps to that. One entity carrying
+everything would probably work: `CTriggerComponent` already sits beside a mesh and a
+`CCompoundPhysComponent` on 16 retail door archetypes, and animals and props all carry the empty
+`CSoundComponent` a sound needs *(seen in data)*. But no retail entity mixes an emitter or a proximity
+trigger with a breakable prop, so it is untested.
+
+### The snake archetype
+
+The donor is `IGE_Archetypes.AutoGen.GarbageBag02`. It is 0.78 × 0.87 × 0.51 m, about a large coil,
+and its three mesh parts are `StatePrim01` (whole) and `StatePrim02` and `StatePrim03` (torn). Any
+two-state prop works; world 1 has 683 of them.
+
+| Piece | Value | Basis |
+|---|---|---|
+| Fragment | `mods/worlds/world1/generated/entitylibrary.fcb/Animals/DLC/Snake.xml`, and the same under `world2` | as [the hyena](#the-archetype) |
+| Names, id | `Name` `DLC.Snake`, `hidName` `Animals.DLC.Snake`, the next free `disEntityId` in both worlds | as the hyena |
+| Mesh and collision | the descriptor's `.xbg` and `.hkx` paths, and `CCompoundPhysComponent`'s `hidResourceId`, at new paths; the descriptor's boxes refitted to the new mesh | the descriptor bakes object indices, boxes and the state-to-body map *(seen in data)*; the boxes as in [replacing a weapon](../modding/replacing-a-weapon.md#step-6--regenerate-the-baked-bounding-boxes) |
+| `Damage` | `bDamageable` True, **`bPlayerOnly` True** | the guard against its own bite, [below](#the-bite) |
+| State 0, `StatePrim01` | `fHealth` 5; Pierce, Crush and Burn on; `OnDamage` Next | any hit kills it: `ObjectDefault` turns even level 9 into 47 health *(read in data)* |
+| State 1, `StatePrim02` and `03` | the dead snake, in one or two pieces; `OnDamage` Stay | Next keeps the body on the ground. What Destroy does to the entity's links was not read |
+| `CPersistComponent` | `selLevel` 1 | like animals: a dead snake is back when its sector reloads. The bag's 2 would save it dead |
+| `CAIShootMeObject` | removed | it probably marks the bag as something soldiers shoot *(inferred from the name)* |
+| `CCountersComponent`, `CSoundComponent`, `CEventComponent` | kept: `ObjectDefault`, empty, links per instance | the empty sound component is the hiss target *(read in code)* |
+
+The placed snake's links, all on `OnStateChange`, fire when it dies:
+
+- to the bite: `CEntityEvent` `Disable`, as the campfire logs send their emitter;
+- to the hiss trigger: `CTriggerEnableEvent` `SetDisabled` with `bEnable False`, as the street bulb
+  sends its trigger;
+- to itself, optionally: `CSoundEvent` `PlaySound` with a death sound.
+
+### The bite
+
+`StimEmitters.DLC.SnakeBite` is the `BurnEmitter` with:
+
+| Field | Value | Effect |
+|---|---|---|
+| `bEnable` | True | always armed; the snake's death disables it |
+| `fRateOfEmission` | 1 | the seconds between bites: the first lands up to a second after the player steps in |
+| first stim | `selType` 3 (Pierce), `nLevel` 18, `fRadius` 1, `bFalloff` False | 100 health a bite, 7 to 10% of an Experienced player's 1,025 to 1,400 |
+| second stim | the empty one, as retail | |
+
+Place it at the coil's centre. It bites everything with a physics body within 1 m: the player,
+soldiers and buddies, and animals. An animal hit by Pierce turns threatened
+([hits](../engine-internals/animals.md#the-animal-agent)), so a zebra that steps on a snake bolts
+*(inferred)*.
+
+**It also bites the snake.** An emitter skips no entity, not even its own
+([stim emitters](../engine-internals/stims-and-damage.md#stim-emitters)), and the coil sits inside
+the radius. Retail meets this at the campfire by turning `bBurnStim` off on the logs. A snake must
+take Pierce from bullets, so the guard is `bPlayerOnly`: `DamageParts` ignores any stim whose
+instigator is not the player *(read in code)*, and the emitter sets only a sender *(read in code)*,
+so its instigator stays unset *(inferred)*. The cost is that soldiers' bullets do not kill snakes. A
+second guard is to bite with Cut (5), which the player takes on the same curve but which has no flag
+on a breakable prop's state *(inferred from the flag set)*.
+
+### The hiss
+
+The trigger is a copy of the dock's:
+
+- `CTriggerComponent` with `static` True;
+- `CProximityTriggerComponent` with `bEnabled` True, `selUsableBy` 2 and `vectorSize` about 4 × 4 × 2,
+  centred on the snake;
+- one link: `Enter` → `CSoundEvent` `PlaySound`, `sndSound` the hiss's id, `sndtpType` 11,
+  `bAssignOnEntity` True, `bInterruptible` True, aimed at the snake.
+
+PlayerOnly means a pawn that is the local player, on foot or not; `selLocomotionFilter` 2 would leave
+out a player in a vehicle ([who sets it off](../engine-internals/entity-instancing.md#cproximitytriggercomponent--the-only-trigger-with-geometry)).
+It hisses once per entry. Whether `vectorSize` is the box's full or half extent is still open, so 4 m
+means a reach of 2 or 4 m from the snake; the first launch measures it.
+
+The hiss and the death sound are new banks, made with `jackall-cli spk new`, named after new ids and
+positioned with a rolloff ([`.spk`](../file-formats/spk.md)). A bank named after an id loads by path
+with no depload entry; that was heard for weapons and is *(inferred)* here. A looping hiss with no
+trigger would be a placed sound point, but a sound point names a record (`sndptSoundPoint`, such as
+`004BE46B`) whose definition was not traced.
+
+### The mesh
+
+A still snake is rigid, so it needs no rig and no clip. The route is the weapon one with a prop:
+
+1. `jackall-cli fc2model export graphics\objects\households\decoration\garbagebag02.xbg --game
+   "C:\Games\Far Cry 2" -o snake.fc2model`. Tested on a loose copy: it exports with no `--rig`, and
+   every node is unskinned (`skin_index` -1, no bind matrices).
+2. In Blender, replace `STATEPRIM01`'s three LODs with the coil and `STATEPRIM02` and `03` with the
+   dead snake. Every part carries two UV sets, colours and a tangent frame, so author both UV layers and
+   a colour attribute. Vertices must stay within ±1.0 m (`pos_compress` 3.05 × 10⁻⁵).
+3. `jackall-cli fc2model extract`, then `jackall-cli mod build`.
+
+Two of the [fish's mesh problems](#making-the-mesh-today) do not apply. The skin-width bug cannot
+reach it, because `export_xbg._skin` returns at once for a part with no weights *(read in the
+add-on)*. And no rig is resolved. The path problem does apply: without renaming the pack's entries,
+the snake overwrites `garbagebag02.xbg` and every garbage bag in the world becomes a snake. The
+material is a copy of the bag's `.xbm` with snakeskin textures, since the add-on writes no materials.
+
+**Collision** is the bag's `.hkx`: an 8-vertex hull for `StatePrim01`, a 16-vertex hull and a small
+box for the pieces, and `HIGH_StatePrim01`, a MOPP over 214 triangles. It is about coil-sized, so
+copy it unchanged. A snake-shaped hull is new tooling: `jackall-cli hkx` moves, turns and resizes
+boxes, but nothing builds a hull or a triangle mesh from Blender, though `hkx encode` refreshes a MOPP
+after an edit. Which body a bullet hits, the hull or the `HIGH_` mesh, was not read.
+
+### Placement
+
+One XML per entity in a generated layer, as [the hyena's](#placement): the snake at ground height from
+the `.sdat` grid, the bite a few centimetres above its centre, and the trigger centred on it, each
+with a new `disEntityId`. Links hold ids, so the three can sit in any order. No navmesh is needed.
+The generator is the hyena's script with three entities and three links: new tooling, nothing left to
+reverse.
+
+### Obstacles
+
+| Obstacle | Solved by | Cheapest one-launch check |
+|---|---|---|
+| An emitter's bite reaches the player | data: the emitter | no files: at the campfire beside `SafeHouse_15` (world 1, about 1,332, 3,222, sector 4020), type `#CDominoManager_GetInstance():SendRegisteredEventToEntity("2058516088527799154", "CStimsEmitterComponent_Enable")` and stand in the fire. Expect health to drop every second within 1 m. The event name is *(inferred)* from the Domino node's `CBaseTriggerComponent_SetEnabled`; if it is not found, wait for a soldier to light the fire |
+| The snake survives its own bite | data: `bPlayerOnly`, or a Cut bite | the stand-in launch below: does it break by itself |
+| It can be shot dead | data: the two states | the stand-in: shoot it |
+| Death switches the bite and the hiss off | data: the three links | the stand-in: shoot it, then step on it |
+| The hiss on approach | data: the `Enter` link | the stand-in: walk in, noting the distance it fires at, which also settles full or half extent |
+| A new archetype at new mesh paths | data | the stand-in on the bag's own mesh first, then the snake mesh |
+| The snake mesh | art; renaming a pack's entries is new tooling, or hand edits | the archetype with the mesh |
+| Collision that fits a smaller snake | new tooling: a hull from a mesh | shoot just beside the coil |
+| The hiss and death sounds | data: new banks | hear them |
+| What the HUD shows for a bite | unknown | the stand-in launch |
+
+The stand-in launch tests the rest: `Animals.DLC.Snake` still on the garbage bag's mesh, with the bite
+and the trigger, placed beside that campfire. The dock's creak, `0x004C6529`, can stand in for the
+hiss.
+
+### Unknowns
+
+- whether an emitter's stim reaches the player at all;
+- whether the emitter's stim really carries no instigator, so that `bPlayerOnly` protects the snake;
+- what the damage indicator shows for a bite with no instigator;
+- whether `vectorSize` is a full or a half extent;
+- which collision body bullets hit;
+- whether a breakable prop ignores Cut.
 
 ## Adding instead of replacing
 

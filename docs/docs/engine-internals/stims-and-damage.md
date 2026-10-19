@@ -1,0 +1,179 @@
+---
+sidebar_position: 29
+---
+
+# Stims and damage
+
+:::info[Verified via reverse engineering]
+Code traced in `FarCry2_server`; every address here is the server's. `CStimsEmitterComponent`,
+`fRateOfEmission`, `selUsableBy` and `bPlayerOnly` are in GOG `Dunia.dll` too (found as strings; the
+functions were not matched). Data read from world 1's `entitylibrary_full.fcb` and the 250 sectors of
+`w1_b_2`, decoded with `jackall-cli fcb decode`. Claims marked *(inferred)* were not read in code or
+data. Nothing here was seen in game.
+:::
+
+Everything that hurts in Far Cry 2 is a stim: a `CEntityEventStims` with a type, a level, a radius
+and a falloff. This page covers how a stim finds its receivers, the one component that sends stims on
+a timer, and how the player and breakable props turn a stim into damage. It was written for
+[a static snake](../design/attacking-animals.md#the-snake), so it stops where that needs it to.
+
+## The stim
+
+`CEntityEventStims` is 0x7C bytes (constructor `0x09447FF0`, vtable `0x0A3B53C8`). The fields that
+matter:
+
+| Offset | Field | |
+|---|---|---|
+| `+0x18` | position | where the stim comes from |
+| `+0x24` | sender | the entity that sends it |
+| `+0x28` | instigator | who is to blame: the shooter. [`CanDoDamage`](#the-player) reads it |
+| `selType`, `nLevel`, `fRadius`, `bFalloff`, `nFalloffMinLevel`, `sDetail` | the data fields | `sDetail` names the kind, such as `explosion` |
+
+Types, in archetype order: 0 None, 1 Bang, 2 Snap, 3 Pierce, 4 Crush, 5 Cut, 6 Health, 7 Burn, 8 Water,
+9 Panic, 10 Fear, 11 Morale, 12 Dirt, 13 Reliability, 14 Interest. `DamageHealth` (`0x09446F50`) is
+true for 3, 4, 5 and 7.
+
+## How a stim reaches entities
+
+`CEntityEventStims::Send(TEntityHandle ignore)` (`0x09449BA0`), for a stim with a radius:
+
+- **Bang, Snap, Panic, Fear, Morale and Interest** go to `CAIEngine::OnEvent`, as things the AI
+  senses.
+- **Every other type** asks physics for every entity in the box of ±`fRadius` around the stim's
+  position (`GetEntitiesAroundAabb`, collision layer mask `0x7FF`), keeps those whose
+  `GetDistanceToEntity` is at most `fRadius`, and calls each one's `OnEvent`. A second pass over
+  `CAABBPartitionManager::GetEntitiesInRadius` reaches objects that are not physics entities
+  *(inferred: vegetation)*.
+
+The only entity skipped is the `ignore` handle. The no-argument `Send()` (`0x0944B650`, vtable slot
+`+0x24`) passes an invalid handle, so it skips nothing, **the sender included**. Where `bFalloff`
+lowers the level with distance was not found in `Send`; it is applied on the receiving side
+*(inferred)*.
+
+## Stim emitters
+
+`CStimsEmitterComponent` sends its stims over and over, with no brain, script or trigger.
+
+| Field | |
+|---|---|
+| `bEnable` | whether it runs; saved |
+| `fRateOfEmission` | **seconds between pulses**, despite the name; 1 by default |
+| `Stims` | the stims, each with its own type, level, radius and falloff |
+| `fTimeElapsed` | the running timer; saved |
+
+- **`Update`** (`0x093535A0`): while enabled it adds the frame time to `fTimeElapsed`. Once that is
+  more than `fRateOfEmission`, it stamps each stim with its own entity as sender and its own position,
+  sends it with the no-argument `Send()`, and resets the timer. It sets no instigator.
+- **`OnEvent`** (`0x09353180`): an event named `Enable` sets `bEnable`, one named `Disable` clears it,
+  and either resets the timer. `Init` (`0x093536B0`) also registers both names as registered events.
+- **It stims its own entity.** Nothing skips the sender, so an emitter on an entity with a physics
+  body sends its stims to that body as well.
+
+**Retail use: campfires.** The eight `StimEmitters.Burn.*` archetypes are bare emitters, with
+`CStimsEmitterComponent` and `CPersistComponent` level 0. `BurnEmitter` sends Burn level 15 within
+1 m with falloff to level 1, once a second, and carries a second, empty stim. 203 sector files place
+one. In the campfire at (1,332.2, 3,222.2) in `worldsector4020`, `Lighting.MediumCampFire_0` is a
+prefab of seven entities:
+
+- the burn emitter (`BurnEmitter_Small`), placed with `bEnable False`;
+- the log pile, `OA_Burnable.Burnable.CampfireLogs`, a breakable prop. Its `OnStateChange` sends the
+  emitter `CEntityEvent` `Disable`, switches the light off with `DeactivateLight`, stops the particles
+  and plays `0x0044F70A` on the sound point;
+- the light-the-fire and put-it-out duty points, whose `STPSpecialActionTriggered` send the emitter
+  `Enable` and `Disable`;
+- a light, a particle emitter and a sound point.
+
+The emitter sits inside the logs, and the logs' live state has `bBurnStim False` with Pierce and
+Crush on, so its own fire cannot break them.
+
+The sound point is an entity with only an empty `CSoundComponent` (`sndptSoundPoint` `FFFFFFFF`) and
+a `CEventComponent`. `CSoundComponent::OnEvent` (`0x095821F0`) plays any `CSoundEvent` it receives on
+its own entity, so any entity carrying that empty component can be a link's sound target.
+
+## The player
+
+`CFCXCountersComponentPlayer::HandleDamageStim` (`0x087FDF20`) takes any `CEntityEventStims`, from a
+bullet or from an emitter alike, and calls `NotifyAttackerHUD`. Its gate is
+`CFCXCountersComponent::CanDoDamage` (`0x087E7250`), which refuses a stim:
+
+- whose instigator is the receiver itself, unless its `sDetail` is an explosion, fire spreading or a
+  bullet impact;
+- while the receiver is invincible, or dead without having fallen to death;
+- that the game rules block as friendly fire;
+- of a type the receiver is immune to.
+
+`tables.StimEffectTables.PlayerDefault` sends Pierce, Crush, Cut and Burn through one curve,
+`Curves.StimEffectCurves.OldDamageHealth`, and Health through `OldRestoreHealth`.
+`ObjectDefault`, the table of 1,365 archetypes, uses the same damage curve for the same four types.
+The curve's knots:
+
+| Level | 9 | 18 | 24 | 28 | 30 | 32 |
+|---|---|---|---|---|---|---|
+| Health lost | 47 | 100 | 202 | 399 | 1,000 | 1,604 |
+
+The player's maximum is a `Curves.PlayerSicknessCurves.HealthMax_*` curve per difficulty. Its first
+pair of knots runs from 1,800 to 1,300 on Casual, 1,400 to 1,025 on Experienced, 1,075 to 825 on
+Hardcore and 825 to 700 on Infamous. What the curve's input is was not checked.
+
+## Breakable props
+
+A `CCompoundPhysComponent` object is a state machine over named parts. 683 of world 1's 954 compound
+archetypes have two states. Each state node carries:
+
+- `fHealth`;
+- a `Stim` block, `bPierceStim`, `bCrushStim` and `bBurnStim`, saying which types hurt it. There is no
+  flag for Cut;
+- `OnDamage` and `OnEvent` transitions, `selNextState`: 0 Destroy, 1 Stay, 2 Next, 3 Specify;
+- optionally an `Explosion` with its own stims, sent on entering the state.
+
+The node's mesh parts and `.hkx` bodies share the state's names (`StatePrim01` whole, `StatePrim02`
+and `03` the broken pieces, `HIGH_StatePrim01` the detailed collision), and the archetype's
+`hidDescriptor` bakes the `.xbg` object indices, bounding boxes and state-to-body map.
+
+**Damage.** `CCompoundPhysComponent::DamageParts` (`0x09524CD0`) returns at once when
+`Damage.bPlayerOnly` is set and the stim's instigator is not the local player. Otherwise the node's
+`ApplyDamage` (single body `0x0954A290`) asks the counters service how much the stim takes, and the
+stim's own virtual, handed the node's `Stim` flags, decides whether it counts. That virtual was not
+followed, so whether a Cut stim leaves a node alone is *(inferred from the flag set)*.
+
+**Events.** `BroadcastEvent` (`0x09523790`) raises:
+
+| Id | Name | Delivered |
+|---|---|---|
+| 0 | `OnStateChange` | to the entity's own `OnEvent` |
+| 1 | `OnPartBreakOff` | to the event links (`CEventComponent::BroadcastEvent`) |
+| 2 | `OnDamageLastState` | to the event links |
+| 3 | `OnEventLastState` | to the event links |
+| 4 | `OnEventDamageStateChange` | to the entity, its bound children and the event links |
+| 5 | `OnDestroy` | to the entity's own `OnEvent` |
+| 6 | `OnDamage` | to the event links |
+| 7 | `OnPostStateChange` | to the entity's own `OnEvent` |
+
+`OnStateChange` still reaches links: retail campfires and street lights link on it. A street bulb in
+`worldsector3860` (`Lights.LightsStreetColonial01_Bulb_34`) sends its time-of-day trigger
+`CTriggerEnableEvent` `SetDisabled` with `bEnable False` when it is shot out.
+
+## Scripts
+
+The Lua global `SendPierceStimWithOrigin(target, origin, level)` (`0x086DC880`) builds a bullet hit,
+a `CPhysBulletHitStim` of type Pierce at the given level, placed at the target's position with
+`origin` as the shooter. It hands it straight to the target's `OnEvent`, with no radius, and then
+sends the target a `CPawnEventFakeBullet`. The Domino node `SendPierceStim` calls it, or
+`SendPierceStimNoOrigin` without an origin, with level 15 when none is given.
+
+## Mines
+
+The IED mine (`weapons.Explosives.IED_Base.IED_Mine`) is a `CExplosive` with no trigger. It explodes
+on a Burn stim (`StimsToExplode`) or from the detonator, then sends Crush 29 within 15 m, Bang 10
+within 150 m and two short-range Burns. No retail sector places one. So the mine deals no damage by
+proximity; of what was read, the stim emitters are what hurts whoever stands in a spot. Fire regions
+(`CFireRegionComponent`) were not read.
+
+## Unknowns
+
+- Whether an emitter's stim reaches the player. The physics query should include the player's
+  character body *(inferred)*.
+- What `NotifyAttackerHUD` shows for a stim with no instigator.
+- Where falloff is applied, and whether `GetDistanceToEntity` measures to the entity's position or its
+  bounds.
+- Whether a compound node ignores Cut.

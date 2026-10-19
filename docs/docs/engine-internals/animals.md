@@ -283,7 +283,10 @@ Two routes need no code *(the mechanism was read; the result was not seen)*:
   radius, and `CFcxAI::PostUpdate` delivers it to `CEntity::OnEvent`. The class is in retail
   `Dunia.dll`; the shipped brains use it only for "vroom" sound stims.
 - **A script.** The Lua global `SendPierceStimWithOrigin(playerId, animalId, level)` (`0x086DC880`)
-  with `GetLocalPlayerId`, from a Domino graph.
+  with `GetLocalPlayerId`, from a Domino graph. It delivers one bullet hit straight to the target.
+- **A stim emitter.** `CStimsEmitterComponent` sends its stims to everything within their radius on a
+  fixed period, with no brain or script; retail campfires burn with it. It suits an animal that does
+  not move. See [stims and damage](./stims-and-damage.md#stim-emitters).
 
 Turning flee into chase in one place (a hook on `ComputeRunAwayDestination` writing the threat's
 position instead), hitting on an animation event, knockback, a camera hit and per-species sight all
