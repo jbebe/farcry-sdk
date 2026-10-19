@@ -201,6 +201,7 @@
     <Add Task="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeGore" />
     <Add Task="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeTimeout" />
     <Add Task="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeEnd" />
+    <Add Task="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeFreeze" />
   </Plan>
   <Task Name="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeOrFlee" Class="CTaskCheckIsInDistance" Looping="0" Independent="0">
     <Parameter Name="positionToMeasure" Value="&lt;PlayerPosition, &gt;">
@@ -253,7 +254,7 @@
     <Parameter Name="CatchPathClippingFailure" Value="0" />
     <Parameter Name="BlindStartPointClippingRadius" Value="-1" />
     <Parameter Name="BlindEndPointClippingRadius" Value="-1" />
-    <Parameter Name="UseTacticalPathFind" Value="0" />
+    <Parameter Name="UseTacticalPathFind" Value="1" />
     <Anchor Name="OnStart" />
     <Anchor Name="OnStop" />
     <Exit Name="Success">
@@ -263,19 +264,19 @@
     <Exit Name="Default" />
     <Exit Name="Always" />
     <Exit Name="PathFindFailed">
-      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeEnd" TargetAnchor="Start" />
+      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeFreeze" TargetAnchor="Start" />
     </Exit>
     <Exit Name="UnknownError">
-      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeEnd" TargetAnchor="Start" />
+      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeFreeze" TargetAnchor="Start" />
     </Exit>
     <Exit Name="PathTooLong">
-      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeEnd" TargetAnchor="Start" />
+      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeFreeze" TargetAnchor="Start" />
     </Exit>
     <Exit Name="PathTooShort">
       <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeRepath" TargetAnchor="Start" />
     </Exit>
     <Exit Name="RejectedClipping">
-      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeEnd" TargetAnchor="Start" />
+      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeFreeze" TargetAnchor="Start" />
     </Exit>
   </Task>
   <Task Name="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeFollow" Class="CTaskAnimalPathFollow" Looping="0" Independent="0">
@@ -288,7 +289,7 @@
     <Exit Name="Default" />
     <Exit Name="Always" />
     <Exit Name="Blocked">
-      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeEnd" TargetAnchor="Start" />
+      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeFreeze" TargetAnchor="Start" />
     </Exit>
   </Task>
   <Task Name="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeRepath" Class="CTaskWait" Looping="0" Independent="0">
@@ -358,6 +359,25 @@
     <Parameter Name="timeToWait" Value="12" />
     <Parameter Name="randomStartDelay" Value="0" />
     <Anchor Name="OnStart" />
+    <Anchor Name="OnStop" />
+    <Exit Name="Success">
+      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeEnd" TargetAnchor="Start" />
+    </Exit>
+    <Exit Name="Default" />
+    <Exit Name="Always" />
+  </Task>
+  <Task Name="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeFreeze" Class="CTaskWait" Looping="0" Independent="0">
+    <Parameter Name="waitTimeFact" Value="" />
+    <Parameter Name="timeToWait" Value="20" />
+    <Parameter Name="randomStartDelay" Value="0" />
+    <Anchor Name="OnStart">
+      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargePathFind" TargetAnchor="Stop" />
+      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeFollow" TargetAnchor="Stop" />
+      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeRepath" TargetAnchor="Stop" />
+      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeContact" TargetAnchor="Stop" />
+      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeContactWait" TargetAnchor="Stop" />
+      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeTimeout" TargetAnchor="Stop" />
+    </Anchor>
     <Anchor Name="OnStop" />
     <Exit Name="Success">
       <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeEnd" TargetAnchor="Start" />
