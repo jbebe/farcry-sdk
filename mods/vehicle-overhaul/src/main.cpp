@@ -4,6 +4,7 @@
 #include "fan.h"
 #include "fcse_api.h"
 #include "lights.h"
+#include "paint.h"
 #include "physics.h"
 #include "sounds.h"
 #include "third_person.h"
@@ -22,6 +23,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     const bool sounds = VehicleOverhaul::Sounds::Install();
     const bool lights = VehicleOverhaul::Lights::Install();
     const bool fan = VehicleOverhaul::Fan::Install();
+    VehicleOverhaul::Paint::Install();
     return thirdPerson || physics || drivetrain || sounds || lights || fan;
 }
 

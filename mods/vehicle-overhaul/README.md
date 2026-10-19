@@ -104,6 +104,9 @@ only; shooting from the windows and the wrecks are to come.
   of it, narrowing to the lamp's beam. Whatever stands in the way hides it. The game lit the lenses
   of AI cars only. Headlights lighting the grass are a UFCP fix, since the game's grass is dark under
   any spot light.
+- **The Datsun's paints.** Its six paints are new: a dark green, a beige, a pale blue-grey, an ochre,
+  a dark red and a dark blue. They take the game's own six places in its paint table, so every Datsun
+  shows them, the ones placed in the world included.
 
 The engine's `Cameras.Camera.Third` is put up and its update is taken over to place the camera. Both
 are described in
@@ -142,12 +145,14 @@ src\                         the FCSE plugin
   sounds.cpp                 the window's Sounds tab
   lights.cpp                 the car lights, put together
   lamp_glow.cpp              each lit headlamp's bright point and glare
+  paint.cpp                  the cars' paints, written into the game's paint table
   shaders\                   the glow's shader
   engine\                    the game's own seams: the signal dispatcher, the input pass, the camera
                              manager and the third camera's update, entities, the seat lookup,
                              terrain height, the Havok vehicle under each car, a vehicle's engine
                              sound, the sound system, sound banks, each car's headlights, the
-                             frame handed to the render thread, the Direct3D device's passes
+                             paint table, the frame handed to the render thread, the Direct3D
+                             device's passes
 layer\mods\
   config\                    the active_camerathird control and its binding, as sections
   languages\                 the control's label, in every language
