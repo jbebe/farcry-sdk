@@ -1,1 +1,1 @@
-Off-road driving: a third-person chase camera, physics that let cars slide, lean and bounce, each car tuned as the real vehicle it depicts, an engine with real gears, new engine sounds for every car from real recordings, visible headlamps, new paints and chrome.
+Third-person chase camera, car physics, engine with real gears, new engine sounds, visible headlamps, new paints.
