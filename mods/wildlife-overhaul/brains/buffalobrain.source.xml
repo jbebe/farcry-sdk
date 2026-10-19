@@ -598,7 +598,7 @@
       <Parameter Name="RefName" Value="" />
     </Parameter>
     <Parameter Name="distance" Value="0" />
-    <Parameter Name="otherDistance" Value="2.5" />
+    <Parameter Name="otherDistance" Value="3.5" />
     <Parameter Name="distanceFactName" Value="" />
     <Parameter Name="trigger1FactName" Value="" />
     <Parameter Name="trigger2FactName" Value="" />
@@ -630,7 +630,7 @@
     <Parameter Name="type" Value="4" />
     <Parameter Name="level" Value="26" />
     <Parameter Name="detail" Value="" />
-    <Parameter Name="radius" Value="3" />
+    <Parameter Name="radius" Value="4.5" />
     <Parameter Name="falloff" Value="0" />
     <Parameter Name="falloffMinLevel" Value="0" />
     <Parameter Name="broadcastToAllAI" Value="1" />

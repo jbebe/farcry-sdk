@@ -19,7 +19,8 @@ is within 40 m, it charges:
    time; the others stand their ground and retry every second;
 2. it runs at a point 8 m beyond the player, so it is still at full speed when it arrives, merging a
    new path toward that point every second without stopping;
-3. within 2.5 m, it sends one Crush stim of level 26 to every pawn within 3 m, about 300 health on
+3. within 3.5 m of its centre, before its own steering swerves round the player, it sends one Crush
+   stim of level 26 to every pawn within 4.5 m, about 300 health on
    the player's damage curve;
 4. after the hit or 12 s it releases the claim and runs away as retail does. If no path reaches the
    player, it stands still for 20 s first (a diagnostic).
