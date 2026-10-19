@@ -109,7 +109,8 @@ only; shooting from the windows and the wrecks are to come.
   shows them, the ones placed in the world included. A taxi that rolls none of the Wrangler's paints
   takes the Datsun's beige.
 - **The big truck's grille.** Its six openings are replaced by thirteen of the user's drawing: a wide
-  arched slot on top, two rows of five short slots, and a pair below either side of a centre bar. Each
+  arched slot on top, two rows of five short eight-sided slots, and a pair below either side of a centre
+  bar, with the slats that stood behind the old openings taken out. Each
   has the old ones' 29 mm wall, out to 45 m; beyond that the model's painted slots are the old six.
 
 The engine's `Cameras.Camera.Third` is put up and its update is taken over to place the camera. Both
