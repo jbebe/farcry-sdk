@@ -7,7 +7,8 @@ sidebar_position: 27
 :::info[Verified via reverse engineering]
 Read from retail Far Cry 3's `worlds\fc3_main\generated\entitylibrary_full.fcb`, its animal brains and
 `common\generated\nomadobjecttemplates.fcb` (unpacked from `fc3_main.fat` with FCBConverter), and its
-animal assets (unpacked with Gibbed's Dunia 2 unpacker from DuniaTools). Field descriptions and stim
+animal assets, `fc3_main_depload.xml` and sound banks (unpacked with Gibbed's Dunia 2 unpacker from
+DuniaTools). Field descriptions and stim
 types were read in `FC3.dll` (Ghidra program `/FarCry3-Retail`), which has no symbols. Claims marked
 *(inferred)* were not read in data or code. Nothing here was seen in game.
 :::
@@ -49,8 +50,8 @@ Land animals are `CAnimalAgentFC3`; fish are `CAquaticAnimalAgent`. The temper e
 - **Crocodile:** biome `EarthAndWater`, speeds 0.53 to 1.57 m/s.
 - **Cassowary:** a short-sight sensory template.
 - **Buffalo:** attacks only when provoked.
-- **Hyena:** a complete archetype with MOVE sets and a Vice Guide entry. Its mesh was not found among
-  the unpacked animal files, and whether hyenas are placed in the world was not checked.
+- **Hyena:** a complete archetype with a handbook entry, but no assets; see
+  [below](#the-hyena-ships-no-assets).
 - **Snake:** a live agent; `_Stationary` variants also exist.
 - **Dingo:** the only animal with `bSquadBehaviorPredator` and `bSquadBehaviorHunting` set.
 
@@ -210,4 +211,37 @@ JackAll reads none of these Far Cry 3 versions.
 | [`.sbao`](../file-formats/sbao.md) | | Ogg Vorbis after a 40-byte header | `jackall-cli sbao extract` read one: 32 kHz stereo |
 | [`.spk`](../file-formats/spk.md) | | version 4 (`04 4B 50 53`) | 539 of 978 banks embed Ogg; the other 439 use an unknown codec |
 
-Which banks hold the animal sounds was not mapped.
+### The hyena ships no assets
+
+`FC3_Quadrupeds/Hyena` names `characters\animals\hyena\hyena.xml`, `hips_ref.skeleton`,
+`hyena_ragdoll.hkx` and `.hkr`, and a graphic kit; a path list from the earlier unpack adds `hyena.xbg`
+and textures `hyena_d`, `_n`, `_m` and `_eye_d`. None of them is in any Far Cry 3 archive. Every `.fat` but the sound ones was unpacked with those paths added
+to the unpacker's name list, and only the handbook page `m_hyena.feu` and its picture `tx_hyena.xbt`
+came out. As a control, the tiger's `hips_ref.skeleton`, which is absent from the stock list too, came
+out the same way.
+
+The rest agrees: `fc3_main_depload.xml` has no hyena entry of any kind, so no clip or bank. The
+archetype's ten voice fields (idle, hurt, death, aware, tracking, tracing, attack, flee, panic,
+unreachable) are unset; of its other sound fields only the bite impact is set
+(`sndMeleeHitSoundIDBite` `0x001B024A`, type 12). Its personality, `aipersonality:animalpersonality.hyena`, gives damage 10 to 40,
+an attack-safe distance of 2.65 m and broadcast radii of 20 to 25 m, and names no sound.
+
+### Animal sounds
+
+Sounds hang off the clips, as in Far Cry 2: `fc3_main_depload.xml` lists each clip's banks under it.
+The banks are `soundbinary\<id>.spk` inside `fc3_main`'s subfats, not in `sound.dat`. The dog family's:
+
+| Bank | Clips |
+|---|---|
+| `001698d6` | rabid dog alert cycles |
+| `00195b38` | thylacine alerts |
+| `0016dcc3`, `001aa476` | rabid dog attacks and attack turns |
+| `001ae3df` | 73 rabid dog clips: attacks, hunting and more |
+| `001ae484` | rabid dog alert-to-sprint |
+| `001ae4c1` | rabid dog and thylacine deaths |
+| `001aa45c` | rabid dog howl |
+
+None of the 22 dog and thylacine banks embeds Ogg. Their audio is a 4-bit ADPCM-like stream that is
+not plain IMA-ADPCM: decoded as IMA it is far smoother than noise but drifts to clipping, where a Far
+Cry 2 IMA bank decodes cleanly *(inferred from that test)*. Reading them needs a v4 bank parser and
+that codec.
