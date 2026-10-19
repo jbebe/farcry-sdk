@@ -5,9 +5,10 @@ sidebar_position: 26
 # Animals
 
 :::info[Verified via reverse engineering]
-Code traced in `FarCry2_server`; addresses below are the server's, and retail `Dunia.dll` addresses
-were not located. Data read from world 1's `entitylibrary_full.fcb`, `world1.managers`, the three
-animal brains and `movemgr.bin`. Claims marked *(inferred)* were not read in code or data. Nothing
+Code traced in `FarCry2_server`; addresses are the server's unless marked GOG, which are GOG
+`Dunia.dll` functions matched against the server and Steam builds. Data read from world 1's
+`entitylibrary_full.fcb`, `world1.managers`, the animal brains, `movemgr.bin`, and every world 1 and 2
+`worldsector*.data.fcb` decoded with `jackall-cli fcb decode`. Claims marked *(inferred)* were not read in code or data. Nothing
 here was seen in game.
 :::
 
@@ -42,21 +43,150 @@ an attack clip.
 | `CCreatureSoundAndFXComponent` | sound and effects |
 | `CFCXAIComponent` | the `CAnimalAgent`: brain `::AnimalBrain/CBrainAnimal` in `animalbrain.ai.rml`, a `CAnimalPersonality`, walk/jog/run speeds (buffalo 0.675 / 5.5 / 5.9), `fThreatAwarenessDistance`, and `Stim_AnimalPanic` (type Panic, radius 20) |
 
-### Two species enums
+### Two species values
 
-- **`CAnimal`**, the value MOVE branches on: Gazelle, Zebra, Wildebeest, CapeBuffalo, Goat, Chicken,
-  **Crocodile**. Crocodile has no MOVE branch and no assets.
-- **`CAnimalAgent`**: Unset, Gazelle, Zebra, Cape, Wildebeest, Goat, Chicken.
+An animal carries two species values with different numberings, and they can be set independently.
 
-### Where animals come from
+**`CAnimal.selAnimalSpecies`** (`+0xD4`) picks animations: Gazelle 0, Zebra 1, Wildebeest 2,
+CapeBuffalo 3, Goat 4, Chicken 5, Crocodile 6. Its only readers are
+`CAnimalBeautifierGazelle::UpdateAnimalMoveState` (`0x08E93650`) and `GenericQuadruped::Activate`
+(`0x08E96640`). Both call `CAnimationComponent::SetEnum(0x1B, value)`, and `SetEnum` (`0x0946CC80`)
+stores the value unchecked into the MOVE channel table. Nothing in code is indexed by it, so values of
+7 and up are safe in code: they match no MOVE branch until MOVE data adds states that test for them.
 
-There is no herd or ecosystem spawner: `world1.managers` holds none. `CSmartTerrainManager` names
-`DefaultSTP` as `STP_archetypes.Animal.SavannahAnimals` and `UrbanAnimals`. These are multi-user
-`CSmartTerrain` points (broadcast radius 50 m) with Eat, HeadTwitch and GazelLieDown actions, run from
-`smartterrainanimal.ai.rml`. `GenericMultiUser*_TODELETE` points are soldier duty and rest points, not
-animals.
+`movemgr.bin` has 46 criteria on the `AnimalSpecies` channel (index 27): EnumEqual on Gazelle 8 times,
+Zebra 7, Chicken 7, CapeBuffalo, Goat and Wildebeest 6 each, plus 6 NotEqual. Nothing tests 6, so
+Crocodile has no animations. A new animal that reuses a value plays that species' clips by path, which
+works only on a rig whose bones match.
 
-Each animal is probably placed one by one in sector data *(inferred: sectors were not read)*.
+**`CAnimalAgent.selAnimalSpecies`** (`+0x1E8`) drives behaviour: Unset 0, Gazelle 1, Zebra 2,
+Cape Buffalo 3, Wildebeest 4, Goat 5, Chicken 6.
+
+- `UpdateVision` (`0x086FF63E`) and `ComputeRunAwayDestination` (`0x083D4116`) test only for 5 and 6,
+  the small animals: sight 3 or 5 m, flee 7 or 4 m. Every other value, 7 and up included, gets the large
+  animals' 25/35 m sight and 60/20 m flee.
+- `CanFindSTP` calls `IsCompatible` (`0x08558540`), which takes a smart-terrain point only if its
+  affiliation is 5 and its `SupportedAnimalSpecies` list holds the animal's value.
+  `CTaskSmartTerrainFinder` copies the value into its query.
+
+### What is archetype data
+
+Sounds (`sndAlertSound`, `sndDeathSound` and their types), speeds and turning, `fPathfindRadius`,
+`Stim_AnimalPanic`, the brain, `fileStateMachine`, mass, ragdoll and the beautifier all come from the
+archetype. The beautifier selector takes 0 Gazelle or 1 Generic; a higher value creates no beautifier.
+All retail quadrupeds, the gazelle included, use 1 (`GenericQuadruped`).
+
+Hard-coded: the goat and chicken case above, and the 150 m herd panic.
+
+## Where animals come from
+
+Every live animal is placed one by one in `worldsector*.data.fcb`. No animal appears in any `landmark*`
+file or in `managers`, `omnis` or `mapsdata`. Instances, and the number of sectors they sit in:
+
+| Archetype | World 1 | World 2 |
+|---|---|---|
+| `Quadrupeds.Gazelle` | 70 in 32 | 33 in 10 |
+| `Quadrupeds.Zebra` | 40 in 21 | 15 in 8 |
+| `Quadrupeds.Wildebeest` | 25 in 11 | 28 in 8 |
+| `Quadrupeds.CapeBuffalo` | 6 in 2 | 8 in 4 |
+| `Quadrupeds.Chicken`, `ChickenA`, `ChickenB` | 8, 4, 4 | 9, 6, 6 |
+| `Quadrupeds.Goat` | 3 in 2 | 9 in 7 |
+| `Scripted.*` | 12, on the taxi-ride layer | 0 |
+| `Winged.Birds` | 46 | 78 |
+
+- **An instance holds** `tplCreatureType`, `hidName` (the archetype name plus a number), `disEntityId`,
+  `hidPos` and `hidPos_precise`, sometimes `hidAngles`, and baked lighting in `CGraphicComponent`. Some
+  also override `CCharacterPhysComponent.fMaxSlope` or carry an empty `CEventComponent`. Some birds
+  override `CBoidsComponent` fields.
+- **Nothing groups or randomizes them.** There is no herd id, count or random field, and no
+  `BindingHierarchy`. A herd is instances placed near each other.
+- **Layers:** 273 animals in world 1 and 495 in world 2 sit in `main`. The `benchmark` layer, off by
+  default, holds 13 that never appear in the campaign. `_disableformission` layers remove animals during
+  missions, such as 13 wildebeest in `w2b4_a17_enemies`. A few sit in `a2sm05_ai` and the taxi ride.
+- **Scripts move, never spawn.** `AnimalFollowPath.lua` drives animals that are already placed; no
+  retail script spawns an animal.
+
+### Smart-terrain points
+
+`CSmartTerrainManager` names the defaults in `archDefaultSavannahAnimalSTP` and
+`archDefaultUrbanAnimalSTP`: `STP_archetypes.Animal.SavannahAnimals` and `UrbanAnimals`. They are
+multi-user `CSmartTerrain` points, run from `smartterrainanimal.ai.rml`, and spawn nothing.
+
+| Point | Placed (w1 / w2) | Species (agent values) | Actions |
+|---|---|---|---|
+| `SavannahAnimals` | 83 / 263 | 1, 2, 3, 4 | `Quadruped_Eat`, `_Generic_Movement`, `_HeadTwitch`, `Pawn_ST_GazelLieDown` |
+| `UrbanAnimals` | 18 / 56 | 5, 6 | the same, with `Pawn_ST_ChickenSit` |
+
+`fBroadcastRange` is 50 and `fExecutionRange` 20; placed points often override the broadcast range, up
+to 160. `GenericMultiUser*_TODELETE` points are soldier duty and rest points, not animals.
+
+### Saves and respawning
+
+Every quadruped archetype has `CPersistComponent.selLevel` 1 (Limited), like soldiers. A level-1 world
+entity is not saved, and dead ones come back once their sector's `main` unloads
+(`ForgetDeletedInSector`, see [AI](./ai.md)). So killed animals return after a sector reload, and
+animals are not in saves *(inferred from the shared level; the savegame component census has no
+`CAnimal`)*.
+
+### Nothing picks at random
+
+No data or code chooses an animal from a list:
+
+- `bRadomize` re-rolls kit outfit parts only.
+- `CPickupContainer.ContainedPickups` (`nProbability`, `nInstanceLimit`) is on 36 multiplayer weapon
+  crates.
+- `CEntitySpawner` (srv `0x08B82B20`, 15 placed) spawns one `archArchetypeToSpawn` once at its own
+  position, at persist level 3 with `bAlreadySpawned`. All 15 spawn weapon pickups.
+- `CReinforcementPoint` (277 placed) carries archetype lists (`MercNames`, `VehicleNames`), but for
+  mercs and vehicles. `CFCXGameplayManager::GetReinforcementArchetype` (`0x08798840`) is a fixed remap
+  table.
+- An RTTI and symbol search for Ecosystem, Wildlife, Herd, Spawner, Population, AnimalSpawn, SpawnGroup
+  and RandomArchetype finds nothing else but `CGhostManager` ghost groups and `CBoidsComponent`.
+
+The only randomness on animals: `CAnimal::Finalize` (`0x08B2F290`) sets the graphic component's
+`+0x1BC` to a random 0.9 to 1.1, probably a size jitter *(inferred)*, and fleeing picks among random
+points.
+
+## How a placed animal is built
+
+`CEntitySystem::SpawnEntityFromNode` (srv `0x09453010`, GOG `0x104DC190`, `__thiscall`, `RET 8`) reads
+the instance's `tplCreatureType` as a string and calls the entity library manager's vtable slot 0,
+`GetArchetypeDescription(const std::string&)` (srv `0x0944C0B0`, GOG `0x1053AEB0`, `__thiscall`,
+`RET 4`). The manager singleton is at GOG `[0x11595228]`, its vtable at `0x10DEACD4`. The name is hashed
+case-insensitively to a `CStringID` and looked up in a hash map that returns the archetype node. The
+spawn takes that node's `Entity` child, merges the instance over it, and creates the entity; the
+merge asks the instance first, so any field the instance carries wins.
+
+The same slot 0 also serves runtime spawns (`SpawnGenericEntityFromArchetype`, srv `0x094534C0`) and
+lookups such as weapon properties.
+
+`CPersistenceDB::RespawnEntities` (srv `0x0967A3C0`) re-runs `SpawnEntityFromNode` on saved
+descriptions, then `ChangeGenericEntityID`. A saved description includes `tplCreatureType`.
+
+### Spawning at runtime
+
+The Lua `SpawnEntityFromArchetype` (GOG `0x10582A50`, bound in `RegisterEngineHelpers` `0x10583A54`):
+
+1. gets `CMissionComponent::DefaultLayer` (`0x105732A0`);
+2. calls `CEntitySystem::SpawnEntityFromArchetype` (GOG `0x104DD270`, `__thiscall` with ECX =
+   `[0x11594270]`, arguments `EntityHandle* out, const std::string* name, const CPathID* layer`,
+   `RET 0xC`);
+3. sets the position (`0x104D2A40`) and the angles in radians (`0x104D2A50`).
+
+A plugin can make the same call from C++ with an MSVC `std::string` (text at `+4`, inline while the
+capacity at `+0x18` is under `0x10`).
+
+- **Finalizing waits on resources:** `CEntity::OnIsLoaded` is the only caller of `CWorld::ToFinalize`.
+- **Animals need a navmesh,** since fleeing and pathfinding snap to it.
+- **Nothing ties a runtime entity to a sector's layer,** so sector unload probably does not remove it
+  *(inferred)*. Only the Lua `RemoveEntity` was confirmed as a way to remove one.
+- **Saving:** `CPersistenceDB::SaveEntity` (srv `0x09680380`) saves only entities with a
+  `CPersistComponent` (level at `+0x10`) or a `CGhostComponent`, filed by the sector of their position,
+  and respawns them when that sector loads. Whether a runtime animal is saved is therefore up to its
+  archetype.
+
+None of this was run; [experiment 2](./data-to-live-object.md#2-spawn-an-animal-a-soldier-and-a-typo-at-runtime)
+on the data-to-live-object page, which spawns a cape buffalo from the console, is the first check.
 
 ## The animal agent
 

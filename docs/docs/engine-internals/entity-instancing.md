@@ -181,7 +181,8 @@ attributes, it only looks them up by id.
 | the archetype resolves but has no `Entity` child | spawned from the instance alone |
 | the name resolves to no archetype | **not spawned**: the call returns the invalid entity proxy |
 
-Retail `Dunia.dll` (`CEntitySystem_SpawnEntityFromNode`, `0x104e99a0`) takes the same three branches.
+Retail `Dunia.dll` (`CEntitySystem_SpawnEntityFromNode`, Steam `0x104e99a0`, GOG `0x104dc190`) takes the
+same three branches.
 A typo in `tplCreatureType`, or an archetype missing from the library the world loads, makes the
 entity silently absent.
 
