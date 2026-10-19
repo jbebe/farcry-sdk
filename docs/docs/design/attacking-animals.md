@@ -5,8 +5,8 @@ sidebar_position: 3
 # Attacking Animals
 
 **Status:** feasibility checked 2026-10-19 from data and code; the buffalo charge built in
-`mods/wildlife-overhaul` the same day; [the hyena](#the-hyena) researched as a new archetype the same
-day; nothing seen in game. The behaviour cannot be copied from Far
+`mods/wildlife-overhaul` the same day; [the hyena](#the-hyena) and [fish shoals](#fish-shoals)
+researched as new archetypes the same day; nothing seen in game. The behaviour cannot be copied from Far
 Cry 3 and has to be rebuilt on Far Cry 2's own agent. New animals can be
 [added alongside the old ones](#adding-instead-of-replacing) with a data layer and a small plugin.
 The first steps are [four experiments](#experiments-in-order).
@@ -88,7 +88,7 @@ Three tools would unblock every animal:
 | lion | tiger or leopard | medium | a new mesh on the Far Cry 2 rig works today; animations as above |
 | hyena | none: Far Cry 3's hyena archetype ships no mesh, rig, ragdoll, textures or sounds; the rabid dog and thylacine are the nearest | medium | a mesh made for the goat rig; [details](#the-hyena) |
 | crocodile | the crocodile: walk, jog, swim and kill clips | medium-high | no animations, MOVE rules or assets behind the Crocodile species value; waterline ambush only |
-| fish packs | river fish (7 bones) or the reef school (125 bones) | medium | `CBoidsComponent` should work under water as data; needs a fish rig |
+| fish packs | `Fish_FP`, Far Cry 3's own fish flock; river fish (7 bones) | medium | the bird rig instead of a fish rig, a night-climb plugin, a skinning fix in BlenderFC2; [details](#fish-shoals) |
 | snake | the snake (32 bones) | high | a new rig, so the rig exporter |
 | ostrich | the cassowary (two-legged, 51 bones) | high | a new rig, and two-legged animation rules Far Cry 2 does not have |
 
@@ -106,9 +106,10 @@ What the ranking leans on, read in Far Cry 2's data:
 - **The chicken is a small ostrich.** Its rig is 10 bones: `Pelvis`, `Neck`, `Head`, `R Wing`,
   `L Wing`, and `Thigh`, `Calf`, `Foot` on each side. Its clips are walk, run, run-jump, eat,
   look-around, sit-down and get-up, and it has a ragdoll and its own MOVE branch.
-- **The bird flock is all data.** `Animals.Winged.Birds`' `CBoidsComponent` holds one model, skeleton
-  and clip, a zone (`fZoneRadius` 30, `fZoneHeight` 4), speeds, and separation, alignment and cohesion
-  weights. The bird rig is `Pelvis` plus two-segment wings.
+- **The bird flock is data, but for its night.** `Animals.Winged.Birds`' `CBoidsComponent` holds
+  models, skeletons and clips, a zone (`fZoneRadius` 30, `fZoneHeight` 4), speeds, and separation,
+  alignment and cohesion weights. The bird rig is `Pelvis` plus two-segment wings. Its climb out of
+  sight at dusk is code ([Flocks](../engine-internals/flocks.md#day-and-night)).
 - **The buffalo is already provoked the way Far Cry 3's is.** It turns threatened when shot at or hit,
   which is exactly when Far Cry 3's defensive buffalo attacks. Mass 500 and a 0.82 m capsule are set.
   Sight threatens it too: any pawn, the player included, within 25 m
@@ -124,9 +125,10 @@ What the ranking leans on, read in Far Cry 2's data:
 
 **A: a new mesh on a Far Cry 2 rig, no new animation**
 
-- **Fish shoals.** A copy of the bird flock with a fish mesh, placed under the surface. Skin the side
-  fins to the wing bones and the flap cycle becomes fin strokes. No AI; Far Cry 3's fish are harmless
-  too. Risk: a zone taller than the water is deep may let fish out of it.
+- **Fish shoals.** A copy of the bird flock with a fish mesh on the bird rig, placed under the
+  surface, which is how Far Cry 3 makes its own. A stiff fish needs no new animation; a tail sweep
+  needs one clip keyed by hand. At dusk every flock climbs 120 m, so a small plugin keeps fish in the
+  water. No AI; Far Cry 3's fish are harmless too. See [fish shoals](#fish-shoals).
 - **Hyena.** A new mesh on the goat rig, on the goat's clips. The zebra rig does not take goat clips.
   The herd panic and per-animal sight make the pack: hyenas placed together with a hunting brain. See
   [the hyena](#the-hyena).
@@ -328,6 +330,169 @@ The generator is a script over those two readers: new tooling, but nothing left 
 
 The spawn, bleat, speed and hunting checks share one launch: a goat-meshed `Animals.DLC.Hyena` on
 species 4 and agent species 2, with the hunting brain, spawned 50 m from the player.
+
+## Fish shoals
+
+Researched 2026-10-19 as a new archetype, `Animals.DLC.FishShoal`, a copy of the bird flock. Nothing
+was built or seen in game. The engine side is in [Flocks](../engine-internals/flocks.md).
+
+Far Cry 3 makes its small river fish exactly this way: `Fish_FP` is a bare `CBoidsComponent` with
+the birds' values and fish meshes, placed by hand, and never spawned
+([Far Cry 3's fish flock](../engine-internals/flocks.md#far-cry-3s-fish-flock)). So the approach is
+proven in the next game. In Far Cry 2 three things need more than data: the flock's night climb, the
+skinning step in BlenderFC2, and a tail clip if the fish should swim rather than glide.
+
+### What the flock does under water
+
+All of this is read in code, none of it seen:
+
+- **Nothing keeps a fish in the water but the zone.** A unit tests no terrain, water surface or
+  object. The zone is centred on the placed point, `fZoneHeight` / 2 above and below it, and it is
+  soft: units are steered back from the top and bottom fifth and can overshoot by about
+  `fForwardSpeed × sin(pitch) / fTurnSpeed`. Far Cry 3 has no water field either.
+- **At dusk the shoal rises out of the water.** Outside sunrise to about sunset the whole flock climbs
+  at 8 m/s up to 120 m and is then hidden; at dawn it comes back down. A shoal loaded at night climbs
+  at once. The rate and ceiling are code constants, not archetype fields. Far Cry 3 added
+  `fDisappearAtNightSpeed` and set it to 0 for its fish.
+- **The player cannot shoot or scare a fish.** There is no collision shape, no event handling and no
+  reading of the player. Far Cry 3's `Fish_FP` is the same.
+- **A subgroup swims in step.** One animation component drives every unit of a subgroup, so three or
+  four subgroups on differently timed clips break up the rhythm, as retail's four flap clips do.
+- **Speed is constant.** Every unit always moves at `fForwardSpeed` along its local +Y, so the fish
+  model must face +Y.
+
+### The archetype
+
+A copy of `Animals.Winged.Birds`, whose only component is `CBoidsComponent`:
+
+| Piece | Value | Basis |
+|---|---|---|
+| Fragment | `mods/worlds/world1/generated/entitylibrary.fcb/Animals/DLC/FishShoal.xml`, and the same under `world2` | as [the hyena](#the-archetype) |
+| Names | `Name` `DLC.FishShoal`, `hidName` `Animals.DLC.FishShoal` | the retail pattern |
+| `disEntityId` | the next free id above the hyena's, the same in both worlds | as the hyena |
+| `hidResourceCount` | the distinct models, skeletons and clips the subgroups name: Birds' 7 is 2 + 1 + 4 | *(inferred)* |
+| `SubGroups` | three or four subgroups of 4 to 6 fish, each on its own clip | flocking cost grows with the square of the units; Far Cry 3 uses 4 × 5 |
+| `fileDefaultModel`, `fileDefaultSkeleton`, `fileDefaultAnimationName` | the fish's, so an empty subgroup cannot fall back to a bird | |
+| `fZoneHeight` | 1 to 2 m, never more than the water depth minus a margin | the zone is soft |
+| `fZoneRadius` | 4 to 10 m | |
+| `fPitchSoftMax` | 5 to 8 | it bounds wanderers' pitch and the push back from the zone's top |
+| `fForwardSpeed` | about 1.5 m/s; Far Cry 3 kept 5 | slower is calmer and overshoots less |
+| `fBankingAmount` | about 0.2 | fish barely roll into turns |
+| the rest | the birds' values, as Far Cry 3 kept them | |
+
+Placed instances may override `fZoneRadius` and `fZoneHeight` per shoal, as 45 retail bird flocks do.
+
+**Depload:** nothing is required. No depload file lists the birds' skeleton or clips, and a flock
+loads each model, skeleton and clip by path. Retail lists each bird `.xbg` with its material and
+textures; the same chain for the fish `.xbg` is prefetch, added with `jackall-cli depload add
+--fragment` *(inferred from the [texture rule](../file-formats/depload.md))*. Whether a clip at a new
+path loads with no entry is [an unknown](#unknowns): the weapon rule that an unlisted clip never plays
+was measured on MOVE clips, which load through a package, and a flock's clip does not.
+
+### Rig and animation
+
+The bird rig is 8 bones: `Pelvis`, `Pelvis_nub`, and `Wing01`, `Wing02` and a nub on each side.
+`Wing01` sits at the body's centre; `Wing02` pivots 0.34 m out to the side. `bird01` and `bird02`
+share one mesh of 59, 35 and 19 vertices over three LODs, skinned to only `Pelvis`, `L_Wing01`,
+`L_Wing02` and `R_Wing02`: `R_Wing01` is in the node tree but not the palette *(read in the
+`.xbg`)*.
+
+The four flap clips (0.37 to 0.73 s, 16 frames per second) roll each `Wing01` about the body's long
+axis by about ±27° (±38° in `flapcycled`) and swing `Wing02` further. `Pelvis` only bobs, 1.5 cm up and
+down; nothing in any clip turns side to side *(read in the clips)*. So:
+
+- **Fins on the wing bones beat like wings,** fast and large, and on `bird01` the right fin's root
+  stays still. A fish 20 to 40 cm long can only use bones at its centre: `Pelvis` and `L_Wing01`.
+- **A tail on `Wing01` twists** about the body axis instead of sweeping.
+
+Three ways to animate it, cheapest first:
+
+1. **A stiff fish.** Weight everything to `Pelvis` and keep a flap clip: it glides with a 1.5 cm bob
+   and no tail motion. No new animation. From a few metres away, small fish read as a shoal.
+2. **A tail sweep.** Weight the rear half to `L_Wing01` and key a new clip that turns `L_Wing01`
+   about its local Z, which is vertical in the bind pose *(computed from the rest rotations: two 90°
+   turns about Z)*, by ±15 to 20° at about 2 Hz. The tail swings
+   about the fish's centre. One bone on one axis, keyed by hand in BlenderFC2 into a copied bank.
+   Three copies at different lengths desynchronise the subgroups.
+3. **Far Cry 3's river fish** on its own 7-bone `spine_ref` rig, with its 1 s swim clip. Blocked on
+   the Far Cry 3 mesh and skeleton reader and the `.mab` `0x61` decoder.
+
+A copied skeleton does not help: BlenderFC2 cannot change the bind pose, so the wing chain cannot be
+turned to point back along the body.
+
+### Making the mesh today
+
+The route is the weapon one ([replacing a weapon](../modding/replacing-a-weapon.md)):
+
+1. `jackall-cli fc2model export <extracted tree>\graphics\characters\animals\birds\bird01.xbg -o
+   fish.fc2model --rig <full path to birds\pelvis_ref.skeleton> --clip <a flap clip> --no-actor`
+2. In Blender, import each LOD in turn from the pack the last one wrote, replace the geometry, weight
+   it, and export.
+3. `jackall-cli fc2model extract fish.fc2model -o <layer>`, then `jackall-cli mod build`.
+
+Four things stand in the way, all read in code:
+
+| Problem | Effect | Fix |
+|---|---|---|
+| **Skin width.** `export_xbg._skin` divides the old weight array by the *new* vertex count to get the influences per vertex; JackAll always reads 8 (`MeshGeometry.SkinStride`) | a skinned part with a new vertex count gets misaligned weights, or fails to extract, and validation does not notice. It comes out right only at 53 to 59, 32 to 35 and 17 to 19 vertices for LOD 0, 1 and 2 | tooling: one line, taking the width from the stride. Until then a fish of 59, 35 and 19 vertices, which is enough for a small fish |
+| **Rig by file name.** A loose-tree export resolves a path that is not a real file by file name alone, so `birds\pelvis_ref.skeleton` can pick another animal's `pelvis_ref.skeleton` | the pack carries the wrong rig | pass a full file path, as above |
+| **New paths.** Extract writes each entry at its own game path, and no command renames a pack's model, material or textures; the add-on never writes materials | without renaming, the fish overwrites `bird01.xbg` and its material, and the birds become fish | tooling: a rename for a pack's entries. By hand: edit the paths in `manifest.json` and the mesh's material list *(inferred, untested)* |
+| **Channels.** On a part whose vertex count changes, a channel Blender does not supply keeps the bird's array | the fish needs two UV layers and a colour attribute | author both |
+
+The fish must also fit the bird's position quantisation, about the bird's ±0.68 m extent; a vertex
+past it is refused at extract.
+
+### The night
+
+Without a plugin a shoal rises out of the water at dusk and falls from the sky at dawn. A small FCSE
+plugin fixes it: on every flock whose default model is the fish, write its climb rate (GOG `+0x94`)
+as 0, so it stays down and visible all night, or its ceiling (`+0x8C`) as 0, so it is hidden from
+dusk to dawn. Either is a few lines, after `Finalize` or in a detour of GOG `0x1005DB70`. Patching
+the constants in the constructor would change the birds too.
+
+### Placement
+
+One XML per shoal, as for [the hyena](#placement): `tplCreatureType` `Animals.DLC.FishShoal`,
+`hidName`, a new `disEntityId`, `hidPos` and `hidPos_precise`, and optionally `fZoneRadius` and
+`fZoneHeight`. No navmesh, lighting or ground snap is needed.
+
+- **Water level** is in the sector's `.sdat` header, a float at `0x3C`: 16.0 m in most water sectors
+  ([Flocks](../engine-internals/flocks.md#retail-use)).
+- **Depth** is that level minus the terrain grid. The whole zone disc, plus overshoot, must clear the
+  bed: the entity z is the middle of the water column there, and `fZoneHeight` at most the shallowest
+  depth under the disc minus a metre.
+- **Where to start.** 42 retail bird flocks already hover over water, the deepest 13.8 m (world 2,
+  sector 2369). World 1 sector 4116, the fishing village, has both a bird flock over water and
+  retail's only fish model, a dead-fish prop.
+
+A script over the `.sdat` reader places shoals: new tooling, nothing left to reverse.
+
+### Obstacles
+
+| Obstacle | Solved by | Cheapest one-launch check |
+|---|---|---|
+| A flock archetype placed under water appears there | data: the fragment and a placed instance | a `FishShoal` stand-in on the bird meshes at sector 4116, by day |
+| Fish are visible through the surface | unknown: the water shader | the same launch, from the bank and from under water |
+| Fish stay in the water | data: zone and placement | the same launch: watch the top of the zone |
+| The dusk climb | FCSE: the night plugin | the same launch: `SetScriptedTimeOfDay(19, 0)` from the [console](../engine-internals/developer-console.md), then watch |
+| The shoal vanishes when its centre leaves the view | FCSE: refit the entity's box; or small zones | the same launch: turn until the centre is just off screen |
+| A clip at a new path, in no depload | data, if it loads | the stand-in on a flap clip copied to a new path |
+| The fish mesh | tooling: the skin-width fix and an entry rename; or 59/35/19 vertices and hand edits | the stand-in with the fish mesh |
+| A tail that sweeps | a clip keyed by hand on `L_Wing01` | the same |
+| Shooting or scaring | FCSE; Far Cry 3 does without | none needed |
+
+The first five share one launch: the stand-in shoal on bird meshes at sector 4116, at noon and then at
+19:00.
+
+### Unknowns
+
+- whether fish under the water surface can be seen from above, and from below once the player dives;
+- whether the renderer culls a flock by its stale bounding box;
+- whether a flock's clip at a new path loads with no depload entry;
+- whether a skinned mesh with new topology works in game: none has been seen yet, on any model;
+- whether `fDisappearAtNightSpeed` is the night climb in Far Cry 3, which would confirm the plugin's
+  fix as the one Far Cry 3 made;
+- the exact end of the day window: the sun-cycle curve's 0.53 point was not converted to a clock time.
 
 ## Adding instead of replacing
 

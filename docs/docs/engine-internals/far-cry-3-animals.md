@@ -131,7 +131,9 @@ Fish come in three kinds:
 
 - `RiverFish`: individual `CAquaticAnimalAgent`s.
 - `Coral_Reef_Fish`: species FishSwarm, one agent animated as a group (`crfish_group_swim`).
-- `Winged/Fish_FP`: a pure `CBoidsComponent` flock of river-fish meshes with no AI.
+- `Winged/Fish_FP`: a pure `CBoidsComponent` flock of river-fish meshes with no AI, placed at
+  least 85 times; compared field by field with Far Cry 2's birds in
+  [Flocks](./flocks.md#far-cry-3s-fish-flock).
 
 ## Prey, corpses and fear
 

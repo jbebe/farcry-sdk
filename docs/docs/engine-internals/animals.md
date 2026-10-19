@@ -283,7 +283,9 @@ state `CHkPhysCharacterStateSwimming` sits on the character controller, which an
 ## Flocks
 
 `CBoidsComponent` is a real flocking system, used by `Animals.Winged.Birds`: zone radius and height,
-wanderers, subgroups of model, skeleton and clip, and separation, alignment and cohesion weights.
+wanderers, subgroups of model, skeleton and clip, and separation, alignment and cohesion weights. It
+has no AI, physics or collision, takes no events, and climbs out of sight at night. See
+[Flocks](./flocks.md).
 
 ## Animation
 
