@@ -12,14 +12,20 @@ install with `jackall-cli mod build`.
 
 `Animals.Quadrupeds.CapeBuffalo` gets its own brain, `wildlifeoverhaul_buffalo.ai.rml`: retail's
 `animalbrain.ai.rml` renamed to `::WildlifeBuffalo/`, with one change to the alert plan. When the
-buffalo is alarmed - shot at, hit, or hearing gunfire - and the player is within 40 m, it charges:
+buffalo is alarmed - shot at, hit, hearing gunfire or seeing the player within 25 m - and the player
+is within 40 m, it charges:
 
-1. bellows (its alert sound) and runs at the player, re-pathing every 0.75 s;
-2. within 2.5 m, sends one Crush stim of level 26 to every pawn within 3 m, about 300 health on the
-   player's damage curve;
-3. after the hit, a failed path or 12 s, runs away as retail does.
+1. it claims the world blackboard fact `WildlifeBuffaloCharging`, so only one buffalo charges at a
+   time; the others stand their ground and retry every second;
+2. it runs at a point 8 m beyond the player, so it is still at full speed when it arrives, merging a
+   new path toward that point every second without stopping;
+3. within 2.5 m, it sends one Crush stim of level 26 to every pawn within 3 m, about 300 health on
+   the player's damage curve;
+4. after the hit or 12 s it releases the claim and runs away as retail does. If no path reaches the
+   player, it stands still for 20 s first (a diagnostic).
 
-Farther than 40 m, it flees as in retail. The scripted buffalo of the opening taxi ride
+The claim is also released when the buffalo dies or its alert is interrupted, and a waiting buffalo
+clears a claim older than 15 s. Farther than 40 m, it flees as in retail. The scripted buffalo of the opening taxi ride
 (`Animals.Scripted.CapeBuffalo`) is unchanged.
 
 | File | What it is |
