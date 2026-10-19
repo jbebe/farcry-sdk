@@ -25,7 +25,8 @@ this page is about how the pieces decide.
 | How often he hits | `ShootingSystem` of the archetype's `CPawnAgent`, and the weapon | yes |
 | How likely optional tactics are | `AdaptativeBehavior` in `gamemodesconfig.xml` | yes |
 
-All of it is editable in JackAll's **AI** tab.
+All of it is editable in JackAll's **AI** tab. Animals have their own agent, described in
+[Animals](./animals.md).
 
 ## Brains and behaviours
 
