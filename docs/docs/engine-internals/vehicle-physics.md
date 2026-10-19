@@ -167,6 +167,98 @@ the broken parameter of the same name: `DiffuseColorBase`, `DiffuseColor1`, `Dif
 forced, with its own dust and dirt values, by a flag on the graphic component whose meaning is
 unknown.
 
+The five colours go to the [`Vehicle` shader](../file-formats/xbm-xbg.md#the-vehicle-pixel-shader):
+
+- **base:** `DiffuseColorBase`, where the mask's blue is 0
+- **paint:** `DiffuseColor1`, where it is 1
+- **dirt:** `DiffuseColor2`, the dirt layer's tint
+- **two speculars:** `SpecularColorBase` and `SpecularColor1`
+
+The archetype picks the entry **(RE-verified on GOG)**:
+
+- `nMinRandomColorIndex` and `nMaxRandomColorIndex` are the range.
+- `selVehicleColor` is the fixed pick.
+- The vehicle component's init (`0x100E7880`) rolls `selVehicleColor` uniformly in the range when
+  min < max and a condition on the entity holds. That condition was not identified.
+- It then copies the index and the archetype's dirt and dust factors to the material component.
+- Material component offsets: dirt `+0x2C`, dust `+0x30`, index `+0x34`.
+- `ApplyChanges` clamps dirt and dust to 0–0.9 before writing `dirtBlendFactor` and
+  `dustBlendFactor`. A `Glass` material passes them through a power curve; its exponent was not
+  read.
+- The ranges in world 1 are below. Entries 26–41, the APR/UFLL faction colours, are in no
+  archetype's range.
+
+| Archetype | Range | Dust | Dirt |
+|---|---|---|---|
+| Buggy | 1–4 | 0.15 | 0 |
+| Datsun, Quad (`DLC_Vehicle1`) | 5–10 | 0.15 | 0 |
+| Paraglider | 11–13 | 0.6 | 0 |
+| Rover, Unimog (`DLC_Vehicle2`) | 14–21 | 0.15 | 0 |
+| Swamp boat | 22–25 | 0 | 0 |
+| Fishing boat | 42–46 | 1 | 0 |
+| Big truck | 47–51 | 0.15 | 0 |
+| Jeep Liberty | 52–54 | 0.15 | 0 |
+| Jeep Wrangler | 56–59 | 0.15 | 0 |
+
+The `Scripted…` variants carry dirt 0.15. The Unimog's paint materials have `ColorOverride` 0, so it
+keeps its own grey whatever entry it rolls.
+
+The table is not constant data. A static initializer (`0x10D383A0`) fills it into writable memory at
+`0x115953D0` when the DLL loads, so a plugin can rewrite any entry after that. An index past 60 runs
+into the burnt colours at `0x115966E0`, so new colours have to take existing slots. Each entry's
+base and paint colours, as RGB, of 61 entries named by the archetype's `enumVehicleColor` list:
+
+<details>
+<summary>Base and paint per entry</summary>
+
+| # | Name | Base | Paint |
+|---|---|---|---|
+| 0 | Default (Green) | 0.219 0.227 0.164 | 0.383 0.383 0.289 |
+| 1 | Buggy Blue | 0.000 0.102 0.219 | 0.016 0.445 0.813 |
+| 2 | Buggy Orange | 0.000 0.102 0.219 | 0.742 0.313 0.000 |
+| 3 | Buggy Red | 0.000 0.102 0.219 | 0.664 0.000 0.188 |
+| 4 | Buggy Yellow | 0.000 0.102 0.219 | 1.102 0.914 0.258 |
+| 5 | Datsun Brown | 0.266 0.266 0.266 | 0.391 0.117 0.078 |
+| 6 | Datsun Gold | 0.266 0.266 0.266 | 1.383 0.813 0.000 |
+| 7 | Datsun Green | 0.266 0.266 0.266 | 0.031 0.258 0.313 |
+| 8 | Datsun Magenta | 0.266 0.266 0.266 | 0.820 0.008 0.211 |
+| 9 | Datsun White | 0.266 0.266 0.266 | 1.375 1.375 1.211 |
+| 10 | Datsun Yellow | 0.266 0.266 0.266 | 1.289 1.328 0.711 |
+| 11 | Glider Purple-White | 0.547 0.547 0.547 | 0.422 0.000 0.516 |
+| 12 | Glider Red-Blue | 0.000 0.266 0.625 | 0.695 0.055 0.055 |
+| 13 | Glider Yellow-Green | 0.164 0.523 0.047 | 0.672 0.523 0.000 |
+| 14 | Rover Blue | 0.055 0.094 0.070 | 0.375 0.797 1.367 |
+| 15 | Rover Green | 0.055 0.094 0.070 | 0.219 0.328 0.258 |
+| 16 | Rover Orange | 0.109 0.039 0.000 | 1.266 0.445 0.000 |
+| 17 | Rover Red | 0.109 0.070 0.000 | 1.328 0.211 0.133 |
+| 18 | Rover Sand | 0.109 0.070 0.000 | 0.859 0.688 0.633 |
+| 19 | Rover Turquoise | 0.094 0.109 0.109 | 0.602 0.867 1.109 |
+| 20 | Rover White | 0.328 0.297 0.289 | 1.359 1.234 1.188 |
+| 21 | Rover Yellow | 0.094 0.078 0.055 | 1.188 0.820 0.000 |
+| 22–25 | Swamp boat | coloured | 0.781 0.711 0.656 |
+| 26–32 | APR, per vehicle | dark red to black | reds |
+| 33–39 | UFLL, per vehicle | dark browns | yellows |
+| 40–46 | Fishing boat | | |
+| 47 | Big Truck Blue | 0.195 0.164 0.102 | 0.180 0.531 0.664 |
+| 48 | Big Truck Bourgogne | 0.117 0.102 0.063 | 0.469 0.250 0.180 |
+| 49 | Big Truck Green | 0.078 0.070 0.039 | 0.266 0.508 0.211 |
+| 50 | Big Truck Grey | 0.078 0.070 0.039 | 0.352 0.352 0.352 |
+| 51 | Big Truck Red | 0.117 0.102 0.063 | 0.664 0.063 0.063 |
+| 52 | Jeep Liberty Blue | 0.000 0.047 0.156 | 0.000 0.133 0.469 |
+| 53 | Jeep Liberty Green | 0.156 0.117 0.063 | 0.039 0.156 0.000 |
+| 54 | Jeep Liberty Grey | 0.133 0.133 0.133 | 0.781 0.781 0.781 |
+| 55 | Jeep Liberty Mission | 0.078 0.078 0.078 | 0.078 0.078 0.078 |
+| 56 | Jeep Wrangler Black | 0.078 0.078 0.078 | 0.078 0.078 0.078 |
+| 57 | Jeep Wrangler Blue | 0.000 0.047 0.156 | 0.000 0.133 0.469 |
+| 58 | Jeep Wrangler Green | 0.156 0.117 0.063 | 0.039 0.156 0.000 |
+| 59 | Jeep Wrangler White | 0.078 0.078 0.078 | 1.133 1.133 1.133 |
+| 60 | (forced entry) | 1.016 1.016 1.016 | 0.000 0.266 0.625 |
+
+The dirt colour is 0.438 0.406 0.344 on every car entry except Rover Orange and Rover Sand, which
+use 0.875 0.813 0.688. Entry 8 matches the Datsun body material's own `DiffuseColor1` exactly.
+
+</details>
+
 ## Collision layers
 
 A collision filter word holds the layer in bits 0–14 and the system group in bits 17–31. Bit 15

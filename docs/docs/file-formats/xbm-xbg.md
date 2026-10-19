@@ -528,6 +528,75 @@ character kit swaps it for a beard on a face (see
 `Hair` is `Generic`-shaped: `DiffuseTexture1 × DiffuseColor1`, with a highlight from
 `SpecularTexture1 × SpecularColor1`.
 
+### The `Vehicle` pixel shader
+
+:::info[Verified via reverse engineering]
+Disassembled from the `obj10` objects that bind `MaskTexture0` and a `Vehicle` constant buffer, for
+example `shadernumber_64691a95`, the normal-mapped permutation without a cube map.
+:::
+
+A car's paintwork is one `Vehicle` material, for example `DATSUN_BODY` or `ROVER_BODY_PAINT`. It
+has no painted colour texture. The textures it combines:
+
+- **`MaskTexture0`**, a per-model mask in the model's own UVs, such as `datsun_ext_m` or `rover_m`.
+- **`DiffuseTexture1`**, a tiling neutral detail: `grey.xbt` or `diffusevariation_d`, at tiling 1
+  to 6.
+- **`MaskTexture1`**, the shared `dirt02_m`: a splash rising from the bottom edge.
+- **`DiffuseTexture2`**, the dirt layer: `clay02_d` on every car.
+
+```
+m0     = tex2D(MaskTexture0, uv0) * saturate(vertexColour.rgb)      // untiled
+m1     = tex2D(MaskTexture1, uv1)                                   // untiled
+dirty  = saturate(saturate((m1.r + dirtBlendFactor - 1) * 4) + m0.g * dustBlendFactor * 3)
+
+tint   = lerp(lerp(BaseClean, BaseBroken, dirty), lerp(Color1Clean, Color1Broken, dirty), m0.b)
+layer1 = tint * tex2D(DiffuseTexture1, uv * DiffuseTiling1)
+layer2 = tex2D(DiffuseTexture2, uv * DiffuseTiling2) * lerp(BaseClean, Color2Broken, dirty)
+albedo = lerp(layer1, layer2, dirty)
+
+N      = lerp(flat, tex2D(NormalTexture1, uv * NormalTiling1), m0.b)
+specCol = lerp(SpecBase, tex2D(SpecularTexture1, uv * SpecularTiling1) * Spec1, m0.r * (1 - dirty))
+colour = albedo * diffuse + pow(N·H, SpecularPower * 8) * light * specCol * (1 - 0.8 * dirty)
+```
+
+What that settles:
+
+- **`MaskTexture0`'s channels:**
+  - Red is how much the paint shines.
+  - Green is where dust collects.
+  - Blue weights `DiffuseColor1` (paint) against `DiffuseColorBase` (base), and the normal map's
+    strength.
+- **Clean and Broken mean clean and dirty, blended per pixel by `dirty`**, not damage. The paint
+  table writes one colour to both halves of each pair (see
+  [Paint](../engine-internals/vehicle-physics.md#paint)), so on a painted car the pair never
+  differs.
+- **`dirtBlendFactor` and `dustBlendFactor` come from the archetype's `fDirtFactor` and
+  `fDustFactor`.** Retail cars have dirt 0, which keeps the bottom splash off.
+- **The second UV set runs along the car and up its height**, from 0 at the sills. `dirt02_m` is
+  sampled on it untiled, so its splash sits along the bottom of every car.
+- **`ColorOverride`, `Glass` and `GlassInterior` are declared but unread** by this object. The
+  override is applied on the CPU.
+
+Every car body material has this layout, whatever its tiling:
+
+- Datsun: `datsun_ext_m`
+- Rover: `rover_m`
+- Big truck: `bigtruck_ext_m`
+- Buggy: `buggybody01_m`
+- Jeep Wrangler: `jeepwrangler_body_m`
+- Jeep Liberty: `jeepliberty_m`
+- Quad: `quad_dlc_m`
+- Unimog: `unimog_ext_m_multi` and `unimog_ext02_m_multi`, one per paint material.
+
+The Datsun's mesh splits the body into parts, each with its own island in `datsun_ext_m`:
+
+- the hood and trunk, a single body-material cluster each, intact and damaged;
+- each door, alongside the interior materials;
+- the chassis, holding the roof, fenders and a side view.
+
+The two doors share the same UVs, and the side view serves both sides. The mask is therefore
+mirrored, and a patch painted on one side shows on the other.
+
 ### Tiling and the "group" half
 
 Each `…TilingAndGroup` constant is `float4(tilingU, tilingV, groupU, groupV)`. The `.xy` half scales
