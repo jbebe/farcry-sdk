@@ -153,5 +153,6 @@ command line:
 
 ```
 jackall-cli ai unpack mercbrain.ai.rml     # mercbrain.source.xml + a readable dump of the compiled half
+jackall-cli ai pack mercbrain.source.xml   # compile a source back into mercbrain.ai.rml
 jackall-cli ai verify *.ai.rml             # recompile each source and compare with its compiled half
 ```

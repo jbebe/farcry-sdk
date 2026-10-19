@@ -239,6 +239,9 @@ app.Configure(config =>
         ai.AddCommand<AiUnpackCommand>("unpack")
             .WithDescription("Split a brain workspace into its BlackBox.AI source and a dump of the compiled repository.")
             .WithExample("ai", "unpack", "mercbrain.ai.rml");
+        ai.AddCommand<AiPackCommand>("pack")
+            .WithDescription("Compile a BlackBox.AI source into a brain workspace.")
+            .WithExample("ai", "pack", "mercbrain.source.xml");
         ai.AddCommand<AiVerifyCommand>("verify")
             .WithDescription("Recompile brain workspaces from their source and compare with the shipped compiled half.")
             .WithExample("ai", "verify", "mercbrain.ai.rml");

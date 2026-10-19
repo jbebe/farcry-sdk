@@ -2,6 +2,12 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **`jackall-cli ai pack`** compiles a brain's BlackBox.AI source, as `ai unpack` writes it, into an
+  `.ai.rml` workspace, so a brain can be edited as text and built into a mod layer.
+
 ## [1.6.1] - 2026-10-17
 
 ### Fixed
