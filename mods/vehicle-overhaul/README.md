@@ -108,7 +108,7 @@ only; shooting from the windows and the wrecks are to come.
   one of the buggy's, all muted. They take the game's own places in its paint table, so every car
   shows them, the ones placed in the world included. A taxi that rolls none of the Wrangler's paints
   takes the Datsun's beige.
-- **The Datsun's chrome.** Its bumpers, door handles, wheel rims, grille frame and badge are chrome, in two materials of its own, where the game made them black. On the two nearest
+- **The Datsun's chrome.** Its bumpers, door handles, wheel rims, grille frame and badge are chrome, in two materials of its own, where the game made them black. On the three nearest
   models; past those they are as before.
 - **The big truck's grille.** Its six openings are replaced by thirteen of the user's drawing: a wide
   arched slot on top, two rows of five short eight-sided slots, and a pair below either side of a centre
