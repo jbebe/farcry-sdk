@@ -202,20 +202,7 @@
     <Add Task="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeTimeout" />
     <Add Task="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeEnd" />
     <Add Task="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeFreeze" />
-    <Add Task="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/DebugOutsideFreeze" />
   </Plan>
-  <Task Name="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/DebugOutsideFreeze" Class="CTaskWait" Looping="0" Independent="0">
-    <Parameter Name="waitTimeFact" Value="" />
-    <Parameter Name="timeToWait" Value="60" />
-    <Parameter Name="randomStartDelay" Value="0" />
-    <Anchor Name="OnStart" />
-    <Anchor Name="OnStop" />
-    <Exit Name="Success">
-      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/CheckThreatDistance" TargetAnchor="Start" />
-    </Exit>
-    <Exit Name="Default" />
-    <Exit Name="Always" />
-  </Task>
   <Task Name="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeOrFlee" Class="CTaskCheckIsInDistance" Looping="0" Independent="0">
     <Parameter Name="positionToMeasure" Value="&lt;PlayerPosition, &gt;">
       <Parameter Name="RefType" Value="6" />
@@ -238,7 +225,7 @@
       <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeTimeout" TargetAnchor="Start" />
     </Event>
     <Event Name="Outside Distance">
-      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/DebugOutsideFreeze" TargetAnchor="Start" />
+      <Connection Target="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/CheckThreatDistance" TargetAnchor="Start" />
     </Event>
   </Task>
   <Task Name="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargePathFind" Class="CTaskPathFind" Looping="0" Independent="0">
@@ -817,19 +804,9 @@
       <Connection Target="::WildlifeBuffalo/CBrainAnimal/ScriptedModePlan/StartLookAt" TargetAnchor="Start" />
     </Exit>
   </Scanner>
-  <Task Name="::WildlifeBuffalo/CBrainAnimal/TurnAroundPlan/DebugAvoidFreeze" Class="CTaskWait" Looping="0" Independent="0">
-    <Parameter Name="waitTimeFact" Value="" />
-    <Parameter Name="timeToWait" Value="9999" />
-    <Parameter Name="randomStartDelay" Value="0" />
-    <Anchor Name="OnStart" />
-    <Anchor Name="OnStop" />
-    <Exit Name="Success" />
-    <Exit Name="Default" />
-    <Exit Name="Always" />
-  </Task>
   <Plan Name="::WildlifeBuffalo/CBrainAnimal/TurnAroundPlan" Class="CPlan" Looping="0" Independent="0">
     <Anchor Name="OnStart">
-      <Connection Target="::WildlifeBuffalo/CBrainAnimal/TurnAroundPlan/DebugAvoidFreeze" TargetAnchor="Start" />
+      <Connection Target="::WildlifeBuffalo/CBrainAnimal/TurnAroundPlan/FindPathToTurnLeft" TargetAnchor="Start" />
     </Anchor>
     <Anchor Name="OnStop" />
     <Exit Name="Success" />
@@ -845,7 +822,6 @@
     <Add Task="::WildlifeBuffalo/CBrainAnimal/TurnAroundPlan/FindPathToTurnLeft" />
     <Add Task="::WildlifeBuffalo/CBrainAnimal/TurnAroundPlan/IsAnimalThreatened" />
     <Add Task="::WildlifeBuffalo/CBrainAnimal/TurnAroundPlan/Reset" />
-    <Add Task="::WildlifeBuffalo/CBrainAnimal/TurnAroundPlan/DebugAvoidFreeze" />
   </Plan>
   <Task Name="::WildlifeBuffalo/CBrainAnimal/TurnAroundPlan/PathFindsFailed" Class="CTaskWait" Looping="0" Independent="0">
     <Parameter Name="waitTimeFact" Value="" />
