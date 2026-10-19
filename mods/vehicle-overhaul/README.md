@@ -108,6 +108,9 @@ only; shooting from the windows and the wrecks are to come.
   one of the buggy's, all muted. They take the game's own places in its paint table, so every car
   shows them, the ones placed in the world included. A taxi that rolls none of the Wrangler's paints
   takes the Datsun's beige.
+- **The big truck's grille.** Its six openings are replaced by thirteen of the user's drawing: a wide
+  arched slot on top, two rows of five short slots, and a pair below either side of a centre bar. Each
+  has the old ones' 29 mm wall, out to 45 m; beyond that the model's painted slots are the old six.
 
 The engine's `Cameras.Camera.Third` is put up and its update is taken over to place the camera. Both
 are described in
@@ -155,6 +158,8 @@ src\                         the FCSE plugin
                              paint table, the frame handed to the render thread, the Direct3D
                              device's passes
 layer\mods\
+  graphics\                  the big truck's model, its fan on a node of its own and its grille the user's;
+                             the quad's third-person driving clip
   config\                    the active_camerathird control and its binding, as sections
   languages\                 the control's label, in every language
   soundbinary\               the Datsun's, the big truck's and the Unimog's engine and start sounds,
