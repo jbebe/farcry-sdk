@@ -21,6 +21,19 @@ namespace {
     constexpr int kMaxReports = 8;
     int g_reports = 0;
 
+    // Faulting addresses already reported. A handled fault that repeats - DxDiag's hardware probe
+    // raises the same one in SETUPAPI.DLL every few seconds on some drivers - is reported once.
+    const void* g_reported[kMaxReports] = {};
+
+    bool AlreadyReported(const void* address) {
+        for (int i = 0; i < g_reports; ++i) {
+            if (g_reported[i] == address) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // How far up the stack to look for return addresses, in dwords. 512 covers a deep menu dispatch
     // without walking into another thread's territory.
     constexpr int kStackScanDwords = 512;
@@ -189,12 +202,13 @@ namespace {
             return EXCEPTION_CONTINUE_SEARCH;
         }
         DWORD code = info->ExceptionRecord->ExceptionCode;
-        if (!IsFatal(code) || g_inHandler || g_reports >= kMaxReports) {
+        const void* address = info->ExceptionRecord->ExceptionAddress;
+        if (!IsFatal(code) || g_inHandler || g_reports >= kMaxReports || AlreadyReported(address)) {
             return EXCEPTION_CONTINUE_SEARCH;
         }
 
         g_inHandler = true;
-        ++g_reports;
+        g_reported[g_reports++] = address;
         if (g_reports == kMaxReports) {
             Log::Loader("CrashLog: report limit reached - further exceptions go unlogged this run");
         }
