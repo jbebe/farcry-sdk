@@ -673,7 +673,7 @@
   <Task Name="::WildlifeBuffalo/CBrainAnimal/CBrainAnimalAlert/RunAway/ChargeGore" Class="CTaskBroadcastStims" Looping="0" Independent="0">
     <Parameter Name="type" Value="4" />
     <Parameter Name="level" Value="26" />
-    <Parameter Name="detail" Value="" />
+    <Parameter Name="detail" Value="wildlife_knockdown" />
     <Parameter Name="radius" Value="4.5" />
     <Parameter Name="falloff" Value="0" />
     <Parameter Name="falloffMinLevel" Value="0" />

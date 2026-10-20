@@ -5,7 +5,6 @@ function WildlifeKnockout:Faint()
 	self.player = GetLocalPlayerId()
 	SetScriptedDeath(1)
 	self.died = CScriptCallbackSystem_GetInstance():RegisterEventCallback(self.player, self, "Event_Died", "PlayerDied")
-	System:Log("WildlifeKnockout: Faint, PlayerDied callback " .. tostring(self.died))
 	self:Hit()
 end
 
@@ -16,6 +15,7 @@ function WildlifeKnockout:Die()
 	self:Hit()
 end
 
+-- Two level-32 Pierce stims, about 3,200 health: more than any difficulty's full bar.
 function WildlifeKnockout:Hit()
 	SendPierceStimNoOrigin(self.player, 32)
 	SendPierceStimNoOrigin(self.player, 32)
@@ -31,7 +31,6 @@ function WildlifeKnockout:Unblock()
 end
 
 function WildlifeKnockout:Event_Died()
-	System:Log("WildlifeKnockout: PlayerDied")
 	CScriptCallbackSystem_GetInstance():RemoveCallback(self.player, self.died)
 	self:After(2, "WakeUp")
 end
@@ -40,16 +39,14 @@ function WildlifeKnockout:WakeUp()
 	local domino = CDominoManager_GetInstance()
 	domino:SendCommandEventToEntity(self.player, "SetupPlayerForAnchorAnim", 1)
 	self.stood = CScriptCallbackSystem_GetInstance():RegisterEventCallback(self.player, self, "Event_StoodUp", "FinishedPlayAnim")
-	local sent = domino:SendCommandEventToEntity2(self.player, "PlayAnim", self, "AnimCommandSent", "pawn_generic_desertgetup", 0, 1)
-	System:Log("WildlifeKnockout: WakeUp, PlayAnim sent " .. tostring(sent))
-	domino:SendRegisteredEventToEntity(self.player, "CFCXCountersComponentPlayerSP_HealingDone")
+	domino:SendCommandEventToEntity2(self.player, "PlayAnim", self, "AnimCommandSent", "pawn_generic_desertgetup", 0, 1)
 	SetScriptedDeath(0)
 end
 
 function WildlifeKnockout:Event_StoodUp()
-	System:Log("WildlifeKnockout: stood up")
 	CScriptCallbackSystem_GetInstance():RemoveCallback(self.player, self.stood)
 	SetPlayerActionMap("default")
+	WildlifeKnockdownRestore()
 end
 
 function WildlifeKnockout:AnimCommandSent()

@@ -1,12 +1,14 @@
 # Wildlife Overhaul
 
 More varied and more dangerous wildlife, toward [attacking animals](../../docs/docs/design/attacking-animals.md):
-new behaviours first, then new animals alongside the old ones. Data only so far: a `layer/` you
-install with `jackall-cli mod build`.
+new behaviours first, then new animals alongside the old ones. An FCSE plugin plus a data layer: a
+`layer/` you install with `jackall-cli mod build`, which carries the plugin once `build.ps1` has
+staged it.
 
 | Animal | Behaviour | Status |
 |---|---|---|
-| Cape buffalo | charges the player instead of fleeing, gores on contact, then runs off | built, not seen in game |
+| Cape buffalo | charges the player instead of fleeing, gores on contact, then runs off | charge seen in game |
+| | a gore knocks the player down; they get up, unless it was the killing blow | built, not seen in game |
 
 ## The buffalo charge
 
@@ -46,24 +48,37 @@ After editing the source, compile it into the layer:
 tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe ai pack mods\wildlife-overhaul\brains\buffalobrain.source.xml -o mods\wildlife-overhaul\layer\mods\scripts\game\newbrains\wildlifeoverhaul_buffalo.ai.rml
 ```
 
-## Prototype: knocked down
+## Knocked down
 
-`prototype/knockout.lua` knocks the player down through the game's own death handling, with two
-endings. It is a script, not part of the layer, and wires only retail pieces:
+The gore's Crush stim carries the detail `wildlife_knockdown`, and the plugin, `WildlifeOverhaul.dll`,
+knocks the player down when one lands. The stim does its damage as any other would; the plugin
+watches the health it leaves (`CFCXCountersComponentPlayer::HandleDamageStim` and `SetHealth`), and on
+the next frame runs `knockout.lua` in the game's own Lua with one of two endings:
 
-| Ending | What it calls | What the game then does |
-|---|---|---|
-| wakes up | `SetScriptedDeath(1)`, a `PlayerDied` callback, two lethal Pierce stims | `scripted_death`: falls, holsters and fades to black; 2 s later the script plays `pawn_generic_desertgetup` (`SetupPlayerForAnchorAnim`, `PlayAnim`), which lifts the black screen and heals, then `SetScriptedDeath(0)`; when the clip reports `FinishedPlayAnim`, `SetPlayerActionMap("default")` hands control back, as the GRIN missions do |
-| stays down | `BlockBuddyRescue()`, the same stims, `UnblockBuddyRescue()` 1 s later | `no_rescue`: falls, game over (the load-save screen), death ragdoll |
+| Ending | When | What it calls | What the game then does |
+|---|---|---|---|
+| `Faint()` | the player survives the gore | `SetScriptedDeath(1)`, a `PlayerDied` callback, two lethal Pierce stims | `scripted_death`: falls, holsters and fades to black; 2 s later the script plays `pawn_generic_desertgetup` (`SetupPlayerForAnchorAnim`, `PlayAnim`), which lifts the black screen, then `SetScriptedDeath(0)`; when the clip reports `FinishedPlayAnim`, `SetPlayerActionMap("default")` hands control back, as the GRIN missions do, and `WildlifeKnockdownRestore()` puts back the health the gore left |
+| `Die()` | the gore would kill | `BlockBuddyRescue()`, the same stims, `UnblockBuddyRescue()` 1 s later | `no_rescue`: falls, game over (the load-save screen), death ragdoll |
 
-To try it, paste the one line in `prototype/knockout.oneline.lua` into DevTools' Lua tab and Run, then
-run `WildlifeKnockout:Faint()` to wake up or `WildlifeKnockout:Die()` to stay down (the game's Lua is 4.0:
-there is no `true`, so a flag argument cannot work). DevTools' invincibility must be
-off. The one-liner is the source file's lines joined by spaces, so regenerate it after an edit.
+A killing gore is held at 1 health so that `Die()`, not the engine, picks the ending. While the
+player is down or getting up from a faint, a gore does nothing; after 30 s the plugin takes another
+regardless.
+The engine heals on waking; the restore replaces that heal, so a knockdown neither refills health
+nor costs a syringe.
+
+| File | What it is |
+|---|---|
+| `src/` | the plugin: `knockdown.cpp` the hooks, `engine/lua.cpp` the game's Lua |
+| `layer/plugins/wildlife-overhaul/knockout.lua` | the endings, read by the plugin at load |
+
+`build.ps1` builds the plugin and stages it into the layer. With the plugin loaded, DevTools' Lua tab
+can run `WildlifeKnockout:Faint()` or `WildlifeKnockout:Die()` once a knockdown has defined them
+(the game's Lua is 4.0: there is no `true`, so a flag argument cannot work).
 
 ## Testing
 
-The GOG install carries Vehicle Overhaul's layer, so build it in alongside:
+Run `build.ps1` first so the layer carries the plugin. The GOG install carries Vehicle Overhaul's
+layer, so build it in alongside:
 
 ```
 tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe mod build --game "C:\Games\Far Cry 2" --layer mods\vehicle-overhaul\layer --layer mods\wildlife-overhaul\layer
