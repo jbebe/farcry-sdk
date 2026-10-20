@@ -46,6 +46,20 @@ After editing the source, compile it into the layer:
 tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe ai pack mods\wildlife-overhaul\brains\buffalobrain.source.xml -o mods\wildlife-overhaul\layer\mods\scripts\game\newbrains\wildlifeoverhaul_buffalo.ai.rml
 ```
 
+## Prototype: knocked down
+
+`prototype/knockout.lua` knocks the player down through the game's own death handling, with two
+endings. It is a script, not part of the layer, and wires only retail pieces:
+
+| Ending | What it calls | What the game then does |
+|---|---|---|
+| wakes up | `SetScriptedDeath(1)`, a `PlayerDied` callback, two lethal Pierce stims | `scripted_death`: falls, holsters and fades to black; 4 s later the script plays `pawn_generic_desertgetup` (`SetupPlayerForAnchorAnim`, `PlayAnim`), which lifts the black screen and heals, then `SetScriptedDeath(0)` |
+| stays down | `BlockBuddyRescue()`, the same stims, `UnblockBuddyRescue()` 1 s later | `no_rescue`: falls, game over (the load-save screen), death ragdoll |
+
+To try it, paste the one line in `prototype/knockout.oneline.lua` into DevTools' Lua tab and Run, then
+run `WildlifeKnockout:Down(true)` or `WildlifeKnockout:Down(false)`. DevTools' invincibility must be
+off. The one-liner is the source file's lines joined by spaces, so regenerate it after an edit.
+
 ## Testing
 
 The GOG install carries Vehicle Overhaul's layer, so build it in alongside:
