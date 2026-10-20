@@ -3,15 +3,19 @@ WildlifeKnockout._type = WildlifeKnockout
 
 function WildlifeKnockout:Down(wake)
 	self.player = GetLocalPlayerId()
+	System:Log("WildlifeKnockout: Down " .. tostring(wake) .. " player " .. tostring(self.player))
 	if wake then
 		SetScriptedDeath(1)
 		self.died = CScriptCallbackSystem_GetInstance():RegisterEventCallback(self.player, self, "Event_Died", "PlayerDied")
+		System:Log("WildlifeKnockout: PlayerDied callback " .. tostring(self.died))
+		self:After(3, "WakeUp")
 	else
 		BlockBuddyRescue()
 		self:After(1, "Unblock")
 	end
 	SendPierceStimNoOrigin(self.player, 32)
 	SendPierceStimNoOrigin(self.player, 32)
+	System:Log("WildlifeKnockout: stims sent")
 end
 
 function WildlifeKnockout:After(seconds, method)
@@ -25,14 +29,12 @@ end
 
 function WildlifeKnockout:Event_Died()
 	System:Log("WildlifeKnockout: PlayerDied")
-	CScriptCallbackSystem_GetInstance():RemoveCallback(self.player, self.died)
-	self:After(2, "WakeUp")
 end
 
 function WildlifeKnockout:WakeUp()
+	System:Log("WildlifeKnockout: WakeUp")
 	local domino = CDominoManager_GetInstance()
 	domino:SendCommandEventToEntity(self.player, "SetupPlayerForAnchorAnim", 1)
-	System:Log("WildlifeKnockout: WakeUp")
 	local sent = domino:SendCommandEventToEntity2(self.player, "PlayAnim", self, "AnimCommandSent", "pawn_generic_desertgetup", 0, 1)
 	System:Log("WildlifeKnockout: PlayAnim sent " .. tostring(sent))
 	domino:SendRegisteredEventToEntity(self.player, "CFCXCountersComponentPlayerSP_HealingDone")
