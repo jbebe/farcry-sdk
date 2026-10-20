@@ -3,6 +3,14 @@
 Notable changes to Vehicle Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.1] - 2026-10-20
+
+### Fixed
+- **A car could drive on the wrong tuning.** Getting into a car, a buggy for one, could leave the mod
+  not knowing which car it was, so it drove on the `[Other cars]` values instead of its own section
+  of `bin\vehicle-overhaul.ini`, with the wrong weight and engine too. Your tuning was never lost; it
+  is now used every time.
+
 ## [1.0.0] - 2026-10-19
 
 ### Added
