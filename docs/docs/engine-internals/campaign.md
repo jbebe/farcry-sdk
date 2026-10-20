@@ -213,4 +213,5 @@ removes one, and unlocks the house when the list becomes empty. It runs in three
 
 - Every rule here is read from code and data; none has been observed in a running game.
 - Whether the one-time reputation bonus for working for both factions is ever re-armed.
-- How a buddy rescue runs once it is available: the rescue manager's state machine was not traced.
+- How a buddy rescue runs once it is available. How the game chooses between a rescue, a scripted
+  death and a game over is on [player death](./player-death.md).

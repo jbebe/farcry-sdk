@@ -108,6 +108,24 @@ functions — e.g. `CFCXMissionManager` also exposes `CurrentAct`, `MissionTime`
 `InfMinCoefficient`, etc. as readable/writable fields). Those are not listed here, but are readable
 from the same decompiled registration functions.
 
+## Writing Lua for the engine
+
+What the embedded Lua 4.1 (alpha) means for a script, all met while writing
+[a scripted knockdown](./player-death.md#waking-up-from-a-scripted-death) (seen in game):
+
+- **There are no booleans.** `true` and `false` are ordinary global names, so both are `nil`; `true`
+  passed to a function arrives as `nil`. Only `nil` is false: `0` is true. A function that has to
+  choose between two behaviours is clearer as two functions.
+- **There is no `pcall`.** The engine runs Domino callbacks in its own protected call, so an error in
+  one is reported and the game goes on.
+- **Bindings check the type.** `SetScriptedDeath` (`0x088A5210`) acts only when given exactly one
+  argument whose `lua_tag` is a number, so `SetScriptedDeath(1)` works and `SetScriptedDeath(true)`
+  does nothing.
+- **A callback object needs a `_type`.** The engine calls back into a table passed to
+  `RegisterEventCallback` or `CDominoDelayManager:CreateDelay` as Domino boxes are built, through the
+  table's `_type`. A plain table must point `_type` at itself (`T._type = T`); without it the callback
+  fails with "attempt to index a nil value" and the game exits (seen on GOG at `Dunia.dll+0x2BE795`).
+
 ## Unknowns
 
 - One registration call site (`0x10738c38`) sits outside any function Ghidra has identified as a
