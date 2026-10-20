@@ -128,7 +128,8 @@ namespace {
 namespace VehicleOverhaul::RealVehicle {
 
 void Follow(Wheeled::Car car, void* vehicle) {
-    if (vehicle == g_vehicle) {
+    // Both, as the driver's car can be named before the seat is, or change under the same vehicle.
+    if (vehicle == g_vehicle && car == g_player.load().car) {
         return;
     }
     g_vehicle = vehicle;
