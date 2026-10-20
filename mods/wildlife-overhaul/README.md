@@ -57,7 +57,8 @@ endings. It is a script, not part of the layer, and wires only retail pieces:
 | stays down | `BlockBuddyRescue()`, the same stims, `UnblockBuddyRescue()` 1 s later | `no_rescue`: falls, game over (the load-save screen), death ragdoll |
 
 To try it, paste the one line in `prototype/knockout.oneline.lua` into DevTools' Lua tab and Run, then
-run `WildlifeKnockout:Down(true)` or `WildlifeKnockout:Down(false)`. DevTools' invincibility must be
+run `WildlifeKnockout:Faint()` to wake up or `WildlifeKnockout:Die()` to stay down (the game's Lua is 4.0:
+there is no `true`, so a flag argument cannot work). DevTools' invincibility must be
 off. The one-liner is the source file's lines joined by spaces, so regenerate it after an edit.
 
 ## Testing
