@@ -53,7 +53,7 @@ endings. It is a script, not part of the layer, and wires only retail pieces:
 
 | Ending | What it calls | What the game then does |
 |---|---|---|
-| wakes up | `SetScriptedDeath(1)`, a `PlayerDied` callback, two lethal Pierce stims | `scripted_death`: falls, holsters and fades to black; 2 s later the script plays `pawn_generic_desertgetup` (`SetupPlayerForAnchorAnim`, `PlayAnim`), which lifts the black screen and heals, then `SetScriptedDeath(0)` |
+| wakes up | `SetScriptedDeath(1)`, a `PlayerDied` callback, two lethal Pierce stims | `scripted_death`: falls, holsters and fades to black; 2 s later the script plays `pawn_generic_desertgetup` (`SetupPlayerForAnchorAnim`, `PlayAnim`), which lifts the black screen and heals, then `SetScriptedDeath(0)`; when the clip reports `FinishedPlayAnim`, `SetPlayerActionMap("default")` hands control back, as the GRIN missions do |
 | stays down | `BlockBuddyRescue()`, the same stims, `UnblockBuddyRescue()` 1 s later | `no_rescue`: falls, game over (the load-save screen), death ragdoll |
 
 To try it, paste the one line in `prototype/knockout.oneline.lua` into DevTools' Lua tab and Run, then

@@ -39,10 +39,17 @@ end
 function WildlifeKnockout:WakeUp()
 	local domino = CDominoManager_GetInstance()
 	domino:SendCommandEventToEntity(self.player, "SetupPlayerForAnchorAnim", 1)
+	self.stood = CScriptCallbackSystem_GetInstance():RegisterEventCallback(self.player, self, "Event_StoodUp", "FinishedPlayAnim")
 	local sent = domino:SendCommandEventToEntity2(self.player, "PlayAnim", self, "AnimCommandSent", "pawn_generic_desertgetup", 0, 1)
 	System:Log("WildlifeKnockout: WakeUp, PlayAnim sent " .. tostring(sent))
 	domino:SendRegisteredEventToEntity(self.player, "CFCXCountersComponentPlayerSP_HealingDone")
 	SetScriptedDeath(0)
+end
+
+function WildlifeKnockout:Event_StoodUp()
+	System:Log("WildlifeKnockout: stood up")
+	CScriptCallbackSystem_GetInstance():RemoveCallback(self.player, self.stood)
+	SetPlayerActionMap("default")
 end
 
 function WildlifeKnockout:AnimCommandSent()
