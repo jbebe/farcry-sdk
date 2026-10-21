@@ -1,6 +1,8 @@
 // The AI hit model against the player: fire held until he sees the player clearly, aim that settles
-// with distance, a chance that means what it says and falls with how well he sees the player, recoil
-// in place of forced misses, no certain hits, and aim at the body rather than the head.
+// with distance, a chance that means what it says and falls with how well he sees the player and how
+// fast the player crosses his aim, recoil in place of forced misses, no certain hits, and aim at the
+// body rather than the head.
+#include "engine/game.h"
 #include "engine/memory.h"
 #include "fcse_api.h"
 
@@ -56,10 +58,17 @@ namespace {
 
     constexpr ptrdiff_t kClockSeconds = 0x30;
     constexpr ptrdiff_t kIsAPlayerSlot = 0xBC;
-    // CPawnAgent's CSensorySystem and CShootingSystem, held in place, and CTaskShoot's agent.
+    // CPawnAgent's CSensorySystem and CShootingSystem, held in place, and its CPawn; CTaskShoot's
+    // agent.
     constexpr ptrdiff_t kAgentSenses = 0x28C;
     constexpr ptrdiff_t kAgentShooting = 0x4A0;
+    constexpr ptrdiff_t kAgentPawn = 0x268;
     constexpr ptrdiff_t kTaskAgent = 0x34;
+    // CPawn's data block, its effective data within it, and the velocity there; an entity's position.
+    constexpr ptrdiff_t kPawnData = 0x10;
+    constexpr ptrdiff_t kDataEffective = 0x2D0;
+    constexpr ptrdiff_t kEffectiveVelocity = 0xB0;
+    constexpr ptrdiff_t kEntityPosition = 0x60;
 
     // Hardcore: seconds for aim to settle after acquiring the player, at 0 m and per metre.
     constexpr float kSettleSeconds = 0.6f;
@@ -75,16 +84,20 @@ namespace {
     // full chance.
     constexpr float kFireVisibility = 0.4f;
     constexpr float kFullVisibility = 0.6f;
+    // Hardcore: how much the angle the player crosses per second (radians) costs the chance, as
+    // 1 / (1 + kCrossingLoss * rate).
+    constexpr float kCrossingLoss = 1.0f;
 
     // When each shooting system last fired at the player, by game clock.
     std::unordered_map<const void*, double> g_lastShot;
     constexpr size_t kMaxShooters = 512;
 
-    // The shot at the player being rolled: its recoil and sighting factors, NaN between such
-    // shots, and the chance it was given.
+    // The shot at the player being rolled: its recoil, sighting and crossing factors, NaN between
+    // such shots, and the chance it was given.
     struct Shot {
         float recoil = NAN;
         float sighting = NAN;
+        float crossing = NAN;
         float chance = NAN;
     };
     Shot g_shot;
@@ -112,6 +125,35 @@ namespace {
         }
         const double since = Now() - last->second;
         return 1.0f - kRecoilLoss * static_cast<float>(std::exp(-since / kRecoilRecoverySeconds));
+    }
+
+    // How hard the player's movement across his line of fire makes the shot, as a factor.
+    float Crossing(void* shooting) {
+        auto* shooter = FCSE::ApiPointer()->EntityData->EntityOf(
+            Read<void*>(Read<void*>(shooting, kShooter), kAgentPawn));
+        void* player = Game::PlayerEntity();
+        if (shooter == nullptr || player == nullptr) {
+            return 1.0f;
+        }
+        auto* effective = Read<uint8_t*>(Read<void*>(g_getTarget(shooting), kAgentPawn), kPawnData) +
+                          kDataEffective;
+        float line[3];
+        float velocity[3];
+        for (int i = 0; i < 3; ++i) {
+            const ptrdiff_t at = i * sizeof(float);
+            line[i] = Read<float>(player, kEntityPosition + at) -
+                      Read<float>(shooter, kEntityPosition + at);
+            velocity[i] = Read<float>(effective, kEffectiveVelocity + at);
+        }
+        const float distance = std::hypot(line[0], line[1], line[2]);
+        if (distance < 1.0f) {
+            return 1.0f;
+        }
+        const float along = (velocity[0] * line[0] + velocity[1] * line[1] + velocity[2] * line[2]) /
+                            distance;
+        const float speed = std::hypot(velocity[0], velocity[1], velocity[2]);
+        const float across = std::sqrt(std::max(speed * speed - along * along, 0.0f));
+        return 1.0f / (1.0f + kCrossingLoss * across / distance);
     }
 
     // How visible his target is to him now, 0 when he does not see it.
@@ -159,7 +201,8 @@ namespace {
         if (chance >= 1.0f) {
             chance *= Settled(shooting);
         }
-        g_shot.chance = std::min(chance, kMaxChance) * g_shot.recoil * g_shot.sighting;
+        g_shot.chance =
+            std::min(chance, kMaxChance) * g_shot.recoil * g_shot.sighting * g_shot.crossing;
         return RollChance(g_shot.chance);
     }
 
@@ -178,10 +221,12 @@ namespace {
             g_setupAimingDot(shooting);
         }
 
-        g_shot = {Recoil(shooting), std::min(Visibility(shooting) / kFullVisibility, 1.0f)};
+        g_shot = {Recoil(shooting), std::min(Visibility(shooting) / kFullVisibility, 1.0f),
+                  Crossing(shooting)};
         const int result = g_originalShootAt(shooting, unused, position, head, torso);
-        FCSE::Logf("shot at player: chance %.2f (recoil %.2f, sighting %.2f) at %.1f m, %s",
-                   g_shot.chance, g_shot.recoil, g_shot.sighting,
+        FCSE::Logf("shot at player: chance %.2f (recoil %.2f, sighting %.2f, crossing %.2f) at "
+                   "%.1f m, %s",
+                   g_shot.chance, g_shot.recoil, g_shot.sighting, g_shot.crossing,
                    Read<float>(shooting, kTargetDistance),
                    Read<bool>(shooting, kLastShotHit) ? "hit" : "miss");
         g_shot = {};
