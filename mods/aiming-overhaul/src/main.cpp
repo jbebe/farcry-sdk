@@ -4,8 +4,10 @@
 #include "engine/aim.h"
 #include "engine/body.h"
 #include "engine/device_reset.h"
+#include "engine/fire.h"
 #include "engine/input.h"
 #include "engine/look.h"
+#include "engine/ray.h"
 #include "engine/second_view.h"
 #include "engine/sprint.h"
 #include "engine/weapon_draws.h"
@@ -18,6 +20,7 @@
 #include "surroundings.h"
 #include "sway.h"
 #include "tracers.h"
+#include "wall.h"
 
 #include <iterator>
 
@@ -87,8 +90,24 @@ namespace {
     }
 
     AimingOverhaul::Aim::Offset OnAimFrame(float seconds) {
+        float forward[3];
+        AimingOverhaul::Aim::Forward(forward);
+        const float down = AimingOverhaul::Wall::Update(seconds, AimingOverhaul::Aim::Eye(), forward);
+        AimingOverhaul::Aim::SetGunDown(down, AimingOverhaul::Wall::Blocked());
         AimingOverhaul::Breath::Update(seconds, AimingOverhaul::Aim::Aiming());
         return AimingOverhaul::Sway::Drift(seconds);
+    }
+
+    // The sway's wander, with the look lowered as far as the gun is swung down.
+    AimingOverhaul::Look::Angles OnLook() {
+        AimingOverhaul::Look::Angles angles = AimingOverhaul::Sway::Wander();
+        angles.up -= AimingOverhaul::Aim::GunDown();
+        return angles;
+    }
+
+    bool RefuseShot(uint8_t* pawn) {
+        return pawn != nullptr && pawn == AimingOverhaul::Aim::Pawn() &&
+               AimingOverhaul::Aim::OnFoot() && AimingOverhaul::Wall::Blocked();
     }
 }
 
@@ -118,8 +137,10 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     FollowZoom();
     AimingOverhaul::Tracers::Install();
     AimingOverhaul::Streak::Install();
-    AimingOverhaul::Look::Install(&AimingOverhaul::Sway::Wander);
+    AimingOverhaul::Look::Install(&OnLook);
     AimingOverhaul::Body::Install();
+    AimingOverhaul::Ray::Install();
+    AimingOverhaul::Fire::Install(&RefuseShot);
     AimingOverhaul::Input::Install(&OnSignal);
     AimingOverhaul::Sprint::Install(&AimingOverhaul::Breath::HoldsSprint);
 
@@ -128,6 +149,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Hold breath", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Breath::SetEnabled)},
         {"Lean", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Lean::SetEnabled)},
+        {"Gun near walls", FCSE_CHECKBOX(true), &OnToggled,
+         Toggles(&AimingOverhaul::Wall::SetEnabled)},
         {"Gun blur", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Blur::SetEnabled)},
         {"Iron sight zoom", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Aim::SetIronsightZoom)},

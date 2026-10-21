@@ -52,6 +52,13 @@ while down the sights, and the breath sounds after `fTimeInIronsightBeforeBreath
 `Update` is entered through the component's second base, at `this + 4`, and calls both helpers on
 `this`. The offsets above are from `this`, which is also what the accessor below returns.
 
+The angular offset is pitch, roll and yaw, up positive for pitch, copied from the effective data's
+`+0x2C` with the camera shake at `+0x128` added. `Update` turns it into a quaternion with the same
+euler order as `CEntity::SetEuler` (`0x100677C0`, on `this + 0xD0`) and multiplies it onto body part
+0's rotation, so it turns the view about its own axes and leaves the body, the arms and the gun
+where they are. Once placed, the scene camera, `ModifySceneCamera` (`0x10504CE0`) on `this`, holds
+the eye's world position at `+0x08`.
+
 Most branches of `UpdateCameraOffset` rewrite the positional offset every frame. The one that is
 blending an angular kick back leaves it alone, so anything added to it has to be taken out again
 before the next call.
@@ -166,6 +173,28 @@ Clearing the bit does not give the player a body worth showing. Seen from `Camer
 a vehicle, the player is still headless and still in the pose made for the first-person camera. From
 the free camera, the body disappears beyond about 10 m. The model and its driving animations are
 first-person only.
+:::
+
+## The gun near walls
+
+The engine never moves the gun out of a wall. It draws it in a depth range of its own, so a gun
+pushed into a wall is drawn whole in front of it.
+
+`CPhysicsSystem::CastRay` (`0x1048DD30`, `__thiscall` on `*(void**)0x11613D60`, `RET 0x18`) takes
+the start, the vector to the end, a hits vector `{hits, count, capacity}`, a `CPhysQueryFilter`, an
+object to skip and flags. The editor's `ComputeDropDistance` (`0x1083DCA0`) calls it so, with flags
+5: the closest hit only, and nothing cast outside the world. Each hit is `0x30` bytes, its world
+position first. The filter is built by `0x1048EC40` from a layer mask and a group; a hits vector
+whose capacity's bit 0 is clear is freed with the engine's free (`0x10228AD0`).
+
+`CWeaponState::CanFire(float)` (`0x1012EC50`, `RET 4`) decides every shot, the player's and the
+AI's. The weapon is at the state's `+0x00`, and `CEquipmentBase::GetWielder` (`0x10156BA0`) on it
+gives the pawn holding it.
+
+:::warning[Not yet tested in a running game]
+Aiming Overhaul casts layer mask `0x43B` from the eye along the view, swings the gun down by
+lowering the look and raising the camera's angular pitch by the same amount, clears the desired
+iron-sight bit and refuses `CanFire` for the player's weapon while it is down. None of it has run.
 :::
 
 ## Leaning

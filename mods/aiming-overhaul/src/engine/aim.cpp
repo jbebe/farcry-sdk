@@ -30,8 +30,10 @@ namespace {
                                           float seconds);
     using EquippedWeaponFn = uint8_t*(__fastcall*)(uint8_t* inventory);
     using PlayerCameraFn = uint8_t*(__cdecl*)();
+    using SceneCameraFn = uint8_t*(__fastcall*)(uint8_t* camera);
 
     FCSE::Relocation<UpdateFn> g_update{FCSE::Uplay(0x00693C00)};
+    FCSE::Relocation<SceneCameraFn> g_sceneCamera{FCSE::Uplay(0x00504CE0)};
     FCSE::Relocation<UpdateCameraOffsetFn> g_updateCameraOffset{FCSE::Uplay(0x00693490)};
     FCSE::Relocation<UpdateFovFn> g_updateFov{FCSE::Uplay(0x00692E30)};
     FCSE::Relocation<EquippedWeaponFn> g_equippedWeapon{FCSE::Uplay(0x00127DA0)};
@@ -41,18 +43,24 @@ namespace {
     UpdateCameraOffsetFn g_originalUpdateCameraOffset = nullptr;
     UpdateFovFn g_originalUpdateFov = nullptr;
 
-    // CCameraPawnComponent: the eye's offset in the view's axes, x right, y ahead, z up; and the
-    // field of view in radians, unaimed, as this frame's, and the noise added to it.
+    // CCameraPawnComponent: the view's pitch over the body's, in radians, up positive; the eye's
+    // offset in the view's axes, x right, y ahead, z up; and the field of view in radians, unaimed,
+    // as this frame's, and the noise added to it. Update's `this` is the component's second base.
+    constexpr ptrdiff_t kViewPitch = 0xD0;
     constexpr ptrdiff_t kEyeRight = 0xE8;
     constexpr ptrdiff_t kEyeAhead = 0xEC;
     constexpr ptrdiff_t kEyeUp = 0xF0;
     constexpr ptrdiff_t kBaseFov = 0x70;
     constexpr ptrdiff_t kFov = 0x108;
     constexpr ptrdiff_t kFovNoise = 0x11C;
+    constexpr ptrdiff_t kSecondBase = 4;
+    // The scene camera's position in the world.
+    constexpr ptrdiff_t kScenePosition = 0x08;
 
-    // CPawn's data, and in it the effective flags, the effective look in radians (pitch up, yaw
-    // left), and the inventory.
+    // CPawn's data, and in it the desired and effective flags, the effective look in radians
+    // (pitch up, yaw left), and the inventory.
     constexpr ptrdiff_t kPawnData = 0x10;
+    constexpr ptrdiff_t kDesiredFlags = 0x144;
     constexpr ptrdiff_t kEffectiveFlags = 0x2D4;
     constexpr uint8_t kIronsight = 0x08;
     constexpr uint8_t kSprint = 0x40;
@@ -118,6 +126,22 @@ namespace {
     uint8_t* g_addedTo = nullptr;
     AimingOverhaul::Aim::Offset g_added = {};
     float g_addedAhead = 0.0f;
+    float g_addedPitch = 0.0f;
+
+    // The player's pawn, when the camera last saw it, and how long ago still counts as on foot.
+    uint8_t* g_pawn = nullptr;
+    ULONGLONG g_seen = 0;
+    constexpr ULONGLONG kOnFootMilliseconds = 200;
+
+    // The eye as last placed, and the view's look this frame, radians, pitch up and yaw left.
+    float g_eye[3] = {};
+    bool g_eyePlaced = false;
+    float g_viewPitch = 0.0f;
+    float g_viewYaw = 0.0f;
+
+    // How far the gun is swung down, in radians, and whether the sights are let go.
+    float g_gunDown = 0.0f;
+    bool g_blocked = false;
 
     // The look last frame, for which pawn, and how fast it has been turning, in radians a second.
     uint8_t* g_lookPawn = nullptr;
@@ -258,13 +282,22 @@ namespace {
         }
         const float raised =
             raising && g_raiseFrom < 1.0f ? (weight - g_raiseFrom) / (1.0f - g_raiseFrom) : 0.0f;
+        g_pawn = pawn;
+        g_seen = GetTickCount64();
+        g_viewPitch = Field<float>(data, kEffectivePitch) + g_gunDown;
+        g_viewYaw = Field<float>(data, kEffectiveYaw);
         const AimingOverhaul::Aim::Offset drift = g_drift(seconds);
         g_added = {drift.right * settled, drift.up * settled};
         g_addedAhead = g_raiseReach * raised;
+        g_addedPitch = g_gunDown;
         Field<float>(camera, kEyeRight) += g_added.right;
         Field<float>(camera, kEyeUp) += g_added.up;
         Field<float>(camera, kEyeAhead) += g_addedAhead;
+        Field<float>(camera, kViewPitch) += g_addedPitch;
         g_addedTo = camera;
+        if (g_blocked) {
+            Field<uint8_t>(data, kDesiredFlags) &= ~kIronsight;
+        }
     }
 
     // The field of view worked out again: with a scope's magnification wholly in while its sight
@@ -304,14 +337,22 @@ namespace {
             Field<float>(g_addedTo, kEyeRight) -= g_added.right;
             Field<float>(g_addedTo, kEyeUp) -= g_added.up;
             Field<float>(g_addedTo, kEyeAhead) -= g_addedAhead;
+            Field<float>(g_addedTo, kViewPitch) -= g_addedPitch;
             g_addedTo = nullptr;
+        }
+        uint8_t* component = camera - kSecondBase;
+        if (component == g_playerCamera()) {
+            const float* eye = &Field<float>(g_sceneCamera(component), kScenePosition);
+            std::copy(eye, eye + 3, g_eye);
+            g_eyePlaced = true;
         }
     }
 }
 
 bool AimingOverhaul::Aim::Install(DriftFn drift, FollowWeaponFn followWeapon, LeanFn lean) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
-    if (!g_update || !g_updateCameraOffset || !g_equippedWeapon || !g_playerCamera) {
+    if (!g_update || !g_updateCameraOffset || !g_equippedWeapon || !g_playerCamera ||
+        !g_sceneCamera) {
         api->Log("aim: the camera functions were not found in this build");
         return false;
     }
@@ -386,4 +427,32 @@ float AimingOverhaul::Aim::Magnification() {
 
 float AimingOverhaul::Aim::ScopeKick() {
     return g_scopeKick;
+}
+
+uint8_t* AimingOverhaul::Aim::Pawn() {
+    return g_pawn;
+}
+
+bool AimingOverhaul::Aim::OnFoot() {
+    return g_pawn != nullptr && GetTickCount64() - g_seen < kOnFootMilliseconds;
+}
+
+const float* AimingOverhaul::Aim::Eye() {
+    return g_eyePlaced ? g_eye : nullptr;
+}
+
+void AimingOverhaul::Aim::Forward(float out[3]) {
+    const float level = std::cos(g_viewPitch);
+    out[0] = -std::sin(g_viewYaw) * level;
+    out[1] = std::cos(g_viewYaw) * level;
+    out[2] = std::sin(g_viewPitch);
+}
+
+void AimingOverhaul::Aim::SetGunDown(float radians, bool blocked) {
+    g_gunDown = radians;
+    g_blocked = blocked;
+}
+
+float AimingOverhaul::Aim::GunDown() {
+    return g_gunDown;
 }

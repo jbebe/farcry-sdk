@@ -59,6 +59,22 @@ float ScopeKick();
 const char* WeaponName();
 uint32_t WeaponChanges();
 
+// The player's pawn as the camera last saw it, and whether that was a moment ago, on foot.
+uint8_t* Pawn();
+bool OnFoot();
+
+// Where the eye was last placed, in the world, or null before it was.
+const float* Eye();
+
+// The view's direction this frame, as a unit vector in the world.
+void Forward(float out[3]);
+
+// Swings the gun down by `radians` while the view holds still: the camera is raised by as much as
+// the look is lowered, which the look's offset does with GunDown(). While `blocked`, the sights
+// are let go.
+void SetGunDown(float radians, bool blocked);
+float GunDown();
+
 // Whether a scope's magnification comes in at once with its sight picture rather than easing in
 // over the raise, so the view outside the eyepiece keeps the field of view it had. The eye then
 // comes forward to the scope as it is raised instead.
