@@ -112,6 +112,17 @@ def _clip_items(self, context):
     return _CLIPS[origin][1]
 
 
+def _start_on_loaded(operator, armature):
+    """Open a bank dialog on the bank the armature's Action was loaded from."""
+    bank = import_mab.loaded_bank(armature)
+    if bank:
+        try:
+            operator.clip = bank
+        except TypeError:
+            # The pack was exported again without that bank.
+            pass
+
+
 def _banks(origin):
     clips = sorted(read_manifest(origin).get("clips", []),
                    key=lambda clip: clip["label"].casefold())
@@ -144,6 +155,7 @@ class FC2_OT_load_clip(bpy.types.Operator):
         return _pack_of(context)[0] is not None
 
     def invoke(self, context, _event):
+        _start_on_loaded(self, _armatures(context)[0])
         return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):
@@ -206,21 +218,31 @@ class FC2_OT_write_clip(bpy.types.Operator):
         name="Only selected bones", default=False,
         description="Rewrite only the selected bones. Every other bone keeps the entry the "
                     "clip already held, at the frames the clip itself keyed")
+    other_bank: BoolProperty(
+        name="Into another bank", default=False, options={"SKIP_SAVE"},
+        description="Write the Action into a bank other than the one it was loaded from. "
+                    "Its motion is cut or held to that bank's length")
 
     @classmethod
     def poll(cls, context):
         return _pack_of(context)[0] is not None
 
-    def invoke(self, context, _event):
-        return context.window_manager.invoke_props_dialog(self)
-
-    def execute(self, context):
+    @staticmethod
+    def _armature(context):
         # Selecting the body and writing is meaningful here - it is how the
         # character's clip gets edited - so what is selected wins, and the
         # model's armature is only the fallback.
         armature = context.object
         if armature is None or armature.type != "ARMATURE":
             armature = _armatures(context)[0]
+        return armature
+
+    def invoke(self, context, _event):
+        _start_on_loaded(self, self._armature(context))
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        armature = self._armature(context)
         if armature is None:
             self.report({"ERROR"}, "Select the armature whose Action to write")
             return {"CANCELLED"}
@@ -245,7 +267,7 @@ class FC2_OT_write_clip(bpy.types.Operator):
             # the dialog is one a person can reason about.
             written = export_mab.write(
                 pack, self.clip, armature, bones=bones, lossless=self.lossless,
-                tolerance=1.0 - math.cos(self.tolerance / 2.0))
+                tolerance=1.0 - math.cos(self.tolerance / 2.0), other_bank=self.other_bank)
         except Exception as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
@@ -282,6 +304,7 @@ class FC2_OT_retime_clip(bpy.types.Operator):
 
     def invoke(self, context, _event):
         self.end_frame = context.scene.frame_end
+        _start_on_loaded(self, _armatures(context)[0])
         return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):

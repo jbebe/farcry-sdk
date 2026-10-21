@@ -11,6 +11,10 @@ Notable changes to the Far Cry 2 Blender add-on, loosely following
   back each time. The helpers now get their clip parents once, when the model is imported, and a
   load changes no mode. A scene saved from an older version has to be imported again, or its knees
   stretch while the legs move.
+- **Write Animation writes into the bank the animation came from.** Its dialog opened on the first
+  bank in the list, so pressing OK without looking poured the motion into that bank instead. An
+  Action now remembers the bank it was loaded from: Load, Write and Retime open on it, and writing
+  into a different one is refused unless **Into another bank** is ticked.
 
 ## [0.3.0] - 2026-10-16
 

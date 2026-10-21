@@ -21,8 +21,10 @@ import bisect
 import bpy
 from mathutils import Quaternion, Vector
 
-from .import_mab import FIRST_FRAME, _quaternion, _rest_local, _tracks, clip_for, timing
+from .import_mab import (FIRST_FRAME, _quaternion, _rest_local, _tracks, clip_for, loaded_bank,
+                         timing)
 from .import_xbg import PROP_ACTOR_OF
+from .pack import stem
 
 # Which sections a rewrite touches. The tags, the events and the trajectory are
 # left exactly as they were unless the bank is retimed.
@@ -47,13 +49,15 @@ STILL_ROTATION = 1e-5
 STILL_TRANSLATION = 1e-5
 
 
-def write(pack, bank_path, armature, lossless=False, tolerance=0.002, bones=None):
+def write(pack, bank_path, armature, lossless=False, tolerance=0.002, bones=None,
+          other_bank=False):
     """Rewrite this model's clip in one bank from the armature's Action.
 
     `bones` names the bones to rewrite; every other one keeps the entry the clip
     already held, at the frames the clip itself keyed. Leave it out to rewrite
     the whole clip, which re-chooses every bone's key frames and adds an entry
-    for every bone on the rig.
+    for every bone on the rig. An Action loaded from another bank is refused
+    unless `other_bank` is set.
 
     Returns what changed, so a caller can say it rather than guess.
     """
@@ -67,6 +71,10 @@ def write(pack, bank_path, armature, lossless=False, tolerance=0.002, bones=None
         raise ValueError("this pack carries no rig, so nothing maps bone names to ids")
     if armature.animation_data is None or armature.animation_data.action is None:
         raise ValueError("%s carries no Action to write" % armature.name)
+    loaded = loaded_bank(armature)
+    if loaded and loaded != bank_path and not other_bank:
+        raise ValueError("This Action was loaded from %s. Pick that bank, or tick Into "
+                         "another bank" % stem(loaded))
 
     clip = clip_for(bank, skeleton)
     if clip is None:

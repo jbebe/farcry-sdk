@@ -156,6 +156,9 @@ made the mesh worse, so it is not shipped.
 came from. The pose is sampled off the evaluated rig rather than read out of the F-curves, so a
 constraint, an NLA strip or a driver all land in the file the way they look in the viewport.
 
+**An Action remembers its bank.** The dialog opens on it, and writing into any other bank is refused
+unless **Into another bank** is ticked, which cuts or holds the motion to that bank's length.
+
 **Only the clip that fits this model's rig is rewritten.** A bank holds the character's motion too,
 and re-encoding that would quietly degrade the arms holding the gun a little more on every save. It
 does not happen: an untouched clip carries its sections and its bone masks verbatim, so it goes back

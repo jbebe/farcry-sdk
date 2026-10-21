@@ -35,6 +35,7 @@ from addon.import_mab import FIRST_FRAME, clip_for, timing
 AK47 = "graphics/weapons/primary/ak47/ak47.xbg"
 RELOAD = ("graphics/characters/_common/animations/weapons/primary/ak47/"
           "1stge_uppb_reload_+000fw_prak4_i1.mab")
+DRAW = RELOAD.replace("reload", "draw")
 
 TOLERANCE = 1e-3
 
@@ -383,8 +384,22 @@ def main():
         errors += named_bones_only()
         errors += retimed_bank_stays_in_step(directory)
         errors += panel_write_operator(directory)
+        errors += another_bank_is_refused(directory)
     print("blender write: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0
+
+
+def _reload_on_a_copy(directory, name, clips):
+    """The AK-47 posed with its reload, from a copy of the pack an operator may save over."""
+    import shutil
+
+    copy = os.path.join(directory, name)
+    shutil.copyfile(pack(AK47, clips=clips), copy)
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    result = import_xbg.load(copy, lod=0, with_textures=False)
+    loaded = import_mab.load(result["pack"], RELOAD, result["armature"])
+    bpy.context.view_layer.objects.active = result["armature"]
+    return copy, result, loaded
 
 
 def panel_write_operator(directory):
@@ -395,16 +410,8 @@ def panel_write_operator(directory):
     an already-edited bank.
     """
     import addon
-    import shutil
 
-    copy = os.path.join(directory, "operator.fc2model")
-    shutil.copyfile(pack(AK47, clips=[RELOAD]), copy)
-
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    result = import_xbg.load(copy, lod=0, with_textures=False)
-    import_mab.load(result["pack"], RELOAD, result["armature"])
-    bpy.context.view_layer.objects.active = result["armature"]
-
+    copy, result, _loaded = _reload_on_a_copy(directory, "operator.fc2model", [RELOAD])
     addon.register()
     try:
         status = bpy.ops.object.fc2_write_clip(clip=RELOAD, lossless=True)
@@ -437,6 +444,33 @@ def panel_write_operator(directory):
     if untouched is not None and untouched.modified:
         return fail("the operator wrote over the pack it was given a copy of")
     print("operator: wrote lossless and marked %s edited" % os.path.basename(RELOAD))
+    return 0
+
+
+def another_bank_is_refused(directory):
+    """The reload's Action does not go into the draw unless that is asked for.
+
+    The draw sorts first, so it is what a dialog left on its first entry writes.
+    """
+    import addon
+
+    copy, _result, loaded = _reload_on_a_copy(directory, "two_banks.fc2model", [DRAW, RELOAD])
+    if loaded["action"].get(import_mab.PROP_BANK) != RELOAD:
+        return fail("the Action does not name the bank it came from")
+    addon.register()
+    try:
+        try:
+            status = bpy.ops.object.fc2_write_clip(clip=DRAW)
+        except RuntimeError as error:
+            status = {"CANCELLED"}
+            print("refused: %s" % str(error).strip())
+        if status != {"CANCELLED"} or Pack.load(copy).entry(DRAW).modified:
+            return fail("the reload's Action was written into the draw")
+        status = bpy.ops.object.fc2_write_clip(clip=DRAW, other_bank=True)
+        if status != {"FINISHED"} or not Pack.load(copy).entry(DRAW).modified:
+            return fail("asking for another bank did not write it")
+    finally:
+        addon.unregister()
     return 0
 
 

@@ -19,6 +19,8 @@ FIRST_FRAME = 1
 
 PROP_DURATION = "fc2_duration"
 PROP_RATE = "fc2_rate"
+# The bank an Action was loaded from, by game path.
+PROP_BANK = "fc2_bank"
 
 # A prop a clip attaches is its own sourced collection, and export would then
 # find two and refuse to pick. Marked so it can be told apart from the model.
@@ -81,14 +83,14 @@ def load(pack, bank_path, armature, with_props=False, lod=0, actor=None):
         raise ValueError("%s holds no clip for a %d-bone rig"
                          % (stem(bank_path), len(skeleton["bones"])))
 
-    result = pose(clip, armature, skeleton, stem(bank_path))
-    result["actor"] = _pose_actor(pack, bank, clip, armature, actor, stem(bank_path))
+    result = pose(clip, armature, skeleton, bank_path)
+    result["actor"] = _pose_actor(pack, bank, clip, armature, actor, bank_path)
     result["props"] = attach_participants(bank, clip, armature) if with_props else []
     result.update(bank=bank, clip_path=bank_path)
     return result
 
 
-def _pose_actor(pack, bank, clip, armature, actor, name):
+def _pose_actor(pack, bank, clip, armature, actor, bank_path):
     """Pose the carried body and hang the model off the bone the bank names."""
     if actor is None:
         return None
@@ -97,7 +99,7 @@ def _pose_actor(pack, bank, clip, armature, actor, name):
     if theirs is None or theirs is clip:
         return None
 
-    posed = pose(theirs, actor["armature"], skeleton, name + "_actor")
+    posed = pose(theirs, actor["armature"], skeleton, bank_path, "_actor")
     # A bank names the model once with no reference - that record's clip drives
     # the whole rig - and again per moving piece with one. Only the first says
     # where the model itself hangs.
@@ -110,10 +112,11 @@ def _pose_actor(pack, bank, clip, armature, actor, name):
     return posed
 
 
-def pose(clip, armature, skeleton, name):
+def pose(clip, armature, skeleton, bank_path, suffix=""):
     """Build an Action from one clip and make it the armature's active one."""
     names = {bone["id"]: bone["name"] for bone in skeleton["bones"]}
-    action = bpy.data.actions.new(name)
+    action = bpy.data.actions.new(stem(bank_path) + suffix)
+    action[PROP_BANK] = bank_path
     action[PROP_DURATION] = clip.get("duration", 0.0)
     action[PROP_RATE] = timing(clip)[1]
     if armature.animation_data is None:
@@ -238,6 +241,12 @@ def apply_to_scene(scene, clip):
         scene.render.fps = rate
     scene.frame_start = FIRST_FRAME
     scene.frame_end = FIRST_FRAME + last
+
+
+def loaded_bank(armature):
+    """The bank the armature's Action was loaded from, if one was."""
+    action = armature.animation_data.action if armature and armature.animation_data else None
+    return action.get(PROP_BANK) if action else None
 
 
 def model_of(armature):
