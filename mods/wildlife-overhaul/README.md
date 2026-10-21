@@ -9,7 +9,7 @@ staged it.
 |---|---|---|
 | Cape buffalo | charges the player instead of fleeing, gores on contact, then runs off | charge seen in game |
 | | a gore knocks the player down; they get up, unless it was the killing blow | built, not seen in game |
-| Hyena (new) | a new archetype on the goat as a stand-in, with zebra sight; retail animal brain, placed nowhere yet | built, not seen in game |
+| Hyena (new) | a new archetype on the goat as a stand-in, with zebra sight; retail animal brain, placed nowhere yet | spawns and runs in game |
 
 ## The buffalo charge
 
