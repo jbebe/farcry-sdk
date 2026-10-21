@@ -2,6 +2,7 @@
 #include "blur.h"
 #include "breath.h"
 #include "engine/aim.h"
+#include "engine/body.h"
 #include "engine/device_reset.h"
 #include "engine/input.h"
 #include "engine/look.h"
@@ -10,6 +11,7 @@
 #include "engine/weapon_draws.h"
 #include "eyepiece.h"
 #include "fcse_api.h"
+#include "lean.h"
 #include "scope_shadow.h"
 #include "scopes.h"
 #include "streak.h"
@@ -79,6 +81,11 @@ namespace {
         return scope != nullptr ? scope->raiseReach : 0.0f;
     }
 
+    void OnSignal(uint32_t signal) {
+        AimingOverhaul::Breath::OnSignal(signal);
+        AimingOverhaul::Lean::OnSignal(signal);
+    }
+
     AimingOverhaul::Aim::Offset OnAimFrame(float seconds) {
         AimingOverhaul::Breath::Update(seconds, AimingOverhaul::Aim::Aiming());
         return AimingOverhaul::Sway::Drift(seconds);
@@ -87,7 +94,7 @@ namespace {
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION || !FCSE::Bind(api) ||
-        !AimingOverhaul::Aim::Install(&OnAimFrame, &FollowWeapon)) {
+        !AimingOverhaul::Aim::Install(&OnAimFrame, &FollowWeapon, &AimingOverhaul::Lean::Roll)) {
         return false;
     }
 
@@ -112,13 +119,15 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     AimingOverhaul::Tracers::Install();
     AimingOverhaul::Streak::Install();
     AimingOverhaul::Look::Install(&AimingOverhaul::Sway::Wander);
-    AimingOverhaul::Input::Install(&AimingOverhaul::Breath::OnSignal);
+    AimingOverhaul::Body::Install();
+    AimingOverhaul::Input::Install(&OnSignal);
     AimingOverhaul::Sprint::Install(&AimingOverhaul::Breath::HoldsSprint);
 
     const FCSE_Setting settings[] = {
         {"Sway", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Sway::SetEnabled)},
         {"Hold breath", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Breath::SetEnabled)},
+        {"Lean", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Lean::SetEnabled)},
         {"Gun blur", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Blur::SetEnabled)},
         {"Iron sight zoom", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Aim::SetIronsightZoom)},

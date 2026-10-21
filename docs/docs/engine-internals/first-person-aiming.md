@@ -168,6 +168,31 @@ the free camera, the body disappears beyond about 10 m. The model and its drivin
 first-person only.
 :::
 
+## Leaning
+
+The player cannot lean. The cover stances the animation graph has a channel for (31, `CoverStance`:
+none, leaning left, leaning right, leaning up, blind firing) are fed from `*(pawn + 0x10) + 0x3F0`,
+the effective data's `+0x120`, by the beautifier's animation update (`0x100AC190`), but the player's
+graph has no clips for them.
+
+`CCameraPawnComponent::Update` does not read the look's roll. It takes the camera's rotation from
+body part 0 (`0x1010D850`): that part's skeleton node, through the skeleton's vtable `+0x78`, times
+the pawn entity's own orientation. That orientation is the entity's 4×4 at `+0x30`, which
+`CEntity::GetOrientation` (`0x104DDA00`) turns into a quaternion. So whatever turns the entity turns
+the eye, the arms and the gun with it.
+
+`CEntity::SetEuler` (`0x104E01C0`) takes pitch, roll and yaw and rebuilds the basis as yaw about Z,
+after roll about the entity's own forward axis Y, after pitch about X, keeping its position. A
+positive roll tilts the up axis toward +X, to the right, and leaves the forward axis where it was, so
+`atan2(m[5], m[4]) - π/2` still reads the same heading.
+
+:::warning[Not yet tested in a running game]
+Aiming Overhaul's lean rolls the pawn entity this way every frame, from the camera update, before
+the camera reads body part 0. Whether the engine sets the entity's orientation afresh each frame,
+whether the roll is still there when a shot is set up, and whether the AI's sight follows the
+rolled body are all unchecked.
+:::
+
 ## A scope's sight picture
 
 `CFCXWeapon::ShowHiResScope(bool)` (`0x106D3B80`) swaps the weapon's `SCOPE_HI` part in and every

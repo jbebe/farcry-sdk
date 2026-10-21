@@ -22,6 +22,10 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   up to two and a half times the sway, until it is let go. After a hold the sway is up to half again
   as large while the breath comes back, which takes 3 s from empty. Through the sights the sprint
   key does nothing else.
+- **Lean.** Holding Lean left or Lean right rolls the whole body about its feet, 12° over a quarter
+  of a second, which takes the eye about a third of a metre to the side: around a corner, the gun
+  comes with it and shots leave from where the eye now is. The eye stays inside the body's own
+  collision, so it never leans into a wall. There is no lean while sprinting.
 - **Gun blur.** Down the iron sights the eye focuses on the front sight, and the rest of the gun
   goes out of focus by how far it is from it, as through an 8 mm pupil: the rear sight most, and the
   blur spills a little past the gun's edge. The focus holds on the front sight while a fast turn
@@ -67,7 +71,8 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
 The eye is moved through the camera's positional offset, the one the recoil kicks, and a scope's
 zoom held back until its sight picture is up, in `src/engine/aim.cpp`. The aim's wander is added
 to the look the input builds each frame, in `src/engine/look.cpp`; the breath is `src/breath.cpp`,
-and the sprint it holds is refused in the input listener, in `src/engine/sprint.cpp`. The blur draws the gun's own
+and the sprint it holds is refused in the input listener, in `src/engine/sprint.cpp`. A lean rolls
+the pawn's entity, in `src/engine/body.cpp`, from `src/lean.cpp`. The blur draws the gun's own
 depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the
 blur and the scope shadow draw at the end of the pass the gun's colour is drawn in, before the
 bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
@@ -111,6 +116,7 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 |---|---|---|
 | Sway | Yes / No | Yes |
 | Hold breath | Yes / No | Yes |
+| Lean | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
 | Iron sight zoom | Yes / No | Yes |
 | Scope shadow | Yes / No | Yes |

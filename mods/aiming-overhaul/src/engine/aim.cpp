@@ -3,6 +3,7 @@
 // See docs/docs/engine-internals/first-person-aiming.md.
 #include "engine/aim.h"
 
+#include "engine/body.h"
 #include "engine/entity_name.h"
 #include "engine/memory.h"
 #include "fcse_api.h"
@@ -54,6 +55,7 @@ namespace {
     constexpr ptrdiff_t kPawnData = 0x10;
     constexpr ptrdiff_t kEffectiveFlags = 0x2D4;
     constexpr uint8_t kIronsight = 0x08;
+    constexpr uint8_t kSprint = 0x40;
     constexpr ptrdiff_t kEffectivePitch = 0x308;
     constexpr ptrdiff_t kEffectiveYaw = 0x310;
     constexpr ptrdiff_t kInventory = 0x4F0;
@@ -84,6 +86,7 @@ namespace {
 
     AimingOverhaul::Aim::DriftFn g_drift = nullptr;
     AimingOverhaul::Aim::FollowWeaponFn g_followWeapon = nullptr;
+    AimingOverhaul::Aim::LeanFn g_lean = nullptr;
     std::atomic<bool> g_zoomAtOnce{true};
     std::atomic<bool> g_ironsightZoom{true};
     float g_sights = 0.0f;
@@ -225,7 +228,9 @@ namespace {
         }
 
         uint8_t* data = Field<uint8_t*>(pawn, kPawnData);
-        const bool sights = (Field<uint8_t>(data, kEffectiveFlags) & kIronsight) != 0;
+        const uint8_t flags = Field<uint8_t>(data, kEffectiveFlags);
+        const bool sights = (flags & kIronsight) != 0;
+        AimingOverhaul::Body::Roll(pawn, g_lean(seconds, (flags & kSprint) == 0));
         uint8_t* weapon = g_equippedWeapon(data + kInventory);
         FollowWeapon(weapon);
         // The scope's sight picture outlasts the iron sights by a few frames as the scope goes.
@@ -304,7 +309,7 @@ namespace {
     }
 }
 
-bool AimingOverhaul::Aim::Install(DriftFn drift, FollowWeaponFn followWeapon) {
+bool AimingOverhaul::Aim::Install(DriftFn drift, FollowWeaponFn followWeapon, LeanFn lean) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
     if (!g_update || !g_updateCameraOffset || !g_equippedWeapon || !g_playerCamera) {
         api->Log("aim: the camera functions were not found in this build");
@@ -313,6 +318,7 @@ bool AimingOverhaul::Aim::Install(DriftFn drift, FollowWeaponFn followWeapon) {
 
     g_drift = drift;
     g_followWeapon = followWeapon;
+    g_lean = lean;
     if (!Hook(g_update.address(), &UpdateDetour, &g_originalUpdate)) {
         return false;
     }

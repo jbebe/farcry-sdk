@@ -24,9 +24,14 @@ using DriftFn = Offset (*)(float seconds);
 // raised; nought unless the plugin draws that scope.
 using FollowWeaponFn = float (*)(uint8_t* weapon);
 
-// Hooks the first-person camera; `drift` and `followWeapon` then run once a frame, and down the iron
-// sights the eye follows the drift. False, and logged, when the camera cannot be hooked.
-bool Install(DriftFn drift, FollowWeaponFn followWeapon);
+// The body's roll this frame in radians, right positive, given the seconds since the last and
+// whether the player may lean: on foot and not sprinting.
+using LeanFn = float (*)(float seconds, bool free);
+
+// Hooks the first-person camera; `drift`, `followWeapon` and `lean` then run once a frame, down the
+// iron sights the eye follows the drift, and the body rolls by the lean before the camera is placed
+// from it. False, and logged, when the camera cannot be hooked.
+bool Install(DriftFn drift, FollowWeaponFn followWeapon, LeanFn lean);
 
 // How far the eye has settled into the iron sights, and into a scope's own sight picture, eased
 // from nought to one. At most one of them is above nought.
