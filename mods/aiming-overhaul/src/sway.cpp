@@ -1,5 +1,8 @@
-// The hand's drift: a few millimetres of wander and a slow breath.
+// The hand's drift: a slow breath and a wander, which move the eye a few millimetres off the gun and
+// the aim a fraction of a degree, less while the breath is held.
 #include "sway.h"
+
+#include "breath.h"
 
 #include <atomic>
 #include <cmath>
@@ -9,6 +12,9 @@
 namespace {
     // Metres.
     constexpr float kDrift = 0.002f;
+    // Radians, down the iron sights and through a scope.
+    constexpr float kIronsightWander = 0.0035f;
+    constexpr float kScopeWander = 0.006f;
 
     struct Wave {
         double hertz;
@@ -38,7 +44,17 @@ AimingOverhaul::Aim::Offset AimingOverhaul::Sway::Drift(float seconds) {
     if (!g_enabled) {
         return {};
     }
-    return {kDrift * Sum(kRight), kDrift * Sum(kUp)};
+    const float drift = kDrift * Breath::Steadiness();
+    return {drift * Sum(kRight), drift * Sum(kUp)};
+}
+
+AimingOverhaul::Look::Angles AimingOverhaul::Sway::Wander() {
+    if (!g_enabled) {
+        return {};
+    }
+    const float wander = (kIronsightWander * Aim::Settled() + kScopeWander * Aim::Scoped()) *
+                         Breath::Steadiness();
+    return {wander * Sum(kUp), wander * Sum(kRight)};
 }
 
 void AimingOverhaul::Sway::SetEnabled(bool enabled) {

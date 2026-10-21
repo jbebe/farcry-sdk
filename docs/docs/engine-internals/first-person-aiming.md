@@ -136,7 +136,8 @@ same, is `+0x2D0`. Both hold the look in radians:
 | yaw, left positive | `+0x40`, again at `+0x4C` |
 
 `UpdateLook` reads the effective look from `+0x54` instead while bit 2 (`0x04`) of the effective
-flags at `+4` is set.
+flags at `+4` is set. It takes no arguments and returns with a plain `RET`. It writes the look to both
+copies and carries the effective roll over unchanged, since the mouse has no roll axis.
 
 :::warning[Not yet tested in a running game]
 Adding to the desired look after `UpdateLook` should move the view, the gun's aim and where shots go

@@ -13,8 +13,15 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   falls with a slow breath. The rear sight is nearer the eye than the front one, so it moves further
   and the two drift out of line. Shots still go where the engine sends them: down the view, which is
   where the barrel points. Sights that have drifted out of line are wrong by the same angle as on a
-  real gun. While a scope's own sight picture is up there is no sway, because that picture is a
-  miniature right at the eye.
+  real gun. The same breath and wander also move the aim itself, view, gun and shot together, by
+  about 0.2° down the iron sights and 0.35° through a scope; the mouse corrects it as it would a
+  real hand. While a scope's own sight picture is up the eye does not drift off the gun, because that
+  picture is a miniature right at the eye, but the aim still wanders under the reticle.
+- **Hold breath.** Holding sprint down the sights or a scope holds the breath instead of sprinting:
+  the sway eases to a sixth of itself and stays there for 4 s. Held longer, the hands shake harder,
+  up to two and a half times the sway, until it is let go. After a hold the sway is up to half again
+  as large while the breath comes back, which takes 3 s from empty. Through the sights the sprint
+  key does nothing else.
 - **Gun blur.** Down the iron sights the eye focuses on the front sight, and the rest of the gun
   goes out of focus by how far it is from it, as through an 8 mm pupil: the rear sight most, and the
   blur spills a little past the gun's edge. The focus holds on the front sight while a fast turn
@@ -58,7 +65,9 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   however far off it is.
 
 The eye is moved through the camera's positional offset, the one the recoil kicks, and a scope's
-zoom held back until its sight picture is up, in `src/engine/aim.cpp`. The blur draws the gun's own
+zoom held back until its sight picture is up, in `src/engine/aim.cpp`. The aim's wander is added
+to the look the input builds each frame, in `src/engine/look.cpp`; the breath is `src/breath.cpp`,
+and the sprint it holds is refused in the input listener, in `src/engine/sprint.cpp`. The blur draws the gun's own
 depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the
 blur and the scope shadow draw at the end of the pass the gun's colour is drawn in, before the
 bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
@@ -101,6 +110,7 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Setting | Values | Default |
 |---|---|---|
 | Sway | Yes / No | Yes |
+| Hold breath | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
 | Iron sight zoom | Yes / No | Yes |
 | Scope shadow | Yes / No | Yes |
@@ -108,7 +118,9 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Scope surroundings | Yes / No | Yes |
 | Tracers | Yes / No | Yes |
 
-With Iron sight zoom off, the view keeps its field of view down a gun's iron sights; a scope still
+With Sway off neither the eye nor the aim drifts, and there is nothing for the breath to steady.
+With Hold breath off, sprint down the sights does what the game does with it. With Iron sight zoom
+off, the view keeps its field of view down a gun's iron sights; a scope still
 magnifies. With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game
 draws them. Which guns fire them and how fast they fly are the weapon data's, and stay; so does the
 scopes' lost iron-sight effect, whatever the scope settings.

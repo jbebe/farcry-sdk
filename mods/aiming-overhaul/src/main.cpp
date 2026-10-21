@@ -1,8 +1,12 @@
 // Aiming Overhaul - how aiming and shooting look. See README.md.
 #include "blur.h"
+#include "breath.h"
 #include "engine/aim.h"
 #include "engine/device_reset.h"
+#include "engine/input.h"
+#include "engine/look.h"
 #include "engine/second_view.h"
+#include "engine/sprint.h"
 #include "engine/weapon_draws.h"
 #include "eyepiece.h"
 #include "fcse_api.h"
@@ -74,11 +78,16 @@ namespace {
         const AimingOverhaul::Scopes::Scope* scope = AimingOverhaul::Scopes::Follow(weapon);
         return scope != nullptr ? scope->raiseReach : 0.0f;
     }
+
+    AimingOverhaul::Aim::Offset OnAimFrame(float seconds) {
+        AimingOverhaul::Breath::Update(seconds, AimingOverhaul::Aim::Aiming());
+        return AimingOverhaul::Sway::Drift(seconds);
+    }
 }
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION || !FCSE::Bind(api) ||
-        !AimingOverhaul::Aim::Install(&AimingOverhaul::Sway::Drift, &FollowWeapon)) {
+        !AimingOverhaul::Aim::Install(&OnAimFrame, &FollowWeapon)) {
         return false;
     }
 
@@ -102,9 +111,14 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     FollowZoom();
     AimingOverhaul::Tracers::Install();
     AimingOverhaul::Streak::Install();
+    AimingOverhaul::Look::Install(&AimingOverhaul::Sway::Wander);
+    AimingOverhaul::Input::Install(&AimingOverhaul::Breath::OnSignal);
+    AimingOverhaul::Sprint::Install(&AimingOverhaul::Breath::HoldsSprint);
 
     const FCSE_Setting settings[] = {
         {"Sway", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Sway::SetEnabled)},
+        {"Hold breath", FCSE_CHECKBOX(true), &OnToggled,
+         Toggles(&AimingOverhaul::Breath::SetEnabled)},
         {"Gun blur", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Blur::SetEnabled)},
         {"Iron sight zoom", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Aim::SetIronsightZoom)},
