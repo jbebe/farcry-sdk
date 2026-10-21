@@ -16,7 +16,7 @@ from bpy_extras.io_utils import ExportHelper, ImportHelper
 from mathutils import Matrix
 
 from . import export_mab, export_xbg, import_mab, import_xbg, panel
-from .pack import EXTENSION, Pack, read_manifest
+from .pack import EXTENSION, Pack, bank_label, bank_order, read_manifest
 
 # What the bone enum holds when a part is placed by nothing.
 ROOT_BONE = "__root__"
@@ -124,10 +124,9 @@ def _start_on_loaded(operator, armature):
 
 
 def _banks(origin):
-    clips = sorted(read_manifest(origin).get("clips", []),
-                   key=lambda clip: clip["label"].casefold())
+    clips = bank_order(read_manifest(origin).get("clips", []))
     return [(clip["path"],
-             clip["label"],
+             bank_label(clip),
              "%d frames at %d Hz%s" % (clip.get("frames", 0), clip.get("rate", 0),
                                        ", on %s" % clip["bone"] if clip.get("bone") else ""))
             for clip in clips]

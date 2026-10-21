@@ -7,6 +7,7 @@
 #
 # See docs/docs/file-formats/fc2model.md.
 
+import collections
 import hashlib
 import json
 import posixpath
@@ -51,6 +52,21 @@ def _key(path):
 def stem(path):
     """A game path's file name without its extension."""
     return posixpath.splitext(posixpath.basename(_key(path)))[0]
+
+
+def bank_label(clip):
+    """A bank's name under its folder, which tells a weapon's own banks from a scene's."""
+    return "%s/%s" % (_folder(clip), clip["label"])
+
+
+def bank_order(clips):
+    """Banks by folder, the fullest first since that is the model's own, then by name."""
+    folders = collections.Counter(_folder(clip) for clip in clips)
+    return sorted(clips, key=lambda clip: (-folders[_folder(clip)], bank_label(clip).casefold()))
+
+
+def _folder(clip):
+    return posixpath.basename(posixpath.dirname(_key(clip["path"])))
 
 
 def timing(clip):

@@ -16,6 +16,7 @@ sys.path.insert(0, HERE)
 import bpy
 
 from addon import import_mab, import_xbg
+from addon.pack import bank_label, bank_order
 
 USAGE = "usage: blender --python open_model.py -- <model.fc2model> [lod] [clip]"
 
@@ -40,9 +41,9 @@ def main():
     print("opened %s: %d parts at LOD%d, %d animation bank(s)"
           % (os.path.basename(path), len(result["parts"]), lod, len(pack.clips)))
     if not wanted:
-        for clip in sorted(pack.clips, key=lambda c: c["label"].casefold())[:20]:
+        for clip in bank_order(pack.clips)[:20]:
             print("   %s  %d frames at %d Hz%s"
-                  % (clip["label"], clip.get("frames", 0), clip.get("rate", 0),
+                  % (bank_label(clip), clip.get("frames", 0), clip.get("rate", 0),
                      " on %s" % clip["bone"] if clip.get("bone") else ""))
         return
 

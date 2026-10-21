@@ -22,6 +22,7 @@ from mathutils import Quaternion, Vector
 
 from addon import import_mab, import_xbg
 from addon.import_mab import FIRST_FRAME, bone_ids, timing
+from addon.pack import bank_label, bank_order, stem
 
 CHARACTER = "graphics/actors/buddy_andrehyppolite/andrehyppolite.xbg"
 AK47 = "graphics/weapons/primary/ak47/ak47.xbg"
@@ -247,13 +248,31 @@ def check_load_keeps_the_mode():
         "a load left %s active in %s" % (active.name, active.mode))
 
 
+def check_bank_order():
+    """A weapon's own banks list first, ahead of a scene's that merely sort earlier."""
+    folder = "graphics/characters/_common/animations/"
+    paths = [folder + "special_actions/buddy_down/1stge_syns_cradlegunawayexecute_+000fw_sedea_i1.mab",
+             folder + "weapons/secondary/mac10/1stge_uppb_reload_+000fw_semac_i1.mab",
+             folder + "weapons/secondary/mac10/1stge_uppb_draw_+000fw_semac_i1.mab"]
+    clips = [{"path": path, "label": stem(path)} for path in paths]
+    listed = [bank_label(clip) for clip in bank_order(clips)]
+    print("bank order: %s" % ", ".join(listed))
+    expected = ["mac10/1stge_uppb_draw_+000fw_semac_i1",
+                "mac10/1stge_uppb_reload_+000fw_semac_i1",
+                "buddy_down/1stge_syns_cradlegunawayexecute_+000fw_sedea_i1"]
+    if listed != expected:
+        return fail("the banks list as %s" % listed)
+    return 0
+
+
 def main():
     if not require_pack():
         return 0
 
     errors = (sum(check(*case) for case in CASES)
               + check_weapon_clip_is_chosen() + check_attachments()
-              + check_actor_holds_the_model() + check_load_keeps_the_mode())
+              + check_actor_holds_the_model() + check_load_keeps_the_mode()
+              + check_bank_order())
     print("blender anim: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0
 

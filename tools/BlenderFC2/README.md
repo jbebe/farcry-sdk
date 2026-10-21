@@ -109,7 +109,8 @@ export prefers and falls back from when a mesh has been rebuilt.
 
 A pack's manifest indexes the banks it carries, so **Object ▸ Load Far Cry 2 Animation** offers them
 as a list — name, length, rate and the bone the model hangs from — with no file dialog and no hunting
-for a skeleton.
+for a skeleton. Each bank shows under its folder, and the folder holding most of them, the model's
+own, comes first: a MAC-10 pack carries 40 banks of its own beside 12 of a buddy's mercy kill.
 
 **A pack with clips also carries the body they pose**, so loading one gives the whole scene the bank
 describes: the character's clip on the character, the weapon's on the weapon, and the weapon hanging

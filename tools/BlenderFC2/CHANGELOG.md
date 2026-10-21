@@ -5,6 +5,11 @@ Notable changes to the Far Cry 2 Blender add-on, loosely following
 
 ## [Unreleased]
 
+### Changed
+- **The animation list shows each bank under its folder, the model's own first.** Sorted by name
+  alone, a MAC-10 pack opened on a buddy's mercy kill, `1stge_syns_…`, ahead of every one of the
+  gun's own `1stge_uppb_…` banks, and nothing in the name said it belonged somewhere else.
+
 ### Fixed
 - **Loading an animation no longer drops you into Object Mode.** Every load reparented the knee
   and elbow helpers through Edit Mode and left the scene in Object Mode, so posing meant switching
