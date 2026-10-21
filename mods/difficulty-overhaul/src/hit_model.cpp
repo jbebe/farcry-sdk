@@ -26,20 +26,24 @@ namespace {
     using GetVisibilityFn = bool(__fastcall*)(void* sensory, void* unused, void* agent,
                                               float* visibility, bool remembered);
     using CanShootFn = bool(__fastcall*)(void* task);
+    using GetEquippedWeaponFn = void*(__fastcall*)(void* inventory);
 
-    // CShootingSystem's GetChanceOfSuccess, GetTimerToMissFactor, GenerateShootAtPosition,
-    // GetTarget and SetupAimingDot, CSensorySystem::GetVisibilityValue, CTaskShoot::CanShoot, and
-    // the game clock.
+    // CShootingSystem's GetChanceOfSuccess, GetTimerToMissFactor, GetTargetDistanceFactor,
+    // GenerateShootAtPosition, GetTarget and SetupAimingDot, CSensorySystem::GetVisibilityValue,
+    // CTaskShoot::CanShoot, CInventoryViewPawn::GetEquippedWeapon, and the game clock.
     FCSE::Relocation<ChanceFn> g_getChance{FCSE::Uplay(0x00A19EE0)};
     FCSE::Relocation<ChanceFn> g_getTimerFactor{FCSE::Uplay(0x00A19A60)};
+    FCSE::Relocation<ChanceFn> g_getDistanceFactor{FCSE::Uplay(0x00A19950)};
     FCSE::Relocation<ShootAtFn> g_shootAt{FCSE::Uplay(0x00A1A110)};
     FCSE::Relocation<GetTargetFn> g_getTarget{FCSE::Uplay(0x00A19370)};
     FCSE::Relocation<SetupAimingDotFn> g_setupAimingDot{FCSE::Uplay(0x00A193E0)};
     FCSE::Relocation<GetVisibilityFn> g_getVisibility{FCSE::Uplay(0x00A021A0)};
     FCSE::Relocation<CanShootFn> g_canShoot{FCSE::Uplay(0x009792F0)};
+    FCSE::Relocation<GetEquippedWeaponFn> g_getEquippedWeapon{FCSE::Uplay(0x00127DA0)};
     FCSE::Relocation<void**> g_clock{FCSE::Uplay(0x01606360)};
     ChanceFn g_originalGetChance = nullptr;
     ChanceFn g_originalGetTimerFactor = nullptr;
+    ChanceFn g_originalGetDistanceFactor = nullptr;
     ShootAtFn g_originalShootAt = nullptr;
     CanShootFn g_originalCanShoot = nullptr;
 
@@ -64,11 +68,18 @@ namespace {
     constexpr ptrdiff_t kAgentShooting = 0x4A0;
     constexpr ptrdiff_t kAgentPawn = 0x268;
     constexpr ptrdiff_t kTaskAgent = 0x34;
-    // CPawn's data block, its effective data within it, and the velocity there; an entity's position.
+    // CPawn's data block, its effective data and inventory view within it, and the velocity in the
+    // effective data; an entity's position.
     constexpr ptrdiff_t kPawnData = 0x10;
     constexpr ptrdiff_t kDataEffective = 0x2D0;
+    constexpr ptrdiff_t kDataInventory = 0x4F0;
     constexpr ptrdiff_t kEffectiveVelocity = 0xB0;
     constexpr ptrdiff_t kEntityPosition = 0x60;
+    // CWeapon's properties holder and its CWeaponPropertiesCommon, and the selWeaponClass there.
+    constexpr ptrdiff_t kWeaponPropertiesHolder = 0x24;
+    constexpr ptrdiff_t kHolderProperties = 0x04;
+    constexpr ptrdiff_t kPropertiesClass = 0x40;
+    enum WeaponClass { kPistol = 1, kSMG = 3, kShotgun = 4 };
 
     // Hardcore: seconds for aim to settle after acquiring the player, at 0 m and per metre.
     constexpr float kSettleSeconds = 0.6f;
@@ -87,6 +98,11 @@ namespace {
     // Hardcore: how much the angle the player crosses per second (radians) costs the chance, as
     // 1 / (1 + kCrossingLoss * rate).
     constexpr float kCrossingLoss = 1.0f;
+    // Hardcore: the range at which pistols, SMGs and shotguns have half the chance the game's
+    // shared range curve gives them, as 1 / (1 + (range / half)^2).
+    constexpr float kPistolHalfRange = 20.0f;
+    constexpr float kSMGHalfRange = 30.0f;
+    constexpr float kShotgunHalfRange = 15.0f;
 
     // When each shooting system last fired at the player, by game clock.
     std::unordered_map<const void*, double> g_lastShot;
@@ -156,6 +172,31 @@ namespace {
         return 1.0f / (1.0f + kCrossingLoss * across / distance);
     }
 
+    // The selWeaponClass of the weapon he holds, or -1.
+    int WeaponClass(void* shooting) {
+        void* pawn = Read<void*>(Read<void*>(shooting, kShooter), kAgentPawn);
+        void* weapon = g_getEquippedWeapon(Read<uint8_t*>(pawn, kPawnData) + kDataInventory);
+        if (weapon == nullptr) {
+            return -1;
+        }
+        const void* holder = Read<void*>(weapon, kWeaponPropertiesHolder);
+        return Read<int>(Read<void*>(holder, kHolderProperties), kPropertiesClass);
+    }
+
+    // The range a short-range weapon class's chance halves at, or 0 for the rest.
+    float HalfRange(int weaponClass) {
+        switch (weaponClass) {
+        case kPistol:
+            return kPistolHalfRange;
+        case kSMG:
+            return kSMGHalfRange;
+        case kShotgun:
+            return kShotgunHalfRange;
+        default:
+            return 0.0f;
+        }
+    }
+
     // How visible his target is to him now, 0 when he does not see it.
     float Visibility(void* shooting) {
         auto* senses = Read<uint8_t*>(shooting, kShooter) + kAgentSenses;
@@ -192,6 +233,16 @@ namespace {
         return Settled(shooting);
     }
 
+    float __fastcall GetDistanceFactorDetour(void* shooting) {
+        const float factor = g_originalGetDistanceFactor(shooting);
+        const float half = AimsAtPlayer(shooting) ? HalfRange(WeaponClass(shooting)) : 0.0f;
+        if (half == 0.0f) {
+            return factor;
+        }
+        const float scaled = Read<float>(shooting, kTargetDistance) / half;
+        return factor / (1.0f + scaled * scaled);
+    }
+
     float __fastcall GetChanceDetour(void* shooting) {
         float chance = g_originalGetChance(shooting);
         if (std::isnan(g_shot.recoil)) {
@@ -224,9 +275,10 @@ namespace {
         g_shot = {Recoil(shooting), std::min(Visibility(shooting) / kFullVisibility, 1.0f),
                   Crossing(shooting)};
         const int result = g_originalShootAt(shooting, unused, position, head, torso);
-        FCSE::Logf("shot at player: chance %.2f (recoil %.2f, sighting %.2f, crossing %.2f) at "
-                   "%.1f m, %s",
+        FCSE::Logf("shot at player: chance %.2f (recoil %.2f, sighting %.2f, crossing %.2f, weapon "
+                   "class %d) at %.1f m, %s",
                    g_shot.chance, g_shot.recoil, g_shot.sighting, g_shot.crossing,
+                   WeaponClass(shooting),
                    Read<float>(shooting, kTargetDistance),
                    Read<bool>(shooting, kLastShotHit) ? "hit" : "miss");
         g_shot = {};
@@ -249,8 +301,10 @@ namespace {
 }
 
 void InstallHitModel() {
-    if (!g_getTarget || !g_setupAimingDot || !g_getVisibility || !g_clock ||
+    if (!g_getTarget || !g_setupAimingDot || !g_getVisibility || !g_getEquippedWeapon ||
+        !g_clock ||
         !Hook(g_getTimerFactor, &GetTimerFactorDetour, &g_originalGetTimerFactor) ||
+        !Hook(g_getDistanceFactor, &GetDistanceFactorDetour, &g_originalGetDistanceFactor) ||
         !Hook(g_getChance, &GetChanceDetour, &g_originalGetChance) ||
         !Hook(g_shootAt, &ShootAtDetour, &g_originalShootAt) ||
         !Hook(g_canShoot, &CanShootDetour, &g_originalCanShoot)) {
