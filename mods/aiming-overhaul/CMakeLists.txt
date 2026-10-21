@@ -72,6 +72,7 @@ add_library(AimingOverhaul SHARED
   "src/breath.cpp"
   "src/eyepiece.cpp"
   "src/lean.cpp"
+  "src/peek.cpp"
   "src/scope_shadow.cpp"
   "src/scopes.cpp"
   "src/surroundings.cpp"

@@ -14,6 +14,7 @@
 #include "eyepiece.h"
 #include "fcse_api.h"
 #include "lean.h"
+#include "peek.h"
 #include "scope_shadow.h"
 #include "scopes.h"
 #include "streak.h"
@@ -87,13 +88,31 @@ namespace {
     void OnSignal(uint32_t signal) {
         AimingOverhaul::Breath::OnSignal(signal);
         AimingOverhaul::Lean::OnSignal(signal);
+        AimingOverhaul::Peek::OnSignal(signal);
+    }
+
+    // The gun near walls is judged from where the lean is taking the eye, so a lean out past a
+    // corner does not swing the gun down on the way.
+    void FollowWalls(float seconds) {
+        float forward[3];
+        AimingOverhaul::Aim::Forward(forward);
+        const float* eye = AimingOverhaul::Aim::Eye();
+        const float roll = AimingOverhaul::Lean::Current();
+        AimingOverhaul::Lean::SetAuto(AimingOverhaul::Peek::Update(seconds, eye, forward, roll));
+        float leaned[3];
+        if (eye != nullptr) {
+            AimingOverhaul::Peek::Shift(forward, roll, AimingOverhaul::Lean::Target(), leaned);
+            for (int i = 0; i < 3; i++) {
+                leaned[i] += eye[i];
+            }
+        }
+        const float down =
+            AimingOverhaul::Wall::Update(seconds, eye != nullptr ? leaned : nullptr, forward);
+        AimingOverhaul::Aim::SetGunDown(down, AimingOverhaul::Wall::Blocked());
     }
 
     AimingOverhaul::Aim::Offset OnAimFrame(float seconds) {
-        float forward[3];
-        AimingOverhaul::Aim::Forward(forward);
-        const float down = AimingOverhaul::Wall::Update(seconds, AimingOverhaul::Aim::Eye(), forward);
-        AimingOverhaul::Aim::SetGunDown(down, AimingOverhaul::Wall::Blocked());
+        FollowWalls(seconds);
         AimingOverhaul::Breath::Update(seconds, AimingOverhaul::Aim::Aiming());
         return AimingOverhaul::Sway::Drift(seconds);
     }
@@ -149,6 +168,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Hold breath", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Breath::SetEnabled)},
         {"Lean", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Lean::SetEnabled)},
+        {"Auto lean", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Peek::SetEnabled)},
         {"Gun near walls", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Wall::SetEnabled)},
         {"Gun blur", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Blur::SetEnabled)},
