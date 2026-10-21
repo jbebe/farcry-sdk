@@ -2,10 +2,10 @@
 
 Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.4.2] - 2026-10-21
 
 ### Fixed
-- **A crash at the menu is logged on machines whose startup hardware scan trips over itself.** On
+- **A crash is logged on machines whose startup hardware scan trips over itself.** On
   some graphics drivers, Windows' DxDiag scan raises the same harmless fault several times while the
   game starts, and each one used up a slot in `fcse.log`'s crash report, so a real crash later went
   unlogged. FCSE now reports each fault once, and no longer stops after the first eight.
