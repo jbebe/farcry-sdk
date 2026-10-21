@@ -3,7 +3,7 @@
 Notable changes to the Far Cry 2 Blender add-on, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.3.1] - 2026-10-21
 
 ### Added
 - **Eye view**, which looks out of the player's eye. It puts an `FC2 Eye` camera on the carried
