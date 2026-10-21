@@ -28,6 +28,9 @@ namespace {
 
     std::atomic<bool> g_enabled{true};
     double g_time = 0.0;
+    // The waves' sums at g_time, rightward and upward.
+    float g_right = 0.0f;
+    float g_up = 0.0f;
 
     float Sum(std::span<const Wave> waves) {
         float sum = 0.0f;
@@ -44,8 +47,10 @@ AimingOverhaul::Aim::Offset AimingOverhaul::Sway::Drift(float seconds) {
     if (!g_enabled) {
         return {};
     }
+    g_right = Sum(kRight);
+    g_up = Sum(kUp);
     const float drift = kDrift * Breath::Steadiness();
-    return {drift * Sum(kRight), drift * Sum(kUp)};
+    return {drift * g_right, drift * g_up};
 }
 
 AimingOverhaul::Look::Angles AimingOverhaul::Sway::Wander() {
@@ -54,7 +59,7 @@ AimingOverhaul::Look::Angles AimingOverhaul::Sway::Wander() {
     }
     const float wander = (kIronsightWander * Aim::Settled() + kScopeWander * Aim::Scoped()) *
                          Breath::Steadiness();
-    return {wander * Sum(kUp), wander * Sum(kRight)};
+    return {wander * g_up, wander * g_right};
 }
 
 void AimingOverhaul::Sway::SetEnabled(bool enabled) {

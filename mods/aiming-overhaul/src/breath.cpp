@@ -2,11 +2,11 @@
 // then the hands shake harder until it is let go, and the player is winded for a while after.
 #include "breath.h"
 
+#include "ease.h"
 #include "fcse_api.h"
 
 #include <algorithm>
 #include <atomic>
-#include <cmath>
 
 namespace {
     // The keyboard's sprint, sent every frame the key is held, and its release.
@@ -28,7 +28,6 @@ namespace {
     constexpr float kFollow = 0.25f;
 
     std::atomic<bool> g_enabled{true};
-    bool g_released = true;
     float g_sinceSprint = kLetGo;
     float g_breath = kLongest;
     float g_strain = 0.0f;
@@ -37,16 +36,15 @@ namespace {
 
 void AimingOverhaul::Breath::OnSignal(uint32_t signal) {
     if (signal == kSprint) {
-        g_released = false;
         g_sinceSprint = 0.0f;
     } else if (signal == kSprintReleased) {
-        g_released = true;
+        g_sinceSprint = kLetGo;
     }
 }
 
 void AimingOverhaul::Breath::Update(float seconds, bool aiming) {
     g_sinceSprint += seconds;
-    const bool holding = g_enabled && aiming && !g_released && g_sinceSprint < kLetGo;
+    const bool holding = g_enabled && aiming && g_sinceSprint < kLetGo;
     float target;
     if (holding && g_breath > 0.0f) {
         g_breath = (std::max)(g_breath - seconds, 0.0f);
@@ -59,7 +57,7 @@ void AimingOverhaul::Breath::Update(float seconds, bool aiming) {
         g_breath = (std::min)(g_breath + seconds * kLongest / kRecover, kLongest);
         target = 1.0f + (kWinded - 1.0f) * (1.0f - g_breath / kLongest);
     }
-    g_steadiness += (target - g_steadiness) * (1.0f - std::exp(-seconds / kFollow));
+    g_steadiness = Follow(g_steadiness, target, seconds, kFollow);
 }
 
 float AimingOverhaul::Breath::Steadiness() {

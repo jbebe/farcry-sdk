@@ -2,6 +2,7 @@
 #include "engine/sprint.h"
 
 #include "engine/memory.h"
+#include "engine/pawn.h"
 #include "fcse_api.h"
 
 #include <cstddef>
@@ -18,21 +19,13 @@ namespace {
     // Past the call and the OR, to the handler's return.
     constexpr ptrdiff_t kPastPress = 9;
 
-    // The listener's pawn, the pawn's data, and in it the effective flags.
-    constexpr ptrdiff_t kListenerPawn = 0x20;
-    constexpr ptrdiff_t kPawnData = 0x10;
-    constexpr ptrdiff_t kEffectiveFlags = 0x2D4;
-    constexpr uint8_t kIronsight = 0x08;
-
     AimingOverhaul::Sprint::RefuseFn g_refuse = nullptr;
 
     void OnPress(FCSE_MidHookContext* ctx) {
-        uint8_t* pawn = Field<uint8_t*>(reinterpret_cast<uint8_t*>(ctx->esi), kListenerPawn);
-        if (pawn == nullptr) {
-            return;
-        }
-        uint8_t* data = Field<uint8_t*>(pawn, kPawnData);
-        if ((Field<uint8_t>(data, kEffectiveFlags) & kIronsight) != 0 && g_refuse()) {
+        uint8_t* pawn = Field<uint8_t*>(reinterpret_cast<uint8_t*>(ctx->esi),
+                                        AimingOverhaul::Pawn::kListenerPawn);
+        if (pawn != nullptr && AimingOverhaul::Pawn::Is(pawn, AimingOverhaul::Pawn::kIronsight) &&
+            g_refuse()) {
             ctx->eip = g_press.address() + kPastPress;
         }
     }

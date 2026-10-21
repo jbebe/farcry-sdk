@@ -17,21 +17,24 @@ struct Swing {
     float y;
 };
 
-// The hand's drift this frame, given the seconds since the last.
-using DriftFn = Offset (*)(float seconds);
+// What the plugin adds to the camera this frame: the hand's drift, which the eye follows down the
+// iron sights, and the view's pitch over the body's, in radians, up positive.
+struct Adjust {
+    Offset drift;
+    float pitch;
+};
+
+// Once a frame, with the player's pawn and the seconds since the last, before the camera is placed
+// from the body, so what turns the body this frame turns the view too.
+using FrameFn = Adjust (*)(uint8_t* pawn, float seconds);
 
 // Follows the weapon in hand, or null: how far the eye comes forward, in metres, as its scope is
 // raised; nought unless the plugin draws that scope.
 using FollowWeaponFn = float (*)(uint8_t* weapon);
 
-// The body's roll this frame in radians, right positive, given the seconds since the last and
-// whether the player may lean: on foot and not sprinting.
-using LeanFn = float (*)(float seconds, bool free);
-
-// Hooks the first-person camera; `drift`, `followWeapon` and `lean` then run once a frame, down the
-// iron sights the eye follows the drift, and the body rolls by the lean before the camera is placed
-// from it. False, and logged, when the camera cannot be hooked.
-bool Install(DriftFn drift, FollowWeaponFn followWeapon, LeanFn lean);
+// Hooks the first-person camera; `frame` and `followWeapon` then run once a frame. False, and
+// logged, when the camera cannot be hooked.
+bool Install(FrameFn frame, FollowWeaponFn followWeapon);
 
 // How far the eye has settled into the iron sights, and into a scope's own sight picture, eased
 // from nought to one. At most one of them is above nought.
@@ -59,21 +62,12 @@ float ScopeKick();
 const char* WeaponName();
 uint32_t WeaponChanges();
 
-// The player's pawn as the camera last saw it, and whether that was a moment ago, on foot.
-uint8_t* Pawn();
-bool OnFoot();
-
 // Where the eye was last placed, in the world, or null before it was.
 const float* Eye();
 
-// The view's direction this frame, as a unit vector in the world.
+// The view's direction, as a unit vector in the world: the body's look this frame, with the view's
+// pitch last added over it.
 void Forward(float out[3]);
-
-// Swings the gun down by `radians` while the view holds still: the camera is raised by as much as
-// the look is lowered, which the look's offset does with GunDown(). While `blocked`, the sights
-// are let go.
-void SetGunDown(float radians, bool blocked);
-float GunDown();
 
 // Whether a scope's magnification comes in at once with its sight picture rather than easing in
 // over the raise, so the view outside the eyepiece keeps the field of view it had. The eye then

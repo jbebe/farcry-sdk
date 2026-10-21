@@ -38,42 +38,49 @@ namespace {
                                           uint32_t group);
     using FreeFn = void(__cdecl*)(const void* memory);
     FCSE::Relocation<CastRayFn> g_castRay{FCSE::Uplay(0x0048DD30)};
-    FCSE::Relocation<FilterFn> g_filter{FCSE::Uplay(0x0048EC40)};
+    FCSE::Relocation<FilterFn> g_makeFilter{FCSE::Uplay(0x0048EC40)};
     FCSE::Relocation<FreeFn> g_free{FCSE::Uplay(0x00228AD0)};
     FCSE::Relocation<void**> g_system{FCSE::Uplay(0x01613D60)};
 
     bool g_installed = false;
+    Filter g_filter = {};
 
-    float Length(const float v[3]) {
-        return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    // The first hit's distance, or a negative one when nothing is hit.
+    float FirstHit(const float from[3], const float direction[3], float length) {
+        void* system = g_installed ? *g_system.get() : nullptr;
+        if (system == nullptr) {
+            return -1.0f;
+        }
+        const float delta[3] = {direction[0] * length, direction[1] * length, direction[2] * length};
+        Hits hits = {};
+        g_castRay(system, nullptr, from, delta, &hits, &g_filter, nullptr, kClosest);
+        float distance = -1.0f;
+        if (hits.size > 0) {
+            distance = std::hypot(hits.data[0] - from[0], hits.data[1] - from[1],
+                                  hits.data[2] - from[2]);
+        }
+        if (hits.data != nullptr && (hits.capacity & kBorrowed) == 0) {
+            g_free(hits.data);
+        }
+        return distance;
     }
 }
 
 bool AimingOverhaul::Ray::Install() {
-    g_installed = g_castRay && g_filter && g_free && g_system;
+    g_installed = g_castRay && g_makeFilter && g_free && g_system;
     if (!g_installed) {
         FCSE::ApiPointer()->Log("ray: the physics ray cast was not found in this build");
+        return false;
     }
-    return g_installed;
+    g_makeFilter(&g_filter, nullptr, kSolid, 0);
+    return true;
 }
 
-float AimingOverhaul::Ray::Cast(const float from[3], const float delta[3]) {
-    const float length = Length(delta);
-    void* system = g_installed ? *g_system.get() : nullptr;
-    if (system == nullptr) {
-        return length;
-    }
-    Filter filter;
-    g_filter(&filter, nullptr, kSolid, 0);
-    Hits hits = {};
-    g_castRay(system, nullptr, from, delta, &hits, &filter, nullptr, kClosest);
-    float distance = length;
-    if (hits.size > 0) {
-        const float to[3] = {hits.data[0] - from[0], hits.data[1] - from[1], hits.data[2] - from[2]};
-        distance = Length(to);
-    }
-    if (hits.data != nullptr && (hits.capacity & kBorrowed) == 0) {
-        g_free(hits.data);
-    }
-    return distance;
+float AimingOverhaul::Ray::Cast(const float from[3], const float direction[3], float length) {
+    const float distance = FirstHit(from, direction, length);
+    return distance < 0.0f ? length : distance;
+}
+
+bool AimingOverhaul::Ray::Clear(const float from[3], const float direction[3], float length) {
+    return FirstHit(from, direction, length) < 0.0f;
 }

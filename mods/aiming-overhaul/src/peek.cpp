@@ -11,13 +11,12 @@
 #include <initializer_list>
 
 namespace {
+    // The aim key itself, since the sights are let go while the gun is swung down at a wall.
     constexpr uint32_t kAim = FCSE::Crc32("startironsight");
     constexpr uint32_t kAimReleased = FCSE::Crc32("stopironsight");
 
-    // Metres from the feet to the eye, which the body rolls about.
-    constexpr float kEyeHeight = 1.6f;
-    // Metres ahead that must be clear for the view to count as open, and the share of a full lean
-    // tried in steps, smallest first.
+    // Metres ahead that must be clear for the view to count as open, and the steps a full lean is
+    // tried in, smallest first.
     constexpr float kProbe = 1.2f;
     constexpr int kSteps = 3;
     // Seconds between looks, so a lean holds for at least that long.
@@ -28,19 +27,15 @@ namespace {
     float g_sinceLook = kInterval;
     float g_target = 0.0f;
 
-    bool Open(const float from[3], const float forward[3]) {
-        const float probe[3] = {forward[0] * kProbe, forward[1] * kProbe, forward[2] * kProbe};
-        return AimingOverhaul::Ray::Cast(from, probe) >= kProbe * 0.99f;
-    }
-
     // Whether the eye can lean by `shift` from `base` and see past what is ahead from there.
     bool Clears(const float base[3], const float shift[3], const float forward[3]) {
-        const float length = std::sqrt(shift[0] * shift[0] + shift[1] * shift[1] + shift[2] * shift[2]);
-        if (AimingOverhaul::Ray::Cast(base, shift) < length * 0.99f) {
+        const float length = std::hypot(shift[0], shift[1], shift[2]);
+        const float way[3] = {shift[0] / length, shift[1] / length, shift[2] / length};
+        if (!AimingOverhaul::Ray::Clear(base, way, length)) {
             return false;
         }
         const float leaned[3] = {base[0] + shift[0], base[1] + shift[1], base[2] + shift[2]};
-        return Open(leaned, forward);
+        return AimingOverhaul::Ray::Clear(leaned, forward, kProbe);
     }
 
     float Search(const float base[3], const float forward[3]) {
@@ -50,7 +45,7 @@ namespace {
             for (const float side : {first, -first}) {
                 const float roll = side * AimingOverhaul::Lean::kMostRoll * step / kSteps;
                 float shift[3];
-                AimingOverhaul::Peek::Shift(forward, 0.0f, roll, shift);
+                AimingOverhaul::Lean::Shift(forward, 0.0f, roll, shift);
                 if (Clears(base, shift, forward)) {
                     return roll;
                 }
@@ -80,20 +75,10 @@ float AimingOverhaul::Peek::Update(float seconds, const float eye[3], const floa
     }
     g_sinceLook = 0.0f;
     float back[3];
-    Shift(forward, roll, 0.0f, back);
+    Lean::Shift(forward, roll, 0.0f, back);
     const float base[3] = {eye[0] + back[0], eye[1] + back[1], eye[2] + back[2]};
-    g_target = Open(base, forward) ? 0.0f : Search(base, forward);
+    g_target = Ray::Clear(base, forward, kProbe) ? 0.0f : Search(base, forward);
     return g_target;
-}
-
-void AimingOverhaul::Peek::Shift(const float forward[3], float from, float to, float out[3]) {
-    const float level = std::hypot(forward[0], forward[1]);
-    const float right[2] = {level > 0.0f ? forward[1] / level : 1.0f,
-                            level > 0.0f ? -forward[0] / level : 0.0f};
-    const float side = kEyeHeight * (std::sin(to) - std::sin(from));
-    out[0] = right[0] * side;
-    out[1] = right[1] * side;
-    out[2] = kEyeHeight * (std::cos(to) - std::cos(from));
 }
 
 void AimingOverhaul::Peek::SetEnabled(bool enabled) {

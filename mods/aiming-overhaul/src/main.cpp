@@ -7,6 +7,7 @@
 #include "engine/fire.h"
 #include "engine/input.h"
 #include "engine/look.h"
+#include "engine/pawn.h"
 #include "engine/ray.h"
 #include "engine/second_view.h"
 #include "engine/sprint.h"
@@ -22,6 +23,8 @@
 #include "sway.h"
 #include "tracers.h"
 #include "wall.h"
+
+#include <windows.h>
 
 #include <iterator>
 
@@ -91,48 +94,55 @@ namespace {
         AimingOverhaul::Peek::OnSignal(signal);
     }
 
-    // The gun near walls is judged from where the lean is taking the eye, so a lean out past a
-    // corner does not swing the gun down on the way.
-    void FollowWalls(float seconds) {
+    // The player's pawn as the camera last saw it, and when. The camera stops seeing it out of a
+    // vehicle, and a gun blocked at a wall is not refused there.
+    uint8_t* g_pawn = nullptr;
+    ULONGLONG g_seen = 0;
+    constexpr ULONGLONG kOnFootMilliseconds = 200;
+
+    // The lean, then the gun near walls, judged from where the lean is taking the eye so a lean out
+    // past a corner does not swing the gun down on the way, then the breath and the sway.
+    AimingOverhaul::Aim::Adjust OnAimFrame(uint8_t* pawn, float seconds) {
+        using namespace AimingOverhaul;
+        g_pawn = pawn;
+        g_seen = GetTickCount64();
         float forward[3];
-        AimingOverhaul::Aim::Forward(forward);
-        const float* eye = AimingOverhaul::Aim::Eye();
-        const float roll = AimingOverhaul::Lean::Current();
-        AimingOverhaul::Lean::SetAuto(AimingOverhaul::Peek::Update(seconds, eye, forward, roll));
+        Aim::Forward(forward);
+        const float* eye = Aim::Eye();
+        const float autoRoll = Peek::Update(seconds, eye, forward, Lean::Current());
+        const float roll = Lean::Roll(seconds, !Pawn::Is(pawn, Pawn::kSprint), autoRoll);
+        Body::Roll(pawn, roll);
         float leaned[3];
         if (eye != nullptr) {
-            AimingOverhaul::Peek::Shift(forward, roll, AimingOverhaul::Lean::Target(), leaned);
+            Lean::Shift(forward, roll, Lean::Target(), leaned);
             for (int i = 0; i < 3; i++) {
                 leaned[i] += eye[i];
             }
         }
-        const float down =
-            AimingOverhaul::Wall::Update(seconds, eye != nullptr ? leaned : nullptr, forward);
-        AimingOverhaul::Aim::SetGunDown(down, AimingOverhaul::Wall::Blocked());
-    }
-
-    AimingOverhaul::Aim::Offset OnAimFrame(float seconds) {
-        FollowWalls(seconds);
-        AimingOverhaul::Breath::Update(seconds, AimingOverhaul::Aim::Aiming());
-        return AimingOverhaul::Sway::Drift(seconds);
+        Wall::Update(seconds, eye != nullptr ? leaned : nullptr, forward);
+        if (Wall::Blocked()) {
+            Pawn::DropSights(pawn);
+        }
+        Breath::Update(seconds, Aim::Aiming());
+        return {Sway::Drift(seconds), Wall::Down()};
     }
 
     // The sway's wander, with the look lowered as far as the gun is swung down.
     AimingOverhaul::Look::Angles OnLook() {
         AimingOverhaul::Look::Angles angles = AimingOverhaul::Sway::Wander();
-        angles.up -= AimingOverhaul::Aim::GunDown();
+        angles.up -= AimingOverhaul::Wall::Down();
         return angles;
     }
 
     bool RefuseShot(uint8_t* pawn) {
-        return pawn != nullptr && pawn == AimingOverhaul::Aim::Pawn() &&
-               AimingOverhaul::Aim::OnFoot() && AimingOverhaul::Wall::Blocked();
+        return AimingOverhaul::Wall::Blocked() && pawn != nullptr && pawn == g_pawn &&
+               GetTickCount64() - g_seen < kOnFootMilliseconds;
     }
 }
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION || !FCSE::Bind(api) ||
-        !AimingOverhaul::Aim::Install(&OnAimFrame, &FollowWeapon, &AimingOverhaul::Lean::Roll)) {
+        !AimingOverhaul::Aim::Install(&OnAimFrame, &FollowWeapon)) {
         return false;
     }
 

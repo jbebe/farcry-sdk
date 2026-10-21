@@ -2,6 +2,7 @@
 // down it neither fires nor comes up to the sights.
 #include "wall.h"
 
+#include "ease.h"
 #include "engine/ray.h"
 
 #include <algorithm>
@@ -21,28 +22,24 @@ namespace {
 
     std::atomic<bool> g_enabled{true};
     float g_swing = 0.0f;
-    std::atomic<bool> g_blocked{false};
-
-    float Ease(float linear) {
-        return linear * linear * (3.0f - 2.0f * linear);
-    }
+    bool g_blocked = false;
 }
 
-float AimingOverhaul::Wall::Update(float seconds, const float eye[3], const float forward[3]) {
+void AimingOverhaul::Wall::Update(float seconds, const float eye[3], const float forward[3]) {
     float target = 0.0f;
     if (g_enabled && eye != nullptr) {
-        const float delta[3] = {forward[0] * kReach, forward[1] * kReach, forward[2] * kReach};
-        const float room = Ray::Cast(eye, delta);
+        const float room = Ray::Cast(eye, forward, kReach);
         target = std::clamp((kReach - room) / kSwingRoom, 0.0f, 1.0f);
     }
-    const float step = seconds / kSwingTime;
-    g_swing = target > g_swing ? (std::min)(g_swing + step, target)
-                               : (std::max)(g_swing - step, target);
+    g_swing = Approach(g_swing, target, seconds / kSwingTime);
     if (g_swing > kBlockAbove) {
         g_blocked = true;
     } else if (g_swing < kFreeBelow) {
         g_blocked = false;
     }
+}
+
+float AimingOverhaul::Wall::Down() {
     return kMostSwing * Ease(g_swing);
 }
 

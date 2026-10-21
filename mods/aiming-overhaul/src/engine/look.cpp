@@ -4,6 +4,7 @@
 #include "engine/look.h"
 
 #include "engine/memory.h"
+#include "engine/pawn.h"
 #include "fcse_api.h"
 
 #include <cstddef>
@@ -18,10 +19,7 @@ namespace {
     FCSE::Relocation<UpdateLookFn> g_updateLook{FCSE::Uplay(0x00143C40)};
     UpdateLookFn g_originalUpdateLook = nullptr;
 
-    // The listener's pawn; the pawn's data, and in it the desired look in radians, pitch up and yaw
-    // left, kept twice.
-    constexpr ptrdiff_t kListenerPawn = 0x20;
-    constexpr ptrdiff_t kPawnData = 0x10;
+    // In the pawn's data, the desired look in radians, pitch up and yaw left, kept twice.
     constexpr ptrdiff_t kDesiredPitch = 0x178;
     constexpr ptrdiff_t kDesiredYaw = 0x180;
     constexpr ptrdiff_t kDesiredAimPitch = 0x184;
@@ -33,7 +31,7 @@ namespace {
 
     void __fastcall UpdateLookDetour(uint8_t* listener, void* unused) {
         g_originalUpdateLook(listener, unused);
-        uint8_t* pawn = Field<uint8_t*>(listener, kListenerPawn);
+        uint8_t* pawn = Field<uint8_t*>(listener, AimingOverhaul::Pawn::kListenerPawn);
         if (pawn == nullptr) {
             return;
         }
@@ -46,7 +44,7 @@ namespace {
         const float left = g_applied.right - wanted.right;
         g_applied = wanted;
 
-        uint8_t* data = Field<uint8_t*>(pawn, kPawnData);
+        uint8_t* data = AimingOverhaul::Pawn::Data(pawn);
         Field<float>(data, kDesiredPitch) += up;
         Field<float>(data, kDesiredAimPitch) += up;
         Field<float>(data, kDesiredYaw) += left;

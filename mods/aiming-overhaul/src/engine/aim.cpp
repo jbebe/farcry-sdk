@@ -3,9 +3,10 @@
 // See docs/docs/engine-internals/first-person-aiming.md.
 #include "engine/aim.h"
 
-#include "engine/body.h"
+#include "ease.h"
 #include "engine/entity_name.h"
 #include "engine/memory.h"
+#include "engine/pawn.h"
 #include "fcse_api.h"
 
 #include <windows.h>
@@ -57,13 +58,7 @@ namespace {
     // The scene camera's position in the world.
     constexpr ptrdiff_t kScenePosition = 0x08;
 
-    // CPawn's data, and in it the desired and effective flags, the effective look in radians
-    // (pitch up, yaw left), and the inventory.
-    constexpr ptrdiff_t kPawnData = 0x10;
-    constexpr ptrdiff_t kDesiredFlags = 0x144;
-    constexpr ptrdiff_t kEffectiveFlags = 0x2D4;
-    constexpr uint8_t kIronsight = 0x08;
-    constexpr uint8_t kSprint = 0x40;
+    // In CPawn's data, the effective look in radians (pitch up, yaw left), and the inventory.
     constexpr ptrdiff_t kEffectivePitch = 0x308;
     constexpr ptrdiff_t kEffectiveYaw = 0x310;
     constexpr ptrdiff_t kInventory = 0x4F0;
@@ -92,9 +87,8 @@ namespace {
     constexpr float kSwingPerTurn = 1.5f;
     constexpr float kMostSwing = 0.5f;
 
-    AimingOverhaul::Aim::DriftFn g_drift = nullptr;
+    AimingOverhaul::Aim::FrameFn g_frame = nullptr;
     AimingOverhaul::Aim::FollowWeaponFn g_followWeapon = nullptr;
-    AimingOverhaul::Aim::LeanFn g_lean = nullptr;
     std::atomic<bool> g_zoomAtOnce{true};
     std::atomic<bool> g_ironsightZoom{true};
     float g_sights = 0.0f;
@@ -128,20 +122,11 @@ namespace {
     float g_addedAhead = 0.0f;
     float g_addedPitch = 0.0f;
 
-    // The player's pawn, when the camera last saw it, and how long ago still counts as on foot.
-    uint8_t* g_pawn = nullptr;
-    ULONGLONG g_seen = 0;
-    constexpr ULONGLONG kOnFootMilliseconds = 200;
-
     // The eye as last placed, and the view's look this frame, radians, pitch up and yaw left.
     float g_eye[3] = {};
     bool g_eyePlaced = false;
     float g_viewPitch = 0.0f;
     float g_viewYaw = 0.0f;
-
-    // How far the gun is swung down, in radians, and whether the sights are let go.
-    float g_gunDown = 0.0f;
-    bool g_blocked = false;
 
     // The look last frame, for which pawn, and how fast it has been turning, in radians a second.
     uint8_t* g_lookPawn = nullptr;
@@ -151,14 +136,6 @@ namespace {
     float g_turnUp = 0.0f;
     std::atomic<float> g_turnedRight{0.0f};
     std::atomic<float> g_turnedUp{0.0f};
-
-    float Ease(float linear) {
-        return linear * linear * (3.0f - 2.0f * linear);
-    }
-
-    float Approach(float value, bool toward, float step) {
-        return std::clamp(value + (toward ? step : -step), 0.0f, 1.0f);
-    }
 
     // Notes the equipped weapon's name each time it changes, and its scope's raise.
     void FollowWeapon(uint8_t* weapon) {
@@ -251,10 +228,8 @@ namespace {
             return;
         }
 
-        uint8_t* data = Field<uint8_t*>(pawn, kPawnData);
-        const uint8_t flags = Field<uint8_t>(data, kEffectiveFlags);
-        const bool sights = (flags & kIronsight) != 0;
-        AimingOverhaul::Body::Roll(pawn, g_lean(seconds, (flags & kSprint) == 0));
+        uint8_t* data = AimingOverhaul::Pawn::Data(pawn);
+        const bool sights = AimingOverhaul::Pawn::Is(pawn, AimingOverhaul::Pawn::kIronsight);
         uint8_t* weapon = g_equippedWeapon(data + kInventory);
         FollowWeapon(weapon);
         // The scope's sight picture outlasts the iron sights by a few frames as the scope goes.
@@ -262,10 +237,10 @@ namespace {
         const float step = seconds / kSettle;
         // The iron sights let go at once when a scope's own sight picture comes up, and the scope
         // when it goes.
-        g_sights = scope ? 0.0f : Approach(g_sights, sights, step);
-        g_scope = scope ? Approach(g_scope, true, step) : 0.0f;
-        const float settled = Ease(g_sights);
-        const float scoped = Ease(g_scope);
+        g_sights = scope ? 0.0f : AimingOverhaul::Approach(g_sights, sights ? 1.0f : 0.0f, step);
+        g_scope = scope ? AimingOverhaul::Approach(g_scope, 1.0f, step) : 0.0f;
+        const float settled = AimingOverhaul::Ease(g_sights);
+        const float scoped = AimingOverhaul::Ease(g_scope);
         g_settled = settled;
         g_scoped = scoped;
         FollowShots(scope, seconds);
@@ -282,22 +257,17 @@ namespace {
         }
         const float raised =
             raising && g_raiseFrom < 1.0f ? (weight - g_raiseFrom) / (1.0f - g_raiseFrom) : 0.0f;
-        g_pawn = pawn;
-        g_seen = GetTickCount64();
-        g_viewPitch = Field<float>(data, kEffectivePitch) + g_gunDown;
+        g_viewPitch = Field<float>(data, kEffectivePitch) + g_addedPitch;
         g_viewYaw = Field<float>(data, kEffectiveYaw);
-        const AimingOverhaul::Aim::Offset drift = g_drift(seconds);
-        g_added = {drift.right * settled, drift.up * settled};
+        const AimingOverhaul::Aim::Adjust adjust = g_frame(pawn, seconds);
+        g_added = {adjust.drift.right * settled, adjust.drift.up * settled};
         g_addedAhead = g_raiseReach * raised;
-        g_addedPitch = g_gunDown;
+        g_addedPitch = adjust.pitch;
         Field<float>(camera, kEyeRight) += g_added.right;
         Field<float>(camera, kEyeUp) += g_added.up;
         Field<float>(camera, kEyeAhead) += g_addedAhead;
         Field<float>(camera, kViewPitch) += g_addedPitch;
         g_addedTo = camera;
-        if (g_blocked) {
-            Field<uint8_t>(data, kDesiredFlags) &= ~kIronsight;
-        }
     }
 
     // The field of view worked out again: with a scope's magnification wholly in while its sight
@@ -308,7 +278,7 @@ namespace {
         if (camera != g_playerCamera()) {
             return;
         }
-        uint8_t* data = Field<uint8_t*>(pawn, kPawnData);
+        uint8_t* data = AimingOverhaul::Pawn::Data(pawn);
         uint8_t* weapon = g_equippedWeapon(data + kInventory);
         if (Field<float>(data, kIronsightWeight) <= 0.0f) {
             return;
@@ -349,7 +319,7 @@ namespace {
     }
 }
 
-bool AimingOverhaul::Aim::Install(DriftFn drift, FollowWeaponFn followWeapon, LeanFn lean) {
+bool AimingOverhaul::Aim::Install(FrameFn frame, FollowWeaponFn followWeapon) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
     if (!g_update || !g_updateCameraOffset || !g_equippedWeapon || !g_playerCamera ||
         !g_sceneCamera) {
@@ -357,9 +327,8 @@ bool AimingOverhaul::Aim::Install(DriftFn drift, FollowWeaponFn followWeapon, Le
         return false;
     }
 
-    g_drift = drift;
+    g_frame = frame;
     g_followWeapon = followWeapon;
-    g_lean = lean;
     if (!Hook(g_update.address(), &UpdateDetour, &g_originalUpdate)) {
         return false;
     }
@@ -429,14 +398,6 @@ float AimingOverhaul::Aim::ScopeKick() {
     return g_scopeKick;
 }
 
-uint8_t* AimingOverhaul::Aim::Pawn() {
-    return g_pawn;
-}
-
-bool AimingOverhaul::Aim::OnFoot() {
-    return g_pawn != nullptr && GetTickCount64() - g_seen < kOnFootMilliseconds;
-}
-
 const float* AimingOverhaul::Aim::Eye() {
     return g_eyePlaced ? g_eye : nullptr;
 }
@@ -446,13 +407,4 @@ void AimingOverhaul::Aim::Forward(float out[3]) {
     out[0] = -std::sin(g_viewYaw) * level;
     out[1] = std::cos(g_viewYaw) * level;
     out[2] = std::sin(g_viewPitch);
-}
-
-void AimingOverhaul::Aim::SetGunDown(float radians, bool blocked) {
-    g_gunDown = radians;
-    g_blocked = blocked;
-}
-
-float AimingOverhaul::Aim::GunDown() {
-    return g_gunDown;
 }
