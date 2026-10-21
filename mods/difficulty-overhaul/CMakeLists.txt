@@ -17,10 +17,13 @@ add_library(DifficultyOverhaul SHARED
   "src/damage_taken.cpp"
   "src/damage_dealt.cpp"
   "src/hit_model.cpp"
+  "src/fire_discipline.cpp"
+  "src/range_falloff.cpp"
   "src/intuition.cpp"
   "src/grass.cpp"
   "src/engine/damage.cpp"
   "src/engine/game.cpp"
+  "src/engine/shooting.cpp"
 )
 
 target_include_directories(DifficultyOverhaul PRIVATE

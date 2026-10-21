@@ -23,7 +23,6 @@ namespace {
 
     constexpr ptrdiff_t kMissionManagerAct = 0x40;
     constexpr ptrdiff_t kEntityId = 0x08;
-    constexpr ptrdiff_t kEntityPosition = 0x60;
 
     const char* const kTypeNames[] = {"pierce", "crush", "cut"};
     const char* const kPartNames[] = {"head", "torso", "arms", "legs", "hands", "feet", "no body part"};
@@ -39,11 +38,11 @@ namespace {
         if (a == nullptr || b == nullptr) {
             return NAN;
         }
-        const auto axis = [&](ptrdiff_t i) {
-            const ptrdiff_t at = kEntityPosition + i * sizeof(float);
-            return Read<float>(a, at) - Read<float>(b, at);
-        };
-        return std::hypot(axis(0), axis(1), axis(2));
+        float p[3];
+        float q[3];
+        Game::Position(a, p);
+        Game::Position(b, q);
+        return std::hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
     }
 
     // One line: who, what hit them where and from how far, the result, and the settings behind it.

@@ -5,6 +5,8 @@ void InstallHitLog();
 void InstallDamageTaken();
 void InstallDamageDealt();
 void InstallHitModel();
+void InstallFireDiscipline();
+void InstallRangeFalloff();
 void InstallIntuition();
 void InstallGrass();
 
@@ -17,6 +19,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallDamageTaken();
     InstallDamageDealt();
     InstallHitModel();
+    InstallFireDiscipline();
+    InstallRangeFalloff();
     InstallIntuition();
     InstallGrass();
     return true;

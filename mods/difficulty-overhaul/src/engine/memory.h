@@ -28,4 +28,11 @@ bool Hook(const FCSE::Relocation<Fn>& site, Fn detour, Fn* original) {
                                             reinterpret_cast<void**>(original));
 }
 
+// Points the absolute memory operand `operand` bytes into the code at `site` at `value`, so the
+// instruction reads the plugin's float instead of a constant the game shares. False as Hook is.
+inline bool RedirectOperand(const FCSE::Relocation<uint8_t*>& site, ptrdiff_t operand,
+                            float* value) {
+    return site && FCSE::ApiPointer()->Patch(site.get() + operand, &value, sizeof(value));
+}
+
 }

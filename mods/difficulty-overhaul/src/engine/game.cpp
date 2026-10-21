@@ -23,6 +23,7 @@ namespace {
     constexpr ptrdiff_t kTerminalPlayer = 0x04;
     constexpr ptrdiff_t kPlayerProxy = 0x08;
     constexpr ptrdiff_t kProxyEntity = 0x0C;
+    constexpr ptrdiff_t kEntityPosition = 0x60;
 
     const char* const kNames[] = {"Easy", "Normal", "Hardcore", "Infamous"};
 }
@@ -60,6 +61,12 @@ void* PlayerEntity() {
 
 void* ProxyEntity(const void* proxy) {
     return proxy != nullptr ? Read<void*>(proxy, kProxyEntity) : nullptr;
+}
+
+void Position(const void* entity, float position[3]) {
+    for (int i = 0; i < 3; ++i) {
+        position[i] = Read<float>(entity, kEntityPosition + i * sizeof(float));
+    }
 }
 
 }
