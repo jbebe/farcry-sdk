@@ -181,7 +181,7 @@ A copy of `Animals.Quadrupeds.Goat` with these changes:
 |---|---|---|
 | Fragment | `mods/worlds/world1/generated/entitylibrary.fcb/Animals/DLC/Hyena.xml`, and the same under `world2` | JackAll appends a fragment that matches no archetype to the library group named by the first `hidName` segment, `Animals` *(read in `FcbFragments.AppendTarget`)*; the engine keys archetypes by `hidName` alone ([archetype table](../engine-internals/entity-instancing.md#the-archetype-table-is-one-name-keyed-map)) |
 | Names | `Name` `DLC.Hyena`, `hidName` `Animals.DLC.Hyena` | the retail pattern *(seen in data)* |
-| `disEntityId` | one above 5,735, the same in both worlds | archetype ids are one numbering across both libraries, 1 to 5,735, no duplicates; the goat is 6 *(seen in data)* |
+| `disEntityId` | one above 5,743, the same in both worlds | archetype ids are one numbering across both campaign libraries, 1 to 5,735, no duplicates; `tmpla`'s run on to 5,743 with other archetypes (its 5,736 is a PKM); the goat is 6 *(seen in data)* |
 | Mesh | `CGraphicComponent/object/objModel` and its `text_` twin: a new `graphics\characters\animals\hyena\hyena.xbg` | `CFileDescriptorComponent.hidDescriptor` mirrors a build-time `goat.xml` that does not ship; keep it consistent, but the model comes from `objModel` *(inferred, as for [vehicles](../engine-internals/vehicle-physics.md))* |
 | Rig | `CAnimationComponent.fileSkeleton`: the goat's own `hips_ref.skeleton` | [rig and animation](#rig-and-animation) |
 | Ragdoll | the goat's `goat_ragdoll.hkx`; `fMass` from 50 to about 60 | it is built on the same bones *(inferred)* |

@@ -9,6 +9,7 @@ staged it.
 |---|---|---|
 | Cape buffalo | charges the player instead of fleeing, gores on contact, then runs off | charge seen in game |
 | | a gore knocks the player down; they get up, unless it was the killing blow | built, not seen in game |
+| Hyena (new) | a new archetype on the goat as a stand-in, with zebra sight; retail animal brain, placed nowhere yet | built, not seen in game |
 
 ## The buffalo charge
 
@@ -74,6 +75,25 @@ nor costs a syringe.
 `build.ps1` builds the plugin and stages it into the layer. With the plugin loaded, DevTools' Lua tab
 can run `WildlifeKnockout:Faint()` or `WildlifeKnockout:Die()` once a knockdown has defined them
 (the game's Lua is 4.0: there is no `true`, so a flag argument cannot work).
+
+## The hyena
+
+A new animal, `Animals.DLC.Hyena`, beside the retail ones, built in steps from
+[the hyena research](../../docs/docs/design/attacking-animals.md#the-hyena). Step 1 is the archetype
+alone: a copy of `Animals.Quadrupeds.Goat`, still on the goat's mesh, rig and clips, with four
+changes:
+
+| Field | Goat | Hyena |
+|---|---|---|
+| `Name`, `hidName` | `Quadrupeds.Goat`, `Animals.Quadrupeds.Goat` | `DLC.Hyena`, `Animals.DLC.Hyena` |
+| `disEntityId` | 6 | 5,744, above every library's ids (`tmpla`'s run to 5,743) |
+| `CCharacterPhysComponent` `fMass` | 50 | 60 |
+| `CAnimalAgent.selAnimalSpecies` | 5 (goat: 3 m sight) | 2 (zebra: 25 m sight) |
+
+The fragment, `layer/mods/worlds/world{1,2}/generated/entitylibrary.fcb/Animals/DLC/Hyena.xml`,
+matches no retail archetype, so JackAll appends it to the `Animals` group. Nothing places it yet;
+spawn one from DevTools: on the Spawner tab press Datsun, copy the `SpawnEntityFromArchetype` line the
+Lua tab shows, and run it again with `"Animals.DLC.Hyena"` in place of the Datsun's archetype.
 
 ## Testing
 
