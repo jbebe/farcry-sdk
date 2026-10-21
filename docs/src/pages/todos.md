@@ -104,3 +104,6 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 - [ ] **Steady aim on a button.** The scope moves around unless the button is held, like in Call of
   Duty 2
 - [ ] **Enemy flashlights.** Enemies use flashlights at night
+- [ ] **Guard an outpost.** A job that pays 1 diamond per day: soldiers who are expected arrive, and
+  you let them through. Checking their documents could be part of it, if the game has dialogue that
+  fits
