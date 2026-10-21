@@ -16,7 +16,8 @@ plugin, with nothing on the Mod Configuration Menu.
 |---|---|
 | Damage taken | A bullet hits the player by where it lands, as a multiple of the game's damage: head 4, torso 2.5, arms and legs 1.5, hands and feet 1. The last health bar no longer quarters the damage. |
 | Damage dealt | The player's hits on a soldier use head 6, torso 2.5, arms and legs 1.25, hands and feet 0.75 in place of the game's 6, 1, 1, 0.5, 0.5, 0.5 |
-| Hit log | Writes every hit on the player, and every hit the player lands on a soldier, to `bin\fcse.log`: stim type and level, body part, range, health before and after, and whether a soldier was wounded or killed |
+| Hit model | How the AI's shots at the player land. Aim settles over 0.6 s plus 0.02 s per metre after he acquires the player, where the game misses outright and then hits at full accuracy; the chance is the real probability of a hit, capped at 0.85 so no shot is certain, point blank included; each shot's recoil costs the next up to 60 % of its chance, recovering in about a quarter of a second, in place of the game's forced misses after a hit; and he aims at the head only 15 % of the time, where the game alternates head and torso |
+| Hit log | Writes every hit on the player, and every hit the player lands on a soldier, to `bin\fcse.log`: stim type and level, body part, range, health before and after, and whether a soldier was wounded or killed. Every AI shot at the player gets a line too: its chance, the recoil factor, the range and whether it hit |
 
 A hit log line reads:
 

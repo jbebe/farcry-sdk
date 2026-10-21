@@ -16,6 +16,7 @@ add_library(DifficultyOverhaul SHARED
   "src/hit_log.cpp"
   "src/damage_taken.cpp"
   "src/damage_dealt.cpp"
+  "src/hit_model.cpp"
   "src/engine/damage.cpp"
   "src/engine/game.cpp"
 )

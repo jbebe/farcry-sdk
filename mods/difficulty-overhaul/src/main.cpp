@@ -4,6 +4,7 @@
 void InstallHitLog();
 void InstallDamageTaken();
 void InstallDamageDealt();
+void InstallHitModel();
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION || !FCSE::Bind(api)) {
@@ -13,5 +14,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallHitLog();
     InstallDamageTaken();
     InstallDamageDealt();
+    InstallHitModel();
     return true;
 }
