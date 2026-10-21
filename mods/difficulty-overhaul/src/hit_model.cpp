@@ -19,20 +19,24 @@ namespace {
     using ShootAtFn = int(__fastcall*)(void* shooting, void* unused, float* position, bool* head,
                                        bool* torso);
 
-    // CShootingSystem's GetChanceOfSuccess, GetTimerToMissFactor, GenerateShootAtPosition and
-    // GetTarget, and the game clock.
+    using SetupAimingDotFn = void(__fastcall*)(void* shooting);
+
+    // CShootingSystem's GetChanceOfSuccess, GetTimerToMissFactor, GenerateShootAtPosition,
+    // GetTarget and SetupAimingDot, and the game clock.
     FCSE::Relocation<ChanceFn> g_getChance{FCSE::Uplay(0x00A19EE0)};
     FCSE::Relocation<ChanceFn> g_getTimerFactor{FCSE::Uplay(0x00A19A60)};
     FCSE::Relocation<ShootAtFn> g_shootAt{FCSE::Uplay(0x00A1A110)};
     FCSE::Relocation<GetTargetFn> g_getTarget{FCSE::Uplay(0x00A19370)};
+    FCSE::Relocation<SetupAimingDotFn> g_setupAimingDot{FCSE::Uplay(0x00A193E0)};
     FCSE::Relocation<void**> g_clock{FCSE::Uplay(0x01606360)};
     ChanceFn g_originalGetChance = nullptr;
     ChanceFn g_originalGetTimerFactor = nullptr;
     ShootAtFn g_originalShootAt = nullptr;
 
-    // CShootingSystem: the aim dot's bone (-1 until set up), the part it aims at, the reaction
-    // CLifeTimer (lifetime, then start time), the target distance, and whether the last shot hit.
-    constexpr ptrdiff_t kAimBone = 0x1C;
+    // CShootingSystem: the part its aim dot is on (-1 until set up), the part to set the next dot
+    // up on, the reaction CLifeTimer (lifetime, then start time), the target distance, and whether
+    // the last shot hit.
+    constexpr ptrdiff_t kDotPart = 0x1C;
     constexpr ptrdiff_t kAimPart = 0x34;
     constexpr ptrdiff_t kReactionLifetime = 0xBC;
     constexpr ptrdiff_t kReactionStart = 0xC0;
@@ -137,10 +141,11 @@ namespace {
         auto* system = static_cast<uint8_t*>(shooting);
         // No streak of forced misses after a hit.
         system[kLastShotHit] = 0;
-        // A dot about to be set up aims at the part chosen here.
-        if (Read<int>(system, kAimBone) == -1) {
-            const bool aimHead = std::rand() < kHeadAimShare * RAND_MAX;
-            *reinterpret_cast<int*>(system + kAimPart) = aimHead ? kHeadPart : kTorsoPart;
+        // Each shot is aimed at the head or the torso by kHeadAimShare, whatever the brain asked.
+        const int part = std::rand() < kHeadAimShare * RAND_MAX ? kHeadPart : kTorsoPart;
+        if (Read<int>(system, kDotPart) != part) {
+            *reinterpret_cast<int*>(system + kAimPart) = part;
+            g_setupAimingDot(shooting);
         }
 
         g_rolling = true;
@@ -160,7 +165,7 @@ namespace {
 }
 
 void InstallHitModel() {
-    if (!g_getTarget || !g_clock ||
+    if (!g_getTarget || !g_setupAimingDot || !g_clock ||
         !Hook(g_getTimerFactor, &GetTimerFactorDetour, &g_originalGetTimerFactor) ||
         !Hook(g_getChance, &GetChanceDetour, &g_originalGetChance) ||
         !Hook(g_shootAt, &ShootAtDetour, &g_originalShootAt)) {
