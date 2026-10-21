@@ -220,17 +220,31 @@ eye stays where it was, and the arms and the gun stay level with the world, so t
 Retail GOG v1.03, from Aiming Overhaul.
 :::
 
-A lean is therefore the camera's own: its roll at `+0xD4` and its eye at `+0xE8`, both turned with
-the view. The gun is drawn through `c0`–`c3`, the view's rotation times the projection, with the
-projection alone at `c8`–`c11` (see [the weapon's passes](./presentation-and-input.md)). For the
-gun to roll and move with the view, each of its draws can be given `P · A · P⁻¹ · C` in place of
-`C`, with `A` the view's roll and the eye's move in camera space. That draws it exactly as the camera
-saw it before the lean. A shot still leaves from body part 0, and the bullet strategy's first-person
-setup (`0x10112600`, `__thiscall(pawn, origin, direction, ·)`, `RET 0x10`) writes the origin, which
-can be moved after it returns.
+The camera update is the last thing in the frame to read the body. Within `CEngine::Update`, the
+physics step is followed by its post-step queue (`0x1058D8F0`, `__thiscall(float seconds)`,
+`RET 4`), which runs every registered physics component's `vt+0x90` to place its entity, and only
+then by the post-physics tick list, where the body is posed for drawing, the weapon is linked to its
+hand (`0x10541FD0`) and, last, the camera is updated. Whatever turns the entity right after the
+post-step therefore turns the drawn arms and gun, the muzzle, the scope's part, the camera and where
+a shot leaves from together. `SetPosition` and `SetEuler` there move the entity alone: the engine's
+own animation root motion (`0x100E9B80`) uses them in the same tick list, and passes the physics
+component explicitly when it wants the body moved too.
+
+Camera-side alternatives fall short. Moving the eye through the camera's offsets and drawing the gun
+from the unleaned camera (the gun is placed through `c0`–`c3`, the projection alone being at
+`c8`–`c11`) leaves the muzzle flash and the tracers at the unleaned gun, and a scope's `SCOPE_HI`
+part, a few centimetres ahead of the unleaned eye, outside a magnified view's frustum.
+
+:::info[Seen in a running game]
+With the eye moved 0.43 m through the camera's offset and the view rolled, iron sights came up but a
+scope's sight picture never showed, and the muzzle flash stayed at the gun's unleaned place. Retail
+GOG v1.03, from Aiming Overhaul.
+:::
 
 :::warning[Not yet tested in a running game]
-Aiming Overhaul's lean does all three. None of it has been seen yet.
+Aiming Overhaul's lean rolls the pawn entity about the belly from the post-step. Whether the
+post-step places the entity afresh each frame, and whether the AI's sight follows the leaned body,
+are unchecked.
 :::
 
 ## A scope's sight picture

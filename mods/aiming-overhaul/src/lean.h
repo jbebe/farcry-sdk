@@ -1,5 +1,5 @@
-// Leaning: held Q or E rolls the upper body out to the side about the belly, so the eye swings
-// sideways and a little down as the view rolls, and the gun goes with it.
+// Leaning: held Q or E rolls the body out to the side about the belly, so the eye swings sideways
+// and a little down as the view rolls, and the gun goes with it.
 #pragma once
 
 #include "engine/aim.h"

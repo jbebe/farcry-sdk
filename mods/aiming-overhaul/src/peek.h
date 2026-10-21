@@ -9,6 +9,10 @@ namespace AimingOverhaul::Peek {
 // for none.
 float Update(float seconds, bool aimHeld, const float eye[3], const float forward[3], float roll);
 
+// The view's heading when the lean out began, in radians, left positive. The wall is on the side
+// opposite the lean, so the look is held from turning back past it.
+float Heading();
+
 void SetEnabled(bool enabled);
 
 }

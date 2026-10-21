@@ -4,7 +4,6 @@
 // See docs/docs/engine-internals/presentation-and-input.md for the passes.
 #pragma once
 
-#include "engine/aim.h"
 #include "engine/frame.h"
 
 #include <d3d9.h>
@@ -56,10 +55,6 @@ struct Listener {
 // down the sights or a scope, and for a few frames after a scope, which the render thread can still
 // be drawing. False, and logged, when either cannot be hooked.
 bool Install(const Listener& listener);
-
-// Draws the gun as the camera saw it before it was rolled by `roll` radians, right positive, and its
-// eye moved by `eye` along its axes before the roll, so the gun rolls and moves with the view.
-void SetViewMove(float roll, Aim::Offset eye);
 
 void ReleaseDeviceObjects();
 

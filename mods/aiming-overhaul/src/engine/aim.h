@@ -17,15 +17,11 @@ struct Swing {
     float y;
 };
 
-// What the plugin adds to the camera this frame.
+// What the plugin adds to the camera this frame: the hand's drift, which the eye follows down the
+// iron sights, and the view's pitch over the body's, in radians, up positive.
 struct Adjust {
-    // The hand's drift, which the eye follows down the iron sights.
     Offset drift;
-    // The eye's own move, along the view's axes before its roll.
-    Offset eye;
-    // The view's pitch and roll over the body's, in radians, up and right positive.
     float pitch;
-    float roll;
 };
 
 // Once a frame, with the player's pawn and the seconds since the last, before the camera is placed

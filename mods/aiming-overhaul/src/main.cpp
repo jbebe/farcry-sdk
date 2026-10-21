@@ -2,6 +2,7 @@
 #include "blur.h"
 #include "breath.h"
 #include "engine/aim.h"
+#include "engine/body.h"
 #include "engine/device_reset.h"
 #include "engine/fire.h"
 #include "engine/input.h"
@@ -9,7 +10,6 @@
 #include "engine/pawn.h"
 #include "engine/ray.h"
 #include "engine/second_view.h"
-#include "engine/shot.h"
 #include "engine/sprint.h"
 #include "engine/weapon_draws.h"
 #include "eyepiece.h"
@@ -126,8 +126,10 @@ namespace {
         const float* eye = Aim::Eye();
         const float autoRoll = Peek::Update(seconds, g_aimHeld, eye, forward, Lean::Current());
         const float roll = Lean::Roll(seconds, !Pawn::Is(pawn, Pawn::kSprint), autoRoll);
-        const Aim::Offset leanEye = Lean::Eye(roll);
-        WeaponDraws::SetViewMove(roll, leanEye);
+        Body::Lean(pawn, roll);
+        // Leaned out by itself, the look turns freely toward the open side and stops at the wall's.
+        const bool peeking = autoRoll != 0.0f && Lean::Target() == autoRoll;
+        Look::SetYawLimit(peeking ? autoRoll : 0.0f, Peek::Heading());
         float leaned[3];
         if (eye != nullptr) {
             Lean::Shift(forward, roll, Lean::Target(), leaned);
@@ -146,22 +148,7 @@ namespace {
             g_sightsDropped = false;
         }
         Breath::Update(seconds, Aim::Aiming());
-        return {Sway::Drift(seconds), leanEye, Wall::Down(), roll};
-    }
-
-    // The player's shot leaves from where the lean has taken the eye.
-    void MoveShot(uint8_t* pawn, float origin[3]) {
-        const float roll = AimingOverhaul::Lean::Current();
-        if (roll == 0.0f || !OnFoot(pawn)) {
-            return;
-        }
-        float forward[3];
-        float shift[3];
-        AimingOverhaul::Aim::Forward(forward);
-        AimingOverhaul::Lean::Shift(forward, 0.0f, roll, shift);
-        for (int i = 0; i < 3; i++) {
-            origin[i] += shift[i];
-        }
+        return {Sway::Drift(seconds), Wall::Down()};
     }
 
     // The sway's wander, with the look lowered as far as the gun is swung down.
@@ -203,7 +190,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     AimingOverhaul::Tracers::Install();
     AimingOverhaul::Streak::Install();
     AimingOverhaul::Look::Install(&OnLook);
-    AimingOverhaul::Shot::Install(&MoveShot);
+    AimingOverhaul::Body::Install();
     AimingOverhaul::Ray::Install();
     AimingOverhaul::Fire::Install(&RefuseShot);
     AimingOverhaul::Input::Install(&OnSignal);

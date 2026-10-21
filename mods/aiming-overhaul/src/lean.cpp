@@ -1,5 +1,5 @@
-// Leaning: held Q or E rolls the upper body out to the side about the belly, so the eye swings
-// sideways and a little down as the view rolls, and the gun goes with it.
+// Leaning: held Q or E rolls the body out to the side about the belly, so the eye swings sideways
+// and a little down as the view rolls, and the gun goes with it.
 #include "lean.h"
 
 #include "ease.h"
@@ -16,7 +16,7 @@ namespace {
 
     // Seconds for the roll to follow, which takes it most of the way in a quarter of a second.
     constexpr float kFollow = 0.08f;
-    // Metres from the belly up to the eye.
+    // Metres from the belly the body leans about up to a standing eye.
     constexpr float kPivot = 1.0f;
 
     std::atomic<bool> g_enabled{true};

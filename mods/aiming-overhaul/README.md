@@ -22,15 +22,17 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   up to two and a half times the sway, until it is let go. After a hold the sway is up to half again
   as large while the breath comes back, which takes 3 s from empty. Through the sights the sprint
   key does nothing else.
-- **Lean.** Holding Lean left or Lean right rolls the upper body about the belly, 25° over a quarter
-  of a second: the view rolls, and the eye swings 0.43 m to the side and 10 cm down, around a corner.
-  The gun rolls and moves with the view, and shots leave from where the eye now is. The eye stays
-  inside the body's own collision, so it never leans into a wall. There is no lean while sprinting.
-  The body the guards see does not lean.
+- **Lean.** Holding Lean left or Lean right rolls the body about the belly, 25° over a quarter of a
+  second: the view rolls, and the eye swings 0.43 m to the side and 10 cm down, around a corner. The
+  arms and the gun lean with it, so the scope, the muzzle flash, the tracers and the shot all come
+  from where the gun now is. The eye stays inside the body's own collision, so it never leans into a
+  wall. There is no lean while sprinting.
 - **Auto lean.** Aiming with a wall within 1.2 m ahead and no lean key held, the body leans out to
   the first side whose view ahead is open from there, by a third, two thirds or all of a full lean,
-  the least that clears. A side tried last time is tried first, so the lean does not flip. Where
-  neither side clears, the gun near walls swings it down instead.
+  the least that clears, and holds that lean while it still clears. Leaned out, the look turns
+  freely toward the open side but no further toward the wall than where the lean began; turning
+  far enough to the open side to see past the corner ends the lean. Where neither side clears, the
+  gun near walls swings it down instead.
 - **Gun near walls.** A gun that would reach into a wall, within 0.8 m of the eye, swings down out
   of it, by up to 34° as the room ahead shrinks by another 0.35 m, while the view holds still.
   Swung more than halfway down it lets go of the sights and does not fire, until it is less than a
@@ -81,9 +83,8 @@ The eye is moved through the camera's positional offset, the one the recoil kick
 zoom held back until its sight picture is up, in `src/engine/aim.cpp`. The aim's wander is added
 to the look the input builds each frame, in `src/engine/look.cpp`; the breath is `src/breath.cpp`,
 and the sprint it holds is refused in the input listener, in `src/engine/sprint.cpp`. A lean is
-`src/lean.cpp`, which `src/peek.cpp` leans by itself at a corner: the camera rolls and its eye moves,
-the gun's draws are put back to the view before the lean in `src/engine/weapon_draws.cpp`, and the
-shot is moved in `src/engine/shot.cpp`. The gun near walls is
+`src/lean.cpp`, which `src/peek.cpp` leans by itself at a corner; the body is leaned once the physics
+has placed it each frame, in `src/engine/body.cpp`. The gun near walls is
 `src/wall.cpp`, casting a physics ray in `src/engine/ray.cpp` and refusing the shot in
 `src/engine/fire.cpp`. The blur draws the gun's own
 depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the

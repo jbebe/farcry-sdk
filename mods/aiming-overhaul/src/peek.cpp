@@ -20,6 +20,7 @@ namespace {
     std::atomic<bool> g_enabled{true};
     float g_sinceLook = kInterval;
     float g_target = 0.0f;
+    float g_heading = 0.0f;
 
     // Whether the eye can lean by `shift` from `base` and see past what is ahead from there.
     bool Clears(const float base[3], const float shift[3], const float forward[3]) {
@@ -71,8 +72,16 @@ float AimingOverhaul::Peek::Update(float seconds, bool aimHeld, const float eye[
     float back[3];
     Lean::Shift(forward, roll, 0.0f, back);
     const float base[3] = {eye[0] + back[0], eye[1] + back[1], eye[2] + back[2]};
-    g_target = Ray::Clear(base, forward, kProbe) ? 0.0f : Search(base, forward);
+    const float target = Ray::Clear(base, forward, kProbe) ? 0.0f : Search(base, forward);
+    if (target != 0.0f && (g_target == 0.0f || (target < 0.0f) != (g_target < 0.0f))) {
+        g_heading = std::atan2(-forward[0], forward[1]);
+    }
+    g_target = target;
     return g_target;
+}
+
+float AimingOverhaul::Peek::Heading() {
+    return g_heading;
 }
 
 void AimingOverhaul::Peek::SetEnabled(bool enabled) {
