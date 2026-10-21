@@ -1,5 +1,6 @@
 // The AI hit model against the player: aim that settles with distance, a chance that means what it
-// says, recoil in place of forced misses, no certain hits, and aim at the body rather than the head.
+// says and falls with how well he sees the player, recoil in place of forced misses, no certain hits,
+// and aim at the body rather than the head.
 #include "engine/memory.h"
 #include "fcse_api.h"
 
@@ -20,22 +21,26 @@ namespace {
                                        bool* torso);
 
     using SetupAimingDotFn = void(__fastcall*)(void* shooting);
+    using GetVisibilityFn = bool(__fastcall*)(void* sensory, void* unused, void* agent,
+                                              float* visibility, bool remembered);
 
     // CShootingSystem's GetChanceOfSuccess, GetTimerToMissFactor, GenerateShootAtPosition,
-    // GetTarget and SetupAimingDot, and the game clock.
+    // GetTarget and SetupAimingDot, CSensorySystem::GetVisibilityValue, and the game clock.
     FCSE::Relocation<ChanceFn> g_getChance{FCSE::Uplay(0x00A19EE0)};
     FCSE::Relocation<ChanceFn> g_getTimerFactor{FCSE::Uplay(0x00A19A60)};
     FCSE::Relocation<ShootAtFn> g_shootAt{FCSE::Uplay(0x00A1A110)};
     FCSE::Relocation<GetTargetFn> g_getTarget{FCSE::Uplay(0x00A19370)};
     FCSE::Relocation<SetupAimingDotFn> g_setupAimingDot{FCSE::Uplay(0x00A193E0)};
+    FCSE::Relocation<GetVisibilityFn> g_getVisibility{FCSE::Uplay(0x00A021A0)};
     FCSE::Relocation<void**> g_clock{FCSE::Uplay(0x01606360)};
     ChanceFn g_originalGetChance = nullptr;
     ChanceFn g_originalGetTimerFactor = nullptr;
     ShootAtFn g_originalShootAt = nullptr;
 
-    // CShootingSystem: the part its aim dot is on (-1 until set up), the part to set the next dot
-    // up on, the reaction CLifeTimer (lifetime, then start time), the target distance, and whether
-    // the last shot hit.
+    // CShootingSystem: the shooter's CPawnAgent, the part its aim dot is on (-1 until set up), the
+    // part to set the next dot up on, the reaction CLifeTimer (lifetime, then start time), the
+    // target distance, and whether the last shot hit.
+    constexpr ptrdiff_t kShooter = 0x00;
     constexpr ptrdiff_t kDotPart = 0x1C;
     constexpr ptrdiff_t kAimPart = 0x34;
     constexpr ptrdiff_t kReactionLifetime = 0xBC;
@@ -47,6 +52,8 @@ namespace {
 
     constexpr ptrdiff_t kClockSeconds = 0x30;
     constexpr ptrdiff_t kIsAPlayerSlot = 0xBC;
+    // CPawnAgent's CSensorySystem, held in place.
+    constexpr ptrdiff_t kAgentSenses = 0x28C;
 
     // Hardcore: seconds for aim to settle after acquiring the player, at 0 m and per metre.
     constexpr float kSettleSeconds = 0.6f;
@@ -58,14 +65,23 @@ namespace {
     constexpr float kRecoilRecoverySeconds = 0.25f;
     // Hardcore: the share of aim dots on the head rather than the torso.
     constexpr float kHeadAimShare = 0.15f;
+    // Hardcore: how visible the player must be to the shooter for a full chance, and the chance
+    // left when he does not see the player at all.
+    constexpr float kFullVisibility = 0.6f;
+    constexpr float kUnseenFactor = 0.1f;
 
     // When each shooting system last fired at the player, by game clock.
     std::unordered_map<const void*, double> g_lastShot;
     constexpr size_t kMaxShooters = 512;
-    // The recoil factor of the shot at the player being rolled, NaN between such shots, and the
-    // chance that shot was given.
-    float g_shotRecoil = NAN;
-    float g_shotChance = NAN;
+
+    // The shot at the player being rolled: its recoil and sighting factors, NaN between such
+    // shots, and the chance it was given.
+    struct Shot {
+        float recoil = NAN;
+        float sighting = NAN;
+        float chance = NAN;
+    };
+    Shot g_shot;
 
     double Now() { return Read<double>(*g_clock.get(), kClockSeconds); }
 
@@ -90,6 +106,16 @@ namespace {
         }
         const double since = Now() - last->second;
         return 1.0f - kRecoilLoss * static_cast<float>(std::exp(-since / kRecoilRecoverySeconds));
+    }
+
+    // How well he sees his target, as a factor on the chance.
+    float Sighting(void* shooting) {
+        auto* senses = Read<uint8_t*>(shooting, kShooter) + kAgentSenses;
+        float visibility = 0.0f;
+        if (!g_getVisibility(senses, nullptr, g_getTarget(shooting), &visibility, false)) {
+            return kUnseenFactor;
+        }
+        return std::clamp(visibility / kFullVisibility, kUnseenFactor, 1.0f);
     }
 
     // The chance to give a roll against the mean of three uniforms so that it succeeds with `p`.
@@ -122,15 +148,15 @@ namespace {
 
     float __fastcall GetChanceDetour(void* shooting) {
         float chance = g_originalGetChance(shooting);
-        if (std::isnan(g_shotRecoil)) {
+        if (std::isnan(g_shot.recoil)) {
             return chance;
         }
         // A certain hit is point blank, which the reaction timer does not reach.
         if (chance >= 1.0f) {
             chance *= Settled(shooting);
         }
-        g_shotChance = std::min(chance, kMaxChance) * g_shotRecoil;
-        return RollChance(g_shotChance);
+        g_shot.chance = std::min(chance, kMaxChance) * g_shot.recoil * g_shot.sighting;
+        return RollChance(g_shot.chance);
     }
 
     int __fastcall ShootAtDetour(void* shooting, void* unused, float* position, bool* head,
@@ -148,13 +174,13 @@ namespace {
             g_setupAimingDot(shooting);
         }
 
-        g_shotRecoil = Recoil(shooting);
-        g_shotChance = NAN;
+        g_shot = {Recoil(shooting), Sighting(shooting)};
         const int result = g_originalShootAt(shooting, unused, position, head, torso);
-        FCSE::Logf("shot at player: chance %.2f (recoil %.2f) at %.1f m, %s", g_shotChance,
-                   g_shotRecoil, Read<float>(shooting, kTargetDistance),
+        FCSE::Logf("shot at player: chance %.2f (recoil %.2f, sighting %.2f) at %.1f m, %s",
+                   g_shot.chance, g_shot.recoil, g_shot.sighting,
+                   Read<float>(shooting, kTargetDistance),
                    Read<bool>(shooting, kLastShotHit) ? "hit" : "miss");
-        g_shotRecoil = NAN;
+        g_shot = {};
         // Forget every shooter once there are more than kMaxShooters.
         if (g_lastShot.size() > kMaxShooters) {
             g_lastShot.clear();
@@ -165,7 +191,7 @@ namespace {
 }
 
 void InstallHitModel() {
-    if (!g_getTarget || !g_setupAimingDot || !g_clock ||
+    if (!g_getTarget || !g_setupAimingDot || !g_getVisibility || !g_clock ||
         !Hook(g_getTimerFactor, &GetTimerFactorDetour, &g_originalGetTimerFactor) ||
         !Hook(g_getChance, &GetChanceDetour, &g_originalGetChance) ||
         !Hook(g_shootAt, &ShootAtDetour, &g_originalShootAt)) {
