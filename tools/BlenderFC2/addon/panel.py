@@ -196,6 +196,34 @@ class FC2_OT_motion_table(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class FC2_OT_eye_view(bpy.types.Operator):
+    """Look out of the player's eye, which first-person animations move with the head"""
+
+    bl_idname = "object.fc2_eye_view"
+    bl_label = "Eye view"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return _eye_rig(context) is not None
+
+    def execute(self, context):
+        armature = _eye_rig(context)
+        collection = armature.users_collection[0]
+        view = _view(context)
+        if sight.sighting(collection):
+            sight.leave(collection)
+            context.scene.camera = None
+            if view:
+                view.region_3d.view_perspective = "PERSP"
+            return {"FINISHED"}
+
+        context.scene.camera = sight.enter_eye(armature)
+        if view:
+            view.region_3d.view_perspective = "CAMERA"
+        return {"FINISHED"}
+
+
 class FC2_OT_sight_picture(bpy.types.Operator):
     """Show only what a zoomed player sees, from where their eye is"""
 
@@ -341,6 +369,11 @@ class FC2_PT_animation(FC2_PT_base):
             _wrapped(layout, "%s replaces the rest of the model while zoomed, so this is the "
                              "whole view. Sizes against each other are exact; the lens angle is "
                              "fitted here, not the game's." % sight.PART, icon="INFO")
+        eye = _eye_rig(context)
+        if eye is not None:
+            looking = sight.sighting(eye.users_collection[0])
+            layout.operator("object.fc2_eye_view", icon="HIDE_OFF",
+                            text="Leave eye view" if looking else "Eye view")
 
         if not len(state.bones):
             if state.motion_summary:
@@ -402,6 +435,14 @@ def _pack_path(context):
     return collection.get(import_xbg.PROP_SOURCE) if collection else None
 
 
+def _eye_rig(context):
+    """The armature with the player's eye: the body a pack carries, else the model's own."""
+    rigs = [obj for obj in context.scene.objects
+            if obj.type == "ARMATURE" and import_mab.EYE_BONE in obj.data.bones]
+    return next((obj for obj in rigs if obj.get(import_xbg.PROP_ACTOR_OF)),
+                rigs[0] if rigs else None)
+
+
 def _view(context):
     """The 3D viewport the sidebar this was pressed in belongs to."""
     space = context.space_data
@@ -412,6 +453,7 @@ CLASSES = (
     FC2_PG_finding, FC2_PG_bone, FC2_PG_state,
     FC2_UL_findings, FC2_UL_bones,
     FC2_OT_check, FC2_OT_select_finding, FC2_OT_motion_table, FC2_OT_sight_picture,
+    FC2_OT_eye_view,
     FC2_PT_model, FC2_PT_check, FC2_PT_animation, FC2_PT_export,
 )
 

@@ -118,6 +118,12 @@ off the bone the bank's own tag record names. That is what a weapon animation ha
 and skin, rather than bones, is what shows a hand clipping through a receiver. It arrives without
 materials or textures, so it renders flat; `--no-actor` leaves it out.
 
+**The body also brings the player's eye.** **Far Cry 2 ▸ Animation ▸ Eye view** looks out of an
+`FC2 Eye` camera on its `Camera` bone, which first-person banks move with the head, so playback shows
+the animation as the player sees it. It is 75° across, the retail `Camera.First` `fFOV` at the
+default `gfx_widescreenmode`, and it matches the sight picture's eye to `6e-08` m. The face wraps
+that bone, so the parts hanging mostly off `Head` are hidden until the view is left.
+
 Four things a reader has to get right or the pose comes out mangled. They are why this file exists
 rather than a generic JSON-to-Action script:
 

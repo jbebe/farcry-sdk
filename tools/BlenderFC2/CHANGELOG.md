@@ -5,12 +5,19 @@ Notable changes to the Far Cry 2 Blender add-on, loosely following
 
 ## [Unreleased]
 
+### Added
+- **Eye view**, which looks out of the player's eye. It puts an `FC2 Eye` camera on the carried
+  body's `Camera` bone at the game's 75° first-person angle, so a first-person animation plays the
+  way the player sees it, and hides the face that wraps that bone until the view is left.
+
 ### Changed
 - **The animation list shows each bank under its folder, the model's own first.** Sorted by name
   alone, a MAC-10 pack opened on a buddy's mercy kill, `1stge_syns_…`, ahead of every one of the
   gun's own `1stge_uppb_…` banks, and nothing in the name said it belonged somewhere else.
 
 ### Fixed
+- **A render of the sight picture shows only the sight.** It hid the rest of the model in the
+  viewport alone, so F12 still drew the whole gun around it.
 - **Loading an animation no longer drops you into Object Mode.** Every load reparented the knee
   and elbow helpers through Edit Mode and left the scene in Object Mode, so posing meant switching
   back each time. The helpers now get their clip parents once, when the model is imported, and a

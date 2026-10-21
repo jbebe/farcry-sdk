@@ -21,9 +21,8 @@ import math
 
 from . import import_mab
 
-# The character bone an aim bank hangs the weapon off, the weapon's own root
-# within the clip that bank drives it with, and the zoomed bank of the two.
-AIM_BONE = "Camera"
+# The weapon's own root within the clip an aim bank drives it with, and the
+# zoomed bank of the two.
 ROOT_BONE = 0
 ZOOMED_BANK = "aimironcycle"
 
@@ -144,6 +143,6 @@ def aim_pose(pack):
 def _aimed(bank):
     """The clip a bank drives its model with while hanging it off the eye."""
     for participant in bank.get("participants") or ():
-        if participant.get("bone") == AIM_BONE:
+        if participant.get("bone") == import_mab.EYE_BONE:
             return bank["clips"][participant["clip"]]
     return None

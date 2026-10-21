@@ -22,6 +22,9 @@ PROP_RATE = "fc2_rate"
 # The bank an Action was loaded from, by game path.
 PROP_BANK = "fc2_bank"
 
+# The bone a character's eye rides on; an aim bank hangs the weapon off it.
+EYE_BONE = "Camera"
+
 # A prop a clip attaches is its own sourced collection, and export would then
 # find two and refuse to pick. Marked so it can be told apart from the model.
 PROP_PROP_OF = "fc2_prop_of"

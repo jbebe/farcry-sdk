@@ -20,7 +20,7 @@ from _corpus import pack, require_pack
 import bpy
 from mathutils import Quaternion, Vector
 
-from addon import import_mab, import_xbg
+from addon import import_mab, import_xbg, motion, sight
 from addon.import_mab import FIRST_FRAME, bone_ids, timing
 from addon.pack import bank_label, bank_order, stem
 
@@ -31,6 +31,7 @@ CLIPS = "graphics/characters/_common/animations"
 AK47_CLIPS = CLIPS + "/weapons/primary/ak47"
 RELOAD = AK47_CLIPS + "/1stge_uppb_reload_+000fw_prak4_i1.mab"
 THIRD_PERSON_RELOAD = AK47_CLIPS + "/3rdge_uppb_reload_nodir_prak4_i1.mab"
+AIMIRON = AK47_CLIPS + "/1stge_uppb_aimironcycle_+000fw_prak4_i1.mab"
 
 # An upper-body clip, which holds its offsets constant; a full-body jump, which
 # drives the Pelvis along a translation track; and the same reload read twice,
@@ -265,6 +266,51 @@ def check_bank_order():
     return 0
 
 
+def check_eye_sees_the_sight():
+    """The eye view stands where the sight picture, from the weapon alone, puts the eye."""
+    import addon
+
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    result = import_xbg.load(pack(AK47, clips=[AIMIRON]), lod=0, with_textures=False)
+    import_mab.load(result["pack"], AIMIRON, result["armature"], actor=result["actor"])
+    parts = result["actor"]["parts"]
+
+    addon.register()
+    try:
+        bpy.ops.object.fc2_eye_view()
+        camera = bpy.context.scene.camera
+        bpy.context.view_layer.update()
+        hidden = [obj for obj in parts if obj.hide_get() and obj.hide_render]
+        bpy.ops.object.fc2_eye_view()
+        restored = not any(obj.hide_get() or obj.hide_render for obj in parts)
+        bpy.ops.object.fc2_eye_view()
+        cameras = [obj for obj in bpy.data.objects if obj.type == "CAMERA"]
+    finally:
+        addon.unregister()
+    if camera is None:
+        return fail("the eye view looks through no camera")
+
+    expected = sight.aimed_eye(motion.aim_pose(result["pack"]))
+    armature = result["armature"]
+    eye = (armature.matrix_world @ armature.pose.bones[0].matrix).inverted() @ camera.matrix_world
+    apart = (eye.to_translation() - expected.to_translation()).length
+    turned = eye.to_quaternion().rotation_difference(expected.to_quaternion()).angle
+    print("eye: %.1e m and %.1e rad from the sight picture's, %d of %d body parts hidden"
+          % (apart, turned, len(hidden), len(parts)))
+    if apart > 1e-5 or turned > 1e-5:
+        return fail("the eye camera is not where the sight picture puts the eye")
+
+    # The face wraps the eye, so it is hidden; the hands it watches are not.
+    hands = [obj for obj in parts if "L Hand" in obj.vertex_groups]
+    if not hidden or any(obj in hidden for obj in hands):
+        return fail("hid %s from the eye" % [obj.name for obj in hidden])
+    if not restored:
+        return fail("leaving the eye view left the face hidden")
+    if cameras != [camera]:
+        return fail("entering twice made %d cameras" % len(cameras))
+    return 0
+
+
 def main():
     if not require_pack():
         return 0
@@ -272,7 +318,7 @@ def main():
     errors = (sum(check(*case) for case in CASES)
               + check_weapon_clip_is_chosen() + check_attachments()
               + check_actor_holds_the_model() + check_load_keeps_the_mode()
-              + check_bank_order())
+              + check_bank_order() + check_eye_sees_the_sight())
     print("blender anim: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0
 
