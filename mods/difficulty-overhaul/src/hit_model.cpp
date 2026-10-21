@@ -1,6 +1,6 @@
-// The AI hit model against the player: aim that settles with distance, a chance that means what it
-// says and falls with how well he sees the player, recoil in place of forced misses, no certain hits,
-// and aim at the body rather than the head.
+// The AI hit model against the player: fire held until he sees the player clearly, aim that settles
+// with distance, a chance that means what it says and falls with how well he sees the player, recoil
+// in place of forced misses, no certain hits, and aim at the body rather than the head.
 #include "engine/memory.h"
 #include "fcse_api.h"
 
@@ -23,19 +23,23 @@ namespace {
     using SetupAimingDotFn = void(__fastcall*)(void* shooting);
     using GetVisibilityFn = bool(__fastcall*)(void* sensory, void* unused, void* agent,
                                               float* visibility, bool remembered);
+    using CanShootFn = bool(__fastcall*)(void* task);
 
     // CShootingSystem's GetChanceOfSuccess, GetTimerToMissFactor, GenerateShootAtPosition,
-    // GetTarget and SetupAimingDot, CSensorySystem::GetVisibilityValue, and the game clock.
+    // GetTarget and SetupAimingDot, CSensorySystem::GetVisibilityValue, CTaskShoot::CanShoot, and
+    // the game clock.
     FCSE::Relocation<ChanceFn> g_getChance{FCSE::Uplay(0x00A19EE0)};
     FCSE::Relocation<ChanceFn> g_getTimerFactor{FCSE::Uplay(0x00A19A60)};
     FCSE::Relocation<ShootAtFn> g_shootAt{FCSE::Uplay(0x00A1A110)};
     FCSE::Relocation<GetTargetFn> g_getTarget{FCSE::Uplay(0x00A19370)};
     FCSE::Relocation<SetupAimingDotFn> g_setupAimingDot{FCSE::Uplay(0x00A193E0)};
     FCSE::Relocation<GetVisibilityFn> g_getVisibility{FCSE::Uplay(0x00A021A0)};
+    FCSE::Relocation<CanShootFn> g_canShoot{FCSE::Uplay(0x009792F0)};
     FCSE::Relocation<void**> g_clock{FCSE::Uplay(0x01606360)};
     ChanceFn g_originalGetChance = nullptr;
     ChanceFn g_originalGetTimerFactor = nullptr;
     ShootAtFn g_originalShootAt = nullptr;
+    CanShootFn g_originalCanShoot = nullptr;
 
     // CShootingSystem: the shooter's CPawnAgent, the part its aim dot is on (-1 until set up), the
     // part to set the next dot up on, the reaction CLifeTimer (lifetime, then start time), the
@@ -52,8 +56,10 @@ namespace {
 
     constexpr ptrdiff_t kClockSeconds = 0x30;
     constexpr ptrdiff_t kIsAPlayerSlot = 0xBC;
-    // CPawnAgent's CSensorySystem, held in place.
+    // CPawnAgent's CSensorySystem and CShootingSystem, held in place, and CTaskShoot's agent.
     constexpr ptrdiff_t kAgentSenses = 0x28C;
+    constexpr ptrdiff_t kAgentShooting = 0x4A0;
+    constexpr ptrdiff_t kTaskAgent = 0x34;
 
     // Hardcore: seconds for aim to settle after acquiring the player, at 0 m and per metre.
     constexpr float kSettleSeconds = 0.6f;
@@ -65,10 +71,10 @@ namespace {
     constexpr float kRecoilRecoverySeconds = 0.25f;
     // Hardcore: the share of aim dots on the head rather than the torso.
     constexpr float kHeadAimShare = 0.15f;
-    // Hardcore: how visible the player must be to the shooter for a full chance, and the chance
-    // left when he does not see the player at all.
+    // Hardcore: how visible the player must be to the shooter for him to fire at all, and for a
+    // full chance.
+    constexpr float kFireVisibility = 0.4f;
     constexpr float kFullVisibility = 0.6f;
-    constexpr float kUnseenFactor = 0.1f;
 
     // When each shooting system last fired at the player, by game clock.
     std::unordered_map<const void*, double> g_lastShot;
@@ -108,14 +114,12 @@ namespace {
         return 1.0f - kRecoilLoss * static_cast<float>(std::exp(-since / kRecoilRecoverySeconds));
     }
 
-    // How well he sees his target, as a factor on the chance.
-    float Sighting(void* shooting) {
+    // How visible his target is to him now, 0 when he does not see it.
+    float Visibility(void* shooting) {
         auto* senses = Read<uint8_t*>(shooting, kShooter) + kAgentSenses;
         float visibility = 0.0f;
-        if (!g_getVisibility(senses, nullptr, g_getTarget(shooting), &visibility, false)) {
-            return kUnseenFactor;
-        }
-        return std::clamp(visibility / kFullVisibility, kUnseenFactor, 1.0f);
+        g_getVisibility(senses, nullptr, g_getTarget(shooting), &visibility, false);
+        return visibility;
     }
 
     // The chance to give a roll against the mean of three uniforms so that it succeeds with `p`.
@@ -174,7 +178,7 @@ namespace {
             g_setupAimingDot(shooting);
         }
 
-        g_shot = {Recoil(shooting), Sighting(shooting)};
+        g_shot = {Recoil(shooting), std::min(Visibility(shooting) / kFullVisibility, 1.0f)};
         const int result = g_originalShootAt(shooting, unused, position, head, torso);
         FCSE::Logf("shot at player: chance %.2f (recoil %.2f, sighting %.2f) at %.1f m, %s",
                    g_shot.chance, g_shot.recoil, g_shot.sighting,
@@ -188,13 +192,23 @@ namespace {
         g_lastShot[shooting] = Now();
         return result;
     }
+
+    // He holds his fire at the player until he sees the player clearly.
+    bool __fastcall CanShootDetour(void* task) {
+        if (!g_originalCanShoot(task)) {
+            return false;
+        }
+        void* shooting = Read<uint8_t*>(task, kTaskAgent) + kAgentShooting;
+        return !AimsAtPlayer(shooting) || Visibility(shooting) >= kFireVisibility;
+    }
 }
 
 void InstallHitModel() {
     if (!g_getTarget || !g_setupAimingDot || !g_getVisibility || !g_clock ||
         !Hook(g_getTimerFactor, &GetTimerFactorDetour, &g_originalGetTimerFactor) ||
         !Hook(g_getChance, &GetChanceDetour, &g_originalGetChance) ||
-        !Hook(g_shootAt, &ShootAtDetour, &g_originalShootAt)) {
+        !Hook(g_shootAt, &ShootAtDetour, &g_originalShootAt) ||
+        !Hook(g_canShoot, &CanShootDetour, &g_originalCanShoot)) {
         FCSE::Logf("hit model: the AI shooting system was not found in this build");
     }
 }
