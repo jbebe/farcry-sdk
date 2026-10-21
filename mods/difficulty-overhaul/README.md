@@ -26,6 +26,12 @@ soldier 0001A2F4 hit: pierce level 14, torso, at 31.2 m, health 150 -> 46 (Hardc
 player hit: pierce level 9, no body part, at 18.7 m, health 1075 -> 1028 (Hardcore, act 1, hit locations off)
 ```
 
+## Planned
+
+- **A vest.** A torso hit from a rifle nearly kills the player, which is realistic; a vest is how
+  they will survive one. How it is obtained, whether its plates wear, and whether mercs wear them
+  too are still open. Until then the player fights without one.
+
 ## Build
 
 ```
