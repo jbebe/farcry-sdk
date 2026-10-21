@@ -2,7 +2,6 @@
 #include "blur.h"
 #include "breath.h"
 #include "engine/aim.h"
-#include "engine/body.h"
 #include "engine/device_reset.h"
 #include "engine/fire.h"
 #include "engine/input.h"
@@ -10,6 +9,7 @@
 #include "engine/pawn.h"
 #include "engine/ray.h"
 #include "engine/second_view.h"
+#include "engine/shot.h"
 #include "engine/sprint.h"
 #include "engine/weapon_draws.h"
 #include "eyepiece.h"
@@ -100,6 +100,10 @@ namespace {
     ULONGLONG g_seen = 0;
     constexpr ULONGLONG kOnFootMilliseconds = 200;
 
+    bool OnFoot(uint8_t* pawn) {
+        return pawn != nullptr && pawn == g_pawn && GetTickCount64() - g_seen < kOnFootMilliseconds;
+    }
+
     // The lean, then the gun near walls, judged from where the lean is taking the eye so a lean out
     // past a corner does not swing the gun down on the way, then the breath and the sway.
     AimingOverhaul::Aim::Adjust OnAimFrame(uint8_t* pawn, float seconds) {
@@ -111,7 +115,8 @@ namespace {
         const float* eye = Aim::Eye();
         const float autoRoll = Peek::Update(seconds, eye, forward, Lean::Current());
         const float roll = Lean::Roll(seconds, !Pawn::Is(pawn, Pawn::kSprint), autoRoll);
-        Body::Roll(pawn, roll);
+        const Aim::Offset leanEye = Lean::Eye(roll);
+        WeaponDraws::SetViewMove(roll, leanEye);
         float leaned[3];
         if (eye != nullptr) {
             Lean::Shift(forward, roll, Lean::Target(), leaned);
@@ -124,7 +129,22 @@ namespace {
             Pawn::DropSights(pawn);
         }
         Breath::Update(seconds, Aim::Aiming());
-        return {Sway::Drift(seconds), Wall::Down()};
+        return {Sway::Drift(seconds), leanEye, Wall::Down(), roll};
+    }
+
+    // The player's shot leaves from where the lean has taken the eye.
+    void MoveShot(uint8_t* pawn, float origin[3]) {
+        const float roll = AimingOverhaul::Lean::Current();
+        if (roll == 0.0f || !OnFoot(pawn)) {
+            return;
+        }
+        float forward[3];
+        float shift[3];
+        AimingOverhaul::Aim::Forward(forward);
+        AimingOverhaul::Lean::Shift(forward, 0.0f, roll, shift);
+        for (int i = 0; i < 3; i++) {
+            origin[i] += shift[i];
+        }
     }
 
     // The sway's wander, with the look lowered as far as the gun is swung down.
@@ -135,8 +155,7 @@ namespace {
     }
 
     bool RefuseShot(uint8_t* pawn) {
-        return AimingOverhaul::Wall::Blocked() && pawn != nullptr && pawn == g_pawn &&
-               GetTickCount64() - g_seen < kOnFootMilliseconds;
+        return AimingOverhaul::Wall::Blocked() && OnFoot(pawn);
     }
 }
 
@@ -167,7 +186,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     AimingOverhaul::Tracers::Install();
     AimingOverhaul::Streak::Install();
     AimingOverhaul::Look::Install(&OnLook);
-    AimingOverhaul::Body::Install();
+    AimingOverhaul::Shot::Install(&MoveShot);
     AimingOverhaul::Ray::Install();
     AimingOverhaul::Fire::Install(&RefuseShot);
     AimingOverhaul::Input::Install(&OnSignal);

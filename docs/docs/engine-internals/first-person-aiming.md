@@ -207,19 +207,30 @@ graph has no clips for them.
 `CCameraPawnComponent::Update` does not read the look's roll. It takes the camera's rotation from
 body part 0 (`0x1010D850`): that part's skeleton node, through the skeleton's vtable `+0x78`, times
 the pawn entity's own orientation. That orientation is the entity's 4×4 at `+0x30`, which
-`CEntity::GetOrientation` (`0x104DDA00`) turns into a quaternion. So whatever turns the entity turns
-the eye, the arms and the gun with it.
+`CEntity::GetOrientation` (`0x104DDA00`) turns into a quaternion.
 
 `CEntity::SetEuler` (`0x104E01C0`) takes pitch, roll and yaw and rebuilds the basis as yaw about Z,
 after roll about the entity's own forward axis Y, after pitch about X, keeping its position. A
 positive roll tilts the up axis toward +X, to the right, and leaves the forward axis where it was, so
 `atan2(m[5], m[4]) - π/2` still reads the same heading.
 
+:::info[Seen in a running game]
+Rolling the pawn entity with `SetEuler` from the camera update rolls the view and nothing else: the
+eye stays where it was, and the arms and the gun stay level with the world, so they tilt on screen.
+Retail GOG v1.03, from Aiming Overhaul.
+:::
+
+A lean is therefore the camera's own: its roll at `+0xD4` and its eye at `+0xE8`, both turned with
+the view. The gun is drawn through `c0`–`c3`, the view's rotation times the projection, with the
+projection alone at `c8`–`c11` (see [the weapon's passes](./presentation-and-input.md)). For the
+gun to roll and move with the view, each of its draws can be given `P · A · P⁻¹ · C` in place of
+`C`, with `A` the view's roll and the eye's move in camera space. That draws it exactly as the camera
+saw it before the lean. A shot still leaves from body part 0, and the bullet strategy's first-person
+setup (`0x10112600`, `__thiscall(pawn, origin, direction, ·)`, `RET 0x10`) writes the origin, which
+can be moved after it returns.
+
 :::warning[Not yet tested in a running game]
-Aiming Overhaul's lean rolls the pawn entity this way every frame, from the camera update, before
-the camera reads body part 0. Whether the engine sets the entity's orientation afresh each frame,
-whether the roll is still there when a shot is set up, and whether the AI's sight follows the
-rolled body are all unchecked.
+Aiming Overhaul's lean does all three. None of it has been seen yet.
 :::
 
 ## A scope's sight picture

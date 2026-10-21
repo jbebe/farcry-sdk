@@ -38,15 +38,23 @@ namespace {
         return AimingOverhaul::Ray::Clear(leaned, forward, kProbe);
     }
 
+    bool Clears(const float base[3], const float forward[3], float roll) {
+        float shift[3];
+        AimingOverhaul::Lean::Shift(forward, 0.0f, roll, shift);
+        return Clears(base, shift, forward);
+    }
+
+    // The lean already taken while it still clears, so a lean holds rather than hunting between
+    // steps; else the least that does, the side leaned to last tried first.
     float Search(const float base[3], const float forward[3]) {
-        // The side leaned to last is tried first, so a lean does not flip between equal sides.
+        if (g_target != 0.0f && Clears(base, forward, g_target)) {
+            return g_target;
+        }
         const float first = g_target < 0.0f ? -1.0f : 1.0f;
         for (int step = 1; step <= kSteps; step++) {
             for (const float side : {first, -first}) {
                 const float roll = side * AimingOverhaul::Lean::kMostRoll * step / kSteps;
-                float shift[3];
-                AimingOverhaul::Lean::Shift(forward, 0.0f, roll, shift);
-                if (Clears(base, shift, forward)) {
+                if (Clears(base, forward, roll)) {
                     return roll;
                 }
             }

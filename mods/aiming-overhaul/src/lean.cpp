@@ -1,4 +1,5 @@
-// Leaning: held Q or E rolls the body out to the side about its feet, eye, gun and all.
+// Leaning: held Q or E rolls the upper body out to the side about the belly, so the eye swings
+// sideways and a little down as the view rolls, and the gun goes with it.
 #include "lean.h"
 
 #include "ease.h"
@@ -15,8 +16,8 @@ namespace {
 
     // Seconds for the roll to follow, which takes it most of the way in a quarter of a second.
     constexpr float kFollow = 0.08f;
-    // Metres from the feet to the eye.
-    constexpr float kEyeHeight = 1.6f;
+    // Metres from the belly up to the eye.
+    constexpr float kPivot = 0.75f;
 
     std::atomic<bool> g_enabled{true};
     bool g_left = false;
@@ -59,14 +60,22 @@ float AimingOverhaul::Lean::Target() {
     return g_target;
 }
 
+AimingOverhaul::Aim::Offset AimingOverhaul::Lean::Eye(float roll) {
+    return {kPivot * std::sin(roll), kPivot * (std::cos(roll) - 1.0f)};
+}
+
 void AimingOverhaul::Lean::Shift(const float forward[3], float from, float to, float out[3]) {
     const float level = std::hypot(forward[0], forward[1]);
-    const float right[2] = {level > 0.0f ? forward[1] / level : 1.0f,
-                            level > 0.0f ? -forward[0] / level : 0.0f};
-    const float side = kEyeHeight * (std::sin(to) - std::sin(from));
-    out[0] = right[0] * side;
-    out[1] = right[1] * side;
-    out[2] = kEyeHeight * (std::cos(to) - std::cos(from));
+    const float right[3] = {level > 0.0f ? forward[1] / level : 1.0f,
+                            level > 0.0f ? -forward[0] / level : 0.0f, 0.0f};
+    // The view's up: right across forward.
+    const float up[3] = {right[1] * forward[2], -right[0] * forward[2],
+                         right[0] * forward[1] - right[1] * forward[0]};
+    const Aim::Offset a = Eye(from);
+    const Aim::Offset b = Eye(to);
+    for (int i = 0; i < 3; i++) {
+        out[i] = right[i] * (b.right - a.right) + up[i] * (b.up - a.up);
+    }
 }
 
 void AimingOverhaul::Lean::SetEnabled(bool enabled) {
