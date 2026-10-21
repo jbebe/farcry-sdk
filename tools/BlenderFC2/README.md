@@ -38,7 +38,7 @@ workspace, or `jackall-cli fc2model extract` for a folder to drop into a mod lay
 | `addon/convert.py` | Every Dunia-to-Blender convention: winding, V flip, bone tails |
 | `addon/import_xbg.py` | Builds the scene: parts, armature, rigid parts on their pivots, skin weights as vertex groups |
 | `addon/materials.py` | Rebuilds the Generic shader as a node graph |
-| `addon/rig.py` | Reparents the mesh's node tree onto the rig's — the knee fix below |
+| `addon/rig.py` | The rig's bone parents, which the armature is built on instead of the mesh's — the knee fix below |
 | `addon/import_mab.py` | Builds an Action from a bank, and marks what it attaches |
 | `addon/export_xbg.py` | Writes edited geometry back into the pack, and appends a part it did not have |
 | `addon/export_mab.py` | Writes an Action back into one clip of a bank, leaving the rest verbatim |

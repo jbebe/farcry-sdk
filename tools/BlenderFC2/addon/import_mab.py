@@ -11,7 +11,7 @@
 import bpy
 from mathutils import Matrix, Quaternion, Vector
 
-from . import import_xbg, rig
+from . import import_xbg
 from .pack import stem, timing
 
 # Blender counts frames from one, the file from zero.
@@ -113,11 +113,6 @@ def _pose_actor(pack, bank, clip, armature, actor, name):
 def pose(clip, armature, skeleton, name):
     """Build an Action from one clip and make it the armature's active one."""
     names = {bone["id"]: bone["name"] for bone in skeleton["bones"]}
-    # The mesh's node tree and the rig's constraint bones both need reconciling
-    # first, or the knees, elbows and arm twists lag behind everything around
-    # them.
-    adjusted = rig.apply(armature, skeleton)
-
     action = bpy.data.actions.new(name)
     action[PROP_DURATION] = clip.get("duration", 0.0)
     action[PROP_RATE] = timing(clip)[1]
@@ -154,7 +149,7 @@ def pose(clip, armature, skeleton, name):
             keys += 1
 
     return {"clip": clip, "action": action, "bones": posed, "unmatched": missing,
-            "keys": keys, "rig": adjusted,
+            "keys": keys,
             "moved": sum(1 for b in offsets if names.get(b, "") in armature.pose.bones)}
 
 

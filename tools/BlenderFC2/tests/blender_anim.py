@@ -182,15 +182,18 @@ def check_attachments():
     return errors
 
 
+def _ak47_with_reload():
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    return import_xbg.load(pack(AK47, clips=[RELOAD]), lod=0, with_textures=False)
+
+
 def check_weapon_clip_is_chosen():
     """A weapon rig has to reach past the character's clip to its own.
 
     The character's clip names bone ids no gun rig has, so taking the first clip
     in the bank silently poses nothing.
     """
-    path = pack(AK47, clips=[RELOAD])
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    result = import_xbg.load(path, lod=0, with_textures=False)
+    result = _ak47_with_reload()
     loaded = import_mab.load(result["pack"], RELOAD, result["armature"])
     print("weapon rig: posed %d bones, %d moved" % (loaded["bones"], loaded["moved"]))
     return 0 if loaded["bones"] == 8 and loaded["moved"] == 4 else fail(
@@ -204,9 +207,7 @@ def check_actor_holds_the_model():
     the weapon's on the weapon - which is the scene a weapon animator has to fit
     the gun to, and what makes clipping visible at all.
     """
-    path = pack(AK47, clips=[RELOAD])
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    result = import_xbg.load(path, lod=0, with_textures=False)
+    result = _ak47_with_reload()
     if not result["pack"].actor:
         return fail("a pack carrying clips carries no body to play them on")
 
@@ -232,13 +233,27 @@ def check_actor_holds_the_model():
     return errors
 
 
+def check_load_keeps_the_mode():
+    """Loading a bank leaves a modeler posing the body in Pose Mode, on the body."""
+    result = _ak47_with_reload()
+    body = result["actor"]["armature"]
+    bpy.context.view_layer.objects.active = body
+    bpy.ops.object.mode_set(mode="POSE")
+
+    import_mab.load(result["pack"], RELOAD, result["armature"], actor=result["actor"])
+    active = bpy.context.view_layer.objects.active
+    print("after a load: %s in %s" % (active.name, active.mode))
+    return 0 if active is body and active.mode == "POSE" else fail(
+        "a load left %s active in %s" % (active.name, active.mode))
+
+
 def main():
     if not require_pack():
         return 0
 
     errors = (sum(check(*case) for case in CASES)
               + check_weapon_clip_is_chosen() + check_attachments()
-              + check_actor_holds_the_model())
+              + check_actor_holds_the_model() + check_load_keeps_the_mode())
     print("blender anim: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0
 

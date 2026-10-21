@@ -10,7 +10,7 @@
 
 import bpy
 
-from . import convert, materials, model as fc2model
+from . import convert, materials, model as fc2model, rig
 from .pack import EXTENSION, Pack, stem
 
 # Custom properties carried so an export can rebuild what it did not author.
@@ -45,8 +45,12 @@ PROP_PLACEMENT = "fc2_placement"
 ATTR_NORMAL = "fc2_normal"
 
 
-def build_armature(mesh, name, collection):
-    """An armature from the pack's nodes, in the file's own node order."""
+def build_armature(mesh, name, collection, skeleton=None):
+    """An armature from the pack's nodes, in the file's own node order.
+
+    A bone the skeleton names hangs off the skeleton's parent instead of the
+    node's, since that is the tree its clips animate.
+    """
     matrices = fc2model.node_world_matrices(mesh)
     data = bpy.data.armatures.new(name + "_rig")
     obj = bpy.data.objects.new(name + "_rig", data)
@@ -70,10 +74,15 @@ def build_armature(mesh, name, collection):
         bone.matrix = convert.matrix(matrices[index])
         bone.length = length
         edit_bones.append(bone)
-    for index, node in enumerate(mesh["nodes"]):
-        if node["parent"] < len(edit_bones):
-            edit_bones[index].parent = edit_bones[node["parent"]]
-            edit_bones[index].use_connect = False
+    by_name = {bone.name: bone for bone in edit_bones}
+    parents = rig.parents(skeleton) if skeleton else {}
+    for bone, node in zip(edit_bones, mesh["nodes"]):
+        parent = by_name.get(parents.get(bone.name))
+        if parent is None and node["parent"] < len(edit_bones):
+            parent = edit_bones[node["parent"]]
+        if parent is not None:
+            bone.parent = parent
+            bone.use_connect = False
     bpy.ops.object.mode_set(mode="OBJECT")
     bpy.context.view_layer.objects.active = previous
 
@@ -184,7 +193,7 @@ def build(pack, name, lod=0, with_armature=True, with_textures=True, origin=""):
     collection[PROP_SOURCE] = origin
     collection[PROP_LOD] = lod
 
-    armature = build_armature(mesh, name, collection) if with_armature else None
+    armature = build_armature(mesh, name, collection, pack.rig()) if with_armature else None
     cache = {}
     # Without an armature there is nothing to parent to, so bake the placement
     # into the vertices instead.
@@ -211,7 +220,7 @@ def build_actor(pack):
     bpy.context.scene.collection.children.link(collection)
     collection[PROP_ACTOR_OF] = pack.model
 
-    armature = build_armature(mesh, name, collection)
+    armature = build_armature(mesh, name, collection, pack.rig(actor=True))
     armature[PROP_ACTOR_OF] = pack.model
     cache = {}
     parts = [build_part(part, mesh, collection, cache, armature, None)

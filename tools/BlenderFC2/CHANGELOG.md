@@ -3,6 +3,15 @@
 Notable changes to the Far Cry 2 Blender add-on, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+- **Loading an animation no longer drops you into Object Mode.** Every load reparented the knee
+  and elbow helpers through Edit Mode and left the scene in Object Mode, so posing meant switching
+  back each time. The helpers now get their clip parents once, when the model is imported, and a
+  load changes no mode. A scene saved from an older version has to be imported again, or its knees
+  stretch while the legs move.
+
 ## [0.3.0] - 2026-10-16
 
 ### Added
