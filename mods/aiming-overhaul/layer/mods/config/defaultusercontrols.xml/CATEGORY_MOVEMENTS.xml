@@ -1,0 +1,8 @@
+<Category name="CATEGORY_MOVEMENTS">
+	<Control name="forward" key1="kb:w" key2="kb:up" actionmap="common_move_remap" group="1" conflictmask="12" />
+	<Control name="back" key1="kb:s" key2="kb:down" actionmap="common_move_remap" group="1" conflictmask="12" />
+	<Control name="strafeleft" key1="kb:a" key2="kb:left" actionmap="common_move_remap" group="1" conflictmask="12" />
+	<Control name="straferight" key1="kb:d" key2="kb:right" actionmap="common_move_remap" group="1" conflictmask="12" />
+	<Control name="lean_left" key1="kb:q" actionmap="common_move_remap" group="1" conflictmask="12" />
+	<Control name="lean_right" key1="kb:e" actionmap="common_move_remap" group="1" conflictmask="12" />
+</Category>

@@ -1,0 +1,6 @@
+<oasisstrings>
+  <section name="Actions">
+    <string enum="lean_left" value="向左探身" />
+    <string enum="lean_right" value="向右探身" />
+  </section>
+</oasisstrings>

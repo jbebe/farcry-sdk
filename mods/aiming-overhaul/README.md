@@ -1,11 +1,11 @@
 # Aiming Overhaul
 
-An FCSE plugin, with weapon data, for how aiming and shooting look: sway and a blurred gun down the
-iron sights; a scope that shadows, is seen from its eyepiece, and has the world around it at the
-eye's own field of view; and tracers. It changes only how things look: no damage, spread or recoil.
-Its weapon data sets only tracer and scope-effect fields, and gives each scoped weapon entity data
-of the plugin's own; JackAll merges both field by field with other mods' weapon edits, reporting
-any clash.
+An FCSE plugin, with weapon data and controls, for how the player aims: sway and a blurred gun down
+the iron sights; a scope that shadows, is seen from its eyepiece, and has the world around it at the
+eye's own field of view; tracers; and leaning, on two new controls. It owns everything from the
+player's input to the shot leaving the gun, and nothing after: no damage, no AI. Its weapon data sets
+only tracer and scope-effect fields, and gives each scoped weapon entity data of the plugin's own;
+JackAll merges both field by field with other mods' weapon edits, reporting any clash.
 
 ## What it does
 
@@ -85,6 +85,13 @@ written by `data\fragments.py`. The engine side is in
 ## Requirements
 
 FCSE 1.4.0 or later.
+
+## Controls
+
+Two new controls, rebindable in Options > Controls under Movements: **Lean left** on Q and **Lean
+right** on E. To free those keys the defaults move: interact to F, throw grenade to G and next
+throwable to T. E and Q stay as the game had them where the game never lets them be
+rebound: leaving a vehicle or a mounted gun, a buddy rescue, the machete finish and the watch.
 
 ## Settings
 

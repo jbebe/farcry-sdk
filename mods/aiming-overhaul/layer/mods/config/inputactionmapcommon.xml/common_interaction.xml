@@ -1,0 +1,7 @@
+<ActionMap name="common_interaction">
+	<import actionmap="common_use_remap" optional="" />
+	<!--Keyboard-->
+	<Binding input="kb:f" action="press" signal="use" />
+	<!--Gamepad-->
+	<Binding input="pad:y" action="press" signal="use" />
+</ActionMap>

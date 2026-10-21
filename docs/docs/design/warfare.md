@@ -101,7 +101,7 @@ Decisions from earlier work that bind this one:
 | Mod | Folder (working name) | In one line | Built from |
 | --- | --- | --- | --- |
 | [Lethal Combat](#lethal-combat) | `mods/lethal-combat` | Few hits kill, both ways | data, one plugin |
-| [Weapon Handling](#weapon-handling) | `mods/weapon-handling` | Heavy guns, hold breath, full auto as a last resort | plugin + data |
+| [Weapon Handling](#weapon-handling) | `mods/weapon-handling` | Heavy guns, full auto as a last resort | plugin + data |
 | [Wounds](#wounds) | `mods/wounds` | Downed, bleeding out, a buddy on the phone | plugin + Lua + data |
 | [AI Overhaul](#ai-overhaul) | `mods/ai-overhaul` | Posts you cannot storm, soldiers who hunt | data + brains + plugin |
 | [Faction War](#faction-war) | `mods/faction-war` | Red and blue fight on the roads and for posts | data + script, one trace |
@@ -129,13 +129,11 @@ as the men he fights.
 
 ### Weapon Handling
 
-How the gun behaves in the hands. Aiming Overhaul stays visual; everything here changes what the shot
-does.
+How the weapon itself behaves: its recoil, fire modes, magazines and weight. How the player aims it
+is Aiming Overhaul's (see [Decisions](#decisions)).
 
 | Idea | What changes | Feasibility | Status |
 | --- | --- | --- | --- |
-| **Hold breath, on Shift while aiming** | Holding sprint while down the sights steadies the aim for a few seconds, drains stamina, then the hands shake harder. Works on iron sights and scopes | plugin: sprint (bit `0x40`) and iron sight (`0x08`) share one input byte, which Legacy Plugin's aim toggle already rewrites. What the game does today with both set is unknown | requested |
-| **Sway that moves the shot** | Drift from breath, stance, stamina and movement, applied to the view the shot follows. Hold breath only matters once this exists | plugin: the recoil kick's camera offset is the likely hook; whether it bends the shot is not traced | idea |
 | **Recoil that stays** | Muzzle climb that the player pulls down, instead of a kick that recovers in a tenth of a second | data: `fRecoilAchieveTime`, `iRecoilRecoveryLevel`, `f*RecoilPerShot` per reliability level | idea |
 | **Full auto spreads** | Spread grows quickly with sustained fire and the first round is the only accurate one; bursts of two or three stay usable | data first (spread blocks, sustained-fire scaling); plugin if the growth rate is not a field | idea |
 | **A fire selector** | A key flips select-fire rifles between semi and auto | plugin + data: the mode is fixed per archetype, and auto needs its sound loop while semi needs per-round sounds, so each rifle needs both | idea |
@@ -146,9 +144,14 @@ does.
 | **Scarce ammunition** | Smaller `iMaxAmmo*`, fewer clips from bodies (`ClipMultiplierForPickup`) | data | idea |
 | **No hip crosshair** | Point shooting by feel; iron sights to hit anything at range | data: a HUD `.mgb` widget, not yet identified | idea |
 
-**Overlap with Aiming Overhaul:** its sway is a visual eye drift that does not move the shot. If
-Weapon Handling ships a sway of its own, the two would stack. See
-[open questions](#open-questions).
+**Moved to Aiming Overhaul:**
+
+| Idea | What changes | Feasibility | Status |
+| --- | --- | --- | --- |
+| **Hold breath, on sprint while aiming** | Holding sprint while down the sights steadies the aim for a few seconds, then the hands shake harder. Works on iron sights and scopes | plugin: sprint (bit `0x40`) and iron sight (`0x08`) share one input byte, which Legacy Plugin's aim toggle already rewrites. What the game does today with both set is unknown | requested |
+| **Sway that moves the shot** | Drift from breath and stance, applied to the look the shot follows. Hold breath only matters once this exists | plugin: the desired look after `UpdateLook` should move view and shot together; not yet tried | requested |
+| **Lean, and auto-lean at a corner** | Q and E roll the body out past cover; aiming at a corner's edge leans by itself | plugin + controls: the engine has no player lean | requested |
+| **The gun near walls** | A gun that would go into a wall comes back to a high ready and cannot fire | plugin: a physics ray along the view | requested |
 
 ### Wounds
 
@@ -231,8 +234,6 @@ Each is one launch.
 ## Open questions
 
 - **Difficulty:** one set of numbers for every difficulty, or harder only on Infamous?
-- **Hold breath and Aiming Overhaul:** should hold breath also still Aiming Overhaul's visual sway, or
-  should Weapon Handling's sway replace it when both are installed?
 - **Health regeneration:** keep the regeneration to the top of a bar, or none at all?
 - **Downed state:** does every heavy hit put the player down, or only the one that would have killed him?
 
@@ -241,3 +242,7 @@ Each is one launch.
 - 2026-10-20: the warfare work is split into seven mods: six new (Lethal Combat, Weapon Handling,
   Wounds, AI Overhaul, Faction War, Hit Effects) and Vehicle Overhaul for shooting from cars. Research
   only; no mod code yet.
+- 2026-10-21: each mod owns one part of the game, so no two write the same value. Aiming Overhaul owns
+  the player's aim, from input to the shot leaving the gun: its sway, hold breath, leaning and the gun
+  near walls. The warfare mods own what follows: damage, AI, wounds and the weapons' own data. A lean
+  rolls the real body, so the AI sees less of the player without an AI change.

@@ -1,0 +1,6 @@
+<oasisstrings>
+  <section name="Actions">
+    <string enum="lean_left" value="Kihajolás balra" />
+    <string enum="lean_right" value="Kihajolás jobbra" />
+  </section>
+</oasisstrings>

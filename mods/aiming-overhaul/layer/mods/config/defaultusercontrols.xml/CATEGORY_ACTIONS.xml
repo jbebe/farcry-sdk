@@ -1,0 +1,9 @@
+<Category name="CATEGORY_ACTIONS">
+	<Control name="fire" key1="mouse:lb" actionmap="common_shoot_remap" group="-1" conflictmask="-1" />
+	<Control name="ironsight" key1="mouse:rb" actionmap="common_iron_remap" group="-1" conflictmask="-1" />
+	<Control name="sprint" key1="kb:lshift" actionmap="common_move_remap" group="1" conflictmask="12" />
+	<Control name="jump" key1="kb:space" actionmap="common_jump_remap" group="1" conflictmask="12" />
+	<Control name="crouch" key1="kb:c" actionmap="common_crouch_remap" group="1" conflictmask="12" />
+	<Control name="reload" key1="kb:r" actionmap="common_reload_remap" group="1" conflictmask="12" />
+	<Control name="interact" key1="kb:f" actionmap="common_use_remap" group="1" conflictmask="12" />
+</Category>

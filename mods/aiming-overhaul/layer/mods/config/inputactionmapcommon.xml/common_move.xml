@@ -1,0 +1,28 @@
+<ActionMap name="common_move">
+	<Import actionmap="common_move_remap" optional="" />
+	<!--Keyboard-->
+	<CompoundInput name="move" device="kb">
+		<Input input="w" axis="0" />
+		<Input input="s" axis="0" invert="1" />
+		<Input input="d" axis="1" />
+		<Input input="a" axis="1" invert="1" />
+	</CompoundInput>
+	<Binding input="kb:move" action="press" signal="move" />
+	<Binding input="kb:move" action="release" signal="move" />
+	<Binding input="kb:lshift" action="press" signal="lock_sprint" />
+	<Binding input="kb:lshift" action="hold" signal="lock_sprint" />
+	<Binding input="kb:lshift" action="release" signal="unlock_sprint" />
+	<Binding input="kb:q" action="press" signal="start_lean_left" />
+	<Binding input="kb:q" action="release" signal="stop_lean_left" />
+	<Binding input="kb:e" action="press" signal="start_lean_right" />
+	<Binding input="kb:e" action="release" signal="stop_lean_right" />
+	<!--Gamepad-->
+	<PadFilter name="left_thumb" device="pad">
+		<Binding input="left_thumb_leftright" axis="1" sensitivity="1" curve="Player.MovementCurves.Movement_leftright" />
+		<Binding input="left_thumb_updown" axis="0" sensitivity="1" curve="Player.MovementCurves.Movement_updown" />
+	</PadFilter>
+	<Binding input="pad:left_thumb" action="update" signal="move" />
+	<Binding input="pad:left_thumb_push" action="press" signal="sprint" />
+	<Binding input="pad:left_thumb_push" action="hold" signal="sprint" />
+	<Binding input="pad:left_thumb_push" action="release" signal="walk" />
+</ActionMap>
