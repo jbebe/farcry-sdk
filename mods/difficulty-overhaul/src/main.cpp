@@ -6,6 +6,7 @@ void InstallDamageTaken();
 void InstallDamageDealt();
 void InstallHitModel();
 void InstallIntuition();
+void InstallGrass();
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION || !FCSE::Bind(api)) {
@@ -17,5 +18,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallDamageDealt();
     InstallHitModel();
     InstallIntuition();
+    InstallGrass();
     return true;
 }
