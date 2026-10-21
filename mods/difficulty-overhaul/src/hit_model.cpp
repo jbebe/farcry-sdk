@@ -62,9 +62,10 @@ namespace {
     // When each shooting system last fired at the player, by game clock.
     std::unordered_map<const void*, double> g_lastShot;
     constexpr size_t kMaxShooters = 512;
-    // Set while GenerateShootAtPosition rolls a shot at the player, and the chance that shot had.
-    bool g_rolling = false;
-    float g_shotChance = 0.0f;
+    // The recoil factor of the shot at the player being rolled, NaN between such shots, and the
+    // chance that shot was given.
+    float g_shotRecoil = NAN;
+    float g_shotChance = NAN;
 
     double Now() { return Read<double>(*g_clock.get(), kClockSeconds); }
 
@@ -113,7 +114,7 @@ namespace {
     }
 
     float __fastcall GetTimerFactorDetour(void* shooting) {
-        if (!AimsAtPlayer(shooting) || Read<float>(shooting, kReactionLifetime) == -1.0f) {
+        if (Read<float>(shooting, kReactionLifetime) == -1.0f || !AimsAtPlayer(shooting)) {
             return g_originalGetTimerFactor(shooting);
         }
         return Settled(shooting);
@@ -121,14 +122,14 @@ namespace {
 
     float __fastcall GetChanceDetour(void* shooting) {
         float chance = g_originalGetChance(shooting);
-        if (!g_rolling) {
+        if (std::isnan(g_shotRecoil)) {
             return chance;
         }
-        // Point blank answers a certain hit and skips the reaction timer.
+        // A certain hit is point blank, which the reaction timer does not reach.
         if (chance >= 1.0f) {
             chance *= Settled(shooting);
         }
-        g_shotChance = std::min(chance, kMaxChance) * Recoil(shooting);
+        g_shotChance = std::min(chance, kMaxChance) * g_shotRecoil;
         return RollChance(g_shotChance);
     }
 
@@ -138,24 +139,23 @@ namespace {
             return g_originalShootAt(shooting, unused, position, head, torso);
         }
 
-        auto* system = static_cast<uint8_t*>(shooting);
         // No streak of forced misses after a hit.
-        system[kLastShotHit] = 0;
-        // Each shot is aimed at the head or the torso by kHeadAimShare, whatever the brain asked.
+        Write<bool>(shooting, kLastShotHit, false);
+        // Each shot is aimed at the head or the torso by kHeadAimShare.
         const int part = std::rand() < kHeadAimShare * RAND_MAX ? kHeadPart : kTorsoPart;
-        if (Read<int>(system, kDotPart) != part) {
-            *reinterpret_cast<int*>(system + kAimPart) = part;
+        if (Read<int>(shooting, kDotPart) != part) {
+            Write(shooting, kAimPart, part);
             g_setupAimingDot(shooting);
         }
 
-        g_rolling = true;
+        g_shotRecoil = Recoil(shooting);
         g_shotChance = NAN;
-        const float recoil = Recoil(shooting);
         const int result = g_originalShootAt(shooting, unused, position, head, torso);
-        g_rolling = false;
-        FCSE::Logf("shot at player: chance %.2f (recoil %.2f) at %.1f m, %s", g_shotChance, recoil,
-                   Read<float>(system, kTargetDistance), system[kLastShotHit] ? "hit" : "miss");
-        // Shooting systems die with their soldiers; an old one's time only means a stale recoil.
+        FCSE::Logf("shot at player: chance %.2f (recoil %.2f) at %.1f m, %s", g_shotChance,
+                   g_shotRecoil, Read<float>(shooting, kTargetDistance),
+                   Read<bool>(shooting, kLastShotHit) ? "hit" : "miss");
+        g_shotRecoil = NAN;
+        // Forget every shooter once there are more than kMaxShooters.
         if (g_lastShot.size() > kMaxShooters) {
             g_lastShot.clear();
         }

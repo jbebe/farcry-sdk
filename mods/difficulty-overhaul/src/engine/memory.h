@@ -14,6 +14,11 @@ T Read(const void* object, ptrdiff_t offset) {
     return *reinterpret_cast<const T*>(static_cast<const uint8_t*>(object) + offset);
 }
 
+template <class T>
+void Write(void* object, ptrdiff_t offset, T value) {
+    *reinterpret_cast<T*>(static_cast<uint8_t*>(object) + offset) = value;
+}
+
 // Hooks the engine function `site`, keeping what it called in `original`. False when the function
 // was not found, which is not logged here, or when FCSE refused it, which FCSE logs.
 template <class Fn>
