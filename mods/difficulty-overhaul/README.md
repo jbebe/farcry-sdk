@@ -5,17 +5,20 @@ plugin that changes `Dunia.dll` in memory.
 
 The goal is lethal combat in both directions where every hit is earned: a bullet that connects is
 serious for the player and for a mercenary, and whether it connects depends on range, movement,
-visibility, recoil and the time a shooter needs to settle his aim. Hardcore is tuned by hand on the
-Mod Configuration Menu; Easy, Normal and Infamous follow it by fixed ratios, and differ in how
-forgiving the game is rather than in how well the enemy aims.
+visibility, recoil and the time a shooter needs to settle his aim. Everything is tuned on Hardcore;
+Easy and Normal will be eased from it and Infamous made harder, so the difficulties differ in how
+forgiving the game is rather than in how well the enemy aims. The values are constants in the
+plugin, with nothing on the Mod Configuration Menu.
 
 ## Features
 
-| Row in `[DifficultyOverhaul]` | What it does | Default |
-|---|---|---|
-| `Hit log` | Writes every hit on the player, and every hit the player lands on a soldier, to `bin\fcse.log`: stim type and level, body part, range, health before and after, and whether a soldier was wounded or killed | on |
+| Feature | What it does |
+|---|---|
+| Damage taken | A bullet hits the player by where it lands, as a multiple of the game's damage: head 4, torso 2.5, arms and legs 1.5, hands and feet 1. The last health bar no longer quarters the damage. |
+| Damage dealt | The player's hits on a soldier use head 6, torso 2.5, arms and legs 1.25, hands and feet 0.75 in place of the game's 6, 1, 1, 0.5, 0.5, 0.5 |
+| Hit log | Writes every hit on the player, and every hit the player lands on a soldier, to `bin\fcse.log`: stim type and level, body part, range, health before and after, and whether a soldier was wounded or killed |
 
-The hit log is the measuring tool for tuning. A line reads:
+A hit log line reads:
 
 ```
 soldier 0001A2F4 hit: pierce level 14, torso, at 31.2 m, health 150 -> 46 (Hardcore, act 1, hit locations on)
@@ -29,6 +32,7 @@ player hit: pierce level 9, no body part, at 18.7 m, health 1075 -> 1028 (Hardco
 .\build.ps1 -Config debug
 .\build.ps1 -Install "<game>\bin"    # copies into bin\plugins\
 .\verify_build.ps1           # x86, static CRT, FCSE_Load exported
+python ..\..\scripts\verify_patterns.py
 ```
 
 Needs FCSE with plugin API v8.

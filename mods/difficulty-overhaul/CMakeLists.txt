@@ -14,6 +14,9 @@ endif()
 add_library(DifficultyOverhaul SHARED
   "src/main.cpp"
   "src/hit_log.cpp"
+  "src/damage_taken.cpp"
+  "src/damage_dealt.cpp"
+  "src/engine/damage.cpp"
   "src/engine/game.cpp"
 )
 

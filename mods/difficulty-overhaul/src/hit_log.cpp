@@ -1,5 +1,6 @@
 // The hit log: every bullet, blast and blade that hits the player, and every one the player lands on
 // a soldier, written to fcse.log with the health it took.
+#include "engine/damage.h"
 #include "engine/game.h"
 #include "engine/memory.h"
 #include "fcse_api.h"
@@ -7,80 +8,31 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
-#include <iterator>
 
 using namespace DifficultyOverhaul;
 
 namespace {
-    // __thiscall with one stack argument, which a free function spells __fastcall.
-    using DamageFn = void(__fastcall*)(void* counters, void* unused, const uint8_t* stim);
-
-    // CFCXCountersComponentPlayer::HandleDamageStim and CFCXCountersComponentAI::DamageHealth.
-    FCSE::Relocation<DamageFn> g_playerDamage{FCSE::Uplay(0x006A2880)};
-    FCSE::Relocation<DamageFn> g_soldierDamage{FCSE::Uplay(0x0069C9C0)};
-    DamageFn g_originalPlayerDamage = nullptr;
-    DamageFn g_originalSoldierDamage = nullptr;
-
-    bool g_enabled = true;
-
-    // CEntityEventStims.
-    constexpr ptrdiff_t kStimInstigator = 0x40;
-    constexpr ptrdiff_t kStimType = 0x48;
-    constexpr ptrdiff_t kStimLevel = 0x58;
-    constexpr ptrdiff_t kStimBodyParts = 0x5C;
+    Damage::StimHandlerFn g_originalPlayerDamage = nullptr;
+    Damage::StimHandlerFn g_originalSoldierDamage = nullptr;
 
     // CFCXCountersComponent, then the soldier's wounded state on CFCXCountersComponentAI.
-    constexpr ptrdiff_t kCountersHealth = 0x44;
     constexpr ptrdiff_t kCountersHitLocations = 0x48;
     constexpr ptrdiff_t kCountersMissionManager = 0x5C;
     constexpr ptrdiff_t kSoldierWoundSeverity = 0x80;
     constexpr ptrdiff_t kSoldierWounded = 0x84;
 
-    constexpr ptrdiff_t kCounterValue = 0x10;
     constexpr ptrdiff_t kMissionManagerAct = 0x40;
     constexpr ptrdiff_t kEntityId = 0x08;
     constexpr ptrdiff_t kEntityPosition = 0x60;
 
-    // Stim types 3 to 5: the ones a weapon deals.
-    constexpr int kFirstWeaponType = 3;
     const char* const kTypeNames[] = {"pierce", "crush", "cut"};
+    const char* const kPartNames[] = {"head", "torso", "arms", "legs", "hands", "feet", "no body part"};
 
-    // In the order CFCXCountersService::ApplyLocationMultiplier tests the bits.
-    constexpr struct {
-        uint32_t mask;
-        const char* name;
-    } kBodyParts[] = {{0x003, "torso"}, {0x040, "head"}, {0x028, "hands"},
-                      {0x500, "feet"},  {0x014, "arms"}, {0x280, "legs"}};
-
-    // The stim's type name, or null when it is not logged.
+    // The stim's type name, or null for a type that is not logged.
     const char* LoggedType(const uint8_t* stim) {
-        const int index = Read<int>(stim, kStimType) - kFirstWeaponType;
-        return g_enabled && index >= 0 && index < static_cast<int>(std::size(kTypeNames))
-                   ? kTypeNames[index]
-                   : nullptr;
-    }
-
-    const char* BodyPart(uint32_t parts) {
-        if (parts == 0) {
-            return "no body part";
-        }
-        for (const auto& part : kBodyParts) {
-            if (parts & part.mask) {
-                return part.name;
-            }
-        }
-        return "unknown body part";
-    }
-
-    float Health(const void* counters) {
-        const auto* counter = Read<const void*>(counters, kCountersHealth);
-        return counter != nullptr ? Read<float>(counter, kCounterValue) : NAN;
-    }
-
-    void* Owner(void* counters) { return FCSE::ApiPointer()->EntityData->EntityOf(counters); }
-
-    void* Instigator(const uint8_t* stim) {
-        return Game::ProxyEntity(Read<const void*>(stim, kStimInstigator));
+        const int type = Damage::Type(stim);
+        return type >= Damage::kPierce && type <= Damage::kCut ? kTypeNames[type - Damage::kPierce]
+                                                                : nullptr;
     }
 
     float Distance(const void* a, const void* b) {
@@ -99,8 +51,8 @@ namespace {
                 const void* counters, const char* result) {
         const auto* missions = Read<const void*>(counters, kCountersMissionManager);
         FCSE::Logf("%s hit: %s level %d, %s, at %.1f m, %s (%s, act %u, hit locations %s)", who,
-                   type, Read<int>(stim, kStimLevel), BodyPart(Read<uint32_t>(stim, kStimBodyParts)),
-                   distance, result, Game::Name(Game::CurrentDifficulty()),
+                   type, Damage::Level(stim), kPartNames[Damage::Part(stim)], distance, result,
+                   Game::Name(Game::CurrentDifficulty()),
                    missions != nullptr ? Read<uint8_t>(missions, kMissionManagerAct) : 0u,
                    Read<bool>(counters, kCountersHitLocations) ? "on" : "off");
     }
@@ -112,25 +64,26 @@ namespace {
             return;
         }
 
-        const float before = Health(counters);
+        const float before = Damage::Health(counters);
         g_originalPlayerDamage(counters, unused, stim);
         char result[64];
-        std::snprintf(result, sizeof(result), "health %.0f -> %.0f", before, Health(counters));
-        LogHit("player", type, stim, Distance(Owner(counters), Instigator(stim)), counters, result);
+        std::snprintf(result, sizeof(result), "health %.0f -> %.0f", before,
+                      Damage::Health(counters));
+        LogHit("player", type, stim, Distance(Damage::Owner(counters), Damage::Instigator(stim)),
+               counters, result);
     }
 
     void __fastcall SoldierDamageDetour(void* counters, void* unused, const uint8_t* stim) {
         const char* type = LoggedType(stim);
-        void* player = type != nullptr ? Game::PlayerEntity() : nullptr;
-        if (player == nullptr || Instigator(stim) != player) {
+        if (type == nullptr || !Damage::ByPlayer(stim)) {
             g_originalSoldierDamage(counters, unused, stim);
             return;
         }
 
         const bool wasWounded = Read<bool>(counters, kSoldierWounded);
-        const float before = Health(counters);
+        const float before = Damage::Health(counters);
         g_originalSoldierDamage(counters, unused, stim);
-        const float after = Health(counters);
+        const float after = Damage::Health(counters);
 
         char result[64];
         if (wasWounded) {
@@ -142,22 +95,18 @@ namespace {
                           : Read<bool>(counters, kSoldierWounded) ? ", wounded"
                                                                    : "");
         }
-        void* soldier = Owner(counters);
+        void* soldier = Damage::Owner(counters);
         char who[24];
         std::snprintf(who, sizeof(who), "soldier %08X",
                       soldier != nullptr ? Read<uint32_t>(soldier, kEntityId) : 0u);
-        LogHit(who, type, stim, Distance(soldier, player), counters, result);
+        LogHit(who, type, stim, Distance(soldier, Damage::Instigator(stim)), counters, result);
     }
 }
 
 void InstallHitLog() {
-    if (!Hook(g_playerDamage, &PlayerDamageDetour, &g_originalPlayerDamage) ||
-        !Hook(g_soldierDamage, &SoldierDamageDetour, &g_originalSoldierDamage)) {
+    if (!Hook(Damage::PlayerDamage, &PlayerDamageDetour, &g_originalPlayerDamage) ||
+        !Hook(Damage::SoldierDamage, &SoldierDamageDetour, &g_originalSoldierDamage)) {
         FCSE::Logf("hit log: the player's or the soldiers' damage handling was not found in this "
                    "build");
     }
-}
-
-void __cdecl OnHitLogChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    g_enabled = value->asCheckbox;
 }
