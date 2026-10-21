@@ -17,7 +17,7 @@ namespace {
     // Seconds for the roll to follow, which takes it most of the way in a quarter of a second.
     constexpr float kFollow = 0.08f;
     // Metres from the belly up to the eye.
-    constexpr float kPivot = 0.75f;
+    constexpr float kPivot = 1.0f;
 
     std::atomic<bool> g_enabled{true};
     bool g_left = false;

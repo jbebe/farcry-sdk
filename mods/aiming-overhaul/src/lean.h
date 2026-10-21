@@ -8,8 +8,8 @@
 
 namespace AimingOverhaul::Lean {
 
-// Radians at full lean, which takes the eye about 0.28 m to the side.
-inline constexpr float kMostRoll = 0.38f;
+// Radians at full lean, which takes the eye about 0.43 m to the side.
+inline constexpr float kMostRoll = 0.44f;
 
 // Follows the lean signals.
 void OnSignal(uint32_t signal);

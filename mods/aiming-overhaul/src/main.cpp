@@ -88,10 +88,20 @@ namespace {
         return scope != nullptr ? scope->raiseReach : 0.0f;
     }
 
+    // Whether the aim key is held, and whether the gun near walls let go of the sights it asked for.
+    constexpr uint32_t kAim = FCSE::Crc32("startironsight");
+    constexpr uint32_t kAimReleased = FCSE::Crc32("stopironsight");
+    bool g_aimHeld = false;
+    bool g_sightsDropped = false;
+
     void OnSignal(uint32_t signal) {
         AimingOverhaul::Breath::OnSignal(signal);
         AimingOverhaul::Lean::OnSignal(signal);
-        AimingOverhaul::Peek::OnSignal(signal);
+        if (signal == kAim) {
+            g_aimHeld = true;
+        } else if (signal == kAimReleased) {
+            g_aimHeld = false;
+        }
     }
 
     // The player's pawn as the camera last saw it, and when. The camera stops seeing it out of a
@@ -105,7 +115,8 @@ namespace {
     }
 
     // The lean, then the gun near walls, judged from where the lean is taking the eye so a lean out
-    // past a corner does not swing the gun down on the way, then the breath and the sway.
+    // past a corner does not swing the gun down on the way, then the breath and the sway. Sights the
+    // wall let go of come back once the gun is free, if the aim key is still held.
     AimingOverhaul::Aim::Adjust OnAimFrame(uint8_t* pawn, float seconds) {
         using namespace AimingOverhaul;
         g_pawn = pawn;
@@ -113,7 +124,7 @@ namespace {
         float forward[3];
         Aim::Forward(forward);
         const float* eye = Aim::Eye();
-        const float autoRoll = Peek::Update(seconds, eye, forward, Lean::Current());
+        const float autoRoll = Peek::Update(seconds, g_aimHeld, eye, forward, Lean::Current());
         const float roll = Lean::Roll(seconds, !Pawn::Is(pawn, Pawn::kSprint), autoRoll);
         const Aim::Offset leanEye = Lean::Eye(roll);
         WeaponDraws::SetViewMove(roll, leanEye);
@@ -127,6 +138,12 @@ namespace {
         Wall::Update(seconds, eye != nullptr ? leaned : nullptr, forward);
         if (Wall::Blocked()) {
             Pawn::DropSights(pawn);
+            g_sightsDropped = g_aimHeld;
+        } else if (g_sightsDropped) {
+            if (g_aimHeld) {
+                Pawn::RaiseSights(pawn);
+            }
+            g_sightsDropped = false;
         }
         Breath::Update(seconds, Aim::Aiming());
         return {Sway::Drift(seconds), leanEye, Wall::Down(), roll};

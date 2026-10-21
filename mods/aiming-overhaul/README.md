@@ -22,8 +22,8 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   up to two and a half times the sway, until it is let go. After a hold the sway is up to half again
   as large while the breath comes back, which takes 3 s from empty. Through the sights the sprint
   key does nothing else.
-- **Lean.** Holding Lean left or Lean right rolls the upper body about the belly, 22° over a quarter
-  of a second: the view rolls, and the eye swings 0.28 m to the side and 5 cm down, around a corner.
+- **Lean.** Holding Lean left or Lean right rolls the upper body about the belly, 25° over a quarter
+  of a second: the view rolls, and the eye swings 0.43 m to the side and 10 cm down, around a corner.
   The gun rolls and moves with the view, and shots leave from where the eye now is. The eye stays
   inside the body's own collision, so it never leans into a wall. There is no lean while sprinting.
   The body the guards see does not lean.
@@ -34,7 +34,7 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
 - **Gun near walls.** A gun that would reach into a wall, within 0.8 m of the eye, swings down out
   of it, by up to 34° as the room ahead shrinks by another 0.35 m, while the view holds still.
   Swung more than halfway down it lets go of the sights and does not fire, until it is less than a
-  third of the way down again.
+  third of the way down again; if the aim key is still held then, the sights come back up.
 - **Gun blur.** Down the iron sights the eye focuses on the front sight, and the rest of the gun
   goes out of focus by how far it is from it, as through an 8 mm pupil: the rear sight most, and the
   blur spills a little past the gun's edge. The focus holds on the front sight while a fast turn

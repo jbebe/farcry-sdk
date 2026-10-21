@@ -3,7 +3,6 @@
 #include "peek.h"
 
 #include "engine/ray.h"
-#include "fcse_api.h"
 #include "lean.h"
 
 #include <atomic>
@@ -11,10 +10,6 @@
 #include <initializer_list>
 
 namespace {
-    // The aim key itself, since the sights are let go while the gun is swung down at a wall.
-    constexpr uint32_t kAim = FCSE::Crc32("startironsight");
-    constexpr uint32_t kAimReleased = FCSE::Crc32("stopironsight");
-
     // Metres ahead that must be clear for the view to count as open, and the steps a full lean is
     // tried in, smallest first.
     constexpr float kProbe = 1.2f;
@@ -23,7 +18,6 @@ namespace {
     constexpr float kInterval = 0.1f;
 
     std::atomic<bool> g_enabled{true};
-    bool g_aimHeld = false;
     float g_sinceLook = kInterval;
     float g_target = 0.0f;
 
@@ -63,18 +57,10 @@ namespace {
     }
 }
 
-void AimingOverhaul::Peek::OnSignal(uint32_t signal) {
-    if (signal == kAim) {
-        g_aimHeld = true;
-    } else if (signal == kAimReleased) {
-        g_aimHeld = false;
-    }
-}
-
-float AimingOverhaul::Peek::Update(float seconds, const float eye[3], const float forward[3],
-                                   float roll) {
+float AimingOverhaul::Peek::Update(float seconds, bool aimHeld, const float eye[3],
+                                   const float forward[3], float roll) {
     g_sinceLook += seconds;
-    if (!g_enabled || !g_aimHeld || eye == nullptr) {
+    if (!g_enabled || !aimHeld || eye == nullptr) {
         g_target = 0.0f;
         return g_target;
     }
