@@ -445,5 +445,4 @@ Everything below needs a real install:
   the player faces, which drops onto its wheels and can be driven. The Lua tab shows the
   `SpawnEntityFromArchetype` line it ran.
 - **Spawner soldiers** *(not yet run)*: in the test range, Squad size 3 and Red faction's Assault,
-  Caucasian put three soldiers 25 m ahead, 3 m apart, facing you. With no navmesh there, a crash
-  some 30 s later is the expected result, not a fault of the spawn.
+  Caucasian put three soldiers 25 m ahead, 3 m apart, facing you, and they engage.

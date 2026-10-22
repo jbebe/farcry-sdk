@@ -94,7 +94,7 @@ level, named after the world.
 | `worldsectors\worldsector<n>.data.fcb` | **entities** by mission layer | no: `tmpla` ships none | ✓ `WorldLoader` | ✓ Map tab, fragments | via XML or the Map tab | none |
 | `worldsectors\landmarkfar_<n>.data.fcb` | **vegetation** (`VegetationData`) and far LOD | no: `tmpla` ships none | ✓ decoded ([vegetation](../engine-internals/terrain-and-vegetation.md)) | ✓ as plain FCB | ✗ no packer for the nine lists | none |
 | `worldsectors\landmarknear<n>.data.fcb` | near light-vegetation grid, some mission content | no | ✓ | ✓ | ✗ | none |
-| `nv\sectors\nv_<n>.nvm` | **navmesh** for AI | no, but AI crashes without it | ✓ `WorldNavMesh` | ✗ | ✗ the engine's generator has no export | none, so no AI |
+| `nv\sectors\nv_<n>.nvm` | **navmesh** for AI | no, but AI crashes without it | ✓ `NvmSector` | ✓ `NvmSector` | ✓ `navmesh build`, flat or gently rolling ground only ([generating a navmesh](../file-formats/nvm.md#generating-a-navmesh)); loaded only where `sectorsdep` sets `HasNavMesh` | none, so no AI |
 | `sector<n>.preload_x.fcb`, beside `generated\` | streaming preload, campaign levels only | no | ✓ | ✓ | ✗ | none |
 
 Other parts of a world live elsewhere:
@@ -178,15 +178,16 @@ also holds a `"world1"` literal. Save in `newworld_tile`, quit to the menu, load
 
 In order of what is ready:
 
-- **Entities and props:** worldsector files through the JackAll Map tab; no AI until a navmesh
-  exists.
+- **Entities and props:** worldsector files through the JackAll Map tab.
 - **Textures and map art:** `xbt build`.
 - **Terrain heights:** `SdatSectorFile.Encode` can write a sector. A flat sector's tables can be
   reused, but real relief needs its normals, LOD masks and bounds derived, and nothing does that yet.
   Sector edges are shared, so neighbouring sectors must agree.
 - **Vegetation:** needs a `VegetationData` packer.
 - **Roads:** need the spline bounds and arc tables recomputed.
-- **AI:** needs a navmesh writer, or a way to drive the engine's own generator.
+- **AI:** `jackall-cli navmesh build` writes a navmesh around placed entities, without cover points or
+  slope limits. Retail `Dunia.dll` carries no generator of its own. [`tools/TestRange`](https://github.com/jbebe/farcry-sdk/tree/main/tools/TestRange)
+  is a flat world built this way.
 
 ## The test sheet
 

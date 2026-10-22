@@ -59,4 +59,8 @@ $walls | Group-Object { [Math]::Floor($_.X / $sectorSize) + $tmplaSide * [Math]:
     Write-Fcb $doc "$layer\levels\$name\generated\worldsectors\worldsector$id.data.fcb"
 }
 
-Write-Host "Wrote $PSScriptRoot\layer with $wallCount walls"
+# Navmesh around the walls, and HasNavMesh on every sector so the game streams it.
+& $Cli navmesh build $layer --level $name | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "navmesh build failed" }
+
+Write-Host "Wrote $PSScriptRoot\layer with $wallCount walls and a navmesh"
