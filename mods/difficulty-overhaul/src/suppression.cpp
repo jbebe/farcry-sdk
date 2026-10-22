@@ -30,7 +30,6 @@ namespace {
 
     // Until when each pinned-down shooting system stays pinned, by game clock.
     std::unordered_map<const void*, double> g_pinnedUntil;
-    constexpr size_t kMaxPinned = 512;
 
     void __fastcall OnBulletShotDetour(void* processor, void* unused, const uint8_t* stim, bool hit) {
         g_originalOnBulletShot(processor, unused, stim, hit);
@@ -45,17 +44,13 @@ namespace {
         if (!Shooting::AimsAtPlayer(shooting)) {
             return;
         }
-        // Soldiers killed while pinned are never erased, so forget everyone past kMaxPinned.
-        if (g_pinnedUntil.size() > kMaxPinned) {
-            g_pinnedUntil.clear();
-        }
         const double now = Game::Now();
-        auto [pinned, added] = g_pinnedUntil.try_emplace(shooting, 0.0);
-        if (added || now >= pinned->second) {
+        double& pinnedUntil = Shooting::Remember(g_pinnedUntil, shooting);
+        if (now >= pinnedUntil) {
             FCSE::Logf("suppressed: %s at %.1f m", hit ? "hit" : "near miss",
                        Shooting::TargetDistance(shooting));
         }
-        pinned->second = now + kPinnedSeconds;
+        pinnedUntil = now + kPinnedSeconds;
         Shooting::RestartAim(shooting);
     }
 

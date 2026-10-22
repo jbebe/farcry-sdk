@@ -22,6 +22,8 @@ plugin, with nothing on the Mod Configuration Menu.
 | Intuition | After a soldier spots or re-spots his target he keeps knowing where it really is, in sight or not, for 1 s in place of the game's 6, so breaking line of sight breaks his track. This is the soldier's own window, so it applies whoever he is tracking |
 | Grass | A player crouched still in high grass stays hidden from a soldier who is fighting: grass takes 80 % of how visible the player is from 10 m out, where the game stops grass hiding the player the moment a soldier is in combat. With fire held until the player is seen clearly, soldiers no longer shoot into grass the player is hiding in |
 | Suppression | A soldier the player's bullets hit, land near or pass close to holds his fire at the player for 1 s, and his aim settles again from scratch after it, so return fire keeps a shooter's head down |
+| Squad memory | A squad keeps hunting the player at the spot it last saw him for as long as he stays within 15 m of it, where the game forgets him 10 s after last seeing him. Only slipping away unseen lets them lose him |
+| Watched spot | A soldier keeps his aim on where the player vanished: a peek from that spot meets a settled rifle, while reappearing more than 0.1 rad away as he sees it (3 m at 30 m) makes him settle his aim again |
 | Hit log | Writes every hit on the player, and every hit the player lands on a soldier, to `bin\fcse.log`: stim type and level, body part, range, health before and after, and whether a soldier was wounded or killed. Every AI shot at the player gets a line too: its chance, the recoil factor, the range and whether it hit |
 
 A hit log line reads:

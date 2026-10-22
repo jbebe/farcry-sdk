@@ -10,6 +10,8 @@ void InstallRangeFalloff();
 void InstallIntuition();
 void InstallGrass();
 void InstallSuppression();
+void InstallSquadMemory();
+void InstallWatchedSpot();
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION || !FCSE::Bind(api)) {
@@ -25,5 +27,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallIntuition();
     InstallGrass();
     InstallSuppression();
+    InstallSquadMemory();
+    InstallWatchedSpot();
     return true;
 }

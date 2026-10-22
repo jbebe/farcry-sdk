@@ -4,8 +4,19 @@
 #include "fcse_api.h"
 
 #include <cstdint>
+#include <unordered_map>
 
 namespace DifficultyOverhaul::Shooting {
+
+// A soldier's entry in a feature's map keyed by shooting system; past 512 soldiers it forgets them
+// all, since dead soldiers are never erased.
+template <typename T>
+T& Remember(std::unordered_map<const void*, T>& soldiers, const void* shooting) {
+    if (soldiers.size() > 512) {
+        soldiers.clear();
+    }
+    return soldiers[shooting];
+}
 
 using CanShootFn = bool(__fastcall*)(void* task);
 

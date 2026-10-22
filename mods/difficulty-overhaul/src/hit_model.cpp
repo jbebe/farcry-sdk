@@ -60,7 +60,6 @@ namespace {
 
     // When each shooting system last fired at the player, by game clock.
     std::unordered_map<const void*, double> g_lastShot;
-    constexpr size_t kMaxShooters = 512;
 
     // The shot at the player being rolled, with recoil NaN between such shots.
     struct Shot {
@@ -188,11 +187,7 @@ namespace {
                    Shooting::TargetDistance(shooting),
                    Read<bool>(shooting, kLastShotHit) ? "hit" : "miss");
         g_shot = {};
-        // Forget every shooter once there are more than kMaxShooters.
-        if (g_lastShot.size() > kMaxShooters) {
-            g_lastShot.clear();
-        }
-        g_lastShot[shooting] = Game::Now();
+        Shooting::Remember(g_lastShot, shooting) = Game::Now();
         return result;
     }
 }

@@ -136,7 +136,9 @@ Two more lieutenant rules, **RE-verified**:
 - **Camping.** Once a second it scores the player for staying put: +0.5 for moving less than 1 m,
   +0.4 under 3 m, +0.3 under 5 m (GOG `0x109225D0`, Steam `0x109335C0`). The score does not decay
   there. It lengthens the squad's memory: the lieutenant drops a target 10 s plus the score after it
-  was last seen (Steam `0x1093A2A0`), so a player who stays put is hunted longer.
+  was last seen, so a player who stays put is hunted longer. The targets are a list on the army, each
+  entry holding the target, where it was seen and when (`UpdateTargetList`, Steam `0x1093A2A0`, which
+  prunes at most every 15 s).
 - **Last man standing.** A member who is up and not in the threshold or dead state is sent
   `LastManStanding` when no other such member is within 200 m (`CheckLastManStanding`). The order
   only sets flag 42 (`CPawnAgent::LastManStanding`), and no plan in `mercbrain` tests flag 42, so the
@@ -342,7 +344,9 @@ Whether a shot may hit is decided by `CShootingSystem::GetChanceOfSuccess`, then
   (`Curves.ShootingSystem.GroupNumber`), evaluated at how many AIs currently shoot at the same
   target.
 - **Timer to miss** - 0 until `fTimerToMissTarget` seconds after the timer starts, 1 after it.
-  Every shot misses before then.
+  Every shot misses before then. The timer starts at his first shot in combat and is stopped only when
+  he leaves the combat states (`UpdateShootingSystem`), so losing sight of his target and finding it
+  again does not restart it.
 - **Hit cap** - 0 once the target has taken `uiMaxHitPerSecondFactor` hits in the current second.
   The value read is the one in the *target* status block; the shooter's copy is unused. It is 5 in
   every archetype that sets it.

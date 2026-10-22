@@ -22,6 +22,8 @@ add_library(DifficultyOverhaul SHARED
   "src/intuition.cpp"
   "src/grass.cpp"
   "src/suppression.cpp"
+  "src/squad_memory.cpp"
+  "src/watched_spot.cpp"
   "src/engine/damage.cpp"
   "src/engine/game.cpp"
   "src/engine/shooting.cpp"
