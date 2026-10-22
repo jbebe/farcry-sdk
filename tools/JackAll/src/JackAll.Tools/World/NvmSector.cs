@@ -84,15 +84,11 @@ public sealed record NvmSector
 
     public Vector2 Centre => new((MinX + MaxX) * 0.5f, (MinY + MaxY) * 0.5f);
 
+    /// <summary>Twice the longer side, which <c>SetPackedVectorSettings</c> needs to be a power of two.</summary>
+    public uint Span => (uint)MathF.Round(MathF.Max(MaxX - MinX, MaxY - MinY)) * 2;
+
     /// <summary>Packed X and Y steps per metre: <c>1 &lt;&lt; (15 - log2(span))</c>.</summary>
-    public float Scale
-    {
-        get
-        {
-            uint span = (uint)MathF.Round(MathF.Max(MaxX - MinX, MaxY - MinY)) * 2;
-            return 1 << (15 - BitOperations.Log2(span));
-        }
-    }
+    public float Scale => 1 << (15 - BitOperations.Log2(Span));
 
     public Vector3 Unpack(PackedVector p)
     {

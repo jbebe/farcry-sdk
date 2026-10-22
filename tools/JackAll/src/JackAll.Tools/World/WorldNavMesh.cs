@@ -5,8 +5,6 @@ namespace JackAll.Tools.World;
 /// <summary>One decoded sector file, every index still local to it.</summary>
 public sealed class NavMeshSector
 {
-    public const uint NoLink = NvmSector.NoLink;
-
     public required int SectorId { get; init; }
 
     public required Vector3[] Vertices { get; init; }
@@ -19,7 +17,7 @@ public sealed class NavMeshSector
 
     /// <summary>Node n's links are <c>Links[LinkStart[n]..LinkStart[n + 1])</c>, the first three
     /// being its edges in order. Each is <c>(nodeIndex &lt;&lt; 16) | sectorId</c> or
-    /// <see cref="NoLink"/>.</summary>
+    /// <see cref="NvmSector.NoLink"/>.</summary>
     public required int[] LinkStart { get; init; }
 
     public required uint[] Links { get; init; }
@@ -110,7 +108,7 @@ public static class WorldNavMesh
             return null;
         }
 
-        uint span = (uint)MathF.Round(MathF.Max(file.MaxX - file.MinX, file.MaxY - file.MinY)) * 2;
+        uint span = file.Span;
         if (file.Nodes.Length == 0 || !float.IsFinite(file.MinX) || !float.IsFinite(file.MinY)
             || span == 0 || (span & (span - 1)) != 0)
         {
@@ -206,7 +204,7 @@ public static class WorldNavMesh
 
         int Resolve(uint link)
         {
-            if (link == NavMeshSector.NoLink)
+            if (link == NvmSector.NoLink)
             {
                 return NoNeighbour;
             }

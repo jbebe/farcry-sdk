@@ -230,24 +230,18 @@ public static class NavMeshGenerator
 
     private static void Refine(Cell cell, Func<float, float, float> heightAt, IReadOnlyList<NavMeshObstacle> obstacles)
     {
-        bool partial = false;
-        foreach (NavMeshObstacle obstacle in obstacles)
+        // Only these can reach the cell's children, so they are all the children test.
+        List<NavMeshObstacle> overlapping = [.. obstacles.Where(o => o.Overlaps(cell.X, cell.Y, cell.Size))];
+        if (overlapping.Any(o => Corners(cell).All(o.Contains)))
         {
-            if (!obstacle.Overlaps(cell.X, cell.Y, cell.Size))
-            {
-                continue;
-            }
-            if (Corners(cell).All(obstacle.Contains))
-            {
-                cell.Blocked = true;
-                return;
-            }
-            partial = true;
+            cell.Blocked = true;
+            return;
         }
 
+        bool partial = overlapping.Count > 0;
         if (cell.Size > MaxCell || (cell.Size > MinCell && (partial || Bends(cell, heightAt))))
         {
-            Split(cell, heightAt, obstacles);
+            Split(cell, heightAt, overlapping);
         }
         else
         {
@@ -312,7 +306,7 @@ public static class NavMeshGenerator
             changed = false;
             foreach (Cell leaf in roots.SelectMany(Leaves).ToList())
             {
-                if (leaf.Size > MinCell && Neighbours(leaf, MinCell, find).Any(n => n.Size < leaf.Size / 2))
+                if (leaf.Size > MinCell && Neighbours(leaf, find).Any(n => n.Size < leaf.Size / 2))
                 {
                     Split(leaf, heightAt, obstacles);
                     changed = true;
@@ -321,11 +315,11 @@ public static class NavMeshGenerator
         }
     }
 
-    /// <summary>The leaves across each side, probed every <paramref name="step"/> just outside it.</summary>
-    private static IEnumerable<Cell> Neighbours(Cell cell, float step, Func<Vector2, Cell?> find)
+    /// <summary>The leaves across each side, probed at every smallest cell's width just outside it.</summary>
+    private static IEnumerable<Cell> Neighbours(Cell cell, Func<Vector2, Cell?> find)
     {
         const float outside = MinCell / 4;
-        for (float t = step / 2; t < cell.Size; t += step)
+        for (float t = MinCell / 2; t < cell.Size; t += MinCell)
         {
             foreach (Vector2 probe in new Vector2[]
             {
@@ -466,6 +460,7 @@ public static class NavMeshGenerator
         foreach ((int id, var c) in corners)
         {
             NvmSector shell = shells[id];
+            float water = shell.WaterLevel - UnderWaterDepth + 0.001f;
             int count = c.Indices.Length / 3;
             var nodes = new NvmNode[count];
             var flat = new (Vector2, Vector2, Vector2)[count];
@@ -481,8 +476,7 @@ public static class NavMeshGenerator
                 {
                     radii[s] = (byte)(int)(MathF.Min(clearance.DistanceTo(samples[s]), MaxClearance) * 25);
                 }
-                float water = shell.WaterLevel - UnderWaterDepth + 0.001f;
-                nodes[n] = new NvmNode(graphIds[(uint)n << 16 | (uint)id], 3, (uint)n * 3, shell.Pack(centroid),
+                nodes[n] =new NvmNode(graphIds[(uint)n << 16 | (uint)id], 3, (uint)n * 3, shell.Pack(centroid),
                     Normal(normal.X), Normal(normal.Y), Normal(normal.Z),
                     a.Z <= water && b.Z <= water && cc.Z <= water, false, ia, ib, ic, radii);
                 flat[n] = (new(a.X, a.Y), new(b.X, b.Y), new(cc.X, cc.Y));
@@ -531,7 +525,8 @@ public static class NavMeshGenerator
                     int first = (int)(node >> 16) * 3;
                     for (int k = 0; k < 3; k++)
                     {
-                        if (around[first + k] is var next && next != NvmSector.NoLink && seen.Add(next))
+                        uint next = around[first + k];
+                        if (next != NvmSector.NoLink && seen.Add(next))
                         {
                             stack.Push(next);
                         }

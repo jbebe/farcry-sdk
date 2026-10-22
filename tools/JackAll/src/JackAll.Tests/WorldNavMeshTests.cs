@@ -11,7 +11,7 @@ public class WorldNavMeshTests
     /// <summary>Two neighbouring retail sectors, so links across the seam between them resolve.</summary>
     private static readonly string[] Sectors = ["Nvm/nv_2576.nvm", "Nvm/nv_2577.nvm"];
 
-    private static readonly uint[] None = [NavMeshSector.NoLink, NavMeshSector.NoLink, NavMeshSector.NoLink];
+    private static readonly uint[] None = [NvmSector.NoLink, NvmSector.NoLink, NvmSector.NoLink];
 
     private static uint Link(int sector, int node) => (uint)(node << 16) | (uint)sector;
 
@@ -74,8 +74,8 @@ public class WorldNavMeshTests
     public void ReadsTrianglesAndTheirLinks()
     {
         NavMeshSector sector = Sector(2576, 1024,
-            (0, 1, 2, [NavMeshSector.NoLink, Link(2576, 1), NavMeshSector.NoLink]),
-            (2, 1, 3, [Link(2576, 0), NavMeshSector.NoLink, NavMeshSector.NoLink, Link(2577, 4)]));
+            (0, 1, 2, [NvmSector.NoLink, Link(2576, 1), NvmSector.NoLink]),
+            (2, 1, 3, [Link(2576, 0), NvmSector.NoLink, NvmSector.NoLink, Link(2577, 4)]));
 
         Assert.Equal([0, 1, 2, 2, 1, 3], sector.Triangles);
         Assert.Equal([0, 3, 7], sector.LinkStart);
@@ -86,10 +86,10 @@ public class WorldNavMeshTests
     public void SortsEdgesIntoInteriorBoundaryAndSeam()
     {
         NavMeshSector a = Sector(2576, 1024,
-            (0, 1, 2, [NavMeshSector.NoLink, Link(2576, 1), Link(2577, 0)]),
-            (2, 1, 3, [Link(2576, 0), NavMeshSector.NoLink, NavMeshSector.NoLink]));
+            (0, 1, 2, [NvmSector.NoLink, Link(2576, 1), Link(2577, 0)]),
+            (2, 1, 3, [Link(2576, 0), NvmSector.NoLink, NvmSector.NoLink]));
         NavMeshSector b = Sector(2577, 1088,
-            (0, 1, 2, [Link(2576, 0), NavMeshSector.NoLink, NavMeshSector.NoLink]));
+            (0, 1, 2, [Link(2576, 0), NvmSector.NoLink, NvmSector.NoLink]));
 
         NavMesh mesh = WorldNavMesh.Assemble([a, b]);
 
@@ -107,9 +107,9 @@ public class WorldNavMeshTests
     public void ANeighbouringPairIsLinkedOnceWhereverItSits()
     {
         NavMeshSector sector = Sector(2576, 1024,
-            (0, 1, 2, [Link(2576, 1), NavMeshSector.NoLink, NavMeshSector.NoLink]),
-            (2, 1, 3, [Link(2576, 0), Link(2576, 2), NavMeshSector.NoLink]),
-            (1, 3, 2, [Link(2576, 1), NavMeshSector.NoLink, NavMeshSector.NoLink]));
+            (0, 1, 2, [Link(2576, 1), NvmSector.NoLink, NvmSector.NoLink]),
+            (2, 1, 3, [Link(2576, 0), Link(2576, 2), NvmSector.NoLink]),
+            (1, 3, 2, [Link(2576, 1), NvmSector.NoLink, NvmSector.NoLink]));
 
         NavMesh mesh = WorldNavMesh.Assemble([sector]);
 
@@ -122,7 +122,7 @@ public class WorldNavMeshTests
     {
         NavMeshSector sector = Sector(2576, 1024,
             (0, 1, 2, None),
-            (2, 1, 3, [Link(2576, 0), NavMeshSector.NoLink, NavMeshSector.NoLink]));
+            (2, 1, 3, [Link(2576, 0), NvmSector.NoLink, NvmSector.NoLink]));
 
         NavMesh mesh = WorldNavMesh.Assemble([sector]);
 
@@ -134,7 +134,7 @@ public class WorldNavMeshTests
     public void ALinkIntoAnUnloadedSectorIsASeam()
     {
         NavMeshSector sector = Sector(2576, 1024,
-            (0, 1, 2, [Link(2600, 0), NavMeshSector.NoLink, NavMeshSector.NoLink]));
+            (0, 1, 2, [Link(2600, 0), NvmSector.NoLink, NvmSector.NoLink]));
 
         NavMesh mesh = WorldNavMesh.Assemble([sector]);
 
