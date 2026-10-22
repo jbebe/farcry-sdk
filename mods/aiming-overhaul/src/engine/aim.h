@@ -21,9 +21,10 @@ struct Swing {
 struct Adjust {
     // The hand's drift, which the eye follows down the iron sights.
     Offset drift;
-    // The view's pitch and roll over the body's, in radians, up and right positive.
+    // The view's pitch over the body's, in radians, up positive.
     float pitch;
-    float roll;
+    // The eye's move with the body as it leans.
+    Offset lean;
 };
 
 // Once a frame, with the player's pawn and the seconds since the last, before the camera is placed

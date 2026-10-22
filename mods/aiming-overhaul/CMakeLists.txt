@@ -90,6 +90,7 @@ add_library(AimingOverhaul SHARED
   "src/engine/ray.cpp"
   "src/engine/screen_draw.cpp"
   "src/engine/second_view.cpp"
+  "src/engine/skeleton.cpp"
   "src/engine/shader.cpp"
   "src/engine/sprint.cpp"
   "src/engine/vtable.cpp"

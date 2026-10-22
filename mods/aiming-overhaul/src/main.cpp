@@ -9,6 +9,7 @@
 #include "engine/pawn.h"
 #include "engine/ray.h"
 #include "engine/second_view.h"
+#include "engine/skeleton.h"
 #include "engine/sprint.h"
 #include "engine/weapon_draws.h"
 #include "eyepiece.h"
@@ -102,9 +103,7 @@ namespace {
         using namespace AimingOverhaul;
         g_pawn = pawn;
         g_seen = GetTickCount64();
-        // The view rolls, and the arms and the gun are drawn rolled with it.
-        const float roll = Lean::Roll(seconds, !Pawn::Is(pawn, Pawn::kSprint));
-        WeaponDraws::SetViewRoll(roll);
+        const Aim::Offset lean = Lean::Update(pawn, seconds, !Pawn::Is(pawn, Pawn::kSprint));
         float forward[3];
         Aim::Forward(forward);
         Wall::Update(seconds, Aim::Eye(), forward);
@@ -112,7 +111,7 @@ namespace {
             Pawn::DropSights(pawn);
         }
         Breath::Update(seconds, Aim::Aiming());
-        return {Sway::Drift(seconds), Wall::Down(), roll};
+        return {Sway::Drift(seconds), Wall::Down(), lean};
     }
 
     // The sway's wander, with the look lowered as far as the gun is swung down.
@@ -159,6 +158,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     AimingOverhaul::Fire::Install(&RefuseShot);
     AimingOverhaul::Input::Install(&OnSignal);
     AimingOverhaul::Sprint::Install(&AimingOverhaul::Breath::HoldsSprint);
+    AimingOverhaul::Skeleton::Install(&AimingOverhaul::Lean::OnPosed);
 
     const FCSE_Setting settings[] = {
         {"Sway", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Sway::SetEnabled)},
