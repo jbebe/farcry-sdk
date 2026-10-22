@@ -16,9 +16,11 @@ namespace {
     FCSE::Relocation<GetServiceFn> g_getService{FCSE::Uplay(0x004DBB80)};
     FCSE::Relocation<const void*> g_gameplayManagerId{FCSE::Uplay(0x0164C33C)};
     FCSE::Relocation<const uint32_t*> g_gameplayManagerIdBuilt{FCSE::Uplay(0x0164C328)};
-    // The local player's CTerminal.
+    // The local player's CTerminal, and the game clock.
     FCSE::Relocation<GetTerminalFn> g_getTerminal{FCSE::Uplay(0x00831870)};
+    FCSE::Relocation<void**> g_clock{FCSE::Uplay(0x01606360)};
 
+    constexpr ptrdiff_t kClockSeconds = 0x30;
     constexpr ptrdiff_t kGameplayManagerDifficulty = 0x40;
     constexpr ptrdiff_t kTerminalPlayer = 0x04;
     constexpr ptrdiff_t kPlayerProxy = 0x08;
@@ -68,5 +70,9 @@ void Position(const void* entity, float position[3]) {
         position[i] = Read<float>(entity, kEntityPosition + i * sizeof(float));
     }
 }
+
+bool ClockFound() { return static_cast<bool>(g_clock); }
+
+double Now() { return Read<double>(*g_clock.get(), kClockSeconds); }
 
 }

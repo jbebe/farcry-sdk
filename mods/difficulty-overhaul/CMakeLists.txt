@@ -21,6 +21,7 @@ add_library(DifficultyOverhaul SHARED
   "src/range_falloff.cpp"
   "src/intuition.cpp"
   "src/grass.cpp"
+  "src/suppression.cpp"
   "src/engine/damage.cpp"
   "src/engine/game.cpp"
   "src/engine/shooting.cpp"

@@ -28,8 +28,10 @@ BodyPart Part(const uint8_t* stim);
 // The entity that caused the stim, or null.
 void* Instigator(const uint8_t* stim);
 
-// Whether the local player caused the stim.
+// Whether the local player caused the stim, and whether the player sent it: a near miss names
+// the shooter only as its sender.
 bool ByPlayer(const uint8_t* stim);
+bool SentByPlayer(const uint8_t* stim);
 
 // A CFCXCountersComponent's current health, or NaN.
 float Health(const void* counters);

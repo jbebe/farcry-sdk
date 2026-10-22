@@ -19,4 +19,8 @@ void* ProxyEntity(const void* proxy);
 // An entity's world position.
 void Position(const void* entity, float position[3]);
 
+// Whether this build's game clock was found, and the clock in seconds.
+bool ClockFound();
+double Now();
+
 }

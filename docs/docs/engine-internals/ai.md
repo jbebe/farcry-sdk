@@ -134,10 +134,28 @@ active and defensive.
 Two more lieutenant rules, **RE-verified**:
 
 - **Camping.** Once a second it scores the player for staying put: +0.5 for moving less than 1 m,
-  +0.4 under 3 m, +0.3 under 5 m (GOG `0x109225D0`). The score does not decay there, and what reads
-  it was not traced.
+  +0.4 under 3 m, +0.3 under 5 m (GOG `0x109225D0`, Steam `0x109335C0`). The score does not decay
+  there. It lengthens the squad's memory: the lieutenant drops a target 10 s plus the score after it
+  was last seen (Steam `0x1093A2A0`), so a player who stays put is hunted longer.
 - **Last man standing.** A member who is up and not in the threshold or dead state is sent
-  `LastManStanding` when no other such member is within 200 m (`CheckLastManStanding`).
+  `LastManStanding` when no other such member is within 200 m (`CheckLastManStanding`). The order
+  only sets flag 42 (`CPawnAgent::LastManStanding`), and no plan in `mercbrain` tests flag 42, so the
+  last man fights on as before.
+- **Roles** balance suppressors against assaulters per range band (`IsNeededAsSuppress`); a member
+  who suppresses has flag 9 set.
+
+### Under fire
+
+A bullet stim from an enemy reaches a soldier's `CSensoryStimProcessor::OnBulletShot` (Steam
+`0x10A24770`) when it hits him, lands near him, or passes close to his head: every shot tests each
+enemy pawn's distance from its line, against the weapon's `fShotJustMissedDistance` or 4 m. Each marks
+him **under fire** with the shooter's position. A near miss also makes him flinch, at most once in 3 s
+(`CPawnAgent::SetBulletJustMissed`, Steam `0x10960880`, which keeps the time at `+0xA94`).
+
+In `mercbrain`, the ranged-attack plans react only to a bullet inside a capsule 1 m in radius and 2 m
+tall around him: it stops his suppressive fire and starts the assault plan, which looks for cover
+(flag 48). A bullet that misses by more changes nothing but the flinch. All of this is **traced in the
+server build** and the brain data; the two Steam addresses were matched in `Dunia.dll`.
 
 ### Reinforcements
 

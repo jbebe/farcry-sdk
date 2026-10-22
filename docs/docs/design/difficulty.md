@@ -40,6 +40,7 @@ Combat that is realistic and fair:
 | 2 | Damage both ways by body part; the last-bar cushion removed | "felt realistic": four hits kill the player, two torso hits down a merc |
 | 3 | Hit model: plain-chance roll, aim that settles with range, recoil, the 0.85 cap, head aimed at 15 % of the time | head share fixed to about a fifth of hits |
 | 4 | Intuition 6 s → 1 s, sighting, fire discipline, grass, crossing speed, range falloff for pistols, SMGs and shotguns | fire discipline, grass and crossing seen; the rest assumed |
+| 5 | Squad, begun with suppression: the player's near misses pin a soldier for 1 s and restart his aim | not yet |
 
 The mod's README lists each feature's values.
 

@@ -21,6 +21,7 @@ plugin, with nothing on the Mod Configuration Menu.
 | Range falloff | With a pistol, SMG or shotgun a soldier's chance against the player also falls with range, on top of the game's shared rifle curve, halving at 20, 30 and 15 m |
 | Intuition | After a soldier spots or re-spots his target he keeps knowing where it really is, in sight or not, for 1 s in place of the game's 6, so breaking line of sight breaks his track. This is the soldier's own window, so it applies whoever he is tracking |
 | Grass | A player crouched still in high grass stays hidden from a soldier who is fighting: grass takes 80 % of how visible the player is from 10 m out, where the game stops grass hiding the player the moment a soldier is in combat. With fire held until the player is seen clearly, soldiers no longer shoot into grass the player is hiding in |
+| Suppression | A soldier the player's bullets hit, land near or pass close to holds his fire at the player for 1 s, and his aim settles again from scratch after it, so return fire keeps a shooter's head down |
 | Hit log | Writes every hit on the player, and every hit the player lands on a soldier, to `bin\fcse.log`: stim type and level, body part, range, health before and after, and whether a soldier was wounded or killed. Every AI shot at the player gets a line too: its chance, the recoil factor, the range and whether it hit |
 
 A hit log line reads:

@@ -22,27 +22,24 @@ namespace {
                                        bool* torso);
 
     // CShootingSystem's GetChanceOfSuccess, GetTimerToMissFactor, GenerateShootAtPosition and
-    // SetupAimingDot, and the game clock.
+    // SetupAimingDot.
     FCSE::Relocation<ChanceFn> g_getChance{FCSE::Uplay(0x00A19EE0)};
     FCSE::Relocation<ChanceFn> g_getTimerFactor{FCSE::Uplay(0x00A19A60)};
     FCSE::Relocation<ShootAtFn> g_shootAt{FCSE::Uplay(0x00A1A110)};
     FCSE::Relocation<SetupAimingDotFn> g_setupAimingDot{FCSE::Uplay(0x00A193E0)};
-    FCSE::Relocation<void**> g_clock{FCSE::Uplay(0x01606360)};
     ChanceFn g_originalGetChance = nullptr;
     ChanceFn g_originalGetTimerFactor = nullptr;
     ShootAtFn g_originalShootAt = nullptr;
 
     // CShootingSystem: the part its aim dot is on (-1 until set up), the part to set the next dot up
-    // on, the reaction CLifeTimer (lifetime, then start time), and whether the last shot hit.
+    // on, the reaction CLifeTimer's lifetime, and whether the last shot hit.
     constexpr ptrdiff_t kDotPart = 0x1C;
     constexpr ptrdiff_t kAimPart = 0x34;
     constexpr ptrdiff_t kReactionLifetime = 0xBC;
-    constexpr ptrdiff_t kReactionStart = 0xC0;
     constexpr ptrdiff_t kLastShotHit = 0x108;
     constexpr int kHeadPart = 3;
     constexpr int kTorsoPart = 5;
 
-    constexpr ptrdiff_t kClockSeconds = 0x30;
     // The effective data in a CPawn's data block, and the velocity in it.
     constexpr ptrdiff_t kDataEffective = 0x2D0;
     constexpr ptrdiff_t kEffectiveVelocity = 0xB0;
@@ -75,11 +72,9 @@ namespace {
     };
     Shot g_shot;
 
-    double Now() { return Read<double>(*g_clock.get(), kClockSeconds); }
-
     // How settled his aim is, 0 to 1, from when the reaction timer started.
     float Settled(const void* shooting) {
-        const float elapsed = static_cast<float>(Now()) - Read<float>(shooting, kReactionStart);
+        const float elapsed = static_cast<float>(Game::Now()) - Shooting::AimStart(shooting);
         const float distance = Shooting::TargetDistance(shooting);
         return std::clamp(elapsed / (kSettleSeconds + kSettleSecondsPerMetre * distance), 0.0f,
                           1.0f);
@@ -90,7 +85,7 @@ namespace {
         if (last == g_lastShot.end()) {
             return 1.0f;
         }
-        const double since = Now() - last->second;
+        const double since = Game::Now() - last->second;
         return 1.0f - kRecoilLoss * static_cast<float>(std::exp(-since / kRecoilRecoverySeconds));
     }
 
@@ -200,13 +195,13 @@ namespace {
         if (g_lastShot.size() > kMaxShooters) {
             g_lastShot.clear();
         }
-        g_lastShot[shooting] = Now();
+        g_lastShot[shooting] = Game::Now();
         return result;
     }
 }
 
 void InstallHitModel() {
-    if (!Shooting::Found() || !g_setupAimingDot || !g_clock ||
+    if (!Shooting::Found() || !g_setupAimingDot || !Game::ClockFound() ||
         !Hook(g_getTimerFactor, &GetTimerFactorDetour, &g_originalGetTimerFactor) ||
         !Hook(g_getChance, &GetChanceDetour, &g_originalGetChance) ||
         !Hook(g_shootAt, &ShootAtDetour, &g_originalShootAt)) {
