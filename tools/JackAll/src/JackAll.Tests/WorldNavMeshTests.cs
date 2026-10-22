@@ -19,58 +19,38 @@ public class WorldNavMeshTests
         int sectorId, float minX, float minY, (short X, short Y, short Z)[] vertices,
         (int A, int B, int C, uint[] Links)[] nodes)
     {
-        var b = new List<byte>();
-        b.AddRange(BitConverter.GetBytes(0u));
-        b.AddRange(BitConverter.GetBytes(0x4E764D68u));
-        b.AddRange(BitConverter.GetBytes(0x14100u));
-        b.AddRange(BitConverter.GetBytes(0u));
-        b.AddRange(BitConverter.GetBytes((ushort)0));
-        b.AddRange(BitConverter.GetBytes((ushort)sectorId));
-        foreach (float f in new[] { minX, minY, minX + 64, minY + 64 })
-        {
-            b.AddRange(BitConverter.GetBytes(f));
-        }
-        b.AddRange(new byte[4 + 8 + 2]);
+        PackedVector Centroid(int a, int b, int c) => new(
+            (short)((vertices[a].X + vertices[b].X + vertices[c].X) / 3),
+            (short)((vertices[a].Y + vertices[b].Y + vertices[c].Y) / 3),
+            (short)((vertices[a].Z + vertices[b].Z + vertices[c].Z) / 3));
 
-        b.AddRange(BitConverter.GetBytes((uint)nodes.Sum(n => n.Links.Length)));
-        foreach ((_, _, _, uint[] links) in nodes)
-        {
-            foreach (uint link in links)
-            {
-                b.AddRange(BitConverter.GetBytes(link));
-            }
-        }
-
-        b.AddRange(BitConverter.GetBytes((uint)nodes.Length));
         int linkOffset = 0;
-        for (int i = 0; i < nodes.Length; i++)
+        return NvmSectorFile.Encode(new NvmSector
         {
-            (int a, int bb, int c, uint[] links) = nodes[i];
-            var node = new byte[48];
-            BitConverter.GetBytes(60u).CopyTo(node, 0);
-            BitConverter.GetBytes((ushort)sectorId).CopyTo(node, 4);
-            BitConverter.GetBytes((ushort)i).CopyTo(node, 6);
-            node[0x0A] = (byte)links.Length;
-            BitConverter.GetBytes((uint)linkOffset).CopyTo(node, 0x0B);
-            BitConverter.GetBytes((short)((vertices[a].X + vertices[bb].X + vertices[c].X) / 3)).CopyTo(node, 0x0F);
-            BitConverter.GetBytes((short)((vertices[a].Y + vertices[bb].Y + vertices[c].Y) / 3)).CopyTo(node, 0x11);
-            BitConverter.GetBytes((short)((vertices[a].Z + vertices[bb].Z + vertices[c].Z) / 3)).CopyTo(node, 0x13);
-            node[0x17] = 127;
-            BitConverter.GetBytes((uint)a).CopyTo(node, 0x1A);
-            BitConverter.GetBytes((uint)bb).CopyTo(node, 0x1E);
-            BitConverter.GetBytes((uint)c).CopyTo(node, 0x22);
-            b.AddRange(node);
-            linkOffset += links.Length;
-        }
-
-        b.AddRange(BitConverter.GetBytes((uint)vertices.Length));
-        foreach ((short x, short y, short z) in vertices)
-        {
-            b.AddRange(BitConverter.GetBytes(x));
-            b.AddRange(BitConverter.GetBytes(y));
-            b.AddRange(BitConverter.GetBytes(z));
-        }
-        return [.. b];
+            SectorWord = 0,
+            SectorId = (ushort)sectorId,
+            MinX = minX,
+            MinY = minY,
+            MaxX = minX + 64,
+            MaxY = minY + 64,
+            WaterLevel = NvmSector.NoWater,
+            BuildId = 0,
+            Unknown30 = 0,
+            Links = [.. nodes.SelectMany(n => n.Links)],
+            Nodes = [.. nodes.Select(n =>
+            {
+                var node = new NvmNode(1, (byte)n.Links.Length, (uint)linkOffset, Centroid(n.A, n.B, n.C),
+                    0, 0, 127, false, false, (uint)n.A, (uint)n.B, (uint)n.C, default);
+                linkOffset += n.Links.Length;
+                return node;
+            })],
+            Vertices = [.. vertices.Select(v => new PackedVector(v.X, v.Y, v.Z))],
+            Covers = [],
+            DynamicCovers = [],
+            CoverVertices = [],
+            Quads = [],
+            QuadNodes = [],
+        });
     }
 
     private static NavMeshSector Sector(int sectorId, float minX, params (int, int, int, uint[])[] nodes) =>

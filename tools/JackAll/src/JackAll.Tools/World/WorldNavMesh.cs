@@ -5,8 +5,7 @@ namespace JackAll.Tools.World;
 /// <summary>One decoded sector file, every index still local to it.</summary>
 public sealed class NavMeshSector
 {
-    /// <summary>A link slot with no neighbour behind that edge.</summary>
-    public const uint NoLink = 0xFFFEFFFF;
+    public const uint NoLink = NvmSector.NoLink;
 
     public required int SectorId { get; init; }
 
@@ -62,36 +61,9 @@ public sealed class NavMesh
 /// The AI navigation mesh a map ships, read from the per-sector <c>nv_&lt;id&gt;.nvm</c> files.
 /// Only campaign levels have them, so a world loads whichever of its sectors do.
 /// </summary>
-/// <remarks>
-/// Positions are quantised: <c>CNavArchive::SetPackedVectorSettings</c> makes the sector's own
-/// bounding box the basis, so X and Y are <c>int16</c> steps of <c>1 / (1 &lt;&lt; (15 - log2(span)))</c>
-/// around its centre while Z is a plain <c>int16</c> in 1/32 metre. Decoding a vertex therefore
-/// needs its sector's header, never the world grid.
-/// </remarks>
+/// <remarks>Decoding a vertex needs its own sector's bounding box, never the world grid.</remarks>
 public static class WorldNavMesh
 {
-    /// <summary>The per-sector tag, "hMvN" on disk.</summary>
-    private const uint Magic = 0x4E764D68;
-
-    /// <summary>Serialized size of one <c>CNavMeshNode</c>, which is smaller than its 60-byte
-    /// in-memory form.</summary>
-    private const int NodeSize = 48;
-
-    private const int LinkCountOffset = 0x0A;
-    private const int LinkOffsetOffset = 0x0B;
-    private const int PositionOffset = 0x0F;
-    private const int VertexIndexOffset = 0x1A;
-
-    /// <summary>Where the link block's count sits, past the header and the sector scalars.</summary>
-    private const int LinkBlockOffset = 0x24 + 4 + 8 + 2;
-
-    private const int PackedVectorSize = 6;
-
-    /// <summary>Format version that introduced this node layout; everything retail ships is newer.</summary>
-    private const uint FirstKnownVersion = 0x13900;
-
-    private const float HeightStep = 1f / 32f;
-
     /// <summary>A resolved link with nothing walkable behind it.</summary>
     private const int NoNeighbour = -1;
 
@@ -128,94 +100,56 @@ public static class WorldNavMesh
     /// <summary>Reads one sector file, or returns null if it is not a navmesh this can decode.</summary>
     public static NavMeshSector? ReadSector(byte[] b)
     {
-        if (b.Length < LinkBlockOffset + 4 || BitConverter.ToUInt32(b, 4) != Magic ||
-            BitConverter.ToUInt32(b, 8) < FirstKnownVersion)
+        NvmSector file;
+        try
+        {
+            file = NvmSectorFile.Decode(b);
+        }
+        catch (InvalidDataException)
         {
             return null;
         }
 
-        float minX = BitConverter.ToSingle(b, 0x14), minY = BitConverter.ToSingle(b, 0x18);
-        float maxX = BitConverter.ToSingle(b, 0x1C), maxY = BitConverter.ToSingle(b, 0x20);
-        uint span = (uint)MathF.Round(MathF.Max(maxX - minX, maxY - minY)) * 2;
-        if (!float.IsFinite(minX) || !float.IsFinite(minY) || span == 0 || (span & (span - 1)) != 0)
+        uint span = (uint)MathF.Round(MathF.Max(file.MaxX - file.MinX, file.MaxY - file.MinY)) * 2;
+        if (file.Nodes.Length == 0 || !float.IsFinite(file.MinX) || !float.IsFinite(file.MinY)
+            || span == 0 || (span & (span - 1)) != 0)
         {
             return null;
         }
 
-        var centre = new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
-        float step = 1f / (1 << (15 - BitOperations.Log2(span)));
-        Vector3 Unpack(int p) => new(
-            BitConverter.ToInt16(b, p) * step + centre.X,
-            BitConverter.ToInt16(b, p + 2) * step + centre.Y,
-            BitConverter.ToInt16(b, p + 4) * HeightStep);
-
-        int at = LinkBlockOffset;
-        long blockCount = BitConverter.ToUInt32(b, at);
-        at += 4;
-        if (at + blockCount * 4 + 4 > b.Length)
-        {
-            return null;
-        }
-        int blockStart = at;
-        at += (int)blockCount * 4;
-
-        long count = BitConverter.ToUInt32(b, at);
-        at += 4;
-        if (count == 0 || at + count * NodeSize + 4 > b.Length)
-        {
-            return null;
-        }
-        int nodeStart = at;
-        at += (int)count * NodeSize;
-
-        long vertexCount = BitConverter.ToUInt32(b, at);
-        at += 4;
-        if (at + vertexCount * PackedVectorSize > b.Length)
-        {
-            return null;
-        }
-
-        var vertices = new Vector3[vertexCount];
-        for (int v = 0; v < vertices.Length; v++)
-        {
-            vertices[v] = Unpack(at + v * PackedVectorSize);
-        }
-
+        Vector3[] vertices = [.. file.Vertices.Select(file.Unpack)];
+        int count = file.Nodes.Length;
         var triangles = new int[count * 3];
         var centroids = new Vector3[count];
         var linkStart = new int[count + 1];
-        var links = new List<uint>((int)count * 3);
+        var links = new List<uint>(count * 3);
         for (int n = 0; n < count; n++)
         {
-            int p = nodeStart + n * NodeSize;
-            centroids[n] = Unpack(p + PositionOffset);
+            NvmNode node = file.Nodes[n];
+            centroids[n] = file.Unpack(node.Centroid);
+            uint[] corners = [node.A, node.B, node.C];
             for (int k = 0; k < 3; k++)
             {
-                uint corner = BitConverter.ToUInt32(b, p + VertexIndexOffset + k * 4);
-                if (corner >= vertexCount)
+                if (corners[k] >= vertices.Length)
                 {
                     return null;
                 }
-                triangles[n * 3 + k] = (int)corner;
+                triangles[n * 3 + k] = (int)corners[k];
             }
 
             linkStart[n] = links.Count;
-            long first = BitConverter.ToUInt32(b, p + LinkOffsetOffset);
-            long last = first + b[p + LinkCountOffset];
-            if (last > blockCount)
+            long last = (long)node.LinkOffset + node.LinkCount;
+            if (last > file.Links.Length)
             {
                 return null;
             }
-            for (long l = first; l < last; l++)
-            {
-                links.Add(BitConverter.ToUInt32(b, blockStart + (int)l * 4));
-            }
+            links.AddRange(file.Links.AsSpan((int)node.LinkOffset, node.LinkCount));
         }
         linkStart[count] = links.Count;
 
         return new NavMeshSector
         {
-            SectorId = BitConverter.ToUInt16(b, 0x12),
+            SectorId = file.SectorId,
             Vertices = vertices,
             Triangles = triangles,
             Centroids = centroids,
