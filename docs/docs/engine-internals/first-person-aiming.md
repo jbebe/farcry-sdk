@@ -267,6 +267,37 @@ while leaning: the beautifier's update ran once a frame for the player, the post
 a frame, and the weapon's `SetMatrix` 0 to 5 times in 30 frames.
 :::
 
+### The body's skeleton
+
+The pawn's body is `*(pawn + 0x10) + 4`: its entity proxy at `+0x04`, its `CGraphicComponent` at
+`+0x08`, and the skeleton node of each body part from `+0x10` (`0x1007E1E0` returns it). The
+component's `vt+0x78` returns its skeleton, embedded at the component's `+0xE0`. `vt+0x7C` returns it
+too but also marks it changed, which has the bones posed again this frame. The human rig hangs
+`Camera`, the view's bone, under `Head`, `Neck`, `Spine2`, `Spine1` and `Spine`, and both arms off
+`Spine2` (see [the skeleton format](../file-formats/skeleton.md#what-the-human-rig-contains)).
+
+The skeleton keeps its bones at `+0x20` and their count at `+0x2C`; bit 0 of `+0x30` marks them to
+be posed. A bone is `0xA0` bytes:
+
+| Offset | Field |
+|---|---|
+| `+0x00` | CRC-32 of the bone's name, case kept |
+| `+0x10` | its animated 4×4, against its parent |
+| `+0x50` | its posed 4×4, in the body's own axes: three axis rows, then its place |
+| `+0x90` | parent index, `-1` for the root |
+| `+0x94` | held: set by hand, and left alone when posing |
+
+Posing (`0x103322C0`, `__fastcall` on the skeleton) runs only while bit 0 is set, and rebuilds every
+bone not held from its animated matrix and its parent's posed one. The skeleton's
+`SkeletonObjectJob` (vtable `0x10E7BA54`) calls it, and the graphic component queues that job beside
+its own update while anything has asked for the skeleton in the last 60 frames. Then the component's
+sync (`0x1051B2A0`) clears bit 0, moves the entities bound to it, and places its rigid parts from
+their bones. The engine's own procedural bones (`0x100C2FA0`, for one) read a posed matrix
+(`0x10331F80`), write it back held (`0x10331F10`), and pose again.
+
+The camera turns with the `Camera` bone's posed matrix, and a shot's first-person origin
+(`0x10112600`) is that bone's place in the world (`0x1010D780`). Nothing here is seen in game yet.
+
 ### What a lean was tried as
 
 Aiming Overhaul tried six ways of leaning the player, each seen in game on retail GOG v1.03. None
