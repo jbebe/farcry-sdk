@@ -55,8 +55,8 @@ namespace {
 bool AimingOverhaul::Look::Install(OffsetFn offset) {
     g_offset = offset;
     if (!Hook(g_updateLook.address(), &UpdateLookDetour, &g_originalUpdateLook)) {
-        FCSE::ApiPointer()->Log("look: the look cannot be hooked, so a gun at a wall does not "
-                                "swing down");
+        FCSE::ApiPointer()->Log("look: the look cannot be hooked, so the aim does not sway and a "
+                                "gun at a wall does not swing down");
         return false;
     }
     return true;

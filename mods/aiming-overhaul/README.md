@@ -13,8 +13,15 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   falls with a slow breath. The rear sight is nearer the eye than the front one, so it moves further
   and the two drift out of line. Shots still go where the engine sends them: down the view, which is
   where the barrel points. Sights that have drifted out of line are wrong by the same angle as on a
-  real gun. While a scope's own sight picture is up there is no sway, because that picture is a
-  miniature right at the eye.
+  real gun. The same breath and wander also move the aim itself, view, gun and shot together, by
+  about 0.2° down the iron sights and 0.35° through a scope; the mouse corrects it as it would a
+  real hand. While a scope's own sight picture is up the eye does not drift off the gun, because that
+  picture is a miniature right at the eye, but the aim still wanders under the reticle.
+- **Hold breath.** Holding sprint down the sights or a scope holds the breath instead of sprinting:
+  the sway eases to a sixth of itself and stays there for 4 s. Held longer, the hands shake harder,
+  up to two and a half times the sway, until it is let go. After a hold the sway is up to half again
+  as large while the breath comes back, which takes 3 s from empty. Through the sights the sprint
+  key does nothing else.
 - **Lean, unfinished.** Holding Lean left or Lean right rolls the view 12° to that side over a
   quarter of a second. The eye does not yet move out to the side, and the arms and the gun stay level
   with the world, so they tilt on screen. There is no lean while sprinting.
@@ -65,7 +72,10 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   however far off it is.
 
 The eye is moved through the camera's positional offset, the one the recoil kicks, and a scope's
-zoom held back until its sight picture is up, in `src/engine/aim.cpp`. A lean is `src/lean.cpp`,
+zoom held back until its sight picture is up, in `src/engine/aim.cpp`. The aim's wander is added
+to the look the input builds each frame, in `src/engine/look.cpp`; the breath is `src/breath.cpp`,
+and the sprint it holds is refused in the input listener, in `src/engine/sprint.cpp`. A lean is
+`src/lean.cpp`,
 rolling the pawn's entity in `src/engine/body.cpp`. The gun near walls is `src/wall.cpp`, casting a
 physics ray in `src/engine/ray.cpp`, lowering the look in `src/engine/look.cpp` and refusing the
 shot in `src/engine/fire.cpp`. The blur draws the gun's own
@@ -111,6 +121,7 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Setting | Values | Default |
 |---|---|---|
 | Sway | Yes / No | Yes |
+| Hold breath | Yes / No | Yes |
 | Lean | Yes / No | Yes |
 | Gun near walls | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
@@ -120,7 +131,9 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Scope surroundings | Yes / No | Yes |
 | Tracers | Yes / No | Yes |
 
-With Iron sight zoom off, the view keeps its field of view down a gun's iron sights; a scope still
+With Sway off neither the eye nor the aim drifts, and there is nothing for the breath to steady.
+With Hold breath off, sprint down the sights does what the game does with it. With Iron sight zoom
+off, the view keeps its field of view down a gun's iron sights; a scope still
 magnifies. With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game
 draws them. Which guns fire them and how fast they fly are the weapon data's, and stay; so does the
 scopes' lost iron-sight effect, whatever the scope settings.

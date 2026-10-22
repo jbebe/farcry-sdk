@@ -1,12 +1,17 @@
-// The hand's drift: a few millimetres of wander and a slow breath.
+// The hand's drift: a slow breath and a wander, which move the eye a few millimetres off the gun and
+// the aim a fraction of a degree, less while the breath is held.
 #pragma once
 
 #include "engine/aim.h"
+#include "engine/look.h"
 
 namespace AimingOverhaul::Sway {
 
-// The drift this frame, for Aim::Install; nothing while switched off.
+// The eye's drift this frame, for Aim::Install; nothing while switched off.
 Aim::Offset Drift(float seconds);
+
+// Where the drift has taken the aim, for Look::Install; nothing while switched off.
+Look::Angles Wander();
 
 void SetEnabled(bool enabled);
 

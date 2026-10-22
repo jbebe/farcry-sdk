@@ -69,6 +69,7 @@ endforeach()
 add_library(AimingOverhaul SHARED
   "src/main.cpp"
   "src/blur.cpp"
+  "src/breath.cpp"
   "src/eyepiece.cpp"
   "src/lean.cpp"
   "src/scope_shadow.cpp"
@@ -91,6 +92,7 @@ add_library(AimingOverhaul SHARED
   "src/engine/screen_draw.cpp"
   "src/engine/second_view.cpp"
   "src/engine/shader.cpp"
+  "src/engine/sprint.cpp"
   "src/engine/vtable.cpp"
   "src/engine/weapon_draws.cpp"
   "src/engine/weapon_mesh.cpp"

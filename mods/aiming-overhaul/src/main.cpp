@@ -1,5 +1,6 @@
 // Aiming Overhaul - how aiming and shooting look. See README.md.
 #include "blur.h"
+#include "breath.h"
 #include "engine/aim.h"
 #include "engine/body.h"
 #include "engine/device_reset.h"
@@ -9,6 +10,7 @@
 #include "engine/pawn.h"
 #include "engine/ray.h"
 #include "engine/second_view.h"
+#include "engine/sprint.h"
 #include "engine/weapon_draws.h"
 #include "eyepiece.h"
 #include "fcse_api.h"
@@ -91,7 +93,12 @@ namespace {
     ULONGLONG g_seen = 0;
     constexpr ULONGLONG kOnFootMilliseconds = 200;
 
-    // The lean, the gun near walls and the eye's drift.
+    void OnSignal(uint32_t signal) {
+        AimingOverhaul::Breath::OnSignal(signal);
+        AimingOverhaul::Lean::OnSignal(signal);
+    }
+
+    // The lean, the gun near walls, the breath and the eye's drift.
     AimingOverhaul::Aim::Adjust OnAimFrame(uint8_t* pawn, float seconds) {
         using namespace AimingOverhaul;
         g_pawn = pawn;
@@ -103,12 +110,15 @@ namespace {
         if (Wall::Blocked()) {
             Pawn::DropSights(pawn);
         }
+        Breath::Update(seconds, Aim::Aiming());
         return {Sway::Drift(seconds), Wall::Down()};
     }
 
-    // The look lowered as far as the gun is swung down.
+    // The sway's wander, with the look lowered as far as the gun is swung down.
     AimingOverhaul::Look::Angles OnLook() {
-        return {-AimingOverhaul::Wall::Down(), 0.0f};
+        AimingOverhaul::Look::Angles angles = AimingOverhaul::Sway::Wander();
+        angles.up -= AimingOverhaul::Wall::Down();
+        return angles;
     }
 
     bool RefuseShot(uint8_t* pawn) {
@@ -147,10 +157,13 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     AimingOverhaul::Body::Install();
     AimingOverhaul::Ray::Install();
     AimingOverhaul::Fire::Install(&RefuseShot);
-    AimingOverhaul::Input::Install(&AimingOverhaul::Lean::OnSignal);
+    AimingOverhaul::Input::Install(&OnSignal);
+    AimingOverhaul::Sprint::Install(&AimingOverhaul::Breath::HoldsSprint);
 
     const FCSE_Setting settings[] = {
         {"Sway", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Sway::SetEnabled)},
+        {"Hold breath", FCSE_CHECKBOX(true), &OnToggled,
+         Toggles(&AimingOverhaul::Breath::SetEnabled)},
         {"Lean", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Lean::SetEnabled)},
         {"Gun near walls", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Wall::SetEnabled)},
