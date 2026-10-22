@@ -44,10 +44,12 @@ namespace {
     UpdateCameraOffsetFn g_originalUpdateCameraOffset = nullptr;
     UpdateFovFn g_originalUpdateFov = nullptr;
 
-    // CCameraPawnComponent: the view's pitch over the body's, in radians, up positive; the eye's
+    // CCameraPawnComponent: the view's pitch and roll over the body's, in radians, up and right
+    // positive, which also turn the eye's offset; the eye's
     // offset in the view's axes, x right, y ahead, z up; and the field of view in radians, unaimed,
     // as this frame's, and the noise added to it. Update's `this` is the component's second base.
     constexpr ptrdiff_t kViewPitch = 0xD0;
+    constexpr ptrdiff_t kViewRoll = 0xD4;
     constexpr ptrdiff_t kEyeRight = 0xE8;
     constexpr ptrdiff_t kEyeAhead = 0xEC;
     constexpr ptrdiff_t kEyeUp = 0xF0;
@@ -121,6 +123,7 @@ namespace {
     AimingOverhaul::Aim::Offset g_added = {};
     float g_addedAhead = 0.0f;
     float g_addedPitch = 0.0f;
+    float g_addedRoll = 0.0f;
 
     // The eye as last placed, and the view's look this frame, radians, pitch up and yaw left.
     float g_eye[3] = {};
@@ -263,10 +266,12 @@ namespace {
         g_added = {adjust.drift.right * settled, adjust.drift.up * settled};
         g_addedAhead = g_raiseReach * raised;
         g_addedPitch = adjust.pitch;
+        g_addedRoll = adjust.roll;
         Field<float>(camera, kEyeRight) += g_added.right;
         Field<float>(camera, kEyeUp) += g_added.up;
         Field<float>(camera, kEyeAhead) += g_addedAhead;
         Field<float>(camera, kViewPitch) += g_addedPitch;
+        Field<float>(camera, kViewRoll) += g_addedRoll;
         g_addedTo = camera;
     }
 
@@ -308,6 +313,7 @@ namespace {
             Field<float>(g_addedTo, kEyeUp) -= g_added.up;
             Field<float>(g_addedTo, kEyeAhead) -= g_addedAhead;
             Field<float>(g_addedTo, kViewPitch) -= g_addedPitch;
+            Field<float>(g_addedTo, kViewRoll) -= g_addedRoll;
             g_addedTo = nullptr;
         }
         uint8_t* component = camera - kSecondBase;

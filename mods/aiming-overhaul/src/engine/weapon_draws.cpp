@@ -6,8 +6,11 @@
 #include "engine/vtable.h"
 #include "fcse_api.h"
 
+#include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <iterator>
+#include <utility>
 
 namespace {
     using DrawIndexedPrimitiveFn = HRESULT(__stdcall*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, INT,
@@ -23,10 +26,21 @@ namespace {
     // The weapon's depth is drawn through a viewport squeezed this close to the near plane.
     constexpr float kWeaponFarthest = 0.5f;
 
-    // Where the projection is, and the farthest out the weapon's near plane is taken to be; the
-    // world's is further.
+    // Where the projection that places the weapon's vertices is, from the view's rotation; where
+    // the projection alone is; and the farthest out the weapon's near plane is taken to be, the
+    // world's being further.
+    constexpr UINT kViewProjectionRegister = 0;
     constexpr UINT kProjectionRegister = 8;
     constexpr float kWeaponNearest = 0.05f;
+
+    // How far the view is rolled off the one the gun is to be drawn from, right positive. Set by
+    // the game thread.
+    std::atomic<float> g_roll{0.0f};
+    // The frame the roll was last set in, which goes stale once the first-person camera stops
+    // setting it; the frame the view last stood rolled in; and whether it stands rolled now.
+    std::atomic<uint32_t> g_rollSet{kNever};
+    uint32_t g_rolledFrame = kNever;
+    bool g_rolled = false;
 
     DrawIndexedPrimitiveFn g_original = nullptr;
     AimingOverhaul::WeaponDraws::Listener g_listener = {};
@@ -149,6 +163,85 @@ namespace {
         return nearest > 0.0f && nearest < kWeaponNearest;
     }
 
+    // 4x4 matrices, one row after another.
+    void Multiply(const float a[16], const float b[16], float out[16]) {
+        for (int row = 0; row < 4; row++) {
+            for (int column = 0; column < 4; column++) {
+                float sum = 0.0f;
+                for (int k = 0; k < 4; k++) {
+                    sum += a[row * 4 + k] * b[k * 4 + column];
+                }
+                out[row * 4 + column] = sum;
+            }
+        }
+    }
+
+    bool Invert(const float matrix[16], float out[16]) {
+        float a[16];
+        std::copy(matrix, matrix + 16, a);
+        for (int i = 0; i < 16; i++) {
+            out[i] = i % 5 == 0 ? 1.0f : 0.0f;
+        }
+        for (int column = 0; column < 4; column++) {
+            int pivot = column;
+            for (int row = column + 1; row < 4; row++) {
+                if (std::abs(a[row * 4 + column]) > std::abs(a[pivot * 4 + column])) {
+                    pivot = row;
+                }
+            }
+            if (std::abs(a[pivot * 4 + column]) < 1e-12f) {
+                return false;
+            }
+            for (int k = 0; k < 4; k++) {
+                std::swap(a[column * 4 + k], a[pivot * 4 + k]);
+                std::swap(out[column * 4 + k], out[pivot * 4 + k]);
+            }
+            const float scale = 1.0f / a[column * 4 + column];
+            for (int k = 0; k < 4; k++) {
+                a[column * 4 + k] *= scale;
+                out[column * 4 + k] *= scale;
+            }
+            for (int row = 0; row < 4; row++) {
+                const float factor = a[row * 4 + column];
+                if (row == column || factor == 0.0f) {
+                    continue;
+                }
+                for (int k = 0; k < 4; k++) {
+                    a[row * 4 + k] -= factor * a[column * 4 + k];
+                    out[row * 4 + k] -= factor * out[column * 4 + k];
+                }
+            }
+        }
+        return true;
+    }
+
+    // Rewrites the projection a gun draw places its vertices by for the view as it stood before it
+    // rolled, keeping what was there in `saved`, so the arms and the gun roll with the view. False,
+    // with nothing changed, while it is not rolled.
+    bool RollBack(IDirect3DDevice9* device, float saved[16]) {
+        const float roll = g_roll;
+        float projection[16];
+        float inverse[16];
+        if (!g_rolled || FAILED(device->GetVertexShaderConstantF(kProjectionRegister, projection, 4)) ||
+            !Invert(projection, inverse) ||
+            FAILED(device->GetVertexShaderConstantF(kViewProjectionRegister, saved, 4))) {
+            return false;
+        }
+        // In camera space, x right, y up and z behind, a point the rolled view sees at p is at
+        // rotation * p for the view as it stood.
+        const float c = std::cos(roll);
+        const float s = std::sin(roll);
+        const float move[16] = {c, s, 0.0f, 0.0f, -s, c, 0.0f, 0.0f,
+                                0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+        float moved[16];
+        float back[16];
+        float rewritten[16];
+        Multiply(projection, move, moved);
+        Multiply(moved, inverse, back);
+        Multiply(back, saved, rewritten);
+        return SUCCEEDED(device->SetVertexShaderConstantF(kViewProjectionRegister, rewritten, 4));
+    }
+
     // Binds our depth for one of the gun's depth draws, at half size over the whole depth range,
     // with every target the engine had bound taken off.
     bool Begin(IDirect3DDevice9* device, const D3DVIEWPORT9& viewport,
@@ -206,6 +299,10 @@ namespace {
         AimingOverhaul::Release(g_savedDepth);
     }
 
+    HRESULT GunDraw(IDirect3DDevice9* device, const D3DVIEWPORT9& viewport,
+                    const Projection& projection, bool squeezed, UINT numVertices,
+                    UINT startIndex, UINT primitiveCount, const auto& draw);
+
     HRESULT __stdcall DrawIndexedPrimitiveDetour(IDirect3DDevice9* device, D3DPRIMITIVETYPE type,
                                                  INT baseVertexIndex, UINT minVertexIndex,
                                                  UINT numVertices, UINT startIndex,
@@ -225,7 +322,19 @@ namespace {
             !ReadGunProjection(device, projection)) {
             return draw();
         }
+        float saved[16];
+        const bool rolled = RollBack(device, saved);
+        const HRESULT result = GunDraw(device, viewport, projection, squeezed, numVertices,
+                                       startIndex, primitiveCount, draw);
+        if (rolled) {
+            device->SetVertexShaderConstantF(kViewProjectionRegister, saved, 4);
+        }
+        return result;
+    }
 
+    HRESULT GunDraw(IDirect3DDevice9* device, const D3DVIEWPORT9& viewport,
+                    const Projection& projection, bool squeezed, UINT numVertices,
+                    UINT startIndex, UINT primitiveCount, const auto& draw) {
         const uint32_t frame = AimingOverhaul::Frame::Number();
         const Part part = {startIndex, primitiveCount, numVertices};
         if (squeezed) {
@@ -259,8 +368,13 @@ namespace {
         if (AimingOverhaul::Aim::ScopeUp()) {
             g_scopedFrame = frame;
         }
+        g_rolled = g_roll != 0.0f && AimingOverhaul::Frame::Within(g_rollSet, kLingerFrames);
+        if (g_rolled) {
+            g_rolledFrame = frame;
+        }
         g_watching = AimingOverhaul::Aim::Aiming() ||
-                     AimingOverhaul::Frame::Within(g_scopedFrame, kLingerFrames);
+                     AimingOverhaul::Frame::Within(g_scopedFrame, kLingerFrames) ||
+                     AimingOverhaul::Frame::Within(g_rolledFrame, kLingerFrames);
         if (!g_watching || g_depthFrame != frame) {
             return;
         }
@@ -280,6 +394,11 @@ bool AimingOverhaul::WeaponDraws::Install(const Listener& listener) {
     g_listener = listener;
     return Frame::Install(&OnScenePass, &OnComposite) &&
            Vtable::Hook(Vtable::kDrawIndexedPrimitive, &DrawIndexedPrimitiveDetour, &g_original);
+}
+
+void AimingOverhaul::WeaponDraws::SetViewRoll(float roll) {
+    g_roll = roll;
+    g_rollSet = Frame::Number();
 }
 
 void AimingOverhaul::WeaponDraws::ReleaseDeviceObjects() {

@@ -1,5 +1,5 @@
-// Leaning: held Q or E rolls the body out to the side about its feet. Only the view follows it yet;
-// see docs/docs/engine-internals/first-person-aiming.md#leaning.
+// Leaning: held Q or E rolls the view to the side, the arms and the gun with it. The eye does not
+// move out yet; see docs/docs/engine-internals/first-person-aiming.md#leaning.
 #include "lean.h"
 
 #include "ease.h"

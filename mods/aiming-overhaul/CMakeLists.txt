@@ -80,7 +80,6 @@ add_library(AimingOverhaul SHARED
   "src/tracers.cpp"
   "src/wall.cpp"
   "src/engine/aim.cpp"
-  "src/engine/body.cpp"
   "src/engine/device_reset.cpp"
   "src/engine/entity_name.cpp"
   "src/engine/fire.cpp"

@@ -56,6 +56,10 @@ struct Listener {
 // be drawing. False, and logged, when either cannot be hooked.
 bool Install(const Listener& listener);
 
+// Draws the arms and the gun as the camera saw them before it was rolled by `roll` radians, right
+// positive, so they roll with the view.
+void SetViewRoll(float roll);
+
 void ReleaseDeviceObjects();
 
 }
