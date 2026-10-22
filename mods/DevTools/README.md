@@ -254,11 +254,17 @@ a crash that follows them.
 
 ### Spawner
 
-The Spawner tab, next to Lua, puts things into the world in front of you. For now that is vehicles:
-every land vehicle, boat and the hang glider, the DLC's ATV and Unimog, and the Rover, both boats
+The Spawner tab, next to Lua, puts things into the world in front of you: vehicles and soldiers. The
+vehicles are every land vehicle, boat and the hang glider, the DLC's ATV and Unimog, and the Rover, both boats
 and the Unimog once per mounted gun. A click spawns one 8 m ahead at the end of the next frame, facing the way you face, and drops
 it from 1.5 m above your feet, because the game's spawn call does not find the ground. Hovering a
 button shows the archetype it spawns.
+
+Soldiers come as a squad: **Squad size** sets how many, 1 to 6, and a click stands them side by side
+25 m ahead, a step apart, facing you. There are both factions, each class as a Caucasian and a
+Nubian, and six of Ubisoft's own test soldiers (`enemy_archetypes.MercTest`). Only the test range,
+[`tools/TestRange`](../../tools/TestRange), has every one of them. The campaign worlds' libraries
+lack some, and clicking one of those logs a Lua error.
 
 A spawn is a call to `SpawnEntityFromArchetype`, the Lua global the game's own scripts use, and the
 line it runs lands in the Lua tab along with any error. In a menu there is no one to spawn in front
@@ -438,3 +444,6 @@ Everything below needs a real install:
 - **Spawner** *(not yet run)*: on the Spawner tab, Datsun puts a Datsun 8 m ahead, facing the way
   the player faces, which drops onto its wheels and can be driven. The Lua tab shows the
   `SpawnEntityFromArchetype` line it ran.
+- **Spawner soldiers** *(not yet run)*: in the test range, Squad size 3 and Red faction's Assault,
+  Caucasian put three soldiers 25 m ahead, 3 m apart, facing you. With no navmesh there, a crash
+  some 30 s later is the expected result, not a fault of the spawn.

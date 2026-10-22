@@ -184,9 +184,10 @@ namespace {
         {"evict_resources", "Evict unused resources", "Game", Arg::None, {}, nullptr, nullptr},
         {"quitToMainMenu", "Quit to the main menu", "Game", Arg::None, {}, nullptr, nullptr},
         {"quit", "Quit the game", "Game", Arg::None, {}, nullptr, nullptr},
-        {"ChangeWorld", "Change world", "Game", Arg::String, {},
-         "#GameChangeWorldDefaultSpawnPoint(\"%s\")",
-         "A world name. Untested, and standing in for load_level, which has no Lua behind it."},
+        {"ChangeWorld", "Change world", "Game", Arg::String, {}, "#GameChangeWorld(%s)",
+         "A world and the spawn point to arrive at, which travel needs: \"world1\", "
+         "\"2056971616016942572\" or \"world2\", \"2051908267268899174\" or \"testrange\", "
+         "\"2054037628277228842\". Standing in for load_level, which has no Lua behind it."},
 
 #include "commands/settings.inc"
     };

@@ -11,9 +11,11 @@ struct Spawnable {
     const char* archetype;
 };
 
+// A squad group spawns several at once, at a distance, facing the player.
 struct Group {
     const char* name;
     std::span<const Spawnable> spawnables;
+    bool squad = false;
 };
 
 std::span<const Group> All();

@@ -16,6 +16,10 @@ namespace {
     // Far enough ahead to clear the longest vehicle, the big truck.
     constexpr float kAhead = 8.0f;
 
+    // A squad stands at rifle range, a step apart.
+    constexpr float kSquadAhead = 25.0f;
+    constexpr float kSquadSpacing = 3.0f;
+
     // The spawn does not find the ground, so the entity starts above the player's feet and drops.
     constexpr float kAbove = 1.5f;
 
@@ -24,28 +28,40 @@ namespace {
 
 namespace DevTools::Spawn {
 
-void Ahead(const char* archetype) {
-    GameThread::Post([name = std::string(archetype)] {
-        void* ref = Entity::AcquireFocusRef(Player::CameraManager());
-        void* entity = Entity::Of(ref);
-        if (entity == nullptr) {
+namespace {
+    // Spawns `count` side by side `ahead` metres in front of the player, turned `turnDegrees` from them.
+    void Line(const char* archetype, int count, float ahead, float turnDegrees) {
+        GameThread::Post([name = std::string(archetype), count, ahead, turnDegrees] {
+            void* ref = Entity::AcquireFocusRef(Player::CameraManager());
+            void* entity = Entity::Of(ref);
+            if (entity == nullptr) {
+                Entity::ReleaseRef(ref);
+                FCSE::Logf("spawn: no player to spawn %s in front of", name.c_str());
+                return;
+            }
+
+            const float* matrix = Entity::Matrix(entity);
+            const float yaw = Entity::Yaw(entity);
+            const float x = matrix[12] - std::sin(yaw) * ahead;
+            const float y = matrix[13] + std::cos(yaw) * ahead;
+            const float z = matrix[14] + kAbove;
             Entity::ReleaseRef(ref);
-            FCSE::Logf("spawn: no player to spawn %s in front of", name.c_str());
-            return;
-        }
 
-        const float* matrix = Entity::Matrix(entity);
-        const float yaw = Entity::Yaw(entity);
-
-        char line[256];
-        std::snprintf(line, sizeof(line),
-                      "SpawnEntityFromArchetype(\"%s\", %.3f, %.3f, %.3f, 0, 0, %.1f)", name.c_str(),
-                      matrix[12] - std::sin(yaw) * kAhead, matrix[13] + std::cos(yaw) * kAhead,
-                      matrix[14] + kAbove, yaw * kDegreesPerRadian);
-        Entity::ReleaseRef(ref);
-
-        Lua::Run(line);
-    });
+            for (int i = 0; i < count; ++i) {
+                const float across = (i - (count - 1) * 0.5f) * kSquadSpacing;
+                char line[256];
+                std::snprintf(line, sizeof(line),
+                              "SpawnEntityFromArchetype(\"%s\", %.3f, %.3f, %.3f, 0, 0, %.1f)",
+                              name.c_str(), x + std::cos(yaw) * across, y + std::sin(yaw) * across, z,
+                              yaw * kDegreesPerRadian + turnDegrees);
+                Lua::Run(line);
+            }
+        });
+    }
 }
+
+void Ahead(const char* archetype) { Line(archetype, 1, kAhead, 0.0f); }
+
+void Squad(const char* archetype, int count) { Line(archetype, count, kSquadAhead, 180.0f); }
 
 }
