@@ -7,10 +7,8 @@
 #include "engine/pawn.h"
 #include "fcse_api.h"
 
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <numbers>
 
 namespace {
     using AimingOverhaul::Field;
@@ -30,8 +28,6 @@ namespace {
     AimingOverhaul::Look::OffsetFn g_offset = nullptr;
     uint8_t* g_pawn = nullptr;
     Angles g_applied = {};
-    float g_limitSide = 0.0f;
-    float g_limitYaw = 0.0f;
 
     void __fastcall UpdateLookDetour(uint8_t* listener, void* unused) {
         g_originalUpdateLook(listener, unused);
@@ -53,27 +49,15 @@ namespace {
         Field<float>(data, kDesiredAimPitch) += up;
         Field<float>(data, kDesiredYaw) += left;
         Field<float>(data, kDesiredAimYaw) += left;
-
-        // Yaw wraps at a turn, so how far past the limit it is goes the short way round.
-        const float past = std::remainder(Field<float>(data, kDesiredYaw) - g_limitYaw,
-                                          2.0f * std::numbers::pi_v<float>);
-        if ((g_limitSide > 0.0f && past > 0.0f) || (g_limitSide < 0.0f && past < 0.0f)) {
-            Field<float>(data, kDesiredYaw) -= past;
-            Field<float>(data, kDesiredAimYaw) -= past;
-        }
     }
 }
 
 bool AimingOverhaul::Look::Install(OffsetFn offset) {
     g_offset = offset;
     if (!Hook(g_updateLook.address(), &UpdateLookDetour, &g_originalUpdateLook)) {
-        FCSE::ApiPointer()->Log("look: the look cannot be hooked, so the aim does not sway");
+        FCSE::ApiPointer()->Log("look: the look cannot be hooked, so a gun at a wall does not "
+                                "swing down");
         return false;
     }
     return true;
-}
-
-void AimingOverhaul::Look::SetYawLimit(float side, float yaw) {
-    g_limitSide = side;
-    g_limitYaw = yaw;
 }

@@ -1,8 +1,5 @@
-// The hand's drift: a slow breath and a wander, which move the eye a few millimetres off the gun and
-// the aim a fraction of a degree, less while the breath is held.
+// The hand's drift: a few millimetres of wander and a slow breath.
 #include "sway.h"
-
-#include "breath.h"
 
 #include <atomic>
 #include <cmath>
@@ -12,9 +9,6 @@
 namespace {
     // Metres.
     constexpr float kDrift = 0.002f;
-    // Radians, down the iron sights and through a scope.
-    constexpr float kIronsightWander = 0.0035f;
-    constexpr float kScopeWander = 0.006f;
 
     struct Wave {
         double hertz;
@@ -28,9 +22,6 @@ namespace {
 
     std::atomic<bool> g_enabled{true};
     double g_time = 0.0;
-    // The waves' sums at g_time, rightward and upward.
-    float g_right = 0.0f;
-    float g_up = 0.0f;
 
     float Sum(std::span<const Wave> waves) {
         float sum = 0.0f;
@@ -47,19 +38,7 @@ AimingOverhaul::Aim::Offset AimingOverhaul::Sway::Drift(float seconds) {
     if (!g_enabled) {
         return {};
     }
-    g_right = Sum(kRight);
-    g_up = Sum(kUp);
-    const float drift = kDrift * Breath::Steadiness();
-    return {drift * g_right, drift * g_up};
-}
-
-AimingOverhaul::Look::Angles AimingOverhaul::Sway::Wander() {
-    if (!g_enabled) {
-        return {};
-    }
-    const float wander = (kIronsightWander * Aim::Settled() + kScopeWander * Aim::Scoped()) *
-                         Breath::Steadiness();
-    return {wander * g_up, wander * g_right};
+    return {kDrift * Sum(kRight), kDrift * Sum(kUp)};
 }
 
 void AimingOverhaul::Sway::SetEnabled(bool enabled) {

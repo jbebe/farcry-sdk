@@ -16,8 +16,4 @@ using OffsetFn = Angles (*)();
 // False, and logged, when the look cannot be hooked.
 bool Install(OffsetFn offset);
 
-// Holds the look from turning past `yaw`, in radians, left positive: with `side` above nought no
-// further left, below nought no further right, and at nought not at all.
-void SetYawLimit(float side, float yaw);
-
 }

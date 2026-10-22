@@ -146,9 +146,21 @@ same, is `+0x2D0`. Both hold the look in radians:
 flags at `+4` is set. It takes no arguments and returns with a plain `RET`. It writes the look to both
 copies and carries the effective roll over unchanged, since the mouse has no roll axis.
 
-:::warning[Not yet tested in a running game]
-Adding to the desired look after `UpdateLook` should move the view, the gun's aim and where shots go
-together, since all three follow it.
+:::info[Seen in a running game]
+Adding the frame's change of an offset to both copies of the desired look after `UpdateLook` moves
+the view and the gun together, and the mouse turns on from wherever the offset left it. A slow
+breath-and-tremor offset read as a sway through iron sights and scopes alike. Where the shots went
+was not checked. Retail GOG v1.03, from Aiming Overhaul.
+:::
+
+The player's sprint press is handled in `CPawnInputListener`'s signal handler: on `lock_sprint` (or
+the pad's `sprint`), the call at `0x101447C1` fetches the desired data and the next instruction ORs
+`0x40` into its flags. EAX holds the signal there and ESI the listener. Jumping from that call to
+`0x101447CA`, the handler's return, refuses the press.
+
+:::info[Seen in a running game]
+Refusing the sprint press that way while the effective iron-sight bit is set keeps the player down
+the sights with sprint held. Retail GOG v1.03, from Aiming Overhaul.
 :::
 
 ## The first-person body
@@ -191,11 +203,19 @@ whose capacity's bit 0 is clear is freed with the engine's free (`0x10228AD0`).
 AI's. The weapon is at the state's `+0x00`, and `CEquipmentBase::GetWielder` (`0x10156BA0`) on it
 gives the pawn holding it.
 
-:::warning[Not yet tested in a running game]
-Aiming Overhaul casts layer mask `0x43B` from the eye along the view, swings the gun down by
-lowering the look and raising the camera's angular pitch by the same amount, clears the desired
-iron-sight bit and refuses `CanFire` for the player's weapon while it is down. None of it has run.
+A gun can be swung down without the view moving: lower the desired look by an angle (see
+[the look](#the-look)) and raise the camera's angular pitch at `+0xD0` by the same angle. The arms
+and the gun follow the look; the view is the look turned back up by the offset.
+
+:::info[Seen in a running game]
+Aiming Overhaul casts layer mask `0x43B` from the eye along the view, swings the gun down that way
+as the room ahead shrinks, clears the desired iron-sight bit and refuses `CanFire` for the player's
+weapon while it is down. The gun swings out of walls with the view holding still, and the player
+neither aims nor fires until it comes back up. Retail GOG v1.03.
 :::
+
+`CastRay` was called from the camera update every frame for this, and up to a few dozen times a
+second more for leaning, without trouble.
 
 ## Leaning
 
@@ -209,42 +229,86 @@ body part 0 (`0x1010D850`): that part's skeleton node, through the skeleton's vt
 the pawn entity's own orientation. That orientation is the entity's 4×4 at `+0x30`, which
 `CEntity::GetOrientation` (`0x104DDA00`) turns into a quaternion.
 
+### Turning the entity
+
 `CEntity::SetEuler` (`0x104E01C0`) takes pitch, roll and yaw and rebuilds the basis as yaw about Z,
-after roll about the entity's own forward axis Y, after pitch about X, keeping its position. A
-positive roll tilts the up axis toward +X, to the right, and leaves the forward axis where it was, so
-`atan2(m[5], m[4]) - π/2` still reads the same heading.
+after roll about the entity's own Y, after pitch about X, keeping its position.
+`CEntity::GetEuler` (`0x104DF830`, through `0x1006AEE0`) decomposes a basis back into the same three
+the same way. A pawn faces along its Y row, with X to its right, so a roll leans it sideways and
+`atan2(m[5], m[4]) - π/2` reads its heading whatever the roll. Rolling about X instead tips it
+forward or back.
+
+Every orientation write ends in `CEntity::SetMatrix` (`0x104DF440`, `__thiscall(const float*
+matrix, void* source)`, `RET 8`). It stores the matrix at `+0x30`, calls `vt+0x4C` on each of the
+entity's components but `source`, and moves the entities bound to it. It reads the matrix with
+aligned SSE loads, so a matrix handed to it must be 16-byte aligned: an unaligned stack copy faults
+as a read of `0xFFFFFFFF`. A component is found by `CEntity::GetComponent` (`0x104E2CC0`, the
+CRC-32 of its class name); the player's physics is `CCharacterPhysComponent`.
+
+### When the body is read
+
+Within `CEngine::Update`, the pre-physics tick list runs first, then the physics step, then the
+physics post-step queue (`0x1058D8F0`, `__thiscall(float seconds)`, `RET 4`), which calls each
+registered physics component's `vt+0x90`, then the post-physics tick list, which ends with the
+camera.
+
+- The pawn beautifier component's update (`0x100EA050`, `__thiscall(seconds, mask)` on the
+  component's updatable at `+0x10`) runs in the **pre-physics** list. It applies the animation's
+  root motion (`0x100E9B80`, which `GetEuler`s the body, adds its turn and `SetEuler`s it back),
+  then calls its beautifiers' `vt+0x80`.
+- In the **post-physics** list something writes the player's matrix through `SetMatrix` once a
+  frame, standing it upright, before the camera reads it.
+- The weapon entity's own matrix is written through `SetMatrix` only a handful of times in thirty
+  frames. The gun is not drawn, and does not fire, from it.
 
 :::info[Seen in a running game]
-Rolling the pawn entity with `SetEuler` from the camera update rolls the view and nothing else: the
-eye stays where it was, and the arms and the gun stay level with the world, so they tilt on screen.
-Retail GOG v1.03, from Aiming Overhaul.
+Retail GOG v1.03, from an FCSE plugin logging the player's matrix and these calls twice a second
+while leaning: the beautifier's update ran once a frame for the player, the post-physics write once
+a frame, and the weapon's `SetMatrix` 0 to 5 times in 30 frames.
 :::
 
-The camera update is the last thing in the frame to read the body. Within `CEngine::Update`, the
-physics step is followed by its post-step queue (`0x1058D8F0`, `__thiscall(float seconds)`,
-`RET 4`), which runs every registered physics component's `vt+0x90` to place its entity, and only
-then by the post-physics tick list, where the body is posed for drawing, the weapon is linked to its
-hand (`0x10541FD0`) and, last, the camera is updated. Whatever turns the entity right after the
-post-step therefore turns the drawn arms and gun, the muzzle, the scope's part, the camera and where
-a shot leaves from together. `SetPosition` and `SetEuler` there move the entity alone: the engine's
-own animation root motion (`0x100E9B80`) uses them in the same tick list, and passes the physics
-component explicitly when it wants the body moved too.
+### What a lean was tried as
 
-Camera-side alternatives fall short. Moving the eye through the camera's offsets and drawing the gun
-from the unleaned camera (the gun is placed through `c0`–`c3`, the projection alone being at
-`c8`–`c11`) leaves the muzzle flash and the tracers at the unleaned gun, and a scope's `SCOPE_HI`
-part, a few centimetres ahead of the unleaned eye, outside a magnified view's frustum.
+Aiming Overhaul tried six ways of leaning the player, each seen in game on retail GOG v1.03. None
+yet leans the view, the arms and the gun, the muzzle and a scope's sight picture together.
+
+1. **The pawn entity rolled from the camera update** with `SetEuler`. The view rolls about its own
+   axis and nothing else: the eye does not move, and the arms and the gun stay level with the world,
+   so they tilt on screen. They were posed earlier in the frame, and the camera reads the entity's
+   orientation lazily for body part 0.
+2. **The camera's own roll and eye.** The roll at `+0xD4` and the eye at `+0xE8` (turned into the
+   rolled axes, since the positional offset is turned by the full camera rotation) lean the view
+   cleanly. The gun is placed through `c0`–`c3`, the view's rotation times the projection, with the
+   projection alone at `c8`–`c11` (see [the weapon's passes](./presentation-and-input.md)): giving
+   each of its draws `P · A · P⁻¹ · C` in place of `C`, with `A` the view's roll and the eye's move in
+   camera space, draws the arms and the gun exactly where they sit unleaned, so they lean with the
+   view. A shot can be moved with the eye in the bullet strategy's first-person setup (`0x10112600`,
+   `__thiscall(pawn, origin, direction, ·)`, `RET 0x10`), which writes the origin from body part 0.
+   But iron sights come up and a scope's sight picture never shows, and the muzzle flash stays where
+   the gun is in the world. The `SCOPE_HI` part, a few centimetres ahead of the unleaned eye, is
+   probably culled from the narrow magnified view; that is not confirmed.
+3. **The pawn entity rolled right after the post-step**, with `SetPosition` and `SetEuler`, which
+   tell every component. The muzzle flash then follows the lean, but the body's heading turns on its
+   own for as long as the lean is held, by up to a quarter turn, and the camera with it; and the
+   post-physics write has stood it upright again by the time the camera reads it.
+4. **The pawn rolled about its X row** from the post-step, on every write. The body tips forward: the
+   view rises and turns.
+5. **The pawn rolled after the pre-physics beautifier and stood upright after the post-step.** The
+   roll is gone before anything is drawn: the beautifier runs before the physics.
+6. **The pawn rolled after the post-step without the physics told** (`source` its
+   `CCharacterPhysComponent`), re-rolled after each of the engine's writes, both for the post-physics
+   list only and for the whole frame. The matrix holds the roll when the camera reads it, every
+   frame, yet the arms and the gun do not move at all, and the body does not turn.
+
+From 3 and 6 the drawn body seems to follow the physics' own copy of the body, not the entity's
+matrix, and telling the physics of a tilt sets it turning the body. A physics component told of the
+lean only between the post-step and the next pre-physics tick list was the next step, untried.
 
 :::info[Seen in a running game]
-With the eye moved 0.43 m through the camera's offset and the view rolled, iron sights came up but a
-scope's sight picture never showed, and the muzzle flash stayed at the gun's unleaned place. Retail
-GOG v1.03, from Aiming Overhaul.
-:::
-
-:::warning[Not yet tested in a running game]
-Aiming Overhaul's lean rolls the pawn entity about the belly from the post-step. Whether the
-post-step places the entity afresh each frame, and whether the AI's sight follows the leaned body,
-are unchecked.
+Weapon entities leaned in the world on every `SetMatrix` move nothing visible, as the writes above
+predict. Moving the drawn gun by its draws alone, as in 2, keeps it in the player's hands only while
+the arms are moved with it: rewriting the arms' draws (40-byte skinned vertices) and not the weapon's
+(32-byte) leaves the gun behind.
 :::
 
 ## A scope's sight picture

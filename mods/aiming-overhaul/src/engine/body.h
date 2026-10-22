@@ -1,19 +1,16 @@
-// The player's body, leaned about the belly once the physics has placed it each frame, so the arms,
-// the gun, the eye and where a shot leaves from are all posed from the leaned body.
+// The player's body, rolled about its feet from the camera update, which rolls the view; the arms
+// and the gun were posed before it and do not follow.
 #pragma once
 
 #include <cstdint>
 
 namespace AimingOverhaul::Body {
 
-// Metres from the feet up to the belly the body leans about.
-inline constexpr float kPivotHeight = 0.65f;
-
-// False, and logged, when the physics post-step cannot be hooked.
+// False, and logged, when the calls that turn an entity are not found.
 bool Install();
 
-// Leans `pawn` by `roll` radians, right positive, from the next physics post-step on. A pawn not
-// set again for a few post-steps is stood upright and let go.
-void Lean(uint8_t* pawn, float roll);
+// Rolls the pawn's entity by `radians`, right positive, keeping its heading and position. Nought
+// stands it upright once and then leaves it alone.
+void Roll(uint8_t* pawn, float radians);
 
 }

@@ -24,14 +24,9 @@ inline bool Is(uint8_t* pawn, uint8_t flag) {
     return (Field<uint8_t>(Data(pawn), kEffectiveFlags) & flag) != 0;
 }
 
-// Lets go of the sights the player asked for, as releasing the aim key does, and asks for them
-// again, as pressing it does.
+// Lets go of the sights the player asked for, as releasing the aim key does.
 inline void DropSights(uint8_t* pawn) {
     Field<uint8_t>(Data(pawn), kDesiredFlags) &= ~kIronsight;
-}
-
-inline void RaiseSights(uint8_t* pawn) {
-    Field<uint8_t>(Data(pawn), kDesiredFlags) |= kIronsight;
 }
 
 }
