@@ -381,6 +381,25 @@ Measured on retail files, against the read path of `CNavMeshNode::SerializeData`
 Implemented in `JackAll.Tools/World/WorldNavMesh.cs`.
 :::
 
+## Generating a navmesh
+
+JackAll's `navmesh build` writes sectors for a level of your own
+([command line](/jackall/cli-formats)). It reads the terrain, cuts out the footprint of
+every placed entity whose descriptor has a `StaticPhysComponent` or `CompoundPhysComponent`, and
+fills in what the engine's generator would: links, graph ids, the clearance radii and the quadtree.
+Then it sets `HasNavMesh` in the world's `sectorsdep.fcb`.
+
+**(measured)** Run over `w1_c_2` with world 1's library:
+
+- Retail covers 54% of the level's ground and the generator 61%.
+- Where retail covers a sector almost fully, the generator keeps 87.5% of that area. It cuts out
+  more around props.
+- 8.6% of what the generator keeps is steeper than retail allows, because it never drops a slope.
+- It makes 2.35 times as many triangles, because it splits cells down to 1 m to follow hills.
+
+It was built for flat ground like `tmpla`'s. For real relief it needs slope rejection and fewer,
+larger triangles, which is what Recast does. Nothing it wrote has been loaded in the game yet.
+
 ## Unknowns
 
 - The meaning of the level-file header fields (`+0x54` through `+0x70`), and of the sector's 64-bit

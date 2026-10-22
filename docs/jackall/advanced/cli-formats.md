@@ -247,6 +247,20 @@ No errors
 
 See [Read a mission](/jackall/missions).
 
+`navmesh build` makes the AI's navmesh for a level of your own, from its terrain and the colliding
+objects placed on it. Point it at a folder laid out like the game's data, such as a mod layer's
+`mods` folder:
+
+```
+> jackall-cli navmesh build tools\TestRange\layer\mods --level testrange
+64 sectors, 7,312 triangles, 14 obstacles cut out.
+HasNavMesh set on 64 of 64 sectors in worlds\testrange\generated\testrange.sectorsdep.fcb.
+```
+
+It writes each sector's `nv_<id>.nvm` and turns on the flag that makes the game load them. It suits
+flat or gently rolling ground: it does not leave out steep slopes, and it makes no cover points. See
+[`.nvm`](/docs/file-formats/nvm#generating-a-navmesh).
+
 ## References
 
 `xref build` indexes every reference between the game's files, once:
