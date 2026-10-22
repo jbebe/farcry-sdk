@@ -15,10 +15,11 @@ namespace {
     FCSE::Relocation<GetTargetFn> g_getTarget{FCSE::Uplay(0x00A19370)};
     FCSE::Relocation<GetVisibilityFn> g_getVisibility{FCSE::Uplay(0x00A021A0)};
 
-    // CShootingSystem's agent, the start time of its reaction CLifeTimer and its target distance;
-    // CPawnAgent's IsAPlayer slot, its senses and shooting system held in place, and its CPawn;
-    // CPawn's data block; CTaskShoot's agent.
+    // CShootingSystem's agent, its reaction CLifeTimer (lifetime, -1 while stopped, then start
+    // time) and its target distance; CPawnAgent's IsAPlayer slot, its senses and shooting system
+    // held in place, and its CPawn; CPawn's data block; CTaskShoot's agent.
     constexpr ptrdiff_t kShooter = 0x00;
+    constexpr ptrdiff_t kReactionLifetime = 0xBC;
     constexpr ptrdiff_t kReactionStart = 0xC0;
     constexpr ptrdiff_t kTargetDistance = 0xE8;
     constexpr ptrdiff_t kIsAPlayerSlot = 0xBC;
@@ -30,6 +31,8 @@ namespace {
 }
 
 namespace DifficultyOverhaul::Shooting {
+
+FCSE::Relocation<CanShootFn> CanShoot{FCSE::Uplay(0x009792F0)};
 
 bool Found() { return g_getTarget && g_getVisibility; }
 
@@ -53,7 +56,11 @@ float Visibility(void* shooting) {
 
 float TargetDistance(const void* shooting) { return Read<float>(shooting, kTargetDistance); }
 
-float AimStart(const void* shooting) { return Read<float>(shooting, kReactionStart); }
+bool Reacting(const void* shooting) { return Read<float>(shooting, kReactionLifetime) != -1.0f; }
+
+float AimSeconds(const void* shooting) {
+    return static_cast<float>(Game::Now()) - Read<float>(shooting, kReactionStart);
+}
 
 void RestartAim(void* shooting) {
     Write(shooting, kReactionStart, static_cast<float>(Game::Now()));

@@ -1,4 +1,4 @@
-// The campaign state every feature reads: the difficulty, and which entity is the local player.
+// The campaign state every feature reads: the difficulty, the local player and the game clock.
 #pragma once
 
 namespace DifficultyOverhaul::Game {
@@ -10,8 +10,9 @@ Difficulty CurrentDifficulty();
 
 const char* Name(Difficulty difficulty);
 
-// The local player's entity, or null outside a session.
+// The local player's entity, or null outside a session, and whether an entity is it.
 void* PlayerEntity();
+bool IsPlayerEntity(const void* entity);
 
 // The entity a CEntityProxy holds, or null.
 void* ProxyEntity(const void* proxy);

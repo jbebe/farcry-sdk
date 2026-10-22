@@ -1,4 +1,4 @@
-// The campaign state every feature reads: the difficulty, and which entity is the local player.
+// The campaign state every feature reads: the difficulty, the local player and the game clock.
 #include "engine/game.h"
 
 #include "engine/memory.h"
@@ -60,6 +60,8 @@ void* PlayerEntity() {
     auto* player = Read<void*>(terminal, kTerminalPlayer);
     return player != nullptr ? ProxyEntity(Read<void*>(player, kPlayerProxy)) : nullptr;
 }
+
+bool IsPlayerEntity(const void* entity) { return entity != nullptr && entity == PlayerEntity(); }
 
 void* ProxyEntity(const void* proxy) {
     return proxy != nullptr ? Read<void*>(proxy, kProxyEntity) : nullptr;

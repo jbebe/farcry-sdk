@@ -6,11 +6,7 @@
 using namespace DifficultyOverhaul;
 
 namespace {
-    using CanShootFn = bool(__fastcall*)(void* task);
-
-    // CTaskShoot::CanShoot.
-    FCSE::Relocation<CanShootFn> g_canShoot{FCSE::Uplay(0x009792F0)};
-    CanShootFn g_originalCanShoot = nullptr;
+    Shooting::CanShootFn g_originalCanShoot = nullptr;
 
     // Hardcore: how visible the player must be to him before he fires.
     constexpr float kFireVisibility = 0.4f;
@@ -26,7 +22,7 @@ namespace {
 }
 
 void InstallFireDiscipline() {
-    if (!Shooting::Found() || !Hook(g_canShoot, &CanShootDetour, &g_originalCanShoot)) {
+    if (!Shooting::Found() || !Hook(Shooting::CanShoot, &CanShootDetour, &g_originalCanShoot)) {
         FCSE::Logf("fire discipline: the soldiers' shoot task was not found in this build");
     }
 }

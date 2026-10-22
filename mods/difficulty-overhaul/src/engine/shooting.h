@@ -1,9 +1,16 @@
 // A soldier's CShootingSystem and what it aims at: the seams every AI shooting feature reads.
 #pragma once
 
+#include "fcse_api.h"
+
 #include <cstdint>
 
 namespace DifficultyOverhaul::Shooting {
+
+using CanShootFn = bool(__fastcall*)(void* task);
+
+// CTaskShoot::CanShoot, whether he may pull the trigger now.
+extern FCSE::Relocation<CanShootFn> CanShoot;
 
 // Whether this build's shooting system and senses were found.
 bool Found();
@@ -22,8 +29,9 @@ float Visibility(void* shooting);
 // The distance to his target, as last measured.
 float TargetDistance(const void* shooting);
 
-// When his aim started settling on his target, by game clock, and restarting it from now.
-float AimStart(const void* shooting);
+// Whether his reaction timer runs, the seconds since his aim started settling, and restarting it.
+bool Reacting(const void* shooting);
+float AimSeconds(const void* shooting);
 void RestartAim(void* shooting);
 
 // The CPawn of a CPawnAgent, and of the soldier a shooting system belongs to.

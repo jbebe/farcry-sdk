@@ -29,10 +29,6 @@ namespace {
         BodyPart part;
     } kPartBits[] = {{0x003, kTorso}, {0x040, kHead}, {0x028, kHands},
                      {0x500, kFeet},  {0x014, kArms}, {0x280, kLegs}};
-
-    bool IsPlayer(const void* entity) {
-        return entity != nullptr && entity == DifficultyOverhaul::Game::PlayerEntity();
-    }
 }
 
 namespace DifficultyOverhaul::Damage {
@@ -58,10 +54,10 @@ void* Instigator(const uint8_t* stim) {
     return Game::ProxyEntity(Read<const void*>(stim, kStimInstigator));
 }
 
-bool ByPlayer(const uint8_t* stim) { return IsPlayer(Instigator(stim)); }
+bool ByPlayer(const uint8_t* stim) { return Game::IsPlayerEntity(Instigator(stim)); }
 
 bool SentByPlayer(const uint8_t* stim) {
-    return IsPlayer(Game::ProxyEntity(Read<const void*>(stim, kStimSender)));
+    return Game::IsPlayerEntity(Game::ProxyEntity(Read<const void*>(stim, kStimSender)));
 }
 
 float Health(const void* counters) {

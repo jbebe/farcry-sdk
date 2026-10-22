@@ -12,17 +12,15 @@
 using namespace DifficultyOverhaul;
 
 namespace {
-    using CanShootFn = bool(__fastcall*)(void* task);
     // __thiscall with two stack arguments, which a free function spells __fastcall.
     using OnBulletShotFn = void(__fastcall*)(void* processor, void* unused, const uint8_t* stim,
                                              bool hit);
 
-    // CTaskShoot::CanShoot, and CSensoryStimProcessor::OnBulletShot, which marks a soldier under
-    // fire for a bullet that hits him, lands near him or passes close to his head.
-    FCSE::Relocation<CanShootFn> g_canShoot{FCSE::Uplay(0x009792F0)};
+    // CSensoryStimProcessor::OnBulletShot, which marks a soldier under fire for a bullet that hits
+    // him, lands near him or passes close to his head.
     FCSE::Relocation<OnBulletShotFn> g_onBulletShot{FCSE::Uplay(0x00A24770)};
-    CanShootFn g_originalCanShoot = nullptr;
     OnBulletShotFn g_originalOnBulletShot = nullptr;
+    Shooting::CanShootFn g_originalCanShoot = nullptr;
 
     // CSensoryStimProcessor's agent.
     constexpr ptrdiff_t kProcessorAgent = 0x04;
@@ -30,14 +28,9 @@ namespace {
     // Hardcore: how long a bullet keeps him from firing at the player.
     constexpr double kPinnedSeconds = 1.0;
 
-    // Until when each shooting system is pinned down, by game clock.
+    // Until when each pinned-down shooting system stays pinned, by game clock.
     std::unordered_map<const void*, double> g_pinnedUntil;
     constexpr size_t kMaxPinned = 512;
-
-    bool Pinned(const void* shooting) {
-        const auto pinned = g_pinnedUntil.find(shooting);
-        return pinned != g_pinnedUntil.end() && Game::Now() < pinned->second;
-    }
 
     void __fastcall OnBulletShotDetour(void* processor, void* unused, const uint8_t* stim, bool hit) {
         g_originalOnBulletShot(processor, unused, stim, hit);
@@ -52,15 +45,17 @@ namespace {
         if (!Shooting::AimsAtPlayer(shooting)) {
             return;
         }
-        if (!Pinned(shooting)) {
-            FCSE::Logf("suppressed: %s at %.1f m", hit ? "hit" : "near miss",
-                       Shooting::TargetDistance(shooting));
-        }
-        // Forget every soldier once there are more than kMaxPinned.
+        // Soldiers killed while pinned are never erased, so forget everyone past kMaxPinned.
         if (g_pinnedUntil.size() > kMaxPinned) {
             g_pinnedUntil.clear();
         }
-        g_pinnedUntil[shooting] = Game::Now() + kPinnedSeconds;
+        const double now = Game::Now();
+        auto [pinned, added] = g_pinnedUntil.try_emplace(shooting, 0.0);
+        if (added || now >= pinned->second) {
+            FCSE::Logf("suppressed: %s at %.1f m", hit ? "hit" : "near miss",
+                       Shooting::TargetDistance(shooting));
+        }
+        pinned->second = now + kPinnedSeconds;
         Shooting::RestartAim(shooting);
     }
 
@@ -68,15 +63,26 @@ namespace {
         if (!g_originalCanShoot(task)) {
             return false;
         }
+        if (g_pinnedUntil.empty()) {
+            return true;
+        }
         void* shooting = Shooting::OfTask(task);
-        return !Pinned(shooting) || !Shooting::AimsAtPlayer(shooting);
+        const auto pinned = g_pinnedUntil.find(shooting);
+        if (pinned == g_pinnedUntil.end()) {
+            return true;
+        }
+        if (Game::Now() >= pinned->second) {
+            g_pinnedUntil.erase(pinned);
+            return true;
+        }
+        return !Shooting::AimsAtPlayer(shooting);
     }
 }
 
 void InstallSuppression() {
     if (!Shooting::Found() || !Game::ClockFound() ||
         !Hook(g_onBulletShot, &OnBulletShotDetour, &g_originalOnBulletShot) ||
-        !Hook(g_canShoot, &CanShootDetour, &g_originalCanShoot)) {
+        !Hook(Shooting::CanShoot, &CanShootDetour, &g_originalCanShoot)) {
         FCSE::Logf("suppression: the soldiers' bullet senses were not found in this build");
     }
 }

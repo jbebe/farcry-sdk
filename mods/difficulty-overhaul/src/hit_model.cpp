@@ -32,10 +32,9 @@ namespace {
     ShootAtFn g_originalShootAt = nullptr;
 
     // CShootingSystem: the part its aim dot is on (-1 until set up), the part to set the next dot up
-    // on, the reaction CLifeTimer's lifetime, and whether the last shot hit.
+    // on, and whether the last shot hit.
     constexpr ptrdiff_t kDotPart = 0x1C;
     constexpr ptrdiff_t kAimPart = 0x34;
-    constexpr ptrdiff_t kReactionLifetime = 0xBC;
     constexpr ptrdiff_t kLastShotHit = 0x108;
     constexpr int kHeadPart = 3;
     constexpr int kTorsoPart = 5;
@@ -74,9 +73,8 @@ namespace {
 
     // How settled his aim is, 0 to 1, from when the reaction timer started.
     float Settled(const void* shooting) {
-        const float elapsed = static_cast<float>(Game::Now()) - Shooting::AimStart(shooting);
         const float distance = Shooting::TargetDistance(shooting);
-        return std::clamp(elapsed / (kSettleSeconds + kSettleSecondsPerMetre * distance), 0.0f,
+        return std::clamp(Shooting::AimSeconds(shooting) / (kSettleSeconds + kSettleSecondsPerMetre * distance), 0.0f,
                           1.0f);
     }
 
@@ -147,8 +145,7 @@ namespace {
     }
 
     float __fastcall GetTimerFactorDetour(void* shooting) {
-        if (Read<float>(shooting, kReactionLifetime) == -1.0f ||
-            !Shooting::AimsAtPlayer(shooting)) {
+        if (!Shooting::Reacting(shooting) || !Shooting::AimsAtPlayer(shooting)) {
             return g_originalGetTimerFactor(shooting);
         }
         return Settled(shooting);
