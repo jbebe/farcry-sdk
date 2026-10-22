@@ -288,12 +288,22 @@ be posed. A bone is `0xA0` bytes:
 | `+0x94` | held: set by hand, and left alone when posing |
 
 Posing (`0x103322C0`, `__fastcall` on the skeleton) runs only while bit 0 is set, and rebuilds every
-bone not held from its animated matrix and its parent's posed one. The skeleton's
-`SkeletonObjectJob` (vtable `0x10E7BA54`) calls it, and the graphic component queues that job beside
-its own update while anything has asked for the skeleton in the last 60 frames. Then the component's
-sync (`0x1051B2A0`) clears bit 0, moves the entities bound to it, and places its rigid parts from
-their bones. The engine's own procedural bones (`0x100C2FA0`, for one) read a posed matrix
-(`0x10331F80`), write it back held (`0x10331F10`), and pose again.
+bone not held from its animated matrix and its parent's posed one. It is the synchronous path, for a
+skeleton's first build and the engine's own procedural bones (`0x100C2FA0`, for one), which read a
+posed matrix (`0x10331F80`), write it back held (`0x10331F10`), and pose again.
+
+Every frame the posing is a job instead. The graphic component queues two, PS3-style, while anything
+has asked for the skeleton in the last 60 frames: each object declares its buffers as plain pointers
+(counts at the declaration's `+0x00`–`+0x0C`, the pointers from `+0x14`) and names a kernel taking
+the job's context, whose first field is that declaration.
+
+- `SkeletonObjectJob` (the object at the component's `+0x40`, kernel `0x1064EC50`) is a copy of
+  posing, run whether or not bit 0 is set. It declares the bones, then the skeleton.
+- The skin job (the object at `+0x1C8`, kernel `0x1061F3A0`) is declared only while bit 0 is set. It
+  builds each kit part's matrices from the posed ones, through the part's node-to-bone map.
+
+Then the component's sync (`0x1051B2A0`) clears bit 0, moves the entities bound to it, and places its
+rigid parts from their bones.
 
 The camera turns with the `Camera` bone's posed matrix, and a shot's first-person origin
 (`0x10112600`) is that bone's place in the world (`0x1010D780`). Nothing here is seen in game yet.
