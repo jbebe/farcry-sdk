@@ -357,16 +357,73 @@ one changes nothing (seen in data).
 
 Missed shots land in a `fMissWidth` × `fMissHeight` box around the target.
 
+**Where a hit lands** is the aiming dot: a body part, head or torso, kept in `CShootingSystem` (`+0x1C`)
+and set up by `SetupAimingDot` (Steam `0x10A193E0`). The brain asks for the head at short range.
+After a hit the engine only zeroes the dot's offset and never rebuilds it, so a soldier who has hit
+keeps aiming at the same part. In game, about two thirds of the soldiers' hits on the player landed on
+the head; with hit locations off for the player ([the player](./stims-and-damage.md#the-player)),
+stock never shows it.
+
+**Whether he fires at all** is `CTaskShoot::CanShoot` (Steam `0x109792F0`). `CTaskShoot::Shoot` calls
+`StartShooting` before it generates the shot's position, so the trigger is pulled before
+`GenerateShootAtPosition` runs. `CanShoot` does not test how well he sees the target, so during the
+[intuition](#intuition) window a soldier fires at a player he cannot see. How visible the target is to
+him is `CSensorySystem::GetVisibilityValue` (Steam `0x10A021A0`), the smoothed value his knowledge base
+keeps for that target.
+
 `GetDifficultyFactor` and `GetProgressionFactor` are multiplied in but return 1 in both builds (the
 PC build inlines them as constants). Difficulty reaches accuracy only through the forced misses.
 
 ### Where difficulty acts
 
-| What | How |
+The game has three dials, and none of them watches how the player plays: the **difficulty setting**,
+the **progression level** (0-27, one per story or library mission) and the **act**. The player's
+**reputation** rises with them. Of these, the AI sees:
+
+| What | Dial |
 |---|---|
-| Accuracy | forced misses per weapon (`nForcedFailure…`) |
-| Squad roles | `FindRoleDistribution`'s split |
+| Accuracy | the setting: forced misses per weapon (`nForcedFailure…`) |
+| Squad roles | the setting: `FindRoleDistribution`'s split, which no brain reads |
+| Enemy weapons | progression ([enemy loadouts](./campaign.md#enemy-loadouts-follow-campaign-progress)) |
+| Optional tactics | progression ([adaptive behaviours](#adaptive-behaviours)) |
+| Weapon condition | the act ([soldiers](./stims-and-damage.md#soldiers)) |
+| Going down instead of dying | the player's reputation ([soldiers](./stims-and-damage.md#soldiers)) |
 | Everything else in this page | not at all - archetypes, cones, thresholds and behaviour odds are the same on every setting |
+
+What else the setting changes is in [campaign](./campaign.md#what-the-difficulty-setting-changes).
+
+### What sets one soldier apart
+
+Little. Every world 1 enemy archetype - `Blue_Faction` and `Red_Faction` × assault, light machine
+gunner, rocket man, shotgun man and sniper × `Caucasian` and `Nubian`, the two `Special.SpecOps_*` and
+`Missions.Assassination_Target` - has the same shooting and sensing values: `fTimerToMissTarget` 0.2,
+`fPointBlankDistance` 2.5, `fTimerToPointBlank` 1.5, `fMissWidth` 3, the same stance and speed factors,
+`uiMaxHitPerSecond` 5, `fAgentHealth` −1 (300 for the assassination target), `WeaponJamProbabilityScale` 1
+and `selAIInfamyMode` 2. What differs (seen in data):
+
+- `fCombatMultiplier` is 4 for snipers, rocket men and the assassination target;
+- `selODU`, the unit type, is 4 for snipers and 1 for SpecOps;
+- `bHasALongRangeWeapon`, and the weapons themselves.
+
+Three per-soldier values exist at run time, none of them used in combat (**traced in the server
+build**):
+
+- **His own reputation.** `selAIInfamyMode` 2 makes it random. The agent keeps a 0-1 fraction (`+0x610`,
+  saved as `AIInfamyValue`) that places him between `AIInfamyRange`'s `lowAIInfamy` 15 and `highAIInfamy`
+  30, above the current act's start level. `CPawnAgent::GetRelativeInfamy` compares it with the
+  player's reputation, from much lower to much higher. `CTaskCheckRelativeInfamy` reads the comparison
+  124 times in `mercbrain`: 108 in the social plans, 15 in idle, 1 in the emotion strategy. It makes
+  him back away from or stand up to a player who aims at him in a ceasefire town.
+- **His stress level** (`+0x614`, `AIStressLevel`). `CTaskCheckStressLevel` reads it only in the look
+  and emotion strategies: where he looks and what face he makes.
+- **His mental state**, set every update from his army-member state (`CPawnAgent::UpdateMentalState`),
+  picks animation skills and bark banks.
+
+**No soldier flees or surrenders in combat.** `CTaskFindSocialFleePos`, the only flee, runs in the
+social and idle plans: aimed at, stared down, crowded. In combat, a soldier leaves a fight only through
+the squad's `Fallback` order (flag 57), the [downed state](./stims-and-damage.md#soldiers) or death.
+The opposite exists too: `RushTarget` (flag 43) and `CombatNoCoverRunToThreat` (flag 55) send him at
+his target.
 
 ## Adaptive behaviours
 

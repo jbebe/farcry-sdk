@@ -31,11 +31,11 @@ The parts that decide the verdicts below:
 
 - **Damage is stims, and the numbers are data.** A shot is a Pierce stim whose level goes through a
   curve to health. The player's curve and health maxima are documented
-  ([the player](../engine-internals/stims-and-damage.md#the-player)). A soldier's own health
-  (`fAgentHealth`) and the NPC damage curve are not, so **how many hits kill a merc is unknown**.
+  ([the player](../engine-internals/stims-and-damage.md#the-player)). A merc has 250 health, set per
+  army, and goes down below 50 ([soldiers](../engine-internals/stims-and-damage.md#soldiers)); in game
+  that took five stock torso hits or one head hit.
 - **Hit-location multipliers exist for damage the player deals**: Head 6, Torso 1, Arms 1, Legs 0.5
-  (`DefaultCountersService/HitLocations`). Every realism mod raised them. Whether they apply to the
-  player too is unchecked.
+  (`DefaultCountersService/HitLocations`). Every realism mod raised them. They are off for the player.
 - **Downed soldiers soak lead.** A hit that takes a soldier to 49 health or less downs him at 49. Hits
   then do nothing for 0.4 s, and after that torso hits do ×0.5 and limb hits ×0.2. This is traced in the
   server build only ([todo page](/farcry-sdk/todos)).

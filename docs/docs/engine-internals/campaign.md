@@ -138,6 +138,26 @@ economy component.
   `02` (disabling `Level_00`, on by default), `03`, `06`, then `05` (disabling `Level_02`). Only the
   vehicle tiers are ever disabled.
 
+## What the difficulty setting changes
+
+The setting (0-3) is stored in the save and read through `CGameplayManager::GetDifficultyLevel`. Its
+44 readers in the server build, by what they change:
+
+- **The player's health:** the maximum ([the player](./stims-and-damage.md#the-player)), how fast
+  sickness drains it, and the last-bar cushion.
+- **Healing:** syrette caps (6 / 5 / 4 / 3), health pickups. Medic stations take a different branch on
+  Infamous; what it does was not checked.
+- **Ammunition:** maximum ammo, clip pickups, grenade drops, reloading.
+- **The player's weapons:** jam chance and wear per shot, upgrade bonuses (`CPawnBonusPlanManager`),
+  the gamepad's aim-assist radius, and [point-blank damage](./stims-and-damage.md#point-blank-damage).
+- **The AI:** forced misses and the squad role split ([where difficulty acts](./ai.md#where-difficulty-acts)).
+- **Telemetry only:** mission start and stop events.
+
+Nothing reads how the player plays - deaths, accuracy or time - so difficulty never adapts.
+Progression and the act scale the enemy instead: their weapons (below), their optional tactics, their
+weapon condition and how often they go down
+([where difficulty acts](./ai.md#where-difficulty-acts)).
+
 ## Enemy loadouts follow campaign progress
 
 `InventoryPackDifficultyLevel` decides which entries of an enemy's inventory pack it spawns with.

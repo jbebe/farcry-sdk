@@ -217,7 +217,8 @@ with observed behavior).
   with the stealth bonus is the community's most-praised realism tweak (credited to forum member
   Diablo_Lobo).
 - **Sniper range**: vanilla `fMaxRange` for sniper rifles is **400** (Discord, `🔨-fc3-and-bd-modding`,
-  "Low"); `RangeMultipliers` are not applied on a per-difficulty basis in FC2.
+  "Low"). `RangeMultipliers` are applied per difficulty, but only to the player's bullets: they add
+  levels at point blank ([point-blank damage](../engine-internals/stims-and-damage.md#point-blank-damage)).
 - **Grenade drop chance**: `<ChanceToDropGrenade Casual="1" Experimented="0.5" Hardcore="0.33"
   Infamous="0.25"/>` in `gamemodesconfig.xml` — set any tier to `1` for every killed merc to drop a
   grenade.

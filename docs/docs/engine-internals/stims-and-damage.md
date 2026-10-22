@@ -113,7 +113,75 @@ The curve's knots:
 
 The player's maximum is a `Curves.PlayerSicknessCurves.HealthMax_*` curve per difficulty. Its first
 pair of knots runs from 1,800 to 1,300 on Casual, 1,400 to 1,025 on Experienced, 1,075 to 825 on
-Hardcore and 825 to 700 on Infamous. What the curve's input is was not checked.
+Hardcore and 825 to 700 on Infamous. What the curve's input is was not checked. In game the player had
+495 or 825 on Hardcore and 780 or 1,300 on Casual at different times.
+
+**Hit locations are off for the player.** `ApplyLocationMultiplier` (Steam `0x107645E0`) scales a hit by
+the body part only when a flag on the receiver's counters component (`+0x48`) is set, and the player's is
+not. In game a head hit on the player did what a torso hit does.
+
+**The last bar is cushioned.** `CFCXCountersComponentPlayerSP::ApplyDamageMultiplier` quarters a hit
+while the player's health is below one health bar. In game, below about 120 health a hit that took 42
+elsewhere took 13 or 14.
+
+### Point-blank damage
+
+`CWeaponFireBulletStrategy::SendImpactStims` adds to the level of a bullet the **player** fires by the
+range it lands at. The bands are the weapon's `RangeMultipliers`, one list per difficulty; the AK-47's:
+
+| Difficulty | 0-2 m | 2-5 m | 5-10 m |
+|---|---|---|---|
+| Casual | +7 | +3 | +2 |
+| Experienced | +3 | +2 | +1 |
+| Hardcore | +2 | – | – |
+| Infamous | – | – | – |
+
+The other primaries and pistols follow the same shape. A soldier's bullet skips the bands: its level is
+scaled by `GetAIDamageMultiplier` at the range, after a second roll against
+`GetAIPrimaryBulletChanceOfSuccess` at the range. What those two read was not traced. This is **traced
+in the server build** only.
+
+## Soldiers
+
+A soldier's hits go through `CFCXCountersComponentAI::DamageHealth` (Steam `0x1069C9C0`). It scales a hit by
+the body part with `DefaultCountersService/HitLocations`: head 6, torso 1, arms 1, legs, hands and
+feet 0.5.
+
+**His health is his army's, not his own.** `CFCXCountersComponentAI::ApplyArmyPillar` (server
+`0x087EDED0`) sets his health and his weapon's reliability from a value kept per army, blue or red,
+unless his archetype's `fAgentHealth` is 0 or more. The values come from `CounterHealthRatingsTable`
+and `CounterReliabilityRatingsTable`, rated high, medium, low and failure per act:
+
+| Act | Health high / medium / low / failure | Reliability high / medium / low / failure |
+|---|---|---|
+| 1 | 250 / 150 / 130 / 50 | 240 / 120 / 80 / 20 |
+| 2 | 250 / 130 / 100 / 50 | 180 / 130 / 100 / 20 |
+| 3 | 250 / 160 / 120 / 50 | 220 / 160 / 120 / 20 |
+
+In game every merc had 250, the high rating; which rating each army holds was not traced.
+
+**Going down.** A hit that takes him under the failure value (50) downs him instead of killing him
+only if `CanHealthFailureOccur` (server `0x087EE270`) allows it:
+
+- never in a vehicle;
+- always for a machete hit;
+- otherwise only for a hit by the player, while fewer soldiers of both armies are down than the
+  player's reputation level allows, on a roll against that level's chance times the weapon's
+  modifier.
+
+The levels are `Infamy/Levels` in `gamemodesconfig.xml`. Since reputation rises with the story, more
+soldiers go down as it goes on:
+
+| Reputation | Chance | Down at once |
+|---|---|---|
+| 0-15 | 15 % | 2 |
+| 16-35 | 25 % | 3 |
+| 36-65 | 35 % | 5 |
+| 66-95 | 50 % | 8 |
+| 96-130 | 65 % | 11 |
+| 131+ | 80 % | 14 |
+
+What a downed soldier then soaks is on the [todo page](/farcry-sdk/todos).
 
 ## Breakable props
 
