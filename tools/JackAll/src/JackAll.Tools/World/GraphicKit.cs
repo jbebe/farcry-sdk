@@ -64,9 +64,7 @@ public sealed class GraphicKit
     /// <summary>The kit an archetype describes, or null when it describes none.</summary>
     public static GraphicKit? Of(FcbObject archetype)
     {
-        if (FcbEntityFields.FindComponent(archetype, WorldHashes.CFileDescriptorComponent) is not { } file
-            || !file.Values.TryGetValue(WorldHashes.HidDescriptor, out byte[]? rml)
-            || FcbXml.TryDecodeRmlValue(rml) is not { } descriptor
+        if (FcbEntityFields.ReadDescriptor(archetype) is not { } descriptor
             || descriptor.DescendantsAndSelf("component")
                 .FirstOrDefault(c => (string?)c.Attribute("class") == "GraphicKitComponent") is not { } component)
         {

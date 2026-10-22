@@ -10,6 +10,7 @@ using JackAll.Cli.Commands.Legacy;
 using JackAll.Cli.Commands.Mgb;
 using JackAll.Cli.Commands.Mod;
 using JackAll.Cli.Commands.Move;
+using JackAll.Cli.Commands.NavMesh;
 using JackAll.Cli.Commands.Rml;
 using JackAll.Cli.Commands.Sav;
 using JackAll.Cli.Commands.Sbao;
@@ -301,6 +302,16 @@ app.Configure(config =>
                 "Check Domino user graphs for what would break in game: the reconstruction proved against "
                 + "each graph's debug twin, the writer's round trip, and the lint rules.")
             .WithExample("domino", "check", @"extracted\domino\user", "--summary");
+    });
+
+    // --- AI navigation mesh ----------------------------------------------
+    config.AddBranch("navmesh", navmesh =>
+    {
+        navmesh.AddCommand<NavMeshBuildCommand>("build")
+            .WithDescription(
+                "Generate a level's navmesh from its terrain and the colliding entities placed on it, and "
+                + "mark its sectors HasNavMesh in the world's sectorsdep.fcb so the game loads it.")
+            .WithExample("navmesh", "build", @"tools\TestRange\layer\mods", "--level", "testrange");
     });
 
     // --- depload.dat dependency index ------------------------------------

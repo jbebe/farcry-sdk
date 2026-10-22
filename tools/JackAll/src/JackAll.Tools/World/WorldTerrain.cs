@@ -55,6 +55,16 @@ public sealed class WorldTerrain
         => Heights[Math.Clamp(y, 0, Side - 1) * Side + Math.Clamp(x, 0, Side - 1)]
            * (float)SdatSectorFile.MetersPerUnit;
 
+    /// <summary>Between samples, blended from the four around the point.</summary>
+    public float HeightMetersAt(float x, float y)
+    {
+        int x0 = (int)MathF.Floor(x), y0 = (int)MathF.Floor(y);
+        float fx = x - x0, fy = y - y0;
+        float bottom = HeightMetersAt(x0, y0) * (1 - fx) + HeightMetersAt(x0 + 1, y0) * fx;
+        float top = HeightMetersAt(x0, y0 + 1) * (1 - fx) + HeightMetersAt(x0 + 1, y0 + 1) * fx;
+        return bottom * (1 - fy) + top * fy;
+    }
+
     public static WorldTerrain Load(
         TerrainMap map,
         Func<string, byte[]?> readByPath,

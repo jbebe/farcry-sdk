@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Text;
+using System.Xml.Linq;
 
 namespace JackAll.Core.Format.Fcb;
 
@@ -58,6 +59,14 @@ public static class FcbEntityFields
         }
         return null;
     }
+
+    /// <summary>The model, physics and effects an entity's <c>CFileDescriptorComponent</c> describes,
+    /// as the <c>hidDescriptor</c> XML; null when it carries none.</summary>
+    public static XElement? ReadDescriptor(FcbObject entity)
+        => FindComponent(entity, WorldHashes.CFileDescriptorComponent) is { } file
+           && file.Values.TryGetValue(WorldHashes.HidDescriptor, out byte[]? rml)
+            ? FcbXml.TryDecodeRmlValue(rml)
+            : null;
 
     public static byte[] StringBytes(string text) => [.. Encoding.UTF8.GetBytes(text), 0];
 
