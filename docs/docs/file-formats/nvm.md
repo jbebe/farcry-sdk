@@ -5,11 +5,11 @@ sidebar_position: 11
 # `.nvm` — Navigation Mesh
 
 :::info[Verified via reverse engineering]
-Traced live via GhidraMCP against `FarCry2_server`. Covers the level-file/sector-file container
-structure, the per-sector header, the full field-order layout of a sector's content (node graph,
-vertex positions, cover points, obstacles, spatial index) and the on-disk bytes of `CNavMeshNode` —
-but not the byte layout inside the other per-element classes (`CNavCover`, etc. — see Unknowns). See
-also [the file manifest](../modding/file-manifest.md#6-navigation-mesh-nvm--locked).
+Traced live via GhidraMCP against `FarCry2_server`, both the write and the read side. Every byte of a
+retail sector file is accounted for: the header, the sector scalars, nodes, vertices, cover points,
+cover vertices and the quadtree. Reading all 512 sectors of `w1_c_2` and `w2_b_3` with this layout
+leaves no byte over. JackAll reads and writes the format. See also
+[the file manifest](../modding/file-manifest.md#6-navigation-mesh-nvm--locked).
 :::
 
 Built on the open-source **Recast** navmesh library (community-reported, via a leaked internal
@@ -37,8 +37,9 @@ exception, and Windows blames `coreclr.dll` instead of Dunia. The original `EXCE
 still recoverable from the crash dump's stack.
 
 This raises navmesh generation from a quality issue to a hard prerequisite for any editor map that
-places actors. The generator is already compiled into the engine (`CNavmeshGenerator`,
-`CNavMeshSectorWriter`, `BuildNavMeshLevel0`); there is simply no `FCE_Nav*` export.
+places actors. `FarCry2_server` carries the generator (`CNavmeshGenerator`, `CNavMeshSectorWriter`,
+`CNavMeshWriter::ComputeSectorRadii`, `BuildNavMeshLevel0`). Retail `Dunia.dll` shows only
+`CNavMeshGenComponent` of it by name. There is no `FCE_Nav*` export.
 
 ## A two-tier file scheme, unlike every other per-sector format
 
@@ -96,11 +97,38 @@ sector** in all of them:
 | `mp_16_airbase` | 640 | 10×10 | 100 | 504 |
 | `world1` | 5120 | 80×80 | 6400 | 25704 |
 
-Two observations complicate the satellite-loading path described above. The mode flag reads `2`
-(single-file) rather than `3` (per-sector satellites) in every shipped level file, and the descriptor
-table is **entirely zero** in all of them — including `world1`, which has 5120 satellites on disk.
-Whatever locates those satellites at run time therefore does not appear to be the descriptor table as
-serialized, and the level file functions in practice as a grid/extent declaration.
+The mode flag reads `2` (single-file) rather than `3` (per-sector satellites) in every shipped level
+file, and the descriptor table is **entirely zero** in all of them, including `world1`'s. The level
+file is a grid and extent declaration. The satellites reach the game another way.
+
+## How the game finds a sector file
+
+**(RE-verified)** A sector's navmesh is streamed with the rest of the sector, as a
+`CNavMeshSectorResource`. `CWorldSector::MakeRuntimeDataRes` (`0x095c9f80`) adds it to the sector's
+resource container through `CNavMeshSector::BuildRsrcDep` (`0x09a1ce20`), which names it
+`<level>\generated\nv\sectors\nv_<sectorId>.nvm`. It does so only when bit 0 of the sector's
+`SWorldSectorDep` flags is set.
+
+Those flags come from `<world>.sectorsdep.fcb`. `LoadDep` (`0x09c26f70`) reads each `CWorldSector`
+entry's booleans into one flag byte:
+
+| Bit | Field | `world1` | `tmpla` |
+|---|---|---|---|
+| 0 | `HasNavMesh` | true | absent |
+| 1 | `HasDescriptor` | true | true |
+| 2 | `HasMainSectorData` | true | absent |
+| 3 | `HasLandmarkNear` | true | absent |
+| 4 | the next boolean, hash `F19B593D` | not seen | absent |
+| 5 | `isSectorAccessible`, true when absent | true | true |
+
+**A world ships navmesh for a sector by setting `HasNavMesh` on that sector's `sectorsdep` entry.**
+Without it, a `nv_<id>.nvm` on disk is never opened. This is why the editor's worlds never load one:
+`CFCXEditorDocument::ExportSectorDependencies` writes only `HasDescriptor`, `HasMainSectorData` and
+`DetailMask`.
+
+When the resource arrives, `CNavMeshSectorResource::ClientProcessRawData` (`0x09abf710`) hands it to
+`CNavMeshLevel::RequestSectorLoad` with a `NavMeshSectorID` of
+`(sectorId % gridWidth) << 7 | (sectorId / gridWidth)`. The grid width is the level file's.
 
 ## Versioned serialization, not a size split
 
@@ -165,75 +193,91 @@ that might have assumed it was still absent.
 through a virtual dispatch. It splits into two: `SerializeDataHeader` (`0x09a21710`) then, if that
 succeeds, `SerializeDataContent` (`0x09a1e780`) — the richest function in this format.
 
-**Header** (`SerializeDataHeader`): sector id/coordinates and bounding box (already known from the
-constructor), followed by two constant-looking values written unconditionally on save — `0x4e764d68`
-(reads as ASCII `hMvN` in raw byte order — plausibly a per-sector magic/tag) and `0x14100` — then a
-computed `GetReloadSize(sector)` value. On load, the equivalent slot is read back and compared against
-the archive's version field, and the whole header read fails (returns `0`) if they disagree — a real
-version/consistency check, not just informational.
+## The sector file, byte by byte
 
-**Content** (`SerializeDataContent`), in field order:
-
-```
-u16  sectorX, sectorY                     (already known from the constructor)
-f32  bbox[4]                              (already known)
-u32  field_0x6c                           (default 0x4f800000 = ~4.29e9, a sentinel-looking float)
-u32  field_0x70, field_0x74               (a pair; falls back to CNavmeshEdition::GetInstance()'s own
-                                            +0x54/+0x58 fields when unset — editor-time defaults)
-u16  field_0x5c
---- CNavArchive::SetPackedVectorSettings() runs here: every vec3 below this point is quantized to
-    3×int16, scaled relative to this sector's own bounding-box center/extent ---
-u32  field_0x64                           (version >= 0x13200)
-u32[field_0x64]              the link block: every node's neighbours, addressed from the node
-u32  nodeCount
-CNavMeshNode[nodeCount]      one triangle each — 48 bytes on disk, own SerializeData
-u32  vertexCount             its own count, unrelated to nodeCount
-f32vec3[vertexCount] → packed  the triangles' corners, 6 bytes each on disk
---- obstacles appear only on versions in [0x10000, 0x13600); retail 0x14100 skips the block ---
-u32  obstacleCount
-CNavMeshObstacle[obstacleCount]  dynamic blockers — 40 bytes each, own SerializeData
-f32vec3[]  → packed           additional quantized vertex arrays (version >= 0x13000 / >= 0x134ff)
---- both paths rejoin here ---
-u32  coverCount
-CNavCover[coverCount]        static AI cover points — 28 bytes in memory, own SerializeData
-u32  dynCoverCount                        (version >= 0x13400)
-CDynamicNavCover[dynCoverCount]  dynamic/toggleable cover points — 40 bytes in memory, own SerializeData
-f32vec3[]  → packed          a second quantized vertex-position array (purpose distinct from the first,
-                              not identified — candidate: edge midpoints or off-mesh link endpoints)
-CNavMeshQTree                a spatial index over the node list, built fresh from node positions via
-                              CNavMeshQTreeWriter and serialized inline — baked into the file, not
-                              rebuilt at load time
-```
-
-`AfterLoad(sector)` runs as the final step on the read path — a post-processing hook, presumably
-rebuilding runtime-only derived structures (adjacency, the live A* graph) from what was just
-deserialized, before the sector is marked ready (`this[0x5e] = 0`).
-
-A navmesh sector therefore contains a triangle mesh (`CNavMeshNode`, one per triangle) with its
-adjacency, quantized vertex positions, two flavors of AI cover point, dynamic obstacles, and a baked
-spatial index — each with a named class and a known position in the byte stream.
-
-## Measured per-sector header
-
-The field order above comes from the serializer; these offsets come from reading real
-`nv_<id>.nvm` files (`w1_c_2`, sectors 2576 and 2577):
+**(RE-verified)** from both directions of `SerializeDataHeader` (`0x09a21710`) and
+`SerializeDataContent` (`0x09a1e780`); **(measured)** on every sector of `w1_c_2` and `w2_b_3`, each of
+which this layout consumes to the last byte. Everything is little-endian, and the version is
+`0x14100` throughout retail.
 
 ```
 +0x00  u32   0
-+0x04  u32   0x4E764D68        the per-sector tag
-+0x08  u32   0x00014100        format version
-+0x0C  u32   reload size       varies per sector (60300, 38220)
-+0x10  u16   unidentified
-+0x12  u16   sector id         2576 / 2577 - the global id, matching the file name
-+0x14  f32   minX              1024 / 1088
-+0x18  f32   minY              2048 / 2048
-+0x1C  f32   maxX              1088 / 1152
-+0x20  f32   maxY              2112 / 2112
++0x04  u32   0x4E764D68        "hMvN", the tag
++0x08  u32   0x00014100        format version; a sector whose version differs fails to load
++0x0C  u32   reload size       120 + 60 * nodeCount (GetReloadSize: the in-memory sizes)
++0x10  u16   NavMeshSectorID   (x << 7) | y, the sector's column and row in the grid
++0x12  u16   sector id         the global id, matching the file name
++0x14  f32   minX, minY, maxX, maxY   the sector's 2D footprint
++0x24  f32   water level       -1e6 when the sector has no water
++0x28  u64   a world-wide constant
++0x30  u16   0x7F7F in every retail sector
++0x32  u32   link count, then u32[] links
+       u32   node count, then 48-byte nodes
+       u32   vertex count, then packed vertices, 6 bytes each
+       u32   cover count, then 6-byte covers
+       u32   dynamic cover count, then 14-byte dynamic covers
+       u32   cover vertex count, then packed cover vertices, 6 bytes each
+       the quadtree
 ```
 
-The bounding box is 2D — four floats, no Z — and matches the sector's own 64×64 footprint exactly.
-That matters for reading the geometry: every vec3 past `SetPackedVectorSettings` is quantised as
-three `int16` **relative to this box**, so these four floats are the dequantisation basis.
+The top two bits of the `NavMeshSectorID` word are whatever was in a register when it was built,
+so retail files differ there for no reason: `ClientProcessRawData` builds its id the same way,
+`unaffected EDI & 0xFFFFC000` included. Whether the stored word is compared with that id on load was
+not traced.
+
+The water level feeds `CNavMeshNode::ComputeIsUnderWater`: a node is under water when all three
+corners sit at or below the level minus 0.6 m. Retail uses −1e6 or a real height, such as 16.0
+and 42.0.
+
+The 64-bit constant at `+0x28` is the same in every sector of a world: `0x00051162F1B64C58` in
+world 1 and `0x001223D31752AD86` in world 2. On write it falls back to `CNavmeshEdition`'s own
+`+0x54`/`+0x58` when unset, so it is something the generator stamps, plausibly a build id. Nothing
+on the read path was found to use it.
+
+The bounding box is the dequantisation basis for every packed vector after it: see
+[dequantising a position](#dequantising-a-position).
+
+### Covers
+
+**(RE-verified)** `CNavCover::SerializeData` (`0x099fc080`) writes 6 bytes:
+
+```
++0  u8   height, in 8 mm steps (height * 125, capped at 250)
++1  u16  index into the cover vertex array
++3  u8   type bits; retail uses 0x00, 0x10, 0x20, 0x30
++4  u16  node index
+```
+
+A cover has no position of its own. `CNavMeshSector::AfterLoad` (`0x09a1cb50`) points each one at
+the cover vertex array, which is what the second packed array is, and gives it an id from the
+sector and its index. `CDynamicNavCover::SerializeData` (`0x099fc700`) writes the same 6 bytes, then
+two `u32`s. Retail has no dynamic covers. **(measured)** Of 25,660 covers in `w1_c_2` and `w2_b_3`,
+175 have a cover vertex index and 30 a node index past the end of their sector's array.
+
+### The quadtree
+
+**(RE-verified)** The tree's shape does not depend on the mesh.
+`CNavMeshQTreeWriter::BuildQTreeStructure` (`0x09abb780`) splits a quad while its half-width is at
+least 4 m, so a 64 m sector always has 341 quads (1 + 4 + 16 + 64 + 256) with 4 m leaves. The four
+children are allocated together, in the order +X+Y, −X+Y, +X−Y, −X−Y, and are then built in that
+order depth-first. `Append` files each node by its centroid's X and Y.
+
+On disk, `CNavMeshQTree::SerializeData` (`0x09abed10`) reads:
+
+```
+u32  quad count
+per quad:
+  u32  1 if the quad has children
+  f32  4 bounds
+  u16  node count, u16 first index into the node list
+  u16  4 child indices, only when it has children
+u32  node list length, then u16[] node indices
+```
+
+### `AfterLoad`
+
+`AfterLoad` sets each node's parent and gives each cover its id and the cover vertices. Nothing
+else is rebuilt, so links, graph ids and clearance radii must all be correct in the file.
 
 Sector files are sizeable — around 70–90 KB each, 254 of them in `w1_c_2` — so a sector's navmesh is
 far richer than its terrain.
@@ -262,20 +306,48 @@ the 60 the class occupies in memory. Each node is one triangle of the mesh:
 +0x00  u32    60 - the object's size, discarded on read
 +0x04  u16    sector id - the file's own
 +0x06  u16    node index - its position in the array
-+0x08  u16    1, or a number unique to the node (meaning unknown)
++0x08  u16    graph id - the connected region the node belongs to
 +0x0A  u8     link count - 3 for almost every node, up to 16 seen
 +0x0B  u32    link offset - index of the node's first entry in the link block
 +0x0F  int16 x, y, z  packed - the triangle's centroid
 +0x15  s8 ×3  normal x, y, z, /127
-+0x18  u8     flag (version >= 0x13900, meaning unknown)
-+0x19  u8     flag (version >= 0x13900, meaning unknown)
++0x18  u8     1 when the node is under water
++0x19  u8     1 when the node stands on an object rather than the terrain
 +0x1A  u32 ×3 vertex indices into the vertex array after the node array
-+0x26  10 bytes, unknown
++0x26  u8 ×10 clearance radii, in 4 cm steps
 ```
 
 The three normal bytes are what the engine dots against world up and compares to
 `NavMeshUtils::COS_ANGLE_SLOPE_LIMIT` to set the node's "too steep" bit, so slope is readable
 straight from the file without touching the terrain.
+
+**Graph id.** `CNavMeshSectorWriter::SetGraphIdToNodeAndFriends` (`0x09a1d170`) floods one id across
+linked nodes that share the under-water bit. It can require a 0.46 m agent radius to fit through
+the shared edge. `0xFFFF` means none was assigned. **(measured)** In `w1_c_2` and `w2_b_3`, 28% of
+nodes are in graph 1.
+
+**Flags.** The two flag bytes are bits 0 and 6 of the node's travel-restriction byte, which
+`CNavMeshNode::SatisfiesTravelRestrictions` (`0x09a10ec0`) tests against an agent's allowed
+terrain. Bit 3, too steep, is recomputed from the normal on load. **(measured)** In `w1_c_2`,
+19,291 of the 19,304 nodes that `ComputeIsUnderWater` puts under water carry `+0x18`, and no other
+node does. `+0x19` matches `ComputeIsAboveTerrain`'s name and is set on 16,267 dry nodes.
+
+**Clearance radii.** `CNavMeshWriter::ComputeSectorRadii` (`0x09a25140`) samples ten points of the
+triangle and stores the largest circle that fits at each, as `min(radius, 10 m) × 25`. The points are:
+
+| Slot | Point |
+|---|---|
+| 0 | the centroid |
+| 1, 2, 3 | corners 0, 1, 2 |
+| 4, 5, 6 | the midpoints of edges 0–1, 0–2, 1–2 |
+| 7, 8, 9 | the midpoints between those midpoints: (4, 5), (4, 6), (5, 6) |
+
+The radius comes from `CNavMeshNode::FindMaximumFittingRadius` (`0x09a14570`). It walks outward
+across links, at most 10 m, and measures the 3D distance to the nearest edge that blocks: an edge
+with no link, or a link to a node the agent's travel restrictions forbid.
+`CNavMeshNode::FastRadiusCheck` (`0x09a10f20`) compares an agent's radius against one slot, and
+`IdentifyPositionIndexes` (`0x09a14310`) picks the slots for the edge an agent crosses. **A navmesh
+with zero radii lets no agent through.**
 
 ### Links
 
@@ -311,18 +383,12 @@ Implemented in `JackAll.Tools/World/WorldNavMesh.cs`.
 
 ## Unknowns
 
-- The semantic meaning of the level-file header fields (`+0x54` through `+0x70`) and the sector-content
-  scalar fields (`+0x5c`, `+0x64`, `+0x6c`, `+0x70`/`+0x74`) — only their storage location and
-  read/write order are confirmed, not what they represent.
-- The byte layout inside `CNavCover`, `CDynamicNavCover`, `CNavMeshObstacle`, and `CNavMeshQTree` —
-  each has its own `SerializeData`, none decoded. `CNavMeshNode` is decoded (above) except its two
-  flag bytes, the id word at `+0x08` and the trailing 10 bytes.
-- The purpose of the second quantized-vertex array, and the relationship between the inline
-  `CNavMeshQTreeWriter`-built tree and the second `CNavMeshQTree` serialized unconditionally at the end
-  of `SerializeDataContent` — possibly one is a full-precision editor-time tree and the other a
-  runtime-optimized rebuild, not confirmed.
-- What exactly selects `modeFlag` 0/2 vs. 3 (single-file vs. per-sector-satellite-files) — whether it's
-  a global setting, a per-level authoring choice, or tied to the format version the same way the
-  header-length gate is.
+- The meaning of the level-file header fields (`+0x54` through `+0x70`), and of the sector's 64-bit
+  constant at `+0x28` and its `0x7F7F` at `+0x30`.
+- The meaning of a cover's type bits, and how a cover's height is measured.
+- How the graph ids of different sectors are kept apart, and whether the AI refuses a path between
+  two nodes whose graph ids differ.
+- What selects `modeFlag` 0/2 vs. 3. Retail ships 2 and streams the sectors as resources instead
+  ([how the game finds a sector file](#how-the-game-finds-a-sector-file)).
 - Whether `nv\nv.nvm` (the writer's "same index twice" `MakeSectorFileName(true)` branch) is ever
   actually reached in practice, or is dead/legacy code — no caller using that branch is known.
