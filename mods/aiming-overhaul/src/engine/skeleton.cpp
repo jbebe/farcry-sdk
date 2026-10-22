@@ -18,6 +18,12 @@ namespace {
     FCSE::Relocation<PoseFn> g_pose{FCSE::Uplay(0x003322C0)};
     PoseFn g_originalPose = nullptr;
 
+    // The same, as the skeleton's job, every frame the skeleton is wanted. __cdecl on the job's
+    // context, whose first field is its declaration: four counts of buffers, then the buffers.
+    using PoseJobFn = void(__cdecl*)(uint32_t** context);
+    FCSE::Relocation<PoseJobFn> g_poseJob{FCSE::Uplay(0x0064EC50)};
+    PoseJobFn g_originalPoseJob = nullptr;
+
     // CGraphicComponent's skeleton through its vtable: to read, and to change, which marks its bones
     // to be posed again. __thiscall.
     using GraphicSkeletonFn = uint8_t*(__fastcall*)(uint8_t* graphic);
@@ -50,6 +56,13 @@ namespace {
         if (dirty) {
             g_posed(skeleton);
         }
+    }
+
+    // The job declares the bones, then the skeleton they belong to.
+    void __cdecl PoseJobDetour(uint32_t** context) {
+        g_originalPoseJob(context);
+        const uint32_t* job = *context;
+        g_posed(reinterpret_cast<uint8_t*>(job[5 + job[0] + job[1] + job[2]]));
     }
 }
 
@@ -84,7 +97,8 @@ int AimingOverhaul::Skeleton::Find(uint8_t* skeleton, uint32_t name) {
 
 bool AimingOverhaul::Skeleton::Install(PosedFn posed) {
     g_posed = posed;
-    if (!Hook(g_pose.address(), &PoseDetour, &g_originalPose)) {
+    if (!Hook(g_pose.address(), &PoseDetour, &g_originalPose) ||
+        !Hook(g_poseJob.address(), &PoseJobDetour, &g_originalPoseJob)) {
         FCSE::ApiPointer()->Log("skeleton: posing cannot be hooked, so the body does not lean");
         return false;
     }
