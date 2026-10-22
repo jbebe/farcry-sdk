@@ -22,10 +22,9 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   up to two and a half times the sway, until it is let go. After a hold the sway is up to half again
   as large while the breath comes back, which takes 3 s from empty. Through the sights the sprint
   key does nothing else.
-- **Lean, unfinished.** Holding Lean left or Lean right rolls the view 12° to that side over a
-  quarter of a second, and the arms and the gun roll with it. The eye does not yet move out to the
-  side. The gun is only drawn rolled, so its muzzle flash and tracers come from where it is in the
-  world, a little off the drawn gun. There is no lean while sprinting.
+- **Lean, unfinished.** Holding Lean left or Lean right bends the body 12° to that side from the
+  lower back over a quarter of a second. The head, the view, the arms and the gun bend with it, and
+  the eye moves out to the side with the head. There is no lean while sprinting.
 - **Gun near walls.** A gun that would reach into a wall, within 0.8 m of the eye, swings down out
   of it, by up to 34° as the room ahead shrinks by another 0.35 m, while the view holds still.
   Swung more than halfway down it lets go of the sights and does not fire, until it is less than a
@@ -76,8 +75,8 @@ The eye is moved through the camera's positional offset, the one the recoil kick
 zoom held back until its sight picture is up, in `src/engine/aim.cpp`. The aim's wander is added
 to the look the input builds each frame, in `src/engine/look.cpp`; the breath is `src/breath.cpp`,
 and the sprint it holds is refused in the input listener, in `src/engine/sprint.cpp`. A lean is
-`src/lean.cpp`, rolling the camera in `src/engine/aim.cpp` and drawing the arms and the gun as the
-unrolled camera saw them in `src/engine/weapon_draws.cpp`. The gun near walls is `src/wall.cpp`, casting a
+`src/lean.cpp`, bending the body's bones each time the engine poses them, in
+`src/engine/skeleton.cpp`, and moving the eye with the head in `src/engine/aim.cpp`. The gun near walls is `src/wall.cpp`, casting a
 physics ray in `src/engine/ray.cpp`, lowering the look in `src/engine/look.cpp` and refusing the
 shot in `src/engine/fire.cpp`. The blur draws the gun's own
 depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the
