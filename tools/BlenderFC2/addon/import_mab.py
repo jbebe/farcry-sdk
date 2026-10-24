@@ -66,17 +66,20 @@ def clip_for(bank, skeleton):
     return None
 
 
-def load(pack, bank_path, armature, with_props=False, lod=0, actor=None):
+def load(pack, bank_path, armature, with_props=False, lod=0, actor=None, still=False):
     """Put one of a pack's banks on `armature` as its active Action.
 
     A bank holds a clip per skeleton taking part. Given the body the pack carries,
     the character's clip goes on it and the model hangs off the bone the bank's
     own tag record names - which is the scene the bank describes, rather than the
-    model alone with a marker where the hands should be.
+    model alone with a marker where the hands should be. `still` holds every
+    clip at its first frame, so a bone left alone writes back still.
     """
     bank = pack.clip(bank_path)
     if bank is None:
         raise ValueError("this pack carries no %s" % bank_path)
+    if still:
+        bank = dict(bank, clips=[_first_frame(clip) for clip in bank["clips"]])
     skeleton = pack.rig()
     if skeleton is None:
         raise ValueError("this pack carries no rig, so nothing maps bone ids to names")
@@ -180,6 +183,15 @@ def _tracks(entries, width):
             (frame, values[index * width:(index + 1) * width])
             for index, frame in enumerate(entry["frames"])]
     return tracks
+
+
+def _first_frame(clip):
+    """The clip with every keyed track cut to its first key, which is always frame 0."""
+    def cut(entries, width):
+        return [dict(entry, frames=entry["frames"][:1], values=entry["values"][:width])
+                for entry in entries or ()]
+    return dict(clip, keyframe_rotations=cut(clip.get("keyframe_rotations"), 4),
+                animated_translations=cut(clip.get("animated_translations"), 3))
 
 
 def _constants(entries):

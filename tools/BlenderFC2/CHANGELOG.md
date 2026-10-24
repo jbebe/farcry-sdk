@@ -5,6 +5,11 @@ Notable changes to the Far Cry 2 Blender add-on, loosely following
 
 ## [0.3.2] - 2026-10-24
 
+### Added
+- **First frame only**, in Load Far Cry 2 Animation. It holds every bone at the bank's first frame
+  instead of playing it, so you animate from a pose rather than on top of the original motion, and
+  a bone you leave alone stays still in the written animation.
+
 ### Fixed
 - **Auto-keying keys every bone.** Blender 5.2 ships with auto-keying set to key only channels that
   are already animated, and a loaded animation gave channels only to the bones its clip moves. Posing

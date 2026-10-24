@@ -148,6 +148,11 @@ class FC2_OT_load_clip(bpy.types.Operator):
         name="Mark attachments", default=True,
         description="Put a marker on each bone the bank attaches something to, "
                     "carrying that participant's own track")
+    still: BoolProperty(
+        name="First frame only", default=False,
+        description="Hold every bone at the bank's first frame instead of playing it, to "
+                    "animate from a pose. A bone you leave alone stays still in the written "
+                    "animation rather than keeping the original motion")
 
     @classmethod
     def poll(cls, context):
@@ -172,7 +177,7 @@ class FC2_OT_load_clip(bpy.types.Operator):
         origin, _collection = _pack_of(context)
         try:
             result = import_mab.load(Pack.load(origin), self.clip, armature,
-                                     with_props=self.with_props,
+                                     with_props=self.with_props, still=self.still,
                                      actor={"armature": actor} if actor else None)
         except Exception as error:
             self.report({"ERROR"}, str(error))

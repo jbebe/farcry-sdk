@@ -112,6 +112,10 @@ as a list — name, length, rate and the bone the model hangs from — with no f
 for a skeleton. Each bank shows under its folder, and the folder holding most of them, the model's
 own, comes first: a MAC-10 pack carries 40 banks of its own beside 12 of a buddy's mercy kill.
 
+**First frame only** holds every bone at the bank's first frame instead of playing it, for
+animating from a pose: a bone left alone then writes back still, rather than keeping the motion
+the bank had.
+
 **A pack with clips also carries the body they pose**, so loading one gives the whole scene the bank
 describes: the character's clip on the character, the weapon's on the weapon, and the weapon hanging
 off the bone the bank's own tag record names. That is what a weapon animation has to be fitted to —

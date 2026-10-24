@@ -21,7 +21,7 @@ import bpy
 from bpy_extras import anim_utils
 from mathutils import Quaternion, Vector
 
-from addon import import_mab, import_xbg, motion, rig, sight
+from addon import export_mab, import_mab, import_xbg, motion, rig, sight
 from addon.import_mab import FIRST_FRAME, bone_ids, timing
 from addon.pack import bank_label, bank_order, stem
 
@@ -281,6 +281,38 @@ def check_every_bone_keyable():
     return errors
 
 
+def check_first_frame_only():
+    """A still load holds the bank's first frame, and writing it moves no bone."""
+    result = _ak47_with_reload()
+    armature = result["armature"]
+    import_mab.load(result["pack"], RELOAD, armature, actor=result["actor"])
+    bpy.context.scene.frame_set(FIRST_FRAME)
+    playing = {b.name: b.matrix.copy() for b in armature.pose.bones}
+
+    import_mab.load(result["pack"], RELOAD, armature, actor=result["actor"], still=True)
+    errors = 0
+    for rig in (armature, result["actor"]["armature"]):
+        bag = anim_utils.action_get_channelbag_for_slot(
+            rig.animation_data.action, rig.animation_data.action_slot)
+        late = [fc.data_path for fc in bag.fcurves
+                if any(k.co.x != FIRST_FRAME for k in fc.keyframe_points)]
+        if late:
+            errors += fail("%s keeps %d channel(s) keyed past the first frame" % (rig.name, len(late)))
+    bpy.context.scene.frame_set(FIRST_FRAME + 20)
+    worst = max(max(abs(a - b) for row_a, row_b in zip(playing[b.name], b.matrix)
+                    for a, b in zip(row_a, row_b)) for b in armature.pose.bones)
+    if worst > TOLERANCE:
+        errors += fail("the held pose is %.2e off the bank's first frame" % worst)
+
+    written = export_mab.write(result["pack"], RELOAD, armature)
+    if written["keyed_rotations"] or written["animated_translations"]:
+        errors += fail("an untouched still load wrote %d keyed and %d moving bone(s)"
+                       % (written["keyed_rotations"], written["animated_translations"]))
+    print("first frame only: held within %.2e, %d bones written still"
+          % (worst, written["constant_rotations"]))
+    return errors
+
+
 def check_bank_order():
     """A weapon's own banks list first, ahead of a scene's that merely sort earlier."""
     folder = "graphics/characters/_common/animations/"
@@ -350,7 +382,7 @@ def main():
     errors = (sum(check(*case) for case in CASES)
               + check_weapon_clip_is_chosen() + check_attachments()
               + check_actor_holds_the_model() + check_load_keeps_the_mode()
-              + check_every_bone_keyable()
+              + check_every_bone_keyable() + check_first_frame_only()
               + check_bank_order() + check_eye_sees_the_sight())
     print("blender anim: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0
