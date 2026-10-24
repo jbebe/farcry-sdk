@@ -252,7 +252,7 @@ objects placed on it. Point it at a folder laid out like the game's data, such a
 `mods` folder:
 
 ```
-> jackall-cli navmesh build tools\TestRange\layer\mods --level testrange
+> jackall-cli navmesh build mods\DevTools\layer\mods --level testrange
 64 sectors, 7,312 triangles, 14 obstacles cut out.
 HasNavMesh set on 64 of 64 sectors in worlds\testrange\generated\testrange.sectorsdep.fcb.
 ```

@@ -41,6 +41,7 @@ include("${DEVTOOLS_INCLUDE_DIR}/devtools_imgui.cmake")
 add_library(DevTools SHARED
   "src/main.cpp"
   "src/commands/catalog.cpp"
+  "src/commands/scenarios.cpp"
   "src/commands/spawnables.cpp"
   "src/engine/benchmark.cpp"
   "src/engine/camera.cpp"
@@ -78,6 +79,7 @@ add_library(DevTools SHARED
   "src/overlay/diagnostics.cpp"
   "src/overlay/lua_console.cpp"
   "src/overlay/overlay.cpp"
+  "src/overlay/range.cpp"
   "src/overlay/spawner.cpp"
   "${imgui_SOURCE_DIR}/backends/imgui_impl_dx9.cpp"
   "${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp"

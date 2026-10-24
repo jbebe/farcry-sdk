@@ -20,6 +20,7 @@
 #include "overlay/baseline.h"
 #include "overlay/diagnostics.h"
 #include "overlay/lua_console.h"
+#include "overlay/range.h"
 #include "overlay/spawner.h"
 
 #include "imgui.h"
@@ -55,7 +56,8 @@ namespace {
     // Tabs of their own rather than command categories, so they have no commands under them.
     constexpr Tab kOwnTabs[] = {{"Diagnostics", &DevTools::Diagnostics::Draw},
                                 {"Lua", &DevTools::LuaConsole::Draw},
-                                {"Spawner", &DevTools::Spawner::Draw}};
+                                {"Spawner", &DevTools::Spawner::Draw},
+                                {"Range", &DevTools::Range::Draw}};
 
     constexpr size_t kHistoryMax = 12;
 

@@ -1,9 +1,9 @@
-#include "scenarios.h"
+#include "commands/scenarios.h"
 
 namespace {
-    using TestRange::Arena;
-    using TestRange::Scenario;
-    using TestRange::Soldier;
+    using DevTools::Scenarios::Arena;
+    using DevTools::Scenarios::Scenario;
+    using DevTools::Scenarios::Soldier;
 
     constexpr const char* kRifleman = "enemy_archetypes.Red_Faction.Assault_Caucasian";
     constexpr const char* kMachineGunner = "enemy_archetypes.Red_Faction.LightMachineGunner_Caucasian";
@@ -90,7 +90,7 @@ namespace {
     };
 }
 
-namespace TestRange {
+namespace DevTools::Scenarios {
 
 std::span<const Arena> Arenas() { return kArenas; }
 

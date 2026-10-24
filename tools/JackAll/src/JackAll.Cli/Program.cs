@@ -312,7 +312,7 @@ app.Configure(config =>
             .WithDescription(
                 "Generate a level's navmesh from its terrain and the colliding entities placed on it, and "
                 + "mark its sectors HasNavMesh in the world's sectorsdep.fcb so the game loads it.")
-            .WithExample("navmesh", "build", @"tools\TestRange\layer\mods", "--level", "testrange");
+            .WithExample("navmesh", "build", @"mods\DevTools\layer\mods", "--level", "testrange");
     });
 
     // --- New worlds ------------------------------------------------------

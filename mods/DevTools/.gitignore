@@ -4,3 +4,5 @@ out/
 # does not leave the tree dirty.
 stage/
 *.zip
+# The test range's built layer: game files, made by range\build-layer.ps1.
+/layer/

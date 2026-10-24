@@ -46,7 +46,7 @@ The mod's README lists each feature's values.
 
 ## Finish checklist
 
-Every feature gets checked again, one at a time, on the test range (`tools/TestRange`) before the mod
+Every feature gets checked again, one at a time, on the test range (DevTools' Range tab, `mods/DevTools/range`) before the mod
 counts as finished. The range is a flat plain with 14 walls, so what happens there comes only from
 what is spawned into it.
 

@@ -9,7 +9,7 @@ lists every file a world is made of, says which ones the tools can read, write a
 lays out the steps to a player standing in a new world, with props and soldiers in it.
 
 A new world has been loaded in game **(proven)**:
-[`tools/TestRange`](https://github.com/jbebe/farcry-sdk/tree/main/tools/TestRange) builds
+[DevTools' test range](https://github.com/jbebe/farcry-sdk/tree/main/mods/DevTools/range) builds
 `testrange`, `tmpla`'s flat plain under a new name with cover walls and a generated navmesh, and
 soldiers spawned there move and fight. It is the worked example for the sections below.
 
@@ -33,7 +33,7 @@ Two questions stood before the first launch:
 1. **Does the engine load a single-player world it does not ship?** Nothing enumerates or
    whitelists worlds **(RE-verified)**. Yes **(proven)**: `testrange`, `tmpla`'s 8 × 8 grid under a
    new name, loads by travel and the player arrives standing on its ground
-   ([`tools/TestRange`](https://github.com/jbebe/farcry-sdk/tree/main/tools/TestRange)).
+   ([DevTools' test range](https://github.com/jbebe/farcry-sdk/tree/main/mods/DevTools/range)).
 2. **Is a one-sector grid enough?** `CWorld::Create` checks no minimum **(RE-verified)**, but
    nothing after it was read.
 
@@ -184,7 +184,7 @@ The smallest file is a sector header and a `main` mission layer, which is always
   `CoverObjects.WallEroded10_BK.Multi_0` from `mp_07_m_dogon`.
 - **Encode** the XML with `jackall-cli fcb encode`.
 
-`tools\TestRange\build-layer.ps1` does all of this for 14 walls, and they stand in the game where they
+`mods\DevTools\range\build-layer.ps1` does all of this for 14 walls, and they stand in the game where they
 were placed **(proven)**.
 
 Place entities before generating the navmesh, so the navmesh is cut around them.
@@ -313,9 +313,9 @@ neither layer is committed. `mod build` replaces the whole patch, so build in ev
 install already carries, with these after them:
 
 ```
-.\tools\TestRange\build-layer.ps1
+.\mods\DevTools\range\build-layer.ps1
 .\mods\new-world\build-layer.ps1
-tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe mod build --game "C:\Games\Far Cry 2" --layer <installed layers> --layer tools\TestRange\layer --layer mods\new-world\layer
+tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe mod build --game "C:\Games\Far Cry 2" --layer <installed layers> --layer mods\DevTools\layer --layer mods\new-world\layer
 ```
 
 The build was checked against a scratch copy of the vanilla patch archive: 406 entries added, none

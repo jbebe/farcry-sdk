@@ -3,7 +3,7 @@
 
 #include <span>
 
-namespace TestRange {
+namespace DevTools::Scenarios {
 
 // A place on the range's ground, facing `yaw` degrees: 0 faces north (+y), 90 west, 270 east.
 struct Spot {

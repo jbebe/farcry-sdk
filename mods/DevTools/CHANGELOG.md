@@ -74,6 +74,9 @@ Notable changes to DevTools, loosely following
   the player.
 - **Change world** takes a world and the spawn point to arrive at, as travel needs, instead of a
   bare world name, which left the arrival position unset.
+- **Test range** and its **Range** tab: `testrange`, a flat world with an arena per kind of fight,
+  built from `range\`, and a button per scenario that clears the last one, takes you to its arena
+  and spawns its soldiers on their posts.
 - **Command API**, which the overlay is written against. One call runs a
   console line or a Lua chunk on the game thread, from anywhere, with developer-only commands
   reachable regardless of the option above; a catalog of 277 commands describes what to offer and

@@ -263,12 +263,59 @@ button shows the archetype it spawns.
 Soldiers come as a squad: **Squad size** sets how many, 1 to 6, and a click stands them side by side
 25 m ahead, a step apart, facing you. There are both factions, each class as a Caucasian and a
 Nubian, and six of Ubisoft's own test soldiers (`enemy_archetypes.MercTest`). Only the test range,
-[`tools/TestRange`](../../tools/TestRange), has every one of them. The campaign worlds' libraries
+the [test range](#test-range), has every one of them. The campaign worlds' libraries
 lack some, and clicking one of those logs a Lua error.
 
 A spawn is a call to `SpawnEntityFromArchetype`, the Lua global the game's own scripts use, and the
 line it runs lands in the Lua tab along with any error. In a menu there is no one to spawn in front
 of, so nothing happens and `fcse.log` says so.
+
+### Test range
+
+DevTools carries a world to fight in while working on the combat mods: `testrange`, `tmpla`'s flat
+512 m plain with a hub of cover walls in the middle and an arena for each kind of fight around it.
+Nothing else is in it, so whatever happens there comes from what is spawned into it. It is built the
+way any new world is ([Make a new world](../../docs/jackall/world/new-worlds.md)):
+
+- `range\content\` holds the walls, as the fragments JackAll's map editor saves, and the three
+  archetypes only the scenarios name, as library fragments. The walls are copies of retail instances,
+  `CoverObjects.WallBarrier01_BK.Multi_0` from `mp_16_airbase` and
+  `CoverObjects.WallEroded10_BK.Multi_0` from `mp_07_m_dogon`.
+- `range\build-layer.ps1` makes the world's files from the installed game's `tmpla` with
+  `jackall-cli world new`, then packs them with the content into `layer\` with `jackall-cli world pack`.
+  The layer is game files and is not committed.
+
+```
+.\mods\DevTools\range\build-layer.ps1
+tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe mod build --game "C:\Games\Far Cry 2" --layer <installed layers> --layer mods\DevTools\layer
+```
+
+The **Range** tab, next to Spawner, has **Travel to the range**, the same as
+`#GameChangeWorld("testrange", "2054037628277228842")`, and a button per scenario. A scenario covers
+rows of the Difficulty Overhaul's [finish checklist](../../docs/docs/design/difficulty.md#finish-checklist).
+Pressing it does the following, as one chunk of the game's own Lua:
+
+1. Removes everything the last scenario spawned.
+2. Sets the time to noon, so runs compare.
+3. Moves you onto its arena's start, facing the enemy. `TeleportEntity` takes you to a spawn point
+   spawned there, and copies that spawn point's position and facing.
+4. Spawns its soldiers, each on a guard or sniper post when he should hold his ground.
+
+Only one scenario's soldiers are ever alive, so the arenas do not disturb each other. Hovering a
+button shows what to do and what to look for; the running scenario's steps stay in the tab. Toggle
+invincibility yourself: it is on unless the scenario tests damage to you.
+
+| Arena | Where | Scenarios | Rows |
+|---|---|---|---|
+| Duel lane | open ground east of (30, 110) | rifleman at 10, 20 and 50 m; machine gunner at 20 m; two riflemen at 20 m; shotgunner at 10 and 40 m | 2 to 8 |
+| Barrier | a barrier at (60, 40), the soldier 30 m north | rifleman over the barrier | 9 |
+| Long wall | a 42 m wall at y 440, an 18 m wall 20 m behind it, the squad 40 m south | squad at the long wall | 11, 13, 14, 15 |
+| Suppression | two 18 m lines at x 420 and 460 | two riflemen behind cover | 12 |
+| Sniper | a 12 m wall 3 m in front of (380, 370), the sniper at (480, 480) | sniper at 150 m | 9, 15 at range |
+
+Not covered yet: **row 10**, since the range has no tall grass, and **pistols and SMGs in row 8**,
+since no soldier archetype carries one as its main weapon. The navmesh has no cover points, so
+soldiers do not take cover behind the walls.
 
 ### Adding a window from another plugin
 
@@ -446,3 +493,6 @@ Everything below needs a real install:
   `SpawnEntityFromArchetype` line it ran.
 - **Spawner soldiers** *(not yet run)*: in the test range, Squad size 3 and Red faction's Assault,
   Caucasian put three soldiers 25 m ahead, 3 m apart, facing you, and they engage.
+- **Range** *(not yet run)*: in the test range, Rifleman at 20 m puts you at the duel lane's start
+  facing east, and one rifleman 20 m ahead who stays on his post; Clear removes him. A soldier who
+  walks off his post means posts spawned at run time do not hold, and the duel lane needs placed ones.

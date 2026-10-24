@@ -49,15 +49,18 @@ namespace {
 
             for (int i = 0; i < count; ++i) {
                 const float across = (i - (count - 1) * 0.5f) * kSquadSpacing;
-                char line[256];
-                std::snprintf(line, sizeof(line),
-                              "SpawnEntityFromArchetype(\"%s\", %.3f, %.3f, %.3f, 0, 0, %.1f)",
-                              name.c_str(), x + std::cos(yaw) * across, y + std::sin(yaw) * across, z,
-                              yaw * kDegreesPerRadian + turnDegrees);
-                Lua::Run(line);
+                Lua::Run(Call(name.c_str(), x + std::cos(yaw) * across, y + std::sin(yaw) * across, z,
+                              yaw * kDegreesPerRadian + turnDegrees));
             }
         });
     }
+}
+
+std::string Call(const char* archetype, float x, float y, float z, float yaw) {
+    char call[256];
+    std::snprintf(call, sizeof(call), "SpawnEntityFromArchetype(\"%s\", %.3f, %.3f, %.3f, 0, 0, %.1f)",
+                  archetype, x, y, z, yaw);
+    return call;
 }
 
 void Ahead(const char* archetype) { Line(archetype, 1, kAhead, 0.0f); }
