@@ -167,7 +167,10 @@ the sights with sprint held. Retail GOG v1.03, from Aiming Overhaul.
 
 The player's stamina is a counter on the pawn entity's `CFCXCountersComponentPlayer` (found by
 `CEntity::GetComponent` with the CRC-32 of that name): the counter is at the component's `+0x64`,
-with the stamina left at its `+0x10` and the most at `+0x14`. The player's biofeedback
+with the stamina left at its `+0x10` and the most at `+0x14`. Health is the same kind of counter at
+the component's `+0x44`. The camera shake a blast causes is three angles in radians at `+0x128`,
+`+0x12C` and `+0x130` of the pawn entity's `CCameraShakeAndPadRumbleComponent`, which the camera
+update (`0x10693490`) adds to its angular offset each frame. The player's biofeedback
 (`0x106D0CA0`) divides the two each frame and keeps the share at its own `+0x9C`. It compares that
 with `fLowStaminaThreshold` (`+0x90`, 0.25) and `fMediumStaminaThreshold` (`+0x94`, 0.5) to set the
 stamina sound switch, and plays its breathing below the medium threshold.
