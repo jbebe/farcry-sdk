@@ -535,7 +535,10 @@ moves, by sustained fire and by the player's accuracy bonus.
 
 `GetActualSpreadData` (server `0x08F4D690`) picks which noise: the jump one while in the air, the
 iron-sight ones once the ironsight flag is set and the pawn's skill value at `+0x14` has reached
-0.75, and the crouched or standing one by stance.
+0.75, and the crouched or standing one by stance. The stance is an integer at the effective data's
+`+0xA4`, `1` while crouched; the client reads it the same way (`0x1010EC79`, after
+`CPawn::GetEffectiveData`), at the pawn data's `+0x374`. In retail data the four sniper rifles have no
+spread down the sights at all, and the iron-sighted guns about 0.4°.
 
 `CNoiseMaker` is a Catmull-Rom curve through Gaussian keys of standard deviation `fAmplitude`, a new
 key every `1 / fFrequency` seconds of game time. The retail `BulletSpread_IronSight` is 0.4° at 35
