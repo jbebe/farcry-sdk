@@ -278,9 +278,12 @@ Nothing else is in it, so whatever happens there comes from what is spawned into
 way any new world is ([Make a new world](../../docs/jackall/world/new-worlds.md)):
 
 - `range\content\` holds the walls, as the fragments JackAll's map editor saves, and the three
-  archetypes only the scenarios name, as library fragments. The walls are copies of retail instances,
-  `CoverObjects.WallBarrier01_BK.Multi_0` from `mp_16_airbase` and
-  `CoverObjects.WallEroded10_BK.Multi_0` from `mp_07_m_dogon`.
+  archetypes only the scenarios name, as library fragments. The walls are copies of two retail
+  instances:
+  - `CoverObjects.WallBarrier01_BK.Multi_0` from `mp_16_airbase`, a barrier 1.3 m high and 1.55 m
+    deep that slopes to its top, only in the hub;
+  - `CoverObjects.WallEroded10_BK.Multi_0` from `mp_07_m_dogon`, a 6 m concrete wall up to 1.4 m
+    high, the crouch cover of every arena.
 - `range\build-layer.ps1` makes the world's files from the installed game's `tmpla` with
   `jackall-cli world new`, then packs them with the content into `layer\` with `jackall-cli world pack`.
   The layer is game files and is not committed.
@@ -308,7 +311,7 @@ invincibility yourself: it is on unless the scenario tests damage to you.
 | Arena | Where | Scenarios | Rows |
 |---|---|---|---|
 | Duel lane | open ground east of (30, 110) | rifleman at 10, 20 and 50 m; machine gunner at 20 m; two riflemen at 20 m; shotgunner at 10 and 40 m | 2 to 8 |
-| Barrier | a barrier at (100, 40), the soldier 30 m north | rifleman over the barrier | 9 |
+| Low wall | a 6 m concrete wall at (100, 40), the soldier 30 m north | rifleman over the low wall | 9 |
 | Long wall | a 42 m wall at y 440, an 18 m wall 20 m behind it, the squad 40 m south | squad at the long wall | 11, 13, 14, 15 |
 | Suppression | two 18 m lines at x 420 and 460 | two riflemen behind cover | 12 |
 | Sniper | a 12 m wall 3 m in front of (380, 370), the sniper at (480, 480) | sniper at 150 m | 9, 15 at range |
