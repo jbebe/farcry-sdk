@@ -1,5 +1,6 @@
-// Leaning: held Q or E bends the body out to the side from the belly, and the head, the view, the
-// arms and the gun go with it; see docs/docs/engine-internals/first-person-aiming.md#leaning.
+// Leaning: held Q or E slides the upper body out to the side and bends it from the belly, and the
+// head, the view, the arms and the gun go with it; see
+// docs/docs/engine-internals/first-person-aiming.md#leaning.
 #pragma once
 
 #include "engine/aim.h"
@@ -11,8 +12,8 @@ namespace AimingOverhaul::Lean {
 // Follows the lean signals.
 void OnSignal(uint32_t signal);
 
-// What the lean does to the view: how far it moves the eye, in the view's axes, and how far it rolls
-// the view, in radians, right positive.
+// What the lean does to the view: how far it moves the eye, in the view's axes, and how far it
+// rolls the view, in radians, right positive.
 struct View {
     Aim::Offset eye;
     float roll;

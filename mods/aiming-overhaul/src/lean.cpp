@@ -1,5 +1,6 @@
-// Leaning: held Q or E bends the body out to the side from the belly, and the head, the view, the
-// arms and the gun go with it; see docs/docs/engine-internals/first-person-aiming.md#leaning.
+// Leaning: held Q or E slides the upper body out to the side and bends it from the belly, and the
+// head, the view, the arms and the gun go with it; see
+// docs/docs/engine-internals/first-person-aiming.md#leaning.
 #include "lean.h"
 
 #include "ease.h"
@@ -21,9 +22,11 @@ namespace {
     constexpr uint32_t kSpine = FCSE::Crc32("Spine");
     constexpr uint32_t kCamera = FCSE::Crc32("Camera");
 
-    // Radians at full lean, and seconds for the bend to follow, which takes it most of the way in a
-    // quarter of a second.
-    constexpr float kMostBend = 0.21f;
+    // Radians and metres to the side at full lean, the upper body sliding over the hips as it
+    // bends, and seconds for the lean to follow, which takes it most of the way in a quarter of a
+    // second.
+    constexpr float kMostBend = 0.26f;
+    constexpr float kMostSlide = 0.10f;
     constexpr float kFollow = 0.08f;
 
     std::atomic<bool> g_enabled{true};
@@ -43,6 +46,11 @@ namespace {
     // and one it has not written again since is still bent.
     std::array<std::array<float, 16>, kMostBones> g_bent = {};
 
+    // How far the upper body slides to the side, in metres, right positive, as it bends by `bend`.
+    float SlideFor(float bend) {
+        return bend / kMostBend * kMostSlide;
+    }
+
     // Turns the point or axis `v`, in the body's axes, by `bend` about its forward axis.
     void Turn(float* v, float bend) {
         const float c = std::cos(bend);
@@ -52,8 +60,8 @@ namespace {
         v[2] = v[2] * c - x * s;
     }
 
-    // Notes which of the skeleton's bones bend: the spine's and every one below it in the tree but the
-    // view's. The first-person body is drawn lined up on the view's bone, so bending that too would
+    // Notes which of the skeleton's bones bend: the spine's and every one below it in the tree but
+    // the view's. The first-person body is drawn lined up on the view's bone, so bending that too would
     // take the bend back off everything else; the view rolls by itself instead.
     bool FindBends(uint8_t* skeleton) {
         using namespace AimingOverhaul;
@@ -72,7 +80,7 @@ namespace {
         return true;
     }
 
-    // How far a bend of `bend` radians moves the view's bone, in the view's axes rolled by it.
+    // How far a lean of `bend` radians moves the view's bone, in the view's axes rolled by it.
     AimingOverhaul::Aim::Offset EyeMoved(uint8_t* skeleton, float bend) {
         using namespace AimingOverhaul;
         const float* pivot = Skeleton::At(skeleton, g_spine).model + 12;
@@ -80,7 +88,9 @@ namespace {
         const float unbent[3] = {eye[0] - pivot[0], eye[1] - pivot[1], eye[2] - pivot[2]};
         float back[3] = {unbent[0], unbent[1], unbent[2]};
         Turn(back, -bend);
-        return {unbent[0] - back[0], unbent[2] - back[2]};
+        float slide[3] = {SlideFor(bend), 0.0f, 0.0f};
+        Turn(slide, -bend);
+        return {unbent[0] - back[0] + slide[0], unbent[2] - back[2] + slide[2]};
     }
 }
 
@@ -146,6 +156,7 @@ void AimingOverhaul::Lean::OnPosed(uint8_t* skeleton) {
         for (int k = 0; k < 3; ++k) {
             place[k] += pivot[k];
         }
+        place[0] += SlideFor(bend);
         std::copy_n(model, 16, g_bent[i].begin());
     }
 }

@@ -22,9 +22,9 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   up to two and a half times the sway, until it is let go. After a hold the sway is up to half again
   as large while the breath comes back, which takes 3 s from empty. Through the sights the sprint
   key does nothing else.
-- **Lean, unfinished.** Holding Lean left or Lean right bends the body 12° to that side from the
-  lower back over a quarter of a second. The head, the view, the arms and the gun bend with it, and
-  the eye moves out to the side with the head. There is no lean while sprinting.
+- **Lean, unfinished.** Holding Lean left or Lean right slides the upper body 10 cm to that side
+  and bends it 15° from the lower back, over a quarter of a second, so the eye moves out about
+  25 cm. The head, the view, the arms and the gun go with it. There is no lean while sprinting.
 - **Gun near walls.** A gun that would reach into a wall, within 0.8 m of the eye, swings down out
   of it, by up to 34° as the room ahead shrinks by another 0.35 m, while the view holds still.
   Swung more than halfway down it lets go of the sights and does not fire, until it is less than a
