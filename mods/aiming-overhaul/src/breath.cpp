@@ -39,6 +39,11 @@ namespace {
     constexpr uint32_t kTiredInhale = 0x00FC0B20;
     constexpr uint32_t kExhale = 0x00FC0B40;
     constexpr uint32_t kTiredExhale = 0x00FC0B60;
+    // The same, quieter, heard with each breath all along while aiming.
+    constexpr uint32_t kQuietInhale = 0x00FC0BA0;
+    constexpr uint32_t kQuietTiredInhale = 0x00FC0BC0;
+    constexpr uint32_t kQuietExhale = 0x00FC0BE0;
+    constexpr uint32_t kQuietTiredExhale = 0x00FC0C00;
     constexpr float kTired = 0.5f;
     constexpr int32_t kOnoPlayer = 6;
 
@@ -99,7 +104,8 @@ bool AimingOverhaul::Breath::Needed() {
 }
 
 void AimingOverhaul::Breath::Update(float seconds, bool aiming, float stamina) {
-    for (uint32_t bank : {kInhale, kTiredInhale, kExhale, kTiredExhale, kHeartbeat}) {
+    for (uint32_t bank : {kInhale, kTiredInhale, kExhale, kTiredExhale, kQuietInhale,
+                          kQuietTiredInhale, kQuietExhale, kQuietTiredExhale, kHeartbeat}) {
         Sound::Hold(bank);
     }
     g_sinceSprint += seconds;
@@ -142,6 +148,16 @@ float AimingOverhaul::Breath::Steadiness() {
 
 bool AimingOverhaul::Breath::Held() {
     return g_drawn;
+}
+
+void AimingOverhaul::Breath::Hear(bool in, float stamina) {
+    if (g_drawn || g_straining) {
+        return;
+    }
+    const bool tired = stamina < kTired;
+    Sound::Play(in ? (tired ? kQuietTiredInhale : kQuietInhale)
+                   : (tired ? kQuietTiredExhale : kQuietExhale),
+                kOnoPlayer);
 }
 
 bool AimingOverhaul::Breath::HoldsSprint() {

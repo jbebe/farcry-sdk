@@ -13,6 +13,10 @@ Aim::Offset Drift(float seconds);
 // Where the drift has taken the aim, for Look::Install; nothing while switched off.
 Look::Angles Wander();
 
+// Whether the breath began drawing in or letting out in the frame Drift last moved.
+enum class Turn { None, In, Out };
+Turn Turned();
+
 void SetEnabled(bool enabled);
 
 }

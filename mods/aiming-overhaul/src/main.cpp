@@ -131,8 +131,14 @@ namespace {
             }
             g_sightsDropped = false;
         }
-        Breath::Update(seconds, Aim::Aiming(), Pawn::Stamina(pawn));
-        return {Sway::Drift(seconds), Wall::Down(), roll};
+        const float stamina = Pawn::Stamina(pawn);
+        Breath::Update(seconds, Aim::Aiming(), stamina);
+        const Aim::Offset drift = Sway::Drift(seconds);
+        // The breathing cycle is heard while aiming, to time a shot by.
+        if (Sway::Turned() != Sway::Turn::None && Aim::Aiming()) {
+            Breath::Hear(Sway::Turned() == Sway::Turn::In, stamina);
+        }
+        return {drift, Wall::Down(), roll};
     }
 
     // The sway's wander, with the look lowered as far as the gun is swung down.

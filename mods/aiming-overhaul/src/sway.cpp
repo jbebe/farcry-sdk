@@ -54,6 +54,7 @@ namespace {
     float g_right = 0.0f;
     float g_up = 0.0f;
     float g_breath = 0.0f;
+    AimingOverhaul::Sway::Turn g_turned = AimingOverhaul::Sway::Turn::None;
 
     float Sum(std::span<const Wave> waves) {
         float sum = 0.0f;
@@ -99,11 +100,16 @@ AimingOverhaul::Aim::Offset AimingOverhaul::Sway::Drift(float seconds) {
     g_time += seconds;
     // A held breath settles to the bottom and rests there, and goes on from the rest when let out.
     const bool held = Breath::Held();
+    const double was = g_breathTime;
     if (held) {
         g_breathTime = kBreathIn + kBreathOut + kRestSettle;
     } else {
         g_breathTime = std::fmod(g_breathTime + seconds, kBreathIn + kBreathOut + kRest);
     }
+    g_turned = held                                                ? Turn::None
+               : g_breathTime < was                                ? Turn::In
+               : was < kBreathIn && kBreathIn <= g_breathTime      ? Turn::Out
+                                                                   : Turn::None;
     g_lift = Follow(g_lift, held ? 0.0f : Lift(g_breathTime), seconds,
                     held ? kSettle : kFollowBreath);
     if (!g_enabled) {
@@ -123,6 +129,10 @@ AimingOverhaul::Look::Angles AimingOverhaul::Sway::Wander() {
     const float scope = kScopeWander * (Breath::Needed() ? kHoldBreathScope : 1.0f);
     const float wander = kIronsightWander * Aim::Settled() + scope * Aim::Scoped();
     return {wander * Up(), wander * Breath::Steadiness() * g_right};
+}
+
+AimingOverhaul::Sway::Turn AimingOverhaul::Sway::Turned() {
+    return g_turned;
 }
 
 void AimingOverhaul::Sway::SetEnabled(bool enabled) {

@@ -27,6 +27,10 @@ float Steadiness();
 // Whether a breath is held in now, which settles the breathing cycle into its rest and keeps it there.
 bool Held();
 
+// Plays a quiet breath in or out as the breathing cycle turns, to hear it by while aiming; nothing
+// while a breath is held or strained against.
+void Hear(bool in, float stamina);
+
 // Whether sprint, pressed down the sights, holds the breath instead of sprinting: with the hold on,
 // and the weapon in hand needing it.
 bool HoldsSprint();

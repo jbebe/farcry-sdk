@@ -1,7 +1,8 @@
 """Build the layer's breath banks from the game's own stamina breathing: each of its twelve breaths is
-an exhale and then an inhale, cut apart here, and the halves become four banks the plugin plays as
-the breath is held and let go - the weaker breaths while stamina is high, the stronger ones while it
-is low. A fifth holds the heartbeat heard while the breath is in.
+an exhale and then an inhale, cut apart here, and the halves become banks the plugin plays as the
+breath is held and let go, and quieter ones for each breath while aiming - the weaker breaths while
+stamina is high, the stronger ones while it is low. Another holds the heartbeat heard while the
+breath is in.
 
     python data\\breath.py <the worlds archive's soundbinary folder>
 
@@ -32,12 +33,13 @@ STRONG = (("0x00455c57", 634), ("0x00455c58", 575), ("0x00455c59", 475),
           ("0x00455c5e", 529), ("0x00455c5f", 609), ("0x00455c60", 601))
 WEAK = (("0x00455c65", 581), ("0x00455c66", 527), ("0x00455c67", 540),
         ("0x00455c6c", 593), ("0x00455c6d", 467), ("0x00455c6e", 388))
-# The banks, by what they hold, which src\breath.cpp plays by id.
-BANKS = {"0x00fc0b00": ("inhale", WEAK), "0x00fc0b20": ("inhale", STRONG),
-         "0x00fc0b40": ("exhale", WEAK), "0x00fc0b60": ("exhale", STRONG)}
-# The breaths at the level they were recorded at. The game's own breathing plays 32 dB lower, through
-# its two switches, which was very quiet for a held breath.
-GAIN_DB = "0"
+# The banks, by what they hold and its gain in dB, which src\breath.cpp plays by id: the breath held,
+# at the level it was recorded at, and the breath heard all along while aiming, quieter. The game's
+# own breathing plays 32 dB lower, through its two switches, which was very quiet for a held breath.
+BANKS = {"0x00fc0b00": ("inhale", WEAK, "0"), "0x00fc0b20": ("inhale", STRONG, "0"),
+         "0x00fc0b40": ("exhale", WEAK, "0"), "0x00fc0b60": ("exhale", STRONG, "0"),
+         "0x00fc0ba0": ("inhale", WEAK, "-12"), "0x00fc0bc0": ("inhale", STRONG, "-12"),
+         "0x00fc0be0": ("exhale", WEAK, "-12"), "0x00fc0c00": ("exhale", STRONG, "-12")}
 # The heart beating while the breath is held: one of the beats the game plays as the player goes down
 # wounded, a little quieter than it plays them.
 WOUNDED_BEAT = ("004c661e.spk", "0x004c660d")
@@ -91,10 +93,10 @@ def main(soundbinary):
             run("spk", "extract", bank, audio)
             halves[audio] = cut(work, audio, at_ms)
         os.makedirs(LAYER, exist_ok=True)
-        for event, (half, breaths) in BANKS.items():
+        for event, (half, breaths, gain) in BANKS.items():
             folder = os.path.join(work, event[2:])
             clips = [halves[audio][half] for audio, _ in breaths]
-            run("spk", "new", event, *clips, "--unpositioned", "--gain", GAIN_DB,
+            run("spk", "new", event, *clips, "--unpositioned", "--gain", gain,
                 "--like", os.path.join(work, LIKE), "-o", folder)
             out = os.path.join(LAYER, event[2:] + ".spk")
             run("spk", "encode", os.path.join(folder, event[2:] + ".xml"), "-o", out)
