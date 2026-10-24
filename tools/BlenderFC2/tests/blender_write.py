@@ -325,6 +325,29 @@ def named_bones_only():
     return errors
 
 
+def constraint_lands():
+    """A constraint's pose is what the bank gets, though no F-curve carries it."""
+    result = load(CHARACTER, PELVIS_REF)
+    armature, pack_object = result["armature"], result["pack"]
+    target = bpy.data.objects.new("target", None)
+    bpy.context.scene.collection.objects.link(target)
+    target.rotation_euler = (0.4, -0.7, 1.1)
+    constraint = armature.pose.bones[EDITED].constraints.new("COPY_ROTATION")
+    constraint.target = target
+    want = _sample(armature, pack_object)
+
+    export_mab.write(pack_object, RELOAD, armature, bones={EDITED}, lossless=True)
+    armature.pose.bones[EDITED].constraints.remove(constraint)
+    import_mab.load(pack_object, RELOAD, armature)
+    got = _sample(armature, pack_object)
+
+    worst = max(1.0 - abs(want[key][0].dot(got[key][0])) for key in want if key[0] == EDITED)
+    if worst > TOLERANCE:
+        return fail("the constrained %s came back %.3e off its pose" % (EDITED, worst))
+    print("constraint lands: %s within %.2e of its constrained pose" % (EDITED, worst))
+    return 0
+
+
 def retimed_bank_stays_in_step(directory):
     """Double the reload; every clip, window and event follows, and the arms keep their pose.
 
@@ -382,6 +405,7 @@ def main():
         errors += other_clips_survive(directory)
         errors += motion_survives(directory)
         errors += named_bones_only()
+        errors += constraint_lands()
         errors += retimed_bank_stays_in_step(directory)
         errors += panel_write_operator(directory)
         errors += another_bank_is_refused(directory)

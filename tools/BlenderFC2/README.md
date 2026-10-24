@@ -152,7 +152,8 @@ difference across four clips is `5.0e-07` on rotation and `2.0e-07` metres on of
 keys only channels that already exist, so a bone the clip leaves alone would otherwise never take a
 key and hold any pose given it on every frame. **Only a bone the rig marks `animated_translation`
 can be moved**: on `pelvis_ref` that is `Pelvis` and `Camera`, so an arm or a hand is placed by
-rotating it. Every other bone's location is locked, because the writer would drop the move.
+rotating it, or by an IK constraint. Every other bone's location is locked, because the writer
+would drop the move.
 
 **A character has no rig of its own.** 74 of the 78 skinned shipped meshes have no sibling
 `_ref.skeleton` and share `characters\_common\pelvis_ref.skeleton`; it is the best name match for 70
@@ -167,7 +168,10 @@ made the mesh worse, so it is not shipped.
 
 **Far Cry 2 ▸ Animation ▸ Write Animation** puts the armature's current Action back into the bank it
 came from. The pose is sampled off the evaluated rig rather than read out of the F-curves, so a
-constraint, an NLA strip or a driver all land in the file the way they look in the viewport.
+constraint, an NLA strip or a driver all land in the file the way they look in the viewport, and an
+IK chain is how a hand is placed. It is baked into the bank alone; the scene keeps its constraints
+and its keys. `tests/blender_write.py` puts a Copy Rotation on a hand, writes, removes it and loads
+the bank back: the hand lands within `3.6e-07` of where the constraint held it.
 
 **An Action remembers its bank.** The dialog opens on it, and writing into any other bank is refused
 unless **Into another bank** is ticked, which cuts or holds the motion to that bank's length.

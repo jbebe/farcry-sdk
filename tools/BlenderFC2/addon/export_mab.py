@@ -178,31 +178,46 @@ def _track(bone_id, frames, keys):
 def _sample(armature, skeleton, last, wanted=None):
     """Each named rig bone's clip-space transform at every frame.
 
-    Sampled off the evaluated pose rather than read out of the F-curves, so a
-    constraint, an NLA strip or a driver all land in the file the way they look
-    in the viewport - which is the whole point of the plugin.
+    Read off the evaluated pose rather than the F-curves, so a constraint, an
+    NLA strip or a driver all land in the file the way they look in the viewport.
+    Nothing is baked into the scene.
     """
     scene = bpy.context.scene
     before = scene.frame_current
-    # A bone's rest transform does not depend on the frame, so it is decomposed
+    # A bone's rest rotation does not depend on the frame, so it is decomposed
     # once rather than inside a sweep that is bones times frames.
     bones = [(bone["id"], armature.pose.bones.get(bone["name"]))
              for bone in skeleton["bones"] if wanted is None or bone["name"] in wanted]
-    bones = [(bone_id, bone) + _rest_local(bone.bone).decompose()[:2]
+    bones = [(bone_id, bone, _rest_local(bone.bone).to_quaternion())
              for bone_id, bone in bones if bone is not None]
 
-    rotations = {bone_id: [] for bone_id, _bone, _offset, _rotation in bones}
-    offsets = {bone_id: [] for bone_id, _bone, _offset, _rotation in bones}
+    rotations = {bone_id: [] for bone_id, _bone, _rest in bones}
+    offsets = {bone_id: [] for bone_id, _bone, _rest in bones}
     try:
         for frame in range(last + 1):
             scene.frame_set(frame + FIRST_FRAME)
-            for bone_id, bone, rest_offset, rest_rotation in bones:
-                # import_mab poses with `rest^-1 . clip`; this is that undone.
-                rotations[bone_id].append(rest_rotation @ bone.rotation_quaternion)
-                offsets[bone_id].append(rest_offset + (rest_rotation @ bone.location))
+            for bone_id, bone, rest_rotation in bones:
+                # import_mab poses with `rest^-1 . clip`, so the posed bone
+                # relative to its parent is the clip's own transform.
+                local = bone.parent.matrix.inverted() @ bone.matrix if bone.parent else bone.matrix
+                offset, rotation, _scale = local.decompose()
+                rotations[bone_id].append(_signed(
+                    rotation, rest_rotation @ bone.rotation_quaternion, rotations[bone_id]))
+                offsets[bone_id].append(offset)
     finally:
         scene.frame_set(before)
     return rotations, offsets
+
+
+def _signed(rotation, keyed, earlier):
+    """The evaluated rotation, with the sign of the keyed one where they agree.
+
+    That keeps an unconstrained bone exactly as written before; a constrained one
+    follows its previous frame, so its track never jumps hemispheres.
+    """
+    if abs(rotation.dot(keyed)) < 1.0 - STILL_ROTATION and earlier:
+        keyed = earlier[-1]
+    return -rotation if rotation.dot(keyed) < 0.0 else rotation
 
 
 def _fill(clip, skeleton, sampled, last, rate, lossless, tolerance):

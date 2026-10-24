@@ -16,6 +16,10 @@ Notable changes to the Far Cry 2 Blender add-on, loosely following
   Write Animation always dropped a move on any other bone, so its location is now locked and
   those bones can only be rotated. A scene saved from an older version has to be imported again to
   get the locks.
+- **Write Animation writes what a constraint does.** It read each bone's own keyed rotation, so an
+  IK chain or any other constraint was left out of the bank, though the docs said otherwise. It now
+  reads the pose the viewport shows and bakes it into the bank only; the `.blend` keeps its
+  constraints and keys. A bone with no constraint writes exactly as before.
 
 ## [0.3.1] - 2026-10-21
 
