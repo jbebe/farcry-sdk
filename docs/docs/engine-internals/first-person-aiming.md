@@ -348,9 +348,9 @@ it keeps the sights on the eye whatever the pitch.
 
 :::info[Seen in a running game]
 The view, the arms and the gun lean together, slid and bent, a long gun down the sights included
-while turning. Retail GOG v1.03, from Aiming Overhaul. Bending round the body's level forward put a
-long gun's sights below the eye; the bend round the look's direction, with the camera bent rather
-than its eye moved, is not seen yet. The muzzle flash and a scope's sight picture were not checked.
+while turning, with a long gun's sights on the eye. Retail GOG v1.03, from Aiming Overhaul. Bending
+round the body's level forward, and moving the eye by the bone's move, had put a long gun's sights
+below the eye. The muzzle flash and a scope's sight picture were not checked.
 :::
 
 ### What a lean was tried as
