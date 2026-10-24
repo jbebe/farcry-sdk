@@ -1,5 +1,5 @@
-// The hand's drift: a slow breath and a wander, which move the eye a few millimetres off the gun and
-// the aim a fraction of a degree, less while the breath is held.
+// The hand's drift: a breathing cycle that rests calm at the bottom of each breath, and a wander,
+// which move the eye a few millimetres off the gun and the aim a fraction of a degree.
 #pragma once
 
 #include "engine/aim.h"

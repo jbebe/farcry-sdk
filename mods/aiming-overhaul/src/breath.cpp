@@ -18,9 +18,11 @@ namespace {
     // Seconds without a sprint signal that count as let go, should the release be lost.
     constexpr float kLetGo = 0.5f;
 
-    // Seconds the breath holds, and to get all of it back.
+    // Seconds the breath holds, to get all of it back, and the share of it back before the next
+    // hold.
     constexpr float kLongest = 4.0f;
     constexpr float kRecover = 3.0f;
+    constexpr float kReady = 0.5f;
     // The sway left while held; the most past the breath's end, reached over kStrain seconds; and
     // the most while winded, which eases off as the breath comes back.
     constexpr float kHeld = 0.15f;
@@ -48,9 +50,11 @@ namespace {
     float g_breath = kLongest;
     float g_strain = 0.0f;
     float g_steadiness = 1.0f;
-    // Whether sprint is held down the scope, and whether the breath drawn for it is still in.
+    // Whether sprint is held down the scope, whether the breath drawn for it is still in, and
+    // whether it is held on after the breath ran out.
     bool g_holding = false;
     bool g_drawn = false;
+    bool g_straining = false;
 
     // The heart beating while the breath is in, the layer's bank of the game's own beat from going
     // down wounded, every kBeat seconds, the first kFirstBeat seconds after the breath is drawn.
@@ -100,13 +104,15 @@ void AimingOverhaul::Breath::Update(float seconds, bool aiming, float stamina) {
     }
     g_sinceSprint += seconds;
     const bool holding = g_enabled && g_needed && aiming && g_sinceSprint < kLetGo;
-    // The breath is drawn as a hold begins with breath to hold, and let out when the hold ends or
-    // the breath runs out, whichever comes first.
-    if (holding && !g_holding && g_breath > 0.0f) {
+    // The breath is drawn as a hold begins, with at least kReady of it back, and let out when the
+    // hold ends or the breath runs out, whichever comes first; held on past that, the hands strain.
+    if (holding && !g_holding && g_breath >= kReady * kLongest) {
         Breathe(true, stamina);
     } else if (g_drawn && (!holding || g_breath <= 0.0f)) {
         Breathe(false, stamina);
+        g_straining = holding;
     }
+    g_straining = g_straining && holding;
     g_holding = holding;
     if (g_drawn) {
         g_toBeat -= seconds;
@@ -116,10 +122,10 @@ void AimingOverhaul::Breath::Update(float seconds, bool aiming, float stamina) {
         }
     }
     float target;
-    if (holding && g_breath > 0.0f) {
+    if (g_drawn) {
         g_breath = (std::max)(g_breath - seconds, 0.0f);
         target = kHeld;
-    } else if (holding) {
+    } else if (g_straining) {
         g_strain = (std::min)(g_strain + seconds, kStrain);
         target = 1.0f + (kStrained - 1.0f) * g_strain / kStrain;
     } else {
@@ -132,6 +138,10 @@ void AimingOverhaul::Breath::Update(float seconds, bool aiming, float stamina) {
 
 float AimingOverhaul::Breath::Steadiness() {
     return g_steadiness;
+}
+
+bool AimingOverhaul::Breath::Held() {
+    return g_drawn;
 }
 
 bool AimingOverhaul::Breath::HoldsSprint() {

@@ -24,6 +24,9 @@ void Update(float seconds, bool aiming, float stamina);
 // How much of the sway is left: below one while held, above it once the breath runs out or after.
 float Steadiness();
 
+// Whether a breath is held in now, which settles the breathing cycle into its rest and keeps it there.
+bool Held();
+
 // Whether sprint, pressed down the sights, holds the breath instead of sprinting: with the hold on,
 // and the weapon in hand needing it.
 bool HoldsSprint();

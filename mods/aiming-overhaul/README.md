@@ -9,19 +9,24 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
 
 ## What it does
 
-- **Sway.** Down the iron sights, the eye drifts a couple of millimetres off the gun and rises and
-  falls with a slow breath. The rear sight is nearer the eye than the front one, so it moves further
-  and the two drift out of line. Shots still go where the engine sends them: down the view, which is
-  where the barrel points. Sights that have drifted out of line are wrong by the same angle as on a
-  real gun. The same breath and wander also move the aim itself, view, gun and shot together, by
-  about 0.2° down the iron sights, 0.35° through a holographic sight and 0.7° through a magnifying
-  scope; the mouse corrects it as it would a real hand. While a scope's own sight picture is up the eye does not drift off the gun, because that
-  picture is a miniature right at the eye, but the aim still wanders under the reticle.
+- **Sway.** The hands drift with a breath and a slow wander. Each breath draws in for 1.5 s,
+  lifting the aim, lets out for 2 s, and rests for 1.5 s at the bottom, where the wander calms to
+  under half: the moment to time a shot in. Down the iron sights the eye drifts a couple of
+  millimetres off the gun with them. The rear sight is nearer the eye than the front one, so it
+  moves further and the two drift out of line. Shots still go where the engine sends them: down the
+  view, which is where the barrel points. Sights that have drifted out of line are wrong by the same
+  angle as on a real gun. The breath and the wander also move the aim itself, view, gun and shot
+  together, by about 0.2° down the iron sights, 0.35° through a holographic sight and 0.7° through
+  a magnifying scope; the mouse corrects it as it would a real hand. While a scope's own sight
+  picture is up the eye does not drift off the gun, because that picture is a miniature right at
+  the eye, but the aim still wanders under the reticle.
 - **Hold breath.** With a magnifying scope, on the Dart Rifle, the M1903, the Dragunov and the AS50,
-  holding sprint down the scope holds the breath instead of sprinting: the sway eases to a sixth of
-  itself and stays there for 4 s. Held longer, the hands shake harder, up to two and a half times
-  the sway, until it is let go. After a hold the sway is up to half again as large while the breath
-  comes back, which takes 3 s from empty. The breath is drawn in as the hold begins and let out as
+  holding sprint down the scope holds the breath instead of sprinting: the breath settles to the
+  bottom of its rest within half a second and stays there, and the wander eases to a sixth of
+  itself, for 4 s. Held longer, the hands shake harder, up to two
+  and a half times the wander, until it is let go. After a hold the sway is up to half again as
+  large while the breath comes back, which takes 3 s from empty, and the next hold waits until half
+  of it is back. The breath is drawn in as the hold begins and let out as
   it ends or after the 4 s, whichever comes first, lightly with more than half the stamina left and
   harder below, and while it is in the heart beats every 0.8 s. Down those scopes the
   sprint key does nothing else; down any other gun's sights it does what the game does.
