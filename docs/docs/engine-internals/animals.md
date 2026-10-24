@@ -394,8 +394,8 @@ chicken's 0.30 m/s, its `fSpeedsWalk` 0.3.
 and the pose builder `GenerateTransformForJointFromParams` (`0x09BB30B0`) takes that value when the
 flag is set and the `.skeleton`'s `m_LocalOffset` when it is not. Every animal rig rests its root at
 offset 0, so the hip height cannot be lifted from the `.skeleton`. That builder is the two-bone IK
-path's; that the per-frame path does the same is *(inferred)*. Posed that way, the chicken's walk keeps
-each planted foot at a steady 0.027 m.
+path's, and the per-frame `CAnimModel::GenerateModelTransforms` (`0x09B49480`) does the same.
+Posed that way, the chicken's walk keeps each planted foot at a steady 0.027 m.
 
 ### Movement comes from the clip
 

@@ -369,9 +369,14 @@ nobody edited plays.
   16 … are written whatever a keying policy decides about the rest.
 - **Translations are dense and frame-major**, so a moving bone gets a value on every frame — there is
   no sparse form to choose.
-- **Only a bone the `.skeleton` marks `m_fAnimatedTranslation` may translate at all.** Every one of
-  the 19,458 constant translations and 5,692 translation tracks in the retail set lands on such a
-  bone; writing one elsewhere is inventing motion the engine will not play.
+- **Only a bone the `.skeleton` marks `m_fAnimatedTranslation` translates in the retail set**, which
+  is a convention rather than a limit. Every one of the 19,458 constant translations and 5,692
+  translation tracks lands on such a bone, but the engine never reads the flag when it plays a clip:
+  `EvaluateSingleAnimNode` (`0x09BBA350`) applies a bone's translation when the clip's own
+  translation masks and the node's bone mask have its bit, and `CAnimModel::GenerateModelTransforms`
+  (`0x09B49480`) takes it over the `.skeleton`'s `m_LocalOffset` for any bone so marked. No code in
+  the animation range reads the flag or the `.skeleton`'s `m_rgTranslationBoneIds` list. A
+  translation on any other bone should therefore play *(not yet seen in game)*.
 - **Every tag record's `+0x0C` delta moves** when any clip changes size, because it is measured from
   the record's own position. A wrong delta misbehaves the animation without crashing.
 

@@ -103,6 +103,13 @@ u16[...]                 m_rgTranslationBoneIds
 3 x (u32 5, u32[5])      LOD bone bitmasks
 ```
 
+**Which bones translate is marked twice and read by nothing that plays a clip.** `m_fAnimatedTranslation`
+(bone `+0x50`) and `m_rgTranslationBoneIds` (skeleton `+0x08`, count at `+0x06`) agree with every
+shipped clip, but in the animation code only `CSkeleton::SetBone` touches the flag, to copy it, and
+the list's setters `SetTranslationBoneCount` (`0x09B561A0`) and `SetTranslationlBoneId`
+(`0x09B55E10`) have no callers. Whether a bone translates is decided by the clip alone; see
+[`.mab`](mab.md#what-a-writer-must-respect).
+
 The LOD bitmasks are stored **zeroed** in every shipped file; `CSkeleton::FillLODBitmask` regenerates
 all three after load.
 
