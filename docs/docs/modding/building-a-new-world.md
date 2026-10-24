@@ -23,7 +23,9 @@ empty and complete ([`tmpla`](../engine-internals/world-loading.md#tmpla-is-a-fl
 What stands between it and a loaded world is one launch, which answers two open questions:
 
 1. **Does the engine load a single-player world it does not ship?** Nothing enumerates or
-   whitelists worlds **(RE-verified)**, but no such world has been seen loading.
+   whitelists worlds **(RE-verified)**. Yes **(proven)**: `testrange`, `tmpla`'s 8 × 8 grid under a
+   new name, loads by travel and the player arrives standing on its ground
+   ([`tools/TestRange`](https://github.com/jbebe/farcry-sdk/tree/main/tools/TestRange)).
 2. **Is a one-sector grid enough?** `CWorld::Create` checks no minimum **(RE-verified)**, but
    nothing after it was read.
 
@@ -64,7 +66,7 @@ generated, vegetation cannot be packed, and the navmesh has no writer. See
 | `generated\entitylibrary.fcb` | every archetype the world can spawn, the player included | loaded regardless; an empty library has no archetypes | ✓ | ✓ | ✗ copy only | `tmpla`'s, the same file as `ige_map`'s |
 | `generated\<w>.managers.fcb` | world managers | skipped if absent | ✓ | ✓ | ✗ copy only | `tmpla`'s |
 | `generated\<w>.omnis.fcb` | omnipresent entities, including the master Domino graph | skipped if absent | ✓ | ✓ | via XML | `tmpla`'s, empty |
-| `generated\<w>.sectorsdep.fcb` | per sector: has a descriptor, detail mask, accessible | skipped if absent | ✓ | ✓ | via XML | `tmpla`'s, cut to sector 0 |
+| `generated\<w>.sectorsdep.fcb` | per sector: has a descriptor, detail mask, accessible, and which of the sector's files the game asks for (`HasMainSectorData`, `HasNavMesh`) | skipped if absent | ✓ | ✓ | via XML | `tmpla`'s, cut to sector 0 |
 | `generated\<w>_depload.dat` | resource dependency tree for streaming | skipped if absent | ✓ | ✓ | ✓ `depload add` | `tmpla`'s |
 | `generated\<w>_deploadnewparticles.rml` | particle dependencies | not traced | ✓ | ✓ | ✗ | `tmpla`'s |
 | `generated\moviedata.xml` | cinematics | not established | text | text | text | `tmpla`'s |
@@ -91,7 +93,7 @@ level, named after the world.
 | `worldsectors\sector<n>.desc.fcb` | detail texture mask, the list of other sectors with flags, terrain-detail resources | not traced | ✓ `SectorDetailLayers` | ✓ | via XML | `tmpla`'s, with the other sectors removed from its list |
 | `worldsectors\sector<n>.srl` | **sound regions**: 32 × 32 bytes ([`.srl`/`.zsr`](../file-formats/srl-zsr.md)) | not traced | ✗ | ✗ | trivial: fixed-size, no header | `tmpla`'s |
 | `worldsectors\zonesector<n>.zsr` | zones, 64 × 64 bytes | not traced | ✗ | ✗ | trivial | `tmpla`'s |
-| `worldsectors\worldsector<n>.data.fcb` | **entities** by mission layer | no: `tmpla` ships none | ✓ `WorldLoader` | ✓ Map tab, fragments | via XML or the Map tab | none |
+| `worldsectors\worldsector<n>.data.fcb` | **entities** by mission layer | no: `tmpla` ships none. Read only where `sectorsdep` sets `HasMainSectorData` **(seen in data)**: in `mp_16_airbase` the 30 flagged sectors are exactly the 30 files | ✓ `WorldLoader` | ✓ Map tab, fragments | via XML or the Map tab | none |
 | `worldsectors\landmarkfar_<n>.data.fcb` | **vegetation** (`VegetationData`) and far LOD | no: `tmpla` ships none | ✓ decoded ([vegetation](../engine-internals/terrain-and-vegetation.md)) | ✓ as plain FCB | ✗ no packer for the nine lists | none |
 | `worldsectors\landmarknear<n>.data.fcb` | near light-vegetation grid, some mission content | no | ✓ | ✓ | ✗ | none |
 | `nv\sectors\nv_<n>.nvm` | **navmesh** for AI | no, but AI crashes without it | ✓ `NvmSector` | ✓ `NvmSector` | ✓ `navmesh build`, flat or gently rolling ground only ([generating a navmesh](../file-formats/nvm.md#generating-a-navmesh)); loaded only where `sectorsdep` sets `HasNavMesh` | none, so no AI |

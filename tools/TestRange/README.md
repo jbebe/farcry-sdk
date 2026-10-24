@@ -15,8 +15,9 @@ what you spawn into it. Like Sound Bench, it is a helper, not a mod for players.
 `tmp\gamefiles\worlds\worlds`. It copies `tmpla`'s files, so the layer is not committed. The walls
 are retail instances, `CoverObjects.WallBarrier01_BK.Multi_0` from `mp_16_airbase` and
 `CoverObjects.WallEroded10_BK.Multi_0` from `mp_07_m_dogon`, placed with a fixed seed: every build
-puts them in the same places. The script then generates the navmesh and marks each sector
-`HasNavMesh` in `sectorsdep`, which is what makes the game load it. Building the world itself is `scripts\tmpla-world.ps1`, shared with
+puts them in the same places. Each sector holding a wall is marked `HasMainSectorData` in
+`sectorsdep`, and each sector `HasNavMesh` once the navmesh is generated: those flags are what make the
+game load the files. Building the world itself is `scripts\tmpla-world.ps1`, shared with
 [`mods/new-world`](../../mods/new-world).
 
 ## Use
@@ -42,6 +43,6 @@ DevTools' Change world command takes the same two arguments. To go back to world
 DevTools' Spawner tab spawns a squad of 1 to 6 soldiers of either faction, or one of Ubisoft's test
 soldiers, 25 m ahead and facing you.
 
-The navmesh has no cover points, so soldiers are not expected to use the walls as cover yet. Nothing
-here has been seen in game: in editor maps without a navmesh, AI crashed the engine about 30 s after
-loading, and whether this navmesh prevents that is the first thing to check.
+**Seen in game:** travel lands you standing on the plain, and spawned soldiers move and shoot on the
+generated navmesh. The navmesh has no cover points, so soldiers are not expected to use the walls as
+cover yet.

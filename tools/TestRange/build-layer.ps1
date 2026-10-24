@@ -33,7 +33,8 @@ while ($walls.Count -lt $wallCount) {
     $walls += [pscustomobject]@{ X = $x; Y = $y; Yaw = $yaw; Index = $walls.Count }
 }
 
-$walls | Group-Object { [Math]::Floor($_.X / $sectorSize) + $tmplaSide * [Math]::Floor($_.Y / $sectorSize) } | ForEach-Object {
+$bySector = $walls | Group-Object { [Math]::Floor($_.X / $sectorSize) + $tmplaSide * [Math]::Floor($_.Y / $sectorSize) }
+$bySector | ForEach-Object {
     $id = [int]$_.Name
     $doc = New-Object Xml.XmlDocument
     $doc.LoadXml(@"
@@ -57,6 +58,20 @@ $walls | Group-Object { [Math]::Floor($_.X / $sectorSize) + $tmplaSide * [Math]:
         [void]$main.AppendChild($entity)
     }
     Write-Fcb $doc "$layer\levels\$name\generated\worldsectors\worldsector$id.data.fcb"
+}
+
+# The game requests a sector's worldsector file only when its sectorsdep entry has HasMainSectorData.
+$sectorsdep = "$layer\worlds\$name\generated\$name.sectorsdep.fcb"
+Edit-Fcb $sectorsdep $sectorsdep {
+    param($doc)
+    foreach ($id in $bySector.Name) {
+        $sector = $doc.SelectSingleNode("//object[@type='CWorldSector'][value[@name='SectorId']='$id']")
+        $flag = $doc.CreateElement('value')
+        $flag.SetAttribute('name', 'HasMainSectorData')
+        $flag.SetAttribute('type', 'Bool')
+        $flag.InnerText = 'True'
+        [void]$sector.InsertAfter($flag, $sector.SelectSingleNode('value[@name="HasDescriptor"]'))
+    }
 }
 
 # Navmesh around the walls, and HasNavMesh on every sector so the game streams it.

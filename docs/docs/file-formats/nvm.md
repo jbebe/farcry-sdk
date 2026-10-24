@@ -398,7 +398,10 @@ Then it sets `HasNavMesh` in the world's `sectorsdep.fcb`.
 - It makes 2.35 times as many triangles, because it splits cells down to 1 m to follow hills.
 
 It was built for flat ground like `tmpla`'s. For real relief it needs slope rejection and fewer,
-larger triangles, which is what Recast does. Nothing it wrote has been loaded in the game yet.
+larger triangles, which is what Recast does.
+
+**(proven)** In `testrange`, a flat world built from `tmpla` with its navmesh from this command,
+soldiers spawned at run time move and shoot, and the game keeps running.
 
 ## Unknowns
 
