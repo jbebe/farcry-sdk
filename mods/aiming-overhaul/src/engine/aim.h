@@ -23,8 +23,9 @@ struct Adjust {
     Offset drift;
     // The view's pitch over the body's, in radians, up positive.
     float pitch;
-    // The eye's move with the body as it leans.
+    // The eye's move with the body as it leans, and the view's roll, in radians, right positive.
     Offset lean;
+    float roll;
 };
 
 // Once a frame, with the player's pawn and the seconds since the last, before the camera is placed

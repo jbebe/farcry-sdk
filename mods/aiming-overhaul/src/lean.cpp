@@ -52,7 +52,9 @@ namespace {
         v[2] = v[2] * c - x * s;
     }
 
-    // Notes which of the skeleton's bones bend: the spine's and every one below it in the tree.
+    // Notes which of the skeleton's bones bend: the spine's and every one below it in the tree but the
+    // view's. The first-person body is drawn lined up on the view's bone, so bending that too would
+    // take the bend back off everything else; the view rolls by itself instead.
     bool FindBends(uint8_t* skeleton) {
         using namespace AimingOverhaul;
         const uint32_t count = Skeleton::Count(skeleton);
@@ -66,19 +68,16 @@ namespace {
             g_bends[i] = static_cast<int>(i) == g_spine ||
                          (parent >= 0 && static_cast<uint32_t>(parent) < i && g_bends[parent]);
         }
+        g_bends[g_camera] = false;
         return true;
     }
 
-    // How far the bend has moved the view's bone, in the view's axes, from where the skeleton holds
-    // it now, bent by g_posedBend.
-    AimingOverhaul::Aim::Offset EyeMoved(uint8_t* skeleton) {
+    // How far a bend of `bend` radians moves the view's bone, in the view's axes rolled by it.
+    AimingOverhaul::Aim::Offset EyeMoved(uint8_t* skeleton, float bend) {
         using namespace AimingOverhaul;
         const float* pivot = Skeleton::At(skeleton, g_spine).model + 12;
         const float* eye = Skeleton::At(skeleton, g_camera).model + 12;
-        const float bend = g_posedBend;
-        // The eye unbent, against the pivot, and that turned into the bent view's axes.
-        float unbent[3] = {eye[0] - pivot[0], eye[1] - pivot[1], eye[2] - pivot[2]};
-        Turn(unbent, -bend);
+        const float unbent[3] = {eye[0] - pivot[0], eye[1] - pivot[1], eye[2] - pivot[2]};
         float back[3] = {unbent[0], unbent[1], unbent[2]};
         Turn(back, -bend);
         return {unbent[0] - back[0], unbent[2] - back[2]};
@@ -97,7 +96,7 @@ void AimingOverhaul::Lean::OnSignal(uint32_t signal) {
     }
 }
 
-AimingOverhaul::Aim::Offset AimingOverhaul::Lean::Update(uint8_t* pawn, float seconds, bool free) {
+AimingOverhaul::Lean::View AimingOverhaul::Lean::Update(uint8_t* pawn, float seconds, bool free) {
     float target = 0.0f;
     if (g_enabled && free) {
         target = kMostBend * ((g_right ? 1.0f : 0.0f) - (g_left ? 1.0f : 0.0f));
@@ -117,9 +116,10 @@ AimingOverhaul::Aim::Offset AimingOverhaul::Lean::Update(uint8_t* pawn, float se
         }
         g_skeleton = skeleton;
     }
-    const Aim::Offset moved = EyeMoved(skeleton);
+    // The view goes with the bend the skeleton was last posed with, which is what will be drawn.
+    const float bend = g_posedBend;
     g_posedBend = g_bend;
-    return moved;
+    return {EyeMoved(skeleton, bend), bend};
 }
 
 void AimingOverhaul::Lean::OnPosed(uint8_t* skeleton) {
