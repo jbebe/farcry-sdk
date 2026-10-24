@@ -184,7 +184,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Sway", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Sway::SetEnabled)},
         {"Hold breath", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Breath::SetEnabled)},
-        {"Lean", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Lean::SetEnabled)},        {"Gun near walls", FCSE_CHECKBOX(true), &OnToggled,
+        {"Gun near walls", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Wall::SetEnabled)},
         {"Gun blur", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Blur::SetEnabled)},
         {"Iron sight zoom", FCSE_CHECKBOX(true), &OnToggled,

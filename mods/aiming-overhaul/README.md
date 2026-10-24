@@ -125,7 +125,6 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 |---|---|---|
 | Sway | Yes / No | Yes |
 | Hold breath | Yes / No | Yes |
-| Lean | Yes / No | Yes |
 | Gun near walls | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
 | Iron sight zoom | Yes / No | Yes |

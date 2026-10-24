@@ -36,7 +36,6 @@ namespace {
     // tap; held longer, the lean ends with it.
     constexpr ULONGLONG kTapMilliseconds = 250;
 
-    std::atomic<bool> g_enabled{true};
     // The side leaned to, -1 left, 1 right, 0 none; whether the lean outlasts its key, tapped; the
     // side whose press just ended a tapped lean, whose release is not a tap; and when the last lean
     // began.
@@ -175,7 +174,7 @@ float AimingOverhaul::Lean::Update(uint8_t* pawn, float seconds, bool free) {
         g_latched = false;
     }
     float target = 0.0f;
-    if (g_enabled && free) {
+    if (free) {
         target = kMostBend * static_cast<float>(g_side);
     }
     const bool moving = g_bend != 0.0f || target != 0.0f;
@@ -228,8 +227,4 @@ bool AimingOverhaul::Lean::OnAttached(uint8_t* skeleton, int bone, float* model)
     UnbentPivot(skeleton, bend, pivot);
     Bend(model, pivot, bend, pitch);
     return true;
-}
-
-void AimingOverhaul::Lean::SetEnabled(bool enabled) {
-    g_enabled = enabled;
 }

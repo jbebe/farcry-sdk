@@ -22,6 +22,4 @@ void OnPosed(uint8_t* skeleton);
 // unbent: the camera, and a long gun at the sights. True where it bent the copy.
 bool OnAttached(uint8_t* skeleton, int bone, float* model);
 
-void SetEnabled(bool enabled);
-
 }
