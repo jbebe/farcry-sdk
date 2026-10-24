@@ -50,7 +50,7 @@ public sealed class WorldPackCommand : CliCommand<WorldPackCommand.Settings>
         LayerFolder.Write(settings.Out, packed);
         foreach (string plugin in mod.PluginPaths)
         {
-            CliIO.WriteOutput(Path.Combine(settings.Out, ModPathHashing.PluginsFolder, plugin), mod.ReadPlugin(plugin));
+            CliIO.WriteOutput(Path.Combine(settings.Out, "plugins", plugin), mod.ReadPlugin(plugin));
         }
         if (settings.Json)
         {
