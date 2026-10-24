@@ -163,6 +163,20 @@ Refusing the sprint press that way while the effective iron-sight bit is set kee
 the sights with sprint held. Retail GOG v1.03, from Aiming Overhaul.
 :::
 
+### Holding the breath
+
+The player's stamina is a counter on the pawn entity's `CFCXCountersComponentPlayer` (found by
+`CEntity::GetComponent` with the CRC-32 of that name): the counter is at the component's `+0x64`,
+with the stamina left at its `+0x10` and the most at `+0x14`. The player's biofeedback
+(`0x106D0CA0`) divides the two each frame and keeps the share at its own `+0x9C`. It compares that
+with `fLowStaminaThreshold` (`+0x90`, 0.25) and `fMediumStaminaThreshold` (`+0x94`, 0.5) to set the
+stamina sound switch, and plays its breathing below the medium threshold.
+
+That breathing is `00455c76.spk`: twelve breaths, each an exhale and then an inhale, picked by the
+stamina switch (`00455C49`: low `00455C4B` or medium `00455C4A`) and then by an infamy switch
+(`00455C46`: high `00455C47` or low `00455C48`), 28 and 4 dB down. They play as sound type 6,
+`Ono_Player`. Aiming Overhaul cuts them into inhales and exhales for its own hold-breath banks.
+
 ## The first-person body
 
 Whether the player is drawn as the first-person body is bit 7 (`0x80`) of the same byte in the
