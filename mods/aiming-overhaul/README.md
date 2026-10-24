@@ -22,7 +22,8 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   itself and stays there for 4 s. Held longer, the hands shake harder, up to two and a half times
   the sway, until it is let go. After a hold the sway is up to half again as large while the breath
   comes back, which takes 3 s from empty. The breath is drawn in as the hold begins and let out as
-  it ends, lightly with more than half the stamina left and harder below. Down those scopes the
+  it ends or after the 4 s, whichever comes first, lightly with more than half the stamina left and
+  harder below. Down those scopes the
   sprint key does nothing else; down any other gun's sights it does what the game does.
 - **Lean, unfinished.** Lean left or Lean right slides the upper body 10 cm to that side and bends
   it 15° from the lower back, over a quarter of a second, so the eye moves out about 25 cm. The

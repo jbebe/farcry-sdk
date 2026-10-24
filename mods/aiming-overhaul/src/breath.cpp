@@ -48,7 +48,16 @@ namespace {
     float g_breath = kLongest;
     float g_strain = 0.0f;
     float g_steadiness = 1.0f;
+    // Whether sprint is held down the scope, and whether the breath drawn for it is still in.
     bool g_holding = false;
+    bool g_drawn = false;
+
+    void Breathe(bool in, float stamina) {
+        const bool tired = stamina < kTired;
+        AimingOverhaul::Sound::Play(
+            in ? (tired ? kTiredInhale : kInhale) : (tired ? kTiredExhale : kExhale), kOnoPlayer);
+        g_drawn = in;
+    }
 }
 
 void AimingOverhaul::Breath::OnSignal(uint32_t signal) {
@@ -83,12 +92,14 @@ void AimingOverhaul::Breath::Update(float seconds, bool aiming, float stamina) {
     }
     g_sinceSprint += seconds;
     const bool holding = g_enabled && g_needed && aiming && g_sinceSprint < kLetGo;
-    if (holding != g_holding) {
-        g_holding = holding;
-        const bool tired = stamina < kTired;
-        Sound::Play(holding ? (tired ? kTiredInhale : kInhale) : (tired ? kTiredExhale : kExhale),
-                    kOnoPlayer);
+    // The breath is drawn as a hold begins with breath to hold, and let out when the hold ends or
+    // the breath runs out, whichever comes first.
+    if (holding && !g_holding && g_breath > 0.0f) {
+        Breathe(true, stamina);
+    } else if (g_drawn && (!holding || g_breath <= 0.0f)) {
+        Breathe(false, stamina);
     }
+    g_holding = holding;
     float target;
     if (holding && g_breath > 0.0f) {
         g_breath = (std::max)(g_breath - seconds, 0.0f);
