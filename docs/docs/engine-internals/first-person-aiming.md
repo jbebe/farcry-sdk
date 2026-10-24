@@ -316,9 +316,10 @@ The camera turns with the `Camera` bone's posed matrix, and a shot's first-perso
 (`0x10112600`) is that bone's place in the world (`0x1010D780`).
 
 An entity bound to a bone is placed from that bone's posed matrix (`0x105530F0`, `__thiscall` on
-the parent's binding with the child's binding and a fallback matrix, `RET 8`): the child binding's
-`+0x1C` is the bone's index, and the matrix is copied to the child's `+0x40`, which the entity is
-then placed from. The parent binding lists its children as entity proxies at `+0x2C`, with their
+the parent's binding with the child's binding and the parent entity's matrix, `RET 8`): the child
+binding's `+0x1C` is the bone's index, and the parent's matrix times the bone's is written to the
+child's `+0x40`, which the entity is then placed from. The parent's matrix there is turned like the
+entity but, where the parent binding's `+0xC5` is set, has its place left out. The parent binding lists its children as entity proxies at `+0x2C`, with their
 count at `+0x30`, and an entity's binding is at its `+0x78`.
 
 :::info[Measured in a running game]
@@ -342,8 +343,8 @@ bends those too, once per write of the animation, and marks the skeleton changed
 each frame the bend moves. The view is rolled by the same angle at `+0xD4`, and the eye moved at
 `+0xE8` and `+0xF0` by how far the bend and the slide move `Camera`, in the rolled view's axes.
 Whatever else hangs from `Camera`, a long gun down the sights, has its copy of the bone's matrix
-bent the same way; the camera's own is left alone. The slide is seen in game; the bent long gun
-is not yet.
+taken back into the body's axes, bent the same way, and turned back; the camera's own is left
+alone. The slide and the bent long gun are seen in game, the long gun while turning not yet.
 
 :::info[Seen in a running game]
 The view, the arms and the gun lean together. Retail GOG v1.03, from Aiming Overhaul. The muzzle
