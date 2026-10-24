@@ -31,6 +31,9 @@ namespace {
     constexpr float kFollow = 0.08f;
 
     std::atomic<bool> g_enabled{true};
+    // Whether a press leans until the next, rather than for as long as the key is held; and the
+    // side leaned to.
+    std::atomic<bool> g_toggles{false};
     bool g_left = false;
     bool g_right = false;
     float g_bend = 0.0f;
@@ -123,7 +126,16 @@ namespace {
 }
 
 void AimingOverhaul::Lean::OnSignal(uint32_t signal) {
-    if (signal == kStartLeft) {
+    if (g_toggles) {
+        // A press leans that way, or back if it already does; a release does nothing.
+        if (signal == kStartLeft) {
+            g_left = !g_left;
+            g_right = false;
+        } else if (signal == kStartRight) {
+            g_right = !g_right;
+            g_left = false;
+        }
+    } else if (signal == kStartLeft) {
         g_left = true;
     } else if (signal == kStopLeft) {
         g_left = false;
@@ -135,6 +147,11 @@ void AimingOverhaul::Lean::OnSignal(uint32_t signal) {
 }
 
 float AimingOverhaul::Lean::Update(uint8_t* pawn, float seconds, bool free) {
+    // Sprinting ends a toggled lean, rather than leaving it to come back after.
+    if (g_toggles && !free) {
+        g_left = false;
+        g_right = false;
+    }
     float target = 0.0f;
     if (g_enabled && free) {
         target = kMostBend * ((g_right ? 1.0f : 0.0f) - (g_left ? 1.0f : 0.0f));
@@ -193,4 +210,10 @@ bool AimingOverhaul::Lean::OnAttached(uint8_t* skeleton, int bone, float* model)
 
 void AimingOverhaul::Lean::SetEnabled(bool enabled) {
     g_enabled = enabled;
+}
+
+void AimingOverhaul::Lean::SetToggles(bool toggles) {
+    g_toggles = toggles;
+    g_left = false;
+    g_right = false;
 }

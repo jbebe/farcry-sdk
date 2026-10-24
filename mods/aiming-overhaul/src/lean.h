@@ -23,4 +23,7 @@ bool OnAttached(uint8_t* skeleton, int bone, float* model);
 
 void SetEnabled(bool enabled);
 
+// Whether a press of a lean key leans until the next press rather than while the key is held.
+void SetToggles(bool toggles);
+
 }

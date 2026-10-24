@@ -124,6 +124,7 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Sway | Yes / No | Yes |
 | Hold breath | Yes / No | Yes |
 | Lean | Yes / No | Yes |
+| Toggle lean | Yes / No | No |
 | Gun near walls | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
 | Iron sight zoom | Yes / No | Yes |
@@ -133,6 +134,8 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Tracers | Yes / No | Yes |
 
 With Sway off neither the eye nor the aim drifts, and there is nothing for the breath to steady.
+With Toggle lean on, a press of Lean left or Lean right leans until the same key is pressed again;
+the other key leans the other way instead, and sprinting ends the lean.
 With Hold breath off, sprint down the sights does what the game does with it. With Iron sight zoom
 off, the view keeps its field of view down a gun's iron sights; a scope still
 magnifies. With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game
