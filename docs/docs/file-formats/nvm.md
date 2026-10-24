@@ -9,13 +9,20 @@ Traced live via GhidraMCP against `FarCry2_server`, both the write and the read 
 retail sector file is accounted for: the header, the sector scalars, nodes, vertices, cover points,
 cover vertices and the quadtree. Reading all 512 sectors of `w1_c_2` and `w2_b_3` with this layout
 leaves no byte over. JackAll reads and writes the format. See also
-[the file manifest](../modding/file-manifest.md#6-navigation-mesh-nvm--locked).
+[the file manifest](../modding/file-manifest.md#6-navigation-mesh-nvm--tooled-jackall).
 :::
 
-Built on the open-source **Recast** navmesh library (community-reported, via a leaked internal
-build-tool plugin list — `RecastNavmeshCompiler`/`Exporter`; not independently verified). This page
-covers Dunia's own file/header structure wrapping whatever Recast-derived mesh data lives inside a
-sector — not Recast's own format.
+**(RE-verified)** The engine's generator is not Recast, though a leaked build-tool plugin list
+names a `RecastNavmeshCompiler`. `FarCry2_server` carries Ubisoft's own **PopNavmesh**, driven by
+`CNavmeshGenerator::Execute` (`0x09a5a8e0`). It works on geometry, never on voxels:
+
+1. It takes the terrain at every whole metre, and the collision of physics entities.
+2. It gathers the triangles no steeper than 45° into "platforms".
+3. It cuts holes where an obstacle's triangles cross a platform's.
+4. It triangulates each platform in 2D with Shewchuk's Triangle, clipped at sector borders.
+5. It links the patches where their open edges coincide.
+
+[Generating a navmesh](#generating-a-navmesh) covers the stages and what JackAll does instead.
 
 ## A missing navmesh crashes the engine, it does not merely disable AI
 
@@ -229,10 +236,13 @@ The water level feeds `CNavMeshNode::ComputeIsUnderWater`: a node is under water
 corners sit at or below the level minus 0.6 m. Retail uses −1e6 or a real height, such as 16.0
 and 42.0.
 
-The 64-bit constant at `+0x28` is the same in every sector of a world: `0x00051162F1B64C58` in
-world 1 and `0x001223D31752AD86` in world 2. On write it falls back to `CNavmeshEdition`'s own
-`+0x54`/`+0x58` when unset, so it is something the generator stamps, plausibly a build id. Nothing
-on the read path was found to use it.
+**(measured)** Under water, retail does not mesh the bed. All 19,291 under-water nodes of `w1_c_2`
+lie on one flat floor exactly 0.62 m under their sector's water surface, whatever the terrain
+does beneath. They are what boats path on.
+
+**(RE-verified)** The 64-bit value at `+0x28` is `TimeGenerated`, a high-performance timer reading
+taken when the navmesh was generated. It is the same in every sector of a world:
+`0x00051162F1B64C58` in world 1 and `0x001223D31752AD86` in world 2. Nothing reads it.
 
 The bounding box is the dequantisation basis for every packed vector after it: see
 [dequantising a position](#dequantising-a-position).
@@ -243,16 +253,46 @@ The bounding box is the dequantisation basis for every packed vector after it: s
 
 ```
 +0  u8   height, in 8 mm steps (height * 125, capped at 250)
-+1  u16  index into the cover vertex array
-+3  u8   type bits; retail uses 0x00, 0x10, 0x20, 0x30
-+4  u16  node index
++1  u16  graph id of the node an agent takes the cover from
++3  u8   type bits: 0x20 the start corner is exposed, 0x10 the end
++4  u16  index into the cover vertex array: the cover's start, its end next
 ```
 
-A cover has no position of its own. `CNavMeshSector::AfterLoad` (`0x09a1cb50`) points each one at
-the cover vertex array, which is what the second packed array is, and gives it an id from the
+A cover is a stretch of obstacle edge, walkable side on its left from start to end. It has no
+position beyond its two cover vertices. `CNavMeshSector::AfterLoad` (`0x09a1cb50`) points each one
+at the cover vertex array, which is what the second packed array is, and gives it an id from the
 sector and its index. `CDynamicNavCover::SerializeData` (`0x099fc700`) writes the same 6 bytes, then
-two `u32`s. Retail has no dynamic covers. **(measured)** Of 25,660 covers in `w1_c_2` and `w2_b_3`,
-175 have a cover vertex index and 30 a node index past the end of their sector's array.
+two `u32`s. Retail has no dynamic covers.
+
+**(measured)** In all 16,558 covers of `w1_c_2`:
+
+- `+4` is inside its sector's cover vertex array.
+- `+1` is a graph id one of the sector's own nodes carries.
+- `fcxNavCoverManager::DealWithRequest` (`0x0863a360`) compares that graph id with the requester's
+  node.
+
+#### How the generator lays them
+
+**(RE-verified)** `CCoverGenerator::GenerateCovers` (`0x09ace9d0`) walks the outlines of every
+sector: the hole each obstacle cuts and the open boundary of the mesh. It treats each segment of
+length L in turn.
+
+- **Splitting** (`GenerateCover_Split`, `0x09ace7f0`):
+  - up to 2.6 m, one cover;
+  - up to 3.9 m, two halves;
+  - longer, 1.3 m at each end and the rest between.
+
+  **(measured)** `w1_c_2` is full of 1.3 m pieces.
+- **Height** (`GenerateCover`, `0x09acdd80`): a grid of level probes, 20 rows 0.1 m apart and a
+  column every 0.1 m. Each probe runs from 0.3 m on the walkable side to 0.6 m into the obstacle.
+  - The height is the first row where any probe misses the obstacle, or 2.0 m when none does.
+  - Under 0.75 m is no cover.
+- **Type bits** (`CalculateCoverEdgeInfo`, `0x09acd690`): an end is exposed, so an agent can lean
+  out past it, when the outline turns away from the walkable side there by more than 45°, or does
+  not go on.
+- **Validity** (`CNavCover::IsCoverLocationValid`, `0x099fccc0`): the stand point is 0.9 m out from
+  the middle of the edge, and an agent of radius 0.8 must fit there. `FilterSectorCovers`
+  (`0x09a23760`) drops the covers that fail and stores that node's graph id.
 
 ### The quadtree
 
@@ -322,15 +362,58 @@ The three normal bytes are what the engine dots against world up and compares to
 straight from the file without touching the terrain.
 
 **Graph id.** `CNavMeshSectorWriter::SetGraphIdToNodeAndFriends` (`0x09a1d170`) floods one id across
-linked nodes that share the under-water bit. It can require a 0.46 m agent radius to fit through
-the shared edge. `0xFFFF` means none was assigned. **(measured)** In `w1_c_2` and `w2_b_3`, 28% of
-nodes are in graph 1.
+linked nodes that share the under-water bit. **(RE-verified)** It enters a neighbour only when that
+neighbour's clearance at the shared edge is at least 12 (0.48 m). The edge is sampled at its middle
+or at either end, the slots `IdentifyPositionIndexes` (`0x09a14310`) picks. `0xFFFF` means none was
+assigned. **(measured)** In `w1_c_2` and `w2_b_3`, 28% of nodes are in graph 1, and 25,224 of
+`w1_c_2`'s nodes are alone in theirs.
+
+**(RE-verified)** Graph ids are numbered per level, from 1, by `CNavMeshLevelWriter::BuildGraphs`
+(`0x09a0cc80`), and the flood crosses sector borders. They matter at run time:
+`CPathFinder::StartRequest` (`0x09a3a040`) fails a request at once when its start and goal nodes
+have different graph ids on the same map. Ground an agent cannot walk between must therefore never
+share an id, and ground it can walk between must.
+
+**(RE-verified)** How a request finds its start and goal: `CPathFinder::FindStartGoalNodes`
+(`0x09a39b70`).
+
+- **The node under the agent.** It takes the triangle under the agent's position when
+  `CanFitAgentAtPosWithConstraints` (`0x09a15860`) passes there. That test is geometric: it walks
+  outward through the links and fails on any blocking edge nearer than the agent's radius.
+- **The nearest point that fits.** Otherwise `GetClosestValidNodePos` (`0x09a16940`) and a search of
+  the neighbours take the nearest of each triangle's centre, corners and edge middles where the
+  slot (`FastRadiusCheck`, `0x09a10f20`) and the walk both pass.
+- **The radius.** Pawns ask with 0.46 m, which the `CPathFinderContext` constructor (`0x09a2ba10`)
+  sets, the same as the generator's flood.
+
+So a node an agent fits inside, with no edge it fits through, has a graph id of its own, and a path
+asked from it fails. **(measured)** Retail has 160 such nodes in `w1_c_2`.
+
+A cover's graph id is compared by `fcxNavCoverManager::DealWithRequest` (`0x0863a360`). A pier
+anchor's is compared by `CPierAnchor::GetGraphID` (`0x08617d20`). Several tasks compare graph ids
+too, among them `CTaskFindRandomDest::FindBuddyDown` (`0x0832d840`) and
+`CTaskHighTargetAttackPos::CheckAttackPosValidity` (`0x08347790`).
 
 **Flags.** The two flag bytes are bits 0 and 6 of the node's travel-restriction byte, which
 `CNavMeshNode::SatisfiesTravelRestrictions` (`0x09a10ec0`) tests against an agent's allowed
-terrain. Bit 3, too steep, is recomputed from the normal on load. **(measured)** In `w1_c_2`,
-19,291 of the 19,304 nodes that `ComputeIsUnderWater` puts under water carry `+0x18`, and no other
-node does. `+0x19` matches `ComputeIsAboveTerrain`'s name and is set on 16,267 dry nodes.
+terrain. **(measured)** In `w1_c_2`, 19,291 of the 19,304 nodes that `ComputeIsUnderWater` puts
+under water carry `+0x18`, and no other node does. `+0x19` is set by `ComputeIsAboveTerrain`
+(`0x09a11cc0`): a dry node any of whose corners is more than 0.001 m over the terrain. It is set
+on 16,267 dry nodes.
+
+**(RE-verified)** The travel-restriction byte, against the agent flags each kind of agent passes:
+
+| Bit | Node | Where it comes from | Agent flag the node needs |
+|---|---|---|---|
+| `0x01` | under water | file `+0x18` | `0x08`, and then nothing else is checked |
+| `0x02` | disabled by a volume | `CAIToggleNavmeshComponent`, at run time | `0x10` |
+| `0x04` | restricted by a volume | the same | `0x02` |
+| `0x08` | too steep: the normal more than 30° off vertical (`COS_ANGLE_SLOPE_LIMIT`) | recomputed on load | `0x04` |
+| `0x40` | above terrain | file `+0x19` | never tested |
+
+A dry node needs agent flag `0x01`. Pawns pass `0x07`, so they walk steep nodes. Animals pass
+`0x03`, so steep nodes stop only them. Wheeled vehicles pass `0x05` and boats `0x08`: boats use
+under-water nodes only.
 
 **Clearance radii.** `CNavMeshWriter::ComputeSectorRadii` (`0x09a25140`) samples ten points of the
 triangle and stores the largest circle that fits at each, as `min(radius, 10 m) × 25`. The points are:
@@ -344,7 +427,9 @@ triangle and stores the largest circle that fits at each, as `min(radius, 10 m) 
 
 The radius comes from `CNavMeshNode::FindMaximumFittingRadius` (`0x09a14570`). It walks outward
 across links, at most 10 m, and measures the 3D distance to the nearest edge that blocks: an edge
-with no link, or a link to a node the agent's travel restrictions forbid.
+with no link, or a link to a node the agent's travel restrictions forbid. **(RE-verified)**
+`ComputeSectorRadii` measures dry nodes as a pawn (agent flags `0x07`) and under-water nodes as a
+boat (`0x08`), so the edge between dry ground and water blocks from both sides.
 `CNavMeshNode::FastRadiusCheck` (`0x09a10f20`) compares an agent's radius against one slot, and
 `IdentifyPositionIndexes` (`0x09a14310`) picks the slots for the edge an agent crosses. **A navmesh
 with zero radii lets no agent through.**
@@ -383,33 +468,98 @@ Implemented in `JackAll.Tools/World/WorldNavMesh.cs`.
 
 ## Generating a navmesh
 
-JackAll's `navmesh build` writes sectors for a level of your own
-([command line](/jackall/cli-formats)). It reads the terrain, cuts out the footprint of
-every placed entity whose descriptor has a `StaticPhysComponent` or `CompoundPhysComponent`, and
-fills in what the engine's generator would: links, graph ids, the clearance radii and the quadtree.
-Then it sets `HasNavMesh` in the world's `sectorsdep.fcb`.
+### What the engine's generator does
 
-**(measured)** Run over `w1_c_2` with world 1's library:
+**(RE-verified)** in `FarCry2_server`, where `CNavmeshGenerator::Execute` (`0x09a5a8e0`) runs the stage
+table at `0x0a3e5100`:
 
-- Retail covers 54% of the level's ground and the generator 61%.
-- Where retail covers a sector almost fully, the generator keeps 87.5% of that area. It cuts out
-  more around props.
-- 8.6% of what the generator keeps is steeper than retail allows, because it never drops a slope.
-- It makes 2.35 times as many triangles, because it splits cells down to 1 m to follow hills.
+- **Terrain.** `CNavmeshEdition::GetTerrainTesselation` (`0x09aca3a0`) takes the heightfield at every
+  whole metre. Each quad is split into two triangles, always along the same diagonal: `(x+1, y)` to
+  `(x, y+1)`. The terrain is cut into chunks of the sector size, 64 m.
+- **Objects.** `CollectObstaclesGeometry` (`0x09ac8250`) takes physics entities, not render meshes.
+  The editor decides which of their Havok shapes to hand over, so that part is not in this binary.
+  An obstacle whose foot is 0 to 0.15 m off the ground is pushed down into it
+  (`ExtrudeToCrossGround`), so it cuts the terrain.
+- **Platforms.** A triangle is walkable when its normal is within 45° of vertical
+  (`ExtractMeshShapePlatforms`, `0x09ab7ec0`). Connected walkable triangles form a platform. A
+  platform under 2 m² is dropped.
+- **Holes.** Where an obstacle's triangles cross a platform's, the crossing lines become holes. The
+  mesh runs right up to the obstacle: agent size is left to the clearance radii.
+- **Triangles.** Each platform is triangulated in 2D by Shewchuk's Triangle, with a minimum angle of
+  20°, then clipped at sector borders. The heights are restored afterwards.
+- **Links.** Patches are linked where their open edges coincide within 0.1 m in plan. Those links
+  are the extra entries past a node's third.
+- **Water.** Terrain far enough under the water is removed (`RemoveUnderWaterGeometry`).
+- **Covers.** [Covers](#how-the-generator-lays-them) are laid along the hole outlines and open
+  edges.
+- **Unused areas.** `FilterUnusedAreas` (`0x09a596a0`) deletes every graph that holds no placed AI
+  agent. That is why retail covers only about half of a level's ground: mountains and the tops of
+  rocks are gone.
 
-It was built for flat ground like `tmpla`'s. For real relief it needs slope rejection and fewer,
-larger triangles, which is what Recast does.
+### JackAll's generator
 
-**(proven)** In `testrange`, a flat world built from `tmpla` with its navmesh from this command,
-soldiers spawned at run time move and shoot, and the game keeps running.
+JackAll's `navmesh build` ([command line](/jackall/cli-formats)), and `world pack` for a new world,
+write every sector of a level. They take the same inputs as the engine's generator:
+
+- the terrain, every whole metre, cut along the same diagonal, and raised under water to the floor
+  retail lays there;
+- the collision of every placed entity with a static, compound or rigid physics component. A body
+  with a [`NAV_` twin](./hkx.md#what-the-files-hold) uses the twin. A breakable object contributes
+  only its intact state's bodies;
+- the trunks of the trees in the landmark files' vegetation.
+
+The surface comes from **Recast**, through DotRecast. Recast voxelises rather than cutting holes,
+which copes with any terrain and any overlap of shapes:
+
+1. **Recast tiles.** Each sector is one Recast tile, built from 0.25 m cells. The rules: no slope
+   over 45°, no step over 0.3 m, headroom of 1.6 m. The ground counts as solid below its surface,
+   and nothing is shrunk away from walls. When Recast's watershed regions fail on a tile, which
+   DotRecast does where C++ Recast would only log, the tile is partitioned monotonely instead.
+2. **Corners snapped.** Every polygon corner is moved from Recast's voxel top down onto the real
+   surface it stands for, the terrain or a walkable face of an object.
+3. **Tiles joined.** Corners on one 1/256 m grid point and within a climb in height are welded.
+   Where two sectors' corners along their border differ, each splits the other's edges, so every
+   edge meets exactly one other or none.
+4. **Unreached ground dropped.** A region kept must touch the terrain and be at least 200 m², or
+   hold a placed soldier, animal, vehicle or smart-terrain point. This is the engine's unused-area
+   filter, kept looser so ground an agent may be spawned on at run time stays.
+5. **Refined.** A triangle is split at the middle of its longest side when it is longer than 12 m,
+   or strays more than 0.5 m from the surface where it is sampled. Everything sharing that side is
+   split with it.
+6. **Flipped.** A pair of triangles is flipped to the better-shaped diagonal (the Delaunay test, in
+   plan) when the flipped pair still follows the surface.
+7. **Filled in.** Then come the links, the per-level graph ids, the clearance radii, the
+   under-water and above-terrain flags, the covers and the quadtree, as the engine's writer makes
+   them.
+
+**(measured)** Run over `w1_c_2` with world 1's library, in about 25 s:
+
+| | Retail | JackAll |
+|---|---|---|
+| Ground covered | 54% | 72% |
+| Of retail's walkable cells, covered at the same height | | 94.7% |
+| Triangles | 344,947 | 634,261 |
+| Triangles steeper than 45° | under 1% | 3%, slivers holding 0.3% of the area |
+| Covers | 16,558 | 16,615 |
+| Retail's covers with one of JackAll's within 1.5 m | | 81% |
+
+Every link has its way back and meets its neighbour edge for edge. 293 of 430,000 open edges lie
+along another without a link, almost all of them 0.25 m steps of the voxel outline.
+
+The extra ground is mostly what the engine's unused-area filter deleted: plateaus, rock tops a
+stair reaches, and mountainsides gentle enough to walk.
+
+**(proven)** In `testrange`, a flat world built from `tmpla` with an earlier, simpler generator,
+soldiers spawned at run time move and shoot, and the game keeps running. Nothing built by this
+generator has been seen in game.
 
 ## Unknowns
 
-- The meaning of the level-file header fields (`+0x54` through `+0x70`), and of the sector's 64-bit
-  constant at `+0x28` and its `0x7F7F` at `+0x30`.
-- The meaning of a cover's type bits, and how a cover's height is measured.
-- How the graph ids of different sectors are kept apart, and whether the AI refuses a path between
-  two nodes whose graph ids differ.
+- The level-file header fields `+0x54` through `+0x70`. The writer fills them with the level's box
+  and its sector grid, but how those land at file offsets is inferred. The sector's `0x7F7F` at
+  `+0x30` is a field the writer never sets.
+- Which Havok shapes the editor's callback hands the engine's generator, and whether it prefers a
+  body's `NAV_` twin.
 - What selects `modeFlag` 0/2 vs. 3. Retail ships 2 and streams the sectors as resources instead
   ([how the game finds a sector file](#how-the-game-finds-a-sector-file)).
 - Whether `nv\nv.nvm` (the writer's "same index twice" `MakeSectorFileName(true)` branch) is ever

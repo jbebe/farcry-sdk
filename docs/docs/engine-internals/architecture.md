@@ -438,7 +438,7 @@ Also registered here: `CPersonalitySystem` (very likely the code-side counterpar
 (pathfinding), and **`CNavMeshSectorResource`**, registered as a real streamed resource type
 (`CResourceManager::RegisterNewResourceType` + `StreamingManager::RegisterAllocCallBack`, the same
 pattern used for ordinary world-streamed data). That's the runtime loader for `.nvm` (see [the file
-manifest](../modding/file-manifest.md#6-navigation-mesh-nvm--locked)).
+manifest](../modding/file-manifest.md#6-navigation-mesh-nvm--tooled-jackall)).
 
 ### `MSAnim` — animation is a resource-registration hub, not a per-frame animator
 

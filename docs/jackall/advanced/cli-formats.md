@@ -247,18 +247,20 @@ No errors
 
 See [Read a mission](/jackall/missions).
 
-`navmesh build` makes the AI's navmesh for a level of your own, from its terrain and the colliding
-objects placed on it. Point it at a folder laid out like the game's data, such as a mod layer's
-`mods` folder:
+`navmesh build` makes the AI's navmesh for a level of your own, from its terrain and the collision of
+what is placed on it. Point it at a folder laid out like the game's data, such as a mod layer's
+`mods` folder, and at the game, which holds the collision of every retail object:
 
 ```
-> jackall-cli navmesh build mods\DevTools\layer\mods --level testrange
-64 sectors, 7,312 triangles, 14 obstacles cut out.
+> jackall-cli navmesh build mods\DevTools\layer\mods --level testrange --game "C:\Games\Far Cry 2"
+64 sectors, 19,068 triangles, 120 covers, 33 colliding objects.
 HasNavMesh set on 64 of 64 sectors in worlds\testrange\generated\testrange.sectorsdep.fcb.
 ```
 
-It writes each sector's `nv_<id>.nvm` and turns on the flag that makes the game load them. It suits
-flat or gently rolling ground: it does not leave out steep slopes, and it makes no cover points. See
+It writes each sector's `nv_<id>.nvm` and turns on the flag that makes the game load them. The mesh
+covers any terrain, and the floors, roofs, ramps and stairs of what stands on it. It leaves out
+slopes over 45° and steps over 0.3 m, and lays cover points along walls and props. Without `--game`,
+an object whose collision is not in the folder is left out, and the command says which. See
 [`.nvm`](/docs/file-formats/nvm#generating-a-navmesh).
 
 `world new` writes a new world's files, made from `tmpla`, into a folder, and `world pack` turns a
@@ -270,7 +272,7 @@ sector flags and navmesh built from its pieces, everything else copied:
 myworld: 382 files, 8 x 8 sectors.
 > jackall-cli world pack myworld-layer --game "C:\Games\Far Cry 2" --out myworld-packed
 myworld: 2,070 archetypes kept of 5,735
-myworld: 64 sectors, 14 obstacles cut out of the navmesh
+myworld: navmesh over 64 sectors and 14 colliding objects
 511 files, 0 plugin files.
 ```
 

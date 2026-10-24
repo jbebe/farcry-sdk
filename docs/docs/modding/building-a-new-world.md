@@ -52,8 +52,8 @@ So a new world reached by travel needs a spawn point placed on its ground. `neww
 under the terrain.
 
 Anything beyond a flat world with props and soldiers runs into gaps that do have names: terrain
-heights cannot be generated, vegetation cannot be packed, and the generated navmesh has no cover
-points and ignores slopes. See [the checklist](#every-file-a-world-is-made-of).
+heights cannot be generated and vegetation cannot be packed. See
+[the checklist](#every-file-a-world-is-made-of).
 
 ## Every file a world is made of
 
@@ -104,7 +104,7 @@ level, named after the world.
 | `worldsectors\worldsector<n>.data.fcb` | **entities** by mission layer | no: `tmpla` ships none. Loaded only where `sectorsdep` sets `HasMainSectorData` | ✓ `WorldLoader` | ✓ Map tab, fragments onto a retail file | via XML ([placing entities](#placing-entities-in-a-new-world)) or the Map tab | none |
 | `worldsectors\landmarkfar_<n>.data.fcb` | **vegetation** (`VegetationData`) and far LOD | no: `tmpla` ships none. Loaded only where `sectorsdep` sets `HasLandmarkFar` | ✓ decoded ([vegetation](../engine-internals/terrain-and-vegetation.md)) | ✓ as plain FCB | ✗ no packer for the nine lists | none |
 | `worldsectors\landmarknear<n>.data.fcb` | near light-vegetation grid, some mission content | no. Loaded only where `sectorsdep` sets `HasLandmarkNear` | ✓ | ✓ | ✗ | none |
-| `nv\sectors\nv_<n>.nvm` | **navmesh** for AI | no, but AI crashes without it. Loaded only where `sectorsdep` sets `HasNavMesh` | ✓ `NvmSector` | ✓ `NvmSector` | ✓ `navmesh build`, flat or gently rolling ground only ([AI in a new world](#ai-in-a-new-world)) | none, so no AI |
+| `nv\sectors\nv_<n>.nvm` | **navmesh** for AI | no, but AI crashes without it. Loaded only where `sectorsdep` sets `HasNavMesh` | ✓ `NvmSector` | ✓ `NvmSector` | ✓ `navmesh build`, any terrain and collision ([AI in a new world](#ai-in-a-new-world)) | none, so no AI |
 | `sector<n>.preload_x.fcb`, beside `generated\` | streaming preload, campaign levels only | no | ✓ | ✓ | ✗ | none |
 
 Other parts of a world live elsewhere:
@@ -198,18 +198,19 @@ AI needs a navmesh, and retail `Dunia.dll` carries no generator of its own: the 
 jackall-cli navmesh build <layer>\mods --level <l>
 ```
 
-It writes `nv\sectors\nv_<n>.nvm` for every sector of the level, cut around every placed entity
-with static collision, and sets `HasNavMesh` on every sector's entry. The world's own `nv.nvm`
-index can stay as `tmpla`'s, its grid and extent edited to match. The method and how it compares
-with retail are in [generating a navmesh](../file-formats/nvm.md#generating-a-navmesh).
+It writes `nv\sectors\nv_<n>.nvm` for every sector of the level and sets `HasNavMesh` on every
+sector's entry. The mesh lies on the terrain and on every walkable face of the placed entities'
+collision: floors, roofs, ramps, stairs and bridges. It leaves out slopes over 45°, steps over
+0.3 m and anything with less than 1.6 m of headroom. It lays cover points along walls and props,
+and gives water its own floor for boats. The world's own `nv.nvm` index can stay as `tmpla`'s, its
+grid and extent edited to match. The method and how it compares with retail are in
+[generating a navmesh](../file-formats/nvm.md#generating-a-navmesh).
 
-**(proven)** In `testrange`, soldiers spawned at run time move and shoot on it. In editor maps with no
-navmesh, AI crashed the engine about 30 s after loading.
+**(proven)** In `testrange`, soldiers spawned at run time move and shoot on the earlier, flat-only
+generator's navmesh. In editor maps with no navmesh, AI crashed the engine about 30 s after loading.
 
-What it does not do yet:
-
-- It writes **no cover points**, so soldiers are not expected to take cover behind props.
-- It **never drops a slope**, so it is for flat or gently rolling ground only.
+Ground off the terrain that nothing could reach is dropped, such as a rooftop or the top of a rock.
+Place a soldier, an animal or a smart-terrain point on it to keep it.
 
 Soldiers can be placed as entities like any prop, or spawned at run time with
 `SpawnEntityFromArchetype`. DevTools' Spawner tab spawns a squad of either faction, or of Ubisoft's
@@ -303,8 +304,7 @@ In order of what is ready:
   Sector edges are shared, so neighbouring sectors must agree.
 - **Vegetation:** needs a `VegetationData` packer.
 - **Roads:** need the spline bounds and arc tables recomputed.
-- **AI:** `jackall-cli navmesh build` ([AI in a new world](#ai-in-a-new-world)). Soldiers fight on
-  it; cover points and slopes are still missing.
+- **AI:** `jackall-cli navmesh build` ([AI in a new world](#ai-in-a-new-world)).
 
 ## The test sheet
 

@@ -197,7 +197,8 @@ Primary-source material mined from Discord exports:
 - **`text-snippets/`** — `CRC32_collisions.txt`, `Far_Cry_2_1.03_filediffs.txt` (the retail/GOG
   patch-gap root cause), `crc32_collision_examples.txt`, `fcbconverter_collision_repro.txt`,
   `redux_readme.txt`, `dunia_internal_tool_plugins_list.txt` (a leaked internal Dunia build-tool
-  plugin list — ~50 build-pipeline plugins, confirming FC2's `.nvm` navmesh files are built on the
-  open-source **Recast** navmesh library, and that `NomadDB` ties directly to the `FC2Editor.Nomad`
+  plugin list — ~50 build-pipeline plugins, among them a `RecastNavmeshCompiler`, though the shipped
+  navmesh generator is Ubisoft's own PopNavmesh ([`.nvm`](../file-formats/nvm.md)), and that
+  `NomadDB` ties directly to the `FC2Editor.Nomad`
   namespace above), `cloth_shader_disasm_example.txt` (a readable disassembled `ps_4_0` HLSL pixel
   shader — shader bytecode is not opaque-packed binary).

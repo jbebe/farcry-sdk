@@ -113,6 +113,12 @@ constraints, named after the part's damage state (`DoorLeftState02`, `HoodState0
 `X`, `Init` also records the index of the body named `HIGH_X` (returned by `GetHighresIndex`) and of
 the one named `NAV_X`.
 
+**(seen in data)** 662 files carry a `NAV_` body. It is a simplified stand-in for navigation: in
+`shantymd01_a04_multi.hkx` it is the six wall boxes alone, with neither floor nor roof, and stood down
+to the ground. In `ruinswall01.hkx` it is two boxes for a 92-triangle wall. JackAll's
+[navmesh generator](./nvm.md#jackalls-generator) uses a body's `NAV_` twin in its place. Whether the
+engine's generator does is decided in the editor, outside the binaries studied.
+
 **`Init` keeps a position, rotation and mass only for the bodies listed before the first one whose
 name contains `HIGH_` or `NAV_`.** These go in a table of `SRigidBodyData`, 0x40 bytes each:
 position at `+0x00`, rotation at `+0x10`, mass at `+0x20`. `GetBodyPos` and `GetBodyRotation` index

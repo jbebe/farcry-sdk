@@ -307,7 +307,8 @@ Everything above is the mechanism. None of it amounts to a demonstration that a 
 - **AI is blocked without a navmesh.** The editor's cooker emits none, and AI entities in a
   navmesh-less world crash the engine roughly 30 s after load, deterministically. Animals
   (`CAnimalAgent`) and interactables are unaffected. The generator (`CNavmeshGenerator`,
-  `BuildNavMeshLevel0`, ~226 symbols) is compiled in but has no `FCE_Nav*` export.
+  `BuildNavMeshLevel0`, ~226 symbols) is compiled in but has no `FCE_Nav*` export. JackAll
+  generates one instead ([generating a navmesh](../file-formats/nvm.md#generating-a-navmesh)).
 - **A one-sector grid** passes `CWorld::Create`, but nothing downstream of it was read for a
   minimum.
 

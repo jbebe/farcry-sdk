@@ -231,6 +231,13 @@ The attributes appear in the order `tplCreatureType`, `hidName`, `disEntityId`,
 holds only the export's baked sky-occlusion and ground-colour values; the mesh comes from the
 archetype.
 
+**(RE-verified)** `hidAngles` is Euler degrees applied about X, then Y, then Z: the rotation is
+`Rz · Ry · Rx`. `CEntity::SetAngles` (`0x0943dc30`) builds the matrix that way, and
+`SBindingHierarchyEntry::OverWriteTransform` (`0x09674f00`) takes it apart the same way. It reads
+Y = asin(−m₀₂), X = atan2(m₁₂, m₂₂) and Z = atan2(m₀₁, m₀₀), with X = 0 when Y is at ±90°. Most
+entities turn only about Z, where any order agrees. A rock or sign tilted about both X and Y does
+not.
+
 Sampling 146 placed entities across `world1` sectors: **48** carry `tplCreatureType` and therefore
 merge against an archetype; the other 98 stand alone. All 146 carry their own `Components` child, and
 61 name their own `.xbg` mesh directly — which is why a renderer can draw most of a map without

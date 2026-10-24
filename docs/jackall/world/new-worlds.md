@@ -60,7 +60,7 @@ For every new world in the layer it writes:
   groups the game asks for by name wherever it is played (the player, weapons and their data,
   hand-held props, cameras, soldiers, vehicles and a few more);
 - **the sector list**, with every sector flagged so the game loads its files and its navmesh;
-- **the navmesh**, cut around every object with collision.
+- **the navmesh**, over the terrain and every object's collision, with cover points along walls and props.
 
 Everything else in the layer is copied as it is. Point `--out` at a new or empty folder.
 
@@ -96,7 +96,8 @@ and the other's objects are missing from that sector's navmesh.
 
 ## Limits
 
-- The navmesh has no cover points, and it does not leave out steep slopes.
+- The navmesh drops ground off the terrain that nothing could reach, such as a rooftop or the top of
+  a rock. Place a soldier, an animal or a smart-terrain point on it to keep it.
 - Terrain, roads, rivers and vegetation are copied from `tmpla` and cannot be edited yet.
 - The files JackAll writes are larger than the game's own, because it does not share repeated
   values the way the game's tools did. The game reads them all the same.

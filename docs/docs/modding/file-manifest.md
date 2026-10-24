@@ -81,18 +81,18 @@ Two sibling per-sector files, `.srl` (sound regions) and `.zsr` (gameplay zones)
 [`.srl`/`.zsr`](../file-formats/srl-zsr.md), which confirms the container level (fixed
 1024/4096-byte raw dumps, no header).
 
-## 6. Navigation Mesh (.nvm) — Locked
+## 6. Navigation Mesh (.nvm) — Tooled (JackAll)
 
 AI pathfinding navmesh data, compiled from level geometry (`worlds.fat/**/*.nvm`).
 
-Confirmed built on the open-source **Recast** library (via a leaked internal build-tool plugin list — `RecastNavmeshCompiler`/`Exporter`), but no FC2-specific decode/edit tool is known.
+A leaked internal build-tool plugin list names a `RecastNavmeshCompiler`, but the shipped generator
+is Ubisoft's own PopNavmesh, which works on geometry rather than voxels.
 
 :::info[Verified via reverse engineering]
-The container/file-structure level is reverse-engineered — see [the `.nvm` format
-page](../file-formats/nvm.md): a two-tier scheme (one level file plus per-sector satellite files),
-distinct from every other per-sector format in this manifest. The triangle mesh and its links are
-decoded, and JackAll's map viewer draws them, but nothing can write or regenerate a navmesh, so this
-stays **Locked** in practice.
+Every byte of a sector file is decoded. See [the `.nvm` format page](../file-formats/nvm.md): a
+two-tier scheme (one level file plus per-sector satellite files), distinct from every other
+per-sector format in this manifest. JackAll's map viewer draws the mesh, and `jackall-cli navmesh
+build` generates one for a level of your own, covers included.
 :::
 
 ## 7. Audio — Partial
