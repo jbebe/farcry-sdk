@@ -69,6 +69,9 @@ uint32_t WeaponChanges();
 // Where the eye was last placed, in the world, or null before it was.
 const float* Eye();
 
+// The player's first-person camera's entity, or null.
+uint8_t* CameraEntity();
+
 // The view's direction, as a unit vector in the world: the body's look this frame, with the view's
 // pitch last added over it.
 void Forward(float out[3]);

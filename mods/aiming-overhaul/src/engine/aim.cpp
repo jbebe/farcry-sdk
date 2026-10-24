@@ -59,6 +59,9 @@ namespace {
     constexpr ptrdiff_t kSecondBase = 4;
     // The scene camera's position in the world.
     constexpr ptrdiff_t kScenePosition = 0x08;
+    // A component's entity proxy, and the proxy's entity.
+    constexpr ptrdiff_t kComponentProxy = 0x08;
+    constexpr ptrdiff_t kProxyEntity = 0x0C;
 
     // In CPawn's data, the effective look in radians (pitch up, yaw left), and the inventory.
     constexpr ptrdiff_t kEffectivePitch = 0x308;
@@ -407,6 +410,12 @@ float AimingOverhaul::Aim::ScopeKick() {
 
 const float* AimingOverhaul::Aim::Eye() {
     return g_eyePlaced ? g_eye : nullptr;
+}
+
+uint8_t* AimingOverhaul::Aim::CameraEntity() {
+    uint8_t* camera = g_playerCamera();
+    uint8_t* proxy = camera != nullptr ? Field<uint8_t*>(camera, kComponentProxy) : nullptr;
+    return proxy != nullptr ? Field<uint8_t*>(proxy, kProxyEntity) : nullptr;
 }
 
 void AimingOverhaul::Aim::Forward(float out[3]) {

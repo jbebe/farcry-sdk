@@ -180,17 +180,10 @@ void AimingOverhaul::Lean::OnPosed(uint8_t* skeleton) {
     }
 }
 
-void AimingOverhaul::Lean::OnAttached(uint8_t* skeleton, int bone, float* model) {
+void AimingOverhaul::Lean::OnAttached(uint8_t* skeleton, int bone, float* model, uint8_t* entity) {
     const float bend = g_posedBend;
-    if (skeleton != g_skeleton) {
-        return;
-    }
-    static int s_logged = -2;
-    if (bone != s_logged) {
-        s_logged = bone;
-        FCSE::Logf("lean: an entity is placed from bone %d (view's bone %d)", bone, g_camera);
-    }
-    if (bone != g_camera || bend == 0.0f) {
+    if (skeleton != g_skeleton || bone != g_camera || bend == 0.0f ||
+        entity == Aim::CameraEntity()) {
         return;
     }
     float pivot[3];

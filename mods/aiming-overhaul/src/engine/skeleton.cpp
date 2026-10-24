@@ -31,11 +31,16 @@ namespace {
     FCSE::Relocation<PlaceChildFn> g_placeChild{FCSE::Uplay(0x005530F0)};
     PlaceChildFn g_originalPlaceChild = nullptr;
 
-    // A parent binding's skeleton, once looked up; a child's bone index, -1 for none, and the copy
-    // of that bone's posed matrix.
+    // A parent binding's children, as entity proxies, how many, and its skeleton, once looked up; a
+    // child's bone index, -1 for none, and the copy of that bone's posed matrix. A proxy's entity,
+    // and the entity's binding.
+    constexpr ptrdiff_t kParentChildren = 0x2C;
+    constexpr ptrdiff_t kParentChildCount = 0x30;
     constexpr ptrdiff_t kParentSkeleton = 0xC0;
     constexpr ptrdiff_t kChildBone = 0x1C;
     constexpr ptrdiff_t kChildBoneMatrix = 0x40;
+    constexpr ptrdiff_t kProxyEntity = 0x0C;
+    constexpr ptrdiff_t kEntityBinding = 0x78;
 
     // CGraphicComponent's skeleton through its vtable: to read, and to change, which marks its
     // bones to be posed again. __thiscall.
@@ -78,13 +83,28 @@ namespace {
         g_posed(reinterpret_cast<uint8_t*>(job[5 + job[0] + job[1] + job[2]]));
     }
 
+    // The entity whose binding `child` is, among the parent's children.
+    uint8_t* ChildEntity(uint8_t* parent, uint8_t* child) {
+        uint8_t** proxies = Field<uint8_t**>(parent, kParentChildren);
+        const uint32_t count = Field<uint32_t>(parent, kParentChildCount);
+        for (uint32_t i = 0; proxies != nullptr && i < count; ++i) {
+            uint8_t* entity = proxies[i] != nullptr ? Field<uint8_t*>(proxies[i], kProxyEntity)
+                                                    : nullptr;
+            if (entity != nullptr && Field<uint8_t*>(entity, kEntityBinding) == child) {
+                return entity;
+            }
+        }
+        return nullptr;
+    }
+
     void __fastcall PlaceChildDetour(uint8_t* parent, void* unused, uint8_t* child,
                                      const float* matrix) {
         g_originalPlaceChild(parent, unused, child, matrix);
         const int bone = Field<int>(child, kChildBone);
         uint8_t* skeleton = Field<uint8_t*>(parent, kParentSkeleton);
         if (bone >= 0 && skeleton != nullptr) {
-            g_attached(skeleton, bone, &Field<float>(child, kChildBoneMatrix));
+            g_attached(skeleton, bone, &Field<float>(child, kChildBoneMatrix),
+                       ChildEntity(parent, child));
         }
     }
 }
