@@ -22,9 +22,11 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   up to two and a half times the sway, until it is let go. After a hold the sway is up to half again
   as large while the breath comes back, which takes 3 s from empty. Through the sights the sprint
   key does nothing else.
-- **Lean, unfinished.** Holding Lean left or Lean right slides the upper body 10 cm to that side
-  and bends it 15° from the lower back, over a quarter of a second, so the eye moves out about
-  25 cm. The head, the view, the arms and the gun go with it. There is no lean while sprinting.
+- **Lean, unfinished.** Lean left or Lean right slides the upper body 10 cm to that side and bends
+  it 15° from the lower back, over a quarter of a second, so the eye moves out about 25 cm. The
+  head, the view, the arms and the gun go with it. Held, the key leans for as long as it is held;
+  tapped, let go within a quarter of a second, it leans until it is tapped again. The other key
+  leans the other way instead. Sprinting ends a lean.
 - **Gun near walls.** A gun that would reach into a wall, within 0.8 m of the eye, swings down out
   of it, by up to 34° as the room ahead shrinks by another 0.5 m, while the view holds still.
   Swung most of the way down, past nine tenths, it lets go of the sights and does not fire, until it
@@ -124,7 +126,6 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Sway | Yes / No | Yes |
 | Hold breath | Yes / No | Yes |
 | Lean | Yes / No | Yes |
-| Toggle lean | Yes / No | No |
 | Gun near walls | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
 | Iron sight zoom | Yes / No | Yes |
@@ -133,10 +134,7 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Scope surroundings | Yes / No | Yes |
 | Tracers | Yes / No | Yes |
 
-With Sway off neither the eye nor the aim drifts, and there is nothing for the breath to steady.
-With Toggle lean on, a press of Lean left or Lean right leans until the same key is pressed again;
-the other key leans the other way instead, and sprinting ends the lean.
-With Hold breath off, sprint down the sights does what the game does with it. With Iron sight zoom
+With Sway off neither the eye nor the aim drifts, and there is nothing for the breath to steady.With Hold breath off, sprint down the sights does what the game does with it. With Iron sight zoom
 off, the view keeps its field of view down a gun's iron sights; a scope still
 magnifies. With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game
 draws them. Which guns fire them and how fast they fly are the weapon data's, and stay; so does the

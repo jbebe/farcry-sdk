@@ -8,6 +8,8 @@
 #include "engine/skeleton.h"
 #include "fcse_api.h"
 
+#include <windows.h>
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -30,13 +32,42 @@ namespace {
     constexpr float kMostSlide = 0.10f;
     constexpr float kFollow = 0.08f;
 
+    // A lean key let go within this many milliseconds was tapped, and the lean stays until the next
+    // tap; held longer, the lean ends with it.
+    constexpr ULONGLONG kTapMilliseconds = 250;
+
     std::atomic<bool> g_enabled{true};
-    // Whether a press leans until the next, rather than for as long as the key is held; and the
-    // side leaned to.
-    std::atomic<bool> g_toggles{false};
-    bool g_left = false;
-    bool g_right = false;
+    // The side leaned to, -1 left, 1 right, 0 none; whether the lean outlasts its key, tapped; the
+    // side whose press just ended a tapped lean, whose release is not a tap; and when the last lean
+    // began.
+    int g_side = 0;
+    bool g_latched = false;
+    int g_ended = 0;
+    ULONGLONG g_pressed = 0;
     float g_bend = 0.0f;
+
+    void Press(int side) {
+        if (g_side == side && g_latched) {
+            g_side = 0;
+            g_latched = false;
+            g_ended = side;
+            return;
+        }
+        g_side = side;
+        g_latched = false;
+        g_pressed = GetTickCount64();
+    }
+
+    void Release(int side) {
+        if (g_ended == side) {
+            g_ended = 0;
+        } else if (g_side == side) {
+            g_latched = GetTickCount64() - g_pressed < kTapMilliseconds;
+            if (!g_latched) {
+                g_side = 0;
+            }
+        }
+    }
 
     // The skeleton leaned, its bend's bone and the view's, and which bones bend; and the bend that
     // posing it applies, in radians, right positive, about the look's direction, which is pitched
@@ -126,35 +157,26 @@ namespace {
 }
 
 void AimingOverhaul::Lean::OnSignal(uint32_t signal) {
-    if (g_toggles) {
-        // A press leans that way, or back if it already does; a release does nothing.
-        if (signal == kStartLeft) {
-            g_left = !g_left;
-            g_right = false;
-        } else if (signal == kStartRight) {
-            g_right = !g_right;
-            g_left = false;
-        }
-    } else if (signal == kStartLeft) {
-        g_left = true;
+    if (signal == kStartLeft) {
+        Press(-1);
     } else if (signal == kStopLeft) {
-        g_left = false;
+        Release(-1);
     } else if (signal == kStartRight) {
-        g_right = true;
+        Press(1);
     } else if (signal == kStopRight) {
-        g_right = false;
+        Release(1);
     }
 }
 
 float AimingOverhaul::Lean::Update(uint8_t* pawn, float seconds, bool free) {
-    // Sprinting ends a toggled lean, rather than leaving it to come back after.
-    if (g_toggles && !free) {
-        g_left = false;
-        g_right = false;
+    // Sprinting ends a tapped lean, rather than leaving it to come back after.
+    if (g_latched && !free) {
+        g_side = 0;
+        g_latched = false;
     }
     float target = 0.0f;
     if (g_enabled && free) {
-        target = kMostBend * ((g_right ? 1.0f : 0.0f) - (g_left ? 1.0f : 0.0f));
+        target = kMostBend * static_cast<float>(g_side);
     }
     const bool moving = g_bend != 0.0f || target != 0.0f;
     g_bend = Follow(g_bend, target, seconds, kFollow);
@@ -210,10 +232,4 @@ bool AimingOverhaul::Lean::OnAttached(uint8_t* skeleton, int bone, float* model)
 
 void AimingOverhaul::Lean::SetEnabled(bool enabled) {
     g_enabled = enabled;
-}
-
-void AimingOverhaul::Lean::SetToggles(bool toggles) {
-    g_toggles = toggles;
-    g_left = false;
-    g_right = false;
 }

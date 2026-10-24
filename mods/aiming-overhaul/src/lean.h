@@ -7,7 +7,8 @@
 
 namespace AimingOverhaul::Lean {
 
-// Follows the lean signals.
+// Follows the lean signals: a lean key tapped leans until it is tapped again, and held, for as long
+// as it is held.
 void OnSignal(uint32_t signal);
 
 // Leans the pawn's body this frame, given the seconds since the last and whether the player may
@@ -22,8 +23,5 @@ void OnPosed(uint8_t* skeleton);
 bool OnAttached(uint8_t* skeleton, int bone, float* model);
 
 void SetEnabled(bool enabled);
-
-// Whether a press of a lean key leans until the next press rather than while the key is held.
-void SetToggles(bool toggles);
 
 }
