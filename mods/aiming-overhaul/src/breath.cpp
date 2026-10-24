@@ -1,5 +1,6 @@
-// Holding the breath while aiming: sprint held down the sights steadies the sway for a few seconds,
-// then the hands shake harder until it is let go, and the player is winded for a while after.
+// Holding the breath while aiming a gun that needs it: sprint held down its scope steadies the sway
+// for a few seconds, then the hands shake harder until it is let go, and the player is winded for a
+// while after.
 #include "breath.h"
 
 #include "ease.h"
@@ -28,6 +29,9 @@ namespace {
     constexpr float kFollow = 0.25f;
 
     std::atomic<bool> g_enabled{true};
+    // The weapon in hand as last followed, and whether its breath can be held.
+    uint8_t* g_weapon = nullptr;
+    std::atomic<bool> g_needed{false};
     float g_sinceSprint = kLetGo;
     float g_breath = kLongest;
     float g_strain = 0.0f;
@@ -42,9 +46,27 @@ void AimingOverhaul::Breath::OnSignal(uint32_t signal) {
     }
 }
 
+void AimingOverhaul::Breath::FollowWeapon(uint8_t* weapon) {
+    if (weapon == g_weapon) {
+        return;
+    }
+    g_weapon = weapon;
+    const FCSE_EntityDataAPI* data = FCSE::ApiPointer()->EntityData;
+    void* entity = weapon != nullptr ? data->EntityOf(weapon) : nullptr;
+    int32_t needed = 0;
+    if (entity != nullptr) {
+        data->GetInt(entity, "AimingOverhaul.HoldBreath", &needed);
+    }
+    g_needed = needed != 0;
+}
+
+bool AimingOverhaul::Breath::Needed() {
+    return g_needed;
+}
+
 void AimingOverhaul::Breath::Update(float seconds, bool aiming) {
     g_sinceSprint += seconds;
-    const bool holding = g_enabled && aiming && g_sinceSprint < kLetGo;
+    const bool holding = g_enabled && g_needed && aiming && g_sinceSprint < kLetGo;
     float target;
     if (holding && g_breath > 0.0f) {
         g_breath = (std::max)(g_breath - seconds, 0.0f);
@@ -65,7 +87,7 @@ float AimingOverhaul::Breath::Steadiness() {
 }
 
 bool AimingOverhaul::Breath::HoldsSprint() {
-    return g_enabled;
+    return g_enabled && g_needed;
 }
 
 void AimingOverhaul::Breath::SetEnabled(bool enabled) {

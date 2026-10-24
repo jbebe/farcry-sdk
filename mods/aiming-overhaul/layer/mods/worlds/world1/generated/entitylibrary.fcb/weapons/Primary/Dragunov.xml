@@ -214,6 +214,9 @@
             <object type="AimingOverhaul.ScopeRaise">
               <value name="Float" type="Float">0.1819</value>
             </object>
+            <object type="AimingOverhaul.HoldBreath">
+              <value name="Int" type="Int32">1</value>
+            </object>
           </object>
         </object>
       </object>

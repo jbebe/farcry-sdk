@@ -12,9 +12,11 @@
 namespace {
     // Metres.
     constexpr float kDrift = 0.002f;
-    // Radians, down the iron sights and through a scope.
+    // Radians, down the iron sights and through a scope, and how many times that through the scope
+    // of a gun whose breath can be held.
     constexpr float kIronsightWander = 0.0035f;
     constexpr float kScopeWander = 0.006f;
+    constexpr float kHoldBreathScope = 2.0f;
 
     struct Wave {
         double hertz;
@@ -57,8 +59,9 @@ AimingOverhaul::Look::Angles AimingOverhaul::Sway::Wander() {
     if (!g_enabled) {
         return {};
     }
-    const float wander = (kIronsightWander * Aim::Settled() + kScopeWander * Aim::Scoped()) *
-                         Breath::Steadiness();
+    const float scope = kScopeWander * (Breath::Needed() ? kHoldBreathScope : 1.0f);
+    const float wander =
+        (kIronsightWander * Aim::Settled() + scope * Aim::Scoped()) * Breath::Steadiness();
     return {wander * g_up, wander * g_right};
 }
 

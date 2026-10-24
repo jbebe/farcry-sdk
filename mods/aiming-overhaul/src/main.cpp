@@ -83,6 +83,7 @@ namespace {
     }
 
     float FollowWeapon(uint8_t* weapon) {
+        AimingOverhaul::Breath::FollowWeapon(weapon);
         const AimingOverhaul::Scopes::Scope* scope = AimingOverhaul::Scopes::Follow(weapon);
         return scope != nullptr ? scope->raiseReach : 0.0f;
     }

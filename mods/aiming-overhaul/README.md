@@ -14,14 +14,15 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   and the two drift out of line. Shots still go where the engine sends them: down the view, which is
   where the barrel points. Sights that have drifted out of line are wrong by the same angle as on a
   real gun. The same breath and wander also move the aim itself, view, gun and shot together, by
-  about 0.2° down the iron sights and 0.35° through a scope; the mouse corrects it as it would a
-  real hand. While a scope's own sight picture is up the eye does not drift off the gun, because that
+  about 0.2° down the iron sights, 0.35° through a holographic sight and 0.7° through a magnifying
+  scope; the mouse corrects it as it would a real hand. While a scope's own sight picture is up the eye does not drift off the gun, because that
   picture is a miniature right at the eye, but the aim still wanders under the reticle.
-- **Hold breath.** Holding sprint down the sights or a scope holds the breath instead of sprinting:
-  the sway eases to a sixth of itself and stays there for 4 s. Held longer, the hands shake harder,
-  up to two and a half times the sway, until it is let go. After a hold the sway is up to half again
-  as large while the breath comes back, which takes 3 s from empty. Through the sights the sprint
-  key does nothing else.
+- **Hold breath.** With a magnifying scope, on the Dart Rifle, the M1903, the Dragunov and the AS50,
+  holding sprint down the scope holds the breath instead of sprinting: the sway eases to a sixth of
+  itself and stays there for 4 s. Held longer, the hands shake harder, up to two and a half times
+  the sway, until it is let go. After a hold the sway is up to half again as large while the breath
+  comes back, which takes 3 s from empty. Down those scopes the sprint key does nothing else; down
+  any other gun's sights it does what the game does.
 - **Lean, unfinished.** Lean left or Lean right slides the upper body 10 cm to that side and bends
   it 15° from the lower back, over a quarter of a second, so the eye moves out about 25 cm. The
   head, the view, the arms and the gun go with it. Held, the key leans for as long as it is held;
@@ -99,8 +100,9 @@ resource holds. Which guns fire tracers, their speed and their streaks' longest 
 scopes the plugin draws losing the engine's iron-sight effect, are weapon data: `WeaponProperties`
 fragments under `layer\mods\`. So is each scope's reticle, eyepiece shape, rim, lens centre, raise
 and size: `AimingOverhaul.Scope*` keys in a `CFCSEDataComponent` on its `weapons` archetype, the
-reticle as an image path under `bin\plugins` with `ScopeReticleLit` for one lit from within. Both are
-written by `data\fragments.py`. The engine side is in
+reticle as an image path under `bin\plugins` with `ScopeReticleLit` for one lit from within. A gun
+whose breath can be held, and whose scope sways harder, has `AimingOverhaul.HoldBreath` set to 1
+there. Both are written by `data\fragments.py`. The engine side is in
 [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md),
 [bullet tracers](../../docs/docs/engine-internals/bullet-tracers.md) and
 [presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).
@@ -133,7 +135,8 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Scope surroundings | Yes / No | Yes |
 | Tracers | Yes / No | Yes |
 
-With Sway off neither the eye nor the aim drifts, and there is nothing for the breath to steady.With Hold breath off, sprint down the sights does what the game does with it. With Iron sight zoom
+With Sway off neither the eye nor the aim drifts, and there is nothing for the breath to steady.
+With Hold breath off, sprint down the sights does what the game does with it. With Iron sight zoom
 off, the view keeps its field of view down a gun's iron sights; a scope still
 magnifies. With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game
 draws them. Which guns fire them and how fast they fly are the weapon data's, and stay; so does the

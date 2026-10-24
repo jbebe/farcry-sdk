@@ -1,6 +1,6 @@
 """Write the layer's weapon archetype fragments: which guns fire tracers, how fast and how long their
-streaks are, which scopes the plugin draws and how, and those scopes losing the engine's iron-sight
-post effect.
+streaks are, which scopes the plugin draws and how, those scopes losing the engine's iron-sight
+post effect, and which guns' breath can be held.
 
 Each fragment is a WeaponProperties or weapons archetype copied whole out of a decoded entity
 library, with only the fields below changed or FCSE's entity data component added, so JackAll
@@ -57,6 +57,10 @@ SCOPES = {
                        "Size": 0.8},
 }
 SCOPE_KEY = "AimingOverhaul.Scope"
+# The guns whose scope sways harder and whose breath can be held to steady it: the magnifying ones,
+# not the holographic sights.
+HOLD_BREATH = ("Special.Dart_Rifle", "Special.M1903", "Primary.Dragunov", "Primary.AS50")
+HOLD_BREATH_KEY = "AimingOverhaul.HoldBreath"
 
 PROPERTIES = "WeaponProperties."
 WEAPONS = "weapons."
@@ -109,8 +113,11 @@ def edit_properties(archetype, block):
 
 def edit_weapon(archetype, block):
     scope = next((values for a, values in SCOPES.items() if of(archetype, (a,))), None)
-    if scope is not None:
-        add_entity_data(block, {SCOPE_KEY + key: value for key, value in scope.items()})
+    data = {SCOPE_KEY + key: value for key, value in (scope or {}).items()}
+    if of(archetype, HOLD_BREATH):
+        data[HOLD_BREATH_KEY] = 1
+    if data:
+        add_entity_data(block, data)
 
 
 def main(paths):
