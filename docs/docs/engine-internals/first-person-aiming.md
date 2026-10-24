@@ -337,18 +337,20 @@ and the arms and the gun stay where they were in the world while the view turns.
 ### Leaning by the bones
 
 Aiming Overhaul leans the player by bending the body's posed bones after the skeleton's job: `Spine`
-and every bone below it in the tree but `Camera`, about `Spine`'s place, round the body's forward
-axis, and sliding them to the side along its X. Every bone of the player's body is held, so it
-bends those too, once per write of the animation, and marks the skeleton changed through `vt+0x7C`
-each frame the bend moves. The view is rolled by the same angle at `+0xD4`, and the eye moved at
-`+0xE8` and `+0xF0` by how far the bend and the slide move `Camera`, in the rolled view's axes.
-Whatever else hangs from `Camera`, a long gun down the sights, has its copy of the bone's matrix
-taken back into the body's axes, bent the same way, and turned back; the camera's own is left
-alone. The slide and the bent long gun are seen in game, the long gun while turning not yet.
+and every bone below it in the tree but `Camera`, about `Spine`'s place, round the look's direction
+(the body's forward pitched by the effective look's pitch), and sliding them to the side along its
+X. Every bone of the player's body is held, so it bends those too, once per write of the animation,
+and marks the skeleton changed through `vt+0x7C` each frame the bend moves. What hangs from
+`Camera`, the first-person camera and a long gun down the sights, has its copy of the bone's matrix
+taken back into the body's axes, bent the same way, and turned back, which moves the eye. The view
+is rolled by the same angle at `+0xD4`; the roll is about the look's direction too, so a bend round
+it keeps the sights on the eye whatever the pitch.
 
 :::info[Seen in a running game]
-The view, the arms and the gun lean together. Retail GOG v1.03, from Aiming Overhaul. The muzzle
-flash, a scope's sight picture and leaning while looking up or down were not checked.
+The view, the arms and the gun lean together, slid and bent, a long gun down the sights included
+while turning. Retail GOG v1.03, from Aiming Overhaul. Bending round the body's level forward put a
+long gun's sights below the eye; the bend round the look's direction, with the camera bent rather
+than its eye moved, is not seen yet. The muzzle flash and a scope's sight picture were not checked.
 :::
 
 ### What a lean was tried as
