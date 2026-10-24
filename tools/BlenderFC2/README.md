@@ -148,6 +148,12 @@ rather than a generic JSON-to-Action script:
 bone's rotation and offset relative to its parent back out, requiring what the pack stores. Worst
 difference across four clips is `5.0e-07` on rotation and `2.0e-07` metres on offset.
 
+**Every bone of the rig is keyed at rest before the clip's keys go on.** As Blender ships, auto-keying
+keys only channels that already exist, so a bone the clip leaves alone would otherwise never take a
+key and hold any pose given it on every frame. **Only a bone the rig marks `animated_translation`
+can be moved**: on `pelvis_ref` that is `Pelvis` and `Camera`, so an arm or a hand is placed by
+rotating it. Every other bone's location is locked, because the writer would drop the move.
+
 **A character has no rig of its own.** 74 of the 78 skinned shipped meshes have no sibling
 `_ref.skeleton` and share `characters\_common\pelvis_ref.skeleton`; it is the best name match for 70
 of them and a tie for five, so `fc2model export --rig` names it rather than guessing.

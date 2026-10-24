@@ -11,7 +11,7 @@
 import bpy
 from mathutils import Matrix, Quaternion, Vector
 
-from . import import_xbg
+from . import import_xbg, rig
 from .pack import stem, timing
 
 # Blender counts frames from one, the file from zero.
@@ -133,6 +133,19 @@ def pose(clip, armature, skeleton, bank_path, suffix=""):
     for bone_id, value in _constants(clip.get("constant_translations")).items():
         offsets.setdefault(bone_id, [(0, value)])
 
+    # Every rig bone starts keyed at rest, and the clip's keys replace that. Blender
+    # auto-keys only channels that already exist, so a bone the clip leaves alone
+    # would otherwise hold any pose given it on every frame, and into the next load.
+    for bone in skeleton["bones"]:
+        pose_bone = armature.pose.bones.get(bone["name"])
+        if pose_bone is None:
+            continue
+        pose_bone.rotation_mode = "QUATERNION"
+        pose_bone.matrix_basis = Matrix()
+        pose_bone.keyframe_insert("rotation_quaternion", frame=FIRST_FRAME)
+        if rig.translates(bone):
+            pose_bone.keyframe_insert("location", frame=FIRST_FRAME)
+
     posed = missing = keys = 0
     for bone_id in sorted(set(tracks) | set(offsets)):
         pose_bone = armature.pose.bones.get(names.get(bone_id, ""))
@@ -142,7 +155,6 @@ def pose(clip, armature, skeleton, bank_path, suffix=""):
         posed += 1
         rest_offset, rest_rotation, _scale = _rest_local(pose_bone.bone).decompose()
         undo = rest_rotation.inverted()
-        pose_bone.rotation_mode = "QUATERNION"
         for frame, rotation in tracks.get(bone_id, ()):
             pose_bone.rotation_quaternion = undo @ _quaternion(rotation)
             pose_bone.keyframe_insert("rotation_quaternion", frame=frame + FIRST_FRAME)

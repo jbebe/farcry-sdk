@@ -9,6 +9,11 @@
 # The parent ids come from CSkeletonResource::SerializeBone.
 
 
+def translates(bone):
+    """Whether a clip may move this bone; any other bone only rotates."""
+    return bool(bone.get("animated_translation"))
+
+
 def parents(skeleton):
     """Each bone's parent by name, as the .skeleton has it; a root names none."""
     names = {bone["id"]: bone["name"] for bone in skeleton["bones"]}

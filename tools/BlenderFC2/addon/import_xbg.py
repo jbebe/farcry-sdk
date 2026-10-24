@@ -91,6 +91,12 @@ def build_armature(mesh, name, collection, skeleton=None):
         if bone:
             bone[PROP_SKIN_INDEX] = node["skin_index"]
             bone[PROP_EXTENT] = node["extent"]
+    # Only a bone the rig marks may translate; any other move is one the writer
+    # drops, so the viewport refuses it too.
+    if skeleton:
+        moves = {bone["name"] for bone in skeleton["bones"] if rig.translates(bone)}
+        for pose_bone in obj.pose.bones:
+            pose_bone.lock_location = (pose_bone.name not in moves,) * 3
     return obj
 
 

@@ -18,9 +18,10 @@ sys.path.insert(0, HERE)
 from _corpus import pack, require_pack
 
 import bpy
+from bpy_extras import anim_utils
 from mathutils import Quaternion, Vector
 
-from addon import import_mab, import_xbg, motion, sight
+from addon import import_mab, import_xbg, motion, rig, sight
 from addon.import_mab import FIRST_FRAME, bone_ids, timing
 from addon.pack import bank_label, bank_order, stem
 
@@ -249,6 +250,37 @@ def check_load_keeps_the_mode():
         "a load left %s active in %s" % (active.name, active.mode))
 
 
+def check_every_bone_keyable():
+    """Every rig bone has a channel to auto-key, and only a mover is free to translate."""
+    result = _ak47_with_reload()
+    body = result["actor"]["armature"]
+    skeleton = result["pack"].rig(actor=True)
+    movers = {bone["name"] for bone in skeleton["bones"] if rig.translates(bone)}
+    body.pose.bones["Jaw"].rotation_quaternion = Quaternion((0.0, 1.0, 0.0, 0.0))
+    import_mab.load(result["pack"], RELOAD, result["armature"], actor=result["actor"])
+
+    action = body.animation_data.action
+    curves = {fc.data_path for fc in anim_utils.action_get_channelbag_for_slot(
+        action, body.animation_data.action_slot).fcurves}
+    errors = 0
+    for bone in skeleton["bones"]:
+        pose_bone = body.pose.bones.get(bone["name"])
+        if pose_bone is None:
+            continue
+        moves = bone["name"] in movers
+        path = 'pose.bones["%s"].' % bone["name"]
+        if path + "rotation_quaternion" not in curves:
+            errors += fail("%s has no rotation channel" % bone["name"])
+        if moves and path + "location" not in curves:
+            errors += fail("%s may translate but has no location channel" % bone["name"])
+        if any(pose_bone.lock_location) == moves:
+            errors += fail("%s is %slocked" % (bone["name"], "" if moves else "not "))
+    if body.pose.bones["Jaw"].rotation_quaternion.angle > 1e-6:
+        errors += fail("a pose the clip does not key survived the load")
+    print("keyable: %d bones, %d free to translate" % (len(skeleton["bones"]), len(movers)))
+    return errors
+
+
 def check_bank_order():
     """A weapon's own banks list first, ahead of a scene's that merely sort earlier."""
     folder = "graphics/characters/_common/animations/"
@@ -318,6 +350,7 @@ def main():
     errors = (sum(check(*case) for case in CASES)
               + check_weapon_clip_is_chosen() + check_attachments()
               + check_actor_holds_the_model() + check_load_keeps_the_mode()
+              + check_every_bone_keyable()
               + check_bank_order() + check_eye_sees_the_sight())
     print("blender anim: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0

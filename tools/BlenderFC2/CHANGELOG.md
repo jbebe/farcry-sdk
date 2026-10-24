@@ -3,6 +3,20 @@
 Notable changes to the Far Cry 2 Blender add-on, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+- **Auto-keying keys every bone.** Blender 5.2 ships with auto-keying set to key only channels that
+  are already animated, and a loaded animation gave channels only to the bones its clip moves. Posing
+  any other bone was never keyed, and the pose held on every frame. Loading now keys every bone of
+  the rig at rest first, so every bone has a channel to key, and a pose left from an earlier load
+  is cleared.
+- **A bone the game cannot move no longer moves in Blender.** Only a bone the rig marks as
+  translating can be moved: `Pelvis` and `Camera` on a character, a gun's moving parts on a weapon.
+  Write Animation always dropped a move on any other bone, so its location is now locked and
+  those bones can only be rotated. A scene saved from an older version has to be imported again to
+  get the locks.
+
 ## [0.3.1] - 2026-10-21
 
 ### Added

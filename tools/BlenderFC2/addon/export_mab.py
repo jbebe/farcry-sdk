@@ -23,6 +23,7 @@ from mathutils import Quaternion, Vector
 
 from .import_mab import (FIRST_FRAME, _quaternion, _rest_local, _tracks, clip_for, loaded_bank,
                          timing)
+from . import rig
 from .import_xbg import PROP_ACTOR_OF
 from .pack import stem
 
@@ -207,8 +208,7 @@ def _sample(armature, skeleton, last, wanted=None):
 def _fill(clip, skeleton, sampled, last, rate, lossless, tolerance):
     """Replace the clip's four motion sections with what was sampled."""
     rotations, offsets = sampled
-    moves = {bone["id"] for bone in skeleton["bones"]
-             if bone.get("animated_translation")}
+    moves = {bone["id"] for bone in skeleton["bones"] if rig.translates(bone)}
 
     def rotation(bone_id, keys):
         if _still_rotation(keys):
