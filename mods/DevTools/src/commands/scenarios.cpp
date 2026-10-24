@@ -49,7 +49,7 @@ namespace {
          "A much lower chance than at 10 m, and than a rifleman's at 40 m."},
     };
 
-    constexpr Soldier kBarrierRifleman[] = {{kRifleman, {60, 70, 180}, kGuardPost}};
+    constexpr Soldier kBarrierRifleman[] = {{kRifleman, {100, 70, 180}, kGuardPost}};
     constexpr Scenario kBarrier[] = {
         {"Rifleman over the barrier", "9", kBarrierRifleman,
          "Crouch behind the 1.2 m barrier. Then go out to the side and lie at the edge of his view.",
@@ -83,7 +83,7 @@ namespace {
 
     constexpr Arena kArenas[] = {
         {"Duel lane", {30, 110, 270}, kDuelLane},
-        {"Barrier", {60, 37, 0}, kBarrier},
+        {"Barrier", {100, 37, 0}, kBarrier},
         {"Long wall", {64, 444, 180}, kLongWall},
         {"Suppression", {416, 60, 270}, kSuppression},
         {"Sniper", {380, 370, 317.7f}, kSniperLane},
