@@ -148,9 +148,13 @@ is Aiming Overhaul's (see [Decisions](#decisions)).
 
 | Idea | What changes | Feasibility | Status |
 | --- | --- | --- | --- |
-| **Hold breath, on sprint while aiming** | Holding sprint while down the sights steadies the aim for a few seconds, then the hands shake harder. Works on iron sights and scopes | built in Aiming Overhaul and seen working. Sprint is refused at the input listener's press site while the iron-sight bit is set ([the look](../engine-internals/first-person-aiming.md#the-look)) | requested |
+| **Hold breath, on sprint while aiming** | Holding sprint down a magnifying scope (the guns whose archetype sets `AimingOverhaul.HoldBreath`) steadies the aim for a few seconds, then the hands shake harder. The breath is drawn and let out audibly, and the heart beats while it is in | built in Aiming Overhaul and seen working. Sprint is refused at the input listener's press site while the iron-sight bit is set ([the look](../engine-internals/first-person-aiming.md#the-look)) | requested |
 | **Sway that moves the shot** | Drift from breath and stance, applied to the look the shot follows. Hold breath only matters once this exists | built in Aiming Overhaul and seen working; an offset's change added to the desired look after `UpdateLook` moves view and gun together. Where the shots went was not checked | requested |
-| **Lean** | Q and E roll the body out past cover | plugin + controls: the controls work, and the view rolls. No way found yet to lean the view, the gun, its muzzle and a scope together; six tried, see [leaning](../engine-internals/first-person-aiming.md#leaning) | requested |
+| **A breathing cycle with a natural pause** | The breath raises and lowers the aim in a cycle, about 1.5 s in, 2 s out and a 1.5 s pause at the bottom where the aim is calm, to time a shot in without a key. Holding the breath freezes the cycle where it is; after a hold the breath has to recover to half before the next | plugin, replacing the breath wave in the sway | planned |
+| **Heart rate** | 70 to 170 bpm: up with sprinting, low stamina, damage and nearby blasts, slowly down at rest. Each beat jolts the aim; a faster heart shortens the hold (4 s to 2 s), quickens the breath and widens the sway, and the heartbeat heard while holding follows it | plugin: stamina and health are counters on `CFCXCountersComponentPlayer`, blasts show as the camera shake | planned |
+| **Stances** | Crouched and still × 0.5 sway and the heart calms twice as fast; standing still × 1; crouched moving × 1.4; standing moving × 1.8; leaning a further × 1.2. Holding the breath stacks on top. No rest on cover | plugin: the crouch flag is not yet found | planned |
+| **Less random spread down a scope** | The engine's own spread down the sights (about 0.4°) shrinks on the scoped guns, so a shot goes where the reticle is when it leaves | data or plugin, not yet looked at | planned |
+| **Lean** | Q and E slide and bend the body out past cover, tapped to stay or held | built in Aiming Overhaul and seen working: the view, the arms and every gun lean together, by the skeleton's bones ([leaning by the bones](../engine-internals/first-person-aiming.md#leaning-by-the-bones)) | requested |
 | **Auto-lean at a corner** | Aiming at a corner's edge leans by itself, and the look stops where the wall starts | plugin: built on the lean and seen to find the corner and hold the look at the wall's edge, by rays from where the lean puts the eye. Its first version jittered because the eye it reasoned from was not where the lean had put it. Shelved until the lean works | requested |
 | **The gun near walls** | A gun that would go into a wall swings down out of it and cannot aim or fire | built in Aiming Overhaul and seen working | requested |
 
@@ -250,3 +254,7 @@ Each is one launch.
 - 2026-10-22: Aiming Overhaul keeps hold breath with the sway that moves the shot, the gun near walls
   and the first lean, which rolls the view alone; auto-lean is taken out, to come back once a lean
   moves the gun with the view.
+- 2026-10-24: the lean works by the skeleton's bones, and the sway becomes layers, built in this order:
+  a breathing cycle with a natural pause that holding the breath freezes, then heart rate, then
+  stances, then less random spread down a scope. There is no rest on cover. The heartbeat is heard
+  only while holding, and iron sights get the whole model at their smaller scale.
