@@ -38,15 +38,15 @@ public sealed class EntityModelLayer : IDisposable
         // Which way this mesh's card looks in model space, or zero for ordinary geometry that
         // keeps the orientation the world gave it.
         uniform vec2 billboardFacing;
-        // The engine's Z-up Euler order: yaw about Z last, over pitch then roll. Columns, so
-        // the product reads right-to-left as Rz * Rx * Ry.
+        // The engine's Euler order, as EulerXyz: about X, then Y, then Z. Columns, so the product
+        // reads right-to-left as Rz * Ry * Rx.
         mat3 spin(vec3 a)
         {
             vec3 s = sin(a), c = cos(a);
             mat3 ry = mat3(c.y, 0.0, -s.y,   0.0, 1.0, 0.0,   s.y, 0.0, c.y);
             mat3 rx = mat3(1.0, 0.0, 0.0,    0.0, c.x, s.x,   0.0, -s.x, c.x);
             mat3 rz = mat3(c.z, s.z, 0.0,   -s.z, c.z, 0.0,   0.0, 0.0, 1.0);
-            return rz * rx * ry;
+            return rz * ry * rx;
         }
         // Turns the card so it looks at the camera, about Z only - a plant leans with the
         // ground, it does not tip back when you climb a hill.

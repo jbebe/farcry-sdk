@@ -54,7 +54,7 @@ public static class RotateGizmo
     /// <summary>Turns an orientation by <paramref name="degrees"/> about a world axis, counter-clockwise
     /// looking down it, and returns it as angles again.</summary>
     public static Vector3 Apply(Vector3 angles, GizmoAxis axis, float degrees)
-        => EulerZxy.FromMatrix(EulerZxy.ToMatrix(angles) * Turn(axis, degrees));
+        => EulerXyz.FromMatrix(EulerXyz.ToMatrix(angles) * Turn(axis, degrees));
 
     /// <summary>Turns a placement by <paramref name="degrees"/> about a world axis through <paramref name="pivot"/>,
     /// counter-clockwise looking down it.</summary>

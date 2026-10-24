@@ -130,9 +130,9 @@ public class RotateGizmoTests
     public void A_turn_composes_the_world_rotation_after_the_current_one(GizmoAxis axis, float degrees)
     {
         var angles = new Vector3(12f, -33f, 71f);
-        Matrix4x4 expected = EulerZxy.ToMatrix(angles)
+        Matrix4x4 expected = EulerXyz.ToMatrix(angles)
             * Matrix4x4.CreateFromAxisAngle(TranslateGizmo.Direction(axis), degrees * (MathF.PI / 180f));
 
-        EulerZxyTests.AssertSameRotation(expected, EulerZxy.ToMatrix(RotateGizmo.Apply(angles, axis, degrees)));
+        EulerXyzTests.AssertSameRotation(expected, EulerXyz.ToMatrix(RotateGizmo.Apply(angles, axis, degrees)));
     }
 }

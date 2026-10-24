@@ -32,7 +32,7 @@ public sealed class WorldEntity
 
     public Vector3 Angles { get; set; }
 
-    public Matrix4x4 Rotation => EulerZxy.ToMatrix(Angles);
+    public Matrix4x4 Rotation => EulerXyz.ToMatrix(Angles);
 
     /// <summary>Placed this session, i.e. absent from <see cref="WorldSectorDocument.PristineRoot"/>.</summary>
     public bool IsNew { get; set; }

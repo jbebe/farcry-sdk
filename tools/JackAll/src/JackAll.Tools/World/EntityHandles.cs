@@ -92,7 +92,7 @@ public static class EntityHandles
 
     /// <summary>Which way a spot shines: its local +Y, which is why every ceiling spot is turned -90
     /// about X.</summary>
-    public static Vector3 SpotDirection(Vector3 angles) => Vector3.TransformNormal(Vector3.UnitY, EulerZxy.ToMatrix(angles));
+    public static Vector3 SpotDirection(Vector3 angles) => Vector3.TransformNormal(Vector3.UnitY, EulerXyz.ToMatrix(angles));
 
     /// <summary>The handle the ray takes, nearest first, or null when it misses them all.</summary>
     /// <param name="scaleAt">The world size that holds a fixed screen size at a point.</param>
