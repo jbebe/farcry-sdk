@@ -697,7 +697,7 @@
                   <value name="fFrequency" type="Float">15</value>
                 </object>
                 <object type="BulletSpread_IronSight">
-                  <value name="fAmplitude" type="Float">0.4</value>
+                  <value name="fAmplitude" type="Float">0</value>
                   <value name="fFrequency" type="Float">15</value>
                 </object>
                 <object type="BulletSpreadCrouch">
@@ -705,7 +705,7 @@
                   <value name="fFrequency" type="Float">15</value>
                 </object>
                 <object type="BulletSpreadCrouch_IronSight">
-                  <value name="fAmplitude" type="Float">0.38</value>
+                  <value name="fAmplitude" type="Float">0</value>
                   <value name="fFrequency" type="Float">15</value>
                 </object>
                 <object type="BulletSpreadJump">

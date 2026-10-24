@@ -1,6 +1,6 @@
 """Write the layer's weapon archetype fragments: which guns fire tracers, how fast and how long their
 streaks are, which scopes the plugin draws and how, those scopes losing the engine's iron-sight
-post effect, and which guns' breath can be held.
+post effect and random spread down the sights, and which guns' breath can be held.
 
 Each fragment is a WeaponProperties or weapons archetype copied whole out of a decoded entity
 library, with only the fields below changed or FCSE's entity data component added, so JackAll
@@ -57,6 +57,8 @@ SCOPES = {
                        "Size": 0.8},
 }
 SCOPE_KEY = "AimingOverhaul.Scope"
+# The engine's random spread down the sights, standing and crouched, which a scope loses.
+AIMED_SPREADS = ("BulletSpread_IronSight", "BulletSpreadCrouch_IronSight")
 # The guns whose scope sways harder and whose breath can be held to steady it: the magnifying ones,
 # not the holographic sights.
 HOLD_BREATH = ("Special.Dart_Rifle", "Special.M1903", "Primary.Dragunov", "Primary.AS50")
@@ -109,6 +111,9 @@ def edit_properties(archetype, block):
     if of(archetype, SCOPES):
         set_value(block, "text_IronsightFX", "")
         set_value(block, "IronsightFX", "FFFFFFFF")
+        # A scoped shot goes where the reticle is, standing or crouched.
+        for spread in AIMED_SPREADS:
+            set_value(block, "fAmplitude", "0", spread)
 
 
 def edit_weapon(archetype, block):
