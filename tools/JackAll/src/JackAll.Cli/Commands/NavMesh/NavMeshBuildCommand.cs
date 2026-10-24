@@ -1,13 +1,15 @@
 using System.ComponentModel;
 using JackAll.Cli.Infrastructure;
+using JackAll.Core;
 using JackAll.Core.Format.Fcb;
+using JackAll.Core.Vfs;
 using JackAll.Tools.World;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace JackAll.Cli.Commands.NavMesh;
 
-/// <summary>Generates a level's navmesh from its terrain and the obstacles placed on it.</summary>
+/// <summary>Generates a level's navmesh from its terrain and the collision of what is placed on it.</summary>
 /// <remarks>The input is a folder laid out like <c>data_win32</c>, such as a mod layer's
 /// <c>mods</c> folder. See docs/docs/file-formats/nvm.md.</remarks>
 public sealed class NavMeshBuildCommand : CliCommand<NavMeshBuildCommand.Settings>
@@ -29,15 +31,28 @@ public sealed class NavMeshBuildCommand : CliCommand<NavMeshBuildCommand.Setting
         [CommandOption("-o|--out <folder>")]
         [Description("Where to write, in the same layout (default: the input folder).")]
         public string? Out { get; init; }
+
+        [CommandOption("-g|--game <dir>")]
+        [Description("A Far Cry 2 install to read whatever the folder lacks from, such as the collision of retail objects.")]
+        public string? Game { get; init; }
     }
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
         string root = Path.GetFullPath(settings.Root);
         string outRoot = settings.Out is null ? root : Path.GetFullPath(settings.Out);
-        string[] files = [.. Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+        List<string> files = [.. Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
             .Select(f => Path.GetRelativePath(root, f).Replace('/', '\\'))];
-        byte[]? Read(string path) => File.Exists(Path.Combine(root, path)) ? File.ReadAllBytes(Path.Combine(root, path)) : null;
+        FcbClassDefinitions defs = BundledAssets.LoadFcbClasses();
+        using GameVfs? vfs = settings.Game is { } game
+            ? GameVfs.Load(GameInstall.TryOpen(game, out string error) ?? throw new InvalidOperationException(error),
+                BundledAssets.LoadNames(), fcbDefinitions: defs, includeFragments: false, vanillaPatch: true)
+            : null;
+        if (vfs is not null)
+        {
+            files.AddRange(vfs.Files.Values.Where(f => f.NameIsKnown).Select(f => f.Path));
+        }
+        byte[]? Read(string path) => File.Exists(Path.Combine(root, path)) ? File.ReadAllBytes(Path.Combine(root, path)) : vfs?.ReadByPath(path);
 
         IReadOnlyList<TerrainMap> maps = TerrainMap.Discover(files);
         TerrainMap map = settings.Level is { } level
@@ -54,7 +69,8 @@ public sealed class NavMeshBuildCommand : CliCommand<NavMeshBuildCommand.Setting
         }
 
         var progress = new Progress<string>(line => AnsiConsole.MarkupLine($"[dim]{line.EscapeMarkup()}[/]"));
-        (Dictionary<int, NvmSector> sectors, int obstacles) = NavMeshGenerator.BuildMap(map, world, Read, progress);
+        (Dictionary<int, NvmSector> sectors, int solids) = NavMeshGenerator.BuildMap(
+            map, world, Read, files, defs, progress);
 
         foreach ((string sdat, int id) in map.Sectors)
         {
@@ -63,7 +79,7 @@ public sealed class NavMeshBuildCommand : CliCommand<NavMeshBuildCommand.Setting
             File.WriteAllBytes(path, NvmSectorFile.Encode(sectors[id]));
         }
         AnsiConsole.MarkupLine(
-            $"{sectors.Count} sectors, {sectors.Values.Sum(s => s.Nodes.Length):N0} triangles, {obstacles} obstacles cut out.");
+            $"{sectors.Count} sectors, {sectors.Values.Sum(s => s.Nodes.Length):N0} triangles, {sectors.Values.Sum(s => s.Covers.Length):N0} covers, {solids} colliding objects.");
 
         string dep = SectorsDep.PathOf(world);
         if (Read(dep) is { } depBytes)

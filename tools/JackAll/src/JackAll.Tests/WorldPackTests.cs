@@ -31,7 +31,7 @@ public class WorldPackTests
         };
         TerrainMap map = TerrainMap.Discover(files.Keys).Single(m => m.Name == "range");
 
-        SortedDictionary<string, byte[]> built = WorldPack.BuildWorld("range", map, files.GetValueOrDefault, FcbClassDefinitions.Empty);
+        SortedDictionary<string, byte[]> built = WorldPack.BuildWorld("range", map, files.GetValueOrDefault, files.Keys, FcbClassDefinitions.Empty);
 
         FcbObject sector = FcbDocument.Deserialize(built[@"levels\range\generated\worldsectors\worldsector0.data.fcb"]);
         Assert.Equal(0u, FcbEntityFields.ReadU32(sector, WorldHashes.WorldSectorX));

@@ -7,6 +7,20 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ### Added
 - **`jackall-cli ai pack`** compiles a brain's BlackBox.AI source, as `ai unpack` writes it, into an
   `.ai.rml` workspace, so a brain can be edited as text and built into a mod layer.
+- **A navmesh for any terrain and anything standing on it.** `navmesh build` and `world pack` now
+  build the AI's navmesh with Recast from the terrain and every placed object's collision. That
+  covers hills, water, floors, roofs, ramps, stairs, bridges and trees. It leaves out slopes over
+  45° and steps over 0.3 m, and lays cover points along walls and props. `navmesh build` takes
+  `--game` to read the collision of retail objects from the install.
+
+### Fixed
+- **Tilted objects stand the way the game stands them.** An entity turned about both X and Y was
+  rotated in the wrong order on the Map tab, by the gizmo and in the navmesh. The engine applies X,
+  then Y, then Z.
+- **Collision files with a degenerate hull face open.** The HKX editor and everything reading
+  collision failed on six retail files whose hulls list a face of fewer than three corners.
+- **Cover records name their fields rightly.** Of a navmesh cover's two numbers, the first is the
+  graph id of the node it is taken from and the second its vertex, not the other way round.
 
 ## [1.6.1] - 2026-10-17
 

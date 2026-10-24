@@ -30,7 +30,8 @@ public static partial class WorldPack
     public static SortedDictionary<string, byte[]> Pack(
         IModLayer mod, GameVfs vfs, FcbClassDefinitions defs, IProgress<string>? progress = null)
     {
-        Dictionary<string, TerrainMap> maps = TerrainMap.Discover(vfs.Files.Values.Where(f => f.NameIsKnown).Select(f => f.Path))
+        List<string> knownPaths = [.. vfs.Files.Values.Where(f => f.NameIsKnown).Select(f => f.Path)];
+        Dictionary<string, TerrainMap> maps = TerrainMap.Discover(knownPaths)
             .ToDictionary(m => m.Name, StringComparer.OrdinalIgnoreCase);
         var packed = new SortedDictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
 
@@ -56,7 +57,7 @@ public static partial class WorldPack
         {
             TerrainMap map = maps.GetValueOrDefault(world)
                 ?? throw new InvalidOperationException($"{world} has no terrain, so it cannot be packed.");
-            foreach ((string path, byte[] bytes) in BuildWorld(world, map, vfs.ReadByPath, defs, progress))
+            foreach ((string path, byte[] bytes) in BuildWorld(world, map, vfs.ReadByPath, knownPaths, defs, progress))
             {
                 packed[path] = bytes;
                 built.Add(NameHash.Compute(path));
@@ -90,7 +91,7 @@ public static partial class WorldPack
         {
             TerrainMap map = maps[world];
             progress?.Report($"{world}: navmesh for the {sectorIds.Count} sectors this layer changes");
-            (Dictionary<int, NvmSector> sectors, _) = NavMeshGenerator.BuildMap(map, world, vfs.ReadByPath, progress);
+            (Dictionary<int, NvmSector> sectors, _) = NavMeshGenerator.BuildMap(map, world, vfs.ReadByPath, knownPaths, defs, progress);
             foreach ((string sdat, int id) in map.Sectors.Where(s => sectorIds.Contains(s.SectorId)))
             {
                 packed[WorldNavMesh.PathOf(sdat, id)] = NvmSectorFile.Encode(sectors[id]);
@@ -102,7 +103,8 @@ public static partial class WorldPack
     /// <summary>A new world's built files: every sector's worldsector, its entity library, its
     /// sectorsdep with every sector flagged, and its navmesh.</summary>
     public static SortedDictionary<string, byte[]> BuildWorld(
-        string world, TerrainMap map, Func<string, byte[]?> read, FcbClassDefinitions defs, IProgress<string>? progress = null)
+        string world, TerrainMap map, Func<string, byte[]?> read, IEnumerable<string> knownPaths, FcbClassDefinitions defs,
+        IProgress<string>? progress = null)
     {
         var files = new SortedDictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
         var namers = new List<FcbObject>();
@@ -151,13 +153,13 @@ public static partial class WorldPack
         SectorsDep.Mark(sectorsDep, SectorsDep.HasNavMesh, ids);
         files[depPath] = FcbDocument.Serialize(sectorsDep);
 
-        (Dictionary<int, NvmSector> navMesh, int obstacles) = NavMeshGenerator.BuildMap(
-            map, world, path => files.TryGetValue(path, out byte[]? builtBytes) ? builtBytes : read(path), progress);
+        (Dictionary<int, NvmSector> navMesh, int solids) = NavMeshGenerator.BuildMap(
+            map, world, path => files.TryGetValue(path, out byte[]? builtBytes) ? builtBytes : read(path), knownPaths, defs, progress);
         foreach ((string sdat, int id) in map.Sectors)
         {
             files[WorldNavMesh.PathOf(sdat, id)] = NvmSectorFile.Encode(navMesh[id]);
         }
-        progress?.Report($"{world}: {map.Sectors.Count} sectors, {obstacles} obstacles cut out of the navmesh");
+        progress?.Report($"{world}: navmesh over {map.Sectors.Count} sectors and {solids} colliding objects");
         return files;
     }
 }
