@@ -42,11 +42,11 @@ BANKS = {"0x00fc0b00": ("inhale", WEAK, "0"), "0x00fc0b20": ("inhale", STRONG, "
          "0x00fc0b40": ("exhale", WEAK, "0"), "0x00fc0b60": ("exhale", STRONG, "0"),
          "0x00fc0ba0": ("inhale", WEAK, "-12"), "0x00fc0bc0": ("inhale", STRONG, "-12"),
          "0x00fc0be0": ("exhale", WEAK, "-12"), "0x00fc0c00": ("exhale", STRONG, "-12")}
-# The heart beating while the breath is held: one of the beats the game plays as the player goes down
-# wounded, a little quieter than it plays them.
+# The heart beating: one of the beats the game plays as the player goes down wounded, as banks with
+# their gains in dB - a little quieter than the game plays it while the breath is held, and faint
+# down the sights while the heart races.
 WOUNDED_BEAT = ("004c661e.spk", "0x004c660d")
-HEARTBEAT = "0x00fc0b80"
-HEARTBEAT_GAIN_DB = "-8"
+HEARTBEATS = {"0x00fc0b80": "-8", "0x00fc0c20": "-20"}
 # Milliseconds each half fades in and out at the cut, so it does not click.
 FADE_MS = 5
 
@@ -106,12 +106,13 @@ def main(soundbinary):
             print(os.path.relpath(out, os.path.join(HERE, "..")))
         beat_bank, beat = WOUNDED_BEAT
         run("spk", "extract", os.path.join(work, beat_bank), beat)
-        folder = os.path.join(work, HEARTBEAT[2:])
-        run("spk", "new", HEARTBEAT, os.path.join(work, beat[2:] + ".wav"), "--unpositioned",
-            "--gain", HEARTBEAT_GAIN_DB, "--like", os.path.join(work, LIKE), "-o", folder)
-        out = os.path.join(LAYER, HEARTBEAT[2:] + ".spk")
-        run("spk", "encode", os.path.join(folder, HEARTBEAT[2:] + ".xml"), "-o", out)
-        print(os.path.relpath(out, os.path.join(HERE, "..")))
+        for event, gain in HEARTBEATS.items():
+            folder = os.path.join(work, event[2:])
+            run("spk", "new", event, os.path.join(work, beat[2:] + ".wav"), "--unpositioned",
+                "--gain", gain, "--like", os.path.join(work, LIKE), "-o", folder)
+            out = os.path.join(LAYER, event[2:] + ".spk")
+            run("spk", "encode", os.path.join(folder, event[2:] + ".xml"), "-o", out)
+            print(os.path.relpath(out, os.path.join(HERE, "..")))
     finally:
         shutil.rmtree(work)
 

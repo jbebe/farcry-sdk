@@ -6,6 +6,7 @@
 #include "ease.h"
 #include "engine/sound.h"
 #include "fcse_api.h"
+#include "heart.h"
 
 #include <algorithm>
 #include <atomic>
@@ -18,9 +19,10 @@ namespace {
     // Seconds without a sprint signal that count as let go, should the release be lost.
     constexpr float kLetGo = 0.5f;
 
-    // Seconds the breath holds, to get all of it back, and the share of it back before the next
-    // hold.
+    // Seconds the breath holds with the heart at rest, and the share of that a racing heart takes
+    // off; seconds to get all of it back, and the share of it back before the next hold.
     constexpr float kLongest = 4.0f;
+    constexpr float kRacingShorter = 0.5f;
     constexpr float kRecover = 3.0f;
     constexpr float kReady = 0.5f;
     // The sway left while held; the most past the breath's end, reached over kStrain seconds; and
@@ -52,7 +54,8 @@ namespace {
     uint8_t* g_weapon = nullptr;
     std::atomic<bool> g_needed{false};
     float g_sinceSprint = kLetGo;
-    float g_breath = kLongest;
+    // The share of the breath left to hold, and seconds strained against it after.
+    float g_breath = 1.0f;
     float g_strain = 0.0f;
     float g_steadiness = 1.0f;
     // Whether sprint is held down the scope, whether the breath drawn for it is still in, and
@@ -61,19 +64,17 @@ namespace {
     bool g_drawn = false;
     bool g_straining = false;
 
-    // The heart beating while the breath is in, the layer's bank of the game's own beat from going
-    // down wounded, every kBeat seconds, the first kFirstBeat seconds after the breath is drawn.
+    // The heart beating, the layer's banks of the game's own beat from going down wounded: while the
+    // breath is in, and fainter down the sights once the heart races this much.
     constexpr uint32_t kHeartbeat = 0x00FC0B80;
-    constexpr float kBeat = 0.8f;
-    constexpr float kFirstBeat = 0.3f;
-    float g_toBeat = 0.0f;
+    constexpr uint32_t kFaintHeartbeat = 0x00FC0C20;
+    constexpr float kHeardRacing = 0.4f;
 
     void Breathe(bool in, float stamina) {
         const bool tired = stamina < kTired;
         AimingOverhaul::Sound::Play(
             in ? (tired ? kTiredInhale : kInhale) : (tired ? kTiredExhale : kExhale), kOnoPlayer);
         g_drawn = in;
-        g_toBeat = kFirstBeat;
     }
 }
 
@@ -105,14 +106,15 @@ bool AimingOverhaul::Breath::Needed() {
 
 void AimingOverhaul::Breath::Update(float seconds, bool aiming, float stamina) {
     for (uint32_t bank : {kInhale, kTiredInhale, kExhale, kTiredExhale, kQuietInhale,
-                          kQuietTiredInhale, kQuietExhale, kQuietTiredExhale, kHeartbeat}) {
+                          kQuietTiredInhale, kQuietExhale, kQuietTiredExhale, kHeartbeat,
+                          kFaintHeartbeat}) {
         Sound::Hold(bank);
     }
     g_sinceSprint += seconds;
     const bool holding = g_enabled && g_needed && aiming && g_sinceSprint < kLetGo;
     // The breath is drawn as a hold begins, with at least kReady of it back, and let out when the
     // hold ends or the breath runs out, whichever comes first; held on past that, the hands strain.
-    if (holding && !g_holding && g_breath >= kReady * kLongest) {
+    if (holding && !g_holding && g_breath >= kReady) {
         Breathe(true, stamina);
     } else if (g_drawn && (!holding || g_breath <= 0.0f)) {
         Breathe(false, stamina);
@@ -120,24 +122,27 @@ void AimingOverhaul::Breath::Update(float seconds, bool aiming, float stamina) {
     }
     g_straining = g_straining && holding;
     g_holding = holding;
-    if (g_drawn) {
-        g_toBeat -= seconds;
-        if (g_toBeat <= 0.0f) {
+    // The heart is heard beating while the breath is held, and faintly down the sights once it
+    // races.
+    if (Heart::Beat()) {
+        if (g_drawn) {
             Sound::Play(kHeartbeat, kOnoPlayer);
-            g_toBeat += kBeat;
+        } else if (aiming && Heart::Racing() >= kHeardRacing) {
+            Sound::Play(kFaintHeartbeat, kOnoPlayer);
         }
     }
     float target;
     if (g_drawn) {
-        g_breath = (std::max)(g_breath - seconds, 0.0f);
+        const float longest = kLongest * (1.0f - kRacingShorter * Heart::Racing());
+        g_breath = (std::max)(g_breath - seconds / longest, 0.0f);
         target = kHeld;
     } else if (g_straining) {
         g_strain = (std::min)(g_strain + seconds, kStrain);
         target = 1.0f + (kStrained - 1.0f) * g_strain / kStrain;
     } else {
         g_strain = 0.0f;
-        g_breath = (std::min)(g_breath + seconds * kLongest / kRecover, kLongest);
-        target = 1.0f + (kWinded - 1.0f) * (1.0f - g_breath / kLongest);
+        g_breath = (std::min)(g_breath + seconds / kRecover, 1.0f);
+        target = 1.0f + (kWinded - 1.0f) * (1.0f - g_breath);
     }
     g_steadiness = Follow(g_steadiness, target, seconds, kFollow);
 }

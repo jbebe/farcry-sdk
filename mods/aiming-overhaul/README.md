@@ -21,16 +21,22 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   a magnifying scope; the mouse corrects it as it would a real hand. While a scope's own sight
   picture is up the eye does not drift off the gun, because that picture is a miniature right at
   the eye, but the aim still wanders under the reticle.
+- **Heart rate.** The heart beats at 70 a minute at rest and up to 170. It climbs over a few
+  seconds as stamina runs down, higher while sprinting, jumps with a wound by as much as the health
+  lost and while a blast nearby shakes the camera, and settles back over about 20 s. Each beat
+  jolts the aim up a little, more as the heart races, and a racing heart breathes up to twice as
+  fast with a quarter of the rest, sways up to 60% wider, and holds the breath for as little as
+  half as long. Down the sights a racing heart is heard, faintly.
 - **Hold breath.** With a magnifying scope, on the Dart Rifle, the M1903, the Dragunov and the AS50,
   holding sprint down the scope holds the breath instead of sprinting: the breath settles to the
   bottom of its rest within half a second and stays there, and the wander eases to a sixth of
-  itself, for 4 s. Held longer, the hands shake harder, up to two
-  and a half times the wander, until it is let go. After a hold the sway is up to half again as
-  large while the breath comes back, which takes 3 s from empty, and the next hold waits until half
-  of it is back. The breath is drawn in as the hold begins and let out as
-  it ends or after the 4 s, whichever comes first, lightly with more than half the stamina left and
-  harder below, and while it is in the heart beats every 0.8 s. Down those scopes the
-  sprint key does nothing else; down any other gun's sights it does what the game does.
+  itself, for 4 s with the heart at rest and 2 s with it racing. Held longer, the hands shake
+  harder, up to two and a half times the wander, until it is let go. After a hold the sway is up to
+  half again as large while the breath comes back, which takes 3 s from empty, and the next hold
+  waits until half of it is back. The breath is drawn in as the hold begins and let out as it ends
+  or the breath runs out, whichever comes first, lightly with more than half the stamina left and
+  harder below, and while it is in each beat of the heart is heard. Down those scopes the sprint key
+  does nothing else; down any other gun's sights it does what the game does.
 - **Lean, unfinished.** Lean left or Lean right slides the upper body 10 cm to that side and bends
   it 15° from the lower back, over a quarter of a second, so the eye moves out about 25 cm. The
   head, the view, the arms and the gun go with it. Held, the key leans for as long as it is held;

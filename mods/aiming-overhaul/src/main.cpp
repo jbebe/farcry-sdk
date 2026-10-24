@@ -15,6 +15,7 @@
 #include "engine/weapon_draws.h"
 #include "eyepiece.h"
 #include "fcse_api.h"
+#include "heart.h"
 #include "lean.h"
 #include "scope_shadow.h"
 #include "scopes.h"
@@ -112,7 +113,7 @@ namespace {
         }
     }
 
-    // The lean, the gun near walls, the breath and the eye's drift.
+    // The lean, the gun near walls, the heart, the breath and the eye's drift.
     AimingOverhaul::Aim::Adjust OnAimFrame(uint8_t* pawn, float seconds) {
         using namespace AimingOverhaul;
         g_pawn = pawn;
@@ -132,6 +133,8 @@ namespace {
             g_sightsDropped = false;
         }
         const float stamina = Pawn::Stamina(pawn);
+        Heart::Update(seconds, Pawn::Is(pawn, Pawn::kSprint), stamina, Pawn::Health(pawn),
+                      Pawn::Shake(pawn));
         Breath::Update(seconds, Aim::Aiming(), stamina);
         const Aim::Offset drift = Sway::Drift(seconds);
         // The breathing cycle is heard while aiming, to time a shot by.

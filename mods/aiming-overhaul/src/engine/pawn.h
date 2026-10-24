@@ -23,8 +23,13 @@ inline uint8_t* Data(uint8_t* pawn) {
     return Field<uint8_t*>(pawn, kData);
 }
 
-// How much stamina the pawn has left, from nought to one; one where it has none to tire.
+// How much stamina and health the pawn has left, from nought to one; one where it has no such
+// counter.
 float Stamina(uint8_t* pawn);
+float Health(uint8_t* pawn);
+
+// How far the camera is shaken off the look this frame, in radians, as a blast nearby shakes it.
+float Shake(uint8_t* pawn);
 
 inline float Pitch(uint8_t* pawn) {
     return Field<float>(Data(pawn), kEffectivePitch);
