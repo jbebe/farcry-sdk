@@ -15,9 +15,16 @@ inline constexpr ptrdiff_t kDesiredFlags = 0x144;
 inline constexpr ptrdiff_t kEffectiveFlags = 0x2D4;
 inline constexpr uint8_t kIronsight = 0x08;
 inline constexpr uint8_t kSprint = 0x40;
+// Also in the data, the effective look in radians, pitch up and yaw left.
+inline constexpr ptrdiff_t kEffectivePitch = 0x308;
+inline constexpr ptrdiff_t kEffectiveYaw = 0x310;
 
 inline uint8_t* Data(uint8_t* pawn) {
     return Field<uint8_t*>(pawn, kData);
+}
+
+inline float Pitch(uint8_t* pawn) {
+    return Field<float>(Data(pawn), kEffectivePitch);
 }
 
 inline bool Is(uint8_t* pawn, uint8_t flag) {

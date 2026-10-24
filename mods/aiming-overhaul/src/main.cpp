@@ -115,7 +115,7 @@ namespace {
         using namespace AimingOverhaul;
         g_pawn = pawn;
         g_seen = GetTickCount64();
-        const Lean::View lean = Lean::Update(pawn, seconds, !Pawn::Is(pawn, Pawn::kSprint));
+        const float roll = Lean::Update(pawn, seconds, !Pawn::Is(pawn, Pawn::kSprint));
         float forward[3];
         Aim::Forward(forward);
         Wall::Update(seconds, Aim::Eye(), forward);
@@ -130,7 +130,7 @@ namespace {
             g_sightsDropped = false;
         }
         Breath::Update(seconds, Aim::Aiming());
-        return {Sway::Drift(seconds), Wall::Down(), lean.eye, lean.roll};
+        return {Sway::Drift(seconds), Wall::Down(), roll};
     }
 
     // The sway's wander, with the look lowered as far as the gun is swung down.

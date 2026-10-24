@@ -59,13 +59,10 @@ namespace {
     constexpr ptrdiff_t kSecondBase = 4;
     // The scene camera's position in the world.
     constexpr ptrdiff_t kScenePosition = 0x08;
-    // A component's entity proxy, and the proxy's entity.
-    constexpr ptrdiff_t kComponentProxy = 0x08;
-    constexpr ptrdiff_t kProxyEntity = 0x0C;
 
-    // In CPawn's data, the effective look in radians (pitch up, yaw left), and the inventory.
-    constexpr ptrdiff_t kEffectivePitch = 0x308;
-    constexpr ptrdiff_t kEffectiveYaw = 0x310;
+    // In CPawn's data, the effective look and the inventory.
+    using AimingOverhaul::Pawn::kEffectivePitch;
+    using AimingOverhaul::Pawn::kEffectiveYaw;
     constexpr ptrdiff_t kInventory = 0x4F0;
     // Also in it, two eased fields of view, each with how far the view has gone to it: another's,
     // and the iron sights', which the weapon's transition curve takes from nought to one.
@@ -266,8 +263,7 @@ namespace {
         g_viewPitch = Field<float>(data, kEffectivePitch) + g_addedPitch;
         g_viewYaw = Field<float>(data, kEffectiveYaw);
         const AimingOverhaul::Aim::Adjust adjust = g_frame(pawn, seconds);
-        g_added = {adjust.drift.right * settled + adjust.lean.right,
-                   adjust.drift.up * settled + adjust.lean.up};
+        g_added = {adjust.drift.right * settled, adjust.drift.up * settled};
         g_addedAhead = g_raiseReach * raised;
         g_addedPitch = adjust.pitch;
         g_addedRoll = adjust.roll;
@@ -410,12 +406,6 @@ float AimingOverhaul::Aim::ScopeKick() {
 
 const float* AimingOverhaul::Aim::Eye() {
     return g_eyePlaced ? g_eye : nullptr;
-}
-
-uint8_t* AimingOverhaul::Aim::CameraEntity() {
-    uint8_t* camera = g_playerCamera();
-    uint8_t* proxy = camera != nullptr ? Field<uint8_t*>(camera, kComponentProxy) : nullptr;
-    return proxy != nullptr ? Field<uint8_t*>(proxy, kProxyEntity) : nullptr;
 }
 
 void AimingOverhaul::Aim::Forward(float out[3]) {

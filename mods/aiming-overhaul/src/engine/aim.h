@@ -23,8 +23,7 @@ struct Adjust {
     Offset drift;
     // The view's pitch over the body's, in radians, up positive.
     float pitch;
-    // The eye's move with the body as it leans, and the view's roll, in radians, right positive.
-    Offset lean;
+    // The view's roll with the body as it leans, in radians, right positive.
     float roll;
 };
 
@@ -68,9 +67,6 @@ uint32_t WeaponChanges();
 
 // Where the eye was last placed, in the world, or null before it was.
 const float* Eye();
-
-// The player's first-person camera's entity, or null.
-uint8_t* CameraEntity();
 
 // The view's direction, as a unit vector in the world: the body's look this frame, with the view's
 // pitch last added over it.
