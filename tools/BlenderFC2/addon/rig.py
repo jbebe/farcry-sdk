@@ -10,7 +10,7 @@
 
 
 def translates(bone):
-    """Whether a clip may move this bone; any other bone only rotates."""
+    """Whether the rig marks this bone as translating, the only kind a shipped clip moves."""
     return bool(bone.get("animated_translation"))
 
 

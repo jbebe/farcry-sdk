@@ -233,9 +233,8 @@ def _fill(clip, skeleton, sampled, last, rate, lossless, tolerance):
 
     def translation(bone_id, keys):
         if bone_id not in moves:
-            # The rig holds this bone at a fixed offset, and every shipped
-            # translation lands on a bone marked otherwise. Writing one here
-            # would be inventing motion the engine will not play.
+            # No shipped clip translates a bone the rig leaves unmarked. The
+            # engine would play one; this keeps to the convention.
             return None, False
         if _still_translation(keys):
             return {"bone": bone_id, "value": [keys[0].x, keys[0].y, keys[0].z]}, True

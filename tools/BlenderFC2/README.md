@@ -152,8 +152,9 @@ difference across four clips is `5.0e-07` on rotation and `2.0e-07` metres on of
 keys only channels that already exist, so a bone the clip leaves alone would otherwise never take a
 key and hold any pose given it on every frame. **Only a bone the rig marks `animated_translation`
 can be moved**: on `pelvis_ref` that is `Pelvis` and `Camera`, so an arm or a hand is placed by
-rotating it, or by an IK constraint. Every other bone's location is locked, because the writer
-would drop the move.
+rotating it, or by an IK constraint. Every other bone's location is locked, and the writer drops a
+move on one. That keeps to how every shipped clip was made rather than to an engine limit: the
+engine plays a translation on any bone a clip carries one for (see the `.mab` page).
 
 **A character has no rig of its own.** 74 of the 78 skinned shipped meshes have no sibling
 `_ref.skeleton` and share `characters\_common\pelvis_ref.skeleton`; it is the best name match for 70
@@ -226,8 +227,8 @@ Two layout rules the writer has to respect, and one choice it offers:
 - Rotations are stored in groups of eight frames whose first frame always carries a key, so frames
   0, 8, 16 … are written whatever the tolerance says.
 - Translations are dense and frame-major, so a moving bone gets a value on every frame. A bone the
-  rig does not mark `animated_translation` gets none at all — every shipped translation lands on a
-  bone marked otherwise, and writing one elsewhere is inventing motion the engine will not play.
+  rig does not mark `animated_translation` gets none at all, because no shipped clip translates one;
+  the engine would play it, but nothing here writes one yet.
 - **Key every frame** stores the pose exactly. The default keeps a frame only where dropping it
   would move the bone further than the tolerance from the interpolation of its neighbours: on the
   rifle's reload that is 44 keys against 158, and the pose comes back within `8.3e-04` of a rotation
