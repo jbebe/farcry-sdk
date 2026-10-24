@@ -313,12 +313,30 @@ read it and when the camera did, 60 frames in 60. Retail GOG v1.03, from Aiming 
 :::
 
 The camera turns with the `Camera` bone's posed matrix, and a shot's first-person origin
-(`0x10112600`) is that bone's place in the world (`0x1010D780`). Nothing here is seen in game yet.
+(`0x10112600`) is that bone's place in the world (`0x1010D780`).
+
+The first-person body is drawn lined up on its `Camera` bone. Turn every bone but `Camera` about a
+point after the skeleton's job, and the arms and the gun turn on screen. Turn `Camera` with them,
+and the arms and the gun stay where they were in the world while the view turns.
+
+### Leaning by the bones
+
+Aiming Overhaul leans the player by bending the body's posed bones after the skeleton's job: `Spine`
+and every bone below it in the tree but `Camera`, about `Spine`'s place, round the body's forward
+axis. Every bone of the player's body is held, so it bends those too, once per write of the
+animation, and marks the skeleton changed through `vt+0x7C` each frame the bend moves. The view is
+rolled by the same angle at `+0xD4`, and the eye moved at `+0xE8` and `+0xF0` by how far the bend
+moves `Camera`, in the rolled view's axes.
+
+:::info[Seen in a running game]
+The view, the arms and the gun lean together. Retail GOG v1.03, from Aiming Overhaul. The muzzle
+flash, a scope's sight picture and leaning while looking up or down were not checked.
+:::
 
 ### What a lean was tried as
 
-Aiming Overhaul tried six ways of leaning the player, each seen in game on retail GOG v1.03. None
-yet leans the view, the arms and the gun, the muzzle and a scope's sight picture together.
+Before that, Aiming Overhaul tried six ways of leaning the player, each seen in game on retail GOG
+v1.03. None leans the view, the arms and the gun, the muzzle and a scope's sight picture together.
 
 1. **The pawn entity rolled from the camera update** with `SetEuler`. The view rolls about its own
    axis and nothing else: the eye does not move, and the arms and the gun stay level with the world,

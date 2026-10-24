@@ -76,7 +76,8 @@ zoom held back until its sight picture is up, in `src/engine/aim.cpp`. The aim's
 to the look the input builds each frame, in `src/engine/look.cpp`; the breath is `src/breath.cpp`,
 and the sprint it holds is refused in the input listener, in `src/engine/sprint.cpp`. A lean is
 `src/lean.cpp`, bending the body's bones each time the engine poses them, in
-`src/engine/skeleton.cpp`, and moving the eye with the head in `src/engine/aim.cpp`. The gun near walls is `src/wall.cpp`, casting a
+`src/engine/skeleton.cpp`, and rolling the view and moving the eye with the head in
+`src/engine/aim.cpp`. The gun near walls is `src/wall.cpp`, casting a
 physics ray in `src/engine/ray.cpp`, lowering the look in `src/engine/look.cpp` and refusing the
 shot in `src/engine/fire.cpp`. The blur draws the gun's own
 depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the
