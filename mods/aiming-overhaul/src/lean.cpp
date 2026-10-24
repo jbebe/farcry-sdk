@@ -180,15 +180,16 @@ void AimingOverhaul::Lean::OnPosed(uint8_t* skeleton) {
     }
 }
 
-void AimingOverhaul::Lean::OnAttached(uint8_t* skeleton, int bone, float* model, uint8_t* entity) {
+bool AimingOverhaul::Lean::OnAttached(uint8_t* skeleton, int bone, float* model, uint8_t* entity) {
     const float bend = g_posedBend;
     if (skeleton != g_skeleton || bone != g_camera || bend == 0.0f ||
         entity == Aim::CameraEntity()) {
-        return;
+        return false;
     }
     float pivot[3];
     UnbentPivot(skeleton, bend, pivot);
     Bend(model, pivot, bend);
+    return true;
 }
 
 void AimingOverhaul::Lean::SetEnabled(bool enabled) {

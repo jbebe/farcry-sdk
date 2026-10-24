@@ -28,8 +28,8 @@ void OnPosed(uint8_t* skeleton);
 
 // Bends what is placed from the player's view bone with the body, though the bone itself stays
 // unbent: a long gun at the sights hangs from it. The camera, which hangs from it too, is left be;
-// it is rolled and moved by itself.
-void OnAttached(uint8_t* skeleton, int bone, float* model, uint8_t* entity);
+// it is rolled and moved by itself. True where it bent the copy.
+bool OnAttached(uint8_t* skeleton, int bone, float* model, uint8_t* entity);
 
 void SetEnabled(bool enabled);
 

@@ -7,6 +7,7 @@
 #include "engine/pawn.h"
 #include "fcse_api.h"
 
+#include <algorithm>
 #include <cstddef>
 
 namespace {
@@ -24,16 +25,17 @@ namespace {
     FCSE::Relocation<PoseJobFn> g_poseJob{FCSE::Uplay(0x0064EC50)};
     PoseJobFn g_originalPoseJob = nullptr;
 
-    // An entity bound to a bone placed: the bone's posed matrix copied into the child binding.
-    // __thiscall on the parent's binding, with the child's and a matrix used when there is no bone.
+    // An entity bound to a bone placed: the parent entity's matrix times the bone's posed one,
+    // copied into the child binding. __thiscall on the parent's binding, with the child's and the
+    // parent entity's matrix, its place left out where the parent binding says so.
     using PlaceChildFn = void(__fastcall*)(uint8_t* parent, void* unused, uint8_t* child,
                                            const float* matrix);
     FCSE::Relocation<PlaceChildFn> g_placeChild{FCSE::Uplay(0x005530F0)};
     PlaceChildFn g_originalPlaceChild = nullptr;
 
     // A parent binding's children, as entity proxies, how many, and its skeleton, once looked up; a
-    // child's bone index, -1 for none, and the copy of that bone's posed matrix. A proxy's entity,
-    // and the entity's binding.
+    // child's bone index, -1 for none, and its matrix from that bone. A proxy's entity, and the
+    // entity's binding.
     constexpr ptrdiff_t kParentChildren = 0x2C;
     constexpr ptrdiff_t kParentChildCount = 0x30;
     constexpr ptrdiff_t kParentSkeleton = 0xC0;
@@ -97,14 +99,46 @@ namespace {
         return nullptr;
     }
 
+    // Takes `m`, the rigid `e` times a matrix, back to that matrix, and from it again. Each is
+    // three axes of four floats, then a place.
+    void Unturn(const float* e, float* m) {
+        for (int j = 0; j < 16; j += 4) {
+            float v[3] = {m[j], m[j + 1], m[j + 2]};
+            if (j == 12) {
+                for (int k = 0; k < 3; ++k) {
+                    v[k] -= e[12 + k];
+                }
+            }
+            for (int k = 0; k < 3; ++k) {
+                m[j + k] = v[0] * e[4 * k] + v[1] * e[4 * k + 1] + v[2] * e[4 * k + 2];
+            }
+        }
+    }
+
+    void Turn(const float* e, float* m) {
+        for (int j = 0; j < 16; j += 4) {
+            const float v[3] = {m[j], m[j + 1], m[j + 2]};
+            for (int k = 0; k < 3; ++k) {
+                m[j + k] = v[0] * e[k] + v[1] * e[4 + k] + v[2] * e[8 + k] +
+                           (j == 12 ? e[12 + k] : 0.0f);
+            }
+        }
+    }
+
     void __fastcall PlaceChildDetour(uint8_t* parent, void* unused, uint8_t* child,
                                      const float* matrix) {
         g_originalPlaceChild(parent, unused, child, matrix);
         const int bone = Field<int>(child, kChildBone);
         uint8_t* skeleton = Field<uint8_t*>(parent, kParentSkeleton);
         if (bone >= 0 && skeleton != nullptr) {
-            g_attached(skeleton, bone, &Field<float>(child, kChildBoneMatrix),
-                       ChildEntity(parent, child));
+            float* placed = &Field<float>(child, kChildBoneMatrix);
+            float posed[16];
+            std::copy_n(placed, 16, posed);
+            Unturn(matrix, posed);
+            if (g_attached(skeleton, bone, posed, ChildEntity(parent, child))) {
+                Turn(matrix, posed);
+                std::copy_n(posed, 16, placed);
+            }
         }
     }
 }
