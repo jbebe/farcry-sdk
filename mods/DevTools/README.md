@@ -317,8 +317,8 @@ invincibility yourself: it is on unless the scenario tests damage to you.
 | Sniper | a 12 m wall 3 m in front of (380, 370), the sniper at (480, 480) | sniper at 150 m | 9, 15 at range |
 
 Not covered yet: **row 10**, since the range has no tall grass, and **pistols and SMGs in row 8**,
-since no soldier archetype carries one as its main weapon. The navmesh has no cover points, so
-soldiers do not take cover behind the walls.
+since no soldier archetype carries one as its main weapon. The navmesh lays cover points along every
+wall (120 of them), so soldiers should take cover behind them. That is not yet seen in game.
 
 `tmpla`'s south-west sector, x and y below 64, is flooded: it has a water plane at 32 m, 16 m above
 the ground. Nothing is placed there.
