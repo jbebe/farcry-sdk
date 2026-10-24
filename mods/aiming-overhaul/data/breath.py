@@ -33,6 +33,8 @@ STRONG = (("0x00455c57", 634), ("0x00455c58", 575), ("0x00455c59", 475),
           ("0x00455c5e", 529), ("0x00455c5f", 609), ("0x00455c60", 601))
 WEAK = (("0x00455c65", 581), ("0x00455c66", 527), ("0x00455c67", 540),
         ("0x00455c6c", 593), ("0x00455c6d", 467), ("0x00455c6e", 388))
+# The breaths whose exhale is too harsh to hear again and again; their inhales are kept.
+HARSH_EXHALES = ("0x00455c67", "0x00455c57", "0x00455c58")
 # The banks, by what they hold and its gain in dB, which src\breath.cpp plays by id: the breath held,
 # at the level it was recorded at, and the breath heard all along while aiming, quieter. The game's
 # own breathing plays 32 dB lower, through its two switches, which was very quiet for a held breath.
@@ -95,7 +97,8 @@ def main(soundbinary):
         os.makedirs(LAYER, exist_ok=True)
         for event, (half, breaths, gain) in BANKS.items():
             folder = os.path.join(work, event[2:])
-            clips = [halves[audio][half] for audio, _ in breaths]
+            clips = [halves[audio][half] for audio, _ in breaths
+                     if half == "inhale" or audio not in HARSH_EXHALES]
             run("spk", "new", event, *clips, "--unpositioned", "--gain", gain,
                 "--like", os.path.join(work, LIKE), "-o", folder)
             out = os.path.join(LAYER, event[2:] + ".spk")
