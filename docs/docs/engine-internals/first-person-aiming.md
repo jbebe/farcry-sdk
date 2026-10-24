@@ -323,10 +323,11 @@ and the arms and the gun stay where they were in the world while the view turns.
 
 Aiming Overhaul leans the player by bending the body's posed bones after the skeleton's job: `Spine`
 and every bone below it in the tree but `Camera`, about `Spine`'s place, round the body's forward
-axis. Every bone of the player's body is held, so it bends those too, once per write of the
+axis, and sliding them to the side along its X. Every bone of the player's body is held, so it bends those too, once per write of the
 animation, and marks the skeleton changed through `vt+0x7C` each frame the bend moves. The view is
 rolled by the same angle at `+0xD4`, and the eye moved at `+0xE8` and `+0xF0` by how far the bend
-moves `Camera`, in the rolled view's axes.
+and the slide move `Camera`, in the rolled view's axes. Sliding the bones moves the drawn arms and
+gun the same way bending them does.
 
 :::info[Seen in a running game]
 The view, the arms and the gun lean together. Retail GOG v1.03, from Aiming Overhaul. The muzzle
