@@ -317,6 +317,9 @@ Not covered yet: **row 10**, since the range has no tall grass, and **pistols an
 since no soldier archetype carries one as its main weapon. The navmesh has no cover points, so
 soldiers do not take cover behind the walls.
 
+`tmpla`'s south-west sector, x and y below 64, is flooded: it has a water plane at 32 m, 16 m above
+the ground. Nothing is placed there.
+
 ### Adding a window from another plugin
 
 `include/devtools_api.h` is the contract, the way `fcse_api.h` is FCSE's, and says what DevTools does
