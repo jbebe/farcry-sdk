@@ -1,0 +1,123 @@
+<object hash="0984415E">
+  <value hash="346AAB33" type="BinHex">4F415F436F7665724F626A656374732E436F7665724F626A656374732E57616C6C45726F64656431305F424B2E4D756C746900</value>
+  <value hash="B9295CC7" type="BinHex">5465737452616E67655F5375707072657373696F6E5F313200</value>
+  <value hash="052A103F" type="BinHex">70C005185480211D</value>
+  <value hash="ADC3BD93" type="BinHex">05000000</value>
+  <value hash="32D620A2" type="BinHex">0000D2430000704200808041</value>
+  <value hash="6553B60B" type="BinHex">00000000000000000000B442</value>
+  <value hash="7D7860C6" type="BinHex">0000D2430000704200808041</value>
+  <object hash="A115F62D">
+    <object hash="035982C6">
+      <value hash="4A89D015" type="BinHex">C3C3C350</value>
+      <value hash="3D8EE083" type="BinHex">FFFFFF97</value>
+      <value hash="A487B139" type="BinHex">FFFFFF97</value>
+      <value hash="D38081AF" type="BinHex">FFFFFF97</value>
+      <value hash="8FF10D55" type="BinHex">262D39FE</value>
+      <value hash="29BB0FF2" type="BinHex">C0F9E53F</value>
+      <value hash="66C60244" type="BinHex">35AAAB42</value>
+      <value hash="2371C028" type="BinHex">01</value>
+    </object>
+    <object hash="AA13F142">
+      <object hash="FE267439">
+        <object hash="366E727B">
+          <object hash="6252FDFF" />
+          <object hash="6252FDFF">
+            <object hash="DB83EFB8">
+              <object hash="A88188FA">
+                <object hash="E93DDFF8">
+                  <value hash="0DBE2127" type="BinHex">0000C842</value>
+                  <object hash="6D659EAB">
+                    <object hash="366E727B">
+                      <object hash="6252FDFF">
+                        <object hash="DB83EFB8">
+                          <value hash="69466E0D" type="BinHex">04000000</value>
+                        </object>
+                      </object>
+                      <object hash="6252FDFF">
+                        <object hash="DB83EFB8">
+                          <value hash="69466E0D" type="BinHex">05000000</value>
+                        </object>
+                      </object>
+                    </object>
+                  </object>
+                </object>
+                <object hash="E93DDFF8">
+                  <value hash="0DBE2127" type="BinHex">0000C842</value>
+                  <object hash="6D659EAB">
+                    <object hash="366E727B">
+                      <object hash="6252FDFF">
+                        <object hash="DB83EFB8">
+                          <value hash="69466E0D" type="BinHex">01000000</value>
+                        </object>
+                      </object>
+                      <object hash="6252FDFF">
+                        <object hash="DB83EFB8">
+                          <value hash="69466E0D" type="BinHex">02000000</value>
+                        </object>
+                      </object>
+                    </object>
+                  </object>
+                </object>
+                <object hash="E93DDFF8">
+                  <value hash="0DBE2127" type="BinHex">0000C842</value>
+                  <object hash="6D659EAB">
+                    <object hash="366E727B">
+                      <object hash="6252FDFF">
+                        <object hash="DB83EFB8">
+                          <value hash="69466E0D" type="BinHex">06000000</value>
+                        </object>
+                      </object>
+                      <object hash="6252FDFF">
+                        <object hash="DB83EFB8">
+                          <value hash="69466E0D" type="BinHex">07000000</value>
+                        </object>
+                      </object>
+                    </object>
+                  </object>
+                </object>
+                <object hash="E93DDFF8">
+                  <value hash="0DBE2127" type="BinHex">0000C842</value>
+                  <object hash="6D659EAB">
+                    <object hash="366E727B">
+                      <object hash="6252FDFF">
+                        <object hash="DB83EFB8">
+                          <value hash="69466E0D" type="BinHex">08000000</value>
+                        </object>
+                      </object>
+                      <object hash="6252FDFF">
+                        <object hash="DB83EFB8">
+                          <value hash="69466E0D" type="BinHex">09000000</value>
+                        </object>
+                      </object>
+                    </object>
+                  </object>
+                </object>
+                <object hash="E93DDFF8">
+                  <value hash="0DBE2127" type="BinHex">0000C842</value>
+                  <object hash="6D659EAB">
+                    <object hash="366E727B">
+                      <object hash="6252FDFF">
+                        <object hash="DB83EFB8">
+                          <value hash="69466E0D" type="BinHex">0A000000</value>
+                        </object>
+                      </object>
+                      <object hash="6252FDFF">
+                        <object hash="DB83EFB8">
+                          <value hash="69466E0D" type="BinHex">0B000000</value>
+                        </object>
+                      </object>
+                    </object>
+                  </object>
+                </object>
+              </object>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>
+    <object hash="B3A99CB8">
+      <value hash="FEE21F0D" type="BinHex">00</value>
+      <object hash="3D06591C" />
+    </object>
+  </object>
+</object>

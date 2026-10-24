@@ -1,0 +1,17 @@
+<object hash="256A1FF9">
+  <value hash="FE11D138" type="BinHex">537061776E506F696E74732E537061776E506F696E7400</value>
+  <object hash="0984415E">
+    <value hash="B9295CC7" type="BinHex">6D756C7469706C617965722E537061776E506F696E74732E537061776E506F696E7400</value>
+    <value hash="052A103F" type="BinHex">C70C000000000000</value>
+    <value hash="D2B3429E" type="BinHex">43537061776E506F696E7400</value>
+    <value hash="1875AE89" type="BinHex">0B3B9B31</value>
+    <value hash="ADC3BD93" type="BinHex">00000000</value>
+    <value hash="32D620A2" type="BinHex">000000000000000000000000</value>
+    <value hash="6553B60B" type="BinHex">000000000000008000000000</value>
+    <value hash="7D7860C6" type="BinHex">000000000000000000000000</value>
+    <value hash="B554978A" type="BinHex">00</value>
+    <value hash="12B13DF7" type="BinHex">00</value>
+    <value hash="B59F66BB" type="BinHex">FFFFFFFFFFFFFFFF</value>
+    <object hash="A115F62D" />
+  </object>
+</object>
