@@ -180,9 +180,8 @@ The smallest file is a sector header and a `main` mission layer, which is always
   `CoverObjects.WallEroded10_BK.Multi_0` from `mp_07_m_dogon`.
 - **Encode** the XML with `jackall-cli fcb encode`.
 
-`tools\TestRange\build-layer.ps1` does all of this for 14 walls. Whether they then stand in the game
-with their collision has not been seen yet: the first launch had no `HasMainSectorData`, and the
-flag is deployed but unchecked.
+`tools\TestRange\build-layer.ps1` does all of this for 14 walls, and they stand in the game where they
+were placed **(proven)**.
 
 Place entities before generating the navmesh, so the navmesh is cut around them.
 
@@ -328,7 +327,7 @@ Each run is one launch. Load a world 1 save, press `~`, and enter the line:
 | 3 | `#GameChangeWorld("newworld_clone", "2054037628277228842")` | the same as run 2 |
 | 4 | `#GameChangeWorld("newworld_tile", "2054037628277228842")` | standing on a 64 m square of ground |
 | 5 | in run 4's world: `#GameChangeWorld("world1", "2056971616016942572")` | back in world 1 |
-| 6 | `#GameChangeWorld("testrange", "2054037628277228842")` | standing on a plain, cover walls around you; spawned soldiers fight. Seen, except the walls |
+| 6 | `#GameChangeWorld("testrange", "2054037628277228842")` | standing on a plain, cover walls around you; spawned soldiers fight. Seen |
 
 DevTools' Change world command takes the same two arguments.
 
@@ -352,7 +351,6 @@ To go back, build the installed layers alone.
   `56F4F69B`)?
 - `tmpla`'s managers come from the editor's template. They are enough for soldiers to fight
   **(proven)**. Does the single-player game need managers they lack, such as weather or the economy?
-- Do placed walls stand with their collision once `HasMainSectorData` is set?
 - JackAll writes `mapsdata.fcb` 47 bytes longer than retail, because it does not share repeated
   objects. It decodes identically. Mod fragments are written the same way.
 - Saving and loading inside a new world (step 5).

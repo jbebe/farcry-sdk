@@ -43,6 +43,6 @@ DevTools' Change world command takes the same two arguments. To go back to world
 DevTools' Spawner tab spawns a squad of 1 to 6 soldiers of either faction, or one of Ubisoft's test
 soldiers, 25 m ahead and facing you.
 
-**Seen in game:** travel lands you standing on the plain, and spawned soldiers move and shoot on the
-generated navmesh. The navmesh has no cover points, so soldiers are not expected to use the walls as
+**Seen in game:** travel lands you standing on the plain among the walls, and spawned soldiers move
+and shoot on the generated navmesh. The navmesh has no cover points, so soldiers are not expected to use the walls as
 cover yet.
