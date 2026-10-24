@@ -34,8 +34,9 @@ WEAK = (("0x00455c65", 581), ("0x00455c66", 527), ("0x00455c67", 540),
 # The banks, by what they hold, which src\breath.cpp plays by id.
 BANKS = {"0x00fc0b00": ("inhale", WEAK), "0x00fc0b20": ("inhale", STRONG),
          "0x00fc0b40": ("exhale", WEAK), "0x00fc0b60": ("exhale", STRONG)}
-# The game's own breathing plays 28 dB and then 4 dB down, through its two switches.
-GAIN_DB = "-32"
+# The breaths at the level they were recorded at. The game's own breathing plays 32 dB lower, through
+# its two switches, which was very quiet for a held breath.
+GAIN_DB = "0"
 # Milliseconds each half fades in and out at the cut, so it does not click.
 FADE_MS = 5
 
