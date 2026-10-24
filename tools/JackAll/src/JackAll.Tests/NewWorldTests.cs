@@ -69,6 +69,25 @@ public class NewWorldTests
         Assert.Equal(spawn.Values[WorldHashes.HidPos], spawn.Values[WorldHashes.HidPosPrecise]);
     }
 
+    /// <summary>A new world's sector has no file until it is packed; the editor still places into it,
+    /// and saves the placement as a fragment of the file the sector will have.</summary>
+    [Fact]
+    public void An_entity_placed_in_a_new_worlds_empty_sector_saves_as_its_fragment()
+    {
+        var map = new TerrainMap { Name = "range", SectorsPerSide = 1, Sectors = [(@"levels\range\generated\sdat\sd0.sdat", 0)] };
+        Fc2World world = WorldLoader.Load(map, _ => null, everySector: true);
+        var session = new WorldEditSession(world, map.SectorsPerSide);
+        var wall = new ArchetypeDefinition(
+            "OA_CoverObjects.CoverObjects.WallBarrier01_BK.Multi", new ArchetypeLayer("library.fcb"), 0, null,
+            new FcbObject { TypeHash = WorldHashes.Entity });
+
+        session.Place(wall, new System.Numerics.Vector3(20, 30, 16), MissionLayers.MainName);
+
+        EntityFragment fragment = Assert.Single(session.Pending().Fragments);
+        Assert.Equal(@"levels\range\generated\worldsectors\worldsector0.data.fcb", fragment.ContainerPath);
+        Assert.Empty(session.LayerPlacements());
+    }
+
     [Theory]
     [InlineData("Range")]
     [InlineData("1range")]

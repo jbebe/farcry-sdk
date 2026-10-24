@@ -1,0 +1,26 @@
+<Window x:Class="JackAll.App.MapEditor.NewMapWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="New map" Width="420" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextPrimaryBrush}">
+    <StackPanel Margin="12">
+        <TextBlock Text="Name" Margin="0,0,0,4" />
+        <TextBox x:Name="NameBox" TextChanged="Name_TextChanged" AutomationProperties.AutomationId="NewMapName" />
+        <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,10" TextWrapping="Wrap"
+                   Text="Lowercase letters, digits and underscores, starting with a letter. Travel there with #GameChangeWorld(&quot;name&quot;, &quot;2054037628277228842&quot;)." />
+        <TextBlock Text="Size" Margin="0,0,0,4" />
+        <ComboBox x:Name="SizePicker" SelectedIndex="1" AutomationProperties.AutomationId="NewMapSize">
+            <ComboBoxItem Content="1 sector, 64 m" Tag="1" />
+            <ComboBoxItem Content="8 × 8 sectors, 512 m" Tag="8" />
+        </ComboBox>
+        <TextBlock x:Name="ProblemText" Style="{StaticResource Muted}" Margin="0,10,0,0" TextWrapping="Wrap" />
+        <DockPanel Margin="0,12,0,0" LastChildFill="False">
+            <Button DockPanel.Dock="Right" Content="Cancel" IsCancel="True" Margin="6,0,0,0" MinWidth="80"
+                    AutomationProperties.AutomationId="NewMapCancel" />
+            <Button x:Name="OkButton" DockPanel.Dock="Right" Content="Create" Style="{StaticResource PrimaryButton}"
+                    MinWidth="80" IsEnabled="False" IsDefault="True" Click="Ok_Click"
+                    AutomationProperties.AutomationId="NewMapOk" />
+        </DockPanel>
+    </StackPanel>
+</Window>

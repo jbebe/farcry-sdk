@@ -626,7 +626,7 @@ public sealed class GameVfs : IDisposable
         foreach ((uint hash, Dictionary<string, List<(IModLayer Layer, uint EntryHash)>> byFragment) in _fragmentOverrides)
         {
             if (byFragment.Count == 0
-                || files.ContainsKey(hash)
+                || (files.TryGetValue(hash, out VfsFile? shipped) && !IsBuildOutput(shipped))
                 || FragmentMerge.ContainerPathOf(byFragment.Values) is not { } path
                 || ContainerSkeletons.For(path) is not { } skeleton)
             {
@@ -647,6 +647,13 @@ public sealed class GameVfs : IDisposable
         }
         _skeletons = skeletons;
     }
+
+    /// <summary>A file only the live patch has, left there by the last deploy rather than shipped.</summary>
+    private bool IsBuildOutput(VfsFile file)
+        => file.SourceKind == SourceKind.Archive
+           && _vanillaPatchArchive is { } vanilla
+           && _archiveIsVolatile.GetValueOrDefault(file.SourceName)
+           && !vanilla.Contains(file.EngineHash);
 
     /// <summary>
     /// Adds fragment rows for container files that split (see <see cref="IContainerSplitter"/>) — this is what lets

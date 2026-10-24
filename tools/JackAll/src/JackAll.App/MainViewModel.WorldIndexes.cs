@@ -1,4 +1,5 @@
 using JackAll.App.FileHandlers.Fcb.FcbEditor;
+using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
 using JackAll.Core.Vfs;
@@ -13,10 +14,32 @@ public sealed partial class MainViewModel
     private readonly Dictionary<string, Task<ArchetypeIndex>> _archetypeIndexes = [];
     private readonly Dictionary<string, Task<IReadOnlyDictionary<ulong, WorldEntity>>> _placedIndexes = [];
 
-    /// <summary>The archetypes <paramref name="world"/> resolves against, as the merged filesystem stands now.</summary>
+    /// <summary>The archetypes <paramref name="world"/> resolves against, as the merged filesystem
+    /// stands now. A new world's library is cut from tmpla's full set when it is packed, so until then
+    /// it resolves against that set, then its own library fragments.</summary>
     public Task<ArchetypeIndex> ArchetypesOf(string world, IProgress<string>? progress = null)
-        => Cached(_archetypeIndexes, world.ToLowerInvariant(),
-            () => ArchetypeIndex.Load(world, ReadByPath, progress, ArchetypeIndex.DiscoverDlcLibraries(AllKnownPaths)));
+        => Cached(_archetypeIndexes, world.ToLowerInvariant(), () =>
+        {
+            IReadOnlyList<ArchetypeLayer> layers = ArchetypeIndex.LayerPaths(world, ArchetypeIndex.DiscoverDlcLibraries(AllKnownPaths));
+            return ArchetypeIndex.Load(IsNewWorld(world) ? [new ArchetypeLayer(WorldPack.FullLibrary), .. layers] : layers, ReadByPath, progress);
+        });
+
+    /// <summary>Whether <paramref name="world"/> is one a layer creates; see <see cref="NewWorld.IsNew"/>.</summary>
+    public bool IsNewWorld(string world) => _vfs is { } vfs && NewWorld.IsNew(world, vfs.ReadOriginal, ReadByPath);
+
+    /// <summary>Stages a new world's files, made from tmpla as the game ships it, in the workspace.</summary>
+    public async Task CreateWorldAsync(string name, int side)
+    {
+        GameVfs vfs = _vfs ?? throw new InvalidOperationException("The game is not loaded.");
+        FolderModLayer workspace = Workspace ?? throw new InvalidOperationException("There is no workspace.");
+        SortedDictionary<string, byte[]> files = await Task.Run(
+            () => NewWorld.Create(name, side, path => vfs.ReadOriginal(NameHash.Compute(path))));
+        foreach ((string path, byte[] bytes) in files)
+        {
+            workspace.Stage(FolderModLayer.StorageKeyOf(path), path, System.IO.Path.GetExtension(path), bytes);
+        }
+        await ReindexAsync(includeFragments: true);
+    }
 
     /// <summary>Every entity placed in <paramref name="world"/>'s sectors, by id; empty for an unknown world.</summary>
     public Task<IReadOnlyDictionary<ulong, WorldEntity>> PlacedEntitiesOf(string world)

@@ -189,7 +189,34 @@ public partial class MapTabView : UserControl
         MapPicker.SelectedIndex = 0;
         MapPicker.IsEnabled = maps.Count > 0;
         LoadButton.IsEnabled = maps.Count > 0;
+        NewMapButton.IsEnabled = true;
         StatusText.Text = maps.Count > 0 ? $"{maps.Count} maps - pick one and Load" : "No map terrain found";
+    }
+
+    /// <summary>Makes a new map's files in the workspace, then opens it.</summary>
+    private async void NewMap_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        if (_vm is null) return;
+        var dialog = new NewMapWindow(MapPicker.Items.OfType<TerrainMap>().Select(m => m.Name).ToHashSet(StringComparer.OrdinalIgnoreCase))
+        {
+            Owner = System.Windows.Window.GetWindow(this),
+        };
+        if (dialog.ShowDialog() != true) return;
+
+        NewMapButton.IsEnabled = false;
+        try
+        {
+            StatusText.Text = $"Making {dialog.MapName} from tmpla";
+            await _vm.CreateWorldAsync(dialog.MapName, dialog.Side);
+            await InitializeAsync(_vm);
+            MapPicker.SelectedItem = MapPicker.Items.OfType<TerrainMap>().FirstOrDefault(m => m.Name == dialog.MapName);
+            Load_Click(sender, e);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or System.IO.IOException)
+        {
+            StatusText.Text = ex.Message;
+            NewMapButton.IsEnabled = true;
+        }
     }
 
     private async void Load_Click(object sender, System.Windows.RoutedEventArgs e)
@@ -214,7 +241,7 @@ public partial class MapTabView : UserControl
                 SectorDetailLayers detail = SectorDetailLayers.Load(map, vm.ReadByPath);
                 TerrainLayerTable table = TerrainLayerTable.Load(map.Name, vm.ReadByPath);
                 WorldEnvironment environment = WorldEnvironment.Load(map.Name, vm.ReadByPath);
-                Fc2World world = WorldLoader.Load(map, vm.ReadByPath, progress);
+                Fc2World world = WorldLoader.Load(map, vm.ReadByPath, progress, everySector: vm.IsNewWorld(map.Name));
                 IReadOnlyList<WorldShape> shapes =
                     WorldShapes.Load(map.Name, vm.ReadByPath, FcbDefinitionsProvider.Value.Value);
                 IReadOnlyList<WorldShape> splines = WorldSplines.Load(map.Name, vm.ReadByPath);

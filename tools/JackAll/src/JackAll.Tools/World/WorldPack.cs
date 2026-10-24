@@ -34,9 +34,7 @@ public static partial class WorldPack
             .ToDictionary(m => m.Name, StringComparer.OrdinalIgnoreCase);
         var packed = new SortedDictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
 
-        // A world is new when its descriptor comes from a layer and no archive.
-        bool IsNew(string world) => vfs.ReadOriginal(NameHash.Compute(DescriptorOf(world))) is null
-            && vfs.ReadByPath(DescriptorOf(world)) is not null;
+        bool IsNew(string world) => NewWorld.IsNew(world, vfs.ReadOriginal, vfs.ReadByPath);
 
         var created = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (uint hash in mod.Hashes)
@@ -162,6 +160,4 @@ public static partial class WorldPack
         progress?.Report($"{world}: {map.Sectors.Count} sectors, {obstacles} obstacles cut out of the navmesh");
         return files;
     }
-
-    private static string DescriptorOf(string world) => $@"worlds\{world}\generated\{world}.game.xml";
 }

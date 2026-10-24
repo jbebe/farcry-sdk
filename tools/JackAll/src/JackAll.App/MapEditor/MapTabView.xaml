@@ -14,9 +14,12 @@
                 <TextBlock Text="Map:" Style="{StaticResource ToolbarLabel}" />
                 <ComboBox x:Name="MapPicker" VerticalAlignment="Center" Width="190" IsEnabled="False" Margin="0,0,8,0"
                           DisplayMemberPath="Name"
-                          ToolTip="Every map that ships terrain: the two campaign worlds, the multiplayer maps, and tmpla" />
+                          ToolTip="Every map with terrain: the two campaign worlds, the multiplayer maps, tmpla, and the new maps in your workspace" />
                 <Button x:Name="LoadButton" Content="Load" IsEnabled="False" Margin="0,0,4,0"
                         Click="Load_Click" />
+                <Button x:Name="NewMapButton" Content="New map…" IsEnabled="False" Margin="0,0,4,0"
+                        Click="NewMap_Click" AutomationProperties.AutomationId="NewMapButton"
+                        ToolTip="Makes a new map from tmpla, the editor's flat template, in your workspace. jackall-cli world pack builds it for the game" />
                 <Button x:Name="SaveButton" Content="Save" IsEnabled="False" Margin="0,0,4,0"
                         Click="Save_Click"
                         ToolTip="Stages the added, moved, edited and deleted entities into your workspace, with the archetypes and depload entries an addition needs" />

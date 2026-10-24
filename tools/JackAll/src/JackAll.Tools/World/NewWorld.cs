@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
+using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 
 namespace JackAll.Tools.World;
@@ -31,6 +32,13 @@ public static partial class NewWorld
 
     [GeneratedRegex("^[a-z][a-z0-9_]*$")]
     private static partial Regex NamePattern();
+
+    public static string DescriptorPath(string world) => $@"worlds\{world}\generated\{world}.game.xml";
+
+    /// <summary>Whether <paramref name="world"/> is a new one: its descriptor comes from a layer, and
+    /// no archive ships it.</summary>
+    public static bool IsNew(string world, Func<uint, byte[]?> readOriginal, Func<string, byte[]?> read)
+        => readOriginal(NameHash.Compute(DescriptorPath(world))) is null && read(DescriptorPath(world)) is not null;
 
     /// <summary>Whether <paramref name="name"/> can name a world: lowercase letters, digits and underscores.</summary>
     public static bool IsValidName(string name) => NamePattern().IsMatch(name) && name != Template;

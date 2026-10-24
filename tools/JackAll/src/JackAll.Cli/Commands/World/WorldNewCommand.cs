@@ -33,7 +33,7 @@ public sealed class WorldNewCommand : CliCommand<WorldNewCommand.Settings>
     {
         LayerFolder.RequireEmpty(settings.Out);
         using GameVfs vfs = GameVfs.OpenForOriginalsOnly(settings.OpenInstall(), BundledAssets.LoadNames());
-        if (vfs.ReadOriginal(NameHash.Compute($@"worlds\{settings.Name}\generated\{settings.Name}.game.xml")) is not null)
+        if (vfs.ReadOriginal(NameHash.Compute(NewWorld.DescriptorPath(settings.Name))) is not null)
         {
             throw new InvalidOperationException($"The game ships a world named {settings.Name}.");
         }
