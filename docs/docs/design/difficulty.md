@@ -4,9 +4,9 @@ sidebar_position: 5
 
 # Difficulty
 
-**Status:** in progress since 2026-10-21, built as `mods/difficulty-overhaul`. Damage, the AI's hit
-model, fire discipline, intuition and grass are built and played. How enemies should differ from one
-another is [not agreed](#open-how-enemies-differ).
+**Status:** in progress since 2026-10-21, built as `mods/difficulty-overhaul`. Fifteen features are
+built; the [finish checklist](#finish-checklist) re-checks each on the test range and lists what is
+left. How enemies should differ from one another is [not agreed](#open-how-enemies-differ).
 
 ## The goal
 
@@ -43,6 +43,56 @@ Combat that is realistic and fair:
 | 5 | Squad: suppression (near misses pin a soldier for 1 s and restart his aim); squad memory (hunted while within 15 m of where last seen); watched spot (a peek elsewhere makes him re-aim) | suppression works; memory and watched spot not yet |
 
 The mod's README lists each feature's values.
+
+## Finish checklist
+
+Every feature gets checked again, one at a time, on the test range (`tools/TestRange`) before the mod
+counts as finished. The range is a flat plain with 14 walls, so what happens there comes only from
+what is spawned into it.
+
+**Setup for every row:**
+
+- Hardcore.
+- Travel with `#GameChangeWorld("testrange", "2054037628277228842")`.
+- Soldiers come from DevTools' Spawner: a squad of 1 to 6, 25 m ahead. DevTools invincibility is on
+  unless the row tests damage to the player.
+- Read `bin\fcse.log` after each run.
+
+The range has no navmesh cover points, so soldiers do not take cover behind its walls. Whether it has
+high grass is unchecked.
+
+### Built: check on the range
+
+| # | Feature | On the range | Expect | Before |
+|---|---|---|---|---|
+| 1 | Hit log | any fight | `soldier … hit:`, `player hit:` and `shot at player:` lines | used every step |
+| 2 | Damage taken | invincibility off; take hits from one soldier | about 4 torso hits kill; a head hit far worse; no softer last bar | felt realistic |
+| 3 | Damage dealt | shoot one soldier in the torso, then one in the limbs | about 2 torso hits or 4 limb hits down him | seen |
+| 4 | Hit model: settling | step out in front of a soldier at 10 m, then at 50 m | first shots miss; the far one takes visibly longer to settle | seen |
+| 5 | Hit model: recoil and cap | stand still in the open against a full-auto soldier | hits spread out within a burst; no shot is certain, point blank included | seen |
+| 6 | Hit model: head aim | take about 20 hits | about a fifth on the head | fixed and seen |
+| 7 | Crossing | strafe across a soldier's line at 20 m, then run straight at him | far fewer hits while crossing | seen |
+| 8 | Range falloff | a squad with pistols or SMGs, at 10 m and at 40 m | much lower `chance` at 40 m than a rifle gets | assumed |
+| 9 | Fire discipline | crouch behind a 1.2 m barrier, then lie at the edge of his view | no shooting until he sees you clearly | loved |
+| 10 | Grass | crouch still in high grass, if the range has any | no shooting from 10 m out | loved |
+| 11 | Intuition | break line of sight behind a wall and move along it | he loses your true position within about 1 s and searches where you were last seen | assumed |
+| 12 | Suppression | fire near a soldier without hitting him | he stops firing for about 1 s, then misses at first; `suppressed:` lines | works |
+| 13 | Squad memory | get seen, hide behind a wall for more than 30 s | they keep hunting you; `squad memory: … still hunted` | not seen |
+| 14 | Squad memory: slipping away | from behind the wall, move more than 15 m away unseen | they lose you 10-25 s later and search | not seen |
+| 15 | Watched spot | peek twice from the same corner, then from 3 m along the wall | quick shots at the same corner; slower, missing first shots at the new spot; `watched spot: … aim restarts` | not seen |
+
+### Still to do before it is finished
+
+| # | Item | State |
+|---|---|---|
+| A | **Flanking a remembered position.** A soldier relocates around the spot where the player was last seen | first a one-launch test: does setting the relocate flag (45) from the plugin make a soldier act on it |
+| B | **The last man.** A squad's lone survivor does something: falls back, or fights on | waits on item C; the game's order sets a flag nothing reads |
+| C | **How enemies differ.** Novices and veterans, locals and mercenaries; scaling with the player's arsenal, not the story | [not agreed](#open-how-enemies-differ) |
+| D | **Tuning candidates** from the review of step 4: hold fire at each soldier's own "clear" value rather than a fixed 0.4; sighting and the speed evaluator both count the player's movement; range falloff from each weapon's own effective range; grass in combat (0.8) hides more than when alerted (0.765) | only if a test-range check asks for it |
+| E | **Damage falloff with range** for the player's hits on soldiers | skipped in step 4 |
+| F | **A vest** | postponed, below |
+| G | **The difficulty spread.** Ease Casual and Experienced and harden Infamous, from the Hardcore values | after A to C |
+| H | **Release.** CHANGELOG, README-release, the Nexus page and the release workflow | last |
 
 ## Postponed
 
