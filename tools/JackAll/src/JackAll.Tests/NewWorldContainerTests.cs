@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Numerics;
 using System.Text;
 using JackAll.Core;
 using JackAll.Core.Format;
@@ -79,7 +80,7 @@ public class NewWorldContainerTests : IDisposable
         IModLayer mapMod = ZipMod("map", ($"mods/{Container}", packed));
 
         FcbObject moved = entities[0].Node.Clone();
-        moved.Values[WorldHashes.HidPos] = Vector(1, 2, 3);
+        moved.Values[WorldHashes.HidPos] = FcbEntityFields.Vector3Bytes(new Vector3(1, 2, 3));
         IModLayer alteringMod = ZipMod("altering", ($@"mods/{Container}\{entities[0].Id}", Encoding.UTF8.GetBytes(FcbXml.ToXml(moved, _defs))));
 
         using GameVfs originals = GameVfs.OpenForOriginalsOnly(_install, TestSupport.LoadNames());
@@ -89,7 +90,7 @@ public class NewWorldContainerTests : IDisposable
         var entry = FatArchive.Read(_install.PatchFat).Entries.First(e => e.Hash == NameHash.Compute(Container));
         using var patch = DuniaArchive.Open(_install.PatchFat);
         FcbObject[] built = [.. FcbFragments.LayersOf(FcbDocument.Deserialize(patch.Read(entry))).SelectMany(l => l.Children)];
-        Assert.Equal(Vector(1, 2, 3), built.Single(e => DisEntityId(e) == DisEntityId(entities[0].Node)).Values[WorldHashes.HidPos]);
+        Assert.Equal(FcbEntityFields.Vector3Bytes(new Vector3(1, 2, 3)), built.Single(e => DisEntityId(e) == DisEntityId(entities[0].Node)).Values[WorldHashes.HidPos]);
         Assert.Contains(built, e => DisEntityId(e) == DisEntityId(entities[1].Node));
     }
 
@@ -98,9 +99,6 @@ public class NewWorldContainerTests : IDisposable
     private string Xml(FcbFragment fragment) => FcbXml.ToXml(fragment.Node, _defs);
 
     private static ulong DisEntityId(FcbObject entity) => FcbEntityFields.ReadU64(entity, WorldHashes.DisEntityId);
-
-    private static byte[] Vector(float x, float y, float z)
-        => [.. BitConverter.GetBytes(x), .. BitConverter.GetBytes(y), .. BitConverter.GetBytes(z)];
 
     private FolderModLayer Workspace(params (string FragmentId, string Xml)[] fragments)
     {

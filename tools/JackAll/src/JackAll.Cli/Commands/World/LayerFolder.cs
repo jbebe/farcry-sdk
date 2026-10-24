@@ -1,4 +1,5 @@
 using JackAll.Cli.Infrastructure;
+using JackAll.Core.Mods;
 
 namespace JackAll.Cli.Commands.World;
 
@@ -18,7 +19,7 @@ internal static class LayerFolder
     {
         foreach ((string path, byte[] bytes) in files)
         {
-            CliIO.WriteOutput(Path.Combine(folder, "mods", path), bytes);
+            CliIO.WriteOutput(Path.Combine(folder, ModPathHashing.ModsFolder, path), bytes);
         }
     }
 }

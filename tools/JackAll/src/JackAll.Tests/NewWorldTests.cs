@@ -24,7 +24,8 @@ public class NewWorldTests
         [@"levels\tmpla\generated\sdat\sd0.sdat"] = "NewWorld/sd0.sdat",
     };
 
-    private static byte[]? Read(string path) => Fixtures.TryGetValue(path, out string? fixture) ? Fixture.Read(fixture) : [];
+    /// <summary>tmpla as New map reads it: the fixtures, and a stand-in for every file only copied.</summary>
+    internal static byte[]? Read(string path) => Fixtures.TryGetValue(path, out string? fixture) ? Fixture.Read(fixture) : [];
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
@@ -62,7 +63,7 @@ public class NewWorldTests
         if (!Fixture.Present(MapsData)) return;
 
         FcbObject mapsData = FcbDocument.Deserialize(NewWorld.Create("range", 1, Read)[@"worlds\range\generated\range.mapsdata.fcb"]);
-        FcbObject spawn = Entities(mapsData).Single(e => FcbEntityFields.ReadString(e, WorldHashes.HidName) == "SpawnPoint_0");
+        FcbObject spawn = FcbFragments.LayersOf(mapsData).SelectMany(l => l.Children).Single(e => FcbEntityFields.ReadString(e, WorldHashes.HidName) == "SpawnPoint_0");
 
         // tmpla's plain is flat at 16.0625 m.
         Assert.Equal(new System.Numerics.Vector3(32, 32, 16.0625f + 0.44f), FcbEntityFields.ReadVector3(spawn, WorldHashes.HidPos));
@@ -96,6 +97,4 @@ public class NewWorldTests
     public void A_name_the_engine_cannot_take_is_refused(string name)
         => Assert.Throws<ArgumentException>(() => NewWorld.Create(name, 1, Read));
 
-    private static IEnumerable<FcbObject> Entities(FcbObject node)
-        => node.Children.SelectMany(c => c.TypeHash == WorldHashes.Entity ? [c] : Entities(c));
 }

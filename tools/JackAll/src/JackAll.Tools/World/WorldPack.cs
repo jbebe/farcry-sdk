@@ -34,7 +34,7 @@ public static partial class WorldPack
             .ToDictionary(m => m.Name, StringComparer.OrdinalIgnoreCase);
         var packed = new SortedDictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
 
-        bool IsNew(string world) => NewWorld.IsNew(world, vfs.ReadOriginal, vfs.ReadByPath);
+        bool IsNew(string world) => NewWorld.IsNew(vfs, world);
 
         var created = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (uint hash in mod.Hashes)
@@ -144,7 +144,7 @@ public static partial class WorldPack
         files[libraryPath] = library;
         progress?.Report($"{world}: {cut.Children.Sum(g => g.Children.Count):N0} archetypes kept of {full.Children.Sum(g => g.Children.Count):N0}");
 
-        string depPath = $@"worlds\{world}\generated\{world}.sectorsdep.fcb";
+        string depPath = SectorsDep.PathOf(world);
         FcbObject sectorsDep = FcbDocument.Deserialize(read(depPath) ?? throw new InvalidOperationException($"{depPath} is missing."));
         IReadOnlySet<int> ids = map.Sectors.Select(s => s.SectorId).ToHashSet();
         SectorsDep.Mark(sectorsDep, SectorsDep.HasMainSectorData, ids);

@@ -32,9 +32,10 @@ public static class LibraryCut
         var prototypes = new Dictionary<string, FcbObject>(StringComparer.OrdinalIgnoreCase);
         foreach (FcbObject prototype in full.Children.SelectMany(g => g.Children))
         {
+            // The last declaration of a name is the one the engine keeps.
             if (NameOf(prototype) is { } name)
             {
-                prototypes.TryAdd(name, prototype);
+                prototypes[name] = prototype;
             }
         }
 
@@ -70,9 +71,7 @@ public static class LibraryCut
     }
 
     private static string? NameOf(FcbObject prototype)
-        => prototype.TypeHash == WorldHashes.EntityPrototype
-           && prototype.Children.FirstOrDefault(c => c.TypeHash == WorldHashes.Entity) is { } entity
-           && FcbEntityFields.ReadString(entity, WorldHashes.HidName) is { Length: > 0 } name
+        => prototype.TypeHash == WorldHashes.EntityPrototype && FcbFragments.FirstEntityName(prototype) is { Length: > 0 } name
             ? name
             : null;
 
@@ -81,10 +80,9 @@ public static class LibraryCut
     {
         foreach (byte[] value in node.Values.Values)
         {
-            if (value.Length > 1 && value[^1] == 0
-                && prototypes.ContainsKey(Encoding.UTF8.GetString(value, 0, value.Length - 1)))
+            if (value.Length > 1 && value[^1] == 0 && Encoding.UTF8.GetString(value, 0, value.Length - 1) is var text && prototypes.ContainsKey(text))
             {
-                yield return Encoding.UTF8.GetString(value, 0, value.Length - 1);
+                yield return text;
             }
         }
         foreach (FcbObject child in node.Children)

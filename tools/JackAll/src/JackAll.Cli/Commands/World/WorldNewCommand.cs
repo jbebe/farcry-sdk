@@ -3,6 +3,7 @@ using JackAll.Cli.Commands.Mod;
 using JackAll.Cli.Infrastructure;
 using JackAll.Core;
 using JackAll.Core.Format;
+using JackAll.Core.Mods;
 using JackAll.Core.Vfs;
 using JackAll.Tools.World;
 using Spectre.Console;
@@ -32,8 +33,8 @@ public sealed class WorldNewCommand : CliCommand<WorldNewCommand.Settings>
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
         LayerFolder.RequireEmpty(settings.Out);
-        using GameVfs vfs = GameVfs.OpenForOriginalsOnly(settings.OpenInstall(), BundledAssets.LoadNames());
-        if (vfs.ReadOriginal(NameHash.Compute(NewWorld.DescriptorPath(settings.Name))) is not null)
+        using GameVfs vfs = ModPipeline.OpenOriginals(settings.OpenInstall(), BundledAssets.LoadNames());
+        if (NewWorld.Ships(vfs, settings.Name))
         {
             throw new InvalidOperationException($"The game ships a world named {settings.Name}.");
         }

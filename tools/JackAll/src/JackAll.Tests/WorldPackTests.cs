@@ -1,4 +1,3 @@
-using System.Text;
 using JackAll.Core.Format.Fcb;
 using JackAll.Tools.World;
 
@@ -25,11 +24,11 @@ public class WorldPackTests
     [Fact]
     public void A_packed_world_has_every_sector_flagged_and_its_library_cut()
     {
-        Dictionary<string, byte[]> files = new(NewWorld.Create("range", 1, NewWorldTestsRead), StringComparer.OrdinalIgnoreCase)
+        if (!Fixture.Present("NewWorld/sd0.sdat")) return;
+        Dictionary<string, byte[]> files = new(NewWorld.Create("range", 1, NewWorldTests.Read), StringComparer.OrdinalIgnoreCase)
         {
             [WorldPack.FullLibrary] = FcbDocument.Serialize(Library(("weapons", "weapons.Primary.AK47", null), ("OA_Props", "OA_Props.Barrel", null))),
         };
-        if (!files.ContainsKey(@"levels\range\generated\sdat\sd0.sdat") || files[@"levels\range\generated\sdat\sd0.sdat"].Length == 0) return;
         TerrainMap map = TerrainMap.Discover(files.Keys).Single(m => m.Name == "range");
 
         SortedDictionary<string, byte[]> built = WorldPack.BuildWorld("range", map, files.GetValueOrDefault, FcbClassDefinitions.Empty);
@@ -46,15 +45,6 @@ public class WorldPackTests
         Assert.True(built.ContainsKey(@"levels\range\generated\nv\sectors\nv_0.nvm"));
     }
 
-    private static byte[]? NewWorldTestsRead(string path)
-        => path.EndsWith(@"tmpla.game.xml") ? Fixture.Read("NewWorld/tmpla.game.xml")
-            : path.EndsWith(@"tmpla.mapsdata.fcb") ? Fixture.Read("NewWorld/tmpla.mapsdata.fcb")
-            : path.EndsWith(@"tmpla.sectorsdep.fcb") ? Fixture.Read("NewWorld/tmpla.sectorsdep.fcb")
-            : path.EndsWith(@"nv.nvm") ? Fixture.Read("NewWorld/nv.nvm")
-            : path.EndsWith(@"sector0.desc.fcb") ? Fixture.Read("NewWorld/sector0.desc.fcb")
-            : path.EndsWith(@"sd0.sdat") ? Fixture.Read("NewWorld/sd0.sdat") ?? []
-            : [];
-
     /// <summary>A library root of groups, each prototype naming at most one other archetype.</summary>
     private static FcbObject Library(params (string Group, string Name, string? Names)[] prototypes)
     {
@@ -62,12 +52,12 @@ public class WorldPackTests
         foreach (var group in prototypes.GroupBy(p => p.Group))
         {
             var node = new FcbObject { TypeHash = WorldHashes.EntityLibrary };
-            node.Values[WorldHashes.Name] = Text(group.Key);
+            node.Values[WorldHashes.Name] = FcbEntityFields.StringBytes(group.Key);
             foreach ((_, string name, string? names) in group)
             {
                 FcbObject entity = names is null ? new FcbObject { TypeHash = WorldHashes.Entity } : Named(names);
                 entity.TypeHash = WorldHashes.Entity;
-                entity.Values[WorldHashes.HidName] = Text(name);
+                entity.Values[WorldHashes.HidName] = FcbEntityFields.StringBytes(name);
                 var prototype = new FcbObject { TypeHash = WorldHashes.EntityPrototype };
                 prototype.Children.Add(entity);
                 node.Children.Add(prototype);
@@ -80,13 +70,11 @@ public class WorldPackTests
     private static FcbObject Named(string archetype)
     {
         var node = new FcbObject { TypeHash = WorldHashes.Entity };
-        node.Values[WorldHashes.TplCreatureType] = Text(archetype);
+        node.Values[WorldHashes.TplCreatureType] = FcbEntityFields.StringBytes(archetype);
         return node;
     }
 
     private static IEnumerable<string> Names(FcbObject library)
         => library.Children.SelectMany(g => g.Children)
             .Select(p => FcbEntityFields.ReadString(p.Children.Single(), WorldHashes.HidName));
-
-    private static byte[] Text(string text) => [.. Encoding.UTF8.GetBytes(text), 0];
 }

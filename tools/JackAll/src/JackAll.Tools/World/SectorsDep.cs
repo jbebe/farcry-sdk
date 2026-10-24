@@ -12,6 +12,8 @@ public static class SectorsDep
     public const string HasMainSectorData = "HasMainSectorData";
     public const string HasNavMesh = "HasNavMesh";
 
+    public static string PathOf(string world) => $@"worlds\{world}\generated\{world}.sectorsdep.fcb";
+
     private static readonly uint WorldSector = FcbClassDefinitions.Crc32Ascii("CWorldSector");
     private static readonly uint SectorId = FcbClassDefinitions.Crc32Ascii("SectorId");
 

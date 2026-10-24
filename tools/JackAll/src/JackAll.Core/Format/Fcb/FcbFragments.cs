@@ -328,7 +328,8 @@ public static class FcbFragments
             ? EntityFragmentId(disEntityId)
             : Sanitize(hidName) + "." + EntityFragmentId(disEntityId);
 
-    internal static string FirstEntityName(FcbObject prototype)
+    /// <summary>A library prototype's archetype name: its first entity's <c>hidName</c>, or empty.</summary>
+    public static string FirstEntityName(FcbObject prototype)
     {
         foreach (FcbObject child in prototype.Children)
         {

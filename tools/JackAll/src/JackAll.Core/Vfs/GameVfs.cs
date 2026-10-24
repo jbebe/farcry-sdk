@@ -255,7 +255,7 @@ public sealed class GameVfs : IDisposable
         NameDatabase names,
         GameCache? cache = null,
         IProgress<string>? progress = null)
-        => OpenArchives(install, names, cache, fcbDefinitions: null, progress);
+        => OpenArchives(install, names, cache, fcbDefinitions: null, progress, vanillaPatch: false);
 
     private static GameVfs OpenArchives(
         GameInstall install,
@@ -263,7 +263,7 @@ public sealed class GameVfs : IDisposable
         GameCache? cache,
         FcbClassDefinitions? fcbDefinitions,
         IProgress<string>? progress,
-        bool vanillaPatch = false)
+        bool vanillaPatch)
     {
         var vfs = new GameVfs(names, cache ?? new GameCache(), fcbDefinitions ?? FcbClassDefinitions.Empty);
         vfs._volatileFat = Path.GetFullPath(install.PatchFat);

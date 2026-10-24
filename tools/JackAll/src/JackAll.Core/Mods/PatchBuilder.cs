@@ -172,15 +172,16 @@ public static class PatchBuilder
         // The vanilla ancestor every contributing layer's edit is merged against - needed even when
         // a whole-file override also exists for this container, since the merge ancestor is always
         // "what Revert would restore." Decoded once per container, shared by every fragment in it.
-        // A container no archive has merges against the lowest layer shipping it whole, as a mod of
-        // another mod's map does; one no layer ships is a new world's, built by `world pack` instead.
         var vanillaByContainer = containersWithFragments
             .AsParallel()
             .Select(kv =>
             {
                 string containerPath = RecoveredContainerPath(kv.Key, kv.Value.Values);
+                wholeFileOverrides.TryGetValue(kv.Key, out List<IModLayer>? shippers);
+                // No archive has it: a mod of another mod's map merges against the lowest whole copy,
+                // and a container no layer ships either is a new world's, which `world pack` builds.
                 byte[]? vanillaBytes = readArchiveOriginal?.Invoke(kv.Key)
-                    ?? (wholeFileOverrides.TryGetValue(kv.Key, out var owners) ? owners[0].Read(kv.Key) : null);
+                    ?? (shippers is null ? null : shippers.Count == 1 ? replacements[kv.Key] : shippers[0].Read(kv.Key));
                 if (vanillaBytes is null)
                 {
                     unpacked.Enqueue(containerPath);
@@ -188,7 +189,7 @@ public static class PatchBuilder
                 }
                 IContainerSplitter splitter = ContainerFormats.For(containerPath, defs);
                 // A whole-file copy the fragments land on, replacing its own version of their entries.
-                (IModLayer Owner, IContainerTree Tree)? copy = wholeFileOverrides.TryGetValue(kv.Key, out var shippers)
+                (IModLayer Owner, IContainerTree Tree)? copy = shippers is not null
                     ? (shippers[^1], splitter.Open(replacements[kv.Key]))
                     : null;
                 return (ContainerHash: kv.Key, VanillaBytes: vanillaBytes, Splitter: splitter,

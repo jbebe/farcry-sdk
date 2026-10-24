@@ -81,13 +81,12 @@ public static class WorldVegetation
         Parallel.For(0, map.Sectors.Count, index =>
         {
             (string path, int sectorId) = map.Sectors[index];
-            string sectorDir = path.Replace(@"\sdat\", @"\worldsectors\", StringComparison.OrdinalIgnoreCase);
             var found = new List<VegetationInstance>();
 
             // Note the naming: the far file has an underscore before its id, the near file does not.
             foreach (string file in new[] { $"landmarkfar_{sectorId}.data.fcb", $"landmarknear{sectorId}.data.fcb" })
             {
-                string landmark = sectorDir.Replace($"sd{sectorId}.sdat", file, StringComparison.OrdinalIgnoreCase);
+                string landmark = WorldLoader.SectorFilePath(path, sectorId, file);
                 // TryDeserialize because the path is a derived probe - see WorldLoader.Load.
                 if (readByPath(landmark) is not { } bytes || FcbDocument.TryDeserialize(bytes) is not { } root)
                 {

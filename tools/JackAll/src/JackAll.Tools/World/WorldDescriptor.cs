@@ -10,10 +10,12 @@ namespace JackAll.Tools.World;
 /// </summary>
 public static class WorldDescriptor
 {
+    public static string PathOf(string world) => $@"worlds\{world}\generated\{world}.game.xml";
+
     /// <summary>The parsed root, or null when the world ships no descriptor or an unreadable one.</summary>
     public static XElement? TryLoadRoot(string mapName, Func<string, byte[]?> readByPath)
     {
-        byte[]? bytes = readByPath($@"worlds\{mapName}\generated\{mapName}.game.xml");
+        byte[]? bytes = readByPath(PathOf(mapName));
         return bytes is null ? null : Parse(bytes);
     }
 

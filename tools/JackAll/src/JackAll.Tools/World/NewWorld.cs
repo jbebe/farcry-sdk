@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
+using JackAll.Core.Vfs;
 
 namespace JackAll.Tools.World;
 
@@ -15,7 +16,6 @@ public static partial class NewWorld
 {
     public const string Template = "tmpla";
     public const int TemplateSide = 8;
-    public const float SectorSize = 64;
 
     /// <summary>The sizes a world can take. Sector ids are the template's, numbered 8 to a row, so a
     /// grid between would need every sector renumbered, inside its .sdat too.</summary>
@@ -33,12 +33,12 @@ public static partial class NewWorld
     [GeneratedRegex("^[a-z][a-z0-9_]*$")]
     private static partial Regex NamePattern();
 
-    public static string DescriptorPath(string world) => $@"worlds\{world}\generated\{world}.game.xml";
+    /// <summary>Whether the game itself ships a world named <paramref name="world"/>.</summary>
+    public static bool Ships(GameVfs vfs, string world) => vfs.ReadOriginal(NameHash.Compute(WorldDescriptor.PathOf(world))) is not null;
 
-    /// <summary>Whether <paramref name="world"/> is a new one: its descriptor comes from a layer, and
-    /// no archive ships it.</summary>
-    public static bool IsNew(string world, Func<uint, byte[]?> readOriginal, Func<string, byte[]?> read)
-        => readOriginal(NameHash.Compute(DescriptorPath(world))) is null && read(DescriptorPath(world)) is not null;
+    /// <summary>Whether <paramref name="world"/> is a new one: a layer has its descriptor, and the game does not.</summary>
+    public static bool IsNew(GameVfs vfs, string world)
+        => !Ships(vfs, world) && vfs.Files.ContainsKey(NameHash.Compute(WorldDescriptor.PathOf(world)));
 
     /// <summary>Whether <paramref name="name"/> can name a world: lowercase letters, digits and underscores.</summary>
     public static bool IsValidName(string name) => NamePattern().IsMatch(name) && name != Template;
@@ -87,12 +87,12 @@ public static partial class NewWorld
         }
         descriptor = descriptor.Replace(nomad, $@"Levels\{name}\{name}.nomad")
             .Replace($"CountX=\"{TemplateSide}\" CountY=\"{TemplateSide}\"", $"CountX=\"{side}\" CountY=\"{side}\"");
-        files[$@"{world}generated\{name}.game.xml"] = new UTF8Encoding(false).GetBytes(descriptor);
+        files[WorldDescriptor.PathOf(name)] = new UTF8Encoding(false).GetBytes(descriptor);
 
         FcbObject sectorsDep = FcbDocument.Deserialize(FromTemplate($@"{srcWorld}generated\tmpla.sectorsdep.fcb"));
         RenameGroup(sectorsDep, name);
         SectorsDep.Keep(sectorsDep, sectors);
-        files[$@"{world}generated\{name}.sectorsdep.fcb"] = FcbDocument.Serialize(sectorsDep);
+        files[SectorsDep.PathOf(name)] = FcbDocument.Serialize(sectorsDep);
 
         files[$@"{world}generated\nv\sectors\nv.nvm"] = NavMeshIndex(FromTemplate($@"{srcWorld}generated\nv\sectors\nv.nvm"), side);
 
@@ -141,21 +141,18 @@ public static partial class NewWorld
     {
         TerrainMap map = TerrainMap.Discover(files.Keys).Single(m => m.Name == name);
         WorldTerrain terrain = WorldTerrain.Load(map, path => files.GetValueOrDefault(path));
-        float middle = side * SectorSize / 2;
+        float middle = side * NavMeshGenerator.SectorSize / 2;
         return new Vector3(middle, middle, terrain.HeightMetersAt(middle, middle) + SpawnAboveGround);
     }
 
     private static void MoveSpawnPoint(FcbObject mapsData, Vector3 at)
     {
-        FcbObject point = Entities(mapsData).SingleOrDefault(e => FcbEntityFields.ReadString(e, WorldHashes.HidName) == "SpawnPoint_0")
+        FcbObject point = FcbFragments.LayersOf(mapsData).SelectMany(l => l.Children)
+            .SingleOrDefault(e => FcbEntityFields.ReadString(e, WorldHashes.HidName) == "SpawnPoint_0")
             ?? throw new InvalidDataException($"{Template}'s mapsdata has no SpawnPoint_0.");
-        byte[] position = [.. BitConverter.GetBytes(at.X), .. BitConverter.GetBytes(at.Y), .. BitConverter.GetBytes(at.Z)];
-        point.Values[WorldHashes.HidPos] = position;
-        point.Values[WorldHashes.HidPosPrecise] = [.. position];
+        point.Values[WorldHashes.HidPos] = FcbEntityFields.Vector3Bytes(at);
+        point.Values[WorldHashes.HidPosPrecise] = FcbEntityFields.Vector3Bytes(at);
     }
-
-    private static IEnumerable<FcbObject> Entities(FcbObject node)
-        => node.Children.SelectMany(c => c.TypeHash == WorldHashes.Entity ? [c] : Entities(c));
 
     /// <summary>A sector's descriptor lists the other sectors; a smaller world keeps only its own.</summary>
     private static byte[] CutDescriptor(byte[] bytes, IReadOnlySet<int> sectors)
@@ -178,7 +175,7 @@ public static partial class NewWorld
         byte[] index = [.. template.AsSpan(0, 0x50), .. new byte[4 * side * side], .. template.AsSpan(template.Length - 24)];
         foreach (int at in new[] { 0x18, 0x1C, 0x34, 0x38 })
         {
-            BitConverter.TryWriteBytes(index.AsSpan(at), side * SectorSize);
+            BitConverter.TryWriteBytes(index.AsSpan(at), side * NavMeshGenerator.SectorSize);
         }
         BitConverter.TryWriteBytes(index.AsSpan(0x40), side);
         BitConverter.TryWriteBytes(index.AsSpan(0x44), side);

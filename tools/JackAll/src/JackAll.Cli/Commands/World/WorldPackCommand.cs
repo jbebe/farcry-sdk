@@ -2,6 +2,7 @@ using System.ComponentModel;
 using JackAll.Cli.Commands.Mod;
 using JackAll.Cli.Infrastructure;
 using JackAll.Core;
+using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
 using JackAll.Core.Vfs;
 using JackAll.Tools.World;
@@ -37,17 +38,19 @@ public sealed class WorldPackCommand : CliCommand<WorldPackCommand.Settings>
     {
         LayerFolder.RequireEmpty(settings.Out);
         IModLayer mod = ModPipeline.OpenLayer(settings.Mod);
-        var progress = new SyncProgress(line => AnsiConsole.MarkupLine($"[dim]{line.EscapeMarkup()}[/]"));
+        var progress = new SyncProgress(JsonOutput.Report);
+        FcbClassDefinitions defs = BundledAssets.LoadFcbClasses();
+        GameInstall install = settings.OpenInstall();
 
         using GameVfs vfs = GameVfs.Load(
-            settings.OpenInstall(), BundledAssets.LoadNames(), fcbDefinitions: BundledAssets.LoadFcbClasses(), vanillaPatch: true);
+            install, BundledAssets.LoadNames(), GameCache.Load(install.CacheFile), defs, vanillaPatch: true);
         vfs.Rebuild([.. settings.Bases.Select(ModPipeline.OpenLayer), mod]);
-        SortedDictionary<string, byte[]> packed = WorldPack.Pack(mod, vfs, BundledAssets.LoadFcbClasses(), progress);
+        SortedDictionary<string, byte[]> packed = WorldPack.Pack(mod, vfs, defs, progress);
 
         LayerFolder.Write(settings.Out, packed);
         foreach (string plugin in mod.PluginPaths)
         {
-            CliIO.WriteOutput(Path.Combine(settings.Out, "plugins", plugin), mod.ReadPlugin(plugin));
+            CliIO.WriteOutput(Path.Combine(settings.Out, ModPathHashing.PluginsFolder, plugin), mod.ReadPlugin(plugin));
         }
         if (settings.Json)
         {

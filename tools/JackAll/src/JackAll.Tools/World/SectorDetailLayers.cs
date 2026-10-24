@@ -32,10 +32,7 @@ public sealed class SectorDetailLayers
 
         Parallel.ForEach(map.Sectors, item =>
         {
-            // The descriptor sits beside the terrain, one folder over.
-            string path = item.Path
-                .Replace(@"\sdat\", @"\worldsectors\", StringComparison.OrdinalIgnoreCase)
-                .Replace($"sd{item.SectorId}.sdat", $"sector{item.SectorId}.desc.fcb", StringComparison.OrdinalIgnoreCase);
+            string path = WorldLoader.SectorFilePath(item.Path, item.SectorId, $"sector{item.SectorId}.desc.fcb");
             // TryDeserialize because the path is a derived probe - see WorldLoader.Load.
             if (readByPath(path) is not { } bytes || FcbDocument.TryDeserialize(bytes) is not { } root)
             {

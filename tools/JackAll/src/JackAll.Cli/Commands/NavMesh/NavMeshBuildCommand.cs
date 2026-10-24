@@ -65,7 +65,7 @@ public sealed class NavMeshBuildCommand : CliCommand<NavMeshBuildCommand.Setting
         AnsiConsole.MarkupLine(
             $"{sectors.Count} sectors, {sectors.Values.Sum(s => s.Nodes.Length):N0} triangles, {obstacles} obstacles cut out.");
 
-        string dep = $@"worlds\{world}\generated\{world}.sectorsdep.fcb";
+        string dep = SectorsDep.PathOf(world);
         if (Read(dep) is { } depBytes)
         {
             FcbObject sectorsDep = FcbDocument.Deserialize(depBytes);
