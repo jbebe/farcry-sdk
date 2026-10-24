@@ -136,12 +136,7 @@ namespace {
         Heart::Update(seconds, Pawn::Is(pawn, Pawn::kSprint), stamina, Pawn::Health(pawn),
                       Pawn::Shake(pawn));
         Breath::Update(seconds, Aim::Aiming(), stamina);
-        const Aim::Offset drift = Sway::Drift(seconds);
-        // The breathing cycle is heard while aiming, to time a shot by.
-        if (Sway::Turned() != Sway::Turn::None && Aim::Aiming()) {
-            Breath::Hear(Sway::Turned() == Sway::Turn::In, stamina);
-        }
-        return {drift, Wall::Down(), roll};
+        return {Sway::Drift(seconds), Wall::Down(), roll};
     }
 
     // The sway's wander, with the look lowered as far as the gun is swung down.

@@ -11,8 +11,7 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
 
 - **Sway.** The hands drift with a breath and a slow wander. Each breath draws in for 1.5 s,
   lifting the aim, lets out for 2 s, and rests for 1.5 s at the bottom, where the wander calms to
-  under half: the moment to time a shot in. While aiming each breath is heard, quietly, as it draws
-  in and as it lets out, so the rest can be timed by ear. Down the iron sights the eye drifts a couple of
+  under half: the moment to time a shot in. Down the iron sights the eye drifts a couple of
   millimetres off the gun with them. The rear sight is nearer the eye than the front one, so it
   moves further and the two drift out of line. Shots still go where the engine sends them: down the
   view, which is where the barrel points. Sights that have drifted out of line are wrong by the same
