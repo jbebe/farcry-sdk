@@ -3,6 +3,7 @@
 
 #include "fcse_api.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace {
@@ -26,11 +27,18 @@ namespace {
     constexpr ptrdiff_t kCounterLeft = 0x10;
     constexpr ptrdiff_t kCounterMost = 0x14;
     constexpr ptrdiff_t kShake = 0x128;
+    // An entity's place in the world, the last row of its 4x4.
+    constexpr ptrdiff_t kEntityPlace = 0x60;
+
+    // The pawn's entity, or null.
+    uint8_t* Entity(uint8_t* pawn) {
+        uint8_t* proxy = Field<uint8_t*>(pawn, kPawnProxy);
+        return proxy != nullptr ? Field<uint8_t*>(proxy, kProxyEntity) : nullptr;
+    }
 
     // The pawn entity's component of the class named by `id`, or null.
     uint8_t* Component(uint8_t* pawn, const uint32_t& id) {
-        uint8_t* proxy = g_lock && g_getComponent ? Field<uint8_t*>(pawn, kPawnProxy) : nullptr;
-        uint8_t* entity = proxy != nullptr ? Field<uint8_t*>(proxy, kProxyEntity) : nullptr;
+        uint8_t* entity = g_lock && g_getComponent ? Entity(pawn) : nullptr;
         if (entity == nullptr) {
             return nullptr;
         }
@@ -53,6 +61,16 @@ float AimingOverhaul::Pawn::Stamina(uint8_t* pawn) {
 
 float AimingOverhaul::Pawn::Health(uint8_t* pawn) {
     return Left(pawn, kHealth);
+}
+
+bool AimingOverhaul::Pawn::Position(uint8_t* pawn, float out[3]) {
+    uint8_t* entity = Entity(pawn);
+    if (entity == nullptr) {
+        return false;
+    }
+    const float* place = &Field<float>(entity, kEntityPlace);
+    std::copy_n(place, 3, out);
+    return true;
 }
 
 float AimingOverhaul::Pawn::Shake(uint8_t* pawn) {

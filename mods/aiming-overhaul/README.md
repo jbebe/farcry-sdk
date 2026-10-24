@@ -26,6 +26,11 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   jolts the aim up a little, more as the heart races, and a racing heart breathes up to twice as
   fast with a quarter of the rest, sways up to 60% wider, and holds the breath for as little as
   half as long. Down the sights a heart past about 95 a minute is heard, faintly.
+- **Stance.** Crouched and still, the sway, heart jolts included, is half what it is standing still;
+  moving, it is 1.4 times crouched and 1.8 times standing, eased in from walking pace with a creep
+  still counting as still. Crouched and still the heart settles twice as fast, crouched and moving
+  it holds where it is, and walking upright keeps it a little up. A lean keeps the stance it leans
+  from, and nothing counts as resting the gun.
 - **Hold breath.** With a magnifying scope, on the Dart Rifle, the M1903, the Dragunov and the AS50,
   holding sprint down the scope holds the breath instead of sprinting: the breath settles to the
   bottom of its rest within half a second and stays there, and the wander eases to a sixth of
@@ -110,7 +115,7 @@ view is drawn in `src/engine/second_view.cpp` and laid down as the gun's colour 
 ricochets are in `src/tracers.cpp`, and the streak is drawn in `src/streak.cpp` with
 `src/shaders/tracer.fx`, in the draws that bind the Direct3D texture the engine's tracer texture
 resource holds. Which guns fire tracers, their speed and their streaks' longest length, and the
-scopes the plugin draws losing the engine's iron-sight effect, are weapon data: `WeaponProperties`
+scopes the plugin draws losing the engine's iron-sight effect and its random spread down the sights, so a scoped shot goes where the reticle is, are weapon data: `WeaponProperties`
 fragments under `layer\mods\`. So is each scope's reticle, eyepiece shape, rim, lens centre, raise
 and size: `AimingOverhaul.Scope*` keys in a `CFCSEDataComponent` on its `weapons` archetype, the
 reticle as an image path under `bin\plugins` with `ScopeReticleLit` for one lit from within. A gun

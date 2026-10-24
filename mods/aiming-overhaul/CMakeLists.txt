@@ -76,6 +76,7 @@ add_library(AimingOverhaul SHARED
   "src/scope_shadow.cpp"
   "src/scopes.cpp"
   "src/surroundings.cpp"
+  "src/stance.cpp"
   "src/sway.cpp"
   "src/streak.cpp"
   "src/tracers.cpp"

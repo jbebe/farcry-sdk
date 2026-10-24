@@ -19,6 +19,7 @@
 #include "lean.h"
 #include "scope_shadow.h"
 #include "scopes.h"
+#include "stance.h"
 #include "streak.h"
 #include "surroundings.h"
 #include "sway.h"
@@ -113,7 +114,7 @@ namespace {
         }
     }
 
-    // The lean, the gun near walls, the heart, the breath and the eye's drift.
+    // The lean, the gun near walls, the stance, the heart, the breath and the eye's drift.
     AimingOverhaul::Aim::Adjust OnAimFrame(uint8_t* pawn, float seconds) {
         using namespace AimingOverhaul;
         g_pawn = pawn;
@@ -133,6 +134,7 @@ namespace {
             g_sightsDropped = false;
         }
         const float stamina = Pawn::Stamina(pawn);
+        Stance::Update(pawn, seconds);
         Heart::Update(seconds, Pawn::Is(pawn, Pawn::kSprint), stamina, Pawn::Health(pawn),
                       Pawn::Shake(pawn));
         Breath::Update(seconds, Aim::Aiming(), stamina);

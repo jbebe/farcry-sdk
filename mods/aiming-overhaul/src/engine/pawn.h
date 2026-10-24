@@ -15,9 +15,12 @@ inline constexpr ptrdiff_t kDesiredFlags = 0x144;
 inline constexpr ptrdiff_t kEffectiveFlags = 0x2D4;
 inline constexpr uint8_t kIronsight = 0x08;
 inline constexpr uint8_t kSprint = 0x40;
-// Also in the data, the effective look in radians, pitch up and yaw left.
+// Also in the data, the effective look in radians, pitch up and yaw left, and the effective stance,
+// one while crouched.
 inline constexpr ptrdiff_t kEffectivePitch = 0x308;
 inline constexpr ptrdiff_t kEffectiveYaw = 0x310;
+inline constexpr ptrdiff_t kEffectiveStance = 0x374;
+inline constexpr int32_t kCrouched = 1;
 
 inline uint8_t* Data(uint8_t* pawn) {
     return Field<uint8_t*>(pawn, kData);
@@ -30,6 +33,13 @@ float Health(uint8_t* pawn);
 
 // How far the camera is shaken off the look this frame, in radians, as a blast nearby shakes it.
 float Shake(uint8_t* pawn);
+
+// Where the pawn stands in the world, or false where it has no entity.
+bool Position(uint8_t* pawn, float out[3]);
+
+inline bool Crouched(uint8_t* pawn) {
+    return Field<int32_t>(Data(pawn), kEffectiveStance) == kCrouched;
+}
 
 inline float Pitch(uint8_t* pawn) {
     return Field<float>(Data(pawn), kEffectivePitch);

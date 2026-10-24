@@ -3,6 +3,7 @@
 #include "heart.h"
 
 #include "ease.h"
+#include "stance.h"
 
 #include <algorithm>
 #include <cmath>
@@ -12,8 +13,9 @@ namespace {
     constexpr float kRest = 70.0f;
     constexpr float kFastest = 170.0f;
     // Where exertion takes the heart: all the way with no stamina left, and this far past the
-    // stamina's own share while sprinting.
+    // stamina's own share while sprinting and while walking upright.
     constexpr float kSprinting = 0.25f;
+    constexpr float kWalking = 0.1f;
     // Seconds for the heart to climb toward that, and to settle back down from above it.
     constexpr float kClimb = 2.5f;
     constexpr float kSettle = 20.0f;
@@ -35,9 +37,19 @@ namespace {
 
 void AimingOverhaul::Heart::Update(float seconds, bool sprinting, float stamina, float health,
                                    float shake) {
-    const float exertion = std::clamp(1.0f - stamina + (sprinting ? kSprinting : 0.0f), 0.0f, 1.0f);
+    // Walking upright keeps the heart up a little; crouched it settles twice as fast standing
+    // still, and holds where it is on the move.
+    const float upright = 1.0f - Stance::Crouched();
+    const float exertion = std::clamp(1.0f - stamina + (sprinting ? kSprinting : 0.0f) +
+                                          kWalking * Stance::Moving() * upright,
+                                      0.0f, 1.0f);
     const float target = kRest + (kFastest - kRest) * exertion;
-    g_rate = Follow(g_rate, target, seconds, g_rate < target ? kClimb : kSettle);
+    const float calming = (1.0f - Stance::Moving()) * (2.0f - upright);
+    if (g_rate < target) {
+        g_rate = Follow(g_rate, target, seconds, kClimb);
+    } else if (calming > 0.0f) {
+        g_rate = Follow(g_rate, target, seconds * calming, kSettle);
+    }
     // A wound, but not the health coming back, the first health seen, or a new life; and the camera
     // shaking.
     if (g_health >= 0.0f && health < g_health) {
