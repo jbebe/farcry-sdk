@@ -151,30 +151,6 @@ public static class NavMeshGenerator
             obstacles, id => water.TryGetValue(id, out float level) ? level : NvmSector.NoWater), obstacles.Count);
     }
 
-    /// <summary>
-    /// Sets <c>HasNavMesh</c> on these sectors' entries of a <c>sectorsdep.fcb</c>, the flag without
-    /// which the game never opens a sector's navmesh file. Returns how many entries it set.
-    /// </summary>
-    public static int MarkHasNavMesh(FcbObject sectorsDep, IReadOnlySet<int> sectorIds)
-    {
-        uint worldSector = FcbClassDefinitions.Crc32Ascii("CWorldSector");
-        uint sectorId = FcbClassDefinitions.Crc32Ascii("SectorId");
-        uint hasNavMesh = FcbClassDefinitions.Crc32Ascii("HasNavMesh");
-        int marked = 0;
-        foreach (FcbObject group in sectorsDep.Children)
-        {
-            foreach (FcbObject sector in group.Children.Where(s => s.TypeHash == worldSector))
-            {
-                if (FcbEntityFields.ReadU32(sector, sectorId) is uint id && sectorIds.Contains((int)id))
-                {
-                    sector.Values[hasNavMesh] = [1];
-                    marked++;
-                }
-            }
-        }
-        return marked;
-    }
-
     private sealed class Cell(float x, float y, float size)
     {
         public readonly float X = x, Y = y, Size = size;

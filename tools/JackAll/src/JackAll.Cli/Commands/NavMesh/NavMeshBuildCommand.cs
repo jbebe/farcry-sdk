@@ -69,7 +69,7 @@ public sealed class NavMeshBuildCommand : CliCommand<NavMeshBuildCommand.Setting
         if (Read(dep) is { } depBytes)
         {
             FcbObject sectorsDep = FcbDocument.Deserialize(depBytes);
-            int marked = NavMeshGenerator.MarkHasNavMesh(sectorsDep, sectors.Keys.ToHashSet());
+            int marked = SectorsDep.Mark(sectorsDep, SectorsDep.HasNavMesh, sectors.Keys.ToHashSet());
             string depOut = Path.Combine(outRoot, dep);
             CliIO.WriteOutput(depOut, FcbDocument.Serialize(sectorsDep));
             AnsiConsole.MarkupLine($"HasNavMesh set on {marked} of {sectors.Count} sectors in {dep.EscapeMarkup()}.");

@@ -104,7 +104,7 @@ public class NavMeshGeneratorTests
         var root = new FcbObject();
         root.Children.Add(group);
 
-        Assert.Equal(1, NavMeshGenerator.MarkHasNavMesh(root, new HashSet<int> { 1 }));
+        Assert.Equal(1, SectorsDep.Mark(root, SectorsDep.HasNavMesh, new HashSet<int> { 1 }));
         // The hash LoadDep reads the flag by.
         Assert.Equal([1], group.Children[1].Values[0xC637A176]);
         Assert.False(group.Children[0].Values.ContainsKey(0xC637A176));
