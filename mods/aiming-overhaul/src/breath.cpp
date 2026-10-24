@@ -4,10 +4,12 @@
 #include "breath.h"
 
 #include "ease.h"
+#include "engine/sound.h"
 #include "fcse_api.h"
 
 #include <algorithm>
 #include <atomic>
+#include <initializer_list>
 
 namespace {
     // The keyboard's sprint, sent every frame the key is held, and its release.
@@ -28,6 +30,16 @@ namespace {
     // Seconds for the sway to follow.
     constexpr float kFollow = 0.25f;
 
+    // The breath drawn as the hold begins and let out as it ends, weaker while stamina is above
+    // kTired and stronger below: the layer's banks, written by data\breath.py, played as the
+    // player's own voice.
+    constexpr uint32_t kInhale = 0x00FC0B00;
+    constexpr uint32_t kTiredInhale = 0x00FC0B20;
+    constexpr uint32_t kExhale = 0x00FC0B40;
+    constexpr uint32_t kTiredExhale = 0x00FC0B60;
+    constexpr float kTired = 0.5f;
+    constexpr int32_t kOnoPlayer = 6;
+
     std::atomic<bool> g_enabled{true};
     // The weapon in hand as last followed, and whether its breath can be held.
     uint8_t* g_weapon = nullptr;
@@ -36,6 +48,7 @@ namespace {
     float g_breath = kLongest;
     float g_strain = 0.0f;
     float g_steadiness = 1.0f;
+    bool g_holding = false;
 }
 
 void AimingOverhaul::Breath::OnSignal(uint32_t signal) {
@@ -64,9 +77,18 @@ bool AimingOverhaul::Breath::Needed() {
     return g_needed;
 }
 
-void AimingOverhaul::Breath::Update(float seconds, bool aiming) {
+void AimingOverhaul::Breath::Update(float seconds, bool aiming, float stamina) {
+    for (uint32_t bank : {kInhale, kTiredInhale, kExhale, kTiredExhale}) {
+        Sound::Hold(bank);
+    }
     g_sinceSprint += seconds;
     const bool holding = g_enabled && g_needed && aiming && g_sinceSprint < kLetGo;
+    if (holding != g_holding) {
+        g_holding = holding;
+        const bool tired = stamina < kTired;
+        Sound::Play(holding ? (tired ? kTiredInhale : kInhale) : (tired ? kTiredExhale : kExhale),
+                    kOnoPlayer);
+    }
     float target;
     if (holding && g_breath > 0.0f) {
         g_breath = (std::max)(g_breath - seconds, 0.0f);

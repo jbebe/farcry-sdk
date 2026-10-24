@@ -23,6 +23,9 @@ inline uint8_t* Data(uint8_t* pawn) {
     return Field<uint8_t*>(pawn, kData);
 }
 
+// How much stamina the pawn has left, from nought to one; one where it has none to tire.
+float Stamina(uint8_t* pawn);
+
 inline float Pitch(uint8_t* pawn) {
     return Field<float>(Data(pawn), kEffectivePitch);
 }

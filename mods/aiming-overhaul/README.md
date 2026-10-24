@@ -21,8 +21,9 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   holding sprint down the scope holds the breath instead of sprinting: the sway eases to a sixth of
   itself and stays there for 4 s. Held longer, the hands shake harder, up to two and a half times
   the sway, until it is let go. After a hold the sway is up to half again as large while the breath
-  comes back, which takes 3 s from empty. Down those scopes the sprint key does nothing else; down
-  any other gun's sights it does what the game does.
+  comes back, which takes 3 s from empty. The breath is drawn in as the hold begins and let out as
+  it ends, lightly with more than half the stamina left and harder below. Down those scopes the
+  sprint key does nothing else; down any other gun's sights it does what the game does.
 - **Lean, unfinished.** Lean left or Lean right slides the upper body 10 cm to that side and bends
   it 15° from the lower back, over a quarter of a second, so the eye moves out about 25 cm. The
   head, the view, the arms and the gun go with it. Held, the key leans for as long as it is held;
@@ -102,7 +103,9 @@ fragments under `layer\mods\`. So is each scope's reticle, eyepiece shape, rim, 
 and size: `AimingOverhaul.Scope*` keys in a `CFCSEDataComponent` on its `weapons` archetype, the
 reticle as an image path under `bin\plugins` with `ScopeReticleLit` for one lit from within. A gun
 whose breath can be held, and whose scope sways harder, has `AimingOverhaul.HoldBreath` set to 1
-there. Both are written by `data\fragments.py`. The engine side is in
+there. Both are written by `data\fragments.py`. The breaths are the game's own stamina breathing,
+cut into inhales and exhales by `data\breath.py` into four banks, `layer\mods\soundbinary\00fc0b*.spk`,
+played in `src/breath.cpp` through `src/engine/sound.cpp`. The engine side is in
 [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md),
 [bullet tracers](../../docs/docs/engine-internals/bullet-tracers.md) and
 [presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).
@@ -148,6 +151,7 @@ scopes' lost iron-sight effect, whatever the scope settings.
 .\build.ps1                                     # x86 release -> layer\plugins\aiming-overhaul\
 .\build.ps1 -Install "C:\Games\Far Cry 2\bin"   # and build the layer into the game with jackall-cli
 python data\fragments.py world1.xml world2.xml dlc1.xml   # rewrite the weapon data, see the script
+python data\breath.py <worlds soundbinary folder>        # rebuild the breath banks, see the script
 ```
 
 `fxc`, from the Windows SDK, compiles the shaders at build time. `-Install` builds the game's patch

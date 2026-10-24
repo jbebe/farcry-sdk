@@ -17,8 +17,9 @@ void FollowWeapon(uint8_t* weapon);
 // Whether the weapon in hand's breath can be held, its scope swaying harder for it.
 bool Needed();
 
-// Once a frame, with whether the player is down the sights or a scope.
-void Update(float seconds, bool aiming);
+// Once a frame, with whether the player is down the sights or a scope and how much stamina they
+// have left, from nought to one, which decides how hard the breath is drawn and let out.
+void Update(float seconds, bool aiming, float stamina);
 
 // How much of the sway is left: below one while held, above it once the breath runs out or after.
 float Steadiness();

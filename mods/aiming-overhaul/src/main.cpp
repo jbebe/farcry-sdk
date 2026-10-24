@@ -10,6 +10,7 @@
 #include "engine/ray.h"
 #include "engine/second_view.h"
 #include "engine/skeleton.h"
+#include "engine/sound.h"
 #include "engine/sprint.h"
 #include "engine/weapon_draws.h"
 #include "eyepiece.h"
@@ -130,7 +131,7 @@ namespace {
             }
             g_sightsDropped = false;
         }
-        Breath::Update(seconds, Aim::Aiming());
+        Breath::Update(seconds, Aim::Aiming(), Pawn::Stamina(pawn));
         return {Sway::Drift(seconds), Wall::Down(), roll};
     }
 
@@ -178,6 +179,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     AimingOverhaul::Fire::Install(&RefuseShot);
     AimingOverhaul::Input::Install(&OnSignal);
     AimingOverhaul::Sprint::Install(&AimingOverhaul::Breath::HoldsSprint);
+    AimingOverhaul::Sound::Install();
     AimingOverhaul::Skeleton::Install(&AimingOverhaul::Lean::OnPosed,
                                       &AimingOverhaul::Lean::OnAttached);
 
