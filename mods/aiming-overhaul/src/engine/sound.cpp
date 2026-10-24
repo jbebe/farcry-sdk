@@ -32,7 +32,7 @@ namespace {
         uint32_t id;
         SoundResourceRef ref;
     };
-    constexpr size_t kMostHeld = 8;
+    constexpr size_t kMostHeld = 16;
 
     bool g_ready = false;
     std::array<Held, kMostHeld> g_held = {};
@@ -53,8 +53,15 @@ void AimingOverhaul::Sound::Install() {
 
 void AimingOverhaul::Sound::Hold(uint32_t id) {
     const auto held = g_held.begin() + g_heldCount;
-    if (!g_ready || g_heldCount == kMostHeld ||
-        std::any_of(g_held.begin(), held, [id](const Held& h) { return h.id == id; })) {
+    if (!g_ready || std::any_of(g_held.begin(), held, [id](const Held& h) { return h.id == id; })) {
+        return;
+    }
+    if (g_heldCount == kMostHeld) {
+        static bool s_logged = false;
+        if (!s_logged) {
+            s_logged = true;
+            FCSE::Logf("sound: no room to hold bank 0x%08X loaded, so it never plays", id);
+        }
         return;
     }
     Held& hold = g_held[g_heldCount++];
