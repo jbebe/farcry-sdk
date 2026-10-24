@@ -16,6 +16,7 @@ using JackAll.Cli.Commands.Sav;
 using JackAll.Cli.Commands.Sbao;
 using JackAll.Cli.Commands.Spk;
 using JackAll.Cli.Commands.Shader;
+using JackAll.Cli.Commands.World;
 using JackAll.Cli.Commands.Xbg;
 using JackAll.Cli.Commands.Xbt;
 using JackAll.Cli.Commands.Xref;
@@ -312,6 +313,21 @@ app.Configure(config =>
                 "Generate a level's navmesh from its terrain and the colliding entities placed on it, and "
                 + "mark its sectors HasNavMesh in the world's sectorsdep.fcb so the game loads it.")
             .WithExample("navmesh", "build", @"tools\TestRange\layer\mods", "--level", "testrange");
+    });
+
+    // --- New worlds ------------------------------------------------------
+    config.AddBranch("world", world =>
+    {
+        world.AddCommand<WorldNewCommand>("new")
+            .WithDescription(
+                "Write a new world's files, made from tmpla, the editor's flat template, into a layer: "
+                + "everything but what world pack builds from the content.")
+            .WithExample("world", "new", "testrange", "--game", @"C:\Games\Far Cry 2", "--out", @"tmp\testrange");
+        world.AddCommand<WorldPackCommand>("pack")
+            .WithDescription(
+                "Write a mod in the form it ships: each new world it creates built from its fragments into "
+                + "worldsectors, an entity library, sector flags and a navmesh; everything else copied.")
+            .WithExample("world", "pack", "workspace", "--game", @"C:\Games\Far Cry 2", "--out", @"tmp\packed");
     });
 
     // --- depload.dat dependency index ------------------------------------

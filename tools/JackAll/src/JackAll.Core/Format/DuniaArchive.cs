@@ -68,7 +68,9 @@ public sealed class DuniaArchive : IDisposable
 
     /// <summary>Opens an explicit .fat/.dat pair, bypassing <see cref="Open(string)"/>'s
     /// extension-swap convention.</summary>
-    public static DuniaArchive Open(string fatPath, string datPath)
+    /// <param name="name">The archive's <see cref="Name"/>, when it is not the index file's own - a
+    /// renamed backup standing in for the archive it backs up.</param>
+    public static DuniaArchive Open(string fatPath, string datPath, string? name = null)
     {
         var index = FatArchive.Read(fatPath);
         // Read-only, shared, and deletable out from under us: the game may well be running while the
@@ -89,7 +91,7 @@ public sealed class DuniaArchive : IDisposable
             datPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
 
         return new DuniaArchive(
-            Path.GetFileNameWithoutExtension(fatPath), fatPath, index, data);
+            name ?? Path.GetFileNameWithoutExtension(fatPath), fatPath, index, data);
     }
 
     private static string ComputeFolder(string fatPath)

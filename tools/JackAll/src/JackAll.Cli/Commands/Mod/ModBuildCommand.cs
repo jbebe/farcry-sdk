@@ -57,6 +57,7 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
                 pluginsDeployed = result.Plugins.Deployed,
                 pluginsRemoved = result.Plugins.Removed,
                 pluginCollisions = result.Plugins.SkippedForeign,
+                unpacked = result.Unpacked,
                 layers = layers.Select((layer, index) => new
                 {
                     index,

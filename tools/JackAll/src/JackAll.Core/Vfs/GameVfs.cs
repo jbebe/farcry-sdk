@@ -215,15 +215,19 @@ public sealed class GameVfs : IDisposable
     /// passes false, so the folder tree and file list can show up before the `.fcb` fragment pass runs
     /// — see <see cref="LoadFragments"/>.
     /// </summary>
+    /// <param name="vanillaPatch">Mount the vanilla backup in place of the live patch, so the view is
+    /// the game plus the layers exactly as a build would make it, with nothing left over from the
+    /// last deploy.</param>
     public static GameVfs Load(
         GameInstall install,
         NameDatabase names,
         GameCache? cache = null,
         FcbClassDefinitions? fcbDefinitions = null,
         IProgress<string>? progress = null,
-        bool includeFragments = true)
+        bool includeFragments = true,
+        bool vanillaPatch = false)
     {
-        GameVfs vfs = OpenArchives(install, names, cache, fcbDefinitions, progress);
+        GameVfs vfs = OpenArchives(install, names, cache, fcbDefinitions, progress, vanillaPatch);
 
         // No cache invalidation check here on purpose - the base game's archives never change for
         // the life of an install, so a cache that loaded without error is trusted outright. If the
@@ -258,7 +262,8 @@ public sealed class GameVfs : IDisposable
         NameDatabase names,
         GameCache? cache,
         FcbClassDefinitions? fcbDefinitions,
-        IProgress<string>? progress)
+        IProgress<string>? progress,
+        bool vanillaPatch = false)
     {
         var vfs = new GameVfs(names, cache ?? new GameCache(), fcbDefinitions ?? FcbClassDefinitions.Empty);
         vfs._volatileFat = Path.GetFullPath(install.PatchFat);
@@ -268,7 +273,9 @@ public sealed class GameVfs : IDisposable
             progress?.Report($"Reading {Path.GetFileName(fat)}…");
             try
             {
-                vfs._archives.Add(DuniaArchive.Open(fat));
+                vfs._archives.Add(vanillaPatch && install.HasVanillaBackup && Path.GetFullPath(fat) == vfs._volatileFat
+                    ? DuniaArchive.Open(install.VanillaPatchFat, install.VanillaPatchDat, Path.GetFileNameWithoutExtension(fat))
+                    : DuniaArchive.Open(fat));
             }
             catch (Exception ex)
             {

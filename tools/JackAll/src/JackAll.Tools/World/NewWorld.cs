@@ -14,8 +14,11 @@ public static partial class NewWorld
 {
     public const string Template = "tmpla";
     public const int TemplateSide = 8;
-    public const int MaxSide = TemplateSide;
     public const float SectorSize = 64;
+
+    /// <summary>The sizes a world can take. Sector ids are the template's, numbered 8 to a row, so a
+    /// grid between would need every sector renumbered, inside its .sdat too.</summary>
+    public static IReadOnlyList<int> Sides { get; } = [1, TemplateSide];
 
     /// <summary>Travel puts the player at the stored position with no ground snap, so the spawn point
     /// sits just above the ground, as retail start points do.</summary>
@@ -48,9 +51,9 @@ public static partial class NewWorld
         {
             throw new ArgumentException($"'{name}' is not a world name: lowercase letters, digits and underscores, starting with a letter.");
         }
-        if (side is < 1 or > MaxSide)
+        if (!Sides.Contains(side))
         {
-            throw new ArgumentOutOfRangeException(nameof(side), $"A world is 1 to {MaxSide} sectors a side.");
+            throw new ArgumentOutOfRangeException(nameof(side), $"A world is {string.Join(" or ", Sides)} sectors a side.");
         }
 
         byte[] FromTemplate(string path) => read(path) ?? throw new InvalidOperationException($"{path} is missing; a new world copies it from {Template}.");

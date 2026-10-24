@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using JackAll.Core.Format.Fcb;
+using JackAll.Core.Mods;
 
 namespace JackAll.Tools.World;
 
@@ -9,28 +10,32 @@ namespace JackAll.Tools.World;
 /// </summary>
 public static class WorldLoader
 {
+    /// <summary>One of a sector's files in <c>worldsectors\</c>, beside its terrain one folder over -
+    /// the same derivation the descriptor loader uses, so the level folder never has to be recomputed.</summary>
+    public static string SectorFilePath(string sdatPath, int sectorId, string file)
+        => sdatPath.Replace(@"\sdat\", @"\worldsectors\", StringComparison.OrdinalIgnoreCase)
+            .Replace($"sd{sectorId}.sdat", file, StringComparison.OrdinalIgnoreCase);
+
+    public static string WorldSectorPath(string sdatPath, int sectorId)
+        => SectorFilePath(sdatPath, sectorId, $"worldsector{sectorId}.data.fcb");
+
+    /// <param name="everySector">A new world's: every sector with no worldsector file loads as an empty
+    /// one, so entities can be placed anywhere on it.</param>
     public static Fc2World Load(
         TerrainMap map,
         Func<string, byte[]?> readByPath,
-        IProgress<string>? progress = null)
+        IProgress<string>? progress = null,
+        bool everySector = false)
     {
-        // The sector payload sits beside the terrain, one folder over - the same derivation the
-        // descriptor loader uses, so the level folder never has to be recomputed. Three files can
-        // place entities in a sector: the worldsector file holds the bulk, and the two landmark
-        // files add the set pieces - the buildings whose roofs, doors and window panes ship as
-        // separate meshes, plus the forts, churches and HQs. 72 meshes are reachable no other way.
+        // Three files can place entities in a sector: the worldsector file holds the bulk, and the two
+        // landmark files add the set pieces - the buildings whose roofs, doors and window panes ship
+        // as separate meshes, plus the forts, churches and HQs. 72 meshes are reachable no other way.
         (string Path, int SectorId, bool Landmark)[] payloads = [.. map.Sectors
-            .SelectMany(s =>
+            .SelectMany(s => new[]
             {
-                string sectorDir = s.Path.Replace(@"\sdat\", @"\worldsectors\", StringComparison.OrdinalIgnoreCase);
-                string Beside(string file) => sectorDir.Replace(
-                    $"sd{s.SectorId}.sdat", file, StringComparison.OrdinalIgnoreCase);
-                return new[]
-                {
-                    (Beside($"worldsector{s.SectorId}.data.fcb"), s.SectorId, false),
-                    (Beside($"landmarknear{s.SectorId}.data.fcb"), s.SectorId, true),
-                    (Beside($"landmarkfar_{s.SectorId}.data.fcb"), s.SectorId, true),
-                };
+                (WorldSectorPath(s.Path, s.SectorId), s.SectorId, false),
+                (SectorFilePath(s.Path, s.SectorId, $"landmarknear{s.SectorId}.data.fcb"), s.SectorId, true),
+                (SectorFilePath(s.Path, s.SectorId, $"landmarkfar_{s.SectorId}.data.fcb"), s.SectorId, true),
             })
             .OrderBy(s => s.Item2)];
 
@@ -42,7 +47,12 @@ public static class WorldLoader
             // TryDeserialize, because the path is a derived probe: its CRC32 can collide with a real
             // file of another format (the engine's own keyspace has such pairs), which should read
             // as "this sector has no payload", not an error.
-            if (readByPath(path) is not { } data || FcbDocument.TryDeserialize(data) is not { } root)
+            FcbObject? root = readByPath(path) is { } data ? FcbDocument.TryDeserialize(data) : null;
+            if (root is null && everySector && !landmark)
+            {
+                root = ContainerSkeletons.WorldSector(sectorId);
+            }
+            if (root is null)
             {
                 return;
             }
