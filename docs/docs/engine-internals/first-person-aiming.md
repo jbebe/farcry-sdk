@@ -326,8 +326,7 @@ and every bone below it in the tree but `Camera`, about `Spine`'s place, round t
 axis, and sliding them to the side along its X. Every bone of the player's body is held, so it bends those too, once per write of the
 animation, and marks the skeleton changed through `vt+0x7C` each frame the bend moves. The view is
 rolled by the same angle at `+0xD4`, and the eye moved at `+0xE8` and `+0xF0` by how far the bend
-and the slide move `Camera`, in the rolled view's axes. Sliding the bones moves the drawn arms and
-gun the same way bending them does.
+and the slide move `Camera`, in the rolled view's axes. The slide is not seen in game yet.
 
 :::info[Seen in a running game]
 The view, the arms and the gun lean together. Retail GOG v1.03, from Aiming Overhaul. The muzzle
