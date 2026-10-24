@@ -118,7 +118,7 @@ entry's booleans into one flag byte:
 | 1 | `HasDescriptor` | true | true |
 | 2 | `HasMainSectorData` | true | absent |
 | 3 | `HasLandmarkNear` | true | absent |
-| 4 | the next boolean, hash `F19B593D` | not seen | absent |
+| 4 | `HasLandmarkFar`, hash `F19B593D` | not seen | absent |
 | 5 | `isSectorAccessible`, true when absent | true | true |
 
 **A world ships navmesh for a sector by setting `HasNavMesh` on that sector's `sectorsdep` entry.**

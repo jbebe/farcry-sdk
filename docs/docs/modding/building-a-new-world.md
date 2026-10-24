@@ -6,11 +6,15 @@ sidebar_position: 8.9
 
 What it takes to load a world Far Cry 2 does not ship, reached by console, portal or menu. This page
 lists every file a world is made of, says which ones the tools can read, write and generate, and
-lays out the steps to a player standing in a new, empty world.
+lays out the steps to a player standing in a new world, with props and soldiers in it.
 
-The first three steps are prepared in [`mods/new-world`](https://github.com/jbebe/farcry-sdk/tree/main/mods/new-world).
-Its script builds a layer holding two new worlds. **Nothing has been loaded in game yet.**
-[The test sheet](#the-test-sheet) has the commands.
+A new world has been loaded in game **(proven)**:
+[`tools/TestRange`](https://github.com/jbebe/farcry-sdk/tree/main/tools/TestRange) builds
+`testrange`, `tmpla`'s flat plain under a new name with cover walls and a generated navmesh, and
+soldiers spawned there move and fight. It is the worked example for the sections below.
+[`mods/new-world`](https://github.com/jbebe/farcry-sdk/tree/main/mods/new-world) builds two smaller
+experiments, a renamed clone and a one-sector tile, which have not been loaded. Both build through
+one shared script, `scripts\tmpla-world.ps1`. [The test sheet](#the-test-sheet) has the commands.
 
 Marks: **(proven)** seen in a running game; **(RE-verified)** read in `FarCry2_server`'s code;
 **(seen in data)** read in the retail files; **(inferred)**; **(untested)**. The mechanism is in
@@ -20,7 +24,7 @@ Marks: **(proven)** seen in a running game; **(RE-verified)** read in `FarCry2_s
 
 No tool or format is missing for a world built from `tmpla`, the editor's template. It is flat,
 empty and complete ([`tmpla`](../engine-internals/world-loading.md#tmpla-is-a-flat-empty-world)).
-What stands between it and a loaded world is one launch, which answers two open questions:
+Two questions stood before the first launch:
 
 1. **Does the engine load a single-player world it does not ship?** Nothing enumerates or
    whitelists worlds **(RE-verified)**. Yes **(proven)**: `testrange`, `tmpla`'s 8 × 8 grid under a
@@ -43,9 +47,9 @@ So a new world reached by travel needs a spawn point placed on its ground. `neww
 44 cm above. `tmpla`'s only spawn point sits 16 m below its ground, so travel there puts the player
 under the terrain.
 
-Anything beyond an empty flat world runs into gaps that do have names: terrain heights cannot be
-generated, vegetation cannot be packed, and the navmesh has no writer. See
-[the checklist](#every-file-a-world-is-made-of).
+Anything beyond a flat world with props and soldiers runs into gaps that do have names: terrain
+heights cannot be generated, vegetation cannot be packed, and the generated navmesh has no cover
+points and ignores slopes. See [the checklist](#every-file-a-world-is-made-of).
 
 ## Every file a world is made of
 
@@ -66,7 +70,7 @@ generated, vegetation cannot be packed, and the navmesh has no writer. See
 | `generated\entitylibrary.fcb` | every archetype the world can spawn, the player included | loaded regardless; an empty library has no archetypes | ✓ | ✓ | ✗ copy only | `tmpla`'s, the same file as `ige_map`'s |
 | `generated\<w>.managers.fcb` | world managers | skipped if absent | ✓ | ✓ | ✗ copy only | `tmpla`'s |
 | `generated\<w>.omnis.fcb` | omnipresent entities, including the master Domino graph | skipped if absent | ✓ | ✓ | via XML | `tmpla`'s, empty |
-| `generated\<w>.sectorsdep.fcb` | per sector: has a descriptor, detail mask, accessible, and which of the sector's files the game asks for (`HasMainSectorData`, `HasNavMesh`) | skipped if absent | ✓ | ✓ | via XML | `tmpla`'s, cut to sector 0 |
+| `generated\<w>.sectorsdep.fcb` | per sector: has a descriptor, detail mask, accessible, and [which of the sector's files the game loads](#which-sector-files-the-game-loads) | skipped if absent | ✓ | ✓ | via XML | `tmpla`'s, cut to sector 0 |
 | `generated\<w>_depload.dat` | resource dependency tree for streaming | skipped if absent | ✓ | ✓ | ✓ `depload add` | `tmpla`'s |
 | `generated\<w>_deploadnewparticles.rml` | particle dependencies | not traced | ✓ | ✓ | ✗ | `tmpla`'s |
 | `generated\moviedata.xml` | cinematics | not established | text | text | text | `tmpla`'s |
@@ -93,10 +97,10 @@ level, named after the world.
 | `worldsectors\sector<n>.desc.fcb` | detail texture mask, the list of other sectors with flags, terrain-detail resources | not traced | ✓ `SectorDetailLayers` | ✓ | via XML | `tmpla`'s, with the other sectors removed from its list |
 | `worldsectors\sector<n>.srl` | **sound regions**: 32 × 32 bytes ([`.srl`/`.zsr`](../file-formats/srl-zsr.md)) | not traced | ✗ | ✗ | trivial: fixed-size, no header | `tmpla`'s |
 | `worldsectors\zonesector<n>.zsr` | zones, 64 × 64 bytes | not traced | ✗ | ✗ | trivial | `tmpla`'s |
-| `worldsectors\worldsector<n>.data.fcb` | **entities** by mission layer | no: `tmpla` ships none. Read only where `sectorsdep` sets `HasMainSectorData` **(seen in data)**: in `mp_16_airbase` the 30 flagged sectors are exactly the 30 files | ✓ `WorldLoader` | ✓ Map tab, fragments | via XML or the Map tab | none |
-| `worldsectors\landmarkfar_<n>.data.fcb` | **vegetation** (`VegetationData`) and far LOD | no: `tmpla` ships none | ✓ decoded ([vegetation](../engine-internals/terrain-and-vegetation.md)) | ✓ as plain FCB | ✗ no packer for the nine lists | none |
-| `worldsectors\landmarknear<n>.data.fcb` | near light-vegetation grid, some mission content | no | ✓ | ✓ | ✗ | none |
-| `nv\sectors\nv_<n>.nvm` | **navmesh** for AI | no, but AI crashes without it | ✓ `NvmSector` | ✓ `NvmSector` | ✓ `navmesh build`, flat or gently rolling ground only ([generating a navmesh](../file-formats/nvm.md#generating-a-navmesh)); loaded only where `sectorsdep` sets `HasNavMesh` | none, so no AI |
+| `worldsectors\worldsector<n>.data.fcb` | **entities** by mission layer | no: `tmpla` ships none. Loaded only where `sectorsdep` sets `HasMainSectorData` | ✓ `WorldLoader` | ✓ Map tab, fragments onto a retail file | via XML ([placing entities](#placing-entities-in-a-new-world)) or the Map tab | none |
+| `worldsectors\landmarkfar_<n>.data.fcb` | **vegetation** (`VegetationData`) and far LOD | no: `tmpla` ships none. Loaded only where `sectorsdep` sets `HasLandmarkFar` | ✓ decoded ([vegetation](../engine-internals/terrain-and-vegetation.md)) | ✓ as plain FCB | ✗ no packer for the nine lists | none |
+| `worldsectors\landmarknear<n>.data.fcb` | near light-vegetation grid, some mission content | no. Loaded only where `sectorsdep` sets `HasLandmarkNear` | ✓ | ✓ | ✗ | none |
+| `nv\sectors\nv_<n>.nvm` | **navmesh** for AI | no, but AI crashes without it. Loaded only where `sectorsdep` sets `HasNavMesh` | ✓ `NvmSector` | ✓ `NvmSector` | ✓ `navmesh build`, flat or gently rolling ground only ([AI in a new world](#ai-in-a-new-world)) | none, so no AI |
 | `sector<n>.preload_x.fcb`, beside `generated\` | streaming preload, campaign levels only | no | ✓ | ✓ | ✗ | none |
 
 Other parts of a world live elsewhere:
@@ -109,6 +113,114 @@ Other parts of a world live elsewhere:
   ([authoring a mission](./authoring-a-mission.md)).
 - **Streaming** comes from the depload files, `sectorsdep.fcb`, the preload files and the landmark
   LODs. Its rings are set in the engine config, not per world.
+
+## Which sector files the game loads
+
+A sector's own files are not looked for on disk. Each entry of `<w>.sectorsdep.fcb` carries one
+boolean per optional file, and the game requests only the files whose boolean is set. The file
+names below are under `levels\<l>\generated\`.
+
+| Flag | File it loads | How it is known |
+|---|---|---|
+| `HasMainSectorData` | `worldsectors\worldsector<n>.data.fcb`, the entities | **seen in data**: in `mp_16_airbase` the 30 flagged sectors are exactly the 30 files. Without it, `testrange`'s walls never appeared **(proven)** |
+| `HasLandmarkNear` | `worldsectors\landmarknear<n>.data.fcb` | **seen in data**: 43 flags, the 43 files |
+| `HasLandmarkFar` | `worldsectors\landmarkfar_<n>.data.fcb` | **seen in data**: 99 flags, the 99 files |
+| `HasNavMesh` | `nv\sectors\nv_<n>.nvm` | **RE-verified** and **proven** ([how the game finds a sector file](../file-formats/nvm.md#how-the-game-finds-a-sector-file)) |
+
+`tmpla` sets none of the four, because it ships none of those files. So every file a new world adds
+to a sector needs its flag added to that sector's entry, or the file is silently ignored. A flag is
+one more child of the entry, written as retail writes it:
+
+```xml
+<object type="CWorldSector">
+  <value name="SectorId" type="Int32">28</value>
+  <value name="HasDescriptor" type="Bool">True</value>
+  <value name="HasMainSectorData" type="Bool">True</value>
+  <value name="DetailMask" type="Int32">268435455</value>
+  <value name="isSectorAccessible" type="Bool">True</value>
+  <value name="HasNavMesh" type="Bool">True</value>
+</object>
+```
+
+None of these files is listed in a depload. The flags are the only thing that makes the game
+stream them.
+
+## Placing entities in a new world
+
+A new world's sectors have no retail `worldsector<n>.data.fcb` to start from, so a mod fragment, the
+way [adding an NPC](./adding-an-npc.md) places one, has nothing to merge onto. `mod build` merges a
+fragment only into a file some archive already provides. Write the whole file instead, then set
+`HasMainSectorData` on its sector.
+
+The smallest file is a sector header and a `main` mission layer, which is always on:
+
+```xml
+<object type="WorldSector">
+  <value name="Id" type="UInt32">28</value>
+  <value name="X" type="UInt32">4</value>
+  <value name="Y" type="UInt32">3</value>
+  <object type="MissionLayer">
+    <value name="text_PathId" type="String">main</value>
+    <value name="PathId" type="Hash">BF28CD64</value>
+    <!-- Entity nodes go here -->
+  </object>
+</object>
+```
+
+- **Which sector:** an entity belongs to the sector its position falls in. With 64 m sectors and a
+  grid `side` sectors wide, `X = floor(x / 64)`, `Y = floor(y / 64)` and `Id = X + side × Y`.
+- **The entity:** copy a retail instance of the archetype you want. A placed prop is a
+  `tplCreatureType` naming the archetype, plus whatever the instance overrides. Give it:
+  - a new `hidName`
+  - a new `disEntityId`, unique in the world
+  - `hidPos` and `hidPos_precise`, both global, with z on the ground
+  - the yaw in degrees as `hidAngles`' z
+- **Collision** comes with the archetype. `testrange`'s walls are copies of
+  `CoverObjects.WallBarrier01_BK.Multi_0` from `mp_16_airbase` and
+  `CoverObjects.WallEroded10_BK.Multi_0` from `mp_07_m_dogon`.
+- **Encode** the XML with `jackall-cli fcb encode`.
+
+`tools\TestRange\build-layer.ps1` does all of this for 14 walls. Whether they then stand in the game
+with their collision has not been seen yet: the first launch had no `HasMainSectorData`, and the
+flag is deployed but unchecked.
+
+Place entities before generating the navmesh, so the navmesh is cut around them.
+
+## AI in a new world
+
+AI needs a navmesh, and retail `Dunia.dll` carries no generator of its own: the editor's
+`CNavmeshGenerator` survives only in `FarCry2_server`. JackAll writes one instead:
+
+```
+jackall-cli navmesh build <layer>\mods --level <l>
+```
+
+It writes `nv\sectors\nv_<n>.nvm` for every sector of the level, cut around every placed entity
+with static collision, and sets `HasNavMesh` on every sector's entry. The world's own `nv.nvm`
+index can stay as `tmpla`'s, its grid and extent edited to match. The method and how it compares
+with retail are in [generating a navmesh](../file-formats/nvm.md#generating-a-navmesh).
+
+**(proven)** In `testrange`, soldiers spawned at run time move and shoot on it. In editor maps with no
+navmesh, AI crashed the engine about 30 s after loading.
+
+What it does not do yet:
+
+- It writes **no cover points**, so soldiers are not expected to take cover behind props.
+- It **never drops a slope**, so it is for flat or gently rolling ground only.
+
+Soldiers can be placed as entities like any prop, or spawned at run time with
+`SpawnEntityFromArchetype`. DevTools' Spawner tab spawns a squad of either faction, or of Ubisoft's
+`enemy_archetypes.MercTest` test soldiers, in front of the player.
+
+## The entity library
+
+A world's archetypes come from its own `generated\entitylibrary.fcb`. `tmpla`'s is the same
+file as the editor's `ige_map`'s: a superset of world 1's archetypes. It has every soldier class of
+both factions and the `MercTest` soldiers, which world 1's lacks.
+
+A mod's archetype edits target a path, usually `worlds\world1\generated\entitylibrary.fcb`, so they
+do not reach a new world's library **(inferred)**. A world built on `tmpla`'s library plays plugin-only mods
+unchanged, but not, for example, a mod that ships weapon data as archetype edits.
 
 ## The smallest world
 
@@ -180,26 +292,27 @@ also holds a `"world1"` literal. Save in `newworld_tile`, quit to the menu, load
 
 In order of what is ready:
 
-- **Entities and props:** worldsector files through the JackAll Map tab.
+- **Entities and props:** whole worldsector files plus their `HasMainSectorData` flag
+  ([placing entities](#placing-entities-in-a-new-world)). The Map tab edits them once they exist.
 - **Textures and map art:** `xbt build`.
 - **Terrain heights:** `SdatSectorFile.Encode` can write a sector. A flat sector's tables can be
   reused, but real relief needs its normals, LOD masks and bounds derived, and nothing does that yet.
   Sector edges are shared, so neighbouring sectors must agree.
 - **Vegetation:** needs a `VegetationData` packer.
 - **Roads:** need the spline bounds and arc tables recomputed.
-- **AI:** `jackall-cli navmesh build` writes a navmesh around placed entities, without cover points or
-  slope limits. Retail `Dunia.dll` carries no generator of its own. [`tools/TestRange`](https://github.com/jbebe/farcry-sdk/tree/main/tools/TestRange)
-  is a flat world built this way.
+- **AI:** `jackall-cli navmesh build` ([AI in a new world](#ai-in-a-new-world)). Soldiers fight on
+  it; cover points and slopes are still missing.
 
 ## The test sheet
 
-The script reads the extracted retail `worlds` archive in `tmp\gamefiles\worlds\worlds`. It
-rebuilds `mods\new-world\layer`, about 29 MB, which is not committed. The GOG install carries Vehicle
-Overhaul's layer, so build that in alongside:
+Both scripts read the extracted retail `worlds` archive in `tmp\gamefiles\worlds\worlds`, and
+neither layer is committed. `mod build` replaces the whole patch, so build in every layer the
+install already carries, with these after them:
 
 ```
+.\tools\TestRange\build-layer.ps1
 .\mods\new-world\build-layer.ps1
-tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe mod build --game "C:\Games\Far Cry 2" --layer mods\vehicle-overhaul\layer --layer mods\new-world\layer
+tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe mod build --game "C:\Games\Far Cry 2" --layer <installed layers> --layer tools\TestRange\layer --layer mods\new-world\layer
 ```
 
 The build was checked against a scratch copy of the vanilla patch archive: 406 entries added, none
@@ -215,6 +328,9 @@ Each run is one launch. Load a world 1 save, press `~`, and enter the line:
 | 3 | `#GameChangeWorld("newworld_clone", "2054037628277228842")` | the same as run 2 |
 | 4 | `#GameChangeWorld("newworld_tile", "2054037628277228842")` | standing on a 64 m square of ground |
 | 5 | in run 4's world: `#GameChangeWorld("world1", "2056971616016942572")` | back in world 1 |
+| 6 | `#GameChangeWorld("testrange", "2054037628277228842")` | standing on a plain, cover walls around you; spawned soldiers fight. Seen, except the walls |
+
+DevTools' Change world command takes the same two arguments.
 
 After each run, `bin\fcse.log` holds
 what the plugins saw. A crash or a hang on the loading screen is a result: note at which run it
@@ -224,11 +340,7 @@ If run 1 does nothing, the Lua binding may not take the id as a string from the 
 `ChangeWorld` box passes it that way. Try `#GameChangeWorldDefaultSpawnPoint("world2")` to see
 whether the call itself works.
 
-To go back, build Vehicle Overhaul alone:
-
-```
-tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe mod build --game "C:\Games\Far Cry 2" --layer mods\vehicle-overhaul\layer
-```
+To go back, build the installed layers alone.
 
 ## Open questions
 
@@ -238,8 +350,9 @@ tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe mod build --ga
   sets up a 32 × 32 cell grid per sector, and `CAIEngine::LevelLoaded` was not read.
 - Was emptying the sector descriptor's list right, and what is its leading value (123, member
   `56F4F69B`)?
-- `tmpla`'s managers come from the editor's template. Does the single-player game need managers it
-  lacks, such as weather or the economy?
+- `tmpla`'s managers come from the editor's template. They are enough for soldiers to fight
+  **(proven)**. Does the single-player game need managers they lack, such as weather or the economy?
+- Do placed walls stand with their collision once `HasMainSectorData` is set?
 - JackAll writes `mapsdata.fcb` 47 bytes longer than retail, because it does not share repeated
   objects. It decodes identically. Mod fragments are written the same way.
 - Saving and loading inside a new world (step 5).
