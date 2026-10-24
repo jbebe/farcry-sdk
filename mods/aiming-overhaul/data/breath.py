@@ -1,12 +1,13 @@
 """Build the layer's breath banks from the game's own stamina breathing: each of its twelve breaths is
 an exhale and then an inhale, cut apart here, and the halves become four banks the plugin plays as
 the breath is held and let go - the weaker breaths while stamina is high, the stronger ones while it
-is low.
+is low. A fifth holds the heartbeat heard while the breath is in.
 
     python data\\breath.py <the worlds archive's soundbinary folder>
 
-The folder is the extracted worlds archive's soundbinary\\, which holds 00455c76.spk (the breathing)
-and 00455cd1.spk (the gasp out of water, whose event the new ones copy). The banks are written to
+The folder is the extracted worlds archive's soundbinary\\, which holds 00455c76.spk (the breathing),
+00455cd1.spk (the gasp out of water, whose event the new ones copy) and 004c661e.spk (a beat of the
+heart as the player goes down). The banks are written to
 layer\\mods\\soundbinary\\.
 """
 import array
@@ -37,6 +38,11 @@ BANKS = {"0x00fc0b00": ("inhale", WEAK), "0x00fc0b20": ("inhale", STRONG),
 # The breaths at the level they were recorded at. The game's own breathing plays 32 dB lower, through
 # its two switches, which was very quiet for a held breath.
 GAIN_DB = "0"
+# The heart beating while the breath is held: one of the beats the game plays as the player goes down
+# wounded, a little quieter than it plays them.
+WOUNDED_BEAT = ("004c661e.spk", "0x004c660d")
+HEARTBEAT = "0x00fc0b80"
+HEARTBEAT_GAIN_DB = "-8"
 # Milliseconds each half fades in and out at the cut, so it does not click.
 FADE_MS = 5
 
@@ -77,7 +83,7 @@ def main(soundbinary):
     work = tempfile.mkdtemp()
     try:
         # spk extract writes beside the bank, so it reads a copy.
-        for bank in (BREATHING, LIKE):
+        for bank in (BREATHING, LIKE, WOUNDED_BEAT[0]):
             shutil.copy(os.path.join(soundbinary, bank), work)
         bank = os.path.join(work, BREATHING)
         halves = {}
@@ -93,6 +99,14 @@ def main(soundbinary):
             out = os.path.join(LAYER, event[2:] + ".spk")
             run("spk", "encode", os.path.join(folder, event[2:] + ".xml"), "-o", out)
             print(os.path.relpath(out, os.path.join(HERE, "..")))
+        beat_bank, beat = WOUNDED_BEAT
+        run("spk", "extract", os.path.join(work, beat_bank), beat)
+        folder = os.path.join(work, HEARTBEAT[2:])
+        run("spk", "new", HEARTBEAT, os.path.join(work, beat[2:] + ".wav"), "--unpositioned",
+            "--gain", HEARTBEAT_GAIN_DB, "--like", os.path.join(work, LIKE), "-o", folder)
+        out = os.path.join(LAYER, HEARTBEAT[2:] + ".spk")
+        run("spk", "encode", os.path.join(folder, HEARTBEAT[2:] + ".xml"), "-o", out)
+        print(os.path.relpath(out, os.path.join(HERE, "..")))
     finally:
         shutil.rmtree(work)
 

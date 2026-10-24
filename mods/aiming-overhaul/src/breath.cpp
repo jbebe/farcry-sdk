@@ -52,11 +52,19 @@ namespace {
     bool g_holding = false;
     bool g_drawn = false;
 
+    // The heart beating while the breath is in, the layer's bank of the game's own beat from going
+    // down wounded, every kBeat seconds, the first kFirstBeat seconds after the breath is drawn.
+    constexpr uint32_t kHeartbeat = 0x00FC0B80;
+    constexpr float kBeat = 0.8f;
+    constexpr float kFirstBeat = 0.3f;
+    float g_toBeat = 0.0f;
+
     void Breathe(bool in, float stamina) {
         const bool tired = stamina < kTired;
         AimingOverhaul::Sound::Play(
             in ? (tired ? kTiredInhale : kInhale) : (tired ? kTiredExhale : kExhale), kOnoPlayer);
         g_drawn = in;
+        g_toBeat = kFirstBeat;
     }
 }
 
@@ -87,7 +95,7 @@ bool AimingOverhaul::Breath::Needed() {
 }
 
 void AimingOverhaul::Breath::Update(float seconds, bool aiming, float stamina) {
-    for (uint32_t bank : {kInhale, kTiredInhale, kExhale, kTiredExhale}) {
+    for (uint32_t bank : {kInhale, kTiredInhale, kExhale, kTiredExhale, kHeartbeat}) {
         Sound::Hold(bank);
     }
     g_sinceSprint += seconds;
@@ -100,6 +108,13 @@ void AimingOverhaul::Breath::Update(float seconds, bool aiming, float stamina) {
         Breathe(false, stamina);
     }
     g_holding = holding;
+    if (g_drawn) {
+        g_toBeat -= seconds;
+        if (g_toBeat <= 0.0f) {
+            Sound::Play(kHeartbeat, kOnoPlayer);
+            g_toBeat += kBeat;
+        }
+    }
     float target;
     if (holding && g_breath > 0.0f) {
         g_breath = (std::max)(g_breath - seconds, 0.0f);
