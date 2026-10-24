@@ -46,7 +46,7 @@ BANKS = {"0x00fc0b00": ("inhale", WEAK, "0"), "0x00fc0b20": ("inhale", STRONG, "
 # their gains in dB - a little quieter than the game plays it while the breath is held, and faint
 # down the sights while the heart races.
 WOUNDED_BEAT = ("004c661e.spk", "0x004c660d")
-HEARTBEATS = {"0x00fc0b80": "-8", "0x00fc0c20": "-20"}
+HEARTBEATS = {"0x00fc0b80": "-8", "0x00fc0c20": "-14"}
 # Milliseconds each half fades in and out at the cut, so it does not click.
 FADE_MS = 5
 

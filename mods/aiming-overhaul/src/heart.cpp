@@ -15,7 +15,7 @@ namespace {
     // stamina's own share while sprinting.
     constexpr float kSprinting = 0.25f;
     // Seconds for the heart to climb toward that, and to settle back down from above it.
-    constexpr float kClimb = 4.0f;
+    constexpr float kClimb = 2.5f;
     constexpr float kSettle = 20.0f;
     // Beats a minute added for all of the health lost at once, and for each radian a second the
     // camera is shaken.

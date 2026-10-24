@@ -68,7 +68,7 @@ namespace {
     // breath is in, and fainter down the sights once the heart races this much.
     constexpr uint32_t kHeartbeat = 0x00FC0B80;
     constexpr uint32_t kFaintHeartbeat = 0x00FC0C20;
-    constexpr float kHeardRacing = 0.4f;
+    constexpr float kHeardRacing = 0.25f;
 
     void Breathe(bool in, float stamina) {
         const bool tired = stamina < kTired;
