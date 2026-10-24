@@ -14,11 +14,19 @@ public sealed record BuildResult(
     IReadOnlyList<ModConflict> Conflicts,
     PluginSyncResult Plugins)
 {
+    /// <summary>Containers that exist only as fragments, with no file to apply them to, left out of the
+    /// build: a new world's sectors and library, which <c>jackall-cli world pack</c> builds.</summary>
+    public IReadOnlyList<string> Unpacked { get; init; } = [];
+
     /// <summary>What the build decided on its own that a modder should hear about, one sentence each.</summary>
     public IEnumerable<string> Warnings()
-        => Conflicts.Select(c => c.Describe()).Concat(Plugins.SkippedForeign.Select(path =>
-            $"bin\\plugins\\{path} already exists and wasn't deployed by JackAll - left untouched. "
-            + "Remove it if the mod's copy should apply."));
+        => Conflicts.Select(c => c.Describe())
+            .Concat(Plugins.SkippedForeign.Select(path =>
+                $"bin\\plugins\\{path} already exists and wasn't deployed by JackAll - left untouched. "
+                + "Remove it if the mod's copy should apply."))
+            .Concat(Unpacked.Select(path =>
+                $"{path} has only fragments and no file to apply them to - left out. A new world's "
+                + "content is built with jackall-cli world pack."));
 }
 
 /// <summary>
@@ -74,6 +82,7 @@ public static class PatchBuilder
         bool resolveFragmentConflictsWithLoadOrder = false)
     {
         var conflicts = new ConcurrentQueue<ModConflict>();
+        var unpacked = new ConcurrentQueue<string>();
 
         install.EnsureVanillaBackup();
 
@@ -85,6 +94,7 @@ public static class PatchBuilder
                 readArchiveOriginal,
                 fcbDefinitions ?? FcbClassDefinitions.Empty,
                 conflicts,
+                unpacked,
                 resolveFragmentConflictsWithLoadOrder);
         }
         catch (AggregateException ex) when (ex.InnerExceptions.Count > 0)
@@ -99,7 +109,7 @@ public static class PatchBuilder
         // After the archive swap, so a plugin-sync failure never leaves a half-written patch. The
         // pair's atomicity doesn't extend to bin\plugins - the manifest lets the next build
         // reconcile it on its own.
-        return result with { Plugins = PluginSync.Apply(install, layers) };
+        return result with { Plugins = PluginSync.Apply(install, layers), Unpacked = [.. unpacked.Order()] };
     }
 
     /// <summary>
@@ -119,6 +129,7 @@ public static class PatchBuilder
         Func<uint, byte[]?>? readArchiveOriginal,
         FcbClassDefinitions defs,
         ConcurrentQueue<ModConflict> conflicts,
+        ConcurrentQueue<string> unpacked,
         bool resolveFragmentConflictsWithLoadOrder)
     {
         ConcurrentQueue<ModConflict>? fragmentConflicts = resolveFragmentConflictsWithLoadOrder ? conflicts : null;
@@ -161,15 +172,20 @@ public static class PatchBuilder
         // The vanilla ancestor every contributing layer's edit is merged against - needed even when
         // a whole-file override also exists for this container, since the merge ancestor is always
         // "what Revert would restore." Decoded once per container, shared by every fragment in it.
+        // A container no archive has merges against the lowest layer shipping it whole, as a mod of
+        // another mod's map does; one no layer ships is a new world's, built by `world pack` instead.
         var vanillaByContainer = containersWithFragments
             .AsParallel()
             .Select(kv =>
             {
-                byte[] vanillaBytes = readArchiveOriginal?.Invoke(kv.Key)
-                    ?? throw new InvalidOperationException(
-                        $"A fragment override targets {kv.Key:X8}, but no archive currently provides " +
-                        "its vanilla ancestor.");
                 string containerPath = RecoveredContainerPath(kv.Key, kv.Value.Values);
+                byte[]? vanillaBytes = readArchiveOriginal?.Invoke(kv.Key)
+                    ?? (wholeFileOverrides.TryGetValue(kv.Key, out var owners) ? owners[0].Read(kv.Key) : null);
+                if (vanillaBytes is null)
+                {
+                    unpacked.Enqueue(containerPath);
+                    return default;
+                }
                 IContainerSplitter splitter = ContainerFormats.For(containerPath, defs);
                 // A whole-file copy the fragments land on, replacing its own version of their entries.
                 (IModLayer Owner, IContainerTree Tree)? copy = wholeFileOverrides.TryGetValue(kv.Key, out var shippers)
@@ -178,12 +194,14 @@ public static class PatchBuilder
                 return (ContainerHash: kv.Key, VanillaBytes: vanillaBytes, Splitter: splitter,
                     Tree: splitter.Open(vanillaBytes), Display: containerPath, Copy: copy);
             })
+            .Where(x => x.VanillaBytes is not null)
             .ToDictionary(x => x.ContainerHash);
 
         // Every (container, fragment) pair, flattened into one parallel pass rather than nesting a
         // parallel loop inside another: a mod that concentrates most of its edits into a single huge
         // container would otherwise leave every core but one idle.
         var resolvedByContainer = containersWithFragments
+            .Where(kv => vanillaByContainer.ContainsKey(kv.Key))
             .SelectMany(kv => kv.Value.Select(f => (ContainerHash: kv.Key, FragmentId: f.Key, Contributors: f.Value)))
             .AsParallel()
             .Select(item =>
@@ -223,25 +241,13 @@ public static class PatchBuilder
     }
 
     /// <summary>
-    /// The container's own path, read off any contributor's staged fragment path. This is what
-    /// <see cref="ContainerFormats.For"/> picks the splitter from as well as what a conflict report
-    /// names, so a wrong answer here decodes the container as the wrong format. A fragment-only layer
-    /// never carries the container's own hash, so a hash-addressed one has no recovered name to fall
-    /// back on and gets a synthesized `.fcb` one.
+    /// The container's own path (see <see cref="FragmentMerge.ContainerPathOf"/>). A fragment-only
+    /// layer never carries the container's own hash, so a hash-addressed one has no recovered name to
+    /// fall back on and gets a synthesized `.fcb` one.
     /// </summary>
     private static string RecoveredContainerPath(
         uint containerHash, IEnumerable<List<(IModLayer Layer, uint EntryHash)>> contributorsByFragment)
-    {
-        foreach ((IModLayer layer, uint entryHash) in contributorsByFragment.SelectMany(c => c))
-        {
-            if (layer.PathOf(entryHash) is { } staged && ModPathHashing.ContainerPathOf(staged) is { } path)
-            {
-                return path;
-            }
-        }
-
-        return $"_hash\\{containerHash:x8}.fcb";
-    }
+        => FragmentMerge.ContainerPathOf(contributorsByFragment) ?? $"_hash\\{containerHash:x8}.fcb";
 
     /// <summary>Reports each whole file whose winning copy dropped a different one.</summary>
     private static void ReportFileCollisions(

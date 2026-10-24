@@ -7,6 +7,11 @@ namespace JackAll.Core.Format.Fcb;
 public static class WorldHashes
 {
     public static readonly uint WorldSector = FcbClassDefinitions.Crc32Ascii("WorldSector");
+
+    /// <summary>A <see cref="WorldSector"/>'s own id, and its column and row in the grid.</summary>
+    public static readonly uint WorldSectorId = FcbClassDefinitions.Crc32Ascii("Id");
+    public static readonly uint WorldSectorX = FcbClassDefinitions.Crc32Ascii("X");
+    public static readonly uint WorldSectorY = FcbClassDefinitions.Crc32Ascii("Y");
     public static readonly uint MissionLayer = FcbClassDefinitions.Crc32Ascii("MissionLayer");
 
     /// <summary>The root of a world's <c>*.mapsdata.fcb</c>, whose children are the level cells that

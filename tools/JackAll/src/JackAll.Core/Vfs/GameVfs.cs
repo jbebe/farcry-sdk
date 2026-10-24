@@ -139,6 +139,10 @@ public sealed class GameVfs : IDisposable
     /// </summary>
     private Dictionary<uint, Dictionary<string, List<(IModLayer Layer, uint EntryHash)>>> _fragmentOverrides = [];
 
+    /// <summary>Container hash -&gt; the empty container (see <see cref="ContainerSkeletons"/>) a
+    /// fragment-only container with no file anywhere is read as and merged against.</summary>
+    private Dictionary<uint, byte[]> _skeletons = [];
+
     /// <summary>The last container <see cref="AncestryOf"/> decoded, so selecting one row after
     /// another inside a 6 MB entity library doesn't decode it once per row. A single reference so
     /// callers on different threads can only ever see one whole entry or another, never a mix.</summary>
@@ -369,6 +373,7 @@ public sealed class GameVfs : IDisposable
             _layers = layers.ToList();
             _fragmentOverrides = FragmentMerge.BuildOverrideIndex(_layers.Where(l => l.Enabled));
             Dictionary<ulong, VfsFile> files = BuildMergedFiles(progress);
+            AddSkeletonContainers(files);
             if (includeFragments)
             {
                 MergeFragments(files, progress);
@@ -387,8 +392,13 @@ public sealed class GameVfs : IDisposable
     /// </summary>
     private ContainerAncestor OpenOriginal(VfsFile container)
     {
-        byte[] bytes = ReadOriginal(container.EngineHash)
-            ?? throw new InvalidOperationException($"No archive provides {container.EngineHash:X8}.");
+        uint hash = container.EngineHash;
+        // A container no archive has merges against the lowest layer that ships it whole - a mod of
+        // another mod's map - or, shipped by none, against its skeleton.
+        byte[] bytes = ReadOriginal(hash)
+            ?? _layers.FirstOrDefault(l => l.Enabled && l.Hashes.Contains(hash))?.Read(hash)
+            ?? _skeletons.GetValueOrDefault(hash)
+            ?? throw new InvalidOperationException($"No archive provides {hash:X8}.");
         IContainerSplitter splitter = SplitterFor(container);
         return new ContainerAncestor(splitter, splitter.Open(bytes));
     }
@@ -596,6 +606,39 @@ public sealed class GameVfs : IDisposable
         {
             _cache.SetType(hash, type);
         }
+    }
+
+    /// <summary>
+    /// A row for every fragment-only container no archive or layer ships as a file and that has a
+    /// skeleton - a new world's sector or library before it is packed - so it browses, reads merged
+    /// and loads like a shipped container.
+    /// </summary>
+    private void AddSkeletonContainers(Dictionary<ulong, VfsFile> files)
+    {
+        var skeletons = new Dictionary<uint, byte[]>();
+        foreach ((uint hash, Dictionary<string, List<(IModLayer Layer, uint EntryHash)>> byFragment) in _fragmentOverrides)
+        {
+            if (byFragment.Count == 0
+                || files.ContainsKey(hash)
+                || FragmentMerge.ContainerPathOf(byFragment.Values) is not { } path
+                || ContainerSkeletons.For(path) is not { } skeleton)
+            {
+                continue;
+            }
+
+            byte[] bytes = FcbDocument.Serialize(skeleton);
+            skeletons[hash] = bytes;
+            files[hash] = new VfsFile(
+                Hash: hash,
+                Path: path,
+                Type: FileTypeSniffer.Identify(bytes, path),
+                Size: bytes.LongLength,
+                SourceName: AttributionOf([.. byFragment.Values.SelectMany(c => c)]),
+                SourceKind: SourceKind.Mod,
+                IsOverriding: false,
+                NameIsKnown: true);
+        }
+        _skeletons = skeletons;
     }
 
     /// <summary>
@@ -993,6 +1036,10 @@ public sealed class GameVfs : IDisposable
 
     private byte[] ReadFromSource(VfsFile file)
     {
+        if (_skeletons.TryGetValue(file.EngineHash, out byte[]? skeleton))
+        {
+            return skeleton;
+        }
         if (file.SourceKind == SourceKind.Mod)
         {
             var layer = _layers.First(l => l.Name == file.SourceName);

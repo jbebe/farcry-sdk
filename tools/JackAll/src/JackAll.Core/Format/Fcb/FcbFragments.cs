@@ -144,7 +144,7 @@ public static class FcbFragments
         // historical last-group fallback rather than inventing a group.
         if (dot <= 0)
         {
-            return root.Children[^1];
+            return root.Children.Count > 0 ? root.Children[^1] : root;
         }
 
         string name = hidName[..dot];
@@ -347,7 +347,6 @@ public static class FcbFragments
     internal static bool IsLibraryOfGroups(FcbObject root)
         => root.Values.Count == 0
         && root.TypeHash == WorldHashes.EntityLibraries
-        && root.Children.Count > 0
         && root.Children.All(c => c.TypeHash == WorldHashes.EntityLibrary);
 
     /// <summary>A name made safe to use as one path segment: of a fragment id, or a file name.</summary>

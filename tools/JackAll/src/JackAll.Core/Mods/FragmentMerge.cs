@@ -51,6 +51,23 @@ public static class FragmentMerge
     }
 
     /// <summary>
+    /// A container's own path, read off any contributor's staged fragment path, or null when every
+    /// contributor is hash-addressed. This is what <see cref="ContainerFormats.For"/> picks the
+    /// splitter from, so a wrong answer decodes the container as the wrong format.
+    /// </summary>
+    public static string? ContainerPathOf(IEnumerable<List<(IModLayer Layer, uint EntryHash)>> contributorsByFragment)
+    {
+        foreach ((IModLayer layer, uint entryHash) in contributorsByFragment.SelectMany(c => c))
+        {
+            if (layer.PathOf(entryHash) is { } staged && ModPathHashing.ContainerPathOf(staged) is { } path)
+            {
+                return path;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
     /// Reports every fragment of one container whose resolved overrides contradict another's - a
     /// deletion of something a sibling override also edits. <see cref="IContainerSplitter.Apply"/>
     /// keeps the entity either way; this is what stops that being a silent decision.
