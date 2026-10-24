@@ -39,6 +39,9 @@ namespace {
     int g_camera = -1;
     std::array<bool, kMostBones> g_bends = {};
     std::atomic<float> g_posedBend{0.0f};
+    // What the last bend left in each bone. The animation writes most of the player's bones itself,
+    // and one it has not written again since is still bent.
+    std::array<std::array<float, 16>, kMostBones> g_bent = {};
 
     // Turns the point or axis `v`, in the body's axes, by `bend` about its forward axis.
     void Turn(float* v, float bend) {
@@ -128,14 +131,14 @@ void AimingOverhaul::Lean::OnPosed(uint8_t* skeleton) {
     std::copy_n(Skeleton::At(skeleton, g_spine).model + 12, 3, pivot);
     const uint32_t count = Skeleton::Count(skeleton);
     for (uint32_t i = g_spine; i < count; ++i) {
-        const Skeleton::Bone bone = Skeleton::At(skeleton, i);
-        if (!g_bends[i] || bone.held) {
+        float* model = Skeleton::At(skeleton, i).model;
+        if (!g_bends[i] || std::equal(model, model + 16, g_bent[i].begin())) {
             continue;
         }
-        Turn(bone.model, bend);
-        Turn(bone.model + 4, bend);
-        Turn(bone.model + 8, bend);
-        float* place = bone.model + 12;
+        Turn(model, bend);
+        Turn(model + 4, bend);
+        Turn(model + 8, bend);
+        float* place = model + 12;
         for (int k = 0; k < 3; ++k) {
             place[k] -= pivot[k];
         }
@@ -143,6 +146,7 @@ void AimingOverhaul::Lean::OnPosed(uint8_t* skeleton) {
         for (int k = 0; k < 3; ++k) {
             place[k] += pivot[k];
         }
+        std::copy_n(model, 16, g_bent[i].begin());
     }
 }
 

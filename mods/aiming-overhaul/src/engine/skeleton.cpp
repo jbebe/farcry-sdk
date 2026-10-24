@@ -37,12 +37,11 @@ namespace {
     constexpr ptrdiff_t kBones = 0x20;
     constexpr ptrdiff_t kBoneCount = 0x2C;
     constexpr ptrdiff_t kFlags = 0x30;
-    // A bone: its name's CRC-32, posed matrix, parent index and whether it is held.
+    // A bone: its name's CRC-32, posed matrix and parent index.
     constexpr ptrdiff_t kBoneSize = 0xA0;
     constexpr ptrdiff_t kBoneName = 0x00;
     constexpr ptrdiff_t kBoneModel = 0x50;
     constexpr ptrdiff_t kBoneParent = 0x90;
-    constexpr ptrdiff_t kBoneHeld = 0x94;
 
     AimingOverhaul::Skeleton::PosedFn g_posed = nullptr;
 
@@ -81,8 +80,7 @@ uint32_t AimingOverhaul::Skeleton::Count(uint8_t* skeleton) {
 
 AimingOverhaul::Skeleton::Bone AimingOverhaul::Skeleton::At(uint8_t* skeleton, uint32_t index) {
     uint8_t* bone = BoneAt(skeleton, index);
-    return {&Field<float>(bone, kBoneModel), Field<int>(bone, kBoneParent),
-            Field<uint8_t>(bone, kBoneHeld) != 0};
+    return {&Field<float>(bone, kBoneModel), Field<int>(bone, kBoneParent)};
 }
 
 int AimingOverhaul::Skeleton::Find(uint8_t* skeleton, uint32_t name) {

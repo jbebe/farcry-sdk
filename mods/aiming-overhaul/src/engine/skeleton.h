@@ -6,12 +6,10 @@
 namespace AimingOverhaul::Skeleton {
 
 // One posed bone: its 4x4 in the body's own axes, x right, y ahead, z up, whose first three rows
-// are the bone's axes and the fourth its place; its parent's index, below nought for none; and
-// whether the engine set it by hand, so that posing leaves it as it is.
+// are the bone's axes and the fourth its place; and its parent's index, below nought for none.
 struct Bone {
     float* model;
     int parent;
-    bool held;
 };
 
 // The skeleton the pawn's first-person body is posed on, which the camera turns with; or null.
