@@ -30,7 +30,7 @@ namespace {
     constexpr double kBreathOut = 2.0;
     constexpr double kRest = 1.5;
     constexpr double kRacingBreath = 0.5;
-    constexpr float kBreathDepth = 0.5f;
+    constexpr float kBreathDepth = 1.0f;
     constexpr float kRestCalm = 0.4f;
     constexpr double kRestSettle = 0.3;
     // Seconds for the aim to follow the breath, and to settle to the bottom as it is held: most of
@@ -48,9 +48,10 @@ namespace {
         double phase;
         float weight;
     };
-    // The wander: unrelated frequencies, so it never visibly repeats.
+    // The wander: unrelated frequencies, so it never visibly repeats. Upward it is half the
+    // breath's depth, so the rise and fall seen is the breath's.
     constexpr Wave kRight[] = {{0.185, 0.0, 0.55f}, {0.355, 1.3, 0.3f}, {0.645, 2.1, 0.15f}};
-    constexpr Wave kUp[] = {{0.215, 0.7, 0.55f}, {0.415, 2.6, 0.3f}, {0.835, 4.0, 0.15f}};
+    constexpr Wave kUp[] = {{0.215, 0.7, 0.28f}, {0.415, 2.6, 0.15f}, {0.835, 4.0, 0.07f}};
 
     // A breath's seconds drawing in, letting out and resting.
     struct Pace {
