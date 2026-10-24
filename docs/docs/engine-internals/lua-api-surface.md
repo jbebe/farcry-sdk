@@ -11,6 +11,10 @@ Scripts](./domino-scripts.md) for what the actual `.lua` script files built on t
 cover.
 :::
 
+The interpreter is Lua 4.1, so Lua 5's library is not there **(proven)**: a console chunk calling
+`ipairs` fails with `attempt to call global 'ipairs' (a nil value)`. Walk a table with a numeric
+`for` over a count kept by hand.
+
 Every C++ function/method exposed to the embedded Lua interpreter goes through one choke point:
 `RegisterLuaBinding(namespace_or_0, "Name", handlerPtr)` (`0x102aa850`). `namespace_or_0 == 0`
 registers a global Lua function callable from anywhere; a class-name string (e.g. `"CBuddiesManager"`)
