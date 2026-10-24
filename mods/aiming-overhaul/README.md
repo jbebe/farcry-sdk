@@ -26,7 +26,7 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   lost and while a blast nearby shakes the camera, and settles back over about 20 s. Each beat
   jolts the aim up a little, more as the heart races, and a racing heart breathes up to twice as
   fast with a quarter of the rest, sways up to 60% wider, and holds the breath for as little as
-  half as long. Down the sights a racing heart is heard, faintly.
+  half as long. Down the sights a heart past about 95 a minute is heard, faintly.
 - **Hold breath.** With a magnifying scope, on the Dart Rifle, the M1903, the Dragunov and the AS50,
   holding sprint down the scope holds the breath instead of sprinting: the breath settles to the
   bottom of its rest within half a second and stays there, and the wander eases to a sixth of
