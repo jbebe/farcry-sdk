@@ -26,9 +26,9 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   and bends it 15° from the lower back, over a quarter of a second, so the eye moves out about
   25 cm. The head, the view, the arms and the gun go with it. There is no lean while sprinting.
 - **Gun near walls.** A gun that would reach into a wall, within 0.8 m of the eye, swings down out
-  of it, by up to 34° as the room ahead shrinks by another 0.35 m, while the view holds still.
-  Swung more than halfway down it lets go of the sights and does not fire, until it is less than a
-  third of the way down again.
+  of it, by up to 34° as the room ahead shrinks by another 0.5 m, while the view holds still.
+  Swung most of the way down, past nine tenths, it lets go of the sights and does not fire, until it
+  is back above seven tenths; then the sights come back by themselves if the aim key is still held.
 - **Gun blur.** Down the iron sights the eye focuses on the front sight, and the rest of the gun
   goes out of focus by how far it is from it, as through an 8 mm pupil: the rear sight most, and the
   blur spills a little past the gun's edge. The focus holds on the front sight while a fast turn

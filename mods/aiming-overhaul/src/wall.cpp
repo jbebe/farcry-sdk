@@ -12,13 +12,13 @@ namespace {
     // Metres ahead of the eye a gun reaches, and how much less room swings it from up to all the
     // way down.
     constexpr float kReach = 0.8f;
-    constexpr float kSwingRoom = 0.35f;
+    constexpr float kSwingRoom = 0.5f;
     // Radians all the way down, and seconds to swing that far.
     constexpr float kMostSwing = 0.6f;
     constexpr float kSwingTime = 0.2f;
     // The share of the swing past which the gun is blocked, and below which it is free again.
-    constexpr float kBlockAbove = 0.5f;
-    constexpr float kFreeBelow = 0.3f;
+    constexpr float kBlockAbove = 0.9f;
+    constexpr float kFreeBelow = 0.7f;
 
     std::atomic<bool> g_enabled{true};
     float g_swing = 0.0f;

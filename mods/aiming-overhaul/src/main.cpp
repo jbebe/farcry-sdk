@@ -93,9 +93,20 @@ namespace {
     ULONGLONG g_seen = 0;
     constexpr ULONGLONG kOnFootMilliseconds = 200;
 
+    // Whether the aim key is held, and whether the gun near walls let go of the sights it asked for.
+    constexpr uint32_t kAim = FCSE::Crc32("startironsight");
+    constexpr uint32_t kAimReleased = FCSE::Crc32("stopironsight");
+    bool g_aimHeld = false;
+    bool g_sightsDropped = false;
+
     void OnSignal(uint32_t signal) {
         AimingOverhaul::Breath::OnSignal(signal);
         AimingOverhaul::Lean::OnSignal(signal);
+        if (signal == kAim) {
+            g_aimHeld = true;
+        } else if (signal == kAimReleased) {
+            g_aimHeld = false;
+        }
     }
 
     // The lean, the gun near walls, the breath and the eye's drift.
@@ -107,8 +118,15 @@ namespace {
         float forward[3];
         Aim::Forward(forward);
         Wall::Update(seconds, Aim::Eye(), forward);
+        // Sights the wall let go of come back once the gun is free, if the aim key is still held.
         if (Wall::Blocked()) {
             Pawn::DropSights(pawn);
+            g_sightsDropped = g_aimHeld;
+        } else if (g_sightsDropped) {
+            if (g_aimHeld) {
+                Pawn::RaiseSights(pawn);
+            }
+            g_sightsDropped = false;
         }
         Breath::Update(seconds, Aim::Aiming());
         return {Sway::Drift(seconds), Wall::Down(), lean.eye, lean.roll};
