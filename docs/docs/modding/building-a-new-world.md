@@ -12,9 +12,13 @@ A new world has been loaded in game **(proven)**:
 [`tools/TestRange`](https://github.com/jbebe/farcry-sdk/tree/main/tools/TestRange) builds
 `testrange`, `tmpla`'s flat plain under a new name with cover walls and a generated navmesh, and
 soldiers spawned there move and fight. It is the worked example for the sections below.
-[`mods/new-world`](https://github.com/jbebe/farcry-sdk/tree/main/mods/new-world) builds two smaller
-experiments, a renamed clone and a one-sector tile, which have not been loaded. Both build through
-one shared script, `scripts\tmpla-world.ps1`. [The test sheet](#the-test-sheet) has the commands.
+
+JackAll does every step on this page: **New map** on the Map tab or `jackall-cli world new` makes
+the files, the map editor places objects, and `jackall-cli world pack` builds the sector files, the
+entity library, the sector flags and the navmesh. See
+[Make a new world](/jackall/new-worlds). [`mods/new-world`](https://github.com/jbebe/farcry-sdk/tree/main/mods/new-world)
+builds two smaller experiments by script, a renamed clone and a one-sector tile, which have not been
+loaded. [The test sheet](#the-test-sheet) has the commands.
 
 Marks: **(proven)** seen in a running game; **(RE-verified)** read in `FarCry2_server`'s code;
 **(seen in data)** read in the retail files; **(inferred)**; **(untested)**. The mechanism is in

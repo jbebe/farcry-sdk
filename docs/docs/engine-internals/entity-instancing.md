@@ -115,6 +115,28 @@ The replace-by-name rule also applies *within* one file: `_full`'s 5,735 prototy
 Only the last declaration of each survives the map. The base library and the patch override contain no
 such duplicates.
 
+### A world's library is a cut of `_full`
+
+**(measured)** Every one of world 1's 1,419 archetypes is in `_full`, so the world library reads as a
+cut of the full set. A cut made by rule reproduces it with nothing missing:
+
+- **Roots:** every archetype a string anywhere in world 1's placed entities names (its worldsector
+  and landmark files, mapsdata, managers and omnis) or a Domino script quotes, plus 14 top-level groups
+  kept whole: `Beautifiers`, `buddies`, `cameras`, `Curves`, `Domino`, `engine`, `gadgets`,
+  `pickups`, `player`, `PostFXs`, `props`, `tables`, `WeaponProperties`, `weapons`.
+- **Closure:** every archetype a kept archetype names in a string field, repeated until nothing new
+  turns up.
+
+The whole groups are what nothing placed names. World 1 keeps all 113 `Curves`, all 105
+`WeaponProperties` and all 8 `cameras`. Before `props` was whole, the cut lacked 70 of the
+hand-held items the animations use: syringes, cigarettes, the map, the machete. The cut keeps 2,305
+archetypes against Ubisoft's 1,419. Most of the extras are editor `IGE_Archetypes` that world 1's own
+instances name but its library leaves out. Per [what a missing archetype does](#instancing-merges-it-does-not-replace),
+those instances never spawn in the campaign.
+
+JackAll's `world pack` cuts a new world's library this way, adding `enemy_archetypes` and `vehicle` whole
+because spawners name them only at run time.
+
 :::warning[`EntityLibraryPatchOverride.fcb` does not ship in every edition]
 It is **absent from the GOG Fortune's Edition**. That install's `patch.fat` holds 215 entries, its
 only entity library is `worlds\tmpla\generated\entitylibrary.fcb`, and its four hash-only entries are

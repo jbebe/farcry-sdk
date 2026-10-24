@@ -261,6 +261,22 @@ It writes each sector's `nv_<id>.nvm` and turns on the flag that makes the game 
 flat or gently rolling ground: it does not leave out steep slopes, and it makes no cover points. See
 [`.nvm`](/docs/file-formats/nvm#generating-a-navmesh).
 
+`world new` writes a new world's files, made from `tmpla`, into a folder, and `world pack` turns a
+layer holding new worlds into the form a mod ships: each world's sector files, entity library,
+sector flags and navmesh built from its pieces, everything else copied:
+
+```
+> jackall-cli world new myworld --side 8 --game "C:\Games\Far Cry 2" --out myworld-layer
+myworld: 382 files, 8 x 8 sectors.
+> jackall-cli world pack myworld-layer --game "C:\Games\Far Cry 2" --out myworld-packed
+myworld: 2,070 archetypes kept of 5,735
+myworld: 64 sectors, 14 obstacles cut out of the navmesh
+511 files, 0 plugin files.
+```
+
+`--base` names a mod the packed one builds on, such as the mod whose world it changes. See
+[Make a new world](/jackall/new-worlds).
+
 ## References
 
 `xref build` indexes every reference between the game's files, once:

@@ -85,4 +85,5 @@ layer ▸**.
 Because every object is its own piece, two mods that edit different objects in the same sector
 merge. Then go to the **Mods** tab and **Deploy mods**.
 
-Terrain, roads, rivers and vegetation are view only.
+Terrain, roads, rivers and vegetation are view only. For a world of your own, see
+[Make a new world](/jackall/new-worlds).
