@@ -18,9 +18,26 @@ public sealed class HkxShapesTests
     // An extended mesh holding both triangle subparts and a subpart of boxes.
     private const string Garage = "Hkx/colonialgarage02_ruin.hkx";
 
+    // A hull whose connectivity lists a face of fewer than three vertices.
+    private const string Supports = "Hkx/pipeline_supports_multi.hkx";
+
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(Chair, Truck, Garage);
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(Chair, Truck, Garage, Supports);
+
+    [Fact]
+    public void A_hull_face_with_no_surface_draws_nothing_and_breaks_nothing()
+    {
+        if (Read(Supports) is not { } nodes)
+        {
+            return;
+        }
+
+        HkxPrimitive[] hulls = [.. nodes.SelectMany(n => n.Primitives()).Where(p => p.Kind == HkxShapeKind.Hull)];
+
+        Assert.NotEmpty(hulls);
+        Assert.All(hulls, h => Assert.All(h.Vertices, v => Assert.True(float.IsFinite(v.X) && float.IsFinite(v.Y) && float.IsFinite(v.Z))));
+    }
 
     [Fact]
     public void The_chair_is_one_body_of_six_boxes_under_a_mopp()

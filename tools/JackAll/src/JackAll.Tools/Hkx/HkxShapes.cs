@@ -383,7 +383,7 @@ public static class HkxShapes
     {
         (Vector3[] vertices, int[][] faces) = HullFaces(shape);
         Vector3[] normals = [.. Planes(vertices, faces).Select(p => new Vector3(p.X, p.Y, p.Z))];
-        Vector3[] grown = [.. vertices.Select((v, i) => v + Push(normals.Where((_, f) => faces[f].Contains(i)), radius))];
+        Vector3[] grown = [.. vertices.Select((v, i) => v + Push(normals.Where((n, f) => float.IsFinite(n.X) && faces[f].Contains(i)), radius))];
         return new HkxPrimitive(shape, HkxShapeKind.Hull, toModel, grown, Fan(faces));
     }
 
@@ -437,13 +437,15 @@ public static class HkxShapes
             sum += n;
         }
         (a.M21, a.M31, a.M32, a.M44) = (a.M12, a.M13, a.M23, 1);
+        // A vertex on no face with a surface, as some retail hulls list, is not moved.
         return Matrix4x4.Invert(a, out Matrix4x4 inverse) && MathF.Abs(a.GetDeterminant()) > 1e-6f
             ? Vector3.TransformNormal(sum * radius, inverse)
-            : Vector3.Normalize(sum) * radius;
+            : sum.LengthSquared() > 1e-12f ? Vector3.Normalize(sum) * radius : Vector3.Zero;
     }
 
+    // A face of fewer than three vertices, which some retail hulls list, has no surface to draw.
     private static int[] Fan(int[][] faces)
-        => [.. faces.SelectMany(f => Enumerable.Range(1, f.Length - 2).SelectMany(i => new[] { f[0], f[i], f[i + 1] }))];
+        => [.. faces.Where(f => f.Length >= 3).SelectMany(f => Enumerable.Range(1, f.Length - 2).SelectMany(i => new[] { f[0], f[i], f[i + 1] }))];
 
     /// <summary>
     /// The sixteen floats of an hkTransform: its three rotation columns and translation, each stored as a vector,
@@ -463,10 +465,9 @@ public static class HkxShapes
 
     private static string Label(HkxPrimitive p)
     {
-        Vector3 size = p.Vertices[7] - p.Vertices[0];
         return p.Kind switch
         {
-            HkxShapeKind.Box => "Box " + string.Join(" x ", new[] { size.X, size.Y, size.Z }.Select(x => x.ToString("0.###", CultureInfo.InvariantCulture))),
+            HkxShapeKind.Box when p.Vertices[7] - p.Vertices[0] is var size => "Box " + string.Join(" x ", new[] { size.X, size.Y, size.Z }.Select(x => x.ToString("0.###", CultureInfo.InvariantCulture))),
             HkxShapeKind.Hull => $"Hull ({p.Vertices.Length} vertices)",
             _ => p.Kind.ToString(),
         };
