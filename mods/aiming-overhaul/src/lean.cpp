@@ -60,9 +60,40 @@ namespace {
         v[2] = v[2] * c - x * s;
     }
 
+    // Bends a posed matrix by `bend` about `pivot`, the spine's unbent place, and slides it.
+    void Bend(float* model, const float pivot[3], float bend) {
+        Turn(model, bend);
+        Turn(model + 4, bend);
+        Turn(model + 8, bend);
+        float* place = model + 12;
+        for (int k = 0; k < 3; ++k) {
+            place[k] -= pivot[k];
+        }
+        Turn(place, bend);
+        for (int k = 0; k < 3; ++k) {
+            place[k] += pivot[k];
+        }
+        place[0] += SlideFor(bend);
+    }
+
+    // Whether bone `i` still holds what the last bend left in it, the animation not having written
+    // it since.
+    bool StillBent(uint32_t i, const float* model) {
+        return std::equal(model, model + 16, g_bent[i].begin());
+    }
+
+    // The spine's place before the bend, which turns it about that place but slides it.
+    void UnbentPivot(uint8_t* skeleton, float bend, float pivot[3]) {
+        const float* spine = AimingOverhaul::Skeleton::At(skeleton, g_spine).model;
+        std::copy_n(spine + 12, 3, pivot);
+        if (StillBent(g_spine, spine)) {
+            pivot[0] -= SlideFor(bend);
+        }
+    }
+
     // Notes which of the skeleton's bones bend: the spine's and every one below it in the tree but
-    // the view's. The first-person body is drawn lined up on the view's bone, so bending that too would
-    // take the bend back off everything else; the view rolls by itself instead.
+    // the view's. The first-person body is drawn lined up on the view's bone, so bending that too
+    // would take the bend back off everything else; the view rolls by itself instead.
     bool FindBends(uint8_t* skeleton) {
         using namespace AimingOverhaul;
         const uint32_t count = Skeleton::Count(skeleton);
@@ -138,27 +169,33 @@ void AimingOverhaul::Lean::OnPosed(uint8_t* skeleton) {
         return;
     }
     float pivot[3];
-    std::copy_n(Skeleton::At(skeleton, g_spine).model + 12, 3, pivot);
+    UnbentPivot(skeleton, bend, pivot);
     const uint32_t count = Skeleton::Count(skeleton);
     for (uint32_t i = g_spine; i < count; ++i) {
         float* model = Skeleton::At(skeleton, i).model;
-        if (!g_bends[i] || std::equal(model, model + 16, g_bent[i].begin())) {
-            continue;
+        if (g_bends[i] && !StillBent(i, model)) {
+            Bend(model, pivot, bend);
+            std::copy_n(model, 16, g_bent[i].begin());
         }
-        Turn(model, bend);
-        Turn(model + 4, bend);
-        Turn(model + 8, bend);
-        float* place = model + 12;
-        for (int k = 0; k < 3; ++k) {
-            place[k] -= pivot[k];
-        }
-        Turn(place, bend);
-        for (int k = 0; k < 3; ++k) {
-            place[k] += pivot[k];
-        }
-        place[0] += SlideFor(bend);
-        std::copy_n(model, 16, g_bent[i].begin());
     }
+}
+
+void AimingOverhaul::Lean::OnAttached(uint8_t* skeleton, int bone, float* model) {
+    const float bend = g_posedBend;
+    if (skeleton != g_skeleton) {
+        return;
+    }
+    static int s_logged = -2;
+    if (bone != s_logged) {
+        s_logged = bone;
+        FCSE::Logf("lean: an entity is placed from bone %d (view's bone %d)", bone, g_camera);
+    }
+    if (bone != g_camera || bend == 0.0f) {
+        return;
+    }
+    float pivot[3];
+    UnbentPivot(skeleton, bend, pivot);
+    Bend(model, pivot, bend);
 }
 
 void AimingOverhaul::Lean::SetEnabled(bool enabled) {

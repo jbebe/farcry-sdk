@@ -24,8 +24,21 @@ namespace {
     FCSE::Relocation<PoseJobFn> g_poseJob{FCSE::Uplay(0x0064EC50)};
     PoseJobFn g_originalPoseJob = nullptr;
 
-    // CGraphicComponent's skeleton through its vtable: to read, and to change, which marks its bones
-    // to be posed again. __thiscall.
+    // An entity bound to a bone placed: the bone's posed matrix copied into the child binding.
+    // __thiscall on the parent's binding, with the child's and a matrix used when there is no bone.
+    using PlaceChildFn = void(__fastcall*)(uint8_t* parent, void* unused, uint8_t* child,
+                                           const float* matrix);
+    FCSE::Relocation<PlaceChildFn> g_placeChild{FCSE::Uplay(0x005530F0)};
+    PlaceChildFn g_originalPlaceChild = nullptr;
+
+    // A parent binding's skeleton, once looked up; a child's bone index, -1 for none, and the copy
+    // of that bone's posed matrix.
+    constexpr ptrdiff_t kParentSkeleton = 0xC0;
+    constexpr ptrdiff_t kChildBone = 0x1C;
+    constexpr ptrdiff_t kChildBoneMatrix = 0x40;
+
+    // CGraphicComponent's skeleton through its vtable: to read, and to change, which marks its
+    // bones to be posed again. __thiscall.
     using GraphicSkeletonFn = uint8_t*(__fastcall*)(uint8_t* graphic);
     constexpr ptrdiff_t kGraphicSkeletonSlot = 0x78 / 4;
     constexpr ptrdiff_t kGraphicChangeSkeletonSlot = 0x7C / 4;
@@ -44,6 +57,7 @@ namespace {
     constexpr ptrdiff_t kBoneParent = 0x90;
 
     AimingOverhaul::Skeleton::PosedFn g_posed = nullptr;
+    AimingOverhaul::Skeleton::AttachedFn g_attached = nullptr;
 
     uint8_t* BoneAt(uint8_t* skeleton, uint32_t index) {
         return Field<uint8_t*>(skeleton, kBones) + index * kBoneSize;
@@ -62,6 +76,16 @@ namespace {
         g_originalPoseJob(context);
         const uint32_t* job = *context;
         g_posed(reinterpret_cast<uint8_t*>(job[5 + job[0] + job[1] + job[2]]));
+    }
+
+    void __fastcall PlaceChildDetour(uint8_t* parent, void* unused, uint8_t* child,
+                                     const float* matrix) {
+        g_originalPlaceChild(parent, unused, child, matrix);
+        const int bone = Field<int>(child, kChildBone);
+        uint8_t* skeleton = Field<uint8_t*>(parent, kParentSkeleton);
+        if (bone >= 0 && skeleton != nullptr) {
+            g_attached(skeleton, bone, &Field<float>(child, kChildBoneMatrix));
+        }
     }
 }
 
@@ -93,10 +117,12 @@ int AimingOverhaul::Skeleton::Find(uint8_t* skeleton, uint32_t name) {
     return -1;
 }
 
-bool AimingOverhaul::Skeleton::Install(PosedFn posed) {
+bool AimingOverhaul::Skeleton::Install(PosedFn posed, AttachedFn attached) {
     g_posed = posed;
+    g_attached = attached;
     if (!Hook(g_pose.address(), &PoseDetour, &g_originalPose) ||
-        !Hook(g_poseJob.address(), &PoseJobDetour, &g_originalPoseJob)) {
+        !Hook(g_poseJob.address(), &PoseJobDetour, &g_originalPoseJob) ||
+        !Hook(g_placeChild.address(), &PlaceChildDetour, &g_originalPlaceChild)) {
         FCSE::ApiPointer()->Log("skeleton: posing cannot be hooked, so the body does not lean");
         return false;
     }

@@ -93,7 +93,8 @@ namespace {
     ULONGLONG g_seen = 0;
     constexpr ULONGLONG kOnFootMilliseconds = 200;
 
-    // Whether the aim key is held, and whether the gun near walls let go of the sights it asked for.
+    // Whether the aim key is held, and whether the gun near walls let go of the sights it asked
+    // for.
     constexpr uint32_t kAim = FCSE::Crc32("startironsight");
     constexpr uint32_t kAimReleased = FCSE::Crc32("stopironsight");
     bool g_aimHeld = false;
@@ -176,7 +177,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     AimingOverhaul::Fire::Install(&RefuseShot);
     AimingOverhaul::Input::Install(&OnSignal);
     AimingOverhaul::Sprint::Install(&AimingOverhaul::Breath::HoldsSprint);
-    AimingOverhaul::Skeleton::Install(&AimingOverhaul::Lean::OnPosed);
+    AimingOverhaul::Skeleton::Install(&AimingOverhaul::Lean::OnPosed,
+                                      &AimingOverhaul::Lean::OnAttached);
 
     const FCSE_Setting settings[] = {
         {"Sway", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Sway::SetEnabled)},

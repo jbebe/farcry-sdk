@@ -26,7 +26,11 @@ int Find(uint8_t* skeleton, uint32_t name);
 // posed them.
 using PosedFn = void (*)(uint8_t* skeleton);
 
+// Runs as an entity bound to one of a skeleton's bones, such as a weapon in hand, is placed from
+// it, with that bone's posed matrix as copied for the entity, which the entity is placed from.
+using AttachedFn = void (*)(uint8_t* skeleton, int bone, float* model);
+
 // False, and logged, when posing cannot be hooked.
-bool Install(PosedFn posed);
+bool Install(PosedFn posed, AttachedFn attached);
 
 }

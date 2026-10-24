@@ -26,6 +26,10 @@ View Update(uint8_t* pawn, float seconds, bool free);
 // Bends a skeleton freshly posed, if it is the player's.
 void OnPosed(uint8_t* skeleton);
 
+// Bends what is placed from the player's view bone, such as a long gun at the sights, with the
+// body, though the bone itself stays unbent.
+void OnAttached(uint8_t* skeleton, int bone, float* model);
+
 void SetEnabled(bool enabled);
 
 }
