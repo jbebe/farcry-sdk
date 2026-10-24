@@ -315,6 +315,20 @@ read it and when the camera did, 60 frames in 60. Retail GOG v1.03, from Aiming 
 The camera turns with the `Camera` bone's posed matrix, and a shot's first-person origin
 (`0x10112600`) is that bone's place in the world (`0x1010D780`).
 
+An entity bound to a bone is placed from that bone's posed matrix (`0x105530F0`, `__thiscall` on
+the parent's binding with the child's binding and a fallback matrix, `RET 8`): the child binding's
+`+0x1C` is the bone's index, and the matrix is copied to the child's `+0x40`, which the entity is
+then placed from. The parent binding lists its children as entity proxies at `+0x2C`, with their
+count at `+0x30`, and an entity's binding is at its `+0x78`.
+
+:::info[Measured in a running game]
+On the player: the first-person camera (`cameras.Camera.First`) hangs from `Camera`, the weapon in
+hand from `R Hand`, slung long guns from `Spine2`, a holstered pistol and the machete from a thigh,
+and the gadgets and grenades from `Pelvis`. Down the sights the AK47 moves to `Camera`, which lines
+its sights up on the eye; the Desert Eagle stays on `R Hand`. Retail GOG v1.03, from Aiming
+Overhaul.
+:::
+
 The first-person body is drawn lined up on its `Camera` bone. Turn every bone but `Camera` about a
 point after the skeleton's job, and the arms and the gun turn on screen. Turn `Camera` with them,
 and the arms and the gun stay where they were in the world while the view turns.
@@ -323,10 +337,13 @@ and the arms and the gun stay where they were in the world while the view turns.
 
 Aiming Overhaul leans the player by bending the body's posed bones after the skeleton's job: `Spine`
 and every bone below it in the tree but `Camera`, about `Spine`'s place, round the body's forward
-axis, and sliding them to the side along its X. Every bone of the player's body is held, so it bends those too, once per write of the
-animation, and marks the skeleton changed through `vt+0x7C` each frame the bend moves. The view is
-rolled by the same angle at `+0xD4`, and the eye moved at `+0xE8` and `+0xF0` by how far the bend
-and the slide move `Camera`, in the rolled view's axes. The slide is not seen in game yet.
+axis, and sliding them to the side along its X. Every bone of the player's body is held, so it
+bends those too, once per write of the animation, and marks the skeleton changed through `vt+0x7C`
+each frame the bend moves. The view is rolled by the same angle at `+0xD4`, and the eye moved at
+`+0xE8` and `+0xF0` by how far the bend and the slide move `Camera`, in the rolled view's axes.
+Whatever else hangs from `Camera`, a long gun down the sights, has its copy of the bone's matrix
+bent the same way; the camera's own is left alone. The slide is seen in game; the bent long gun
+is not yet.
 
 :::info[Seen in a running game]
 The view, the arms and the gun lean together. Retail GOG v1.03, from Aiming Overhaul. The muzzle
