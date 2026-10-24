@@ -305,6 +305,13 @@ the job's context, whose first field is that declaration.
 Then the component's sync (`0x1051B2A0`) clears bit 0, moves the entities bound to it, and places its
 rigid parts from their bones.
 
+:::info[Measured in a running game]
+On the player's first-person body (107 bones at run time) every bone but the first is held: the
+animation writes each posed matrix itself, before the skeleton's job, so the job's posing leaves
+them all alone. A posed matrix changed right after the job was still unchanged when the skin job
+read it and when the camera did, 60 frames in 60. Retail GOG v1.03, from Aiming Overhaul.
+:::
+
 The camera turns with the `Camera` bone's posed matrix, and a shot's first-person origin
 (`0x10112600`) is that bone's place in the world (`0x1010D780`). Nothing here is seen in game yet.
 
