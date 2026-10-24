@@ -31,9 +31,12 @@ public record struct NvmNode(
     }
 }
 
+/// <summary>One cover: a stretch of obstacle an agent can hide behind, standing on its left.</summary>
 /// <param name="Height">In 8 mm steps.</param>
-/// <param name="Vertex">Index into <see cref="NvmSector.CoverVertices"/>.</param>
-public readonly record struct NvmCover(byte Height, ushort Vertex, byte Type, ushort Node);
+/// <param name="GraphId">The graph id of the node an agent takes the cover from.</param>
+/// <param name="Type">0x20 when the start corner is exposed, 0x10 the end.</param>
+/// <param name="Vertex">Index into <see cref="NvmSector.CoverVertices"/> of the cover's start; its end follows.</param>
+public readonly record struct NvmCover(byte Height, ushort GraphId, byte Type, ushort Vertex);
 
 public readonly record struct NvmDynamicCover(NvmCover Cover, uint First, uint Second);
 
@@ -400,8 +403,8 @@ public static class NvmSectorFile
     private static void WriteCover(ByteWriter w, NvmCover cover)
     {
         w.WriteU8(cover.Height);
-        w.WriteU16(cover.Vertex);
+        w.WriteU16(cover.GraphId);
         w.WriteU8(cover.Type);
-        w.WriteU16(cover.Node);
+        w.WriteU16(cover.Vertex);
     }
 }
