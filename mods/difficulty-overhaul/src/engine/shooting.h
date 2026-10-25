@@ -40,6 +40,9 @@ float Visibility(void* shooting);
 // How long he has had his target in his sight without a break, or -1 when it is out of sight.
 float SightSeconds(void* shooting);
 
+// A CPawnAgent's knowledge entry for another agent, or null when he knows nothing of it.
+const uint8_t* Knowledge(const void* agent, const void* target);
+
 // The distance to his target, as last measured.
 float TargetDistance(const void* shooting);
 

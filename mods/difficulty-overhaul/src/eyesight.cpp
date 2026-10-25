@@ -1,13 +1,16 @@
 // Eyesight: how soldiers see the player. The focus cone reaches farther and keeps the player fully
 // visible out to half its length; the peripheral cone spans 180 degrees, where the player is only
 // ever noticed: enough for a soldier to turn and look, never enough to see him as an enemy.
+#include "engine/game.h"
 #include "engine/memory.h"
+#include "engine/shooting.h"
 #include "fcse_api.h"
 
 #include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <cstdint>
+#include <unordered_map>
 
 using namespace DifficultyOverhaul;
 
@@ -67,6 +70,40 @@ namespace {
     // The player's agent, the target AdjustFOV last flagged as a player.
     std::atomic<const void*> g_player{nullptr};
 
+    // A context's observer; a knowledge entry's flags, its smoothed visibility and the visibility
+    // its last vision update measured. Flags 0 to 2 all set mean the target is plainly seen.
+    constexpr ptrdiff_t kContextObserver = 0x08;
+    constexpr ptrdiff_t kEntryFlags = 0x00;
+    constexpr ptrdiff_t kEntrySmoothed = 0x44;
+    constexpr ptrdiff_t kEntryMeasured = 0x48;
+    constexpr uint32_t kPlainlySeen = 0x7;
+    // Diagnostic while Eyesight is tuned: each soldier's view of the player, every half second.
+    constexpr double kTraceSeconds = 0.5;
+    std::unordered_map<const void*, double> g_traced;
+    // The distance factor the game and Eyesight gave the player on this thread's last evaluation.
+    thread_local float t_gameDistance = -1.0f;
+    thread_local float t_distance = -1.0f;
+
+    void Trace(const uint8_t* context, float angle, float gameAngular, float angular) {
+        const void* observer = Read<const void*>(context, kContextObserver);
+        const double now = Game::Now();
+        double& last = Shooting::Remember(g_traced, observer);
+        if (now - last < kTraceSeconds) {
+            return;
+        }
+        last = now;
+        const uint8_t* entry = Shooting::Knowledge(observer, g_player.load(std::memory_order_relaxed));
+        FCSE::Logf("eyesight: %.1f m, %.0f deg off his view; distance %.2f (game %.2f), angle %.2f "
+                   "(game %.2f); %s, measured %.2f, smoothed %.2f",
+                   g_targetDistance(context), angle, t_distance, t_gameDistance, angular, gameAngular,
+                   entry == nullptr ? "unknown to him"
+                   : (Read<uint32_t>(entry, kEntryFlags) & kPlainlySeen) == kPlainlySeen
+                       ? "plainly seen"
+                       : "not plainly seen",
+                   entry != nullptr ? Read<float>(entry, kEntryMeasured) : 0.0f,
+                   entry != nullptr ? Read<float>(entry, kEntrySmoothed) : 0.0f);
+    }
+
     bool ForPlayer(const uint8_t* context) {
         const void* player = g_player.load(std::memory_order_relaxed);
         return player != nullptr && Read<const void*>(context, kContextTarget) == player;
@@ -110,12 +147,15 @@ namespace {
         const float length = Read<float>(Read<const uint8_t*>(context, kContextCones), kFocusLength);
         const float distance = g_targetDistance(context);
         const float atEnd = Read<float>(parameters, kVisibilityAtEnd);
+        t_gameDistance = game;
         // Any other result is the game's case for a player with his back turned, left as it is.
         if (std::abs(game - Falloff(distance, length, Read<float>(parameters, kFullVisibilityShare),
                                     atEnd)) > 1.0e-3f) {
+            t_distance = game;
             return game;
         }
-        return Falloff(distance, length, kFullVisibility, atEnd);
+        t_distance = Falloff(distance, length, kFullVisibility, atEnd);
+        return t_distance;
     }
 
     float __fastcall FovDetour(void* evaluator, void* unused, bool* applies) {
@@ -146,14 +186,15 @@ namespace {
         const auto* cones = Read<const uint8_t*>(context, kContextCones);
         const float focusHalf = Read<float>(cones, kFocusAngle) / 2.0f;
         const float peripheralHalf = Read<float>(cones, kPeripheralAngle) / 2.0f;
+        float angular = 1.0f;
         if (angle > peripheralHalf) {
-            return 0.0f;
+            angular = 0.0f;
+        } else if (angle >= focusHalf && peripheralHalf > focusHalf) {
+            const float across = (angle - focusHalf) / (peripheralHalf - focusHalf);
+            angular = kPeripheralNearFocus + (kPeripheralAtEdge - kPeripheralNearFocus) * across;
         }
-        if (angle < focusHalf || peripheralHalf <= focusHalf) {
-            return 1.0f;
-        }
-        const float across = (angle - focusHalf) / (peripheralHalf - focusHalf);
-        return kPeripheralNearFocus + (kPeripheralAtEdge - kPeripheralNearFocus) * across;
+        Trace(context, angle, game, angular);
+        return angular;
     }
 }
 

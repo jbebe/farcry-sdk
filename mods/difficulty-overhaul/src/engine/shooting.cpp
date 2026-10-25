@@ -66,13 +66,21 @@ float Visibility(void* shooting) {
     return visibility;
 }
 
-float SightSeconds(void* shooting) {
-    const auto* senses = Read<const uint8_t*>(shooting, kShooter) + kAgentSenses;
-    const auto* target = static_cast<const uint8_t*>(Target(shooting));
+const uint8_t* Knowledge(const void* agent, const void* target) {
+    const auto* senses = static_cast<const uint8_t*>(agent) + kAgentSenses;
     uint8_t* entry = nullptr;
     if (target == nullptr ||
         !g_getKnowledge(Read<void*>(senses, kSensesKnowledge), nullptr,
-                        reinterpret_cast<const uint32_t*>(target + kAgentId), &entry)) {
+                        reinterpret_cast<const uint32_t*>(static_cast<const uint8_t*>(target) + kAgentId),
+                        &entry)) {
+        return nullptr;
+    }
+    return entry;
+}
+
+float SightSeconds(void* shooting) {
+    const uint8_t* entry = Knowledge(Read<const void*>(shooting, kShooter), Target(shooting));
+    if (entry == nullptr) {
         return -1.0f;
     }
     return std::max(Read<float>(entry, kEntryFocusSeconds),
