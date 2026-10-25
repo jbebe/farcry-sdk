@@ -247,6 +247,17 @@ knowledge flags and sets one per cone the target is in; `GetVisibilityValue` wit
 In the range, stock and modded alike, a rifleman facing a player standing in the open 50 m away only
 investigated, walked to where he had noticed him, and passed a player who had stepped 5-10 m aside.
 
+**Seeing is not recognizing.** Visibility becomes a threat only in `CTaskFindVisualThreat` (Steam
+`0x1099A050`, `RET 4`): it sorts every agent he sees into clear threats (above his "clear" value) and
+faint ones (above "fuzzy") and succeeds once either list holds anyone, which sends a target-seen
+report. It keeps polling while it finds nothing. The idle brain starts it once; every alert plan starts
+it at its `OnStart`. So an alerted soldier whose search has just reported a faint sighting looks no
+more until his next plan starts: in the range he walked 7.5 s with the player 4-27° off his view at a
+visibility of 0.93, against his 0.6 "clear", and did not react (**traced in the server build**, matched
+in `Dunia.dll`, seen in the log). `SetVisibilityValues` also sets two more values per state (idle 10
+and 50, alert 1 and 50, threshold, special and vehicle 1 and 100, combat untouched); what reads them was
+not traced. The agent's `ThreatLevel` meter is fed only by Bang and Fear stims.
+
 The evaluators combine as a product: each with value *e* and weight *w* contributes
 `1 − (1 − e) × w` (`CVisibilityEvaluator::Evaluate`; GOG `0x10A0BFC0`). A weight of 0 skips the
 evaluator. An evaluator that returns 0 makes the whole product 0, whatever its weight. Within that
