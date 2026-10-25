@@ -23,6 +23,8 @@ namespace {
     constexpr Soldier kRiflemanAt50[] = {Lane(kRifleman, 50)};
     constexpr Soldier kMachineGunnerAt20[] = {Lane(kMachineGunner, 20)};
     constexpr Soldier kTwoAt20[] = {Lane(kRifleman, 20, 107), Lane(kRifleman, 20, 113)};
+    // Facing north, so the player at the lane's start stands at the edge of his vision, on his left.
+    constexpr Soldier kSideOnAt30[] = {{kRifleman, {60, 110, 0}}};
     constexpr Soldier kShotgunnerAt10[] = {Lane(kShotgunner, 10)};
     constexpr Soldier kShotgunnerAt40[] = {Lane(kShotgunner, 40)};
 
@@ -39,6 +41,10 @@ namespace {
         {"Machine gunner at 20 m", "5", kMachineGunnerAt20,
          "Stand still in the open while he fires full auto.",
          "Hits spread out within a burst; no shot is certain, point blank included."},
+        {"Rifleman side-on at 30 m", "16", kSideOnAt30,
+         "Stand still where you start: you are at the edge of his vision. Then step a few metres north, "
+         "into his view.",
+         "He notices you at his side, comes or turns to look, and shoots once he faces you, not before."},
         {"Two riflemen at 20 m", "3", kTwoAt20,
          "Shoot one in the torso and the other in the arms and legs.",
          "About 2 torso hits down the first; about 4 limb hits the second."},
