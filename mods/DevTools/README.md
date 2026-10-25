@@ -302,7 +302,9 @@ Pressing it does the following, as one chunk of the game's own Lua:
 2. Sets the time to noon, so runs compare.
 3. Moves you onto its arena's start, facing the enemy. `TeleportEntity` takes you to a spawn point
    spawned there, and copies that spawn point's position and facing.
-4. Spawns its soldiers, each on a guard or sniper post when he should hold his ground.
+4. Spawns its soldiers. Only the sniper is put on a post: a soldier spawned onto a guard post stood
+   blind for about 7 s, facing the player 10 m away, while one spawned without a post engaged at
+   once. Without a post a soldier moves sideways around the player once he fights.
 
 Only one scenario's soldiers are ever alive, so the arenas do not disturb each other. Hovering a
 button shows what to do and what to look for; the running scenario's steps stay in the tab. Toggle
@@ -497,8 +499,8 @@ Everything below needs a real install:
 - **Spawner** *(not yet run)*: on the Spawner tab, Datsun puts a Datsun 8 m ahead, facing the way
   the player faces, which drops onto its wheels and can be driven. The Lua tab shows the
   `SpawnEntityFromArchetype` line it ran.
-- **Spawner soldiers** *(not yet run)*: in the test range, Squad size 3 and Red faction's Assault,
-  Caucasian put three soldiers 25 m ahead, 3 m apart, facing you, and they engage.
-- **Range** *(not yet run)*: in the test range, Rifleman at 20 m puts you at the duel lane's start
-  facing east, and one rifleman 20 m ahead who stays on his post; Clear removes him. A soldier who
-  walks off his post means posts spawned at run time do not hold, and the duel lane needs placed ones.
+- **Spawner soldiers** *(seen 2026-10-25 with squad size 1)*: in the test range, Red faction's
+  Assault, Caucasian put a soldier 25 m ahead, facing you, and he opened fire at once.
+- **Range** *(seen 2026-10-25)*: Rifleman at 10 m put the player at the duel lane's start facing
+  him and spawned him on a guard post. He stood facing the player for about 7 s before he noticed
+  him, so the scenarios no longer use guard posts. Not yet run since that change.

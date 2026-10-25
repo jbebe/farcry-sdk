@@ -9,12 +9,13 @@ namespace {
     constexpr const char* kMachineGunner = "enemy_archetypes.Red_Faction.LightMachineGunner_Caucasian";
     constexpr const char* kShotgunner = "enemy_archetypes.Red_Faction.ShotgunMan_Caucasian";
     constexpr const char* kSniper = "enemy_archetypes.Red_Faction.Sniper_Caucasian";
-    constexpr const char* kGuardPost = "STP_archetypes.Duty.Guard";
+    // Only the sniper holds a post: a soldier spawned onto one is blind while he settles onto it,
+    // seconds a scenario that starts in plain sight cannot spare.
     constexpr const char* kSniperPost = "STP_archetypes.Special.SniperPoint";
 
-    // A soldier on the duel lane, held at `metres` east of the player's start at (30, 110).
+    // A soldier on the duel lane, `metres` east of the player's start at (30, 110).
     constexpr Soldier Lane(const char* archetype, float metres, float y = 110) {
-        return {archetype, {30 + metres, y, 90}, kGuardPost};
+        return {archetype, {30 + metres, y, 90}};
     }
 
     constexpr Soldier kRiflemanAt10[] = {Lane(kRifleman, 10)};
@@ -49,7 +50,7 @@ namespace {
          "A much lower chance than at 10 m, and than a rifleman's at 40 m."},
     };
 
-    constexpr Soldier kLowWallRifleman[] = {{kRifleman, {100, 70, 180}, kGuardPost}};
+    constexpr Soldier kLowWallRifleman[] = {{kRifleman, {100, 70, 180}}};
     constexpr Scenario kLowWall[] = {
         {"Rifleman over the low wall", "9", kLowWallRifleman,
          "Crouch behind the low concrete wall. Then go out to the side and lie at the edge of his view.",
@@ -66,7 +67,7 @@ namespace {
          "after you slip away they search."},
     };
 
-    constexpr Soldier kSuppressionPair[] = {{kRifleman, {464, 56, 90}, kGuardPost}, {kRifleman, {464, 64, 90}, kGuardPost}};
+    constexpr Soldier kSuppressionPair[] = {{kRifleman, {464, 56, 90}}, {kRifleman, {464, 64, 90}}};
     constexpr Scenario kSuppression[] = {
         {"Two riflemen behind cover", "12", kSuppressionPair,
          "Fire near one of them without hitting him.",
