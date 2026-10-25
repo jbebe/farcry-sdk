@@ -37,6 +37,9 @@ bool IsPlayer(void* agent);
 // How visible his target is to him now, 0 when he does not see it.
 float Visibility(void* shooting);
 
+// How long he has had his target in his sight without a break, or -1 when it is out of sight.
+float SightSeconds(void* shooting);
+
 // The distance to his target, as last measured.
 float TargetDistance(const void* shooting);
 

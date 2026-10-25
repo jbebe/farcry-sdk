@@ -5,15 +5,21 @@
 #include "engine/memory.h"
 #include "fcse_api.h"
 
+#include <algorithm>
+
 namespace {
     using GetTargetFn = void*(__fastcall*)(void* shooting);
     using IsAPlayerFn = bool(__fastcall*)(void* agent);
     using GetVisibilityFn = bool(__fastcall*)(void* senses, void* unused, void* agent,
                                               float* visibility, bool remembered);
+    using GetKnowledgeFn = bool(__fastcall*)(void* knowledge, void* unused, const uint32_t* id,
+                                             uint8_t** entry);
 
-    // CShootingSystem::GetTarget and CSensorySystem::GetVisibilityValue.
+    // CShootingSystem::GetTarget, CSensorySystem::GetVisibilityValue and
+    // CSensorySystemKB::GetKBEntryForEntity.
     FCSE::Relocation<GetTargetFn> g_getTarget{FCSE::Uplay(0x00A19370)};
     FCSE::Relocation<GetVisibilityFn> g_getVisibility{FCSE::Uplay(0x00A021A0)};
+    FCSE::Relocation<GetKnowledgeFn> g_getKnowledge{FCSE::Uplay(0x00A235C0)};
 
     // CShootingSystem's agent, its reaction CLifeTimer (lifetime, -1 while stopped, then start
     // time) and its target distance; CPawnAgent's IsAPlayer slot, its senses and shooting system
@@ -24,7 +30,13 @@ namespace {
     constexpr ptrdiff_t kTargetDistance = 0xE8;
     constexpr ptrdiff_t kIsAPlayerSlot = 0xBC;
     constexpr ptrdiff_t kAgentSenses = 0x28C;
+    constexpr ptrdiff_t kAgentId = 0x0C;
     constexpr ptrdiff_t kAgentShooting = 0x4A0;
+    // CSensorySystem's knowledge base, and a knowledge entry's unbroken seconds in the focus and
+    // the peripheral cone, -1 while out of it.
+    constexpr ptrdiff_t kSensesKnowledge = 0x24;
+    constexpr ptrdiff_t kEntryFocusSeconds = 0x0C;
+    constexpr ptrdiff_t kEntryPeripheralSeconds = 0x10;
     constexpr ptrdiff_t kAgentPawn = 0x268;
     constexpr ptrdiff_t kPawnData = 0x10;
     constexpr ptrdiff_t kTaskAgent = 0x34;
@@ -34,7 +46,7 @@ namespace DifficultyOverhaul::Shooting {
 
 FCSE::Relocation<CanShootFn> CanShoot{FCSE::Uplay(0x009792F0)};
 
-bool Found() { return g_getTarget && g_getVisibility; }
+bool Found() { return g_getTarget && g_getVisibility && g_getKnowledge; }
 
 void* Target(void* shooting) { return g_getTarget(shooting); }
 
@@ -52,6 +64,19 @@ float Visibility(void* shooting) {
     float visibility = 0.0f;
     g_getVisibility(senses, nullptr, Target(shooting), &visibility, false);
     return visibility;
+}
+
+float SightSeconds(void* shooting) {
+    const auto* senses = Read<const uint8_t*>(shooting, kShooter) + kAgentSenses;
+    const auto* target = static_cast<const uint8_t*>(Target(shooting));
+    uint8_t* entry = nullptr;
+    if (target == nullptr ||
+        !g_getKnowledge(Read<void*>(senses, kSensesKnowledge), nullptr,
+                        reinterpret_cast<const uint32_t*>(target + kAgentId), &entry)) {
+        return -1.0f;
+    }
+    return std::max(Read<float>(entry, kEntryFocusSeconds),
+                    Read<float>(entry, kEntryPeripheralSeconds));
 }
 
 float TargetDistance(const void* shooting) { return Read<float>(shooting, kTargetDistance); }
