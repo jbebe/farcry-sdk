@@ -52,9 +52,9 @@ def fail(message):
     return 1
 
 
-def posed_local(pose_bone):
-    """The bone's node relative to its parent's, as posed."""
-    return convert.node_local(pose_bone.matrix, pose_bone.parent.matrix if pose_bone.parent else None)
+def posed_local(pose_bone, parent):
+    """The bone's node relative to `parent`'s, as posed; a root's is relative to the model."""
+    return convert.node_local(pose_bone.matrix, parent.matrix if parent else None)
 
 
 def _gap(a, b):
@@ -71,6 +71,8 @@ def check(model, rig, clip_path):
     loaded = import_mab.load(result["pack"], clip_path, armature)
     clip, skeleton = loaded["clip"], result["pack"].rig()
     names = {bone["id"]: bone["name"] for bone in skeleton["bones"]}
+    # Measured against the skeleton's parent, which is what a clip is written against.
+    parent_of = {bone["name"]: names.get(bone["parent"]) for bone in skeleton["bones"]}
     errors = 0
 
     print("%s on %s: %d bones posed, %d moved, %d unmatched, %d keys, duration %.3f"
@@ -115,7 +117,7 @@ def check(model, rig, clip_path):
             pose_bone = armature.pose.bones.get(name)
             if pose_bone is None:
                 continue
-            local = posed_local(pose_bone)
+            local = posed_local(pose_bone, armature.pose.bones.get(parent_of[name] or ""))
             wanted = rotations.get((bone_id, frame))
             if wanted is not None:
                 got = local.to_quaternion()

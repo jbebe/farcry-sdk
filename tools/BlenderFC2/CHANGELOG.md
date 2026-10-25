@@ -12,6 +12,12 @@ Notable changes to the Far Cry 2 Blender add-on, loosely following
   an older version has to be imported again: loading or writing an animation on its rig is refused
   rather than written a quarter turn off.
 
+### Fixed
+- **A loaded animation no longer lifts the body a metre.** The mesh hangs `Pelvis` off an extra
+  `Root` node at hip height that the game's skeleton does not have, and the clip places `Pelvis`
+  from the model's origin, so the body floated a hip's height above the ground, and a full-body clip
+  such as a jump was also turned. Written animations were never affected; only the view was.
+
 ## [0.3.2] - 2026-10-24
 
 ### Added

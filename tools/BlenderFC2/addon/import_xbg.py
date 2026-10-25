@@ -81,9 +81,11 @@ def build_armature(mesh, name, collection, skeleton=None):
         edit_bones.append(bone)
     by_name = {bone.name: bone for bone in edit_bones}
     parents = rig.parents(skeleton) if skeleton else {}
+    roots = {entry["name"] for entry in skeleton["bones"]} - set(parents) if skeleton else set()
     for bone, node in zip(edit_bones, mesh["nodes"]):
         parent = by_name.get(parents.get(bone.name))
-        if parent is None and node["parent"] < len(edit_bones):
+        # A skeleton's root is posed in model space, whatever node the mesh hangs it off.
+        if parent is None and bone.name not in roots and node["parent"] < len(edit_bones):
             parent = edit_bones[node["parent"]]
         if parent is not None:
             bone.parent = parent
