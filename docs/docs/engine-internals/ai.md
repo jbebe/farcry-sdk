@@ -252,13 +252,11 @@ investigated, walked to where he had noticed him, and passed a player who had st
 faint ones (above "fuzzy") and succeeds once either list holds anyone, which sends a target-seen
 report. It keeps polling while it finds nothing. The idle brain starts it once; every alert plan starts
 it at its `OnStart`. So an alerted soldier whose search has just reported a faint sighting looks no
-more until his next plan starts: in the range he walked 7.5 s with the player 4-27° off his view at a
-visibility of 0.93, against his 0.6 "clear", and did not react (**traced in the server build**, matched
-in `Dunia.dll`, seen in the log). The search reads visibility through `GetVisibilityValue` without its "remembered" switch, so it
-counts only targets plainly seen, inside both cones: a glimpse in the periphery alone is never even a
-faint threat, and soldiers never notice anyone from the side. A clear report a soldier spawned at run
-time sent within a second of spawning came to nothing in the range; his next one, 20 s later, worked.
-`SetVisibilityValues` also sets two more values per state (idle 10
+more until his next plan starts (**traced in the server build**, matched in `Dunia.dll`). In the range
+no soldier was ever seen in that state: a mod that kept the search going never acted. The search
+reads visibility through `GetVisibilityValue` without its "remembered" switch, so it counts only
+targets plainly seen, inside both cones: a glimpse in the periphery alone is never even a faint
+threat, and soldiers never notice anyone from the side. `SetVisibilityValues` also sets two more values per state (idle 10
 and 50, alert 1 and 50, threshold, special and vehicle 1 and 100, combat untouched); what reads them was
 not traced. The agent's `ThreatLevel` meter is fed only by Bang and Fear stims.
 

@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # Difficulty
 
-**Status:** in progress since 2026-10-21, built as `mods/difficulty-overhaul`. Fifteen features are
+**Status:** in progress since 2026-10-21, built as `mods/difficulty-overhaul`. Sixteen features are
 built; the [finish checklist](#finish-checklist) re-checks each on the test range and lists what is
 left. How enemies should differ from one another is [not agreed](#open-how-enemies-differ).
 
@@ -79,7 +79,7 @@ range in the log drifts from the scenario's distance.
 | 12 | Suppression | fire near a soldier without hitting him | he stops firing for about 1 s, then misses at first; `suppressed:` lines | works |
 | 13 | Squad memory | get seen, hide behind a wall for more than 30 s | they keep hunting you; `squad memory: … still hunted` | not seen |
 | 14 | Squad memory: slipping away | from behind the wall, move more than 15 m away unseen | they lose you 10-25 s later and search | not seen |
-| 16 | Eyesight | Rifleman at 50 m: stand in the open in front of him. Rifleman side-on at 30 m: start at the edge of his vision | he sees you at 50 m; at his side he notices, turns and then sees you | new | stock and the mod alike: he only investigated at 50 m and walked past a player who stepped aside. 50 m in front passes: he engages at once, every run. Side-on to run; Recognition (an alerted soldier keeps looking after a faint sighting) is unproven, since no run has had him alerted |
+| 16 | Eyesight | Rifleman at 50 m: stand in the open in front of him. Rifleman side-on at 30 m: start at the edge of his vision | he sees you at 50 m; at his side he notices, turns and then sees you | new | stock and the mod alike: he only investigated at 50 m and walked past a player who stepped aside. 50 m in front passes: he engages at once, every run. Side-on passes: standing at his side he did not notice; stepping into his view, he turned and fired once he faced the player, "it feels good". Recognition (an alerted soldier keeps looking after a faint sighting) was removed: it never acted in any run |
 | 15 | Watched spot | peek twice from the same corner, then from 3 m along the wall | quick shots at the same corner; slower, missing first shots at the new spot; `watched spot: … aim restarts` | not seen | restarted his aim during burst pauses while the player stood in the open; fixed to read his unbroken sighting time, to rerun |
 
 ### Still to do before it is finished
