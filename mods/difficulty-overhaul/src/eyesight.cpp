@@ -1,6 +1,6 @@
 // Eyesight: how soldiers see the player. The focus cone reaches farther and keeps the player fully
-// visible out to half its length; the peripheral cone spans 180 degrees, where the player is only
-// ever noticed: enough for a soldier to turn and look, never enough to see him as an enemy.
+// visible out to half its length; he sees across 180 degrees, but outside his focus the player is
+// only ever noticed: enough for a soldier to turn and look, never enough to see him as an enemy.
 #include "engine/game.h"
 #include "engine/memory.h"
 #include "engine/shooting.h"
@@ -53,9 +53,10 @@ namespace {
     constexpr ptrdiff_t kPeripheralAngle = 0x20;
 
     // Hardcore: the focus cone's reach against the game's (100 m by day for a rifleman, where the
-    // game's is 60), the peripheral cone's full angle, and the share of the focus cone the player is
-    // fully visible within, where the game's is a quarter. The peripheral cone reaches as far as the
-    // focus cone: a soldier sees the player plainly only inside both.
+    // game's is 60), the angle both cones span, and the share of the focus cone the player is fully
+    // visible within, where the game's is a quarter. A soldier sees the player plainly only inside
+    // both cones, and his threat search looks at nothing else, so both span the whole 180 degrees
+    // and reach as far; the FOV evaluator keeps the game's focus angle for where he counts fully.
     constexpr float kFocusReach = 100.0f / 60.0f;
     constexpr float kPeripheralSpan = 180.0f;
     constexpr float kFullVisibility = 0.5f;
@@ -69,6 +70,9 @@ namespace {
 
     // The player's agent, the target AdjustFOV last flagged as a player.
     std::atomic<const void*> g_player{nullptr};
+    // Half the focus cone's angle AdjustFOV gave the player on this thread, before both cones were
+    // widened: within it he counts fully.
+    thread_local float t_focusHalf = 0.0f;
 
     // A context's observer; a knowledge entry's flags, its smoothed visibility and the visibility
     // its last vision update measured. Flags 0 to 2 all set mean the target is plainly seen.
@@ -137,7 +141,10 @@ namespace {
             Write(cones, kFocusLength, focus);
         }
         Write(cones, kPeripheralLength, std::max(Read<float>(cones, kPeripheralLength), focus));
-        Write(cones, kPeripheralAngle, std::max(Read<float>(cones, kPeripheralAngle), kPeripheralSpan));
+        const float span = std::max(Read<float>(cones, kPeripheralAngle), kPeripheralSpan);
+        t_focusHalf = Read<float>(cones, kFocusAngle) / 2.0f;
+        Write(cones, kPeripheralAngle, span);
+        Write(cones, kFocusAngle, std::max(Read<float>(cones, kFocusAngle), span));
     }
 
     float __fastcall DistanceDetour(void* evaluator, void* unused, bool* applies) {
@@ -187,7 +194,7 @@ namespace {
         const float cosine = std::clamp(along / std::sqrt(targetLength * viewLength), -1.0f, 1.0f);
         const float angle = std::acos(cosine) * 57.29578f;
         const auto* cones = Read<const uint8_t*>(context, kContextCones);
-        const float focusHalf = Read<float>(cones, kFocusAngle) / 2.0f;
+        const float focusHalf = t_focusHalf;
         const float peripheralHalf = Read<float>(cones, kPeripheralAngle) / 2.0f;
         float angular = 1.0f;
         if (angle > peripheralHalf) {
