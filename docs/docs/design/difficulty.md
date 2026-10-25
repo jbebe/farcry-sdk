@@ -58,20 +58,20 @@ what is spawned into it.
   unless the row tests damage to the player.
 - Read `bin\fcse.log` after each run.
 
-The range has no navmesh cover points, so soldiers do not take cover behind its walls. Whether it has
-high grass is unchecked.
+A soldier's post only sets where he starts: in a fight he moves sideways around the player, so the
+range in the log drifts from the scenario's distance.
 
 ### Built: check on the range
 
-| # | Feature | On the range | Expect | Before |
-|---|---|---|---|---|
-| 1 | Hit log | any fight | `soldier … hit:`, `player hit:` and `shot at player:` lines | used every step |
+| # | Feature | On the range | Expect | Before | Range result |
+|---|---|---|---|---|---|
+| 1 | Hit log | any fight | `soldier … hit:`, `player hit:` and `shot at player:` lines | used every step | passes |
 | 2 | Damage taken | invincibility off; take hits from one soldier | about 4 torso hits kill; a head hit far worse; no softer last bar | felt realistic |
 | 3 | Damage dealt | shoot one soldier in the torso, then one in the limbs | about 2 torso hits or 4 limb hits down him | seen |
-| 4 | Hit model: settling | step out in front of a soldier at 10 m, then at 50 m | first shots miss; the far one takes visibly longer to settle | seen |
+| 4 | Hit model: settling | step out in front of a soldier at 10 m, then at 50 m | first shots miss; the far one takes visibly longer to settle | seen | 10 m passes: his chance climbs from 0 to 0.53 in about 0.8 s; 50 m to run |
 | 5 | Hit model: recoil and cap | stand still in the open against a full-auto soldier | hits spread out within a burst; no shot is certain, point blank included | seen |
 | 6 | Hit model: head aim | take about 20 hits | about a fifth on the head | fixed and seen |
-| 7 | Crossing | strafe across a soldier's line at 20 m, then run straight at him | far fewer hits while crossing | seen |
+| 7 | Crossing | strafe across a soldier's line at 20 m, then run straight at him | far fewer hits while crossing | seen | passes: strafing at 12 m costs about 23 % of his chance, running at him nothing; the reduction is accepted |
 | 8 | Range falloff | a squad with pistols or SMGs, at 10 m and at 40 m | much lower `chance` at 40 m than a rifle gets | assumed |
 | 9 | Fire discipline | crouch behind a 1.2 m barrier, then lie at the edge of his view | no shooting until he sees you clearly | loved |
 | 10 | Grass | crouch still in high grass, if the range has any | no shooting from 10 m out | loved |
@@ -79,7 +79,7 @@ high grass is unchecked.
 | 12 | Suppression | fire near a soldier without hitting him | he stops firing for about 1 s, then misses at first; `suppressed:` lines | works |
 | 13 | Squad memory | get seen, hide behind a wall for more than 30 s | they keep hunting you; `squad memory: … still hunted` | not seen |
 | 14 | Squad memory: slipping away | from behind the wall, move more than 15 m away unseen | they lose you 10-25 s later and search | not seen |
-| 15 | Watched spot | peek twice from the same corner, then from 3 m along the wall | quick shots at the same corner; slower, missing first shots at the new spot; `watched spot: … aim restarts` | not seen |
+| 15 | Watched spot | peek twice from the same corner, then from 3 m along the wall | quick shots at the same corner; slower, missing first shots at the new spot; `watched spot: … aim restarts` | not seen | restarted his aim during burst pauses while the player stood in the open; fixed to read his unbroken sighting time, to rerun |
 
 ### Still to do before it is finished
 
