@@ -66,7 +66,7 @@ range in the log drifts from the scenario's distance.
 | # | Feature | On the range | Expect | Before | Range result |
 |---|---|---|---|---|---|
 | 1 | Hit log | any fight | `soldier … hit:`, `player hit:` and `shot at player:` lines | used every step | passes |
-| 2 | Damage taken | invincibility off; take hits from one soldier | about 4 torso hits kill; a head hit far worse; no softer last bar | felt realistic |
+| 2 | Damage taken | invincibility off; take hits from one soldier | about 4 torso hits kill; one head hit kills; no softer last bar | felt realistic | at torso 2.5 and head 4, 8 torso hits killed (132 each of 1,025 health; a head hit 211) and the last bar took full damage. Raised to torso 5 and head 24, the user's choice; to rerun |
 | 3 | Damage dealt | shoot one soldier in the torso, then one in the limbs | about 2 torso hits or 4 limb hits down him | seen |
 | 4 | Hit model: settling | step out in front of a soldier at 10 m, then at 50 m | first shots miss; the far one takes visibly longer to settle | seen | passes. 10 m: his chance climbs from 0 to 0.53 in about 0.8 s. 50 m: from 0 to 0.67 before recoil in about 1.6 s, first hit 1.3 s after his first shot; after a reload he resumed fully settled |
 | 5 | Hit model: recoil and cap | stand still in the open against a full-auto soldier | hits spread out within a burst; no shot is certain, point blank included | seen | passes: a burst opens at his full chance (0.52-0.69 at 20 m) and the next shots get about 0.6 of it; the highest chance was 0.80 at 5 m, and at 4-5 m 13 of 21 shots hit |

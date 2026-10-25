@@ -14,7 +14,7 @@ plugin, with nothing on the Mod Configuration Menu.
 
 | Feature | What it does |
 |---|---|
-| Damage taken | A bullet hits the player by where it lands, as a multiple of the game's damage: head 4, torso 2.5, arms and legs 1.5, hands and feet 1. The last health bar no longer quarters the damage. |
+| Damage taken | A bullet hits the player by where it lands, as a multiple of the game's damage: head 24, torso 5, arms and legs 3, hands and feet 2. With a rifleman's hits at 20 m and 1,025 health, four torso hits kill and one head hit does. The last health bar no longer quarters the damage. |
 | Damage dealt | The player's hits on a soldier use head 6, torso 2.5, arms and legs 1.25, hands and feet 0.75 in place of the game's 6, 1, 1, 0.5, 0.5, 0.5 |
 | Hit model | How the AI's shots at the player land. Aim settles over 0.6 s plus 0.02 s per metre after he acquires the player, where the game misses outright and then hits at full accuracy; the chance is the real probability of a hit, capped at 0.85 so no shot is certain, point blank included; it falls with how well he sees the player, full from a visibility of 0.6, and with how fast the player crosses his aim, as 1 / (1 + the angle crossed per second in radians), so running across his line of fire is harder to hit than running at him; each shot's recoil costs the next up to 60 % of its chance, recovering in about a quarter of a second, in place of the game's forced misses after a hit; and he aims at the head only 15 % of the time, where the game alternates head and torso |
 | Fire discipline | A soldier holds his fire at the player until he sees the player clearly (a visibility of 0.4, the game's own "clear" line in combat), rather than spending free ammunition on a player he cannot see |

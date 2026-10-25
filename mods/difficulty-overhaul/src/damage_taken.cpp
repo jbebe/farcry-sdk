@@ -26,7 +26,7 @@ namespace {
     constexpr uint8_t kReturn4[] = {0xC2, 0x04, 0x00};
 
     // Hardcore: a bullet's damage to the player as a multiple of the game's, per Damage::BodyPart.
-    constexpr float kBulletDamage[] = {4.0f, 2.5f, 1.5f, 1.5f, 1.0f, 1.0f, 2.5f};
+    constexpr float kBulletDamage[] = {24.0f, 5.0f, 3.0f, 3.0f, 2.0f, 2.0f, 5.0f};
     static_assert(std::size(kBulletDamage) == Damage::kNoBodyPart + 1);
 
     float __fastcall ApplyLocationMultiplierDetour(void* service, void* unused, void* receiver,
