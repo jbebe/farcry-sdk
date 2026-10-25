@@ -23,8 +23,8 @@ from mathutils import Quaternion, Vector
 
 from .import_mab import (FIRST_FRAME, _quaternion, _rest_local, _tracks, clip_for, loaded_bank,
                          timing)
-from . import rig
-from .import_xbg import PROP_ACTOR_OF
+from . import convert, rig
+from .import_xbg import PROP_ACTOR_OF, require_current
 from .pack import stem
 
 # Which sections a rewrite touches. The tags, the events and the trajectory are
@@ -62,6 +62,7 @@ def write(pack, bank_path, armature, lossless=False, tolerance=0.002, bones=None
 
     Returns what changed, so a caller can say it rather than guess.
     """
+    require_current(armature)
     bank = pack.clip(bank_path)
     if bank is None:
         raise ValueError("this pack carries no %s" % bank_path)
@@ -197,12 +198,11 @@ def _sample(armature, skeleton, last, wanted=None):
         for frame in range(last + 1):
             scene.frame_set(frame + FIRST_FRAME)
             for bone_id, bone, rest_rotation in bones:
-                # import_mab poses with `rest^-1 . clip`, so the posed bone
-                # relative to its parent is the clip's own transform.
-                local = bone.parent.matrix.inverted() @ bone.matrix if bone.parent else bone.matrix
+                # import_mab poses with `rest^-1 . clip`, so this is the clip's own transform.
+                local = convert.node_local(bone.matrix, bone.parent.matrix if bone.parent else None)
                 offset, rotation, _scale = local.decompose()
-                rotations[bone_id].append(_signed(
-                    rotation, rest_rotation @ bone.rotation_quaternion, rotations[bone_id]))
+                keyed = rest_rotation @ convert.to_node(bone.rotation_quaternion)
+                rotations[bone_id].append(_signed(rotation, keyed, rotations[bone_id]))
                 offsets[bone_id].append(offset)
     finally:
         scene.frame_set(before)

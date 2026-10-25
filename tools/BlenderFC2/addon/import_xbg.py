@@ -8,7 +8,10 @@
 # in metres, UVs, normals, skin pairs and material documents - which is what
 # lets this file be about Blender and nothing else.
 
+import math
+
 import bpy
+from mathutils import Matrix, Vector
 
 from . import convert, materials, model as fc2model, rig
 from .pack import EXTENSION, Pack, stem
@@ -44,6 +47,9 @@ PROP_PLACEMENT = "fc2_placement"
 # shades with, so the originals ride along in their own attribute.
 ATTR_NORMAL = "fc2_normal"
 
+# Set on an armature whose bones are their nodes turned by convert.BONE_AXES.
+PROP_BONE_AXES = "fc2_bone_axes"
+
 
 def build_armature(mesh, name, collection, skeleton=None):
     """An armature from the pack's nodes, in the file's own node order.
@@ -53,6 +59,7 @@ def build_armature(mesh, name, collection, skeleton=None):
     """
     matrices = fc2model.node_world_matrices(mesh)
     data = bpy.data.armatures.new(name + "_rig")
+    data[PROP_BONE_AXES] = True
     obj = bpy.data.objects.new(name + "_rig", data)
     collection.objects.link(obj)
 
@@ -63,15 +70,13 @@ def build_armature(mesh, name, collection, skeleton=None):
     edit_bones = []
     for index, node in enumerate(mesh["nodes"]):
         bone = data.edit_bones.new(fc2model.bone_name(mesh, index))
-        bone.head = heads[index]
         children = [heads[c] for c, other in enumerate(mesh["nodes"])
                     if other["parent"] == index]
-        bone.tail = convert.bone_tail(bone.head, children)
-        # Orient the bone the way the node is, not at its children. The rest
-        # pose then matches Dunia's, so a clip's local rotation drives the pose
-        # bone directly; aiming bones at children would bake in a twist.
-        length = bone.length
-        bone.matrix = convert.matrix(matrices[index])
+        length = convert.bone_length(heads[index], children)
+        bone.head = heads[index]
+        bone.tail = heads[index] + Vector((0.0, length, 0.0))
+        # The node turned to point down its X axis, at its child, keeping its twist.
+        bone.matrix = convert.matrix(matrices[index]) @ convert.BONE_AXES
         bone.length = length
         edit_bones.append(bone)
     by_name = {bone.name: bone for bone in edit_bones}
@@ -83,6 +88,11 @@ def build_armature(mesh, name, collection, skeleton=None):
         if parent is not None:
             bone.parent = parent
             bone.use_connect = False
+    if skeleton:
+        entries = {entry["name"]: entry for entry in skeleton["bones"]}
+        for bone in edit_bones:
+            if bone.parent is None:
+                _join_chain(bone, entries)
     bpy.ops.object.mode_set(mode="OBJECT")
     bpy.context.view_layer.objects.active = previous
 
@@ -96,8 +106,63 @@ def build_armature(mesh, name, collection, skeleton=None):
     if skeleton:
         moves = {bone["name"] for bone in skeleton["bones"] if rig.translates(bone)}
         for pose_bone in obj.pose.bones:
-            pose_bone.lock_location = (pose_bone.name not in moves,) * 3
+            # Blender never moves a joined bone itself; Auto IK drags it.
+            free = pose_bone.name in moves or pose_bone.bone.use_connect
+            pose_bone.lock_location = (not free,) * 3
     return obj
+
+
+# A joint further than this off its parent's axis is left loose rather than snapped.
+ON_AXIS = 1e-5
+# A child nearer than this sits on its parent's own joint rather than down the bone.
+SHORTEST = 1e-3
+
+
+def _join_chain(bone, entries):
+    """Join `bone` to the child on its axis, for Auto IK, then do the same down the tree.
+
+    A child a clip moves or the engine derives stays loose.
+    """
+    children = bone.children
+    on_axis = []
+    for child in children:
+        entry = entries.get(child.name)
+        if entry is None or rig.derived(entry) or rig.translates(entry):
+            continue
+        local = bone.matrix.inverted() @ child.head
+        if local.y > SHORTEST and math.hypot(local.x, local.z) < ON_AXIS:
+            on_axis.append((local.y, child))
+    if on_axis:
+        reach, child = max(on_axis, key=lambda pair: pair[0])
+        bone.length = reach
+        frame, length = child.matrix.copy(), child.length
+        child.use_connect = True
+        # Connecting leaves the child's tail behind; its own frame goes back on the joint.
+        frame.translation = bone.tail
+        child.matrix = frame
+        child.length = length
+    for child in children:
+        _join_chain(child, entries)
+
+
+def require_current(armature):
+    """Refuse an armature built before bones were turned, which every clip would miss by a quarter turn."""
+    if not armature.data.get(PROP_BONE_AXES):
+        raise ValueError("%s was imported by an older version of the add-on. Import the "
+                         "model again" % armature.name)
+
+
+def attach(child, armature, bone_name):
+    """Hang an object off a bone in its node's frame, where a clip or a part is placed.
+
+    Blender parents to the tail, so the inverse cancels the bone's length and its turn.
+    """
+    require_current(armature)
+    child.parent = armature
+    child.parent_type = "BONE"
+    child.parent_bone = bone_name
+    child.matrix_parent_inverse = Matrix.Translation(
+        (0.0, -armature.data.bones[bone_name].length, 0.0)) @ convert.BONE_AXES.inverted()
 
 
 def _material(cache, path, pack):
@@ -159,11 +224,11 @@ def build_part(part, mesh, collection, material_cache, armature, pack):
         # bone and let Blender place it. matrix_world is assigned after the
         # parent so Blender solves the local transform; baking the placement
         # into the vertices as well would move the part twice.
-        obj.parent = armature
         node = part.placement_node
         if node < len(mesh["nodes"]):
-            obj.parent_type = "BONE"
-            obj.parent_bone = fc2model.bone_name(mesh, node)
+            attach(obj, armature, fc2model.bone_name(mesh, node))
+        else:
+            obj.parent = armature
     if part.placement is not None:
         obj.matrix_world = convert.matrix(part.placement)
     stamp_placement(obj)

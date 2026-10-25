@@ -93,7 +93,7 @@ def _eye_camera(armature):
     if found is None:
         found = bpy.data.objects.new("FC2 Eye", bpy.data.cameras.new("FC2 Eye"))
         armature.users_collection[0].objects.link(found)
-        import_mab.attach(found, armature, import_mab.EYE_BONE)
+        import_xbg.attach(found, armature, import_mab.EYE_BONE)
         found.matrix_basis = LOOK
         found.data.sensor_fit = "HORIZONTAL"
         found.data.angle = EYE_FOV

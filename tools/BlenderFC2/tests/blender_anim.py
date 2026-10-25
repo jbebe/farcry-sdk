@@ -21,7 +21,7 @@ import bpy
 from bpy_extras import anim_utils
 from mathutils import Quaternion, Vector
 
-from addon import export_mab, import_mab, import_xbg, motion, rig, sight
+from addon import convert, export_mab, import_mab, import_xbg, model, motion, rig, sight
 from addon.import_mab import FIRST_FRAME, bone_ids, timing
 from addon.pack import bank_label, bank_order, stem
 
@@ -53,10 +53,13 @@ def fail(message):
 
 
 def posed_local(pose_bone):
-    """The bone's transform relative to its parent, as posed."""
-    if pose_bone.parent:
-        return pose_bone.parent.matrix.inverted() @ pose_bone.matrix
-    return pose_bone.matrix.copy()
+    """The bone's node relative to its parent's, as posed."""
+    return convert.node_local(pose_bone.matrix, pose_bone.parent.matrix if pose_bone.parent else None)
+
+
+def _gap(a, b):
+    """The largest difference between two matrices, element by element."""
+    return max(abs(a[r][c] - b[r][c]) for r in range(4) for c in range(4))
 
 
 def check(model, rig, clip_path):
@@ -174,10 +177,9 @@ def check_attachments():
         bpy.context.view_layer.update()
         for prop in props:
             bone = armature.pose.bones[prop["participant"]["bone"]]
-            want = armature.matrix_world @ bone.matrix @ prop["object"].matrix_basis
-            got = prop["object"].matrix_world
-            worst = max(worst, max(abs(got[r][c] - want[r][c])
-                                   for r in range(4) for c in range(4)))
+            want = (armature.matrix_world @ convert.node_frame(bone.matrix)
+                    @ prop["object"].matrix_basis)
+            worst = max(worst, _gap(prop["object"].matrix_world, want))
     if worst > TOLERANCE:
         errors += fail("an attached marker is %.2e off its bone" % worst)
     else:
@@ -273,11 +275,48 @@ def check_every_bone_keyable():
             errors += fail("%s has no rotation channel" % bone["name"])
         if moves and path + "location" not in curves:
             errors += fail("%s may translate but has no location channel" % bone["name"])
-        if any(pose_bone.lock_location) == moves:
-            errors += fail("%s is %slocked" % (bone["name"], "" if moves else "not "))
+        free = moves or pose_bone.bone.use_connect
+        if any(pose_bone.lock_location) == free:
+            errors += fail("%s is %slocked" % (bone["name"], "" if free else "not "))
     if body.pose.bones["Jaw"].rotation_quaternion.angle > 1e-6:
         errors += fail("a pose the clip does not key survived the load")
     print("keyable: %d bones, %d free to translate" % (len(skeleton["bones"]), len(movers)))
+    return errors
+
+
+JOINED = ("R Hand", "R Forearm", "R UpperArm", "L Hand", "L Forearm", "R Calf", "R Foot")
+LOOSE = ("Pelvis", "Camera", "R Elbow", "L Knee", "R D UpperArm twist", "Spine1")
+
+
+def check_limbs_join():
+    """The limbs join into chains Auto IK can drag, and every bone still sits on its node."""
+    result = _ak47_with_reload()
+    body, mesh = result["actor"]["armature"].data, result["actor"]["mesh"]
+    errors = 0
+    for name in JOINED:
+        if not body.bones[name].use_connect:
+            errors += fail("%s is not joined to %s" % (name, body.bones[name].parent.name))
+    for name in LOOSE:
+        if body.bones[name].use_connect:
+            errors += fail("%s is joined, though it moves or is derived" % name)
+
+    worst = 0.0
+    for index, node in enumerate(model.node_world_matrices(mesh)):
+        bone = body.bones.get(model.bone_name(mesh, index))
+        if bone is not None:
+            worst = max(worst, _gap(convert.node_frame(bone.matrix_local), node))
+    # Edit bones hold a frame to about 1e-5, and a snapped joint moves no more than that.
+    if worst > 5e-5:
+        errors += fail("a bone sits %.2e off its node" % worst)
+    print("limbs join: %d bones joined, every bone within %.2e of its node"
+          % (sum(1 for b in body.bones if b.use_connect), worst))
+
+    del body[import_xbg.PROP_BONE_AXES]
+    try:
+        import_mab.load(result["pack"], RELOAD, result["armature"], actor=result["actor"])
+        errors += fail("an unturned rig was loaded onto")
+    except ValueError:
+        pass
     return errors
 
 
@@ -356,7 +395,8 @@ def check_eye_sees_the_sight():
 
     expected = sight.aimed_eye(motion.aim_pose(result["pack"]))
     armature = result["armature"]
-    eye = (armature.matrix_world @ armature.pose.bones[0].matrix).inverted() @ camera.matrix_world
+    root = armature.matrix_world @ convert.node_frame(armature.pose.bones[0].matrix)
+    eye = root.inverted() @ camera.matrix_world
     apart = (eye.to_translation() - expected.to_translation()).length
     turned = eye.to_quaternion().rotation_difference(expected.to_quaternion()).angle
     print("eye: %.1e m and %.1e rad from the sight picture's, %d of %d body parts hidden"
@@ -382,7 +422,7 @@ def main():
     errors = (sum(check(*case) for case in CASES)
               + check_weapon_clip_is_chosen() + check_attachments()
               + check_actor_holds_the_model() + check_load_keeps_the_mode()
-              + check_every_bone_keyable() + check_first_frame_only()
+              + check_every_bone_keyable() + check_limbs_join() + check_first_frame_only()
               + check_bank_order() + check_eye_sees_the_sight())
     print("blender anim: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0

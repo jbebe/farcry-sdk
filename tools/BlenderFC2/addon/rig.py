@@ -14,6 +14,11 @@ def translates(bone):
     return bool(bone.get("animated_translation"))
 
 
+def derived(bone):
+    """Whether the engine solves this bone from others, as it does twists and helpers."""
+    return bool(bone["ori"]["kind"])
+
+
 def parents(skeleton):
     """Each bone's parent by name, as the .skeleton has it; a root names none."""
     names = {bone["id"]: bone["name"] for bone in skeleton["bones"]}

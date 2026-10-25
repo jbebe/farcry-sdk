@@ -3,6 +3,15 @@
 Notable changes to the Far Cry 2 Blender add-on, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **Auto IK drags an arm or a leg.** With Auto IK on in Pose Options, grab a hand with G and the
+  arm bends to follow. The bones now point at the joint below them and the limbs are joined into
+  chains, which is what Auto IK needs; clips load and write exactly as before. A scene saved from
+  an older version has to be imported again: loading or writing an animation on its rig is refused
+  rather than written a quarter turn off.
+
 ## [0.3.2] - 2026-10-24
 
 ### Added

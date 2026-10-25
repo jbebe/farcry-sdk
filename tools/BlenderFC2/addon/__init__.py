@@ -15,7 +15,7 @@ from bpy_extras.io_utils import ExportHelper, ImportHelper
 
 from mathutils import Matrix
 
-from . import export_mab, export_xbg, import_mab, import_xbg, panel
+from . import convert, export_mab, export_xbg, import_mab, import_xbg, panel
 from .pack import EXTENSION, Pack, bank_label, bank_order, read_manifest
 
 # What the bone enum holds when a part is placed by nothing.
@@ -380,23 +380,29 @@ class FC2_OT_add_part(bpy.types.Operator):
         if not name:
             self.report({"ERROR"}, "Give the part a name")
             return {"CANCELLED"}
+        on_bone = armature is not None and self.bone != ROOT_BONE
+        if on_bone:
+            try:
+                import_xbg.require_current(armature)
+            except ValueError as error:
+                self.report({"ERROR"}, str(error))
+                return {"CANCELLED"}
 
         for other in list(obj.users_collection):
             other.objects.unlink(obj)
         collection.objects.link(obj)
 
-        on_bone = armature is not None and self.bone != ROOT_BONE
-        place = (armature.matrix_world @ armature.data.bones[self.bone].matrix_local
+        place = (armature.matrix_world
+                 @ convert.node_frame(armature.data.bones[self.bone].matrix_local)
                  if on_bone else Matrix.Identity(4))
         # A part is modelled around its own pivot, and export reads vertices in
         # object space, so the transform that put the object where the modeler
         # left it moves into the mesh rather than staying on the object.
         obj.data.transform(place.inverted() @ obj.matrix_world)
-        if armature:
+        if on_bone:
+            import_xbg.attach(obj, armature, self.bone)
+        elif armature:
             obj.parent = armature
-            if on_bone:
-                obj.parent_type = "BONE"
-                obj.parent_bone = self.bone
         obj.matrix_world = place
 
         obj[import_xbg.PROP_NEW_PART] = name

@@ -141,12 +141,18 @@ rather than a generic JSON-to-Action script:
   bind pose is untouched; it takes the worst edge stretch around those bones from **10.5x to 2.5x**,
   which is less than the 5.3x the rest of the character reaches on the same sprint.
 - **A rotation replaces the bone's rest rotation rather than adding to it**, so the pose bone gets
-  `rest⁻¹ · clip`, and the armature is built with each bone oriented like its own node instead of
-  aimed at its children. Aiming at children bakes in a twist that no later correction removes. The
-  same holds for offsets, and since a pose bone's location is measured in its own rest frame, the
-  offset is rotated into that frame before it is keyed.
+  `rest⁻¹ · clip`. The same holds for offsets, and since a pose bone's location is measured in its
+  own rest frame, the offset is rotated into that frame before it is keyed.
+- **A Dunia node points down its X axis and a Blender bone down Y**, so every bone is its node turned
+  a quarter about Z. That aims each bone at the joint below it while keeping the node's own twist,
+  where letting Blender aim bones at their children picks a twist of its own. The pose is worked
+  out between nodes and carried across the turn, both ways. Every limb joint sits on its parent's
+  axis to `1.5e-06` m, so the limbs are joined into chains that Blender's Auto IK drags: grab a
+  hand with Auto IK on and the arm bends to follow. The spine, up to `2e-04` m off, stays loose, as
+  do the twist and helper bones the engine derives and the two that translate.
 - **Blender parents an object to a bone's tail**, so an attachment's parent inverse cancels the
-  bone's length and it lands on the head, which is the frame the clip is written in.
+  bone's length and its turn, and it lands in the node's frame, which is the one the clip is
+  written in.
 
 `tests/blender_anim.py` checks this from the other side: it evaluates the posed rig and reads each
 bone's rotation and offset relative to its parent back out, requiring what the pack stores. Worst

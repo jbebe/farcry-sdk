@@ -28,7 +28,7 @@ from _corpus import CLI, find, pack, require_pack
 import bpy
 from mathutils import Quaternion, Vector
 
-from addon import export_mab, import_mab, import_xbg
+from addon import convert, export_mab, import_mab, import_xbg
 from addon.pack import Pack
 from addon.import_mab import FIRST_FRAME, clip_for, timing
 
@@ -267,8 +267,7 @@ def _sample(armature, pack_object, bank_path=RELOAD):
             bone = armature.pose.bones.get(name)
             if bone is None:
                 continue
-            local = (bone.parent.matrix.inverted() @ bone.matrix) if bone.parent \
-                else bone.matrix.copy()
+            local = convert.node_local(bone.matrix, bone.parent.matrix if bone.parent else None)
             out[(name, frame)] = (local.to_quaternion(), local.to_translation())
     return out
 
@@ -329,6 +328,7 @@ def constraint_lands():
     """A constraint's pose is what the bank gets, though no F-curve carries it."""
     result = load(CHARACTER, PELVIS_REF)
     armature, pack_object = result["armature"], result["pack"]
+    playing = _sample(armature, pack_object)
     target = bpy.data.objects.new("target", None)
     bpy.context.scene.collection.objects.link(target)
     target.rotation_euler = (0.4, -0.7, 1.1)
@@ -336,15 +336,23 @@ def constraint_lands():
     constraint.target = target
     want = _sample(armature, pack_object)
 
+    def apart(a, b):
+        return max(1.0 - abs(a[key][0].dot(b[key][0])) for key in a if key[0] == EDITED)
+
+    moved = apart(want, playing)
+    if moved < 0.01:
+        return fail("the constraint left %s where the clip had it" % EDITED)
+
     export_mab.write(pack_object, RELOAD, armature, bones={EDITED}, lossless=True)
     armature.pose.bones[EDITED].constraints.remove(constraint)
     import_mab.load(pack_object, RELOAD, armature)
     got = _sample(armature, pack_object)
 
-    worst = max(1.0 - abs(want[key][0].dot(got[key][0])) for key in want if key[0] == EDITED)
+    worst = apart(want, got)
     if worst > TOLERANCE:
         return fail("the constrained %s came back %.3e off its pose" % (EDITED, worst))
-    print("constraint lands: %s within %.2e of its constrained pose" % (EDITED, worst))
+    print("constraint lands: %s moved %.2e by it, back within %.2e of that pose"
+          % (EDITED, moved, worst))
     return 0
 
 

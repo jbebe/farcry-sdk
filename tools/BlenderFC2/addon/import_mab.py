@@ -11,7 +11,7 @@
 import bpy
 from mathutils import Matrix, Quaternion, Vector
 
-from . import import_xbg, rig
+from . import convert, import_xbg, rig
 from .pack import stem, timing
 
 # Blender counts frames from one, the file from zero.
@@ -35,10 +35,8 @@ def _quaternion(xyzw):
 
 
 def _rest_local(bone):
-    """A bone's rest transform relative to its parent, as Blender holds it."""
-    if bone.parent:
-        return bone.parent.matrix_local.inverted() @ bone.matrix_local
-    return bone.matrix_local.copy()
+    """A bone's rest node relative to its parent's."""
+    return convert.node_local(bone.matrix_local, bone.parent.matrix_local if bone.parent else None)
 
 
 def bone_ids(clip):
@@ -75,6 +73,9 @@ def load(pack, bank_path, armature, with_props=False, lod=0, actor=None, still=F
     model alone with a marker where the hands should be. `still` holds every
     clip at its first frame, so a bone left alone writes back still.
     """
+    import_xbg.require_current(armature)
+    if actor is not None:
+        import_xbg.require_current(actor["armature"])
     bank = pack.clip(bank_path)
     if bank is None:
         raise ValueError("this pack carries no %s" % bank_path)
@@ -113,7 +114,7 @@ def _pose_actor(pack, bank, clip, armature, actor, bank_path):
                if bank["clips"][p["clip"]] is clip and p.get("bone")]
     mine = next((p for p in records if not p.get("reference")), None)
     if mine and mine["bone"] in actor["armature"].pose.bones:
-        attach(armature, actor["armature"], mine["bone"])
+        import_xbg.attach(armature, actor["armature"], mine["bone"])
         posed["bone"] = mine["bone"]
     return posed
 
@@ -159,13 +160,13 @@ def pose(clip, armature, skeleton, bank_path, suffix=""):
         rest_offset, rest_rotation, _scale = _rest_local(pose_bone.bone).decompose()
         undo = rest_rotation.inverted()
         for frame, rotation in tracks.get(bone_id, ()):
-            pose_bone.rotation_quaternion = undo @ _quaternion(rotation)
+            pose_bone.rotation_quaternion = convert.to_bone(undo @ _quaternion(rotation))
             pose_bone.keyframe_insert("rotation_quaternion", frame=frame + FIRST_FRAME)
             keys += 1
         # A pose bone's location is measured in its own rest frame, so the
         # offset the clip replaces the rest one with has to be rotated into it.
         for frame, offset in offsets.get(bone_id, ()):
-            pose_bone.location = undo @ (Vector(offset) - rest_offset)
+            pose_bone.location = convert.offset_to_bone(undo @ (Vector(offset) - rest_offset))
             pose_bone.keyframe_insert("location", frame=frame + FIRST_FRAME)
             keys += 1
 
@@ -198,18 +199,6 @@ def _constants(entries):
     return {entry["bone"]: entry["value"] for entry in entries or ()}
 
 
-def attach(child, armature, bone_name):
-    """Hang an object off a bone at the bone's head, where a clip attaches.
-
-    Blender parents to the tail, so the inverse cancels the bone's length.
-    """
-    child.parent = armature
-    child.parent_type = "BONE"
-    child.parent_bone = bone_name
-    child.matrix_parent_inverse = Matrix.Translation(
-        (0.0, -armature.data.bones[bone_name].length, 0.0))
-
-
 def attach_participants(bank, posed, armature):
     """Hang an empty on each bone the bank attaches something to.
 
@@ -228,7 +217,7 @@ def attach_participants(bank, posed, armature):
             continue
         marker = _empty(participant["name"], armature)
         _key_root(bank["clips"][participant["clip"]], marker)
-        attach(marker, armature, bone)
+        import_xbg.attach(marker, armature, bone)
         loaded.append({"participant": participant, "object": marker})
     return loaded
 
