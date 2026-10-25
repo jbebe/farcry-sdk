@@ -69,8 +69,8 @@ range in the log drifts from the scenario's distance.
 | 2 | Damage taken | invincibility off; take hits from one soldier | about 4 torso hits kill; a head hit far worse; no softer last bar | felt realistic |
 | 3 | Damage dealt | shoot one soldier in the torso, then one in the limbs | about 2 torso hits or 4 limb hits down him | seen |
 | 4 | Hit model: settling | step out in front of a soldier at 10 m, then at 50 m | first shots miss; the far one takes visibly longer to settle | seen | passes. 10 m: his chance climbs from 0 to 0.53 in about 0.8 s. 50 m: from 0 to 0.67 before recoil in about 1.6 s, first hit 1.3 s after his first shot; after a reload he resumed fully settled |
-| 5 | Hit model: recoil and cap | stand still in the open against a full-auto soldier | hits spread out within a burst; no shot is certain, point blank included | seen |
-| 6 | Hit model: head aim | take about 20 hits | about a fifth on the head | fixed and seen |
+| 5 | Hit model: recoil and cap | stand still in the open against a full-auto soldier | hits spread out within a burst; no shot is certain, point blank included | seen | passes: a burst opens at his full chance (0.52-0.69 at 20 m) and the next shots get about 0.6 of it; the highest chance was 0.80 at 5 m, and at 4-5 m 13 of 21 shots hit |
+| 6 | Hit model: head aim | take about 20 hits | about a fifth on the head | fixed and seen | passes: 9 of 57 hits on the head (16 %), over the machine gunner run and one before it at 11 m |
 | 7 | Crossing | strafe across a soldier's line at 20 m, then run straight at him | far fewer hits while crossing | seen | passes: strafing at 12 m costs about 23 % of his chance, running at him nothing; the reduction is accepted |
 | 8 | Range falloff | a squad with pistols or SMGs, at 10 m and at 40 m | much lower `chance` at 40 m than a rifle gets | assumed |
 | 9 | Fire discipline | crouch behind a 1.2 m barrier, then lie at the edge of his view | no shooting until he sees you clearly | loved |
