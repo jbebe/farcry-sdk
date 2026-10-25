@@ -2,11 +2,15 @@
 #include "overlay/range.h"
 
 #include "commands/scenarios.h"
+#include "engine/entity.h"
+#include "engine/game_thread.h"
 #include "engine/lua.h"
+#include "engine/player.h"
 #include "engine/spawn.h"
 
 #include "imgui.h"
 
+#include <cmath>
 #include <string>
 
 namespace {
@@ -25,6 +29,11 @@ namespace {
     // The player's teleport target, spawned at the start: TeleportEntity copies its position and facing.
     constexpr const char* kMarker = "multiplayer.SpawnPoints.SpawnPoint";
 
+    // Within this far of an arena's start the player is moved straight there, as noclip moves him. A
+    // teleport brings up a loading screen, behind which the scenario's soldiers already act.
+    constexpr float kPlaceRadius = 150.0f;
+    constexpr float kRadiansPerDegree = 0.0174532925f;
+
     constexpr const char* kTravel = "GameChangeWorld(\"testrange\", \"2054037628277228842\")";
 
     // Removes everything the last scenario spawned, whose ids the global TestRange table holds from 1
@@ -39,18 +48,44 @@ namespace {
                + DevTools::Spawn::Call(archetype, at.x, at.y, z, at.yaw) + " ";
     }
 
-    void Start(const Arena& arena, const Scenario& scenario) {
-        std::string lua = kClear;
-        lua += "CDynamicEnvironmentManager_GetInstance():SetScriptedTimeOfDay(12, 0) ";
-        AppendSpawn(lua, kMarker, arena.start, kGround + kAboveGround);
-        lua += "TeleportEntity(GetLocalPlayerId(), TestRange[1]) ";
-        for (const DevTools::Scenarios::Soldier& soldier : scenario.soldiers) {
-            if (soldier.post != nullptr) {
-                AppendSpawn(lua, soldier.post, soldier.at, kGround);
+    // Moves the player onto `start` when he is near it, with collision off for the move. False when
+    // he is too far, or there is no player, and the teleport has to take him.
+    bool PlaceNear(const Spot& start) {
+        using namespace DevTools;
+        void* ref = Entity::AcquireFocusRef(Player::CameraManager());
+        void* entity = Entity::Of(ref);
+        void* physics = entity != nullptr ? Entity::PhysicsComponent(entity) : nullptr;
+        bool placed = false;
+        if (physics != nullptr) {
+            const float* matrix = Entity::Matrix(entity);
+            if (std::hypot(matrix[12] - start.x, matrix[13] - start.y) <= kPlaceRadius) {
+                Entity::SetPhysicsEnabled(physics, false);
+                Entity::SetPosition(entity, start.x, start.y, kGround + kAboveGround);
+                Entity::SetEuler(entity, 0.0f, 0.0f, start.yaw * kRadiansPerDegree);
+                Entity::SetPhysicsEnabled(physics, true);
+                placed = true;
             }
-            AppendSpawn(lua, soldier.archetype, soldier.at, kGround + kDrop);
         }
-        DevTools::Lua::Post(lua);
+        Entity::ReleaseRef(ref);
+        return placed;
+    }
+
+    void Start(const Arena& arena, const Scenario& scenario) {
+        DevTools::GameThread::Post([&arena, &scenario] {
+            std::string lua = kClear;
+            lua += "CDynamicEnvironmentManager_GetInstance():SetScriptedTimeOfDay(12, 0) ";
+            if (!PlaceNear(arena.start)) {
+                AppendSpawn(lua, kMarker, arena.start, kGround + kAboveGround);
+                lua += "TeleportEntity(GetLocalPlayerId(), TestRange[1]) ";
+            }
+            for (const DevTools::Scenarios::Soldier& soldier : scenario.soldiers) {
+                if (soldier.post != nullptr) {
+                    AppendSpawn(lua, soldier.post, soldier.at, kGround);
+                }
+                AppendSpawn(lua, soldier.archetype, soldier.at, kGround + kDrop);
+            }
+            DevTools::Lua::Run(lua);
+        });
         g_running = &scenario;
     }
 }
@@ -67,7 +102,8 @@ void Draw() {
         g_running = nullptr;
     }
     ImGui::TextWrapped("Start clears the last scenario, sets noon, takes you to its arena and spawns its "
-                       "soldiers. Rows are the Difficulty Overhaul's finish checklist.");
+                       "soldiers: inside the range without a loading screen, from farther away by teleport. "
+                       "Rows are the Difficulty Overhaul's finish checklist.");
 
     for (const Arena& arena : Scenarios::Arenas()) {
         ImGui::SeparatorText(arena.name);

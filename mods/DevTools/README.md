@@ -300,8 +300,11 @@ Pressing it does the following, as one chunk of the game's own Lua:
 
 1. Removes everything the last scenario spawned.
 2. Sets the time to noon, so runs compare.
-3. Moves you onto its arena's start, facing the enemy. `TeleportEntity` takes you to a spawn point
-   spawned there, and copies that spawn point's position and facing.
+3. Moves you onto its arena's start, facing the enemy. Within 150 m of it you are placed there
+   directly, the way noclip moves you: collision off, position and facing set, collision back on.
+   From farther away, `TeleportEntity` takes you to a spawn point spawned there and copies its
+   position and facing, behind a loading screen of about 17 s during which the soldiers spawned next
+   already move, see and report.
 4. Spawns its soldiers. Only the sniper is put on a post: a soldier spawned onto a guard post stood
    blind for about 7 s, facing the player 10 m away, while one spawned without a post engaged at
    once. Without a post a soldier moves sideways around the player once he fights.
