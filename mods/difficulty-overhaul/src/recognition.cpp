@@ -56,9 +56,9 @@ namespace {
         return false;
     }
 
-    int __fastcall FindThreatDetour(void* task, void* unused, float seconds) {
-        const int found = g_originalFindThreat(task, unused, seconds);
-        const auto* agent = Read<const uint8_t*>(task, kTaskAgent);
+    // What the search returns: the game's result, but an alerted soldier with only a faint sighting
+    // of the player keeps looking unless the player has moved since the last one he reported.
+    int Decide(const uint8_t* agent, int found) {
         if (found == 0 || Read<int>(agent, kAgentState) != kAlert ||
             Read<int>(agent, kClearCount) != 0 || Read<int>(agent, kOtherCount) != 0 ||
             !FaintlySeesPlayer(agent)) {
@@ -83,6 +83,32 @@ namespace {
         }
         last.reported = true;
         return found;
+    }
+
+    // Diagnostic while Eyesight is tuned: each search whose outcome differs from the soldier's last.
+    std::unordered_map<const void*, uint32_t> g_outcomes;
+
+    int Traced(const uint8_t* agent, int found, int reported) {
+        const int state = Read<int>(agent, kAgentState);
+        const int clear = Read<int>(agent, kClearCount);
+        const int faint = Read<int>(agent, kFaintCount);
+        const int other = Read<int>(agent, kOtherCount);
+        const uint32_t outcome = (state & 0xFF) | (clear & 0xF) << 8 | (faint & 0xF) << 12 |
+                                 (other & 0xF) << 16 | (found & 1) << 20 | (reported & 1) << 21;
+        uint32_t& last = Shooting::Remember(g_outcomes, agent);
+        if (outcome != last) {
+            last = outcome;
+            FCSE::Logf("threat search: state %d, clear %d, faint %d, other %d, %s", state, clear,
+                       faint, other,
+                       found == 0 ? "nothing yet" : reported != 0 ? "reports" : "keeps looking");
+        }
+        return reported;
+    }
+
+    int __fastcall FindThreatDetour(void* task, void* unused, float seconds) {
+        const int found = g_originalFindThreat(task, unused, seconds);
+        const auto* agent = Read<const uint8_t*>(task, kTaskAgent);
+        return Traced(agent, found, Decide(agent, found));
     }
 }
 

@@ -73,6 +73,8 @@ namespace {
     // A context's observer; a knowledge entry's flags, its smoothed visibility and the visibility
     // its last vision update measured. Flags 0 to 2 all set mean the target is plainly seen.
     constexpr ptrdiff_t kContextObserver = 0x08;
+    // The observer's army-member state: 0 social, 1 idle, 2 alert, 3-5 combat.
+    constexpr ptrdiff_t kObserverState = 0x274;
     constexpr ptrdiff_t kEntryFlags = 0x00;
     constexpr ptrdiff_t kEntrySmoothed = 0x44;
     constexpr ptrdiff_t kEntryMeasured = 0x48;
@@ -93,9 +95,10 @@ namespace {
         }
         last = now;
         const uint8_t* entry = Shooting::Knowledge(observer, g_player.load(std::memory_order_relaxed));
-        FCSE::Logf("eyesight: %.1f m, %.0f deg off his view; distance %.2f (game %.2f), angle %.2f "
-                   "(game %.2f); %s, measured %.2f, smoothed %.2f",
-                   g_targetDistance(context), angle, t_distance, t_gameDistance, angular, gameAngular,
+        FCSE::Logf("eyesight: state %d, %.1f m, %.0f deg off his view; distance %.2f (game %.2f), "
+                   "angle %.2f (game %.2f); %s, measured %.2f, smoothed %.2f",
+                   Read<int>(observer, kObserverState), g_targetDistance(context), angle, t_distance,
+                   t_gameDistance, angular, gameAngular,
                    entry == nullptr ? "unknown to him"
                    : (Read<uint32_t>(entry, kEntryFlags) & kPlainlySeen) == kPlainlySeen
                        ? "plainly seen"
