@@ -3,7 +3,7 @@
 Notable changes to the Far Cry 2 Blender add-on, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.3.3] - 2026-10-25
 
 ### Added
 - **Auto IK drags an arm or a leg.** With Auto IK on in Pose Options, grab a hand with G and the
