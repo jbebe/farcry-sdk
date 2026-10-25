@@ -3,6 +3,8 @@
 #include "engine/shooting.h"
 #include "fcse_api.h"
 
+#include <unordered_map>
+
 using namespace DifficultyOverhaul;
 
 namespace {
@@ -11,13 +13,28 @@ namespace {
     // Hardcore: how visible the player must be to him before he fires.
     constexpr float kFireVisibility = 0.4f;
 
+    // Whether each soldier last held his fire at the player or fired, so only changes are logged.
+    enum class Stance { kUnknown, kFires, kHolds };
+    std::unordered_map<const void*, Stance> g_stances;
+
     bool __fastcall CanShootDetour(void* task) {
         if (!g_originalCanShoot(task)) {
             return false;
         }
         void* shooting = Shooting::OfTask(task);
-        return !Shooting::AimsAtPlayer(shooting) ||
-               Shooting::Visibility(shooting) >= kFireVisibility;
+        if (!Shooting::AimsAtPlayer(shooting)) {
+            return true;
+        }
+        const float visibility = Shooting::Visibility(shooting);
+        const Stance stance = visibility < kFireVisibility ? Stance::kHolds : Stance::kFires;
+        Stance& last = Shooting::Remember(g_stances, shooting);
+        if (stance != last) {
+            last = stance;
+            FCSE::Logf("fire discipline: %s at %.1f m, visibility %.2f",
+                       stance == Stance::kHolds ? "holds his fire" : "fires",
+                       Shooting::TargetDistance(shooting), visibility);
+        }
+        return stance == Stance::kFires;
     }
 }
 

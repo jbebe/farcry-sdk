@@ -37,8 +37,10 @@ namespace {
     // A camping score no target outlasts.
     constexpr float kForever = 1.0e9f;
 
-    // The sighting each lieutenant was last reported as holding on to, so each is logged once.
+    // The sighting each lieutenant was last reported as holding on to, so each is logged once, and
+    // whether its squad had the player among its seen targets on its last pass.
     std::unordered_map<const void*, float> g_reported;
+    std::unordered_map<const void*, bool> g_spotted;
 
     // The lieutenant's entry for the player in its army's seen targets, or null.
     const uint8_t* PlayerSighting(void* lieutenant, void** player) {
@@ -75,6 +77,11 @@ namespace {
     void __fastcall UpdateTargetListDetour(void* lieutenant, void* unused, bool* noTargets) {
         void* player = nullptr;
         const uint8_t* sighting = PlayerSighting(lieutenant, &player);
+        bool& spotted = g_spotted[lieutenant];
+        if ((sighting != nullptr) != spotted) {
+            spotted = sighting != nullptr;
+            FCSE::Logf("squad memory: the squad %s", spotted ? "spotted the player" : "lost him");
+        }
         const float distance = sighting != nullptr ? DistanceFrom(player, sighting) : -1.0f;
         if (distance < 0.0f || distance > kHoldRadius) {
             g_originalUpdateTargetList(lieutenant, unused, noTargets);
