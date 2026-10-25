@@ -231,6 +231,22 @@ distance, cone edge, body coverage, occlusion, vegetation, stance and movement, 
 weight, plus grass, whose weight is not exposed. `fAmbientLightEvaluatorWeight` is loaded but never
 read: there is no light evaluator, so no light in the scene, the sun included, reaches the AI.
 
+Two of them depend on the cones (Steam, **RE-verified** against the server):
+
+- **FOV** (`CFOVEvaluator::ComputeVisibility`, `0x10A21380`): 1 inside the focus cone's angle, then
+  falling linearly to `1 − fFOVEvaluator_VisibilityFactorAtFOVLimit` (0.5) at the peripheral cone's
+  edge, 0 outside it. A glimpse at the edge of the periphery can therefore still be a clear sighting.
+- **Distance** (`CDistanceEvaluator::ComputeVisibility`, `0x10A20FA0`, a vtable slot the analysis did
+  not make a function): it uses the **focus** cone's length whatever the angle.
+
+**A soldier sees a target plainly only inside both cones.** Each vision update clears the target's
+knowledge flags and sets one per cone the target is in; `GetVisibilityValue` without its
+"remembered" switch needs both. With the shipped 60 m focus and 40 m peripheral cones, a player
+40-60 m away straight ahead counts as not plainly seen.
+
+In the range, stock and modded alike, a rifleman facing a player standing in the open 50 m away only
+investigated, walked to where he had noticed him, and passed a player who had stepped 5-10 m aside.
+
 The evaluators combine as a product: each with value *e* and weight *w* contributes
 `1 − (1 − e) × w` (`CVisibilityEvaluator::Evaluate`; GOG `0x10A0BFC0`). A weight of 0 skips the
 evaluator. An evaluator that returns 0 makes the whole product 0, whatever its weight. Within that

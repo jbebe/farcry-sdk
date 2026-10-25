@@ -12,6 +12,7 @@ void InstallGrass();
 void InstallSuppression();
 void InstallSquadMemory();
 void InstallWatchedSpot();
+void InstallEyesight();
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION || !FCSE::Bind(api)) {
@@ -29,5 +30,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallSuppression();
     InstallSquadMemory();
     InstallWatchedSpot();
+    InstallEyesight();
     return true;
 }
