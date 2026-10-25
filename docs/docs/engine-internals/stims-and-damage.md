@@ -186,9 +186,27 @@ soldiers go down as it goes on:
 The cap is `CFCXCountersService::GetMaxNPCsInFailure` (Steam `0x107645C0`). This is **traced in the
 server build** and matched in `Dunia.dll`.
 
+A weapon can override that rule for the player's hits. Its `selHitLocation_Torso_Severity` and
+`selHitLocation_Limb_Severity` (0 normal damage, 1-3 health failure levels, 4 kill) pick the hit's
+path in `DamageHealth`. At 0 the rule above applies, and it has no cap on overkill: a hit far past his
+health still downs him at 49. At 1-3 the same decision runs on every hit, so a hit that would not have
+taken him under 50 can down him too, and a refused one deals its damage or kills as before. At 4, and
+on any head hit, he dies. In world 1's library:
+
+| Weapon | Torso | Limbs |
+|---|---|---|
+| AS50 | 4 | 3 |
+| Dragunov | 3 | 2 |
+| Desert Eagle | 2 | 1 |
+| Dart Rifle, LPO-50 | 4 | 4 |
+| M1903 | 1 | 0 |
+
+Every other weapon leaves both at 0.
+
 A downed soldier runs `CBrainMercThresholdHealthVictim`: he calls for help, limps to cover, waits to be
 carried or healed by a comrade, and while the target is visible and close enough aims at it and
-shoots (`RepelTarget`). Which weapon he shoots with there was not checked.
+shoots (`RepelTarget`). Which weapon he shoots with there was not checked. In the range a comrade
+lifted a downed soldier onto his shoulders, carried him a moment and dropped him on the ground.
 
 What a downed soldier then soaks is on the [todo page](/farcry-sdk/todos).
 
