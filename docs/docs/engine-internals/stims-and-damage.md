@@ -161,7 +161,9 @@ and `CounterReliabilityRatingsTable`, rated high, medium, low and failure per ac
 In game every merc had 250, the high rating; which rating each army holds was not traced.
 
 **Going down.** A hit that takes him under the failure value (50) downs him instead of killing him
-only if `CanHealthFailureOccur` (server `0x087EE270`) allows it:
+only if `CanHealthFailureOccur` (server `0x087EE270`, Steam `0x1069B8D0`, `RET 8`) allows it; otherwise
+the hit kills him outright, whatever health it would have left. The body part plays no part in the
+decision, though the stim it is given carries it:
 
 - never in a vehicle;
 - always for a machete hit;
@@ -180,6 +182,13 @@ soldiers go down as it goes on:
 | 66-95 | 50 % | 8 |
 | 96-130 | 65 % | 11 |
 | 131+ | 80 % | 14 |
+
+The cap is `CFCXCountersService::GetMaxNPCsInFailure` (Steam `0x107645C0`). This is **traced in the
+server build** and matched in `Dunia.dll`.
+
+A downed soldier runs `CBrainMercThresholdHealthVictim`: he calls for help, limps to cover, waits to be
+carried or healed by a comrade, and while the target is visible and close enough aims at it and
+shoots (`RepelTarget`). Which weapon he shoots with there was not checked.
 
 What a downed soldier then soaks is on the [todo page](/farcry-sdk/todos).
 

@@ -25,6 +25,7 @@ add_library(DifficultyOverhaul SHARED
   "src/squad_memory.cpp"
   "src/watched_spot.cpp"
   "src/eyesight.cpp"
+  "src/going_down.cpp"
   "src/engine/damage.cpp"
   "src/engine/game.cpp"
   "src/engine/shooting.cpp"

@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # Difficulty
 
-**Status:** in progress since 2026-10-21, built as `mods/difficulty-overhaul`. Sixteen features are
+**Status:** in progress since 2026-10-21, built as `mods/difficulty-overhaul`. Seventeen features are
 built; the [finish checklist](#finish-checklist) re-checks each on the test range and lists what is
 left. How enemies should differ from one another is [not agreed](#open-how-enemies-differ).
 
@@ -81,6 +81,7 @@ range in the log drifts from the scenario's distance.
 | 14 | Squad memory: slipping away | from behind the wall, move more than 15 m away unseen | they lose you 10-25 s later and search | not seen |
 | 16 | Eyesight | Rifleman at 50 m: stand in the open in front of him. Rifleman side-on at 30 m: start at the edge of his vision | he sees you at 50 m; at his side he notices, turns and then sees you | new | stock and the mod alike: he only investigated at 50 m and walked past a player who stepped aside. 50 m in front passes: he engages at once, every run. Side-on passes: standing at his side he did not notice; stepping into his view, he turned and fired once he faced the player, "it feels good". Recognition (an alerted soldier keeps looking after a faint sighting) was removed: it never acted in any run |
 | 15 | Watched spot | peek twice from the same corner, then from 3 m along the wall | quick shots at the same corner; slower, missing first shots at the new spot; `watched spot: … aim restarts` | not seen | restarted his aim during burst pauses while the player stood in the open; fixed to read his unbroken sighting time, to rerun |
+| 17 | Going down | Two riflemen at 20 m: shoot one only in the arms and legs | the hit that would kill him downs him instead, every time: he falls, calls out, crawls, maybe shoots from the ground; `soldier … hit: … wounded` | new: limb hits died outright on a failed 15 % roll | |
 
 ### Still to do before it is finished
 

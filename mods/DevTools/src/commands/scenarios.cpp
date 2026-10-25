@@ -45,9 +45,9 @@ namespace {
          "Stand still where you start: you are at the edge of his vision. Then step a few metres north, "
          "into his view.",
          "He notices you at his side, comes or turns to look, and shoots once he faces you, not before."},
-        {"Two riflemen at 20 m", "3", kTwoAt20,
+        {"Two riflemen at 20 m", "3, 17", kTwoAt20,
          "Shoot one in the torso and the other in the arms and legs.",
-         "About 2 torso hits down the first; about 4 limb hits the second."},
+         "About 2 torso hits kill the first. The limb hit that would kill the second downs him instead."},
         {"Shotgunner at 10 m", "8", kShotgunnerAt10,
          "Stand in the open.",
          "His shot lines' chance, to compare with the 40 m run."},
