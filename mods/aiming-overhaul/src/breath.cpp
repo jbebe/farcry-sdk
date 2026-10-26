@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <atomic>
 #include <initializer_list>
+#include <iterator>
 
 namespace {
     // The keyboard's sprint, sent every frame the key is held, and its release.
@@ -60,10 +61,14 @@ namespace {
     bool g_straining = false;
 
     // The heart beating, the layer's banks of the game's own beat from going down wounded: while the
-    // breath is in, and fainter down the sights once the heart races this much.
+    // breath is in, and down the scope of a gun that needs it, from loudest to faintest as the heart
+    // settles from kLoudRacing to kSilentRacing, and not at all below.
     constexpr uint32_t kHeartbeat = 0x00FC0B80;
-    constexpr uint32_t kFaintHeartbeat = 0x00FC0C20;
-    constexpr float kHeardRacing = 0.25f;
+    constexpr uint32_t kFaintHeartbeats[] = {0x00FC0C20, 0x00FC0C40, 0x00FC0C60, 0x00FC0C80,
+                                             0x00FC0CA0};
+    constexpr int kFaintSteps = static_cast<int>(std::size(kFaintHeartbeats));
+    constexpr float kLoudRacing = 0.6f;
+    constexpr float kSilentRacing = 0.1f;
 
     void Breathe(bool in, float stamina) {
         const bool tired = stamina < kTired;
@@ -100,8 +105,10 @@ bool AimingOverhaul::Breath::Needed() {
 }
 
 void AimingOverhaul::Breath::Update(float seconds, bool aiming, float stamina) {
-    for (uint32_t bank : {kInhale, kTiredInhale, kExhale, kTiredExhale, kHeartbeat,
-                          kFaintHeartbeat}) {
+    for (uint32_t bank : {kInhale, kTiredInhale, kExhale, kTiredExhale, kHeartbeat}) {
+        Sound::Hold(bank);
+    }
+    for (uint32_t bank : kFaintHeartbeats) {
         Sound::Hold(bank);
     }
     g_sinceSprint += seconds;
@@ -116,13 +123,15 @@ void AimingOverhaul::Breath::Update(float seconds, bool aiming, float stamina) {
     }
     g_straining = g_straining && holding;
     g_holding = holding;
-    // The heart is heard beating while the breath is held, and faintly down the sights once it
-    // races.
+    // The heart is heard beating while the breath is held, and faintly down the scope while it
+    // races, fading out as it settles.
     if (Heart::Beat()) {
+        const float quiet = (kLoudRacing - Heart::Racing()) / (kLoudRacing - kSilentRacing);
         if (g_drawn) {
             Sound::Play(kHeartbeat, kOnoPlayer);
-        } else if (aiming && Heart::Racing() >= kHeardRacing) {
-            Sound::Play(kFaintHeartbeat, kOnoPlayer);
+        } else if (g_needed && aiming && quiet < 1.0f) {
+            const int step = std::clamp(static_cast<int>(quiet * kFaintSteps), 0, kFaintSteps - 1);
+            Sound::Play(kFaintHeartbeats[step], kOnoPlayer);
         }
     }
     float target;

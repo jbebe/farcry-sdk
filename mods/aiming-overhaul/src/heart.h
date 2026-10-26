@@ -1,5 +1,6 @@
-// The heart: its rate climbs with exertion and jumps with a wound or a blast nearby, then settles
-// slowly; each beat jolts the aim, and a fast heart steadies the hands less.
+// The heart: its rate climbs with exertion and comes back down as the stamina does, jumps with a
+// wound or a blast nearby and settles slowly from that; each beat jolts the aim, and a fast heart
+// steadies the hands less.
 #pragma once
 
 #include <cstdint>

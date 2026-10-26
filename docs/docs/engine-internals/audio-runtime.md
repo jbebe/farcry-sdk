@@ -58,6 +58,10 @@ Game code plays a DARE event id through `CSoundSystem` (`PlaySound`, `PlaySoundA
 `PlaySoundReverb`, …), against a sound object and one of the sound types below. The ids come from
 entity fields prefixed `snd` (see the [entity component schema](./entity-component-schema.md)).
 
+`PlaySound`'s float argument is a fade-in time, not a volume: above `0`, `FUN_10a3c730` starts the
+voice at -96 dB and ramps it up over that time. Nothing in the call sets a per-play volume, so a
+sound heard at several levels needs one bank per level **(RE-verified)**.
+
 ### DARE dispatches on the event type
 
 `FUN_10a3c9c0` is the play dispatcher. It switches on the event object's type (the

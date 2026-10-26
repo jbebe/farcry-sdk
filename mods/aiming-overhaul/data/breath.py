@@ -1,7 +1,7 @@
 """Build the layer's breath banks from the game's own stamina breathing: each of its twelve breaths is
 an exhale and then an inhale, cut apart here, and the halves become banks the plugin plays as the
 breath is held and let go - the weaker breaths while stamina is high, the stronger ones while it is
-low. Two more hold the heartbeat, heard while the breath is in and faintly while the heart races.
+low. More hold the heartbeat, heard while the breath is in and faintly while the heart races.
 
     python data\\breath.py <the worlds archive's soundbinary folder>
 
@@ -41,9 +41,10 @@ BANKS = {"0x00fc0b00": ("inhale", WEAK, "0"), "0x00fc0b20": ("inhale", STRONG, "
          "0x00fc0b40": ("exhale", WEAK, "0"), "0x00fc0b60": ("exhale", STRONG, "0")}
 # The heart beating: one of the beats the game plays as the player goes down wounded, as banks with
 # their gains in dB - a little quieter than the game plays it while the breath is held, and faint
-# down the sights while the heart races.
+# down the scope while the heart races, in steps the plugin fades it out through as it settles.
 WOUNDED_BEAT = ("004c661e.spk", "0x004c660d")
-HEARTBEATS = {"0x00fc0b80": "-12", "0x00fc0c20": "-14"}
+HEARTBEATS = {"0x00fc0b80": "-12", "0x00fc0c20": "-14", "0x00fc0c40": "-18", "0x00fc0c60": "-22",
+              "0x00fc0c80": "-26", "0x00fc0ca0": "-30"}
 # Milliseconds each half fades in and out at the cut, so it does not click.
 FADE_MS = 5
 

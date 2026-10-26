@@ -21,15 +21,18 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   picture is up the eye does not drift off the gun, because that picture is a miniature right at
   the eye, but the aim still wanders under the reticle.
 - **Heart rate.** The heart beats at 70 a minute at rest and up to 170. It climbs over a few
-  seconds as stamina runs down, higher while sprinting, jumps with a wound by as much as the health
-  lost and while a blast nearby shakes the camera, and settles back over about 20 s. Each beat
-  jolts the aim up a little, more as the heart races, and a racing heart breathes up to twice as
-  fast with a quarter of the rest, sways up to 60% wider, and holds the breath for as little as
-  half as long. Down the sights a heart past about 95 a minute is heard, faintly.
+  seconds as stamina runs down, higher while sprinting, and comes back down as the stamina does,
+  at rest soon after it is full. It jumps with a wound by as much as the health lost and while a
+  blast nearby shakes the camera, and that settles back over about 20 s. Each beat jolts the aim up
+  a little, more as the heart races, and a racing heart breathes up to twice as fast with a quarter
+  of the rest, sways up to 60% wider, and holds the breath for as little as half as long. Down a
+  magnifying scope a heart past 130 a minute is heard faintly, and it fades out as the heart slows,
+  silent below 80; iron sights and the holographic sights never hear it.
 - **Stance.** Crouched and still, the sway, heart jolts included, is half what it is standing still;
   moving, it is 1.4 times crouched and 1.8 times standing, eased in from walking pace with a creep
-  still counting as still. Crouched and still the heart settles twice as fast, crouched and moving
-  it holds where it is, and walking upright keeps it a little up. A lean keeps the stance it leans
+  still counting as still. Crouched and still a wound's or a blast's share of the heart settles
+  twice as fast, crouched and moving it holds where it is, and walking upright keeps the heart a
+  little up. A lean keeps the stance it leans
   from, and nothing counts as resting the gun.
 - **Hold breath.** With a magnifying scope, on the Dart Rifle, the M1903, the Dragunov and the AS50,
   holding sprint down the scope holds the breath instead of sprinting: the breath settles to the
