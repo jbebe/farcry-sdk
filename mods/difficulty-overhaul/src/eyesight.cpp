@@ -68,7 +68,7 @@ namespace {
     constexpr float kPeripheralAtEdge = 0.35f;
     // Hardcore: within this range a head over cover is as plain as a whole man's top half, so the
     // share of the player's body the rays reach counts this many times over, up to all of it.
-    constexpr float kCloseRange = 30.0f;
+    constexpr float kCloseRange = 40.0f;
     constexpr float kCloseSampling = 2.0f;
     // The game's cap on a cone against the player, unless he looks through a scope.
     constexpr float kMaxFocusLength = 150.0f;
