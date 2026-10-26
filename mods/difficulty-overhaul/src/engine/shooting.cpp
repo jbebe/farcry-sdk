@@ -39,6 +39,10 @@ namespace {
     constexpr ptrdiff_t kEntryPeripheralSeconds = 0x10;
     constexpr ptrdiff_t kAgentPawn = 0x268;
     constexpr ptrdiff_t kPawnData = 0x10;
+    // The effective data in a CPawn's data block, and its stance and velocity.
+    constexpr ptrdiff_t kDataEffective = 0x2D0;
+    constexpr ptrdiff_t kEffectiveStance = 0xA4;
+    constexpr ptrdiff_t kEffectiveVelocity = 0xB0;
     constexpr ptrdiff_t kTaskAgent = 0x34;
 }
 
@@ -104,6 +108,15 @@ void* Pawn(void* agent) { return Read<void*>(agent, kAgentPawn); }
 void* ShooterPawn(void* shooting) { return Pawn(Read<void*>(shooting, kShooter)); }
 
 uint8_t* PawnData(void* pawn) { return Read<uint8_t*>(pawn, kPawnData); }
+
+void Velocity(void* pawn, float velocity[3]) {
+    const uint8_t* effective = PawnData(pawn) + kDataEffective;
+    for (int axis = 0; axis < 3; ++axis) {
+        velocity[axis] = Read<float>(effective, kEffectiveVelocity + axis * sizeof(float));
+    }
+}
+
+int Stance(void* pawn) { return Read<int>(PawnData(pawn) + kDataEffective, kEffectiveStance); }
 
 void* OfAgent(void* agent) { return static_cast<uint8_t*>(agent) + kAgentShooting; }
 

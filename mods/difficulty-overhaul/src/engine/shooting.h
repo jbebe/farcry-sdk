@@ -58,6 +58,10 @@ void* ShooterPawn(void* shooting);
 // A CPawn's data block.
 uint8_t* PawnData(void* pawn);
 
+// A CPawn's velocity in metres per second, and its stance, 1 when crouched.
+void Velocity(void* pawn, float velocity[3]);
+int Stance(void* pawn);
+
 // The shooting system of a CPawnAgent, and of the soldier a CTaskShoot runs on.
 void* OfAgent(void* agent);
 void* OfTask(void* task);

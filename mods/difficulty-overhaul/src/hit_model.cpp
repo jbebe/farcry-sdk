@@ -39,10 +39,6 @@ namespace {
     constexpr int kHeadPart = 3;
     constexpr int kTorsoPart = 5;
 
-    // The effective data in a CPawn's data block, and the velocity in it.
-    constexpr ptrdiff_t kDataEffective = 0x2D0;
-    constexpr ptrdiff_t kEffectiveVelocity = 0xB0;
-
     // Hardcore: seconds for aim to settle after acquiring the player, at 0 m and per metre.
     constexpr float kSettleSeconds = 0.6f;
     constexpr float kSettleSecondsPerMetre = 0.02f;
@@ -103,13 +99,14 @@ namespace {
         float to[3];
         Game::Position(shooter, from);
         Game::Position(player, to);
-        const uint8_t* effective = Shooting::PawnData(playerPawn) + kDataEffective;
+        float velocity[3];
+        Shooting::Velocity(playerPawn, velocity);
         float line = 0.0f;
         float speed = 0.0f;
         float along = 0.0f;
         for (int i = 0; i < 3; ++i) {
             const float l = to[i] - from[i];
-            const float v = Read<float>(effective, kEffectiveVelocity + i * sizeof(float));
+            const float v = velocity[i];
             line += l * l;
             speed += v * v;
             along += v * l;
