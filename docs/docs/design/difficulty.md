@@ -98,7 +98,7 @@ range in the log drifts from the scenario's distance.
 | J | **Close-range awareness.** Within about 2 m a soldier senses the player at any angle, but a crouching player can always approach without alerting him; walking or running alerts him | chosen from the AI survey, with the user's note on crouching; easy |
 | K | **Vertical sight limit.** About 45° above and 60° below his eye line | chosen from the AI survey; easy, but the range is flat, so testing needs height |
 | L | **A heard step means investigate.** A footstep sends a soldier to look; only seeing the player makes him hostile | chosen from the AI survey; first check what the stock brains do with the footstep sound |
-| M | **AI view in the game.** Each soldier's cones, how well he sees the player and where he thinks the player is, drawn as lines in the 3D scene after the frame renders, depth-tested, not through DevTools' overlay or a world-to-screen projection | built in DevTools as the AI view toggle (Mod Configuration Menu); unseen |
+| M | **AI view in the game.** Each soldier's cones, how well he sees the player and where he thinks the player is, drawn as lines in the 3D scene after the frame renders, depth-tested, not through DevTools' overlay or a world-to-screen projection | built in DevTools as the AI view toggle (Mod Configuration Menu); works in game, cones redone as ground sectors and lines widened at the user's request |
 | H | **Release.** CHANGELOG, README-release, the Nexus page and the release workflow | last |
 
 ## Postponed
