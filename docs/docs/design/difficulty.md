@@ -94,6 +94,11 @@ range in the log drifts from the scenario's distance.
 | E | **Damage falloff with range** for the player's hits on soldiers | skipped in step 4 |
 | F | **A vest** | postponed, below |
 | G | **The difficulty spread.** Ease Casual and Experienced and harden Infamous, from the Hardcore values | after A to C |
+| I | **Periphery sees movement.** Outside his focus a still player is barely noticed, a moving one is | chosen from the AI survey (2026-10-26); easy: the FOV evaluator we replace scales with the speed evaluator |
+| J | **Close-range awareness.** Within about 2 m a soldier senses the player at any angle, but a crouching player can always approach without alerting him; walking or running alerts him | chosen from the AI survey, with the user's note on crouching; easy |
+| K | **Vertical sight limit.** About 45° above and 60° below his eye line | chosen from the AI survey; easy, but the range is flat, so testing needs height |
+| L | **A heard step means investigate.** A footstep sends a soldier to look; only seeing the player makes him hostile | chosen from the AI survey; first check what the stock brains do with the footstep sound |
+| M | **AI view in the game.** Each soldier's cones, how well he sees the player and where he thinks the player is, drawn as lines in the 3D scene after the frame renders, depth-tested, not through DevTools' overlay or a world-to-screen projection | chosen from the AI survey, with the user's note; medium |
 | H | **Release.** CHANGELOG, README-release, the Nexus page and the release workflow | last |
 
 ## Postponed
