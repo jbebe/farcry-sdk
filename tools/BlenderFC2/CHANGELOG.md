@@ -3,6 +3,27 @@
 Notable changes to the Far Cry 2 Blender add-on, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.4.0] - 2026-10-26
+
+### Added
+- **Edit a material in Blender.** Properties ▸ Material ▸ Far Cry 2, and the new Material panel in
+  the Far Cry 2 sidebar, show the material's own values - the same ones JackAll's material editor
+  shows - grouped the way its shader groups them. **+** adds a property the material leaves unset,
+  **×** drops one, and export writes the material back. The node graph is now a preview of these
+  values, so rewiring it by hand changes nothing in the game. The grouping and the unset properties
+  need a pack exported by a current JackAll, which carries every shader's property list.
+- **Clean twins set along.** A weapon's or vehicle's condition overwrites a colour from its Clean and
+  Broken twins, which now sit under it; setting the colour sets Clean too, and Broken stays the worn
+  look.
+- **Copy to a New Material.** A material the model shares with other models is read-only, since an
+  edit would change them all. The copy is the model's own, beside it, and draws the selected parts
+  that used the original; export adds it to the pack.
+- **A part draws with whatever material its slot holds**, at every level of detail. Pointing a part
+  at another of the model's materials used to be ignored.
+- **Textures are written back.** A texture painted or resized in Blender goes back into the pack, and
+  an image from outside it becomes a new texture beside the model, in the codec its alpha needs. A
+  new normal map is stored the way the game reads one.
+
 ## [0.3.3] - 2026-10-25
 
 ### Added
