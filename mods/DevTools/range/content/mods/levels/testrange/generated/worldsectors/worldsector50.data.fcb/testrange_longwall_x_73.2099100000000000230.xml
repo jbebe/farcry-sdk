@@ -1,0 +1,53 @@
+<object hash="0984415E">
+  <value hash="346AAB33" type="BinHex">4F415F436F7665724F626A656374732E436F7665724F626A656374732E57616C6C4261727269657230315F424B2E4D756C746900</value>
+  <value hash="B9295CC7" type="BinHex">5465737452616E67655F4C6F6E6757616C6C5F585F373300</value>
+  <value hash="052A103F" type="BinHex">E6C005185480211D</value>
+  <value hash="ADC3BD93" type="BinHex">07000000</value>
+  <value hash="32D620A2" type="BinHex">00003C430000DC4300808041</value>
+  <value hash="6553B60B" type="BinHex">000000000000000000000000</value>
+  <value hash="7D7860C6" type="BinHex">00003C430000DC4300808041</value>
+  <object hash="A115F62D">
+    <object hash="035982C6">
+      <value hash="9EE14321" type="BinHex">81000000</value>
+      <value hash="4A89D015" type="BinHex">FFFFFFAB</value>
+      <value hash="3D8EE083" type="BinHex">FFFFFFE2</value>
+      <value hash="A487B139" type="BinHex">FFFFFFD6</value>
+      <value hash="D38081AF" type="BinHex">FFFFFFD6</value>
+      <value hash="8FF10D55" type="BinHex">1D211EFE</value>
+      <value hash="29BB0FF2" type="BinHex">A0D8993F</value>
+      <value hash="66C60244" type="BinHex">AF338B41</value>
+      <value hash="2371C028" type="BinHex">01</value>
+    </object>
+    <object hash="AA13F142">
+      <object hash="FE267439">
+        <object hash="366E727B">
+          <object hash="6252FDFF">
+            <object hash="DB83EFB8">
+              <value hash="69466E0D" type="BinHex">01000000</value>
+            </object>
+          </object>
+          <object hash="6252FDFF">
+            <object hash="DB83EFB8">
+              <object hash="23C20EF1">
+                <object hash="254D477B" />
+                <object hash="254D477B">
+                  <value hash="69466E0D" type="BinHex">03000000</value>
+                </object>
+                <object hash="254D477B">
+                  <value hash="69466E0D" type="BinHex">02000000</value>
+                </object>
+                <object hash="254D477B">
+                  <value hash="69466E0D" type="BinHex">04000000</value>
+                </object>
+              </object>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>
+    <object hash="B3A99CB8">
+      <value hash="FEE21F0D" type="BinHex">00</value>
+      <object hash="3D06591C" />
+    </object>
+  </object>
+</object>

@@ -317,7 +317,7 @@ invincibility yourself: it is on unless the scenario tests damage to you.
 |---|---|---|---|
 | Duel lane | open ground east of (30, 110) | rifleman at 10, 20 and 50 m; rifleman side-on at 30 m; machine gunner at 20 m; two riflemen at 20 m; shotgunner at 10 and 40 m | 2 to 8, 16, 17 |
 | Low wall | three barriers end to end at (100, 40), 6.75 m along their tops, the soldier 30 m north | rifleman over the low wall | 9 |
-| Long wall | a 42 m wall at y 440, an 18 m wall 20 m behind it, the squad 40 m south | squad at the long wall | 11, 13, 14, 15 |
+| Long wall | a wall at y 440 across the whole range, so the squad cannot go round it, an 18 m wall 20 m behind it, the squad 40 m south | squad at the long wall | 11, 13, 14, 15 |
 | Suppression | two 18 m lines at x 420 and 460 | two riflemen behind cover | 12 |
 | Sniper | a 12 m wall 3 m in front of (380, 370), the sniper at (480, 480) | sniper at 150 m | 9, 15 at range |
 
