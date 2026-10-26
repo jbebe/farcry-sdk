@@ -414,11 +414,12 @@ whole condition ramp then runs inside a single magazine. See
 
 ## Step 7 — ship it
 
-Do the whole thing through a `.fc2model` pack. Edit `materials/<name>.json` and swap the texture PNGs
-inside the zip, then set **`origin_sha256`** on each entry you touched — that field's presence is
-exactly what marks an entry modified. A material added with `add-material` carries an empty one
-already. Set `levels` to the new chain length (11 for a 1024 image) and the applier does
-the rest:
+Do the whole thing through a `.fc2model` pack. The Blender add-on edits it for you: the material's
+values in its **Far Cry 2** panel, its textures by painting them or picking another image for the
+slot, and export marks what changed and recounts the mip chain of a resized texture. By hand, edit
+`materials/<name>.json` and swap the texture PNGs inside the zip, then set **`origin_sha256`** on each
+entry you touched — that field's presence is exactly what marks an entry modified — and set `levels`
+to the new chain length (11 for a 1024 image). Either way the applier does the rest:
 
 ```
 jackall-cli fc2model extract edited.fc2model -o mylayer

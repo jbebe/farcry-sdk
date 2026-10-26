@@ -27,11 +27,6 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 
 ## Tools/BlenderFC2
 
-- [ ] **A pack's own materials and textures are still edited by hand.** `fc2model add-material` and
-  `assign-material` add a material and move a part's clusters onto it, but changing a value of a
-  material the pack already carries, or swapping its texture, is a JSON or PNG edit plus
-  `origin_sha256` — what [texturing a replaced weapon](/farcry-sdk/docs/modding/texturing-a-weapon)
-  prescribes. Authoring materials in Blender is the next step.
 - [ ] **A material at a new path has not been tried in game.** JackAll makes one; whether the engine
   loads a material no `depload` lists is one launch: copy a weapon's material to a new path, point
   its mesh at it with a magenta texture, and look.

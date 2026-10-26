@@ -86,9 +86,14 @@ Then **Deploy mods**.
 
 ## What else the add-on does
 
-- **Textures** travel in the pack as PNG. Edit them in any image editor and they're converted back
-  when you apply the pack. [Texturing a weapon](/docs/modding/texturing-a-weapon) explains how the
-  game's materials use them.
+- **Materials** are edited in **Properties ▸ Material ▸ Far Cry 2**, or in the **Material** panel of
+  the Far Cry 2 sidebar: the same values JackAll's material editor shows, grouped the way the
+  shader groups them. A material the model shares with other models is read-only; **Copy to a New
+  Material** makes one of the model's own and draws the selected parts with it. A part draws with
+  whatever material its slot holds, at every level of detail.
+- **Textures** travel in the pack as PNG. Paint one in Blender or pick another image for a slot, and
+  export writes it back; an image from outside the pack becomes a new texture beside the model.
+  [Texturing a weapon](/docs/modding/texturing-a-weapon) explains how the game's materials use them.
 - **Animations** from a pack exported with animations load onto the rig from **Object ▸ Load Far Cry
   2 Animation**, and an edited one can be written back.
 - **Add as New Part** adds a mesh the model didn't have before.
