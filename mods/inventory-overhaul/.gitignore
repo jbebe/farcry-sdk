@@ -1,0 +1,5 @@
+# CMake build tree, and the built plugin the layer only carries.
+out/
+layer/plugins/inventory-overhaul/InventoryOverhaul.dll
+# The mockup carries the game's own textures and stays local.
+mockup/
