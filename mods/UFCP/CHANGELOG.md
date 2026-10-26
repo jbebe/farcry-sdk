@@ -2,6 +2,12 @@
 
 Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Changed
+- **Field of view** now sets the weapon and arms too, one slider for both. They used to stay at the
+  game's own 75 degrees whatever the setting.
+
 ## [1.1.1] - 2026-10-15
 
 ### Fixed
