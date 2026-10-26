@@ -19,8 +19,8 @@ enum Class { kMachete, kPrimary, kSecondary, kSpecial };
 // False when an address is missing on this build; nothing below may be called then.
 bool Resolve();
 
-// The inventory of a CPlayer's pawn, or null while it has none.
-void* OfPlayer(const void* player);
+// The inventory behind a pawn's CInventoryViewPawn.
+void* OfView(const void* view);
 // Whether an inventory is the local player's.
 bool IsPlayers(const void* inventory);
 // The entity a component, such as a weapon or a pawn, belongs to.

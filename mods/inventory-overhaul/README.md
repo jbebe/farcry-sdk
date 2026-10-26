@@ -23,13 +23,16 @@ secondary and a special. What changes is the player's inventory (`InventoryOverh
 Two guns of the same model share an item id, by which the engine draws them, so the later one is
 given an id of its own. Every decision is logged to `bin\fcse.log`.
 
-When the player spawns from a save (`CPlayer::CompleteDoSpawnPlayer`), every gun without a slot
+A loading save adds its guns before the save's own data on them comes back, and that data replaces
+any slot given meanwhile. So guns added any way but a pickup are placed later, the first time
+`CInventoryViewPawn::GetEquippedWeapon` is asked for the player's gun, which the HUD does every
+frame; a number key that finds no gun in its slot places them too. Every gun without a slot then
 takes the key its class had in the game where it is free: the secondary's 2 (gun 1), the primary's
 3 (gun 2), else the free one. A save from before the mod carries up to three guns; the one left
 without a slot, the special-class gun, is dropped at the player's feet, and if it was in hand gun 1
-is drawn. A gun given in play some other way than a pickup, such as from a weapon crate, with two
-carried is left without a slot until the next load. A scripted draw of the secondary class, if the
-game has one, goes through the same action as key 2 and draws gun 1.
+is drawn. A weapon crate's gun taken with two carried is placed the same way, so the gun left over
+is dropped. A scripted draw of the secondary class, if the game has one, goes through the same
+action as key 2 and draws gun 1.
 
 ## Testing
 

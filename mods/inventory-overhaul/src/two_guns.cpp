@@ -19,12 +19,12 @@ namespace {
     using FindByClassFn = void*(__fastcall*)(void* inventory, void* unused, const uint32_t* category);
     using PrePickupFn = void(__fastcall*)(void* pickup, void* unused, void* pawn);
     using PickFn = bool(__fastcall*)(void* pickup, void* unused, void* user, uint32_t flag);
-    using SpawnedFn = void(__fastcall*)(void* player, void* unused);
+    using EquippedFn = void*(__fastcall*)(void* view, void* unused);
 
-    // CPlayer::CompleteDoSpawnPlayer, which ends every load; a state machine node's action; the
-    // inventory's AddWeapon(CWeapon*), SelectWeapon(class) and GetWeaponFromCategory(class);
-    // CPickupWeapon's PrePickup(pawn) and Pick(user, flag).
-    FCSE::Relocation<SpawnedFn> g_spawnedSite{FCSE::Uplay(0x00193520)};
+    // CInventoryViewPawn::GetEquippedWeapon, which the HUD asks for the player every frame; a state
+    // machine node's action; the inventory's AddWeapon(CWeapon*), SelectWeapon(class) and
+    // GetWeaponFromCategory(class); CPickupWeapon's PrePickup(pawn) and Pick(user, flag).
+    FCSE::Relocation<EquippedFn> g_equippedSite{FCSE::Uplay(0x00127DA0)};
     FCSE::Relocation<ActionFn> g_actionSite{FCSE::Uplay(0x00CE27F0)};
     FCSE::Relocation<AddWeaponFn> g_addWeaponSite{FCSE::Uplay(0x001285F0)};
     FCSE::Relocation<SelectWeaponFn> g_selectWeaponSite{FCSE::Uplay(0x0012D670)};
@@ -37,7 +37,7 @@ namespace {
     FindByClassFn g_findByClass = nullptr;
     PrePickupFn g_prePickup = nullptr;
     PickFn g_pick = nullptr;
-    SpawnedFn g_spawned = nullptr;
+    EquippedFn g_equipped = nullptr;
 
     constexpr int kSlots = 2;
     constexpr const char* kSlotKey = "InventoryOverhaul.Slot";
@@ -51,9 +51,10 @@ namespace {
 
     // The slot the number key being handled asks for, 0 for none; -1 outside a number key.
     int g_keySlot = -1;
-    // Set while anything picks a weapon up, and while the player spawns from a save.
+    // Set while anything picks a weapon up.
     bool g_inPickup = false;
-    bool g_spawning = false;
+    // Set when a weapon is added some other way, as a save's are, until the player's guns are seen.
+    bool g_check = true;
     // The gun the player's pickup added, and the inventory it went into.
     struct Picked {
         void* inventory;
@@ -164,6 +165,36 @@ namespace {
         return true;
     }
 
+    // Places the player's guns and drops a third; gun 1 is drawn if the dropped one was in hand.
+    void Tidy(void* inventory) {
+        std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
+        SeparateTwins(guns);
+        if (!PlaceGuns(inventory, guns, true)) {
+            return;
+        }
+        guns = Inventory::Guns(inventory);
+        const Inventory::Weapon* gun = InSlot(guns, 1);
+        if (gun == nullptr) {
+            gun = InSlot(guns, 2);
+        }
+        if (gun != nullptr) {
+            Draw(inventory, *gun);
+        }
+    }
+
+    // A save's guns are added before the save's own data on them comes back, which replaces any
+    // slot given then; they are placed here, the first time the HUD asks for the player's gun.
+    void* __fastcall OnEquipped(void* view, void* unused) {
+        if (g_check && !g_inPickup) {
+            void* inventory = Inventory::OfView(view);
+            if (Inventory::IsPlayers(inventory)) {
+                g_check = false;
+                Tidy(inventory);
+            }
+        }
+        return g_equipped(view, unused);
+    }
+
     void __fastcall OnAction(void* node, void* unused, void* context, void* extra) {
         const auto action = Read<uint32_t>(node, kActionType);
         g_keySlot = action == kSelectSecondary ? 1
@@ -183,8 +214,13 @@ namespace {
         if (slot == 0) {
             return false;
         }
-        const std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
+        std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
         const Inventory::Weapon* gun = InSlot(guns, slot);
+        if (gun == nullptr && !guns.empty()) {
+            Tidy(inventory);
+            guns = Inventory::Guns(inventory);
+            gun = InSlot(guns, slot);
+        }
         if (gun == nullptr || (Inventory::Id(gun->item) == Inventory::InHandId(inventory) &&
                                Inventory::Drawn(inventory))) {
             return false;
@@ -197,54 +233,25 @@ namespace {
         return true;
     }
 
-    // A gun picked up with two carried takes the place of the one in hand. Loading a save adds its
-    // guns here too, and drops none: the player's spawn places them once all are in.
+    // A gun the player picks up with two carried takes the place of the one in hand. A weapon added
+    // any other way is placed the next time the HUD asks for the player's gun.
     void __fastcall OnAddWeapon(void* inventory, void* unused, void* weapon) {
-        if (g_spawning || !Inventory::IsPlayers(inventory) || !Inventory::IsGun(weapon)) {
+        if (!g_inPickup || !Inventory::IsPlayers(inventory) || !Inventory::IsGun(weapon)) {
+            g_check |= !g_inPickup;
             return g_addWeapon(inventory, unused, weapon);
         }
-        if (g_inPickup) {
-            const std::vector<Inventory::Weapon> carried = Inventory::Guns(inventory);
-            if (carried.size() >= kSlots) {
-                const Inventory::Weapon& out = ToReplace(inventory, carried);
-                FCSE::Logf("the %s takes a slot: the %s is dropped", Inventory::Name(weapon),
-                           Inventory::Name(out.weapon));
-                Inventory::Drop(inventory, out.weapon);
-            }
+        const std::vector<Inventory::Weapon> carried = Inventory::Guns(inventory);
+        if (carried.size() >= kSlots) {
+            const Inventory::Weapon& out = ToReplace(inventory, carried);
+            FCSE::Logf("the %s takes a slot: the %s is dropped", Inventory::Name(weapon),
+                       Inventory::Name(out.weapon));
+            Inventory::Drop(inventory, out.weapon);
         }
         g_addWeapon(inventory, unused, weapon);
         const std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
         SeparateTwins(guns);
         PlaceGuns(inventory, guns, false);
-        if (g_inPickup) {
-            g_picked = {inventory, weapon};
-        }
-    }
-
-    // A save from before the mod carries up to three guns: the third is dropped, and the other two
-    // take the keys their classes had.
-    void __fastcall OnSpawned(void* player, void* unused) {
-        g_spawning = true;
-        g_spawned(player, unused);
-        g_spawning = false;
-        void* inventory = Inventory::OfPlayer(player);
-        if (inventory == nullptr) {
-            return;
-        }
-        std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
-        FCSE::Logf("spawned with %zu guns", guns.size());
-        SeparateTwins(guns);
-        if (!PlaceGuns(inventory, guns, true)) {
-            return;
-        }
-        guns = Inventory::Guns(inventory);
-        const Inventory::Weapon* gun = InSlot(guns, 1);
-        if (gun == nullptr) {
-            gun = InSlot(guns, 2);
-        }
-        if (gun != nullptr) {
-            Draw(inventory, *gun);
-        }
+        g_picked = {inventory, weapon};
     }
 
     // A pickup replaces the carried gun of its class, which the player's no longer is: AddWeapon
@@ -285,7 +292,7 @@ bool Install() {
         return false;
     }
     const bool added = Hook(g_addWeaponSite, &OnAddWeapon, &g_addWeapon) &&
-                       Hook(g_spawnedSite, &OnSpawned, &g_spawned);
+                       Hook(g_equippedSite, &OnEquipped, &g_equipped);
     const bool keys = Hook(g_selectWeaponSite, &OnSelectWeapon, &g_selectWeapon) &&
                       Hook(g_actionSite, &OnAction, &g_action);
     const bool pickups = Hook(g_findByClassSite, &OnFindByClass, &g_findByClass) &&
