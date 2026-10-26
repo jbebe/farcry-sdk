@@ -108,13 +108,12 @@ namespace {
     HRESULT __stdcall OnSetTexture(IDirect3DDevice9* device, DWORD stage,
                                    IDirect3DBaseTexture9* texture) {
         if (texture != nullptr && Notebook::IsOpen()) {
+            // Asked on every bind: streaming puts a new Direct3D texture behind the resource once
+            // the full picture has loaded.
             const uint8_t* resource = g_paperResource;
-            if (resource != g_paperFrom || g_paper == nullptr) {
-                IDirect3DBaseTexture9* paper =
-                    resource != nullptr ? Direct3DTextureOf(resource) : nullptr;
-                if (resource != g_paperFrom || paper != g_paper) {
-                    FCSE::Logf("paper: resource %p is Direct3D texture %p", resource, paper);
-                }
+            IDirect3DBaseTexture9* paper = resource != nullptr ? Direct3DTextureOf(resource) : nullptr;
+            if (resource != g_paperFrom || paper != g_paper) {
+                FCSE::Logf("paper: resource %p is Direct3D texture %p", resource, paper);
                 g_paperFrom = resource;
                 g_paper = paper;
                 g_bindsWithoutPaper = 0;
