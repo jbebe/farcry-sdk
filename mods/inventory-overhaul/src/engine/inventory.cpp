@@ -4,26 +4,41 @@
 #include "engine/memory.h"
 #include "fcse_api.h"
 
+#include <cstring>
+
 namespace InventoryOverhaul::Inventory {
 
 namespace {
     using GetTerminalFn = void*(__cdecl*)();
     using DropWeaponFn = void*(__fastcall*)(void* inventory, void* unused, void* weapon, int keep);
+    using CanSpawnPickupFn = bool(__fastcall*)(void* inventory, void* unused);
+    using AddByNameFn = bool(__fastcall*)(void* inventory, void* unused, const char* archetype);
     using UpdateEquipAnimFn = void(__fastcall*)(void* inventory, void* unused);
     using BuildTypeFn = void*(__cdecl*)();
     using HierarchyFn = const void*(__fastcall*)(void* object, void* unused);
     using ItemWeaponFn = void*(__fastcall*)(void* item, void* unused);
     using CategoryFn = const uint32_t*(__fastcall*)(void* weapon, void* unused);
+    using ReliabilityFn = float(__fastcall*)(void* weapon, void* unused);
+    using SetReliabilityFn = void(__fastcall*)(void* weapon, void* unused, float reliability);
+    using LoadedFn = int(__fastcall*)(void* weapon, void* unused);
+    using SetLoadedFn = void(__fastcall*)(void* weapon, void* unused, int rounds);
 
-    // The local player's CTerminal, and the inventory's DropWeapon(CWeapon*, bool) and
-    // UpdateEquipAnim.
+    // The local player's CTerminal; the inventory's DropWeapon(CWeapon*, bool), the CanSpawnPickup
+    // question a drop asks first, AddWeaponByName(archetype) and UpdateEquipAnim; CWeapon's
+    // GetReliability and its loaded rounds, read and set.
     FCSE::Relocation<GetTerminalFn> g_getTerminal{FCSE::Uplay(0x00831870)};
     FCSE::Relocation<DropWeaponFn> g_dropWeapon{FCSE::Uplay(0x0012DB20)};
+    FCSE::Relocation<CanSpawnPickupFn> g_canSpawnPickupSite{FCSE::Uplay(0x0012D950)};
+    FCSE::Relocation<AddByNameFn> g_addByName{FCSE::Uplay(0x0012B540)};
     FCSE::Relocation<UpdateEquipAnimFn> g_updateEquipAnim{FCSE::Uplay(0x0012A6F0)};
+    FCSE::Relocation<ReliabilityFn> g_reliability{FCSE::Uplay(0x0012E9F0)};
+    FCSE::Relocation<LoadedFn> g_loaded{FCSE::Uplay(0x0012EB60)};
+    FCSE::Relocation<SetLoadedFn> g_setLoaded{FCSE::Uplay(0x0012F850)};
     // CInventoryItemWeapon's class id, built on first use, and CWeaponPropertiesCommon's class ids.
     FCSE::Relocation<BuildTypeFn> g_buildWeaponItemType{FCSE::Uplay(0x00126210)};
     FCSE::Relocation<const uint32_t*> g_weaponItemType{FCSE::Uplay(0x00FE46EC)};
     FCSE::Relocation<const uint32_t*> g_classes{FCSE::Uplay(0x00F93390)};
+    CanSpawnPickupFn g_canSpawnPickup = nullptr;
 
     // A component of the player's entity, not its pawn.
     constexpr ptrdiff_t kTerminalPlayer = 0x04;
@@ -43,12 +58,10 @@ namespace {
     constexpr size_t kHierarchySlot = 1;
     constexpr size_t kItemWeaponSlot = 0x14 / sizeof(void*);
     constexpr size_t kWeaponCategorySlot = 0x8C / sizeof(void*);
+    constexpr size_t kSetReliabilitySlot = 0xBC / sizeof(void*);
 
-    void* PlayerEntity() {
-        void* terminal = g_getTerminal();
-        void* player = terminal != nullptr ? Read<void*>(terminal, kTerminalPlayer) : nullptr;
-        return player != nullptr ? Entity(player) : nullptr;
-    }
+    // Set while a gun is taken away, so its drop leaves no pickup.
+    bool g_removing = false;
 
     bool IsWeaponItem(void* item, uint32_t weaponItemType) {
         const void* hierarchy = Method<HierarchyFn>(item, kHierarchySlot)(item, nullptr);
@@ -60,11 +73,16 @@ namespace {
         }
         return false;
     }
+
+    bool __fastcall OnCanSpawnPickup(void* inventory, void* unused) {
+        return !g_removing && g_canSpawnPickup(inventory, unused);
+    }
 }
 
-bool Resolve() {
-    return g_getTerminal && g_dropWeapon && g_updateEquipAnim && g_buildWeaponItemType &&
-           g_weaponItemType && g_classes;
+bool Install() {
+    return g_getTerminal && g_dropWeapon && g_addByName && g_updateEquipAnim && g_reliability &&
+           g_loaded && g_setLoaded && g_buildWeaponItemType && g_weaponItemType && g_classes &&
+           Hook(g_canSpawnPickupSite, &OnCanSpawnPickup, &g_canSpawnPickup);
 }
 
 void* OfView(const void* view) { return Read<void*>(view, kViewInventory); }
@@ -72,6 +90,12 @@ void* OfView(const void* view) { return Read<void*>(view, kViewInventory); }
 bool IsPlayers(const void* inventory) {
     const void* owner = Entity(Read<const void*>(inventory, kInventoryOwner));
     return owner != nullptr && owner == PlayerEntity();
+}
+
+void* PlayerEntity() {
+    void* terminal = g_getTerminal();
+    void* player = terminal != nullptr ? Read<void*>(terminal, kTerminalPlayer) : nullptr;
+    return player != nullptr ? Entity(player) : nullptr;
 }
 
 void* Entity(const void* component) {
@@ -117,6 +141,16 @@ const char* Name(void* weapon) {
                : Read<const char*>(entity, kEntityName);
 }
 
+float Reliability(void* weapon) { return g_reliability(weapon, nullptr); }
+
+void SetReliability(void* weapon, float reliability) {
+    Method<SetReliabilityFn>(weapon, kSetReliabilitySlot)(weapon, nullptr, reliability);
+}
+
+int Loaded(void* weapon) { return g_loaded(weapon, nullptr); }
+
+void SetLoaded(void* weapon, int rounds) { g_setLoaded(weapon, nullptr, rounds); }
+
 uint32_t& Id(void* item) {
     return *reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(item) + kItemId);
 }
@@ -135,5 +169,30 @@ void Equip(void* inventory, uint32_t id) {
 }
 
 void Drop(void* inventory, void* weapon) { g_dropWeapon(inventory, nullptr, weapon, 0); }
+
+void Remove(void* inventory, void* weapon) {
+    g_removing = true;
+    Drop(inventory, weapon);
+    g_removing = false;
+}
+
+bool AddByName(void* inventory, const char* archetype) {
+    // The engine adds no gun whose item id, made from its archetype, is already carried, so those
+    // ids are turned aside for the call.
+    std::vector<uint32_t*> sameModel;
+    for (const Weapon& gun : Guns(inventory)) {
+        if (std::strcmp(Name(gun.weapon), archetype) == 0) {
+            sameModel.push_back(&Id(gun.item));
+        }
+    }
+    for (uint32_t* id : sameModel) {
+        *id = ~*id;
+    }
+    const bool added = g_addByName(inventory, nullptr, archetype);
+    for (uint32_t* id : sameModel) {
+        *id = ~*id;
+    }
+    return added;
+}
 
 }

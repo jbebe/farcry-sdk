@@ -6,7 +6,8 @@ this is an FCSE plugin, built in the log's steps.
 
 | Step | What it does | Status |
 |---|---|---|
-| 1. Two guns | gun 1 on key 2, gun 2 on key 3, of any class; a third gun replaces the one in hand | built, not seen in game |
+| 1. Two guns | gun 1 on key 2, gun 2 on key 3, of any class; a third gun replaces the one in hand | works in game |
+| 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay | built, not seen in game |
 
 ## Two guns
 
@@ -33,6 +34,24 @@ without a slot, the special-class gun, is dropped at the player's feet, and if i
 is drawn. A weapon crate's gun taken with two carried is placed the same way, so the gun left over
 is dropped. A scripted draw of the secondary class, if the game has one, goes through the same
 action as key 2 and draws gun 1.
+
+## Items
+
+Items is what the player carries outside the two slots (`src/items.cpp`). It is one string of
+entity data on the player's entity, `InventoryOverhaul.Items`, so it is saved with the game: a line
+per record, `gun <archetype> <wear> <rounds>` or `item <id> <count>`.
+
+A stowed gun leaves the game and becomes a record. Stowing is the engine's own drop
+(`DropWeapon`) with its `CanSpawnPickup` question answered no, so nothing lands on the ground.
+Taking it out makes a new gun of that archetype with the inventory's `AddWeaponByName`, then puts
+back its wear and loaded rounds; with two guns carried, the one in hand takes its place in Items.
+The engine adds no gun of a model already carried, which it tells by item id, so the carried
+guns of that model have their ids turned aside for the call. Spare ammo is one pool per ammo type
+and stays with the player, and upgrades are the player's, not the gun's, so nothing else is lost.
+
+Until the notebook exists, a window in DevTools' overlay (Home) shows both slots and Items, with
+Stow, Take, Give and Discard. Its buttons are carried out on the game thread, the next time the
+HUD asks for the player's gun.
 
 ## Testing
 

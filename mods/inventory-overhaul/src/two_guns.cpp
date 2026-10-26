@@ -2,9 +2,11 @@
 // the gun count and what a pickup replaces change.
 #include "two_guns.h"
 
+#include "engine/game_thread.h"
 #include "engine/inventory.h"
 #include "engine/memory.h"
 #include "fcse_api.h"
+#include "test_window.h"
 
 #include <algorithm>
 #include <utility>
@@ -63,38 +65,48 @@ namespace {
     Picked g_picked{};
     int g_lastSlot = 1;
 
-    int SlotOf(void* weapon) {
-        int32_t slot = 0;
-        return FCSE::ApiPointer()->EntityData->GetInt(Inventory::Entity(weapon), kSlotKey, &slot)
-                   ? slot
-                   : 0;
-    }
-
     void SetSlot(void* weapon, int slot) {
         FCSE::ApiPointer()->EntityData->SetInt(Inventory::Entity(weapon), kSlotKey, slot);
     }
+}
 
-    const Inventory::Weapon* InSlot(const std::vector<Inventory::Weapon>& guns, int slot) {
-        for (const Inventory::Weapon& gun : guns) {
-            if (SlotOf(gun.weapon) == slot) {
-                return &gun;
-            }
+int SlotOf(void* weapon) {
+    int32_t slot = 0;
+    return FCSE::ApiPointer()->EntityData->GetInt(Inventory::Entity(weapon), kSlotKey, &slot) ? slot
+                                                                                              : 0;
+}
+
+const Inventory::Weapon* InSlot(const std::vector<Inventory::Weapon>& guns, int slot) {
+    for (const Inventory::Weapon& gun : guns) {
+        if (SlotOf(gun.weapon) == slot) {
+            return &gun;
         }
-        return nullptr;
     }
+    return nullptr;
+}
 
-    // The gun in hand, else the one last drawn with a key, else the first of `guns`, never empty.
-    const Inventory::Weapon& ToReplace(const void* inventory,
-                                       const std::vector<Inventory::Weapon>& guns) {
-        for (const Inventory::Weapon& gun : guns) {
-            if (Inventory::Id(gun.item) == Inventory::InHandId(inventory)) {
-                return gun;
-            }
+const Inventory::Weapon& ToReplace(const void* inventory,
+                                   const std::vector<Inventory::Weapon>& guns) {
+    for (const Inventory::Weapon& gun : guns) {
+        if (Inventory::Id(gun.item) == Inventory::InHandId(inventory)) {
+            return gun;
         }
-        const Inventory::Weapon* last = InSlot(guns, g_lastSlot);
-        return last != nullptr ? *last : guns.front();
     }
+    const Inventory::Weapon* last = InSlot(guns, g_lastSlot);
+    return last != nullptr ? *last : guns.front();
+}
 
+// The engine draws the first gun of the class asked for, so `gun` then takes its place, which
+// matters when both guns are of one class.
+bool Draw(void* inventory, const Inventory::Weapon& gun) {
+    if (!g_selectWeapon(inventory, nullptr, Inventory::Category(gun.weapon))) {
+        return false;
+    }
+    Inventory::Equip(inventory, Inventory::Id(gun.item));
+    return true;
+}
+
+namespace {
     // The slot whose key the gun's class had in the game: the secondary's 2 is gun 1, the
     // primary's 3 gun 2. The special class's 4 reaches nothing now.
     int GameSlot(void* weapon) {
@@ -155,16 +167,6 @@ namespace {
         }
     }
 
-    // Draws `gun`. The engine draws the first gun of the class asked for, so `gun` then takes its
-    // place, which matters when both guns are of one class.
-    bool Draw(void* inventory, const Inventory::Weapon& gun) {
-        if (!g_selectWeapon(inventory, nullptr, Inventory::Category(gun.weapon))) {
-            return false;
-        }
-        Inventory::Equip(inventory, Inventory::Id(gun.item));
-        return true;
-    }
-
     // Places the player's guns and drops a third; gun 1 is drawn if the dropped one was in hand.
     void Tidy(void* inventory) {
         std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
@@ -183,13 +185,20 @@ namespace {
     }
 
     // A save's guns are added before the save's own data on them comes back, which replaces any
-    // slot given then; they are placed here, the first time the HUD asks for the player's gun.
+    // slot given then; they are placed here, the first time the HUD asks for the player's gun. The
+    // test window's buttons are carried out here too.
     void* __fastcall OnEquipped(void* view, void* unused) {
-        if (g_check && !g_inPickup) {
+        static bool running = false;
+        if ((g_check || TestWindow::Pending()) && !g_inPickup && !running &&
+            GameThread::IsCurrent()) {
             void* inventory = Inventory::OfView(view);
             if (Inventory::IsPlayers(inventory)) {
-                g_check = false;
-                Tidy(inventory);
+                running = true;
+                if (std::exchange(g_check, false)) {
+                    Tidy(inventory);
+                }
+                TestWindow::Run(inventory);
+                running = false;
             }
         }
         return g_equipped(view, unused);
@@ -286,8 +295,14 @@ namespace {
     }
 }
 
+void Settle(void* inventory) {
+    const std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
+    SeparateTwins(guns);
+    PlaceGuns(inventory, guns, false);
+}
+
 bool Install() {
-    if (!Inventory::Resolve()) {
+    if (!Inventory::Install() || !GameThread::Install()) {
         FCSE::ApiPointer()->Log("an inventory address is missing on this build: two guns is off");
         return false;
     }

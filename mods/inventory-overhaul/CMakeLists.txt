@@ -11,14 +11,24 @@ if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
                       "Select the x86-debug/x86-release preset.")
 endif()
 
+# DevTools' overlay contract and the Dear ImGui it pins, for the test window; without DevTools
+# installed the window is simply not there.
+set(DEVTOOLS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../DevTools/include")
+include("${DEVTOOLS_INCLUDE_DIR}/devtools_imgui.cmake")
+
 add_library(InventoryOverhaul SHARED
   "src/main.cpp"
+  "src/items.cpp"
+  "src/test_window.cpp"
   "src/two_guns.cpp"
+  "src/engine/game_thread.cpp"
   "src/engine/inventory.cpp"
 )
 
 target_include_directories(InventoryOverhaul PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  "${DEVTOOLS_INCLUDE_DIR}"
   "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/FCSE/include"
 )
+target_link_libraries(InventoryOverhaul PRIVATE imgui)
 target_compile_features(InventoryOverhaul PRIVATE cxx_std_20)

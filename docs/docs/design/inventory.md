@@ -237,9 +237,10 @@ Movement and look stay live, as with the map. The gamepad mirrors the map's: d-p
   their class, `AddWeapon` drops the gun in hand when two are carried, and while the player picks
   something up the engine finds no carried gun of its class to replace. Two of the same model share
   an item id, so the later one gets an id of its own.
-- **A stowed gun** gets one of two made-up categories, `spare1` or `spare2`, bound to no key, so the
-  engine keeps its wear and loaded rounds and saves it. Fallback: a record (archetype, wear, rounds)
-  the plugin turns back into a gun.
+- **A stowed gun** is a record (archetype, wear, loaded rounds) in Items, on the player's entity, and
+  the gun itself leaves the game. Taking it out makes a new gun of that archetype and puts its wear
+  and rounds back. Kept in the inventory, a stowed gun would be reached by weapon cycling, the HUD
+  and the crates, which all walk it.
 - **Item definitions** live in a data file (id, kind, name and text keys, picture, stack).
   The plugin holds two lists, Items and the box, both saved on the player's entity.
 - **The page** is drawn by the plugin into a texture, swapped in when the notebook's paper is drawn,
@@ -253,7 +254,7 @@ Each step ends with one check in game before the next.
 | Step | What | Check in game |
 |---|---|---|
 | 1 | Two-gun rule, no UI | carry two AK-47s; a third gun swaps with the one in hand |
-| 2 | Item core and Items; console `inv give`, `inv take`, `inv list` | a stowed Carl G survives a save and reload |
+| 2 | Item core and Items; a test window in DevTools' overlay to stow, take, give and discard | a stowed Carl G survives a save and reload |
 | 3 | The notebook in hand on Tab, the map's mesh standing in | walk, look and get shot with it out |
 | 4 | The Inventory page drawn onto the paper | pictures, wear and ammo match the guns |
 | 5 | The notebook model, page turns on the flip | |
