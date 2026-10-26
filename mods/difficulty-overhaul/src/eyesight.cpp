@@ -2,8 +2,8 @@
 // visible out to half its length; he sees across 180 degrees, but outside his focus the player is
 // only ever noticed: enough for a soldier to turn and look, never enough to see him as an enemy, and
 // noticed for moving upright rather than for standing still or creeping crouched. Up close, the part
-// of the player that shows over cover counts double, and at arm's length a soldier senses a player
-// who walks or runs upright at any angle, though not one who creeps up crouched.
+// of the player that shows over cover counts double. A player walking or running upright is noticed
+// behind a soldier within 20 m and sensed in full at arm's length; one creeping crouched is not.
 #include "engine/game.h"
 #include "engine/memory.h"
 #include "engine/shooting.h"
@@ -74,10 +74,12 @@ namespace {
     // moving upright, who counts in full from this speed, a walk.
     constexpr float kStillPeriphery = 0.2f;
     constexpr float kWalkSpeed = 2.0f;
-    // Hardcore: within this range a soldier senses at any angle a player moving upright at least this
-    // fast.
-    constexpr float kArmsLength = 2.0f;
+    // Hardcore: a player moving upright at least this fast is noticed behind a soldier within the
+    // first range, as visible as the second, and sensed in full at any angle within the third.
     constexpr float kMovingSpeed = 0.5f;
+    constexpr float kHearingRange = 20.0f;
+    constexpr float kHeardBehind = 0.5f;
+    constexpr float kArmsLength = 2.0f;
     constexpr float kAllAround = 360.0f;
     // The two low stances: crouched, and the one swimming forces.
     constexpr int kCrouched = 1;
@@ -93,10 +95,12 @@ namespace {
     std::atomic<const void*> g_player{nullptr};
     // Half the focus cone's angle AdjustFOV gave the player on this thread, before both cones were
     // widened: within it he counts fully. Then how much of a moving player's visibility he keeps in
-    // the periphery, and whether he is close enough and moving enough to be sensed all around.
+    // the periphery, and whether the player moves upright close enough to be heard behind him, and
+    // to be sensed in full.
     thread_local float t_focusHalf = 0.0f;
     thread_local float t_motion = 1.0f;
-    thread_local bool t_sensed = false;
+    thread_local bool t_heard = false;
+    thread_local bool t_close = false;
 
     bool ForPlayer(const uint8_t* context) {
         const void* player = g_player.load(std::memory_order_relaxed);
@@ -115,8 +119,8 @@ namespace {
         return 1.0f - (1.0f - atEnd) * (distance - fullTo) / (length - fullTo);
     }
 
-    // How much the player's movement shows, which only moving upright does, and whether he is within
-    // arm's length of `eye` doing so.
+    // How much the player's movement shows, which only moving upright does, and how close to `eye` he
+    // does so.
     void Motion(void* player, const float eye[3]) {
         void* pawn = Shooting::Pawn(player);
         const int stance = Shooting::Stance(pawn);
@@ -131,8 +135,10 @@ namespace {
         if (entity != nullptr) {
             Game::Position(entity, at);
         }
-        t_sensed = entity != nullptr && std::hypot(at[0] - eye[0], at[1] - eye[1]) <= kArmsLength &&
-                   speed >= kMovingSpeed;
+        const float distance = std::hypot(at[0] - eye[0], at[1] - eye[1]);
+        const bool moving = entity != nullptr && speed >= kMovingSpeed;
+        t_heard = moving && distance <= kHearingRange;
+        t_close = moving && distance <= kArmsLength;
     }
 
     void OnConesSet(FCSE_MidHookContext* ctx) {
@@ -156,7 +162,7 @@ namespace {
         }
         Write(cones, kPeripheralLength, std::max(Read<float>(cones, kPeripheralLength), focus));
         const float span = std::max(Read<float>(cones, kPeripheralAngle),
-                                    t_sensed ? kAllAround : kPeripheralSpan);
+                                    t_heard ? kAllAround : kPeripheralSpan);
         t_focusHalf = Read<float>(cones, kFocusAngle) / 2.0f;
         Write(cones, kPeripheralAngle, span);
         Write(cones, kFocusAngle, std::max(Read<float>(cones, kFocusAngle), span));
@@ -186,7 +192,7 @@ namespace {
         if (!ForPlayer(context)) {
             return game;
         }
-        if (t_sensed) {
+        if (t_close) {
             return 1.0f;
         }
         float toTarget[3];
@@ -210,9 +216,11 @@ namespace {
         const float angle = std::acos(cosine) * 57.29578f;
         const auto* cones = Read<const uint8_t*>(context, kContextCones);
         const float focusHalf = t_focusHalf;
-        const float peripheralHalf = Read<float>(cones, kPeripheralAngle) / 2.0f;
+        // Heard, the cones reach all round, and behind his eyes he counts what he hears.
+        const float peripheralHalf =
+            t_heard ? kPeripheralSpan / 2.0f : Read<float>(cones, kPeripheralAngle) / 2.0f;
         if (angle > peripheralHalf) {
-            return 0.0f;
+            return t_heard ? kHeardBehind : 0.0f;
         }
         if (angle < focusHalf || peripheralHalf <= focusHalf) {
             return 1.0f;
