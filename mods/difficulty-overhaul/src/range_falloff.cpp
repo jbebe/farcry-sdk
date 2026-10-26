@@ -1,8 +1,10 @@
-// Range falloff: a soldier with a pistol, SMG or shotgun loses accuracy against the player with range,
-// on top of the game's shared rifle curve.
+// Range falloff: a soldier with a pistol or SMG loses accuracy against the player with range, on top
+// of the game's shared rifle curve; one with a shotgun is deadly out to 20 m and falls off fast past it.
 #include "engine/memory.h"
 #include "engine/shooting.h"
 #include "fcse_api.h"
+
+#include <algorithm>
 
 using namespace DifficultyOverhaul;
 
@@ -23,10 +25,14 @@ namespace {
     constexpr ptrdiff_t kPropertiesClass = 0x40;
     enum { kPistol = 1, kSMG = 3, kShotgun = 4 };
 
-    // Hardcore: the range at which each class's chance halves.
+    // Hardcore: the range at which a pistol's and an SMG's chance halves.
     constexpr float kPistolHalfRange = 20.0f;
     constexpr float kSMGHalfRange = 30.0f;
-    constexpr float kShotgunHalfRange = 15.0f;
+    // Hardcore: a shotgun's lift over the shared curve, which brings a settled shot to about 0.7 at
+    // 15 m, the range it keeps it to, and how far past that range its chance halves.
+    constexpr float kShotgunLift = 1.15f;
+    constexpr float kShotgunFullRange = 20.0f;
+    constexpr float kShotgunHalfBeyond = 8.0f;
 
     // The selWeaponClass of the weapon he holds, or -1.
     int WeaponClass(void* shooting) {
@@ -39,29 +45,33 @@ namespace {
         return Read<int>(Read<void*>(holder, kHolderProperties), kPropertiesClass);
     }
 
-    // The range a class's chance halves at, or 0 for a class that keeps the shared curve.
-    float HalfRange(int weaponClass) {
+    // 1 at no distance, a half at `half`.
+    float Halving(float distance, float half) {
+        const float scaled = distance / half;
+        return 1.0f / (1.0f + scaled * scaled);
+    }
+
+    // What the shared curve is multiplied by for a weapon class at `distance`.
+    float Multiplier(int weaponClass, float distance) {
         switch (weaponClass) {
         case kPistol:
-            return kPistolHalfRange;
+            return Halving(distance, kPistolHalfRange);
         case kSMG:
-            return kSMGHalfRange;
+            return Halving(distance, kSMGHalfRange);
         case kShotgun:
-            return kShotgunHalfRange;
+            return kShotgunLift *
+                   Halving(std::max(distance - kShotgunFullRange, 0.0f), kShotgunHalfBeyond);
         default:
-            return 0.0f;
+            return 1.0f;
         }
     }
 
     float __fastcall GetDistanceFactorDetour(void* shooting) {
         const float factor = g_originalGetDistanceFactor(shooting);
-        const float half =
-            Shooting::AimsAtPlayer(shooting) ? HalfRange(WeaponClass(shooting)) : 0.0f;
-        if (half == 0.0f) {
+        if (!Shooting::AimsAtPlayer(shooting)) {
             return factor;
         }
-        const float scaled = Shooting::TargetDistance(shooting) / half;
-        return factor / (1.0f + scaled * scaled);
+        return factor * Multiplier(WeaponClass(shooting), Shooting::TargetDistance(shooting));
     }
 }
 
