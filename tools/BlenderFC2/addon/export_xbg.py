@@ -22,7 +22,7 @@ from . import convert, material_data, model as fc2model
 from .import_mab import PROP_PROP_OF
 from .import_xbg import (
     ATTR_NORMAL, PROP_LOD, PROP_MATERIAL_PATH, PROP_NEW_PART, PROP_SOURCE, PROP_SUBMESH)
-from .pack import EXTENSION, Pack
+from .pack import EXTENSION, Pack, same_path
 from .transform import apply
 
 # The per-vertex channels a geometry entry can carry, which is what decides
@@ -54,7 +54,7 @@ def build_mesh(collection, recompute_tangents=False):
     geometries = mesh["lods"][lod_index]["geometry"]
 
     written = []
-    edited = resized = moved = added = 0
+    edited = resized = moved = added = reassigned = 0
     for obj in collection.objects:
         if obj.type != "MESH" or PROP_SUBMESH not in obj:
             continue
@@ -66,6 +66,13 @@ def build_mesh(collection, recompute_tangents=False):
         geometry = geometries[submesh]
         before = geometry["vertex_count"]
         moved += _encode(obj, mesh, geometry, recompute_tangents)
+        part = mesh["parts"][geometry["part"]]
+        cluster = part["clusters"][geometry["cluster"]]
+        index = _material_index(obj, mesh, keep=cluster["material_index"])
+        if index != cluster["material_index"]:
+            _follow_lods(mesh, part["name"], lod_index, cluster["material_index"], index)
+            cluster["material_index"] = index
+            reassigned += 1
         edited += 1
         resized += geometry["vertex_count"] != before
         written.append((obj, submesh))
@@ -84,7 +91,8 @@ def build_mesh(collection, recompute_tangents=False):
     if moved or added:
         refit_bounds(mesh)
     return {"pack": pack, "mesh": mesh, "parts": edited, "resized": resized,
-            "moved": moved, "added": added, "written": written, "lod": lod_index}
+            "moved": moved, "added": added, "reassigned": reassigned, "written": written,
+            "lod": lod_index}
 
 
 def new_parts(collection):
@@ -165,27 +173,46 @@ def _placement_node(obj, mesh):
                      % (obj.name, obj.parent_bone))
 
 
-def _material_index(obj, mesh):
-    """Which of the model's materials the object's first slot names.
+def _follow_lods(mesh, name, lod_index, was, now):
+    """Draw the same part at the LODs not in the scene with the material it now has, wherever
+    it drew with the one it had - or the model changes material with distance."""
+    base = fc2model.part_name(name)
+    for part in mesh["parts"]:
+        if fc2model.part_name(part["name"]) != base or fc2model.lod_tier(part["name"]) == lod_index:
+            continue
+        for cluster in part["clusters"]:
+            if cluster["material_index"] == was:
+                cluster["material_index"] = now
+
+
+def _material_index(obj, mesh, keep=None):
+    """Which of the model's materials the object's first slot names, appending one it lacks.
 
     The same slot `validate` reads, so the material a rule checks is the one
-    export writes.
+    export writes. A slot naming no game path leaves the part with `keep`.
     """
     material = obj.data.materials[0] if obj.data.materials else None
-    if material is None:
-        raise ValueError("%s carries no material, so nothing says how to draw it" % obj.name)
-    try:
-        return mesh["materials"].index(material.get(PROP_MATERIAL_PATH, ""))
-    except ValueError:
-        raise ValueError("%s uses %r, which is not one of this model's materials"
-                         % (obj.name, material.name)) from None
+    path = material.get(PROP_MATERIAL_PATH, "") if material else ""
+    if not path:
+        if keep is not None:
+            return keep
+        raise ValueError("%s carries no Far Cry 2 material, so nothing says how to draw it"
+                         % obj.name)
+    names = mesh["materials"]
+    if keep is not None and same_path(names[keep], path):
+        return keep
+    for index, name in enumerate(names):
+        if same_path(name, path):
+            return index
+    names.append(path)
+    return len(names) - 1
 
 
 def save(path, collection, recompute_tangents=False):
     """Rebuild the collection's LOD and its materials in its source pack and write the pack out."""
     built = build_mesh(collection, recompute_tangents)
     pack = built["pack"]
-    if built["moved"] or built["resized"] or built["added"]:
+    if built["moved"] or built["resized"] or built["added"] or built["reassigned"]:
         pack.replace_document(pack.model, built["mesh"])
     built["materials"] = material_data.write(pack, collection)
     pack.save(path)

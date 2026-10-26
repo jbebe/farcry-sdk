@@ -436,13 +436,16 @@ class FC2_OT_export_pack(bpy.types.Operator, ExportHelper):
             return {"CANCELLED"}
 
         materials = ", %d material(s)" % result["materials"] if result["materials"] else ""
-        if not result["moved"] and not result["resized"] and not result["added"]:
+        if not (result["moved"] or result["resized"] or result["added"] or result["reassigned"]):
             self.report({"INFO"}, "Wrote the pack with nothing in LOD%d edited%s"
                         % (result["lod"], materials))
         else:
             added = ", %d added" % result["added"] if result["added"] else ""
-            self.report({"INFO"}, "Wrote %d parts at LOD%d, %d rebuilt%s%s"
-                        % (result["parts"], result["lod"], result["resized"], added, materials))
+            repointed = (", %d drawn with another material" % result["reassigned"]
+                         if result["reassigned"] else "")
+            self.report({"INFO"}, "Wrote %d parts at LOD%d, %d rebuilt%s%s%s"
+                        % (result["parts"], result["lod"], result["resized"], added, repointed,
+                           materials))
         return {"FINISHED"}
 
 

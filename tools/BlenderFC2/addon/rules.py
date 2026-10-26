@@ -260,7 +260,7 @@ def check_edit(entry):
         % (entry.path, " with %d other files" % (entry.usage - 1) if entry.usage else ""),
         Target(kind="material" if entry.kind == "material" else "image", name=entry.path),
         "Copy it to the model's own folder first, and point the material at the copy.")]
-def check_mesh(name, submesh, corners, groups, slot_material, part_material):
+def check_mesh(name, submesh, corners, groups, foreign_material, part_material):
     """Rules about one object's own mesh data.
 
     Everything here is a silent failure: the file has no way to store what the
@@ -283,21 +283,17 @@ def check_mesh(name, submesh, corners, groups, slot_material, part_material):
 
     out += _group_rules(name, target, groups)
 
-    # The container keeps each cluster's material index, so pointing the slot at
-    # a different material changes what Blender draws and nothing in the file.
-    if slot_material and part_material and not _same_path(slot_material, part_material):
+    # Export writes the slot's material into the cluster, but only a material
+    # with a game path names one; anything else leaves the part as it was.
+    if foreign_material:
         out.append(Finding(
             WARNING, "material.assignment-ignored",
-            "'%s' now uses a different material; the file keeps '%s' and the change "
-            "would be lost." % (name, part_material),
-            Target(object=name, kind="material", name=slot_material),
-            "Edit the material the part already names, or point that material at "
-            "different textures."))
+            "'%s' draws with '%s', which is not a Far Cry 2 material, so the file keeps '%s'."
+            % (name, foreign_material, part_material),
+            Target(object=name, kind="material", name=foreign_material),
+            "Use one of the model's materials, or copy one to a new material in the Material "
+            "properties."))
     return out
-
-
-def _same_path(a, b):
-    return a.replace("\\", "/").lower() == b.replace("\\", "/").lower()
 
 
 def _group_rules(name, target, groups):

@@ -320,8 +320,8 @@ licence, so change it here if this should follow that instead.
 
 ## Materials
 
-**Properties ▸ Material ▸ Far Cry 2** holds the material's own values, the same ones JackAll's editor
-shows: its name, its shader, and every property grouped the way the shader groups them. The pack's
+**Properties ▸ Material ▸ Far Cry 2**, and the **Material** panel in the 3D view's Far Cry 2 sidebar,
+hold the material's own values, the same ones JackAll's editor shows: its name, its shader, and every property grouped the way the shader groups them. The pack's
 `shaders.json` says what a shader takes; **Show every property the shader takes** lists the unset ones
 with a **+** that adds one at the descriptor's default, and **×** drops one so the shader's default
 applies. A texture slot takes any image the pack loaded, and its game path follows the image.
@@ -338,6 +338,19 @@ under it as indented rows. **Set Clean twins along** makes setting the colour se
 **A material the model shares is read-only.** Editing one would change every other model that draws
 with it, so the panel greys it out and export refuses it. Whether a material is the model's own
 comes from the pack: an export from JackAll.App, or one with an `xref` index built, counts users.
+
+**Copy to a New Material** makes one of the model's own: the values the material holds now, at a
+game path beside the model, drawing the selected parts that used the original. Export adds it to the
+pack with an empty `origin_sha256` — it arrived with nothing — so JackAll writes it like any edit.
+
+**A part draws with whatever material its slot holds.** Export writes the slot's material into the
+part's cluster, adding it to the model's material list when the list lacks it, and does the same for
+that part at every LOD not in the scene, wherever it drew with the old one — or the model would
+change material with distance. A slot holding a plain Blender material, one with no game path, leaves
+the part as it was, and Check says so. Mind `SCOPE_HI`: on a weapon it shares the body's material
+and is the whole view while zoomed, so leave it unselected when copying the body's, and it keeps its own.
+
+A material at a path the game never listed has not been tried in game yet; a texture at one has.
 
 ## The viewport tells the truth
 

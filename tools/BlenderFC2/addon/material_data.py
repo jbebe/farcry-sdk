@@ -31,6 +31,9 @@ PROP_MATERIAL_PATH = "fc2_material_path"
 # The document as the pack held it, for the fields nobody edits.
 PROP_DOCUMENT = "fc2_document"
 
+# A material at a path the pack does not carry yet, which export adds.
+PROP_ADDED = "fc2_added"
+
 # Set while values are written in bulk, so the preview is rebuilt once at the end.
 _quiet = False
 
@@ -201,18 +204,31 @@ def used(collection):
 
 
 def write(pack, collection):
-    """Put every material whose values changed back into the pack, and say how many."""
+    """Put every material whose values changed back into the pack, and every new one in, and
+    say how many."""
     written = 0
     for material in used(collection):
         path = material.get(PROP_MATERIAL_PATH, "")
         original = pack.material(path)
-        if original is None:
-            continue
         edited = document(material)
-        if not same(edited, original):
+        if original is None:
+            if material.get(PROP_ADDED):
+                pack.add_material(path, edited)
+                written += 1
+        elif not same(edited, original):
             pack.replace_document(path, edited)
             written += 1
     return written
+
+
+def copy(material, name, path):
+    """A new material at `path`, holding the values `material` holds now."""
+    new = material.copy()
+    new.name = name
+    new[PROP_MATERIAL_PATH] = path
+    new[PROP_ADDED] = True
+    new.fc2.name = name
+    return new
 
 
 CLASSES = (FC2_PG_value, FC2_PG_material)

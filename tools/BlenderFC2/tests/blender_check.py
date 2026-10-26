@@ -166,11 +166,8 @@ def loose_vertex(result):
 
 
 def reassigned_material(result):
-    """A part pointed at another part's material, which the file ignores."""
-    parts = result["parts"]
-    other = next(o for o in parts[1:] if o.data.materials
-                 and o.data.materials[0] is not parts[0].data.materials[0])
-    parts[0].data.materials[0] = other.data.materials[0]
+    """A part pointed at a material with no game path, which the file cannot name."""
+    result["parts"][0].data.materials[0] = bpy.data.materials.new("Blender only")
 
 
 def too_many_influences(result):

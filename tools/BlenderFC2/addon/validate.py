@@ -102,7 +102,7 @@ def _meshes(objects, mesh, lod, pack):
             obj.name, submesh,
             _split_corners(obj.data),
             _groups(obj, entry),
-            _slot_material(obj, pack),
+            _foreign_material(obj),
             _part_material(mesh, entry))
         out += rules.check_loose(obj.name, submesh, _loose(obj.data))
     return out
@@ -201,10 +201,10 @@ def _groups(obj, geometry):
             for vertex in obj.data.vertices]
 
 
-def _slot_material(obj, pack):
-    """The `.xbm` the object's material slot points at, by game path."""
+def _foreign_material(obj):
+    """The name of a slot material that names no game path, which export cannot write."""
     material = obj.data.materials[0] if obj.data.materials else None
-    return material.get(PROP_MATERIAL_PATH, "") if material else ""
+    return material.name if material and not material.get(PROP_MATERIAL_PATH) else ""
 
 
 def _part_material(mesh, geometry):
@@ -331,7 +331,8 @@ def _alpha_levels(image):
 def _material(material, pack):
     path = material.get(PROP_MATERIAL_PATH, "")
     original = pack.material(path) if path else None
-    if original is None:
+    added = material.get(material_data.PROP_ADDED) and material_data.held(material)
+    if original is None and not added:
         # A material an .xbg embeds has no file, so the pack cannot carry it -
         # four of the 7,496 shipped material names, none of them weapons.
         return []
@@ -339,7 +340,7 @@ def _material(material, pack):
     # The document export would write, so the rules judge what reaches the pack.
     definition = material_data.document(material) if material_data.held(material) else original
     entry = pack.entry(path)
-    edited = not material_data.same(definition, original)
+    edited = original is not None and not material_data.same(definition, original)
     out = rules.check_edit(entry) if entry is not None and edited else []
     return out + rules.check_material(
         material.name,

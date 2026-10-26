@@ -139,6 +139,68 @@ def shared_edit_is_refused(path, directory):
     return errors
 
 
+def copy_reaches_the_game_file(path, directory):
+    """A shared material copied to one of the model's own, edited, and drawn by the parts it drew."""
+    import addon
+
+    result = load(path)
+    wood = material(result, WOOD)
+    users = [obj for obj in result["parts"] if obj.data.materials[0] is wood]
+    added = "graphics/weapons/primary/ak47/ak47_body.xbm"
+    addon.register()
+    try:
+        return _copy(result, wood, users, added, directory)
+    finally:
+        addon.unregister()
+
+
+def _copy(result, wood, users, added, directory):
+    with bpy.context.temp_override(material=wood, object=users[0], selected_objects=users):
+        if bpy.ops.material.fc2_copy(name="AK47_BODY", path=added) != {"FINISHED"}:
+            return fail("copying the wood did not finish")
+
+    copy = users[0].data.materials[0]
+    errors = 0
+    if copy is wood or any(obj.data.materials[0] is not copy for obj in users):
+        errors += fail("the parts the wood drew do not all draw with the copy")
+    next(v for v in copy.fc2.values if v.key == "SpecularPower").number[0] = 150.0
+
+    out = os.path.join(directory, "copied.fc2model")
+    written = export_xbg.save(out, result["collection"])
+    if written["reassigned"] != len(users) or written["materials"] != 1:
+        errors += fail("export repointed %d of %d parts and wrote %d material(s)"
+                       % (written["reassigned"], len(users), written["materials"]))
+    exported = Pack.load(out)
+    entry = exported.entry(added)
+    if entry is None or entry.record.get("origin_sha256") != "" or not entry.owned:
+        errors += fail("the copy is not an owned entry with an empty origin: %s"
+                       % (entry.record if entry else None))
+    if exported.entry(WOOD).modified:
+        errors += fail("copying the wood modified the wood")
+    mesh = exported.mesh()
+    index = next(i for i, name in enumerate(mesh["materials"]) if name == added)
+    drawing = {part["name"] for part in mesh["parts"]
+               for cluster in part["clusters"] if cluster["material_index"] == index}
+    # The scene holds LOD0 only, and the part has to change material at every distance.
+    if drawing != {"FRAME_LOD%d" % lod for lod in range(len(mesh["lods"]))}:
+        errors += fail("the copy draws %s, not FRAME at every LOD" % sorted(drawing))
+
+    layer = os.path.join(directory, "copied")
+    subprocess.run([CLI, "fc2model", "extract", out, "-o", layer], capture_output=True, check=True)
+    xbm = os.path.join(layer, "mods", *added.split("/"))
+    if not os.path.exists(xbm):
+        return errors + fail("JackAll wrote no %s" % added)
+    shown = json.loads(subprocess.run([CLI, "xbm", "show", xbm, "--json"],
+                                      capture_output=True, text=True, check=True).stdout)
+    power = {e["key"]: e["value"] for e in shown["properties"]}.get("SpecularPower")
+    if shown["name"] != "AK47_BODY" or power != "150":
+        errors += fail("the game file is %s with SpecularPower %s" % (shown["name"], power))
+    if not errors:
+        print("copy: the wood copied, edited and drawn by %s reaches the game files"
+              % ", ".join(sorted(drawing)))
+    return errors
+
+
 def panel_operators(path, directory):
     """Add and remove a property through the operators the panel's buttons run."""
     import addon
@@ -176,6 +238,7 @@ def main():
     errors = untouched_goes_back_unwritten(path, directory)
     errors += edit_reaches_the_game_file(path, directory)
     errors += shared_edit_is_refused(path, directory)
+    errors += copy_reaches_the_game_file(path, directory)
     errors += panel_operators(path, directory)
     print("blender material: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0

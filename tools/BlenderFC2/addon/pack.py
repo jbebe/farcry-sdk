@@ -262,6 +262,27 @@ class Pack:
     def replace_document(self, game_path, document):
         return self.replace(game_path, dumps(document))
 
+    def add_material(self, game_path, document):
+        """Carry a material the game does not have.
+
+        Its origin hash is empty - it arrived with nothing - so it reads as
+        modified to every reader and is always written. The mesh names it
+        separately, through a cluster's material index.
+        """
+        if self.entry(game_path) is not None:
+            raise ValueError("this pack already carries %s" % game_path)
+        name = "materials/%s.json" % posixpath.splitext(
+            posixpath.basename(game_path.replace("\\", "/")))[0]
+        if name in self.files:
+            raise ValueError("this pack already holds a file named %s" % name)
+        content = dumps(document)
+        record = {"path": game_path, "file": name, "kind": MATERIAL, "role": OWNED,
+                  "sha256": hashlib.sha256(content).hexdigest(), "origin_sha256": ""}
+        self.manifest.setdefault("entries", []).append(record)
+        self.entries.append(Entry(record))
+        self.files[name] = content
+        return self.entries[-1]
+
     def save(self, path):
         with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
             archive.writestr(MANIFEST, json.dumps(self.manifest, indent=2))
