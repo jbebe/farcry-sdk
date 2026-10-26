@@ -126,8 +126,10 @@ namespace {
         const int stance = Shooting::Stance(pawn);
         float velocity[3];
         Shooting::Velocity(pawn, velocity);
-        const float speed = stance == kCrouched || stance == kLow ? 0.0f
-                                                                  : std::hypot(velocity[0], velocity[1]);
+        // Every way of moving upright counts, a jump on the spot included.
+        const float speed = stance == kCrouched || stance == kLow
+                                ? 0.0f
+                                : std::hypot(velocity[0], velocity[1], velocity[2]);
         t_motion = kStillPeriphery + (1.0f - kStillPeriphery) * std::min(speed / kWalkSpeed, 1.0f);
 
         float at[3] = {};
