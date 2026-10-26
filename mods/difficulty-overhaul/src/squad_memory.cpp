@@ -37,10 +37,18 @@ namespace {
     // A camping score no target outlasts.
     constexpr float kForever = 1.0e9f;
 
-    // The sighting each lieutenant was last reported as holding on to, so each is logged once, and
-    // whether its squad had the player among its seen targets on its last pass.
+    // The sighting each lieutenant was last reported as holding on to, so each is logged once.
     std::unordered_map<const void*, float> g_reported;
-    std::unordered_map<const void*, bool> g_spotted;
+
+    // What each lieutenant's last pass found: whether the player was among its seen targets, and if
+    // so how long unseen, how far from where it last saw him, and how long the game would keep him.
+    struct Pass {
+        bool spotted = false;
+        float unseen = 0.0f;
+        float distance = 0.0f;
+        float memory = 0.0f;
+    };
+    std::unordered_map<const void*, Pass> g_passes;
 
     // The lieutenant's entry for the player in its army's seen targets, or null.
     const uint8_t* PlayerSighting(void* lieutenant, void** player) {
@@ -77,20 +85,30 @@ namespace {
     void __fastcall UpdateTargetListDetour(void* lieutenant, void* unused, bool* noTargets) {
         void* player = nullptr;
         const uint8_t* sighting = PlayerSighting(lieutenant, &player);
-        bool& spotted = g_spotted[lieutenant];
-        if ((sighting != nullptr) != spotted) {
-            spotted = sighting != nullptr;
-            FCSE::Logf("squad memory: the squad %s", spotted ? "spotted the player" : "lost him");
-        }
-        const float distance = sighting != nullptr ? DistanceFrom(player, sighting) : -1.0f;
-        if (distance < 0.0f || distance > kHoldRadius) {
+        Pass& last = g_passes[lieutenant];
+        if (sighting == nullptr) {
+            if (last.spotted) {
+                FCSE::Logf("squad memory: the squad lost him %.0f s after it last saw him, %.1f m from "
+                           "there, where the game keeps him %.0f s",
+                           last.unseen, last.distance, last.memory);
+            }
+            last.spotted = false;
             g_originalUpdateTargetList(lieutenant, unused, noTargets);
             return;
+        }
+        if (!last.spotted) {
+            FCSE::Logf("squad memory: the squad spotted the player");
         }
         const auto score = Read<float>(lieutenant, kLieutenantCampingScore);
         const auto seenAt = Read<float>(sighting, kSeenTargetTime);
         const float unseen = static_cast<float>(Game::Now()) - seenAt;
-        if (unseen > kGameMemorySeconds + score && g_reported[lieutenant] != seenAt) {
+        const float distance = DistanceFrom(player, sighting);
+        last = {true, unseen, distance, kGameMemorySeconds + score};
+        if (distance > kHoldRadius) {
+            g_originalUpdateTargetList(lieutenant, unused, noTargets);
+            return;
+        }
+        if (unseen > last.memory && g_reported[lieutenant] != seenAt) {
             g_reported[lieutenant] = seenAt;
             FCSE::Logf("squad memory: unseen %.0f s and %.1f m from where they last saw him, "
                        "still hunted where the game would have forgotten him",
