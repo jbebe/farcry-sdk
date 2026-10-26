@@ -103,6 +103,21 @@ range in the log drifts from the scenario's distance.
 
 Decided against on 2026-10-26: a reload making a soldier settle his aim again; recoil mattering less at close range; fading the over-cover doubling in before 40 m. The shotgun was raised to about 0.7 at 15 m, falling off past 20 m, instead.
 
+## On the real map
+
+2026-10-26, Hardcore, world 1, 14 minutes, with Sound, Sky and Aiming Overhaul: "I felt that it was
+realistic. a bit raw, maybe people would call it fucking annoying, but I think the fair and hard is
+definitely there."
+
+From the log:
+
+- Soldiers fired 145 shots at the player, from 10 m out to 100 m. Twelve hit, 11 in the torso and 1 in
+  the head, and the player died three times.
+- The player hit soldiers 34 times, which killed nine and downed two.
+- Near misses pinned soldiers 28 times.
+
+The easier settings are where the rawness is for others to soften ([item G](#still-to-do-before-it-is-finished)).
+
 ## Postponed
 
 - **A vest.** A torso hit from a rifle nearly kills the player, which is realistic; a vest is how they
