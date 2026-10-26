@@ -275,6 +275,11 @@ product **(RE-verified on GOG and the server)**:
 - **Movement.** `1 − (1 − fSpeedEvaluator_StandingStillVisibilityFactor) × (1 − s) × ramp(d, 10 m,
   max(20 m, cone))`, where *s* is the target's speed against a reference speed, clamped to 0–1. So
   standing still only helps beyond 10 m.
+- **Body coverage.** For a player on foot, `CPawnSamplingEvaluator` (Steam `0x10A21D90`, `RET 4`)
+  casts three rays at points on his body and counts a third for each that gets through, scaled by
+  the transparency of anything it passes. Walls count here; `COcclusionEvaluator` reads only AI
+  occlusion volumes. In the range a player standing behind a 1.3 m barrier, or crouched behind a
+  1.4 m wall, had half the visibility he had in the open.
 
 ### Grass and stealth
 

@@ -1,6 +1,7 @@
 // Eyesight: how soldiers see the player. The focus cone reaches farther and keeps the player fully
 // visible out to half its length; he sees across 180 degrees, but outside his focus the player is
-// only ever noticed: enough for a soldier to turn and look, never enough to see him as an enemy.
+// only ever noticed: enough for a soldier to turn and look, never enough to see him as an enemy. Up
+// close, the part of the player that shows over cover counts double.
 #include "engine/memory.h"
 #include "fcse_api.h"
 
@@ -21,13 +22,16 @@ namespace {
         "8B 45 10 8B 80 ?? ?? ?? ?? 50 E8 ?? ?? ?? ?? 83 C4 04 84 C0 74 ?? 8B 4E 04 F3 0F 10 05 ?? ?? ?? ?? "
         "F3 0F 11 41 0C")};
     // CDistanceEvaluator::ComputeVisibility, which the address library does not know, and
-    // CFOVEvaluator::ComputeVisibility; CVisibilityContext::GetTargetDistance.
+    // CFOVEvaluator::ComputeVisibility; CPawnSamplingEvaluator::ComputeVisibility, a third for each
+    // of three points on the target's body a ray reaches; CVisibilityContext::GetTargetDistance.
     FCSE::Relocation<EvaluatorFn> g_distance{
         FCSE::Pattern("8B 44 24 04 83 EC 1C 56 8B F1 C6 00 01 8B 46 24 80 78 3E 00 57 0F 85")};
     FCSE::Relocation<EvaluatorFn> g_fov{FCSE::Uplay(0x00A21380)};
+    FCSE::Relocation<EvaluatorFn> g_sampling{FCSE::Uplay(0x00A21D90)};
     FCSE::Relocation<TargetDistanceFn> g_targetDistance{FCSE::Uplay(0x00614F50)};
     EvaluatorFn g_originalDistance = nullptr;
     EvaluatorFn g_originalFov = nullptr;
+    EvaluatorFn g_originalSampling = nullptr;
 
     // AdjustFOV's frame at the hook: whether its target is a player, and the target agent.
     constexpr ptrdiff_t kTargetIsPlayer = 0x0E;
@@ -62,6 +66,10 @@ namespace {
     // him".
     constexpr float kPeripheralNearFocus = 0.55f;
     constexpr float kPeripheralAtEdge = 0.35f;
+    // Hardcore: within this range a head over cover is as plain as a whole man's top half, so the
+    // share of the player's body the rays reach counts this many times over, up to all of it.
+    constexpr float kCloseRange = 30.0f;
+    constexpr float kCloseSampling = 2.0f;
     // The game's cap on a cone against the player, unless he looks through a scope.
     constexpr float kMaxFocusLength = 150.0f;
 
@@ -162,13 +170,23 @@ namespace {
         const float across = (angle - focusHalf) / (peripheralHalf - focusHalf);
         return kPeripheralNearFocus + (kPeripheralAtEdge - kPeripheralNearFocus) * across;
     }
+
+    float __fastcall SamplingDetour(void* evaluator, void* unused, bool* applies) {
+        const float game = g_originalSampling(evaluator, unused, applies);
+        const auto* context = Read<const uint8_t*>(evaluator, kEvaluatorContext);
+        if (!ForPlayer(context) || g_targetDistance(context) > kCloseRange) {
+            return game;
+        }
+        return std::min(game * kCloseSampling, 1.0f);
+    }
 }
 
 void InstallEyesight() {
     if (!g_conesSet || !g_targetDistance ||
         !FCSE::ApiPointer()->MidHook(g_conesSet.get(), &OnConesSet) ||
         !Hook(g_distance, &DistanceDetour, &g_originalDistance) ||
-        !Hook(g_fov, &FovDetour, &g_originalFov)) {
+        !Hook(g_fov, &FovDetour, &g_originalFov) ||
+        !Hook(g_sampling, &SamplingDetour, &g_originalSampling)) {
         FCSE::Logf("eyesight: the soldiers' vision was not found in this build");
     }
 }
