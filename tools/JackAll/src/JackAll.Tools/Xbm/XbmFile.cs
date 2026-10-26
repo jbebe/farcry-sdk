@@ -1,4 +1,6 @@
+using System.Globalization;
 using JackAll.Core.Format;
+using JackAll.Core.Format.Fcb;
 using JackAll.Tools.Xbg;
 
 namespace JackAll.Tools.Xbm;
@@ -32,6 +34,51 @@ public sealed class XbmEntry
     public float[] Floats { get; set; } = [];
 
     public uint Integer { get; set; }
+
+    /// <summary>The value as text that <see cref="Parse"/> reads back exactly.</summary>
+    public string Text => Section switch
+    {
+        XbmSection.Texture => Path,
+        XbmSection.Integer => Integer.ToString(CultureInfo.InvariantCulture),
+        _ => string.Join(", ", Floats.Select(f => f.ToString(CultureInfo.InvariantCulture))),
+    };
+
+    /// <summary>
+    /// An entry from text: a path, a whole number, or <paramref name="width"/> comma-separated
+    /// floats, where a single float fills every component.
+    /// </summary>
+    public static XbmEntry Parse(string key, XbmSection section, int width, string text)
+    {
+        text = text.Trim();
+        switch (section)
+        {
+            case XbmSection.Texture:
+                return text.Length > 0
+                    ? new XbmEntry { Section = section, Key = key, Path = text }
+                    : throw new FormatException($"'{key}' needs a texture path.");
+            case XbmSection.Integer:
+                return uint.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out uint integer)
+                    ? new XbmEntry { Section = section, Key = key, Integer = integer }
+                    : throw new FormatException($"'{key}' needs a whole number, not '{text}'.");
+        }
+
+        List<float> floats = [];
+        foreach (string part in text.Split(',', StringSplitOptions.TrimEntries))
+        {
+            if (!float.TryParse(part, NumberStyles.Float, CultureInfo.InvariantCulture, out float value))
+            {
+                throw new FormatException($"'{key}' needs numbers, and '{part}' is not one.");
+            }
+            floats.Add(value);
+        }
+        if (floats.Count == 1)
+        {
+            floats = [.. Enumerable.Repeat(floats[0], width)];
+        }
+        return floats.Count == width
+            ? new XbmEntry { Section = section, Key = key, Floats = [.. floats] }
+            : throw new FormatException($"'{key}' takes {width} numbers, not {floats.Count}.");
+    }
 }
 
 /// <summary>
@@ -88,6 +135,58 @@ public sealed class XbmFile
 
     /// <summary>The other chunks an `.xbm` carries, so an edit can be written back.</summary>
     public XbgFile? Container { get; private set; }
+
+    /// <summary>A material with no properties, in the container every standalone one shares.</summary>
+    /// <param name="headerWord">The container's hash, which the engine never reads; a hash of the
+    /// name when not given.</param>
+    public static XbmFile Create(string name, string shader, uint? headerWord = null)
+        => new()
+        {
+            Name = name,
+            Shader = shader,
+            Container = Template(headerWord ?? FcbClassDefinitions.Crc32Ascii(name)),
+        };
+
+    /// <summary>
+    /// The empty mesh every standalone material is wrapped in, identical in all 2,379 shipped ones.
+    /// </summary>
+    public static XbgFile Template(uint headerWord)
+    {
+        // Both bounds chunks are memset to 0x7F rather than fitted - there is no geometry to fit.
+        float unset = BitConverter.UInt32BitsToSingle(0x7F7F7F7F);
+        var container = new XbgFile
+        {
+            HeaderWords = [headerWord, 0, 0, 0, 0],
+            Materials = [],
+            MaterialWord = null,
+            Box = [unset, unset, unset, unset, unset, unset],
+            Sphere = [unset, unset, unset, unset],
+            PosCompress = [0.0f, BitConverter.UInt32BitsToSingle(0x3B03126F)],
+            UvCompress = [0.0f, BitConverter.UInt32BitsToSingle(0xBB800100)],
+        };
+
+        container.Lods.Add(new XbgLod
+        {
+            Distance = float.MaxValue,
+            VertexBuffers = [],
+            Submeshes = [],
+            VertexData = [],
+            IndexData = [],
+        });
+
+        // A material carries no material list of its own, so LTMR is absent.
+        foreach (string tag in (string[])
+                 [
+                     XbgFile.TagMaterialBody, XbgFile.TagNode, XbgFile.TagPartRefs, XbgFile.TagParts,
+                     XbgFile.TagLods, XbgFile.TagBox, XbgFile.TagSphere, XbgFile.TagLod,
+                     XbgFile.TagPosCompress, XbgFile.TagUvCompress,
+                 ])
+        {
+            container.Chunks.Add(new XbgChunk { Tag = tag, Word0 = 1 });
+        }
+        container.Derive();
+        return container;
+    }
 
     public static XbmFile Parse(byte[] data)
     {
@@ -188,18 +287,32 @@ public sealed class XbmFile
             ? (values[0], values[1])
             : (1.0f, 1.0f);
 
-    /// <summary>Change a property the material already carries.</summary>
-    public void Set(XbmSection section, string key, float[] values)
+    /// <summary>The first entry under a key, in whichever section holds it.</summary>
+    public XbmEntry? Find(string key) => Entries.FirstOrDefault(e => e.Key == key);
+
+    /// <summary>
+    /// Replace every entry under the value's key with it, in the first one's place, or append it
+    /// when the material carries none.
+    /// </summary>
+    public void Set(XbmEntry value)
     {
-        foreach (XbmEntry entry in Entries.Where(e => e.Section == section && e.Key == key))
+        int at = Entries.FindIndex(e => e.Key == value.Key);
+        Remove(value.Key);
+        Entries.Insert(at < 0 ? Entries.Count : at, value);
+        Index(value);
+    }
+
+    /// <summary>Drop every entry under a key; false when there was none.</summary>
+    public bool Remove(string key)
+    {
+        if (Entries.RemoveAll(e => e.Key == key) == 0)
         {
-            entry.Floats = values;
+            return false;
         }
-        if (!Floats.ContainsKey(key))
-        {
-            throw new KeyNotFoundException($"'{Name}' carries no float property named '{key}'.");
-        }
-        Floats[key] = values;
+        Textures.Remove(key);
+        Floats.Remove(key);
+        Integers.Remove(key);
+        return true;
     }
 
     /// <summary>The materials an `.xbg` embeds, keyed by the name its geometry references.</summary>
@@ -263,6 +376,11 @@ public sealed class XbmFile
     public void Add(XbmEntry entry)
     {
         Entries.Add(entry);
+        Index(entry);
+    }
+
+    private void Index(XbmEntry entry)
+    {
         switch (entry.Section)
         {
             case XbmSection.Texture:

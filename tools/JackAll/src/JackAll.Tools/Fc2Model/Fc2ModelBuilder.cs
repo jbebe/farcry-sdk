@@ -81,7 +81,7 @@ public static class Fc2ModelBuilder
             }
 
             MaterialDocument material = MaterialDocument.Parse(materialBytes);
-            Add(bundle, materialPath, $"materials/{Name(materialPath)}.json", Fc2ModelKind.Material,
+            Add(bundle, materialPath, $"materials/{Fc2ModelBundle.Stem(materialPath)}.json", Fc2ModelKind.Material,
                 JsonSerializer.SerializeToUtf8Bytes(material, Json), modelPath, usage);
 
             foreach (MaterialTexture texture in material.Textures)
@@ -105,10 +105,10 @@ public static class Fc2ModelBuilder
             }
 
             MabFile bank = MabFile.Parse(clipBytes);
-            string file = $"clips/{Name(clipPath)}.json";
+            string file = $"clips/{Fc2ModelBundle.Stem(clipPath)}.json";
             Add(bundle, clipPath, file, Fc2ModelKind.Clip,
                 JsonSerializer.SerializeToUtf8Bytes(BankDocument.From(bank), Json), modelPath, usage);
-            bundle.Manifest.Clips.Add(Index(bank, clipPath, file, Name(modelPath)));
+            bundle.Manifest.Clips.Add(Index(bank, clipPath, file, Fc2ModelBundle.Stem(modelPath)));
         }
 
         AddActor(bundle, actor, actorRig, readByPath, modelPath, usage);
@@ -161,7 +161,7 @@ public static class Fc2ModelBuilder
         {
             Path = clipPath,
             File = file,
-            Label = Name(clipPath),
+            Label = Fc2ModelBundle.Stem(clipPath),
             Frames = timing?.LastFrame ?? 0,
             Rate = timing?.Rate ?? 0,
             Participant = mine?.Name,
@@ -189,7 +189,7 @@ public static class Fc2ModelBuilder
             return;
         }
 
-        string name = Name(texturePath);
+        string name = Fc2ModelBundle.Stem(texturePath);
         string headerFile = $"textures/{name}.header.bin";
         bundle.Files[headerFile] = texture.Header;
         string? companionFile = null;
@@ -232,12 +232,4 @@ public static class Fc2ModelBuilder
         });
     }
 
-    private static string Name(string gamePath)
-    {
-        string normalised = gamePath.Replace('\\', '/');
-        int at = normalised.LastIndexOf('/');
-        string file = at < 0 ? normalised : normalised[(at + 1)..];
-        int dot = file.LastIndexOf('.');
-        return dot < 0 ? file : file[..dot];
-    }
 }

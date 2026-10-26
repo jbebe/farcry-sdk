@@ -17,4 +17,7 @@ internal static class XbmFixtures
 
     // The one shipped material that repeats a key inside a section.
     public const string RepeatedKey = "XbmRepeat/repeated_key.xbm";
+
+    // engine\providerdescriptors\descriptors.xml, every shader's parameters.
+    public const string Descriptors = "Xbm/descriptors.xml";
 }

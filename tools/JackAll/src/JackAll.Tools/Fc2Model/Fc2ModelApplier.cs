@@ -1,4 +1,3 @@
-using System.Text.Json;
 using JackAll.Tools.Png;
 using JackAll.Tools.Skeleton;
 using JackAll.Tools.Xbt;
@@ -23,8 +22,6 @@ public sealed class Fc2ModelOutput
 /// </remarks>
 public static class Fc2ModelApplier
 {
-    private static readonly JsonSerializerOptions Json = Fc2ModelJson.Compact;
-
     /// <summary>What applying this pack would write.</summary>
     public static List<Fc2ModelOutput> Outputs(Fc2ModelBundle bundle, bool onlyModified = true)
     {
@@ -62,14 +59,13 @@ public static class Fc2ModelApplier
 
     private static IEnumerable<Fc2ModelOutput> Produce(Fc2ModelBundle bundle, Fc2ModelEntry entry)
     {
-        byte[] content = bundle.Content(entry);
         switch (entry.Kind)
         {
             case Fc2ModelKind.Mesh:
                 yield return new Fc2ModelOutput
                 {
                     Path = entry.Path,
-                    Content = Deserialize<MeshDocument>(content).ToXbg().Write(),
+                    Content = bundle.Document<MeshDocument>(entry).ToXbg().Write(),
                 };
                 break;
 
@@ -77,7 +73,7 @@ public static class Fc2ModelApplier
                 yield return new Fc2ModelOutput
                 {
                     Path = entry.Path,
-                    Content = Deserialize<MaterialDocument>(content).ToXbm(),
+                    Content = bundle.Document<MaterialDocument>(entry).ToXbm(),
                 };
                 break;
 
@@ -85,7 +81,7 @@ public static class Fc2ModelApplier
                 yield return new Fc2ModelOutput
                 {
                     Path = entry.Path,
-                    Content = Deserialize<SkeletonFile>(content).Write(),
+                    Content = bundle.Document<SkeletonFile>(entry).Write(),
                 };
                 break;
 
@@ -93,12 +89,12 @@ public static class Fc2ModelApplier
                 yield return new Fc2ModelOutput
                 {
                     Path = entry.Path,
-                    Content = Deserialize<BankDocument>(content).ToMab(),
+                    Content = bundle.Document<BankDocument>(entry).ToMab(),
                 };
                 break;
 
             case Fc2ModelKind.Texture:
-                foreach (Fc2ModelOutput output in Texture(bundle, entry, content))
+                foreach (Fc2ModelOutput output in Texture(bundle, entry, bundle.Content(entry)))
                 {
                     yield return output;
                 }
@@ -144,8 +140,4 @@ public static class Fc2ModelApplier
             };
         }
     }
-
-    private static T Deserialize<T>(byte[] content)
-        => JsonSerializer.Deserialize<T>(content, Json)
-           ?? throw new InvalidDataException($"Unreadable {typeof(T).Name} in the pack.");
 }

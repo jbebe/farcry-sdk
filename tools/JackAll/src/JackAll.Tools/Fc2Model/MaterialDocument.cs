@@ -31,7 +31,7 @@ public sealed class MaterialInteger
 /// A standalone <c>.xbm</c> is the mesh container carrying a material chunk and an empty mesh, and
 /// that empty mesh is the same in all 2,379 shipped materials - no nodes, no parts, no materials
 /// list, one empty LOD, bounds memset to <c>0x7F</c>, and fixed quantisation scales. So a material
-/// needs to carry none of it: the container is rebuilt from <see cref="Template"/> and the one word
+/// needs to carry none of it: the container is rebuilt from <see cref="XbmFile.Template"/> and the one word
 /// nothing derives.
 /// <para>
 /// The three property lists are ordered, not keyed. One shipped material repeats a key inside a
@@ -98,13 +98,9 @@ public sealed class MaterialDocument
     /// <summary>The material as an `.xbm`, rebuilt around the container template.</summary>
     public byte[] ToXbm()
     {
-        var material = new XbmFile
-        {
-            Name = Name,
-            Shader = Shader,
-            Preamble = [.. Preamble],
-            BooleanCount = Trailing,
-        };
+        XbmFile material = XbmFile.Create(Name, Shader, HeaderWord);
+        material.Preamble = [.. Preamble];
+        material.BooleanCount = Trailing;
         foreach (MaterialTexture texture in Textures)
         {
             material.Add(new XbmEntry
@@ -127,49 +123,6 @@ public sealed class MaterialDocument
             });
         }
 
-        XbgFile container = Template(HeaderWord);
-        XbmFile.ChunkOf(container).Raw = material.Pack();
-        container.Derive();
-        return container.Write();
-    }
-
-    /// <summary>
-    /// The empty mesh every standalone material is wrapped in, identical in all 2,379 shipped ones.
-    /// </summary>
-    public static XbgFile Template(uint headerWord)
-    {
-        // Both bounds chunks are memset to 0x7F rather than fitted - there is no geometry to fit.
-        float unset = BitConverter.UInt32BitsToSingle(0x7F7F7F7F);
-        var container = new XbgFile
-        {
-            HeaderWords = [headerWord, 0, 0, 0, 0],
-            Materials = [],
-            MaterialWord = null,
-            Box = [unset, unset, unset, unset, unset, unset],
-            Sphere = [unset, unset, unset, unset],
-            PosCompress = [0.0f, BitConverter.UInt32BitsToSingle(0x3B03126F)],
-            UvCompress = [0.0f, BitConverter.UInt32BitsToSingle(0xBB800100)],
-        };
-
-        container.Lods.Add(new XbgLod
-        {
-            Distance = float.MaxValue,
-            VertexBuffers = [],
-            Submeshes = [],
-            VertexData = [],
-            IndexData = [],
-        });
-
-        // A material carries no material list of its own, so LTMR is absent.
-        foreach (string tag in (string[])
-                 [
-                     XbgFile.TagMaterialBody, XbgFile.TagNode, XbgFile.TagPartRefs, XbgFile.TagParts,
-                     XbgFile.TagLods, XbgFile.TagBox, XbgFile.TagSphere, XbgFile.TagLod,
-                     XbgFile.TagPosCompress, XbgFile.TagUvCompress,
-                 ])
-        {
-            container.Chunks.Add(new XbgChunk { Tag = tag, Word0 = 1 });
-        }
-        return container;
+        return material.Write();
     }
 }

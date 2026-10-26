@@ -38,13 +38,16 @@ public sealed class Fc2ModelEntry
     /// <summary>Where <see cref="Usage"/> came from: an authoritative index, or a partial scan.</summary>
     public string? UsageSource { get; init; }
 
-    public required string Sha256 { get; init; }
+    public required string Sha256 { get; set; }
 
     /// <summary>
     /// The hash this arrived with, present only once an editor has changed the entry - so an entry
-    /// is modified exactly when this is set.
+    /// that came from the game is modified exactly when this is set.
     /// </summary>
     public string? OriginSha256 { get; set; }
+
+    /// <summary>A file the game does not have, added to the pack rather than exported into it.</summary>
+    public bool Added { get; init; }
 
     /// <summary>A texture's header bytes, which cannot be synthesized, as a file in the zip.</summary>
     public string? Header { get; init; }
@@ -57,7 +60,7 @@ public sealed class Fc2ModelEntry
     public int? Levels { get; init; }
 
     [JsonIgnore]
-    public bool Modified => OriginSha256 is not null;
+    public bool Modified => OriginSha256 is not null || Added;
 }
 
 public sealed class Fc2ModelLimits
@@ -177,6 +180,59 @@ public sealed class Fc2ModelBundle
     /// <summary>The bytes an entry points at.</summary>
     public byte[] Content(Fc2ModelEntry entry) => Files[entry.File];
 
+    /// <summary>Change an entry's content, marking it modified the way an editor does.</summary>
+    public void Replace(Fc2ModelEntry entry, byte[] content)
+    {
+        entry.OriginSha256 ??= entry.Sha256;
+        entry.Sha256 = Hash(content);
+        Files[entry.File] = content;
+    }
+
+    /// <summary>
+    /// Add a material the game does not have at <paramref name="gamePath"/>, and append it to the
+    /// mesh's material list.
+    /// </summary>
+    /// <returns>The index the mesh's clusters name it by.</returns>
+    public int AddMaterial(string gamePath, MaterialDocument material)
+    {
+        if (Entry(gamePath) is not null)
+        {
+            throw new InvalidOperationException($"The pack already carries '{gamePath}'.");
+        }
+        Fc2ModelEntry meshEntry = Mesh();
+        MeshDocument mesh = Document<MeshDocument>(meshEntry);
+
+        string file = $"materials/{Stem(gamePath)}.json";
+        if (Files.ContainsKey(file))
+        {
+            throw new InvalidOperationException($"The pack already holds a file named '{file}'.");
+        }
+        byte[] content = JsonSerializer.SerializeToUtf8Bytes(material, Fc2ModelJson.Compact);
+        Files[file] = content;
+        Manifest.Entries.Add(new Fc2ModelEntry
+        {
+            Path = gamePath,
+            File = file,
+            Kind = Fc2ModelKind.Material,
+            Role = Owned,
+            Sha256 = Hash(content),
+            Added = true,
+        });
+
+        mesh.Materials.Add(gamePath);
+        Replace(meshEntry, JsonSerializer.SerializeToUtf8Bytes(mesh, Fc2ModelJson.Compact));
+        return mesh.Materials.Count - 1;
+    }
+
+    /// <summary>The subject's mesh entry.</summary>
+    public Fc2ModelEntry Mesh()
+        => Entry(Manifest.Model) ?? throw new InvalidDataException($"The pack does not carry {Manifest.Model}.");
+
+    /// <summary>A JSON document entry, decoded.</summary>
+    public T Document<T>(Fc2ModelEntry entry)
+        => JsonSerializer.Deserialize<T>(Content(entry), Fc2ModelJson.Compact)
+           ?? throw new InvalidDataException($"Unreadable {typeof(T).Name} in the pack.");
+
     /// <summary>Entries an editor changed, which are the only ones worth writing back.</summary>
     public IEnumerable<Fc2ModelEntry> Modified => Manifest.Entries.Where(entry => entry.Modified);
 
@@ -247,6 +303,16 @@ public sealed class Fc2ModelBundle
             }
         }
         return bundle;
+    }
+
+    /// <summary>A game path's file name without its extension, which names its document in the zip.</summary>
+    internal static string Stem(string gamePath)
+    {
+        string normalised = gamePath.Replace('\\', '/');
+        int at = normalised.LastIndexOf('/');
+        string file = at < 0 ? normalised : normalised[(at + 1)..];
+        int dot = file.LastIndexOf('.');
+        return dot < 0 ? file : file[..dot];
     }
 
     private static string Directory(string gamePath)

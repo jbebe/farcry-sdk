@@ -1,4 +1,6 @@
 using JackAll.Tools.Fc2Model;
+using JackAll.Tools.Xbg;
+using JackAll.Tools.Xbm;
 
 namespace JackAll.Tests;
 
@@ -142,6 +144,47 @@ public sealed class Fc2ModelBundleTests
         InvalidOperationException error =
             Assert.Throws<InvalidOperationException>(() => Fc2ModelApplier.Outputs(bundle));
         Assert.Contains(shared.Path, error.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A material the game does not have travels in the pack as an addition, and applying it writes
+    /// both the material and a mesh whose chosen clusters draw with it.
+    /// </summary>
+    [Fact]
+    public void An_added_material_is_written_with_the_mesh_that_uses_it()
+    {
+        if (Reader() is not { } read)
+        {
+            return;
+        }
+
+        const string Added = @"graphics\weapons\primary\ak47\ak47_new.xbm";
+        Fc2ModelBundle bundle = Fc2ModelBuilder.Build(Rifle, read);
+        MeshDocument mesh = bundle.Document<MeshDocument>(bundle.Mesh());
+        MeshPart part = mesh.Parts.First(p => p.Clusters.Count > 0);
+        int from = part.Clusters[0].MaterialIndex;
+        MaterialDocument copy = bundle.Document<MaterialDocument>(bundle.Entry(mesh.Materials[from])!);
+
+        int index = bundle.AddMaterial(Added, copy);
+        mesh = bundle.Document<MeshDocument>(bundle.Mesh());
+        Assert.True(mesh.Reassign(from, index, [part.Name]) > 0);
+        bundle.Replace(bundle.Mesh(), System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(mesh, Fc2ModelJson.Compact));
+
+        string path = Path.Combine(Path.GetTempPath(), $"fc2model-{Guid.NewGuid():N}{Fc2ModelBundle.Extension}");
+        try
+        {
+            bundle.Save(path);
+            List<Fc2ModelOutput> outputs = Fc2ModelApplier.Outputs(Fc2ModelBundle.Load(path));
+
+            Assert.Equal([Rifle, Added], outputs.Select(o => o.Path).Order(StringComparer.Ordinal));
+            Assert.Equal(copy.Name, XbmFile.Parse(outputs.Single(o => o.Path == Added).Content).Name);
+            XbgFile written = XbgFile.Parse(outputs.Single(o => o.Path == Rifle).Content);
+            Assert.Equal(Added, written.Materials[index]);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     /// <summary>

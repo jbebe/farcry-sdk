@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using JackAll.Tools.Xbg;
 
 namespace JackAll.Tools.Fc2Model;
@@ -23,7 +24,7 @@ public sealed class MeshNode
 /// <summary>One drawable block: which material it uses and which bones it may reference.</summary>
 public sealed class MeshCluster
 {
-    public required ushort MaterialIndex { get; init; }
+    public required ushort MaterialIndex { get; set; }
 
     public required ushort Flags { get; init; }
 
@@ -156,6 +157,35 @@ public sealed class MeshDocument
 
     /// <summary>Which chunks the container holds and in what order, with any opaque bodies.</summary>
     public List<MeshChunk> Chunks { get; init; } = [];
+
+    /// <summary>
+    /// Move the clusters drawing with one material onto another, in every part or only in the named
+    /// ones, at every LOD and damage state.
+    /// </summary>
+    /// <returns>How many clusters moved.</returns>
+    public int Reassign(int from, int to, IReadOnlyCollection<string> parts)
+    {
+        if (to < 0 || to >= Materials.Count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(to), $"The mesh names {Materials.Count} materials, so there is no index {to}.");
+        }
+
+        int moved = 0;
+        foreach (MeshPart part in Parts.Where(p => parts.Count == 0
+                     || parts.Any(name => name.Equals(p.Name, StringComparison.OrdinalIgnoreCase)
+                                          || name.Equals(PartSuffix.Replace(p.Name, ""), StringComparison.OrdinalIgnoreCase))))
+        {
+            foreach (MeshCluster cluster in part.Clusters.Where(c => c.MaterialIndex == from))
+            {
+                cluster.MaterialIndex = (ushort)to;
+                moved++;
+            }
+        }
+        return moved;
+    }
+
+    /// <summary>What a part name adds to the part: a damage state, then an LOD tier.</summary>
+    private static readonly Regex PartSuffix = new(@"(_STATE\d+)?(_LOD\d+)?$", RegexOptions.IgnoreCase);
 
     public static MeshDocument From(XbgFile file)
     {

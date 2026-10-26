@@ -69,9 +69,60 @@ public sealed class XbmFileTests
         }
     }
 
+    /// <summary>A created material reads back as what it was given, in the container shipped ones use.</summary>
+    [Fact]
+    public void A_created_material_reads_back()
+    {
+        XbmFile created = XbmFile.Create("NEW_METAL", "Weapon");
+        created.Add(XbmEntry.Parse("DiffuseTexture1", XbmSection.Texture, 0, @"graphics\new\albedo.xbt"));
+        created.Add(XbmEntry.Parse("DiffuseColor1", XbmSection.Float, 3, "0.5"));
+        created.Add(XbmEntry.Parse("LogicalMaterialId", XbmSection.Integer, 0, "4"));
+
+        XbmFile read = XbmFile.Parse(created.Write());
+
+        Assert.Equal("NEW_METAL", read.Name);
+        Assert.Equal("Weapon", read.Shader);
+        Assert.Equal(@"graphics\new\albedo.xbt", read.Textures["DiffuseTexture1"]);
+        Assert.Equal([0.5f, 0.5f, 0.5f], read.Floats["DiffuseColor1"]);
+        Assert.Equal(4u, read.Integers["LogicalMaterialId"]);
+    }
+
+    /// <summary>
+    /// Setting a key changes that key alone, in its own place: setting one to the value it already
+    /// holds writes the file back unchanged.
+    /// </summary>
+    [Fact]
+    public void Set_keeps_a_key_in_place()
+    {
+        if (Fixture.Read(XbmFixtures.Wood) is not { } original)
+        {
+            return;
+        }
+
+        XbmFile material = XbmFile.Parse(original);
+        foreach (XbmEntry entry in material.Entries.ToList())
+        {
+            material.Set(XbmEntry.Parse(entry.Key, entry.Section, entry.Floats.Length, entry.Text));
+        }
+        Fixture.AssertSameBytes(XbmFixtures.Wood, original, material.Write());
+
+        material.Set(XbmEntry.Parse("SpecularPower", XbmSection.Float, 1, "150"));
+        Assert.Equal([150f], XbmFile.Parse(material.Write()).Floats["SpecularPower"]);
+        Assert.True(material.Remove("SpecularPower"));
+        Assert.False(XbmFile.Parse(material.Write()).Floats.ContainsKey("SpecularPower"));
+    }
+
+    [Theory]
+    [InlineData(3, "1, 2", "takes 3 numbers")]
+    [InlineData(1, "x", "'x' is not one")]
+    public void A_value_that_does_not_fit_is_refused(int width, string text, string message)
+        => Assert.Contains(message,
+            Assert.Throws<FormatException>(() => XbmEntry.Parse("Key", XbmSection.Float, width, text)).Message);
+
     [Fact]
     [Trait("Category", "RequiresFixture")]
     public void The_fixtures_were_actually_found()
         => Fixture.AssertPresent(
-            XbmFixtures.Wood, XbmFixtures.Metal, XbmFixtures.Blended, XbmFixtures.Masked, XbmFixtures.RepeatedKey);
+            XbmFixtures.Wood, XbmFixtures.Metal, XbmFixtures.Blended, XbmFixtures.Masked, XbmFixtures.RepeatedKey,
+            XbmFixtures.Descriptors);
 }
