@@ -89,7 +89,7 @@ range in the log drifts from the scenario's distance.
 |---|---|---|
 | A | **Flanking a remembered position.** A soldier relocates around the spot where the player was last seen | the game already does it: at the long wall the squad flanked to where it last saw the player, every run; nothing to build unless a test asks |
 | B | **The last man.** A squad's lone survivor does something: falls back, or fights on | waits on item C; the game's order sets a flag nothing reads |
-| C | **How enemies differ.** Novices and veterans, locals and mercenaries; scaling with the player's arsenal, not the story | [not agreed](#open-how-enemies-differ) |
+| C | **How enemies differ.** Skill by role: guard posts below vehicle patrols below bodyguards; the arsenal stays as the game has it | direction set, [on hold](#open-how-enemies-differ) |
 | D | **Tuning candidates** from the review of step 4: hold fire at each soldier's own "clear" value rather than a fixed 0.4; sighting and the speed evaluator both count the player's movement; range falloff from each weapon's own effective range; grass in combat (0.8) hides more than when alerted (0.765) | only if a test-range check asks for it |
 | E | **Damage falloff with range** for the player's hits on soldiers | skipped in step 4 |
 | F | **A vest** | postponed, below |
@@ -111,7 +111,25 @@ range in the log drifts from the scenario's distance.
 
 The game's enemies are all alike, and they grow stronger with the story, not with the player
 ([where difficulty acts](../engine-internals/ai.md#where-difficulty-acts),
-[what sets one soldier apart](../engine-internals/ai.md#what-sets-one-soldier-apart)). Not agreed:
+[what sets one soldier apart](../engine-internals/ai.md#what-sets-one-soldier-apart)).
+
+**Direction set on 2026-10-26, on hold:**
+
+- **The arsenal stays as the game has it.** Better enemy weapons as the player progresses and moves to
+  the second world.
+- **What changes is skill, by role.** A half-dressed guard at a post is never as skilled as a guard
+  protecting an important person, and the patrols that drive the map in Land Rovers are more skilled
+  than the guard posts.
+- **Proposed, not agreed:**
+  - Three tiers: green for guard posts, regular for vehicle patrols, elite for bodyguards.
+  - Skill scales aim settling, best chance, recoil control, suppression and head aim. Eyesight,
+    hearing and memory stay the same for every tier.
+  - A soldier's tier is read once from where he spawned, backed by the special archetypes.
+- **Questions for the user:** whether three tiers is right; where snipers, RPG and mortar men go;
+  whether temperament stays part of this; whether the difficulty setting shifts all tiers; whether
+  skill should be readable on sight.
+
+The earlier notes, not agreed:
 
 - **What may scale.** The direction is the player's arsenal and armour, not the act or the mission
   count: better weapons may bring a harder fight, the story's progress may not. How the arsenal is
