@@ -13,9 +13,14 @@ struct Weapon {
     void* weapon;
 };
 
+// The weapon classes, in the order of a weapon's selCategory.
+enum Class { kMachete, kPrimary, kSecondary, kSpecial };
+
 // False when an address is missing on this build; nothing below may be called then.
 bool Resolve();
 
+// The inventory of a CPlayer's pawn, or null while it has none.
+void* OfPlayer(const void* player);
 // Whether an inventory is the local player's.
 bool IsPlayers(const void* inventory);
 // The entity a component, such as a weapon or a pawn, belongs to.
@@ -23,6 +28,7 @@ void* Entity(const void* component);
 
 // Every weapon but the machete, in the inventory's order.
 std::vector<Weapon> Guns(const void* inventory);
+bool Is(void* weapon, Class weaponClass);
 bool IsGun(void* weapon);
 const uint32_t* Category(void* weapon);
 // The archetype the weapon was made from, such as "weapons.Primary.AK47".
