@@ -1,5 +1,6 @@
 using System.Windows;
 using JackAll.Core.Vfs;
+using JackAll.Tools.Xbm;
 
 namespace JackAll.App.Picker;
 
@@ -28,6 +29,12 @@ public static class FilePicker
     public static string? PathOf(uint hash) => _source?.PathOf(hash);
 
     public static VfsFile? FileOf(uint hash) => _source?.FindByHash(hash);
+
+    /// <inheritdoc cref="MainViewModel.FindByPath"/>
+    public static VfsFile? FileOfPath(string path) => _source?.FindByPath(path);
+
+    /// <inheritdoc cref="MainViewModel.Shaders"/>
+    public static ShaderSchema? Shaders => _source?.Shaders;
 
     public static byte[] Read(VfsFile file) => _source!.Read(file);
 

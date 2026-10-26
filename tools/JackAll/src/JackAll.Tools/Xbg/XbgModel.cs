@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Text.RegularExpressions;
 
 namespace JackAll.Tools.Xbg;
 
@@ -66,12 +65,8 @@ public sealed class XbgSubmesh
 /// placement DIKS names outright.
 /// </para>
 /// </remarks>
-public sealed partial class XbgModel
+public sealed class XbgModel
 {
-    /// <summary>Every trailing LOD suffix, not just the last: the female civilian kit names its
-    /// clothes <c>P_WC_LB_JEANS03_LOD00_LOD0</c>, and entities wear them as <c>P_WC_LB_JEANS03</c>.</summary>
-    [GeneratedRegex(@"(_LOD\d+)+$", RegexOptions.IgnoreCase)]
-    private static partial Regex LodSuffixRegex();
 
     public required IReadOnlyList<string> Materials { get; init; }
     public required IReadOnlyList<XbgSubmesh> Submeshes { get; init; }
@@ -95,7 +90,7 @@ public sealed partial class XbgModel
                 submeshes.Add(new XbgSubmesh
                 {
                     LodLevel = lodLevel,
-                    PartName = LodSuffixRegex().Replace(part.Name, ""),
+                    PartName = XbgFile.WithoutLod(part.Name),
                     PartTransform = placement is { IsIdentity: false } ? placement : null,
                     MaterialIndex = cluster.MaterialIndex,
                     MaterialName = cluster.MaterialIndex < file.Materials.Count

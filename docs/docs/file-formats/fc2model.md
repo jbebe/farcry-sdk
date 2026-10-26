@@ -134,8 +134,8 @@ Every entry carries the hash of the bytes in the zip. An entry the editor change
 `origin_sha256` is present**. That is what lets an applier write only what changed, and warn that
 the install differs from what the pack was built against before touching anything.
 
-An entry the game never had — a material `fc2model add-material` put in — carries `"added": true`
-instead, and is always written. It has no origin to hash, and its role is `owned`.
+An entry the game never had — a material `fc2model add-material` put in — arrived with nothing, so
+its `origin_sha256` is empty: present, and so written, by every reader. Its role is `owned`.
 
 ### Ownership
 

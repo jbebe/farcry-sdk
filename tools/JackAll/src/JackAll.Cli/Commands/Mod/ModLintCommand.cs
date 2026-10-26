@@ -4,7 +4,6 @@ using JackAll.Cli.Commands.Domino;
 using JackAll.Cli.Infrastructure;
 using JackAll.Core;
 using JackAll.Core.Mods;
-using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
 using JackAll.Tools.Domino;
 using JackAll.Tools.Domino.Graphs;
@@ -36,24 +35,14 @@ public sealed class ModLintCommand : CliCommand<ModLintCommand.Settings>
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
-        GameInstall install = GameInstall.TryOpen(settings.Game, out string error)
-            ?? throw new InvalidOperationException(error);
-
         List<IModLayer> layers = [.. settings.Layers.Select(ModPipeline.OpenLayer)];
         var progress = new SyncProgress(JsonOutput.Report);
-        NameDatabase names = BundledAssets.LoadNames();
 
         // Resolved through the merged filesystem with the layers applied, so a layer that adds an
         // archetype to a later library is itself taken into account. Fragment *rows* are skipped -
         // decoding every .fcb container in the game would dwarf the lint itself, and a layer's own
         // fragment overrides are spliced from the layer, not from those rows.
-        using GameVfs vfs = GameVfs.Load(
-            install, names, GameCache.Load(install.CacheFile), BundledAssets.LoadFcbClasses(), progress,
-            includeFragments: false);
-        if (layers.Count > 0)
-        {
-            vfs.Rebuild(layers, includeFragments: false, progress: progress);
-        }
+        using GameVfs vfs = settings.OpenVfs(layers);
 
         IReadOnlyList<DeadEdit> dead = ArchetypeLint.Run(
             ArchetypeLint.StagedFragmentsOf(layers),

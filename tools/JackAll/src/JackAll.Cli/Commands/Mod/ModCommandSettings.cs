@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using JackAll.Cli.Infrastructure;
 using JackAll.Core;
+using JackAll.Core.Mods;
+using JackAll.Core.Vfs;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -34,4 +36,19 @@ public class GameCommandSettings : CommandSettings, IJsonOutputSettings
     /// into the one-line message <see cref="CliCommand{TSettings}"/>'s guard reports.</summary>
     public GameInstall OpenInstall()
         => GameInstall.TryOpen(Game, out string error) ?? throw new InvalidOperationException(error);
+
+    /// <summary>The install's merged files without fragment rows, with <paramref name="layers"/> on top.</summary>
+    public GameVfs OpenVfs(IReadOnlyList<IModLayer> layers)
+    {
+        GameInstall install = OpenInstall();
+        var progress = new SyncProgress(JsonOutput.Report);
+        GameVfs vfs = GameVfs.Load(
+            install, BundledAssets.LoadNames(), GameCache.Load(install.CacheFile), BundledAssets.LoadFcbClasses(),
+            progress, includeFragments: false);
+        if (layers.Count > 0)
+        {
+            vfs.Rebuild(layers, includeFragments: false, progress: progress);
+        }
+        return vfs;
+    }
 }

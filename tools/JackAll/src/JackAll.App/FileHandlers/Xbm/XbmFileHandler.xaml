@@ -19,68 +19,22 @@
                              app:CommitOnEnter.IsEnabled="True" AutomationProperties.Name="{Binding Key}" />
                     <StackPanel Grid.Column="2" Orientation="Horizontal">
                         <Border Width="22" Height="22" Margin="6,0,0,0" BorderThickness="1"
-                                BorderBrush="{DynamicResource ControlBorderBrush}" Background="{Binding Swatch}">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Swatch}" Value="{x:Null}">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                        </Border>
+                                BorderBrush="{DynamicResource ControlBorderBrush}" Background="{Binding Swatch}"
+                                Visibility="{Binding HasSwatch, Converter={StaticResource BoolToVis}}" />
                         <Button Content="Pick…" Click="PickTexture_Click" Margin="6,0,0,0" Style="{StaticResource DenseButton}"
                                 ToolTip="Pick a texture from the game archives and the workspace"
                                 Visibility="{Binding IsTexture, Converter={StaticResource BoolToVis}}" />
-                        <Button Content="Go to →" Click="GoTo_Click" Margin="6,0,0,0">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource DenseButton}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Texture}" Value="{x:Null}">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+                        <Button Content="Go to →" Click="GoTo_Click" Margin="6,0,0,0" Style="{StaticResource DenseButton}"
+                                Visibility="{Binding HasTexture, Converter={StaticResource BoolToVis}}" />
                     </StackPanel>
                 </Grid>
-                <TextBlock Text="{Binding Hint}" Margin="190,2,0,0">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock" BasedOn="{StaticResource Note}">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Hint}" Value="{x:Null}">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
+                <TextBlock Text="{Binding Hint}" Style="{StaticResource Note}" Margin="190,2,0,0"
+                           Visibility="{Binding HasHint, Converter={StaticResource BoolToVis}}" />
                 <TextBlock Text="{Binding Problem}" Foreground="{DynamicResource WarningTextBrush}" TextWrapping="Wrap"
-                           Margin="190,2,0,0">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Problem}" Value="{x:Null}">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
+                           Margin="190,2,0,0" Visibility="{Binding HasProblem, Converter={StaticResource BoolToVis}}" />
                 <Image Source="{Binding Thumbnail, IsAsync=True}" MaxWidth="96" MaxHeight="96" Stretch="Uniform"
-                       HorizontalAlignment="Left" Margin="190,4,0,0">
-                    <Image.Style>
-                        <Style TargetType="Image">
-                            <Style.Triggers>
-                                <Trigger Property="Source" Value="{x:Null}">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Image.Style>
-                </Image>
+                       HorizontalAlignment="Left" Margin="190,4,0,0"
+                       Visibility="{Binding HasTexture, Converter={StaticResource BoolToVis}}" />
             </StackPanel>
         </DataTemplate>
     </UserControl.Resources>

@@ -4,7 +4,6 @@ using System.Runtime.CompilerServices;
 using System.Windows.Media;
 using JackAll.App.FileHandlers.Xbt;
 using JackAll.App.Picker;
-using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Vfs;
 using JackAll.Tools.Fcb;
@@ -70,7 +69,7 @@ public sealed class ScalarField : INotifyPropertyChanged
     private VfsFile? ReferencedFile => FileRef switch
     {
         FileRef.PathHash when IsValid && Value is uint hash => FilePicker.FileOf(hash),
-        FileRef.Path when Text.Trim() is { Length: > 0 } path => FilePicker.FileOf(NameHash.Compute(path)),
+        FileRef.Path when Text.Trim() is { Length: > 0 } path => FilePicker.FileOfPath(path),
         _ => null,
     };
 
@@ -171,7 +170,7 @@ public sealed class ScalarField : INotifyPropertyChanged
 
     public Brush? Swatch
         => IsColour && Value is float[] c
-            ? new SolidColorBrush(Color.FromRgb(Byte(c[0]), Byte(c[1]), Byte(c[2])))
+            ? ColourSwatch.Of(c)
             : null;
 
     public double Red { get => Channel(0); set => SetChannel(0, value); }
@@ -192,8 +191,6 @@ public sealed class ScalarField : INotifyPropertyChanged
             Text = FcbFieldFormat.Format(Type, next);
         }
     }
-
-    private static byte Byte(float channel) => (byte)Math.Clamp(channel * 255f, 0f, 255f);
 
     /// <summary>A sound id as the data writes it: <c>0x</c> and eight uppercase hex digits.</summary>
     public static string SoundIdText(uint id) => $"0x{id:X8}";

@@ -172,8 +172,8 @@ public sealed class MeshDocument
 
         int moved = 0;
         foreach (MeshPart part in Parts.Where(p => parts.Count == 0
-                     || parts.Any(name => name.Equals(p.Name, StringComparison.OrdinalIgnoreCase)
-                                          || name.Equals(PartSuffix.Replace(p.Name, ""), StringComparison.OrdinalIgnoreCase))))
+                     || parts.Contains(p.Name, StringComparer.OrdinalIgnoreCase)
+                     || parts.Contains(StateSuffix.Replace(XbgFile.WithoutLod(p.Name), ""), StringComparer.OrdinalIgnoreCase)))
         {
             foreach (MeshCluster cluster in part.Clusters.Where(c => c.MaterialIndex == from))
             {
@@ -184,8 +184,7 @@ public sealed class MeshDocument
         return moved;
     }
 
-    /// <summary>What a part name adds to the part: a damage state, then an LOD tier.</summary>
-    private static readonly Regex PartSuffix = new(@"(_STATE\d+)?(_LOD\d+)?$", RegexOptions.IgnoreCase);
+    private static readonly Regex StateSuffix = new(@"_STATE\d+$", RegexOptions.IgnoreCase);
 
     public static MeshDocument From(XbgFile file)
     {

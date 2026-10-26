@@ -81,7 +81,7 @@ public static class Fc2ModelBuilder
             }
 
             MaterialDocument material = MaterialDocument.Parse(materialBytes);
-            Add(bundle, materialPath, $"materials/{Fc2ModelBundle.Stem(materialPath)}.json", Fc2ModelKind.Material,
+            Add(bundle, materialPath, Fc2ModelBundle.MaterialFile(materialPath), Fc2ModelKind.Material,
                 JsonSerializer.SerializeToUtf8Bytes(material, Json), modelPath, usage);
 
             foreach (MaterialTexture texture in material.Textures)

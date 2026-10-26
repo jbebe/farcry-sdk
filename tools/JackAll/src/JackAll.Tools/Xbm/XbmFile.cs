@@ -92,9 +92,6 @@ public sealed class XbmEntry
 /// discarded string is empty, which is the five bytes kept as <see cref="Preamble"/>; an embedded
 /// one's is the name its geometry references, kept as <see cref="Name"/> with the material's own
 /// name as <see cref="Part"/>.
-/// <para>
-/// <see cref="XbmMaterial"/> flattens this into display-formatted text for the file viewer.
-/// </para>
 /// </remarks>
 public sealed class XbmFile
 {
@@ -150,7 +147,7 @@ public sealed class XbmFile
     /// <summary>
     /// The empty mesh every standalone material is wrapped in, identical in all 2,379 shipped ones.
     /// </summary>
-    public static XbgFile Template(uint headerWord)
+    private static XbgFile Template(uint headerWord)
     {
         // Both bounds chunks are memset to 0x7F rather than fitted - there is no geometry to fit.
         float unset = BitConverter.UInt32BitsToSingle(0x7F7F7F7F);
@@ -236,7 +233,7 @@ public sealed class XbmFile
     }
 
     /// <summary>The LTMD payload this material is stored as.</summary>
-    public byte[] Pack()
+    private byte[] Pack()
     {
         var w = new ByteWriter();
         w.WriteRaw(Preamble);
@@ -331,7 +328,7 @@ public sealed class XbmFile
     }
 
     /// <summary>The chunk an `.xbm` keeps its material in.</summary>
-    public static XbgChunk ChunkOf(XbgFile model)
+    private static XbgChunk ChunkOf(XbgFile model)
         => model.Chunk(XbgFile.TagMaterialBody)
            ?? throw new InvalidDataException("No LTMD chunk.");
 

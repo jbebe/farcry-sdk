@@ -416,8 +416,8 @@ whole condition ramp then runs inside a single magazine. See
 
 Do the whole thing through a `.fc2model` pack. Edit `materials/<name>.json` and swap the texture PNGs
 inside the zip, then set **`origin_sha256`** on each entry you touched — that field's presence is
-exactly what marks an entry modified. A material added with `add-material` is marked `added` instead
-and needs neither. Set `levels` to the new chain length (11 for a 1024 image) and the applier does
+exactly what marks an entry modified. A material added with `add-material` carries an empty one
+already. Set `levels` to the new chain length (11 for a 1024 image) and the applier does
 the rest:
 
 ```

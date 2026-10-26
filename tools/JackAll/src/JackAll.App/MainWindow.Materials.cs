@@ -26,9 +26,7 @@ public partial class MainWindow
             return;
         }
 
-        IEnumerable<string> shaders = _vm.ReadByPath(ShaderSchema.GamePath) is { } descriptors
-            ? ShaderSchema.Parse(descriptors).Names.Order(StringComparer.Ordinal)
-            : [material.Shader];
+        IEnumerable<string> shaders = _vm.Shaders?.Names ?? [material.Shader];
         var dialog = new NewMaterialWindow(source.Path, material.Shader, shaders, path => _vm.FindByPath(path) is not null)
         {
             Owner = this,
@@ -56,8 +54,6 @@ public partial class MainWindow
             Warn($"Couldn't stage '{dialog.GamePath}': {ex.Message}");
             return;
         }
-        // A search would leave the new file out of the list it is selected in.
-        _vm.FilterText = string.Empty;
         _vm.Reindex(select: dialog.GamePath);
         _vm.Status = $"{dialog.GamePath} is in your workspace. A mesh draws with it once its material list names it.";
     }

@@ -11,35 +11,23 @@ using Spectre.Console.Cli;
 
 namespace JackAll.Cli.Commands.Xbm;
 
-/// <summary>The install, with any layers on top, and the shader schema it ships.</summary>
+/// <summary>The shader schema the game ships.</summary>
 internal static class GameMaterials
 {
-    public static (GameVfs Vfs, ShaderSchema Schema) Open(GameCommandSettings settings, IEnumerable<string> layers)
-    {
-        var progress = new SyncProgress(JsonOutput.Report);
-        GameInstall install = settings.OpenInstall();
-        GameVfs vfs = GameVfs.Load(
-            install, BundledAssets.LoadNames(), GameCache.Load(install.CacheFile), BundledAssets.LoadFcbClasses(),
-            progress, includeFragments: false);
-        List<IModLayer> opened = [.. layers.Select(ModPipeline.OpenLayer)];
-        if (opened.Count > 0)
-        {
-            vfs.Rebuild(opened, includeFragments: false, progress: progress);
-        }
-
-        byte[] descriptors = vfs.ReadByPath(ShaderSchema.GamePath)
-            ?? throw new InvalidOperationException($"The install has no {ShaderSchema.GamePath}.");
-        return (vfs, ShaderSchema.Parse(descriptors));
-    }
-
+    /// <summary>The vanilla schema, read without building the merged index.</summary>
     public static ShaderSchema Schema(GameCommandSettings settings)
     {
-        (GameVfs vfs, ShaderSchema schema) = Open(settings, []);
-        vfs.Dispose();
-        return schema;
+        using GameVfs vfs = ModPipeline.OpenOriginals(
+            settings.OpenInstall(), BundledAssets.LoadNames(), new SyncProgress(JsonOutput.Report));
+        return Parse(vfs.ReadOriginal(NameHash.Compute(ShaderSchema.GamePath)));
     }
-}
 
+    /// <summary>The schema the merged files hold, a mod's override included.</summary>
+    public static ShaderSchema Schema(GameVfs vfs) => Parse(vfs.ReadByPath(ShaderSchema.GamePath));
+
+    private static ShaderSchema Parse(byte[]? descriptors)
+        => ShaderSchema.Parse(descriptors ?? throw new InvalidOperationException($"The install has no {ShaderSchema.GamePath}."));
+}
 /// <summary>Prints a material's shader and every property, as text <c>xbm set</c> takes back.</summary>
 public sealed class XbmShowCommand : CliCommand<XbmShowCommand.Settings>
 {
@@ -185,7 +173,7 @@ public sealed class XbmSetCommand : CliCommand<XbmSetCommand.Settings>
             {
                 throw new FormatException($"'{assignment}' is not Key=value.");
             }
-            written.AddRange(shader.Set(material, assignment[..at].Trim(), assignment[(at + 1)..], !settings.NoLink));
+            written.AddRange(MaterialEdit.Set(material, shader, assignment[..at].Trim(), assignment[(at + 1)..], !settings.NoLink));
         }
         foreach (string key in settings.Remove)
         {
@@ -227,8 +215,8 @@ public sealed class XbmLintCommand : CliCommand<XbmLintCommand.Settings>
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
-        (GameVfs vfs, ShaderSchema schema) = GameMaterials.Open(settings, settings.Layers);
-        using GameVfs _ = vfs;
+        using GameVfs vfs = settings.OpenVfs([.. settings.Layers.Select(ModPipeline.OpenLayer)]);
+        ShaderSchema schema = GameMaterials.Schema(vfs);
         var findings = settings.Files.Select(file => (
             File: file,
             Problems: MaterialLint.Check(

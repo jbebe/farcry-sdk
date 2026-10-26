@@ -99,8 +99,8 @@ public class GraphicKitTests
         Assert.Equal(@"graphics\actors\_textures\c_cm_cloth_05_s.xbt", surface.DiffuseTexturePath);
         Assert.Equal(@"graphics\actors\_textures\c_cm_gene_gray.xbt", surface.SecondDiffusePath);
         Assert.Equal(@"graphics\actors\_textures\c_cm_dirt_02_d.xbt", surface.BloodPath);
-        Assert.Equal(new Vector3(0.306f, 0.369f, 0.471f), surface.TintBase);
-        Assert.Equal(new Vector3(1.255f, 1.427f, 1.49f), surface.Tint);
+        Assert.Equal(new Vector3(0.30588236f, 0.36862746f, 0.47058827f), surface.TintBase);
+        Assert.Equal(new Vector3(1.254902f, 1.427451f, 1.4901961f), surface.Tint);
         Assert.Equal(new Vector2(12f, 15f), surface.DiffuseTiling);
         Assert.Equal(new Vector4(0f, 1f, 0f, 0f), surface.UvSets);
     }
@@ -115,8 +115,8 @@ public class GraphicKitTests
         Assert.Equal(MaterialTemplate.Skin, surface.Template);
         Assert.Equal(@"graphics\actors\_textures\c_cm_body_nubi_female_d.xbt", surface.DiffuseTexturePath);
         Assert.Null(surface.SecondDiffusePath);
-        Assert.Equal(new Vector3(0.761f, 0.761f, 0.761f), surface.TintBase);
-        Assert.Equal(new Vector3(0.463f, 0.486f, 0.478f), surface.Tint);
+        Assert.Equal(new Vector3(0.7607844f, 0.7607844f, 0.7607844f), surface.TintBase);
+        Assert.Equal(new Vector3(0.46274513f, 0.48627454f, 0.4784314f), surface.Tint);
     }
 
     /// <summary>A pick lands where the engine routes it per template; on Generic only the texture

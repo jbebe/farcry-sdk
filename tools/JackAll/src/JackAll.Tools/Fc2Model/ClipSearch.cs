@@ -34,7 +34,7 @@ public static class ClipSearch
     public static List<string> For(
         string modelPath, IEnumerable<string> bankPaths, Func<string, byte[]?> read)
     {
-        string model = Stem(modelPath);
+        string model = Fc2ModelBundle.Stem(modelPath);
         List<string> found = [];
         foreach (string path in bankPaths)
         {
@@ -95,12 +95,4 @@ public static class ClipSearch
         return new BankRigs(Load(own.FirstOrDefault()), props);
     }
 
-    private static string Stem(string gamePath)
-    {
-        string normalised = gamePath.Replace('\\', '/');
-        int at = normalised.LastIndexOf('/');
-        string file = at < 0 ? normalised : normalised[(at + 1)..];
-        int dot = file.LastIndexOf('.');
-        return dot < 0 ? file : file[..dot];
-    }
 }

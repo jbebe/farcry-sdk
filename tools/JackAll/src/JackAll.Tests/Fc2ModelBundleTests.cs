@@ -168,7 +168,7 @@ public sealed class Fc2ModelBundleTests
         int index = bundle.AddMaterial(Added, copy);
         mesh = bundle.Document<MeshDocument>(bundle.Mesh());
         Assert.True(mesh.Reassign(from, index, [part.Name]) > 0);
-        bundle.Replace(bundle.Mesh(), System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(mesh, Fc2ModelJson.Compact));
+        bundle.Replace(bundle.Mesh(), mesh);
 
         string path = Path.Combine(Path.GetTempPath(), $"fc2model-{Guid.NewGuid():N}{Fc2ModelBundle.Extension}");
         try

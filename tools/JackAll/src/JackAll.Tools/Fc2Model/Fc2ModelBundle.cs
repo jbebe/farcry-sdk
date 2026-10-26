@@ -42,12 +42,9 @@ public sealed class Fc2ModelEntry
 
     /// <summary>
     /// The hash this arrived with, present only once an editor has changed the entry - so an entry
-    /// that came from the game is modified exactly when this is set.
+    /// is modified exactly when this is set. Empty on a file the game does not have.
     /// </summary>
     public string? OriginSha256 { get; set; }
-
-    /// <summary>A file the game does not have, added to the pack rather than exported into it.</summary>
-    public bool Added { get; init; }
 
     /// <summary>A texture's header bytes, which cannot be synthesized, as a file in the zip.</summary>
     public string? Header { get; init; }
@@ -60,7 +57,7 @@ public sealed class Fc2ModelEntry
     public int? Levels { get; init; }
 
     [JsonIgnore]
-    public bool Modified => OriginSha256 is not null || Added;
+    public bool Modified => OriginSha256 is not null;
 }
 
 public sealed class Fc2ModelLimits
@@ -181,8 +178,9 @@ public sealed class Fc2ModelBundle
     public byte[] Content(Fc2ModelEntry entry) => Files[entry.File];
 
     /// <summary>Change an entry's content, marking it modified the way an editor does.</summary>
-    public void Replace(Fc2ModelEntry entry, byte[] content)
+    public void Replace<T>(Fc2ModelEntry entry, T document)
     {
+        byte[] content = JsonSerializer.SerializeToUtf8Bytes(document, Fc2ModelJson.Compact);
         entry.OriginSha256 ??= entry.Sha256;
         entry.Sha256 = Hash(content);
         Files[entry.File] = content;
@@ -202,25 +200,25 @@ public sealed class Fc2ModelBundle
         Fc2ModelEntry meshEntry = Mesh();
         MeshDocument mesh = Document<MeshDocument>(meshEntry);
 
-        string file = $"materials/{Stem(gamePath)}.json";
+        string file = MaterialFile(gamePath);
         if (Files.ContainsKey(file))
         {
             throw new InvalidOperationException($"The pack already holds a file named '{file}'.");
         }
-        byte[] content = JsonSerializer.SerializeToUtf8Bytes(material, Fc2ModelJson.Compact);
-        Files[file] = content;
-        Manifest.Entries.Add(new Fc2ModelEntry
+        // Arrived with nothing, so its origin hash is empty and it reads as modified to every reader.
+        var entry = new Fc2ModelEntry
         {
             Path = gamePath,
             File = file,
             Kind = Fc2ModelKind.Material,
             Role = Owned,
-            Sha256 = Hash(content),
-            Added = true,
-        });
+            Sha256 = string.Empty,
+        };
+        Manifest.Entries.Add(entry);
+        Replace(entry, material);
 
         mesh.Materials.Add(gamePath);
-        Replace(meshEntry, JsonSerializer.SerializeToUtf8Bytes(mesh, Fc2ModelJson.Compact));
+        Replace(meshEntry, mesh);
         return mesh.Materials.Count - 1;
     }
 
@@ -304,6 +302,9 @@ public sealed class Fc2ModelBundle
         }
         return bundle;
     }
+
+    /// <summary>Where a material's document sits in the zip.</summary>
+    internal static string MaterialFile(string gamePath) => $"materials/{Stem(gamePath)}.json";
 
     /// <summary>A game path's file name without its extension, which names its document in the zip.</summary>
     internal static string Stem(string gamePath)

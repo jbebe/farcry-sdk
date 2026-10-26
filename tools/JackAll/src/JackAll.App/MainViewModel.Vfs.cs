@@ -7,6 +7,7 @@ using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
 using JackAll.Core.Xrefs;
 using JackAll.Tools.World;
+using JackAll.Tools.Xbm;
 
 namespace JackAll.App;
 
@@ -62,6 +63,12 @@ public sealed partial class MainViewModel
     /// <inheritdoc cref="GameVfs.ReadByPath"/>
     public byte[]? ReadByPath(string path) => _vfs?.ReadByPath(path);
 
+    private ShaderSchema? _shaders;
+
+    /// <summary>The shader schema the merged files hold, read once per reindex; null without a game.</summary>
+    public ShaderSchema? Shaders
+        => _shaders ??= ReadByPath(ShaderSchema.GamePath) is { } xml ? ShaderSchema.Parse(xml) : null;
+
     /// <summary>The row of a plain file by its game path, or null when no archive or mod has it.</summary>
     public VfsFile? FindByPath(string path) => FindByHash(NameHash.Compute(path));
 
@@ -77,11 +84,20 @@ public sealed partial class MainViewModel
         // scroll-and-click browsing into it would bury the one step the user actually wants back.
         PushNavigationHistory(SelectedFile);
 
+        // A search that leaves the target out is dropped, so the list can show it.
+        FileFilter filter = FileFilter.Parse(FilterText);
+        bool hidden = !filter.IsEmpty && !filter.Matches(file, ModuleNameFor);
+        if (hidden)
+        {
+            _filterText = string.Empty;
+            OnPropertyChanged(nameof(FilterText));
+        }
+
         // Without a search the list shows one folder, so the jump opens the target's and selects it
         // there once the list is refilled.
-        if (FileFilter.Parse(FilterText).IsEmpty
+        if ((filter.IsEmpty || hidden)
             && PassesToggles(file, OnlyMods, HideUnused)
-            && FindFolder(file.Directory) is { } folder && folder != SelectedFolder)
+            && FindFolder(file.Directory) is { } folder && (folder != SelectedFolder || hidden))
         {
             _reselectPath = file.Path;
             SelectedFolder = folder;

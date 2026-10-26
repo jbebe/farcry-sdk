@@ -31,7 +31,7 @@ public sealed class MaterialInteger
 /// A standalone <c>.xbm</c> is the mesh container carrying a material chunk and an empty mesh, and
 /// that empty mesh is the same in all 2,379 shipped materials - no nodes, no parts, no materials
 /// list, one empty LOD, bounds memset to <c>0x7F</c>, and fixed quantisation scales. So a material
-/// needs to carry none of it: the container is rebuilt from <see cref="XbmFile.Template"/> and the one word
+/// needs to carry none of it: the container is rebuilt by <see cref="XbmFile.Create"/> and the one word
 /// nothing derives.
 /// <para>
 /// The three property lists are ordered, not keyed. One shipped material repeats a key inside a

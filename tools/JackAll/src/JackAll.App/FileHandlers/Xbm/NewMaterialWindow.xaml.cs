@@ -37,15 +37,13 @@ public partial class NewMaterialWindow : Window
         if (_pathFollowsName)
         {
             PathBox.Text = Path.Combine(_folder, MaterialName.ToLowerInvariant() + ".xbm");
-            // Setting the box raised Path_TextChanged, which takes it for a hand edit.
-            _pathFollowsName = true;
         }
         Check();
     }
 
     private void Path_TextChanged(object sender, TextChangedEventArgs e)
     {
-        _pathFollowsName = false;
+        _pathFollowsName &= !PathBox.IsKeyboardFocusWithin;
         Check();
     }
 

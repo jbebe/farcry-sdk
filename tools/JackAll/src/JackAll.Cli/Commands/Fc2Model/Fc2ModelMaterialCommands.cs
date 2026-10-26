@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Text.Json;
 using JackAll.Cli.Infrastructure;
 using JackAll.Tools.Fc2Model;
 using JackAll.Tools.Xbm;
@@ -102,7 +101,7 @@ public sealed class Fc2ModelAssignMaterialCommand : CliCommand<Fc2ModelAssignMat
         {
             throw new InvalidOperationException("No cluster matched, so nothing was changed.");
         }
-        bundle.Replace(entry, JsonSerializer.SerializeToUtf8Bytes(mesh, Fc2ModelJson.Compact));
+        bundle.Replace(entry, mesh);
         bundle.Save(settings.Output);
 
         if (settings.Json)

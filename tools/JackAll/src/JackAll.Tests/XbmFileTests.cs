@@ -102,7 +102,7 @@ public sealed class XbmFileTests
         XbmFile material = XbmFile.Parse(original);
         foreach (XbmEntry entry in material.Entries.ToList())
         {
-            material.Set(XbmEntry.Parse(entry.Key, entry.Section, entry.Floats.Length, entry.Text));
+            MaterialEdit.Set(material, null, entry.Key, entry.Text, link: false);
         }
         Fixture.AssertSameBytes(XbmFixtures.Wood, original, material.Write());
 

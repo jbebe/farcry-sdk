@@ -94,7 +94,7 @@ public static class Fc2ModelApplier
                 break;
 
             case Fc2ModelKind.Texture:
-                foreach (Fc2ModelOutput output in Texture(bundle, entry, bundle.Content(entry)))
+                foreach (Fc2ModelOutput output in Texture(bundle, entry))
                 {
                     yield return output;
                 }
@@ -114,9 +114,9 @@ public static class Fc2ModelApplier
     /// resolution in game only.
     /// </remarks>
     private static IEnumerable<Fc2ModelOutput> Texture(
-        Fc2ModelBundle bundle, Fc2ModelEntry entry, byte[] png)
+        Fc2ModelBundle bundle, Fc2ModelEntry entry)
     {
-        (byte[] rgba, int width, int height) = PngImage.Decode(png);
+        (byte[] rgba, int width, int height) = PngImage.Decode(bundle.Content(entry));
         var document = new TextureDocument
         {
             Width = width,

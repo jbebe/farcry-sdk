@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Numerics;
+using System.Text.RegularExpressions;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 
@@ -170,7 +171,7 @@ public sealed class XbgChunk
 /// that only wants to draw the thing.
 /// </para>
 /// </remarks>
-public sealed class XbgFile
+public sealed partial class XbgFile
 {
     public const uint VersionFc2 = 0x0006002A;
     public const int ChunkHeader = 20;
@@ -496,6 +497,13 @@ public sealed class XbgFile
             chunk.Word0 = 1;
         }
     }
+
+    /// <summary>A part's name without every trailing LOD suffix, not just the last: the female civilian
+    /// kit names its clothes <c>P_WC_LB_JEANS03_LOD00_LOD0</c>, and entities wear them as <c>P_WC_LB_JEANS03</c>.</summary>
+    public static string WithoutLod(string partName) => LodSuffixRegex().Replace(partName, "");
+
+    [GeneratedRegex(@"(_LOD\d+)+$", RegexOptions.IgnoreCase)]
+    private static partial Regex LodSuffixRegex();
 
     /// <summary>The tier a part's <c>_LOD&lt;n&gt;</c> suffix names, which is what its LOD field holds.</summary>
     public static int LodTier(string partName, int fallback = 0)

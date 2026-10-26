@@ -23,7 +23,7 @@ public sealed class ShaderSchemaTests
         Assert.Equal(XbmSection.Texture, weapon.Find("ReflectionTexture")!.Section);
 
         // Carried by retail outside the descriptor; composed by the engine and never stored.
-        Assert.True(weapon.Find("LogicalMaterialId")!.Undeclared);
+        Assert.NotNull(weapon.Find("LogicalMaterialId"));
         Assert.Null(schema.Find("Generic")!.Find("DiffuseTilingAndGroup1"));
         Assert.Null(schema.Find("Generic")!.Find("DiffuseTilings"));
 

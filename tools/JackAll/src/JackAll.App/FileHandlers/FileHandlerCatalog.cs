@@ -89,7 +89,7 @@ public static class FileHandlerCatalog
             { Type.Extension: "xbt" } => new XbtFileHandler(file.FileName, readContent(), replaceContent),
             { Type.Extension: "xbg" } => new XbgFileHandler(file.FileName, readContent()),
             { Type.Extension: "mab" } => MabPlayer.Open(file.FileName, readContent(), findRigs),
-            { Type.Extension: "xbm" } => new XbmFileHandler(readContent(), replaceContent, navigateTo),
+            { Type.Extension: "xbm" } => XbmFileHandler.For(readContent(), replaceContent, navigateTo),
             { Type.Extension: "sbao" } => new SbaoFileHandler(file.FileName, readContent(), replaceContent),
             { Type.Extension: "fcb" } => new FcbFileHandler(file, readContent(), replaceContent, readOriginal),
             { Type.Extension: "rml" } => new RmlFileHandler(file, readContent(), replaceContent, readOriginal),
