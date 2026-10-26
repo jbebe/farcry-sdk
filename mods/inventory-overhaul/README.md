@@ -1,0 +1,32 @@
+# Inventory Overhaul
+
+Two guns of any class, and a notebook, opened with Tab and used in real time, for everything else
+the player carries. The design is [the inventory design log](../../docs/docs/design/inventory.md);
+this is an FCSE plugin, built in the log's steps.
+
+| Step | What it does | Status |
+|---|---|---|
+| 1. Two guns | gun 1 on key 2, gun 2 on key 3, of any class; a third gun replaces the one in hand | built, not seen in game |
+
+## Two guns
+
+The engine keeps its weapon classes, so the box, the scripts and the HUD still see a primary, a
+secondary and a special. What changes is the player's inventory (`InventoryOverhaul.dll`,
+`src/two_guns.cpp`):
+
+| Engine call | What the plugin does |
+|---|---|
+| `AddWeapon` | with two guns carried, drops the one in hand first (else the one last drawn); gives the new gun a free slot, kept on it as the entity data `InventoryOverhaul.Slot` |
+| the state machine's select-class actions, `SelectWeapon` | key 2 draws gun 1 and key 3 gun 2, whatever their class; key 4 draws nothing; the machete is unchanged. Other callers of `SelectWeapon`, such as the weapon crate, still select by class |
+| `GetWeaponFromCategory`, inside the player's `CPickupWeapon::PrePickup` and `Pick` | finds no gun, so a pickup replaces nothing of its own class and `AddWeapon` makes room; the gun picked up is then drawn |
+
+Two guns of the same model share an item id, by which the engine draws them, so the later one is
+given an id of its own. Every decision is logged to `bin\fcse.log`.
+
+A save made without the plugin may carry three guns; the third keeps no slot and no key reaches it
+until a pickup replaces one of the others. A scripted draw of the secondary class, if the game has
+one, goes through the same action as key 2 and draws gun 1.
+
+## Testing
+
+`build.ps1 -Install "<game>\bin"` builds the plugin and copies it into `bin\plugins\`.

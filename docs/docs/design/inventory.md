@@ -232,10 +232,11 @@ Movement and look stay live, as with the map. The gamepad mirrors the map's: d-p
 
 ## Under the hood
 
-- **Two guns:** the plugin answers a carried gun's category question with `gun1` or `gun2`, kept on
-  the gun as entity data, and `WeaponCategories` binds those to keys 2 and 3. The engine's own
-  one-gun-per-category rule is then the two-gun rule, and two AK-47s are two categories. A pickup's
-  category is set the same way before `PrePickup` reads it: the free slot, else the slot in hand.
+- **Two guns:** every gun keeps its real class, because the box, scripts and the HUD read it. Each
+  carried gun holds its slot, 1 or 2, as entity data. Keys 2 and 3 draw gun 1 and gun 2 whatever
+  their class, `AddWeapon` drops the gun in hand when two are carried, and while the player picks
+  something up the engine finds no carried gun of its class to replace. Two of the same model share
+  an item id, so the later one gets an id of its own.
 - **A stowed gun** gets one of two made-up categories, `spare1` or `spare2`, bound to no key, so the
   engine keeps its wear and loaded rounds and saves it. Fallback: a record (archetype, wear, rounds)
   the plugin turns back into a gun.
@@ -267,7 +268,8 @@ Each step ends with one check in game before the next.
 - **A second held gadget.** Whether the engine takes a notebook beside the map, in an `Unused` slot.
   If not, the notebook can be the back of the map. Step 3 answers it.
 - **Swapping the paper's texture** at the notebook's draw. Step 4 answers it.
-- **What else reads a gun's category:** HUD icons, holster animations, the shop. Step 1 shows it.
+- **What still selects by class:** the weapon crate draws the gun it hands out by its class, and a
+  pickup's switch prompt shows the carried gun of the pickup's class. Step 1 shows how far it shows.
 - **Putting a gun into the player's hands from code,** with its wear, which the box and the
   stowed-gun fallback need. `CMagicCrate` does it for fresh guns.
 - **How a mission asks "does the player carry X"**, since the plugin cannot read `Globals`. Candidates:
