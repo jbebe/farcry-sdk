@@ -1,3 +1,4 @@
+using System.Text.Json;
 using JackAll.Tools.Fc2Model;
 using JackAll.Tools.Xbg;
 using JackAll.Tools.Xbm;
@@ -36,6 +37,14 @@ public sealed class Fc2ModelBundleTests
         Assert.Contains(bundle.Manifest.Entries, entry => entry.Kind == Fc2ModelKind.Rig);
         Assert.Contains(bundle.Manifest.Entries, entry => entry.Kind == Fc2ModelKind.Material);
         Assert.Contains(bundle.Manifest.Entries, entry => entry.Kind == Fc2ModelKind.Texture);
+
+        // What every shader takes travels with the pack, so an editor needs no game file of its own.
+        Assert.Equal(Fc2ModelBundle.ShadersFile, bundle.Manifest.Shaders);
+        using JsonDocument shaders = JsonDocument.Parse(bundle.Files[Fc2ModelBundle.ShadersFile]);
+        JsonElement colour = shaders.RootElement.GetProperty("Weapon").GetProperty("parameters")
+            .EnumerateArray().First(p => p.GetProperty("name").GetString() == "DiffuseColor1");
+        Assert.Equal("Float", colour.GetProperty("section").GetString());
+        Assert.True(colour.GetProperty("is_color").GetBoolean());
 
         // Every entry's content is present and hashes to what the manifest says.
         foreach (Fc2ModelEntry entry in bundle.Manifest.Entries)
@@ -249,6 +258,7 @@ public sealed class Fc2ModelBundleTests
             ".xbm" => "Xbm",
             ".xbt" => "Texture",
             ".skeleton" => "Skeleton",
+            ".xml" => "Xbm",
             _ => "Mab",
         })(gamePath);
 }

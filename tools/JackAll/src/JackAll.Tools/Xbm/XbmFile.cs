@@ -1,10 +1,12 @@
 using System.Globalization;
+using System.Text.Json.Serialization;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Tools.Xbg;
 
 namespace JackAll.Tools.Xbm;
 
+[JsonConverter(typeof(JsonStringEnumConverter<XbmSection>))]
 public enum XbmSection
 {
     Texture,

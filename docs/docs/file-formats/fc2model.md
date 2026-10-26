@@ -100,6 +100,25 @@ The ceilings are declared by the pack rather than hardcoded by whatever opens it
 no second place to drift from. They are properties of the container's `u16` fields, measured over
 every shipped mesh — see [Authoring ceilings](./xbm-xbg.md#authoring-ceilings).
 
+### `shaders` — what every material can be given
+
+`"shaders": "shaders.json"` names a file holding every shader's properties, keyed by the name a
+material spells it, aliases included:
+
+```json
+{"Weapon": {"name": "Weapon", "parameters": [
+  {"name": "DiffuseColor1", "section": "Float", "width": 4, "group": "Diffuse", "is_color": true},
+  {"name": "DiffuseTexture1", "section": "Texture", "width": 0, "group": "Diffuse"}, …]}}
+```
+
+It is the game's own `descriptors.xml` as JackAll reads it, with what retail never stores left out
+and what retail stores that it does not declare added in — see
+[What retail stores against what the descriptor declares](./xbm-xbg.md#what-retail-stores-against-what-the-descriptor-declares).
+`section` is where a value lives in the material document: `textures`, `floats` or `integers`. A
+parameter `Clean`- and `Broken`-suffixed twins of which both exist is a colour a weapon's or
+vehicle's condition overwrites from those twins. The field is absent when the install's file could
+not be read, so an editor treats the schema as optional.
+
 ### The pack's own conventions, not the file's
 
 A pack is not a Dunia format, and it does not inherit Dunia's conventions. The one that catches

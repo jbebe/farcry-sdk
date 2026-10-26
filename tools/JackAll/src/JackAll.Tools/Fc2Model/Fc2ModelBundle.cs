@@ -125,6 +125,9 @@ public sealed class Fc2ModelManifest
     /// </remarks>
     public string? Actor { get; set; }
 
+    /// <summary>The file holding every shader's properties, by name; null when the install's could not be read.</summary>
+    public string? Shaders { get; set; }
+
     public string? Credits { get; init; }
 
     public Fc2ModelLimits Limits { get; init; } = new();
@@ -158,6 +161,7 @@ public sealed class Fc2ModelBundle
 
     public const string ActorFolder = "actor/";
     public const string ManifestFile = "manifest.json";
+    public const string ShadersFile = "shaders.json";
     public const string Extension = ".fc2model";
 
     public const string Owned = "owned";

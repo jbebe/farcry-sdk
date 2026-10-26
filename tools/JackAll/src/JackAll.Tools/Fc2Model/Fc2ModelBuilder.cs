@@ -111,6 +111,14 @@ public static class Fc2ModelBuilder
             bundle.Manifest.Clips.Add(Index(bank, clipPath, file, Fc2ModelBundle.Stem(modelPath)));
         }
 
+        // So an editor can offer a material's properties without the game's own file to read them from.
+        if (readByPath(ShaderSchema.GamePath) is { } descriptors)
+        {
+            bundle.Files[Fc2ModelBundle.ShadersFile] =
+                JsonSerializer.SerializeToUtf8Bytes(ShaderSchema.Parse(descriptors).Shaders, Json);
+            bundle.Manifest.Shaders = Fc2ModelBundle.ShadersFile;
+        }
+
         AddActor(bundle, actor, actorRig, readByPath, modelPath, usage);
         return bundle;
     }
