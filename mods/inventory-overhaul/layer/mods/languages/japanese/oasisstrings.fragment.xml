@@ -1,0 +1,5 @@
+<oasisstrings>
+  <section name="Actions">
+    <string enum="toggle_notebook" value="手帳" />
+  </section>
+</oasisstrings>

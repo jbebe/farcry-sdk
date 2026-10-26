@@ -19,6 +19,7 @@ include("${DEVTOOLS_INCLUDE_DIR}/devtools_imgui.cmake")
 add_library(InventoryOverhaul SHARED
   "src/main.cpp"
   "src/items.cpp"
+  "src/notebook.cpp"
   "src/test_window.cpp"
   "src/two_guns.cpp"
   "src/engine/economy.cpp"

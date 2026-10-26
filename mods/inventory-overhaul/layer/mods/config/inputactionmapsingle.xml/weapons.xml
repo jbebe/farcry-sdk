@@ -1,0 +1,12 @@
+<ActionMap name="weapons">
+	<Import actionmap="common_weapons" />
+	<Import actionmap="system" />
+	<Import actionmap="common_gadget_remap" optional="" />
+	<Import actionmap="common_notebook_remap" optional="" />
+	<Binding input="pad:back" action="press" signal="toggle_gadget" />
+	<Binding input="kb:5" action="press" signal="toggle_gadget" />
+	<Binding input="kb:tab" action="press" signal="toggle_notebook" />
+	<NoResend input="pad:back" />
+	<NoResend input="kb:5" />
+	<NoResend input="kb:tab" />
+</ActionMap>

@@ -1,0 +1,5 @@
+<oasisstrings>
+  <section name="Actions">
+    <string enum="toggle_notebook" value="Блокнот" />
+  </section>
+</oasisstrings>

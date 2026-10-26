@@ -7,7 +7,8 @@ this is an FCSE plugin, built in the log's steps.
 | Step | What it does | Status |
 |---|---|---|
 | 1. Two guns | gun 1 on key 2, gun 2 on key 3, of any class; a third gun replaces the one in hand | works in game |
-| 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay | built, not seen in game |
+| 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay | works in game |
+| 3. The notebook on Tab | a new Notebook control brings the map out with its notebook face up; the map's own mesh and paper stand in | built, not seen in game |
 
 ## Two guns
 
@@ -59,6 +60,29 @@ Until the notebook exists, a window in DevTools' overlay (Home) shows both slots
 Stow, Take, Give and Discard, and +1 on the diamonds, which runs `#Game:AddDiamonds(1)`. Its buttons
 are carried out on the game thread, the next time the HUD asks for the player's gun.
 
+## The notebook
+
+The notebook is the map held in hand with its other face up (`src/notebook.cpp`). A new control,
+**Notebook** (Tab, rebindable in Options > Controls), sends `toggle_notebook`; the plugin passes it
+on as the map key's `toggle_gadget`, so the map comes out exactly as it does on its own key, and
+remembers which face is up. While it is out, Tab and the map key turn it to their own face, and put
+it away when their face is already up. `CGadgetMapStrategy::OnEquip` and `OnUnequip` say when the
+map is really out. The signals are caught at the entry of the game's signal dispatcher, which
+DevTools hooks too; FCSE stacks the two.
+
+| File | What it is |
+|---|---|
+| `layer/mods/config/defaultusercontrols.xml/CATEGORY_MISC.xml` | the Notebook control, on Tab |
+| `layer/mods/config/inputactionmapsingle.xml/weapons.xml` | Tab bound to `toggle_notebook` where the map key is bound |
+| `layer/mods/languages/<language>/oasisstrings.fragment.xml` | the control's name in each language |
+
+The notebook works on foot only for now: the driving controls are left as they are.
+
 ## Testing
 
-`build.ps1 -Install "<game>\bin"` builds the plugin and copies it into `bin\plugins\`.
+`build.ps1 -Install "<game>\bin"` builds the plugin and copies it into `bin\plugins\`. The layer goes
+in with JackAll, alongside every other layer the install carries:
+
+```
+tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe mod build --game "C:\Games\Far Cry 2" --layer <each layer> --layer mods\inventory-overhaul\layer
+```
