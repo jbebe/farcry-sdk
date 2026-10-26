@@ -9,6 +9,7 @@ namespace {
     constexpr const char* kMachineGunner = "enemy_archetypes.Red_Faction.LightMachineGunner_Caucasian";
     constexpr const char* kShotgunner = "enemy_archetypes.Red_Faction.ShotgunMan_Caucasian";
     constexpr const char* kSniper = "enemy_archetypes.Red_Faction.Sniper_Caucasian";
+    constexpr const char* kRocketMan = "enemy_archetypes.Red_Faction.RocketMan_Caucasian";
     // Only the sniper holds a post: a soldier spawned onto one is blind while he settles onto it,
     // seconds a scenario that starts in plain sight cannot spare.
     constexpr const char* kSniperPost = "STP_archetypes.Special.SniperPoint";
@@ -27,6 +28,7 @@ namespace {
     constexpr Soldier kSideOnAt30[] = {{kRifleman, {60, 110, 0}}};
     constexpr Soldier kShotgunnerAt10[] = {Lane(kShotgunner, 10)};
     constexpr Soldier kShotgunnerAt40[] = {Lane(kShotgunner, 40)};
+    constexpr Soldier kRocketManAt40[] = {Lane(kRocketMan, 40)};
 
     constexpr Scenario kDuelLane[] = {
         {"Rifleman at 10 m", "4, 7", kRiflemanAt10,
@@ -54,6 +56,10 @@ namespace {
         {"Shotgunner at 40 m", "8", kShotgunnerAt40,
          "Stand in the open.",
          "A much lower chance than at 10 m, and than a rifleman's at 40 m."},
+        {"Rocket man at 40 m", "18", kRocketManAt40,
+         "Stand in the open, on foot.",
+         "No rocket at you. He fires his pistol or SMG; the first time, he may raise the launcher and "
+         "put it away unfired."},
     };
 
     constexpr Soldier kLowWallRifleman[] = {{kRifleman, {100, 70, 180}}};

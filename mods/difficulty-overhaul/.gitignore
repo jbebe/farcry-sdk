@@ -4,3 +4,5 @@ out/
 # does not leave the tree dirty.
 stage/
 *.zip
+# The merc brain layer: game files, made by build-layer.ps1.
+/layer/

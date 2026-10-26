@@ -110,6 +110,30 @@ it changes; they interrupt plans the same way. Tasks share state through the age
 the target's current position and for its blackboard `BestTargetLastPosSeen`. The bands are
 constants in code.
 
+### Sniping
+
+The chain's sniping link takes a soldier whose archetype sets `bHasALongRangeWeapon`
+(`CPawnAgent::HasALongRangeWeapon` returns the flag as is) once his target is farther than the brain's
+`SnipingRange`, 20 m in `mercbrain`. Rocket men set it, so beyond 20 m they snipe. `CombatSnipingPlan`
+then draws the special weapon and stays until the target comes within 15 m. The **traced in the
+server build** parts:
+
+- **What he fires depends on the weapon in hand.** The shoot phase tests it with
+  `CTaskCheckPlayerAction` and `CheckPlayer` 0, which reads the soldier's own equipped weapon's class
+  (`CheckWeaponMatch`). `PlayerWeapon` 0 is a flamethrower, 1 a mounted weapon, 2 a machete,
+  3 a sniper rifle, 4 an RPG, 5 a Carl Gustav, 6 a mortar, 7 a shotgun, 8 a pistol, 9 an assault rifle,
+  10 an SMG and 11 an LMG. An RPG or a Carl Gustav fires through the rocket loop and a mortar through
+  the mortar loop; anything else, a sidearm included, through the sniper loop.
+- **No task can test a weapon he is not holding.** To learn what his special weapon is, the soldier
+  must draw it.
+- **Closer than 20 m he uses his sidearm.** The range-band plans run a fire strategy that swaps a
+  special weapon for the primary or secondary.
+- **`CTaskSwitchWeapon` with `weaponSelected` primary draws the secondary when he has no primary.**
+  `desiredWeaponClass`, when he carries that category, overrides it.
+
+Difficulty Overhaul's brain keeps the launcher for a player in a vehicle
+([design log](../design/difficulty.md)).
+
 ## Squads
 
 Every army is run by a `CDispatcherSquadLieutenant`, a C++ commander above the individual brains. It
