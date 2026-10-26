@@ -23,12 +23,6 @@ NORMAL1 = "NormalTexture1"
 # A character's skin and a cloth material name their albedo differently.
 ALBEDO_SLOTS = (DIFFUSE1, "SkinTexture", "FabricTexture")
 
-# The material's own internal name and shader, kept apart from the game path the
-# importer stores - one property used to carry both, so resolving the textures
-# overwrote the path with the name and lost it.
-PROP_MATERIAL_NAME = "fc2_material_name"
-PROP_SHADER = "fc2_shader"
-
 # Which slot a node stands for, so an export can match an image back to the slot
 # it came from and a rule can tell an edited chain from a rebuilt one.
 PROP_SLOT = "fc2_slot"
@@ -63,6 +57,12 @@ def albedo(definition):
 
 def tiling(definition, slot, default=(1.0, 1.0)):
     return tuple(floats(definition).get(slot, default))
+
+
+def pack_images(pack):
+    """Game path to Blender image for every texture the pack carries, each loaded once."""
+    cache = {}
+    return lambda game_path: _image(game_path, pack, cache)
 
 
 def _image(game_path, pack, cache):
@@ -149,7 +149,7 @@ def _base_tint(tree, values, weight, location):
     return node.outputs["Color"]
 
 
-def _normal(tree, slots, pack, cache, definition, principled):
+def _normal(tree, slots, image_for, definition, principled):
     """A normal map through a Normal Map node, which is the only correct route.
 
     The game stores the vector in two channels - X in the alpha, Y in the colour
@@ -163,7 +163,7 @@ def _normal(tree, slots, pack, cache, definition, principled):
     """
     if NORMAL1 not in slots:
         return
-    image = _image(slots[NORMAL1], pack, cache)
+    image = image_for(slots[NORMAL1])
     if image is None:
         return
     # The alpha is a coordinate rather than coverage, so Blender must not fold it
@@ -189,7 +189,7 @@ def _normal(tree, slots, pack, cache, definition, principled):
     tree.links.new(principled.inputs["Normal"], normal_map.outputs["Normal"])
 
 
-def _specular(tree, slots, pack, cache, definition, values, principled):
+def _specular(tree, slots, image_for, definition, values, principled):
     """Specular as the engine has it: a per-texel map, a colour, and a power.
 
     1,889 shipped materials carry the map. Blender's Principled has no direct
@@ -206,7 +206,7 @@ def _specular(tree, slots, pack, cache, definition, values, principled):
 
     if SPECULAR1 not in slots:
         return
-    image = _image(slots[SPECULAR1], pack, cache)
+    image = image_for(slots[SPECULAR1])
     if image is None:
         return
 
@@ -239,8 +239,9 @@ def _vertex_colour(tree, weight, location):
     return node.outputs["Color"]
 
 
-def build(material, definition, pack, cache):
-    """Wire an existing Blender material to the textures its document names."""
+def build(material, definition, image_for):
+    """Wire a Blender material to the textures its document names, each resolved by
+    `image_for` from its game path."""
     material.use_nodes = True
     tree = material.node_tree
     tree.nodes.clear()
@@ -250,18 +251,15 @@ def build(material, definition, pack, cache):
     principled.location = (2 * COLUMN, 0)
     tree.links.new(output.inputs["Surface"], principled.outputs["BSDF"])
 
-    material[PROP_SHADER] = definition.get("shader", "")
-    material[PROP_MATERIAL_NAME] = definition.get("name", "")
-
     slots = textures(definition)
     values = floats(definition)
-    first = _image(albedo(definition), pack, cache) if albedo(definition) else None
+    first = image_for(albedo(definition)) if albedo(definition) else None
     if first is None:
         return False
 
     # The mask supplies both weights: green blends in layer 2, blue chooses how
     # far layer 1's tint moves from DiffuseColorBase towards DiffuseColor1.
-    mask = _image(slots[MASK1], pack, cache) if MASK1 in slots else None
+    mask = image_for(slots[MASK1]) if MASK1 in slots else None
     layer_weight = tint_weight = None
     if mask is not None:
         mask_node = _texture_node(tree, mask, MASK1, tiling(definition, "MaskTiling1"),
@@ -290,7 +288,7 @@ def build(material, definition, pack, cache):
         tree.links.new(node.inputs["Color2"], tint)
         colour = node.outputs["Color"]
 
-    second = _image(slots[DIFFUSE2], pack, cache) if DIFFUSE2 in slots else None
+    second = image_for(slots[DIFFUSE2]) if DIFFUSE2 in slots else None
     if second is not None and layer_weight is not None:
         second_node = _texture_node(tree, second, DIFFUSE2,
                                     tiling(definition, "DiffuseTiling2"), (0, -ROW))
@@ -305,8 +303,8 @@ def build(material, definition, pack, cache):
 
     tree.links.new(principled.inputs["Base Color"], colour)
     principled.inputs["Roughness"].default_value = 0.6
-    _specular(tree, slots, pack, cache, definition, values, principled)
-    _normal(tree, slots, pack, cache, definition, principled)
+    _specular(tree, slots, image_for, definition, values, principled)
+    _normal(tree, slots, image_for, definition, principled)
     _alpha(tree, base, definition, principled, material)
     return True
 

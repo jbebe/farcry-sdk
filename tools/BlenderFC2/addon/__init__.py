@@ -15,7 +15,8 @@ from bpy_extras.io_utils import ExportHelper, ImportHelper
 
 from mathutils import Matrix
 
-from . import convert, export_mab, export_xbg, import_mab, import_xbg, panel
+from . import (convert, export_mab, export_xbg, import_mab, import_xbg, material_data,
+               material_panel, panel)
 from .pack import EXTENSION, Pack, bank_label, bank_order, read_manifest
 
 # What the bone enum holds when a part is placed by nothing.
@@ -434,13 +435,14 @@ class FC2_OT_export_pack(bpy.types.Operator, ExportHelper):
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
 
+        materials = ", %d material(s)" % result["materials"] if result["materials"] else ""
         if not result["moved"] and not result["resized"] and not result["added"]:
-            self.report({"INFO"}, "Wrote the pack unchanged: nothing in LOD%d was edited"
-                        % result["lod"])
+            self.report({"INFO"}, "Wrote the pack with nothing in LOD%d edited%s"
+                        % (result["lod"], materials))
         else:
             added = ", %d added" % result["added"] if result["added"] else ""
-            self.report({"INFO"}, "Wrote %d parts at LOD%d, %d rebuilt%s"
-                        % (result["parts"], result["lod"], result["resized"], added))
+            self.report({"INFO"}, "Wrote %d parts at LOD%d, %d rebuilt%s%s"
+                        % (result["parts"], result["lod"], result["resized"], added, materials))
         return {"FINISHED"}
 
 
@@ -459,11 +461,14 @@ CLASSES = (FC2_OT_import_pack, FC2_OT_load_clip, FC2_OT_write_clip, FC2_OT_retim
 
 
 def register():
+    # Before the operators: an import fills Material.fc2, which has to exist by then.
+    material_data.register()
     for cls in CLASSES:
         bpy.utils.register_class(cls)
     # After the operators: the panel's buttons name them, and a panel drawn
     # against an unregistered operator is a poll error on the first redraw.
     panel.register()
+    material_panel.register()
     bpy.types.TOPBAR_MT_file_import.append(menu_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_export)
 
@@ -471,6 +476,8 @@ def register():
 def unregister():
     bpy.types.TOPBAR_MT_file_export.remove(menu_export)
     bpy.types.TOPBAR_MT_file_import.remove(menu_import)
+    material_panel.unregister()
     panel.unregister()
     for cls in reversed(CLASSES):
         bpy.utils.unregister_class(cls)
+    material_data.unregister()

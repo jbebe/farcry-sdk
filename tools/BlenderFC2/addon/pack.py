@@ -85,6 +85,17 @@ def read_manifest(path):
         return _manifest(archive, path)
 
 
+def read_schema(path):
+    """The manifest and every shader's properties by name, without unpacking anything else.
+
+    A pack written before JackAll carried the shaders has none, and gets an empty dict.
+    """
+    with zipfile.ZipFile(path) as archive:
+        manifest = _manifest(archive, path)
+        name = manifest.get("shaders")
+        return manifest, json.loads(archive.read(name)) if name else {}
+
+
 def _manifest(archive, path):
     manifest = json.loads(archive.read(MANIFEST))
     if manifest.get("format") != FORMAT:

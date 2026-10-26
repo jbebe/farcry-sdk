@@ -13,7 +13,8 @@ import math
 import bpy
 from mathutils import Matrix, Vector
 
-from . import convert, materials, model as fc2model, rig
+from . import convert, material_data, materials, model as fc2model, rig
+from .material_data import PROP_MATERIAL_PATH
 from .pack import EXTENSION, Pack, stem
 
 # Custom properties carried so an export can rebuild what it did not author.
@@ -33,11 +34,6 @@ PROP_NEW_PART = "fc2_new_part"
 # Marks the body a pack carries for its clips to pose, so a check or an export
 # can tell it apart from the model those are about.
 PROP_ACTOR_OF = "fc2_actor_of"
-
-# The material's game path, which is its identity in the pack. Kept apart from
-# the material's own internal name (see materials.PROP_MATERIAL_NAME) - one file
-# used to carry both, so resolving textures overwrote the path with the name.
-PROP_MATERIAL_PATH = "fc2_material_path"
 
 # Where a part was placed at import, so an export can tell that the modeler
 # moved the object rather than its vertices - which export silently discards.
@@ -175,11 +171,15 @@ def _material(cache, path, pack):
         definition = pack.material(path) if pack else None
         if definition is not None:
             try:
-                materials.build(material, definition, pack, cache.setdefault("_images", {}))
+                material_data.load(material, definition, cache[IMAGES])
             except Exception as error:
                 print("fc2: material %s: %s" % (path, error))
         cache[path] = material
     return cache[path]
+
+
+# The material cache's entry for resolving a game path to an image.
+IMAGES = "_images"
 
 
 def build_part(part, mesh, collection, material_cache, armature, pack):
@@ -267,11 +267,10 @@ def build(pack, name, lod=0, with_armature=True, with_textures=True, origin=""):
     collection[PROP_LOD] = lod
 
     armature = build_armature(mesh, name, collection, pack.rig()) if with_armature else None
-    cache = {}
+    cache = {IMAGES: materials.pack_images(pack) if with_textures else lambda _path: None}
     # Without an armature there is nothing to parent to, so bake the placement
     # into the vertices instead.
-    parts = [build_part(part, mesh, collection, cache, armature,
-                        pack if with_textures else None)
+    parts = [build_part(part, mesh, collection, cache, armature, pack)
              for part in fc2model.parts_at(mesh, lod, place=armature is None)]
     built = {"pack": pack, "mesh": mesh, "collection": collection,
              "armature": armature, "parts": parts}

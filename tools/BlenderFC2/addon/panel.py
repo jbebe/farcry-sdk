@@ -78,7 +78,7 @@ class FC2_OT_check(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return _pack_path(context) is not None
+        return pack_path(context) is not None
 
     def execute(self, context):
         state = context.scene.fc2
@@ -167,13 +167,13 @@ class FC2_OT_motion_table(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return _pack_path(context) is not None
+        return pack_path(context) is not None
 
     def execute(self, context):
         state = context.scene.fc2
         state.bones.clear()
         try:
-            pack = Pack.load(_pack_path(context))
+            pack = Pack.load(pack_path(context))
             table = motion.table(pack)
         except Exception as error:
             self.report({"ERROR"}, str(error))
@@ -233,7 +233,7 @@ class FC2_OT_sight_picture(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return _pack_path(context) is not None
+        return pack_path(context) is not None
 
     def execute(self, context):
         collection = _collection(context)
@@ -251,7 +251,7 @@ class FC2_OT_sight_picture(bpy.types.Operator):
                         % sight.PART)
             return {"CANCELLED"}
 
-        pose = motion.aim_pose(Pack.load(_pack_path(context)))
+        pose = motion.aim_pose(Pack.load(pack_path(context)))
         if pose is None:
             self.report({"ERROR"}, "No bank in this pack aims down the weapon, so there is "
                                    "nowhere to put the eye. Re-export with --clips.")
@@ -280,7 +280,7 @@ class FC2_PT_model(FC2_PT_base):
 
     def draw(self, context):
         layout = self.layout
-        path = _pack_path(context)
+        path = pack_path(context)
         if path is None:
             layout.label(text="No model pack imported.", icon="INFO")
             layout.operator("import_scene.fc2_pack", icon="IMPORT")
@@ -338,9 +338,9 @@ class FC2_PT_check(FC2_PT_base):
         row = state.findings[state.active]
         box = layout.box()
         box.label(text=row.code, icon=ICONS.get(row.severity, "INFO"))
-        _wrapped(box, row.message)
+        wrapped(box, row.message)
         if row.hint:
-            _wrapped(box, row.hint, icon="LIGHT")
+            wrapped(box, row.hint, icon="LIGHT")
         if row.target_object:
             box.operator("object.fc2_select_finding", icon="RESTRICT_SELECT_OFF")
 
@@ -351,7 +351,7 @@ class FC2_PT_animation(FC2_PT_base):
 
     def draw(self, context):
         layout = self.layout
-        if _pack_path(context) is None:
+        if pack_path(context) is None:
             layout.label(text="No model pack imported.", icon="INFO")
             return
 
@@ -366,7 +366,7 @@ class FC2_PT_animation(FC2_PT_base):
         layout.operator("object.fc2_sight_picture", icon="CAMERA_DATA",
                         text="Leave sight picture" if zoomed else "Sight picture")
         if zoomed:
-            _wrapped(layout, "%s replaces the rest of the model while zoomed, so this is the "
+            wrapped(layout, "%s replaces the rest of the model while zoomed, so this is the "
                              "whole view. Sizes against each other are exact; the lens angle is "
                              "fitted here, not the game's." % sight.PART, icon="INFO")
         eye = _eye_rig(context)
@@ -386,8 +386,8 @@ class FC2_PT_animation(FC2_PT_base):
             row = state.bones[state.active_bone]
             box = layout.box()
             box.label(text="%s: %.1f deg, %.3f m" % (row.name, row.rotation, row.translation))
-            _wrapped(box, "Worst in %s" % row.clip)
-            _wrapped(box, "A bone that does not move is where the body of the model belongs; "
+            wrapped(box, "Worst in %s" % row.clip)
+            wrapped(box, "A bone that does not move is where the body of the model belongs; "
                           "one that swings is a moving part.", icon="LIGHT")
 
 
@@ -406,7 +406,7 @@ class FC2_PT_export(FC2_PT_base):
         row.operator("export_scene.fc2_pack", icon="EXPORT")
 
 
-def _wrapped(layout, text, icon="NONE", width=44):
+def wrapped(layout, text, icon="NONE", width=44):
     """A message across as many rows as it takes. Blender does not wrap labels."""
     column = layout.column(align=True)
     line = ""
@@ -430,7 +430,7 @@ def _collection(context):
                  and import_mab.PROP_PROP_OF not in c), None)
 
 
-def _pack_path(context):
+def pack_path(context):
     collection = _collection(context)
     return collection.get(import_xbg.PROP_SOURCE) if collection else None
 

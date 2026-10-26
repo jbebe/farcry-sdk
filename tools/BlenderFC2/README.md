@@ -37,7 +37,9 @@ workspace, or `jackall-cli fc2model extract` for a folder to drop into a mod lay
 | `addon/transform.py` | 4x4 helpers, so node world transforms need no `mathutils` |
 | `addon/convert.py` | Every Dunia-to-Blender convention: winding, V flip, bone tails |
 | `addon/import_xbg.py` | Builds the scene: parts, armature, rigid parts on their pivots, skin weights as vertex groups |
-| `addon/materials.py` | Rebuilds the Generic shader as a node graph |
+| `addon/materials.py` | Rebuilds the Generic shader as a node graph, the preview of a material's values |
+| `addon/material_data.py` | A material's document held on the Blender material: its values, and what export writes |
+| `addon/material_panel.py` | The Far Cry 2 panel in the Material properties, laid out by the pack's shader list |
 | `addon/rig.py` | The rig's bone parents, which the armature is built on instead of the mesh's — the knee fix below |
 | `addon/import_mab.py` | Builds an Action from a bank, and marks what it attaches |
 | `addon/export_xbg.py` | Writes edited geometry back into the pack, and appends a part it did not have |
@@ -52,6 +54,7 @@ workspace, or `jackall-cli fc2model extract` for a folder to drop into a mod lay
 | `tests/blender_anim.py` | Poses a character and a weapon, and reads the rotations and offsets back off the rig |
 | `tests/blender_check.py` | Requires every rule to be silent on retail, then fire on exactly one violation |
 | `tests/blender_write.py` | Rewrites one clip and requires every other clip in the bank to survive |
+| `tests/blender_material.py` | Edits a material and requires the `.xbm` JackAll writes from it; refuses a shared one |
 | `tests/blender_transplant.py` | Rebuilds a weapon from a donated mesh with nothing but this add-on, end to end |
 | `tests/render_preview.py` | Renders an imported model to a PNG, for looking at what the importer built |
 | `open_model.py` / `.cmd` | Opens a pack, and optionally a clip, in Blender's UI; quoting-safe in cmd and PowerShell |
@@ -262,6 +265,7 @@ cleanly when either is missing.
 & "C:\Programs\Blender 5.2\blender.exe" -b --python tools\BlenderFC2\tests\blender_anim.py
 & "C:\Programs\Blender 5.2\blender.exe" -b --python tools\BlenderFC2\tests\blender_check.py
 & "C:\Programs\Blender 5.2\blender.exe" -b --python tools\BlenderFC2\tests\blender_write.py
+& "C:\Programs\Blender 5.2\blender.exe" -b --python tools\BlenderFC2\tests\blender_material.py
 & "C:\Programs\Blender 5.2\blender.exe" -b --python tools\BlenderFC2\tests\blender_transplant.py
 ```
 
@@ -313,6 +317,27 @@ does not, so rebuild and reinstall after changing code, or disable the extension
 
 The manifest declares `SPDX:Unlicense` to match the repository root; `tools/JackAll` uses a different
 licence, so change it here if this should follow that instead.
+
+## Materials
+
+**Properties ▸ Material ▸ Far Cry 2** holds the material's own values, the same ones JackAll's editor
+shows: its name, its shader, and every property grouped the way the shader groups them. The pack's
+`shaders.json` says what a shader takes; **Show every property the shader takes** lists the unset ones
+with a **+** that adds one at the descriptor's default, and **×** drops one so the shader's default
+applies. A texture slot takes any image the pack loaded, and its game path follows the image.
+
+The values are what export writes and the node graph is a picture of them: an edit rebuilds the
+graph, so rewiring the graph by hand changes nothing in the file. Export writes a material only when
+its values differ from the pack's, compared as the float32 the file stores, so an untouched one is
+never rewritten.
+
+A weapon's or vehicle's condition overwrites a colour from its `Clean` and `Broken` twins, which sit
+under it as indented rows. **Set Clean twins along** makes setting the colour set `Clean` too;
+`Broken` is the worn look and stays as it is.
+
+**A material the model shares is read-only.** Editing one would change every other model that draws
+with it, so the panel greys it out and export refuses it. Whether a material is the model's own
+comes from the pack: an export from JackAll.App, or one with an `xref` index built, counts users.
 
 ## The viewport tells the truth
 

@@ -108,8 +108,8 @@ def pack(model_path, clips=(), rig=None):
     os.makedirs(directory, exist_ok=True)
     # The clips and rig are part of the name: a pack built for one bank is not the
     # pack built for another, and reusing the file would silently test the first
-    # one twice.
-    stamp = hashlib.sha256(repr(key).encode()).hexdigest()[:8]
+    # one twice. So is the JackAll build, or a pack it no longer writes would be.
+    stamp = hashlib.sha256(repr((key, os.path.getmtime(CLI))).encode()).hexdigest()[:8]
     out = os.path.join(directory, "%s-%s.fc2model" % (
         os.path.splitext(os.path.basename(model_path))[0], stamp))
     if not os.path.exists(out):

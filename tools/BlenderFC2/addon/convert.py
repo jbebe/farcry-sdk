@@ -7,6 +7,7 @@
 # every bone is its node turned a quarter about Z.
 
 import math
+import struct
 
 import mathutils
 
@@ -14,6 +15,16 @@ BONE_AXES = mathutils.Matrix.Rotation(-math.pi / 2.0, 4, "Z")
 _NODE_AXES = BONE_AXES.inverted()
 _TURN = BONE_AXES.to_quaternion()
 _TURN_BACK = _TURN.inverted()
+
+
+def f32(value):
+    """A number as the float32 the file will hold, widened back to a double.
+
+    The pack's numbers are the shortest decimal that round-trips through a float, and
+    Blender hands back the float widened to a double - the same value, spelled
+    differently, so comparing the doubles calls every untouched value changed.
+    """
+    return struct.unpack("<f", struct.pack("<f", value))[0]
 
 
 def triangle(corners):

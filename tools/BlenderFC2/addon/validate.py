@@ -11,7 +11,7 @@
 
 import bpy
 
-from . import export_xbg, materials, rules
+from . import export_xbg, material_data, materials, rules
 from .import_xbg import PROP_MATERIAL_PATH, PROP_PART
 from .rules import ERROR, WARNING, Finding, Target
 
@@ -330,14 +330,17 @@ def _alpha_levels(image):
 
 def _material(material, pack):
     path = material.get(PROP_MATERIAL_PATH, "")
-    definition = pack.material(path) if path else None
-    if definition is None:
+    original = pack.material(path) if path else None
+    if original is None:
         # A material an .xbg embeds has no file, so the pack cannot carry it -
         # four of the 7,496 shipped material names, none of them weapons.
         return []
 
+    # The document export would write, so the rules judge what reaches the pack.
+    definition = material_data.document(material) if material_data.held(material) else original
     entry = pack.entry(path)
-    out = rules.check_edit(entry) if entry is not None and _edited(material) else []
+    edited = not material_data.same(definition, original)
+    out = rules.check_edit(entry) if entry is not None and edited else []
     return out + rules.check_material(
         material.name,
         definition.get("shader", ""),
@@ -347,18 +350,6 @@ def _material(material, pack):
          if len(value) == 2},
         lambda texture: (pack.entry(texture) or entry) is not None
         and (pack.entry(texture).owned if pack.entry(texture) else False))
-
-
-def _edited(material):
-    """Whether the shader graph was rebuilt rather than the one import wired.
-
-    Import tags every node it makes with the slot it stands for, so a graph with
-    an untagged image node in it is one a modeler changed.
-    """
-    if not material.use_nodes:
-        return False
-    return any(node.type == "TEX_IMAGE" and materials.PROP_SLOT not in node
-               for node in material.node_tree.nodes)
 
 
 def _driven(material):

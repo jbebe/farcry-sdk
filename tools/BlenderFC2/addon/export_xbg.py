@@ -15,11 +15,10 @@
 # vertex wins.
 
 import os
-import struct
 
 import bpy
 
-from . import convert, model as fc2model
+from . import convert, material_data, model as fc2model
 from .import_mab import PROP_PROP_OF
 from .import_xbg import (
     ATTR_NORMAL, PROP_LOD, PROP_MATERIAL_PATH, PROP_NEW_PART, PROP_SOURCE, PROP_SUBMESH)
@@ -183,11 +182,12 @@ def _material_index(obj, mesh):
 
 
 def save(path, collection, recompute_tangents=False):
-    """Rebuild the collection's LOD in its source pack and write the pack out."""
+    """Rebuild the collection's LOD and its materials in its source pack and write the pack out."""
     built = build_mesh(collection, recompute_tangents)
     pack = built["pack"]
     if built["moved"] or built["resized"] or built["added"]:
         pack.replace_document(pack.model, built["mesh"])
+    built["materials"] = material_data.write(pack, collection)
     pack.save(path)
     return built
 
@@ -278,12 +278,7 @@ def _put(geometry, key, values):
     A component the geometry does not carry is left absent even when Blender
     could supply one: the buffer's layout is fixed, so an extra UV set has
     nowhere to go and inventing an array would have JackAll pack it into a
-    buffer with no room for it.
-
-    The comparison rounds to float32 first. The pack's numbers were written as
-    the shortest decimal that round-trips through a float, and Blender hands
-    back the float widened to a double - the same value, spelled differently, so
-    comparing the doubles calls every vertex moved.
+    buffer with no room for it. Compared as float32, see `convert.f32`.
     """
     if key not in geometry:
         return False
@@ -298,12 +293,7 @@ def _put(geometry, key, values):
 def _same(before, after):
     if len(before) != len(after):
         return False
-    return all(_f32(a) == _f32(b) for a, b in zip(before, after))
-
-
-def _f32(value):
-    """A number as the float32 the file will hold, widened back to a double."""
-    return struct.unpack("<f", struct.pack("<f", value))[0]
+    return all(convert.f32(a) == convert.f32(b) for a, b in zip(before, after))
 
 
 def _flat(points):
