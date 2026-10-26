@@ -61,6 +61,7 @@ add_library(DevTools SHARED
   "src/engine/process_stats.cpp"
   "src/engine/renderer.cpp"
   "src/engine/spawn.cpp"
+  "src/engine/vtable.cpp"
   "src/engine/weather.cpp"
   "src/engine/world_draw.cpp"
   "src/fixes/load_savegame.cpp"

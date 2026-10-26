@@ -45,9 +45,11 @@ Two windows exist before the game's own, and neither is the one to draw into:
 
 `NomadTool9` is the same trick an overlay wants. The engine
 `LoadLibraryA("d3d9.dll")`, `GetProcAddress`es `Direct3DCreate9`, creates a device against that 1×1
-window, and asks it what the hardware can do. Anyone who needs `IDirect3DDevice9`'s vtable can do
-precisely this and release the device again: every device in the process shares d3d9.dll's vtable, so
-one device of your own names the functions the game's device will call.
+window, and asks it what the hardware can do. Anyone who needs `IDirect3DDevice9`'s functions can do
+precisely this: one device of your own names the functions the game's device will call. **Copy the
+vtable's slots before releasing that device.** A wrapper such as an overlay can keep the vtable inside
+the device object and free it with the device; DevTools read the table after releasing its device and
+crashed at startup on such a machine.
 
 ### EndScene is not once a frame
 
@@ -662,15 +664,15 @@ viewport's edge is already where a rasteriser interpolating to a pixel centre ex
 
 ### Which device vtable slots the repo's plugins hold
 
-`IDirect3DDevice9`'s vtable is shared by every device in the process, so a throwaway device created
-at load is enough to read a slot from. No `Dunia.dll` address is involved and none of it is
-build-specific.
+The game's device runs the same functions as a throwaway device created at load, so the slots are
+read from one of those, copied before it is released. No `Dunia.dll` address is involved and none of
+it is build-specific.
 
 | Slot | Function | Held by |
 |---|---|---|
 | 16 | `Reset` | DevTools |
 | 17 | `Present` | DevTools |
-| 42 | `EndScene` | Sky Overhaul |
+| 42 | `EndScene` | Sky Overhaul, DevTools (the AI view, in the sky pass) |
 | 82 | `DrawIndexedPrimitive` | Sky Overhaul |
 | 94 | `SetVertexShaderConstantF` | Sky Overhaul |
 | 109 | `SetPixelShaderConstantF` | Sky Overhaul |

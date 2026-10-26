@@ -360,7 +360,9 @@ That visibility is compared with two thresholds that depend on the brain state.
 | special, dead, vehicle | `m_Special…`, `m_Dead…`, `m_Vehicle…` | |
 
 *Fuzzy* is where he starts to sense something, *clear* where he positively sees the player. One
-caller path lowers *clear* to *fuzzy*, so the first hint is already a sighting.
+caller path lowers *clear* to *fuzzy*, so the first hint is already a sighting. The pair in force sits
+on the agent at `+0x7CC`/`+0x7D0` in the server build and `+0x868`/`+0x86C` in `Dunia.dll` (Steam),
+where the threat search reads it through one getter (`0x10960730`). This is **RE-verified** in both.
 
 ### Intuition
 

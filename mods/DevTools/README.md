@@ -86,10 +86,10 @@ are strips three pixels wide that turn to face the camera. For each soldier:
   update, in blue, as translucent sectors on the ground at his feet (with the Difficulty Overhaul,
   the wider one spans 180°);
 - a white line where his head points;
-- a line to your head and a bar above his, coloured by how visible you are to him: grey below 0.3,
-  yellow from 0.3 (noticed), orange from 0.4 (a fighting soldier fires), red from 0.5 (an idle or
-  alert soldier recognises an enemy). The bar is a metre tall at full visibility, with ticks at 0.3,
-  0.4, 0.5 and 1;
+- a line to your head and a bar above his, coloured by how visible you are to him against his own
+  thresholds, which his state sets: grey below the point where he senses something, yellow from it,
+  red from the point where he sees you as an enemy. The bar is a metre tall at full visibility, with
+  ticks at his two thresholds and at 1;
 - a magenta cross where he last perceived you, joined to him while he cannot see you plainly.
 
 The data is copied out of each soldier's vision update (`CSensorySystem::AddTargetDataToKB`), so a

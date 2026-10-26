@@ -16,6 +16,7 @@
 // it for, and the UI that does the asking.
 #include "fcse_api.h"
 
+#include "engine/ai_sight.h"
 #include "engine/camera.h"
 #include "engine/console.h"
 #include "engine/debug_camera.h"
@@ -27,6 +28,7 @@
 #include "engine/pawn_tick.h"
 #include "engine/player.h"
 #include "engine/weather.h"
+#include "engine/world_draw.h"
 #include "options/options.h"
 #include "overlay/overlay.h"
 
@@ -45,7 +47,6 @@ void InstallInfiniteAmmoHooks();
 void InstallDiamondsHooks();
 void InstallSkipSystemDetectionHook();
 void InstallFastLoadingHooks();
-void InstallAiViewHooks();
 
 namespace {
     // One callback for every option: which one it is arrives as the userdata FCSE hands back.
@@ -149,9 +150,12 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
 
     DevTools::PawnTick::Install();
 
+    // What the AI view draws, and where it draws it.
+    DevTools::AiSight::Install();
+    DevTools::WorldDraw::Install();
+
     InstallSkipSystemDetectionHook();
     InstallFastLoadingHooks();
-    InstallAiViewHooks();
     RegisterOptions(api);
 
     return true;

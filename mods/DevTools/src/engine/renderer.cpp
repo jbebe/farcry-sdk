@@ -1,24 +1,19 @@
-// Every IDirect3DDevice9 in a process shares one vtable, the one inside d3d9.dll, so a device of
-// our own is enough to name the functions the game's device will call - and once those are
-// detoured, the device that arrives is the game's. It is released as soon as its vtable has been
-// read; nothing of ours stays resident until the game's own frames start arriving.
+// The game's device runs the same Present and Reset as a device of our own, so detouring those names
+// the game's device the moment it calls them; nothing of ours stays resident until then.
 //
 // Reset is hooked before Present, and a failure to hook either leaves neither installed. Drawing
 // with Reset unhooked would be the worst of both: ImGui's buffers live in the default pool, so a
 // device reset the overlay never hears about fails outright and takes the game's renderer with it.
 #include "engine/renderer.h"
 
+#include "engine/vtable.h"
 #include "fcse_api.h"
 
 #include <d3d9.h>
 #include <windows.h>
 
-#include <algorithm>
-#include <array>
-
 namespace {
-    // IDirect3DDevice9's vtable, as declared in d3d9.h: its three IUnknown and 116 own methods.
-    constexpr size_t kDeviceSlots = 119;
+    // IDirect3DDevice9's vtable, as declared in d3d9.h.
     constexpr size_t kResetSlot = 16;
     constexpr size_t kPresentSlot = 17;
 
@@ -81,36 +76,6 @@ namespace {
         g_onDeviceLost();
         return g_originalReset(device, params);
     }
-
-    // Builds a device only to copy its vtable, which can go with it: the device is gone before this
-    // returns, and only the copy is read afterwards.
-    std::array<void*, kDeviceSlots> ReadDeviceVtable() {
-        std::array<void*, kDeviceSlots> slots{};
-        IDirect3D9* d3d = Direct3DCreate9(D3D_SDK_VERSION);
-        if (d3d == nullptr) {
-            return slots;
-        }
-
-        D3DPRESENT_PARAMETERS present{};
-        present.Windowed = TRUE;
-        present.SwapEffect = D3DSWAPEFFECT_DISCARD;
-        present.BackBufferFormat = D3DFMT_UNKNOWN;
-        present.hDeviceWindow = GetDesktopWindow();
-
-        IDirect3DDevice9* device = nullptr;
-        HRESULT created = d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, present.hDeviceWindow,
-                                            D3DCREATE_SOFTWARE_VERTEXPROCESSING, &present, &device);
-        if (FAILED(created)) {
-            d3d->Release();
-            return slots;
-        }
-
-        void** vtable = *reinterpret_cast<void***>(device);
-        std::copy_n(vtable, kDeviceSlots, slots.begin());
-        device->Release();
-        d3d->Release();
-        return slots;
-    }
 }
 
 namespace DevTools::Renderer {
@@ -121,8 +86,8 @@ bool Install(DrawFn draw, FrameFn onFrame, DeviceLostFn onDeviceLost) {
     g_onFrame = onFrame;
     g_onDeviceLost = onDeviceLost;
 
-    void* present = DeviceFunction(kPresentSlot);
-    void* reset = DeviceFunction(kResetSlot);
+    void* present = Vtable::Slot(kPresentSlot);
+    void* reset = Vtable::Slot(kResetSlot);
     if (present == nullptr || reset == nullptr) {
         api->Log("renderer: no Direct3D 9 device could be created - the overlay cannot draw");
         return false;
@@ -139,11 +104,6 @@ bool Install(DrawFn draw, FrameFn onFrame, DeviceLostFn onDeviceLost) {
 
     FCSE::Logf("renderer: drawing from Present at 0x%08zX", reinterpret_cast<size_t>(present));
     return true;
-}
-
-void* DeviceFunction(size_t slot) {
-    static const std::array<void*, kDeviceSlots> slots = ReadDeviceVtable();
-    return slot < kDeviceSlots ? slots[slot] : nullptr;
 }
 
 }

@@ -7,8 +7,6 @@
 
 #include "engine/frame_stats.h"
 
-#include <cstddef>
-
 struct IDirect3DDevice9;
 
 namespace DevTools::Renderer {
@@ -26,9 +24,5 @@ using DeviceLostFn = void (*)();
 // Takes over the device's Present and Reset. Call once from FCSE_Load. False means the overlay
 // cannot draw, which it logs, and nothing is left hooked.
 bool Install(DrawFn draw, FrameFn onFrame, DeviceLostFn onDeviceLost);
-
-// The device function at `slot` of IDirect3DDevice9's vtable, as declared in d3d9.h, copied off a
-// device made for the purpose; the game's device runs the same code. Null when none could be made.
-void* DeviceFunction(size_t slot);
 
 }

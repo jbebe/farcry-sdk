@@ -1,6 +1,6 @@
 #include "engine/world_draw.h"
 
-#include "engine/renderer.h"
+#include "engine/vtable.h"
 #include "fcse_api.h"
 
 #include <atomic>
@@ -30,12 +30,9 @@ namespace {
     using EndSceneFn = HRESULT(__stdcall*)(IDirect3DDevice9* device);
 
     EndSceneFn g_originalEndScene = nullptr;
-    DevTools::WorldDraw::FillFn g_fill = nullptr;
-    std::atomic<bool> g_enabled{false};
+    std::atomic<DevTools::WorldDraw::FillFn> g_fill{nullptr};
     Frame g_frame;
     std::vector<Vertex> g_ribbons;
-    // Whether this frame's sky pass has had its shapes. The composite closes the frame.
-    bool g_drawn = false;
 
     struct Surface {
         IDirect3DSurface9* surface = nullptr;
@@ -47,37 +44,28 @@ namespace {
         }
     };
 
-    enum class Pass { Other, Scene, Composite };
-
-    // The world renders into an offscreen target of the back buffer's size with depth attached; the
-    // composite is the only back-buffer pass with no depth.
-    Pass Classify(IDirect3DDevice9* device) {
+    // Whether the pass renders the world: an offscreen target of the back buffer's size, with depth.
+    bool IsWorld(IDirect3DDevice9* device) {
         Surface target;
         Surface backBuffer;
+        Surface depth;
         if (FAILED(device->GetRenderTarget(0, &target.surface)) || target.surface == nullptr ||
             FAILED(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &backBuffer.surface)) ||
-            backBuffer.surface == nullptr) {
-            return Pass::Other;
-        }
-        Surface depth;
-        const bool haveDepth =
-            SUCCEEDED(device->GetDepthStencilSurface(&depth.surface)) && depth.surface != nullptr;
-        if (target.surface == backBuffer.surface) {
-            return haveDepth ? Pass::Other : Pass::Composite;
+            backBuffer.surface == nullptr || target.surface == backBuffer.surface ||
+            FAILED(device->GetDepthStencilSurface(&depth.surface)) || depth.surface == nullptr) {
+            return false;
         }
         D3DSURFACE_DESC targetDesc = {};
         D3DSURFACE_DESC backBufferDesc = {};
         target.surface->GetDesc(&targetDesc);
         backBuffer.surface->GetDesc(&backBufferDesc);
-        const bool sceneSized =
-            targetDesc.Width == backBufferDesc.Width && targetDesc.Height == backBufferDesc.Height;
-        return haveDepth && sceneSized ? Pass::Scene : Pass::Other;
+        return targetDesc.Width == backBufferDesc.Width && targetDesc.Height == backBufferDesc.Height;
     }
 
-    // The offset from `at` to one edge of a line along `along`, turned to face the camera and as
-    // wide as `metresPerPixel` makes kLinePixels at `at`'s distance.
-    void Side(const Vertex& at, const float along[3], const float camera[3], float metresPerPixel,
-              float out[3]) {
+    // The two edges of a line at `at`, running along `along`, turned to face the camera and as far
+    // apart as `metresPerPixel` makes kLinePixels at `at`'s distance.
+    void Edges(const Vertex& at, const float along[3], const float camera[3], float metresPerPixel,
+               Vertex& minus, Vertex& plus) {
         const float toCamera[3] = {camera[0] - at.x, camera[1] - at.y, camera[2] - at.z};
         const float side[3] = {along[1] * toCamera[2] - along[2] * toCamera[1],
                                along[2] * toCamera[0] - along[0] * toCamera[2],
@@ -87,9 +75,8 @@ namespace {
                                          toCamera[2] * toCamera[2]);
         const float half = length > 0.0f ? kLinePixels * 0.5f * metresPerPixel * distance / length
                                          : 0.0f;
-        for (int axis = 0; axis < 3; ++axis) {
-            out[axis] = side[axis] * half;
-        }
+        minus = {at.x - side[0] * half, at.y - side[1] * half, at.z - side[2] * half, at.colour};
+        plus = {at.x + side[0] * half, at.y + side[1] * half, at.z + side[2] * half, at.colour};
     }
 
     // Each line as two triangles facing the camera, kLinePixels wide on screen.
@@ -99,14 +86,9 @@ namespace {
             const Vertex& a = lines[i];
             const Vertex& b = lines[i + 1];
             const float along[3] = {b.x - a.x, b.y - a.y, b.z - a.z};
-            float sideA[3];
-            float sideB[3];
-            Side(a, along, camera, metresPerPixel, sideA);
-            Side(b, along, camera, metresPerPixel, sideB);
-            const Vertex a0 = {a.x - sideA[0], a.y - sideA[1], a.z - sideA[2], a.colour};
-            const Vertex a1 = {a.x + sideA[0], a.y + sideA[1], a.z + sideA[2], a.colour};
-            const Vertex b0 = {b.x - sideB[0], b.y - sideB[1], b.z - sideB[2], b.colour};
-            const Vertex b1 = {b.x + sideB[0], b.y + sideB[1], b.z + sideB[2], b.colour};
+            Vertex a0, a1, b0, b1;
+            Edges(a, along, camera, metresPerPixel, a0, a1);
+            Edges(b, along, camera, metresPerPixel, b0, b1);
             g_ribbons.insert(g_ribbons.end(), {a0, a1, b1, a0, b1, b0});
         }
     }
@@ -118,10 +100,11 @@ namespace {
         }
     }
 
-    void Draw(IDirect3DDevice9* device, const D3DVIEWPORT9& viewport) {
+    void Draw(IDirect3DDevice9* device, const D3DVIEWPORT9& viewport,
+              DevTools::WorldDraw::FillFn fill) {
         g_frame.lines.clear();
         g_frame.triangles.clear();
-        g_fill(g_frame);
+        fill(g_frame);
         if (g_frame.lines.empty() && g_frame.triangles.empty()) {
             return;
         }
@@ -189,23 +172,12 @@ namespace {
     }
 
     HRESULT __stdcall EndSceneDetour(IDirect3DDevice9* device) {
-        if (g_enabled.load(std::memory_order_relaxed) && device->TestCooperativeLevel() == D3D_OK) {
-            switch (Classify(device)) {
-            case Pass::Scene: {
-                D3DVIEWPORT9 viewport = {};
-                if (!g_drawn && SUCCEEDED(device->GetViewport(&viewport)) &&
-                    viewport.MinZ >= kSkyPassMinZ) {
-                    g_drawn = true;
-                    Draw(device, viewport);
-                }
-                break;
-            }
-            case Pass::Composite:
-                g_drawn = false;
-                break;
-            case Pass::Other:
-                break;
-            }
+        const DevTools::WorldDraw::FillFn fill = g_fill.load(std::memory_order_relaxed);
+        D3DVIEWPORT9 viewport = {};
+        if (fill != nullptr && SUCCEEDED(device->GetViewport(&viewport)) &&
+            viewport.MinZ >= kSkyPassMinZ && IsWorld(device) &&
+            device->TestCooperativeLevel() == D3D_OK) {
+            Draw(device, viewport, fill);
         }
         return g_originalEndScene(device);
     }
@@ -213,21 +185,20 @@ namespace {
 
 namespace DevTools::WorldDraw {
 
-bool Install(FillFn fill) {
+void Install() {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
-    void* endScene = Renderer::DeviceFunction(kEndSceneSlot);
+    void* endScene = Vtable::Slot(kEndSceneSlot);
     if (endScene == nullptr) {
         api->Log("world draw: no Direct3D 9 device could be created - nothing can be drawn");
-        return false;
+        return;
     }
-    g_fill = fill;
     // A rejected hook is already logged by FCSE.
-    return api->Hook(endScene, reinterpret_cast<void*>(&EndSceneDetour),
-                     reinterpret_cast<void**>(&g_originalEndScene));
+    api->Hook(endScene, reinterpret_cast<void*>(&EndSceneDetour),
+              reinterpret_cast<void**>(&g_originalEndScene));
 }
 
-void SetEnabled(bool enabled) {
-    g_enabled.store(enabled, std::memory_order_relaxed);
+void SetFill(FillFn fill) {
+    g_fill.store(fill, std::memory_order_relaxed);
 }
 
 }
