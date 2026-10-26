@@ -49,14 +49,6 @@ namespace {
         *reinterpret_cast<float*>(ctx->esp + 4) = g_fieldOfView;
     }
 
-    // With the Widescreen option off the field of view goes unwidened, so the branch is forced. Its
-    // weight is left to the game, whose only fade of it is a computer's zoom.
-    void WidescreenHandler(FCSE_MidHookContext* ctx) {
-        constexpr uintptr_t kZeroFlag = 0x40;
-
-        ctx->eflags &= ~kZeroFlag;
-    }
-
     // At the head of the frame's FOV blend, which rebuilds the camera's field every frame. ESI is
     // the camera.
     void CameraBlendHandler(FCSE_MidHookContext* ctx) {
@@ -66,12 +58,6 @@ namespace {
 
     FCSE::Relocation<uint8_t*> g_setter{
         FCSE::Pattern("F3 0F 10 44 24 04 F3 0F 59 05 ?? ?? ?? ?? F3 0F 11 41 70 C2 04 00")};
-
-    // Into the match, the branch the widescreen hook stands on.
-    constexpr ptrdiff_t kWidescreenBranch = 10;
-    FCSE::Relocation<uint8_t*> g_widescreen{FCSE::Pattern(
-        "8B 0D ?? ?? ?? ?? 83 79 40 00 0F 84 C4 00 00 00 E8 ?? ?? ?? ?? F3 0F 10 40 10")};
-
     FCSE::Relocation<uint8_t*> g_cameraBlend{
         FCSE::Pattern("F3 0F 10 4E 70 F3 0F 10 47 14 0F 57 D2 F3 0F 5C C1 F3 0F 59 47 10")};
 }
@@ -86,11 +72,6 @@ void InstallFovHook() {
     }
 
     api->MidHook(reinterpret_cast<void*>(g_setter.address()), &FieldOfViewSetterHandler);
-
-    if (g_widescreen) {
-        api->MidHook(reinterpret_cast<void*>(g_widescreen.address() + kWidescreenBranch),
-                     &WidescreenHandler);
-    }
 
     if (g_cameraBlend) {
         api->MidHook(reinterpret_cast<void*>(g_cameraBlend.address()), &CameraBlendHandler);

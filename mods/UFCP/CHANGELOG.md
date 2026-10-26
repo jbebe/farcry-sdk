@@ -7,6 +7,8 @@ Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachang
 ### Changed
 - **Field of view** now sets the weapon and arms too, one slider for both. They used to stay at the
   game's own 75 degrees whatever the setting.
+- **Field of view** follows the game's own Widescreen option again. With it off, the view was
+  widened as if it were on.
 
 ## [1.1.1] - 2026-10-15
 
