@@ -20,17 +20,21 @@ namespace {
     using KnowledgeFn = bool(__fastcall*)(void* knowledge, void* unused, const uint32_t* id,
                                           const uint8_t** entry);
     using IsPlayerFn = bool(__fastcall*)(const void* agent, void* unused);
+    // Returns its argument, the position written into it.
+    using PositionFn = const float*(__fastcall*)(const void* agent, void* unused, float* out);
 
     // CSensorySystem::AddTargetDataToKB and CSensorySystemKB::GetKBEntryForEntity.
     FCSE::Relocation<AddTargetDataFn> g_addTargetData{FCSE::Uplay(0x00A03120)};
     FCSE::Relocation<KnowledgeFn> g_knowledge{FCSE::Uplay(0x00A235C0)};
     AddTargetDataFn g_originalAddTargetData = nullptr;
 
-    // The visual target's agent, an agent's IsAPlayer slot and id, and the sensory system's
-    // knowledge base.
+    // The visual target's AI object, whose id keys the knowledge base, and its agent; an agent's
+    // GetPosition and IsAPlayer slots; the sensory system's knowledge base.
+    constexpr ptrdiff_t kTargetObject = 0x04;
+    constexpr ptrdiff_t kObjectId = 0x0C;
     constexpr ptrdiff_t kTargetAgent = 0x08;
+    constexpr size_t kPositionSlot = 0x78 / sizeof(void*);
     constexpr size_t kIsPlayerSlot = 0xBC / sizeof(void*);
-    constexpr ptrdiff_t kAgentId = 0x0C;
     constexpr ptrdiff_t kSensesKnowledge = 0x24;
     // CVisibilityContext: its cones, observer, eye, target position and view direction.
     constexpr ptrdiff_t kContextCones = 0x04;
@@ -75,13 +79,16 @@ namespace {
         std::memcpy(out, object + offset, 3 * sizeof(float));
     }
 
+    void* const* Vtable(const void* agent) { return Read<void* const*>(agent, 0); }
+
     bool IsPlayer(const void* agent) {
-        const auto* vtable = Read<void* const*>(agent, 0);
-        return reinterpret_cast<IsPlayerFn>(vtable[kIsPlayerSlot])(agent, nullptr);
+        return reinterpret_cast<IsPlayerFn>(Vtable(agent)[kIsPlayerSlot])(agent, nullptr);
     }
 
-    void Capture(void* senses, const void* agent, const uint8_t* context) {
+    void Capture(void* senses, const uint8_t* target, const uint8_t* context) {
         Sight sight = {};
+        const void* observer = Read<const void*>(context, kContextObserver);
+        reinterpret_cast<PositionFn>(Vtable(observer)[kPositionSlot])(observer, nullptr, sight.feet);
         Read3(context, kContextEye, sight.eye);
         Read3(context, kContextView, sight.view);
         Read3(context, kContextTarget, sight.target);
@@ -92,7 +99,7 @@ namespace {
         sight.peripheralLength = Read<float>(cones, kPeripheralLength);
         sight.peripheralAngle = Read<float>(cones, kPeripheralAngle);
 
-        const uint32_t id = Read<uint32_t>(agent, kAgentId);
+        const uint32_t id = Read<uint32_t>(Read<const void*>(target, kTargetObject), kObjectId);
         const uint8_t* entry = nullptr;
         sight.known = g_knowledge(Read<void*>(senses, kSensesKnowledge), nullptr, &id, &entry) &&
                       entry != nullptr;
@@ -103,7 +110,7 @@ namespace {
         }
 
         const std::lock_guard lock(g_mutex);
-        g_sights[Read<const void*>(context, kContextObserver)] = {sight, Clock::now()};
+        g_sights[observer] = {sight, Clock::now()};
     }
 
     void __fastcall AddTargetDataDetour(void* senses, void* unused, const uint8_t* target,
@@ -114,7 +121,7 @@ namespace {
         }
         const void* agent = Read<const void*>(target, kTargetAgent);
         if (agent != nullptr && IsPlayer(agent)) {
-            Capture(senses, agent, context);
+            Capture(senses, target, context);
         }
     }
 }

@@ -9,8 +9,9 @@
 namespace DevTools::AiSight {
 
 struct Sight {
-    // Where his eyes are and the way his head points, not normalised, and the player's head as the
-    // update measured it.
+    // Where he stands, where his eyes are and the way his head points, not normalised, and the
+    // player's head as the update measured it.
+    float feet[3];
     float eye[3];
     float view[3];
     float target[3];

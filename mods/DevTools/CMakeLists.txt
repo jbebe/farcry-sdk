@@ -62,7 +62,7 @@ add_library(DevTools SHARED
   "src/engine/renderer.cpp"
   "src/engine/spawn.cpp"
   "src/engine/weather.cpp"
-  "src/engine/world_lines.cpp"
+  "src/engine/world_draw.cpp"
   "src/fixes/load_savegame.cpp"
   "src/fixes/skip_intro.cpp"
   "src/fixes/skip_title_screen.cpp"
