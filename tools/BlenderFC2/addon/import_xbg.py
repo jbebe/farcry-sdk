@@ -171,7 +171,7 @@ def _material(cache, path, pack):
         definition = pack.material(path) if pack else None
         if definition is not None:
             try:
-                material_data.load(material, definition, cache[IMAGES])
+                material_data.load(material, definition, cache[IMAGES], pack.model)
             except Exception as error:
                 print("fc2: material %s: %s" % (path, error))
         cache[path] = material

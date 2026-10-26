@@ -18,7 +18,7 @@ import os
 
 import bpy
 
-from . import convert, material_data, model as fc2model
+from . import convert, material_data, model as fc2model, textures
 from .import_mab import PROP_PROP_OF
 from .import_xbg import (
     ATTR_NORMAL, PROP_LOD, PROP_MATERIAL_PATH, PROP_NEW_PART, PROP_SOURCE, PROP_SUBMESH)
@@ -215,6 +215,7 @@ def save(path, collection, recompute_tangents=False):
     if built["moved"] or built["resized"] or built["added"] or built["reassigned"]:
         pack.replace_document(pack.model, built["mesh"])
     built["materials"] = material_data.write(pack, collection)
+    built["textures"] = textures.write(pack, collection)
     pack.save(path)
     return built
 

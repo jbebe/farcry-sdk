@@ -436,6 +436,8 @@ class FC2_OT_export_pack(bpy.types.Operator, ExportHelper):
             return {"CANCELLED"}
 
         materials = ", %d material(s)" % result["materials"] if result["materials"] else ""
+        if result["textures"]:
+            materials += ", %d texture(s)" % result["textures"]
         if not (result["moved"] or result["resized"] or result["added"] or result["reassigned"]):
             self.report({"INFO"}, "Wrote the pack with nothing in LOD%d edited%s"
                         % (result["lod"], materials))

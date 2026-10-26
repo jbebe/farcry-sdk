@@ -6,6 +6,7 @@
 # so an untouched material goes back exactly as it came.
 
 import json
+import posixpath
 
 import bpy
 from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatVectorProperty,
@@ -34,6 +35,9 @@ PROP_DOCUMENT = "fc2_document"
 # A material at a path the pack does not carry yet, which export adds.
 PROP_ADDED = "fc2_added"
 
+# The model's game path, whose folder a new texture lands in.
+PROP_MODEL = "fc2_model"
+
 # Set while values are written in bulk, so the preview is rebuilt once at the end.
 _quiet = False
 
@@ -47,12 +51,23 @@ def _changed(self, _context):
 
 
 def _picked(self, context):
-    """An image picked for a texture slot brings the game path it came from."""
-    path = self.image.get(materials.PROP_IMAGE_PATH) if self.image else None
+    """An image picked for a texture slot brings its game path: the pack's, or a new one."""
+    image = self.image
+    path = (image.get(materials.PROP_IMAGE_PATH) or _new_path(image, self.id_data.get(PROP_MODEL, ""))
+            if image else None)
     if path and path != self.path:
         self.path = path
     else:
         _changed(self, context)
+
+
+def _new_path(image, model):
+    """Where an image from outside the pack will live in the game: beside the model, named after
+    the image. Stamped on it, so every slot that picks it names the same file."""
+    name = posixpath.splitext(image.name)[0].strip().lower().replace(" ", "_")
+    folder = posixpath.dirname(model.replace("\\", "/"))
+    image[materials.PROP_IMAGE_PATH] = posixpath.join(folder, name + ".xbt")
+    return image[materials.PROP_IMAGE_PATH]
 
 
 def _colour(self):
@@ -92,8 +107,9 @@ def held(material):
     return material is not None and PROP_DOCUMENT in material
 
 
-def load(material, document, image_for):
-    """Hold a document on the material, its textures resolved by `image_for`, and preview it."""
+def load(material, document, image_for, model=""):
+    """Hold a document on the material of `model`, its textures resolved by `image_for`, and
+    preview it."""
     global _quiet
     # A script can import a pack without registering the add-on.
     register()
@@ -107,6 +123,7 @@ def load(material, document, image_for):
             for entry in document.get(field, ()):
                 add(fc2, section, entry.get("slot", entry.get("key")), entry, image_for)
         material[PROP_DOCUMENT] = json.dumps(document)
+        material[PROP_MODEL] = model
     finally:
         _quiet = False
     refresh(material)

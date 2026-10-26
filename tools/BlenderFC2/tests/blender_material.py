@@ -21,6 +21,7 @@ sys.path.insert(0, HERE)
 from _corpus import CLI, pack, require_pack
 
 import bpy
+import numpy
 
 from addon import export_xbg, import_xbg, material_data, validate
 from addon.pack import Pack
@@ -201,6 +202,65 @@ def _copy(result, wood, users, added, directory):
     return errors
 
 
+def textures_reach_the_game_files(path, directory):
+    """A texture of the model's own painted and halved, and a new image in a slot of an owned material."""
+    result = load(owning(path, WOOD, directory))
+    wood = material(result, WOOD)
+    values = {value.key: value for value in wood.fc2.values}
+
+    mask = values["MaskTexture1"].image
+    width = mask.size[0]
+    mask.scale(width // 2, mask.size[1] // 2)
+    painted = numpy.ones(len(mask.pixels), dtype=numpy.float32)
+    mask.pixels.foreach_set(painted)
+    mask.update()
+
+    albedo = bpy.data.images.new("New Albedo", 256, 256)
+    values["DiffuseTexture1"].image = albedo
+    added = "graphics/weapons/primary/ak47/new_albedo.xbt"
+
+    errors = 0
+    if values["DiffuseTexture1"].path != added:
+        errors += fail("a new image was given %s, not %s" % (values["DiffuseTexture1"].path, added))
+
+    out = os.path.join(directory, "textures.fc2model")
+    written = export_xbg.save(out, result["collection"])
+    if written["textures"] != 2:
+        errors += fail("export wrote %d textures, not the mask and the new albedo" % written["textures"])
+    exported = Pack.load(out)
+    new = exported.entry(added)
+    if new is None or new.record.get("origin_sha256") != "" or new.record.get("codec") != "DXT1" \
+            or new.record.get("levels") != 9:
+        errors += fail("the new albedo's entry is %s" % (new.record if new else None))
+    old = exported.entry(values["MaskTexture1"].path)
+    if not old.modified or old.record["levels"] != Pack.load(path).entry(old.path).record["levels"] - 1:
+        errors += fail("the halved mask is %s" % old.record)
+
+    layer = os.path.join(directory, "textures")
+    applied = subprocess.run([CLI, "fc2model", "extract", out, "-o", layer], capture_output=True, text=True)
+    if applied.returncode != 0:
+        return errors + fail("JackAll could not write the textures: %s" % applied.stdout)
+    written_files = {name.lower() for _base, _dirs, names in os.walk(layer) for name in names}
+    for name in ("new_albedo.xbt", os.path.basename(old.path.replace("\\", "/")).lower()):
+        if name not in written_files:
+            errors += fail("JackAll wrote no %s: %s" % (name, sorted(written_files)))
+    if not errors:
+        print("textures: a halved, painted mask and a new albedo reach the game files")
+    return errors
+
+
+def cube_map_is_refused(path, directory):
+    result = load(owning(path, WOOD, directory))
+    wood = material(result, WOOD)
+    reflection = material_data.add(wood.fc2, material_data.TEXTURE, "ReflectionTexture", {"path": ""})
+    reflection.image = bpy.data.images.new("Flat", 64, 64)
+    found = validate.check_scene(bpy.context)
+    if not any(f.code == "texture.not-writable" and f.severity == ERROR for f in found):
+        return fail("Check let a flat image into a cube-map slot: %s" % [f.code for f in found])
+    print("cube map: a flat image in ReflectionTexture blocks the export")
+    return 0
+
+
 def panel_operators(path, directory):
     """Add and remove a property through the operators the panel's buttons run."""
     import addon
@@ -239,6 +299,8 @@ def main():
     errors += edit_reaches_the_game_file(path, directory)
     errors += shared_edit_is_refused(path, directory)
     errors += copy_reaches_the_game_file(path, directory)
+    errors += textures_reach_the_game_files(path, directory)
+    errors += cube_map_is_refused(path, directory)
     errors += panel_operators(path, directory)
     print("blender material: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0

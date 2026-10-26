@@ -40,6 +40,7 @@ workspace, or `jackall-cli fc2model extract` for a folder to drop into a mod lay
 | `addon/materials.py` | Rebuilds the Generic shader as a node graph, the preview of a material's values |
 | `addon/material_data.py` | A material's document held on the Blender material: its values, and what export writes |
 | `addon/material_panel.py` | The Far Cry 2 panel in the Material properties, laid out by the pack's shader list |
+| `addon/textures.py` | Which images export writes into the pack, at which game path and in which codec |
 | `addon/rig.py` | The rig's bone parents, which the armature is built on instead of the mesh's — the knee fix below |
 | `addon/import_mab.py` | Builds an Action from a bank, and marks what it attaches |
 | `addon/export_xbg.py` | Writes edited geometry back into the pack, and appends a part it did not have |
@@ -54,7 +55,7 @@ workspace, or `jackall-cli fc2model extract` for a folder to drop into a mod lay
 | `tests/blender_anim.py` | Poses a character and a weapon, and reads the rotations and offsets back off the rig |
 | `tests/blender_check.py` | Requires every rule to be silent on retail, then fire on exactly one violation |
 | `tests/blender_write.py` | Rewrites one clip and requires every other clip in the bank to survive |
-| `tests/blender_material.py` | Edits a material and requires the `.xbm` JackAll writes from it; refuses a shared one |
+| `tests/blender_material.py` | Edits, copies and retextures a material and requires the game files JackAll writes from it |
 | `tests/blender_transplant.py` | Rebuilds a weapon from a donated mesh with nothing but this add-on, end to end |
 | `tests/render_preview.py` | Renders an imported model to a PNG, for looking at what the importer built |
 | `open_model.py` / `.cmd` | Opens a pack, and optionally a clip, in Blender's UI; quoting-safe in cmd and PowerShell |
@@ -349,6 +350,14 @@ that part at every LOD not in the scene, wherever it drew with the old one — o
 change material with distance. A slot holding a plain Blender material, one with no game path, leaves
 the part as it was, and Check says so. Mind `SCOPE_HI`: on a weapon it shares the body's material
 and is the whole view while zoomed, so leave it unselected when copying the body's, and it keeps its own.
+
+**A texture slot takes any image.** One the pack carried keeps its game path, and export writes it
+back only when its pixels changed - painted in Blender, or the file edited and reloaded - with the
+mip chain recounted if it was resized. An image from outside the pack gets a game path beside the
+model, named after the image, and export adds it as a new texture: DXT1, or DXT5 where alpha carries
+something, and a normal map swizzled the way the game reads one, X in alpha and Y in the colour. A
+flat image in a cube-map slot, `ReflectionTexture`, is refused. A texture the model shares is
+refused like a shared material.
 
 A material at a path the game never listed has not been tried in game yet; a texture at one has.
 

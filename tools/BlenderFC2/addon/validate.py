@@ -11,7 +11,7 @@
 
 import bpy
 
-from . import export_xbg, material_data, materials, rules
+from . import export_xbg, material_data, materials, rules, textures
 from .import_xbg import PROP_MATERIAL_PATH, PROP_PART
 from .rules import ERROR, WARNING, Finding, Target
 
@@ -49,6 +49,12 @@ def check_scene(context):
     found += _meshes(objects, mesh, built["lod"], pack)
     found += _materials(collection, pack)
     found += _textures(collection, pack)
+    try:
+        for _slot, _image, _path, entry, _png in textures.changes(pack, collection):
+            found += rules.check_edit(entry) if entry is not None else []
+    except ValueError as error:
+        found.append(Finding(ERROR, "texture.not-writable", str(error), Target(kind="scene"),
+                             "Export would refuse for the same reason."))
     found += _placement(objects)
     found += _added_to_one_lod(built)
     return sorted(found, key=lambda f: (f.severity != ERROR, f.code))

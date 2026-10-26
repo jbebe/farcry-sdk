@@ -97,7 +97,8 @@ def _texture_node(tree, image, slot, uv_scale, location, colorspace="sRGB"):
     node.location = location
     node.interpolation = "Smart"
     node[PROP_SLOT] = slot
-    if colorspace != "sRGB":
+    # Setting it at all reloads the image from disk, which would throw away paint.
+    if colorspace != "sRGB" and image.colorspace_settings.name != colorspace:
         image.colorspace_settings.name = colorspace
     if uv_scale and uv_scale != (1.0, 1.0):
         mapping = tree.nodes.new("ShaderNodeMapping")
@@ -167,8 +168,9 @@ def _normal(tree, slots, image_for, definition, principled):
     if image is None:
         return
     # The alpha is a coordinate rather than coverage, so Blender must not fold it
-    # into the colour on the way in.
-    image.alpha_mode = "CHANNEL_PACKED"
+    # into the colour on the way in. Set only when it differs, since setting reloads.
+    if image.alpha_mode != "CHANNEL_PACKED":
+        image.alpha_mode = "CHANNEL_PACKED"
 
     node = _texture_node(tree, image, NORMAL1, tiling(definition, "NormalTiling1"),
                          (0, ROW), colorspace="Non-Color")

@@ -263,21 +263,27 @@ class Pack:
         return self.replace(game_path, dumps(document))
 
     def add_material(self, game_path, document):
-        """Carry a material the game does not have.
+        """Carry a material the game does not have. The mesh names it separately, through a
+        cluster's material index."""
+        return self._add(game_path, "materials", ".json", MATERIAL, dumps(document))
 
-        Its origin hash is empty - it arrived with nothing - so it reads as
-        modified to every reader and is always written. The mesh names it
-        separately, through a cluster's material index.
-        """
+    def add_texture(self, game_path, png, codec, levels):
+        """Carry a texture the game does not have. With no header of its own, JackAll writes a
+        fresh one that names no companion, so the whole chain lands in one file."""
+        return self._add(game_path, "textures", ".png", TEXTURE, png,
+                         codec=codec, levels=levels)
+
+    def _add(self, game_path, folder, extension, kind, content, **fields):
+        """A new owned entry. Its origin hash is empty - it arrived with nothing - so it reads
+        as modified to every reader and is always written."""
         if self.entry(game_path) is not None:
             raise ValueError("this pack already carries %s" % game_path)
-        name = "materials/%s.json" % posixpath.splitext(
-            posixpath.basename(game_path.replace("\\", "/")))[0]
+        name = "%s/%s%s" % (folder, posixpath.splitext(
+            posixpath.basename(game_path.replace("\\", "/")))[0], extension)
         if name in self.files:
             raise ValueError("this pack already holds a file named %s" % name)
-        content = dumps(document)
-        record = {"path": game_path, "file": name, "kind": MATERIAL, "role": OWNED,
-                  "sha256": hashlib.sha256(content).hexdigest(), "origin_sha256": ""}
+        record = {"path": game_path, "file": name, "kind": kind, "role": OWNED,
+                  "sha256": hashlib.sha256(content).hexdigest(), "origin_sha256": "", **fields}
         self.manifest.setdefault("entries", []).append(record)
         self.entries.append(Entry(record))
         self.files[name] = content
