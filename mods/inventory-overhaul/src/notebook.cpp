@@ -1,5 +1,7 @@
 // The map gadget's strategy says when the map comes out and goes away; the game's signals, Tab's
-// toggle_notebook and the map key's toggle_gadget, say which face it shows.
+// toggle_notebook and the map key's toggle_gadget, say which face it shows. The terminal hands one
+// signal to each of its listeners in turn, the pause service's before the player's, so a signal
+// rewritten in the pause service's is what the player's sees.
 #include "notebook.h"
 
 #include "engine/memory.h"
@@ -14,9 +16,9 @@ namespace {
                                        void* context);
     using EquipFn = void(__fastcall*)(void* strategy, void* unused);
 
-    // The dispatcher every action map signal goes through, found past its first instruction
-    // because DevTools hooks its entry, and CGadgetMapStrategy's OnEquip and OnUnequip. None is an
-    // entry the address library knows.
+    // The pause service's listener, which sees every action map signal, found past its first
+    // instruction because DevTools hooks its entry, and CGadgetMapStrategy's OnEquip and
+    // OnUnequip. None is an entry the address library knows.
     FCSE::Relocation<uint8_t*> g_signalBody{
         FCSE::Pattern("83 EC 50 A8 01 53 55 56 57 8B F9 75 ?? 83 C8 01 A3")};
     FCSE::Relocation<EquipFn> g_equipSite{
@@ -29,32 +31,30 @@ namespace {
     EquipFn g_unequip = nullptr;
 
     constexpr uint32_t kToggleNotebook = FCSE::Crc32("toggle_notebook");
-    // The map key's signal, also sent in Tab's place to bring the map out or put it away.
+    // The map key's signal, which Tab's becomes to bring the map out or put it away.
     constexpr uint32_t kToggleGadget = FCSE::Crc32("toggle_gadget");
-    const uint32_t g_toggleGadget = kToggleGadget;
+    // A signal no listener knows, which one that only turns the map over becomes.
+    constexpr uint32_t kTurned = FCSE::Crc32("InventoryOverhaul.Turned");
 
     // Whether the map is out, whether its notebook face is up, and the face it comes out with.
     bool g_out = false;
     std::atomic<bool> g_notebook{false};
     bool g_askedNotebook = false;
 
-    // True, as the dispatcher's own refusal is, for a signal that only turns the map over.
-    bool Turn(bool notebook) {
-        g_notebook = notebook;
-        FCSE::Logf("the map is turned to its %s face", notebook ? "notebook" : "map");
-        return true;
-    }
-
     bool __fastcall OnSignal(void* dispatcher, void* unused, const uint32_t* signal, void* context) {
         if (signal != nullptr && (*signal == kToggleNotebook || *signal == kToggleGadget)) {
             const bool notebook = *signal == kToggleNotebook;
+            uint32_t& id = *const_cast<uint32_t*>(signal);
             if (g_out && g_notebook != notebook) {
-                return Turn(notebook);
+                g_notebook = notebook;
+                id = kTurned;
+                FCSE::Logf("the map is turned to its %s face", notebook ? "notebook" : "map");
+            } else {
+                if (!g_out) {
+                    g_askedNotebook = notebook;
+                }
+                id = kToggleGadget;
             }
-            if (!g_out) {
-                g_askedNotebook = notebook;
-            }
-            return g_signal(dispatcher, unused, &g_toggleGadget, context);
         }
         return g_signal(dispatcher, unused, signal, context);
     }

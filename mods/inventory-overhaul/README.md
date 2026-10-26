@@ -68,8 +68,10 @@ The notebook is the map held in hand with its other face up (`src/notebook.cpp`)
 on as the map key's `toggle_gadget`, so the map comes out exactly as it does on its own key, and
 remembers which face is up. While it is out, Tab and the map key turn it to their own face, and put
 it away when their face is already up. `CGadgetMapStrategy::OnEquip` and `OnUnequip` say when the
-map is really out. The signals are caught at the entry of the game's signal dispatcher, which
-DevTools hooks too; FCSE stacks the two.
+map is really out. The terminal hands each signal to its listeners in turn, the same signal to
+each, and the pause service's listener comes before the player's; the plugin rewrites the signal
+there, at the listener's entry, which DevTools hooks too (FCSE stacks the two). A signal that only
+turns the map over becomes one no listener knows, so the map stays out.
 
 | File | What it is |
 |---|---|
