@@ -71,6 +71,41 @@ graphics\weapons\primary\ak47\ak47.xbg
 Wrote 1 file(s) under ak47-longer-mag
 ```
 
+## Materials
+
+`xbm show` prints a material's shader and every property, as text the other commands take back.
+`xbm new` writes a new material, a copy of another under a new name or empty on a shader; `xbm set`
+sets and removes properties, checked against the shader; `xbm lint` reports what the game would
+silently ignore:
+
+```
+> jackall-cli xbm new body.xbm --name AK47_BODY --from game\graphics\_materials\jpcormier-m-2007100950589039.xbm
+Wrote body.xbm
+> jackall-cli xbm set body.xbm SpecularPower=150 "DiffuseColor1=0.2" -g "C:\Games\Far Cry 2"
+set SpecularPower = 150
+set DiffuseColor1 = 0.2, 0.2, 0.2
+set DiffuseColor1Clean = 0.2, 0.2, 0.2
+Wrote body.xbm
+> jackall-cli xbm lint body.xbm -g "C:\Games\Far Cry 2"
+ok  body.xbm
+```
+
+A single number fills every component of a colour. On a weapon or a vehicle, setting a colour also
+sets its `Clean` twin, which is what the game shows; `--no-link` sets the colour alone.
+
+To draw a model with a new material, add it to the model's pack and move the clusters of a part
+onto it. `inspect --materials` lists the materials by index:
+
+```
+> jackall-cli fc2model add-material ak47.fc2model graphics\weapons\primary\ak47\ak47_body.xbm --from GRAPHICS\_MATERIALS\JPCORMIER-M-2007100950589039.xbm --name AK47_BODY
+Added graphics\weapons\primary\ak47\ak47_body.xbm as material 3. Move clusters onto it with assign-material.
+> jackall-cli fc2model assign-material ak47.fc2model --from 1 --to 3 --part FRAME
+Moved 5 cluster(s).
+```
+
+`--part FRAME` covers the part at every level of detail and damage state. `fc2model extract` then
+writes both the mesh and the new material.
+
 ## Textures
 
 `xbt extract` splits a texture into a `.dds` image and an `.xml` header; `xbt build` puts an edited

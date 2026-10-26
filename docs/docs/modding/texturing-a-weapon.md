@@ -102,9 +102,11 @@ donor is still in the game, drawing through the same ones. Rewriting them retext
 The VSS is the worked case. Its `.xbg` sits at the Dart Rifle's path and names seven materials, every
 one of them the Dragunov's, because that is the pack the mesh was built in.
 
-You cannot fix this by copying a material, because **nothing in the toolchain creates an `.xbm`**.
-What you can do is take a material the *replaced* weapon owned. Your mod already made it unused — you
-overwrote the mesh that was its only reader.
+JackAll can make a material at a new path — `xbm new`, **New material…** on the Files tab, or
+`fc2model add-material` straight into a pack — but **a material at a path the game never listed has
+not been tried in game**. A texture at a new path loads ([above](#a-weapon-is-not-limited-to-the-texture-paths-it-owns));
+a material may not. Until one is tried, take a material the *replaced* weapon owned. Your mod already
+made it unused — you overwrote the mesh that was its only reader.
 
 Build the reference index and ask:
 
@@ -133,13 +135,16 @@ material  owned   GRAPHICS\_MATERIALS\FBOIVIN2-M-2007050162241150.xbm   the wood
 `world1_depload.dat` and `world2_depload.dat`, sited against `dart_rifle.xbg`. A material at a path
 you invented would not be, and that is the untested ground worth staying off.
 
-**If nothing comes back `owned`, there is no material to take.** That is a real gap, not something to
-work around by inventing a path.
+**If nothing comes back `owned`, there is no material to take**, and a material at a new path is the
+only route left — the untested one.
 
 ## Step 2 — repoint the mesh, and append rather than overwrite
 
 A pack carries the mesh as `model/mesh.json`, where `materials` is a plain list of paths and every
-cluster holds a `material_index` into it. Repointing is an edit to an array of strings.
+cluster holds a `material_index` into it. `fc2model add-material` appends a material to that list —
+at the owned path or a new one, copied from any material — and `fc2model assign-material --part
+FRAME` moves one part's clusters onto it at every LOD; `fc2model inspect --materials` lists the
+indices and the parts drawing with each.
 
 **Append your material and move only the body's clusters onto it.** Do not overwrite the entry that
 is already there. The reason is specific and easy to miss:
@@ -411,8 +416,9 @@ whole condition ramp then runs inside a single magazine. See
 
 Do the whole thing through a `.fc2model` pack. Edit `materials/<name>.json` and swap the texture PNGs
 inside the zip, then set **`origin_sha256`** on each entry you touched — that field's presence is
-exactly what marks an entry modified. Set `levels` to the new chain length (11 for a 1024 image) and
-the applier does the rest:
+exactly what marks an entry modified. A material added with `add-material` is marked `added` instead
+and needs neither. Set `levels` to the new chain length (11 for a 1024 image) and the applier does
+the rest:
 
 ```
 jackall-cli fc2model extract edited.fc2model -o mylayer
@@ -474,7 +480,8 @@ the **Dragunov's** `spdra`. The framing is wrong by however far those two eyes d
   `MaskTextureBroken` to the same map is what stops a weapon ever looking used.
 - **A transplanted mesh keeps its donor's material table.** Take a material the replaced weapon owned
   instead, and check it with `xref` rather than the directory rule.
-- **Nothing creates an `.xbm`.** If no material is exclusively yours, that is a wall, not a detour.
+- **A material at a new path is untested in game.** JackAll makes one; whether the engine loads a
+  material no `depload` lists is the open question. An owned material is the confirmed route.
 - **Append the material and move clusters onto it.** `SCOPE_HI` shares the body's material and must
   keep it.
 - **Fit the albedo into a band anchored on the source's own percentiles**, in float, before

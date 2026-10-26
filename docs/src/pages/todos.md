@@ -27,13 +27,14 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 
 ## Tools/BlenderFC2
 
-- [ ] **Nothing writes into a `.fc2model`.** `fc2model` has `export`/`extract`/`inspect` only, so
-  retexturing a weapon means hand-editing the pack's JSON — which is what
-  [texturing a replaced weapon](/farcry-sdk/docs/modding/texturing-a-weapon) prescribes.
-  `Fc2ModelBundle` and `MaterialDocument` already model everything a `fc2model set-material` /
-  `set-texture` pair would need. Worth building when a third mod wants it; the mesh half stays a
-  per-mod script, because appending a material and skipping `SCOPE_HI` is policy rather than a
-  generic operation.
+- [ ] **A pack's own materials and textures are still edited by hand.** `fc2model add-material` and
+  `assign-material` add a material and move a part's clusters onto it, but changing a value of a
+  material the pack already carries, or swapping its texture, is a JSON or PNG edit plus
+  `origin_sha256` — what [texturing a replaced weapon](/farcry-sdk/docs/modding/texturing-a-weapon)
+  prescribes. Authoring materials in Blender is the next step.
+- [ ] **A material at a new path has not been tried in game.** JackAll makes one; whether the engine
+  loads a material no `depload` lists is one launch: copy a weapon's material to a new path, point
+  its mesh at it with a magenta texture, and look.
 - [ ] **Add a node or an LOD from the scene.** Adding a *part* is done — **Add as New Part** appends
   one and every shipped mesh takes it with its own parts unchanged (3,133 of 3,133). A node and a
   whole LOD tier still have no scene-to-document path, and neither does removing a part. An added

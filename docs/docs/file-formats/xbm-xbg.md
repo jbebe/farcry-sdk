@@ -346,6 +346,27 @@ GOG)** (`SetShaderName` `0x1044EAE0`, the material loader at `0x10357420`):
 - **Water loads caustics.** An exact `Water` or `WaterRiver` shader whose descriptor declares
   `CausticsTexture` also loads the 32 frames `AnimatedCaustics_001.xbt` to `_032.xbt`.
 
+### What retail stores against what the descriptor declares
+
+Measured over all 2,379 materials, the descriptor is not the whole list in either direction:
+
+- **Never stored:** a parameter marked `hide="1"`, and every `…TilingAndGroup…` one. Those are
+  composed from a tiling and a `UVGroupMapChannel`, which is what materials store instead.
+  `ignore="1"` does not mean unused: `DiffuseTiling1` carries it and 1,647 materials store it.
+- **Stored but not declared:** `LogicalMaterialId` on 2,350, `VertexColorEnabled` 2,159,
+  `AmbientOcclusion` 1,813, `Maskable` 394, `RainOccluder` 209, `TwoSided` 81, `AccessoryCategory`
+  64, `Unlit`'s scroll and frame keys (`USpeed`, `VSpeed`, `AngularSpeed`, `AnimType`, `NbFrames`)
+  on all 49, and on every `Vehicle` the unsuffixed colours and tilings, whose descriptor declares
+  only the `Clean`/`Broken` twins and the composed tilings. Where the engine reads these is not
+  traced.
+- **Stored narrower than declared:** a `float4` colour is three floats (11,556 entries), and some
+  declared floats are integers (2,090), both covered by the width conversion above.
+- **The unsuffixed colour equals its `Clean` twin** in every `Weapon` and `Vehicle` material.
+
+JackAll's material editor and `xbm lint` offer and check exactly this set: the descriptor without
+the never-stored parameters, plus the stored-but-undeclared keys for the shaders that carry them.
+No retail material draws a complaint from it.
+
 ### The `Weapon` shader's parameter set
 
 The 102 `Weapon` materials add the weapon-degradation system on top of `Generic`'s mask-and-two-layer

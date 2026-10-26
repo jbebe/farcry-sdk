@@ -96,7 +96,8 @@ file. See [The value editor in depth](/jackall/value-editor).
 
 Most file types get a real viewer instead of a hex dump. `.xbt` textures show a preview and split
 into a `.dds` plus a small XML header, and you can build that pair back into a working `.xbt`. `.xbm`
-materials show the shader, every texture slot and every parameter. `.xbg` models get a 3D preview
+materials show the shader, every texture slot and every parameter, all editable and checked against
+what the shader takes, and **New material…** makes one at a new path. `.xbg` models get a 3D preview
 where you pick the LOD and the damage state, and RealTree species draw as actual trees. `.sbao` audio
 plays right there, exports as ogg or mp3, and imports basically any audio file you have: ffmpeg comes
 with the app and converts it to the 48 kHz stereo ogg the engine wants.
@@ -228,7 +229,7 @@ game actually ships. The format notes are under [File Formats](/docs/category/fi
 | `.rml` | Binary XML, used for manifests and the translated text table | Decodes and encodes, text editor with a diff against the original |
 | `.mgb` (+ `.mgb.desc`) | Magma UI packages: menus and HUD | Full decode and encode plus a real editor, splits into one piece per area, merges edits coming from different mods. `verify` checks that a package only uses names it declares |
 | `.xbt` (+ `.dds`) | Textures, block compressed, with a streaming header | Splits and rebuilds, decodes BCn to pixels for previews and model packs, encodes back with the same compression |
-| `.xbm` | Materials: shader, texture slots, parameters | Fully decoded and shown, written back through a model pack |
+| `.xbm` | Materials: shader, texture slots, parameters | Decodes and encodes, edited in the preview against the shader's own parameter list, created new, written back through a model pack |
 | `.xbg` (+ `.xbgmip`) | Models, with LODs, damage states and skinning | Decodes and encodes, 3D preview, `.obj` export, editable through a model pack |
 | `.skeleton` | Skeletons | Reads and writes, byte identical on every shipped file |
 | `.mab` | Animation banks | Reads them, writes one clip back and leaves the rest of the bank untouched |

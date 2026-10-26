@@ -28,7 +28,18 @@ mark the model's parts. A model also gets **Export as .fc2model…**, see
 ## Materials (`.xbm`)
 
 How a surface is drawn: the shader template, the textures it uses, and every parameter, such as
-colours, tiling and shininess. Read-only here; materials are changed together with their model.
+colours, tiling and shininess, grouped the way the game groups them. Each value is editable, and an
+edit goes into your workspace as soon as you leave the box; clear a box to drop the value, so the
+shader's default applies. **Show every property the shader takes** lists the ones the material
+leaves unset too. A texture gets **Pick…** to choose one from the game, a thumbnail and **Go to**.
+
+Anything the game would ignore without saying so is called out under the value: a misspelt
+property, one the shader doesn't take, a texture that isn't there. On a weapon or a vehicle, a
+colour's `Clean` twin is what the game actually shows, so **Set Clean twins along** sets it with the
+colour.
+
+**New material…** makes a material at a new path, as a copy of the selected one or empty on a
+shader. A model draws with it once its material list names it, which `fc2model add-material` does.
 
 ![A material](/img/jackall/previews/02-material.png)
 
