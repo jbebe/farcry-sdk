@@ -12,6 +12,9 @@
 # Calling `bpy.ops` from a property update runs it during UI event handling,
 # which is a known way to crash Blender.
 
+import itertools
+import os
+
 import bpy
 from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatProperty,
                        IntProperty, PointerProperty, StringProperty)
@@ -428,6 +431,35 @@ def _collection(context):
     return next((c for c in bpy.data.collections
                  if import_xbg.PROP_SOURCE in c
                  and import_mab.PROP_PROP_OF not in c), None)
+
+
+def pack_of(context):
+    """The pack the active object was imported from, and its collection: the object's own
+    collection first, else any imported one."""
+    obj = context.object
+    for collection in itertools.chain(obj.users_collection if obj else (), bpy.data.collections):
+        origin = collection.get(import_xbg.PROP_SOURCE)
+        if origin:
+            return origin, collection
+    return None, None
+
+
+def cached(cache, path, read, fallback):
+    """`read(path)`, kept until the file changes, since Blender asks again on every redraw.
+
+    A file that cannot be read is cached as `fallback` like any other answer, or it would be
+    reopened on every redraw; the stamp clears it the moment the file is rewritten.
+    """
+    try:
+        stamp = os.path.getmtime(path)
+    except OSError:
+        return fallback
+    if path not in cache or cache[path][0] != stamp:
+        try:
+            cache[path] = (stamp, read(path))
+        except Exception:
+            cache[path] = (stamp, fallback)
+    return cache[path][1]
 
 
 def pack_path(context):

@@ -1,44 +1,32 @@
-# The Far Cry 2 panel in the Material properties: the material's document, laid
-# out the way its shader's own property list groups it.
+# The Far Cry 2 material editor, in the Material properties and in the 3D view's sidebar: the
+# material's document, laid out the way its shader's own property list groups it.
 #
-# `draw` reads only what is already cached; the pack's manifest and shader list
-# are read once per file change, the way the clip list is.
-
-import os
-import posixpath
+# `draw` reads only what is already cached; the pack's manifest and shader list are read once per
+# file change, the way the clip list is.
 
 import bpy
 from bpy.props import EnumProperty, IntProperty, StringProperty
 
 from . import material_data, panel
-from .import_xbg import PROP_SOURCE
 from .material_data import BROKEN, CLEAN, FLOAT, INTEGER, TEXTURE
-from .pack import OWNED, read_schema, same_path
+from .pack import Pack, read_schema, same_path
 
-# Each pack's manifest and shader list against the mtime they were read at.
+# Each pack's entries and shader list, until the file changes.
 _PACKS = {}
 
 # The shader enum's items, kept alive for Blender the way the clip list is.
 _SHADERS = []
 
 
+def _read(path):
+    manifest, shaders = read_schema(path)
+    return Pack(manifest, {}), shaders
+
+
 def _pack(context):
-    """The manifest and shader list of the pack the active object came from."""
-    obj = context.object
-    path = next((c.get(PROP_SOURCE) for c in (obj.users_collection if obj else ())
-                 if c.get(PROP_SOURCE)), None) or panel.pack_path(context)
-    if not path:
-        return {}, {}
-    try:
-        stamp = os.path.getmtime(path)
-    except OSError:
-        return {}, {}
-    if path not in _PACKS or _PACKS[path][0] != stamp:
-        try:
-            _PACKS[path] = (stamp,) + read_schema(path)
-        except Exception:
-            _PACKS[path] = (stamp, {}, {})
-    return _PACKS[path][1], _PACKS[path][2]
+    """The entries and shader list of the pack the active object came from."""
+    origin, _collection = panel.pack_of(context)
+    return panel.cached(_PACKS, origin, _read, (None, {})) if origin else (None, {})
 
 
 def _material(context):
@@ -49,9 +37,12 @@ def _material(context):
     return material
 
 
-def _record(manifest, path):
-    return next((entry for entry in manifest.get("entries", ())
-                 if same_path(entry["path"], path)), None)
+def _owned(material, pack):
+    """Whether export may write the material: one it adds, or one only this model draws with."""
+    if material_data.is_new(material):
+        return True
+    entry = pack.entry(material.get(material_data.PROP_MATERIAL_PATH, "")) if pack else None
+    return entry is not None and entry.owned
 
 
 def _parameter(context, key):
@@ -59,7 +50,15 @@ def _parameter(context, key):
     return next((p for p in descriptor["parameters"] if p["name"] == key), None) if descriptor else None
 
 
-class FC2_OT_material_add(bpy.types.Operator):
+class _OnMaterial:
+    """Something that acts on a Far Cry 2 material, there only when one is being edited."""
+
+    @classmethod
+    def poll(cls, context):
+        return material_data.held(_material(context))
+
+
+class FC2_OT_material_add(_OnMaterial, bpy.types.Operator):
     """Give the material this property, at the shader's default"""
 
     bl_idname = "material.fc2_add_value"
@@ -68,16 +67,12 @@ class FC2_OT_material_add(bpy.types.Operator):
 
     key: StringProperty()
 
-    @classmethod
-    def poll(cls, context):
-        return material_data.held(_material(context))
-
     def execute(self, context):
+        material = _material(context)
         parameter = _parameter(context, self.key)
         if parameter is None:
-            self.report({"ERROR"}, "%s takes no %s" % (_material(context).fc2.shader, self.key))
+            self.report({"ERROR"}, "%s takes no %s" % (material.fc2.shader, self.key))
             return {"CANCELLED"}
-        material = _material(context)
         material_data.add(material.fc2, parameter["section"], self.key, _default(parameter))
         material_data.refresh(material)
         return {"FINISHED"}
@@ -98,7 +93,7 @@ def _default(parameter):
     return {"value": numbers}
 
 
-class FC2_OT_material_remove(bpy.types.Operator):
+class FC2_OT_material_remove(_OnMaterial, bpy.types.Operator):
     """Drop this property, so the shader's own default applies"""
 
     bl_idname = "material.fc2_remove_value"
@@ -106,10 +101,6 @@ class FC2_OT_material_remove(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     index: IntProperty()
-
-    @classmethod
-    def poll(cls, context):
-        return material_data.held(_material(context))
 
     def execute(self, context):
         material = _material(context)
@@ -125,7 +116,7 @@ def _shader_items(_self, context):
     return _SHADERS or [("", "This pack carries no shader list", "")]
 
 
-class FC2_OT_material_shader(bpy.types.Operator):
+class FC2_OT_material_shader(_OnMaterial, bpy.types.Operator):
     """Draw the material with another shader. Properties it does not take are listed apart"""
 
     bl_idname = "material.fc2_shader"
@@ -133,10 +124,6 @@ class FC2_OT_material_shader(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     shader: EnumProperty(name="Shader", items=_shader_items)
-
-    @classmethod
-    def poll(cls, context):
-        return material_data.held(_material(context))
 
     def invoke(self, context, _event):
         return context.window_manager.invoke_props_dialog(self)
@@ -148,7 +135,7 @@ class FC2_OT_material_shader(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class FC2_OT_material_copy(bpy.types.Operator):
+class FC2_OT_material_copy(_OnMaterial, bpy.types.Operator):
     """Copy this material to a new one of the model's own, and draw the selected parts that use
     it with the copy"""
 
@@ -160,15 +147,10 @@ class FC2_OT_material_copy(bpy.types.Operator):
     path: StringProperty(name="Game path",
                          description="Where the game will find it, beside the model by default")
 
-    @classmethod
-    def poll(cls, context):
-        return material_data.held(_material(context))
-
     def invoke(self, context, _event):
-        self.name = _material(context).fc2.name + "_OWN"
-        manifest = _pack(context)[0]
-        folder = posixpath.dirname(manifest.get("model", "").replace("\\", "/"))
-        self.path = posixpath.join(folder, self.name.lower() + ".xbm")
+        material = _material(context)
+        self.name = material.fc2.name + "_OWN"
+        self.path = material_data.beside_model(material, self.name, ".xbm")
         return context.window_manager.invoke_props_dialog(self, width=420)
 
     def execute(self, context):
@@ -176,7 +158,8 @@ class FC2_OT_material_copy(bpy.types.Operator):
         if not self.name.strip() or not path.lower().endswith(".xbm"):
             self.report({"ERROR"}, "Give the material a name and a game path ending in .xbm")
             return {"CANCELLED"}
-        if _record(_pack(context)[0], path) is not None or any(
+        pack = _pack(context)[0]
+        if (pack and pack.entry(path)) or any(
                 same_path(m.get(material_data.PROP_MATERIAL_PATH, ""), path) for m in bpy.data.materials):
             self.report({"ERROR"}, "%s is a material already" % path)
             return {"CANCELLED"}
@@ -193,49 +176,41 @@ class FC2_OT_material_copy(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class FC2_PT_material(bpy.types.Panel):
+class _MaterialPanel(_OnMaterial):
+    def draw(self, context):
+        _draw(self.layout, context, _material(context))
+
+
+class FC2_PT_material(_MaterialPanel, bpy.types.Panel):
     bl_idname = "FC2_PT_material"
     bl_label = "Far Cry 2"
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
     bl_context = "material"
 
-    @classmethod
-    def poll(cls, context):
-        return material_data.held(_material(context))
 
-    def draw(self, context):
-        _draw(self.layout, context, _material(context))
-
-
-class FC2_PT_material_sidebar(panel.FC2_PT_base):
+class FC2_PT_material_sidebar(_MaterialPanel, panel.FC2_PT_base):
     bl_idname = "FC2_PT_material_sidebar"
     bl_label = "Material"
-
-    @classmethod
-    def poll(cls, context):
-        return material_data.held(_material(context))
-
-    def draw(self, context):
-        _draw(self.layout, context, _material(context))
 
 
 def _draw(layout, context, material):
     fc2 = material.fc2
-    path = material.get(material_data.PROP_MATERIAL_PATH, "")
-    manifest, shaders = _pack(context)
+    pack, shaders = _pack(context)
+    owned = _owned(material, pack)
 
-    layout.label(text=path, icon="MATERIAL")
-    record = _record(manifest, path)
-    added = bool(material.get(material_data.PROP_ADDED))
-    owned = added or (record is not None and record.get("role") == OWNED)
+    layout.label(text=material.get(material_data.PROP_MATERIAL_PATH, ""), icon="MATERIAL")
     if not owned:
-        box = layout.box()
-        panel.wrapped(box, "Shared with other models, so export refuses an edit. Copy it "
-                           "to change it.", icon="LOCKED", width=36)
-    elif added:
+        panel.wrapped(layout.box(), "Shared with other models, so export refuses an edit. Copy it "
+                                    "to change it.", icon="LOCKED", width=36)
+    elif material_data.is_new(material):
         layout.label(text="New: export adds it to the pack.", icon="ADD")
     layout.operator(FC2_OT_material_copy.bl_idname, icon="DUPLICATE")
+
+    # Every value's index by key, so the layout below never scans the values per parameter.
+    by_key = {}
+    for index, value in enumerate(fc2.values):
+        by_key.setdefault(value.key, []).append(index)
 
     body = layout.column()
     body.enabled = owned
@@ -248,52 +223,55 @@ def _draw(layout, context, material):
         body.label(text="No shader is named %s, so the game draws this with Error." % fc2.shader,
                    icon="ERROR")
     body.prop(fc2, "show_all")
-    if any(material_data.clean_twin(fc2, v.key) for v in fc2.values if v.section == FLOAT):
+    if any(_twin(by_key, key) is not None for key in by_key):
         body.prop(fc2, "link_clean")
 
     parameters = descriptor["parameters"] if descriptor else []
     declared = {p["name"]: p for p in parameters}
-    twins = {p["name"] for p in parameters if _base(p["name"], declared)}
     groups = {}
     for parameter in parameters:
-        if parameter["name"] not in twins:
+        if not _is_twin(parameter["name"], declared):
             groups.setdefault(parameter["group"], []).append(parameter)
     for group, members in groups.items():
-        keys = [p["name"] + suffix for p in members for suffix in ("", CLEAN, BROKEN)]
-        if not fc2.show_all and not any(v.key in keys for v in fc2.values):
+        names = [p["name"] + suffix for p in members for suffix in ("", CLEAN, BROKEN)]
+        if not fc2.show_all and not any(name in by_key for name in names):
             continue
         body.label(text=group)
         for parameter in members:
-            _rows(body, fc2, parameter, parameter["name"])
+            _rows(body, fc2, by_key, parameter, parameter["name"])
             for suffix in (CLEAN, BROKEN):
-                if parameter["name"] + suffix in twins:
-                    _rows(body, fc2, declared[parameter["name"] + suffix], suffix)
+                if parameter["name"] + suffix in declared:
+                    _rows(body, fc2, by_key, declared[parameter["name"] + suffix], suffix)
 
-    stray = [i for i, v in enumerate(fc2.values) if v.key not in declared]
+    stray = [index for key, indices in by_key.items() if key not in declared for index in indices]
     if stray:
         body.label(text="Not taken by %s" % fc2.shader if descriptor else "Properties")
-        for index in stray:
-            _row(body, fc2, index, None)
+        for index in sorted(stray):
+            _row(body, fc2, by_key, index, None)
 
 
-def _base(name, declared):
-    """The value a Clean or Broken twin belongs to, when the shader declares it."""
-    for suffix in (CLEAN, BROKEN):
-        if name.endswith(suffix) and name[:-len(suffix)] in declared:
-            return name[:-len(suffix)]
-    return None
+def _is_twin(name, declared):
+    """Whether this is the Clean or Broken twin of a value the shader declares."""
+    return any(name.endswith(suffix) and name[:-len(suffix)] in declared for suffix in (CLEAN, BROKEN))
 
 
-def _rows(layout, fc2, parameter, label):
+def _twin(by_key, key):
+    """The index of the Clean twin of a value that carries both twins, as `clean_twin` decides."""
+    if key.endswith(CLEAN) or key.endswith(BROKEN) or key + BROKEN not in by_key:
+        return None
+    return by_key.get(key + CLEAN, [None])[0]
+
+
+def _rows(layout, fc2, by_key, parameter, label):
     """A parameter's value rows, or its unset row when every property is shown."""
-    indices = [i for i, v in enumerate(fc2.values) if v.key == parameter["name"]]
+    indices = by_key.get(parameter["name"], ())
     for index in indices:
-        _row(layout, fc2, index, parameter, label)
+        _row(layout, fc2, by_key, index, parameter, label)
     if not indices and fc2.show_all:
         _unset(layout, parameter, label)
 
 
-def _row(layout, fc2, index, parameter, label=None):
+def _row(layout, fc2, by_key, index, parameter, label=None):
     value = fc2.values[index]
     split = layout.split(factor=0.42, align=True)
     _label(split, label or value.key, value.key)
@@ -313,9 +291,11 @@ def _row(layout, fc2, index, parameter, label=None):
     if value.section == TEXTURE:
         layout.prop(value, "path", text="")
 
-    twin = material_data.clean_twin(fc2, value.key) if value.section == FLOAT else None
-    if twin is not None and not fc2.link_clean and tuple(twin.number) != tuple(value.number):
-        layout.label(text="Differs from %s, which is what the game shows" % twin.key, icon="ERROR")
+    twin = _twin(by_key, value.key) if value.section == FLOAT else None
+    if twin is not None and not fc2.link_clean \
+            and tuple(fc2.values[twin].number) != tuple(value.number):
+        layout.label(text="Differs from %s, which is what the game shows" % fc2.values[twin].key,
+                     icon="ERROR")
 
 
 def _label(layout, text, key):
@@ -324,14 +304,13 @@ def _label(layout, text, key):
     if text != key:
         row.separator(factor=2.0)
     row.label(text=text)
-    return row
 
 
 def _unset(layout, parameter, label):
     split = layout.split(factor=0.42, align=True)
-    _label(split, label, parameter["name"]).active = False
+    split.active = False
+    _label(split, label, parameter["name"])
     row = split.row(align=True)
-    row.active = False
     row.label(text="default %s" % parameter["default"] if parameter.get("default") else "unset")
     row.operator(FC2_OT_material_add.bl_idname, text="", icon="ADD").key = parameter["name"]
 

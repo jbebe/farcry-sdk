@@ -35,6 +35,9 @@ MATERIAL = "material"
 TEXTURE = "texture"
 CLIP = "clip"
 
+# Where JackAll's builder puts each kind of document in the zip.
+_MEMBERS = {MATERIAL: "materials/%s.json", TEXTURE: "textures/%s.png"}
+
 
 def same_path(a, b):
     """Whether two game paths name one file.
@@ -42,16 +45,23 @@ def same_path(a, b):
     A path arrives however the referencing file spelled it — a mesh names its
     materials `GRAPHICS\\_MATERIALS\\…` — so it is compared, never rewritten.
     """
-    return _key(a) == _key(b)
+    return path_key(a) == path_key(b)
 
 
-def _key(path):
+def path_key(path):
+    """A game path the way `same_path` compares it."""
     return (path or "").replace("\\", "/").lower()
 
 
 def stem(path):
-    """A game path's file name without its extension."""
-    return posixpath.splitext(posixpath.basename(_key(path)))[0]
+    """A game path's file name without its extension, lowercased."""
+    return _file_stem(path).lower()
+
+
+def _file_stem(path):
+    """The file name without its extension, as the path spells it - which names the zip member,
+    the way JackAll's builder does."""
+    return posixpath.splitext(posixpath.basename((path or "").replace("\\", "/")))[0]
 
 
 def bank_label(clip):
@@ -66,7 +76,7 @@ def bank_order(clips):
 
 
 def _folder(clip):
-    return posixpath.basename(posixpath.dirname(_key(clip["path"])))
+    return posixpath.basename(posixpath.dirname(path_key(clip["path"])))
 
 
 def timing(clip):
@@ -265,21 +275,19 @@ class Pack:
     def add_material(self, game_path, document):
         """Carry a material the game does not have. The mesh names it separately, through a
         cluster's material index."""
-        return self._add(game_path, "materials", ".json", MATERIAL, dumps(document))
+        return self._add(game_path, MATERIAL, dumps(document))
 
     def add_texture(self, game_path, png, codec, levels):
         """Carry a texture the game does not have. With no header of its own, JackAll writes a
         fresh one that names no companion, so the whole chain lands in one file."""
-        return self._add(game_path, "textures", ".png", TEXTURE, png,
-                         codec=codec, levels=levels)
+        return self._add(game_path, TEXTURE, png, codec=codec, levels=levels)
 
-    def _add(self, game_path, folder, extension, kind, content, **fields):
+    def _add(self, game_path, kind, content, **fields):
         """A new owned entry. Its origin hash is empty - it arrived with nothing - so it reads
         as modified to every reader and is always written."""
         if self.entry(game_path) is not None:
             raise ValueError("this pack already carries %s" % game_path)
-        name = "%s/%s%s" % (folder, posixpath.splitext(
-            posixpath.basename(game_path.replace("\\", "/")))[0], extension)
+        name = _MEMBERS[kind] % _file_stem(game_path)
         if name in self.files:
             raise ValueError("this pack already holds a file named %s" % name)
         record = {"path": game_path, "file": name, "kind": kind, "role": OWNED,

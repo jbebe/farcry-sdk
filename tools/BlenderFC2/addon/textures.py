@@ -3,7 +3,6 @@
 # A texture travels as PNG and JackAll encodes it. What this decides is which PNG, at which game
 # path and in which codec; the blocks, the mip chain and the header are JackAll's.
 
-import hashlib
 import math
 import os
 import tempfile
@@ -12,6 +11,7 @@ import bpy
 import numpy
 
 from . import material_data
+from .pack import path_key
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
@@ -20,7 +20,7 @@ CUBE_SLOTS = ("ReflectionTexture", "ReflectionCubeTexture")
 
 
 def plan(pack, collection):
-    """Every texture slot whose image export would write: (slot, image, game path, entry or None).
+    """Every texture slot holding an image, once per game path: (slot, image, path, entry or None).
 
     Raises for what no export can write, so a check can say so before an export refuses.
     """
@@ -33,40 +33,45 @@ def plan(pack, collection):
             if entry is None and value.key in CUBE_SLOTS:
                 raise ValueError("%s on %s is a cube map, and %s is a flat image; pick a cube map "
                                  "the game has" % (value.key, material.name, value.image.name))
-            out.setdefault(value.path.lower(), (value.key, value.image, value.path, entry))
+            out.setdefault(path_key(value.path), (value.key, value.image, value.path, entry))
     return list(out.values())
 
 
-def changes(pack, collection):
-    """What export would write: (slot, image, game path, entry or None, PNG) for every new
-    texture and every one whose image no longer matches the pack's."""
-    out = []
-    for slot, image, path, entry in plan(pack, collection):
-        png = encode(image, slot if entry is None else None)
-        if entry is None or hashlib.sha256(png).hexdigest() != entry.record["sha256"]:
-            out.append((slot, image, path, entry, png))
-    return out
+def changed(pack, slot, image, entry):
+    """The PNG to write for this slot's image, or None when the pack already holds it."""
+    png = encode(image, swizzle=entry is None and _normal(slot))
+    return png if entry is None or png != pack.content(entry) else None
 
 
 def write(pack, collection):
     """Put every changed and every new texture into the pack, and say how many."""
-    changed = changes(pack, collection)
-    for slot, image, path, entry, png in changed:
+    written = 0
+    for slot, image, path, entry in plan(pack, collection):
+        png = changed(pack, slot, image, entry)
+        if png is None:
+            continue
         if entry is None:
             pack.add_texture(path, png, codec(image, slot), levels(png))
-            continue
-        resized = size(png) != size(pack.content(entry))
-        pack.replace(path, png)
-        if resized:
-            entry.record["levels"] = levels(png)
-    return len(changed)
+        else:
+            resized = size(png) != size(pack.content(entry))
+            pack.replace(path, png)
+            if resized:
+                entry.record["levels"] = levels(png)
+        written += 1
+    return written
 
 
 def codec(image, slot):
     """DXT5 where alpha carries something - coverage, or a normal's X - else DXT1."""
-    if slot.startswith("NormalTexture"):
+    if _normal(slot):
         return "DXT5"
-    return "DXT5" if _soft_alpha(image) else "DXT1"
+    found = alpha(image)
+    return "DXT5" if found is not None and (found < 0.999).any() else "DXT1"
+
+
+def _normal(slot):
+    """NormalTexture1 or NormalTexture2."""
+    return slot.startswith("NormalTexture")
 
 
 def levels(png):
@@ -79,14 +84,24 @@ def size(png):
     return int.from_bytes(png[16:20], "big"), int.from_bytes(png[20:24], "big")
 
 
-def encode(image, new_slot=None):
+def alpha(image):
+    """Every texel's alpha, in one read; None for an image with none or no pixels loaded."""
+    if image.channels < 4:
+        return None
+    try:
+        pixels = numpy.empty(len(image.pixels), dtype=numpy.float32)
+        image.pixels.foreach_get(pixels)
+    except (RuntimeError, AttributeError):
+        return None
+    return pixels[3::4]
+
+
+def encode(image, swizzle=False):
     """The image as PNG: the file it was loaded from unless it was painted since.
 
-    A new normal map is stored the way the game reads one, X in alpha and Y in the colour,
-    which is the swizzle the importer undoes.
+    `swizzle` stores a new normal map the way the game reads one, X in alpha and Y in the colour.
     """
-    normal = new_slot is not None and new_slot.startswith("NormalTexture")
-    if not image.is_dirty and not normal and image.packed_file is None and image.filepath:
+    if not image.is_dirty and not swizzle and image.packed_file is None and image.filepath:
         path = bpy.path.abspath(image.filepath)
         if os.path.exists(path):
             with open(path, "rb") as handle:
@@ -97,9 +112,12 @@ def encode(image, new_slot=None):
     width, height = image.size
     pixels = numpy.empty(width * height * image.channels, dtype=numpy.float32)
     image.pixels.foreach_get(pixels)
-    rgba = numpy.ones((width * height, 4), dtype=numpy.float32)
-    rgba[:, :image.channels] = pixels.reshape(-1, image.channels)
-    if normal:
+    if image.channels == 4:
+        rgba = pixels.reshape(-1, 4)
+    else:
+        rgba = numpy.ones((width * height, 4), dtype=numpy.float32)
+        rgba[:, :image.channels] = pixels.reshape(-1, image.channels)
+    if swizzle:
         rgba[:, 3] = rgba[:, 0]
         rgba[:, 0] = rgba[:, 2] = rgba[:, 1]
 
@@ -107,7 +125,7 @@ def encode(image, new_slot=None):
     try:
         copy.colorspace_settings.name = "Non-Color"
         copy.pixels.foreach_set(rgba.ravel())
-        out = os.path.join(tempfile.gettempdir(), "fc2tex", "export.png")
+        out = os.path.join(tempfile.gettempdir(), "fc2tex-export", "encoded.png")
         os.makedirs(os.path.dirname(out), exist_ok=True)
         copy.filepath_raw = out
         copy.file_format = "PNG"
@@ -116,13 +134,3 @@ def encode(image, new_slot=None):
             return handle.read()
     finally:
         bpy.data.images.remove(copy)
-
-
-def _soft_alpha(image, samples=4096):
-    """Whether any sampled texel is less than opaque."""
-    if image.channels < 4:
-        return False
-    pixels = numpy.empty(len(image.pixels), dtype=numpy.float32)
-    image.pixels.foreach_get(pixels)
-    alpha = pixels[3::4]
-    return bool((alpha[::max(1, len(alpha) // samples)] < 0.999).any())

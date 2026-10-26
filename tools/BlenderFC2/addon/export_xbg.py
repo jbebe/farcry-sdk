@@ -48,6 +48,8 @@ def build_mesh(collection, recompute_tangents=False):
     a rule that fired on something export would not write, or missed something
     it would, is worse than no rule.
     """
+    # A script can export a saved scene without registering the add-on.
+    material_data.register()
     pack = source_pack(collection)
     mesh = pack.mesh()
     lod_index = collection.get(PROP_LOD, 0)
@@ -92,7 +94,7 @@ def build_mesh(collection, recompute_tangents=False):
         refit_bounds(mesh)
     return {"pack": pack, "mesh": mesh, "parts": edited, "resized": resized,
             "moved": moved, "added": added, "reassigned": reassigned, "written": written,
-            "lod": lod_index}
+            "lod": lod_index, "changed": bool(moved or resized or added or reassigned)}
 
 
 def new_parts(collection):
@@ -212,7 +214,7 @@ def save(path, collection, recompute_tangents=False):
     """Rebuild the collection's LOD and its materials in its source pack and write the pack out."""
     built = build_mesh(collection, recompute_tangents)
     pack = built["pack"]
-    if built["moved"] or built["resized"] or built["added"] or built["reassigned"]:
+    if built["changed"]:
         pack.replace_document(pack.model, built["mesh"])
     built["materials"] = material_data.write(pack, collection)
     built["textures"] = textures.write(pack, collection)

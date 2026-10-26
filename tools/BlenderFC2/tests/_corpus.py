@@ -82,6 +82,16 @@ CLI = os.path.normpath(os.path.join(
 _packs = {}
 
 
+def extract(pack_path, out):
+    """Write a pack's edits out as game files under `out`, the way JackAll applies one."""
+    result = subprocess.run([CLI, "fc2model", "extract", pack_path, "-o", out],
+                            capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError("jackall could not apply %s:\n%s\n%s"
+                           % (pack_path, result.stdout, result.stderr))
+    return out
+
+
 def have_jackall():
     return os.path.exists(CLI) and os.path.isdir(GAME)
 

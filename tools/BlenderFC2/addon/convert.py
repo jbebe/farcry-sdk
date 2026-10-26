@@ -18,12 +18,8 @@ _TURN_BACK = _TURN.inverted()
 
 
 def f32(value):
-    """A number as the float32 the file will hold, widened back to a double.
-
-    The pack's numbers are the shortest decimal that round-trips through a float, and
-    Blender hands back the float widened to a double - the same value, spelled
-    differently, so comparing the doubles calls every untouched value changed.
-    """
+    """A number as the float32 the file will hold, widened back to a double: the pack spells a
+    value as the shortest decimal and Blender as a widened float, so only this compares them."""
     return struct.unpack("<f", struct.pack("<f", value))[0]
 
 

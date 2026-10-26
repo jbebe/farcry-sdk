@@ -5,14 +5,17 @@
 # Dunia format - the document is the pack's JSON, its entries kept in file order
 # so an untouched material goes back exactly as it came.
 
+import contextlib
 import json
 import posixpath
+import re
 
 import bpy
 from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatVectorProperty,
                        IntProperty, PointerProperty, StringProperty)
 
 from . import convert, materials
+from .pack import path_key, same_path
 
 TEXTURE = "Texture"
 FLOAT = "Float"
@@ -24,22 +27,33 @@ SECTIONS = ((TEXTURE, "textures"), (FLOAT, "floats"), (INTEGER, "integers"))
 CLEAN = "Clean"
 BROKEN = "Broken"
 
-# The material's game path, which is its identity in the pack. Kept apart from
-# the material's own internal name - one property used to carry both, so
-# resolving textures overwrote the path with the name.
+# The material's game path, its identity in the pack.
 PROP_MATERIAL_PATH = "fc2_material_path"
 
-# The document as the pack held it, for the fields nobody edits.
+# The document's fields nobody edits, as the pack held them.
 PROP_DOCUMENT = "fc2_document"
 
 # A material at a path the pack does not carry yet, which export adds.
 PROP_ADDED = "fc2_added"
 
-# The model's game path, whose folder a new texture lands in.
+# The model's game path, whose folder a new texture or material lands in.
 PROP_MODEL = "fc2_model"
 
-# Set while values are written in bulk, so the preview is rebuilt once at the end.
+# An image's file extension, which a game path built from its name leaves out.
+_IMAGE_EXTENSION = re.compile(r"\.(png|jpe?g|tga|tiff?|bmp|exr|dds)$", re.IGNORECASE)
+
+# Set while values are written in bulk, so update callbacks leave the scene alone.
 _quiet = False
+
+
+@contextlib.contextmanager
+def _quietly():
+    global _quiet
+    _quiet = True
+    try:
+        yield
+    finally:
+        _quiet = False
 
 
 def _changed(self, _context):
@@ -47,27 +61,50 @@ def _changed(self, _context):
         return
     material = self.id_data
     _link(material, self)
-    refresh(material)
+    if self.section == TEXTURE or self.key in materials.PREVIEWED:
+        refresh(material)
+
+
+def _typed(self, context):
+    """A typed game path takes the image the file already holds for it, or none."""
+    if _quiet:
+        return
+    found = _loaded(self.path)
+    if found is not self.image:
+        with _quietly():
+            self.image = found
+    _changed(self, context)
 
 
 def _picked(self, context):
-    """An image picked for a texture slot brings its game path: the pack's, or a new one."""
+    """A picked image brings its game path: the pack's, or a new one beside the model."""
+    if _quiet:
+        return
     image = self.image
-    path = (image.get(materials.PROP_IMAGE_PATH) or _new_path(image, self.id_data.get(PROP_MODEL, ""))
-            if image else None)
-    if path and path != self.path:
-        self.path = path
-    else:
-        _changed(self, context)
+    path = (image.get(materials.PROP_IMAGE_PATH) or _new_path(image, self.id_data)) if image else ""
+    if image and not same_path(path, self.path):
+        with _quietly():
+            self.path = path
+    _changed(self, context)
 
 
-def _new_path(image, model):
-    """Where an image from outside the pack will live in the game: beside the model, named after
-    the image. Stamped on it, so every slot that picks it names the same file."""
-    name = posixpath.splitext(image.name)[0].strip().lower().replace(" ", "_")
-    folder = posixpath.dirname(model.replace("\\", "/"))
-    image[materials.PROP_IMAGE_PATH] = posixpath.join(folder, name + ".xbt")
-    return image[materials.PROP_IMAGE_PATH]
+def _new_path(image, material):
+    """Where an image from outside the pack will live, stamped on it so every slot that picks it
+    names one file - and no other image's."""
+    path = beside_model(material, _IMAGE_EXTENSION.sub("", image.name), ".xbt")
+    base, count = path[:-len(".xbt")], 1
+    while any(other is not image and same_path(other.get(materials.PROP_IMAGE_PATH), path)
+              for other in bpy.data.images):
+        count += 1
+        path = "%s_%d.xbt" % (base, count)
+    image[materials.PROP_IMAGE_PATH] = path
+    return path
+
+
+def beside_model(material, name, extension):
+    """A game path in the model's own folder, named after `name`."""
+    folder = posixpath.dirname(material.get(PROP_MODEL, "").replace("\\", "/"))
+    return posixpath.join(folder, re.sub(r"[^a-z0-9_]+", "_", name.strip().lower()) + extension)
 
 
 def _colour(self):
@@ -83,7 +120,7 @@ class FC2_PG_value(bpy.types.PropertyGroup):
     key: StringProperty()
     section: EnumProperty(items=[(name, name, "") for name, _field in SECTIONS])
     width: IntProperty(min=0, max=4)
-    path: StringProperty(name="Texture", update=_changed)
+    path: StringProperty(name="Texture", update=_typed)
     image: PointerProperty(type=bpy.types.Image, update=_picked)
     number: FloatVectorProperty(size=4, update=_changed)
     colour: FloatVectorProperty(size=3, subtype="COLOR", min=0.0, soft_max=1.0,
@@ -107,14 +144,15 @@ def held(material):
     return material is not None and PROP_DOCUMENT in material
 
 
-def load(material, document, image_for, model=""):
+def is_new(material):
+    """A held material the pack does not carry yet."""
+    return held(material) and bool(material.get(PROP_ADDED))
+
+
+def load(material, document, image_for, model):
     """Hold a document on the material of `model`, its textures resolved by `image_for`, and
     preview it."""
-    global _quiet
-    # A script can import a pack without registering the add-on.
-    register()
-    _quiet = True
-    try:
+    with _quietly():
         fc2 = material.fc2
         fc2.values.clear()
         fc2.name = document.get("name", "")
@@ -122,10 +160,10 @@ def load(material, document, image_for, model=""):
         for section, field in SECTIONS:
             for entry in document.get(field, ()):
                 add(fc2, section, entry.get("slot", entry.get("key")), entry, image_for)
-        material[PROP_DOCUMENT] = json.dumps(document)
+        material[PROP_DOCUMENT] = json.dumps(
+            {key: value for key, value in document.items()
+             if key not in ("name", "shader") + tuple(field for _section, field in SECTIONS)})
         material[PROP_MODEL] = model
-    finally:
-        _quiet = False
     refresh(material)
 
 
@@ -147,17 +185,17 @@ def add(fc2, section, key, entry, image_for=None):
 
 
 def document(material):
-    """The document export writes: the one the pack held, with the values as they now are."""
-    out = json.loads(material[PROP_DOCUMENT])
+    """The document export writes: the fields nobody edits, and the values as they now are."""
     fc2 = material.fc2
-    out["name"] = fc2.name
-    out["shader"] = fc2.shader
-    out["textures"] = [{"slot": v.key, "path": v.path} for v in fc2.values if v.section == TEXTURE]
-    out["floats"] = [{"key": v.key, "value": list(v.number[:v.width])}
-                     for v in fc2.values if v.section == FLOAT]
-    out["integers"] = [{"key": v.key, "value": v.integer}
-                       for v in fc2.values if v.section == INTEGER]
-    return out
+    return {
+        **json.loads(material[PROP_DOCUMENT]),
+        "name": fc2.name,
+        "shader": fc2.shader,
+        "textures": [{"slot": v.key, "path": v.path} for v in fc2.values if v.section == TEXTURE],
+        "floats": [{"key": v.key, "value": list(v.number[:v.width])}
+                   for v in fc2.values if v.section == FLOAT],
+        "integers": [{"key": v.key, "value": v.integer} for v in fc2.values if v.section == INTEGER],
+    }
 
 
 def same(a, b):
@@ -184,28 +222,25 @@ def clean_twin(fc2, key):
 
 
 def _link(material, value):
-    global _quiet
     fc2 = material.fc2
     twin = clean_twin(fc2, value.key) if value.section == FLOAT and fc2.link_clean else None
-    if twin is None:
-        return
-    _quiet = True
-    try:
-        twin.number = value.number
-    finally:
-        _quiet = False
+    if twin is not None:
+        with _quietly():
+            twin.number = value.number
 
 
 def refresh(material):
     """Rebuild the preview from the values, with the images they already point at."""
-    images = {v.path: v.image for v in material.fc2.values if v.section == TEXTURE and v.image}
-    materials.build(material, document(material), lambda path: images.get(path) or _loaded(path))
+    images = {path_key(v.path): v.image for v in material.fc2.values
+              if v.section == TEXTURE and v.image}
+    materials.build(material, document(material),
+                    lambda path: images.get(path_key(path)) or _loaded(path))
 
 
 def _loaded(path):
     """An image already in the file for a game path, such as one another material loaded."""
     return next((image for image in bpy.data.images
-                 if image.get(materials.PROP_IMAGE_PATH) == path), None)
+                 if path and same_path(image.get(materials.PROP_IMAGE_PATH), path)), None)
 
 
 def used(collection):
@@ -229,7 +264,7 @@ def write(pack, collection):
         original = pack.material(path)
         edited = document(material)
         if original is None:
-            if material.get(PROP_ADDED):
+            if is_new(material):
                 pack.add_material(path, edited)
                 written += 1
         elif not same(edited, original):
@@ -252,7 +287,7 @@ CLASSES = (FC2_PG_value, FC2_PG_material)
 
 
 def register():
-    """Idempotent, since an import may have registered these already."""
+    """Idempotent, since an import or export run as a script registers these itself."""
     if hasattr(bpy.types.Material, "fc2"):
         return
     for cls in CLASSES:

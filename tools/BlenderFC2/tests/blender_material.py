@@ -7,6 +7,7 @@
 # out of JackAll as the .xbm it describes, and a material the model shares is
 # refused rather than quietly re-skinning every other model that uses it.
 
+import contextlib
 import json
 import os
 import subprocess
@@ -18,7 +19,7 @@ sys.path.insert(0, os.path.join(HERE, ".."))
 sys.path.insert(0, HERE)
 
 # _corpus first: it evicts any copy of the add-on an installed extension left.
-from _corpus import CLI, pack, require_pack
+from _corpus import CLI, extract, find, pack, require_pack
 
 import bpy
 import numpy
@@ -48,6 +49,25 @@ def load(path):
 def material(result, game_path):
     return next(m for obj in result["parts"] for m in obj.data.materials
                 if m and m.get(material_data.PROP_MATERIAL_PATH) == game_path)
+
+
+@contextlib.contextmanager
+def registered():
+    """The add-on registered, for the operators a panel's buttons run."""
+    import addon
+
+    addon.register()
+    try:
+        yield
+    finally:
+        addon.unregister()
+
+
+def shown(xbm):
+    """A written material's own name and its properties as `xbm show` prints them."""
+    out = json.loads(subprocess.run([CLI, "xbm", "show", xbm, "--json"],
+                                    capture_output=True, text=True, check=True).stdout)
+    return out["name"], {entry["key"]: entry["value"] for entry in out["properties"]}
 
 
 def owning(path, game_path, directory):
@@ -104,13 +124,7 @@ def edit_reaches_the_game_file(path, directory):
     if not Pack.load(out).entry(WOOD).modified:
         errors += fail("the edited material was not marked modified")
 
-    layer = os.path.join(directory, "layer")
-    subprocess.run([CLI, "fc2model", "extract", out, "-o", layer], capture_output=True, check=True)
-    xbm = next(os.path.join(base, name) for base, _dirs, names in os.walk(layer)
-               for name in names if name.lower().endswith(".xbm"))
-    shown = json.loads(subprocess.run([CLI, "xbm", "show", xbm, "--json"],
-                                      capture_output=True, text=True, check=True).stdout)
-    written = {entry["key"]: entry["value"] for entry in shown["properties"]}
+    _name, written = shown(next(find(".xbm", extract(out, os.path.join(directory, "layer")))))
     if written.get("SpecularPower") != "150":
         errors += fail("the game file says SpecularPower %s" % written.get("SpecularPower"))
     if written.get("DiffuseColor1Clean") != "0.5, 0.25, 0.125":
@@ -123,7 +137,7 @@ def edit_reaches_the_game_file(path, directory):
 def shared_edit_is_refused(path, directory):
     result = load(path)
     wood = material(result, WOOD)
-    next(v for v in wood.fc2.values if v.key == "SpecularPower").number[0] = 150.0
+    material_data.find(wood.fc2, "SpecularPower").number[0] = 150.0
 
     errors = 0
     found = validate.check_scene(bpy.context)
@@ -142,17 +156,12 @@ def shared_edit_is_refused(path, directory):
 
 def copy_reaches_the_game_file(path, directory):
     """A shared material copied to one of the model's own, edited, and drawn by the parts it drew."""
-    import addon
-
     result = load(path)
     wood = material(result, WOOD)
     users = [obj for obj in result["parts"] if obj.data.materials[0] is wood]
     added = "graphics/weapons/primary/ak47/ak47_body.xbm"
-    addon.register()
-    try:
+    with registered():
         return _copy(result, wood, users, added, directory)
-    finally:
-        addon.unregister()
 
 
 def _copy(result, wood, users, added, directory):
@@ -164,7 +173,7 @@ def _copy(result, wood, users, added, directory):
     errors = 0
     if copy is wood or any(obj.data.materials[0] is not copy for obj in users):
         errors += fail("the parts the wood drew do not all draw with the copy")
-    next(v for v in copy.fc2.values if v.key == "SpecularPower").number[0] = 150.0
+    material_data.find(copy.fc2, "SpecularPower").number[0] = 150.0
 
     out = os.path.join(directory, "copied.fc2model")
     written = export_xbg.save(out, result["collection"])
@@ -186,16 +195,13 @@ def _copy(result, wood, users, added, directory):
     if drawing != {"FRAME_LOD%d" % lod for lod in range(len(mesh["lods"]))}:
         errors += fail("the copy draws %s, not FRAME at every LOD" % sorted(drawing))
 
-    layer = os.path.join(directory, "copied")
-    subprocess.run([CLI, "fc2model", "extract", out, "-o", layer], capture_output=True, check=True)
-    xbm = os.path.join(layer, "mods", *added.split("/"))
+    xbm = os.path.join(extract(out, os.path.join(directory, "copied")), "mods", *added.split("/"))
     if not os.path.exists(xbm):
         return errors + fail("JackAll wrote no %s" % added)
-    shown = json.loads(subprocess.run([CLI, "xbm", "show", xbm, "--json"],
-                                      capture_output=True, text=True, check=True).stdout)
-    power = {e["key"]: e["value"] for e in shown["properties"]}.get("SpecularPower")
-    if shown["name"] != "AK47_BODY" or power != "150":
-        errors += fail("the game file is %s with SpecularPower %s" % (shown["name"], power))
+    name, properties = shown(xbm)
+    if name != "AK47_BODY" or properties.get("SpecularPower") != "150":
+        errors += fail("the game file is %s with SpecularPower %s"
+                       % (name, properties.get("SpecularPower")))
     if not errors:
         print("copy: the wood copied, edited and drawn by %s reaches the game files"
               % ", ".join(sorted(drawing)))
@@ -236,11 +242,8 @@ def textures_reach_the_game_files(path, directory):
     if not old.modified or old.record["levels"] != Pack.load(path).entry(old.path).record["levels"] - 1:
         errors += fail("the halved mask is %s" % old.record)
 
-    layer = os.path.join(directory, "textures")
-    applied = subprocess.run([CLI, "fc2model", "extract", out, "-o", layer], capture_output=True, text=True)
-    if applied.returncode != 0:
-        return errors + fail("JackAll could not write the textures: %s" % applied.stdout)
-    written_files = {name.lower() for _base, _dirs, names in os.walk(layer) for name in names}
+    layer = extract(out, os.path.join(directory, "textures"))
+    written_files = {os.path.basename(name).lower() for name in find(".xbt", layer)}
     for name in ("new_albedo.xbt", os.path.basename(old.path.replace("\\", "/")).lower()):
         if name not in written_files:
             errors += fail("JackAll wrote no %s: %s" % (name, sorted(written_files)))
@@ -263,26 +266,20 @@ def cube_map_is_refused(path, directory):
 
 def panel_operators(path, directory):
     """Add and remove a property through the operators the panel's buttons run."""
-    import addon
-
     result = load(owning(path, WOOD, directory))
     wood = material(result, WOOD)
-    addon.register()
     errors = 0
-    try:
-        with bpy.context.temp_override(material=wood, object=result["parts"][0]):
-            if bpy.ops.material.fc2_add_value(key="ReflectionPower") != {"FINISHED"}:
-                return fail("adding ReflectionPower did not finish")
-            added = material_data.find(wood.fc2, "ReflectionPower")
-            if added is None or added.width != 1:
-                errors += fail("ReflectionPower was not added as one float")
-            index = list(wood.fc2.values).index(added)
-            if bpy.ops.material.fc2_remove_value(index=index) != {"FINISHED"}:
-                errors += fail("removing ReflectionPower did not finish")
-            if material_data.find(wood.fc2, "ReflectionPower") is not None:
-                errors += fail("ReflectionPower is still there after removing it")
-    finally:
-        addon.unregister()
+    with registered(), bpy.context.temp_override(material=wood, object=result["parts"][0]):
+        if bpy.ops.material.fc2_add_value(key="ReflectionPower") != {"FINISHED"}:
+            return fail("adding ReflectionPower did not finish")
+        added = material_data.find(wood.fc2, "ReflectionPower")
+        if added is None or added.width != 1:
+            errors += fail("ReflectionPower was not added as one float")
+        index = list(wood.fc2.values).index(added)
+        if bpy.ops.material.fc2_remove_value(index=index) != {"FINISHED"}:
+            errors += fail("removing ReflectionPower did not finish")
+        if material_data.find(wood.fc2, "ReflectionPower") is not None:
+            errors += fail("ReflectionPower is still there after removing it")
     if not errors:
         print("panel: a property is added at the shader's default and removed")
     return errors

@@ -23,13 +23,19 @@ NORMAL1 = "NormalTexture1"
 # A character's skin and a cloth material name their albedo differently.
 ALBEDO_SLOTS = (DIFFUSE1, "SkinTexture", "FabricTexture")
 
-# Which slot a node stands for, so an export can match an image back to the slot
-# it came from and a rule can tell an edited chain from a rebuilt one.
+# Which slot a node stands for, so a rule can tell the graph this built from one rewired by hand.
 PROP_SLOT = "fc2_slot"
 
-# What an image was when the pack handed it over, so a rule can say it changed.
+# The size a pack's texture arrived at, so a rule can say it was resized.
 PROP_IMAGE_SIZE = "fc2_size"
+# The game path an image is written to: the pack's, or the one a new image is given.
 PROP_IMAGE_PATH = "fc2_texture_path"
+
+# The values `build` draws besides the texture slots; a change to any other leaves the graph as it is.
+PREVIEWED = frozenset((
+    "DiffuseColorBase", "DiffuseColor1", "DiffuseColor2", "SpecularColor1", "SpecularPower",
+    "DiffuseTiling1", "DiffuseTiling2", "MaskTiling1", "SpecularTiling1", "NormalTiling1",
+    "VertexColorEnabled", "AlphaTestEnabled", "AlphaBlendEnabled"))
 
 # Node graph spacing, purely cosmetic.
 COLUMN = 260
@@ -71,7 +77,7 @@ def _image(game_path, pack, cache):
         return cache[game_path]
 
     image = None
-    png = pack.texture(game_path) if pack else None
+    png = pack.texture(game_path)
     if png:
         name = stem(game_path) + ".png"
         temporary = os.path.join(tempfile.gettempdir(), "fc2tex", name)

@@ -163,7 +163,7 @@ def attach(child, armature, bone_name):
         (0.0, -armature.data.bones[bone_name].length, 0.0)) @ convert.BONE_AXES.inverted()
 
 
-def _material(cache, path, pack):
+def _material(cache, path, pack, image_for):
     if path not in cache:
         material = bpy.data.materials.new(stem(path) or "material")
         material[PROP_MATERIAL_PATH] = path
@@ -171,18 +171,14 @@ def _material(cache, path, pack):
         definition = pack.material(path) if pack else None
         if definition is not None:
             try:
-                material_data.load(material, definition, cache[IMAGES], pack.model)
+                material_data.load(material, definition, image_for, pack.model)
             except Exception as error:
                 print("fc2: material %s: %s" % (path, error))
         cache[path] = material
     return cache[path]
 
 
-# The material cache's entry for resolving a game path to an image.
-IMAGES = "_images"
-
-
-def build_part(part, mesh, collection, material_cache, armature, pack):
+def build_part(part, mesh, collection, material_cache, armature, pack, image_for=None):
     data = bpy.data.meshes.new(part.full_name)
     data.from_pydata(part.positions, [], [convert.triangle(t) for t in part.triangles])
     data.update()
@@ -204,7 +200,7 @@ def build_part(part, mesh, collection, material_cache, armature, pack):
         stored = data.attributes.new(name=ATTR_NORMAL, type="FLOAT_VECTOR", domain="POINT")
         stored.data.foreach_set("vector", [c for n in part.normals for c in n])
 
-    data.materials.append(_material(material_cache, part.material, pack))
+    data.materials.append(_material(material_cache, part.material, pack, image_for))
     obj = bpy.data.objects.new(part.full_name, data)
     obj[PROP_PART] = part.name
     obj[PROP_LOD] = part.lod
@@ -266,11 +262,14 @@ def build(pack, name, lod=0, with_armature=True, with_textures=True, origin=""):
     collection[PROP_SOURCE] = origin
     collection[PROP_LOD] = lod
 
+    # A script can import a pack without registering the add-on.
+    material_data.register()
     armature = build_armature(mesh, name, collection, pack.rig()) if with_armature else None
-    cache = {IMAGES: materials.pack_images(pack) if with_textures else lambda _path: None}
+    cache = {}
+    image_for = materials.pack_images(pack) if with_textures else None
     # Without an armature there is nothing to parent to, so bake the placement
     # into the vertices instead.
-    parts = [build_part(part, mesh, collection, cache, armature, pack)
+    parts = [build_part(part, mesh, collection, cache, armature, pack, image_for)
              for part in fc2model.parts_at(mesh, lod, place=armature is None)]
     built = {"pack": pack, "mesh": mesh, "collection": collection,
              "armature": armature, "parts": parts}

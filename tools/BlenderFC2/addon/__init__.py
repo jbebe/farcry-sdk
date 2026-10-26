@@ -4,9 +4,7 @@
 # writes. Nothing here opens a game file, which is the whole arrangement: JackAll
 # owns the byte layouts and this owns what a scene looks like.
 
-import itertools
 import math
-import os
 
 import bpy
 from bpy.props import (BoolProperty, EnumProperty, FloatProperty, IntProperty,
@@ -55,17 +53,6 @@ class FC2_OT_import_pack(bpy.types.Operator, ImportHelper):
         return {"FINISHED"}
 
 
-def _pack_of(context):
-    """The pack the active object was imported from, and its collection."""
-    obj = context.object
-    for collection in itertools.chain(obj.users_collection if obj else (),
-                                      bpy.data.collections):
-        origin = collection.get(import_xbg.PROP_SOURCE)
-        if origin:
-            return origin, collection
-    return None, None
-
-
 def _armatures(context):
     """The model's armature and the carried body's, if the scene holds one.
 
@@ -87,30 +74,17 @@ _NO_PACK = [("", "No pack imported", "")]
 _UNREADABLE = [("", "Could not read the pack", "")]
 _NO_CLIPS = [("", "This pack carries no animation", "")]
 
-# Each pack's bank list against the mtime it was read at. Blender runs an items
-# callback on every redraw and keeps no reference to what it returns, so the
-# list is built once and outlives the call.
+# Each pack's bank list. Blender keeps no reference to what an items callback
+# returns, so the list has to outlive the call.
 _CLIPS = {}
 
 
 def _clip_items(self, context):
     """The banks the pack carries, from its manifest alone."""
-    origin, _collection = _pack_of(context)
+    origin, _collection = panel.pack_of(context)
     if not origin:
         return _NO_PACK
-    try:
-        stamp = os.path.getmtime(origin)
-    except OSError:
-        return _UNREADABLE
-    if origin not in _CLIPS or _CLIPS[origin][0] != stamp:
-        try:
-            _CLIPS[origin] = (stamp, _banks(origin) or _NO_CLIPS)
-        except Exception:
-            # Cached like any other answer: a pack that cannot be read would
-            # otherwise reopen its zip on every redraw, and the stamp clears
-            # this the moment the file is rewritten.
-            _CLIPS[origin] = (stamp, _UNREADABLE)
-    return _CLIPS[origin][1]
+    return panel.cached(_CLIPS, origin, lambda path: _banks(path) or _NO_CLIPS, _UNREADABLE)
 
 
 def _start_on_loaded(operator, armature):
@@ -157,7 +131,7 @@ class FC2_OT_load_clip(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return _pack_of(context)[0] is not None
+        return panel.pack_of(context)[0] is not None
 
     def invoke(self, context, _event):
         _start_on_loaded(self, _armatures(context)[0])
@@ -175,7 +149,7 @@ class FC2_OT_load_clip(bpy.types.Operator):
             self.report({"ERROR"}, "This pack carries no animation to load")
             return {"CANCELLED"}
 
-        origin, _collection = _pack_of(context)
+        origin, _collection = panel.pack_of(context)
         try:
             result = import_mab.load(Pack.load(origin), self.clip, armature,
                                      with_props=self.with_props, still=self.still,
@@ -230,7 +204,7 @@ class FC2_OT_write_clip(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return _pack_of(context)[0] is not None
+        return panel.pack_of(context)[0] is not None
 
     @staticmethod
     def _armature(context):
@@ -264,7 +238,7 @@ class FC2_OT_write_clip(bpy.types.Operator):
             self.report({"ERROR"}, "No bones are selected")
             return {"CANCELLED"}
 
-        origin, _collection = _pack_of(context)
+        origin, _collection = panel.pack_of(context)
         pack = Pack.load(origin)
         try:
             # The writer measures a dropped frame as 1 - |dot| between quaternions;
@@ -305,7 +279,7 @@ class FC2_OT_retime_clip(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return _pack_of(context)[0] is not None
+        return panel.pack_of(context)[0] is not None
 
     def invoke(self, context, _event):
         self.end_frame = context.scene.frame_end
@@ -313,7 +287,7 @@ class FC2_OT_retime_clip(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):
-        origin, _collection = _pack_of(context)
+        origin, _collection = panel.pack_of(context)
         pack = Pack.load(origin)
         try:
             was = export_mab.retime(pack, self.clip, self.end_frame - import_mab.FIRST_FRAME)
@@ -335,7 +309,7 @@ _BONES = []
 
 def _bone_items(_self, context):
     global _BONES
-    _origin, collection = _pack_of(context)
+    _origin, collection = panel.pack_of(context)
     armature = _armature_in(collection)
     _BONES = [(ROOT_BONE, "Model root", "Sit in the model's own space, placed by nothing")]
     if armature:
@@ -366,7 +340,7 @@ class FC2_OT_add_part(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         obj = context.object
-        return obj is not None and obj.type == "MESH" and _pack_of(context)[0] is not None
+        return obj is not None and obj.type == "MESH" and panel.pack_of(context)[0] is not None
 
     def invoke(self, context, _event):
         if not self.name:
@@ -375,7 +349,7 @@ class FC2_OT_add_part(bpy.types.Operator):
 
     def execute(self, context):
         obj = context.object
-        _origin, collection = _pack_of(context)
+        _origin, collection = panel.pack_of(context)
         armature = _armature_in(collection)
         name = self.name.strip()
         if not name:
@@ -435,19 +409,15 @@ class FC2_OT_export_pack(bpy.types.Operator, ExportHelper):
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
 
-        materials = ", %d material(s)" % result["materials"] if result["materials"] else ""
-        if result["textures"]:
-            materials += ", %d texture(s)" % result["textures"]
-        if not (result["moved"] or result["resized"] or result["added"] or result["reassigned"]):
-            self.report({"INFO"}, "Wrote the pack with nothing in LOD%d edited%s"
-                        % (result["lod"], materials))
+        counts = "".join(", %d %s" % (result[key], label) for key, label in (
+            ("added", "added"), ("reassigned", "drawn with another material"),
+            ("materials", "material(s)"), ("textures", "texture(s)")) if result[key])
+        if result["changed"]:
+            self.report({"INFO"}, "Wrote %d parts at LOD%d, %d rebuilt%s"
+                        % (result["parts"], result["lod"], result["resized"], counts))
         else:
-            added = ", %d added" % result["added"] if result["added"] else ""
-            repointed = (", %d drawn with another material" % result["reassigned"]
-                         if result["reassigned"] else "")
-            self.report({"INFO"}, "Wrote %d parts at LOD%d, %d rebuilt%s%s%s"
-                        % (result["parts"], result["lod"], result["resized"], added, repointed,
-                           materials))
+            self.report({"INFO"}, "Wrote the pack with nothing in LOD%d edited%s"
+                        % (result["lod"], counts))
         return {"FINISHED"}
 
 
