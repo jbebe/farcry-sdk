@@ -56,7 +56,7 @@ public sealed class ShaderSchema
         ["Vehicle", "Generic", "Cloth", "Hair", "Leaf", "RealtreeTrunk", "BigLeaf", "Grass", "Weapon"];
 
     // Keys retail materials carry outside their descriptor, by the shaders that carry them, counted
-    // over all 2,379; every float3 one is a colour.
+    // over all 2,379.
     private static readonly (string Name, string Type, string Group, string[] Shaders)[] Carried =
     [
         ("LogicalMaterialId", "int", MaterialGroup, [.. Lit, "Skin", "Unlit"]),
@@ -120,7 +120,7 @@ public sealed class ShaderSchema
                     p.Attribute("uitype")?.Value == "color", p.Attribute("defaultvalue")?.Value))];
             parameters.AddRange(Carried
                 .Where(c => c.Shaders.Contains(name))
-                .Select(c => Parameter(c.Name, c.Type, c.Group, c.Type == "float3", null)));
+                .Select(c => Parameter(c.Name, c.Type, c.Group, false, null)));
 
             var descriptor = new ShaderDescriptor { Name = name, Parameters = parameters };
             shaders[name] = descriptor;
@@ -146,7 +146,9 @@ public sealed class ShaderSchema
         };
         return new ShaderParameter
         {
-            Name = name, Section = section, Width = width, Group = group, IsColor = color, Default = fallback,
+            Name = name, Section = section, Width = width, Group = group, Default = fallback,
+            // The descriptor marks some colours and not others, DiffuseColorBase among the unmarked.
+            IsColor = color || (width >= 3 && name.Contains("Color", StringComparison.Ordinal)),
         };
     }
 
