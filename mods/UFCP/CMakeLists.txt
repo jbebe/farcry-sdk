@@ -35,6 +35,7 @@ add_library(UFCP SHARED
   "src/main.cpp"
   "src/engine/command_line.cpp"
   "src/engine/memory_probe.cpp"
+  "src/engine/render_profile.cpp"
   "src/fixes/jackal_tapes.cpp"
   "src/fixes/bonus_content.cpp"
   "src/fixes/exit_teardown.cpp"

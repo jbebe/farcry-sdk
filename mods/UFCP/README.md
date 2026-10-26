@@ -42,18 +42,27 @@ disagree.
 | Option | Range | Default |
 |---|---|---|
 | Field of view | 65–140 degrees | **75** — the game's own |
+| Weapon field of view | Same as field of view · 45–140 degrees | **Same as field of view** — as the game ties them |
 | Maximum frame rate | Game default · Unlocked · Screen refresh · 30–240 Hz | **60 Hz** |
 | Display mode | Game default · Borderless | **Game default** |
 | Processor affinity | All cores · Physical cores only · 4 cores · 1 core | **All cores** |
 
 **Field of view** substitutes the argument to `CCameraComponent`'s `fFOV` property setter, and
 holds the camera's unaimed value at the setting every frame, which the engine otherwise rebuilds. It
-is the view on foot, cutscenes and ladders included, and the weapon and arms with it: they draw in a
-nearer pass whose projection the engine builds from the camera's field of view, so one slider moves
-both, exactly as the game ties them at its own 75 degrees. The sights, scopes and vehicles, the hang
+is the view on foot, cutscenes and ladders included. The sights, scopes and vehicles, the hang
 glider among them, keep their own. At an arms dealer's computer the view eases back to the game's
 own 75 degrees on the same two-second fade as the game's zoom onto the screen, and out again as the
-player gets up.
+player gets up. Both rows widen to the screen's shape only where the game's own `WidescreenFOV`
+does.
+
+**Weapon field of view** is the weapon and arms, which draw in a nearer pass with a projection of
+their own. The engine builds it from the camera's field of view, so by default they follow the row
+above, as the game ties them at its own 75 degrees. Given an angle of their own, the two passes
+differ, and ten further sites exist only to keep that honest: the near pass follows the camera
+wherever a first-person scene puts the hands on the world, muzzle particles are split between the
+two passes and come apart once the projections differ, and the map's markers change pass inside a
+vehicle. None of them changes what is drawn while the weapon follows. With the sights up, the weapon
+never draws wider than the view.
 
 **Maximum frame rate** uses the engine's own limiter, `gfx_MaxFps`. It is set on the command line at
 launch and written into the render profile afterwards, which is what lets a change made from the

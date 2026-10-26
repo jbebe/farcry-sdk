@@ -20,6 +20,7 @@
 #include <iterator>
 
 #include "engine/command_line.h"
+#include "engine/render_profile.h"
 
 // Fixes. Each finds its own site and applies itself, or logs why it could not.
 void ApplyJackalTapesFix();
@@ -42,6 +43,7 @@ void ApplyManyCoresFix();
 // registration is what delivers the saved value.
 void InstallFovHook();
 void __cdecl OnFovChanged(const FCSE_SettingValue* value, void* userdata);
+void __cdecl OnWeaponFovChanged(const FCSE_SettingValue* value, void* userdata);
 
 void InstallMaxFrameRateHook();
 void __cdecl OnMaxFrameRateChanged(const FCSE_SettingValue* value, void* userdata);
@@ -60,6 +62,12 @@ namespace {
                                           "60 Hz",        "72 Hz",    "75 Hz",          "90 Hz",
                                           "120 Hz",       "144 Hz",   "165 Hz",         "180 Hz",
                                           "240 Hz"};
+
+    // Stored by label as well; fov.cpp maps each choice to its angle.
+    const char* const kWeaponFieldsOfView[] = {
+        "Same as field of view", "45",  "50",  "55",  "60",  "65",  "70",  "75",  "80",  "85",
+        "90",                    "95",  "100", "105", "110", "115", "120", "125", "130", "135",
+        "140"};
 
     // The default, and the one setting that deliberately does not leave the game as it shipped -
     // see the contract note above.
@@ -95,6 +103,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     ApplyGrassSpotLightFix();
     ApplyManyCoresFix();
 
+    UFCP::FindRenderProfile();
     InstallFovHook();
     InstallMaxFrameRateHook();
     UFCP::InstallRunGameHook();
@@ -108,6 +117,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // stock behaviour.
     static const FCSE_Setting settings[] = {
         {"Field of view", FCSE_SLIDER(75), &OnFovChanged, nullptr, nullptr, 0, 65, 140},
+        {"Weapon field of view", FCSE_CHOICE(0), &OnWeaponFovChanged, nullptr, kWeaponFieldsOfView,
+         std::size(kWeaponFieldsOfView)},
         {"Maximum frame rate", FCSE_CHOICE(kMaxFrameRate60Hz), &OnMaxFrameRateChanged, nullptr,
          kMaxFrameRates, std::size(kMaxFrameRates)},
         {"Display mode", FCSE_CHOICE(0), &OnDisplayModeChanged, nullptr, kDisplayModes, std::size(kDisplayModes)},

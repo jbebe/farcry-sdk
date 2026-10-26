@@ -48,8 +48,10 @@ the game exactly as it shipped until you change them — the frame rate is cappe
 box, one row away from the stock behaviour.
 
 - **Field of view** — 65 to 140 degrees, default 75, the game's own. The view on foot, cutscenes
-  and ladders included, with the weapon and arms widening along with it; the sights, scopes and
-  vehicles keep their own, and an arms dealer's computer is seen at the game's own view.
+  and ladders included; the sights, scopes and vehicles keep their own, and an arms dealer's
+  computer is seen at the game's own view.
+- **Weapon field of view** — the weapon and arms. Same as field of view by default, as the game
+  ties them, or 45 to 140 degrees of their own.
 - **Maximum frame rate** — the engine's own limiter, capped at 60 by default. Takes effect without
   a restart.
 - **Display mode** — borderless, applied on the next launch.

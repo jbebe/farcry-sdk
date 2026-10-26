@@ -9,14 +9,15 @@
 // Two halves, because one alone is not enough. The command line sets the rate the engine starts
 // with, since it is parsed once during startup and never read again. Writing the field afterwards
 // and raising the render-settings broadcast is what makes a change made from the menu take effect
-// without a restart, and is the route CFCXOptionDisplayPage itself uses. Both the global and the
-// broadcast are read out of the tail of that page's apply, the only place the two meet.
+// without a restart, and is the route CFCXOptionDisplayPage itself uses. The broadcast is read out
+// of the tail of that page's apply.
 //
 // The broadcast walks four listener lists calling a virtual on every entry, so it is raised only
 // from the engine thread; off it, the field is written and the engine picks it up on its own.
 #include "fcse_api.h"
 
 #include "engine/command_line.h"
+#include "engine/render_profile.h"
 
 #include <windows.h>
 
@@ -33,8 +34,7 @@ namespace {
     // rate nothing can reach.
     constexpr int32_t kUnlockedFps = 9999;
 
-    // Into the tail: the disp32 of `mov ecx,[render profile]`, and the jmp to the broadcast.
-    constexpr ptrdiff_t kTailProfilePointer = 9;
+    // Into the tail, the jmp to the broadcast.
     constexpr ptrdiff_t kTailNotify = 16;
 
     // EnumDisplaySettings answers 0 or 1 for a display with no fixed rate; both mean "default".
@@ -57,7 +57,6 @@ namespace {
     FCSE::Relocation<uint8_t*> g_displayPageTail{
         FCSE::Pattern("8B C8 E8 ?? ?? ?? ?? 8B 0D ?? ?? ?? ?? 83 C4 0C E9")};
 
-    void** g_renderProfile = nullptr;
     NotifyRenderSettingsFn g_notifyRenderSettings = nullptr;
 
     uint32_t g_mode = kGameDefault;
@@ -86,12 +85,12 @@ namespace {
     }
 
     void ApplyLive() {
-        if (g_renderProfile == nullptr || *g_renderProfile == nullptr) {
+        uint8_t* profile = UFCP::RenderProfile();
+        if (profile == nullptr) {
             return;
         }
 
-        void* profile = *g_renderProfile;
-        *reinterpret_cast<int32_t*>(static_cast<uint8_t*>(profile) + kProfileMaxFps) = ResolveFps();
+        *reinterpret_cast<int32_t*>(profile + kProfileMaxFps) = ResolveFps();
 
         if (g_notifyRenderSettings != nullptr && UFCP::IsEngineThread()) {
             g_notifyRenderSettings(profile);
@@ -103,12 +102,10 @@ void InstallMaxFrameRateHook() {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
     if (!g_displayPageTail) {
-        api->Log("max frame rate: the display page's apply was not found in this build - the cap "
-                 "can only be set at launch");
+        api->Log("max frame rate: the display page's apply was not found in this build - a change "
+                 "waits for the engine to pick it up");
         return;
     }
-
-    g_renderProfile = *reinterpret_cast<void***>(g_displayPageTail.address() + kTailProfilePointer);
 
     // The jmp's displacement, resolved against the instruction after it.
     uint8_t* jump = reinterpret_cast<uint8_t*>(g_displayPageTail.address() + kTailNotify);
