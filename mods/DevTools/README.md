@@ -281,9 +281,9 @@ way any new world is ([Make a new world](../../docs/jackall/world/new-worlds.md)
   archetypes only the scenarios name, as library fragments. The walls are copies of two retail
   instances:
   - `CoverObjects.WallBarrier01_BK.Multi_0` from `mp_16_airbase`, a barrier 1.3 m high and 1.55 m
-    deep that slopes to its top, in the hub and the low wall arena;
+    deep that slopes to its top, 2.25 m along it: the cover of every arena, end to end in rows;
   - `CoverObjects.WallEroded10_BK.Multi_0` from `mp_07_m_dogon`, a 6 m concrete wall up to 1.4 m
-    high with a broken top, the crouch cover of the other arenas.
+    high with a broken top, only in the hub: through its gaps a crouched player is half seen.
 - `range\build-layer.ps1` makes the world's files from the installed game's `tmpla` with
   `jackall-cli world new`, then packs them with the content into `layer\` with `jackall-cli world pack`.
   The layer is game files and is not committed.
