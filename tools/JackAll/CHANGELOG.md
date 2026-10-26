@@ -2,9 +2,23 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.7.0] - 2026-10-26
 
 ### Added
+- **Materials are edited in the Files tab.** An `.xbm`'s preview shows every property its shader
+  takes, grouped the way the game's own shader descriptors group them, with colour swatches and
+  texture thumbnails, **Pick…** and **Go to** for each texture. An edit goes into your workspace a
+  moment after you make it; clearing a value lets the shader's default apply. Anything the game
+  would ignore without saying so - a misspelt property, one the shader doesn't take, a texture that
+  isn't there - is called out under it. On a weapon or a vehicle, setting a colour also sets its
+  Clean twin, which is what the game shows.
+- **New material…** makes a material at a new path, as a copy of the selected one or empty on a
+  shader of your choosing.
+- **`jackall-cli xbm show`, `new`, `set` and `lint`** do the same on the command line.
+- **`jackall-cli fc2model add-material`** adds a material to a model pack, and **`assign-material`**
+  draws a part with it at every level of detail; `fc2model inspect --materials` lists a model's
+  materials and the parts drawing with each. A model pack now also carries every shader's property
+  list, which the Blender add-on's material editor reads.
 - **`jackall-cli ai pack`** compiles a brain's BlackBox.AI source, as `ai unpack` writes it, into an
   `.ai.rml` workspace, so a brain can be edited as text and built into a mod layer.
 - **A navmesh for any terrain and anything standing on it.** `navmesh build` and `world pack` now
@@ -14,6 +28,8 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   `--game` to read the collision of retail objects from the install.
 
 ### Fixed
+- **Following a reference reaches its file whatever the search box holds.** A jump to a file the
+  current search left out used to select nothing; the search is now cleared so the file shows.
 - **Tilted objects stand the way the game stands them.** An entity turned about both X and Y was
   rotated in the wrong order on the Map tab, by the gizmo and in the navmesh. The engine applies X,
   then Y, then Z.
