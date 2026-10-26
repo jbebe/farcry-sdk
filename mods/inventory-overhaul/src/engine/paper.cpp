@@ -44,12 +44,16 @@ namespace {
     int g_size = 0;
     bool g_fresh = false;
 
-    // On the render thread: the paper's Direct3D texture and the resource it was found from, and
-    // the page's texture.
+    // On the render thread: the paper's Direct3D texture and the resource it was found from, the
+    // page's texture, and how many textures were bound since the paper last was, to say once in
+    // fcse.log that it is not.
     const uint8_t* g_paperFrom = nullptr;
     IDirect3DBaseTexture9* g_paper = nullptr;
     IDirect3DTexture9* g_page = nullptr;
     int g_pageSize = 0;
+    int g_bindsWithoutPaper = 0;
+    bool g_shownOnce = false;
+    constexpr int kBindsToWait = 20000;
 
     // Null where the engine's pointers do not hold, as while the texture is still loading.
     IDirect3DBaseTexture9* Direct3DTextureOf(const uint8_t* resource) {
@@ -63,6 +67,9 @@ namespace {
     }
 
     void __fastcall OnSetMapTexture(void* strategy, void* unused, void* resource, uint32_t owned) {
+        if (resource != g_paperResource.load()) {
+            FCSE::Logf("paper: the map's texture is now resource %p", resource);
+        }
         g_paperResource = static_cast<const uint8_t*>(resource);
         g_setMapTexture(strategy, unused, resource, owned);
     }
@@ -103,13 +110,32 @@ namespace {
         if (texture != nullptr && Notebook::IsOpen()) {
             const uint8_t* resource = g_paperResource;
             if (resource != g_paperFrom || g_paper == nullptr) {
+                IDirect3DBaseTexture9* paper =
+                    resource != nullptr ? Direct3DTextureOf(resource) : nullptr;
+                if (resource != g_paperFrom || paper != g_paper) {
+                    FCSE::Logf("paper: resource %p is Direct3D texture %p", resource, paper);
+                }
                 g_paperFrom = resource;
-                g_paper = resource != nullptr ? Direct3DTextureOf(resource) : nullptr;
+                g_paper = paper;
+                g_bindsWithoutPaper = 0;
             }
             if (texture == g_paper) {
-                if (IDirect3DTexture9* page = Page(device)) {
+                g_bindsWithoutPaper = 0;
+                IDirect3DTexture9* page = Page(device);
+                if (page != nullptr && !g_shownOnce) {
+                    g_shownOnce = true;
+                    FCSE::Logf("paper: the page is drawn on the paper");
+                } else if (page == nullptr && !g_shownOnce) {
+                    g_shownOnce = true;
+                    FCSE::Logf("paper: the paper is bound, but no page has been drawn yet");
+                }
+                if (page != nullptr) {
                     return g_setTexture(device, stage, page);
                 }
+            } else if (++g_bindsWithoutPaper == kBindsToWait) {
+                FCSE::Logf("paper: %d textures bound with the notebook out, none of them the "
+                           "paper's %p",
+                           kBindsToWait, g_paper);
             }
         }
         return g_setTexture(device, stage, texture);

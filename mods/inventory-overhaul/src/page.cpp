@@ -5,6 +5,7 @@
 #include "engine/economy.h"
 #include "engine/inventory.h"
 #include "engine/paper.h"
+#include "fcse_api.h"
 #include "items.h"
 #include "page_layout.h"
 #include "two_guns.h"
@@ -74,6 +75,10 @@ void Update(const void* view, void* inventory) {
         return;
     }
     if (const uint32_t* pixels = PageLayout::Draw(model)) {
+        if (g_shown.empty()) {
+            FCSE::Logf("page: drawn, %zu guns in hand and %zu rows of Items", model.hands.size(),
+                       model.items.size());
+        }
         g_shown = std::move(key);
         Paper::Show(pixels, PageLayout::kSize);
     }

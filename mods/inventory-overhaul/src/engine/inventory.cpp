@@ -49,6 +49,9 @@ namespace {
 
     // A component of the player's entity, not its pawn.
     constexpr ptrdiff_t kTerminalPlayer = 0x04;
+    // The pawn's data, which holds its inventory view, whose second field is the inventory.
+    constexpr ptrdiff_t kPawnData = 0x10;
+    constexpr ptrdiff_t kDataInventoryView = 0x4F0;
     constexpr ptrdiff_t kViewInventory = 0x04;
     // The entity's name, an MSVC std::string: its text sits inline until it outgrows 16 bytes.
     constexpr ptrdiff_t kEntityName = 0x14;
@@ -103,6 +106,8 @@ bool Install() {
            g_reliability && g_ammoInClip && g_rememberedInClip && g_setLoaded && g_spareRounds && g_buildWeaponItemType && g_weaponItemType && g_classes &&
            Hook(g_canSpawnPickupSite, &OnCanSpawnPickup, &g_canSpawnPickup);
 }
+
+void* ViewOf(const void* pawn) { return Read<uint8_t*>(pawn, kPawnData) + kDataInventoryView; }
 
 void* OfView(const void* view) { return Read<void*>(view, kViewInventory); }
 

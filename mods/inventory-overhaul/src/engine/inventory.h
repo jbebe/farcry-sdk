@@ -20,7 +20,8 @@ enum Class { kMachete, kPrimary, kSecondary, kSpecial };
 // called then.
 bool Install();
 
-// The inventory behind a pawn's CInventoryViewPawn.
+// A CPawn's CInventoryViewPawn, and the inventory behind one.
+void* ViewOf(const void* pawn);
 void* OfView(const void* view);
 // Whether an inventory is the local player's.
 bool IsPlayers(const void* inventory);
