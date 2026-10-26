@@ -16,14 +16,10 @@ struct Weapon {
 // False when an address is missing on this build; nothing below may be called then.
 bool Resolve();
 
-// The local player's inventory, or null before the player is spawned.
-void* PlayerInventory();
-bool IsPlayerEntity(const void* entity);
+// Whether an inventory is the local player's.
 bool IsPlayers(const void* inventory);
 // The entity a component, such as a weapon or a pawn, belongs to.
 void* Entity(const void* component);
-// The entity an entity proxy, such as the user a pickup is handed, stands for.
-void* ProxyEntity(const void* proxy);
 
 // Every weapon but the machete, in the inventory's order.
 std::vector<Weapon> Guns(const void* inventory);

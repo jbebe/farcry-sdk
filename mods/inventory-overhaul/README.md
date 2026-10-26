@@ -16,7 +16,7 @@ secondary and a special. What changes is the player's inventory (`InventoryOverh
 
 | Engine call | What the plugin does |
 |---|---|
-| `AddWeapon` | with two guns carried, drops the one in hand first (else the one last drawn); gives the new gun a free slot, kept on it as the entity data `InventoryOverhaul.Slot` |
+| `AddWeapon` | for a gun picked up with two carried, drops the one in hand first (else the one last drawn); gives every new gun a free slot, kept on it as the entity data `InventoryOverhaul.Slot`. Loading a save adds its guns here too, and drops none |
 | the state machine's select-class actions, `SelectWeapon` | key 2 draws gun 1 and key 3 gun 2, whatever their class; key 4 draws nothing; the machete is unchanged. Other callers of `SelectWeapon`, such as the weapon crate, still select by class |
 | `GetWeaponFromCategory`, inside the player's `CPickupWeapon::PrePickup` and `Pick` | finds no gun, so a pickup replaces nothing of its own class and `AddWeapon` makes room; the gun picked up is then drawn |
 

@@ -8,7 +8,6 @@ namespace InventoryOverhaul::Inventory {
 
 namespace {
     using GetTerminalFn = void*(__cdecl*)();
-    using GetInventoryViewFn = void*(__fastcall*)(void* pawn, void* unused);
     using DropWeaponFn = void*(__fastcall*)(void* inventory, void* unused, void* weapon, int keep);
     using UpdateEquipAnimFn = void(__fastcall*)(void* inventory, void* unused);
     using BuildTypeFn = void*(__cdecl*)();
@@ -16,10 +15,9 @@ namespace {
     using ItemWeaponFn = void*(__fastcall*)(void* item, void* unused);
     using CategoryFn = const uint32_t*(__fastcall*)(void* weapon, void* unused);
 
-    // The local player's CTerminal, CPawn::GetInventoryView, and the inventory's
-    // DropWeapon(CWeapon*, bool) and UpdateEquipAnim.
+    // The local player's CTerminal, and the inventory's DropWeapon(CWeapon*, bool) and
+    // UpdateEquipAnim.
     FCSE::Relocation<GetTerminalFn> g_getTerminal{FCSE::Uplay(0x00831870)};
-    FCSE::Relocation<GetInventoryViewFn> g_getInventoryView{FCSE::Uplay(0x0007E140)};
     FCSE::Relocation<DropWeaponFn> g_dropWeapon{FCSE::Uplay(0x0012DB20)};
     FCSE::Relocation<UpdateEquipAnimFn> g_updateEquipAnim{FCSE::Uplay(0x0012A6F0)};
     // CInventoryItemWeapon's class id, built on first use, and CWeaponPropertiesCommon's class ids.
@@ -28,12 +26,11 @@ namespace {
     FCSE::Relocation<const uint32_t*> g_classes{FCSE::Uplay(0x00F93390)};
 
     constexpr size_t kMacheteClass = 0;
+    // A component of the player's entity, not its pawn.
     constexpr ptrdiff_t kTerminalPlayer = 0x04;
-    constexpr ptrdiff_t kProxyEntity = 0x0C;
     // The entity's name, an MSVC std::string: its text sits inline until it outgrows 16 bytes.
     constexpr ptrdiff_t kEntityName = 0x14;
     constexpr ptrdiff_t kEntityNameCapacity = 0x28;
-    constexpr ptrdiff_t kViewInventory = 0x04;
     constexpr ptrdiff_t kInventoryItems = 0x04;
     constexpr ptrdiff_t kInventoryInHand = 0x14;
     constexpr ptrdiff_t kInventoryDesired = 0x18;
@@ -47,9 +44,10 @@ namespace {
     constexpr size_t kItemWeaponSlot = 0x14 / sizeof(void*);
     constexpr size_t kWeaponCategorySlot = 0x8C / sizeof(void*);
 
-    void* PlayerPawn() {
+    void* PlayerEntity() {
         void* terminal = g_getTerminal();
-        return terminal != nullptr ? Read<void*>(terminal, kTerminalPlayer) : nullptr;
+        void* player = terminal != nullptr ? Read<void*>(terminal, kTerminalPlayer) : nullptr;
+        return player != nullptr ? Entity(player) : nullptr;
     }
 
     bool IsWeaponItem(void* item, uint32_t weaponItemType) {
@@ -65,30 +63,18 @@ namespace {
 }
 
 bool Resolve() {
-    return g_getTerminal && g_getInventoryView && g_dropWeapon && g_updateEquipAnim &&
-           g_buildWeaponItemType && g_weaponItemType && g_classes;
-}
-
-void* PlayerInventory() {
-    void* pawn = PlayerPawn();
-    void* view = pawn != nullptr ? g_getInventoryView(pawn, nullptr) : nullptr;
-    return view != nullptr ? Read<void*>(view, kViewInventory) : nullptr;
-}
-
-bool IsPlayerEntity(const void* entity) {
-    void* pawn = PlayerPawn();
-    return entity != nullptr && pawn != nullptr && entity == Entity(pawn);
+    return g_getTerminal && g_dropWeapon && g_updateEquipAnim && g_buildWeaponItemType &&
+           g_weaponItemType && g_classes;
 }
 
 bool IsPlayers(const void* inventory) {
-    return IsPlayerEntity(Entity(Read<const void*>(inventory, kInventoryOwner)));
+    const void* owner = Entity(Read<const void*>(inventory, kInventoryOwner));
+    return owner != nullptr && owner == PlayerEntity();
 }
 
 void* Entity(const void* component) {
     return FCSE::ApiPointer()->EntityData->EntityOf(const_cast<void*>(component));
 }
-
-void* ProxyEntity(const void* proxy) { return Read<void*>(proxy, kProxyEntity); }
 
 std::vector<Weapon> Guns(const void* inventory) {
     g_buildWeaponItemType();
