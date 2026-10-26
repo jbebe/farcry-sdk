@@ -18,6 +18,8 @@ int GetFreecamKey();
 void SetFreecamKey(int value);
 int GetFpsCounter();
 void SetFpsCounter(int value);
+int GetAiView();
+void SetAiView(int value);
 int GetSkipSystemDetection();
 void SetSkipSystemDetection(int value);
 int GetFastLoading();
@@ -43,6 +45,7 @@ namespace {
         {"Noclip key", Kind::Key, DevTools::Keys::kChoiceOff, 0, 0, &GetNoclipKey, &SetNoclipKey},
         {"Freecam key", Kind::Key, DevTools::Keys::kChoiceF2, 0, 0, &GetFreecamKey, &SetFreecamKey},
         {"FPS counter", Kind::Toggle, 1, 0, 1, &GetFpsCounter, &SetFpsCounter},
+        {"AI view", Kind::Toggle, 0, 0, 1, &GetAiView, &SetAiView},
         {"Skip system detection", Kind::Toggle, 1, 0, 1, &GetSkipSystemDetection,
          &SetSkipSystemDetection},
         {"Fast loading", Kind::Toggle, 1, 0, 1, &GetFastLoading, &SetFastLoading},

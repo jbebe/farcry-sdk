@@ -78,11 +78,12 @@ namespace {
         return g_originalReset(device, params);
     }
 
-    // Builds a device only to read its vtable. The device is gone before this returns.
-    bool ReadDeviceVtable(void** outPresent, void** outReset) {
+    // Builds a device only to read its vtable. The device is gone before this returns; the vtable
+    // lives in d3d9.dll and stays.
+    void** ReadDeviceVtable() {
         IDirect3D9* d3d = Direct3DCreate9(D3D_SDK_VERSION);
         if (d3d == nullptr) {
-            return false;
+            return nullptr;
         }
 
         D3DPRESENT_PARAMETERS present{};
@@ -96,16 +97,13 @@ namespace {
                                             D3DCREATE_SOFTWARE_VERTEXPROCESSING, &present, &device);
         if (FAILED(created)) {
             d3d->Release();
-            return false;
+            return nullptr;
         }
 
         void** vtable = *reinterpret_cast<void***>(device);
-        *outPresent = vtable[kPresentSlot];
-        *outReset = vtable[kResetSlot];
-
         device->Release();
         d3d->Release();
-        return true;
+        return vtable;
     }
 }
 
@@ -117,9 +115,9 @@ bool Install(DrawFn draw, FrameFn onFrame, DeviceLostFn onDeviceLost) {
     g_onFrame = onFrame;
     g_onDeviceLost = onDeviceLost;
 
-    void* present = nullptr;
-    void* reset = nullptr;
-    if (!ReadDeviceVtable(&present, &reset)) {
+    void* present = DeviceFunction(kPresentSlot);
+    void* reset = DeviceFunction(kResetSlot);
+    if (present == nullptr || reset == nullptr) {
         api->Log("renderer: no Direct3D 9 device could be created - the overlay cannot draw");
         return false;
     }
@@ -135,6 +133,11 @@ bool Install(DrawFn draw, FrameFn onFrame, DeviceLostFn onDeviceLost) {
 
     FCSE::Logf("renderer: drawing from Present at 0x%08zX", reinterpret_cast<size_t>(present));
     return true;
+}
+
+void* DeviceFunction(size_t slot) {
+    static void** vtable = ReadDeviceVtable();
+    return vtable != nullptr ? vtable[slot] : nullptr;
 }
 
 }

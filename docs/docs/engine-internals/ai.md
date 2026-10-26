@@ -244,6 +244,16 @@ knowledge flags and sets one per cone the target is in; `GetVisibilityValue` wit
 "remembered" switch needs both. With the shipped 60 m focus and 40 m peripheral cones, a player
 40-60 m away straight ahead counts as not plainly seen.
 
+For each candidate target, `AddPawnsToKB` resets the cones, lets `AdjustFOV` set them, then calls
+`CSensorySystem::AddTargetDataToKB` (Steam `0x10A03120`, `RET 8`; `this` the sensory system, then the
+visual target and the visibility context). The context there holds the final cones at `+0x04`, the
+observer at `+0x08`, his eye at `+0x10`, the target's head at `+0x1C` and his view direction at
+`+0x28`. The cone record keeps the archetype's own values beside the adjusted ones: focus length and
+angle at `+0x08`/`+0x0C` adjusted and `+0x10`/`+0x14` as authored, peripheral at `+0x1C`/`+0x20` and
+`+0x24`/`+0x28` (`SPawnFOVPerRegion::ResetFOV` copies the authored ones back). The knowledge entry
+the call updates stores where the target was last perceived at `+0x28`, its head at `+0x34` and its
+distance at `+0x40`. This is **traced in the server build** and matched in `Dunia.dll`.
+
 In the range, stock and modded alike, a rifleman facing a player standing in the open 50 m away only
 investigated, walked to where he had noticed him, and passed a player who had stepped 5-10 m aside.
 

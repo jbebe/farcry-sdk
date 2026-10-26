@@ -77,6 +77,23 @@ The catalog row does the same thing, but does not survive a restart and cannot b
 console registers the variable; this is delivered at load, so the readout is up for the loading
 screen too.
 
+**AI view**, off by default, draws what each soldier near you sees of you, as lines in the world
+itself. They are drawn at the end of the world's own render, against its depth and through its
+camera, so walls hide them; Present is too late, because the scene's depth is gone by then. For each
+soldier:
+
+- a white line where his head points;
+- his focus cone as his archetype sets it, in cyan, and the wider cone the engine tested this
+  update, in blue (with the Difficulty Overhaul, both span 180°);
+- a line to your head and a bar above his, coloured by how visible you are to him: grey below 0.3,
+  yellow from 0.3 (noticed), orange from 0.4 (a fighting soldier fires), red from 0.5 (an idle or
+  alert soldier recognises an enemy). The bar is a metre tall at full visibility, with ticks at 0.3,
+  0.4, 0.5 and 1;
+- a magenta cross where he last perceived you, joined to him while he cannot see you plainly.
+
+The data is copied out of each soldier's vision update (`CSensorySystem::AddTargetDataToKB`), so a
+soldier appears once he first considers you and disappears a second after his updates stop.
+
 **Skip system detection**, off by default, cuts the hardware probe out of startup. `systemdetection.dll`
 spins up WMI to enumerate the hardware and DxDiag to enumerate the display before the menu appears,
 and both are worth seconds on every launch. WMI is refused outright and DxDiag is proxied and cached,
