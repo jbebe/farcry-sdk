@@ -86,12 +86,29 @@ function IfAtPlayer($name, $player, $other) {
 "@
 }
 
-# Draws the primary, or the secondary when there is no primary.
-function DrawOtherGun($name, $then) {
+function IfCarriesLauncher($name, $no, $yes) {
+    @"
+<Task Name="$name" Class="CTaskCheckFactExist" Looping="0" Independent="0">
+  <Parameter Name="factNameIN" Value="CarriesLauncher" />
+  <Parameter Name="useWorldBlackboard" Value="0" />
+  <Parameter Name="BlackboardType" Value="1" />
+  <Parameter Name="checkType" Value="0" />
+  <Parameter Name="factValue" Value="integer">
+    <Parameter Name="integer" Value="0" />
+  </Parameter>
+  <Anchor Name="OnStart" />
+  <Event Name="False">$no</Event>
+  <Event Name="True">$yes</Event>
+</Task>
+"@
+}
+
+# Draws the $class weapon when he carries one, else $selected; primary falls back to the secondary.
+function SwitchWeapon($name, $selected, $class, $then) {
     @"
 <Task Name="$name" Class="CTaskSwitchWeapon" Looping="0" Independent="0">
-  <Parameter Name="weaponSelected" Value="primary" />
-  <Parameter Name="desiredWeaponClass" Value="" />
+  <Parameter Name="weaponSelected" Value="$selected" />
+  <Parameter Name="desiredWeaponClass" Value="$class" />
   <Parameter Name="actionSignal" Value="switch" />
   <Parameter Name="actionSignalGroup" Value="::Pawn Weapons/Weapon Mechanics/States/SwitchingWeapon" />
   <Anchor Name="OnStart" />
@@ -105,23 +122,13 @@ function DrawOtherGun($name, $then) {
 "@
 }
 
-# At the player, $launcher only while they are in a vehicle, else the other gun and then $next; anyone
-# else gets $launcher. With -Watch, the player getting out later stops $launcher too.
-function Add-PlayerGate($scope, $after, $launcher, $next, [switch]$Watch) {
-    $inVehicle = if ($Watch) { '' } else { Connect "$scope/TargetOnFoot" 'Stop' }
-    $onFootStops = @("$scope/TargetInVehicle") + @(if ($Watch) { $launcher })
-    Add-Instance $scope $after (IfAtPlayer "$scope/IfAtPlayer" (Connect "$scope/TargetInVehicle", "$scope/TargetOnFoot") (Connect $launcher))
-    Add-Instance $scope "$scope/IfAtPlayer" (InVehicle "$scope/TargetInVehicle" 0 ($inVehicle + (Connect $launcher)))
-    Add-Instance $scope "$scope/TargetInVehicle" (InVehicle "$scope/TargetOnFoot" 1 ((Connect $onFootStops 'Stop') + (Connect "$scope/DrawOtherGun")))
-    Add-Instance $scope "$scope/TargetOnFoot" (DrawOtherGun "$scope/DrawOtherGun" (Connect $next))
-}
-
 $plan = '::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan'
 $shoot = "$plan/ShootPhase"
 
-# In the shoot phase, a launcher in hand is remembered and goes through the gate; the other gun fires
-# through the plain sniper loop.
+# In the shoot phase, a soldier with a launcher in hand, or known to carry one, fires it at the player
+# only while they are in a vehicle and his other gun otherwise, switching as they get in and out.
 Retarget "$shoot/CheckRocketWeapon" PlayerUsingWeapon "$shoot/RocketShootingLoop" "$shoot/LauncherInHand"
+Retarget "$shoot/CheckRocketWeapon" PlayerNotDoingAction "$shoot/SniperShootingLoop" "$shoot/IfCarriesLauncher"
 Retarget "$shoot/CheckCarlGustavWeapon" PlayerUsingWeapon "$shoot/RocketShootingLoop" "$shoot/LauncherInHand"
 Add-Instance $shoot "$shoot/CheckRocketWeapon" @"
 <Task Name="$shoot/LauncherInHand" Class="CTaskUpdateBlackboard" Looping="0" Independent="0">
@@ -140,25 +147,23 @@ Add-Instance $shoot "$shoot/CheckRocketWeapon" @"
   <Exit Name="Failure" />
 </Task>
 "@
-Add-PlayerGate $shoot "$shoot/LauncherInHand" "$shoot/RocketShootingLoop" "$shoot/CheckForcedMiss" -Watch
+Add-Instance $shoot "$shoot/LauncherInHand" (IfCarriesLauncher "$shoot/IfCarriesLauncher" (
+    Connect "$shoot/SniperShootingLoop") (Connect "$shoot/IfAtPlayer"))
+Add-Instance $shoot "$shoot/IfCarriesLauncher" (IfAtPlayer "$shoot/IfAtPlayer" (
+    Connect "$shoot/TargetInVehicle", "$shoot/TargetOnFoot") (Connect "$shoot/DrawLauncher"))
+Add-Instance $shoot "$shoot/IfAtPlayer" (InVehicle "$shoot/TargetInVehicle" 0 (
+    (Connect "$shoot/SniperShootingLoop" 'Stop') + (Connect "$shoot/TargetOnFoot", "$shoot/DrawLauncher")))
+Add-Instance $shoot "$shoot/TargetInVehicle" (InVehicle "$shoot/TargetOnFoot" 1 (
+    (Connect "$shoot/RocketShootingLoop" 'Stop') + (Connect "$shoot/TargetInVehicle", "$shoot/DrawOtherGun")))
+Add-Instance $shoot "$shoot/TargetOnFoot" (SwitchWeapon "$shoot/DrawLauncher" '' special (
+    Connect "$shoot/RocketShootingLoop"))
+Add-Instance $shoot "$shoot/DrawLauncher" (SwitchWeapon "$shoot/DrawOtherGun" primary '' (
+    Connect "$shoot/SniperShootingLoop"))
 
-# At the plan's start, a soldier known to carry a launcher goes through the gate before drawing it.
-Retarget "$plan/SetFireSpecial" Success "$plan/SwitchToSniperGun" "$plan/IfLauncherKnown"
-Add-Instance $plan "$plan/SetFireSpecial" @"
-<Task Name="$plan/IfLauncherKnown" Class="CTaskCheckFactExist" Looping="0" Independent="0">
-  <Parameter Name="factNameIN" Value="CarriesLauncher" />
-  <Parameter Name="useWorldBlackboard" Value="0" />
-  <Parameter Name="BlackboardType" Value="1" />
-  <Parameter Name="checkType" Value="0" />
-  <Parameter Name="factValue" Value="integer">
-    <Parameter Name="integer" Value="0" />
-  </Parameter>
-  <Anchor Name="OnStart" />
-  <Event Name="False">$(Connect "$plan/SwitchToSniperGun")</Event>
-  <Event Name="True">$(Connect "$plan/IfAtPlayer")</Event>
-</Task>
-"@
-Add-PlayerGate $plan "$plan/IfLauncherKnown" "$plan/SwitchToSniperGun" "$plan/CheckMortarWeapon1"
+# At the plan's start, a soldier known to carry a launcher leaves the drawing to the shoot phase.
+Retarget "$plan/SetFireSpecial" Success "$plan/SwitchToSniperGun" "$plan/IfCarriesLauncher"
+Add-Instance $plan "$plan/SetFireSpecial" (IfCarriesLauncher "$plan/IfCarriesLauncher" (
+    Connect "$plan/SwitchToSniperGun") (Connect "$plan/CheckMortarWeapon1"))
 
 $doc.Save($source)
 $brains = "$layer\mods\scripts\game\newbrains"
