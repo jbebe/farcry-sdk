@@ -136,6 +136,7 @@ public sealed partial class MainViewModel
             OnPropertyChanged(nameof(HasReachNote));
             OnPropertyChanged(nameof(HasOriginal));
             OnPropertyChanged(nameof(SelectionIsModel));
+            OnPropertyChanged(nameof(SelectionIsMaterial));
         }
     }
 

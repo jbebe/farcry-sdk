@@ -172,7 +172,9 @@ public sealed partial class MainViewModel
     /// Rebuild and LoadFragments share one internal lock, so the two calls simply serialize there
     /// instead of racing; whichever finishes last is what the tree ends up showing.
     /// </summary>
-    public void Reindex() => _ = ReindexAsync(includeFragments: true);
+    /// <param name="select">A path to select once the view is rebuilt, in whichever folder holds it;
+    /// the file selected before otherwise.</param>
+    public void Reindex(string? select = null) => _ = ReindexAsync(includeFragments: true, select);
 
     /// <summary>Raised once a reindex has applied the current layer stack: a save, a revert, a mod
     /// toggled or rescanned.</summary>
@@ -199,12 +201,12 @@ public sealed partial class MainViewModel
     /// paint. Every other caller goes through <see cref="Reindex"/>, which always wants the complete
     /// view.
     /// </summary>
-    private async Task ReindexAsync(bool includeFragments)
+    private async Task ReindexAsync(bool includeFragments, string? select = null)
     {
         if (_vfs is null) return;
 
         Workspace?.Rescan();
-        _reselectPath = SelectedFile?.Path;
+        _reselectPath = select ?? SelectedFile?.Path;
         GameVfs vfs = _vfs;
         IReadOnlyList<IModLayer> layers = Layers;
         try
@@ -223,6 +225,10 @@ public sealed partial class MainViewModel
         // that one via _refreshCts, wasting the scan and guaranteeing a caught-but-thrown
         // OperationCanceledException on every reindex.
         BuildTree();
+        if (select is not null && FindByPath(select) is { } selected)
+        {
+            NavigateTo(selected);
+        }
 
         // Every ModRow's FileCount/FileCountText is a computed property over its (never-replaced)
         // Layer, so nothing re-reads them without this - see ModRow.NotifyFileCountChanged.

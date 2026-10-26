@@ -580,6 +580,13 @@
                                     <Button Content="…with animations" Click="ExportPackWithClips_Click"
                                             ToolTip="Also carry every animation bank that names this model" />
                                 </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0"
+                                            Visibility="{Binding SelectionIsMaterial, Converter={StaticResource BoolToVis}}">
+                                    <Button Content="New material…" Click="NewMaterial_Click"
+                                            AutomationProperties.AutomationId="NewMaterial"
+                                            ToolTip="Make a material at a new path, as a copy of this one or empty" />
+                                </StackPanel>
                             </StackPanel>
 
                             <!-- Filled in by MainWindow.xaml.cs — FileHandlerCatalog picks the view for the selected file's type. -->

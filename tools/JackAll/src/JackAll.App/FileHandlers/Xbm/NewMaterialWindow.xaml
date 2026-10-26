@@ -1,0 +1,28 @@
+<Window x:Class="JackAll.App.FileHandlers.Xbm.NewMaterialWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="New material" Width="520" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextPrimaryBrush}">
+    <StackPanel Margin="12">
+        <TextBlock Text="Name" Margin="0,0,0,4" />
+        <TextBox x:Name="NameBox" TextChanged="Name_TextChanged" AutomationProperties.AutomationId="NewMaterialName" />
+        <TextBlock Text="Game path" Margin="0,10,0,4" />
+        <TextBox x:Name="PathBox" TextChanged="Path_TextChanged" AutomationProperties.AutomationId="NewMaterialPath" />
+        <TextBlock Style="{StaticResource Note}" Margin="0,4,0,10"
+                   Text="A path no archive has. A mesh draws with it once its material list names it - an .fc2model pack's add-material does that." />
+        <RadioButton x:Name="CopyOption" GroupName="Start" IsChecked="True" Margin="0,0,0,6" />
+        <StackPanel Orientation="Horizontal">
+            <RadioButton x:Name="EmptyOption" GroupName="Start" Content="Empty, on the shader" VerticalAlignment="Center" />
+            <ComboBox x:Name="ShaderPicker" Width="160" Margin="8,0,0,0"
+                      IsEnabled="{Binding IsChecked, ElementName=EmptyOption}" />
+        </StackPanel>
+        <TextBlock x:Name="ProblemText" Style="{StaticResource Muted}" Margin="0,10,0,0" TextWrapping="Wrap" />
+        <DockPanel Margin="0,12,0,0" LastChildFill="False">
+            <Button DockPanel.Dock="Right" Content="Cancel" IsCancel="True" Margin="6,0,0,0" MinWidth="80" />
+            <Button x:Name="OkButton" DockPanel.Dock="Right" Content="Create" Style="{StaticResource PrimaryButton}"
+                    MinWidth="80" IsEnabled="False" IsDefault="True" Click="Ok_Click"
+                    AutomationProperties.AutomationId="NewMaterialOk" />
+        </DockPanel>
+    </StackPanel>
+</Window>

@@ -24,6 +24,10 @@ public sealed partial class MainViewModel
     public bool SelectionIsModel
         => SelectedFile is { NameIsKnown: true, Type.Extension: "xbg" };
 
+    /// <summary>Whether "New material" applies to the selected row.</summary>
+    public bool SelectionIsMaterial
+        => SelectedFile is { Type.Extension: "xbm" };
+
     /// <summary>
     /// Collects the selected model and everything it names into a pack.
     /// </summary>
@@ -79,19 +83,10 @@ public sealed partial class MainViewModel
     /// </remarks>
     public int ApplyPack(Fc2ModelBundle bundle)
     {
-        if (Workspace is null)
-        {
-            throw new InvalidOperationException("The workspace is not available.");
-        }
-
         List<Fc2ModelOutput> outputs = PlanPack(bundle);
         foreach (Fc2ModelOutput output in outputs)
         {
-            Workspace.Stage(
-                Core.Format.NameHash.Compute(output.Path),
-                output.Path,
-                Path.GetExtension(output.Path).TrimStart('.'),
-                output.Content);
+            Stage(output.Path, output.Content);
         }
         return outputs.Count;
     }

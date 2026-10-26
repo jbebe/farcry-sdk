@@ -1,3 +1,4 @@
+using System.IO;
 using JackAll.App.FileHandlers.Fcb;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
@@ -227,6 +228,17 @@ public sealed partial class MainViewModel
     {
         Workspace!.Stage(WorkspaceKeyOf(file), StagePathOf(file), file.Type.Extension, content);
         Reindex();
+    }
+
+    /// <summary>Puts a file into the workspace by game path, which may be one no archive has; the
+    /// caller reindexes.</summary>
+    public void Stage(string path, byte[] content)
+    {
+        if (Workspace is null)
+        {
+            throw new InvalidOperationException("The workspace is not available.");
+        }
+        Workspace.Stage(NameHash.Compute(path), path, Path.GetExtension(path).TrimStart('.'), content);
     }
 
     /// <summary>The hashlist every name in the app is resolved through.</summary>
