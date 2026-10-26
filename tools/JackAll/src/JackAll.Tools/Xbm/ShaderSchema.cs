@@ -49,6 +49,28 @@ public sealed class ShaderDescriptor
            && Find(key + Clean) is not null && Find(key + Broken) is not null
             ? key + Clean
             : null;
+
+    /// <summary>
+    /// Set a key from text, stored the way the material already stores it or else the way this
+    /// shader declares it; <paramref name="link"/> also sets the clean twin of a condition-driven
+    /// value, leaving the broken one as the worn look.
+    /// </summary>
+    /// <returns>The keys written.</returns>
+    public List<string> Set(XbmFile material, string key, string text, bool link = true)
+    {
+        List<string> written = [];
+        foreach (string target in link && CleanTwin(key) is { } clean ? [key, clean] : (string[])[key])
+        {
+            (XbmSection section, int width) = material.Find(target) is { } current
+                ? (current.Section, current.Floats.Length)
+                : Find(target) is { } declared
+                    ? (declared.Section, declared.Width)
+                    : throw new KeyNotFoundException($"{Name} takes no '{target}'.");
+            material.Set(XbmEntry.Parse(target, section, width, text));
+            written.Add(target);
+        }
+        return written;
+    }
 }
 
 /// <summary>

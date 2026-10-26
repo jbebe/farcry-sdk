@@ -18,6 +18,7 @@ using JackAll.Cli.Commands.Spk;
 using JackAll.Cli.Commands.Shader;
 using JackAll.Cli.Commands.World;
 using JackAll.Cli.Commands.Xbg;
+using JackAll.Cli.Commands.Xbm;
 using JackAll.Cli.Commands.Xbt;
 using JackAll.Cli.Commands.Xref;
 using Spectre.Console.Cli;
@@ -117,6 +118,30 @@ app.Configure(config =>
         pack.AddCommand<Fc2ModelInspectCommand>("inspect")
             .WithDescription("List what a pack holds and which of it has been changed.")
             .WithExample("fc2model", "inspect", "ak47.fc2model");
+        pack.AddCommand<Fc2ModelAddMaterialCommand>("add-material")
+            .WithDescription("Add a material the game does not have, for the mesh to draw with.")
+            .WithExample("fc2model", "add-material", "ak47.fc2model", @"graphics\weapons\primary\ak47\ak47_body.xbm",
+                "--from", @"GRAPHICS\_MATERIALS\JPCORMIER-M-2007100950589039.xbm", "--name", "AK47_BODY");
+        pack.AddCommand<Fc2ModelAssignMaterialCommand>("assign-material")
+            .WithDescription("Move the clusters drawing with one of the mesh's materials onto another.")
+            .WithExample("fc2model", "assign-material", "ak47.fc2model", "--from", "6", "--to", "7", "--part", "FRAME");
+    });
+
+    // --- .xbm materials ---------------------------------------------------
+    config.AddBranch("xbm", xbm =>
+    {
+        xbm.AddCommand<XbmShowCommand>("show")
+            .WithDescription("Print a material's shader and properties.")
+            .WithExample("xbm", "show", "material.xbm");
+        xbm.AddCommand<XbmNewCommand>("new")
+            .WithDescription("Write a new material: a copy of another, or an empty one of a shader.")
+            .WithExample("xbm", "new", "body.xbm", "--name", "AK47_BODY", "--shader", "Weapon", "-g", @"C:\Games\Far Cry 2");
+        xbm.AddCommand<XbmSetCommand>("set")
+            .WithDescription("Set or remove a material's properties, checked against its shader.")
+            .WithExample("xbm", "set", "body.xbm", "SpecularPower=30", "DiffuseColor1=0.64", "-g", @"C:\Games\Far Cry 2");
+        xbm.AddCommand<XbmLintCommand>("lint")
+            .WithDescription("Report what a material asks for that the game will not do.")
+            .WithExample("xbm", "lint", "body.xbm", "-g", @"C:\Games\Far Cry 2", "--layer", "mylayer");
     });
 
     // --- compiled RML documents -------------------------------------------

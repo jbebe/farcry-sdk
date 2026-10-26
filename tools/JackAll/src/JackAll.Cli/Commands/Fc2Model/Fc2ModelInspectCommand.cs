@@ -19,6 +19,10 @@ public sealed class Fc2ModelInspectCommand : CliCommand<Fc2ModelInspectCommand.S
         [Description("List the animation banks instead of the files.")]
         public bool Clips { get; init; }
 
+        [CommandOption("--materials")]
+        [Description("List the mesh's materials by index, with the parts drawing with each.")]
+        public bool Materials { get; init; }
+
         [CommandOption("--json")]
         [Description("Emit one JSON object on stdout instead of human-readable output.")]
         public bool Json { get; init; }
@@ -44,7 +48,7 @@ public sealed class Fc2ModelInspectCommand : CliCommand<Fc2ModelInspectCommand.S
         }
 
         AnsiConsole.MarkupLineInterpolated($"[bold]{bundle.Manifest.Model}[/]");
-        AnsiConsole.Write(settings.Clips ? ClipTable(bundle) : FileTable(bundle));
+        AnsiConsole.Write(settings.Materials ? MaterialTable(bundle) : settings.Clips ? ClipTable(bundle) : FileTable(bundle));
         if (!settings.Clips && bundle.Manifest.Clips.Count > 0)
         {
             AnsiConsole.MarkupLineInterpolated(
@@ -63,6 +67,21 @@ public sealed class Fc2ModelInspectCommand : CliCommand<Fc2ModelInspectCommand.S
                 entry.Role,
                 entry.Modified ? "yes" : "",
                 Markup.Escape(entry.Path));
+        }
+        return table;
+    }
+
+    /// <summary>The index each material goes by in <c>assign-material</c>, and who draws with it.</summary>
+    private static Table MaterialTable(Fc2ModelBundle bundle)
+    {
+        MeshDocument mesh = bundle.Document<MeshDocument>(bundle.Mesh());
+        var table = new Table().AddColumns("index", "material", "parts");
+        for (int index = 0; index < mesh.Materials.Count; index++)
+        {
+            IEnumerable<string> parts = mesh.Parts
+                .Where(part => part.Clusters.Any(cluster => cluster.MaterialIndex == index))
+                .Select(part => part.Name);
+            table.AddRow(index.ToString(), Markup.Escape(mesh.Materials[index]), Markup.Escape(string.Join(" ", parts)));
         }
         return table;
     }

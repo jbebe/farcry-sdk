@@ -43,7 +43,7 @@ public sealed class MaterialDocument
     /// <summary>The one value in a material's container that nothing derives.</summary>
     public required uint HeaderWord { get; init; }
 
-    public required string Name { get; init; }
+    public required string Name { get; set; }
 
     public required string Shader { get; init; }
 
