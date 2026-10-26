@@ -242,9 +242,14 @@ Movement and look stay live, as with the map. The gamepad mirrors the map's: d-p
   and the crates, which all walk it.
 - **Item definitions** live in a data file (id, kind, name and text keys, picture, stack).
   The plugin holds two lists, Items and the box, both saved on the player's entity.
-- **The page** is drawn by the plugin into a texture, swapped in when the notebook's paper is drawn,
-  so it is lit by the world and moves with the hands. Picking out the draw is proven; swapping its
-  texture is new. A flat overlay would read as a HUD.
+- **The notebook is the map's other face** for now: a Notebook control (Tab) brings the map out
+  with the notebook's face up, and Tab and the map's key each turn it to their face. A second held
+  gadget would need the engine to take one beside the map; one held object with two faces needs
+  nothing new.
+- **The page** is drawn by the plugin into a texture and bound wherever Direct3D binds the map
+  paper's texture while the notebook's face is up, so it is lit by the world and moves with the
+  hands. A flat overlay would read as a HUD. The paper is one square sheet, 25.5 cm a side, with the
+  area map on top and the world map on its back.
 
 ## Steps
 
@@ -265,9 +270,10 @@ Each step ends with one check in game before the next.
 
 ## Open
 
-- **A second held gadget.** Whether the engine takes a notebook beside the map, in an `Unused` slot.
-  If not, the notebook can be the back of the map. Step 3 answers it.
-- **Swapping the paper's texture** at the notebook's draw. Step 4 answers it.
+- **Whether the page shows the right way up** on the paper, and all of it: the mesh's texture
+  coordinates are not read yet. Step 4's check in game answers it.
+- **R turns the paper over** to the world map, which is the map's own back, not a notebook page.
+  Page turns need their own face or the notebook's own model (step 5).
 - **What still selects by class:** the weapon crate draws the gun it hands out by its class, and a
   pickup's switch prompt shows the carried gun of the pickup's class. Step 1 shows how far it shows.
 - **How a mission asks "does the player carry X"**, since the plugin cannot read `Globals`. Candidates:
