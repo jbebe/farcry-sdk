@@ -94,7 +94,7 @@ range in the log drifts from the scenario's distance.
 | E | **Damage falloff with range** for the player's hits on soldiers | skipped in step 4 |
 | F | **A vest** | postponed, below |
 | G | **The difficulty spread.** Ease Casual and Experienced and harden Infamous, from the Hardcore values | after A to C |
-| I | **Periphery sees movement.** Outside his focus a still player is barely noticed, a moving one is | built: a still player counts 0.2 of a moving one in the periphery, full from 2 m/s; unseen |
+| I | **Periphery sees movement.** Outside his focus a still player is barely noticed, a moving one is | built: a still or crouch-moving player counts 0.2 of one moving upright in the periphery, full from 2 m/s (crouch-moving split off at the user's request: it is as fast as a walk); unseen |
 | J | **Close-range awareness.** Within about 2 m a soldier senses the player at any angle, but a crouching player can always approach without alerting him; walking or running alerts him | built: within 2 m, moving at 0.5 m/s or more and not crouched, both cones go all round and he counts in full; unseen |
 | K | **Vertical sight limit.** About 45° above and 60° below his eye line | chosen from the AI survey; easy, but the range is flat, so testing needs height |
 | L | **A heard step means investigate.** A footstep sends a soldier to look; only seeing the player makes him hostile | chosen from the AI survey; first check what the stock brains do with the footstep sound |

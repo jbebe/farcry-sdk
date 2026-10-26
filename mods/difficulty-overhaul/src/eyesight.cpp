@@ -1,9 +1,9 @@
 // Eyesight: how soldiers see the player. The focus cone reaches farther and keeps the player fully
 // visible out to half its length; he sees across 180 degrees, but outside his focus the player is
 // only ever noticed: enough for a soldier to turn and look, never enough to see him as an enemy, and
-// noticed for moving rather than for standing still. Up close, the part of the player that shows over
-// cover counts double, and at arm's length a soldier senses a player who walks or runs upright at
-// any angle, though not one who creeps up crouched.
+// noticed for moving upright rather than for standing still or creeping crouched. Up close, the part
+// of the player that shows over cover counts double, and at arm's length a soldier senses a player
+// who walks or runs upright at any angle, though not one who creeps up crouched.
 #include "engine/game.h"
 #include "engine/memory.h"
 #include "engine/shooting.h"
@@ -70,16 +70,18 @@ namespace {
     // him".
     constexpr float kPeripheralNearFocus = 0.55f;
     constexpr float kPeripheralAtEdge = 0.35f;
-    // Hardcore: in the periphery a still player counts this share of a moving one, who counts in full
-    // from this speed, a walk.
+    // Hardcore: in the periphery a player standing still or moving crouched counts this share of one
+    // moving upright, who counts in full from this speed, a walk.
     constexpr float kStillPeriphery = 0.2f;
     constexpr float kWalkSpeed = 2.0f;
-    // Hardcore: within this range a soldier senses at any angle a player moving at least this fast,
-    // unless he is crouched.
+    // Hardcore: within this range a soldier senses at any angle a player moving upright at least this
+    // fast.
     constexpr float kArmsLength = 2.0f;
     constexpr float kMovingSpeed = 0.5f;
-    constexpr int kCrouched = 1;
     constexpr float kAllAround = 360.0f;
+    // The two low stances: crouched, and the one swimming forces.
+    constexpr int kCrouched = 1;
+    constexpr int kLow = 2;
     // Hardcore: within this range a head over cover is as plain as a whole man's top half, so the
     // share of the player's body the rays reach counts this many times over, up to all of it.
     constexpr float kCloseRange = 40.0f;
@@ -113,13 +115,15 @@ namespace {
         return 1.0f - (1.0f - atEnd) * (distance - fullTo) / (length - fullTo);
     }
 
-    // How fast the player moves across the ground, and whether he is within arm's length of `eye`,
-    // upright, and moving.
+    // How much the player's movement shows, which only moving upright does, and whether he is within
+    // arm's length of `eye` doing so.
     void Motion(void* player, const float eye[3]) {
         void* pawn = Shooting::Pawn(player);
+        const int stance = Shooting::Stance(pawn);
         float velocity[3];
         Shooting::Velocity(pawn, velocity);
-        const float speed = std::hypot(velocity[0], velocity[1]);
+        const float speed = stance == kCrouched || stance == kLow ? 0.0f
+                                                                  : std::hypot(velocity[0], velocity[1]);
         t_motion = kStillPeriphery + (1.0f - kStillPeriphery) * std::min(speed / kWalkSpeed, 1.0f);
 
         float at[3] = {};
@@ -128,7 +132,7 @@ namespace {
             Game::Position(entity, at);
         }
         t_sensed = entity != nullptr && std::hypot(at[0] - eye[0], at[1] - eye[1]) <= kArmsLength &&
-                   speed >= kMovingSpeed && Shooting::Stance(pawn) != kCrouched;
+                   speed >= kMovingSpeed;
     }
 
     void OnConesSet(FCSE_MidHookContext* ctx) {
