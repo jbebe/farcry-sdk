@@ -84,8 +84,9 @@ The notebook works on foot only for now: the driving controls are left as they a
 `CGadgetMapStrategy::SetMapTexture` gives the map entity's `maptop` material the texture of the area
 the player is in. While the notebook's face is up, the plugin binds its own page wherever Direct3D
 binds that texture (`src/engine/paper.cpp`), so the page is drawn on the map's own paper, lit and
-moved with it. The page (`src/page.cpp`) is drawn with GDI into a 1024 by 1024 bitmap in Windows'
-Ink Free face, and only again when its text changes:
+moved with it. The page is drawn with GDI into a 1024 by 1024 bitmap in Windows' Ink Free face
+(`src/page_layout.cpp`), from what `src/page.cpp` reads in the game, and only again when its text
+changes:
 
 - **Hands:** each gun's slot, name and condition as a word (new, used, worn, failing), with a mark
   on the gun in hand.
@@ -95,6 +96,13 @@ Ink Free face, and only again when its text changes:
 
 Names come from the archetype for now (`weapons.Special.M249_Saw` is "M249 Saw"). The Belt, the
 pictures, the index labels and moving along the lists are still to come.
+
+To look at the page without the game, build `PagePreview`, which draws a sample page to a `.bmp`:
+
+```
+cmake --build out\build\x86-release --target PagePreview
+out\build\x86-release\PagePreview.exe page.bmp
+```
 
 ## Testing
 
