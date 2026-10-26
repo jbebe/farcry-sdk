@@ -16,9 +16,9 @@ namespace {
     constexpr size_t kMostText = 16384;
     constexpr const char* kWeaponPrefix = "weapons.";
 
-    Record Keep(void* weapon) {
+    Record Keep(const void* inventory, void* weapon) {
         return {Inventory::Name(weapon), true, Inventory::Reliability(weapon),
-                Inventory::Loaded(weapon)};
+                Inventory::Loaded(inventory, weapon)};
     }
 }
 
@@ -78,8 +78,9 @@ bool Stow(void* inventory, int slot) {
         return false;
     }
     const bool inHand = Inventory::Id(gun->item) == Inventory::InHandId(inventory);
-    items.push_back(Keep(gun->weapon));
-    FCSE::Logf("stowed gun %d, the %s", slot, items.back().id.c_str());
+    items.push_back(Keep(inventory, gun->weapon));
+    FCSE::Logf("stowed gun %d, the %s with %d loaded", slot, items.back().id.c_str(),
+               items.back().loaded);
     Inventory::Remove(inventory, gun->weapon);
     Save(items);
     const std::vector<Inventory::Weapon> rest = Inventory::Guns(inventory);
@@ -103,8 +104,9 @@ bool Take(void* inventory, size_t index) {
     items.erase(items.begin() + index);
     if (before.size() >= 2) {
         const Inventory::Weapon& out = TwoGuns::ToReplace(inventory, before);
-        items.push_back(Keep(out.weapon));
-        FCSE::Logf("the %s goes into Items in its place", items.back().id.c_str());
+        items.push_back(Keep(inventory, out.weapon));
+        FCSE::Logf("the %s goes into Items in its place with %d loaded", items.back().id.c_str(),
+                   items.back().loaded);
         Inventory::Remove(inventory, out.weapon);
     }
     Save(items);
@@ -124,8 +126,8 @@ bool Take(void* inventory, size_t index) {
             Inventory::SetLoaded(gun.weapon, taken.loaded);
         }
         TwoGuns::Draw(inventory, gun);
-        FCSE::Logf("took the %s out of Items: gun %d", taken.id.c_str(),
-                   TwoGuns::SlotOf(gun.weapon));
+        FCSE::Logf("took the %s out of Items with %d loaded: gun %d", taken.id.c_str(),
+                   taken.loaded, TwoGuns::SlotOf(gun.weapon));
     }
     return true;
 }

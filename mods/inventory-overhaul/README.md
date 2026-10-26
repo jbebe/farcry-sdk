@@ -45,13 +45,19 @@ A stowed gun leaves the game and becomes a record. Stowing is the engine's own d
 (`DropWeapon`) with its `CanSpawnPickup` question answered no, so nothing lands on the ground.
 Taking it out makes a new gun of that archetype with the inventory's `AddWeaponByName`, then puts
 back its wear and loaded rounds; with two guns carried, the one in hand takes its place in Items.
+The gun in hand keeps its magazine in `AmmoInClip`, a holstered one in `RememberedAmmoInClip`,
+which it loads when drawn; a gun taken out is given the latter, as a gun made from a pickup is. With
+nothing left in hand, the gun is drawn with the immediate select a pickup uses.
+
+The player's diamonds are a row of Items too, read straight from the wallet (`CEconomyComponent`,
+`DiamondCount`); they cannot be dropped.
 The engine adds no gun of a model already carried, which it tells by item id, so the carried
 guns of that model have their ids turned aside for the call. Spare ammo is one pool per ammo type
 and stays with the player, and upgrades are the player's, not the gun's, so nothing else is lost.
 
 Until the notebook exists, a window in DevTools' overlay (Home) shows both slots and Items, with
-Stow, Take, Give and Discard. Its buttons are carried out on the game thread, the next time the
-HUD asks for the player's gun.
+Stow, Take, Give and Discard, and +1 on the diamonds, which runs `#Game:AddDiamonds(1)`. Its buttons
+are carried out on the game thread, the next time the HUD asks for the player's gun.
 
 ## Testing
 

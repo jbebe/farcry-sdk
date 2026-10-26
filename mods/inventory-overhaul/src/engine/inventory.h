@@ -36,10 +36,12 @@ bool IsGun(void* weapon);
 const uint32_t* Category(void* weapon);
 // The archetype the weapon was made from, such as "weapons.Primary.AK47".
 const char* Name(void* weapon);
-// How worn a gun is, as the engine counts it, and the rounds it has loaded.
+// How worn a gun is, as the engine counts it.
 float Reliability(void* weapon);
 void SetReliability(void* weapon, float reliability);
-int Loaded(void* weapon);
+// The rounds in a gun's magazine: for the gun in hand its own, for a holstered one those it will
+// load when next drawn. SetLoaded sets the latter.
+int Loaded(const void* inventory, void* weapon);
 void SetLoaded(void* weapon, int rounds);
 
 // An item's id, by which the engine selects, draws and saves it.
@@ -47,6 +49,10 @@ uint32_t& Id(void* item);
 uint32_t InHandId(const void* inventory);
 // Whether the gun in hand is out, rather than being drawn or put away.
 bool Drawn(const void* inventory);
+// Whether nothing is in hand, as after the gun in hand was dropped.
+bool HandEmpty(const void* inventory);
+// Draws the first gun of a class at once, as a pickup does, rather than switching to it.
+void SelectAtOnce(void* inventory, const uint32_t* category);
 // Makes the gun whose item has `id` the one being drawn.
 void Equip(void* inventory, uint32_t id);
 // Drops a gun at the pawn's feet, or with Remove takes it away and leaves nothing behind.

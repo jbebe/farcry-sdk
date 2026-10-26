@@ -18,21 +18,25 @@ namespace {
     using HierarchyFn = const void*(__fastcall*)(void* object, void* unused);
     using ItemWeaponFn = void*(__fastcall*)(void* item, void* unused);
     using CategoryFn = const uint32_t*(__fastcall*)(void* weapon, void* unused);
+    using SelectAtOnceFn = void(__fastcall*)(void* inventory, void* unused, const uint32_t* category);
     using ReliabilityFn = float(__fastcall*)(void* weapon, void* unused);
     using SetReliabilityFn = void(__fastcall*)(void* weapon, void* unused, float reliability);
-    using LoadedFn = int(__fastcall*)(void* weapon, void* unused);
+    using RoundsFn = int(__fastcall*)(void* weapon, void* unused);
     using SetLoadedFn = void(__fastcall*)(void* weapon, void* unused, int rounds);
 
     // The local player's CTerminal; the inventory's DropWeapon(CWeapon*, bool), the CanSpawnPickup
-    // question a drop asks first, AddWeaponByName(archetype) and UpdateEquipAnim; CWeapon's
-    // GetReliability and its loaded rounds, read and set.
+    // question a drop asks first, AddWeaponByName(archetype), the immediate select a pickup draws
+    // with, and UpdateEquipAnim; CWeapon's GetReliability, its AmmoInClip and RememberedAmmoInClip,
+    // and the setter of RememberedAmmoInClip and RememberedAmmoOverflow.
     FCSE::Relocation<GetTerminalFn> g_getTerminal{FCSE::Uplay(0x00831870)};
     FCSE::Relocation<DropWeaponFn> g_dropWeapon{FCSE::Uplay(0x0012DB20)};
     FCSE::Relocation<CanSpawnPickupFn> g_canSpawnPickupSite{FCSE::Uplay(0x0012D950)};
     FCSE::Relocation<AddByNameFn> g_addByName{FCSE::Uplay(0x0012B540)};
+    FCSE::Relocation<SelectAtOnceFn> g_selectAtOnce{FCSE::Uplay(0x0012B9B0)};
     FCSE::Relocation<UpdateEquipAnimFn> g_updateEquipAnim{FCSE::Uplay(0x0012A6F0)};
     FCSE::Relocation<ReliabilityFn> g_reliability{FCSE::Uplay(0x0012E9F0)};
-    FCSE::Relocation<LoadedFn> g_loaded{FCSE::Uplay(0x0012EB60)};
+    FCSE::Relocation<RoundsFn> g_ammoInClip{FCSE::Uplay(0x0012E950)};
+    FCSE::Relocation<RoundsFn> g_rememberedInClip{FCSE::Uplay(0x0012EB50)};
     FCSE::Relocation<SetLoadedFn> g_setLoaded{FCSE::Uplay(0x0012F850)};
     // CInventoryItemWeapon's class id, built on first use, and CWeaponPropertiesCommon's class ids.
     FCSE::Relocation<BuildTypeFn> g_buildWeaponItemType{FCSE::Uplay(0x00126210)};
@@ -47,6 +51,9 @@ namespace {
     constexpr ptrdiff_t kEntityName = 0x14;
     constexpr ptrdiff_t kEntityNameCapacity = 0x28;
     constexpr ptrdiff_t kInventoryItems = 0x04;
+    // The equipped weapon's entity proxy, which holds the entity at +0xC.
+    constexpr ptrdiff_t kInventoryEquipped = 0x10;
+    constexpr ptrdiff_t kProxyEntity = 0x0C;
     constexpr ptrdiff_t kInventoryInHand = 0x14;
     constexpr ptrdiff_t kInventoryDesired = 0x18;
     constexpr ptrdiff_t kInventoryOwner = 0x48;
@@ -77,11 +84,16 @@ namespace {
     bool __fastcall OnCanSpawnPickup(void* inventory, void* unused) {
         return !g_removing && g_canSpawnPickup(inventory, unused);
     }
+
+    const void* EquippedEntity(const void* inventory) {
+        const void* proxy = Read<const void*>(inventory, kInventoryEquipped);
+        return proxy != nullptr ? Read<const void*>(proxy, kProxyEntity) : nullptr;
+    }
 }
 
 bool Install() {
-    return g_getTerminal && g_dropWeapon && g_addByName && g_updateEquipAnim && g_reliability &&
-           g_loaded && g_setLoaded && g_buildWeaponItemType && g_weaponItemType && g_classes &&
+    return g_getTerminal && g_dropWeapon && g_addByName && g_selectAtOnce && g_updateEquipAnim &&
+           g_reliability && g_ammoInClip && g_rememberedInClip && g_setLoaded && g_buildWeaponItemType && g_weaponItemType && g_classes &&
            Hook(g_canSpawnPickupSite, &OnCanSpawnPickup, &g_canSpawnPickup);
 }
 
@@ -147,7 +159,10 @@ void SetReliability(void* weapon, float reliability) {
     Method<SetReliabilityFn>(weapon, kSetReliabilitySlot)(weapon, nullptr, reliability);
 }
 
-int Loaded(void* weapon) { return g_loaded(weapon, nullptr); }
+int Loaded(const void* inventory, void* weapon) {
+    return EquippedEntity(inventory) == Entity(weapon) ? g_ammoInClip(weapon, nullptr)
+                                                        : g_rememberedInClip(weapon, nullptr);
+}
 
 void SetLoaded(void* weapon, int rounds) { g_setLoaded(weapon, nullptr, rounds); }
 
@@ -159,6 +174,12 @@ uint32_t InHandId(const void* inventory) { return Read<uint32_t>(inventory, kInv
 
 bool Drawn(const void* inventory) {
     return Read<uint32_t>(inventory, kInventoryHandState) == kHandStateDrawn;
+}
+
+bool HandEmpty(const void* inventory) { return EquippedEntity(inventory) == nullptr; }
+
+void SelectAtOnce(void* inventory, const uint32_t* category) {
+    g_selectAtOnce(inventory, nullptr, category);
 }
 
 void Equip(void* inventory, uint32_t id) {

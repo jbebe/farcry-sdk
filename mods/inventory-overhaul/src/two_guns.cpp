@@ -2,6 +2,7 @@
 // the gun count and what a pickup replaces change.
 #include "two_guns.h"
 
+#include "engine/economy.h"
 #include "engine/game_thread.h"
 #include "engine/inventory.h"
 #include "engine/memory.h"
@@ -97,9 +98,12 @@ const Inventory::Weapon& ToReplace(const void* inventory,
 }
 
 // The engine draws the first gun of the class asked for, so `gun` then takes its place, which
-// matters when both guns are of one class.
+// matters when both guns are of one class. With nothing in hand a switch brings nothing up, so the
+// gun is drawn at once, as a pickup draws it.
 bool Draw(void* inventory, const Inventory::Weapon& gun) {
-    if (!g_selectWeapon(inventory, nullptr, Inventory::Category(gun.weapon))) {
+    if (Inventory::HandEmpty(inventory)) {
+        Inventory::SelectAtOnce(inventory, Inventory::Category(gun.weapon));
+    } else if (!g_selectWeapon(inventory, nullptr, Inventory::Category(gun.weapon))) {
         return false;
     }
     Inventory::Equip(inventory, Inventory::Id(gun.item));
@@ -302,7 +306,7 @@ void Settle(void* inventory) {
 }
 
 bool Install() {
-    if (!Inventory::Install() || !GameThread::Install()) {
+    if (!Inventory::Install() || !Economy::Resolve() || !GameThread::Install()) {
         FCSE::ApiPointer()->Log("an inventory address is missing on this build: two guns is off");
         return false;
     }

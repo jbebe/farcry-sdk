@@ -3,6 +3,7 @@
 #include "test_window.h"
 
 #include "devtools_api.h"
+#include "engine/economy.h"
 #include "engine/inventory.h"
 #include "items.h"
 #include "two_guns.h"
@@ -36,12 +37,14 @@ namespace {
 
     constexpr const char* kPresets[] = {"weapons.Special.CarlGustaf", "weapons.Special.RPG7",
                                         "weapons.Special.PKM", "weapons.Primary.AK47",
-                                        "weapons.Secondary.Makarov", "diamond"};
+                                        "weapons.Secondary.Makarov"};
 
     std::mutex g_lock;
     std::vector<Request> g_requests;
     std::vector<Gun> g_hands;
     std::vector<Items::Record> g_items;
+    // The player's own diamonds, which Items shows but cannot drop.
+    int g_diamonds = -1;
     std::atomic<bool> g_asked{false};
     std::atomic<bool> g_shown{false};
     char g_giveId[128] = "weapons.Special.CarlGustaf";
@@ -70,8 +73,15 @@ namespace {
         }
 
         ImGui::SeparatorText("Items");
+        if (g_diamonds >= 0) {
+            ImGui::Text("diamonds x%d", g_diamonds);
+            ImGui::SameLine();
+            if (ImGui::SmallButton("+1")) {
+                DevTools::Overlay::PostLine("#Game:AddDiamonds(1)");
+            }
+        }
         if (g_items.empty()) {
-            ImGui::TextDisabled("empty");
+            ImGui::TextDisabled("nothing else");
         }
         for (size_t i = 0; i < g_items.size(); ++i) {
             const Items::Record& item = g_items[i];
@@ -142,14 +152,16 @@ void Run(void* inventory) {
     std::vector<Gun> hands;
     for (const Inventory::Weapon& gun : Inventory::Guns(inventory)) {
         hands.push_back({TwoGuns::SlotOf(gun.weapon), Inventory::Name(gun.weapon),
-                         Inventory::Reliability(gun.weapon), Inventory::Loaded(gun.weapon),
+                         Inventory::Reliability(gun.weapon), Inventory::Loaded(inventory, gun.weapon),
                          Inventory::Id(gun.item) == Inventory::InHandId(inventory)});
     }
     std::sort(hands.begin(), hands.end(), [](const Gun& a, const Gun& b) { return a.slot < b.slot; });
     std::vector<Items::Record> items = Items::Load();
+    const int diamonds = Economy::Diamonds();
     std::lock_guard<std::mutex> held(g_lock);
     g_hands = std::move(hands);
     g_items = std::move(items);
+    g_diamonds = diamonds;
 }
 
 }

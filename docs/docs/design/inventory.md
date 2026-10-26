@@ -191,7 +191,7 @@ Which bandolier covers which gun, from the shop's plans:
 |---|---|---|
 | Gun in a slot | — (2 and 3 select it, as now) | falls at the feet as a pickup, with its wear and ammo |
 | Gun in Items | equip to gun 1 or 2, swapping with the gun there **(proposed)** | as above |
-| Diamonds | — | they lie where they fell, and can be lost |
+| Diamonds | — | no: the row is the player's own diamond count |
 | Syrette | heal, as the heal key does | no |
 | Letter, photo | read: it lies over the right page | no |
 | Tape | play or stop, while the player walks on | no |
@@ -213,8 +213,7 @@ Using a crate pulls the notebook out at the Box page:
 - **Catalogue:** every bought gun, fresh, any number of times. Take one into gun 1, gun 2 or Items.
 - **Stored:** what the player put in, each kept with its wear and ammo. No limit.
 
-On the Inventory page, while the player is at a crate, a gun, quest item or the diamonds get a
-**Store** action.
+On the Inventory page, while the player is at a crate, a gun or quest item gets a **Store** action.
 
 ### Controls (proposed)
 
@@ -271,11 +270,5 @@ Each step ends with one check in game before the next.
 - **Swapping the paper's texture** at the notebook's draw. Step 4 answers it.
 - **What still selects by class:** the weapon crate draws the gun it hands out by its class, and a
   pickup's switch prompt shows the carried gun of the pickup's class. Step 1 shows how far it shows.
-- **Putting a gun into the player's hands from code,** with its wear, which the box and the
-  stowed-gun fallback need. `CMagicCrate` does it for fresh guns.
 - **How a mission asks "does the player carry X"**, since the plugin cannot read `Globals`. Candidates:
   a layer's state, or a handler in `MissionTools.lua`.
-- **Diamonds as an item.** The count lives on the player's economy component (`CEconomyComponent`,
-  `DiamondCount`). Dropping them has to take them off it and leave a pickup holding them, the way a
-  diamond case (`CPickupDiamond`) pays. Whether the shop can spend diamonds kept in the box is not
-  decided.
