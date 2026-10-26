@@ -13,8 +13,12 @@
 #include <d3d9.h>
 #include <windows.h>
 
+#include <algorithm>
+#include <array>
+
 namespace {
-    // IDirect3DDevice9's vtable, as declared in d3d9.h.
+    // IDirect3DDevice9's vtable, as declared in d3d9.h: its three IUnknown and 116 own methods.
+    constexpr size_t kDeviceSlots = 119;
     constexpr size_t kResetSlot = 16;
     constexpr size_t kPresentSlot = 17;
 
@@ -78,12 +82,13 @@ namespace {
         return g_originalReset(device, params);
     }
 
-    // Builds a device only to read its vtable. The device is gone before this returns; the vtable
-    // lives in d3d9.dll and stays.
-    void** ReadDeviceVtable() {
+    // Builds a device only to copy its vtable, which can go with it: the device is gone before this
+    // returns, and only the copy is read afterwards.
+    std::array<void*, kDeviceSlots> ReadDeviceVtable() {
+        std::array<void*, kDeviceSlots> slots{};
         IDirect3D9* d3d = Direct3DCreate9(D3D_SDK_VERSION);
         if (d3d == nullptr) {
-            return nullptr;
+            return slots;
         }
 
         D3DPRESENT_PARAMETERS present{};
@@ -97,13 +102,14 @@ namespace {
                                             D3DCREATE_SOFTWARE_VERTEXPROCESSING, &present, &device);
         if (FAILED(created)) {
             d3d->Release();
-            return nullptr;
+            return slots;
         }
 
         void** vtable = *reinterpret_cast<void***>(device);
+        std::copy_n(vtable, kDeviceSlots, slots.begin());
         device->Release();
         d3d->Release();
-        return vtable;
+        return slots;
     }
 }
 
@@ -136,8 +142,8 @@ bool Install(DrawFn draw, FrameFn onFrame, DeviceLostFn onDeviceLost) {
 }
 
 void* DeviceFunction(size_t slot) {
-    static void** vtable = ReadDeviceVtable();
-    return vtable != nullptr ? vtable[slot] : nullptr;
+    static const std::array<void*, kDeviceSlots> slots = ReadDeviceVtable();
+    return slot < kDeviceSlots ? slots[slot] : nullptr;
 }
 
 }
