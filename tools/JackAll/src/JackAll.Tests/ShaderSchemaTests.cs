@@ -20,6 +20,8 @@ public sealed class ShaderSchemaTests
         ShaderParameter colour = weapon.Find("DiffuseColor1")!;
         Assert.Equal((XbmSection.Float, 4, "Diffuse"), (colour.Section, colour.Width, colour.Group));
         Assert.True(colour.IsColor);
+        // Unmarked in Weapon's own descriptor, marked a colour by another's.
+        Assert.True(weapon.Find("SpecularColorBase")!.IsColor);
         Assert.Equal(XbmSection.Texture, weapon.Find("ReflectionTexture")!.Section);
 
         // Carried by retail outside the descriptor; composed by the engine and never stored.

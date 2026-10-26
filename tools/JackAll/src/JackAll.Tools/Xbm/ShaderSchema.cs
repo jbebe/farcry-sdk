@@ -108,6 +108,12 @@ public sealed class ShaderSchema
         XElement root = XDocument.Load(stream).Root
             ?? throw new InvalidDataException("descriptors.xml has no root element.");
 
+        // A descriptor marks some colours and not others - DiffuseColorBase among the unmarked - but
+        // every one is marked by some descriptor, so a name marked anywhere is a colour everywhere.
+        HashSet<string> colours = [.. root.Descendants("parameter")
+            .Where(p => p.Attribute("uitype")?.Value == "color")
+            .Select(p => Attribute(p, "name"))];
+
         Dictionary<string, ShaderDescriptor> shaders = new(StringComparer.Ordinal);
         foreach (XElement element in root.Elements("descriptor"))
         {
@@ -117,10 +123,10 @@ public sealed class ShaderSchema
                             && !Attribute(p, "name").Contains("AndGroup", StringComparison.Ordinal))
                 .Select(p => Parameter(
                     Attribute(p, "name"), Attribute(p, "type"), p.Attribute("group")?.Value ?? MaterialGroup,
-                    p.Attribute("uitype")?.Value == "color", p.Attribute("defaultvalue")?.Value))];
+                    colours, p.Attribute("defaultvalue")?.Value))];
             parameters.AddRange(Carried
                 .Where(c => c.Shaders.Contains(name))
-                .Select(c => Parameter(c.Name, c.Type, c.Group, false, null)));
+                .Select(c => Parameter(c.Name, c.Type, c.Group, colours, null)));
 
             var descriptor = new ShaderDescriptor { Name = name, Parameters = parameters };
             shaders[name] = descriptor;
@@ -132,7 +138,8 @@ public sealed class ShaderSchema
         return new ShaderSchema { Shaders = shaders };
     }
 
-    private static ShaderParameter Parameter(string name, string type, string group, bool color, string? fallback)
+    private static ShaderParameter Parameter(
+        string name, string type, string group, IReadOnlySet<string> colours, string? fallback)
     {
         (XbmSection section, int width) = type switch
         {
@@ -147,8 +154,7 @@ public sealed class ShaderSchema
         return new ShaderParameter
         {
             Name = name, Section = section, Width = width, Group = group, Default = fallback,
-            // The descriptor marks some colours and not others, DiffuseColorBase among the unmarked.
-            IsColor = color || (width >= 3 && name.Contains("Color", StringComparison.Ordinal)),
+            IsColor = width >= 3 && colours.Contains(name),
         };
     }
 
