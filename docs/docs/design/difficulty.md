@@ -118,6 +118,10 @@ From the log:
 
 The easier settings are where the rawness is for others to soften ([item G](#still-to-do-before-it-is-finished)).
 
+What stood out: "the immense pinned down feeling. when someone aimed at me on an empty field without
+cover, I was pretty much dead. which is exactly what should happen." The player's own weapons felt bad,
+which the user reads as room to improve them later, not as a fault of this mod.
+
 ## Postponed
 
 - **A vest.** A torso hit from a rifle nearly kills the player, which is realistic; a vest is how they
