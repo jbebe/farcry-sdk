@@ -80,9 +80,9 @@ namespace {
          "He holds his fire for about 1 s, then misses at first; 'suppressed:' lines."},
     };
 
-    constexpr Soldier kLoneSniper[] = {{kSniper, {480, 480, 137.7f}, kSniperPost}};
+    constexpr Soldier kLoneSniper[] = {{kSniper, {440, 437, 137.7f}, kSniperPost}};
     constexpr Scenario kSniperLane[] = {
-        {"Sniper at 150 m", "9, 15", kLoneSniper,
+        {"Sniper at 90 m", "9, 15", kLoneSniper,
          "Stay behind the wall, then peek past one end, then past the other.",
          "No shots without a clear line of sight; he waits for the peek, and re-aims when you show "
          "at the other end."},

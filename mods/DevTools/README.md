@@ -319,7 +319,7 @@ invincibility yourself: it is on unless the scenario tests damage to you.
 | Low wall | three barriers end to end at (100, 40), 6.75 m along their tops, the soldier 30 m north | rifleman over the low wall | 9 |
 | Long wall | a wall at y 440 across the whole range, so the squad cannot go round it, an 18 m wall 20 m behind it, the squad 40 m south | squad at the long wall | 11, 13, 14, 15 |
 | Suppression | two 18 m lines at x 420 and 460 | two riflemen behind cover | 12 |
-| Sniper | a 12 m wall 3 m in front of (380, 370), the sniper at (480, 480) | sniper at 150 m | 9, 15 at range |
+| Sniper | a 12 m wall 3 m in front of (380, 370), the sniper at (440, 437), 90 m away: at 150 m the game removed him | sniper at 90 m | 9, 15 at range |
 
 Not covered yet: **row 10**, since the range has no tall grass, and **pistols and SMGs in row 8**,
 since no soldier archetype carries one as its main weapon. The navmesh lays cover points along every
