@@ -43,6 +43,8 @@ void SetReliability(void* weapon, float reliability);
 // load when next drawn. SetLoaded sets the latter.
 int Loaded(const void* inventory, void* weapon);
 void SetLoaded(void* weapon, int rounds);
+// The rounds of a gun's ammo the pawn carries outside every magazine, by its CInventoryViewPawn.
+int SpareRounds(const void* view, void* weapon);
 
 // An item's id, by which the engine selects, draws and saves it.
 uint32_t& Id(void* item);

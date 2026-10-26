@@ -1,4 +1,5 @@
 // Inventory Overhaul - two guns of any class and a notebook for everything else. See README.md.
+#include "engine/paper.h"
 #include "fcse_api.h"
 #include "notebook.h"
 #include "test_window.h"
@@ -9,7 +10,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         return false;
     }
     const bool guns = InventoryOverhaul::TwoGuns::Install();
-    const bool notebook = InventoryOverhaul::Notebook::Install();
+    const bool notebook = InventoryOverhaul::Notebook::Install() && InventoryOverhaul::Paper::Install();
     return guns || notebook;
 }
 

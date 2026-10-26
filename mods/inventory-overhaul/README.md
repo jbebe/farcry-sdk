@@ -9,6 +9,7 @@ this is an FCSE plugin, built in the log's steps.
 | 1. Two guns | gun 1 on key 2, gun 2 on key 3, of any class; a third gun replaces the one in hand | works in game |
 | 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay | works in game |
 | 3. The notebook on Tab | a new Notebook control brings the map out with its notebook face up; the map's own mesh and paper stand in | built, not seen in game |
+| 4. The Inventory page | Hands, Items and the diamonds on the paper, a post-it for the gun in hand with its condition and ammo | built, not seen in game |
 
 ## Two guns
 
@@ -77,6 +78,23 @@ DevTools hooks too; FCSE stacks the two.
 | `layer/mods/languages/<language>/oasisstrings.fragment.xml` | the control's name in each language |
 
 The notebook works on foot only for now: the driving controls are left as they are.
+
+### The page on the paper
+
+`CGadgetMapStrategy::SetMapTexture` gives the map entity's `maptop` material the texture of the area
+the player is in. While the notebook's face is up, the plugin binds its own page wherever Direct3D
+binds that texture (`src/engine/paper.cpp`), so the page is drawn on the map's own paper, lit and
+moved with it. The page (`src/page.cpp`) is drawn with GDI into a 1024 by 1024 bitmap in Windows'
+Ink Free face, and only again when its text changes:
+
+- **Hands:** each gun's slot, name and condition as a word (new, used, worn, failing), with a mark
+  on the gun in hand.
+- **Items:** stowed guns, other items with their count, and the player's diamonds.
+- **The post-it:** the gun in hand, or gun 1, with its condition and `Ammo <loaded> / <spare>`, the
+  spare rounds being the player's whole pool of that gun's ammo.
+
+Names come from the archetype for now (`weapons.Special.M249_Saw` is "M249 Saw"). The Belt, the
+pictures, the index labels and moving along the lists are still to come.
 
 ## Testing
 

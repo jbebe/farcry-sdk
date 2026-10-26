@@ -7,6 +7,8 @@
 #include "engine/inventory.h"
 #include "engine/memory.h"
 #include "fcse_api.h"
+#include "notebook.h"
+#include "page.h"
 #include "test_window.h"
 
 #include <algorithm>
@@ -193,7 +195,7 @@ namespace {
     // test window's buttons are carried out here too.
     void* __fastcall OnEquipped(void* view, void* unused) {
         static bool running = false;
-        if ((g_check || TestWindow::Pending()) && !g_inPickup && !running &&
+        if ((g_check || TestWindow::Pending() || Notebook::IsOpen()) && !g_inPickup && !running &&
             GameThread::IsCurrent()) {
             void* inventory = Inventory::OfView(view);
             if (Inventory::IsPlayers(inventory)) {
@@ -202,6 +204,9 @@ namespace {
                     Tidy(inventory);
                 }
                 TestWindow::Run(inventory);
+                if (Notebook::IsOpen()) {
+                    Page::Update(view, inventory);
+                }
                 running = false;
             }
         }

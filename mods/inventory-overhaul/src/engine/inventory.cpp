@@ -23,6 +23,7 @@ namespace {
     using SetReliabilityFn = void(__fastcall*)(void* weapon, void* unused, float reliability);
     using RoundsFn = int(__fastcall*)(void* weapon, void* unused);
     using SetLoadedFn = void(__fastcall*)(void* weapon, void* unused, int rounds);
+    using SpareRoundsFn = int(__fastcall*)(const void* view, void* unused, const uint32_t* ammoType);
 
     // The local player's CTerminal; the inventory's DropWeapon(CWeapon*, bool), the CanSpawnPickup
     // question a drop asks first, AddWeaponByName(archetype), the immediate select a pickup draws
@@ -38,6 +39,8 @@ namespace {
     FCSE::Relocation<RoundsFn> g_ammoInClip{FCSE::Uplay(0x0012E950)};
     FCSE::Relocation<RoundsFn> g_rememberedInClip{FCSE::Uplay(0x0012EB50)};
     FCSE::Relocation<SetLoadedFn> g_setLoaded{FCSE::Uplay(0x0012F850)};
+    // CInventoryViewPawn's count of the rounds of one ammo type outside the magazines.
+    FCSE::Relocation<SpareRoundsFn> g_spareRounds{FCSE::Uplay(0x00126000)};
     // CInventoryItemWeapon's class id, built on first use, and CWeaponPropertiesCommon's class ids.
     FCSE::Relocation<BuildTypeFn> g_buildWeaponItemType{FCSE::Uplay(0x00126210)};
     FCSE::Relocation<const uint32_t*> g_weaponItemType{FCSE::Uplay(0x00FE46EC)};
@@ -66,6 +69,10 @@ namespace {
     constexpr size_t kItemWeaponSlot = 0x14 / sizeof(void*);
     constexpr size_t kWeaponCategorySlot = 0x8C / sizeof(void*);
     constexpr size_t kSetReliabilitySlot = 0xBC / sizeof(void*);
+    // The weapon's state object, its CWeaponPropertiesCommon, and the ammo type in that.
+    constexpr ptrdiff_t kWeaponState = 0x24;
+    constexpr ptrdiff_t kStateProperties = 0x04;
+    constexpr ptrdiff_t kPropertiesAmmoType = 0x88;
 
     // Set while a gun is taken away, so its drop leaves no pickup.
     bool g_removing = false;
@@ -93,7 +100,7 @@ namespace {
 
 bool Install() {
     return g_getTerminal && g_dropWeapon && g_addByName && g_selectAtOnce && g_updateEquipAnim &&
-           g_reliability && g_ammoInClip && g_rememberedInClip && g_setLoaded && g_buildWeaponItemType && g_weaponItemType && g_classes &&
+           g_reliability && g_ammoInClip && g_rememberedInClip && g_setLoaded && g_spareRounds && g_buildWeaponItemType && g_weaponItemType && g_classes &&
            Hook(g_canSpawnPickupSite, &OnCanSpawnPickup, &g_canSpawnPickup);
 }
 
@@ -165,6 +172,13 @@ int Loaded(const void* inventory, void* weapon) {
 }
 
 void SetLoaded(void* weapon, int rounds) { g_setLoaded(weapon, nullptr, rounds); }
+
+int SpareRounds(const void* view, void* weapon) {
+    const auto* properties = Read<const uint8_t*>(Read<const void*>(weapon, kWeaponState),
+                                                  kStateProperties);
+    return g_spareRounds(view, nullptr,
+                         reinterpret_cast<const uint32_t*>(properties + kPropertiesAmmoType));
+}
 
 uint32_t& Id(void* item) {
     return *reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(item) + kItemId);
