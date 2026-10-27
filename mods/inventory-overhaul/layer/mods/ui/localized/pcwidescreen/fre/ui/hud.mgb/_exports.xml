@@ -267,6 +267,9 @@
     <GENERICOBJECT name="IO_HAND2_FAILING">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory t_io_hand2_failing" />
     </GENERICOBJECT>
+    <GENERICOBJECT name="IO_ITEMS_ABOVE_ARROW">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory i_io_items_above_arrow" />
+    </GENERICOBJECT>
     <GENERICOBJECT name="IO_ITEMS_ABOVE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory t_io_items_above" />
     </GENERICOBJECT>
@@ -342,6 +345,27 @@
     <GENERICOBJECT name="IO_ITEM8">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory t_io_item8" />
     </GENERICOBJECT>
+    <GENERICOBJECT name="IO_ITEM9_SEL">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory i_io_item9_sel" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_ITEM9_MARK">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory t_io_item9_mark" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_ITEM9">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory t_io_item9" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_ITEM10_SEL">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory i_io_item10_sel" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_ITEM10_MARK">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory t_io_item10_mark" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_ITEM10">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory t_io_item10" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_ITEMS_MORE_ARROW">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory i_io_items_more_arrow" />
+    </GENERICOBJECT>
     <GENERICOBJECT name="IO_ITEMS_MORE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory t_io_items_more" />
     </GENERICOBJECT>
@@ -380,6 +404,9 @@
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_BELT4_COUNT">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory t_io_belt4_count" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_LETTERS_ABOVE_ARROW">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_papers a_io_papers i_io_letters_above_arrow" />
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_LETTERS_ABOVE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_papers a_io_papers t_io_letters_above" />
@@ -474,8 +501,14 @@
     <GENERICOBJECT name="IO_LETTER10">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_papers a_io_papers t_io_letter10" />
     </GENERICOBJECT>
+    <GENERICOBJECT name="IO_LETTERS_MORE_ARROW">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_papers a_io_papers i_io_letters_more_arrow" />
+    </GENERICOBJECT>
     <GENERICOBJECT name="IO_LETTERS_MORE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_papers a_io_papers t_io_letters_more" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_TAPES_ABOVE_ARROW">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_papers a_io_papers i_io_tapes_above_arrow" />
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_TAPES_ABOVE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_papers a_io_papers t_io_tapes_above" />
@@ -528,6 +561,9 @@
     <GENERICOBJECT name="IO_TAPE4">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_papers a_io_papers t_io_tape4" />
     </GENERICOBJECT>
+    <GENERICOBJECT name="IO_TAPES_MORE_ARROW">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_papers a_io_papers i_io_tapes_more_arrow" />
+    </GENERICOBJECT>
     <GENERICOBJECT name="IO_TAPES_MORE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_papers a_io_papers t_io_tapes_more" />
     </GENERICOBJECT>
@@ -536,6 +572,9 @@
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_REPUTATION_PROSE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_journal a_io_journal t_io_reputation_prose" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_RESCUERS_ABOVE_ARROW">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_contacts a_io_contacts i_io_rescuers_above_arrow" />
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_RESCUERS_ABOVE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_contacts a_io_contacts t_io_rescuers_above" />
@@ -645,8 +684,14 @@
     <GENERICOBJECT name="IO_RESCUER7_SIDE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_contacts a_io_contacts t_io_rescuer7_side" />
     </GENERICOBJECT>
+    <GENERICOBJECT name="IO_RESCUERS_MORE_ARROW">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_contacts a_io_contacts i_io_rescuers_more_arrow" />
+    </GENERICOBJECT>
     <GENERICOBJECT name="IO_RESCUERS_MORE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_contacts a_io_contacts t_io_rescuers_more" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_AROUNDS_ABOVE_ARROW">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_contacts a_io_contacts i_io_arounds_above_arrow" />
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_AROUNDS_ABOVE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_contacts a_io_contacts t_io_arounds_above" />
@@ -695,6 +740,9 @@
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_AROUND3_SIDE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_contacts a_io_contacts t_io_around3_side" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_AROUNDS_MORE_ARROW">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_contacts a_io_contacts i_io_arounds_more_arrow" />
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_AROUNDS_MORE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_contacts a_io_contacts t_io_arounds_more" />

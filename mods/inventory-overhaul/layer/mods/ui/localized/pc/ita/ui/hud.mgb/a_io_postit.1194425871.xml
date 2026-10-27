@@ -37,7 +37,7 @@
         </Keyframe>
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="scotchtape" PACKAGE="\common.mgb" />
+        <MATERIALLINK present="true" id="io_scotchtape" PACKAGE="" />
       </Image>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">

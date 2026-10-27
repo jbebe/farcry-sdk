@@ -130,8 +130,10 @@ void List(Model& model, const std::string& list, size_t lines, size_t& first, co
         model.Show(Name(prefix, line + 1, "_MARK"), isSelected);
     }
     const size_t below = rows.size() > first + lines ? rows.size() - first - lines : 0;
-    model.Text(prefix + "S_ABOVE", first > 0 ? L"+ " + std::to_wstring(first) + L" above" : L"");
-    model.Text(prefix + "S_MORE", below > 0 ? L"+ " + std::to_wstring(below) + L" more" : L"");
+    model.Text(prefix + "S_ABOVE", first > 0 ? std::to_wstring(first) + L" above" : L"");
+    model.Show(prefix + "S_ABOVE_ARROW", first > 0);
+    model.Text(prefix + "S_MORE", below > 0 ? std::to_wstring(below) + L" more" : L"");
+    model.Show(prefix + "S_MORE_ARROW", below > 0);
 }
 
 void ClearPostIt(Model& model) {

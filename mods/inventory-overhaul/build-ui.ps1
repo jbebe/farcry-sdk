@@ -21,6 +21,7 @@ $Repo = Resolve-Path "$PSScriptRoot\..\.."
 $Cli = "$Repo\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
 $Retail = "$Repo\tmp\gamefiles\common\ui\localized"
 $StockTexture = "$Repo\tmp\gamefiles\common\ui\textures\ui_tape_icon.xbt"
+$ScotchTape = "$Repo\tmp\gamefiles\common\ui\textures\common\scotchtape.xbt"
 $Texconv = "$Repo\tools\third-party\FCBConverter\texconv.exe"
 $Layer = "$PSScriptRoot\layer\mods\ui\localized"
 $Textures = "$PSScriptRoot\layer\mods\ui\textures\io"
@@ -172,9 +173,9 @@ $tabs = "Inventory", "Papers", "Journal", "Contacts"
 $areas = [ordered]@{}
 foreach ($tab in $tabs) { $areas[$tab.ToLowerInvariant()] = [System.Collections.Generic.List[string]]::new() }
 
-# A section's heading in soft ink.
-function Heading([string]$tab, [string]$name, [string]$string, [double]$x, [double]$y = 52) {
-    $areas[$tab].Add((Text $name $string $x $y 300 18 18 $inkSoft LEFT 0 TOP))
+# A section's heading.
+function Heading([string]$tab, [string]$name, [string]$string, [double]$x, [double]$y = 46) {
+    $areas[$tab].Add((Text $name $string $x $y 340 26 24 $inkFull LEFT 0 TOP))
 }
 
 # A row's red pencil line and mark, shown while the row whose text is centred on `middle` is selected.
@@ -185,6 +186,16 @@ function Selection([string]$tab, [string]$name, [double]$x, [double]$middle, [do
     Export (AreaPath "a_io_$tab") "t_io_${name}_mark"
 }
 
+# How many rows are out of a list's window on one side: the pause menu's arrow turned to point
+# `rotation` degrees from left, and the count beside it.
+function Overflow([string]$tab, [string]$name, [double]$x, [double]$y, [double]$rotation) {
+    $path = AreaPath "a_io_$tab"
+    $areas[$tab].Add((Image "i_io_${name}_arrow" pc_arrow "\common.mgb" ($x + 32) ($y - 4) 30 30 $countInk $rotation))
+    $areas[$tab].Add((Text "t_io_$name" "" ($x + 62) $y ($width - 70) 22 18 $countInk))
+    Export $path "i_io_${name}_arrow"
+    Export $path "t_io_$name"
+}
+
 # A list of `lines` rows `step` apart from `top`, each with its selection, a picture of `material`
 # if given, its text and a text `side` wide on the right; above and below, how many rows are out of
 # the window.
@@ -193,8 +204,7 @@ function List([string]$tab, [string]$name, [double]$x, [double]$top, [int]$lines
               [double]$side = 0) {
     $area = $areas[$tab]
     $path = AreaPath "a_io_$tab"
-    $area.Add((Text "t_io_${name}s_above" "" ($x + 38) ($top - 24) ($width - 46) 22 18 $countInk))
-    Export $path "t_io_${name}s_above"
+    Overflow $tab "${name}s_above" $x ($top - 24) 90
     $textX = $x + 38 + $(if ($material) { $pictureW + 10 } else { 0 })
     for ($j = 1; $j -le $lines; $j++) {
         $middle = $top + ($j - 1) * $step + $step / 2
@@ -210,8 +220,7 @@ function List([string]$tab, [string]$name, [double]$x, [double]$top, [int]$lines
             Export $path "t_io_$name${j}_side"
         }
     }
-    $area.Add((Text "t_io_${name}s_more" "" ($x + 38) ($top + $lines * $step + 2) ($width - 46) 22 18 $countInk))
-    Export $path "t_io_${name}s_more"
+    Overflow $tab "${name}s_more" $x ($top + $lines * $step + 2) -90
 }
 
 # An index tab: a strip of post-it paper standing up from the spread's top edge, its page's name on it.
@@ -236,20 +245,20 @@ AddTabs tab -16 64 "FFCCCCCC"
 AddTabs open -30 74 "FFFFFFFF"
 $page.Add((Image i_io_spread $NotebookMaterial "\common.mgb" 0 0 $Spread.W $Spread.H "FFFFFFFF" 0 (Crop $Spread)))
 
-# Inventory. The left page: Hands, then Items.
+# Inventory. The left page: Weapons, then Items.
 $inventoryArea = $areas.inventory
 $InventoryPath = AreaPath a_io_inventory
-Heading inventory t_io_hands "HANDS" $left
+Heading inventory t_io_weapons "WEAPONS" $left
 foreach ($k in 1, 2) {
     $top = 76 + ($k - 1) * 46
     $inventoryArea.Add((Image "i_io_hand${k}_sel" red_line "\common.mgb" ($left + 24) ($top + 22) ($width - 16) 22 $redLine -0.6))
     Export $InventoryPath "i_io_hand${k}_sel"
 }
 Selection inventory machete $left 192
+# Each gun slot is marked with multiplayer's VIP letter, A or B.
 foreach ($k in 1, 2) {
     $top = 76 + ($k - 1) * 46
-    $inventoryArea.Add((Image "i_io_hand${k}_ring" crosshair_circle_s "" ($left + 4) ($top + 12) 22 22 $inkFull))
-    $inventoryArea.Add((Text "t_io_hand${k}_num" "$k" ($left + 4) ($top + 12) 22 22 18 $inkFull CENTER))
+    $inventoryArea.Add((Image "i_io_hand${k}_slot" "io_slot_$([char](96 + $k))" "" ($left + 2) ($top + 10) 26 26 "FFFFFFFF" 0 @(0, 0, 1, 1) Multiply))
     foreach ($pic in $GunPictures) {
         $inventoryArea.Add((Image "i_io_hand${k}_pic_$pic" "io_gun_$pic" "" ($left + 38) ($top + 11) 96 24 "FFFFFFFF" 0 @(0, 0, 1, 1) Multiply))
         Export $InventoryPath "i_io_hand${k}_pic_$pic"
@@ -268,9 +277,9 @@ foreach ($k in 1, 2) {
 $inventoryArea.Add((Image i_io_machete hud_icon_machete "" ($left + 38) (168 + 11) 96 24 (Colour "000000" 0.82)))
 $inventoryArea.Add((Text t_io_machete "Machete" ($left + 142) 178 218 26 22 $inkFull))
 
-# Items shows a window of eight rows that follows the selection.
-Heading inventory t_io_items "ITEMS" $left 230
-List inventory item $left 276 8 40
+# Items shows a window of ten rows that follows the selection.
+Heading inventory t_io_items "ITEMS" $left 226
+List inventory item $left 276 10 32
 
 # The right page's top half: the belt.
 Heading inventory t_io_belt "BELT" $right
@@ -322,8 +331,8 @@ Export $PagePath a_io_portraits
 
 # The post-it, in its own pixels; its instance tilts it about its centre.
 $postIt.Add((Image i_io_postit_paper postit "\common.mgb" 0 0 416 302 "FFFFFFFF" 0 (Crop $PostItCrop)))
-# scotchtape.png stands upright; it is turned a quarter to lie across the post-it's top.
-$postIt.Add((Image i_io_postit_tape scotchtape "\common.mgb" (208 - 17) (-3 - 58) 34 116 (Colour "FFFFFF" 0.85) 92))
+# The scotch tape stands upright; it is turned a quarter to lie across the post-it's top.
+$postIt.Add((Image i_io_postit_tape io_scotchtape "" (208 - 17) (-3 - 58) 34 116 (Colour "FFFFFF" 0.85) 92))
 foreach ($pic in $GunPictures) {
     $postIt.Add((Image "i_io_postit_pic_$pic" "io_gun_$pic" "" 65 22 288 72 "FFFFFFFF" 0 @(0, 0, 1, 1) Multiply))
     Export $PostItPath "i_io_postit_pic_$pic"
@@ -412,6 +421,8 @@ $materials = @(
     $PaperPictures | ForEach-Object { Material "io_paper_$_" "\textures\common\$_.png" }
     $Portraits | ForEach-Object { Material "io_buddy_$_" "\textures\hud\icons_buddies\buddies_$_.png" }
     Material io_tape "\textures\ui_tape_icon.png"
+    ("a", "b") | ForEach-Object { Material "io_slot_$_" "\textures\hud_mp\vip_$_.png" }
+    Material io_scotchtape "\textures\io\scotchtape.png"
     Material io_mark_begin "\textures\io\mark_begin.png"
     Material io_mark_end "\textures\io\mark_end.png") -join "`n"
 
@@ -445,6 +456,32 @@ foreach ($mark in @(@{ Name = "mark_begin"; W = 4; H = 64 }, @{ Name = "mark_end
     & $Cli xbt build "$Work\$($mark.Name).dds" "$Work\ui_tape_icon.xml" -o "$Textures\$($mark.Name).xbt" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "xbt build failed for $($mark.Name)" }
 }
+
+# The scotch tape stands on a flat #7E7F7E, the colour the game keys out. Its copy has that
+# background clear, found from the edges in, so any grey inside the tape stays.
+& $Cli xbt extract $ScotchTape -o $Work | Out-Null
+& $Texconv -nologo -ft png -y -o $Work "$Work\scotchtape.dds" | Out-Null
+$tape = [System.Drawing.Bitmap]::FromFile("$Work\scotchtape.png")
+$keyed = New-Object System.Drawing.Bitmap $tape
+$tape.Dispose()
+function IsKey($c) { [Math]::Abs($c.R - 0x7E) -le 8 -and [Math]::Abs($c.G - 0x7F) -le 8 -and [Math]::Abs($c.B - 0x7E) -le 8 }
+$todo = [System.Collections.Generic.Stack[int[]]]::new()
+for ($px = 0; $px -lt $keyed.Width; $px++) { $todo.Push(@($px, 0)); $todo.Push(@($px, ($keyed.Height - 1))) }
+for ($py = 0; $py -lt $keyed.Height; $py++) { $todo.Push(@(0, $py)); $todo.Push(@(($keyed.Width - 1), $py)) }
+while ($todo.Count -gt 0) {
+    $px, $py = $todo.Pop()
+    if ($px -lt 0 -or $py -lt 0 -or $px -ge $keyed.Width -or $py -ge $keyed.Height) { continue }
+    $c = $keyed.GetPixel($px, $py)
+    if ($c.A -eq 0 -or -not (IsKey $c)) { continue }
+    $keyed.SetPixel($px, $py, [System.Drawing.Color]::FromArgb(0, $c.R, $c.G, $c.B))
+    $todo.Push(@(($px + 1), $py)); $todo.Push(@(($px - 1), $py)); $todo.Push(@($px, ($py + 1))); $todo.Push(@($px, ($py - 1)))
+}
+$keyed.Save("$Work\scotchtape.png", [System.Drawing.Imaging.ImageFormat]::Png)
+$keyed.Dispose()
+& $Texconv -nologo -f DXT5 -y -o $Work "$Work\scotchtape.png" | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "texconv failed for the scotch tape" }
+& $Cli xbt build "$Work\scotchtape.dds" "$Work\scotchtape.xml" -o "$Textures\scotchtape.xbt" | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "xbt build failed for the scotch tape" }
 
 foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
     $variant = $source.Directory.Parent.FullName.Substring($Retail.Length + 1)

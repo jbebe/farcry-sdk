@@ -53,7 +53,11 @@ layer. Marked **(proposed)** are choices not yet agreed.
 - **R turns the map over by animation.** `CGadgetMapStrategy::FlipSide` (server `0x0890fc40`) sends
   `flipside` to the player's state machine. A page turn can be that signal.
 - **Gadget slots have spares.** The gadget category and strategy enums both carry `Unused1` and
-  `Unused2`.
+  `Unused2`. A gadget is taken out only when its category has a slot in `gamemodesconfig.xml`'s
+  `GadgetCategories` (the map's is 1, the others' 0); without one it is carried but never drawn.
+  `CFCXWeaponsService::LoadCategorySlots` (Steam `0x107692F0`) reads them into a `std::map` at
+  `+0x13C`. The map key's action, `CGOStateEventInventory::ToggleGadget` (Steam `0x10CE2440`), takes
+  the map's category from one global, `0x10FCD628`, which nothing else on that path reads.
 - **The engine keeps one gun per category.** `CInventoryViewPawn::GetWeaponFromCategory` and
   `DropWeaponFromCategory` (server `0x08feb1a0`, `0x08ff8730`) walk the inventory list for the gun whose
   category matches (weapon vtable `+0x98`). The number key for each category is data:
@@ -89,13 +93,13 @@ layer. Marked **(proposed)** are choices not yet agreed.
 
 ### Pages
 
-Each page has an index label on the notebook's right edge, written vertically. The labels sit
-tucked behind the pages; the open one is drawn over the notebook. The label says where the player
-is, so a page has no title. R turns the page, using the map's own flip.
+Each page has an index tab along the left page's top, clear of the fingers, standing up from behind
+the paper; the open page's is pulled up and white. The tab says where the player is, so a page has
+no title. R turns the page, using the map's own flip.
 
 | Page | Left page | Right page, upper half |
 |---|---|---|
-| Inventory | Hands, Items | Belt |
+| Inventory | Weapons, Items | Belt |
 | Papers | letters and photos | the Jackal and Predecessor tapes |
 | Journal | reputation | current jobs |
 | Contacts | buddies who will pull the player out | the other buddies |
@@ -108,9 +112,9 @@ the right page shows the highlighted row's picture and details.
 
 ```
  ┌──────────────────────────────┬──────────────────────────────┐╮
- │ HANDS                        │ BELT                         ││ I
- │ ① [AK-47 picture]  AK-47 used│  Syrettes          ×3        ││ n
- │ ② [Makarov]      Makarov new │  Malaria pills     ×14       ││ v
+ │ WEAPONS                      │ BELT                         ││ I
+ │ Ⓐ [AK-47 picture]  AK-47 used│  Syrettes          ×3        ││ n
+ │ Ⓑ [Makarov]      Makarov new │  Malaria pills     ×14       ││ v
  │   Machete                    │  M67 grenades      ×3        │╯
  │ ITEMS                        │ ┌──────────────────────────┐ │╮
  │ ▸ Carl G                     │ │ [picture]  Carl G        │ ││ P
@@ -124,7 +128,7 @@ the right page shows the highlighted row's picture and details.
 
 Each list shows a fixed number of rows and scrolls with the highlight; there is no scrollbar.
 When rows are hidden, a pencilled "▲ 3 more" or "▼ 5 more" sits at the list's edge. Only the list
-moves: section headings stay, and Hands never scrolls. On the Inventory page Items shows 8 rows; on
+moves: section headings stay, and Weapons never scrolls. On the Inventory page Items shows 10 rows; on
 the Box page the catalogue shows 7 and the stored list 3.
 
 The catalogue grows long: the shop sells 28 guns (12 primary, 8 secondary, 7 special, and IEDs),
@@ -134,7 +138,7 @@ and they are listed in the shop's order, so a gun is always in the same part of 
 
 | List | A row shows |
 |---|---|
-| Hands | the slot's number, the gun's picture, its name, its condition as a coloured word |
+| Weapons | the slot's letter, A or B as multiplayer's VIP marks, the gun's picture, its name, its condition as a coloured word |
 | Items | the name, nothing more |
 | Belt | the picture, the name, the count |
 
@@ -242,10 +246,11 @@ Movement and look stay live, as with the map. The gamepad mirrors the map's: d-p
   and the crates, which all walk it.
 - **Item definitions** live in a data file (id, kind, name and text keys, picture, stack).
   The plugin holds two lists, Items and the box, both saved on the player's entity.
-- **The notebook is the map's other face** for now: a Notebook control (Tab) brings the map out
-  with the notebook's face up, and Tab and the map's key each turn it to their face. A second held
-  gadget would need the engine to take one beside the map; one held object with two faces needs
-  nothing new.
+- **The notebook is a gadget of its own** beside the map, in the spare category `unused1`: the map's
+  archetype with the notebook's model and arms, given to the player once they carry the map. A
+  Notebook control (Tab) runs the map key's own action with the notebook's category in the map's
+  place, so it comes out, switches with the map and goes away exactly as the map does. Its category's
+  slot is added to the weapons service at runtime, which leaves `gamemodesconfig.xml` to other mods.
 - **The page is Magma**, built the way the pause menu's paper pages are, so it looks like the game's
   own: the `notebook` texture, Farcry2 ink, `common.mgb`'s post-it, tape and red line, with the
   index tabs along the top, clear of the fingers. It is drawn onto the notebook's pages, where it is
@@ -254,7 +259,14 @@ Movement and look stay live, as with the map. The gamepad mirrors the map's: d-p
   material named `MAPTOP`, which shows that texture in place of the area map, cut out to the notebook
   picture's own outline. The notebook in hand is a model of its own: two pages meeting at the spine,
   10° apart, each a chain of hinged strips, so the right page bends as the hands come together and
-  apart. The map's animations carry it, the right arm mirroring the left.
+  apart. Its arms are the map's banks on foot, remade in Blender: the left hand moved 5 cm off the
+  pages' edge along them and 0.5 cm toward the eye, the notebook's own track baked again so it stays
+  put; the right hand that left hand mirrored across the pages' centre line and lifted 3 cm up the
+  screen, plus half the left hand's own movement mirrored across the chest, so the hands come
+  together and apart as two hands do. The right page's hinges bend to stay in that hand. Where the
+  notebook is lowered (running, sliding) the whole right arm is the left one mirrored across the
+  chest. IK takes each hand there with the shoulder included; walking, the right hand still falls up
+  to 1 cm short of its place.
 
 ## Steps
 

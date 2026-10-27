@@ -78,9 +78,9 @@ namespace {
         {L"Molotovs", "molotov", L"Picked with F, thrown with Q.", {"pyrotechnic satchel", ""}},
     };
 
-    // The hands and the machete, the rows above Items.
+    // The weapons and the machete, the rows above Items.
     constexpr int kHandRows = 3;
-    constexpr size_t kItemRows = 8;
+    constexpr size_t kItemRows = 10;
     // The upgrade icons' slots: a gun's operation manual, repair manual and bandolier, and the
     // syrettes' two first aid manuals in the last two.
     constexpr int kGunUpgradeSlots[] = {0, 1, 2};
@@ -107,7 +107,7 @@ namespace {
         return nullptr;
     }
 
-    // A row of the page, in reading order: the hands, Items, then the belt.
+    // A row of the page, in reading order: the weapons, Items, then the belt.
     struct Row {
         enum Kind { kGun, kMachete, kItem, kDiamonds, kBelt } kind;
         int slot = 0;

@@ -8,8 +8,8 @@ this is an FCSE plugin, built in the log's steps.
 |---|---|---|
 | 1. Two guns | gun 1 on key 2, gun 2 on key 3, of any class; a third gun replaces the one in hand | works in game |
 | 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay | works in game |
-| 3. The notebook on Tab | a new Notebook control brings the map out with its notebook face up; the map's own mesh and paper stand in | works in game |
-| 4. The Inventory page | the mockup's spread as a Magma page drawn onto the notebook's pages: Hands, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet. On the notebook's pages seen only with the notebook model from a test layer; with the map it lands on the map's sheet |
+| 3. The notebook on Tab | a gadget of its own beside the map, given with it, on a new Notebook control: two bent pages held in both hands, the right one bending as the hands move | works in game |
+| 4. The Inventory page | the mockup's spread as a Magma page drawn onto the notebook's pages: Weapons, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet |
 | 6, in part. Papers, Journal, Contacts | R turns the page; letters and photos and the Jackal tapes found, the reputation, and the buddies met, in the pause menu's words | seen in game in the demo range; the Journal's jobs are not read yet, and the papers are samples |
 
 ## Two guns
@@ -68,21 +68,35 @@ item's id has no spaces, so the page shows its underscores as spaces.
 
 ## The notebook
 
-The notebook is the map held in hand with its other face up (`src/notebook.cpp`). A new control,
-**Notebook** (Tab, rebindable in Options > Controls), sends `toggle_notebook`; the plugin passes it
-on as the map key's `toggle_gadget`, so the map comes out exactly as it does on its own key, and
-remembers which face is up. While it is out, Tab and the map key turn it to their own face, and put
-it away when their face is already up. `CGadgetMapStrategy::OnEquip` and `OnUnequip` say when the
-map is really out. The terminal hands each signal to its listeners in turn, the same signal to
-each, and the pause service's listener comes before the player's; the plugin rewrites the signal
-there, at the listener's entry, which DevTools hooks too (FCSE stacks the two). A signal that only
-turns the map over becomes one no listener knows, so the map stays out.
+The notebook is a gadget of its own, `gadgets.Equipped.Notebook`, in the spare gadget category
+`unused1` beside the map (`src/notebook.cpp`). It is the map's archetype with the notebook's model,
+its own arms and no GPS. The plugin gives it to the player once they carry the map, with the
+inventory's `AddGadget`, looking again whenever the inventory changes, so a save from before the mod
+gets one too. A gadget category needs a slot in `gamemodesconfig.xml`'s `GadgetCategories` to be
+taken out; the plugin adds `unused1`'s to the weapons service's map after
+`CFCXWeaponsService::LoadCategorySlots` fills it, so the file itself is left alone.
+
+A new control, **Notebook** (Tab, rebindable in Options > Controls), sends `toggle_notebook`; the
+plugin passes it on as the map key's `toggle_gadget` and remembers it came from Tab. The map key's
+action, `CGOStateEventInventory::ToggleGadget`, then runs with the notebook's category in place of
+the map's, so the notebook comes out, switches with the map and goes away exactly as the map does.
+`CGadgetMapStrategy::OnEquip` and `OnUnequip`, which both gadgets run, say when the notebook is out.
+The terminal hands each signal to its listeners in turn, the same signal to each, and the pause
+service's listener comes before the player's; the plugin rewrites the signal there, at the
+listener's entry, which DevTools hooks too (FCSE stacks the two).
+
+`build-notebook.ps1` builds the gadget into the layer with the scripts in `notebook/`, each of which
+says what it makes:
 
 | File | What it is |
 |---|---|
 | `layer/mods/config/defaultusercontrols.xml/CATEGORY_MISC.xml` | the Notebook control, on Tab |
 | `layer/mods/config/inputactionmapsingle.xml/weapons.xml` | Tab bound to `toggle_notebook` where the map key is bound |
 | `layer/mods/languages/<language>/oasisstrings.fragment.xml` | the control's name in each language |
+| `layer/mods/graphics/objects/equipment/notebook/` | the pages (`page.py`): two pages meeting at the spine, each a chain of four hinged strips, drawn with a copy of the map's `MAPTOP` material cut out by its alpha |
+| `layer/mods/graphics/characters/_common/animations/equipment/equipped_gadget/*_eqnote*.mab` | the arms (`arms.py`): the map's banks on foot with the left hand moved off the pages and the right one mirroring it |
+| `layer/mods/graphics/move/movemgr.bin/`, `layer/mods/worlds/<world>/generated/<world>_depload.dat/` | MOVE weapon 9's (the map's) rules copied onto 44 and pointed at those banks, each registered where the map's is (`clips.py`) |
+| `layer/mods/worlds/<world>/generated/entitylibrary.fcb/gadgets/Equipped/Notebook.xml` | the archetype in each world (`archetype.py`) |
 
 The notebook works on foot only for now: the driving controls are left as they are.
 
@@ -92,7 +106,8 @@ The pages are the mockup's spread built in Magma and added to the HUD (`hud.mgb`
 the notebook's pages in the world rather than over the screen. `build-ui.ps1` makes it from each
 retail `hud.mgb`, in both aspects and every language, and writes the parts it changes as fragments
 under `layer/mods/ui/localized`, which merge with other mods' HUD fragments, such as the flashlight's
-icon, and its two marker textures under `layer/mods/ui/textures/io`:
+icon, and its textures under `layer/mods/ui/textures/io`: two markers, and `common.mgb`'s scotch tape
+with its `#7E7F7E` background, the colour the game keys out, made clear:
 
 | Area | What it holds |
 |---|---|
@@ -124,10 +139,10 @@ goes back to the screen, and a device reset releases both targets.
 the string assignment `CMagmaFacade::SetLabel` makes and `Element::SetVisible`
 (`src/engine/magma.cpp`), and only again when what it shows changes:
 
-- **Hands:** guns 1 and 2 with their picture, short name and condition as a coloured word (new,
-  used, worn, failing), then the machete.
-- **Items:** stowed guns, other items with their count, and the player's diamonds; eight rows at a
-  time, with how many more lie above and below.
+- **Weapons:** guns 1 and 2, marked with multiplayer's VIP letters A and B, with their picture,
+  short name and condition as a coloured word (new, used, worn, failing), then the machete.
+- **Items:** stowed guns, other items with their count, and the player's diamonds; ten rows at a
+  time, with how many more lie above and below beside the pause menu's arrow.
 - **The belt:** syrettes (the ammo type `syringe`), malaria pills (the player's counters
   component), grenades and molotovs (the uses of the gadget of each category).
 - **The post-it:** the selected row. A gun has its picture, full name, class, slot, condition,
@@ -136,9 +151,9 @@ the string assignment `CMagmaFacade::SetLabel` makes and `Element::SetVisible`
   an empty slot, an item, the diamonds and the belt's items each have their own picture, count and
   notes.
 
-The mouse wheel moves the selection along every list in reading order, the hands, Items, then the
+The mouse wheel moves the selection along every list in reading order, the weapons, Items, then the
 belt, underlining the row in red pencil; the notebook takes the wheel's `cycleweapon` signal while
-its face is up, so the gun in hand stays. It opens on the gun in hand, and keeps its place while
+it is out, so the gun in hand stays. It opens on the gun in hand, and keeps its place while
 the game runs.
 
 A gun's upgrades are the game's three icons, faint until bought: its operation manual, its repair
@@ -153,9 +168,9 @@ hidden. Using the selected row is still to come.
 
 ### The other pages
 
-R, the map's `flipside`, turns the page while the notebook's face is up: Inventory, Papers, Journal,
-Contacts, then Inventory again. The notebook takes the signal, as it does the wheel's, so the map
-stays as it is. Each page keeps its own selection. Each is an area of its own in the spread
+R, the map's `flipside`, turns the page while the notebook is out: Inventory, Papers, Journal,
+Contacts, then Inventory again. The notebook takes the signal, as it does the wheel's, so it is not
+turned over as the map would be. Each page keeps its own selection. Each is an area of its own in the spread
 (`a_io_inventory`, `a_io_papers`, `a_io_journal`, `a_io_contacts`), one shown at a time, with its
 index tab pulled out over the spread; the post-it is shared, and hidden on a page with no rows. Every
 text the game has is the game's, in the player's language, through its string table
@@ -175,7 +190,7 @@ text the game has is the game's, in the player's language, through its string ta
 Fill in the test window, or `INVENTORY_OVERHAUL_FILL`, also gives the sample papers and, through the
 game's own Lua in DevTools' console, meets Frank, Flora, Marty, Josip and Warren, makes Flora
 rescue-ready, and finds five tapes. `INVENTORY_OVERHAUL_LUA` holds Lua lines, split by `|`, that the
-console runs as the game loads, such as `AddGadget(SpawnWeapon("gadgets.Equipped.Notebook"))`.
+console runs as the game loads, such as `AddGadget(SpawnWeapon("gadgets.Equipped.Map"))`.
 
 ## Testing
 
