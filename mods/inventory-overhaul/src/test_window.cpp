@@ -38,6 +38,12 @@ namespace {
     constexpr const char* kPresets[] = {"weapons.Special.CarlGustaf", "weapons.Special.RPG7",
                                         "weapons.Special.PKM", "weapons.Primary.AK47",
                                         "weapons.Secondary.Makarov"};
+    // A long Items list, the mockup's Fill items: two stowed guns and nine items.
+    constexpr const char* kFill[] = {"weapons.Special.CarlGustaf", "weapons.Special.PKM", "Courier_pouch",
+                                     "Sealed_envelope", "Vaccine_case", "Radio_valve", "Roll_of_film",
+                                     "Map_case", "Dog_tags", "Ledger", "Camo_Suit"};
+    // Set in the game's environment, it fills Items as the game starts, for a scripted test.
+    constexpr const char* kFillVariable = "INVENTORY_OVERHAUL_FILL";
 
     std::mutex g_lock;
     std::vector<Request> g_requests;
@@ -52,6 +58,12 @@ namespace {
     void Ask(Action action, size_t index = 0, std::string id = {}) {
         g_requests.push_back({action, index, std::move(id)});
         g_asked = true;
+    }
+
+    void Fill() {
+        for (const char* id : kFill) {
+            Ask(Action::Give, 0, id);
+        }
     }
 
     void Draw(void*) {
@@ -110,6 +122,10 @@ namespace {
         if (ImGui::Button("Give")) {
             Ask(Action::Give, 0, g_giveId);
         }
+        ImGui::SameLine();
+        if (ImGui::Button("Fill")) {
+            Fill();
+        }
         for (const char* preset : kPresets) {
             if (ImGui::SmallButton(preset)) {
                 std::snprintf(g_giveId, sizeof(g_giveId), "%s", preset);
@@ -118,7 +134,13 @@ namespace {
     }
 }
 
-void Add() { DevTools::Overlay::AddWindow("Inventory Overhaul", 420.0f, 480.0f, &Draw); }
+void Add() {
+    DevTools::Overlay::AddWindow("Inventory Overhaul", 420.0f, 480.0f, &Draw);
+    if (GetEnvironmentVariableA(kFillVariable, nullptr, 0) > 0) {
+        std::lock_guard<std::mutex> held(g_lock);
+        Fill();
+    }
+}
 
 bool Pending() { return g_asked || g_shown; }
 

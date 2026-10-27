@@ -134,9 +134,9 @@ namespace {
         return nullptr;
     }
 
-    // The archetype's last part with spaces for underscores, for a gun the table does not know.
-    std::wstring PlainName(const std::string& archetype) {
-        std::string name = archetype.substr(archetype.find_last_of('.') + 1);
+    // An id's last part with spaces for underscores: a gun the table does not know, or an item.
+    std::wstring PlainName(const std::string& id) {
+        std::string name = id.substr(id.find_last_of('.') + 1);
         std::replace(name.begin(), name.end(), '_', ' ');
         return std::wstring(name.begin(), name.end());
     }
@@ -343,7 +343,7 @@ namespace {
                           known != nullptr ? Inventory::Ammo(carried.view, known->ammo) : 0, L"stowed");
                 return;
             }
-            model.Text("IO_POSTIT_NAME", std::wstring(item.id.begin(), item.id.end()));
+            model.Text("IO_POSTIT_NAME", PlainName(item.id));
             model.Text("IO_POSTIT_SUB", L"stowed");
             model.Text("IO_POSTIT_LINE1", L"Carried");
             model.Text("IO_POSTIT_VALUE1", L"\x00D7" + std::to_wstring(item.count));
@@ -393,7 +393,7 @@ namespace {
             const Gun* known = GunOf(item.id);
             return known != nullptr ? known->shortName : PlainName(item.id);
         }
-        std::wstring text(item.id.begin(), item.id.end());
+        std::wstring text = PlainName(item.id);
         if (item.count > 1) {
             text += L"  \x00D7" + std::to_wstring(item.count);
         }
