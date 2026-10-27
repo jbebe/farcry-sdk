@@ -1,0 +1,13 @@
+<MoveState state="1712310548" class="CMoveState">
+  <ver n="CMoveState" v="2" />
+  <ver n="CMoveBaseState" v="5" />
+  <ver n="CMoveObject" v="1" />
+  <null n="CMoveCriteria" />
+  <ver n="CMoveDescriptorGroup" v="2" />
+  <xref n="CMoveDescriptor" state="3601238062" path="0.8.0.41.0.42.0" />
+  <null n="CMoveDescriptor" />
+  <null n="CTransitionLink" />
+  <null n="CNotInterruptibleLink" />
+  <u32 n="m_stateNameHash" v="1712310548" />
+  <u32 n="aliasID" v="4294967295" />
+</MoveState>

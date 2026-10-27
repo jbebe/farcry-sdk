@@ -15,7 +15,10 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     const bool guns = TwoGuns::Install();
     const bool notebook = Notebook::Install() && Page::Install() && GameThread::Install();
     if (notebook) {
-        GameThread::EachFrame(&Page::Frame);
+        GameThread::EachFrame([] {
+            Notebook::Frame();
+            Page::Frame();
+        });
         Paper::Install();
     }
     return guns || notebook;

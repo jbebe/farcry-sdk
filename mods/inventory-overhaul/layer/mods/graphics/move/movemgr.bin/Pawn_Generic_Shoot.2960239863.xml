@@ -1,0 +1,175 @@
+<MoveState state="2960239863" class="CLayeredState">
+  <ver n="CMoveBaseState" v="5" />
+  <ver n="CMoveObject" v="1" />
+  <null n="CMoveCriteria" />
+  <ver n="CMoveDescriptorGroup" v="2" />
+  <obj n="CMoveDescriptor" class="CMoveGroup" id="1">
+    <ver n="CMoveObject" v="1" />
+    <obj n="CMoveCriteria" class="CMoveCriteriaEnumEqual" id="2">
+      <ver n="CMoveCriteriaEnum" v="1" />
+      <s32 n="m_Value" v="0" />
+      <ver n="CMoveCriteria" v="4" />
+      <u8 n="m_eValueID" v="13" />
+      <ver n="CMoveObject" v="1" />
+      <s32 n="m_logicOperator" v="0" />
+    </obj>
+    <null n="CMoveCriteria" />
+    <ver n="CMoveDescriptorGroup" v="2" />
+    <obj n="CMoveDescriptor" class="CMoveGroup" id="3">
+      <ver n="CMoveObject" v="1" />
+      <obj n="CMoveCriteria" class="CMoveCriteriaEnumEqual" id="4">
+        <ver n="CMoveCriteriaEnum" v="1" />
+        <s32 n="m_Value" v="2" />
+        <ver n="CMoveCriteria" v="4" />
+        <u8 n="m_eValueID" v="7" />
+        <ver n="CMoveObject" v="1" />
+        <s32 n="m_logicOperator" v="0" />
+      </obj>
+      <null n="CMoveCriteria" />
+      <ver n="CMoveDescriptorGroup" v="2" />
+      <branch n="CMoveDescriptor" unit="214481855" />
+      <branch n="CMoveDescriptor" unit="2512513541" />
+      <branch n="CMoveDescriptor" unit="1964245787" />
+      <branch n="CMoveDescriptor" unit="3804682899" />
+      <branch n="CMoveDescriptor" unit="195395494" />
+      <branch n="CMoveDescriptor" unit="906029117" />
+      <branch n="CMoveDescriptor" unit="2825158046" />
+      <branch n="CMoveDescriptor" unit="3747826952" />
+      <branch n="CMoveDescriptor" unit="1181359282" />
+      <branch n="CMoveDescriptor" unit="2714907061" />
+      <branch n="CMoveDescriptor" unit="829238308" />
+      <branch n="CMoveDescriptor" unit="3604283683" />
+      <branch n="CMoveDescriptor" unit="489536510" />
+      <branch n="CMoveDescriptor" unit="4260909792" />
+      <branch n="CMoveDescriptor" unit="4098760395" />
+      <branch n="CMoveDescriptor" unit="440434663" />
+      <branch n="CMoveDescriptor" unit="4079213266" />
+      <branch n="CMoveDescriptor" unit="1781173096" />
+      <branch n="CMoveDescriptor" unit="2331992694" />
+      <branch n="CMoveDescriptor" unit="2217011780" />
+      <branch n="CMoveDescriptor" unit="2638207749" />
+      <branch n="CMoveDescriptor" unit="1932638761" />
+      <branch n="CMoveDescriptor" unit="1833389937" />
+      <branch n="CMoveDescriptor" unit="3853196938" />
+      <branch n="CMoveDescriptor" unit="2481214263" />
+      <branch n="CMoveDescriptor" unit="3840107425" />
+      <branch n="CMoveDescriptor" unit="3531492802" />
+      <obj n="CMoveDescriptor" class="CMoveComment" id="5">
+        <ver n="CMoveObject" v="1" />
+        <null n="CMoveCriteria" />
+        <u8 n="m_popup" v="1" />
+      </obj>
+      <null n="CMoveDescriptor" />
+      <obj n="CTransitionLink" class="CTransitionLink" id="6">
+        <ver n="CTransitionLink" v="3" />
+        <ver n="CMoveObject" v="1" />
+        <f32 n="flBlendTime" v="0.3" />
+        <u32 n="dwBlendType" v="4278211602" />
+        <f32 n="flBlendRate" v="0.05" />
+        <obj n="m_ptr" class="CMoveGroup" id="7">
+          <ver n="CMoveObject" v="1" />
+          <obj n="CMoveCriteria" class="CMoveCriteriaEnumEqual" id="8">
+            <ver n="CMoveCriteriaEnum" v="1" />
+            <s32 n="m_Value" v="1" />
+            <ver n="CMoveCriteria" v="4" />
+            <u8 n="m_eValueID" v="7" />
+            <ver n="CMoveObject" v="1" />
+            <s32 n="m_logicOperator" v="0" />
+          </obj>
+          <null n="CMoveCriteria" />
+          <ver n="CMoveDescriptorGroup" v="2" />
+          <branch n="CMoveDescriptor" unit="214481855" />
+          <branch n="CMoveDescriptor" unit="2512513541" />
+          <branch n="CMoveDescriptor" unit="1964245787" />
+          <branch n="CMoveDescriptor" unit="3804682899" />
+          <branch n="CMoveDescriptor" unit="3853196938" />
+          <branch n="CMoveDescriptor" unit="195395494" />
+          <branch n="CMoveDescriptor" unit="1091033259" />
+          <branch n="CMoveDescriptor" unit="906029117" />
+          <branch n="CMoveDescriptor" unit="2825158046" />
+          <branch n="CMoveDescriptor" unit="3747826952" />
+          <branch n="CMoveDescriptor" unit="1181359282" />
+          <branch n="CMoveDescriptor" unit="2714907061" />
+          <xref n="CMoveDescriptor" state="2960239863" path="0.1.11.1.0.0" />
+          <branch n="CMoveDescriptor" unit="3604283683" />
+          <xref n="CMoveDescriptor" state="2960239863" path="0.1.13.1.0.0" />
+          <branch n="CMoveDescriptor" unit="4260909792" />
+          <branch n="CMoveDescriptor" unit="4098760395" />
+          <branch n="CMoveDescriptor" unit="440434663" />
+          <branch n="CMoveDescriptor" unit="4079213266" />
+          <branch n="CMoveDescriptor" unit="1781173096" />
+          <branch n="CMoveDescriptor" unit="2331992694" />
+          <branch n="CMoveDescriptor" unit="2217011780" />
+          <xref n="CMoveDescriptor" state="2960239863" path="0.1.21.1.0.0" />
+          <branch n="CMoveDescriptor" unit="1932638761" />
+          <branch n="CMoveDescriptor" unit="1833389937" />
+          <branch n="CMoveDescriptor" unit="2481214263" />
+          <branch n="CMoveDescriptor" unit="3840107425" />
+          <branch n="CMoveDescriptor" unit="3531492802" />
+          <obj n="CMoveDescriptor" class="CMoveComment" id="9">
+            <ver n="CMoveObject" v="1" />
+            <null n="CMoveCriteria" />
+            <u8 n="m_popup" v="1" />
+          </obj>
+          <null n="CMoveDescriptor" />
+          <obj n="CTransitionLink" class="CTransitionLink" id="10">
+            <ver n="CTransitionLink" v="3" />
+            <ver n="CMoveObject" v="1" />
+            <f32 n="flBlendTime" v="0.3" />
+            <u32 n="dwBlendType" v="4278211602" />
+            <f32 n="flBlendRate" v="0.05" />
+            <ref n="m_ptr" id="3" />
+            <null n="m_group" />
+          </obj>
+          <null n="CTransitionLink" />
+          <null n="CNotInterruptibleLink" />
+          <ver n="CMoveGroup" v="1" />
+          <u8 n="m_branchEnable" v="1" />
+        </obj>
+        <null n="m_group" />
+      </obj>
+      <null n="CTransitionLink" />
+      <null n="CNotInterruptibleLink" />
+      <ver n="CMoveGroup" v="1" />
+      <u8 n="m_branchEnable" v="1" />
+    </obj>
+    <ref n="CMoveDescriptor" id="7" />
+    <obj n="CMoveDescriptor" class="CMoveGroup" id="11">
+      <ver n="CMoveObject" v="1" />
+      <obj n="CMoveCriteria" class="CMoveCriteriaEnumEqual" id="12">
+        <ver n="CMoveCriteriaEnum" v="1" />
+        <s32 n="m_Value" v="0" />
+        <ver n="CMoveCriteria" v="4" />
+        <u8 n="m_eValueID" v="7" />
+        <ver n="CMoveObject" v="1" />
+        <s32 n="m_logicOperator" v="0" />
+      </obj>
+      <null n="CMoveCriteria" />
+      <ver n="CMoveDescriptorGroup" v="2" />
+      <obj n="CMoveDescriptor" class="CDoNothing" id="13">
+        <ver n="CMoveObject" v="1" />
+        <null n="CMoveCriteria" />
+        <ver n="CMoveDescriptorGroup" v="2" />
+        <null n="CMoveDescriptor" />
+        <null n="CTransitionLink" />
+        <null n="CNotInterruptibleLink" />
+      </obj>
+      <null n="CMoveDescriptor" />
+      <null n="CTransitionLink" />
+      <null n="CNotInterruptibleLink" />
+      <ver n="CMoveGroup" v="1" />
+      <u8 n="m_branchEnable" v="1" />
+    </obj>
+    <null n="CMoveDescriptor" />
+    <null n="CTransitionLink" />
+    <null n="CNotInterruptibleLink" />
+    <ver n="CMoveGroup" v="1" />
+    <u8 n="m_branchEnable" v="1" />
+  </obj>
+  <xref n="CMoveDescriptor" state="2395758669" path="0.0.0.0.0.0.0.0.1.0.0.0.0.0.1.0.1.11.0.30.0.34.0" />
+  <null n="CMoveDescriptor" />
+  <null n="CTransitionLink" />
+  <null n="CNotInterruptibleLink" />
+  <u32 n="m_stateNameHash" v="2960239863" />
+  <u32 n="aliasID" v="4294967295" />
+</MoveState>

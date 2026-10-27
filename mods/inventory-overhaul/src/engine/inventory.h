@@ -17,7 +17,7 @@ struct Weapon {
 enum Class { kMachete, kPrimary, kSecondary, kSpecial };
 
 // False when an address is missing on this build or a hook was refused; nothing below may be
-// called then.
+// called then. Hooks once however often it is called.
 bool Install();
 
 // A CPawn's CInventoryViewPawn, and the inventory behind one.
@@ -31,6 +31,10 @@ void* PlayerEntity();
 void* Entity(const void* component);
 // The player entity's component of the class `type`, or null.
 void* PlayerComponent(const uint32_t* type);
+// The local player's CPawn, or null when there is none.
+void* PlayerPawn();
+// How many items an inventory holds.
+size_t Count(const void* inventory);
 
 // Every weapon but the machete, in the inventory's order.
 std::vector<Weapon> Guns(const void* inventory);
@@ -52,6 +56,11 @@ int SpareRounds(const void* view, void* weapon);
 int Ammo(const void* view, const char* ammo);
 // The uses left of the throwable of `category`, "grenade" or "molotov", or 0 without one.
 int Throwables(const void* view, const char* category);
+// The pawn's gadget of a category, such as Crc32("map"), by its CInventoryViewPawn, or null.
+void* Gadget(const void* view, uint32_t category);
+// Makes a gadget of `archetype` and adds it, or adds `uses` to the one of that archetype carried.
+// Null when none was made.
+void* AddGadget(void* inventory, const char* archetype, int uses);
 // The malaria pills the player carries, or -1 when there is no player.
 int Pills();
 // The player's reputation level, 0 to 5, or -1 when there is no player.

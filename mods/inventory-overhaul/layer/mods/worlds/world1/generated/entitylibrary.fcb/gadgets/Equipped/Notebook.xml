@@ -1,0 +1,542 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">Equipped.Notebook</value>
+      <object type="Entity">
+        <value name="hidName" type="String">gadgets.Equipped.Notebook</value>
+        <value name="disEntityId" type="Int64">81301</value>
+        <value name="text_hidEntityClass" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">2</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CFileDescriptorComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileName" type="String">graphics\objects\equipment\notebook\notebook.xml</value>
+            <value name="fileName" type="Hash">84C659DC</value>
+            <value name="hidDescriptor" type="Rml">
+              <hidDescriptor>
+                <component class="GraphicComponent" version="2" detail="0">
+                  <object index="0" meshName="PageL1" boneName="PageL1" bboxMin="-0.201363,-0.236396,0.027115" bboxMax="0.453351,0.254555,0.055925" />
+                  <object index="1" meshName="PageL2" boneName="PageL2" bboxMin="-0.201363,-0.236396,0.027115" bboxMax="0.453351,0.254555,0.055925" />
+                  <object index="2" meshName="PageL3" boneName="PageL3" bboxMin="-0.201363,-0.236396,0.027115" bboxMax="0.453351,0.254555,0.055925" />
+                  <object index="3" meshName="PageL4" boneName="PageL4" bboxMin="-0.201363,-0.236396,0.027115" bboxMax="0.453351,0.254555,0.055925" />
+                  <object index="4" meshName="PageR1" boneName="PageR1" bboxMin="-0.201363,-0.236396,0.027115" bboxMax="0.453351,0.254555,0.055925" />
+                  <object index="5" meshName="PageR2" boneName="PageR2" bboxMin="-0.201363,-0.236396,0.027115" bboxMax="0.453351,0.254555,0.055925" />
+                  <object index="6" meshName="PageR3" boneName="PageR3" bboxMin="-0.201363,-0.236396,0.027115" bboxMax="0.453351,0.254555,0.055925" />
+                  <object index="7" meshName="PageR4" boneName="PageR4" bboxMin="-0.201363,-0.236396,0.027115" bboxMax="0.453351,0.254555,0.055925" />
+                  <resource fileName="graphics\objects\equipment\notebook\notebook.xbg" bboxMin="-0.201363,-0.236396,0.027115" bboxMax="0.453351,0.254555,0.055925" />
+                  <skeleton name="Map" pos="0,0,0" rot="1,-0,-0,-0">
+                    <bone name="PageL1" pos="0.124052,0,0.0271148" rot="-0.0436194,0,0.999048,0" />
+                    <bone name="PageL2" pos="0.042699,0,0.0342323" rot="-0.0436194,0,0.999048,0" />
+                    <bone name="PageL3" pos="-0.0386538,0,0.0413497" rot="-0.0436194,0,0.999048,0" />
+                    <bone name="PageL4" pos="-0.120007,0,0.0484672" rot="-0.0436194,0,0.999048,0" />
+                    <bone name="PageR1" pos="0.124052,0,0.0271148" rot="0.999048,0,-0.0436194,0" />
+                    <bone name="PageR2" pos="0.206375,0,0.0343172" rot="0.999048,0,-0.0436194,0" />
+                    <bone name="PageR3" pos="0.288698,0,0.0415195" rot="0.999048,0,-0.0436194,0" />
+                    <bone name="PageR4" pos="0.371021,0,0.0487219" rot="0.999048,0,-0.0436194,0" />
+                  </skeleton>
+                </component>
+              </hidDescriptor>
+            </value>
+          </object>
+          <object type="CGraphicComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bCastShadow" type="Bool">True</value>
+            <value name="bReceiveShadow" type="Bool">True</value>
+            <value name="bCastAmbientShadow" type="Bool">True</value>
+            <value name="olgLightGroup" type="Hash">00000501</value>
+            <value name="bAllowCullBySize" type="Bool">True</value>
+            <value name="agAmbientGroup" type="Hash">00000000</value>
+            <value name="bBehaveLikeAPickup" type="Bool">False</value>
+            <value name="bShowInReflection" type="Bool">True</value>
+            <value name="bAlwaysShowInReflection" type="Bool">False</value>
+            <value name="bOverrideLODSphere" type="Bool">False</value>
+            <value name="fLODSphereRadius" type="Float">0</value>
+            <value name="hidSkyOcclusion0" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion1" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion2" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion3" type="Hash">FFFFFFFF</value>
+            <value name="hidGroundColor" type="Hash">FFFFFFFF</value>
+            <value name="hidObjectHeight" type="Float">3</value>
+            <value name="hidHeightAbove" type="Float">0</value>
+            <value name="hidHasAmbientValues" type="Bool">False</value>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">0</value>
+              <value name="text_objModel" type="String">graphics\objects\equipment\notebook\notebook.xbg</value>
+              <value name="objModel" type="Hash">948C9C9B</value>
+              <value name="hidMeshName" type="String">PageL1</value>
+              <value name="text_hidNodeName" type="String">PageL1</value>
+              <value name="hidNodeName" type="Hash">FCE131EB</value>
+              <value name="text_hidNodeNameLOD0" type="String">PageL1_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">631345FE</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">1</value>
+              <value name="text_objModel" type="String">graphics\objects\equipment\notebook\notebook.xbg</value>
+              <value name="objModel" type="Hash">948C9C9B</value>
+              <value name="hidMeshName" type="String">PageL2</value>
+              <value name="text_hidNodeName" type="String">PageL2</value>
+              <value name="hidNodeName" type="Hash">65E86051</value>
+              <value name="text_hidNodeNameLOD0" type="String">PageL2_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">E5873750</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">2</value>
+              <value name="text_objModel" type="String">graphics\objects\equipment\notebook\notebook.xbg</value>
+              <value name="objModel" type="Hash">948C9C9B</value>
+              <value name="hidMeshName" type="String">PageL3</value>
+              <value name="text_hidNodeName" type="String">PageL3</value>
+              <value name="hidNodeName" type="Hash">12EF50C7</value>
+              <value name="text_hidNodeNameLOD0" type="String">PageL3_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">2EDBE4F5</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">3</value>
+              <value name="text_objModel" type="String">graphics\objects\equipment\notebook\notebook.xbg</value>
+              <value name="objModel" type="Hash">948C9C9B</value>
+              <value name="hidMeshName" type="String">PageL4</value>
+              <value name="text_hidNodeName" type="String">PageL4</value>
+              <value name="hidNodeName" type="Hash">8C8BC564</value>
+              <value name="text_hidNodeNameLOD0" type="String">PageL4_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">33DED44D</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">4</value>
+              <value name="text_objModel" type="String">graphics\objects\equipment\notebook\notebook.xbg</value>
+              <value name="objModel" type="Hash">948C9C9B</value>
+              <value name="hidMeshName" type="String">PageR1</value>
+              <value name="text_hidNodeName" type="String">PageR1</value>
+              <value name="hidNodeName" type="Hash">28A00E34</value>
+              <value name="text_hidNodeNameLOD0" type="String">PageR1_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">54F2A26D</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">5</value>
+              <value name="text_objModel" type="String">graphics\objects\equipment\notebook\notebook.xbg</value>
+              <value name="objModel" type="Hash">948C9C9B</value>
+              <value name="hidMeshName" type="String">PageR2</value>
+              <value name="text_hidNodeName" type="String">PageR2</value>
+              <value name="hidNodeName" type="Hash">B1A95F8E</value>
+              <value name="text_hidNodeNameLOD0" type="String">PageR2_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">D266D0C3</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">6</value>
+              <value name="text_objModel" type="String">graphics\objects\equipment\notebook\notebook.xbg</value>
+              <value name="objModel" type="Hash">948C9C9B</value>
+              <value name="hidMeshName" type="String">PageR3</value>
+              <value name="text_hidNodeName" type="String">PageR3</value>
+              <value name="hidNodeName" type="Hash">C6AE6F18</value>
+              <value name="text_hidNodeNameLOD0" type="String">PageR3_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">193A0366</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">7</value>
+              <value name="text_objModel" type="String">graphics\objects\equipment\notebook\notebook.xbg</value>
+              <value name="objModel" type="Hash">948C9C9B</value>
+              <value name="hidMeshName" type="String">PageR4</value>
+              <value name="text_hidNodeName" type="String">PageR4</value>
+              <value name="hidNodeName" type="Hash">58CAFABB</value>
+              <value name="text_hidNodeNameLOD0" type="String">PageR4_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">043F33DE</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+          </object>
+          <object type="CSimpleAnimationComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileSkeleton" type="String">graphics\objects\equipment\notebook\notebook_ref.skeleton</value>
+            <value name="fileSkeleton" type="Hash">A6C2A18F</value>
+            <value name="sPartName" type="String">map</value>
+          </object>
+          <object type="CGadget">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="iAnimationValue" type="Int32">44</value>
+            <value name="sName" type="String">map</value>
+            <value name="selCategory" type="UInt32">2</value>
+            <value name="selUseRateMode" type="UInt32">0</value>
+            <value name="iUseRate" type="Float">60</value>
+            <value name="selUseStrategy" type="UInt32">1</value>
+            <value name="iMaxUsesCasual" type="Int32">1</value>
+            <value name="iMaxUsesExperimented" type="Int32">1</value>
+            <value name="iMaxUsesHardcore" type="Int32">1</value>
+            <value name="iMaxUsesInfamous" type="Int32">1</value>
+            <value name="bUnlimitedUses" type="Bool">True</value>
+            <value name="archPickupArchetypeName" type="String"></value>
+            <value name="fLookSensitivity" type="Float">1</value>
+            <value name="bUseBothHands" type="Bool">True</value>
+            <object type="enumCategory">
+              <object type="enum">
+                <value name="Value" type="String">Grenade</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Map</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Unused1</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Watch</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Binoculars</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Phone</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Unused2</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Molotov</value>
+              </object>
+            </object>
+            <object type="enumUseRateMode">
+              <object type="enum">
+                <value name="Value" type="String">Instant</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Continuous</value>
+              </object>
+            </object>
+            <object type="enumUseStrategy">
+              <object type="enum">
+                <value name="Value" type="String">Throw</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Map</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Unused1</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Watch</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Binoculars</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Phone</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">CompassMulti</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">CompassSingle</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Unused2</value>
+              </object>
+            </object>
+            <object type="UseStrategy">
+              <value name="archCompassArchetype" type="String"></value>
+              <value name="archMonocularArchetype" type="String">gadgets.Equipped.Monocular</value>
+              <value name="archPlayerMarker" type="String">gadgets.ObjectiveIcons.PlayerPosition</value>
+              <value name="archDiamondMarker" type="String">gadgets.ObjectiveIcons.Diamond</value>
+              <value name="text_sMapCornerUpLeftBone" type="String">UpperLeftCorner</value>
+              <value name="sMapCornerUpLeftBone" type="Hash">076881E5</value>
+              <value name="text_sMapCornerUpRightBone" type="String">UpperRightCorner</value>
+              <value name="sMapCornerUpRightBone" type="Hash">F07E307D</value>
+              <value name="text_sMapCornerDownLeftBone" type="String">LowerLeftCorner</value>
+              <value name="sMapCornerDownLeftBone" type="Hash">782D8707</value>
+              <value name="text_sMapCornerDownRightBone" type="String">LowerRightCorner</value>
+              <value name="sMapCornerDownRightBone" type="Hash">BE05F62F</value>
+              <value name="fMarkerPlayerZ" type="Float">0.0006</value>
+              <value name="fMarkerDiamondZ" type="Float">0.0007</value>
+              <value name="fMarkerArrowOffsetXY" type="Float">0.008</value>
+              <object type="MarkerBlinking">
+                <value name="fMarkerBlinkFrequency" type="Float">0.3</value>
+                <value name="fMarkerBlinkDuration" type="Float">3</value>
+                <object type="MarkerTypes">
+                  <value name="Objective" type="Bool">True</value>
+                  <value name="PGP" type="Bool">False</value>
+                  <value name="SafeHouse" type="Bool">False</value>
+                  <value name="CellTower" type="Bool">False</value>
+                  <value name="WeaponShop" type="Bool">False</value>
+                  <value name="BusStation" type="Bool">False</value>
+                  <value name="Underground" type="Bool">False</value>
+                  <value name="HQ" type="Bool">False</value>
+                  <value name="MikesPlace" type="Bool">False</value>
+                  <value name="Other" type="Bool">False</value>
+                  <value name="City" type="Bool">False</value>
+                </object>
+              </object>
+              <object type="DetailedMap">
+                <value name="archMedicKit" type="String">gadgets.ObjectiveIcons.Health</value>
+                <value name="archAmmoPile" type="String">gadgets.ObjectiveIcons.AmmoPile</value>
+                <value name="archExplosivePile" type="String">gadgets.ObjectiveIcons.ExplosivePile</value>
+                <value name="archFuelPile" type="String">gadgets.ObjectiveIcons.FuelPile</value>
+                <value name="archMountedWeapon" type="String">gadgets.ObjectiveIcons.MountedWeapon</value>
+                <value name="archSniperPoint" type="String">gadgets.ObjectiveIcons.Sniper</value>
+                <value name="archLandVehicle" type="String">gadgets.ObjectiveIcons.Vehicle</value>
+                <value name="archWaterVehicle" type="String">gadgets.ObjectiveIcons.Vehicle</value>
+                <value name="archAirVehicle" type="String">gadgets.ObjectiveIcons.Vehicle</value>
+              </object>
+              <object type="MarkerVisibility">
+                <object type="World">
+                  <value name="Objective" type="Bool">True</value>
+                  <value name="PGP" type="Bool">False</value>
+                  <value name="SafeHouse" type="Bool">False</value>
+                  <value name="CellTower" type="Bool">True</value>
+                  <value name="WeaponShop" type="Bool">True</value>
+                  <value name="BusStation" type="Bool">True</value>
+                  <value name="Underground" type="Bool">True</value>
+                  <value name="HQ" type="Bool">False</value>
+                  <value name="MikesPlace" type="Bool">True</value>
+                  <value name="Other" type="Bool">False</value>
+                  <value name="City" type="Bool">True</value>
+                </object>
+                <object type="Area">
+                  <value name="Objective" type="Bool">True</value>
+                  <value name="PGP" type="Bool">True</value>
+                  <value name="SafeHouse" type="Bool">True</value>
+                  <value name="CellTower" type="Bool">True</value>
+                  <value name="WeaponShop" type="Bool">True</value>
+                  <value name="BusStation" type="Bool">True</value>
+                  <value name="Underground" type="Bool">True</value>
+                  <value name="HQ" type="Bool">False</value>
+                  <value name="MikesPlace" type="Bool">True</value>
+                  <value name="Other" type="Bool">False</value>
+                  <value name="City" type="Bool">True</value>
+                </object>
+                <object type="KeyLocation">
+                  <value name="Objective" type="Bool">True</value>
+                  <value name="PGP" type="Bool">True</value>
+                  <value name="SafeHouse" type="Bool">True</value>
+                  <value name="CellTower" type="Bool">False</value>
+                  <value name="WeaponShop" type="Bool">True</value>
+                  <value name="BusStation" type="Bool">False</value>
+                  <value name="Underground" type="Bool">True</value>
+                  <value name="HQ" type="Bool">True</value>
+                  <value name="MikesPlace" type="Bool">True</value>
+                  <value name="Other" type="Bool">True</value>
+                  <value name="City" type="Bool">False</value>
+                </object>
+              </object>
+              <object type="MarkerRepository">
+                <object type="MarkerArchetypes">
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.AmmoPile</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.APRHQ</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.APRHQ_MissionAvailable</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.BusStation</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.CellTower</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.CellTower_MissionAvailable</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.CompassObjective</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.CompassObjective_VEH</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.CompassSubvertAnte</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.CompassSubvertAnte_VEH</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.CompassUndergroundObjective</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.CompassUndergroundObjective_VEH</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.Diamond</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.ExplosivePile</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.FuelPile</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.Generator</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.GuardPost_Locked</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.Health</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.HUB</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.MikesPlace</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.MikesPlace_MissionAvailable</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.MissionArrow</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.MissionArrowGPS</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.MissionArrowGPS_VEH</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.MissionObjective</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.MissionSubvertAnte</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.MountedWeapon</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.PartnerMission</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.PartnerMissionObjective</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.PartnerMissionObjective_GPS</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.PartnerMissionObjective_GPS_VEH</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.PlayerPosition</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.SafeHouse_Locked</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.SafeHouse_Locked_GPS</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.SafeHouse_Locked_GPS_VEH</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.SafeHouse_Unlocked</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.SafeHouse_Unlocked_GPS</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.SafeHouse_Unlocked_GPS_VEH</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.SaveDisk</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.SaveDiskGPS</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.SaveDiskGPS_VEH</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.Sniper</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.SubvertArrow</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.SubvertArrowGPS</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.SubvertArrowGPS_VEH</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.Towns</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.Towns_MissionAvailable</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.UFLLHQ</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.UFLLHQ_MissionAvailable</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.Underground</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.Underground_MissionAvailable</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.UnderGroundArrow</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.UnderGroundArrowGPS</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.UnderGroundArrowGPS_VEH</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.UndergroundObjective</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.Vehicle</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.WeaponShop</value>
+                  </object>
+                  <object type="Marker">
+                    <value name="archMarker" type="String">gadgets.ObjectiveIcons.WeaponShop_MissionAvailable</value>
+                  </object>
+                </object>
+              </object>
+            </object>
+          </object>
+          <object type="CGadgetNetworkComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+          <object type="CPersistComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selLevel" type="UInt32">2</value>
+            <object type="enumLevel">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Limited</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Full</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Critical</value>
+              </object>
+            </object>
+          </object>
+          <object type="CDynamicDeploadComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+        </object>
+      </object>
+    </object>

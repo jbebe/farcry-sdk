@@ -42,11 +42,19 @@ namespace {
     FCSE::Relocation<SetLoadedFn> g_setLoaded{FCSE::Uplay(0x0012F850)};
     // CInventoryViewPawn's count of the rounds of one ammo type outside the magazines.
     FCSE::Relocation<SpareRoundsFn> g_spareRounds{FCSE::Uplay(0x00126000)};
-    // CInventoryViewPawn::GetGadgetFromCategory, and CGadget::GetUses.
+    // CInventoryViewPawn::GetGadgetFromCategory, CGadget::GetUses, and the inventory's
+    // AddGadget(archetype, uses).
     using GadgetFn = void*(__fastcall*)(const void* view, void* unused, const uint32_t* category);
     using UsesFn = int(__fastcall*)(void* gadget, void* unused);
+    using AddGadgetFn = void*(__fastcall*)(void* inventory, void* unused, const char* archetype,
+                                           int uses);
     FCSE::Relocation<GadgetFn> g_gadgetFromCategory{FCSE::Uplay(0x00129DF0)};
     FCSE::Relocation<UsesFn> g_uses{FCSE::Uplay(0x001496C0)};
+    FCSE::Relocation<AddGadgetFn> g_addGadget{FCSE::Uplay(0x0012B790)};
+    // CPawn's class hierarchy, built on first use, whose fourth class id is CPawn's own.
+    using ClassFn = const void*(__cdecl*)();
+    FCSE::Relocation<ClassFn> g_pawnClass{FCSE::Uplay(0x00040A80)};
+    constexpr size_t kPawnClass = 3;
     // An entity's component by class id; CFCXCountersComponentPlayerSP's class id, built when its
     // name is still unset, its RemainingPills, and its reputation level, 0 to 5.
     using GetComponentFn = void*(__fastcall*)(void* entity, void* unused, const uint32_t* type);
@@ -96,11 +104,15 @@ namespace {
     // Set while a gun is taken away, so its drop leaves no pickup.
     bool g_removing = false;
 
+    uint32_t ClassId(const void* hierarchy, size_t index) {
+        return Read<uint32_t>(hierarchy, kHierarchyIds + index * sizeof(uint32_t));
+    }
+
     bool IsWeaponItem(void* item, uint32_t weaponItemType) {
         const void* hierarchy = Method<HierarchyFn>(item, kHierarchySlot)(item, nullptr);
         const auto count = Read<uint32_t>(hierarchy, kHierarchyCount);
         for (uint32_t i = 0; i < count; ++i) {
-            if (Read<uint32_t>(hierarchy, kHierarchyIds + i * sizeof(uint32_t)) == weaponItemType) {
+            if (ClassId(hierarchy, i) == weaponItemType) {
                 return true;
             }
         }
@@ -127,9 +139,11 @@ namespace {
 bool Install() {
     return g_getTerminal && g_dropWeapon && g_addByName && g_selectAtOnce && g_updateEquipAnim &&
            g_reliability && g_ammoInClip && g_rememberedInClip && g_setLoaded && g_spareRounds &&
-           g_gadgetFromCategory && g_uses && g_getComponent && g_buildCountersType &&
-           g_countersTypeName && g_countersType && g_buildWeaponItemType && g_weaponItemType &&
-           g_classes && Hook(g_canSpawnPickupSite, &OnCanSpawnPickup, &g_canSpawnPickup);
+           g_gadgetFromCategory && g_uses && g_addGadget && g_pawnClass && g_getComponent &&
+           g_buildCountersType && g_countersTypeName && g_countersType && g_buildWeaponItemType &&
+           g_weaponItemType && g_classes &&
+           (g_canSpawnPickup != nullptr ||
+            Hook(g_canSpawnPickupSite, &OnCanSpawnPickup, &g_canSpawnPickup));
 }
 
 void* ViewOf(const void* pawn) { return Read<uint8_t*>(pawn, kPawnData) + kDataInventoryView; }
@@ -154,6 +168,15 @@ void* Entity(const void* component) {
 void* PlayerComponent(const uint32_t* type) {
     void* player = PlayerEntity();
     return player != nullptr ? g_getComponent(player, nullptr, type) : nullptr;
+}
+
+void* PlayerPawn() {
+    const uint32_t pawn = ClassId(g_pawnClass(), kPawnClass);
+    return PlayerComponent(&pawn);
+}
+
+size_t Count(const void* inventory) {
+    return Read<uint32_t>(Read<const void*>(inventory, kInventoryItems), sizeof(void*));
 }
 
 std::vector<Weapon> Guns(const void* inventory) {
@@ -219,9 +242,16 @@ int Ammo(const void* view, const char* ammo) {
 }
 
 int Throwables(const void* view, const char* category) {
-    const uint32_t type = FCSE::Crc32(category);
-    void* gadget = g_gadgetFromCategory(view, nullptr, &type);
+    void* gadget = Gadget(view, FCSE::Crc32(category));
     return gadget != nullptr ? g_uses(gadget, nullptr) : 0;
+}
+
+void* Gadget(const void* view, uint32_t category) {
+    return g_gadgetFromCategory(view, nullptr, &category);
+}
+
+void* AddGadget(void* inventory, const char* archetype, int uses) {
+    return g_addGadget(inventory, nullptr, archetype, uses);
 }
 
 int Pills() {
