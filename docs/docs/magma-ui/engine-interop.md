@@ -626,6 +626,18 @@ Magma draws every quad through `magma::Render` (`BeginQuad`, `SetVertex`, `SetCo
 render pass, which runs after the world's composite, so an area drawn into a texture of its own has
 to be caught there.
 
+It can be caught at the Direct3D device **(seen in game, 2026-10-27)**. An area's elements reach the
+device in their order in the package, each image binding its own texture, so the binds of an area's
+first and last image bracket its draws. The Inventory Overhaul brackets its page with two clear
+textures of a size no other texture has, and points render target 0 at a target of its own between
+them; the rest of the HUD still reaches the screen. The texture is a frame late for the world, which
+has already drawn.
+
+The HUD's canvas page covers the whole screen, stretched to it rather than cropped: the widescreen
+page, 1280 by 800 canvas units, fills a 1920 by 1080 screen, its 720 middle units falling on rows 54
+to 1026 **(seen in game)**. Something laid over the whole page therefore covers the screen at any
+aspect.
+
 ## Settings rows
 
 Every options screen is a `CSettingsPage`, and its rows are not built widget by widget. Three calls

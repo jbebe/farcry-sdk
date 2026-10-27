@@ -4,37 +4,44 @@
 
 .DESCRIPTION
     The pages are the HTML mockup's spread (mockup\index.html), authored in the spread's own pixels and
-    drawn the way the pause menu's paper pages are: the notebook texture, black Farcry2 ink, common.mgb's
-    post-it, tape, red line and brush stroke. a_io_notebook places the spread on the HUD, a_io_page
-    holds it with its index tabs, one area per page (a_io_inventory, a_io_papers, a_io_journal,
-    a_io_contacts) shown at a time, a_io_portraits the buddies' portraits a row takes its picture from,
-    and a_io_postit the post-it stuck on it. Everything the plugin fills or hides is exported as IO_*;
-    a gun's picture is one image per gun and slot, all but one hidden.
+    drawn the way the pause menu's paper pages are: black Farcry2 ink, common.mgb's post-it, tape, red
+    line and brush stroke, on the dossier's own ruled paper. The plugin draws them onto the notebook's
+    pages rather than the screen: a_io_notebook lays the spread over the screen as the sheet the pages
+    show, and a_io_page holds it between two marker images the plugin knows it by, with its
+    index tabs, one area per page (a_io_inventory, a_io_papers, a_io_journal, a_io_contacts) shown at a
+    time, a_io_portraits the buddies' portraits a row takes its picture from, and a_io_postit the
+    post-it stuck on it. Everything the plugin fills or hides is exported as IO_*; a gun's picture is
+    one image per gun and slot, all but one hidden.
 
-    Run from anywhere; reads the retail packages under tmp\, writes layer\mods\ui\localized.
+    Run from anywhere; reads the retail files under tmp\, writes layer\mods\ui.
 #>
 $ErrorActionPreference = "Stop"
 
 $Repo = Resolve-Path "$PSScriptRoot\..\.."
 $Cli = "$Repo\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
 $Retail = "$Repo\tmp\gamefiles\common\ui\localized"
+$StockTexture = "$Repo\tmp\gamefiles\common\ui\textures\ui_tape_icon.xbt"
+$RuledPaper = "$Repo\tmp\gamefiles\worlds\worlds\graphics\_textures\diffuse\misc\paper_d.xbt"
+$Texconv = "$Repo\tools\third-party\FCBConverter\texconv.exe"
 $Layer = "$PSScriptRoot\layer\mods\ui\localized"
+$Textures = "$PSScriptRoot\layer\mods\ui\textures\io"
 $Work = "$PSScriptRoot\out\ui"
 
-# hud, its main page, and the pause menu's notebook material in common.mgb.
+# hud and its main page.
 $PackageId = "#A1126B78"
 $PageId = "#F2CDBA4C"
-$NotebookMaterial = "#F67D9A2B"
 $Farcry2 = "#5B34AD62"
 
-# Where the mockup holds the notebook: the spread's centre and width as fractions of the screen.
-$CentreX = 0.46
-$CentreY = 0.5178
-$WidthShare = 0.54375
-$Tilt = -1.5
+# The spread, and the sheet the dossier's pages show: as wide as the two pages are for the spread's
+# height (0.552 by 0.360 m), the spread centred on it. It covers the HUD's whole canvas page, which the
+# plugin copies whole.
+$Spread = @{ W = 1012; H = 716 }
+$SheetW = $Spread.H * 0.552 / 0.360
+$Margin = ($SheetW - $Spread.W) / 2
+# The dossier's ruled paper repeats 10 times across a page and 3.92 times down it.
+$PaperCrop = @(0, 0, 20, 3.92)
 
-# The spread's place in notebook.png, and the post-it's and an index tab's in postit.png.
-$Spread = @{ X = 4; Y = 10; W = 1012; H = 716; Size = 1024 }
+# The post-it's and an index tab's place in postit.png.
 $PostItCrop = @{ X = 13; Y = 16; W = 428; H = 311; Size = 512 }
 $TabCrop = @{ X = 40; Y = 40; W = 70; H = 180; Size = 512 }
 
@@ -83,12 +90,12 @@ function Placement([double]$x, [double]$y, [double]$w, [double]$h, [double]$rota
 # material's texture drawn, as fractions: x, y, width, height.
 function Image([string]$name, [string]$material, [string]$package, [double]$x, [double]$y, [double]$w,
                [double]$h, [string]$tint = "FFFFFFFF", [double]$rotation = 0, [double[]]$crop = @(0, 0, 1, 1),
-               [string]$blending = "Normal") {
+               [string]$blending = "Normal", [string]$addressing = "Clamp") {
     $state = "<ImageState INTERPOLATIONFLAGS=`"0`" STATECOLOR=`"FFFFFFFF`" $(Placement $x $y $w $h $rotation) " +
         "SHADOWCOLOR=`"FFFFFFFF`" SHADOWOFFSETX=`"0`" SHADOWOFFSETY=`"0`" TILING.x=`"$(F $crop[2])`" TILING.y=`"$(F $crop[3])`" " +
         "OFFSET.x=`"$(F $crop[0])`" OFFSET.y=`"$(F $crop[1])`" FLIPHORIZONTAL=`"false`" FLIPVERTICAL=`"false`" ACTUALSIZE=`"false`" " +
         "COLOR1=`"$tint`" COLOR2=`"$tint`" COLOR3=`"$tint`" COLOR4=`"$tint`" />"
-    $body = "<Image BLENDINGMODE=`"$blending`" ALPHABLENDFIRST=`"false`" ADDRESSINGMODEU=`"Clamp`" ADDRESSINGMODEV=`"Clamp`">" +
+    $body = "<Image BLENDINGMODE=`"$blending`" ALPHABLENDFIRST=`"false`" ADDRESSINGMODEU=`"$addressing`" ADDRESSINGMODEV=`"$addressing`">" +
         "<MATERIALLINK present=`"true`" id=`"$material`" PACKAGE=`"$package`" /></Image>"
     Element 74 Image $name $state $body
 }
@@ -217,17 +224,21 @@ function Tab([string]$name, [string]$label, [double]$x, [double]$y, [string]$tin
     Text "t_io_${name}_label" $label ($x + 12) ($y + 32) 116 52 22 $inkFull CENTER 90
 }
 
-# Index tabs on the right edge: each page's own pulled out over the spread in its area, the others
-# behind the spread, hidden while their page is open.
+# The page's first image, then the paper under everything, the sheet's whole width.
+$page.Add((Image i_io_begin io_mark_begin "" 0 0 2 2))
+$page.Add((Image i_io_paper io_paper "" (-$Margin) 0 $SheetW $Spread.H "FFFFFFFF" 0 $PaperCrop Normal Wrap))
+
+# Index tabs inside the sheet's right edge: each page's own pulled out over the spread in its area,
+# the others hidden while their page is open.
+$tabX = $Spread.W + $Margin - 96
 for ($i = 0; $i -lt $tabs.Count; $i++) {
     $tabName = $tabs[$i].ToLowerInvariant()
     $y = 70 + $i * 124
-    $page.AddRange([string[]](Tab "tab_$tabName" $tabs[$i] 962 $y "FFCCCCCC"))
+    $page.AddRange([string[]](Tab "tab_$tabName" $tabs[$i] $tabX $y "FFCCCCCC"))
     Export $PagePath "i_io_tab_$tabName"
     Export $PagePath "t_io_tab_${tabName}_label"
-    $areas[$tabName].AddRange([string[]](Tab "open_$tabName" $tabs[$i] 936 $y "FFFFFFFF"))
+    $areas[$tabName].AddRange([string[]](Tab "open_$tabName" $tabs[$i] ($tabX - 26) $y "FFFFFFFF"))
 }
-$page.Add((Image i_io_spread $NotebookMaterial "\common.mgb" 0 0 $Spread.W $Spread.H "FFFFFFFF" 0 (Crop $Spread)))
 
 # Inventory. The left page: Hands, then Items.
 $inventoryArea = $areas.inventory
@@ -393,6 +404,8 @@ for ($r = 1; $r -le $Ratings.Count; $r++) {
 $postItTurned = Turn 208 151 -1.4
 $page.Add((Instance a_io_postit (512 + 208 - $postItTurned[0]) (344 + 151 - $postItTurned[1]) 1 1 -1.4))
 Export $PagePath a_io_postit
+# The page's last image.
+$page.Add((Image i_io_end io_mark_end "" 0 0 2 2))
 
 function Material([string]$name, [string]$texture) {
     "<Material name=`"$name`" texture=`"$texture`" REGION=`"0 0 1 1`" />"
@@ -402,7 +415,10 @@ $materials = @(
     ("manual", "repair", "ammo") | ForEach-Object { Material "io_upgrade_$_" "\textures\ui_icon_$($_)upgrade.png" }
     $PaperPictures | ForEach-Object { Material "io_paper_$_" "\textures\common\$_.png" }
     $Portraits | ForEach-Object { Material "io_buddy_$_" "\textures\hud\icons_buddies\buddies_$_.png" }
-    Material io_tape "\textures\ui_tape_icon.png") -join "`n"
+    Material io_tape "\textures\ui_tape_icon.png"
+    Material io_paper "\textures\io\notebook_paper.png"
+    Material io_mark_begin "\textures\io\mark_begin.png"
+    Material io_mark_end "\textures\io\mark_end.png") -join "`n"
 
 function IndexOf([System.Collections.Generic.List[string]]$lines, [string]$text, [int]$from = 0) {
     for ($i = $from; $i -lt $lines.Count; $i++) {
@@ -418,7 +434,23 @@ function Attribute([string]$line, [string]$name) {
 }
 
 Remove-Item -Recurse -Force $Work -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force -Path $Work | Out-Null
+New-Item -ItemType Directory -Force -Path $Work, $Textures | Out-Null
+
+# The paper is the dossier's own. The markers are clear, single-level DXT5 under the header of a
+# stock HUD texture that has no _mip0 companion.
+Copy-Item $RuledPaper "$Textures\notebook_paper.xbt"
+& $Cli xbt extract $StockTexture -o $Work | Out-Null
+Add-Type -AssemblyName System.Drawing
+# Their sizes are how the plugin knows them.
+foreach ($mark in @(@{ Name = "mark_begin"; W = 4; H = 64 }, @{ Name = "mark_end"; W = 64; H = 4 })) {
+    $clear = New-Object System.Drawing.Bitmap $mark.W, $mark.H, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    $clear.Save("$Work\$($mark.Name).png", [System.Drawing.Imaging.ImageFormat]::Png)
+    $clear.Dispose()
+    & $Texconv -nologo -f DXT5 -m 1 -y -o $Work "$Work\$($mark.Name).png" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "texconv failed for $($mark.Name)" }
+    & $Cli xbt build "$Work\$($mark.Name).dds" "$Work\ui_tape_icon.xml" -o "$Textures\$($mark.Name).xbt" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "xbt build failed for $($mark.Name)" }
+}
 
 foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
     $variant = $source.Directory.Parent.FullName.Substring($Retail.Length + 1)
@@ -426,38 +458,22 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
     Copy-Item $source.FullName "$dir\hud.mgb"
     & $Cli mgb decode "$dir\hud.mgb" -o "$dir\hud.xml" | Out-Null
-    $pause = "$($source.Directory.FullName)\sp_pause_menus.mgb"
-    Copy-Item $pause "$dir\sp_pause_menus.mgb"
-    & $Cli mgb decode "$dir\sp_pause_menus.mgb" -o "$dir\pause.xml" | Out-Null
     $lines = [System.Collections.Generic.List[string]]::new([IO.File]::ReadAllLines("$dir\hud.xml"))
 
-    # The screen in canvas units, and the pause menu's notebook on it: its texture stretched over a
-    # box whose sides give the canvas units per texture pixel.
+    # The canvas page, and the sheet over the whole of it.
     $header = $lines[0]
     $screenX = -(Attribute $header 'DISPLAYOFFSET.x')
     $screenY = -(Attribute $header 'DISPLAYOFFSET.y')
     $screenW = Attribute $header 'PAGESIZE.w'
     $screenH = Attribute $header 'PAGESIZE.h'
-    $pauseLines = [IO.File]::ReadAllLines("$dir\pause.xml")
-    $notebook = 0
-    while ($pauseLines[$notebook] -notmatch "id=`"$NotebookMaterial`"") { $notebook++ }
-    $box = $notebook
-    while ($pauseLines[$box] -notmatch 'LEFT=') { $box-- }
-    $unitX = ((Attribute $pauseLines[$box] RIGHT) - (Attribute $pauseLines[$box] LEFT)) / $Spread.Size
-    $unitY = ((Attribute $pauseLines[$box] BOTTOM) - (Attribute $pauseLines[$box] TOP)) / $Spread.Size
-
-    # The mockup's size and place, keeping the pause menu's proportions.
-    $shrink = $WidthShare * $screenW / ($Spread.W * $unitX)
-    $scaleX = $unitX * $shrink
-    $scaleY = $unitY * $shrink
-    $turned = Turn ($scaleX * $Spread.W / 2) ($scaleY * $Spread.H / 2) $Tilt
-    $x = $screenX + $CentreX * $screenW - $turned[0]
-    $y = $screenY + $CentreY * $screenH - $turned[1]
+    $scaleX = $screenW / $SheetW
+    $scaleY = $screenH / $Spread.H
+    $x = $screenX + $Margin * $scaleX
 
     $areaXml = @(
-        (Area a_io_notebook ($Spread.W + 46) $Spread.H @(Instance a_io_page 0 0 1 1 0))
-        (Area a_io_page ($Spread.W + 46) $Spread.H $page)
-        foreach ($tabName in $areas.Keys) { Area "a_io_$tabName" ($Spread.W + 46) $Spread.H $areas[$tabName] }
+        (Area a_io_notebook ($Spread.W + $Margin) $Spread.H @(Instance a_io_page 0 0 1 1 0))
+        (Area a_io_page ($Spread.W + $Margin) $Spread.H $page)
+        foreach ($tabName in $areas.Keys) { Area "a_io_$tabName" ($Spread.W + $Margin) $Spread.H $areas[$tabName] }
         (Area a_io_portraits 44 44 $palette)
         (Area a_io_postit 416 302 $postIt)) -join "`n"
     $objects = @("<GENERICOBJECT name=`"IO_NOTEBOOK`"><LINK slot=`"69`" LASTOBJECTTYPE=`"Element`" IDS=`"$NotebookPath a_io_page`" /></GENERICOBJECT>") + $Exports
@@ -470,9 +486,9 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
     $strings = IndexOf $lines '<STRINGTABLE'
     $lines.Insert($strings - 1, $areaXml)
 
-    # Last on the HUD page, so it draws over the rest of the HUD.
+    # Last on the HUD page, so its draws are the last of the HUD's.
     $pageEnd = IndexOf $lines '</CHILDREN>' (IndexOf $lines "<USERDATA name=`"$PageId`">")
-    $lines.Insert($pageEnd, (Instance a_io_notebook $x $y $scaleX $scaleY $Tilt))
+    $lines.Insert($pageEnd, (Instance a_io_notebook $x $screenY $scaleX $scaleY 0))
 
     $materialsAt = IndexOf $lines '<MATERIALS materialExtra='
     $lines.Insert($materialsAt + 1, $materials)
@@ -485,5 +501,5 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
     Remove-Item -Recurse -Force "$target\hud.mgb" -ErrorAction SilentlyContinue
     & $Cli mgb fragments "$dir\hud.xml" --base $source.FullName --out "$target\hud.mgb" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "fragments failed for $variant" }
-    Write-Host ("{0,-20} notebook at {1:0},{2:0} scaled {3:0.000} x {4:0.000}" -f $variant, $x, $y, $scaleX, $scaleY)
+    Write-Host ("{0,-20} notebook at {1:0},{2:0} scaled {3:0.000} x {4:0.000}" -f $variant, $x, $screenY, $scaleX, $scaleY)
 }

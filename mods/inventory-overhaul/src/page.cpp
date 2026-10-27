@@ -3,6 +3,7 @@
 #include "page.h"
 
 #include "engine/magma.h"
+#include "engine/paper.h"
 #include "engine/story.h"
 #include "fcse_api.h"
 #include "notebook.h"
@@ -232,6 +233,7 @@ void Frame() {
         FCSE::Logf("page: the HUD's notebook is %p", notebook);
         // A HUD loaded since holds what its package says, not what was written.
         g_shown.clear();
+        Paper::NewHud();
     }
     if (notebook != nullptr) {
         Magma::SetVisible(notebook, open);

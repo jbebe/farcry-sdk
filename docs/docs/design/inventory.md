@@ -247,13 +247,12 @@ Movement and look stay live, as with the map. The gamepad mirrors the map's: d-p
   gadget would need the engine to take one beside the map; one held object with two faces needs
   nothing new.
 - **The page is Magma**, built the way the pause menu's paper pages are, so it looks like the game's
-  own: the `notebook` texture, Farcry2 ink, `common.mgb`'s post-it, tape and red line. It goes onto
-  the map's paper, where it is lit by the world and moves with the hands, since a flat overlay reads
-  as a HUD. Magma draws through an abstract `magma::Render` whose PC implementation feeds a render
-  pass (`CSceneRenderer::Render2DView`), so putting one area into a texture means catching its draws
-  in that pass. Until then the page is a 2D overlay on the HUD, held where the mockup holds the
-  notebook. The paper is one square sheet, 25.5 cm a side, with the area map on top and the world
-  map on its back.
+  own: Farcry2 ink, `common.mgb`'s post-it, tape and red line. It is drawn onto the notebook's pages,
+  where it is lit by the world and moves with the hands, since a flat overlay reads as a HUD. It has
+  no background of its own: the paper under the ink is the dossier's ruled paper. The draws between
+  the page's first and last image go into a texture instead of the screen, and the pages draw with
+  the map's `MAPTOP` material, which shows that texture in place of the area map. The notebook in
+  hand is a copy of the Jackal dossier, a white ruled notebook, carried by the map's animations.
 
 ## Steps
 
@@ -276,8 +275,6 @@ Each step ends with one check in game before the next.
 
 - **The arrow keys:** the mockup moves along the lists with ↑ and ↓ as well as the wheel, but
   the game binds them to walking beside W and S, so for now only the wheel moves the selection.
-- **How the page gets onto the paper:** which of `Render2DView`'s draws are the page's, and whether
-  the paper's texture coordinates show all of it the right way up.
 - **The Journal's jobs:** where the game keeps the jobs taken and their current objective is not
   traced yet. The pause menu's Journal shows the progress manager's story synopses instead
   (`GetLocalizedMiSyn`, `ChSyn`, `CuSyn`, from `LoadScreens`), and the objectives' first-person texts

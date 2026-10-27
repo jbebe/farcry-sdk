@@ -1,5 +1,6 @@
 // Inventory Overhaul - two guns of any class and a notebook for everything else. See README.md.
 #include "engine/game_thread.h"
+#include "engine/paper.h"
 #include "fcse_api.h"
 #include "notebook.h"
 #include "page.h"
@@ -15,6 +16,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     const bool notebook = Notebook::Install() && Page::Install() && GameThread::Install();
     if (notebook) {
         GameThread::EachFrame(&Page::Frame);
+        Paper::Install();
     }
     return guns || notebook;
 }
