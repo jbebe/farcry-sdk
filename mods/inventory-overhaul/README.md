@@ -144,7 +144,7 @@ the string assignment `CMagmaFacade::SetLabel` makes and `Element::SetVisible`
   time, with how many more lie above and below beside the pause menu's arrow.
 - **The belt:** syrettes (the ammo type `syringe`), malaria pills (the player's counters
   component), grenades and molotovs (the uses of the gadget of each category).
-- **The post-it:** the selected row. A gun has its picture, full name, class, slot, condition,
+- **The post-it:** the selected row. A gun has its picture, full name, type (Pistol), condition,
   `<loaded> / <spare>` ammo (the spare rounds being the player's whole pool of its ammo, so a stowed
   gun's too), its upgrades and the multiplayer loadout's five ratings as brush strokes. The machete,
   an empty slot, an item, the diamonds and the belt's items each have their own picture, count and

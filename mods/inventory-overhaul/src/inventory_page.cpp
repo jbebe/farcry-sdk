@@ -16,15 +16,14 @@ namespace InventoryOverhaul::Page {
 
 namespace {
     // A gun as the shop and the multiplayer loadout know it: its archetype, its picture
-    // gun_icon_<picture>.png, its names, class and slot, its five loadout ratings from 0 to 5 (none
-    // below zero), its name in the shop, its ammo type and the bandolier that carries more of it.
+    // gun_icon_<picture>.png, its names and type, its five loadout ratings from 0 to 5 (none below
+    // zero), its name in the shop, its ammo type and the bandolier that carries more of it.
     struct Gun {
         const char* archetype;
         const char* picture;
         const wchar_t* name;
         const wchar_t* shortName;
         const wchar_t* kind;
-        const wchar_t* slot;
         float ratings[5];
         const char* shop;
         const char* ammo;
@@ -33,34 +32,34 @@ namespace {
 
     // Matched against the start of the archetype's last part, in lower case without underscores.
     constexpr Gun kGuns[] = {
-        {"ak47", "ak47", L"AK-47", L"AK-47", L"Assault", L"primary", {3, 4, 3, 5, 4}, "ak47", "assaultrifle", "assault webbing"},
-        {"as50", "as50", L"AS50", L"AS50", L"Sniper", L"primary", {5, 5, 3, 3, 3}, "as50", "sniperrifle", "marksmans bandolier"},
-        {"dragunov", "dragunov", L"Dragunov SVD", L"Dragunov", L"Sniper", L"primary", {3, 4, 4, 4, 4}, "dragunov", "sniperrifle", "marksmans bandolier"},
-        {"fnfal", "fnfal", L"FAL Paratrooper", L"FAL", L"Assault", L"primary", {3, 4, 4, 4, 4}, "fnfal", "assaultrifle", "assault webbing"},
-        {"g3ka4", "g3ka4", L"G3-KA4", L"G3-KA4", L"Assault", L"primary", {3, 3, 4, 4, 3}, "g3ka4", "assaultrifle", "assault webbing"},
-        {"ithaca", "ithaca", L"Homeland 37", L"Homeland 37", L"Shotgun", L"primary", {4, 3, 3, 2.5f, 2}, "ithaca", "shotgun", "shotgun bandolier"},
-        {"m16", "m16", L"AR-16", L"AR-16", L"Assault", L"primary", {4, 4, 4, 3.5f, 3}, "m16", "assaultrifle", "assault webbing"},
-        {"m1903", "m1903", L"M1903 Sniper Rifle", L"M1903", L"Sniper", L"special", {4, 4, 5, 2.5f, 1}, "m1903", "sniperrifle", "marksmans bandolier"},
-        {"mgl140", "mgl40", L"MGL-140", L"MGL-140", L"G-Launcher", L"primary", {4, 4, 3, 2.5f, 3}, "mgl40", "mgl140", "grenadier webbing"},
-        {"mp5", "mp5sd", L"Silent MP-5", L"MP-5", L"Assault", L"primary", {2, 3, 3, 4, 4}, "mp5", "assaultrifle", "assault webbing"},
-        {"spas12", "spas12", L"SPAS-12", L"SPAS-12", L"Shotgun", L"primary", {5, 2, 1, 3.5f, 3}, "spas12", "shotgun", "shotgun bandolier"},
-        {"usas12", "usas", L"USAS-12", L"USAS-12", L"Shotgun", L"primary", {4, 2, 2, 4, 5}, "usas12", "shotgun", "shotgun bandolier"},
-        {"silencedmakarov", "6p9", L"Silent Makarov 6P9", L"6P9", L"Pistol", L"secondary", {2, 2, 3, 3, 4}, "6p9", "deserteagle", "pistol belt"},
-        {"deserteagle", "deagle", L"Eagle.50", L"Eagle.50", L"Pistol", L"secondary", {4, 3, 3, 2.5f, 2}, "de", "deserteagle", "pistol belt"},
-        {"flaregun", "flare", L"Flare Pistol", L"Flare Pistol", L"Flare", L"secondary", {3, 5, 1, 1.5f, 1}, "flare", "flare", "pyrotechnic satchel"},
-        {"m79", "m79", L"M-79 Grenade Launcher", L"M-79", L"G-Launcher", L"secondary", {4, 3, 2, 2, 2}, "m79", "m79", "grenadier webbing"},
-        {"mac10", "mac10", L"MAC-10", L"MAC-10", L"SMG", L"secondary", {2, 2, 2, 2.5f, 5}, "mac10", "smg", "light assault webbing"},
-        {"makarov", "makarov", L"Makarov", L"Makarov", L"Pistol", L"secondary", {2, 2, 3, 2.5f, 4}, "makarov", "deserteagle", "pistol belt"},
-        {"star45", "p45", L"Star .45", L"Star .45", L"Pistol", L"secondary", {3, 2, 3, 3.5f, 3}, "star45", "deserteagle", "pistol belt"},
-        {"uzi", "uzi", L"Uzi", L"Uzi", L"SMG", L"secondary", {2, 2, 3, 3, 4}, "uzi", "smg", "light assault webbing"},
-        {"carlgustaf", "carlgust", L"Carl G Rocket Launcher", L"Carl G", L"R-Launcher", L"special", {5, 4, 5, 3.5f, 1}, "carlgustaf", "rocket", "rocketeer satchel"},
-        {"dartrifle", "sniperdart", L"Dart Rifle", L"Dart Rifle", L"Sniper", L"special", {5, 4, 5, 3.5f, 1}, "dart rifle", "darts", "marksmans bandolier"},
-        {"lpo50", "lpo50", L"LPO-50 Flamethrower", L"LPO-50", L"Flamethrower", L"special", {3, 1, 5, 3.5f, 5}, "lpo50", "fuel", "pyrotechnic satchel"},
-        {"m249", "m249", L"M-249 SAW", L"M-249", L"LMG", L"special", {4, 4, 4, 3, 4}, "m249", "lmg", "gunner pack"},
-        {"mortar", "mortar", L"Type 63 Mortar", L"Mortar", L"Mortar", L"special", {-1, -1, -1, -1, -1}, "mortar", "mortar", "rocketeer satchel"},
-        {"pkm", "rpk", L"PKM", L"PKM", L"LMG", L"special", {3, 4, 3, 3.5f, 3}, "pkm", "lmg", "gunner pack"},
-        {"rpg7", "rpg7", L"RPG-7 Rocket Launcher", L"RPG-7", L"R-Launcher", L"special", {5, 4, 3, 4, 1}, "rpg7", "rocket", "rocketeer satchel"},
-        {"ied", "ied", L"IEDs", L"IED", L"Explosive", L"special", {5, 0, 0, 5, 0}, "ied", "ied", "grenadier webbing"},
+        {"ak47", "ak47", L"AK-47", L"AK-47", L"Assault", {3, 4, 3, 5, 4}, "ak47", "assaultrifle", "assault webbing"},
+        {"as50", "as50", L"AS50", L"AS50", L"Sniper", {5, 5, 3, 3, 3}, "as50", "sniperrifle", "marksmans bandolier"},
+        {"dragunov", "dragunov", L"Dragunov SVD", L"Dragunov", L"Sniper", {3, 4, 4, 4, 4}, "dragunov", "sniperrifle", "marksmans bandolier"},
+        {"fnfal", "fnfal", L"FAL Paratrooper", L"FAL", L"Assault", {3, 4, 4, 4, 4}, "fnfal", "assaultrifle", "assault webbing"},
+        {"g3ka4", "g3ka4", L"G3-KA4", L"G3-KA4", L"Assault", {3, 3, 4, 4, 3}, "g3ka4", "assaultrifle", "assault webbing"},
+        {"ithaca", "ithaca", L"Homeland 37", L"Homeland 37", L"Shotgun", {4, 3, 3, 2.5f, 2}, "ithaca", "shotgun", "shotgun bandolier"},
+        {"m16", "m16", L"AR-16", L"AR-16", L"Assault", {4, 4, 4, 3.5f, 3}, "m16", "assaultrifle", "assault webbing"},
+        {"m1903", "m1903", L"M1903 Sniper Rifle", L"M1903", L"Sniper", {4, 4, 5, 2.5f, 1}, "m1903", "sniperrifle", "marksmans bandolier"},
+        {"mgl140", "mgl40", L"MGL-140", L"MGL-140", L"G-Launcher", {4, 4, 3, 2.5f, 3}, "mgl40", "mgl140", "grenadier webbing"},
+        {"mp5", "mp5sd", L"Silent MP-5", L"MP-5", L"Assault", {2, 3, 3, 4, 4}, "mp5", "assaultrifle", "assault webbing"},
+        {"spas12", "spas12", L"SPAS-12", L"SPAS-12", L"Shotgun", {5, 2, 1, 3.5f, 3}, "spas12", "shotgun", "shotgun bandolier"},
+        {"usas12", "usas", L"USAS-12", L"USAS-12", L"Shotgun", {4, 2, 2, 4, 5}, "usas12", "shotgun", "shotgun bandolier"},
+        {"silencedmakarov", "6p9", L"Silent Makarov 6P9", L"6P9", L"Pistol", {2, 2, 3, 3, 4}, "6p9", "deserteagle", "pistol belt"},
+        {"deserteagle", "deagle", L"Eagle.50", L"Eagle.50", L"Pistol", {4, 3, 3, 2.5f, 2}, "de", "deserteagle", "pistol belt"},
+        {"flaregun", "flare", L"Flare Pistol", L"Flare Pistol", L"Flare", {3, 5, 1, 1.5f, 1}, "flare", "flare", "pyrotechnic satchel"},
+        {"m79", "m79", L"M-79 Grenade Launcher", L"M-79", L"G-Launcher", {4, 3, 2, 2, 2}, "m79", "m79", "grenadier webbing"},
+        {"mac10", "mac10", L"MAC-10", L"MAC-10", L"SMG", {2, 2, 2, 2.5f, 5}, "mac10", "smg", "light assault webbing"},
+        {"makarov", "makarov", L"Makarov", L"Makarov", L"Pistol", {2, 2, 3, 2.5f, 4}, "makarov", "deserteagle", "pistol belt"},
+        {"star45", "p45", L"Star .45", L"Star .45", L"Pistol", {3, 2, 3, 3.5f, 3}, "star45", "deserteagle", "pistol belt"},
+        {"uzi", "uzi", L"Uzi", L"Uzi", L"SMG", {2, 2, 3, 3, 4}, "uzi", "smg", "light assault webbing"},
+        {"carlgustaf", "carlgust", L"Carl G Rocket Launcher", L"Carl G", L"R-Launcher", {5, 4, 5, 3.5f, 1}, "carlgustaf", "rocket", "rocketeer satchel"},
+        {"dartrifle", "sniperdart", L"Dart Rifle", L"Dart Rifle", L"Sniper", {5, 4, 5, 3.5f, 1}, "dart rifle", "darts", "marksmans bandolier"},
+        {"lpo50", "lpo50", L"LPO-50 Flamethrower", L"LPO-50", L"Flamethrower", {3, 1, 5, 3.5f, 5}, "lpo50", "fuel", "pyrotechnic satchel"},
+        {"m249", "m249", L"M-249 SAW", L"M-249", L"LMG", {4, 4, 4, 3, 4}, "m249", "lmg", "gunner pack"},
+        {"mortar", "mortar", L"Type 63 Mortar", L"Mortar", L"Mortar", {-1, -1, -1, -1, -1}, "mortar", "mortar", "rocketeer satchel"},
+        {"pkm", "rpk", L"PKM", L"PKM", L"LMG", {3, 4, 3, 3.5f, 3}, "pkm", "lmg", "gunner pack"},
+        {"rpg7", "rpg7", L"RPG-7 Rocket Launcher", L"RPG-7", L"R-Launcher", {5, 4, 3, 4, 1}, "rpg7", "rocket", "rocketeer satchel"},
+        {"ied", "ied", L"IEDs", L"IED", L"Explosive", {5, 0, 0, 5, 0}, "ied", "ied", "grenadier webbing"},
     };
 
     // The belt, in its rows' order: what each is, how much of it the player carries, its picture,
@@ -175,15 +174,13 @@ namespace {
 
     // A gun's post-it, whether it is carried as `weapon` or stowed in Items as `item`.
     void GunPostIt(Model& model, const Carried& carried, const std::string& archetype, float reliability,
-                   int loaded, int spare, const std::wstring& where) {
+                   int loaded, int spare) {
         const Gun* known = GunOf(archetype);
         if (known != nullptr) {
             model.Show("IO_POSTIT_PIC_" + Upper(known->picture), true);
+            model.Text("IO_POSTIT_SUB", known->kind);
         }
         model.Text("IO_POSTIT_NAME", known != nullptr ? known->name : PlainName(archetype));
-        model.Text("IO_POSTIT_SUB", known != nullptr ? std::wstring(known->kind) + L" \x2022 " + known->slot +
-                                                           L" \x2022 " + where
-                                                     : where);
         if (reliability >= 0) {
             model.Text("IO_POSTIT_LINE1", L"Condition");
             model.Text("IO_POSTIT_VALUE1", Condition(reliability));
@@ -218,13 +215,9 @@ namespace {
                 model.Text("IO_POSTIT_NOTE", L"Nothing here. Pick a gun up, or take one from Items.");
                 return;
             }
-            std::wstring where = L"gun " + std::to_wstring(row.slot);
-            if (Inventory::Id(row.gun->item) == Inventory::InHandId(carried.inventory)) {
-                where += L", in hand";
-            }
             GunPostIt(model, carried, Inventory::Name(row.gun->weapon), Inventory::Reliability(row.gun->weapon),
                       Inventory::Loaded(carried.inventory, row.gun->weapon),
-                      Inventory::SpareRounds(carried.view, row.gun->weapon), where);
+                      Inventory::SpareRounds(carried.view, row.gun->weapon));
             return;
         }
         case Row::kMachete:
@@ -238,7 +231,7 @@ namespace {
             if (item.gun) {
                 const Gun* known = GunOf(item.id);
                 GunPostIt(model, carried, item.id, item.reliability, item.loaded,
-                          known != nullptr ? Inventory::Ammo(carried.view, known->ammo) : 0, L"stowed");
+                          known != nullptr ? Inventory::Ammo(carried.view, known->ammo) : 0);
                 return;
             }
             model.Text("IO_POSTIT_NAME", PlainName(item.id));
