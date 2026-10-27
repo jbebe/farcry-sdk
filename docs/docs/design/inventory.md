@@ -113,8 +113,8 @@ top by a paperclip, shows the highlighted row's picture and details.
 ```
  ┌──────────────────────────────┬──────────────────────────────┐
  │ WEAPONS                      │ ┌───────────────────────║──┐ │
- │ Ⓐ [AK-47 picture]  AK-47 used│ │ [picture]  Carl G        │ │
- │ Ⓑ [Makarov]      Makarov new │ │ R-Launcher · stowed      │ │
+ │ Ⓐ AK-47                      │ │ [picture]  Carl G        │ │
+ │ Ⓑ Makarov                    │ │ R-Launcher · stowed      │ │
  │   Machete                    │ │ condition worn  dmg ●●●●●│ │
  │ ITEMS                        │ │ ammo 1 / 4      rng ●●●●○│ │
  │ ▸ Carl G                     │ └──────────────────────────┘ │
@@ -138,15 +138,16 @@ and they are listed in the shop's order, so a gun is always in the same part of 
 
 | List | A row shows |
 |---|---|
-| Weapons | the slot's letter, A or B as multiplayer's VIP marks, the gun's picture, its name, its condition as a coloured word |
+| Weapons | the slot's letter, A or B as multiplayer's VIP marks, and the gun's name; its picture and condition are on the post-it |
 | Items | the name, nothing more |
 | Belt | the picture, the name, the count |
 
 **A gun's ammo is one line, "Ammo 30 / 120":** the rounds in the gun, then every remaining round
 the player carries for it. The words "loaded" and "spare" are never shown.
 
-**A gun's condition is only ever a word,** coloured: *new* green, *used* olive, *worn* orange,
-*failing* red. Never a bar or a number, so nobody can tell exactly when a gun will jam or blow up.
+**A gun's condition is only ever a word,** in the same ink as the rest: *new*, *used*, *worn*,
+*failing*. Never a bar or a number, so nobody can tell exactly when a gun will jam or blow up. The
+page uses no colours of its own.
 
 ### What the post-it shows
 

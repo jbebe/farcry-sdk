@@ -677,58 +677,6 @@
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_postit_new">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_postit_new" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF2A6B2F" ROTATION="0" ORIGIN.x="50" ORIGIN.y="12" LEFT="101" RIGHT="201" TOP="148" BOTTOM="172" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="new" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_postit_used">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_postit_used" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF12646F" ROTATION="0" ORIGIN.x="50" ORIGIN.y="12" LEFT="101" RIGHT="201" TOP="148" BOTTOM="172" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="used" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_postit_worn">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_postit_worn" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF0F56B0" ROTATION="0" ORIGIN.x="50" ORIGIN.y="12" LEFT="101" RIGHT="201" TOP="148" BOTTOM="172" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="worn" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_postit_failing">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_postit_failing" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141DA5" ROTATION="0" ORIGIN.x="50" ORIGIN.y="12" LEFT="101" RIGHT="201" TOP="148" BOTTOM="172" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="failing" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="i_io_postit_up0_faint">
         <PROPERTIES />
@@ -852,7 +800,7 @@
       </USERDATA>
       <KEYFRAMES>
         <Keyframe name="kf_t_io_postit_warn" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF1C2C8F" ROTATION="0" ORIGIN.x="183" ORIGIN.y="11" LEFT="26" RIGHT="392" TOP="258" BOTTOM="280" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="183" ORIGIN.y="11" LEFT="26" RIGHT="392" TOP="258" BOTTOM="280" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">

@@ -24,8 +24,6 @@ namespace {
     // The post-it's pictures besides the guns', as build-ui.ps1 makes them.
     constexpr const char* kOtherPictures[] = {"machete", "diamond", "seringe", "pills", "m67", "molotov",
                                               "jackal_photo", "jackal_definition", "apr_01", "ufll_01", "tape"};
-    // The condition words, from new down: the engine counts a gun's wear from 1 to 0.
-    constexpr const char* kConditions[] = {"NEW", "USED", "WORN", "FAILING"};
     constexpr int kUpgradeSlots = 4;
     constexpr int kHalfSteps = 10;
 
@@ -107,11 +105,8 @@ std::wstring PlainName(const std::string& id) {
     return Wide(name);
 }
 
-void Condition(Model& model, const std::string& prefix, float reliability) {
-    const int shown = reliability < 0 ? -1 : reliability >= 0.75f ? 0 : reliability >= 0.5f ? 1 : reliability >= 0.25f ? 2 : 3;
-    for (int word = 0; word < static_cast<int>(std::size(kConditions)); ++word) {
-        model.Show(prefix + kConditions[word], word == shown);
-    }
+const wchar_t* Condition(float reliability) {
+    return reliability >= 0.75f ? L"new" : reliability >= 0.5f ? L"used" : reliability >= 0.25f ? L"worn" : L"failing";
 }
 
 void List(Model& model, const std::string& list, size_t lines, size_t& first, const std::vector<std::wstring>& rows,
@@ -149,7 +144,6 @@ void ClearPostIt(Model& model) {
                              "IO_POSTIT_QUOTE", "IO_POSTIT_NOTE", "IO_POSTIT_WARN"}) {
         model.Text(name, L"");
     }
-    Condition(model, "IO_POSTIT_", -1);
     for (int slot = 0; slot < kUpgradeSlots; ++slot) {
         model.Show(Name("IO_POSTIT_UP", slot, "_FAINT"), false);
         model.Show(Name("IO_POSTIT_UP", slot, "_BOUGHT"), false);

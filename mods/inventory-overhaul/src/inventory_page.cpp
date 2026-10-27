@@ -186,7 +186,7 @@ namespace {
                                                      : where);
         if (reliability >= 0) {
             model.Text("IO_POSTIT_LINE1", L"Condition");
-            Condition(model, "IO_POSTIT_", reliability);
+            model.Text("IO_POSTIT_VALUE1", Condition(reliability));
         }
         model.Text("IO_POSTIT_LINE2", L"Ammo");
         model.Text("IO_POSTIT_VALUE2", (loaded >= 0 ? std::to_wstring(loaded) : L"-") + L" / " + std::to_wstring(spare));
@@ -273,12 +273,8 @@ namespace {
         const std::string row = Name("IO_HAND", slot);
         const std::string archetype = gun != nullptr ? Inventory::Name(gun->weapon) : "";
         const Gun* known = gun != nullptr ? GunOf(archetype) : nullptr;
-        for (const char* picture : kGunPictures) {
-            model.Show(row + "_PIC_" + Upper(picture), known != nullptr && std::string(known->picture) == picture);
-        }
         model.Text(row + "_NAME", gun == nullptr ? L"" : known != nullptr ? known->shortName : PlainName(archetype));
         model.Show(row + "_EMPTY", gun == nullptr);
-        Condition(model, row + "_", gun != nullptr ? Inventory::Reliability(gun->weapon) : -1);
         model.Show(row + "_SEL", selected);
     }
 

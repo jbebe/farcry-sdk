@@ -24,7 +24,7 @@ struct Model {
     std::wstring Key() const;
 };
 
-// Every gun picture a hand row and the post-it have, as build-ui.ps1 makes them.
+// Every gun picture the post-it has, as build-ui.ps1 makes them.
 inline constexpr const char* kGunPictures[] = {
     "6p9", "ak47", "as50", "carlgust", "deagle", "dragunov", "flare", "fnfal", "g3ka4", "ied",
     "ithaca", "lpo50", "m16", "m1903", "m249", "m79", "mac10", "makarov", "mgl40", "mp5sd",
@@ -37,8 +37,8 @@ std::wstring Wide(const std::string& text);
 // An id's last part with spaces for underscores: a gun the tables do not know, or an item.
 std::wstring PlainName(const std::string& id);
 
-// A gun's wear, 1 to 0, as one condition word shown, IO_<prefix><WORD> in its colour; none below 0.
-void Condition(Model& model, const std::string& prefix, float reliability);
+// A gun's wear, 1 to 0, as a condition word: new, used, worn or failing.
+const wchar_t* Condition(float reliability);
 
 // Fills IO_<LIST>1... with a window of `lines` of `rows` from `first`, kept on row `selected` if it
 // is one of them, and IO_<LIST>S_ABOVE and _MORE with the rows outside it.

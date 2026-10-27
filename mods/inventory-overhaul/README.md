@@ -120,10 +120,10 @@ It is drawn the way the pause menu's paper pages are: the `notebook` texture, bl
 no shadow, `common.mgb`'s post-it, paperclip, red line and brush stroke, cropped with the image's `OFFSET`
 and `TILING`. The sheet is the spread with room above it for the index tabs, which stand up from the
 left page's top edge behind the paper, out of the fingers' way: the open page's pulled up and white,
-the others grey.
-The guns' pictures are the shop's `gun_icon_*` textures, multiplied onto the paper, one image per gun
-and row, all but one hidden; each condition word is its own text in its own colour the same way,
-since a colour written into a text at runtime does not stay.
+the others grey. Everything is written in the one ink; the only colour is the red line under the
+selected row, tinted as the pause pages tint it.
+The post-it's gun pictures are the shop's `gun_icon_*` textures, multiplied onto the paper, one image
+per gun, all but one hidden.
 
 `src/engine/paper.cpp` puts it on the pages. Its first and last images, `mark_begin` and `mark_end`,
 are clear textures of a size no other has. While the notebook is open, the Direct3D texture binds
@@ -138,8 +138,8 @@ goes back to the screen, and a device reset releases both targets.
 the string assignment `CMagmaFacade::SetLabel` makes and `Element::SetVisible`
 (`src/engine/magma.cpp`), and only again when what it shows changes:
 
-- **Weapons:** guns 1 and 2, marked with multiplayer's VIP letters A and B, with their picture,
-  short name and condition as a coloured word (new, used, worn, failing), then the machete.
+- **Weapons:** guns 1 and 2 by their short name, marked with multiplayer's VIP letters A and B,
+  then the machete. Their picture and condition are on the post-it.
 - **Items:** stowed guns, other items with their count, and the player's diamonds; ten rows at a
   time, with how many more lie above and below beside the pause menu's arrow.
 - **The belt:** syrettes (the ammo type `syringe`), malaria pills (the player's counters

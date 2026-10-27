@@ -41,15 +41,12 @@ $SheetTop = -40
 $PostItCrop = @{ X = 13; Y = 16; W = 428; H = 311; Size = 512 }
 $TabCrop = @{ X = 40; Y = 40; W = 180; H = 70; Size = 512 }
 
-# The mockup's colours.
+# The mockup's ink, and the red of the pencil line a selected row is underlined with.
 $Ink = "2A1E14"
 $PencilRed = "8F2C1C"
-# A gun's condition is a word in its colour, never a number. Each is its own text, shown or hidden,
-# since a colour written into a text at runtime does not stay.
-$Conditions = [ordered]@{ new = "2F6B2A"; used = "6F6412"; worn = "B0560F"; failing = "A51D14" }
 
 # Every gun picture the game has, by the name gun_icon_<name>.png carries; the plugin asks for
-# IO_HAND1_PIC_<name> and so on.
+# IO_POSTIT_PIC_<name>.
 $GunPictures = "6p9 ak47 as50 carlgust deagle dragunov flare fnfal g3ka4 ied ithaca lpo50 m16 m1903 m249 m79 mac10 makarov mgl40 mp5sd p45 rpg7 rpk sniperdart spas12 usas uzi" -split ' '
 $Ratings = "Damage", "Range", "Accuracy", "Reliability", "Fire rate"
 # The sample papers' pictures, in textures\common, and the buddies' portraits,
@@ -159,7 +156,6 @@ $inkFull = Colour $Ink
 $inkSoft = Colour $Ink 0.6
 $countInk = Colour $Ink 0.65
 $redLine = Colour $PencilRed 0.55
-$pencil = Colour $PencilRed
 # The selected row's mark; the font has no arrow.
 $Arrow = [string][char]0xBB
 $left = 96
@@ -183,7 +179,7 @@ function Heading([string]$tab, [string]$name, [string]$string, [double]$x, [doub
 # A row's red pencil line and mark, shown while the row whose text is centred on `middle` is selected.
 function Selection([string]$tab, [string]$name, [double]$x, [double]$middle, [double]$lineWidth = ($width - 16)) {
     $areas[$tab].Add((Image "i_io_${name}_sel" red_line "\common.mgb" ($x + 24) ($middle - 2) $lineWidth 22 $redLine -0.6))
-    $areas[$tab].Add((Text "t_io_${name}_mark" $Arrow $x ($middle - 13) 30 26 22 $pencil CENTER))
+    $areas[$tab].Add((Text "t_io_${name}_mark" $Arrow $x ($middle - 13) 30 26 22 $inkFull CENTER))
     Export (AreaPath "a_io_$tab") "i_io_${name}_sel"
     Export (AreaPath "a_io_$tab") "t_io_${name}_mark"
 }
@@ -263,23 +259,12 @@ Selection inventory machete $left 192
 foreach ($k in 1, 2) {
     $top = 76 + ($k - 1) * 46
     $inventoryArea.Add((Image "i_io_hand${k}_slot" "io_slot_$([char](96 + $k))" "" ($left + 2) ($top + 10) 26 26 (Colour "906F4C" 0.7)))
-    foreach ($pic in $GunPictures) {
-        $inventoryArea.Add((Image "i_io_hand${k}_pic_$pic" "io_gun_$pic" "" ($left + 38) ($top + 11) 96 24 "FFFFFFFF" 0 @(0, 0, 1, 1) Multiply))
-        Export $InventoryPath "i_io_hand${k}_pic_$pic"
-    }
-    $inventoryArea.Add((Image "i_io_hand${k}_pic_mortar" hud_icon_mortar_shop "" ($left + 38) ($top + 11) 96 24 (Colour "000000" 0.82)))
-    Export $InventoryPath "i_io_hand${k}_pic_mortar"
-    $inventoryArea.Add((Text "t_io_hand${k}_name" "" ($left + 142) ($top + 10) 128 26 22 $inkFull))
-    $inventoryArea.Add((Text "t_io_hand${k}_empty" "empty" ($left + 142) ($top + 10) 128 26 22 $inkSoft))
+    $inventoryArea.Add((Text "t_io_hand${k}_name" "" ($left + 38) ($top + 10) ($width - 46) 26 22 $inkFull))
+    $inventoryArea.Add((Text "t_io_hand${k}_empty" "empty" ($left + 38) ($top + 10) ($width - 46) 26 22 $inkSoft))
     Export $InventoryPath "t_io_hand${k}_name"
     Export $InventoryPath "t_io_hand${k}_empty"
-    foreach ($word in $Conditions.Keys) {
-        $inventoryArea.Add((Text "t_io_hand${k}_$word" $word ($left + 270) ($top + 10) 90 26 20 (Colour $Conditions[$word]) RIGHT))
-        Export $InventoryPath "t_io_hand${k}_$word"
-    }
 }
-$inventoryArea.Add((Image i_io_machete hud_icon_machete "" ($left + 38) (168 + 11) 96 24 (Colour "000000" 0.82)))
-$inventoryArea.Add((Text t_io_machete "Machete" ($left + 142) 178 218 26 22 $inkFull))
+$inventoryArea.Add((Text t_io_machete "Machete" ($left + 38) 178 ($width - 46) 26 22 $inkFull))
 
 # Items shows a window of ten rows that follows the selection.
 Heading inventory t_io_items "ITEMS" $left 226
@@ -376,10 +361,6 @@ $postIt.Add((Text t_io_postit_value2 "" 81 174 120 24 20 $inkFull RIGHT))
 # A paper's, a tape's or a buddy's first line, a label and a longer value, and what it says below.
 $postIt.Add((Text t_io_postit_state "" 140 148 252 24 20 $inkFull))
 $postIt.Add((Text t_io_postit_quote "" 26 176 366 84 17 $inkFull LEFT 0 TOP $true))
-foreach ($word in $Conditions.Keys) {
-    $postIt.Add((Text "t_io_postit_$word" $word 101 148 100 24 20 (Colour $Conditions[$word]) RIGHT))
-    Export $PostItPath "t_io_postit_$word"
-}
 # The game's upgrade icons, faint until bought: a gun's operation and repair manuals and its
 # bandolier, or the syrettes' two first aid manuals.
 $upgrades = "manual", "repair", "ammo", "ammo"
@@ -391,7 +372,7 @@ for ($u = 0; $u -lt $upgrades.Count; $u++) {
     Export $PostItPath "i_io_postit_up${u}_bought"
 }
 $postIt.Add((Text t_io_postit_note "" 26 236 366 22 18 $inkFull))
-$postIt.Add((Text t_io_postit_warn "" 26 258 366 22 18 $pencil))
+$postIt.Add((Text t_io_postit_warn "" 26 258 366 22 18 $inkFull))
 foreach ($name in "t_io_postit_name", "t_io_postit_sub", "t_io_postit_value1", "t_io_postit_value2", "t_io_postit_state",
         "t_io_postit_quote", "t_io_postit_note", "t_io_postit_warn") {
     Export $PostItPath $name
