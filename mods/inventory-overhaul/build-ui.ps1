@@ -257,10 +257,12 @@ foreach ($k in 1, 2) {
     Export $InventoryPath "i_io_hand${k}_sel"
 }
 Selection inventory machete $left 192
-# Each gun slot is marked with multiplayer's VIP letter, A or B.
+# Each gun slot is marked with multiplayer's VIP letter, A or B, tinted with the paper's colour so its
+# grey disc takes the paper's tone, as multiplying it would, while its clear corners stay clear; at
+# 70% the paper shows through it.
 foreach ($k in 1, 2) {
     $top = 76 + ($k - 1) * 46
-    $inventoryArea.Add((Image "i_io_hand${k}_slot" "io_slot_$([char](96 + $k))" "" ($left + 2) ($top + 10) 26 26 "FFFFFFFF" 0 @(0, 0, 1, 1) Multiply))
+    $inventoryArea.Add((Image "i_io_hand${k}_slot" "io_slot_$([char](96 + $k))" "" ($left + 2) ($top + 10) 26 26 (Colour "906F4C" 0.7)))
     foreach ($pic in $GunPictures) {
         $inventoryArea.Add((Image "i_io_hand${k}_pic_$pic" "io_gun_$pic" "" ($left + 38) ($top + 11) 96 24 "FFFFFFFF" 0 @(0, 0, 1, 1) Multiply))
         Export $InventoryPath "i_io_hand${k}_pic_$pic"
