@@ -110,7 +110,8 @@ namespace {
             return true;
         }
         ReleaseAll();
-        if (FAILED(device->CreateRenderTarget(screen.Width, screen.Height, screen.Format, screen.MultiSampleType,
+        // With alpha, which cuts the pages out where the sheet has no paper.
+        if (FAILED(device->CreateRenderTarget(screen.Width, screen.Height, D3DFMT_A8R8G8B8, screen.MultiSampleType,
                                               screen.MultiSampleQuality, FALSE, &g_screen, nullptr)) ||
             FAILED(device->CreateTexture(screen.Width, screen.Height, 0, D3DUSAGE_RENDERTARGET | D3DUSAGE_AUTOGENMIPMAP,
                                          D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &g_page, nullptr))) {

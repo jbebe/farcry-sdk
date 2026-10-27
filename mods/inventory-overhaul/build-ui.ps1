@@ -4,14 +4,14 @@
 
 .DESCRIPTION
     The pages are the HTML mockup's spread (mockup\index.html), authored in the spread's own pixels and
-    drawn the way the pause menu's paper pages are: black Farcry2 ink, common.mgb's post-it, tape, red
-    line and brush stroke, on the dossier's own ruled paper. The plugin draws them onto the notebook's
-    pages rather than the screen: a_io_notebook lays the spread over the screen as the sheet the pages
-    show, and a_io_page holds it between two marker images the plugin knows it by, with its
-    index tabs, one area per page (a_io_inventory, a_io_papers, a_io_journal, a_io_contacts) shown at a
-    time, a_io_portraits the buddies' portraits a row takes its picture from, and a_io_postit the
-    post-it stuck on it. Everything the plugin fills or hides is exported as IO_*; a gun's picture is
-    one image per gun and slot, all but one hidden.
+    drawn the way the pause menu's paper pages are: the notebook texture, black Farcry2 ink, common.mgb's
+    post-it, tape, red line and brush stroke. The plugin draws them onto the notebook's pages rather than
+    the screen: a_io_notebook lays the spread over the screen as the sheet the pages show, and a_io_page
+    holds it between two marker images the plugin knows it by, with its index tabs along the top, one
+    area per page (a_io_inventory, a_io_papers, a_io_journal, a_io_contacts) shown at a time,
+    a_io_portraits the buddies' portraits a row takes its picture from, and a_io_postit the post-it
+    stuck on it. Everything the plugin fills or hides is exported as IO_*; a gun's picture is one image
+    per gun and slot, all but one hidden.
 
     Run from anywhere; reads the retail files under tmp\, writes layer\mods\ui.
 #>
@@ -21,29 +21,25 @@ $Repo = Resolve-Path "$PSScriptRoot\..\.."
 $Cli = "$Repo\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
 $Retail = "$Repo\tmp\gamefiles\common\ui\localized"
 $StockTexture = "$Repo\tmp\gamefiles\common\ui\textures\ui_tape_icon.xbt"
-$RuledPaper = "$Repo\tmp\gamefiles\worlds\worlds\graphics\_textures\diffuse\misc\paper_d.xbt"
 $Texconv = "$Repo\tools\third-party\FCBConverter\texconv.exe"
 $Layer = "$PSScriptRoot\layer\mods\ui\localized"
 $Textures = "$PSScriptRoot\layer\mods\ui\textures\io"
 $Work = "$PSScriptRoot\out\ui"
 
-# hud and its main page.
+# hud, its main page, and the pause menu's notebook material in common.mgb.
 $PackageId = "#A1126B78"
 $PageId = "#F2CDBA4C"
+$NotebookMaterial = "#F67D9A2B"
 $Farcry2 = "#5B34AD62"
 
-# The spread, and the sheet the dossier's pages show: as wide as the two pages are for the spread's
-# height (0.552 by 0.360 m), the spread centred on it. It covers the HUD's whole canvas page, which the
-# plugin copies whole.
-$Spread = @{ W = 1012; H = 716 }
-$SheetW = $Spread.H * 0.552 / 0.360
-$Margin = ($SheetW - $Spread.W) / 2
-# The dossier's ruled paper repeats 10 times across a page and 3.92 times down it.
-$PaperCrop = @(0, 0, 20, 3.92)
+# The spread's place in notebook.png. The sheet the notebook's pages show is the spread from $SheetTop
+# above it, room for the tabs; it covers the HUD's whole canvas page, which the plugin copies whole.
+$Spread = @{ X = 4; Y = 10; W = 1012; H = 716; Size = 1024 }
+$SheetTop = -40
 
 # The post-it's and an index tab's place in postit.png.
 $PostItCrop = @{ X = 13; Y = 16; W = 428; H = 311; Size = 512 }
-$TabCrop = @{ X = 40; Y = 40; W = 70; H = 180; Size = 512 }
+$TabCrop = @{ X = 40; Y = 40; W = 180; H = 70; Size = 512 }
 
 # The mockup's colours.
 $Ink = "2A1E14"
@@ -218,27 +214,26 @@ function List([string]$tab, [string]$name, [double]$x, [double]$top, [int]$lines
     Export $path "t_io_${name}s_more"
 }
 
-# An index tab: the post-it's tab shape, its page's name written up its side.
+# An index tab: a strip of post-it paper standing up from the spread's top edge, its page's name on it.
 function Tab([string]$name, [string]$label, [double]$x, [double]$y, [string]$tint) {
-    Image "i_io_$name" postit "\common.mgb" $x $y 96 116 $tint 0 (Crop $TabCrop)
-    Text "t_io_${name}_label" $label ($x + 12) ($y + 32) 116 52 22 $inkFull CENTER 90
+    Image "i_io_$name" postit "\common.mgb" $x $y 104 64 $tint 0 (Crop $TabCrop)
+    Text "t_io_${name}_label" $label $x ($y + 4) 104 24 18 $inkFull CENTER
 }
 
-# The page's first image, then the paper under everything, the sheet's whole width.
 $page.Add((Image i_io_begin io_mark_begin "" 0 0 2 2))
-$page.Add((Image i_io_paper io_paper "" (-$Margin) 0 $SheetW $Spread.H "FFFFFFFF" 0 $PaperCrop Normal Wrap))
 
-# Index tabs inside the sheet's right edge: each page's own pulled out over the spread in its area,
-# the others hidden while their page is open.
-$tabX = $Spread.W + $Margin - 96
+# Index tabs along the right page's top, behind the spread: each page's own pulled up and white
+# while it is open, the others grey.
 for ($i = 0; $i -lt $tabs.Count; $i++) {
     $tabName = $tabs[$i].ToLowerInvariant()
-    $y = 70 + $i * 124
-    $page.AddRange([string[]](Tab "tab_$tabName" $tabs[$i] $tabX $y "FFCCCCCC"))
-    Export $PagePath "i_io_tab_$tabName"
-    Export $PagePath "t_io_tab_${tabName}_label"
-    $areas[$tabName].AddRange([string[]](Tab "open_$tabName" $tabs[$i] ($tabX - 26) $y "FFFFFFFF"))
+    $x = 524 + $i * 106
+    foreach ($tab in @(@{ Name = "tab_$tabName"; Y = -16; Tint = "FFCCCCCC" }, @{ Name = "open_$tabName"; Y = -36; Tint = "FFFFFFFF" })) {
+        $page.AddRange([string[]](Tab $tab.Name $tabs[$i] $x $tab.Y $tab.Tint))
+        Export $PagePath "i_io_$($tab.Name)"
+        Export $PagePath "t_io_$($tab.Name)_label"
+    }
 }
+$page.Add((Image i_io_spread $NotebookMaterial "\common.mgb" 0 0 $Spread.W $Spread.H "FFFFFFFF" 0 (Crop $Spread)))
 
 # Inventory. The left page: Hands, then Items.
 $inventoryArea = $areas.inventory
@@ -416,7 +411,6 @@ $materials = @(
     $PaperPictures | ForEach-Object { Material "io_paper_$_" "\textures\common\$_.png" }
     $Portraits | ForEach-Object { Material "io_buddy_$_" "\textures\hud\icons_buddies\buddies_$_.png" }
     Material io_tape "\textures\ui_tape_icon.png"
-    Material io_paper "\textures\io\notebook_paper.png"
     Material io_mark_begin "\textures\io\mark_begin.png"
     Material io_mark_end "\textures\io\mark_end.png") -join "`n"
 
@@ -433,12 +427,11 @@ function Attribute([string]$line, [string]$name) {
     if ($v -gt 32767) { $v - 65536 } else { $v }
 }
 
-Remove-Item -Recurse -Force $Work -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force $Work, $Textures -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $Work, $Textures | Out-Null
 
-# The paper is the dossier's own. The markers are clear, single-level DXT5 under the header of a
-# stock HUD texture that has no _mip0 companion.
-Copy-Item $RuledPaper "$Textures\notebook_paper.xbt"
+# The markers are clear, single-level DXT5 under the header of a stock HUD texture that has no _mip0
+# companion.
 & $Cli xbt extract $StockTexture -o $Work | Out-Null
 Add-Type -AssemblyName System.Drawing
 # Their sizes are how the plugin knows them.
@@ -466,14 +459,14 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
     $screenY = -(Attribute $header 'DISPLAYOFFSET.y')
     $screenW = Attribute $header 'PAGESIZE.w'
     $screenH = Attribute $header 'PAGESIZE.h'
-    $scaleX = $screenW / $SheetW
-    $scaleY = $screenH / $Spread.H
-    $x = $screenX + $Margin * $scaleX
+    $scaleX = $screenW / $Spread.W
+    $scaleY = $screenH / ($Spread.H - $SheetTop)
+    $y = $screenY - $SheetTop * $scaleY
 
     $areaXml = @(
-        (Area a_io_notebook ($Spread.W + $Margin) $Spread.H @(Instance a_io_page 0 0 1 1 0))
-        (Area a_io_page ($Spread.W + $Margin) $Spread.H $page)
-        foreach ($tabName in $areas.Keys) { Area "a_io_$tabName" ($Spread.W + $Margin) $Spread.H $areas[$tabName] }
+        (Area a_io_notebook $Spread.W $Spread.H @(Instance a_io_page 0 0 1 1 0))
+        (Area a_io_page $Spread.W $Spread.H $page)
+        foreach ($tabName in $areas.Keys) { Area "a_io_$tabName" $Spread.W $Spread.H $areas[$tabName] }
         (Area a_io_portraits 44 44 $palette)
         (Area a_io_postit 416 302 $postIt)) -join "`n"
     $objects = @("<GENERICOBJECT name=`"IO_NOTEBOOK`"><LINK slot=`"69`" LASTOBJECTTYPE=`"Element`" IDS=`"$NotebookPath a_io_page`" /></GENERICOBJECT>") + $Exports
@@ -488,7 +481,7 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
 
     # Last on the HUD page, so its draws are the last of the HUD's.
     $pageEnd = IndexOf $lines '</CHILDREN>' (IndexOf $lines "<USERDATA name=`"$PageId`">")
-    $lines.Insert($pageEnd, (Instance a_io_notebook $x $screenY $scaleX $scaleY 0))
+    $lines.Insert($pageEnd, (Instance a_io_notebook $screenX $y $scaleX $scaleY 0))
 
     $materialsAt = IndexOf $lines '<MATERIALS materialExtra='
     $lines.Insert($materialsAt + 1, $materials)
@@ -501,5 +494,5 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
     Remove-Item -Recurse -Force "$target\hud.mgb" -ErrorAction SilentlyContinue
     & $Cli mgb fragments "$dir\hud.xml" --base $source.FullName --out "$target\hud.mgb" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "fragments failed for $variant" }
-    Write-Host ("{0,-20} notebook at {1:0},{2:0} scaled {3:0.000} x {4:0.000}" -f $variant, $x, $screenY, $scaleX, $scaleY)
+    Write-Host ("{0,-20} notebook at {1:0},{2:0} scaled {3:0.000} x {4:0.000}" -f $variant, $screenX, $y, $scaleX, $scaleY)
 }

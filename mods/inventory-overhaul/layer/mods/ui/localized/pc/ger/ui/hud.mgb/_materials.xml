@@ -48,7 +48,6 @@
   <Material name="io_buddy_warren" texture="\textures\hud\icons_buddies\buddies_warren.png" REGION="0 0 1 1" />
   <Material name="io_buddy_bai" texture="\textures\hud\icons_buddies\buddies_bai.png" REGION="0 0 1 1" />
   <Material name="io_tape" texture="\textures\ui_tape_icon.png" REGION="0 0 1 1" />
-  <Material name="io_paper" texture="\textures\io\notebook_paper.png" REGION="0 0 1 1" />
   <Material name="io_mark_begin" texture="\textures\io\mark_begin.png" REGION="0 0 1 1" />
   <Material name="io_mark_end" texture="\textures\io\mark_end.png" REGION="0 0 1 1" />
   <Material name="hud_icon_flairgun" texture="\textures\hud\icons_weapons\hud_icon_flairgun.png" REGION="0 0 1 1" />

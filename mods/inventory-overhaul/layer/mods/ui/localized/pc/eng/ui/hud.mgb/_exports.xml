@@ -9,11 +9,23 @@
     <GENERICOBJECT name="IO_TAB_INVENTORY_LABEL">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page t_io_tab_inventory_label" />
     </GENERICOBJECT>
+    <GENERICOBJECT name="IO_OPEN_INVENTORY">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page i_io_open_inventory" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_OPEN_INVENTORY_LABEL">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page t_io_open_inventory_label" />
+    </GENERICOBJECT>
     <GENERICOBJECT name="IO_TAB_PAPERS">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page i_io_tab_papers" />
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_TAB_PAPERS_LABEL">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page t_io_tab_papers_label" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_OPEN_PAPERS">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page i_io_open_papers" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_OPEN_PAPERS_LABEL">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page t_io_open_papers_label" />
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_TAB_JOURNAL">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page i_io_tab_journal" />
@@ -21,11 +33,23 @@
     <GENERICOBJECT name="IO_TAB_JOURNAL_LABEL">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page t_io_tab_journal_label" />
     </GENERICOBJECT>
+    <GENERICOBJECT name="IO_OPEN_JOURNAL">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page i_io_open_journal" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_OPEN_JOURNAL_LABEL">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page t_io_open_journal_label" />
+    </GENERICOBJECT>
     <GENERICOBJECT name="IO_TAB_CONTACTS">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page i_io_tab_contacts" />
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_TAB_CONTACTS_LABEL">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page t_io_tab_contacts_label" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_OPEN_CONTACTS">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page i_io_open_contacts" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_OPEN_CONTACTS_LABEL">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page t_io_open_contacts_label" />
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_HAND1_SEL">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory i_io_hand1_sel" />

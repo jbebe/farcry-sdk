@@ -183,7 +183,9 @@ void Update(const void* view, void* inventory) {
     for (int tab = 0; tab < kTabs; ++tab) {
         const std::string name = kTabNames[tab];
         model.Show("IO_" + name, tab == g_tab);
-        // The open page's tab is its own, drawn over the spread.
+        // Each tab has an open look, pulled up, and a closed one.
+        model.Show("IO_OPEN_" + name, tab == g_tab);
+        model.Show("IO_OPEN_" + name + "_LABEL", tab == g_tab);
         model.Show("IO_TAB_" + name, tab != g_tab);
         model.Show("IO_TAB_" + name + "_LABEL", tab != g_tab);
     }

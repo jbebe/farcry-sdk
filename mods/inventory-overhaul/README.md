@@ -9,7 +9,7 @@ this is an FCSE plugin, built in the log's steps.
 | 1. Two guns | gun 1 on key 2, gun 2 on key 3, of any class; a third gun replaces the one in hand | works in game |
 | 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay | works in game |
 | 3. The notebook on Tab | a new Notebook control brings the map out with its notebook face up; the map's own mesh and paper stand in | works in game |
-| 4. The Inventory page | the mockup's spread as a Magma page drawn onto the notebook's pages: Hands, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet. On the dossier's pages seen only with the dossier from a test layer; with the map it lands on the map's sheet |
+| 4. The Inventory page | the mockup's spread as a Magma page drawn onto the notebook's pages: Hands, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet. On the notebook's pages seen only with the notebook model from a test layer; with the map it lands on the map's sheet |
 | 6, in part. Papers, Journal, Contacts | R turns the page; letters and photos and the Jackal tapes found, the reputation, and the buddies met, in the pause menu's words | seen in game in the demo range; the Journal's jobs are not read yet, and the papers are samples |
 
 ## Two guns
@@ -92,30 +92,30 @@ The pages are the mockup's spread built in Magma and added to the HUD (`hud.mgb`
 the notebook's pages in the world rather than over the screen. `build-ui.ps1` makes it from each
 retail `hud.mgb`, in both aspects and every language, and writes the parts it changes as fragments
 under `layer/mods/ui/localized`, which merge with other mods' HUD fragments, such as the flashlight's
-icon, and its three textures under `layer/mods/ui/textures/io`:
+icon, and its two marker textures under `layer/mods/ui/textures/io`:
 
 | Area | What it holds |
 |---|---|
 | `a_io_notebook` | the sheet the notebook's pages show, laid untilted over the HUD's whole canvas, last on the HUD page |
-| `a_io_page` | the paper and the closed index tabs, in the spread's own pixels, with the areas below, between two marker images |
-| `a_io_inventory`, `a_io_papers`, `a_io_journal`, `a_io_contacts` | one page each, with its open tab |
+| `a_io_page` | the spread and the index tabs, in the spread's own pixels, with the areas below, between two marker images |
+| `a_io_inventory`, `a_io_papers`, `a_io_journal`, `a_io_contacts` | one page each |
 | `a_io_portraits` | the buddies' portraits, hidden, for rows to copy |
 | `a_io_postit` | the post-it with its tape, tilted on the page |
 
-It is drawn the way the pause menu's paper pages are: black Farcry2 ink with no shadow,
-`common.mgb`'s post-it, tape, red line and brush stroke, cropped with the image's `OFFSET` and
-`TILING`. Its background is the dossier's own ruled paper, `paper_d`, repeated as the dossier repeats
-it, so nothing of the pause menu's notebook is on it. The sheet has the proportions of the dossier's
-two pages, the spread centred on it with paper either side and the index tabs inside the right edge.
+It is drawn the way the pause menu's paper pages are: the `notebook` texture, black Farcry2 ink with
+no shadow, `common.mgb`'s post-it, tape, red line and brush stroke, cropped with the image's `OFFSET`
+and `TILING`. The sheet is the spread with room above it for the index tabs, which stand up from the
+right page's top edge, out of the fingers' way: the open page's pulled up and white, the others grey.
 The guns' pictures are the shop's `gun_icon_*` textures, multiplied onto the paper, one image per gun
 and row, all but one hidden; each condition word is its own text in its own colour the same way,
 since a colour written into a text at runtime does not stay.
 
 `src/engine/paper.cpp` puts it on the pages. Its first and last images, `mark_begin` and `mark_end`,
 are clear textures of a size no other has. While the notebook is open, the Direct3D texture binds
-between them go into a target of the screen's size instead of the screen. That target is copied into
-a mip-mapped texture, which is bound wherever the map's `MAPTOP` texture is: the dossier's pages draw
-with that material, the one `CGadgetMapStrategy::SetMapTexture` fills with the area map. Magma draws
+between them go into a target of the screen's size, with alpha, instead of the screen. That target is
+copied into a mip-mapped texture, which is bound wherever the area map is: the notebook's pages draw
+with a material named `MAPTOP`, which `CGadgetMapStrategy::SetMapTexture` fills with the area map,
+and cut themselves out by the sheet's alpha, so their outline is the notebook picture's. Magma draws
 after the world, so the pages show the frame before's page. A frame that ends before the last marker
 goes back to the screen, and a device reset releases both targets.
 

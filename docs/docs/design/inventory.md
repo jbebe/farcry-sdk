@@ -247,12 +247,14 @@ Movement and look stay live, as with the map. The gamepad mirrors the map's: d-p
   gadget would need the engine to take one beside the map; one held object with two faces needs
   nothing new.
 - **The page is Magma**, built the way the pause menu's paper pages are, so it looks like the game's
-  own: Farcry2 ink, `common.mgb`'s post-it, tape and red line. It is drawn onto the notebook's pages,
-  where it is lit by the world and moves with the hands, since a flat overlay reads as a HUD. It has
-  no background of its own: the paper under the ink is the dossier's ruled paper. The draws between
-  the page's first and last image go into a texture instead of the screen, and the pages draw with
-  the map's `MAPTOP` material, which shows that texture in place of the area map. The notebook in
-  hand is a copy of the Jackal dossier, a white ruled notebook, carried by the map's animations.
+  own: the `notebook` texture, Farcry2 ink, `common.mgb`'s post-it, tape and red line, with the
+  index tabs along the top, clear of the fingers. It is drawn onto the notebook's pages, where it is
+  lit by the world and moves with the hands, since a flat overlay reads as a HUD. The draws between
+  the page's first and last image go into a texture instead of the screen, and the pages draw with a
+  material named `MAPTOP`, which shows that texture in place of the area map, cut out to the notebook
+  picture's own outline. The notebook in hand is a model of its own: two pages meeting at the spine,
+  10° apart, each a chain of hinged strips, so the right page bends as the hands come together and
+  apart. The map's animations carry it, the right arm mirroring the left.
 
 ## Steps
 
