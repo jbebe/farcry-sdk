@@ -220,8 +220,8 @@ function Tab([string]$name, [string]$label, [double]$x, [double]$y, [double]$h, 
     Text "t_io_${name}_label" $label $x ($y + 4) 104 24 18 $inkFull CENTER
 }
 
-# Index tabs along the left page's top: the closed ones grey and behind the spread, the open page's
-# white, pulled up and stuck over the paper's edge.
+# Index tabs along the left page's top, behind the spread: the closed ones grey, the open page's white
+# and pulled up.
 function AddTabs([string]$look, [double]$y, [double]$h, [string]$tint) {
     for ($i = 0; $i -lt $tabs.Count; $i++) {
         $name = "${look}_$($tabs[$i].ToLowerInvariant())"
@@ -233,8 +233,8 @@ function AddTabs([string]$look, [double]$y, [double]$h, [string]$tint) {
 
 $page.Add((Image i_io_begin io_mark_begin "" 0 0 2 2))
 AddTabs tab -16 64 "FFCCCCCC"
-$page.Add((Image i_io_spread $NotebookMaterial "\common.mgb" 0 0 $Spread.W $Spread.H "FFFFFFFF" 0 (Crop $Spread)))
 AddTabs open -30 74 "FFFFFFFF"
+$page.Add((Image i_io_spread $NotebookMaterial "\common.mgb" 0 0 $Spread.W $Spread.H "FFFFFFFF" 0 (Crop $Spread)))
 
 # Inventory. The left page: Hands, then Items.
 $inventoryArea = $areas.inventory

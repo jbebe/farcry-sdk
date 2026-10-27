@@ -132,19 +132,6 @@
       </Text>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_spread">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_i_io_spread" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="506" ORIGIN.y="358" LEFT="0" RIGHT="1012" TOP="0" BOTTOM="716" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="0.988281" TILING.y="0.699219" OFFSET.x="0.003906" OFFSET.y="0.009766" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="#F67D9A2B" PACKAGE="\common.mgb" />
-      </Image>
-    </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="i_io_open_inventory">
         <PROPERTIES />
       </USERDATA>
@@ -247,6 +234,19 @@
       <Text useStringTable="false" STRING="Contacts" ALIGNMENTX="CENTER" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_spread">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_spread" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="506" ORIGIN.y="358" LEFT="0" RIGHT="1012" TOP="0" BOTTOM="716" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="0.988281" TILING.y="0.699219" OFFSET.x="0.003906" OFFSET.y="0.009766" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="#F67D9A2B" PACKAGE="\common.mgb" />
+      </Image>
     </Element>
     <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="a_io_inventory">

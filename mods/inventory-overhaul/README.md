@@ -105,8 +105,8 @@ icon, and its two marker textures under `layer/mods/ui/textures/io`:
 It is drawn the way the pause menu's paper pages are: the `notebook` texture, black Farcry2 ink with
 no shadow, `common.mgb`'s post-it, tape, red line and brush stroke, cropped with the image's `OFFSET`
 and `TILING`. The sheet is the spread with room above it for the index tabs, which stand up from the
-left page's top edge, out of the fingers' way: the open page's pulled up, white and stuck over the
-paper's edge, the others grey and behind it.
+left page's top edge behind the paper, out of the fingers' way: the open page's pulled up and white,
+the others grey.
 The guns' pictures are the shop's `gun_icon_*` textures, multiplied onto the paper, one image per gun
 and row, all but one hidden; each condition word is its own text in its own colour the same way,
 since a colour written into a text at runtime does not stay.
