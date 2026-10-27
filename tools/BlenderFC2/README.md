@@ -136,8 +136,10 @@ Four things a reader has to get right or the pose comes out mangled. They are wh
 rather than a generic JSON-to-Action script:
 
 - **A bank is not one clip.** It carries one clip per skeleton taking part, so a weapon rig has to
-  reach past the character's clip to its own. Which one is decided by the rig's own bone ids, not by
-  position — an index would silently mispose the model when it went stale.
+  reach past the character's clip to its own. Which one is the clip whose tag record names the rig's
+  root bone, else the first the rig's bone ids fit — not a position, which would silently mispose
+  the model when it went stale. The ids alone are not enough: the map's bank holds the compass's
+  3-bone clip ahead of the map's own, and both fit.
 - **The mesh's bone tree is not the tree clips animate.** On `pelvis_ref` four bones differ: the
   mid-joint helpers `L/R Knee` and `L/R Elbow` hang off the `Pelvis` in the mesh but off the thigh
   and upper arm in the rig. Animate them on the mesh's tree and a knee helper stays by the hip while

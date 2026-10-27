@@ -2,8 +2,8 @@
 #
 # A bank is not one animation: it holds a clip per skeleton taking part, so a
 # weapon's motion rides behind the character's. Which one fits a given rig is
-# re-derived from the rig's own bone ids rather than trusted from an index -
-# a stale index would silently mispose the model.
+# re-derived from the tag table and the rig's own bone ids rather than trusted
+# from an index - a stale index would silently mispose the model.
 #
 # Rotations and offsets are local and replace the bone's own rest transform, so
 # what the pose bone carries is the rest undone and the clip's applied.
@@ -50,18 +50,24 @@ def bone_ids(clip):
 
 
 def clip_for(bank, skeleton):
-    """The clip a bank holds for this rig: the first whose ids fit it.
+    """The clip a bank holds for this rig: the one its tag record names after the
+    rig's root bone, which carries the model's name, else the first whose ids fit.
 
     A bank carries one clip per skeleton taking part, character first and then
-    the weapon or vehicle it handles, so a weapon rig has to skip past the
-    character's clip to reach its own.
+    the weapon or vehicle it handles, and two small props can both fit one rig.
     """
     count = len(skeleton["bones"])
-    for clip in bank["clips"]:
+
+    def fits(clip):
         ids = bone_ids(clip)
-        if not ids or ids[-1] < count:
+        return not ids or ids[-1] < count
+
+    root = skeleton["bones"][0]["name"].lower() if count else None
+    for record in bank.get("participants") or ():
+        clip = bank["clips"][record["clip"]]
+        if not record.get("reference") and record["name"].lower() == root and fits(clip):
             return clip
-    return None
+    return next(filter(fits, bank["clips"]), None)
 
 
 def load(pack, bank_path, armature, with_props=False, lod=0, actor=None, still=False):

@@ -285,6 +285,11 @@ ids all fit it. A character clip addresses ids up to 118, so an 8-bone weapon ri
 lands on its own clip; the character rig matches the first clip and stops there. Of the 468 banks
 filed under a weapon, 467 chain a clip that fits that weapon's `_ref.skeleton`.
 
+Fitting alone is ambiguous when two small props take part: the map's banks chain the compass's
+3-bone clip ahead of the map's 1-bone one, and both fit the 5-bone `map_ref.skeleton`. The tag record
+settles it, since a participant is named after its model and a rig's root bone carries the same
+name (`Map` in `map_ref.skeleton`).
+
 Loading `1stge_uppb_reload_+000fw_prak4_i1.mab` twice — once against `pelvis_ref.skeleton` and once
 against `ak47_ref.skeleton` — poses 53 character bones from the first clip and all 8 AK-47 bones
 from the second, with `AK47`, `CLIP`, `SLIDE` and `ACCESSORY` carrying the translations, which is

@@ -253,8 +253,9 @@ them weapons**. Small enough to name rather than design around.
 
 Nothing in a mesh names its animation, so a pack carries the banks it is told to carry. `clips[]` in
 the manifest indexes them - enough to list what a pack holds without opening and parsing every one.
-It is a **hint, not truth**: which clip in a chain belongs to a given rig must be re-derived from the
-rig's bone ids on load, so a stale entry can never mispose anything.
+It is a **hint, not truth**: which clip in a chain belongs to a given rig must be re-derived on load,
+from the tag record naming the rig's root bone and the rig's bone ids (see
+[`.mab`](./mab.md#reading-a-weapons-animation)), so a stale entry can never mispose anything.
 
 `label` is the bank's own file name. The format carries no friendlier one, and the naming convention
 (`1stge_uppb_reload_+000fw_prak4_i1` - first person, upper body, reload, no direction, AK-pattern
