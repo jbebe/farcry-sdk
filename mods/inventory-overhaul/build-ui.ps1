@@ -215,25 +215,26 @@ function List([string]$tab, [string]$name, [double]$x, [double]$top, [int]$lines
 }
 
 # An index tab: a strip of post-it paper standing up from the spread's top edge, its page's name on it.
-function Tab([string]$name, [string]$label, [double]$x, [double]$y, [string]$tint) {
-    Image "i_io_$name" postit "\common.mgb" $x $y 104 64 $tint 0 (Crop $TabCrop)
+function Tab([string]$name, [string]$label, [double]$x, [double]$y, [double]$h, [string]$tint) {
+    Image "i_io_$name" postit "\common.mgb" $x $y 104 $h $tint 0 (Crop $TabCrop)
     Text "t_io_${name}_label" $label $x ($y + 4) 104 24 18 $inkFull CENTER
 }
 
-$page.Add((Image i_io_begin io_mark_begin "" 0 0 2 2))
-
-# Index tabs along the right page's top, behind the spread: each page's own pulled up and white
-# while it is open, the others grey.
-for ($i = 0; $i -lt $tabs.Count; $i++) {
-    $tabName = $tabs[$i].ToLowerInvariant()
-    $x = 524 + $i * 106
-    foreach ($tab in @(@{ Name = "tab_$tabName"; Y = -16; Tint = "FFCCCCCC" }, @{ Name = "open_$tabName"; Y = -36; Tint = "FFFFFFFF" })) {
-        $page.AddRange([string[]](Tab $tab.Name $tabs[$i] $x $tab.Y $tab.Tint))
-        Export $PagePath "i_io_$($tab.Name)"
-        Export $PagePath "t_io_$($tab.Name)_label"
+# Index tabs along the left page's top: the closed ones grey and behind the spread, the open page's
+# white, pulled up and stuck over the paper's edge.
+function AddTabs([string]$look, [double]$y, [double]$h, [string]$tint) {
+    for ($i = 0; $i -lt $tabs.Count; $i++) {
+        $name = "${look}_$($tabs[$i].ToLowerInvariant())"
+        $page.AddRange([string[]](Tab $name $tabs[$i] (70 + $i * 106) $y $h $tint))
+        Export $PagePath "i_io_$name"
+        Export $PagePath "t_io_${name}_label"
     }
 }
+
+$page.Add((Image i_io_begin io_mark_begin "" 0 0 2 2))
+AddTabs tab -16 64 "FFCCCCCC"
 $page.Add((Image i_io_spread $NotebookMaterial "\common.mgb" 0 0 $Spread.W $Spread.H "FFFFFFFF" 0 (Crop $Spread)))
+AddTabs open -30 74 "FFFFFFFF"
 
 # Inventory. The left page: Hands, then Items.
 $inventoryArea = $areas.inventory
