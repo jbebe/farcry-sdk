@@ -54,6 +54,8 @@ int Ammo(const void* view, const char* ammo);
 int Throwables(const void* view, const char* category);
 // The malaria pills the player carries, or -1 when there is no player.
 int Pills();
+// The player's reputation level, 0 to 5, or -1 when there is no player.
+int Reputation();
 
 // An item's id, by which the engine selects, draws and saves it.
 uint32_t& Id(void* item);

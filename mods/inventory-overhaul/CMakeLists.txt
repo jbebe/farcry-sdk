@@ -18,15 +18,20 @@ include("${DEVTOOLS_INCLUDE_DIR}/devtools_imgui.cmake")
 
 add_library(InventoryOverhaul SHARED
   "src/main.cpp"
+  "src/contacts_page.cpp"
+  "src/inventory_page.cpp"
   "src/items.cpp"
+  "src/journal_page.cpp"
   "src/notebook.cpp"
   "src/page.cpp"
+  "src/papers_page.cpp"
   "src/test_window.cpp"
   "src/two_guns.cpp"
   "src/engine/economy.cpp"
   "src/engine/game_thread.cpp"
   "src/engine/inventory.cpp"
   "src/engine/magma.cpp"
+  "src/engine/story.cpp"
 )
 
 target_include_directories(InventoryOverhaul PRIVATE

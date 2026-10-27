@@ -10,6 +10,7 @@ this is an FCSE plugin, built in the log's steps.
 | 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay | works in game |
 | 3. The notebook on Tab | a new Notebook control brings the map out with its notebook face up; the map's own mesh and paper stand in | works in game |
 | 4. The Inventory page | the mockup's spread as a Magma page over the HUD: Hands, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet |
+| 6, in part. Papers, Journal, Contacts | R turns the page; letters and photos and the Jackal tapes found, the reputation, and the buddies met, in the pause menu's words | seen in game in the demo range; the Journal's jobs are not read yet, and the papers are samples |
 
 ## Two guns
 
@@ -59,8 +60,9 @@ and stays with the player, and upgrades are the player's, not the gun's, so noth
 
 Until the notebook can use its rows, a window in DevTools' overlay (Home) shows both slots and
 Items, with Stow, Take, Give and Discard, and +1 on the diamonds, which runs `#Game:AddDiamonds(1)`.
-Fill gives the mockup's long Items list, two stowed guns and nine items, to see Items scroll; the
-game started with the environment variable `INVENTORY_OVERHAUL_FILL` set does the same as it loads.
+Fill gives the mockup's long Items list, two stowed guns and nine items, to see Items scroll, and the
+other pages' test data; the game started with the environment variable `INVENTORY_OVERHAUL_FILL` set
+does the same as it loads.
 Its buttons are carried out on the game thread, the next time the HUD asks for the player's gun. An
 item's id has no spaces, so the page shows its underscores as spaces.
 
@@ -86,7 +88,7 @@ The notebook works on foot only for now: the driving controls are left as they a
 
 ### The Inventory page
 
-The page is the mockup's spread built in Magma and added to the HUD (`hud.mgb`), drawn over the
+The pages are the mockup's spread built in Magma and added to the HUD (`hud.mgb`), drawn over the
 screen while the notebook's face is up. It is a 2D overlay for now; drawing it onto the map's paper
 comes after. `build-ui.ps1` makes it from each retail `hud.mgb`, in both aspects and every language,
 and writes the parts it changes as fragments under `layer/mods/ui/localized`, which merge with other
@@ -95,7 +97,9 @@ mods' HUD fragments, such as the flashlight's icon:
 | Area | What it holds |
 |---|---|
 | `a_io_notebook` | the page's place on the HUD page, last there so it draws over the rest |
-| `a_io_page` | the spread, the index tabs, Hands, Items and the belt, in the spread's own pixels |
+| `a_io_page` | the spread and the closed index tabs, in the spread's own pixels, with the areas below |
+| `a_io_inventory`, `a_io_papers`, `a_io_journal`, `a_io_contacts` | one page each, with its open tab |
+| `a_io_portraits` | the buddies' portraits, hidden, for rows to copy |
 | `a_io_postit` | the post-it with its tape, tilted on the page |
 
 It is drawn the way the pause menu's paper pages are: the `notebook` texture, black Farcry2 ink with
@@ -134,7 +138,32 @@ and molotovs their bandoliers. Bought is a name in the wallet's list, as the sho
 Names, classes and ratings are the shop's and the loadout's, matched by the archetype's last part;
 a gun the table does not know is named from its archetype. The page shows at the end of each frame
 (`GameThread::EachFrame`) and only while the notebook is open, so a HUD loaded meanwhile starts
-hidden. Using the selected row, and the other tabs' pages, are still to come.
+hidden. Using the selected row is still to come.
+
+### The other pages
+
+R, the map's `flipside`, turns the page while the notebook's face is up: Inventory, Papers, Journal,
+Contacts, then Inventory again. The notebook takes the signal, as it does the wheel's, so the map
+stays as it is. Each page keeps its own selection. Each is an area of its own in the spread
+(`a_io_inventory`, `a_io_papers`, `a_io_journal`, `a_io_contacts`), one shown at a time, with its
+index tab pulled out over the spread; the post-it is shared, and hidden on a page with no rows. Every
+text the game has is the game's, in the player's language, through its string table
+(`src/engine/story.cpp`):
+
+- **Papers** (`src/papers_page.cpp`): on the left the letters and photos, the Items records the page
+  knows by id, which leave the Inventory page's Items. For now four sample papers from the mockup,
+  with their textures in `textures\common`. On the right the Jackal tapes found, from the mission
+  manager, each with its title and the game's line about it.
+- **Journal** (`src/journal_page.cpp`): the reputation level and its words, as the pause menu's
+  Journal has them. Where the game keeps the jobs is not traced yet, so the right page says so.
+- **Contacts** (`src/contacts_page.cpp`): the buddies met, from the buddies manager, those ready to
+  pull the player out on the left and the rest on the right, each with a portrait, name and status,
+  and on the post-it their nationality, age and the first line the pause menu's Buddies page has.
+  A row's portrait is copied from a hidden image of the same package (`a_io_portraits`).
+
+Fill in the test window, or `INVENTORY_OVERHAUL_FILL`, also gives the sample papers and, through the
+game's own Lua in DevTools' console, meets Frank, Flora, Marty, Josip and Warren, makes Flora
+rescue-ready, and finds five tapes.
 
 ## Testing
 

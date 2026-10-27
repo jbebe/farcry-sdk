@@ -266,7 +266,7 @@ Each step ends with one check in game before the next.
 | 3 | The notebook in hand on Tab, the map's mesh standing in | walk, look and get shot with it out |
 | 4 | The Inventory page in Magma, as an overlay, then on the paper | pictures, wear and ammo match the guns |
 | 5 | The notebook model, page turns on the flip | |
-| 6 | The pause pages moved in | the pause menu keeps only its eight entries |
+| 6 | The pause pages moved in. Built so far: Papers (sample papers, the tapes found), Journal (reputation) and Contacts (the buddies met), each read from the game, and R turning the page | the pause menu keeps only its eight entries |
 | 7 | Papers and memories: a letter and a photo in the world | read one, walking |
 | 8 | The box at the crates | bring a found Carl G home and take it out again |
 | 9 | One fetch mission | |
@@ -278,8 +278,12 @@ Each step ends with one check in game before the next.
   the game binds them to walking beside W and S, so for now only the wheel moves the selection.
 - **How the page gets onto the paper:** which of `Render2DView`'s draws are the page's, and whether
   the paper's texture coordinates show all of it the right way up.
-- **R turns the paper over** to the world map, which is the map's own back, not a notebook page.
-  Page turns need their own face or the notebook's own model (step 5).
+- **The Journal's jobs:** where the game keeps the jobs taken and their current objective is not
+  traced yet. The pause menu's Journal shows the progress manager's story synopses instead
+  (`GetLocalizedMiSyn`, `ChSyn`, `CuSyn`, from `LoadScreens`), and the objectives' first-person texts
+  sit in `Objectives` keyed by mission state.
+- **Real papers:** the Papers page lists four sample papers the test window's Fill gives; papers
+  found in the world come with step 7.
 - **What still selects by class:** the weapon crate draws the gun it hands out by its class, and a
   pickup's switch prompt shows the carried gun of the pickup's class. Step 1 shows how far it shows.
 - **How a mission asks "does the player carry X"**, since the plugin cannot read `Globals`. Candidates:

@@ -51,6 +51,8 @@ namespace {
     constexpr uint32_t kCycleWeapon = FCSE::Crc32("cycleweapon");
     constexpr ptrdiff_t kSignalValue = 0x04;
     constexpr ptrdiff_t kSignalFired = 0x10;
+    // R with the map out, which turns the notebook's page while its face is up.
+    constexpr uint32_t kFlipSide = FCSE::Crc32("flipside");
 
     // Whether the map is out, whether its notebook face is up, and the face it comes out with.
     bool g_out = false;
@@ -63,6 +65,10 @@ namespace {
             if (Read<uint32_t>(signal, kSignalFired) > 0 && turned != 0.0f) {
                 Page::Scroll(turned > 0.0f ? -1 : 1);
             }
+            *const_cast<uint32_t*>(signal) = kTurned;
+        }
+        if (signal != nullptr && *signal == kFlipSide && g_notebook) {
+            Page::Turn();
             *const_cast<uint32_t*>(signal) = kTurned;
         }
         if (signal != nullptr && (*signal == kToggleNotebook || *signal == kToggleGadget)) {

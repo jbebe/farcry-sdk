@@ -13,17 +13,7 @@ namespace {
     using FindGenericFn = void*(__thiscall*)(void* server, const uint32_t* id);
     using GenericTargetFn = void*(__thiscall*)(void* generic);
     using SetVisibleFn = void(__thiscall*)(void* element, int32_t visible);
-
-    // The engine's std::wstring, with magma's allocator: an allocator word, then the text inline
-    // until it outgrows 8 units, the length and the capacity.
-    struct WideString {
-        void* allocator;
-        const wchar_t* text;
-        uint32_t padding[3];
-        uint32_t length;
-        uint32_t capacity;
-    };
-    using SetStringFn = void(__thiscall*)(void* text, const WideString* string);
+    using SetStringFn = void(__thiscall*)(void* text, const EngineString<wchar_t>* string);
 
     // CMagmaFacade::GetGenericObject<Keyframe>, whose second instruction loads the server singleton.
     FCSE::Relocation<uint8_t*> g_getKeyframe{FCSE::Uplay(0x00534500)};
@@ -38,10 +28,9 @@ namespace {
     constexpr size_t kServerOperand = 0x06;
     // What a magma::GenericObject resolves to is reached through this offset in it.
     constexpr ptrdiff_t kGenericTarget = 0x0C;
-    // An element's widget, which for a Text element is the magma::Text.
+    // An element's widget, which for a Text element is the magma::Text, and an Image's Material*.
     constexpr ptrdiff_t kElementWidget = 0x14;
-    // A capacity this large tells the engine the text is not inline.
-    constexpr uint32_t kOutOfLine = 8;
+    constexpr ptrdiff_t kImageMaterial = 0x20;
 
     void* const* g_server = nullptr;
 }
@@ -66,9 +55,13 @@ void* Find(const char* name) {
 void SetVisible(void* element, bool visible) { g_setVisible(element, visible); }
 
 void SetText(void* element, const wchar_t* text) {
-    const auto length = static_cast<uint32_t>(std::wcslen(text));
-    const WideString string{nullptr, text, {}, length, length + kOutOfLine};
+    const auto string = EngineString<wchar_t>::Of(text, std::wcslen(text));
     g_setString(Read<void*>(element, kElementWidget), &string);
+}
+
+void SetPicture(void* image, const void* from) {
+    Write(Read<void*>(image, kElementWidget), kImageMaterial,
+          Read<void*>(Read<const void*>(from, kElementWidget), kImageMaterial));
 }
 
 }

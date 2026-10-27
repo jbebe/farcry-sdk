@@ -4,6 +4,7 @@
 #include "engine/memory.h"
 #include "fcse_api.h"
 
+#include <algorithm>
 #include <cstring>
 
 namespace InventoryOverhaul::Inventory {
@@ -47,7 +48,7 @@ namespace {
     FCSE::Relocation<GadgetFn> g_gadgetFromCategory{FCSE::Uplay(0x00129DF0)};
     FCSE::Relocation<UsesFn> g_uses{FCSE::Uplay(0x001496C0)};
     // An entity's component by class id; CFCXCountersComponentPlayerSP's class id, built when its
-    // name is still unset, and its RemainingPills.
+    // name is still unset, its RemainingPills, and its reputation level, 0 to 5.
     using GetComponentFn = void*(__fastcall*)(void* entity, void* unused, const uint32_t* type);
     using BuildCountersTypeFn = void(__fastcall*)(void* unused, void* unused2);
     FCSE::Relocation<GetComponentFn> g_getComponent{FCSE::Uplay(0x004E2CC0)};
@@ -55,6 +56,8 @@ namespace {
     FCSE::Relocation<const void* const*> g_countersTypeName{FCSE::Uplay(0x01649818)};
     FCSE::Relocation<const uint32_t*> g_countersType{FCSE::Uplay(0x01649838)};
     constexpr ptrdiff_t kRemainingPills = 0xF0;
+    constexpr ptrdiff_t kReputation = 0x184;
+    constexpr int kTopReputation = 5;
     // CInventoryItemWeapon's class id, built on first use, and CWeaponPropertiesCommon's class ids.
     FCSE::Relocation<BuildTypeFn> g_buildWeaponItemType{FCSE::Uplay(0x00126210)};
     FCSE::Relocation<const uint32_t*> g_weaponItemType{FCSE::Uplay(0x00FE46EC)};
@@ -67,9 +70,8 @@ namespace {
     constexpr ptrdiff_t kPawnData = 0x10;
     constexpr ptrdiff_t kDataInventoryView = 0x4F0;
     constexpr ptrdiff_t kViewInventory = 0x04;
-    // The entity's name, an MSVC std::string: its text sits inline until it outgrows 16 bytes.
-    constexpr ptrdiff_t kEntityName = 0x14;
-    constexpr ptrdiff_t kEntityNameCapacity = 0x28;
+    // The entity's name, an engine std::string.
+    constexpr ptrdiff_t kEntityName = 0x10;
     constexpr ptrdiff_t kInventoryItems = 0x04;
     // The equipped weapon's entity proxy, which holds the entity at +0xC.
     constexpr ptrdiff_t kInventoryEquipped = 0x10;
@@ -112,6 +114,13 @@ namespace {
     const void* EquippedEntity(const void* inventory) {
         const void* proxy = Read<const void*>(inventory, kInventoryEquipped);
         return proxy != nullptr ? Read<const void*>(proxy, kProxyEntity) : nullptr;
+    }
+
+    const void* Counters() {
+        if (*g_countersTypeName.get() == nullptr) {
+            g_buildCountersType(nullptr, nullptr);
+        }
+        return PlayerComponent(g_countersType.get());
     }
 }
 
@@ -181,9 +190,7 @@ const char* Name(void* weapon) {
     if (entity == nullptr) {
         return "?";
     }
-    return Read<uint32_t>(entity, kEntityNameCapacity) < 16
-               ? reinterpret_cast<const char*>(entity + kEntityName)
-               : Read<const char*>(entity, kEntityName);
+    return reinterpret_cast<const EngineString<char>*>(entity + kEntityName)->Text();
 }
 
 float Reliability(void* weapon) { return g_reliability(weapon, nullptr); }
@@ -218,11 +225,13 @@ int Throwables(const void* view, const char* category) {
 }
 
 int Pills() {
-    if (*g_countersTypeName.get() == nullptr) {
-        g_buildCountersType(nullptr, nullptr);
-    }
-    const void* counters = PlayerComponent(g_countersType.get());
+    const void* counters = Counters();
     return counters != nullptr ? Read<int32_t>(counters, kRemainingPills) : -1;
+}
+
+int Reputation() {
+    const void* counters = Counters();
+    return counters != nullptr ? std::min<int>(Read<uint8_t>(counters, kReputation), kTopReputation) : -1;
 }
 
 uint32_t& Id(void* item) {

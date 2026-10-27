@@ -195,6 +195,55 @@ spawned, or when the rescue record exists and is active. Scripts can switch resc
 the Lua calls `BlockBuddyRescue` and `UnblockBuddyRescue`. They set `CBuddyRescue`'s
 `DisabledByScripts`, which a save keeps.
 
+## What the pause menu's pages read
+
+:::info[Verified via reverse engineering and in game]
+Traced in the Steam `Dunia.dll` against the server build's symbols, and read by
+`mods/inventory-overhaul` on retail GOG v1.03 in the demo range **(seen in game, 2026-10-27)**.
+Addresses in this section are Steam.
+:::
+
+**Strings.** Every page words what it shows through `CStringTableMgr::Localize` (`0x104d1e40`,
+`__thiscall` on `[0x11644778]`, `(const std::string* section, const std::string* key, u32 file)`,
+`ret 0xC`), which returns the string as a `const wchar_t*`. It only reads the two strings' text, and
+the file id every page passes is the constant `0x079C5159`, kept in several data copies
+(`0x10f9d874`, `0x10f9dcc8`, `0x10f9ddc0`) that the address library does not map.
+
+**Reputation and sickness.** The Journal (`PAUSE_REPUTATION`) reads two bytes of
+`CFCXCountersComponentPlayerSP`: the reputation level at `+0x184` and the sickness level at `+0x68`,
+each 0–5. Its text is `PauseMenu/REPUTATION_INFAMY_DESCRIPTION_<level>` and
+`REPUTATION_SICKNESS_DESCRIPTION_<level>`, which from level 1 open with their own heading line.
+
+**Jackal tapes.** `CFCXMissionManager` is a game mode service (class id `0x11649ebc`, built by
+`0x10666680` while the name at `0x11649eac` is unset). Its tapes are at `+0x158`, a pointer and a
+count of `0x78`-byte records: the string key (`A1JT00`…`A2JT16`, and the partner tapes) at `+0`,
+found at `+0x74`. A tape's title is `JackalTapes/<key>`, its line `<key>_DESC`. Lua's
+`GetFCXMissionManager():NewJackalTapeFound()` marks the next tape of the current world found and
+plays it; in the demo range it found 09 to 13.
+
+**Buddies.** `CBuddiesManager` is one too (class id `0x1164a484`, built by `0x10681c50` while the
+name at `0x1164a474` is unset). Its `SBuddyData` records are at `+0x44`, their count at `+0x48`,
+`0xC0` bytes each:
+
+| Offset | Field |
+|---|---|
+| `+0x00` | name, a `std::string` such as `Frank_Bilders` |
+| `+0x74` | gender |
+| `+0x98` | unlocked |
+| `+0x9C` | history points |
+| `+0xA0` | life state, 0 alive |
+
+`GetBuddyStatus` (`0x107463e0`, `__thiscall(manager, const std::string* name)`) gives 0 alive, 1
+missing, 2 mercy killed, 3 rescue-ready or 4 wounded, and `CFCXUIBuddyUtil::GetBuddyStateString`
+(`0x107575b0`, `cdecl(status, gender)`) words it from `PauseMenu/BUDDY_STATE_*`. The page's other
+text is `Buddies/<NAME>_NATIONALITY`, `_AGE` and `_DESCRIPTION_1` to `_3`, and its portraits are
+`sp_pause_menus.mgb`'s `buddies_*` materials.
+
+From Lua, `GetBuddiesManager():BypassSetBuddyUnlock("Frank_Bilders", 1)` unlocks a buddy; passed
+`true` instead of `1` it unlocked none **(seen in game)**. It skips the player's own character.
+`CheatSetRescueBuddy(name)` makes a buddy the rescue buddy, and `SetBuddyRescueActive(1)` makes it
+rescue-ready.
+
 ## Malaria
 
 `gamemodesconfig.xml`'s `<Malaria>` block names four curves (`FirstAttackTime`,

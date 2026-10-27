@@ -31,6 +31,23 @@
   <Material name="io_upgrade_manual" texture="\textures\ui_icon_manualupgrade.png" REGION="0 0 1 1" />
   <Material name="io_upgrade_repair" texture="\textures\ui_icon_repairupgrade.png" REGION="0 0 1 1" />
   <Material name="io_upgrade_ammo" texture="\textures\ui_icon_ammoupgrade.png" REGION="0 0 1 1" />
+  <Material name="io_paper_jackal_photo" texture="\textures\common\jackal_photo.png" REGION="0 0 1 1" />
+  <Material name="io_paper_jackal_definition" texture="\textures\common\jackal_definition.png" REGION="0 0 1 1" />
+  <Material name="io_paper_apr_01" texture="\textures\common\apr_01.png" REGION="0 0 1 1" />
+  <Material name="io_paper_ufll_01" texture="\textures\common\ufll_01.png" REGION="0 0 1 1" />
+  <Material name="io_buddy_andre" texture="\textures\hud\icons_buddies\buddies_andre.png" REGION="0 0 1 1" />
+  <Material name="io_buddy_flora" texture="\textures\hud\icons_buddies\buddies_flora.png" REGION="0 0 1 1" />
+  <Material name="io_buddy_frank" texture="\textures\hud\icons_buddies\buddies_frank.png" REGION="0 0 1 1" />
+  <Material name="io_buddy_hakim" texture="\textures\hud\icons_buddies\buddies_hakim.png" REGION="0 0 1 1" />
+  <Material name="io_buddy_josip" texture="\textures\hud\icons_buddies\buddies_josip.png" REGION="0 0 1 1" />
+  <Material name="io_buddy_marty" texture="\textures\hud\icons_buddies\buddies_marty.png" REGION="0 0 1 1" />
+  <Material name="io_buddy_michele" texture="\textures\hud\icons_buddies\buddies_michele.png" REGION="0 0 1 1" />
+  <Material name="io_buddy_nasreen" texture="\textures\hud\icons_buddies\buddies_nasreen.png" REGION="0 0 1 1" />
+  <Material name="io_buddy_paul" texture="\textures\hud\icons_buddies\buddies_paul.png" REGION="0 0 1 1" />
+  <Material name="io_buddy_singh" texture="\textures\hud\icons_buddies\buddies_singh.png" REGION="0 0 1 1" />
+  <Material name="io_buddy_warren" texture="\textures\hud\icons_buddies\buddies_warren.png" REGION="0 0 1 1" />
+  <Material name="io_buddy_bai" texture="\textures\hud\icons_buddies\buddies_bai.png" REGION="0 0 1 1" />
+  <Material name="io_tape" texture="\textures\ui_tape_icon.png" REGION="0 0 1 1" />
   <Material name="hud_icon_flairgun" texture="\textures\hud\icons_weapons\hud_icon_flairgun.png" REGION="0 0 1 1" />
   <Material name="hud_icon_FAL" texture="\textures\hud\icons_weapons\hud_icon_FAL.png" REGION="0 0 1 1" />
   <Material name="hud_icon_dragunov" texture="\textures\hud\icons_weapons\hud_icon_dragunov.png" REGION="0 0 1 1" />

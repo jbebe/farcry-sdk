@@ -1,14 +1,15 @@
 <#
 .SYNOPSIS
-    Adds the notebook's Inventory page to every retail hud.mgb and writes the changed parts into the
-    layer.
+    Adds the notebook's pages to every retail hud.mgb and writes the changed parts into the layer.
 
 .DESCRIPTION
-    The page is the HTML mockup's spread (mockup\index.html), authored in the spread's own pixels and
+    The pages are the HTML mockup's spread (mockup\index.html), authored in the spread's own pixels and
     drawn the way the pause menu's paper pages are: the notebook texture, black Farcry2 ink, common.mgb's
-    post-it, tape, red line and brush stroke. Three areas: a_io_notebook places the page on the HUD,
-    a_io_page holds it, a_io_postit is the post-it stuck on it. Everything the plugin fills or hides
-    is exported as IO_*; a gun's picture is one image per gun and slot, all but one hidden.
+    post-it, tape, red line and brush stroke. a_io_notebook places the spread on the HUD, a_io_page
+    holds it with its index tabs, one area per page (a_io_inventory, a_io_papers, a_io_journal,
+    a_io_contacts) shown at a time, a_io_portraits the buddies' portraits a row takes its picture from,
+    and a_io_postit the post-it stuck on it. Everything the plugin fills or hides is exported as IO_*;
+    a gun's picture is one image per gun and slot, all but one hidden.
 
     Run from anywhere; reads the retail packages under tmp\, writes layer\mods\ui\localized.
 #>
@@ -48,6 +49,10 @@ $Conditions = [ordered]@{ new = "2F6B2A"; used = "6F6412"; worn = "B0560F"; fail
 # IO_HAND1_PIC_<name> and so on.
 $GunPictures = "6p9 ak47 as50 carlgust deagle dragunov flare fnfal g3ka4 ied ithaca lpo50 m16 m1903 m249 m79 mac10 makarov mgl40 mp5sd p45 rpg7 rpk sniperdart spas12 usas uzi" -split ' '
 $Ratings = "Damage", "Range", "Accuracy", "Reliability", "Fire rate"
+# The sample papers' pictures, in textures\common, and the buddies' portraits,
+# textures\hud\icons_buddies\buddies_<name>.png.
+$PaperPictures = "jackal_photo", "jackal_definition", "apr_01", "ufll_01"
+$Portraits = "andre flora frank hakim josip marty michele nasreen paul singh warren bai" -split ' '
 
 # A colour as Magma stores it, red in the lowest byte: written AABBGGRR. `rgb` is RRGGBB.
 function Colour([string]$rgb, [double]$alpha = 1) {
@@ -89,15 +94,18 @@ function Image([string]$name, [string]$material, [string]$package, [double]$x, [
 }
 
 # A line of Farcry2 ink, as the pause menu's pages set theirs: no shadow, one line, cut with an
-# ellipsis.
+# ellipsis; or, with `wrap`, prose wrapped from the top of its box.
 function Text([string]$name, [string]$string, [double]$x, [double]$y, [double]$w, [double]$h, [int]$height,
-              [string]$colour, [string]$align = "LEFT", [double]$rotation = 0, [string]$alignY = "CENTER") {
+              [string]$colour, [string]$align = "LEFT", [double]$rotation = 0, [string]$alignY = "CENTER",
+              [bool]$wrap = $false) {
     $tracking = if ($height -ge 22) { 0 } elseif ($height -ge 19) { 65516 } else { 65521 }
+    $wrapping = $wrap.ToString().ToLowerInvariant()
+    $ellipsis = (-not $wrap).ToString().ToLowerInvariant()
     $state = "<TextState INTERPOLATIONFLAGS=`"0`" STATECOLOR=`"$colour`" $(Placement $x $y $w $h $rotation) " +
         "OFFSETY=`"0`" ABSOFFSETY=`"0`" SHADOWCOLOR=`"FF000000`" HEIGHT=`"$height`" SHADOWOFFSETX=`"0`" SHADOWOFFSETY=`"0`" " +
         "LEADING=`"$height`" TRACKING=`"$tracking`" />"
-    $body = "<Text useStringTable=`"false`" STRING=`"$string`" ALIGNMENTX=`"$align`" ALIGNMENTY=`"$alignY`" WRAPPING=`"false`" " +
-        "CLIPPING=`"false`" ELLIPSIS=`"true`" AUTOSIZED=`"false`" BOLD=`"false`" ITALICS=`"false`" UNDERLINED=`"false`" " +
+    $body = "<Text useStringTable=`"false`" STRING=`"$string`" ALIGNMENTX=`"$align`" ALIGNMENTY=`"$alignY`" WRAPPING=`"$wrapping`" " +
+        "CLIPPING=`"false`" ELLIPSIS=`"$ellipsis`" AUTOSIZED=`"false`" BOLD=`"false`" ITALICS=`"false`" UNDERLINED=`"false`" " +
         "BLENDINGMODE=`"Normal`" ALPHABLENDFIRST=`"false`"><FONTFAMILY present=`"true`" id=`"$Farcry2`" PACKAGE=`"\fonts.mgb`" /></Text>"
     Element 50 Text $name $state $body
 }
@@ -141,87 +149,124 @@ $PostItPath = "$PagePath a_io_postit a_io_postit"
 function Export([string]$path, [string]$element) {
     $Exports.Add("<GENERICOBJECT name=`"IO_$($element.Substring(5).ToUpperInvariant())`"><LINK slot=`"69`" LASTOBJECTTYPE=`"Element`" IDS=`"$path $element`" /></GENERICOBJECT>")
 }
+# An area instanced in the spread's, as each page is.
+function AreaPath([string]$area) { "$PagePath $area $area" }
 
 $inkFull = Colour $Ink
 $inkSoft = Colour $Ink 0.6
-$page = [System.Collections.Generic.List[string]]::new()
-$postIt = [System.Collections.Generic.List[string]]::new()
-
-# Index tabs on the right edge, the open one pulled out over the pages. The others go in first so
-# the spread covers them.
-$tabs = "Inventory", "Papers", "Journal", "Contacts"
-$openTab = $null
-for ($i = 0; $i -lt $tabs.Count; $i++) {
-    $open = $i -eq 0
-    $x = if ($open) { 936 } else { 962 }
-    $y = 70 + $i * 124
-    $tint = if ($open) { "FFFFFFFF" } else { "FFCCCCCC" }
-    $name = $tabs[$i].ToLowerInvariant()
-    $parts = @(
-        (Image "i_io_tab_$name" postit "\common.mgb" $x $y 96 116 $tint 0 (Crop $TabCrop)),
-        (Text "t_io_tab_$name" $tabs[$i] ($x + 70 - 58) ($y + 58 - 26) 116 52 22 $inkFull CENTER 90))
-    if ($open) { $openTab = $parts } else { $page.AddRange([string[]]$parts) }
-}
-$page.Add((Image i_io_spread $NotebookMaterial "\common.mgb" 0 0 $Spread.W $Spread.H "FFFFFFFF" 0 (Crop $Spread)))
-$page.AddRange([string[]]$openTab)
-
-# The left page: Hands, then Items.
-$left = 96
-$width = 368
-$page.Add((Text t_io_hands "HANDS" $left 52 300 18 18 $inkSoft LEFT 0 TOP))
+$countInk = Colour $Ink 0.65
 $redLine = Colour $PencilRed 0.55
 $pencil = Colour $PencilRed
 # The selected row's mark; the font has no arrow.
 $Arrow = [string][char]0xBB
-foreach ($k in 1, 2) {
-    $top = 76 + ($k - 1) * 46
-    $page.Add((Image "i_io_hand${k}_sel" red_line "\common.mgb" ($left + 24) ($top + 22) ($width - 16) 22 $redLine -0.6))
-    Export $PagePath "i_io_hand${k}_sel"
-}
-$page.Add((Image i_io_machete_sel red_line "\common.mgb" ($left + 24) (168 + 22) ($width - 16) 22 $redLine -0.6))
-Export $PagePath i_io_machete_sel
-foreach ($k in 1, 2) {
-    $top = 76 + ($k - 1) * 46
-    $page.Add((Image "i_io_hand${k}_ring" crosshair_circle_s "" ($left + 4) ($top + 12) 22 22 $inkFull))
-    $page.Add((Text "t_io_hand${k}_num" "$k" ($left + 4) ($top + 12) 22 22 18 $inkFull CENTER))
-    foreach ($pic in $GunPictures) {
-        $page.Add((Image "i_io_hand${k}_pic_$pic" "io_gun_$pic" "" ($left + 38) ($top + 11) 96 24 "FFFFFFFF" 0 @(0, 0, 1, 1) Multiply))
-        Export $PagePath "i_io_hand${k}_pic_$pic"
-    }
-    $page.Add((Image "i_io_hand${k}_pic_mortar" hud_icon_mortar_shop "" ($left + 38) ($top + 11) 96 24 (Colour "000000" 0.82)))
-    Export $PagePath "i_io_hand${k}_pic_mortar"
-    $page.Add((Text "t_io_hand${k}_name" "" ($left + 142) ($top + 10) 128 26 22 $inkFull))
-    $page.Add((Text "t_io_hand${k}_empty" "empty" ($left + 142) ($top + 10) 128 26 22 $inkSoft))
-    Export $PagePath "t_io_hand${k}_name"
-    Export $PagePath "t_io_hand${k}_empty"
-    foreach ($word in $Conditions.Keys) {
-        $page.Add((Text "t_io_hand${k}_$word" $word ($left + 270) ($top + 10) 90 26 20 (Colour $Conditions[$word]) RIGHT))
-        Export $PagePath "t_io_hand${k}_$word"
-    }
-}
-$page.Add((Text t_io_machete_mark $Arrow $left 178 30 26 22 $pencil CENTER))
-Export $PagePath t_io_machete_mark
-$page.Add((Image i_io_machete hud_icon_machete "" ($left + 38) (168 + 11) 96 24 (Colour "000000" 0.82)))
-$page.Add((Text t_io_machete "Machete" ($left + 142) 178 218 26 22 $inkFull))
+$left = 96
+$right = 532
+$width = 368
 
-# Items shows a window of eight rows that follows the selection, with how many more lie above it on
-# a line under the heading and below it under the last row.
-$page.Add((Text t_io_items "ITEMS" $left 230 300 18 18 $inkSoft LEFT 0 TOP))
-$page.Add((Text t_io_items_above "" ($left + 38) 252 ($width - 46) 22 18 (Colour $Ink 0.65)))
-Export $PagePath t_io_items_above
-for ($j = 1; $j -le 8; $j++) {
-    $top = 276 + ($j - 1) * 40
-    $page.Add((Image "i_io_item${j}_sel" red_line "\common.mgb" ($left + 24) ($top + 18) ($width - 16) 22 $redLine -0.6))
-    $page.Add((Text "t_io_item${j}_mark" $Arrow $left ($top + 7) 30 26 22 $pencil CENTER))
-    $page.Add((Text "t_io_item$j" "" ($left + 38) ($top + 7) ($width - 46) 26 22 $inkFull))
-    foreach ($name in "i_io_item${j}_sel", "t_io_item${j}_mark", "t_io_item$j") { Export $PagePath $name }
+$page = [System.Collections.Generic.List[string]]::new()
+$postIt = [System.Collections.Generic.List[string]]::new()
+$tabs = "Inventory", "Papers", "Journal", "Contacts"
+$areas = [ordered]@{}
+foreach ($tab in $tabs) { $areas[$tab.ToLowerInvariant()] = [System.Collections.Generic.List[string]]::new() }
+
+# A section's heading in soft ink.
+function Heading([string]$tab, [string]$name, [string]$string, [double]$x, [double]$y = 52) {
+    $areas[$tab].Add((Text $name $string $x $y 300 18 18 $inkSoft LEFT 0 TOP))
 }
-$page.Add((Text t_io_items_more "" ($left + 38) 598 ($width - 46) 22 18 (Colour $Ink 0.65)))
-Export $PagePath t_io_items_more
+
+# A row's red pencil line and mark, shown while the row whose text is centred on `middle` is selected.
+function Selection([string]$tab, [string]$name, [double]$x, [double]$middle, [double]$lineWidth = ($width - 16)) {
+    $areas[$tab].Add((Image "i_io_${name}_sel" red_line "\common.mgb" ($x + 24) ($middle - 2) $lineWidth 22 $redLine -0.6))
+    $areas[$tab].Add((Text "t_io_${name}_mark" $Arrow $x ($middle - 13) 30 26 22 $pencil CENTER))
+    Export (AreaPath "a_io_$tab") "i_io_${name}_sel"
+    Export (AreaPath "a_io_$tab") "t_io_${name}_mark"
+}
+
+# A list of `lines` rows `step` apart from `top`, each with its selection, a picture of `material`
+# if given, its text and a text `side` wide on the right; above and below, how many rows are out of
+# the window.
+function List([string]$tab, [string]$name, [double]$x, [double]$top, [int]$lines, [double]$step,
+              [string]$material = "", [double]$pictureW = 0, [double]$pictureH = 0, [string]$tint = "FFFFFFFF",
+              [double]$side = 0) {
+    $area = $areas[$tab]
+    $path = AreaPath "a_io_$tab"
+    $area.Add((Text "t_io_${name}s_above" "" ($x + 38) ($top - 24) ($width - 46) 22 18 $countInk))
+    Export $path "t_io_${name}s_above"
+    $textX = $x + 38 + $(if ($material) { $pictureW + 10 } else { 0 })
+    for ($j = 1; $j -le $lines; $j++) {
+        $middle = $top + ($j - 1) * $step + $step / 2
+        Selection $tab "$name$j" $x $middle
+        if ($material) {
+            $area.Add((Image "i_io_$name${j}_pic" $material "" ($x + 38) ($middle - $pictureH / 2) $pictureW $pictureH $tint))
+            Export $path "i_io_$name${j}_pic"
+        }
+        $area.Add((Text "t_io_$name$j" "" $textX ($middle - 13) ($x + $width - 8 - $side - $textX) 26 22 $inkFull))
+        Export $path "t_io_$name$j"
+        if ($side -gt 0) {
+            $area.Add((Text "t_io_$name${j}_side" "" ($x + $width - $side) ($middle - 12) $side 24 16 $inkSoft RIGHT))
+            Export $path "t_io_$name${j}_side"
+        }
+    }
+    $area.Add((Text "t_io_${name}s_more" "" ($x + 38) ($top + $lines * $step + 2) ($width - 46) 22 18 $countInk))
+    Export $path "t_io_${name}s_more"
+}
+
+# An index tab: the post-it's tab shape, its page's name written up its side.
+function Tab([string]$name, [string]$label, [double]$x, [double]$y, [string]$tint) {
+    Image "i_io_$name" postit "\common.mgb" $x $y 96 116 $tint 0 (Crop $TabCrop)
+    Text "t_io_${name}_label" $label ($x + 12) ($y + 32) 116 52 22 $inkFull CENTER 90
+}
+
+# Index tabs on the right edge: each page's own pulled out over the spread in its area, the others
+# behind the spread, hidden while their page is open.
+for ($i = 0; $i -lt $tabs.Count; $i++) {
+    $tabName = $tabs[$i].ToLowerInvariant()
+    $y = 70 + $i * 124
+    $page.AddRange([string[]](Tab "tab_$tabName" $tabs[$i] 962 $y "FFCCCCCC"))
+    Export $PagePath "i_io_tab_$tabName"
+    Export $PagePath "t_io_tab_${tabName}_label"
+    $areas[$tabName].AddRange([string[]](Tab "open_$tabName" $tabs[$i] 936 $y "FFFFFFFF"))
+}
+$page.Add((Image i_io_spread $NotebookMaterial "\common.mgb" 0 0 $Spread.W $Spread.H "FFFFFFFF" 0 (Crop $Spread)))
+
+# Inventory. The left page: Hands, then Items.
+$inventoryArea = $areas.inventory
+$InventoryPath = AreaPath a_io_inventory
+Heading inventory t_io_hands "HANDS" $left
+foreach ($k in 1, 2) {
+    $top = 76 + ($k - 1) * 46
+    $inventoryArea.Add((Image "i_io_hand${k}_sel" red_line "\common.mgb" ($left + 24) ($top + 22) ($width - 16) 22 $redLine -0.6))
+    Export $InventoryPath "i_io_hand${k}_sel"
+}
+Selection inventory machete $left 192
+foreach ($k in 1, 2) {
+    $top = 76 + ($k - 1) * 46
+    $inventoryArea.Add((Image "i_io_hand${k}_ring" crosshair_circle_s "" ($left + 4) ($top + 12) 22 22 $inkFull))
+    $inventoryArea.Add((Text "t_io_hand${k}_num" "$k" ($left + 4) ($top + 12) 22 22 18 $inkFull CENTER))
+    foreach ($pic in $GunPictures) {
+        $inventoryArea.Add((Image "i_io_hand${k}_pic_$pic" "io_gun_$pic" "" ($left + 38) ($top + 11) 96 24 "FFFFFFFF" 0 @(0, 0, 1, 1) Multiply))
+        Export $InventoryPath "i_io_hand${k}_pic_$pic"
+    }
+    $inventoryArea.Add((Image "i_io_hand${k}_pic_mortar" hud_icon_mortar_shop "" ($left + 38) ($top + 11) 96 24 (Colour "000000" 0.82)))
+    Export $InventoryPath "i_io_hand${k}_pic_mortar"
+    $inventoryArea.Add((Text "t_io_hand${k}_name" "" ($left + 142) ($top + 10) 128 26 22 $inkFull))
+    $inventoryArea.Add((Text "t_io_hand${k}_empty" "empty" ($left + 142) ($top + 10) 128 26 22 $inkSoft))
+    Export $InventoryPath "t_io_hand${k}_name"
+    Export $InventoryPath "t_io_hand${k}_empty"
+    foreach ($word in $Conditions.Keys) {
+        $inventoryArea.Add((Text "t_io_hand${k}_$word" $word ($left + 270) ($top + 10) 90 26 20 (Colour $Conditions[$word]) RIGHT))
+        Export $InventoryPath "t_io_hand${k}_$word"
+    }
+}
+$inventoryArea.Add((Image i_io_machete hud_icon_machete "" ($left + 38) (168 + 11) 96 24 (Colour "000000" 0.82)))
+$inventoryArea.Add((Text t_io_machete "Machete" ($left + 142) 178 218 26 22 $inkFull))
+
+# Items shows a window of eight rows that follows the selection.
+Heading inventory t_io_items "ITEMS" $left 230
+List inventory item $left 276 8 40
 
 # The right page's top half: the belt.
-$right = 532
-$page.Add((Text t_io_belt "BELT" $right 52 300 18 18 $inkSoft LEFT 0 TOP))
+Heading inventory t_io_belt "BELT" $right
 $belt = @(
     @{ Name = "Syrettes"; Material = "hud_icon_seringe"; Blending = "Normal" },
     @{ Name = "Malaria pills"; Material = "hud_icon_pills"; Blending = "Normal" },
@@ -229,15 +274,44 @@ $belt = @(
     @{ Name = "Molotovs"; Material = "io_gun_molotov"; Blending = "Multiply" })
 for ($j = 1; $j -le $belt.Count; $j++) {
     $top = 76 + ($j - 1) * 40
-    $page.Add((Image "i_io_belt${j}_sel" red_line "\common.mgb" ($right + 24) ($top + 18) ($width - 8) 22 $redLine -0.6))
-    $page.Add((Text "t_io_belt${j}_mark" $Arrow $right ($top + 7) 30 26 22 $pencil CENTER))
-    Export $PagePath "i_io_belt${j}_sel"
-    Export $PagePath "t_io_belt${j}_mark"
-    $page.Add((Image "i_io_belt$j" $belt[$j - 1].Material "" ($right + 55) ($top + 5) 30 30 "FFFFFFFF" 0 @(0, 0, 1, 1) $belt[$j - 1].Blending))
-    $page.Add((Text "t_io_belt$j" $belt[$j - 1].Name ($right + 110) ($top + 7) 190 26 22 $inkFull))
-    $page.Add((Text "t_io_belt${j}_count" "" ($right + 300) ($top + 7) 76 26 20 $inkFull RIGHT))
-    Export $PagePath "t_io_belt${j}_count"
+    Selection inventory "belt$j" $right ($top + 20) ($width - 8)
+    $inventoryArea.Add((Image "i_io_belt$j" $belt[$j - 1].Material "" ($right + 55) ($top + 5) 30 30 "FFFFFFFF" 0 @(0, 0, 1, 1) $belt[$j - 1].Blending))
+    $inventoryArea.Add((Text "t_io_belt$j" $belt[$j - 1].Name ($right + 110) ($top + 7) 190 26 22 $inkFull))
+    $inventoryArea.Add((Text "t_io_belt${j}_count" "" ($right + 300) ($top + 7) 76 26 20 $inkFull RIGHT))
+    Export $InventoryPath "t_io_belt${j}_count"
 }
+
+# Papers: letters and photos on the left, the Jackal tapes on the right.
+Heading papers t_io_letters "LETTERS AND PHOTOS" $left
+List papers letter $left 98 10 40
+Heading papers t_io_tapes "JACKAL TAPES" $right
+List papers tape $right 98 4 40 io_tape 40 20 (Colour "000000" 0.8)
+
+# Journal: the reputation in the game's words on the left, jobs on the right.
+Heading journal t_io_reputation "" $left
+$areas.journal.Add((Text t_io_reputation_prose "" $left 80 $width 400 22 $inkFull LEFT 0 TOP $true))
+Export (AreaPath a_io_journal) t_io_reputation
+Export (AreaPath a_io_journal) t_io_reputation_prose
+Heading journal t_io_jobs "JOBS" $right
+$areas.journal.Add((Text t_io_jobs_none "Not read from the game yet." ($right + 38) 80 ($width - 46) 22 18 $countInk))
+
+# Contacts: the buddies who will pull the player out on the left, the rest on the right, each with
+# a portrait the plugin takes from a_io_portraits and a status.
+Heading contacts t_io_rescuers "WILL PULL ME OUT" $left
+List contacts rescuer $left 98 7 50 io_buddy_frank 44 44 "FFFFFFFF" 130
+Heading contacts t_io_others "AROUND" $right
+List contacts around $right 98 3 50 io_buddy_frank 44 44 "FFFFFFFF" 130
+$palette = foreach ($portrait in $Portraits) {
+    Image "i_io_portrait_$portrait" "io_buddy_$portrait" "" 0 0 44 44
+    Export (AreaPath a_io_portraits) "i_io_portrait_$portrait"
+}
+
+foreach ($tabName in $areas.Keys) {
+    $page.Add((Instance "a_io_$tabName" 0 0 1 1 0))
+    Export $PagePath "a_io_$tabName"
+}
+$page.Add((Instance a_io_portraits 0 0 1 1 0))
+Export $PagePath a_io_portraits
 
 # The post-it, in its own pixels; its instance tilts it about its centre.
 $postIt.Add((Image i_io_postit_paper postit "\common.mgb" 0 0 416 302 "FFFFFFFF" 0 (Crop $PostItCrop)))
@@ -261,6 +335,14 @@ foreach ($square in @(
     $postIt.Add((Image "i_io_postit_pic_$($square.Pic)" $square.Material "" 173 22 72 72 $square.Tint 0 @(0, 0, 1, 1) $square.Blending))
     Export $PostItPath "i_io_postit_pic_$($square.Pic)"
 }
+foreach ($paper in $PaperPictures) {
+    $postIt.Add((Image "i_io_postit_pic_$paper" "io_paper_$paper" "" 160 2 94 94))
+    Export $PostItPath "i_io_postit_pic_$paper"
+}
+$postIt.Add((Image i_io_postit_pic_tape io_tape "" 160 26 96 48 (Colour "000000" 0.8)))
+$postIt.Add((Image i_io_postit_portrait io_buddy_frank "" 172 16 72 72))
+Export $PostItPath i_io_postit_pic_tape
+Export $PostItPath i_io_postit_portrait
 $postIt.Add((Text t_io_postit_name "" 26 96 366 26 24 $inkFull))
 $postIt.Add((Text t_io_postit_sub "" 26 124 366 18 15 $inkSoft))
 # Three lines of a label and a value: a gun's condition and ammo, a belt item's count, then the
@@ -271,6 +353,9 @@ for ($l = 1; $l -le 3; $l++) {
 }
 $postIt.Add((Text t_io_postit_value1 "" 101 148 100 24 20 $inkFull RIGHT))
 $postIt.Add((Text t_io_postit_value2 "" 81 174 120 24 20 $inkFull RIGHT))
+# A paper's, a tape's or a buddy's first line, a label and a longer value, and what it says below.
+$postIt.Add((Text t_io_postit_state "" 140 148 252 24 20 $inkFull))
+$postIt.Add((Text t_io_postit_quote "" 26 176 366 84 17 $inkFull LEFT 0 TOP $true))
 foreach ($word in $Conditions.Keys) {
     $postIt.Add((Text "t_io_postit_$word" $word 101 148 100 24 20 (Colour $Conditions[$word]) RIGHT))
     Export $PostItPath "t_io_postit_$word"
@@ -287,7 +372,8 @@ for ($u = 0; $u -lt $upgrades.Count; $u++) {
 }
 $postIt.Add((Text t_io_postit_note "" 26 236 366 22 18 $inkFull))
 $postIt.Add((Text t_io_postit_warn "" 26 258 366 22 18 $pencil))
-foreach ($name in "t_io_postit_name", "t_io_postit_sub", "t_io_postit_value1", "t_io_postit_value2", "t_io_postit_note", "t_io_postit_warn") {
+foreach ($name in "t_io_postit_name", "t_io_postit_sub", "t_io_postit_value1", "t_io_postit_value2", "t_io_postit_state",
+        "t_io_postit_quote", "t_io_postit_note", "t_io_postit_warn") {
     Export $PostItPath $name
 }
 # Each rating is a brush stroke as long as the rating, the way the loadout draws them, over a faint
@@ -303,14 +389,20 @@ for ($r = 1; $r -le $Ratings.Count; $r++) {
         Export $PostItPath "i_io_postit_rating${r}_$half"
     }
 }
-$page.Add((Instance a_io_postit 0 0 1 1 0))
-$postItIndex = $page.Count - 1
+# The post-it's place on the lower right page, tilted about its centre, in the page's own pixels.
+$postItTurned = Turn 208 151 -1.4
+$page.Add((Instance a_io_postit (512 + 208 - $postItTurned[0]) (344 + 151 - $postItTurned[1]) 1 1 -1.4))
+Export $PagePath a_io_postit
 
-$materials = ((($GunPictures + "m67", "molotov") | ForEach-Object {
-    "<Material name=`"io_gun_$_`" texture=`"\textures\guns\gun_icon_$_.png`" REGION=`"0 0 1 1`" />"
-}) + (("manual", "repair", "ammo") | ForEach-Object {
-    "<Material name=`"io_upgrade_$_`" texture=`"\textures\ui_icon_$($_)upgrade.png`" REGION=`"0 0 1 1`" />"
-})) -join "`n"
+function Material([string]$name, [string]$texture) {
+    "<Material name=`"$name`" texture=`"$texture`" REGION=`"0 0 1 1`" />"
+}
+$materials = @(
+    ($GunPictures + "m67", "molotov") | ForEach-Object { Material "io_gun_$_" "\textures\guns\gun_icon_$_.png" }
+    ("manual", "repair", "ammo") | ForEach-Object { Material "io_upgrade_$_" "\textures\ui_icon_$($_)upgrade.png" }
+    $PaperPictures | ForEach-Object { Material "io_paper_$_" "\textures\common\$_.png" }
+    $Portraits | ForEach-Object { Material "io_buddy_$_" "\textures\hud\icons_buddies\buddies_$_.png" }
+    Material io_tape "\textures\ui_tape_icon.png") -join "`n"
 
 function IndexOf([System.Collections.Generic.List[string]]$lines, [string]$text, [int]$from = 0) {
     for ($i = $from; $i -lt $lines.Count; $i++) {
@@ -362,14 +454,11 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
     $x = $screenX + $CentreX * $screenW - $turned[0]
     $y = $screenY + $CentreY * $screenH - $turned[1]
 
-    # The post-it's place on the page, tilted about its centre, in the page's own pixels.
-    $postItTurned = Turn 208 151 -1.4
-    $children = [System.Collections.Generic.List[string]]::new($page)
-    $children[$postItIndex] = Instance a_io_postit (512 + 208 - $postItTurned[0]) (344 + 151 - $postItTurned[1]) 1 1 -1.4
-
-    $areas = @(
-        (Area a_io_notebook ($Spread.W + 46) $Spread.H @(Instance a_io_page 0 0 1 1 0)),
-        (Area a_io_page ($Spread.W + 46) $Spread.H $children),
+    $areaXml = @(
+        (Area a_io_notebook ($Spread.W + 46) $Spread.H @(Instance a_io_page 0 0 1 1 0))
+        (Area a_io_page ($Spread.W + 46) $Spread.H $page)
+        foreach ($tabName in $areas.Keys) { Area "a_io_$tabName" ($Spread.W + 46) $Spread.H $areas[$tabName] }
+        (Area a_io_portraits 44 44 $palette)
         (Area a_io_postit 416 302 $postIt)) -join "`n"
     $objects = @("<GENERICOBJECT name=`"IO_NOTEBOOK`"><LINK slot=`"69`" LASTOBJECTTYPE=`"Element`" IDS=`"$NotebookPath a_io_page`" /></GENERICOBJECT>") + $Exports
 
@@ -379,7 +468,7 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
     $lines.Insert($at + 1, ($objects -join "`n"))
 
     $strings = IndexOf $lines '<STRINGTABLE'
-    $lines.Insert($strings - 1, $areas)
+    $lines.Insert($strings - 1, $areaXml)
 
     # Last on the HUD page, so it draws over the rest of the HUD.
     $pageEnd = IndexOf $lines '</CHILDREN>' (IndexOf $lines "<USERDATA name=`"$PageId`">")

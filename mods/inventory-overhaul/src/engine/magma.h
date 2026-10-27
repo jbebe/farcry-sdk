@@ -14,4 +14,7 @@ void SetVisible(void* element, bool visible);
 // A Text element's string.
 void SetText(void* element, const wchar_t* text);
 
+// An Image element's picture made another's, as the pause menu's Buddies page swaps a portrait.
+void SetPicture(void* image, const void* from);
+
 }

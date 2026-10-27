@@ -603,9 +603,14 @@ authored once per colour and shown or hidden **(seen in game)**.
 That byte order is the renderer's too: a colour in a package's XML is authored `AABBGGRR`, so a
 `RectShape` filled `FFFF0000` draws blue, and ink written `FF2A6B2F` draws green **(seen in game)**.
 
-An `Image` widget keeps its `Material*` at `+0x1c` (its property setter, `0x10abb8a0`, falls back to
-the default material at `[0x10ee6094]`), so one image's picture can be another's by copying that
-pointer.
+An `Image` widget keeps its `Material*` at `+0x20` on PC (`+0x1c` in the server build):
+`magma::LoadVisitor::ReadImage` (`0x10ae6d10`) stores the `MATERIALLINK` there, and the pause menu's
+Buddies page (`SetBuddyDescription`, `0x108621e0`) writes a buddy's portrait there. So one image's
+picture can be another's by copying that pointer: a list row takes a portrait from a hidden image of
+the same package that way **(seen in game, 2026-10-27)**.
+
+A `Text` authored with `WRAPPING="true"` wraps a string written at runtime over lines from the top of
+its box **(seen in game)**.
 
 An `ImageState`'s `OFFSET` and `TILING` crop the material: `magma::Image::RenderMaterial` draws
 `u` from `region.x + OFFSET.x * region.w` to that plus `TILING.x * region.w`, and `v` the same way.

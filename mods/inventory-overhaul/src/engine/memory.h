@@ -3,8 +3,10 @@
 
 #include "fcse_api.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 namespace InventoryOverhaul {
 
@@ -17,6 +19,38 @@ T Read(const void* object, ptrdiff_t offset) {
 template <class T>
 void Write(void* object, ptrdiff_t offset, T value) {
     *reinterpret_cast<T*>(static_cast<uint8_t*>(object) + offset) = value;
+}
+
+// The engine's std::string or std::wstring: an allocator word, the text inline until it outgrows 16
+// bytes, its length and its capacity.
+template <class Char>
+struct EngineString {
+    static constexpr uint32_t kInline = 16 / sizeof(Char);
+
+    void* allocator;
+    union {
+        Char inlineText[kInline];
+        const Char* text;
+    };
+    uint32_t length;
+    uint32_t capacity;
+
+    // A string the engine reads `text` from, without copying it.
+    static EngineString Of(const Char* text, size_t length) {
+        EngineString string{};
+        string.text = text;
+        string.length = static_cast<uint32_t>(length);
+        string.capacity = std::max(string.length, kInline);
+        return string;
+    }
+
+    const Char* Text() const { return capacity < kInline ? inlineText : text; }
+};
+static_assert(sizeof(EngineString<char>) == 0x1C);
+
+inline std::string ReadString(const void* string) {
+    const auto* engine = static_cast<const EngineString<char>*>(string);
+    return std::string(engine->Text(), engine->length);
 }
 
 // The virtual function in `slot` of `object`'s vtable.

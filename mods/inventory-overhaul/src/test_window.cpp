@@ -19,7 +19,7 @@
 namespace InventoryOverhaul::TestWindow {
 
 namespace {
-    enum class Action { Stow, Take, Give, Discard };
+    enum class Action { Stow, Take, Give, Discard, Story };
 
     struct Request {
         Action action;
@@ -38,10 +38,16 @@ namespace {
     constexpr const char* kPresets[] = {"weapons.Special.CarlGustaf", "weapons.Special.RPG7",
                                         "weapons.Special.PKM", "weapons.Primary.AK47",
                                         "weapons.Secondary.Makarov"};
-    // A long Items list, the mockup's Fill items: two stowed guns and nine items.
+    // The mockup's Fill items: two stowed guns, nine items, then the Papers page's sample papers.
     constexpr const char* kFill[] = {"weapons.Special.CarlGustaf", "weapons.Special.PKM", "Courier_pouch",
                                      "Sealed_envelope", "Vaccine_case", "Radio_valve", "Roll_of_film",
-                                     "Map_case", "Dog_tags", "Ledger", "Camo_Suit"};
+                                     "Map_case", "Dog_tags", "Ledger", "Camo_Suit", "Torn_notebook_page",
+                                     "Dictionary_page", "APR_poster", "UFLL_poster"};
+    // The mockup's buddies, met through the game's own Lua (whose bools take 1), the first of them
+    // ready to rescue the player, and the Jackal tapes found the same way.
+    constexpr const char* kBuddies[] = {"Flora_Guillen", "Frank_Bilders", "Marty_Alencar", "Josip_Idromeno",
+                                        "Warren_Clyde"};
+    constexpr int kTapes = 5;
     // Set in the game's environment, it fills Items as the game starts, for a scripted test.
     constexpr const char* kFillVariable = "INVENTORY_OVERHAUL_FILL";
 
@@ -64,6 +70,7 @@ namespace {
         for (const char* id : kFill) {
             Ask(Action::Give, 0, id);
         }
+        Ask(Action::Story);
     }
 
     void Draw(void*) {
@@ -164,6 +171,18 @@ void Run(void* inventory) {
             break;
         case Action::Discard:
             Items::Discard(request.index);
+            break;
+        case Action::Story:
+            for (const char* buddy : kBuddies) {
+                const std::string name = buddy;
+                DevTools::Overlay::PostLine(("#GetBuddiesManager():BypassSetBuddyUnlock(\"" + name + "\", 1)").c_str());
+            }
+            DevTools::Overlay::PostLine(
+                (std::string("#GetBuddiesManager():CheatSetRescueBuddy(\"") + kBuddies[0] + "\")").c_str());
+            DevTools::Overlay::PostLine("#GetBuddiesManager():SetBuddyRescueActive(1)");
+            for (int tape = 0; tape < kTapes; ++tape) {
+                DevTools::Overlay::PostLine("#GetFCXMissionManager():NewJackalTapeFound()");
+            }
             break;
         }
     }
