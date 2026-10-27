@@ -28,16 +28,16 @@
       </Image>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_postit_tape">
+      <USERDATA name="i_io_postit_clip">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_postit_tape" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="92" ORIGIN.x="17" ORIGIN.y="58" LEFT="191" RIGHT="225" TOP="65475" BOTTOM="55" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="D9FFFFFF" COLOR2="D9FFFFFF" COLOR3="D9FFFFFF" COLOR4="D9FFFFFF" />
+        <Keyframe name="kf_i_io_postit_clip" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="90" ORIGIN.x="48" ORIGIN.y="24" LEFT="252" RIGHT="348" TOP="65518" BOTTOM="30" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
         </Keyframe>
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="io_scotchtape" PACKAGE="" />
+        <MATERIALLINK present="true" id="paperclip" PACKAGE="\common.mgb" />
       </Image>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">

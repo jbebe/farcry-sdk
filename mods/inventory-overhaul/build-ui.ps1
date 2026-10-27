@@ -21,7 +21,6 @@ $Repo = Resolve-Path "$PSScriptRoot\..\.."
 $Cli = "$Repo\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
 $Retail = "$Repo\tmp\gamefiles\common\ui\localized"
 $StockTexture = "$Repo\tmp\gamefiles\common\ui\textures\ui_tape_icon.xbt"
-$ScotchTape = "$Repo\tmp\gamefiles\common\ui\textures\common\scotchtape.xbt"
 $Texconv = "$Repo\tools\third-party\FCBConverter\texconv.exe"
 $Layer = "$PSScriptRoot\layer\mods\ui\localized"
 $Textures = "$PSScriptRoot\layer\mods\ui\textures\io"
@@ -166,6 +165,9 @@ $Arrow = [string][char]0xBB
 $left = 96
 $right = 532
 $width = 368
+# The post-it fills the right page's top, and the right page's lists start below it.
+$PostItTop = 56
+$Below = $PostItTop + 302 + 16
 
 $page = [System.Collections.Generic.List[string]]::new()
 $postIt = [System.Collections.Generic.List[string]]::new()
@@ -281,15 +283,15 @@ $inventoryArea.Add((Text t_io_machete "Machete" ($left + 142) 178 218 26 22 $ink
 Heading inventory t_io_items "ITEMS" $left 226
 List inventory item $left 276 10 32
 
-# The right page's top half: the belt.
-Heading inventory t_io_belt "BELT" $right
+# The right page, below the post-it: the belt.
+Heading inventory t_io_belt "BELT" $right $Below
 $belt = @(
     @{ Name = "Syrettes"; Material = "hud_icon_seringe"; Blending = "Normal" },
     @{ Name = "Malaria pills"; Material = "hud_icon_pills"; Blending = "Normal" },
     @{ Name = "M67 grenades"; Material = "io_gun_m67"; Blending = "Multiply" },
     @{ Name = "Molotovs"; Material = "io_gun_molotov"; Blending = "Multiply" })
 for ($j = 1; $j -le $belt.Count; $j++) {
-    $top = 76 + ($j - 1) * 40
+    $top = $Below + 30 + ($j - 1) * 40
     Selection inventory "belt$j" $right ($top + 20) ($width - 8)
     $inventoryArea.Add((Image "i_io_belt$j" $belt[$j - 1].Material "" ($right + 55) ($top + 5) 30 30 "FFFFFFFF" 0 @(0, 0, 1, 1) $belt[$j - 1].Blending))
     $inventoryArea.Add((Text "t_io_belt$j" $belt[$j - 1].Name ($right + 110) ($top + 7) 190 26 22 $inkFull))
@@ -297,11 +299,11 @@ for ($j = 1; $j -le $belt.Count; $j++) {
     Export $InventoryPath "t_io_belt${j}_count"
 }
 
-# Papers: letters and photos on the left, the Jackal tapes on the right.
+# Papers: letters and photos on the left, the Jackal tapes on the right below the post-it.
 Heading papers t_io_letters "LETTERS AND PHOTOS" $left
 List papers letter $left 98 10 40
-Heading papers t_io_tapes "JACKAL TAPES" $right
-List papers tape $right 98 4 40 io_tape 40 20 (Colour "000000" 0.8)
+Heading papers t_io_tapes "JACKAL TAPES" $right $Below
+List papers tape $right ($Below + 52) 4 40 io_tape 40 20 (Colour "000000" 0.8)
 
 # Journal: the reputation in the game's words on the left, jobs on the right.
 Heading journal t_io_reputation "" $left
@@ -311,12 +313,12 @@ Export (AreaPath a_io_journal) t_io_reputation_prose
 Heading journal t_io_jobs "JOBS" $right
 $areas.journal.Add((Text t_io_jobs_none "Not read from the game yet." ($right + 38) 80 ($width - 46) 22 18 $countInk))
 
-# Contacts: the buddies who will pull the player out on the left, the rest on the right, each with
-# a portrait the plugin takes from a_io_portraits and a status.
+# Contacts: the buddies who will pull the player out on the left, the rest on the right below the
+# post-it, each with a portrait the plugin takes from a_io_portraits and a status.
 Heading contacts t_io_rescuers "WILL PULL ME OUT" $left
 List contacts rescuer $left 98 7 50 io_buddy_frank 44 44 "FFFFFFFF" 130
-Heading contacts t_io_others "AROUND" $right
-List contacts around $right 98 3 50 io_buddy_frank 44 44 "FFFFFFFF" 130
+Heading contacts t_io_others "AROUND" $right $Below
+List contacts around $right ($Below + 52) 3 50 io_buddy_frank 44 44 "FFFFFFFF" 130
 $palette = foreach ($portrait in $Portraits) {
     Image "i_io_portrait_$portrait" "io_buddy_$portrait" "" 0 0 44 44
     Export (AreaPath a_io_portraits) "i_io_portrait_$portrait"
@@ -331,8 +333,8 @@ Export $PagePath a_io_portraits
 
 # The post-it, in its own pixels; its instance tilts it about its centre.
 $postIt.Add((Image i_io_postit_paper postit "\common.mgb" 0 0 416 302 "FFFFFFFF" 0 (Crop $PostItCrop)))
-# The scotch tape stands upright; it is turned a quarter to lie across the post-it's top.
-$postIt.Add((Image i_io_postit_tape io_scotchtape "" (208 - 17) (-3 - 58) 34 116 (Colour "FFFFFF" 0.85) 92))
+# The paperclip lies on its side; it is turned a quarter clockwise to stand across the post-it's top.
+$postIt.Add((Image i_io_postit_clip paperclip "\common.mgb" (300 - 48) (6 - 24) 96 48 "FFFFFFFF" 90))
 foreach ($pic in $GunPictures) {
     $postIt.Add((Image "i_io_postit_pic_$pic" "io_gun_$pic" "" 65 22 288 72 "FFFFFFFF" 0 @(0, 0, 1, 1) Multiply))
     Export $PostItPath "i_io_postit_pic_$pic"
@@ -405,9 +407,9 @@ for ($r = 1; $r -le $Ratings.Count; $r++) {
         Export $PostItPath "i_io_postit_rating${r}_$half"
     }
 }
-# The post-it's place on the lower right page, tilted about its centre, in the page's own pixels.
+# The post-it's place at the right page's top, tilted about its centre, in the page's own pixels.
 $postItTurned = Turn 208 151 -1.4
-$page.Add((Instance a_io_postit (512 + 208 - $postItTurned[0]) (344 + 151 - $postItTurned[1]) 1 1 -1.4))
+$page.Add((Instance a_io_postit (512 + 208 - $postItTurned[0]) ($PostItTop + 151 - $postItTurned[1]) 1 1 -1.4))
 Export $PagePath a_io_postit
 # The page's last image.
 $page.Add((Image i_io_end io_mark_end "" 0 0 2 2))
@@ -422,7 +424,6 @@ $materials = @(
     $Portraits | ForEach-Object { Material "io_buddy_$_" "\textures\hud\icons_buddies\buddies_$_.png" }
     Material io_tape "\textures\ui_tape_icon.png"
     ("a", "b") | ForEach-Object { Material "io_slot_$_" "\textures\hud_mp\vip_$_.png" }
-    Material io_scotchtape "\textures\io\scotchtape.png"
     Material io_mark_begin "\textures\io\mark_begin.png"
     Material io_mark_end "\textures\io\mark_end.png") -join "`n"
 
@@ -456,32 +457,6 @@ foreach ($mark in @(@{ Name = "mark_begin"; W = 4; H = 64 }, @{ Name = "mark_end
     & $Cli xbt build "$Work\$($mark.Name).dds" "$Work\ui_tape_icon.xml" -o "$Textures\$($mark.Name).xbt" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "xbt build failed for $($mark.Name)" }
 }
-
-# The scotch tape stands on a flat #7E7F7E, the colour the game keys out. Its copy has that
-# background clear, found from the edges in, so any grey inside the tape stays.
-& $Cli xbt extract $ScotchTape -o $Work | Out-Null
-& $Texconv -nologo -ft png -y -o $Work "$Work\scotchtape.dds" | Out-Null
-$tape = [System.Drawing.Bitmap]::FromFile("$Work\scotchtape.png")
-$keyed = New-Object System.Drawing.Bitmap $tape
-$tape.Dispose()
-function IsKey($c) { [Math]::Abs($c.R - 0x7E) -le 8 -and [Math]::Abs($c.G - 0x7F) -le 8 -and [Math]::Abs($c.B - 0x7E) -le 8 }
-$todo = [System.Collections.Generic.Stack[int[]]]::new()
-for ($px = 0; $px -lt $keyed.Width; $px++) { $todo.Push(@($px, 0)); $todo.Push(@($px, ($keyed.Height - 1))) }
-for ($py = 0; $py -lt $keyed.Height; $py++) { $todo.Push(@(0, $py)); $todo.Push(@(($keyed.Width - 1), $py)) }
-while ($todo.Count -gt 0) {
-    $px, $py = $todo.Pop()
-    if ($px -lt 0 -or $py -lt 0 -or $px -ge $keyed.Width -or $py -ge $keyed.Height) { continue }
-    $c = $keyed.GetPixel($px, $py)
-    if ($c.A -eq 0 -or -not (IsKey $c)) { continue }
-    $keyed.SetPixel($px, $py, [System.Drawing.Color]::FromArgb(0, $c.R, $c.G, $c.B))
-    $todo.Push(@(($px + 1), $py)); $todo.Push(@(($px - 1), $py)); $todo.Push(@($px, ($py + 1))); $todo.Push(@($px, ($py - 1)))
-}
-$keyed.Save("$Work\scotchtape.png", [System.Drawing.Imaging.ImageFormat]::Png)
-$keyed.Dispose()
-& $Texconv -nologo -f DXT5 -y -o $Work "$Work\scotchtape.png" | Out-Null
-if ($LASTEXITCODE -ne 0) { throw "texconv failed for the scotch tape" }
-& $Cli xbt build "$Work\scotchtape.dds" "$Work\scotchtape.xml" -o "$Textures\scotchtape.xbt" | Out-Null
-if ($LASTEXITCODE -ne 0) { throw "xbt build failed for the scotch tape" }
 
 foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
     $variant = $source.Directory.Parent.FullName.Substring($Retail.Length + 1)

@@ -324,7 +324,7 @@
       </USERDATA>
       <KEYFRAMES>
         <Keyframe name="kf_a_io_postit" IDX="0" INTERPOLATION="None">
-          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-1.4" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="508" POSITION.y="349" SCALEX="1" SCALEY="1" />
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-1.4" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="508" POSITION.y="61" SCALEX="1" SCALEY="1" />
         </Keyframe>
       </KEYFRAMES>
       <AreaInstance LABEL="" INDEXOFFSET="0">

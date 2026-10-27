@@ -97,7 +97,7 @@ Each page has an index tab along the left page's top, clear of the fingers, stan
 the paper; the open page's is pulled up and white. The tab says where the player is, so a page has
 no title. R turns the page, using the map's own flip.
 
-| Page | Left page | Right page, upper half |
+| Page | Left page | Right page, below the post-it |
 |---|---|---|
 | Inventory | Weapons, Items | Belt |
 | Papers | letters and photos | the Jackal and Predecessor tapes |
@@ -107,21 +107,21 @@ no title. R turns the page, using the map's own flip.
 
 ### Lists, and a post-it for the highlighted row
 
-Lists fill the left page and the upper half of the right page. A post-it stuck on the lower half of
-the right page shows the highlighted row's picture and details.
+Lists fill the left page and the right page below the post-it. The post-it, held at the right page's
+top by a paperclip, shows the highlighted row's picture and details.
 
 ```
- ┌──────────────────────────────┬──────────────────────────────┐╮
- │ WEAPONS                      │ BELT                         ││ I
- │ Ⓐ [AK-47 picture]  AK-47 used│  Syrettes          ×3        ││ n
- │ Ⓑ [Makarov]      Makarov new │  Malaria pills     ×14       ││ v
- │   Machete                    │  M67 grenades      ×3        │╯
- │ ITEMS                        │ ┌──────────────────────────┐ │╮
- │ ▸ Carl G                     │ │ [picture]  Carl G        │ ││ P
- │   Courier pouch              │ │ R-Launcher · stowed      │ ││ a
- │   37 diamonds                │ │ condition worn  dmg ●●●●●│ ││ p
- │                              │ │ ammo 1 / 4      rng ●●●●○│ │╯
- └──────────────────────────────┴─┴──────────────────────────┴─┘
+ ┌──────────────────────────────┬──────────────────────────────┐
+ │ WEAPONS                      │ ┌───────────────────────║──┐ │
+ │ Ⓐ [AK-47 picture]  AK-47 used│ │ [picture]  Carl G        │ │
+ │ Ⓑ [Makarov]      Makarov new │ │ R-Launcher · stowed      │ │
+ │   Machete                    │ │ condition worn  dmg ●●●●●│ │
+ │ ITEMS                        │ │ ammo 1 / 4      rng ●●●●○│ │
+ │ ▸ Carl G                     │ └──────────────────────────┘ │
+ │   Courier pouch              │ BELT                         │
+ │   37 diamonds                │  Syrettes          ×3        │
+ │                              │  Malaria pills     ×14       │
+ └──────────────────────────────┴──────────────────────────────┘
 ```
 
 ### Long lists scroll
@@ -252,7 +252,7 @@ Movement and look stay live, as with the map. The gamepad mirrors the map's: d-p
   place, so it comes out, switches with the map and goes away exactly as the map does. Its category's
   slot is added to the weapons service at runtime, which leaves `gamemodesconfig.xml` to other mods.
 - **The page is Magma**, built the way the pause menu's paper pages are, so it looks like the game's
-  own: the `notebook` texture, Farcry2 ink, `common.mgb`'s post-it, tape and red line, with the
+  own: the `notebook` texture, Farcry2 ink, `common.mgb`'s post-it, paperclip and red line, with the
   index tabs along the top, clear of the fingers. It is drawn onto the notebook's pages, where it is
   lit by the world and moves with the hands, since a flat overlay reads as a HUD. The draws between
   the page's first and last image go into a texture instead of the screen, and the pages draw with a

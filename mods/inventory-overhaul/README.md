@@ -106,8 +106,7 @@ The pages are the mockup's spread built in Magma and added to the HUD (`hud.mgb`
 the notebook's pages in the world rather than over the screen. `build-ui.ps1` makes it from each
 retail `hud.mgb`, in both aspects and every language, and writes the parts it changes as fragments
 under `layer/mods/ui/localized`, which merge with other mods' HUD fragments, such as the flashlight's
-icon, and its textures under `layer/mods/ui/textures/io`: two markers, and `common.mgb`'s scotch tape
-with its `#7E7F7E` background, the colour the game keys out, made clear:
+icon, and its two marker textures under `layer/mods/ui/textures/io`:
 
 | Area | What it holds |
 |---|---|
@@ -115,10 +114,10 @@ with its `#7E7F7E` background, the colour the game keys out, made clear:
 | `a_io_page` | the spread and the index tabs, in the spread's own pixels, with the areas below, between two marker images |
 | `a_io_inventory`, `a_io_papers`, `a_io_journal`, `a_io_contacts` | one page each |
 | `a_io_portraits` | the buddies' portraits, hidden, for rows to copy |
-| `a_io_postit` | the post-it with its tape, tilted on the page |
+| `a_io_postit` | the post-it, held by `common.mgb`'s paperclip, tilted at the right page's top |
 
 It is drawn the way the pause menu's paper pages are: the `notebook` texture, black Farcry2 ink with
-no shadow, `common.mgb`'s post-it, tape, red line and brush stroke, cropped with the image's `OFFSET`
+no shadow, `common.mgb`'s post-it, paperclip, red line and brush stroke, cropped with the image's `OFFSET`
 and `TILING`. The sheet is the spread with room above it for the index tabs, which stand up from the
 left page's top edge behind the paper, out of the fingers' way: the open page's pulled up and white,
 the others grey.
