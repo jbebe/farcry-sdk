@@ -204,19 +204,19 @@ Export $PagePath t_io_machete_mark
 $page.Add((Image i_io_machete hud_icon_machete "" ($left + 38) (168 + 11) 96 24 (Colour "000000" 0.82)))
 $page.Add((Text t_io_machete "Machete" ($left + 142) 178 218 26 22 $inkFull))
 
-# Items shows a window of eight rows that follows the selection, with how many more lie above it
-# beside the heading and below it under the last row.
+# Items shows a window of eight rows that follows the selection, with how many more lie above it on
+# a line under the heading and below it under the last row.
 $page.Add((Text t_io_items "ITEMS" $left 230 300 18 18 $inkSoft LEFT 0 TOP))
-$page.Add((Text t_io_items_above "" ($left + 160) 228 ($width - 160) 22 18 (Colour $Ink 0.65) RIGHT))
+$page.Add((Text t_io_items_above "" ($left + 38) 252 ($width - 46) 22 18 (Colour $Ink 0.65)))
 Export $PagePath t_io_items_above
 for ($j = 1; $j -le 8; $j++) {
-    $top = 254 + ($j - 1) * 40
+    $top = 276 + ($j - 1) * 40
     $page.Add((Image "i_io_item${j}_sel" red_line "\common.mgb" ($left + 24) ($top + 18) ($width - 16) 22 $redLine -0.6))
     $page.Add((Text "t_io_item${j}_mark" $Arrow $left ($top + 7) 30 26 22 $pencil CENTER))
     $page.Add((Text "t_io_item$j" "" ($left + 38) ($top + 7) ($width - 46) 26 22 $inkFull))
     foreach ($name in "i_io_item${j}_sel", "t_io_item${j}_mark", "t_io_item$j") { Export $PagePath $name }
 }
-$page.Add((Text t_io_items_more "" ($left + 38) 576 ($width - 46) 22 18 (Colour $Ink 0.65)))
+$page.Add((Text t_io_items_more "" ($left + 38) 598 ($width - 46) 22 18 (Colour $Ink 0.65)))
 Export $PagePath t_io_items_more
 
 # The right page's top half: the belt.
