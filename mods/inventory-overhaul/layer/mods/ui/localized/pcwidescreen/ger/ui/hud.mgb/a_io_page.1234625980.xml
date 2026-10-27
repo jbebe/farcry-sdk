@@ -1,0 +1,1475 @@
+<Area slot="44" type="Area" FRAMERATE="30" CURRENTFRAME="0" STATICBOX="0 1058 0 716">
+  <USERDATA name="a_io_page">
+    <PROPERTIES />
+  </USERDATA>
+  <CHILDREN>
+    <Element slot="77" type="Placeholder" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="action">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_action" IDX="0" INTERPOLATION="None">
+          <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Placeholder />
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_tab_papers">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_tab_papers" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="58" LEFT="962" RIGHT="1058" TOP="194" BOTTOM="310" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="0.136719" TILING.y="0.351563" OFFSET.x="0.078125" OFFSET.y="0.078125" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFCCCCCC" COLOR2="FFCCCCCC" COLOR3="FFCCCCCC" COLOR4="FFCCCCCC" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="postit" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_tab_papers">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_tab_papers" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="90" ORIGIN.x="58" ORIGIN.y="26" LEFT="974" RIGHT="1090" TOP="226" BOTTOM="278" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="Papers" ALIGNMENTX="CENTER" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_tab_journal">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_tab_journal" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="58" LEFT="962" RIGHT="1058" TOP="318" BOTTOM="434" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="0.136719" TILING.y="0.351563" OFFSET.x="0.078125" OFFSET.y="0.078125" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFCCCCCC" COLOR2="FFCCCCCC" COLOR3="FFCCCCCC" COLOR4="FFCCCCCC" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="postit" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_tab_journal">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_tab_journal" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="90" ORIGIN.x="58" ORIGIN.y="26" LEFT="974" RIGHT="1090" TOP="350" BOTTOM="402" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="Journal" ALIGNMENTX="CENTER" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_tab_contacts">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_tab_contacts" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="58" LEFT="962" RIGHT="1058" TOP="442" BOTTOM="558" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="0.136719" TILING.y="0.351563" OFFSET.x="0.078125" OFFSET.y="0.078125" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFCCCCCC" COLOR2="FFCCCCCC" COLOR3="FFCCCCCC" COLOR4="FFCCCCCC" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="postit" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_tab_contacts">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_tab_contacts" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="90" ORIGIN.x="58" ORIGIN.y="26" LEFT="974" RIGHT="1090" TOP="474" BOTTOM="526" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="Contacts" ALIGNMENTX="CENTER" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_spread">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_spread" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="506" ORIGIN.y="358" LEFT="0" RIGHT="1012" TOP="0" BOTTOM="716" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="0.988281" TILING.y="0.699219" OFFSET.x="0.003906" OFFSET.y="0.009766" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="#F67D9A2B" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_tab_inventory">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_tab_inventory" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="58" LEFT="936" RIGHT="1032" TOP="70" BOTTOM="186" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="0.136719" TILING.y="0.351563" OFFSET.x="0.078125" OFFSET.y="0.078125" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="postit" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_tab_inventory">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_tab_inventory" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="90" ORIGIN.x="58" ORIGIN.y="26" LEFT="948" RIGHT="1064" TOP="102" BOTTOM="154" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="Inventory" ALIGNMENTX="CENTER" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_hands">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_hands" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="150" ORIGIN.y="9" LEFT="96" RIGHT="396" TOP="52" BOTTOM="70" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="HANDS" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_sel">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_sel" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="176" ORIGIN.y="11" LEFT="120" RIGHT="472" TOP="98" BOTTOM="120" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="red_line" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_sel">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_sel" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="176" ORIGIN.y="11" LEFT="120" RIGHT="472" TOP="144" BOTTOM="166" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="red_line" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_machete_sel">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_machete_sel" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="176" ORIGIN.y="11" LEFT="120" RIGHT="472" TOP="190" BOTTOM="212" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="red_line" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_ring">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_ring" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="11" ORIGIN.y="11" LEFT="100" RIGHT="122" TOP="88" BOTTOM="110" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FF141E2A" COLOR2="FF141E2A" COLOR3="FF141E2A" COLOR4="FF141E2A" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="crosshair_circle_s" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_hand1_num">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_hand1_num" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="11" ORIGIN.y="11" LEFT="100" RIGHT="122" TOP="88" BOTTOM="110" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="1" ALIGNMENTX="CENTER" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_6p9">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_6p9" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_6p9" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_ak47">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_ak47" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_ak47" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_as50">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_as50" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_as50" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_carlgust">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_carlgust" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_carlgust" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_deagle">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_deagle" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_deagle" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_dragunov">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_dragunov" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_dragunov" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_flare">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_flare" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_flare" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_fnfal">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_fnfal" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_fnfal" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_g3ka4">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_g3ka4" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_g3ka4" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_ied">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_ied" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_ied" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_ithaca">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_ithaca" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_ithaca" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_lpo50">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_lpo50" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_lpo50" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_m16">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_m16" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_m16" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_m1903">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_m1903" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_m1903" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_m249">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_m249" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_m249" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_m79">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_m79" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_m79" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_mac10">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_mac10" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_mac10" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_makarov">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_makarov" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_makarov" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_mgl40">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_mgl40" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_mgl40" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_mp5sd">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_mp5sd" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_mp5sd" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_p45">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_p45" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_p45" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_rpg7">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_rpg7" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_rpg7" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_rpk">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_rpk" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_rpk" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_sniperdart">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_sniperdart" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_sniperdart" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_spas12">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_spas12" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_spas12" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_usas">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_usas" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_usas" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_uzi">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_uzi" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_uzi" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand1_pic_mortar">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand1_pic_mortar" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="87" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="D1000000" COLOR2="D1000000" COLOR3="D1000000" COLOR4="D1000000" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="hud_icon_mortar_shop" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_hand1_name">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_hand1_name" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="64" ORIGIN.y="13" LEFT="238" RIGHT="366" TOP="86" BOTTOM="112" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_hand1_empty">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_hand1_empty" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="64" ORIGIN.y="13" LEFT="238" RIGHT="366" TOP="86" BOTTOM="112" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="empty" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_hand1_new">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_hand1_new" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF2A6B2F" ROTATION="0" ORIGIN.x="45" ORIGIN.y="13" LEFT="366" RIGHT="456" TOP="86" BOTTOM="112" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="new" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_hand1_used">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_hand1_used" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF12646F" ROTATION="0" ORIGIN.x="45" ORIGIN.y="13" LEFT="366" RIGHT="456" TOP="86" BOTTOM="112" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="used" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_hand1_worn">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_hand1_worn" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF0F56B0" ROTATION="0" ORIGIN.x="45" ORIGIN.y="13" LEFT="366" RIGHT="456" TOP="86" BOTTOM="112" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="worn" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_hand1_failing">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_hand1_failing" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141DA5" ROTATION="0" ORIGIN.x="45" ORIGIN.y="13" LEFT="366" RIGHT="456" TOP="86" BOTTOM="112" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="failing" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_ring">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_ring" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="11" ORIGIN.y="11" LEFT="100" RIGHT="122" TOP="134" BOTTOM="156" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FF141E2A" COLOR2="FF141E2A" COLOR3="FF141E2A" COLOR4="FF141E2A" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="crosshair_circle_s" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_hand2_num">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_hand2_num" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="11" ORIGIN.y="11" LEFT="100" RIGHT="122" TOP="134" BOTTOM="156" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="2" ALIGNMENTX="CENTER" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_6p9">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_6p9" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_6p9" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_ak47">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_ak47" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_ak47" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_as50">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_as50" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_as50" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_carlgust">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_carlgust" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_carlgust" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_deagle">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_deagle" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_deagle" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_dragunov">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_dragunov" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_dragunov" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_flare">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_flare" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_flare" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_fnfal">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_fnfal" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_fnfal" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_g3ka4">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_g3ka4" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_g3ka4" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_ied">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_ied" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_ied" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_ithaca">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_ithaca" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_ithaca" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_lpo50">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_lpo50" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_lpo50" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_m16">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_m16" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_m16" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_m1903">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_m1903" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_m1903" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_m249">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_m249" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_m249" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_m79">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_m79" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_m79" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_mac10">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_mac10" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_mac10" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_makarov">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_makarov" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_makarov" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_mgl40">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_mgl40" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_mgl40" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_mp5sd">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_mp5sd" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_mp5sd" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_p45">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_p45" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_p45" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_rpg7">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_rpg7" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_rpg7" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_rpk">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_rpk" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_rpk" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_sniperdart">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_sniperdart" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_sniperdart" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_spas12">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_spas12" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_spas12" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_usas">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_usas" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_usas" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_uzi">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_uzi" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_uzi" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_hand2_pic_mortar">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_hand2_pic_mortar" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="133" BOTTOM="157" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="D1000000" COLOR2="D1000000" COLOR3="D1000000" COLOR4="D1000000" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="hud_icon_mortar_shop" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_hand2_name">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_hand2_name" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="64" ORIGIN.y="13" LEFT="238" RIGHT="366" TOP="132" BOTTOM="158" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_hand2_empty">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_hand2_empty" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="64" ORIGIN.y="13" LEFT="238" RIGHT="366" TOP="132" BOTTOM="158" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="empty" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_hand2_new">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_hand2_new" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF2A6B2F" ROTATION="0" ORIGIN.x="45" ORIGIN.y="13" LEFT="366" RIGHT="456" TOP="132" BOTTOM="158" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="new" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_hand2_used">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_hand2_used" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF12646F" ROTATION="0" ORIGIN.x="45" ORIGIN.y="13" LEFT="366" RIGHT="456" TOP="132" BOTTOM="158" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="used" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_hand2_worn">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_hand2_worn" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF0F56B0" ROTATION="0" ORIGIN.x="45" ORIGIN.y="13" LEFT="366" RIGHT="456" TOP="132" BOTTOM="158" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="worn" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_hand2_failing">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_hand2_failing" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141DA5" ROTATION="0" ORIGIN.x="45" ORIGIN.y="13" LEFT="366" RIGHT="456" TOP="132" BOTTOM="158" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="failing" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_machete_mark">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_machete_mark" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF1C2C8F" ROTATION="0" ORIGIN.x="15" ORIGIN.y="13" LEFT="96" RIGHT="126" TOP="178" BOTTOM="204" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="»" ALIGNMENTX="CENTER" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_machete">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_machete" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="48" ORIGIN.y="12" LEFT="134" RIGHT="230" TOP="179" BOTTOM="203" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="D1000000" COLOR2="D1000000" COLOR3="D1000000" COLOR4="D1000000" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="hud_icon_machete" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_machete">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_machete" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="109" ORIGIN.y="13" LEFT="238" RIGHT="456" TOP="178" BOTTOM="204" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="Machete" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_items">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_items" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="150" ORIGIN.y="9" LEFT="96" RIGHT="396" TOP="230" BOTTOM="248" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="ITEMS" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_item1">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_item1" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="161" ORIGIN.y="13" LEFT="134" RIGHT="456" TOP="261" BOTTOM="287" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_item2">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_item2" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="161" ORIGIN.y="13" LEFT="134" RIGHT="456" TOP="301" BOTTOM="327" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_item3">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_item3" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="161" ORIGIN.y="13" LEFT="134" RIGHT="456" TOP="341" BOTTOM="367" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_item4">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_item4" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="161" ORIGIN.y="13" LEFT="134" RIGHT="456" TOP="381" BOTTOM="407" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_item5">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_item5" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="161" ORIGIN.y="13" LEFT="134" RIGHT="456" TOP="421" BOTTOM="447" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_item6">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_item6" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="161" ORIGIN.y="13" LEFT="134" RIGHT="456" TOP="461" BOTTOM="487" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_item7">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_item7" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="161" ORIGIN.y="13" LEFT="134" RIGHT="456" TOP="501" BOTTOM="527" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_item8">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_item8" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="161" ORIGIN.y="13" LEFT="134" RIGHT="456" TOP="541" BOTTOM="567" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_items_more">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_items_more" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="A6141E2A" ROTATION="0" ORIGIN.x="161" ORIGIN.y="11" LEFT="134" RIGHT="456" TOP="576" BOTTOM="598" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_belt">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_belt" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="150" ORIGIN.y="9" LEFT="532" RIGHT="832" TOP="52" BOTTOM="70" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="BELT" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_belt1">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_belt1" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="15" ORIGIN.y="15" LEFT="587" RIGHT="617" TOP="81" BOTTOM="111" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="hud_icon_seringe" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_belt1">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_belt1" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="95" ORIGIN.y="13" LEFT="642" RIGHT="832" TOP="83" BOTTOM="109" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="Syrettes" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_belt1_count">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_belt1_count" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="38" ORIGIN.y="13" LEFT="832" RIGHT="908" TOP="83" BOTTOM="109" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_belt2">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_belt2" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="15" ORIGIN.y="15" LEFT="587" RIGHT="617" TOP="121" BOTTOM="151" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="hud_icon_pills" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_belt2">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_belt2" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="95" ORIGIN.y="13" LEFT="642" RIGHT="832" TOP="123" BOTTOM="149" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="Malaria pills" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_belt2_count">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_belt2_count" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="38" ORIGIN.y="13" LEFT="832" RIGHT="908" TOP="123" BOTTOM="149" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_belt3">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_belt3" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="15" ORIGIN.y="15" LEFT="587" RIGHT="617" TOP="161" BOTTOM="191" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_m67" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_belt3">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_belt3" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="95" ORIGIN.y="13" LEFT="642" RIGHT="832" TOP="163" BOTTOM="189" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="M67 grenades" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_belt3_count">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_belt3_count" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="38" ORIGIN.y="13" LEFT="832" RIGHT="908" TOP="163" BOTTOM="189" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_belt4">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_belt4" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="15" ORIGIN.y="15" LEFT="587" RIGHT="617" TOP="201" BOTTOM="231" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_gun_molotov" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_belt4">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_belt4" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="95" ORIGIN.y="13" LEFT="642" RIGHT="832" TOP="203" BOTTOM="229" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="Molotovs" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_belt4_count">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_belt4_count" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="38" ORIGIN.y="13" LEFT="832" RIGHT="908" TOP="203" BOTTOM="229" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_postit">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_postit" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-1.4" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="508" POSITION.y="349" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_postit" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+  </CHILDREN>
+</Area>

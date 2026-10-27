@@ -21,14 +21,12 @@ add_library(InventoryOverhaul SHARED
   "src/items.cpp"
   "src/notebook.cpp"
   "src/page.cpp"
-  "src/page_layout.cpp"
   "src/test_window.cpp"
   "src/two_guns.cpp"
-  "src/engine/direct3d.cpp"
   "src/engine/economy.cpp"
-  "src/engine/paper.cpp"
   "src/engine/game_thread.cpp"
   "src/engine/inventory.cpp"
+  "src/engine/magma.cpp"
 )
 
 target_include_directories(InventoryOverhaul PRIVATE
@@ -36,12 +34,5 @@ target_include_directories(InventoryOverhaul PRIVATE
   "${DEVTOOLS_INCLUDE_DIR}"
   "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/FCSE/include"
 )
-target_link_libraries(InventoryOverhaul PRIVATE d3d9 gdi32 imgui)
+target_link_libraries(InventoryOverhaul PRIVATE imgui)
 target_compile_features(InventoryOverhaul PRIVATE cxx_std_20)
-
-# A sample Inventory page drawn to a .bmp, to look at the page without the game. Built on request:
-# cmake --build --preset x86-release --target PagePreview
-add_executable(PagePreview EXCLUDE_FROM_ALL "tools/page_preview.cpp" "src/page_layout.cpp")
-target_include_directories(PagePreview PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
-target_link_libraries(PagePreview PRIVATE gdi32)
-target_compile_features(PagePreview PRIVATE cxx_std_20)

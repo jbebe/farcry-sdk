@@ -8,8 +8,8 @@ this is an FCSE plugin, built in the log's steps.
 |---|---|---|
 | 1. Two guns | gun 1 on key 2, gun 2 on key 3, of any class; a third gun replaces the one in hand | works in game |
 | 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay | works in game |
-| 3. The notebook on Tab | a new Notebook control brings the map out with its notebook face up; the map's own mesh and paper stand in | built, not seen in game |
-| 4. The Inventory page | Hands, Items and the diamonds on the paper, a post-it for the gun in hand with its condition and ammo | built, not seen in game |
+| 3. The notebook on Tab | a new Notebook control brings the map out with its notebook face up; the map's own mesh and paper stand in | works in game |
+| 4. The Inventory page | the mockup's spread as a Magma page over the HUD: Hands, Items with the diamonds, the belt, a post-it for the gun in hand | seen in game; belt counts, upgrades and moving along the lists to come |
 
 ## Two guns
 
@@ -81,30 +81,44 @@ turns the map over becomes one no listener knows, so the map stays out.
 
 The notebook works on foot only for now: the driving controls are left as they are.
 
-### The page on the paper
+### The Inventory page
 
-`CGadgetMapStrategy::SetMapTexture` gives the map entity's `maptop` material the texture of the area
-the player is in. While the notebook's face is up, the plugin binds its own page wherever Direct3D
-binds that texture (`src/engine/paper.cpp`), so the page is drawn on the map's own paper, lit and
-moved with it. The page is drawn with GDI into a 1024 by 1024 bitmap in Windows' Ink Free face
-(`src/page_layout.cpp`), from what `src/page.cpp` reads in the game, and only again when its text
-changes:
+The page is the mockup's spread built in Magma and added to the HUD (`hud.mgb`), drawn over the
+screen while the notebook's face is up. It is a 2D overlay for now; drawing it onto the map's paper
+comes after. `build-ui.ps1` makes it from each retail `hud.mgb`, in both aspects and every language,
+and writes the parts it changes as fragments under `layer/mods/ui/localized`, which merge with other
+mods' HUD fragments, such as the flashlight's icon:
 
-- **Hands:** each gun's slot, name and condition as a word (new, used, worn, failing), with a mark
-  on the gun in hand.
-- **Items:** stowed guns, other items with their count, and the player's diamonds.
-- **The post-it:** the gun in hand, or gun 1, with its condition and `Ammo <loaded> / <spare>`, the
-  spare rounds being the player's whole pool of that gun's ammo.
+| Area | What it holds |
+|---|---|
+| `a_io_notebook` | the page's place on the HUD page, last there so it draws over the rest |
+| `a_io_page` | the spread, the index tabs, Hands, Items and the belt, in the spread's own pixels |
+| `a_io_postit` | the post-it with its tape, tilted on the page |
 
-Names come from the archetype for now (`weapons.Special.M249_Saw` is "M249 Saw"). The Belt, the
-pictures, the index labels and moving along the lists are still to come.
+It is drawn the way the pause menu's paper pages are: the `notebook` texture, black Farcry2 ink with
+no shadow, `common.mgb`'s post-it, tape, red line and brush stroke, cropped with the image's
+`OFFSET` and `TILING`. Its size keeps the pause menu's notebook proportions, shrunk to the mockup's
+size and place on screen. The guns' pictures are the shop's `gun_icon_*` textures, multiplied onto
+the paper, one image per gun and row, all but one hidden; each condition word is its own text in its
+own colour the same way, since a colour written into a text at runtime does not stay.
 
-To look at the page without the game, build `PagePreview`, which draws a sample page to a `.bmp`:
+`src/page.cpp` reads the game and writes into the elements the package exports as `IO_*`, through
+the string assignment `CMagmaFacade::SetLabel` makes and `Element::SetVisible`
+(`src/engine/magma.cpp`), and only again when what it shows changes:
 
-```
-cmake --build out\build\x86-release --target PagePreview
-out\build\x86-release\PagePreview.exe page.bmp
-```
+- **Hands:** guns 1 and 2 with their picture, short name and condition as a coloured word (new,
+  used, worn, failing), the gun in hand underlined in red pencil, then the machete.
+- **Items:** stowed guns, other items with their count, and the player's diamonds; eight rows, then
+  how many more.
+- **The belt:** syrettes, malaria pills, grenades and molotovs; their counts are still to come.
+- **The post-it:** the gun in hand, or the first gun, with its picture, full name, class, slot,
+  condition, `<loaded> / <spare>` ammo, the spare rounds being the player's whole pool of its ammo,
+  and the multiplayer loadout's five ratings as brush strokes.
+
+Names, classes and ratings are the shop's and the loadout's, matched by the archetype's last part;
+a gun the table does not know is named from its archetype. The page shows at the end of each frame
+(`GameThread::EachFrame`) and only while the notebook is open, so a HUD loaded meanwhile starts
+hidden. Moving along the lists, the other tabs' pages and the upgrades are still to come.
 
 ## Testing
 

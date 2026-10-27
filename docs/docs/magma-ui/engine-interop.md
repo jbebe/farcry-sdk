@@ -571,6 +571,56 @@ An `Area` keeps its milliseconds per frame as a `u16` at `+0x18`, its playhead i
 frame time. After `SetTime` and `SetPlaying` the playhead advances in real time
 **(measured, 2026-10-02)**.
 
+## Writing text and pictures from code
+
+:::info[Verified via reverse engineering and in game]
+Traced in the Steam `Dunia.dll` against the server build's symbols and used by
+`mods/inventory-overhaul` on the GOG build, whose notebook page shows its text, pictures and crops
+**(seen in game, 2026-10-27)**. Addresses are Steam.
+:::
+
+| Call | Address | Signature |
+|---|---|---|
+| `CMagmaFacade::SetLabel(Text*, const char*, const ndVec4&)` | `0x105358b0` | `__thiscall(facade, Text* text, const char* label, const ndVec4* rgba)`, `ret 0xC`; the facade is never read |
+| `TextBase` string assignment it calls | `0x10535560` | `__thiscall(Text*, const std::wstring&)`, `ret 4` |
+| `CMagmaFacade` singleton | `[0x11645c3c]` | |
+| `CMagmaFacade::FindPackage(const std::string&)` | `0x105355b0` | `__thiscall(facade, const std::string*)` |
+| `magma::Package::FindMaterial(Id)` | `0x10a992c0` | `__thiscall(package, u32 id)` → `Material*` |
+
+`SetLabel` at that address is the narrow overload: it widens the string a byte at a time, so a wide
+string handed to it shows its first character only **(seen in game)**. It assigns the string to the
+`Text` widget, which is the element's `+0x14`, and re-measures the box, all in `0x10535560`, which a
+wide string can be handed straight to: the engine's `std::wstring` is an allocator word, the text
+inline until it outgrows 8 units, then its length at `+0x14` and capacity at `+0x18`, and a capacity
+of 8 or more makes the second word a pointer to the text.
+
+The colour is an aligned `ndVec4`, loaded with `movaps`; an unaligned one faults **(crashed,
+2026-10-27)**. Unless all four floats are zero, `SetLabel` writes it into the widget's current state
+(`widget+0x8`, then `+0x10`) as bytes red, green, blue, alpha. On a text inside an instance that does
+not tick, the keyframe's colour is back by the next frame, so a text that changes colour is better
+authored once per colour and shown or hidden **(seen in game)**.
+
+That byte order is the renderer's too: a colour in a package's XML is authored `AABBGGRR`, so a
+`RectShape` filled `FFFF0000` draws blue, and ink written `FF2A6B2F` draws green **(seen in game)**.
+
+An `Image` widget keeps its `Material*` at `+0x1c` (its property setter, `0x10abb8a0`, falls back to
+the default material at `[0x10ee6094]`), so one image's picture can be another's by copying that
+pointer.
+
+An `ImageState`'s `OFFSET` and `TILING` crop the material: `magma::Image::RenderMaterial` draws
+`u` from `region.x + OFFSET.x * region.w` to that plus `TILING.x * region.w`, and `v` the same way.
+`TILING` below 1 shows part of a texture, so a shared material such as `common.mgb`'s `notebook` can
+be drawn cut to one spread without a material of its own **(seen in game)**.
+
+`hud.mgb` can use `common.mgb`'s materials, as it already does in 40 places, since common is loaded
+with the HUD. A material of its own on a texture no package's `_depload.xml` lists, the shop's
+`textures\guns\gun_icon_*.png`, also draws in game, so that list is not what loads a texture.
+
+Magma draws every quad through `magma::Render` (`BeginQuad`, `SetVertex`, `SetColor`, `SetUV`,
+`EndQuad`, blend and mask modes). On PC its implementation feeds `CSceneRenderer::Render2DView`'s
+render pass, which runs after the world's composite, so an area drawn into a texture of its own has
+to be caught there.
+
 ## Settings rows
 
 Every options screen is a `CSettingsPage`, and its rows are not built widget by widget. Three calls

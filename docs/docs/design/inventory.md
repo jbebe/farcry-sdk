@@ -246,10 +246,14 @@ Movement and look stay live, as with the map. The gamepad mirrors the map's: d-p
   with the notebook's face up, and Tab and the map's key each turn it to their face. A second held
   gadget would need the engine to take one beside the map; one held object with two faces needs
   nothing new.
-- **The page** is drawn by the plugin into a texture and bound wherever Direct3D binds the map
-  paper's texture while the notebook's face is up, so it is lit by the world and moves with the
-  hands. A flat overlay would read as a HUD. The paper is one square sheet, 25.5 cm a side, with the
-  area map on top and the world map on its back.
+- **The page is Magma**, built the way the pause menu's paper pages are, so it looks like the game's
+  own: the `notebook` texture, Farcry2 ink, `common.mgb`'s post-it, tape and red line. It goes onto
+  the map's paper, where it is lit by the world and moves with the hands, since a flat overlay reads
+  as a HUD. Magma draws through an abstract `magma::Render` whose PC implementation feeds a render
+  pass (`CSceneRenderer::Render2DView`), so putting one area into a texture means catching its draws
+  in that pass. Until then the page is a 2D overlay on the HUD, held where the mockup holds the
+  notebook. The paper is one square sheet, 25.5 cm a side, with the area map on top and the world
+  map on its back.
 
 ## Steps
 
@@ -260,7 +264,7 @@ Each step ends with one check in game before the next.
 | 1 | Two-gun rule, no UI | carry two AK-47s; a third gun swaps with the one in hand |
 | 2 | Item core and Items; a test window in DevTools' overlay to stow, take, give and discard | a stowed Carl G survives a save and reload |
 | 3 | The notebook in hand on Tab, the map's mesh standing in | walk, look and get shot with it out |
-| 4 | The Inventory page drawn onto the paper | pictures, wear and ammo match the guns |
+| 4 | The Inventory page in Magma, as an overlay, then on the paper | pictures, wear and ammo match the guns |
 | 5 | The notebook model, page turns on the flip | |
 | 6 | The pause pages moved in | the pause menu keeps only its eight entries |
 | 7 | Papers and memories: a letter and a photo in the world | read one, walking |
@@ -270,8 +274,8 @@ Each step ends with one check in game before the next.
 
 ## Open
 
-- **Whether the page shows the right way up** on the paper, and all of it: the mesh's texture
-  coordinates are not read yet. Step 4's check in game answers it.
+- **How the page gets onto the paper:** which of `Render2DView`'s draws are the page's, and whether
+  the paper's texture coordinates show all of it the right way up.
 - **R turns the paper over** to the world map, which is the map's own back, not a notebook page.
   Page turns need their own face or the notebook's own model (step 5).
 - **What still selects by class:** the weapon crate draws the gun it hands out by its class, and a
