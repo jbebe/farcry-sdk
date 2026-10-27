@@ -691,6 +691,7 @@ stores it.
 jackall-cli move decode movemgr.bin --names movemgrnamed.bin
 jackall-cli move encode movemgr.xml
 jackall-cli move verify dlc1.bin
+jackall-cli move clone movemgr.bin out.bin --from 9 --to 44
 ```
 
 A Python reference codec lives beside it in `tools/misc/move-python-reference/` — `move_codec.py`
@@ -915,9 +916,20 @@ fragments disagree about how many branches the weapon has and it says so rather 
 silently. Both directions are pinned by `MoveNewWeaponTests`, which clones weapon 39's branch onto
 index 44 and checks that 44 then reaches the clips 39 reaches while 39 itself is unchanged.
 
-Whether index 44 then *works in game* is a separate question this cannot answer — see
-[the weapon ceiling](#equippedweapon--the-weapon-ceiling): nothing declares the enum, so the graph
-accepts 44 as cheaply as 43, but it has never been driven with one.
+`jackall-cli move clone <in> <out> --from 9 --to 44` makes the copies, as the Animations tab's copy
+of a weapon's set does. A reference into a state from another fragment addresses its target by child
+position, so a branch inserted mid-list rewrites every such reference past it. To keep that rare, a
+copy goes as late as it can while nothing it passes could answer for the new index, which the search
+treats exactly like the slot right after the donor's. Cloning the map's set (9) onto 44 writes 39
+fragments that way, against 63 with every copy right after its donor: the 12 states that gained a
+branch, 13 new branches, and 14 fragments that only point past a copy stopped before a fallback.
+
+That placement is a mitigation. Two mods that each insert before the same fallback both ship the
+same shifted address and merge into a reference that lands one sibling short, with no error. See
+[Open questions](#open-questions).
+
+**Confirmed in game (2026-10-27):** the map's set cloned onto 44, repointed at copies of its clips
+at new paths, plays for a gadget whose `iAnimationValue` is 44, exactly as the map's plays for 9.
 
 #### Importing a mod that shipped the whole graph
 
@@ -1132,12 +1144,10 @@ states behind it, so a character holding it would find no matching move and fall
 the graph's defaults are. Supplying those states is the actual work, and it is the ordinary
 expansion path — the same one DLC1 used.
 
-Two caveats, neither tested in game:
-
-- Whether the code that drives channel 17 each frame passes `iAnimationValue` through unclamped has
-  not been traced end to end; only the property registration and the container's storage were.
-- What the graph does when *no* state matches is unknown, and could be anything from a T-pose to a
-  benign fallback.
+An `iAnimationValue` of 44 reaches channel 17 unclamped: a gadget set to 44 plays the branches
+cloned onto 44 (see [Adding a weapon, as fragments](#adding-a-weapon-as-fragments)). What the
+graph does when *no* state matches is still untested, and could be anything from a T-pose to a
+benign fallback.
 
 Note that the six reserved `dlc1`…`dlc6` names that exist for HUD icons and kill codes (see
 [Adding a weapon](../modding/adding-a-weapon.md)) have **no counterpart here** — MOVE reserves
@@ -1178,14 +1188,15 @@ Still open:
   [hashing their strings against the loadable graph](#getting-the-names-back) recovers **100% of
   them** without parsing the format at all. What remains unread is authoring metadata — GUIDs, and
   whatever field sits around `CTransitionLink` — that nothing downstream needs.
-- **Nothing built with the writer has been loaded by the game.** Every claim below is verified
-  against the format and against the shipped data; none of it is verified against a running
-  `Dunia.dll`. Producing a file the parser accepts is necessary, not sufficient.
 - **Whether the `files/Move File` config key can be overridden** from `OverrideEngineConfig.xml` is
   untested, and is the cheapest experiment available.
-- **Whether the engine drives channel 17 unclamped** with an `iAnimationValue` of 44 or more, and
-  what the graph does when no state matches, are the two in-game questions the weapon work actually
-  turns on.
+- **What the graph does when no state matches** an `iAnimationValue` is untested. 44 itself is
+  driven unclamped.
+- **Fragment addresses are positional.** An `<xref path>` counts children from the state's root, so
+  any structural edit shifts the addresses past it, in fragments the editing mod did not otherwise
+  touch. Addressing a target by its weapon branch and its path within it, and remainder children
+  without counting branch sites, would let branches come and go without moving any address. The
+  shipped VSS fragments use the positional form, so it would have to stay readable.
 
 ## Related
 

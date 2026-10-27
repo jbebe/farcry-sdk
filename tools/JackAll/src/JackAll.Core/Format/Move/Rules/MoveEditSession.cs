@@ -152,7 +152,7 @@ public sealed class MoveEditSession
     public MoveCloneResult CloneWeapon(int donor, int target, string? package)
     {
         MoveCloneResult? result = null;
-        Structural(() => result = MoveEdits.CloneWeapon(File, Index, Names, donor, target, package));
+        Structural(() => result = MoveEdits.CloneWeapon(File, Index, Rules, Names, donor, target, package));
         return result!;
     }
 

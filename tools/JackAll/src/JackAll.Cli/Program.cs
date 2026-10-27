@@ -401,6 +401,11 @@ app.Configure(config =>
                 "Retarget the clips one weapon plays, from a map of old to new game paths. Only "
                 + "sites that weapon governs are rewritten; shared sites are reported, not touched.")
             .WithExample("move", "repoint", "movemgr.bin", "out.bin", "--weapon", "39", "--map", "vss.tsv");
+        move.AddCommand<MoveCloneCommand>("clone")
+            .WithDescription(
+                "Give a new EquippedWeapon index a copy of every branch a donor index has. The copies "
+                + "play the donor's clips until they are repointed.")
+            .WithExample("move", "clone", "movemgr.bin", "out.bin", "--from", "9", "--to", "44");
         move.AddCommand<MoveFragmentsCommand>("fragments")
             .WithDescription(
                 "Write a MOVE graph out as per-state fragments a mod can stage, keeping only the "

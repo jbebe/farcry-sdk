@@ -149,6 +149,12 @@ clips belong to the `dragunov` package; a registration under `dart_rifle` is acc
 nothing, and fails silently.
 
 Edit it with [`jackall-cli depload add`](#editing) rather than by hand.
+
+**A clip can also be listed under the MOVE state that plays it.** The map's arm clips belong to no
+animation package: every world lists each one under the states that play it, which are
+`CMovementResource`s keyed by the state's name (`Pawn_Generic_Aim`, `Pawn_Generic_Wait`,
+`Pawn_Generic_Draw`…). Copies of them at new paths, listed under the same states, play in game.
+Whether listing them was needed there is untested.
 :::
 
 :::note[An unlisted clip does not load]

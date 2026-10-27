@@ -51,11 +51,11 @@ internal static class MoveEdits
     public static bool HoldsState(MoveObject root) => root.Subtree().Any(o => MoveStateIndex.NameHashOf(o) is not null);
 
     /// <summary>
-    /// Gives <paramref name="target"/> a copy of every branch <paramref name="donor"/> has, beside the
+    /// Gives <paramref name="target"/> a copy of every branch <paramref name="donor"/> has, after the
     /// donor's own, in every state that has any.
     /// </summary>
     public static MoveCloneResult CloneWeapon(
-        MoveFile file, MoveStateIndex index, MoveNames names, int donor, int target, string? package)
+        MoveFile file, MoveStateIndex index, MoveRuleSet rules, MoveNames names, int donor, int target, string? package)
     {
         List<uint> states = [];
         List<string> skipped = [];
@@ -93,7 +93,8 @@ internal static class MoveEdits
                 Repin(copy, donor, target);
                 MoveObject owner = index.OwnerOf(site.Branch)!;
                 int at = owner.Ops.FindIndex(op => op.Kind == MoveOpKind.PointerNew && op.Target == site.Branch);
-                owner.Ops.Insert(at + 1, owner.Ops[at].WithTarget(copy));
+                int slot = SlotFor(owner, at, rules.RulesOf(state), site.Unit.Channel, target);
+                owner.Ops.Insert(slot, owner.Ops[at].WithTarget(copy));
                 copies.Add(copy);
             }
 
@@ -106,6 +107,28 @@ internal static class MoveEdits
         }
 
         return new MoveCloneResult(states, copies.Count, skipped);
+    }
+
+    /// <summary>
+    /// Where the copy of the branch at <paramref name="slot"/> goes: past every later sibling that cannot
+    /// answer for <paramref name="target"/>, so the fewest siblings move.
+    /// </summary>
+    private static int SlotFor(MoveObject owner, int slot, IReadOnlyList<MoveRule> rules, int channel, int target)
+    {
+        if (owner.Ops[slot].Name != "CMoveDescriptor")
+        {
+            return slot + 1;
+        }
+
+        MoveSituation situation = new() { [channel] = target };
+        int at = slot + 1;
+        while (owner.Ops[at] is { Name: "CMoveDescriptor", Target: { } sibling }
+               && !rules.Any(r => r.Chain.Contains(sibling) && situation.Test(r) != MoveMatch.No))
+        {
+            at++;
+        }
+
+        return at;
     }
 
     /// <summary>Rewrites every weapon test in a copied branch that names the donor.</summary>

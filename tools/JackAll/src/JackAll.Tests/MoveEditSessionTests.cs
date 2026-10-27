@@ -14,6 +14,7 @@ namespace JackAll.Tests;
 public sealed class MoveEditSessionTests
 {
     private const int DartRifle = 39;
+    private const int NewWeapon = 44;
 
     private static string VssFragments =>
         Path.Combine(TestSupport.RepositoryRoot, "mods", "vss-vintorez", "layer", "mods",
@@ -154,7 +155,6 @@ public sealed class MoveEditSessionTests
     [Fact]
     public void Copying_a_weapons_set_gives_the_new_index_the_donors_clips()
     {
-        const int NewWeapon = 44;
         if (MoveRulesTests.OpenRetail() is not { } session) return;
         IReadOnlySet<uint> donorClips = MoveWeapons.ClipsByWeapon(session.File)[DartRifle];
         int packages = (int)session.File.Objects.Single(o => o.ClassName == "CMoveMgr").Field("size")!.Value;
@@ -170,5 +170,41 @@ public sealed class MoveEditSessionTests
         MoveSavePlan plan = session.Plan();
         Assert.Contains(plan.Changes, c => c.Id == "_packages.xml");
         Assert.Contains(plan.Changes, c => c.Id.Contains("_w44.", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// The map's branches are followed by other weapons' in most groups and by a fallback in a few, so
+    /// a copy placed late in its group is only right if it still wins exactly where the donor's does.
+    /// </summary>
+    [Fact]
+    public void A_copied_set_is_searched_as_the_donors_is()
+    {
+        const int Map = 9;
+        if (MoveRulesTests.OpenRetail() is not { } session) return;
+        MoveVerdict[] donor = [.. Verdicts(session, Map).Order()];
+
+        session.CloneWeapon(Map, NewWeapon, null);
+
+        Assert.Equal(donor, Verdicts(session, NewWeapon).Order());
+    }
+
+    /// <summary>How each rule pinned to a weapon fares with that weapon in hand, or being drawn.</summary>
+    private static IEnumerable<MoveVerdict> Verdicts(MoveEditSession session, int weapon)
+    {
+        foreach (MoveObject state in session.Rules.States)
+        {
+            IReadOnlyList<MoveRule> rules = session.Rules.RulesOf(state);
+            foreach (int channel in new[] { MoveWeapons.EquippedWeaponChannel, MoveWeapons.DesiredWeaponChannel })
+            {
+                IReadOnlyList<MoveVerdict> verdicts = new MoveSituation { [channel] = weapon }.Resolve(rules);
+                for (int i = 0; i < rules.Count; i++)
+                {
+                    if (rules[i].Pin == (channel, weapon))
+                    {
+                        yield return verdicts[i];
+                    }
+                }
+            }
+        }
     }
 }
