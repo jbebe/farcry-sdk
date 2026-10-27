@@ -163,7 +163,8 @@ text the game has is the game's, in the player's language, through its string ta
 
 Fill in the test window, or `INVENTORY_OVERHAUL_FILL`, also gives the sample papers and, through the
 game's own Lua in DevTools' console, meets Frank, Flora, Marty, Josip and Warren, makes Flora
-rescue-ready, and finds five tapes.
+rescue-ready, and finds five tapes. `INVENTORY_OVERHAUL_LUA` holds Lua lines, split by `|`, that the
+console runs as the game loads, such as `AddGadget(SpawnWeapon("gadgets.Equipped.Notebook"))`.
 
 ## Testing
 

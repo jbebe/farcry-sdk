@@ -19,7 +19,7 @@
 namespace InventoryOverhaul::TestWindow {
 
 namespace {
-    enum class Action { Stow, Take, Give, Discard, Story };
+    enum class Action { Stow, Take, Give, Discard, Story, Lua };
 
     struct Request {
         Action action;
@@ -48,8 +48,10 @@ namespace {
     constexpr const char* kBuddies[] = {"Flora_Guillen", "Frank_Bilders", "Marty_Alencar", "Josip_Idromeno",
                                         "Warren_Clyde"};
     constexpr int kTapes = 5;
-    // Set in the game's environment, it fills Items as the game starts, for a scripted test.
+    // Set in the game's environment for a scripted test: the first fills Items as the game starts,
+    // the second holds Lua lines, split by |, run in DevTools' console then.
     constexpr const char* kFillVariable = "INVENTORY_OVERHAUL_FILL";
+    constexpr const char* kLuaVariable = "INVENTORY_OVERHAUL_LUA";
 
     std::mutex g_lock;
     std::vector<Request> g_requests;
@@ -143,9 +145,13 @@ namespace {
 
 void Add() {
     DevTools::Overlay::AddWindow("Inventory Overhaul", 420.0f, 480.0f, &Draw);
+    std::lock_guard<std::mutex> held(g_lock);
     if (GetEnvironmentVariableA(kFillVariable, nullptr, 0) > 0) {
-        std::lock_guard<std::mutex> held(g_lock);
         Fill();
+    }
+    char lua[1024];
+    if (const DWORD length = GetEnvironmentVariableA(kLuaVariable, lua, sizeof(lua)); length > 0 && length < sizeof(lua)) {
+        Ask(Action::Lua, 0, lua);
     }
 }
 
@@ -182,6 +188,14 @@ void Run(void* inventory) {
             DevTools::Overlay::PostLine("#GetBuddiesManager():SetBuddyRescueActive(1)");
             for (int tape = 0; tape < kTapes; ++tape) {
                 DevTools::Overlay::PostLine("#GetFCXMissionManager():NewJackalTapeFound()");
+            }
+            break;
+        case Action::Lua:
+            for (size_t start = 0; start < request.id.size();) {
+                size_t end = request.id.find('|', start);
+                end = end == std::string::npos ? request.id.size() : end;
+                DevTools::Overlay::PostLine(("#" + request.id.substr(start, end - start)).c_str());
+                start = end + 1;
             }
             break;
         }
