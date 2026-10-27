@@ -9,7 +9,7 @@ this is an FCSE plugin, built in the log's steps.
 | 1. Two guns | gun 1 on key 2, gun 2 on key 3, of any class; a third gun replaces the one in hand | works in game |
 | 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay | works in game |
 | 3. The notebook on Tab | a new Notebook control brings the map out with its notebook face up; the map's own mesh and paper stand in | works in game |
-| 4. The Inventory page | the mockup's spread as a Magma page over the HUD: Hands, Items with the diamonds, the belt, a post-it for the gun in hand | seen in game; belt counts, upgrades and moving along the lists to come |
+| 4. The Inventory page | the mockup's spread as a Magma page over the HUD: Hands, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game; a bought upgrade and a long Items list not seen yet |
 
 ## Two guns
 
@@ -107,18 +107,31 @@ the string assignment `CMagmaFacade::SetLabel` makes and `Element::SetVisible`
 (`src/engine/magma.cpp`), and only again when what it shows changes:
 
 - **Hands:** guns 1 and 2 with their picture, short name and condition as a coloured word (new,
-  used, worn, failing), the gun in hand underlined in red pencil, then the machete.
-- **Items:** stowed guns, other items with their count, and the player's diamonds; eight rows, then
-  how many more.
-- **The belt:** syrettes, malaria pills, grenades and molotovs; their counts are still to come.
-- **The post-it:** the gun in hand, or the first gun, with its picture, full name, class, slot,
-  condition, `<loaded> / <spare>` ammo, the spare rounds being the player's whole pool of its ammo,
-  and the multiplayer loadout's five ratings as brush strokes.
+  used, worn, failing), then the machete.
+- **Items:** stowed guns, other items with their count, and the player's diamonds; eight rows at a
+  time, with how many more lie above and below.
+- **The belt:** syrettes (the ammo type `syringe`), malaria pills (the player's counters
+  component), grenades and molotovs (the uses of the gadget of each category).
+- **The post-it:** the selected row. A gun has its picture, full name, class, slot, condition,
+  `<loaded> / <spare>` ammo (the spare rounds being the player's whole pool of its ammo, so a stowed
+  gun's too), its upgrades and the multiplayer loadout's five ratings as brush strokes. The machete,
+  an empty slot, an item, the diamonds and the belt's items each have their own picture, count and
+  notes.
+
+The mouse wheel moves the selection along every list in reading order, the hands, Items, then the
+belt, underlining the row in red pencil; the notebook takes the wheel's `cycleweapon` signal while
+its face is up, so the gun in hand stays. It opens on the gun in hand, and keeps its place while
+the game runs.
+
+A gun's upgrades are the game's three icons, faint until bought: its operation manual, its repair
+manual and the bandolier for its ammo. The syrettes have the two first aid manuals, and the grenades
+and molotovs their bandoliers. Bought is a name in the wallet's list, as the shop names its items
+(`ak47 repair manual`, `assault webbing`).
 
 Names, classes and ratings are the shop's and the loadout's, matched by the archetype's last part;
 a gun the table does not know is named from its archetype. The page shows at the end of each frame
 (`GameThread::EachFrame`) and only while the notebook is open, so a HUD loaded meanwhile starts
-hidden. Moving along the lists, the other tabs' pages and the upgrades are still to come.
+hidden. Using the selected row, and the other tabs' pages, are still to come.
 
 ## Testing
 

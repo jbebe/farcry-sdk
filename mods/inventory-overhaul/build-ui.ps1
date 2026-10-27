@@ -170,6 +170,9 @@ $left = 96
 $width = 368
 $page.Add((Text t_io_hands "HANDS" $left 52 300 18 18 $inkSoft LEFT 0 TOP))
 $redLine = Colour $PencilRed 0.55
+$pencil = Colour $PencilRed
+# The selected row's mark; the font has no arrow.
+$Arrow = [string][char]0xBB
 foreach ($k in 1, 2) {
     $top = 76 + ($k - 1) * 46
     $page.Add((Image "i_io_hand${k}_sel" red_line "\common.mgb" ($left + 24) ($top + 22) ($width - 16) 22 $redLine -0.6))
@@ -196,15 +199,22 @@ foreach ($k in 1, 2) {
         Export $PagePath "t_io_hand${k}_$word"
     }
 }
-$page.Add((Text t_io_machete_mark ([string][char]0xBB) $left 178 30 26 22 (Colour $PencilRed) CENTER))
+$page.Add((Text t_io_machete_mark $Arrow $left 178 30 26 22 $pencil CENTER))
 Export $PagePath t_io_machete_mark
 $page.Add((Image i_io_machete hud_icon_machete "" ($left + 38) (168 + 11) 96 24 (Colour "000000" 0.82)))
 $page.Add((Text t_io_machete "Machete" ($left + 142) 178 218 26 22 $inkFull))
 
+# Items shows a window of eight rows that follows the selection, with how many more lie above it
+# beside the heading and below it under the last row.
 $page.Add((Text t_io_items "ITEMS" $left 230 300 18 18 $inkSoft LEFT 0 TOP))
+$page.Add((Text t_io_items_above "" ($left + 160) 228 ($width - 160) 22 18 (Colour $Ink 0.65) RIGHT))
+Export $PagePath t_io_items_above
 for ($j = 1; $j -le 8; $j++) {
-    $page.Add((Text "t_io_item$j" "" ($left + 38) (254 + ($j - 1) * 40 + 7) ($width - 46) 26 22 $inkFull))
-    Export $PagePath "t_io_item$j"
+    $top = 254 + ($j - 1) * 40
+    $page.Add((Image "i_io_item${j}_sel" red_line "\common.mgb" ($left + 24) ($top + 18) ($width - 16) 22 $redLine -0.6))
+    $page.Add((Text "t_io_item${j}_mark" $Arrow $left ($top + 7) 30 26 22 $pencil CENTER))
+    $page.Add((Text "t_io_item$j" "" ($left + 38) ($top + 7) ($width - 46) 26 22 $inkFull))
+    foreach ($name in "i_io_item${j}_sel", "t_io_item${j}_mark", "t_io_item$j") { Export $PagePath $name }
 }
 $page.Add((Text t_io_items_more "" ($left + 38) 576 ($width - 46) 22 18 (Colour $Ink 0.65)))
 Export $PagePath t_io_items_more
@@ -219,6 +229,10 @@ $belt = @(
     @{ Name = "Molotovs"; Material = "io_gun_molotov"; Blending = "Multiply" })
 for ($j = 1; $j -le $belt.Count; $j++) {
     $top = 76 + ($j - 1) * 40
+    $page.Add((Image "i_io_belt${j}_sel" red_line "\common.mgb" ($right + 24) ($top + 18) ($width - 8) 22 $redLine -0.6))
+    $page.Add((Text "t_io_belt${j}_mark" $Arrow $right ($top + 7) 30 26 22 $pencil CENTER))
+    Export $PagePath "i_io_belt${j}_sel"
+    Export $PagePath "t_io_belt${j}_mark"
     $page.Add((Image "i_io_belt$j" $belt[$j - 1].Material "" ($right + 55) ($top + 5) 30 30 "FFFFFFFF" 0 @(0, 0, 1, 1) $belt[$j - 1].Blending))
     $page.Add((Text "t_io_belt$j" $belt[$j - 1].Name ($right + 110) ($top + 7) 190 26 22 $inkFull))
     $page.Add((Text "t_io_belt${j}_count" "" ($right + 300) ($top + 7) 76 26 20 $inkFull RIGHT))
@@ -237,22 +251,53 @@ foreach ($silhouette in @(@{ Pic = "machete"; Material = "hud_icon_machete" }, @
     $postIt.Add((Image "i_io_postit_pic_$($silhouette.Pic)" $silhouette.Material "" 65 22 288 72 (Colour "000000" 0.8)))
     Export $PostItPath "i_io_postit_pic_$($silhouette.Pic)"
 }
+# The belt's and the wallet's pictures are square.
+foreach ($square in @(
+        @{ Pic = "diamond"; Material = "ui_hud_icon_diamond"; Tint = (Colour "000000" 0.8); Blending = "Normal" },
+        @{ Pic = "seringe"; Material = "hud_icon_seringe"; Tint = "FFFFFFFF"; Blending = "Normal" },
+        @{ Pic = "pills"; Material = "hud_icon_pills"; Tint = "FFFFFFFF"; Blending = "Normal" },
+        @{ Pic = "m67"; Material = "io_gun_m67"; Tint = "FFFFFFFF"; Blending = "Multiply" },
+        @{ Pic = "molotov"; Material = "io_gun_molotov"; Tint = "FFFFFFFF"; Blending = "Multiply" })) {
+    $postIt.Add((Image "i_io_postit_pic_$($square.Pic)" $square.Material "" 173 22 72 72 $square.Tint 0 @(0, 0, 1, 1) $square.Blending))
+    Export $PostItPath "i_io_postit_pic_$($square.Pic)"
+}
 $postIt.Add((Text t_io_postit_name "" 26 96 366 26 24 $inkFull))
 $postIt.Add((Text t_io_postit_sub "" 26 124 366 18 15 $inkSoft))
-$postIt.Add((Text t_io_postit_condition "Condition" 26 148 120 24 20 $inkFull))
+# Three lines of a label and a value: a gun's condition and ammo, a belt item's count, then the
+# upgrades bought for it.
+for ($l = 1; $l -le 3; $l++) {
+    $postIt.Add((Text "t_io_postit_line$l" "" 26 (148 + ($l - 1) * 26) 120 24 20 $inkFull))
+    Export $PostItPath "t_io_postit_line$l"
+}
+$postIt.Add((Text t_io_postit_value1 "" 101 148 100 24 20 $inkFull RIGHT))
+$postIt.Add((Text t_io_postit_value2 "" 81 174 120 24 20 $inkFull RIGHT))
 foreach ($word in $Conditions.Keys) {
     $postIt.Add((Text "t_io_postit_$word" $word 101 148 100 24 20 (Colour $Conditions[$word]) RIGHT))
     Export $PostItPath "t_io_postit_$word"
 }
-$postIt.Add((Text t_io_postit_ammo_label "Ammo" 26 174 80 24 20 $inkFull))
-$postIt.Add((Text t_io_postit_ammo "" 81 174 120 24 20 $inkFull RIGHT))
-foreach ($name in "t_io_postit_name", "t_io_postit_sub", "t_io_postit_ammo") { Export $PostItPath $name }
+# The game's upgrade icons, faint until bought: a gun's operation and repair manuals and its
+# bandolier, or the syrettes' two first aid manuals.
+$upgrades = "manual", "repair", "ammo", "ammo"
+for ($u = 0; $u -lt $upgrades.Count; $u++) {
+    $material = "io_upgrade_$($upgrades[$u])"
+    $postIt.Add((Image "i_io_postit_up${u}_faint" $material "" (125 + $u * 27) 201 22 22 (Colour $Ink 0.35)))
+    $postIt.Add((Image "i_io_postit_up${u}_bought" $material "" (125 + $u * 27) 201 22 22 (Colour $Ink 0.85)))
+    Export $PostItPath "i_io_postit_up${u}_faint"
+    Export $PostItPath "i_io_postit_up${u}_bought"
+}
+$postIt.Add((Text t_io_postit_note "" 26 236 366 22 18 $inkFull))
+$postIt.Add((Text t_io_postit_warn "" 26 258 366 22 18 $pencil))
+foreach ($name in "t_io_postit_name", "t_io_postit_sub", "t_io_postit_value1", "t_io_postit_value2", "t_io_postit_note", "t_io_postit_warn") {
+    Export $PostItPath $name
+}
 # Each rating is a brush stroke as long as the rating, the way the loadout draws them, over a faint
 # full-length one: one stroke per half point, all but one hidden.
 for ($r = 1; $r -le $Ratings.Count; $r++) {
     $top = 148 + ($r - 1) * 25
     $postIt.Add((Text "t_io_postit_rating$r" $Ratings[$r - 1] 217 $top 110 22 14 $inkFull))
     $postIt.Add((Image "i_io_postit_rating${r}_track" brush_stroke "\common.mgb" 330 ($top + 4) 58 14 (Colour $Ink 0.18)))
+    Export $PostItPath "t_io_postit_rating$r"
+    Export $PostItPath "i_io_postit_rating${r}_track"
     for ($half = 1; $half -le 10; $half++) {
         $postIt.Add((Image "i_io_postit_rating${r}_$half" brush_stroke "\common.mgb" 330 ($top + 4) (5.8 * $half) 14 (Colour $Ink 0.85) 0 @(0, 0, ($half / 10), 1)))
         Export $PostItPath "i_io_postit_rating${r}_$half"
@@ -261,9 +306,11 @@ for ($r = 1; $r -le $Ratings.Count; $r++) {
 $page.Add((Instance a_io_postit 0 0 1 1 0))
 $postItIndex = $page.Count - 1
 
-$materials = (($GunPictures + "m67", "molotov") | ForEach-Object {
+$materials = ((($GunPictures + "m67", "molotov") | ForEach-Object {
     "<Material name=`"io_gun_$_`" texture=`"\textures\guns\gun_icon_$_.png`" REGION=`"0 0 1 1`" />"
-}) -join "`n"
+}) + (("manual", "repair", "ammo") | ForEach-Object {
+    "<Material name=`"io_upgrade_$_`" texture=`"\textures\ui_icon_$($_)upgrade.png`" REGION=`"0 0 1 1`" />"
+})) -join "`n"
 
 function IndexOf([System.Collections.Generic.List[string]]$lines, [string]$text, [int]$from = 0) {
     for ($i = $from; $i -lt $lines.Count; $i++) {

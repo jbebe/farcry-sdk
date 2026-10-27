@@ -274,6 +274,8 @@ Each step ends with one check in game before the next.
 
 ## Open
 
+- **The arrow keys:** the mockup moves along the lists with ↑ and ↓ as well as the wheel, but
+  the game binds them to walking beside W and S, so for now only the wheel moves the selection.
 - **How the page gets onto the paper:** which of `Render2DView`'s draws are the page's, and whether
   the paper's texture coordinates show all of it the right way up.
 - **R turns the paper over** to the world map, which is the map's own back, not a notebook page.

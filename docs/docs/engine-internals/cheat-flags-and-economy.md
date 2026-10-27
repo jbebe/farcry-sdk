@@ -142,3 +142,43 @@ arithmetic has to clamp to the balance the same way it does.
 The component dies with the player while an external clock keeps running, so **every** write to a
 sighted component needs a liveness test: a live local player, and the object still carrying the vtable
 it was first seen with.
+
+### What the player has bought
+
+:::info[Verified via reverse engineering and in game]
+Traced in the Steam `Dunia.dll`; the shop's lists were read out of a running game, retail GOG v1.03,
+2026-10-27. Addresses are Steam.
+:::
+
+The wallet also keeps the name of everything bought from the arms dealer: engine `std::string`s
+(`0x1C` bytes each) at `+0x14`, and their count at `+0x18`.
+`CEconomyComponent::AlreadyBoughtItem` (`0x1066ba10`) is a search of that list, so an upgrade is
+bought when its name is in it.
+
+The names are the shop's own. The shop, `CWeaponBazaar`, is a game mode service:
+`0x104dbb80` (`__thiscall` on the `CGameModeManager` at `[0x11644d74]`, with its class id at
+`0x11649fd8`, built by `0x1066b490` while the name at `0x11649fc8` is unset). It keeps three lists at
+`+0x84`, `+0x90` and `+0x9c`, each a pointer and a count. Their records are `0xDC` bytes, with the name
+as a `std::string` at `+0x04`:
+
+| List | Items |
+|---|---|
+| 0 | 28 guns, `<gun> crate`: `ak47 crate`, `de crate` (the Eagle .50), `dart rifle crate`, … |
+| 1 | 62 manuals, `<gun> operation manual` (accuracy) and `<gun> repair manual` (reliability) |
+| 2 | 15: the bandoliers (`pistol belt`, `light assault webbing`, `shotgun bandolier`, `assault webbing`, `marksmans bandolier`, `rocketeer satchel`, `grenadier webbing`, `pyrotechnic satchel`, `gunner pack`), `camo suit`, `medium first aid manual`, `large first aid manual`, and the three weapon crates |
+
+The pause menu's Upgrades page (`CFCXPausePlayerStatsPage::InitItem`, `0x1085b210`) reaches the same
+records from a gun through its attribute list.
+
+## The belt
+
+How much of each belt item the player carries, as the HUD and Lua read it:
+
+| Item | Where |
+|---|---|
+| Syrettes | `CInventoryViewPawn::GetAmmo` (`0x10126000`) for the ammo type `syringe`; the HUD caps it at 8 |
+| Malaria pills | `CFCXCountersComponentPlayerSP+0xF0`, `RemainingPills`, a component of the player's entity (class id at `0x11649838`); Lua's `GetMalariaPillCount` (`0x109f8770`) caps it at 4 |
+| Grenades, molotovs | gadgets: `CInventoryViewPawn::GetGadgetFromCategory` (`0x10129df0`, `__thiscall(view, const CStringID*)`) with `grenade` or `molotov`, then `CGadget::GetUses` (`0x101496c0`, `gadget+0x24`, then `+0x7C`) |
+
+A gadget's category index sits at `gadget+0x24`, then `+0x54` in the PC build, where the server build
+keeps its uses; the two lay that object out differently.

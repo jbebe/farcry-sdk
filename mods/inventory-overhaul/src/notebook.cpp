@@ -46,6 +46,11 @@ namespace {
     constexpr uint32_t kToggleGadget = FCSE::Crc32("toggle_gadget");
     // A signal no listener knows, which one that only turns the map over becomes.
     constexpr uint32_t kTurned = FCSE::Crc32("InventoryOverhaul.Turned");
+    // The mouse wheel's signal, which moves along the page while the notebook's face is up: how far
+    // the wheel turned, and whether it fired this frame.
+    constexpr uint32_t kCycleWeapon = FCSE::Crc32("cycleweapon");
+    constexpr ptrdiff_t kSignalValue = 0x04;
+    constexpr ptrdiff_t kSignalFired = 0x10;
 
     // Whether the map is out, whether its notebook face is up, and the face it comes out with.
     bool g_out = false;
@@ -53,6 +58,13 @@ namespace {
     bool g_askedNotebook = false;
 
     bool __fastcall OnSignal(void* dispatcher, void* unused, const uint32_t* signal, void* context) {
+        if (signal != nullptr && *signal == kCycleWeapon && g_notebook) {
+            const float turned = Read<float>(signal, kSignalValue);
+            if (Read<uint32_t>(signal, kSignalFired) > 0 && turned != 0.0f) {
+                Page::Scroll(turned > 0.0f ? -1 : 1);
+            }
+            *const_cast<uint32_t*>(signal) = kTurned;
+        }
         if (signal != nullptr && (*signal == kToggleNotebook || *signal == kToggleGadget)) {
             const bool notebook = *signal == kToggleNotebook;
             uint32_t& id = *const_cast<uint32_t*>(signal);

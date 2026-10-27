@@ -28,6 +28,9 @@
   <Material name="io_gun_uzi" texture="\textures\guns\gun_icon_uzi.png" REGION="0 0 1 1" />
   <Material name="io_gun_m67" texture="\textures\guns\gun_icon_m67.png" REGION="0 0 1 1" />
   <Material name="io_gun_molotov" texture="\textures\guns\gun_icon_molotov.png" REGION="0 0 1 1" />
+  <Material name="io_upgrade_manual" texture="\textures\ui_icon_manualupgrade.png" REGION="0 0 1 1" />
+  <Material name="io_upgrade_repair" texture="\textures\ui_icon_repairupgrade.png" REGION="0 0 1 1" />
+  <Material name="io_upgrade_ammo" texture="\textures\ui_icon_ammoupgrade.png" REGION="0 0 1 1" />
   <Material name="hud_icon_flairgun" texture="\textures\hud\icons_weapons\hud_icon_flairgun.png" REGION="0 0 1 1" />
   <Material name="hud_icon_FAL" texture="\textures\hud\icons_weapons\hud_icon_FAL.png" REGION="0 0 1 1" />
   <Material name="hud_icon_dragunov" texture="\textures\hud\icons_weapons\hud_icon_dragunov.png" REGION="0 0 1 1" />

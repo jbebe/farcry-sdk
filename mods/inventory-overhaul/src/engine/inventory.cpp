@@ -41,6 +41,20 @@ namespace {
     FCSE::Relocation<SetLoadedFn> g_setLoaded{FCSE::Uplay(0x0012F850)};
     // CInventoryViewPawn's count of the rounds of one ammo type outside the magazines.
     FCSE::Relocation<SpareRoundsFn> g_spareRounds{FCSE::Uplay(0x00126000)};
+    // CInventoryViewPawn::GetGadgetFromCategory, and CGadget::GetUses.
+    using GadgetFn = void*(__fastcall*)(const void* view, void* unused, const uint32_t* category);
+    using UsesFn = int(__fastcall*)(void* gadget, void* unused);
+    FCSE::Relocation<GadgetFn> g_gadgetFromCategory{FCSE::Uplay(0x00129DF0)};
+    FCSE::Relocation<UsesFn> g_uses{FCSE::Uplay(0x001496C0)};
+    // An entity's component by class id; CFCXCountersComponentPlayerSP's class id, built when its
+    // name is still unset, and its RemainingPills.
+    using GetComponentFn = void*(__fastcall*)(void* entity, void* unused, const uint32_t* type);
+    using BuildCountersTypeFn = void(__fastcall*)(void* unused, void* unused2);
+    FCSE::Relocation<GetComponentFn> g_getComponent{FCSE::Uplay(0x004E2CC0)};
+    FCSE::Relocation<BuildCountersTypeFn> g_buildCountersType{FCSE::Uplay(0x00657F30)};
+    FCSE::Relocation<const void* const*> g_countersTypeName{FCSE::Uplay(0x01649818)};
+    FCSE::Relocation<const uint32_t*> g_countersType{FCSE::Uplay(0x01649838)};
+    constexpr ptrdiff_t kRemainingPills = 0xF0;
     // CInventoryItemWeapon's class id, built on first use, and CWeaponPropertiesCommon's class ids.
     FCSE::Relocation<BuildTypeFn> g_buildWeaponItemType{FCSE::Uplay(0x00126210)};
     FCSE::Relocation<const uint32_t*> g_weaponItemType{FCSE::Uplay(0x00FE46EC)};
@@ -103,8 +117,10 @@ namespace {
 
 bool Install() {
     return g_getTerminal && g_dropWeapon && g_addByName && g_selectAtOnce && g_updateEquipAnim &&
-           g_reliability && g_ammoInClip && g_rememberedInClip && g_setLoaded && g_spareRounds && g_buildWeaponItemType && g_weaponItemType && g_classes &&
-           Hook(g_canSpawnPickupSite, &OnCanSpawnPickup, &g_canSpawnPickup);
+           g_reliability && g_ammoInClip && g_rememberedInClip && g_setLoaded && g_spareRounds &&
+           g_gadgetFromCategory && g_uses && g_getComponent && g_buildCountersType &&
+           g_countersTypeName && g_countersType && g_buildWeaponItemType && g_weaponItemType &&
+           g_classes && Hook(g_canSpawnPickupSite, &OnCanSpawnPickup, &g_canSpawnPickup);
 }
 
 void* ViewOf(const void* pawn) { return Read<uint8_t*>(pawn, kPawnData) + kDataInventoryView; }
@@ -124,6 +140,11 @@ void* PlayerEntity() {
 
 void* Entity(const void* component) {
     return FCSE::ApiPointer()->EntityData->EntityOf(const_cast<void*>(component));
+}
+
+void* PlayerComponent(const uint32_t* type) {
+    void* player = PlayerEntity();
+    return player != nullptr ? g_getComponent(player, nullptr, type) : nullptr;
 }
 
 std::vector<Weapon> Guns(const void* inventory) {
@@ -183,6 +204,25 @@ int SpareRounds(const void* view, void* weapon) {
                                                   kStateProperties);
     return g_spareRounds(view, nullptr,
                          reinterpret_cast<const uint32_t*>(properties + kPropertiesAmmoType));
+}
+
+int Ammo(const void* view, const char* ammo) {
+    const uint32_t type = FCSE::Crc32(ammo);
+    return g_spareRounds(view, nullptr, &type);
+}
+
+int Throwables(const void* view, const char* category) {
+    const uint32_t type = FCSE::Crc32(category);
+    void* gadget = g_gadgetFromCategory(view, nullptr, &type);
+    return gadget != nullptr ? g_uses(gadget, nullptr) : 0;
+}
+
+int Pills() {
+    if (*g_countersTypeName.get() == nullptr) {
+        g_buildCountersType(nullptr, nullptr);
+    }
+    const void* counters = PlayerComponent(g_countersType.get());
+    return counters != nullptr ? Read<int32_t>(counters, kRemainingPills) : -1;
 }
 
 uint32_t& Id(void* item) {

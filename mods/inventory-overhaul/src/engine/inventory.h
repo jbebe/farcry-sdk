@@ -29,6 +29,8 @@ bool IsPlayers(const void* inventory);
 void* PlayerEntity();
 // The entity a component, such as a weapon or a pawn, belongs to.
 void* Entity(const void* component);
+// The player entity's component of the class `type`, or null.
+void* PlayerComponent(const uint32_t* type);
 
 // Every weapon but the machete, in the inventory's order.
 std::vector<Weapon> Guns(const void* inventory);
@@ -46,6 +48,12 @@ int Loaded(const void* inventory, void* weapon);
 void SetLoaded(void* weapon, int rounds);
 // The rounds of a gun's ammo the pawn carries outside every magazine, by its CInventoryViewPawn.
 int SpareRounds(const void* view, void* weapon);
+// The rounds of the ammo type named `ammo` the pawn carries, such as "syringe".
+int Ammo(const void* view, const char* ammo);
+// The uses left of the throwable of `category`, "grenade" or "molotov", or 0 without one.
+int Throwables(const void* view, const char* category);
+// The malaria pills the player carries, or -1 when there is no player.
+int Pills();
 
 // An item's id, by which the engine selects, draws and saves it.
 uint32_t& Id(void* item);

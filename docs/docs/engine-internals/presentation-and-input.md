@@ -741,6 +741,20 @@ imports it as an optional file right after the console's map:
 This is **RE-verified on GOG** and seen in data. Which folder `%APPDATA%` expands to was not
 traced.
 
+### Action signals and their listeners
+
+A bound input reaches the game as an action signal, a `CActionValue`: the signal's `CStringID` at
+`+0x00`, its value as a float at `+0x04`, and at `+0x10` how many times it fired this frame. The player
+acts only when that count is above zero. `CTerminalImpl::Execute` hands the **same** object to each
+of the terminal's listeners in the order they registered, and ignores what they return. The pause
+service's listener (`CFCXPauseMultiService`, Steam `0x1071AF40`) comes before the player's. So a
+listener ahead of the player's can rewrite the signal's id in place, and the player's sees the new
+one. An id no listener knows makes the signal do nothing. `mods/inventory-overhaul` does this to Tab,
+and to the mouse wheel while its notebook is up.
+
+The wheel is `cycleweapon`, an `update` binding whose value is the turn: below zero for a turn
+towards the user, which moves down a list **(seen in game, 2026-10-27)**.
+
 ## What this is enough to build
 
 DevTools' overlay is exactly the above and nothing else: a throwaway device for the vtable, `Present`
