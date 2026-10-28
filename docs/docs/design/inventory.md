@@ -39,6 +39,10 @@ layer. Marked **(proposed)** are choices not yet agreed.
   game as a pause screen does, so Statistics and Upgrades stay in the pause menu, with Resume, Save,
   Load, Options, Legend and Quit. Jackal Tapes, Predecessor Tapes, Buddies, Journal and the malaria
   panel move into the notebook; malaria becomes the pills' card.
+- **Handwriting for what is written, not for the notebook's labels** (2026-10-28). Mission texts,
+  notes and captions are in Caveat, a handwriting font: the Journal's job and objectives, a paper's
+  opening line on the post-it, and the reader's text and caption. Headings, rows and prompts keep the
+  game's Farcry2 ink.
 
 ## What the engine gives us
 
@@ -259,7 +263,9 @@ player bound it on a piece of the HUD's dark strip, the left mouse button as the
   slot is added to the weapons service at runtime, which leaves `gamemodesconfig.xml` to other mods.
 - **The page is Magma**, built the way the pause menu's paper pages are, so it looks like the game's
   own: the `notebook` texture, Farcry2 ink, `common.mgb`'s post-it, paperclip and red line, with the
-  index tabs along the top, clear of the fingers. It is drawn onto the notebook's pages, where it is
+  index tabs along the top, clear of the fingers. The handwriting is a font of the game's own kind,
+  Caveat drawn at weight 600 and 40 px by JackAll's `mft build` and added to every `fonts.mgb` and
+  UI dependency list as fragments (seen in game, 2026-10-28). It is drawn onto the notebook's pages, where it is
   lit by the world and moves with the hands, since a flat overlay reads as a HUD. The draws between
   the page's first and last image go into a texture instead of the screen, and the pages draw with a
   material named `MAPTOP`, which shows that texture in place of the area map, cut out to the notebook

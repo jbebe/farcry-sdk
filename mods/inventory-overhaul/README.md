@@ -128,7 +128,11 @@ no shadow, `common.mgb`'s post-it, paperclip, red line and brush stroke, cropped
 and `TILING`. The sheet is the spread with room above it for the index tabs, which stand up from the
 left page's top edge behind the paper, out of the fingers' way: the open page's pulled up and white,
 the others grey. Everything is written in the one ink; the only colour is the red line under the
-selected row, tinted as the pause pages tint it.
+selected row, tinted as the pause pages tint it. Mission texts, notes and captions are in Caveat, a
+handwriting font (`notebook/fonts/`, under the SIL Open Font License): `build-ui.ps1` has
+`jackall-cli mft build` draw it into `layer/mods/ui/fonts/` and add it to every `fonts.mgb` and UI
+dependency list as fragments, which it reads from the install (`-Game`, `C:\Games\Far Cry 2` by
+default).
 The post-it's gun pictures are the shop's `gun_icon_*` textures, multiplied onto the paper, one image
 per gun, all but one hidden.
 

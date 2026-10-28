@@ -1,0 +1,5 @@
+<FONTS>
+  <FONT slot="106" type="PixmapFont" name="Farcry2_25" file="\Fonts\Farcry2_25.mft" />
+  <FONT slot="106" type="PixmapFont" name="arial_cyrillic_25" file="\Fonts\arial_cyrillic_25.mft" />
+  <FONT slot="106" type="PixmapFont" name="Caveat_40" file="\Fonts\caveat_40.mft" />
+</FONTS>

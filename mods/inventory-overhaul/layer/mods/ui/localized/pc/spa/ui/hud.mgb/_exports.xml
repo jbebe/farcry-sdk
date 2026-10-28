@@ -720,6 +720,9 @@
     <GENERICOBJECT name="IO_POSTIT_QUOTE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit t_io_postit_quote" />
     </GENERICOBJECT>
+    <GENERICOBJECT name="IO_POSTIT_WRITING">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit t_io_postit_writing" />
+    </GENERICOBJECT>
     <GENERICOBJECT name="IO_POSTIT_NOTE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit t_io_postit_note" />
     </GENERICOBJECT>

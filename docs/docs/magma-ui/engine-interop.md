@@ -683,7 +683,7 @@ aspect.
 `CMagmaTextUtil::ExpandInputString` (Steam `0x105EB830`, `cdecl(const std::wstring* text,
 std::wstring* out, int flag)`, its callers passing 1) words each `{signal}` in `text` as the keys
 bound to that action map signal. It takes the names from the string table's `Keyboard` and `Mouse`
-sections and joins several with `Generic/OR`, as the tutorials' messages do ("press {use} to
+sections and joins several with `Generic/OR`, as the tutorials' messages do ("press `{use}` to
 interact"). `out` is the engine's own string, freed with its destructor (`0x10002890`). It gives
 "Tab" for `toggle_notebook`, "R" for `flipside`, "X" for a new control's `drop_item` and "left mouse
 button" for `startshooting` **(seen in game, 2026-10-28)**, so the notebook's prompts name the

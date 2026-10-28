@@ -92,7 +92,7 @@ namespace {
             opening.erase(word != std::wstring::npos ? word : kOpening);
             opening += L"…";
         }
-        model.Text("IO_POSTIT_QUOTE", std::move(opening));
+        model.Text("IO_POSTIT_WRITING", std::move(opening));
     }
 
     // The paper read whole, on the sheet over the right page.

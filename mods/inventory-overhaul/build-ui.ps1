@@ -13,8 +13,12 @@
     stuck on it. Everything the plugin fills or hides is exported as IO_*; a gun's picture is one image
     per gun and slot, all but one hidden.
 
-    Run from anywhere; reads the retail files under tmp\, writes layer\mods\ui.
+    Run from anywhere; reads the retail files under tmp\, and the install's for the fonts, writes
+    layer\mods\ui.
 #>
+param(
+    [string]$Game = 'C:\Games\Far Cry 2'
+)
 $ErrorActionPreference = "Stop"
 
 $Repo = Resolve-Path "$PSScriptRoot\..\.."
@@ -32,6 +36,10 @@ $CommonId = "#E5EC7051"
 $PageId = "#F2CDBA4C"
 $NotebookMaterial = "#F67D9A2B"
 $Farcry2 = "#5B34AD62"
+# The handwriting: Caveat, at a weight that reads on the page, made a font package as the game's are.
+$CaveatSize = 40
+$CaveatWeight = 600
+$Caveat = "Caveat_$CaveatSize"
 
 # The spread's place in notebook.png. The sheet the notebook's pages show is the spread from $SheetTop
 # above it, room for the tabs; it covers the HUD's whole canvas page, which the plugin copies whole.
@@ -100,11 +108,13 @@ function Image([string]$name, [string]$material, [string]$package, [double]$x, [
 }
 
 # A line of Farcry2 ink, as the pause menu's pages set theirs: no shadow, one line, cut with an
-# ellipsis; or, with `wrap`, prose wrapped from the top of its box. `shadow` casts the HUD's own.
+# ellipsis; or, with `wrap`, prose wrapped from the top of its box. `shadow` casts the HUD's own, and
+# `hand` writes it in Caveat, the notebook's handwriting.
 function Text([string]$name, [string]$string, [double]$x, [double]$y, [double]$w, [double]$h, [int]$height,
               [string]$colour, [string]$align = "LEFT", [double]$rotation = 0, [string]$alignY = "CENTER",
-              [bool]$wrap = $false, [bool]$italic = $false, [bool]$shadow = $false) {
-    $tracking = if ($height -ge 22) { 0 } elseif ($height -ge 19) { 65516 } else { 65521 }
+              [bool]$wrap = $false, [bool]$italic = $false, [bool]$shadow = $false, [bool]$hand = $false) {
+    $family = if ($hand) { $Caveat } else { $Farcry2 }
+    $tracking = if ($hand -or $height -ge 22) { 0 } elseif ($height -ge 19) { 65516 } else { 65521 }
     $wrapping = $wrap.ToString().ToLowerInvariant()
     $ellipsis = (-not $wrap).ToString().ToLowerInvariant()
     $italics = $italic.ToString().ToLowerInvariant()
@@ -114,7 +124,7 @@ function Text([string]$name, [string]$string, [double]$x, [double]$y, [double]$w
         "LEADING=`"$height`" TRACKING=`"$tracking`" />"
     $body = "<Text useStringTable=`"false`" STRING=`"$string`" ALIGNMENTX=`"$align`" ALIGNMENTY=`"$alignY`" WRAPPING=`"$wrapping`" " +
         "CLIPPING=`"false`" ELLIPSIS=`"$ellipsis`" AUTOSIZED=`"false`" BOLD=`"false`" ITALICS=`"$italics`" UNDERLINED=`"false`" " +
-        "BLENDINGMODE=`"Normal`" ALPHABLENDFIRST=`"false`"><FONTFAMILY present=`"true`" id=`"$Farcry2`" PACKAGE=`"\fonts.mgb`" /></Text>"
+        "BLENDINGMODE=`"Normal`" ALPHABLENDFIRST=`"false`"><FONTFAMILY present=`"true`" id=`"$family`" PACKAGE=`"\fonts.mgb`" /></Text>"
     Element 50 Text $name $state $body
 }
 
@@ -319,14 +329,14 @@ List papers tape $right ($Below + 52) 4 40 io_tape 40 20 (Colour "000000" 0.8)
 Heading journal t_io_reputation "" $left
 $areas.journal.Add((Text t_io_reputation_prose "" $left 80 $width 400 22 $inkFull LEFT 0 TOP $true))
 Heading journal t_io_jobs "JOB" $right
-$areas.journal.Add((Text t_io_job "" $right 80 $width 120 22 $inkFull LEFT 0 TOP $true))
+$areas.journal.Add((Text t_io_job "" $right 80 $width 120 26 $inkFull LEFT 0 TOP $true -hand $true))
 $areas.journal.Add((Text t_io_jobs_none "No job right now." $right 80 $width 22 18 $countInk))
 Heading journal t_io_objectives "OBJECTIVES" $right 216
 foreach ($k in 1, 2) {
-    $areas.journal.Add((Text "t_io_objective$k" "" $right (252 + ($k - 1) * 68) $width 64 20 $inkFull LEFT 0 TOP $true))
+    $areas.journal.Add((Text "t_io_objective$k" "" $right (252 + ($k - 1) * 68) $width 64 24 $inkFull LEFT 0 TOP $true -hand $true))
 }
 Heading journal t_io_underground "UNDERGROUND" $right 400
-$areas.journal.Add((Text t_io_underground_job "" $right 436 $width 88 20 $inkFull LEFT 0 TOP $true))
+$areas.journal.Add((Text t_io_underground_job "" $right 436 $width 88 24 $inkFull LEFT 0 TOP $true -hand $true))
 foreach ($name in "t_io_reputation", "t_io_reputation_prose", "t_io_job", "t_io_jobs_none", "t_io_objectives",
     "t_io_objective1", "t_io_objective2", "t_io_underground", "t_io_underground_job") {
     Export (AreaPath a_io_journal) $name
@@ -408,6 +418,8 @@ $postIt.Add((Text t_io_postit_value2 "" 81 174 120 24 20 $inkFull RIGHT))
 $postIt.Add((Text t_io_postit_state "" 140 148 252 24 20 $inkFull))
 $postIt.Add((Text t_io_postit_status "" 140 148 252 24 20 $inkFull RIGHT))
 $postIt.Add((Text t_io_postit_quote "" 26 176 366 84 17 $inkFull LEFT 0 TOP $true))
+# A paper's own words, in its writer's hand, in the same place.
+$postIt.Add((Text t_io_postit_writing "" 26 172 366 88 21 $inkFull LEFT 0 TOP $true -hand $true))
 # The game's upgrade icons, faint until bought, in a row after a line's label: a gun's operation and
 # repair manuals and its bandolier on the third line, under its condition and ammo; a belt item's
 # first aid manuals or bandolier on the second, under its count.
@@ -424,7 +436,7 @@ Upgrades up "manual", "repair", "ammo" 201
 Upgrades belt_up "ammo", "ammo" 175
 $postIt.Add((Text t_io_postit_note "" 26 236 366 22 18 $inkFull))
 foreach ($name in "t_io_postit_name", "t_io_postit_sub", "t_io_postit_about", "t_io_postit_value1", "t_io_postit_value2",
-        "t_io_postit_state", "t_io_postit_status", "t_io_postit_quote", "t_io_postit_note") {
+        "t_io_postit_state", "t_io_postit_status", "t_io_postit_quote", "t_io_postit_writing", "t_io_postit_note") {
     Export $PostItPath $name
 }
 # Each rating is a brush stroke as long as the rating, the way the loadout draws them, over a faint
@@ -451,8 +463,8 @@ $reader = [System.Collections.Generic.List[string]]::new()
 $reader.Add((Image i_io_reader_paper postit "\common.mgb" -104 104 620 412 "FFFFFFFF" 90 (Crop $PostItCrop)))
 $reader.Add((Text t_io_reader_name "" 30 30 352 30 24 $inkFull))
 PaperPictures $reader reader_pic $ReaderPath 76 72 260 30 92 352
-$reader.Add((Text t_io_reader_text "" 30 72 352 506 20 $inkFull LEFT 0 TOP $true))
-$reader.Add((Text t_io_reader_caption "" 30 346 352 232 20 $inkFull LEFT 0 TOP $true))
+$reader.Add((Text t_io_reader_text "" 30 72 352 506 24 $inkFull LEFT 0 TOP $true -hand $true))
+$reader.Add((Text t_io_reader_caption "" 30 346 352 232 24 $inkFull LEFT 0 TOP $true -hand $true))
 $reader.Add((Text t_io_reader_sheet "" 30 584 352 20 15 $inkSoft RIGHT))
 foreach ($name in "t_io_reader_name", "t_io_reader_text", "t_io_reader_caption", "t_io_reader_sheet") {
     Export $ReaderPath $name
@@ -542,6 +554,14 @@ foreach ($mark in @(@{ Name = "mark_begin"; W = 4; H = 64 }, @{ Name = "mark_end
     & $Cli xbt build "$Work\$($mark.Name).dds" "$Work\ui_tape_icon.xml" -o "$Textures\$($mark.Name).xbt" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "xbt build failed for $($mark.Name)" }
 }
+
+# Caveat drawn into ui\fonts, with its font and family in every fonts.mgb and its files in every UI
+# dependency list, which is what the game preloads, as fragments of the game's own.
+Remove-Item -Recurse -Force "$PSScriptRoot\layer\mods\ui\fonts", "$Layer\*\*\ui\fonts.mgb", "$Layer\*\*\ui\_depload.xml" `
+    -ErrorAction SilentlyContinue
+& $Cli mft build "$PSScriptRoot\notebook\fonts\Caveat-VariableFont_wght.ttf" --axis "wght=$CaveatWeight" `
+    --size $CaveatSize --name $Caveat --out "$PSScriptRoot\layer" --game $Game | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "mft build failed" }
 
 # A changed package's XML checked and written into the layer as fragments of its retail package.
 function Ship([System.Collections.Generic.List[string]]$lines, [string]$xml, [System.IO.FileInfo]$source,
