@@ -77,8 +77,8 @@ namespace {
         }
         model.Text("IO_POSTIT_NAME", PlainName(buddy.name));
         model.Text("IO_POSTIT_SUB", Value(buddy.name, "_NATIONALITY") + L", " + Value(buddy.name, "_AGE"));
-        model.Text("IO_POSTIT_LINE1", L"Status");
-        model.Text("IO_POSTIT_STATE", buddy.statusText);
+        model.Text("IO_POSTIT_LINE1", L"Status:");
+        model.Text("IO_POSTIT_STATUS", buddy.statusText);
         model.Text("IO_POSTIT_QUOTE", Story::Localize(kBuddies, Upper(buddy.name) + "_DESCRIPTION_1"));
     }
 }

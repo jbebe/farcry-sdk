@@ -329,12 +329,13 @@ Export $PagePath a_io_portraits
 $postIt.Add((Image i_io_postit_paper postit "\common.mgb" 0 0 416 302 "FFFFFFFF" 0 (Crop $PostItCrop)))
 # The paperclip lies on its side; it is turned a quarter clockwise to stand across the post-it's top.
 $postIt.Add((Image i_io_postit_clip paperclip "\common.mgb" (300 - 48) (6 - 24) 96 48 "FFFFFFFF" 90))
+# The wide pictures, the guns' and the machete's, are kept small enough not to look blocky.
 foreach ($pic in $GunPictures) {
-    $postIt.Add((Image "i_io_postit_pic_$pic" "io_gun_$pic" "" 65 22 288 72 "FFFFFFFF" 0 @(0, 0, 1, 1) Multiply))
+    $postIt.Add((Image "i_io_postit_pic_$pic" "io_gun_$pic" "" 94 29 230 58 "FFFFFFFF" 0 @(0, 0, 1, 1) Multiply))
     Export $PostItPath "i_io_postit_pic_$pic"
 }
-$postIt.Add((Image i_io_postit_pic_machete hud_icon_machete "" 65 22 288 72))
-$postIt.Add((Image i_io_postit_pic_mortar hud_icon_mortar_shop "" 65 22 288 72 (Colour "000000" 0.8)))
+$postIt.Add((Image i_io_postit_pic_machete hud_icon_machete "" 94 29 230 58))
+$postIt.Add((Image i_io_postit_pic_mortar hud_icon_mortar_shop "" 94 29 230 58 (Colour "000000" 0.8)))
 Export $PostItPath i_io_postit_pic_machete
 Export $PostItPath i_io_postit_pic_mortar
 # The belt's and the wallet's pictures are square.
@@ -367,8 +368,10 @@ for ($l = 1; $l -le 3; $l++) {
 }
 $postIt.Add((Text t_io_postit_value1 "" 101 148 100 24 20 $inkFull RIGHT))
 $postIt.Add((Text t_io_postit_value2 "" 81 174 120 24 20 $inkFull RIGHT))
-# A paper's, a tape's or a buddy's first line, a label and a longer value, and what it says below.
+# A paper's or a tape's first line, a label and a longer value, and what it says below; a buddy's
+# status, at the post-it's right edge.
 $postIt.Add((Text t_io_postit_state "" 140 148 252 24 20 $inkFull))
+$postIt.Add((Text t_io_postit_status "" 140 148 252 24 20 $inkFull RIGHT))
 $postIt.Add((Text t_io_postit_quote "" 26 176 366 84 17 $inkFull LEFT 0 TOP $true))
 # The game's upgrade icons, faint until bought, in a row after a line's label: a gun's operation and
 # repair manuals and its bandolier on the third line, under its condition and ammo; a belt item's
@@ -386,7 +389,7 @@ Upgrades up "manual", "repair", "ammo" 201
 Upgrades belt_up "ammo", "ammo" 175
 $postIt.Add((Text t_io_postit_note "" 26 236 366 22 18 $inkFull))
 foreach ($name in "t_io_postit_name", "t_io_postit_sub", "t_io_postit_about", "t_io_postit_value1", "t_io_postit_value2",
-        "t_io_postit_state", "t_io_postit_quote", "t_io_postit_note") {
+        "t_io_postit_state", "t_io_postit_status", "t_io_postit_quote", "t_io_postit_note") {
     Export $PostItPath $name
 }
 # Each rating is a brush stroke as long as the rating, the way the loadout draws them, over a faint

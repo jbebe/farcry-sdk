@@ -141,7 +141,7 @@ void ClearPostIt(Model& model) {
     model.Show("IO_POSTIT_PORTRAIT", false);
     for (const char* name : {"IO_POSTIT_NAME", "IO_POSTIT_SUB", "IO_POSTIT_LINE1", "IO_POSTIT_LINE2",
                              "IO_POSTIT_LINE3", "IO_POSTIT_VALUE1", "IO_POSTIT_VALUE2", "IO_POSTIT_STATE",
-                             "IO_POSTIT_QUOTE", "IO_POSTIT_NOTE", "IO_POSTIT_ABOUT"}) {
+                             "IO_POSTIT_QUOTE", "IO_POSTIT_NOTE", "IO_POSTIT_ABOUT", "IO_POSTIT_STATUS"}) {
         model.Text(name, L"");
     }
     for (const auto& [icons, count] : kUpgradeRows) {

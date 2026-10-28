@@ -60,7 +60,6 @@ namespace {
         std::wstring about = Story::Localize(kTapes, key + "_DESC");
         model.Show("IO_POSTIT_PIC_TAPE", true);
         model.Text("IO_POSTIT_NAME", title);
-        model.Text("IO_POSTIT_SUB", L"a Jackal tape");
         if (const size_t dash = about.find(L" - "); dash != std::wstring::npos) {
             const std::wstring recorded = about.substr(0, dash);
             model.Text("IO_POSTIT_LINE1", L"Recorded");
