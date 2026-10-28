@@ -13,7 +13,8 @@ public static class AiWorkspacePacker
 {
     public static byte[] Pack(XElement source) => new Packing(source).Write();
 
-    private static uint Hash(string name) => FcbClassDefinitions.Crc32Ascii(name);
+    /// <summary>The name hash the repository keys tasks by.</summary>
+    public static uint Hash(string name) => FcbClassDefinitions.Crc32Ascii(name);
 
     /// <summary>The <c>Parameters</c> node <c>LoadInstance</c> builds: flags as attributes, then one
     /// attribute per parameter and a child element for each parameter that has sub-parameters.</summary>

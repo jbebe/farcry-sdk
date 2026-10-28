@@ -148,8 +148,8 @@ offset, so the order has no effect.
 ## Editing
 
 JackAll's **AI** tab browses a workspace as a tree (brain → "when *filter*" → plan → tasks), edits
-parameters, and on save recompiles `packed` from the edited source and stages the file. From the
-command line:
+parameters, and on save recompiles `packed` from the edited source and stages the instances that
+differ, as fragments. From the command line:
 
 ```
 jackall-cli ai unpack mercbrain.ai.rml     # mercbrain.source.xml + a readable dump of the compiled half

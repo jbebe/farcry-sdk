@@ -146,7 +146,7 @@ warns.
 | Save on the **Map** tab | The objects you moved or added, the sector's `_layout.xml`, archetypes you pasted from the other world, and the dependency entries they need |
 | Save in the MGB editor | The areas that differ from what the game loads now; an area put back to the original is removed again |
 | Save on the **Animations** tab | The situations you changed |
-| Save on the **AI** tab | Soldier, weapon and curve archetypes; brains and behaviour odds are whole files |
+| Save on the **AI** tab | Soldier, weapon and curve archetypes; a brain as the plans and tasks that differ; behaviour odds as a whole file |
 | **Import legacy mod** | Every piece of every container the old mod changed |
 
 You can also write a fragment by hand: copy one into your workspace with **Mirror** on the Files tab,

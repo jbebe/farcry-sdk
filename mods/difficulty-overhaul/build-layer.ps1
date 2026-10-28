@@ -16,8 +16,8 @@ function Invoke-Cli {
 }
 
 $work = Join-Path ([IO.Path]::GetTempPath()) 'difficulty-overhaul-brain'
-$layer = "$PSScriptRoot\layer"
-foreach ($dir in $work, $layer) { if (Test-Path $dir) { Remove-Item -Recurse -Force $dir } }
+$fragments = "$PSScriptRoot\layer\mods\scripts\game\newbrains\mercbrain.ai.rml"
+foreach ($dir in $work, $fragments) { if (Test-Path $dir) { Remove-Item -Recurse -Force $dir } }
 
 Invoke-Cli archive extract "$Game\Data_Win32\worlds\worlds.fat" --names --filter mercbrain.ai.rml -o $work
 $brain = (Get-ChildItem -Recurse $work -Filter mercbrain.ai.rml).FullName
@@ -213,5 +213,5 @@ Add-Instance $plan "$plan/SetFireSpecial" (IfCarriesLauncher "$plan/IfCarriesLau
     Connect "$plan/SwitchToSniperGun") (Connect "$plan/CheckMortarWeapon1"))
 
 $doc.Save($source)
-Invoke-Cli ai fragments $source --base $brain --out "$layer\mods\scripts\game\newbrains\mercbrain.ai.rml"
+Invoke-Cli ai fragments $source --base $brain --out $fragments
 Remove-Item -Recurse -Force $work

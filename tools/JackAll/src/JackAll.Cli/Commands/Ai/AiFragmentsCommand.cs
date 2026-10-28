@@ -11,10 +11,6 @@ namespace JackAll.Cli.Commands.Ai;
 /// <summary>
 /// Writes a brain workspace out as fragments, keeping only the instances that differ from vanilla.
 /// </summary>
-/// <remarks>
-/// A whole brain in a mod is last-wins against every other mod that edits it, and every soldier runs
-/// the same one. Fragments merge instead.
-/// </remarks>
 public sealed class AiFragmentsCommand : CliCommand<AiFragmentsCommand.Settings>
 {
     public sealed class Settings : CommandSettings

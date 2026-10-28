@@ -10,12 +10,13 @@ namespace JackAll.Core.Format.Ai;
 public sealed record AiWorkspaceFile(byte[] Packed, XElement Source)
 {
     public const string Folder = @"scripts\game\newbrains\";
+    public const string Extension = ".ai.rml";
 
     /// <summary>The header kind the engine loads without recompiling the source.</summary>
     private const uint PackedKind = 4;
 
     public static bool IsWorkspace(string path)
-        => path.StartsWith(Folder, StringComparison.OrdinalIgnoreCase) && path.EndsWith(".ai.rml", StringComparison.OrdinalIgnoreCase);
+        => path.StartsWith(Folder, StringComparison.OrdinalIgnoreCase) && path.EndsWith(Extension, StringComparison.OrdinalIgnoreCase);
 
     public static AiWorkspaceFile Read(byte[] data)
     {

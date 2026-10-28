@@ -35,7 +35,6 @@ public class AiWorkspaceContainerSplitterTests
         Assert.Equal($"LauncherInHand.{FcbClassDefinitions.Crc32Ascii(name)}.xml", AiWorkspaceContainerSplitter.IdOf(task));
     }
 
-    /// <summary>Every instance spliced straight back loads as the shipped repository does.</summary>
     [Theory]
     [InlineData(Stoopid)]
     [InlineData(Merc)]
@@ -88,9 +87,8 @@ public class AiWorkspaceContainerSplitterTests
         if (Fixture.Read(Stoopid) is not { } original) return;
 
         string ancestor = Splitter.Open(original).Extract(AiWorkspaceContainerSplitter.IdOf(Instance(original, FollowTarget)))!;
-        (string ours, string theirs) = (WithAdd(ancestor, "Ours"), WithAdd(ancestor, "Theirs"));
-
-        (string merged, IReadOnlyList<string> conflicts) = Splitter.Merge("", ancestor, ours, theirs);
+        (string merged, IReadOnlyList<string> conflicts) =
+            Splitter.Merge("", ancestor, WithAdd(ancestor, "Ours"), WithAdd(ancestor, "Theirs"));
 
         Assert.Empty(conflicts);
         Assert.Equal(

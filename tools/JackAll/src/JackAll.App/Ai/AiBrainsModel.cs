@@ -210,7 +210,7 @@ public sealed class AiBrainsModel(MainViewModel vm) : Observable
         OnPropertyChanged(nameof(LoadedPath));
     }
 
-    /// <summary>Recompiles the workspace and stages it.</summary>
+    /// <summary>Recompiles the workspace and stages the instances that differ from what the game loads now.</summary>
     public async Task SaveAsync()
     {
         if (_file is null || _graph is null || !IsDirty)
@@ -218,7 +218,7 @@ public sealed class AiBrainsModel(MainViewModel vm) : Observable
             return;
         }
         XElement source = _graph.Source;
-        vm.Replace(_file, await Task.Run(() => AiWorkspaceFile.Compile(source)));
+        vm.StageContainer(_file, await Task.Run(() => AiWorkspaceFile.Compile(source)));
         IsDirty = false;
     }
 
