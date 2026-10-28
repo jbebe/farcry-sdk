@@ -1,0 +1,98 @@
+<CMagmaConfigUIResource ID="ui\localized\pc\fre\ui\hud.mgb.desc" crc_ID="276450068" version="2">
+	<CMagmaUIResource ID="ui\localized\pc\fre\ui\hud.mgb" crc_ID="1931955805" />
+	<CTextureResource ID="ui\textures\hud\flashlight_hud_on.xbt" crc_ID="1011300640" />
+	<CTextureResource ID="ui\textures\hud\flashlight_hud_off.xbt" crc_ID="3651628979" />
+	<CMagmaConfigUIResource ID="ui\localized\pc\fre\ui\360.mgb.desc" crc_ID="2730945738" />
+	<CMagmaConfigUIResource ID="ui\localized\pc\fre\ui\fonts.mgb.desc" crc_ID="417927282" />
+	<CMagmaConfigUIResource ID="ui\localized\pc\fre\ui\common.mgb.desc" crc_ID="971726415" />
+	<CMagmaConfigUIResource ID="ui\localized\pc\fre\ui\ps3.mgb.desc" crc_ID="2836629348" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004f014b.spk" crc_ID="3860662165" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004f014c.spk" crc_ID="3682414117" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004f0e85.spk" crc_ID="3430291857" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004f0e88.spk" crc_ID="887545120" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004f014c.spk" crc_ID="3682414117" IsFilename="1" Size="0" nbChildren="0" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_flairgun.xbt" crc_ID="3656455747" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_fal.xbt" crc_ID="181688272" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_dragunov.xbt" crc_ID="1812467191" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_dlc_06.xbt" crc_ID="2959098891" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_dlc_05.xbt" crc_ID="4156571355" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_dlc_02.xbt" crc_ID="1172366027" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_dlc_04.xbt" crc_ID="3399489387" />
+	<CTextureResource ID="ui\textures\hud\icons_inventory\hud_icon_ied.xbt" crc_ID="3847026219" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_dlc_03.xbt" crc_ID="2021706619" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_dlc_01.xbt" crc_ID="37787675" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_deagle.xbt" crc_ID="3247793039" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_carlgustav.xbt" crc_ID="2016588193" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_bullets.xbt" crc_ID="3847011656" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_as50.xbt" crc_ID="3995691782" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_ak47.xbt" crc_ID="3278157338" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_6p9.xbt" crc_ID="293089250" />
+	<CTextureResource ID="ui\textures\hud\hud_gun_stain.xbt" crc_ID="3587698204" />
+	<CTextureResource ID="ui\textures\hud\hit_texture_sliced.xbt" crc_ID="2633605798" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_g3ka4.xbt" crc_ID="1262970885" />
+	<CTextureResource ID="ui\textures\hud\hit_indicator_sliced.xbt" crc_ID="419453571" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\gun_icon_m249_mounted.xbt" crc_ID="769518195" />
+	<CTextureResource ID="ui\textures\hud\crosshair_line.xbt" crc_ID="1566687696" />
+	<CTextureResource ID="ui\textures\hud\crosshair_circle_s.xbt" crc_ID="3213150168" />
+	<CTextureResource ID="ui\textures\hud\crosshair_circle_l.xbt" crc_ID="1563740043" />
+	<CTextureResource ID="ui\textures\hud\icons_inventory\hud_icon_interact.xbt" crc_ID="2046453652" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_ied.xbt" crc_ID="1467821806" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_lpo50.xbt" crc_ID="4174445540" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_m1903.xbt" crc_ID="1576278586" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_m249.xbt" crc_ID="2645995856" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_m67.xbt" crc_ID="1453049279" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_p45.xbt" crc_ID="1738197722" />
+	<CTextureResource ID="ui\textures\hud\icons_inventory\hud_icon_phone.xbt" crc_ID="3041203020" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icons_explosion.xbt" crc_ID="400446620" />
+	<CTextureResource ID="ui\textures\hud\icons_inventory\hud_icon_wrench.xbt" crc_ID="1390563493" />
+	<CTextureResource ID="ui\textures\hud\icons_inventory\hud_icon_watch.xbt" crc_ID="4022106869" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icons_fire.xbt" crc_ID="2175243092" />
+	<CTextureResource ID="ui\textures\hud\hud_lifebar.xbt" crc_ID="952180376" />
+	<CTextureResource ID="ui\textures\hud\hud_lifebar_frame.xbt" crc_ID="2960027006" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icons_vehicule.xbt" crc_ID="2673111437" />
+	<CTextureResource ID="ui\textures\hud\hud_seringe_stain.xbt" crc_ID="474468338" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_ithaca.xbt" crc_ID="4154033161" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_m16.xbt" crc_ID="1996414135" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_m2.xbt" crc_ID="3543289658" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_makarov.xbt" crc_ID="2753417068" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_mgl40.xbt" crc_ID="1667309229" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_mk19.xbt" crc_ID="2067172487" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_molotov.xbt" crc_ID="2834281758" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_mp5sd.xbt" crc_ID="2090653988" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_mortar.xbt" crc_ID="1660037644" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_mortar_shop.xbt" crc_ID="3111854113" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_m79.xbt" crc_ID="586655867" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_mac10.xbt" crc_ID="59504240" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_machete.xbt" crc_ID="3970091797" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_uzi.xbt" crc_ID="4245925035" />
+	<CTextureResource ID="ui\textures\hud\icons_objectives\icon_ufll_active.xbt" crc_ID="1396044020" />
+	<CTextureResource ID="ui\textures\hud\ui_hud_icon_diamond.xbt" crc_ID="1079587077" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_silenced_shotgun.xbt" crc_ID="1492333644" />
+	<CTextureResource ID="ui\textures\hud\hud_weapon_swap.xbt" crc_ID="4105346719" />
+	<CTextureResource ID="ui\textures\hud\icons_objectives\icon_apr_active.xbt" crc_ID="737324470" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_stricker_crossbow.xbt" crc_ID="2875992645" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_rpg7_rocket.xbt" crc_ID="973572728" />
+	<CTextureResource ID="ui\textures\hud\icons_inventory\hud_icon_pills.xbt" crc_ID="3933194854" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_rpg7.xbt" crc_ID="3734188735" />
+	<CTextureResource ID="ui\textures\hud\hud_icon_seringe.xbt" crc_ID="3492607792" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_sniperdart.xbt" crc_ID="1008227068" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_sawedoff_shotgun.xbt" crc_ID="1265219049" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_pkm.xbt" crc_ID="2451698930" />
+	<CTextureResource ID="ui\eapons\hud_icon_spas12.xbt" crc_ID="3746738230" />
+	<CTextureResource ID="ui\textures\hud\icons_weapons\hud_icon_usas.xbt" crc_ID="2660514991" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004b178a.spk" crc_ID="619305366" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004b178a.spk" crc_ID="619305366" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004b178a.spk" crc_ID="619305366" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004b178a.spk" crc_ID="619305366" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004b178a.spk" crc_ID="619305366" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004b178a.spk" crc_ID="619305366" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004b178a.spk" crc_ID="619305366" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004b178a.spk" crc_ID="619305366" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004b178a.spk" crc_ID="619305366" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004b178a.spk" crc_ID="619305366" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004b178a.spk" crc_ID="619305366" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004b178a.spk" crc_ID="619305366" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004b178a.spk" crc_ID="619305366" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004b178a.spk" crc_ID="619305366" IsFilename="1" Size="0" nbChildren="0" />
+	<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\004b178a.spk" crc_ID="619305366" IsFilename="1" Size="0" nbChildren="0" />
+</CMagmaConfigUIResource>
