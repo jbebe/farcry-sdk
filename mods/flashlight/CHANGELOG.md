@@ -3,6 +3,14 @@
 Notable changes to Flashlight, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.1] - 2026-10-28
+
+### Changed
+- **Combines with other mods that add to what the HUD loads.** It ships only its two icons' entries
+  in the HUD's dependency lists rather than whole copies of the lists, so another mod adding to them,
+  such as a new font or texture, keeps its entries and the Flashlight's. Needs JackAll 1.7.0 or the
+  Vortex extension 0.6.0.
+
 ## [1.2.0] - 2026-10-15
 
 ### Changed
