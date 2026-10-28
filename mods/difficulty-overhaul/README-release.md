@@ -26,8 +26,6 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
   and falls off fast past it.
 - **No rockets at you on foot.** A soldier with an RPG or a Carl Gustav draws his other gun at you on
   foot, and keeps the launcher for you in a vehicle.
-- **Shotgunners push in** at close range, and every soldier stops about 3 m from you instead of
-  walking into you.
 - **A combat log** in `bin\fcse.log`: every hit on you and by you, and every shot at you with its
   chance.
 

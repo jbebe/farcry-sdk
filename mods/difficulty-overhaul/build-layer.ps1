@@ -1,7 +1,6 @@
 # Builds layer\ from the installed game: the merc brain's changes as fragments, which JackAll merges
 # into the player's own brain. Soldiers carrying an RPG or a Carl Gustav fire it at the player only in
-# a vehicle and draw their other gun at the player on foot, shotgunners press their assault inside
-# 12 m too, and every soldier stops 3 m from the player.
+# a vehicle and draw their other gun at the player on foot.
 param(
     [string]$Game = 'C:\Games\Far Cry 2',
     [string]$Cli = "$PSScriptRoot\..\..\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
@@ -122,51 +121,6 @@ function SwitchWeapon($name, $selected, $class, $then) {
   <Exit Name="SwitchWeaponFailed" />
 </Task>
 "@
-}
-
-# Turns the blueprint switch $name on at the player; anyone else keeps the branch it shipped with, off.
-function Enable-AtPlayer($name) {
-    $switch = Instance $name
-    $switch.SelectSingleNode("Parameter[@Name='DecisionToUse']").SetAttribute('Value', '1')
-    $on = $switch.SelectSingleNode("Event[@Name='IS_TRUE']")
-    $off = $switch.SelectSingleNode("Event[@Name='IS_FALSE']").InnerXml
-    $gate = "${name}AtPlayer"
-    Add-Instance $name.Substring(0, $name.LastIndexOf('/')) $name (IfAtPlayer $gate $on.InnerXml $off)
-    $on.InnerXml = Connect $gate
-}
-
-# Inside 12 m a shotgunner keeps the assault role and pauses 1 s at each cover, as he does farther out.
-$kill = '::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack'
-Enable-AtPlayer "$kill/CheckForShotgunProgression"
-Enable-AtPlayer "$kill/AssaultAttack/CheckForShotgunProgression"
-
-# Within 3 m of the player a soldier stops whatever move he is on and fights where he stands, seen or
-# not: each close-target check, which waits until the player is in sight at 6 m, gets a 3 m scanner too.
-$closeChecks = @($doc.DocumentElement.SelectNodes('Plan') |
-    Where-Object { $_.GetAttribute('Name') -match '^::MercBrain/MercBrain/.*/CheckCloseTarget[^/]*$' })
-foreach ($check in $closeChecks) {
-    $name = $check.GetAttribute('Name')
-    $parent = $name.Substring(0, $name.LastIndexOf('/'))
-    Add-Instance $name "$name/CScannerIsInDistance1" @"
-<Scanner Name="$name/WithinReach" Class="CScannerIsInDistance" Looping="0" Independent="0">
-  <Parameter Name="InDistance" Value="3" />
-  <Parameter Name="RefPosFactName" Value="BestTarget" />
-  <Parameter Name="smartPostion" Value="&lt;AiObject, &gt;">
-    <Parameter Name="RefType" Value="1" />
-    <Parameter Name="RefName" Value="" />
-  </Parameter>
-  <Parameter Name="CheckIsInside" Value="1" />
-  <Parameter Name="InDistanceFactName" Value="" />
-  <Parameter Name="Trigger1FactName" Value="" />
-  <Parameter Name="Trigger2FactName" Value="" />
-  <Anchor Name="OnStart" />
-  <Anchor Name="OnStop" />
-  <Exit Name="Success">$(Connect "$name/WithinReachAtPlayer")</Exit>
-</Scanner>
-"@
-    Add-Instance $name "$name/WithinReach" (IfAtPlayer "$name/WithinReachAtPlayer" (Connect $parent 'Stop') '')
-    $start = $check.SelectSingleNode("Anchor[@Name='OnStart']")
-    $start.InnerXml += Connect "$name/WithinReach"
 }
 
 $plan = '::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan'

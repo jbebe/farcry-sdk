@@ -586,7 +586,7 @@ off:
 |---|---|---|
 | `TryRunToPerpendicular` | long, medium | a soldier with no reachable cover runs to a flanking spot to the target's side; off, he runs at the target |
 | `CheckForHeightDiff` | long, medium | the attack on a target above him: a firing spot for a high target, or a path up |
-| `CheckForShotgunProgression` | kill (both copies) | a shotgunner keeps the assault role and pauses 1 s at each cover instead of 3 s |
+| `CheckForShotgunProgression` | kill (both copies) | a shotgunner takes the assault role whatever his squad gave him, and pauses 1 s at each cover instead of 3 s. On in the short, medium and long bands, so he pushes from 50 m in to 12 m |
 | `CheckForMountedWeapon`, `CheckForVehicle` | kill; kill and short | going for a mounted gun; calling a vehicle |
 | `ScanRelocate` | fire alert, hurt, shot by another target | moving when his position is compromised (flag 45) |
 | `RelocateForShotBlock` | `CombatFireMoving` | moving when a shot is blocked while he walks |
