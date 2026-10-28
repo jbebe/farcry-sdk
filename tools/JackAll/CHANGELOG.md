@@ -2,7 +2,7 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.7.0] - 2026-10-28
 
 ### Added
 - **Make a font**, on the Mods tab, draws a font the game can use from any TrueType or OpenType
@@ -16,10 +16,6 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   same package all land; two mods shipping the list whole used to replace each other.
 - **A UI package's fonts and font families are fragments** (`_fonts.xml`, `_fontfamilies.xml`), so
   mods adding fonts to `fonts.mgb` work together.
-
-## [1.7.0] - 2026-10-28
-
-### Added
 - **Materials are edited in the Files tab.** An `.xbm`'s preview shows every property its shader
   takes, grouped the way the game's own shader descriptors group them, with colour swatches and
   texture thumbnails, **Pick…** and **Go to** for each texture. An edit goes into your workspace a
@@ -40,7 +36,10 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   staged in a folder named after the brain, such as `mods\scripts\game\newbrains\mercbrain.ai.rml\`,
   instead of the whole brain. The build merges them into the game's own brain and recompiles it, so
   mods that change the same brain work together, and two that change one plan merge. **`jackall-cli
-  ai fragments`** writes them from an edited brain or its source.
+  ai fragments`** writes them from an edited brain or its source, and saving a brain on the **AI**
+  tab stages only the plans and tasks you changed.
+- **`jackall-cli move clone`** gives a new weapon index a copy of everything another weapon's
+  animations do, playing the same clips until you point it at others.
 - **A navmesh for any terrain and anything standing on it.** `navmesh build` and `world pack` now
   build the AI's navmesh with Recast from the terrain and every placed object's collision. That
   covers hills, water, floors, roofs, ramps, stairs, bridges and trees. It leaves out slopes over

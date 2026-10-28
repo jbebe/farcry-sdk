@@ -9,6 +9,9 @@ Notable changes to the Vortex Far Cry 2 extension, loosely following
 - **Mods that change the AI's brains merge.** A mod can ship only the plans and tasks of a brain it
   changes, and the extension merges them into the game's own brain alongside any other mod changing
   the same one. Difficulty Overhaul ships its soldier changes this way.
+- **Mods that add fonts, or add to what the HUD and menus load, merge.** A mod can ship only its own
+  entries of a UI dependency list and its own fonts in `fonts.mgb`, and the extension merges them
+  with every other mod's, where two such mods used to replace each other's whole list.
 
 ## [0.5.0] - 2026-10-16
 
