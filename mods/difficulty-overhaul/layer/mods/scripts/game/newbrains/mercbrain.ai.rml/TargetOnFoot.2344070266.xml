@@ -1,0 +1,17 @@
+<Scanner Name="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/TargetOnFoot" Class="CScannerIsInVehicle" Looping="0" Independent="0">
+  <Parameter Name="factPawnAgentId" Value="BestTarget" />
+  <Parameter Name="functionalVehicleOnly" Value="1" />
+  <Parameter Name="movingVehicleOnly" Value="0" />
+  <Parameter Name="minMovingSpeed" Value="3" />
+  <Parameter Name="invertResult" Value="1" />
+  <Parameter Name="checkDelay" Value="0.5" />
+  <Parameter Name="outFactVehicleAgentId" Value="" />
+  <Parameter Name="vehicleType" Value="0" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/RocketShootingLoop" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/TargetInVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/DrawOtherGun" TargetAnchor="Start" />
+  </Exit>
+</Scanner>

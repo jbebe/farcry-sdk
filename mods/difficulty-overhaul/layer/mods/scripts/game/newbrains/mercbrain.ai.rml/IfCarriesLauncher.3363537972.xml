@@ -1,0 +1,16 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/IfCarriesLauncher" Class="CTaskCheckFactExist" Looping="0" Independent="0">
+  <Parameter Name="factNameIN" Value="CarriesLauncher" />
+  <Parameter Name="useWorldBlackboard" Value="0" />
+  <Parameter Name="BlackboardType" Value="1" />
+  <Parameter Name="checkType" Value="0" />
+  <Parameter Name="factValue" Value="integer">
+    <Parameter Name="integer" Value="0" />
+  </Parameter>
+  <Anchor Name="OnStart" />
+  <Event Name="False">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/SniperShootingLoop" TargetAnchor="Start" />
+  </Event>
+  <Event Name="True">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/IfAtPlayer" TargetAnchor="Start" />
+  </Event>
+</Task>

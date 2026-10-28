@@ -1,0 +1,19 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/CheckForShotgunProgressionAtPlayer" Class="CTaskCheckTargetType" Looping="0" Independent="0">
+  <Parameter Name="currentTarget" Value="BestTarget" />
+  <Anchor Name="OnStart" />
+  <Event Name="IsABuddy">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/CTaskCheckArmyRole1" TargetAnchor="Start" />
+  </Event>
+  <Event Name="IsAPlayer">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/CheckPlayerUsingShotgun" TargetAnchor="Start" />
+  </Event>
+  <Event Name="IsASpecialChar">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/CTaskCheckArmyRole1" TargetAnchor="Start" />
+  </Event>
+  <Event Name="IsAMerc">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/CTaskCheckArmyRole1" TargetAnchor="Start" />
+  </Event>
+  <Event Name="IsNotFound">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/CTaskCheckArmyRole1" TargetAnchor="Start" />
+  </Event>
+</Task>

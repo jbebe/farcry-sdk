@@ -1,0 +1,17 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/DrawLauncher" Class="CTaskSwitchWeapon" Looping="0" Independent="0">
+  <Parameter Name="weaponSelected" Value="" />
+  <Parameter Name="desiredWeaponClass" Value="special" />
+  <Parameter Name="actionSignal" Value="switch" />
+  <Parameter Name="actionSignalGroup" Value="::Pawn Weapons/Weapon Mechanics/States/SwitchingWeapon" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/RocketShootingLoop" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="WeaponAlreadySelected">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/RocketShootingLoop" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="SwitchWeaponFailed" />
+</Task>

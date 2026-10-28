@@ -1,0 +1,10 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/SetFireSpecial" Class="CTaskSetFireStrategy" Looping="0" Independent="0">
+  <Parameter Name="fireStrategy" Value="5" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/IfCarriesLauncher" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+</Task>

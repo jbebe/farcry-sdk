@@ -1,0 +1,18 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CheckCloseTarget_BP1" Class="CPlan" Looping="0" Independent="1">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CheckCloseTarget_BP1/CScannerIsInDistance1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CheckCloseTarget_BP1/WithinReach" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget" TargetAnchor="Stop" />
+  </Exit>
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CheckCloseTarget_BP1/CheckTargetVisible1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CheckCloseTarget_BP1/Wait1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CheckCloseTarget_BP1/CScannerIsInDistance1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CheckCloseTarget_BP1/WithinReach" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CheckCloseTarget_BP1/WithinReachAtPlayer" />
+</Plan>

@@ -1,0 +1,17 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/LauncherInHand" Class="CTaskUpdateBlackboard" Looping="0" Independent="0">
+  <Parameter Name="factNameIN" Value="CarriesLauncher" />
+  <Parameter Name="newfactNameIN" Value="" />
+  <Parameter Name="operationType" Value="1" />
+  <Parameter Name="useWorldBlackboardIN" Value="0" />
+  <Parameter Name="BlackboardType" Value="1" />
+  <Parameter Name="UpdateWho" Value="" />
+  <Parameter Name="factTime" Value="-1" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/IfAtPlayer" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+</Task>

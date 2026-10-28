@@ -1,0 +1,21 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/CheckCarlGustavWeapon" Class="CTaskCheckPlayerAction" Looping="0" Independent="0">
+  <Parameter Name="PlayerAction" Value="1" />
+  <Parameter Name="PlayerWeapon" Value="5" />
+  <Parameter Name="PerformingDistance" Value="-1" />
+  <Parameter Name="CheckWho" Value="" />
+  <Parameter Name="CheckPlayer" Value="0" />
+  <Parameter Name="CheckArmyMembers" Value="0" />
+  <Parameter Name="FactShooterId" Value="" />
+  <Anchor Name="OnStart" />
+  <Event Name="PlayerReloading" />
+  <Event Name="PlayerUsingWeapon">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/LauncherInHand" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/SniperAccuracy1" TargetAnchor="Start" />
+  </Event>
+  <Event Name="SwitchedWeapon" />
+  <Event Name="PlayerAimingAtMe" />
+  <Event Name="PlayerWoundedCanHeal" />
+  <Event Name="PlayerNotDoingAction">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/CheckForcedMiss" TargetAnchor="Start" />
+  </Event>
+</Task>

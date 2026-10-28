@@ -1,6 +1,7 @@
-# Builds layer\ from the installed game: the merc brain, with soldiers carrying an RPG or a Carl Gustav
-# firing it at the player only in a vehicle and drawing their other gun at the player on foot, and
-# shotgunners pressing their assault on the player inside 12 m too.
+# Builds layer\ from the installed game: the merc brain's changes as fragments, which JackAll merges
+# into the player's own brain. Soldiers carrying an RPG or a Carl Gustav fire it at the player only in
+# a vehicle and draw their other gun at the player on foot, shotgunners press their assault inside
+# 12 m too, and every soldier stops 3 m from the player.
 param(
     [string]$Game = 'C:\Games\Far Cry 2',
     [string]$Cli = "$PSScriptRoot\..\..\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
@@ -212,7 +213,5 @@ Add-Instance $plan "$plan/SetFireSpecial" (IfCarriesLauncher "$plan/IfCarriesLau
     Connect "$plan/SwitchToSniperGun") (Connect "$plan/CheckMortarWeapon1"))
 
 $doc.Save($source)
-$brains = "$layer\mods\scripts\game\newbrains"
-New-Item -ItemType Directory -Force $brains | Out-Null
-Invoke-Cli ai pack $source -o "$brains\mercbrain.ai.rml"
+Invoke-Cli ai fragments $source --base $brain --out "$layer\mods\scripts\game\newbrains\mercbrain.ai.rml"
 Remove-Item -Recurse -Force $work

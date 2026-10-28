@@ -1,0 +1,40 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/RemoveBlockedShot" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/StopIronsight" TargetAnchor="Start" />
+  </Anchor>
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/MovePhase" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/StopIronsight" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/CheckRocketWeapon" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/SniperAccuracy1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/LookAtTargetPredictedPos" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/AimAtPredictedPos" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/CheckCarlGustavWeapon" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/ManageUnderFire" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/AimAtTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/LookAtTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/RemoveBlockedShot" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/CheckForcedMiss" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/AlwaysMissAccuracy" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/SniperAccuracy" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/CheckMortarWeapon" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/SniperShootingLoop" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/RocketShootingLoop" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/MortarShootingLoop" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/UpdateStance" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/LauncherInHand" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/IfCarriesLauncher" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/IfAtPlayer" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/TargetInVehicle" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/TargetOnFoot" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/DrawLauncher" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ShootPhase/DrawOtherGun" />
+</Plan>

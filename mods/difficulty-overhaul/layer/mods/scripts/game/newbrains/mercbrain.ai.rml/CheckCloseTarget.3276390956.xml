@@ -1,0 +1,18 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/CombatFromExitVehiclePlan/CheckCloseTarget" Class="CPlan" Looping="0" Independent="1">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatFromExitVehiclePlan/CheckCloseTarget/CScannerIsInDistance1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatFromExitVehiclePlan/CheckCloseTarget/WithinReach" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatFromExitVehiclePlan" TargetAnchor="Stop" />
+  </Exit>
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatFromExitVehiclePlan/CheckCloseTarget/CheckTargetVisible1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatFromExitVehiclePlan/CheckCloseTarget/Wait1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatFromExitVehiclePlan/CheckCloseTarget/CScannerIsInDistance1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatFromExitVehiclePlan/CheckCloseTarget/WithinReach" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatFromExitVehiclePlan/CheckCloseTarget/WithinReachAtPlayer" />
+</Plan>
