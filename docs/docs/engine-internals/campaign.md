@@ -260,6 +260,15 @@ An entry left out of `AddButton` with -1 returned is gone from the menu **(seen 
 2026-10-28)**; as its handler is left out of the page's list with it, the others keep theirs
 **(inferred)**.
 
+**The pause menu's look.** Its main page is `PAUSE_MENU_PAGE`, `sp_pause_menus.mgb`'s `#C1849B53`.
+The entries are the rows of a list panel it instances, `common.mgb`'s `#9EA91A65`, whose list uses
+the same row button (`#1E789210`) as the game-over dialog. That dialog is `common.mgb`'s
+`MESSAGEBOXLIST` page `#D24218AB`: a dimming fill, the clouds backdrop `#EB3BB25F`, a post-it area
+`#D096B132` that pops in, and the list. Its strings are `MBOXLISTHEADER_GAMEOVER` and
+`MBOXLISTGAMEOVER_*`. Moving the panel onto a copy of that post-it, with the notebook spread, its
+paperclip, the glows and the buddies' portraits hidden, makes the pause menu look like the dialog
+**(seen in game, 2026-10-28)**.
+
 **Buddies.** `CBuddiesManager` is one too (class id `0x1164a484`, built by `0x10681c50` while the
 name at `0x1164a474` is unset). Its `SBuddyData` records are at `+0x44`, their count at `+0x48`,
 `0xC0` bytes each:

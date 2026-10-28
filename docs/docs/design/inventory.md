@@ -235,6 +235,10 @@ On the Inventory page, while the player is at a crate, a gun or quest item gets 
 
 Movement and look stay live, as with the map. The gamepad mirrors the map's: d-pad to move, X to turn.
 
+The screen's bottom right says what the keys do while the notebook is out, each key named as the
+player bound it on a piece of the HUD's dark strip, the left mouse button as the game's mouse icon
+(built 2026-10-28).
+
 ## Under the hood
 
 - **Two guns:** every gun keeps its real class, because the box, scripts and the HUD read it. Each

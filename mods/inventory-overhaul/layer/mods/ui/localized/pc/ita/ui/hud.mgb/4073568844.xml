@@ -271,6 +271,20 @@
         <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_notebook" ISUSINGDUPLICATEDAREA="false" />
       </AreaInstance>
     </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_prompts">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_prompts" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="152" POSITION.y="660" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_prompts" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
   </CHILDREN>
   <DEFAULT_ELEMENTS />
 </Area>

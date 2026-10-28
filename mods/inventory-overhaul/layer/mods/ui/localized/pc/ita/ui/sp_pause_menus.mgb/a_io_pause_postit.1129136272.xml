@@ -1,0 +1,31 @@
+<Area slot="44" type="Area" FRAMERATE="30" CURRENTFRAME="0" STATICBOX="0 477 0 320">
+  <USERDATA name="a_io_pause_postit">
+    <PROPERTIES />
+  </USERDATA>
+  <CHILDREN>
+    <Element slot="77" type="Placeholder" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="action">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_action" IDX="0" INTERPOLATION="None">
+          <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Placeholder />
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_pause_postit">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#E457DBA2" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="15" RIGHT="527" TOP="65532" BOTTOM="508" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FF7F7F7F" COLOR4="FF7F7F7F" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Wrap" ADDRESSINGMODEV="Wrap">
+        <MATERIALLINK present="true" id="postit" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+  </CHILDREN>
+</Area>

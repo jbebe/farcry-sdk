@@ -678,6 +678,17 @@ page, 1280 by 800 canvas units, fills a 1920 by 1080 screen, its 720 middle unit
 to 1026 **(seen in game)**. Something laid over the whole page therefore covers the screen at any
 aspect.
 
+### Naming the keys bound to an action
+
+`CMagmaTextUtil::ExpandInputString` (Steam `0x105EB830`, `cdecl(const std::wstring* text,
+std::wstring* out, int flag)`, its callers passing 1) words each `{signal}` in `text` as the keys
+bound to that action map signal. It takes the names from the string table's `Keyboard` and `Mouse`
+sections and joins several with `Generic/OR`, as the tutorials' messages do ("press {use} to
+interact"). `out` is the engine's own string, freed with its destructor (`0x10002890`). It gives
+"Tab" for `toggle_notebook`, "R" for `flipside`, "X" for a new control's `drop_item` and "left mouse
+button" for `startshooting` **(seen in game, 2026-10-28)**, so the notebook's prompts name the
+player's own bindings.
+
 ## Settings rows
 
 Every options screen is a `CSettingsPage`, and its rows are not built widget by widget. Three calls

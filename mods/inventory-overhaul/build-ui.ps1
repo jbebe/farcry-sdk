@@ -100,16 +100,17 @@ function Image([string]$name, [string]$material, [string]$package, [double]$x, [
 }
 
 # A line of Farcry2 ink, as the pause menu's pages set theirs: no shadow, one line, cut with an
-# ellipsis; or, with `wrap`, prose wrapped from the top of its box.
+# ellipsis; or, with `wrap`, prose wrapped from the top of its box. `shadow` casts the HUD's own.
 function Text([string]$name, [string]$string, [double]$x, [double]$y, [double]$w, [double]$h, [int]$height,
               [string]$colour, [string]$align = "LEFT", [double]$rotation = 0, [string]$alignY = "CENTER",
-              [bool]$wrap = $false, [bool]$italic = $false) {
+              [bool]$wrap = $false, [bool]$italic = $false, [bool]$shadow = $false) {
     $tracking = if ($height -ge 22) { 0 } elseif ($height -ge 19) { 65516 } else { 65521 }
     $wrapping = $wrap.ToString().ToLowerInvariant()
     $ellipsis = (-not $wrap).ToString().ToLowerInvariant()
     $italics = $italic.ToString().ToLowerInvariant()
+    $shade, $offset = if ($shadow) { "64000000", 2 } else { "FF000000", 0 }
     $state = "<TextState INTERPOLATIONFLAGS=`"0`" STATECOLOR=`"$colour`" $(Placement $x $y $w $h $rotation) " +
-        "OFFSETY=`"0`" ABSOFFSETY=`"0`" SHADOWCOLOR=`"FF000000`" HEIGHT=`"$height`" SHADOWOFFSETX=`"0`" SHADOWOFFSETY=`"0`" " +
+        "OFFSETY=`"0`" ABSOFFSETY=`"0`" SHADOWCOLOR=`"$shade`" HEIGHT=`"$height`" SHADOWOFFSETX=`"$offset`" SHADOWOFFSETY=`"$offset`" " +
         "LEADING=`"$height`" TRACKING=`"$tracking`" />"
     $body = "<Text useStringTable=`"false`" STRING=`"$string`" ALIGNMENTX=`"$align`" ALIGNMENTY=`"$alignY`" WRAPPING=`"$wrapping`" " +
         "CLIPPING=`"false`" ELLIPSIS=`"$ellipsis`" AUTOSIZED=`"false`" BOLD=`"false`" ITALICS=`"$italics`" UNDERLINED=`"false`" " +
@@ -476,6 +477,25 @@ $Exports.Add("<GENERICOBJECT name=`"IO_FLIP_AREA`"><LINK slot=`"44`" LASTOBJECTT
 # The page's last image.
 $page.Add((Image i_io_end io_mark_end "" 0 0 2 2))
 
+# The prompts while the notebook is out, on the screen at its bottom right in the HUD's grey and
+# shadow: four slots, the first the rightmost, each a key's name on a piece of the HUD's dark strip,
+# or the mouse's left button in its place, and what the key does.
+$PromptSlots = 4
+$PromptW = 200
+$PromptsPath = "$PackageId $PageId a_io_prompts a_io_prompts"
+$hudGrey = "FFC0C0C0"
+$prompts = for ($n = 1; $n -le $PromptSlots; $n++) {
+    $x = ($PromptSlots - $n) * $PromptW
+    Image "i_io_prompt${n}_strip" hud_text_box "\common.mgb" $x 6 64 30
+    Text "t_io_prompt${n}_key" "" $x 6 64 30 18 $hudGrey CENTER -shadow $true
+    Image "i_io_prompt${n}_mouse" pc_mouse_left "\common.mgb" ($x + 14) 1 40 40
+    Text "t_io_prompt${n}_label" "" ($x + 72) 8 ($PromptW - 76) 26 20 $hudGrey -shadow $true
+    foreach ($element in "i_io_prompt${n}_strip", "t_io_prompt${n}_key", "i_io_prompt${n}_mouse", "t_io_prompt${n}_label") {
+        Export $PromptsPath $element
+    }
+}
+Export "$PackageId $PageId" a_io_prompts
+
 function Material([string]$name, [string]$texture) {
     "<Material name=`"$name`" texture=`"$texture`" REGION=`"0 0 1 1`" />"
 }
@@ -560,6 +580,7 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
         (Area a_io_portraits 44 44 $palette)
         (Area a_io_postit 416 302 $postIt)
         (Area a_io_reader 412 620 $reader)
+        (Area a_io_prompts ($PromptSlots * $PromptW) 44 $prompts)
         $photoAreas) -join "`n"
     $objects = @("<GENERICOBJECT name=`"IO_NOTEBOOK`"><LINK slot=`"69`" LASTOBJECTTYPE=`"Element`" IDS=`"$NotebookPath a_io_page`" /></GENERICOBJECT>") + $Exports
 
@@ -574,6 +595,9 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
     # Last on the HUD page, so its draws are the last of the HUD's.
     $pageEnd = IndexOf $lines '</CHILDREN>' (IndexOf $lines "<USERDATA name=`"$PageId`">")
     $lines.Insert($pageEnd, (Instance a_io_notebook $screenX $y $scaleX $scaleY 0))
+    # After the notebook, so on the screen rather than the pages.
+    $lines.Insert($pageEnd + 1, (Instance a_io_prompts ($screenX + $screenW - $PromptSlots * $PromptW - 40) `
+        ($screenY + $screenH - 84) 1 1 0 -hidden $true))
 
     $materialsAt = IndexOf $lines '<MATERIALS materialExtra='
     $lines.Insert($materialsAt + 1, $materials)
@@ -582,22 +606,77 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
     Write-Host ("{0,-20} notebook at {1:0},{2:0} scaled {3:0.000} x {4:0.000}" -f $variant, $screenX, $y, $scaleX, $scaleY)
 }
 
-# The pause menu's main page without the job the Journal shows: its three headings, the job's line,
-# its objective list and the Underground's line and icon.
+# The first and last line of the element named `name` after line `from`: its <Element> and </Element>.
+function ElementRange([System.Collections.Generic.List[string]]$lines, [string]$name, [int]$from) {
+    $first = (IndexOf $lines "<USERDATA name=`"$name`">" $from) - 1
+    $indent = $lines[$first].Substring(0, $lines[$first].IndexOf('<'))
+    , @($first, (IndexOf $lines "$indent</Element>" $first))
+}
+
+function ElementLines([System.Collections.Generic.List[string]]$lines, [string]$name, [int]$from) {
+    $range = ElementRange $lines $name $from
+    , $lines.GetRange($range[0], $range[1] - $range[0] + 1).ToArray()
+}
+
+# An instance's position in its last keyframe.
+function LastPosition([string[]]$element) {
+    $last = @($element -match 'POSITION\.x=')[-1]
+    , @((Attribute $last 'POSITION.x'), (Attribute $last 'POSITION.y'))
+}
+
+# The pause menu's main page as the game-over dialog, common.mgb's message box list page: its dimming
+# and post-it over the menu's clouds, the menu's list where the dialog's is, and the rest hidden.
 $PausePage = "#C1849B53"
-$PausePanel = "#E039A398", "#36D6DAD3", "#95871E12", "#81FDCEB5", "#B638527D", "#6CF418D5", "#C801AB46"
+$PauseHidden = "#E039A398", "#36D6DAD3", "#95871E12", "#81FDCEB5", "#B638527D", "#6CF418D5", "#C801AB46",
+    "#684AC59C", "#F0CC8C29", "#EDE19BDA", "#2A5FDD43", "#C54DB506", "#B1CC4148"
+$PausePackage = "#7B435D46"
+$PauseClouds = "#B21251FF"
+$PauseList = "#3D23C3C5"
+$DialogPage = "#D24218AB"
+$DialogDim = "#E1CD80CB"
+$DialogPostIt = "#815EB148"
+$DialogPostItArea = "#D096B132"
+$DialogPostItPaper = "#06E8B233"
+# The dialog's post-it holds three rows; the pause menu's nine need it this much taller.
+$PostItStretch = 1.07
+# The list in the dialog's page, and in the list panel the pause page instances, common.mgb's #9EA91A65.
+$CommonList = "#0D9428EC"
+$ListPanel = "#9EA91A65"
 foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter sp_pause_menus.mgb) {
     $variant = $source.Directory.Parent.FullName.Substring($Retail.Length + 1)
     $dir = Join-Path $Work $variant
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
     & $Cli mgb decode $source.FullName -o "$dir\sp_pause_menus.xml" | Out-Null
+    & $Cli mgb decode (Join-Path $source.DirectoryName common.mgb) -o "$dir\common.xml" | Out-Null
+    $common = [System.Collections.Generic.List[string]]::new([IO.File]::ReadAllLines("$dir\common.xml"))
+    $dialog = IndexOf $common "<USERDATA name=`"$DialogPage`">"
+    $dim = (ElementLines $common $DialogDim $dialog) -replace "name=`"$DialogDim`"", 'name="r_io_pause_dim"'
+    $postIt = (ElementLines $common $DialogPostIt $dialog) -replace "name=`"$DialogPostIt`"", 'name="a_io_pause_postit"' `
+        -replace "PACKAGE=`"$CommonId`" AREA=`"$DialogPostItArea`"", "PACKAGE=`"$PausePackage`" AREA=`"a_io_pause_postit`"" |
+        ForEach-Object { [regex]::Replace($_, 'SCALEY="([\d.]+)"', { param($m) "SCALEY=`"$(F ([double]$m.Groups[1].Value * $PostItStretch))`"" }) }
+    $postItArea = IndexOf $common "<USERDATA name=`"$DialogPostItArea`">"
+    $postItBox = [regex]::Match($common[$postItArea - 1], 'STATICBOX="0 (\d+) 0 (\d+)"').Groups
+    $paper = (ElementLines $common $DialogPostItPaper $postItArea) `
+        -replace "name=`"$DialogPostItPaper`"", 'name="i_io_pause_postit"' -replace 'id="postit" PACKAGE=""', 'id="postit" PACKAGE="\common.mgb"'
+    $listAt = LastPosition (ElementLines $common $CommonList $dialog)
+    $inPanel = LastPosition (ElementLines $common $CommonList (IndexOf $common "<USERDATA name=`"$ListPanel`">"))
+
     $lines = [System.Collections.Generic.List[string]]::new([IO.File]::ReadAllLines("$dir\sp_pause_menus.xml"))
     $start = IndexOf $lines "<USERDATA name=`"$PausePage`">"
     $end = IndexOf $lines '</Area>' $start
-    foreach ($element in $PausePanel) {
+    foreach ($element in $PauseHidden) {
         $at = IndexOf $lines "<USERDATA name=`"$element`">" $start
         if ($at -gt $end) { throw "$element is not on the pause page in $variant" }
         $lines[$at - 1] = $lines[$at - 1].Replace('HIDDEN="false"', 'HIDDEN="true"')
     }
+    # The list panel where the dialog has its list, unscaled.
+    $list = ElementRange $lines $PauseList $start
+    for ($i = $list[0]; $i -lt $list[1]; $i++) {
+        $lines[$i] = $lines[$i] -replace 'POSITION\.x="\d+" POSITION\.y="\d+" SCALEX="[\d.]+" SCALEY="[\d.]+"',
+            "POSITION.x=`"$(U16 ($listAt[0] - $inPanel[0]))`" POSITION.y=`"$(U16 ($listAt[1] - $inPanel[1]))`" SCALEX=`"1`" SCALEY=`"1`""
+    }
+    $lines.InsertRange($list[0], [string[]]$postIt)
+    $lines.InsertRange((ElementRange $lines $PauseClouds $start)[0], [string[]]$dim)
+    $lines.Insert((IndexOf $lines '<STRINGTABLE') - 1, (Area a_io_pause_postit $postItBox[1].Value $postItBox[2].Value $paper))
     Ship $lines "$dir\sp_pause_menus.xml" $source $variant
 }

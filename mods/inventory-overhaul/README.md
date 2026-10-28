@@ -184,6 +184,13 @@ its time set each frame without its keyframes' actions, since the area is the pa
 `SoundEvent`'s sound is played from the plugin instead, with the same id and type, and faded out to
 end at half its length (see
 [driving an area's timeline](../../docs/docs/magma-ui/engine-interop.md#driving-an-areas-timeline-from-code)).
+
+While the notebook is out, the screen's bottom right says what the keys do (`a_io_prompts`, after the
+notebook on the HUD so it reaches the screen rather than the pages): the page's own, such as X Drop
+on a gun or item, or the left mouse button's Read and Put back on a paper and the wheel's Next sheet
+while one is read, then R Turn page and Tab Put away. Each key is named as the player bound it, by
+the game's own `ExpandInputString`, on a piece of the HUD's dark strip, in the HUD's grey and shadow;
+the left mouse button is the game's mouse icon.
 Each page keeps its own selection. Each is an area of its own in the spread
 (`a_io_inventory`, `a_io_papers`, `a_io_journal`, `a_io_contacts`), one shown at a time, with its
 index tab pulled out over the spread; the post-it is shared, and hidden on a page with no rows. Every
@@ -207,8 +214,11 @@ text the game has is the game's, in the player's language, through its string ta
 
 The pause menu (`src/pause_menu.cpp`) no longer has the pages the notebook took: while
 `CFCXPauseMenuPage::Setup` runs, `CListMenuPage::AddButton` leaves out Journal, Buddies, Jackal Tapes
-and Predecessor Tapes, known by their words in the player's language. Its main page's job panel is
-hidden in the layer (`sp_pause_menus.mgb`, one area fragment per language).
+and Predecessor Tapes, known by their words in the player's language. Its main page looks like the
+game-over dialog, in the layer (`sp_pause_menus.mgb`): the dialog's dimming and post-it, popping in
+as the dialog's does and a little taller for nine rows, over the menu's clouds, with the menu's list
+where the dialog has its own. The notebook spread, its post-it and paperclip, the glows, the
+buddies' portraits and the job panel are hidden.
 - **Contacts** (`src/contacts_page.cpp`): the buddies met, from the buddies manager, all on the left
   page: the active buddies, the primary and the secondary (the manager's `+0x50` and `+0x54` point at
   their records), then the others, the living before the dead. Each row has a portrait, name and

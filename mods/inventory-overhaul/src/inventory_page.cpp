@@ -301,13 +301,17 @@ int InventoryPage(Model& model, int& selected, const void* view, void* inventory
     selected = std::clamp(selected, 0, static_cast<int>(rows.size()) - 1);
     const Row& row = rows[selected];
     // X drops the selected gun, or one of the selected item, and the page is read again.
-    if (dropped && (row.gun != nullptr || row.kind == Row::kItem)) {
+    const bool droppable = row.gun != nullptr || row.kind == Row::kItem;
+    if (dropped && droppable) {
         if (row.gun != nullptr) {
             TwoGuns::Release(inventory, *row.gun, true);
         } else {
             Items::Drop(inventory, row.index);
         }
         return InventoryPage(model, selected, view, inventory, false);
+    }
+    if (droppable) {
+        model.Prompt(L"drop_item", L"Drop");
     }
 
     Hand(model, 1, rows[0].gun, selected == 0);

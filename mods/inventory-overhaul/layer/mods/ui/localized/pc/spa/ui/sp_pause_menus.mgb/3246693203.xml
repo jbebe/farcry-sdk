@@ -6,7 +6,7 @@
   </USERDATA>
   <CHILDREN>
     <Element slot="77" type="Placeholder" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="#47CC8C92">
+      <USERDATA name="action">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
@@ -29,6 +29,20 @@
       </KEYFRAMES>
       <Placeholder />
     </Element>
+    <Element slot="76" type="RectShape" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="r_io_pause_dim">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#40C8AE3B" IDX="0" INTERPOLATION="Linear">
+          <RectShapeState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="65504" RIGHT="992" TOP="65512" BOTTOM="744" OUTLINEWEIGHT="1" OUTLINECOLOR="FFFFFFFF" FILLCOLOR1="00000000" FILLCOLOR2="00000000" FILLCOLOR3="00000000" FILLCOLOR4="00000000" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" />
+        </Keyframe>
+        <Keyframe name="#5C8BCFEA" IDX="10" INTERPOLATION="Linear">
+          <RectShapeState INTERPOLATIONFLAGS="125829121" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="65504" RIGHT="992" TOP="65512" BOTTOM="744" OUTLINEWEIGHT="1" OUTLINECOLOR="FFFFFFFF" FILLCOLOR1="96000000" FILLCOLOR2="96000000" FILLCOLOR3="96000000" FILLCOLOR4="96000000" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <RectShape ISOUTLINED="false" ISFILLED="true" BLENDINGMODE="Normal" />
+    </Element>
     <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="#B21251FF">
         <PROPERTIES />
@@ -47,7 +61,7 @@
         <NEIGHBORS />
       </FOCUSABLE>
     </Element>
-    <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="#684AC59C">
         <PROPERTIES />
       </USERDATA>
@@ -61,7 +75,7 @@
         <LINK slot="151" TIMING="NoTimingStrategy" PACKAGE="#E5EC7051" AREA="#A5D8B868" ISUSINGDUPLICATEDAREA="false" />
       </AreaInstance>
     </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+    <Element slot="74" type="Image" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="#F0CC8C29">
         <PROPERTIES />
       </USERDATA>
@@ -74,7 +88,7 @@
         <MATERIALLINK present="true" id="#F67D9A2B" PACKAGE="\common.mgb" />
       </Image>
     </Element>
-    <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="#EDE19BDA">
         <PROPERTIES />
       </USERDATA>
@@ -88,7 +102,7 @@
         <LINK slot="151" TIMING="NoTimingStrategy" PACKAGE="#7B435D46" AREA="#EDE19BDA" ISUSINGDUPLICATEDAREA="false" />
       </AreaInstance>
     </Element>
-    <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="#2A5FDD43">
         <PROPERTIES />
       </USERDATA>
@@ -102,7 +116,7 @@
         <LINK slot="151" TIMING="NoTimingStrategy" PACKAGE="#7B435D46" AREA="#2A5FDD43" ISUSINGDUPLICATEDAREA="false" />
       </AreaInstance>
     </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+    <Element slot="74" type="Image" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="#C54DB506">
         <PROPERTIES />
       </USERDATA>
@@ -112,8 +126,28 @@
         </Keyframe>
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="#68A7E6CB" PACKAGE="\common.mgb" />
+        <MATERIALLINK present="true" id="postit" PACKAGE="\common.mgb" />
       </Image>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_pause_postit">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#759E41B3" IDX="2" INTERPOLATION="Linear">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="00FFFFFF" ROTATION="-20.519316" ORIGIN.x="46" ORIGIN.y="31" POSITION.x="430" POSITION.y="329" SCALEX="0.19496855" SCALEY="0.207313" />
+        </Keyframe>
+        <Keyframe name="#EBFAD410" IDX="5" INTERPOLATION="Linear">
+          <ScaleState INTERPOLATIONFLAGS="255" STATECOLOR="FFFFFFFF" ROTATION="1.6372162" ORIGIN.x="245" ORIGIN.y="165" POSITION.x="231" POSITION.y="195" SCALEX="1.0314466" SCALEY="1.103438" />
+        </Keyframe>
+        <Keyframe name="#05F4B53C" IDX="7" INTERPOLATION="Linear">
+          <ScaleState INTERPOLATIONFLAGS="254" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="238" ORIGIN.y="160" POSITION.x="238" POSITION.y="200" SCALEX="1" SCALEY="1.07" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="151" TIMING="NoTimingStrategy" PACKAGE="#7B435D46" AREA="a_io_pause_postit" ISUSINGDUPLICATEDAREA="true" />
+      </AreaInstance>
     </Element>
     <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="#3D23C3C5">
@@ -121,7 +155,7 @@
       </USERDATA>
       <KEYFRAMES>
         <Keyframe name="#625DD23B" IDX="0" INTERPOLATION="Linear">
-          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="76" POSITION.y="52" SCALEX="0.9529703" SCALEY="0.96231157" />
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="296" POSITION.y="221" SCALEX="1" SCALEY="1" />
         </Keyframe>
       </KEYFRAMES>
       <PageInstance LABEL="" INDEXOFFSET="0">
@@ -133,7 +167,7 @@
         <NEIGHBORS />
       </FOCUSABLE>
     </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+    <Element slot="74" type="Image" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="#B1CC4148">
         <PROPERTIES />
       </USERDATA>
