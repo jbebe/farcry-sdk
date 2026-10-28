@@ -94,7 +94,7 @@ says what it makes:
 | `layer/mods/config/inputactionmapsingle.xml/weapons.xml` | Tab bound to `toggle_notebook` where the map key is bound |
 | `layer/mods/languages/<language>/oasisstrings.fragment.xml` | the control's name in each language |
 | `layer/mods/graphics/objects/equipment/notebook/` | the pages (`page.py`): two pages meeting at the spine, each a chain of four hinged strips, drawn with a copy of the map's `MAPTOP` material cut out by its alpha |
-| `layer/mods/graphics/characters/_common/animations/equipment/equipped_gadget/*_eqnote*.mab` | the arms (`arms.py`): the map's banks on foot with the left hand moved off the pages and the right one mirroring it |
+| `layer/mods/graphics/characters/_common/animations/equipment/equipped_gadget/*_eqnote*.mab` | the arms (`arms.py`): the map's banks on foot with the left hand moved off the pages and the right one holding the other edge in the idle's grip, mirrored |
 | `layer/mods/graphics/move/movemgr.bin/`, `layer/mods/worlds/<world>/generated/<world>_depload.dat/` | MOVE weapon 9's (the map's) rules copied onto 44 and pointed at those banks, each registered where the map's is (`clips.py`) |
 | `layer/mods/worlds/<world>/generated/entitylibrary.fcb/gadgets/Equipped/Notebook.xml` | the archetype in each world (`archetype.py`) |
 

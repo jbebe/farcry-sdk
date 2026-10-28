@@ -262,12 +262,14 @@ Movement and look stay live, as with the map. The gamepad mirrors the map's: d-p
   10° apart, each a chain of hinged strips, so the right page bends as the hands come together and
   apart. Its arms are the map's banks on foot, remade in Blender: the left hand moved 5 cm off the
   pages' edge along them and 0.5 cm toward the eye, the notebook's own track baked again so it stays
-  put; the right hand that left hand mirrored across the pages' centre line and lifted 3 cm up the
-  screen, plus half the left hand's own movement mirrored across the chest, so the hands come
-  together and apart as two hands do. The right page's hinges bend to stay in that hand. Where the
-  notebook is lowered (running, sliding) the whole right arm is the left one mirrored across the
-  chest. IK takes each hand there with the shoulder included; walking, the right hand still falls up
-  to 1 cm short of its place.
+  put. The right hand keeps one grip on the right page's edge strip: the idle's left hand mirrored
+  across the pages' centre line, lifted 3 cm up the screen, 2 cm further out and 1.5 mm toward the
+  eye, so no finger crosses the page. Half the left hand's own movement mirrored across the chest, at
+  most 3 mm, bends the right page's hinges, and the hand turns with the strip it holds. Where the right
+  hand would be over 48.5 cm from its shoulder, as when walking, the notebook comes toward that
+  shoulder instead, so each arm reaches with its elbow and shoulder and the collarbones keep the map's
+  pose. Running, the notebook is lowered and the right arm is the map's own, swinging against the
+  left; sliding, it is the left one mirrored across the chest.
 
 ## Steps
 
