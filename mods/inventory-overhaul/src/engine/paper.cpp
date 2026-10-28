@@ -42,6 +42,10 @@ namespace {
 
     enum class Mark : uint8_t { None, Begin, End };
 
+    // What the page is drawn over: clear, in the paper's tone, so the filtered edges of the spread
+    // and its index tabs fade into paper rather than black.
+    constexpr D3DCOLOR kUnderPage = D3DCOLOR_ARGB(0, 0xA0, 0x80, 0x50);
+
     std::atomic<const void*> g_paperResource{nullptr};
     std::atomic<bool> g_newHud{false};
 
@@ -137,7 +141,7 @@ namespace {
         device->GetViewport(&g_viewport);
         device->SetRenderTarget(0, g_screen);
         device->SetViewport(&g_viewport);
-        device->Clear(0, nullptr, D3DCLEAR_TARGET, 0, 0.0f, 0);
+        device->Clear(0, nullptr, D3DCLEAR_TARGET, kUnderPage, 0.0f, 0);
     }
 
     void Restore(IDirect3DDevice9* device) {

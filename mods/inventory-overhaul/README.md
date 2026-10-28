@@ -127,7 +127,9 @@ per gun, all but one hidden.
 
 `src/engine/paper.cpp` puts it on the pages. Its first and last images, `mark_begin` and `mark_end`,
 are clear textures of a size no other has. While the notebook is open, the Direct3D texture binds
-between them go into a target of the screen's size, with alpha, instead of the screen. That target is
+between them go into a target of the screen's size, with alpha, instead of the screen; it is cleared to
+a clear paper tone, so the filtered edges of the spread and its tabs fade into paper, not black. That
+target is
 copied into a mip-mapped texture, which is bound wherever the area map is: the notebook's pages draw
 with a material named `MAPTOP`, which `CGadgetMapStrategy::SetMapTexture` fills with the area map,
 and cut themselves out by the sheet's alpha, so their outline is the notebook picture's. Magma draws
@@ -146,9 +148,9 @@ the string assignment `CMagmaFacade::SetLabel` makes and `Element::SetVisible`
   component), grenades and molotovs (the uses of the gadget of each category).
 - **The post-it:** the selected row. A gun has its picture, full name, type (Pistol), condition,
   `<loaded> / <spare>` ammo (the spare rounds being the player's whole pool of its ammo, so a stowed
-  gun's too), its upgrades and the multiplayer loadout's five ratings as brush strokes. The machete,
-  an empty slot, an item, the diamonds and the belt's items each have their own picture, count and
-  notes.
+  gun's too), its upgrades and the multiplayer loadout's five ratings as brush strokes. The machete
+  has its HUD icon, "Melee" and a note; the diamonds their HUD icon and a description under the name;
+  a belt item its picture, count and the upgrades for it right under that.
 
 The mouse wheel moves the selection along every list in reading order, the weapons, Items, then the
 belt, underlining the row in red pencil; the notebook takes the wheel's `cycleweapon` signal while

@@ -24,7 +24,8 @@ namespace {
     // The post-it's pictures besides the guns', as build-ui.ps1 makes them.
     constexpr const char* kOtherPictures[] = {"machete", "diamond", "seringe", "pills", "m67", "molotov",
                                               "jackal_photo", "jackal_definition", "apr_01", "ufll_01", "tape"};
-    constexpr int kUpgradeSlots = 4;
+    // The upgrade icon rows: a gun's three on the third line, a belt item's two on the second.
+    constexpr std::pair<const char*, int> kUpgradeRows[] = {{"IO_POSTIT_UP", 3}, {"IO_POSTIT_BELT_UP", 2}};
     constexpr int kHalfSteps = 10;
 
     // The page open, R's turns and the wheel's steps since the last write, and each page's selected
@@ -140,12 +141,14 @@ void ClearPostIt(Model& model) {
     model.Show("IO_POSTIT_PORTRAIT", false);
     for (const char* name : {"IO_POSTIT_NAME", "IO_POSTIT_SUB", "IO_POSTIT_LINE1", "IO_POSTIT_LINE2",
                              "IO_POSTIT_LINE3", "IO_POSTIT_VALUE1", "IO_POSTIT_VALUE2", "IO_POSTIT_STATE",
-                             "IO_POSTIT_QUOTE", "IO_POSTIT_NOTE", "IO_POSTIT_WARN"}) {
+                             "IO_POSTIT_QUOTE", "IO_POSTIT_NOTE", "IO_POSTIT_ABOUT"}) {
         model.Text(name, L"");
     }
-    for (int slot = 0; slot < kUpgradeSlots; ++slot) {
-        model.Show(Name("IO_POSTIT_UP", slot, "_FAINT"), false);
-        model.Show(Name("IO_POSTIT_UP", slot, "_BOUGHT"), false);
+    for (const auto& [icons, count] : kUpgradeRows) {
+        for (int slot = 0; slot < count; ++slot) {
+            model.Show(Name(icons, slot, "_FAINT"), false);
+            model.Show(Name(icons, slot, "_BOUGHT"), false);
+        }
     }
     for (int rating = 1; rating <= kRatings; ++rating) {
         model.Show(Name("IO_POSTIT_RATING", rating), false);

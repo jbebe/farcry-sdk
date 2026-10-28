@@ -62,28 +62,23 @@ namespace {
         {"ied", "ied", L"IEDs", L"IED", L"Explosive", {5, 0, 0, 5, 0}, "ied", "ied", "grenadier webbing"},
     };
 
-    // The belt, in its rows' order: what each is, how much of it the player carries, its picture,
-    // its note, and the upgrades the shop sells for it, empty where it sells none.
+    // The belt, in its rows' order: what each is, its picture, and the upgrades the shop sells for
+    // it, empty where it sells none.
     struct BeltItem {
         const wchar_t* name;
         const char* picture;
-        const wchar_t* note;
         const char* upgrades[2];
     };
     constexpr BeltItem kBelt[] = {
-        {L"Syrettes", "seringe", L"Heals fully, as H does.", {"medium first aid manual", "large first aid manual"}},
-        {L"Malaria pills", "pills", L"Taken when an attack comes.", {"", ""}},
-        {L"M67 grenades", "m67", L"Thrown with Q.", {"grenadier webbing", ""}},
-        {L"Molotovs", "molotov", L"Picked with F, thrown with Q.", {"pyrotechnic satchel", ""}},
+        {L"Syrettes", "seringe", {"medium first aid manual", "large first aid manual"}},
+        {L"Malaria pills", "pills", {"", ""}},
+        {L"M67 grenades", "m67", {"grenadier webbing", ""}},
+        {L"Molotovs", "molotov", {"pyrotechnic satchel", ""}},
     };
 
     // The weapons and the machete, the rows above Items.
     constexpr int kHandRows = 3;
     constexpr size_t kItemRows = 10;
-    // The upgrade icons' slots: a gun's operation manual, repair manual and bandolier, and the
-    // syrettes' two first aid manuals in the last two.
-    constexpr int kGunUpgradeSlots[] = {0, 1, 2};
-    constexpr int kBeltUpgradeSlots[] = {2, 3};
 
     // "weapons.Special.M249_Saw" is m249saw.
     std::string Key(const std::string& archetype) {
@@ -154,21 +149,23 @@ namespace {
         return rows;
     }
 
-    // The upgrade icons in `slots`, each faint until the shop item named beside it is bought.
+    // The upgrade icons <icons>0... on the post-it's line `line`, each faint until the shop item
+    // named beside it is bought.
     template <size_t N>
-    void Upgrades(Model& model, const Carried& carried, const int (&slots)[N], const std::string (&names)[N]) {
+    void Upgrades(Model& model, const Carried& carried, const std::string& icons, int line,
+                  const std::string (&names)[N]) {
         bool any = false;
         for (size_t i = 0; i < N; ++i) {
             if (names[i].empty()) {
                 continue;
             }
             const bool bought = carried.Bought(names[i]);
-            model.Show(Name("IO_POSTIT_UP", slots[i], "_FAINT"), !bought);
-            model.Show(Name("IO_POSTIT_UP", slots[i], "_BOUGHT"), bought);
+            model.Show(Name(icons, i, "_FAINT"), !bought);
+            model.Show(Name(icons, i, "_BOUGHT"), bought);
             any = true;
         }
         if (any) {
-            model.Text("IO_POSTIT_LINE3", L"Upgrades");
+            model.Text(Name("IO_POSTIT_LINE", line), L"Upgrades");
         }
     }
 
@@ -190,7 +187,7 @@ namespace {
         if (known != nullptr) {
             const std::string shop = known->shop;
             const std::string names[] = {shop + " operation manual", shop + " repair manual", known->bandolier};
-            Upgrades(model, carried, kGunUpgradeSlots, names);
+            Upgrades(model, carried, "IO_POSTIT_UP", 3, names);
             for (int rating = 0; rating < kRatings; ++rating) {
                 const float value = known->ratings[rating];
                 if (value < 0) {
@@ -243,20 +240,17 @@ namespace {
         case Row::kDiamonds:
             model.Show("IO_POSTIT_PIC_DIAMOND", true);
             model.Text("IO_POSTIT_NAME", std::to_wstring(carried.diamonds) + L" diamonds");
-            model.Text("IO_POSTIT_SUB", L"in the wallet");
-            model.Text("IO_POSTIT_NOTE", L"Spent at the arms dealer.");
-            model.Text("IO_POSTIT_WARN", L"Can't be dropped.");
+            model.Text("IO_POSTIT_ABOUT",
+                       L"Octahedral crystals, near-colorless, a few flaws. Mostly the moral kind.");
             return;
         case Row::kBelt: {
             const BeltItem& belt = kBelt[row.index];
             model.Show("IO_POSTIT_PIC_" + Upper(belt.picture), true);
             model.Text("IO_POSTIT_NAME", belt.name);
-            model.Text("IO_POSTIT_SUB", L"on the belt");
             model.Text("IO_POSTIT_LINE1", L"Carried");
             model.Text("IO_POSTIT_VALUE1", L"\x00D7" + std::to_wstring(std::max(carried.belt[row.index], 0)));
             const std::string names[] = {belt.upgrades[0], belt.upgrades[1]};
-            Upgrades(model, carried, kBeltUpgradeSlots, names);
-            model.Text("IO_POSTIT_NOTE", belt.note);
+            Upgrades(model, carried, "IO_POSTIT_BELT_UP", 2, names);
             return;
         }
         }

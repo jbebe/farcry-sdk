@@ -660,17 +660,26 @@
     <GENERICOBJECT name="IO_POSTIT_UP2_BOUGHT">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_up2_bought" />
     </GENERICOBJECT>
-    <GENERICOBJECT name="IO_POSTIT_UP3_FAINT">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_up3_faint" />
+    <GENERICOBJECT name="IO_POSTIT_BELT_UP0_FAINT">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_belt_up0_faint" />
     </GENERICOBJECT>
-    <GENERICOBJECT name="IO_POSTIT_UP3_BOUGHT">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_up3_bought" />
+    <GENERICOBJECT name="IO_POSTIT_BELT_UP0_BOUGHT">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_belt_up0_bought" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_POSTIT_BELT_UP1_FAINT">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_belt_up1_faint" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_POSTIT_BELT_UP1_BOUGHT">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_belt_up1_bought" />
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_POSTIT_NAME">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit t_io_postit_name" />
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_POSTIT_SUB">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit t_io_postit_sub" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_POSTIT_ABOUT">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit t_io_postit_about" />
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_POSTIT_VALUE1">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit t_io_postit_value1" />
@@ -686,9 +695,6 @@
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_POSTIT_NOTE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit t_io_postit_note" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_POSTIT_WARN">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit t_io_postit_warn" />
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_POSTIT_RATING1">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit t_io_postit_rating1" />

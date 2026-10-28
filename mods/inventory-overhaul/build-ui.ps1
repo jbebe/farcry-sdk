@@ -288,7 +288,7 @@ for ($j = 1; $j -le $belt.Count; $j++) {
     $top = $Below + 30 + ($j - 1) * 40
     Selection inventory "belt$j" ($right - 14) ($top + 20) ($width + 14)
     $inventoryArea.Add((Image "i_io_belt$j" $belt[$j - 1].Material "" $right ($top + 5) 30 30 "FFFFFFFF" 0 @(0, 0, 1, 1) $belt[$j - 1].Blending))
-    $inventoryArea.Add((Text "t_io_belt$j" $belt[$j - 1].Name ($right + 55) ($top + 7) 245 26 22 $inkFull))
+    $inventoryArea.Add((Text "t_io_belt$j" $belt[$j - 1].Name ($right + 40) ($top + 7) 260 26 22 $inkFull))
     $inventoryArea.Add((Text "t_io_belt${j}_count" "" ($right + 300) ($top + 7) 76 26 20 $inkFull RIGHT))
     Export $InventoryPath "t_io_belt${j}_count"
 }
@@ -333,13 +333,13 @@ foreach ($pic in $GunPictures) {
     $postIt.Add((Image "i_io_postit_pic_$pic" "io_gun_$pic" "" 65 22 288 72 "FFFFFFFF" 0 @(0, 0, 1, 1) Multiply))
     Export $PostItPath "i_io_postit_pic_$pic"
 }
-foreach ($silhouette in @(@{ Pic = "machete"; Material = "hud_icon_machete" }, @{ Pic = "mortar"; Material = "hud_icon_mortar_shop" })) {
-    $postIt.Add((Image "i_io_postit_pic_$($silhouette.Pic)" $silhouette.Material "" 65 22 288 72 (Colour "000000" 0.8)))
-    Export $PostItPath "i_io_postit_pic_$($silhouette.Pic)"
-}
+$postIt.Add((Image i_io_postit_pic_machete hud_icon_machete "" 65 22 288 72))
+$postIt.Add((Image i_io_postit_pic_mortar hud_icon_mortar_shop "" 65 22 288 72 (Colour "000000" 0.8)))
+Export $PostItPath i_io_postit_pic_machete
+Export $PostItPath i_io_postit_pic_mortar
 # The belt's and the wallet's pictures are square.
 foreach ($square in @(
-        @{ Pic = "diamond"; Material = "ui_hud_icon_diamond"; Tint = (Colour "000000" 0.8); Blending = "Normal" },
+        @{ Pic = "diamond"; Material = "ui_hud_icon_diamond"; Tint = "FFFFFFFF"; Blending = "Normal" },
         @{ Pic = "seringe"; Material = "hud_icon_seringe"; Tint = "FFFFFFFF"; Blending = "Normal" },
         @{ Pic = "pills"; Material = "hud_icon_pills"; Tint = "FFFFFFFF"; Blending = "Normal" },
         @{ Pic = "m67"; Material = "io_gun_m67"; Tint = "FFFFFFFF"; Blending = "Multiply" },
@@ -357,6 +357,8 @@ Export $PostItPath i_io_postit_pic_tape
 Export $PostItPath i_io_postit_portrait
 $postIt.Add((Text t_io_postit_name "" 26 96 366 26 24 $inkFull))
 $postIt.Add((Text t_io_postit_sub "" 26 124 366 18 15 $inkSoft))
+# What a thing with no subtitle is, wrapped right under its name.
+$postIt.Add((Text t_io_postit_about "" 26 128 366 110 18 $inkFull LEFT 0 TOP $true))
 # Three lines of a label and a value: a gun's condition and ammo, a belt item's count, then the
 # upgrades bought for it.
 for ($l = 1; $l -le 3; $l++) {
@@ -368,20 +370,23 @@ $postIt.Add((Text t_io_postit_value2 "" 81 174 120 24 20 $inkFull RIGHT))
 # A paper's, a tape's or a buddy's first line, a label and a longer value, and what it says below.
 $postIt.Add((Text t_io_postit_state "" 140 148 252 24 20 $inkFull))
 $postIt.Add((Text t_io_postit_quote "" 26 176 366 84 17 $inkFull LEFT 0 TOP $true))
-# The game's upgrade icons, faint until bought: a gun's operation and repair manuals and its
-# bandolier, or the syrettes' two first aid manuals.
-$upgrades = "manual", "repair", "ammo", "ammo"
-for ($u = 0; $u -lt $upgrades.Count; $u++) {
-    $material = "io_upgrade_$($upgrades[$u])"
-    $postIt.Add((Image "i_io_postit_up${u}_faint" $material "" (125 + $u * 27) 201 22 22 (Colour $Ink 0.35)))
-    $postIt.Add((Image "i_io_postit_up${u}_bought" $material "" (125 + $u * 27) 201 22 22 (Colour $Ink 0.85)))
-    Export $PostItPath "i_io_postit_up${u}_faint"
-    Export $PostItPath "i_io_postit_up${u}_bought"
+# The game's upgrade icons, faint until bought, in a row after a line's label: a gun's operation and
+# repair manuals and its bandolier on the third line, under its condition and ammo; a belt item's
+# first aid manuals or bandolier on the second, under its count.
+function Upgrades([string]$row, [string[]]$icons, [double]$y) {
+    for ($u = 0; $u -lt $icons.Count; $u++) {
+        $material = "io_upgrade_$($icons[$u])"
+        $postIt.Add((Image "i_io_postit_${row}${u}_faint" $material "" (125 + $u * 27) $y 22 22 (Colour $Ink 0.35)))
+        $postIt.Add((Image "i_io_postit_${row}${u}_bought" $material "" (125 + $u * 27) $y 22 22 (Colour $Ink 0.85)))
+        Export $PostItPath "i_io_postit_${row}${u}_faint"
+        Export $PostItPath "i_io_postit_${row}${u}_bought"
+    }
 }
+Upgrades up "manual", "repair", "ammo" 201
+Upgrades belt_up "ammo", "ammo" 175
 $postIt.Add((Text t_io_postit_note "" 26 236 366 22 18 $inkFull))
-$postIt.Add((Text t_io_postit_warn "" 26 258 366 22 18 $inkFull))
-foreach ($name in "t_io_postit_name", "t_io_postit_sub", "t_io_postit_value1", "t_io_postit_value2", "t_io_postit_state",
-        "t_io_postit_quote", "t_io_postit_note", "t_io_postit_warn") {
+foreach ($name in "t_io_postit_name", "t_io_postit_sub", "t_io_postit_about", "t_io_postit_value1", "t_io_postit_value2",
+        "t_io_postit_state", "t_io_postit_quote", "t_io_postit_note") {
     Export $PostItPath $name
 }
 # Each rating is a brush stroke as long as the rating, the way the loadout draws them, over a faint
