@@ -36,7 +36,7 @@ namespace {
     constexpr float kSyretteShare = 0.65f;
 
     // Seconds from the syrette's level to full health, per Game::Difficulty; Infamous never.
-    constexpr float kSyretteToFullSeconds[] = {3.0f, 240.0f, 360.0f,
+    constexpr float kSyretteToFullSeconds[] = {3.0f, 10.0f, 360.0f,
                                                std::numeric_limits<float>::infinity()};
 
     float SyretteToFullSeconds() {

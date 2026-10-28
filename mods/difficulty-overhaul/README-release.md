@@ -8,7 +8,7 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
   longer softens what you take. About two torso hits or four limb hits drop a soldier.
 - **Healing in three steps.** On your last bar the surgery leaves you one rifle hit from death, and
   a syrette two. Only full health takes four, and it comes back slowly: nothing below a syrette's
-  level, and from there to full in 6 minutes on Hardcore, in seconds on Casual and never on
+  level, and from there to full in 6 minutes on Hardcore, in seconds on Casual and Experienced and never on
   Infamous. A syrette is not used where it would not raise your health. Beds and medic cabinets
   still heal you fully.
 - **Limb hits wound.** A hit to an arm or a leg that would kill a soldier puts him down wounded
