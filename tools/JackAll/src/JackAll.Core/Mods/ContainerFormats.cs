@@ -30,7 +30,11 @@ public static class ContainerFormats
            || IsStringTable(segment)
            || IsWorldDescriptor(segment)
            || IsInputConfig(segment)
-           || IsMagmaPackage(segment);
+           || IsMagmaPackage(segment)
+           || IsBrainWorkspace(segment);
+
+    /// <summary>A brain workspace, which splits per instance.</summary>
+    public static bool IsBrainWorkspace(string fileName) => AiWorkspaceContainerSplitter.IsWorkspace(fileName);
 
     /// <summary>A world or map descriptor, which splits per mission.</summary>
     public static bool IsWorldDescriptor(string fileName)
@@ -49,7 +53,7 @@ public static class ContainerFormats
     /// </summary>
     public static bool IsPlainDocumentFragment(string container, string fragmentId)
         => IsDepLoad(container) || IsWorldDescriptor(container) || IsInputConfig(container) || IsMagmaPackage(container)
-           || ContainerLayout.IsLayoutId(fragmentId);
+           || IsBrainWorkspace(container) || ContainerLayout.IsLayoutId(fragmentId);
 
     /// <summary>
     /// Whether a fragment's base-game form is worth diffing against. A world sector's layout states
@@ -125,6 +129,11 @@ public static class ContainerFormats
         if (IsMagmaPackage(fileName))
         {
             return MgbContainerSplitter.Instance;
+        }
+
+        if (IsBrainWorkspace(fileName))
+        {
+            return AiWorkspaceContainerSplitter.Instance;
         }
 
         return IsStringTable(fileName)

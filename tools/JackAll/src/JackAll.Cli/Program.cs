@@ -275,6 +275,11 @@ app.Configure(config =>
         ai.AddCommand<AiLintCommand>("lint")
             .WithDescription("List the parameters a brain sets that their task class never reads.")
             .WithExample("ai", "lint", "mercbrain.ai.rml");
+        ai.AddCommand<AiFragmentsCommand>("fragments")
+            .WithDescription(
+                "Write a brain, or the source it is compiled from, out as per-instance fragments a mod can "
+                + "stage, keeping only those that differ from --base.")
+            .WithExample("ai", "fragments", "mercbrain.source.xml", "--base", "vanilla\\mercbrain.ai.rml", "--out", "layer\\mercbrain.ai.rml");
     });
 
     // --- .fcb object trees ----------------------------------------------
