@@ -1,5 +1,5 @@
-// Healing: the surgery on the last bar leaves the player one rifle hit from death and a syrette
-// two; only full health takes four, and it comes back slowly, from the syrette's level up.
+// Healing: a syrette leaves 65 % of maximum health rather than full, and only from there does
+// health come back, slowly.
 #include "engine/damage.h"
 #include "engine/memory.h"
 #include "fcse_api.h"
@@ -29,11 +29,14 @@ namespace {
     constexpr ptrdiff_t kBarRefill = 0x78;
     constexpr ptrdiff_t kHealthRate = 0x7C;
 
-    // Hardcore: a rifleman's torso hit at 20 m, and what the surgery and a syrette leave.
-    constexpr float kRifleHit = 264.0f;
-    constexpr float kSurgeryHealth = 1.5f * kRifleHit;
-    constexpr float kSyretteHealth = 2.5f * kRifleHit;
+    // The share of maximum health a syrette leaves, two rifle hits from death on Hardcore; the
+    // game's surgery leaves two of five bars, one hit from death.
+    constexpr float kSyretteShare = 0.65f;
     constexpr float kSyretteToFullSeconds = 360.0f;
+
+    float SyretteHealth(const uint8_t* counters) {
+        return kSyretteShare * Damage::MaxHealth(counters);
+    }
 
     void __fastcall UpdateHealthDetour(uint8_t* counters, void* unused, float seconds) {
         Write(counters, kBarRefill, 0.0f);
@@ -42,11 +45,12 @@ namespace {
         const float health = Damage::Health(counters);
         const float max = Damage::MaxHealth(counters);
         // A negative rate is the last bar bleeding out, or drowning.
-        if (health < kSyretteHealth || health >= max || Read<float>(counters, kHealthRate) < 0.0f ||
+        if (health < SyretteHealth(counters) || health >= max ||
+            Read<float>(counters, kHealthRate) < 0.0f ||
             Read<float>(counters, kSinceLastDamage) < Read<float>(counters, kRegenDelay)) {
             return;
         }
-        const float rate = (max - kSyretteHealth) / kSyretteToFullSeconds;
+        const float rate = (1.0f - kSyretteShare) * max / kSyretteToFullSeconds;
         Damage::SetHealth(counters, health + rate * seconds);
     }
 
@@ -54,14 +58,16 @@ namespace {
         const float before = Damage::Health(counters);
         const bool surgery = before < Read<float>(counters, kBarSize);
         g_originalProcessHeal(counters);
-        Damage::SetHealth(counters, std::max(before, surgery ? kSurgeryHealth : kSyretteHealth));
+        if (!surgery) {
+            Damage::SetHealth(counters, std::max(before, SyretteHealth(counters)));
+        }
         FCSE::Logf("healed: %s, health %.0f -> %.0f", surgery ? "surgery" : "syrette", before,
                    Damage::Health(counters));
     }
 
     // A syrette is refused where it would not raise health.
     bool __fastcall CanHealSelfDetour(uint8_t* counters) {
-        return Damage::Health(counters) < kSyretteHealth && g_originalCanHealSelf(counters);
+        return Damage::Health(counters) < SyretteHealth(counters) && g_originalCanHealSelf(counters);
     }
 }
 
