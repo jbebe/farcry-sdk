@@ -114,13 +114,13 @@ top by a paperclip, shows the highlighted row's picture and details.
  ┌──────────────────────────────┬──────────────────────────────┐
  │ WEAPONS                      │ ┌───────────────────────║──┐ │
  │ Ⓐ AK-47                      │ │ [picture]  Carl G        │ │
- │ Ⓑ Makarov                    │ │ R-Launcher · stowed      │ │
+ │ Ⓑ Makarov                    │ │ R-Launcher               │ │
  │   Machete                    │ │ condition worn  dmg ●●●●●│ │
  │ ITEMS                        │ │ ammo 1 / 4      rng ●●●●○│ │
- │ ▸ Carl G                     │ └──────────────────────────┘ │
- │   Courier pouch              │ BELT                         │
- │   37 diamonds                │  Syrettes          ×3        │
- │                              │  Malaria pills     ×14       │
+ │ Carl G                       │ └──────────────────────────┘ │
+ │ ‾‾‾‾‾‾                       │ BELT                         │
+ │ Courier pouch                │ Syrettes           ×3        │
+ │ 37 diamonds                  │ Malaria pills      ×14       │
  └──────────────────────────────┴──────────────────────────────┘
 ```
 

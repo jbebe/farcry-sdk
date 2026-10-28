@@ -156,8 +156,6 @@ $inkFull = Colour $Ink
 $inkSoft = Colour $Ink 0.6
 $countInk = Colour $Ink 0.65
 $redLine = Colour $PencilRed 0.55
-# The selected row's mark; the font has no arrow.
-$Arrow = [string][char]0xBB
 $left = 96
 $right = 532
 $width = 368
@@ -176,20 +174,18 @@ function Heading([string]$tab, [string]$name, [string]$string, [double]$x, [doub
     $areas[$tab].Add((Text $name $string $x $y 340 26 24 $inkFull LEFT 0 TOP))
 }
 
-# A row's red pencil line and mark, shown while the row whose text is centred on `middle` is selected.
-function Selection([string]$tab, [string]$name, [double]$x, [double]$middle, [double]$lineWidth = ($width - 16)) {
-    $areas[$tab].Add((Image "i_io_${name}_sel" red_line "\common.mgb" ($x + 24) ($middle - 2) $lineWidth 22 $redLine -0.6))
-    $areas[$tab].Add((Text "t_io_${name}_mark" $Arrow $x ($middle - 13) 30 26 22 $inkFull CENTER))
+# A row's red pencil line from `x`, shown while the row whose text is centred on `middle` is selected.
+function Selection([string]$tab, [string]$name, [double]$x, [double]$middle, [double]$lineWidth) {
+    $areas[$tab].Add((Image "i_io_${name}_sel" red_line "\common.mgb" $x ($middle - 2) $lineWidth 22 $redLine -0.6))
     Export (AreaPath "a_io_$tab") "i_io_${name}_sel"
-    Export (AreaPath "a_io_$tab") "t_io_${name}_mark"
 }
 
 # How many rows are out of a list's window on one side: the pause menu's arrow turned to point
 # `rotation` degrees from left, and the count beside it.
 function Overflow([string]$tab, [string]$name, [double]$x, [double]$y, [double]$rotation) {
     $path = AreaPath "a_io_$tab"
-    $areas[$tab].Add((Image "i_io_${name}_arrow" pc_arrow "\common.mgb" ($x + 32) ($y - 4) 30 30 $countInk $rotation))
-    $areas[$tab].Add((Text "t_io_$name" "" ($x + 62) $y ($width - 70) 22 18 $countInk))
+    $areas[$tab].Add((Image "i_io_${name}_arrow" pc_arrow "\common.mgb" ($x - 8) ($y - 4) 30 30 $countInk $rotation))
+    $areas[$tab].Add((Text "t_io_$name" "" ($x + 22) $y ($width - 22) 22 18 $countInk))
     Export $path "i_io_${name}_arrow"
     Export $path "t_io_$name"
 }
@@ -203,12 +199,12 @@ function List([string]$tab, [string]$name, [double]$x, [double]$top, [int]$lines
     $area = $areas[$tab]
     $path = AreaPath "a_io_$tab"
     Overflow $tab "${name}s_above" $x ($top - 24) 90
-    $textX = $x + 38 + $(if ($material) { $pictureW + 10 } else { 0 })
+    $textX = $x + $(if ($material) { $pictureW + 10 } else { 0 })
     for ($j = 1; $j -le $lines; $j++) {
         $middle = $top + ($j - 1) * $step + $step / 2
-        Selection $tab "$name$j" $x $middle
+        Selection $tab "$name$j" ($x - 14) $middle ($width + 14)
         if ($material) {
-            $area.Add((Image "i_io_$name${j}_pic" $material "" ($x + 38) ($middle - $pictureH / 2) $pictureW $pictureH $tint))
+            $area.Add((Image "i_io_$name${j}_pic" $material "" $x ($middle - $pictureH / 2) $pictureW $pictureH $tint))
             Export $path "i_io_$name${j}_pic"
         }
         $area.Add((Text "t_io_$name$j" "" $textX ($middle - 13) ($x + $width - 8 - $side - $textX) 26 22 $inkFull))
@@ -252,7 +248,7 @@ foreach ($k in 1, 2) {
     $inventoryArea.Add((Image "i_io_hand${k}_sel" red_line "\common.mgb" ($left + 24) ($top + 22) ($width - 16) 22 $redLine -0.6))
     Export $InventoryPath "i_io_hand${k}_sel"
 }
-Selection inventory machete $left 192
+Selection inventory machete ($left + 24) 192 ($width - 16)
 # Each gun slot is marked with multiplayer's VIP letter, A or B, tinted with the paper's colour so its
 # grey disc takes the paper's tone, as multiplying it would, while its clear corners stay clear; at
 # 70% the paper shows through it.
@@ -279,9 +275,9 @@ $belt = @(
     @{ Name = "Molotovs"; Material = "io_gun_molotov"; Blending = "Multiply" })
 for ($j = 1; $j -le $belt.Count; $j++) {
     $top = $Below + 30 + ($j - 1) * 40
-    Selection inventory "belt$j" $right ($top + 20) ($width - 8)
-    $inventoryArea.Add((Image "i_io_belt$j" $belt[$j - 1].Material "" ($right + 55) ($top + 5) 30 30 "FFFFFFFF" 0 @(0, 0, 1, 1) $belt[$j - 1].Blending))
-    $inventoryArea.Add((Text "t_io_belt$j" $belt[$j - 1].Name ($right + 110) ($top + 7) 190 26 22 $inkFull))
+    Selection inventory "belt$j" ($right - 14) ($top + 20) ($width + 14)
+    $inventoryArea.Add((Image "i_io_belt$j" $belt[$j - 1].Material "" $right ($top + 5) 30 30 "FFFFFFFF" 0 @(0, 0, 1, 1) $belt[$j - 1].Blending))
+    $inventoryArea.Add((Text "t_io_belt$j" $belt[$j - 1].Name ($right + 55) ($top + 7) 245 26 22 $inkFull))
     $inventoryArea.Add((Text "t_io_belt${j}_count" "" ($right + 300) ($top + 7) 76 26 20 $inkFull RIGHT))
     Export $InventoryPath "t_io_belt${j}_count"
 }
@@ -298,7 +294,7 @@ $areas.journal.Add((Text t_io_reputation_prose "" $left 80 $width 400 22 $inkFul
 Export (AreaPath a_io_journal) t_io_reputation
 Export (AreaPath a_io_journal) t_io_reputation_prose
 Heading journal t_io_jobs "JOBS" $right
-$areas.journal.Add((Text t_io_jobs_none "Not read from the game yet." ($right + 38) 80 ($width - 46) 22 18 $countInk))
+$areas.journal.Add((Text t_io_jobs_none "Not read from the game yet." $right 80 $width 22 18 $countInk))
 
 # Contacts: the buddies who will pull the player out on the left, the rest on the right below the
 # post-it, each with a portrait the plugin takes from a_io_portraits and a status.

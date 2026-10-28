@@ -122,7 +122,6 @@ void List(Model& model, const std::string& list, size_t lines, size_t& first, co
         const bool isSelected = index < rows.size() && static_cast<int>(index) == selected;
         model.Text(Name(prefix, line + 1), index < rows.size() ? rows[index] : L"");
         model.Show(Name(prefix, line + 1, "_SEL"), isSelected);
-        model.Show(Name(prefix, line + 1, "_MARK"), isSelected);
     }
     const size_t below = rows.size() > first + lines ? rows.size() - first - lines : 0;
     model.Text(prefix + "S_ABOVE", first > 0 ? std::to_wstring(first) + L" above" : L"");

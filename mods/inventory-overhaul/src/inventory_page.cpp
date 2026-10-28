@@ -223,8 +223,8 @@ namespace {
         case Row::kMachete:
             model.Show("IO_POSTIT_PIC_MACHETE", true);
             model.Text("IO_POSTIT_NAME", L"Machete");
-            model.Text("IO_POSTIT_SUB", L"always carried \x2022 key 1");
-            model.Text("IO_POSTIT_NOTE", L"Never dropped, never stored.");
+            model.Text("IO_POSTIT_SUB", L"Melee");
+            model.Text("IO_POSTIT_NOTE", L"A rusty old companion");
             return;
         case Row::kItem: {
             const Items::Record& item = *row.item;
@@ -310,7 +310,6 @@ int InventoryPage(Model& model, int& selected, const void* view, void* inventory
     Hand(model, 1, rows[0].gun, selected == 0);
     Hand(model, 2, rows[1].gun, selected == 1);
     model.Show("IO_MACHETE_SEL", row.kind == Row::kMachete);
-    model.Show("IO_MACHETE_MARK", row.kind == Row::kMachete);
 
     std::vector<std::wstring> texts;
     for (const Row& each : rows) {
@@ -324,7 +323,6 @@ int InventoryPage(Model& model, int& selected, const void* view, void* inventory
         const bool isSelected = row.kind == Row::kBelt && row.index == i;
         model.Text(Name("IO_BELT", i + 1, "_COUNT"), L"\x00D7" + std::to_wstring(std::max(carried.belt[i], 0)));
         model.Show(Name("IO_BELT", i + 1, "_SEL"), isSelected);
-        model.Show(Name("IO_BELT", i + 1, "_MARK"), isSelected);
     }
 
     PostIt(model, carried, row);
