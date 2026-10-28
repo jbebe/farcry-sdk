@@ -14,6 +14,7 @@ void InstallSquadMemory();
 void InstallWatchedSpot();
 void InstallEyesight();
 void InstallGoingDown();
+void InstallHealing();
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION || !FCSE::Bind(api)) {
@@ -33,5 +34,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallWatchedSpot();
     InstallEyesight();
     InstallGoingDown();
+    InstallHealing();
     return true;
 }

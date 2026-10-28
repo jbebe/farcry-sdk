@@ -33,8 +33,12 @@ void* Instigator(const uint8_t* stim);
 bool ByPlayer(const uint8_t* stim);
 bool SentByPlayer(const uint8_t* stim);
 
-// A CFCXCountersComponent's current health, or NaN.
+// A CFCXCountersComponent's current and maximum health, or NaN.
 float Health(const void* counters);
+float MaxHealth(const void* counters);
+
+// Sets a CFCXCountersComponent's health the way the game's own health changes do.
+void SetHealth(void* counters, float health);
 
 // The entity a counters component belongs to.
 void* Owner(void* counters);

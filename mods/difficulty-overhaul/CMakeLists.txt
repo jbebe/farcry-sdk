@@ -26,6 +26,7 @@ add_library(DifficultyOverhaul SHARED
   "src/watched_spot.cpp"
   "src/eyesight.cpp"
   "src/going_down.cpp"
+  "src/healing.cpp"
   "src/engine/damage.cpp"
   "src/engine/game.cpp"
   "src/engine/shooting.cpp"

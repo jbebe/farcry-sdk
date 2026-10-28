@@ -6,6 +6,10 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
 
 - **Lethal both ways.** About four torso hits or one head hit kill you, and the last health bar no
   longer softens what you take. About two torso hits or four limb hits drop a soldier.
+- **Healing in three steps.** On your last bar the surgery leaves you one rifle hit from death, and
+  a syrette two. Only full health takes four, and it comes back slowly: nothing below a syrette's
+  level, and from there to full in 6 minutes. A syrette is not used where it would not raise your
+  health. Beds and medic cabinets still heal you fully.
 - **Limb hits wound.** A hit to an arm or a leg that would kill a soldier puts him down wounded
   instead: he calls for help, crawls for cover and may shoot back from the ground.
 - **Aim is earned.** A soldier's aim settles after he spots you, longer at range. Every shot is a

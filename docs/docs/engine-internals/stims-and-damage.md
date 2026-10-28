@@ -113,8 +113,9 @@ The curve's knots:
 
 The player's maximum is a `Curves.PlayerSicknessCurves.HealthMax_*` curve per difficulty. Its first
 pair of knots runs from 1,800 to 1,300 on Casual, 1,400 to 1,025 on Experienced, 1,075 to 825 on
-Hardcore and 825 to 700 on Infamous. What the curve's input is was not checked. In game the player had
-495 or 825 on Hardcore and 780 or 1,300 on Casual at different times.
+Hardcore and 825 to 700 on Infamous. The curve's input is the player's sickness level, 0 to 5, which
+`SetSicknessLevel` takes from the game's scripts; the component starts at level 1, which is 1,025 on
+Hardcore. In game the player had 495 or 825 on Hardcore and 780 or 1,300 on Casual at different times.
 
 **Hit locations are off for the player.** `ApplyLocationMultiplier` (Steam `0x107645E0`) scales a hit by
 the body part only when a flag on the receiver's counters component (`+0x48`) is set, and the player's is
@@ -123,6 +124,23 @@ not. In game a head hit on the player did what a torso hit does.
 **The last bar is cushioned.** `CFCXCountersComponentPlayerSP::ApplyDamageMultiplier` quarters a hit
 while the player's health is below one health bar. In game, below about 120 health a hit that took 42
 elsewhere took 13 or 14.
+
+**Healing.** All of it is on `CFCXCountersComponentPlayer`, with its values in `gamemodesconfig.xml`'s
+`PlayerSickness/Health`:
+
+- **The bar refills.** `UpdateHealth` (Steam `0x106A0E40`) tops up the bar health is in, a whole bar
+  per `HealthRegenRate` seconds (1), once `HealthRegenDelay` seconds (5) have passed since the last
+  damage. An empty bar never comes back.
+- **The last bar bleeds out.** Below one bar the same function drains a bar every
+  `HealthDegenerationLevels` seconds: 15 on every setting. Infamous names `InfamousHealTime`, a curve
+  world 1's entity library does not hold.
+- **The heal key.** `ProcessHeal` (Steam `0x106A00E0`, `Heal(false, false)` inlined) does the surgery
+  below one bar, free, and leaves `CriticalRegenHealthBars` bars: 2, the default, since the
+  single-player config does not set it. Above one bar it spends a syrette and fills health to full.
+  `CanHealSelf` (Steam `0x106A2CA0`) refuses at full health, and is what allows the surgery with no
+  syrette left.
+- **Beds and medic cabinets** call `Heal(true, false)` (Steam `0x1069FF70`), which fills health to full
+  without a syrette.
 
 ### Point-blank damage
 
