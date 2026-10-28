@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Xml.Linq;
 using JackAll.Core.Vfs;
+using JackAll.Core.Format.Ai;
 using JackAll.Tools.Ai;
 
 namespace JackAll.App.Ai;

@@ -1,9 +1,8 @@
 using System.Xml.Linq;
-using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Format.Rml;
 
-namespace JackAll.Tools.Ai;
+namespace JackAll.Core.Format.Ai;
 
 /// <summary>
 /// Compiles <c>BlackBox.AI</c> source into the repository <c>CTaskRepository</c> loads - a port of

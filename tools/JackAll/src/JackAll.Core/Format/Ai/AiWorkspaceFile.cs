@@ -1,8 +1,7 @@
 using System.Xml.Linq;
-using JackAll.Core.Format;
 using JackAll.Core.Format.Rml;
 
-namespace JackAll.Tools.Ai;
+namespace JackAll.Core.Format.Ai;
 
 /// <summary>
 /// A <c>scripts\game\newbrains\*.ai.rml</c> brain workspace: the compiled task repository the engine

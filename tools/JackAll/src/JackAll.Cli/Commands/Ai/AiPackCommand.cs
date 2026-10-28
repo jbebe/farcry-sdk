@@ -1,4 +1,5 @@
 using JackAll.Cli.Infrastructure;
+using JackAll.Core.Format.Ai;
 using JackAll.Tools.Ai;
 using Spectre.Console.Cli;
 using System.ComponentModel;

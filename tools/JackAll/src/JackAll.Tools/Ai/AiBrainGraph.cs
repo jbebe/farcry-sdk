@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using JackAll.Core.Format.Ai;
 
 namespace JackAll.Tools.Ai;
 

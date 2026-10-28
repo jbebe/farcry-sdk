@@ -1,6 +1,5 @@
-using JackAll.Core.Format;
 
-namespace JackAll.Tools.Ai;
+namespace JackAll.Core.Format.Ai;
 
 /// <summary>One distinct parameter block: a task class and its <c>Parameters</c> RML bytes.</summary>
 public sealed record AiParameterBlob(uint ClassHash, byte[] Rml);
