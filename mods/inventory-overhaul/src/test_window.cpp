@@ -43,8 +43,9 @@ namespace {
                                      "Sealed_envelope", "Vaccine_case", "Radio_valve", "Roll_of_film",
                                      "Map_case", "Dog_tags", "Ledger", "Camo_Suit", "Torn_notebook_page",
                                      "Dictionary_page", "APR_poster", "UFLL_poster"};
-    // The mockup's buddies, met through the game's own Lua (whose bools take 1), the first of them
-    // ready to rescue the player, and the Jackal tapes found the same way.
+    // The mockup's buddies, met through the game's own Lua (whose bools take 1), Frank the primary
+    // buddy, Hakim the secondary (who must be alive) and Warren dead, and the Jackal tapes found the
+    // same way.
     constexpr const char* kBuddies[] = {"Flora_Guillen", "Frank_Bilders", "Marty_Alencar", "Josip_Idromeno",
                                         "Warren_Clyde"};
     constexpr int kTapes = 5;
@@ -183,9 +184,9 @@ void Run(void* inventory) {
                 const std::string name = buddy;
                 DevTools::Overlay::PostLine(("#GetBuddiesManager():BypassSetBuddyUnlock(\"" + name + "\", 1)").c_str());
             }
-            DevTools::Overlay::PostLine(
-                (std::string("#GetBuddiesManager():CheatSetRescueBuddy(\"") + kBuddies[0] + "\")").c_str());
-            DevTools::Overlay::PostLine("#GetBuddiesManager():SetBuddyRescueActive(1)");
+            DevTools::Overlay::PostLine("#GetBuddiesManager():BypassSetPrimaryBuddy(\"Frank_Bilders\")");
+            DevTools::Overlay::PostLine("#GetBuddiesManager():BypassSetSecondaryBuddy(\"Hakim_Echebbi\")");
+            DevTools::Overlay::PostLine("#GetBuddiesManager():BypassSetBuddyLifeState(\"Warren_Clyde\", 2)");
             for (int tape = 0; tape < kTapes; ++tape) {
                 DevTools::Overlay::PostLine("#GetFCXMissionManager():NewJackalTapeFound()");
             }

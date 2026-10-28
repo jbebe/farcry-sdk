@@ -97,15 +97,16 @@ function Image([string]$name, [string]$material, [string]$package, [double]$x, [
 # ellipsis; or, with `wrap`, prose wrapped from the top of its box.
 function Text([string]$name, [string]$string, [double]$x, [double]$y, [double]$w, [double]$h, [int]$height,
               [string]$colour, [string]$align = "LEFT", [double]$rotation = 0, [string]$alignY = "CENTER",
-              [bool]$wrap = $false) {
+              [bool]$wrap = $false, [bool]$italic = $false) {
     $tracking = if ($height -ge 22) { 0 } elseif ($height -ge 19) { 65516 } else { 65521 }
     $wrapping = $wrap.ToString().ToLowerInvariant()
     $ellipsis = (-not $wrap).ToString().ToLowerInvariant()
+    $italics = $italic.ToString().ToLowerInvariant()
     $state = "<TextState INTERPOLATIONFLAGS=`"0`" STATECOLOR=`"$colour`" $(Placement $x $y $w $h $rotation) " +
         "OFFSETY=`"0`" ABSOFFSETY=`"0`" SHADOWCOLOR=`"FF000000`" HEIGHT=`"$height`" SHADOWOFFSETX=`"0`" SHADOWOFFSETY=`"0`" " +
         "LEADING=`"$height`" TRACKING=`"$tracking`" />"
     $body = "<Text useStringTable=`"false`" STRING=`"$string`" ALIGNMENTX=`"$align`" ALIGNMENTY=`"$alignY`" WRAPPING=`"$wrapping`" " +
-        "CLIPPING=`"false`" ELLIPSIS=`"$ellipsis`" AUTOSIZED=`"false`" BOLD=`"false`" ITALICS=`"false`" UNDERLINED=`"false`" " +
+        "CLIPPING=`"false`" ELLIPSIS=`"$ellipsis`" AUTOSIZED=`"false`" BOLD=`"false`" ITALICS=`"$italics`" UNDERLINED=`"false`" " +
         "BLENDINGMODE=`"Normal`" ALPHABLENDFIRST=`"false`"><FONTFAMILY present=`"true`" id=`"$Farcry2`" PACKAGE=`"\fonts.mgb`" /></Text>"
     Element 50 Text $name $state $body
 }
@@ -155,6 +156,7 @@ function AreaPath([string]$area) { "$PagePath $area $area" }
 $inkFull = Colour $Ink
 $inkSoft = Colour $Ink 0.6
 $countInk = Colour $Ink 0.65
+$inkFaded = Colour $Ink 0.4
 $redLine = Colour $PencilRed 0.55
 $left = 96
 $right = 532
@@ -171,7 +173,7 @@ foreach ($tab in $tabs) { $areas[$tab.ToLowerInvariant()] = [System.Collections.
 
 # A section's heading.
 function Heading([string]$tab, [string]$name, [string]$string, [double]$x, [double]$y = 46) {
-    $areas[$tab].Add((Text $name $string $x $y 340 26 24 $inkFull LEFT 0 TOP))
+    $areas[$tab].Add((Text $name $string $x $y 340 26 24 $inkFull LEFT 0 TOP $false $true))
 }
 
 # A row's red pencil line from `x`, shown while the row whose text is centred on `middle` is selected.
@@ -192,10 +194,11 @@ function Overflow([string]$tab, [string]$name, [double]$x, [double]$y, [double]$
 
 # A list of `lines` rows `step` apart from `top`, each with its selection, a picture of `material`
 # if given, its text and a text `side` wide on the right; above and below, how many rows are out of
-# the window.
+# the window. With `fades`, each text has a faded italic twin in the same place, for a row the
+# plugin greys out.
 function List([string]$tab, [string]$name, [double]$x, [double]$top, [int]$lines, [double]$step,
               [string]$material = "", [double]$pictureW = 0, [double]$pictureH = 0, [string]$tint = "FFFFFFFF",
-              [double]$side = 0) {
+              [double]$side = 0, [bool]$fades = $false) {
     $area = $areas[$tab]
     $path = AreaPath "a_io_$tab"
     Overflow $tab "${name}s_above" $x ($top - 24) 90
@@ -209,9 +212,17 @@ function List([string]$tab, [string]$name, [double]$x, [double]$top, [int]$lines
         }
         $area.Add((Text "t_io_$name$j" "" $textX ($middle - 13) ($x + $width - 8 - $side - $textX) 26 22 $inkFull))
         Export $path "t_io_$name$j"
+        if ($fades) {
+            $area.Add((Text "t_io_$name${j}_faded" "" $textX ($middle - 13) ($x + $width - 8 - $side - $textX) 26 22 $inkFaded LEFT 0 CENTER $false $true))
+            Export $path "t_io_$name${j}_faded"
+        }
         if ($side -gt 0) {
             $area.Add((Text "t_io_$name${j}_side" "" ($x + $width - $side) ($middle - 12) $side 24 16 $inkSoft RIGHT))
             Export $path "t_io_$name${j}_side"
+            if ($fades) {
+                $area.Add((Text "t_io_$name${j}_side_faded" "" ($x + $width - $side) ($middle - 12) $side 24 16 $inkFaded RIGHT 0 CENTER $false $true))
+                Export $path "t_io_$name${j}_side_faded"
+            }
         }
     }
     Overflow $tab "${name}s_more" $x ($top + $lines * $step + 2) -90
@@ -296,12 +307,12 @@ Export (AreaPath a_io_journal) t_io_reputation_prose
 Heading journal t_io_jobs "JOBS" $right
 $areas.journal.Add((Text t_io_jobs_none "Not read from the game yet." $right 80 $width 22 18 $countInk))
 
-# Contacts: the buddies who will pull the player out on the left, the rest on the right below the
-# post-it, each with a portrait the plugin takes from a_io_portraits and a status.
-Heading contacts t_io_rescuers "WILL PULL ME OUT" $left
-List contacts rescuer $left 98 7 50 io_buddy_frank 44 44 "FFFFFFFF" 130
-Heading contacts t_io_others "AROUND" $right $Below
-List contacts around $right ($Below + 52) 3 50 io_buddy_frank 44 44 "FFFFFFFF" 130
+# Contacts, on the left page: the primary and secondary buddy, then the other buddies, each with a
+# portrait the plugin takes from a_io_portraits and a status.
+Heading contacts t_io_actives "ACTIVE BUDDIES" $left
+List contacts active $left 98 2 50 io_buddy_frank 44 44 "FFFFFFFF" 130 $true
+Heading contacts t_io_others "OTHER BUDDIES" $left 236
+List contacts other $left 288 6 50 io_buddy_frank 44 44 "FFFFFFFF" 130 $true
 $palette = foreach ($portrait in $Portraits) {
     Image "i_io_portrait_$portrait" "io_buddy_$portrait" "" 0 0 44 44
     Export (AreaPath a_io_portraits) "i_io_portrait_$portrait"

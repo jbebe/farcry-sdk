@@ -1,5 +1,5 @@
-// The Contacts page: the buddies met, those who will pull the player out when they go down and the
-// rest, as the pause menu's Buddies page knows them.
+// The Contacts page: the buddies met, the player's primary and secondary buddy first, then the rest,
+// living before dead, as the pause menu's Buddies page knows them.
 #include "pages.h"
 
 #include "engine/story.h"
@@ -18,10 +18,10 @@ namespace {
                                                                             {"XIANYONG", "BAI"}};
 
     constexpr const char* kBuddies = "Buddies";
-    constexpr size_t kRescuerLines = 7;
-    constexpr size_t kAroundLines = 3;
-    size_t g_firstRescuer = 0;
-    size_t g_firstAround = 0;
+    constexpr size_t kActiveLines = 2;
+    constexpr size_t kOtherLines = 6;
+    size_t g_firstActive = 0;
+    size_t g_firstOther = 0;
 
     std::string FirstName(const std::string& name) { return name.substr(0, name.find('_')); }
 
@@ -44,6 +44,7 @@ namespace {
         return colon != std::wstring::npos ? text.substr(colon + 2) : text;
     }
 
+    // A dead buddy's row is written in its faded texts instead.
     void Buddies(Model& model, const std::string& list, size_t lines, size_t& first,
                  const std::vector<const Story::Buddy*>& buddies, int selected) {
         std::vector<std::wstring> names;
@@ -54,8 +55,14 @@ namespace {
         for (size_t line = 0; line < lines; ++line) {
             const size_t index = first + line;
             const std::string row = Name("IO_" + list, line + 1);
-            const std::string portrait = index < buddies.size() ? PortraitOf(buddies[index]->name) : "";
-            model.Text(row + "_SIDE", index < buddies.size() ? buddies[index]->statusText : L"");
+            const bool shown = index < buddies.size();
+            const bool dead = shown && buddies[index]->status == Story::kDead;
+            const std::wstring status = shown ? buddies[index]->statusText : L"";
+            model.Text(row, shown && !dead ? names[index] : L"");
+            model.Text(row + "_FADED", dead ? names[index] : L"");
+            model.Text(row + "_SIDE", dead ? L"" : status);
+            model.Text(row + "_SIDE_FADED", dead ? status : L"");
+            const std::string portrait = shown ? PortraitOf(buddies[index]->name) : "";
             model.Show(row + "_PIC", !portrait.empty());
             if (!portrait.empty()) {
                 model.Picture(row + "_PIC", portrait);
@@ -78,23 +85,24 @@ namespace {
 
 int ContactsPage(Model& model, int& selected) {
     const std::vector<Story::Buddy> buddies = Story::Buddies();
-    std::vector<const Story::Buddy*> rescuers;
-    std::vector<const Story::Buddy*> around;
+    std::vector<const Story::Buddy*> active;
+    std::vector<const Story::Buddy*> others;
     for (const Story::Buddy& buddy : buddies) {
-        (buddy.status == Story::kRescueReady ? rescuers : around).push_back(&buddy);
+        (buddy.active != 0 ? active : others).push_back(&buddy);
     }
+    std::sort(active.begin(), active.end(), [](const auto* a, const auto* b) { return a->active < b->active; });
+    std::stable_partition(others.begin(), others.end(), [](const auto* buddy) { return buddy->status != Story::kDead; });
     const int rows = static_cast<int>(buddies.size());
     selected = std::clamp(selected, 0, std::max(rows - 1, 0));
 
-    // Those who will pull the player out, on the left page, come before the rest on the right.
-    const int other = selected - static_cast<int>(rescuers.size());
-    Buddies(model, "RESCUER", kRescuerLines, g_firstRescuer, rescuers, selected);
-    Buddies(model, "AROUND", kAroundLines, g_firstAround, around, other);
+    const int other = selected - static_cast<int>(active.size());
+    Buddies(model, "ACTIVE", kActiveLines, g_firstActive, active, selected);
+    Buddies(model, "OTHER", kOtherLines, g_firstOther, others, other);
 
     if (other < 0) {
-        BuddyPostIt(model, *rescuers[selected]);
-    } else if (other < static_cast<int>(around.size())) {
-        BuddyPostIt(model, *around[other]);
+        BuddyPostIt(model, *active[selected]);
+    } else if (other < static_cast<int>(others.size())) {
+        BuddyPostIt(model, *others[other]);
     }
     return rows;
 }

@@ -181,14 +181,18 @@ text the game has is the game's, in the player's language, through its string ta
   manager, each with its title and the game's line about it.
 - **Journal** (`src/journal_page.cpp`): the reputation level and its words, as the pause menu's
   Journal has them. Where the game keeps the jobs is not traced yet, so the right page says so.
-- **Contacts** (`src/contacts_page.cpp`): the buddies met, from the buddies manager, those ready to
-  pull the player out on the left and the rest on the right, each with a portrait, name and status,
-  and on the post-it their nationality, age and the first line the pause menu's Buddies page has.
-  A row's portrait is copied from a hidden image of the same package (`a_io_portraits`).
+- **Contacts** (`src/contacts_page.cpp`): the buddies met, from the buddies manager, all on the left
+  page: the active buddies, the primary and the secondary (the manager's `+0x50` and `+0x54` point at
+  their records), then the others, the living before the dead. Each row has a portrait, name and
+  status, a dead buddy's in faded italic ink, and the post-it has their nationality, age and the
+  first line the pause menu's Buddies page has. A row's portrait is copied from a hidden image of the
+  same package (`a_io_portraits`); a faded row is a second pair of texts, shown in the normal one's
+  place, since a text's colour cannot be changed at runtime.
 
 Fill in the test window, or `INVENTORY_OVERHAUL_FILL`, also gives the sample papers and, through the
-game's own Lua in DevTools' console, meets Frank, Flora, Marty, Josip and Warren, makes Flora
-rescue-ready, and finds five tapes. `INVENTORY_OVERHAUL_LUA` holds Lua lines, split by `|`, that the
+game's own Lua in DevTools' console, meets Frank, Flora, Marty, Josip and Warren, makes Frank the
+primary buddy and Hakim the secondary (the game takes only a living one), kills Warren, and finds
+five tapes. `INVENTORY_OVERHAUL_LUA` holds Lua lines, split by `|`, that the
 console runs as the game loads, such as `AddGadget(SpawnWeapon("gadgets.Equipped.Map"))`.
 
 ## Testing

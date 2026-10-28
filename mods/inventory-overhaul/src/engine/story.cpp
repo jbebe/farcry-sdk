@@ -42,9 +42,12 @@ namespace {
     constexpr ptrdiff_t kTapes = 0x158;
     constexpr ptrdiff_t kTapeSize = 0x78;
     constexpr ptrdiff_t kTapeFound = 0x74;
-    // The buddies manager's SBuddyData records, each starting with its name.
+    // The buddies manager's SBuddyData records, each starting with its name, and the primary and
+    // secondary buddy's records, the records' end for none.
     constexpr ptrdiff_t kBuddies = 0x44;
     constexpr ptrdiff_t kBuddyCount = 0x48;
+    constexpr ptrdiff_t kPrimaryBuddy = 0x50;
+    constexpr ptrdiff_t kSecondaryBuddy = 0x54;
     constexpr ptrdiff_t kBuddySize = 0xC0;
     constexpr ptrdiff_t kBuddyGender = 0x74;
     constexpr ptrdiff_t kBuddyUnlocked = 0x98;
@@ -114,6 +117,8 @@ std::vector<Buddy> Buddies() {
     }
     const auto* records = Read<const uint8_t*>(buddies, kBuddies);
     const auto count = Read<int32_t>(buddies, kBuddyCount);
+    const auto* primary = Read<const uint8_t*>(buddies, kPrimaryBuddy);
+    const auto* secondary = Read<const uint8_t*>(buddies, kSecondaryBuddy);
     for (int32_t i = 0; i < count; ++i) {
         const uint8_t* record = records + i * kBuddySize;
         if (Read<uint8_t>(record, kBuddyUnlocked) == 0) {
@@ -122,7 +127,8 @@ std::vector<Buddy> Buddies() {
         const int status = g_buddyStatus(buddies, nullptr, record);
         const wchar_t* text = g_statusText(status, Read<int32_t>(record, kBuddyGender));
         met.push_back({Read<int32_t>(record, kBuddyHistory),
-                       {ReadString(record), static_cast<Status>(status), text != nullptr ? text : L""}});
+                       {ReadString(record), static_cast<Status>(status), text != nullptr ? text : L"",
+                        record == primary ? 1 : record == secondary ? 2 : 0}});
     }
     std::stable_sort(met.begin(), met.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
     std::vector<Buddy> sorted;

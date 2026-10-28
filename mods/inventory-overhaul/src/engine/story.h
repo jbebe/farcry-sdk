@@ -18,14 +18,15 @@ const std::wstring& Localize(const char* section, const std::string& key);
 std::vector<std::string> FoundTapes();
 
 // A buddy's status, as CBuddiesManager::GetBuddyStatus counts it.
-enum Status { kAlive, kMissing, kMercyKilled, kRescueReady, kWounded };
+enum Status { kAlive, kMissing, kDead, kRescueReady, kWounded };
 
-// A buddy met: its name, such as "Frank_Bilders", its status, and that status in the pause menu's
-// words.
+// A buddy met: its name, such as "Frank_Bilders", its status, that status in the pause menu's
+// words, and whether it is the player's primary buddy (1), secondary buddy (2) or neither (0).
 struct Buddy {
     std::string name;
     Status status;
     std::wstring statusText;
+    int active;
 };
 
 // The buddies met, most history points first.

@@ -15,24 +15,24 @@
       <Placeholder />
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuers">
+      <USERDATA name="t_io_actives">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuers" IDX="0" INTERPOLATION="None">
+        <Keyframe name="kf_t_io_actives" IDX="0" INTERPOLATION="None">
           <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="170" ORIGIN.y="13" LEFT="96" RIGHT="436" TOP="46" BOTTOM="72" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="24" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="24" TRACKING="0" />
         </Keyframe>
       </KEYFRAMES>
-      <Text useStringTable="false" STRING="WILL PULL ME OUT" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+      <Text useStringTable="false" STRING="ACTIVE BUDDIES" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuers_above_arrow">
+      <USERDATA name="i_io_actives_above_arrow">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuers_above_arrow" IDX="0" INTERPOLATION="None">
+        <Keyframe name="kf_i_io_actives_above_arrow" IDX="0" INTERPOLATION="None">
           <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="90" ORIGIN.x="15" ORIGIN.y="15" LEFT="88" RIGHT="118" TOP="70" BOTTOM="100" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="A6141E2A" COLOR2="A6141E2A" COLOR3="A6141E2A" COLOR4="A6141E2A" />
         </Keyframe>
       </KEYFRAMES>
@@ -41,11 +41,11 @@
       </Image>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuers_above">
+      <USERDATA name="t_io_actives_above">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuers_above" IDX="0" INTERPOLATION="None">
+        <Keyframe name="kf_t_io_actives_above" IDX="0" INTERPOLATION="None">
           <TextState INTERPOLATIONFLAGS="0" STATECOLOR="A6141E2A" ROTATION="0" ORIGIN.x="173" ORIGIN.y="11" LEFT="118" RIGHT="464" TOP="74" BOTTOM="96" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
         </Keyframe>
       </KEYFRAMES>
@@ -54,11 +54,11 @@
       </Text>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuer1_sel">
+      <USERDATA name="i_io_active1_sel">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuer1_sel" IDX="0" INTERPOLATION="None">
+        <Keyframe name="kf_i_io_active1_sel" IDX="0" INTERPOLATION="None">
           <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="82" RIGHT="464" TOP="121" BOTTOM="143" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
         </Keyframe>
       </KEYFRAMES>
@@ -67,11 +67,11 @@
       </Image>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuer1_pic">
+      <USERDATA name="i_io_active1_pic">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuer1_pic" IDX="0" INTERPOLATION="None">
+        <Keyframe name="kf_i_io_active1_pic" IDX="0" INTERPOLATION="None">
           <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="96" RIGHT="140" TOP="101" BOTTOM="145" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
         </Keyframe>
       </KEYFRAMES>
@@ -80,11 +80,11 @@
       </Image>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuer1">
+      <USERDATA name="t_io_active1">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuer1" IDX="0" INTERPOLATION="None">
+        <Keyframe name="kf_t_io_active1" IDX="0" INTERPOLATION="None">
           <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="110" BOTTOM="136" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
         </Keyframe>
       </KEYFRAMES>
@@ -93,11 +93,24 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuer1_side">
+      <USERDATA name="t_io_active1_faded">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuer1_side" IDX="0" INTERPOLATION="None">
+        <Keyframe name="kf_t_io_active1_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="110" BOTTOM="136" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_active1_side">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_active1_side" IDX="0" INTERPOLATION="None">
           <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="111" BOTTOM="135" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
         </Keyframe>
       </KEYFRAMES>
@@ -105,12 +118,25 @@
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuer2_sel">
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_active1_side_faded">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuer2_sel" IDX="0" INTERPOLATION="None">
+        <Keyframe name="kf_t_io_active1_side_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="111" BOTTOM="135" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_active2_sel">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_active2_sel" IDX="0" INTERPOLATION="None">
           <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="82" RIGHT="464" TOP="171" BOTTOM="193" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
         </Keyframe>
       </KEYFRAMES>
@@ -119,11 +145,11 @@
       </Image>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuer2_pic">
+      <USERDATA name="i_io_active2_pic">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuer2_pic" IDX="0" INTERPOLATION="None">
+        <Keyframe name="kf_i_io_active2_pic" IDX="0" INTERPOLATION="None">
           <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="96" RIGHT="140" TOP="151" BOTTOM="195" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
         </Keyframe>
       </KEYFRAMES>
@@ -132,11 +158,11 @@
       </Image>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuer2">
+      <USERDATA name="t_io_active2">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuer2" IDX="0" INTERPOLATION="None">
+        <Keyframe name="kf_t_io_active2" IDX="0" INTERPOLATION="None">
           <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="160" BOTTOM="186" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
         </Keyframe>
       </KEYFRAMES>
@@ -145,11 +171,24 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuer2_side">
+      <USERDATA name="t_io_active2_faded">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuer2_side" IDX="0" INTERPOLATION="None">
+        <Keyframe name="kf_t_io_active2_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="160" BOTTOM="186" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_active2_side">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_active2_side" IDX="0" INTERPOLATION="None">
           <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="161" BOTTOM="185" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
         </Keyframe>
       </KEYFRAMES>
@@ -157,273 +196,26 @@
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuer3_sel">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuer3_sel" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="82" RIGHT="464" TOP="221" BOTTOM="243" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="red_line" PACKAGE="\common.mgb" />
-      </Image>
-    </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuer3_pic">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuer3_pic" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="96" RIGHT="140" TOP="201" BOTTOM="245" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="io_buddy_frank" PACKAGE="" />
-      </Image>
-    </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuer3">
+      <USERDATA name="t_io_active2_side_faded">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuer3" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="210" BOTTOM="236" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        <Keyframe name="kf_t_io_active2_side_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="161" BOTTOM="185" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
         </Keyframe>
       </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuer3_side">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuer3_side" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="211" BOTTOM="235" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuer4_sel">
+      <USERDATA name="i_io_actives_more_arrow">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuer4_sel" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="82" RIGHT="464" TOP="271" BOTTOM="293" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="red_line" PACKAGE="\common.mgb" />
-      </Image>
-    </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuer4_pic">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuer4_pic" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="96" RIGHT="140" TOP="251" BOTTOM="295" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="io_buddy_frank" PACKAGE="" />
-      </Image>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuer4">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuer4" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="260" BOTTOM="286" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuer4_side">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuer4_side" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="261" BOTTOM="285" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuer5_sel">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuer5_sel" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="82" RIGHT="464" TOP="321" BOTTOM="343" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="red_line" PACKAGE="\common.mgb" />
-      </Image>
-    </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuer5_pic">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuer5_pic" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="96" RIGHT="140" TOP="301" BOTTOM="345" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="io_buddy_frank" PACKAGE="" />
-      </Image>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuer5">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuer5" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="310" BOTTOM="336" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuer5_side">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuer5_side" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="311" BOTTOM="335" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuer6_sel">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuer6_sel" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="82" RIGHT="464" TOP="371" BOTTOM="393" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="red_line" PACKAGE="\common.mgb" />
-      </Image>
-    </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuer6_pic">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuer6_pic" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="96" RIGHT="140" TOP="351" BOTTOM="395" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="io_buddy_frank" PACKAGE="" />
-      </Image>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuer6">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuer6" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="360" BOTTOM="386" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuer6_side">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuer6_side" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="361" BOTTOM="385" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuer7_sel">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuer7_sel" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="82" RIGHT="464" TOP="421" BOTTOM="443" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="red_line" PACKAGE="\common.mgb" />
-      </Image>
-    </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuer7_pic">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuer7_pic" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="96" RIGHT="140" TOP="401" BOTTOM="445" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="io_buddy_frank" PACKAGE="" />
-      </Image>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuer7">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuer7" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="410" BOTTOM="436" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuer7_side">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuer7_side" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="411" BOTTOM="435" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_rescuers_more_arrow">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_i_io_rescuers_more_arrow" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-90" ORIGIN.x="15" ORIGIN.y="15" LEFT="88" RIGHT="118" TOP="446" BOTTOM="476" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="A6141E2A" COLOR2="A6141E2A" COLOR3="A6141E2A" COLOR4="A6141E2A" />
+        <Keyframe name="kf_i_io_actives_more_arrow" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-90" ORIGIN.x="15" ORIGIN.y="15" LEFT="88" RIGHT="118" TOP="196" BOTTOM="226" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="A6141E2A" COLOR2="A6141E2A" COLOR3="A6141E2A" COLOR4="A6141E2A" />
         </Keyframe>
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
@@ -431,12 +223,12 @@
       </Image>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_rescuers_more">
+      <USERDATA name="t_io_actives_more">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_rescuers_more" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="A6141E2A" ROTATION="0" ORIGIN.x="173" ORIGIN.y="11" LEFT="118" RIGHT="464" TOP="450" BOTTOM="472" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
+        <Keyframe name="kf_t_io_actives_more" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="A6141E2A" ROTATION="0" ORIGIN.x="173" ORIGIN.y="11" LEFT="118" RIGHT="464" TOP="200" BOTTOM="222" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
@@ -449,20 +241,20 @@
       </USERDATA>
       <KEYFRAMES>
         <Keyframe name="kf_t_io_others" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="170" ORIGIN.y="13" LEFT="532" RIGHT="872" TOP="374" BOTTOM="400" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="24" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="24" TRACKING="0" />
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="170" ORIGIN.y="13" LEFT="96" RIGHT="436" TOP="236" BOTTOM="262" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="24" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="24" TRACKING="0" />
         </Keyframe>
       </KEYFRAMES>
-      <Text useStringTable="false" STRING="AROUND" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+      <Text useStringTable="false" STRING="OTHER BUDDIES" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_arounds_above_arrow">
+      <USERDATA name="i_io_others_above_arrow">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_arounds_above_arrow" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="90" ORIGIN.x="15" ORIGIN.y="15" LEFT="524" RIGHT="554" TOP="398" BOTTOM="428" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="A6141E2A" COLOR2="A6141E2A" COLOR3="A6141E2A" COLOR4="A6141E2A" />
+        <Keyframe name="kf_i_io_others_above_arrow" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="90" ORIGIN.x="15" ORIGIN.y="15" LEFT="88" RIGHT="118" TOP="260" BOTTOM="290" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="A6141E2A" COLOR2="A6141E2A" COLOR3="A6141E2A" COLOR4="A6141E2A" />
         </Keyframe>
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
@@ -470,12 +262,12 @@
       </Image>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_arounds_above">
+      <USERDATA name="t_io_others_above">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_arounds_above" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="A6141E2A" ROTATION="0" ORIGIN.x="173" ORIGIN.y="11" LEFT="554" RIGHT="900" TOP="402" BOTTOM="424" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
+        <Keyframe name="kf_t_io_others_above" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="A6141E2A" ROTATION="0" ORIGIN.x="173" ORIGIN.y="11" LEFT="118" RIGHT="464" TOP="264" BOTTOM="286" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
@@ -483,12 +275,12 @@
       </Text>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_around1_sel">
+      <USERDATA name="i_io_other1_sel">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_around1_sel" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="518" RIGHT="900" TOP="449" BOTTOM="471" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
+        <Keyframe name="kf_i_io_other1_sel" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="82" RIGHT="464" TOP="311" BOTTOM="333" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
         </Keyframe>
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
@@ -496,12 +288,12 @@
       </Image>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_around1_pic">
+      <USERDATA name="i_io_other1_pic">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_around1_pic" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="532" RIGHT="576" TOP="429" BOTTOM="473" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        <Keyframe name="kf_i_io_other1_pic" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="96" RIGHT="140" TOP="291" BOTTOM="335" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
         </Keyframe>
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
@@ -509,12 +301,12 @@
       </Image>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_around1">
+      <USERDATA name="t_io_other1">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_around1" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="586" RIGHT="762" TOP="438" BOTTOM="464" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        <Keyframe name="kf_t_io_other1" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="300" BOTTOM="326" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
@@ -522,25 +314,51 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_around1_side">
+      <USERDATA name="t_io_other1_faded">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_around1_side" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="770" RIGHT="900" TOP="439" BOTTOM="463" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
+        <Keyframe name="kf_t_io_other1_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="300" BOTTOM="326" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other1_side">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other1_side" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="301" BOTTOM="325" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_around2_sel">
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other1_side_faded">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_around2_sel" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="518" RIGHT="900" TOP="499" BOTTOM="521" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
+        <Keyframe name="kf_t_io_other1_side_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="301" BOTTOM="325" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_other2_sel">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_other2_sel" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="82" RIGHT="464" TOP="361" BOTTOM="383" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
         </Keyframe>
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
@@ -548,12 +366,12 @@
       </Image>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_around2_pic">
+      <USERDATA name="i_io_other2_pic">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_around2_pic" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="532" RIGHT="576" TOP="479" BOTTOM="523" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        <Keyframe name="kf_i_io_other2_pic" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="96" RIGHT="140" TOP="341" BOTTOM="385" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
         </Keyframe>
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
@@ -561,12 +379,12 @@
       </Image>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_around2">
+      <USERDATA name="t_io_other2">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_around2" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="586" RIGHT="762" TOP="488" BOTTOM="514" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        <Keyframe name="kf_t_io_other2" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="350" BOTTOM="376" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
@@ -574,25 +392,51 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_around2_side">
+      <USERDATA name="t_io_other2_faded">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_around2_side" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="770" RIGHT="900" TOP="489" BOTTOM="513" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
+        <Keyframe name="kf_t_io_other2_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="350" BOTTOM="376" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other2_side">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other2_side" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="351" BOTTOM="375" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_around3_sel">
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other2_side_faded">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_around3_sel" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="518" RIGHT="900" TOP="549" BOTTOM="571" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
+        <Keyframe name="kf_t_io_other2_side_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="351" BOTTOM="375" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_other3_sel">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_other3_sel" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="82" RIGHT="464" TOP="411" BOTTOM="433" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
         </Keyframe>
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
@@ -600,12 +444,12 @@
       </Image>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_around3_pic">
+      <USERDATA name="i_io_other3_pic">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_around3_pic" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="532" RIGHT="576" TOP="529" BOTTOM="573" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        <Keyframe name="kf_i_io_other3_pic" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="96" RIGHT="140" TOP="391" BOTTOM="435" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
         </Keyframe>
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
@@ -613,12 +457,12 @@
       </Image>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_around3">
+      <USERDATA name="t_io_other3">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_around3" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="586" RIGHT="762" TOP="538" BOTTOM="564" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        <Keyframe name="kf_t_io_other3" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="400" BOTTOM="426" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
@@ -626,25 +470,285 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_around3_side">
+      <USERDATA name="t_io_other3_faded">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_around3_side" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="770" RIGHT="900" TOP="539" BOTTOM="563" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
+        <Keyframe name="kf_t_io_other3_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="400" BOTTOM="426" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other3_side">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other3_side" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="401" BOTTOM="425" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_arounds_more_arrow">
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other3_side_faded">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_arounds_more_arrow" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-90" ORIGIN.x="15" ORIGIN.y="15" LEFT="524" RIGHT="554" TOP="574" BOTTOM="604" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="A6141E2A" COLOR2="A6141E2A" COLOR3="A6141E2A" COLOR4="A6141E2A" />
+        <Keyframe name="kf_t_io_other3_side_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="401" BOTTOM="425" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_other4_sel">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_other4_sel" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="82" RIGHT="464" TOP="461" BOTTOM="483" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="red_line" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_other4_pic">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_other4_pic" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="96" RIGHT="140" TOP="441" BOTTOM="485" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_buddy_frank" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other4">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other4" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="450" BOTTOM="476" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other4_faded">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other4_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="450" BOTTOM="476" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other4_side">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other4_side" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="451" BOTTOM="475" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other4_side_faded">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other4_side_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="451" BOTTOM="475" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_other5_sel">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_other5_sel" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="82" RIGHT="464" TOP="511" BOTTOM="533" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="red_line" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_other5_pic">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_other5_pic" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="96" RIGHT="140" TOP="491" BOTTOM="535" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_buddy_frank" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other5">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other5" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="500" BOTTOM="526" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other5_faded">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other5_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="500" BOTTOM="526" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other5_side">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other5_side" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="501" BOTTOM="525" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other5_side_faded">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other5_side_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="501" BOTTOM="525" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_other6_sel">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_other6_sel" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="191" ORIGIN.y="11" LEFT="82" RIGHT="464" TOP="561" BOTTOM="583" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="red_line" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_other6_pic">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_other6_pic" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="22" ORIGIN.y="22" LEFT="96" RIGHT="140" TOP="541" BOTTOM="585" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_buddy_frank" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other6">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other6" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="550" BOTTOM="576" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other6_faded">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other6_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="550" BOTTOM="576" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other6_side">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other6_side" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="551" BOTTOM="575" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other6_side_faded">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other6_side_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="65" ORIGIN.y="12" LEFT="334" RIGHT="464" TOP="551" BOTTOM="575" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="16" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="16" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_others_more_arrow">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_others_more_arrow" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-90" ORIGIN.x="15" ORIGIN.y="15" LEFT="88" RIGHT="118" TOP="586" BOTTOM="616" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="A6141E2A" COLOR2="A6141E2A" COLOR3="A6141E2A" COLOR4="A6141E2A" />
         </Keyframe>
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
@@ -652,12 +756,12 @@
       </Image>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_arounds_more">
+      <USERDATA name="t_io_others_more">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_t_io_arounds_more" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="A6141E2A" ROTATION="0" ORIGIN.x="173" ORIGIN.y="11" LEFT="554" RIGHT="900" TOP="578" BOTTOM="600" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
+        <Keyframe name="kf_t_io_others_more" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="A6141E2A" ROTATION="0" ORIGIN.x="173" ORIGIN.y="11" LEFT="118" RIGHT="464" TOP="590" BOTTOM="612" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">

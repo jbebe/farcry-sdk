@@ -102,7 +102,7 @@ no title. R turns the page, using the map's own flip.
 | Inventory | Weapons, Items | Belt |
 | Papers | letters and photos | the Jackal and Predecessor tapes |
 | Journal | reputation | current jobs |
-| Contacts | buddies who will pull the player out | the other buddies |
+| Contacts | the active buddies (primary, secondary), then the others, living first, the dead faded | nothing below the post-it |
 | Box (only at a crate) | bought guns, stored things | Items |
 
 ### Lists, and a post-it for the highlighted row
