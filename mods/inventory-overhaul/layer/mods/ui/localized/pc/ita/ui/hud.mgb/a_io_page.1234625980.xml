@@ -332,6 +332,20 @@
         <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_postit" ISUSINGDUPLICATEDAREA="false" />
       </AreaInstance>
     </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_flip">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_flip" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="25" POSITION.y="65502" SCALEX="0.933455" SCALEY="1.083503" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#5B36589B" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="i_io_end">
         <PROPERTIES />

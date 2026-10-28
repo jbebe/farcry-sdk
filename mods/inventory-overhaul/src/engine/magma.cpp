@@ -14,6 +14,8 @@ namespace {
     using GenericTargetFn = void*(__thiscall*)(void* generic);
     using SetVisibleFn = void(__thiscall*)(void* element, int32_t visible);
     using SetStringFn = void(__thiscall*)(void* text, const EngineString<wchar_t>* string);
+    using SetTimeFn = uint8_t(__thiscall*)(void* area, uint32_t milliseconds, bool executeActions, bool flag);
+    using SetPlayingFn = void(__thiscall*)(void* area, bool playing, bool flag);
 
     // CMagmaFacade::GetGenericObject<Keyframe>, whose second instruction loads the server singleton.
     FCSE::Relocation<uint8_t*> g_getKeyframe{FCSE::Uplay(0x00534500)};
@@ -22,6 +24,9 @@ namespace {
     FCSE::Relocation<SetVisibleFn> g_setVisible{FCSE::Uplay(0x00AB13F0)};
     // A Text's string set and measured again, the part of SetLabel after it has made the wstring.
     FCSE::Relocation<SetStringFn> g_setString{FCSE::Uplay(0x00535560)};
+    // magma::Area's SetTime and SetPlaying, as the HUD shows its pills.
+    FCSE::Relocation<SetTimeFn> g_setTime{FCSE::Uplay(0x00A973E0)};
+    FCSE::Relocation<SetPlayingFn> g_setPlaying{FCSE::Uplay(0x00A973A0)};
 
     // `mov ecx, [<GenericObjectServer>]`, and where its operand sits.
     constexpr uint16_t kMovEcxMem = 0x0D8B;
@@ -31,6 +36,13 @@ namespace {
     // An element's widget, which for a Text element is the magma::Text, and an Image's Material*.
     constexpr ptrdiff_t kElementWidget = 0x14;
     constexpr ptrdiff_t kImageMaterial = 0x20;
+    // magma::Area's milliseconds per frame.
+    constexpr ptrdiff_t kAreaFrameTime = 0x18;
+    // An element's time when last set, and the index of its keyframe then in the low 12 bits of a
+    // word, all ones for none.
+    constexpr ptrdiff_t kElementTime = 0x2C;
+    constexpr ptrdiff_t kElementKeyframe = 0x30;
+    constexpr uint32_t kKeyframeBits = 0xFFF;
 
     void* const* g_server = nullptr;
 }
@@ -38,7 +50,7 @@ namespace {
 bool Install() {
     const uint8_t* getKeyframe = g_getKeyframe.get();
     if (getKeyframe == nullptr || Read<uint16_t>(getKeyframe, kServerOperand - 2) != kMovEcxMem ||
-        !g_findGeneric || !g_genericTarget || !g_setVisible || !g_setString) {
+        !g_findGeneric || !g_genericTarget || !g_setVisible || !g_setString || !g_setTime || !g_setPlaying) {
         return false;
     }
     g_server = Read<void* const*>(getKeyframe, kServerOperand);
@@ -62,6 +74,16 @@ void SetText(void* element, const wchar_t* text) {
 void SetPicture(void* image, const void* from) {
     Write(Read<void*>(image, kElementWidget), kImageMaterial,
           Read<void*>(Read<const void*>(from, kElementWidget), kImageMaterial));
+}
+
+void Rearm(void* element) {
+    Write<uint32_t>(element, kElementTime, UINT32_MAX);
+    Write<uint32_t>(element, kElementKeyframe, Read<uint32_t>(element, kElementKeyframe) | kKeyframeBits);
+}
+
+void PlayFrom(void* area, int frame) {
+    g_setTime(area, static_cast<uint32_t>(Read<uint16_t>(area, kAreaFrameTime)) * frame, true, false);
+    g_setPlaying(area, true, false);
 }
 
 }

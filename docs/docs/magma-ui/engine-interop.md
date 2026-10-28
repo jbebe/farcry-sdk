@@ -571,6 +571,29 @@ An `Area` keeps its milliseconds per frame as a `u16` at `+0x18`, its playhead i
 frame time. After `SetTime` and `SetPlaying` the playhead advances in real time
 **(measured, 2026-10-02)**.
 
+**A keyframe's actions run when an element moves onto that keyframe, not when its time is set.** Each
+element remembers the time it was last set to at `+0x2C` and the index of its keyframe then in the
+low 12 bits of `+0x30` (all ones for none); its keyframe is the last one at or before the time. An
+element whose only keyframe is at frame 0 therefore runs that keyframe's actions once, the first
+time, and never again however often its area is set back to 0. Writing `0xFFFFFFFF` to its time and
+all ones to the index bits first makes the next `SetTime` run them again **(RE-verified; used by
+`mods/inventory-overhaul` for its page flip sound, which then played on every turn, 2026-10-28)**.
+
+### Sounds a layout plays
+
+The `SoundEvent` action is handled by `CSoundMenuManager::OnActionSignal` (Steam `0x100BD220`)
+wherever the area raising it is, the HUD's included: it reads `Sound Event Name`, a sound id written
+as a string such as `0x004ebebc`, passes it to `ISoundSystem::ConvertSoundStringToSoundId`, and plays
+it through the sound system with `Sound Event Type` **(RE-verified; seen played from the HUD,
+2026-10-28)**.
+
+The notebook's page flip is one such layout: `common.mgb`'s area `#5B36589B`, at 30 frames a second.
+Frames 0 to 16 cycle `notebook_flip_03`, `_02` and `_01` over the whole spread and sweep three
+`notebook_flip_single` pages and a `page_blur` across it. Frame 0 raises `SoundEvent` with
+`0x004ebebc` (`soundbinary\004ebebc.spk`) and type 20, and frame 50 `Stop`s the area. The pause pages
+instance it with `SyncTimingStrategy` over their notebook: turning forward at (−27, −24) scaled
+(1, 1.0390625), and once mirrored at x 998 for the other way.
+
 ## Writing text and pictures from code
 
 :::info[Verified via reverse engineering and in game]

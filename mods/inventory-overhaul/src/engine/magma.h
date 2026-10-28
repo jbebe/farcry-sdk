@@ -17,4 +17,12 @@ void SetText(void* element, const wchar_t* text);
 // An Image element's picture made another's, as the pause menu's Buddies page swaps a portrait.
 void SetPicture(void* image, const void* from);
 
+// Plays an Area's timeline from `frame`, its keyframes' actions included.
+void PlayFrom(void* area, int frame);
+
+// Makes an element run its keyframe's actions again when its area's time is next set, as on the
+// first time. An element runs them only on moving to another keyframe, so one with a single
+// keyframe runs them once otherwise.
+void Rearm(void* element);
+
 }

@@ -170,7 +170,17 @@ bool Install() {
 }
 
 void Update(const void* view, void* inventory) {
-    g_tab = (g_tab + g_turns.exchange(0)) % kTabs;
+    const int turns = g_turns.exchange(0);
+    g_tab = (g_tab + turns) % kTabs;
+    // The pause menu's own page flip, which plays its page flip sound as it starts.
+    void* flip = turns > 0 ? Magma::Find("IO_FLIP") : nullptr;
+    void* flipArea = flip != nullptr ? Magma::Find("IO_FLIP_AREA") : nullptr;
+    void* flipSound = flipArea != nullptr ? Magma::Find("IO_FLIP_SOUND") : nullptr;
+    if (flipSound != nullptr) {
+        Magma::SetVisible(flip, true);
+        Magma::Rearm(flipSound);
+        Magma::PlayFrom(flipArea, 0);
+    }
     int& selected = g_selected[g_tab];
     const int steps = g_steps.exchange(0);
     if (selected >= 0) {

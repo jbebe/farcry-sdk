@@ -26,8 +26,9 @@ $Layer = "$PSScriptRoot\layer\mods\ui\localized"
 $Textures = "$PSScriptRoot\layer\mods\ui\textures\io"
 $Work = "$PSScriptRoot\out\ui"
 
-# hud, its main page, and the pause menu's notebook material in common.mgb.
+# hud, its main page, and the pause menu's notebook material in common.mgb, whose id is $CommonId.
 $PackageId = "#A1126B78"
+$CommonId = "#E5EC7051"
 $PageId = "#F2CDBA4C"
 $NotebookMaterial = "#F67D9A2B"
 $Farcry2 = "#5B34AD62"
@@ -64,9 +65,9 @@ function U16([double]$v) { $i = [int][Math]::Round($v); if ($i -lt 0) { 65536 + 
 
 function F([double]$v) { $v.ToString("0.######", [Globalization.CultureInfo]::InvariantCulture) }
 
-function Element([string]$slot, [string]$type, [string]$name, [string]$state, [string]$body) {
+function Element([string]$slot, [string]$type, [string]$name, [string]$state, [string]$body, [bool]$hidden = $false) {
     @"
-<Element slot="$slot" type="$type" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+<Element slot="$slot" type="$type" HIDDEN="$($hidden.ToString().ToLowerInvariant())" ISDUPLICATABLE="true" MASKMODE="NOMASK">
   <USERDATA name="$name"><PROPERTIES /></USERDATA>
   <KEYFRAMES><Keyframe name="kf_$name" IDX="0" INTERPOLATION="None">$state</Keyframe></KEYFRAMES>
 $body
@@ -111,12 +112,15 @@ function Text([string]$name, [string]$string, [double]$x, [double]$y, [double]$w
     Element 50 Text $name $state $body
 }
 
-function Instance([string]$area, [double]$x, [double]$y, [double]$scaleX, [double]$scaleY, [double]$rotation) {
+# An instance of `area`, named after it unless given a `name`; by default one of hud's own areas.
+function Instance([string]$area, [double]$x, [double]$y, [double]$scaleX, [double]$scaleY, [double]$rotation,
+                  [string]$name = $area, [string]$package = $PackageId, [string]$timing = "NoTimingStrategy",
+                  [bool]$hidden = $false) {
     $state = "<ScaleState INTERPOLATIONFLAGS=`"0`" STATECOLOR=`"FFFFFFFF`" ROTATION=`"$(F $rotation)`" ORIGIN.x=`"0`" ORIGIN.y=`"0`" " +
         "POSITION.x=`"$(U16 $x)`" POSITION.y=`"$(U16 $y)`" SCALEX=`"$(F $scaleX)`" SCALEY=`"$(F $scaleY)`" />"
     $body = "<AreaInstance LABEL=`"`" INDEXOFFSET=`"0`"><MATERIALLINK present=`"false`" />" +
-        "<LINK slot=`"150`" TIMING=`"NoTimingStrategy`" PACKAGE=`"$PackageId`" AREA=`"$area`" ISUSINGDUPLICATEDAREA=`"false`" /></AreaInstance>"
-    Element 33 AreaInstance $area $state $body
+        "<LINK slot=`"150`" TIMING=`"$timing`" PACKAGE=`"$package`" AREA=`"$area`" ISUSINGDUPLICATEDAREA=`"false`" /></AreaInstance>"
+    Element 33 AreaInstance $name $state $body $hidden
 }
 
 # Every area starts with a placeholder named action, as stock areas do.
@@ -409,6 +413,17 @@ for ($r = 1; $r -le $Ratings.Count; $r++) {
 $postItTurned = Turn 208 151 -1.4
 $page.Add((Instance a_io_postit (512 + 208 - $postItTurned[0]) ($PostItTop + 151 - $postItTurned[1]) 1 1 -1.4))
 Export $PagePath a_io_postit
+# The pause menu's own page flip, common.mgb's area, whose first frame plays the page flip sound and
+# whose last stops it. The pause pages turn forward with it at (-27, -24), 1.0390625 as tall, over
+# notebook.png drawn 1097 by 982 from (-58, -1); that carried into the spread's pixels, which draw
+# notebook.png unscaled from (4, 10). Hidden until R first turns a page, so it does not play as the
+# HUD loads.
+$page.Add((Instance "#5B36589B" ((-27 + 58) / (1097 / 1024) - $Spread.X) ((-24 + 1) / (982 / 1024) - $Spread.Y) `
+    (1 / (1097 / 1024)) (1.0390625 / (982 / 1024)) 0 a_io_flip $CommonId TickTimingStrategy $true))
+Export $PagePath a_io_flip
+$Exports.Add("<GENERICOBJECT name=`"IO_FLIP_AREA`"><LINK slot=`"44`" LASTOBJECTTYPE=`"Area`" IDS=`"$PagePath a_io_flip #5B36589B`" /></GENERICOBJECT>")
+# The placeholder whose first keyframe raises the sound.
+$Exports.Add("<GENERICOBJECT name=`"IO_FLIP_SOUND`"><LINK slot=`"69`" LASTOBJECTTYPE=`"Element`" IDS=`"$PagePath a_io_flip #5B36589B #F88EC384`" /></GENERICOBJECT>")
 # The page's last image.
 $page.Add((Image i_io_end io_mark_end "" 0 0 2 2))
 
