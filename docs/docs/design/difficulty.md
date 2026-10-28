@@ -96,7 +96,7 @@ range in the log drifts from the scenario's distance.
 | D | **Tuning candidates** from the review of step 4: hold fire at each soldier's own "clear" value rather than a fixed 0.4; sighting and the speed evaluator both count the player's movement; range falloff from each weapon's own effective range; grass in combat (0.8) hides more than when alerted (0.765) | closed, the user's call: the game's own combat "clear" is 0.4, the fire line already |
 | E | **Damage falloff with range** for the player's hits on soldiers | not needed, the user's call: a rifle round barely slows within the 150 m soldiers live at |
 | F | **A vest** | postponed, below; on hold |
-| G | **The difficulty spread.** Ease Casual and Experienced and harden Infamous, from the Hardcore values | after A to C |
+| G | **The difficulty spread.** Ease Casual and Experienced and harden Infamous, from the Hardcore values | every lever [listed below](#open-the-difficulty-spread) gets an answer before the mod is finished; after A to C |
 | I | **Periphery sees movement.** Outside his focus a still player is barely noticed, a moving one is | built: a still or crouch-moving player counts 0.2 of one moving upright in the periphery, full from 2 m/s (crouch-moving split off at the user's request: it is as fast as a walk); works in game, user 2026-10-26 |
 | J | **Close-range awareness.** Within about 2 m a soldier senses the player at any angle, but a crouching player can always approach without alerting him; walking or running alerts him | built: moving upright at 0.5 m/s or more, both cones go all round within 20 m and behind his eyes he counts 0.5 (noticed); within 2 m he counts in full. The 20 m is the user's; walking, running and jumping count, crouching never; works in game, user 2026-10-26 |
 | K | **Vertical sight limit.** About 45° above and 60° below his eye line | skipped, the user's call: the cone test is already a round 3D cone, 90° from his head direction, and a narrower band would only matter at steep angles |
@@ -177,3 +177,55 @@ The earlier notes, not agreed:
 The game scales with progression in three places, which any answer has to deal with: enemy weapons
 follow the mission count, weapon condition follows the act, and how often soldiers go down follows the
 player's reputation.
+
+## Open: the difficulty spread
+
+Item G. Each lever below is to be scaled, flattened or left as it is, by an explicit decision, before the
+mod counts as finished. Listed on 2026-10-28; nothing decided yet.
+
+**The game's own levers** ([where difficulty acts](../engine-internals/ai.md#where-difficulty-acts)):
+
+| Lever | Where | Casual → Infamous | With the mod |
+|---|---|---|---|
+| Player maximum health | data: `HealthMax_*` and `HealthBarSize_*` curves | 1,800 / 1,400 / 1,075 / 825 at the curves' start | untouched; the biggest thing still differing |
+| Last-bar cushion | code | quarters damage while the player is on his last bar | removed on every setting |
+| Syrette cap | code | 6 / 5 / 4 / 3 | untouched |
+| Healing over time | data: `HealthDegenerationLevels` in `gamemodesconfig.xml` | one curve per setting | untouched |
+| Health pickups, medic stations | code | per setting; Infamous medic stations take another branch, never checked | untouched |
+| Max ammo | data: `iMaxAmmo{Casual,…}` per weapon | for example the dart rifle's 9 / 4 / 3 / 2 | untouched |
+| Clip pickups, reloading | code | per setting, values not checked | untouched |
+| Grenade drops from the dead | data: `ChanceToDropGrenade` | 1 / 0.5 / 0.33 / 0.25 | untouched |
+| The player's weapons' jams and wear | code | per setting, values not checked | untouched |
+| The player's close-range damage | data: `RangeMultipliers` per weapon | AK-47 at 0-2 m: +7 / +3 / +2 / none | untouched |
+| Upgrade bonuses | code | per setting | untouched |
+| Enemy forced misses | data: `nForcedFailure*` per weapon | AK-47 misses 4-8 / 2-4 / 1 / 0 shots after a hit | replaced by the hit model on every setting |
+| Squad role split | code | one soldier / 70 % / 70 % / 90 % of the squad in the first role | untouched |
+| Malaria drain | code | per setting | untouched |
+| Gamepad aim assist | code | per setting | untouched; gamepad only |
+
+**The mod's own constants that could follow the setting.** Damage taken, aim settle, recoil recovery and
+squad coordination are the forgiveness levers agreed on 2026-10-21:
+
+| Constant | Hardcore now | Eased by |
+|---|---|---|
+| Damage the player takes per body part | torso 5×, head 24× | lower multipliers |
+| Aim settle | 0.6 s + 0.02 s per metre | longer before his shots land |
+| Recoil | a follow-up loses up to 60 %, recovering in 0.25 s | more lost, or slower recovery |
+| Suppression pin | 1 s | longer pins |
+| Head aim | 15 %, none in his first 3 s | a lower share, a longer grace |
+| Squad memory | hunted within 15 m of the last sighting | a smaller radius |
+
+**Proposed, not agreed:**
+
+- The enemy is the same on every setting. The spread comes from the game's forgiveness levers that
+  already differ (health, syrettes, ammo, grenade drops, jams), plus two of the mod's constants: damage
+  taken and aim settle.
+- The hit cap of 0.85, eyesight, fire discipline and grass stay the same on every setting: they are what
+  the enemy is.
+
+**Questions for the user:**
+
+- The point-blank bonus for the player's bullets on the easier settings: flatten it, or keep it as
+  forgiveness?
+- The last-bar cushion: back on Casual and Experienced only?
+- Whether G goes ahead before C, which is on hold.
