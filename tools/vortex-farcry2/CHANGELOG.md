@@ -3,6 +3,13 @@
 Notable changes to the Vortex Far Cry 2 extension, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.6.0] - 2026-10-28
+
+### Added
+- **Mods that change the AI's brains merge.** A mod can ship only the plans and tasks of a brain it
+  changes, and the extension merges them into the game's own brain alongside any other mod changing
+  the same one. Difficulty Overhaul ships its soldier changes this way.
+
 ## [0.5.0] - 2026-10-16
 
 ### Changed
