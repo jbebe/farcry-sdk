@@ -88,7 +88,7 @@ namespace {
         {"Shotgunner behind cover", "19", kShotgunnerBehindCover,
          "Stay behind your line and let him come.",
          "He comes at you, pausing about 1 s at each cover, and inside 12 m keeps closing in rather "
-         "than holding back to fire."},
+         "than holding back to fire, then stops about 3 m from you and fights from there."},
     };
 
     constexpr Soldier kLoneSniper[] = {{kSniper, {440, 437, 137.7f}, kSniperPost}};

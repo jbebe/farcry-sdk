@@ -88,6 +88,14 @@ trespass or a vehicle, sniping, a building, reload, target too close, the range 
 `CombatNothing` as the fallback. The flag meanings are read off the names of the tasks that set and
 test them; the chain's order and the flag checks are read out of the code.
 
+"Target too close" is a blackboard fact, not a flag. Every `CScannerIsInDistance` with `CheckIsInside`
+1 writes `ThreatTooClose` while its reference is inside its distance, and the chain picks
+`CombatTargetTooClose` when the fact is there and clears it (**traced in the server build**). In
+`mercbrain` that plan stands and fires for at least 5 s. The combat plans start a `CheckCloseTarget`
+copy that stops them at 6 m (5 m when attacking a higher target), but only once the target is in plain
+sight. A move toward a hidden target is not stopped: the kill-range run at a target with no cover
+follows its path to the target's last seen spot with no stop distance.
+
 A plan starts the tasks wired to its `OnStart` anchor and each task's exits (`Success`, `Failure`,
 class-specific ones) start the next. Scanners are tasks that watch a condition and fire an exit when
 it changes; they interrupt plans the same way. Tasks share state through the agent's *blackboard*

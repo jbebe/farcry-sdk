@@ -139,6 +139,35 @@ $kill = '::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack'
 Enable-AtPlayer "$kill/CheckForShotgunProgression"
 Enable-AtPlayer "$kill/AssaultAttack/CheckForShotgunProgression"
 
+# Within 3 m of the player a soldier stops whatever move he is on and fights where he stands, seen or
+# not: each close-target check, which waits until the player is in sight at 6 m, gets a 3 m scanner too.
+$closeChecks = @($doc.DocumentElement.SelectNodes('Plan') |
+    Where-Object { $_.GetAttribute('Name') -match '^::MercBrain/MercBrain/.*/CheckCloseTarget[^/]*$' })
+foreach ($check in $closeChecks) {
+    $name = $check.GetAttribute('Name')
+    $parent = $name.Substring(0, $name.LastIndexOf('/'))
+    Add-Instance $name "$name/CScannerIsInDistance1" @"
+<Scanner Name="$name/WithinReach" Class="CScannerIsInDistance" Looping="0" Independent="0">
+  <Parameter Name="InDistance" Value="3" />
+  <Parameter Name="RefPosFactName" Value="BestTarget" />
+  <Parameter Name="smartPostion" Value="&lt;AiObject, &gt;">
+    <Parameter Name="RefType" Value="1" />
+    <Parameter Name="RefName" Value="" />
+  </Parameter>
+  <Parameter Name="CheckIsInside" Value="1" />
+  <Parameter Name="InDistanceFactName" Value="" />
+  <Parameter Name="Trigger1FactName" Value="" />
+  <Parameter Name="Trigger2FactName" Value="" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">$(Connect "$name/WithinReachAtPlayer")</Exit>
+</Scanner>
+"@
+    Add-Instance $name "$name/WithinReach" (IfAtPlayer "$name/WithinReachAtPlayer" (Connect $parent 'Stop') '')
+    $start = $check.SelectSingleNode("Anchor[@Name='OnStart']")
+    $start.InnerXml += Connect "$name/WithinReach"
+}
+
 $plan = '::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan'
 $shoot = "$plan/ShootPhase"
 
