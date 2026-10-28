@@ -888,9 +888,6 @@
     <GENERICOBJECT name="IO_FLIP_AREA">
       <LINK slot="44" LASTOBJECTTYPE="Area" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_flip #5B36589B" />
     </GENERICOBJECT>
-    <GENERICOBJECT name="IO_FLIP_SOUND">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_flip #5B36589B #F88EC384" />
-    </GENERICOBJECT>
     <GENERICOBJECT name="#8962A37E">
       <LINK slot="101" LASTOBJECTTYPE="Page" IDS="#A1126B78 #F2CDBA4C" />
     </GENERICOBJECT>

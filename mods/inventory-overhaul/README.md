@@ -172,9 +172,10 @@ hidden. Using the selected row is still to come.
 R, the map's `flipside`, turns the page while the notebook is out: Inventory, Papers, Journal,
 Contacts, then Inventory again. The notebook takes the signal, as it does the wheel's, so it is not
 turned over as the map would be. The turn is the pause menu's own: an instance of `common.mgb`'s
-page flip area (`a_io_flip`, last on the spread, hidden until the first turn) played from its first
-frame, whose `SoundEvent` plays the page flip sound, re-armed each time since a keyframe's actions
-run only once otherwise (see
+page flip area (`a_io_flip`, last on the spread, shown only while a page turns) at twice its speed,
+its time set each frame without its keyframes' actions, since the area is the pause menu's too. Its
+`SoundEvent`'s sound is played from the plugin instead, with the same id and type, and faded out to
+end at half its length (see
 [driving an area's timeline](../../docs/docs/magma-ui/engine-interop.md#driving-an-areas-timeline-from-code)).
 Each page keeps its own selection. Each is an area of its own in the spread
 (`a_io_inventory`, `a_io_papers`, `a_io_journal`, `a_io_contacts`), one shown at a time, with its

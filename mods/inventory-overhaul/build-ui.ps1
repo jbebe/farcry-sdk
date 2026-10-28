@@ -413,17 +413,14 @@ for ($r = 1; $r -le $Ratings.Count; $r++) {
 $postItTurned = Turn 208 151 -1.4
 $page.Add((Instance a_io_postit (512 + 208 - $postItTurned[0]) ($PostItTop + 151 - $postItTurned[1]) 1 1 -1.4))
 Export $PagePath a_io_postit
-# The pause menu's own page flip, common.mgb's area, whose first frame plays the page flip sound and
-# whose last stops it. The pause pages turn forward with it at (-27, -24), 1.0390625 as tall, over
-# notebook.png drawn 1097 by 982 from (-58, -1); that carried into the spread's pixels, which draw
-# notebook.png unscaled from (4, 10). Hidden until R first turns a page, so it does not play as the
-# HUD loads.
+# The pause menu's own page flip, common.mgb's area, which the plugin steps through itself. The pause
+# pages turn forward with it at (-27, -24), 1.0390625 as tall, over notebook.png drawn 1097 by 982
+# from (-58, -1); that carried into the spread's pixels, which draw notebook.png unscaled from
+# (4, 10). Shown only while R turns a page.
 $page.Add((Instance "#5B36589B" ((-27 + 58) / (1097 / 1024) - $Spread.X) ((-24 + 1) / (982 / 1024) - $Spread.Y) `
     (1 / (1097 / 1024)) (1.0390625 / (982 / 1024)) 0 a_io_flip $CommonId TickTimingStrategy $true))
 Export $PagePath a_io_flip
 $Exports.Add("<GENERICOBJECT name=`"IO_FLIP_AREA`"><LINK slot=`"44`" LASTOBJECTTYPE=`"Area`" IDS=`"$PagePath a_io_flip #5B36589B`" /></GENERICOBJECT>")
-# The placeholder whose first keyframe raises the sound.
-$Exports.Add("<GENERICOBJECT name=`"IO_FLIP_SOUND`"><LINK slot=`"69`" LASTOBJECTTYPE=`"Element`" IDS=`"$PagePath a_io_flip #5B36589B #F88EC384`" /></GENERICOBJECT>")
 # The page's last image.
 $page.Add((Image i_io_end io_mark_end "" 0 0 2 2))
 

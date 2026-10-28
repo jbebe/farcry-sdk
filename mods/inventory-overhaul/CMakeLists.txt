@@ -32,6 +32,7 @@ add_library(InventoryOverhaul SHARED
   "src/engine/inventory.cpp"
   "src/engine/magma.cpp"
   "src/engine/paper.cpp"
+  "src/engine/sound.cpp"
   "src/engine/story.cpp"
   "src/engine/vtable.cpp"
 )

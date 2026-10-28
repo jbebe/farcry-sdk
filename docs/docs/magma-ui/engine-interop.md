@@ -571,13 +571,24 @@ An `Area` keeps its milliseconds per frame as a `u16` at `+0x18`, its playhead i
 frame time. After `SetTime` and `SetPlaying` the playhead advances in real time
 **(measured, 2026-10-02)**.
 
+**An instance of another package's area is that area, not a copy.** The `Area` an export's path
+resolves to through an instance has the defining package for parent, so every instance of it, in any
+package, shares its playhead and frame time: changing either for one changes it for all
+**(seen in game: `common.mgb`'s page flip, instanced in the HUD, had a package other than the HUD's
+for parent, 2026-10-28)**.
+
 **A keyframe's actions run when an element moves onto that keyframe, not when its time is set.** Each
 element remembers the time it was last set to at `+0x2C` and the index of its keyframe then in the
 low 12 bits of `+0x30` (all ones for none); its keyframe is the last one at or before the time. An
 element whose only keyframe is at frame 0 therefore runs that keyframe's actions once, the first
 time, and never again however often its area is set back to 0. Writing `0xFFFFFFFF` to its time and
-all ones to the index bits first makes the next `SetTime` run them again **(RE-verified; used by
-`mods/inventory-overhaul` for its page flip sound, which then played on every turn, 2026-10-28)**.
+all ones to the index bits first makes the next `SetTime` run them again **(RE-verified; the page
+flip's sound then played on every turn, 2026-10-28)**.
+
+Only a visible element takes a time: `Element::SetTime` skips one whose `+0x34` bit 0, the bit
+`SetVisible` writes, is clear, so a hidden element runs no actions. `SetTime` with `executeActions`
+false moves every element without running any **(RE-verified; `mods/inventory-overhaul` steps the page
+flip that way, 2026-10-28)**.
 
 ### Sounds a layout plays
 
@@ -587,9 +598,15 @@ as a string such as `0x004ebebc`, passes it to `ISoundSystem::ConvertSoundString
 it through the sound system with `Sound Event Type` **(RE-verified; seen played from the HUD,
 2026-10-28)**.
 
+`CSoundSystem::PlaySound` (vtable `+0x9C`) returns the playing sound's handle, which `OnActionSignal`
+drops, so a sound a layout raises cannot be cut short. To cut one, set the area's time without its
+actions and play the event from code with the same id and type: the handle then goes to `StopSound`
+(`+0xA8`, with a fade-out in seconds), and `GetSoundLength` (`+0xC0`) takes the event id and returns
+its length in seconds, 0.656 for `0x004ebebc` **(RE-verified; logged, 2026-10-28)**.
+
 The notebook's page flip is one such layout: `common.mgb`'s area `#5B36589B`, at 30 frames a second.
 Frames 0 to 16 cycle `notebook_flip_03`, `_02` and `_01` over the whole spread and sweep three
-`notebook_flip_single` pages and a `page_blur` across it. Frame 0 raises `SoundEvent` with
+`notebook_flip_single` pages and a `page_blur` across it, faded out by frame 16. Frame 0 raises `SoundEvent` with
 `0x004ebebc` (`soundbinary\004ebebc.spk`) and type 20, and frame 50 `Stop`s the area. The pause pages
 instance it with `SyncTimingStrategy` over their notebook: turning forward at (−27, −24) scaled
 (1, 1.0390625), and once mirrored at x 998 for the other way.

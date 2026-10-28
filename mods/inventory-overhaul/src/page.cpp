@@ -4,6 +4,7 @@
 
 #include "engine/magma.h"
 #include "engine/paper.h"
+#include "engine/sound.h"
 #include "engine/story.h"
 #include "fcse_api.h"
 #include "notebook.h"
@@ -12,7 +13,9 @@
 #include <algorithm>
 #include <atomic>
 #include <cctype>
+#include <chrono>
 #include <iterator>
+#include <utility>
 
 namespace InventoryOverhaul::Page {
 
@@ -39,6 +42,45 @@ namespace {
     void* g_notebook = nullptr;
     bool g_open = false;
     std::wstring g_shown;
+
+    // The pause menu's own page flip, common.mgb's area, shared with the pause menu: its time is set
+    // from here at twice its speed up to the frame its images have faded out by, without its
+    // keyframes' actions, so its sound, as its SoundEvent names it, is played here and faded out to
+    // end at half its length.
+    constexpr float kFlipSpeed = 2.0f;
+    constexpr int kFlipLastFrame = 16;
+    constexpr uint32_t kFlipSound = 0x004EBEBC;
+    constexpr int32_t kMenuSound = 20;
+    constexpr float kFlipSoundPart = 0.5f;
+    constexpr float kFlipSoundFade = 0.03f;
+    std::chrono::steady_clock::time_point g_flipStart;
+    bool g_flipping = false;
+    uint32_t g_flipSound = Sound::kNone;
+
+    void StartFlip() {
+        g_flipStart = std::chrono::steady_clock::now();
+        g_flipping = true;
+        Sound::Stop(g_flipSound, kFlipSoundFade);
+        g_flipSound = Sound::Play(kFlipSound, kMenuSound);
+    }
+
+    void Flip() {
+        const float seconds = std::chrono::duration<float>(std::chrono::steady_clock::now() - g_flipStart).count();
+        if (g_flipSound != Sound::kNone && seconds >= Sound::Length(kFlipSound) * kFlipSoundPart - kFlipSoundFade) {
+            Sound::Stop(std::exchange(g_flipSound, Sound::kNone), kFlipSoundFade);
+        }
+        void* flip = g_flipping ? Magma::Find("IO_FLIP") : nullptr;
+        void* area = flip != nullptr ? Magma::Find("IO_FLIP_AREA") : nullptr;
+        if (area == nullptr) {
+            g_flipping = false;
+            return;
+        }
+        const uint32_t last = Magma::TimePerFrame(area) * kFlipLastFrame;
+        const auto time = static_cast<uint32_t>(seconds * 1000.0f * kFlipSpeed);
+        g_flipping = time < last;
+        Magma::SetTime(area, std::min(time, last));
+        Magma::SetVisible(flip, g_flipping);
+    }
 
     // Writes everything; a picture is taken from an element of the same package, found by name.
     size_t Write(const Model& model) {
@@ -166,20 +208,18 @@ bool Install() {
                            : story ? "on the HUD"
                                    : "on the HUD, but the story's services were not found: Papers, Journal and "
                                      "Contacts stay empty");
+    if (magma && !Sound::Install()) {
+        FCSE::Logf("page: the sound system calls were not found, so a turn is silent");
+    }
     return magma;
 }
 
 void Update(const void* view, void* inventory) {
+    Sound::Hold(kFlipSound);
     const int turns = g_turns.exchange(0);
     g_tab = (g_tab + turns) % kTabs;
-    // The pause menu's own page flip, which plays its page flip sound as it starts.
-    void* flip = turns > 0 ? Magma::Find("IO_FLIP") : nullptr;
-    void* flipArea = flip != nullptr ? Magma::Find("IO_FLIP_AREA") : nullptr;
-    void* flipSound = flipArea != nullptr ? Magma::Find("IO_FLIP_SOUND") : nullptr;
-    if (flipSound != nullptr) {
-        Magma::SetVisible(flip, true);
-        Magma::Rearm(flipSound);
-        Magma::PlayFrom(flipArea, 0);
+    if (turns > 0) {
+        StartFlip();
     }
     int& selected = g_selected[g_tab];
     const int steps = g_steps.exchange(0);
@@ -234,6 +274,7 @@ void Scroll(int steps) { g_steps += steps; }
 void Turn() { ++g_turns; }
 
 void Frame() {
+    Flip();
     void* notebook = Magma::Find("IO_NOTEBOOK");
     const bool open = Notebook::IsOpen();
     if (notebook == g_notebook && open == g_open) {
