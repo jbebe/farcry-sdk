@@ -42,6 +42,14 @@ The floor of everything: one element, one keyframe, geometry in the state.
 `COLOR1`–`COLOR4` are the quad's corner colours: set them differently and the image is tinted with a
 gradient, for free, with no extra texture.
 
+## A loading-screen picture
+
+Each loading screen's picture is six textures, `textures\loading\<nn>_01.png` to `_06.png`: tiles of
+one 1280 by 800 image, row by row, a 256-wide tile then a 1024-wide one, in rows 512, 256 and 32
+tall **(seen in data)**. To show one elsewhere, put six images at their places in an area of its own
+and instance that area at the scale wanted. Inventory Overhaul's notebook does this for a photo, small
+on its post-it and large over a page **(untested in game)**.
+
 ## Fade in and hold
 
 Two keyframes and a `Stop`. `STATECOLOR`'s alpha channel is Magma's opacity — it multiplies the

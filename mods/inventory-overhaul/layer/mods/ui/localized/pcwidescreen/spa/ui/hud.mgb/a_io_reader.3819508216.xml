@@ -1,0 +1,149 @@
+<Area slot="44" type="Area" FRAMERATE="30" CURRENTFRAME="0" STATICBOX="0 412 0 620">
+  <USERDATA name="a_io_reader">
+    <PROPERTIES />
+  </USERDATA>
+  <CHILDREN>
+    <Element slot="77" type="Placeholder" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="action">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_action" IDX="0" INTERPOLATION="None">
+          <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Placeholder />
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_reader_paper">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_reader_paper" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="90" ORIGIN.x="310" ORIGIN.y="206" LEFT="65432" RIGHT="516" TOP="104" BOTTOM="516" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="0.835938" TILING.y="0.607422" OFFSET.x="0.025391" OFFSET.y="0.03125" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="postit" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_reader_name">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_reader_name" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="176" ORIGIN.y="15" LEFT="30" RIGHT="382" TOP="30" BOTTOM="60" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="24" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="24" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_reader_pic_jackal_photo">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_reader_pic_jackal_photo" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="130" ORIGIN.y="130" LEFT="76" RIGHT="336" TOP="72" BOTTOM="332" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_paper_jackal_photo" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_reader_pic_jackal_definition">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_reader_pic_jackal_definition" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="130" ORIGIN.y="130" LEFT="76" RIGHT="336" TOP="72" BOTTOM="332" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_paper_jackal_definition" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_reader_pic_apr_01">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_reader_pic_apr_01" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="130" ORIGIN.y="130" LEFT="76" RIGHT="336" TOP="72" BOTTOM="332" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_paper_apr_01" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_reader_pic_ufll_01">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_reader_pic_ufll_01" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="130" ORIGIN.y="130" LEFT="76" RIGHT="336" TOP="72" BOTTOM="332" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_paper_ufll_01" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_reader_pic_photo05">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_reader_pic_photo05" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="30" POSITION.y="92" SCALEX="0.275" SCALEY="0.275" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_photo_05" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_reader_text">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_reader_text" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="176" ORIGIN.y="253" LEFT="30" RIGHT="382" TOP="72" BOTTOM="578" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="true" CLIPPING="false" ELLIPSIS="false" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_reader_caption">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_reader_caption" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="176" ORIGIN.y="116" LEFT="30" RIGHT="382" TOP="346" BOTTOM="578" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="true" CLIPPING="false" ELLIPSIS="false" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_reader_sheet">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_reader_sheet" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="99141E2A" ROTATION="0" ORIGIN.x="176" ORIGIN.y="10" LEFT="30" RIGHT="382" TOP="584" BOTTOM="604" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="15" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="15" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+  </CHILDREN>
+</Area>

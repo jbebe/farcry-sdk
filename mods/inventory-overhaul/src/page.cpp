@@ -27,17 +27,21 @@ namespace {
 
     // The post-it's pictures besides the guns', as build-ui.ps1 makes them.
     constexpr const char* kOtherPictures[] = {"machete", "diamond", "seringe", "pills", "m67", "molotov",
-                                              "jackal_photo", "jackal_definition", "apr_01", "ufll_01", "tape"};
+                                              "jackal_photo", "jackal_definition", "apr_01", "ufll_01", "photo05",
+                                              "tape"};
     // The upgrade icon rows: a gun's three on the third line, a belt item's two on the second.
     constexpr std::pair<const char*, int> kUpgradeRows[] = {{"IO_POSTIT_UP", 3}, {"IO_POSTIT_BELT_UP", 2}};
     constexpr int kHalfSteps = 10;
 
-    // The page open, R's turns and the wheel's steps since the last write, and each page's selected
-    // row; the Inventory page opens on the gun in hand.
+    // The page open, R's turns, the wheel's steps and whether it was clicked since the last write, and
+    // each page's selected row; the Inventory page opens on the gun in hand. The sheet of the paper
+    // read, -1 while none is.
     int g_tab = kInventory;
     std::atomic<int> g_turns{0};
     std::atomic<int> g_steps{0};
+    std::atomic<bool> g_used{false};
     int g_selected[kTabs] = {-1, 0, 0, 0};
+    std::atomic<int> g_sheet{-1};
 
     // The page's elements as last found, and what was last written into them.
     void* g_notebook = nullptr;
@@ -222,12 +226,16 @@ void Update(const void* view, void* inventory) {
     Sound::Hold(kFlipSound);
     const int turns = g_turns.exchange(0);
     g_tab = (g_tab + turns) % kTabs;
+    int sheet = turns > 0 ? -1 : g_sheet.load();
     if (turns > 0) {
         StartFlip();
     }
     int& selected = g_selected[g_tab];
     const int steps = g_steps.exchange(0);
-    if (selected >= 0) {
+    const bool used = g_used.exchange(false);
+    if (sheet >= 0) {
+        sheet = std::max(sheet + steps, 0);
+    } else if (selected >= 0) {
         selected += steps;
     }
 
@@ -250,7 +258,7 @@ void Update(const void* view, void* inventory) {
         rows = InventoryPage(model, selected, view, inventory);
         break;
     case kPapers:
-        rows = PapersPage(model, selected);
+        rows = PapersPage(model, selected, used, sheet);
         break;
     case kJournal:
         JournalPage(model);
@@ -259,7 +267,9 @@ void Update(const void* view, void* inventory) {
         rows = ContactsPage(model, selected);
         break;
     }
-    model.Show("IO_POSTIT", rows > 0);
+    g_sheet = sheet;
+    model.Show("IO_POSTIT", rows > 0 && sheet < 0);
+    model.Show("IO_READER", sheet >= 0);
 
     std::wstring key = model.Key();
     if (key == g_shown) {
@@ -277,6 +287,10 @@ void Scroll(int steps) { g_steps += steps; }
 
 void Turn() { ++g_turns; }
 
+void Use() { g_used = true; }
+
+bool PutBack() { return g_sheet.exchange(-1) >= 0; }
+
 void Frame() {
     Flip();
     void* notebook = Magma::Find("IO_NOTEBOOK");
@@ -292,6 +306,9 @@ void Frame() {
     }
     if (notebook != nullptr) {
         Magma::SetVisible(notebook, open);
+    }
+    if (!open) {
+        g_sheet = -1;
     }
     g_notebook = notebook;
     g_open = open;

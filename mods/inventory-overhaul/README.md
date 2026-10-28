@@ -10,7 +10,7 @@ this is an FCSE plugin, built in the log's steps.
 | 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay | works in game |
 | 3. The notebook on Tab | a gadget of its own beside the map, given with it, on a new Notebook control: two bent pages held in both hands, the right one bending as the hands move | works in game |
 | 4. The Inventory page | the mockup's spread as a Magma page drawn onto the notebook's pages: Weapons, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet |
-| 6. Papers, Journal, Contacts | R turns the page; letters and photos, the Jackal and Predecessor tapes found, the reputation and the current job, and the buddies met, in the game's words; the pause menu without those pages or its job panel | seen in game in world 2; the papers are samples |
+| 6. Papers, Journal, Contacts | R turns the page; letters and photos, read whole with LMB, the Jackal and Predecessor tapes found, the reputation and the current job, and the buddies met, in the game's words; the pause menu without those pages or its job panel | seen in game in world 2; the papers are samples; reading a paper whole seen by self-test, the dummy note's sheets and photo not yet |
 | 7. Papers in the world | the torn notebook page with the Jackal photo lies on a burnt-out truck's bed in world 1; picking it up puts it in Items, so Papers shows it | built, not yet seen in game |
 
 ## Two guns
@@ -187,8 +187,12 @@ text the game has is the game's, in the player's language, through its string ta
 - **Papers** (`src/papers_page.cpp`): on the left the letters and photos, the Items records the page
   knows by id, which leave the Inventory page's Items. Four papers from the mockup, with their
   textures in `textures\common`: the torn notebook page is found in the world, the other three are
-  still samples. On the right the Jackal tapes found and then the Predecessor's, from the mission
-  manager's two lists, each with its title and the game's line about it.
+  still samples. Two dummies try the reader: a note three sheets long and a photo, a loading-screen
+  picture shown from its six tiles. On the right the Jackal tapes found and then the Predecessor's,
+  from the mission manager's two lists, each with its title and the game's line about it. The post-it
+  shows a paper's opening; LMB (`startshooting`) lays the paper whole over the right page, on the
+  post-it's paper turned upright (`a_io_reader`), the wheel turns a long letter's sheets, and LMB, Esc
+  (`show_pausemenu`), R or Tab put it back.
 - **Journal** (`src/journal_page.cpp`): on the left the reputation level and its words, as the pause
   menu's Journal has them; on the right the current job, its objectives and the Underground's, as the
   pause menu's main page showed them (`src/engine/jobs.cpp`): every objective marker that is on, its

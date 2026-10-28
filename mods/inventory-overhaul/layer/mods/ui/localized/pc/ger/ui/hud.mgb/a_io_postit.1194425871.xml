@@ -534,6 +534,20 @@
         <MATERIALLINK present="true" id="io_paper_ufll_01" PACKAGE="" />
       </Image>
     </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_postit_pic_photo05">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_postit_pic_photo05" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="133" POSITION.y="2" SCALEX="0.1175" SCALEY="0.1175" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_photo_05" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="i_io_postit_pic_tape">
         <PROPERTIES />

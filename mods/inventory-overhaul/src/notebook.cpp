@@ -74,6 +74,9 @@ namespace {
     constexpr ptrdiff_t kSignalFired = 0x10;
     // R, which turns the notebook's page.
     constexpr uint32_t kFlipSide = FCSE::Crc32("flipside");
+    // The left mouse button, which reads a paper or puts it back, and Esc, which puts it back.
+    constexpr uint32_t kStartShooting = FCSE::Crc32("startshooting");
+    constexpr uint32_t kShowPauseMenu = FCSE::Crc32("show_pausemenu");
 
     // Whether the notebook is out, whether the toggle the player handles next is Tab's, and whether
     // the notebook could not be made.
@@ -106,6 +109,17 @@ namespace {
         case kFlipSide:
             if (g_open) {
                 Page::Turn();
+                id = kTaken;
+            }
+            break;
+        case kStartShooting:
+            if (g_open) {
+                Page::Use();
+                id = kTaken;
+            }
+            break;
+        case kShowPauseMenu:
+            if (g_open && Page::PutBack()) {
                 id = kTaken;
             }
             break;

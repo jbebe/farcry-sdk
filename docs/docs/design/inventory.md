@@ -198,7 +198,7 @@ Which bandolier covers which gun, from the shop's plans:
 | Gun in Items | equip to gun 1 or 2, swapping with the gun there **(proposed)** | as above |
 | Diamonds | — | no: the row is the player's own diamond count |
 | Syrette | heal, as the heal key does | no |
-| Letter, photo | read: it lies over the right page | no |
+| Letter, photo | read: it lies over the whole right page on the post-it's paper turned upright, the post-it hidden; a photo keeps its own colours; the wheel turns a long letter's sheets; LMB or Esc puts it back (built 2026-10-28) | no |
 | Tape | play or stop, while the player walks on | no |
 | Quest item | — | no, until its job ends |
 | Pills, grenades, molotovs | — | no |

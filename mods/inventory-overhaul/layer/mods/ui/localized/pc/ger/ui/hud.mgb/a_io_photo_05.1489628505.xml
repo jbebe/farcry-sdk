@@ -1,0 +1,96 @@
+<Area slot="44" type="Area" FRAMERATE="30" CURRENTFRAME="0" STATICBOX="0 1280 0 800">
+  <USERDATA name="a_io_photo_05">
+    <PROPERTIES />
+  </USERDATA>
+  <CHILDREN>
+    <Element slot="77" type="Placeholder" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="action">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_action" IDX="0" INTERPOLATION="None">
+          <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Placeholder />
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_photo_05_1">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_photo_05_1" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="128" ORIGIN.y="256" LEFT="0" RIGHT="256" TOP="0" BOTTOM="512" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_photo_05_1" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_photo_05_2">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_photo_05_2" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="512" ORIGIN.y="256" LEFT="256" RIGHT="1280" TOP="0" BOTTOM="512" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_photo_05_2" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_photo_05_3">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_photo_05_3" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="128" ORIGIN.y="128" LEFT="0" RIGHT="256" TOP="512" BOTTOM="768" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_photo_05_3" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_photo_05_4">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_photo_05_4" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="512" ORIGIN.y="128" LEFT="256" RIGHT="1280" TOP="512" BOTTOM="768" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_photo_05_4" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_photo_05_5">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_photo_05_5" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="128" ORIGIN.y="16" LEFT="0" RIGHT="256" TOP="768" BOTTOM="800" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_photo_05_5" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_photo_05_6">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_photo_05_6" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="512" ORIGIN.y="16" LEFT="256" RIGHT="1280" TOP="768" BOTTOM="800" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_photo_05_6" PACKAGE="" />
+      </Image>
+    </Element>
+  </CHILDREN>
+</Area>

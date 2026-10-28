@@ -38,11 +38,11 @@ namespace {
     constexpr const char* kPresets[] = {"weapons.Special.CarlGustaf", "weapons.Special.RPG7",
                                         "weapons.Special.PKM", "weapons.Primary.AK47",
                                         "weapons.Secondary.Makarov"};
-    // The mockup's Fill items: two stowed guns, nine items, then the Papers page's sample papers.
+    // The mockup's Fill items: two stowed guns, nine items, then the Papers page's papers.
     constexpr const char* kFill[] = {"weapons.Special.CarlGustaf", "weapons.Special.PKM", "Courier_pouch",
                                      "Sealed_envelope", "Vaccine_case", "Radio_valve", "Roll_of_film",
                                      "Map_case", "Dog_tags", "Ledger", "Camo_Suit", "Torn_notebook_page",
-                                     "Dictionary_page", "APR_poster", "UFLL_poster"};
+                                     "Dictionary_page", "APR_poster", "UFLL_poster", "Dummy_note", "Dummy_photo"};
     // The mockup's buddies, met through the game's own Lua (whose bools take 1), Frank the primary
     // buddy, Hakim the secondary (who must be alive) and Warren dead, and the Jackal tapes found the
     // same way.

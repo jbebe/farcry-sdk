@@ -53,6 +53,11 @@ $Ratings = "Damage", "Range", "Accuracy", "Reliability", "Fire rate"
 # The sample papers' pictures, in textures\common, and the buddies' portraits,
 # textures\hud\icons_buddies\buddies_<name>.png.
 $PaperPictures = "jackal_photo", "jackal_definition", "apr_01", "ufll_01"
+# The papers' photos, loading-screen pictures by their number in textures\loading, each kept by the
+# game as six tiles of a 1280 by 800 image: x, y, width and height.
+$Photos = "05"
+$PhotoTiles = @(0, 0, 256, 512), @(256, 0, 1024, 512), @(0, 512, 256, 256), @(256, 512, 1024, 256), @(0, 768, 256, 32),
+    @(256, 768, 1024, 32)
 $Portraits = "andre flora frank hakim josip marty michele nasreen paul singh warren bai" -split ' '
 
 # A colour as Magma stores it, red in the lowest byte: written AABBGGRR. `rgb` is RRGGBB.
@@ -141,16 +146,20 @@ $($children -join "`n")
 
 function Crop($c) { , @(($c.X / $c.Size), ($c.Y / $c.Size), ($c.W / $c.Size), ($c.H / $c.Size)) }
 
-# A point turned by `degrees` about the origin, as Magma turns an instance about its position.
-function Turn([double]$x, [double]$y, [double]$degrees) {
+# An instance of `area`, `w` by `h`, at (x, y) and tilted `degrees` about its centre; Magma turns an
+# instance about its position, so the position is moved to keep the centre in place.
+function Tilted([string]$area, [double]$x, [double]$y, [double]$w, [double]$h, [double]$degrees, [bool]$hidden = $false) {
     $r = $degrees * [Math]::PI / 180
-    , @(($x * [Math]::Cos($r) - $y * [Math]::Sin($r)), ($x * [Math]::Sin($r) + $y * [Math]::Cos($r)))
+    $cx = $w / 2 * [Math]::Cos($r) - $h / 2 * [Math]::Sin($r)
+    $cy = $w / 2 * [Math]::Sin($r) + $h / 2 * [Math]::Cos($r)
+    Instance $area ($x + $w / 2 - $cx) ($y + $h / 2 - $cy) 1 1 $degrees -hidden $hidden
 }
 
 $Exports = [System.Collections.Generic.List[string]]::new()
 $NotebookPath = "$PackageId $PageId a_io_notebook a_io_notebook"
 $PagePath = "$NotebookPath a_io_page a_io_page"
 $PostItPath = "$PagePath a_io_postit a_io_postit"
+$ReaderPath = "$PagePath a_io_reader a_io_reader"
 function Export([string]$path, [string]$element) {
     $Exports.Add("<GENERICOBJECT name=`"IO_$($element.Substring(5).ToUpperInvariant())`"><LINK slot=`"69`" LASTOBJECTTYPE=`"Element`" IDS=`"$path $element`" /></GENERICOBJECT>")
 }
@@ -363,10 +372,20 @@ foreach ($square in @(
     $postIt.Add((Image "i_io_postit_pic_$($square.Pic)" $square.Material "" 173 22 72 72 $square.Tint 0 @(0, 0, 1, 1) $square.Blending))
     Export $PostItPath "i_io_postit_pic_$($square.Pic)"
 }
-foreach ($paper in $PaperPictures) {
-    $postIt.Add((Image "i_io_postit_pic_$paper" "io_paper_$paper" "" 160 2 94 94))
-    Export $PostItPath "i_io_postit_pic_$paper"
+# The papers' pictures in `area`, each named <name>_<picture> as the plugin asks for it: a picture
+# `size` square at (x, y), and a photo `photoW` wide at (photoX, photoY).
+function PaperPictures($area, [string]$name, [string]$path, [double]$x, [double]$y, [double]$size,
+                       [double]$photoX, [double]$photoY, [double]$photoW) {
+    foreach ($paper in $PaperPictures) {
+        $area.Add((Image "i_io_${name}_$paper" "io_paper_$paper" "" $x $y $size $size))
+        Export $path "i_io_${name}_$paper"
+    }
+    foreach ($photo in $Photos) {
+        $area.Add((Instance "a_io_photo_$photo" $photoX $photoY ($photoW / 1280) ($photoW / 1280) 0 "a_io_${name}_photo$photo"))
+        Export $path "a_io_${name}_photo$photo"
+    }
 }
+PaperPictures $postIt postit_pic $PostItPath 160 2 94 133 2 (94 / 800 * 1280)
 $postIt.Add((Image i_io_postit_pic_tape io_tape "" 160 26 96 48 (Colour "000000" 0.8)))
 $postIt.Add((Image i_io_postit_portrait io_buddy_frank "" 172 16 72 72))
 Export $PostItPath i_io_postit_pic_tape
@@ -421,9 +440,31 @@ for ($r = 1; $r -le $Ratings.Count; $r++) {
     }
 }
 # The post-it's place at the right page's top, tilted about its centre, in the page's own pixels.
-$postItTurned = Turn 208 151 -1.4
-$page.Add((Instance a_io_postit (512 + 208 - $postItTurned[0]) ($PostItTop + 151 - $postItTurned[1]) 1 1 -1.4))
+$page.Add((Tilted a_io_postit 512 $PostItTop 416 302 -1.4))
 Export $PagePath a_io_postit
+
+# The paper being read, over the whole right page on the post-it's paper turned upright: its name, its
+# picture on the first sheet with the sheet's text below it, or the sheet's text alone, and which
+# sheet of how many.
+$reader = [System.Collections.Generic.List[string]]::new()
+$reader.Add((Image i_io_reader_paper postit "\common.mgb" -104 104 620 412 "FFFFFFFF" 90 (Crop $PostItCrop)))
+$reader.Add((Text t_io_reader_name "" 30 30 352 30 24 $inkFull))
+PaperPictures $reader reader_pic $ReaderPath 76 72 260 30 92 352
+$reader.Add((Text t_io_reader_text "" 30 72 352 506 20 $inkFull LEFT 0 TOP $true))
+$reader.Add((Text t_io_reader_caption "" 30 346 352 232 20 $inkFull LEFT 0 TOP $true))
+$reader.Add((Text t_io_reader_sheet "" 30 584 352 20 15 $inkSoft RIGHT))
+foreach ($name in "t_io_reader_name", "t_io_reader_text", "t_io_reader_caption", "t_io_reader_sheet") {
+    Export $ReaderPath $name
+}
+$page.Add((Tilted a_io_reader 509 38 412 620 1.2 $true))
+Export $PagePath a_io_reader
+$photoAreas = foreach ($photo in $Photos) {
+    $tiles = for ($t = 0; $t -lt $PhotoTiles.Count; $t++) {
+        $tile = $PhotoTiles[$t]
+        Image "i_io_photo_${photo}_$($t + 1)" "io_photo_${photo}_$($t + 1)" "" $tile[0] $tile[1] $tile[2] $tile[3]
+    }
+    Area "a_io_photo_$photo" 1280 800 $tiles
+}
 # The pause menu's own page flip, common.mgb's area, which the plugin steps through itself. The pause
 # pages turn forward with it at (-27, -24), 1.0390625 as tall, over notebook.png drawn 1097 by 982
 # from (-58, -1); that carried into the spread's pixels, which draw notebook.png unscaled from
@@ -442,6 +483,9 @@ $materials = @(
     ($GunPictures + "m67", "molotov") | ForEach-Object { Material "io_gun_$_" "\textures\guns\gun_icon_$_.png" }
     ("manual", "repair", "ammo") | ForEach-Object { Material "io_upgrade_$_" "\textures\ui_icon_$($_)upgrade.png" }
     $PaperPictures | ForEach-Object { Material "io_paper_$_" "\textures\common\$_.png" }
+    foreach ($photo in $Photos) {
+        for ($t = 1; $t -le $PhotoTiles.Count; $t++) { Material "io_photo_${photo}_$t" "\textures\loading\${photo}_0$t.png" }
+    }
     $Portraits | ForEach-Object { Material "io_buddy_$_" "\textures\hud\icons_buddies\buddies_$_.png" }
     Material io_tape "\textures\ui_tape_icon.png"
     ("a", "b") | ForEach-Object { Material "io_slot_$_" "\textures\hud_mp\vip_$_.png" }
@@ -514,7 +558,9 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
         (Area a_io_page $Spread.W $Spread.H $page)
         foreach ($tabName in $areas.Keys) { Area "a_io_$tabName" $Spread.W $Spread.H $areas[$tabName] }
         (Area a_io_portraits 44 44 $palette)
-        (Area a_io_postit 416 302 $postIt)) -join "`n"
+        (Area a_io_postit 416 302 $postIt)
+        (Area a_io_reader 412 620 $reader)
+        $photoAreas) -join "`n"
     $objects = @("<GENERICOBJECT name=`"IO_NOTEBOOK`"><LINK slot=`"69`" LASTOBJECTTYPE=`"Element`" IDS=`"$NotebookPath a_io_page`" /></GENERICOBJECT>") + $Exports
 
     # Generic objects, the areas, the page, then materials: back to front, so each insertion leaves

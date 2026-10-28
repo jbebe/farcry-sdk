@@ -19,6 +19,13 @@ void Scroll(int steps);
 // thread.
 void Turn();
 
+// Reads the paper selected on Papers whole, or puts it back, the next time the page is written; while
+// one is read, Scroll turns its sheets. Any thread.
+void Use();
+
+// Puts back the paper being read; false when none was. Any thread.
+bool PutBack();
+
 // Shows the page while the notebook is open and hides it otherwise, a HUD loaded since included.
 // Game thread, once a frame.
 void Frame();
