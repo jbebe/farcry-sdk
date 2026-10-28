@@ -47,8 +47,10 @@ namespace {
     // Hardcore: how much of the chance a shot's recoil takes from the next, and how fast it returns.
     constexpr float kRecoilLoss = 0.6f;
     constexpr float kRecoilRecoverySeconds = 0.25f;
-    // Hardcore: the share of aim dots on the head rather than the torso.
+    // Hardcore: the share of aim dots on the head rather than the torso, once his aim has held the
+    // player this long; before that every dot is on the torso.
     constexpr float kHeadAimShare = 0.15f;
+    constexpr float kHeadAimAfterSeconds = 3.0f;
     // Hardcore: how visible the player must be to him for a full chance.
     constexpr float kFullVisibility = 0.6f;
     // Hardcore: what each radian per second the player crosses his aim at costs the chance.
@@ -169,8 +171,8 @@ namespace {
 
         // No streak of forced misses after a hit.
         Write<bool>(shooting, kLastShotHit, false);
-        // Each shot is aimed at the head or the torso by kHeadAimShare.
-        const int part = std::rand() < kHeadAimShare * RAND_MAX ? kHeadPart : kTorsoPart;
+        const bool headAllowed = Shooting::AimSeconds(shooting) >= kHeadAimAfterSeconds;
+        const int part = headAllowed && std::rand() < kHeadAimShare * RAND_MAX ? kHeadPart : kTorsoPart;
         if (Read<int>(shooting, kDotPart) != part) {
             Write(shooting, kAimPart, part);
             g_setupAimingDot(shooting);
@@ -179,9 +181,10 @@ namespace {
         g_shot = {Recoil(shooting), Sighting(shooting), Crossing(shooting)};
         const int result = g_originalShootAt(shooting, unused, position, head, torso);
         FCSE::Logf("shot at player: chance %.2f (recoil %.2f, sighting %.2f, crossing %.2f) at "
-                   "%.1f m, %s",
+                   "%.1f m, %.1f s on him, at the %s, %s",
                    g_shot.chance, g_shot.recoil, g_shot.sighting, g_shot.crossing,
-                   Shooting::TargetDistance(shooting),
+                   Shooting::TargetDistance(shooting), Shooting::AimSeconds(shooting),
+                   part == kHeadPart ? "head" : "torso",
                    Read<bool>(shooting, kLastShotHit) ? "hit" : "miss");
         g_shot = {};
         Shooting::Remember(g_lastShot, shooting) = Game::Now();

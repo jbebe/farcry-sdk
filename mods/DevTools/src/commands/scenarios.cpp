@@ -34,9 +34,10 @@ namespace {
         {"Rifleman at 10 m", "4, 7", kRiflemanAt10,
          "Step out in front of him. Then strafe across his line, and run straight at him.",
          "First shots miss while his aim settles. Far fewer hits while you cross his line."},
-        {"Rifleman at 20 m", "2, 6, 7", kRiflemanAt20,
+        {"Rifleman at 20 m", "2, 6, 7, 20", kRiflemanAt20,
          "Take about 20 hits with invincibility on, then take hits with it off.",
-         "About a fifth of the hits on your head. About 4 torso hits kill you; no softer last bar."},
+         "About a fifth of the hits on your head, none in his first 3 s on you. About 4 torso hits kill "
+         "you; no softer last bar."},
         {"Rifleman at 50 m", "4", kRiflemanAt50,
          "Step out in front of him and stay in the open.",
          "He takes visibly longer to settle than at 10 m."},
