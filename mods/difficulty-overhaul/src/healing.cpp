@@ -1,10 +1,12 @@
 // Healing: a syrette leaves 65 % of maximum health rather than full, and only from there does
 // health come back, slowly.
 #include "engine/damage.h"
+#include "engine/game.h"
 #include "engine/memory.h"
 #include "fcse_api.h"
 
 #include <algorithm>
+#include <limits>
 
 using namespace DifficultyOverhaul;
 
@@ -32,7 +34,15 @@ namespace {
     // The share of maximum health a syrette leaves, two rifle hits from death on Hardcore; the
     // game's surgery leaves two of five bars, one hit from death.
     constexpr float kSyretteShare = 0.65f;
-    constexpr float kSyretteToFullSeconds = 360.0f;
+
+    // Seconds from the syrette's level to full health, per Game::Difficulty; Infamous never.
+    constexpr float kSyretteToFullSeconds[] = {3.0f, 240.0f, 360.0f,
+                                               std::numeric_limits<float>::infinity()};
+
+    float SyretteToFullSeconds() {
+        const Game::Difficulty difficulty = Game::CurrentDifficulty();
+        return kSyretteToFullSeconds[difficulty == Game::kUnknown ? Game::kHardcore : difficulty];
+    }
 
     float SyretteHealth(const uint8_t* counters) {
         return kSyretteShare * Damage::MaxHealth(counters);
@@ -50,7 +60,7 @@ namespace {
             Read<float>(counters, kSinceLastDamage) < Read<float>(counters, kRegenDelay)) {
             return;
         }
-        const float rate = (1.0f - kSyretteShare) * max / kSyretteToFullSeconds;
+        const float rate = (1.0f - kSyretteShare) * max / SyretteToFullSeconds();
         Damage::SetHealth(counters, health + rate * seconds);
     }
 
@@ -67,7 +77,8 @@ namespace {
 
     // A syrette is refused where it would not raise health.
     bool __fastcall CanHealSelfDetour(uint8_t* counters) {
-        return Damage::Health(counters) < SyretteHealth(counters) && g_originalCanHealSelf(counters);
+        return Damage::Health(counters) < SyretteHealth(counters) &&
+               g_originalCanHealSelf(counters);
     }
 }
 

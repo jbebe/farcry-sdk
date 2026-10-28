@@ -8,8 +8,9 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
   longer softens what you take. About two torso hits or four limb hits drop a soldier.
 - **Healing in three steps.** On your last bar the surgery leaves you one rifle hit from death, and
   a syrette two. Only full health takes four, and it comes back slowly: nothing below a syrette's
-  level, and from there to full in 6 minutes. A syrette is not used where it would not raise your
-  health. Beds and medic cabinets still heal you fully.
+  level, and from there to full in 6 minutes on Hardcore, in seconds on Casual and never on
+  Infamous. A syrette is not used where it would not raise your health. Beds and medic cabinets
+  still heal you fully.
 - **Limb hits wound.** A hit to an arm or a leg that would kill a soldier puts him down wounded
   instead: he calls for help, crawls for cover and may shoot back from the ground.
 - **Aim is earned.** A soldier's aim settles after he spots you, longer at range. Every shot is a
@@ -33,8 +34,8 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
 - **A combat log** in `bin\fcse.log`: every hit on you and by you, and every shot at you with its
   chance.
 
-Everything is tuned on Hardcore. In this version every difficulty plays at the Hardcore values;
-easier and harder settings come later. Fights between soldiers, and between soldiers and your
+Everything is tuned on Hardcore. In this version every difficulty plays at the Hardcore values
+except healing; easier and harder settings come later. Fights between soldiers, and between soldiers and your
 buddies, play as the game ships them.
 
 ## Requirements
