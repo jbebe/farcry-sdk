@@ -567,6 +567,28 @@ Others ship only in the buddy and special-character brains, never in a soldier's
 `CTaskCoverAttack`, `CTaskCheckUsingCover`, `CTaskCheckTargetRange`, `CTaskCheckThreatDistance`,
 `CTaskCheckCombatMercInRadius`, `CScannerAgentIsVisible`, `CScannerVisualThreat`.
 
+### Switched off in `mercbrain`
+
+A blueprint copied into a brain keeps its optional branches behind `CBlueprintDecision` switches:
+the task fires `IS_TRUE` when its `DecisionToUse` is non-zero and `IS_FALSE` otherwise, nothing else
+(**traced in the server build**). `mercbrain` has 273 of them. The ones that bear on combat and ship
+off:
+
+| Switch | Off in | What it gates |
+|---|---|---|
+| `TryRunToPerpendicular` | long, medium | a soldier with no reachable cover runs to a flanking spot to the target's side; off, he runs at the target |
+| `CheckForHeightDiff` | long, medium | the attack on a target above him: a firing spot for a high target, or a path up |
+| `CheckForShotgunProgression` | kill (both copies) | a shotgunner keeps the assault role and pauses 1 s at each cover instead of 3 s |
+| `CheckForMountedWeapon`, `CheckForVehicle` | kill; kill and short | going for a mounted gun; calling a vehicle |
+| `ScanRelocate` | fire alert, hurt, shot by another target | moving when his position is compromised (flag 45) |
+| `RelocateForShotBlock` | `CombatFireMoving` | moving when a shot is blocked while he walks |
+
+`TryFlee` is off in every band but sits behind `TryRunToThreat`, which is on, so it is never reached;
+the same plan flees anyway when the soldier is under fire.
+
+Some blueprints are never copied into the live brain at all. The largest, `ShotgunProgression`
+(227 instances), is an advance from cover to cover with taunts.
+
 ## Task parameters
 
 A task's parameters are not declared in `RegisterProperties`. Its `LoadFromXML` reads each one by name

@@ -1,5 +1,6 @@
 # Builds layer\ from the installed game: the merc brain, with soldiers carrying an RPG or a Carl Gustav
-# firing it at the player only in a vehicle, and drawing their other gun at the player on foot.
+# firing it at the player only in a vehicle and drawing their other gun at the player on foot, and
+# shotgunners pressing their assault on the player inside 12 m too.
 param(
     [string]$Game = 'C:\Games\Far Cry 2',
     [string]$Cli = "$PSScriptRoot\..\..\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
@@ -121,6 +122,22 @@ function SwitchWeapon($name, $selected, $class, $then) {
 </Task>
 "@
 }
+
+# Turns the blueprint switch $name on at the player; anyone else keeps the branch it shipped with, off.
+function Enable-AtPlayer($name) {
+    $switch = Instance $name
+    $switch.SelectSingleNode("Parameter[@Name='DecisionToUse']").SetAttribute('Value', '1')
+    $on = $switch.SelectSingleNode("Event[@Name='IS_TRUE']")
+    $off = $switch.SelectSingleNode("Event[@Name='IS_FALSE']").InnerXml
+    $gate = "${name}AtPlayer"
+    Add-Instance $name.Substring(0, $name.LastIndexOf('/')) $name (IfAtPlayer $gate $on.InnerXml $off)
+    $on.InnerXml = Connect $gate
+}
+
+# Inside 12 m a shotgunner keeps the assault role and pauses 1 s at each cover, as he does farther out.
+$kill = '::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack'
+Enable-AtPlayer "$kill/CheckForShotgunProgression"
+Enable-AtPlayer "$kill/AssaultAttack/CheckForShotgunProgression"
 
 $plan = '::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan'
 $shoot = "$plan/ShootPhase"

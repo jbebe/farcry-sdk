@@ -80,10 +80,15 @@ namespace {
     };
 
     constexpr Soldier kSuppressionPair[] = {{kRifleman, {464, 56, 90}}, {kRifleman, {464, 64, 90}}};
+    constexpr Soldier kShotgunnerBehindCover[] = {{kShotgunner, {464, 60, 90}}};
     constexpr Scenario kSuppression[] = {
         {"Two riflemen behind cover", "12", kSuppressionPair,
          "Fire near one of them without hitting him.",
          "He holds his fire for about 1 s, then misses at first; 'suppressed:' lines."},
+        {"Shotgunner behind cover", "19", kShotgunnerBehindCover,
+         "Stay behind your line and let him come.",
+         "He comes at you, pausing about 1 s at each cover, and inside 12 m keeps closing in rather "
+         "than holding back to fire."},
     };
 
     constexpr Soldier kLoneSniper[] = {{kSniper, {440, 437, 137.7f}, kSniperPost}};
