@@ -31,6 +31,9 @@ void* PlayerEntity();
 void* Entity(const void* component);
 // The player entity's component of the class `type`, or null.
 void* PlayerComponent(const uint32_t* type);
+
+// An entity's component by class id, or null.
+const void* Component(void* entity, const uint32_t* type);
 // The local player's CPawn, or null when there is none.
 void* PlayerPawn();
 // How many items an inventory holds.

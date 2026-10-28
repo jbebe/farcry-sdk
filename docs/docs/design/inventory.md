@@ -282,7 +282,7 @@ Each step ends with one check in game before the next.
 | 3 | The notebook in hand on Tab, the map's mesh standing in | walk, look and get shot with it out |
 | 4 | The Inventory page in Magma, as an overlay, then on the paper | pictures, wear and ammo match the guns |
 | 5 | The notebook model, page turns on the flip | |
-| 6 | The pause pages moved in. Built so far: Papers (sample papers, the tapes found), Journal (reputation) and Contacts (the buddies met), each read from the game, and R turning the page | the pause menu keeps only its eight entries |
+| 6 | The pause pages moved in: Papers (sample papers, the Jackal and Predecessor tapes found), Journal (reputation and the current job) and Contacts (the buddies met), each read from the game, and R turning the page. The pause menu loses those entries and its main page's job panel; the story synopses the pause menu's Journal had are dropped | the pause menu keeps only its eight entries (seen, 2026-10-28) |
 | 7 | Papers and memories: a letter and a photo in the world | read one, walking |
 | 8 | The box at the crates | bring a found Carl G home and take it out again |
 | 9 | One fetch mission | |
@@ -292,10 +292,6 @@ Each step ends with one check in game before the next.
 
 - **The arrow keys:** the mockup moves along the lists with ↑ and ↓ as well as the wheel, but
   the game binds them to walking beside W and S, so for now only the wheel moves the selection.
-- **The Journal's jobs:** where the game keeps the jobs taken and their current objective is not
-  traced yet. The pause menu's Journal shows the progress manager's story synopses instead
-  (`GetLocalizedMiSyn`, `ChSyn`, `CuSyn`, from `LoadScreens`), and the objectives' first-person texts
-  sit in `Objectives` keyed by mission state.
 - **Real papers:** the Papers page lists four sample papers the test window's Fill gives; papers
   found in the world come with step 7.
 - **What still selects by class:** the weapon crate draws the gun it hands out by its class, and a

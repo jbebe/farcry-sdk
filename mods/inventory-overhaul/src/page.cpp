@@ -2,6 +2,7 @@
 // only when what they show changes.
 #include "page.h"
 
+#include "engine/jobs.h"
 #include "engine/magma.h"
 #include "engine/paper.h"
 #include "engine/sound.h"
@@ -210,6 +211,9 @@ bool Install() {
                                      "Contacts stay empty");
     if (magma && !Sound::Install()) {
         FCSE::Logf("page: the sound system calls were not found, so a turn is silent");
+    }
+    if (magma && !Jobs::Install()) {
+        FCSE::Logf("page: the objective markers' calls were not found, so the Journal shows no job");
     }
     return magma;
 }

@@ -297,19 +297,30 @@ for ($j = 1; $j -le $belt.Count; $j++) {
     Export $InventoryPath "t_io_belt${j}_count"
 }
 
-# Papers: letters and photos on the left, the Jackal tapes on the right below the post-it.
+# Papers: letters and photos on the left, the Jackal and Predecessor tapes on the right below the
+# post-it.
 Heading papers t_io_letters "LETTERS AND PHOTOS" $left
 List papers letter $left 98 10 40
-Heading papers t_io_tapes "JACKAL TAPES" $right $Below
+Heading papers t_io_tapes "TAPES" $right $Below
 List papers tape $right ($Below + 52) 4 40 io_tape 40 20 (Colour "000000" 0.8)
 
-# Journal: the reputation in the game's words on the left, jobs on the right.
+# Journal: the reputation in the game's words on the left; on the right the current job, its
+# objectives and the Underground's, as the pause menu's main page showed them.
 Heading journal t_io_reputation "" $left
 $areas.journal.Add((Text t_io_reputation_prose "" $left 80 $width 400 22 $inkFull LEFT 0 TOP $true))
-Export (AreaPath a_io_journal) t_io_reputation
-Export (AreaPath a_io_journal) t_io_reputation_prose
-Heading journal t_io_jobs "JOBS" $right
-$areas.journal.Add((Text t_io_jobs_none "Not read from the game yet." $right 80 $width 22 18 $countInk))
+Heading journal t_io_jobs "JOB" $right
+$areas.journal.Add((Text t_io_job "" $right 80 $width 120 22 $inkFull LEFT 0 TOP $true))
+$areas.journal.Add((Text t_io_jobs_none "No job right now." $right 80 $width 22 18 $countInk))
+Heading journal t_io_objectives "OBJECTIVES" $right 216
+foreach ($k in 1, 2) {
+    $areas.journal.Add((Text "t_io_objective$k" "" $right (252 + ($k - 1) * 68) $width 64 20 $inkFull LEFT 0 TOP $true))
+}
+Heading journal t_io_underground "UNDERGROUND" $right 400
+$areas.journal.Add((Text t_io_underground_job "" $right 436 $width 88 20 $inkFull LEFT 0 TOP $true))
+foreach ($name in "t_io_reputation", "t_io_reputation_prose", "t_io_job", "t_io_jobs_none", "t_io_objectives",
+    "t_io_objective1", "t_io_objective2", "t_io_underground", "t_io_underground_job") {
+    Export (AreaPath a_io_journal) $name
+}
 
 # Contacts, on the left page: the primary and secondary buddy, then the other buddies, each with a
 # portrait the plugin takes from a_io_portraits and a status.
@@ -468,6 +479,18 @@ foreach ($mark in @(@{ Name = "mark_begin"; W = 4; H = 64 }, @{ Name = "mark_end
     if ($LASTEXITCODE -ne 0) { throw "xbt build failed for $($mark.Name)" }
 }
 
+# A changed package's XML checked and written into the layer as fragments of its retail package.
+function Ship([System.Collections.Generic.List[string]]$lines, [string]$xml, [System.IO.FileInfo]$source,
+              [string]$variant) {
+    [IO.File]::WriteAllLines($xml, $lines)
+    & $Cli mgb verify $xml
+    if ($LASTEXITCODE -ne 0) { throw "verify failed for $variant $($source.Name)" }
+    $target = Join-Path $Layer "$variant\ui\$($source.Name)"
+    Remove-Item -Recurse -Force $target -ErrorAction SilentlyContinue
+    & $Cli mgb fragments $xml --base $source.FullName --out $target | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "fragments failed for $variant $($source.Name)" }
+}
+
 foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
     $variant = $source.Directory.Parent.FullName.Substring($Retail.Length + 1)
     $dir = Join-Path $Work $variant
@@ -509,13 +532,26 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
     $materialsAt = IndexOf $lines '<MATERIALS materialExtra='
     $lines.Insert($materialsAt + 1, $materials)
 
-    [IO.File]::WriteAllLines("$dir\hud.xml", $lines)
-    & $Cli mgb verify "$dir\hud.xml"
-    if ($LASTEXITCODE -ne 0) { throw "verify failed for $variant" }
-
-    $target = Join-Path $Layer "$variant\ui"
-    Remove-Item -Recurse -Force "$target\hud.mgb" -ErrorAction SilentlyContinue
-    & $Cli mgb fragments "$dir\hud.xml" --base $source.FullName --out "$target\hud.mgb" | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "fragments failed for $variant" }
+    Ship $lines "$dir\hud.xml" $source $variant
     Write-Host ("{0,-20} notebook at {1:0},{2:0} scaled {3:0.000} x {4:0.000}" -f $variant, $screenX, $y, $scaleX, $scaleY)
+}
+
+# The pause menu's main page without the job the Journal shows: its three headings, the job's line,
+# its objective list and the Underground's line and icon.
+$PausePage = "#C1849B53"
+$PausePanel = "#E039A398", "#36D6DAD3", "#95871E12", "#81FDCEB5", "#B638527D", "#6CF418D5", "#C801AB46"
+foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter sp_pause_menus.mgb) {
+    $variant = $source.Directory.Parent.FullName.Substring($Retail.Length + 1)
+    $dir = Join-Path $Work $variant
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    & $Cli mgb decode $source.FullName -o "$dir\sp_pause_menus.xml" | Out-Null
+    $lines = [System.Collections.Generic.List[string]]::new([IO.File]::ReadAllLines("$dir\sp_pause_menus.xml"))
+    $start = IndexOf $lines "<USERDATA name=`"$PausePage`">"
+    $end = IndexOf $lines '</Area>' $start
+    foreach ($element in $PausePanel) {
+        $at = IndexOf $lines "<USERDATA name=`"$element`">" $start
+        if ($at -gt $end) { throw "$element is not on the pause page in $variant" }
+        $lines[$at - 1] = $lines[$at - 1].Replace('HIDDEN="false"', 'HIDDEN="true"')
+    }
+    Ship $lines "$dir\sp_pause_menus.xml" $source $variant
 }

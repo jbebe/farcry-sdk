@@ -14,7 +14,11 @@ bool Install();
 // Game thread only, as is everything below.
 const std::wstring& Localize(const char* section, const std::string& key);
 
-// The string keys of the Jackal tapes found, in the order the game lists them.
+// The string `key` of `section` with the names it leaves as words, such as PRIMARY_BUDDY_NAME,
+// filled in as the pause menu fills them; empty when this build lacks the calls.
+std::wstring Words(const char* section, const std::string& key);
+
+// The string keys of the Jackal then Predecessor tapes found, in the game's order.
 std::vector<std::string> FoundTapes();
 
 // A buddy's status, as CBuddiesManager::GetBuddyStatus counts it.

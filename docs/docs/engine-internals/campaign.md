@@ -214,12 +214,51 @@ the file id every page passes is the constant `0x079C5159`, kept in several data
 each 0–5. Its text is `PauseMenu/REPUTATION_INFAMY_DESCRIPTION_<level>` and
 `REPUTATION_SICKNESS_DESCRIPTION_<level>`, which from level 1 open with their own heading line.
 
-**Jackal tapes.** `CFCXMissionManager` is a game mode service (class id `0x11649ebc`, built by
-`0x10666680` while the name at `0x11649eac` is unset). Its tapes are at `+0x158`, a pointer and a
-count of `0x78`-byte records: the string key (`A1JT00`…`A2JT16`, and the partner tapes) at `+0`,
-found at `+0x74`. A tape's title is `JackalTapes/<key>`, its line `<key>_DESC`. Lua's
-`GetFCXMissionManager():NewJackalTapeFound()` marks the next tape of the current world found and
-plays it; in the demo range it found 09 to 13.
+**Jackal and Predecessor tapes.** `CFCXMissionManager` is a game mode service (class id
+`0x11649ebc`, built by `0x10666680` while the name at `0x11649eac` is unset). Its Jackal tapes are at
+`+0x158` and the Predecessor's (`PartnerTapes`) at `+0x164`, each a pointer and a count of
+`0x78`-byte records: the string key at `+0`, found at `+0x74`. The keys are `A1JT00`…`A2JT16`, then
+`W1V1M1`…`W2V3M1`, `C0V0M3` and `C0V0M4`. A tape's title is `JackalTapes/<key>`, its line
+`<key>_DESC`; the Predecessor's lines have no recording date. Lua's
+`GetFCXMissionManager():NewJackalTapeFound()` marks the next Jackal tape of the current world found
+and plays it; in the demo range it found 09 to 13. `PartnerTapeFound("W1V1M1")` marks and plays a
+Predecessor tape by key **(seen in game, 2026-10-28)**.
+
+**The current job.** The pause menu's main page (`CFCXPauseMenuPage::MissionObjective`, `0x10855d30`,
+and `SetupMissionObjective`, `0x10856ac0`) walks the entity system's game elements and reads each one's
+`CMapElementComponent` that is on (`+0x16C` non-zero) and has a state:
+
+| Offset | Field |
+|---|---|
+| `+0x128` | `StateId`, a `std::string`: the job's line in `Objectives` |
+| `+0x144` | `ObjectiveId`: the objective's line |
+| `+0x16C` | on |
+
+The first marker whose state is not the Underground's (`CGameDominoHelpers::IsUndergroundMission`,
+`0x10722160`, `cdecl`) gives MISSION DETAILS, at most two such markers give OBJECTIVES (the one whose
+key ends in `_01` first), and the Underground's marker gives its line. The walk is
+`GenericEntityMapIterator`: three words (the map's node, the entity's node, the map at the entity
+system `[0x11644e80] + 0x1C`), started from the map head's first node by `0x1070ddb0` and stepped by
+`0x1070e0d0`; an entity is `[[inner + 0x10] + 0xC]`, locked by `0x104dd4f0`, and its marker is
+`GetComponent` (`0x104e2cc0`) with the class id at `0x10fde188`, built by `0x10041e60` while the name at
+`0x10fde178` is unset. Texts go through `GetDescriptionWithBuddyName` (`0x10854750`), which fills in
+`PRIMARY_BUDDY_NAME`, `RESCUE_BUDDY_NAME`, `MISSION_BUDDY_<id>`, `ASSIGNED_<id>`, `FIRST_LT`,
+`SECOND_LT` and `WINNING_*` and reads nothing of its page. It takes a result pointer and the text as
+an engine `std::wstring` by value (`ret 0x20`) and frees that text, so the text must be the engine's
+own: the string table's lookup into a string, `0x104d1fc0` (`__thiscall(table, out, section, key,
+file)`, `ret 0x10`), makes one; `0x10002890` destroys the result. In world 2's skytest save it read
+"Thanks to my latest efforts, I can pretty much write my own ticket…" and the objective "Go to any
+briefing location to get a mission." **(seen in game, 2026-10-28)**.
+
+**The pause menu's entries.** `CFCXPauseMenuPage::Setup` (`0x10853540`) adds them one by one with
+`CListMenuPage::AddButton` (`0x10cdbb80`, `__thiscall(page, const wchar_t* label, bool enabled,
+handler)`, `ret 0xC`, returning the button's index): Resume, Journal (`PAUSE_REPUTATION`), Buddies,
+Legend, Upgrades, Jackal Tapes, Predecessor Tapes when that content is unlocked, Statistics, Options,
+Load Game, Save Game, Quit to Menu, Quit. It keeps the Jackal Tapes', Predecessor Tapes' and Save
+Game's indices at `+0x1F0`, `+0x1F4` and `+0x1EC` to enable them later, which skips an index of -1.
+An entry left out of `AddButton` with -1 returned is gone from the menu **(seen in game,
+2026-10-28)**; as its handler is left out of the page's list with it, the others keep theirs
+**(inferred)**.
 
 **Buddies.** `CBuddiesManager` is one too (class id `0x1164a484`, built by `0x10681c50` while the
 name at `0x1164a474` is unset). Its `SBuddyData` records are at `+0x44`, their count at `+0x48`,

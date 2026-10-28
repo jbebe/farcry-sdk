@@ -1,0 +1,299 @@
+<Area slot="101" type="Page" FRAMERATE="30" CURRENTFRAME="0" STATICBOX="0 0 0 0" SINGLE_GLOBAL_SELECTION="true">
+  <USERDATA name="#C1849B53">
+    <PROPERTIES>
+      <PROPERTY key="#138FE3AA" type="2" value="10" />
+    </PROPERTIES>
+  </USERDATA>
+  <CHILDREN>
+    <Element slot="77" type="Placeholder" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#47CC8C92">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#D74F9662" IDX="30" INTERPOLATION="None">
+          <ACTIONEXECUTER slot="133" type="ActionExecuter">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#1964B988">
+                <USERDATA name="#1964B988">
+                  <PROPERTIES>
+                    <PROPERTY key="#4BAB415E" type="17">
+                      <LINK slot="101" LASTOBJECTTYPE="Page" IDS="#7B435D46 #C1849B53" />
+                    </PROPERTY>
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+          </ACTIONEXECUTER>
+          <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Placeholder />
+    </Element>
+    <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#B21251FF">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#179BA834" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="0" POSITION.y="0" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <PageInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#EB3BB25F" ISUSINGDUPLICATEDAREA="true" />
+        <DEFAULTFOCUSES />
+      </PageInstance>
+      <FOCUSABLE INPUTFILTER="255">
+        <NEIGHBORS />
+      </FOCUSABLE>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#684AC59C">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#6AB877EE" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="65388" POSITION.y="65483" SCALEX="0.99131805" SCALEY="1.0047393" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="151" TIMING="NoTimingStrategy" PACKAGE="#E5EC7051" AREA="#A5D8B868" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#F0CC8C29">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#76F0C034" IDX="0" INTERPOLATION="Linear">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="7" ORIGIN.y="10" LEFT="65472" RIGHT="1039" TOP="65532" BOTTOM="995" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="#F67D9A2B" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#EDE19BDA">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#A697B6A4" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="53" POSITION.y="439" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="151" TIMING="NoTimingStrategy" PACKAGE="#7B435D46" AREA="#EDE19BDA" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#2A5FDD43">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#41AB0CF0" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="249" POSITION.y="438" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="151" TIMING="NoTimingStrategy" PACKAGE="#7B435D46" AREA="#2A5FDD43" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#C54DB506">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#27034E95" IDX="0" INTERPOLATION="Circle">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-1.0744295" ORIGIN.x="0" ORIGIN.y="0" LEFT="29" RIGHT="515" TOP="29" BOTTOM="713" SHADOWCOLOR="32FFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFEFE8" COLOR2="FFC0C0C0" COLOR3="FFFFEFE8" COLOR4="FFC0C0C0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="#68A7E6CB" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#3D23C3C5">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#625DD23B" IDX="0" INTERPOLATION="Linear">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="72" POSITION.y="55" SCALEX="0.9529703" SCALEY="0.96231157" />
+        </Keyframe>
+      </KEYFRAMES>
+      <PageInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9EA91A65" ISUSINGDUPLICATEDAREA="true" />
+        <DEFAULTFOCUSES />
+      </PageInstance>
+      <FOCUSABLE INPUTFILTER="255">
+        <NEIGHBORS />
+      </FOCUSABLE>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#B1CC4148">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#5264ED6A" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-242.73396" ORIGIN.x="148" ORIGIN.y="82" LEFT="180" RIGHT="308" TOP="61" BOTTOM="125" SHADOWCOLOR="00000000" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="#B1CC4148" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#E039A398">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#D6C5BB71" IDX="0" INTERPOLATION="Linear">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF000000" ROTATION="0" ORIGIN.x="190" ORIGIN.y="16" LEFT="533" RIGHT="908" TOP="66" BOTTOM="91" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="WWWWWWWWWWWWWWWWWWWW" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#36D6DAD3">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#4D217594" IDX="0" INTERPOLATION="Linear">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF000000" ROTATION="0" ORIGIN.x="190" ORIGIN.y="16" LEFT="533" RIGHT="908" TOP="224" BOTTOM="249" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="WWWWWWWWWWWWWWWWWWWW" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#95871E12">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#AFE1E8BD" IDX="0" INTERPOLATION="Linear">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF000000" ROTATION="0" ORIGIN.x="192" ORIGIN.y="16" LEFT="533" RIGHT="912" TOP="326" BOTTOM="351" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="WWWWWWWWWWWWWWWWWWWW" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#81FDCEB5">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#53CA21D4" IDX="0" INTERPOLATION="Linear">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF000000" ROTATION="0" ORIGIN.x="185" ORIGIN.y="162" LEFT="535" RIGHT="916" TOP="349" BOTTOM="646" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="17" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="21" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="Etiam adipiscing leo id velit. Phasellus eros sapien, pharetra id, dapibus eget, posuere et, lacus. Duis egestas nunc quis augue. Maecenas pulvinar magna. Nunc pharetra, metus eu sollicitudin aliquam, tortor dolor rutrum leo, in dictum quam felis sit amet sapien. Duis viverra. Mauris fringilla accumsan libero. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Nulla vel neque vel quam ultricies vestibulum. Praesent neque ligula, sollicitudin vitae, ullamcorper in, tempor nec, magna. Integer rhoncus consequat nisi. Cum sociis natoque penatibus" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="true" CLIPPING="true" ELLIPSIS="false" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#B638527D">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#8A9581B3" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF000000" ROTATION="0" ORIGIN.x="162" ORIGIN.y="33" LEFT="589" RIGHT="913" TOP="243" BOTTOM="310" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="Wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="true" CLIPPING="true" ELLIPSIS="false" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="61" type="ListBox" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#6CF418D5">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#351E6997" IDX="0" INTERPOLATION="Linear">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="527" POSITION.y="93" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <ListBox HEADERFOOTERPOS="2" AUTOCENTER="false" WRAPAROUND="false" SLIDESELITEM="false" flag4="false" BUTTONCOUNT="2" ITEMSPACING="0">
+        <HEADERLINK slot="151" TIMING="NoTimingStrategy" PACKAGE="#7B435D46" AREA="#AC5ECEF0" ISUSINGDUPLICATEDAREA="true" />
+      </ListBox>
+      <FOCUSABLE INPUTFILTER="255">
+        <NEIGHBORS />
+      </FOCUSABLE>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#C801AB46">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#35BD3592" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="526" POSITION.y="251" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="151" TIMING="NoTimingStrategy" PACKAGE="#7B435D46" AREA="#C801AB46" ISUSINGDUPLICATEDAREA="true" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#5B36589B">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#D05B167C" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="995" POSITION.y="65508" SCALEX="-1" SCALEY="1.0546875" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="152" TIMING="SyncTimingStrategy" PACKAGE="#E5EC7051" AREA="#5B36589B" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#E58F0F6C">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#807379A8" IDX="0" INTERPOLATION="Linear">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="00FFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="0" POSITION.y="0" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+        <Keyframe name="#354DB6C3" IDX="10" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="00FFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="0" POSITION.y="0" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+        <Keyframe name="#DC2E13F6" IDX="16" INTERPOLATION="Root">
+          <ScaleState INTERPOLATIONFLAGS="1" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="0" POSITION.y="0" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <PageInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#E58F0F6C" ISUSINGDUPLICATEDAREA="true" />
+        <DEFAULTFOCUSES />
+      </PageInstance>
+      <FOCUSABLE INPUTFILTER="255">
+        <NEIGHBORS />
+      </FOCUSABLE>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#E82DE1C0">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#D4BBAE6B" IDX="0" INTERPOLATION="Linear">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="65376" RIGHT="1120" TOP="65496" BOTTOM="760" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Modulate" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="#E82DE1C0" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+  </CHILDREN>
+  <DEFAULT_ELEMENTS>
+    <DEFAULT_ELEMENT CONTROLLER="255" ID="#3D23C3C5" />
+  </DEFAULT_ELEMENTS>
+</Area>

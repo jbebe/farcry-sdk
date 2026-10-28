@@ -49,7 +49,20 @@
           <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="170" ORIGIN.y="13" LEFT="532" RIGHT="872" TOP="46" BOTTOM="72" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="24" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="24" TRACKING="0" />
         </Keyframe>
       </KEYFRAMES>
-      <Text useStringTable="false" STRING="JOBS" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+      <Text useStringTable="false" STRING="JOB" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_job">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_job" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="184" ORIGIN.y="60" LEFT="532" RIGHT="900" TOP="80" BOTTOM="200" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="true" CLIPPING="false" ELLIPSIS="false" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
@@ -62,7 +75,72 @@
           <TextState INTERPOLATIONFLAGS="0" STATECOLOR="A6141E2A" ROTATION="0" ORIGIN.x="184" ORIGIN.y="11" LEFT="532" RIGHT="900" TOP="80" BOTTOM="102" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="18" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="18" TRACKING="65521" />
         </Keyframe>
       </KEYFRAMES>
-      <Text useStringTable="false" STRING="Not read from the game yet." ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+      <Text useStringTable="false" STRING="No job right now." ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_objectives">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_objectives" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="170" ORIGIN.y="13" LEFT="532" RIGHT="872" TOP="216" BOTTOM="242" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="24" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="24" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="OBJECTIVES" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_objective1">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_objective1" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="184" ORIGIN.y="32" LEFT="532" RIGHT="900" TOP="252" BOTTOM="316" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="true" CLIPPING="false" ELLIPSIS="false" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_objective2">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_objective2" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="184" ORIGIN.y="32" LEFT="532" RIGHT="900" TOP="320" BOTTOM="384" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="true" CLIPPING="false" ELLIPSIS="false" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_underground">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_underground" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="170" ORIGIN.y="13" LEFT="532" RIGHT="872" TOP="400" BOTTOM="426" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="24" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="24" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="UNDERGROUND" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_underground_job">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_underground_job" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="184" ORIGIN.y="44" LEFT="532" RIGHT="900" TOP="436" BOTTOM="524" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="20" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="20" TRACKING="65516" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="true" CLIPPING="false" ELLIPSIS="false" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>

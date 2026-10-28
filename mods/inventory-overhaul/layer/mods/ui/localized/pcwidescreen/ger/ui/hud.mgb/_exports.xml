@@ -294,6 +294,27 @@
     <GENERICOBJECT name="IO_REPUTATION_PROSE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_journal a_io_journal t_io_reputation_prose" />
     </GENERICOBJECT>
+    <GENERICOBJECT name="IO_JOB">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_journal a_io_journal t_io_job" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_JOBS_NONE">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_journal a_io_journal t_io_jobs_none" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_OBJECTIVES">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_journal a_io_journal t_io_objectives" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_OBJECTIVE1">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_journal a_io_journal t_io_objective1" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_OBJECTIVE2">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_journal a_io_journal t_io_objective2" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_UNDERGROUND">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_journal a_io_journal t_io_underground" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_UNDERGROUND_JOB">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_journal a_io_journal t_io_underground_job" />
+    </GENERICOBJECT>
     <GENERICOBJECT name="IO_ACTIVES_ABOVE_ARROW">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_contacts a_io_contacts i_io_actives_above_arrow" />
     </GENERICOBJECT>

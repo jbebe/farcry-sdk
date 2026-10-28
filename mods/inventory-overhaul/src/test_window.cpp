@@ -190,6 +190,7 @@ void Run(void* inventory) {
             for (int tape = 0; tape < kTapes; ++tape) {
                 DevTools::Overlay::PostLine("#GetFCXMissionManager():NewJackalTapeFound()");
             }
+            DevTools::Overlay::PostLine("#GetFCXMissionManager():PartnerTapeFound(\"W1V1M1\")");
             break;
         case Action::Lua:
             for (size_t start = 0; start < request.id.size();) {

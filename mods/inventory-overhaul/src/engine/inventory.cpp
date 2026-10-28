@@ -165,6 +165,8 @@ void* Entity(const void* component) {
     return FCSE::ApiPointer()->EntityData->EntityOf(const_cast<void*>(component));
 }
 
+const void* Component(void* entity, const uint32_t* type) { return g_getComponent(entity, nullptr, type); }
+
 void* PlayerComponent(const uint32_t* type) {
     void* player = PlayerEntity();
     return player != nullptr ? g_getComponent(player, nullptr, type) : nullptr;

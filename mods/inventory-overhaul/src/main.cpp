@@ -4,6 +4,7 @@
 #include "fcse_api.h"
 #include "notebook.h"
 #include "page.h"
+#include "pause_menu.h"
 #include "test_window.h"
 #include "two_guns.h"
 
@@ -20,6 +21,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
             Page::Frame();
         });
         Paper::Install();
+        PauseMenu::Install();
     }
     return guns || notebook;
 }

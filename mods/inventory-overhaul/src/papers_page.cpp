@@ -1,4 +1,4 @@
-// The Papers page: letters and photos carried in Items, and the Jackal tapes found.
+// The Papers page: letters and photos carried in Items, and the Jackal and Predecessor tapes found.
 #include "pages.h"
 
 #include "engine/story.h"

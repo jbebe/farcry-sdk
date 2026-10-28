@@ -10,7 +10,7 @@ this is an FCSE plugin, built in the log's steps.
 | 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay | works in game |
 | 3. The notebook on Tab | a gadget of its own beside the map, given with it, on a new Notebook control: two bent pages held in both hands, the right one bending as the hands move | works in game |
 | 4. The Inventory page | the mockup's spread as a Magma page drawn onto the notebook's pages: Weapons, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet |
-| 6, in part. Papers, Journal, Contacts | R turns the page; letters and photos and the Jackal tapes found, the reputation, and the buddies met, in the pause menu's words | seen in game in the demo range; the Journal's jobs are not read yet, and the papers are samples |
+| 6. Papers, Journal, Contacts | R turns the page; letters and photos, the Jackal and Predecessor tapes found, the reputation and the current job, and the buddies met, in the game's words; the pause menu without those pages or its job panel | seen in game in world 2; the papers are samples |
 
 ## Two guns
 
@@ -185,10 +185,19 @@ text the game has is the game's, in the player's language, through its string ta
 
 - **Papers** (`src/papers_page.cpp`): on the left the letters and photos, the Items records the page
   knows by id, which leave the Inventory page's Items. For now four sample papers from the mockup,
-  with their textures in `textures\common`. On the right the Jackal tapes found, from the mission
-  manager, each with its title and the game's line about it.
-- **Journal** (`src/journal_page.cpp`): the reputation level and its words, as the pause menu's
-  Journal has them. Where the game keeps the jobs is not traced yet, so the right page says so.
+  with their textures in `textures\common`. On the right the Jackal tapes found and then the
+  Predecessor's, from the mission manager's two lists, each with its title and the game's line about
+  it.
+- **Journal** (`src/journal_page.cpp`): on the left the reputation level and its words, as the pause
+  menu's Journal has them; on the right the current job, its objectives and the Underground's, as the
+  pause menu's main page showed them (`src/engine/jobs.cpp`): every objective marker that is on, its
+  texts from `Objectives` with the buddies' and lieutenants' names filled in by the game's own
+  `GetDescriptionWithBuddyName`. The markers are read at most once a second.
+
+The pause menu (`src/pause_menu.cpp`) no longer has the pages the notebook took: while
+`CFCXPauseMenuPage::Setup` runs, `CListMenuPage::AddButton` leaves out Journal, Buddies, Jackal Tapes
+and Predecessor Tapes, known by their words in the player's language. Its main page's job panel is
+hidden in the layer (`sp_pause_menus.mgb`, one area fragment per language).
 - **Contacts** (`src/contacts_page.cpp`): the buddies met, from the buddies manager, all on the left
   page: the active buddies, the primary and the secondary (the manager's `+0x50` and `+0x54` point at
   their records), then the others, the living before the dead. Each row has a portrait, name and
@@ -200,7 +209,7 @@ text the game has is the game's, in the player's language, through its string ta
 Fill in the test window, or `INVENTORY_OVERHAUL_FILL`, also gives the sample papers and, through the
 game's own Lua in DevTools' console, meets Frank, Flora, Marty, Josip and Warren, makes Frank the
 primary buddy and Hakim the secondary (the game takes only a living one), kills Warren, and finds
-five tapes. `INVENTORY_OVERHAUL_LUA` holds Lua lines, split by `|`, that the
+five Jackal tapes and the Moroccan's. `INVENTORY_OVERHAUL_LUA` holds Lua lines, split by `|`, that the
 console runs as the game loads, such as `AddGadget(SpawnWeapon("gadgets.Equipped.Map"))`.
 
 ## Testing
