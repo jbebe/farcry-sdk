@@ -32,5 +32,8 @@ bool Take(void* inventory, size_t index);
 // Adds a new gun when `id` names a weapon archetype, else one more of the item `id`.
 bool Give(const std::string& id);
 void Discard(size_t index);
+// Drops row `index`: a stowed gun falls at the pawn's feet as it was stowed, and one of an item is
+// thrown away. False when there is no such row or its gun could not be made.
+bool Drop(void* inventory, size_t index);
 
 }

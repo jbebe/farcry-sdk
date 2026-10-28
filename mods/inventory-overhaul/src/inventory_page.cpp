@@ -282,7 +282,7 @@ namespace {
     }
 }
 
-int InventoryPage(Model& model, int& selected, const void* view, void* inventory) {
+int InventoryPage(Model& model, int& selected, const void* view, void* inventory, bool dropped) {
     Carried carried{view, inventory, Inventory::Guns(inventory), Items::Load(), Economy::Bought(),
                     Economy::Diamonds(),
                     {Inventory::Ammo(view, "syringe"), Inventory::Pills(),
@@ -300,6 +300,15 @@ int InventoryPage(Model& model, int& selected, const void* view, void* inventory
     }
     selected = std::clamp(selected, 0, static_cast<int>(rows.size()) - 1);
     const Row& row = rows[selected];
+    // X drops the selected gun, or one of the selected item, and the page is read again.
+    if (dropped && (row.gun != nullptr || row.kind == Row::kItem)) {
+        if (row.gun != nullptr) {
+            TwoGuns::Release(inventory, *row.gun, true);
+        } else {
+            Items::Drop(inventory, row.index);
+        }
+        return InventoryPage(model, selected, view, inventory, false);
+    }
 
     Hand(model, 1, rows[0].gun, selected == 0);
     Hand(model, 2, rows[1].gun, selected == 1);

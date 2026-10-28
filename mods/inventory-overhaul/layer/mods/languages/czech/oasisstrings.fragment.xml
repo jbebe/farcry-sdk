@@ -1,5 +1,6 @@
 <oasisstrings>
   <section name="Actions">
     <string enum="toggle_notebook" value="Zápisník" />
+    <string enum="drop_item" value="Upustit" />
   </section>
 </oasisstrings>

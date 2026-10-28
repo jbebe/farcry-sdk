@@ -26,6 +26,9 @@ void Use();
 // Puts back the paper being read; false when none was. Any thread.
 bool PutBack();
 
+// Drops the row selected on Inventory the next time the page is written. Any thread.
+void Drop();
+
 // Shows the page while the notebook is open and hides it otherwise, a HUD loaded since included.
 // Game thread, once a frame.
 void Frame();

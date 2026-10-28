@@ -1,5 +1,6 @@
 <oasisstrings>
   <section name="Actions">
     <string enum="toggle_notebook" value="Taccuino" />
+    <string enum="drop_item" value="Rilascia" />
   </section>
 </oasisstrings>

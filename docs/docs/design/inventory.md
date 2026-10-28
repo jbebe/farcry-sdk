@@ -201,6 +201,7 @@ Which bandolier covers which gun, from the shop's plans:
 | Letter, photo | read: it lies over the whole right page on the post-it's paper turned upright, the post-it hidden; a photo keeps its own colours; the wheel turns a long letter's sheets; LMB or Esc puts it back (built 2026-10-28) | no |
 | Tape | play or stop, while the player walks on | no |
 | Quest item | — | no, until its job ends |
+| Other item | — | thrown away, one at a time |
 | Pills, grenades, molotovs | — | no |
 
 A gun swapped out of a slot is stowed in Items if Items holds fewer than two guns, and falls at the
@@ -229,7 +230,7 @@ On the Inventory page, while the player is at a crate, a gun or quest item gets 
 | R | turn the page |
 | Left mouse | use or equip the highlighted item |
 | 2, 3 on a gun | put it in gun 1, gun 2 |
-| X | drop |
+| X | drop the selected row; with the notebook away, the gun in hand (built 2026-10-28) |
 | Right mouse, held | the monocular, as with the map: the notebook comes back on release |
 
 Movement and look stay live, as with the map. The gamepad mirrors the map's: d-pad to move, X to turn.

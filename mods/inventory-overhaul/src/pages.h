@@ -49,7 +49,9 @@ void List(Model& model, const std::string& list, size_t lines, size_t& first, co
 void ClearPostIt(Model& model);
 
 // Each page's rows and the post-it of row `selected`, kept within them; each returns its row count.
-int InventoryPage(Model& model, int& selected, const void* view, void* inventory);
+// `dropped`, X was pressed: the selected gun falls at the feet, a stowed one too, and one of the
+// selected item is thrown away.
+int InventoryPage(Model& model, int& selected, const void* view, void* inventory, bool dropped);
 // `used`, the page was clicked: the selected paper is read whole, or put back. `sheet` is the sheet
 // read, kept within the paper's, or -1 while none is.
 int PapersPage(Model& model, int& selected, bool used, int& sheet);

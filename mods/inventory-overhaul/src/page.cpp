@@ -33,13 +33,14 @@ namespace {
     constexpr std::pair<const char*, int> kUpgradeRows[] = {{"IO_POSTIT_UP", 3}, {"IO_POSTIT_BELT_UP", 2}};
     constexpr int kHalfSteps = 10;
 
-    // The page open, R's turns, the wheel's steps and whether it was clicked since the last write, and
-    // each page's selected row; the Inventory page opens on the gun in hand. The sheet of the paper
-    // read, -1 while none is.
+    // The page open, R's turns, the wheel's steps and whether it was clicked or X pressed since the
+    // last write, and each page's selected row; the Inventory page opens on the gun in hand. The sheet
+    // of the paper read, -1 while none is.
     int g_tab = kInventory;
     std::atomic<int> g_turns{0};
     std::atomic<int> g_steps{0};
     std::atomic<bool> g_used{false};
+    std::atomic<bool> g_dropped{false};
     int g_selected[kTabs] = {-1, 0, 0, 0};
     std::atomic<int> g_sheet{-1};
 
@@ -233,6 +234,7 @@ void Update(const void* view, void* inventory) {
     int& selected = g_selected[g_tab];
     const int steps = g_steps.exchange(0);
     const bool used = g_used.exchange(false);
+    const bool dropped = g_dropped.exchange(false);
     if (sheet >= 0) {
         sheet = std::max(sheet + steps, 0);
     } else if (selected >= 0) {
@@ -255,7 +257,7 @@ void Update(const void* view, void* inventory) {
     int rows = 0;
     switch (g_tab) {
     case kInventory:
-        rows = InventoryPage(model, selected, view, inventory);
+        rows = InventoryPage(model, selected, view, inventory, dropped);
         break;
     case kPapers:
         rows = PapersPage(model, selected, used, sheet);
@@ -288,6 +290,8 @@ void Scroll(int steps) { g_steps += steps; }
 void Turn() { ++g_turns; }
 
 void Use() { g_used = true; }
+
+void Drop() { g_dropped = true; }
 
 bool PutBack() { return g_sheet.exchange(-1) >= 0; }
 

@@ -7,7 +7,8 @@ namespace InventoryOverhaul::Notebook {
 // False when the map or the signals could not be hooked; Tab then does nothing.
 bool Install();
 
-// Gives the player the notebook when they carry the map but no notebook. Game thread.
+// Drops the gun in hand when X asked for it, and gives the player the notebook when they carry the
+// map but no notebook. Game thread.
 void Frame();
 
 // Whether the notebook is out. Any thread.

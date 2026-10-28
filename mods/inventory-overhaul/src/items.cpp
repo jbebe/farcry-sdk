@@ -7,6 +7,7 @@
 #include "two_guns.h"
 
 #include <algorithm>
+#include <optional>
 #include <sstream>
 
 namespace InventoryOverhaul::Items {
@@ -19,6 +20,31 @@ namespace {
     Record Keep(const void* inventory, void* weapon) {
         return {Inventory::Name(weapon), true, Inventory::Reliability(weapon),
                 Inventory::Loaded(inventory, weapon)};
+    }
+
+    // A new gun made from a stowed one, with its wear and rounds, beside the guns carried `before`;
+    // none when it could not be made.
+    std::optional<Inventory::Weapon> Make(void* inventory, const Record& stowed,
+                                          const std::vector<Inventory::Weapon>& before) {
+        if (!Inventory::AddByName(inventory, stowed.id.c_str())) {
+            FCSE::Logf("no %s could be made: it stays in Items", stowed.id.c_str());
+            return std::nullopt;
+        }
+        for (const Inventory::Weapon& gun : Inventory::Guns(inventory)) {
+            const bool added = std::none_of(before.begin(), before.end(), [&](const Inventory::Weapon& old) {
+                return old.weapon == gun.weapon;
+            });
+            if (added) {
+                if (stowed.reliability >= 0.0f) {
+                    Inventory::SetReliability(gun.weapon, stowed.reliability);
+                }
+                if (stowed.loaded >= 0) {
+                    Inventory::SetLoaded(gun.weapon, stowed.loaded);
+                }
+                return gun;
+            }
+        }
+        return std::nullopt;
     }
 }
 
@@ -77,16 +103,11 @@ bool Stow(void* inventory, int slot) {
     if (gun == nullptr || GunCount(items) >= kMostGuns) {
         return false;
     }
-    const bool inHand = Inventory::Id(gun->item) == Inventory::InHandId(inventory);
     items.push_back(Keep(inventory, gun->weapon));
     FCSE::Logf("stowed gun %d, the %s with %d loaded", slot, items.back().id.c_str(),
                items.back().loaded);
-    Inventory::Remove(inventory, gun->weapon);
+    TwoGuns::Release(inventory, *gun, false);
     Save(items);
-    const std::vector<Inventory::Weapon> rest = Inventory::Guns(inventory);
-    if (inHand && !rest.empty()) {
-        TwoGuns::Draw(inventory, rest.front());
-    }
     return true;
 }
 
@@ -97,8 +118,8 @@ bool Take(void* inventory, size_t index) {
     }
     const Record taken = items[index];
     const std::vector<Inventory::Weapon> before = Inventory::Guns(inventory);
-    if (!Inventory::AddByName(inventory, taken.id.c_str())) {
-        FCSE::Logf("no %s could be made: it stays in Items", taken.id.c_str());
+    const std::optional<Inventory::Weapon> made = Make(inventory, taken, before);
+    if (!made) {
         return false;
     }
     items.erase(items.begin() + index);
@@ -111,24 +132,30 @@ bool Take(void* inventory, size_t index) {
     }
     Save(items);
     TwoGuns::Settle(inventory);
-    for (const Inventory::Weapon& gun : Inventory::Guns(inventory)) {
-        const bool added = std::none_of(before.begin(), before.end(),
-                                        [&](const Inventory::Weapon& old) {
-                                            return old.weapon == gun.weapon;
-                                        });
-        if (!added) {
-            continue;
-        }
-        if (taken.reliability >= 0.0f) {
-            Inventory::SetReliability(gun.weapon, taken.reliability);
-        }
-        if (taken.loaded >= 0) {
-            Inventory::SetLoaded(gun.weapon, taken.loaded);
-        }
-        TwoGuns::Draw(inventory, gun);
-        FCSE::Logf("took the %s out of Items with %d loaded: gun %d", taken.id.c_str(),
-                   taken.loaded, TwoGuns::SlotOf(gun.weapon));
+    TwoGuns::Draw(inventory, *made);
+    FCSE::Logf("took the %s out of Items with %d loaded: gun %d", taken.id.c_str(), taken.loaded,
+               TwoGuns::SlotOf(made->weapon));
+    return true;
+}
+
+bool Drop(void* inventory, size_t index) {
+    std::vector<Record> items = Load();
+    if (index >= items.size()) {
+        return false;
     }
+    Record& dropped = items[index];
+    if (dropped.gun) {
+        const std::optional<Inventory::Weapon> made = Make(inventory, dropped, Inventory::Guns(inventory));
+        if (!made) {
+            return false;
+        }
+        FCSE::Logf("dropped the %s from Items with %d loaded", dropped.id.c_str(), dropped.loaded);
+        Inventory::Drop(inventory, made->weapon);
+    }
+    if (dropped.gun || --dropped.count <= 0) {
+        items.erase(items.begin() + index);
+    }
+    Save(items);
     return true;
 }
 

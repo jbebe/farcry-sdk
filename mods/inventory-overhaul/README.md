@@ -7,7 +7,7 @@ this is an FCSE plugin, built in the log's steps.
 | Step | What it does | Status |
 |---|---|---|
 | 1. Two guns | gun 1 on key 2, gun 2 on key 3, of any class; a third gun replaces the one in hand | works in game |
-| 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay | works in game |
+| 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay; X drops the gun in hand, or the notebook's selected row | works in game; X seen dropping guns A and B by self-test, a stowed gun and an item not yet |
 | 3. The notebook on Tab | a gadget of its own beside the map, given with it, on a new Notebook control: two bent pages held in both hands, the right one bending as the hands move | works in game |
 | 4. The Inventory page | the mockup's spread as a Magma page drawn onto the notebook's pages: Weapons, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet |
 | 6. Papers, Journal, Contacts | R turns the page; letters and photos, read whole with LMB, the Jackal and Predecessor tapes found, the reputation and the current job, and the buddies met, in the game's words; the pause menu without those pages or its job panel | seen in game in world 2; the papers are samples; reading a paper whole seen by self-test, the dummy note's sheets and photo not yet |
@@ -55,6 +55,12 @@ nothing left in hand, the gun is drawn with the immediate select a pickup uses.
 
 The player's diamonds are a row of Items too, read straight from the wallet (`CEconomyComponent`,
 `DiamondCount`); they cannot be dropped.
+
+X, a new Drop control (`drop_item`, named with the game's own `TOOLCONTROL_DROP` in each
+language), drops the gun in hand, and the other gun is drawn. With the notebook out it drops the
+Inventory page's selected row instead: gun A or B, or a stowed gun, made again with its wear and
+rounds and dropped as a pickup; or one of an item, which is thrown away. The machete, the diamonds,
+the belt and the Papers page's rows stay.
 The engine adds no gun of a model already carried, which it tells by item id, so the carried
 guns of that model have their ids turned aside for the call. Spare ammo is one pool per ammo type
 and stays with the player, and upgrades are the player's, not the gun's, so nothing else is lost.

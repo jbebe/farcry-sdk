@@ -6,6 +6,7 @@
 #include "engine/memory.h"
 #include "fcse_api.h"
 #include "page.h"
+#include "two_guns.h"
 
 #include <atomic>
 #include <utility>
@@ -77,12 +78,16 @@ namespace {
     // The left mouse button, which reads a paper or puts it back, and Esc, which puts it back.
     constexpr uint32_t kStartShooting = FCSE::Crc32("startshooting");
     constexpr uint32_t kShowPauseMenu = FCSE::Crc32("show_pausemenu");
+    // The Drop control's signal, X: the row selected while the notebook is out, else the gun in hand.
+    constexpr uint32_t kDropItem = FCSE::Crc32("drop_item");
 
     // Whether the notebook is out, whether the toggle the player handles next is Tab's, and whether
     // the notebook could not be made.
     std::atomic<bool> g_open{false};
     bool g_tabbed = false;
     bool g_refused = false;
+    // Set when X asked for the gun in hand to be dropped.
+    std::atomic<bool> g_dropInHand{false};
     // The player's inventory and how many items it held when last looked at for the notebook.
     const void* g_lookedAt = nullptr;
     size_t g_lookedAtItems = 0;
@@ -122,6 +127,14 @@ namespace {
             if (g_open && Page::PutBack()) {
                 id = kTaken;
             }
+            break;
+        case kDropItem:
+            if (g_open) {
+                Page::Drop();
+            } else {
+                g_dropInHand = true;
+            }
+            id = kTaken;
             break;
         case kToggleNotebook:
         case kToggleGadget:
@@ -197,15 +210,22 @@ bool Install() {
 }
 
 void Frame() {
-    if (g_refused) {
-        return;
-    }
     void* pawn = Inventory::PlayerPawn();
     if (pawn == nullptr) {
         return;
     }
     const void* view = Inventory::ViewOf(pawn);
-    const size_t items = Inventory::Count(Inventory::OfView(view));
+    void* inventory = Inventory::OfView(view);
+    if (g_dropInHand.exchange(false)) {
+        const std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
+        if (const Inventory::Weapon* gun = TwoGuns::InHand(inventory, guns)) {
+            TwoGuns::Release(inventory, *gun, true);
+        }
+    }
+    if (g_refused) {
+        return;
+    }
+    const size_t items = Inventory::Count(inventory);
     if (view == g_lookedAt && items == g_lookedAtItems) {
         return;
     }
@@ -214,7 +234,7 @@ void Frame() {
     if (Inventory::Gadget(view, kMap) == nullptr || Inventory::Gadget(view, kNotebook) != nullptr) {
         return;
     }
-    g_refused = Inventory::AddGadget(Inventory::OfView(view), kArchetype, 1) == nullptr;
+    g_refused = Inventory::AddGadget(inventory, kArchetype, 1) == nullptr;
     FCSE::Logf(g_refused ? "the player has a map, but %s could not be made"
                          : "the player has a map: %s given",
                kArchetype);

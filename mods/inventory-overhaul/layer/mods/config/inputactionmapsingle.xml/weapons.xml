@@ -3,10 +3,13 @@
 	<Import actionmap="system" />
 	<Import actionmap="common_gadget_remap" optional="" />
 	<Import actionmap="common_notebook_remap" optional="" />
+	<Import actionmap="common_drop_remap" optional="" />
 	<Binding input="pad:back" action="press" signal="toggle_gadget" />
 	<Binding input="kb:5" action="press" signal="toggle_gadget" />
 	<Binding input="kb:tab" action="press" signal="toggle_notebook" />
+	<Binding input="kb:x" action="press" signal="drop_item" />
 	<NoResend input="pad:back" />
 	<NoResend input="kb:5" />
 	<NoResend input="kb:tab" />
+	<NoResend input="kb:x" />
 </ActionMap>

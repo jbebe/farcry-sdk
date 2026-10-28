@@ -86,12 +86,19 @@ const Inventory::Weapon* InSlot(const std::vector<Inventory::Weapon>& guns, int 
     return nullptr;
 }
 
-const Inventory::Weapon& ToReplace(const void* inventory,
-                                   const std::vector<Inventory::Weapon>& guns) {
+const Inventory::Weapon* InHand(const void* inventory, const std::vector<Inventory::Weapon>& guns) {
     for (const Inventory::Weapon& gun : guns) {
         if (Inventory::Id(gun.item) == Inventory::InHandId(inventory)) {
-            return gun;
+            return &gun;
         }
+    }
+    return nullptr;
+}
+
+const Inventory::Weapon& ToReplace(const void* inventory,
+                                   const std::vector<Inventory::Weapon>& guns) {
+    if (const Inventory::Weapon* gun = InHand(inventory, guns)) {
+        return *gun;
     }
     const Inventory::Weapon* last = InSlot(guns, g_lastSlot);
     return last != nullptr ? *last : guns.front();
@@ -171,20 +178,24 @@ namespace {
         }
     }
 
-    // Places the player's guns and drops a third; gun 1 is drawn if the dropped one was in hand.
-    void Tidy(void* inventory) {
-        std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
-        SeparateTwins(guns);
-        if (!PlaceGuns(inventory, guns, true)) {
-            return;
-        }
-        guns = Inventory::Guns(inventory);
+    // Draws gun 1, else gun 2.
+    void DrawFirst(void* inventory) {
+        const std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
         const Inventory::Weapon* gun = InSlot(guns, 1);
         if (gun == nullptr) {
             gun = InSlot(guns, 2);
         }
         if (gun != nullptr) {
             Draw(inventory, *gun);
+        }
+    }
+
+    // Places the player's guns and drops a third; gun 1 is drawn if the dropped one was in hand.
+    void Tidy(void* inventory) {
+        std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
+        SeparateTwins(guns);
+        if (PlaceGuns(inventory, guns, true)) {
+            DrawFirst(inventory);
         }
     }
 
@@ -303,6 +314,19 @@ void Settle(void* inventory) {
     const std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
     SeparateTwins(guns);
     PlaceGuns(inventory, guns, false);
+}
+
+void Release(void* inventory, const Inventory::Weapon& gun, bool drop) {
+    const bool inHand = Inventory::Id(gun.item) == Inventory::InHandId(inventory);
+    if (drop) {
+        FCSE::Logf("dropped gun %d, the %s", SlotOf(gun.weapon), Inventory::Name(gun.weapon));
+        Inventory::Drop(inventory, gun.weapon);
+    } else {
+        Inventory::Remove(inventory, gun.weapon);
+    }
+    if (inHand) {
+        DrawFirst(inventory);
+    }
 }
 
 bool Install() {
