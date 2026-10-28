@@ -89,7 +89,7 @@ range in the log drifts from the scenario's distance.
 | # | Item | State |
 |---|---|---|
 | A | **Flanking a remembered position.** A soldier relocates around the spot where the player was last seen | the game already does it: at the long wall the squad flanked to where it last saw the player, every run; nothing to build unless a test asks |
-| B | **The last man.** A squad's lone survivor does something: falls back, or fights on | waits on item C; the game's order sets a flag nothing reads |
+| B | **The last man.** A squad's lone survivor does something: falls back, or fights on | waits on item C; the game's order only makes him bark |
 | C | **How enemies differ.** Skill by role: guard posts below vehicle patrols below bodyguards; the arsenal stays as the game has it | direction set, [on hold](#open-how-enemies-differ) |
 | D | **Tuning candidates** from the review of step 4: hold fire at each soldier's own "clear" value rather than a fixed 0.4; sighting and the speed evaluator both count the player's movement; range falloff from each weapon's own effective range; grass in combat (0.8) hides more than when alerted (0.765) | closed, the user's call: the game's own combat "clear" is 0.4, the fire line already |
 | E | **Damage falloff with range** for the player's hits on soldiers | not needed, the user's call: a rifle round barely slows within the 150 m soldiers live at |

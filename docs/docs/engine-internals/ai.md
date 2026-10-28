@@ -165,8 +165,9 @@ Two more lieutenant rules, **RE-verified**:
   prunes at most every 15 s).
 - **Last man standing.** A member who is up and not in the threshold or dead state is sent
   `LastManStanding` when no other such member is within 200 m (`CheckLastManStanding`). The order
-  only sets flag 42 (`CPawnAgent::LastManStanding`), and no plan in `mercbrain` tests flag 42, so the
-  last man fights on as before.
+  only sets flag 42 (`CPawnAgent::LastManStanding`). In `mercbrain` the combat plans' common
+  `ScannerLastManStanding` tests it and plays a bark (`TalkAboutLastManStanding`, bark event 11), so
+  the last man calls it out and fights on as before.
 - **Roles** balance suppressors against assaulters per range band (`IsNeededAsSuppress`); a member
   who suppresses has flag 9 set.
 
