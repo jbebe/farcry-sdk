@@ -2,7 +2,7 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [1.7.0] - 2026-10-26
+## [1.7.0] - 2026-10-28
 
 ### Added
 - **Materials are edited in the Files tab.** An `.xbm`'s preview shows every property its shader
@@ -21,6 +21,11 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   list, which the Blender add-on's material editor reads.
 - **`jackall-cli ai pack`** compiles a brain's BlackBox.AI source, as `ai unpack` writes it, into an
   `.ai.rml` workspace, so a brain can be edited as text and built into a mod layer.
+- **AI brains merge as fragments.** A mod can ship only the brain's plans and tasks it changes,
+  staged in a folder named after the brain, such as `mods\scripts\game\newbrains\mercbrain.ai.rml\`,
+  instead of the whole brain. The build merges them into the game's own brain and recompiles it, so
+  mods that change the same brain work together, and two that change one plan merge. **`jackall-cli
+  ai fragments`** writes them from an edited brain or its source.
 - **A navmesh for any terrain and anything standing on it.** `navmesh build` and `world pack` now
   build the AI's navmesh with Recast from the terrain and every placed object's collision. That
   covers hills, water, floors, roofs, ramps, stairs, bridges and trees. It leaves out slopes over

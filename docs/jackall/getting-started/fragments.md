@@ -63,9 +63,10 @@ works next to any other mod that changes other parts of them.
 | World descriptors, `<world>.game.xml` | One mission, or one section such as the environment | `mods\worlds\world1\generated\world1.game.xml\_environment.xml` |
 | Controls, `config\inputactionmap*.xml` and `config\defaultusercontrols.xml` | One action map or category | `mods\config\inputactionmapcommon.xml\common_gameplay.xml` |
 | Menus and the HUD, `.mgb` | One area, plus the package's lists of materials, strings and exports | `mods\ui\localized\pc\eng\ui\hud.mgb\a_flashlight_object.1092050190.xml` |
+| AI brains, `scripts\game\newbrains\*.ai.rml` | One brain, plan, scanner or task. A plan lists the tasks it owns, so a mod adding a task also ships its plan | `mods\scripts\game\newbrains\mercbrain.ai.rml\LauncherInHand.3303724464.xml` |
 
 Everything else ships whole: textures, sounds, music, models, animation clips, terrain, Lua scripts,
-AI brains, and the other `.fcb` and `.xml` files. When two mods ship the same whole file, the lowest
+and the other `.fcb` and `.xml` files. When two mods ship the same whole file, the lowest
 one in the list wins.
 
 ## How a fragment is named
@@ -149,8 +150,8 @@ warns.
 | **Import legacy mod** | Every piece of every container the old mod changed |
 
 You can also write a fragment by hand: copy one into your workspace with **Mirror** on the Files tab,
-edit it, and click **Rescan mods**. On the command line, `mgb fragments`, `move fragments` and
-`depload add --fragment` write them; see
+edit it, and click **Rescan mods**. On the command line, `mgb fragments`, `move fragments`,
+`ai fragments` and `depload add --fragment` write them; see
 [Convert game files on the command line](/jackall/cli-formats).
 
 ### The text table

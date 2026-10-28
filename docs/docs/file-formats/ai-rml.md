@@ -155,4 +155,12 @@ command line:
 jackall-cli ai unpack mercbrain.ai.rml     # mercbrain.source.xml + a readable dump of the compiled half
 jackall-cli ai pack mercbrain.source.xml   # compile a source back into mercbrain.ai.rml
 jackall-cli ai verify *.ai.rml             # recompile each source and compare with its compiled half
+jackall-cli ai fragments mercbrain.source.xml --base mercbrain.ai.rml   # only the instances that differ
 ```
+
+A mod need not ship a whole brain. JackAll splits a workspace into one fragment per instance, staged
+at `mods\scripts\game\newbrains\<brain>.ai.rml\<last name segment>.<CRC-32 of the full name>.xml`, the
+hash the packed task table keys on. The build replaces or adds each instance in the player's own
+brain and recompiles `packed` from the merged source, so mods that change the same brain merge rather
+than the last one winning. A plan's `Add` children are what it owns, so a mod adding a task also ships
+the plan that adds it. See [Containers and fragments](/jackall/fragments).

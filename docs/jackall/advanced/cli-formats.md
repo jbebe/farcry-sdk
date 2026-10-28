@@ -266,6 +266,15 @@ OK
 `ai unpack` writes a brain's source out as XML, and `ai verify` checks that brains recompile
 unchanged. See [Tune the AI](/jackall/ai).
 
+`ai fragments` writes an edited brain, or the source it is compiled from, as the instances that
+differ from the game's, which a mod stages at the brain's path; see
+[Fragments](/jackall/fragments):
+
+```
+> jackall-cli ai fragments mercbrain.source.xml --base vanilla\mercbrain.ai.rml --out layer\mods\scripts\game\newbrains\mercbrain.ai.rml
+mercbrain.source.xml: 13611 units, 46 differ from vanilla (28 new)
+```
+
 `domino check` looks for what would break a mission script in game:
 
 ```
