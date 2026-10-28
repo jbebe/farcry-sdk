@@ -11,6 +11,7 @@ this is an FCSE plugin, built in the log's steps.
 | 3. The notebook on Tab | a gadget of its own beside the map, given with it, on a new Notebook control: two bent pages held in both hands, the right one bending as the hands move | works in game |
 | 4. The Inventory page | the mockup's spread as a Magma page drawn onto the notebook's pages: Weapons, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet |
 | 6. Papers, Journal, Contacts | R turns the page; letters and photos, the Jackal and Predecessor tapes found, the reputation and the current job, and the buddies met, in the game's words; the pause menu without those pages or its job panel | seen in game in world 2; the papers are samples |
+| 7. Papers in the world | the torn notebook page with the Jackal photo lies on a burnt-out truck's bed in world 1; picking it up puts it in Items, so Papers shows it | built, not yet seen in game |
 
 ## Two guns
 
@@ -184,10 +185,10 @@ text the game has is the game's, in the player's language, through its string ta
 (`src/engine/story.cpp`):
 
 - **Papers** (`src/papers_page.cpp`): on the left the letters and photos, the Items records the page
-  knows by id, which leave the Inventory page's Items. For now four sample papers from the mockup,
-  with their textures in `textures\common`. On the right the Jackal tapes found and then the
-  Predecessor's, from the mission manager's two lists, each with its title and the game's line about
-  it.
+  knows by id, which leave the Inventory page's Items. Four papers from the mockup, with their
+  textures in `textures\common`: the torn notebook page is found in the world, the other three are
+  still samples. On the right the Jackal tapes found and then the Predecessor's, from the mission
+  manager's two lists, each with its title and the game's line about it.
 - **Journal** (`src/journal_page.cpp`): on the left the reputation level and its words, as the pause
   menu's Journal has them; on the right the current job, its objectives and the Underground's, as the
   pause menu's main page showed them (`src/engine/jobs.cpp`): every objective marker that is on, its
@@ -211,6 +212,13 @@ game's own Lua in DevTools' console, meets Frank, Flora, Marty, Josip and Warren
 primary buddy and Hakim the secondary (the game takes only a living one), kills Warren, and finds
 five Jackal tapes and the Moroccan's. `INVENTORY_OVERHAUL_LUA` holds Lua lines, split by `|`, that the
 console runs as the game loads, such as `AddGadget(SpawnWeapon("gadgets.Equipped.Map"))`.
+
+A paper in the world is the Predecessor's envelope pickup drawn as the stock single sheet, which
+`build-papers.ps1` writes into the layer (`notebook/papers.py`), with an instance in its sector: a
+`CPickupMissionItem` whose archetype holds its Items id as the entity data
+`InventoryOverhaul.Item`, saved at persist level 3 like a diamond case so it stays picked. After the
+engine's `CPickupMissionItem::Pick`, `src/pickups.cpp` gives the player that item. The torn notebook
+page lies on the bed of the burnt-out truck at about (1835, 2387) in world 1, by its open tailgate.
 
 ## Testing
 

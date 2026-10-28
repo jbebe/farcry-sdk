@@ -45,7 +45,8 @@ function Exec([string]$program) {
 
 if (Test-Path $Work) { Remove-Item -Recurse -Force $Work }
 New-Item -ItemType Directory -Force $Work | Out-Null
-$built = @("$Layer\$ModelFolder") + ($Worlds | ForEach-Object { "$Layer\worlds\$_\generated\entitylibrary.fcb" })
+$built = @("$Layer\$ModelFolder") +
+    ($Worlds | ForEach-Object { "$Layer\worlds\$_\generated\entitylibrary.fcb\gadgets\Equipped\Notebook.xml" })
 foreach ($dir in $built) {
     if (Test-Path $dir) { Remove-Item -Recurse -Force $dir }
 }

@@ -283,7 +283,7 @@ Each step ends with one check in game before the next.
 | 4 | The Inventory page in Magma, as an overlay, then on the paper | pictures, wear and ammo match the guns |
 | 5 | The notebook model, page turns on the flip | |
 | 6 | The pause pages moved in: Papers (sample papers, the Jackal and Predecessor tapes found), Journal (reputation and the current job) and Contacts (the buddies met), each read from the game, and R turning the page. The pause menu loses those entries and its main page's job panel; the story synopses the pause menu's Journal had are dropped | the pause menu keeps only its eight entries (seen, 2026-10-28) |
-| 7 | Papers and memories: a letter and a photo in the world | read one, walking |
+| 7 | Papers and memories: the torn notebook page with the Jackal photo clipped to it, on a burnt-out truck's bed near the start, picked up into Items | read one, walking (built, not yet seen in game) |
 | 8 | The box at the crates | bring a found Carl G home and take it out again |
 | 9 | One fetch mission | |
 | later | Diamonds, food, pills, ammo as items | |
@@ -292,8 +292,8 @@ Each step ends with one check in game before the next.
 
 - **The arrow keys:** the mockup moves along the lists with ↑ and ↓ as well as the wheel, but
   the game binds them to walking beside W and S, so for now only the wheel moves the selection.
-- **Real papers:** the Papers page lists four sample papers the test window's Fill gives; papers
-  found in the world come with step 7.
+- **Real papers:** the torn notebook page is found in the world; the Papers page's other three are
+  still samples the test window's Fill gives.
 - **What still selects by class:** the weapon crate draws the gun it hands out by its class, and a
   pickup's switch prompt shows the carried gun of the pickup's class. Step 1 shows how far it shows.
 - **How a mission asks "does the player carry X"**, since the plugin cannot read `Globals`. Candidates:

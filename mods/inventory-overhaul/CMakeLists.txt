@@ -26,6 +26,7 @@ add_library(InventoryOverhaul SHARED
   "src/page.cpp"
   "src/papers_page.cpp"
   "src/pause_menu.cpp"
+  "src/pickups.cpp"
   "src/test_window.cpp"
   "src/two_guns.cpp"
   "src/engine/economy.cpp"

@@ -10,7 +10,7 @@ namespace InventoryOverhaul::Page {
 
 namespace {
     // A paper the Papers page knows by its Items id: its name, its picture, what it is, where it was
-    // found and what it says. Sample papers for now, which the test window's Fill gives.
+    // found and what it says. The test window's Fill gives them all; notebook\papers.py places them.
     struct Paper {
         const char* id;
         const wchar_t* name;

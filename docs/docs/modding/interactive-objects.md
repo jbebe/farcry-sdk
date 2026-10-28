@@ -222,6 +222,17 @@ Way 2: a handler that calls `SetMalariaPillCount(GetMalariaPillCount() + 1)` and
 switching its layer off with `Game:MissionSetState` (or way 1's `_MissionSetState` on a second
 link). **(untested)**
 
+### A paper the player keeps
+
+Copy the Predecessor's envelope, `MissionPickups.PartnerMissionEnvelope`, a `CPickupMissionItem`.
+Give it another model in its descriptor and graphic component, and persist level 3 so that it stays
+picked. `CPickupMissionItem::Pick` (Steam `0x106C8040`) runs the base pickup's `Pick` with a copy of
+the picker, then clears `bActive` (`+0x15`) and `bNeverPicked` (`+0xD1`) **(RE-verified)**. When the
+item has a string at `+0xC8`, it then hands something built from it to the picker's entity
+**(inferred)**. What the player carries afterwards is up to a plugin. Inventory Overhaul hooks `Pick`
+and gives the item named by its archetype's FCSE entity data (`mods/inventory-overhaul/notebook/papers.py`,
+`src/pickups.cpp`). It is placed by a sector fragment in `main` **(untested in game)**.
+
 ## What needs an FCSE plugin
 
 Data and Lua cover any use that **triggers something**. These need engine code:

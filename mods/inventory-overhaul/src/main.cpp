@@ -5,6 +5,7 @@
 #include "notebook.h"
 #include "page.h"
 #include "pause_menu.h"
+#include "pickups.h"
 #include "test_window.h"
 #include "two_guns.h"
 
@@ -14,6 +15,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         return false;
     }
     const bool guns = TwoGuns::Install();
+    const bool pickups = Pickups::Install();
     const bool notebook = Notebook::Install() && Page::Install() && GameThread::Install();
     if (notebook) {
         GameThread::EachFrame([] {
@@ -23,7 +25,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         Paper::Install();
         PauseMenu::Install();
     }
-    return guns || notebook;
+    return guns || pickups || notebook;
 }
 
 // Runs after every plugin's FCSE_Load, so DevTools has loaded by now if it is installed at all.

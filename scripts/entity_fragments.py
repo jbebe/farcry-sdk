@@ -1,9 +1,10 @@
 """Archetype fragments for a mod's layer, cut out of an entity library decoded with
-`jackall-cli fcb decode`: each archetype's node, FCSE's entity data component added to one, and the
-fragment written where a layer stages it.
+`jackall-cli fcb decode`: each archetype's node, its values changed, FCSE's entity data component
+added to one, and the fragment written where a layer stages it.
 """
 import os
 import re
+import zlib
 
 
 def prototypes(lines):
@@ -17,6 +18,24 @@ def prototypes(lines):
         name = next(re.search(r">([^<]*)<", l).group(1) for l in lines[start:end]
                     if '<value name="hidName"' in l)
         yield name, start, end + 1
+
+
+def crc(text):
+    """The Hash a String value's text_ twin is stored as."""
+    return "%08X" % zlib.crc32(text.encode())
+
+
+def replace_value(text, name, kind, old, new):
+    """The archetype's text with its one value `name` changed from `old` to `new`."""
+    element = '<value name="%s" type="%s">%s</value>'
+    assert text.count(element % (name, kind, old)) == 1, name
+    return text.replace(element % (name, kind, old), element % (name, kind, new))
+
+
+def replace_hashed(text, name, old, new):
+    """The archetype's text with the String `text_<name>` and its Hash `name` changed to `new`."""
+    text = replace_value(text, "text_" + name, "String", old, new)
+    return replace_value(text, name, "Hash", crc(old), crc(new))
 
 
 def object_lines(block, kind):

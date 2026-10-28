@@ -9,10 +9,9 @@ import json
 import os
 import re
 import sys
-import zlib
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "scripts"))
-from entity_fragments import fragment_path, prototypes, write
+from entity_fragments import crc, fragment_path, prototypes, replace_hashed, replace_value, write
 
 library, obj_path, nodes_path, layer, world = sys.argv[1:6]
 NAME = "gadgets.Equipped.Notebook"
@@ -28,19 +27,8 @@ DESCRIPTOR = r"graphics\objects\equipment\notebook\notebook.xml"
 NODES = {name: place for name, place in json.load(open(nodes_path)).items() if name.startswith("Page")}
 
 
-def crc(text):
-    return "%08X" % zlib.crc32(text.encode())
-
-
 def f(values):
     return ",".join("%g" % v for v in values)
-
-
-def set_value(text, name, kind, old, new):
-    """The archetype with its one value `name` changed from `old` to `new`."""
-    element = '<value name="%s" type="%s">%s</value>'
-    assert text.count(element % (name, kind, old)) == 1, name
-    return text.replace(element % (name, kind, old), element % (name, kind, new))
 
 
 points = [tuple(map(float, line.split()[1:4])) for line in open(obj_path) if line.startswith("v ")]
@@ -88,17 +76,15 @@ for i, n in enumerate(NODES):
         f"{indent}</object>"]))
 text = text[:graphic.start()] + "\n".join(replacement) + text[graphic.end():]
 
+text = replace_hashed(text, "fileName", r"graphics\objects\mapcompass\map.xml", DESCRIPTOR)
+text = replace_hashed(text, "fileSkeleton", r"graphics\objects\mapcompass\map_ref.skeleton", SKELETON)
 for name, kind, old, new in [
-        ("text_fileName", "String", r"graphics\objects\mapcompass\map.xml", DESCRIPTOR),
-        ("fileName", "Hash", "C8F5CDF7", crc(DESCRIPTOR)),
-        ("text_fileSkeleton", "String", r"graphics\objects\mapcompass\map_ref.skeleton", SKELETON),
-        ("fileSkeleton", "Hash", "ECBD7222", crc(SKELETON)),
         ("Name", "String", "Equipped.Map", "Equipped.Notebook"),
         ("hidName", "String", "gadgets.Equipped.Map", NAME),
         ("disEntityId", "Int64", "328", ENTITY_ID),
         ("selCategory", "UInt32", "1", CATEGORY),
         ("iAnimationValue", "Int32", "9", ANIMATION),
         ("archCompassArchetype", "String", "gadgets.Equipped.CompassSingle", "")]:
-    text = set_value(text, name, kind, old, new)
+    text = replace_value(text, name, kind, old, new)
 
 write(fragment_path(layer, ("worlds", world, "generated", "entitylibrary.fcb"), NAME), text.split("\n"))
