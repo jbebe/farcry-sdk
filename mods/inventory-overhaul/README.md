@@ -212,12 +212,13 @@ text the game has is the game's, in the player's language, through its string ta
   texts from `Objectives` with the buddies' and lieutenants' names filled in by the game's own
   `GetDescriptionWithBuddyName`. The markers are read at most once a second.
 
-The pause menu (`src/pause_menu.cpp`) no longer has the pages the notebook took: while
-`CFCXPauseMenuPage::Setup` runs, `CListMenuPage::AddButton` leaves out Journal, Buddies, Jackal Tapes
-and Predecessor Tapes, known by their words in the player's language. Its main page looks like the
-game-over dialog, in the layer (`sp_pause_menus.mgb`): the dialog's dimming and post-it, popping in
-as the dialog's does and a little taller for nine rows, over the menu's clouds, with the menu's list
-where the dialog has its own. The notebook spread, its post-it and paperclip, the glows, the
+The pause menu (`src/pause_menu.cpp`) no longer has the pages the notebook took, nor Resume, which
+Esc does: while `CFCXPauseMenuPage::Setup` runs, `CListMenuPage::AddButton` leaves out Resume,
+Journal, Buddies, Jackal Tapes and Predecessor Tapes, known by their words in the player's language.
+Upgrades stays, as it lists every gun's manuals, what the shop still sells, vehicle and equipment
+upgrades and the challenges, which the notebook does not. Its main page looks like the game-over
+dialog, in the layer (`sp_pause_menus.mgb`): the dialog's dimming and post-it, popping in as the
+dialog's does, over the menu's clouds, with the menu's list where the dialog has its own. The notebook spread, its post-it and paperclip, the glows, the
 buddies' portraits and the job panel are hidden.
 - **Contacts** (`src/contacts_page.cpp`): the buddies met, from the buddies manager, all on the left
   page: the active buddies, the primary and the secondary (the manager's `+0x50` and `+0x54` point at

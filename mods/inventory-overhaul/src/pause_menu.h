@@ -1,5 +1,5 @@
-// The pause menu without the pages the notebook took: Journal, Buddies, Jackal Tapes and Predecessor
-// Tapes.
+// The pause menu without Resume, which Esc does, or the pages the notebook took: Journal, Buddies,
+// Jackal Tapes and Predecessor Tapes.
 #pragma once
 
 namespace InventoryOverhaul::PauseMenu {

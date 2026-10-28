@@ -637,8 +637,6 @@ $DialogDim = "#E1CD80CB"
 $DialogPostIt = "#815EB148"
 $DialogPostItArea = "#D096B132"
 $DialogPostItPaper = "#06E8B233"
-# The dialog's post-it holds three rows; the pause menu's nine need it this much taller.
-$PostItStretch = 1.07
 # The list in the dialog's page, and in the list panel the pause page instances, common.mgb's #9EA91A65.
 $CommonList = "#0D9428EC"
 $ListPanel = "#9EA91A65"
@@ -652,8 +650,7 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter sp_pause_menus.
     $dialog = IndexOf $common "<USERDATA name=`"$DialogPage`">"
     $dim = (ElementLines $common $DialogDim $dialog) -replace "name=`"$DialogDim`"", 'name="r_io_pause_dim"'
     $postIt = (ElementLines $common $DialogPostIt $dialog) -replace "name=`"$DialogPostIt`"", 'name="a_io_pause_postit"' `
-        -replace "PACKAGE=`"$CommonId`" AREA=`"$DialogPostItArea`"", "PACKAGE=`"$PausePackage`" AREA=`"a_io_pause_postit`"" |
-        ForEach-Object { [regex]::Replace($_, 'SCALEY="([\d.]+)"', { param($m) "SCALEY=`"$(F ([double]$m.Groups[1].Value * $PostItStretch))`"" }) }
+        -replace "PACKAGE=`"$CommonId`" AREA=`"$DialogPostItArea`"", "PACKAGE=`"$PausePackage`" AREA=`"a_io_pause_postit`""
     $postItArea = IndexOf $common "<USERDATA name=`"$DialogPostItArea`">"
     $postItBox = [regex]::Match($common[$postItArea - 1], 'STATICBOX="0 (\d+) 0 (\d+)"').Groups
     $paper = (ElementLines $common $DialogPostItPaper $postItArea) `

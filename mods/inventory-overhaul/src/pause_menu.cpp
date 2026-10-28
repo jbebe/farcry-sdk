@@ -1,5 +1,5 @@
-// While CFCXPauseMenuPage::Setup runs, AddButton returns -1 for the entries the notebook took, as it
-// does without a list; see docs/docs/engine-internals/campaign.md.
+// While CFCXPauseMenuPage::Setup runs, AddButton returns -1 for the entries the notebook took and for
+// Resume, as it does without a list; see docs/docs/engine-internals/campaign.md.
 #include "pause_menu.h"
 
 #include "engine/memory.h"
@@ -19,8 +19,9 @@ namespace {
     SetupFn g_setup = nullptr;
     AddButtonFn g_addButton = nullptr;
 
-    // The entries' strings in the PauseMenu section.
-    constexpr const char* kTaken[] = {"PAUSE_REPUTATION", "PAUSE_BUDDIES", "PAUSE_JACKALFILES", "PAUSE_PREDECESSORFILES"};
+    // The entries' strings in the PauseMenu section; Esc resumes without Resume.
+    constexpr const char* kTaken[] = {"PAUSE_RESUME", "PAUSE_REPUTATION", "PAUSE_BUDDIES", "PAUSE_JACKALFILES",
+                                      "PAUSE_PREDECESSORFILES"};
 
     bool g_settingUp = false;
 
@@ -44,7 +45,7 @@ namespace {
 
 bool Install() {
     const bool hooked = Hook(g_setupSite, &OnSetup, &g_setup) && Hook(g_addButtonSite, &OnAddButton, &g_addButton);
-    FCSE::Logf("pause menu: %s", hooked ? "Journal, Buddies and both tape entries left to the notebook"
+    FCSE::Logf("pause menu: %s", hooked ? "Resume gone, Journal, Buddies and both tape entries left to the notebook"
                                         : "its calls were not found, so it keeps every entry");
     return hooked;
 }
