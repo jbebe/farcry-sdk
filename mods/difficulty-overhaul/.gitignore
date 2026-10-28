@@ -4,3 +4,5 @@ out/
 # does not leave the tree dirty.
 stage/
 *.zip
+# The built plugin the layer only carries.
+layer/plugins/DifficultyOverhaul.dll

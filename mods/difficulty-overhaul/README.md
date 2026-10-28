@@ -1,14 +1,14 @@
 # Difficulty Overhaul
 
 Realistic damage and AI shooting for Far Cry 2, scaled by the game's own difficulty setting. An FCSE
-plugin that changes `Dunia.dll` in memory, and a data layer with one change to the soldiers' brain.
+plugin that changes `Dunia.dll` in memory, and a data layer of changes to the soldiers' brain.
 
 The goal is lethal combat in both directions where every hit is earned: a bullet that connects is
 serious for the player and for a mercenary, and whether it connects depends on range, movement,
-visibility, recoil and the time a shooter needs to settle his aim. Everything is tuned on Hardcore;
-Easy and Normal will be eased from it and Infamous made harder, so the difficulties differ in how
-forgiving the game is rather than in how well the enemy aims. The values are constants in the
-plugin, with nothing on the Mod Configuration Menu.
+visibility, recoil and the time a shooter needs to settle his aim. Everything is tuned on Hardcore,
+and every difficulty plays at those values for now; Easy and Normal will be eased from it and
+Infamous made harder, so the difficulties differ in how forgiving the game is rather than in how well
+the enemy aims. The values are constants in the plugin, with nothing on the Mod Configuration Menu.
 
 ## Features
 
@@ -26,7 +26,7 @@ plugin, with nothing on the Mod Configuration Menu.
 | Squad memory | A squad keeps hunting the player at the spot it last saw him for as long as he stays within 15 m of it, where the game forgets him 10 s after last seeing him. Only slipping away unseen lets them lose him |
 | Watched spot | A soldier keeps his aim on where the player vanished: a peek from that spot meets a settled rifle, while reappearing more than 0.1 rad away as he sees it (3 m at 30 m) makes him settle his aim again |
 | Eyesight | How a soldier sees the player. His focus cone reaches 100 m by day where the game's reaches 60, and keeps the player fully visible out to half its length instead of a quarter, so a man standing in the open at 50 m is seen. His peripheral cone spans 180° instead of 120°, and there the player counts only 0.55 near the focus falling to 0.35 at 90°: enough for him to notice and turn, never enough to see the player as an enemy until he looks. Within 40 m, the share of the player that shows over cover counts double: the game traces three points on his body and counts a third for each it reaches, so a head and shoulders over a wall counted as a third of a man. In the periphery a player standing still or moving crouched counts a fifth as much as one walking upright or faster, so he is noticed for moving upright, not for creeping. A player walking or running upright behind a soldier is noticed within 20 m (as visible as 0.5, before distance and movement) and sensed in full at arm's length, 2 m; one creeping crouched is not. Night, the alert state, crouching, standing still, grass and cover still apply |
-| Launchers | A soldier with an RPG or a Carl Gustav fires it at the player only while the player is in a working vehicle. At a player on foot he draws his other gun: his primary, or his pistol or SMG when he has none. He keeps watching: the player getting into a vehicle brings the launcher out, and getting out puts it away. The game hands him the launcher whenever his target is beyond 20 m, so the first time he may raise it, find the player on foot and put it away; after that he remembers. His shots at other soldiers and at buddies are as shipped. This is the layer's `mercbrain.ai.rml` |
+| Launchers | A soldier with an RPG or a Carl Gustav fires it at the player only while the player is in a working vehicle. At a player on foot he draws his other gun: his primary, or his pistol or SMG when he has none. He keeps watching: the player getting into a vehicle brings the launcher out, and getting out puts it away. The game hands him the launcher whenever his target is beyond 20 m, so the first time he may raise it, find the player on foot and put it away; after that he remembers. His shots at other soldiers and at buddies are as shipped. Part of the layer's brain |
 | Shotgunners | A soldier with a shotgun presses his assault on the player inside 12 m as he does farther out: he keeps the assault role rather than holding back to suppress, and pauses 1 s at each cover where others pause 3 s. The game switches this off inside 12 m; the layer's brain switches it on for fights with the player |
 | Close quarters | Within 3 m of the player a soldier stops whatever move he is on and fights where he stands, whether he sees the player or not. The game stops him at 6 m only once he sees the player clearly, so a soldier heading for cover beside a hidden player, or running at him with no cover, walked into him. Part of the layer's brain |
 | Hit log | Writes every hit on the player, and every hit the player lands on a soldier, to `bin\fcse.log`: stim type and level, body part, range, health before and after, and whether a soldier was wounded or killed. Every AI shot at the player gets a line too: its chance, the recoil factor, the range and whether it hit |
@@ -47,17 +47,20 @@ player hit: pierce level 9, no body part, at 18.7 m, health 1075 -> 1028 (Hardco
 ## Build
 
 ```
-.\build.ps1                  # x86 release -> DifficultyOverhaul.dll
+.\build.ps1                  # x86 release -> DifficultyOverhaul.dll, staged into layer\plugins\
 .\build.ps1 -Config debug
 .\build.ps1 -Install "<game>\bin"    # copies into bin\plugins\
 .\verify_build.ps1           # x86, static CRT, FCSE_Load exported
 python ..\..\scripts\verify_patterns.py
-.\build-layer.ps1            # layer\ from the installed game's merc brain, with the launcher change
+.\build-layer.ps1            # the brain's fragments in layer\, from the installed game's merc brain
 ```
 
-`layer\` holds game files, so it is built rather than committed: `build-layer.ps1` takes
-`mercbrain.ai.rml` out of the installed game, rewires its sniping plan and compiles it with
-`jackall-cli`. Install it with `jackall-cli mod build --game "<game>" --layer layer`, together with
-any other layers in play.
+`layer\` is what the release zips: the plugin under `plugins\`, and the brain's changes as fragments
+under `mods\scripts\game\newbrains\mercbrain.ai.rml\`, one file per plan or task, which JackAll
+merges into the game's own brain at install. `build-layer.ps1` makes them: it takes
+`mercbrain.ai.rml` out of the installed game, makes the edits and writes what differs with
+`jackall-cli ai fragments`. Install with `jackall-cli mod build --game "<game>" --layer layer`,
+together with any other layers in play.
 
-Needs FCSE with plugin API v8.
+Needs FCSE 1.4.0 or later (plugin API v8), and JackAll 1.7.0 or the Vortex extension 0.6.0, or later,
+to install the brain's fragments.

@@ -6,7 +6,8 @@
 .DESCRIPTION
     Wraps the vcvarsall.bat x86 + cmake --preset/--build dance, the same way tools/FCSE/build.ps1
     does. Must be x86, never x64 - Far Cry 2 is a 32-bit process and a 64-bit DLL cannot load into
-    it.
+    it. The DLL is also staged into layer\plugins\, where JackAll deploys it from and the release
+    zips it with the brain fragments.
 
 .PARAMETER Config
     "release" or "debug" - selects the x86-release/x86-debug CMake preset. Defaults to "release".
@@ -56,6 +57,10 @@ if ($LASTEXITCODE -ne 0) { throw "Build failed (exit $LASTEXITCODE)." }
 
 $OutputDll = Join-Path $BuildDir "DifficultyOverhaul.dll"
 Write-Host "Build succeeded: $OutputDll" -ForegroundColor Green
+
+$StagedDir = Join-Path $ProjectRoot "layer\plugins"
+New-Item -ItemType Directory -Force -Path $StagedDir | Out-Null
+Copy-Item $OutputDll (Join-Path $StagedDir "DifficultyOverhaul.dll") -Force
 
 if ($Install) {
     # FCSE scans bin\plugins\ by name, so that is the only place this can go. It creates the folder
