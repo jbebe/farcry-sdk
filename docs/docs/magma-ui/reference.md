@@ -216,7 +216,8 @@ relative with a leading backslash and resolves against the owning package's name
 - `SLIDERLINK` (optional attribute) names a sibling `Slider` that scrolls the text.
 - Font families come from `\fonts.mgb`; all 810 shipped `Text` widgets use one of two families,
   `Farcry2_25` (467) or `#24EE0F45` (343 — the family whose font file is `arial_cyrillic_25`; its
-  own name string is not recoverable).
+  own name string is not recoverable). A family of your own is added the way
+  [`.mft`](../file-formats/mft.md#adding-a-font) describes.
 
 ### Area instances — `AreaInstance`, `PageInstance`, `ButtonInstance`, `CheckBoxInstance`, `RadioButtonInstance`, `AutonomousAreaInstance`
 

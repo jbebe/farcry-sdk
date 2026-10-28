@@ -19,6 +19,7 @@
         'music'
         'blender'
         'hud-and-menus'
+        'fonts'
         'map-viewer'
         'map-editing'
         'map-links-prefabs'

@@ -225,6 +225,38 @@ hud.xml: 110 units, 0 differ from vanilla (0 new)
 
 See [Edit the HUD and menus](/jackall/hud-and-menus).
 
+## Fonts
+
+The game's fonts are `.mft` files under `ui\fonts\`, each with pages of drawn glyphs beside it.
+`mft decode` writes one as XML, a row per glyph, and `mft encode` builds it back:
+
+```
+> jackall-cli mft decode game\ui\fonts\farcry2_25.mft --out farcry2_25.xml
+Wrote farcry2_25.xml
+```
+
+`mft faces` lists the fonts a TrueType or OpenType file holds, and a variable font's design axes:
+
+```
+> jackall-cli mft faces Caveat.ttf
+   65536  Caveat Regular
+  131072  Caveat Bold
+          axis wght (Weight): 400 to 700, 400 by default
+```
+
+`mft build` draws one of them into a mod layer. `--face` picks it by index or style, `--axis` sets an
+axis, `--size` is the pixel size and `--name` what the game knows it by. With `--game` it is also
+added to every `fonts.mgb` and UI dependency list as fragments, and `--preview` writes sample text
+set in it:
+
+```
+> jackall-cli mft build Caveat.ttf --axis wght=600 --size 40 --name Caveat_40 --out fontmod --game "C:\Games\Far Cry 2" --preview caveat.png
+Caveat_40: Caveat Regular wght=600 at 40 px, 457 characters on 1 page(s), 40 file(s) written.
+The font lacks 75 of the game's characters, which draw as nothing: U+017F U+037E U+0384 U+0385 U+0386 U+0387 U+0388 U+0389 U+038A U+038C U+038E U+038F U+0390 U+0391 U+0392 U+0393 U+0394 U+0395 U+0396 U+0397 U+0398 U+0399 U+039A U+039B ...
+```
+
+See [Add a font](/jackall/fonts).
+
 ## Animations
 
 `graphics\move\movemgr.bin` decides which animation plays when. `move clips` lists the clips one

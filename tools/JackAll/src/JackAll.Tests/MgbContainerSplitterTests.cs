@@ -164,6 +164,29 @@ public class MgbContainerSplitterTests : IDisposable
         Assert.Equal(exports, Splitter.Open(built).Extract("_exports.xml"));
     }
 
+    /// <summary>Two mods each adding a font and its family to the fonts package: both land.</summary>
+    [Fact]
+    public void Two_mods_adding_a_font_both_land()
+    {
+        if (Fixture.Read(Fonts) is not { } fonts) return;
+
+        const string fontsPath = @"ui\localized\pcwidescreen\eng\ui\fonts.mgb";
+        IContainerTree tree = Splitter.Open(fonts);
+        string WithFont(string name) => Edited(tree, "_fonts.xml", list =>
+        {
+            var font = new XElement(list.Elements("FONT").First());
+            font.SetAttributeValue("name", name);
+            font.SetAttributeValue("file", $@"\Fonts\{name}.mft");
+            list.Add(font);
+        });
+        FolderModLayer modA = TestSupport.StageFragment(_sandbox, "mod_a", fontsPath, "_fonts.xml", WithFont("a_30"));
+        FolderModLayer modB = TestSupport.StageFragment(_sandbox, "mod_b", fontsPath, "_fonts.xml", WithFont("b_30"));
+
+        MgbPackage built = MgbPackage.Read(Splitter.Apply(fonts, TestSupport.ResolveFragments(Splitter, fonts, fontsPath, null, modA, modB)));
+
+        Assert.Equal(MgbPackage.Read(fonts).FontRefs.Count + 2, built.FontRefs.Count);
+    }
+
     /// <summary>An added area and raised pool counts fit in fragments; a new page size does not.</summary>
     [Fact]
     public void Only_a_change_inside_the_fragments_is_expressible()

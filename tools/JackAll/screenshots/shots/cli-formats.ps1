@@ -23,7 +23,7 @@ try {
     # Archives
     Step 'archive', 'extract', "$data\worlds\worlds.fat", '--names', '--filter', 'ak47.xbg', '--out-dir', 'game'
     Get-GameFile 'worlds\worlds.fat' 'ak47_state01_m', 'mercbrain.ai.rml', '004bf5e9.spk', 'world1_depload.dat', 'w1_c_3\generated\worldsectors\worldsector3160.data.fcb'
-    Get-GameFile 'common.fat' 'ak47_state01_m', 'pc\eng\ui\hud.mgb', 'english\oasisstrings.rml', 'movemgr.bin', 'a1sm01_townescape.a1sm01_mission'
+    Get-GameFile 'common.fat' 'ak47_state01_m', 'pc\eng\ui\hud.mgb', 'english\oasisstrings.rml', 'movemgr.bin', 'a1sm01_townescape.a1sm01_mission', 'farcry2_25.mft'
     Get-GameFile 'sound.fat' '004b177b.sbao'
     $files = Get-ChildItem game -Recurse -File | ForEach-Object { $_.FullName.Substring($dir.Length + 1) }
     Write-Host ($files -join "`n")
@@ -63,6 +63,12 @@ try {
     Step 'mgb', 'decode', (& $find 'hud.mgb'), '--out', 'hud.xml'
     Step 'mgb', 'verify', 'hud.xml'
     Step 'mgb', 'fragments', 'hud.xml', '--base', (& $find 'hud.mgb'), '--list'
+
+    # Fonts
+    Copy-Item (Join-Path $paths.Repo 'mods\inventory-overhaul\notebook\fonts\Caveat-VariableFont_wght.ttf') 'Caveat.ttf'
+    Step 'mft', 'decode', (& $find 'farcry2_25.mft'), '--out', 'farcry2_25.xml'
+    Step 'mft', 'faces', 'Caveat.ttf'
+    Step 'mft', 'build', 'Caveat.ttf', '--axis', 'wght=600', '--size', '40', '--name', 'Caveat_40', '--out', 'fontmod', '--game', $game, '--preview', 'caveat.png'
 
     # Animations
     $move = & $find 'movemgr.bin'

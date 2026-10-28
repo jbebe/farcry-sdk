@@ -54,7 +54,7 @@ Everything the app does is also a CLI verb, and `jackall-cli` is what the mod bu
 JackAll.exe         one self-contained file - no .NET install needed
 jackall-cli.exe     the same engine on the command line: mod build/restore/inspect/lint,
                     archive extract, fc2model export/extract/inspect, xbt, xbg, fcb, rml,
-                    mgb, move, spk, sbao, sav, xref, domino check, ai
+                    mgb, mft, move, spk, sbao, sav, xref, domino check, ai
 config.ini          your game folder + the mod list; hand-editable, comments preserved
 data\               shipped/generated support files - nothing here is hand-edited
   .itemhashes         hash -> filename dictionary (161,686 names)
@@ -90,3 +90,8 @@ in `src/JackAll.Tests/Fixtures/<Format>/`, which is gitignored because the files
 them out of your own game export. Without them the tests that need them no-op, and a
 `RequiresFixture` canary per class says so. The end-to-end tests also use the installed game, if
 it's present: a no-mod build reproduces the real `patch.dat` byte-for-byte.
+
+## Credits
+
+Fonts are drawn with FreeType. Portions of this software are copyright © 2023 The FreeType Project
+(www.freetype.org). All rights reserved.

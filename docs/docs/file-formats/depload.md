@@ -297,10 +297,45 @@ JackAll's tests pin each one:
 The format's own ceilings are `childIndex`/`childCount` being `u16` (65,535 children per file;
 `world1` uses 29,723) and `childTypeIndex` being `u8` (256 distinct types; 16 are used).
 
+## UI dependency lists
+
+The UI has lists of its own, plain XML at `ui\localized\<aspect>\<lang>\ui\_depload.xml`, one per
+language and screen shape. Each holds 53 top-level resources: a package's `.mgb.desc` for each of 50
+packages, and 3 sound banks. A package's children are its `.mgb`, the packages it uses, and the
+textures, fonts and sounds it draws and plays:
+
+```xml
+<CMagmaConfigUIResource ID="ui\localized\pc\eng\ui\fonts.mgb.desc" crc_ID="615711406" version="2">
+	<CMagmaUIResource ID="ui\localized\pc\eng\ui\fonts.mgb" crc_ID="2178248305" />
+	<CMagmaUIResource ID="ui\fonts\farcry2_25.mft" crc_ID="2187389144" />
+	<CTextureResource ID="ui\fonts\farcry2_25_0.xbt" crc_ID="4044182890" />
+	…
+</CMagmaConfigUIResource>
+```
+
+`crc_ID` is the path's [archive hash](./archives-fat-dat.md). The game loads the list at startup
+(`CFCXUiService::PreloadUiDependencies`, Steam `0x101d0cb0`) **(RE-verified)**:
+
+- **It is what the game reads, not the `.desc`.** A package's `.mgb.desc` carries the same
+  dependencies, but `CMagmaConfigUIResource::ClientProcessRawData` (Steam `0x10554c60`) reads them only
+  when the request manager's depload flag (`+0x2F5`) is off. It is on: the constructor sets it, and
+  animation clips need their world `depload.dat` entries, which only that mode enforces.
+- **A UI file opens only once it is loaded.** Magma opens a file through `CFileReaderNomad::Open`
+  (`FarCry2_server` `0x096f7510`), which takes the resource if it is already loaded and otherwise
+  creates an empty one that fails to open. A new font named in `fonts.mgb` but missing from this list
+  draws nothing; listed under `fonts.mgb.desc`, it draws **(seen in game, 2026-10-28)**. A texture is
+  not held to this: a HUD material on a texture no list names still draws
+  ([engine interop](../magma-ui/engine-interop.md)).
+
+JackAll splits each list per top-level resource, staged as `<file name>.<crc_ID>.xml`, such as
+`ui\localized\pc\eng\ui\_depload.xml\fonts.mgb.desc.615711406.xml`, and merges a resource's
+dependencies as a list, so mods adding to one package all land.
+
 ## Unknowns
 
-- **Whether registration is needed for asset types other than animations.** A texture at an
-  unlisted path renders fine, and an animation does not load at all; nothing else has been tested.
+- **Whether registration is needed for asset types other than animations and UI files.** A texture
+  at an unlisted path renders fine, and an animation does not load at all; nothing else has been
+  tested.
 - **The `_depload.xml` twins are not a byte-exact source for the binary.** In `world1` they agree on
   all 9,718 parents, but 381 parents recur through the nesting and 2,032 localized
   `soundbinary\loc\*.spk` children disagree with the `.dat`, so the XML is a readable sibling rather

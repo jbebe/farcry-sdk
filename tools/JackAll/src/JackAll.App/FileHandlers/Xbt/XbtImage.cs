@@ -67,7 +67,8 @@ public static class XbtImage
     public static (byte[] Rgba, int Width, int Height)? TryDecodeRgbaDds(byte[] dds)
         => XbtPixels.TryDecodeDds(dds);
 
-    private static WriteableBitmap ToBitmap(byte[] rgba, int width, int height)
+    /// <summary>RGBA pixels as a frozen bitmap WPF can show.</summary>
+    public static WriteableBitmap ToBitmap(byte[] rgba, int width, int height)
     {
         // WPF wants BGRA, so the red and blue channels swap on the way in.
         var buffer = new byte[rgba.Length];

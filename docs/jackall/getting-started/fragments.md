@@ -41,15 +41,15 @@ mods\config\inputactionmapcommon.xml\common_gameplay.xml      one action map
 mods\languages\english\oasisstrings.fragment.xml             its strings, one file per language
 mods\ui\localized\pc\eng\ui\hud.mgb\a_flashlight_object.1092050190.xml   one area of the HUD
 mods\ui\localized\pc\eng\ui\hud.mgb\_materials.xml           the HUD's list of textures
-mods\ui\localized\pc\eng\ui\_depload.xml                      a whole file
+mods\ui\localized\pc\eng\ui\_depload.xml\hud.mgb.desc.1430943848.xml   what the HUD preloads
 mods\ui\textures\hud\flashlight_hud_off.xbt                   a whole file
 mods\soundbinary\00fc0a00.spk                                 a whole file
 plugins\flashlight\Flashlight.dll                             an FCSE plugin
 ```
 
 Every other HUD package the game ships, one per language and screen shape, gets the same `hud.mgb`
-fragments. None of the controls files, text tables or HUD packages it changes is in it whole, so it
-works next to any other mod that changes other parts of them.
+and `_depload.xml` fragments. None of the controls files, text tables, HUD packages or dependency
+lists it changes is in it whole, so it works next to any other mod that changes other parts of them.
 
 ## Which files are containers
 
@@ -58,11 +58,12 @@ works next to any other mod that changes other parts of them.
 | Entity libraries: `worlds\<world>\generated\entitylibrary.fcb`, `generated\entitylibrarypatchoverride.fcb` and the DLC's | One archetype | `mods\worlds\world1\generated\entitylibrary.fcb\WeaponProperties\Special\Dart_Rifle.xml` |
 | World sectors, `…\worldsectors\worldsector<N>.data.fcb`, and a world's `omnis`, `managers` and `mapsdata` | One object placed in the world | `mods\levels\w1_c_4\generated\worldsectors\worldsector3331.data.fcb\land.jeepliberty_0.2054243731923553576.xml` |
 | Dependency lists, `<world>_depload.dat` | One resource and everything it loads with it | `mods\worlds\world1\generated\world1_depload.dat\dragunov.3882209901.xml` |
+| UI dependency lists, `ui\localized\<aspect>\<lang>\ui\_depload.xml` | One UI package and everything the game preloads with it | `mods\ui\localized\pc\eng\ui\_depload.xml\hud.mgb.desc.1430943848.xml` |
 | The animation graphs, `graphics\move\movemgr.bin` and `dlc1.bin` | One situation, or one weapon's rules in it | `mods\graphics\move\movemgr.bin\Pawn_Generic_Reload_ch17_w39.1920121392.xml` |
 | The text table, `languages\<language>\oasisstrings.rml` | One string | `mods\languages\english\oasisstrings.fragment.xml`; see [The text table](#the-text-table) |
 | World descriptors, `<world>.game.xml` | One mission, or one section such as the environment | `mods\worlds\world1\generated\world1.game.xml\_environment.xml` |
 | Controls, `config\inputactionmap*.xml` and `config\defaultusercontrols.xml` | One action map or category | `mods\config\inputactionmapcommon.xml\common_gameplay.xml` |
-| Menus and the HUD, `.mgb` | One area, plus the package's lists of materials, strings and exports | `mods\ui\localized\pc\eng\ui\hud.mgb\a_flashlight_object.1092050190.xml` |
+| Menus and the HUD, `.mgb` | One area, plus the package's lists of materials, fonts, font families, strings and exports | `mods\ui\localized\pc\eng\ui\hud.mgb\a_flashlight_object.1092050190.xml` |
 | AI brains, `scripts\game\newbrains\*.ai.rml` | One brain, plan, scanner or task. A plan lists the tasks it owns, so a mod adding a task also ships its plan | `mods\scripts\game\newbrains\mercbrain.ai.rml\LauncherInHand.3303724464.xml` |
 
 Everything else ships whole: textures, sounds, music, models, animation clips, terrain, Lua scripts,
@@ -84,7 +85,8 @@ zip.
   `land.jeepliberty_0.2054243731923553576.xml` and `2054243731923553576.xml` are the same jeep. These
   files sit directly in the container's folder, not in folders of their own.
 - **The rest go by their name:** a controls section such as `common_gameplay.xml`, and the fixed
-  names that start with `_`, such as `_materials.xml`, `_environment.xml` and `_layout.xml`.
+  names that start with `_`, such as `_materials.xml`, `_fonts.xml`, `_environment.xml` and
+  `_layout.xml`.
 
 ## What a fragment holds
 
@@ -147,11 +149,12 @@ warns.
 | Save in the MGB editor | The areas that differ from what the game loads now; an area put back to the original is removed again |
 | Save on the **Animations** tab | The situations you changed |
 | Save on the **AI** tab | Soldier, weapon and curve archetypes; a brain as the plans and tasks that differ; behaviour odds as a whole file |
+| **Make a font** on the **Mods** tab | The font and its family in every `fonts.mgb`, and its files in every UI dependency list; see [Add a font](/jackall/fonts) |
 | **Import legacy mod** | Every piece of every container the old mod changed |
 
 You can also write a fragment by hand: copy one into your workspace with **Mirror** on the Files tab,
 edit it, and click **Rescan mods**. On the command line, `mgb fragments`, `move fragments`,
-`ai fragments` and `depload add --fragment` write them; see
+`ai fragments`, `depload add --fragment` and `mft build` write them; see
 [Convert game files on the command line](/jackall/cli-formats).
 
 ### The text table

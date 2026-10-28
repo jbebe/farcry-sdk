@@ -7,6 +7,7 @@ using JackAll.Cli.Commands.Fc2Model;
 using JackAll.Cli.Commands.Fcb;
 using JackAll.Cli.Commands.Hkx;
 using JackAll.Cli.Commands.Legacy;
+using JackAll.Cli.Commands.Mft;
 using JackAll.Cli.Commands.Mgb;
 using JackAll.Cli.Commands.Mod;
 using JackAll.Cli.Commands.Move;
@@ -103,6 +104,27 @@ app.Configure(config =>
         xbt.AddCommand<XbtBuildCommand>("build")
             .WithDescription("Reassemble an .xbt from a .dds and its .xml header.")
             .WithExample("xbt", "build", "texture.dds", "texture.xml");
+    });
+
+    // --- .mft fonts -----------------------------------------------------
+    config.AddBranch("mft", mft =>
+    {
+        mft.AddCommand<MftDecodeCommand>("decode")
+            .WithDescription("Decode a Magma font to editable XML.")
+            .WithExample("mft", "decode", "farcry2_25.mft");
+        mft.AddCommand<MftEncodeCommand>("encode")
+            .WithDescription("Build a Magma font back from its XML.")
+            .WithExample("mft", "encode", "farcry2_25.xml");
+        mft.AddCommand<MftFacesCommand>("faces")
+            .WithDescription("List the fonts a TrueType, OpenType or collection file holds.")
+            .WithExample("mft", "faces", "Caveat-VariableFont_wght.ttf");
+        mft.AddCommand<MftBuildCommand>("build")
+            .WithDescription(
+                "Draw a font from a TrueType or OpenType file into a mod layer: the .mft and its pages, "
+                + "and with --game its font and family in every fonts.mgb and its files in every UI "
+                + "dependency list, as fragments.")
+            .WithExample("mft", "build", "Caveat-VariableFont_wght.ttf", "--face", "SemiBold", "--size", "40",
+                "--out", @"mods\inventory-overhaul\layer", "--game", @"C:\Games\Far Cry 2");
     });
 
     // --- .fc2model packs -------------------------------------------------

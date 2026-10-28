@@ -7,7 +7,8 @@ namespace JackAll.Core.Mods;
 
 /// <summary>
 /// A Magma UI package (`.mgb`) as an <see cref="IContainerSplitter"/>: one fragment per top-level
-/// area, plus the material list, the string table and the exported-object table under reserved ids.
+/// area, plus the material list, the fonts, the font families, the string table and the
+/// exported-object table under reserved ids.
 /// </summary>
 /// <remarks>
 /// A fragment is the area as <see cref="MgbXml"/> renders it, staged as
@@ -31,6 +32,8 @@ public sealed class MgbContainerSplitter(IEnumerable<string>? names = null) : IC
     private static readonly (string Id, string Element)[] Sections =
     [
         ("_materials.xml", MaterialsElement),
+        ("_fonts.xml", "FONTS"),
+        ("_fontfamilies.xml", "FONTFAMILIES"),
         ("_strings.xml", "STRINGTABLE"),
         ("_exports.xml", "GENERICOBJECTTABLE"),
     ];

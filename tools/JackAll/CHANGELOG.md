@@ -2,6 +2,21 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **Make a font**, on the Mods tab, draws a font the game can use from any TrueType or OpenType
+  file: pick one of the fonts the file holds, set a variable font's weight or other axes, the size
+  and the name, and see sample text set as the game sets it before staging it. It is staged in every
+  `fonts.mgb` and every UI dependency list, so a UI text can name it as its font family.
+- **`.mft` fonts in the Files tab** show what they hold and sample text set from their own pages.
+- **`jackall-cli mft decode`, `encode`, `faces` and `build`** do the same on the command line.
+- **The UI dependency lists merge as fragments.** A mod ships only the entries of
+  `ui\localized\<aspect>\<lang>\ui\_depload.xml` it changes, one per package, and mods adding to the
+  same package all land; two mods shipping the list whole used to replace each other.
+- **A UI package's fonts and font families are fragments** (`_fonts.xml`, `_fontfamilies.xml`), so
+  mods adding fonts to `fonts.mgb` work together.
+
 ## [1.7.0] - 2026-10-28
 
 ### Added

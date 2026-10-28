@@ -6,6 +6,7 @@ using JackAll.Core.Mods;
 using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
 using JackAll.Core.Xrefs;
+using JackAll.Tools.Mft;
 using JackAll.Tools.World;
 using JackAll.Tools.Xbm;
 
@@ -246,8 +247,8 @@ public sealed partial class MainViewModel
         Reindex();
     }
 
-    /// <summary>Puts a file into the workspace by game path, which may be one no archive has; the
-    /// caller reindexes.</summary>
+    /// <summary>Puts a file, or a fragment by its staged path, into the workspace by game path, which
+    /// may be one no archive has; the caller reindexes.</summary>
     public void Stage(string path, byte[] content)
     {
         if (Workspace is null)
@@ -255,6 +256,24 @@ public sealed partial class MainViewModel
             throw new InvalidOperationException("The workspace is not available.");
         }
         Workspace.Stage(NameHash.Compute(path), path, Path.GetExtension(path).TrimStart('.'), content);
+    }
+
+    /// <summary>Stages a font in the workspace, registered in every UI package the game ships, and
+    /// returns how many files that took.</summary>
+    public Task<int> StageFontAsync(BuiltFont built) => StageGeneratedAsync(read => FontLayer.Files(built, read));
+
+    /// <summary>Stages the files a generator makes from the game's own, files and fragments by their
+    /// path, with one reindex, and returns how many.</summary>
+    private async Task<int> StageGeneratedAsync(Func<Func<string, byte[]?>, IReadOnlyDictionary<string, byte[]>> generate)
+    {
+        GameVfs vfs = _vfs ?? throw new InvalidOperationException("The game is not loaded.");
+        IReadOnlyDictionary<string, byte[]> files = await Task.Run(() => generate(path => vfs.ReadOriginal(NameHash.Compute(path))));
+        foreach ((string path, byte[] content) in files)
+        {
+            Stage(path, content);
+        }
+        await ReindexAsync(includeFragments: true);
+        return files.Count;
     }
 
     /// <summary>The hashlist every name in the app is resolved through.</summary>

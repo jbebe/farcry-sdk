@@ -359,9 +359,10 @@ canvas is `REGION="0 0 0.7109375 0.515625"`, and draws uncropped and unstretched
 Every stock HUD texture is listed as a child of the package's `.mgb.desc` in that variant's
 `ui\localized\<aspect>\<lang>\ui\_depload.xml`, as
 `<CTextureResource ID="ui\textures\hud\x.xbt" crc_ID="<CRC32 of the path>" />`; the flashlight's are
-listed the same way. A texture missing from that list still loads: the inventory overhaul's HUD
-materials on the shop's `textures\guns` pictures, which no list gives the HUD, draw in game
-**(seen in game, 2026-10-27)**.
+listed the same way, as a fragment of the list. A texture missing from that list still loads: the
+inventory overhaul's HUD materials on the shop's `textures\guns` pictures, which no list gives the
+HUD, draw in game **(seen in game, 2026-10-27)**. A font does not: see
+[UI dependency lists](../file-formats/depload.md#ui-dependency-lists).
 
 :::danger[An image's corner colours multiply its alpha]
 `ImageState`'s `COLOR1`-`COLOR4` scale the image, alpha included. The same icon drew with

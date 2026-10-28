@@ -29,19 +29,11 @@ public sealed partial class MainViewModel
     /// <summary>Stages a new world's files, made from tmpla as the game ships it, in the workspace.</summary>
     public async Task CreateWorldAsync(string name, int side)
     {
-        GameVfs vfs = _vfs ?? throw new InvalidOperationException("The game is not loaded.");
-        FolderModLayer workspace = Workspace ?? throw new InvalidOperationException("There is no workspace.");
-        if (NewWorld.Ships(vfs, name))
+        if (_vfs is { } vfs && NewWorld.Ships(vfs, name))
         {
             throw new InvalidOperationException($"The game ships a world named {name}.");
         }
-        SortedDictionary<string, byte[]> files = await Task.Run(
-            () => NewWorld.Create(name, side, path => vfs.ReadOriginal(NameHash.Compute(path))));
-        foreach ((string path, byte[] bytes) in files)
-        {
-            workspace.Stage(FolderModLayer.StorageKeyOf(path), path, System.IO.Path.GetExtension(path), bytes);
-        }
-        await ReindexAsync(includeFragments: true);
+        await StageGeneratedAsync(read => NewWorld.Create(name, side, read));
     }
 
     /// <summary>Every entity placed in <paramref name="world"/>'s sectors, by id; empty for an unknown world.</summary>

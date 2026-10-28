@@ -1,3 +1,4 @@
+using JackAll.App.FileHandlers.Mft;
 using JackAll.Core.Mods;
 using JackAll.Tools.World;
 using Microsoft.Win32;
@@ -5,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows.Controls;
 using System.Windows;
+using System.Windows.Input;
 
 namespace JackAll.App;
 
@@ -133,6 +135,31 @@ public partial class MainWindow
     }
 
     private void RescanMods_Click(object sender, RoutedEventArgs e) => _vm.RescanMods();
+
+    private async void MakeFont_Click(object sender, RoutedEventArgs e)
+    {
+        var wizard = new FontWizardWindow { Owner = this };
+        if (wizard.ShowDialog() != true || wizard.Built is not { } built)
+        {
+            return;
+        }
+
+        try
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+            int staged = await _vm.StageFontAsync(built);
+            _vm.Status = $"Staged {built.Font.Name}, {staged} file(s). A UI text draws in it once its FONTFAMILY names "
+                + $"{built.Font.Name}; deploy mods to see it in game.";
+        }
+        catch (Exception ex)
+        {
+            Warn($"Couldn't stage that font: {ex.Message}");
+        }
+        finally
+        {
+            Mouse.OverrideCursor = null;
+        }
+    }
 
     /// <summary>Reports archetype edits a later entity library overrides - the silent failure the
     /// library's replace-by-name rule makes easy, since the edited file really did change.</summary>

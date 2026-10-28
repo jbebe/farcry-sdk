@@ -26,6 +26,7 @@ public static class ContainerFormats
     public static bool IsContainerSegment(string segment)
         => segment.EndsWith(FcbSuffix, StringComparison.OrdinalIgnoreCase)
            || IsDepLoad(segment)
+           || IsUiDepLoad(segment)
            || IsMoveGraph(segment)
            || IsStringTable(segment)
            || IsWorldDescriptor(segment)
@@ -40,6 +41,9 @@ public static class ContainerFormats
     public static bool IsWorldDescriptor(string fileName)
         => WorldDescriptorContainerSplitter.IsWorldDescriptor(fileName);
 
+    /// <summary>A UI dependency list, which splits per package.</summary>
+    public static bool IsUiDepLoad(string path) => UiDepLoadContainerSplitter.IsUiDepLoad(path);
+
     /// <summary>A Magma UI package, which splits per area.</summary>
     public static bool IsMagmaPackage(string fileName) => MgbContainerSplitter.IsPackage(fileName);
 
@@ -52,8 +56,9 @@ public static class ContainerFormats
     /// value tree, and so belongs in a text view instead of the value editor.
     /// </summary>
     public static bool IsPlainDocumentFragment(string container, string fragmentId)
-        => IsDepLoad(container) || IsWorldDescriptor(container) || IsInputConfig(container) || IsMagmaPackage(container)
-           || IsBrainWorkspace(container) || ContainerLayout.IsLayoutId(fragmentId);
+        => IsDepLoad(container) || IsUiDepLoad(container) || IsWorldDescriptor(container)
+           || IsInputConfig(container) || IsMagmaPackage(container) || IsBrainWorkspace(container)
+           || ContainerLayout.IsLayoutId(fragmentId);
 
     /// <summary>
     /// Whether a fragment's base-game form is worth diffing against. A world sector's layout states
@@ -124,6 +129,11 @@ public static class ContainerFormats
         if (IsInputConfig(fileName))
         {
             return InputConfigContainerSplitter.Instance;
+        }
+
+        if (IsUiDepLoad(fileName))
+        {
+            return UiDepLoadContainerSplitter.Instance;
         }
 
         if (IsMagmaPackage(fileName))

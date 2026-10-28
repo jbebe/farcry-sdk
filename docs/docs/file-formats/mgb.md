@@ -698,13 +698,16 @@ could not coexist. JackAll splits a package into fragments the way it splits
 |---|---|
 | `<name>.<hash>.xml` | One top-level area with its elements, keyframes and actions |
 | `_materials.xml` | The material list |
+| `_fonts.xml` | The `FONTS` list |
+| `_fontfamilies.xml` | The `FONTFAMILIES` list |
 | `_strings.xml` | The string table |
 | `_exports.xml` | The `GENERICOBJECTTABLE` |
 
 The number is the area's name hash in decimal and is what binds; the label is the name, when the
 package spells one. A fragment is written in the XML interchange format. The header, the type table,
-the fonts and the package's own `USERDATA` are in no fragment, so a mod that changes them still
-ships the whole package.
+the embedded `FONTSUBSTS` and the package's own `USERDATA` are in no fragment, so a mod that changes
+them still ships the whole package. A new font is a `FONT` and a `FONTFAMILY` in `fonts.mgb`'s two
+lists; see [`.mft`](./mft.md#adding-a-font).
 
 Names are unique in every scope a merge pairs by, across all 590 retail packages: areas in a
 package, elements in an area, keyframes in an element, materials, exports and strings. A merge

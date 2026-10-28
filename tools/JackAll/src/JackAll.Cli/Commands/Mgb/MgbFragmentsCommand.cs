@@ -49,7 +49,7 @@ public sealed class MgbFragmentsCommand : CliCommand<MgbFragmentsCommand.Setting
         {
             AnsiConsole.MarkupLine(
                 "[red]This package removes an area or list, or changes something outside them - the "
-                + "header, the type table or the fonts - which no fragment carries. Ship the whole package.[/]");
+                + "header or the type table - which no fragment carries. Ship the whole package.[/]");
             return 1;
         }
 

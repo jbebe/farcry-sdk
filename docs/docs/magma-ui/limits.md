@@ -63,8 +63,10 @@ degradation — and the JackAll encoder rejects it before you get there.
   runs, no inline colour, no markup. This is why templates carry `Wwwwwwwwwww` placeholders: sizing
   is done by eye at author time.
 - **New fonts without a font package.** Font families resolve out of `\fonts.mgb`; the corpus uses
-  exactly two. Embedding a font blob is possible (`<FONTSUBST>` carries one), but no shipped package
-  does it, so that path is untested.
+  exactly two. A new pixmap font works when `fonts.mgb` declares it and the UI dependency list
+  preloads its files **(seen in game, 2026-10-28)**; see [`.mft`](../file-formats/mft.md#adding-a-font).
+  Embedding a font blob is possible (`<FONTSUBST>` carries one), but no shipped package does it, so
+  that path is untested.
 - **Vector drawing.** `RectShape` (optionally outlined, four corner colours) is the only untextured
   primitive. Everything else is a textured quad.
 

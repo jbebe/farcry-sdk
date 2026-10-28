@@ -370,6 +370,10 @@ function Set-UiValue($Element, [string]$Value) {
     $p.SetValue($Value)
 }
 
+function Set-UiRange($Element, [double]$Value) {
+    $Element.GetCurrentPattern([System.Windows.Automation.RangeValuePattern]::Pattern).SetValue($Value)
+}
+
 function Get-UiValue($Element) {
     $p = $null
     if ($Element.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$p)) { return $p.Current.Value }

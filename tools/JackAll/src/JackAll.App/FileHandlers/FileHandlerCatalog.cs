@@ -2,6 +2,7 @@ using System.Windows.Controls;
 using JackAll.App.FileHandlers.DepLoad;
 using JackAll.App.FileHandlers.Fcb;
 using JackAll.App.FileHandlers.Mab;
+using JackAll.App.FileHandlers.Mft;
 using JackAll.App.FileHandlers.Mgb;
 using JackAll.App.FileHandlers.Rml;
 using JackAll.App.FileHandlers.Sbao;
@@ -52,12 +53,13 @@ public static class FileHandlerCatalog
     /// different bank entirely (see <see cref="SpkFileHandler"/>); it takes a *sound id*, not a path
     /// hash - the two are different spaces, and resolving one as the other silently finds nothing.
     /// <paramref name="findRigs"/> is the mab case's, resolving the rigs a bank plays on, which are
-    /// filed elsewhere (see <see cref="MabPlayer"/>).
+    /// filed elsewhere (see <see cref="MabPlayer"/>). <paramref name="readByPath"/> is the mft case's,
+    /// reading the pages a font names.
     /// </summary>
     public static UserControl? CreateView(
         VfsFile file, Func<byte[]> readContent, Action<byte[]> replaceContent, Action<EditorKind> openEditor,
         Func<byte[]?> readOriginal, Func<uint, VfsFile?> resolveSoundId, Action<VfsFile> navigateTo,
-        Func<MabFile, BankRigs> findRigs)
+        Func<MabFile, BankRigs> findRigs, Func<string, byte[]?> readByPath)
         => file switch
         {
             // A dependency list, a mission element and a sector's layer placement are all small
@@ -96,6 +98,7 @@ public static class FileHandlerCatalog
             { Type.Extension: "sdat" } => new SdatFileHandler(file.FileName, readContent()),
             { Type.Extension: "spk" } => new SpkFileHandler(file.FileName, readContent(), replaceContent, resolveSoundId, navigateTo),
             { Type.Extension: "mgb" } => new MgbFilePreviewHandler(readContent(), () => openEditor(EditorKind.Mgb)),
+            { Type.Extension: "mft" } => new MftFileHandler(file.FileName, file.Directory, readContent(), readByPath),
             { Type.Extension: "hkx" } => BuildLauncherPreview(file, () => HkxText(readContent()),
                 () => readOriginal() is { } original ? HkxText(original) : null, () => openEditor(EditorKind.Hkx),
                 "Havok collision and physics bodies - open it in the HKX editor to see them over the model.",

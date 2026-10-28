@@ -90,6 +90,7 @@ public static class FileTypeSniffer
         // Formats whose magic sits at a fixed offset other than 0 have to be checked before the
         // generic magic-at-0 scan, or a coincidental first word would shadow them.
         if (StartsWith(header, "MAGMA")) return new FileType("ui", "mgb");
+        if (StartsWith(header, "Magma Font")) return new FileType("ui", "mft");
         if (StartsWith(header, "BIK")) return new FileType("video", "bik");
         if (StartsWith(header, "UEF")) return new FileType("ui", "feu");
         if (header.Length >= 15 && StartsWith(header, "SQLite format 3")) return new FileType("db", "sqlite3");
@@ -155,7 +156,7 @@ public static class FileTypeSniffer
         "xml" or "rml" => "misc",
         "bik" => "video",
         "hkx" => "physics",
-        "mgb" or "feu" or "desc" => "ui",
+        "mgb" or "mft" or "feu" or "desc" => "ui",
         "sdat" => "terrain",
         _ => "misc",
     };

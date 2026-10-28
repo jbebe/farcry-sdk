@@ -78,6 +78,8 @@
                                 <Button Content="Import legacy mod" Click="ImportLegacy_Click" Style="{StaticResource ToolbarButton}" />
                                 <Button Content="Apply .fc2model" Click="ApplyPack_Click" Style="{StaticResource ToolbarButton}"
                                         ToolTip="Encodes a model pack a 3D editor changed and stages the changed files into the workspace." />
+                                <Button Content="Make a font" Click="MakeFont_Click" Style="{StaticResource ToolbarButton}"
+                                        ToolTip="Draws a font from a TrueType or OpenType file and stages it into the workspace, registered so a UI text can name it as its font family." />
                                 <Button Content="Rescan mods" Click="RescanMods_Click" Style="{StaticResource ToolbarButton}"
                                         ToolTip="Re-reads every mod's zip and the workspace folder from disk - picks up a mod replaced or edited outside JackAll without needing a restart." />
                                 <Button Content="Check for dead edits" Click="LintArchetypes_Click" Style="{StaticResource ToolbarButton}"
