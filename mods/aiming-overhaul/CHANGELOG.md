@@ -3,6 +3,35 @@
 Notable changes to Aiming Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.0] - 2026-10-29
+
+### Added
+- **Lean**, on two new controls in Options > Controls under Movements: Lean left on Q and Lean
+  right on E. The upper body slides out and bends to that side, so the eye comes about 25 cm past a
+  corner, with the view, the arms and the gun, and shots leave from where the eye now is. Hold the
+  key to lean while it is held, or tap it to lean until it is tapped again. Sprinting ends a lean.
+- **The sway moves the aim.** The breath and a slow wander now move the view, the gun and the shot
+  together, by about 0.2° down iron sights, 0.35° through a holographic sight and 0.7° through a
+  magnifying scope, and the mouse corrects it as it would a real hand. Each breath draws in, lets
+  out and rests calmly at the bottom: the moment to time a shot.
+- **Heart rate**, from 70 a minute at rest up to 170. It climbs as stamina runs down and jumps with
+  a wound or a blast nearby. Each beat jolts the aim, and a racing heart breathes faster, sways
+  wider and holds the breath for less. Down a magnifying scope a racing heart is heard faintly.
+- **Stance.** Crouched and still, the sway is half what it is standing; moving widens it.
+- **Hold breath** on the Dart Rifle, the M1903, the Dragunov and the AS50: hold sprint down the
+  scope and the breath settles and the aim steadies, for 4 s with a calm heart and 2 s with a racing
+  one, heard drawn in and let out. Those four scopes sway twice as far when the breath is not held.
+- **Gun near walls.** A gun that would reach into a wall swings down out of it and does not fire
+  until it is back up. The sights come back by themselves if the aim key is still held.
+- **Hold breath** and **Gun near walls** switches in the Mod Configuration menu.
+
+### Changed
+- **Interact moves to F, throw grenade to G and next throwable to T** by default, to free Q and E
+  for the lean. All three can be rebound. Leaving a vehicle or a mounted gun, a buddy rescue, the
+  machete finish and the watch stay on E and Q, which the game never lets be rebound.
+- **No random spread down the AR-16's and the MGL-140's scopes**, so a scoped shot goes where the
+  reticle is, as it already did on the sniper rifles.
+
 ## [1.2.0] - 2026-10-15
 
 ### Added

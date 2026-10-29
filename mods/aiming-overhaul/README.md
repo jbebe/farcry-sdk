@@ -44,7 +44,7 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   or the breath runs out, whichever comes first, lightly with more than half the stamina left and
   harder below, and while it is in each beat of the heart is heard. Down those scopes the sprint key
   does nothing else; down any other gun's sights it does what the game does.
-- **Lean, unfinished.** Lean left or Lean right slides the upper body 10 cm to that side and bends
+- **Lean.** Lean left or Lean right slides the upper body 10 cm to that side and bends
   it 15° from the lower back, over a quarter of a second, so the eye moves out about 25 cm. The
   head, the view, the arms and the gun go with it, and shots leave from where the eye now is. Held, the key leans for as long as it is held;
   tapped, let go within a quarter of a second, it leans until it is tapped again. The other key

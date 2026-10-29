@@ -1,20 +1,36 @@
 # Aiming Overhaul
 
-How aiming and shooting look in Far Cry 2: sway and a blurred gun down the iron sights, scopes seen
-from the eyepiece with the world around them, and tracers. It changes only how things look: no
-damage, spread or recoil. Its weapon data sets only which guns fire tracers, how fast they fly,
-the scopes' iron-sight effect and how the mod draws each scope, so it merges with mods that change
-anything else about a weapon.
+How the player aims in Far Cry 2, from the hands to the shot leaving the gun: sway driven by the
+breath and the heart, holding the breath on a sniper scope, leaning, a gun that swings down at walls,
+a blurred gun down the iron sights, scopes seen from the eyepiece with the world around them, and
+tracers. It changes no damage and no AI. Its weapon data sets only which guns fire tracers, how fast
+they fly, how the mod draws each scope and which guns can hold the breath, so it merges with mods
+that change anything else about a weapon.
 
-- **Sway.** Down the iron sights the eye drifts a couple of millimetres off the gun and rises and
-  falls with a slow breath, so the rear and front sights drift out of line as on a real gun. Shots
-  still go where the game sends them.
+- **Sway.** The breath and a slow wander move the aim, the view, the gun and the shot together, by
+  about 0.2° down iron sights, 0.35° through a holographic sight and 0.7° through a magnifying
+  scope; the mouse corrects it as it would a real hand. Each breath draws in, lets out and rests
+  calmly at the bottom: the moment to time a shot. Down the iron sights the eye also drifts a couple
+  of millimetres off the gun, so the rear and front sights drift out of line as on a real gun.
+- **Heart rate**, from 70 a minute at rest up to 170. It climbs as stamina runs down and jumps with
+  a wound or a blast nearby. Each beat jolts the aim, and a racing heart breathes faster, sways
+  wider and holds the breath for less. Down a magnifying scope a racing heart is heard faintly.
+- **Stance.** Crouched and still, the sway is half what it is standing; moving widens it.
+- **Hold breath** on the Dart Rifle, the M1903, the Dragunov and the AS50: hold sprint down the
+  scope and the breath settles and the aim steadies, for 4 s with a calm heart and 2 s with a racing
+  one. Held longer, the hands shake. Those four scopes sway twice as far when the breath is not held.
+- **Lean** on Q and E. The upper body slides out and bends to that side, so the eye comes about
+  25 cm past a corner, with the view, the arms and the gun, and shots leave from where the eye now
+  is. Hold the key to lean while it is held, or tap it to lean until it is tapped again.
+- **Gun near walls.** A gun that would reach into a wall swings down out of it and does not fire
+  until it is back up.
 - **Gun blur.** Down the iron sights the eye focuses on the front sight and the rest of the gun goes
   out of focus by how far it is from it, the rear sight most. A pistol's sights are too close
   together to blur.
 - **Scope eyepiece.** Instead of a long tube, every scope is a black, out-of-focus eyepiece spanning
   80% of the screen, with the zoomed view filling its opening. The view inside is seen through
-  glass, and the scope trails the look a little and kicks back with each shot.
+  glass, and the scope trails the look a little and kicks back with each shot. The AR-16's and the
+  MGL-140's scopes lose the game's random spread, so a scoped shot goes where the reticle is.
 - **Reticles**, new in every scope: a hunting duplex on the Dart Rifle and the M1903, a PSO-1 with
   its rangefinder on the Dragunov, a red tactical mil-scale on the AS50, and a lit holographic
   chevron on the AR-16 and the MGL-140. They are plain PNG files in
@@ -27,6 +43,13 @@ anything else about a weapon.
   shots included: bright orange streaks at 350 m/s, visible however far off. One in six glances off
   where it lands, up into the air.
 
+## Controls
+
+Two new controls, rebindable in Options > Controls under Movements: **Lean left** on Q and **Lean
+right** on E. To free those keys the defaults move: interact to F, throw grenade to G and next
+throwable to T. E and Q stay as the game had them where the game never lets them be rebound:
+leaving a vehicle or a mounted gun, a buddy rescue, the machete finish and the watch.
+
 ## Settings
 
 In the **Mod Configuration** menu, and under `[AimingOverhaul]` in `bin\fcse.ini`:
@@ -34,6 +57,8 @@ In the **Mod Configuration** menu, and under `[AimingOverhaul]` in `bin\fcse.ini
 | Setting | Values | Default |
 |---|---|---|
 | Sway | Yes / No | Yes |
+| Hold breath | Yes / No | Yes |
+| Gun near walls | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
 | Iron sight zoom | Yes / No | Yes |
 | Scope shadow | Yes / No | Yes |
@@ -41,10 +66,11 @@ In the **Mod Configuration** menu, and under `[AimingOverhaul]` in `bin\fcse.ini
 | Scope surroundings | Yes / No | Yes |
 | Tracers | Yes / No | Yes |
 
-The scope shadow needs the eyepiece, whose opening it shades. With Iron sight zoom off, the view
-doesn't zoom in down iron sights; scopes still magnify. With Tracers off, your own shots leave
-none, none ricochets, and they are drawn as the game draws them; which guns fire them and how fast
-they fly stay as the mod's weapon data sets them.
+With Sway off neither the eye nor the aim drifts. With Hold breath off, sprint down the sights does
+what the game does with it. The scope shadow needs the eyepiece, whose opening it shades. With Iron
+sight zoom off, the view doesn't zoom in down iron sights; scopes still magnify. With Tracers off,
+your own shots leave none, none ricochets, and they are drawn as the game draws them; which guns
+fire them and how fast they fly stay as the mod's weapon data sets them.
 
 ## Requirements
 
@@ -53,8 +79,8 @@ they fly stay as the mod's weapon data sets them.
 
 ## Installing
 
-This archive is a JackAll layer: `mods\` at its root is the weapon data, `plugins\` is the FCSE
-plugin, and both installers read that same shape.
+This archive is a JackAll layer: `mods\` at its root is the weapon data, the controls and the breath
+sounds, `plugins\` is the FCSE plugin, and both installers read that same shape.
 
 - **Vortex** — with the Far Cry 2 extension installed, drop the zip in and enable it.
 - **JackAll** — add the zip in the app, or from the command line:
@@ -69,5 +95,8 @@ jackall-cli mod restore --game "C:\Games\Far Cry 2"
 ## Compatibility
 
 - **Mods that change weapons' stats or data** merge with it field by field.
-- **Mods that change the same fields** — a weapon's tracer settings or its iron-sight effect — clash
-  on those fields, and the installer reports it.
+- **Mods that change the same fields** — a weapon's tracer settings, its iron-sight effect or its
+  spread down a scope — clash on those fields, and the installer reports it.
+- **Mods that change the controls**, such as Flashlight, combine with it control by control. One
+  that rebinds interact, throw grenade or next throwable too clashes on that control, and the
+  installer reports it.
