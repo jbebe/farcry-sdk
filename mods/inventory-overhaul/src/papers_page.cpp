@@ -92,7 +92,7 @@ namespace {
             opening.erase(word != std::wstring::npos ? word : kOpening);
             opening += L"\u2026";
         }
-        model.Text("IO_POSTIT_WRITING", std::move(opening));
+        model.Text("IO_POSTIT_QUOTE", std::move(opening));
     }
 
     // The paper read whole, on the sheet over the right page.
@@ -113,9 +113,6 @@ namespace {
         model.Text("IO_READER_CAPTION", pictured ? sheets[sheet] : L"");
         model.Text("IO_READER_SHEET", sheets.size() > 1 ? std::to_wstring(sheet + 1) + L" / " + std::to_wstring(sheets.size())
                                                         : L"");
-        if (sheets.size() > 1) {
-            model.Prompt(L"cycleweapon", L"Next sheet");
-        }
     }
 
     // The game words a tape as "RECORDED 17/09/2008 - <what it is about>".
@@ -165,8 +162,6 @@ int PapersPage(Model& model, int& selected, bool used, int& sheet) {
     }
     if (tape >= 0) {
         sheet = -1;
-    } else {
-        model.Prompt(L"startshooting", sheet >= 0 ? L"Put back" : L"Read");
     }
     if (sheet >= 0) {
         Reader(model, *papers[selected], sheet);

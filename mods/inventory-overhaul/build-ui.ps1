@@ -108,19 +108,18 @@ function Image([string]$name, [string]$material, [string]$package, [double]$x, [
 }
 
 # A line of Farcry2 ink, as the pause menu's pages set theirs: no shadow, one line, cut with an
-# ellipsis; or, with `wrap`, prose wrapped from the top of its box. `shadow` casts the HUD's own, and
-# `hand` writes it in Caveat, the notebook's handwriting.
+# ellipsis; or, with `wrap`, prose wrapped from the top of its box. `hand` writes it in Caveat, the
+# notebook's handwriting.
 function Text([string]$name, [string]$string, [double]$x, [double]$y, [double]$w, [double]$h, [int]$height,
               [string]$colour, [string]$align = "LEFT", [double]$rotation = 0, [string]$alignY = "CENTER",
-              [bool]$wrap = $false, [bool]$italic = $false, [bool]$shadow = $false, [bool]$hand = $false) {
+              [bool]$wrap = $false, [bool]$italic = $false, [bool]$hand = $false) {
     $family = if ($hand) { $Caveat } else { $Farcry2 }
     $tracking = if ($hand -or $height -ge 22) { 0 } elseif ($height -ge 19) { 65516 } else { 65521 }
     $wrapping = $wrap.ToString().ToLowerInvariant()
     $ellipsis = (-not $wrap).ToString().ToLowerInvariant()
     $italics = $italic.ToString().ToLowerInvariant()
-    $shade, $offset = if ($shadow) { "64000000", 2 } else { "FF000000", 0 }
     $state = "<TextState INTERPOLATIONFLAGS=`"0`" STATECOLOR=`"$colour`" $(Placement $x $y $w $h $rotation) " +
-        "OFFSETY=`"0`" ABSOFFSETY=`"0`" SHADOWCOLOR=`"$shade`" HEIGHT=`"$height`" SHADOWOFFSETX=`"$offset`" SHADOWOFFSETY=`"$offset`" " +
+        "OFFSETY=`"0`" ABSOFFSETY=`"0`" SHADOWCOLOR=`"FF000000`" HEIGHT=`"$height`" SHADOWOFFSETX=`"0`" SHADOWOFFSETY=`"0`" " +
         "LEADING=`"$height`" TRACKING=`"$tracking`" />"
     $body = "<Text useStringTable=`"false`" STRING=`"$string`" ALIGNMENTX=`"$align`" ALIGNMENTY=`"$alignY`" WRAPPING=`"$wrapping`" " +
         "CLIPPING=`"false`" ELLIPSIS=`"$ellipsis`" AUTOSIZED=`"false`" BOLD=`"false`" ITALICS=`"$italics`" UNDERLINED=`"false`" " +
@@ -329,14 +328,14 @@ List papers tape $right ($Below + 52) 4 40 io_tape 40 20 (Colour "000000" 0.8)
 Heading journal t_io_reputation "" $left
 $areas.journal.Add((Text t_io_reputation_prose "" $left 80 $width 400 22 $inkFull LEFT 0 TOP $true))
 Heading journal t_io_jobs "JOB" $right
-$areas.journal.Add((Text t_io_job "" $right 80 $width 120 26 $inkFull LEFT 0 TOP $true -hand $true))
+$areas.journal.Add((Text t_io_job "" $right 80 $width 120 22 $inkFull LEFT 0 TOP $true))
 $areas.journal.Add((Text t_io_jobs_none "No job right now." $right 80 $width 22 18 $countInk))
 Heading journal t_io_objectives "OBJECTIVES" $right 216
 foreach ($k in 1, 2) {
-    $areas.journal.Add((Text "t_io_objective$k" "" $right (252 + ($k - 1) * 68) $width 64 24 $inkFull LEFT 0 TOP $true -hand $true))
+    $areas.journal.Add((Text "t_io_objective$k" "" $right (252 + ($k - 1) * 68) $width 64 20 $inkFull LEFT 0 TOP $true))
 }
 Heading journal t_io_underground "UNDERGROUND" $right 400
-$areas.journal.Add((Text t_io_underground_job "" $right 436 $width 88 24 $inkFull LEFT 0 TOP $true -hand $true))
+$areas.journal.Add((Text t_io_underground_job "" $right 436 $width 88 20 $inkFull LEFT 0 TOP $true))
 foreach ($name in "t_io_reputation", "t_io_reputation_prose", "t_io_job", "t_io_jobs_none", "t_io_objectives",
     "t_io_objective1", "t_io_objective2", "t_io_underground", "t_io_underground_job") {
     Export (AreaPath a_io_journal) $name
@@ -418,8 +417,6 @@ $postIt.Add((Text t_io_postit_value2 "" 81 174 120 24 20 $inkFull RIGHT))
 $postIt.Add((Text t_io_postit_state "" 140 148 252 24 20 $inkFull))
 $postIt.Add((Text t_io_postit_status "" 140 148 252 24 20 $inkFull RIGHT))
 $postIt.Add((Text t_io_postit_quote "" 26 176 366 84 17 $inkFull LEFT 0 TOP $true))
-# A paper's own words, in its writer's hand, in the same place.
-$postIt.Add((Text t_io_postit_writing "" 26 172 366 88 21 $inkFull LEFT 0 TOP $true -hand $true))
 # The game's upgrade icons, faint until bought, in a row after a line's label: a gun's operation and
 # repair manuals and its bandolier on the third line, under its condition and ammo; a belt item's
 # first aid manuals or bandolier on the second, under its count.
@@ -436,7 +433,7 @@ Upgrades up "manual", "repair", "ammo" 201
 Upgrades belt_up "ammo", "ammo" 175
 $postIt.Add((Text t_io_postit_note "" 26 236 366 22 18 $inkFull))
 foreach ($name in "t_io_postit_name", "t_io_postit_sub", "t_io_postit_about", "t_io_postit_value1", "t_io_postit_value2",
-        "t_io_postit_state", "t_io_postit_status", "t_io_postit_quote", "t_io_postit_writing", "t_io_postit_note") {
+        "t_io_postit_state", "t_io_postit_status", "t_io_postit_quote", "t_io_postit_note") {
     Export $PostItPath $name
 }
 # Each rating is a brush stroke as long as the rating, the way the loadout draws them, over a faint
@@ -488,25 +485,6 @@ Export $PagePath a_io_flip
 $Exports.Add("<GENERICOBJECT name=`"IO_FLIP_AREA`"><LINK slot=`"44`" LASTOBJECTTYPE=`"Area`" IDS=`"$PagePath a_io_flip #5B36589B`" /></GENERICOBJECT>")
 # The page's last image.
 $page.Add((Image i_io_end io_mark_end "" 0 0 2 2))
-
-# The prompts while the notebook is out, on the screen at its bottom right in the HUD's grey and
-# shadow: four slots, the first the rightmost, each a key's name on a piece of the HUD's dark strip,
-# or the mouse's left button in its place, and what the key does.
-$PromptSlots = 4
-$PromptW = 200
-$PromptsPath = "$PackageId $PageId a_io_prompts a_io_prompts"
-$hudGrey = "FFC0C0C0"
-$prompts = for ($n = 1; $n -le $PromptSlots; $n++) {
-    $x = ($PromptSlots - $n) * $PromptW
-    Image "i_io_prompt${n}_strip" hud_text_box "\common.mgb" $x 6 64 30
-    Text "t_io_prompt${n}_key" "" $x 6 64 30 18 $hudGrey CENTER -shadow $true
-    Image "i_io_prompt${n}_mouse" pc_mouse_left "\common.mgb" ($x + 14) 1 40 40
-    Text "t_io_prompt${n}_label" "" ($x + 72) 8 ($PromptW - 76) 26 20 $hudGrey -shadow $true
-    foreach ($element in "i_io_prompt${n}_strip", "t_io_prompt${n}_key", "i_io_prompt${n}_mouse", "t_io_prompt${n}_label") {
-        Export $PromptsPath $element
-    }
-}
-Export "$PackageId $PageId" a_io_prompts
 
 function Material([string]$name, [string]$texture) {
     "<Material name=`"$name`" texture=`"$texture`" REGION=`"0 0 1 1`" />"
@@ -600,7 +578,6 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
         (Area a_io_portraits 44 44 $palette)
         (Area a_io_postit 416 302 $postIt)
         (Area a_io_reader 412 620 $reader)
-        (Area a_io_prompts ($PromptSlots * $PromptW) 44 $prompts)
         $photoAreas) -join "`n"
     $objects = @("<GENERICOBJECT name=`"IO_NOTEBOOK`"><LINK slot=`"69`" LASTOBJECTTYPE=`"Element`" IDS=`"$NotebookPath a_io_page`" /></GENERICOBJECT>") + $Exports
 
@@ -615,9 +592,6 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
     # Last on the HUD page, so its draws are the last of the HUD's.
     $pageEnd = IndexOf $lines '</CHILDREN>' (IndexOf $lines "<USERDATA name=`"$PageId`">")
     $lines.Insert($pageEnd, (Instance a_io_notebook $screenX $y $scaleX $scaleY 0))
-    # After the notebook, so on the screen rather than the pages.
-    $lines.Insert($pageEnd + 1, (Instance a_io_prompts ($screenX + $screenW - $PromptSlots * $PromptW - 40) `
-        ($screenY + $screenH - 84) 1 1 0 -hidden $true))
 
     $materialsAt = IndexOf $lines '<MATERIALS materialExtra='
     $lines.Insert($materialsAt + 1, $materials)

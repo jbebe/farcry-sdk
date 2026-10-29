@@ -720,9 +720,6 @@
     <GENERICOBJECT name="IO_POSTIT_QUOTE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit t_io_postit_quote" />
     </GENERICOBJECT>
-    <GENERICOBJECT name="IO_POSTIT_WRITING">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit t_io_postit_writing" />
-    </GENERICOBJECT>
     <GENERICOBJECT name="IO_POSTIT_NOTE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit t_io_postit_note" />
     </GENERICOBJECT>
@@ -944,57 +941,6 @@
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_FLIP_AREA">
       <LINK slot="44" LASTOBJECTTYPE="Area" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_flip #5B36589B" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT1_STRIP">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts i_io_prompt1_strip" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT1_KEY">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts t_io_prompt1_key" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT1_MOUSE">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts i_io_prompt1_mouse" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT1_LABEL">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts t_io_prompt1_label" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT2_STRIP">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts i_io_prompt2_strip" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT2_KEY">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts t_io_prompt2_key" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT2_MOUSE">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts i_io_prompt2_mouse" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT2_LABEL">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts t_io_prompt2_label" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT3_STRIP">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts i_io_prompt3_strip" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT3_KEY">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts t_io_prompt3_key" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT3_MOUSE">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts i_io_prompt3_mouse" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT3_LABEL">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts t_io_prompt3_label" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT4_STRIP">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts i_io_prompt4_strip" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT4_KEY">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts t_io_prompt4_key" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT4_MOUSE">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts i_io_prompt4_mouse" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPT4_LABEL">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts a_io_prompts t_io_prompt4_label" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PROMPTS">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_prompts" />
     </GENERICOBJECT>
     <GENERICOBJECT name="#8962A37E">
       <LINK slot="101" LASTOBJECTTYPE="Page" IDS="#A1126B78 #F2CDBA4C" />

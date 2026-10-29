@@ -23,7 +23,6 @@ namespace {
     using NamesFn = EngineString<wchar_t>*(__fastcall*)(void* page, void* unused, EngineString<wchar_t>* out,
                                                        EngineString<wchar_t> text);
     using FreeFn = void(__fastcall*)(EngineString<wchar_t>* string);
-    using ExpandFn = void(__cdecl*)(const EngineString<wchar_t>* text, EngineString<wchar_t>* out, int flag);
 
     // CStringTableMgr::Localize and its singleton, and the id of the strings' file every page passes,
     // a constant in the image.
@@ -35,9 +34,6 @@ namespace {
     FCSE::Relocation<LocalizeIntoFn> g_localizeInto{FCSE::Uplay(0x004D1FC0)};
     FCSE::Relocation<NamesFn> g_names{FCSE::Uplay(0x00854750)};
     FCSE::Relocation<FreeFn> g_free{FCSE::Uplay(0x00002890)};
-    // CMagmaTextUtil::ExpandInputString, which words "{signal}" as the keys bound to it, as the
-    // tutorials' messages do.
-    FCSE::Relocation<ExpandFn> g_expand{FCSE::Uplay(0x005EB830)};
     // CGameModeManager's GetGameModeService and its singleton; the class ids of CFCXMissionManager
     // and CBuddiesManager, each built when its name is still unset.
     FCSE::Relocation<GetServiceFn> g_getService{FCSE::Uplay(0x004DBB80)};
@@ -69,13 +65,6 @@ namespace {
     constexpr ptrdiff_t kBuddyHistory = 0x9C;
 
     bool g_installed = false;
-
-    // The text of a string the engine made, which is freed.
-    std::wstring Taken(EngineString<wchar_t>& string) {
-        std::wstring text(string.Text(), string.length);
-        g_free(&string);
-        return text;
-    }
 
     void* Service(const FCSE::Relocation<BuildClassIdFn>& build, const void* const* name, const uint32_t* type) {
         if (!g_installed) {
@@ -125,18 +114,9 @@ std::wstring Words(const char* section, const std::string& key) {
     g_localizeInto(table, nullptr, &text, &sectionString, &keyString, kStringFile);
     EngineString<wchar_t> named{};
     g_names(nullptr, nullptr, &named, text);
-    return Taken(named);
-}
-
-std::wstring Keys(const std::wstring& signal) {
-    if (!g_installed || !g_expand || !g_free) {
-        return L"";
-    }
-    const std::wstring token = L"{" + signal + L"}";
-    const auto text = EngineString<wchar_t>::Of(token.c_str(), token.size());
-    EngineString<wchar_t> keys{};
-    g_expand(&text, &keys, 1);
-    return Taken(keys);
+    std::wstring words(named.Text(), named.length);
+    g_free(&named);
+    return words;
 }
 
 std::vector<std::string> FoundTapes() {

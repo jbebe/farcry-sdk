@@ -39,10 +39,11 @@ layer. Marked **(proposed)** are choices not yet agreed.
   game as a pause screen does, so Statistics and Upgrades stay in the pause menu, with Resume, Save,
   Load, Options, Legend and Quit. Jackal Tapes, Predecessor Tapes, Buddies, Journal and the malaria
   panel move into the notebook; malaria becomes the pills' card.
-- **Handwriting for what is written, not for the notebook's labels** (2026-10-28). Mission texts,
-  notes and captions are in Caveat, a handwriting font: the Journal's job and objectives, a paper's
-  opening line on the post-it, and the reader's text and caption. Headings, rows and prompts keep the
-  game's Farcry2 ink.
+- **Handwriting only on the paper being read** (2026-10-28, narrowed 2026-10-29). A note's text and
+  a photo's caption, on the half page the reader shows, are in Caveat, a handwriting font. Everything
+  else, the Journal's job and objectives and the post-it included, keeps the game's Farcry2 ink.
+- **No key legend on the notebook** (2026-10-29). A strip naming the keys as bound was built and
+  dropped as not needed.
 
 ## What the engine gives us
 
@@ -238,10 +239,6 @@ On the Inventory page, while the player is at a crate, a gun or quest item gets 
 | Right mouse, held | the monocular, as with the map: the notebook comes back on release |
 
 Movement and look stay live, as with the map. The gamepad mirrors the map's: d-pad to move, X to turn.
-
-The screen's bottom right says what the keys do while the notebook is out, each key named as the
-player bound it on a piece of the HUD's dark strip, the left mouse button as the game's mouse icon
-(built 2026-10-28).
 
 ## Under the hood
 

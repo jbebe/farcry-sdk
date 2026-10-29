@@ -18,10 +18,6 @@ const std::wstring& Localize(const char* section, const std::string& key);
 // filled in as the pause menu fills them; empty when this build lacks the calls.
 std::wstring Words(const char* section, const std::string& key);
 
-// The keys bound to the action map signal, such as L"X" for drop_item, as the tutorials' messages
-// name them; empty when this build lacks the call.
-std::wstring Keys(const std::wstring& signal);
-
 // The string keys of the Jackal then Predecessor tapes found, in the game's order.
 std::vector<std::string> FoundTapes();
 

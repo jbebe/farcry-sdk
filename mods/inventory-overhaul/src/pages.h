@@ -16,13 +16,10 @@ struct Model {
     std::map<std::string, std::wstring> texts;
     std::map<std::string, bool> shown;
     std::map<std::string, std::string> pictures;
-    // What the row's keys do, each an action map signal and its words, left to right.
-    std::vector<std::pair<std::wstring, std::wstring>> prompts;
 
     void Text(const std::string& name, std::wstring text) { texts[name] = std::move(text); }
     void Show(const std::string& name, bool visible) { shown[name] = visible; }
     void Picture(const std::string& name, std::string from) { pictures[name] = std::move(from); }
-    void Prompt(std::wstring signal, std::wstring words) { prompts.emplace_back(std::move(signal), std::move(words)); }
 
     // Everything the page shows, so that it is written again only when this changes.
     std::wstring Key() const;

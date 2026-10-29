@@ -32,44 +32,6 @@ namespace {
     // The upgrade icon rows: a gun's three on the third line, a belt item's two on the second.
     constexpr std::pair<const char*, int> kUpgradeRows[] = {{"IO_POSTIT_UP", 3}, {"IO_POSTIT_BELT_UP", 2}};
     constexpr int kHalfSteps = 10;
-    // The prompts' slots, the first the rightmost.
-    constexpr size_t kPromptSlots = 4;
-
-    // A signal's first bound key as the game words it, and whether that is the left mouse button.
-    struct Key {
-        std::wstring words;
-        bool mouse = false;
-    };
-    // The key of each signal a prompt names, worded again each time the notebook comes out.
-    std::map<std::wstring, Key> g_keys;
-
-    const Key& KeyOf(const std::wstring& signal) {
-        auto found = g_keys.find(signal);
-        if (found == g_keys.end()) {
-            // Keys bound to one signal are joined by the game's "OR".
-            std::wstring words = Story::Keys(signal);
-            words = words.substr(0, words.find(L" " + Story::Localize("Generic", "OR")));
-            const bool mouse = words == Story::Localize("Mouse", "lb");
-            found = g_keys.emplace(signal, Key{std::move(words), mouse}).first;
-        }
-        return found->second;
-    }
-
-    // The page's prompts and the two every page has, in the slots from the right: a key's name, or
-    // the mouse's left button in its place, and its words.
-    void Prompts(Model& model) {
-        auto& prompts = model.prompts;
-        prompts.emplace_back(L"flipside", L"Turn page");
-        prompts.emplace_back(L"toggle_notebook", L"Put away");
-        for (size_t slot = 1; slot <= kPromptSlots; ++slot) {
-            const auto* prompt = slot <= prompts.size() ? &prompts[prompts.size() - slot] : nullptr;
-            const Key* key = prompt != nullptr ? &KeyOf(prompt->first) : nullptr;
-            model.Show(Name("IO_PROMPT", slot, "_STRIP"), key != nullptr && !key->mouse);
-            model.Text(Name("IO_PROMPT", slot, "_KEY"), key != nullptr && !key->mouse ? key->words : L"");
-            model.Show(Name("IO_PROMPT", slot, "_MOUSE"), key != nullptr && key->mouse);
-            model.Text(Name("IO_PROMPT", slot, "_LABEL"), prompt != nullptr ? prompt->second : L"");
-        }
-    }
 
     // The page open, R's turns, the wheel's steps and whether it was clicked or X pressed since the
     // last write, and each page's selected row; the Inventory page opens on the gun in hand. The sheet
@@ -227,8 +189,7 @@ void ClearPostIt(Model& model) {
     model.Show("IO_POSTIT_PORTRAIT", false);
     for (const char* name : {"IO_POSTIT_NAME", "IO_POSTIT_SUB", "IO_POSTIT_LINE1", "IO_POSTIT_LINE2",
                              "IO_POSTIT_LINE3", "IO_POSTIT_VALUE1", "IO_POSTIT_VALUE2", "IO_POSTIT_STATE",
-                             "IO_POSTIT_QUOTE", "IO_POSTIT_WRITING", "IO_POSTIT_NOTE", "IO_POSTIT_ABOUT",
-                             "IO_POSTIT_STATUS"}) {
+                             "IO_POSTIT_QUOTE", "IO_POSTIT_NOTE", "IO_POSTIT_ABOUT", "IO_POSTIT_STATUS"}) {
         model.Text(name, L"");
     }
     for (const auto& [icons, count] : kUpgradeRows) {
@@ -311,7 +272,6 @@ void Update(const void* view, void* inventory) {
     g_sheet = sheet;
     model.Show("IO_POSTIT", rows > 0 && sheet < 0);
     model.Show("IO_READER", sheet >= 0);
-    Prompts(model);
 
     std::wstring key = model.Key();
     if (key == g_shown) {
@@ -351,13 +311,7 @@ void Frame() {
     if (notebook != nullptr) {
         Magma::SetVisible(notebook, open);
     }
-    if (void* prompts = Magma::Find("IO_PROMPTS")) {
-        Magma::SetVisible(prompts, open);
-    }
-    // The keys are worded again each time the notebook comes out, in case they were bound anew.
-    if (open) {
-        g_keys.clear();
-    } else {
+    if (!open) {
         g_sheet = -1;
     }
     g_notebook = notebook;

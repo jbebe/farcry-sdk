@@ -686,8 +686,7 @@ bound to that action map signal. It takes the names from the string table's `Key
 sections and joins several with `Generic/OR`, as the tutorials' messages do ("press `{use}` to
 interact"). `out` is the engine's own string, freed with its destructor (`0x10002890`). It gives
 "Tab" for `toggle_notebook`, "R" for `flipside`, "X" for a new control's `drop_item` and "left mouse
-button" for `startshooting` **(seen in game, 2026-10-28)**, so the notebook's prompts name the
-player's own bindings.
+button" for `startshooting` **(seen in game, 2026-10-28)**.
 
 ## Settings rows
 

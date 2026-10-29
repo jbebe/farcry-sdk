@@ -128,11 +128,11 @@ no shadow, `common.mgb`'s post-it, paperclip, red line and brush stroke, cropped
 and `TILING`. The sheet is the spread with room above it for the index tabs, which stand up from the
 left page's top edge behind the paper, out of the fingers' way: the open page's pulled up and white,
 the others grey. Everything is written in the one ink; the only colour is the red line under the
-selected row, tinted as the pause pages tint it. Mission texts, notes and captions are in Caveat, a
-handwriting font (`notebook/fonts/`, under the SIL Open Font License): `build-ui.ps1` has
-`jackall-cli mft build` draw it into `layer/mods/ui/fonts/` and add it to every `fonts.mgb` and UI
-dependency list as fragments, which it reads from the install (`-Game`, `C:\Games\Far Cry 2` by
-default).
+selected row, tinted as the pause pages tint it. A note's text and a photo's caption, on the paper
+being read, are in Caveat, a handwriting font (`notebook/fonts/`, under the SIL Open Font License):
+`build-ui.ps1` has `jackall-cli mft build` draw it into `layer/mods/ui/fonts/` and add it to every
+`fonts.mgb` and UI dependency list as fragments, which it reads from the install (`-Game`,
+`C:\Games\Far Cry 2` by default).
 The post-it's gun pictures are the shop's `gun_icon_*` textures, multiplied onto the paper, one image
 per gun, all but one hidden.
 
@@ -189,12 +189,6 @@ its time set each frame without its keyframes' actions, since the area is the pa
 end at half its length (see
 [driving an area's timeline](../../docs/docs/magma-ui/engine-interop.md#driving-an-areas-timeline-from-code)).
 
-While the notebook is out, the screen's bottom right says what the keys do (`a_io_prompts`, after the
-notebook on the HUD so it reaches the screen rather than the pages): the page's own, such as X Drop
-on a gun or item, or the left mouse button's Read and Put back on a paper and the wheel's Next sheet
-while one is read, then R Turn page and Tab Put away. Each key is named as the player bound it, by
-the game's own `ExpandInputString`, on a piece of the HUD's dark strip, in the HUD's grey and shadow;
-the left mouse button is the game's mouse icon.
 Each page keeps its own selection. Each is an area of its own in the spread
 (`a_io_inventory`, `a_io_papers`, `a_io_journal`, `a_io_contacts`), one shown at a time, with its
 index tab pulled out over the spread; the post-it is shared, and hidden on a page with no rows. Every
