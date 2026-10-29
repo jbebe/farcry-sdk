@@ -8,7 +8,7 @@ solves for a weapon or diamonds. Data only so far. Its papers are read in
 ## What the layer holds
 
 A note, a photo and a cassette in world 1, the first papers the convention was seen working with
-(2026-10-29), and an item, not yet seen:
+(2026-10-29), and an item, seen the same day:
 
 | Items id | Where | Pickup | Picture, sound or description |
 |---|---|---|---|
