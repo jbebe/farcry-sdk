@@ -27,15 +27,10 @@ struct Model {
         pictures[name] = std::move(from);
     }
 
-    // Everything the page shows, so that it is written again only when this changes.
-    std::wstring Key() const;
+    bool operator==(const Model&) const = default;
 };
 
-// Every gun picture the post-it has, as build-ui.ps1 makes them.
-inline constexpr const char* kGunPictures[] = {
-    "6p9", "ak47", "as50", "carlgust", "deagle", "dragunov", "flare", "fnfal", "g3ka4", "ied",
-    "ithaca", "lpo50", "m16", "m1903", "m249", "m79", "mac10", "makarov", "mgl40", "mp5sd",
-    "p45", "rpg7", "rpk", "sniperdart", "spas12", "usas", "uzi", "mortar"};
+// How many loadout ratings a gun has, each a row of the post-it.
 inline constexpr int kRatings = 5;
 
 std::string Name(const std::string& prefix, size_t index, const char* suffix = "");
@@ -44,17 +39,14 @@ std::wstring Wide(const std::string& text);
 // An id's last part with spaces for underscores: a gun the tables do not know, or an item.
 std::wstring PlainName(const std::string& id);
 
-// A gun's wear, 1 to 0, as a condition word: new, used, worn or failing.
-const wchar_t* Condition(float reliability);
-
 // Fills IO_<LIST>1... with a window of `lines` of `rows` from `first`, kept on row `selected` if it
 // is one of them, and IO_<LIST>S_ABOVE and _MORE with the rows outside it. Returns the selected row's
 // line, from 1, or 0 when it is none of them.
 size_t List(Model& model, const std::string& list, size_t lines, size_t& first, const std::vector<std::wstring>& rows,
             int selected);
 
-// Everything on the post-it hidden or emptied, for the selected row to fill in.
-void ClearPostIt(Model& model);
+// Every picture the Inventory page shows on the post-it hidden, as every page's post-it starts.
+void HideInventoryPictures(Model& model);
 
 // Each page's rows and the post-it of row `selected`, kept within them; each returns its row count.
 // `dropped`, X was pressed: the selected gun falls at the feet, a stowed one too, and one of the

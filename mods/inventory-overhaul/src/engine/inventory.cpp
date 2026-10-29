@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <string_view>
 
 namespace InventoryOverhaul::Inventory {
 
@@ -58,14 +59,20 @@ namespace {
     // An entity's component by class id; CFCXCountersComponentPlayerSP's class id, built when its
     // name is still unset, its RemainingPills, and its reputation level, 0 to 5.
     using GetComponentFn = void*(__fastcall*)(void* entity, void* unused, const uint32_t* type);
-    using BuildCountersTypeFn = void(__fastcall*)(void* unused, void* unused2);
     FCSE::Relocation<GetComponentFn> g_getComponent{FCSE::Uplay(0x004E2CC0)};
-    FCSE::Relocation<BuildCountersTypeFn> g_buildCountersType{FCSE::Uplay(0x00657F30)};
+    FCSE::Relocation<BuildClassIdFn> g_buildCountersType{FCSE::Uplay(0x00657F30)};
     FCSE::Relocation<const void* const*> g_countersTypeName{FCSE::Uplay(0x01649818)};
     FCSE::Relocation<const uint32_t*> g_countersType{FCSE::Uplay(0x01649838)};
     constexpr ptrdiff_t kRemainingPills = 0xF0;
     constexpr ptrdiff_t kReputation = 0x184;
     constexpr int kTopReputation = 5;
+    // The wallet's class id, CEconomyComponent's, built on first use; its diamonds, and the names
+    // bought, engine std::strings, and how many, which CEconomyComponent::AlreadyBoughtItem searches.
+    FCSE::Relocation<BuildTypeFn> g_buildEconomyType{FCSE::Uplay(0x006574F0)};
+    FCSE::Relocation<const uint32_t*> g_economyType{FCSE::Uplay(0x016491D8)};
+    constexpr ptrdiff_t kDiamondCount = 0x10;
+    constexpr ptrdiff_t kBoughtNames = 0x14;
+    constexpr ptrdiff_t kBoughtCount = 0x18;
     // CInventoryItemWeapon's class id, built on first use, and CWeaponPropertiesCommon's class ids.
     FCSE::Relocation<BuildTypeFn> g_buildWeaponItemType{FCSE::Uplay(0x00126210)};
     FCSE::Relocation<const uint32_t*> g_weaponItemType{FCSE::Uplay(0x00FE46EC)};
@@ -104,7 +111,7 @@ namespace {
     // Set while a gun is taken away, so its drop leaves no pickup.
     bool g_removing = false;
 
-    uint32_t ClassId(const void* hierarchy, size_t index) {
+    uint32_t ClassIdAt(const void* hierarchy, size_t index) {
         return Read<uint32_t>(hierarchy, kHierarchyIds + index * sizeof(uint32_t));
     }
 
@@ -112,7 +119,7 @@ namespace {
         const void* hierarchy = Method<HierarchyFn>(item, kHierarchySlot)(item, nullptr);
         const auto count = Read<uint32_t>(hierarchy, kHierarchyCount);
         for (uint32_t i = 0; i < count; ++i) {
-            if (ClassId(hierarchy, i) == weaponItemType) {
+            if (ClassIdAt(hierarchy, i) == weaponItemType) {
                 return true;
             }
         }
@@ -129,10 +136,13 @@ namespace {
     }
 
     const void* Counters() {
-        if (*g_countersTypeName.get() == nullptr) {
-            g_buildCountersType(nullptr, nullptr);
-        }
-        return PlayerComponent(g_countersType.get());
+        return PlayerComponent(ClassId(g_buildCountersType, g_countersTypeName, g_countersType));
+    }
+
+    // The wallet is found by its class id as the game's mission rewards find it.
+    const void* Wallet() {
+        g_buildEconomyType();
+        return PlayerComponent(g_economyType.get());
     }
 }
 
@@ -140,8 +150,8 @@ bool Install() {
     return g_getTerminal && g_dropWeapon && g_addByName && g_selectAtOnce && g_updateEquipAnim &&
            g_reliability && g_ammoInClip && g_rememberedInClip && g_setLoaded && g_spareRounds &&
            g_gadgetFromCategory && g_uses && g_addGadget && g_pawnClass && g_getComponent &&
-           g_buildCountersType && g_countersTypeName && g_countersType && g_buildWeaponItemType &&
-           g_weaponItemType && g_classes &&
+           g_buildCountersType && g_countersTypeName && g_countersType && g_buildEconomyType &&
+           g_economyType && g_buildWeaponItemType && g_weaponItemType && g_classes &&
            (g_canSpawnPickup != nullptr ||
             Hook(g_canSpawnPickupSite, &OnCanSpawnPickup, &g_canSpawnPickup));
 }
@@ -173,7 +183,7 @@ void* PlayerComponent(const uint32_t* type) {
 }
 
 void* PlayerPawn() {
-    const uint32_t pawn = ClassId(g_pawnClass(), kPawnClass);
+    const uint32_t pawn = ClassIdAt(g_pawnClass(), kPawnClass);
     return PlayerComponent(&pawn);
 }
 
@@ -266,11 +276,28 @@ int Reputation() {
     return counters != nullptr ? std::min<int>(Read<uint8_t>(counters, kReputation), kTopReputation) : -1;
 }
 
+int Diamonds() {
+    const void* wallet = Wallet();
+    return wallet != nullptr ? Read<int32_t>(wallet, kDiamondCount) : -1;
+}
+
+bool IsBought(const std::string& name) {
+    const void* wallet = Wallet();
+    if (wallet == nullptr) {
+        return false;
+    }
+    const auto* bought = Read<const EngineString<char>*>(wallet, kBoughtNames);
+    const auto count = Read<uint32_t>(wallet, kBoughtCount);
+    return std::any_of(bought, bought + count, [&](const EngineString<char>& each) {
+        return std::string_view(each.Text(), each.length) == name;
+    });
+}
+
 uint32_t& Id(void* item) {
     return *reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(item) + kItemId);
 }
 
-uint32_t InHandId(const void* inventory) { return Read<uint32_t>(inventory, kInventoryInHand); }
+bool IsInHand(const void* inventory, void* item) { return Id(item) == Read<uint32_t>(inventory, kInventoryInHand); }
 
 bool Drawn(const void* inventory) {
     return Read<uint32_t>(inventory, kInventoryHandState) == kHandStateDrawn;

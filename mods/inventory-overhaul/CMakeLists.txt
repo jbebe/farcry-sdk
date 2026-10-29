@@ -29,7 +29,6 @@ add_library(InventoryOverhaul SHARED
   "src/pickups.cpp"
   "src/test_window.cpp"
   "src/two_guns.cpp"
-  "src/engine/economy.cpp"
   "src/engine/game_thread.cpp"
   "src/engine/inventory.cpp"
   "src/engine/jobs.cpp"

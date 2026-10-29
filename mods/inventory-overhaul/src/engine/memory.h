@@ -59,6 +59,17 @@ Fn Method(const void* object, size_t slot) {
     return (*reinterpret_cast<Fn* const*>(object))[slot];
 }
 
+// A class id the engine builds on first use: `build` makes it while its name is still unset.
+using BuildClassIdFn = void(__fastcall*)(void* unused, void* unused2);
+inline const uint32_t* ClassId(const FCSE::Relocation<BuildClassIdFn>& build,
+                               const FCSE::Relocation<const void* const*>& name,
+                               const FCSE::Relocation<const uint32_t*>& id) {
+    if (*name.get() == nullptr) {
+        build(nullptr, nullptr);
+    }
+    return id.get();
+}
+
 // Hooks the engine function `site`, keeping what it called in `original`. False when the function
 // was not found, which is not logged here, or when FCSE refused it, which FCSE logs.
 template <class Fn>

@@ -17,7 +17,6 @@ namespace InventoryOverhaul::Story {
 namespace {
     using LocalizeFn = const wchar_t*(__fastcall*)(void* table, void* unused, const EngineString<char>* section,
                                                    const EngineString<char>* key, uint32_t file);
-    using BuildClassIdFn = void(__fastcall*)(void* unused, void* unused2);
     using GetServiceFn = void*(__fastcall*)(void* services, void* unused, const uint32_t* type, int create);
     using BuddyStatusFn = int(__fastcall*)(void* buddies, void* unused, const void* name);
     using StatusTextFn = const wchar_t*(__cdecl*)(int status, int gender);
@@ -27,6 +26,7 @@ namespace {
     using NamesFn = EngineString<wchar_t>*(__fastcall*)(void* page, void* unused, EngineString<wchar_t>* out,
                                                        EngineString<wchar_t> text);
     using FreeFn = void(__fastcall*)(EngineString<wchar_t>* string);
+    using LockFn = void(__fastcall*)(void* entity);
     using TapeFn = void(__fastcall*)(void* manager, void* unused);
     using PlayTapeFn = void(__fastcall*)(void* manager, void* unused, const void* tape);
     using TapeSlotFn = void(__cdecl*)(uint32_t sound, int32_t type, float fade, int32_t flag);
@@ -55,16 +55,16 @@ namespace {
     // CBuddiesManager::GetBuddyStatus by name, and CFCXUIBuddyUtil::GetBuddyStateString.
     FCSE::Relocation<BuddyStatusFn> g_buddyStatus{FCSE::Uplay(0x007463E0)};
     FCSE::Relocation<StatusTextFn> g_statusText{FCSE::Uplay(0x007575B0)};
-    // CJackalTapeManager's PlayTape and StopTape, the call the pause page makes on the manager first,
-    // the manager's handle (the manager at +0xC), and the music manager's tape slot: the playing
-    // sound's handle, -1 when none, and its start id.
-    FCSE::Relocation<TapeFn> g_touchTapes{FCSE::Uplay(0x004DD4F0)};
+    // CJackalTapeManager's PlayTape and StopTape, CEntity::Lock, which the pause page calls on the
+    // manager first, the manager's entity proxy (the manager at +0xC), and the music manager's tape
+    // slot: the playing sound's handle, -1 when none, and its start id.
     FCSE::Relocation<PlayTapeFn> g_playTape{FCSE::Uplay(0x00717FA0)};
     FCSE::Relocation<TapeFn> g_stopTape{FCSE::Uplay(0x00717E90)};
+    FCSE::Relocation<LockFn> g_lock{FCSE::Uplay(0x004DD4F0)};
     FCSE::Relocation<void* const*> g_tapeManager{FCSE::Uplay(0x0164C788)};
     FCSE::Relocation<const int32_t*> g_tapeHandle{FCSE::Uplay(0x0164C234)};
     FCSE::Relocation<const uint32_t*> g_tapeSound{FCSE::Uplay(0x0164C22C)};
-    constexpr ptrdiff_t kHandleManager = 0x0C;
+    constexpr ptrdiff_t kProxyEntity = 0x0C;
     // The slot's play and its stop, and the manager's own tapes: each a key, a start and a stop sound, a
     // sound type and whether it was played last. A play while the slot plays leaves that sound playing,
     // forgotten by the slot, and a tape's stop sound stops that tape alone.
@@ -97,7 +97,10 @@ namespace {
     constexpr ptrdiff_t kBuddyUnlocked = 0x98;
     constexpr ptrdiff_t kBuddyHistory = 0x9C;
 
+    // Whether the services, the tapes' calls and the calls that fill names into a string were found.
     bool g_installed = false;
+    bool g_tapes = false;
+    bool g_words = false;
     // The tape or cassette started and its start id, to tell it from one the game plays, whether it is a
     // cassette, and the tapes' sound type. A cassette's sound waits for its click to end until `g_startAt`.
     std::string g_playing;
@@ -107,21 +110,16 @@ namespace {
     uint32_t g_waiting = 0;
     std::chrono::steady_clock::time_point g_startAt;
 
-    void* Service(const FCSE::Relocation<BuildClassIdFn>& build, const void* const* name, const uint32_t* type) {
-        if (!g_installed) {
-            return nullptr;
-        }
-        if (*name == nullptr) {
-            build(nullptr, nullptr);
-        }
-        void* services = *g_services.get();
-        return services != nullptr ? g_getService(services, nullptr, type, 1) : nullptr;
+    void* Service(const FCSE::Relocation<BuildClassIdFn>& build, const FCSE::Relocation<const void* const*>& name,
+                  const FCSE::Relocation<const uint32_t*>& type) {
+        void* services = g_installed ? *g_services.get() : nullptr;
+        return services != nullptr ? g_getService(services, nullptr, ClassId(build, name, type), 1) : nullptr;
     }
 
     // Each of the mission manager's tape records, the Jackal tapes then the Predecessor's.
     template <typename Visit>
     void EachTape(Visit visit) {
-        const void* missions = Service(g_buildMissionsType, g_missionsTypeName.get(), g_missionsType.get());
+        const void* missions = Service(g_buildMissionsType, g_missionsTypeName, g_missionsType);
         if (missions == nullptr) {
             return;
         }
@@ -135,11 +133,8 @@ namespace {
     }
 
     void* TapeManager() {
-        void* handle = g_tapeManager && g_touchTapes && g_playTape && g_stopTape && g_tapeHandle && g_tapeSound &&
-                               g_tapeSlot && g_stopSlot
-                           ? *g_tapeManager.get()
-                           : nullptr;
-        return handle != nullptr ? Read<void*>(handle, kHandleManager) : nullptr;
+        void* proxy = g_tapes ? *g_tapeManager.get() : nullptr;
+        return proxy != nullptr ? Read<void*>(proxy, kProxyEntity) : nullptr;
     }
 
     // The manager's first tape, whose sound type a cassette takes, or null.
@@ -162,6 +157,9 @@ bool Install() {
     g_installed = g_localize && g_stringTable && g_getService && g_services && g_buildMissionsType &&
                   g_missionsTypeName && g_missionsType && g_buildBuddiesType && g_buddiesTypeName && g_buddiesType &&
                   g_buddyStatus && g_statusText;
+    g_tapes = g_playTape && g_stopTape && g_lock && g_tapeManager && g_tapeHandle && g_tapeSound && g_tapeSlot &&
+              g_stopSlot;
+    g_words = g_installed && g_localizeInto && g_names && g_free;
     return g_installed;
 }
 
@@ -185,7 +183,7 @@ const std::wstring& Localize(const char* section, const std::string& key) {
 }
 
 std::wstring Words(const char* section, const std::string& key) {
-    void* table = g_installed && g_localizeInto && g_names && g_free ? *g_stringTable.get() : nullptr;
+    void* table = g_words ? *g_stringTable.get() : nullptr;
     if (table == nullptr) {
         return L"";
     }
@@ -221,7 +219,7 @@ bool PlayTape(const std::string& key) {
     if (manager == nullptr || record == nullptr) {
         return false;
     }
-    g_touchTapes(manager, nullptr);
+    g_lock(manager);
     ClearSlot(manager);
     g_playing = key;
     g_cassette = false;
@@ -237,7 +235,7 @@ bool PlayCassette(const std::string& key, uint32_t sound) {
     if (first == nullptr || sound == 0 || Sound::Length(sound) < 0.0f) {
         return false;
     }
-    g_touchTapes(manager, nullptr);
+    g_lock(manager);
     ClearSlot(manager);
     g_playing = key;
     g_cassette = true;
@@ -290,7 +288,7 @@ void Frame() {
 
 std::vector<Buddy> Buddies() {
     std::vector<std::pair<int, Buddy>> met;
-    void* buddies = Service(g_buildBuddiesType, g_buddiesTypeName.get(), g_buddiesType.get());
+    void* buddies = Service(g_buildBuddiesType, g_buddiesTypeName, g_buddiesType);
     if (buddies == nullptr) {
         return {};
     }

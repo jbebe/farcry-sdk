@@ -1,6 +1,5 @@
 #include "engine/paper.h"
 
-#include "engine/com.h"
 #include "engine/memory.h"
 #include "engine/vtable.h"
 #include "fcse_api.h"
@@ -96,6 +95,15 @@ namespace {
                 Read<const void*>(Read<const void*>(resource, kResourceTexture), kTextureDevice), kDeviceDirect3D);
         } __except (EXCEPTION_EXECUTE_HANDLER) {
             return nullptr;
+        }
+    }
+
+    // Releases a COM pointer and forgets it.
+    template <class T>
+    void Release(T*& object) {
+        if (object != nullptr) {
+            object->Release();
+            object = nullptr;
         }
     }
 

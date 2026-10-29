@@ -3,7 +3,6 @@
 #include "test_window.h"
 
 #include "devtools_api.h"
-#include "engine/economy.h"
 #include "engine/inventory.h"
 #include "items.h"
 #include "two_guns.h"
@@ -90,7 +89,7 @@ namespace {
             ImGui::TextDisabled("    wear %.3f, %d loaded", gun.reliability, gun.loaded);
             ImGui::SameLine();
             if (ImGui::SmallButton("Stow")) {
-                Ask(Action::Stow, static_cast<size_t>(gun.slot));
+                Ask(Action::Stow, 0, {}, gun.slot);
             }
             ImGui::PopID();
         }
@@ -171,7 +170,7 @@ void Run(void* inventory) {
     for (const Request& request : requests) {
         switch (request.action) {
         case Action::Stow:
-            Items::Stow(inventory, static_cast<int>(request.index));
+            Items::Stow(inventory, request.slot);
             break;
         case Action::Take:
             Items::Take(inventory, request.index, request.slot);
@@ -213,11 +212,11 @@ void Run(void* inventory) {
     for (const Inventory::Weapon& gun : Inventory::Guns(inventory)) {
         hands.push_back({TwoGuns::SlotOf(gun.weapon), Inventory::Name(gun.weapon),
                          Inventory::Reliability(gun.weapon), Inventory::Loaded(inventory, gun.weapon),
-                         Inventory::Id(gun.item) == Inventory::InHandId(inventory)});
+                         Inventory::IsInHand(inventory, gun.item)});
     }
     std::sort(hands.begin(), hands.end(), [](const Gun& a, const Gun& b) { return a.slot < b.slot; });
     std::vector<Items::Record> items = Items::Load();
-    const int diamonds = Economy::Diamonds();
+    const int diamonds = Inventory::Diamonds();
     std::lock_guard<std::mutex> held(g_lock);
     g_hands = std::move(hands);
     g_items = std::move(items);

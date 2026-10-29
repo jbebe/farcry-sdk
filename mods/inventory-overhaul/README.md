@@ -186,7 +186,8 @@ and molotovs their bandoliers. Bought is a name in the wallet's list, as the sho
 (`ak47 repair manual`, `assault webbing`).
 
 Names, classes and ratings are the shop's and the loadout's, matched by the archetype's last part;
-a gun the table does not know is named from its archetype. The page shows at the end of each frame
+the full name and type are the string table's `WeaponBazaar/WEAPONBAZAAR_<shop name>_CRATE_NAME` and
+`_DESCRIPTION`. A gun the table does not know is named from its archetype. The page shows at the end of each frame
 (`GameThread::EachFrame`) and only while the notebook is open, so a HUD loaded meanwhile starts
 hidden.
 

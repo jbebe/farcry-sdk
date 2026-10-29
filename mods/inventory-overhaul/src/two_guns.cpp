@@ -2,7 +2,6 @@
 // the gun count and what a pickup replaces change.
 #include "two_guns.h"
 
-#include "engine/economy.h"
 #include "engine/game_thread.h"
 #include "engine/inventory.h"
 #include "engine/memory.h"
@@ -89,20 +88,11 @@ const Inventory::Weapon* InSlot(const std::vector<Inventory::Weapon>& guns, int 
 
 const Inventory::Weapon* InHand(const void* inventory, const std::vector<Inventory::Weapon>& guns) {
     for (const Inventory::Weapon& gun : guns) {
-        if (Inventory::Id(gun.item) == Inventory::InHandId(inventory)) {
+        if (Inventory::IsInHand(inventory, gun.item)) {
             return &gun;
         }
     }
     return nullptr;
-}
-
-const Inventory::Weapon& ToReplace(const void* inventory,
-                                   const std::vector<Inventory::Weapon>& guns) {
-    if (const Inventory::Weapon* gun = InHand(inventory, guns)) {
-        return *gun;
-    }
-    const Inventory::Weapon* last = InSlot(guns, g_lastSlot);
-    return last != nullptr ? *last : guns.front();
 }
 
 // The engine draws the first gun of the class asked for, so `gun` then takes its place, which
@@ -127,10 +117,26 @@ namespace {
                                                             : 0;
     }
 
-    // Gives every gun a slot of its own. Slots already held are kept; a gun without one, as every
-    // gun is in a save from before the mod, takes its class's slot from the game if free, else the
-    // free one. With `drop`, a gun left over is dropped, and true is returned if it was in hand.
-    bool PlaceGuns(void* inventory, const std::vector<Inventory::Weapon>& guns, bool drop) {
+    // Two guns of the same model share an item id, which would make the engine draw the first
+    // whichever is asked for; the later one gets an id of its own.
+    void SeparateTwins(const std::vector<Inventory::Weapon>& guns) {
+        for (auto gun = guns.begin(); gun != guns.end(); ++gun) {
+            uint32_t& id = Inventory::Id(gun->item);
+            while (std::any_of(guns.begin(), gun, [&](const Inventory::Weapon& earlier) {
+                return Inventory::Id(earlier.item) == id;
+            })) {
+                id += kTwinSalt;
+            }
+        }
+    }
+
+    // Gives every gun an item id and a slot of its own. Slots already held are kept; a gun without
+    // one, as every gun is in a save from before the mod, takes its class's slot from the game if
+    // free, else the free one. With `drop`, a gun left over is dropped, and true is returned if it was
+    // in hand.
+    bool PlaceGuns(void* inventory, bool drop) {
+        const std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
+        SeparateTwins(guns);
         bool taken[kSlots + 1] = {};
         std::vector<const Inventory::Weapon*> unplaced;
         for (const Inventory::Weapon& gun : guns) {
@@ -156,7 +162,7 @@ namespace {
                 FCSE::Logf("the %s is gun %d", Inventory::Name(gun->weapon), slot);
             } else if (drop) {
                 FCSE::Logf("the %s is a third gun: dropped", Inventory::Name(gun->weapon));
-                droppedInHand |= Inventory::Id(gun->item) == Inventory::InHandId(inventory);
+                droppedInHand |= Inventory::IsInHand(inventory, gun->item);
                 Inventory::Drop(inventory, gun->weapon);
             } else {
                 SetSlot(gun->weapon, 0);
@@ -166,17 +172,14 @@ namespace {
         return droppedInHand;
     }
 
-    // Two guns of the same model share an item id, which would make the engine draw the first
-    // whichever is asked for; the later one gets an id of its own.
-    void SeparateTwins(const std::vector<Inventory::Weapon>& guns) {
-        for (auto gun = guns.begin(); gun != guns.end(); ++gun) {
-            uint32_t& id = Inventory::Id(gun->item);
-            while (std::any_of(guns.begin(), gun, [&](const Inventory::Weapon& earlier) {
-                return Inventory::Id(earlier.item) == id;
-            })) {
-                id += kTwinSalt;
-            }
+    // The gun a new one takes the place of: the one in hand, else the one last drawn with a key, else
+    // the first of `guns`, which must not be empty.
+    const Inventory::Weapon& ToReplace(const void* inventory, const std::vector<Inventory::Weapon>& guns) {
+        if (const Inventory::Weapon* gun = InHand(inventory, guns)) {
+            return *gun;
         }
+        const Inventory::Weapon* last = InSlot(guns, g_lastSlot);
+        return last != nullptr ? *last : guns.front();
     }
 
     // Draws gun 1, else gun 2.
@@ -193,9 +196,7 @@ namespace {
 
     // Places the player's guns and drops a third; gun 1 is drawn if the dropped one was in hand.
     void Tidy(void* inventory) {
-        std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
-        SeparateTwins(guns);
-        if (PlaceGuns(inventory, guns, true)) {
+        if (PlaceGuns(inventory, true)) {
             DrawFirst(inventory);
         }
     }
@@ -246,8 +247,7 @@ namespace {
             guns = Inventory::Guns(inventory);
             gun = InSlot(guns, slot);
         }
-        if (gun == nullptr || (Inventory::Id(gun->item) == Inventory::InHandId(inventory) &&
-                               Inventory::Drawn(inventory))) {
+        if (gun == nullptr || (Inventory::IsInHand(inventory, gun->item) && Inventory::Drawn(inventory))) {
             return false;
         }
         if (!Draw(inventory, *gun)) {
@@ -280,9 +280,7 @@ namespace {
             Inventory::Drop(inventory, weapon);
             return;
         }
-        const std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
-        SeparateTwins(guns);
-        PlaceGuns(inventory, guns, false);
+        PlaceGuns(inventory, false);
         g_picked = {inventory, weapon};
     }
 
@@ -318,14 +316,10 @@ namespace {
     }
 }
 
-void Settle(void* inventory) {
-    const std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
-    SeparateTwins(guns);
-    PlaceGuns(inventory, guns, false);
-}
+void Settle(void* inventory) { PlaceGuns(inventory, false); }
 
 void Release(void* inventory, const Inventory::Weapon& gun, bool drop) {
-    const bool inHand = Inventory::Id(gun.item) == Inventory::InHandId(inventory);
+    const bool inHand = Inventory::IsInHand(inventory, gun.item);
     if (drop) {
         FCSE::Logf("dropped gun %d, the %s", SlotOf(gun.weapon), Inventory::Name(gun.weapon));
         Inventory::Drop(inventory, gun.weapon);
@@ -338,7 +332,7 @@ void Release(void* inventory, const Inventory::Weapon& gun, bool drop) {
 }
 
 bool Install() {
-    if (!Inventory::Install() || !Economy::Resolve() || !GameThread::Install()) {
+    if (!Inventory::Install() || !GameThread::Install()) {
         FCSE::ApiPointer()->Log("an inventory address is missing on this build: two guns is off");
         return false;
     }

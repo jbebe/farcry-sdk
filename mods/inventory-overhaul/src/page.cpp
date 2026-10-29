@@ -15,7 +15,7 @@
 #include <atomic>
 #include <cctype>
 #include <chrono>
-#include <iterator>
+#include <optional>
 #include <utility>
 
 namespace InventoryOverhaul::Page {
@@ -25,9 +25,6 @@ namespace {
     enum Tab { kInventory, kPapers, kJournal, kContacts, kTabs };
     constexpr const char* kTabNames[] = {"INVENTORY", "PAPERS", "JOURNAL", "CONTACTS"};
 
-    // The post-it's pictures besides the guns', as build-ui.ps1 makes them.
-    constexpr const char* kOtherPictures[] = {"machete", "diamond", "seringe", "pills", "m67", "molotov", "note",
-                                              "photo", "tape", "placeholder"};
     // The upgrade icon rows: a gun's three on the third line, a belt item's two on the second.
     constexpr std::pair<const char*, int> kUpgradeRows[] = {{"IO_POSTIT_UP", 3}, {"IO_POSTIT_BELT_UP", 2}};
     constexpr int kHalfSteps = 10;
@@ -48,7 +45,7 @@ namespace {
     // The page's elements as last found, and what was last written into them.
     void* g_notebook = nullptr;
     bool g_open = false;
-    std::wstring g_shown;
+    std::optional<Model> g_shown;
 
     // The pause menu's own page flip, common.mgb's area, shared with the pause menu: its time is set
     // from here at twice its speed up to the frame its images have faded out by, without its
@@ -117,22 +114,33 @@ namespace {
         }
         return missing;
     }
-}
 
-std::wstring Model::Key() const {
-    std::wstring key;
-    for (const auto& [name, text] : texts) {
-        key += text;
-        key += L'\n';
+    // Everything on the post-it hidden or emptied, for the selected row to fill in.
+    void ClearPostIt(Model& model) {
+        HideInventoryPictures(model);
+        for (const char* picture : {"IO_POSTIT_PIC_NOTE", "IO_POSTIT_PIC_PHOTO", "IO_POSTIT_PIC_TAPE",
+                                    "IO_POSTIT_PORTRAIT"}) {
+            model.Show(picture, false);
+        }
+        for (const char* name : {"IO_POSTIT_NAME", "IO_POSTIT_SUB", "IO_POSTIT_LINE1", "IO_POSTIT_LINE2",
+                                 "IO_POSTIT_LINE3", "IO_POSTIT_VALUE1", "IO_POSTIT_VALUE2", "IO_POSTIT_STATE",
+                                 "IO_POSTIT_QUOTE", "IO_POSTIT_NOTE", "IO_POSTIT_ABOUT", "IO_POSTIT_STATUS"}) {
+            model.Text(name, L"");
+        }
+        for (const auto& [icons, count] : kUpgradeRows) {
+            for (int slot = 0; slot < count; ++slot) {
+                model.Show(Name(icons, slot, "_FAINT"), false);
+                model.Show(Name(icons, slot, "_BOUGHT"), false);
+            }
+        }
+        for (int rating = 1; rating <= kRatings; ++rating) {
+            model.Show(Name("IO_POSTIT_RATING", rating), false);
+            model.Show(Name("IO_POSTIT_RATING", rating, "_TRACK"), false);
+            for (int half = 1; half <= kHalfSteps; ++half) {
+                model.Show(Name("IO_POSTIT_RATING", rating, "_") + std::to_string(half), false);
+            }
+        }
     }
-    for (const auto& [name, visible] : shown) {
-        key += visible ? L'1' : L'0';
-    }
-    for (const auto& [name, from] : pictures) {
-        key.append(from.begin(), from.end());
-        key += L'\n';
-    }
-    return key;
 }
 
 std::string Name(const std::string& prefix, size_t index, const char* suffix) {
@@ -153,10 +161,6 @@ std::wstring PlainName(const std::string& id) {
     std::string name = id.substr(id.find_last_of('.') + 1);
     std::replace(name.begin(), name.end(), '_', ' ');
     return Wide(name);
-}
-
-const wchar_t* Condition(float reliability) {
-    return reliability >= 0.75f ? L"new" : reliability >= 0.5f ? L"used" : reliability >= 0.25f ? L"worn" : L"failing";
 }
 
 size_t List(Model& model, const std::string& list, size_t lines, size_t& first, const std::vector<std::wstring>& rows,
@@ -183,34 +187,6 @@ size_t List(Model& model, const std::string& list, size_t lines, size_t& first, 
     model.Text(prefix + "S_MORE", below > 0 ? std::to_wstring(below) + L" more" : L"");
     model.Show(prefix + "S_MORE_ARROW", below > 0);
     return selectedLine;
-}
-
-void ClearPostIt(Model& model) {
-    for (const char* picture : kGunPictures) {
-        model.Show("IO_POSTIT_PIC_" + Upper(picture), false);
-    }
-    for (const char* picture : kOtherPictures) {
-        model.Show("IO_POSTIT_PIC_" + Upper(picture), false);
-    }
-    model.Show("IO_POSTIT_PORTRAIT", false);
-    for (const char* name : {"IO_POSTIT_NAME", "IO_POSTIT_SUB", "IO_POSTIT_LINE1", "IO_POSTIT_LINE2",
-                             "IO_POSTIT_LINE3", "IO_POSTIT_VALUE1", "IO_POSTIT_VALUE2", "IO_POSTIT_STATE",
-                             "IO_POSTIT_QUOTE", "IO_POSTIT_NOTE", "IO_POSTIT_ABOUT", "IO_POSTIT_STATUS"}) {
-        model.Text(name, L"");
-    }
-    for (const auto& [icons, count] : kUpgradeRows) {
-        for (int slot = 0; slot < count; ++slot) {
-            model.Show(Name(icons, slot, "_FAINT"), false);
-            model.Show(Name(icons, slot, "_BOUGHT"), false);
-        }
-    }
-    for (int rating = 1; rating <= kRatings; ++rating) {
-        model.Show(Name("IO_POSTIT_RATING", rating), false);
-        model.Show(Name("IO_POSTIT_RATING", rating, "_TRACK"), false);
-        for (int half = 1; half <= kHalfSteps; ++half) {
-            model.Show(Name("IO_POSTIT_RATING", rating, "_") + std::to_string(half), false);
-        }
-    }
 }
 
 bool Install() {
@@ -289,16 +265,15 @@ void Update(const void* view, void* inventory) {
     model.Show("IO_POSTIT_BODY_UP", raised);
     model.Show("IO_READER", sheet >= 0);
 
-    std::wstring key = model.Key();
-    if (key == g_shown) {
+    if (model == g_shown) {
         return;
     }
     const size_t missing = Write(model);
-    if (g_shown.empty()) {
+    if (!g_shown) {
         FCSE::Logf("page: written, %zu texts, %zu shown or hidden and %zu pictures, %zu of them not on the HUD",
                    model.texts.size(), model.shown.size(), model.pictures.size(), missing);
     }
-    g_shown = std::move(key);
+    g_shown = std::move(model);
 }
 
 void Scroll(int steps) { g_steps += steps; }
@@ -328,7 +303,7 @@ void Frame() {
     if (notebook != g_notebook) {
         FCSE::Logf("page: the HUD's notebook is %p", notebook);
         // A HUD loaded since holds what its package says, not what was written.
-        g_shown.clear();
+        g_shown.reset();
         Paper::NewHud();
     }
     if (notebook != nullptr) {

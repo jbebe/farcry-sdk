@@ -18,10 +18,6 @@ const Inventory::Weapon* InHand(const void* inventory, const std::vector<Invento
 int SlotOf(void* weapon);
 // Puts a gun in slot 1 or 2, or in none with 0; Settle keeps it there.
 void SetSlot(void* weapon, int slot);
-// The gun a new one takes the place of: the one in hand, else the one last drawn with a key, else
-// the first of `guns`, which must not be empty.
-const Inventory::Weapon& ToReplace(const void* inventory,
-                                   const std::vector<Inventory::Weapon>& guns);
 bool Draw(void* inventory, const Inventory::Weapon& gun);
 // Gives a gun added outside a pickup its slot, and an item id of its own.
 void Settle(void* inventory);

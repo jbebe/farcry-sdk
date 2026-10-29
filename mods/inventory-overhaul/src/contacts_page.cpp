@@ -2,6 +2,7 @@
 // those at hand, then the missing, then the dead, as the pause menu's Buddies page knows them.
 #include "pages.h"
 
+#include "engine/magma.h"
 #include "engine/story.h"
 
 #include <algorithm>
@@ -10,10 +11,8 @@
 namespace InventoryOverhaul::Page {
 
 namespace {
-    // The portraits build-ui.ps1 makes, IO_PORTRAIT_<NAME>, named by the buddy's first name but for
-    // two named by the last.
-    constexpr std::string_view kPortraits[] = {"ANDRE", "FLORA", "FRANK", "HAKIM", "JOSIP", "MARTY",
-                                               "MICHELE", "NASREEN", "PAUL", "SINGH", "WARREN", "BAI"};
+    // The portraits build-ui.ps1 makes, IO_PORTRAIT_<NAME>, are named by the buddy's first name but
+    // for two named by the last.
     constexpr std::pair<std::string_view, std::string_view> kLastNamed[] = {{"QUARBANI", "SINGH"},
                                                                             {"XIANYONG", "BAI"}};
 
@@ -25,7 +24,7 @@ namespace {
 
     std::string FirstName(const std::string& name) { return name.substr(0, name.find('_')); }
 
-    // The palette image whose picture is the buddy's portrait, or empty.
+    // The palette image whose picture is the buddy's portrait, or empty when there is none.
     std::string PortraitOf(const std::string& name) {
         std::string picture = Upper(FirstName(name));
         for (const auto& [first, last] : kLastNamed) {
@@ -33,8 +32,8 @@ namespace {
                 picture = last;
             }
         }
-        const bool made = std::find(std::begin(kPortraits), std::end(kPortraits), picture) != std::end(kPortraits);
-        return made ? "IO_PORTRAIT_" + picture : "";
+        const std::string portrait = "IO_PORTRAIT_" + picture;
+        return Magma::Find(portrait.c_str()) != nullptr ? portrait : "";
     }
 
     // A buddy string's value, without its label: "Nationality: Northern Irish" is Northern Irish.

@@ -23,12 +23,12 @@ namespace {
     };
     using StepFn = void(__fastcall*)(Iterator* iterator);
     using LockFn = void(__fastcall*)(void* entity);
-    using BuildClassIdFn = void(__fastcall*)(void* unused, void* unused2);
     using UndergroundFn = bool(__cdecl*)(const EngineString<char>* state);
 
     FCSE::Relocation<const uint8_t* const*> g_entities{FCSE::Uplay(0x01644E80)};
     FCSE::Relocation<StepFn> g_first{FCSE::Uplay(0x0070DDB0)};
     FCSE::Relocation<StepFn> g_next{FCSE::Uplay(0x0070E0D0)};
+    // CEntity::Lock.
     FCSE::Relocation<LockFn> g_lock{FCSE::Uplay(0x004DD4F0)};
     // CMapElementComponent's class id, built when its name is still unset.
     FCSE::Relocation<BuildClassIdFn> g_buildMarkerType{FCSE::Uplay(0x00041E60)};
@@ -66,9 +66,7 @@ Current Find() {
     if (entities == nullptr) {
         return current;
     }
-    if (*g_markerTypeName.get() == nullptr) {
-        g_buildMarkerType(nullptr, nullptr);
-    }
+    const uint32_t* markerType = ClassId(g_buildMarkerType, g_markerTypeName, g_markerType);
     const EngineString<char>* objectives[2] = {};
     size_t found = 0;
     const EngineString<char>* underground = nullptr;
@@ -78,7 +76,7 @@ Current Find() {
     for (g_first(&it); it.outer != head; g_next(&it)) {
         void* entity = Read<void*>(Read<const void*>(it.inner, kNodeProxy), kProxyEntity);
         g_lock(entity);
-        const auto* marker = static_cast<const uint8_t*>(Inventory::Component(entity, g_markerType.get()));
+        const auto* marker = static_cast<const uint8_t*>(Inventory::Component(entity, markerType));
         if (marker == nullptr || Read<uint32_t>(marker, kMarkerOn) == 0) {
             continue;
         }

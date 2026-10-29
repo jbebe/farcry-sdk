@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace InventoryOverhaul::Inventory {
@@ -68,10 +69,15 @@ void* AddGadget(void* inventory, const char* archetype, int uses);
 int Pills();
 // The player's reputation level, 0 to 5, or -1 when there is no player.
 int Reputation();
+// The diamonds in the player's wallet, or -1 when there is no player.
+int Diamonds();
+// Whether the player has bought the shop item `name`, as the shop names it: "ak47 repair manual",
+// "assault webbing", "medium first aid manual".
+bool IsBought(const std::string& name);
 
 // An item's id, by which the engine selects, draws and saves it.
 uint32_t& Id(void* item);
-uint32_t InHandId(const void* inventory);
+bool IsInHand(const void* inventory, void* item);
 // Whether the gun in hand is out, rather than being drawn or put away.
 bool Drawn(const void* inventory);
 // Whether nothing is in hand, as after the gun in hand was dropped.
