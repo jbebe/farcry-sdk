@@ -26,6 +26,7 @@ namespace {
     using TapeFn = void(__fastcall*)(void* manager, void* unused);
     using PlayTapeFn = void(__fastcall*)(void* manager, void* unused, const void* tape);
     using TapeSlotFn = void(__cdecl*)(uint32_t sound, int32_t type, float fade, int32_t flag);
+    using StopSlotFn = void(__cdecl*)(float fade);
 
     // CStringTableMgr::Localize and its singleton, and the id of the strings' file every page passes,
     // a constant in the image.
@@ -60,13 +61,17 @@ namespace {
     FCSE::Relocation<const int32_t*> g_tapeHandle{FCSE::Uplay(0x0164C234)};
     FCSE::Relocation<const uint32_t*> g_tapeSound{FCSE::Uplay(0x0164C22C)};
     constexpr ptrdiff_t kHandleManager = 0x0C;
-    // The slot's play, which replaces the sound playing in it, and the manager's own tapes: each a key,
-    // a start and a stop sound, and a sound type.
+    // The slot's play and its stop, and the manager's own tapes: each a key, a start and a stop sound, a
+    // sound type and whether it was played last. A play while the slot plays leaves that sound playing,
+    // forgotten by the slot, and a tape's stop sound stops that tape alone.
     FCSE::Relocation<TapeSlotFn> g_tapeSlot{FCSE::Uplay(0x006FA7D0)};
+    FCSE::Relocation<StopSlotFn> g_stopSlot{FCSE::Uplay(0x006F8B50)};
     constexpr ptrdiff_t kEntries = 0xE0;
     constexpr ptrdiff_t kEntryCount = 0xE4;
-    constexpr ptrdiff_t kEntryStop = 0x20;
+    constexpr ptrdiff_t kEntrySize = 0x2C;
     constexpr ptrdiff_t kEntryType = 0x24;
+    constexpr ptrdiff_t kEntryPlaying = 0x28;
+    constexpr float kCassetteFade = 0.25f;
 
     // The mission manager's Jackal and Predecessor tapes, SMissionTape records each starting with its
     // string key, and whether one was found.
@@ -85,9 +90,11 @@ namespace {
     constexpr ptrdiff_t kBuddyHistory = 0x9C;
 
     bool g_installed = false;
-    // The tape PlayTape started and its start id, to tell it from one the game plays.
+    // The tape PlayTape started and its start id, to tell it from one the game plays, and whether it is
+    // a cassette.
     std::string g_playing;
     uint32_t g_playingSound = 0;
+    bool g_cassette = false;
 
     void* Service(const FCSE::Relocation<BuildClassIdFn>& build, const void* const* name, const uint32_t* type) {
         if (!g_installed) {
@@ -118,15 +125,25 @@ namespace {
 
     void* TapeManager() {
         void* handle = g_tapeManager && g_touchTapes && g_playTape && g_stopTape && g_tapeHandle && g_tapeSound &&
-                               g_tapeSlot
+                               g_tapeSlot && g_stopSlot
                            ? *g_tapeManager.get()
                            : nullptr;
         return handle != nullptr ? Read<void*>(handle, kHandleManager) : nullptr;
     }
 
-    // The manager's first tape, whose stop sound and sound type a cassette takes, or null.
+    // The manager's first tape, whose sound type a cassette takes, or null.
     const uint8_t* FirstTape(const void* manager) {
         return Read<uint32_t>(manager, kEntryCount) > 0 ? Read<const uint8_t*>(manager, kEntries) : nullptr;
+    }
+
+    // Stops whatever the slot plays, and marks none of the manager's tapes played last, so that its own
+    // StopTape plays no stop sound over the next tape.
+    void ClearSlot(void* manager) {
+        g_stopSlot(0.0f);
+        auto* tapes = Read<uint8_t*>(manager, kEntries);
+        for (uint32_t i = 0; i < Read<uint32_t>(manager, kEntryCount); ++i) {
+            Write<uint8_t>(tapes + i * kEntrySize, kEntryPlaying, 0);
+        }
     }
 }
 
@@ -196,11 +213,10 @@ bool PlayTape(const std::string& key, uint32_t sound) {
         return false;
     }
     g_touchTapes(manager, nullptr);
+    ClearSlot(manager);
     if (sound == 0) {
         g_playTape(manager, nullptr, record);
     } else {
-        // StopTape first, as PlayTape does, so that no tape of the manager's stays marked playing.
-        g_stopTape(manager, nullptr);
         g_tapeSlot(sound, Read<int32_t>(first, kEntryType), -1.0f, 0);
     }
     if (*g_tapeHandle.get() == -1) {
@@ -208,6 +224,7 @@ bool PlayTape(const std::string& key, uint32_t sound) {
     }
     g_playing = key;
     g_playingSound = *g_tapeSound.get();
+    g_cassette = sound != 0;
     return true;
 }
 
@@ -216,11 +233,11 @@ void StopTape() {
     if (manager == nullptr) {
         return;
     }
-    g_stopTape(manager, nullptr);
-    // A cassette is none of the manager's tapes, so it still plays: it ends on their stop sound.
-    const uint8_t* first = FirstTape(manager);
-    if (first != nullptr && !PlayingTape().empty()) {
-        g_tapeSlot(Read<uint32_t>(first, kEntryStop), Read<int32_t>(first, kEntryType), -1.0f, 0);
+    // A cassette is none of the manager's tapes, so the slot is stopped under it.
+    if (g_cassette && !PlayingTape().empty()) {
+        g_stopSlot(kCassetteFade);
+    } else {
+        g_stopTape(manager, nullptr);
     }
 }
 

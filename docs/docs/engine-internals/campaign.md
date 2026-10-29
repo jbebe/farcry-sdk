@@ -243,6 +243,12 @@ calls, ends in `CJackalTapeManager::PlayTape` (`0x10717fa0`, `__thiscall(manager
 - **StopTape** plays the playing entry's stop id through the same slot. Nothing else in the pause
   menu stops a tape: leaving the page or the menu does not; a re-pick restarts it; a phone call
   (`0x106ea930`), a loading screen and scripted music on the other slot do.
+- **The slot does not replace its sound.** Its play (`0x106f9210`), given a sound while the slot's
+  own still plays, starts the new one unattached and resets the slot to none, so the old one plays on
+  and neither is tracked. A stop id is such a play, and stops its own tape only: the first Jackal
+  tape's stop id, played over another sound in the slot, left that sound playing **(heard,
+  2026-10-29)**. `0x106f8b50` (`cdecl`, a fade in seconds) stops the slot's sound outright and resets
+  the slot; the music manager's `0x106fa650` calls it **(RE-verified)**.
 - **Whether one plays:** the slot's handle `[0x1164c234]` is -1 when nothing does, reset by the music
   manager's update (`0x106fd830`) when the sound ends, and `[0x1164c22c]` holds the playing start id.
   The manager's own playing mark (`entry+0x28`) stays set after a tape ends. While scripted music holds
