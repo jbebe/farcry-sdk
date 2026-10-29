@@ -1,1 +1,1 @@
-Bugs Ubisoft never patched: Jackal tapes, exit crash, mouse speed cap, locked bonus missions, machetes. Plus a field of view slider and a frame cap.
+Bugs Ubisoft never patched: Jackal tapes, exit crash, mouse speed cap, locked bonus missions, machetes. Plus field of view settings for the view and the weapon, and a frame cap.

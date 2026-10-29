@@ -2,7 +2,7 @@
 
 Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.2.0] - 2026-10-29
 
 ### Added
 - **Weapon field of view**, for the weapon and arms: the same as Field of view by default, or 45 to
@@ -12,8 +12,9 @@ Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachang
 - **Field of view** now widens the weapon and arms along with the view, unless Weapon field of view
   gives them an angle of their own. They used to stay at the game's own 75 degrees whatever the
   setting.
-- **Field of view** follows the game's own widescreen field of view setting again (`WidescreenFOV`
-  in `GamerProfile.xml`, on by default). With it off, the view was widened as if it were on.
+- **Field of view** leaves the game's own widescreen field of view setting in charge
+  (`WidescreenFOV` in `GamerProfile.xml`, on by default). With it off, the view used to be widened
+  as if it were on.
 
 ## [1.1.1] - 2026-10-15
 
