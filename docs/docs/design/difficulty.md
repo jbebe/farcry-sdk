@@ -89,6 +89,9 @@ range in the log drifts from the scenario's distance.
 
 ### Still to do before it is finished
 
+**Before release, the user's call on 2026-10-29:** the camo suit (N), the vest (F), grass visibility
+(row 10) and heavy testing.
+
 | # | Item | State |
 |---|---|---|
 | A | **Flanking a remembered position.** A soldier relocates around the spot where the player was last seen | the game already does it: at the long wall the squad flanked to where it last saw the player, every run; nothing to build unless a test asks |
@@ -96,13 +99,14 @@ range in the log drifts from the scenario's distance.
 | C | **How enemies differ.** Skill by role: guard posts below vehicle patrols below bodyguards; the arsenal stays as the game has it | direction set, [on hold](#open-how-enemies-differ) |
 | D | **Tuning candidates** from the review of step 4: hold fire at each soldier's own "clear" value rather than a fixed 0.4; sighting and the speed evaluator both count the player's movement; range falloff from each weapon's own effective range; grass in combat (0.8) hides more than when alerted (0.765) | closed, the user's call: the game's own combat "clear" is 0.4, the fire line already |
 | E | **Damage falloff with range** for the player's hits on soldiers | not needed, the user's call: a rifle round barely slows within the 150 m soldiers live at |
-| F | **A vest** | postponed, below; on hold |
+| F | **A vest** | before release; what it is and does is open ([notes below](#postponed)) |
 | G | **The difficulty spread.** Ease Casual and Experienced and harden Infamous, from the Hardcore values | every lever [listed below](#open-the-difficulty-spread) gets an answer before the mod is finished; after A to C |
 | I | **Periphery sees movement.** Outside his focus a still player is barely noticed, a moving one is | built: a still or crouch-moving player counts 0.2 of one moving upright in the periphery, full from 2 m/s (crouch-moving split off at the user's request: it is as fast as a walk); works in game, user 2026-10-26 |
 | J | **Close-range awareness.** Within about 2 m a soldier senses the player at any angle, but a crouching player can always approach without alerting him; walking or running alerts him | built: moving upright at 0.5 m/s or more, both cones go all round within 20 m and behind his eyes he counts 0.5 (noticed); within 2 m he counts in full. The 20 m is the user's; walking, running and jumping count, crouching never; works in game, user 2026-10-26 |
 | K | **Vertical sight limit.** About 45° above and 60° below his eye line | skipped, the user's call: the cone test is already a round 3D cone, 90° from his head direction, and a narrower band would only matter at steep angles |
 | L | **A heard step means investigate.** A footstep sends a soldier to look; only seeing the player makes him hostile | skipped, the user's call: J already makes a walking player behind a soldier noticed, not shot |
 | M | **AI view in the game.** Each soldier's cones, how well he sees the player and where he thinks the player is, drawn as lines in the 3D scene after the frame renders, depth-tested, not through DevTools' overlay or a world-to-screen projection | built in DevTools as the AI view toggle (Mod Configuration Menu); works in game, cones redone as ground sectors and lines widened at the user's request |
+| N | **The camo suit.** The game's suit makes a crouched, still player in high grass invisible beyond 2 m (4 m to an alerted soldier), but only outside combat | before release; the change is open |
 | H | **Release.** CHANGELOG, README-release, the Nexus page and the release workflow | last |
 
 Decided against on 2026-10-26: a reload making a soldier settle his aim again; recoil mattering less at close range; fading the over-cover doubling in before 40 m. The shotgun was raised to about 0.7 at 15 m, falling off past 20 m, instead.
