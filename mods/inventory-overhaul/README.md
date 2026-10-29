@@ -172,8 +172,8 @@ The left mouse button (`startshooting`, taken too) uses the selected row: gun A 
 Items if Items holds fewer than two guns, and on Syrettes the click becomes the heal key's `heal`
 signal, so the game puts the notebook away and uses a syrette as it does for H. A row with more than
 one action opens a context menu instead: a stowed gun's is a scrap of post-it right of its row
-(`a_io_menu_a` and `a_io_menu_b`, one per action underlined, instanced beside each of the ten Items
-lines and all hidden), with "To slot A" and "To slot B". The wheel moves between them, a click puts
+(`a_io_menu`, instanced hidden beside each of the ten Items lines; the instances share the one area,
+so its pencil lines are exported once, through the first), with "To slot A" and "To slot B". The wheel moves between them, a click puts
 the gun in that slot, the gun there going into Items, while the notebook stays out, and the right
 mouse button
 (`draw_monocular`, taken only while something is open) or Esc closes it.
