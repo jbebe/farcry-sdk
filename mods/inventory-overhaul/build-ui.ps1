@@ -423,6 +423,10 @@ foreach ($square in @(
     $postIt.Add((Image "i_io_postit_pic_$($square.Pic)" $square.Material "" 173 22 72 72 $square.Tint 0 @(0, 0, 1, 1) $square.Blending))
     Export $PostItPath "i_io_postit_pic_$($square.Pic)"
 }
+# A thing with no picture of its own has the malaria mosquito, unscaled in the same square, its white
+# multiplied away.
+$postIt.Add((Image i_io_postit_pic_placeholder io_placeholder "" 177 26 64 64 "FFFFFFFF" 0 @(0, 0, 1, 1) Multiply))
+Export $PostItPath i_io_postit_pic_placeholder
 # Where `area` shows a paper's picture, which the plugin copies in: a note's `size` square at (x, y),
 # and a photo's, 3:2, `photoW` wide at (photoX, photoY).
 function PaperPictures($area, [string]$name, [string]$path, [double]$x, [double]$y, [double]$size,
@@ -537,6 +541,7 @@ $materials = @(
     ("manual", "repair", "ammo") | ForEach-Object { Material "io_upgrade_$_" "\textures\ui_icon_$($_)upgrade.png" }
     $Portraits | ForEach-Object { Material "io_buddy_$_" "\textures\hud\icons_buddies\buddies_$_.png" }
     Material io_tape "\textures\ui_tape_icon.png"
+    Material io_placeholder "\textures\common\mosquito.png"
     ("a", "b") | ForEach-Object { Material "io_slot_$_" "\textures\hud_mp\vip_$_.png" }
     Material io_mark_begin "\textures\io\mark_begin.png"
     Material io_mark_end "\textures\io\mark_end.png") -join "`n"

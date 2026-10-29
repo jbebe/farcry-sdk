@@ -29,7 +29,7 @@ namespace {
 
     // The post-it's pictures besides the guns', as build-ui.ps1 makes them.
     constexpr const char* kOtherPictures[] = {"machete", "diamond", "seringe", "pills", "m67", "molotov", "note",
-                                              "photo", "tape"};
+                                              "photo", "tape", "placeholder"};
     // The upgrade icon rows: a gun's three on the third line, a belt item's two on the second.
     constexpr std::pair<const char*, int> kUpgradeRows[] = {{"IO_POSTIT_UP", 3}, {"IO_POSTIT_BELT_UP", 2}};
     constexpr int kHalfSteps = 10;

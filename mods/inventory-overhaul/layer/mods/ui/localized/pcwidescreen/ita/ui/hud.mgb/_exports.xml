@@ -747,6 +747,9 @@
     <GENERICOBJECT name="IO_POSTIT_PIC_MOLOTOV">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_molotov" />
     </GENERICOBJECT>
+    <GENERICOBJECT name="IO_POSTIT_PIC_PLACEHOLDER">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_placeholder" />
+    </GENERICOBJECT>
     <GENERICOBJECT name="IO_POSTIT_PIC_NOTE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_note" />
     </GENERICOBJECT>

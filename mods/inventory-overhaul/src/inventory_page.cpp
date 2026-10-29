@@ -175,8 +175,8 @@ namespace {
     void GunPostIt(Model& model, const Carried& carried, const std::string& archetype, float reliability,
                    int loaded, int spare) {
         const Gun* known = GunOf(archetype);
+        model.Show(known != nullptr ? "IO_POSTIT_PIC_" + Upper(known->picture) : "IO_POSTIT_PIC_PLACEHOLDER", true);
         if (known != nullptr) {
-            model.Show("IO_POSTIT_PIC_" + Upper(known->picture), true);
             model.Text("IO_POSTIT_SUB", known->kind);
         }
         model.Text("IO_POSTIT_NAME", known != nullptr ? known->name : PlainName(archetype));
@@ -233,6 +233,7 @@ namespace {
                           known != nullptr ? Inventory::Ammo(carried.view, known->ammo) : 0);
                 return;
             }
+            model.Show("IO_POSTIT_PIC_PLACEHOLDER", true);
             model.Text("IO_POSTIT_NAME", PlainName(item.id));
             model.Text("IO_POSTIT_SUB", L"stowed");
             model.Text("IO_POSTIT_LINE1", L"Carried");
