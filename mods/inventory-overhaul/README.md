@@ -223,7 +223,8 @@ Upgrades stays, as it lists every gun's manuals, what the shop still sells, vehi
 upgrades and the challenges, which the notebook does not. Its main page looks like the game-over
 dialog, in the layer (`sp_pause_menus.mgb`): the dialog's dimming and post-it, popping in as the
 dialog's does, over the menu's clouds, with the menu's list where the dialog has its own. The notebook spread, its post-it and paperclip, the glows, the
-buddies' portraits and the job panel are hidden.
+buddies' portraits, the job panel and the page flip it opened with are hidden. The game's code shows
+the job panel whatever the layer says, so the plugin also skips the three methods that fill it.
 - **Contacts** (`src/contacts_page.cpp`): the buddies met, from the buddies manager, all on the left
   page: the active buddies, the primary and the secondary (the manager's `+0x50` and `+0x54` point at
   their records), then the others, the living before the dead. Each row has a portrait, name and

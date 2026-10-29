@@ -275,7 +275,7 @@
         <LINK slot="151" TIMING="NoTimingStrategy" PACKAGE="#7B435D46" AREA="#C801AB46" ISUSINGDUPLICATEDAREA="true" />
       </AreaInstance>
     </Element>
-    <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="#5B36589B">
         <PROPERTIES />
       </USERDATA>

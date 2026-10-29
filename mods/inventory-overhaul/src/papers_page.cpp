@@ -90,7 +90,7 @@ namespace {
         if (opening.size() > kOpening) {
             const size_t word = opening.rfind(L' ', kOpening);
             opening.erase(word != std::wstring::npos ? word : kOpening);
-            opening += L"…";
+            opening += L"\u2026";
         }
         model.Text("IO_POSTIT_WRITING", std::move(opening));
     }

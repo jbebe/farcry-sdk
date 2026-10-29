@@ -236,7 +236,12 @@ and `SetupMissionObjective`, `0x10856ac0`) walks the entity system's game elemen
 
 The first marker whose state is not the Underground's (`CGameDominoHelpers::IsUndergroundMission`,
 `0x10722160`, `cdecl`) gives MISSION DETAILS, at most two such markers give OBJECTIVES (the one whose
-key ends in `_01` first), and the Underground's marker gives its line. The walk is
+key ends in `_01` first), and the Underground's marker gives its line. One caller runs four
+`__thiscall(page)` methods in a row: `MissionObjective` (`PAUSE_INFODESCRIPTION_TEXT`),
+`SetupMissionObjective` (`MISSION_OBJECTIF_LIST`), `0x108569a0`, which writes the Underground's line
+into the widgets the page keeps at `+0x1B8`, `+0x1BC`, `+0x1C0` and `+0x1D8`, and `0x10855ba0`. They
+show what they fill, so hiding the panel in `sp_pause_menus.mgb` is not enough: an Underground job
+still showed with every element of it marked `HIDDEN` **(seen in game, 2026-10-29)**. The walk is
 `GenericEntityMapIterator`: three words (the map's node, the entity's node, the map at the entity
 system `[0x11644e80] + 0x1C`), started from the map head's first node by `0x1070ddb0` and stepped by
 `0x1070e0d0`; an entity is `[[inner + 0x10] + 0xC]`, locked by `0x104dd4f0`, and its marker is

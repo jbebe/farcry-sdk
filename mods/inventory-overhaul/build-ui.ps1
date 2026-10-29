@@ -645,10 +645,11 @@ function LastPosition([string[]]$element) {
 }
 
 # The pause menu's main page as the game-over dialog, common.mgb's message box list page: its dimming
-# and post-it over the menu's clouds, the menu's list where the dialog's is, and the rest hidden.
+# and post-it over the menu's clouds, the menu's list where the dialog's is, and the rest hidden, the
+# page flip it opens with among them.
 $PausePage = "#C1849B53"
 $PauseHidden = "#E039A398", "#36D6DAD3", "#95871E12", "#81FDCEB5", "#B638527D", "#6CF418D5", "#C801AB46",
-    "#684AC59C", "#F0CC8C29", "#EDE19BDA", "#2A5FDD43", "#C54DB506", "#B1CC4148"
+    "#684AC59C", "#F0CC8C29", "#EDE19BDA", "#2A5FDD43", "#C54DB506", "#B1CC4148", "#5B36589B"
 $PausePackage = "#7B435D46"
 $PauseClouds = "#B21251FF"
 $PauseList = "#3D23C3C5"
