@@ -174,6 +174,7 @@ $inkFull = Colour $Ink
 $inkSoft = Colour $Ink 0.6
 $countInk = Colour $Ink 0.65
 $inkFaded = Colour $Ink 0.4
+$dimTint = Colour "FFFFFF" 0.4
 $redLine = Colour $PencilRed 0.55
 $left = 96
 $right = 532
@@ -219,8 +220,8 @@ function Overflow([string]$tab, [string]$name, [double]$x, [double]$y, [double]$
 
 # A list of `lines` rows `step` apart from `top`, each with its selection, a picture of `material`
 # if given, its text and a text `side` wide on the right; above and below, how many rows are out of
-# the window. With `fades`, each text has a faded italic twin in the same place, for a row the
-# plugin greys out.
+# the window. With `fades`, each text has a faded italic twin in the same place, for a dead buddy's
+# row, and a faded upright one, for a missing buddy's, whose picture has a faded twin too.
 function List([string]$tab, [string]$name, [double]$x, [double]$top, [int]$lines, [double]$step,
               [string]$material = "", [double]$pictureW = 0, [double]$pictureH = 0, [string]$tint = "FFFFFFFF",
               [double]$side = 0, [bool]$fades = $false) {
@@ -234,19 +235,27 @@ function List([string]$tab, [string]$name, [double]$x, [double]$top, [int]$lines
         if ($material) {
             $area.Add((Image "i_io_$name${j}_pic" $material "" $x ($middle - $pictureH / 2) $pictureW $pictureH $tint))
             Export $path "i_io_$name${j}_pic"
+            if ($fades) {
+                $area.Add((Image "i_io_$name${j}_pic_dim" $material "" $x ($middle - $pictureH / 2) $pictureW $pictureH $dimTint))
+                Export $path "i_io_$name${j}_pic_dim"
+            }
         }
         $area.Add((Text "t_io_$name$j" "" $textX ($middle - 13) ($x + $width - 8 - $side - $textX) 26 22 $inkFull))
         Export $path "t_io_$name$j"
         if ($fades) {
             $area.Add((Text "t_io_$name${j}_faded" "" $textX ($middle - 13) ($x + $width - 8 - $side - $textX) 26 22 $inkFaded LEFT 0 CENTER $false $true))
+            $area.Add((Text "t_io_$name${j}_dim" "" $textX ($middle - 13) ($x + $width - 8 - $side - $textX) 26 22 $inkFaded))
             Export $path "t_io_$name${j}_faded"
+            Export $path "t_io_$name${j}_dim"
         }
         if ($side -gt 0) {
             $area.Add((Text "t_io_$name${j}_side" "" ($x + $width - $side) ($middle - 12) $side 24 16 $inkSoft RIGHT))
             Export $path "t_io_$name${j}_side"
             if ($fades) {
                 $area.Add((Text "t_io_$name${j}_side_faded" "" ($x + $width - $side) ($middle - 12) $side 24 16 $inkFaded RIGHT 0 CENTER $false $true))
+                $area.Add((Text "t_io_$name${j}_side_dim" "" ($x + $width - $side) ($middle - 12) $side 24 16 $inkFaded RIGHT))
                 Export $path "t_io_$name${j}_side_faded"
+                Export $path "t_io_$name${j}_side_dim"
             }
         }
     }
@@ -432,51 +441,64 @@ $postIt.Add((Text t_io_postit_name "" 26 96 366 26 24 $inkFull))
 $postIt.Add((Text t_io_postit_sub "" 26 124 366 18 15 $inkSoft))
 # What a thing with no subtitle is, wrapped right under its name.
 $postIt.Add((Text t_io_postit_about "" 26 128 366 110 18 $inkFull LEFT 0 TOP $true))
+foreach ($name in "t_io_postit_name", "t_io_postit_sub", "t_io_postit_about") {
+    Export $PostItPath $name
+}
+# The post-it's body, everything below the subtitle, an area instanced twice: in its place, and
+# raised into the subtitle's line for a post-it with none. The two share the area, so its elements are
+# exported once, through the first.
+$postItBody = [System.Collections.Generic.List[string]]::new()
+$BodyPath = "$PostItPath a_io_postit_body a_io_postit_body"
+$BodyRaise = 26
 # Three lines of a label and a value: a gun's condition and ammo, a belt item's count, then the
 # upgrades bought for it.
 for ($l = 1; $l -le 3; $l++) {
-    $postIt.Add((Text "t_io_postit_line$l" "" 26 (148 + ($l - 1) * 26) 120 24 20 $inkFull))
-    Export $PostItPath "t_io_postit_line$l"
+    $postItBody.Add((Text "t_io_postit_line$l" "" 26 (148 + ($l - 1) * 26) 120 24 20 $inkFull))
+    Export $BodyPath "t_io_postit_line$l"
 }
-$postIt.Add((Text t_io_postit_value1 "" 101 148 100 24 20 $inkFull RIGHT))
-$postIt.Add((Text t_io_postit_value2 "" 81 174 120 24 20 $inkFull RIGHT))
+$postItBody.Add((Text t_io_postit_value1 "" 101 148 100 24 20 $inkFull RIGHT))
+$postItBody.Add((Text t_io_postit_value2 "" 81 174 120 24 20 $inkFull RIGHT))
 # A paper's or a tape's first line, a label and a longer value, and what it says below; a buddy's
 # status, at the post-it's right edge.
-$postIt.Add((Text t_io_postit_state "" 140 148 252 24 20 $inkFull))
-$postIt.Add((Text t_io_postit_status "" 140 148 252 24 20 $inkFull RIGHT))
-$postIt.Add((Text t_io_postit_quote "" 26 176 366 84 17 $inkFull LEFT 0 TOP $true))
+$postItBody.Add((Text t_io_postit_state "" 140 148 252 24 20 $inkFull))
+$postItBody.Add((Text t_io_postit_status "" 140 148 252 24 20 $inkFull RIGHT))
+$postItBody.Add((Text t_io_postit_quote "" 26 176 366 84 17 $inkFull LEFT 0 TOP $true))
 # The game's upgrade icons, faint until bought, in a row after a line's label: a gun's operation and
 # repair manuals and its bandolier on the third line, under its condition and ammo; a belt item's
 # first aid manuals or bandolier on the second, under its count.
 function Upgrades([string]$row, [string[]]$icons, [double]$y) {
     for ($u = 0; $u -lt $icons.Count; $u++) {
         $material = "io_upgrade_$($icons[$u])"
-        $postIt.Add((Image "i_io_postit_${row}${u}_faint" $material "" (125 + $u * 27) $y 22 22 (Colour $Ink 0.35)))
-        $postIt.Add((Image "i_io_postit_${row}${u}_bought" $material "" (125 + $u * 27) $y 22 22 (Colour $Ink 0.85)))
-        Export $PostItPath "i_io_postit_${row}${u}_faint"
-        Export $PostItPath "i_io_postit_${row}${u}_bought"
+        $postItBody.Add((Image "i_io_postit_${row}${u}_faint" $material "" (125 + $u * 27) $y 22 22 (Colour $Ink 0.35)))
+        $postItBody.Add((Image "i_io_postit_${row}${u}_bought" $material "" (125 + $u * 27) $y 22 22 (Colour $Ink 0.85)))
+        Export $BodyPath "i_io_postit_${row}${u}_faint"
+        Export $BodyPath "i_io_postit_${row}${u}_bought"
     }
 }
 Upgrades up "manual", "repair", "ammo" 201
 Upgrades belt_up "ammo", "ammo" 175
-$postIt.Add((Text t_io_postit_note "" 26 236 366 22 18 $inkFull))
-foreach ($name in "t_io_postit_name", "t_io_postit_sub", "t_io_postit_about", "t_io_postit_value1", "t_io_postit_value2",
-        "t_io_postit_state", "t_io_postit_status", "t_io_postit_quote", "t_io_postit_note") {
-    Export $PostItPath $name
+$postItBody.Add((Text t_io_postit_note "" 26 236 366 22 18 $inkFull))
+foreach ($name in "t_io_postit_value1", "t_io_postit_value2", "t_io_postit_state", "t_io_postit_status",
+        "t_io_postit_quote", "t_io_postit_note") {
+    Export $BodyPath $name
 }
 # Each rating is a brush stroke as long as the rating, the way the loadout draws them, over a faint
 # full-length one: one stroke per half point, all but one hidden.
 for ($r = 1; $r -le $Ratings.Count; $r++) {
     $top = 148 + ($r - 1) * 25
-    $postIt.Add((Text "t_io_postit_rating$r" $Ratings[$r - 1] 217 $top 110 22 14 $inkFull))
-    $postIt.Add((Image "i_io_postit_rating${r}_track" brush_stroke "\common.mgb" 330 ($top + 4) 58 14 (Colour $Ink 0.18)))
-    Export $PostItPath "t_io_postit_rating$r"
-    Export $PostItPath "i_io_postit_rating${r}_track"
+    $postItBody.Add((Text "t_io_postit_rating$r" $Ratings[$r - 1] 217 $top 110 22 14 $inkFull))
+    $postItBody.Add((Image "i_io_postit_rating${r}_track" brush_stroke "\common.mgb" 330 ($top + 4) 58 14 (Colour $Ink 0.18)))
+    Export $BodyPath "t_io_postit_rating$r"
+    Export $BodyPath "i_io_postit_rating${r}_track"
     for ($half = 1; $half -le 10; $half++) {
-        $postIt.Add((Image "i_io_postit_rating${r}_$half" brush_stroke "\common.mgb" 330 ($top + 4) (5.8 * $half) 14 (Colour $Ink 0.85) 0 @(0, 0, ($half / 10), 1)))
-        Export $PostItPath "i_io_postit_rating${r}_$half"
+        $postItBody.Add((Image "i_io_postit_rating${r}_$half" brush_stroke "\common.mgb" 330 ($top + 4) (5.8 * $half) 14 (Colour $Ink 0.85) 0 @(0, 0, ($half / 10), 1)))
+        Export $BodyPath "i_io_postit_rating${r}_$half"
     }
 }
+$postIt.Add((Instance a_io_postit_body 0 0 1 1 0))
+$postIt.Add((Instance a_io_postit_body 0 (-$BodyRaise) 1 1 0 a_io_postit_body_up -hidden $true))
+Export $PostItPath a_io_postit_body
+Export $PostItPath a_io_postit_body_up
 # The post-it's place at the right page's top, tilted about its centre, in the page's own pixels.
 $page.Add((Tilted a_io_postit 512 $PostItTop 416 302 -1.4))
 Export $PagePath a_io_postit
@@ -595,6 +617,7 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
         (Area a_io_portraits 44 44 $palette)
         (Area a_io_paper_pictures 44 44 @())
         (Area a_io_postit 416 302 $postIt)
+        (Area a_io_postit_body 416 302 $postItBody)
         (Area a_io_reader 412 620 $reader)
         (Area a_io_menu $MenuW $MenuH $menu)) -join "`n"
     $objects = @("<GENERICOBJECT name=`"IO_NOTEBOOK`"><LINK slot=`"69`" LASTOBJECTTYPE=`"Element`" IDS=`"$NotebookPath a_io_page`" /></GENERICOBJECT>") + $Exports

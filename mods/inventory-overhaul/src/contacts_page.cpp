@@ -1,5 +1,5 @@
 // The Contacts page: the buddies met, the player's primary and secondary buddy first, then the rest,
-// living before dead, as the pause menu's Buddies page knows them.
+// those at hand, then the missing, then the dead, as the pause menu's Buddies page knows them.
 #include "pages.h"
 
 #include "engine/story.h"
@@ -44,9 +44,16 @@ namespace {
         return colon != std::wstring::npos ? text.substr(colon + 2) : text;
     }
 
-    // A dead buddy's row is written in its faded texts instead.
+    // How available a buddy is: 0 at hand, 1 missing, 2 dead.
+    int Unavailable(const Story::Buddy& buddy) {
+        return buddy.status == Story::kDead ? 2 : buddy.status == Story::kMissing ? 1 : 0;
+    }
+
+    // A dead buddy's row is written in its faded italic texts instead, a missing one's in its dim texts,
+    // with its dim picture.
     void Buddies(Model& model, const std::string& list, size_t lines, size_t& first,
                  const std::vector<const Story::Buddy*>& buddies, int selected) {
+        constexpr const char* kStyles[] = {"", "_DIM", "_FADED"};
         std::vector<std::wstring> names;
         for (const Story::Buddy* buddy : buddies) {
             names.push_back(Wide(FirstName(buddy->name)));
@@ -56,16 +63,18 @@ namespace {
             const size_t index = first + line;
             const std::string row = Name("IO_" + list, line + 1);
             const bool shown = index < buddies.size();
-            const bool dead = shown && buddies[index]->status == Story::kDead;
-            const std::wstring status = shown ? buddies[index]->statusText : L"";
-            model.Text(row, shown && !dead ? names[index] : L"");
-            model.Text(row + "_FADED", dead ? names[index] : L"");
-            model.Text(row + "_SIDE", dead ? L"" : status);
-            model.Text(row + "_SIDE_FADED", dead ? status : L"");
+            const int style = shown ? Unavailable(*buddies[index]) : 0;
+            for (int s = 0; s < 3; ++s) {
+                model.Text(row + kStyles[s], shown && s == style ? names[index] : L"");
+                model.Text(row + "_SIDE" + kStyles[s], shown && s == style ? buddies[index]->statusText : L"");
+            }
             const std::string portrait = shown ? PortraitOf(buddies[index]->name) : "";
-            model.Show(row + "_PIC", !portrait.empty());
+            const std::string picture = row + (style == 1 ? "_PIC_DIM" : "_PIC");
+            model.Show(row + "_PIC", false);
+            model.Show(row + "_PIC_DIM", false);
             if (!portrait.empty()) {
-                model.Picture(row + "_PIC", portrait);
+                model.Show(picture, true);
+                model.Picture(picture, portrait);
             }
         }
     }
@@ -91,7 +100,8 @@ int ContactsPage(Model& model, int& selected) {
         (buddy.active != 0 ? active : others).push_back(&buddy);
     }
     std::sort(active.begin(), active.end(), [](const auto* a, const auto* b) { return a->active < b->active; });
-    std::stable_partition(others.begin(), others.end(), [](const auto* buddy) { return buddy->status != Story::kDead; });
+    std::stable_sort(others.begin(), others.end(),
+                     [](const auto* a, const auto* b) { return Unavailable(*a) < Unavailable(*b); });
     const int rows = static_cast<int>(buddies.size());
     selected = std::clamp(selected, 0, std::max(rows - 1, 0));
 

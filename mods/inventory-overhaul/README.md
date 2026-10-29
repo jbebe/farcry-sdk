@@ -123,6 +123,7 @@ icon, and its two marker textures under `layer/mods/ui/textures/io`:
 | `a_io_portraits` | the buddies' portraits, hidden, for rows to copy |
 | `a_io_paper_pictures` | the papers' pictures, hidden, for the post-it and the reader to copy; other mods add theirs |
 | `a_io_postit` | the post-it, held by `common.mgb`'s paperclip, tilted at the right page's top |
+| `a_io_postit_body` | everything on the post-it below the subtitle, instanced twice: in its place, and raised into the subtitle's line for a post-it with none, such as a belt item's or a Jackal tape's |
 
 It is drawn the way the pause menu's paper pages are: the `notebook` texture, black Farcry2 ink with
 no shadow, `common.mgb`'s post-it, paperclip, red line and brush stroke, cropped with the image's `OFFSET`
@@ -239,11 +240,12 @@ buddies' portraits, the job panel and the page flip it opened with are hidden. T
 the job panel whatever the layer says, so the plugin also skips the three methods that fill it.
 - **Contacts** (`src/contacts_page.cpp`): the buddies met, from the buddies manager, all on the left
   page: the active buddies, the primary and the secondary (the manager's `+0x50` and `+0x54` point at
-  their records), then the others, the living before the dead. Each row has a portrait, name and
-  status, a dead buddy's in faded italic ink, and the post-it has their nationality, age and the
-  first line the pause menu's Buddies page has. A row's portrait is copied from a hidden image of the
-  same package (`a_io_portraits`); a faded row is a second pair of texts, shown in the normal one's
-  place, since a text's colour cannot be changed at runtime.
+  their records), then the others, those at hand before the missing and the missing before the dead.
+  Each row has a portrait, name and status, a dead buddy's in faded italic ink and a missing one's
+  faded, its portrait too, and the post-it has their nationality, age and the first line the pause
+  menu's Buddies page has. A row's portrait is copied from a hidden image of the same package
+  (`a_io_portraits`); a faded row is a second set of texts and picture, shown in the normal one's
+  place, since an element's colour cannot be changed at runtime.
 
 Fill in the test window, or `INVENTORY_OVERHAUL_FILL`, also gives Tales of Africa's note and photo and, through the
 game's own Lua in DevTools' console, meets Frank, Flora, Marty, Josip and Warren, makes Frank the

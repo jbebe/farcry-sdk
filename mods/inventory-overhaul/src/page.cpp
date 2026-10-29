@@ -283,6 +283,10 @@ void Update(const void* view, void* inventory) {
     g_menu = menu;
     g_heals = model.heals;
     model.Show("IO_POSTIT", rows > 0 && sheet < 0);
+    // A post-it with no subtitle has its body raised into the subtitle's line.
+    const bool raised = model.texts["IO_POSTIT_SUB"].empty();
+    model.Show("IO_POSTIT_BODY", !raised);
+    model.Show("IO_POSTIT_BODY_UP", raised);
     model.Show("IO_READER", sheet >= 0);
 
     std::wstring key = model.Key();
