@@ -207,7 +207,7 @@ Which bandolier covers which gun, from the shop's plans:
 | Diamonds | — | no: the row is the player's own diamond count |
 | Syrette | heal: the click is the heal key's, so the notebook goes away and the syrette is used (built and seen in game, 2026-10-29) | no |
 | Letter, photo | read: it lies over the whole right page on the post-it's paper turned upright, the post-it hidden; a photo keeps its own colours; the wheel turns a long letter's sheets; LMB or Esc puts it back (built 2026-10-28) | no |
-| Tape | play or stop, while the player walks on: a click plays it, on the playing tape stops it (built 2026-10-29, not yet heard) | no |
+| Tape | play or stop, while the player walks on: a click plays it, on the playing tape stops it (heard in game, 2026-10-29) | no |
 | Quest item | — | no, until its job ends |
 | Other item | — | thrown away, one at a time |
 | Pills, grenades, molotovs | — | no |

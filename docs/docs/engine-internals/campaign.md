@@ -229,7 +229,7 @@ description at `+0x1C`, `startSoundID` and `stopSoundID` at `+0x38` and `+0x54` 
 `"0x%08X"`), `soundType` at `+0x70`. The Bowa-Seko repeat fix patches the world test in
 `NewJackalTapeFound` (`0x1074e464`), which reads a byte at `+0x75` **(RE-verified)**.
 
-**Playing a tape** **(RE-verified, not run)**. Every player of a tape, the pause pages and both Lua
+**Playing a tape** **(RE-verified; played from a plugin while the game runs, 2026-10-29)**. Every player of a tape, the pause pages and both Lua
 calls, ends in `CJackalTapeManager::PlayTape` (`0x10717fa0`, `__thiscall(manager, const SMissionTape*)`,
 `ret 4`), which needs nothing of the pause menu:
 
