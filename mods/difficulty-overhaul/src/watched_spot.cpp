@@ -45,15 +45,11 @@ namespace {
         if (sight < 0.0f) {
             return true;
         }
-        void* shooter = Shooting::ShooterEntity(shooting);
-        void* player = Game::PlayerEntity();
-        if (shooter == nullptr || player == nullptr) {
-            return true;
-        }
         float from[3];
         float to[3];
-        Game::Position(shooter, from);
-        Game::Position(player, to);
+        if (!Shooting::Positions(shooting, from, to)) {
+            return true;
+        }
 
         const double now = Game::Now();
         const double since = now - sight;

@@ -22,9 +22,10 @@ namespace {
     FCSE::Relocation<GetVisibilityFn> g_getVisibility{FCSE::Uplay(0x00A021A0)};
     FCSE::Relocation<GetKnowledgeFn> g_getKnowledge{FCSE::Uplay(0x00A235C0)};
 
-    // CShootingSystem: its agent, its reaction CLifeTimer's lifetime (-1 while stopped) and start
-    // time, and its target distance.
+    // CShootingSystem: its agent, the lifetime its reaction CLifeTimer starts with, that timer's
+    // lifetime (-1 while stopped) and start time, and its target distance.
     constexpr ptrdiff_t kShooter = 0x00;
+    constexpr ptrdiff_t kReactionDuration = 0xB8;
     constexpr ptrdiff_t kReactionLifetime = 0xBC;
     constexpr ptrdiff_t kReactionStart = 0xC0;
     constexpr ptrdiff_t kTargetDistance = 0xE8;
@@ -150,11 +151,25 @@ void RestartAim(void* shooting) {
     Write(shooting, kReactionStart, static_cast<float>(Game::Now()));
 }
 
+void StartAim(void* shooting) {
+    Write(shooting, kReactionLifetime, Read<float>(shooting, kReactionDuration));
+    RestartAim(shooting);
+}
+
+bool Positions(void* shooting, float from[3], float to[3]) {
+    void* shooter = Game::EntityOf(ShooterPawn(shooting));
+    void* target = Game::EntityOf(Pawn(Target(shooting)));
+    if (shooter == nullptr || target == nullptr) {
+        return false;
+    }
+    Game::Position(shooter, from);
+    Game::Position(target, to);
+    return true;
+}
+
 void* Pawn(void* agent) { return Read<void*>(agent, kAgentPawn); }
 
 void* ShooterPawn(void* shooting) { return Pawn(Read<void*>(shooting, kShooter)); }
-
-void* ShooterEntity(void* shooting) { return Game::EntityOf(ShooterPawn(shooting)); }
 
 uint8_t* PawnData(void* pawn) { return Read<uint8_t*>(pawn, kPawnData); }
 

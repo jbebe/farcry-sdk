@@ -14,10 +14,10 @@ Notable changes to Difficulty Overhaul, loosely following
   never on Infamous. Beds and medic cabinets still heal you fully.
 - **Limb hits wound.** A hit to an arm or a leg that would kill a soldier puts him down wounded
   instead: he calls for help, crawls for cover and may shoot back from the ground.
-- **Aim is earned.** A soldier's aim settles after he spots you, longer at range. Every shot is a
-  real chance and none is certain, recoil spoils his follow-up shots, and you are harder to hit
-  running across his line of fire than running at him. He never aims at your head in his first 3
-  seconds on you.
+- **Aim is earned.** A soldier who spots you holds his fire for a moment, longer at range, so you
+  have time to duck, and his aim settles meanwhile. Every shot is a real chance and none is certain,
+  recoil spoils his follow-up shots, and you are harder to hit running across his line of fire than
+  running at him. He never aims at your head in his first 3 seconds on you.
 - **Fire discipline and grass.** Soldiers hold their fire until they can make you out, waiting aimed
   where they are, and high grass hides you crouched and still even in a firefight.
 - **Suppression.** Your bullets shake a soldier's aim for a second but never silence him: hit him and

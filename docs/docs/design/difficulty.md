@@ -89,6 +89,7 @@ range in the log drifts from the scenario's distance.
 | 19 | Shotgunners | Shotgunner behind cover: stay behind your line and let him come | he closes in from cover to cover, pausing about 1 s at each, and inside 12 m keeps pushing rather than holding back to fire; he stops about 3 m away | new: the game switches the shotgunner's push off inside 12 m; switched on at the player, the user's pick ("their weapon seems like a suitable tool for that") | he pushed in and walked into the player: "he has to stop at some point. like at 3 meters". Every soldier then stopped 3 m from the player, seen or not. Dropped with that stop, the user's call on 2026-10-28: the game already has the push on from 50 m to 12 m, and stopping near 12 m is close enough |
 | 20 | No headshot on first contact | Rifleman at 20 m: step out in front of him, take hits with invincibility on, duck out of sight and step out again | every `shot at player:` line under 3.0 s on him says `at the torso`; after that about one in seven says `at the head`, and ducking out starts it over | new: from the research, the user's pick ("that really rustles people's jimmies"); his first shot could go for the head | not run |
 | 21 | Healing | Rifleman at 20 m, invincibility off: take hits down to the last bar, heal, heal again, then hide and wait | at 1,025 maximum the surgery leaves 410 health (40 %) and a syrette 666 (65 %), `healed:` lines; a second syrette is refused; nothing comes back below 666, and from there health reaches full in 6 minutes, starting 5 s after the last hit (3 s on Casual, 10 s on Experienced, never on Infamous) | new: the user's three states ("surgery makes you survive one more shot, syrette makes you survive 2 shots, full regen makes you survive the 4 shots"); the game's surgery gave two bars, a syrette full health, and the bar health was in refilled within a second | not run |
+| 22 | Reaction | Rifleman at 50 m, idle: stand in the open in front of him until he spots you, then stay | `reaction: spotted the player at 50 m, holds his fire 2.2 s`, no shot for 2.2 s, then his first `shot at player:` says about `2.2 s on him` | new 2026-10-29: an idle soldier at 58.6 m opened fire the moment he noticed the user standing in a bush and killed him 1.2 s later ("my last death was bullshit"); the user's pick of a hold on first contact only, not on every peek ("I want them spraying when I peek") | not run |
 
 ### Still to do before it is finished
 
@@ -153,6 +154,13 @@ where he is keeps firing until the player relocates. Changed the same day, not y
   fire line.
 
 Not wanted: suppressive fire at the spot where the player ducked out of sight.
+
+Later the same day an idle soldier 58.6 m away noticed the user standing in a bush and fired at once,
+nine rounds in 1.1 s while his aim settled; two hit and killed him ("this is too much of a reaction
+time"). Added, not yet seen: a soldier who spots the player before he has fired in the fight holds his
+fire for 1 s plus 0.025 s per metre while his aim settles ([row 22](#built-check-on-the-range)). Not
+wanted: holding fire until his aim is half settled on every sighting, which would end the spraying on
+a peek.
 
 ## Postponed
 

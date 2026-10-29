@@ -96,16 +96,12 @@ namespace {
 
     // How hard the player's movement across his line of fire makes the shot, as a factor.
     float Crossing(void* shooting) {
-        void* playerPawn = Shooting::Pawn(Shooting::Target(shooting));
-        void* shooter = Shooting::ShooterEntity(shooting);
-        void* player = Game::EntityOf(playerPawn);
-        if (shooter == nullptr || player == nullptr) {
-            return 1.0f;
-        }
         float from[3];
         float to[3];
-        Game::Position(shooter, from);
-        Game::Position(player, to);
+        if (!Shooting::Positions(shooting, from, to)) {
+            return 1.0f;
+        }
+        void* playerPawn = Shooting::Pawn(Shooting::Target(shooting));
         float velocity[3];
         Shooting::Velocity(playerPawn, velocity);
         float line = 0.0f;

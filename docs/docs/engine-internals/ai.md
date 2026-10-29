@@ -418,7 +418,8 @@ Whether a shot may hit is decided by `CShootingSystem::GetChanceOfSuccess`, then
 - **Target status** - the same factors for the target, with `fDrivingFactor` scaled down by the
   vehicle's evasiveness.
 - **Weapon range** - `CWeaponPropertiesCommon::GetTargetDistanceFactor` at the target distance
-  (clamped to 220 m); forced to 1 when he aims with a sniper rifle.
+  (clamped to 220 m); forced to 1 when he aims with a sniper rifle. The target distance is measured
+  only here, and only when he has a weapon equipped; until then it holds 99 m, the constructor's value.
 - **Group number** - the curve named by `archGroupNumberCurve`
   (`Curves.ShootingSystem.GroupNumber`), evaluated at how many AIs currently shoot at the same
   target.

@@ -46,15 +46,21 @@ float SightSeconds(void* shooting);
 // The distance to his target, as last measured.
 float TargetDistance(const void* shooting);
 
-// Whether his reaction timer runs, the seconds since his aim started settling, and restarting it.
+// Whether his reaction timer runs, which stays stopped until his first shot in a fight unless
+// reaction starts it, the seconds since his aim started settling, and restarting it.
 bool Reacting(const void* shooting);
 float AimSeconds(const void* shooting);
 void RestartAim(void* shooting);
 
-// The CPawn of a CPawnAgent, and the CPawn and entity of the soldier a shooting system belongs to.
+// Starts his stopped reaction timer now, as the game does at his first shot.
+void StartAim(void* shooting);
+
+// His position and his target's, false when either has no entity.
+bool Positions(void* shooting, float from[3], float to[3]);
+
+// The CPawn of a CPawnAgent, and the CPawn of the soldier a shooting system belongs to.
 void* Pawn(void* agent);
 void* ShooterPawn(void* shooting);
-void* ShooterEntity(void* shooting);
 
 // A CPawn's data block.
 uint8_t* PawnData(void* pawn);
