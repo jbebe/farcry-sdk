@@ -291,7 +291,7 @@ Each step ends with one check in game before the next.
 | 4 | The Inventory page in Magma, as an overlay, then on the paper | pictures, wear and ammo match the guns |
 | 5 | The notebook model, page turns on the flip | |
 | 6 | The pause pages moved in: Papers (sample papers, the Jackal and Predecessor tapes found), Journal (reputation and the current job) and Contacts (the buddies met), each read from the game, and R turning the page. The pause menu loses those entries and its main page's job panel; the story synopses the pause menu's Journal had are dropped | the pause menu keeps only its eight entries (seen, 2026-10-28) |
-| 7 | Papers and memories: the torn notebook page with the Jackal photo clipped to it, on a burnt-out truck's bed near the start, picked up into Items | read one, walking (built, not yet seen in game) |
+| 7 | Papers and memories: the torn notebook page with the Jackal photo clipped to it, where a boombox stands on a beer barrel, picked up into Items | read one, walking (seen in game, 2026-10-29) |
 | 8 | The box at the crates | bring a found Carl G home and take it out again |
 | 9 | One fetch mission | |
 | later | Diamonds, food, pills, ammo as items | |
