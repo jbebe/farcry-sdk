@@ -76,6 +76,23 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 
 - [ ] Grade the gunshot echo per gun: an automatic rifle's echo shouldn't be as loud as the Dragunov's
 
+## Mods/difficulty-overhaul
+
+- [ ] Shell-shock from an explosion
+- [ ] Ear ringing
+- [ ] Hearing fades when health is low
+- [ ] Movement reconfigured to feel more realistic
+- [ ] Heavier weapons weigh more, so you move slower
+- [ ] A ricochet shoves dirt in your eye
+- [ ] Rounds that go through metal
+- [ ] Real RPG speed
+- [ ] Flak vests
+- [ ] Grenade damage radius reconfigured
+- [ ] No marker showing where a hit came from
+- [ ] Enemies carry a flashlight on their head at night
+- [ ] Weather makes it easier or harder to notice an enemy
+- [ ] Reinforcements come 30 s to 1 min after an outpost goes on alert
+
 ## Mod ideas
 
 - [ ] Binoculars with a distance meter
@@ -99,6 +116,5 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 - [ ] **Radio(s).** A host created with ElevenLabs, for example
 - [ ] **Steady aim on a button.** The scope moves around unless the button is held, like in Call of
   Duty 2
-- [ ] **Enemy flashlights.** Enemies use flashlights at night
 - [ ] **Guard an outpost.** A job that pays 1 diamond per day, with incoming soldiers expected.
   Checking their documents could be part of it, if the game has dialogue that fits
