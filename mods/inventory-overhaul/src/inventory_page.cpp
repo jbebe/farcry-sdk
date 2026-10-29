@@ -4,6 +4,7 @@
 
 #include "engine/economy.h"
 #include "engine/inventory.h"
+#include "engine/story.h"
 #include "items.h"
 #include "two_guns.h"
 
@@ -15,6 +16,9 @@
 namespace InventoryOverhaul::Page {
 
 namespace {
+    // Where another mod words its items: InventoryItems/<id>_DESC is an item's description.
+    constexpr const char* kItemStrings = "InventoryItems";
+
     // A gun as the shop and the multiplayer loadout know it: its archetype, its picture
     // gun_icon_<picture>.png, its names and type, its five loadout ratings from 0 to 5 (none below
     // zero), its name in the shop, its ammo type and the bandolier that carries more of it.
@@ -238,7 +242,7 @@ namespace {
             model.Text("IO_POSTIT_SUB", L"stowed");
             model.Text("IO_POSTIT_LINE1", L"Carried");
             model.Text("IO_POSTIT_VALUE1", L"\x00D7" + std::to_wstring(item.count));
-            model.Text("IO_POSTIT_QUOTE", Wide(item.description));
+            model.Text("IO_POSTIT_QUOTE", Story::Localize(kItemStrings, item.id + "_DESC"));
             return;
         }
         case Row::kDiamonds:

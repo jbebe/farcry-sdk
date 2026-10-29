@@ -18,13 +18,13 @@ A note, a photo and a cassette in world 1, the first papers the convention was s
 | `Oil_can` | on the ground north of the table, (2606.9, 2108.05, 19.74) | the envelope drawn as Explosives' gas can, its intact mesh and its own physics, which does not burst | the description "A little gas for the Datsun." |
 
 Each is saved at persist level 3, like a diamond case, so it stays picked. A pickup takes another
-archetype's look in `papers.py`: its graphic with only the named node's mesh, and its physics, or the
-sheet's when it has none.
+archetype's look in `papers.py`: its graphic with only the named node's mesh, and the physics of the
+archetype the look names.
 
 | Part | Files |
 |---|---|
 | Pickups | `layer/mods/worlds/world1/generated/entitylibrary.fcb/OA_MissionPickups/` and `layer/mods/levels/`, written by `build-papers.ps1` (`papers.py`) from the retail entity library under `tmp\` |
-| Words | the `Papers` section of `layer/mods/languages/<language>/oasisstrings.fragment.xml` |
+| Words | the `Papers` section of `layer/mods/languages/<language>/oasisstrings.fragment.xml`, and its `InventoryItems` section for the items' descriptions |
 | Pictures | `layer/mods/ui/localized/<aspect>/<language>/ui/hud.mgb/`: the images in `a_io_paper_pictures`, their materials and exports |
 
 ## Testing

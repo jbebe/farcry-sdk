@@ -1,5 +1,5 @@
 // Items as one string of entity data, a record a line: "gun <archetype> <wear> <rounds>" or
-// "item <id> <count> <sound> <description>", the description being the rest of the line.
+// "item <id> <count> <sound>".
 #include "items.h"
 
 #include "engine/inventory.h"
@@ -71,7 +71,6 @@ std::vector<Record> Load() {
             fields >> item.reliability >> item.loaded;
         } else {
             fields >> item.count >> item.sound;
-            std::getline(fields >> std::ws, item.description);
         }
         if (!item.id.empty()) {
             items.push_back(std::move(item));
@@ -90,7 +89,7 @@ void Save(const std::vector<Record>& items) {
         if (item.gun) {
             text << "gun " << item.id << ' ' << item.reliability << ' ' << item.loaded << '\n';
         } else {
-            text << "item " << item.id << ' ' << item.count << ' ' << item.sound << ' ' << item.description << '\n';
+            text << "item " << item.id << ' ' << item.count << ' ' << item.sound << '\n';
         }
     }
     FCSE::ApiPointer()->EntityData->SetString(player, kItemsKey, text.str().c_str());
@@ -166,7 +165,7 @@ bool Drop(void* inventory, size_t index) {
     return true;
 }
 
-bool Give(const std::string& id, uint32_t sound, const std::string& description) {
+bool Give(const std::string& id, uint32_t sound) {
     std::vector<Record> items = Load();
     if (id.rfind(kWeaponPrefix, 0) == 0) {
         void* pawn = Inventory::PlayerPawn();
@@ -182,11 +181,7 @@ bool Give(const std::string& id, uint32_t sound, const std::string& description)
         if (same != items.end()) {
             ++same->count;
         } else {
-            Record& item = items.emplace_back(Record{id});
-            item.sound = sound;
-            // A record is one line.
-            item.description = description;
-            std::replace(item.description.begin(), item.description.end(), '\n', ' ');
+            items.emplace_back(Record{id}).sound = sound;
         }
     }
     Save(items);

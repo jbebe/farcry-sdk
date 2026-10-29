@@ -267,7 +267,7 @@ by convention; the only data of its own is on its pickup.
 | Its words | the string table's section `Papers`: `<id>` its name (else the id's last part), `<id>_FOUND` where it was found, `<id>_1`, `_2`... its sheets, read until one is missing. A photo's caption and a cassette's description are its first sheet |
 | Its picture | an image in `hud.mgb`'s `a_io_paper_pictures`, exported as `IO_PAPER_<ID>`, the id upper-cased with its dots made underscores: a note's shown square, a photo's 3:2, so its material's `REGION` crops it to that. A paper with none shows its words only. It ships as fragments of every `hud.mgb`: the area, and `_materials.xml` and `_exports.xml` whole, the retail entries included, as `jackall-cli mgb fragments` writes them, since a list missing an entry removes it |
 | A cassette's sound | `soundbinary\<id>.spk`, a bank of its own named after the event |
-| Any other item | an id with none of those first parts is an item in Items, named by the id's last part; the entity data `InventoryOverhaul.Description`, text in UTF-8, is kept with it and shown on its post-it. Its picture is the malaria mosquito (`textures\common\mosquito`, its white multiplied away), as is a gun's the shop's tables do not know |
+| Any other item | an id with none of those first parts is an item in Items, named by the id's last part; its description, shown on its post-it, is the string table's `InventoryItems/<id>_DESC`. Its picture is the malaria mosquito (`textures\common\mosquito`, its white multiplied away), as is a gun's the shop's tables do not know |
 
 [Tales of Africa](../tales-of-africa/README.md) is such a mod: its note, photo and cassette are the
 ones this convention was first seen working with.

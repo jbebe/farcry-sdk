@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <cwchar>
 #include <map>
 #include <utility>
 
@@ -179,7 +180,8 @@ const std::wstring& Localize(const char* section, const std::string& key) {
     const auto sectionString = EngineString<char>::Of(section, std::strlen(section));
     const auto keyString = EngineString<char>::Of(key.c_str(), key.size());
     const wchar_t* text = g_localize(table, nullptr, &sectionString, &keyString, kStringFile);
-    return s_known[id] = text != nullptr ? text : L"";
+    // The table gives a key it lacks as a space.
+    return s_known[id] = text != nullptr && std::wcscmp(text, L" ") != 0 ? text : L"";
 }
 
 std::wstring Words(const char* section, const std::string& key) {

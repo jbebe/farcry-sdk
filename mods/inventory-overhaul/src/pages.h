@@ -40,7 +40,6 @@ inline constexpr int kRatings = 5;
 
 std::string Name(const std::string& prefix, size_t index, const char* suffix = "");
 std::string Upper(const std::string& text);
-// UTF-8 text as the HUD's.
 std::wstring Wide(const std::string& text);
 // An id's last part with spaces for underscores: a gun the tables do not know, or an item.
 std::wstring PlainName(const std::string& id);

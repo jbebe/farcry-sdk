@@ -1,8 +1,8 @@
 """The papers and items lying in a world, kept in Inventory Overhaul's notebook: for each, one of the
 Predecessor's pickups lifted out of a decoded entity library, the envelope drawn as a stock prop or the
-tape as it is, naming its Items id, a cassette its sound event and an item its description in FCSE
-entity data, and an instance of it placed in a sector. Written as the world's archetype and sector
-fragments in the layer.
+tape as it is, naming its Items id and a cassette its sound event in FCSE entity data, and an instance
+of it placed in a sector. Written as the world's archetype and sector fragments in the layer; their
+words are the language fragments'.
 
     python papers.py <entitylibrary.xml> <layer> <world>
 """
@@ -41,8 +41,8 @@ PAPERS = [
     {"item": "Tape.Test_cassette", "base": TAPE, "sound": "0x004E1C52", "archetype_id": 81304,
      "world": "world1", "level": "w1_c_3", "sector": 2600, "entity_id": 2099000000000000206,
      "pos": (2606.75, 2107.00, 20.5065), "angles": (0, 0, 0)},
-    {"item": "Oil_can", "base": ENVELOPE, "look": "jerrycan", "description": "A little gas for the Datsun.",
-     "archetype_id": 81305, "world": "world1", "level": "w1_c_3", "sector": 2600,
+    {"item": "Oil_can", "base": ENVELOPE, "look": "jerrycan", "archetype_id": 81305,
+     "world": "world1", "level": "w1_c_3", "sector": 2600,
      "entity_id": 2099000000000000207, "pos": (2606.9, 2108.05, 19.74), "angles": (0, 0, 90)},
 ]
 
@@ -94,9 +94,8 @@ for paper in (p for p in PAPERS if p["world"] == world):
     assert "nvelope" not in text
     block = text.split("\n")
     data = {"InventoryOverhaul.Item": paper["item"]}
-    for key, field in [("sound", "InventoryOverhaul.Sound"), ("description", "InventoryOverhaul.Description")]:
-        if key in paper:
-            data[field] = paper[key]
+    if "sound" in paper:
+        data["InventoryOverhaul.Sound"] = paper["sound"]
     add_entity_data(block, data)
     write(fragment_path(layer, ("worlds", world, "generated", "entitylibrary.fcb"), "OA_MissionPickups." + name),
           block)

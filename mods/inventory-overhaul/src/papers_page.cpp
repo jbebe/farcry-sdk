@@ -49,15 +49,9 @@ namespace {
         return nullptr;
     }
 
-    // Papers/<key>, empty when the table has none, which it gives as a space.
-    std::wstring PaperString(const std::string& key) {
-        const std::wstring& text = Story::Localize(kSection, key);
-        return text == L" " ? L"" : text;
-    }
-
     Paper PaperOf(const Kind& kind, const Items::Record& item) {
-        std::wstring name = PaperString(item.id);
-        return {&kind, &item, name.empty() ? PlainName(item.id) : std::move(name)};
+        const std::wstring& name = Story::Localize(kSection, item.id);
+        return {&kind, &item, name.empty() ? PlainName(item.id) : name};
     }
 
     // The image a paper's picture is copied from, IO_PAPER_<ID> with the id's dots made underscores, or
@@ -71,8 +65,12 @@ namespace {
     // A paper's sheets, one at least.
     std::vector<std::wstring> Sheets(const Paper& paper) {
         std::vector<std::wstring> sheets;
-        for (std::wstring sheet; !(sheet = PaperString(Name(paper.item->id + "_", sheets.size() + 1))).empty();) {
-            sheets.push_back(std::move(sheet));
+        while (true) {
+            const std::wstring& sheet = Story::Localize(kSection, Name(paper.item->id + "_", sheets.size() + 1));
+            if (sheet.empty()) {
+                break;
+            }
+            sheets.push_back(sheet);
         }
         if (sheets.empty()) {
             sheets.emplace_back();
@@ -89,11 +87,11 @@ namespace {
         }
         model.Text("IO_POSTIT_NAME", paper.name);
         model.Text("IO_POSTIT_SUB", paper.kind->word);
-        if (std::wstring found = PaperString(paper.item->id + "_FOUND"); !found.empty()) {
+        if (const std::wstring& found = Story::Localize(kSection, paper.item->id + "_FOUND"); !found.empty()) {
             model.Text("IO_POSTIT_LINE1", L"Found");
-            model.Text("IO_POSTIT_STATE", std::move(found));
+            model.Text("IO_POSTIT_STATE", found);
         }
-        std::wstring opening = PaperString(paper.item->id + "_1");
+        std::wstring opening = Story::Localize(kSection, paper.item->id + "_1");
         if (opening.size() > kOpening) {
             const size_t word = opening.rfind(L' ', kOpening);
             opening.erase(word != std::wstring::npos ? word : kOpening);

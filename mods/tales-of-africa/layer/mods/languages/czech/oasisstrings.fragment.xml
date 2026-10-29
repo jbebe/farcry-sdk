@@ -11,4 +11,7 @@
     <string enum="Tape.Test_cassette_FOUND" value="on a table" />
     <string enum="Tape.Test_cassette_1" value="Test cassette. A minute of the game's own music, played from a bank of its own." />
   </section>
+  <section name="InventoryItems">
+    <string enum="Oil_can_DESC" value="A little gas for the Datsun." />
+  </section>
 </oasisstrings>

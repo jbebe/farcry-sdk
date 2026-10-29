@@ -183,9 +183,6 @@
             <object type="InventoryOverhaul.Item">
               <value name="String" type="String">Oil_can</value>
             </object>
-            <object type="InventoryOverhaul.Description">
-              <value name="String" type="String">A little gas for the Datsun.</value>
-            </object>
           </object>
         </object>
       </object>
