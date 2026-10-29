@@ -7,10 +7,10 @@ solves for a weapon or diamonds. Data only so far. Its papers are read in
 
 ## What the layer holds
 
-A note, a photo, a cassette and an item in world 1, the first the convention was seen working with
-(2026-10-29):
+A note, a photo and a cassette in world 1, the first papers the convention was seen working with
+(2026-10-29), and an item, not yet seen:
 
-| Items id | Where | Pickup | Picture or sound |
+| Items id | Where | Pickup | Picture, sound or description |
 |---|---|---|---|
 | `Note.Torn_notebook_page` | on the boombox on a beer barrel, (2604.02, 2108.09, 21.35) | the Predecessor's envelope drawn as the stock single sheet | `textures\common\jackal_photo` |
 | `Photo.Cliff_village` | on the round table beside it, (2606.95, 2106.80, 20.51) | the envelope drawn as the hotel room's polaroid | `textures\loading\03_02`, cropped 3:2 |
