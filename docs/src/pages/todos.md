@@ -76,7 +76,7 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 
 - [ ] Grade the gunshot echo per gun: an automatic rifle's echo shouldn't be as loud as the Dragunov's
 
-## Mods/difficulty-overhaul
+## Combat mod (not started)
 
 - [ ] Shell-shock from an explosion
 - [ ] Ear ringing
