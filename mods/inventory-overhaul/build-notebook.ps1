@@ -12,8 +12,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 
-$Repo = Resolve-Path "$PSScriptRoot\..\.."
-$Cli = "$Repo\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
+. "$PSScriptRoot\build-common.ps1"
 $Retail = "$Repo\tmp\gamefiles"
 $Scripts = "$PSScriptRoot\notebook"
 $Layer = "$PSScriptRoot\layer\mods"
@@ -30,18 +29,6 @@ $Banks = "aimcyclecrh_+000fw_nowep_eqmpcp_i1", "aimoffset_+090rt_nowep_i1_eqmpcp
     "jumpstart_+000fw_nowep_i1_eqmpcp", "run_+000fw_nowep_eqmpcp_i1", "slideend_+000fw_nowep_i1_eqmpcp",
     "slidepose_+000fw_nowep_i1_eqmpcp", "slidestart_+000fw_nowep_i1_eqmpcp", "walk_+000fw_nowep_i1_eqmpcp",
     "walkcrh_+000fw_nowep_i1_eqmpcp"
-
-# Runs a program and returns its output, throwing when it fails. The CLI reports progress on stderr,
-# which Windows PowerShell would otherwise stop the script on.
-function Exec([string]$program) {
-    $ErrorActionPreference = "Continue"
-    $output = & $program @args 2>&1 | ForEach-Object { "$_" }
-    if ($LASTEXITCODE -ne 0) {
-        $output | Select-Object -Last 20 | Write-Host
-        throw "$(Split-Path -Leaf $program) $($args[0]) failed"
-    }
-    $output
-}
 
 if (Test-Path $Work) { Remove-Item -Recurse -Force $Work }
 New-Item -ItemType Directory -Force $Work | Out-Null
