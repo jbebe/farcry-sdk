@@ -174,7 +174,8 @@ signal, so the game puts the notebook away and uses a syrette as it does for H. 
 one action opens a context menu instead: a stowed gun's is a scrap of post-it right of its row
 (`a_io_menu_a` and `a_io_menu_b`, one per action underlined, instanced beside each of the ten Items
 lines and all hidden), with "To slot A" and "To slot B". The wheel moves between them, a click puts
-the gun in that slot and in hand, the gun there going into Items, and the right mouse button
+the gun in that slot, the gun there going into Items, while the notebook stays out, and the right
+mouse button
 (`draw_monocular`, taken only while something is open) or Esc closes it.
 
 A gun's upgrades are the game's three icons, faint until bought: its operation manual, its repair

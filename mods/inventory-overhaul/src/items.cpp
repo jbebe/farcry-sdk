@@ -122,6 +122,7 @@ bool Take(void* inventory, size_t index, int slot) {
         slot = TwoGuns::SlotOf(TwoGuns::ToReplace(inventory, before).weapon);
     }
     const Inventory::Weapon* out = slot != 0 ? TwoGuns::InSlot(before, slot) : nullptr;
+    const bool inHand = out != nullptr && Inventory::Id(out->item) == Inventory::InHandId(inventory);
     const std::optional<Inventory::Weapon> made = Make(inventory, taken, before);
     if (!made) {
         return false;
@@ -138,7 +139,9 @@ bool Take(void* inventory, size_t index, int slot) {
     }
     Save(items);
     TwoGuns::Settle(inventory);
-    TwoGuns::Draw(inventory, *made);
+    if (inHand) {
+        TwoGuns::Draw(inventory, *made);
+    }
     FCSE::Logf("took the %s out of Items with %d loaded: gun %d", taken.id.c_str(), taken.loaded,
                TwoGuns::SlotOf(made->weapon));
     return true;

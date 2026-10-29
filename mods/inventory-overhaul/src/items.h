@@ -27,8 +27,9 @@ size_t GunCount(const std::vector<Record>& items);
 
 // Moves gun 1 or 2 into Items. False when there is no such gun, or Items holds two guns already.
 bool Stow(void* inventory, int slot);
-// Puts the gun in row `index` in gun `slot`, 1 or 2, and in hand; the gun there takes its row. With
-// slot 0 it goes where the gun in hand is when two are carried, else in the free slot.
+// Puts the gun in row `index` in gun `slot`, 1 or 2; the gun there takes its row, and if that one was
+// in hand, the new one is drawn. With slot 0 it goes where the gun in hand is when two are carried,
+// else in the free slot. While the notebook is out, no gun is in hand.
 bool Take(void* inventory, size_t index, int slot = 0);
 // Adds a new gun when `id` names a weapon archetype, else one more of the item `id`.
 bool Give(const std::string& id);
