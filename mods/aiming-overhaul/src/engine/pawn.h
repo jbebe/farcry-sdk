@@ -37,6 +37,9 @@ float Shake(uint8_t* pawn);
 // Where the pawn stands in the world, or false where it has no entity.
 bool Position(uint8_t* pawn, float out[3]);
 
+// Turns `v`, in the body's own axes, into the world's, or false where the pawn has no entity.
+bool ToWorld(uint8_t* pawn, const float v[3], float out[3]);
+
 inline bool Crouched(uint8_t* pawn) {
     return Field<int32_t>(Data(pawn), kEffectiveStance) == kCrouched;
 }

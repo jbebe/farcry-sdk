@@ -18,6 +18,10 @@ float Update(uint8_t* pawn, float seconds, bool free);
 // Bends a skeleton freshly posed, if it is the player's.
 void OnPosed(uint8_t* skeleton);
 
+// Moves the player's shot, leaving from `origin` in the world, to where the lean has taken the view's
+// bone.
+void MoveShot(uint8_t* pawn, float origin[3]);
+
 // Bends what is placed from the player's view bone with the body, though the bone itself stays
 // unbent: the camera, and a long gun at the sights. True where it bent the copy.
 bool OnAttached(uint8_t* skeleton, int bone, float* model);

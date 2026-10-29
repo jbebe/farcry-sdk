@@ -27,7 +27,8 @@ namespace {
     constexpr ptrdiff_t kCounterLeft = 0x10;
     constexpr ptrdiff_t kCounterMost = 0x14;
     constexpr ptrdiff_t kShake = 0x128;
-    // An entity's place in the world, the last row of its 4x4.
+    // An entity's 4x4 in the world: three axes, then its place.
+    constexpr ptrdiff_t kEntityAxes = 0x30;
     constexpr ptrdiff_t kEntityPlace = 0x60;
 
     // The pawn's entity, or null.
@@ -70,6 +71,18 @@ bool AimingOverhaul::Pawn::Position(uint8_t* pawn, float out[3]) {
     }
     const float* place = &Field<float>(entity, kEntityPlace);
     std::copy_n(place, 3, out);
+    return true;
+}
+
+bool AimingOverhaul::Pawn::ToWorld(uint8_t* pawn, const float v[3], float out[3]) {
+    uint8_t* entity = Entity(pawn);
+    if (entity == nullptr) {
+        return false;
+    }
+    const float* axes = &Field<float>(entity, kEntityAxes);
+    for (int k = 0; k < 3; ++k) {
+        out[k] = v[0] * axes[k] + v[1] * axes[4 + k] + v[2] * axes[8 + k];
+    }
     return true;
 }
 

@@ -217,6 +217,27 @@ void AimingOverhaul::Lean::OnPosed(uint8_t* skeleton) {
     }
 }
 
+void AimingOverhaul::Lean::MoveShot(uint8_t* pawn, float origin[3]) {
+    uint8_t* skeleton = g_skeleton;
+    const float bend = g_posedBend;
+    if (skeleton == nullptr || bend == 0.0f) {
+        return;
+    }
+    float pivot[3];
+    UnbentPivot(skeleton, bend, pivot);
+    const float* view = Skeleton::At(skeleton, g_camera).model;
+    float bent[16];
+    std::copy_n(view, 16, bent);
+    Bend(bent, pivot, bend, g_posedPitch);
+    const float shift[3] = {bent[12] - view[12], bent[13] - view[13], bent[14] - view[14]};
+    float moved[3];
+    if (Pawn::ToWorld(pawn, shift, moved)) {
+        for (int k = 0; k < 3; ++k) {
+            origin[k] += moved[k];
+        }
+    }
+}
+
 bool AimingOverhaul::Lean::OnAttached(uint8_t* skeleton, int bone, float* model) {
     const float bend = g_posedBend;
     const float pitch = g_posedPitch;

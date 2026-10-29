@@ -9,6 +9,7 @@
 #include "engine/pawn.h"
 #include "engine/ray.h"
 #include "engine/second_view.h"
+#include "engine/shot.h"
 #include "engine/skeleton.h"
 #include "engine/sound.h"
 #include "engine/sprint.h"
@@ -148,9 +149,18 @@ namespace {
         return angles;
     }
 
+    bool OnFoot(uint8_t* pawn) {
+        return pawn != nullptr && pawn == g_pawn && GetTickCount64() - g_seen < kOnFootMilliseconds;
+    }
+
     bool RefuseShot(uint8_t* pawn) {
-        return AimingOverhaul::Wall::Blocked() && pawn != nullptr && pawn == g_pawn &&
-               GetTickCount64() - g_seen < kOnFootMilliseconds;
+        return AimingOverhaul::Wall::Blocked() && OnFoot(pawn);
+    }
+
+    void MoveShot(uint8_t* pawn, float origin[3]) {
+        if (OnFoot(pawn)) {
+            AimingOverhaul::Lean::MoveShot(pawn, origin);
+        }
     }
 }
 
@@ -183,6 +193,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     AimingOverhaul::Look::Install(&OnLook);
     AimingOverhaul::Ray::Install();
     AimingOverhaul::Fire::Install(&RefuseShot);
+    AimingOverhaul::Shot::Install(&MoveShot);
     AimingOverhaul::Input::Install(&OnSignal);
     AimingOverhaul::Sprint::Install(&AimingOverhaul::Breath::HoldsSprint);
     AimingOverhaul::Sound::Install();

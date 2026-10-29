@@ -93,6 +93,7 @@ add_library(AimingOverhaul SHARED
   "src/engine/screen_draw.cpp"
   "src/engine/second_view.cpp"
   "src/engine/pawn.cpp"
+  "src/engine/shot.cpp"
   "src/engine/skeleton.cpp"
   "src/engine/sound.cpp"
   "src/engine/shader.cpp"

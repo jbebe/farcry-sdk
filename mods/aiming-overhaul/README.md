@@ -46,7 +46,7 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   does nothing else; down any other gun's sights it does what the game does.
 - **Lean, unfinished.** Lean left or Lean right slides the upper body 10 cm to that side and bends
   it 15° from the lower back, over a quarter of a second, so the eye moves out about 25 cm. The
-  head, the view, the arms and the gun go with it. Held, the key leans for as long as it is held;
+  head, the view, the arms and the gun go with it, and shots leave from where the eye now is. Held, the key leans for as long as it is held;
   tapped, let go within a quarter of a second, it leans until it is tapped again. The other key
   leans the other way instead. Sprinting ends a lean.
 - **Gun near walls.** A gun that would reach into a wall, within 0.8 m of the eye, swings down out
@@ -101,7 +101,7 @@ to the look the input builds each frame, in `src/engine/look.cpp`; the breath is
 and the sprint it holds is refused in the input listener, in `src/engine/sprint.cpp`. A lean is
 `src/lean.cpp`, bending the body's bones each time the engine poses them, in
 `src/engine/skeleton.cpp`, and rolling the view and moving the eye with the head in
-`src/engine/aim.cpp`. The gun near walls is `src/wall.cpp`, casting a
+`src/engine/aim.cpp`; a shot is moved with the eye in `src/engine/shot.cpp`. The gun near walls is `src/wall.cpp`, casting a
 physics ray in `src/engine/ray.cpp`, lowering the look in `src/engine/look.cpp` and refusing the
 shot in `src/engine/fire.cpp`. The blur draws the gun's own
 depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the
