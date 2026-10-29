@@ -38,8 +38,8 @@ bool Take(void* inventory, size_t index, int slot);
 // and `description`.
 bool Give(const std::string& id, uint32_t sound = 0, const std::string& description = {});
 void Discard(size_t index);
-// Drops row `index`: a stowed gun falls at the pawn's feet as it was stowed, and one of an item is
-// thrown away. False when there is no such row or its gun could not be made.
+// Drops row `index`: a stowed gun falls at the pawn's feet as it was stowed, or is only removed when
+// it cannot be made, and one of an item is thrown away. False when there is no such row.
 bool Drop(void* inventory, size_t index);
 
 }

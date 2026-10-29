@@ -36,11 +36,11 @@ namespace {
         bool inHand;
     };
 
-    constexpr const char* kPresets[] = {"weapons.Special.CarlGustaf", "weapons.Special.RPG7",
+    constexpr const char* kPresets[] = {"weapons.Special.Carl_Gustaf", "weapons.Special.RPG7",
                                         "weapons.Special.PKM", "weapons.Primary.AK47",
                                         "weapons.Secondary.Makarov"};
     // The mockup's Fill items: two stowed guns, nine items, then Tales of Africa's note and photo.
-    constexpr const char* kFill[] = {"weapons.Special.CarlGustaf", "weapons.Special.PKM", "Courier_pouch",
+    constexpr const char* kFill[] = {"weapons.Special.Carl_Gustaf", "weapons.Special.PKM", "Courier_pouch",
                                      "Sealed_envelope", "Vaccine_case", "Radio_valve", "Roll_of_film",
                                      "Map_case", "Dog_tags", "Ledger", "Camo_Suit", "Note.Torn_notebook_page",
                                      "Photo.Cliff_village"};
@@ -63,7 +63,7 @@ namespace {
     int g_diamonds = -1;
     std::atomic<bool> g_asked{false};
     std::atomic<bool> g_shown{false};
-    char g_giveId[128] = "weapons.Special.CarlGustaf";
+    char g_giveId[128] = "weapons.Special.Carl_Gustaf";
 
     void Ask(Action action, size_t index = 0, std::string id = {}, int slot = 0) {
         g_requests.push_back({action, index, std::move(id), slot});

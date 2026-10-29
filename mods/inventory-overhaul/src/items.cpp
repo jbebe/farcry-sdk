@@ -27,7 +27,7 @@ namespace {
     std::optional<Inventory::Weapon> Make(void* inventory, const Record& stowed,
                                           const std::vector<Inventory::Weapon>& before) {
         if (!Inventory::AddByName(inventory, stowed.id.c_str())) {
-            FCSE::Logf("no %s could be made: it stays in Items", stowed.id.c_str());
+            FCSE::Logf("no %s could be made", stowed.id.c_str());
             return std::nullopt;
         }
         for (const Inventory::Weapon& gun : Inventory::Guns(inventory)) {
@@ -150,12 +150,12 @@ bool Drop(void* inventory, size_t index) {
     }
     Record& dropped = items[index];
     if (dropped.gun) {
-        const std::optional<Inventory::Weapon> made = Make(inventory, dropped, Inventory::Guns(inventory));
-        if (!made) {
-            return false;
+        if (const std::optional<Inventory::Weapon> made = Make(inventory, dropped, Inventory::Guns(inventory))) {
+            FCSE::Logf("dropped the %s from Items with %d loaded", dropped.id.c_str(), dropped.loaded);
+            Inventory::Drop(inventory, made->weapon);
+        } else {
+            FCSE::Logf("the %s is only removed from Items", dropped.id.c_str());
         }
-        FCSE::Logf("dropped the %s from Items with %d loaded", dropped.id.c_str(), dropped.loaded);
-        Inventory::Drop(inventory, made->weapon);
     }
     if (dropped.gun || --dropped.count <= 0) {
         items.erase(items.begin() + index);
