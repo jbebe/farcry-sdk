@@ -31,8 +31,6 @@
   <Material name="io_upgrade_manual" texture="\textures\ui_icon_manualupgrade.png" REGION="0 0 1 1" />
   <Material name="io_upgrade_repair" texture="\textures\ui_icon_repairupgrade.png" REGION="0 0 1 1" />
   <Material name="io_upgrade_ammo" texture="\textures\ui_icon_ammoupgrade.png" REGION="0 0 1 1" />
-  <Material name="io_paper_note_torn_notebook_page" texture="\textures\common\jackal_photo.png" REGION="0 0 1 1" />
-  <Material name="io_paper_photo_cliff_village" texture="\textures\loading\03_02.png" REGION="0.125 0 0.75 1" />
   <Material name="io_buddy_andre" texture="\textures\hud\icons_buddies\buddies_andre.png" REGION="0 0 1 1" />
   <Material name="io_buddy_flora" texture="\textures\hud\icons_buddies\buddies_flora.png" REGION="0 0 1 1" />
   <Material name="io_buddy_frank" texture="\textures\hud\icons_buddies\buddies_frank.png" REGION="0 0 1 1" />

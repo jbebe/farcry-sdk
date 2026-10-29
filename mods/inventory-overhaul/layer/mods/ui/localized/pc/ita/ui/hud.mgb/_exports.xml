@@ -570,12 +570,6 @@
     <GENERICOBJECT name="IO_PORTRAITS">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_portraits" />
     </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PAPER_NOTE_TORN_NOTEBOOK_PAGE">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_paper_pictures a_io_paper_pictures i_io_paper_note_torn_notebook_page" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_PAPER_PHOTO_CLIFF_VILLAGE">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_paper_pictures a_io_paper_pictures i_io_paper_photo_cliff_village" />
-    </GENERICOBJECT>
     <GENERICOBJECT name="IO_PAPER_PICTURES">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_paper_pictures" />
     </GENERICOBJECT>

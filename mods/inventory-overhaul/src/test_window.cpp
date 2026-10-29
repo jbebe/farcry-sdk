@@ -39,7 +39,7 @@ namespace {
     constexpr const char* kPresets[] = {"weapons.Special.CarlGustaf", "weapons.Special.RPG7",
                                         "weapons.Special.PKM", "weapons.Primary.AK47",
                                         "weapons.Secondary.Makarov"};
-    // The mockup's Fill items: two stowed guns, nine items, then the test note and photo.
+    // The mockup's Fill items: two stowed guns, nine items, then Tales of Africa's note and photo.
     constexpr const char* kFill[] = {"weapons.Special.CarlGustaf", "weapons.Special.PKM", "Courier_pouch",
                                      "Sealed_envelope", "Vaccine_case", "Radio_valve", "Roll_of_film",
                                      "Map_case", "Dog_tags", "Ledger", "Camo_Suit", "Note.Torn_notebook_page",

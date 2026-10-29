@@ -58,11 +58,6 @@ $PencilRed = "8F2C1C"
 # IO_POSTIT_PIC_<name>.
 $GunPictures = "6p9 ak47 as50 carlgust deagle dragunov flare fnfal g3ka4 ied ithaca lpo50 m16 m1903 m249 m79 mac10 makarov mgl40 mp5sd p45 rpg7 rpk sniperdart spas12 usas uzi" -split ' '
 $Ratings = "Damage", "Range", "Accuracy", "Reliability", "Fire rate"
-# The test papers' pictures, as another mod adds its own to a_io_paper_pictures: each an Items id, a
-# texture, and the part of it shown, a note's square and a photo's 3:2.
-$TestPictures = @(
-    @{ Id = "Note.Torn_notebook_page"; Texture = "\textures\common\jackal_photo.png"; Region = "0 0 1 1" },
-    @{ Id = "Photo.Cliff_village"; Texture = "\textures\loading\03_02.png"; Region = "0.125 0 0.75 1" })
 # The buddies' portraits, textures\hud\icons_buddies\buddies_<name>.png.
 $Portraits = "andre flora frank hakim josip marty michele nasreen paul singh warren bai" -split ' '
 
@@ -390,14 +385,9 @@ foreach ($tabName in $areas.Keys) {
 $page.Add((Instance a_io_portraits 0 0 1 1 0))
 Export $PagePath a_io_portraits
 
-# The papers' pictures, which the plugin copies onto the post-it and the reader: each mod adds its own
-# to this area, an image named after its paper's Items id, dots made underscores, and exports it as
-# IO_PAPER_<ID>.
-function PaperName([string]$id) { $id.Replace('.', '_').ToLowerInvariant() }
-$paperPictures = foreach ($picture in $TestPictures) {
-    Image "i_io_paper_$(PaperName $picture.Id)" "io_paper_$(PaperName $picture.Id)" "" 0 0 44 44
-    Export (AreaPath a_io_paper_pictures) "i_io_paper_$(PaperName $picture.Id)"
-}
+# The papers' pictures, which the plugin copies onto the post-it and the reader, empty: each mod adds
+# its own to this area, an image named after its paper's Items id, dots made underscores, and exports
+# it as IO_PAPER_<ID>.
 $page.Add((Instance a_io_paper_pictures 0 0 1 1 0))
 Export $PagePath a_io_paper_pictures
 
@@ -517,14 +507,12 @@ $Exports.Add("<GENERICOBJECT name=`"IO_FLIP_AREA`"><LINK slot=`"44`" LASTOBJECTT
 # The page's last image.
 $page.Add((Image i_io_end io_mark_end "" 0 0 2 2))
 
-# A material's region is the part of its texture drawn: x, y, width and height, as fractions.
-function Material([string]$name, [string]$texture, [string]$region = "0 0 1 1") {
-    "<Material name=`"$name`" texture=`"$texture`" REGION=`"$region`" />"
+function Material([string]$name, [string]$texture) {
+    "<Material name=`"$name`" texture=`"$texture`" REGION=`"0 0 1 1`" />"
 }
 $materials = @(
     ($GunPictures + "m67", "molotov") | ForEach-Object { Material "io_gun_$_" "\textures\guns\gun_icon_$_.png" }
     ("manual", "repair", "ammo") | ForEach-Object { Material "io_upgrade_$_" "\textures\ui_icon_$($_)upgrade.png" }
-    $TestPictures | ForEach-Object { Material "io_paper_$(PaperName $_.Id)" $_.Texture $_.Region }
     $Portraits | ForEach-Object { Material "io_buddy_$_" "\textures\hud\icons_buddies\buddies_$_.png" }
     Material io_tape "\textures\ui_tape_icon.png"
     ("a", "b") | ForEach-Object { Material "io_slot_$_" "\textures\hud_mp\vip_$_.png" }
@@ -605,7 +593,7 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
         (Area a_io_page $Spread.W $Spread.H $page)
         foreach ($tabName in $areas.Keys) { Area "a_io_$tabName" $Spread.W $Spread.H $areas[$tabName] }
         (Area a_io_portraits 44 44 $palette)
-        (Area a_io_paper_pictures 44 44 $paperPictures)
+        (Area a_io_paper_pictures 44 44 @())
         (Area a_io_postit 416 302 $postIt)
         (Area a_io_reader 412 620 $reader)
         (Area a_io_menu $MenuW $MenuH $menu)) -join "`n"

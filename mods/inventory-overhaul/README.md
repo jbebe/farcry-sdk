@@ -10,8 +10,8 @@ this is an FCSE plugin, built in the log's steps.
 | 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay; X drops the gun in hand, or the notebook's selected row | works in game; X seen dropping guns A and B by self-test, a stowed gun and an item not yet |
 | 3. The notebook on Tab | a gadget of its own beside the map, given with it, on a new Notebook control: two bent pages held in both hands, the right one bending as the hands move | works in game |
 | 4. The Inventory page | the mockup's spread as a Magma page drawn onto the notebook's pages: Weapons, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet |
-| 6. Papers, Journal, Contacts | R turns the page; notes and photos, read whole with LMB, the Jackal and Predecessor tapes found and other mods' cassettes, the reputation and the current job, and the buddies met, in the game's words; the pause menu without those pages or its job panel | seen in game in world 2; the notes, photos and cassettes by convention not yet |
-| 7. Papers in the world | a test note, photo and cassette in world 1, laid out as another mod would lay out its own; picking one up puts it in Items, so Papers shows it | the note seen in game as it was before the convention; the photo and cassette not yet |
+| 6. Papers, Journal, Contacts | R turns the page; notes and photos, read whole with LMB, the Jackal and Predecessor tapes found and other mods' cassettes, the reputation and the current job, and the buddies met, in the game's words; the pause menu without those pages or its job panel | seen in game in world 2; another mod's note, photo and cassette read, viewed and played, clicks included |
+| 7. Papers in the world | another mod's notes, photos and cassettes, known by convention; picking one up puts it in Items, so Papers shows it | seen in game with [Tales of Africa](../tales-of-africa/README.md)'s |
 
 ## Two guns
 
@@ -245,7 +245,7 @@ the job panel whatever the layer says, so the plugin also skips the three method
   same package (`a_io_portraits`); a faded row is a second pair of texts, shown in the normal one's
   place, since a text's colour cannot be changed at runtime.
 
-Fill in the test window, or `INVENTORY_OVERHAUL_FILL`, also gives the test note and photo and, through the
+Fill in the test window, or `INVENTORY_OVERHAUL_FILL`, also gives Tales of Africa's note and photo and, through the
 game's own Lua in DevTools' console, meets Frank, Flora, Marty, Josip and Warren, makes Frank the
 primary buddy and Hakim the secondary (the game takes only a living one), kills Warren, and finds
 five Jackal tapes and the Moroccan's. `INVENTORY_OVERHAUL_LUA` holds console lines, split by `|`,
@@ -263,16 +263,11 @@ by convention; the only data of its own is on its pickup.
 | The pickup | a `CPickupMissionItem` whose archetype has the entity data `InventoryOverhaul.Item`, the Items id, and for a cassette `InventoryOverhaul.Sound`, its sound event written as the game writes one (`0x004E1C52`). After the engine's `CPickupMissionItem::Pick`, `src/pickups.cpp` puts it in Items |
 | What it is | the id's first part: `Note.<name>`, `Photo.<name>` or `Tape.<name>` |
 | Its words | the string table's section `Papers`: `<id>` its name (else the id's last part), `<id>_FOUND` where it was found, `<id>_1`, `_2`... its sheets, read until one is missing. A photo's caption and a cassette's description are its first sheet |
-| Its picture | an image in `hud.mgb`'s `a_io_paper_pictures`, exported as `IO_PAPER_<ID>`, the id upper-cased with its dots made underscores: a note's shown square, a photo's 3:2, so its material's `REGION` crops it to that. A paper with none shows its words only |
+| Its picture | an image in `hud.mgb`'s `a_io_paper_pictures`, exported as `IO_PAPER_<ID>`, the id upper-cased with its dots made underscores: a note's shown square, a photo's 3:2, so its material's `REGION` crops it to that. A paper with none shows its words only. It ships as fragments of every `hud.mgb`: the area, and `_materials.xml` and `_exports.xml` whole, the retail entries included, as `jackall-cli mgb fragments` writes them, since a list missing an entry removes it |
 | A cassette's sound | `soundbinary\<id>.spk`, a bank of its own named after the event |
 
-The test papers are laid out the same way, in this layer for now: `build-papers.ps1` writes their
-pickups (`notebook/papers.py`), `build-ui.ps1` their pictures, and the string fragments their words.
-The torn notebook page lies on the boombox on a beer barrel, at (2604.02, 2108.09, 21.35) in world
-1, and the Cliff village photo and the test cassette on the round table beside it; the note and the
-photo are the Predecessor's envelope pickup drawn as the stock single sheet and as a polaroid, the
-cassette the Predecessor's tape pickup, a dictaphone, playing a minute of the game's own music
-(`004e1c52.spk`). Each is saved at persist level 3, like a diamond case, so it stays picked.
+[Tales of Africa](../tales-of-africa/README.md) is such a mod: its note, photo and cassette are the
+ones this convention was first seen working with.
 
 ## Testing
 
