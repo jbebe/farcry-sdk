@@ -101,7 +101,7 @@ bool Stow(void* inventory, int slot) {
     std::vector<Record> items = Load();
     const std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
     const Inventory::Weapon* gun = TwoGuns::InSlot(guns, slot);
-    if (gun == nullptr || GunCount(items) >= kMostGuns) {
+    if (gun == nullptr) {
         return false;
     }
     items.push_back(Keep(inventory, gun->weapon));
@@ -167,7 +167,9 @@ bool Drop(void* inventory, size_t index) {
 bool Give(const std::string& id, uint32_t sound, const std::string& description) {
     std::vector<Record> items = Load();
     if (id.rfind(kWeaponPrefix, 0) == 0) {
-        if (GunCount(items) >= kMostGuns) {
+        void* pawn = Inventory::PlayerPawn();
+        const void* inventory = pawn != nullptr ? Inventory::OfView(Inventory::ViewOf(pawn)) : nullptr;
+        if (inventory == nullptr || Inventory::Guns(inventory).size() + GunCount(items) >= kMostGuns) {
             return false;
         }
         items.push_back({id, true});

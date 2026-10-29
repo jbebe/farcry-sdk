@@ -7,7 +7,7 @@ this is an FCSE plugin, built in the log's steps.
 | Step | What it does | Status |
 |---|---|---|
 | 1. Two guns | gun 1 on key 2, gun 2 on key 3, of any class; a third gun replaces the one in hand | works in game |
-| 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay; X drops the gun in hand, or the notebook's selected row | works in game; X seen dropping guns A and B by self-test, a stowed gun and an item not yet |
+| 2. Items | guns stowed outside the two slots, at most four guns in all with theirs, and any other item by id and count; a test window in DevTools' overlay; X drops the gun in hand, or the notebook's selected row | works in game; X seen dropping guns A and B by self-test, a stowed gun and an item not yet |
 | 3. The notebook on Tab | a gadget of its own beside the map, given with it, on a new Notebook control: two bent pages held in both hands, the right one bending as the hands move | works in game |
 | 4. The Inventory page | the mockup's spread as a Magma page drawn onto the notebook's pages: Weapons, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet |
 | 6. Papers, Journal, Contacts | R turns the page; notes and photos, read whole with LMB, the Jackal and Predecessor tapes found and other mods' cassettes, the reputation and the current job, and the buddies met, in the game's words; the pause menu without those pages or its job panel | seen in game in world 2; another mod's note, photo and cassette read, viewed and played, clicks included |
@@ -21,7 +21,7 @@ secondary and a special. What changes is the player's inventory (`InventoryOverh
 
 | Engine call | What the plugin does |
 |---|---|
-| `AddWeapon` | for a gun picked up with two carried, drops the one in hand first (else the one last drawn); gives every new gun a free slot, kept on it as the entity data `InventoryOverhaul.Slot`. Loading a save adds its guns here too, and drops none |
+| `AddWeapon` | for a gun picked up with two carried, or with four in all counting Items' guns, drops the one in hand first (else the one last drawn), and with none carried and four in Items drops the new one; gives every new gun a free slot, kept on it as the entity data `InventoryOverhaul.Slot`. Loading a save adds its guns here too, and drops none |
 | the state machine's select-class actions, `SelectWeapon` | key 2 draws gun 1 and key 3 gun 2, whatever their class; key 4 draws nothing; the machete is unchanged. Other callers of `SelectWeapon`, such as the weapon crate, still select by class |
 | `GetWeaponFromCategory`, inside the player's `CPickupWeapon::PrePickup` and `Pick` | finds no gun, so a pickup replaces nothing of its own class and `AddWeapon` makes room; the gun picked up is then drawn |
 
@@ -171,7 +171,7 @@ it is out, so the gun in hand stays. It opens on the gun in hand, and keeps its 
 the game runs.
 
 The left mouse button (`startshooting`, taken too) uses the selected row: gun A or B is stowed in
-Items if Items holds fewer than two guns, and on Syrettes the click becomes the heal key's `heal`
+Items, and on Syrettes the click becomes the heal key's `heal`
 signal, so the game puts the notebook away and uses a syrette as it does for H. A row with more than
 one action opens a context menu instead: a stowed gun's is a scrap of post-it right of its row
 (`a_io_menu`, instanced hidden beside each of the ten Items lines; the instances share the one area,

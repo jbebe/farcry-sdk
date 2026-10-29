@@ -7,6 +7,7 @@
 #include "engine/inventory.h"
 #include "engine/memory.h"
 #include "fcse_api.h"
+#include "items.h"
 #include "test_window.h"
 
 #include <algorithm>
@@ -257,21 +258,28 @@ namespace {
         return true;
     }
 
-    // A gun the player picks up with two carried takes the place of the one in hand. A weapon added
-    // any other way is placed the next time the HUD asks for the player's gun.
+    // A gun the player picks up with two carried, or with as many as Items allows in all, takes the
+    // place of the one in hand; with none carried it falls back at their feet. A weapon added any
+    // other way is placed the next time the HUD asks for the player's gun.
     void __fastcall OnAddWeapon(void* inventory, void* unused, void* weapon) {
         if (!g_inPickup || !Inventory::IsPlayers(inventory) || !Inventory::IsGun(weapon)) {
             g_check |= !g_inPickup;
             return g_addWeapon(inventory, unused, weapon);
         }
         const std::vector<Inventory::Weapon> carried = Inventory::Guns(inventory);
-        if (carried.size() >= kSlots) {
+        const bool full = carried.size() + Items::GunCount(Items::Load()) >= Items::kMostGuns;
+        if (!carried.empty() && (carried.size() >= kSlots || full)) {
             const Inventory::Weapon& out = ToReplace(inventory, carried);
             FCSE::Logf("the %s takes a slot: the %s is dropped", Inventory::Name(weapon),
                        Inventory::Name(out.weapon));
             Inventory::Drop(inventory, out.weapon);
         }
         g_addWeapon(inventory, unused, weapon);
+        if (carried.empty() && full) {
+            FCSE::Logf("the %s would be a gun too many: dropped", Inventory::Name(weapon));
+            Inventory::Drop(inventory, weapon);
+            return;
+        }
         const std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
         SeparateTwins(guns);
         PlaceGuns(inventory, guns, false);
