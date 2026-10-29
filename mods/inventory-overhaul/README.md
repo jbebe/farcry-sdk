@@ -207,7 +207,9 @@ text the game has is the game's, in the player's language, through its string ta
   from the mission manager's two lists, each with its title and the game's line about it. The post-it
   shows a paper's opening; LMB (`startshooting`) lays the paper whole over the right page, on the
   post-it's paper turned upright (`a_io_reader`), the wheel turns a long letter's sheets, and LMB, Esc
-  (`show_pausemenu`), R or Tab put it back.
+  (`show_pausemenu`), R or Tab put it back. LMB on a tape plays it through the game's own
+  `CJackalTapeManager::PlayTape`, as the pause menu does, while the game runs on, and on the playing
+  tape stops it (see [playing a tape](../../docs/docs/engine-internals/campaign.md)).
 - **Journal** (`src/journal_page.cpp`): on the left the reputation level and its words, as the pause
   menu's Journal has them; on the right the current job, its objectives and the Underground's, as the
   pause menu's main page showed them (`src/engine/jobs.cpp`): every objective marker that is on, its

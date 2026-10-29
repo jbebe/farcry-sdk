@@ -42,6 +42,9 @@ layer. Marked **(proposed)** are choices not yet agreed.
 - **Handwriting only on the paper being read** (2026-10-28, narrowed 2026-10-29). A note's text and
   a photo's caption, on the half page the reader shows, are in Caveat, a handwriting font. Everything
   else, the Journal's job and objectives and the post-it included, keeps the game's Farcry2 ink.
+- **A context menu only where a row has more than one action** (2026-10-29). A single action runs
+  on the click itself, as the syrettes heal; a row with several opens a small paper box beside it,
+  one action per line: the wheel moves between them, left click runs one, right click closes it.
 - **No key legend on the notebook** (2026-10-29). A strip naming the keys as bound was built and
   dropped as not needed.
 
@@ -200,11 +203,11 @@ Which bandolier covers which gun, from the shop's plans:
 | Kind | Use | Drop |
 |---|---|---|
 | Gun in a slot | stowed in Items, if it holds fewer than two guns (built and seen in game, 2026-10-29) | falls at the feet as a pickup, with its wear and ammo |
-| Gun in Items | a small post-it of buttons, shown as the reader is **(proposed)** | as above |
+| Gun in Items | a context menu: a small paper box right of or under the row, "To slot A" and "To slot B" (mockup, 2026-10-29) | as above |
 | Diamonds | — | no: the row is the player's own diamond count |
 | Syrette | heal: the click is the heal key's, so the notebook goes away and the syrette is used (built and seen in game, 2026-10-29) | no |
 | Letter, photo | read: it lies over the whole right page on the post-it's paper turned upright, the post-it hidden; a photo keeps its own colours; the wheel turns a long letter's sheets; LMB or Esc puts it back (built 2026-10-28) | no |
-| Tape | play or stop, while the player walks on | no |
+| Tape | play or stop, while the player walks on: a click plays it, on the playing tape stops it (built 2026-10-29, not yet heard) | no |
 | Quest item | — | no, until its job ends |
 | Other item | — | thrown away, one at a time |
 | Pills, grenades, molotovs | — | no |

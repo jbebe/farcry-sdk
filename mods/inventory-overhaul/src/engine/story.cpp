@@ -23,6 +23,8 @@ namespace {
     using NamesFn = EngineString<wchar_t>*(__fastcall*)(void* page, void* unused, EngineString<wchar_t>* out,
                                                        EngineString<wchar_t> text);
     using FreeFn = void(__fastcall*)(EngineString<wchar_t>* string);
+    using TapeFn = void(__fastcall*)(void* manager, void* unused);
+    using PlayTapeFn = void(__fastcall*)(void* manager, void* unused, const void* tape);
 
     // CStringTableMgr::Localize and its singleton, and the id of the strings' file every page passes,
     // a constant in the image.
@@ -47,6 +49,16 @@ namespace {
     // CBuddiesManager::GetBuddyStatus by name, and CFCXUIBuddyUtil::GetBuddyStateString.
     FCSE::Relocation<BuddyStatusFn> g_buddyStatus{FCSE::Uplay(0x007463E0)};
     FCSE::Relocation<StatusTextFn> g_statusText{FCSE::Uplay(0x007575B0)};
+    // CJackalTapeManager's PlayTape and StopTape, the call the pause page makes on the manager first,
+    // the manager's handle (the manager at +0xC), and the music manager's tape slot: the playing
+    // sound's handle, -1 when none, and its start id.
+    FCSE::Relocation<TapeFn> g_touchTapes{FCSE::Uplay(0x004DD4F0)};
+    FCSE::Relocation<PlayTapeFn> g_playTape{FCSE::Uplay(0x00717FA0)};
+    FCSE::Relocation<TapeFn> g_stopTape{FCSE::Uplay(0x00717E90)};
+    FCSE::Relocation<void* const*> g_tapeManager{FCSE::Uplay(0x0164C788)};
+    FCSE::Relocation<const int32_t*> g_tapeHandle{FCSE::Uplay(0x0164C234)};
+    FCSE::Relocation<const uint32_t*> g_tapeSound{FCSE::Uplay(0x0164C22C)};
+    constexpr ptrdiff_t kHandleManager = 0x0C;
 
     // The mission manager's Jackal and Predecessor tapes, SMissionTape records each starting with its
     // string key, and whether one was found.
@@ -65,6 +77,9 @@ namespace {
     constexpr ptrdiff_t kBuddyHistory = 0x9C;
 
     bool g_installed = false;
+    // The tape PlayTape started and its start id, to tell it from one the game plays.
+    std::string g_playing;
+    uint32_t g_playingSound = 0;
 
     void* Service(const FCSE::Relocation<BuildClassIdFn>& build, const void* const* name, const uint32_t* type) {
         if (!g_installed) {
@@ -75,6 +90,29 @@ namespace {
         }
         void* services = *g_services.get();
         return services != nullptr ? g_getService(services, nullptr, type, 1) : nullptr;
+    }
+
+    // Each of the mission manager's tape records, the Jackal tapes then the Predecessor's.
+    template <typename Visit>
+    void EachTape(Visit visit) {
+        const void* missions = Service(g_buildMissionsType, g_missionsTypeName.get(), g_missionsType.get());
+        if (missions == nullptr) {
+            return;
+        }
+        for (const ptrdiff_t list : kTapeLists) {
+            const auto* tapes = Read<const uint8_t*>(missions, list);
+            const auto count = Read<uint32_t>(missions, list + sizeof(void*));
+            for (uint32_t i = 0; i < count; ++i) {
+                visit(tapes + i * kTapeSize);
+            }
+        }
+    }
+
+    void* TapeManager() {
+        void* handle = g_tapeManager && g_touchTapes && g_playTape && g_stopTape && g_tapeHandle && g_tapeSound
+                           ? *g_tapeManager.get()
+                           : nullptr;
+        return handle != nullptr ? Read<void*>(handle, kHandleManager) : nullptr;
     }
 }
 
@@ -121,21 +159,44 @@ std::wstring Words(const char* section, const std::string& key) {
 
 std::vector<std::string> FoundTapes() {
     std::vector<std::string> keys;
-    const void* missions = Service(g_buildMissionsType, g_missionsTypeName.get(), g_missionsType.get());
-    if (missions == nullptr) {
-        return keys;
-    }
-    for (const ptrdiff_t list : kTapeLists) {
-        const auto* tapes = Read<const uint8_t*>(missions, list);
-        const auto count = Read<uint32_t>(missions, list + sizeof(void*));
-        for (uint32_t i = 0; i < count; ++i) {
-            const uint8_t* tape = tapes + i * kTapeSize;
-            if (Read<uint8_t>(tape, kTapeFound) != 0) {
-                keys.push_back(ReadString(tape));
-            }
+    EachTape([&](const uint8_t* tape) {
+        if (Read<uint8_t>(tape, kTapeFound) != 0) {
+            keys.push_back(ReadString(tape));
         }
-    }
+    });
     return keys;
+}
+
+bool PlayTape(const std::string& key) {
+    void* manager = TapeManager();
+    const uint8_t* record = nullptr;
+    EachTape([&](const uint8_t* tape) {
+        if (record == nullptr && ReadString(tape) == key) {
+            record = tape;
+        }
+    });
+    if (manager == nullptr || record == nullptr) {
+        return false;
+    }
+    g_touchTapes(manager, nullptr);
+    g_playTape(manager, nullptr, record);
+    if (*g_tapeHandle.get() == -1) {
+        return false;
+    }
+    g_playing = key;
+    g_playingSound = *g_tapeSound.get();
+    return true;
+}
+
+void StopTape() {
+    if (void* manager = TapeManager()) {
+        g_stopTape(manager, nullptr);
+    }
+}
+
+std::string PlayingTape() {
+    const bool playing = TapeManager() != nullptr && *g_tapeHandle.get() != -1 && *g_tapeSound.get() == g_playingSound;
+    return playing ? g_playing : "";
 }
 
 std::vector<Buddy> Buddies() {

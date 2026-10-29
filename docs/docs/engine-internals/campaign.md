@@ -224,6 +224,32 @@ each 0–5. Its text is `PauseMenu/REPUTATION_INFAMY_DESCRIPTION_<level>` and
 and plays it; in the demo range it found 09 to 13. `PartnerTapeFound("W1V1M1")` marks and plays a
 Predecessor tape by key **(seen in game, 2026-10-28)**.
 
+The record's other fields, as `SMissionTape::RegisterProperties` (`0x1074e4d0`) names them: the
+description at `+0x1C`, `startSoundID` and `stopSoundID` at `+0x38` and `+0x54` (strings,
+`"0x%08X"`), `soundType` at `+0x70`. The Bowa-Seko repeat fix patches the world test in
+`NewJackalTapeFound` (`0x1074e464`), which reads a byte at `+0x75` **(RE-verified)**.
+
+**Playing a tape** **(RE-verified, not run)**. Every player of a tape, the pause pages and both Lua
+calls, ends in `CJackalTapeManager::PlayTape` (`0x10717fa0`, `__thiscall(manager, const SMissionTape*)`,
+`ret 4`), which needs nothing of the pause menu:
+
+- **The manager** is `[[0x1164c788] + 0xC]`. The pause page (`PlaySelected`, `0x10857790`, the row's
+  user data being its record) first calls `0x104dd4f0(manager)`.
+- **PlayTape** calls `StopTape` (`0x10717e90`, `__thiscall(manager)`), finds its own entry by the
+  record's key (`+0xE0` entries, `+0xE4` count, `0x2C` each; banks loaded at manager init), and plays
+  the start id through the music manager's tape slot, `0x106fa7d0(id, type, -1.0f, 0)`. The slot stops
+  the in-game music and starts the sound with `CSoundSystem` vtable `+0x94`, which unlike `+0x9C`
+  ignores the type's inhibit flag, and sets the tape's type to 0 dB.
+- **StopTape** plays the playing entry's stop id through the same slot. Nothing else in the pause
+  menu stops a tape: leaving the page or the menu does not; a re-pick restarts it; a phone call
+  (`0x106ea930`), a loading screen and scripted music on the other slot do.
+- **Whether one plays:** the slot's handle `[0x1164c234]` is -1 when nothing does, reset by the music
+  manager's update (`0x106fd830`) when the sound ends, and `[0x1164c22c]` holds the playing start id.
+  The manager's own playing mark (`entry+0x28`) stays set after a tape ends. While scripted music holds
+  the other slot, the slot drops a tape silently, so the handle is the test that it started.
+- **Pause** applies the `Exclusive.In-Game Menu` mix and pauses `SoundPauseConfig`'s types, both lifted
+  on resume, so a tape plays on in the game. The tapes have no subtitles.
+
 **The current job.** The pause menu's main page (`CFCXPauseMenuPage::MissionObjective`, `0x10855d30`,
 and `SetupMissionObjective`, `0x10856ac0`) walks the entity system's game elements and reads each one's
 `CMapElementComponent` that is on (`+0x16C` non-zero) and has a state:

@@ -55,7 +55,8 @@ void ClearPostIt(Model& model);
 // `dropped`, X was pressed: the selected gun falls at the feet, a stowed one too, and one of the
 // selected item is thrown away. `used`, the page was clicked: gun 1 or 2 is stowed in Items.
 int InventoryPage(Model& model, int& selected, const void* view, void* inventory, bool dropped, bool used);
-// `used`, the page was clicked: the selected paper is read whole, or put back. `sheet` is the sheet
+// `used`, the page was clicked: the selected paper is read whole, or put back, and the selected tape
+// played, or stopped while it plays. `sheet` is the sheet
 // read, kept within the paper's, or -1 while none is.
 int PapersPage(Model& model, int& selected, bool used, int& sheet);
 void JournalPage(Model& model);

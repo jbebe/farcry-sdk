@@ -21,6 +21,13 @@ std::wstring Words(const char* section, const std::string& key);
 // The string keys of the Jackal then Predecessor tapes found, in the game's order.
 std::vector<std::string> FoundTapes();
 
+// Plays tape `key` from its start as the pause menu does, stopping any other, while the game runs on;
+// false when it did not start, as while scripted music plays.
+bool PlayTape(const std::string& key);
+void StopTape();
+// The key of the tape PlayTape started while it still plays, else empty.
+std::string PlayingTape();
+
 // A buddy's status, as CBuddiesManager::GetBuddyStatus counts it.
 enum Status { kAlive, kMissing, kDead, kRescueReady, kWounded };
 

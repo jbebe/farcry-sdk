@@ -20,8 +20,8 @@ void Scroll(int steps);
 void Turn();
 
 // Uses the row selected the next time the page is written: reads the paper selected on Papers whole,
-// or puts it back, and while one is read Scroll turns its sheets; on Inventory, stows gun 1 or 2. Any
-// thread.
+// or puts it back, and while one is read Scroll turns its sheets; plays or stops a tape; on Inventory,
+// stows gun 1 or 2. Any thread.
 void Use();
 
 // Puts back the paper being read; false when none was. Any thread.

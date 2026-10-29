@@ -157,7 +157,13 @@ int PapersPage(Model& model, int& selected, bool used, int& sheet) {
         model.Show(Name("IO_TAPE", line + 1, "_PIC"), g_firstTape + line < tapes.size());
     }
 
-    if (used) {
+    if (used && tape >= 0 && tape < static_cast<int>(tapes.size())) {
+        if (Story::PlayingTape() == tapes[tape]) {
+            Story::StopTape();
+        } else {
+            Story::PlayTape(tapes[tape]);
+        }
+    } else if (used) {
         sheet = sheet < 0 ? 0 : -1;
     }
     if (tape >= 0) {
