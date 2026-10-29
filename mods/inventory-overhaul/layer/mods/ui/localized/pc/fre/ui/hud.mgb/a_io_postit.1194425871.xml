@@ -593,7 +593,7 @@
       </USERDATA>
       <KEYFRAMES>
         <Keyframe name="kf_a_io_postit_body_up" IDX="0" INTERPOLATION="None">
-          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="0" POSITION.y="65510" SCALEX="1" SCALEY="1" />
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="0" POSITION.y="65523" SCALEX="1" SCALEY="1" />
         </Keyframe>
       </KEYFRAMES>
       <AreaInstance LABEL="" INDEXOFFSET="0">

@@ -449,7 +449,7 @@ foreach ($name in "t_io_postit_name", "t_io_postit_sub", "t_io_postit_about") {
 # exported once, through the first.
 $postItBody = [System.Collections.Generic.List[string]]::new()
 $BodyPath = "$PostItPath a_io_postit_body a_io_postit_body"
-$BodyRaise = 26
+$BodyRaise = 13
 # Three lines of a label and a value: a gun's condition and ammo, a belt item's count, then the
 # upgrades bought for it.
 for ($l = 1; $l -le 3; $l++) {
