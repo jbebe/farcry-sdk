@@ -221,8 +221,9 @@ Esc does: while `CFCXPauseMenuPage::Setup` runs, `CListMenuPage::AddButton` leav
 Journal, Buddies, Jackal Tapes and Predecessor Tapes, known by their words in the player's language.
 Upgrades stays, as it lists every gun's manuals, what the shop still sells, vehicle and equipment
 upgrades and the challenges, which the notebook does not. Its main page looks like the game-over
-dialog, in the layer (`sp_pause_menus.mgb`): the dialog's dimming and post-it, popping in as the
-dialog's does, over the menu's clouds, with the menu's list where the dialog has its own. The notebook spread, its post-it and paperclip, the glows, the
+dialog, in the layer (`sp_pause_menus.mgb`): the dialog's dimming and post-it, the post-it at its
+full size from the first frame rather than popping in, over the menu's clouds, with the menu's list
+where the dialog has its own. The notebook spread, its post-it and paperclip, the glows, the
 buddies' portraits, the job panel and the page flip it opened with are hidden. The game's code shows
 the job panel whatever the layer says, so the plugin also skips the three methods that fill it.
 - **Contacts** (`src/contacts_page.cpp`): the buddies met, from the buddies manager, all on the left

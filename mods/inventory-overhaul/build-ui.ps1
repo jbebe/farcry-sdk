@@ -670,8 +670,14 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter sp_pause_menus.
     $common = [System.Collections.Generic.List[string]]::new([IO.File]::ReadAllLines("$dir\common.xml"))
     $dialog = IndexOf $common "<USERDATA name=`"$DialogPage`">"
     $dim = (ElementLines $common $DialogDim $dialog) -replace "name=`"$DialogDim`"", 'name="r_io_pause_dim"'
-    $postIt = (ElementLines $common $DialogPostIt $dialog) -replace "name=`"$DialogPostIt`"", 'name="a_io_pause_postit"' `
-        -replace "PACKAGE=`"$CommonId`" AREA=`"$DialogPostItArea`"", "PACKAGE=`"$PausePackage`" AREA=`"a_io_pause_postit`""
+    $postIt = [System.Collections.Generic.List[string]]::new([string[]]((ElementLines $common $DialogPostIt $dialog) `
+        -replace "name=`"$DialogPostIt`"", 'name="a_io_pause_postit"' `
+        -replace "PACKAGE=`"$CommonId`" AREA=`"$DialogPostItArea`"", "PACKAGE=`"$PausePackage`" AREA=`"a_io_pause_postit`""))
+    # Its last keyframe alone, from the first frame: the dialog's post-it pops in, and the list is there at once.
+    $keys = IndexOf $postIt '<KEYFRAMES>'
+    $last = $postIt.FindLastIndex([Predicate[string]] { param($line) $line.Contains('<Keyframe ') })
+    $postIt.RemoveRange($keys + 1, $last - $keys - 1)
+    $postIt[$keys + 1] = $postIt[$keys + 1] -replace 'IDX="\d+"', 'IDX="0"'
     $postItArea = IndexOf $common "<USERDATA name=`"$DialogPostItArea`">"
     $postItBox = [regex]::Match($common[$postItArea - 1], 'STATICBOX="0 (\d+) 0 (\d+)"').Groups
     $paper = (ElementLines $common $DialogPostItPaper $postItArea) `
