@@ -113,7 +113,8 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 - [ ] Full-body first person: look down and see your legs
 - [ ] **Some kind of platformer on a computer.** Opening the computer brings up a Magma UI that
   lets you play a platformer game, with a high score and such
-- [ ] **Radio(s).** A host created with ElevenLabs, for example
+- [ ] **Radio(s).** A radio station to listen to wherever there's a radio. The game already has a
+  station there; change it. A host created with ElevenLabs, for example
 - [ ] **Steady aim on a button.** The scope moves around unless the button is held, like in Call of
   Duty 2
 - [ ] **Guard an outpost.** A job that pays 1 diamond per day, with incoming soldiers expected.
