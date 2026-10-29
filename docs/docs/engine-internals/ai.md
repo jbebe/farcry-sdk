@@ -472,6 +472,13 @@ stock never shows it.
 him is `CSensorySystem::GetVisibilityValue` (Steam `0x10A021A0`), the smoothed value his knowledge base
 keeps for that target.
 
+The shoot task's update (Steam `0x1097B920`) treats its two checks differently **(traced in the Steam
+build)**. When `CanShoot` refuses, the task stops firing, sets flag 49 on its next update and ends, so
+the brain picks his next behaviour. When `CTaskShoot::IsAligned` (Steam `0x1097A3D0`, which among
+other tests wants the muzzle within 15° of the aim point) says no, the task stops firing but keeps running, testing it
+again every update, and fires as soon as it passes. While it waits, the task's own time limit is not
+checked.
+
 `GetDifficultyFactor` and `GetProgressionFactor` are multiplied in but return 1 in both builds (the
 PC build inlines them as constants). Difficulty reaches accuracy only through the forced misses.
 

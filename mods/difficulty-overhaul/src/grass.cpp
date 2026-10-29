@@ -16,8 +16,9 @@ namespace {
                       "?? ?? EB ?? F3 0F 10 4C 24 ?? F3 0F 59 0D")};
     constexpr ptrdiff_t kCombatOperand = 65;
 
-    // Hardcore: how much of the player high grass hides from a soldier in combat, from 10 m out.
-    float g_combatConcealment = 0.8f;
+    // Hardcore: how much of the player high grass hides from a soldier in combat, from 10 m out: as
+    // much as from an idle one, so a hidden player stays under the fire line.
+    float g_combatConcealment = 0.9f;
 }
 
 void InstallGrass() {

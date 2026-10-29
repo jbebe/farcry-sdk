@@ -28,9 +28,12 @@ Combat that is realistic and fair:
 - **Where the mod covers a lever, the game's own per-difficulty spread goes**, so the mod is the one
   source of difficulty.
 - **Only the player's fights change.** Fights between soldiers stay as shipped.
-- **Fire discipline and grass define the mod.** A soldier holds his fire until he sees the player
-  clearly, and grass hides a crouched player in combat too. Seen in game: "The bush, the tall grass
+- **Fire discipline and grass define the mod.** A soldier holds his fire until he can make the player
+  out, and grass hides a crouched player in combat too. Seen in game: "The bush, the tall grass
   actually makes them stop shooting. the sniper has no LoS and waits for me to peek."
+- **Firefights are aggressive.** Nothing the player does silences a soldier who sees him: suppression
+  only spoils aim, and holding fire never sends a soldier elsewhere
+  ([2026-10-29](#on-the-real-map)).
 
 ## Built
 
@@ -73,10 +76,10 @@ range in the log drifts from the scenario's distance.
 | 6 | Hit model: head aim | take about 20 hits | about a fifth on the head | fixed and seen | passes: 9 of 57 hits on the head (16 %), over the machine gunner run and one before it at 11 m |
 | 7 | Crossing | strafe across a soldier's line at 20 m, then run straight at him | far fewer hits while crossing | seen | passes: strafing at 12 m costs about 23 % of his chance, running at him nothing; the reduction is accepted |
 | 8 | Range falloff | a squad with pistols or SMGs, at 10 m and at 40 m | much lower `chance` at 40 m than a rifle gets | assumed | passes for the shotgun: settled 0.30-0.43 at 10-13 m, 0.04-0.08 at 34-43 m (a rifleman: 0.67 at 50 m); pistols and SMGs not run, accepted by the user: no enemy carries one as his main weapon. Shotgun raised to about 0.7 at 15 m, falling off past 20 m, at the user's call: a settled shot at a still player was 0.61-0.81 at 14 m, 0.40-0.46 at a moving one, then 0.41 at 21 m, 0.10 at 37 m, 0.04 at 45 m |
-| 9 | Fire discipline | crouch behind a 1.2 m barrier, then lie at the edge of his view | no shooting until he sees you clearly | loved | low wall passes once it was barriers: he fires at each peek; the eroded wall's broken top flipped his view of a crouched player between 0.54 and 0.27 every frame, around the 0.4 line. The sniper at 90 m passes, the user's check |
-| 10 | Grass | crouch still in high grass, if the range has any | no shooting from 10 m out | loved | accepted untested by the user: the range has no tall grass |
+| 9 | Fire discipline | crouch behind a 1.2 m barrier, then lie at the edge of his view | no shooting until he can make you out (visibility 0.2); holding, he stays put, aimed, and fires as you show | loved; changed 2026-10-29 from 0.4 and refusing the shot, not run | low wall passes once it was barriers: he fires at each peek; the eroded wall's broken top flipped his view of a crouched player between 0.54 and 0.27 every frame, around the 0.4 line. The sniper at 90 m passes, the user's check |
+| 10 | Grass | crouch still in high grass, if the range has any | no shooting from 10 m out | loved; raised to 90 % on 2026-10-29, not run | accepted untested by the user: the range has no tall grass |
 | 11 | Intuition | break line of sight behind a wall and move along it | he loses your true position within about 1 s and searches where you were last seen | assumed | passes at the long wall: "they lost my real position. they hunt the last known position and then they eventually get bored of it like they should" |
-| 12 | Suppression | fire near a soldier without hitting him | he stops firing for about 1 s, then misses at first; `suppressed:` lines | works | passes: 15 near misses logged; after one his chance drops to 0-0.03 and climbs back over his settling time (0.42 1.3 s later at 36 m). A burst already under way finishes, at a chance of 0, before the pin holds him |
+| 12 | Suppression | fire near a soldier, then hit him | he keeps firing: `shaken 0.70` on his shots for 1 s after a near miss; after a hit, `hit, he panics` and he fires back at once at `shaken 0.25` | worked as a 1 s pin; redesigned 2026-10-29, not run | passes: 15 near misses logged; after one his chance drops to 0-0.03 and climbs back over his settling time (0.42 1.3 s later at 36 m). A burst already under way finishes, at a chance of 0, before the pin holds him |
 | 13 | Squad memory | get seen, hide behind a wall for more than 30 s | they keep hunting you; `squad memory: … still hunted` | not seen | not shown yet: at the long wall the squad flanked or hunted the player within the game's own memory, and the sniper (at 90 m; at 150 m the game removed him) never lost him either, so the plugin never had to hold on; accepted by the user |
 | 14 | Squad memory: slipping away | from behind the wall, move more than 15 m away unseen | they lose you 10-25 s later and search | not seen | passes at the long wall: lost 34 s after the last sighting, once the player had slipped back |
 | 16 | Eyesight | Rifleman at 50 m: stand in the open in front of him. Rifleman side-on at 30 m: start at the edge of his vision | he sees you at 50 m; at his side he notices, turns and then sees you | new | stock and the mod alike: he only investigated at 50 m and walked past a player who stepped aside. 50 m in front passes: he engages at once, every run. Side-on passes: standing at his side he did not notice; stepping into his view, he turned and fired once he faced the player, "it feels good". Recognition (an alerted soldier keeps looking after a faint sighting) was removed: it never acted in any run. Standing behind a barrier at 20 m he was unseen until he jumped: the body-coverage rays counted a head and shoulders as a third of a man. Within 30 m that share now counts double, the user's choice: passes, a soldier who walked inside 30 m recognised the player standing behind the wall. Raised to 40 m, the user's call: 30 m was not enough |
@@ -129,6 +132,27 @@ The easier settings are where the rawness is for others to soften ([item G](#sti
 What stood out: "the immense pinned down feeling. when someone aimed at me on an empty field without
 cover, I was pretty much dead. which is exactly what should happen." The player's own weapons felt bad,
 which the user reads as room to improve them later, not as a fault of this mod.
+
+2026-10-29, Hardcore, world 1, two runs of about 7 minutes at the same post, with Sound and Aiming
+Overhaul. Being pinned in the open still felt right, but hunting soldiers one by one from cover was too
+easy: "when I shoot at them they pause making them very vulnerable", and they were "repositioning or
+shoot and stop and wait" instead of fighting from cover. Over the two runs suppression pinned soldiers
+98 times, and in the second run fire discipline held them 50 times. Every refusal ended the soldier's
+shoot task, so the game chose something new for him, often moving. The user's direction: a firefight
+is aggressive,
+"the enemies need to kill me, not thinking about it", and a soldier who sees the player and knows
+where he is keeps firing until the player relocates. Changed the same day, not yet seen in game:
+
+- **Suppression never stops a soldier's fire.** A near miss leaves him 70 % of his chance for 1 s.
+  A hit panics him: for 1 s he fires back at once, however little he sees, at a quarter of his chance.
+  This is the user's design.
+- **Fire discipline holds the trigger, not the task.** He fires once he can make the player out, his
+  own fuzzy line (0.2 in combat) rather than the clear one (0.4). Holding, his shoot task is told his
+  aim is not on the player yet, which keeps it waiting where he stands.
+- **Grass in combat hides 90 %,** as from an idle soldier, so a hidden player stays under the lower
+  fire line.
+
+Not wanted: suppressive fire at the spot where the player ducked out of sight.
 
 ## Postponed
 

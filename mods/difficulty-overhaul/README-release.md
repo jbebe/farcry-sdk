@@ -17,10 +17,10 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
   real chance and none is certain, recoil spoils his follow-up shots, and you are harder to hit
   running across his line of fire than running at him. He never aims at your head in his first 3
   seconds on you, so a first sighting cannot end in a headshot.
-- **Fire discipline and grass.** Soldiers hold their fire until they see you clearly, and high grass
-  hides you crouched and still even in a firefight.
-- **Suppression.** Bullets landing near a soldier pin him for a second and spoil his aim, so return
-  fire keeps heads down.
+- **Fire discipline and grass.** Soldiers hold their fire until they can make you out, waiting aimed
+  where they are, and high grass hides you crouched and still even in a firefight.
+- **Suppression.** Your bullets shake a soldier's aim for a second but never silence him: hit him and
+  he fires back in a panic.
 - **Squads hunt where they last saw you** for as long as you stay near it; only slipping away unseen
   loses them. A soldier keeps his rifle on the spot where you ducked out of sight, so peek from
   somewhere else.

@@ -6,6 +6,7 @@
 #include "fcse_api.h"
 
 #include <algorithm>
+#include <unordered_map>
 
 namespace {
     using GetTargetFn = void*(__fastcall*)(void* shooting);
@@ -33,6 +34,8 @@ namespace {
     constexpr ptrdiff_t kAgentPawn = 0x268;
     constexpr ptrdiff_t kAgentSenses = 0x28C;
     constexpr ptrdiff_t kAgentShooting = 0x4A0;
+    // CPawnAgent's visibility thresholds for its current state, and the fuzzy one in it.
+    constexpr ptrdiff_t kAgentFuzzy = 0x868;
     // CSensorySystem's knowledge base, and a knowledge entry's unbroken seconds in the focus and
     // the peripheral cone, -1 while out of it.
     constexpr ptrdiff_t kSensesKnowledge = 0x24;
@@ -45,11 +48,20 @@ namespace {
     constexpr ptrdiff_t kEffectiveVelocity = 0xB0;
     // CTaskShoot's agent.
     constexpr ptrdiff_t kTaskAgent = 0x34;
+
+    // The last shake of each shooting system, and until when it holds by game clock.
+    struct Mark {
+        double until = -1.0;
+        float factor = 1.0f;
+        bool panic = false;
+    };
+    std::unordered_map<const void*, Mark> g_marks;
 }
 
 namespace DifficultyOverhaul::Shooting {
 
-FCSE::Relocation<CanShootFn> CanShoot{FCSE::Uplay(0x009792F0)};
+FCSE::Relocation<TaskCheckFn> CanShoot{FCSE::Uplay(0x009792F0)};
+FCSE::Relocation<TaskCheckFn> IsAligned{FCSE::Uplay(0x0097A3D0)};
 
 bool Found() { return g_getTarget && g_getVisibility && g_getKnowledge; }
 
@@ -69,6 +81,37 @@ float Visibility(void* shooting) {
     float visibility = 0.0f;
     g_getVisibility(senses, nullptr, Target(shooting), &visibility, false);
     return visibility;
+}
+
+float FuzzyVisibility(void* shooting) {
+    return Read<float>(Read<const void*>(shooting, kShooter), kAgentFuzzy);
+}
+
+namespace {
+    // The shake that holds on him now, if any.
+    const Mark* Holding(const void* shooting) {
+        const auto shake = g_marks.find(shooting);
+        return shake != g_marks.end() && Game::Now() < shake->second.until ? &shake->second
+                                                                             : nullptr;
+    }
+}
+
+bool Shake(const void* shooting, float factor, bool panic, double seconds) {
+    const Mark* holding = Holding(shooting);
+    if (holding == nullptr || holding->factor >= factor) {
+        Remember(g_marks, shooting) = {Game::Now() + seconds, factor, panic};
+    }
+    return holding != nullptr;
+}
+
+float Shaken(const void* shooting) {
+    const Mark* holding = Holding(shooting);
+    return holding != nullptr ? holding->factor : 1.0f;
+}
+
+bool Panicking(const void* shooting) {
+    const Mark* holding = Holding(shooting);
+    return holding != nullptr && holding->panic;
 }
 
 namespace {

@@ -35,6 +35,11 @@ namespace {
     constexpr ptrdiff_t kDotPart = 0x1C;
     constexpr ptrdiff_t kAimPart = 0x34;
     constexpr ptrdiff_t kLastShotHit = 0x108;
+    // CShootingSystem: the factors GetChanceOfSuccess multiplies, from its last call.
+    constexpr ptrdiff_t kOwnStatusFactor = 0x10C;
+    constexpr ptrdiff_t kTargetStatusFactor = 0x110;
+    constexpr ptrdiff_t kGroupFactor = 0x114;
+    constexpr ptrdiff_t kDistanceFactor = 0x11C;
     constexpr int kHeadPart = 3;
     constexpr int kTorsoPart = 5;
 
@@ -64,6 +69,7 @@ namespace {
         float recoil = 1.0f;
         float sighting = 1.0f;
         float crossing = 1.0f;
+        float shaken = 1.0f;
         float chance = NAN;
     };
     Shot g_shot;
@@ -157,8 +163,15 @@ namespace {
         if (chance >= 1.0f) {
             chance *= Settled(shooting);
         }
-        g_shot.chance =
-            std::min(chance, kMaxChance) * g_shot.recoil * g_shot.sighting * g_shot.crossing;
+        // Evidence for tracing where the game's chance goes wrong; to go once that is fixed.
+        if (std::isnan(chance)) {
+            FCSE::Logf("shot at player: the game's chance is not a number: own status %.2f, "
+                       "target status %.2f, group %.2f, distance %.2f",
+                       Read<float>(shooting, kOwnStatusFactor), Read<float>(shooting, kTargetStatusFactor),
+                       Read<float>(shooting, kGroupFactor), Read<float>(shooting, kDistanceFactor));
+        }
+        g_shot.chance = std::min(chance, kMaxChance) * g_shot.recoil * g_shot.sighting *
+                        g_shot.crossing * g_shot.shaken;
         return RollChance(g_shot.chance);
     }
 
@@ -177,11 +190,12 @@ namespace {
             g_setupAimingDot(shooting);
         }
 
-        g_shot = {true, Recoil(shooting), Sighting(shooting), Crossing(shooting)};
+        g_shot = {true, Recoil(shooting), Sighting(shooting), Crossing(shooting),
+                  Shooting::Shaken(shooting)};
         const int result = g_originalShootAt(shooting, unused, position, head, torso);
-        FCSE::Logf("shot at player: chance %.2f (recoil %.2f, sighting %.2f, crossing %.2f) at "
-                   "%.1f m, %.1f s on him, at the %s, %s",
-                   g_shot.chance, g_shot.recoil, g_shot.sighting, g_shot.crossing,
+        FCSE::Logf("shot at player: chance %.2f (recoil %.2f, sighting %.2f, crossing %.2f, "
+                   "shaken %.2f) at %.1f m, %.1f s on him, at the %s, %s",
+                   g_shot.chance, g_shot.recoil, g_shot.sighting, g_shot.crossing, g_shot.shaken,
                    Shooting::TargetDistance(shooting), Shooting::AimSeconds(shooting),
                    part == kHeadPart ? "head" : "torso",
                    Read<bool>(shooting, kLastShotHit) ? "hit" : "miss");

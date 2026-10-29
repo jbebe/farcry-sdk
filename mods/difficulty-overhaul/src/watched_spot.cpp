@@ -11,8 +11,10 @@
 using namespace DifficultyOverhaul;
 
 namespace {
-    Shooting::CanShootFn g_originalCanShoot = nullptr;
+    Shooting::TaskCheckFn g_originalCanShoot = nullptr;
 
+    // Hardcore: how visible the player must be for a soldier to see him clearly.
+    constexpr float kClearVisibility = 0.4f;
     // Unseen for longer than this, the player has vanished rather than flickered.
     constexpr double kVanishedSeconds = 1.0;
     // Two sightings that began closer together than this are the same one.
@@ -36,7 +38,7 @@ namespace {
         }
         void* shooting = Shooting::OfTask(task);
         if (!Shooting::AimsAtPlayer(shooting) ||
-            Shooting::Visibility(shooting) < Shooting::kClearVisibility) {
+            Shooting::Visibility(shooting) < kClearVisibility) {
             return true;
         }
         const float sight = Shooting::SightSeconds(shooting);
