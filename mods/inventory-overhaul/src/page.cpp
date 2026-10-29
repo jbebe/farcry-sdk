@@ -315,6 +315,7 @@ bool Heals() { return g_heals; }
 
 void Frame() {
     Flip();
+    Story::Frame();
     void* notebook = Magma::Find("IO_NOTEBOOK");
     const bool open = Notebook::IsOpen();
     if (notebook == g_notebook && open == g_open) {

@@ -24,11 +24,15 @@ std::vector<std::string> FoundTapes();
 
 // Plays tape `key` from its start as the pause menu does, stopping any other, while the game runs on;
 // false when it did not start, as while scripted music plays. With a `sound`, the tape is another
-// mod's cassette, that sound event, played and stopped as the Jackal tapes are.
+// mod's cassette, that sound event, played and stopped as the Jackal tapes are, clicks included.
 bool PlayTape(const std::string& key, uint32_t sound = 0);
 void StopTape();
 // The key of the tape PlayTape started while it still plays, else empty.
 std::string PlayingTape();
+// Holds a cassette's bank and the clicks loaded, for PlayTape: a play loads nothing.
+void HoldCassette(uint32_t sound);
+// Starts a cassette once its click has played; every frame.
+void Frame();
 
 // A buddy's status, as CBuddiesManager::GetBuddyStatus counts it.
 enum Status { kAlive, kMissing, kDead, kRescueReady, kWounded };

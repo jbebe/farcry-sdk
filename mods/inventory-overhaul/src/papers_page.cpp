@@ -159,7 +159,7 @@ int PapersPage(Model& model, int& selected, bool used, int& sheet) {
     for (const Paper& cassette : cassettes) {
         titles.push_back(cassette.name);
         if (cassette.item->sound != 0) {
-            Sound::Hold(cassette.item->sound);
+            Story::HoldCassette(cassette.item->sound);
         }
     }
     const int rows = static_cast<int>(papers.size() + titles.size());

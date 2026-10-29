@@ -215,8 +215,12 @@ text the game has is the game's, in the player's language, through its string ta
   (`show_pausemenu`), R or Tab put it back. LMB on a tape plays it through the game's own
   `CJackalTapeManager::PlayTape`, as the pause menu does, while the game runs on, and on the playing
   tape stops it (see [playing a tape](../../docs/docs/engine-internals/campaign.md)). A cassette plays
-  and stops the same way, through the music manager's tape slot with the first Jackal tape's stop
-  sound and sound type; its bank is held loaded while the page lists it.
+  in the music manager's tape slot with the Jackal tapes' sound type and clicks, so its own sound
+  needs none: the click their recordings start with, the stock sample `0x004ebec4` played through
+  this mod's event `0x00FD0001` (`notebook/tape_click.xml`, encoded with `jackall-cli spk encode`
+  into `layer/mods/soundbinary/`), then the cassette once the click has played; on a stop, the slot
+  is stopped under it with the click their stop sounds play, `0x004EBECF`. Its bank and the clicks'
+  are held loaded while the page lists it.
 - **Journal** (`src/journal_page.cpp`): on the left the reputation level and its words, as the pause
   menu's Journal has them; on the right the current job, its objectives and the Underground's, as the
   pause menu's main page showed them (`src/engine/jobs.cpp`): every objective marker that is on, its

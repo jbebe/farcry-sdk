@@ -2,11 +2,14 @@
 #include "engine/story.h"
 
 #include "engine/memory.h"
+#include "engine/sound.h"
 #include "fcse_api.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstring>
 #include <map>
+#include <utility>
 
 namespace InventoryOverhaul::Story {
 
@@ -72,6 +75,10 @@ namespace {
     constexpr ptrdiff_t kEntryType = 0x24;
     constexpr ptrdiff_t kEntryPlaying = 0x28;
     constexpr float kCassetteFade = 0.25f;
+    // The click the Jackal tapes' recordings start with, a sample played through this mod's own event
+    // (notebook\tape_click.xml), and the click their stop sounds play.
+    constexpr uint32_t kClickIn = 0x00FD0001;
+    constexpr uint32_t kClickOut = 0x004EBECF;
 
     // The mission manager's Jackal and Predecessor tapes, SMissionTape records each starting with its
     // string key, and whether one was found.
@@ -90,11 +97,14 @@ namespace {
     constexpr ptrdiff_t kBuddyHistory = 0x9C;
 
     bool g_installed = false;
-    // The tape PlayTape started and its start id, to tell it from one the game plays, and whether it is
-    // a cassette.
+    // The tape PlayTape started and its start id, to tell it from one the game plays, whether it is a
+    // cassette, and the tapes' sound type. A cassette's sound waits for its click to end until `g_startAt`.
     std::string g_playing;
     uint32_t g_playingSound = 0;
     bool g_cassette = false;
+    int32_t g_type = 0;
+    uint32_t g_waiting = 0;
+    std::chrono::steady_clock::time_point g_startAt;
 
     void* Service(const FCSE::Relocation<BuildClassIdFn>& build, const void* const* name, const uint32_t* type) {
         if (!g_installed) {
@@ -214,18 +224,21 @@ bool PlayTape(const std::string& key, uint32_t sound) {
     }
     g_touchTapes(manager, nullptr);
     ClearSlot(manager);
-    if (sound == 0) {
-        g_playTape(manager, nullptr, record);
-    } else {
-        g_tapeSlot(sound, Read<int32_t>(first, kEntryType), -1.0f, 0);
-    }
-    if (*g_tapeHandle.get() == -1) {
-        return false;
-    }
     g_playing = key;
-    g_playingSound = *g_tapeSound.get();
     g_cassette = sound != 0;
-    return true;
+    g_waiting = 0;
+    if (g_cassette) {
+        g_type = Read<int32_t>(first, kEntryType);
+        Sound::Play(kClickIn, g_type);
+        g_waiting = sound;
+        g_startAt = std::chrono::steady_clock::now() +
+                    std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                        std::chrono::duration<float>(std::max(Sound::Length(kClickIn), 0.0f)));
+        return true;
+    }
+    g_playTape(manager, nullptr, record);
+    g_playingSound = *g_tapeSound.get();
+    return *g_tapeHandle.get() != -1;
 }
 
 void StopTape() {
@@ -233,8 +246,10 @@ void StopTape() {
     if (manager == nullptr) {
         return;
     }
-    // A cassette is none of the manager's tapes, so the slot is stopped under it.
+    // A cassette is none of the manager's tapes, so the slot is stopped under it, with their click.
     if (g_cassette && !PlayingTape().empty()) {
+        g_waiting = 0;
+        Sound::Play(kClickOut, g_type);
         g_stopSlot(kCassetteFade);
     } else {
         g_stopTape(manager, nullptr);
@@ -242,8 +257,23 @@ void StopTape() {
 }
 
 std::string PlayingTape() {
-    const bool playing = TapeManager() != nullptr && *g_tapeHandle.get() != -1 && *g_tapeSound.get() == g_playingSound;
+    const bool playing = g_waiting != 0 || (TapeManager() != nullptr && *g_tapeHandle.get() != -1 &&
+                                            *g_tapeSound.get() == g_playingSound);
     return playing ? g_playing : "";
+}
+
+void HoldCassette(uint32_t sound) {
+    Sound::Hold(sound);
+    Sound::Hold(kClickIn);
+    Sound::Hold(kClickOut);
+}
+
+void Frame() {
+    if (g_waiting == 0 || std::chrono::steady_clock::now() < g_startAt || TapeManager() == nullptr) {
+        return;
+    }
+    g_tapeSlot(std::exchange(g_waiting, 0), g_type, -1.0f, 0);
+    g_playingSound = *g_tapeSound.get();
 }
 
 std::vector<Buddy> Buddies() {
