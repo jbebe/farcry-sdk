@@ -3,19 +3,19 @@
   <value name="hidName" type="String">InventoryOverhaul_Torn_notebook_page</value>
   <value name="disEntityId" type="Int64">2099000000000000201</value>
   <value name="hidPos" type="Vector3">
-    <x>1834.6381</x>
-    <y>2389.0729</y>
-    <z>36.0984</z>
+    <x>2604.02</x>
+    <y>2108.09</y>
+    <z>21.3459</z>
   </value>
   <value name="hidAngles" type="Vector3">
-    <x>7.3121</x>
-    <y>0.5206</y>
-    <z>43.2083</z>
+    <x>0</x>
+    <y>0</y>
+    <z>0</z>
   </value>
   <value name="hidPos_precise" type="Vector3">
-    <x>1834.6381</x>
-    <y>2389.0729</y>
-    <z>36.0984</z>
+    <x>2604.02</x>
+    <y>2108.09</y>
+    <z>21.3459</z>
   </value>
   <object type="Components">
     <object type="CEventComponent">

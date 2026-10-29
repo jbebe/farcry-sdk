@@ -17,10 +17,10 @@ ENVELOPE = "OA_MissionPickups.MissionPickups.PartnerMissionEnvelope"
 SHEET = "OA_DetailObjects.DetailObjects.SingleSheet_BK"
 GRAPHIC = re.compile(r'<component class="GraphicComponent".*?</component>', re.S)
 PAPERS = [
-    # On the bed of the burnt-out truck StaticObject_10702, by its open tailgate, flat on the planks.
-    {"item": "Torn_notebook_page", "archetype_id": 81302, "world": "world1", "level": "w1_c_2",
-     "sector": 2988, "entity_id": 2099000000000000201, "pos": (1834.6381, 2389.0729, 36.0984),
-     "angles": (7.3121, 0.5206, 43.2083)},
+    # Flat where the boombox Appliances.BoomBoxRadio_398 stands, on a beer barrel.
+    {"item": "Torn_notebook_page", "archetype_id": 81302, "world": "world1", "level": "w1_c_3",
+     "sector": 2600, "entity_id": 2099000000000000201, "pos": (2604.02, 2108.09, 21.3459),
+     "angles": (0, 0, 0)},
 ]
 
 

@@ -239,7 +239,7 @@ A paper in the world is the Predecessor's envelope pickup drawn as the stock sin
 `CPickupMissionItem` whose archetype holds its Items id as the entity data
 `InventoryOverhaul.Item`, saved at persist level 3 like a diamond case so it stays picked. After the
 engine's `CPickupMissionItem::Pick`, `src/pickups.cpp` gives the player that item. The torn notebook
-page lies on the bed of the burnt-out truck at about (1835, 2387) in world 1, by its open tailgate.
+page lies where a boombox stands on a beer barrel, at (2604.02, 2108.09, 21.35) in world 1.
 
 ## Testing
 
