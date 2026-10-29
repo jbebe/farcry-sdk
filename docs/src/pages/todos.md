@@ -62,6 +62,12 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 
 - [ ] Dev console bug: `Game:SetHealth`100 and 25 both kill the player
 
+## Mods/inventory-overhaul
+
+- [ ] **Crate support, on hold.** A shared crate, provided by another mod, whose contents the notebook
+      shows; without that mod nothing about it appears in game. The contract between the two mods is
+      not designed yet.
+
 ## Mods/vehicle-overhaul
 
 - [x] Configure every car's physics in game
