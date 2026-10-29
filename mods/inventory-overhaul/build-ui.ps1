@@ -158,11 +158,12 @@ function Crop($c) { , @(($c.X / $c.Size), ($c.Y / $c.Size), ($c.W / $c.Size), ($
 
 # An instance of `area`, `w` by `h`, at (x, y) and tilted `degrees` about its centre; Magma turns an
 # instance about its position, so the position is moved to keep the centre in place.
-function Tilted([string]$area, [double]$x, [double]$y, [double]$w, [double]$h, [double]$degrees, [bool]$hidden = $false) {
+function Tilted([string]$area, [double]$x, [double]$y, [double]$w, [double]$h, [double]$degrees, [bool]$hidden = $false,
+                [string]$name = $area) {
     $r = $degrees * [Math]::PI / 180
     $cx = $w / 2 * [Math]::Cos($r) - $h / 2 * [Math]::Sin($r)
     $cy = $w / 2 * [Math]::Sin($r) + $h / 2 * [Math]::Cos($r)
-    Instance $area ($x + $w / 2 - $cx) ($y + $h / 2 - $cy) 1 1 $degrees -hidden $hidden
+    Instance $area ($x + $w / 2 - $cx) ($y + $h / 2 - $cy) 1 1 $degrees -hidden $hidden -name $name
 }
 
 $Exports = [System.Collections.Generic.List[string]]::new()
@@ -297,8 +298,38 @@ foreach ($k in 1, 2) {
 $inventoryArea.Add((Text t_io_machete "Machete" ($left + 38) 178 ($width - 46) 26 22 $inkFull))
 
 # Items shows a window of ten rows that follows the selection.
+$ItemsTop = 276
+$ItemLines = 10
+$ItemStep = 32
 Heading inventory t_io_items "ITEMS" $left 226
-List inventory item $left 276 10 32
+List inventory item $left $ItemsTop $ItemLines $ItemStep
+
+# A stowed gun's context menu: a scrap of post-it right of its row, past the longest gun name, with the
+# slots the gun can go to, its first on the row's line. One area per action underlined, and an
+# instance of each beside every row of the window, all hidden.
+$MenuW = 190
+$MenuH = 90
+$menuActions = "To slot A", "To slot B"
+function Menu([string]$tag, [int]$selected) {
+    $menu = [System.Collections.Generic.List[string]]::new()
+    $menu.Add((Image "i_io_menu_${tag}_paper" postit "\common.mgb" 0 0 $MenuW $MenuH "FFFFFFFF" 0 (Crop $PostItCrop)))
+    for ($k = 0; $k -lt $menuActions.Count; $k++) {
+        $middle = 29 + $k * $ItemStep
+        if ($k -eq $selected) {
+            $menu.Add((Image "i_io_menu_${tag}_sel" red_line "\common.mgb" 8 ($middle - 2) ($MenuW - 18) 22 $redLine -0.6))
+        }
+        $menu.Add((Text "t_io_menu_${tag}$k" $menuActions[$k] 22 ($middle - 13) ($MenuW - 34) 26 22 $inkFull))
+    }
+    , $menu
+}
+$menus = [ordered]@{ a = (Menu a 0); b = (Menu b 1) }
+for ($j = 1; $j -le $ItemLines; $j++) {
+    $middle = $ItemsTop + ($j - 1) * $ItemStep + $ItemStep / 2
+    foreach ($tag in $menus.Keys) {
+        $inventoryArea.Add((Tilted "a_io_menu_$tag" ($left + 165) ($middle - 29) $MenuW $MenuH -0.8 $true "a_io_menu_$tag$j"))
+        Export $InventoryPath "a_io_menu_$tag$j"
+    }
+}
 
 # The right page, below the post-it: the belt.
 Heading inventory t_io_belt "BELT" $right $Below
@@ -578,6 +609,7 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
         (Area a_io_portraits 44 44 $palette)
         (Area a_io_postit 416 302 $postIt)
         (Area a_io_reader 412 620 $reader)
+        foreach ($tag in $menus.Keys) { Area "a_io_menu_$tag" $MenuW $MenuH $menus[$tag] }
         $photoAreas) -join "`n"
     $objects = @("<GENERICOBJECT name=`"IO_NOTEBOOK`"><LINK slot=`"69`" LASTOBJECTTYPE=`"Element`" IDS=`"$NotebookPath a_io_page`" /></GENERICOBJECT>") + $Exports
 

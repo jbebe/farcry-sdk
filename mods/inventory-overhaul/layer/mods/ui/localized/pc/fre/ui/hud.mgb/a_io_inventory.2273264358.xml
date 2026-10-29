@@ -482,6 +482,286 @@
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_a1">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_a1" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="264" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_a" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_b1">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_b1" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="264" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_b" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_a2">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_a2" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="296" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_a" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_b2">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_b2" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="296" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_b" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_a3">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_a3" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="328" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_a" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_b3">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_b3" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="328" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_b" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_a4">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_a4" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="360" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_a" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_b4">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_b4" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="360" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_b" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_a5">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_a5" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="392" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_a" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_b5">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_b5" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="392" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_b" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_a6">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_a6" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="424" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_a" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_b6">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_b6" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="424" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_b" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_a7">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_a7" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="456" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_a" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_b7">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_b7" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="456" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_b" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_a8">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_a8" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="488" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_a" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_b8">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_b8" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="488" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_b" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_a9">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_a9" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="520" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_a" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_b9">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_b9" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="520" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_b" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_a10">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_a10" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="552" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_a" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
+    <Element slot="33" type="AreaInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="a_io_menu_b10">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_a_io_menu_b10" IDX="0" INTERPOLATION="None">
+          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.8" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="260" POSITION.y="552" SCALEX="1" SCALEY="1" />
+        </Keyframe>
+      </KEYFRAMES>
+      <AreaInstance LABEL="" INDEXOFFSET="0">
+        <MATERIALLINK present="false" />
+        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_menu_b" ISUSINGDUPLICATEDAREA="false" />
+      </AreaInstance>
+    </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_belt">
         <PROPERTIES />

@@ -75,11 +75,14 @@ namespace {
     constexpr ptrdiff_t kSignalFired = 0x10;
     // R, which turns the notebook's page.
     constexpr uint32_t kFlipSide = FCSE::Crc32("flipside");
-    // The left mouse button, which uses the row selected or is the heal key's, and Esc, which puts a
-    // paper back.
+    // The left mouse button, which uses the row selected or is the heal key's; Esc, which puts a paper
+    // back or closes a menu; and the right mouse button, which closes them too before it is the
+    // monocular's.
     constexpr uint32_t kStartShooting = FCSE::Crc32("startshooting");
     constexpr uint32_t kHeal = FCSE::Crc32("heal");
     constexpr uint32_t kShowPauseMenu = FCSE::Crc32("show_pausemenu");
+    constexpr uint32_t kDrawMonocular = FCSE::Crc32("draw_monocular");
+    constexpr uint32_t kHolsterMonocular = FCSE::Crc32("holster_monocular");
     // The Drop control's signal, X: the row selected while the notebook is out, else the gun in hand.
     constexpr uint32_t kDropItem = FCSE::Crc32("drop_item");
 
@@ -88,8 +91,10 @@ namespace {
     std::atomic<bool> g_open{false};
     bool g_tabbed = false;
     bool g_refused = false;
-    // Set when X asked for the gun in hand to be dropped.
+    // Set when X asked for the gun in hand to be dropped, and while the right mouse button that closed
+    // something is held, so that its release does not lower the monocular.
     std::atomic<bool> g_dropInHand{false};
+    bool g_rightClosed = false;
     // The player's inventory and how many items it held when last looked at for the notebook.
     const void* g_lookedAt = nullptr;
     size_t g_lookedAtItems = 0;
@@ -128,7 +133,18 @@ namespace {
             }
             break;
         case kShowPauseMenu:
-            if (g_open && Page::PutBack()) {
+            if (g_open && Page::Close()) {
+                id = kTaken;
+            }
+            break;
+        case kDrawMonocular:
+            g_rightClosed = g_open && Page::Close();
+            if (g_rightClosed) {
+                id = kTaken;
+            }
+            break;
+        case kHolsterMonocular:
+            if (std::exchange(g_rightClosed, false)) {
                 id = kTaken;
             }
             break;

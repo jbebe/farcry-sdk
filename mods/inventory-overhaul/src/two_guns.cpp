@@ -65,10 +65,10 @@ namespace {
     };
     Picked g_picked{};
     int g_lastSlot = 1;
+}
 
-    void SetSlot(void* weapon, int slot) {
-        FCSE::ApiPointer()->EntityData->SetInt(Inventory::Entity(weapon), kSlotKey, slot);
-    }
+void SetSlot(void* weapon, int slot) {
+    FCSE::ApiPointer()->EntityData->SetInt(Inventory::Entity(weapon), kSlotKey, slot);
 }
 
 int SlotOf(void* weapon) {

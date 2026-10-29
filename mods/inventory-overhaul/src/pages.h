@@ -53,8 +53,13 @@ void ClearPostIt(Model& model);
 
 // Each page's rows and the post-it of row `selected`, kept within them; each returns its row count.
 // `dropped`, X was pressed: the selected gun falls at the feet, a stowed one too, and one of the
-// selected item is thrown away. `used`, the page was clicked: gun 1 or 2 is stowed in Items.
-int InventoryPage(Model& model, int& selected, const void* view, void* inventory, bool dropped, bool used);
+// selected item is thrown away. `used`, the page was clicked: gun 1 or 2 is stowed in Items, and a
+// stowed gun's menu opened, or its action run. `menu` is the menu's action underlined, -1 while it is
+// closed.
+int InventoryPage(Model& model, int& selected, const void* view, void* inventory, bool dropped, bool used,
+                  int& menu);
+// The actions a stowed gun's menu offers: to slot A, to slot B.
+inline constexpr int kMenuActions = 2;
 // `used`, the page was clicked: the selected paper is read whole, or put back, and the selected tape
 // played, or stopped while it plays. `sheet` is the sheet
 // read, kept within the paper's, or -1 while none is.

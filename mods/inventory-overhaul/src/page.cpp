@@ -35,7 +35,7 @@ namespace {
 
     // The page open, R's turns, the wheel's steps and whether it was clicked or X pressed since the
     // last write, and each page's selected row; the Inventory page opens on the gun in hand. The sheet
-    // of the paper read, -1 while none is.
+    // of the paper read and the action underlined in a stowed gun's menu, -1 while neither is open.
     int g_tab = kInventory;
     std::atomic<int> g_turns{0};
     std::atomic<int> g_steps{0};
@@ -43,6 +43,7 @@ namespace {
     std::atomic<bool> g_dropped{false};
     int g_selected[kTabs] = {-1, 0, 0, 0};
     std::atomic<int> g_sheet{-1};
+    std::atomic<int> g_menu{-1};
     std::atomic<bool> g_heals{false};
 
     // The page's elements as last found, and what was last written into them.
@@ -229,6 +230,7 @@ void Update(const void* view, void* inventory) {
     const int turns = g_turns.exchange(0);
     g_tab = (g_tab + turns) % kTabs;
     int sheet = turns > 0 ? -1 : g_sheet.load();
+    int menu = turns > 0 ? -1 : g_menu.load();
     if (turns > 0) {
         StartFlip();
     }
@@ -238,6 +240,8 @@ void Update(const void* view, void* inventory) {
     const bool dropped = g_dropped.exchange(false);
     if (sheet >= 0) {
         sheet = std::max(sheet + steps, 0);
+    } else if (menu >= 0) {
+        menu = std::clamp(menu + steps, 0, kMenuActions - 1);
     } else if (selected >= 0) {
         selected += steps;
     }
@@ -258,7 +262,7 @@ void Update(const void* view, void* inventory) {
     int rows = 0;
     switch (g_tab) {
     case kInventory:
-        rows = InventoryPage(model, selected, view, inventory, dropped, used);
+        rows = InventoryPage(model, selected, view, inventory, dropped, used, menu);
         break;
     case kPapers:
         rows = PapersPage(model, selected, used, sheet);
@@ -271,6 +275,7 @@ void Update(const void* view, void* inventory) {
         break;
     }
     g_sheet = sheet;
+    g_menu = menu;
     g_heals = model.heals;
     model.Show("IO_POSTIT", rows > 0 && sheet < 0);
     model.Show("IO_READER", sheet >= 0);
@@ -295,7 +300,11 @@ void Use() { g_used = true; }
 
 void Drop() { g_dropped = true; }
 
-bool PutBack() { return g_sheet.exchange(-1) >= 0; }
+bool Close() {
+    const bool read = g_sheet.exchange(-1) >= 0;
+    const bool menu = g_menu.exchange(-1) >= 0;
+    return read || menu;
+}
 
 bool Heals() { return g_heals; }
 
@@ -316,7 +325,7 @@ void Frame() {
         Magma::SetVisible(notebook, open);
     }
     if (!open) {
-        g_sheet = -1;
+        Close();
     }
     g_notebook = notebook;
     g_open = open;

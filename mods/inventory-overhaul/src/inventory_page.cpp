@@ -282,7 +282,8 @@ namespace {
     }
 }
 
-int InventoryPage(Model& model, int& selected, const void* view, void* inventory, bool dropped, bool used) {
+int InventoryPage(Model& model, int& selected, const void* view, void* inventory, bool dropped, bool used,
+                  int& menu) {
     Carried carried{view, inventory, Inventory::Guns(inventory), Items::Load(), Economy::Bought(),
                     Economy::Diamonds(),
                     {Inventory::Ammo(view, "syringe"), Inventory::Pills(),
@@ -300,18 +301,29 @@ int InventoryPage(Model& model, int& selected, const void* view, void* inventory
     }
     selected = std::clamp(selected, 0, static_cast<int>(rows.size()) - 1);
     const Row& row = rows[selected];
-    // X drops the selected gun, or one of the selected item, a click stows gun 1 or 2, and the page is
-    // read again.
+    const bool stowedGun = row.kind == Row::kItem && row.item->gun;
+    if (!stowedGun || dropped) {
+        menu = -1;
+    }
+    // X drops the selected gun, or one of the selected item; a click stows gun 1 or 2, opens a stowed
+    // gun's menu or runs the action underlined in it; and the page is read again.
     if (dropped && (row.gun != nullptr || row.kind == Row::kItem)) {
         if (row.gun != nullptr) {
             TwoGuns::Release(inventory, *row.gun, true);
         } else {
             Items::Drop(inventory, row.index);
         }
-        return InventoryPage(model, selected, view, inventory, false, false);
+        return InventoryPage(model, selected, view, inventory, false, false, menu);
     }
-    if (used && row.kind == Row::kGun && Items::Stow(inventory, row.slot)) {
-        return InventoryPage(model, selected, view, inventory, false, false);
+    if (used && menu >= 0) {
+        Items::Take(inventory, row.index, menu + 1);
+        menu = -1;
+        return InventoryPage(model, selected, view, inventory, false, false, menu);
+    }
+    if (used && stowedGun) {
+        menu = 0;
+    } else if (used && row.kind == Row::kGun && Items::Stow(inventory, row.slot)) {
+        return InventoryPage(model, selected, view, inventory, false, false, menu);
     }
     model.heals = row.kind == Row::kBelt && row.index == 0;
 
@@ -326,6 +338,12 @@ int InventoryPage(Model& model, int& selected, const void* view, void* inventory
         }
     }
     List(model, "ITEM", kItemRows, g_firstItem, texts, selected - kHandRows);
+    // The menu beside its row's line of the window, with its action underlined.
+    const int line = selected - kHandRows - static_cast<int>(g_firstItem) + 1;
+    for (size_t j = 1; j <= kItemRows; ++j) {
+        model.Show(Name("IO_MENU_A", j), menu == 0 && line == static_cast<int>(j));
+        model.Show(Name("IO_MENU_B", j), menu == 1 && line == static_cast<int>(j));
+    }
 
     for (size_t i = 0; i < std::size(kBelt); ++i) {
         const bool isSelected = row.kind == Row::kBelt && row.index == i;

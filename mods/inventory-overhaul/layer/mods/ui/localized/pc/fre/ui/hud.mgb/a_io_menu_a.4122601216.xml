@@ -1,0 +1,70 @@
+<Area slot="44" type="Area" FRAMERATE="30" CURRENTFRAME="0" STATICBOX="0 190 0 90">
+  <USERDATA name="a_io_menu_a">
+    <PROPERTIES />
+  </USERDATA>
+  <CHILDREN>
+    <Element slot="77" type="Placeholder" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="action">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_action" IDX="0" INTERPOLATION="None">
+          <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Placeholder />
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_menu_a_paper">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_menu_a_paper" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="95" ORIGIN.y="45" LEFT="0" RIGHT="190" TOP="0" BOTTOM="90" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="0.835938" TILING.y="0.607422" OFFSET.x="0.025391" OFFSET.y="0.03125" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="postit" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_menu_a_sel">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_menu_a_sel" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="-0.6" ORIGIN.x="86" ORIGIN.y="11" LEFT="8" RIGHT="180" TOP="27" BOTTOM="49" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="8C1C2C8F" COLOR2="8C1C2C8F" COLOR3="8C1C2C8F" COLOR4="8C1C2C8F" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="red_line" PACKAGE="\common.mgb" />
+      </Image>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_menu_a0">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_menu_a0" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="78" ORIGIN.y="13" LEFT="22" RIGHT="178" TOP="16" BOTTOM="42" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="To slot A" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_menu_a1">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_menu_a1" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF141E2A" ROTATION="0" ORIGIN.x="78" ORIGIN.y="13" LEFT="22" RIGHT="178" TOP="48" BOTTOM="74" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="To slot B" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+  </CHILDREN>
+</Area>

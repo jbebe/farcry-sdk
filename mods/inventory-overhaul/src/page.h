@@ -21,11 +21,13 @@ void Turn();
 
 // Uses the row selected the next time the page is written: reads the paper selected on Papers whole,
 // or puts it back, and while one is read Scroll turns its sheets; plays or stops a tape; on Inventory,
-// stows gun 1 or 2. Any thread.
+// stows gun 1 or 2, or opens a stowed gun's menu, in which Scroll moves and Use runs the action. Any
+// thread.
 void Use();
 
-// Puts back the paper being read; false when none was. Any thread.
-bool PutBack();
+// Puts back the paper being read and closes a stowed gun's menu; false when neither was open. Any
+// thread.
+bool Close();
 
 // Whether a click heals instead of being used: Syrettes is selected on Inventory. Any thread.
 bool Heals();

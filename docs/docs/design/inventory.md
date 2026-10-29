@@ -203,7 +203,7 @@ Which bandolier covers which gun, from the shop's plans:
 | Kind | Use | Drop |
 |---|---|---|
 | Gun in a slot | stowed in Items, if it holds fewer than two guns (built and seen in game, 2026-10-29) | falls at the feet as a pickup, with its wear and ammo |
-| Gun in Items | a context menu: a small paper box right of or under the row, "To slot A" and "To slot B" (mockup, 2026-10-29) | as above |
+| Gun in Items | a context menu: a small paper box right of or under the row, "To slot A" and "To slot B", the gun there going into Items (post-it paper, right of the row; built 2026-10-29, not yet seen) | as above |
 | Diamonds | — | no: the row is the player's own diamond count |
 | Syrette | heal: the click is the heal key's, so the notebook goes away and the syrette is used (built and seen in game, 2026-10-29) | no |
 | Letter, photo | read: it lies over the whole right page on the post-it's paper turned upright, the post-it hidden; a photo keeps its own colours; the wheel turns a long letter's sheets; LMB or Esc puts it back (built 2026-10-28) | no |

@@ -111,24 +111,30 @@ bool Stow(void* inventory, int slot) {
     return true;
 }
 
-bool Take(void* inventory, size_t index) {
+bool Take(void* inventory, size_t index, int slot) {
     std::vector<Record> items = Load();
     if (index >= items.size() || !items[index].gun) {
         return false;
     }
     const Record taken = items[index];
     const std::vector<Inventory::Weapon> before = Inventory::Guns(inventory);
+    if (slot == 0 && before.size() >= 2) {
+        slot = TwoGuns::SlotOf(TwoGuns::ToReplace(inventory, before).weapon);
+    }
+    const Inventory::Weapon* out = slot != 0 ? TwoGuns::InSlot(before, slot) : nullptr;
     const std::optional<Inventory::Weapon> made = Make(inventory, taken, before);
     if (!made) {
         return false;
     }
     items.erase(items.begin() + index);
-    if (before.size() >= 2) {
-        const Inventory::Weapon& out = TwoGuns::ToReplace(inventory, before);
-        items.push_back(Keep(inventory, out.weapon));
+    if (out != nullptr) {
+        items.push_back(Keep(inventory, out->weapon));
         FCSE::Logf("the %s goes into Items in its place with %d loaded", items.back().id.c_str(),
                    items.back().loaded);
-        Inventory::Remove(inventory, out.weapon);
+        Inventory::Remove(inventory, out->weapon);
+    }
+    if (slot != 0) {
+        TwoGuns::SetSlot(made->weapon, slot);
     }
     Save(items);
     TwoGuns::Settle(inventory);

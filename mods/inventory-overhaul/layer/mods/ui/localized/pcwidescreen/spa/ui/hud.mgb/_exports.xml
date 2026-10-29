@@ -144,6 +144,66 @@
     <GENERICOBJECT name="IO_ITEMS_MORE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory t_io_items_more" />
     </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_A1">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_a1" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_B1">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_b1" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_A2">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_a2" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_B2">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_b2" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_A3">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_a3" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_B3">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_b3" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_A4">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_a4" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_B4">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_b4" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_A5">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_a5" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_B5">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_b5" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_A6">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_a6" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_B6">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_b6" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_A7">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_a7" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_B7">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_b7" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_A8">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_a8" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_B8">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_b8" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_A9">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_a9" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_B9">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_b9" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_A10">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_a10" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_MENU_B10">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory a_io_menu_b10" />
+    </GENERICOBJECT>
     <GENERICOBJECT name="IO_BELT1_SEL">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_inventory a_io_inventory i_io_belt1_sel" />
     </GENERICOBJECT>
