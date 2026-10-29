@@ -4,6 +4,8 @@
 #include "engine/memory.h"
 #include "fcse_api.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 
 namespace {
@@ -67,10 +69,18 @@ void* ProxyEntity(const void* proxy) {
     return proxy != nullptr ? Read<void*>(proxy, kProxyEntity) : nullptr;
 }
 
+void* EntityOf(void* component) { return FCSE::ApiPointer()->EntityData->EntityOf(component); }
+
 void Position(const void* entity, float position[3]) {
-    for (int i = 0; i < 3; ++i) {
-        position[i] = Read<float>(entity, kEntityPosition + i * sizeof(float));
+    std::copy_n(Vec3(entity, kEntityPosition), 3, position);
+}
+
+float Distance(const float a[3], const float b[3]) {
+    float squared = 0.0f;
+    for (int axis = 0; axis < 3; ++axis) {
+        squared += (a[axis] - b[axis]) * (a[axis] - b[axis]);
     }
+    return std::sqrt(squared);
 }
 
 bool ClockFound() { return static_cast<bool>(g_clock); }

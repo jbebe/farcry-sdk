@@ -31,8 +31,8 @@ namespace {
 
     float __fastcall ApplyLocationMultiplierDetour(void* service, void* unused, void* receiver,
                                                    const uint8_t* stim, float damage) {
-        void* player = Damage::Type(stim) == Damage::kPierce ? Game::PlayerEntity() : nullptr;
-        const bool onPlayer = player != nullptr && Game::ProxyEntity(receiver) == player;
+        const bool onPlayer = Damage::Type(stim) == Damage::kPierce &&
+                              Game::IsPlayerEntity(Game::ProxyEntity(receiver));
         const float result =
             g_originalApplyLocationMultiplier(service, unused, receiver, stim, damage);
         return onPlayer ? damage * kBulletDamage[Damage::Part(stim)] : result;

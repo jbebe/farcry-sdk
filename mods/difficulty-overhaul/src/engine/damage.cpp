@@ -86,8 +86,6 @@ void SetHealth(void* counters, float health) {
     }
 }
 
-void* Owner(void* counters) { return FCSE::ApiPointer()->EntityData->EntityOf(counters); }
-
 float* PartMultipliers(const void* counters) {
     auto* service = Read<uint8_t*>(counters, kCountersService);
     return service != nullptr ? reinterpret_cast<float*>(service + kServicePartMultipliers) : nullptr;

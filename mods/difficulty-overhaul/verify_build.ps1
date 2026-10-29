@@ -37,7 +37,7 @@ $image = [System.Text.Encoding]::GetEncoding(28591).GetString($bytes)
 $crt = @("MSVCP140", "VCRUNTIME140", "api-ms-win-crt-", "ucrtbase") |
        Where-Object { $image.Contains($_) }
 if ($crt) {
-    throw "$DllPath links the dynamic CRT (found: $($crt -join ', ')) - it must build /MT. See the CMP0091 note in CMakeLists.txt."
+    throw "$DllPath links the dynamic CRT (found: $($crt -join ', ')) - it must build /MT. See CMAKE_MSVC_RUNTIME_LIBRARY in CMakeLists.txt."
 }
 
 if (-not $image.Contains("FCSE_Load")) {

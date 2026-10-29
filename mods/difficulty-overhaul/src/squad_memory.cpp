@@ -4,7 +4,6 @@
 #include "engine/memory.h"
 #include "fcse_api.h"
 
-#include <cmath>
 #include <cstdint>
 #include <unordered_map>
 
@@ -37,55 +36,41 @@ namespace {
     // A camping score no target outlasts.
     constexpr float kForever = 1.0e9f;
 
-    // The sighting each lieutenant was last reported as holding on to, so each is logged once.
-    std::unordered_map<const void*, float> g_reported;
-
     // What each lieutenant's last pass found: whether the player was among its seen targets, and if
-    // so how long unseen, how far from where it last saw him, and how long the game would keep him.
+    // so how long unseen, how far from where it last saw him, and how long the game would keep him;
+    // and the sighting it was last reported as holding on to, so each is logged once.
     struct Pass {
         bool spotted = false;
         float unseen = 0.0f;
         float distance = 0.0f;
         float memory = 0.0f;
+        float reported = 0.0f;
     };
     std::unordered_map<const void*, Pass> g_passes;
 
     // The lieutenant's entry for the player in its army's seen targets, or null.
-    const uint8_t* PlayerSighting(void* lieutenant, void** player) {
+    const uint8_t* PlayerSighting(void* lieutenant, const void* player) {
         const auto* army = Read<const uint8_t*>(lieutenant, kLieutenantArmy);
-        if (army == nullptr) {
+        if (army == nullptr || player == nullptr) {
             return nullptr;
         }
         const auto* targets = Read<const uint8_t*>(army, kArmySeenTargets);
         const int count = Read<int>(army, kArmySeenTargetCount);
         for (int i = 0; i < count; ++i) {
             const uint8_t* target = targets + i * kSeenTargetSize;
-            *player = Game::ProxyEntity(Read<const void*>(target, kSeenTargetProxy));
-            if (Game::IsPlayerEntity(*player)) {
+            if (Game::ProxyEntity(Read<const void*>(target, kSeenTargetProxy)) == player) {
                 return target;
             }
         }
         return nullptr;
     }
 
-    float DistanceFrom(const void* entity, const uint8_t* sighting) {
-        float now[3];
-        Game::Position(entity, now);
-        float squared = 0.0f;
-        for (int axis = 0; axis < 3; ++axis) {
-            const float d =
-                now[axis] - Read<float>(sighting, kSeenTargetPosition + axis * sizeof(float));
-            squared += d * d;
-        }
-        return std::sqrt(squared);
-    }
-
     // While the player is near where they last saw him, the camping score is raised past any
     // timeout for this one pass, which also keeps the squad's other seen targets.
     void __fastcall UpdateTargetListDetour(void* lieutenant, void* unused, bool* noTargets) {
-        void* player = nullptr;
-        const uint8_t* sighting = PlayerSighting(lieutenant, &player);
-        Pass& last = g_passes[lieutenant];
+        void* player = Game::PlayerEntity();
+        const uint8_t* sighting = PlayerSighting(lieutenant, player);
+        Pass& last = Remember(g_passes, lieutenant);
         if (sighting == nullptr) {
             if (last.spotted) {
                 FCSE::Logf("squad memory: the squad lost him %.0f s after it last saw him, %.1f m from "
@@ -102,14 +87,16 @@ namespace {
         const auto score = Read<float>(lieutenant, kLieutenantCampingScore);
         const auto seenAt = Read<float>(sighting, kSeenTargetTime);
         const float unseen = static_cast<float>(Game::Now()) - seenAt;
-        const float distance = DistanceFrom(player, sighting);
-        last = {true, unseen, distance, kGameMemorySeconds + score};
+        float position[3];
+        Game::Position(player, position);
+        const float distance = Game::Distance(position, Vec3(sighting, kSeenTargetPosition));
+        last = {true, unseen, distance, kGameMemorySeconds + score, last.reported};
         if (distance > kHoldRadius) {
             g_originalUpdateTargetList(lieutenant, unused, noTargets);
             return;
         }
-        if (unseen > last.memory && g_reported[lieutenant] != seenAt) {
-            g_reported[lieutenant] = seenAt;
+        if (unseen > last.memory && last.reported != seenAt) {
+            last.reported = seenAt;
             FCSE::Logf("squad memory: unseen %.0f s and %.1f m from where they last saw him, "
                        "still hunted where the game would have forgotten him",
                        unseen, distance);

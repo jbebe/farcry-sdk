@@ -40,9 +40,6 @@ float MaxHealth(const void* counters);
 // Sets a CFCXCountersComponent's health the way the game's own health changes do.
 void SetHealth(void* counters, float health);
 
-// The entity a counters component belongs to.
-void* Owner(void* counters);
-
 // The counters service's shared multiplier per BodyPart, kHead to kFeet, or null.
 float* PartMultipliers(const void* counters);
 

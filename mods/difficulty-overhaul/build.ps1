@@ -47,12 +47,8 @@ if (-not (Test-Path $VcVarsAll)) {
     throw "vcvarsall.bat not found at expected path: $VcVarsAll"
 }
 
-Write-Host "Configuring ($Preset)..." -ForegroundColor Cyan
-& cmd /c "`"$VcVarsAll`" x86 >nul 2>nul && cd /d `"$ProjectRoot`" && cmake --preset $Preset"
-if ($LASTEXITCODE -ne 0) { throw "CMake configure failed (exit $LASTEXITCODE)." }
-
 Write-Host "Building ($Preset)..." -ForegroundColor Cyan
-& cmd /c "`"$VcVarsAll`" x86 >nul 2>nul && cmake --build `"$BuildDir`""
+& cmd /c "`"$VcVarsAll`" x86 >nul 2>nul && cd /d `"$ProjectRoot`" && cmake --preset $Preset && cmake --build `"$BuildDir`""
 if ($LASTEXITCODE -ne 0) { throw "Build failed (exit $LASTEXITCODE)." }
 
 $OutputDll = Join-Path $BuildDir "DifficultyOverhaul.dll"
@@ -63,8 +59,6 @@ New-Item -ItemType Directory -Force -Path $StagedDir | Out-Null
 Copy-Item $OutputDll (Join-Path $StagedDir "DifficultyOverhaul.dll") -Force
 
 if ($Install) {
-    # FCSE scans bin\plugins\ by name, so that is the only place this can go. It creates the folder
-    # itself on first run, but installing before ever launching FCSE is the normal order.
     if (-not (Test-Path (Join-Path $Install "FarCry2.exe"))) {
         throw "$Install does not look like the game's bin folder - no FarCry2.exe in it."
     }

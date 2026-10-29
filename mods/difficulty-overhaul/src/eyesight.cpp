@@ -1,9 +1,5 @@
-// Eyesight: how soldiers see the player. The focus cone reaches farther and keeps the player fully
-// visible out to half its length; he sees across 180 degrees, but outside his focus the player is
-// only ever noticed: enough for a soldier to turn and look, never enough to see him as an enemy, and
-// noticed for moving upright rather than for standing still or creeping crouched. Up close, the part
-// of the player that shows over cover counts double. A player walking or running upright is noticed
-// behind a soldier within 20 m and sensed in full at arm's length; one creeping crouched is not.
+// Eyesight: how soldiers see the player: a farther focus cone, a periphery that only notices a player
+// moving upright, his body over cover counting double up close, and moving upright heard behind.
 #include "engine/game.h"
 #include "engine/memory.h"
 #include "engine/shooting.h"
@@ -25,9 +21,9 @@ namespace {
     FCSE::Relocation<uint8_t*> g_conesSet{FCSE::Pattern(
         "8B 45 10 8B 80 ?? ?? ?? ?? 50 E8 ?? ?? ?? ?? 83 C4 04 84 C0 74 ?? 8B 4E 04 F3 0F 10 05 ?? ?? ?? ?? "
         "F3 0F 11 41 0C")};
-    // CDistanceEvaluator::ComputeVisibility, which the address library does not know, and
-    // CFOVEvaluator::ComputeVisibility; CPawnSamplingEvaluator::ComputeVisibility, a third for each
-    // of three points on the target's body a ray reaches; CVisibilityContext::GetTargetDistance.
+    // CDistanceEvaluator, CFOVEvaluator and CPawnSamplingEvaluator::ComputeVisibility, the last a
+    // third for each of three points on the target's body a ray reaches; then
+    // CVisibilityContext::GetTargetDistance.
     FCSE::Relocation<EvaluatorFn> g_distance{
         FCSE::Pattern("8B 44 24 04 83 EC 1C 56 8B F1 C6 00 01 8B 46 24 80 78 3E 00 57 0F 85")};
     FCSE::Relocation<EvaluatorFn> g_fov{FCSE::Uplay(0x00A21380)};
@@ -57,17 +53,14 @@ namespace {
     constexpr ptrdiff_t kPeripheralLength = 0x1C;
     constexpr ptrdiff_t kPeripheralAngle = 0x20;
 
-    // Hardcore: the focus cone's reach against the game's (100 m by day for a rifleman, where the
-    // game's is 60), the angle both cones span, and the share of the focus cone the player is fully
-    // visible within, where the game's is a quarter. A soldier sees the player plainly only inside
-    // both cones, and his threat search looks at nothing else, so both span the whole 180 degrees
-    // and reach as far; the FOV evaluator keeps the game's focus angle for where he counts fully.
+    // Hardcore: the focus cone's reach against the game's, the angle both cones span, and the share
+    // of the focus cone the player is fully visible within. FovDetour keeps the game's focus angle
+    // for where he counts fully.
     constexpr float kFocusReach = 100.0f / 60.0f;
     constexpr float kPeripheralSpan = 180.0f;
     constexpr float kFullVisibility = 0.5f;
     // Hardcore: how visible the player is in the periphery, at the focus cone's edge and at the
-    // peripheral cone's: above every state's "something is there", below idle's and alert's "I see
-    // him".
+    // peripheral cone's.
     constexpr float kPeripheralNearFocus = 0.55f;
     constexpr float kPeripheralAtEdge = 0.35f;
     // Hardcore: in the periphery a player standing still or moving crouched counts this share of one
@@ -133,7 +126,7 @@ namespace {
         t_motion = kStillPeriphery + (1.0f - kStillPeriphery) * std::min(speed / kWalkSpeed, 1.0f);
 
         float at[3] = {};
-        void* entity = FCSE::ApiPointer()->EntityData->EntityOf(pawn);
+        void* entity = Game::EntityOf(pawn);
         if (entity != nullptr) {
             Game::Position(entity, at);
         }
@@ -151,11 +144,7 @@ namespace {
         void* player = Read<void*>(frame, kTarget);
         g_player.store(player, std::memory_order_relaxed);
         const auto* context = reinterpret_cast<const uint8_t*>(ctx->esi);
-        float eye[3];
-        for (int axis = 0; axis < 3; ++axis) {
-            eye[axis] = Read<float>(context, kContextEye + axis * sizeof(float));
-        }
-        Motion(player, eye);
+        Motion(player, Vec3(context, kContextEye));
         auto* cones = Read<uint8_t*>(context, kContextCones);
         float focus = Read<float>(cones, kFocusLength);
         if (focus < kMaxFocusLength) {
@@ -197,18 +186,16 @@ namespace {
         if (t_close) {
             return 1.0f;
         }
-        float toTarget[3];
-        float view[3];
+        const float* target = Vec3(context, kContextTargetPosition);
+        const float* eye = Vec3(context, kContextEye);
+        const float* view = Vec3(context, kContextView);
         float along = 0.0f;
         float targetLength = 0.0f;
         float viewLength = 0.0f;
         for (int axis = 0; axis < 3; ++axis) {
-            const ptrdiff_t offset = axis * sizeof(float);
-            toTarget[axis] = Read<float>(context, kContextTargetPosition + offset) -
-                             Read<float>(context, kContextEye + offset);
-            view[axis] = Read<float>(context, kContextView + offset);
-            along += toTarget[axis] * view[axis];
-            targetLength += toTarget[axis] * toTarget[axis];
+            const float toTarget = target[axis] - eye[axis];
+            along += toTarget * view[axis];
+            targetLength += toTarget * toTarget;
             viewLength += view[axis] * view[axis];
         }
         if (targetLength <= 0.0f || viewLength <= 0.0f) {
@@ -217,17 +204,16 @@ namespace {
         const float cosine = std::clamp(along / std::sqrt(targetLength * viewLength), -1.0f, 1.0f);
         const float angle = std::acos(cosine) * 57.29578f;
         const auto* cones = Read<const uint8_t*>(context, kContextCones);
-        const float focusHalf = t_focusHalf;
         // Heard, the cones reach all round, and behind his eyes he counts what he hears.
         const float peripheralHalf =
             t_heard ? kPeripheralSpan / 2.0f : Read<float>(cones, kPeripheralAngle) / 2.0f;
         if (angle > peripheralHalf) {
             return t_heard ? kHeardBehind : 0.0f;
         }
-        if (angle < focusHalf || peripheralHalf <= focusHalf) {
+        if (angle < t_focusHalf || peripheralHalf <= t_focusHalf) {
             return 1.0f;
         }
-        const float across = (angle - focusHalf) / (peripheralHalf - focusHalf);
+        const float across = (angle - t_focusHalf) / (peripheralHalf - t_focusHalf);
         return (kPeripheralNearFocus + (kPeripheralAtEdge - kPeripheralNearFocus) * across) * t_motion;
     }
 

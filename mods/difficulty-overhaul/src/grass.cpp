@@ -16,8 +16,7 @@ namespace {
                       "?? ?? EB ?? F3 0F 10 4C 24 ?? F3 0F 59 0D")};
     constexpr ptrdiff_t kCombatOperand = 65;
 
-    // Hardcore: how much of the player high grass hides from a soldier in combat, from 10 m out. The
-    // game's is 0, against 0.765 alerted and 0.9 idle.
+    // Hardcore: how much of the player high grass hides from a soldier in combat, from 10 m out.
     float g_combatConcealment = 0.8f;
 }
 

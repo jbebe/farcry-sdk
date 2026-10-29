@@ -10,9 +10,6 @@ using namespace DifficultyOverhaul;
 namespace {
     Shooting::CanShootFn g_originalCanShoot = nullptr;
 
-    // Hardcore: how visible the player must be to him before he fires.
-    constexpr float kFireVisibility = 0.4f;
-
     // Whether each soldier last held his fire at the player or fired, so only changes are logged.
     enum class Stance { kUnknown, kFires, kHolds };
     std::unordered_map<const void*, Stance> g_stances;
@@ -26,8 +23,8 @@ namespace {
             return true;
         }
         const float visibility = Shooting::Visibility(shooting);
-        const Stance stance = visibility < kFireVisibility ? Stance::kHolds : Stance::kFires;
-        Stance& last = Shooting::Remember(g_stances, shooting);
+        const Stance stance = visibility < Shooting::kClearVisibility ? Stance::kHolds : Stance::kFires;
+        Stance& last = Remember(g_stances, shooting);
         if (stance != last) {
             last = stance;
             FCSE::Logf("fire discipline: %s at %.1f m, visibility %.2f",

@@ -28,8 +28,8 @@ namespace {
     // Hardcore: the range at which a pistol's and an SMG's chance halves.
     constexpr float kPistolHalfRange = 20.0f;
     constexpr float kSMGHalfRange = 30.0f;
-    // Hardcore: a shotgun's lift over the shared curve, which brings a settled shot to about 0.7 at
-    // 15 m, the range it keeps it to, and how far past that range its chance halves.
+    // Hardcore: a shotgun's lift over the shared curve, the range it keeps it to, and how far past
+    // that range its chance halves.
     constexpr float kShotgunLift = 1.15f;
     constexpr float kShotgunFullRange = 20.0f;
     constexpr float kShotgunHalfBeyond = 8.0f;

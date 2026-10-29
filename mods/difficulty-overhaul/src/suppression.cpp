@@ -45,7 +45,7 @@ namespace {
             return;
         }
         const double now = Game::Now();
-        double& pinnedUntil = Shooting::Remember(g_pinnedUntil, shooting);
+        double& pinnedUntil = Remember(g_pinnedUntil, shooting);
         if (now >= pinnedUntil) {
             FCSE::Logf("suppressed: %s at %.1f m", hit ? "hit" : "near miss",
                        Shooting::TargetDistance(shooting));
@@ -57,9 +57,6 @@ namespace {
     bool __fastcall CanShootDetour(void* task) {
         if (!g_originalCanShoot(task)) {
             return false;
-        }
-        if (g_pinnedUntil.empty()) {
-            return true;
         }
         void* shooting = Shooting::OfTask(task);
         const auto pinned = g_pinnedUntil.find(shooting);

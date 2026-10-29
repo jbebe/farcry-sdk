@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <unordered_map>
 
 namespace DifficultyOverhaul {
 
@@ -17,6 +18,21 @@ T Read(const void* object, ptrdiff_t offset) {
 template <class T>
 void Write(void* object, ptrdiff_t offset, T value) {
     *reinterpret_cast<T*>(static_cast<uint8_t*>(object) + offset) = value;
+}
+
+// The three floats at `offset` into an engine object.
+inline const float* Vec3(const void* object, ptrdiff_t offset) {
+    return reinterpret_cast<const float*>(static_cast<const uint8_t*>(object) + offset);
+}
+
+// An engine object's entry in a feature's map; past 512 objects it forgets them all, since dead
+// ones are never erased.
+template <typename T>
+T& Remember(std::unordered_map<const void*, T>& objects, const void* object) {
+    if (objects.size() > 512) {
+        objects.clear();
+    }
+    return objects[object];
 }
 
 // Hooks the engine function `site`, keeping what it called in `original`. False when the function

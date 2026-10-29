@@ -8,7 +8,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdint>
 #include <cstdlib>
 #include <unordered_map>
 
@@ -59,9 +58,10 @@ namespace {
     // When each shooting system last fired at the player, by game clock.
     std::unordered_map<const void*, double> g_lastShot;
 
-    // The shot at the player being rolled, with recoil NaN between such shots.
+    // The shot at the player being rolled, not rolling between such shots.
     struct Shot {
-        float recoil = NAN;
+        bool rolling = false;
+        float recoil = 1.0f;
         float sighting = 1.0f;
         float crossing = 1.0f;
         float chance = NAN;
@@ -90,10 +90,9 @@ namespace {
 
     // How hard the player's movement across his line of fire makes the shot, as a factor.
     float Crossing(void* shooting) {
-        const FCSE_EntityDataAPI* data = FCSE::ApiPointer()->EntityData;
         void* playerPawn = Shooting::Pawn(Shooting::Target(shooting));
-        void* shooter = data->EntityOf(Shooting::ShooterPawn(shooting));
-        void* player = data->EntityOf(playerPawn);
+        void* shooter = Shooting::ShooterEntity(shooting);
+        void* player = Game::EntityOf(playerPawn);
         if (shooter == nullptr || player == nullptr) {
             return 1.0f;
         }
@@ -151,7 +150,7 @@ namespace {
 
     float __fastcall GetChanceDetour(void* shooting) {
         float chance = g_originalGetChance(shooting);
-        if (std::isnan(g_shot.recoil)) {
+        if (!g_shot.rolling) {
             return chance;
         }
         // A certain hit is point blank, which the reaction timer does not reach.
@@ -178,7 +177,7 @@ namespace {
             g_setupAimingDot(shooting);
         }
 
-        g_shot = {Recoil(shooting), Sighting(shooting), Crossing(shooting)};
+        g_shot = {true, Recoil(shooting), Sighting(shooting), Crossing(shooting)};
         const int result = g_originalShootAt(shooting, unused, position, head, torso);
         FCSE::Logf("shot at player: chance %.2f (recoil %.2f, sighting %.2f, crossing %.2f) at "
                    "%.1f m, %.1f s on him, at the %s, %s",
@@ -187,7 +186,7 @@ namespace {
                    part == kHeadPart ? "head" : "torso",
                    Read<bool>(shooting, kLastShotHit) ? "hit" : "miss");
         g_shot = {};
-        Shooting::Remember(g_lastShot, shooting) = Game::Now();
+        Remember(g_lastShot, shooting) = Game::Now();
         return result;
     }
 }

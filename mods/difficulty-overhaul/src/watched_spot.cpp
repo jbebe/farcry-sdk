@@ -6,7 +6,6 @@
 #include "fcse_api.h"
 
 #include <algorithm>
-#include <cmath>
 #include <unordered_map>
 
 using namespace DifficultyOverhaul;
@@ -14,9 +13,6 @@ using namespace DifficultyOverhaul;
 namespace {
     Shooting::CanShootFn g_originalCanShoot = nullptr;
 
-    // How visible the player must be to count as seen: fire discipline's line, below which he
-    // does not fire anyway.
-    constexpr float kSeenVisibility = 0.4f;
     // Unseen for longer than this, the player has vanished rather than flickered.
     constexpr double kVanishedSeconds = 1.0;
     // Two sightings that began closer together than this are the same one.
@@ -34,28 +30,20 @@ namespace {
     };
     std::unordered_map<const void*, Sighting> g_sightings;
 
-    float Distance(const float a[3], const float b[3]) {
-        float squared = 0.0f;
-        for (int i = 0; i < 3; ++i) {
-            squared += (a[i] - b[i]) * (a[i] - b[i]);
-        }
-        return std::sqrt(squared);
-    }
-
     bool __fastcall CanShootDetour(void* task) {
         if (!g_originalCanShoot(task)) {
             return false;
         }
         void* shooting = Shooting::OfTask(task);
         if (!Shooting::AimsAtPlayer(shooting) ||
-            Shooting::Visibility(shooting) < kSeenVisibility) {
+            Shooting::Visibility(shooting) < Shooting::kClearVisibility) {
             return true;
         }
         const float sight = Shooting::SightSeconds(shooting);
         if (sight < 0.0f) {
             return true;
         }
-        void* shooter = FCSE::ApiPointer()->EntityData->EntityOf(Shooting::ShooterPawn(shooting));
+        void* shooter = Shooting::ShooterEntity(shooting);
         void* player = Game::PlayerEntity();
         if (shooter == nullptr || player == nullptr) {
             return true;
@@ -67,13 +55,13 @@ namespace {
 
         const double now = Game::Now();
         const double since = now - sight;
-        Sighting& last = Shooting::Remember(g_sightings, shooting);
+        Sighting& last = Remember(g_sightings, shooting);
         // A sighting that began after the last one we saw, with a gap long enough to vanish in.
         const double unseen = since - last.at;
         if (last.at >= 0.0 && since > last.since + kSameSightingSeconds &&
             unseen > kVanishedSeconds) {
-            const float range = std::max(Distance(from, to), 1.0f);
-            const float moved = Distance(last.position, to);
+            const float range = std::max(Game::Distance(from, to), 1.0f);
+            const float moved = Game::Distance(last.position, to);
             if (moved / range > kWatchedAngle) {
                 Shooting::RestartAim(shooting);
                 FCSE::Logf("watched spot: the player reappeared %.1f m from where he vanished "
@@ -81,9 +69,7 @@ namespace {
                            moved, unseen, range);
             }
         }
-        for (int i = 0; i < 3; ++i) {
-            last.position[i] = to[i];
-        }
+        std::copy_n(to, 3, last.position);
         last.at = now;
         last.since = since;
         return true;

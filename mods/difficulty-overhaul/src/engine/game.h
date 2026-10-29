@@ -17,8 +17,12 @@ bool IsPlayerEntity(const void* entity);
 // The entity a CEntityProxy holds, or null.
 void* ProxyEntity(const void* proxy);
 
-// An entity's world position.
+// The entity a component such as a CPawn or a counters component belongs to, or null.
+void* EntityOf(void* component);
+
+// An entity's world position, and the distance between two positions.
 void Position(const void* entity, float position[3]);
+float Distance(const float a[3], const float b[3]);
 
 // Whether this build's game clock was found, and the clock in seconds.
 bool ClockFound();

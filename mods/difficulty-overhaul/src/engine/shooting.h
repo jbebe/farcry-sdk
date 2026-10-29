@@ -4,19 +4,11 @@
 #include "fcse_api.h"
 
 #include <cstdint>
-#include <unordered_map>
 
 namespace DifficultyOverhaul::Shooting {
 
-// A soldier's entry in a feature's map keyed by shooting system; past 512 soldiers it forgets them
-// all, since dead soldiers are never erased.
-template <typename T>
-T& Remember(std::unordered_map<const void*, T>& soldiers, const void* shooting) {
-    if (soldiers.size() > 512) {
-        soldiers.clear();
-    }
-    return soldiers[shooting];
-}
+// Hardcore: how visible the player must be for a soldier to see him clearly, and to fire at him.
+constexpr float kClearVisibility = 0.4f;
 
 using CanShootFn = bool(__fastcall*)(void* task);
 
@@ -40,9 +32,6 @@ float Visibility(void* shooting);
 // How long he has had his target in his sight without a break, or -1 when it is out of sight.
 float SightSeconds(void* shooting);
 
-// A CPawnAgent's knowledge entry for another agent, or null when he knows nothing of it.
-const uint8_t* Knowledge(const void* agent, const void* target);
-
 // The distance to his target, as last measured.
 float TargetDistance(const void* shooting);
 
@@ -51,9 +40,10 @@ bool Reacting(const void* shooting);
 float AimSeconds(const void* shooting);
 void RestartAim(void* shooting);
 
-// The CPawn of a CPawnAgent, and of the soldier a shooting system belongs to.
+// The CPawn of a CPawnAgent, and the CPawn and entity of the soldier a shooting system belongs to.
 void* Pawn(void* agent);
 void* ShooterPawn(void* shooting);
+void* ShooterEntity(void* shooting);
 
 // A CPawn's data block.
 uint8_t* PawnData(void* pawn);

@@ -15,7 +15,7 @@ namespace {
                       "?? ?? ?? ?? 0F 2F C8")};
     constexpr ptrdiff_t kWindowOperand = 14;
 
-    // Hardcore: seconds of the window. The game's is 6.
+    // Hardcore: seconds of the window.
     float g_intuitionSeconds = 1.0f;
 }
 

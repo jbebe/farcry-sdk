@@ -31,8 +31,7 @@ namespace {
     constexpr ptrdiff_t kBarRefill = 0x78;
     constexpr ptrdiff_t kHealthRate = 0x7C;
 
-    // The share of maximum health a syrette leaves, two rifle hits from death on Hardcore; the
-    // game's surgery leaves two of five bars, one hit from death.
+    // The share of maximum health a syrette leaves.
     constexpr float kSyretteShare = 0.65f;
 
     // Seconds from the syrette's level to full health, per Game::Difficulty; Infamous never.

@@ -21,28 +21,29 @@ namespace {
     FCSE::Relocation<GetVisibilityFn> g_getVisibility{FCSE::Uplay(0x00A021A0)};
     FCSE::Relocation<GetKnowledgeFn> g_getKnowledge{FCSE::Uplay(0x00A235C0)};
 
-    // CShootingSystem's agent, its reaction CLifeTimer (lifetime, -1 while stopped, then start
-    // time) and its target distance; CPawnAgent's IsAPlayer slot, its senses and shooting system
-    // held in place, and its CPawn; CPawn's data block; CTaskShoot's agent.
+    // CShootingSystem: its agent, its reaction CLifeTimer's lifetime (-1 while stopped) and start
+    // time, and its target distance.
     constexpr ptrdiff_t kShooter = 0x00;
     constexpr ptrdiff_t kReactionLifetime = 0xBC;
     constexpr ptrdiff_t kReactionStart = 0xC0;
     constexpr ptrdiff_t kTargetDistance = 0xE8;
-    constexpr ptrdiff_t kIsAPlayerSlot = 0xBC;
-    constexpr ptrdiff_t kAgentSenses = 0x28C;
+    // CPawnAgent: its id, IsAPlayer slot and CPawn, and its senses and shooting system held in place.
     constexpr ptrdiff_t kAgentId = 0x0C;
+    constexpr ptrdiff_t kIsAPlayerSlot = 0xBC;
+    constexpr ptrdiff_t kAgentPawn = 0x268;
+    constexpr ptrdiff_t kAgentSenses = 0x28C;
     constexpr ptrdiff_t kAgentShooting = 0x4A0;
     // CSensorySystem's knowledge base, and a knowledge entry's unbroken seconds in the focus and
     // the peripheral cone, -1 while out of it.
     constexpr ptrdiff_t kSensesKnowledge = 0x24;
     constexpr ptrdiff_t kEntryFocusSeconds = 0x0C;
     constexpr ptrdiff_t kEntryPeripheralSeconds = 0x10;
-    constexpr ptrdiff_t kAgentPawn = 0x268;
+    // CPawn's data block, and the stance and velocity in its effective data.
     constexpr ptrdiff_t kPawnData = 0x10;
-    // The effective data in a CPawn's data block, and its stance and velocity.
     constexpr ptrdiff_t kDataEffective = 0x2D0;
     constexpr ptrdiff_t kEffectiveStance = 0xA4;
     constexpr ptrdiff_t kEffectiveVelocity = 0xB0;
+    // CTaskShoot's agent.
     constexpr ptrdiff_t kTaskAgent = 0x34;
 }
 
@@ -70,16 +71,19 @@ float Visibility(void* shooting) {
     return visibility;
 }
 
-const uint8_t* Knowledge(const void* agent, const void* target) {
-    const auto* senses = static_cast<const uint8_t*>(agent) + kAgentSenses;
-    uint8_t* entry = nullptr;
-    if (target == nullptr ||
-        !g_getKnowledge(Read<void*>(senses, kSensesKnowledge), nullptr,
-                        reinterpret_cast<const uint32_t*>(static_cast<const uint8_t*>(target) + kAgentId),
-                        &entry)) {
-        return nullptr;
+namespace {
+    // A CPawnAgent's knowledge entry for another agent, or null when he knows nothing of it.
+    const uint8_t* Knowledge(const void* agent, const void* target) {
+        const auto* senses = static_cast<const uint8_t*>(agent) + kAgentSenses;
+        uint8_t* entry = nullptr;
+        if (target == nullptr ||
+            !g_getKnowledge(Read<void*>(senses, kSensesKnowledge), nullptr,
+                            reinterpret_cast<const uint32_t*>(static_cast<const uint8_t*>(target) + kAgentId),
+                            &entry)) {
+            return nullptr;
+        }
+        return entry;
     }
-    return entry;
 }
 
 float SightSeconds(void* shooting) {
@@ -107,13 +111,12 @@ void* Pawn(void* agent) { return Read<void*>(agent, kAgentPawn); }
 
 void* ShooterPawn(void* shooting) { return Pawn(Read<void*>(shooting, kShooter)); }
 
+void* ShooterEntity(void* shooting) { return Game::EntityOf(ShooterPawn(shooting)); }
+
 uint8_t* PawnData(void* pawn) { return Read<uint8_t*>(pawn, kPawnData); }
 
 void Velocity(void* pawn, float velocity[3]) {
-    const uint8_t* effective = PawnData(pawn) + kDataEffective;
-    for (int axis = 0; axis < 3; ++axis) {
-        velocity[axis] = Read<float>(effective, kEffectiveVelocity + axis * sizeof(float));
-    }
+    std::copy_n(Vec3(PawnData(pawn) + kDataEffective, kEffectiveVelocity), 3, velocity);
 }
 
 int Stance(void* pawn) { return Read<int>(PawnData(pawn) + kDataEffective, kEffectiveStance); }

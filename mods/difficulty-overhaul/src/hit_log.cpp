@@ -42,7 +42,7 @@ namespace {
         float q[3];
         Game::Position(a, p);
         Game::Position(b, q);
-        return std::hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+        return Game::Distance(p, q);
     }
 
     // One line: who, what hit them where and from how far, the result, and the settings behind it.
@@ -68,7 +68,7 @@ namespace {
         char result[64];
         std::snprintf(result, sizeof(result), "health %.0f -> %.0f", before,
                       Damage::Health(counters));
-        LogHit("player", type, stim, Distance(Damage::Owner(counters), Damage::Instigator(stim)),
+        LogHit("player", type, stim, Distance(Game::EntityOf(counters), Damage::Instigator(stim)),
                counters, result);
     }
 
@@ -94,7 +94,7 @@ namespace {
                           : Read<bool>(counters, kSoldierWounded) ? ", wounded"
                                                                    : "");
         }
-        void* soldier = Damage::Owner(counters);
+        void* soldier = Game::EntityOf(counters);
         char who[24];
         std::snprintf(who, sizeof(who), "soldier %08X",
                       soldier != nullptr ? Read<uint32_t>(soldier, kEntityId) : 0u);
