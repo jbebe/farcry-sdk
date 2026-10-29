@@ -17,6 +17,8 @@
 #include <chrono>
 #include <iterator>
 #include <utility>
+#define NOMINMAX
+#include <windows.h>
 
 namespace InventoryOverhaul::Page {
 
@@ -147,7 +149,12 @@ std::string Upper(const std::string& text) {
     return upper;
 }
 
-std::wstring Wide(const std::string& text) { return std::wstring(text.begin(), text.end()); }
+std::wstring Wide(const std::string& text) {
+    std::wstring wide(text.size(), L'\0');
+    wide.resize(MultiByteToWideChar(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), wide.data(),
+                                    static_cast<int>(wide.size())));
+    return wide;
+}
 
 std::wstring PlainName(const std::string& id) {
     std::string name = id.substr(id.find_last_of('.') + 1);

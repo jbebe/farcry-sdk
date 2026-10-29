@@ -237,6 +237,7 @@ namespace {
             model.Text("IO_POSTIT_SUB", L"stowed");
             model.Text("IO_POSTIT_LINE1", L"Carried");
             model.Text("IO_POSTIT_VALUE1", L"\x00D7" + std::to_wstring(item.count));
+            model.Text("IO_POSTIT_QUOTE", Wide(item.description));
             return;
         }
         case Row::kDiamonds:

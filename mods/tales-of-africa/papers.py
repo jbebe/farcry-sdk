@@ -1,8 +1,8 @@
-"""The papers lying in a world, read in Inventory Overhaul's notebook: for each, one of the
-Predecessor's pickups lifted out of a decoded entity library, the envelope drawn as a stock sheet or photo or the
-tape as it is, naming its Items id and a cassette its sound event in FCSE entity data, and an
-instance of it placed in a sector. Written as the world's archetype and sector fragments in the
-layer.
+"""The papers and items lying in a world, kept in Inventory Overhaul's notebook: for each, one of the
+Predecessor's pickups lifted out of a decoded entity library, the envelope drawn as a stock prop or the
+tape as it is, naming its Items id, a cassette its sound event and an item its description in FCSE
+entity data, and an instance of it placed in a sector. Written as the world's archetype and sector
+fragments in the layer.
 
     python papers.py <entitylibrary.xml> <layer> <world>
 """
@@ -17,16 +17,18 @@ library, layer, world = sys.argv[1:4]
 ENVELOPE = "OA_MissionPickups.MissionPickups.PartnerMissionEnvelope"
 TAPE = "OA_MissionPickups.MissionPickups.PartnerMissionTape"
 GRAPHIC = re.compile(r'<component class="GraphicComponent".*?</component>', re.S)
-# What the envelope is drawn as: the archetype whose graphic it takes, and that graphic's file and
-# node. The photo has no physics of its own, so both take the sheet's.
+PHYSICS = re.compile(r'<resource fileName="([^"]+\.hkx)" />')
+SHEET = "OA_DetailObjects.DetailObjects.SingleSheet_BK"
+# What the envelope is drawn as: the archetype whose graphic and physics it takes, and the node of the
+# one mesh it shows. The photo has no physics of its own and takes the sheet's; the jerrycan is
+# Explosives' gas can, its intact state, without the parts that make it burst.
 LOOKS = {
-    "sheet": ("OA_DetailObjects.DetailObjects.SingleSheet_BK", r"graphics\objects\equipment\folder\singlesheet",
-              "SingleSheet"),
-    "photo": ("props.World1_HotelRoom.HotelRoom_Photo_1", r"graphics\objects\equipment\pictureframe\photo_01",
-              "Photo_01"),
+    "sheet": (SHEET, "SingleSheet"),
+    "photo": ("props.World1_HotelRoom.HotelRoom_Photo_1", "Photo_01"),
+    "jerrycan": ("OA_Explosives.Explosives.GasCan02_NEW", "GasTankSmall02_State01"),
 }
 # The note flat where the boombox Appliances.BoomBoxRadio_398 stands, on a beer barrel; the photo and
-# the cassette on the round table beside it.
+# the cassette on the round table beside it, and the oil can on the ground north of the table.
 PAPERS = [
     {"item": "Note.Torn_notebook_page", "base": ENVELOPE, "look": "sheet", "archetype_id": 81302,
      "world": "world1", "level": "w1_c_3", "sector": 2600, "entity_id": 2099000000000000204,
@@ -37,6 +39,9 @@ PAPERS = [
     {"item": "Tape.Test_cassette", "base": TAPE, "sound": "0x004E1C52", "archetype_id": 81304,
      "world": "world1", "level": "w1_c_3", "sector": 2600, "entity_id": 2099000000000000206,
      "pos": (2606.75, 2107.00, 20.5065), "angles": (0, 0, 0)},
+    {"item": "Oil_can", "base": ENVELOPE, "look": "jerrycan", "description": "A little gas for the Datsun.",
+     "archetype_id": 81305, "world": "world1", "level": "w1_c_3", "sector": 2600,
+     "entity_id": 2099000000000000207, "pos": (2606.9, 2108.05, 19.74), "angles": (0, 0, 90)},
 ]
 
 
@@ -46,16 +51,25 @@ def vector(name, values):
             "  </value>"]
 
 
+def text_of(block, name):
+    """The block's first String value `name`."""
+    return re.search(r'<value name="%s" type="String">([^<]*)</value>' % name, block).group(1)
+
+
 def drawn_as(envelope, look):
-    """The envelope with the look's graphic and the sheet's physics."""
-    archetype, path, node = LOOKS[look]
-    pickup = GRAPHIC.sub(lambda m: GRAPHIC.search(blocks[archetype]).group(0), envelope, count=1)
-    pickup = pickup.replace(r"Equipment\Envelope\Envelope.hkx", r"Equipment\Folder\SingleSheet.hkx")
-    for name, extension in [("fileName", ".xml"), ("objModel", ".xbg")]:
+    """The envelope with the look's graphic, showing only its node's mesh, and its physics."""
+    archetype, node = LOOKS[look]
+    shown = blocks[archetype]
+    solid = shown if PHYSICS.search(shown) else blocks[SHEET]
+    meshes = [line for line in GRAPHIC.search(shown).group(0).split("\n")
+              if "<object index=" not in line or 'boneName="%s' % node in line]
+    graphic = re.sub(r'<object index="\d+"', '<object index="0"', "\n".join(meshes))
+    pickup = GRAPHIC.sub(lambda m: graphic, envelope, count=1)
+    pickup = pickup.replace(r"graphics\Objects\Equipment\Envelope\Envelope.hkx", PHYSICS.search(solid).group(1))
+    for name, extension, source in [("fileName", ".xml", shown), ("objModel", ".xbg", shown),
+                                    ("hidResourceId", ".hkx", solid)]:
         pickup = replace_hashed(pickup, name, r"graphics\objects\equipment\envelope\envelope" + extension,
-                                path + extension)
-    pickup = replace_hashed(pickup, "hidResourceId", r"graphics\objects\equipment\envelope\envelope.hkx",
-                            LOOKS["sheet"][1] + ".hkx")
+                                text_of(source, "text_" + name))
     for name, suffix in [("hidNodeName", ""), ("hidNodeNameLOD0", "_LOD0")]:
         pickup = replace_hashed(pickup, name, "Envelope" + suffix, node + suffix)
     # Saved once picked, like a diamond case and the tape.
@@ -63,7 +77,7 @@ def drawn_as(envelope, look):
 
 
 lines = open(library, encoding="utf-8").read().split("\n")
-wanted = {ENVELOPE, TAPE} | {archetype for archetype, _, _ in LOOKS.values()}
+wanted = {ENVELOPE, TAPE} | {archetype for archetype, _ in LOOKS.values()}
 blocks = {name: "\n".join(lines[start:end]) for name, start, end in prototypes(lines) if name in wanted}
 
 for paper in (p for p in PAPERS if p["world"] == world):
@@ -83,8 +97,9 @@ for paper in (p for p in PAPERS if p["world"] == world):
     assert "nvelope" not in text
     block = text.split("\n")
     data = {"InventoryOverhaul.Item": paper["item"]}
-    if "sound" in paper:
-        data["InventoryOverhaul.Sound"] = paper["sound"]
+    for key, field in [("sound", "InventoryOverhaul.Sound"), ("description", "InventoryOverhaul.Description")]:
+        if key in paper:
+            data[field] = paper[key]
     add_entity_data(block, data)
     write(fragment_path(layer, ("worlds", world, "generated", "entitylibrary.fcb"), "OA_MissionPickups." + name),
           block)

@@ -7,7 +7,7 @@ solves for a weapon or diamonds. Data only so far. Its papers are read in
 
 ## What the layer holds
 
-A note, a photo and a cassette in world 1, the first papers the convention was seen working with
+A note, a photo, a cassette and an item in world 1, the first the convention was seen working with
 (2026-10-29):
 
 | Items id | Where | Pickup | Picture or sound |
@@ -15,8 +15,11 @@ A note, a photo and a cassette in world 1, the first papers the convention was s
 | `Note.Torn_notebook_page` | on the boombox on a beer barrel, (2604.02, 2108.09, 21.35) | the Predecessor's envelope drawn as the stock single sheet | `textures\common\jackal_photo` |
 | `Photo.Cliff_village` | on the round table beside it, (2606.95, 2106.80, 20.51) | the envelope drawn as the hotel room's polaroid | `textures\loading\03_02`, cropped 3:2 |
 | `Tape.Test_cassette` | on the same table, (2606.75, 2107.00, 20.51) | the Predecessor's tape pickup, a dictaphone | a minute of the game's own music, `0x004E1C52` |
+| `Oil_can` | on the ground north of the table, (2606.9, 2108.05, 19.74) | the envelope drawn as Explosives' gas can, its intact mesh and its own physics, which does not burst | the description "A little gas for the Datsun." |
 
-Each is saved at persist level 3, like a diamond case, so it stays picked.
+Each is saved at persist level 3, like a diamond case, so it stays picked. A pickup takes another
+archetype's look in `papers.py`: its graphic with only the named node's mesh, and its physics, or the
+sheet's when it has none.
 
 | Part | Files |
 |---|---|

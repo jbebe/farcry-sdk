@@ -9,8 +9,8 @@
 namespace InventoryOverhaul::Items {
 
 // A gun is kept as the archetype it was made from, its wear and its loaded rounds; below zero, a
-// wear or round count leaves the gun as the game makes it. Anything else is an id and a count, and a
-// cassette its sound event.
+// wear or round count leaves the gun as the game makes it. Anything else is an id and a count, a
+// cassette its sound event, and an item the description its pickup gave it, in UTF-8.
 struct Record {
     std::string id;
     bool gun = false;
@@ -18,6 +18,7 @@ struct Record {
     int loaded = -1;
     int count = 1;
     uint32_t sound = 0;
+    std::string description;
 };
 
 // Items holds at most this many guns, so four in all with the two slots.
@@ -33,8 +34,9 @@ bool Stow(void* inventory, int slot);
 // Puts the gun in row `index` in gun `slot`, 1 or 2; the gun there takes its row, and if that one was
 // in hand, the new one is drawn. While the notebook is out, no gun is in hand.
 bool Take(void* inventory, size_t index, int slot);
-// Adds a new gun when `id` names a weapon archetype, else one more of the item `id`, with its `sound`.
-bool Give(const std::string& id, uint32_t sound = 0);
+// Adds a new gun when `id` names a weapon archetype, else one more of the item `id`, with its `sound`
+// and `description`.
+bool Give(const std::string& id, uint32_t sound = 0, const std::string& description = {});
 void Discard(size_t index);
 // Drops row `index`: a stowed gun falls at the pawn's feet as it was stowed, and one of an item is
 // thrown away. False when there is no such row or its gun could not be made.
