@@ -19,12 +19,16 @@ void Scroll(int steps);
 // thread.
 void Turn();
 
-// Reads the paper selected on Papers whole, or puts it back, the next time the page is written; while
-// one is read, Scroll turns its sheets. Any thread.
+// Uses the row selected the next time the page is written: reads the paper selected on Papers whole,
+// or puts it back, and while one is read Scroll turns its sheets; on Inventory, stows gun 1 or 2. Any
+// thread.
 void Use();
 
 // Puts back the paper being read; false when none was. Any thread.
 bool PutBack();
+
+// Whether a click heals instead of being used: Syrettes is selected on Inventory. Any thread.
+bool Heals();
 
 // Drops the row selected on Inventory the next time the page is written. Any thread.
 void Drop();

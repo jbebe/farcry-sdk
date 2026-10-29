@@ -43,6 +43,7 @@ namespace {
     std::atomic<bool> g_dropped{false};
     int g_selected[kTabs] = {-1, 0, 0, 0};
     std::atomic<int> g_sheet{-1};
+    std::atomic<bool> g_heals{false};
 
     // The page's elements as last found, and what was last written into them.
     void* g_notebook = nullptr;
@@ -257,7 +258,7 @@ void Update(const void* view, void* inventory) {
     int rows = 0;
     switch (g_tab) {
     case kInventory:
-        rows = InventoryPage(model, selected, view, inventory, dropped);
+        rows = InventoryPage(model, selected, view, inventory, dropped, used);
         break;
     case kPapers:
         rows = PapersPage(model, selected, used, sheet);
@@ -270,6 +271,7 @@ void Update(const void* view, void* inventory) {
         break;
     }
     g_sheet = sheet;
+    g_heals = model.heals;
     model.Show("IO_POSTIT", rows > 0 && sheet < 0);
     model.Show("IO_READER", sheet >= 0);
 
@@ -294,6 +296,8 @@ void Use() { g_used = true; }
 void Drop() { g_dropped = true; }
 
 bool PutBack() { return g_sheet.exchange(-1) >= 0; }
+
+bool Heals() { return g_heals; }
 
 void Frame() {
     Flip();

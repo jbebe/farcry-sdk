@@ -199,10 +199,10 @@ Which bandolier covers which gun, from the shop's plans:
 
 | Kind | Use | Drop |
 |---|---|---|
-| Gun in a slot | — (2 and 3 select it, as now) | falls at the feet as a pickup, with its wear and ammo |
-| Gun in Items | equip to gun 1 or 2, swapping with the gun there **(proposed)** | as above |
+| Gun in a slot | stowed in Items, if it holds fewer than two guns (built and seen in game, 2026-10-29) | falls at the feet as a pickup, with its wear and ammo |
+| Gun in Items | a small post-it of buttons, shown as the reader is **(proposed)** | as above |
 | Diamonds | — | no: the row is the player's own diamond count |
-| Syrette | heal, as the heal key does | no |
+| Syrette | heal: the click is the heal key's, so the notebook goes away and the syrette is used (built and seen in game, 2026-10-29) | no |
 | Letter, photo | read: it lies over the whole right page on the post-it's paper turned upright, the post-it hidden; a photo keeps its own colours; the wheel turns a long letter's sheets; LMB or Esc puts it back (built 2026-10-28) | no |
 | Tape | play or stop, while the player walks on | no |
 | Quest item | — | no, until its job ends |
@@ -233,7 +233,7 @@ On the Inventory page, while the player is at a crate, a gun or quest item gets 
 | Tab | take the notebook out or put it away |
 | Mouse wheel, ↑ ↓ | move along the list |
 | R | turn the page |
-| Left mouse | use or equip the highlighted item |
+| Left mouse | use the selected row: stow a gun, heal with the syrettes, read a paper (built 2026-10-28 and 2026-10-29) |
 | 2, 3 on a gun | put it in gun 1, gun 2 |
 | X | drop the selected row; with the notebook away, the gun in hand (built 2026-10-28) |
 | Right mouse, held | the monocular, as with the map: the notebook comes back on release |

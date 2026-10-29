@@ -11,11 +11,13 @@
 namespace InventoryOverhaul::Page {
 
 // Each element's text, whether it is shown, and the element whose picture it takes, as a page wants
-// them; a later write to an element replaces an earlier one.
+// them; a later write to an element replaces an earlier one. `heals`: a click heals, as the heal key
+// does, instead of coming to the page.
 struct Model {
     std::map<std::string, std::wstring> texts;
     std::map<std::string, bool> shown;
     std::map<std::string, std::string> pictures;
+    bool heals = false;
 
     void Text(const std::string& name, std::wstring text) { texts[name] = std::move(text); }
     void Show(const std::string& name, bool visible) { shown[name] = visible; }
@@ -51,8 +53,8 @@ void ClearPostIt(Model& model);
 
 // Each page's rows and the post-it of row `selected`, kept within them; each returns its row count.
 // `dropped`, X was pressed: the selected gun falls at the feet, a stowed one too, and one of the
-// selected item is thrown away.
-int InventoryPage(Model& model, int& selected, const void* view, void* inventory, bool dropped);
+// selected item is thrown away. `used`, the page was clicked: gun 1 or 2 is stowed in Items.
+int InventoryPage(Model& model, int& selected, const void* view, void* inventory, bool dropped, bool used);
 // `used`, the page was clicked: the selected paper is read whole, or put back. `sheet` is the sheet
 // read, kept within the paper's, or -1 while none is.
 int PapersPage(Model& model, int& selected, bool used, int& sheet);

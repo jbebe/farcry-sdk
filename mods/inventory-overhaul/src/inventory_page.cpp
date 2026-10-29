@@ -209,7 +209,7 @@ namespace {
             if (row.gun == nullptr) {
                 model.Text("IO_POSTIT_NAME", L"gun " + std::to_wstring(row.slot));
                 model.Text("IO_POSTIT_SUB", L"empty");
-                model.Text("IO_POSTIT_NOTE", L"Nothing here. Pick a gun up, or take one from Items.");
+                model.Text("IO_POSTIT_NOTE", L"Pick a gun up, or take one from Items.");
                 return;
             }
             GunPostIt(model, carried, Inventory::Name(row.gun->weapon), Inventory::Reliability(row.gun->weapon),
@@ -282,7 +282,7 @@ namespace {
     }
 }
 
-int InventoryPage(Model& model, int& selected, const void* view, void* inventory, bool dropped) {
+int InventoryPage(Model& model, int& selected, const void* view, void* inventory, bool dropped, bool used) {
     Carried carried{view, inventory, Inventory::Guns(inventory), Items::Load(), Economy::Bought(),
                     Economy::Diamonds(),
                     {Inventory::Ammo(view, "syringe"), Inventory::Pills(),
@@ -300,15 +300,20 @@ int InventoryPage(Model& model, int& selected, const void* view, void* inventory
     }
     selected = std::clamp(selected, 0, static_cast<int>(rows.size()) - 1);
     const Row& row = rows[selected];
-    // X drops the selected gun, or one of the selected item, and the page is read again.
+    // X drops the selected gun, or one of the selected item, a click stows gun 1 or 2, and the page is
+    // read again.
     if (dropped && (row.gun != nullptr || row.kind == Row::kItem)) {
         if (row.gun != nullptr) {
             TwoGuns::Release(inventory, *row.gun, true);
         } else {
             Items::Drop(inventory, row.index);
         }
-        return InventoryPage(model, selected, view, inventory, false);
+        return InventoryPage(model, selected, view, inventory, false, false);
     }
+    if (used && row.kind == Row::kGun && Items::Stow(inventory, row.slot)) {
+        return InventoryPage(model, selected, view, inventory, false, false);
+    }
+    model.heals = row.kind == Row::kBelt && row.index == 0;
 
     Hand(model, 1, rows[0].gun, selected == 0);
     Hand(model, 2, rows[1].gun, selected == 1);

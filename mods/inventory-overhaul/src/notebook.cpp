@@ -75,8 +75,10 @@ namespace {
     constexpr ptrdiff_t kSignalFired = 0x10;
     // R, which turns the notebook's page.
     constexpr uint32_t kFlipSide = FCSE::Crc32("flipside");
-    // The left mouse button, which reads a paper or puts it back, and Esc, which puts it back.
+    // The left mouse button, which uses the row selected or is the heal key's, and Esc, which puts a
+    // paper back.
     constexpr uint32_t kStartShooting = FCSE::Crc32("startshooting");
+    constexpr uint32_t kHeal = FCSE::Crc32("heal");
     constexpr uint32_t kShowPauseMenu = FCSE::Crc32("show_pausemenu");
     // The Drop control's signal, X: the row selected while the notebook is out, else the gun in hand.
     constexpr uint32_t kDropItem = FCSE::Crc32("drop_item");
@@ -118,7 +120,9 @@ namespace {
             }
             break;
         case kStartShooting:
-            if (g_open) {
+            if (g_open && Page::Heals()) {
+                id = kHeal;
+            } else if (g_open) {
                 Page::Use();
                 id = kTaken;
             }

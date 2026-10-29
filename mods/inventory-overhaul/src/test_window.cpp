@@ -50,7 +50,7 @@ namespace {
                                         "Warren_Clyde"};
     constexpr int kTapes = 5;
     // Set in the game's environment for a scripted test: the first fills Items as the game starts,
-    // the second holds Lua lines, split by |, run in DevTools' console then.
+    // the second holds console lines, split by |, run in DevTools' console then, # starting Lua.
     constexpr const char* kFillVariable = "INVENTORY_OVERHAUL_FILL";
     constexpr const char* kLuaVariable = "INVENTORY_OVERHAUL_LUA";
 
@@ -196,7 +196,7 @@ void Run(void* inventory) {
             for (size_t start = 0; start < request.id.size();) {
                 size_t end = request.id.find('|', start);
                 end = end == std::string::npos ? request.id.size() : end;
-                DevTools::Overlay::PostLine(("#" + request.id.substr(start, end - start)).c_str());
+                DevTools::Overlay::PostLine(request.id.substr(start, end - start).c_str());
                 start = end + 1;
             }
             break;

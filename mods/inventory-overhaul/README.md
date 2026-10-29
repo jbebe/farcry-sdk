@@ -168,6 +168,10 @@ belt, underlining the row in red pencil; the notebook takes the wheel's `cyclewe
 it is out, so the gun in hand stays. It opens on the gun in hand, and keeps its place while
 the game runs.
 
+The left mouse button (`startshooting`, taken too) uses the selected row: gun A or B is stowed in
+Items if Items holds fewer than two guns, and on Syrettes the click becomes the heal key's `heal`
+signal, so the game puts the notebook away and uses a syrette as it does for H.
+
 A gun's upgrades are the game's three icons, faint until bought: its operation manual, its repair
 manual and the bandolier for its ammo. The syrettes have the two first aid manuals, and the grenades
 and molotovs their bandoliers. Bought is a name in the wallet's list, as the shop names its items
@@ -176,7 +180,7 @@ and molotovs their bandoliers. Bought is a name in the wallet's list, as the sho
 Names, classes and ratings are the shop's and the loadout's, matched by the archetype's last part;
 a gun the table does not know is named from its archetype. The page shows at the end of each frame
 (`GameThread::EachFrame`) and only while the notebook is open, so a HUD loaded meanwhile starts
-hidden. Using the selected row is still to come.
+hidden.
 
 ### The other pages
 
@@ -231,8 +235,9 @@ the job panel whatever the layer says, so the plugin also skips the three method
 Fill in the test window, or `INVENTORY_OVERHAUL_FILL`, also gives the sample papers and, through the
 game's own Lua in DevTools' console, meets Frank, Flora, Marty, Josip and Warren, makes Frank the
 primary buddy and Hakim the secondary (the game takes only a living one), kills Warren, and finds
-five Jackal tapes and the Moroccan's. `INVENTORY_OVERHAUL_LUA` holds Lua lines, split by `|`, that the
-console runs as the game loads, such as `AddGadget(SpawnWeapon("gadgets.Equipped.Map"))`.
+five Jackal tapes and the Moroccan's. `INVENTORY_OVERHAUL_LUA` holds console lines, split by `|`,
+that the console runs as the game loads, such as `hit_me` or, as Lua,
+`#AddGadget(SpawnWeapon("gadgets.Equipped.Map"))`.
 
 A paper in the world is the Predecessor's envelope pickup drawn as the stock single sheet, which
 `build-papers.ps1` writes into the layer (`notebook/papers.py`), with an instance in its sector: a
