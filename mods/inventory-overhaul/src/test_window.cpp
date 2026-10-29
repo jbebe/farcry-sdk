@@ -25,6 +25,7 @@ namespace {
         Action action;
         size_t index;
         std::string id;
+        int slot;
     };
 
     struct Gun {
@@ -64,8 +65,8 @@ namespace {
     std::atomic<bool> g_shown{false};
     char g_giveId[128] = "weapons.Special.CarlGustaf";
 
-    void Ask(Action action, size_t index = 0, std::string id = {}) {
-        g_requests.push_back({action, index, std::move(id)});
+    void Ask(Action action, size_t index = 0, std::string id = {}, int slot = 0) {
+        g_requests.push_back({action, index, std::move(id), slot});
         g_asked = true;
     }
 
@@ -111,9 +112,11 @@ namespace {
             if (item.gun) {
                 ImGui::Text("%s", item.id.c_str());
                 ImGui::TextDisabled("    wear %.3f, %d loaded", item.reliability, item.loaded);
-                ImGui::SameLine();
-                if (ImGui::SmallButton("Take")) {
-                    Ask(Action::Take, i);
+                for (int slot = 1; slot <= 2; ++slot) {
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton(slot == 1 ? "To A" : "To B")) {
+                        Ask(Action::Take, i, {}, slot);
+                    }
                 }
             } else {
                 ImGui::Text("%s x%d", item.id.c_str(), item.count);
@@ -171,7 +174,7 @@ void Run(void* inventory) {
             Items::Stow(inventory, static_cast<int>(request.index));
             break;
         case Action::Take:
-            Items::Take(inventory, request.index);
+            Items::Take(inventory, request.index, request.slot);
             break;
         case Action::Give:
             Items::Give(request.id);

@@ -200,11 +200,19 @@ function Heading([string]$tab, [string]$name, [string]$string, [double]$x, [doub
     $areas[$tab].Add((Text $name $string $x $y 340 26 24 $inkFull LEFT 0 TOP $false $true))
 }
 
-# A row's red pencil line from `x`, shown while the row whose text is centred on `middle` is selected.
+# The red pencil line under a row whose text is centred on `middle`, from `x`.
+function PencilLine([string]$name, [double]$x, [double]$middle, [double]$lineWidth) {
+    Image $name red_line "\common.mgb" $x ($middle - 2) $lineWidth 22 $redLine -0.6
+}
+
+# A row's pencil line, shown while the row is selected.
 function Selection([string]$tab, [string]$name, [double]$x, [double]$middle, [double]$lineWidth) {
-    $areas[$tab].Add((Image "i_io_${name}_sel" red_line "\common.mgb" $x ($middle - 2) $lineWidth 22 $redLine -0.6))
+    $areas[$tab].Add((PencilLine "i_io_${name}_sel" $x $middle $lineWidth))
     Export (AreaPath "a_io_$tab") "i_io_${name}_sel"
 }
+
+# The middle of row `j` of a list `step` apart from `top`.
+function RowMiddle([double]$top, [double]$step, [int]$j) { $top + ($j - 1) * $step + $step / 2 }
 
 # How many rows are out of a list's window on one side: the pause menu's arrow turned to point
 # `rotation` degrees from left, and the count beside it.
@@ -228,7 +236,7 @@ function List([string]$tab, [string]$name, [double]$x, [double]$top, [int]$lines
     Overflow $tab "${name}s_above" $x ($top - 24) 90
     $textX = $x + $(if ($material) { $pictureW + 10 } else { 0 })
     for ($j = 1; $j -le $lines; $j++) {
-        $middle = $top + ($j - 1) * $step + $step / 2
+        $middle = RowMiddle $top $step $j
         Selection $tab "$name$j" ($x - 14) $middle ($width + 14)
         if ($material) {
             $area.Add((Image "i_io_$name${j}_pic" $material "" $x ($middle - $pictureH / 2) $pictureW $pictureH $tint))
@@ -280,7 +288,7 @@ $InventoryPath = AreaPath a_io_inventory
 Heading inventory t_io_weapons "WEAPONS" $left
 foreach ($k in 1, 2) {
     $top = 76 + ($k - 1) * 46
-    $inventoryArea.Add((Image "i_io_hand${k}_sel" red_line "\common.mgb" ($left + 24) ($top + 22) ($width - 16) 22 $redLine -0.6))
+    $inventoryArea.Add((PencilLine "i_io_hand${k}_sel" ($left + 24) ($top + 24) ($width - 16)))
     Export $InventoryPath "i_io_hand${k}_sel"
 }
 Selection inventory machete ($left + 24) 192 ($width - 16)
@@ -305,30 +313,24 @@ Heading inventory t_io_items "ITEMS" $left 226
 List inventory item $left $ItemsTop $ItemLines $ItemStep
 
 # A stowed gun's context menu: a scrap of post-it right of its row, past the longest gun name, with the
-# slots the gun can go to, its first on the row's line. One area per action underlined, and an
-# instance of each beside every row of the window, all hidden.
+# slots the gun can go to, its first on the row's line, each with its pencil line. One area, instanced
+# beside every row of the window, all hidden; the instances share it, so its lines are exported once.
 $MenuW = 190
 $MenuH = 90
+$MenuFirst = ($MenuH - $ItemStep) / 2
 $menuActions = "To slot A", "To slot B"
-function Menu([string]$tag, [int]$selected) {
-    $menu = [System.Collections.Generic.List[string]]::new()
-    $menu.Add((Image "i_io_menu_${tag}_paper" postit "\common.mgb" 0 0 $MenuW $MenuH "FFFFFFFF" 0 (Crop $PostItCrop)))
-    for ($k = 0; $k -lt $menuActions.Count; $k++) {
-        $middle = 29 + $k * $ItemStep
-        if ($k -eq $selected) {
-            $menu.Add((Image "i_io_menu_${tag}_sel" red_line "\common.mgb" 8 ($middle - 2) ($MenuW - 18) 22 $redLine -0.6))
-        }
-        $menu.Add((Text "t_io_menu_${tag}$k" $menuActions[$k] 22 ($middle - 13) ($MenuW - 34) 26 22 $inkFull))
-    }
-    , $menu
+$menu = [System.Collections.Generic.List[string]]::new()
+$menu.Add((Image i_io_menu_paper postit "\common.mgb" 0 0 $MenuW $MenuH "FFFFFFFF" 0 (Crop $PostItCrop)))
+for ($k = 0; $k -lt $menuActions.Count; $k++) {
+    $middle = $MenuFirst + $k * $ItemStep
+    $menu.Add((PencilLine "i_io_menu_sel$k" 8 $middle ($MenuW - 18)))
+    $menu.Add((Text "t_io_menu$k" $menuActions[$k] 22 ($middle - 13) ($MenuW - 34) 26 22 $inkFull))
+    Export "$InventoryPath a_io_menu1 a_io_menu" "i_io_menu_sel$k"
 }
-$menus = [ordered]@{ a = (Menu a 0); b = (Menu b 1) }
 for ($j = 1; $j -le $ItemLines; $j++) {
-    $middle = $ItemsTop + ($j - 1) * $ItemStep + $ItemStep / 2
-    foreach ($tag in $menus.Keys) {
-        $inventoryArea.Add((Tilted "a_io_menu_$tag" ($left + 165) ($middle - 29) $MenuW $MenuH -0.8 $true "a_io_menu_$tag$j"))
-        Export $InventoryPath "a_io_menu_$tag$j"
-    }
+    $middle = RowMiddle $ItemsTop $ItemStep $j
+    $inventoryArea.Add((Tilted a_io_menu ($left + 165) ($middle - $MenuFirst) $MenuW $MenuH -0.8 $true "a_io_menu$j"))
+    Export $InventoryPath "a_io_menu$j"
 }
 
 # The right page, below the post-it: the belt.
@@ -609,7 +611,7 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
         (Area a_io_portraits 44 44 $palette)
         (Area a_io_postit 416 302 $postIt)
         (Area a_io_reader 412 620 $reader)
-        foreach ($tag in $menus.Keys) { Area "a_io_menu_$tag" $MenuW $MenuH $menus[$tag] }
+        (Area a_io_menu $MenuW $MenuH $menu)
         $photoAreas) -join "`n"
     $objects = @("<GENERICOBJECT name=`"IO_NOTEBOOK`"><LINK slot=`"69`" LASTOBJECTTYPE=`"Element`" IDS=`"$NotebookPath a_io_page`" /></GENERICOBJECT>") + $Exports
 

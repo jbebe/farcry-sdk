@@ -160,25 +160,30 @@ const wchar_t* Condition(float reliability) {
     return reliability >= 0.75f ? L"new" : reliability >= 0.5f ? L"used" : reliability >= 0.25f ? L"worn" : L"failing";
 }
 
-void List(Model& model, const std::string& list, size_t lines, size_t& first, const std::vector<std::wstring>& rows,
-          int selected) {
+size_t List(Model& model, const std::string& list, size_t lines, size_t& first, const std::vector<std::wstring>& rows,
+            int selected) {
     const std::string prefix = "IO_" + list;
     if (selected >= 0 && static_cast<size_t>(selected) < rows.size()) {
         const auto index = static_cast<size_t>(selected);
         first = std::clamp(first, index + 1 >= lines ? index + 1 - lines : 0, index);
     }
     first = std::min(first, rows.size() > lines ? rows.size() - lines : 0);
+    size_t selectedLine = 0;
     for (size_t line = 0; line < lines; ++line) {
         const size_t index = first + line;
         const bool isSelected = index < rows.size() && static_cast<int>(index) == selected;
         model.Text(Name(prefix, line + 1), index < rows.size() ? rows[index] : L"");
         model.Show(Name(prefix, line + 1, "_SEL"), isSelected);
+        if (isSelected) {
+            selectedLine = line + 1;
+        }
     }
     const size_t below = rows.size() > first + lines ? rows.size() - first - lines : 0;
     model.Text(prefix + "S_ABOVE", first > 0 ? std::to_wstring(first) + L" above" : L"");
     model.Show(prefix + "S_ABOVE_ARROW", first > 0);
     model.Text(prefix + "S_MORE", below > 0 ? std::to_wstring(below) + L" more" : L"");
     model.Show(prefix + "S_MORE_ARROW", below > 0);
+    return selectedLine;
 }
 
 void ClearPostIt(Model& model) {
@@ -241,7 +246,7 @@ void Update(const void* view, void* inventory) {
     if (sheet >= 0) {
         sheet = std::max(sheet + steps, 0);
     } else if (menu >= 0) {
-        menu = std::clamp(menu + steps, 0, kMenuActions - 1);
+        menu = std::max(menu + steps, 0);
     } else if (selected >= 0) {
         selected += steps;
     }

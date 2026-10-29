@@ -79,6 +79,8 @@ namespace {
     // The weapons and the machete, the rows above Items.
     constexpr int kHandRows = 3;
     constexpr size_t kItemRows = 10;
+    // A stowed gun's menu: to slot A, to slot B.
+    constexpr int kMenuActions = 2;
 
     // "weapons.Special.M249_Saw" is m249saw.
     std::string Key(const std::string& archetype) {
@@ -302,9 +304,7 @@ int InventoryPage(Model& model, int& selected, const void* view, void* inventory
     selected = std::clamp(selected, 0, static_cast<int>(rows.size()) - 1);
     const Row& row = rows[selected];
     const bool stowedGun = row.kind == Row::kItem && row.item->gun;
-    if (!stowedGun || dropped) {
-        menu = -1;
-    }
+    menu = !stowedGun || dropped ? -1 : std::min(menu, kMenuActions - 1);
     // X drops the selected gun, or one of the selected item; a click stows gun 1 or 2, opens a stowed
     // gun's menu or runs the action underlined in it; and the page is read again.
     if (dropped && (row.gun != nullptr || row.kind == Row::kItem)) {
@@ -337,12 +337,13 @@ int InventoryPage(Model& model, int& selected, const void* view, void* inventory
             texts.push_back(ItemText(carried, each));
         }
     }
-    List(model, "ITEM", kItemRows, g_firstItem, texts, selected - kHandRows);
+    const size_t line = List(model, "ITEM", kItemRows, g_firstItem, texts, selected - kHandRows);
     // The menu beside its row's line of the window, with its action underlined.
-    const int line = selected - kHandRows - static_cast<int>(g_firstItem) + 1;
     for (size_t j = 1; j <= kItemRows; ++j) {
-        model.Show(Name("IO_MENU_A", j), menu == 0 && line == static_cast<int>(j));
-        model.Show(Name("IO_MENU_B", j), menu == 1 && line == static_cast<int>(j));
+        model.Show(Name("IO_MENU", j), menu >= 0 && line == j);
+    }
+    for (int k = 0; k < kMenuActions; ++k) {
+        model.Show(Name("IO_MENU_SEL", k), menu == k);
     }
 
     for (size_t i = 0; i < std::size(kBelt); ++i) {

@@ -44,9 +44,10 @@ std::wstring PlainName(const std::string& id);
 const wchar_t* Condition(float reliability);
 
 // Fills IO_<LIST>1... with a window of `lines` of `rows` from `first`, kept on row `selected` if it
-// is one of them, and IO_<LIST>S_ABOVE and _MORE with the rows outside it.
-void List(Model& model, const std::string& list, size_t lines, size_t& first, const std::vector<std::wstring>& rows,
-          int selected);
+// is one of them, and IO_<LIST>S_ABOVE and _MORE with the rows outside it. Returns the selected row's
+// line, from 1, or 0 when it is none of them.
+size_t List(Model& model, const std::string& list, size_t lines, size_t& first, const std::vector<std::wstring>& rows,
+            int selected);
 
 // Everything on the post-it hidden or emptied, for the selected row to fill in.
 void ClearPostIt(Model& model);
@@ -58,8 +59,6 @@ void ClearPostIt(Model& model);
 // closed.
 int InventoryPage(Model& model, int& selected, const void* view, void* inventory, bool dropped, bool used,
                   int& menu);
-// The actions a stowed gun's menu offers: to slot A, to slot B.
-inline constexpr int kMenuActions = 2;
 // `used`, the page was clicked: the selected paper is read whole, or put back, and the selected tape
 // played, or stopped while it plays. `sheet` is the sheet
 // read, kept within the paper's, or -1 while none is.

@@ -118,11 +118,8 @@ bool Take(void* inventory, size_t index, int slot) {
     }
     const Record taken = items[index];
     const std::vector<Inventory::Weapon> before = Inventory::Guns(inventory);
-    if (slot == 0 && before.size() >= 2) {
-        slot = TwoGuns::SlotOf(TwoGuns::ToReplace(inventory, before).weapon);
-    }
-    const Inventory::Weapon* out = slot != 0 ? TwoGuns::InSlot(before, slot) : nullptr;
-    const bool inHand = out != nullptr && Inventory::Id(out->item) == Inventory::InHandId(inventory);
+    const Inventory::Weapon* out = TwoGuns::InSlot(before, slot);
+    const bool inHand = out != nullptr && out == TwoGuns::InHand(inventory, before);
     const std::optional<Inventory::Weapon> made = Make(inventory, taken, before);
     if (!made) {
         return false;
@@ -134,9 +131,7 @@ bool Take(void* inventory, size_t index, int slot) {
                    items.back().loaded);
         Inventory::Remove(inventory, out->weapon);
     }
-    if (slot != 0) {
-        TwoGuns::SetSlot(made->weapon, slot);
-    }
+    TwoGuns::SetSlot(made->weapon, slot);
     Save(items);
     TwoGuns::Settle(inventory);
     if (inHand) {
