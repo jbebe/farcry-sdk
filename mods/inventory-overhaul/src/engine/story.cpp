@@ -97,7 +97,7 @@ namespace {
     constexpr ptrdiff_t kBuddyHistory = 0x9C;
 
     bool g_installed = false;
-    // The tape PlayTape started and its start id, to tell it from one the game plays, whether it is a
+    // The tape or cassette started and its start id, to tell it from one the game plays, whether it is a
     // cassette, and the tapes' sound type. A cassette's sound waits for its click to end until `g_startAt`.
     std::string g_playing;
     uint32_t g_playingSound = 0;
@@ -208,37 +208,45 @@ std::vector<std::string> FoundTapes() {
     return keys;
 }
 
-bool PlayTape(const std::string& key, uint32_t sound) {
+bool PlayTape(const std::string& key) {
     void* manager = TapeManager();
     const uint8_t* record = nullptr;
-    if (sound == 0) {
-        EachTape([&](const uint8_t* tape) {
-            if (record == nullptr && ReadString(tape) == key) {
-                record = tape;
-            }
-        });
-    }
-    const uint8_t* first = manager != nullptr ? FirstTape(manager) : nullptr;
-    if (manager == nullptr || (sound == 0 ? record == nullptr : first == nullptr)) {
+    EachTape([&](const uint8_t* tape) {
+        if (record == nullptr && ReadString(tape) == key) {
+            record = tape;
+        }
+    });
+    if (manager == nullptr || record == nullptr) {
         return false;
     }
     g_touchTapes(manager, nullptr);
     ClearSlot(manager);
     g_playing = key;
-    g_cassette = sound != 0;
+    g_cassette = false;
     g_waiting = 0;
-    if (g_cassette) {
-        g_type = Read<int32_t>(first, kEntryType);
-        Sound::Play(kClickIn, g_type);
-        g_waiting = sound;
-        g_startAt = std::chrono::steady_clock::now() +
-                    std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-                        std::chrono::duration<float>(std::max(Sound::Length(kClickIn), 0.0f)));
-        return true;
-    }
     g_playTape(manager, nullptr, record);
     g_playingSound = *g_tapeSound.get();
     return *g_tapeHandle.get() != -1;
+}
+
+bool PlayCassette(const std::string& key, uint32_t sound) {
+    void* manager = TapeManager();
+    const uint8_t* first = manager != nullptr ? FirstTape(manager) : nullptr;
+    if (first == nullptr || sound == 0 || Sound::Length(sound) < 0.0f) {
+        return false;
+    }
+    g_touchTapes(manager, nullptr);
+    ClearSlot(manager);
+    g_playing = key;
+    g_cassette = true;
+    g_type = Read<int32_t>(first, kEntryType);
+    Sound::Play(kClickIn, g_type);
+    // The cassette's sound starts in Frame, once the click has played.
+    g_waiting = sound;
+    g_startAt = std::chrono::steady_clock::now() +
+                std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                    std::chrono::duration<float>(std::max(Sound::Length(kClickIn), 0.0f)));
+    return true;
 }
 
 void StopTape() {
@@ -263,7 +271,9 @@ std::string PlayingTape() {
 }
 
 void HoldCassette(uint32_t sound) {
-    Sound::Hold(sound);
+    if (sound != 0) {
+        Sound::Hold(sound);
+    }
     Sound::Hold(kClickIn);
     Sound::Hold(kClickOut);
 }

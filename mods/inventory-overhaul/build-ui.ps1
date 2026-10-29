@@ -229,6 +229,12 @@ function List([string]$tab, [string]$name, [double]$x, [double]$top, [int]$lines
     $path = AreaPath "a_io_$tab"
     Overflow $tab "${name}s_above" $x ($top - 24) 90
     $textX = $x + $(if ($material) { $pictureW + 10 } else { 0 })
+    $textW = $x + $width - 8 - $side - $textX
+    $styles = @(@{ Suffix = ""; Ink = $inkFull; SideInk = $inkSoft; Italic = $false })
+    if ($fades) {
+        $styles += @{ Suffix = "_faded"; Ink = $inkFaded; SideInk = $inkFaded; Italic = $true },
+            @{ Suffix = "_dim"; Ink = $inkFaded; SideInk = $inkFaded; Italic = $false }
+    }
     for ($j = 1; $j -le $lines; $j++) {
         $middle = RowMiddle $top $step $j
         Selection $tab "$name$j" ($x - 14) $middle ($width + 14)
@@ -240,22 +246,12 @@ function List([string]$tab, [string]$name, [double]$x, [double]$top, [int]$lines
                 Export $path "i_io_$name${j}_pic_dim"
             }
         }
-        $area.Add((Text "t_io_$name$j" "" $textX ($middle - 13) ($x + $width - 8 - $side - $textX) 26 22 $inkFull))
-        Export $path "t_io_$name$j"
-        if ($fades) {
-            $area.Add((Text "t_io_$name${j}_faded" "" $textX ($middle - 13) ($x + $width - 8 - $side - $textX) 26 22 $inkFaded LEFT 0 CENTER $false $true))
-            $area.Add((Text "t_io_$name${j}_dim" "" $textX ($middle - 13) ($x + $width - 8 - $side - $textX) 26 22 $inkFaded))
-            Export $path "t_io_$name${j}_faded"
-            Export $path "t_io_$name${j}_dim"
-        }
-        if ($side -gt 0) {
-            $area.Add((Text "t_io_$name${j}_side" "" ($x + $width - $side) ($middle - 12) $side 24 16 $inkSoft RIGHT))
-            Export $path "t_io_$name${j}_side"
-            if ($fades) {
-                $area.Add((Text "t_io_$name${j}_side_faded" "" ($x + $width - $side) ($middle - 12) $side 24 16 $inkFaded RIGHT 0 CENTER $false $true))
-                $area.Add((Text "t_io_$name${j}_side_dim" "" ($x + $width - $side) ($middle - 12) $side 24 16 $inkFaded RIGHT))
-                Export $path "t_io_$name${j}_side_faded"
-                Export $path "t_io_$name${j}_side_dim"
+        foreach ($style in $styles) {
+            $area.Add((Text "t_io_$name$j$($style.Suffix)" "" $textX ($middle - 13) $textW 26 22 $style.Ink LEFT 0 CENTER $false $style.Italic))
+            Export $path "t_io_$name$j$($style.Suffix)"
+            if ($side -gt 0) {
+                $area.Add((Text "t_io_$name${j}_side$($style.Suffix)" "" ($x + $width - $side) ($middle - 12) $side 24 16 $style.SideInk RIGHT 0 CENTER $false $style.Italic))
+                Export $path "t_io_$name${j}_side$($style.Suffix)"
             }
         }
     }

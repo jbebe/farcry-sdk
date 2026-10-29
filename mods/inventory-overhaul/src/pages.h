@@ -21,7 +21,11 @@ struct Model {
 
     void Text(const std::string& name, std::wstring text) { texts[name] = std::move(text); }
     void Show(const std::string& name, bool visible) { shown[name] = visible; }
-    void Picture(const std::string& name, std::string from) { pictures[name] = std::move(from); }
+    // Shows the image `name` with the picture of `from`.
+    void Picture(const std::string& name, std::string from) {
+        shown[name] = true;
+        pictures[name] = std::move(from);
+    }
 
     // Everything the page shows, so that it is written again only when this changes.
     std::wstring Key() const;

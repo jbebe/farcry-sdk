@@ -27,7 +27,8 @@ constexpr size_t kMostGuns = 4;
 // The player's Items, empty when there is no player. Everything here runs on the game thread.
 std::vector<Record> Load();
 void Save(const std::vector<Record>& items);
-size_t GunCount(const std::vector<Record>& items);
+// Whether the player has kMostGuns already, `inventory`'s and Items' together.
+bool Full(const void* inventory);
 
 // Moves gun 1 or 2 into Items. False when there is no such gun.
 bool Stow(void* inventory, int slot);

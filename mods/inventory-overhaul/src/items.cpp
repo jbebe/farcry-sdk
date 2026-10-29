@@ -27,7 +27,6 @@ namespace {
     std::optional<Inventory::Weapon> Make(void* inventory, const Record& stowed,
                                           const std::vector<Inventory::Weapon>& before) {
         if (!Inventory::AddByName(inventory, stowed.id.c_str())) {
-            FCSE::Logf("no %s could be made", stowed.id.c_str());
             return std::nullopt;
         }
         for (const Inventory::Weapon& gun : Inventory::Guns(inventory)) {
@@ -45,6 +44,10 @@ namespace {
             }
         }
         return std::nullopt;
+    }
+
+    size_t GunCount(const std::vector<Record>& items) {
+        return std::count_if(items.begin(), items.end(), [](const Record& item) { return item.gun; });
     }
 }
 
@@ -71,7 +74,7 @@ std::vector<Record> Load() {
             std::getline(fields >> std::ws, item.description);
         }
         if (!item.id.empty()) {
-            items.push_back(item);
+            items.push_back(std::move(item));
         }
     }
     return items;
@@ -93,9 +96,7 @@ void Save(const std::vector<Record>& items) {
     FCSE::ApiPointer()->EntityData->SetString(player, kItemsKey, text.str().c_str());
 }
 
-size_t GunCount(const std::vector<Record>& items) {
-    return std::count_if(items.begin(), items.end(), [](const Record& item) { return item.gun; });
-}
+bool Full(const void* inventory) { return Inventory::Guns(inventory).size() + GunCount(Load()) >= kMostGuns; }
 
 bool Stow(void* inventory, int slot) {
     std::vector<Record> items = Load();
@@ -123,6 +124,7 @@ bool Take(void* inventory, size_t index, int slot) {
     const bool inHand = out != nullptr && out == TwoGuns::InHand(inventory, before);
     const std::optional<Inventory::Weapon> made = Make(inventory, taken, before);
     if (!made) {
+        FCSE::Logf("no %s could be made: it stays in Items", taken.id.c_str());
         return false;
     }
     items.erase(items.begin() + index);
@@ -154,7 +156,7 @@ bool Drop(void* inventory, size_t index) {
             FCSE::Logf("dropped the %s from Items with %d loaded", dropped.id.c_str(), dropped.loaded);
             Inventory::Drop(inventory, made->weapon);
         } else {
-            FCSE::Logf("the %s is only removed from Items", dropped.id.c_str());
+            FCSE::Logf("no %s could be made: it is only removed from Items", dropped.id.c_str());
         }
     }
     if (dropped.gun || --dropped.count <= 0) {
@@ -169,7 +171,7 @@ bool Give(const std::string& id, uint32_t sound, const std::string& description)
     if (id.rfind(kWeaponPrefix, 0) == 0) {
         void* pawn = Inventory::PlayerPawn();
         const void* inventory = pawn != nullptr ? Inventory::OfView(Inventory::ViewOf(pawn)) : nullptr;
-        if (inventory == nullptr || Inventory::Guns(inventory).size() + GunCount(items) >= kMostGuns) {
+        if (inventory == nullptr || Full(inventory)) {
             return false;
         }
         items.push_back({id, true});
@@ -180,10 +182,11 @@ bool Give(const std::string& id, uint32_t sound, const std::string& description)
         if (same != items.end()) {
             ++same->count;
         } else {
+            Record& item = items.emplace_back(Record{id});
+            item.sound = sound;
             // A record is one line.
-            std::string line = description;
-            std::replace(line.begin(), line.end(), '\n', ' ');
-            items.push_back({id, false, -1.0f, -1, 1, sound, line});
+            item.description = description;
+            std::replace(item.description.begin(), item.description.end(), '\n', ' ');
         }
     }
     Save(items);

@@ -106,32 +106,6 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_active1_faded">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_active1_faded" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="110" BOTTOM="136" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_active1_dim">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_active1_dim" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="110" BOTTOM="136" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_active1_side">
         <PROPERTIES />
       </USERDATA>
@@ -145,6 +119,19 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_active1_faded">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_active1_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="110" BOTTOM="136" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_active1_side_faded">
         <PROPERTIES />
       </USERDATA>
@@ -154,6 +141,19 @@
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_active1_dim">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_active1_dim" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="110" BOTTOM="136" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
@@ -223,32 +223,6 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_active2_faded">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_active2_faded" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="160" BOTTOM="186" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_active2_dim">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_active2_dim" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="160" BOTTOM="186" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_active2_side">
         <PROPERTIES />
       </USERDATA>
@@ -262,6 +236,19 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_active2_faded">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_active2_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="160" BOTTOM="186" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_active2_side_faded">
         <PROPERTIES />
       </USERDATA>
@@ -271,6 +258,19 @@
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_active2_dim">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_active2_dim" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="160" BOTTOM="186" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
@@ -405,32 +405,6 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_other1_faded">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_other1_faded" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="300" BOTTOM="326" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_other1_dim">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_other1_dim" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="300" BOTTOM="326" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_other1_side">
         <PROPERTIES />
       </USERDATA>
@@ -444,6 +418,19 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other1_faded">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other1_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="300" BOTTOM="326" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_other1_side_faded">
         <PROPERTIES />
       </USERDATA>
@@ -453,6 +440,19 @@
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other1_dim">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other1_dim" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="300" BOTTOM="326" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
@@ -522,32 +522,6 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_other2_faded">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_other2_faded" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="350" BOTTOM="376" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_other2_dim">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_other2_dim" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="350" BOTTOM="376" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_other2_side">
         <PROPERTIES />
       </USERDATA>
@@ -561,6 +535,19 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other2_faded">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other2_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="350" BOTTOM="376" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_other2_side_faded">
         <PROPERTIES />
       </USERDATA>
@@ -570,6 +557,19 @@
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other2_dim">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other2_dim" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="350" BOTTOM="376" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
@@ -639,32 +639,6 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_other3_faded">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_other3_faded" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="400" BOTTOM="426" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_other3_dim">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_other3_dim" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="400" BOTTOM="426" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_other3_side">
         <PROPERTIES />
       </USERDATA>
@@ -678,6 +652,19 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other3_faded">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other3_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="400" BOTTOM="426" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_other3_side_faded">
         <PROPERTIES />
       </USERDATA>
@@ -687,6 +674,19 @@
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other3_dim">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other3_dim" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="400" BOTTOM="426" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
@@ -756,32 +756,6 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_other4_faded">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_other4_faded" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="450" BOTTOM="476" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_other4_dim">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_other4_dim" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="450" BOTTOM="476" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_other4_side">
         <PROPERTIES />
       </USERDATA>
@@ -795,6 +769,19 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other4_faded">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other4_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="450" BOTTOM="476" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_other4_side_faded">
         <PROPERTIES />
       </USERDATA>
@@ -804,6 +791,19 @@
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other4_dim">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other4_dim" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="450" BOTTOM="476" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
@@ -873,32 +873,6 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_other5_faded">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_other5_faded" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="500" BOTTOM="526" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_other5_dim">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_other5_dim" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="500" BOTTOM="526" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_other5_side">
         <PROPERTIES />
       </USERDATA>
@@ -912,6 +886,19 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other5_faded">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other5_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="500" BOTTOM="526" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_other5_side_faded">
         <PROPERTIES />
       </USERDATA>
@@ -921,6 +908,19 @@
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other5_dim">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other5_dim" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="500" BOTTOM="526" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>
@@ -990,32 +990,6 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_other6_faded">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_other6_faded" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="550" BOTTOM="576" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="t_io_other6_dim">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_t_io_other6_dim" IDX="0" INTERPOLATION="None">
-          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="550" BOTTOM="576" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
-        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
-      </Text>
-    </Element>
-    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_other6_side">
         <PROPERTIES />
       </USERDATA>
@@ -1029,6 +1003,19 @@
       </Text>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other6_faded">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other6_faded" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="550" BOTTOM="576" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_other6_side_faded">
         <PROPERTIES />
       </USERDATA>
@@ -1038,6 +1025,19 @@
         </Keyframe>
       </KEYFRAMES>
       <Text useStringTable="false" STRING="" ALIGNMENTX="RIGHT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="true" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+        <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
+      </Text>
+    </Element>
+    <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="t_io_other6_dim">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_t_io_other6_dim" IDX="0" INTERPOLATION="None">
+          <TextState INTERPOLATIONFLAGS="0" STATECOLOR="66141E2A" ROTATION="0" ORIGIN.x="88" ORIGIN.y="13" LEFT="150" RIGHT="326" TOP="550" BOTTOM="576" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="FF000000" HEIGHT="22" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="22" TRACKING="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Text useStringTable="false" STRING="" ALIGNMENTX="LEFT" ALIGNMENTY="CENTER" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
         <FONTFAMILY present="true" id="#5B34AD62" PACKAGE="\fonts.mgb" />
       </Text>
     </Element>

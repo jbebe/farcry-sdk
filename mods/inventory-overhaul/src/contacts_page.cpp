@@ -44,16 +44,18 @@ namespace {
         return colon != std::wstring::npos ? text.substr(colon + 2) : text;
     }
 
-    // How available a buddy is: 0 at hand, 1 missing, 2 dead.
-    int Unavailable(const Story::Buddy& buddy) {
-        return buddy.status == Story::kDead ? 2 : buddy.status == Story::kMissing ? 1 : 0;
+    // How available a buddy is, in the order the other buddies are listed, and the suffix of the twin
+    // texts a row is written in: missing ones dim, dead ones faded italic.
+    enum Availability { kAtHand, kMissing, kDead };
+    constexpr const char* kStyles[] = {"", "_DIM", "_FADED"};
+
+    Availability AvailabilityOf(const Story::Buddy& buddy) {
+        return buddy.status == Story::kDead ? kDead : buddy.status == Story::kMissing ? kMissing : kAtHand;
     }
 
-    // A dead buddy's row is written in its faded italic texts instead, a missing one's in its dim texts,
-    // with its dim picture.
+    // A missing buddy's portrait is its dim twin too.
     void Buddies(Model& model, const std::string& list, size_t lines, size_t& first,
                  const std::vector<const Story::Buddy*>& buddies, int selected) {
-        constexpr const char* kStyles[] = {"", "_DIM", "_FADED"};
         std::vector<std::wstring> names;
         for (const Story::Buddy* buddy : buddies) {
             names.push_back(Wide(FirstName(buddy->name)));
@@ -63,25 +65,22 @@ namespace {
             const size_t index = first + line;
             const std::string row = Name("IO_" + list, line + 1);
             const bool shown = index < buddies.size();
-            const int style = shown ? Unavailable(*buddies[index]) : 0;
-            for (int s = 0; s < 3; ++s) {
+            const Availability style = shown ? AvailabilityOf(*buddies[index]) : kAtHand;
+            for (int s = kAtHand; s <= kDead; ++s) {
                 model.Text(row + kStyles[s], shown && s == style ? names[index] : L"");
                 model.Text(row + "_SIDE" + kStyles[s], shown && s == style ? buddies[index]->statusText : L"");
             }
             const std::string portrait = shown ? PortraitOf(buddies[index]->name) : "";
-            const std::string picture = row + (style == 1 ? "_PIC_DIM" : "_PIC");
             model.Show(row + "_PIC", false);
             model.Show(row + "_PIC_DIM", false);
             if (!portrait.empty()) {
-                model.Show(picture, true);
-                model.Picture(picture, portrait);
+                model.Picture(row + (style == kMissing ? "_PIC_DIM" : "_PIC"), portrait);
             }
         }
     }
 
     void BuddyPostIt(Model& model, const Story::Buddy& buddy) {
         if (const std::string portrait = PortraitOf(buddy.name); !portrait.empty()) {
-            model.Show("IO_POSTIT_PORTRAIT", true);
             model.Picture("IO_POSTIT_PORTRAIT", portrait);
         }
         model.Text("IO_POSTIT_NAME", PlainName(buddy.name));
@@ -101,7 +100,7 @@ int ContactsPage(Model& model, int& selected) {
     }
     std::sort(active.begin(), active.end(), [](const auto* a, const auto* b) { return a->active < b->active; });
     std::stable_sort(others.begin(), others.end(),
-                     [](const auto* a, const auto* b) { return Unavailable(*a) < Unavailable(*b); });
+                     [](const auto* a, const auto* b) { return AvailabilityOf(*a) < AvailabilityOf(*b); });
     const int rows = static_cast<int>(buddies.size());
     selected = std::clamp(selected, 0, std::max(rows - 1, 0));
 

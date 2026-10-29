@@ -1,4 +1,4 @@
-// The papers notebook\papers.py places in the world are such pickups.
+// Other mods' papers and items, such as mods\tales-of-africa's, are such pickups.
 #include "pickups.h"
 
 #include "engine/inventory.h"
@@ -39,7 +39,8 @@ namespace {
 
 bool Install() {
     const bool hooked = Hook(g_pickSite, &OnPick, &g_pick);
-    FCSE::Logf("pickups: %s", hooked ? "papers picked up go into Items" : "Pick was not found, so papers only vanish");
+    FCSE::Logf("pickups: %s", hooked ? "papers and items picked up go into Items"
+                                     : "Pick was not found, so papers and items only vanish");
     return hooked;
 }
 

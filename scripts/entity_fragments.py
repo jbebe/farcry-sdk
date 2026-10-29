@@ -25,6 +25,11 @@ def crc(text):
     return "%08X" % zlib.crc32(text.encode())
 
 
+def find_value(text, name, kind):
+    """The archetype's first value `name` of type `kind`, as text."""
+    return re.search(r'<value name="%s" type="%s">([^<]*)</value>' % (name, kind), text).group(1)
+
+
 def replace_value(text, name, kind, old, new):
     """The archetype's text with its one value `name` changed from `old` to `new`."""
     element = '<value name="%s" type="%s">%s</value>'

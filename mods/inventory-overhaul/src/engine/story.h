@@ -23,13 +23,16 @@ std::wstring Words(const char* section, const std::string& key);
 std::vector<std::string> FoundTapes();
 
 // Plays tape `key` from its start as the pause menu does, stopping any other, while the game runs on;
-// false when it did not start, as while scripted music plays. With a `sound`, the tape is another
-// mod's cassette, that sound event, played and stopped as the Jackal tapes are, clicks included.
-bool PlayTape(const std::string& key, uint32_t sound = 0);
+// false when it did not start, as while scripted music plays.
+bool PlayTape(const std::string& key);
+// Plays another mod's cassette `key`, the sound event `sound`, as the Jackal tapes play, their click
+// first; false while its bank is not loaded.
+bool PlayCassette(const std::string& key, uint32_t sound);
+// Stops what PlayTape or PlayCassette started, a cassette with the Jackal tapes' stop click.
 void StopTape();
-// The key of the tape PlayTape started while it still plays, else empty.
+// The key of the tape or cassette started while it still plays, else empty.
 std::string PlayingTape();
-// Holds a cassette's bank and the clicks loaded, for PlayTape: a play loads nothing.
+// Holds a cassette's bank and the clicks loaded, for PlayCassette: a play loads nothing.
 void HoldCassette(uint32_t sound);
 // Starts a cassette once its click has played; every frame.
 void Frame();

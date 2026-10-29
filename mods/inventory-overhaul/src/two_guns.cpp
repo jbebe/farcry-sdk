@@ -267,15 +267,15 @@ namespace {
             return g_addWeapon(inventory, unused, weapon);
         }
         const std::vector<Inventory::Weapon> carried = Inventory::Guns(inventory);
-        const bool full = carried.size() + Items::GunCount(Items::Load()) >= Items::kMostGuns;
-        if (!carried.empty() && (carried.size() >= kSlots || full)) {
+        const bool full = carried.size() >= kSlots || Items::Full(inventory);
+        if (full && !carried.empty()) {
             const Inventory::Weapon& out = ToReplace(inventory, carried);
             FCSE::Logf("the %s takes a slot: the %s is dropped", Inventory::Name(weapon),
                        Inventory::Name(out.weapon));
             Inventory::Drop(inventory, out.weapon);
         }
         g_addWeapon(inventory, unused, weapon);
-        if (carried.empty() && full) {
+        if (full && carried.empty()) {
             FCSE::Logf("the %s would be a gun too many: dropped", Inventory::Name(weapon));
             Inventory::Drop(inventory, weapon);
             return;

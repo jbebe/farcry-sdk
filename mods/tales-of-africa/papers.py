@@ -11,7 +11,8 @@ import re
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "scripts"))
-from entity_fragments import add_entity_data, fragment_path, prototypes, replace_hashed, replace_value, write
+from entity_fragments import (add_entity_data, find_value, fragment_path, prototypes, replace_hashed, replace_value,
+                              write)
 
 library, layer, world = sys.argv[1:4]
 ENVELOPE = "OA_MissionPickups.MissionPickups.PartnerMissionEnvelope"
@@ -19,13 +20,14 @@ TAPE = "OA_MissionPickups.MissionPickups.PartnerMissionTape"
 GRAPHIC = re.compile(r'<component class="GraphicComponent".*?</component>', re.S)
 PHYSICS = re.compile(r'<resource fileName="([^"]+\.hkx)" />')
 SHEET = "OA_DetailObjects.DetailObjects.SingleSheet_BK"
-# What the envelope is drawn as: the archetype whose graphic and physics it takes, and the node of the
-# one mesh it shows. The photo has no physics of its own and takes the sheet's; the jerrycan is
-# Explosives' gas can, its intact state, without the parts that make it burst.
+# What the envelope is drawn as: the archetype whose graphic it takes, the node of the one mesh it
+# shows, and the archetype whose physics it takes. The photo has no physics of its own and takes the
+# sheet's; the jerrycan is Explosives' gas can, its intact state, without the parts that make it burst.
+GAS_CAN = "OA_Explosives.Explosives.GasCan02_NEW"
 LOOKS = {
-    "sheet": (SHEET, "SingleSheet"),
-    "photo": ("props.World1_HotelRoom.HotelRoom_Photo_1", "Photo_01"),
-    "jerrycan": ("OA_Explosives.Explosives.GasCan02_NEW", "GasTankSmall02_State01"),
+    "sheet": (SHEET, "SingleSheet", SHEET),
+    "photo": ("props.World1_HotelRoom.HotelRoom_Photo_1", "Photo_01", SHEET),
+    "jerrycan": (GAS_CAN, "GasTankSmall02_State01", GAS_CAN),
 }
 # The note flat where the boombox Appliances.BoomBoxRadio_398 stands, on a beer barrel; the photo and
 # the cassette on the round table beside it, and the oil can on the ground north of the table.
@@ -51,25 +53,20 @@ def vector(name, values):
             "  </value>"]
 
 
-def text_of(block, name):
-    """The block's first String value `name`."""
-    return re.search(r'<value name="%s" type="String">([^<]*)</value>' % name, block).group(1)
-
-
 def drawn_as(envelope, look):
     """The envelope with the look's graphic, showing only its node's mesh, and its physics."""
-    archetype, node = LOOKS[look]
-    shown = blocks[archetype]
-    solid = shown if PHYSICS.search(shown) else blocks[SHEET]
+    archetype, node, physics = LOOKS[look]
+    shown, solid = blocks[archetype], blocks[physics]
+    mesh = re.compile(r'boneName="%s(_LOD0)?"' % node)
     meshes = [line for line in GRAPHIC.search(shown).group(0).split("\n")
-              if "<object index=" not in line or 'boneName="%s' % node in line]
+              if "<object index=" not in line or mesh.search(line)]
     graphic = re.sub(r'<object index="\d+"', '<object index="0"', "\n".join(meshes))
     pickup = GRAPHIC.sub(lambda m: graphic, envelope, count=1)
     pickup = pickup.replace(r"graphics\Objects\Equipment\Envelope\Envelope.hkx", PHYSICS.search(solid).group(1))
     for name, extension, source in [("fileName", ".xml", shown), ("objModel", ".xbg", shown),
                                     ("hidResourceId", ".hkx", solid)]:
         pickup = replace_hashed(pickup, name, r"graphics\objects\equipment\envelope\envelope" + extension,
-                                text_of(source, "text_" + name))
+                                find_value(source, "text_" + name, "String"))
     for name, suffix in [("hidNodeName", ""), ("hidNodeNameLOD0", "_LOD0")]:
         pickup = replace_hashed(pickup, name, "Envelope" + suffix, node + suffix)
     # Saved once picked, like a diamond case and the tape.
@@ -77,14 +74,14 @@ def drawn_as(envelope, look):
 
 
 lines = open(library, encoding="utf-8").read().split("\n")
-wanted = {ENVELOPE, TAPE} | {archetype for archetype, _ in LOOKS.values()}
+wanted = {ENVELOPE, TAPE} | {name for shown, _, solid in LOOKS.values() for name in (shown, solid)}
 blocks = {name: "\n".join(lines[start:end]) for name, start, end in prototypes(lines) if name in wanted}
 
 for paper in (p for p in PAPERS if p["world"] == world):
     base = blocks[paper["base"]]
     text = drawn_as(base, paper["look"]) if "look" in paper else base
     name = "MissionPickups.TalesOfAfrica_" + paper["item"].replace(".", "_")
-    base_id = re.search(r'<value name="disEntityId" type="Int64">(\d+)</value>', base).group(1)
+    base_id = find_value(base, "disEntityId", "Int64")
     # Lit, glinting and kept like a placed retail pickup, and named.
     for field, kind, old, new in [
             ("olgLightGroup", "Hash", "00000001", "00000081"),
