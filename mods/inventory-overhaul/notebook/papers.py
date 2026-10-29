@@ -1,5 +1,6 @@
-"""The papers lying in a world: for each, the Predecessor's envelope pickup lifted out of a decoded
-entity library, drawn as the stock single sheet and naming its Items id in FCSE entity data, and an
+"""The papers lying in a world, as another mod would place its own: for each, one of the Predecessor's
+pickups lifted out of a decoded entity library, the envelope drawn as a stock sheet or photo or the
+tape as it is, naming its Items id and a cassette its sound event in FCSE entity data, and an
 instance of it placed in a sector. Written as the world's archetype and sector fragments in the
 layer.
 
@@ -14,13 +15,28 @@ from entity_fragments import add_entity_data, fragment_path, prototypes, replace
 
 library, layer, world = sys.argv[1:4]
 ENVELOPE = "OA_MissionPickups.MissionPickups.PartnerMissionEnvelope"
-SHEET = "OA_DetailObjects.DetailObjects.SingleSheet_BK"
+TAPE = "OA_MissionPickups.MissionPickups.PartnerMissionTape"
 GRAPHIC = re.compile(r'<component class="GraphicComponent".*?</component>', re.S)
+# What the envelope is drawn as: the archetype whose graphic it takes, and that graphic's file and
+# node. The photo has no physics of its own, so both take the sheet's.
+LOOKS = {
+    "sheet": ("OA_DetailObjects.DetailObjects.SingleSheet_BK", r"graphics\objects\equipment\folder\singlesheet",
+              "SingleSheet"),
+    "photo": ("props.World1_HotelRoom.HotelRoom_Photo_1", r"graphics\objects\equipment\pictureframe\photo_01",
+              "Photo_01"),
+}
+# The note flat where the boombox Appliances.BoomBoxRadio_398 stands, on a beer barrel; the photo and
+# the cassette on the round table beside it.
 PAPERS = [
-    # Flat where the boombox Appliances.BoomBoxRadio_398 stands, on a beer barrel.
-    {"item": "Torn_notebook_page", "archetype_id": 81302, "world": "world1", "level": "w1_c_3",
-     "sector": 2600, "entity_id": 2099000000000000201, "pos": (2604.02, 2108.09, 21.3459),
-     "angles": (0, 0, 0)},
+    {"item": "Note.Torn_notebook_page", "base": ENVELOPE, "look": "sheet", "archetype_id": 81302,
+     "world": "world1", "level": "w1_c_3", "sector": 2600, "entity_id": 2099000000000000204,
+     "pos": (2604.02, 2108.09, 21.3459), "angles": (0, 0, 0)},
+    {"item": "Photo.Cliff_village", "base": ENVELOPE, "look": "photo", "archetype_id": 81303,
+     "world": "world1", "level": "w1_c_3", "sector": 2600, "entity_id": 2099000000000000205,
+     "pos": (2606.95, 2106.80, 20.5065), "angles": (0, 0, 30)},
+    {"item": "Tape.Test_cassette", "base": TAPE, "sound": "0x004E1C52", "archetype_id": 81304,
+     "world": "world1", "level": "w1_c_3", "sector": 2600, "entity_id": 2099000000000000206,
+     "pos": (2606.75, 2107.00, 20.5065), "angles": (0, 0, 0)},
 ]
 
 
@@ -30,40 +46,50 @@ def vector(name, values):
             "  </value>"]
 
 
-lines = open(library, encoding="utf-8").read().split("\n")
-blocks = {name: "\n".join(lines[start:end]) for name, start, end in prototypes(lines) if name in (ENVELOPE, SHEET)}
+def drawn_as(envelope, look):
+    """The envelope with the look's graphic and the sheet's physics."""
+    archetype, path, node = LOOKS[look]
+    pickup = GRAPHIC.sub(lambda m: GRAPHIC.search(blocks[archetype]).group(0), envelope, count=1)
+    pickup = pickup.replace(r"Equipment\Envelope\Envelope.hkx", r"Equipment\Folder\SingleSheet.hkx")
+    for name, extension in [("fileName", ".xml"), ("objModel", ".xbg")]:
+        pickup = replace_hashed(pickup, name, r"graphics\objects\equipment\envelope\envelope" + extension,
+                                path + extension)
+    pickup = replace_hashed(pickup, "hidResourceId", r"graphics\objects\equipment\envelope\envelope.hkx",
+                            LOOKS["sheet"][1] + ".hkx")
+    for name, suffix in [("hidNodeName", ""), ("hidNodeNameLOD0", "_LOD0")]:
+        pickup = replace_hashed(pickup, name, "Envelope" + suffix, node + suffix)
+    # Saved once picked, like a diamond case and the tape.
+    return replace_value(pickup, "selLevel", "UInt32", "1", "3")
 
-# The envelope drawn as the sheet: lit, glinting and kept like a placed retail pickup, and saved once
-# picked like a diamond case.
-pickup = GRAPHIC.sub(lambda m: GRAPHIC.search(blocks[SHEET]).group(0), blocks[ENVELOPE], count=1)
-pickup = pickup.replace(r"Equipment\Envelope\Envelope.hkx", r"Equipment\Folder\SingleSheet.hkx")
-for name, extension in [("fileName", ".xml"), ("objModel", ".xbg"), ("hidResourceId", ".hkx")]:
-    pickup = replace_hashed(pickup, name, r"graphics\objects\equipment\envelope\envelope" + extension,
-                            r"graphics\objects\equipment\folder\singlesheet" + extension)
-for name, suffix in [("hidNodeName", ""), ("hidNodeNameLOD0", "_LOD0")]:
-    pickup = replace_hashed(pickup, name, "Envelope" + suffix, "SingleSheet" + suffix)
-for name, kind, old, new in [
-        ("olgLightGroup", "Hash", "00000001", "00000081"),
-        ("bAllowCullBySize", "Bool", "True", "False"),
-        ("bBehaveLikeAPickup", "Bool", "False", "True"),
-        ("selLevel", "UInt32", "1", "3")]:
-    pickup = replace_value(pickup, name, kind, old, new)
+
+lines = open(library, encoding="utf-8").read().split("\n")
+wanted = {ENVELOPE, TAPE} | {archetype for archetype, _, _ in LOOKS.values()}
+blocks = {name: "\n".join(lines[start:end]) for name, start, end in prototypes(lines) if name in wanted}
 
 for paper in (p for p in PAPERS if p["world"] == world):
-    name = "MissionPickups.InventoryOverhaul_" + paper["item"]
-    text = pickup
+    base = blocks[paper["base"]]
+    text = drawn_as(base, paper["look"]) if "look" in paper else base
+    name = "MissionPickups.InventoryOverhaul_" + paper["item"].replace(".", "_")
+    base_id = re.search(r'<value name="disEntityId" type="Int64">(\d+)</value>', base).group(1)
+    # Lit, glinting and kept like a placed retail pickup, and named.
     for field, kind, old, new in [
-            ("Name", "String", "MissionPickups.PartnerMissionEnvelope", name),
-            ("hidName", "String", ENVELOPE, "OA_MissionPickups." + name),
-            ("disEntityId", "Int64", "4422", paper["archetype_id"])]:
+            ("olgLightGroup", "Hash", "00000001", "00000081"),
+            ("bAllowCullBySize", "Bool", "True", "False"),
+            ("bBehaveLikeAPickup", "Bool", "False", "True"),
+            ("Name", "String", paper["base"].split(".", 1)[1], name),
+            ("hidName", "String", paper["base"], "OA_MissionPickups." + name),
+            ("disEntityId", "Int64", base_id, paper["archetype_id"])]:
         text = replace_value(text, field, kind, old, new)
     assert "nvelope" not in text
     block = text.split("\n")
-    add_entity_data(block, {"InventoryOverhaul.Item": paper["item"]})
+    data = {"InventoryOverhaul.Item": paper["item"]}
+    if "sound" in paper:
+        data["InventoryOverhaul.Sound"] = paper["sound"]
+    add_entity_data(block, data)
     write(fragment_path(layer, ("worlds", world, "generated", "entitylibrary.fcb"), "OA_MissionPickups." + name),
           block)
 
-    instance = "InventoryOverhaul_" + paper["item"]
+    instance = "InventoryOverhaul_" + paper["item"].replace(".", "_")
     sector = os.path.join(layer, "levels", paper["level"], "generated", "worldsectors",
                           "worldsector%d.data.fcb" % paper["sector"])
     write(os.path.join(sector, "%s.%d.xml" % (instance.lower(), paper["entity_id"])), [

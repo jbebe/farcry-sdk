@@ -6,6 +6,8 @@
 #include "fcse_api.h"
 #include "items.h"
 
+#include <cstdlib>
+
 namespace InventoryOverhaul::Pickups {
 
 namespace {
@@ -17,12 +19,16 @@ namespace {
                       "E8 ?? ?? ?? ?? 8B 8E C8 00 00 00 33 DB 88 5E 15 88 9E D1 00 00 00")};
     PickFn g_pick = nullptr;
 
+    // A cassette's sound event is written as the game writes one, such as "0x004E1C52".
     char __fastcall OnPick(void* pickup, void* unused, void* picker, bool flag) {
         const char picked = g_pick(pickup, unused, picker, flag);
+        const auto* data = FCSE::ApiPointer()->EntityData;
+        void* entity = Inventory::Entity(pickup);
         char id[64];
-        if (FCSE::ApiPointer()->EntityData->GetString(Inventory::Entity(pickup), "InventoryOverhaul.Item", id,
-                                                      sizeof id)) {
-            Items::Give(id);
+        char sound[16] = "0";
+        if (data->GetString(entity, "InventoryOverhaul.Item", id, sizeof id)) {
+            data->GetString(entity, "InventoryOverhaul.Sound", sound, sizeof sound);
+            Items::Give(id, std::strtoul(sound, nullptr, 16));
         }
         return picked;
     }

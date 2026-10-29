@@ -9,8 +9,8 @@
     the screen: a_io_notebook lays the spread over the screen as the sheet the pages show, and a_io_page
     holds it between two marker images the plugin knows it by, with its index tabs along the top, one
     area per page (a_io_inventory, a_io_papers, a_io_journal, a_io_contacts) shown at a time,
-    a_io_portraits the buddies' portraits a row takes its picture from, and a_io_postit the post-it
-    stuck on it. Everything the plugin fills or hides is exported as IO_*; a gun's picture is one image
+    a_io_portraits the buddies' portraits a row takes its picture from, a_io_paper_pictures the papers'
+    pictures, and a_io_postit the post-it stuck on it. Everything the plugin fills or hides is exported as IO_*; a gun's picture is one image
     per gun and slot, all but one hidden.
 
     Run from anywhere; reads the retail files under tmp\, and the install's for the fonts, writes
@@ -58,14 +58,12 @@ $PencilRed = "8F2C1C"
 # IO_POSTIT_PIC_<name>.
 $GunPictures = "6p9 ak47 as50 carlgust deagle dragunov flare fnfal g3ka4 ied ithaca lpo50 m16 m1903 m249 m79 mac10 makarov mgl40 mp5sd p45 rpg7 rpk sniperdart spas12 usas uzi" -split ' '
 $Ratings = "Damage", "Range", "Accuracy", "Reliability", "Fire rate"
-# The sample papers' pictures, in textures\common, and the buddies' portraits,
-# textures\hud\icons_buddies\buddies_<name>.png.
-$PaperPictures = "jackal_photo", "jackal_definition", "apr_01", "ufll_01"
-# The papers' photos, loading-screen pictures by their number in textures\loading, each kept by the
-# game as six tiles of a 1280 by 800 image: x, y, width and height.
-$Photos = "05"
-$PhotoTiles = @(0, 0, 256, 512), @(256, 0, 1024, 512), @(0, 512, 256, 256), @(256, 512, 1024, 256), @(0, 768, 256, 32),
-    @(256, 768, 1024, 32)
+# The test papers' pictures, as another mod adds its own to a_io_paper_pictures: each an Items id, a
+# texture, and the part of it shown, a note's square and a photo's 3:2.
+$TestPictures = @(
+    @{ Id = "Note.Torn_notebook_page"; Texture = "\textures\common\jackal_photo.png"; Region = "0 0 1 1" },
+    @{ Id = "Photo.Cliff_village"; Texture = "\textures\loading\03_02.png"; Region = "0.125 0 0.75 1" })
+# The buddies' portraits, textures\hud\icons_buddies\buddies_<name>.png.
 $Portraits = "andre flora frank hakim josip marty michele nasreen paul singh warren bai" -split ' '
 
 # A colour as Magma stores it, red in the lowest byte: written AABBGGRR. `rgb` is RRGGBB.
@@ -392,6 +390,17 @@ foreach ($tabName in $areas.Keys) {
 $page.Add((Instance a_io_portraits 0 0 1 1 0))
 Export $PagePath a_io_portraits
 
+# The papers' pictures, which the plugin copies onto the post-it and the reader: each mod adds its own
+# to this area, an image named after its paper's Items id, dots made underscores, and exports it as
+# IO_PAPER_<ID>.
+function PaperName([string]$id) { $id.Replace('.', '_').ToLowerInvariant() }
+$paperPictures = foreach ($picture in $TestPictures) {
+    Image "i_io_paper_$(PaperName $picture.Id)" "io_paper_$(PaperName $picture.Id)" "" 0 0 44 44
+    Export (AreaPath a_io_paper_pictures) "i_io_paper_$(PaperName $picture.Id)"
+}
+$page.Add((Instance a_io_paper_pictures 0 0 1 1 0))
+Export $PagePath a_io_paper_pictures
+
 # The post-it, in its own pixels; its instance tilts it about its centre.
 $postIt.Add((Image i_io_postit_paper postit "\common.mgb" 0 0 416 302 "FFFFFFFF" 0 (Crop $PostItCrop)))
 # The paperclip lies on its side; it is turned a quarter clockwise to stand across the post-it's top.
@@ -415,20 +424,16 @@ foreach ($square in @(
     $postIt.Add((Image "i_io_postit_pic_$($square.Pic)" $square.Material "" 173 22 72 72 $square.Tint 0 @(0, 0, 1, 1) $square.Blending))
     Export $PostItPath "i_io_postit_pic_$($square.Pic)"
 }
-# The papers' pictures in `area`, each named <name>_<picture> as the plugin asks for it: a picture
-# `size` square at (x, y), and a photo `photoW` wide at (photoX, photoY).
+# Where `area` shows a paper's picture, which the plugin copies in: a note's `size` square at (x, y),
+# and a photo's, 3:2, `photoW` wide at (photoX, photoY).
 function PaperPictures($area, [string]$name, [string]$path, [double]$x, [double]$y, [double]$size,
                        [double]$photoX, [double]$photoY, [double]$photoW) {
-    foreach ($paper in $PaperPictures) {
-        $area.Add((Image "i_io_${name}_$paper" "io_paper_$paper" "" $x $y $size $size))
-        Export $path "i_io_${name}_$paper"
-    }
-    foreach ($photo in $Photos) {
-        $area.Add((Instance "a_io_photo_$photo" $photoX $photoY ($photoW / 1280) ($photoW / 1280) 0 "a_io_${name}_photo$photo"))
-        Export $path "a_io_${name}_photo$photo"
-    }
+    $area.Add((Image "i_io_${name}_note" io_mark_end "" $x $y $size $size))
+    $area.Add((Image "i_io_${name}_photo" io_mark_end "" $photoX $photoY $photoW ($photoW / 1.5)))
+    Export $path "i_io_${name}_note"
+    Export $path "i_io_${name}_photo"
 }
-PaperPictures $postIt postit_pic $PostItPath 160 2 94 133 2 (94 / 800 * 1280)
+PaperPictures $postIt postit_pic $PostItPath 160 2 94 137 2 141
 $postIt.Add((Image i_io_postit_pic_tape io_tape "" 160 26 96 48 (Colour "000000" 0.8)))
 $postIt.Add((Image i_io_postit_portrait io_buddy_frank "" 172 16 72 72))
 Export $PostItPath i_io_postit_pic_tape
@@ -501,13 +506,6 @@ foreach ($name in "t_io_reader_name", "t_io_reader_text", "t_io_reader_caption",
 }
 $page.Add((Tilted a_io_reader 509 38 412 620 1.2 $true))
 Export $PagePath a_io_reader
-$photoAreas = foreach ($photo in $Photos) {
-    $tiles = for ($t = 0; $t -lt $PhotoTiles.Count; $t++) {
-        $tile = $PhotoTiles[$t]
-        Image "i_io_photo_${photo}_$($t + 1)" "io_photo_${photo}_$($t + 1)" "" $tile[0] $tile[1] $tile[2] $tile[3]
-    }
-    Area "a_io_photo_$photo" 1280 800 $tiles
-}
 # The pause menu's own page flip, common.mgb's area, which the plugin steps through itself. The pause
 # pages turn forward with it at (-27, -24), 1.0390625 as tall, over notebook.png drawn 1097 by 982
 # from (-58, -1); that carried into the spread's pixels, which draw notebook.png unscaled from
@@ -519,16 +517,14 @@ $Exports.Add("<GENERICOBJECT name=`"IO_FLIP_AREA`"><LINK slot=`"44`" LASTOBJECTT
 # The page's last image.
 $page.Add((Image i_io_end io_mark_end "" 0 0 2 2))
 
-function Material([string]$name, [string]$texture) {
-    "<Material name=`"$name`" texture=`"$texture`" REGION=`"0 0 1 1`" />"
+# A material's region is the part of its texture drawn: x, y, width and height, as fractions.
+function Material([string]$name, [string]$texture, [string]$region = "0 0 1 1") {
+    "<Material name=`"$name`" texture=`"$texture`" REGION=`"$region`" />"
 }
 $materials = @(
     ($GunPictures + "m67", "molotov") | ForEach-Object { Material "io_gun_$_" "\textures\guns\gun_icon_$_.png" }
     ("manual", "repair", "ammo") | ForEach-Object { Material "io_upgrade_$_" "\textures\ui_icon_$($_)upgrade.png" }
-    $PaperPictures | ForEach-Object { Material "io_paper_$_" "\textures\common\$_.png" }
-    foreach ($photo in $Photos) {
-        for ($t = 1; $t -le $PhotoTiles.Count; $t++) { Material "io_photo_${photo}_$t" "\textures\loading\${photo}_0$t.png" }
-    }
+    $TestPictures | ForEach-Object { Material "io_paper_$(PaperName $_.Id)" $_.Texture $_.Region }
     $Portraits | ForEach-Object { Material "io_buddy_$_" "\textures\hud\icons_buddies\buddies_$_.png" }
     Material io_tape "\textures\ui_tape_icon.png"
     ("a", "b") | ForEach-Object { Material "io_slot_$_" "\textures\hud_mp\vip_$_.png" }
@@ -609,10 +605,10 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
         (Area a_io_page $Spread.W $Spread.H $page)
         foreach ($tabName in $areas.Keys) { Area "a_io_$tabName" $Spread.W $Spread.H $areas[$tabName] }
         (Area a_io_portraits 44 44 $palette)
+        (Area a_io_paper_pictures 44 44 $paperPictures)
         (Area a_io_postit 416 302 $postIt)
         (Area a_io_reader 412 620 $reader)
-        (Area a_io_menu $MenuW $MenuH $menu)
-        $photoAreas) -join "`n"
+        (Area a_io_menu $MenuW $MenuH $menu)) -join "`n"
     $objects = @("<GENERICOBJECT name=`"IO_NOTEBOOK`"><LINK slot=`"69`" LASTOBJECTTYPE=`"Element`" IDS=`"$NotebookPath a_io_page`" /></GENERICOBJECT>") + $Exports
 
     # Generic objects, the areas, the page, then materials: back to front, so each insertion leaves

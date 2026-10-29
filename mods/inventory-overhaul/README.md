@@ -10,8 +10,8 @@ this is an FCSE plugin, built in the log's steps.
 | 2. Items | guns stowed outside the two slots, at most two, and any other item by id and count; a test window in DevTools' overlay; X drops the gun in hand, or the notebook's selected row | works in game; X seen dropping guns A and B by self-test, a stowed gun and an item not yet |
 | 3. The notebook on Tab | a gadget of its own beside the map, given with it, on a new Notebook control: two bent pages held in both hands, the right one bending as the hands move | works in game |
 | 4. The Inventory page | the mockup's spread as a Magma page drawn onto the notebook's pages: Weapons, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet |
-| 6. Papers, Journal, Contacts | R turns the page; letters and photos, read whole with LMB, the Jackal and Predecessor tapes found, the reputation and the current job, and the buddies met, in the game's words; the pause menu without those pages or its job panel | seen in game in world 2; the papers are samples; reading a paper whole seen by self-test, the dummy note's sheets and photo not yet |
-| 7. Papers in the world | the torn notebook page with the Jackal photo lies where a boombox stands on a beer barrel in world 1; picking it up puts it in Items, so Papers shows it | seen in game |
+| 6. Papers, Journal, Contacts | R turns the page; notes and photos, read whole with LMB, the Jackal and Predecessor tapes found and other mods' cassettes, the reputation and the current job, and the buddies met, in the game's words; the pause menu without those pages or its job panel | seen in game in world 2; the notes, photos and cassettes by convention not yet |
+| 7. Papers in the world | a test note, photo and cassette in world 1, laid out as another mod would lay out its own; picking one up puts it in Items, so Papers shows it | the note seen in game as it was before the convention; the photo and cassette not yet |
 
 ## Two guns
 
@@ -121,6 +121,7 @@ icon, and its two marker textures under `layer/mods/ui/textures/io`:
 | `a_io_page` | the spread and the index tabs, in the spread's own pixels, with the areas below, between two marker images |
 | `a_io_inventory`, `a_io_papers`, `a_io_journal`, `a_io_contacts` | one page each |
 | `a_io_portraits` | the buddies' portraits, hidden, for rows to copy |
+| `a_io_paper_pictures` | the papers' pictures, hidden, for the post-it and the reader to copy; other mods add theirs |
 | `a_io_postit` | the post-it, held by `common.mgb`'s paperclip, tilted at the right page's top |
 
 It is drawn the way the pause menu's paper pages are: the `notebook` texture, black Farcry2 ink with
@@ -205,17 +206,17 @@ index tab pulled out over the spread; the post-it is shared, and hidden on a pag
 text the game has is the game's, in the player's language, through its string table
 (`src/engine/story.cpp`):
 
-- **Papers** (`src/papers_page.cpp`): on the left the letters and photos, the Items records the page
-  knows by id, which leave the Inventory page's Items. Four papers from the mockup, with their
-  textures in `textures\common`: the torn notebook page is found in the world, the other three are
-  still samples. Two dummies try the reader: a note three sheets long and a photo, a loading-screen
-  picture shown from its six tiles. On the right the Jackal tapes found and then the Predecessor's,
-  from the mission manager's two lists, each with its title and the game's line about it. The post-it
-  shows a paper's opening; LMB (`startshooting`) lays the paper whole over the right page, on the
-  post-it's paper turned upright (`a_io_reader`), the wheel turns a long letter's sheets, and LMB, Esc
+- **Papers** (`src/papers_page.cpp`): on the left the notes and photos in Items, which leave the
+  Inventory page's Items; on the right the Jackal tapes found and then the Predecessor's, from the
+  mission manager's two lists, each with its title and the game's line about it, then the cassettes in
+  Items. None of them is this mod's: see [other mods' papers](#other-mods-papers). The post-it shows a
+  paper's opening; LMB (`startshooting`) lays the paper whole over the right page, on the post-it's
+  paper turned upright (`a_io_reader`), the wheel turns a long note's sheets, and LMB, Esc
   (`show_pausemenu`), R or Tab put it back. LMB on a tape plays it through the game's own
   `CJackalTapeManager::PlayTape`, as the pause menu does, while the game runs on, and on the playing
-  tape stops it (see [playing a tape](../../docs/docs/engine-internals/campaign.md)).
+  tape stops it (see [playing a tape](../../docs/docs/engine-internals/campaign.md)). A cassette plays
+  and stops the same way, through the music manager's tape slot with the first Jackal tape's stop
+  sound and sound type; its bank is held loaded while the page lists it.
 - **Journal** (`src/journal_page.cpp`): on the left the reputation level and its words, as the pause
   menu's Journal has them; on the right the current job, its objectives and the Underground's, as the
   pause menu's main page showed them (`src/engine/jobs.cpp`): every objective marker that is on, its
@@ -240,19 +241,34 @@ the job panel whatever the layer says, so the plugin also skips the three method
   same package (`a_io_portraits`); a faded row is a second pair of texts, shown in the normal one's
   place, since a text's colour cannot be changed at runtime.
 
-Fill in the test window, or `INVENTORY_OVERHAUL_FILL`, also gives the sample papers and, through the
+Fill in the test window, or `INVENTORY_OVERHAUL_FILL`, also gives the test note and photo and, through the
 game's own Lua in DevTools' console, meets Frank, Flora, Marty, Josip and Warren, makes Frank the
 primary buddy and Hakim the secondary (the game takes only a living one), kills Warren, and finds
 five Jackal tapes and the Moroccan's. `INVENTORY_OVERHAUL_LUA` holds console lines, split by `|`,
 that the console runs as the game loads, such as `hit_me` or, as Lua,
 `#AddGadget(SpawnWeapon("gadgets.Equipped.Map"))`.
 
-A paper in the world is the Predecessor's envelope pickup drawn as the stock single sheet, which
-`build-papers.ps1` writes into the layer (`notebook/papers.py`), with an instance in its sector: a
-`CPickupMissionItem` whose archetype holds its Items id as the entity data
-`InventoryOverhaul.Item`, saved at persist level 3 like a diamond case so it stays picked. After the
-engine's `CPickupMissionItem::Pick`, `src/pickups.cpp` gives the player that item. The torn notebook
-page lies where a boombox stands on a beer barrel, at (2604.02, 2108.09, 21.35) in world 1.
+### Other mods' papers
+
+The notebook has no notes, photos or cassettes of its own: another mod places them in the world, and
+a Papers page with none shows only the game's tapes. Everything about one follows from its Items id
+by convention; the only data of its own is on its pickup.
+
+| What | Where |
+|---|---|
+| The pickup | a `CPickupMissionItem` whose archetype has the entity data `InventoryOverhaul.Item`, the Items id, and for a cassette `InventoryOverhaul.Sound`, its sound event written as the game writes one (`0x004E1C52`). After the engine's `CPickupMissionItem::Pick`, `src/pickups.cpp` puts it in Items |
+| What it is | the id's first part: `Note.<name>`, `Photo.<name>` or `Tape.<name>` |
+| Its words | the string table's section `Papers`: `<id>` its name (else the id's last part), `<id>_FOUND` where it was found, `<id>_1`, `_2`... its sheets, read until one is missing. A photo's caption and a cassette's description are its first sheet |
+| Its picture | an image in `hud.mgb`'s `a_io_paper_pictures`, exported as `IO_PAPER_<ID>`, the id upper-cased with its dots made underscores: a note's shown square, a photo's 3:2, so its material's `REGION` crops it to that. A paper with none shows its words only |
+| A cassette's sound | `soundbinary\<id>.spk`, a bank of its own named after the event |
+
+The test papers are laid out the same way, in this layer for now: `build-papers.ps1` writes their
+pickups (`notebook/papers.py`), `build-ui.ps1` their pictures, and the string fragments their words.
+The torn notebook page lies on the boombox on a beer barrel, at (2604.02, 2108.09, 21.35) in world
+1, and the Cliff village photo and the test cassette on the round table beside it; the note and the
+photo are the Predecessor's envelope pickup drawn as the stock single sheet and as a polaroid, the
+cassette the Predecessor's tape pickup, a dictaphone, playing a minute of the game's own music
+(`004e1c52.spk`). Each is saved at persist level 3, like a diamond case, so it stays picked.
 
 ## Testing
 

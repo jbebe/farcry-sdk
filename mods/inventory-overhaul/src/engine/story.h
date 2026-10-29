@@ -2,6 +2,7 @@
 // which words it.
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -22,8 +23,9 @@ std::wstring Words(const char* section, const std::string& key);
 std::vector<std::string> FoundTapes();
 
 // Plays tape `key` from its start as the pause menu does, stopping any other, while the game runs on;
-// false when it did not start, as while scripted music plays.
-bool PlayTape(const std::string& key);
+// false when it did not start, as while scripted music plays. With a `sound`, the tape is another
+// mod's cassette, that sound event, played and stopped as the Jackal tapes are.
+bool PlayTape(const std::string& key, uint32_t sound = 0);
 void StopTape();
 // The key of the tape PlayTape started while it still plays, else empty.
 std::string PlayingTape();

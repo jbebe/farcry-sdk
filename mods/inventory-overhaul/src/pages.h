@@ -59,14 +59,14 @@ void ClearPostIt(Model& model);
 // closed.
 int InventoryPage(Model& model, int& selected, const void* view, void* inventory, bool dropped, bool used,
                   int& menu);
-// `used`, the page was clicked: the selected paper is read whole, or put back, and the selected tape
-// played, or stopped while it plays. `sheet` is the sheet
-// read, kept within the paper's, or -1 while none is.
+// `used`, the page was clicked: the selected note or photo is read whole, or put back, and the selected
+// tape or cassette played, or stopped while it plays. `sheet` is the sheet read, kept within the
+// paper's, or -1 while none is.
 int PapersPage(Model& model, int& selected, bool used, int& sheet);
 void JournalPage(Model& model);
 int ContactsPage(Model& model, int& selected);
 
-// Whether an Items record is a paper, which the Papers page lists instead of Items.
+// Whether an Items record is a note, photo or cassette, which the Papers page lists instead of Items.
 bool IsPaper(const std::string& id);
 
 }

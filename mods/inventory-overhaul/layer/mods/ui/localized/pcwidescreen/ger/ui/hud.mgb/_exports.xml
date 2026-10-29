@@ -570,6 +570,15 @@
     <GENERICOBJECT name="IO_PORTRAITS">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_portraits" />
     </GENERICOBJECT>
+    <GENERICOBJECT name="IO_PAPER_NOTE_TORN_NOTEBOOK_PAGE">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_paper_pictures a_io_paper_pictures i_io_paper_note_torn_notebook_page" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_PAPER_PHOTO_CLIFF_VILLAGE">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_paper_pictures a_io_paper_pictures i_io_paper_photo_cliff_village" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_PAPER_PICTURES">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_paper_pictures" />
+    </GENERICOBJECT>
     <GENERICOBJECT name="IO_POSTIT_PIC_6P9">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_6p9" />
     </GENERICOBJECT>
@@ -672,20 +681,11 @@
     <GENERICOBJECT name="IO_POSTIT_PIC_MOLOTOV">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_molotov" />
     </GENERICOBJECT>
-    <GENERICOBJECT name="IO_POSTIT_PIC_JACKAL_PHOTO">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_jackal_photo" />
+    <GENERICOBJECT name="IO_POSTIT_PIC_NOTE">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_note" />
     </GENERICOBJECT>
-    <GENERICOBJECT name="IO_POSTIT_PIC_JACKAL_DEFINITION">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_jackal_definition" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_POSTIT_PIC_APR_01">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_apr_01" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_POSTIT_PIC_UFLL_01">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_ufll_01" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_POSTIT_PIC_PHOTO05">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit a_io_postit_pic_photo05" />
+    <GENERICOBJECT name="IO_POSTIT_PIC_PHOTO">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_photo" />
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_POSTIT_PIC_TAPE">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_tape" />
@@ -942,20 +942,11 @@
     <GENERICOBJECT name="IO_POSTIT">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit" />
     </GENERICOBJECT>
-    <GENERICOBJECT name="IO_READER_PIC_JACKAL_PHOTO">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_reader a_io_reader i_io_reader_pic_jackal_photo" />
+    <GENERICOBJECT name="IO_READER_PIC_NOTE">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_reader a_io_reader i_io_reader_pic_note" />
     </GENERICOBJECT>
-    <GENERICOBJECT name="IO_READER_PIC_JACKAL_DEFINITION">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_reader a_io_reader i_io_reader_pic_jackal_definition" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_READER_PIC_APR_01">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_reader a_io_reader i_io_reader_pic_apr_01" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_READER_PIC_UFLL_01">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_reader a_io_reader i_io_reader_pic_ufll_01" />
-    </GENERICOBJECT>
-    <GENERICOBJECT name="IO_READER_PIC_PHOTO05">
-      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_reader a_io_reader a_io_reader_pic_photo05" />
+    <GENERICOBJECT name="IO_READER_PIC_PHOTO">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_reader a_io_reader i_io_reader_pic_photo" />
     </GENERICOBJECT>
     <GENERICOBJECT name="IO_READER_NAME">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_reader a_io_reader t_io_reader_name" />

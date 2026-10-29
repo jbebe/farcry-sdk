@@ -1,7 +1,7 @@
     <object hash="256A1FF9">
-      <value name="Name" type="String">MissionPickups.InventoryOverhaul_Torn_notebook_page</value>
+      <value name="Name" type="String">MissionPickups.InventoryOverhaul_Note_Torn_notebook_page</value>
       <object type="Entity">
-        <value name="hidName" type="String">OA_MissionPickups.MissionPickups.InventoryOverhaul_Torn_notebook_page</value>
+        <value name="hidName" type="String">OA_MissionPickups.MissionPickups.InventoryOverhaul_Note_Torn_notebook_page</value>
         <value name="disEntityId" type="Int64">81302</value>
         <value name="text_hidEntityClass" type="String">CEntity</value>
         <value name="hidEntityClass" type="Hash">50C95067</value>
@@ -175,7 +175,7 @@
           </object>
           <object type="CFCSEDataComponent">
             <object type="InventoryOverhaul.Item">
-              <value name="String" type="String">Torn_notebook_page</value>
+              <value name="String" type="String">Note.Torn_notebook_page</value>
             </object>
           </object>
         </object>

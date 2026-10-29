@@ -3,4 +3,16 @@
     <string enum="toggle_notebook" value="Taccuino" />
     <string enum="drop_item" value="Rilascia" />
   </section>
+  <section name="Papers">
+    <string enum="Note.Torn_notebook_page" value="Torn notebook page" />
+    <string enum="Note.Torn_notebook_page_FOUND" value="on a boombox" />
+    <string enum="Note.Torn_notebook_page_1" value="The Jackal is gone. He missed our meeting yesterday &amp; today. He never missed a meeting. I don't think I'll ever see him again." />
+    <string enum="Note.Torn_notebook_page_2" value="Word on the street - someone's been sent after him." />
+    <string enum="Photo.Cliff_village" value="Cliff village" />
+    <string enum="Photo.Cliff_village_FOUND" value="on a table" />
+    <string enum="Photo.Cliff_village_1" value="Test photo. A village built into the cliffs." />
+    <string enum="Tape.Test_cassette" value="Test cassette" />
+    <string enum="Tape.Test_cassette_FOUND" value="on a table" />
+    <string enum="Tape.Test_cassette_1" value="Test cassette. A minute of the game's own music, played from a bank of its own." />
+  </section>
 </oasisstrings>

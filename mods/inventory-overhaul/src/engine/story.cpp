@@ -25,6 +25,7 @@ namespace {
     using FreeFn = void(__fastcall*)(EngineString<wchar_t>* string);
     using TapeFn = void(__fastcall*)(void* manager, void* unused);
     using PlayTapeFn = void(__fastcall*)(void* manager, void* unused, const void* tape);
+    using TapeSlotFn = void(__cdecl*)(uint32_t sound, int32_t type, float fade, int32_t flag);
 
     // CStringTableMgr::Localize and its singleton, and the id of the strings' file every page passes,
     // a constant in the image.
@@ -59,6 +60,13 @@ namespace {
     FCSE::Relocation<const int32_t*> g_tapeHandle{FCSE::Uplay(0x0164C234)};
     FCSE::Relocation<const uint32_t*> g_tapeSound{FCSE::Uplay(0x0164C22C)};
     constexpr ptrdiff_t kHandleManager = 0x0C;
+    // The slot's play, which replaces the sound playing in it, and the manager's own tapes: each a key,
+    // a start and a stop sound, and a sound type.
+    FCSE::Relocation<TapeSlotFn> g_tapeSlot{FCSE::Uplay(0x006FA7D0)};
+    constexpr ptrdiff_t kEntries = 0xE0;
+    constexpr ptrdiff_t kEntryCount = 0xE4;
+    constexpr ptrdiff_t kEntryStop = 0x20;
+    constexpr ptrdiff_t kEntryType = 0x24;
 
     // The mission manager's Jackal and Predecessor tapes, SMissionTape records each starting with its
     // string key, and whether one was found.
@@ -109,10 +117,16 @@ namespace {
     }
 
     void* TapeManager() {
-        void* handle = g_tapeManager && g_touchTapes && g_playTape && g_stopTape && g_tapeHandle && g_tapeSound
+        void* handle = g_tapeManager && g_touchTapes && g_playTape && g_stopTape && g_tapeHandle && g_tapeSound &&
+                               g_tapeSlot
                            ? *g_tapeManager.get()
                            : nullptr;
         return handle != nullptr ? Read<void*>(handle, kHandleManager) : nullptr;
+    }
+
+    // The manager's first tape, whose stop sound and sound type a cassette takes, or null.
+    const uint8_t* FirstTape(const void* manager) {
+        return Read<uint32_t>(manager, kEntryCount) > 0 ? Read<const uint8_t*>(manager, kEntries) : nullptr;
     }
 }
 
@@ -167,19 +181,28 @@ std::vector<std::string> FoundTapes() {
     return keys;
 }
 
-bool PlayTape(const std::string& key) {
+bool PlayTape(const std::string& key, uint32_t sound) {
     void* manager = TapeManager();
     const uint8_t* record = nullptr;
-    EachTape([&](const uint8_t* tape) {
-        if (record == nullptr && ReadString(tape) == key) {
-            record = tape;
-        }
-    });
-    if (manager == nullptr || record == nullptr) {
+    if (sound == 0) {
+        EachTape([&](const uint8_t* tape) {
+            if (record == nullptr && ReadString(tape) == key) {
+                record = tape;
+            }
+        });
+    }
+    const uint8_t* first = manager != nullptr ? FirstTape(manager) : nullptr;
+    if (manager == nullptr || (sound == 0 ? record == nullptr : first == nullptr)) {
         return false;
     }
     g_touchTapes(manager, nullptr);
-    g_playTape(manager, nullptr, record);
+    if (sound == 0) {
+        g_playTape(manager, nullptr, record);
+    } else {
+        // StopTape first, as PlayTape does, so that no tape of the manager's stays marked playing.
+        g_stopTape(manager, nullptr);
+        g_tapeSlot(sound, Read<int32_t>(first, kEntryType), -1.0f, 0);
+    }
     if (*g_tapeHandle.get() == -1) {
         return false;
     }
@@ -189,8 +212,15 @@ bool PlayTape(const std::string& key) {
 }
 
 void StopTape() {
-    if (void* manager = TapeManager()) {
-        g_stopTape(manager, nullptr);
+    void* manager = TapeManager();
+    if (manager == nullptr) {
+        return;
+    }
+    g_stopTape(manager, nullptr);
+    // A cassette is none of the manager's tapes, so it still plays: it ends on their stop sound.
+    const uint8_t* first = FirstTape(manager);
+    if (first != nullptr && !PlayingTape().empty()) {
+        g_tapeSlot(Read<uint32_t>(first, kEntryStop), Read<int32_t>(first, kEntryType), -1.0f, 0);
     }
 }
 

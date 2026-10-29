@@ -5,6 +5,8 @@
 #include "engine/memory.h"
 #include "fcse_api.h"
 
+#include <map>
+
 namespace InventoryOverhaul::Sound {
 
 namespace {
@@ -30,8 +32,7 @@ namespace {
     constexpr size_t kGetSoundLengthSlot = 0xC0 / sizeof(void*);
 
     bool g_ready = false;
-    SoundResourceRef g_held{};
-    bool g_holding = false;
+    std::map<uint32_t, SoundResourceRef> g_held;
 
     void* System() { return g_ready ? g_getSoundSystem() : nullptr; }
 }
@@ -42,13 +43,13 @@ bool Install() {
 }
 
 void Hold(uint32_t id) {
-    if (!g_ready || g_holding) {
+    if (!g_ready || g_held.count(id) != 0) {
         return;
     }
-    g_holding = true;
-    g_getFromSoundId(&g_held, id, nullptr);
-    if (g_held.resource != nullptr) {
-        Method<RequestLoadFn>(g_held.resource, kRequestLoadSlot)(g_held.resource);
+    SoundResourceRef& held = g_held[id];
+    g_getFromSoundId(&held, id, nullptr);
+    if (held.resource != nullptr) {
+        Method<RequestLoadFn>(held.resource, kRequestLoadSlot)(held.resource);
     }
 }
 

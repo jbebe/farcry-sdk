@@ -41,70 +41,30 @@
       </Text>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_reader_pic_jackal_photo">
+      <USERDATA name="i_io_reader_pic_note">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_reader_pic_jackal_photo" IDX="0" INTERPOLATION="None">
+        <Keyframe name="kf_i_io_reader_pic_note" IDX="0" INTERPOLATION="None">
           <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="130" ORIGIN.y="130" LEFT="76" RIGHT="336" TOP="72" BOTTOM="332" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
         </Keyframe>
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="io_paper_jackal_photo" PACKAGE="" />
+        <MATERIALLINK present="true" id="io_mark_end" PACKAGE="" />
       </Image>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_reader_pic_jackal_definition">
+      <USERDATA name="i_io_reader_pic_photo">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_reader_pic_jackal_definition" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="130" ORIGIN.y="130" LEFT="76" RIGHT="336" TOP="72" BOTTOM="332" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        <Keyframe name="kf_i_io_reader_pic_photo" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="176" ORIGIN.y="117" LEFT="30" RIGHT="382" TOP="92" BOTTOM="327" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
         </Keyframe>
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="io_paper_jackal_definition" PACKAGE="" />
+        <MATERIALLINK present="true" id="io_mark_end" PACKAGE="" />
       </Image>
-    </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_reader_pic_apr_01">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_i_io_reader_pic_apr_01" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="130" ORIGIN.y="130" LEFT="76" RIGHT="336" TOP="72" BOTTOM="332" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="io_paper_apr_01" PACKAGE="" />
-      </Image>
-    </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_reader_pic_ufll_01">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_i_io_reader_pic_ufll_01" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="130" ORIGIN.y="130" LEFT="76" RIGHT="336" TOP="72" BOTTOM="332" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="io_paper_ufll_01" PACKAGE="" />
-      </Image>
-    </Element>
-    <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="a_io_reader_pic_photo05">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_a_io_reader_pic_photo05" IDX="0" INTERPOLATION="None">
-          <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="30" POSITION.y="92" SCALEX="0.275" SCALEY="0.275" />
-        </Keyframe>
-      </KEYFRAMES>
-      <AreaInstance LABEL="" INDEXOFFSET="0">
-        <MATERIALLINK present="false" />
-        <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#A1126B78" AREA="a_io_photo_05" ISUSINGDUPLICATEDAREA="false" />
-      </AreaInstance>
     </Element>
     <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
       <USERDATA name="t_io_reader_text">

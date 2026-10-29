@@ -1,5 +1,5 @@
 // Items as one string of entity data, a record a line: "gun <archetype> <wear> <rounds>" or
-// "item <id> <count>".
+// "item <id> <count> <sound>".
 #include "items.h"
 
 #include "engine/inventory.h"
@@ -67,7 +67,7 @@ std::vector<Record> Load() {
         if (item.gun) {
             fields >> item.reliability >> item.loaded;
         } else {
-            fields >> item.count;
+            fields >> item.count >> item.sound;
         }
         if (!item.id.empty()) {
             items.push_back(item);
@@ -86,7 +86,7 @@ void Save(const std::vector<Record>& items) {
         if (item.gun) {
             text << "gun " << item.id << ' ' << item.reliability << ' ' << item.loaded << '\n';
         } else {
-            text << "item " << item.id << ' ' << item.count << '\n';
+            text << "item " << item.id << ' ' << item.count << ' ' << item.sound << '\n';
         }
     }
     FCSE::ApiPointer()->EntityData->SetString(player, kItemsKey, text.str().c_str());
@@ -163,7 +163,7 @@ bool Drop(void* inventory, size_t index) {
     return true;
 }
 
-bool Give(const std::string& id) {
+bool Give(const std::string& id, uint32_t sound) {
     std::vector<Record> items = Load();
     if (id.rfind(kWeaponPrefix, 0) == 0) {
         if (GunCount(items) >= kMostGuns) {
@@ -177,7 +177,7 @@ bool Give(const std::string& id) {
         if (same != items.end()) {
             ++same->count;
         } else {
-            items.push_back({id});
+            items.push_back({id, false, -1.0f, -1, 1, sound});
         }
     }
     Save(items);

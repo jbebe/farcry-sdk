@@ -26,9 +26,8 @@ namespace {
     constexpr const char* kTabNames[] = {"INVENTORY", "PAPERS", "JOURNAL", "CONTACTS"};
 
     // The post-it's pictures besides the guns', as build-ui.ps1 makes them.
-    constexpr const char* kOtherPictures[] = {"machete", "diamond", "seringe", "pills", "m67", "molotov",
-                                              "jackal_photo", "jackal_definition", "apr_01", "ufll_01", "photo05",
-                                              "tape"};
+    constexpr const char* kOtherPictures[] = {"machete", "diamond", "seringe", "pills", "m67", "molotov", "note",
+                                              "photo", "tape"};
     // The upgrade icon rows: a gun's three on the third line, a belt item's two on the second.
     constexpr std::pair<const char*, int> kUpgradeRows[] = {{"IO_POSTIT_UP", 3}, {"IO_POSTIT_BELT_UP", 2}};
     constexpr int kHalfSteps = 10;
@@ -261,8 +260,9 @@ void Update(const void* view, void* inventory) {
         model.Show("IO_TAB_" + name, tab != g_tab);
         model.Show("IO_TAB_" + name + "_LABEL", tab != g_tab);
     }
-    // The portraits a buddy's picture is taken from.
+    // The portraits a buddy's picture is taken from, and the papers' pictures.
     model.Show("IO_PORTRAITS", false);
+    model.Show("IO_PAPER_PICTURES", false);
     ClearPostIt(model);
     int rows = 0;
     switch (g_tab) {

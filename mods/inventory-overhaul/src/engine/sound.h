@@ -11,8 +11,8 @@ constexpr uint32_t kNone = UINT32_MAX;
 // False when this build lacks the sound system calls; everything below is then a no-op.
 bool Install();
 
-// Requests the bank named after `id` and holds it loaded: a play never loads its own bank. Once is
-// enough; later calls do nothing.
+// Requests the bank named after `id` and holds it loaded: a play never loads its own bank. Once per
+// id is enough; later calls do nothing.
 void Hold(uint32_t id);
 
 // The playing sound's handle, or kNone when it did not start.

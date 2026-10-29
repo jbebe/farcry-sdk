@@ -1,11 +1,11 @@
 <object type="Entity">
-  <value name="tplCreatureType" type="String">OA_MissionPickups.MissionPickups.InventoryOverhaul_Torn_notebook_page</value>
-  <value name="hidName" type="String">InventoryOverhaul_Torn_notebook_page</value>
-  <value name="disEntityId" type="Int64">2099000000000000201</value>
+  <value name="tplCreatureType" type="String">OA_MissionPickups.MissionPickups.InventoryOverhaul_Tape_Test_cassette</value>
+  <value name="hidName" type="String">InventoryOverhaul_Tape_Test_cassette</value>
+  <value name="disEntityId" type="Int64">2099000000000000206</value>
   <value name="hidPos" type="Vector3">
-    <x>2604.02</x>
-    <y>2108.09</y>
-    <z>21.3459</z>
+    <x>2606.75</x>
+    <y>2107.0</y>
+    <z>20.5065</z>
   </value>
   <value name="hidAngles" type="Vector3">
     <x>0</x>
@@ -13,9 +13,9 @@
     <z>0</z>
   </value>
   <value name="hidPos_precise" type="Vector3">
-    <x>2604.02</x>
-    <y>2108.09</y>
-    <z>21.3459</z>
+    <x>2606.75</x>
+    <y>2107.0</y>
+    <z>20.5065</z>
   </value>
   <object type="Components">
     <object type="CEventComponent">
