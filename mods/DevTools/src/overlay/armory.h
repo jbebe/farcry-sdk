@@ -1,4 +1,4 @@
-// The Armory tab: how a gun should arrive, and a button per gun, each putting it in the player's hands.
+// The Armory tab: a button per gun putting it in the player's hands, and controls for the gun in hand.
 #pragma once
 
 namespace DevTools::Armory {

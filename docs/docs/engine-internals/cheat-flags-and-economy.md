@@ -199,13 +199,18 @@ refills every gun. It neither makes room in the gun's class nor draws the gun. A
 | Spare | `CInventoryViewPawn::SetAmmo` (`0x10125f70`) | Sets the pool of that ammo type exactly, with no cap |
 | Draw | `ForceSelectWeapon` (`0x1012b9b0`) | Skipped while the inventory is locked (`+0x50`); does nothing if a gun of the class is already out |
 
-A gun already in hand has loaded its magazine, so `ForceAmmoInClip` (`0x10130060`) sets it, uncapped,
-and rolls for a jam as a reload does.
+Drawing a gun (`SWeaponImpl::OnEquip`, server `0x08f49d00`) sets its magazine to the rounds it
+remembers, taking from the pool whatever `RememberedAmmoOverflow` does not cover.
+`SetRememberedAmmoInClip` sets both, so nothing is taken. A gun without clips first remembers its whole
+pool and empties it, so its rounds are in the pool while holstered and in the magazine while drawn.
+
+A gun already in hand has loaded its magazine, so `SetAmmoInClip` (`0x1012e960`) sets it, with no cap.
+`ForceAmmoInClip` (`0x10130060`) does the same and rolls for a jam, as a reload does.
 
 Reliability is not a fraction. The gun's state constructor (`0x10130260`) starts both it and
-`MaxReliability` at 1000, and a shot takes `MaxReliability ÷ iClipsForSelfDestruct ÷ magazine` off it, so setting a new
-gun to 1 leaves it a few shots from breaking **(seen in game)**. Anything meant as a share of a gun's
-life multiplies `MaxReliability`, as the game does at `0x1069bb80` with 0.75 and 0.25.
+`MaxReliability` at 1000, and a shot takes `MaxReliability ÷ iClipsForSelfDestruct ÷ magazine` off it,
+so setting a new gun to 1 leaves it a few shots from breaking **(seen in game)**. Anything meant as a
+share of a gun's life multiplies `MaxReliability`, as the game does at `0x1069bb80` with 0.75 and 0.25.
 
 A class id is the CRC-32 of `primary`, `secondary` or `special`, indexed by `selCategory` in the table
 at `0x10f93390`. The class is not always the one in the archetype's name: `weapons.Special.M1903` is a

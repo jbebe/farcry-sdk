@@ -348,22 +348,24 @@ the ground. Nothing is placed there.
 
 ### Armory
 
-The Armory tab, next to Range, puts a gun in your hands at the end of the next frame, with the
-ammo and health you set above the buttons. It has a button for each of the 28 guns of the game's own
+The Armory tab, next to Range, has a button for each of the 28 guns of the game's own
 `CHEAT_GiveWeapons` box, under the class the gun is really carried in: the M1903 is a primary and the
 flare gun a secondary, whatever their archetype names say. Hovering a button shows the archetype.
 
-- **Magazine** and **Spare** are the two ammo counts. Each is capped at what the gun holds on the
-  current difficulty, upgrades included, so the default of 999 means full. Spare is one pool per ammo
-  type, so it also changes every other gun of that type. The LPO-50 has no magazine: Magazine is its
-  fuel.
-- **Health %** is the gun's reliability as a percentage of its maximum: 100 is new, 0 is worn out.
-  The result line shows the engine's own numbers.
+A click works like a pickup, at the end of the next frame: the gun of that class you carry drops at
+your feet, and the new one is drawn at once, full and new. If you already carry that model, it is kept
+and restored, so repeated clicks leave nothing on the ground. The result shows in the tab and in
+`fcse.log`, as does the reason when a gun cannot be given.
 
-A click works like a pickup: the gun of that class you carry drops at your feet, and the new one is
-drawn at once. If you already carry that model, it is kept and only its values change, so repeated
-clicks leave nothing on the ground. The result, with the numbers the gun ended up with, shows above
-the buttons and in `fcse.log`, as does the reason when a gun cannot be given.
+Above the buttons are two controls for whichever gun is in your hands, however it got there. Both
+follow the gun, so the slider falls as you fire:
+
+- **Ammo** runs from 0 to what the gun holds in all: its magazine plus its spare pool, on the current
+  difficulty and with upgrades. The magazine fills first and the rest go spare, as when a pickup shares
+  out its rounds. Spare is one pool per ammo type, so it also changes every other gun of that type.
+  The LPO-50 has no magazine or spare, only fuel. Ctrl+click types a number.
+- **Health %** is the gun's reliability as a percentage of its maximum: 100 is new, 0 is worn out. It
+  applies when you press Enter, click away or use the step buttons.
 
 ### Adding a window from another plugin
 
@@ -541,10 +543,10 @@ Everything below needs a real install:
   `SpawnEntityFromArchetype` line it ran.
 - **Spawner soldiers** *(seen 2026-10-25 with squad size 1)*: in the test range, Red faction's
   Assault, Caucasian put a soldier 25 m ahead, facing you, and he opened fire at once.
-- **Armory** *(seen 2026-10-30, health not since its fix)*: with Magazine 5, Spare 20 and Health 100,
-  AK-47 draws an AK-47 and the HUD shows 5 and 20, the gun of its class lies at your feet, the tab
-  reads `5 in the magazine, 20 spare, reliability 1000 of 1000`, and the gun lasts about 50 magazines.
-  Clicking again with Magazine 12 sets the gun in hand to 12 and drops nothing.
+- **Armory** *(giving a gun seen 2026-10-30; the slider and the health fix not yet run)*: AK-47 draws an
+  AK-47, the gun of its class lies at your feet, and the tab reads `reliability 1000 of 1000`. With
+  Ammo at 35, the HUD shows 30 and 5. Firing lowers the slider. The gun lasts about 50 magazines.
+  Clicking AK-47 again refills and restores it and drops nothing.
 - **Range** *(seen 2026-10-25)*: Rifleman at 10 m put the player at the duel lane's start facing
   him and spawned him on a guard post. He stood facing the player for about 7 s before he noticed
   him, so the scenarios no longer use guard posts. Not yet run since that change.
