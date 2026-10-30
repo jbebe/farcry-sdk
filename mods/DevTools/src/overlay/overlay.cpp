@@ -17,6 +17,7 @@
 #include "engine/renderer.h"
 #include "engine/weather.h"
 #include "fcse_api.h"
+#include "overlay/armory.h"
 #include "overlay/baseline.h"
 #include "overlay/diagnostics.h"
 #include "overlay/lua_console.h"
@@ -57,7 +58,8 @@ namespace {
     constexpr Tab kOwnTabs[] = {{"Diagnostics", &DevTools::Diagnostics::Draw},
                                 {"Lua", &DevTools::LuaConsole::Draw},
                                 {"Spawner", &DevTools::Spawner::Draw},
-                                {"Range", &DevTools::Range::Draw}};
+                                {"Range", &DevTools::Range::Draw},
+                                {"Armory", &DevTools::Armory::Draw}};
 
     constexpr size_t kHistoryMax = 12;
 

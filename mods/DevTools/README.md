@@ -346,6 +346,24 @@ wall (120 of them), so soldiers should take cover behind them. That is not yet s
 `tmpla`'s south-west sector, x and y below 64, is flooded: it has a water plane at 32 m, 16 m above
 the ground. Nothing is placed there.
 
+### Armory
+
+The Armory tab, next to Range, puts a gun in your hands at the end of the next frame, with the
+ammo and health you set above the buttons. It has a button for each of the 28 guns of the game's own
+`CHEAT_GiveWeapons` box, under the class the gun is really carried in: the M1903 is a primary and the
+flare gun a secondary, whatever their archetype names say. Hovering a button shows the archetype.
+
+- **Magazine** and **Spare** are the two ammo counts. Each is capped at what the gun holds on the
+  current difficulty, upgrades included, so the default of 999 means full. Spare is one pool per ammo
+  type, so it also changes every other gun of that type. The LPO-50 has no magazine: Magazine is its
+  fuel.
+- **Health** is the gun's reliability, from 1 (new) to 0 (worn out).
+
+A click works like a pickup: the gun of that class you carry drops at your feet, and the new one is
+drawn at once. If you already carry that model, it is kept and only its values change, so repeated
+clicks leave nothing on the ground. The result, with the numbers the gun ended up with, shows above
+the buttons and in `fcse.log`, as does the reason when a gun cannot be given.
+
 ### Adding a window from another plugin
 
 `include/devtools_api.h` is the contract, the way `fcse_api.h` is FCSE's, and says what DevTools does
@@ -522,6 +540,9 @@ Everything below needs a real install:
   `SpawnEntityFromArchetype` line it ran.
 - **Spawner soldiers** *(seen 2026-10-25 with squad size 1)*: in the test range, Red faction's
   Assault, Caucasian put a soldier 25 m ahead, facing you, and he opened fire at once.
+- **Armory** *(not yet run)*: with Magazine 5, Spare 20 and Health 0.30, AK-47 draws an AK-47 and the
+  HUD shows 5 and 20; the gun of its class lies at your feet, and the tab reads `5 in the magazine,
+  20 spare, health 0.30`. Clicking again with Magazine 12 sets the gun in hand to 12 and drops nothing.
 - **Range** *(seen 2026-10-25)*: Rifleman at 10 m put the player at the duel lane's start facing
   him and spawned him on a guard post. He stood facing the player for about 7 s before he noticed
   him, so the scenarios no longer use guard posts. Not yet run since that change.

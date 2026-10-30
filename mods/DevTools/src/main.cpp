@@ -23,6 +23,7 @@
 #include "engine/entity.h"
 #include "engine/game_profile.h"
 #include "engine/game_thread.h"
+#include "engine/inventory.h"
 #include "engine/keys.h"
 #include "engine/lua.h"
 #include "engine/pawn_tick.h"
@@ -138,6 +139,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // The player, the flags hung off their profile, and the frame all of it runs on. Subscribers are
     // called in the order they register here, so the profile's own frame goes first.
     DevTools::Player::Install();
+    DevTools::Inventory::Install();
     DevTools::GameProfile::Install();
     InstallInvincibilityHooks();
     InstallInfiniteAmmoHooks();

@@ -8,6 +8,9 @@ void Install();
 // Null outside a session, which is how everything here tells a live game from a menu.
 void* Local();
 
+// The local player's CPawn, or null.
+void* Pawn();
+
 // The camera manager for the local player's scene, or null. Takes the player when the caller
 // already has one, because most callers are on a frame that resolved it once.
 void* CameraManager(void* local);

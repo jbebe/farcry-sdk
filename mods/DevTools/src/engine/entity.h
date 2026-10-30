@@ -31,6 +31,12 @@ float Yaw(void* entity);
 void SetPosition(void* entity, float x, float y, float z);
 void SetEuler(void* entity, float pitch, float roll, float yaw);
 
+// The name an entity has from its archetype, as `weapons.Primary.AK47`, or "" for no entity.
+const char* Name(const void* entity);
+
+// The entity's component of the class `classId`, or null.
+void* Component(void* entity, const void* classId);
+
 // The entity's physics component, registering its class tag first, as the engine does on every
 // fetch. Null if the entity has none.
 void* PhysicsComponent(void* entity);

@@ -182,3 +182,31 @@ How much of each belt item the player carries, as the HUD and Lua read it:
 
 A gadget's category index sits at `gadget+0x24`, then `+0x54` in the PC build, where the server build
 keeps its uses; the two lay that object out differently.
+
+## Handing the player a gun
+
+`cheat_add_playerweapon` (`0x10769760`) takes a full archetype name, calls `AddWeaponByName` and then
+refills every gun. It neither makes room in the gun's class nor draws the gun. A pickup does both, in
+`CPickupWeapon::SwitchWeapon` (server `0x090edce0`), which is the order to copy **(RE-verified)**:
+
+| Step | Call | What it does |
+|---|---|---|
+| Find the class's gun | `GetWeaponFromCategory` (`0x10128fb0`) | The first carried gun of the class |
+| Make room | `DropWeapon` (`0x1012db20`) | Does nothing while the player is on a mounted gun; leaves no pickup at reliability 0 or below |
+| Add | `AddWeaponByName` (`0x1012b540`) | False if the archetype is unknown, or a gun with its item id is already carried |
+| Wear | `SetReliability`, weapon vtable `+0xBC` | Capped at `MaxReliability`; at 0 or below, a gun that is not breakable goes back to 1.0 |
+| Magazine | `SetRememberedAmmoInClip` (`0x1012f850`) | Capped at `GetMaxAmmoInClip`; the gun loads this when drawn |
+| Spare | `CInventoryViewPawn::SetAmmo` (`0x10125f70`) | Sets the pool of that ammo type exactly, with no cap |
+| Draw | `ForceSelectWeapon` (`0x1012b9b0`) | Skipped while the inventory is locked (`+0x50`); does nothing if a gun of the class is already out |
+
+A gun already in hand has loaded its magazine, so `ForceAmmoInClip` (`0x10130060`) sets it, uncapped,
+and rolls for a jam as a reload does.
+
+A class id is the CRC-32 of `primary`, `secondary` or `special`, indexed by `selCategory` in the table
+at `0x10f93390`. The class is not always the one in the archetype's name: `weapons.Special.M1903` is a
+primary and `weapons.Special.Flare_Gun` a secondary **(from the entity library)**.
+
+Two limits come from the properties. `GetMaxAmmo` (`0x1012f820`, on the gun) is `iMaxAmmo` for the
+difficulty plus any `MaxAmmo` bonus, and `AddWeapon` makes it the cap of the gun's ammo pool.
+`GetMaxAmmoInClip` (`0x1012f830`) is `iAmmoInClip`, or `GetMaxAmmo` when `bUsesClips` is false, which
+only the LPO-50 sets.

@@ -4,6 +4,7 @@
 // by-value reference convention the manager's SetFocus uses.
 #include "engine/entity.h"
 
+#include "engine/memory.h"
 #include "fcse_api.h"
 
 #include <cmath>
@@ -14,6 +15,7 @@ namespace {
 
     constexpr ptrdiff_t kRefCount = 0x08;
     constexpr ptrdiff_t kRefEntity = 0x0C;
+    constexpr ptrdiff_t kEntityName = 0x10;
     constexpr ptrdiff_t kEntityMatrix = 0x30;
 
     constexpr ptrdiff_t kManagerFocusLow = 0x08;
@@ -41,7 +43,7 @@ namespace {
     using SetEulerFn = void(__fastcall*)(void* entity, void* unused, float pitch, float roll,
                                          float yaw);
     using RegisterTagFn = void(__fastcall*)(void* unused);
-    using GetComponentFn = void*(__fastcall*)(void* entity, void* unused, void* tag);
+    using GetComponentFn = void*(__fastcall*)(void* entity, void* unused, const void* tag);
     using SetPhysicsEnabledFn = void(__fastcall*)(void* physics, void* unused, int32_t enabled);
 
     FCSE::Relocation<uint8_t*> g_focusResolve{FCSE::Pattern(
@@ -103,7 +105,7 @@ void Install() {
     }
 
     if (g_refFromId == nullptr || g_getComponentByTag == nullptr || g_setPosition == nullptr) {
-        api->Log("entity: not everything needed to move an entity was found in this build");
+        api->Log("entity: not everything needed to reach or move an entity was found in this build");
     }
 }
 
@@ -180,8 +182,20 @@ void SetEuler(void* entity, float pitch, float roll, float yaw) {
     }
 }
 
+const char* Name(const void* entity) {
+    if (entity == nullptr) {
+        return "";
+    }
+    const auto* name = static_cast<const uint8_t*>(entity) + kEntityName;
+    return reinterpret_cast<const NarrowString*>(name)->Text();
+}
+
+void* Component(void* entity, const void* classId) {
+    return g_getComponentByTag != nullptr ? g_getComponentByTag(entity, nullptr, classId) : nullptr;
+}
+
 void* PhysicsComponent(void* entity) {
-    if (g_getComponentByTag == nullptr || g_physicsTag == nullptr) {
+    if (g_physicsTag == nullptr) {
         return nullptr;
     }
 
@@ -190,7 +204,7 @@ void* PhysicsComponent(void* entity) {
         g_registerPhysicsTag(nullptr);
     }
 
-    return g_getComponentByTag(entity, nullptr, g_physicsTag);
+    return Component(entity, g_physicsTag);
 }
 
 void SetPhysicsEnabled(void* physics, bool enabled) {

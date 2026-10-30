@@ -1,15 +1,17 @@
 #include "engine/ai_sight.h"
 
+#include "engine/memory.h"
 #include "fcse_api.h"
 
 #include <atomic>
 #include <chrono>
 #include <cstdint>
-#include <cstring>
 #include <mutex>
 #include <unordered_map>
 
 namespace {
+    using DevTools::Method;
+    using DevTools::Read;
     using DevTools::AiSight::Point;
     using DevTools::AiSight::Sight;
     using Clock = std::chrono::steady_clock;
@@ -70,19 +72,6 @@ namespace {
     std::atomic<Clock::rep> g_askedUntil{0};
     std::mutex g_mutex;
     std::unordered_map<const void*, Copy> g_sights;
-
-    template <class T>
-    T Read(const void* object, ptrdiff_t offset) {
-        T value;
-        std::memcpy(&value, static_cast<const uint8_t*>(object) + offset, sizeof(T));
-        return value;
-    }
-
-    // The virtual method at `slot` of `object`.
-    template <class Fn>
-    Fn Method(const void* object, size_t slot) {
-        return reinterpret_cast<Fn>(Read<void* const*>(object, 0)[slot]);
-    }
 
     void Capture(void* senses, const uint8_t* target, const uint8_t* context, Clock::time_point now) {
         Sight sight = {};

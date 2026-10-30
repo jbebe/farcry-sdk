@@ -41,6 +41,7 @@ include("${DEVTOOLS_INCLUDE_DIR}/devtools_imgui.cmake")
 add_library(DevTools SHARED
   "src/main.cpp"
   "src/commands/catalog.cpp"
+  "src/commands/guns.cpp"
   "src/commands/scenarios.cpp"
   "src/commands/spawnables.cpp"
   "src/engine/ai_sight.cpp"
@@ -54,6 +55,7 @@ add_library(DevTools SHARED
   "src/engine/game_thread.cpp"
   "src/engine/imports.cpp"
   "src/engine/input.cpp"
+  "src/engine/inventory.cpp"
   "src/engine/keys.cpp"
   "src/engine/lua.cpp"
   "src/engine/pawn_tick.cpp"
@@ -79,6 +81,7 @@ add_library(DevTools SHARED
   "src/options/options.cpp"
   "src/options/skip_system_detection.cpp"
   "src/options/unlock_all_weapons.cpp"
+  "src/overlay/armory.cpp"
   "src/overlay/baseline.cpp"
   "src/overlay/diagnostics.cpp"
   "src/overlay/lua_console.cpp"

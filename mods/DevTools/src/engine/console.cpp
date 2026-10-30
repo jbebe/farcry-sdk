@@ -7,6 +7,7 @@
 #include "engine/console.h"
 
 #include "engine/game_thread.h"
+#include "engine/memory.h"
 #include "fcse_api.h"
 
 #include <cstdarg>
@@ -16,14 +17,7 @@
 #include <string>
 
 namespace {
-    // MSVC's std::string as this build lays it out.
-    struct NarrowString {
-        const void* proxy;
-        char buffer[16];
-        uint32_t size;
-        uint32_t capacity;
-    };
-    static_assert(sizeof(NarrowString) == 28, "the engine reads this as its own std::string");
+    using DevTools::NarrowString;
 
     constexpr size_t kInlineCapacity = sizeof(NarrowString::buffer) - 1;
 
