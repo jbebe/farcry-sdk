@@ -36,6 +36,9 @@ Always applied. A fix that needs a switch is a preference in disguise.
 - **CPU and GPU utilisation** — the job pool was sized for two-core machines, idle workers spun in
   the queue's critical section, the GPU could never run a frame ahead, and with a frame cap set the
   limiter burned a whole core busy-waiting for its deadline.
+- **Hybrid cores** — on a CPU with performance and efficiency cores, such as Intel's since Alder
+  Lake, the game crashed at random with every core and stuttered on a few. It now runs on the
+  performance cores alone, chosen by itself; on any other CPU it keeps every processor.
 
 The two restorations unlock content that ships inside the game's own files but is held behind an
 ownership check that can no longer succeed: both were Ubisoft promotions that ended, and the service
@@ -55,10 +58,6 @@ box, one row away from the stock behaviour.
 - **Maximum frame rate** — the engine's own limiter, capped at 60 by default. Takes effect without
   a restart.
 - **Display mode** — borderless, applied on the next launch.
-- **Processor affinity** — All cores (default), Physical cores only, 4 cores, or 1 core. Restricting
-  the game to fewer processors is the long-standing workaround for the physics and timing artefacts
-  the engine shows on machines far larger than anything it was tested on, such as NPCs visibly
-  bouncing. It costs performance, which is why it is off by default.
 
 ## Credits
 

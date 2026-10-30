@@ -2,6 +2,18 @@
 
 Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+- **Crashes and stutter on Intel CPUs with performance and efficiency cores.** On such a CPU, such
+  as Intel's since Alder Lake, the game crashed at random with every core and stuttered when held
+  to a few. It now runs on the performance cores alone, chosen by itself; on any other CPU it keeps
+  every processor.
+
+### Removed
+- **Processor affinity.** The game's processors are chosen for it now, so the setting is gone, and
+  an affinity the game was started with is replaced as well.
+
 ## [1.2.0] - 2026-10-29
 
 ### Added

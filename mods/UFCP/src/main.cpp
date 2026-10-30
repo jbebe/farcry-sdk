@@ -38,6 +38,8 @@ void ApplyUtilisationFix();
 void ApplyGrassSpotLightFix();
 // The game closes at the splash screen on a machine with 32 or more logical processors.
 void ApplyManyCoresFix();
+// The game crashes at random with a hybrid CPU's efficiency cores in the mix.
+void ApplyHybridCoresFix();
 
 // Options. The hook has to exist before the setting that drives it is registered, because
 // registration is what delivers the saved value.
@@ -49,15 +51,10 @@ void InstallMaxFrameRateHook();
 void __cdecl OnMaxFrameRateChanged(const FCSE_SettingValue* value, void* userdata);
 
 void __cdecl OnDisplayModeChanged(const FCSE_SettingValue* value, void* userdata);
-void __cdecl OnAffinityChanged(const FCSE_SettingValue* value, void* userdata);
 
 namespace {
-    // Index order is the file format: these labels are what FCSE writes into bin\fcse.ini and reads
-    // back, so reordering them changes the meaning of a value a player already saved.
-    const char* const kAffinityModes[] = {"All cores", "Physical cores only", "4 cores", "1 core"};
-
-    // The same applies here, and doubly so: FCSE stores a Choice by its label, so the text is as
-    // load-bearing as the order. max_frame_rate.cpp indexes its own table by the same choice.
+    // FCSE stores a Choice by its label, so the text is as load-bearing as the order.
+    // max_frame_rate.cpp indexes its own table by the same choice.
     const char* const kMaxFrameRates[] = {"Game default", "Unlocked", "Screen refresh", "30 Hz",
                                           "60 Hz",        "72 Hz",    "75 Hz",          "90 Hz",
                                           "120 Hz",       "144 Hz",   "165 Hz",         "180 Hz",
@@ -102,6 +99,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     ApplyUtilisationFix();
     ApplyGrassSpotLightFix();
     ApplyManyCoresFix();
+    ApplyHybridCoresFix();
 
     UFCP::FindRenderProfile();
     InstallFovHook();
@@ -122,7 +120,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Maximum frame rate", FCSE_CHOICE(kMaxFrameRate60Hz), &OnMaxFrameRateChanged, nullptr,
          kMaxFrameRates, std::size(kMaxFrameRates)},
         {"Display mode", FCSE_CHOICE(0), &OnDisplayModeChanged, nullptr, kDisplayModes, std::size(kDisplayModes)},
-        {"Processor affinity", FCSE_CHOICE(0), &OnAffinityChanged, nullptr, kAffinityModes, std::size(kAffinityModes)},
     };
     api->RegisterSettings("UFCP", settings, sizeof(settings) / sizeof(settings[0]));
 

@@ -25,6 +25,7 @@ Applied unconditionally, with no setting — a fix that needs a switch is a pref
 | Grass under spot lights | Headlights and flashlights left grass black however close it was. The game's light pass over grass scaled the light by the fog's amount instead of by what the fog leaves, so only grass already lost in fog was lit. It also lit each clump only as far as the ground under it faced the lamp, a tenth of the light where a headlight skims along the ground. |
 | Many cores | The game closed at the splash screen on a PC with 32 or more logical processors. The hardware probe's walk over the processors could only end on a bit that shifts out to zero, which x86 never produces, so it wrote up the stack until it crashed. |
 | CPU and GPU utilisation | The job pool was sized for two-core machines, idle workers spun in the queue's critical section, the GPU could never run ahead a frame, and with a frame cap set the limiter burned a whole core busy-waiting. |
+| Hybrid cores | On a CPU with performance and efficiency cores, such as Intel's since Alder Lake, the game crashed at random with every core, and stuttered when squeezed onto a few. It now runs on the performance cores alone, which is what players set by hand to play it; on any other CPU it keeps every processor. |
 
 The two restorations are not a bypass of anything anyone can still buy. Both were Ubisoft promotions
 that ended; the Steam build asks a retired Uplay privileges service and the GOG build reads a
@@ -45,7 +46,6 @@ disagree.
 | Weapon field of view | Same as field of view · 45–140 degrees | **Same as field of view** — as the game ties them |
 | Maximum frame rate | Game default · Unlocked · Screen refresh · 30–240 Hz | **60 Hz** |
 | Display mode | Game default · Borderless | **Game default** |
-| Processor affinity | All cores · Physical cores only · 4 cores · 1 core | **All cores** |
 
 **Field of view** substitutes the argument to `CCameraComponent`'s `fFOV` property setter, and
 holds the camera's unaimed value at the setting every frame, which the engine otherwise rebuilds. It
@@ -70,12 +70,6 @@ menu take effect without a restart.
 
 **Display mode** asks the engine for `-borderless`, a flag it already understands, so it applies on
 the next launch. Fullscreen and windowed are on the game's own video page already.
-
-**Processor affinity** is a workaround, not a fix: the engine misbehaves on machines far larger than
-anything it was tested on (the reported symptom is NPCs visibly bouncing), and giving it a smaller
-machine makes that rarer at the cost of performance. *Physical cores only* drops SMT siblings; *4
-cores* and *1 core* count in physical cores where the topology can be read. It is the one feature
-here that needs no engine knowledge at all, so it works on any build.
 
 ## Jackal tapes
 
@@ -158,7 +152,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-The Jackal tapes, bonus content, exit teardown and processor affinity work is this repository's own.
+The Jackal tapes, bonus content, exit teardown and hybrid cores work is this repository's own.
 
 ## How a feature finds the code it patches
 
@@ -218,11 +212,11 @@ of the game in the repository. Run it after touching a pattern.
 Everything below needs a real install:
 
 - `bin\fcse.log` shows `UFCP loaded`, then `jackal tapes fixed`, `predecessor tapes unlocked`,
-  `machetes unlocked`, the exit guard installing, the FOV hook's address, and the affinity mask.
+  `machetes unlocked`, the exit guard installing, the FOV hook's address, and the processors the
+  hybrid cores fix chose.
 - **Exit crash** *(run, works)*: quitting through Exit Game ends with `RunGame returned true` and no
   `CRASH:` line — verified from the menu.
-- `bin\fcse.ini` gains a `[UFCP]` group with `Field of view = 75` and
-  `Processor affinity = All cores`.
+- `bin\fcse.ini` gains a `[UFCP]` group with `Field of view = 75`.
 - Moving the FOV slider logs the new value; setting it back to 75 logs that the game's own value is
   no longer being overridden.
 - **In-game, none of which has been run yet**: tapes in the southern map advance instead of

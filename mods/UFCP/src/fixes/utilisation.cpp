@@ -134,7 +134,7 @@ namespace {
         return (ticks * 1000000) / g_counterFrequency;
     }
 
-    // The affinity mask rather than GetSystemInfo, so the processor affinity option narrows the
+    // The affinity mask rather than GetSystemInfo, so the hybrid cores fix narrows the
     // pool along with everything else.
     int32_t WorkerThreadCount() {
         DWORD_PTR processMask = 0;
