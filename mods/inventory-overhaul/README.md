@@ -275,7 +275,7 @@ ones this convention was first seen working with.
 
 ## Testing
 
-`build.ps1 -Install "<game>\bin"` builds the plugin and copies it into `bin\plugins\`. The layer goes
+`build.ps1 -Install "<game>\bin"` builds the plugin, stages it into `layer\plugins\` and copies it into `bin\plugins\`. The layer goes
 in with JackAll, alongside every other layer the install carries:
 
 ```
