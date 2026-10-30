@@ -1,0 +1,8 @@
+{
+  "save": "world1",
+  "spots": [
+    {"name": "Ranch, from the benchmark", "x": 1876.16, "y": 3523.59, "z": 37.0, "yaw": 187},
+    {"name": "Ranch road, from the benchmark", "x": 1293.73, "y": 3119.01, "z": 32.0, "yaw": 109},
+    {"name": "Inventory Overhaul's paper", "x": 2604.02, "y": 2108.09, "z": 23.0, "yaw": 0}
+  ]
+}
