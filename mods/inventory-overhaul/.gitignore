@@ -1,5 +1,9 @@
 # CMake build tree, and the built plugin the layer only carries.
 out/
-layer/plugins/inventory-overhaul/InventoryOverhaul.dll
+layer/plugins/InventoryOverhaul.dll
+# The release workflow's staging folder and archive, so running those steps by hand to check them
+# does not leave the tree dirty.
+stage/
+*.zip
 # The mockup carries the game's own textures and stays local.
 mockup/
