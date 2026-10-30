@@ -46,6 +46,7 @@ add_library(DevTools SHARED
   "src/commands/spawnables.cpp"
   "src/engine/ai_sight.cpp"
   "src/engine/benchmark.cpp"
+  "src/engine/bin_folder.cpp"
   "src/engine/camera.cpp"
   "src/engine/console.cpp"
   "src/engine/debug_camera.cpp"

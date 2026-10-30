@@ -10,6 +10,7 @@
 #include "commands/catalog.h"
 #include "devtools_api.h"
 #include "engine/benchmark.h"
+#include "engine/bin_folder.h"
 #include "engine/console.h"
 #include "engine/game_thread.h"
 #include "engine/input.h"
@@ -33,9 +34,11 @@
 #include <cstring>
 #include <d3d9.h>
 #include <deque>
+#include <fstream>
 #include <mutex>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <windows.h>
 
@@ -52,14 +55,22 @@ namespace {
     struct Tab {
         const char* name;
         void (*draw)();
+        // Stays in the row.
+        bool pinned = false;
     };
 
-    // Tabs of their own rather than command categories, so they have no commands under them.
-    constexpr Tab kOwnTabs[] = {{"Diagnostics", &DevTools::Diagnostics::Draw},
-                                {"Lua", &DevTools::LuaConsole::Draw},
-                                {"Spawner", &DevTools::Spawner::Draw},
-                                {"Range", &DevTools::Range::Draw},
-                                {"Armory", &DevTools::Armory::Draw}};
+    constexpr const char* kAllTab = "All";
+
+    // The tabs that are not a command category, pinned until the config file says otherwise.
+    constexpr Tab kOwnTabs[] = {{"Armory", &DevTools::Armory::Draw, true},
+                                {"Spawner", &DevTools::Spawner::Draw, true},
+                                {"Range", &DevTools::Range::Draw, true},
+                                {"Lua", &DevTools::LuaConsole::Draw, true},
+                                {"Diagnostics", &DevTools::Diagnostics::Draw, true},
+                                {kAllTab, nullptr}};
+
+    // The config file's line of pinned tabs.
+    constexpr std::string_view kPinsKey = "Tabs=";
 
     constexpr size_t kHistoryMax = 12;
 
@@ -116,9 +127,11 @@ namespace {
     // The weather the Environment tab forces, for this session only.
     DevTools::Weather::Wanted g_weather;
 
-    // Which tab is open, as an index into the tabs below. 0 is "All".
-    int g_category = 0;
     std::vector<Tab> g_tabs;
+
+    // The open tab, and the one More just asked for: a tab bar takes a frame to select a tab it is told to.
+    const Tab* g_open = nullptr;
+    const Tab* g_picked = nullptr;
 
     // Whether the overlay is up is the same question as whether it has the input, so it is only
     // stored once - two flags for one state can disagree, and did.
@@ -237,8 +250,40 @@ namespace {
                          g_registered.end());
     }
 
+    const std::filesystem::path& ConfigFile() {
+        static const std::filesystem::path file = DevTools::BinFolder::File(L"DevTools-config.ini");
+        return file;
+    }
+
+    void LoadPins() {
+        std::ifstream file(ConfigFile());
+        for (std::string line; std::getline(file, line);) {
+            if (line.starts_with(kPinsKey)) {
+                const std::string pins = "," + line.substr(kPinsKey.size()) + ",";
+                for (Tab& tab : g_tabs) {
+                    tab.pinned = pins.find("," + std::string(tab.name) + ",") != std::string::npos;
+                }
+            }
+        }
+    }
+
+    void SavePins() {
+        std::string pins;
+        for (const Tab& tab : g_tabs) {
+            if (tab.pinned) {
+                pins.append(pins.empty() ? "" : ",").append(tab.name);
+            }
+        }
+
+        std::ofstream file(ConfigFile(), std::ios::trunc);
+        file << kPinsKey << pins << "\n";
+        file.close();
+        if (!file) {
+            FCSE::Logf("overlay: %s could not be written", ConfigFile().string().c_str());
+        }
+    }
+
     void BuildTabs() {
-        g_tabs.push_back({"All", nullptr});
         for (const Tab& tab : kOwnTabs) {
             g_tabs.push_back(tab);
         }
@@ -251,6 +296,8 @@ namespace {
                 g_tabs.push_back({command.category, nullptr});
             }
         }
+
+        LoadPins();
     }
 
     bool Start(IDirect3DDevice9* device) {
@@ -267,8 +314,7 @@ namespace {
         ImGui::StyleColorsDark();
 
         ImGuiIO& io = ImGui::GetIO();
-        // No imgui.ini: the overlay leaves nothing in the game folder, and there is no layout worth
-        // the file.
+        // No imgui.ini: there is no layout worth the file.
         io.IniFilename = nullptr;
         // The game hides the system cursor and never puts it back, so the overlay draws its own.
         io.MouseDrawCursor = true;
@@ -299,9 +345,8 @@ namespace {
         return true;
     }
 
-    // Category 0 is "All".
     bool Matches(const Command& command) {
-        return g_category == 0 || std::strcmp(command.category, g_tabs[g_category].name) == 0;
+        return std::strcmp(g_open->name, kAllTab) == 0 || std::strcmp(command.category, g_open->name) == 0;
     }
 
     void Send(const Command& command, const char* argument) {
@@ -471,19 +516,46 @@ namespace {
         }
     }
 
-    // DevTools' own window: the catalog, a tab per category, and what was run.
+    // The button at the row's end: every tab, to open it, with a box to keep it in the row.
+    void DrawMore() {
+        if (ImGui::TabItemButton("More", ImGuiTabItemFlags_Trailing)) {
+            ImGui::OpenPopup("more");
+        }
+        if (!ImGui::BeginPopup("more")) {
+            return;
+        }
+
+        ImGui::TextDisabled("Tick to keep as a tab");
+        for (Tab& tab : g_tabs) {
+            ImGui::PushID(tab.name);
+            if (ImGui::Checkbox("##pinned", &tab.pinned)) {
+                SavePins();
+            }
+            ImGui::SameLine();
+            if (ImGui::Selectable(tab.name, &tab == g_open)) {
+                g_picked = &tab;
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndPopup();
+    }
+
+    // DevTools' own window: the catalog, the pinned tabs and the open one, and what was run.
     void DrawCatalog(void*) {
         // Kept free under the tabs for the history, which stays put while the categories change.
         const float historyHeight = ImGui::GetTextLineHeightWithSpacing() * 6.0f;
 
-        // Sixteen categories will not fit across the window, so they scroll rather than shrink, and
-        // the popup button is the way to reach one that has scrolled off.
-        if (ImGui::BeginTabBar("categories", ImGuiTabBarFlags_FittingPolicyScroll |
-                                                 ImGuiTabBarFlags_TabListPopupButton)) {
-            for (size_t category = 0; category < g_tabs.size(); ++category) {
-                const Tab& tab = g_tabs[category];
-                if (ImGui::BeginTabItem(tab.name)) {
-                    g_category = static_cast<int>(category);
+        if (ImGui::BeginTabBar("categories", ImGuiTabBarFlags_FittingPolicyScroll)) {
+            for (const Tab& tab : g_tabs) {
+                if (!tab.pinned && &tab != g_open && &tab != g_picked) {
+                    continue;
+                }
+                const ImGuiTabItemFlags flags = &tab == g_picked ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None;
+                if (ImGui::BeginTabItem(tab.name, nullptr, flags)) {
+                    g_open = &tab;
+                    if (&tab == g_picked) {
+                        g_picked = nullptr;
+                    }
                     ImGui::BeginChild("tab", ImVec2(0.0f, -historyHeight));
                     if (tab.draw != nullptr) {
                         tab.draw();
@@ -496,6 +568,7 @@ namespace {
                     ImGui::EndTabItem();
                 }
             }
+            DrawMore();
             ImGui::EndTabBar();
         }
 

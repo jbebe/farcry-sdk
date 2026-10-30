@@ -182,12 +182,17 @@ them. Which ones, and how each verdict was reached, is in
 
 ## Overlay
 
-**Home** opens it, in game or in a menu. The command catalog on screen, split across a tab per
-category — `All` first, then `Cheats`, `Player`, `Camera` and the rest — with an argument box or a
-pair of buttons depending on what each command takes, and a note on hover for the ones with something
-to warn about. There are more categories than fit across the window, so the tabs scroll and the small
-button at their left end lists them all. Running a command queues it for the engine's next frame, so
-the click and the command are never on the same thread as each other.
+**Home** opens it, in game or in a menu. The command catalog on screen, split by category — `All`,
+`Cheats`, `Player`, `Camera` and the rest — with an argument box or a pair of buttons depending on
+what each command takes, and a note on hover for the ones with something to warn about. Running a
+command queues it for the engine's next frame, so the click and the command are never on the same
+thread as each other.
+
+There are more pages than fit across the window, so only the ones you pin stay as tabs: Armory,
+Spawner, Range, Lua and Diagnostics to begin with. **More**, at the row's end, lists every page. Click
+a name to open it, or tick its box to pin or hide it. A page you open without pinning gets a tab of
+its own until you move to another. The pins are saved in `bin\DevTools-config.ini`, because FCSE's own
+settings can only be changed from the Mod Configuration Menu.
 
 The Environment tab puts the clock and the weather above its commands. Storm, rain and wind each
 offer Engine, Off, and a way to force them: a storm strength, rain on, a wind speed and direction.
@@ -219,7 +224,7 @@ through DirectInput, and both of those shape the result — see
 
 ### Diagnostics
 
-The Diagnostics tab, next to `All`, is always live. It shows what the game costs to run right now,
+The Diagnostics tab is always live. It shows what the game costs to run right now,
 beside a baseline this rig measured running the game as it shipped, so a mod's cost reads as a
 change from that baseline.
 
@@ -261,7 +266,7 @@ the GPU or CPU differ from this rig's, when the resolution differs, and when vsy
 
 ### Lua
 
-The Lua tab, next to Diagnostics, runs a line of Lua in the game's own script state and shows what
+The Lua tab runs a line of Lua in the game's own script state and shows what
 Lua reports back. **Run** executes the line as a chunk. **Evaluate** reads it as an expression and
 prints its value as `tostring` renders it, so a script's global or `GetLocalPlayerId()` can be
 inspected without a visible side effect. Both run at the end of the next frame.
@@ -272,7 +277,7 @@ a crash that follows them.
 
 ### Spawner
 
-The Spawner tab, next to Lua, puts things into the world in front of you: vehicles and soldiers. The
+The Spawner tab puts things into the world in front of you: vehicles and soldiers. The
 vehicles are every land vehicle, boat and the hang glider, the DLC's ATV and Unimog, and the Rover, both boats
 and the Unimog once per mounted gun. A click spawns one 8 m ahead at the end of the next frame, facing the way you face, and drops
 it from 1.5 m above your feet, because the game's spawn call does not find the ground. Hovering a
@@ -311,7 +316,7 @@ way any new world is ([Make a new world](../../docs/jackall/world/new-worlds.md)
 tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe mod build --game "C:\Games\Far Cry 2" --layer <installed layers> --layer mods\DevTools\layer
 ```
 
-The **Range** tab, next to Spawner, has **Travel to the range**, the same as
+The **Range** tab has **Travel to the range**, the same as
 `#GameChangeWorld("testrange", "2054037628277228842")`, and a button per scenario. A scenario covers
 rows of the Difficulty Overhaul's [finish checklist](../../docs/docs/design/difficulty.md#finish-checklist).
 Pressing it does the following, as one chunk of the game's own Lua:
@@ -348,7 +353,7 @@ the ground. Nothing is placed there.
 
 ### Armory
 
-The Armory tab, next to Range, has a button for each of the 28 guns of the game's own
+The Armory tab has a button for each of the 28 guns of the game's own
 `CHEAT_GiveWeapons` box, under the class the gun is really carried in: the M1903 is a primary and the
 flare gun a secondary, whatever their archetype names say. Hovering a button shows the archetype.
 
@@ -543,6 +548,9 @@ Everything below needs a real install:
   `SpawnEntityFromArchetype` line it ran.
 - **Spawner soldiers** *(seen 2026-10-25 with squad size 1)*: in the test range, Red faction's
   Assault, Caucasian put a soldier 25 m ahead, facing you, and he opened fire at once.
+- **Tabs** *(not yet run)*: the row shows Armory, Spawner, Range, Lua and Diagnostics. More opens Cheats
+  as a sixth tab, which goes away when another tab is clicked. Ticking Cheats keeps it, and it is still
+  there after a relaunch, with `Tabs=` in `bin\DevTools-config.ini` listing it.
 - **Armory** *(seen 2026-10-30)*: AK-47 draws an
   AK-47, the gun of its class lies at your feet, and the tab reads `reliability 1000 of 1000`. With
   Ammo at 35, the HUD shows 30 and 5. Firing lowers the slider. The gun lasts about 50 magazines.

@@ -6,6 +6,7 @@
 #include "overlay/baseline.h"
 
 #include "engine/benchmark.h"
+#include "engine/bin_folder.h"
 #include "engine/process_stats.h"
 #include "fcse_api.h"
 
@@ -77,13 +78,8 @@ namespace {
     std::vector<float> g_gpu;
     Samples g_samples;
 
-    // Beside fcse.ini, in the folder the process was started from.
     const std::filesystem::path& File() {
-        static const std::filesystem::path file = [] {
-            std::wstring exe(32768, L'\0');
-            exe.resize(GetModuleFileNameW(nullptr, exe.data(), static_cast<DWORD>(exe.size())));
-            return std::filesystem::path(exe).parent_path() / L"DevTools-baseline.ini";
-        }();
+        static const std::filesystem::path file = DevTools::BinFolder::File(L"DevTools-baseline.ini");
         return file;
     }
 
