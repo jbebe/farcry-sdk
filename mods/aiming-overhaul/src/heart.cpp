@@ -71,10 +71,6 @@ void AimingOverhaul::Heart::Update(float seconds, bool sprinting, float stamina,
     }
 }
 
-float AimingOverhaul::Heart::Rate() {
-    return g_rate;
-}
-
 float AimingOverhaul::Heart::Racing() {
     return std::clamp((g_rate - kRest) / (kFastest - kRest), 0.0f, 1.0f);
 }

@@ -11,9 +11,6 @@ namespace AimingOverhaul::Heart {
 // and health they have left and how hard the camera is shaken, each as the pawn reads them.
 void Update(float seconds, bool sprinting, float stamina, float health, float shake);
 
-// The heart's rate in beats a minute.
-float Rate();
-
 // How fast the heart runs, from nought at rest to one at its fastest.
 float Racing();
 

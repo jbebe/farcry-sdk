@@ -295,8 +295,8 @@ DevTools carries a world to fight in while working on the combat mods: `testrang
 Nothing else is in it, so whatever happens there comes from what is spawned into it. It is built the
 way any new world is ([Make a new world](../../docs/jackall/world/new-worlds.md)):
 
-- `range\content\` holds the walls, as the fragments JackAll's map editor saves, and the three
-  archetypes only the scenarios name, as library fragments. The walls are copies of two retail
+- `range\content\` holds the walls, as the fragments JackAll's map editor saves, and the two
+  archetypes only the range names, as library fragments. The walls are copies of two retail
   instances:
   - `CoverObjects.WallBarrier01_BK.Multi_0` from `mp_16_airbase`, a barrier 1.3 m high and 1.55 m
     deep that slopes to its top, 2.25 m along it: the cover of every arena, end to end in rows;
