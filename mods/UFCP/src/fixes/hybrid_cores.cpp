@@ -1,6 +1,6 @@
 // Hybrid processors: on a CPU with performance and efficiency cores, such as Intel's since Alder
-// Lake, the game runs on the performance cores alone. With every core it crashes at random, and
-// squeezed onto fewer it stutters; the performance cores are what players set by hand to play it.
+// Lake, the game runs on the performance cores alone. It has no way to tell Windows which of its
+// threads carry the frame, so one landing on a slower efficiency core holds the frame up.
 // Elsewhere it keeps every processor. Either way this replaces whatever affinity it was started with.
 #include "fcse_api.h"
 

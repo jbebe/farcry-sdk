@@ -32,13 +32,13 @@ void ApplyExitTeardownFix();
 void ApplyMouseSpeedCapFix();
 // Loading screens run far below the rate they were paced for.
 void ApplyHighPrecisionTimerFix();
-// The engine leaves processors idle and busy-waits for its own frame cap.
+// The engine spins idle workers and busy-waits for its own frame cap.
 void ApplyUtilisationFix();
 // Grass stays dark under a spot light - headlights, a flashlight - however close it is.
 void ApplyGrassSpotLightFix();
 // The game closes at the splash screen on a machine with 32 or more logical processors.
 void ApplyManyCoresFix();
-// The game crashes at random with a hybrid CPU's efficiency cores in the mix.
+// On a hybrid CPU a thread the frame waits for can land on a slow efficiency core.
 void ApplyHybridCoresFix();
 
 // Options. The hook has to exist before the setting that drives it is registered, because

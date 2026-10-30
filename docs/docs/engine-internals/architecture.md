@@ -249,6 +249,12 @@ How many job workers there are comes from `engine\settings\defaultthreadingconfi
 enables `RENDER_THREAD` and `PHYSIC_TIMESTEP_THREAD` and sets `PHYSIC_THREADS` to 0. All of this is
 **RE-verified on GOG** and seen in data.
 
+The jobs are not safe to run on two workers at once. With the count raised to 2, and to 6, a
+player's game crashed at random in `CEngineNomad::Unlock` (Steam `0x1000E170`) on a job worker,
+called from the worker loop (`0x102B25E6`), with the lock pointer the worker had saved on its stack
+overwritten. With the stock single worker it did not. Seen in a player's logs on Steam v1.03, not
+reproduced here.
+
 `FatalError::IsSecondaryThreadWaitingForDisplay()`, polled once per frame in `CCryEngine::Update`,
 confirms the engine's crash/error-dialog path is deliberately thread-aware: a background thread can hit
 a fatal error and hand off to the main thread to actually display it, rather than showing UI off-thread.

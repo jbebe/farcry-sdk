@@ -2,44 +2,28 @@
 //
 // Ported from FC2JackalFix (MIT, (c) 2026 Joshhhuaaa, TGP482) - source/system/utilisation.ixx.
 //
-// Four separate things, all of them the engine being sized for 2008 hardware and none of them
+// Three separate things, all of them the engine being sized for 2008 hardware and none of them
 // visible in a frame - which is exactly why they were never noticed as defects:
 //
-//   - The job pool asks CThreadingConfig for JOB_THREADS and gets a number from a file written for
-//     two-core machines, so most of the processors sit out the frame.
 //   - A worker whose dequeue comes back empty retries immediately, so an idle pool spends its time
 //     in the queue's critical section rather than out of the way.
 //   - The GPU fence ring is sized one frame per GPU, so the CPU can never run ahead.
 //   - With a frame cap set, the limiter busy-waits on the render thread, burning a whole core to
 //     wait for a deadline it could have slept on.
 //
-// The last is the one worth stating plainly: with a cap set, a core is pinned for no reason at all.
+// The job pool keeps the engine's own worker count: a second worker running at once crashes on a
+// job's lock, see docs/docs/engine-internals/architecture.md.
 //
-// Everything here is a floor rather than an override. The thread count is never lowered below what
-// the config asked for, so OverrideThreadingConfig.xml still wins; the ring is never made shallower
-// than the engine wanted, nor deeper than it will build; and the limiter still lands on its own
-// deadline, having slept out all but a margin.
+// The ring is never made shallower than the engine wanted, nor deeper than it will build; and the
+// limiter still lands on its own deadline, having slept out all but a margin.
 #include "fcse_api.h"
-
-#include "engine/memory_probe.h"
 
 #include <windows.h>
 
-#include <intrin.h>
-
 #include <algorithm>
-#include <bit>
 #include <cstdint>
-#include <cstring>
 
 namespace {
-    // Held back for the main and render threads, which help the queue rather than blocking on it.
-    constexpr int32_t kReservedProcessors = 2;
-
-    // Past six workers the extra threads live in the queue's critical section.
-    constexpr int32_t kMinWorkers = 1;
-    constexpr int32_t kMaxWorkers = 6;
-
     // Frames of GPU work the CPU may queue ahead, and the engine's own ceiling: above five fences
     // per GPU it rebuilds the ring's queries every frame.
     constexpr int32_t kFrameQueueDepth = 3;
@@ -76,26 +60,11 @@ namespace {
 #define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
 #endif
 
-    using ThreadCountFn = int32_t(__fastcall*)(void* self, void* unused, const char* name);
-
-    // The quality table asks for JOB_THREADS too, so the pool's call is told apart by where it
-    // returns to.
-    uintptr_t g_jobPoolReturnAddress = 0;
-
     // Thresholds in counter ticks: the hot paths compare rather than divide.
     int64_t g_counterFrequency = 0;
     int64_t g_episodeGapTicks = 0;
     int64_t g_minimumWaitTicks = 0;
     int64_t g_maximumWaitTicks = 0;
-
-    ThreadCountFn g_originalThreadCount = nullptr;
-
-    FCSE::Relocation<uint8_t*> g_jobThreadsSite{
-        FCSE::Pattern("8B 0D ?? ?? ?? ?? 68 ?? ?? ?? ?? E8 ?? ?? ?? ?? 8B F0 3B F7 89 74 24 10 7E")};
-
-    FCSE::Relocation<ThreadCountFn> g_threadCount{
-        FCSE::Pattern("83 EC 24 53 56 57 8D 44 24 0F 8B F9 50 8D 4C 24 1C 33 DB 51 C7 44 24 1C ?? "
-                      "?? ?? ?? C7 44 24 34 0F 00 00 00 88 5C 24 17")};
 
     FCSE::Relocation<uint8_t*> g_workerStarved{
         FCSE::Pattern("8B CE E8 ?? ?? ?? ?? 8B F8 85 FF 75 0D 8B 96 E0 00 00 00 38 42 14 74 E8")};
@@ -107,10 +76,6 @@ namespace {
     FCSE::Relocation<uint8_t*> g_frameLimiter{
         FCSE::Pattern("DF F1 DD D8 76 ?? E8 ?? ?? ?? ?? 8B C8 8B F9 2B BE 38 03 00 00 8B C2 1B 86 "
                       "3C 03 00 00")};
-
-    // The pushed name is wildcarded, so the site is confirmed by what it names.
-    constexpr ptrdiff_t kJobThreadsName = 7;
-    constexpr ptrdiff_t kJobThreadsReturn = 0x10;
 
     // The shutdown-flag re-read, the only instruction on the empty-handed path.
     constexpr ptrdiff_t kWorkerStarvedRetry = 0x0D;
@@ -132,38 +97,6 @@ namespace {
     // The input is bounded by kMaximumWaitTicks, so the multiply cannot overflow.
     int64_t ToMicroseconds(int64_t ticks) {
         return (ticks * 1000000) / g_counterFrequency;
-    }
-
-    // The affinity mask rather than GetSystemInfo, so the hybrid cores fix narrows the
-    // pool along with everything else.
-    int32_t WorkerThreadCount() {
-        DWORD_PTR processMask = 0;
-        DWORD_PTR systemMask = 0;
-        int32_t processors = 0;
-
-        if (GetProcessAffinityMask(GetCurrentProcess(), &processMask, &systemMask)) {
-            processors = static_cast<int32_t>(std::popcount(processMask));
-        }
-
-        if (processors <= 0) {
-            SYSTEM_INFO info = {};
-            GetSystemInfo(&info);
-            processors = static_cast<int32_t>(info.dwNumberOfProcessors);
-        }
-
-        return std::clamp(processors - kReservedProcessors, kMinWorkers, kMaxWorkers);
-    }
-
-    int32_t __fastcall ThreadCountDetour(void* self, void* unused, const char* name) {
-        const uintptr_t returnAddress = reinterpret_cast<uintptr_t>(_ReturnAddress());
-        const int32_t stock = g_originalThreadCount(self, unused, name);
-
-        if (returnAddress != g_jobPoolReturnAddress) {
-            return stock;
-        }
-
-        const int32_t wanted = WorkerThreadCount();
-        return wanted > stock ? wanted : stock;
     }
 
     // The worker's dequeue retry, on the turn the pop came back empty. State is per thread, and the
@@ -309,20 +242,6 @@ void ApplyUtilisationFix() {
         g_episodeGapTicks = ToTicks(kEpisodeGapMicroseconds);
         g_minimumWaitTicks = ToTicks(kHighResolutionMarginMicroseconds);
         g_maximumWaitTicks = ToTicks(kMaximumWaitMicroseconds);
-    }
-
-    if (g_jobThreadsSite) {
-        const char* const* name =
-            reinterpret_cast<const char* const*>(g_jobThreadsSite.address() + kJobThreadsName);
-        if (UFCP::IsInDunia(*name) && std::strcmp(*name, "JOB_THREADS") == 0) {
-            g_jobPoolReturnAddress = g_jobThreadsSite.address() + kJobThreadsReturn;
-        }
-    }
-
-    if (g_threadCount && g_jobPoolReturnAddress != 0) {
-        api->Hook(reinterpret_cast<void*>(g_threadCount.address()),
-                  reinterpret_cast<void*>(&ThreadCountDetour),
-                  reinterpret_cast<void**>(&g_originalThreadCount));
     }
 
     if (g_workerStarved) {
