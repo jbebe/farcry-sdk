@@ -156,7 +156,7 @@ where he is keeps firing until the player relocates. Changed the same day, not y
 Not wanted: suppressive fire at the spot where the player ducked out of sight.
 
 Later the same day an idle soldier 58.6 m away noticed the user standing in a bush and fired at once,
-nine rounds in 1.1 s while his aim settled; two hit and killed him ("this is too much of a reaction
+ten rounds in 1.1 s while his aim settled; two hit and killed him ("this is too much of a reaction
 time"). Added, not yet seen: a soldier who spots the player before he has fired in the fight holds his
 fire for 1 s plus 0.025 s per metre while his aim settles ([row 22](#built-check-on-the-range)). Not
 wanted: holding fire until his aim is half settled on every sighting, which would end the spraying on
