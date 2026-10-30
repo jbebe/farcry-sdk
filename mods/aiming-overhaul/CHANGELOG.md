@@ -3,7 +3,7 @@
 Notable changes to Aiming Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [1.3.0] - 2026-10-29
+## [Unreleased]
 
 ### Added
 - **Lean**, on two new controls in Options > Controls under Movements: Lean left on Q and Lean
