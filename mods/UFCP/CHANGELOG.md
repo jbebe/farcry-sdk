@@ -2,7 +2,7 @@
 
 Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.3.1] - 2026-10-30
 
 ### Fixed
 - **Grass under spot lights** is lit whichever way you face, under a light that casts shadows such as
