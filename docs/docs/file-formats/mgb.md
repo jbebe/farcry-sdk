@@ -553,7 +553,7 @@ Against a 50-file corpus:
 - **50/50 files parse to exactly `file_size`**, every declared area consumed, zero bytes left over and
   zero unread trailing data.
 - **Read-for-read identity with the running game.** A live trace
-  (`reverse/ida/Dunia.dll/trace_handler_semantic.idc`, which breakpoints the shared reader-entry
+  (an IDA script that breakpoints the shared reader-entry
   primitive at `Dunia.dll 0x10AE7BF0` plus `VisitElement`/`VisitUserData`/`VisitFullLink` directly)
   logs the reader's byte cursor for every primitive read in `controller.mgb`'s `0x0E00–0x1100` window.
   The parser reproduces **all 258 read offsets exactly**, and all 17 visitor entry points land on the

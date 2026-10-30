@@ -115,8 +115,7 @@ See `include/fcse_api.h` for the authoritative, documented ABI. Summary, from "n
    moment, to read or rewrite.
 3. **`Patch(address, data, size)`** - direct byte patching (`VirtualProtect` → `memcpy` → restore →
    `FlushInstructionCache`), for the same kind of small constant/branch-flip edit
-   `reverse/patch_toRed.py`/`patch_incHB.py`/`patch_carJoke.py` apply *statically* to `Dunia.dll` on
-   disk today - this applies the same kind of edit live, in-process, so any number of plugins can
+   a patch to `Dunia.dll` on disk makes - this applies it live, in-process, so any number of plugins can
    each patch their own byte ranges without needing one shared pre-patched file.
 4. **`RegisterSettings(pluginName, settings, count)`** - persistent, player-editable settings, both
    in `bin\fcse.ini` and as rows in the in-game Mod Configuration Menu. Zero address knowledge

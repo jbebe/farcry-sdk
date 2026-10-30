@@ -8,9 +8,10 @@ How to put a new person in the single-player world: someone standing still, a so
 soldier on patrol, and a named character who talks. Also how sides and hostility are set, and
 whether an NPC can be friendly, neutral or a vendor.
 
-Two test layers that each place one NPC are in [`mods/npc-example`](https://github.com/jbebe/farcry-sdk/tree/main/mods/npc-example).
-They are **built but not deployed**; [testing them](#testing-the-example-layers) is one build and one
-launch each.
+Two test layers that each place one NPC were in `mods/npc-example`, since removed; the last version
+is [in the history](https://github.com/jbebe/farcry-sdk/tree/2ac208e0/mods/npc-example). They were
+**built but never deployed**; [testing them](#testing-the-example-layers) is restoring that folder,
+then one build and one launch each.
 
 Marks: **(proven)** seen in a running game; **(RE-verified)** read in `FarCry2_server`'s code;
 **(seen in data)** read in the retail files; **(inferred)**; **(untested)**. Nothing on this page has

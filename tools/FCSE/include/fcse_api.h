@@ -117,8 +117,8 @@ typedef bool (*FCSE_MidHookFn)(void* target, FCSE_MidHookHandler handler);
 // Overwrites `size` bytes at `address` with `data` (handles the VirtualProtect dance so `address`
 // doesn't need to already be writable). Returns false (and logs why) if the byte range overlaps a
 // range a *different* plugin already patched this run - overlapping your own earlier patch is
-// fine. Meant for the same kind of small constant/branch-flip edit as reverse/patch_*.py apply
-// statically to Dunia.dll on disk, just live and in-process instead.
+// fine. Meant for small constant/branch-flip edits, made live and in-process instead of to
+// Dunia.dll on disk.
 typedef bool (*FCSE_PatchFn)(void* address, const void* data, size_t size);
 
 // Writes one line to bin\fcse.log, tagged with the calling plugin's own module name (resolved

@@ -300,7 +300,7 @@ distance. Far Cry 3's pattern, one attacking while the rest circle, needs an FCS
 
 ### Placement
 
-A generated layer, as in [`mods/npc-example`](../modding/adding-an-npc.md): one XML per hyena under
+A generated layer, as in [the NPC example layers](../modding/adding-an-npc.md): one XML per hyena under
 `levels/<level>/generated/worldsectors/worldsector<n>.data.fcb/`, holding `tplCreatureType`
 `Animals.DLC.Hyena`, `hidName`, a new `disEntityId` from the mod's own range, `hidPos` and
 `hidPos_precise`, `hidAngles`, and the baked lighting copied from a retail animal nearby.
@@ -1223,7 +1223,7 @@ A pool changes what the existing placements become, not how many there are. To f
   (`random.lua`, `randominteger.lua`). Whether a runtime-spawned animal's AI and physics start, and
   whether it duplicates across loads, is open.
 - **A generated placement layer:** permanent extra herds, one XML per entity as in
-  [`mods/npc-example`](../modding/adding-an-npc.md), written by a script. The work is ground height and
+  [the NPC example layers](../modding/adding-an-npc.md), written by a script. The work is ground height and
   navmesh coverage.
 
 ## Experiments in order

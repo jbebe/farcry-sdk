@@ -47,9 +47,8 @@ tools to change engine behavior with:
    FCSE hands back a working trampoline to call the original. `MidHook` does the same for a single
    instruction anywhere inside a function, handing the handler every register of that moment.
 3. **Patch bytes directly** (`Patch`) — for small constant/branch-flip edits, applied live and
-   in-process instead of to a shared file on disk. This is the direct successor to what
-   `reverse/patch_toRed.py`/`patch_incHB.py`/`patch_carJoke.py` already do *statically* against
-   `Dunia.dll` before launch — same idea, but any number of plugins can each apply their own
+   in-process instead of to a shared file on disk. This is the direct successor to patching `Dunia.dll` on disk
+   before launch — same idea, but any number of plugins can each apply their own
    edit without agreeing on one shared pre-patched binary.
 
 Beyond those, a plugin can **keep its own values on game entities** (`EntityData`): a count on a

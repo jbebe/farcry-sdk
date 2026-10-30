@@ -2,11 +2,9 @@
 
 #include <cstddef>
 
-// Tier 3 of the plugin API: direct byte patching, for the same kind of small constant/branch-flip
-// edit reverse/patch_toRed.py, patch_incHB.py, and patch_carJoke.py already apply *statically* to
-// Dunia.dll on disk before launch. Backs FCSE_PluginAPI::Patch - applies the same kind of edit
-// live, in-process, at plugin-load time, so any number of plugins can each patch their own
-// unrelated byte ranges without needing to agree on one shared pre-patched Dunia.dll file.
+// Tier 3 of the plugin API: direct byte patching for small constant/branch-flip edits. Backs
+// FCSE_PluginAPI::Patch - applies them live, in-process, at plugin-load time, so any number of
+// plugins can each patch their own byte ranges without one shared pre-patched Dunia.dll file.
 namespace FCSE {
 
 class PatchManager {

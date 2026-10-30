@@ -16,9 +16,10 @@ soldiers spawned there move and fight. It is the worked example for the sections
 JackAll does every step on this page: **New map** on the Map tab or `jackall-cli world new` makes
 the files, the map editor places objects, and `jackall-cli world pack` builds the sector files, the
 entity library, the sector flags and the navmesh. See
-[Make a new world](/jackall/new-worlds). [`mods/new-world`](https://github.com/jbebe/farcry-sdk/tree/main/mods/new-world)
-builds two smaller experiments by script, a renamed clone and a one-sector tile, which have not been
-loaded. [The test sheet](#the-test-sheet) has the commands.
+[Make a new world](/jackall/new-worlds). A script for two smaller experiments, a renamed clone and a
+one-sector tile, is [in the history](https://github.com/jbebe/farcry-sdk/tree/2ac208e0/mods/new-world)
+as `mods/new-world`, since removed; neither was loaded. [The test sheet](#the-test-sheet) has the
+commands for the test range.
 
 Marks: **(proven)** seen in a running game; **(RE-verified)** read in `FarCry2_server`'s code;
 **(seen in data)** read in the retail files; **(inferred)**; **(untested)**. The mechanism is in
@@ -308,14 +309,13 @@ In order of what is ready:
 
 ## The test sheet
 
-Both scripts read the extracted retail `worlds` archive in `tmp\gamefiles\worlds\worlds`, and
-neither layer is committed. `mod build` replaces the whole patch, so build in every layer the
-install already carries, with these after them:
+The script reads the extracted retail `worlds` archive in `tmp\gamefiles\worlds\worlds`, and the
+layer is not committed. `mod build` replaces the whole patch, so build in every layer the install
+already carries, with this one after them:
 
 ```
 .\mods\DevTools\range\build-layer.ps1
-.\mods\new-world\build-layer.ps1
-tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe mod build --game "C:\Games\Far Cry 2" --layer <installed layers> --layer mods\DevTools\layer --layer mods\new-world\layer
+tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe mod build --game "C:\Games\Far Cry 2" --layer <installed layers> --layer mods\DevTools\layer
 ```
 
 The build was checked against a scratch copy of the vanilla patch archive: 406 entries added, none
@@ -328,10 +328,7 @@ Each run is one launch. Load a world 1 save, press `~`, and enter the line:
 |---|---|---|
 | 1, control | `#GameChangeWorld("world2", "2051908267268899174")` | world 2 at its act 2 start |
 | 2 | `#GameChangeWorld("tmpla", "2054037628277228842")` | a load, with the player 16 m under a flat plain; noclip up to see it |
-| 3 | `#GameChangeWorld("newworld_clone", "2054037628277228842")` | the same as run 2 |
-| 4 | `#GameChangeWorld("newworld_tile", "2054037628277228842")` | standing on a 64 m square of ground |
-| 5 | in run 4's world: `#GameChangeWorld("world1", "2056971616016942572")` | back in world 1 |
-| 6 | `#GameChangeWorld("testrange", "2054037628277228842")` | standing on a plain, cover walls around you; spawned soldiers fight. Seen |
+| 3 | `#GameChangeWorld("testrange", "2054037628277228842")` | standing on a plain, cover walls around you; spawned soldiers fight. Seen |
 
 DevTools' Change world command takes the same two arguments.
 
