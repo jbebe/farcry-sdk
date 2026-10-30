@@ -131,6 +131,31 @@ Unloading a world and teleporting also switch to driven for one forced frame and
 thread on, the load-time shader precache runs only on background frames: the loading screen's own,
 and sub-state 3's wait.
 
+## Asking whether anything is loading
+
+Two plain calls answer it, both Steam addresses:
+
+- **`0x1032D710`** is whether the render thread is in its background loop, so whether a loading screen
+  is up, apart from the moments the table above switches it.
+- **`CWorld::IsLoadPending` (`0x104DB900`)** is whether the world still has requests or a queue.
+
+## Teleporting the player
+
+`CPlayerService::TeleportLocalPlayer` (`0x10136B60`) is `__cdecl`, one argument, a pointer to three
+floats. It sends the player's entity `TeleportBegin`, takes a `CLoadKeeper` for the destination, moves
+the player, unloads what is left behind, forces a frame, blocks in `CWorld::Synch`, then sends
+`TeleportEnd`. So when it returns, the world at the destination has loaded. It finds no ground: the
+player falls from the height given, and a height below the ground lands inside the terrain.
+
+The `TeleportEntity` Lua global is a heavier road. For an entity with a `CDynLoadComponent`, the player
+among them, it queues the load's own operations: preparing the loading screen, `CFCXTeleportEntityOperation`,
+`CFCXLoadWorldSynchOp`, skipping frames, preparing the renderer, starting the game and unloading the screen.
+That is the loading screen of about 17 s the test range sees from far away.
+
+Called directly from the end of a frame on GOG v1.03, `TeleportLocalPlayer` crossed 1.5 km of world1
+in 0.65 s with DevTools' Fast loading on and no loading screen, and everything at the destination was
+drawn in the next picture.
+
 ## Elsewhere during a load
 
 - **PunkBuster** is a service of the main-menu, console and four multiplayer game modes, never the

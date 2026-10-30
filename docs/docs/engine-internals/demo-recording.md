@@ -10,9 +10,13 @@ against the two demos `FC2BenchmarkTool.exe` ships. See [the overview](./overvie
 identification.
 :::
 
-:::warning[Not yet tested in a running game]
-Neither recording with <kbd>Numpad 8</kbd> nor replaying a demo through `-benchmark playback` has been
-tried on a retail install.
+:::info[Tried in a running game]
+GOG v1.03, 2026-10-30. Firing `toggle_recording` as an action started and stopped the recorder, which
+wrote all three files. <kbd>Numpad 8</kbd> itself was not pressed. Actions fired from outside the
+terminal's list, as DevTools' are, are not in the `.npl`.
+
+`-benchmark playback` with the shipped demo loaded at the demo's first position and quit cleanly about
+10 s after launch, without the run being seen to play. Why was not looked into.
 :::
 
 The benchmark's two "Playback" demos, *Action Scene* and *Demo Ranch*, are not camera paths. They are
@@ -71,6 +75,18 @@ record and writes it back onto the player: position through the entity, the two 
 the pawn's data at `+0x38` and `+0x44`. The player is therefore held on the recorded path, while the
 `.npl` supplies what the player did.
 
+## Where a demo meets the input
+
+`0x104F1440` is the terminal's input pass, `__thiscall` with two stack arguments (`RET 8`). Each frame
+it has the action map turn raw input into a list of `CActionValue`s, 0x14 bytes each. If the recorder
+is on it writes the list to the `.npl` (`0x10587540`); if a demo is playing it adds that frame's entries
+to the list (`0x10587770`). Then it hands every entry to the object at the terminal's `+0x0C`, through
+that object's first virtual method, with a flag that is true unless the terminal changed mode during
+the pass.
+
+So an action fired at that object after the pass reaches the same listeners a binding does.
+`mods/DevTools/src/engine/actions.cpp` does this, for DevTools' remote control.
+
 ## `.bsav`
 
 The first two sections of a [`.sav`](../file-formats/savegame.md), followed directly by the
@@ -125,5 +141,8 @@ demos.
 
 - Whether <kbd>Numpad 8</kbd> reaches the handler in retail, since the `common_system` map may not be
   active, and what the handler's two extra checks test.
+- Why `-benchmark playback` quit without playing the demo in the one launch tried.
+- What the 30 fps lock does while recording or playing. Both starts call `0x1029B250` with `30, -1`, the
+  value the `-benchmarkfixedframerate` lock uses.
 - How faithfully AI, physics and other randomness replay. Only the player is held to the recording.
 - The `.npl` header float, the `.bsav` u32 at `0x04`, and what separates the two angle triples.

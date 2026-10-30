@@ -744,8 +744,9 @@ traced.
 ### Action signals and their listeners
 
 A bound input reaches the game as an action signal, a `CActionValue`: the signal's `CStringID` at
-`+0x00`, its value as a float at `+0x04`, and at `+0x10` how many times it fired this frame. The player
-acts only when that count is above zero. `CTerminalImpl::Execute` hands the **same** object to each
+`+0x00`, up to three float values from `+0x04`, and at `+0x10` how many of them it has, which is how
+the [demo reader](./demo-recording.md#where-a-demo-meets-the-input) fills it in. The player acts only
+when that count is above zero. `CTerminalImpl::Execute` hands the **same** object to each
 of the terminal's listeners in the order they registered, and ignores what they return. The pause
 service's listener (`CFCXPauseMultiService`, Steam `0x1071AF40`) comes before the player's. So a
 listener ahead of the player's can rewrite the signal's id in place, and the player's sees the new
