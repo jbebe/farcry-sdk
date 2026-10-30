@@ -357,7 +357,8 @@ flare gun a secondary, whatever their archetype names say. Hovering a button sho
   current difficulty, upgrades included, so the default of 999 means full. Spare is one pool per ammo
   type, so it also changes every other gun of that type. The LPO-50 has no magazine: Magazine is its
   fuel.
-- **Health** is the gun's reliability, from 1 (new) to 0 (worn out).
+- **Health %** is the gun's reliability as a percentage of its maximum: 100 is new, 0 is worn out.
+  The result line shows the engine's own numbers.
 
 A click works like a pickup: the gun of that class you carry drops at your feet, and the new one is
 drawn at once. If you already carry that model, it is kept and only its values change, so repeated
@@ -540,9 +541,10 @@ Everything below needs a real install:
   `SpawnEntityFromArchetype` line it ran.
 - **Spawner soldiers** *(seen 2026-10-25 with squad size 1)*: in the test range, Red faction's
   Assault, Caucasian put a soldier 25 m ahead, facing you, and he opened fire at once.
-- **Armory** *(not yet run)*: with Magazine 5, Spare 20 and Health 0.30, AK-47 draws an AK-47 and the
-  HUD shows 5 and 20; the gun of its class lies at your feet, and the tab reads `5 in the magazine,
-  20 spare, health 0.30`. Clicking again with Magazine 12 sets the gun in hand to 12 and drops nothing.
+- **Armory** *(seen 2026-10-30, health not since its fix)*: with Magazine 5, Spare 20 and Health 100,
+  AK-47 draws an AK-47 and the HUD shows 5 and 20, the gun of its class lies at your feet, the tab
+  reads `5 in the magazine, 20 spare, reliability 1000 of 1000`, and the gun lasts about 50 magazines.
+  Clicking again with Magazine 12 sets the gun in hand to 12 and drops nothing.
 - **Range** *(seen 2026-10-25)*: Rifleman at 10 m put the player at the duel lane's start facing
   him and spawned him on a guard post. He stood facing the player for about 7 s before he noticed
   him, so the scenarios no longer use guard posts. Not yet run since that change.

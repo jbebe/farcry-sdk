@@ -45,6 +45,7 @@ namespace {
     constexpr ptrdiff_t kGunState = 0x24;
     constexpr ptrdiff_t kStateProperties = 0x04;
     constexpr ptrdiff_t kStateReliability = 0x0C;
+    constexpr ptrdiff_t kStateMaxReliability = 0x10;
     constexpr ptrdiff_t kPropertiesAmmoType = 0x88;
     constexpr size_t kSetReliabilitySlot = 0xBC / sizeof(void*);
 
@@ -95,7 +96,9 @@ namespace {
             }
         }
 
-        Method<SetReliabilityFn>(gun, kSetReliabilitySlot)(gun, nullptr, health);
+        const void* state = Read<const void*>(gun, kGunState);
+        const float most = Read<float>(state, kStateMaxReliability);
+        Method<SetReliabilityFn>(gun, kSetReliabilitySlot)(gun, nullptr, most * health / 100.0f);
 
         // A gun loads what it remembers as it is drawn, so one already in hand is loaded as well.
         g_setRememberedAmmoInClip(gun, nullptr, loaded);
@@ -104,7 +107,6 @@ namespace {
             g_forceAmmoInClip(gun, nullptr, magazine);
         }
 
-        const void* state = Read<const void*>(gun, kGunState);
         const auto* properties = Read<const uint8_t*>(state, kStateProperties);
         const int pool = std::min(spare, g_getMaxAmmo(gun, nullptr));
         g_setAmmo(view, nullptr, reinterpret_cast<const uint32_t*>(properties + kPropertiesAmmoType), pool);
@@ -114,8 +116,8 @@ namespace {
         }
 
         char result[160];
-        std::snprintf(result, sizeof(result), "%s: %d in the magazine, %d spare, health %.2f",
-                      archetype.c_str(), magazine, pool, Read<float>(state, kStateReliability));
+        std::snprintf(result, sizeof(result), "%s: %d in the magazine, %d spare, reliability %.0f of %.0f",
+                      archetype.c_str(), magazine, pool, Read<float>(state, kStateReliability), most);
         Report(result);
     }
 }

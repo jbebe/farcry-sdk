@@ -34,16 +34,16 @@ void Draw() {
 
     static int loaded = kFull;
     static int spare = kFull;
-    static float health = 1.0f;
+    static float health = 100.0f;
 
     DrawRounds("Magazine", loaded, "The LPO-50 has no magazine: this is its fuel.");
     DrawRounds("Spare", spare, "One pool per ammo type, shared with every gun that takes it.");
 
     ImGui::SetNextItemWidth(kWidth);
-    ImGui::InputFloat("Health", &health, 0.05f, 0.25f, "%.2f");
-    health = std::clamp(health, 0.0f, 1.0f);
+    ImGui::InputFloat("Health %", &health, 1.0f, 10.0f, "%.1f");
+    health = std::clamp(health, 0.0f, 100.0f);
     if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("The gun's reliability: 1 is new, 0 is worn out.");
+        ImGui::SetTooltip("Of the gun's maximum reliability: 100 is new, 0 is worn out.");
     }
 
     const std::string result = Inventory::LastResult();

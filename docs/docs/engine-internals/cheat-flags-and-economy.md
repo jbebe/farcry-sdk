@@ -194,13 +194,18 @@ refills every gun. It neither makes room in the gun's class nor draws the gun. A
 | Find the class's gun | `GetWeaponFromCategory` (`0x10128fb0`) | The first carried gun of the class |
 | Make room | `DropWeapon` (`0x1012db20`) | Does nothing while the player is on a mounted gun; leaves no pickup at reliability 0 or below |
 | Add | `AddWeaponByName` (`0x1012b540`) | False if the archetype is unknown, or a gun with its item id is already carried |
-| Wear | `SetReliability`, weapon vtable `+0xBC` | Capped at `MaxReliability`; at 0 or below, a gun that is not breakable goes back to 1.0 |
+| Wear | `SetReliability`, weapon vtable `+0xBC` | Capped at `MaxReliability` (`0x1012ea00`); at 0 or below, a gun that is not breakable goes back to 1.0 |
 | Magazine | `SetRememberedAmmoInClip` (`0x1012f850`) | Capped at `GetMaxAmmoInClip`; the gun loads this when drawn |
 | Spare | `CInventoryViewPawn::SetAmmo` (`0x10125f70`) | Sets the pool of that ammo type exactly, with no cap |
 | Draw | `ForceSelectWeapon` (`0x1012b9b0`) | Skipped while the inventory is locked (`+0x50`); does nothing if a gun of the class is already out |
 
 A gun already in hand has loaded its magazine, so `ForceAmmoInClip` (`0x10130060`) sets it, uncapped,
 and rolls for a jam as a reload does.
+
+Reliability is not a fraction. The gun's state constructor (`0x10130260`) starts both it and
+`MaxReliability` at 1000, and a shot takes `MaxReliability ÷ iClipsForSelfDestruct ÷ magazine` off it, so setting a new
+gun to 1 leaves it a few shots from breaking **(seen in game)**. Anything meant as a share of a gun's
+life multiplies `MaxReliability`, as the game does at `0x1069bb80` with 0.75 and 0.25.
 
 A class id is the CRC-32 of `primary`, `secondary` or `special`, indexed by `selCategory` in the table
 at `0x10f93390`. The class is not always the one in the archetype's name: `weapons.Special.M1903` is a

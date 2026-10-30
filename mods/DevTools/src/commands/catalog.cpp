@@ -34,7 +34,7 @@ namespace {
         {"hit_me", "Damage the player", "Player", Arg::String, {}, nullptr,
          "An amount, optionally followed by crush, burn or cut."},
         {"set_weapon_reliability", "Weapon reliability", "Player", Arg::Float, {}, nullptr,
-         "0 to 1."},
+         "The gun in hand's wear, not a fraction: a new gun has 1000."},
         {"set_no_weapon_mode", "No weapon mode", "Player", Arg::Enum, kOffOn, nullptr, nullptr},
         {"SetWeaponDifficultyLevel", "Weapon difficulty", "Player", Arg::Int, {}, nullptr, nullptr},
         {"dbg_start_malaria", "Start malaria", "Player", Arg::None, {}, nullptr, nullptr},
