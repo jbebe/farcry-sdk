@@ -106,11 +106,12 @@ namespace {
         g_setAmmo(view, nullptr, AmmoTypeOf(gun), rounds - magazine);
     }
 
-    void Hand(const std::string& archetype, uint32_t category) {
+    // False when the gun did not come to hand, which Report has said why.
+    bool Hand(const std::string& archetype, uint32_t category) {
         void* view = PlayerView();
         if (view == nullptr) {
             Report("no player to give " + archetype + " to");
-            return;
+            return false;
         }
         void* inventory = Read<void*>(view, kViewInventory);
 
@@ -121,19 +122,19 @@ namespace {
             // The engine refuses a drop while the player is on a mounted gun.
             if (next == gun) {
                 Report("the player cannot drop the " + NameOf(gun) + " right now");
-                return;
+                return false;
             }
             gun = next;
         }
         if (gun == nullptr) {
             if (!g_addWeaponByName(inventory, nullptr, archetype.c_str())) {
                 Report("this world's library has no " + archetype);
-                return;
+                return false;
             }
             gun = g_getWeaponFromCategory(inventory, nullptr, &category);
             if (gun == nullptr) {
                 Report(archetype + " was added, but this game's data puts it in another class");
-                return;
+                return false;
             }
         }
 
@@ -149,6 +150,7 @@ namespace {
             g_forceSelectWeapon(inventory, nullptr, &category);
         }
         Report(archetype + ": full and new");
+        return true;
     }
 
     void Look() {
@@ -199,6 +201,10 @@ void Give(const char* archetype, const char* category) {
     }
 }
 
+bool GiveNow(const char* archetype, const char* category) {
+    return g_ready && Hand(archetype, FCSE::Crc32(category));
+}
+
 void SetRounds(int rounds) {
     PostToGunInHand([rounds](void* view, void* gun) { SetRoundsOf(view, gun, rounds); });
 }
@@ -210,6 +216,14 @@ void SetHealth(float percent) {
 Held InHand() {
     if (g_ready && !g_lookQueued.exchange(true)) {
         GameThread::Post(Look);
+    }
+    std::lock_guard<std::mutex> held(g_lock);
+    return g_held;
+}
+
+Held InHandNow() {
+    if (g_ready) {
+        Look();
     }
     std::lock_guard<std::mutex> held(g_lock);
     return g_held;

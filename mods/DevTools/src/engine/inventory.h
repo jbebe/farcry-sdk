@@ -25,6 +25,9 @@ void Install();
 // it is this model, which is kept and restored instead.
 void Give(const char* archetype, const char* category);
 
+// Give, now. Game thread only. False when it could not, and LastResult says why.
+bool GiveNow(const char* archetype, const char* category);
+
 // Sets the gun in hand at the end of the next frame. Rounds fill the magazine first and the rest go
 // spare; health is a percentage of the gun's maximum reliability.
 void SetRounds(int rounds);
@@ -32,6 +35,9 @@ void SetHealth(float percent);
 
 // What the last frame saw in the player's hands, asking the next frame to look again.
 Held InHand();
+
+// What is in the player's hands now. Game thread only.
+Held InHandNow();
 
 // What the last Give did, in words.
 std::string LastResult();

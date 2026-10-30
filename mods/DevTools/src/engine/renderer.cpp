@@ -6,6 +6,7 @@
 // device reset the overlay never hears about fails outright and takes the game's renderer with it.
 #include "engine/renderer.h"
 
+#include "engine/frame_capture.h"
 #include "engine/vtable.h"
 #include "fcse_api.h"
 
@@ -58,6 +59,7 @@ namespace {
     HRESULT __stdcall PresentDetour(IDirect3DDevice9* device, const RECT* source,
                                     const RECT* destination, HWND window, const RGNDATA* dirty) {
         g_onFrame(DevTools::FrameStats::Presenting());
+        DevTools::FrameCapture::OnPresent(device);
 
         // A draw that presented a frame of its own would otherwise recurse for as long as it kept
         // drawing.

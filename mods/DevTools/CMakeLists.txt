@@ -44,6 +44,7 @@ add_library(DevTools SHARED
   "src/commands/guns.cpp"
   "src/commands/scenarios.cpp"
   "src/commands/spawnables.cpp"
+  "src/engine/actions.cpp"
   "src/engine/ai_sight.cpp"
   "src/engine/benchmark.cpp"
   "src/engine/bin_folder.cpp"
@@ -51,6 +52,7 @@ add_library(DevTools SHARED
   "src/engine/console.cpp"
   "src/engine/debug_camera.cpp"
   "src/engine/entity.cpp"
+  "src/engine/frame_capture.cpp"
   "src/engine/frame_stats.cpp"
   "src/engine/game_profile.cpp"
   "src/engine/game_thread.cpp"
@@ -66,6 +68,7 @@ add_library(DevTools SHARED
   "src/engine/spawn.cpp"
   "src/engine/vtable.cpp"
   "src/engine/weather.cpp"
+  "src/engine/world.cpp"
   "src/engine/world_draw.cpp"
   "src/fixes/load_savegame.cpp"
   "src/fixes/skip_intro.cpp"
@@ -89,6 +92,7 @@ add_library(DevTools SHARED
   "src/overlay/overlay.cpp"
   "src/overlay/range.cpp"
   "src/overlay/spawner.cpp"
+  "src/remote/remote.cpp"
   "${imgui_SOURCE_DIR}/backends/imgui_impl_dx9.cpp"
   "${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp"
 )
@@ -97,7 +101,8 @@ add_library(DevTools SHARED
 # while the overlay is up. Both ship with the Windows SDK; the legacy DirectX SDK is not needed.
 # ole32 is for the one CoInitializeEx call that holds dxdiagn.dll loaded under the cached provider.
 # pdh and psapi are the diagnostics tab's: the GPU counters Task Manager reads, and process memory.
-target_link_libraries(DevTools PRIVATE imgui d3d9 dinput8 dxguid ole32 pdh psapi)
+# windowscodecs writes the remote control's screenshots.
+target_link_libraries(DevTools PRIVATE imgui d3d9 dinput8 dxguid ole32 pdh psapi windowscodecs)
 
 # windows.h would otherwise define min and max as macros over std::min and std::max.
 target_compile_definitions(DevTools PRIVATE NOMINMAX)

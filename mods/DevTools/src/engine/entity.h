@@ -7,6 +7,8 @@
 
 namespace DevTools::Entity {
 
+constexpr float kRadiansPerDegree = 0.0174532925f;
+
 void Install();
 
 // The entity a camera manager is focused on, as a holder the caller owns a reference on. Null when

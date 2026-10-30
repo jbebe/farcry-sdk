@@ -66,6 +66,20 @@ namespace {
 
     std::mutex g_lock;
     std::deque<std::string> g_lines;
+    // How many lines have ever been added, however many of them g_lines still holds.
+    size_t g_added = 0;
+
+    size_t Added() {
+        std::lock_guard<std::mutex> held(g_lock);
+        return g_added;
+    }
+
+    // The lines added since Added returned `before`, as far back as g_lines reaches.
+    std::vector<std::string> LinesSince(size_t before) {
+        std::lock_guard<std::mutex> held(g_lock);
+        const size_t count = std::min(g_added - before, g_lines.size());
+        return {g_lines.end() - count, g_lines.end()};
+    }
 
     // Keeps each line of `text` under `tag`, in fcse.log too so it survives a crash that follows.
     void AddLines(const char* tag, const char* text) {
@@ -77,6 +91,7 @@ namespace {
             if (!line.empty()) {
                 FCSE::Logf("lua %s: %s", tag, line.c_str());
                 g_lines.push_back(std::string(tag) + ": " + line);
+                ++g_added;
                 if (g_lines.size() > kMaxLines) {
                     g_lines.pop_front();
                 }
@@ -178,30 +193,39 @@ void Install() {
              "CDominoInputListener::Execute");
 }
 
-void Run(const std::string& code) {
+Outcome Run(const std::string& code) {
+    const size_t before = Added();
     AddLines(">", code.c_str());
-    Execute(code);
+    const bool ran = Execute(code);
+    return {ran, {}, LinesSince(before)};
 }
 
 void Post(const std::string& code) {
     GameThread::Post([code] { Run(code); });
 }
 
-void PostEvaluate(const std::string& expression) {
-    GameThread::Post([expression] {
-        AddLines("=", expression.c_str());
-        if (!Execute(std::string(kResultGlobal) + " = tostring(" + expression + ")")) {
-            return;
-        }
+Outcome Evaluate(const std::string& expression) {
+    const size_t before = Added();
+    AddLines("=", expression.c_str());
 
+    Outcome outcome;
+    outcome.ran = Execute(std::string(kResultGlobal) + " = tostring(" + expression + ")");
+    if (outcome.ran) {
         void* state = *static_cast<void**>(g_getScriptSystem());
         char** top = static_cast<char**>(state);
         char* saved = *top;
         g_getGlobal(state, kResultGlobal);
         const char* value = g_toString(state, -1);
-        AddLines("value", value != nullptr ? value : "(not a string)");
+        outcome.value = value != nullptr ? value : "(not a string)";
+        AddLines("value", outcome.value.c_str());
         *top = saved;
-    });
+    }
+    outcome.lines = LinesSince(before);
+    return outcome;
+}
+
+void PostEvaluate(const std::string& expression) {
+    GameThread::Post([expression] { Evaluate(expression); });
 }
 
 std::vector<std::string> Lines() {

@@ -16,6 +16,9 @@ using MessageFn = bool (*)(HWND window, UINT message, WPARAM wparam, LPARAM lpar
 // Subclasses the game's window and takes over DirectInput's device reads. False is logged.
 bool Install(HWND window, MessageFn onMessage);
 
+// The game's window, or null before Install.
+HWND Window();
+
 // While captured, the game reads an idle keyboard and a still mouse, and messages that reach the
 // overlay stop there. Its own state is untouched, so releasing hands input back mid-motion without
 // a stuck key.

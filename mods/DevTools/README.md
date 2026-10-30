@@ -396,6 +396,39 @@ own Dear ImGui by including `include/devtools_imgui.cmake` and linking `imgui`.
 `#` escapes to Lua, developer-only commands are reachable, and the line runs at the end of the next
 frame, so a window can post one straight from its draw. Sky Overhaul's window sets the clock this way.
 
+## Remote control
+
+Launched with `-devtoolsremote`, DevTools serves a local named pipe, `\\.\pipe\DevToolsRemote`, for a
+program to drive the game. [fc2drive](../../tools/fc2drive) is the program. It is off otherwise, because
+whatever connects can run any Lua in the game, and the pipe refuses connections from other machines.
+
+Each command is one line, and each answer one line of JSON with `ok` true, or false and an `error`.
+Commands that touch the game run at the end of a frame and answer after, so a `goto` answers once the
+world there has loaded.
+
+| Command | What it does |
+|---|---|
+| `state` | Whether the player is in a world, whether a loading screen is up or anything is streaming, and `ready` for none of those. Then position, yaw, the gun in hand, its rounds and health, whether a recording is being made or played, and the game's window. While the engine is too busy loading to reach the end of a frame, only `ready` false and `busy` true |
+| `goto x y z [yaw]` | The game's own teleport, then the facing in degrees |
+| `action <signal> [values]` | Fires an action by its name in the action map, as the player's bindings would: `startshooting 1`, `stopshooting 0`, `move 1 0`, `look 0 -0.5`, `use 1` |
+| `shot <path>` | Writes the next finished frame as a PNG, before the overlay draws on it |
+| `lua <code>`, `eval <expression>`, `console <line>` | The Lua tab's Run and Evaluate, with the lines they added, and a console line |
+| `guns`, `give <archetype>`, `rounds <n>`, `gunhealth <percent>` | The Armory's list and what its controls do |
+| `spawnpickup <archetype>` | The Spawner's call for something to pick up, close to the player and low, facing 0: spawned turned the way the player faced, an AK-47 was not offered for use |
+| `option <name> <value>` | Sets a row of the Mod Configuration Menu for this launch: `option Infinite ammo 1`. Nothing is saved |
+| `weather clear`, `weather engine` | No storm, rain or wind, or the engine's own |
+| `record`, `stoprecord <path>`, `play <path>` | See below |
+
+Actions are not keypresses. They reach the listeners the bindings reach, so they ignore how controls
+are rebound, and they work with another window focused. Real keys and the mouse still reach the game
+as well.
+
+**Recordings** keep every action the game acts on, the player's or a script's, as a text file with a
+line per action: seconds from the start, the signal in hex, its values. Playing one fires them at those
+times from wherever the player is now, inside a normal game, so start it from where it was recorded. A
+replay ended 3 mm from where the recording did, over 3.5 s of walking and firing. AI and physics are
+not recorded and will differ.
+
 ## Savegame launch
 
 `-load` opens the save and parses it correctly, then dies in what it does next: a validation pass
@@ -555,6 +588,10 @@ Everything below needs a real install:
   AK-47, the gun of its class lies at your feet, and the tab reads `reliability 1000 of 1000`. With
   Ammo at 35, the HUD shows 30 and 5. Firing lowers the slider. The gun lasts about 50 magazines.
   Clicking AK-47 again refills and restores it and drops nothing.
+- **Remote control** *(run, works, GOG v1.03, 2026-10-30)*: with `-devtoolsremote`, `fcse.log` shows
+  `remote: serving on \\.\pipe\DevToolsRemote`. fc2drive's scenarios gave and fired guns, teleported
+  1.5 km across world1 with the world loaded on arrival, took a pickup with `use`, and replayed a
+  recording.
 - **Range** *(seen 2026-10-25)*: Rifleman at 10 m put the player at the duel lane's start facing
   him and spawned him on a guard post. He stood facing the player for about 7 s before he noticed
   him, so the scenarios no longer use guard posts. Not yet run since that change.

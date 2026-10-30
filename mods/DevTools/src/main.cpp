@@ -32,6 +32,7 @@
 #include "engine/world_draw.h"
 #include "options/options.h"
 #include "overlay/overlay.h"
+#include "remote/remote.h"
 
 #include <vector>
 
@@ -159,6 +160,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallSkipSystemDetectionHook();
     InstallFastLoadingHooks();
     RegisterOptions(api);
+
+    DevTools::Remote::Start();
 
     return true;
 }

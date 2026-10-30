@@ -10,6 +10,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <optional>
 #include <string>
 
 namespace {
@@ -23,15 +24,19 @@ namespace {
     // The spawn does not find the ground, so the entity starts above the player's feet and drops.
     constexpr float kAbove = 1.5f;
 
+    constexpr float kPickupAhead = 1.6f;
+    constexpr float kPickupAbove = 0.4f;
+
     constexpr float kDegreesPerRadian = 57.2957795f;
 }
 
 namespace DevTools::Spawn {
 
 namespace {
-    // Spawns `count` side by side `ahead` metres in front of the player, turned `turnDegrees` from them.
-    void Line(const char* archetype, int count, float ahead, float turnDegrees) {
-        GameThread::Post([name = std::string(archetype), count, ahead, turnDegrees] {
+    // Spawns `count` side by side `ahead` metres in front of the player and `above` over their feet,
+    // turned `turnDegrees` from them, or unturned without it.
+    void Line(const char* archetype, int count, float ahead, float above, std::optional<float> turnDegrees) {
+        GameThread::Post([name = std::string(archetype), count, ahead, above, turnDegrees] {
             void* ref = Entity::AcquireFocusRef(Player::CameraManager());
             void* entity = Entity::Of(ref);
             if (entity == nullptr) {
@@ -44,13 +49,13 @@ namespace {
             const float yaw = Entity::Yaw(entity);
             const float x = matrix[12] - std::sin(yaw) * ahead;
             const float y = matrix[13] + std::cos(yaw) * ahead;
-            const float z = matrix[14] + kAbove;
+            const float z = matrix[14] + above;
             Entity::ReleaseRef(ref);
 
             for (int i = 0; i < count; ++i) {
                 const float across = (i - (count - 1) * 0.5f) * kSquadSpacing;
                 Lua::Run(Call(name.c_str(), x + std::cos(yaw) * across, y + std::sin(yaw) * across, z,
-                              yaw * kDegreesPerRadian + turnDegrees));
+                              turnDegrees ? yaw * kDegreesPerRadian + *turnDegrees : 0.0f));
             }
         });
     }
@@ -63,8 +68,10 @@ std::string Call(const char* archetype, float x, float y, float z, float yaw) {
     return call;
 }
 
-void Ahead(const char* archetype) { Line(archetype, 1, kAhead, 0.0f); }
+void Ahead(const char* archetype) { Line(archetype, 1, kAhead, kAbove, 0.0f); }
 
-void Squad(const char* archetype, int count) { Line(archetype, count, kSquadAhead, 180.0f); }
+void Squad(const char* archetype, int count) { Line(archetype, count, kSquadAhead, kAbove, 180.0f); }
+
+void Pickup(const char* archetype) { Line(archetype, 1, kPickupAhead, kPickupAbove, std::nullopt); }
 
 }

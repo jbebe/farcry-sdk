@@ -32,7 +32,6 @@ namespace {
     // Within this far of an arena's start the player is moved straight there, as noclip moves him. A
     // teleport brings up a loading screen, behind which the scenario's soldiers already act.
     constexpr float kPlaceRadius = 150.0f;
-    constexpr float kRadiansPerDegree = 0.0174532925f;
 
     constexpr const char* kTravel = "GameChangeWorld(\"testrange\", \"2054037628277228842\")";
 
@@ -61,7 +60,7 @@ namespace {
             if (std::hypot(matrix[12] - start.x, matrix[13] - start.y) <= kPlaceRadius) {
                 Entity::SetPhysicsEnabled(physics, false);
                 Entity::SetPosition(entity, start.x, start.y, kGround + kAboveGround);
-                Entity::SetEuler(entity, 0.0f, 0.0f, start.yaw * kRadiansPerDegree);
+                Entity::SetEuler(entity, 0.0f, 0.0f, start.yaw * Entity::kRadiansPerDegree);
                 Entity::SetPhysicsEnabled(physics, true);
                 placed = true;
             }

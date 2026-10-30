@@ -26,6 +26,7 @@ namespace {
     GetDeviceStateFn g_originalGetDeviceState = nullptr;
     GetDeviceDataFn g_originalGetDeviceData = nullptr;
 
+    std::atomic<HWND> g_window{nullptr};
     WNDPROC g_originalWndProc = nullptr;
     DevTools::Input::MessageFn g_onMessage = nullptr;
 
@@ -114,6 +115,7 @@ namespace DevTools::Input {
 bool Install(HWND window, MessageFn onMessage) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
+    g_window = window;
     g_onMessage = onMessage;
 
     void* getState = nullptr;
@@ -142,6 +144,8 @@ bool Install(HWND window, MessageFn onMessage) {
     api->Log("input: watching the game's window and its DirectInput devices");
     return true;
 }
+
+HWND Window() { return g_window; }
 
 void SetCaptured(bool captured) {
     g_captured = captured;

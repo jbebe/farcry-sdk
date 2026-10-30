@@ -1,6 +1,7 @@
 // AI view: what each soldier near the player sees of him, drawn in the world. Off by default; it
 // changes nothing in play, but it covers the screen.
 #include "engine/ai_sight.h"
+#include "engine/entity.h"
 #include "engine/world_draw.h"
 #include "fcse_api.h"
 
@@ -13,7 +14,6 @@ namespace {
     using DevTools::WorldDraw::Frame;
     using DevTools::WorldDraw::Vertex;
 
-    constexpr float kRadiansPerDegree = 0.0174532925f;
     constexpr float kArcStepDegrees = 3.0f;
     // How far above his feet the sectors lie, clear of the ground they would otherwise flicker in.
     constexpr float kSectorLift = 0.05f;
@@ -64,8 +64,8 @@ namespace {
     void Sector(Frame& out, const Point& centre, float yaw, float angle, float length,
                 uint32_t fill, uint32_t edge) {
         const int steps = static_cast<int>(std::ceil(angle / kArcStepDegrees));
-        const float start = yaw - angle * 0.5f * kRadiansPerDegree;
-        const float step = angle * kRadiansPerDegree / steps;
+        const float start = yaw - angle * 0.5f * DevTools::Entity::kRadiansPerDegree;
+        const float step = angle * DevTools::Entity::kRadiansPerDegree / steps;
         const float stepCos = std::cos(step);
         const float stepSin = std::sin(step);
         float x = std::cos(start) * length;
