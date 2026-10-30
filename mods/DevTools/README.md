@@ -543,7 +543,7 @@ Everything below needs a real install:
   `SpawnEntityFromArchetype` line it ran.
 - **Spawner soldiers** *(seen 2026-10-25 with squad size 1)*: in the test range, Red faction's
   Assault, Caucasian put a soldier 25 m ahead, facing you, and he opened fire at once.
-- **Armory** *(giving a gun seen 2026-10-30; the slider and the health fix not yet run)*: AK-47 draws an
+- **Armory** *(seen 2026-10-30)*: AK-47 draws an
   AK-47, the gun of its class lies at your feet, and the tab reads `reliability 1000 of 1000`. With
   Ammo at 35, the HUD shows 30 and 5. Firing lowers the slider. The gun lasts about 50 magazines.
   Clicking AK-47 again refills and restores it and drops nothing.
