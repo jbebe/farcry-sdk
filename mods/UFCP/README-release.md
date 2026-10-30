@@ -38,7 +38,8 @@ Always applied. A fix that needs a switch is a preference in disguise.
   its deadline.
 - **Hybrid cores** — on a CPU with performance and efficiency cores, such as Intel's since Alder
   Lake, the game runs on the performance cores alone, chosen by itself, so nothing the frame waits
-  for lands on a slower core. On any other CPU it keeps every processor.
+  for lands on a slower core. Where they have fewer than 8 threads, and on any other CPU, it keeps
+  every processor.
 
 The two restorations unlock content that ships inside the game's own files but is held behind an
 ownership check that can no longer succeed: both were Ubisoft promotions that ended, and the service

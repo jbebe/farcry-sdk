@@ -8,8 +8,8 @@ Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachang
 - **Random crashes on PCs with four or more cores.** UFCP gave the engine up to six job workers,
   and its jobs crash when two run at once. It keeps the engine's own single worker again.
 - **Intel CPUs with performance and efficiency cores.** The game now runs on the performance cores
-  alone, chosen by itself, so nothing the frame waits for lands on a slower core. On any other CPU
-  it keeps every processor.
+  alone, chosen by itself, so nothing the frame waits for lands on a slower core. Where they have
+  fewer than 8 threads, and on any other CPU, it keeps every processor.
 
 ### Removed
 - **Processor affinity.** The game's processors are chosen for it now, so the setting is gone, and

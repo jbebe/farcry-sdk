@@ -1,15 +1,20 @@
 // Hybrid processors: on a CPU with performance and efficiency cores, such as Intel's since Alder
 // Lake, the game runs on the performance cores alone. It has no way to tell Windows which of its
 // threads carry the frame, so one landing on a slower efficiency core holds the frame up.
-// Elsewhere it keeps every processor. Either way this replaces whatever affinity it was started with.
+// Performance cores with fewer threads than the game keeps busy would stutter instead, so there, and
+// on any other CPU, it keeps every processor. Either way this replaces the affinity it started with.
 #include "fcse_api.h"
 
 #include <windows.h>
 
+#include <bit>
 #include <cstdint>
 #include <vector>
 
 namespace {
+    // The fewest performance threads the game is held to: its own busy threads, with room to spare.
+    constexpr int kFewestThreads = 8;
+
     // The cores of the highest efficiency class in processor group `group`, or 0 where the topology
     // cannot be read. Windows before 10 reports every core as class 0, so they all count.
     KAFFINITY PerformanceCores(WORD group) {
@@ -57,14 +62,16 @@ void ApplyHybridCoresFix() {
     }
 
     const DWORD_PTR performance = PerformanceCores(thread.Group) & systemMask;
-    const DWORD_PTR wanted = performance != 0 ? performance : systemMask;
+    const DWORD_PTR wanted = std::popcount(performance) >= kFewestThreads ? performance : systemMask;
     if (!SetProcessAffinityMask(GetCurrentProcess(), wanted)) {
         FCSE::Logf("hybrid cores: affinity could not be set to 0x%08zX, error %lu",
                    static_cast<size_t>(wanted), GetLastError());
         return;
     }
 
-    FCSE::Logf(wanted == systemMask ? "hybrid cores: none, so every processor, 0x%08zX"
-                                    : "hybrid cores: the performance cores only, 0x%08zX",
-               static_cast<size_t>(wanted));
+    FCSE::Logf(wanted == systemMask
+                   ? "hybrid cores: every processor, 0x%08zX, the performance cores being 0x%08zX"
+                   : "hybrid cores: the performance cores only, 0x%08zX, of 0x%08zX",
+               static_cast<size_t>(wanted),
+               static_cast<size_t>(wanted == systemMask ? performance : systemMask));
 }
