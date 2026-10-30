@@ -3,7 +3,7 @@
 Notable changes to Inventory Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.0.0] - 2026-10-30
 
 ### Added
 - **Two guns of any class.** Gun A on key 2 and gun B on key 3, whatever their class. A gun you pick
