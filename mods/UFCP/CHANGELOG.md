@@ -2,6 +2,15 @@
 
 Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+- **Grass under spot lights** is lit whichever way you face, under a light that casts shadows such as
+  a flashlight. Most of that grass goes through a second version of the game's shader, which the fix
+  did not cover, so it stayed black and only some of it lit.
+- **Grass under spot lights** now works at other graphics settings. It only recognised the game's
+  shaders as they are built at one anti-aliasing and vegetation setting, and did nothing at others.
+
 ## [1.3.0] - 2026-10-30
 
 ### Fixed
