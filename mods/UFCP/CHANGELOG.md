@@ -2,7 +2,7 @@
 
 Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.3.0] - 2026-10-30
 
 ### Fixed
 - **Random crashes on PCs with four or more cores.** UFCP gave the engine up to six job workers,
