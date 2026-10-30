@@ -64,8 +64,8 @@ namespace {
         0xFB24621F, 0xFB76EC90, 0xFB8A9289,
     };
 
-    // The vertex shaders that light grass and leaves by the sun; those for grass the engine builds
-    // for itself, and no archive holds. See docs/docs/file-formats/shader-objects.md.
+    // The vertex shaders that light grass and leaves by the sun; those for grass have no name in the
+    // hash list. See docs/docs/file-formats/shader-objects.md.
     constexpr NamedVertex kNamedVertex[] = {
         {0x736F4429, VertexKind::LitGrass},
         {0x50B69F13, VertexKind::LitGrassCascaded},

@@ -100,16 +100,17 @@ The grass material places its instances from vertex data, so its per-instance wi
 never appear as constants; the combination above is what is left to find it by. The tree trunk binds
 `DistanceFactors` and `LevelLOD` too, which is why the trunk's own constants rule it out.
 
-### Grass lit by the sun is built at runtime
+### Grass lit by the sun is in the unnamed objects
 
 :::info[Verified via reverse engineering]
 Measured on GOG in savannah and jungle, by the bytecode of every grass draw, over three launches
 that gave the same CRCs.
 :::
 
-The 39 grass `.vso` draw grass only into depth: the linear depth pass, and its alpha-tested near
-grass. Grass lit in the HDR scene pass comes through vertex shaders that match no object, which the
-engine builds for itself:
+The 39 named grass `.vso` draw grass only into depth: the linear depth pass, and its alpha-tested near
+grass. Grass lit in the HDR scene pass comes through objects the hash list has no name for, at
+`_unknown\<hash>.bin` in an export. The D3D9 tree holds 2,844 vertex shaders, all `vs_3_0`, and 456 of
+them read `c32` to `c34`. The CRC is of the bytecode the device hands back, not of the object:
 
 | Vertex shader | Pixel shader | Draws |
 | --- | --- | --- |
@@ -117,7 +118,29 @@ engine builds for itself:
 | `50B69F13` | `FA083E8F` | lit by the sun, shadow cascades |
 | `0701D375` | `D26F57AE` | the same for bent clumps, placed through a rotation from the instance data |
 | `A08FE8BF`, `7601537E` | `ABB7093C` | lit without a shadow |
-| `05D4DC7E`, `94B54206` | `5D532300` | an additive light pass, depth test equal |
+| `05D4DC7E`, `94B54206` | `5D532300` | an omni light's additive pass, depth test equal |
+| `D6110861`, `DC1C293C` | `5D532300`, `8FE88A8C` with alpha | a spot light's additive pass, depth test equal, upright and bent |
+| `AFCC79D6` | `320F2CEC`, `E2CA3564` with alpha | the same for an upright clump, receiving the light's shadow |
+
+These CRCs are at 4x multisampling with very high vegetation. With multisampling off and low vegetation
+the spot pair upright is `270DCCA2` and `84DD1CBD`, so nothing that reaches every player can match
+on them. What tells a spot light's additive pass from the rest in any setting, exactly 80 of the 2,844:
+
+- three `dp3` reading `c32` to `c34`, which only grass has;
+- one unsaturated `dp3` with a constant as its second source, the light's direction for the cone. Omni
+  has no such dot, the sun's is saturated, and the depth pass has the constant first;
+- no read of `FogColorVector` at `c48`. 80 more have both of the above and read it: a clump's first pass,
+  ambient and spot light together, and only a first pass writes the fog's colour. None was drawn in any
+  run measured.
+
+The omni pair has the same two faults as the spot passes: `mul o1.w` writes the fog's amount where an
+additive light wants what the fog leaves, and the diffuse is a saturated dot with the ground's normal. The
+only omni light measured drew for a few seconds after each load, at the player, in a colour of
+`(0, 0.4, 0.5)`, with `c72.x`, its falloff, under 0.0005.
+
+A light that casts shadows draws grass through both of its passes in one place, and which one a draw
+gets changes as the camera turns. Over a full turn in long grass the shadowed pass took 374,226
+instances and the unshadowed 3,682. What decides it is not traced.
 
 Every grass vertex shader, shipped or built, turns each clump by `GrassCylindricalBillboardMatrix` at
 `c32` to `c34`, reading only `xyz`: one camera heading shared by every clump, so each faces the eye.
