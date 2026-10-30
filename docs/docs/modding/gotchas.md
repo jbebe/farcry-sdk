@@ -94,6 +94,11 @@ the full provenance note.
   developer console](../engine-internals/developer-console.md). It does not remove the repack cycle
   for asset changes, but it does give a live scripting loop for gameplay state; the map editor also
   has its `CTRL+G` live-playtest shortcut (see [Engine Theory](./engine-theory.md)).
+- **A big quad barely takes a spot light.** On a `Generic` material a spot light landing mid-face
+  showed almost nothing while the quad's corners lay outside its cone, and a pool of light once the
+  face was cut into cells about 4 cm square, the map's density **(seen in game, 2026-10-30)**. This
+  implies the light is evaluated per vertex. The shader itself was not read. Tessellate large flat
+  meshes that a flashlight or headlamp should light.
 
   :::info[Verified in a running game]
   `CXConsole` is constructed unconditionally on the boot path, and the console opens and runs in
