@@ -184,7 +184,7 @@ The smallest file is a sector header and a `main` mission layer, which is always
   `CoverObjects.WallEroded10_BK.Multi_0` from `mp_07_m_dogon`.
 - **Encode** the XML with `jackall-cli fcb encode`.
 
-`mods\DevTools\range\build-layer.ps1` does all of this for 14 walls, and they stand in the game where they
+`mods\DevTools\range\build-layer.ps1` does all of this for the range's walls, and they stand in the game where they
 were placed **(proven)**.
 
 Place entities before generating the navmesh, so the navmesh is cut around them.
