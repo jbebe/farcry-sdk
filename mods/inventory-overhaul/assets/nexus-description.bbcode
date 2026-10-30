@@ -1,0 +1,50 @@
+[quote][b]I'm working on all of these mods on my own.[/b] If you'd like to help, extend or fix one of them, co-author a new one, or join one of my bigger projects, I'm very open to it. Send me a message here on Nexus or on the [b]FarCry:Modding Discord Server[/b].[/quote]
+
+Two guns of any class, and a notebook for everything else you carry. You hold the notebook in both hands while the game runs on, the way you hold the map, so looking through your things in a firefight is your own risk.
+
+[b][size=4]What it changes[/size][/b]
+[list]
+[*][b]Two guns[/b] - gun A is on key 2 and gun B on key 3, whatever their class. A gun you pick up with two carried takes the place of the one in hand. Key 4 draws nothing, and the machete is unchanged.[/*]
+[*][b]Items[/b] - stow a gun and it keeps its wear and its loaded rounds. You can have four guns in all, slots included. Spare ammo and upgrades stay yours, as they always were.[/*]
+[*][b]The notebook[/b] comes with the map. It works on foot.[/*]
+[*][b]Inventory page[/b] - your guns, Items, your diamonds and the belt. A post-it shows the selected row's picture, condition, ammo, upgrades and ratings.[/*]
+[*][b]Papers page[/b] - the Jackal's and the Predecessor's tapes you have found, which play while you keep moving, and any notes and photos other mods add.[/*]
+[*][b]Journal page[/b] - your reputation and your current job, with its objectives and the Underground's.[/*]
+[*][b]Contacts page[/b] - the buddies you have met, with your active buddies first and the missing and the dead faded.[/*]
+[*][b]The pause menu[/b] loses Resume, Journal, Buddies, Jackal Tapes and Predecessor Tapes, which the notebook and Esc now cover. Upgrades stays.[/*]
+[/list]
+[b][size=4]Controls[/size][/b]
+[list]
+[*][b]Tab[/b] - take the notebook out or put it away. Rebindable in Options > Controls.[/*]
+[*][b]Mouse wheel[/b] - move along the rows, or turn a long note's sheets.[/*]
+[*][b]R[/b] - turn the page.[/*]
+[*][b]Left mouse button[/b] - use the selected row: stow gun A or B, heal on the syrettes, play or stop a tape, read a note. On a stowed gun it opens a small menu; the wheel moves in it, and a click puts the gun in slot A or B.[/*]
+[*][b]Right mouse button or Esc[/b] - close that menu, or put back the note you are reading.[/*]
+[*][b]X[/b] - drop the gun in hand, or with the notebook out the selected gun or one of the selected item. Rebindable.[/*]
+[*][b]2, 3[/b] - draw gun A, gun B.[/*]
+[/list]
+[size=4][b]Requirements[/b][/size]
+[list]
+[*][url=https://www.nexusmods.com/farcry2/mods/368]FCSE[/url] 1.4.0 or later, the plugin loader this runs in. Far Cry 2 1.03, Steam or GOG.[/*]
+[*]JackAll 1.7.0 or the Vortex extension 0.6.0, or later. Older versions can't merge the handwriting font this mod adds to the game's font list.[/*]
+[/list]
+[b][size=4]Installing[/size][/b]
+The download is a JackAll layer, which both installers read as-is:
+[list]
+[*][b]Vortex[/b] - auto-installer handles the rest.[/*]
+[*][b]JackAll[/b] - [url=https://jbebe.github.io/farcry-sdk/jackall/installing-mods/]here's a detailed instruction[/url] for JackAll installation.[/*]
+[/list]
+A save from before the mod works. If it carries three guns, the special-class gun is dropped at your feet when it loads.
+
+Whatever is in Items exists only while this mod is installed. Loading a save made with the mod after removing it has not been tested, so keep a save from before you installed it.
+
+[b][size=4]Language[/size][/b]
+The game's own text appears in your language: tapes, buddies, your reputation and your job. The notebook's own labels and the guns' names are in English in every language for now.
+
+[b][size=4]Compatibility[/size][/b]
+[list]
+[*][b]Other mods' HUD changes[/b] merge with this one when they ship them as fragments. A mod that replaces the whole hud.mgb will not work alongside it.[/*]
+[*][b]Weapon crates[/b] still draw the gun they hand out by its class, and a pickup's prompt shows the carried gun of the pickup's class.[/*]
+[/list]
+[b][size=4]For modders[/size][/b]
+Notes, photos, cassettes and items come from other mods: a pickup names its id in FCSE entity data, and the rest follows from that id by convention. See [url=https://github.com/jbebe/farcry-sdk/blob/main/mods/inventory-overhaul/README.md#other-mods-papers]Other mods' papers[/url].
