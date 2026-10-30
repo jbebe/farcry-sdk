@@ -82,8 +82,8 @@ bool IsInHand(const void* inventory, void* item);
 bool Drawn(const void* inventory);
 // Whether nothing is in hand, as after the gun in hand was dropped.
 bool HandEmpty(const void* inventory);
-// Draws the first gun of a class at once, as a pickup does, rather than switching to it.
-void SelectAtOnce(void* inventory, const uint32_t* category);
+// Draws `gun` at once, as a pickup does, rather than switching to it.
+void SelectAtOnce(void* inventory, const Weapon& gun);
 // Makes the gun whose item has `id` the one being drawn.
 void Equip(void* inventory, uint32_t id);
 // Drops a gun at the pawn's feet, or with Remove takes it away and leaves nothing behind.

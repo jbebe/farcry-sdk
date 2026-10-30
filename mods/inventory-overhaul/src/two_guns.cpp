@@ -100,7 +100,7 @@ const Inventory::Weapon* InHand(const void* inventory, const std::vector<Invento
 // gun is drawn at once, as a pickup draws it.
 bool Draw(void* inventory, const Inventory::Weapon& gun) {
     if (Inventory::HandEmpty(inventory)) {
-        Inventory::SelectAtOnce(inventory, Inventory::Category(gun.weapon));
+        Inventory::SelectAtOnce(inventory, gun);
     } else if (!g_selectWeapon(inventory, nullptr, Inventory::Category(gun.weapon))) {
         return false;
     }
@@ -308,8 +308,8 @@ namespace {
             return picked;
         }
         for (const Inventory::Weapon& gun : Inventory::Guns(added.inventory)) {
-            if (gun.weapon == added.weapon) {
-                Draw(added.inventory, gun);
+            if (gun.weapon == added.weapon && !Inventory::IsInHand(added.inventory, gun.item)) {
+                Inventory::SelectAtOnce(added.inventory, gun);
             }
         }
         return picked;

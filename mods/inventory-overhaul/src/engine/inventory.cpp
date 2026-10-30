@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstring>
 #include <string_view>
+#include <utility>
 
 namespace InventoryOverhaul::Inventory {
 
@@ -37,6 +38,7 @@ namespace {
     FCSE::Relocation<AddByNameFn> g_addByName{FCSE::Uplay(0x0012B540)};
     FCSE::Relocation<SelectAtOnceFn> g_selectAtOnce{FCSE::Uplay(0x0012B9B0)};
     FCSE::Relocation<UpdateEquipAnimFn> g_updateEquipAnim{FCSE::Uplay(0x0012A6F0)};
+    FCSE::Relocation<UpdateEquipAnimFn> g_putAwayAtOnce{FCSE::Uplay(0x0012AF80)};
     FCSE::Relocation<ReliabilityFn> g_reliability{FCSE::Uplay(0x0012E9F0)};
     FCSE::Relocation<RoundsFn> g_ammoInClip{FCSE::Uplay(0x0012E950)};
     FCSE::Relocation<RoundsFn> g_rememberedInClip{FCSE::Uplay(0x0012EB50)};
@@ -147,7 +149,7 @@ namespace {
 }
 
 bool Install() {
-    return g_getTerminal && g_dropWeapon && g_addByName && g_selectAtOnce && g_updateEquipAnim &&
+    return g_getTerminal && g_dropWeapon && g_addByName && g_selectAtOnce && g_updateEquipAnim && g_putAwayAtOnce &&
            g_reliability && g_ammoInClip && g_rememberedInClip && g_setLoaded && g_spareRounds &&
            g_gadgetFromCategory && g_uses && g_addGadget && g_pawnClass && g_getComponent &&
            g_buildCountersType && g_countersTypeName && g_countersType && g_buildEconomyType &&
@@ -305,8 +307,16 @@ bool Drawn(const void* inventory) {
 
 bool HandEmpty(const void* inventory) { return EquippedEntity(inventory) == nullptr; }
 
-void SelectAtOnce(void* inventory, const uint32_t* category) {
-    g_selectAtOnce(inventory, nullptr, category);
+void SelectAtOnce(void* inventory, const Weapon& gun) {
+    // The engine does nothing with a gun of the class in hand, as dropping one leaves the other there,
+    // and draws the first gun of the class, so the hand is emptied and this one goes first for the call.
+    g_putAwayAtOnce(inventory, nullptr);
+    void* list = Read<void*>(inventory, kInventoryItems);
+    void** items = Read<void**>(list, 0);
+    void** place = std::find(items, items + Read<uint32_t>(list, sizeof(void*)), gun.item);
+    std::swap(*items, *place);
+    g_selectAtOnce(inventory, nullptr, Category(gun.weapon));
+    std::swap(*items, *place);
 }
 
 void Equip(void* inventory, uint32_t id) {
