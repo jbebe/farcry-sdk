@@ -26,6 +26,9 @@ MAIN_LEFT, MAIN_RIGHT, SPINE, MIDDLE = 81, 931, 503, 352
 LEFT_EDGE, WIDTH, PLANE = -0.150, 0.552, 0.051
 TILT = 5.0
 STRIPS = 4
+# Each strip's front in cells, about 4 cm square like the map's: a spot light reaches a page only through
+# its vertices, so a bare quad with its corners outside the cone stays dark.
+FRONT_ALONG, FRONT_ACROSS = 2, 12
 # A spot of plain paper, for the backs.
 BLANK = (300, 660)
 
@@ -126,33 +129,37 @@ for side, sign, outer in (("L", -1, 0), ("R", 1, SHEET_W)):
         # The strip in its bone's frame, front then back; the spread's x and y at each corner.
         inner_x = SPINE + sign * k * length / SCALE
         outer_x = SPINE + sign * (k + 1) * length / SCALE
-        corners = [(0.0, inner_x, BOTTOM), (0.0, inner_x, TOP), (length, outer_x, TOP), (length, outer_x, BOTTOM)]
-        positions, uvs, normals, tangents, binormals = [], [], [], [], []
-        for face, face_normal in enumerate(faces):
-            for along, x, y in corners:
-                positions += [along, (MIDDLE - y) * SCALE, 0.0]
-                uvs += uv(x, y) if face == 0 else uv(*BLANK)
-                normals += face_normal
-                tangents += [sign, 0.0, 0.0]
-                binormals += [0.0, 1.0, 0.0]
-        # Clockwise as seen from the side each face looks at.
-        indices = []
-        for face, face_normal in enumerate(faces):
-            base = face * 4
-            a, b, c, d = (positions[(base + i) * 3:(base + i) * 3 + 3] for i in range(4))
-            winding = [0, 1, 2, 2, 3, 0]
-            if dot(cross(sub(b, a), sub(c, a)), face_normal) > 0:
-                winding = [0, 2, 1, 2, 0, 3]
-            indices += [base + i for i in winding]
+        positions, uvs, normals, tangents, binormals, indices = [], [], [], [], [], []
+        for face, (face_normal, along_cells, across_cells) in enumerate(
+                ((faces[0], FRONT_ALONG, FRONT_ACROSS), (faces[1], 1, 1))):
+            base = len(positions) // 3
+            for i in range(along_cells + 1):
+                for j in range(across_cells + 1):
+                    x = inner_x + (outer_x - inner_x) * i / along_cells
+                    y = BOTTOM + (TOP - BOTTOM) * j / across_cells
+                    positions += [length * i / along_cells, (MIDDLE - y) * SCALE, 0.0]
+                    uvs += uv(x, y) if face == 0 else uv(*BLANK)
+                    normals += face_normal
+                    tangents += [sign, 0.0, 0.0]
+                    binormals += [0.0, 1.0, 0.0]
+            # Clockwise as seen from the side the face looks at.
+            for i in range(along_cells):
+                for j in range(across_cells):
+                    a = base + i * (across_cells + 1) + j
+                    b, c, d = a + 1, a + across_cells + 2, a + across_cells + 1
+                    pa, pb, pc = (positions[n * 3:n * 3 + 3] for n in (a, b, c))
+                    clockwise = dot(cross(sub(pb, pa), sub(pc, pa)), face_normal) <= 0
+                    indices += [a, b, c, c, d, a] if clockwise else [a, c, b, c, a, d]
         lows = [min(positions[i::3]) for i in range(3)]
         highs = [max(positions[i::3]) for i in range(3)]
         centre, radius = sphere(lows, highs)
         parts.append({"name": name + "_LOD0", "lod_metric": 10, "bounds": centre + [radius] + lows + highs,
                       "placement_node": index,
                       "clusters": [{"material_index": 0, "flags": 3018, "palette": [-1] * 48}]})
-        geometry.append({"buffer": 0, "part": len(parts) - 1, "cluster": 0, "vertex_count": 8, "positions": positions,
-                         "uvs": uvs, "uvs1": [-1.0000305, 2.0000305] * 8, "normals": normals, "tangents": tangents,
-                         "binormals": binormals, "colours": [1.0] * 32, "indices": indices})
+        count = len(positions) // 3
+        geometry.append({"buffer": 0, "part": len(parts) - 1, "cluster": 0, "vertex_count": count, "positions": positions,
+                         "uvs": uvs, "uvs1": [-1.0000305, 2.0000305] * count, "normals": normals, "tangents": tangents,
+                         "binormals": binormals, "colours": [1.0] * (count * 4), "indices": indices})
 
 # Each node's place in the model, and the model's box over every strip placed by its node.
 places = {}
