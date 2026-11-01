@@ -5,7 +5,7 @@ solves for a weapon or diamonds. Data only so far. Its papers are read in
 [Inventory Overhaul](../inventory-overhaul/README.md)'s notebook, which knows them by
 [convention](../inventory-overhaul/README.md#other-mods-papers), so it needs that mod.
 
-When this mod ships, Inventory Overhaul's example papers go. In that mod: `kExamples` and its insert
+When this mod ships, Inventory Overhaul's placeholder papers go. In that mod: `kExamples` and its insert
 in `src/papers_page.cpp`, the `Papers` section of the language fragments, the example photo's lines in
 `build-ui.ps1`, then run it again; `layer/mods/soundbinary/00fd0002.spk`, the papers' sources in
 `assets/`, and the "for now" lines in `README.md`, `README-release.md` and

@@ -11,7 +11,7 @@ this is an FCSE plugin, built in the log's steps.
 | 3. The notebook on Tab | a gadget of its own beside the map, given with it, on a new Notebook control: two bent pages held in both hands, the right one bending as the hands move | works in game |
 | 4. The Items page | the mockup's spread as a Magma page drawn onto the notebook's pages: Weapons, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet |
 | 6. Docs, Missions, Buddies | R turns the page; notes and photos, read whole with LMB, the Jackal and Predecessor tapes found and other mods' cassettes, the reputation and the current job, and the buddies met, in the game's words; the pause menu without those pages or its job panel | seen in game in world 2; another mod's note, photo and cassette read, viewed and played, clicks included |
-| 7. Papers in the world | another mod's notes, photos and cassettes, known by convention; picking one up puts it in Items, so Papers shows it | seen in game with [Tales of Africa](../tales-of-africa/README.md)'s |
+| 7. Papers in the world | another mod's notes, photos and cassettes, known by convention; picking one up puts it in Items, so Docs shows it | seen in game with [Tales of Africa](../tales-of-africa/README.md)'s |
 
 ## Two guns
 
@@ -139,7 +139,8 @@ nothing.
 The post-it's gun pictures are the shop's `gun_icon_*` textures, multiplied onto the paper, one image
 per gun, all but one hidden.
 
-`src/engine/paper.cpp` puts it on the pages. Its first and last images, `mark_begin` and `mark_end`,
+`src/engine/paper.cpp` puts it on the pages, on DirectX 9 only: the notebook does not work on DirectX 10.
+Its first and last images, `mark_begin` and `mark_end`,
 are clear textures of a size no other has. While the notebook is open, the Direct3D texture binds
 between them go into a target of the screen's size, with alpha, instead of the screen; it is cleared to
 a clear paper tone, so the filtered edges of the spread and its tabs fade into paper, not black. That
@@ -264,7 +265,8 @@ The notebook has no notes, photos or cassettes of its own: another mod places th
 a Docs page with none shows only the game's tapes. Everything about one follows from its Items id
 by convention; the only data of its own is on its pickup.
 
-For now the page also lists three examples for everyone, never in Items and never saved. They go when
+For now the page also lists three placeholders for everyone, dummy content for later support of new
+mission types, never in Items and never saved. They go when
 Tales of Africa ships: [its README](../tales-of-africa/README.md) says how. Their sources are in
 `assets/`. `build-ui.ps1` makes the photo's texture from `photo.png`, and the cassette's bank,
 `00fd0002.spk`, is the mp3 made Ogg Vorbis (`ffmpeg -c:a libvorbis -q:a 2`).

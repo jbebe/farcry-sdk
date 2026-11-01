@@ -305,8 +305,8 @@ Each step ends with one check in game before the next.
 
 - **The arrow keys:** the mockup moves along the lists with ↑ and ↓ as well as the wheel, but
   the game binds them to walking beside W and S, so for now only the wheel moves the selection.
-- **Real papers:** the torn notebook page is found in the world; the Docs page's other three are
-  still samples the test window's Fill gives.
+- **Real papers:** the Docs page's note, photo and cassette are placeholders for later mission types;
+  Tales of Africa, on hold, holds the first real ones.
 - **What still selects by class:** the weapon crate draws the gun it hands out by its class, and a
   pickup's switch prompt shows the carried gun of the pickup's class. Step 1 shows how far it shows.
 - **How a mission asks "does the player carry X"**, since the plugin cannot read `Globals`. Candidates:

@@ -12,8 +12,8 @@ is your own risk.
 - **Items page:** your guns, your items, your diamonds and the belt. A post-it shows the selected
   row's picture, condition, ammo, upgrades and ratings.
 - **Docs page:** the Jackal's and the Predecessor's tapes you have found, which play while you keep
-  moving, and any notes and photos other mods add. For now it also lists an example note, photo and
-  cassette, to show what those look like.
+  moving. The documents beside them, a note, a photo and a cassette, are only dummy content for now,
+  for later support of new mission types.
 - **Missions page:** your reputation and your current job, with its objectives and the Underground's.
 - **Buddies page:** the buddies you have met, with your active buddies first and the missing and
   the dead faded.
@@ -38,6 +38,7 @@ is your own risk.
 - **FCSE 1.4.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
 - **JackAll 1.7.0 or the Vortex extension 0.6.0, or later**, to install it. Older versions can't merge
   the handwriting font this mod adds to the game's font list.
+- **DirectX 9**, set in Options > Display > DirectX Version. The notebook does not work on DirectX 10.
 
 ## Installing
 
