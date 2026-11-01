@@ -264,8 +264,9 @@ Movement and look stay live, as with the map. The gamepad mirrors the map's: d-p
 - **The page is Magma**, built the way the pause menu's paper pages are, so it looks like the game's
   own: the `notebook` texture, Farcry2 ink, `common.mgb`'s post-it, paperclip and red line, with the
   index tabs along the top, clear of the fingers. The handwriting is a font of the game's own kind,
-  Caveat drawn at weight 600 and 40 px by JackAll's `mft build` and added to every `fonts.mgb` and
-  UI dependency list as fragments (seen in game, 2026-10-28). It is drawn onto the notebook's pages, where it is
+  Caveat Bold drawn at 20 px without Cyrillic by JackAll's `mft build` and added to every `fonts.mgb`
+  and UI dependency list as fragments (seen in game, 2026-10-28). It is shown at 24, so it is stretched
+  a little and no finer than the game's own fonts; at 40 px it read too smooth beside them (2026-11-01). It is drawn onto the notebook's pages, where it is
   lit by the world and moves with the hands, since a flat overlay reads as a HUD. The draws between
   the page's first and last image go into a texture instead of the screen, and the pages draw with a
   material named `MAPTOP`, which shows that texture in place of the area map, cut out to the notebook

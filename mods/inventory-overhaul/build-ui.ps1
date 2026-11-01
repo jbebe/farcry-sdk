@@ -35,9 +35,10 @@ $CommonId = "#E5EC7051"
 $PageId = "#F2CDBA4C"
 $NotebookMaterial = "#F67D9A2B"
 $Farcry2 = "#5B34AD62"
-# The handwriting: Caveat, at a weight that reads on the page, made a font package as the game's are.
-$CaveatSize = 40
-$CaveatWeight = 600
+# The handwriting: Caveat in its bold, made a font package as the game's are, and drawn smaller than it
+# is shown so it is no finer than they are. Leaving Cyrillic out halves its page; no paper uses it.
+$CaveatSize = 20
+$CaveatWeight = 700
 $Caveat = "Caveat_$CaveatSize"
 
 # The spread's place in notebook.png. The sheet the notebook's pages show is the spread from $SheetTop
@@ -541,7 +542,7 @@ Exec $Cli xbt build "$Work\photo.dds" "$Work\ui_tape_icon.xml" -o "$Textures\exa
 Remove-Item -Recurse -Force "$PSScriptRoot\layer\mods\ui\fonts", "$Layer\*\*\ui\fonts.mgb", "$Layer\*\*\ui\_depload.xml" `
     -ErrorAction SilentlyContinue
 Exec $Cli mft build "$PSScriptRoot\notebook\fonts\Caveat-VariableFont_wght.ttf" --axis "wght=$CaveatWeight" `
-    --size $CaveatSize --name $Caveat --out "$PSScriptRoot\layer" --game $Game | Out-Null
+    --size $CaveatSize --no-cyrillic --name $Caveat --out "$PSScriptRoot\layer" --game $Game | Out-Null
 
 # A changed package's XML checked and written into the layer as fragments of its retail package.
 function Ship([System.Collections.Generic.List[string]]$lines, [string]$xml, [System.IO.FileInfo]$source,

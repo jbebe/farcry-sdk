@@ -72,6 +72,9 @@ list.
 A page is single-level DXT5, white, with the glyphs in alpha. `farcry2_25_0.xbt` is 128 × 1024; the
 Cyrillic font's are 256 × 256. A page's `.xbt` header is the default one any texture can have.
 
+A page can be any size under the same `.mft`, since its UVs are fractions: a font's page enlarged 4×
+draws the same glyphs in the same places **(seen in game, 2026-11-01)**.
+
 ## Adding a font
 
 A font is used through a font family. Both are declared in `fonts.mgb`, one per language and screen

@@ -134,7 +134,8 @@ selected row, tinted as the pause pages tint it. A note's text and a photo's cap
 being read, are in Caveat, a handwriting font (`notebook/fonts/`, under the SIL Open Font License):
 `build-ui.ps1` has `jackall-cli mft build` draw it into `layer/mods/ui/fonts/` and add it to every
 `fonts.mgb` and UI dependency list as fragments, which it reads from the install (`-Game`,
-`C:\Games\Far Cry 2` by default).
+`C:\Games\Far Cry 2` by default). It has no Cyrillic or Greek, so a paper written in those draws as
+nothing.
 The post-it's gun pictures are the shop's `gun_icon_*` textures, multiplied onto the paper, one image
 per gun, all but one hidden.
 

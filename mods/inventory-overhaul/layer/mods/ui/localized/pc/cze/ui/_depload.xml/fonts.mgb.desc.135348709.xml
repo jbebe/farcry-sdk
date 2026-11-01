@@ -4,6 +4,6 @@
 	<CTextureResource ID="ui\fonts\arial_cyrillic_25_0.xbt" crc_ID="2754708555" />
 	<CTextureResource ID="ui\fonts\arial_cyrillic_25_1.xbt" crc_ID="2572267003" />
 	<CTextureResource ID="ui\fonts\arial_cyrillic_25_2.xbt" crc_ID="3740391211" />
-	<CMagmaUIResource ID="ui\fonts\caveat_40.mft" crc_ID="3738007791" />
-	<CTextureResource ID="ui\fonts\caveat_40_0.xbt" crc_ID="2433039031" />
+	<CMagmaUIResource ID="ui\fonts\caveat_20.mft" crc_ID="143956978" />
+	<CTextureResource ID="ui\fonts\caveat_20_0.xbt" crc_ID="1466577712" />
 </CMagmaConfigUIResource>
