@@ -118,7 +118,7 @@ namespace {
     // Everything on the post-it hidden or emptied, for the selected row to fill in.
     void ClearPostIt(Model& model) {
         HideInventoryPictures(model);
-        for (const char* picture : {"IO_POSTIT_PIC_NOTE", "IO_POSTIT_PIC_PHOTO", "IO_POSTIT_PIC_TAPE",
+        for (const char* picture : {"IO_POSTIT_PIC_PAPER", "IO_POSTIT_PIC_TAPE", "IO_POSTIT_PIC_ENVELOPE",
                                     "IO_POSTIT_PORTRAIT"}) {
             model.Show(picture, false);
         }

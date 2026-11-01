@@ -208,16 +208,17 @@ index tab pulled out over the spread; the post-it is shared, and hidden on a pag
 text the game has is the game's, in the player's language, through its string table
 (`src/engine/story.cpp`):
 
-- **Papers** (`src/papers_page.cpp`): on the left the notes and photos in Items, which leave the
-  Inventory page's Items; on the right the Jackal tapes found and then the Predecessor's, from the
-  mission manager's two lists, each with its title and the game's line about it, then the cassettes in
-  Items. None of them is this mod's: see [other mods' papers](#other-mods-papers). The post-it shows a
-  paper's opening; LMB (`startshooting`) lays the paper whole over the right page, on the post-it's
-  paper turned upright (`a_io_reader`), the wheel turns a long note's sheets, and LMB, Esc
-  (`show_pausemenu`), R or Tab put it back. LMB on a tape plays it through the game's own
-  `CJackalTapeManager::PlayTape`, as the pause menu does, while the game runs on, and on the playing
-  tape stops it (see [playing a tape](../../docs/docs/engine-internals/campaign.md)). A cassette plays
-  in the music manager's tape slot with the Jackal tapes' sound type and clicks, so its own sound
+- **Papers** (`src/papers_page.cpp`): on the left the notes, photos and cassettes in Items, which
+  leave the Inventory page's Items, and come from other mods: see
+  [other mods' papers](#other-mods-papers); on the right the Jackal tapes found and then the
+  Predecessor's, from the mission manager's two lists, each with its title and the game's line about
+  it. The post-it shows a paper's opening; LMB (`startshooting`) lays a note or photo whole over the
+  right page, on the post-it's paper turned upright (`a_io_reader`), the wheel turns a long note's
+  sheets, and LMB, Esc (`show_pausemenu`), R or Tab put it back. LMB on a tape plays it through the
+  game's own `CJackalTapeManager::PlayTape`, as the pause menu does, while the game runs on, and on the
+  playing tape stops it (see [playing a tape](../../docs/docs/engine-internals/campaign.md)). LMB does
+  the same on a cassette, which plays in the music manager's tape slot with the Jackal tapes' sound
+  type and clicks, so its own sound
   needs none: the click their recordings start with, the stock sample `0x004ebec4` played through
   this mod's event `0x00FD0001` (`notebook/tape_click.xml`, encoded with `jackall-cli spk encode`
   into `layer/mods/soundbinary/`), then the cassette once the click has played; on a stop, the slot
@@ -261,13 +262,18 @@ The notebook has no notes, photos or cassettes of its own: another mod places th
 a Papers page with none shows only the game's tapes. Everything about one follows from its Items id
 by convention; the only data of its own is on its pickup.
 
+For now the page also lists three examples for everyone, never in Items and never saved. They go when
+Tales of Africa ships: [its README](../tales-of-africa/README.md) says how. Their sources are in
+`assets/`. `build-ui.ps1` makes the photo's texture from `photo.png`, and the cassette's bank,
+`00fd0002.spk`, is the mp3 made Ogg Vorbis (`ffmpeg -c:a libvorbis -q:a 2`).
+
 | What | Where |
 |---|---|
 | The pickup | a `CPickupMissionItem` whose archetype has the entity data `InventoryOverhaul.Item`, the Items id, and for a cassette `InventoryOverhaul.Sound`, its sound event written as the game writes one (`0x004E1C52`). After the engine's `CPickupMissionItem::Pick`, `src/pickups.cpp` puts it in Items |
 | What it is | the id's first part: `Note.<name>`, `Photo.<name>` or `Tape.<name>` |
-| Its words | the string table's section `Papers`: `<id>` its name (else the id's last part), `<id>_FOUND` where it was found, `<id>_1`, `_2`... its sheets, read until one is missing. A photo's caption and a cassette's description are its first sheet |
-| Its picture | an image in `hud.mgb`'s `a_io_paper_pictures`, exported as `IO_PAPER_<ID>`, the id upper-cased with its dots made underscores: a note's shown square, a photo's 3:2, so its material's `REGION` crops it to that. A paper with none shows its words only. It ships as fragments of every `hud.mgb`: the area, and `_materials.xml` and `_exports.xml` whole, the retail entries included, as `jackall-cli mgb fragments` writes them, since a list missing an entry removes it |
-| A cassette's sound | `soundbinary\<id>.spk`, a bank of its own named after the event |
+| Its words | the string table's section `Papers`: `<id>` its name (else the id's last part), which also opens its first sheet when it is read whole unless it has a picture, `<id>_FOUND` where it was found, `<id>_1`, `_2`... its sheets, read until one is missing. A photo's caption and a cassette's description are its first sheet |
+| Its picture | an image in `hud.mgb`'s `a_io_paper_pictures`, exported as `IO_PAPER_<ID>`, the id upper-cased with its dots made underscores: shown in a square, 94 wide on the post-it and 380 in the reader, so its texture is square or its material's `REGION` crops it square; what is clear in it shows the page. `SquarePicture` in `build-ui.ps1` fits any image whole into such a texture, clear around it, as the example photo's is. A paper with none shows its words only, and a note's post-it the stock envelope, `textures\hud\icons_objectives\icon_partner_mission`. It ships as fragments of every `hud.mgb`: the area, and `_materials.xml` and `_exports.xml` whole, the retail entries included, as `jackall-cli mgb fragments` writes them, since a list missing an entry removes it |
+| A cassette's sound | `soundbinary\<id>.spk`, a bank of its own named after the event: `jackall-cli spk new <id> <ogg> --like 004e1c52.spk --unpositioned`, then `spk encode`. `004e1c52.spk` is a retail bank |
 | Any other item | an id with none of those first parts is an item in Items, named by the id's last part; its description, shown on its post-it, is the string table's `InventoryItems/<id>_DESC`. Its picture is the malaria mosquito (`textures\common\mosquito`, its white multiplied away), as is a gun's the shop's tables do not know |
 
 [Tales of Africa](../tales-of-africa/README.md) is such a mod: its note, photo and cassette are the

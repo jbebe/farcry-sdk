@@ -12,15 +12,21 @@
 namespace InventoryOverhaul::Page {
 
 namespace {
-    // What an Items id is by its first part: the post-it's word for it, and the images its picture is
-    // shown in, IO_POSTIT_PIC_<slot> and IO_READER_PIC_<slot>, a photo's wider than a note's. A
-    // cassette has none; the post-it shows the tape.
+    // What an Items id is by its first part: the post-it's word for it, what the post-it shows when it has
+    // no picture, and whether a click plays it rather than reads it.
     struct Kind {
         const char* prefix;
         const wchar_t* word;
-        const char* slot;
+        const char* icon;
+        bool plays;
     };
-    constexpr Kind kKinds[] = {{"Note.", L"a note", "NOTE"}, {"Photo.", L"a photo", "PHOTO"}, {"Tape.", L"a cassette", nullptr}};
+    constexpr Kind kKinds[] = {{"Note.", L"NOTE", "IO_POSTIT_PIC_ENVELOPE", false},
+                               {"Photo.", L"PHOTO", nullptr, false},
+                               {"Tape.", L"CASSETTE", "IO_POSTIT_PIC_TAPE", true}};
+
+    // Examples of what other mods add, for everyone and never saved, until Tales of Africa ships papers.
+    const Items::Record kExamples[] = {
+        {.id = "Note.Example_note"}, {.id = "Photo.Example_photo"}, {.id = "Tape.Example_cassette", .sound = 0x00FD0002}};
 
     // A paper's words are the string table's Papers/<id>, its name, <id>_FOUND, where it was found,
     // and <id>_1, _2... its sheets: a photo's caption or a cassette's description the first.
@@ -80,10 +86,10 @@ namespace {
 
     // A paper's or a cassette's name, what it is, where it was found and its first sheet's opening.
     void PaperPostIt(Model& model, const Paper& paper) {
-        if (paper.kind->slot == nullptr) {
-            model.Show("IO_POSTIT_PIC_TAPE", true);
-        } else if (const std::string picture = PictureOf(paper); !picture.empty()) {
-            model.Picture(std::string("IO_POSTIT_PIC_") + paper.kind->slot, picture);
+        if (const std::string picture = PictureOf(paper); !picture.empty()) {
+            model.Picture("IO_POSTIT_PIC_PAPER", picture);
+        } else if (paper.kind->icon != nullptr) {
+            model.Show(paper.kind->icon, true);
         }
         model.Text("IO_POSTIT_NAME", paper.name);
         model.Text("IO_POSTIT_SUB", paper.kind->word);
@@ -102,19 +108,19 @@ namespace {
 
     // The paper read whole, on the sheet over the right page.
     void Reader(Model& model, const Paper& paper, int& sheet) {
-        const std::vector<std::wstring> sheets = Sheets(paper);
-        sheet = std::clamp(sheet, 0, static_cast<int>(sheets.size()) - 1);
+        std::vector<std::wstring> sheets = Sheets(paper);
         const std::string picture = PictureOf(paper);
+        // Words alone open with the paper's name; a picture has only its caption under it.
+        if (picture.empty()) {
+            sheets[0].insert(0, paper.name + L"\n\n");
+        }
+        sheet = std::clamp(sheet, 0, static_cast<int>(sheets.size()) - 1);
         const bool pictured = !picture.empty() && sheet == 0;
-        for (const Kind& kind : kKinds) {
-            if (kind.slot != nullptr) {
-                model.Show(std::string("IO_READER_PIC_") + kind.slot, false);
-            }
-        }
         if (pictured) {
-            model.Picture(std::string("IO_READER_PIC_") + paper.kind->slot, picture);
+            model.Picture("IO_READER_PIC", picture);
+        } else {
+            model.Show("IO_READER_PIC", false);
         }
-        model.Text("IO_READER_NAME", paper.name);
         model.Text("IO_READER_TEXT", pictured ? L"" : sheets[sheet]);
         model.Text("IO_READER_CAPTION", pictured ? sheets[sheet] : L"");
         model.Text("IO_READER_SHEET", sheets.size() > 1 ? std::to_wstring(sheet + 1) + L" / " + std::to_wstring(sheets.size())
@@ -139,66 +145,64 @@ namespace {
 bool IsPaper(const std::string& id) { return KindOf(id) != nullptr; }
 
 int PapersPage(Model& model, int& selected, bool used, int& sheet) {
-    const std::vector<Items::Record> items = Items::Load();
+    std::vector<Items::Record> items = Items::Load();
+    items.insert(items.end(), std::begin(kExamples), std::end(kExamples));
     std::vector<Paper> papers;
-    std::vector<Paper> cassettes;
+    std::vector<std::wstring> letters;
     for (const Items::Record& item : items) {
         if (const Kind* kind = KindOf(item.id); kind != nullptr && !item.gun) {
-            (kind->slot == nullptr ? cassettes : papers).push_back(PaperOf(*kind, item));
+            papers.push_back(PaperOf(*kind, item));
+            letters.push_back(papers.back().name);
+            // A cassette's bank is held so that a click finds it loaded.
+            if (kind->plays) {
+                Story::HoldCassette(item.sound);
+            }
         }
     }
-    std::vector<std::wstring> letters;
-    for (const Paper& paper : papers) {
-        letters.push_back(paper.name);
-    }
-    // The game's tapes, then the cassettes, whose banks are held so that a click finds them loaded: each
-    // row's key, and its cassette if it is one.
-    std::vector<std::pair<std::string, const Paper*>> tapes;
+    const std::vector<std::string> tapes = Story::FoundTapes();
     std::vector<std::wstring> titles;
-    for (const std::string& key : Story::FoundTapes()) {
-        tapes.emplace_back(key, nullptr);
+    for (const std::string& key : tapes) {
         titles.push_back(Story::Localize(kTapes, key));
-    }
-    for (const Paper& cassette : cassettes) {
-        tapes.emplace_back(cassette.item->id, &cassette);
-        titles.push_back(cassette.name);
-        Story::HoldCassette(cassette.item->sound);
     }
     const int rows = static_cast<int>(papers.size() + tapes.size());
     selected = std::clamp(selected, 0, std::max(rows - 1, 0));
 
-    // The letters on the left page come before the tapes on the right.
+    // The papers on the left page come before the tapes on the right.
     const int tape = selected - static_cast<int>(papers.size());
-    const auto* row = tape >= 0 && tape < static_cast<int>(tapes.size()) ? &tapes[tape] : nullptr;
+    const Paper* paper = tape < 0 ? &papers[selected] : nullptr;
     List(model, "LETTER", kLetterLines, g_firstLetter, letters, selected);
     List(model, "TAPE", kTapeLines, g_firstTape, titles, tape);
     for (size_t line = 0; line < kTapeLines; ++line) {
         model.Show(Name("IO_TAPE", line + 1, "_PIC"), g_firstTape + line < tapes.size());
     }
+    if (rows == 0) {
+        sheet = -1;
+        return 0;
+    }
 
-    if (used && row != nullptr) {
-        const auto& [key, cassette] = *row;
+    // A tape or a cassette plays where a note or a photo is read.
+    const bool plays = paper == nullptr || paper->kind->plays;
+    if (used && plays) {
+        const std::string& key = paper != nullptr ? paper->item->id : tapes[tape];
         if (Story::PlayingTape() == key) {
             Story::StopTape();
-        } else if (cassette == nullptr) {
-            Story::PlayTape(key);
+        } else if (paper != nullptr) {
+            Story::PlayCassette(key, paper->item->sound);
         } else {
-            Story::PlayCassette(key, cassette->item->sound);
+            Story::PlayTape(key);
         }
     } else if (used) {
         sheet = sheet < 0 ? 0 : -1;
     }
-    if (tape >= 0) {
+    if (plays) {
         sheet = -1;
     }
     if (sheet >= 0) {
-        Reader(model, papers[selected], sheet);
-    } else if (tape < 0) {
-        PaperPostIt(model, papers[selected]);
-    } else if (row != nullptr && row->second != nullptr) {
-        PaperPostIt(model, *row->second);
-    } else if (row != nullptr) {
-        TapePostIt(model, row->first, titles[tape]);
+        Reader(model, *paper, sheet);
+    } else if (paper != nullptr) {
+        PaperPostIt(model, *paper);
+    } else {
+        TapePostIt(model, tapes[tape], titles[tape]);
     }
     return rows;
 }

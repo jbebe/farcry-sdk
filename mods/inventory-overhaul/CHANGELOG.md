@@ -3,7 +3,7 @@
 Notable changes to Inventory Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [1.0.0] - 2026-10-30
+## [1.0.0] - 2026-10-31
 
 ### Added
 - **Two guns of any class.** Gun A on key 2 and gun B on key 3, whatever their class. A gun you pick
@@ -19,4 +19,4 @@ Notable changes to Inventory Overhaul, loosely following
   your reputation and the buddies you have met are in the game's own words.
 - **X drops the gun in hand** at any time, on a new Drop control.
 - **Other mods can add notes, photos, cassettes and items** to the notebook by following a naming
-  convention.
+  convention. For now the Papers page lists an example of each paper, which saves keep nothing of.

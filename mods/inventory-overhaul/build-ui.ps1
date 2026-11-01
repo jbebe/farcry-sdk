@@ -339,7 +339,7 @@ for ($j = 1; $j -le $belt.Count; $j++) {
 # post-it.
 Heading papers t_io_letters "LETTERS AND PHOTOS" $left
 List papers letter $left 98 10 40
-Heading papers t_io_tapes "TAPES" $right $Below
+Heading papers t_io_tapes "JACKAL$([char]0x2019)S TAPES" $right $Below
 List papers tape $right ($Below + 52) 4 40 io_tape 40 20 (Colour "000000" 0.8)
 
 # Journal: the reputation in the game's words on the left; on the right the current job, its
@@ -373,9 +373,12 @@ foreach ($tabName in $areas.Keys) {
 }
 AddExported $page $PagePath (Instance a_io_portraits 0 0 1 1 0)
 
-# The papers' pictures, which the plugin copies onto the post-it and the reader, empty: each mod adds
-# its own to this area, an image named after its paper's Items id, dots made underscores, and exports
-# it as IO_PAPER_<ID>.
+# The papers' pictures, which the plugin copies onto the post-it and the reader: each mod adds its own
+# to this area, an image named after its paper's Items id, dots made underscores, and exports it as
+# IO_PAPER_<ID>.
+$paperPictures = [System.Collections.Generic.List[string]]::new()
+# The example photo's picture.
+AddExported $paperPictures (AreaPath a_io_paper_pictures) (Image i_io_paper_photo_example_photo io_paper_photo_example_photo "" 0 0 44 44)
 AddExported $page $PagePath (Instance a_io_paper_pictures 0 0 1 1 0)
 
 # The post-it, in its own pixels; its instance tilts it about its centre.
@@ -395,15 +398,10 @@ foreach ($square in @(@{ Pic = "diamond"; Material = "ui_hud_icon_diamond"; Blen
 # A thing with no picture of its own has the malaria mosquito, unscaled in the same square, its white
 # multiplied away.
 AddExported $postIt $PostItPath (Image i_io_postit_pic_placeholder io_placeholder "" 177 26 64 64 "FFFFFFFF" 0 @(0, 0, 1, 1) Multiply)
-# Where `area` shows a paper's picture, which the plugin copies in: a note's `size` square at (x, y),
-# and a photo's, 3:2, `photoW` wide at (photoX, photoY).
-function PaperPictures($area, [string]$name, [string]$path, [double]$x, [double]$y, [double]$size,
-                       [double]$photoX, [double]$photoY, [double]$photoW) {
-    AddExported $area $path (Image "i_io_${name}_note" io_mark_end "" $x $y $size $size)
-    AddExported $area $path (Image "i_io_${name}_photo" io_mark_end "" $photoX $photoY $photoW ($photoW / 1.5))
-}
-PaperPictures $postIt postit_pic $PostItPath 160 2 94 137 2 141
+# Where the post-it shows a paper's picture, which the plugin copies in; every picture is square.
+AddExported $postIt $PostItPath (Image i_io_postit_pic_paper io_mark_end "" 160 2 94 94)
 AddExported $postIt $PostItPath (Image i_io_postit_pic_tape io_tape "" 160 26 96 48 (Colour "000000" 0.8))
+AddExported $postIt $PostItPath (Image i_io_postit_pic_envelope io_envelope "" 177 26 64 64)
 AddExported $postIt $PostItPath (Image i_io_postit_portrait io_buddy_frank "" 172 16 72 72)
 AddExported $postIt $PostItPath (Text t_io_postit_name "" 26 96 366 26 24 $inkFull)
 AddExported $postIt $PostItPath (Text t_io_postit_sub "" 26 124 366 18 15 $inkSoft)
@@ -455,15 +453,13 @@ AddExported $postIt $PostItPath (Instance a_io_postit_body 0 (-$BodyRaise) 1 1 0
 # The post-it's place at the right page's top, tilted about its centre, in the page's own pixels.
 AddExported $page $PagePath (Tilted a_io_postit 512 $PostItTop 416 302 -1.4)
 
-# The paper being read, over the whole right page on the post-it's paper turned upright: its name, its
-# picture on the first sheet with the sheet's text below it, or the sheet's text alone, and which
-# sheet of how many.
+# The paper being read, over the whole right page on the post-it's paper turned upright: its picture on
+# the first sheet with the sheet's text below it, or the sheet's text alone, and which sheet of how many.
 $reader = [System.Collections.Generic.List[string]]::new()
 $reader.Add((Image i_io_reader_paper postit "\common.mgb" -104 104 620 412 "FFFFFFFF" 90 (Crop $PostItCrop)))
-AddExported $reader $ReaderPath (Text t_io_reader_name "" 30 30 352 30 24 $inkFull)
-PaperPictures $reader reader_pic $ReaderPath 76 72 260 30 92 352
-AddExported $reader $ReaderPath (Text t_io_reader_text "" 30 72 352 506 24 $inkFull LEFT 0 TOP $true -hand $true)
-AddExported $reader $ReaderPath (Text t_io_reader_caption "" 30 346 352 232 24 $inkFull LEFT 0 TOP $true -hand $true)
+AddExported $reader $ReaderPath (Image i_io_reader_pic io_mark_end "" 16 16 380 380)
+AddExported $reader $ReaderPath (Text t_io_reader_text "" 30 30 352 548 24 $inkFull LEFT 0 TOP $true -hand $true)
+AddExported $reader $ReaderPath (Text t_io_reader_caption "" 30 404 352 174 24 $inkFull LEFT 0 TOP $true -hand $true)
 AddExported $reader $ReaderPath (Text t_io_reader_sheet "" 30 584 352 20 15 $inkSoft RIGHT)
 AddExported $page $PagePath (Tilted a_io_reader 509 38 412 620 1.2 $true)
 # The pause menu's own page flip, common.mgb's area, which the plugin steps through itself. The pause
@@ -483,7 +479,9 @@ $materials = @(
     ($GunPictures + "m67", "molotov") | ForEach-Object { Material "io_gun_$_" "\textures\guns\gun_icon_$_.png" }
     ("manual", "repair", "ammo") | ForEach-Object { Material "io_upgrade_$_" "\textures\ui_icon_$($_)upgrade.png" }
     $Portraits | ForEach-Object { Material "io_buddy_$_" "\textures\hud\icons_buddies\buddies_$_.png" }
+    Material io_paper_photo_example_photo "\textures\io\example_photo.png"
     Material io_tape "\textures\ui_tape_icon.png"
+    Material io_envelope "\textures\hud\icons_objectives\icon_partner_mission.png"
     Material io_placeholder "\textures\common\mosquito.png"
     ("a", "b") | ForEach-Object { Material "io_slot_$_" "\textures\hud_mp\vip_$_.png" }
     Material io_mark_begin "\textures\io\mark_begin.png"
@@ -517,6 +515,26 @@ foreach ($mark in @(@{ Name = "mark_begin"; W = 4; H = 64 }, @{ Name = "mark_end
     Exec $Texconv -nologo -f DXT5 -m 1 -y -o $Work "$Work\$($mark.Name).png" | Out-Null
     Exec $Cli xbt build "$Work\$($mark.Name).dds" "$Work\ui_tape_icon.xml" -o "$Textures\$($mark.Name).xbt" | Out-Null
 }
+# Any image fitted whole into a square tiff, clear around it, for a paper's picture. Not a png: .NET tags
+# those sRGB, and texconv then darkens them.
+function SquarePicture([string]$source, [string]$target, [int]$size) {
+    $image = [System.Drawing.Image]::FromFile($source)
+    $scale = $size / [Math]::Max($image.Width, $image.Height)
+    $w = [int]($image.Width * $scale)
+    $h = [int]($image.Height * $scale)
+    $square = New-Object System.Drawing.Bitmap $size, $size, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    $graphics = [System.Drawing.Graphics]::FromImage($square)
+    $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $graphics.DrawImage($image, [int](($size - $w) / 2), [int](($size - $h) / 2), $w, $h)
+    $square.Save($target, [System.Drawing.Imaging.ImageFormat]::Tiff)
+    $graphics.Dispose()
+    $square.Dispose()
+    $image.Dispose()
+}
+# The example photo, under the same header.
+SquarePicture "$PSScriptRoot\assets\photo.png" "$Work\photo.tif" 512
+Exec $Texconv -nologo -f DXT5 -m 1 -y -o $Work "$Work\photo.tif" | Out-Null
+Exec $Cli xbt build "$Work\photo.dds" "$Work\ui_tape_icon.xml" -o "$Textures\example_photo.xbt" | Out-Null
 
 # Caveat drawn into ui\fonts, with its font and family in every fonts.mgb and its files in every UI
 # dependency list, which is what the game preloads, as fragments of the game's own.
@@ -557,7 +575,7 @@ foreach ($source in Get-ChildItem -Recurse -Path $Retail -Filter hud.mgb) {
         (Area a_io_page $Spread.W $Spread.H $page)
         foreach ($tabName in $areas.Keys) { Area "a_io_$tabName" $Spread.W $Spread.H $areas[$tabName] }
         (Area a_io_portraits 44 44 $palette)
-        (Area a_io_paper_pictures 44 44 @())
+        (Area a_io_paper_pictures 44 44 $paperPictures)
         (Area a_io_postit 416 302 $postIt)
         (Area a_io_postit_body 416 302 $postItBody)
         (Area a_io_reader 412 620 $reader)

@@ -12,7 +12,8 @@ is your own risk.
 - **Inventory page:** your guns, Items, your diamonds and the belt. A post-it shows the selected
   row's picture, condition, ammo, upgrades and ratings.
 - **Papers page:** the Jackal's and the Predecessor's tapes you have found, which play while you keep
-  moving, and any notes and photos other mods add.
+  moving, and any notes and photos other mods add. For now it also lists an example note, photo and
+  cassette, to show what those look like.
 - **Journal page:** your reputation and your current job, with its objectives and the Underground's.
 - **Contacts page:** the buddies you have met, with your active buddies first and the missing and
   the dead faded.

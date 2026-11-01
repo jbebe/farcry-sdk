@@ -5,6 +5,14 @@ solves for a weapon or diamonds. Data only so far. Its papers are read in
 [Inventory Overhaul](../inventory-overhaul/README.md)'s notebook, which knows them by
 [convention](../inventory-overhaul/README.md#other-mods-papers), so it needs that mod.
 
+When this mod ships, Inventory Overhaul's example papers go. In that mod: `kExamples` and its insert
+in `src/papers_page.cpp`, the `Papers` section of the language fragments, the example photo's lines in
+`build-ui.ps1`, then run it again; `layer/mods/soundbinary/00fd0002.spk`, the papers' sources in
+`assets/`, and the "for now" lines in `README.md`, `README-release.md` and
+`assets/nexus-description.bbcode`. `SquarePicture` moves here with them, for this mod's own photos.
+This mod's photo also needs its `REGION` cut to the square the notebook now shows pictures in: it still
+crops to 3:2.
+
 ## What the layer holds
 
 A note, a photo and a cassette in world 1, the first papers the convention was seen working with

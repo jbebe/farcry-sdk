@@ -496,25 +496,12 @@
       </Image>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_postit_pic_note">
+      <USERDATA name="i_io_postit_pic_paper">
         <PROPERTIES />
       </USERDATA>
       <KEYFRAMES>
-        <Keyframe name="kf_i_io_postit_pic_note" IDX="0" INTERPOLATION="None">
+        <Keyframe name="kf_i_io_postit_pic_paper" IDX="0" INTERPOLATION="None">
           <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="47" ORIGIN.y="47" LEFT="160" RIGHT="254" TOP="2" BOTTOM="96" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
-        </Keyframe>
-      </KEYFRAMES>
-      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
-        <MATERIALLINK present="true" id="io_mark_end" PACKAGE="" />
-      </Image>
-    </Element>
-    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
-      <USERDATA name="i_io_postit_pic_photo">
-        <PROPERTIES />
-      </USERDATA>
-      <KEYFRAMES>
-        <Keyframe name="kf_i_io_postit_pic_photo" IDX="0" INTERPOLATION="None">
-          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="70" ORIGIN.y="47" LEFT="137" RIGHT="278" TOP="2" BOTTOM="96" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
         </Keyframe>
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
@@ -532,6 +519,19 @@
       </KEYFRAMES>
       <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
         <MATERIALLINK present="true" id="io_tape" PACKAGE="" />
+      </Image>
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="i_io_postit_pic_envelope">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="kf_i_io_postit_pic_envelope" IDX="0" INTERPOLATION="None">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="32" ORIGIN.y="32" LEFT="177" RIGHT="241" TOP="26" BOTTOM="90" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="io_envelope" PACKAGE="" />
       </Image>
     </Element>
     <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
