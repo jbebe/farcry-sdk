@@ -245,7 +245,8 @@ Wrote farcry2_25.xml
 ```
 
 `mft build` draws one of them into a mod layer. `--face` picks it by index or style, `--axis` sets an
-axis, `--size` is the pixel size and `--name` what the game knows it by. With `--game` it is also
+axis, `--size` is the pixel size and `--name` what the game knows it by. `--no-cyrillic` leaves the
+Cyrillic characters out for a smaller page, so Russian text draws as nothing. With `--game` it is also
 added to every `fonts.mgb` and UI dependency list as fragments, and `--preview` writes sample text
 set in it:
 

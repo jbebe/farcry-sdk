@@ -93,6 +93,23 @@ public class MftFontTests
         Assert.Equal(font.Write(), MftFont.Read(font.Write()).Write());
     }
 
+    /// <summary>Left out on request, and so not reported as characters the font lacks; the rest stay.</summary>
+    [Fact]
+    public void A_font_can_leave_out_cyrillic()
+    {
+        if (Fixture.Read(Caveat) is not { } file) return;
+
+        BuiltFont all = Build(file);
+        BuiltFont latin = MftBuilder.Build(file, FontRaster.Faces(file)[0].Index, 40, "Caveat_40", "Caveat.ttf",
+            new Dictionary<string, float> { ["wght"] = 600 }, cyrillic: false);
+
+        Assert.Contains(all.Font.Glyphs, g => g.Code == 0x0416);
+        Assert.DoesNotContain(latin.Font.Glyphs, g => g.Code is >= 0x0400 and <= 0x04FF);
+        Assert.DoesNotContain(latin.Missing, c => c is >= 0x0400 and <= 0x04FF);
+        Assert.Contains(latin.Font.Glyphs, g => g.Code == 0x00F6);
+        Assert.True(latin.Font.CharacterCount < all.Font.CharacterCount);
+    }
+
     /// <summary>The font's files, its font and family in the package, and its files in the package's
     /// preload list, each applying to the retail file as the build applies it.</summary>
     [Fact]

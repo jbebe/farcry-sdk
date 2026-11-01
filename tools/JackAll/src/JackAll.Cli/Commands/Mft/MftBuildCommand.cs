@@ -42,6 +42,10 @@ public sealed class MftBuildCommand : CliCommand<MftBuildCommand.Settings>
         [Description("What the game knows the font by, and its family's name (default: <family>_<size>).")]
         public string? Name { get; init; }
 
+        [CommandOption("--no-cyrillic")]
+        [Description("Leave the Cyrillic characters out, for a smaller page; Russian text then draws as nothing.")]
+        public bool NoCyrillic { get; init; }
+
         [CommandOption("-o|--out <layer>")]
         [Description("The mod layer to write into: the folder that holds its mods\\ folder.")]
         public string Out { get; init; } = null!;
@@ -72,7 +76,7 @@ public sealed class MftBuildCommand : CliCommand<MftBuildCommand.Settings>
             p => p[0].Trim(),
             p => p.Length == 2 && float.TryParse(p[1], CultureInfo.InvariantCulture, out float v) ? v
                 : throw new InvalidOperationException($"'{string.Join('=', p)}' is not an axis value; write it as wght=600."));
-        BuiltFont built = MftBuilder.Build(file, face.Index, settings.Size, name, Path.GetFileName(settings.Input), axes);
+        BuiltFont built = MftBuilder.Build(file, face.Index, settings.Size, name, Path.GetFileName(settings.Input), axes, !settings.NoCyrillic);
         // Read by hash alone, so no hashlist.
         using GameVfs? vfs = settings.Game is { } game
             ? GameVfs.OpenForOriginalsOnly(

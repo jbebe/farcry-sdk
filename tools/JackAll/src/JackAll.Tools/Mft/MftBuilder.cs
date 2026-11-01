@@ -65,15 +65,18 @@ public static class MftBuilder
     /// <param name="name">What the game knows the font by, such as <c>Caveat_40</c>.</param>
     /// <param name="source">The font file's name, recorded in the font.</param>
     /// <param name="axes">Design axis values by tag, for a variable font.</param>
+    /// <param name="cyrillic">False to leave the Cyrillic characters out, for a smaller page.</param>
     public static BuiltFont Build(
-        byte[] fontFile, int faceIndex, int pixelSize, string name, string source, IReadOnlyDictionary<string, float>? axes = null)
+        byte[] fontFile, int faceIndex, int pixelSize, string name, string source, IReadOnlyDictionary<string, float>? axes = null,
+        bool cyrillic = true)
     {
         // Glyph 0 is the empty one a character the font lacks maps to.
         List<RasterGlyph> drawn = [new(MftFont.MissingCode, 0, 0, 0, 0, 0, [])];
         List<int> missing = [];
         using (var raster = new FontRaster(fontFile, faceIndex, pixelSize, axes))
         {
-            foreach (int code in GameCharacters.SelectMany(r => Enumerable.Range(r.First, r.Last - r.First + 1)))
+            foreach (int code in GameCharacters.SelectMany(r => Enumerable.Range(r.First, r.Last - r.First + 1))
+                .Where(c => cyrillic || c is < 0x0400 or > 0x04FF))
             {
                 if (raster.Draw(code) is { } glyph)
                 {

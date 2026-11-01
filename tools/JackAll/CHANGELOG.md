@@ -11,6 +11,7 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   `fonts.mgb` and every UI dependency list, so a UI text can name it as its font family.
 - **`.mft` fonts in the Files tab** show what they hold and sample text set from their own pages.
 - **`jackall-cli mft decode`, `encode`, `faces` and `build`** do the same on the command line.
+  `build --no-cyrillic` leaves the Cyrillic characters out for a smaller page.
 - **The UI dependency lists merge as fragments.** A mod ships only the entries of
   `ui\localized\<aspect>\<lang>\ui\_depload.xml` it changes, one per package, and mods adding to the
   same package all land; two mods shipping the list whole used to replace each other.
