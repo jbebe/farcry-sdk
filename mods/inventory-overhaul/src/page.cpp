@@ -30,7 +30,7 @@ namespace {
     constexpr int kHalfSteps = 10;
 
     // The page open, R's turns, the wheel's steps and whether it was clicked or X pressed since the
-    // last write, and each page's selected row; the Inventory page opens on the gun in hand. The sheet
+    // last write, and each page's selected row; the Items page opens on the gun in hand. The sheet
     // of the paper read and the action underlined in a stowed gun's menu, -1 while neither is open.
     int g_tab = kInventory;
     std::atomic<int> g_turns{0};
@@ -194,13 +194,13 @@ bool Install() {
     const bool story = magma && Story::Install();
     FCSE::Logf("page: %s", !magma ? "off, the HUD's Magma calls were not found"
                            : story ? "on the HUD"
-                                   : "on the HUD, but the story's services were not found: Papers, Journal and "
-                                     "Contacts stay empty");
+                                   : "on the HUD, but the story's services were not found: Docs, Missions and "
+                                     "Buddies stay empty");
     if (magma && !Sound::Install()) {
         FCSE::Logf("page: the sound system calls were not found, so a turn is silent");
     }
     if (magma && !Jobs::Install()) {
-        FCSE::Logf("page: the objective markers' calls were not found, so the Journal shows no job");
+        FCSE::Logf("page: the objective markers' calls were not found, so Missions shows no job");
     }
     return magma;
 }

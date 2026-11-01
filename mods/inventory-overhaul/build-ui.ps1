@@ -188,9 +188,10 @@ $Below = $PostItTop + 302 + 16
 
 $page = [System.Collections.Generic.List[string]]::new()
 $postIt = [System.Collections.Generic.List[string]]::new()
-$tabs = "Inventory", "Papers", "Journal", "Contacts"
+# Each page's name in the UI's areas and exports, and the label on its tab.
+$tabs = [ordered]@{ inventory = "Items"; papers = "Docs"; journal = "Missions"; contacts = "Buddies" }
 $areas = [ordered]@{}
-foreach ($tab in $tabs) { $areas[$tab.ToLowerInvariant()] = [System.Collections.Generic.List[string]]::new() }
+foreach ($tab in $tabs.Keys) { $areas[$tab] = [System.Collections.Generic.List[string]]::new() }
 
 # A section's heading, exported when the plugin writes it.
 function Heading([string]$tab, [string]$name, [string]$string, [double]$x, [double]$y = 46, [switch]$exported) {
@@ -264,9 +265,10 @@ function Tab([string]$name, [string]$label, [double]$x, [double]$y, [double]$h, 
 # Index tabs along the left page's top, behind the spread: the closed ones grey, the open page's white
 # and pulled up.
 function AddTabs([string]$look, [double]$y, [double]$h, [string]$tint) {
-    for ($i = 0; $i -lt $tabs.Count; $i++) {
-        $name = "${look}_$($tabs[$i].ToLowerInvariant())"
-        foreach ($element in Tab $name $tabs[$i] (70 + $i * 106) $y $h $tint) { AddExported $page $PagePath $element }
+    $x = 70
+    foreach ($tab in $tabs.GetEnumerator()) {
+        foreach ($element in Tab "${look}_$($tab.Key)" $tab.Value $x $y $h $tint) { AddExported $page $PagePath $element }
+        $x += 106
     }
 }
 
@@ -275,7 +277,7 @@ AddTabs tab -16 64 "FFCCCCCC"
 AddTabs open -30 74 "FFFFFFFF"
 $page.Add((Image i_io_spread $NotebookMaterial "\common.mgb" 0 0 $Spread.W $Spread.H "FFFFFFFF" 0 (Crop $Spread)))
 
-# Inventory. The left page: Weapons, then Items.
+# Items. The left page: Weapons, then Items.
 $inventoryArea = $areas.inventory
 $InventoryPath = AreaPath a_io_inventory
 Heading inventory t_io_weapons "WEAPONS" $left
@@ -291,7 +293,7 @@ foreach ($k in 1, 2) {
     $top = 76 + ($k - 1) * 46
     $inventoryArea.Add((Image "i_io_hand${k}_slot" "io_slot_$([char](96 + $k))" "" ($left + 2) ($top + 10) 26 26 (Colour "906F4C" 0.7)))
     AddExported $inventoryArea $InventoryPath (Text "t_io_hand${k}_name" "" ($left + 38) ($top + 10) ($width - 46) 26 22 $inkFull)
-    AddExported $inventoryArea $InventoryPath (Text "t_io_hand${k}_empty" "empty" ($left + 38) ($top + 10) ($width - 46) 26 22 $inkSoft)
+    AddExported $inventoryArea $InventoryPath (Text "t_io_hand${k}_empty" "Empty" ($left + 38) ($top + 10) ($width - 46) 26 22 $inkSoft)
 }
 $inventoryArea.Add((Text t_io_machete "Machete" ($left + 38) 178 ($width - 46) 26 22 $inkFull))
 
@@ -336,14 +338,14 @@ for ($j = 1; $j -le $belt.Count; $j++) {
     AddExported $inventoryArea $InventoryPath (Text "t_io_belt${j}_count" "" ($right + 300) ($top + 7) 76 26 20 $inkFull RIGHT)
 }
 
-# Papers: letters and photos on the left, the Jackal and Predecessor tapes on the right below the
+# Docs: the documents on the left, the Jackal and Predecessor tapes on the right below the
 # post-it.
-Heading papers t_io_letters "LETTERS AND PHOTOS" $left
+Heading papers t_io_letters "DOCUMENTS" $left
 List papers letter $left 98 10 40
 Heading papers t_io_tapes "JACKAL$([char]0x2019)S TAPES" $right $Below
 List papers tape $right ($Below + 52) 4 40 io_tape 40 20 (Colour "000000" 0.8)
 
-# Journal: the reputation in the game's words on the left; on the right the current job, its
+# Missions: the reputation in the game's words on the left; on the right the current job, its
 # objectives and the Underground's, as the pause menu's main page showed them.
 $JournalPath = AreaPath a_io_journal
 Heading journal t_io_reputation "" $left -exported
@@ -358,7 +360,7 @@ foreach ($k in 1, 2) {
 Heading journal t_io_underground "UNDERGROUND" $right 400 -exported
 AddExported $areas.journal $JournalPath (Text t_io_underground_job "" $right 436 $width 88 20 $inkFull LEFT 0 TOP $true)
 
-# Contacts, on the left page: the primary and secondary buddy, then the other buddies, each with a
+# Buddies, on the left page: the primary and secondary buddy, then the other buddies, each with a
 # portrait the plugin takes from a_io_portraits and a status.
 Heading contacts t_io_actives "ACTIVE BUDDIES" $left
 List contacts active $left 98 2 50 io_buddy_frank 44 44 "FFFFFFFF" 130 $true

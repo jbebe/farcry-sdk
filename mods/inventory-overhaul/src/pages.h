@@ -45,7 +45,7 @@ std::wstring PlainName(const std::string& id);
 size_t List(Model& model, const std::string& list, size_t lines, size_t& first, const std::vector<std::wstring>& rows,
             int selected);
 
-// Every picture the Inventory page shows on the post-it hidden, as every page's post-it starts.
+// Every picture the Items page shows on the post-it hidden, as every page's post-it starts.
 void HideInventoryPictures(Model& model);
 
 // Each page's rows and the post-it of row `selected`, kept within them; each returns its row count.
@@ -62,7 +62,7 @@ int PapersPage(Model& model, int& selected, bool used, int& sheet);
 void JournalPage(Model& model);
 int ContactsPage(Model& model, int& selected);
 
-// Whether an Items record is a note, photo or cassette, which the Papers page lists instead of Items.
+// Whether an Items record is a note, photo or cassette, which the Docs page lists instead of Items.
 bool IsPaper(const std::string& id);
 
 }

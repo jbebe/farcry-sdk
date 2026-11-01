@@ -4,8 +4,8 @@
     <string enum="drop_item" value="Upuść" />
   </section>
   <section name="Papers">
-    <string enum="Note.Example_note" value="In Memoriam Dr. H.G.K." />
-    <string enum="Note.Example_note_1" value="“Hölderlin ist Ihnen unbekannt?” Dr.&#xA;H.G.K. asked as he dug the pit for the horse’s carcass.&#xA;“Who is that?” the German guard growled.&#xA;“The author of Hyperion,” said Dr. H.G.K., who had a positive passion for explanations.&#xA;“The greatest figure of German Romanticism. How about Heine?” he tried again.&#xA;“Who’re them guys?” the guard growled, louder than before.&#xA;“Poets,” Dr. H.G.K. said. “But Schiller. Surely you have heard of Schiller?”&#xA;“That goes without saying,” the German guard nodded.&#xA;“And Rilke?” Dr. H.G.K. insisted.&#xA;“Him, too,” the German guard said and, turning the color of paprika,&#xA;shot Dr. H.G.K. in the back of the head.&#xA;&#xA;1968" />
+    <string enum="Note.Example_note" value="Short novel" />
+    <string enum="Note.Example_note_1" value="In Memoriam Dr. H.G.K.&#xA;&#xA;“Hölderlin ist Ihnen unbekannt?” Dr.&#xA;H.G.K. asked as he dug the pit for the horse’s carcass.&#xA;“Who is that?” the German guard growled.&#xA;“The author of Hyperion,” said Dr. H.G.K., who had a positive passion for explanations.&#xA;“The greatest figure of German Romanticism. How about Heine?” he tried again.&#xA;“Who’re them guys?” the guard growled, louder than before.&#xA;“Poets,” Dr. H.G.K. said. “But Schiller. Surely you have heard of Schiller?”&#xA;“That goes without saying,” the German guard nodded.&#xA;“And Rilke?” Dr. H.G.K. insisted.&#xA;“Him, too,” the German guard said and, turning the color of paprika,&#xA;shot Dr. H.G.K. in the back of the head.&#xA;&#xA;1968" />
     <string enum="Photo.Example_photo" value="Magazine with missing pages" />
     <string enum="Photo.Example_photo_1" value="I found it on the backseat of the taxi. Quite a read." />
     <string enum="Tape.Example_cassette" value="Swahili Basic Course" />

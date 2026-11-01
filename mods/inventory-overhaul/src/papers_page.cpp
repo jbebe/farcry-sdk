@@ -1,4 +1,4 @@
-// The Papers page: the notes, photos and cassettes other mods' pickups put in Items, and the Jackal and
+// The Docs page: the notes, photos and cassettes other mods' pickups put in Items, and the Jackal and
 // Predecessor tapes found.
 #include "pages.h"
 
@@ -20,9 +20,9 @@ namespace {
         const char* icon;
         bool plays;
     };
-    constexpr Kind kKinds[] = {{"Note.", L"NOTE", "IO_POSTIT_PIC_ENVELOPE", false},
-                               {"Photo.", L"PHOTO", nullptr, false},
-                               {"Tape.", L"CASSETTE", "IO_POSTIT_PIC_TAPE", true}};
+    constexpr Kind kKinds[] = {{"Note.", L"Note", "IO_POSTIT_PIC_ENVELOPE", false},
+                               {"Photo.", L"Photo", nullptr, false},
+                               {"Tape.", L"Cassette", "IO_POSTIT_PIC_TAPE", true}};
 
     // Examples of what other mods add, for everyone and never saved, until Tales of Africa ships papers.
     const Items::Record kExamples[] = {
@@ -108,12 +108,8 @@ namespace {
 
     // The paper read whole, on the sheet over the right page.
     void Reader(Model& model, const Paper& paper, int& sheet) {
-        std::vector<std::wstring> sheets = Sheets(paper);
+        const std::vector<std::wstring> sheets = Sheets(paper);
         const std::string picture = PictureOf(paper);
-        // Words alone open with the paper's name; a picture has only its caption under it.
-        if (picture.empty()) {
-            sheets[0].insert(0, paper.name + L"\n\n");
-        }
         sheet = std::clamp(sheet, 0, static_cast<int>(sheets.size()) - 1);
         const bool pictured = !picture.empty() && sheet == 0;
         if (pictured) {

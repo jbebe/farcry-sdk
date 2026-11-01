@@ -1,4 +1,4 @@
-// The Journal page: the player's reputation in the words of the pause menu's Journal, and the current
+// The Missions page: the player's reputation in the words of the pause menu's Journal, and the current
 // job as the pause menu's main page showed it.
 #include "pages.h"
 

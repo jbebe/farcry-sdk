@@ -103,14 +103,15 @@ layer. Marked **(proposed)** are choices not yet agreed.
 
 Each page has an index tab along the left page's top, clear of the fingers, standing up from behind
 the paper; the open page's is pulled up and white. The tab says where the player is, so a page has
-no title. R turns the page, using the map's own flip.
+no title. R turns the page, using the map's own flip. The names are final (2026-11-01); the steps below
+keep the names the pages had then, Inventory, Papers, Journal and Contacts.
 
 | Page | Left page | Right page, below the post-it |
 |---|---|---|
-| Inventory | Weapons, Items | Belt |
-| Papers | letters and photos | the Jackal and Predecessor tapes |
-| Journal | reputation | current jobs |
-| Contacts | the active buddies (primary, secondary), then the others, living first, the dead faded | nothing below the post-it |
+| Items | Weapons, Items | Belt |
+| Docs | documents: notes, photos, cassettes | the Jackal and Predecessor tapes |
+| Missions | reputation | current jobs |
+| Buddies | the active buddies (primary, secondary), then the others, living first, the dead faded | nothing below the post-it |
 | Box (only at a crate) | bought guns, stored things | Items |
 
 ### Lists, and a post-it for the highlighted row
@@ -136,7 +137,7 @@ top by a paperclip, shows the highlighted row's picture and details.
 
 Each list shows a fixed number of rows and scrolls with the highlight; there is no scrollbar.
 When rows are hidden, a pencilled "▲ 3 more" or "▼ 5 more" sits at the list's edge. Only the list
-moves: section headings stay, and Weapons never scrolls. On the Inventory page Items shows 10 rows; on
+moves: section headings stay, and Weapons never scrolls. On the Items page the Items list shows 10 rows; on
 the Box page the catalogue shows 7 and the stored list 3.
 
 The catalogue grows long: the shop sells 28 guns (12 primary, 8 secondary, 7 special, and IEDs),
@@ -227,7 +228,7 @@ Using a crate pulls the notebook out at the Box page:
 - **Catalogue:** every bought gun, fresh, any number of times. Take one into gun 1, gun 2 or Items.
 - **Stored:** what the player put in, each kept with its wear and ammo. No limit.
 
-On the Inventory page, while the player is at a crate, a gun or quest item gets a **Store** action.
+On the Items page, while the player is at a crate, a gun or quest item gets a **Store** action.
 
 ### Controls (proposed)
 
@@ -304,7 +305,7 @@ Each step ends with one check in game before the next.
 
 - **The arrow keys:** the mockup moves along the lists with ↑ and ↓ as well as the wheel, but
   the game binds them to walking beside W and S, so for now only the wheel moves the selection.
-- **Real papers:** the torn notebook page is found in the world; the Papers page's other three are
+- **Real papers:** the torn notebook page is found in the world; the Docs page's other three are
   still samples the test window's Fill gives.
 - **What still selects by class:** the weapon crate draws the gun it hands out by its class, and a
   pickup's switch prompt shows the carried gun of the pickup's class. Step 1 shows how far it shows.

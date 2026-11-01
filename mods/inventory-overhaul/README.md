@@ -9,8 +9,8 @@ this is an FCSE plugin, built in the log's steps.
 | 1. Two guns | gun 1 on key 2, gun 2 on key 3, of any class; a third gun replaces the one in hand | works in game |
 | 2. Items | guns stowed outside the two slots, at most four guns in all with theirs, and any other item by id and count; a test window in DevTools' overlay; X drops the gun in hand, or the notebook's selected row | works in game; X seen dropping guns A and B, a stowed gun and an item, by `tools/fc2drive/scenarios/inventory.py` |
 | 3. The notebook on Tab | a gadget of its own beside the map, given with it, on a new Notebook control: two bent pages held in both hands, the right one bending as the hands move | works in game |
-| 4. The Inventory page | the mockup's spread as a Magma page drawn onto the notebook's pages: Weapons, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet |
-| 6. Papers, Journal, Contacts | R turns the page; notes and photos, read whole with LMB, the Jackal and Predecessor tapes found and other mods' cassettes, the reputation and the current job, and the buddies met, in the game's words; the pause menu without those pages or its job panel | seen in game in world 2; another mod's note, photo and cassette read, viewed and played, clicks included |
+| 4. The Items page | the mockup's spread as a Magma page drawn onto the notebook's pages: Weapons, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet |
+| 6. Docs, Missions, Buddies | R turns the page; notes and photos, read whole with LMB, the Jackal and Predecessor tapes found and other mods' cassettes, the reputation and the current job, and the buddies met, in the game's words; the pause menu without those pages or its job panel | seen in game in world 2; another mod's note, photo and cassette read, viewed and played, clicks included |
 | 7. Papers in the world | another mod's notes, photos and cassettes, known by convention; picking one up puts it in Items, so Papers shows it | seen in game with [Tales of Africa](../tales-of-africa/README.md)'s |
 
 ## Two guns
@@ -58,9 +58,9 @@ The player's diamonds are a row of Items too, read straight from the wallet (`CE
 
 X, a new Drop control (`drop_item`, named with the game's own `TOOLCONTROL_DROP` in each
 language), drops the gun in hand, and the other gun is drawn. With the notebook out it drops the
-Inventory page's selected row instead: gun A or B, or a stowed gun, made again with its wear and
+Items page's selected row instead: gun A or B, or a stowed gun, made again with its wear and
 rounds and dropped as a pickup; or one of an item, which is thrown away. The machete, the diamonds,
-the belt and the Papers page's rows stay.
+the belt and the Docs page's rows stay.
 The engine adds no gun of a model already carried, which it tells by item id, so the carried
 guns of that model have their ids turned aside for the call. Spare ammo is one pool per ammo type
 and stays with the player, and upgrades are the player's, not the gun's, so nothing else is lost.
@@ -107,7 +107,7 @@ says what it makes:
 
 The notebook works on foot only for now: the driving controls are left as they are.
 
-### The Inventory page
+### The Items page
 
 The pages are the mockup's spread built in Magma and added to the HUD (`hud.mgb`), and drawn onto
 the notebook's pages in the world rather than over the screen. `build-ui.ps1` makes it from each
@@ -194,8 +194,9 @@ hidden.
 
 ### The other pages
 
-R, the map's `flipside`, turns the page while the notebook is out: Inventory, Papers, Journal,
-Contacts, then Inventory again. The notebook takes the signal, as it does the wheel's, so it is not
+R, the map's `flipside`, turns the page while the notebook is out: Items, Docs, Missions, Buddies,
+then Items again. In the UI's areas and exports and in the source they keep the names inventory,
+papers, journal and contacts. The notebook takes the signal, as it does the wheel's, so it is not
 turned over as the map would be. The turn is the pause menu's own: an instance of `common.mgb`'s
 page flip area (`a_io_flip`, last on the spread, shown only while a page turns) at twice its speed,
 its time set each frame without its keyframes' actions, since the area is the pause menu's too. Its
@@ -209,8 +210,8 @@ index tab pulled out over the spread; the post-it is shared, and hidden on a pag
 text the game has is the game's, in the player's language, through its string table
 (`src/engine/story.cpp`):
 
-- **Papers** (`src/papers_page.cpp`): on the left the notes, photos and cassettes in Items, which
-  leave the Inventory page's Items, and come from other mods: see
+- **Docs** (`src/papers_page.cpp`): on the left the notes, photos and cassettes in Items, which
+  leave the Items page's Items, and come from other mods: see
   [other mods' papers](#other-mods-papers); on the right the Jackal tapes found and then the
   Predecessor's, from the mission manager's two lists, each with its title and the game's line about
   it. The post-it shows a paper's opening; LMB (`startshooting`) lays a note or photo whole over the
@@ -225,7 +226,7 @@ text the game has is the game's, in the player's language, through its string ta
   into `layer/mods/soundbinary/`), then the cassette once the click has played; on a stop, the slot
   is stopped under it with the click their stop sounds play, `0x004EBECF`. Its bank and the clicks'
   are held loaded while the page lists it.
-- **Journal** (`src/journal_page.cpp`): on the left the reputation level and its words, as the pause
+- **Missions** (`src/journal_page.cpp`): on the left the reputation level and its words, as the pause
   menu's Journal has them; on the right the current job, its objectives and the Underground's, as the
   pause menu's main page showed them (`src/engine/jobs.cpp`): every objective marker that is on, its
   texts from `Objectives` with the buddies' and lieutenants' names filled in by the game's own
@@ -241,7 +242,7 @@ full size from the first frame rather than popping in, over the menu's clouds, w
 where the dialog has its own. The notebook spread, its post-it and paperclip, the glows, the
 buddies' portraits, the job panel and the page flip it opened with are hidden. The game's code shows
 the job panel whatever the layer says, so the plugin also skips the three methods that fill it.
-- **Contacts** (`src/contacts_page.cpp`): the buddies met, from the buddies manager, all on the left
+- **Buddies** (`src/contacts_page.cpp`): the buddies met, from the buddies manager, all on the left
   page: the active buddies, the primary and the secondary (the manager's `+0x50` and `+0x54` point at
   their records), then the others, those at hand before the missing and the missing before the dead.
   Each row has a portrait, name and status, a dead buddy's in faded italic ink and a missing one's
@@ -260,7 +261,7 @@ that the console runs as the game loads, such as `hit_me` or, as Lua,
 ### Other mods' papers
 
 The notebook has no notes, photos or cassettes of its own: another mod places them in the world, and
-a Papers page with none shows only the game's tapes. Everything about one follows from its Items id
+a Docs page with none shows only the game's tapes. Everything about one follows from its Items id
 by convention; the only data of its own is on its pickup.
 
 For now the page also lists three examples for everyone, never in Items and never saved. They go when
@@ -272,7 +273,7 @@ Tales of Africa ships: [its README](../tales-of-africa/README.md) says how. Thei
 |---|---|
 | The pickup | a `CPickupMissionItem` whose archetype has the entity data `InventoryOverhaul.Item`, the Items id, and for a cassette `InventoryOverhaul.Sound`, its sound event written as the game writes one (`0x004E1C52`). After the engine's `CPickupMissionItem::Pick`, `src/pickups.cpp` puts it in Items |
 | What it is | the id's first part: `Note.<name>`, `Photo.<name>` or `Tape.<name>` |
-| Its words | the string table's section `Papers`: `<id>` its name (else the id's last part), which also opens its first sheet when it is read whole unless it has a picture, `<id>_FOUND` where it was found, `<id>_1`, `_2`... its sheets, read until one is missing. A photo's caption and a cassette's description are its first sheet |
+| Its words | the string table's section `Papers`: `<id>` its name on its row and post-it (else the id's last part), `<id>_FOUND` where it was found, `<id>_1`, `_2`... its sheets, read until one is missing; a title goes at the start of the first. A photo's caption and a cassette's description are its first sheet |
 | Its picture | an image in `hud.mgb`'s `a_io_paper_pictures`, exported as `IO_PAPER_<ID>`, the id upper-cased with its dots made underscores: shown in a square, 94 wide on the post-it and 380 in the reader, so its texture is square or its material's `REGION` crops it square; what is clear in it shows the page. `SquarePicture` in `build-ui.ps1` fits any image whole into such a texture, clear around it, as the example photo's is. A paper with none shows its words only, and a note's post-it the stock envelope, `textures\hud\icons_objectives\icon_partner_mission`. It ships as fragments of every `hud.mgb`: the area, and `_materials.xml` and `_exports.xml` whole, the retail entries included, as `jackall-cli mgb fragments` writes them, since a list missing an entry removes it |
 | A cassette's sound | `soundbinary\<id>.spk`, a bank of its own named after the event: `jackall-cli spk new <id> <ogg> --like 004e1c52.spk --unpositioned`, then `spk encode`. `004e1c52.spk` is a retail bank |
 | Any other item | an id with none of those first parts is an item in Items, named by the id's last part; its description, shown on its post-it, is the string table's `InventoryItems/<id>_DESC`. Its picture is the malaria mosquito (`textures\common\mosquito`, its white multiplied away), as is a gun's the shop's tables do not know |

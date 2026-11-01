@@ -9,13 +9,13 @@ is your own risk.
 - **Items.** Stow a gun and it keeps its wear and its loaded rounds. You can have four guns in all,
   slots included. Spare ammo and upgrades stay yours, as they always were.
 - **The notebook** comes with the map. It works on foot.
-- **Inventory page:** your guns, Items, your diamonds and the belt. A post-it shows the selected
+- **Items page:** your guns, your items, your diamonds and the belt. A post-it shows the selected
   row's picture, condition, ammo, upgrades and ratings.
-- **Papers page:** the Jackal's and the Predecessor's tapes you have found, which play while you keep
+- **Docs page:** the Jackal's and the Predecessor's tapes you have found, which play while you keep
   moving, and any notes and photos other mods add. For now it also lists an example note, photo and
   cassette, to show what those look like.
-- **Journal page:** your reputation and your current job, with its objectives and the Underground's.
-- **Contacts page:** the buddies you have met, with your active buddies first and the missing and
+- **Missions page:** your reputation and your current job, with its objectives and the Underground's.
+- **Buddies page:** the buddies you have met, with your active buddies first and the missing and
   the dead faded.
 - **The pause menu** loses Resume, Journal, Buddies, Jackal Tapes and Predecessor Tapes, which the
   notebook and Esc now cover. Upgrades stays.

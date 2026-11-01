@@ -1,4 +1,4 @@
-// The Inventory page: the guns in hand, Items, the belt and the wallet, read from the player's
+// The Items page: the guns in hand, Items, the belt and the wallet, read from the player's
 // inventory, Items and wallet.
 #include "pages.h"
 
@@ -155,7 +155,7 @@ namespace {
             rows.push_back({Row::kGun, slot, TwoGuns::InSlot(carried.guns, slot)});
         }
         rows.push_back({Row::kMachete});
-        // The Papers page lists the papers; a row keeps its record's place in Items.
+        // The Docs page lists the papers; a row keeps its record's place in Items.
         for (size_t i = 0; i < carried.items.size(); ++i) {
             if (carried.items[i].gun || !IsPaper(carried.items[i].id)) {
                 rows.push_back({Row::kItem, 0, nullptr, &carried.items[i], i});
@@ -243,8 +243,8 @@ namespace {
         switch (row.kind) {
         case Row::kGun: {
             if (row.gun == nullptr) {
-                model.Text("IO_POSTIT_NAME", L"gun " + std::to_wstring(row.slot));
-                model.Text("IO_POSTIT_SUB", L"empty");
+                model.Text("IO_POSTIT_NAME", L"Gun " + std::to_wstring(row.slot));
+                model.Text("IO_POSTIT_SUB", L"Empty");
                 model.Text("IO_POSTIT_NOTE", L"Pick a gun up, or take one from Items.");
                 return;
             }
@@ -269,7 +269,7 @@ namespace {
             }
             model.Show("IO_POSTIT_PIC_PLACEHOLDER", true);
             model.Text("IO_POSTIT_NAME", PlainName(item.id));
-            model.Text("IO_POSTIT_SUB", L"stowed");
+            model.Text("IO_POSTIT_SUB", L"Stowed");
             model.Text("IO_POSTIT_LINE1", L"Carried");
             model.Text("IO_POSTIT_VALUE1", L"\x00D7" + std::to_wstring(item.count));
             model.Text("IO_POSTIT_QUOTE", Story::Localize(kItemStrings, item.id + "_DESC"));

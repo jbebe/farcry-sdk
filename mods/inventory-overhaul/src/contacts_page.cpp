@@ -1,4 +1,4 @@
-// The Contacts page: the buddies met, the player's primary and secondary buddy first, then the rest,
+// The Buddies page: the buddies met, the player's primary and secondary buddy first, then the rest,
 // those at hand, then the missing, then the dead, as the pause menu's Buddies page knows them.
 #include "pages.h"
 
