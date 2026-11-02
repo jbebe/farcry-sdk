@@ -1,0 +1,10 @@
+<Task Name="::MercBrain/MercBrain/MercBrainAlert/StandDown" Class="CTaskOperateOnFlagField" Looping="0" Independent="0">
+  <Parameter Name="FlagFieldValue" Value="57" />
+  <Parameter Name="ArmyFlagFieldValue" Value="0" />
+  <Parameter Name="OperationType" Value="0" />
+  <Parameter Name="FlagFieldType" Value="0" />
+  <Anchor Name="OnStart" />
+  <Event Name="IS_TRUE" />
+  <Event Name="IS_FALSE" />
+  <Event Name="FLAG_SET" />
+</Task>

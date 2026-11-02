@@ -1,6 +1,7 @@
 # Builds layer\ from the installed game: the merc brain's changes as fragments, which JackAll merges
 # into the player's own brain. Soldiers carrying an RPG or a Carl Gustav fire it at the player only in
-# a vehicle and draw their other gun at the player on foot.
+# a vehicle and draw their other gun at the player on foot, and an alerted soldier stands down after
+# 2 minutes.
 param(
     [string]$Game = 'C:\Games\Far Cry 2',
     [string]$Cli = "$PSScriptRoot\..\..\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
@@ -52,6 +53,13 @@ function Add-Instance($plan, $after, $xml) {
 
 function Connect([string[]]$targets, $anchor = 'Start') {
     ($targets | ForEach-Object { "<Connection Target=`"$_`" TargetAnchor=`"$anchor`" />" }) -join ''
+}
+
+# Starts $targets whenever the instance $name starts.
+function Start-With($name, [string[]]$targets) {
+    $fragment = $doc.CreateDocumentFragment()
+    $fragment.InnerXml = Connect $targets
+    (Instance $name).SelectSingleNode("Anchor[@Name='OnStart']").AppendChild($fragment) | Out-Null
 }
 
 # Whether the target is in a working vehicle, or with $invert 1, not in one.
@@ -165,6 +173,36 @@ Add-Instance $shoot "$shoot/DrawLauncher" (SwitchWeapon "$shoot/DrawOtherGun" pr
 Retarget "$plan/SetFireSpecial" Success "$plan/SwitchToSniperGun" "$plan/IfCarriesLauncher"
 Add-Instance $plan "$plan/SetFireSpecial" (IfCarriesLauncher "$plan/IfCarriesLauncher" (
     Connect "$plan/SwitchToSniperGun") (Connect "$plan/CheckMortarWeapon1"))
+
+$alert = '::MercBrain/MercBrain/MercBrainAlert'
+
+# 2 minutes into an alert that nothing new has restarted, a soldier falls back to where he was
+# alerted and out of the alert, as the game has him do only once the player enters a safe zone.
+Add-Instance $alert "$alert/CheckFallback1" @"
+<Task Name="$alert/StandDownTimer" Class="CTaskWait" Looping="0" Independent="1">
+  <Parameter Name="waitTimeFact" Value="" />
+  <Parameter Name="timeToWait" Value="120" />
+  <Parameter Name="randomStartDelay" Value="0" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">$(Connect "$alert/StandDown")</Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+</Task>
+"@
+Add-Instance $alert "$alert/StandDownTimer" @"
+<Task Name="$alert/StandDown" Class="CTaskOperateOnFlagField" Looping="0" Independent="0">
+  <Parameter Name="FlagFieldValue" Value="57" />
+  <Parameter Name="ArmyFlagFieldValue" Value="0" />
+  <Parameter Name="OperationType" Value="0" />
+  <Parameter Name="FlagFieldType" Value="0" />
+  <Anchor Name="OnStart" />
+  <Event Name="IS_TRUE" />
+  <Event Name="IS_FALSE" />
+  <Event Name="FLAG_SET" />
+</Task>
+"@
+Start-With $alert "$alert/StandDownTimer"
 
 $doc.Save($source)
 Invoke-Cli ai fragments $source --base $brain --out $fragments

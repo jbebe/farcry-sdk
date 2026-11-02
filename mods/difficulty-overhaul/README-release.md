@@ -32,6 +32,8 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
   and falls off fast past it.
 - **No rockets at you on foot.** A soldier with an RPG or a Carl Gustav draws his other gun at you on
   foot, and keeps the launcher for you in a vehicle.
+- **Alerts end.** A soldier who has lost you gives up after 2 minutes, walks back to where he was
+  when the alert began and goes back to his post, where the game kept him searching for good.
 - **A combat log** in `bin\difficulty-overhaul-logs`, one file per session and the last 20 kept:
   every hit on you and by you, and every shot at you with its chance. Attach it to a bug report.
 

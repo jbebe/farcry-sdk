@@ -1,0 +1,87 @@
+<Brain Name="::MercBrain/MercBrain/MercBrainAlert" Class="CBrainMercAlert" Looping="0" Independent="0">
+  <Selectable Filter="SearchAlertThreat" Task="::MercBrain/MercBrain/MercBrainAlert/SeachPossibleThreat" />
+  <Selectable Filter="stateSearch" Task="::MercBrain/MercBrain/MercBrainAlert/SearchTargetLost" />
+  <Selectable Filter="TargetLostRushToLastPosSeen" Task="::MercBrain/MercBrain/MercBrainAlert/RushToLastPosSeen" />
+  <Selectable Filter="TargetLostWaitRushResults" Task="::MercBrain/MercBrain/MercBrainAlert/WaitRushResults" />
+  <Selectable Filter="stateWaitAlerted" Task="::MercBrain/MercBrain/MercBrainAlert/WaitAlerted" />
+  <Selectable Filter="stateSniperBehavior" Task="::MercBrain/MercBrain/MercBrainAlert/SnipingBehavior" />
+  <Selectable Filter="GrenadeEscape" Task="::MercBrain/MercBrain/MercBrainAlert/EscapeProjectile" />
+  <Selectable Filter="MortarEscape" Task="::MercBrain/MercBrain/MercBrainAlert/EscapeMortar" />
+  <Selectable Filter="SniperAlertBehaviour" Task="::MercBrain/MercBrain/MercBrainAlert/SniperAlert" />
+  <Selectable Filter="FireAlertBehaviour" Task="::MercBrain/MercBrain/MercBrainAlert/EscapeFire" />
+  <Selectable Filter="ReinforcementAlertBehaviour" Task="::MercBrain/MercBrain/MercBrainAlert/GotoReinforcementPos" />
+  <Selectable Filter="EscapeVehicle" Task="::MercBrain/MercBrain/MercBrainAlert/EscapeFriendlyVehicle" />
+  <Selectable Filter="MercBhvHurt" />
+  <Selectable Filter="ThrowProjectile" Task="::MercBrain/MercBrain/MercBrainAlert/GoThrowProjectile" />
+  <Selectable Filter="CorpseSeen" Task="::MercBrain/MercBrain/MercBrainAlert/SawCorpse" />
+  <Selectable Filter="MountedWeapon" Task="::MercBrain/MercBrain/MercBrainAlert/AlertUsingMountedWeapon" />
+  <Selectable Filter="SilentSniperHider" Task="::MercBrain/MercBrain/MercBrainAlert/HideFromSilentSniper" />
+  <Selectable Filter="SilentSniperKiller" Task="::MercBrain/MercBrain/MercBrainAlert/KillSilentSniper" />
+  <Selectable Filter="FallBackToStartPosition" Task="::MercBrain/MercBrain/MercBrainAlert/FallbackToStartPositionBP1" />
+  <Selectable Filter="HideFromFarShooter" Task="::MercBrain/MercBrain/MercBrainAlert/HideFarShooter" />
+  <Selectable Filter="AmmoPileEscape" Task="::MercBrain/MercBrain/MercBrainAlert/EscapeDangerousAmmoPile" />
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/ScanThresholdCross" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/ScanFire" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/ScanPlayerDead" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/ScanUnderWater" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/ScanUseVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainAlert/ScanFireProximity" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainAlert/ScanBlindCombat" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainAlert/ScanrArmyMemberState" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainAlert/ScannerLastManStanding" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainAlert/NoEmotion" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainAlert/CheckFallback1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainAlert/PlayConfusionBark1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/ScanFallToDeath" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainAlert/StandDownTimer" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/PlayConfusionBark1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/ScanMortarSeen" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/CheckFallback1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/CScannerFallback1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/NoEmotion" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/SeachPossibleThreat" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/SearchTargetLost" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/EscapeProjectile" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/EscapeMortar" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/SniperAlert" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/EscapeFire" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/SnipingBehavior" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/GotoReinforcementPos" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/RushToLastPosSeen" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/WaitRushResults" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/GoThrowProjectile" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/AlertUsingMountedWeapon" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/SawCorpse" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/KillSilentSniper" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/HideFromSilentSniper" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/HideFarShooter" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/EscapeFriendlyVehicle" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/EscapeDangerousAmmoPile" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/FallbackToStartPositionBP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/FindVisualThreat" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/FindFlyingProjectile" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/ScanBlindCombat" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/ScanFireProximity" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/ScanrArmyMemberState" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/ScanProjectileSeen" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/ScannerLastManStanding" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/WaitAlerted" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/CheckNeedToRescue" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/CheckFlagTargetOnlyPlayer" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/SetKeepMountedWeapon" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/CheckIsUsingMountedWeapon" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/TalkAboutLastManStanding" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/WaitBetweenTalkLastMan" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/ScanIncomingFriendlyVehicle" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/RemoveFactSearchAmmoPile" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/ScannerDangerousAmmoPile" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/StandDownTimer" />
+  <Add Task="::MercBrain/MercBrain/MercBrainAlert/StandDown" />
+</Brain>

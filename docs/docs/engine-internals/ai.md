@@ -179,6 +179,25 @@ Two more lieutenant rules, **RE-verified**:
 - **Roles** balance suppressors against assaulters per range band (`IsNeededAsSuppress`); a member
   who suppresses has flag 9 set.
 
+### How an alert ends
+
+Each time a soldier's top brain restarts, `CBrainMerc::DoStart` picks his state again. A soldier who
+was searching for a lost target (flag 18) goes back to idle only once his blackboard holds
+`ItMustHaveBeenTheWind`, and in `mercbrain` only the idle brain's look at something glimpsed sets it.
+An alert entered any other way, from a gunshot or a target lost in a fight, never ends on its own:
+
+- `SearchTargetLost` loops, moving him between covers and random spots near where the target was
+  lost. Its 20-30 s timer only plays a bark and sets flag 27.
+- `WaitAlerted`, what the alert brain picks when nothing else applies, waits 1,000,000 s.
+- The way home is `FallbackToStartPositionBP1`, chosen while flag 57 is set. It walks him, aiming
+  along the path, to `EngagementStartPosition`, where he stood when he went from idle to alert, then
+  clears 57, sets 58 and ends the alert brain. The game sets 57 only 10 s into a search while the
+  player is inside a safe zone.
+
+This is **traced in the server build** (`CBrainMerc::DoStart`, `CBrainMercAlert::DoStart`) and the
+shipped `mercbrain`, not yet matched in `Dunia.dll`. Difficulty Overhaul's brain sets flag 57 two
+minutes into an alert ([design log](../design/difficulty.md)).
+
 ### Under fire
 
 A bullet stim from an enemy reaches a soldier's `CSensoryStimProcessor::OnBulletShot` (Steam
