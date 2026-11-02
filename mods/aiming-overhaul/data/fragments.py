@@ -1,7 +1,7 @@
 """Write the layer's weapon archetype fragments: which guns fire tracers, how fast and how long their
 streaks are, which scopes the plugin draws and how, those scopes losing the engine's iron-sight
-post effect and random spread down the sights, which guns' breath can be held, and what each weapon
-weighs.
+post effect and random spread down the sights, which guns' breath can be held, what each weapon
+weighs, and which guns the game still takes the kick back on.
 
 Each fragment is a WeaponProperties or weapons archetype copied whole out of a decoded entity
 library, with only the fields below changed or FCSE's entity data component added, so JackAll
@@ -79,9 +79,15 @@ WEIGHTS = {
     "Special.Mortar": 10.0, "Special.LPO50": 8.0,
 }
 WEIGHT_KEY = "AimingOverhaul.Weight"
+# The guns whose kick the game still takes back after a burst: the shotguns and the launchers.
+# Every other gun's kick stays in the aim.
+RECOIL_RETURNS = ("Primary.Ithaca", "Primary.SPAS12", "Primary.USAS12", "Primary.MGL140",
+                  "Secondary.M79", "Special.RPG7", "Special.Carl_Gustaf", "DLC1.Crossbow",
+                  "DLC1.SawedOffShotgun", "DLC1.SilencedShotgun")
+RECOIL_RETURNS_KEY = "AimingOverhaul.RecoilReturns"
 
 PROPERTIES = "WeaponProperties."
-WEAPONS = "weapons."
+WEAPONS = ("weapons.", "DLC1Weapons.")
 
 
 def of(name, archetypes):
@@ -141,6 +147,8 @@ def edit_weapon(archetype, block):
     data = {SCOPE_KEY + key: value for key, value in (lookup(archetype, SCOPES) or {}).items()}
     if of(archetype, HOLD_BREATH):
         data[HOLD_BREATH_KEY] = 1
+    if of(archetype, RECOIL_RETURNS):
+        data[RECOIL_RETURNS_KEY] = 1
     weight = lookup(archetype, WEIGHTS)
     if weight is not None:
         data[WEIGHT_KEY] = weight
@@ -160,7 +168,7 @@ def main(paths):
             if name.startswith(PROPERTIES):
                 edit_properties(name[len(PROPERTIES):], block)
             elif name.startswith(WEAPONS):
-                edit_weapon(name[len(WEAPONS):], block)
+                edit_weapon(name.split(".", 1)[1], block)
             if block == lines[start:end]:
                 continue
             out = fragment_path(LAYER, library, name)

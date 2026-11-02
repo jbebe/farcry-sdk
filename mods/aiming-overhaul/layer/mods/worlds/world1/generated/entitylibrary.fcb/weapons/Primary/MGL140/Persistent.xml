@@ -222,6 +222,9 @@
             <object type="AimingOverhaul.ScopeSize">
               <value name="Float" type="Float">0.8</value>
             </object>
+            <object type="AimingOverhaul.RecoilReturns">
+              <value name="Int" type="Int32">1</value>
+            </object>
             <object type="AimingOverhaul.Weight">
               <value name="Float" type="Float">6.0</value>
             </object>

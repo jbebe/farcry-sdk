@@ -1,4 +1,5 @@
-// The player's look, as the input builds it once a frame, with an offset of the plugin's own on it.
+// The player's look, as the input builds it once a frame, with an offset and turns of the plugin's
+// own on it.
 //
 // See docs/docs/engine-internals/first-person-aiming.md#the-look.
 #include "engine/look.h"
@@ -28,6 +29,7 @@ namespace {
     AimingOverhaul::Look::OffsetFn g_offset = nullptr;
     uint8_t* g_pawn = nullptr;
     Angles g_applied = {};
+    Angles g_turn = {};
 
     void __fastcall UpdateLookDetour(uint8_t* listener, void* unused) {
         g_originalUpdateLook(listener, unused);
@@ -38,11 +40,13 @@ namespace {
         if (pawn != g_pawn) {
             g_pawn = pawn;
             g_applied = {};
+            g_turn = {};
         }
         const Angles wanted = g_offset();
-        const float up = wanted.up - g_applied.up;
-        const float left = g_applied.right - wanted.right;
+        const float up = wanted.up - g_applied.up + g_turn.up;
+        const float left = g_applied.right - wanted.right - g_turn.right;
         g_applied = wanted;
+        g_turn = {};
 
         uint8_t* data = AimingOverhaul::Pawn::Data(pawn);
         Field<float>(data, kDesiredPitch) += up;
@@ -55,9 +59,14 @@ namespace {
 bool AimingOverhaul::Look::Install(OffsetFn offset) {
     g_offset = offset;
     if (!Hook(g_updateLook.address(), &UpdateLookDetour, &g_originalUpdateLook)) {
-        FCSE::ApiPointer()->Log("look: the look cannot be hooked, so the aim does not sway and a "
-                                "gun at a wall does not swing down");
+        FCSE::ApiPointer()->Log("look: the look cannot be hooked, so the aim does not sway, a gun "
+                                "at a wall does not swing down and recoil does not stay");
         return false;
     }
     return true;
+}
+
+void AimingOverhaul::Look::Turn(Angles by) {
+    g_turn.up += by.up;
+    g_turn.right += by.right;
 }

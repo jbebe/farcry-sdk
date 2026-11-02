@@ -63,7 +63,9 @@ bool Aiming();
 Swing ScopeSwing();
 
 // How fast the look turned over the last frame, unsmoothed; nought across a cut. On the game thread.
-Turning Turned();// How many times the scope last raised magnifies the view.
+Turning Turned();
+
+// How many times the scope last raised magnifies the view.
 float Magnification();
 
 // How far a scope has kicked back toward the eye from the last shot, from nought to one.

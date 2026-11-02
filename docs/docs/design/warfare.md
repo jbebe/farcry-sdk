@@ -134,8 +134,6 @@ is Aiming Overhaul's (see [Decisions](#decisions)).
 
 | Idea | What changes | Feasibility | Status |
 | --- | --- | --- | --- |
-| **Recoil that stays** | Muzzle climb that the player pulls down, instead of a kick that recovers in a tenth of a second | data: `fRecoilAchieveTime`, `iRecoilRecoveryLevel`, `f*RecoilPerShot` per reliability level | idea |
-| **Full auto spreads** | Spread grows quickly with sustained fire and the first round is the only accurate one; bursts of two or three stay usable | data first (spread blocks, sustained-fire scaling); plugin if the growth rate is not a field | idea |
 | **A fire selector** | A key flips select-fire rifles between semi and auto | plugin + data: the mode is fixed per archetype, and auto needs its sound loop while semi needs per-round sounds, so each rifle needs both | idea |
 | **Slow to raise** | Longer `fIronsightTransitionTime` per class: pistol fast, PKM slow. Slower turning and walking while aimed | data | idea |
 | **Carried weight** | The loadout's weight slows walking, sprinting and stamina recovery. A PKM and an RPG together are a burden | plugin: no weight field exists; weights as entity data on each weapon | idea |
@@ -161,6 +159,8 @@ is Aiming Overhaul's (see [Decisions](#decisions)).
 | **Landing** | A landing drops the eye by how fast it came down | plugin: the camera's positional offset on a spring | built; seen in a scripted run |
 | **Sprint before you shoot** | The gun comes up after a sprint over 0.25 s plus 0.03 s per kilogram, neither firing nor aiming until it is up | plugin: the shot refused at `CanFire` and the sights dropped, as the gun near walls does | built; seen in a scripted run |
 | **Getting going** | A walk reaches its pace in half a second and a sprint its top in 1.5 s; the jump unchanged | data: `fWalkingAcceleration`, `fWalkingDeceleration` and the sprint curve. Stopping when every key is let go is instant whatever the data ([walking, sprinting and jumping](../engine-internals/first-person-aiming.md#walking-sprinting-and-jumping)) | built; seen in a scripted run |
+| **Recoil that stays** | Each shot's kick, the game's own for the gun, its wear and the sights, goes into the aim and is never taken back; the player pulls it down. The first two kicks of a burst are a quarter, so its first three shots land together. Shotguns, launchers and mounted guns keep the game's return | plugin: the kick taken from the game before `CPawnBeautifierFirst::UpdateRecoil` blends it, and added to the look ([recoil](../engine-internals/first-person-aiming.md#recoil)); shotguns and launchers opt out with `AimingOverhaul.RecoilReturns` | built 2026-11-02; seen in a scripted run |
+| **Full auto spreads** | From the 4th shot of a burst, each shot adds random spread of a quarter of the gun's kick, up to 8 shots' worth; a burst is shots less than 0.25 s apart | plugin: the shot's direction bent in `SetupShot1st`. The game's own spread never grows in a burst; it only tightens after a pause, on a few guns ([where a first-person shot goes](../engine-internals/first-person-aiming.md#where-a-first-person-shot-goes)) | built 2026-11-02; the values logged in a scripted run, not seen on a target |
 
 ### Wounds
 
@@ -286,3 +286,7 @@ Each is one launch.
   slower walk start, the gun carried low in a sprint and the landing's drop of the view.
 - 2026-11-02: the game's own sideways slide behind a turn stays, and gets a vertical twin of the
   same size: the arms slide behind the look's pitch too.
+- 2026-11-02: recoil stays in the aim at the game's own sizes, and the spread grows from a burst's
+  4th shot. The first two kicks are light so that the first shots go where they were aimed. Shotguns
+  and launchers keep the game's return, since a 10° kick to pull down after every blast is too
+  much.

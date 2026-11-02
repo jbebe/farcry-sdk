@@ -1,4 +1,5 @@
-// Where a first-person shot leaves from, which can be moved for the player's.
+// Where a first-person shot leaves from and which way it goes, which can be changed for the
+// player's.
 //
 // See docs/docs/engine-internals/first-person-aiming.md#where-a-first-person-shot-goes.
 #include "engine/shot.h"
@@ -21,7 +22,7 @@ namespace {
     void __fastcall SetupDetour(uint8_t* strategy, void* unused, uint8_t* pawn, float* origin,
                                 float* direction, uint32_t fourth) {
         g_originalSetup(strategy, unused, pawn, origin, direction, fourth);
-        g_move(pawn, origin);
+        g_move(pawn, origin, direction);
     }
 }
 
@@ -29,7 +30,7 @@ bool AimingOverhaul::Shot::Install(MoveFn move) {
     g_move = move;
     if (!Hook(g_setup.address(), &SetupDetour, &g_originalSetup)) {
         FCSE::ApiPointer()->Log("shot: the first-person shot cannot be hooked, so a lean does not "
-                                "move where it leaves from");
+                                "move where it leaves from and a burst does not spread");
         return false;
     }
     return true;

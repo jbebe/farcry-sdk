@@ -30,8 +30,14 @@ Notable changes to Aiming Overhaul, loosely following
   up after it, longer the heavier it is; until then it doesn't fire or aim.
 - **Getting going.** A walk takes half a second to reach its pace and a sprint a second and a half
   to reach its top. The top speeds and the jump are the game's.
-- **Hold breath**, **Gun near walls**, **Vertical inertia**, **Gun up after sprint** and **Landing**
-  switches in the Mod Configuration menu.
+- **Recoil that stays.** Each shot kicks the aim up by the game's own amount, and it stays there
+  until you pull it down, instead of dropping back once you stop firing. The first two kicks of a
+  burst are light, so its first three shots land together. Shotguns, launchers and mounted guns are
+  as they were.
+- **Full auto spreads.** From the fourth shot of a burst each shot strays a little further, up to
+  eight shots' worth.
+- **Hold breath**, **Gun near walls**, **Vertical inertia**, **Gun up after sprint**, **Landing**
+  and **Recoil that stays** switches in the Mod Configuration menu.
 
 ### Changed
 - **Interact moves to F, throw grenade to G and next throwable to T** by default, to free Q and E

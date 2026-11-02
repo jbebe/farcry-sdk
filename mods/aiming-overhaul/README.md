@@ -70,6 +70,16 @@ both field by field with other mods' edits, reporting any clash.
   the game's does. Walking out of a sprint, or into the sights' slower pace, slows over a moment.
   The top speeds and the jump are the game's. Letting go of every key still stops the player at
   once.
+- **Recoil that stays.** Each shot kicks the aim up and a little to one side, and the aim stays
+  there until you pull it back down. The game's own climb drops back to where the burst began once
+  the shots stop; here it never does. The kick is the game's own for the gun, its wear and the
+  sights: a new AK-47 climbs 0.6° a shot down the sights and 1.1° from the hip. The first two kicks
+  of a burst are a quarter of that, so its first three shots land together. Shotguns, launchers and
+  mounted guns kick and come back as in the game.
+- **Full auto spreads.** From the fourth shot of a burst each shot strays further, by a quarter of
+  the gun's kick more each time, up to eight shots' worth: down a new AK-47's sights, up to 1.2°
+  more than the game's 0.4°. A burst is shots less than a quarter of a second apart, so slower taps
+  each start fresh.
 - **Gun blur.** Down the iron sights the eye focuses on the front sight, and the rest of the gun
   goes out of focus by how far it is from it, as through an 8 mm pupil: the rear sight most, and the
   blur spills a little past the gun's edge. The focus holds on the front sight while a fast turn
@@ -124,7 +134,11 @@ and the sprint it holds is refused in the input listener, in `src/engine/sprint.
 `src/ready.cpp`, refused the same way and held low by the same pass that bends the lean, which
 turns the arms' bones; how long it takes is by the weight `src/weight.cpp` reads. The arms' slide
 behind the look's pitch, `src/pitch_slide.cpp`, moves them in the same pass. A landing is
-`src/landing.cpp`, dropping the eye through the camera's positional offset. The blur draws the gun's own
+`src/landing.cpp`, dropping the eye through the camera's positional offset. The recoil is
+`src/recoil.cpp`: each of the player's kicks is taken from the game before the game blends it in,
+in `src/engine/kick.cpp`, added to the look in `src/engine/look.cpp`, and a burst's shots stray in
+`src/engine/shot.cpp`. The guns that keep the game's recoil have `AimingOverhaul.RecoilReturns` on
+their archetype, written by `data\fragments.py`. The blur draws the gun's own
 depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the
 blur and the scope shadow draw at the end of the pass the gun's colour is drawn in, before the
 bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
@@ -179,6 +193,7 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Vertical inertia | Yes / No | Yes |
 | Gun up after sprint | Yes / No | Yes |
 | Landing | Yes / No | Yes |
+| Recoil that stays | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
 | Iron sight zoom | Yes / No | Yes |
 | Scope shadow | Yes / No | Yes |
@@ -189,7 +204,8 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 With Sway off neither the eye nor the aim drifts, and there is nothing for the breath to steady.
 With Hold breath off, sprint down the sights does what the game does with it. With Vertical
 inertia off, the arms keep still as the look pitches, as in the game. With Gun up after sprint off, the gun fires and aims as soon as the sprint ends, as in the game. With Landing off,
-the eye does not drop. How quickly the player gets going is the player data's, and stays. With
+the eye does not drop. With Recoil that stays off, the game's recoil comes back as it was and a
+burst no longer spreads. How quickly the player gets going is the player data's, and stays. With
 Iron sight zoom
 off, the view keeps its field of view down a gun's iron sights; a scope still
 magnifies. With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game

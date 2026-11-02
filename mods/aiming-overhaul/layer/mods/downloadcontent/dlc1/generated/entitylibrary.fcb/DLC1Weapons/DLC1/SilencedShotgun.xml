@@ -1,0 +1,209 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">DLC1.SilencedShotgun</value>
+      <object type="Entity">
+        <value name="hidName" type="String">DLC1Weapons.DLC1.SilencedShotgun</value>
+        <value name="disEntityId" type="Int64">269</value>
+        <value name="text_hidEntityClass" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">4</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CFileDescriptorComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileName" type="String">graphics\weapons\dlc\silenced_shotgun\dlc1_silenced_shotgun.xml</value>
+            <value name="fileName" type="Hash">6A131592</value>
+            <value name="hidDescriptor" type="Rml">
+              <hidDescriptor>
+                <component class="GraphicComponent" version="2" detail="0">
+                  <object index="0" meshName="BULLET" boneName="BULLET" bboxMin="-0.00813986,-7.37287e-005,-0.00855873" bboxMax="0.00813985,0.0576057,0.00855874" />
+                  <object index="1" meshName="CLIP" boneName="CLIP" bboxMin="-0.0111414,-0.00173916,-0.00399351" bboxMax="0.0111407,0.068144,0.00962197" />
+                  <object index="2" meshName="FRAME" boneName="FRAME" bboxMin="-0.0271966,-0.134604,-0.0392451" bboxMax="0.0353438,0.725015,0.128388" />
+                  <object index="3" meshName="SLIDE" boneName="SLIDE" bboxMin="-0.0234524,-0.0540247,-0.00994867" bboxMax="0.0234499,0.107784,0.0369534" />
+                  <object index="4" meshName="SLIDE02" boneName="SLIDE02" bboxMin="-0.024605,-0.2596,0.0263565" bboxMax="-0.00996339,-0.153229,0.0465023" />
+                  <resource fileName="graphics\Weapons\DLC\Silenced_Shotgun\dlc1_silenced_shotgun.xbg" bboxMin="-0.0289893,-0.0653509,-0.0557091" bboxMax="0.0336053,0.794267,0.111924" />
+                  <skeleton name="dlc1_silenced_shotgun" pos="0,0,0" rot="1,-0,-0,-0">
+                    <bone name="BULLET" pos="-0.001949,0.180434,0.068934" rot="1,0,0,0" />
+                    <bone name="CLIP" pos="-0.00174,0.161067,0.026371" rot="1,0,0,0" />
+                    <bone name="FRAME" pos="-0.001739,0.069253,-0.016464" rot="1,0,0,0" />
+                    <bone name="FX_CASING" pos="-0.01163,0.197006,0.061768" rot="0.653255,0.270455,0.270475,0.653418" />
+                    <bone name="FX_FIRE" pos="-0.001711,0.825048,0.075669" rot="1,0,0,0" />
+                    <bone name="HAND_PLACEMENT" pos="0.067158,0.380245,-0.00181" rot="-0.5,0.500001,-0.5,-0.5" />
+                    <bone name="SLIDE" pos="-0.001739,0.385884,0.034153" rot="1,0,0,0" />
+                    <bone name="Weapon_Break" pos="0,-0,0" rot="1,0,0,0" />
+                    <bone name="SLIDE02" pos="-0.001739,0.385884,0.034153" rot="1,0,0,0" />
+                  </skeleton>
+                </component>
+                <component class="RigidPhysComponent">
+                  <resource fileName="graphics\Weapons\DLC\Silenced_Shotgun\dlc1_silenced_shotgun.hkx" />
+                </component>
+              </hidDescriptor>
+            </value>
+          </object>
+          <object type="CGraphicComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bCastShadow" type="Bool">True</value>
+            <value name="bReceiveShadow" type="Bool">True</value>
+            <value name="bCastAmbientShadow" type="Bool">True</value>
+            <value name="olgLightGroup" type="Hash">00000181</value>
+            <value name="bAllowCullBySize" type="Bool">True</value>
+            <value name="agAmbientGroup" type="Hash">00000000</value>
+            <value name="bBehaveLikeAPickup" type="Bool">False</value>
+            <value name="bShowInReflection" type="Bool">True</value>
+            <value name="bAlwaysShowInReflection" type="Bool">False</value>
+            <value name="bOverrideLODSphere" type="Bool">False</value>
+            <value name="fLODSphereRadius" type="Float">0</value>
+            <value name="hidSkyOcclusion0" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion1" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion2" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion3" type="Hash">FFFFFFFF</value>
+            <value name="hidGroundColor" type="Hash">FFFFFFFF</value>
+            <value name="hidObjectHeight" type="Float">3</value>
+            <value name="hidHeightAbove" type="Float">0</value>
+            <value name="hidHasAmbientValues" type="Bool">False</value>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">0</value>
+              <value name="text_objModel" type="String">graphics\weapons\dlc\silenced_shotgun\dlc1_silenced_shotgun.xbg</value>
+              <value name="objModel" type="Hash">7A59D0D5</value>
+              <value name="hidMeshName" type="String">BULLET</value>
+              <value name="text_hidNodeName" type="String">BULLET</value>
+              <value name="hidNodeName" type="Hash">4AEBF7F3</value>
+              <value name="text_hidNodeNameLOD0" type="String">BULLET_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">DFADA48F</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">1</value>
+              <value name="text_objModel" type="String">graphics\weapons\dlc\silenced_shotgun\dlc1_silenced_shotgun.xbg</value>
+              <value name="objModel" type="Hash">7A59D0D5</value>
+              <value name="hidMeshName" type="String">CLIP</value>
+              <value name="text_hidNodeName" type="String">CLIP</value>
+              <value name="hidNodeName" type="Hash">9BB5F9D3</value>
+              <value name="text_hidNodeNameLOD0" type="String">CLIP_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">00B20B5C</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">2</value>
+              <value name="text_objModel" type="String">graphics\weapons\dlc\silenced_shotgun\dlc1_silenced_shotgun.xbg</value>
+              <value name="objModel" type="Hash">7A59D0D5</value>
+              <value name="hidMeshName" type="String">FRAME</value>
+              <value name="text_hidNodeName" type="String">FRAME</value>
+              <value name="hidNodeName" type="Hash">42ACFE7D</value>
+              <value name="text_hidNodeNameLOD0" type="String">FRAME_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">117FF4BB</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">3</value>
+              <value name="text_objModel" type="String">graphics\weapons\dlc\silenced_shotgun\dlc1_silenced_shotgun.xbg</value>
+              <value name="objModel" type="Hash">7A59D0D5</value>
+              <value name="hidMeshName" type="String">SLIDE</value>
+              <value name="text_hidNodeName" type="String">SLIDE</value>
+              <value name="hidNodeName" type="Hash">85BB2CD2</value>
+              <value name="text_hidNodeNameLOD0" type="String">SLIDE_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">F2877992</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">4</value>
+              <value name="text_objModel" type="String">graphics\weapons\dlc\silenced_shotgun\dlc1_silenced_shotgun.xbg</value>
+              <value name="objModel" type="Hash">7A59D0D5</value>
+              <value name="hidMeshName" type="String">SLIDE02</value>
+              <value name="text_hidNodeName" type="String">SLIDE02</value>
+              <value name="hidNodeName" type="Hash">D79E3B49</value>
+              <value name="text_hidNodeNameLOD0" type="String">SLIDE02_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">2F94BB68</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+          </object>
+          <object type="CSimpleAnimationComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileSkeleton" type="String">graphics\weapons\dlc\silenced_shotgun\dlc1_silenced_shotgun_ref.skeleton</value>
+            <value name="fileSkeleton" type="Hash">1B15F8A8</value>
+            <value name="sPartName" type="String">dlc1_silenced_shotgun</value>
+          </object>
+          <object type="CFCXWeapon">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="iAnimationValue" type="UInt32">43</value>
+            <value name="sndswtpWeaponStatusSoundSwitchType" type="Hash">FFFFFFFF</value>
+            <value name="WeaponStatusSwitchValues" type="Rml">
+              <WeaponStatusSwitchValues Failure="4294967295" LowReliability="4294967295" MediumReliability="4294967295" HighReliability="4294967295" />
+            </value>
+            <value name="bUseHiResScope" type="Bool">False</value>
+            <value name="fHiResLowResScopeSwitchTransitionPoint" type="Float">0.5</value>
+            <object type="FireStrategy" />
+            <object type="ReliabilityLevelsData">
+              <object type="Failure">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.35</value>
+                <value name="fVerticalRecoilPerShot" type="Float">5.6</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.12</value>
+              </object>
+              <object type="Low">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.3</value>
+                <value name="fVerticalRecoilPerShot" type="Float">5.4</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.06</value>
+              </object>
+              <object type="Medium">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.25</value>
+                <value name="fVerticalRecoilPerShot" type="Float">5.2</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.03</value>
+              </object>
+              <object type="High">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.2</value>
+                <value name="fVerticalRecoilPerShot" type="Float">5</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0</value>
+              </object>
+            </object>
+          </object>
+          <object type="CWeaponNetworkComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+          <object type="CCountersComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="archStimEffectTable" type="String">tables.StimEffectTables.WeaponDefault</value>
+          </object>
+          <object type="CPersistComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selLevel" type="UInt32">2</value>
+            <object type="enumLevel">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Limited</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Full</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Critical</value>
+              </object>
+            </object>
+          </object>
+          <object type="CFCSEDataComponent">
+            <object type="AimingOverhaul.RecoilReturns">
+              <value name="Int" type="Int32">1</value>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>

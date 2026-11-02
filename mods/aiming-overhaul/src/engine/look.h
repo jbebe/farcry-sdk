@@ -1,4 +1,5 @@
-// The player's look, as the input builds it once a frame, with an offset of the plugin's own on it.
+// The player's look, as the input builds it once a frame, with an offset and turns of the plugin's
+// own on it.
 #pragma once
 
 namespace AimingOverhaul::Look {
@@ -15,5 +16,8 @@ using OffsetFn = Angles (*)();
 
 // False, and logged, when the look cannot be hooked.
 bool Install(OffsetFn offset);
+
+// Turns the look by `by` once, the next time it is built, as the mouse would. On the game thread.
+void Turn(Angles by);
 
 }

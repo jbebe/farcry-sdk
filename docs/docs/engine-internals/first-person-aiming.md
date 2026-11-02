@@ -593,7 +593,13 @@ What that means for a weapon's mesh is in
 `CWeaponFireBulletStrategy::SetupShot1st` (server `0x08F50BC0`) starts the shot at the pawn's body
 part 0 and points it along that part's rotation, not the weapon's. It then bends the direction by
 `CNoiseMaker::GetNoise` (server `0x09008420`), in degrees. That noise is scaled up while the pawn
-moves, by sustained fire and by the player's accuracy bonus.
+moves, by the time since the last shot and by the player's accuracy bonus.
+
+The time since the last shot works through a timer on the strategy: the noise is multiplied by
+`m + (1 − m) · t / T`, with `T` the weapon's `fBulletSpread_StabilizationTime` and `m` its
+`fBulletSpread_MinimumSpreadPercentage`, and each shot sets `t` back to `T`. Where `t` runs down was
+not traced. Retail `m` is 1 on the AK-47, so it gets no bonus at all; it is 0.7 on the AR-16, 0.8 on
+the M249 and 0.85-0.9 on the G3 and FAL. Nothing grows the spread over a long burst.
 
 `GetActualSpreadData` (server `0x08F4D690`) picks which noise: the jump one while in the air, the
 iron-sight ones once the ironsight flag is set and the pawn's skill value at `+0x14` has reached
@@ -606,3 +612,43 @@ spread down the sights at all, and the iron-sighted guns about 0.4°.
 key every `1 / fFrequency` seconds of game time. The retail `BulletSpread_IronSight` is 0.4° at 35
 keys a second, so a shot's error is effectively random from one shot to the next rather than a
 drift you could see.
+
+## Recoil
+
+Each shot, `CWeapon::SWeaponImpl::Shoot` (server `0x08F4C720`) asks the weapons service for the gun's
+kick, `CFCXWeaponsService::GetRecoilIntensity` (server `0x087A0700`). It reads
+`fVerticalRecoilPerShot` and `fHorizontalRecoilPerShot` at the weapon's reliability level, in
+degrees. It scales both by the pawn's recoil bonus and, down the sights, by `fIronsightRecoilFactor`,
+and passes on `fRecoilAchieveTime`. `Shoot` then sets the desired recoil to the effective recoil plus
+the vertical kick, capped at `fRecoilMax` degrees, and a yaw drawn evenly within the horizontal kick
+either side of the effective one, and raises the new-kick flag.
+
+| Field | Desired data | Effective data | Pawn data |
+|---|---|---|---|
+| pitch, up positive, radians | `+0xD4` | `+0xD4` | `+0x214`, `+0x3A4` |
+| yaw, radians | `+0xD8` | `+0xD8` | `+0x218`, `+0x3A8` |
+| seconds to reach it | `+0xDC` | `+0xDC` | `+0x21C` |
+| new kick, a byte | `+0xE0` | `+0xE0` | `+0x220` |
+
+`CPawnBeautifierFirst::UpdateRecoil` (`0x100A0050`, server `0x092E52C0`, `__thiscall(float
+seconds)`, its pawn at `+0x10`) consumes the flag. It blends the effective recoil from where it
+stands to the desired one over those seconds through a curve. It then takes a recovery time from
+`CFCXWeaponsService::GetRecoilRecoveryTime` (server `0x0879D630`) and blends back to nought. That
+time is the `RecoilRecoveryTable` entry for the weapon's `iRecoilRecoveryLevel`, one entry further
+on outside the sights. A new kick in either phase starts again from where the recoil stands, so a
+burst climbs and the return begins after its last shot.
+
+A mounted weapon's beautifier has its own (`0x100A36B0`), which copies the desired recoil straight
+over, and so does a vehicle passenger's (`0x100AFA40`).
+
+`UpdateLook` spends a downward mouse pull on the desired recoil pitch first, while that is above
+nought. Only what is left moves the look, so pulling down never takes the aim below where the burst
+began.
+
+:::info[Seen in a running game]
+Down a new AK-47's sights each kick was 0.0106 rad (1.1° × 0.55) up and within ±0.0038 rad
+sideways. A 15-round burst raised the view about 200 px and the game brought it back within 1.5 s.
+Taking each kick before `UpdateRecoil` runs, by setting the desired recoil to the effective one and
+clearing the flag, kept the recoil still. With the kick added to the look instead, the climb stayed.
+Retail GOG v1.03, from Aiming Overhaul.
+:::

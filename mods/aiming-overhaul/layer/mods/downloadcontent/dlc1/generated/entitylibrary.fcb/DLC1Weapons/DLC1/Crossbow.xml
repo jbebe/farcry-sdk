@@ -1,0 +1,175 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">DLC1.Crossbow</value>
+      <object type="Entity">
+        <value name="hidName" type="String">DLC1Weapons.DLC1.Crossbow</value>
+        <value name="disEntityId" type="Int64">246</value>
+        <value name="text_hidEntityClass" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">4</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CFileDescriptorComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileName" type="String">graphics\weapons\dlc\crossbow\dlc1_crossbow.xml</value>
+            <value name="fileName" type="Hash">16ACAB33</value>
+            <value name="hidDescriptor" type="Rml">
+              <hidDescriptor>
+                <component class="GraphicComponent" version="2" detail="0">
+                  <resource fileName="graphics\Weapons\DLC\Crossbow\dlc1_crossbow.xbg" bboxMin="-0.14954,-0.420592,-0.230834" bboxMax="0.0828894,0.462748,0.230834" />
+                  <skeleton name="dlc1_crossbow" pos="0,0,0" rot="1,-0,-0,-0">
+                    <bone name="Frame" pos="0.042253,-0.259223,0.000171" rot="0.707107,-0,-0.707107,-0" />
+                    <bone name="String_Slide" pos="-0.055906,0.062987,0" rot="0.707107,0,-0.707107,0">
+                      <bone name="Left_String_Slide_Down" pos="-0.006008,-0.032577,-0.004323" rot="0.707107,0,0.707107,0" />
+                      <bone name="Right_String_Slide_Down" pos="0.006061,-0.032577,-0.004322" rot="0.707107,0,0.707107,0" />
+                    </bone>
+                    <bone name="Right_UP_Bone" pos="-0.055906,0.372014,0.098217" rot="0.707107,-0,-0.707107,0">
+                      <bone name="Right_Down_Bone" pos="0.090829,-0.178749,0" rot="0.522969,0,0,0.852352">
+                        <bone name="Pulley_Right" pos="0.004935,0.001894,-0.007111" rot="0.649863,0.0118249,-0.0101125,0.759891">
+                          <bone name="Right_String_Slide_Up" pos="-0.007796,0.032653,0.002702" rot="0.394649,0.0121644,0.00524745,0.918737" />
+                        </bone>
+                        <bone name="Center_String_Right" pos="0.023799,-0.011464,-0.004702" rot="0.0279062,0.851137,0.522224,-0.0454813" />
+                      </bone>
+                    </bone>
+                    <bone name="Left_UP_Bone" pos="-0.055906,0.372014,-0.099454" rot="0.5,-0.5,-0.5,0.5">
+                      <bone name="Left_Down_Bone" pos="-0.178383,0.091882,-0" rot="0.971854,-2.35584e-007,0,-0.235584">
+                        <bone name="Pulley_Left" pos="0.005267,-0.003337,-0.007111" rot="0.652792,-0.0117517,-0.0101283,-0.757378">
+                          <bone name="Left_String_Slide_Up" pos="-0.007229,-0.032015,0.002942" rot="0.919178,0.00523297,0.0121555,0.393619" />
+                        </bone>
+                        <bone name="Center_String_Left" pos="0.024175,0.009942,-0.004404" rot="0.852543,0.028097,0.0460764,-0.519863" />
+                      </bone>
+                    </bone>
+                    <bone name="Center_String" pos="-0.031002,0.219675,0" rot="0.707107,0,-0.707107,0" />
+                    <bone name="Arrow_Shoot_Bone" pos="-0.058756,0.05486,-0" rot="0.707107,0,-0.707107,0" />
+                    <bone name="FX_FIRE" pos="-0.058756,0.377453,0" rot="0.707107,0,-0.707107,0" />
+                  </skeleton>
+                </component>
+                <component class="RigidPhysComponent">
+                  <resource fileName="graphics\Weapons\DLC\Crossbow\dlc1_crossbow.hkx" />
+                </component>
+              </hidDescriptor>
+            </value>
+          </object>
+          <object type="CGraphicComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bCastShadow" type="Bool">True</value>
+            <value name="bReceiveShadow" type="Bool">True</value>
+            <value name="bCastAmbientShadow" type="Bool">True</value>
+            <value name="olgLightGroup" type="Hash">00000181</value>
+            <value name="bAllowCullBySize" type="Bool">True</value>
+            <value name="agAmbientGroup" type="Hash">00000000</value>
+            <value name="bBehaveLikeAPickup" type="Bool">False</value>
+            <value name="bShowInReflection" type="Bool">True</value>
+            <value name="bAlwaysShowInReflection" type="Bool">False</value>
+            <value name="bOverrideLODSphere" type="Bool">False</value>
+            <value name="fLODSphereRadius" type="Float">0</value>
+            <value name="hidSkyOcclusion0" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion1" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion2" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion3" type="Hash">FFFFFFFF</value>
+            <value name="hidGroundColor" type="Hash">FFFFFFFF</value>
+            <value name="hidObjectHeight" type="Float">3</value>
+            <value name="hidHeightAbove" type="Float">0</value>
+            <value name="hidHasAmbientValues" type="Bool">False</value>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">0</value>
+              <value name="text_objModel" type="String">graphics\weapons\dlc\crossbow\dlc1_crossbow.xbg</value>
+              <value name="objModel" type="Hash">06E66E74</value>
+              <value name="hidMeshName" type="String"></value>
+              <value name="text_hidNodeName" type="String"></value>
+              <value name="hidNodeName" type="Hash">FFFFFFFF</value>
+              <value name="text_hidNodeNameLOD0" type="String"></value>
+              <value name="hidNodeNameLOD0" type="Hash">FFFFFFFF</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+          </object>
+          <object type="CSimpleAnimationComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileSkeleton" type="String">graphics\weapons\dlc\crossbow\dlc1_crossbow_ref.skeleton</value>
+            <value name="fileSkeleton" type="Hash">816B5861</value>
+            <value name="sPartName" type="String">dlc1_crossbow</value>
+          </object>
+          <object type="CFCXWeapon">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="iAnimationValue" type="UInt32">41</value>
+            <value name="sndswtpWeaponStatusSoundSwitchType" type="Hash">FFFFFFFF</value>
+            <value name="WeaponStatusSwitchValues" type="Rml">
+              <WeaponStatusSwitchValues Failure="4294967295" LowReliability="4294967295" MediumReliability="4294967295" HighReliability="4294967295" />
+            </value>
+            <value name="bUseHiResScope" type="Bool">True</value>
+            <value name="fHiResLowResScopeSwitchTransitionPoint" type="Float">1</value>
+            <object type="FireStrategy" />
+            <object type="ReliabilityLevelsData">
+              <object type="Failure">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.08</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0.26</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.12</value>
+              </object>
+              <object type="Low">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.07</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0.24</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.06</value>
+              </object>
+              <object type="Medium">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.06</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0.22</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.03</value>
+              </object>
+              <object type="High">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.05</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0.2</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0</value>
+              </object>
+            </object>
+          </object>
+          <object type="CWeaponNetworkComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+          <object type="CCountersComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="archStimEffectTable" type="String">tables.StimEffectTables.WeaponDefault</value>
+          </object>
+          <object type="CPersistComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selLevel" type="UInt32">2</value>
+            <object type="enumLevel">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Limited</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Full</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Critical</value>
+              </object>
+            </object>
+          </object>
+          <object type="CFCSEDataComponent">
+            <object type="AimingOverhaul.RecoilReturns">
+              <value name="Int" type="Int32">1</value>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>
