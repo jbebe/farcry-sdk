@@ -163,6 +163,19 @@ Refusing the sprint press that way while the effective iron-sight bit is set kee
 the sights with sprint held. Retail GOG v1.03, from Aiming Overhaul.
 :::
 
+### Look speed while zoomed
+
+`0x107D8D10` scales the frame's turn by a look speed blended from `+0x40` to `+0x44` by the zoom's
+progress at `+0x18`, all in the zoom data at `*(pawn + 0x10) + 0xD8` (`0x1007E1F0`). Both start at
+1. A weapon writes both (`0x10131280`): its own `fLookSensitivityFactor` (`+0xCC` in its properties)
+first, and its `IronSight` one (`+0xD0`) at full zoom. The monocular's use strategy (`0x1072B170`)
+writes only the second, from its `fLookSensitivity` at `+0x50`, beside its `fFOV` at `+0x4C`. So the
+monocular eases in from whatever the last weapon left. **RE-verified on Steam.**
+
+Retail weapons scale the full-zoom speed with their field of view, about 0.3 per radian: 0.4 at a
+pistol's 1.309, 0.07 at the AS50's 0.2. The monocular zooms as far as the AS50 and ships with 0.1;
+UFCP's layer gives it 0.061.
+
 ### Holding the breath
 
 The player's stamina is a counter on the pawn entity's `CFCXCountersComponentPlayer` (found by

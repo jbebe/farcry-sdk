@@ -30,6 +30,8 @@ void ApplyMachetesUnlock();
 void ApplyExitTeardownFix();
 // A fast mouse flick turns the view less far than a slow one.
 void ApplyMouseSpeedCapFix();
+// A slow mouse movement does not move the menu cursor at all.
+void ApplyMenuCursorFix();
 // Loading screens run far below the rate they were paced for.
 void ApplyHighPrecisionTimerFix();
 // The engine spins idle workers and busy-waits for its own frame cap.
@@ -95,6 +97,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     ApplyMachetesUnlock();
     ApplyExitTeardownFix();
     ApplyMouseSpeedCapFix();
+    ApplyMenuCursorFix();
     ApplyHighPrecisionTimerFix();
     ApplyUtilisationFix();
     ApplyGrassSpotLightFix();

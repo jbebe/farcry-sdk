@@ -4,7 +4,8 @@ Bugs Ubisoft never patched, fixed in the running game instead of in the files on
 
 UFCP is an [FCSE](../../tools/FCSE) plugin: it patches `Dunia.dll` in memory at startup, so it
 overwrites nothing, leaves no trace when uninstalled, and stacks with whatever data mods are already
-installed.
+installed. A bug that is wrong data, not wrong code, is fixed in `layer/` instead, as a fragment
+JackAll merges with every other layer; the plugin ships inside that layer.
 
 This is the plugin a player installs. The things only someone working on the game wants — the
 developer console, booting straight into a save — are a separate plugin, [DevTools](../DevTools),
@@ -21,6 +22,8 @@ Applied unconditionally, with no setting — a fix that needs a switch is a pref
 | Machetes | Restores the Primitive and Homemade machete variants, held behind the same kind of check. Pick one in the game's own Options → Game → Machete Type. |
 | Exit crash | Quitting through Exit Game faulted instead of closing cleanly — the reason "Far Cry 2 crashes on exit" is folklore, and a guaranteed false positive on top of any real crash you are trying to read. |
 | Mouse speed cap | A fast flick turned the view less far than a slow one: the gamepad filter's output ceiling was applied to the mouse too, so quick movement saturated. |
+| Menu cursor | A slow mouse movement did not move the menu cursor at all. Each frame's movement was cut down to whole pixels, so whatever fell below a pixel was lost, the more so the higher the frame rate. |
+| Monocular look speed | The monocular turned the view 64% faster than the guns' scopes do at its zoom. Their look speed is about 0.305 per radian of field of view; the monocular's `fLookSensitivity` is now 0.061 at its 0.2, in `layer/` for both worlds. |
 | High-precision timer | Loading screens ran far below the 30 FPS they are paced for, because the default 15.6 ms timer resolution overshoots every sleep. |
 | Grass under spot lights | Headlights and flashlights left grass black however close it was. The game's light pass over grass scaled the light by the fog's amount instead of by what the fog leaves, so only grass already lost in fog was lit. It also lit each clump only as far as the ground under it faced the lamp, a tenth of the light where a headlight skims along the ground. |
 | Many cores | The game closed at the splash screen on a PC with 32 or more logical processors. The hardware probe's walk over the processors could only end on a bit that shifts out to zero, which x86 never produces, so it wrote up the stack until it crashed. |
@@ -198,7 +201,9 @@ holds no pure logic worth a suite, and stubbing the engine to manufacture some w
 ## Installing
 
 1. Install FCSE (`FCSE.exe` next to the game's `FarCry2.exe`).
-2. Drop `UFCP.dll` into `bin\plugins\`.
+2. Build the layer into the game with every other layer installed, since `mod build` keeps only the
+   layers it is given: `jackall-cli mod build --game "<game>" --layer mods\UFCP\layer --layer ...`.
+   `build.ps1` stages `UFCP.dll` into the layer first; `-Install` copies only the DLL.
 3. Launch `FCSE.exe`.
 
 ## Verification
@@ -221,4 +226,5 @@ Everything below needs a real install:
   no longer being overridden.
 - **In-game, none of which has been run yet**: tapes in the southern map advance instead of
   repeating; the predecessor-mission envelope appears in the central town; Options → Game offers
-  Machete Type with three entries; a changed FOV takes effect after a load.
+  Machete Type with three entries; a changed FOV takes effect after a load; the menu cursor creeps
+  with a slow mouse; the monocular turns about as fast as the AS50's scope.

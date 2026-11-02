@@ -1,5 +1,7 @@
 out/
 .vs/
+# The built plugin the layer only carries.
+layer/plugins/UFCP.dll
 # The release workflow's staging folder and archive, so running those steps by hand to check them
 # does not leave the tree dirty.
 stage/

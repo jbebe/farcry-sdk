@@ -1,0 +1,226 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">Equipped.Monocular</value>
+      <object type="Entity">
+        <value name="hidName" type="String">gadgets.Equipped.Monocular</value>
+        <value name="disEntityId" type="Int64">329</value>
+        <value name="text_hidEntityClass" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">3</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CFileDescriptorComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileName" type="String">graphics\objects\equipment\monocular\monocular.xml</value>
+            <value name="fileName" type="Hash">01A45CC1</value>
+            <value name="hidDescriptor" type="Rml">
+              <hidDescriptor>
+                <component class="GraphicComponent" version="2" detail="0">
+                  <object index="0" meshName="FRAME" boneName="FRAME" bboxMin="-0.0428372,-0.0987117,0.0184689" bboxMax="0.0443177,0.0902344,0.0904097" />
+                  <object index="1" meshName="Marker" boneName="Marker" bboxMin="-0.00733228,0.00276768,-0.00733228" bboxMax="0.00733228,0.00276768,0.00733228" />
+                  <resource fileName="graphics\Objects\Equipment\Monocular\Monocular.xbg" bboxMin="-0.0428372,-0.100739,-0.0342498" bboxMax="0.0443177,0.0902344,0.037691" />
+                  <skeleton name="Monocular" pos="0,0,0" rot="1,-0,-0,-0">
+                    <bone name="FRAME" pos="0,0,-0.052719" rot="1,0,0,0" />
+                    <bone name="Marker" pos="0.026446,0.00802,-0.006838" rot="1,0,0,0" />
+                  </skeleton>
+                </component>
+              </hidDescriptor>
+            </value>
+          </object>
+          <object type="CGraphicComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bCastShadow" type="Bool">True</value>
+            <value name="bReceiveShadow" type="Bool">True</value>
+            <value name="bCastAmbientShadow" type="Bool">True</value>
+            <value name="olgLightGroup" type="Hash">00000581</value>
+            <value name="bAllowCullBySize" type="Bool">True</value>
+            <value name="agAmbientGroup" type="Hash">00000000</value>
+            <value name="bBehaveLikeAPickup" type="Bool">False</value>
+            <value name="bShowInReflection" type="Bool">True</value>
+            <value name="bAlwaysShowInReflection" type="Bool">False</value>
+            <value name="bOverrideLODSphere" type="Bool">False</value>
+            <value name="fLODSphereRadius" type="Float">0</value>
+            <value name="hidSkyOcclusion0" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion1" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion2" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion3" type="Hash">FFFFFFFF</value>
+            <value name="hidGroundColor" type="Hash">FFFFFFFF</value>
+            <value name="hidObjectHeight" type="Float">3</value>
+            <value name="hidHeightAbove" type="Float">0</value>
+            <value name="hidHasAmbientValues" type="Bool">False</value>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">0</value>
+              <value name="text_objModel" type="String">graphics\objects\equipment\monocular\monocular.xbg</value>
+              <value name="objModel" type="Hash">11EE9986</value>
+              <value name="hidMeshName" type="String">FRAME</value>
+              <value name="text_hidNodeName" type="String">FRAME</value>
+              <value name="hidNodeName" type="Hash">42ACFE7D</value>
+              <value name="text_hidNodeNameLOD0" type="String">FRAME_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">117FF4BB</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">1</value>
+              <value name="text_objModel" type="String">graphics\objects\equipment\monocular\monocular.xbg</value>
+              <value name="objModel" type="Hash">11EE9986</value>
+              <value name="hidMeshName" type="String">Marker</value>
+              <value name="text_hidNodeName" type="String">Marker</value>
+              <value name="hidNodeName" type="Hash">856325C8</value>
+              <value name="text_hidNodeNameLOD0" type="String">Marker_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">2645DDB3</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+          </object>
+          <object type="CSimpleAnimationComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileSkeleton" type="String">graphics\characters\_common\singlebone_ref.skeleton</value>
+            <value name="fileSkeleton" type="Hash">433223C9</value>
+            <value name="sPartName" type="String">monocular</value>
+          </object>
+          <object type="CGadget">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="iAnimationValue" type="Int32">31</value>
+            <value name="sName" type="String">binoculars</value>
+            <value name="selCategory" type="UInt32">4</value>
+            <value name="selUseRateMode" type="UInt32">1</value>
+            <value name="iUseRate" type="Float">60</value>
+            <value name="selUseStrategy" type="UInt32">4</value>
+            <value name="iMaxUsesCasual" type="Int32">1</value>
+            <value name="iMaxUsesExperimented" type="Int32">1</value>
+            <value name="iMaxUsesHardcore" type="Int32">1</value>
+            <value name="iMaxUsesInfamous" type="Int32">1</value>
+            <value name="bUnlimitedUses" type="Bool">True</value>
+            <value name="archPickupArchetypeName" type="String"></value>
+            <value name="fLookSensitivity" type="Float">1</value>
+            <value name="bUseBothHands" type="Bool">False</value>
+            <object type="enumCategory">
+              <object type="enum">
+                <value name="Value" type="String">Grenade</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Map</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Unused1</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Watch</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Binoculars</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Phone</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Unused2</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Molotov</value>
+              </object>
+            </object>
+            <object type="enumUseRateMode">
+              <object type="enum">
+                <value name="Value" type="String">Instant</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Continuous</value>
+              </object>
+            </object>
+            <object type="enumUseStrategy">
+              <object type="enum">
+                <value name="Value" type="String">Throw</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Map</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Unused1</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Watch</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Binoculars</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Phone</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">CompassMulti</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">CompassSingle</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Unused2</value>
+              </object>
+            </object>
+            <object type="UseStrategy">
+              <object type="Zoom">
+                <value name="fFOV" type="Float">0.2</value>
+                <value name="fTransitionTime" type="Float">0.5</value>
+                <value name="fLookSensitivity" type="Float">0.061</value>
+                <value name="TransitionCurve" type="String">weapons.AimCurves.IronsightFOVCurve</value>
+                <value name="text_PostFX" type="String">ironsightfx</value>
+                <value name="PostFX" type="Hash">ED63A53E</value>
+              </object>
+              <object type="Targetting">
+                <value name="DefaultColor" type="Vector4">
+                  <x>1</x>
+                  <y>0</y>
+                  <z>0</z>
+                  <w>0</w>
+                </value>
+                <value name="TaggingColor" type="Vector4">
+                  <x>0</x>
+                  <y>1</y>
+                  <z>0</z>
+                  <w>0</w>
+                </value>
+                <value name="sndTaggingSound" type="String">0x004E7C77</value>
+                <value name="sndtpTaggingSoundType" type="Int32">15</value>
+              </object>
+            </object>
+          </object>
+          <object type="CGadgetNetworkComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+          <object type="CPersistComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selLevel" type="UInt32">2</value>
+            <object type="enumLevel">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Limited</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Full</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Critical</value>
+              </object>
+            </object>
+          </object>
+          <object type="CDynamicDeploadComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+        </object>
+      </object>
+    </object>

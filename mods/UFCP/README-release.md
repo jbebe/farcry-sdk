@@ -1,7 +1,8 @@
 # UFCP — Unofficial Far Cry Patch
 
-Bugs Ubisoft never patched, fixed in the running game instead of in the files on disk. Nothing is
-overwritten, nothing survives uninstalling it, and it stacks with the data mods you already have.
+Bugs Ubisoft never patched. Almost all are fixed in the running game instead of in the files on
+disk; the monocular's look speed is a change to its data, which merges with the data mods you
+already have.
 
 Requires FCSE (the Far Cry Script Extender) 1.4.0 or later, the plugin loader, released from the
 same place as this archive — and Far Cry 2 v1.03, either the Steam/Ubisoft Connect build or the
@@ -11,11 +12,19 @@ skipping the intro movies and title screen.
 
 ## Installing
 
-1. Install FCSE: `FCSE.exe` goes next to the game's own `FarCry2.exe`, in `bin\`.
-2. Copy `plugins\UFCP.dll` from this archive into the game's `bin\plugins\`.
-3. Launch `FCSE.exe` instead of `FarCry2.exe`.
+This archive is a JackAll layer: `plugins\` is the FCSE plugin, and `mods\` holds the monocular's
+data. Install FCSE first: `FCSE.exe` goes next to the game's own `FarCry2.exe`, in `bin\`.
 
-`bin\fcse.log` lists what was applied. To uninstall, delete the DLL.
+- **Vortex** — with the Far Cry 2 extension installed, drop the zip in and enable it.
+- **JackAll** — add the zip in the app, or from the command line:
+
+```
+jackall-cli mod build   --game "C:\Games\Far Cry 2" --layer ufcp.zip
+jackall-cli mod restore --game "C:\Games\Far Cry 2"
+```
+
+`mod restore` is the uninstall, and removes the plugin too. Launch `FCSE.exe` instead of
+`FarCry2.exe`; `bin\fcse.log` lists what was applied.
 
 ## Fixes
 
@@ -29,6 +38,10 @@ Always applied. A fix that needs a switch is a preference in disguise.
 - **Exit crash** — quitting through Exit Game faulted instead of closing cleanly.
 - **Mouse speed cap** — a fast flick turned the view less far than a slow one, because the gamepad's
   output ceiling was applied to the mouse as well.
+- **Menu cursor** — a slow mouse movement did not move the menu cursor at all, as if behind a
+  deadzone.
+- **Monocular** — it turned the view 64% faster than the guns' scopes do at the same zoom. Its look
+  speed is now theirs.
 - **High-precision timer** — loading screens ran far below the 30 FPS they are paced for.
 - **Grass under spot lights** — headlights and flashlights left grass black however close it was.
 - **Many cores** — on a PC with 32 or more logical processors the game closed at the splash screen,

@@ -756,6 +756,14 @@ and to the mouse wheel while its notebook is up.
 The wheel is `cycleweapon`, an `update` binding whose value is the turn: below zero for a turn
 towards the user, which moves down a list **(seen in game, 2026-10-27)**.
 
+### The menu cursor
+
+`0x104EFAD0` moves the menu cursor from a two-axis signal: speed (`+0x88`) times each axis times
+the frame time, added to the cursor's 16-bit pixel position after a truncation toward zero. A
+movement below one pixel in a frame is lost, and more of it is lost the higher the frame rate.
+**RE-verified on Steam.** UFCP carries the dropped fraction into the next frame, as FC2JackalFix
+does.
+
 ## What this is enough to build
 
 DevTools' overlay is exactly the above and nothing else: a throwaway device for the vtable, `Present`

@@ -2,6 +2,18 @@
 
 Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+- **Menu cursor** follows a slow mouse movement. Each frame dropped whatever the mouse moved below a
+  pixel, so moving slowly did nothing at all, the more so the higher the frame rate.
+- **Monocular** turns the view at the guns' look speed for its zoom, 0.061, instead of 64% faster.
+
+### Changed
+- **UFCP is a JackAll layer.** The monocular fix is a change to its data, so the download installs
+  through Vortex or JackAll, which merge it with your other data mods, rather than as a DLL copied
+  by hand.
+
 ## [1.3.1] - 2026-10-30
 
 ### Fixed
