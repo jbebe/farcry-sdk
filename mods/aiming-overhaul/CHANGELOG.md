@@ -23,13 +23,15 @@ Notable changes to Aiming Overhaul, loosely following
   one, heard drawn in and let out. Those four scopes sway twice as far when the breath is not held.
 - **Gun near walls.** A gun that would reach into a wall swings down out of it and does not fire
   until it is back up. The sights come back by themselves if the aim key is still held.
+- **Vertical inertia.** The game's arms slide a little sideways behind a turn but never up or down;
+  now they also slide a little down as you look up and up as you look down, just as much.
 - **Landing.** A landing drops your view a few centimetres as your knees take it.
 - **Gun up after a sprint.** The gun is carried lower in a sprint and takes a moment to come back
   up after it, longer the heavier it is; until then it doesn't fire or aim.
 - **Getting going.** A walk takes half a second to reach its pace and a sprint a second and a half
   to reach its top. The top speeds and the jump are the game's.
-- **Hold breath**, **Gun near walls**, **Gun up after sprint** and **Landing** switches in the Mod
-  Configuration menu.
+- **Hold breath**, **Gun near walls**, **Vertical inertia**, **Gun up after sprint** and **Landing**
+  switches in the Mod Configuration menu.
 
 ### Changed
 - **Interact moves to F, throw grenade to G and next throwable to T** by default, to free Q and E

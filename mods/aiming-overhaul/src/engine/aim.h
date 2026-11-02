@@ -11,6 +11,12 @@ struct Offset {
     float up;
 };
 
+// Radians a second the look turns, right and up.
+struct Turning {
+    float right;
+    float up;
+};
+
 // A share of the scope's opening radius, x right and y down.
 struct Swing {
     float x;
@@ -54,7 +60,10 @@ bool ScopeUp();
 bool Aiming();
 
 // How far the scope's shadow has swung off the opening's centre, against the look's turn.
-Swing ScopeSwing();// How many times the scope last raised magnifies the view.
+Swing ScopeSwing();
+
+// How fast the look turned over the last frame, unsmoothed; nought across a cut. On the game thread.
+Turning Turned();// How many times the scope last raised magnifies the view.
 float Magnification();
 
 // How far a scope has kicked back toward the eye from the last shot, from nought to one.

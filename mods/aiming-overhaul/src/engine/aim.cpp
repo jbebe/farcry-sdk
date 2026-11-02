@@ -141,6 +141,7 @@ namespace {
     float g_turnUp = 0.0f;
     std::atomic<float> g_turnedRight{0.0f};
     std::atomic<float> g_turnedUp{0.0f};
+    AimingOverhaul::Aim::Turning g_turning = {};
 
     // Notes the equipped weapon's name each time it changes, and its scope's raise.
     void FollowWeapon(uint8_t* weapon) {
@@ -210,6 +211,7 @@ namespace {
             g_lookPawn = pawn;
             g_lastPitch = pitch;
             g_lastYaw = yaw;
+            g_turning = {};
             return;
         }
         // Yaw is left; it wraps at a turn.
@@ -218,6 +220,7 @@ namespace {
         const float up = std::clamp((pitch - g_lastPitch) / seconds, -kFastestTurn, kFastestTurn);
         g_lastPitch = pitch;
         g_lastYaw = yaw;
+        g_turning = {right, up};
 
         const float follow = 1.0f - std::exp(-seconds / kTrail);
         g_turnRight += (right - g_turnRight) * follow;
@@ -384,6 +387,10 @@ bool AimingOverhaul::Aim::ScopeUp() {
 
 bool AimingOverhaul::Aim::Aiming() {
     return g_aiming;
+}
+
+AimingOverhaul::Aim::Turning AimingOverhaul::Aim::Turned() {
+    return g_turning;
 }
 
 AimingOverhaul::Aim::Swing AimingOverhaul::Aim::ScopeSwing() {

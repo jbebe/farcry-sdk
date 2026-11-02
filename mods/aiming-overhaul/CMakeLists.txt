@@ -75,6 +75,7 @@ add_library(AimingOverhaul SHARED
   "src/heart.cpp"
   "src/landing.cpp"
   "src/lean.cpp"
+  "src/pitch_slide.cpp"
   "src/ready.cpp"
   "src/scope_shadow.cpp"
   "src/scopes.cpp"

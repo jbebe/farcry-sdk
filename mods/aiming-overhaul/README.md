@@ -55,6 +55,10 @@ both field by field with other mods' edits, reporting any clash.
   of it, by up to 34° as the room ahead shrinks by another 0.5 m, while the view holds still.
   Swung most of the way down, past nine tenths, it lets go of the sights and does not fire, until it
   is back above seven tenths; then the sights come back by themselves if the aim key is still held.
+- **Vertical inertia.** The game slides the arms a little sideways behind a turn, never up or down.
+  Here they also slide down a little as the look pitches up, and up as it pitches down, at the same
+  rate, smoothing and size as the game's own: 1.1 cm at 126° a second, the most at 185°. Down the
+  sights there is none, as there is none sideways.
 - **Landing.** A landing drops the eye as the knees take it, by how fast it came down, about 5 cm
   from a standing jump, and it is back up in about a third of a second.
 - **Gun up after a sprint.** A sprint carries the gun lower than the game does, and after it the gun
@@ -118,7 +122,8 @@ and the sprint it holds is refused in the input listener, in `src/engine/sprint.
 `src/wall.cpp`, casting a physics ray in `src/engine/ray.cpp`, lowering the look in
 `src/engine/look.cpp` and refusing the shot in `src/engine/fire.cpp`. The gun after a sprint is
 `src/ready.cpp`, refused the same way and held low by the same pass that bends the lean, which
-turns the arms' bones; how long it takes is by the weight `src/weight.cpp` reads. A landing is
+turns the arms' bones; how long it takes is by the weight `src/weight.cpp` reads. The arms' slide
+behind the look's pitch, `src/pitch_slide.cpp`, moves them in the same pass. A landing is
 `src/landing.cpp`, dropping the eye through the camera's positional offset. The blur draws the gun's own
 depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the
 blur and the scope shadow draw at the end of the pass the gun's colour is drawn in, before the
@@ -171,6 +176,7 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Sway | Yes / No | Yes |
 | Hold breath | Yes / No | Yes |
 | Gun near walls | Yes / No | Yes |
+| Vertical inertia | Yes / No | Yes |
 | Gun up after sprint | Yes / No | Yes |
 | Landing | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
@@ -181,8 +187,8 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Tracers | Yes / No | Yes |
 
 With Sway off neither the eye nor the aim drifts, and there is nothing for the breath to steady.
-With Hold breath off, sprint down the sights does what the game does with it. With Gun up after
-sprint off, the gun fires and aims as soon as the sprint ends, as in the game. With Landing off,
+With Hold breath off, sprint down the sights does what the game does with it. With Vertical
+inertia off, the arms keep still as the look pitches, as in the game. With Gun up after sprint off, the gun fires and aims as soon as the sprint ends, as in the game. With Landing off,
 the eye does not drop. How quickly the player gets going is the player data's, and stays. With
 Iron sight zoom
 off, the view keeps its field of view down a gun's iron sights; a scope still
