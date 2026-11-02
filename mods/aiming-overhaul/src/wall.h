@@ -2,14 +2,19 @@
 // down it neither fires nor comes up to the sights.
 #pragma once
 
+#include "body.h"
+
 namespace AimingOverhaul::Wall {
 
 // Once a frame, from the eye, or null when it is not known, and the view's direction.
 void Update(float seconds, const float eye[3], const float forward[3]);
 
-// How far the gun is swung down, in radians: the look goes down by it and the view up by it, so the
-// view holds still while the arms and the gun swing.
-float Down();
+// How far the arms hold the gun swung down this frame.
+Body::Offset Posed();
+
+// Turns the direction of a shot about to leave, a unit vector in the world, down as far as the gun
+// is swung, so it goes where the gun points.
+void Bend(float direction[3]);
 
 // Whether the gun is down far enough that it neither fires nor aims.
 bool Blocked();

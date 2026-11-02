@@ -27,8 +27,6 @@ struct Swing {
 struct Adjust {
     // The hand's drift, which the eye follows down the iron sights.
     Offset drift;
-    // The view's pitch over the body's, in radians, up positive.
-    float pitch;
     // The view's roll with the body as it leans, in radians, right positive.
     float roll;
     // How far the eye drops, in metres, as the knees take a landing.
@@ -82,8 +80,7 @@ const float* Eye();
 // The first-person camera entity's binding to the body's view bone, or null; on the game thread.
 uint8_t* CameraBinding();
 
-// The view's direction, as a unit vector in the world: the body's look this frame, with the view's
-// pitch last added over it.
+// The view's direction, as a unit vector in the world: the body's look this frame.
 void Forward(float out[3]);
 
 // Whether a scope's magnification comes in at once with its sight picture rather than easing in

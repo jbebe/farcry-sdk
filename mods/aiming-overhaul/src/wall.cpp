@@ -7,6 +7,8 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
+#include <numbers>
 
 namespace {
     // Metres ahead of the eye a gun reaches, and how much less room swings it from up to all the
@@ -29,6 +31,11 @@ namespace {
     float g_swing = 0.0f;
     float g_clear = 0.0f;
     bool g_blocked = false;
+
+    // How far the gun is swung down, in radians.
+    float Down() {
+        return kMostSwing * AimingOverhaul::Ease(g_swing);
+    }
 }
 
 void AimingOverhaul::Wall::Update(float seconds, const float eye[3], const float forward[3]) {
@@ -36,8 +43,7 @@ void AimingOverhaul::Wall::Update(float seconds, const float eye[3], const float
     if (g_enabled && eye != nullptr) {
         const float room = Ray::Cast(eye, forward, kReach);
         target = std::clamp((kReach - room) / kSwingRoom, 0.0f, 1.0f);
-    }
-    if (target >= g_swing) {
+    }    if (target >= g_swing) {
         g_swing = Approach(g_swing, target, seconds / kSwingTime);
         g_clear = 0.0f;
     } else if (g_clear >= kClearHold || target < g_swing - kClearRoom / kSwingRoom) {
@@ -55,8 +61,22 @@ void AimingOverhaul::Wall::Update(float seconds, const float eye[3], const float
     }
 }
 
-float AimingOverhaul::Wall::Down() {
-    return kMostSwing * Ease(g_swing);
+AimingOverhaul::Body::Offset AimingOverhaul::Wall::Posed() {
+    return {0.0f, -Down(), 0.0f, 0.0f, 0.0f, 0.0f};
+}
+
+void AimingOverhaul::Wall::Bend(float direction[3]) {
+    const float down = Down();
+    const float level = std::hypot(direction[0], direction[1]);
+    if (down <= 0.0f || level <= 0.0f) {
+        return;
+    }
+    const float pitch = (std::max)(std::atan2(direction[2], level) - down,
+                                   -0.5f * std::numbers::pi_v<float>);
+    const float scale = std::cos(pitch) / level;
+    direction[0] *= scale;
+    direction[1] *= scale;
+    direction[2] = std::sin(pitch);
 }
 
 bool AimingOverhaul::Wall::Blocked() {

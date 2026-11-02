@@ -44,11 +44,10 @@ namespace {
     UpdateCameraOffsetFn g_originalUpdateCameraOffset = nullptr;
     UpdateFovFn g_originalUpdateFov = nullptr;
 
-    // CCameraPawnComponent: the view's pitch and roll over the body's, in radians, up and right
-    // positive, which also turn the eye's offset; the eye's offset in the view's axes, x right,
-    // y ahead, z up; and the field of view in radians, unaimed, as this frame's, and the noise added
-    // to it. Update's `this` is the component's second base.
-    constexpr ptrdiff_t kViewPitch = 0xD0;
+    // CCameraPawnComponent: the view's roll over the body's, in radians, right positive, which also
+    // turns the eye's offset; the eye's offset in the view's axes, x right, y ahead, z up; and the
+    // field of view in radians, unaimed, as this frame's, and the noise added to it. Update's `this`
+    // is the component's second base.
     constexpr ptrdiff_t kViewRoll = 0xD4;
     constexpr ptrdiff_t kEyeRight = 0xE8;
     constexpr ptrdiff_t kEyeAhead = 0xEC;
@@ -124,16 +123,14 @@ namespace {
     uint8_t* g_addedTo = nullptr;
     AimingOverhaul::Aim::Offset g_added = {};
     float g_addedAhead = 0.0f;
-    float g_addedPitch = 0.0f;
     float g_addedRoll = 0.0f;
 
-    // The eye as last placed, and the view's look this frame, radians, pitch up and yaw left.
+    // The eye as last placed.
     float g_eye[3] = {};
     bool g_eyePlaced = false;
-    float g_viewPitch = 0.0f;
-    float g_viewYaw = 0.0f;
 
-    // The look last frame, for which pawn, and how fast it has been turning, in radians a second.
+    // The look as last followed, radians, pitch up and yaw left, for which pawn, and how fast it has
+    // been turning, in radians a second.
     uint8_t* g_lookPawn = nullptr;
     float g_lastPitch = 0.0f;
     float g_lastYaw = 0.0f;
@@ -265,17 +262,13 @@ namespace {
         }
         const float raised =
             raising && g_raiseFrom < 1.0f ? (weight - g_raiseFrom) / (1.0f - g_raiseFrom) : 0.0f;
-        g_viewPitch = Field<float>(data, kEffectivePitch) + g_addedPitch;
-        g_viewYaw = Field<float>(data, kEffectiveYaw);
         const AimingOverhaul::Aim::Adjust adjust = g_frame(pawn, seconds);
         g_added = {adjust.drift.right * settled, adjust.drift.up * settled - adjust.drop};
         g_addedAhead = g_raiseReach * raised;
-        g_addedPitch = adjust.pitch;
         g_addedRoll = adjust.roll;
         Field<float>(camera, kEyeRight) += g_added.right;
         Field<float>(camera, kEyeUp) += g_added.up;
         Field<float>(camera, kEyeAhead) += g_addedAhead;
-        Field<float>(camera, kViewPitch) += g_addedPitch;
         Field<float>(camera, kViewRoll) += g_addedRoll;
         g_addedTo = camera;
     }
@@ -317,7 +310,6 @@ namespace {
             Field<float>(g_addedTo, kEyeRight) -= g_added.right;
             Field<float>(g_addedTo, kEyeUp) -= g_added.up;
             Field<float>(g_addedTo, kEyeAhead) -= g_addedAhead;
-            Field<float>(g_addedTo, kViewPitch) -= g_addedPitch;
             Field<float>(g_addedTo, kViewRoll) -= g_addedRoll;
             g_addedTo = nullptr;
         }
@@ -426,8 +418,8 @@ uint8_t* AimingOverhaul::Aim::CameraBinding() {
 }
 
 void AimingOverhaul::Aim::Forward(float out[3]) {
-    const float level = std::cos(g_viewPitch);
-    out[0] = -std::sin(g_viewYaw) * level;
-    out[1] = std::cos(g_viewYaw) * level;
-    out[2] = std::sin(g_viewPitch);
+    const float level = std::cos(g_lastPitch);
+    out[0] = -std::sin(g_lastYaw) * level;
+    out[1] = std::cos(g_lastYaw) * level;
+    out[2] = std::sin(g_lastPitch);
 }

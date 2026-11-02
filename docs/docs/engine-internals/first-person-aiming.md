@@ -250,15 +250,28 @@ whose capacity's bit 0 is clear is freed with the engine's free (`0x10228AD0`).
 AI's. The weapon is at the state's `+0x00`, and `CEquipmentBase::GetWielder` (`0x10156BA0`) on it
 gives the pawn holding it.
 
-A gun can be swung down without the view moving: lower the desired look by an angle (see
-[the look](#the-look)) and raise the camera's angular pitch at `+0xD0` by the same angle. The arms
-and the gun follow the look; the view is the look turned back up by the offset.
+Lowering the desired look by an angle (see [the look](#the-look)) and raising the camera's angular
+pitch at `+0xD0` by the same angle swings the arms and the gun down, but the view does not hold
+still. The eye hangs from the `Camera` bone, which the animation bends down and forward with the
+look's pitch. And the look's offset goes in during the input's `UpdateLook`, before the camera
+update that works out the frame's swing, so the angular pitch runs a frame ahead of the look.
+Turning the arms' bones down instead (see [the body's skeleton](#the-bodys-skeleton)) leaves the
+look, and so the view, alone. A shot still points along the look (see
+[where a first-person shot goes](#where-a-first-person-shot-goes)), so it has to be turned down with
+the gun.
+
+:::info[Measured in a running game]
+From the hip with an AK-47, the look swung 0.6 rad down that way took the eye 17 cm down and 7 cm
+ahead, and the view's pitch dipped by up to 0.05 rad and rose by up to 0.075 rad while the swing
+moved. The arms' bones turned 0.6 rad down about a point between the shoulders took the gun out of
+the picture with the view's angles, which `CSimpleCamera::SetAngles` keeps at the scene camera's
+`+0x6C`, and the eye unchanged, to 0.00001 rad and 0.1 mm. Retail GOG v1.03, from Aiming Overhaul.
+:::
 
 :::info[Seen in a running game]
-Aiming Overhaul casts layer mask `0x43B` from the eye along the view, swings the gun down that way
-as the room ahead shrinks, clears the desired iron-sight bit and refuses `CanFire` for the player's
-weapon while it is down. The gun swings out of walls with the view holding still, and the player
-neither aims nor fires until it comes back up. Retail GOG v1.03.
+Aiming Overhaul casts layer mask `0x43B` from the eye along the view, swings the gun down as the
+room ahead shrinks, clears the desired iron-sight bit and refuses `CanFire` for the player's weapon
+while it is down. The player neither aims nor fires until the gun comes back up. Retail GOG v1.03.
 :::
 
 `CastRay` was called from the camera update every frame for this, and up to a few dozen times a

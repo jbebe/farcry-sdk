@@ -161,14 +161,7 @@ namespace {
         Body::Follow(pawn);
         Heart::Update(seconds, sprinting, stamina, Pawn::Health(pawn), Pawn::Shake(pawn));
         Breath::Update(seconds, Aim::Aiming(), stamina);
-        return {Sway::Drift(seconds), Wall::Down(), roll, Landing::EyeDrop()};
-    }
-
-    // The sway's wander, with the look lowered as far as the gun is swung down.
-    AimingOverhaul::Look::Angles OnLook() {
-        AimingOverhaul::Look::Angles angles = AimingOverhaul::Sway::Wander();
-        angles.up -= AimingOverhaul::Wall::Down();
-        return angles;
+        return {Sway::Drift(seconds), roll, Landing::EyeDrop()};
     }
 
     bool OnFoot(uint8_t* pawn) {
@@ -183,6 +176,7 @@ namespace {
         if (OnFoot(pawn)) {
             AimingOverhaul::Body::MoveShot(pawn, origin);
             AimingOverhaul::Recoil::Bend(direction);
+            AimingOverhaul::Wall::Bend(direction);
         }
     }
 
@@ -218,7 +212,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     AimingOverhaul::Tracers::Install();
     AimingOverhaul::Streak::Install();
     // Kicks are taken only where the look can carry them.
-    if (AimingOverhaul::Look::Install(&OnLook)) {
+    if (AimingOverhaul::Look::Install(&AimingOverhaul::Sway::Wander)) {
         AimingOverhaul::Kick::Install(&TakeKick);
     }
     AimingOverhaul::Ray::Install();

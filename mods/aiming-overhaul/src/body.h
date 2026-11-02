@@ -1,6 +1,7 @@
 // The player's first-person body as the engine poses it each frame: the upper body bent by the lean,
-// and the arms and the gun held low in a sprint, while the view's bone stays where the animation
-// holds it. See docs/docs/engine-internals/first-person-aiming.md#the-bodys-skeleton.
+// and the arms and the gun held low in a sprint or swung out of a wall, while the view's bone stays
+// where the animation holds it.
+// See docs/docs/engine-internals/first-person-aiming.md#the-bodys-skeleton.
 #pragma once
 
 #include <cstdint>

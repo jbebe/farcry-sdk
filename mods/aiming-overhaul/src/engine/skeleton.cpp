@@ -159,7 +159,8 @@ bool AimingOverhaul::Skeleton::Install(PosedFn posed, AttachedFn attached) {
         !Hook(g_poseJob.address(), &PoseJobDetour, &g_originalPoseJob) ||
         !Hook(g_placeChild.address(), &PlaceChildDetour, &g_originalPlaceChild)) {
         FCSE::ApiPointer()->Log(
-            "skeleton: posing cannot be hooked, so the body neither leans nor moves with the gun");
+            "skeleton: posing cannot be hooked, so the body neither leans nor moves with the gun, and "
+            "a gun at a wall or after a sprint is held from firing without being seen to go down");
         return false;
     }
     return true;

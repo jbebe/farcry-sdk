@@ -21,10 +21,10 @@ Notable changes to Aiming Overhaul, loosely following
 - **Hold breath** on the Dart Rifle, the M1903, the Dragunov and the AS50: hold sprint down the
   scope and the breath settles and the aim steadies, for 4 s with a calm heart and 2 s with a racing
   one, heard drawn in and let out. Those four scopes sway twice as far when the breath is not held.
-- **Gun near walls.** A gun that would reach into a wall swings down out of it and does not fire
-  until it is back up. The sights come back by themselves if the aim key is still held. It waits for
-  the way to stay clear before it comes back up, so something swaying at the edge of its reach, like
-  a tree trunk in the wind, doesn't shake it up and down.
+- **Gun near walls.** A gun that would reach into a wall swings down out of it, the view staying
+  where it is, and does not fire until it is back up. The sights come back by themselves if the aim
+  key is still held. It waits for the way to stay clear before it comes back up, so something
+  swaying at the edge of its reach, like a tree trunk in the wind, doesn't shake it up and down.
 - **Vertical inertia.** The game's arms slide a little sideways behind a turn but never up or down;
   now they also slide a little down as you look up and up as you look down, just as much.
 - **Landing.** A landing drops your view a few centimetres as your knees take it.

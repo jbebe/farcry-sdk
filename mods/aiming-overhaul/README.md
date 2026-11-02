@@ -131,10 +131,10 @@ and the sprint it holds is refused in the input listener, in `src/engine/sprint.
 `src/lean.cpp`, bending the body's bones each time the engine poses them, in `src/body.cpp` through
 `src/engine/skeleton.cpp`, and rolling the view and moving the eye with the head in
 `src/engine/aim.cpp`; a shot is moved with the eye in `src/engine/shot.cpp`. The gun near walls is
-`src/wall.cpp`, casting a physics ray in `src/engine/ray.cpp`, lowering the look in
-`src/engine/look.cpp` and refusing the shot in `src/engine/fire.cpp`. The gun after a sprint is
-`src/ready.cpp`, refused the same way and held low by the same pass that bends the lean, which
-turns the arms' bones; how long it takes is by the weight `src/weight.cpp` reads. The arms' slide
+`src/wall.cpp`, casting a physics ray in `src/engine/ray.cpp` and refusing the shot in
+`src/engine/fire.cpp`; the gun after a sprint is `src/ready.cpp`, refused the same way. Both swing
+the gun down in the same pass that bends the lean, which turns the arms' bones; how long the gun
+takes to come up after a sprint is by the weight `src/weight.cpp` reads. The arms' slide
 behind the look's pitch, `src/pitch_slide.cpp`, moves them in the same pass. A landing is
 `src/landing.cpp`, dropping the eye through the camera's positional offset. The recoil is
 `src/recoil.cpp`: each of the player's kicks is taken from the game before the game blends it in,

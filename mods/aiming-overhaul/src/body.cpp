@@ -8,6 +8,7 @@
 #include "lean.h"
 #include "pitch_slide.h"
 #include "ready.h"
+#include "wall.h"
 
 #include <windows.h>
 
@@ -187,7 +188,7 @@ namespace {
 }
 
 void AimingOverhaul::Body::Follow(uint8_t* pawn) {
-    const Pose pose = {Lean::Posed(), Ready::Posed() + PitchSlide::Posed()};
+    const Pose pose = {Lean::Posed(), Ready::Posed() + Wall::Posed() + PitchSlide::Posed()};
     uint8_t* skeleton = Skeleton::Of(pawn, !(pose == g_poses[g_current]));
     if (skeleton != g_skeleton) {
         g_skeleton = nullptr;
