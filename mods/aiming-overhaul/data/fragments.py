@@ -1,6 +1,7 @@
 """Write the layer's weapon archetype fragments: which guns fire tracers, how fast and how long their
 streaks are, which scopes the plugin draws and how, those scopes losing the engine's iron-sight
-post effect and random spread down the sights, and which guns' breath can be held.
+post effect and random spread down the sights, which guns' breath can be held, and what each weapon
+weighs.
 
 Each fragment is a WeaponProperties or weapons archetype copied whole out of a decoded entity
 library, with only the fields below changed or FCSE's entity data component added, so JackAll
@@ -63,6 +64,21 @@ AIMED_SPREADS = ("BulletSpread_IronSight", "BulletSpreadCrouch_IronSight")
 # not the holographic sights.
 HOLD_BREATH = ("Special.Dart_Rifle", "Special.M1903", "Primary.Dragunov", "Primary.AS50")
 HOLD_BREATH_KEY = "AimingOverhaul.HoldBreath"
+# Each weapon's weight in the hands, loaded, in kilograms, an archetype and its variants each: how
+# long it takes to come up after a sprint.
+WEIGHTS = {
+    "HandToHand": 0.7,
+    "Secondary.Makarov": 0.8, "Secondary.SilencedMakarov_6P9": 1.1, "Secondary.Star45": 1.1,
+    "Secondary.DesertEagle": 2.0, "Secondary.MAC10": 3.0, "Secondary.Uzi": 3.6,
+    "Secondary.M79": 2.9, "Secondary.IED": 0.5,
+    "Primary.AK47": 4.3, "Primary.FNFAL": 4.9, "Primary.G3KA4": 4.7, "Primary.M16": 4.0,
+    "Primary.MP5": 3.4, "Primary.Ithaca": 3.6, "Primary.SPAS12": 4.4, "Primary.USAS12": 7.0,
+    "Primary.MGL140": 6.0, "Primary.Dragunov": 4.7, "Primary.AS50": 14.0,
+    "Special.Dart_Rifle": 3.5, "Special.M1903": 4.3, "Special.Flare_Gun": 0.8,
+    "Special.M249_Saw": 10.0, "Special.PKM": 9.0, "Special.RPG7": 7.0, "Special.Carl_Gustaf": 10.0,
+    "Special.Mortar": 10.0, "Special.LPO50": 8.0,
+}
+WEIGHT_KEY = "AimingOverhaul.Weight"
 
 PROPERTIES = "WeaponProperties."
 WEAPONS = "weapons."
@@ -116,11 +132,18 @@ def edit_properties(archetype, block):
             set_value(block, "fAmplitude", "0", spread)
 
 
+def lookup(archetype, table):
+    """The table's value for the archetype or one it is a variant of, or None."""
+    return next((value for a, value in table.items() if of(archetype, (a,))), None)
+
+
 def edit_weapon(archetype, block):
-    scope = next((values for a, values in SCOPES.items() if of(archetype, (a,))), None)
-    data = {SCOPE_KEY + key: value for key, value in (scope or {}).items()}
+    data = {SCOPE_KEY + key: value for key, value in (lookup(archetype, SCOPES) or {}).items()}
     if of(archetype, HOLD_BREATH):
         data[HOLD_BREATH_KEY] = 1
+    weight = lookup(archetype, WEIGHTS)
+    if weight is not None:
+        data[WEIGHT_KEY] = weight
     if data:
         add_entity_data(block, data)
 

@@ -1,0 +1,183 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">Special.Mortar.Mortar_Merc</value>
+      <object type="Entity">
+        <value name="hidName" type="String">weapons.Special.Mortar.Mortar_Merc</value>
+        <value name="disEntityId" type="Int64">5724</value>
+        <value name="text_hidEntityClass" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">4</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CFileDescriptorComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileName" type="String">graphics\weapons\special\mortar\mortar.xml</value>
+            <value name="fileName" type="Hash">17AC3FC4</value>
+            <value name="hidDescriptor" type="Rml">
+              <hidDescriptor>
+                <component class="GraphicComponent" version="2" detail="0">
+                  <object index="0" meshName="FRAME" boneName="FRAME" bboxMin="-0.0812418,-0.0869322,-0.0354052" bboxMax="0.0827997,0.0755364,0.713837" />
+                  <object index="1" meshName="TRIPOD" boneName="TRIPOD" bboxMin="-0.0274461,-0.14583,-0.538084" bboxMax="0.0279272,0.144274,0.0313646" />
+                  <object index="2" meshName="Gauge" boneName="Gauge" bboxMin="-0.00392005,-0.0233386,-0.00360977" bboxMax="0.00392005,0.0172683,0.00360985" />
+                  <resource fileName="graphics\Weapons\Special\Mortar\Mortar.xbg" bboxMin="-0.0998999,-0.0528103,-0.610715" bboxMax="0.110919,0.234902,0.138273" />
+                  <skeleton name="Mortar" pos="0,0,0" rot="1,-0,-0,-0">
+                    <bone name="FRAME" pos="-0.015023,0.080274,-0.576426" rot="0.660641,0.0218297,0.00729683,0.75035" />
+                    <bone name="TRIPOD" pos="0.07073,0.082225,0.017351" rot="0.997721,0.0102764,0.0205958,0.0634335" />
+                    <bone name="PLATE" pos="0.035113,0.086331,-0.562642" rot="0.997721,0.0102764,0.0205958,0.0634335" />
+                    <bone name="FX_FIRE" pos="0.015244,0.067502,0.136635" rot="0.698228,0.712762,0.0594176,0.0302908" />
+                    <bone name="FX_SMOKE" pos="-0.01451,0.080058,-0.564331" rot="0.0302912,-0.0594177,0.712762,-0.698228" />
+                    <bone name="Weapon_Break" pos="0,0,0" rot="0.997721,0.0102764,0.0205958,0.0634335" />
+                    <bone name="Gauge" pos="-0.004985,0.142345,0.02017" rot="0.997721,0.0102764,0.0205958,0.0634335" />
+                  </skeleton>
+                </component>
+                <component class="RigidPhysComponent">
+                  <resource fileName="graphics\Weapons\Special\Mortar\Mortar.hkx" />
+                </component>
+              </hidDescriptor>
+            </value>
+          </object>
+          <object type="CGraphicComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bCastShadow" type="Bool">True</value>
+            <value name="bReceiveShadow" type="Bool">True</value>
+            <value name="bCastAmbientShadow" type="Bool">True</value>
+            <value name="olgLightGroup" type="Hash">00000501</value>
+            <value name="bAllowCullBySize" type="Bool">True</value>
+            <value name="agAmbientGroup" type="Hash">00000000</value>
+            <value name="bBehaveLikeAPickup" type="Bool">False</value>
+            <value name="bShowInReflection" type="Bool">True</value>
+            <value name="bAlwaysShowInReflection" type="Bool">False</value>
+            <value name="bOverrideLODSphere" type="Bool">False</value>
+            <value name="fLODSphereRadius" type="Float">0</value>
+            <value name="hidSkyOcclusion0" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion1" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion2" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion3" type="Hash">FFFFFFFF</value>
+            <value name="hidGroundColor" type="Hash">FFFFFFFF</value>
+            <value name="hidObjectHeight" type="Float">3</value>
+            <value name="hidHeightAbove" type="Float">0</value>
+            <value name="hidHasAmbientValues" type="Bool">False</value>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">0</value>
+              <value name="text_objModel" type="String">graphics\weapons\special\mortar\mortar.xbg</value>
+              <value name="objModel" type="Hash">07E6FA83</value>
+              <value name="hidMeshName" type="String">FRAME</value>
+              <value name="text_hidNodeName" type="String">FRAME</value>
+              <value name="hidNodeName" type="Hash">42ACFE7D</value>
+              <value name="text_hidNodeNameLOD0" type="String">FRAME_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">117FF4BB</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">1</value>
+              <value name="text_objModel" type="String">graphics\weapons\special\mortar\mortar.xbg</value>
+              <value name="objModel" type="Hash">07E6FA83</value>
+              <value name="hidMeshName" type="String">TRIPOD</value>
+              <value name="text_hidNodeName" type="String">TRIPOD</value>
+              <value name="hidNodeName" type="Hash">E8FE98AD</value>
+              <value name="text_hidNodeNameLOD0" type="String">TRIPOD_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">BD178D80</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">2</value>
+              <value name="text_objModel" type="String">graphics\weapons\special\mortar\mortar.xbg</value>
+              <value name="objModel" type="Hash">07E6FA83</value>
+              <value name="hidMeshName" type="String">Gauge</value>
+              <value name="text_hidNodeName" type="String">Gauge</value>
+              <value name="hidNodeName" type="Hash">EA35212E</value>
+              <value name="text_hidNodeNameLOD0" type="String">Gauge_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">84E75DF1</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+          </object>
+          <object type="CSimpleAnimationComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileSkeleton" type="String">graphics\weapons\special\mortar\mortar_ref.skeleton</value>
+            <value name="fileSkeleton" type="Hash">136A9F9C</value>
+            <value name="sPartName" type="String">mortar</value>
+          </object>
+          <object type="CFCXWeapon">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="iAnimationValue" type="UInt32">12</value>
+            <value name="sndswtpWeaponStatusSoundSwitchType" type="Hash">004402A7</value>
+            <value name="WeaponStatusSwitchValues" type="Rml">
+              <WeaponStatusSwitchValues Failure="4294967295" LowReliability="4294967295" MediumReliability="4294967295" HighReliability="4294967295" />
+            </value>
+            <value name="bUseHiResScope" type="Bool">False</value>
+            <value name="fHiResLowResScopeSwitchTransitionPoint" type="Float">0.5</value>
+            <object type="FireStrategy" />
+            <object type="ReliabilityLevelsData">
+              <object type="Failure">
+                <value name="fHorizontalRecoilPerShot" type="Float">0</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.08</value>
+              </object>
+              <object type="Low">
+                <value name="fHorizontalRecoilPerShot" type="Float">0</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.04</value>
+              </object>
+              <object type="Medium">
+                <value name="fHorizontalRecoilPerShot" type="Float">0</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.02</value>
+              </object>
+              <object type="High">
+                <value name="fHorizontalRecoilPerShot" type="Float">0</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0</value>
+              </object>
+            </object>
+          </object>
+          <object type="CWeaponNetworkComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+          <object type="CCountersComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="archStimEffectTable" type="String">tables.StimEffectTables.WeaponDefault</value>
+          </object>
+          <object type="CPersistComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selLevel" type="UInt32">2</value>
+            <object type="enumLevel">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Limited</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Full</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Critical</value>
+              </object>
+            </object>
+          </object>
+          <object type="CFCSEDataComponent">
+            <object type="AimingOverhaul.Weight">
+              <value name="Float" type="Float">10.0</value>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>

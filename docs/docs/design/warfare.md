@@ -139,7 +139,6 @@ is Aiming Overhaul's (see [Decisions](#decisions)).
 | **A fire selector** | A key flips select-fire rifles between semi and auto | plugin + data: the mode is fixed per archetype, and auto needs its sound loop while semi needs per-round sounds, so each rifle needs both | idea |
 | **Slow to raise** | Longer `fIronsightTransitionTime` per class: pistol fast, PKM slow. Slower turning and walking while aimed | data | idea |
 | **Carried weight** | The loadout's weight slows walking, sprinting and stamina recovery. A PKM and an RPG together are a burden | plugin: no weight field exists; weights as entity data on each weapon | idea |
-| **Sprint before you shoot** | A short delay between sprint and the first shot | plugin; `fBusyDuration`'s role is unknown | idea |
 | **Real magazines, no auto-reload** | Magazine sizes as in Redux (FAL 20, SPAS 9), `bAutoReload` off | data | idea |
 | **Scarce ammunition** | Smaller `iMaxAmmo*`, fewer clips from bodies (`ClipMultiplierForPickup`) | data | idea |
 | **No hip crosshair** | Point shooting by feel; iron sights to hit anything at range | data: a HUD `.mgb` widget, not yet identified | idea |
@@ -157,6 +156,10 @@ is Aiming Overhaul's (see [Decisions](#decisions)).
 | **Lean** | Q and E slide and bend the body out past cover, tapped to stay or held | built in Aiming Overhaul and seen working: the view, the arms and every gun lean together, by the skeleton's bones ([leaning by the bones](../engine-internals/first-person-aiming.md#leaning-by-the-bones)) | requested |
 | **Auto-lean at a corner** | Aiming at a corner's edge leans by itself, and the look stops where the wall starts | plugin: built on the lean and seen to find the corner and hold the look at the wall's edge, by rays from where the lean puts the eye. Its first version jittered because the eye it reasoned from was not where the lean had put it. Shelved until the lean works | requested |
 | **The gun near walls** | A gun that would go into a wall swings down out of it and cannot aim or fire | built in Aiming Overhaul and seen working | requested |
+| **Gun weight** | The gun's weight shown by how it moves in the hands or slows the player | tried, all through the arms' bones after posing or the weapon's `fMoveSpeedFactor`: a lag behind the look on a fast spring, swings with the body's starts, stops, sidesteps and landings, weight slowing the walk and the sprint, a slow lag behind a strafe, and a lag behind the look that fell behind at once and came back slowly | dropped 2026-11-02 |
+| **Landing** | A landing drops the eye by how fast it came down | plugin: the camera's positional offset on a spring | built; seen in a scripted run |
+| **Sprint before you shoot** | The gun comes up after a sprint over 0.25 s plus 0.03 s per kilogram, neither firing nor aiming until it is up | plugin: the shot refused at `CanFire` and the sights dropped, as the gun near walls does | built; seen in a scripted run |
+| **Getting going** | A walk reaches its pace in half a second and a sprint its top in 1.5 s; the jump unchanged | data: `fWalkingAcceleration`, `fWalkingDeceleration` and the sprint curve. Stopping when every key is let go is instant whatever the data ([walking, sprinting and jumping](../engine-internals/first-person-aiming.md#walking-sprinting-and-jumping)) | built; seen in a scripted run |
 
 ### Wounds
 
@@ -262,3 +265,21 @@ Each is one launch.
 - 2026-10-26: the faint heartbeat is heard only down a magnifying scope, not iron or holographic
   sights, and fades to silence as the stamina comes back, so the heart's exertion share follows the
   stamina down instead of settling over 20 s.
+- 2026-11-02: Aiming Overhaul also owns how the player moves and how the gun moves in the hands,
+  everything before the bullet reaches its target, kept realistic without changing the proportions:
+  the top speeds and the jump stay the game's. The mouse stays one to one with the view, so weight
+  shows in the gun, never as lag on the look. Down the sights the gun's motion fades out and shots
+  keep going down the view. Sprint before you shoot moves here from Weapon Handling; carried weight
+  stays there, out of scope, as it would slow the sprint. A steadier view needs nothing: the game's
+  view hardly bobs.
+- 2026-11-02, after playing it: a gun trailing the look reads as the gun flung from side to side.
+  The slower walk start, the gun carried low in a sprint and the landing's drop of the view stay;
+  gradual stops are not wanted. Everything else of the gun's weight, its swings and how it slows
+  the player, is scrapped, to be redone to the user's exact instructions.
+- 2026-11-02: the redo started with strafing only: a heavy gun inching away from the view as the
+  strafe goes on and coming back slowly, like a heavy object on a slow suspension; a pistol only a
+  little. Built as asked, it did not work in play, so the same slow suspension moves to the mouse:
+  the gun lags behind the look's turn instead.
+- 2026-11-02: the gun's weight is dropped altogether: the lag behind the mouse read as too little,
+  then disorienting, then not worth keeping at any size. What stays of the movement work is the
+  slower walk start, the gun carried low in a sprint and the landing's drop of the view.

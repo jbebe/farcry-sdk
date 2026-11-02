@@ -193,6 +193,23 @@ stamina switch (`00455C49`: low `00455C4B` or medium `00455C4A`) and then by an 
 (`00455C46`: high `00455C47` or low `00455C48`), 28 and 4 dB down. They play as sound type 6,
 `Ono_Player`. Aiming Overhaul cuts them into inhales and exhales for its own hold-breath banks.
 
+### The arms behind a turn
+
+The first-person body's only lag behind the look is a turn rate the animation reads.
+`CPawnBeautifierFirst::ComputeAngularSpeed` (`0x1009FFC0`, server `0x092E4FC0`) takes the turn from
+the body's heading to the look's yaw this frame, in degrees a second, clamps it to ±185, eases it a
+tenth of the way each frame and keeps it at the beautifier's `+0x58`, nought below 1. Pitch has no such rate.
+`UpdatePlayerMoveState` (`0x1009F2B0`, server `0x092E6CC0`) copies it to the skills' `+0x58`, which the
+flamethrower reads, and hands it to the animation's channel 28, `PlayerAngularSpeed`, through
+`CAnimationComponent::SetFloat` (`0x1051F480`). The load for that call is `FLD [EBX+58h]` at
+`0x1009F55B`; loading nought there instead takes the slide away.
+
+:::info[Measured in a running game]
+At 126° a second the channel slides the right hand 1.1 cm sideways against the view, with no turn, on
+the AK-47 and the Makarov alike. Looking up or down at the same rate moves it not at all. Retail GOG
+v1.03, from Aiming Overhaul's posed bones.
+:::
+
 ## The first-person body
 
 Whether the player is drawn as the first-person body is bit 7 (`0x80`) of the same byte in the
@@ -246,6 +263,36 @@ neither aims nor fires until it comes back up. Retail GOG v1.03.
 
 `CastRay` was called from the camera update every frame for this, and up to a few dozen times a
 second more for leaning, without trouble.
+
+## Walking, sprinting and jumping
+
+`CPawnInputListener::UpdateSpeed` (`0x10143DE0`, server `0x08FDF2D0`, `__fastcall` on the listener)
+sets the velocity the player wants each frame, in the desired data's `+0xB0`. Walking, its size
+eases toward the body's top speed, `fWalkingMaxSpeed` or `fWalkingMaxSpeedCrouch` times the weapon's
+`fMoveSpeedFactor` (`+0xD4` in its properties from the hip, `+0xD8` down the sights; 1 and 0.5 on
+the AK-47), by `fWalkingAcceleration` a second when that is faster and `fWalkingDeceleration` when it
+is slower. With no move key held the wanted speed is nought, and the velocity is set to nought at
+once: deceleration only slows the player toward a slower pace, such as a walk out of a sprint. Its
+direction follows the keys at once. Sprinting, the speed is `archSprintCurve`'s value at the seconds
+since the sprint began, kept at the listener's `+0x1C`, again without easing. `0x1010D690`
+(`__thiscall` on the pawn's body, the seconds, `RET 4`) reads that curve, and `UpdateSpeed` is its
+only caller. The direction is made unit length before the curve's speed is put on it, so the
+weapon's factor never reaches a sprint. `fSprintingDeceleration` is read by none of the functions
+that take the pawn's body.
+
+Whether a jump is under way is two bytes of the pawn's data, `*(pawn + 0x10)`: `+0x49B`, set as it
+leaves the ground, and `+0x49C`, set as it ends; `CPawn::IsPerformingJump` (`0x1007E250`) is the
+first set and the second clear. How far the pawn is above the ground, in metres, is the float at
+`+0x4A4` (`0x1007E240`).
+
+:::info[Measured in a running game]
+With retail data a walk reaches 3.8 m/s in 0.15 s, and a sprint climbs from it to 9.0 m/s by 0.9 s
+and falls back to 6.3 m/s from 1.8 s. Letting go of the keys stops either within two frames. A
+standing jump rises 1.0 m and is 0.66 s in the air, landing at 4.4 m/s, with `+0x49B` set throughout.
+The view's bone hardly moves walking, 0.9 cm sideways and 0.5 cm up and down, and the right hand 2 to
+3 cm against it. Sprinting carries the gun 45° to 75° off its aim, and it is back 0.25 s after the
+sprint ends; a shot fires at once all the same. Retail GOG v1.03, from Aiming Overhaul's trace.
+:::
 
 ## Leaning
 
@@ -350,7 +397,9 @@ the parent's binding with the child's binding and the parent entity's matrix, `R
 binding's `+0x1C` is the bone's index, and the parent's matrix times the bone's is written to the
 child's `+0x40`, which the entity is then placed from. The parent's matrix there is turned like the
 entity but, where the parent binding's `+0xC5` is set, has its place left out. The parent binding lists its children as entity proxies at `+0x2C`, with their
-count at `+0x30`, and an entity's binding is at its `+0x78`.
+count at `+0x30`, and an entity's binding is at its `+0x78`. So the first-person camera's own binding
+is its component's entity, through the entity proxy at the component's `+0x08`, at `+0x78`: what
+tells it apart from a long gun hung from the same bone.
 
 :::info[Measured in a running game]
 On the player: the first-person camera (`cameras.Camera.First`) hangs from `Camera`, the weapon in

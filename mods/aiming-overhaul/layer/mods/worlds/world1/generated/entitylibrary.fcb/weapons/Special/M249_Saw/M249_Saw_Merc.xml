@@ -1,0 +1,168 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">Special.M249_Saw.M249_Saw_Merc</value>
+      <object type="Entity">
+        <value name="hidName" type="String">weapons.Special.M249_Saw.M249_Saw_Merc</value>
+        <value name="disEntityId" type="Int64">5717</value>
+        <value name="text_hidEntityClass" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">4</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CFileDescriptorComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileName" type="String">graphics\weapons\special\m249saw\m249.xml</value>
+            <value name="fileName" type="Hash">D42B199F</value>
+            <value name="hidDescriptor" type="Rml">
+              <hidDescriptor>
+                <component class="GraphicComponent" version="2" detail="0">
+                  <resource fileName="graphics\Weapons\Special\M249SAW\M249.xbg" bboxMin="-0.0796428,-0.297801,-0.0873172" bboxMax="0.107725,0.656818,0.226545" />
+                  <skeleton name="M249" pos="0,0,0" rot="1,-0,-0,-0">
+                    <bone name="Bullet_01" pos="-0.063009,0.119042,0.050296" rot="0.716302,-0,-0.697791,-0" />
+                    <bone name="Bullet_02" pos="-0.062673,0.119042,0.063121" rot="0.970017,2.43038e-007,-0.243038,-1.21519e-006" />
+                    <bone name="Bullet_03" pos="-0.05208,0.119042,0.068785" rot="0.938672,-0,-0.344812,3.44812e-007" />
+                    <bone name="Bullet_04" pos="-0.042469,0.119042,0.076947" rot="0.752907,-0,-0.658127,0" />
+                    <bone name="Bullet_05" pos="-0.040731,0.119042,0.08983" rot="0.623471,-7.81846e-007,-0.781846,0" />
+                    <bone name="Bullet_06" pos="-0.043579,0.119042,0.102304" rot="0.743721,-0,-0.66849,-0" />
+                    <bone name="Bullet_07" pos="-0.042293,0.119042,0.114341" rot="0.89887,4.38215e-007,-0.438215,-8.7643e-007" />
+                    <bone name="Bullet_08" pos="-0.034461,0.119042,0.124358" rot="0.984948,1.72852e-007,-0.172852,0" />
+                    <bone name="Bullet_09" pos="-0.022858,0.119042,0.12856" rot="0.999759,1.31845e-007,-0.0219729,-7.47124e-007" />
+                    <bone name="Bullet_10" pos="-0.010045,0.119042,0.129123" rot="0.99983,-1.10724e-007,-0.0184545,-3.69079e-008" />
+                    <bone name="CASING" pos="-0,0.163633,0.144239" rot="0.707107,0,-0,-0.707107" />
+                    <bone name="CLIP" pos="-0,0.127095,0.070431" rot="0.707107,0,-0,-0.707107" />
+                    <bone name="FRAME" pos="-0.000953,-0.134741,0.002071" rot="1,0,0,0" />
+                    <bone name="FX_CASING" pos="0.02372,0.10356,0.124994" rot="0.696364,0.122788,-0.122788,-0.696365" />
+                    <bone name="FX_FIRE" pos="-0.000953,0.656493,0.114464" rot="1,0,0,0" />
+                    <bone name="SLIDE" pos="0.046269,0.155463,0.11249" rot="0.707107,0,-0,-0.707107" />
+                    <bone name="Weapon_Break" pos="0,0,0" rot="1,0,0,0" />
+                  </skeleton>
+                </component>
+                <component class="RigidPhysComponent">
+                  <resource fileName="graphics\Weapons\Special\M249SAW\M249.hkx" />
+                </component>
+              </hidDescriptor>
+            </value>
+          </object>
+          <object type="CGraphicComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bCastShadow" type="Bool">True</value>
+            <value name="bReceiveShadow" type="Bool">True</value>
+            <value name="bCastAmbientShadow" type="Bool">True</value>
+            <value name="olgLightGroup" type="Hash">00000501</value>
+            <value name="bAllowCullBySize" type="Bool">True</value>
+            <value name="agAmbientGroup" type="Hash">00000000</value>
+            <value name="bBehaveLikeAPickup" type="Bool">False</value>
+            <value name="bShowInReflection" type="Bool">True</value>
+            <value name="bAlwaysShowInReflection" type="Bool">False</value>
+            <value name="bOverrideLODSphere" type="Bool">False</value>
+            <value name="fLODSphereRadius" type="Float">0</value>
+            <value name="hidSkyOcclusion0" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion1" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion2" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion3" type="Hash">FFFFFFFF</value>
+            <value name="hidGroundColor" type="Hash">FFFFFFFF</value>
+            <value name="hidObjectHeight" type="Float">3</value>
+            <value name="hidHeightAbove" type="Float">0</value>
+            <value name="hidHasAmbientValues" type="Bool">False</value>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">0</value>
+              <value name="text_objModel" type="String">graphics\weapons\special\m249saw\m249.xbg</value>
+              <value name="objModel" type="Hash">C461DCD8</value>
+              <value name="hidMeshName" type="String"></value>
+              <value name="text_hidNodeName" type="String"></value>
+              <value name="hidNodeName" type="Hash">FFFFFFFF</value>
+              <value name="text_hidNodeNameLOD0" type="String"></value>
+              <value name="hidNodeNameLOD0" type="Hash">FFFFFFFF</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+          </object>
+          <object type="CSimpleAnimationComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileSkeleton" type="String">graphics\weapons\special\m249saw\m249_ref.skeleton</value>
+            <value name="fileSkeleton" type="Hash">06B99380</value>
+            <value name="sPartName" type="String">m249</value>
+          </object>
+          <object type="CFCXWeapon">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="iAnimationValue" type="UInt32">15</value>
+            <value name="sndswtpWeaponStatusSoundSwitchType" type="Hash">004402A7</value>
+            <value name="WeaponStatusSwitchValues" type="Rml">
+              <WeaponStatusSwitchValues Failure="4294967295" LowReliability="4294967295" MediumReliability="4294967295" HighReliability="4294967295" />
+            </value>
+            <value name="bUseHiResScope" type="Bool">False</value>
+            <value name="fHiResLowResScopeSwitchTransitionPoint" type="Float">0.5</value>
+            <object type="FireStrategy" />
+            <object type="ReliabilityLevelsData">
+              <object type="Failure">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.81</value>
+                <value name="fVerticalRecoilPerShot" type="Float">2.1</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.2</value>
+              </object>
+              <object type="Low">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.79</value>
+                <value name="fVerticalRecoilPerShot" type="Float">1.9</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.1</value>
+              </object>
+              <object type="Medium">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.77</value>
+                <value name="fVerticalRecoilPerShot" type="Float">1.7</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.05</value>
+              </object>
+              <object type="High">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.75</value>
+                <value name="fVerticalRecoilPerShot" type="Float">1.5</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0</value>
+              </object>
+            </object>
+          </object>
+          <object type="CWeaponNetworkComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+          <object type="CCountersComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="archStimEffectTable" type="String">tables.StimEffectTables.WeaponDefault</value>
+          </object>
+          <object type="CPersistComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selLevel" type="UInt32">2</value>
+            <object type="enumLevel">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Limited</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Full</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Critical</value>
+              </object>
+            </object>
+          </object>
+          <object type="CFCSEDataComponent">
+            <object type="AimingOverhaul.Weight">
+              <value name="Float" type="Float">10.0</value>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>

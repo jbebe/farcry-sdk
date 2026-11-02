@@ -116,7 +116,7 @@ namespace {
             float posed[16];
             std::copy_n(placed, 16, posed);
             Unturn(matrix, posed);
-            if (g_attached(skeleton, bone, posed)) {
+            if (g_attached(skeleton, bone, child, posed)) {
                 Turn(matrix, posed);
                 std::copy_n(posed, 16, placed);
             }
@@ -158,7 +158,8 @@ bool AimingOverhaul::Skeleton::Install(PosedFn posed, AttachedFn attached) {
     if (!Hook(g_pose.address(), &PoseDetour, &g_originalPose) ||
         !Hook(g_poseJob.address(), &PoseJobDetour, &g_originalPoseJob) ||
         !Hook(g_placeChild.address(), &PlaceChildDetour, &g_originalPlaceChild)) {
-        FCSE::ApiPointer()->Log("skeleton: posing cannot be hooked, so the body does not lean");
+        FCSE::ApiPointer()->Log(
+            "skeleton: posing cannot be hooked, so the body neither leans nor moves with the gun");
         return false;
     }
     return true;

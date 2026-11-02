@@ -217,6 +217,9 @@
             <object type="AimingOverhaul.HoldBreath">
               <value name="Int" type="Int32">1</value>
             </object>
+            <object type="AimingOverhaul.Weight">
+              <value name="Float" type="Float">4.7</value>
+            </object>
           </object>
         </object>
       </object>

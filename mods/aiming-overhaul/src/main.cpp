@@ -1,5 +1,6 @@
 // Aiming Overhaul - how aiming and shooting look. See README.md.
 #include "blur.h"
+#include "body.h"
 #include "breath.h"
 #include "engine/aim.h"
 #include "engine/device_reset.h"
@@ -17,7 +18,9 @@
 #include "eyepiece.h"
 #include "fcse_api.h"
 #include "heart.h"
+#include "landing.h"
 #include "lean.h"
+#include "ready.h"
 #include "scope_shadow.h"
 #include "scopes.h"
 #include "stance.h"
@@ -26,6 +29,7 @@
 #include "sway.h"
 #include "tracers.h"
 #include "wall.h"
+#include "weight.h"
 
 #include <windows.h>
 
@@ -88,6 +92,7 @@ namespace {
 
     float FollowWeapon(uint8_t* weapon) {
         AimingOverhaul::Breath::FollowWeapon(weapon);
+        AimingOverhaul::Weight::Follow(weapon);
         const AimingOverhaul::Scopes::Scope* scope = AimingOverhaul::Scopes::Follow(weapon);
         return scope != nullptr ? scope->raiseReach : 0.0f;
     }
@@ -98,12 +103,18 @@ namespace {
     ULONGLONG g_seen = 0;
     constexpr ULONGLONG kOnFootMilliseconds = 200;
 
-    // Whether the aim key is held, and whether the gun near walls let go of the sights it asked
-    // for.
+    // Whether the aim key is held, and whether the gun near walls or after a sprint let go of the
+    // sights it asked for.
     constexpr uint32_t kAim = FCSE::Crc32("startironsight");
     constexpr uint32_t kAimReleased = FCSE::Crc32("stopironsight");
     bool g_aimHeld = false;
     bool g_sightsDropped = false;
+
+    // Whether the gun is down, swung out of a wall or not yet up after a sprint, and so neither fires
+    // nor aims.
+    bool GunDown() {
+        return AimingOverhaul::Wall::Blocked() || AimingOverhaul::Ready::Lowered();
+    }
 
     void OnSignal(uint32_t signal) {
         AimingOverhaul::Breath::OnSignal(signal);
@@ -115,17 +126,20 @@ namespace {
         }
     }
 
-    // The lean, the gun near walls, the stance, the heart, the breath and the eye's drift.
+    // The lean, the gun near walls and after a sprint, the stance, a landing, the heart, the breath
+    // and the eye's drift.
     AimingOverhaul::Aim::Adjust OnAimFrame(uint8_t* pawn, float seconds) {
         using namespace AimingOverhaul;
         g_pawn = pawn;
         g_seen = GetTickCount64();
-        const float roll = Lean::Update(pawn, seconds, !Pawn::Is(pawn, Pawn::kSprint));
+        const bool sprinting = Pawn::Is(pawn, Pawn::kSprint);
+        const float roll = Lean::Update(pawn, seconds, !sprinting, Body::Found());
         float forward[3];
         Aim::Forward(forward);
         Wall::Update(seconds, Aim::Eye(), forward);
-        // Sights the wall let go of come back once the gun is free, if the aim key is still held.
-        if (Wall::Blocked()) {
+        Ready::Update(seconds, sprinting, Weight::Kilograms());
+        // Sights let go of come back once the gun is free, if the aim key is still held.
+        if (GunDown()) {
             Pawn::DropSights(pawn);
             g_sightsDropped = g_aimHeld;
         } else if (g_sightsDropped) {
@@ -136,10 +150,11 @@ namespace {
         }
         const float stamina = Pawn::Stamina(pawn);
         Stance::Update(pawn, seconds);
-        Heart::Update(seconds, Pawn::Is(pawn, Pawn::kSprint), stamina, Pawn::Health(pawn),
-                      Pawn::Shake(pawn));
+        Landing::Update(pawn, seconds);
+        Body::Follow(pawn);
+        Heart::Update(seconds, sprinting, stamina, Pawn::Health(pawn), Pawn::Shake(pawn));
         Breath::Update(seconds, Aim::Aiming(), stamina);
-        return {Sway::Drift(seconds), Wall::Down(), roll};
+        return {Sway::Drift(seconds), Wall::Down(), roll, Landing::EyeDrop()};
     }
 
     // The sway's wander, with the look lowered as far as the gun is swung down.
@@ -154,12 +169,12 @@ namespace {
     }
 
     bool RefuseShot(uint8_t* pawn) {
-        return AimingOverhaul::Wall::Blocked() && OnFoot(pawn);
+        return GunDown() && OnFoot(pawn);
     }
 
     void MoveShot(uint8_t* pawn, float origin[3]) {
         if (OnFoot(pawn)) {
-            AimingOverhaul::Lean::MoveShot(pawn, origin);
+            AimingOverhaul::Body::MoveShot(pawn, origin);
         }
     }
 }
@@ -197,8 +212,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     AimingOverhaul::Input::Install(&OnSignal);
     AimingOverhaul::Sprint::Install(&AimingOverhaul::Breath::HoldsSprint);
     AimingOverhaul::Sound::Install();
-    AimingOverhaul::Skeleton::Install(&AimingOverhaul::Lean::OnPosed,
-                                      &AimingOverhaul::Lean::OnAttached);
+    AimingOverhaul::Skeleton::Install(&AimingOverhaul::Body::OnPosed,
+                                      &AimingOverhaul::Body::OnAttached);
 
     const FCSE_Setting settings[] = {
         {"Sway", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Sway::SetEnabled)},
@@ -206,6 +221,10 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          Toggles(&AimingOverhaul::Breath::SetEnabled)},
         {"Gun near walls", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Wall::SetEnabled)},
+        {"Gun up after sprint", FCSE_CHECKBOX(true), &OnToggled,
+         Toggles(&AimingOverhaul::Ready::SetEnabled)},
+        {"Landing", FCSE_CHECKBOX(true), &OnToggled,
+         Toggles(&AimingOverhaul::Landing::SetEnabled)},
         {"Gun blur", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Blur::SetEnabled)},
         {"Iron sight zoom", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Aim::SetIronsightZoom)},

@@ -59,6 +59,8 @@ namespace {
     constexpr ptrdiff_t kSecondBase = 4;
     // The scene camera's position in the world.
     constexpr ptrdiff_t kScenePosition = 0x08;
+    // An entity's binding to what it hangs from.
+    constexpr ptrdiff_t kEntityBinding = 0x78;
 
     // In CPawn's data, the effective look and the inventory.
     using AimingOverhaul::Pawn::kEffectivePitch;
@@ -263,7 +265,7 @@ namespace {
         g_viewPitch = Field<float>(data, kEffectivePitch) + g_addedPitch;
         g_viewYaw = Field<float>(data, kEffectiveYaw);
         const AimingOverhaul::Aim::Adjust adjust = g_frame(pawn, seconds);
-        g_added = {adjust.drift.right * settled, adjust.drift.up * settled};
+        g_added = {adjust.drift.right * settled, adjust.drift.up * settled - adjust.drop};
         g_addedAhead = g_raiseReach * raised;
         g_addedPitch = adjust.pitch;
         g_addedRoll = adjust.roll;
@@ -406,6 +408,14 @@ float AimingOverhaul::Aim::ScopeKick() {
 
 const float* AimingOverhaul::Aim::Eye() {
     return g_eyePlaced ? g_eye : nullptr;
+}
+
+uint8_t* AimingOverhaul::Aim::CameraBinding() {
+    uint8_t* camera = g_playerCamera ? g_playerCamera() : nullptr;
+    auto* entity = camera != nullptr ? static_cast<uint8_t*>(
+                                           FCSE::ApiPointer()->EntityData->EntityOf(camera))
+                                     : nullptr;
+    return entity != nullptr ? Field<uint8_t*>(entity, kEntityBinding) : nullptr;
 }
 
 void AimingOverhaul::Aim::Forward(float out[3]) {

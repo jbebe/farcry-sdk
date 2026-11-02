@@ -21,6 +21,11 @@ inline constexpr ptrdiff_t kEffectivePitch = 0x308;
 inline constexpr ptrdiff_t kEffectiveYaw = 0x310;
 inline constexpr ptrdiff_t kEffectiveStance = 0x374;
 inline constexpr int32_t kCrouched = 1;
+// Also in it, whether a jump has left the ground and whether it has ended, and how far the pawn is
+// above the ground, in metres.
+inline constexpr ptrdiff_t kJumping = 0x49B;
+inline constexpr ptrdiff_t kJumpEnded = 0x49C;
+inline constexpr ptrdiff_t kAboveGround = 0x4A4;
 
 inline uint8_t* Data(uint8_t* pawn) {
     return Field<uint8_t*>(pawn, kData);
@@ -46,6 +51,18 @@ inline bool Crouched(uint8_t* pawn) {
 
 inline float Pitch(uint8_t* pawn) {
     return Field<float>(Data(pawn), kEffectivePitch);
+}
+
+inline float Yaw(uint8_t* pawn) {
+    return Field<float>(Data(pawn), kEffectiveYaw);
+}
+
+inline bool Jumping(uint8_t* pawn) {
+    return Field<uint8_t>(Data(pawn), kJumping) != 0 && Field<uint8_t>(Data(pawn), kJumpEnded) == 0;
+}
+
+inline float AboveGround(uint8_t* pawn) {
+    return Field<float>(Data(pawn), kAboveGround);
 }
 
 inline bool Is(uint8_t* pawn, uint8_t flag) {

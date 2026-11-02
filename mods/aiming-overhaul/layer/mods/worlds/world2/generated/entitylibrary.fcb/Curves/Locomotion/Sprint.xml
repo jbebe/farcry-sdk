@@ -1,0 +1,254 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">Locomotion.Sprint</value>
+      <object type="Entity">
+        <value name="hidName" type="String">Curves.Locomotion.Sprint</value>
+        <value name="disEntityId" type="Int64">153</value>
+        <value name="text_hidEntityClass" type="String">CCurve</value>
+        <value name="hidEntityClass" type="Hash">68745CCF</value>
+        <object type="curveCurve">
+          <value name="hidNumKnots" type="UInt32">16</value>
+          <object type="Knots">
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>-0.0056</x>
+                <y>4.9611</y>
+                <z>0.5</z>
+                <w>0</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>1.5000</x>
+                <y>8.8956</y>
+                <z>2.2014</z>
+                <w>-0.0950714</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>1.5000</x>
+                <y>8.8956</y>
+                <z>2.2014</z>
+                <w>-0.0950714</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>1.5981</x>
+                <y>8.9839</y>
+                <z>2.2014</z>
+                <w>-0.0950714</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>1.5981</x>
+                <y>8.9839</y>
+                <z>1.5298</z>
+                <w>1.29931</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>1.8027</x>
+                <y>8.8846</y>
+                <z>0.5</z>
+                <w>0</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>1.8027</x>
+                <y>8.8846</y>
+                <z>0.5</z>
+                <w>0</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>1.8938</x>
+                <y>8.6577</y>
+                <z>0.5</z>
+                <w>0</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>1.8938</x>
+                <y>8.6577</y>
+                <z>0.5</z>
+                <w>0</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>2.2892</x>
+                <y>6.6723</y>
+                <z>0.5</z>
+                <w>0</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>2.2892</x>
+                <y>6.6723</y>
+                <z>0.5</z>
+                <w>0</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>2.3684</x>
+                <y>6.4194</y>
+                <z>0.5</z>
+                <w>0</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>2.3684</x>
+                <y>6.4194</y>
+                <z>0.5</z>
+                <w>0</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>2.5268</x>
+                <y>6.2996</y>
+                <z>0.5</z>
+                <w>0</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>2.5268</x>
+                <y>6.2996</y>
+                <z>0.5</z>
+                <w>0</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>7.1227</x>
+                <y>6.0708</y>
+                <z>0.5</z>
+                <w>0</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>

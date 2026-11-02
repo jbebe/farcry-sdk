@@ -1,11 +1,13 @@
 # Aiming Overhaul
 
-An FCSE plugin, with weapon data and controls, for how the player aims: sway and a blurred gun down
-the iron sights; a scope that shadows, is seen from its eyepiece, and has the world around it at the
-eye's own field of view; tracers; and leaning, on two new controls. It owns everything from the
-player's input to the shot leaving the gun, and nothing after: no damage, no AI. Its weapon data sets
-only tracer and scope-effect fields, and gives each scoped weapon entity data of the plugin's own;
-JackAll merges both field by field with other mods' weapon edits, reporting any clash.
+An FCSE plugin, with weapon and player data and controls, for how the player aims and moves: sway
+and a blurred gun down the iron sights; a scope that shadows, is seen from its eyepiece, and has the
+world around it at the eye's own field of view; tracers; leaning, on two new controls; a gun carried
+low in a sprint; a landing the knees take; and a player who takes a moment to get going. It owns
+everything from the player's input to the shot leaving the gun, and nothing after: no damage, no AI.
+Its weapon data sets only tracer and scope-effect fields, and gives each weapon entity data of the
+plugin's own; its player data sets only how quickly a walk and a sprint get going. JackAll merges
+both field by field with other mods' edits, reporting any clash.
 
 ## What it does
 
@@ -53,6 +55,17 @@ JackAll merges both field by field with other mods' weapon edits, reporting any 
   of it, by up to 34° as the room ahead shrinks by another 0.5 m, while the view holds still.
   Swung most of the way down, past nine tenths, it lets go of the sights and does not fire, until it
   is back above seven tenths; then the sights come back by themselves if the aim key is still held.
+- **Landing.** A landing drops the eye as the knees take it, by how fast it came down, about 5 cm
+  from a standing jump, and it is back up in about a third of a second.
+- **Gun up after a sprint.** A sprint carries the gun lower than the game does, and after it the gun
+  takes 0.25 s and 0.03 s more for each kilogram it weighs to come back up: 0.38 s for an AK-47,
+  half a second for a PKM. Until it is up it neither fires nor comes to the sights, and the sights
+  come up by themselves then if the aim key is still held.
+- **Getting going.** A walk takes half a second to reach its pace, not a seventh of one, and a
+  sprint a second and a half to reach its top, not half a second, before it falls back to a run as
+  the game's does. Walking out of a sprint, or into the sights' slower pace, slows over a moment.
+  The top speeds and the jump are the game's. Letting go of every key still stops the player at
+  once.
 - **Gun blur.** Down the iron sights the eye focuses on the front sight, and the rest of the gun
   goes out of focus by how far it is from it, as through an 8 mm pupil: the rear sight most, and the
   blur spills a little past the gun's edge. The focus holds on the front sight while a fast turn
@@ -99,11 +112,14 @@ The eye is moved through the camera's positional offset, the one the recoil kick
 zoom held back until its sight picture is up, in `src/engine/aim.cpp`. The aim's wander is added
 to the look the input builds each frame, in `src/engine/look.cpp`; the breath is `src/breath.cpp`,
 and the sprint it holds is refused in the input listener, in `src/engine/sprint.cpp`. A lean is
-`src/lean.cpp`, bending the body's bones each time the engine poses them, in
+`src/lean.cpp`, bending the body's bones each time the engine poses them, in `src/body.cpp` through
 `src/engine/skeleton.cpp`, and rolling the view and moving the eye with the head in
-`src/engine/aim.cpp`; a shot is moved with the eye in `src/engine/shot.cpp`. The gun near walls is `src/wall.cpp`, casting a
-physics ray in `src/engine/ray.cpp`, lowering the look in `src/engine/look.cpp` and refusing the
-shot in `src/engine/fire.cpp`. The blur draws the gun's own
+`src/engine/aim.cpp`; a shot is moved with the eye in `src/engine/shot.cpp`. The gun near walls is
+`src/wall.cpp`, casting a physics ray in `src/engine/ray.cpp`, lowering the look in
+`src/engine/look.cpp` and refusing the shot in `src/engine/fire.cpp`. The gun after a sprint is
+`src/ready.cpp`, refused the same way and held low by the same pass that bends the lean, which
+turns the arms' bones; how long it takes is by the weight `src/weight.cpp` reads. A landing is
+`src/landing.cpp`, dropping the eye through the camera's positional offset. The blur draws the gun's own
 depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the
 blur and the scope shadow draw at the end of the pass the gun's colour is drawn in, before the
 bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
@@ -123,7 +139,11 @@ fragments under `layer\mods\`. So is each scope's reticle, eyepiece shape, rim, 
 and size: `AimingOverhaul.Scope*` keys in a `CFCSEDataComponent` on its `weapons` archetype, the
 reticle as an image path under `bin\plugins` with `ScopeReticleLit` for one lit from within. A gun
 whose breath can be held, and whose scope sways harder, has `AimingOverhaul.HoldBreath` set to 1
-there. Both are written by `data\fragments.py`. The breaths are the game's own stamina breathing,
+there, and every weapon has its weight in kilograms, `AimingOverhaul.Weight`; a weapon without one
+weighs 3.5. All of it is written by `data\fragments.py`. How quickly a walk speeds up and slows down
+is the player archetypes' `fWalkingAcceleration` and `fWalkingDeceleration`, and a sprint's speed
+over time is `Curves.Locomotion.Sprint`, both fragments under `layer\mods\` written by
+`data\movement.py`. The breaths are the game's own stamina breathing,
 cut into inhales and exhales by `data\breath.py` into four banks, `layer\mods\soundbinary\00fc0b*.spk`,
 played in `src/breath.cpp` through `src/engine/sound.cpp`. The engine side is in
 [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md),
@@ -151,6 +171,8 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Sway | Yes / No | Yes |
 | Hold breath | Yes / No | Yes |
 | Gun near walls | Yes / No | Yes |
+| Gun up after sprint | Yes / No | Yes |
+| Landing | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
 | Iron sight zoom | Yes / No | Yes |
 | Scope shadow | Yes / No | Yes |
@@ -159,7 +181,10 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Tracers | Yes / No | Yes |
 
 With Sway off neither the eye nor the aim drifts, and there is nothing for the breath to steady.
-With Hold breath off, sprint down the sights does what the game does with it. With Iron sight zoom
+With Hold breath off, sprint down the sights does what the game does with it. With Gun up after
+sprint off, the gun fires and aims as soon as the sprint ends, as in the game. With Landing off,
+the eye does not drop. How quickly the player gets going is the player data's, and stays. With
+Iron sight zoom
 off, the view keeps its field of view down a gun's iron sights; a scope still
 magnifies. With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game
 draws them. Which guns fire them and how fast they fly are the weapon data's, and stay; so does the
@@ -171,6 +196,7 @@ scopes' lost iron-sight effect, whatever the scope settings.
 .\build.ps1                                     # x86 release -> layer\plugins\aiming-overhaul\
 .\build.ps1 -Install "C:\Games\Far Cry 2\bin"   # and build the layer into the game with jackall-cli
 python data\fragments.py world1.xml world2.xml dlc1.xml   # rewrite the weapon data, see the script
+python data\movement.py world1.xml world2.xml            # rewrite the player data, see the script
 python data\breath.py <worlds soundbinary folder>        # rebuild the breath banks, see the script
 ```
 

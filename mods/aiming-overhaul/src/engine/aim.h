@@ -25,6 +25,8 @@ struct Adjust {
     float pitch;
     // The view's roll with the body as it leans, in radians, right positive.
     float roll;
+    // How far the eye drops, in metres, as the knees take a landing.
+    float drop;
 };
 
 // Once a frame, with the player's pawn and the seconds since the last, before the camera is placed
@@ -52,9 +54,7 @@ bool ScopeUp();
 bool Aiming();
 
 // How far the scope's shadow has swung off the opening's centre, against the look's turn.
-Swing ScopeSwing();
-
-// How many times the scope last raised magnifies the view.
+Swing ScopeSwing();// How many times the scope last raised magnifies the view.
 float Magnification();
 
 // How far a scope has kicked back toward the eye from the last shot, from nought to one.
@@ -67,6 +67,9 @@ uint32_t WeaponChanges();
 
 // Where the eye was last placed, in the world, or null before it was.
 const float* Eye();
+
+// The first-person camera entity's binding to the body's view bone, or null; on the game thread.
+uint8_t* CameraBinding();
 
 // The view's direction, as a unit vector in the world: the body's look this frame, with the view's
 // pitch last added over it.
