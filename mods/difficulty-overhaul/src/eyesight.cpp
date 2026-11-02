@@ -74,9 +74,6 @@ namespace {
     constexpr float kHeardBehind = 0.5f;
     constexpr float kArmsLength = 2.0f;
     constexpr float kAllAround = 360.0f;
-    // The two low stances: crouched, and the one swimming forces.
-    constexpr int kCrouched = 1;
-    constexpr int kLow = 2;
     // Hardcore: within this range a head over cover is as plain as a whole man's top half, so the
     // share of the player's body the rays reach counts this many times over, up to all of it.
     constexpr float kCloseRange = 40.0f;
@@ -120,7 +117,7 @@ namespace {
         float velocity[3];
         Shooting::Velocity(pawn, velocity);
         // Every way of moving upright counts, a jump on the spot included.
-        const float speed = stance == kCrouched || stance == kLow
+        const float speed = stance == Shooting::kCrouched || stance == Shooting::kLow
                                 ? 0.0f
                                 : std::hypot(velocity[0], velocity[1], velocity[2]);
         t_motion = kStillPeriphery + (1.0f - kStillPeriphery) * std::min(speed / kWalkSpeed, 1.0f);

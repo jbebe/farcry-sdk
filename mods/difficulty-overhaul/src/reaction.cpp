@@ -1,5 +1,6 @@
 // Reaction: a soldier who spots the player before he has fired in this fight holds his fire for a
 // moment, longer at range, while his aim settles; a hit that panics him ends it.
+#include "engine/combat_log.h"
 #include "engine/game.h"
 #include "engine/memory.h"
 #include "engine/shooting.h"
@@ -38,7 +39,8 @@ namespace {
             const double seconds = kReactionSeconds + kReactionSecondsPerMetre * distance;
             Remember(g_holds, shooting) = now + seconds;
             Shooting::StartAim(shooting);
-            FCSE::Logf("reaction: spotted the player at %.1f m, holds his fire %.1f s", distance,
+            CombatLogf("soldier %08X reaction: spotted the player at %.1f m, holds his fire %.1f s",
+                       Shooting::ShooterId(shooting), distance,
                        seconds);
             return false;
         }

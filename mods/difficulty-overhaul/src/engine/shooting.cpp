@@ -15,12 +15,14 @@ namespace {
                                               float* visibility, bool remembered);
     using GetKnowledgeFn = bool(__fastcall*)(void* knowledge, void* unused, const uint32_t* id,
                                              uint8_t** entry);
+    using GetEquippedWeaponFn = void*(__fastcall*)(void* inventory);
 
-    // CShootingSystem::GetTarget, CSensorySystem::GetVisibilityValue and
-    // CSensorySystemKB::GetKBEntryForEntity.
+    // CShootingSystem::GetTarget, CSensorySystem::GetVisibilityValue,
+    // CSensorySystemKB::GetKBEntryForEntity and CInventoryViewPawn::GetEquippedWeapon.
     FCSE::Relocation<GetTargetFn> g_getTarget{FCSE::Uplay(0x00A19370)};
     FCSE::Relocation<GetVisibilityFn> g_getVisibility{FCSE::Uplay(0x00A021A0)};
     FCSE::Relocation<GetKnowledgeFn> g_getKnowledge{FCSE::Uplay(0x00A235C0)};
+    FCSE::Relocation<GetEquippedWeaponFn> g_getEquippedWeapon{FCSE::Uplay(0x00127DA0)};
 
     // CShootingSystem: its agent, the lifetime its reaction CLifeTimer starts with, that timer's
     // lifetime (-1 while stopped) and start time, and its target distance.
@@ -47,8 +49,18 @@ namespace {
     constexpr ptrdiff_t kDataEffective = 0x2D0;
     constexpr ptrdiff_t kEffectiveStance = 0xA4;
     constexpr ptrdiff_t kEffectiveVelocity = 0xB0;
+    // The inventory view in a CPawn's data block; CWeapon's properties holder, the
+    // CWeaponPropertiesCommon in it, and its selWeaponClass.
+    constexpr ptrdiff_t kDataInventory = 0x4F0;
+    constexpr ptrdiff_t kWeaponPropertiesHolder = 0x24;
+    constexpr ptrdiff_t kHolderProperties = 0x04;
+    constexpr ptrdiff_t kPropertiesClass = 0x40;
     // CTaskShoot's agent.
     constexpr ptrdiff_t kTaskAgent = 0x34;
+
+    const char* const kWeaponClassNames[] = {"machete", "pistol",       "assault rifle", "SMG",
+                                             "shotgun", "sniper rifle", "machine gun",   "launcher"};
+    const char* const kStanceNames[] = {"standing", "crouched", "swimming"};
 
     // The last shake of each shooting system, and until when it holds by game clock.
     struct Mark {
@@ -65,6 +77,8 @@ FCSE::Relocation<TaskCheckFn> CanShoot{FCSE::Uplay(0x009792F0)};
 FCSE::Relocation<TaskCheckFn> IsAligned{FCSE::Uplay(0x0097A3D0)};
 
 bool Found() { return g_getTarget && g_getVisibility && g_getKnowledge; }
+
+bool WeaponClassFound() { return static_cast<bool>(g_getEquippedWeapon); }
 
 void* Target(void* shooting) { return g_getTarget(shooting); }
 
@@ -171,6 +185,28 @@ void* Pawn(void* agent) { return Read<void*>(agent, kAgentPawn); }
 
 void* ShooterPawn(void* shooting) { return Pawn(Read<void*>(shooting, kShooter)); }
 
+uint32_t ShooterId(void* shooting) { return Game::Id(Game::EntityOf(ShooterPawn(shooting))); }
+
+int WeaponClass(void* shooting) {
+    if (!g_getEquippedWeapon) {
+        return kNoWeapon;
+    }
+    void* weapon = g_getEquippedWeapon(PawnData(ShooterPawn(shooting)) + kDataInventory);
+    if (weapon == nullptr) {
+        return kNoWeapon;
+    }
+    const void* holder = Read<void*>(weapon, kWeaponPropertiesHolder);
+    return Read<int>(Read<void*>(holder, kHolderProperties), kPropertiesClass);
+}
+
+const char* WeaponClassName(int weaponClass) {
+    if (weaponClass == kNoWeapon) {
+        return "no weapon in hand";
+    }
+    return weaponClass >= kMachete && weaponClass <= kLauncher ? kWeaponClassNames[weaponClass]
+                                                                 : "weapon of another class";
+}
+
 uint8_t* PawnData(void* pawn) { return Read<uint8_t*>(pawn, kPawnData); }
 
 void Velocity(void* pawn, float velocity[3]) {
@@ -178,6 +214,10 @@ void Velocity(void* pawn, float velocity[3]) {
 }
 
 int Stance(void* pawn) { return Read<int>(PawnData(pawn) + kDataEffective, kEffectiveStance); }
+
+const char* StanceName(int stance) {
+    return stance >= kStanding && stance <= kLow ? kStanceNames[stance] : "in another stance";
+}
 
 void* OfAgent(void* agent) { return static_cast<uint8_t*>(agent) + kAgentShooting; }
 

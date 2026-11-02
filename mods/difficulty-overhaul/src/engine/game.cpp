@@ -27,6 +27,7 @@ namespace {
     constexpr ptrdiff_t kTerminalPlayer = 0x04;
     constexpr ptrdiff_t kPlayerProxy = 0x08;
     constexpr ptrdiff_t kProxyEntity = 0x0C;
+    constexpr ptrdiff_t kEntityId = 0x08;
     constexpr ptrdiff_t kEntityPosition = 0x60;
 
     const char* const kNames[] = {"Easy", "Normal", "Hardcore", "Infamous"};
@@ -70,6 +71,10 @@ void* ProxyEntity(const void* proxy) {
 }
 
 void* EntityOf(void* component) { return FCSE::ApiPointer()->EntityData->EntityOf(component); }
+
+uint32_t Id(const void* entity) {
+    return entity != nullptr ? Read<uint32_t>(entity, kEntityId) : 0;
+}
 
 void Position(const void* entity, float position[3]) {
     std::copy_n(Vec3(entity, kEntityPosition), 3, position);

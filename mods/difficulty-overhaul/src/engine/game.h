@@ -1,6 +1,8 @@
 // The campaign state every feature reads: the difficulty, the local player and the game clock.
 #pragma once
 
+#include <cstdint>
+
 namespace DifficultyOverhaul::Game {
 
 enum Difficulty { kUnknown = -1, kEasy, kNormal, kHardcore, kInfamous };
@@ -19,6 +21,9 @@ void* ProxyEntity(const void* proxy);
 
 // The entity a component such as a CPawn or a counters component belongs to, or null.
 void* EntityOf(void* component);
+
+// The low half of an entity's 64-bit id, which names a soldier in the logs; 0 for none.
+uint32_t Id(const void* entity);
 
 // An entity's world position, and the distance between two positions.
 void Position(const void* entity, float position[3]);

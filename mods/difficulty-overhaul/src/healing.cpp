@@ -1,5 +1,6 @@
 // Healing: a syrette leaves 65 % of maximum health rather than full, and only from there does
 // health come back, slowly.
+#include "engine/combat_log.h"
 #include "engine/damage.h"
 #include "engine/game.h"
 #include "engine/memory.h"
@@ -70,7 +71,7 @@ namespace {
         if (!surgery) {
             Damage::SetHealth(counters, std::max(before, SyretteHealth(counters)));
         }
-        FCSE::Logf("healed: %s, health %.0f -> %.0f", surgery ? "surgery" : "syrette", before,
+        CombatLogf("healed: %s, health %.0f -> %.0f", surgery ? "surgery" : "syrette", before,
                    Damage::Health(counters));
     }
 

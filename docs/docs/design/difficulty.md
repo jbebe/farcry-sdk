@@ -59,7 +59,8 @@ what is spawned into it.
 - Travel with `#GameChangeWorld("testrange", "2054037628277228842")`.
 - Soldiers come from DevTools' Spawner: a squad of 1 to 6, 25 m ahead. DevTools invincibility is on
   unless the row tests damage to the player.
-- Read `bin\fcse.log` after each run.
+- Read the session's combat log after each run, in `bin\difficulty-overhaul-logs`, with the mod's
+  `fight_report.py`; its README's Combat log section says how.
 
 A soldier's post only sets where he starts: in a fight he moves sideways around the player, so the
 range in the log drifts from the scenario's distance.

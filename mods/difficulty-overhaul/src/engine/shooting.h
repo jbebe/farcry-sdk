@@ -62,12 +62,33 @@ bool Positions(void* shooting, float from[3], float to[3]);
 void* Pawn(void* agent);
 void* ShooterPawn(void* shooting);
 
+// His entity's id, as the logs name soldiers.
+uint32_t ShooterId(void* shooting);
+
+// CWeaponPropertiesCommon's selWeaponClass values.
+enum WeaponClassId {
+    kNoWeapon = -1, kMachete, kPistol, kAssault, kSMG, kShotgun, kSniper, kLMG, kLauncher
+};
+
+// Whether this build's weapon lookup was found; without it every soldier holds kNoWeapon.
+bool WeaponClassFound();
+
+// The class of the weapon in his hands, kNoWeapon when he holds none, as on a mounted gun.
+int WeaponClass(void* shooting);
+
+const char* WeaponClassName(int weaponClass);
+
 // A CPawn's data block.
 uint8_t* PawnData(void* pawn);
 
-// A CPawn's velocity in metres per second, and its stance, 1 when crouched.
+// A CPawn's stances: the two low ones are crouched and the one swimming forces.
+enum StanceId { kStanding, kCrouched, kLow };
+
+// A CPawn's velocity in metres per second, and its stance.
 void Velocity(void* pawn, float velocity[3]);
 int Stance(void* pawn);
+
+const char* StanceName(int stance);
 
 // The shooting system of a CPawnAgent, and of the soldier a CTaskShoot runs on.
 void* OfAgent(void* agent);

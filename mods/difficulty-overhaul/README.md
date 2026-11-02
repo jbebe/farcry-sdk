@@ -29,13 +29,33 @@ the enemy aims. The values are constants in the plugin, with nothing on the Mod 
 | Watched spot | A soldier keeps his aim on where the player vanished: a peek from that spot meets a settled rifle, while reappearing more than 0.1 rad away as he sees it (3 m at 30 m) makes him settle his aim again |
 | Eyesight | How a soldier sees the player. His focus cone reaches 100 m by day where the game's reaches 60, and keeps the player fully visible out to half its length instead of a quarter, so a man standing in the open at 50 m is seen. His peripheral cone spans 180° instead of 120°, and there the player counts only 0.55 near the focus falling to 0.35 at 90°: enough for him to notice and turn, never enough to see the player as an enemy until he looks. Within 40 m, the share of the player that shows over cover counts double: the game traces three points on his body and counts a third for each it reaches, so a head and shoulders over a wall counted as a third of a man. In the periphery a player standing still or moving crouched counts a fifth as much as one walking upright or faster, so he is noticed for moving upright, not for creeping. A player walking or running upright behind a soldier is noticed within 20 m (as visible as 0.5, before distance and movement) and sensed in full at arm's length, 2 m; one creeping crouched is not. Night, the alert state, crouching, standing still, grass and cover still apply |
 | Launchers | A soldier with an RPG or a Carl Gustav fires it at the player only while the player is in a working vehicle. At a player on foot he draws his other gun: his primary, or his pistol or SMG when he has none. He keeps watching: the player getting into a vehicle brings the launcher out, and getting out puts it away. The game hands him the launcher whenever his target is beyond 20 m, so the first time he may raise it, find the player on foot and put it away; after that he remembers. His shots at other soldiers and at buddies are as shipped. Part of the layer's brain |
-| Hit log | Writes every hit on the player, and every hit the player lands on a soldier, to `bin\fcse.log`: stim type and level, body part, range, health before and after, and whether a soldier was wounded or killed. Every AI shot at the player gets a line too: its chance, the recoil factor, the range and whether it hit |
+| Combat log | Every hit on the player and every hit the player lands on a soldier, every AI shot at the player, and what each feature did to a soldier, one line each. See [Combat log](#combat-log) |
 
-A hit log line reads:
+## Combat log
+
+Each game session writes its own file, `bin\difficulty-overhaul-logs\combat-<date>_<time>.log`, and
+the folder keeps the last 20, since `fcse.log` starts over at every launch. Every line also goes to
+`fcse.log`. A soldier is named by his entity id, the same in every line about him:
 
 ```
-soldier 0001A2F4 hit: pierce level 14, torso, at 31.2 m, health 150 -> 46 (Hardcore, act 1, hit locations on)
-player hit: pierce level 9, no body part, at 18.7 m, health 1075 -> 1028 (Hardcore, act 1, hit locations off)
+soldier 3A802DED reaction: spotted the player at 58.6 m, holds his fire 2.5 s
+soldier 3A802DED shot at player: chance 0.66 (recoil 1.00, sighting 1.00, crossing 1.00, shaken 1.00) at 58.6 m, 2.6 s on him, at the torso, hit; visibility 0.77, assault rifle; the player standing at 0.0 m/s
+player hit: pierce level 10, torso, at 58.6 m, health 495 -> 231 of 495, by 3A802DED (Hardcore, act 1, hit locations off)
+player died: killed by 3A802DED at 58.6 m
+soldier 3A802DED hit: pierce level 8, torso, at 58.0 m, health 250 -> 146 (Hardcore, act 1, hit locations on)
+soldier 3A802DED suppressed: hit, he panics at 58.6 m
+soldier 7C000123 fire discipline: holds his fire at 30.2 m, visibility 0.12
+```
+
+`fight_report.py` reads a session and reports it: totals by range, each death with who fired in the
+10 s before it, each soldier from first sighting to last shot, and flags for what should not happen,
+such as a shot inside a reaction hold or a death within 2 s of the killer's first shot:
+
+```
+python fight_report.py                          the newest session
+python fight_report.py <file>                   a session file, or an fcse.log
+python fight_report.py --at 19:30:43            the lines in the 10 s before that time
+python fight_report.py --soldier 3A802DED       every line about one soldier
 ```
 
 ## Planned

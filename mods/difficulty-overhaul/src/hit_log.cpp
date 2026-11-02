@@ -1,5 +1,6 @@
 // The hit log: every bullet, blast and blade that hits the player, and every one the player lands on
-// a soldier, written to fcse.log with the health it took.
+// a soldier, written to the combat log with the health it took.
+#include "engine/combat_log.h"
 #include "engine/damage.h"
 #include "engine/game.h"
 #include "engine/memory.h"
@@ -22,7 +23,6 @@ namespace {
     constexpr ptrdiff_t kSoldierWounded = 0x84;
 
     constexpr ptrdiff_t kMissionManagerAct = 0x40;
-    constexpr ptrdiff_t kEntityId = 0x08;
 
     const char* const kTypeNames[] = {"pierce", "crush", "cut"};
     const char* const kPartNames[] = {"head", "torso", "arms", "legs", "hands", "feet", "no body part"};
@@ -49,7 +49,7 @@ namespace {
     void LogHit(const char* who, const char* type, const uint8_t* stim, float distance,
                 const void* counters, const char* result) {
         const auto* missions = Read<const void*>(counters, kCountersMissionManager);
-        FCSE::Logf("%s hit: %s level %d, %s, at %.1f m, %s (%s, act %u, hit locations %s)", who,
+        CombatLogf("%s hit: %s level %d, %s, at %.1f m, %s (%s, act %u, hit locations %s)", who,
                    type, Damage::Level(stim), kPartNames[Damage::Part(stim)], distance, result,
                    Game::Name(Game::CurrentDifficulty()),
                    missions != nullptr ? Read<uint8_t>(missions, kMissionManagerAct) : 0u,
@@ -65,11 +65,16 @@ namespace {
 
         const float before = Damage::Health(counters);
         g_originalPlayerDamage(counters, unused, stim);
-        char result[64];
-        std::snprintf(result, sizeof(result), "health %.0f -> %.0f", before,
-                      Damage::Health(counters));
-        LogHit("player", type, stim, Distance(Game::EntityOf(counters), Damage::Instigator(stim)),
-               counters, result);
+        const float after = Damage::Health(counters);
+        void* shooter = Damage::Instigator(stim);
+        char result[96];
+        std::snprintf(result, sizeof(result), "health %.0f -> %.0f of %.0f, by %08X", before,
+                      after, Damage::MaxHealth(counters), Game::Id(shooter));
+        const float distance = Distance(Game::EntityOf(counters), shooter);
+        LogHit("player", type, stim, distance, counters, result);
+        if (before > 0.0f && after <= 0.0f) {
+            CombatLogf("player died: killed by %08X at %.1f m", Game::Id(shooter), distance);
+        }
     }
 
     void __fastcall SoldierDamageDetour(void* counters, void* unused, const uint8_t* stim) {
@@ -96,8 +101,7 @@ namespace {
         }
         void* soldier = Game::EntityOf(counters);
         char who[24];
-        std::snprintf(who, sizeof(who), "soldier %08X",
-                      soldier != nullptr ? Read<uint32_t>(soldier, kEntityId) : 0u);
+        std::snprintf(who, sizeof(who), "soldier %08X", Game::Id(soldier));
         LogHit(who, type, stim, Distance(soldier, Damage::Instigator(stim)), counters, result);
     }
 }
