@@ -55,6 +55,8 @@ both field by field with other mods' edits, reporting any clash.
   of it, by up to 34° as the room ahead shrinks by another 0.5 m, while the view holds still.
   Swung most of the way down, past nine tenths, it lets go of the sights and does not fire, until it
   is back above seven tenths; then the sights come back by themselves if the aim key is still held.
+  It comes back up only once there has been 10 cm more room than it went down for, for 0.4 s, and
+  then over 0.3 s, so a trunk or a branch swaying at the edge of its reach does not shake it.
 - **Vertical inertia.** The game slides the arms a little sideways behind a turn, never up or down.
   Here they also slide down a little as the look pitches up, and up as it pitches down, at the same
   rate, smoothing and size as the game's own: 1.1 cm at 126° a second, the most at 185°. Down the

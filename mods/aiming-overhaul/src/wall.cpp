@@ -13,15 +13,21 @@ namespace {
     // way down.
     constexpr float kReach = 0.8f;
     constexpr float kSwingRoom = 0.5f;
-    // Radians all the way down, and seconds to swing that far.
+    // Radians all the way down, and seconds to swing all the way down, and back up.
     constexpr float kMostSwing = 0.6f;
     constexpr float kSwingTime = 0.2f;
+    constexpr float kRaiseTime = 0.3f;
+    // The gun comes back up only once there is kClearRoom metres more room than it swung down for,
+    // and has been for kClearHold seconds, so what sways in and out of reach does not shake it.
+    constexpr float kClearRoom = 0.1f;
+    constexpr float kClearHold = 0.4f;
     // The share of the swing past which the gun is blocked, and below which it is free again.
     constexpr float kBlockAbove = 0.9f;
     constexpr float kFreeBelow = 0.7f;
 
     std::atomic<bool> g_enabled{true};
     float g_swing = 0.0f;
+    float g_clear = 0.0f;
     bool g_blocked = false;
 }
 
@@ -31,7 +37,17 @@ void AimingOverhaul::Wall::Update(float seconds, const float eye[3], const float
         const float room = Ray::Cast(eye, forward, kReach);
         target = std::clamp((kReach - room) / kSwingRoom, 0.0f, 1.0f);
     }
-    g_swing = Approach(g_swing, target, seconds / kSwingTime);
+    if (target >= g_swing) {
+        g_swing = Approach(g_swing, target, seconds / kSwingTime);
+        g_clear = 0.0f;
+    } else if (g_clear >= kClearHold || target < g_swing - kClearRoom / kSwingRoom) {
+        g_clear += seconds;
+        if (g_clear >= kClearHold) {
+            g_swing = Approach(g_swing, target, seconds / kRaiseTime);
+        }
+    } else {
+        g_clear = 0.0f;
+    }
     if (g_swing > kBlockAbove) {
         g_blocked = true;
     } else if (g_swing < kFreeBelow) {
