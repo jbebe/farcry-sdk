@@ -22,6 +22,7 @@ add_library(DifficultyOverhaul SHARED
   "src/range_falloff.cpp"
   "src/intuition.cpp"
   "src/grass.cpp"
+  "src/camo_suit.cpp"
   "src/suppression.cpp"
   "src/squad_memory.cpp"
   "src/watched_spot.cpp"

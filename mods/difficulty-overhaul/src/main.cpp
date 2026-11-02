@@ -10,6 +10,7 @@ void InstallReaction();
 void InstallRangeFalloff();
 void InstallIntuition();
 void InstallGrass();
+void InstallCamoSuit();
 void InstallSuppression();
 void InstallSquadMemory();
 void InstallWatchedSpot();
@@ -33,6 +34,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallRangeFalloff();
     InstallIntuition();
     InstallGrass();
+    InstallCamoSuit();
     InstallSuppression();
     InstallSquadMemory();
     InstallWatchedSpot();

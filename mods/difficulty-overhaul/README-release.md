@@ -18,8 +18,12 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
   recoil spoils his follow-up shots, and you are harder to hit running across his line of fire than
   running at him. He never aims at your head in his first 3 seconds on you, so a first sighting
   cannot end in a headshot.
-- **Fire discipline and grass.** Soldiers hold their fire until they can make you out, waiting aimed
-  where they are, and high grass hides you crouched and still even in a firefight.
+- **Fire discipline.** Soldiers hold their fire until they can make you out, waiting aimed where they
+  are.
+- **Grass is not camouflage.** Within 30 m soldiers see you crouched in high grass as in the open;
+  only farther out does it hide you, in a firefight too. Bushes and trees still hide you.
+- **The camo suit** hides you crouched and still in high grass from 10 m out, where the game had it
+  from 2 m, as long as soldiers are not fighting.
 - **Suppression.** Your bullets shake a soldier's aim for a second but never silence him: hit him and
   he fires back in a panic.
 - **Squads hunt where they last saw you** for as long as you stay near it; only slipping away unseen

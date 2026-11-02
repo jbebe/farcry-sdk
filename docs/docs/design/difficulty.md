@@ -28,9 +28,12 @@ Combat that is realistic and fair:
 - **Where the mod covers a lever, the game's own per-difficulty spread goes**, so the mod is the one
   source of difficulty.
 - **Only the player's fights change.** Fights between soldiers stay as shipped.
-- **Fire discipline and grass define the mod.** A soldier holds his fire until he can make the player
-  out, and grass hides a crouched player in combat too. Seen in game: "The bush, the tall grass
-  actually makes them stop shooting. the sniper has no LoS and waits for me to peek."
+- **Fire discipline and cover define the mod.** A soldier holds his fire until he can make the player
+  out. Seen in game: "The bush, the tall grass actually makes them stop shooting. the sniper has no
+  LoS and waits for me to peek."
+- **Grass is not camouflage.** "crouching in grass is NOT camouflage. behind a bush or a tree is, but
+  simple grass is not" (2026-11-02): within 30 m a soldier sees a player in grass in any state, and
+  only the camo suit, still, hides him from 10 m.
 - **Firefights are aggressive.** Nothing the player does silences a soldier who sees him: suppression
   only spoils aim, and holding fire never sends a soldier elsewhere
   ([2026-10-29](#on-the-real-map)).
@@ -78,7 +81,7 @@ range in the log drifts from the scenario's distance.
 | 7 | Crossing | strafe across a soldier's line at 20 m, then run straight at him | far fewer hits while crossing | seen | passes: strafing at 12 m costs about 23 % of his chance, running at him nothing; the reduction is accepted |
 | 8 | Range falloff | a squad with pistols or SMGs, at 10 m and at 40 m | much lower `chance` at 40 m than a rifle gets | assumed | passes for the shotgun: settled 0.30-0.43 at 10-13 m, 0.04-0.08 at 34-43 m (a rifleman: 0.67 at 50 m); pistols and SMGs not run, accepted by the user: no enemy carries one as his main weapon. Shotgun raised to about 0.7 at 15 m, falling off past 20 m, at the user's call: a settled shot at a still player was 0.61-0.81 at 14 m, 0.40-0.46 at a moving one, then 0.41 at 21 m, 0.10 at 37 m, 0.04 at 45 m |
 | 9 | Fire discipline | crouch behind a 1.2 m barrier, then lie at the edge of his view | no shooting until he can make you out (visibility 0.2); holding, he stays put, aimed, and fires as you show | loved; changed 2026-10-29 from 0.4 and refusing the shot, not run | low wall passes once it was barriers: he fires at each peek; the eroded wall's broken top flipped his view of a crouched player between 0.54 and 0.27 every frame, around the 0.4 line. The sniper at 90 m passes, the user's check |
-| 10 | Grass | crouch still in high grass, if the range has any | no shooting from 10 m out | loved; raised to 90 % on 2026-10-29, not run | accepted untested by the user: the range has no tall grass |
+| 10 | Grass | crouch in high grass, if the range has any, a soldier at 20 m and one at 50 m | the one at 20 m sees and shoots you, idle, alerted or fighting; the one at 50 m does not | loved at 90 % from 10 m; moved on 2026-11-02 to nothing within 30 m, fading in to full at 40 m, after an alerted soldier walked past the user in grass ("Grass hides me too well"), not run | the range has no tall grass |
 | 11 | Intuition | break line of sight behind a wall and move along it | he loses your true position within about 1 s and searches where you were last seen | assumed | passes at the long wall: "they lost my real position. they hunt the last known position and then they eventually get bored of it like they should" |
 | 12 | Suppression | fire near a soldier, then hit him | he keeps firing: `shaken 0.70` on his shots for 1 s after a near miss; after a hit, `hit, he panics` and he fires back at once at `shaken 0.25` | worked as a 1 s pin; redesigned 2026-10-29, not run | passes: 15 near misses logged; after one his chance drops to 0-0.03 and climbs back over his settling time (0.42 1.3 s later at 36 m). A burst already under way finishes, at a chance of 0, before the pin holds him |
 | 13 | Squad memory | get seen, hide behind a wall for more than 30 s | they keep hunting you; `squad memory: … still hunted` | not seen | not shown yet: at the long wall the squad flanked or hunted the player within the game's own memory, and the sniper (at 90 m; at 150 m the game removed him) never lost him either, so the plugin never had to hold on; accepted by the user |
@@ -112,7 +115,7 @@ range in the log drifts from the scenario's distance.
 | K | **Vertical sight limit.** About 45° above and 60° below his eye line | skipped, the user's call: the cone test is already a round 3D cone, 90° from his head direction, and a narrower band would only matter at steep angles |
 | L | **A heard step means investigate.** A footstep sends a soldier to look; only seeing the player makes him hostile | skipped, the user's call: J already makes a walking player behind a soldier noticed, not shot |
 | M | **AI view in the game.** Each soldier's cones, how well he sees the player and where he thinks the player is, drawn as lines in the 3D scene after the frame renders, depth-tested, not through DevTools' overlay or a world-to-screen projection | built in DevTools as the AI view toggle (Mod Configuration Menu); works in game, cones redone as ground sectors and lines widened at the user's request |
-| N | **The camo suit.** The game's suit makes a crouched, still player in high grass invisible beyond 2 m (4 m to an alerted soldier), but only outside combat | before release; the change is open |
+| N | **The camo suit.** The game's suit makes a crouched, still player in high grass invisible beyond 2 m (4 m to an alerted soldier), but only outside combat | built 2026-11-02, the user's pick ("should help past 10m if player stand still"): invisible from 10 m to idle and alerted soldiers alike, still nothing in a fight; not run |
 | H | **Release.** CHANGELOG, README-release, the Nexus page and the release workflow | last |
 
 Decided against on 2026-10-26: a reload making a soldier settle his aim again; recoil mattering less at close range; fading the over-cover doubling in before 40 m. The shotgun was raised to about 0.7 at 15 m, falling off past 20 m, instead.
