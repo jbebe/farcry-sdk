@@ -38,6 +38,8 @@
 
 // -load <save>.sav crashes to desktop instead of launching into the save.
 void ApplyLoadSavegameFix();
+// A second copy of the game will not start while one is running.
+void ApplyMultipleInstancesFix();
 // The Ubisoft, Dunia and rating movies play before the menu on every launch.
 void ApplySkipIntroFix();
 // The menu waits behind a "press any key" title screen on every launch.
@@ -123,6 +125,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // FCSE_Load runs before any Dunia.dll engine code, so every fix is in place before the game that
     // would read it starts.
     ApplyLoadSavegameFix();
+    ApplyMultipleInstancesFix();
     ApplySkipIntroFix();
     ApplySkipTitleScreenFix();
 

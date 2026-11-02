@@ -71,6 +71,7 @@ add_library(DevTools SHARED
   "src/engine/world.cpp"
   "src/engine/world_draw.cpp"
   "src/fixes/load_savegame.cpp"
+  "src/fixes/multiple_instances.cpp"
   "src/fixes/skip_intro.cpp"
   "src/fixes/skip_title_screen.cpp"
   "src/options/ai_view.cpp"

@@ -19,6 +19,10 @@ Applied unconditionally, with no setting.
   page's own `SkipIntroMovies` path is taken unconditionally; the profile flag is left alone.
 - **Skip title screen** — the menu appears without waiting behind "press any key". The main menu's
   initial state falls straight through into the next.
+- **Multiple instances** — a second copy of the game starts while one is running, instead of
+  refusing. `InitDuniaEngine` still looks for the `FarCry2Instance` mutex, but never acts on it. Every
+  copy still shares `bin\fcse.log`, which only the first can write, and the remote control's pipe,
+  which only the first serves.
 
 ## Options
 
@@ -542,7 +546,10 @@ of the game in the repository. Run it after touching a pattern.
 Everything below needs a real install:
 
 - `bin\fcse.log` shows `DevTools loaded`, then `-load: savegame launches skip the post-load pass
-  until the engine exists`, `intro videos skipped` and `title screen skipped`.
+  until the engine exists`, `intro videos skipped`, `title screen skipped` and `multiple instances:
+  another copy of the game may start alongside this one`.
+- **Multiple instances** *(not yet run)*: with one copy running windowed, `FCSE.exe` again opens a
+  second window.
 - **Savegame launch** *(run, works)*: `FCSE.exe -load <name>.sav` boots straight into that save.
 - `bin\fcse.ini` gains a `[DevTools]` group with `Developer console = false`.
 - Toggling Developer console logs `developer console: on` or `off`; a build where a gate could not
