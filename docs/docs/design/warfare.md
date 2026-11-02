@@ -38,7 +38,7 @@ The parts that decide the verdicts below:
   (`DefaultCountersService/HitLocations`). Every realism mod raised them. They are off for the player.
 - **Downed soldiers soak lead.** A hit that takes a soldier to 49 health or less downs him at 49. Hits
   then do nothing for 0.4 s, and after that torso hits do ×0.5 and limb hits ×0.2. This is traced in the
-  server build only ([todo page](/farcry-sdk/todos)).
+  server build only ([issue #25](https://github.com/jbebe/farcry-sdk/issues/25)).
 - **AI accuracy is a dice roll, not ballistics.** The chance of a hit is a product of stance, speed,
   range curve and group size. Each hit forces a number of misses after it, set per weapon and per
   difficulty, and difficulty acts on accuracy only through those misses

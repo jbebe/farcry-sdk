@@ -132,9 +132,9 @@ const config = {
             label: 'FCSE',
           },
           {
-            to: '/todos',
+            href: 'https://github.com/jbebe/farcry-sdk/issues',
             position: 'left',
-            label: 'Todos',
+            label: 'Issues',
           },
           {
             href: 'https://github.com/jbebe/farcry-sdk',

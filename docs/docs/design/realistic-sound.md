@@ -9,7 +9,7 @@ sidebar_position: 1
 [DSOAL experiment](#experiment-bring-eax-back-with-dsoal) became `mods/sound-overhaul`: bundled DSOAL,
 a fix for the game never switching reverb, and a stronger reverb send for the player's own sounds. The
 Makarov's first-person shot is the first dry sample, with an outdoor echo. What comes next is the
-step-by-step listening list on the [todo page](/farcry-sdk/todos): distant enemy fire, distant voices,
+step-by-step listening list: distant enemy fire, distant voices,
 vehicle engines, interior reverbs, then every weapon's own shot.
 
 ## The goal

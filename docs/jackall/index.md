@@ -264,7 +264,7 @@ The rest goes well past a file manager: a 3D map editor forming over the actual 
 exporter with its own file format and a Blender add-on on the other side of it, a visual editor for
 Domino missions, an archetype browser that resolves the override chains, and a savegame editor. A few
 of those don't exist anywhere else for this game, in any form. Some are still viewers, and the plan is
-that each one gets its write path, in the order the [roadmap](/todos/roadmap) argues for.
+that each one gets its write path.
 
 None of this is really specific to Far Cry 2. Dunia is Ubisoft's engine across a decade of games and
 the formats are close relatives: an `.fcb` is an `.fcb`, an archive is an archive, a mesh is more or

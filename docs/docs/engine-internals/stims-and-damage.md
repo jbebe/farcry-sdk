@@ -226,7 +226,7 @@ carried or healed by a comrade, and while the target is visible and close enough
 shoots (`RepelTarget`). Which weapon he shoots with there was not checked. In the range a comrade
 lifted a downed soldier onto his shoulders, carried him a moment and dropped him on the ground.
 
-What a downed soldier then soaks is on the [todo page](/farcry-sdk/todos).
+What a downed soldier then soaks is in [issue #25](https://github.com/jbebe/farcry-sdk/issues/25).
 
 ## Breakable props
 

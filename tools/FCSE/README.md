@@ -1,9 +1,8 @@
 # FCSE (Far Cry Script Extender)
 
-An SKSE-style DLL plugin loader for Far Cry 2 - see [`docs/docs/todos.md`](../../docs/docs/todos.md)'s
-`Tools/"dll plugins"` entry for the motivating problem: some engine behavior only lives in
-`Dunia.dll` itself, and until now the only way to change it was to ship your own patched copy of
-that DLL - which works for exactly one mod at a time, since two patched copies can't coexist.
+An SKSE-style DLL plugin loader for Far Cry 2. Some engine behavior only lives in `Dunia.dll`
+itself, and until now the only way to change it was to ship your own patched copy of that DLL -
+which works for exactly one mod at a time, since two patched copies can't coexist.
 
 This README is for people building/maintaining the loader itself. If you just want to write a
 plugin, see [`include/fcse_api.h`](include/fcse_api.h) (the full ABI, documented inline) and

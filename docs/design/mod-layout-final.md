@@ -145,7 +145,7 @@ Two consequences to handle deliberately:
 
 - **`OasisStringTable` lives in `JackAll.App`**, but splitters belong in `JackAll.Core` alongside the mod
   pipeline. Moving it down is a prerequisite for the `stringtable` recogniser, and it is also what
-  [Track 5](/todos/roadmap) needs for a localization editor. One move, two payoffs.
+  a localization editor needs. One move, two payoffs.
 - **Particle libraries and string tables each ship twice** — compiled (`.rml`) and plain-text
   (24 `<NewPartLib>` `.bin` totalling 164 MB, 10 `<stringtable>` `.bin` at 11.4 MB). **Target the
   `.rml`; the other form is dead.** Verified against both shipped DLLs rather than inferred:
