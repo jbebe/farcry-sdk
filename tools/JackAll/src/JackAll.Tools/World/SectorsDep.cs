@@ -11,6 +11,7 @@ public static class SectorsDep
 {
     public const string HasMainSectorData = "HasMainSectorData";
     public const string HasNavMesh = "HasNavMesh";
+    public const string HasLandmarkNear = "HasLandmarkNear";
 
     public static string PathOf(string world) => $@"worlds\{world}\generated\{world}.sectorsdep.fcb";
 

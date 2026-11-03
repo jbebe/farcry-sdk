@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
@@ -9,9 +10,9 @@ namespace JackAll.Tools.World;
 /// <summary>
 /// Turns a mod layer into the form a mod ships. Every new world the layer creates is built from its
 /// fragments into whole files - each sector's worldsector, the entity library cut from tmpla's full
-/// set, the sector flags and the navmesh - and everything else in the layer is copied as it is. A
-/// layer that only adds to another mod's world gets the navmesh of the sectors it changed, and keeps
-/// its fragments, which merge onto that mod's files at install.
+/// set, the sector flags, the navmesh and the vegetation its plan lays out - and everything else in
+/// the layer is copied as it is. A layer that only adds to another mod's world gets the navmesh of
+/// the sectors it changed, and keeps its fragments, which merge onto that mod's files at install.
 /// </summary>
 public static partial class WorldPack
 {
@@ -22,6 +23,9 @@ public static partial class WorldPack
 
     [GeneratedRegex(@"^levels\\(?<level>[^\\]+)\\generated\\worldsectors\\worldsector(?<id>\d+)\.data\.fcb$", RegexOptions.IgnoreCase)]
     private static partial Regex WorldSectorPattern();
+
+    [GeneratedRegex(@"^levels\\(?<level>[^\\]+)\\vegetation\.xml$", RegexOptions.IgnoreCase)]
+    private static partial Regex PlanPattern();
 
     /// <summary>
     /// Game path -&gt; bytes of <paramref name="mod"/> packed, read through <paramref name="vfs"/>, which
@@ -38,11 +42,18 @@ public static partial class WorldPack
         bool IsNew(string world) => NewWorld.IsNew(vfs, world);
 
         var created = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var planned = new List<string>();
         foreach (uint hash in mod.Hashes)
         {
             if (mod.PathOf(hash) is not { } path)
             {
                 progress?.Report($"Skipped {hash:X8}: staged by hash, so it has no path to copy it to");
+                continue;
+            }
+            // A vegetation plan is grown by BuildWorld, never shipped.
+            if (PlanPattern().Match(path) is { Success: true } plan)
+            {
+                planned.Add(plan.Groups["level"].Value);
                 continue;
             }
             packed[path] = mod.Read(hash);
@@ -62,6 +73,10 @@ public static partial class WorldPack
                 packed[path] = bytes;
                 built.Add(NameHash.Compute(path));
             }
+        }
+        foreach (string level in planned.Where(l => !created.Contains(l)))
+        {
+            progress?.Report($"{VegetationPlan.PathOf(level)} not grown: only a world this layer creates grows its plan");
         }
 
         var extended = new Dictionary<string, HashSet<int>>(StringComparer.OrdinalIgnoreCase);
@@ -91,7 +106,7 @@ public static partial class WorldPack
         {
             TerrainMap map = maps[world];
             progress?.Report($"{world}: navmesh for the {sectorIds.Count} sectors this layer changes");
-            (Dictionary<int, NvmSector> sectors, _) = NavMeshGenerator.BuildMap(map, world, vfs.ReadByPath, knownPaths, defs, progress);
+            (Dictionary<int, NvmSector> sectors, _) = NavMeshGenerator.BuildMap(map, world, vfs.ReadByPath, knownPaths, progress);
             foreach ((string sdat, int id) in map.Sectors.Where(s => sectorIds.Contains(s.SectorId)))
             {
                 packed[WorldNavMesh.PathOf(sdat, id)] = NvmSectorFile.Encode(sectors[id]);
@@ -101,7 +116,8 @@ public static partial class WorldPack
     }
 
     /// <summary>A new world's built files: every sector's worldsector, its entity library, its
-    /// sectorsdep with every sector flagged, and its navmesh.</summary>
+    /// sectorsdep with every sector flagged, its navmesh, and the landmarknear files of its
+    /// <see cref="VegetationPlan"/>.</summary>
     public static SortedDictionary<string, byte[]> BuildWorld(
         string world, TerrainMap map, Func<string, byte[]?> read, IEnumerable<string> knownPaths, FcbClassDefinitions defs,
         IProgress<string>? progress = null)
@@ -151,10 +167,23 @@ public static partial class WorldPack
         IReadOnlySet<int> ids = map.Sectors.Select(s => s.SectorId).ToHashSet();
         SectorsDep.Mark(sectorsDep, SectorsDep.HasMainSectorData, ids);
         SectorsDep.Mark(sectorsDep, SectorsDep.HasNavMesh, ids);
+        if (read(VegetationPlan.PathOf(world)) is { } plan)
+        {
+            Dictionary<int, byte[]> grown = VegetationPlan.Build(XElement.Load(new MemoryStream(plan)), map, read, knownPaths, progress);
+            foreach ((string sdat, int id) in map.Sectors)
+            {
+                if (grown.TryGetValue(id, out byte[]? near))
+                {
+                    files[WorldVegetation.NearPath(sdat, id)] = near;
+                }
+            }
+            SectorsDep.Mark(sectorsDep, SectorsDep.HasLandmarkNear, grown.Keys.ToHashSet());
+            progress?.Report($"{world}: vegetation grown in {grown.Count} sectors");
+        }
         files[depPath] = FcbDocument.Serialize(sectorsDep);
 
         (Dictionary<int, NvmSector> navMesh, int solids) = NavMeshGenerator.BuildMap(
-            map, world, path => files.TryGetValue(path, out byte[]? builtBytes) ? builtBytes : read(path), knownPaths, defs, progress);
+            map, world, path => files.TryGetValue(path, out byte[]? builtBytes) ? builtBytes : read(path), knownPaths, progress);
         foreach ((string sdat, int id) in map.Sectors)
         {
             files[WorldNavMesh.PathOf(sdat, id)] = NvmSectorFile.Encode(navMesh[id]);
