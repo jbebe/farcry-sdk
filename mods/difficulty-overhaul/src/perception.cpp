@@ -7,9 +7,12 @@
 #include "engine/shooting.h"
 #include "fcse_api.h"
 
+#include <windows.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <mutex>
 #include <unordered_map>
 
@@ -184,9 +187,11 @@ namespace {
     std::unordered_map<uint32_t, Seen> g_seen;
     std::mutex g_seenLock;
     constexpr double kForgetSeconds = 3.0;
-    // Every check of the player as a line, at most this often per soldier, for tracing the model.
-    constexpr bool kTrace = false;
-    constexpr double kTraceSeconds = 0.5;
+    // Every check of the player as a line, at most this often per soldier, when the game is launched
+    // with the switch; fc2drive's perception scenario reads it to see where the soldier looks.
+    constexpr char kTraceSwitch[] = "-perceptiontrace";
+    constexpr double kTraceSeconds = 0.25;
+    bool g_trace = false;
 
     // The class at depth six of an agent's hierarchy, 0 when it is shallower.
     uint32_t SixthClass(const void* agent) {
@@ -330,7 +335,7 @@ namespace {
             g_seen.clear();
         }
         Seen& seen = g_seen[id];
-        if (kTrace && now - seen.traced >= kTraceSeconds) {
+        if (g_trace && now - seen.traced >= kTraceSeconds) {
             seen.traced = now;
             CombatLogf("soldier %08X perception trace: %.1f m, %s, %s%s, %s; cover %.2f; visibility %.2f, "
                        "lines %.2f and %.2f; notices from %.0f m, recognises from %.0f m",
@@ -409,6 +414,7 @@ namespace {
 }
 
 void InstallPerception() {
+    g_trace = std::strstr(GetCommandLineA(), kTraceSwitch) != nullptr;
     if (!g_conesSet || !g_targetDistance || !g_timeOfDay || !g_currentVehicle || !g_distance ||
         !g_fov || !g_stance || !g_speed || !g_grass || !g_sampling ||
         !Hook(g_evaluate, &EvaluateDetour, &g_originalEvaluate) ||

@@ -38,3 +38,4 @@ target_include_directories(DifficultyOverhaul PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/FCSE/include"
 )
 target_compile_features(DifficultyOverhaul PRIVATE cxx_std_20)
+target_compile_definitions(DifficultyOverhaul PRIVATE NOMINMAX)

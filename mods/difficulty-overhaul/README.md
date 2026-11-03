@@ -58,6 +58,10 @@ python fight_report.py --at 19:30:43            the lines in the 10 s before tha
 python fight_report.py --soldier 3A802DED       every line about one soldier
 ```
 
+Launched with `-perceptiontrace`, the game also logs every soldier's check of the player four times a
+second: how far, where in his view, what hides the player, and the distances he notices and
+recognises from. fc2drive's perception scenario reads it to know where the soldier is looking.
+
 ## Planned
 
 - **A vest.** A torso hit from a rifle nearly kills the player, which is realistic; a vest is how
