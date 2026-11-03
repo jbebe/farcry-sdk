@@ -1,5 +1,5 @@
 // The hit log: every bullet, blast and blade that hits the player, and every one the player lands on
-// a soldier, written to the combat log with the health it took.
+// a soldier, written to the combat log with the health it took; and a soldier's death by anything else.
 #include "engine/combat_log.h"
 #include "engine/damage.h"
 #include "engine/game.h"
@@ -80,7 +80,12 @@ namespace {
     void __fastcall SoldierDamageDetour(void* counters, void* unused, const uint8_t* stim) {
         const char* type = LoggedType(stim);
         if (type == nullptr || !Damage::ByPlayer(stim)) {
+            const float before = Damage::Health(counters);
             g_originalSoldierDamage(counters, unused, stim);
+            if (before > 0.0f && Damage::Health(counters) <= 0.0f) {
+                CombatLogf("soldier %08X died, not by the player: stim type %d level %d",
+                           Game::Id(Game::EntityOf(counters)), Damage::Type(stim), Damage::Level(stim));
+            }
             return;
         }
 

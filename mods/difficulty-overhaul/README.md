@@ -45,6 +45,7 @@ player died: killed by 3A802DED at 58.6 m
 soldier 3A802DED hit: pierce level 8, torso, at 58.0 m, health 250 -> 146 (Hardcore, act 1, hit locations on)
 soldier 3A802DED suppressed: hit, he panics at 58.6 m
 soldier 7C000123 fire discipline: holds his fire at 30.2 m, visibility 0.12
+soldier 7C000123 died, not by the player: stim type 4 level 1000
 ```
 
 `fight_report.py` reads a session and reports it: totals by range, each death with who fired in the
