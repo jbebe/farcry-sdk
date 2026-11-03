@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from perception import CLEAR, SAVE, SETTLE, Log, facing, put, spawn, spawn_yaw
+from perception import CLEAR, SAVE, SETTLE, Log, direction, put, spawn, spawn_yaw
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fc2drive import Run, launch
@@ -49,7 +49,7 @@ def main():
     with launch(SAVE) as game:
         game.option("Invincibility", 1)
         game.fix_light(hour=12)
-        ahead = facing(game)
+        ahead = direction(game.state()["yaw"])
         run.note(f"the player faces ({ahead[0]:.2f}, {ahead[1]:.2f})")
 
         put(game, *FIELD)
