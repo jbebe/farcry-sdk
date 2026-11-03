@@ -26,6 +26,9 @@ namespace {
     using TimeOfDayFn = float(__fastcall*)(void* senses);
     using GetCurrentVehicleFn = void*(__cdecl*)(void* pawn);
     using HierarchyFn = const uint8_t*(__fastcall*)(const void* object);
+    // __thiscall with four stack arguments; `invert` reads the bonus negated.
+    using BonusFn = float(__fastcall*)(void* bonuses, void* unused, const uint32_t* category,
+                                       const uint32_t* name, float base, int invert);
 
     // CVisibilityEvaluator::Evaluate, the product of a soldier's checks of how visible a target is.
     FCSE::Relocation<EvaluateFn> g_evaluate{FCSE::Uplay(0x00A1D8A0)};
@@ -36,8 +39,8 @@ namespace {
         "F3 0F 11 41 0C")};
     // The ComputeVisibility of the checks the model stands in for: CDistanceEvaluator,
     // CFOVEvaluator, CStanceEvaluator and CSpeedEvaluator. Then CGrassEvaluator's, asked whether grass
-    // or the camo suit hides the player, and CPawnSamplingEvaluator's, a third for each of three
-    // points on his body a ray reaches.
+    // hides the player, and CPawnSamplingEvaluator's, a third for each of three points on his body a
+    // ray reaches.
     FCSE::Relocation<uint8_t*> g_distance{
         FCSE::Pattern("8B 44 24 04 83 EC 1C 56 8B F1 C6 00 01 8B 46 24 80 78 3E 00 57 0F 85")};
     FCSE::Relocation<uint8_t*> g_fov{FCSE::Uplay(0x00A21380)};
@@ -54,11 +57,13 @@ namespace {
     FCSE::Relocation<TargetDistanceFn> g_targetDistance{FCSE::Uplay(0x00614F50)};
     FCSE::Relocation<TimeOfDayFn> g_timeOfDay{FCSE::Uplay(0x00A01200)};
     FCSE::Relocation<GetCurrentVehicleFn> g_currentVehicle{FCSE::Uplay(0x000E7330)};
+    // A pawn's bonus of one name from its bonus plans, the camo suit's `stealth` among them, and the
+    // category the grass check asks it under.
+    FCSE::Relocation<BonusFn> g_bonus{FCSE::Uplay(0x0007E280)};
+    FCSE::Relocation<const uint32_t*> g_bonusCategory{FCSE::Uplay(0x00E2C55C)};
     // CGrassEvaluator::ComputeVisibility's concealment: its ramp with distance, whose full and start
     // distances are operands kFullOperand and kFromOperand bytes in, then its factor by the soldier's
-    // state, whose in-combat factor is kCombatOperand bytes in. Then its camouflage, whose distances
-    // past which the suit hides the player from an alerted and an idle soldier are operands
-    // kAlertedOperand and kIdleOperand bytes in.
+    // state, whose in-combat factor is kCombatOperand bytes in.
     FCSE::Relocation<uint8_t*> g_concealment{
         FCSE::Pattern("D9 05 ?? ?? ?? ?? 83 EC 08 D9 5C 24 04 8B CE D9 05 ?? ?? ?? ?? D9 1C 24 E8 ?? ?? "
                       "?? ?? 51 8B CF D9 1C 24 E8 ?? ?? ?? ?? D9 5C 24 0C 8B 47 24 80 78 3E 00 75 ?? 80 "
@@ -68,12 +73,8 @@ namespace {
     constexpr ptrdiff_t kFullOperand = 2;
     constexpr ptrdiff_t kFromOperand = 17;
     constexpr ptrdiff_t kCombatOperand = 109;
-    FCSE::Relocation<uint8_t*> g_camouflage{
-        FCSE::Pattern("80 7B 2B 00 74 ?? 8B 4F 24 80 79 3E 00 75 ?? 80 79 3F 00 75 ?? 80 79 3D 00 74 ?? "
-                      "E8 ?? ?? ?? ?? D9 05 ?? ?? ?? ?? D9 C9 DF F1 DD D8 77 ?? 8B 4F 24 80 79 3D 00 75 "
-                      "?? E8 ?? ?? ?? ?? D9 05")};
-    constexpr ptrdiff_t kAlertedOperand = 34;
-    constexpr ptrdiff_t kIdleOperand = 62;
+    // The hash of the camo suit's bonus.
+    constexpr uint32_t kStealthBonus = 0x4BE05598;
 
     // AdjustFOV's frame at the hook: whether the soldier aims through a sniper scope, whether the
     // target is a player, and the target agent. Its sensory system's owner, the share of the cones
@@ -130,7 +131,8 @@ namespace {
     // Hardcore: the most a soldier recognises and notices from at night.
     constexpr float kNightRecognise = 25.0f;
     constexpr float kNightNotice = 30.0f;
-    // Hardcore: inside this, the camo suit no longer hides a still player in high grass.
+    // Hardcore: from how far a soldier not fighting him notices and recognises a player in the camo
+    // suit, crouched and still in high grass.
     constexpr float kCamouflaged = 3.0f;
     // Hardcore: a player moving upright at least this fast is noticed behind a soldier within the
     // first distance and sensed in full within the second; crouched, he never is.
@@ -142,14 +144,13 @@ namespace {
     constexpr float kSamplingRays = 3.0f;
     // The cones' reach and span against the player: the game's cap on a cone against him, half a
     // turn, a full one. Then the grass check's concealment made a test of whether grass hides him at
-    // all, its in-combat factor as from an idle soldier, and the camo suit's reach.
+    // all, and its in-combat factor as from an idle soldier.
     constexpr float kMaxReach = 150.0f;
     constexpr float kHalfTurn = 180.0f;
     constexpr float kFullTurn = 360.0f;
     float g_grassFrom = 0.0f;
     float g_grassFull = 0.01f;
     float g_combatConcealment = 0.9f;
-    float g_camouflageFrom = kCamouflaged;
 
     // What AdjustFOV found on this thread for the check of the same soldier and target that follows
     // it: the player as the target, unless he sits in a vehicle, and the soldier; half the focus
@@ -170,7 +171,7 @@ namespace {
     enum Zone { kFocus, kSide, kBehind };
     const char* const kZoneNames[] = {"in his focus", "at his side", "behind him"};
 
-    // What the soldier's own checks of cover, grass and the camo suit found.
+    // What the soldier's own checks of cover and grass found, and whether the camo suit hides him.
     struct Hiding {
         float cover = 1.0f;
         bool grass = false;
@@ -178,15 +179,19 @@ namespace {
     };
 
     // The most each soldier, by entity id, has made of the player lately, 1 noticing and 2
-    // recognising, logged as it rises; once below it for a while, it is forgotten.
+    // recognising, logged as it rises; once below it for a while, it is forgotten. Then when his grass
+    // check last found the player in grass.
     struct Seen {
         int level = 0;
         double below = -1.0;
         double traced = -1.0;
+        double grass = -1.0;
     };
     std::unordered_map<uint32_t, Seen> g_seen;
     std::mutex g_seenLock;
     constexpr double kForgetSeconds = 3.0;
+    // Seconds a soldier's grass finding is held: his check sometimes misses the player for one look.
+    constexpr double kGrassHold = 0.5;
     // Every check of the player as a line, at most this often per soldier, when the game is launched
     // with the switch; fc2drive's perception scenario reads it to see where the soldier looks.
     constexpr char kTraceSwitch[] = "-perceptiontrace";
@@ -267,7 +272,6 @@ namespace {
                 return false;
             }
             if (compute == g_grass.address()) {
-                hiding.camouflaged = value == 0.0f;
                 hiding.grass = value < 1.0f;
                 continue;
             }
@@ -277,6 +281,12 @@ namespace {
             hiding.cover *= value == 0.0f ? 0.0f : 1.0f - (1.0f - value) * weight;
         }
         return true;
+    }
+
+    // Whether the player's pawn has the camo suit's stealth from its bonus plans.
+    bool WearsCamoSuit(void* pawn) {
+        return pawn != nullptr && g_bonus && g_bonusCategory &&
+               g_bonus(pawn, nullptr, g_bonusCategory.get(), &kStealthBonus, 0.0f, 0) > 0.0f;
     }
 
     Zone ZoneOf(const uint8_t* context, float focusHalf) {
@@ -323,13 +333,22 @@ namespace {
         return hiding.camouflaged ? ", hidden by the camo suit" : hiding.grass ? ", in grass" : "";
     }
 
-    void Report(const Look& look, float visibility, float distance, const char* moving, Zone zone,
-                const Hiding& hiding, const char* state, float notice, float recognise) {
+    // Whether grass hides the player from soldier `id`: as his check found now, or within kGrassHold.
+    bool HeldInGrass(uint32_t id, bool grass, double now) {
+        std::lock_guard<std::mutex> lock(g_seenLock);
+        Seen& seen = g_seen[id];
+        if (grass) {
+            seen.grass = now;
+        }
+        return now - seen.grass <= kGrassHold;
+    }
+
+    void Report(const Look& look, uint32_t id, double now, float visibility, float distance,
+                const char* moving, Zone zone, const Hiding& hiding, const char* state, float notice,
+                float recognise) {
         const int level = visibility >= Shooting::ClearLine(look.soldier)   ? 2
                           : visibility >= Shooting::FuzzyLine(look.soldier) ? 1
                                                                             : 0;
-        const double now = Game::Now();
-        const uint32_t id = Game::Id(Game::EntityOf(Shooting::Pawn(look.soldier)));
         std::lock_guard<std::mutex> lock(g_seenLock);
         if (g_seen.size() > 512) {
             g_seen.clear();
@@ -348,7 +367,8 @@ namespace {
         } else if (seen.below < 0.0) {
             seen.below = now;
         } else if (now - seen.below > kForgetSeconds) {
-            seen = {level, -1.0};
+            seen.level = level;
+            seen.below = -1.0;
         }
         if (level <= seen.level) {
             return;
@@ -382,8 +402,12 @@ namespace {
         const bool moving = std::hypot(velocity[0], velocity[1], velocity[2]) >= kMovingSpeed;
         const float distance = g_targetDistance(context);
         const Zone zone = ZoneOf(at, look.focusHalf);
-        const bool alert = Read<bool>(at, kContextAlerted) || Read<bool>(at, kContextFighting) ||
-                           Read<bool>(at, kContextAfterFight);
+        const bool fighting = Read<bool>(at, kContextFighting) || Read<bool>(at, kContextAfterFight);
+        const bool alert = Read<bool>(at, kContextAlerted) || fighting;
+        const double now = Game::Now();
+        const uint32_t id = Game::Id(Game::EntityOf(Shooting::Pawn(look.soldier)));
+        hiding.grass = !upright && HeldInGrass(id, hiding.grass, now);
+        hiding.camouflaged = hiding.grass && !moving && !fighting && WearsCamoSuit(pawn);
 
         float recognise = moving ? (upright ? kRecogniseUpright : kRecogniseCrouched) : kRecogniseStill;
         recognise *= (zone == kSide ? kAtSide : 1.0f) * (hiding.grass ? kInGrass : 1.0f) * hiding.cover;
@@ -406,7 +430,7 @@ namespace {
         } else if (distance <= kArmsLength) {
             visibility = 1.0f;
         }
-        Report(look, visibility, distance,
+        Report(look, id, now, visibility, distance,
                moving ? (upright ? "walking upright" : "moving crouched") : "still", zone, hiding,
                alert ? "alert" : "idle", notice, recognise);
         return visibility;
@@ -424,9 +448,10 @@ void InstallPerception() {
     }
     if (!RedirectOperand(g_concealment, kFromOperand, &g_grassFrom) ||
         !RedirectOperand(g_concealment, kFullOperand, &g_grassFull) ||
-        !RedirectOperand(g_concealment, kCombatOperand, &g_combatConcealment) ||
-        !RedirectOperand(g_camouflage, kAlertedOperand, &g_camouflageFrom) ||
-        !RedirectOperand(g_camouflage, kIdleOperand, &g_camouflageFrom)) {
-        FCSE::Logf("perception: grass and the camo suit were not found in this build");
+        !RedirectOperand(g_concealment, kCombatOperand, &g_combatConcealment)) {
+        FCSE::Logf("perception: grass was not found in this build");
+    }
+    if (!g_bonus || !g_bonusCategory) {
+        FCSE::Logf("perception: the camo suit's bonus was not found in this build, so it hides no one");
     }
 }
