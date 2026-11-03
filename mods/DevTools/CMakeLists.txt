@@ -49,6 +49,7 @@ add_library(DevTools SHARED
   "src/engine/benchmark.cpp"
   "src/engine/bin_folder.cpp"
   "src/engine/camera.cpp"
+  "src/engine/clock.cpp"
   "src/engine/console.cpp"
   "src/engine/debug_camera.cpp"
   "src/engine/entity.cpp"

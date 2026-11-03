@@ -181,7 +181,15 @@ The clock is `CTimer` in the server's symbols; on GOG the instance is at `0x1155
 - **Pausing stops game time, not the frame time.** Game time at `+0x30` advances only while the
   pause flag (`+0x48`) is clear. `+0x38` keeps updating while paused, but `GetFrameTime` returns 0.
 
-On the Linux server the same fields sit 4 bytes earlier.
+On the Linux server the same fields sit 4 bytes earlier. On Steam the clock is reached through the
+pointer at `0x11606360`, its tick is `0x1029B290`, and the delta, the frame time, game time and the
+scale are doubles.
+
+**A scale of 0 stops the world and keeps the frame.** Physics steps only while the frame time is
+above 0, so it stops, and AI, animation and game time stand still, while rendering and input go on.
+A free camera then needs the real delta at `+0x40` handed to its update; given it, it flies through
+the frozen world. DevTools' pause does this, and a player dropped from 6 m hung in the air while
+paused and fell once the scale was back (**seen in game on GOG, 2026-11-03**).
 
 ### Physics substeps
 

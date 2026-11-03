@@ -1,9 +1,10 @@
-// Flying: noclip, and the engine's own free camera.
+// Flying: noclip, the engine's own free camera, and the free camera with the game paused.
 //
 // See docs/docs/engine-internals/free-camera-and-noclip.md.
 #include "engine/debug_camera.h"
 
 #include "engine/camera.h"
+#include "engine/clock.h"
 #include "engine/entity.h"
 #include "engine/keys.h"
 #include "engine/pawn_tick.h"
@@ -17,7 +18,8 @@
 namespace {
     using Mode = DevTools::DebugCamera::Mode;
 
-    // Fixed bindings. Only the two mode keys are configurable.
+    // Fixed bindings. Only the noclip and freecam keys are configurable.
+    constexpr int kPause = 'P';
     constexpr int kForward = 'W';
     constexpr int kBack = 'S';
     constexpr int kStrafeLeft = 'A';
@@ -60,7 +62,7 @@ namespace {
     constexpr ptrdiff_t kPawnFallFrames = 0x4A0;
     constexpr size_t kFallUpdateTail = 0x303;
 
-    // The signals noclip refuses.
+    // The signals noclip and pause refuse.
     constexpr uint32_t kSignalPauseMenu = FCSE::Crc32("show_pausemenu");
     constexpr uint32_t kSignalQuickSave = FCSE::Crc32("quicksave");
     constexpr uint32_t kSignalQuickLoad = FCSE::Crc32("quickload");
@@ -87,7 +89,7 @@ namespace {
         bool latch;
     };
 
-    Binding g_bindings[3]{};
+    Binding g_bindings[4]{};
 
     // Noclip.
     void* g_noclipRef = nullptr;
@@ -295,12 +297,13 @@ namespace {
     void LeaveAll(void* manager) {
         LeaveNoclip();
         LeaveFreecam(manager);
+        DevTools::Clock::SetStopped(false);
         g_mode = Mode::None;
     }
 
     // Called from the free camera's own update, so input lands in the frame that reads it.
     void FeedCameraInput(void* camera) {
-        if (g_mode != Mode::Freecam || camera != g_freecam.camera) {
+        if (camera != g_freecam.camera) {
             return;
         }
 
@@ -345,7 +348,7 @@ namespace {
     // handled, nothing done.
     bool __fastcall GameSignalDetour(void* dispatcher, void* unused, const uint32_t* signal,
                                      void* context) {
-        if (g_mode == Mode::Noclip && signal != nullptr &&
+        if ((g_mode == Mode::Noclip || g_mode == Mode::Pause) && signal != nullptr &&
             (*signal == kSignalPauseMenu || *signal == kSignalQuickSave ||
              *signal == kSignalQuickLoad)) {
             return true;
@@ -386,7 +389,7 @@ namespace {
 
         const bool entered = mode == Mode::Noclip ? EnterNoclip(manager) : EnterFreecam(manager);
         if (!entered) {
-            if (mode == Mode::Freecam) {
+            if (mode != Mode::Noclip) {
                 FCSE::ApiPointer()->Log("freecam: the camera manager would not activate "
                                         "Cameras.Camera.Free - this data set does not carry the "
                                         "free camera archetype");
@@ -395,6 +398,9 @@ namespace {
         }
 
         g_mode = mode;
+        if (mode == Mode::Pause) {
+            DevTools::Clock::SetStopped(true);
+        }
 
         // A step chosen in freecam can sit past noclip's lower ceiling.
         if (mode == Mode::Noclip && g_speedStep > kNoclipTopStep) {
@@ -405,7 +411,7 @@ namespace {
     void OnTick(const DevTools::PawnTick::Frame& frame) {
         void* manager = DevTools::Player::CameraManager(frame.local);
 
-        if (g_mode == Mode::Freecam) {
+        if (g_mode == Mode::Freecam || g_mode == Mode::Pause) {
             // Mouse look for the free camera, off the listener's accumulators.
             if (frame.listener != 0) {
                 g_freecam.mouseLookX = *reinterpret_cast<float*>(frame.listener + kListenerLookX);
@@ -414,14 +420,12 @@ namespace {
 
             // A level load or a cutscene taking the camera ends the mode where it stands.
             if (!CameraStillOurs(manager)) {
-                ForgetFreecam(manager);
-                g_mode = Mode::None;
+                LeaveAll(manager);
             }
         } else if (g_mode == Mode::Noclip) {
             // The entity going away is a level load. Drop the reference rather than follow it.
             if (DevTools::Entity::Of(g_noclipRef) == nullptr) {
-                LeaveNoclip();
-                g_mode = Mode::None;
+                LeaveAll(manager);
             } else {
                 ApplyNoclip(frame, manager);
             }
@@ -463,11 +467,17 @@ void Install() {
     Camera::OnUpdate(&FeedCameraInput);
     PawnTick::Subscribe(&OnTick);
 
+    if (Clock::Found()) {
+        Bind(Mode::Pause, kPause);
+    } else {
+        api->Log("pause: the game clock was not found in this build - P does nothing");
+    }
+
     if (!g_gameSignal || !api->Hook(reinterpret_cast<void*>(g_gameSignal.address()),
                                     reinterpret_cast<void*>(&GameSignalDetour),
                                     reinterpret_cast<void**>(&g_originalGameSignal))) {
         api->Log("debug camera: the signal dispatcher was not hooked - the pause menu and quicksave "
-                 "stay reachable while noclip is up");
+                 "stay reachable while noclip or pause is up");
     }
 
     if (g_fallUpdate) {

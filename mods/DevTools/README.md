@@ -127,9 +127,10 @@ Each part finds its own site and is left as shipped if it cannot; the log says w
 
 ## Camera modes
 
-Two ways to fly, bound from the Mod Configuration Menu and off until you bind them. Only one can be
-up at a time, and picking a key the other mode already holds leaves the one you just set unbound —
-one key toggling between both would leave no way back to the game. The log says when that happens.
+Two ways to fly, bound from the Mod Configuration Menu and off until you bind them, and a pause on
+`P`. Only one can be up at a time, and picking a key the other mode already holds leaves the one you
+just set unbound — one key toggling between both would leave no way back to the game. The log says
+when that happens.
 
 **Noclip** detaches the player: physics off, so no collision and no gravity, and the body flown
 directly. The view stays on the head, so it is still the player's camera and the HUD is still up,
@@ -153,6 +154,11 @@ log says as much.
 
 Noclip's speed tops out lower than the free camera's, because the world still has to stream in
 around a body that is really there.
+
+**Pause** is `P`, always, with no binding to set. It stops the game clock, so physics, AI,
+animation and game time stand still, and puts up the free camera with the keys above, flying through
+the frozen world. `P` again puts the view back on the player and the clock back to its pace. The
+pause menu, quicksave and quickload are refused while it is up, as with noclip.
 
 ## These and the `cheat_*` commands
 

@@ -1,9 +1,10 @@
-// Flying: noclip, and the engine's own free camera.
+// Flying: noclip, the engine's own free camera, and the free camera with the game paused.
 //
-// Two modes rather than two features, because they are mutually exclusive and share a speed ladder,
-// so the exclusion has to live somewhere neither option owns. What is here is the mechanism - the
-// engine's camera manager, its free camera prototype, the character controller's physics - and what
-// the options own is the policy: whether a mode is allowed, and on which key.
+// Modes rather than features, because they are mutually exclusive and share a speed ladder, so the
+// exclusion has to live somewhere no option owns. What is here is the mechanism - the engine's camera
+// manager, its free camera prototype, the character controller's physics, the game clock - and what
+// the options own is the policy: whether noclip and freecam are allowed, and on which key. Pause is
+// always on P.
 //
 // Noclip detaches the player: physics off, the body flown directly, the view still on the head.
 // Freecam leaves the player standing and switches the manager to a free camera prototype the shipped
@@ -12,7 +13,8 @@
 
 namespace DevTools::DebugCamera {
 
-enum class Mode { None, Noclip, Freecam };
+// Pause is the free camera with the game clock stopped, on P.
+enum class Mode { None, Noclip, Freecam, Pause };
 
 void Install();
 

@@ -1,6 +1,7 @@
 // The camera manager, and the free camera prototype it can be asked for.
 #include "engine/camera.h"
 
+#include "engine/clock.h"
 #include "engine/entity.h"
 #include "engine/player.h"
 #include "fcse_api.h"
@@ -52,7 +53,10 @@ namespace {
         if (g_onUpdate != nullptr) {
             g_onUpdate(static_cast<uint8_t*>(self) - 4);
         }
-        g_originalFreeCameraUpdate(self, unused, delta, flags);
+        // Real time while the clock is stopped, so the free camera still flies.
+        g_originalFreeCameraUpdate(self, unused,
+                                   DevTools::Clock::Stopped() ? DevTools::Clock::RealDelta() : delta,
+                                   flags);
     }
 }
 
