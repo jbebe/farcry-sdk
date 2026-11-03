@@ -5,14 +5,11 @@ the player, case by case, read off the combat log's perception lines.
 
 Each case spawns a fresh rifleman, places the player in the open, behind the low wall or in the grass
 field, facing him, and walks him toward the soldier, holds him still at a distance, or sidesteps him to
-and fro there. A case is about one place in the soldier's view, in his focus, at his side or behind
-him, and counts only while the soldier keeps the player there: the plugin's trace says where he looks,
-and a case he looks away from is tried again. The table at the end puts what the log shows beside what
-the model expects.
-
-The walk-in cases have the soldier come to the player instead, along one of the range's patrol routes,
-looking mostly ahead: each sighting counts in the zone it happened in, and a look from within the
-model's distance that saw nothing counts against it.
+and fro there. The walk-in cases have the soldier come to the player instead, along one of the range's
+patrol routes. A case is about one place in the soldier's view, in his focus, at his side or behind
+him: the plugin's trace says where he looks, a sighting counts in the zone it happened in, a look of
+his there from within the model's distance that saw nothing counts against it, and a case left
+unjudged is tried again. The table at the end puts what the log shows beside what the model expects.
 """
 
 import argparse
@@ -53,7 +50,7 @@ DEATH = re.compile(r"soldier \S+ died, not by the player")
 TRACE_SWITCH = "-perceptiontrace"
 # The bonus plan that is the camo suit.
 CAMO_SUIT = "stealth_camouflage"
-# Seconds a crouched player waits before the soldier spawns, past the second still in grass he needs to count as hidden.
+# Seconds a crouched player waits before the soldier spawns, for the crouch and the grass to settle.
 CROUCH = 3.0
 # Seconds: a soldier's settling after he spawns, a held player's wait, a sidestep's each way, and an
 # approach's longest.
@@ -65,13 +62,13 @@ APPROACH_LIMIT = 40.0
 # it has been.
 CLOSEST = 4.0
 WRONG_WAY = 3.0
-# Tries at a case before it is given up as one he never kept his eyes on; the trace samples a never
-# needs, a second of looking; and how far in metres a distance may be off the model's and match.
+# Tries at a case before it is given up as one he never kept his eyes on; the looks in its zone a
+# never needs, a second of looking; and how far in metres a distance may be off the model's and match.
 ATTEMPTS = 3
 LOOKS = 4
 TOLERANCE = 1.5
-# Seconds from his last look to the end of a try within which he still counts as looking.
-LAST_LOOK = 1.0
+# How near an approach's looks have to come for a never to count.
+APPROACHED = 10.0
 
 # The lane is open ground through (256, 110), south of the hub, run along LANE_YAW from LANE_BACK
 # behind its middle, so the farthest soldier stays on the range. The low wall's barriers lie across
@@ -112,6 +109,7 @@ CASES = [
     ("grass-crouched-moving-27", 12, "grass", 27, True, "sidestep", 30, 25),
     ("grass-upright-still-30", 12, "grass", 30, False, "hold", 48, 40),
     ("camo-still-10", 12, "camo", 10, True, "hold", 3, 3),
+    ("camo-still-4", 12, "camo", 4, True, "hold", 3, 3),
     ("camo-still-2.5", 12, "camo", 2.5, True, "hold", 3, 3),
 ]
 WARM_UP = ("warm-up", 12, "toward", 30, False, "hold", 48, 40)
@@ -168,44 +166,44 @@ class Log:
         return data.decode("utf-8", "replace").splitlines()
 
 
-# A noticing or recognising: how far, where in his view, and whether he had kept the player in the
-# case's zone until then.
-Sighting = namedtuple("Sighting", "distance zone kept")
+# A noticing or recognising: how far, where in his view as logged and as the bare zone, and how many
+# of his looks came before it.
+Sighting = namedtuple("Sighting", "distance zone where before")
 
 
 class Watch:
-    """What one try at a case saw, and whether and how near he looked at the player in its zone."""
+    """What one try at a case saw of the soldier's looks, sightings and death."""
 
     def __init__(self, zone):
         self.zone = zone
-        self.looks = 0
-        self.looked = 0.0
-        self.away = False
-        self.closest = math.inf
+        self.looks = []
         self.seen = {}
-        self.ended = 0.0
+        self.on_way = True
+        self.dead = False
 
     def read(self, lines):
         for line in lines:
             if trace := TRACE.search(line):
-                if trace.group(2) == self.zone:
-                    self.looks += 1
-                    self.looked = time.monotonic()
-                    self.closest = min(self.closest, float(trace.group(1)))
-                else:
-                    self.away = True
+                self.looks.append((float(trace.group(1)), trace.group(2)))
             elif match := PERCEPTION.search(line):
                 # Recognised at once, he noticed him there too.
-                sighting = Sighting(float(match.group(2)), match.group(3), not self.away and match.group(4) == self.zone)
+                sighting = Sighting(float(match.group(2)), match.group(3), match.group(4), len(self.looks))
                 self.seen.setdefault("notices", sighting)
                 if match.group(1) == "recognises":
                     self.seen.setdefault("recognises", sighting)
+            elif DEATH.search(line):
+                self.dead = True
 
-    def judged(self, level):
-        if level in self.seen:
-            return self.seen[level].kept
-        # A soldier who dies stops looking, so a never needs him looking to the end.
-        return not self.away and self.looks >= LOOKS and self.ended - self.looked <= LAST_LOOK
+    def distances(self):
+        return [distance for distance, _ in self.looks]
+
+    def in_zone(self, looks):
+        return [distance for distance, zone in looks if zone == self.zone]
+
+    def before_any_sighting(self):
+        """His looks before he first made anything of the player, while the case was as set up."""
+        first = min((sighting.before for sighting in self.seen.values()), default=len(self.looks))
+        return self.looks[:first]
 
 
 def direction(yaw):
@@ -253,7 +251,7 @@ def on_range(x, y):
 
 
 def run_case(game, log, case):
-    """One try at a case, given up as soon as he looks away from where it is about."""
+    """One try at a case."""
     _, hour, where, distance, crouched, mode, *_ = case
     game.lua(CLEAR + f"CDynamicEnvironmentManager_GetInstance():SetScriptedTimeOfDay({hour}, 0) " +
              (f'Game:AddBonusPlan("{CAMO_SUIT}")' if where == "camo" else ""))
@@ -266,13 +264,13 @@ def run_case(game, log, case):
     watch = Watch(ZONES.get(where, FOCUS))
     spawn(game, soldier, yaw)
     start = time.monotonic()
-    while time.monotonic() < start + SETTLE and not watch.away:
+    while time.monotonic() < start + SETTLE:
         watch.read(log.new_lines())
         time.sleep(0.2)
     if mode in ("hold", "sidestep"):
         start = time.monotonic()
         way = None
-        while time.monotonic() < start + HOLD and not watch.away:
+        while time.monotonic() < start + HOLD:
             # A sidestep is sent once a swing, right then left.
             turn = int((time.monotonic() - start) / SWING) % 2
             if mode == "sidestep" and turn != way:
@@ -284,7 +282,7 @@ def run_case(game, log, case):
         game.action("move", 1.0, 0.0)
         deadline = time.monotonic() + APPROACH_LIMIT
         nearest = math.inf
-        while time.monotonic() < deadline and "recognises" not in watch.seen and not watch.away:
+        while time.monotonic() < deadline and "recognises" not in watch.seen:
             watch.read(log.new_lines())
             x, y, _ = game.state()["pos"]
             gap = math.hypot(soldier[0] - x, soldier[1] - y)
@@ -295,7 +293,6 @@ def run_case(game, log, case):
     game.action("move", 0.0, 0.0)
     time.sleep(0.5)
     watch.read(log.new_lines())
-    watch.ended = time.monotonic()
     if crouched:
         game.action("crouch", 1.0)
     if where == "camo":
@@ -304,21 +301,15 @@ def run_case(game, log, case):
 
 
 def models(case):
-    """Each level of a case, with what the model expects of it."""
-    return (("notices", case[6]), ("recognises", case[7]))
+    """Each level of a case, what the model expects of it, and how near his looks need to come."""
+    distance, mode = case[3], case[5]
 
+    def close(model):
+        if mode != "approach":
+            return distance + TOLERANCE
+        return APPROACHED if model is None else None
 
-def verdict(watch, level, model, distance):
-    """Whether what he did matches the model, with a never only if he never looked from within it."""
-    if model == TURNS:
-        return "left to his turn"
-    if not watch.judged(level):
-        return "unjudged, he looked away"
-    if level in watch.seen:
-        matches = model is not None and abs(watch.seen[level].distance - min(model, distance)) <= TOLERANCE
-    else:
-        matches = model is None or watch.closest > model - TOLERANCE
-    return "matches" if matches else "differs"
+    return [(level, model, close(model)) for level, model in (("notices", case[6]), ("recognises", case[7]))]
 
 
 def shown(watch, level, model):
@@ -328,50 +319,10 @@ def shown(watch, level, model):
     return f"{logged:<36} model {expected:<6}"
 
 
-# A walk-in's noticing or recognising: how far, where in his view as logged and as the bare zone, and
-# his looks before it.
-WalkSighting = namedtuple("WalkSighting", "distance zone where before")
-
-
-class WalkWatch:
-    """What one walk-in saw: his looks at the player, each how far and in which zone; the first
-    noticing and recognising; whether he set off along his route; and whether he died."""
-
-    def __init__(self, zone):
-        self.zone = zone
-        self.looks = []
-        self.seen = {}
-        self.on_way = False
-        self.dead = False
-
-    def read(self, lines):
-        for line in lines:
-            if trace := TRACE.search(line):
-                self.looks.append((float(trace.group(1)), trace.group(2)))
-            elif match := PERCEPTION.search(line):
-                sighting = WalkSighting(float(match.group(2)), match.group(3), match.group(4), list(self.looks))
-                self.seen.setdefault("notices", sighting)
-                if match.group(1) == "recognises":
-                    self.seen.setdefault("recognises", sighting)
-            elif DEATH.search(line):
-                self.dead = True
-
-    def distances(self):
-        return [distance for distance, _ in self.looks]
-
-    def in_zone(self, looks):
-        return [distance for distance, zone in looks if zone == self.zone]
-
-    def before_any_sighting(self):
-        """His looks before he first made anything of the player, while he still walked his route."""
-        first = min((len(sighting.before) for sighting in self.seen.values()), default=len(self.looks))
-        return self.looks[:first]
-
-
-def walk_verdict(watch, level, model, close):
-    """A sighting in the case's zone matches where the model puts it, unless an earlier look of his
-    in the zone from within the model's distance saw nothing; a never needs him to have looked from
-    within `close`."""
+def verdict(watch, level, model, close):
+    """Whether a level matches the model, judged by his looks and sightings in the case's zone."""
+    if model == TURNS:
+        return "left to his turn"
     if watch.dead:
         return "unjudged, he died"
     if not watch.on_way and not watch.seen:
@@ -381,16 +332,16 @@ def walk_verdict(watch, level, model, close):
         distance = sighting.distance
         if model is None:
             return "differs"
-        missed = [d for d in watch.in_zone(sighting.before) if distance + 0.3 < d <= model - TOLERANCE]
+        missed = [d for d in watch.in_zone(watch.looks[:sighting.before]) if distance + 0.3 < d <= model - TOLERANCE]
         if missed:
             return f"differs, missed him at {max(missed):.1f} m"
         return "matches" if distance <= model + TOLERANCE else "differs"
     looks = watch.in_zone(watch.before_any_sighting())
-    if model is None:
-        return "matches" if looks and min(looks) <= close else "unjudged, he never came close"
-    if looks and min(looks) <= model - TOLERANCE:
+    if model is not None and looks and min(looks) <= model - TOLERANCE:
         return f"differs, missed him at {min(looks):.1f} m"
-    return "unjudged, not in the zone within reach"
+    if close is not None and sum(d <= close for d in looks) >= LOOKS:
+        return "matches"
+    return "unjudged, he never came close" if model is None else "unjudged, not in the zone within reach"
 
 
 def spawn_alive(game, log, at, yaw):
@@ -418,7 +369,7 @@ def run_walk(game, log, case):
     if crouched:
         game.action("crouch", 1.0)
         time.sleep(CROUCH)
-    watch = WalkWatch(zone)
+    watch = Watch(zone)
     watch.read(spawn_alive(game, log, (sx, sy), spawn_yaw(dx, dy)))
     start = time.monotonic()
     on_way = None
@@ -454,20 +405,26 @@ def run_walk(game, log, case):
     return watch
 
 
-def run_walk_case(game, run, log, case):
-    """Up to ATTEMPTS walk-ins until both levels are judged; the row of the one that judged most."""
+def walk_models(case):
+    """Each level of a walk-in with what the model expects of it, and how near a never needs him."""
     _, *_, notices, recognises, close = case
-    models = (("notices", notices), ("recognises", recognises))
+    return [("notices", notices, close), ("recognises", recognises, close)]
+
+
+def judge(game, run, log, case, run_one, levels):
+    """Up to ATTEMPTS tries at a case until every level is judged; the row of the one that judged most."""
+    def judged(watch):
+        return sum(not verdict(watch, level, model, close).startswith("unjudged") for level, model, close in levels)
+
     tries = []
     while len(tries) < ATTEMPTS:
-        tries.append(run_walk(game, log, case))
-        if not any(walk_verdict(tries[-1], level, model, close).startswith("unjudged") for level, model in models):
+        tries.append(run_one(game, log, case))
+        if judged(tries[-1]) == len(levels):
             break
-    watch = max(tries, key=lambda tried: sum(not walk_verdict(tried, level, model, close).startswith("unjudged")
-                                             for level, model in models))
+    watch = max(tries, key=judged)
     row = f"{case[0]:<26} try {tries.index(watch) + 1} of {len(tries)}"
-    for level, model in models:
-        row += f" | {level} {shown(watch, level, model)} {walk_verdict(watch, level, model, close)}"
+    for level, model, close in levels:
+        row += f" | {level} {shown(watch, level, model)} {verdict(watch, level, model, close)}"
     print(row)
     run.note(row)
 
@@ -486,23 +443,11 @@ def main():
         # The first soldier spawned after the load saw nothing; a held case first wakes the AI.
         run_case(game, log, WARM_UP)
         for case in CASES:
-            if only is not None and case[0] not in only:
-                continue
-            levels = [level for level, model in models(case) if model != TURNS]
-            tries = []
-            while len(tries) < ATTEMPTS:
-                tries.append(run_case(game, log, case))
-                if all(tries[-1].judged(level) for level in levels):
-                    break
-            watch = max(tries, key=lambda tried: sum(tried.judged(level) for level in levels))
-            row = f"{case[0]:<24} try {tries.index(watch) + 1} of {len(tries)}"
-            for level, model in models(case):
-                row += f" | {level} {shown(watch, level, model)} {verdict(watch, level, model, case[3])}"
-            print(row)
-            run.note(row)
+            if only is None or case[0] in only:
+                judge(game, run, log, case, run_case, models(case))
         for case in WALK_CASES:
             if only is None or case[0] in only:
-                run_walk_case(game, run, log, case)
+                judge(game, run, log, case, run_walk, walk_models(case))
         game.lua(CLEAR)
     print(run.folder)
 
