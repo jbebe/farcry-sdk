@@ -1,7 +1,7 @@
 # Builds layer\ from the installed game: the merc brain's changes as fragments, which JackAll merges
 # into the player's own brain. Soldiers carrying an RPG or a Carl Gustav fire it at the player only in
 # a vehicle and draw their other gun at the player on foot, and an alerted soldier stands down after
-# 2 minutes.
+# 90 seconds.
 param(
     [string]$Game = 'C:\Games\Far Cry 2',
     [string]$Cli = "$PSScriptRoot\..\..\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
@@ -176,12 +176,12 @@ Add-Instance $plan "$plan/SetFireSpecial" (IfCarriesLauncher "$plan/IfCarriesLau
 
 $alert = '::MercBrain/MercBrain/MercBrainAlert'
 
-# 2 minutes into an alert that nothing new has restarted, a soldier falls back to where he was
+# 90 seconds into an alert that nothing new has restarted, a soldier falls back to where he was
 # alerted and out of the alert, as the game has him do only once the player enters a safe zone.
 Add-Instance $alert "$alert/CheckFallback1" @"
 <Task Name="$alert/StandDownTimer" Class="CTaskWait" Looping="0" Independent="1">
   <Parameter Name="waitTimeFact" Value="" />
-  <Parameter Name="timeToWait" Value="120" />
+  <Parameter Name="timeToWait" Value="90" />
   <Parameter Name="randomStartDelay" Value="0" />
   <Anchor Name="OnStart" />
   <Anchor Name="OnStop" />
