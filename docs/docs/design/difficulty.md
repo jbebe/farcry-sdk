@@ -54,6 +54,7 @@ turns the two into the visibility the game compares with the soldier's own fuzzy
 | Shade by day | ×0.5 (phase 3) |
 | Camo suit, still, in grass | 3 m |
 | Cover | hidden only where it hides his head; head and shoulders over a wall count as in the open |
+| Tall grass on a crest between them | hidden as by a rock, unless his head clears the grass (2026-11-03) |
 | Night | at most 25 m, whatever he does |
 | Lit by a lamp at night | ×1.25 (phase 3) |
 | Heavy fog | at most 40 m (phase 2) |
@@ -78,7 +79,12 @@ Built in phase 1, checked on the range by fc2drive (row 24), not yet played: the
 the camo suit, cover, night, the alert factor, the reaction time, fire discipline at the recognition
 line, and a `perception:` line for each first notice and recognition. The plugin reads the camo suit
 itself: the game's own camouflage reads the suit's bonus inverted and never hides anyone. A sniper aiming through his scope sees as much farther as the game's scope
-makes him, a choice of the build's, not the user's. Phase 2: fog, talking guards, drivers and gunners,
+makes him, a choice of the build's, not the user's. Tall grass on a crest between them (2026-11-03,
+after the user was shot through grass over curved ground): the soldier's line to the player's head,
+lowered by the grass's 1.2 m and never below the ground under either of them, is cast; where it meets
+the ground more than 2 m from the player and the game's high-grass test finds grass there, the player
+is hidden. On the flat range it changed none of the checked cases; a crest has not been seen in game.
+Phase 2: fog, talking guards, drivers and gunners,
 the flashlight and headlights. Phase 3: shade and lamps.
 
 ## Built

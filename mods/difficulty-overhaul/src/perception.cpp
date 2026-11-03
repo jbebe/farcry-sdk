@@ -29,6 +29,23 @@ namespace {
     // __thiscall with four stack arguments; `invert` reads the bonus negated.
     using BonusFn = float(__fastcall*)(void* bonuses, void* unused, const uint32_t* category,
                                        const uint32_t* name, float base, int invert);
+    // The hits a ray hands back, each a position first, how many, and whether the storage is its own;
+    // and CPhysQueryFilter: its vtable, the layers it lets hit, and a system group to skip.
+    struct Hits {
+        const float* data;
+        uint32_t size;
+        uint32_t capacity;
+    };
+    struct Filter {
+        void* vtable;
+        uint32_t layers;
+        uint32_t group;
+    };
+    using CastRayFn = void(__fastcall*)(void* world, void* unused, const float* from, const float* along,
+                                        Hits* hits, const Filter* filter, void* ignored, uint32_t flags);
+    using FilterFn = Filter*(__fastcall*)(Filter* filter, void* unused, uint32_t layers, uint32_t group);
+    using FreeFn = void(__cdecl*)(const void* memory);
+    using InHighGrassFn = bool(__fastcall*)(void* unused, void* unused2, const float* point);
 
     // CVisibilityEvaluator::Evaluate, the product of a soldier's checks of how visible a target is.
     FCSE::Relocation<EvaluateFn> g_evaluate{FCSE::Uplay(0x00A1D8A0)};
@@ -61,6 +78,13 @@ namespace {
     // category the grass check asks it under.
     FCSE::Relocation<BonusFn> g_bonus{FCSE::Uplay(0x0007E280)};
     FCSE::Relocation<const uint32_t*> g_bonusCategory{FCSE::Uplay(0x00E2C55C)};
+    // The physics world and CPhysWorld::RayCheck, answered at once on the game thread; the filter's
+    // constructor; the engine's free; and CStealthComponent::InHighGrass, which ignores its object.
+    FCSE::Relocation<void* const*> g_physicsWorld{FCSE::Uplay(0x01613D60)};
+    FCSE::Relocation<CastRayFn> g_castRay{FCSE::Uplay(0x0048DD30)};
+    FCSE::Relocation<FilterFn> g_makeFilter{FCSE::Uplay(0x0048EC40)};
+    FCSE::Relocation<FreeFn> g_free{FCSE::Uplay(0x00228AD0)};
+    FCSE::Relocation<InHighGrassFn> g_inHighGrass{FCSE::Uplay(0x006991D0)};
     // CGrassEvaluator::ComputeVisibility's concealment: its ramp with distance, whose full and start
     // distances are operands kFullOperand and kFromOperand bytes in, then its factor by the soldier's
     // state, whose in-combat factor is kCombatOperand bytes in.
@@ -75,6 +99,14 @@ namespace {
     constexpr ptrdiff_t kCombatOperand = 109;
     // The hash of the camo suit's bonus.
     constexpr uint32_t kStealthBonus = 0x4BE05598;
+    // The layers the sight check's rays meet, the ground and solid things but no bodies; the closest
+    // hit only, and nothing cast outside the world; a hit list's flag for storage it does not own.
+    constexpr uint32_t kSightLayers = 0x33;
+    constexpr uint32_t kClosest = 1 | 4;
+    constexpr uint32_t kBorrowed = 1;
+    // The lowered lines' collision filter, built at install, and whether this build has what they need.
+    Filter g_groundFilter = {};
+    bool g_grassBetween = false;
 
     // AdjustFOV's frame at the hook: whether the soldier aims through a sniper scope, whether the
     // target is a player, and the target agent. Its sensory system's owner, the share of the cones
@@ -142,6 +174,11 @@ namespace {
     // One ray of the three that reaches the player, his head over a wall, shows him as plainly as
     // all three.
     constexpr float kSamplingRays = 3.0f;
+    // The top of the tall grass, how far above the ground under either of them the lowered line
+    // stays, and how near the player grass is the grass he is in.
+    constexpr float kGrassTop = 1.2f;
+    constexpr float kAboveGround = 0.1f;
+    constexpr float kOwnGrass = 2.0f;
     // The cones' reach and span against the player: the game's cap on a cone against him, half a
     // turn, a full one. Then the grass check's concealment made a test of whether grass hides him at
     // all, and its in-combat factor as from an idle soldier.
@@ -171,10 +208,12 @@ namespace {
     enum Zone { kFocus, kSide, kBehind };
     const char* const kZoneNames[] = {"in his focus", "at his side", "behind him"};
 
-    // What the soldier's own checks of cover and grass found, and whether the camo suit hides him.
+    // What the soldier's own checks of cover and grass found, whether grass between them hides the
+    // player, and whether the camo suit does.
     struct Hiding {
         float cover = 1.0f;
         bool grass = false;
+        bool behindGrass = false;
         bool camouflaged = false;
     };
 
@@ -330,7 +369,10 @@ namespace {
     }
 
     const char* HidingName(const Hiding& hiding) {
-        return hiding.camouflaged ? ", hidden by the camo suit" : hiding.grass ? ", in grass" : "";
+        return hiding.camouflaged    ? ", hidden by the camo suit"
+               : hiding.behindGrass ? ", behind grass"
+               : hiding.grass       ? ", in grass"
+                                    : "";
     }
 
     // Whether grass hides the player from soldier `id`: as his check found now, or within kGrassHold.
@@ -341,6 +383,38 @@ namespace {
             seen.grass = now;
         }
         return now - seen.grass <= kGrassHold;
+    }
+
+    // Whether tall grass between the soldier and the player hides the player: the soldier's line from
+    // his eye to the player's head, lowered by the grass's height but never below the ground under
+    // either of them, and stopped kOwnGrass short of the player, meets the ground where grass stands.
+    bool BehindGrass(const uint8_t* context, const void* soldier, const void* player) {
+        void* world = *g_physicsWorld.get();
+        if (world == nullptr) {
+            return false;
+        }
+        const float* eye = Vec3(context, kContextEye);
+        const float* head = Vec3(context, kContextTargetPosition);
+        float soldierFeet[3];
+        float playerFeet[3];
+        Game::Position(soldier, soldierFeet);
+        Game::Position(player, playerFeet);
+        const float from[3] = {eye[0], eye[1], std::max(eye[2] - kGrassTop, soldierFeet[2] + kAboveGround)};
+        const float to[3] = {head[0], head[1], std::max(head[2] - kGrassTop, playerFeet[2] + kAboveGround)};
+        const float across = std::hypot(to[0] - from[0], to[1] - from[1]);
+        if (across <= kOwnGrass) {
+            return false;
+        }
+        const float share = 1.0f - kOwnGrass / across;
+        const float along[3] = {(to[0] - from[0]) * share, (to[1] - from[1]) * share,
+                                (to[2] - from[2]) * share};
+        Hits hits = {};
+        g_castRay(world, nullptr, from, along, &hits, &g_groundFilter, nullptr, kClosest);
+        const bool grass = hits.size > 0 && g_inHighGrass(nullptr, nullptr, hits.data);
+        if (hits.data != nullptr && (hits.capacity & kBorrowed) == 0) {
+            g_free(hits.data);
+        }
+        return grass;
     }
 
     void Report(const Look& look, uint32_t id, double now, float visibility, float distance,
@@ -405,7 +479,8 @@ namespace {
         const bool fighting = Read<bool>(at, kContextFighting) || Read<bool>(at, kContextAfterFight);
         const bool alert = Read<bool>(at, kContextAlerted) || fighting;
         const double now = Game::Now();
-        const uint32_t id = Game::Id(Game::EntityOf(Shooting::Pawn(look.soldier)));
+        void* soldier = Game::EntityOf(Shooting::Pawn(look.soldier));
+        const uint32_t id = Game::Id(soldier);
         hiding.grass = !upright && HeldInGrass(id, hiding.grass, now);
         hiding.camouflaged = hiding.grass && !moving && !fighting && WearsCamoSuit(pawn);
 
@@ -425,10 +500,14 @@ namespace {
         }
 
         float visibility = Visibility(distance, recognise, notice, look.soldier);
+        hiding.behindGrass = g_grassBetween && visibility > 0.0f && zone != kBehind &&
+                             distance > kArmsLength && BehindGrass(at, soldier, Game::EntityOf(pawn));
         if (zone == kBehind) {
             visibility = look.close ? 1.0f : look.heard ? Shooting::FuzzyLine(look.soldier) : 0.0f;
         } else if (distance <= kArmsLength) {
             visibility = 1.0f;
+        } else if (hiding.behindGrass) {
+            visibility = 0.0f;
         }
         Report(look, id, now, visibility, distance,
                moving ? (upright ? "walking upright" : "moving crouched") : "still", zone, hiding,
@@ -453,5 +532,11 @@ void InstallPerception() {
     }
     if (!g_bonus || !g_bonusCategory) {
         FCSE::Logf("perception: the camo suit's bonus was not found in this build, so it hides no one");
+    }
+    g_grassBetween = g_physicsWorld && g_castRay && g_makeFilter && g_free && g_inHighGrass;
+    if (g_grassBetween) {
+        g_makeFilter(&g_groundFilter, nullptr, kSightLayers, 0);
+    } else {
+        FCSE::Logf("perception: the soldiers' rays were not found in this build, so grass between hides no one");
     }
 }

@@ -349,7 +349,17 @@ product **(RE-verified on GOG and the server)**:
   casts three rays at points on his body and counts a third for each that gets through, scaled by
   the transparency of anything it passes. Walls count here; `COcclusionEvaluator` reads only AI
   occlusion volumes. In the range a player standing behind a 1.3 m barrier, or crouched behind a
-  1.4 m wall, had half the visibility he had in the open.
+  1.4 m wall, had half the visibility he had in the open. The rays run from the observer's limb 2,
+  1.74 m up on a standing player, to the target's limb 1 or 2 at random and limbs 4 and 7, the last two moved up to 0.075 m
+  aside. They take the collision layers `0x33`, the ground and solid things but no bodies, and are
+  asked of the physics world (`this` at Steam `0x11613D60`), which answers them in the next frame:
+  ask `0x1048DD40`, answer by the returned id `0x1048DD50`, each hit `0x30` bytes with its position
+  first and its distance at `+0x1C`. `CPhysWorld::RayCheck` (Steam `0x1048DD30`, `RET 0x18`) answers
+  at once. Grass stops none of them, since no grass or bush mesh has the physics bit
+  ([`flags`](./terrain-and-vegetation.md#the-mesh-a-tuft-names)): a soldier sees through tall grass
+  that hides him from the player (**RE-verified**; the queue's answers seen in game, 2026-11-03). A
+  CPawn's limb positions come from the limbs at `+0x04` of its data block (Steam `0x1010D780`,
+  `RET 8`).
 
 ### Grass and stealth
 
@@ -362,9 +372,9 @@ High grass is the vegetation the world places, not the ground. Each sample tests
 around the player, his front, left and right, and he is in high grass when two of them are. A point
 is in it when a placed tuft stands within 1.5 m of it, unburnt, of a mesh whose
 [`playerCoverage`](./terrain-and-vegetation.md#the-mesh-a-tuft-names) is at least 1
-(`CStealthComponent::InHighGrass`, server `0x0883E250`; **RE-verified**). Only five shipped meshes
-have that, the tall savannah grasses and sorghum, so the multiplayer grass looks the same and hides
-no one. On the test range a crouched player in `1_grasssavannah_b` reads `in grass` on the
+(`CStealthComponent::InHighGrass`, server `0x0883E250`, Steam `0x106991D0` with `RET 4` and its
+object unread; **RE-verified**). Only five shipped meshes have that, the tall savannah grasses and
+sorghum, so the multiplayer grass looks the same and hides no one. They stand 1.2 m, `_bold` 1.4 m. On the test range a crouched player in `1_grasssavannah_b` reads `in grass` on the
 Difficulty Overhaul's perception line and in `1_grasssavannah_b_mp` does not (fc2drive, 2026-11-03).
 
 - **Concealment** is `1 − ramp(d, 3 m, 10 m) × k`. *k* is 0.9 for an idle observer, 0.765 for one
