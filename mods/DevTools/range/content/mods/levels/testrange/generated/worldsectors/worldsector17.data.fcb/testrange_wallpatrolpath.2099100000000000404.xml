@@ -1,0 +1,131 @@
+<object type="Entity">
+  <value name="hidName" type="String">TestRange_WallPatrolPath</value>
+  <value name="disEntityId" type="Int64">2099100000000000404</value>
+  <value name="text_hidEntityClass" type="String">CBasicShapeEntity</value>
+  <value name="hidEntityClass" type="Hash">706002E6</value>
+  <value name="hidResourceCount" type="UInt32">0</value>
+  <value name="hidPos" type="Vector3">
+    <x>100</x>
+    <y>150</y>
+    <z>16.0625</z>
+  </value>
+  <value name="hidAngles" type="Vector3">
+    <x>0</x>
+    <y>0</y>
+    <z>0</z>
+  </value>
+  <value name="hidPos_precise" type="Vector3">
+    <x>100</x>
+    <y>150</y>
+    <z>16.0625</z>
+  </value>
+  <value name="hidConstEntity" type="Bool">False</value>
+  <value name="hidShapePoints" type="Vector3Array">
+    <item>
+      <x>100</x>
+      <y>150</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>145</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>140</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>135</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>130</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>125</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>120</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>115</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>110</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>105</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>100</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>95</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>90</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>85</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>80</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>75</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>70</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>65</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>60</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>100</x>
+      <y>55</y>
+      <z>16.0625</z>
+    </item>
+  </value>
+  <object type="Components">
+    <object type="CEventComponent">
+      <value name="hidHasAliasName" type="Bool">False</value>
+      <object type="hidLinks" />
+    </object>
+  </object>
+</object>

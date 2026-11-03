@@ -1,0 +1,151 @@
+<object type="Entity">
+  <value name="hidName" type="String">TestRange_GrassPatrolPath</value>
+  <value name="disEntityId" type="Int64">2099100000000000402</value>
+  <value name="text_hidEntityClass" type="String">CBasicShapeEntity</value>
+  <value name="hidEntityClass" type="Hash">706002E6</value>
+  <value name="hidResourceCount" type="UInt32">0</value>
+  <value name="hidPos" type="Vector3">
+    <x>318</x>
+    <y>352</y>
+    <z>16.0625</z>
+  </value>
+  <value name="hidAngles" type="Vector3">
+    <x>0</x>
+    <y>0</y>
+    <z>0</z>
+  </value>
+  <value name="hidPos_precise" type="Vector3">
+    <x>318</x>
+    <y>352</y>
+    <z>16.0625</z>
+  </value>
+  <value name="hidConstEntity" type="Bool">False</value>
+  <value name="hidShapePoints" type="Vector3Array">
+    <item>
+      <x>318</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>313</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>308</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>303</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>298</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>293</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>288</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>283</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>278</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>273</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>268</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>263</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>258</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>253</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>248</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>243</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>238</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>233</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>228</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>223</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>218</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>213</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>208</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+    <item>
+      <x>203</x>
+      <y>352</y>
+      <z>16.0625</z>
+    </item>
+  </value>
+  <object type="Components">
+    <object type="CEventComponent">
+      <value name="hidHasAliasName" type="Bool">False</value>
+      <object type="hidLinks" />
+    </object>
+  </object>
+</object>

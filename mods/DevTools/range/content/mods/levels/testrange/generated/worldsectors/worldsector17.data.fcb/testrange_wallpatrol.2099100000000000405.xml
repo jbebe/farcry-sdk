@@ -1,0 +1,32 @@
+<object type="Entity">
+  <value name="tplCreatureType" type="String">STP_archetypes.Duty.Patrol</value>
+  <value name="hidName" type="String">TestRange_WallPatrol</value>
+  <value name="disEntityId" type="Int64">2099100000000000405</value>
+  <value name="hidPos" type="Vector3">
+    <x>100</x>
+    <y>150</y>
+    <z>16.0625</z>
+  </value>
+  <value name="hidPos_precise" type="Vector3">
+    <x>100</x>
+    <y>150</y>
+    <z>16.0625</z>
+  </value>
+  <object type="Components">
+    <object type="CFCXAIComponent">
+      <object type="AIObject">
+        <object type="CSmartTerrain">
+          <object type="Action">
+            <object type="Patrol">
+              <value name="entPathName" type="Int64">2099100000000000404</value>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>
+    <object type="CEventComponent">
+      <value name="hidHasAliasName" type="Bool">False</value>
+      <object type="hidLinks" />
+    </object>
+  </object>
+</object>
