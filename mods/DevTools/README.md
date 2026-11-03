@@ -318,11 +318,12 @@ way any new world is ([Make a new world](../../docs/jackall/world/new-worlds.md)
   it, at x 128 to 192, is a grove of small acacias about 14 m apart with ziziphus bushes between
   them. The navmesh is cut around the acacias' trunks; not yet seen in game.
 
-  South of the hub a patrol route runs along y 110 from x 140 to 340: an AI path, a
-  `CBasicShapeEntity` of points 5 m apart, and an `STP_archetypes.Duty.Patrol` point at its west end
-  that names it. A soldier spawned at the point walks the path east, facing mostly along it, but only
-  after about 50 s of the idle wandering a soldier with nothing to do starts with (fc2drive,
-  2026-11-03).
+  Three patrol routes, each an AI path, a `CBasicShapeEntity` of points 5 m apart, and an
+  `STP_archetypes.Duty.Patrol` point at its start that names it: south of the hub along y 110 from
+  x 140 east to 340; through the grass field along y 352 from x 318 west to 203; and along x 100 from
+  y 150 south to 55, up to the low wall. A soldier spawned at a point walks its path, facing mostly
+  along it, but only after about 50 s of the idle wandering a soldier with nothing to do starts with
+  (fc2drive, 2026-11-03).
 - `range\build-layer.ps1` makes the world's files from the installed game's `tmpla` with
   `jackall-cli world new`, then packs them with the content into `layer\` with `jackall-cli world pack`.
   The layer is game files and is not committed.
