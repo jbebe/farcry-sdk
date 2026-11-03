@@ -79,7 +79,8 @@ Notable changes to DevTools, loosely following
 - **Test range** and its **Range** tab: `testrange`, a flat world with an arena per kind of fight,
   built from `range\`, and a button per scenario that clears the last one, takes you to its arena
   and spawns its soldiers on their posts. North of the hub is a field of the tall savannah grass that
-  hides a crouched player, with a **Grass field** arena: riflemen at 20 m and 50 m.
+  hides a crouched player, with a **Grass field** arena: riflemen at 20 m and 50 m. West of it is a
+  grove of small acacias and bushes.
 - **Command API**, which the overlay is written against. One call runs a
   console line or a Lua chunk on the game thread, from anywhere, with developer-only commands
   reachable regardless of the option above; a catalog of 277 commands describes what to offer and

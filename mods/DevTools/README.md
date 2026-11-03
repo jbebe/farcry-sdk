@@ -314,7 +314,9 @@ way any new world is ([Make a new world](../../docs/jackall/world/new-worlds.md)
 
   It also holds `vegetation.xml`, the [vegetation plan](../../docs/jackall/world/new-worlds.md#vegetation)
   for the grass field north of the hub: x 192 to 320 and y 320 to 384, world 1's tall savannah
-  grass `1_grasssavannah_b`, one of the few meshes that hide a crouched player from soldiers.
+  grass `1_grasssavannah_b`, one of the few meshes that hide a crouched player from soldiers. West of
+  it, at x 128 to 192, is a grove of small acacias about 14 m apart with ziziphus bushes between
+  them. The navmesh is cut around the acacias' trunks; not yet seen in game.
 - `range\build-layer.ps1` makes the world's files from the installed game's `tmpla` with
   `jackall-cli world new`, then packs them with the content into `layer\` with `jackall-cli world pack`.
   The layer is game files and is not committed.
