@@ -74,9 +74,10 @@ A shot, the player's flashlight or a vehicle's headlights at night alert those w
 at once: they know where it came from and go to clear the spot, but they do not see the player
 ("they don't have nightvision"); recognising him still follows the table.
 
-Built in phase 1, not yet seen: the base, view, grass, the camo suit, cover, night, the alert factor,
-the reaction time, fire discipline at the recognition line, and a `perception:` line for each first
-notice and recognition. A sniper aiming through his scope sees as much farther as the game's scope
+Built in phase 1, checked on the range by fc2drive (row 24), not yet played: the base, view, grass,
+the camo suit, cover, night, the alert factor, the reaction time, fire discipline at the recognition
+line, and a `perception:` line for each first notice and recognition. The camo suit does nothing
+until the game's inverted read of its bonus is fixed. A sniper aiming through his scope sees as much farther as the game's scope
 makes him, a choice of the build's, not the user's. Phase 2: fog, talking guards, drivers and gunners,
 the flashlight and headlights. Phase 3: shade and lamps.
 
@@ -137,8 +138,7 @@ range in the log drifts from the scenario's distance.
 | 21 | Healing | Rifleman at 20 m, invincibility off: take hits down to the last bar, heal, heal again, then hide and wait | at 1,025 maximum the surgery leaves 410 health (40 %) and a syrette 666 (65 %), `healed:` lines; a second syrette is refused; nothing comes back below 666, and from there health reaches full in 6 minutes, starting 5 s after the last hit (3 s on Casual, 10 s on Experienced, never on Infamous) | new: the user's three states ("surgery makes you survive one more shot, syrette makes you survive 2 shots, full regen makes you survive the 4 shots"); the game's surgery gave two bars, a syrette full health, and the bar health was in refilled within a second | not run |
 | 22 | Reaction | Rifleman at 50 m, idle: stand in the open in front of him until he spots you, then stay | `reaction: spotted the player at 50 m, holds his fire 2.2 s`, no shot for 2.2 s, then his first `shot at player:` says about `2.2 s on him` | new 2026-10-29: an idle soldier at 58.6 m opened fire the moment he noticed the user standing in a bush and killed him 1.2 s later ("my last death was bullshit"); the user's pick of a hold on first contact only, not on every peek ("I want them spraying when I peek") | not run |
 | 23 | Stand-down | Rifleman at 40 m, idle: fire a shot into the air out of his sight, then hide where he cannot find you | he searches, then 2 minutes after the alert last started over walks back to where he stood and goes back to idle | new 2026-11-02: after a shot into the air a squad searched for minutes and never went back to its posts; in the game only an idle soldier's look at something glimpsed, or the player in a safe zone, ends an alert ([how an alert ends](../engine-internals/ai.md#how-an-alert-ends)); the user's pick of 2 minutes, in the brain | not run |
-
-| 24 | Perception | `python tools\fc2drive\scenarios\perception.py`: 13 cases on the duel lane and at the low wall, by day and at night, in front of him, at his side and behind | each case's first `perception:` distances within a few metres of the model's | new 2026-11-03, [the model](#perception); supersedes rows 10, 16, 22 and item N | not run |
+| 24 | Perception | `python tools\fc2drive\scenarios\perception.py`: 20 cases on the duel lane, at the low wall and in the grass field, by day and at night, in front of him, at his side and behind, the camo suit given by its bonus plan | each case's first `perception:` distances within a few metres of the model's | new 2026-11-03, [the model](#perception); supersedes rows 10, 16, 22 and item N | fc2drive, 2026-11-03, not played: every distance matches the model for where the player was in his view at the time; an idle soldier turns his head and wanders, so an approach can end with his back turned. In grass, crouched and still: recognised at 15 m, only noticed at 22 m, nothing at 30 m; moving crouched: recognised at 25.0 m; standing, the grass counts for nothing. The camo suit hides no one, in the game as shipped too: it reads the suit's bonus inverted ([grass and stealth](../engine-internals/ai.md#grass-and-stealth)) |
 
 ### Still to do before it is finished
 

@@ -202,6 +202,8 @@ with observed behavior).
 - **Camo/detection tuning** (`gamemodesconfig.xml` + `player.xml`):
   `<Plan name="stealth_camouflage"><bonus attr="stealth" value="1"/></Plan>` controls the camo suit's
   bonus (base game default is `value="10"`, not `1`), seemingly a 0/1 toggle rather than a gradient.
+  The game reads that bonus inverted, so the shipped value never hides anyone
+  ([grass and stealth](../engine-internals/ai.md#grass-and-stealth)).
   Detection-duration values (`player.xml`) are counterintuitive: raising them makes mercs *slower* to
   confirm a detection (harder to detect you), not more alert. Full field list (guru3D, credit
   "Freelancer"): `PlayerAwarenessResetDelay`, `LongRangeDetectionDurationLevel1/2`,

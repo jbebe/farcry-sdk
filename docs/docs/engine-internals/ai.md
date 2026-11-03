@@ -372,7 +372,12 @@ Difficulty Overhaul's perception line and in `1_grasssavannah_b_mp` does not (fc
   which grass sample counts, front, left or right. An observer looking down at more than 30° is not
   fooled.
 - **Camouflage**: with a `stealth` bonus and the hidden flag, outside combat, the player is
-  invisible beyond 2 m to an idle observer and beyond 4 m to an alerted one.
+  invisible beyond 2 m to an idle observer and beyond 4 m to an alerted one. It never applies in
+  the game as shipped: the evaluator reads the bonus inverted, -1 for the camo suit's
+  `stealth_camouflage` plan, and asks for more than 0. Read as it is, a crouched, still player in
+  the test range's grass went unseen (Difficulty Overhaul diagnostic, 2026-11-03; **RE-verified and
+  in game**). Lua's `Game:AddBonusPlan("stealth_camouflage")` gives the suit; the console's
+  `add_bonus_plan` puts its argument into that call unquoted and gives nothing.
 
 This is **RE-verified** (`CGrassEvaluator`, GOG `0x10A10DD0`).
 
