@@ -65,6 +65,8 @@ WRONG_WAY = 3.0
 ATTEMPTS = 3
 LOOKS = 4
 TOLERANCE = 1.5
+# Seconds from his last look to the end of a try within which he still counts as looking.
+LAST_LOOK = 1.0
 
 # The lane is open ground through (256, 110), south of the hub, run along LANE_YAW from LANE_BACK
 # behind its middle, so the farthest soldier stays on the range. The low wall's barriers lie across
@@ -141,15 +143,18 @@ class Watch:
     def __init__(self, zone):
         self.zone = zone
         self.looks = 0
+        self.looked = 0.0
         self.away = False
         self.closest = math.inf
         self.seen = {}
+        self.ended = 0.0
 
     def read(self, lines):
         for line in lines:
             if trace := TRACE.search(line):
                 if trace.group(2) == self.zone:
                     self.looks += 1
+                    self.looked = time.monotonic()
                     self.closest = min(self.closest, float(trace.group(1)))
                 else:
                     self.away = True
@@ -163,7 +168,8 @@ class Watch:
     def judged(self, level):
         if level in self.seen:
             return self.seen[level].kept
-        return not self.away and self.looks >= LOOKS
+        # A soldier who dies stops looking, so a never needs him looking to the end.
+        return not self.away and self.looks >= LOOKS and self.ended - self.looked <= LAST_LOOK
 
 
 def direction(yaw):
@@ -253,6 +259,7 @@ def run_case(game, log, case):
     game.action("move", 0.0, 0.0)
     time.sleep(0.5)
     watch.read(log.new_lines())
+    watch.ended = time.monotonic()
     if crouched:
         game.action("crouch", 1.0)
     if where == "camo":
