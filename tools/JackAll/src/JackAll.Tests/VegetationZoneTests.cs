@@ -13,13 +13,17 @@ public class VegetationZoneTests
     // A campaign sector whose editor put 259 tufts in its cluster 33, past the count byte.
     public const string Overfilled = "WorldSector/landmarknear2836.data.fcb";
 
+    // A campaign far file: five RealTrees, an acacia among them, each cluster saved without a sphere.
+    public const string Trees = "WorldSector/landmarkfar_3663.data.fcb";
+
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(Savanna, Overfilled, WorldSectorFragmentTests.Landmark4427);
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(Savanna, Overfilled, Trees, WorldSectorFragmentTests.Landmark4427);
 
     /// <summary>Every list comes back byte for byte: of 12,203 shipped zones, all but the 6 the editor overfilled.</summary>
     [Theory]
     [InlineData(Savanna)]
+    [InlineData(Trees)]
     [InlineData(WorldSectorFragmentTests.Landmark4427)]
     public void A_shipped_zone_writes_back_byte_for_byte(string fixture)
     {

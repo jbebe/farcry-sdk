@@ -116,7 +116,7 @@ public static partial class WorldPack
     }
 
     /// <summary>A new world's built files: every sector's worldsector, its entity library, its
-    /// sectorsdep with every sector flagged, its navmesh, and the landmarknear files of its
+    /// sectorsdep with every sector flagged, its navmesh, and the landmark files of its
     /// <see cref="VegetationPlan"/>.</summary>
     public static SortedDictionary<string, byte[]> BuildWorld(
         string world, TerrainMap map, Func<string, byte[]?> read, IEnumerable<string> knownPaths, FcbClassDefinitions defs,
@@ -169,16 +169,22 @@ public static partial class WorldPack
         SectorsDep.Mark(sectorsDep, SectorsDep.HasNavMesh, ids);
         if (read(VegetationPlan.PathOf(world)) is { } plan)
         {
-            Dictionary<int, byte[]> grown = VegetationPlan.Build(XElement.Load(new MemoryStream(plan)), map, read, knownPaths, progress);
+            Dictionary<(int Sector, bool Far), byte[]> grown = VegetationPlan.Build(XElement.Load(new MemoryStream(plan)), map, read, knownPaths, progress);
             foreach ((string sdat, int id) in map.Sectors)
             {
-                if (grown.TryGetValue(id, out byte[]? near))
+                if (grown.TryGetValue((id, false), out byte[]? near))
                 {
                     files[WorldVegetation.NearPath(sdat, id)] = near;
                 }
+                if (grown.TryGetValue((id, true), out byte[]? far))
+                {
+                    files[WorldVegetation.FarPath(sdat, id)] = far;
+                }
             }
-            SectorsDep.Mark(sectorsDep, SectorsDep.HasLandmarkNear, grown.Keys.ToHashSet());
-            progress?.Report($"{world}: vegetation grown in {grown.Count} sectors");
+            ILookup<bool, int> byFile = grown.Keys.ToLookup(k => k.Far, k => k.Sector);
+            SectorsDep.Mark(sectorsDep, SectorsDep.HasLandmarkNear, byFile[false].ToHashSet());
+            SectorsDep.Mark(sectorsDep, SectorsDep.HasLandmarkFar, byFile[true].ToHashSet());
+            progress?.Report($"{world}: vegetation grown into {grown.Count} landmark files");
         }
         files[depPath] = FcbDocument.Serialize(sectorsDep);
 

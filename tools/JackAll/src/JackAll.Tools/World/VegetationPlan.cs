@@ -10,14 +10,18 @@ using JackAll.Tools.Xbg;
 namespace JackAll.Tools.World;
 
 /// <summary>
-/// A new world's vegetation as its author lays it out, grown into each sector's
-/// <c>landmarknear</c> file when the world is packed. A patch spreads one mesh over rectangles at an
-/// even spacing, every tuft turned at random and given the colour, height and sky of a random tuft
-/// of the same mesh in a shipped level, its donor:
+/// A new world's vegetation as its author lays it out, grown into each sector's landmark files when
+/// the world is packed: meshes into its near file, RealTrees into its far one, as shipped levels keep
+/// them. A patch spreads one mesh or tree over rectangles at an even spacing and at single spots,
+/// every copy turned at random and dressed as a random copy of the same one in a shipped level, its
+/// donor:
 /// <code>
 /// &lt;Vegetation&gt;
 ///   &lt;Patch Mesh="graphics\vegetation\savannah\1_grasssavannah_b.xbg" Donor="w1_b_2" Spacing="1.6" Seed="1"&gt;
 ///     &lt;Area X="192" Y="320" Width="128" Height="64" /&gt;
+///   &lt;/Patch&gt;
+///   &lt;Patch Mesh="graphics\vegetation\savannah\realtrees\rt_tree_acacia.rtx" Donor="w1_b_2"&gt;
+///     &lt;At X="150" Y="350" /&gt;
 ///   &lt;/Patch&gt;
 /// &lt;/Vegetation&gt;
 /// </code>
@@ -36,42 +40,51 @@ public static class VegetationPlan
     /// <summary>Above every retail id and the Map tab's own; a sector's entity adds its sector id.</summary>
     private const ulong SectorEntityIdFloor = 0x4100_0000_0000_0000;
 
+    /// <summary>What a far file's sector entity adds besides, so it never shares the near one's id.</summary>
+    private const ulong FarEntityIdOffset = 0x1_0000;
+
+    /// <summary>The collection manager's <c>classId</c> of a RealTree; a mesh's is 1.</summary>
+    private const int RealTreeClass = 2;
+
     private static readonly uint CSectorEntity = Hash("CSectorEntity");
-    private static readonly uint LandmarkNear = Hash("LandmarkNear");
     private static readonly uint Resource = Hash("Resource");
+    private static readonly uint ClassId = Hash("classId");
     private static readonly uint FileNameId = Hash("fileNameId");
     private static readonly uint PlayerCoverage = Hash("playerCoverage");
 
     public static string PathOf(string level) => $@"levels\{level}\vegetation.xml";
 
-    /// <summary>The <c>landmarknear</c> file of every sector the plan grows something in, by sector id.</summary>
-    public static Dictionary<int, byte[]> Build(
+    /// <summary>The landmark file of every sector the plan grows something in, by sector id and whether it is the far one.</summary>
+    public static Dictionary<(int Sector, bool Far), byte[]> Build(
         XElement plan, TerrainMap map, Func<string, byte[]?> read, IEnumerable<string> knownPaths,
         IProgress<string>? progress = null)
     {
         string[] paths = [.. knownPaths];
-        Dictionary<uint, float> coverage = Coverage(map.Name, read);
+        Dictionary<uint, (bool Tree, float Covers)> listed = Listed(map.Name, read);
         var ground = new Ground(map, read);
-        var looks = new Dictionary<string, ILookup<uint, (uint Colour, uint Sky)>>(StringComparer.OrdinalIgnoreCase);
+        var looks = new Dictionary<string, ILookup<uint, (uint Colour, uint Normal, uint Sky)>>(StringComparer.OrdinalIgnoreCase);
         var boxes = new Dictionary<uint, (Vector3 Min, Vector3 Max)>();
-        var grown = new List<(int Sector, uint Resource, VegetationTuft Tuft)>();
+        var grown = new List<(int Sector, uint Resource, bool Tree, VegetationTuft Tuft)>();
         foreach (XElement patch in plan.Elements("Patch"))
         {
             string mesh = NameHash.Normalize(Required(patch, "Mesh"));
             uint resource = NameHash.Compute(mesh);
-            if (!coverage.TryGetValue(resource, out float covers))
+            if (!listed.TryGetValue(resource, out (bool Tree, float Covers) entry))
             {
                 throw new InvalidOperationException($"{map.Name}'s collection manager has no {mesh}, so the game would not draw it.");
             }
-            if (covers < HighGrass)
+            if (!entry.Tree && entry.Covers < HighGrass)
             {
-                progress?.Report($"{mesh} hides no one from the AI: its playerCoverage is {covers}");
+                progress?.Report($"{mesh} hides no one from the AI: its playerCoverage is {entry.Covers}");
             }
-            float[] box = XbgFile.Parse(read(mesh) ?? throw new InvalidOperationException($"{mesh} is not in the game.")).Box;
-            boxes[resource] = (new Vector3(box[0], box[1], box[2]), new Vector3(box[3], box[4], box[5]));
+            if (!boxes.ContainsKey(resource))
+            {
+                byte[] bytes = read(mesh) ?? throw new InvalidOperationException($"{mesh} is not in the game.");
+                boxes[resource] = entry.Tree ? XbgModel.Bounds(WorldModels.Triangulate(mesh, bytes).Submeshes) : Box(XbgFile.Parse(bytes).Box);
+            }
 
             string donor = Required(patch, "Donor");
-            (uint Colour, uint Sky)[] dressed =
+            (uint Colour, uint Normal, uint Sky)[] dressed =
                 [.. (looks.TryGetValue(donor, out var lookup) ? lookup : looks[donor] = Looks(donor, read, paths))[resource]];
             if (dressed.Length == 0)
             {
@@ -80,6 +93,21 @@ public static class VegetationPlan
 
             float spacing = Number(patch, "Spacing", DefaultSpacing);
             var random = new Random((int)Number(patch, "Seed", 0));
+
+            // A tree keeps its donor's words whole: the ground's colour stands where a mesh keeps its normal.
+            void Plant(Vector2 at)
+            {
+                int sector = ground.SectorAt(at)
+                    ?? throw new InvalidOperationException($"A {mesh} reaches past {map.Name} at ({at.X}, {at.Y}).");
+                (float height, Vector3 normal) = ground.At(sector, at);
+                (uint colour, uint underneath, uint sky) = dressed[random.Next(dressed.Length)];
+                float turn = random.NextSingle() * MathF.Tau;
+                (uint orientation, uint second) = entry.Tree
+                    ? (VegetationTuft.PackTreeTurn(turn), underneath)
+                    : (VegetationTuft.PackTurn(turn), VegetationTuft.PackNormal(normal));
+                grown.Add((sector, resource, entry.Tree, new VegetationTuft(new Vector3(at, height), orientation, colour, second, sky)));
+            }
+
             foreach (XElement area in patch.Elements("Area"))
             {
                 float x0 = Number(area, "X"), y0 = Number(area, "Y");
@@ -92,47 +120,51 @@ public static class VegetationPlan
                         var at = new Vector2(
                             VegetationTuft.OnDecimetre(x + random.NextSingle() * spacing),
                             VegetationTuft.OnDecimetre(y + random.NextSingle() * spacing));
-                        if (at.X >= x1 || at.Y >= y1)
+                        if (at.X < x1 && at.Y < y1)
                         {
-                            continue;
+                            Plant(at);
                         }
-                        int sector = ground.SectorAt(at)
-                            ?? throw new InvalidOperationException($"A {mesh} area reaches past {map.Name} at ({at.X}, {at.Y}).");
-                        (float height, Vector3 normal) = ground.At(sector, at);
-                        (uint colour, uint sky) = dressed[random.Next(dressed.Length)];
-                        grown.Add((sector, resource, new VegetationTuft(new Vector3(at, height),
-                            VegetationTuft.PackTurn(random.NextSingle() * MathF.Tau), colour, VegetationTuft.PackNormal(normal), sky)));
                     }
                 }
             }
+            foreach (XElement spot in patch.Elements("At"))
+            {
+                Plant(new Vector2(VegetationTuft.OnDecimetre(Number(spot, "X")), VegetationTuft.OnDecimetre(Number(spot, "Y"))));
+            }
         }
 
-        return grown.GroupBy(t => t.Sector).ToDictionary(sector => sector.Key, sector =>
+        // Trees go to the far file, so a file's trees flag is its far flag too.
+        return grown.GroupBy(t => (t.Sector, Far: t.Tree)).ToDictionary(file => file.Key, file =>
         {
-            VegetationResource[] resources = [.. sector
+            bool trees = file.Key.Far;
+            VegetationResource[] resources = [.. file
                 .GroupBy(t => t.Resource, t => t.Tuft)
-                .Select(r => new VegetationResource(r.Key, Clusters(r, boxes[r.Key])))];
-            (Vector3 min, Vector3 max) = XbgModel.Bounds(sector.SelectMany(t => Corners(t.Tuft, boxes[t.Resource])));
-            return FcbDocument.Serialize(Landmark(sector.Key, map.SectorsPerSide, new VegetationZone(0, resources), min, max));
+                .Select(r => new VegetationResource(r.Key, Clusters(r, trees ? null : boxes[r.Key])))];
+            (Vector3 min, Vector3 max) = XbgModel.Bounds(file.SelectMany(t => Corners(t.Tuft, trees ? t.Tuft.TreeTurn : t.Tuft.Turn, boxes[t.Resource])));
+            return FcbDocument.Serialize(Landmark(file.Key.Sector, map.SectorsPerSide, trees, new VegetationZone(0, resources), min, max));
         });
     }
 
     /// <summary>
-    /// Each mesh the world's collection manager lists, by path hash, with its <c>playerCoverage</c>.
-    /// The game spawns no tuft of a mesh it does not list.
+    /// Each mesh and RealTree the world's collection manager lists, by path hash, with its
+    /// <c>playerCoverage</c>. The game spawns no copy of one it does not list.
     /// </summary>
-    private static Dictionary<uint, float> Coverage(string world, Func<string, byte[]?> read)
+    private static Dictionary<uint, (bool Tree, float Covers)> Listed(string world, Func<string, byte[]?> read)
     {
         string path = $@"worlds\{world}\generated\{world}.managers.fcb";
         FcbObject managers = FcbDocument.Deserialize(read(path) ?? throw new InvalidOperationException($"{path} is missing."));
         return managers.Descendants()
             .Where(n => n.TypeHash == Resource && FcbEntityFields.ReadU32(n, FileNameId) is not null)
             .DistinctBy(n => FcbEntityFields.ReadU32(n, FileNameId))
-            .ToDictionary(n => FcbEntityFields.ReadU32(n, FileNameId)!.Value, n => FcbEntityFields.ReadFloat(n, PlayerCoverage) ?? 0);
+            .ToDictionary(
+                n => FcbEntityFields.ReadU32(n, FileNameId)!.Value,
+                n => (FcbEntityFields.ReadU32(n, ClassId) == RealTreeClass, FcbEntityFields.ReadFloat(n, PlayerCoverage) ?? 0));
     }
 
-    /// <summary>The colour and sky of every tuft in the donor level's landmark files, by mesh.</summary>
-    private static ILookup<uint, (uint Colour, uint Sky)> Looks(string donor, Func<string, byte[]?> read, string[] paths)
+    private static (Vector3 Min, Vector3 Max) Box(float[] box) => (new Vector3(box[0], box[1], box[2]), new Vector3(box[3], box[4], box[5]));
+
+    /// <summary>The three colour words of every copy in the donor level's landmark files, by mesh.</summary>
+    private static ILookup<uint, (uint Colour, uint Normal, uint Sky)> Looks(string donor, Func<string, byte[]?> read, string[] paths)
     {
         string prefix = $@"levels\{donor}\generated\worldsectors\landmark";
         return paths
@@ -143,20 +175,22 @@ public static class VegetationPlan
             .OfType<FcbObject>()
             .SelectMany(WorldVegetation.Zones)
             .SelectMany(z => z.Resources)
-            .SelectMany(r => r.Clusters.SelectMany(c => c.Tufts), (r, t) => (r.Id, Look: (t.Colour, t.Sky)))
+            .SelectMany(r => r.Clusters.SelectMany(c => c.Tufts), (r, t) => (r.Id, Look: (t.Colour, t.Normal, t.Sky)))
             .ToLookup(t => t.Id, t => t.Look);
     }
 
     /// <summary>
-    /// The tufts gathered into clusters by the square they stand in, none over a cluster's limit,
-    /// each culled by the sphere <c>CSceneGraphicObjectClusterHelper::UpdateBoundingVolume</c> fits.
+    /// The tufts gathered into clusters by the square they stand in, none over a cluster's limit. A
+    /// mesh's cluster is culled by the sphere <c>CSceneGraphicObjectClusterHelper::UpdateBoundingVolume</c>
+    /// fits from its <paramref name="box"/>; a RealTree's, given none, is saved without one, as
+    /// <c>StClusterData::StoreRealtreeCluster</c> saves it.
     /// </summary>
-    private static VegetationCluster[] Clusters(IEnumerable<VegetationTuft> tufts, (Vector3 Min, Vector3 Max) box)
+    private static VegetationCluster[] Clusters(IEnumerable<VegetationTuft> tufts, (Vector3 Min, Vector3 Max)? box)
         => [.. tufts
             .GroupBy(t => ((int)MathF.Floor(t.Position.Y / ClusterSide), (int)MathF.Floor(t.Position.X / ClusterSide)))
             .OrderBy(g => g.Key)
             .SelectMany(g => g.Chunk(VegetationCluster.MaxTufts))
-            .Select(chunk => new VegetationCluster(Sphere(chunk, box), chunk))];
+            .Select(chunk => new VegetationCluster(box is { } mesh ? Sphere(chunk, mesh) : Vector4.Zero, chunk))];
 
     /// <summary>
     /// Each tuft as a sphere at its mesh box's centre with the box's shortest side as radius, as
@@ -177,9 +211,9 @@ public static class VegetationPlan
     }
 
     /// <summary>The corners of a tuft's turned mesh box, whose bounds over a sector <c>VegetationData</c> carries.</summary>
-    private static IEnumerable<Vector3> Corners(VegetationTuft tuft, (Vector3 Min, Vector3 Max) box)
+    private static IEnumerable<Vector3> Corners(VegetationTuft tuft, float radians, (Vector3 Min, Vector3 Max) box)
     {
-        (float Sin, float Cos) turn = MathF.SinCos(tuft.Turn);
+        (float Sin, float Cos) turn = MathF.SinCos(radians);
         foreach ((float x, float y) in new[] { (box.Min.X, box.Min.Y), (box.Max.X, box.Min.Y), (box.Min.X, box.Max.Y), (box.Max.X, box.Max.Y) })
         {
             Vector3 at = tuft.Position + Rotate(new Vector3(x, y, 0), turn);
@@ -191,9 +225,12 @@ public static class VegetationPlan
     private static Vector3 Rotate(Vector3 v, (float Sin, float Cos) turn)
         => new(v.X * turn.Cos - v.Y * turn.Sin, v.X * turn.Sin + v.Y * turn.Cos, v.Z);
 
-    /// <summary>A sector's near landmark file, shaped as a shipped one less its fire.</summary>
-    private static FcbObject Landmark(int sectorId, int sectorsPerSide, VegetationZone zone, Vector3 min, Vector3 max)
+    /// <summary>A sector's near or far landmark file, shaped as a shipped one less its fire.</summary>
+    private static FcbObject Landmark(int sectorId, int sectorsPerSide, bool far, VegetationZone zone, Vector3 min, Vector3 max)
     {
+        (string category, string name, ulong id) = far
+            ? ("LandmarkFar", $"SectorEntityFar_{sectorId}", SectorEntityIdFloor + FarEntityIdOffset + (ulong)sectorId)
+            : ("LandmarkNear", $"SectorEntity_{sectorId}", SectorEntityIdFloor + (ulong)sectorId);
         var data = new FcbObject { TypeHash = Hash("VegetationData") };
         data.Values[Hash("dataVersion")] = BitConverter.GetBytes(5);
         data.Values[Hash("bboxMin")] = FcbEntityFields.Vector3Bytes(min);
@@ -216,8 +253,8 @@ public static class VegetationPlan
         FcbObject mission = Component(WorldHashes.CMissionComponent);
         mission.Values[Hash("text_hidMissionLayerPath")] = FcbEntityFields.StringBytes("");
         mission.Values[WorldHashes.HidMissionLayerPath] = BitConverter.GetBytes(uint.MaxValue);
-        mission.Values[Hash("text_hidCategory")] = FcbEntityFields.StringBytes("LandmarkNear");
-        mission.Values[Hash("hidCategory")] = BitConverter.GetBytes(LandmarkNear);
+        mission.Values[Hash("text_hidCategory")] = FcbEntityFields.StringBytes(category);
+        mission.Values[Hash("hidCategory")] = BitConverter.GetBytes(Hash(category));
         mission.Values[Hash("ForceMerge")] = [1];
 
         var components = new FcbObject { TypeHash = WorldHashes.Components };
@@ -227,8 +264,8 @@ public static class VegetationPlan
         const float half = WorldModels.SectorMeters / 2;
         byte[] at = FcbEntityFields.Vector3Bytes(new Vector3(x * WorldModels.SectorMeters + half, y * WorldModels.SectorMeters + half, 0));
         var entity = new FcbObject { TypeHash = WorldHashes.Entity };
-        entity.Values[WorldHashes.HidName] = FcbEntityFields.StringBytes($"SectorEntity_{sectorId}");
-        entity.Values[WorldHashes.DisEntityId] = BitConverter.GetBytes(SectorEntityIdFloor + (ulong)sectorId);
+        entity.Values[WorldHashes.HidName] = FcbEntityFields.StringBytes(name);
+        entity.Values[WorldHashes.DisEntityId] = BitConverter.GetBytes(id);
         entity.Values[WorldHashes.TextHidEntityClass] = FcbEntityFields.StringBytes("CSectorEntity");
         entity.Values[WorldHashes.HidEntityClass] = BitConverter.GetBytes(CSectorEntity);
         entity.Values[WorldHashes.HidResourceCount] = BitConverter.GetBytes((uint)zone.Resources.Count);

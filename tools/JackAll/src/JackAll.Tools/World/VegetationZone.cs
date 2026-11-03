@@ -9,9 +9,9 @@ namespace JackAll.Tools.World;
 /// docs/docs/engine-internals/terrain-and-vegetation.md#one-tuft.
 /// </summary>
 /// <param name="Position">X and Y are stored in decimetres, so they come back on that step.</param>
-/// <param name="Orientation">A mesh's turn about Z: its sine in the high <c>i16</c>, its cosine in the low, each x 32767.</param>
-/// <param name="Colour">RGB the ground's colour under it, A its height scale.</param>
-/// <param name="Normal">The ground's normal under it, each axis x 0.5 + 0.5 in R, G and B.</param>
+/// <param name="Orientation">A mesh's turn about Z: its sine in the high <c>i16</c>, its cosine in the low, each x 32767. A RealTree's is hundredths of a degree.</param>
+/// <param name="Colour">RGB the ground's colour under it, A its height scale. A RealTree's is <c>0xFFFFFFFF</c>.</param>
+/// <param name="Normal">The ground's normal under it, each axis x 0.5 + 0.5 in R, G and B. A RealTree holds the ground's colour here.</param>
 /// <param name="Sky">RGB how much sky it sees.</param>
 public readonly record struct VegetationTuft(Vector3 Position, uint Orientation, uint Colour, uint Normal, uint Sky)
 {
@@ -19,8 +19,14 @@ public readonly record struct VegetationTuft(Vector3 Position, uint Orientation,
     public static uint PackTurn(float radians)
         => (uint)(ushort)(short)(MathF.Sin(radians) * 32767f) << 16 | (ushort)(short)(MathF.Cos(radians) * 32767f);
 
-    /// <summary>The turn <see cref="Orientation"/> holds, in radians.</summary>
+    /// <summary>The <see cref="Orientation"/> of a RealTree turned by <paramref name="radians"/>, as <c>GetPackedRealtreeClusterOrientData</c> packs it.</summary>
+    public static uint PackTreeTurn(float radians) => (uint)(int)Math.Round(radians * (180 / Math.PI) / 0.01);
+
+    /// <summary>The turn a mesh's <see cref="Orientation"/> holds, in radians.</summary>
     public float Turn => MathF.Atan2((short)(Orientation >> 16) / 32767f, (short)Orientation / 32767f);
+
+    /// <summary>The turn a RealTree's <see cref="Orientation"/> holds, in radians.</summary>
+    public float TreeTurn => (int)Orientation * 0.01f * (MathF.PI / 180);
 
     /// <summary>A <see cref="Normal"/> as the editor packs one.</summary>
     public static uint PackNormal(Vector3 normal)

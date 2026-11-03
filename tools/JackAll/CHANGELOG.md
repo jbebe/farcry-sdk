@@ -5,11 +5,11 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ## [Unreleased]
 
 ### Added
-- **Vegetation for a new world.** A plan, `levels\<world>\vegetation.xml`, lays out patches of grass
-  or any other scatter mesh over rectangles, and `world pack` grows it into the world's sectors. Each
-  copy takes its look from the same mesh in a shipped level you name. Packing refuses a mesh the world
-  does not list, which the game would never draw, and warns about one that hides no one from
-  soldiers.
+- **Vegetation for a new world.** A plan, `levels\<world>\vegetation.xml`, lays out patches of grass,
+  trees or any other scatter mesh over rectangles and at single spots, and `world pack` grows it into
+  the world's sectors. Each copy takes its look from the same one in a shipped level you name. Packing
+  refuses a mesh the world does not list, which the game would never draw, and warns about one that
+  hides no one from soldiers.
 
 ## [1.7.0] - 2026-10-28
 

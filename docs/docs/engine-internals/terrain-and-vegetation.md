@@ -278,6 +278,20 @@ cluster's sphere sits at the middle of their bounds, and its radius is the longe
 bounds, so the sphere is about twice as large as it needs to be. `VegetationData`'s `bboxMin` and
 `bboxMax` bound every tuft's turned mesh box in the sector.
 
+A RealTree uses the same lists differently (`StClusterData::AddRealtreeInstance`,
+`StSerialVegetationZoneData::RestoreRealtreeCluster`; **RE-verified**):
+
+- its turn is a whole number of hundredths of a degree, not a sine and cosine;
+- its first colour word is always `0xFFFFFFFF`, the second holds the ground's colour under it, and
+  the third its sky;
+- its cluster is saved with an all-zero sphere and the loader never reads one;
+- it brings its own collision (`CRealtreeClusterComponent::CreatePhysics`), so no physics flag is
+  needed for it in [the mesh's entry](#the-mesh-a-tuft-names).
+
+Shipped levels keep RealTrees in a sector's `landmarkfar` file, filed under the category
+`LandmarkFar`, and grass in its `landmarknear` file under `LandmarkNear`. Rocks and other meshes can
+be in either file. The two files are shaped alike.
+
 **A cluster holds at most 255 tufts.** Its count is the low byte of its packed word, and the editor
 packs `offset << 8 | count` without masking, so a 257th tuft carries into the offset. The engine then
 reads a few tufts from one place further on and never draws the rest. Six campaign sectors shipped

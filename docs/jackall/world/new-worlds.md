@@ -67,8 +67,8 @@ Everything else in the layer is copied as it is. Point `--out` at a new or empty
 
 ## Vegetation
 
-Grass and other scattered meshes are laid out in a plan, `levels\<world>\vegetation.xml` in the
-workspace. `world pack` grows it into each sector it reaches and flags those sectors so the game
+Grass, trees and other scattered meshes are laid out in a plan, `levels\<world>\vegetation.xml` in
+the workspace. `world pack` grows it into each sector it reaches and flags those sectors so the game
 loads them. The plan itself stays out of the packed layer.
 
 ```xml
@@ -76,15 +76,25 @@ loads them. The plan itself stays out of the packed layer.
   <Patch Mesh="graphics\vegetation\savannah\1_grasssavannah_b.xbg" Donor="w1_b_2" Seed="1">
     <Area X="192" Y="320" Width="128" Height="64" />
   </Patch>
+  <Patch Mesh="graphics\vegetation\savannah\realtrees\rt_tree_acacia_small.rtx" Donor="w1_b_2" Spacing="14">
+    <Area X="128" Y="320" Width="64" Height="64" />
+    <At X="100" Y="350" />
+  </Patch>
 </Vegetation>
 ```
 
-A **Patch** spreads one mesh over its **Area**s, rectangles in world metres. It places one copy in
-every square of **Spacing** metres (default 1.6, as thick as a shipped savannah field), at a random
-spot in the square, turned at random, on the ground. **Seed** makes another random layout of the
-same patch. **Donor** is a shipped level that places the same mesh. Each copy takes the colour,
-height and light of a random copy there, so a field looks the way the game's own fields do. Packing
-stops with an error if the donor places none.
+A **Patch** spreads one mesh or tree over its **Area**s, rectangles in world metres. It places one
+copy in every square of **Spacing** metres (default 1.6, as thick as a shipped savannah field), at a
+random spot in the square, turned at random, on the ground. An **At** places one copy at exactly
+that spot. **Seed** makes another random layout of the same patch. **Donor** is a shipped level that
+places the same mesh. Each copy takes the colour, height and light of a random copy there, so a
+field looks the way the game's own fields do. Packing stops with an error if the donor places none.
+
+A **tree** is a RealTree, a `.rtx` file, such as `graphics\vegetation\savannah\realtrees\rt_tree_acacia.rtx`.
+Give it a Spacing of its own, about 10 to 15 m for a stand of trees. A tree brings its own
+collision, and the navmesh is cut around its trunk so soldiers path round it; a bush has no trunk
+and is not cut out. Packing puts trees in each sector's far landmark file, and grass and other
+meshes in its near one, as the shipped levels do.
 
 Which mesh you pick decides more than its look:
 
