@@ -1,11 +1,12 @@
-// Reaction: a soldier who spots the player before he has fired in this fight holds his fire for a
-// moment, longer at range, while his aim settles; a hit that panics him ends it.
+// Reaction: a soldier who spots the player before he has fired in this fight fires at once up close
+// and takes longer to make up his mind farther out; a hit that panics him ends it.
 #include "engine/combat_log.h"
 #include "engine/game.h"
 #include "engine/memory.h"
 #include "engine/shooting.h"
 #include "fcse_api.h"
 
+#include <algorithm>
 #include <unordered_map>
 
 using namespace DifficultyOverhaul;
@@ -13,9 +14,10 @@ using namespace DifficultyOverhaul;
 namespace {
     Shooting::TaskCheckFn g_originalIsAligned = nullptr;
 
-    // Hardcore: how long he holds his fire after spotting the player, at 0 m and per metre.
-    constexpr double kReactionSeconds = 1.0;
-    constexpr double kReactionSecondsPerMetre = 0.025;
+    // Hardcore: within this range he fires as fast as he can; beyond it he holds his fire this long
+    // per metre, 3 s at 50 m.
+    constexpr double kInstantRange = 10.0;
+    constexpr double kSecondsPerMetre = 0.075;
 
     // Until when each surprised soldier holds his fire, by game clock.
     std::unordered_map<const void*, double> g_holds;
@@ -36,7 +38,7 @@ namespace {
                 return true;
             }
             const float distance = Game::Distance(from, to);
-            const double seconds = kReactionSeconds + kReactionSecondsPerMetre * distance;
+            const double seconds = std::max(distance - kInstantRange, 0.0) * kSecondsPerMetre;
             Remember(g_holds, shooting) = now + seconds;
             Shooting::StartAim(shooting);
             CombatLogf("soldier %08X reaction: spotted the player at %.1f m, holds his fire %.1f s",

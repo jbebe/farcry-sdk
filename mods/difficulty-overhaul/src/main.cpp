@@ -9,12 +9,10 @@ void InstallFireDiscipline();
 void InstallReaction();
 void InstallRangeFalloff();
 void InstallIntuition();
-void InstallGrass();
-void InstallCamoSuit();
 void InstallSuppression();
 void InstallSquadMemory();
 void InstallWatchedSpot();
-void InstallEyesight();
+void InstallPerception();
 void InstallGoingDown();
 void InstallHealing();
 
@@ -33,12 +31,10 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallReaction();
     InstallRangeFalloff();
     InstallIntuition();
-    InstallGrass();
-    InstallCamoSuit();
     InstallSuppression();
     InstallSquadMemory();
     InstallWatchedSpot();
-    InstallEyesight();
+    InstallPerception();
     InstallGoingDown();
     InstallHealing();
     return true;

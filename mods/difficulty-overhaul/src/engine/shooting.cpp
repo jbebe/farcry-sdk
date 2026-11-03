@@ -37,8 +37,9 @@ namespace {
     constexpr ptrdiff_t kAgentPawn = 0x268;
     constexpr ptrdiff_t kAgentSenses = 0x28C;
     constexpr ptrdiff_t kAgentShooting = 0x4A0;
-    // CPawnAgent's visibility thresholds for its current state, and the fuzzy one in it.
+    // CPawnAgent's visibility lines for its current state, fuzzy then clear.
     constexpr ptrdiff_t kAgentFuzzy = 0x868;
+    constexpr ptrdiff_t kAgentClear = 0x86C;
     // CSensorySystem's knowledge base, and a knowledge entry's unbroken seconds in the focus and
     // the peripheral cone, -1 while out of it.
     constexpr ptrdiff_t kSensesKnowledge = 0x24;
@@ -98,9 +99,11 @@ float Visibility(void* shooting) {
     return visibility;
 }
 
-float FuzzyVisibility(void* shooting) {
-    return Read<float>(Read<const void*>(shooting, kShooter), kAgentFuzzy);
-}
+float FuzzyLine(const void* agent) { return Read<float>(agent, kAgentFuzzy); }
+
+float ClearLine(const void* agent) { return Read<float>(agent, kAgentClear); }
+
+void* Agent(void* shooting) { return Read<void*>(shooting, kShooter); }
 
 namespace {
     // The shake that holds on him now, if any.
@@ -183,7 +186,7 @@ bool Positions(void* shooting, float from[3], float to[3]) {
 
 void* Pawn(void* agent) { return Read<void*>(agent, kAgentPawn); }
 
-void* ShooterPawn(void* shooting) { return Pawn(Read<void*>(shooting, kShooter)); }
+void* ShooterPawn(void* shooting) { return Pawn(Agent(shooting)); }
 
 uint32_t ShooterId(void* shooting) { return Game::Id(Game::EntityOf(ShooterPawn(shooting))); }
 

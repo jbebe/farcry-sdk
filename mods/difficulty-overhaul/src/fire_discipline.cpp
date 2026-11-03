@@ -1,5 +1,5 @@
-// Fire discipline: a soldier holds his fire at the player until he can make the player out, and
-// waits aimed where he is rather than giving up the shot; one a hit has panicked fires regardless.
+// Fire discipline: a soldier holds his fire at the player until he recognises him, and waits aimed
+// where he is rather than giving up the shot; one a hit has panicked fires regardless.
 #include "engine/combat_log.h"
 #include "engine/memory.h"
 #include "engine/shooting.h"
@@ -25,8 +25,9 @@ namespace {
             return true;
         }
         const float visibility = Shooting::Visibility(shooting);
-        const Stance stance =
-            visibility < Shooting::FuzzyVisibility(shooting) ? Stance::kHolds : Stance::kFires;
+        const Stance stance = visibility < Shooting::ClearLine(Shooting::Agent(shooting))
+                                  ? Stance::kHolds
+                                  : Stance::kFires;
         Stance& last = Remember(g_stances, shooting);
         if (stance != last) {
             last = stance;

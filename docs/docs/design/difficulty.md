@@ -32,11 +32,53 @@ Combat that is realistic and fair:
   out. Seen in game: "The bush, the tall grass actually makes them stop shooting. the sniper has no
   LoS and waits for me to peek."
 - **Grass is not camouflage.** "crouching in grass is NOT camouflage. behind a bush or a tree is, but
-  simple grass is not" (2026-11-02): within 30 m a soldier sees a player in grass in any state, and
-  only the camo suit, still, hides him from 10 m.
+  simple grass is not" (2026-11-02). Since the [perception model](#perception), grass halves the
+  distances and the camo suit hides a still player in grass beyond 3 m.
+- **Perception is one model, the user's** (2026-11-03): from how far a soldier notices and
+  recognises the player, fitted to the user's own answers for 17 situations.
 - **Firefights are aggressive.** Nothing the player does silences a soldier who sees him: suppression
   only spoils aim, and holding fire never sends a soldier elsewhere
   ([2026-10-29](#on-the-real-map)).
+
+## Perception
+
+Agreed 2026-11-03. The user gave the distances for 17 situations: where a soldier first notices
+something (turns, comes to look) and where he recognises the player as an enemy and shoots. The model
+below fits them. A soldier recognises the player within R and notices something within N; the mod
+turns the two into the visibility the game compares with the soldier's own fuzzy and clear lines.
+
+| Parameter | R |
+|---|---|
+| Base: day, in the open, straight ahead, idle | walking upright 60 m, moving crouched 50 m, still (standing or crouched) 40 m |
+| In high grass, crouched | ×0.5 |
+| Shade by day | ×0.5 (phase 3) |
+| Camo suit, still, in grass | 3 m |
+| Cover | hidden only where it hides his head; head and shoulders over a wall count as in the open |
+| Night | at most 25 m, whatever he does |
+| Lit by a lamp at night | ×1.25 (phase 3) |
+| Heavy fog | at most 40 m (phase 2) |
+| Talking guards | ×0.5 (phase 2) |
+| Driver | only through a narrow windscreen cone; a turret gunner sees 180° like a soldier on foot (phase 2) |
+| Alert or fighting | ×1.25, after the night and fog limits |
+| At his side, within 180° | ×0.5 |
+| Behind him | never; walking upright within 20 m he hears the player, "only crouching behind an enemy can get you behind them without noticing" |
+
+He notices from 1.2 × R. In daylight, in the open and straight ahead, a moving player catches his eye
+from farther: 100 m upright, 70 m crouched. At night he notices from 30 m at most, in heavy fog 45 m.
+
+He fires at once within 10 m and holds his fire 0.075 s per metre beyond, 3 s at 50 m, in place of the
+earlier reaction hold: "if you show up from a wall at 10m they immediately reach for the gun ... at
+50m they squint a little, think with their brain and then at 3s mark, they start shooting".
+
+A shot, the player's flashlight or a vehicle's headlights at night alert those who see or hear them
+at once: they know where it came from and go to clear the spot, but they do not see the player
+("they don't have nightvision"); recognising him still follows the table.
+
+Built in phase 1, not yet seen: the base, view, grass, the camo suit, cover, night, the alert factor,
+the reaction time, fire discipline at the recognition line, and a `perception:` line for each first
+notice and recognition. A sniper aiming through his scope sees as much farther as the game's scope
+makes him, a choice of the build's, not the user's. Phase 2: fog, talking guards, drivers and gunners,
+the flashlight and headlights. Phase 3: shade and lamps.
 
 ## Built
 
@@ -95,6 +137,8 @@ range in the log drifts from the scenario's distance.
 | 21 | Healing | Rifleman at 20 m, invincibility off: take hits down to the last bar, heal, heal again, then hide and wait | at 1,025 maximum the surgery leaves 410 health (40 %) and a syrette 666 (65 %), `healed:` lines; a second syrette is refused; nothing comes back below 666, and from there health reaches full in 6 minutes, starting 5 s after the last hit (3 s on Casual, 10 s on Experienced, never on Infamous) | new: the user's three states ("surgery makes you survive one more shot, syrette makes you survive 2 shots, full regen makes you survive the 4 shots"); the game's surgery gave two bars, a syrette full health, and the bar health was in refilled within a second | not run |
 | 22 | Reaction | Rifleman at 50 m, idle: stand in the open in front of him until he spots you, then stay | `reaction: spotted the player at 50 m, holds his fire 2.2 s`, no shot for 2.2 s, then his first `shot at player:` says about `2.2 s on him` | new 2026-10-29: an idle soldier at 58.6 m opened fire the moment he noticed the user standing in a bush and killed him 1.2 s later ("my last death was bullshit"); the user's pick of a hold on first contact only, not on every peek ("I want them spraying when I peek") | not run |
 | 23 | Stand-down | Rifleman at 40 m, idle: fire a shot into the air out of his sight, then hide where he cannot find you | he searches, then 2 minutes after the alert last started over walks back to where he stood and goes back to idle | new 2026-11-02: after a shot into the air a squad searched for minutes and never went back to its posts; in the game only an idle soldier's look at something glimpsed, or the player in a safe zone, ends an alert ([how an alert ends](../engine-internals/ai.md#how-an-alert-ends)); the user's pick of 2 minutes, in the brain | not run |
+
+| 24 | Perception | `python tools\fc2drive\scenarios\perception.py`: 13 cases on the duel lane and at the low wall, by day and at night, in front of him, at his side and behind | each case's first `perception:` distances within a few metres of the model's | new 2026-11-03, [the model](#perception); supersedes rows 10, 16, 22 and item N | not run |
 
 ### Still to do before it is finished
 

@@ -29,8 +29,13 @@ bool IsPlayer(void* agent);
 // How visible his target is to him now, 0 when he does not see it.
 float Visibility(void* shooting);
 
-// The visibility at which he makes out a target at all, in his current state.
-float FuzzyVisibility(void* shooting);
+// A soldier's visibility lines in his current state: where he notices a target, and where he
+// recognises it. `agent` is his CPawnAgent.
+float FuzzyLine(const void* agent);
+float ClearLine(const void* agent);
+
+// The CPawnAgent a shooting system belongs to.
+void* Agent(void* shooting);
 
 // Shakes his aim: for `seconds` his chance at the player takes `factor`, a panic if `panic`. A worse
 // shake that still holds is kept. Returns whether any held.

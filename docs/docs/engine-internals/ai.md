@@ -323,8 +323,16 @@ and 50, alert 1 and 50, threshold, special and vehicle 1 and 100, combat untouch
 not traced. The agent's `ThreatLevel` meter is fed only by Bang and Fear stims.
 
 The evaluators combine as a product: each with value *e* and weight *w* contributes
-`1 − (1 − e) × w` (`CVisibilityEvaluator::Evaluate`; GOG `0x10A0BFC0`). A weight of 0 skips the
-evaluator. An evaluator that returns 0 makes the whole product 0, whatever its weight. Within that
+`1 − (1 − e) × w` (`CVisibilityEvaluator::Evaluate`; GOG `0x10A0BFC0`, Steam `0x10A1D8A0`, `RET 8`). A
+weight of 0 skips the evaluator. An evaluator that returns 0 makes the whole product 0, whatever its
+weight. The evaluator holds its list at `+0x08` and the count at `+0x0C`; each entry gets the
+context at `+0x24` and keeps its weight at `+0x2C`, with `ComputeVisibility` in vtable slot `0x14`
+and an "always visible" test in slot `0x0C`, which the distance check fills with its 2 m rule. The
+server names eight; `Dunia.dll` has no RTTI, so on Steam they are known by what each reads: distance
+`0x10A20FA0`, FOV `0x10A21380`, body sampling `0x10A21D90`, occlusion and vegetation `0x10A22120` and
+`0x10A222B0` (which is which not settled), grass `0x10A226C0`, stance `0x10A22BB0`, speed `0x10A22DF0`. The night term reaches `AdjustFOV` as its last argument, already forced to 1
+by a muzzle flash; `CSensorySystem::GetTimeOfDayFOVMultiplier` (Steam `0x10A01200`) gives it
+without, from the shipped `fNightTimeMultiplier` at `+0x40`. Within that
 product **(RE-verified on GOG and the server)**:
 
 - **Distance.** Full visibility inside the first `fDistanceEvaluator_FullVisibilityRatio` of the

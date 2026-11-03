@@ -15,6 +15,8 @@ python scenarios\guns.py --only AK-47,M79 --no-clip
 python scenarios\locations.py             a picture at each spot in scenarios\spots\world1.json
 python scenarios\locations.py --hour 22 --clip
 python scenarios\inventory.py             the notebook's pages, then a pickup; needs Inventory Overhaul
+python scenarios\perception.py            Difficulty Overhaul's perception on the test range, case by case
+python scenarios\perception.py --only day-upright,night-upright
 ```
 
 Each launches the game, does its work, closes the game, and leaves a folder under `runs\` (not
