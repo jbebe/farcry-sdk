@@ -10,13 +10,13 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from perception import CLEAR, LANE_YAW, SAVE, SETTLE, Log, forward, put, spawn, spawn_yaw
+from perception import CLEAR, SAVE, SETTLE, Log, facing, put, spawn, spawn_yaw
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fc2drive import Run, launch
 
 # Inside the field, which covers x 192 to 320 and y 320 to 384, with room ahead along the way the
-# player faces at LANE_YAW; then a spot on open ground south of the hub.
+# player faces; then a spot on open ground south of the hub.
 FIELD = (290.0, 352.0)
 OPEN = (256.0, 110.0)
 PERCEPTION = re.compile(r"perception: (notices|recognises) the player at (\S+) m, ([^;]*);")
@@ -49,8 +49,8 @@ def main():
     with launch(SAVE) as game:
         game.option("Invincibility", 1)
         game.fix_light(hour=12)
-        ahead = forward(game)
-        run.note(f"the player faces ({ahead[0]:.2f}, {ahead[1]:.2f}) at yaw {LANE_YAW}")
+        ahead = facing(game)
+        run.note(f"the player faces ({ahead[0]:.2f}, {ahead[1]:.2f})")
 
         put(game, *FIELD)
         time.sleep(1.0)

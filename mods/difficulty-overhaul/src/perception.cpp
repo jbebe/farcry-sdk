@@ -314,6 +314,10 @@ namespace {
         return 0.0f;
     }
 
+    const char* HidingName(const Hiding& hiding) {
+        return hiding.camouflaged ? ", hidden by the camo suit" : hiding.grass ? ", in grass" : "";
+    }
+
     void Report(const Look& look, float visibility, float distance, const char* moving, Zone zone,
                 const Hiding& hiding, const char* state, float notice, float recognise) {
         const int level = visibility >= Shooting::ClearLine(look.soldier)   ? 2
@@ -328,11 +332,11 @@ namespace {
         Seen& seen = g_seen[id];
         if (kTrace && now - seen.traced >= kTraceSeconds) {
             seen.traced = now;
-            CombatLogf("soldier %08X perception trace: %.1f m, %s, %s, %s; visibility %.2f, lines %.2f "
-                       "and %.2f; notices from %.0f m, recognises from %.0f m",
-                       id, distance, moving, kZoneNames[zone], state, visibility,
-                       Shooting::FuzzyLine(look.soldier), Shooting::ClearLine(look.soldier), notice,
-                       recognise);
+            CombatLogf("soldier %08X perception trace: %.1f m, %s, %s%s, %s; cover %.2f; visibility %.2f, "
+                       "lines %.2f and %.2f; notices from %.0f m, recognises from %.0f m",
+                       id, distance, moving, kZoneNames[zone], HidingName(hiding), state, hiding.cover,
+                       visibility, Shooting::FuzzyLine(look.soldier), Shooting::ClearLine(look.soldier),
+                       notice, recognise);
         }
         if (level >= seen.level) {
             seen.below = -1.0;
@@ -348,8 +352,7 @@ namespace {
         CombatLogf("soldier %08X perception: %s the player at %.1f m, %s, %s%s, %s; cover %.2f, "
                    "night %.2f; notices from %.0f m, recognises from %.0f m",
                    id, level == 2 ? "recognises" : "notices", distance, moving, kZoneNames[zone],
-                   hiding.camouflaged ? ", hidden by the camo suit" : hiding.grass ? ", in grass" : "",
-                   state, hiding.cover, look.night, notice, recognise);
+                   HidingName(hiding), state, hiding.cover, look.night, notice, recognise);
     }
 
     float __fastcall EvaluateDetour(void* evaluator, void* unused, void* context, bool* applies) {

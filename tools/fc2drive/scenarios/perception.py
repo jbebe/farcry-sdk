@@ -3,8 +3,9 @@ the player, case by case, read off the combat log's perception lines.
 
     python perception.py [--only day-upright,night-upright]
 
-Each case spawns a fresh rifleman, places the player, and either walks him toward the soldier or holds
-him still at a distance. The table at the end puts what the log shows beside what the model expects.
+Each case spawns a fresh rifleman, places the player in the open, behind the low wall or in the grass
+field, and walks him toward the soldier, holds him still at a distance, or sidesteps him to and fro
+there. The table at the end puts what the log shows beside what the model expects.
 """
 
 import argparse
@@ -15,7 +16,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from fc2drive import GAME_BIN, GameError, Run, launch
+from fc2drive import GAME_BIN, Run, launch
 
 LOGS = GAME_BIN / "difficulty-overhaul-logs"
 RIFLEMAN = "enemy_archetypes.Red_Faction.Assault_Caucasian"
@@ -32,11 +33,17 @@ EDGE = 10.0
 # Removes what the last case spawned, which the TestRange table holds, as the Range tab does.
 CLEAR = ("TestRange = TestRange or {n = 0} for i = 1, TestRange.n do RemoveEntity(TestRange[i]) end "
          "TestRange = {n = 0} ")
-PERCEPTION = re.compile(
-    r"perception: (notices|recognises) the player at (\S+) m, [^,]+, (in his focus|at his side|behind him)")
-# Seconds: a soldier's settling after he spawns, a held player's wait, and an approach's longest.
+PERCEPTION = re.compile(r"perception: (notices|recognises) the player at (\S+) m, [^,]+, "
+                        r"((?:in his focus|at his side|behind him)(?:, in grass|, hidden by the camo suit)?)")
+# The bonus plan that is the camo suit.
+CAMO_SUIT = "stealth_camouflage"
+# Seconds a crouched player waits before the soldier spawns, past the second still in grass he needs to count as hidden.
+CROUCH = 3.0
+# Seconds: a soldier's settling after he spawns, a held player's wait, a sidestep's each way, and an
+# approach's longest.
 SETTLE = 3.0
 HOLD = 6.0
+SWING = 1.5
 APPROACH_LIMIT = 40.0
 # An approach stops this close to the soldier, or once it has drawn this much farther from him than
 # it has been.
@@ -48,13 +55,17 @@ WRONG_WAY = 3.0
 # low wall's barriers lie across (100, 40), with the player's start south of them.
 LANE_MIDDLE = (256.0, 110.0)
 LANE_BACK = 65.0
-LANE_YAW = 90
 SIDE_ANGLE = 60.0
 WALL_START = (100.0, 37.0)
 WALL_SOLDIER = (100.0, 70.0)
+# The grass field covers x 192 to 320 and y 320 to 384; a case there puts the player and the soldier
+# either side of its middle.
+FIELD_MIDDLE = (256.0, 352.0)
 
-# name, hour, soldier facing (toward the player, away, or with him at his side), start distance,
-# crouched, mode, then what the model expects: notices and recognises from, None for never.
+# name, hour, where (on the lane with the soldier facing toward the player, away, or with him at his
+# side; behind the wall; in the grass field facing him, there in the camo suit), start distance,
+# crouched, mode (approach, hold or sidestep), then what the model expects: notices and recognises
+# from, None for never.
 CASES = [
     ("day-upright", 12, "toward", 130, False, "approach", 100, 60),
     ("day-crouched", 12, "toward", 110, True, "approach", 70, 50),
@@ -69,6 +80,14 @@ CASES = [
     ("behind-crouched", 12, "away", 30, True, "approach", None, None),
     ("wall-crouched", 12, "wall", 33, True, "hold", None, None),
     ("wall-standing", 12, "wall", 33, False, "hold", 48, 40),
+    ("grass-crouched-still-15", 12, "grass", 15, True, "hold", 24, 20),
+    ("grass-crouched-still-22", 12, "grass", 22, True, "hold", 24, 20),
+    ("grass-crouched-still-30", 12, "grass", 30, True, "hold", 24, 20),
+    ("grass-crouched-moving-22", 12, "grass", 22, True, "sidestep", 30, 25),
+    ("grass-crouched-moving-27", 12, "grass", 27, True, "sidestep", 30, 25),
+    ("grass-upright-still-30", 12, "grass", 30, False, "hold", 48, 40),
+    ("camo-still-10", 12, "camo", 10, True, "hold", 3, 3),
+    ("camo-still-2.5", 12, "camo", 2.5, True, "hold", 3, 3),
 ]
 WARM_UP = ("warm-up", 12, "toward", 30, False, "hold", 48, 40)
 
@@ -94,29 +113,26 @@ class Log:
 
 
 def perceived(lines, seen):
+    """The first noticing and recognising in `lines`; recognised at once, he noticed him there too."""
     for line in lines:
         match = PERCEPTION.search(line)
-        if match and match.group(1) not in seen:
-            seen[match.group(1)] = (float(match.group(2)), match.group(3))
+        if match:
+            sighting = (float(match.group(2)), match.group(3))
+            seen.setdefault("notices", sighting)
+            if match.group(1) == "recognises":
+                seen.setdefault("recognises", sighting)
 
 
-def put(game, x, y, yaw=LANE_YAW):
-    game.goto(x, y, GROUND + PLAYER_ABOVE, yaw)
+def put(game, x, y):
+    # A goto leaves the player's facing as it was, whatever yaw it is given.
+    game.goto(x, y, GROUND + PLAYER_ABOVE)
     time.sleep(1.0)
 
 
-def forward(game):
-    """The way the player faces at LANE_YAW, measured by a step, so nothing rests on what the remote
-    control's yaw means."""
-    put(game, *LANE_MIDDLE)
-    x0, y0, _ = game.state()["pos"]
-    game.walk(1.0, 0.0, 0.6)
-    time.sleep(0.5)
-    x1, y1, _ = game.state()["pos"]
-    step = math.hypot(x1 - x0, y1 - y0)
-    if step < 0.5:
-        raise GameError(f"a step forward moved the player {step:.2f} m")
-    return (x1 - x0) / step, (y1 - y0) / step
+def facing(game):
+    """The way the player faces, from his yaw, which turns as a spawn's does."""
+    yaw = math.radians(game.state()["yaw"])
+    return -math.sin(yaw), math.cos(yaw)
 
 
 def spawn_yaw(gx, gy):
@@ -124,24 +140,22 @@ def spawn_yaw(gx, gy):
     return math.degrees(math.atan2(-gx, gy))
 
 
-def place(game, case, ahead):
-    name, hour, facing, distance, crouched, mode, *_ = case
-    game.lua(CLEAR + f"CDynamicEnvironmentManager_GetInstance():SetScriptedTimeOfDay({hour}, 0)")
+def place(where, distance, ahead):
+    """Where a case puts the player and the soldier, and the soldier's yaw."""
+    if where == "wall":
+        return WALL_START, WALL_SOLDIER, 180.0
     fx, fy = ahead
-    if facing == "wall":
-        player, soldier, yaw = WALL_START, WALL_SOLDIER, 180.0
+    if where in ("grass", "camo"):
+        player = (FIELD_MIDDLE[0] - fx * distance / 2, FIELD_MIDDLE[1] - fy * distance / 2)
     else:
         player = (LANE_MIDDLE[0] - fx * LANE_BACK, LANE_MIDDLE[1] - fy * LANE_BACK)
-        soldier = (player[0] + fx * distance, player[1] + fy * distance)
-        # At his side: he faces 60 degrees off the player, inside his view whichever way he glances.
-        side = math.radians(SIDE_ANGLE)
-        gx, gy = {"toward": (-fx, -fy), "away": (fx, fy),
-                  "side": (-fx * math.cos(side) + fy * math.sin(side),
-                           -fx * math.sin(side) - fy * math.cos(side))}[facing]
-        yaw = spawn_yaw(gx, gy)
-    put(game, *player)
-    spawn(game, soldier, yaw)
-    return soldier
+    soldier = (player[0] + fx * distance, player[1] + fy * distance)
+    # At his side: he faces 60 degrees off the player, inside his view whichever way he glances.
+    side = math.radians(SIDE_ANGLE)
+    gx, gy = {"away": (fx, fy),
+              "side": (-fx * math.cos(side) + fy * math.sin(side),
+                       -fx * math.sin(side) - fy * math.cos(side))}.get(where, (-fx, -fy))
+    return player, soldier, spawn_yaw(gx, gy)
 
 
 def spawn(game, at, yaw):
@@ -154,20 +168,32 @@ def on_range(x, y):
     return EDGE <= x <= RANGE_SIZE - EDGE and EDGE <= y <= RANGE_SIZE - EDGE
 
 
-def run_case(game, log, case, ahead):
-    name, hour, facing, distance, crouched, mode, *_ = case
-    log.new_lines()
-    seen = {}
-    soldier = place(game, case, ahead)
+def run_case(game, log, case):
+    _, hour, where, distance, crouched, mode, *_ = case
+    game.lua(CLEAR + f"CDynamicEnvironmentManager_GetInstance():SetScriptedTimeOfDay({hour}, 0) " +
+             (f'Game:AddBonusPlan("{CAMO_SUIT}")' if where == "camo" else ""))
+    player, soldier, yaw = place(where, distance, facing(game))
+    put(game, *player)
     if crouched:
         game.action("crouch", 1.0)
+        time.sleep(CROUCH)
+    log.new_lines()
+    seen = {}
+    spawn(game, soldier, yaw)
     time.sleep(SETTLE)
     perceived(log.new_lines(), seen)
-    if mode == "hold":
-        deadline = time.monotonic() + HOLD
-        while time.monotonic() < deadline:
+    if mode in ("hold", "sidestep"):
+        start = time.monotonic()
+        way = None
+        while time.monotonic() < start + HOLD:
+            # A sidestep is sent once a swing, right then left.
+            turn = int((time.monotonic() - start) / SWING) % 2
+            if mode == "sidestep" and turn != way:
+                way = turn
+                game.action("move", 0.0, 1.0 - 2.0 * way)
             perceived(log.new_lines(), seen)
             time.sleep(0.2)
+        game.action("move", 0.0, 0.0)
     else:
         game.action("move", 1.0, 0.0)
         deadline = time.monotonic() + APPROACH_LIMIT
@@ -185,29 +211,31 @@ def run_case(game, log, case, ahead):
         perceived(log.new_lines(), seen)
     if crouched:
         game.action("crouch", 1.0)
+    if where == "camo":
+        game.lua(f'Game:RemoveBonusPlan("{CAMO_SUIT}")')
     return seen
 
 
 def shown(value):
-    return "never" if value is None else f"{value:.0f} m"
+    return "never" if value is None else f"{value:g} m"
 
 
 def logged(seen, level):
     """What the log showed, and where in his view the player was then: idle soldiers turn their
     heads, so a case's facing is only where he starts."""
     if level not in seen:
-        return "never".ljust(22)
+        return "never".ljust(40)
     distance, zone = seen[level]
-    return f"{distance:.0f} m {zone}".ljust(22)
+    return f"{distance:.1f} m {zone}".ljust(40)
 
 
 def expected(case, model):
-    """Where the model says the log should show it: on an approach from where it starts, held still
-    at the hold's distance if it reaches that far."""
+    """Where the model says the log should show it: on an approach from where it starts, held or
+    sidestepping at the case's distance if it reaches that far."""
     distance, mode = case[3], case[5]
     if model is None:
         return None
-    if mode == "hold":
+    if mode != "approach":
         return distance if distance <= model else None
     return min(model, distance)
 
@@ -223,17 +251,14 @@ def main():
     with launch(SAVE) as game:
         game.option("Invincibility", 1)
         game.call("weather clear")
-        ahead = forward(game)
-        run.note(f"the player faces ({ahead[0]:.2f}, {ahead[1]:.2f}) at yaw {LANE_YAW}")
+        ahead = facing(game)
+        run.note(f"the player faces ({ahead[0]:.2f}, {ahead[1]:.2f})")
         # The first soldier spawned after the load saw nothing; a held case first wakes the AI.
-        run_case(game, log, WARM_UP, ahead)
+        run_case(game, log, WARM_UP)
         for case in CASES:
             if only is not None and case[0] not in only:
                 continue
-            seen = run_case(game, log, case, ahead)
-            # Recognised at once, he never logged noticing first.
-            if "notices" not in seen and "recognises" in seen:
-                seen["notices"] = seen["recognises"]
+            seen = run_case(game, log, case)
             row = (f"{case[0]:<24} notices {logged(seen, 'notices')} (model {shown(expected(case, case[6]))}), "
                    f"recognises {logged(seen, 'recognises')} (model {shown(expected(case, case[7]))})")
             print(row)
