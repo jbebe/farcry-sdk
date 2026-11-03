@@ -228,6 +228,20 @@ lifted a downed soldier onto his shoulders, carried him a moment and dropped him
 
 What a downed soldier then soaks is in [issue #25](https://github.com/jbebe/farcry-sdk/issues/25).
 
+**A fall he is sure he will not survive.** When a soldier starts to fall, `CPawn::SPawnImpl::UpdateJump`
+(server `0x08FCC600`) casts a ray 10.1 m down from him, 2.1 m for the player. If it finds no ground
+it sends him `falltodeath_ai`, and `CFCXCountersComponentAI::OnEvent` sets a flag (`+0x94`) that makes
+his next landing a Crush stim of level 1000 with no instigator, whatever the speed:
+`ApplyLandingDamage` (`0x087E62D0`) takes it as forced, where otherwise `GetStimLevelFromFall`
+(`0x09403690`) rates the landing by its speed. **RE-verified in the server build.**
+
+A soldier spawned far from the player can meet it on flat ground. On the test range a rifleman
+spawned 56 to 130 m away now and then took that stim 1.4 to 1.9 s after the spawn, his health 250 to
+0, and lay dead where he stood, a drop of 0.5 m or none. A second one spawned at the same spot within
+about half a minute lived; the next one after that could die again. Read as: the ground under a
+far spot can be missing from the physics world for a moment, so he falls and the ray finds nothing.
+What streams that ground in was not traced (fc2drive and a hook on `DamageHealth`, 2026-11-03).
+
 ## Breakable props
 
 A `CCompoundPhysComponent` object is a state machine over named parts. 683 of world 1's 954 compound
