@@ -9,6 +9,10 @@ and fro there. A case is about one place in the soldier's view, in his focus, at
 him, and counts only while the soldier keeps the player there: the plugin's trace says where he looks,
 and a case he looks away from is tried again. The table at the end puts what the log shows beside what
 the model expects.
+
+The walk-in cases have the soldier come to the player instead, along one of the range's patrol routes,
+looking mostly ahead: each sighting counts in the zone it happened in, and a look from within the
+model's distance that saw nothing counts against it.
 """
 
 import argparse
@@ -44,6 +48,7 @@ ZONE = "(" + "|".join([FOCUS, *ZONES.values()]) + ")"
 PERCEPTION = re.compile(r"perception: (notices|recognises) the player at (\S+) m, [^,]+, "
                         rf"({ZONE}(?:, in grass|, hidden by the camo suit)?)")
 TRACE = re.compile(rf"perception trace: (\S+) m, [^,]+, {ZONE}")
+DEATH = re.compile(r"soldier \S+ died, not by the player")
 # The switch that has Difficulty Overhaul trace every check of the player.
 TRACE_SWITCH = "-perceptiontrace"
 # The bonus plan that is the camo suit.
@@ -110,6 +115,37 @@ CASES = [
     ("camo-still-2.5", 12, "camo", 2.5, True, "hold", 3, 3),
 ]
 WARM_UP = ("warm-up", 12, "toward", 30, False, "hold", 48, 40)
+
+# The range's patrol routes: where each starts, at its patrol point, and the way it runs from there.
+ROUTES = {"lane": ((140.0, 110.0), (1.0, 0.0)), "grass": ((318.0, 352.0), (-1.0, 0.0)),
+          "wall": ((100.0, 125.0), (0.0, -1.0))}
+# Seconds a spawned soldier may take to die of a fall the game is sure of, and tries at a spawn that
+# outlives it; how far closer than his farthest look he has to come to be on his way, which his idle
+# wandering does not reach; the longest wait for that, and for a whole walk-in. Then how much farther
+# than his nearest look he has to draw to have passed, and how close the player walks up to him.
+FALL_DEATH = 2.5
+SPAWNS = 3
+ON_HIS_WAY = 20.0
+WAIT_LIMIT = 120.0
+WALK_LIMIT = 240.0
+PASSED = 5.0
+WALK_UP = 6.0
+# name, route, hour, how far ahead along it and to its left the player stands, crouched, what he does
+# once the soldier is on his way (stays still, walks to him, or sidesteps), the zone the case is about,
+# then what the model expects: notices and recognises from, None for never, and for a never how near
+# a look of his in the zone has to come to count.
+WALK_CASES = [
+    ("walk-day-still", "lane", 12, 75, 0, False, "still", FOCUS, 48, 40, None),
+    ("walk-day-crouched-still", "lane", 12, 75, 0, True, "still", FOCUS, 48, 40, None),
+    ("walk-day-upright", "lane", 12, 140, 0, False, "walk", FOCUS, 100, 60, None),
+    ("walk-day-crouched", "lane", 12, 140, 0, True, "walk", FOCUS, 70, 50, None),
+    ("walk-night-upright", "lane", 0, 80, 0, False, "walk", FOCUS, 30, 25, None),
+    ("walk-night-crouched-still", "lane", 0, 60, 0, True, "still", FOCUS, 30, 25, None),
+    ("walk-side-35", "lane", 12, 75, 35, False, "still", "at his side", None, None, 37),
+    ("walk-grass-crouched-still", "grass", 12, 100, 0, True, "still", FOCUS, 24, 20, None),
+    ("walk-grass-crouched-moving", "grass", 12, 100, 0, True, "sidestep", FOCUS, 30, 25, None),
+    ("walk-wall-crouched", "wall", 12, 88, 0, True, "still", FOCUS, None, None, 20),
+]
 
 
 class Log:
@@ -292,6 +328,150 @@ def shown(watch, level, model):
     return f"{logged:<36} model {expected:<6}"
 
 
+# A walk-in's noticing or recognising: how far, where in his view as logged and as the bare zone, and
+# his looks before it.
+WalkSighting = namedtuple("WalkSighting", "distance zone where before")
+
+
+class WalkWatch:
+    """What one walk-in saw: his looks at the player, each how far and in which zone; the first
+    noticing and recognising; whether he set off along his route; and whether he died."""
+
+    def __init__(self, zone):
+        self.zone = zone
+        self.looks = []
+        self.seen = {}
+        self.on_way = False
+        self.dead = False
+
+    def read(self, lines):
+        for line in lines:
+            if trace := TRACE.search(line):
+                self.looks.append((float(trace.group(1)), trace.group(2)))
+            elif match := PERCEPTION.search(line):
+                sighting = WalkSighting(float(match.group(2)), match.group(3), match.group(4), list(self.looks))
+                self.seen.setdefault("notices", sighting)
+                if match.group(1) == "recognises":
+                    self.seen.setdefault("recognises", sighting)
+            elif DEATH.search(line):
+                self.dead = True
+
+    def distances(self):
+        return [distance for distance, _ in self.looks]
+
+    def in_zone(self, looks):
+        return [distance for distance, zone in looks if zone == self.zone]
+
+    def before_any_sighting(self):
+        """His looks before he first made anything of the player, while he still walked his route."""
+        first = min((len(sighting.before) for sighting in self.seen.values()), default=len(self.looks))
+        return self.looks[:first]
+
+
+def walk_verdict(watch, level, model, close):
+    """A sighting in the case's zone matches where the model puts it, unless an earlier look of his
+    in the zone from within the model's distance saw nothing; a never needs him to have looked from
+    within `close`."""
+    if watch.dead:
+        return "unjudged, he died"
+    if not watch.on_way and not watch.seen:
+        return "unjudged, he never set off"
+    sighting = watch.seen.get(level)
+    if sighting is not None and sighting.where == watch.zone:
+        distance = sighting.distance
+        if model is None:
+            return "differs"
+        missed = [d for d in watch.in_zone(sighting.before) if distance + 0.3 < d <= model - TOLERANCE]
+        if missed:
+            return f"differs, missed him at {max(missed):.1f} m"
+        return "matches" if distance <= model + TOLERANCE else "differs"
+    looks = watch.in_zone(watch.before_any_sighting())
+    if model is None:
+        return "matches" if looks and min(looks) <= close else "unjudged, he never came close"
+    if looks and min(looks) <= model - TOLERANCE:
+        return f"differs, missed him at {min(looks):.1f} m"
+    return "unjudged, not in the zone within reach"
+
+
+def spawn_alive(game, log, at, yaw):
+    """A rifleman spawned at `at` who outlives a fall the game is sure of, and the lines since."""
+    for _ in range(SPAWNS):
+        game.lua(CLEAR)
+        log.new_lines()
+        game.lua(f'TestRange.n = TestRange.n + 1 TestRange[TestRange.n] = SpawnEntityFromArchetype('
+                 f'"{RIFLEMAN}", {at[0]:.3f}, {at[1]:.3f}, {GROUND:.4f}, 0, 0, {yaw:.1f})')
+        time.sleep(FALL_DEATH)
+        lines = log.new_lines()
+        if not any(DEATH.search(line) for line in lines):
+            return lines
+    return lines
+
+
+def run_walk(game, log, case):
+    """One walk-in: the soldier spawned at his route's start, the player ahead, until he recognises the
+    player, passes him, or dies."""
+    _, route, hour, ahead, aside, crouched, motion, zone, *_ = case
+    (sx, sy), (dx, dy) = ROUTES[route]
+    player = (sx + dx * ahead - dy * aside, sy + dy * ahead + dx * aside)
+    game.lua(CLEAR + f"CDynamicEnvironmentManager_GetInstance():SetScriptedTimeOfDay({hour}, 0)")
+    put(game, *player, spawn_yaw(sx - player[0], sy - player[1]))
+    if crouched:
+        game.action("crouch", 1.0)
+        time.sleep(CROUCH)
+    watch = WalkWatch(zone)
+    watch.read(spawn_alive(game, log, (sx, sy), spawn_yaw(dx, dy)))
+    start = time.monotonic()
+    on_way = None
+    way = None
+    while time.monotonic() < start + WALK_LIMIT and not watch.dead and "recognises" not in watch.seen:
+        watch.read(log.new_lines())
+        distances = watch.distances()
+        if on_way is None:
+            if distances and max(distances) - distances[-1] >= ON_HIS_WAY:
+                on_way = len(distances)
+                if motion == "walk":
+                    game.action("move", 1.0, 0.0)
+            elif time.monotonic() > start + WAIT_LIMIT:
+                break
+        else:
+            if distances[-1] >= min(distances[on_way - 1:]) + PASSED:
+                break
+            if motion == "walk" and distances[-1] <= WALK_UP:
+                game.action("move", 0.0, 0.0)
+            if motion == "sidestep":
+                # A sidestep is sent once a swing, right then left.
+                turn = int(time.monotonic() / SWING) % 2
+                if turn != way:
+                    way = turn
+                    game.action("move", 0.0, 1.0 - 2.0 * way)
+        time.sleep(0.2)
+    game.action("move", 0.0, 0.0)
+    time.sleep(1.0)
+    watch.read(log.new_lines())
+    if crouched:
+        game.action("crouch", 1.0)
+    watch.on_way = on_way is not None
+    return watch
+
+
+def run_walk_case(game, run, log, case):
+    """Up to ATTEMPTS walk-ins until both levels are judged; the row of the one that judged most."""
+    _, *_, notices, recognises, close = case
+    models = (("notices", notices), ("recognises", recognises))
+    tries = []
+    while len(tries) < ATTEMPTS:
+        tries.append(run_walk(game, log, case))
+        if not any(walk_verdict(tries[-1], level, model, close).startswith("unjudged") for level, model in models):
+            break
+    watch = max(tries, key=lambda tried: sum(not walk_verdict(tried, level, model, close).startswith("unjudged")
+                                             for level, model in models))
+    row = f"{case[0]:<26} try {tries.index(watch) + 1} of {len(tries)}"
+    for level, model in models:
+        row += f" | {level} {shown(watch, level, model)} {walk_verdict(watch, level, model, close)}"
+    print(row)
+    run.note(row)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--only", help="case names, comma separated")
@@ -320,6 +500,9 @@ def main():
                 row += f" | {level} {shown(watch, level, model)} {verdict(watch, level, model, case[3])}"
             print(row)
             run.note(row)
+        for case in WALK_CASES:
+            if only is None or case[0] in only:
+                run_walk_case(game, run, log, case)
         game.lua(CLEAR)
     print(run.folder)
 
