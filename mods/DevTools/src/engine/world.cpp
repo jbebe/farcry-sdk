@@ -5,6 +5,8 @@
 #include "engine/player.h"
 #include "fcse_api.h"
 
+#include <cmath>
+
 namespace {
     using FlagFn = bool(__cdecl*)();
     using TeleportFn = void(__cdecl*)(const float* position);
@@ -44,7 +46,8 @@ bool Teleport(float x, float y, float z, std::optional<float> yawDegrees) {
     if (yawDegrees) {
         void* ref = Entity::AcquireFocusRef(Player::CameraManager());
         if (void* entity = Entity::Of(ref)) {
-            Entity::SetEuler(entity, 0.0f, 0.0f, *yawDegrees * Entity::kRadiansPerDegree);
+            const float degrees = std::remainder(*yawDegrees - Entity::Yaw(entity) / Entity::kRadiansPerDegree, 360.0f);
+            Player::TurnLook(degrees * Entity::kRadiansPerDegree);
         }
         Entity::ReleaseRef(ref);
     }

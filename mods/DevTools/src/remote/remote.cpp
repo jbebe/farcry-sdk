@@ -186,10 +186,12 @@ namespace {
             return Fail("goto takes x y z, then a yaw in degrees if wanted");
         }
         const std::optional<float> yaw = at.size() > 3 ? std::optional<float>(at[3]) : std::nullopt;
-        return OnFrame([at, yaw] {
-            return World::Teleport(at[0], at[1], at[2], yaw) ? State()
+        const std::string moved = OnFrame([at, yaw] {
+            return World::Teleport(at[0], at[1], at[2], yaw) ? Ok()
                                                              : Fail("there is no player to move, or no teleport in this build");
         }, kLoad);
+        // The state a frame on, once the body has taken the look's facing.
+        return moved == Ok() ? OnFrame(State) : moved;
     }
 
     std::string Action(const std::string& arguments) {

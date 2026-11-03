@@ -22,6 +22,12 @@ namespace {
 
     constexpr ptrdiff_t kPlayerScene = 0x04;
     constexpr ptrdiff_t kSceneCameraManager = 0xB8;
+
+    // The pawn's data, in it the desired and the effective look, and in each the yaw in radians, left
+    // positive, kept twice. See docs/docs/engine-internals/first-person-aiming.md#the-look.
+    constexpr ptrdiff_t kPawnData = 0x10;
+    constexpr ptrdiff_t kLooks[] = {0x140, 0x2D0};
+    constexpr ptrdiff_t kLookYaws[] = {0x40, 0x4C};
 }
 
 namespace DevTools::Player {
@@ -49,6 +55,19 @@ void* Pawn() {
     // The scene is a component of the player's entity, which also holds the pawn.
     void* entity = FCSE::ApiPointer()->EntityData->EntityOf(Read<void*>(local, kPlayerScene));
     return entity != nullptr ? Entity::Component(entity, g_pawnClass() + kHierarchyPawnId) : nullptr;
+}
+
+void TurnLook(float leftRadians) {
+    void* pawn = Pawn();
+    auto* data = pawn != nullptr ? Read<uint8_t*>(pawn, kPawnData) : nullptr;
+    if (data == nullptr) {
+        return;
+    }
+    for (const ptrdiff_t look : kLooks) {
+        for (const ptrdiff_t yaw : kLookYaws) {
+            *reinterpret_cast<float*>(data + look + yaw) += leftRadians;
+        }
+    }
 }
 
 void* CameraManager(void* local) {

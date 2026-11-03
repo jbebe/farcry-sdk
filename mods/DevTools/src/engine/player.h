@@ -11,6 +11,10 @@ void* Local();
 // The local player's CPawn, or null.
 void* Pawn();
 
+// Turns the local player's look by `leftRadians`; his body takes it from the look a frame later.
+// Game thread.
+void TurnLook(float leftRadians);
+
 // The camera manager for the local player's scene, or null. Takes the player when the caller
 // already has one, because most callers are on a frame that resolved it once.
 void* CameraManager(void* local);

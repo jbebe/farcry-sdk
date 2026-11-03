@@ -420,7 +420,7 @@ world there has loaded.
 | Command | What it does |
 |---|---|
 | `state` | Whether the player is in a world, whether a loading screen is up or anything is streaming, and `ready` for none of those. Then position, yaw, the gun in hand, its rounds and health, whether a recording is being made or played, and the game's window. While the engine is too busy loading to reach the end of a frame, only `ready` false and `busy` true |
-| `goto x y z [yaw]` | The game's own teleport, then the facing in degrees |
+| `goto x y z [yaw]` | The game's own teleport, then the facing in degrees, turned through the player's look, since a facing set on the body does not hold. Answers a frame later, once the body faces it |
 | `action <signal> [values]` | Fires an action by its name in the action map, as the player's bindings would: `startshooting 1`, `stopshooting 0`, `move 1 0`, `look 0 -0.5`, `use 1` |
 | `shot <path>` | Writes the next finished frame as a PNG, before the overlay draws on it |
 | `lua <code>`, `eval <expression>`, `console <line>` | The Lua tab's Run and Evaluate, with the lines they added, and a console line |
