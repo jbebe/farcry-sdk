@@ -19,6 +19,9 @@ public sealed class FcbObject
 
     public List<FcbObject> Children { get; } = [];
 
+    /// <summary>Every node under this one, each before its own children.</summary>
+    public IEnumerable<FcbObject> Descendants() => Children.SelectMany(c => c.Descendants().Prepend(c));
+
     /// <summary>A deep copy - no value array or child is shared with this node.</summary>
     public FcbObject Clone()
     {

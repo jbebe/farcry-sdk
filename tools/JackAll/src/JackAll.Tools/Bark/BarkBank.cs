@@ -70,19 +70,16 @@ public static class BarkBank
             FcbEntityFields.ReadString(bark, SourceText),
             FcbEntityFields.ReadString(bark, TargetText),
             mission,
-            [.. Descendants(bark).Where(o => o.TypeHash == LineType).Select(ReadLine)]);
+            [.. bark.Descendants().Where(o => o.TypeHash == LineType).Select(ReadLine)]);
     }
 
     private static BarkLine ReadLine(FcbObject line) => new(
         FcbEntityFields.ReadString(line, SpeakerText),
         FcbEntityFields.ReadString(line, EmotionText),
         FcbEntityFields.ReadString(line, GestureText),
-        [.. Descendants(line)
+        [.. line.Descendants()
             .Select(o => FcbEntityFields.ReadU32(o, SoundIdField))
             .OfType<uint>()]);
-
-    private static IEnumerable<FcbObject> Descendants(FcbObject node) =>
-        node.Children.SelectMany(c => Descendants(c).Prepend(c));
 }
 
 /// <summary>Which bank holds each mission tag's barks, read once from every bank the list names.</summary>

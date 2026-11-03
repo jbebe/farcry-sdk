@@ -70,7 +70,7 @@ public sealed class NavMeshBuildCommand : CliCommand<NavMeshBuildCommand.Setting
 
         var progress = new Progress<string>(line => AnsiConsole.MarkupLine($"[dim]{line.EscapeMarkup()}[/]"));
         (Dictionary<int, NvmSector> sectors, int solids) = NavMeshGenerator.BuildMap(
-            map, world, Read, files, defs, progress);
+            map, world, Read, files, progress);
 
         foreach ((string sdat, int id) in map.Sectors)
         {

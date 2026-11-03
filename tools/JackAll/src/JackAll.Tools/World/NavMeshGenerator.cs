@@ -102,13 +102,13 @@ public static partial class NavMeshGenerator
     /// <param name="knownPaths">Every path the trees' resource ids may name.</param>
     public static (Dictionary<int, NvmSector> Sectors, int Solids) BuildMap(
         TerrainMap map, string worldName, Func<string, byte[]?> readByPath, IEnumerable<string> knownPaths,
-        FcbClassDefinitions definitions, IProgress<string>? progress = null)
+        IProgress<string>? progress = null)
     {
         WorldTerrain terrain = WorldTerrain.Load(map, readByPath, progress);
         Fc2World world = WorldLoader.Load(map, readByPath, progress);
         ArchetypeIndex archetypes = ArchetypeIndex.Load(worldName, readByPath, progress);
         List<NavMeshSolid> solids = NavMeshSolid.Of(world.Entities, archetypes, readByPath, progress);
-        solids.AddRange(NavMeshSolid.OfVegetation(WorldVegetation.Load(map, readByPath, definitions, progress),
+        solids.AddRange(NavMeshSolid.OfVegetation(WorldVegetation.Load(map, readByPath, progress),
             WorldVegetation.ResourcesById(knownPaths), readByPath));
         Dictionary<int, float> water = terrain.Water.ToDictionary(w => w.SectorId, w => w.Level);
 

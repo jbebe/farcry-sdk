@@ -34,8 +34,8 @@ public static class WorldLoader
             .SelectMany(s => new[]
             {
                 (WorldSectorPath(s.Path, s.SectorId), s.SectorId, false),
-                (SectorFilePath(s.Path, s.SectorId, $"landmarknear{s.SectorId}.data.fcb"), s.SectorId, true),
-                (SectorFilePath(s.Path, s.SectorId, $"landmarkfar_{s.SectorId}.data.fcb"), s.SectorId, true),
+                (WorldVegetation.NearPath(s.Path, s.SectorId), s.SectorId, true),
+                (WorldVegetation.FarPath(s.Path, s.SectorId), s.SectorId, true),
             })
             .OrderBy(s => s.Item2)];
 
