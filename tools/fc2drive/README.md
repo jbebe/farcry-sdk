@@ -17,6 +17,7 @@ python scenarios\locations.py --hour 22 --clip
 python scenarios\inventory.py             the notebook's pages, then a pickup; needs Inventory Overhaul
 python scenarios\perception.py            Difficulty Overhaul's perception on the test range, case by case
 python scenarios\perception.py --only day-upright,night-upright
+python scenarios\grass.py                 the test range's grass field: pictures, then whether soldiers count you in grass
 ```
 
 Each launches the game, does its work, closes the game, and leaves a folder under `runs\` (not

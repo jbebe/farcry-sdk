@@ -140,9 +140,14 @@ def place(game, case, ahead):
                            -fx * math.sin(side) - fy * math.cos(side))}[facing]
         yaw = spawn_yaw(gx, gy)
     put(game, *player)
-    game.lua(f'TestRange.n = TestRange.n + 1 TestRange[TestRange.n] = SpawnEntityFromArchetype('
-             f'"{RIFLEMAN}", {soldier[0]:.3f}, {soldier[1]:.3f}, {GROUND + SOLDIER_DROP:.3f}, 0, 0, {yaw:.1f})')
+    spawn(game, soldier, yaw)
     return soldier
+
+
+def spawn(game, at, yaw):
+    """A rifleman dropped onto the range at `at`, kept in the TestRange table CLEAR empties."""
+    game.lua(f'TestRange.n = TestRange.n + 1 TestRange[TestRange.n] = SpawnEntityFromArchetype('
+             f'"{RIFLEMAN}", {at[0]:.3f}, {at[1]:.3f}, {GROUND + SOLDIER_DROP:.3f}, 0, 0, {yaw:.1f})')
 
 
 def on_range(x, y):

@@ -95,12 +95,23 @@ namespace {
          "at the other end."},
     };
 
+    // In the field north of the hub, x 192 to 320 and y 320 to 384: the player 20 m into it, facing
+    // north, one rifleman in the grass ahead and one in the open past its edge.
+    constexpr Soldier kGrassPair[] = {{kRifleman, {256, 360, 180}}, {kRifleman, {256, 390, 180}}};
+    constexpr Scenario kGrassField[] = {
+        {"Riflemen at 20 m and 50 m", "10", kGrassPair,
+         "Crouch in the grass and keep still, then move crouched toward them.",
+         "The one at 20 m makes you out once you move ('in grass' on his perception line) and fires; "
+         "the one at 50 m never does while you stay crouched."},
+    };
+
     constexpr Arena kArenas[] = {
         {"Duel lane", {30, 110, 270}, kDuelLane},
         {"Low wall", {100, 37, 0}, kLowWall},
         {"Long wall", {64, 444, 180}, kLongWall},
         {"Suppression", {416, 60, 270}, kSuppression},
         {"Sniper", {380, 370, 317.7f}, kSniperLane},
+        {"Grass field", {256, 340, 0}, kGrassField},
     };
 }
 

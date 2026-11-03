@@ -311,6 +311,10 @@ way any new world is ([Make a new world](../../docs/jackall/world/new-worlds.md)
     deep that slopes to its top, 2.25 m along it: the cover of every arena, end to end in rows;
   - `CoverObjects.WallEroded10_BK.Multi_0` from `mp_07_m_dogon`, a 6 m concrete wall up to 1.4 m
     high with a broken top, only in the hub: through its gaps a crouched player is half seen.
+
+  It also holds `vegetation.xml`, the [vegetation plan](../../docs/jackall/world/new-worlds.md#vegetation)
+  for the grass field north of the hub: x 192 to 320 and y 320 to 384, world 1's tall savannah
+  grass `1_grasssavannah_b`, one of the few meshes that hide a crouched player from soldiers.
 - `range\build-layer.ps1` makes the world's files from the installed game's `tmpla` with
   `jackall-cli world new`, then packs them with the content into `layer\` with `jackall-cli world pack`.
   The layer is game files and is not committed.
@@ -347,9 +351,10 @@ invincibility yourself: it is on unless the scenario tests damage to you.
 | Long wall | a wall at y 440 across the whole range, so the squad cannot go round it, an 18 m wall 20 m behind it, the squad 40 m south | squad at the long wall | 11, 13, 14, 15 |
 | Suppression | two 18 m lines at x 420 and 460 | two riflemen behind cover | 12 |
 | Sniper | a 12 m wall 3 m in front of (380, 370), the sniper at (440, 437), 90 m away: at 150 m the game removed him | sniper at 90 m | 9, 15 at range |
+| Grass field | the player 20 m into the grass at (256, 340), facing north | riflemen at 20 m in the grass and at 50 m past its edge | 10 |
 
-Not covered yet: **row 10**, since the range has no tall grass, and **pistols and SMGs in row 8**,
-since no soldier archetype carries one as its main weapon. The navmesh lays cover points along every
+Not covered yet: **pistols and SMGs in row 8**, since no soldier archetype carries one as its main
+weapon. The navmesh lays cover points along every
 wall (120 of them), so soldiers should take cover behind them. That is not yet seen in game.
 
 `tmpla`'s south-west sector, x and y below 64, is flooded: it has a water plane at 32 m, 16 m above
