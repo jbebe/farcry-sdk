@@ -250,14 +250,67 @@ in the sector data, descriptors or masks. The `.sdat` `EnvSettings` blob, the re
 store, is a raw memory snapshot whose varying words look like retained pointers (`0x07xxxxxx`), not
 an authored slot table.
 
+## One tuft
+
+:::info[Verified via reverse engineering]
+Read from the editor's save path (`StClusterData::StoreGraphicCluster`,
+`StSerialVegetationZoneData::Serial_PrepareForSave`) and the load path
+(`RestoreGraphicCluster`, `CSceneGraphicObjectClusterHelper::AddInstance`), then checked against
+every shipped zone: JackAll reads and rewrites the nine lists of 12,197 of the 12,203 byte for byte.
+:::
+
+A placed copy of a mesh is a 32-byte record in memory: its position, its turn, and three colour
+words. The lists hold the same fields, split one list per field:
+
+| Field | What it holds |
+|---|---|
+| `posXYList`, `posZList` | the position: X and Y rounded to the decimetre, Z a float |
+| `orientZDataList` | the turn about Z only: `sin × 32767` in the high `i16`, `cos × 32767` in the low. The angle is `atan2(sin, cos)` |
+| `colorsList` word 1 | RGB the ground's colour under the tuft, A its height scale (`× 255`). A of 0 is read as `0xFF` |
+| `colorsList` word 2 | the ground's normal under the tuft, each axis `× 0.5 + 0.5` in R, G and B, Z as `CSector::GetNormal` makes it ([normals](#normals)). Flat ground is `0x007F7FFF` |
+| `colorsList` word 3 | RGB how much sky the tuft sees, near white in the open; what A carries is not established |
+
+The editor groups a resource's tufts into **clusters by the 16 m square they stand in**, about 96
+to a square in a shipped savannah field. A cluster is drawn and culled as one; its sphere comes from
+`CSceneGraphicObjectClusterHelper::UpdateBoundingVolume`. Each tuft counts as a sphere at its mesh
+box's centre whose radius is the box's shortest side, as `GetGeometryLocalBSphere` makes it. The
+cluster's sphere sits at the middle of their bounds, and its radius is the longest side of those
+bounds, so the sphere is about twice as large as it needs to be. `VegetationData`'s `bboxMin` and
+`bboxMax` bound every tuft's turned mesh box in the sector.
+
+**A cluster holds at most 255 tufts.** Its count is the low byte of its packed word, and the editor
+packs `offset << 8 | count` without masking, so a 257th tuft carries into the offset. The engine then
+reads a few tufts from one place further on and never draws the rest. Six campaign sectors shipped
+that way (`landmarknear2753` and `2836` in `w1_c_3`, `3983`, `4062`, `4063` and `4540` in `w2_b_4`),
+each missing most of one cluster's grass.
+
+## The mesh a tuft names
+
+A tuft is spawned only if the world's `CCollectionManager` lists its mesh: the
+`SerializationData` → `ResourcesList` → `Resource` entries of `<world>.managers.fcb`
+(`CCollectionManager::GetSafeResourceInfo`; **RE-verified**). Each `StClusterResourceInfo` carries:
+
+| Field | Meaning |
+|---|---|
+| `classId` | 1 a mesh (`CGraphicClusterComponent`), 2 a RealTree (`CRealtreeClusterComponent`) |
+| `fileNameId` | the mesh, by path hash |
+| `flags` | bit 0 draws the tuft in its own colour word, bit 2 gives it physics; `RefreshHasGrass` sets `0x80` when the mesh has a material named `Grass` |
+| `playerCoverage` | 1 for a mesh tall enough to hide a crouched player from the AI ([grass and stealth](./ai.md#grass-and-stealth)), 0 for the rest |
+| `physPathId` | the physics a mesh with bit 2 collides with |
+
+`world1`, `world2`, `tmpla`, `mp_11_l_savanna` and `mp_17_dunes` each list the same 187 entries. Of
+the grasses only `1_grasssavannah_b`, `_f`, `_g`
+and `_bold`, and `2_sorghum`, have a `playerCoverage` of 1. The multiplayer grasses (`*_mp`), the
+short and `_a`/`_c` savannah grasses, and every jungle and desert grass have 0: they are drawn, but
+hide no one.
+
 ## Not mapped
 
 Left deliberately unresolved rather than guessed:
 
 - Bit 4 of the per-cell `Flags` byte. Bits 3..0 are the quad mask and bits 7..5 the surface-type
   palette slot — see [`.sdat`](../file-formats/sdat.md#the-low-nibble-is-the-quad-mask).
-- `StVegetationInstanceInfo`'s fields, and the nested 0x10- and 0x50-byte cluster/instance records
-  inside `StSerialVegetationZoneData`.
+- The alpha of a tuft's third colour word, and how the editor scatter picks a tuft's height scale.
 - `CFCXEditorCollectionManager::LoadMask` has an in-place expansion path for a shorter-than-expected
   mask file, which reads like nibble unpacking but whose index arithmetic is `i >> 2` where `i >> 1`
   would be expected for two nibbles per byte. Worth checking against a real mask file before relying

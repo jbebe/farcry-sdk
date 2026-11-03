@@ -358,6 +358,15 @@ archetypes carry, so it is 1 for anyone else. `CStealthComponent::Update` sets i
 the player is crouched, samples the grass every 0.25 s, and counts him as hidden once he has been
 crouched in high grass for more than a second without moving 0.2 m.
 
+High grass is the vegetation the world places, not the ground. Each sample tests three points
+around the player, his front, left and right, and he is in high grass when two of them are. A point
+is in it when a placed tuft stands within 1.5 m of it, unburnt, of a mesh whose
+[`playerCoverage`](./terrain-and-vegetation.md#the-mesh-a-tuft-names) is at least 1
+(`CStealthComponent::InHighGrass`, server `0x0883E250`; **RE-verified**). Only five shipped meshes
+have that, the tall savannah grasses and sorghum, so the multiplayer grass looks the same and hides
+no one. On the test range a crouched player in `1_grasssavannah_b` reads `in grass` on the
+Difficulty Overhaul's perception line and in `1_grasssavannah_b_mp` does not (fc2drive, 2026-11-03).
+
 - **Concealment** is `1 − ramp(d, 3 m, 10 m) × k`. *k* is 0.9 for an idle observer, 0.765 for one
   alerted before a fight, and 0 in or just after combat. The observer's side of the player picks
   which grass sample counts, front, left or right. An observer looking down at more than 30° is not

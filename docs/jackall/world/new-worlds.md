@@ -60,9 +60,43 @@ For every new world in the layer it writes:
   groups the game asks for by name wherever it is played (the player, weapons and their data,
   hand-held props, cameras, soldiers, vehicles and a few more);
 - **the sector list**, with every sector flagged so the game loads its files and its navmesh;
-- **the navmesh**, over the terrain and every object's collision, with cover points along walls and props.
+- **the navmesh**, over the terrain and every object's collision, with cover points along walls and props;
+- **the vegetation**, if the world has a [vegetation plan](#vegetation).
 
 Everything else in the layer is copied as it is. Point `--out` at a new or empty folder.
+
+## Vegetation
+
+Grass and other scattered meshes are laid out in a plan, `levels\<world>\vegetation.xml` in the
+workspace. `world pack` grows it into each sector it reaches and flags those sectors so the game
+loads them. The plan itself stays out of the packed layer.
+
+```xml
+<Vegetation>
+  <Patch Mesh="graphics\vegetation\savannah\1_grasssavannah_b.xbg" Donor="w1_b_2" Seed="1">
+    <Area X="192" Y="320" Width="128" Height="64" />
+  </Patch>
+</Vegetation>
+```
+
+A **Patch** spreads one mesh over its **Area**s, rectangles in world metres. It places one copy in
+every square of **Spacing** metres (default 1.6, as thick as a shipped savannah field), at a random
+spot in the square, turned at random, on the ground. **Seed** makes another random layout of the
+same patch. **Donor** is a shipped level that places the same mesh. Each copy takes the colour,
+height and light of a random copy there, so a field looks the way the game's own fields do. Packing
+stops with an error if the donor places none.
+
+Which mesh you pick decides more than its look:
+
+- The world has to list it, or the game draws nothing. Every shipped world, and so every new one,
+  lists the same 187 meshes, all the game's scatter grasses, rocks and bushes among them. Packing
+  stops with an error for a mesh the world does not list.
+- Only five meshes hide a crouched player from soldiers: `1_grasssavannah_b`, `_f`, `_g`, `_bold`
+  and `2_sorghum`, all in `graphics\vegetation\savannah\`. The multiplayer grasses look the same and
+  hide no one. Packing warns about a mesh that hides no one.
+
+A world with no plan keeps `tmpla`'s bare ground. A plan in a mod that only changes another mod's
+world is not grown.
 
 ## Deploy and visit
 
@@ -98,6 +132,8 @@ and the other's objects are missing from that sector's navmesh.
 
 - The navmesh drops ground off the terrain that nothing could reach, such as a rooftop or the top of
   a rock. Place a soldier, an animal or a smart-terrain point on it to keep it.
-- Terrain, roads, rivers and vegetation are copied from `tmpla` and cannot be edited yet.
+- Terrain, roads and rivers are copied from `tmpla` and cannot be edited yet. Vegetation is planned
+  in a file, not on the Map tab, and a plan cannot burn: none of it carries the fire data shipped
+  fields do.
 - The files JackAll writes are larger than the game's own, because it does not share repeated
   values the way the game's tools did. The game reads them all the same.

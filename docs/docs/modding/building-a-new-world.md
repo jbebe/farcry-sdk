@@ -53,8 +53,7 @@ So a new world reached by travel needs a spawn point placed on its ground. `neww
 under the terrain.
 
 Anything beyond a flat world with props and soldiers runs into gaps that do have names: terrain
-heights cannot be generated and vegetation cannot be packed. See
-[the checklist](#every-file-a-world-is-made-of).
+heights cannot be generated. See [the checklist](#every-file-a-world-is-made-of).
 
 ## Every file a world is made of
 
@@ -103,8 +102,8 @@ level, named after the world.
 | `worldsectors\sector<n>.srl` | **sound regions**: 32 × 32 bytes ([`.srl`/`.zsr`](../file-formats/srl-zsr.md)) | not traced | ✗ | ✗ | trivial: fixed-size, no header | `tmpla`'s |
 | `worldsectors\zonesector<n>.zsr` | zones, 64 × 64 bytes | not traced | ✗ | ✗ | trivial | `tmpla`'s |
 | `worldsectors\worldsector<n>.data.fcb` | **entities** by mission layer | no: `tmpla` ships none. Loaded only where `sectorsdep` sets `HasMainSectorData` | ✓ `WorldLoader` | ✓ Map tab, fragments onto a retail file | via XML ([placing entities](#placing-entities-in-a-new-world)) or the Map tab | none |
-| `worldsectors\landmarkfar_<n>.data.fcb` | **vegetation** (`VegetationData`) and far LOD | no: `tmpla` ships none. Loaded only where `sectorsdep` sets `HasLandmarkFar` | ✓ decoded ([vegetation](../engine-internals/terrain-and-vegetation.md)) | ✓ as plain FCB | ✗ no packer for the nine lists | none |
-| `worldsectors\landmarknear<n>.data.fcb` | near light-vegetation grid, some mission content | no. Loaded only where `sectorsdep` sets `HasLandmarkNear` | ✓ | ✓ | ✗ | none |
+| `worldsectors\landmarkfar_<n>.data.fcb` | **vegetation** (`VegetationData`) and far LOD | no: `tmpla` ships none. Loaded only where `sectorsdep` sets `HasLandmarkFar` | ✓ decoded ([vegetation](../engine-internals/terrain-and-vegetation.md)) | ✓ `VegetationZone` | not written: generated vegetation goes in the near file | none |
+| `worldsectors\landmarknear<n>.data.fcb` | **vegetation** too, a near light-vegetation grid, some mission content | no. Loaded only where `sectorsdep` sets `HasLandmarkNear` | ✓ | ✓ `VegetationZone` | ✓ `world pack` from a [vegetation plan](/jackall/new-worlds#vegetation), flag included | none |
 | `nv\sectors\nv_<n>.nvm` | **navmesh** for AI | no, but AI crashes without it. Loaded only where `sectorsdep` sets `HasNavMesh` | ✓ `NvmSector` | ✓ `NvmSector` | ✓ `navmesh build`, any terrain and collision ([AI in a new world](#ai-in-a-new-world)) | none, so no AI |
 | `sector<n>.preload_x.fcb`, beside `generated\` | streaming preload, campaign levels only | no | ✓ | ✓ | ✗ | none |
 
@@ -303,7 +302,7 @@ In order of what is ready:
 - **Terrain heights:** `SdatSectorFile.Encode` can write a sector. A flat sector's tables can be
   reused, but real relief needs its normals, LOD masks and bounds derived, and nothing does that yet.
   Sector edges are shared, so neighbouring sectors must agree.
-- **Vegetation:** needs a `VegetationData` packer.
+- **Vegetation:** a [vegetation plan](/jackall/new-worlds#vegetation), which `world pack` grows into each sector's `landmarknear` file.
 - **Roads:** need the spline bounds and arc tables recomputed.
 - **AI:** `jackall-cli navmesh build` ([AI in a new world](#ai-in-a-new-world)).
 
