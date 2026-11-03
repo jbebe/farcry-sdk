@@ -1,6 +1,6 @@
 <Task Name="::MercBrain/MercBrain/MercBrainAlert/StandDownTimer" Class="CTaskWait" Looping="0" Independent="1">
   <Parameter Name="waitTimeFact" Value="" />
-  <Parameter Name="timeToWait" Value="120" />
+  <Parameter Name="timeToWait" Value="90" />
   <Parameter Name="randomStartDelay" Value="0" />
   <Anchor Name="OnStart" />
   <Anchor Name="OnStop" />
