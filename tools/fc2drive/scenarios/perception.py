@@ -1,7 +1,7 @@
 """Difficulty Overhaul's perception on the test range: from how far one rifleman notices and recognises
 the player, case by case, read off the combat log's perception lines.
 
-    python perception.py [--save world1] [--only day-upright,night-upright]
+    python perception.py [--only day-upright,night-upright]
 
 Each case spawns a fresh rifleman, places the player, and either walks him toward the soldier or holds
 him still at a distance. The table at the end puts what the log shows beside what the model expects.
@@ -15,33 +15,45 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from fc2drive import GAME_BIN, Run, launch
+from fc2drive import GAME_BIN, GameError, Run, launch
 
 LOGS = GAME_BIN / "difficulty-overhaul-logs"
 RIFLEMAN = "enemy_archetypes.Red_Faction.Assault_Caucasian"
-TRAVEL = 'GameChangeWorld("testrange", "2054037628277228842")'
-# The range's ground, and a drop onto it for the player and for a soldier.
+# The save behind RunDebug_demorange, which starts on the test range: changing world to it from
+# another save crashed in the frame after.
+SAVE = "demorange"
+# The range's ground, the height above it the player is put at, as the Range tab puts him, and a drop
+# onto it for a soldier; then how far the range reaches, and how near its edge a walk stops.
 GROUND = 16.0625
-PLAYER_DROP = 2.0
+PLAYER_ABOVE = 0.44
 SOLDIER_DROP = 0.5
+RANGE_SIZE = 512.0
+EDGE = 10.0
 # Removes what the last case spawned, which the TestRange table holds, as the Range tab does.
 CLEAR = ("TestRange = TestRange or {n = 0} for i = 1, TestRange.n do RemoveEntity(TestRange[i]) end "
          "TestRange = {n = 0} ")
-PERCEPTION = re.compile(r"perception: (notices|recognises) the player at (\S+) m")
+PERCEPTION = re.compile(
+    r"perception: (notices|recognises) the player at (\S+) m, [^,]+, (in his focus|at his side|behind him)")
 # Seconds: a soldier's settling after he spawns, a held player's wait, and an approach's longest.
 SETTLE = 3.0
 HOLD = 6.0
 APPROACH_LIMIT = 40.0
-# An approach stops this close to the soldier.
+# An approach stops this close to the soldier, or once it has drawn this much farther from him than
+# it has been.
 CLOSEST = 4.0
+WRONG_WAY = 3.0
 
-# The duel lane runs east from (30, 110); the low wall's barriers lie across (100, 40) with the
-# player's start south of them.
-LANE = (30.0, 110.0)
+# The lane is open ground through (256, 110), south of the hub. The player is put this far back along
+# the way he faces from it, so a soldier as far ahead as any case puts him stays on the range. The
+# low wall's barriers lie across (100, 40), with the player's start south of them.
+LANE_MIDDLE = (256.0, 110.0)
+LANE_BACK = 65.0
+LANE_YAW = 90
+SIDE_ANGLE = 60.0
 WALL_START = (100.0, 37.0)
 WALL_SOLDIER = (100.0, 70.0)
 
-# name, hour, soldier facing (toward the player, away, or north across the lane), start distance,
+# name, hour, soldier facing (toward the player, away, or with him at his side), start distance,
 # crouched, mode, then what the model expects: notices and recognises from, None for never.
 CASES = [
     ("day-upright", 12, "toward", 130, False, "approach", 100, 60),
@@ -51,13 +63,14 @@ CASES = [
     ("day-crouched-still-35", 12, "toward", 35, True, "hold", 48, 40),
     ("night-upright", 0, "toward", 60, False, "approach", 30, 25),
     ("night-crouched-still-20", 0, "toward", 20, True, "hold", 30, 25),
-    ("side-still-15", 12, "north", 15, False, "hold", 24, 20),
-    ("side-still-30", 12, "north", 30, False, "hold", 24, 20),
+    ("side-still-15", 12, "side", 15, False, "hold", 24, 20),
+    ("side-still-30", 12, "side", 30, False, "hold", 24, 20),
     ("behind-upright", 12, "away", 30, False, "approach", 20, None),
     ("behind-crouched", 12, "away", 30, True, "approach", None, None),
     ("wall-crouched", 12, "wall", 33, True, "hold", None, None),
     ("wall-standing", 12, "wall", 33, False, "hold", 48, 40),
 ]
+WARM_UP = ("warm-up", 12, "toward", 30, False, "hold", 48, 40)
 
 
 class Log:
@@ -84,33 +97,67 @@ def perceived(lines, seen):
     for line in lines:
         match = PERCEPTION.search(line)
         if match and match.group(1) not in seen:
-            seen[match.group(1)] = float(match.group(2))
+            seen[match.group(1)] = (float(match.group(2)), match.group(3))
 
 
-def place(game, case):
+def put(game, x, y, yaw=LANE_YAW):
+    game.goto(x, y, GROUND + PLAYER_ABOVE, yaw)
+    time.sleep(1.0)
+
+
+def forward(game):
+    """The way the player faces at LANE_YAW, measured by a step, so nothing rests on what the remote
+    control's yaw means."""
+    put(game, *LANE_MIDDLE)
+    x0, y0, _ = game.state()["pos"]
+    game.walk(1.0, 0.0, 0.6)
+    time.sleep(0.5)
+    x1, y1, _ = game.state()["pos"]
+    step = math.hypot(x1 - x0, y1 - y0)
+    if step < 0.5:
+        raise GameError(f"a step forward moved the player {step:.2f} m")
+    return (x1 - x0) / step, (y1 - y0) / step
+
+
+def spawn_yaw(gx, gy):
+    """SpawnEntityFromArchetype's yaw for a soldier facing (gx, gy): 0 faces +y, 90 faces -x."""
+    return math.degrees(math.atan2(-gx, gy))
+
+
+def place(game, case, ahead):
     name, hour, facing, distance, crouched, mode, *_ = case
     game.lua(CLEAR + f"CDynamicEnvironmentManager_GetInstance():SetScriptedTimeOfDay({hour}, 0)")
+    fx, fy = ahead
     if facing == "wall":
-        player, soldier, yaw, player_yaw = WALL_START, WALL_SOLDIER, 180, 0
+        player, soldier, yaw = WALL_START, WALL_SOLDIER, 180.0
     else:
-        player = LANE
-        soldier = (LANE[0] + distance, LANE[1])
-        yaw = {"toward": 90, "away": 270, "north": 0}[facing]
-        player_yaw = 270
-    game.goto(player[0], player[1], GROUND + PLAYER_DROP, player_yaw)
+        player = (LANE_MIDDLE[0] - fx * LANE_BACK, LANE_MIDDLE[1] - fy * LANE_BACK)
+        soldier = (player[0] + fx * distance, player[1] + fy * distance)
+        # At his side: he faces 60 degrees off the player, inside his view whichever way he glances.
+        side = math.radians(SIDE_ANGLE)
+        gx, gy = {"toward": (-fx, -fy), "away": (fx, fy),
+                  "side": (-fx * math.cos(side) + fy * math.sin(side),
+                           -fx * math.sin(side) - fy * math.cos(side))}[facing]
+        yaw = spawn_yaw(gx, gy)
+    put(game, *player)
     game.lua(f'TestRange.n = TestRange.n + 1 TestRange[TestRange.n] = SpawnEntityFromArchetype('
-             f'"{RIFLEMAN}", {soldier[0]:.3f}, {soldier[1]:.3f}, {GROUND + SOLDIER_DROP:.3f}, 0, 0, {yaw})')
+             f'"{RIFLEMAN}", {soldier[0]:.3f}, {soldier[1]:.3f}, {GROUND + SOLDIER_DROP:.3f}, 0, 0, {yaw:.1f})')
     return soldier
 
 
-def run_case(game, log, case):
+def on_range(x, y):
+    return EDGE <= x <= RANGE_SIZE - EDGE and EDGE <= y <= RANGE_SIZE - EDGE
+
+
+def run_case(game, log, case, ahead):
     name, hour, facing, distance, crouched, mode, *_ = case
-    soldier = place(game, case)
+    log.new_lines()
+    seen = {}
+    soldier = place(game, case, ahead)
     if crouched:
         game.action("crouch", 1.0)
     time.sleep(SETTLE)
-    log.new_lines()
-    seen = {}
+    perceived(log.new_lines(), seen)
     if mode == "hold":
         deadline = time.monotonic() + HOLD
         while time.monotonic() < deadline:
@@ -119,10 +166,13 @@ def run_case(game, log, case):
     else:
         game.action("move", 1.0, 0.0)
         deadline = time.monotonic() + APPROACH_LIMIT
+        nearest = math.inf
         while time.monotonic() < deadline and "recognises" not in seen:
             perceived(log.new_lines(), seen)
             x, y, _ = game.state()["pos"]
-            if math.hypot(soldier[0] - x, soldier[1] - y) <= CLOSEST:
+            gap = math.hypot(soldier[0] - x, soldier[1] - y)
+            nearest = min(nearest, gap)
+            if gap <= CLOSEST or gap > nearest + WRONG_WAY or not on_range(x, y):
                 break
             time.sleep(0.1)
         game.action("move", 0.0, 0.0)
@@ -135,6 +185,15 @@ def run_case(game, log, case):
 
 def shown(value):
     return "never" if value is None else f"{value:.0f} m"
+
+
+def logged(seen, level):
+    """What the log showed, and where in his view the player was then: idle soldiers turn their
+    heads, so a case's facing is only where he starts."""
+    if level not in seen:
+        return "never".ljust(22)
+    distance, zone = seen[level]
+    return f"{distance:.0f} m {zone}".ljust(22)
 
 
 def expected(case, model):
@@ -150,28 +209,28 @@ def expected(case, model):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--save", default="world1")
     parser.add_argument("--only", help="case names, comma separated")
     options = parser.parse_args()
     only = options.only.split(",") if options.only else None
 
     run = Run("perception")
     log = Log()
-    with launch(options.save) as game:
+    with launch(SAVE) as game:
         game.option("Invincibility", 1)
         game.call("weather clear")
-        game.lua(TRAVEL)
-        game.wait_ready()
+        ahead = forward(game)
+        run.note(f"the player faces ({ahead[0]:.2f}, {ahead[1]:.2f}) at yaw {LANE_YAW}")
+        # The first soldier spawned after the load saw nothing; a held case first wakes the AI.
+        run_case(game, log, WARM_UP, ahead)
         for case in CASES:
             if only is not None and case[0] not in only:
                 continue
-            seen = run_case(game, log, case)
+            seen = run_case(game, log, case, ahead)
             # Recognised at once, he never logged noticing first.
-            seen.setdefault("notices", seen.get("recognises"))
-            row = (f"{case[0]:<26} notices {shown(seen.get('notices')):>7} "
-                   f"(model {shown(expected(case, case[6]))}), "
-                   f"recognises {shown(seen.get('recognises')):>7} "
-                   f"(model {shown(expected(case, case[7]))})")
+            if "notices" not in seen and "recognises" in seen:
+                seen["notices"] = seen["recognises"]
+            row = (f"{case[0]:<24} notices {logged(seen, 'notices')} (model {shown(expected(case, case[6]))}), "
+                   f"recognises {logged(seen, 'recognises')} (model {shown(expected(case, case[7]))})")
             print(row)
             run.note(row)
         game.lua(CLEAR)

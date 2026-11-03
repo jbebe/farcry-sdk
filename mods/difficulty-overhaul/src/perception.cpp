@@ -174,15 +174,19 @@ namespace {
         bool camouflaged = false;
     };
 
-    // The most each soldier has made of the player lately, 1 noticing and 2 recognising, logged as it
-    // rises; once below it for a while, it is forgotten.
+    // The most each soldier, by entity id, has made of the player lately, 1 noticing and 2
+    // recognising, logged as it rises; once below it for a while, it is forgotten.
     struct Seen {
         int level = 0;
         double below = -1.0;
+        double traced = -1.0;
     };
-    std::unordered_map<const void*, Seen> g_seen;
+    std::unordered_map<uint32_t, Seen> g_seen;
     std::mutex g_seenLock;
     constexpr double kForgetSeconds = 3.0;
+    // Every check of the player as a line, at most this often per soldier, for tracing the model.
+    constexpr bool kTrace = false;
+    constexpr double kTraceSeconds = 0.5;
 
     // The class at depth six of an agent's hierarchy, 0 when it is shallower.
     uint32_t SixthClass(const void* agent) {
@@ -316,8 +320,20 @@ namespace {
                           : visibility >= Shooting::FuzzyLine(look.soldier) ? 1
                                                                             : 0;
         const double now = Game::Now();
+        const uint32_t id = Game::Id(Game::EntityOf(Shooting::Pawn(look.soldier)));
         std::lock_guard<std::mutex> lock(g_seenLock);
-        Seen& seen = Remember(g_seen, look.soldier);
+        if (g_seen.size() > 512) {
+            g_seen.clear();
+        }
+        Seen& seen = g_seen[id];
+        if (kTrace && now - seen.traced >= kTraceSeconds) {
+            seen.traced = now;
+            CombatLogf("soldier %08X perception trace: %.1f m, %s, %s, %s; visibility %.2f, lines %.2f "
+                       "and %.2f; notices from %.0f m, recognises from %.0f m",
+                       id, distance, moving, kZoneNames[zone], state, visibility,
+                       Shooting::FuzzyLine(look.soldier), Shooting::ClearLine(look.soldier), notice,
+                       recognise);
+        }
         if (level >= seen.level) {
             seen.below = -1.0;
         } else if (seen.below < 0.0) {
@@ -331,8 +347,7 @@ namespace {
         seen.level = level;
         CombatLogf("soldier %08X perception: %s the player at %.1f m, %s, %s%s, %s; cover %.2f, "
                    "night %.2f; notices from %.0f m, recognises from %.0f m",
-                   Game::Id(Game::EntityOf(Shooting::Pawn(look.soldier))),
-                   level == 2 ? "recognises" : "notices", distance, moving, kZoneNames[zone],
+                   id, level == 2 ? "recognises" : "notices", distance, moving, kZoneNames[zone],
                    hiding.camouflaged ? ", hidden by the camo suit" : hiding.grass ? ", in grass" : "",
                    state, hiding.cover, look.night, notice, recognise);
     }
