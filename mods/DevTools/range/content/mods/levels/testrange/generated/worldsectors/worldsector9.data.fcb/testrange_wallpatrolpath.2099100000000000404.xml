@@ -6,7 +6,7 @@
   <value name="hidResourceCount" type="UInt32">0</value>
   <value name="hidPos" type="Vector3">
     <x>100</x>
-    <y>150</y>
+    <y>125</y>
     <z>16.0625</z>
   </value>
   <value name="hidAngles" type="Vector3">
@@ -16,36 +16,11 @@
   </value>
   <value name="hidPos_precise" type="Vector3">
     <x>100</x>
-    <y>150</y>
+    <y>125</y>
     <z>16.0625</z>
   </value>
   <value name="hidConstEntity" type="Bool">False</value>
   <value name="hidShapePoints" type="Vector3Array">
-    <item>
-      <x>100</x>
-      <y>150</y>
-      <z>16.0625</z>
-    </item>
-    <item>
-      <x>100</x>
-      <y>145</y>
-      <z>16.0625</z>
-    </item>
-    <item>
-      <x>100</x>
-      <y>140</y>
-      <z>16.0625</z>
-    </item>
-    <item>
-      <x>100</x>
-      <y>135</y>
-      <z>16.0625</z>
-    </item>
-    <item>
-      <x>100</x>
-      <y>130</y>
-      <z>16.0625</z>
-    </item>
     <item>
       <x>100</x>
       <y>125</y>
