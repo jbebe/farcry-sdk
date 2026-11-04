@@ -84,18 +84,35 @@ Reconstructed from `CSector::ExportSectorDataChunk`'s own stack layout:
 
 **Not a raw height array.** `ExportSectorDataChunk` calls
 `CTerrainSectorGenericCompiler::PreparePackedDataForExport` (`0x097f01f0`) immediately before
-serializing this blob, which builds, from data already resident in the struct:
+serializing this blob. Its offsets count from `CSceneTerrainSectorPackedData`, 4 bytes before the
+blob, so its `0x4208` is blob offset `0x4204`. Offsets below are blob offsets. From data already
+resident in the struct it builds:
 
-- Multi-resolution "hole"/quad-visibility bitmasks over a base **64×64** quad grid (4 mip levels:
-  64×64, 32×32, 16×16, 8×8 — packed nibble/bit arrays at struct-relative offsets ~`0x4208` (per-quad,
-  2-bit fields), `0x56b0`/`0x5410`, `0x5810`, `0x5910`) — one hole-flag per 8×8 block of the 512×512
-  quad terrain (512/64 = 8).
-- Per-mip-node bounding data (4 LOD levels × 16 nodes × 8 bytes) — min/max-style culling bounds, not
-  confirmed further.
-- The variable 12-byte record array itself (dynamic array at struct offset `0x5960`/count at `0x5964`)
-  — one record per active (non-`0xff`) mask entry across all 4 mips, each:
-  `[u8 maskValue][3 bytes][u16][u16][u32 [email protected]*16+quadIndex]`. Read back 1:1 by
-  `CSector::Load`.
+- The quad masks of four LOD levels over the base **64×64** quad grid (64×64, 32×32, 16×16, 8×8), in
+  nibble arrays from about `0x56ac` up to the palette.
+- **The LOD records**, the variable 12-byte array that follows the blob. There is one per LOD and
+  quad-mask value the sector uses, and it gives the rectangle of vertices that LOD's quads with that
+  mask cover and the raw height range over it:
+  `[u8 first column][u8 first row][u8 last column][u8 last row][u16 lowest][u16 highest][u32 lod*16+mask]`.
+  The 4 bytes after the array give the index of each LOD's first record, a byte each. `CSector::Load`
+  reads both back 1:1.
+
+The LODs themselves are cooked in the editor. `ComputeLODSubdivisions` splits each 8×8 node while the
+heights inside depart from the coarser mesh by more than `CRenderConfig`'s
+`TerrainCompilerLOD1Tolerance` to `LOD3Tolerance`, and `ComputeVerticesLastLOD` stores the result:
+
+- **`0x4204`, each vertex's last LOD**: 2 bits a vertex, row-major, four to a byte from the low bits.
+  It is the coarsest of the four LOD meshes that still has the vertex. LOD *n* splits a node whose
+  centre vertex has *n* or more. Flat `tmpla` ground keeps only the 8, 4 and 2 m grids. At run time
+  `LockLODs` builds the LOD meshes from these bits (`BuildOptimizedLODFromPackedData`), so ground
+  raised without updating them is drawn flat at a distance.
+- **`0x5954`, four u16**: how many vertices LOD 0, 1, 2 and 3 have (4225 at LOD 0).
+- **The 16-byte tail block**, copied from `CSceneTerrainSector` +0xc4: four floats, each LOD's
+  largest height error in metres. They are 0 on `tmpla`, and 0, 1.5, 3.0 and 6.9 in a hilly `world1`
+  sector.
+
+Across the shipped sectors, no more than 983 of a sector's 4225 vertices stay in LOD 3. This is
+**RE-verified** against `FarCry2_server` and the shipped files (2026-11-04).
 
 **Height sub-layout**, confirmed via `CSector::GetZApr` (`0x097ecf50`, called from `CTerrain::GetZApr` →
 `FCE_TerrainManager_GetHeightAt` — a runtime height query used for collision/physics, present in the
@@ -111,6 +128,8 @@ height_m   = (float)height_u16 * 0.0078125      // 1/128
 
 It samples the 4 corners of a quad (`index`, `index+1`, `index+0x41`, `index+0x42`) and bilinearly
 interpolates. **Each sector's native terrain resolution is 65×65 vertices (64×64 quads), not 513×513.**
+Terrain collision reads the same cells: `hkpSampledHeightFieldShape::getHeightAtImpl` takes the u16
+times 1/128, so a raised cell is raised for rays and bodies too.
 `PreparePackedDataForExport`'s own 64-iteration mask loops (`local_290 != 0x40`) run over the same
 64-wide base grid.
 
@@ -176,10 +195,10 @@ nz = 1 - sqrt(nx*nx + ny*ny)
 That is not a renormalisation and the result is not a unit vector — the engine consumes it as is.
 A sector with no packed data resident returns `(0, 0, 1)` instead.
 
-The `NormalY` array ends at `0x56a9`, immediately before the mip-mask table this page places at
-`0x56b0`, and starts after the LOD0 mask region beginning around `0x4208` — so the normal plane and
-the mask tables interleave in the range `[0x4204, 0x594c)` rather than either one owning it whole.
-The exact boundaries between them are not pinned down.
+The `NormalY` array runs from `0x4628` to `0x56a9`, after the vertices' last LODs (`0x4204` to
+`0x4625`) and before the quad masks. The cooker's normal is `normalize(-dh/dx, -dh/dy, 1)` from the
+neighbouring heights either side, each axis stored as `(n + 1) * 127.5` rounded down; a hilly
+`world1` sector matches it to within a step or two.
 
 ### Writers must duplicate the shared edge
 

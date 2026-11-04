@@ -9,10 +9,11 @@ namespace JackAll.Tools.World;
 
 /// <summary>
 /// Turns a mod layer into the form a mod ships. Every new world the layer creates is built from its
-/// fragments into whole files - each sector's worldsector, the entity library cut from tmpla's full
-/// set, the sector flags, the navmesh and the vegetation its plan lays out - and everything else in
-/// the layer is copied as it is. A layer that only adds to another mod's world gets the navmesh of
-/// the sectors it changed, and keeps its fragments, which merge onto that mod's files at install.
+/// fragments into whole files - its terrain as its plan shapes it, each sector's worldsector, the
+/// entity library cut from tmpla's full set, the sector flags, the navmesh and the vegetation its plan
+/// lays out - and everything else in the layer is copied as it is. A layer that only adds to another
+/// mod's world gets the navmesh of the sectors it changed, and keeps its fragments, which merge onto
+/// that mod's files at install.
 /// </summary>
 public static partial class WorldPack
 {
@@ -24,7 +25,7 @@ public static partial class WorldPack
     [GeneratedRegex(@"^levels\\(?<level>[^\\]+)\\generated\\worldsectors\\worldsector(?<id>\d+)\.data\.fcb$", RegexOptions.IgnoreCase)]
     private static partial Regex WorldSectorPattern();
 
-    [GeneratedRegex(@"^levels\\(?<level>[^\\]+)\\vegetation\.xml$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^levels\\(?<level>[^\\]+)\\(vegetation|terrain)\.xml$", RegexOptions.IgnoreCase)]
     private static partial Regex PlanPattern();
 
     /// <summary>
@@ -42,7 +43,7 @@ public static partial class WorldPack
         bool IsNew(string world) => NewWorld.IsNew(vfs, world);
 
         var created = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var planned = new List<string>();
+        var planned = new List<(string Level, string Path)>();
         foreach (uint hash in mod.Hashes)
         {
             if (mod.PathOf(hash) is not { } path)
@@ -50,10 +51,10 @@ public static partial class WorldPack
                 progress?.Report($"Skipped {hash:X8}: staged by hash, so it has no path to copy it to");
                 continue;
             }
-            // A vegetation plan is grown by BuildWorld, never shipped.
+            // A plan is carried out by BuildWorld, never shipped.
             if (PlanPattern().Match(path) is { Success: true } plan)
             {
-                planned.Add(plan.Groups["level"].Value);
+                planned.Add((plan.Groups["level"].Value, path));
                 continue;
             }
             packed[path] = mod.Read(hash);
@@ -74,9 +75,9 @@ public static partial class WorldPack
                 built.Add(NameHash.Compute(path));
             }
         }
-        foreach (string level in planned.Where(l => !created.Contains(l)))
+        foreach ((_, string path) in planned.Where(p => !created.Contains(p.Level)))
         {
-            progress?.Report($"{VegetationPlan.PathOf(level)} not grown: only a world this layer creates grows its plan");
+            progress?.Report($"{path} not carried out: only a world this layer creates carries out its plans");
         }
 
         var extended = new Dictionary<string, HashSet<int>>(StringComparer.OrdinalIgnoreCase);
@@ -115,15 +116,28 @@ public static partial class WorldPack
         return packed;
     }
 
-    /// <summary>A new world's built files: every sector's worldsector, its entity library, its
-    /// sectorsdep with every sector flagged, its navmesh, and the landmark files of its
-    /// <see cref="VegetationPlan"/>.</summary>
+    /// <summary>A new world's built files: the sectors its <see cref="TerrainPlan"/> shapes, every
+    /// sector's worldsector, its entity library, its sectorsdep with every sector flagged, its navmesh,
+    /// and the landmark files of its <see cref="VegetationPlan"/>.</summary>
     public static SortedDictionary<string, byte[]> BuildWorld(
         string world, TerrainMap map, Func<string, byte[]?> read, IEnumerable<string> knownPaths, FcbClassDefinitions defs,
         IProgress<string>? progress = null)
     {
         var files = new SortedDictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
         var namers = new List<FcbObject>();
+
+        // Shaped first, so the vegetation and the navmesh stand on the new ground.
+        if (read(TerrainPlan.PathOf(world)) is { } terrain)
+        {
+            Dictionary<string, byte[]> shaped = TerrainPlan.Build(XElement.Load(new MemoryStream(terrain)), map, read);
+            Func<string, byte[]?> unshaped = read;
+            read = path => shaped.TryGetValue(path, out byte[]? bytes) ? bytes : unshaped(path);
+            foreach ((string path, byte[] bytes) in shaped)
+            {
+                files[path] = bytes;
+            }
+            progress?.Report($"{world}: terrain shaped in {shaped.Count} sectors");
+        }
 
         // Every sector gets a file, an empty one as a bare main layer, so a mod of this world always
         // has one to fragment and never has to replace sectorsdep, which has no ids to merge by.

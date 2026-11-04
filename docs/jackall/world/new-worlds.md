@@ -61,9 +61,27 @@ For every new world in the layer it writes:
   hand-held props, cameras, soldiers, vehicles and a few more);
 - **the sector list**, with every sector flagged so the game loads its files and its navmesh;
 - **the navmesh**, over the terrain and every object's collision, with cover points along walls and props;
+- **the terrain**, if the world has a [terrain plan](#terrain);
 - **the vegetation**, if the world has a [vegetation plan](#vegetation).
 
 Everything else in the layer is copied as it is. Point `--out` at a new or empty folder.
+
+## Terrain
+
+A new world starts on `tmpla`'s flat ground. A plan, `levels\<world>\terrain.xml` in the workspace,
+raises it. `world pack` shapes the sectors first, so the vegetation and the navmesh stand on the new
+ground. The plan itself stays out of the packed layer.
+
+```xml
+<Terrain>
+  <Ridge FromX="272" FromY="376" ToX="352" ToY="376" Height="1" Width="12" />
+</Terrain>
+```
+
+A **Ridge** lifts the ground by **Height** metres along the line from (**FromX**, **FromY**) to
+(**ToX**, **ToY**), and eases back down to it over half its **Width** either side, rounded at its ends.
+Ridges that overlap add up. The game draws distant terrain with fewer points; the ground a ridge
+raises keeps all of them, so it looks the same from any distance.
 
 ## Vegetation
 
@@ -142,8 +160,8 @@ and the other's objects are missing from that sector's navmesh.
 
 - The navmesh drops ground off the terrain that nothing could reach, such as a rooftop or the top of
   a rock. Place a soldier, an animal or a smart-terrain point on it to keep it.
-- Terrain, roads and rivers are copied from `tmpla` and cannot be edited yet. Vegetation is planned
-  in a file, not on the Map tab, and a plan cannot burn: none of it carries the fire data shipped
-  fields do.
+- Roads and rivers are copied from `tmpla` and cannot be edited yet. Terrain and vegetation are
+  planned in files, not on the Map tab. A terrain plan only raises ridges, and casts no baked shadow.
+  A vegetation plan cannot burn: none of it carries the fire data shipped fields do.
 - The files JackAll writes are larger than the game's own, because it does not share repeated
   values the way the game's tools did. The game reads them all the same.

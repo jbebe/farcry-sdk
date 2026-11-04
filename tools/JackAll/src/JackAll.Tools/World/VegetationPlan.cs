@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Numerics;
 using System.Xml.Linq;
 using JackAll.Core.Format;
@@ -6,6 +5,7 @@ using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
 using JackAll.Tools.Sdat;
 using JackAll.Tools.Xbg;
+using static JackAll.Tools.World.PlanXml;
 
 namespace JackAll.Tools.World;
 
@@ -289,15 +289,6 @@ public static class VegetationPlan
         component.Values[WorldHashes.HidHasAliasName] = [0];
         return component;
     }
-
-    private static string Required(XElement element, string attribute)
-        => (string?)element.Attribute(attribute)
-           ?? throw new InvalidOperationException($"A {element.Name} needs {attribute}.");
-
-    private static float Number(XElement element, string attribute, float? fallback = null)
-        => element.Attribute(attribute) is { } value
-            ? float.Parse(value.Value, CultureInfo.InvariantCulture)
-            : fallback ?? throw new InvalidOperationException($"A {element.Name} needs {attribute}.");
 
     private static uint Hash(string name) => FcbClassDefinitions.Crc32Ascii(name);
 

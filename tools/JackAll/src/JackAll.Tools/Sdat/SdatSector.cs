@@ -61,10 +61,9 @@ public sealed record SdatSector
     public required SdatGridCell[,] Grid { get; init; }
 
     /// <summary>
-    /// Everything in the packed blob after the cell grid: the NormalY plane, the multi-resolution
-    /// quad-mask tables and per-node bounds built by
-    /// <c>CTerrainSectorGenericCompiler::PreparePackedDataForExport</c>, and the surface-type palette.
-    /// Preserved verbatim; the decoded parts are exposed by the accessors below.
+    /// Everything in the packed blob after the cell grid: each vertex's last LOD, the NormalY plane,
+    /// the multi-resolution quad-mask tables, the surface-type palette and the LOD meshes' vertex
+    /// counts. Preserved verbatim; the decoded parts are exposed by the accessors below.
     /// </summary>
     public required byte[] MaskTablesRaw { get; init; }
 
@@ -89,6 +88,70 @@ public sealed record SdatSector
     /// <summary>Encoded Y component of the cell's normal, from the plane that follows the grid.</summary>
     public byte NormalYAt(int row, int column) =>
         MaskTablesRaw[SdatSectorFile.NormalYOffsetInMaskTables + row * SdatSectorFile.GridSize + column];
+
+    /// <summary>Stores a cell's height and its normal's X and Y, each encoded as <c>(n + 1) * 127.5</c>.</summary>
+    public void SetCell(int row, int column, ushort rawHeight, float normalX, float normalY)
+    {
+        Grid[row, column] = Grid[row, column] with { RawHeight = rawHeight, RawByte2 = EncodeNormal(normalX) };
+        MaskTablesRaw[SdatSectorFile.NormalYOffsetInMaskTables + row * SdatSectorFile.GridSize + column] = EncodeNormal(normalY);
+    }
+
+    /// <summary>The coarsest of the four LOD meshes that still has this vertex, 0 to 3.</summary>
+    public int LastLodAt(int row, int column)
+    {
+        int vertex = row * SdatSectorFile.GridSize + column;
+        return MaskTablesRaw[SdatSectorFile.LastLodOffsetInMaskTables + vertex / 4] >> (vertex % 4 * 2) & 3;
+    }
+
+    /// <summary>Keeps the vertex in every LOD mesh, so distance never flattens what it carries.</summary>
+    public void KeepAtEveryLod(int row, int column)
+    {
+        int vertex = row * SdatSectorFile.GridSize + column;
+        MaskTablesRaw[SdatSectorFile.LastLodOffsetInMaskTables + vertex / 4] |= (byte)(3 << (vertex % 4 * 2));
+    }
+
+    /// <summary>How many vertices the LOD mesh <paramref name="lod"/> has.</summary>
+    public int LodVertexCount(int lod)
+        => BitConverter.ToUInt16(MaskTablesRaw, SdatSectorFile.LodVertexCountsOffsetInMaskTables + lod * 2);
+
+    /// <summary>
+    /// Brings what the export derives from the heights and LODs back in line after an edit: each LOD
+    /// mesh's vertex count, and each record's height range over its rectangle.
+    /// </summary>
+    public void RefreshLodSummaries()
+    {
+        const int side = SdatSectorFile.GridSize;
+        var atLeast = new int[4];
+        for (int vertex = 0; vertex < side * side; vertex++)
+        {
+            for (int lod = LastLodAt(vertex / side, vertex % side); lod >= 0; lod--)
+            {
+                atLeast[lod]++;
+            }
+        }
+        for (int lod = 0; lod < atLeast.Length; lod++)
+        {
+            BitConverter.TryWriteBytes(MaskTablesRaw.AsSpan(SdatSectorFile.LodVertexCountsOffsetInMaskTables + lod * 2), (ushort)atLeast[lod]);
+        }
+
+        for (int record = 0; record < RecordsRaw.Length; record += SdatSectorFile.RecordSize)
+        {
+            Span<byte> bounds = RecordsRaw.AsSpan(record, SdatSectorFile.RecordSize);
+            ushort low = ushort.MaxValue, high = 0;
+            for (int row = bounds[1]; row <= Math.Min((int)bounds[3], side - 1); row++)
+            {
+                for (int column = bounds[0]; column <= Math.Min((int)bounds[2], side - 1); column++)
+                {
+                    low = Math.Min(low, Grid[row, column].RawHeight);
+                    high = Math.Max(high, Grid[row, column].RawHeight);
+                }
+            }
+            BitConverter.TryWriteBytes(bounds[4..], low);
+            BitConverter.TryWriteBytes(bounds[6..], high);
+        }
+    }
+
+    private static byte EncodeNormal(float n) => (byte)Math.Clamp((int)((n + 1) * 127.5f), 0, 255);
 
     /// <summary>Still water covers this sector.</summary>
     public bool HasStillWater => EnvSettingsRaw.Length > 0 && EnvSettingsRaw[0] != 0;
@@ -119,16 +182,19 @@ public sealed record SdatSector
         }
     }
 
-    /// <summary>The variable-length "quad LOD/hole" record array (12 bytes each). Not decoded - preserved verbatim.</summary>
+    /// <summary>
+    /// One 12-byte record per LOD and quad mask the sector uses: the rectangle of vertices its quads
+    /// cover (first column, first row, last column, last row, a byte each), the raw height range over
+    /// it (two u16), and <c>lod * 16 + mask</c> (u32).
+    /// </summary>
     public required byte[] RecordsRaw { get; init; }
 
-    /// <summary>Trailing 4-byte field after the record array, purpose unknown. Preserved verbatim.</summary>
+    /// <summary>The index of each LOD's first record, a byte per LOD. Preserved verbatim.</summary>
     public required uint TrailingField { get; init; }
 
     /// <summary>
-    /// Final 16-byte block, round-trips into the live <c>CSceneTerrainSector</c> object's
-    /// +0xc4/+0xc8/+0xcc/+0xd0 fields (shape suggests a bounding box or height range). Not decoded -
-    /// preserved verbatim.
+    /// Four floats, the largest height error each LOD mesh makes, in metres; 0 for a mesh that keeps
+    /// every vertex it needs. Round-trips into <c>CSceneTerrainSector</c> +0xc4. Preserved verbatim.
     /// </summary>
     public required byte[] TailBlockRaw { get; init; }
 }
@@ -181,16 +247,24 @@ public static class SdatSectorFile
     private const int HeaderPaddingSize = MetadataSize - (0x20 + EnvSettingsSize); // 2
     private const int PackedBlobSize = 0x595C; // 22,876
     private const int MaskTablesSize = PackedBlobSize - GridByteSize; // 0x1758 = 5,976
-    private const int RecordSize = 12;
+    public const int RecordSize = 12;
     private const int TrailingFieldSize = 4;
     private const int TailBlockSize = 16;
 
     /// <summary>Surface-type slots a sector's palette holds, per <c>STerrainSectorPackedData</c>.</summary>
     public const int SurfaceTypeSlots = 7;
 
+    /// <summary>Where each vertex's last LOD starts within <see cref="SdatSector.MaskTablesRaw"/>
+    /// (packed-blob offset 0x4204): two bits a vertex, row-major, four to a byte from the low bits.</summary>
+    public const int LastLodOffsetInMaskTables = 0;
+
     /// <summary>Where the NormalY plane starts within <see cref="SdatSector.MaskTablesRaw"/>
     /// (packed-blob offset 0x4628).</summary>
     public const int NormalYOffsetInMaskTables = 0x4628 - GridByteSize;
+
+    /// <summary>Where the four LOD meshes' vertex counts start within <see cref="SdatSector.MaskTablesRaw"/>
+    /// (packed-blob offset 0x5954): a u16 each, LOD 0 first.</summary>
+    public const int LodVertexCountsOffsetInMaskTables = 0x5954 - GridByteSize;
 
     /// <summary>Where the surface-type palette starts within <see cref="SdatSector.MaskTablesRaw"/>
     /// (packed-blob offset 0x594c).</summary>

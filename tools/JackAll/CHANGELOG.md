@@ -10,6 +10,9 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   the world's sectors. Each copy takes its look from the same one in a shipped level you name. Packing
   refuses a mesh the world does not list, which the game would never draw, and warns about one that
   hides no one from soldiers.
+- **Terrain for a new world.** A plan, `levels\<world>\terrain.xml`, raises ridges, and `world pack`
+  shapes the world's sectors before it lays the vegetation and the navmesh on them. A raised spot
+  keeps its full shape at every distance.
 
 ## [1.7.0] - 2026-10-28
 
