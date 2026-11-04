@@ -11,7 +11,8 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from perception import CLEAR, GROUND, PLAYER_ABOVE, SAVE, SETTLE, TRACE_SWITCH, Log, spawn, spawn_yaw
+from perception import (ATTEMPTS, CLEAR, FOCUS, GROUND, LOOKS, PLAYER_ABOVE, SAVE, SETTLE, TRACE_SWITCH, Log, spawn,
+                        spawn_yaw)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fc2drive import Run, launch
@@ -57,9 +58,20 @@ def hold(game, log, case):
     if crouched:
         game.action("crouch", 1.0)
     seen = [m.group(1) + " at " + m.group(2) + " m" for m in map(PERCEPTION.search, lines) if m]
-    traces = [m for m in map(TRACE.search, lines) if m]
-    behind = sum(1 for m in traces if "behind grass" in m.group(2))
-    return seen, f"{behind} of {len(traces)} looks behind grass"
+    looks = [m.group(2) for m in map(TRACE.search, lines) if m and FOCUS in m.group(2)]
+    return seen, len(looks), sum("behind grass" in look for look in looks)
+
+
+def judge(game, log, case):
+    """Up to ATTEMPTS tries until the case is judged: a never needs LOOKS of his looks on the player."""
+    for attempt in range(1, ATTEMPTS + 1):
+        seen, looks, behind = hold(game, log, case)
+        recognised = any(s.startswith("recognises") for s in seen)
+        if recognised or looks >= LOOKS:
+            break
+    verdict = ("matches" if recognised == case[5] else "differs") if recognised or looks >= LOOKS else "unjudged"
+    return (f"{case[0]:<16} try {attempt} | {', '.join(seen) or 'nothing':<24} "
+            f"{looks} looks on him, {behind} behind grass | {verdict}")
 
 
 def main():
@@ -80,10 +92,7 @@ def main():
             game.action("crouch", 1.0)
 
         for case in CASES:
-            seen, looks = hold(game, log, case)
-            recognised = any(s.startswith("recognises") for s in seen)
-            verdict = "matches" if recognised == case[5] else "differs"
-            row = f"{case[0]:<16} {', '.join(seen) or 'nothing':<44} {looks:<28} {verdict}"
+            row = judge(game, log, case)
             print(row)
             run.note(row)
         game.lua(CLEAR)
