@@ -57,9 +57,9 @@ turns the two into the visibility the game compares with the soldier's own fuzzy
 | Tall grass on a crest between them | hidden as by a rock, unless his head clears the grass (2026-11-03) |
 | Night | at most 25 m, whatever he does |
 | Lit by a lamp at night | ×1.25 (phase 3) |
-| Heavy fog | at most 40 m (phase 2) |
+| Heavy fog | at most 40 m in a sandstorm, the heaviest; lighter fog in proportion to its full distance over its amount (2026-11-04) |
 | Talking guards | ×0.5 (phase 2) |
-| Driver | only through a narrow windscreen cone; a turret gunner sees 180° like a soldier on foot (phase 2) |
+| Driver | only through a 60° windscreen cone; a turret gunner sees 180° like a soldier on foot (phase 2) |
 | Alert or fighting | ×1.25, after the night and fog limits |
 | At his side, within 180° | ×0.5 |
 | Behind him | never; walking upright within 20 m he hears the player, "only crouching behind an enemy can get you behind them without noticing" |
@@ -84,8 +84,10 @@ after the user was shot through grass over curved ground): the soldier's line to
 lowered by the grass's 1.2 m and never below the ground under either of them, is cast; where it meets
 the ground more than 2 m from the player and the game's high-grass test finds grass there, the player
 is hidden. On the flat range it changed none of the checked cases; a crest has not been seen in game.
-Phase 2: fog, talking guards, drivers and gunners,
-the flashlight and headlights. Phase 3: shade and lamps.
+Phase 2 (2026-11-04): fog, built, read from the fog the environment manager hands the renderer each
+frame, and on the range a sandstorm brought a soldier to 45 m and 40 m; talking guards, drivers and
+gunners still to come. Headlights are dropped: the soldiers already hear the car. The flashlight
+stays in the Flashlight mod, as long as it works with this one. Phase 3: shade and lamps.
 
 ## Built
 

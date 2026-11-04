@@ -46,6 +46,7 @@ namespace {
     using FilterFn = Filter*(__fastcall*)(Filter* filter, void* unused, uint32_t layers, uint32_t group);
     using FreeFn = void(__cdecl*)(const void* memory);
     using InHighGrassFn = bool(__fastcall*)(void* unused, void* unused2, const float* point);
+    using FogSetterFn = void(__fastcall*)(void* engine, void* unused, float value);
 
     // CVisibilityEvaluator::Evaluate, the product of a soldier's checks of how visible a target is.
     FCSE::Relocation<EvaluateFn> g_evaluate{FCSE::Uplay(0x00A1D8A0)};
@@ -85,6 +86,14 @@ namespace {
     FCSE::Relocation<FilterFn> g_makeFilter{FCSE::Uplay(0x0048EC40)};
     FCSE::Relocation<FreeFn> g_free{FCSE::Uplay(0x00228AD0)};
     FCSE::Relocation<InHighGrassFn> g_inHighGrass{FCSE::Uplay(0x006991D0)};
+    // The 3D engine's fog setters, which the environment manager hands this frame's fog: the
+    // distance it is full at, and how much of the view it takes there.
+    FCSE::Relocation<FogSetterFn> g_setFogEnd{FCSE::Uplay(0x0032F640)};
+    FCSE::Relocation<FogSetterFn> g_setFogAmount{FCSE::Uplay(0x0032F660)};
+    FogSetterFn g_originalSetFogEnd = nullptr;
+    FogSetterFn g_originalSetFogAmount = nullptr;
+    float g_fogEnd = 0.0f;
+    float g_fogAmount = 0.0f;
     // CGrassEvaluator::ComputeVisibility's concealment: its ramp with distance, whose full and start
     // distances are operands kFullOperand and kFromOperand bytes in, then its factor by the soldier's
     // state, whose in-combat factor is kCombatOperand bytes in.
@@ -163,6 +172,11 @@ namespace {
     // Hardcore: the most a soldier recognises and notices from at night.
     constexpr float kNightRecognise = 25.0f;
     constexpr float kNightNotice = 30.0f;
+    // Hardcore: the most a soldier recognises and notices from in the heaviest fog, a sandstorm's,
+    // full at 30 m with 0.98 of the view; lighter fog limits him in proportion to its reach.
+    constexpr float kFogRecognise = 40.0f;
+    constexpr float kFogNotice = 45.0f;
+    constexpr float kHeaviestFogReach = 30.0f / 0.98f;
     // Hardcore: from how far a soldier not fighting him notices and recognises a player in the camo
     // suit, crouched and still in high grass.
     constexpr float kCamouflaged = 3.0f;
@@ -354,6 +368,16 @@ namespace {
         return distance + (std::min(distance, limit) - distance) * night;
     }
 
+    void __fastcall SetFogEndDetour(void* engine, void* unused, float value) {
+        g_fogEnd = value;
+        g_originalSetFogEnd(engine, unused, value);
+    }
+
+    void __fastcall SetFogAmountDetour(void* engine, void* unused, float value) {
+        g_fogAmount = value;
+        g_originalSetFogAmount(engine, unused, value);
+    }
+
     // The visibility that crosses the soldier's fuzzy line at `notice` and his clear line at
     // `recognise`.
     float Visibility(float distance, float recognise, float notice, void* soldier) {
@@ -431,10 +455,11 @@ namespace {
         if (g_trace && now - seen.traced >= kTraceSeconds) {
             seen.traced = now;
             CombatLogf("soldier %08X perception trace: %.1f m, %s, %s%s, %s; cover %.2f; visibility %.2f, "
-                       "lines %.2f and %.2f; notices from %.0f m, recognises from %.0f m",
+                       "lines %.2f and %.2f; fog full at %.0f m with %.2f; notices from %.0f m, "
+                       "recognises from %.0f m",
                        id, distance, moving, kZoneNames[zone], HidingName(hiding), state, hiding.cover,
                        visibility, Shooting::FuzzyLine(look.soldier), Shooting::ClearLine(look.soldier),
-                       notice, recognise);
+                       g_fogEnd, g_fogAmount, notice, recognise);
         }
         if (level >= seen.level) {
             seen.below = -1.0;
@@ -492,6 +517,13 @@ namespace {
         }
         recognise = AtNight(recognise, kNightRecognise, look.night);
         notice = AtNight(notice, kNightNotice, look.night);
+        // How far this frame's fog lets anyone see, relative to the heaviest fog's: its full distance
+        // over how much of the view it takes.
+        if (g_fogEnd > 0.0f && g_fogAmount > 0.0f) {
+            const float fog = g_fogEnd / g_fogAmount / kHeaviestFogReach;
+            recognise = std::min(recognise, kFogRecognise * fog);
+            notice = std::min(notice, kFogNotice * fog);
+        }
         const float sharpness = (alert ? kAlert : 1.0f) * (zone == kFocus ? look.scope : 1.0f);
         recognise *= sharpness;
         notice *= sharpness;
@@ -529,6 +561,10 @@ void InstallPerception() {
         !RedirectOperand(g_concealment, kFullOperand, &g_grassFull) ||
         !RedirectOperand(g_concealment, kCombatOperand, &g_combatConcealment)) {
         FCSE::Logf("perception: grass was not found in this build");
+    }
+    if (!Hook(g_setFogEnd, &SetFogEndDetour, &g_originalSetFogEnd) ||
+        !Hook(g_setFogAmount, &SetFogAmountDetour, &g_originalSetFogAmount)) {
+        FCSE::Logf("perception: the fog was not found in this build, so fog limits no one");
     }
     if (!g_bonus || !g_bonusCategory) {
         FCSE::Logf("perception: the camo suit's bonus was not found in this build, so it hides no one");

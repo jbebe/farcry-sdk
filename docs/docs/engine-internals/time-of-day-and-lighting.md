@@ -38,6 +38,10 @@ curved-horizon variables into the renderer's config and binding the world's temp
 5. `CSky::Update` places the sun and the moon.
 6. Fog: the zone-blended preset, lerped toward the storm's fog by the storm transition curve, then
    toward a fog override. The result goes to `C3DEngine`'s fog setters and to `CSky::UpdateFog`.
+   On Steam `Dunia.dll` the start, end and amount setters are `0x1032F620`, `0x1032F640` and
+   `0x1032F660`, each `__thiscall` taking one float with `RET 4`. In a running game on the test range
+   the end was 398 m with an amount of 1 at noon, and 30 m with 0.98 under the
+   `Default.SandStorm.Fog` override (**seen in game, 2026-11-04**).
 7. `UpdateAdaptiveBloom` and `UpdateAtmosphericScattering`, then depth of field with the storm's and
    an override's blended in.
 8. `UpdateSky`: the sky gradients, the storm sky, and the clouds' formation, material and light.
