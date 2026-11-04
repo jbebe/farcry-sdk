@@ -558,6 +558,28 @@ spots, and many shipping disabled for mission logic to switch on.
 | `fFlickeringFrequency`, `fFlickeringAmplitude`, `fFlickeringNoise` | campfire flicker |
 | `fOuterAngle`, `fInnerAngle` | spots only |
 
+At run time the component holds a handle into the container of `CSceneLight`s (Steam `0x10F96830`,
+the same container the environment manager keeps its sun or moon light in), and each frame its
+`Update` writes the entity's position and facing into the light. The container's buffers sit at its
+`+0x08`: the first holds the lights and the number of slots, and a destroyed light's slot is emptied.
+It holds only the lights near the player, about a dozen at a time in world 1. A `CSceneLight` is
+0x7C bytes:
+
+| Offset | Field |
+|---|---|
+| `+0x04` | `hidType`: 0 for the environment's directional light, 1 omni, 3 spot |
+| `+0x08` | `bEnabled` |
+| `+0x0C` | position |
+| `+0x18` | facing, the entity's Y axis: a spot points along it |
+| `+0x30` | `fRadius` |
+| `+0x34` | `clrColor` |
+| `+0x40` | `fIntensity` |
+| `+0x44` | this frame's flicker |
+| `+0x5C` | `fOuterAngle`, the spot's full angle in radians |
+
+The `tmpla` library carries 17 lights as `IGE_Archetypes.AutoPrefab.OmniLight_*` and `SpotLight_*`,
+some on, some off; any of them can be spawned like a soldier (**seen in game, 2026-11-04**).
+
 :::caution[Not lights]
 `<world>.omnis.fcb` contains **no lights**. "Omni" there means *omnipresent*: world-scope entities
 outside the sector grid. Retail `world1` holds five `COmniEntity` DLC Domino hosts; most maps ship a
