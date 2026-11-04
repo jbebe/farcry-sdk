@@ -38,6 +38,9 @@ Notable changes to Difficulty Overhaul, loosely following
   him he never sees you, but hears you walk upright within 20 m; crouched, you can creep up unheard.
   Alerted soldiers see a quarter farther, and a soldier at the wheel only through his windscreen. The
   camo suit hides you crouched and still in high grass beyond 3 m, unless he is fighting you.
+  Beyond 30 m in front of him, or 20 m at his side, he needs a moment to notice you, longer the
+  farther and the less visible you are, up to 4 seconds: running across open ground at 50 m gives you
+  about 2, so a dash from cover to cover can go unseen.
 - **Weapons by range.** Pistols and SMGs lose accuracy with range. A shotgun is deadly out to 20 m
   and falls off fast past it.
 - **No rockets at you on foot.** A soldier with an RPG or a Carl Gustav draws his other gun at you on

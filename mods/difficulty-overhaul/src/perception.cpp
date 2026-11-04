@@ -203,6 +203,17 @@ namespace {
     constexpr float kNoticeShare = 1.2f;
     constexpr float kUprightCatchesEye = 100.0f;
     constexpr float kCrouchedCatchesEye = 70.0f;
+    // Hardcore: within these distances, in his focus and at his side, he notices the player at once.
+    // Beyond them he must first sit through a delay: this many seconds per square metre past the line,
+    // over how far inside the notice distance the player is, at most kNoticeLongest, forgotten over
+    // kNoticeForget out of sight.
+    constexpr float kNoticeAtOnceInFocus = 30.0f;
+    constexpr float kNoticeAtOnceAtSide = 20.0f;
+    constexpr float kNoticeSecondsPerSquareMetre = 1.0f / 400.0f;
+    constexpr float kNoticeLongest = 4.0f;
+    constexpr double kNoticeForget = 2.0;
+    // The longest gap between two of a soldier's looks that still counts as the player in his sight.
+    constexpr double kLookGap = 0.5;
     // Hardcore: at his side, in high grass crouched, in shade by day, and alerted or fighting.
     constexpr float kAtSide = 0.5f;
     constexpr float kInGrass = 0.5f;
@@ -312,7 +323,8 @@ namespace {
 
     // The most each soldier, by entity id, has made of the player lately, 1 noticing and 2
     // recognising, logged as it rises; once below it for a while, it is forgotten. Then when his grass
-    // check last found the player in grass, and when his line was last walked and what it found.
+    // check last found the player in grass, and when his line was last walked and what it found. Then
+    // how much of his notice delay he has sat through, since when, and when he last looked.
     struct Seen {
         int level = 0;
         double below = -1.0;
@@ -320,6 +332,9 @@ namespace {
         double grass = -1.0;
         double walked = -1.0;
         bool behindGrass = false;
+        double sat = 0.0;
+        double sighted = -1.0;
+        double looked = -1.0;
     };
     std::unordered_map<uint32_t, Seen> g_seen;
     std::mutex g_seenLock;
@@ -600,6 +615,37 @@ namespace {
         return behind;
     }
 
+    // Seconds the player must be in a soldier's sight before he notices him, `distance` away and
+    // noticed from `notice` at most, past `atOnce`.
+    float NoticeDelay(float distance, float notice, float atOnce) {
+        if (distance <= atOnce) {
+            return 0.0f;
+        }
+        const float within = 1.0f - distance / notice;
+        const float past = distance - atOnce;
+        return within > 0.0f ? std::min(kNoticeSecondsPerSquareMetre * past * past / within, kNoticeLongest)
+                             : kNoticeLongest;
+    }
+
+    // Whether soldier `id` still has to sit through `delay` with the player in sight before he notices him.
+    // Of a gap between his looks, at most kLookGap counts as in sight.
+    bool HeldBack(uint32_t id, double now, bool inSight, float delay) {
+        std::lock_guard<std::mutex> lock(g_seenLock);
+        Seen& seen = g_seen[id];
+        const double gap = seen.looked < 0.0 ? 0.0 : now - seen.looked;
+        seen.looked = now;
+        const double held = inSight ? std::min(gap, kLookGap) : 0.0;
+        seen.sat = std::max(seen.sat - (gap - held) / kNoticeForget, 0.0);
+        if (!inSight || seen.sat >= 1.0) {
+            return false;
+        }
+        if (seen.sat <= 0.0) {
+            seen.sighted = now;
+        }
+        seen.sat = delay > 0.0f ? std::min(seen.sat + held / delay, 1.0) : 1.0;
+        return seen.sat < 1.0;
+    }
+
     // The direction toward the sun, false while it is below the horizon or no world is loaded.
     bool TowardSun(float sun[3]) {
         const uint8_t* environment = *g_environment.get();
@@ -814,10 +860,10 @@ namespace {
         }
         seen.level = level;
         CombatLogf("soldier %08X perception: %s the player at %.1f m, %s, %s%s%s%s, %s; cover %.2f, "
-                   "night %.2f; notices from %.0f m, recognises from %.0f m",
+                   "night %.2f; notices from %.0f m, recognises from %.0f m; %.1f s after first sighting him",
                    id, level == 2 ? "recognises" : "notices", distance, moving, kZoneNames[zone],
                    HidingName(hiding), BushName(hiding), LightName(hiding), state, hiding.cover, look.night,
-                   notice, recognise);
+                   notice, recognise, now - seen.sighted);
     }
 
     float __fastcall EvaluateDetour(void* evaluator, void* unused, void* context, bool* applies) {
@@ -896,6 +942,13 @@ namespace {
         } else if (distance <= kArmsLength) {
             visibility = 1.0f;
         } else if (hiding.behindGrass) {
+            visibility = 0.0f;
+        }
+        // Hearing him behind, and sensing him at arm's length, fall within the line he notices at once.
+        static_assert(kHeardRange <= kNoticeAtOnceAtSide && kArmsLength <= kNoticeAtOnceAtSide, "");
+        const float atOnce = zone == kFocus ? kNoticeAtOnceInFocus : kNoticeAtOnceAtSide;
+        const float delay = fighting ? 0.0f : NoticeDelay(distance, notice, atOnce);
+        if (HeldBack(id, now, visibility >= Shooting::FuzzyLine(look.soldier), delay)) {
             visibility = 0.0f;
         }
         Report(look, id, now, visibility, distance,
