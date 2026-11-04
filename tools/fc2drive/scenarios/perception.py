@@ -172,7 +172,7 @@ Sighting = namedtuple("Sighting", "distance zone where before")
 
 
 class Watch:
-    """What one try at a case saw of the soldier's looks, sightings and death."""
+    """What one try at a case saw of the soldier's looks, sightings and death, and every line it read."""
 
     def __init__(self, zone):
         self.zone = zone
@@ -180,8 +180,10 @@ class Watch:
         self.seen = {}
         self.on_way = True
         self.dead = False
+        self.lines = []
 
     def read(self, lines):
+        self.lines += lines
         for line in lines:
             if trace := TRACE.search(line):
                 self.looks.append((float(trace.group(1)), trace.group(2)))
