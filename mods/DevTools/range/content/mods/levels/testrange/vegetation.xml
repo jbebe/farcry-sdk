@@ -1,5 +1,5 @@
 <!-- The grass field north of the hub: world 1's tall savannah grass, the kind that hides a crouched player. -->
-<!-- West of it, a grove: small acacias with bushes between them. -->
+<!-- West of it, a grove: small acacias with bushes between them. On the bare crest east of it, one tamarix bush. -->
 <Vegetation>
   <Patch Mesh="graphics\vegetation\savannah\1_grasssavannah_b.xbg" Donor="w1_b_2" Seed="1">
     <Area X="192" Y="320" Width="128" Height="64" />
@@ -9,5 +9,8 @@
   </Patch>
   <Patch Mesh="graphics\vegetation\savannah\realtrees\rt_bush_ziziphus.rtx" Donor="w1_b_2" Spacing="9" Seed="3">
     <Area X="128" Y="320" Width="64" Height="64" />
+  </Patch>
+  <Patch Mesh="graphics\vegetation\savannah\realtrees\rt_bush_tamarix_small.rtx" Donor="w1_b_2">
+    <At X="340" Y="376" />
   </Patch>
 </Vegetation>

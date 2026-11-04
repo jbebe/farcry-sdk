@@ -327,7 +327,8 @@ way any new world is ([Make a new world](../../docs/jackall/world/new-worlds.md)
   `terrain.xml`, the [terrain plan](../../docs/jackall/world/new-worlds.md#terrain), raises a crest
   1 m high and 12 m wide along the field's north edge, y 376 from x 272 to 352. It is grassed as far
   as the field's east end at x 320 and bare past it. A soldier's line over it to a standing player
-  clears the ground by about 0.7 m, so only the grass on top hides him.
+  clears the ground by about 0.7 m, so only the grass on top hides him. On the bare part's top, at
+  (340, 376), stands one `rt_bush_tamarix_small`, 2.4 m wide and 2.7 m tall.
 
   Three patrol routes, each an AI path, a `CBasicShapeEntity` of points 5 m apart, and an
   `STP_archetypes.Duty.Patrol` point at its start that names it: south of the hub along y 110 from
@@ -373,7 +374,7 @@ invincibility yourself: it is on unless the scenario tests damage to you.
 | Suppression | two 18 m lines at x 420 and 460 | two riflemen behind cover | 12 |
 | Sniper | a 12 m wall 3 m in front of (380, 370), the sniper at (440, 437), 90 m away: at 150 m the game removed him | sniper at 90 m | 9, 15 at range |
 | Grass field | the player 20 m into the grass at (256, 340), facing north | riflemen at 20 m in the grass and at 50 m past its edge | 10 |
-| Grass crest | the player on open ground at (316, 392), facing south over the crest | a rifleman 36 m off behind its grassy part, and one behind its bare part | 24 |
+| Grass crest | the player on open ground at (316, 392), facing south over the crest | a rifleman 36 m off behind its grassy part, one behind its bare part, and one 30 m behind the bush on it | 24 |
 
 Not covered yet: **pistols and SMGs in row 8**, since no soldier archetype carries one as its main
 weapon. The navmesh lays cover points along every

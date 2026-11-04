@@ -105,10 +105,12 @@ namespace {
          "the one at 50 m never does while you stay crouched."},
     };
 
-    // The crest along y 376, grassed west of x 320 and bare east of it: the player on open ground
-    // north of it, facing south, each rifleman 36 m off past one part of it, facing him.
+    // The crest along y 376, grassed west of x 320 and bare east of it, with a tamarix bush on its top
+    // at x 340: the player on open ground north of it, facing south, each rifleman 36 m off past one
+    // part of it, facing him, and one 30 m south of the spot straight behind the bush.
     constexpr Soldier kBehindGrassyCrest[] = {{kRifleman, {296, 362, 326.3f}}};
     constexpr Soldier kBehindBareCrest[] = {{kRifleman, {336, 362, 33.7f}}};
+    constexpr Soldier kBehindCrestBush[] = {{kRifleman, {340, 362, 0}}};
     constexpr Scenario kGrassCrest[] = {
         {"Rifleman behind the grassy crest", "24", kBehindGrassyCrest,
          "Stand still, then crouch. Then walk up onto the crest.",
@@ -117,6 +119,11 @@ namespace {
         {"Rifleman behind the bare crest", "24", kBehindBareCrest,
          "Stand still where you start.",
          "He recognises you over the bare crest within a few seconds: the crest alone hides no one."},
+        {"Rifleman behind the bush on the crest", "24", kBehindCrestBush,
+         "Walk 24 m east to (340, 392), the bush straight between you. Stand still, then crouch. Then "
+         "step 6 m east, clear of the bush.",
+         "The bush hides you standing and crouched: he neither notices nor recognises you. Clear of "
+         "it, he recognises you within a few seconds."},
     };
 
     constexpr Arena kArenas[] = {
