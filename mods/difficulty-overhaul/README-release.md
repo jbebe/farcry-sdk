@@ -31,9 +31,9 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
   or crouched in high grass, it is half. Cover hides you only where it hides your head, and tall grass
   on a crest between you hides you as a rock would, unless your head shows above it. At night he
   recognises you from 25 m at most, whatever you do, and in a sandstorm from 40 m at most. Behind
-  him he never sees you, but hears you walk upright within 20 m; crouched, you can creep up unheard. Alerted soldiers see a quarter
-  farther. The camo suit hides you crouched and still in high grass beyond 3 m, unless he is fighting
-  you.
+  him he never sees you, but hears you walk upright within 20 m; crouched, you can creep up unheard.
+  Alerted soldiers see a quarter farther, and a soldier at the wheel only through his windscreen. The
+  camo suit hides you crouched and still in high grass beyond 3 m, unless he is fighting you.
 - **Weapons by range.** Pistols and SMGs lose accuracy with range. A shotgun is deadly out to 20 m
   and falls off fast past it.
 - **No rockets at you on foot.** A soldier with an RPG or a Carl Gustav draws his other gun at you on

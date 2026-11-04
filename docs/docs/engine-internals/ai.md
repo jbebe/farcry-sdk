@@ -270,7 +270,11 @@ again for every target on every update:
   `fPlayerInVehicleMultiplier`, by day or with the vehicle's headlights on. Then it is capped: 150 m
   against the player, 350 m through a scope, less against other soldiers.
 - **Angle** is `DesertFOV`'s `fAngle`, times `fSniperAngleMultiplier` through a scope. A soldier
-  sitting in a vehicle sees all around him: both angles become 360°.
+  sitting in a vehicle sees all around him: both angles become 360°, whatever seat he is in. Which
+  seat is in the vehicle's `CVehicle` properties (`+0x10`): the seats at `+0x0C`, their count at
+  `+0x10`, each `0x50` bytes in the Steam `Dunia.dll` (`0x4C` in the server), with the role at
+  `+0x10` (1 the driver, 3 a Datsun's passenger), the occupant's 64-bit entity id at `+0x28` and the
+  state at `+0x30`, 4 for seated (**seen in game**: the player at a Datsun's wheel, 2026-11-04).
 
 The **night term** is `1 − night × fNightTimeMultiplier`. *night* is 0 by day and 1 at night, and
 ramps between them across dusk and dawn, four times kept by the dynamic environment manager. With

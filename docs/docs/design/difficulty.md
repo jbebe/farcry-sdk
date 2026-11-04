@@ -58,8 +58,8 @@ turns the two into the visibility the game compares with the soldier's own fuzzy
 | Night | at most 25 m, whatever he does |
 | Lit by a lamp at night | ×1.25 (phase 3) |
 | Heavy fog | at most 40 m in a sandstorm, the heaviest; lighter fog in proportion to its full distance over its amount (2026-11-04) |
-| Talking guards | ×0.5 (phase 2) |
-| Driver | only through a 60° windscreen cone; a turret gunner sees 180° like a soldier on foot (phase 2) |
+| Talking guards | ×0.5; deferred 2026-11-04, social posts left as shipped until needed |
+| Driver | only through a 50° windscreen cone; a turret gunner sees 180° like a soldier on foot, and so does a passenger (phase 2; 50° and passengers 2026-11-04) |
 | Alert or fighting | ×1.25, after the night and fog limits |
 | At his side, within 180° | ×0.5 |
 | Behind him | never; walking upright within 20 m he hears the player, "only crouching behind an enemy can get you behind them without noticing" |
@@ -86,8 +86,11 @@ lowered by the grass's 1.2 m and never below the ground under either of them, is
 the ground more than 2 m from the player and the game's high-grass test finds grass there, the player
 is hidden. On the flat range it changed none of the checked cases; a crest has not been seen in game.
 Phase 2 (2026-11-04): fog, built, read from the fog the environment manager hands the renderer each
-frame, and on the range a sandstorm brought a soldier to 45 m and 40 m; talking guards, drivers and
-gunners still to come. Headlights are dropped: the soldiers already hear the car. The flashlight
+frame, and on the range a sandstorm brought a soldier to 45 m and 40 m. Drivers, built: a soldier
+in a vehicle's driving seat sees only within 25° of the way it faces, beyond that as behind him;
+gunners and passengers already see as on foot, the mod's view zones taken from their own view. The
+seat lookup found the player at the wheel of a Datsun on the range; no soldier has been seen driving
+under it. Talking guards deferred. Headlights are dropped: the soldiers already hear the car. The flashlight
 stays in the Flashlight mod, as long as it works with this one. Phase 3: shade and lamps.
 
 ## Built

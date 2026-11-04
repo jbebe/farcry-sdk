@@ -25,8 +25,9 @@ void* EntityOf(void* component);
 // The low half of an entity's 64-bit id, which names a soldier in the logs; 0 for none.
 uint32_t Id(const void* entity);
 
-// An entity's world position, and the distance between two positions.
+// An entity's world position and the way it faces, and the distance between two positions.
 void Position(const void* entity, float position[3]);
+void Forward(const void* entity, float forward[3]);
 float Distance(const float a[3], const float b[3]);
 
 // Whether this build's game clock was found, and the clock in seconds.

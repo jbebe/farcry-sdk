@@ -29,6 +29,7 @@ namespace {
     constexpr ptrdiff_t kProxyEntity = 0x0C;
     constexpr ptrdiff_t kEntityId = 0x08;
     constexpr ptrdiff_t kEntityPosition = 0x60;
+    constexpr ptrdiff_t kEntityForward = 0x40;
 
     const char* const kNames[] = {"Easy", "Normal", "Hardcore", "Infamous"};
 }
@@ -78,6 +79,10 @@ uint32_t Id(const void* entity) {
 
 void Position(const void* entity, float position[3]) {
     std::copy_n(Vec3(entity, kEntityPosition), 3, position);
+}
+
+void Forward(const void* entity, float forward[3]) {
+    std::copy_n(Vec3(entity, kEntityForward), 3, forward);
 }
 
 float Distance(const float a[3], const float b[3]) {

@@ -154,6 +154,17 @@ namespace {
     constexpr ptrdiff_t kHierarchySlot = 0x04;
     constexpr ptrdiff_t kHierarchyDepth = 0x04;
     constexpr ptrdiff_t kHierarchySixth = 0x1C;
+    // A CVehicle's properties, which hold its seats: where they are and how many, each kSeatSize. A
+    // seat's role, the low half of its occupant's entity id, its state; the driver's role, and seated.
+    constexpr ptrdiff_t kVehicleProperties = 0x10;
+    constexpr ptrdiff_t kSeats = 0x0C;
+    constexpr ptrdiff_t kSeatCount = 0x10;
+    constexpr ptrdiff_t kSeatSize = 0x50;
+    constexpr ptrdiff_t kSeatRole = 0x10;
+    constexpr ptrdiff_t kSeatOccupant = 0x28;
+    constexpr ptrdiff_t kSeatState = 0x30;
+    constexpr int32_t kDriverSeat = 1;
+    constexpr int32_t kSeated = 4;
 
     // Hardcore: from how far a soldier recognises the player by day, in the open, straight ahead of
     // him and idle: walking upright, moving crouched, and still, standing or crouched.
@@ -169,6 +180,8 @@ namespace {
     constexpr float kAtSide = 0.5f;
     constexpr float kInGrass = 0.5f;
     constexpr float kAlert = 1.25f;
+    // Hardcore: a driver sees only through his windscreen, this wide.
+    constexpr float kWindscreen = 50.0f;
     // Hardcore: the most a soldier recognises and notices from at night.
     constexpr float kNightRecognise = 25.0f;
     constexpr float kNightNotice = 30.0f;
@@ -206,8 +219,8 @@ namespace {
     // What AdjustFOV found on this thread for the check of the same soldier and target that follows
     // it: the player as the target, unless he sits in a vehicle, and the soldier; half the focus
     // cone's angle before it is widened; how much farther a scope reaches; 0 by day to 1 at night;
-    // and whether the player moves upright close enough behind him to be heard, or within arm's
-    // length.
+    // whether the player moves upright close enough behind him to be heard, or within arm's length;
+    // and, when the soldier drives, the way his vehicle faces.
     struct Look {
         void* player = nullptr;
         void* soldier = nullptr;
@@ -216,6 +229,8 @@ namespace {
         float night = 0.0f;
         bool heard = false;
         bool close = false;
+        bool driving = false;
+        float ahead[3] = {};
     };
     thread_local Look t_look;
 
@@ -257,6 +272,24 @@ namespace {
         return Read<uint32_t>(info, kHierarchyDepth) > 5 ? Read<uint32_t>(info, kHierarchySixth) : 0;
     }
 
+    // Whether the soldier `entity` sits in `vehicle`'s driving seat.
+    bool Drives(const void* vehicle, const void* entity) {
+        const uint8_t* properties = Read<const uint8_t*>(vehicle, kVehicleProperties);
+        if (properties == nullptr || entity == nullptr) {
+            return false;
+        }
+        const uint8_t* seats = Read<const uint8_t*>(properties, kSeats);
+        const uint32_t count = Read<uint32_t>(properties, kSeatCount);
+        const uint32_t id = Game::Id(entity);
+        for (uint32_t i = 0; i < count; ++i) {
+            const uint8_t* seat = seats + i * kSeatSize;
+            if (Read<uint32_t>(seat, kSeatOccupant) == id && Read<int32_t>(seat, kSeatState) == kSeated) {
+                return Read<int32_t>(seat, kSeatRole) == kDriverSeat;
+            }
+        }
+        return false;
+    }
+
     void OnConesSet(FCSE_MidHookContext* ctx) {
         const auto* frame = reinterpret_cast<const uint8_t*>(ctx->esp);
         if (Read<uint8_t>(frame, kFrameTargetIsPlayer) == 0) {
@@ -295,6 +328,12 @@ namespace {
         const float distance = std::hypot(at[0] - eye[0], at[1] - eye[1]);
         look.heard = movingUpright && distance <= kHeardRange;
         look.close = movingUpright && distance <= kArmsLength;
+        void* soldierPawn = Shooting::Pawn(soldier);
+        void* vehicle = g_currentVehicle(soldierPawn);
+        look.driving = vehicle != nullptr && Drives(vehicle, Game::EntityOf(soldierPawn));
+        if (look.driving) {
+            Game::Forward(Game::EntityOf(vehicle), look.ahead);
+        }
         t_look = look;
 
         const float reach = std::max(Read<float>(cones, kFocusLength), kMaxReach);
@@ -342,10 +381,12 @@ namespace {
                g_bonus(pawn, nullptr, g_bonusCategory.get(), &kStealthBonus, 0.0f, 0) > 0.0f;
     }
 
-    Zone ZoneOf(const uint8_t* context, float focusHalf) {
+    // Where the player is in the soldier's view; a driver's is his windscreen, and beyond it is as
+    // behind him.
+    Zone ZoneOf(const uint8_t* context, const Look& look) {
         const float* target = Vec3(context, kContextTargetPosition);
         const float* eye = Vec3(context, kContextEye);
-        const float* view = Vec3(context, kContextView);
+        const float* view = look.driving ? look.ahead : Vec3(context, kContextView);
         float along = 0.0f;
         float targetLength = 0.0f;
         float viewLength = 0.0f;
@@ -360,7 +401,10 @@ namespace {
         }
         const float angle =
             std::acos(std::clamp(along / std::sqrt(targetLength * viewLength), -1.0f, 1.0f)) * 57.29578f;
-        return angle <= focusHalf ? kFocus : angle <= kHalfTurn / 2.0f ? kSide : kBehind;
+        if (look.driving) {
+            return angle <= kWindscreen / 2.0f ? kFocus : kBehind;
+        }
+        return angle <= look.focusHalf ? kFocus : angle <= kHalfTurn / 2.0f ? kSide : kBehind;
     }
 
     // `distance` moved toward `limit` by `night`, when it is farther.
@@ -454,10 +498,11 @@ namespace {
         Seen& seen = g_seen[id];
         if (g_trace && now - seen.traced >= kTraceSeconds) {
             seen.traced = now;
-            CombatLogf("soldier %08X perception trace: %.1f m, %s, %s%s, %s; cover %.2f; visibility %.2f, "
+            CombatLogf("soldier %08X perception trace: %.1f m, %s, %s%s%s, %s; cover %.2f; visibility %.2f, "
                        "lines %.2f and %.2f; fog full at %.0f m with %.2f; notices from %.0f m, "
                        "recognises from %.0f m",
-                       id, distance, moving, kZoneNames[zone], HidingName(hiding), state, hiding.cover,
+                       id, distance, moving, kZoneNames[zone], HidingName(hiding),
+                       look.driving ? ", driving" : "", state, hiding.cover,
                        visibility, Shooting::FuzzyLine(look.soldier), Shooting::ClearLine(look.soldier),
                        g_fogEnd, g_fogAmount, notice, recognise);
         }
@@ -500,7 +545,7 @@ namespace {
         const bool upright = Shooting::Stance(pawn) == Shooting::kStanding;
         const bool moving = std::hypot(velocity[0], velocity[1], velocity[2]) >= kMovingSpeed;
         const float distance = g_targetDistance(context);
-        const Zone zone = ZoneOf(at, look.focusHalf);
+        const Zone zone = ZoneOf(at, look);
         const bool fighting = Read<bool>(at, kContextFighting) || Read<bool>(at, kContextAfterFight);
         const bool alert = Read<bool>(at, kContextAlerted) || fighting;
         const double now = Game::Now();
