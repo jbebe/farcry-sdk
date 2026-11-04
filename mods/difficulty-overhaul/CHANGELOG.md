@@ -29,7 +29,9 @@ Notable changes to Difficulty Overhaul, loosely following
   walking upright from 60 m, crouched and moving from 50 m and still from 40 m, and notices
   something from a little farther; movement in daylight catches his eye from 100 m. At his side,
   or crouched in high grass, it is half. Cover hides you only where it hides your head, and tall grass
-  on a crest between you hides you as a rock would, unless your head shows above it. At night he
+  on a crest between you hides you as a rock would, unless your head shows above it. A bush between
+  you hides you wherever its leaves are, where the game counted only its heart; one cuts how far he
+  sees you to a tenth, and leaves shot off let him see through. At night he
   recognises you from 25 m at most, whatever you do, and in a sandstorm from 40 m at most. Behind
   him he never sees you, but hears you walk upright within 20 m; crouched, you can creep up unheard.
   Alerted soldiers see a quarter farther, and a soldier at the wheel only through his windscreen. The

@@ -55,6 +55,7 @@ turns the two into the visibility the game compares with the soldier's own fuzzy
 | Camo suit, still, in grass | 3 m |
 | Cover | hidden only where it hides his head; head and shoulders over a wall count as in the open |
 | Tall grass on a crest between them | hidden as by a rock, unless his head clears the grass (2026-11-03) |
+| A bush between them | ×(1 − its camouflage): ×0.1 for a savannah bush, two hide him; wherever its leaves are, on the line to his head (2026-11-04) |
 | Night | at most 25 m, whatever he does |
 | Lit by a lamp at night | ×1.25 (phase 3) |
 | Heavy fog | at most 40 m in a sandstorm, the heaviest; lighter fog in proportion to its full distance over its amount (2026-11-04) |
@@ -95,6 +96,20 @@ behind grass. He recognised him at 35.8 m over its bare part, and at 16.6 m on i
 field's flat cases the walk never fired (424 looks). A walk took 1 to 4 µs on average. A few took 141
 to 368 µs by the clock, but a thread-cycle count put the longest's own work at about 9 µs: the main
 thread had been preempted mid-walk. Not played.
+
+Bushes between them (2026-11-04, after the user's soldier on a crest saw through a bush, not grass).
+The game counts a bush only inside a small sphere at its heart ([bushes and
+trees](../engine-internals/ai.md#bushes-and-trees)), so the plugin counts it wherever its leaves
+are: an upright column as wide as its narrower side and as tall as the bush, rounded at the top, in
+full within three quarters of it and fading out to its edge. It still adds the game's camouflage,
+less the leaves shot off, and asks about the line to the player's head. A bush is a RealTree whose
+camouflage reaches lower than 1 m and that stands under 6 m, which leaves out two big diospyros trees
+and the small palm. Trees keep the game's sphere in their crown. On the range a tamarix stands on the
+bare crest's top, 30 m from a rifleman. As shipped he recognised the player through it at 26.2 m
+standing and 29.8 m crouched, the bush giving cover 0.24 to 1. With the plugin, every look through it
+gave cover 0.10, and he never made the player out, standing or crouched; 6 m aside, clear of it, he
+recognised him at 30.4 m. In an earlier run he walked up to 3 m short of the bush and recognised the
+crouched player past its edge at 19.1 m, cover 0.48. Not played.
 
 Phase 2 (2026-11-04): fog, built, read from the fog the environment manager hands the renderer each
 frame, and on the range a sandstorm brought a soldier to 45 m and 40 m. Drivers, built: a soldier
