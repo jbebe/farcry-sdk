@@ -155,7 +155,8 @@ range in the log drifts from the scenario's distance.
 ### Still to do before it is finished
 
 **Before release, the user's call on 2026-10-29:** the camo suit (N), the vest (F), grass visibility
-(row 10) and heavy testing.
+(row 10) and heavy testing. Added 2026-11-04: perception phase 3 (shade and lamps), and a revision of
+the damage, the soldiers' shooting and the health system.
 
 | # | Item | State |
 |---|---|---|
