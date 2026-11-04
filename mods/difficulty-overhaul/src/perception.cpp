@@ -515,6 +515,10 @@ namespace {
         if (zone == kFocus && moving && look.night < 0.5f && !hiding.grass && hiding.cover >= 0.99f) {
             notice = std::max(notice, upright ? kUprightCatchesEye : kCrouchedCatchesEye);
         }
+        // A scope reaches farther, but no farther than night or fog let anyone see.
+        const float scope = zone == kFocus ? look.scope : 1.0f;
+        recognise *= scope;
+        notice *= scope;
         recognise = AtNight(recognise, kNightRecognise, look.night);
         notice = AtNight(notice, kNightNotice, look.night);
         // How far this frame's fog lets anyone see, relative to the heaviest fog's: its full distance
@@ -524,9 +528,10 @@ namespace {
             recognise = std::min(recognise, kFogRecognise * fog);
             notice = std::min(notice, kFogNotice * fog);
         }
-        const float sharpness = (alert ? kAlert : 1.0f) * (zone == kFocus ? look.scope : 1.0f);
-        recognise *= sharpness;
-        notice *= sharpness;
+        if (alert) {
+            recognise *= kAlert;
+            notice *= kAlert;
+        }
         if (hiding.camouflaged) {
             recognise = notice = kCamouflaged;
         }

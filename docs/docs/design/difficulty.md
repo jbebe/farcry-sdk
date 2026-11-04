@@ -79,7 +79,8 @@ Built in phase 1, checked on the range by fc2drive (row 24), not yet played: the
 the camo suit, cover, night, the alert factor, the reaction time, fire discipline at the recognition
 line, and a `perception:` line for each first notice and recognition. The plugin reads the camo suit
 itself: the game's own camouflage reads the suit's bonus inverted and never hides anyone. A sniper aiming through his scope sees as much farther as the game's scope
-makes him, a choice of the build's, not the user's. Tall grass on a crest between them (2026-11-03,
+makes him, a choice of the build's, but since 2026-11-04 no farther than night or fog allow (the
+user's call). Tall grass on a crest between them (2026-11-03,
 after the user was shot through grass over curved ground): the soldier's line to the player's head,
 lowered by the grass's 1.2 m and never below the ground under either of them, is cast; where it meets
 the ground more than 2 m from the player and the game's high-grass test finds grass there, the player
