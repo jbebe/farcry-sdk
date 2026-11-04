@@ -114,6 +114,12 @@ clouds are lit from as the moon at `+0x194`, the night factor at `+0x1B8` and th
 coordinate at `+0x1BC` ([the sky and cloud system](./sky-and-clouds.md)): each of those four is the
 server offset plus `0x10`. The storm factor breaks the pattern, `+0x6C` here against `+0x78` there, so
 no other offset on this page carries over by adding `0x10`.
+
+The environment manager itself is reached through the global at Steam `0x10FE4174` (GOG
+`0x10F33874`), loaded just before the frame's call of `Update`. Its `CSky` sits at `+0x270` and keeps
+the sun direction it copies into the scene state at `+0x44`, so the sun can be read without the
+renderer: at 9 on the test range it was `(0.89, -0.04, 0.46)` and at 17 `(-0.69, -0.06, 0.72)`, east
+then west, as the shadows fell (**seen in game, 2026-11-04**). The clock's seconds sit at `+0x260`.
 :::
 
 `GetNormalizedTimeOfDay` (`0x09156C80`) returns `+0x2F0` of the manager, and the lighting, fog, cloud

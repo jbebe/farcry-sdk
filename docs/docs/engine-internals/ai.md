@@ -402,7 +402,9 @@ never. It asks `CAABBPartitionManager::GetCombinedTreeVisibility` (Steam `0x1053
 the line from the observer's body part 2 to the target's part 5, his torso. That walks the 16 m cells
 the line crosses (`CamouflageHitTest`) and adds up `CamouflageHitTestEntry` (Steam `0x1052FFE0`,
 `RET 0x20`) for each RealTree in them, stopping past 1. The check is 1 less the sum, so with the
-shipped weight of 1 two bushes squarely on the line hide the target completely.
+shipped weight of 1 two bushes squarely on the line hide the target completely. The check takes the
+partition manager from a reference-counted handle in the global at Steam `0x11645C24`, at its
+`+0x0C`, and flushes it (Steam `0x104DD4F0`) before asking, so anything else can ask the same way.
 
 A tree adds its species' camouflage, less the share of its leaves that have been shot off
 (`RTxcSimulation::GetCombineCamouflage`, Steam `0x10467F90`). It adds it in full where the line passes
