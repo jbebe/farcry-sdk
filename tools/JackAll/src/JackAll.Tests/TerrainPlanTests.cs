@@ -51,7 +51,7 @@ public class TerrainPlanTests
         for (int lod = 0; lod < 4; lod++)
         {
             int kept = Enumerable.Range(0, side * side).Count(v => sector.LastLodAt(v / side, v % side) >= lod);
-            Assert.Equal(kept, sector.LodVertexCount(lod));
+            Assert.Equal(kept, BitConverter.ToUInt16(sector.MaskTablesRaw, SdatSectorFile.LodVertexCountsOffsetInMaskTables + lod * 2));
         }
         for (int record = 0; record < sector.RecordsRaw.Length; record += SdatSectorFile.RecordSize)
         {

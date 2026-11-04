@@ -86,33 +86,29 @@ public sealed record SdatSector
     }
 
     /// <summary>Encoded Y component of the cell's normal, from the plane that follows the grid.</summary>
-    public byte NormalYAt(int row, int column) =>
-        MaskTablesRaw[SdatSectorFile.NormalYOffsetInMaskTables + row * SdatSectorFile.GridSize + column];
+    public byte NormalYAt(int row, int column) => MaskTablesRaw[NormalYIndex(row, column)];
 
-    /// <summary>Stores a cell's height and its normal's X and Y, each encoded as <c>(n + 1) * 127.5</c>.</summary>
-    public void SetCell(int row, int column, ushort rawHeight, float normalX, float normalY)
+    /// <summary>Stores a cell's height, and its normal's X and Y each encoded as <c>(n + 1) * 127.5</c>.</summary>
+    public void SetCell(int row, int column, float heightMeters, float normalX, float normalY)
     {
-        Grid[row, column] = Grid[row, column] with { RawHeight = rawHeight, RawByte2 = EncodeNormal(normalX) };
-        MaskTablesRaw[SdatSectorFile.NormalYOffsetInMaskTables + row * SdatSectorFile.GridSize + column] = EncodeNormal(normalY);
+        var raw = (ushort)Math.Clamp(MathF.Round(heightMeters / SdatSectorFile.MetersPerUnit), 0, ushort.MaxValue);
+        Grid[row, column] = Grid[row, column] with { RawHeight = raw, RawByte2 = EncodeNormal(normalX) };
+        MaskTablesRaw[NormalYIndex(row, column)] = EncodeNormal(normalY);
     }
 
     /// <summary>The coarsest of the four LOD meshes that still has this vertex, 0 to 3.</summary>
     public int LastLodAt(int row, int column)
     {
-        int vertex = row * SdatSectorFile.GridSize + column;
-        return MaskTablesRaw[SdatSectorFile.LastLodOffsetInMaskTables + vertex / 4] >> (vertex % 4 * 2) & 3;
+        (int index, int shift) = LastLodSlot(row, column);
+        return MaskTablesRaw[index] >> shift & 3;
     }
 
-    /// <summary>Keeps the vertex in every LOD mesh, so distance never flattens what it carries.</summary>
+    /// <summary>Keeps the vertex in every LOD mesh.</summary>
     public void KeepAtEveryLod(int row, int column)
     {
-        int vertex = row * SdatSectorFile.GridSize + column;
-        MaskTablesRaw[SdatSectorFile.LastLodOffsetInMaskTables + vertex / 4] |= (byte)(3 << (vertex % 4 * 2));
+        (int index, int shift) = LastLodSlot(row, column);
+        MaskTablesRaw[index] |= (byte)(3 << shift);
     }
-
-    /// <summary>How many vertices the LOD mesh <paramref name="lod"/> has.</summary>
-    public int LodVertexCount(int lod)
-        => BitConverter.ToUInt16(MaskTablesRaw, SdatSectorFile.LodVertexCountsOffsetInMaskTables + lod * 2);
 
     /// <summary>
     /// Brings what the export derives from the heights and LODs back in line after an edit: each LOD
@@ -149,6 +145,15 @@ public sealed record SdatSector
             BitConverter.TryWriteBytes(bounds[4..], low);
             BitConverter.TryWriteBytes(bounds[6..], high);
         }
+    }
+
+    private static int NormalYIndex(int row, int column)
+        => SdatSectorFile.NormalYOffsetInMaskTables + row * SdatSectorFile.GridSize + column;
+
+    private static (int Index, int Shift) LastLodSlot(int row, int column)
+    {
+        int vertex = row * SdatSectorFile.GridSize + column;
+        return (SdatSectorFile.LastLodOffsetInMaskTables + vertex / 4, vertex % 4 * 2);
     }
 
     private static byte EncodeNormal(float n) => (byte)Math.Clamp((int)((n + 1) * 127.5f), 0, 255);

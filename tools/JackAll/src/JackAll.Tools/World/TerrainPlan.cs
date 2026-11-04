@@ -16,9 +16,9 @@ namespace JackAll.Tools.World;
 /// </code>
 /// </summary>
 /// <remarks>
-/// A raised vertex is kept in every LOD mesh, block by block, so the ground a soldier's ray meets is
-/// the ground drawn at any distance. The blocks around stay as simplified as before; where they meet
-/// there is no crack only while the unraised ground there is flat, as a new world's is.
+/// Each 8x8 block a ridge raises keeps every vertex at every LOD, and the blocks around stay as
+/// simplified as they were, which meets them without a crack only on flat ground: a sector whose LODs
+/// leave out detail is refused.
 /// </remarks>
 public static class TerrainPlan
 {
@@ -32,44 +32,68 @@ public static class TerrainPlan
     {
         Ridge[] ridges = [.. plan.Elements("Ridge").Select(Ridge.Parse)];
         WorldTerrain ground = WorldTerrain.Load(map, read);
-        float Raise(int x, int y) => ridges.Sum(r => r.At(x, y));
-        float Height(int x, int y) => ground.HeightMetersAt(x, y) + Raise(x, y);
-
         const int side = SdatSectorFile.GridSize;
         var shaped = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
         foreach ((string path, int id) in map.Sectors)
         {
             int x0 = id % map.SectorsPerSide * SdatTerrainCrop.QuadsPerSector;
             int y0 = id / map.SectorsPerSide * SdatTerrainCrop.QuadsPerSector;
+            Ridge[] near = [.. ridges.Where(r => r.Reaches(x0 - 1, y0 - 1, x0 + side, y0 + side))];
+            if (near.Length == 0)
+            {
+                continue;
+            }
+
+            // The raise over the sector's vertices and the ring around them its slopes lean on.
+            var raise = new float[side + 2, side + 2];
+            for (int row = -1; row <= side; row++)
+            {
+                for (int column = -1; column <= side; column++)
+                {
+                    raise[row + 1, column + 1] = near.Sum(r => r.At(x0 + column, y0 + row));
+                }
+            }
+            float Raise(int row, int column) => raise[row + 1, column + 1];
+            float Height(int row, int column) => ground.HeightMetersAt(x0 + column, y0 + row) + Raise(row, column);
+
             SdatSector? sector = null;
             for (int row = 0; row < side; row++)
             {
                 for (int column = 0; column < side; column++)
                 {
-                    int x = x0 + column, y = y0 + row;
                     // A vertex beside a raised one keeps its height but tilts with it.
-                    if (Raise(x, y) == 0 && Raise(x - 1, y) == 0 && Raise(x + 1, y) == 0 && Raise(x, y - 1) == 0 && Raise(x, y + 1) == 0)
+                    if (Raise(row, column) == 0 && Raise(row, column - 1) == 0 && Raise(row, column + 1) == 0 &&
+                        Raise(row - 1, column) == 0 && Raise(row + 1, column) == 0)
                     {
                         continue;
                     }
                     sector ??= SdatSectorFile.Decode(read(path) ?? throw new InvalidOperationException($"{path} is missing."));
-                    float gx = (Height(x + 1, y) - Height(x - 1, y)) / 2, gy = (Height(x, y + 1) - Height(x, y - 1)) / 2;
+                    float gx = (Height(row, column + 1) - Height(row, column - 1)) / 2;
+                    float gy = (Height(row + 1, column) - Height(row - 1, column)) / 2;
                     float length = MathF.Sqrt(gx * gx + gy * gy + 1);
-                    ushort raw = (ushort)Math.Clamp(MathF.Round(Height(x, y) / SdatSectorFile.MetersPerUnit), 0, ushort.MaxValue);
-                    sector.SetCell(row, column, raw, -gx / length, -gy / length);
+                    sector.SetCell(row, column, Height(row, column), -gx / length, -gy / length);
                 }
             }
             if (sector is null)
             {
                 continue;
             }
+
             for (int blockRow = 0; blockRow < side - 1; blockRow += LodBlock)
             {
                 for (int blockColumn = 0; blockColumn < side - 1; blockColumn += LodBlock)
                 {
-                    if (Block(blockRow, blockColumn).Any(v => Raise(x0 + v.Column, y0 + v.Row) != 0))
+                    if (!Raised(blockRow, blockColumn))
                     {
-                        foreach ((int row, int column) in Block(blockRow, blockColumn))
+                        continue;
+                    }
+                    if (sector.TailBlockRaw.Any(b => b != 0))
+                    {
+                        throw new InvalidOperationException($"{path}'s distant LODs leave out detail, so a ridge cannot be raised there: only flat ground can.");
+                    }
+                    for (int row = blockRow; row <= blockRow + LodBlock; row++)
+                    {
+                        for (int column = blockColumn; column <= blockColumn + LodBlock; column++)
                         {
                             sector.KeepAtEveryLod(row, column);
                         }
@@ -78,13 +102,24 @@ public static class TerrainPlan
             }
             sector.RefreshLodSummaries();
             shaped[path] = SdatSectorFile.Encode(sector);
+
+            bool Raised(int blockRow, int blockColumn)
+            {
+                for (int row = blockRow; row <= blockRow + LodBlock; row++)
+                {
+                    for (int column = blockColumn; column <= blockColumn + LodBlock; column++)
+                    {
+                        if (Raise(row, column) != 0)
+                        {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
         }
         return shaped;
     }
-
-    /// <summary>Every vertex of the block whose first corner is at (<paramref name="row"/>, <paramref name="column"/>), its edges included.</summary>
-    private static IEnumerable<(int Row, int Column)> Block(int row, int column)
-        => from r in Enumerable.Range(row, LodBlock + 1) from c in Enumerable.Range(column, LodBlock + 1) select (r, c);
 
     private sealed record Ridge(Vector2 From, Vector2 To, float Height, float HalfWidth)
     {
@@ -92,6 +127,11 @@ public static class TerrainPlan
             new Vector2(Number(ridge, "FromX"), Number(ridge, "FromY")),
             new Vector2(Number(ridge, "ToX"), Number(ridge, "ToY")),
             Number(ridge, "Height"), Number(ridge, "Width") / 2);
+
+        /// <summary>Whether the ridge can lift anything in the rectangle.</summary>
+        public bool Reaches(int minX, int minY, int maxX, int maxY)
+            => MathF.Min(From.X, To.X) - HalfWidth < maxX && MathF.Max(From.X, To.X) + HalfWidth > minX &&
+               MathF.Min(From.Y, To.Y) - HalfWidth < maxY && MathF.Max(From.Y, To.Y) + HalfWidth > minY;
 
         /// <summary>How far the ridge lifts the ground at a point: its height on the line, nothing half its width from it.</summary>
         public float At(int x, int y)

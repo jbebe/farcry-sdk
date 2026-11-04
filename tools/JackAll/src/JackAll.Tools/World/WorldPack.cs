@@ -9,11 +9,9 @@ namespace JackAll.Tools.World;
 
 /// <summary>
 /// Turns a mod layer into the form a mod ships. Every new world the layer creates is built from its
-/// fragments into whole files - its terrain as its plan shapes it, each sector's worldsector, the
-/// entity library cut from tmpla's full set, the sector flags, the navmesh and the vegetation its plan
-/// lays out - and everything else in the layer is copied as it is. A layer that only adds to another
-/// mod's world gets the navmesh of the sectors it changed, and keeps its fragments, which merge onto
-/// that mod's files at install.
+/// fragments and plans into whole files by <see cref="BuildWorld"/>, and everything else in the layer
+/// is copied as it is. A layer that only adds to another mod's world gets the navmesh of the sectors it
+/// changed, and keeps its fragments, which merge onto that mod's files at install.
 /// </summary>
 public static partial class WorldPack
 {
@@ -125,13 +123,11 @@ public static partial class WorldPack
     {
         var files = new SortedDictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
         var namers = new List<FcbObject>();
+        byte[]? Built(string path) => files.TryGetValue(path, out byte[]? bytes) ? bytes : read(path);
 
-        // Shaped first, so the vegetation and the navmesh stand on the new ground.
         if (read(TerrainPlan.PathOf(world)) is { } terrain)
         {
             Dictionary<string, byte[]> shaped = TerrainPlan.Build(XElement.Load(new MemoryStream(terrain)), map, read);
-            Func<string, byte[]?> unshaped = read;
-            read = path => shaped.TryGetValue(path, out byte[]? bytes) ? bytes : unshaped(path);
             foreach ((string path, byte[] bytes) in shaped)
             {
                 files[path] = bytes;
@@ -183,7 +179,7 @@ public static partial class WorldPack
         SectorsDep.Mark(sectorsDep, SectorsDep.HasNavMesh, ids);
         if (read(VegetationPlan.PathOf(world)) is { } plan)
         {
-            Dictionary<(int Sector, bool Far), byte[]> grown = VegetationPlan.Build(XElement.Load(new MemoryStream(plan)), map, read, knownPaths, progress);
+            Dictionary<(int Sector, bool Far), byte[]> grown = VegetationPlan.Build(XElement.Load(new MemoryStream(plan)), map, Built, knownPaths, progress);
             foreach ((string sdat, int id) in map.Sectors)
             {
                 if (grown.TryGetValue((id, false), out byte[]? near))
@@ -202,8 +198,7 @@ public static partial class WorldPack
         }
         files[depPath] = FcbDocument.Serialize(sectorsDep);
 
-        (Dictionary<int, NvmSector> navMesh, int solids) = NavMeshGenerator.BuildMap(
-            map, world, path => files.TryGetValue(path, out byte[]? builtBytes) ? builtBytes : read(path), knownPaths, progress);
+        (Dictionary<int, NvmSector> navMesh, int solids) = NavMeshGenerator.BuildMap(map, world, Built, knownPaths, progress);
         foreach ((string sdat, int id) in map.Sectors)
         {
             files[WorldNavMesh.PathOf(sdat, id)] = NvmSectorFile.Encode(navMesh[id]);
