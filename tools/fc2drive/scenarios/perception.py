@@ -240,10 +240,11 @@ def place(where, distance):
     return player, soldier, spawn_yaw(gx, gy)
 
 
-def spawn(game, at, yaw):
-    """A rifleman dropped onto the range at `at`, kept in the TestRange table CLEAR empties."""
+def spawn(game, at, yaw, archetype=RIFLEMAN, above=SOLDIER_DROP):
+    """A rifleman, or `archetype`, put `above` the range's ground at `at`, kept in the TestRange table CLEAR
+    empties."""
     game.lua(f'TestRange.n = TestRange.n + 1 TestRange[TestRange.n] = SpawnEntityFromArchetype('
-             f'"{RIFLEMAN}", {at[0]:.3f}, {at[1]:.3f}, {GROUND + SOLDIER_DROP:.3f}, 0, 0, {yaw:.1f})')
+             f'"{archetype}", {at[0]:.3f}, {at[1]:.3f}, {GROUND + above:.3f}, 0, 0, {yaw:.1f})')
 
 
 def on_range(x, y):
