@@ -105,6 +105,20 @@ namespace {
          "the one at 50 m never does while you stay crouched."},
     };
 
+    // The crest along y 376, grassed west of x 320 and bare east of it: the player on open ground
+    // north of it, facing south, each rifleman 36 m off past one part of it, facing him.
+    constexpr Soldier kBehindGrassyCrest[] = {{kRifleman, {296, 362, 326.3f}}};
+    constexpr Soldier kBehindBareCrest[] = {{kRifleman, {336, 362, 33.7f}}};
+    constexpr Scenario kGrassCrest[] = {
+        {"Rifleman behind the grassy crest", "24", kBehindGrassyCrest,
+         "Stand still, then crouch. Then walk up onto the crest.",
+         "The grass on the crest hides you: he neither notices nor recognises you ('behind grass' on his "
+         "trace). On its top, your head above the grass, he recognises you."},
+        {"Rifleman behind the bare crest", "24", kBehindBareCrest,
+         "Stand still where you start.",
+         "He recognises you over the bare crest within a few seconds: the crest alone hides no one."},
+    };
+
     constexpr Arena kArenas[] = {
         {"Duel lane", {30, 110, 270}, kDuelLane},
         {"Low wall", {100, 37, 0}, kLowWall},
@@ -112,6 +126,7 @@ namespace {
         {"Suppression", {416, 60, 270}, kSuppression},
         {"Sniper", {380, 370, 317.7f}, kSniperLane},
         {"Grass field", {256, 340, 0}, kGrassField},
+        {"Grass crest", {316, 392, 180}, kGrassCrest},
     };
 }
 

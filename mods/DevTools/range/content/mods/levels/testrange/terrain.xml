@@ -1,0 +1,5 @@
+<!-- A crest a metre high along the grass field's north edge, grassed to the field's east end at x 320 and bare past it. -->
+<!-- A soldier's line over it to a player clears the ground but runs through the grass on top. -->
+<Terrain>
+  <Ridge FromX="272" FromY="376" ToX="352" ToY="376" Height="1" Width="12" />
+</Terrain>
