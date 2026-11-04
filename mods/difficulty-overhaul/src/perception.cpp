@@ -96,13 +96,30 @@ namespace {
     FCSE::Relocation<const uint8_t* const*> g_treesHandle{FCSE::Uplay(0x01645C24)};
     constexpr ptrdiff_t kHandleTrees = 0x0C;
     FCSE::Relocation<FlushFn> g_flushTrees{FCSE::Uplay(0x004DD4F0)};
-    // Whether this build has what shade needs, the ray and the sun, and what crowns need.
+    // Whether this build has what shade needs, the ray and the sun, what crowns need, and what lamps do.
     bool g_shadeWorks = false;
     bool g_crownsWork = false;
+    bool g_lampsWork = false;
     // The environment manager, its CSky, and the sky's direction toward the sun, Z up.
     FCSE::Relocation<const uint8_t* const*> g_environment{FCSE::Uplay(0x00FE4174)};
     constexpr ptrdiff_t kEnvironmentSky = 0x270;
     constexpr ptrdiff_t kSkySun = 0x44;
+    // The container of CSceneLights, the ones near the player: its buffers, the first holding the
+    // lights and how many slots. A light's type, whether it is on, where it is, which way a spot
+    // faces, its radius, its intensity and a spot's full angle.
+    FCSE::Relocation<const uint8_t*> g_sceneLights{FCSE::Uplay(0x00F96830)};
+    constexpr ptrdiff_t kLightBuffers = 0x08;
+    constexpr ptrdiff_t kBufferLights = 0x00;
+    constexpr ptrdiff_t kBufferCount = 0x04;
+    constexpr ptrdiff_t kLightType = 0x04;
+    constexpr ptrdiff_t kLightOn = 0x08;
+    constexpr ptrdiff_t kLightPosition = 0x0C;
+    constexpr ptrdiff_t kLightFacing = 0x18;
+    constexpr ptrdiff_t kLightRadius = 0x30;
+    constexpr ptrdiff_t kLightIntensity = 0x40;
+    constexpr ptrdiff_t kLightSpotAngle = 0x5C;
+    constexpr int32_t kPointLight = 1;
+    constexpr int32_t kSpotLight = 3;
     // CGrassEvaluator::ComputeVisibility's concealment: its ramp with distance, whose full and start
     // distances are operands kFullOperand and kFromOperand bytes in, then its factor by the soldier's
     // state, whose in-combat factor is kCombatOperand bytes in.
@@ -193,9 +210,12 @@ namespace {
     constexpr float kAlert = 1.25f;
     // Hardcore: a driver sees only through his windscreen, this wide.
     constexpr float kWindscreen = 50.0f;
-    // Hardcore: the most a soldier recognises and notices from at night.
+    // Hardcore: the most a soldier recognises and notices from at night, and how much farther when a
+    // lamp lights the player. A lamp's line to him ends kLampFixture short of it.
     constexpr float kNightRecognise = 25.0f;
     constexpr float kNightNotice = 30.0f;
+    constexpr float kLitByLamp = 1.25f;
+    constexpr float kLampFixture = 0.3f;
     // Hardcore: the most a soldier recognises and notices from in the heaviest fog, a sandstorm's,
     // full at 30 m with 0.98 of the view; lighter fog limits him in proportion to its reach.
     constexpr float kFogRecognise = 40.0f;
@@ -226,10 +246,11 @@ namespace {
     constexpr float kBushTopBelow = 6.0f;
     constexpr float kBushSolid = 0.75f;
     // The line from the player's head toward the sun: how far a solid thing shades him from, and how
-    // high above him a crown can; then how long his shade, once found, holds.
+    // high above him a crown can.
     constexpr float kShadeReach = 100.0f;
     constexpr float kCrownsBelow = 20.0f;
-    constexpr double kShadeHold = 0.25;
+    // How long the player's shade or lamp, once found, holds.
+    constexpr double kLightHold = 0.25;
     // The cones' reach and span against the player: the game's cap on a cone against him, half a
     // turn, a full one. Then the grass check's concealment made a test of whether grass hides him at
     // all, and its in-combat factor as from an idle soldier.
@@ -261,16 +282,21 @@ namespace {
     enum Zone { kFocus, kSide, kBehind };
     const char* const kZoneNames[] = {"in his focus", "at his side", "behind him"};
 
+    // Whether the player stands in shade, and whether a lamp lights him.
+    struct Lighting {
+        bool shaded = false;
+        bool lit = false;
+    };
+
     // What the soldier's own checks of cover and grass found, whether a bush's foliage counted in that
-    // cover, whether grass between them hides the player, whether the camo suit does, and whether the
-    // player stands in shade.
+    // cover, whether grass between them hides the player, whether the camo suit does, and his light.
     struct Hiding {
         float cover = 1.0f;
         bool grass = false;
         bool behindBush = false;
         bool behindGrass = false;
         bool camouflaged = false;
-        bool shaded = false;
+        Lighting light;
     };
 
     // While the soldier's checks of the player run on this thread: the check's context, whose eye and
@@ -280,9 +306,9 @@ namespace {
     thread_local bool t_behindBush = false;
     thread_local bool t_askingCrowns = false;
 
-    // When the player's shade was last found and what it was.
-    double g_shadeAt = -1.0;
-    bool g_shaded = false;
+    // When the player's light was last found and what it was.
+    double g_lightAt = -1.0;
+    Lighting g_light;
 
     // The most each soldier, by entity id, has made of the player lately, 1 noticing and 2
     // recognising, logged as it rises; once below it for a while, it is forgotten. Then when his grass
@@ -493,7 +519,9 @@ namespace {
 
     const char* BushName(const Hiding& hiding) { return hiding.behindBush ? ", behind a bush" : ""; }
 
-    const char* ShadeName(const Hiding& hiding) { return hiding.shaded ? ", in shade" : ""; }
+    const char* LightName(const Hiding& hiding) {
+        return hiding.light.shaded ? ", in shade" : hiding.light.lit ? ", lit by a lamp" : "";
+    }
 
     // Whether grass hides the player from soldier `id`: as his check found now, or within kGrassHold.
     bool HeldInGrass(uint32_t id, bool grass, double now) {
@@ -606,22 +634,65 @@ namespace {
         return under;
     }
 
-    // Whether the player, his head at `head`, stands in shade by day: something solid within
-    // kShadeReach of it toward the sun, or a crown on that line. Found again once kShadeHold has passed.
-    bool PlayerShade(const float* head, double now) {
+    // Whether a lamp lights the player's head: a point or spot light that is on, with his head within
+    // its radius, and a spot's cone, and nothing solid between them.
+    bool UnderLamp(const float* head) {
+        const uint8_t* buffers = Read<const uint8_t*>(g_sceneLights.get(), kLightBuffers);
+        if (buffers == nullptr) {
+            return false;
+        }
+        const auto* const* lights = Read<const uint8_t* const*>(buffers, kBufferLights);
+        const uint32_t count = Read<uint32_t>(buffers, kBufferCount);
+        for (uint32_t i = 0; i < count; ++i) {
+            const uint8_t* light = lights[i];
+            if (light == nullptr) {
+                continue;
+            }
+            const int32_t type = Read<int32_t>(light, kLightType);
+            if ((type != kPointLight && type != kSpotLight) || Read<uint8_t>(light, kLightOn) == 0 ||
+                Read<float>(light, kLightIntensity) <= 0.0f) {
+                continue;
+            }
+            const float* at = Vec3(light, kLightPosition);
+            const float toLamp[3] = {at[0] - head[0], at[1] - head[1], at[2] - head[2]};
+            const float distance = std::hypot(toLamp[0], toLamp[1], toLamp[2]);
+            if (distance <= kLampFixture || distance > Read<float>(light, kLightRadius)) {
+                continue;
+            }
+            const float toward[3] = {toLamp[0] / distance, toLamp[1] / distance, toLamp[2] / distance};
+            if (type == kSpotLight) {
+                const float* facing = Vec3(light, kLightFacing);
+                const float along = -(toward[0] * facing[0] + toward[1] * facing[1] + toward[2] * facing[2]);
+                if (along < std::cos(Read<float>(light, kLightSpotAngle) / 2.0f)) {
+                    continue;
+                }
+            }
+            if (Ray::Clear(head, toward, distance - kLampFixture)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Whether the player, his head at `head`, stands in shade while the sun is up, something solid
+    // within kShadeReach of it toward the sun or a crown on that line, and whether a lamp lights him
+    // once it is down. Found again once kLightHold has passed.
+    Lighting PlayerLight(const float* head, double now) {
         {
             std::lock_guard<std::mutex> lock(g_seenLock);
-            if (now - g_shadeAt < kShadeHold) {
-                return g_shaded;
+            if (now - g_lightAt < kLightHold) {
+                return g_light;
             }
-            g_shadeAt = now;
+            g_lightAt = now;
         }
         float sun[3];
-        const bool shaded = g_shadeWorks && TowardSun(sun) &&
-                            (UnderCrown(head, sun) || !Ray::Clear(head, sun, kShadeReach));
+        const bool sunUp = g_shadeWorks && TowardSun(sun);
+        Lighting light;
+        light.shaded = sunUp && (UnderCrown(head, sun) || !Ray::Clear(head, sun, kShadeReach));
+        light.lit = !sunUp && g_lampsWork && UnderLamp(head);
         std::lock_guard<std::mutex> lock(g_seenLock);
-        g_shaded = shaded;
-        return shaded;
+        g_light = light;
+        return light;
     }
 
     // GetCombinedTreeVisibility of the line from the soldier's eye to the player's head, in place of
@@ -726,7 +797,7 @@ namespace {
                        "lines %.2f and %.2f; fog full at %.0f m with %.2f; notices from %.0f m, "
                        "recognises from %.0f m",
                        id, distance, moving, kZoneNames[zone], HidingName(hiding), BushName(hiding),
-                       ShadeName(hiding), look.driving ? ", driving" : "", state, hiding.cover,
+                       LightName(hiding), look.driving ? ", driving" : "", state, hiding.cover,
                        visibility, Shooting::FuzzyLine(look.soldier), Shooting::ClearLine(look.soldier),
                        g_fogEnd, g_fogAmount, notice, recognise);
         }
@@ -745,7 +816,7 @@ namespace {
         CombatLogf("soldier %08X perception: %s the player at %.1f m, %s, %s%s%s%s, %s; cover %.2f, "
                    "night %.2f; notices from %.0f m, recognises from %.0f m",
                    id, level == 2 ? "recognises" : "notices", distance, moving, kZoneNames[zone],
-                   HidingName(hiding), BushName(hiding), ShadeName(hiding), state, hiding.cover, look.night,
+                   HidingName(hiding), BushName(hiding), LightName(hiding), state, hiding.cover, look.night,
                    notice, recognise);
     }
 
@@ -783,14 +854,14 @@ namespace {
         const uint32_t id = Game::Id(soldier);
         hiding.grass = !upright && HeldInGrass(id, hiding.grass, now);
         hiding.camouflaged = hiding.grass && !moving && !fighting && WearsCamoSuit(pawn);
-        hiding.shaded = PlayerShade(Vec3(at, kContextTargetPosition), now);
+        hiding.light = PlayerLight(Vec3(at, kContextTargetPosition), now);
 
         // Shade counts in full by day and fades out with the daylight.
-        const float shade = hiding.shaded ? kInShade + (1.0f - kInShade) * look.night : 1.0f;
+        const float shade = hiding.light.shaded ? kInShade + (1.0f - kInShade) * look.night : 1.0f;
         float recognise = moving ? (upright ? kRecogniseUpright : kRecogniseCrouched) : kRecogniseStill;
         recognise *= (zone == kSide ? kAtSide : 1.0f) * (hiding.grass ? kInGrass : 1.0f) * shade * hiding.cover;
         float notice = recognise * kNoticeShare;
-        if (zone == kFocus && moving && look.night < 0.5f && !hiding.grass && !hiding.shaded &&
+        if (zone == kFocus && moving && look.night < 0.5f && !hiding.grass && !hiding.light.shaded &&
             hiding.cover >= 0.99f) {
             notice = std::max(notice, upright ? kUprightCatchesEye : kCrouchedCatchesEye);
         }
@@ -798,8 +869,10 @@ namespace {
         const float scope = zone == kFocus ? look.scope : 1.0f;
         recognise *= scope;
         notice *= scope;
-        recognise = AtNight(recognise, kNightRecognise, look.night);
-        notice = AtNight(notice, kNightNotice, look.night);
+        // A lamp lets him see the player farther at night than the dark does.
+        const float lamp = hiding.light.lit ? kLitByLamp : 1.0f;
+        recognise = AtNight(recognise, kNightRecognise * lamp, look.night);
+        notice = AtNight(notice, kNightNotice * lamp, look.night);
         // How far this frame's fog lets anyone see, relative to the heaviest fog's: its full distance
         // over how much of the view it takes.
         if (g_fogEnd > 0.0f && g_fogAmount > 0.0f) {
@@ -866,12 +939,17 @@ void InstallPerception() {
     if (!trees) {
         FCSE::Logf("perception: the RealTrees' cover was not found in this build, so bushes hide as the game has it");
     }
-    g_shadeWorks = g_environment && Ray::Install();
+    const bool rays = Ray::Install();
+    g_shadeWorks = rays && g_environment;
     g_crownsWork = g_shadeWorks && trees && g_treesHandle && g_flushTrees;
+    g_lampsWork = rays && g_sceneLights;
     if (!g_shadeWorks) {
         FCSE::Logf("perception: the sun or the rays were not found in this build, so shade hides no one");
     } else if (!g_crownsWork) {
         FCSE::Logf("perception: the RealTrees were not found in this build, so their crowns shade no one");
+    }
+    if (!g_lampsWork) {
+        FCSE::Logf("perception: the scene's lights were not found in this build, so lamps light no one");
     }
     if (g_trace) {
         LARGE_INTEGER frequency = {};

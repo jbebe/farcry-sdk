@@ -57,7 +57,7 @@ turns the two into the visibility the game compares with the soldier's own fuzzy
 | Tall grass on a crest between them | hidden as by a rock, unless his head clears the grass (2026-11-03) |
 | A bush between them | ×(1 − its camouflage): ×0.1 for a savannah bush, two hide him; wherever its leaves are, on the line to his head (2026-11-04) |
 | Night | at most 25 m, whatever he does |
-| Lit by a lamp at night | ×1.25 (phase 3) |
+| Lit by a lamp at night | the night limits ×1.25, 31 m: a point or spot light that is on, his head within its reach and a spot's cone, nothing solid between (phase 3, 2026-11-04) |
 | Heavy fog | at most 40 m in a sandstorm, the heaviest; lighter fog in proportion to its full distance over its amount (2026-11-04) |
 | Talking guards | ×0.5; deferred 2026-11-04, social posts left as shipped until needed |
 | Driver | only through a 50° windscreen cone; a turret gunner sees 180° like a soldier on foot, and so does a passenger (phase 2; 50° and passengers 2026-11-04) |
@@ -127,7 +127,17 @@ from 100 m. Found for the player once a quarter of a second. On the range (fc2dr
 crouched still at eight spots around the tamarix on the crest's top, only the spot on the far side
 from the sun was in shade, the west one at 9 and the east one at 17, on every look, and the soldier
 recognised him from half as far there. Around a Datsun no spot was: a crouched head stands higher than
-its ends. Lamps are next, and need the engine's lights found first. Not played.
+its ends. Not played.
+
+Lamps (2026-11-04), built. The player is lit when a point or spot light that is on has his head
+within its radius, and a spot within its cone, with nothing solid between them, found while the sun
+is down. A flashlight or a car's headlights face away from his head, so their cones leave him out.
+Lit, the night's limits reach 1.25 times as far, 31 m to recognise and 37.5 m to notice. The lights
+are read from the scene's own list, which holds only those near the player. On the range
+(fc2drive's `lamp.py`) one of `tmpla`'s point lights spawned 3 m up: 2 m beside it every look found
+the player lit and an idle rifleman 15 m off recognised him from 31 m, 15 m north of it from 25 m. At
+the ranch in world 1 a room's lamp lit the player inside, and a step outside, still within its
+reach, the wall between left him unlit. Not played.
 
 ## Built
 

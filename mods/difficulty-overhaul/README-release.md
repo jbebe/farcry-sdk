@@ -33,7 +33,8 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
   on a crest between you hides you as a rock would, unless your head shows above it. A bush between
   you hides you wherever its leaves are, where the game counted only its heart; one cuts how far he
   sees you to a tenth, and leaves shot off let him see through. At night he
-  recognises you from 25 m at most, whatever you do, and in a sandstorm from 40 m at most. Behind
+  recognises you from 25 m at most, whatever you do, a quarter farther under a lamp, and in a
+  sandstorm from 40 m at most. Behind
   him he never sees you, but hears you walk upright within 20 m; crouched, you can creep up unheard.
   Alerted soldiers see a quarter farther, and a soldier at the wheel only through his windscreen. The
   camo suit hides you crouched and still in high grass beyond 3 m, unless he is fighting you.
