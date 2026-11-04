@@ -55,21 +55,25 @@ section is relative to that:
 +0x10  char[256]  asset path, e.g. graphics\Vegetation\Desert\Realtrees\HY_Aloes_01
 ```
 
-The skeleton arena follows at `+0x118` (after the optional prefix block, which never occurs), runs
+The skeleton arena follows at `+0x110` (after the optional prefix block, which never occurs), runs
 for the size at `+0x0C`, and the material table follows it.
 
 The embedded path often ends in **`.rta`**, an authoring extension that ships in no archive.
 
 ## The skeleton arena
 
-Its first `0x220` bytes are the `RTxcSkeleton` header. The counts that drive the walk:
+Its first `0x220` bytes are the `RTxcSkeleton` header. The counts that drive the walk, and the fields
+the AI's [vegetation check](../engine-internals/ai.md#bushes-and-trees) reads:
 
 | Offset | Meaning |
 |---|---|
+| `+0x08` | `float` camouflage, how much of a soldier's view the species hides: 0.9 for every savannah bush |
 | `+0x10` | node count |
 | `+0x1C` | branch count |
 | `+0x28` | leaf-card count |
 | `+0x34` | modelled-leaf count |
+| `+0x60` | the species' box from its foot, six `float`s, the least corner then the greatest |
+| `+0xC0` | the sphere its camouflage counts in, from its foot: a centre, then a radius |
 | `+0x180` | count of a simulation array, stride `0x34` |
 | `+0x220` | render block, `0x20` bytes — counts at `+0x08` and `+0x0C` size two more arrays |
 | `+0x240` | location block, `0x20` bytes |

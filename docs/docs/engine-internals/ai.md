@@ -333,8 +333,8 @@ weight. The evaluator holds its list at `+0x08` and the count at `+0x0C`; each e
 context at `+0x24` and keeps its weight at `+0x2C`, with `ComputeVisibility` in vtable slot `0x14`
 and an "always visible" test in slot `0x0C`, which the distance check fills with its 2 m rule. The
 server names eight; `Dunia.dll` has no RTTI, so on Steam they are known by what each reads: distance
-`0x10A20FA0`, FOV `0x10A21380`, body sampling `0x10A21D90`, occlusion and vegetation `0x10A22120` and
-`0x10A222B0` (which is which not settled), grass `0x10A226C0`, stance `0x10A22BB0`, speed `0x10A22DF0`. The night term reaches `AdjustFOV` as its last argument, already forced to 1
+`0x10A20FA0`, FOV `0x10A21380`, body sampling `0x10A21D90`, occlusion `0x10A22120`, vegetation
+`0x10A222B0` ([bushes and trees](#bushes-and-trees)), grass `0x10A226C0`, stance `0x10A22BB0`, speed `0x10A22DF0`. The night term reaches `AdjustFOV` as its last argument, already forced to 1
 by a muzzle flash; `CSensorySystem::GetTimeOfDayFOVMultiplier` (Steam `0x10A01200`) gives it
 without, from the shipped `fNightTimeMultiplier` at `+0x40`. Within that
 product **(RE-verified on GOG and the server)**:
@@ -394,6 +394,34 @@ Difficulty Overhaul's perception line and in `1_grasssavannah_b_mp` does not (fc
   `add_bonus_plan` puts its argument into that call unquoted and gives nothing.
 
 This is **RE-verified** (`CGrassEvaluator`, GOG `0x10A10DD0`).
+
+### Bushes and trees
+
+The vegetation check counts RealTrees only, the bushes and trees the world scatters; grass meshes
+never. It asks `CAABBPartitionManager::GetCombinedTreeVisibility` (Steam `0x105318F0`, `RET 8`) about
+the line from the observer's body part 2 to the target's part 5, his torso. That walks the 16 m cells
+the line crosses (`CamouflageHitTest`) and adds up `CamouflageHitTestEntry` (Steam `0x1052FFE0`,
+`RET 0x20`) for each RealTree in them, stopping past 1. The check is 1 less the sum, so with the
+shipped weight of 1 two bushes squarely on the line hide the target completely.
+
+A tree adds its species' camouflage, less the share of its leaves that have been shot off
+(`RTxcSimulation::GetCombineCamouflage`, Steam `0x10467F90`). It adds it in full where the line passes
+within half the radius of the species' camouflage sphere, falling to nothing at the radius. The
+sphere is not turned with the tree. Both values sit in the species'
+[skeleton](../file-formats/rtx.md#the-skeleton-arena).
+
+| Species | Camouflage | Size | Camouflage sphere |
+|---|---|---|---|
+| `rt_bush_ziziphus` | 0.9 | 1.7 × 1.9 m, 1.8 m tall | radius 0.67 m, 0.64 m up |
+| `rt_bush_tamarix_small` | 0.9 | 2.4 × 2.5 m, 2.7 m tall | radius 0.82 m, 1.22 m up |
+| `rt_bush_tamarix_medium` | 0.9 | 4.0 × 4.1 m, 3.3 m tall | radius 1.45 m, 0.80 m up |
+| `rt_tree_acacia` | 0.33 | 9.7 × 8.8 m, 5.8 m tall | radius 2.55 m, 4.65 m up |
+| `rt_tree_baobab_a` | 0.14 | 14.8 × 13.4 m, 14.1 m tall | radius 5.69 m, 10.32 m up |
+
+Every savannah bush has 0.9, and its sphere is small for its size. A line across a bush's top, its
+side or its lower half misses most of the sphere, and the soldier sees through the bush. A tree's
+sphere sits in its crown, so a line under the crown passes clear, as it should
+(**RE-verified** on Steam and the server).
 
 ### Hearing
 
