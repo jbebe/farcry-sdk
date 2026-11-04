@@ -81,10 +81,21 @@ line, and a `perception:` line for each first notice and recognition. The plugin
 itself: the game's own camouflage reads the suit's bonus inverted and never hides anyone. A sniper aiming through his scope sees as much farther as the game's scope
 makes him, a choice of the build's, but since 2026-11-04 no farther than night or fog allow (the
 user's call). Tall grass on a crest between them (2026-11-03,
-after the user was shot through grass over curved ground): the soldier's line to the player's head,
-lowered by the grass's 1.2 m and never below the ground under either of them, is cast; where it meets
-the ground more than 2 m from the player and the game's high-grass test finds grass there, the player
-is hidden. On the flat range it changed none of the checked cases; a crest has not been seen in game.
+after the user was shot through grass over curved ground; walked since 2026-11-04, the plan the user
+accepted from two research papers on grass and sight). The soldier's line to the player's head is
+walked a metre at a time, leaving out 2 m at each end. Where it runs within the grass's 1.2 m of the
+ground, and 0.3 m lower over it than the lower of their heads stands over its own, the game's
+high-grass test there hides the player. Flat or evenly sloping ground never brings the line that low,
+so crouching in grass stays the ×0.5 above. A soldier's walk holds 0.25 s, the game's own grass
+sampling interval.
+
+On the range's grass crest (fc2drive's `crest.py`, 2026-11-04), a soldier 36 m away kept his eyes on
+the player behind its grassy part and never made him out, standing or crouched: every such look was
+behind grass. He recognised him at 35.8 m over its bare part, and at 16.6 m on its top. In the grass
+field's flat cases the walk never fired (424 looks). A walk took 1 to 4 µs on average. A few took 141
+to 368 µs by the clock, but a thread-cycle count put the longest's own work at about 9 µs: the main
+thread had been preempted mid-walk. Not played.
+
 Phase 2 (2026-11-04): fog, built, read from the fog the environment manager hands the renderer each
 frame, and on the range a sandstorm brought a soldier to 45 m and 40 m. Drivers, built: a soldier
 in a vehicle's driving seat sees only within 25° of the way it faces, beyond that as behind him;
