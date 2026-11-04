@@ -30,6 +30,7 @@ add_library(DifficultyOverhaul SHARED
   "src/engine/combat_log.cpp"
   "src/engine/damage.cpp"
   "src/engine/game.cpp"
+  "src/engine/ray.cpp"
   "src/engine/shooting.cpp"
 )
 

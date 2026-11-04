@@ -27,8 +27,9 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
   somewhere else.
 - **How soldiers see you.** By day, in the open and in front of him, a soldier recognises you
   walking upright from 60 m, crouched and moving from 50 m and still from 40 m, and notices
-  something from a little farther; movement in daylight catches his eye from 100 m. At his side,
-  or crouched in high grass, it is half. Cover hides you only where it hides your head, and tall grass
+  something from a little farther; movement in daylight catches his eye from 100 m, unless you
+  stand in shade. At his side, crouched in high grass, or in shade by day, it is half. Cover hides
+  you only where it hides your head, and tall grass
   on a crest between you hides you as a rock would, unless your head shows above it. A bush between
   you hides you wherever its leaves are, where the game counted only its heart; one cuts how far he
   sees you to a tenth, and leaves shot off let him see through. At night he

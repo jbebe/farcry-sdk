@@ -51,7 +51,7 @@ turns the two into the visibility the game compares with the soldier's own fuzzy
 |---|---|
 | Base: day, in the open, straight ahead, idle | walking upright 60 m, moving crouched 50 m, still (standing or crouched) 40 m |
 | In high grass, crouched | ×0.5 |
-| Shade by day | ×0.5 (phase 3) |
+| Shade by day | ×0.5, of his head: anything solid within 100 m toward the sun, or a crown on that line; fades with the daylight (phase 3, 2026-11-04) |
 | Camo suit, still, in grass | 3 m |
 | Cover | hidden only where it hides his head; head and shoulders over a wall count as in the open |
 | Tall grass on a crest between them | hidden as by a rock, unless his head clears the grass (2026-11-03) |
@@ -118,6 +118,16 @@ gunners and passengers already see as on foot, the mod's view zones taken from t
 seat lookup found the player at the wheel of a Datsun on the range; no soldier has been seen driving
 under it. Talking guards deferred. Headlights are dropped: the soldiers already hear the car. The flashlight
 stays in the Flashlight mod, as long as it works with this one. Phase 3: shade and lamps.
+
+Shade (2026-11-04), built. The player is in shade when a ray from his head toward the sun meets
+anything solid within 100 m, or the line crosses a bush's or tree's crown: an upright ellipsoid as
+wide as its narrower side, from the bottom of its camouflage sphere to its top. It halves every
+distance by day and fades out with the daylight, and a player in shade no longer catches the eye
+from 100 m. Found for the player once a quarter of a second. On the range (fc2drive's `shade.py`),
+crouched still at eight spots around the tamarix on the crest's top, only the spot on the far side
+from the sun was in shade, the west one at 9 and the east one at 17, on every look, and the soldier
+recognised him from half as far there. Around a Datsun no spot was: a crouched head stands higher than
+its ends. Lamps are next, and need the engine's lights found first. Not played.
 
 ## Built
 

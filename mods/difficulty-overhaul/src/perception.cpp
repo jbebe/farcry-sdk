@@ -1,9 +1,11 @@
 // Perception: from how far a soldier recognises the player and notices something, by how the player
-// stands and moves, where he is in the soldier's view, grass, bushes, the camo suit, cover, night and
-// the soldier's state. The game's own checks of distance, view, stance and movement give way to it.
+// stands and moves, where he is in the soldier's view, grass, bushes, the camo suit, cover, shade,
+// night, fog and the soldier's state. The game's own checks of distance, view, stance and movement
+// give way to it.
 #include "engine/combat_log.h"
 #include "engine/game.h"
 #include "engine/memory.h"
+#include "engine/ray.h"
 #include "engine/shooting.h"
 #include "fcse_api.h"
 
@@ -38,6 +40,7 @@ namespace {
                                            const float* from, const float* to, const float* direction,
                                            float lengthSquared);
     using CamouflageFn = float(__fastcall*)(const void* simulation);
+    using FlushFn = void(__fastcall*)(void* trees);
 
     // CVisibilityEvaluator::Evaluate, the product of a soldier's checks of how visible a target is.
     FCSE::Relocation<EvaluateFn> g_evaluate{FCSE::Uplay(0x00A1D8A0)};
@@ -88,6 +91,18 @@ namespace {
     FCSE::Relocation<CamouflageFn> g_camouflage{FCSE::Uplay(0x00467F90)};
     TreeVisibilityFn g_originalTreeVisibility = nullptr;
     TreeHidesFn g_originalTreeHides = nullptr;
+    // The handle to the partition manager the RealTrees are in, the manager kHandleTrees into it, and
+    // the flush the vegetation check runs on it before asking.
+    FCSE::Relocation<const uint8_t* const*> g_treesHandle{FCSE::Uplay(0x01645C24)};
+    constexpr ptrdiff_t kHandleTrees = 0x0C;
+    FCSE::Relocation<FlushFn> g_flushTrees{FCSE::Uplay(0x004DD4F0)};
+    // Whether this build has what shade needs, the ray and the sun, and what crowns need.
+    bool g_shadeWorks = false;
+    bool g_crownsWork = false;
+    // The environment manager, its CSky, and the sky's direction toward the sun, Z up.
+    FCSE::Relocation<const uint8_t* const*> g_environment{FCSE::Uplay(0x00FE4174)};
+    constexpr ptrdiff_t kEnvironmentSky = 0x270;
+    constexpr ptrdiff_t kSkySun = 0x44;
     // CGrassEvaluator::ComputeVisibility's concealment: its ramp with distance, whose full and start
     // distances are operands kFullOperand and kFromOperand bytes in, then its factor by the soldier's
     // state, whose in-combat factor is kCombatOperand bytes in.
@@ -171,9 +186,10 @@ namespace {
     constexpr float kNoticeShare = 1.2f;
     constexpr float kUprightCatchesEye = 100.0f;
     constexpr float kCrouchedCatchesEye = 70.0f;
-    // Hardcore: at his side, in high grass crouched, and alerted or fighting.
+    // Hardcore: at his side, in high grass crouched, in shade by day, and alerted or fighting.
     constexpr float kAtSide = 0.5f;
     constexpr float kInGrass = 0.5f;
+    constexpr float kInShade = 0.5f;
     constexpr float kAlert = 1.25f;
     // Hardcore: a driver sees only through his windscreen, this wide.
     constexpr float kWindscreen = 50.0f;
@@ -209,6 +225,11 @@ namespace {
     constexpr float kBushCamouflageBelow = 1.0f;
     constexpr float kBushTopBelow = 6.0f;
     constexpr float kBushSolid = 0.75f;
+    // The line from the player's head toward the sun: how far a solid thing shades him from, and how
+    // high above him a crown can; then how long his shade, once found, holds.
+    constexpr float kShadeReach = 100.0f;
+    constexpr float kCrownsBelow = 20.0f;
+    constexpr double kShadeHold = 0.25;
     // The cones' reach and span against the player: the game's cap on a cone against him, half a
     // turn, a full one. Then the grass check's concealment made a test of whether grass hides him at
     // all, and its in-combat factor as from an idle soldier.
@@ -241,19 +262,27 @@ namespace {
     const char* const kZoneNames[] = {"in his focus", "at his side", "behind him"};
 
     // What the soldier's own checks of cover and grass found, whether a bush's foliage counted in that
-    // cover, whether grass between them hides the player, and whether the camo suit does.
+    // cover, whether grass between them hides the player, whether the camo suit does, and whether the
+    // player stands in shade.
     struct Hiding {
         float cover = 1.0f;
         bool grass = false;
         bool behindBush = false;
         bool behindGrass = false;
         bool camouflaged = false;
+        bool shaded = false;
     };
 
     // While the soldier's checks of the player run on this thread: the check's context, whose eye and
     // target position make the line the RealTrees are asked about, and whether a bush hid any of it.
+    // Then whether the RealTrees are being asked about the line toward the sun instead.
     thread_local const uint8_t* t_treeLine = nullptr;
     thread_local bool t_behindBush = false;
+    thread_local bool t_askingCrowns = false;
+
+    // When the player's shade was last found and what it was.
+    double g_shadeAt = -1.0;
+    bool g_shaded = false;
 
     // The most each soldier, by entity id, has made of the player lately, 1 noticing and 2
     // recognising, logged as it rises; once below it for a while, it is forgotten. Then when his grass
@@ -464,6 +493,8 @@ namespace {
 
     const char* BushName(const Hiding& hiding) { return hiding.behindBush ? ", behind a bush" : ""; }
 
+    const char* ShadeName(const Hiding& hiding) { return hiding.shaded ? ", in shade" : ""; }
+
     // Whether grass hides the player from soldier `id`: as his check found now, or within kGrassHold.
     bool HeldInGrass(uint32_t id, bool grass, double now) {
         std::lock_guard<std::mutex> lock(g_seenLock);
@@ -541,6 +572,58 @@ namespace {
         return behind;
     }
 
+    // The direction toward the sun, false while it is below the horizon or no world is loaded.
+    bool TowardSun(float sun[3]) {
+        const uint8_t* environment = *g_environment.get();
+        if (environment == nullptr) {
+            return false;
+        }
+        const float* toward = Vec3(environment, kEnvironmentSky + kSkySun);
+        if (toward[2] <= 0.0f) {
+            return false;
+        }
+        const float length = std::hypot(toward[0], toward[1], toward[2]);
+        for (int axis = 0; axis < 3; ++axis) {
+            sun[axis] = toward[axis] / length;
+        }
+        return true;
+    }
+
+    // Whether a RealTree's crown crosses the line from the player's head toward the sun, as far up as
+    // a crown can be.
+    bool UnderCrown(const float* head, const float* sun) {
+        const uint8_t* handle = g_crownsWork ? *g_treesHandle.get() : nullptr;
+        void* trees = handle != nullptr ? Read<void*>(handle, kHandleTrees) : nullptr;
+        if (trees == nullptr) {
+            return false;
+        }
+        const float reach = std::min(kShadeReach, kCrownsBelow / sun[2]);
+        const float line[3] = {sun[0] * reach, sun[1] * reach, sun[2] * reach};
+        g_flushTrees(trees);
+        t_askingCrowns = true;
+        const bool under = g_originalTreeVisibility(trees, nullptr, head, line) < 1.0f;
+        t_askingCrowns = false;
+        return under;
+    }
+
+    // Whether the player, his head at `head`, stands in shade by day: something solid within
+    // kShadeReach of it toward the sun, or a crown on that line. Found again once kShadeHold has passed.
+    bool PlayerShade(const float* head, double now) {
+        {
+            std::lock_guard<std::mutex> lock(g_seenLock);
+            if (now - g_shadeAt < kShadeHold) {
+                return g_shaded;
+            }
+            g_shadeAt = now;
+        }
+        float sun[3];
+        const bool shaded = g_shadeWorks && TowardSun(sun) &&
+                            (UnderCrown(head, sun) || !Ray::Clear(head, sun, kShadeReach));
+        std::lock_guard<std::mutex> lock(g_seenLock);
+        g_shaded = shaded;
+        return shaded;
+    }
+
     // GetCombinedTreeVisibility of the line from the soldier's eye to the player's head, in place of
     // his vegetation check's to the player's torso, while his checks of the player run.
     float __fastcall TreeVisibilityDetour(void* trees, void* unused, const float* from, const float* line) {
@@ -553,13 +636,44 @@ namespace {
         return g_originalTreeVisibility(trees, unused, eye, toHead);
     }
 
+    // Whether the line from `from` to `to` passes through the crown of the RealTree at (x, y, z): an
+    // upright ellipsoid `radius` wide from `bottom` to `top` above its foot.
+    bool ThroughCrown(const float* from, const float* to, float x, float y, float z, float radius, float bottom,
+                      float top) {
+        if (radius <= 0.0f || top <= bottom) {
+            return false;
+        }
+        const float half = (top - bottom) / 2.0f;
+        const float scale[3] = {radius, radius, half};
+        const float centre[3] = {x, y, z + bottom + half};
+        float start[3];
+        float line[3];
+        float startAlong = 0.0f;
+        float lineSquared = 0.0f;
+        for (int axis = 0; axis < 3; ++axis) {
+            start[axis] = (from[axis] - centre[axis]) / scale[axis];
+            line[axis] = (to[axis] - from[axis]) / scale[axis];
+            startAlong += start[axis] * line[axis];
+            lineSquared += line[axis] * line[axis];
+        }
+        const float along = lineSquared > 0.0f ? std::clamp(-startAlong / lineSquared, 0.0f, 1.0f) : 0.0f;
+        float reach = 0.0f;
+        for (int axis = 0; axis < 3; ++axis) {
+            const float nearest = start[axis] + line[axis] * along;
+            reach += nearest * nearest;
+        }
+        return reach < 1.0f;
+    }
+
     // How much the RealTree at (x, y, z) hides of the player's line. A bush counts by its foliage: an
     // upright column as wide as its narrower side and rounded at the top, met where the line passes
-    // nearest to it across the ground. A tree keeps the game's sphere around its crown.
+    // nearest to it across the ground. A tree keeps the game's sphere around its crown. Asked about
+    // the line toward the sun, any RealTree whose crown it crosses hides all of it: a crown as wide,
+    // from the bottom of its camouflage sphere to its top.
     float __fastcall TreeHidesDetour(void* trees, void* unused, const void* tree, float x, float y, float z,
                                      const float* from, const float* to, const float* direction,
                                      float lengthSquared) {
-        if (t_treeLine == nullptr) {
+        if (t_treeLine == nullptr && !t_askingCrowns) {
             return g_originalTreeHides(trees, unused, tree, x, y, z, from, to, direction, lengthSquared);
         }
         const auto* simulation = Read<const uint8_t*>(tree, kTreeSimulation);
@@ -568,9 +682,12 @@ namespace {
         const float* greatest = Vec3(skeleton, kSkeletonGreatest);
         const float lowest =
             Vec3(skeleton, kSkeletonCamouflageCentre)[2] - Read<float>(skeleton, kSkeletonCamouflageRadius);
+        const float radius = std::min(greatest[0] - least[0], greatest[1] - least[1]) / 2.0f;
+        if (t_askingCrowns) {
+            return ThroughCrown(from, to, x, y, z, radius, lowest, greatest[2]) ? 1.0f : 0.0f;
+        }
         const float foot = std::max(least[2], 0.0f);
         const float half = (greatest[2] - foot) / 2.0f;
-        const float radius = std::min(greatest[0] - least[0], greatest[1] - least[1]) / 2.0f;
         if (lowest >= kBushCamouflageBelow || greatest[2] >= kBushTopBelow || half <= 0.0f || radius <= 0.0f) {
             return g_originalTreeHides(trees, unused, tree, x, y, z, from, to, direction, lengthSquared);
         }
@@ -605,11 +722,11 @@ namespace {
         Seen& seen = g_seen[id];
         if (g_trace && now - seen.traced >= kTraceSeconds) {
             seen.traced = now;
-            CombatLogf("soldier %08X perception trace: %.1f m, %s, %s%s%s%s, %s; cover %.2f; visibility %.2f, "
+            CombatLogf("soldier %08X perception trace: %.1f m, %s, %s%s%s%s%s, %s; cover %.2f; visibility %.2f, "
                        "lines %.2f and %.2f; fog full at %.0f m with %.2f; notices from %.0f m, "
                        "recognises from %.0f m",
                        id, distance, moving, kZoneNames[zone], HidingName(hiding), BushName(hiding),
-                       look.driving ? ", driving" : "", state, hiding.cover,
+                       ShadeName(hiding), look.driving ? ", driving" : "", state, hiding.cover,
                        visibility, Shooting::FuzzyLine(look.soldier), Shooting::ClearLine(look.soldier),
                        g_fogEnd, g_fogAmount, notice, recognise);
         }
@@ -625,10 +742,11 @@ namespace {
             return;
         }
         seen.level = level;
-        CombatLogf("soldier %08X perception: %s the player at %.1f m, %s, %s%s%s, %s; cover %.2f, "
+        CombatLogf("soldier %08X perception: %s the player at %.1f m, %s, %s%s%s%s, %s; cover %.2f, "
                    "night %.2f; notices from %.0f m, recognises from %.0f m",
                    id, level == 2 ? "recognises" : "notices", distance, moving, kZoneNames[zone],
-                   HidingName(hiding), BushName(hiding), state, hiding.cover, look.night, notice, recognise);
+                   HidingName(hiding), BushName(hiding), ShadeName(hiding), state, hiding.cover, look.night,
+                   notice, recognise);
     }
 
     float __fastcall EvaluateDetour(void* evaluator, void* unused, void* context, bool* applies) {
@@ -665,11 +783,15 @@ namespace {
         const uint32_t id = Game::Id(soldier);
         hiding.grass = !upright && HeldInGrass(id, hiding.grass, now);
         hiding.camouflaged = hiding.grass && !moving && !fighting && WearsCamoSuit(pawn);
+        hiding.shaded = PlayerShade(Vec3(at, kContextTargetPosition), now);
 
+        // Shade counts in full by day and fades out with the daylight.
+        const float shade = hiding.shaded ? kInShade + (1.0f - kInShade) * look.night : 1.0f;
         float recognise = moving ? (upright ? kRecogniseUpright : kRecogniseCrouched) : kRecogniseStill;
-        recognise *= (zone == kSide ? kAtSide : 1.0f) * (hiding.grass ? kInGrass : 1.0f) * hiding.cover;
+        recognise *= (zone == kSide ? kAtSide : 1.0f) * (hiding.grass ? kInGrass : 1.0f) * shade * hiding.cover;
         float notice = recognise * kNoticeShare;
-        if (zone == kFocus && moving && look.night < 0.5f && !hiding.grass && hiding.cover >= 0.99f) {
+        if (zone == kFocus && moving && look.night < 0.5f && !hiding.grass && !hiding.shaded &&
+            hiding.cover >= 0.99f) {
             notice = std::max(notice, upright ? kUprightCatchesEye : kCrouchedCatchesEye);
         }
         // A scope reaches farther, but no farther than night or fog let anyone see.
@@ -739,9 +861,17 @@ void InstallPerception() {
         FCSE::Logf("perception: the high-grass test or the terrain's height was not found in this build, so grass "
                    "between hides no one");
     }
-    if (!g_camouflage || !Hook(g_treeVisibility, &TreeVisibilityDetour, &g_originalTreeVisibility) ||
-        !Hook(g_treeHides, &TreeHidesDetour, &g_originalTreeHides)) {
+    const bool trees = g_camouflage && Hook(g_treeVisibility, &TreeVisibilityDetour, &g_originalTreeVisibility) &&
+                       Hook(g_treeHides, &TreeHidesDetour, &g_originalTreeHides);
+    if (!trees) {
         FCSE::Logf("perception: the RealTrees' cover was not found in this build, so bushes hide as the game has it");
+    }
+    g_shadeWorks = g_environment && Ray::Install();
+    g_crownsWork = g_shadeWorks && trees && g_treesHandle && g_flushTrees;
+    if (!g_shadeWorks) {
+        FCSE::Logf("perception: the sun or the rays were not found in this build, so shade hides no one");
+    } else if (!g_crownsWork) {
+        FCSE::Logf("perception: the RealTrees were not found in this build, so their crowns shade no one");
     }
     if (g_trace) {
         LARGE_INTEGER frequency = {};
