@@ -7,6 +7,7 @@
 #include "ease.h"
 #include "heart.h"
 #include "stance.h"
+#include "tuning.h"
 
 #include <algorithm>
 #include <atomic>
@@ -123,6 +124,12 @@ namespace {
         const float steadiness = AimingOverhaul::Breath::Steadiness();
         return steadiness * g_up + (std::max)(steadiness, 1.0f) * g_breath + g_jolt;
     }
+
+    // The share of the sway left down the sights, as far crouched as the player is.
+    float SightShare() {
+        const AimingOverhaul::Tuning::SightSway& sights = AimingOverhaul::Tuning::Sights();
+        return std::lerp(sights.standing, sights.crouched, AimingOverhaul::Stance::Crouched());
+    }
 }
 
 AimingOverhaul::Aim::Offset AimingOverhaul::Sway::Drift(float seconds) {
@@ -144,13 +151,13 @@ AimingOverhaul::Aim::Offset AimingOverhaul::Sway::Drift(float seconds) {
         return {};
     }
     const float racing = Heart::Racing();
-    const float wider = (1.0f + kRacingSway * racing) * Stance::Sway();
+    const float steady = Stance::Sway() * SightShare();
+    const float wider = (1.0f + kRacingSway * racing) * steady;
     const float calm = Calm(g_breathTime, pace) * wider;
     g_right = calm * Sum(kRight);
     g_up = calm * Sum(kUp);
     g_breath = wider * kBreathDepth * (2.0f * g_lift - 1.0f);
-    g_jolt = (kRestingJolt + (kRacingJolt - kRestingJolt) * racing) * Stance::Sway() *
-             Heart::Jolt();
+    g_jolt = (kRestingJolt + (kRacingJolt - kRestingJolt) * racing) * steady * Heart::Jolt();
     return {kDrift * Breath::Steadiness() * g_right, kDrift * Up()};
 }
 

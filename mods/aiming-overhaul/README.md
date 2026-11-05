@@ -13,13 +13,15 @@ both field by field with other mods' edits, reporting any clash.
 
 - **Sway.** The hands drift with a breath and a slow wander. Each breath draws in for 1.5 s,
   lifting the aim, lets out for 2 s, and rests for 1.5 s at the bottom, where the wander calms to
-  under half: the moment to time a shot in. Down the iron sights the eye drifts a couple of
-  millimetres off the gun with them. The rear sight is nearer the eye than the front one, so it
+  under half: the moment to time a shot in. Down the iron sights the eye drifts about a millimetre
+  off the gun with them. The rear sight is nearer the eye than the front one, so it
   moves further and the two drift out of line. Shots still go where the engine sends them: down the
   view, which is where the barrel points. Sights that have drifted out of line are wrong by the same
   angle as on a real gun. The breath and the wander also move the aim itself, view, gun and shot
-  together, by about 0.2° down the iron sights, 0.35° through a holographic sight and 0.7° through
-  a magnifying scope; the mouse corrects it as it would a real hand. While a scope's own sight
+  together, by about 0.1° down the iron sights, 0.18° through a holographic sight and 0.35°
+  through a magnifying scope, standing still; the mouse corrects it as it would a real hand. How
+  much of the sway is left down the sights, standing and crouched, is set in Aiming Overhaul's
+  window in DevTools' overlay, half of it on both by default. While a scope's own sight
   picture is up the eye does not drift off the gun, because that picture is a miniature right at
   the eye, but the aim still wanders under the reticle.
 - **Heart rate.** The heart beats at 70 a minute at rest and up to 170. It climbs over a few
@@ -80,8 +82,11 @@ both field by field with other mods' edits, reporting any clash.
   mounted guns kick and come back as in the game.
 - **Full auto spreads.** From the fourth shot of a burst each shot strays further, by a quarter of
   the gun's kick more each time, up to eight shots' worth: down a new AK-47's sights, up to 1.2°
-  more than the game's 0.4°. A burst is shots less than a quarter of a second apart, so slower taps
+  more than its own 0.2°. A burst is shots less than a quarter of a second apart, so slower taps
   each start fresh.
+- **Tighter down the sights.** Every gun's random spread down the iron sights is half the game's
+  standing and a quarter of it crouched: a new AK-47's 0.2° and 0.1°, against the game's 0.4° and
+  0.38°, an Eagle .50's 0.35° and 0.13°. From the hip it is the game's. A scope has none.
 - **Shot shake.** Each shot kicks the view up and it springs straight back, as hard as the round
   pushes whoever fires it: its projectiles' mass times their muzzle velocity, from the round
   Difficulty Overhaul gives each gun's archetype, easing off past 15 newton-seconds, the same from
@@ -182,8 +187,10 @@ view is drawn in `src/engine/second_view.cpp` and laid down as the gun's colour 
 `src/surroundings.cpp`. The player's own tracers, a streak's length against its shot, and the
 ricochets are in `src/tracers.cpp`, and the streak is drawn in `src/streak.cpp` with
 `src/shaders/tracer.fx`, in the draws that bind the Direct3D texture the engine's tracer texture
-resource holds. Which guns fire tracers, their speed and their streaks' longest length, and the
-scopes the plugin draws losing the engine's iron-sight effect and its random spread down the sights, so a scoped shot goes where the reticle is, are weapon data: `WeaponProperties`
+resource holds. Which guns fire tracers, their speed and their streaks' longest length, every
+gun's random spread down the sights cut, the scopes the plugin draws losing the engine's
+iron-sight effect and that spread altogether, so a scoped shot goes where the reticle is, are
+weapon data: `WeaponProperties`
 fragments under `layer\mods\`. So is each scope's reticle, eyepiece shape, rim, lens centre, raise
 and size: `AimingOverhaul.Scope*` keys in a `CFCSEDataComponent` on its `weapons` archetype, the
 reticle as an image path under `bin\plugins` with `ScopeReticleLit` for one lit from within. A gun
@@ -243,9 +250,16 @@ magnifies. With Tracers off, the player's shots leave none again, none ricochets
 draws them. Which guns fire them and how fast they fly are the weapon data's, and stay; so does the
 scopes' lost iron-sight effect, whatever the scope settings.
 
-With DevTools installed, its overlay has an Aiming Overhaul window, which sets the shot shake for
-each weapon while the game runs and keeps it in `bin\aiming-overhaul.ini`, a section per weapon,
-read at launch; delete the file for the defaults. Its Weapon list holds every gun the player can
+With DevTools installed, its overlay has an Aiming Overhaul window, which sets the sway down the
+sights and the shot shake for each weapon while the game runs and keeps them in
+`bin\aiming-overhaul.ini`, read at launch; delete the file for the defaults.
+
+| Down the sights, every weapon | Unit | Default |
+|---|---|---|
+| Sway standing | share of the sway left down the sights standing | 0.5 |
+| Sway crouched | share of it left crouched, on top of the stance's own half | 0.5 |
+
+The shot shake has a section per weapon. Its Weapon list holds every gun the player can
 fire, variants under their gun, and Other weapons for the rest. It moves to the weapon in hand each
 time that changes, and any other can be picked. Under the sliders it names the weapon in hand's
 round and its push, and what its last shot shook.

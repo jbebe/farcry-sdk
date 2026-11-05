@@ -43,6 +43,11 @@ def replace_hashed(text, name, old, new):
     return replace_value(text, name, "Hash", crc(old), crc(new))
 
 
+def has_object(block, kind):
+    """Whether the block holds an object of this type."""
+    return any(l.strip() == '<object type="%s">' % kind for l in block)
+
+
 def object_lines(block, kind):
     """The lines that open and close the one object of this type in the block, and its indent."""
     first = next(i for i, l in enumerate(block) if l.strip() == '<object type="%s">' % kind)

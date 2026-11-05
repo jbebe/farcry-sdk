@@ -1,7 +1,7 @@
 """Write the layer's weapon archetype fragments: which guns fire tracers, how fast and how long their
 streaks are, which scopes the plugin draws and how, those scopes losing the engine's iron-sight
-post effect and random spread down the sights, which guns' breath can be held, what each weapon
-weighs, and which guns the game still takes the kick back on.
+post effect, every gun's random spread down the sights cut and a scope's taken away, which guns'
+breath can be held, what each weapon weighs, and which guns the game still takes the kick back on.
 
 Each fragment is a WeaponProperties or weapons archetype copied whole out of a decoded entity
 library, with only the fields below changed or FCSE's entity data component added, so JackAll
@@ -22,7 +22,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "scripts"))
-from entity_fragments import add_entity_data, fragment_path, object_lines, prototypes, write
+from entity_fragments import (add_entity_data, fragment_path, has_object, object_lines, prototypes,
+                              write)
 
 LAYER = os.path.join(HERE, "..", "layer", "mods")
 LIBRARIES = (
@@ -58,8 +59,11 @@ SCOPES = {
                        "Size": 0.8},
 }
 SCOPE_KEY = "AimingOverhaul.Scope"
-# The engine's random spread down the sights, standing and crouched, which a scope loses.
-AIMED_SPREADS = ("BulletSpread_IronSight", "BulletSpreadCrouch_IronSight")
+# The share of the engine's random spread down the sights a gun keeps, standing and crouched; a
+# scope keeps none.
+AIMED_SPREADS = {"BulletSpread_IronSight": 0.5, "BulletSpreadCrouch_IronSight": 0.25}
+# The weapon properties no player aims down the sights with: mounted guns and the placeholder.
+UNAIMED = ("MountedWeapons", "Special.M2", "Special.MK19", "Wrong")
 # The guns whose scope sways harder and whose breath can be held to steady it: the magnifying ones,
 # not the holographic sights.
 HOLD_BREATH = ("Special.Dart_Rifle", "Special.M1903", "Primary.Dragunov", "Primary.AS50")
@@ -118,7 +122,7 @@ def set_value(block, name, value, within=None):
 
 def fires_tracers(block):
     """Whether the gun leaves tracers: it has a tracer texture, and a round in so many is one."""
-    return (any(l.strip() == '<object type="BulletTracer">' for l in block)
+    return (has_object(block, "BulletTracer")
             and get_value(block, "texTexture", "BulletTracer") != "FFFFFFFF"
             and get_value(block, "iFrequency", "BulletTracer") != "0")
 
@@ -130,12 +134,16 @@ def edit_properties(archetype, block):
             set_value(block, "fLength", TRACER_LENGTH, "BulletTracer")
         else:
             set_value(block, "iFrequency", "0", "BulletTracer")
-    if of(archetype, SCOPES):
+    scoped = of(archetype, SCOPES)
+    if scoped:
         set_value(block, "text_IronsightFX", "")
         set_value(block, "IronsightFX", "FFFFFFFF")
-        # A scoped shot goes where the reticle is, standing or crouched.
-        for spread in AIMED_SPREADS:
-            set_value(block, "fAmplitude", "0", spread)
+    elif of(archetype, UNAIMED):
+        return
+    for spread, share in AIMED_SPREADS.items():
+        if has_object(block, spread):
+            kept = 0.0 if scoped else share * float(get_value(block, "fAmplitude", spread))
+            set_value(block, "fAmplitude", "%g" % round(kept, 4), spread)
 
 
 def lookup(archetype, table):

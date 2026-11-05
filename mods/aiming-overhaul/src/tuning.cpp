@@ -1,4 +1,5 @@
-// How each weapon's shots shake the view, and the window and file they are kept in. See tuning.h.
+// The sway down the sights and each weapon's shot shake, and the window and file they are kept in.
+// See tuning.h.
 #include "tuning.h"
 
 #include "engine/aim.h"
@@ -21,20 +22,30 @@
 #include <string_view>
 
 namespace {
+    using AimingOverhaul::Tuning::SightSway;
     using AimingOverhaul::Tuning::Values;
 
+    template <class T>
     struct Parameter {
         // The key in the file.
         const char* key;
         const char* label;
-        float Values::*member;
+        float T::*member;
         float min;
         float max;
         // The printf format, which carries its unit.
         const char* format;
     };
 
-    constexpr Parameter kParameters[] = {
+    // The sights' section in the file, and its values.
+    constexpr const char* kSights = "Down the sights";
+    constexpr Parameter<SightSway> kSightParameters[] = {
+        {"SwayStanding", "Sway standing", &SightSway::standing, 0.0f, 1.5f, "%.2fx"},
+        {"SwayCrouched", "Sway crouched", &SightSway::crouched, 0.0f, 1.5f, "%.2fx"},
+    };
+    SightSway g_sights;
+
+    constexpr Parameter<Values> kParameters[] = {
         {"KickPerImpulse", "Single shot kick", &Values::kickPerImpulse, 0.0f, 0.6f,
          "%.3f deg per N s"},
         {"KickTime", "Single shot time", &Values::kickTime, 0.05f, 1.0f, "%.2f s"},
@@ -136,25 +147,60 @@ namespace {
                    : text.substr(first, text.find_last_not_of(" \t\r") - first + 1);
     }
 
+    template <class T, size_t N>
+    void WriteSection(std::ofstream& file, const char* name, const Parameter<T> (&parameters)[N],
+                      const T& values) {
+        file << "\n[" << name << "]\n";
+        for (const Parameter<T>& parameter : parameters) {
+            char value[32];
+            const char* end =
+                std::to_chars(value, value + sizeof(value), values.*parameter.member).ptr;
+            file << parameter.key << " = " << std::string_view(value, end - value) << "\n";
+        }
+    }
+
+    // Sets the value `key` names to `number`, where it is one of these and a number.
+    template <class T, size_t N>
+    void Read(std::string_view key, std::string_view number, const Parameter<T> (&parameters)[N],
+              T& values) {
+        const auto parameter = std::find_if(std::begin(parameters), std::end(parameters),
+                                            [&](const Parameter<T>& p) { return key == p.key; });
+        float read = 0.0f;
+        if (parameter != std::end(parameters) &&
+            std::from_chars(number.data(), number.data() + number.size(), read).ec == std::errc{}) {
+            values.*parameter->member = std::clamp(read, parameter->min, parameter->max);
+        }
+    }
+
+    // True when a slider moved.
+    template <class T, size_t N>
+    bool DrawSliders(const Parameter<T> (&parameters)[N], T& values) {
+        bool moved = false;
+        for (const Parameter<T>& parameter : parameters) {
+            moved |= ImGui::SliderFloat(parameter.label, &(values.*parameter.member), parameter.min,
+                                        parameter.max, parameter.format,
+                                        ImGuiSliderFlags_AlwaysClamp);
+        }
+        return moved;
+    }
+
     void Save() {
         std::ofstream file(File(), std::ios::trunc);
-        file << "; Aiming Overhaul, a section per weapon. Set in its window in DevTools' overlay "
-                "and read at launch.\n";
+        file << "; Aiming Overhaul, the sights' section, then one per weapon. Set in its window in "
+                "DevTools' overlay\n; and read at launch.\n";
+        WriteSection(file, kSights, kSightParameters, g_sights);
         for (size_t weapon = 0; weapon < g_weapons.size(); ++weapon) {
-            file << "\n[" << NameOf(weapon) << "]\n";
-            for (const Parameter& parameter : kParameters) {
-                char value[32];
-                const char* end = std::to_chars(value, value + sizeof(value),
-                                                g_weapons[weapon].*parameter.member)
-                                      .ptr;
-                file << parameter.key << " = " << std::string_view(value, end - value) << "\n";
-            }
+            WriteSection(file, NameOf(weapon), kParameters, g_weapons[weapon]);
         }
         file.close();
         if (!file) {
             FCSE::ApiPointer()->Log("tuning: aiming-overhaul.ini could not be written");
         }
     }
+}
+
+const SightSway& AimingOverhaul::Tuning::Sights() {
+    return g_sights;
 }
 
 void AimingOverhaul::Tuning::Follow(uint8_t* weapon) {
@@ -172,18 +218,20 @@ void AimingOverhaul::Tuning::Load() {
     for (size_t weapon = 0; weapon < g_weapons.size(); ++weapon) {
         g_weapons[weapon] = weapon < kOther ? kWeapons[weapon].defaults : Values{};
     }
-    // A line that is not a known key and a number, or is outside a known section, changes nothing.
+    // A line outside a known section changes nothing.
     std::ifstream file(File());
-    Values* section = nullptr;
+    bool sights = false;
+    Values* weapon = nullptr;
     std::string line;
     while (std::getline(file, line)) {
         const std::string_view text = Trim(line);
         if (text.starts_with('[') && text.ends_with(']')) {
             const std::string_view name = text.substr(1, text.size() - 2);
-            section = nullptr;
-            for (size_t weapon = 0; weapon < g_weapons.size() && section == nullptr; ++weapon) {
-                if (name == NameOf(weapon)) {
-                    section = &g_weapons[weapon];
+            sights = name == kSights;
+            weapon = nullptr;
+            for (size_t i = 0; i < g_weapons.size() && weapon == nullptr; ++i) {
+                if (name == NameOf(i)) {
+                    weapon = &g_weapons[i];
                 }
             }
             continue;
@@ -194,18 +242,22 @@ void AimingOverhaul::Tuning::Load() {
         }
         const std::string_view key = Trim(text.substr(0, equals));
         const std::string_view number = Trim(text.substr(equals + 1));
-        float read = 0.0f;
-        const auto parameter = std::find_if(std::begin(kParameters), std::end(kParameters),
-                                            [&](const Parameter& p) { return key == p.key; });
-        if (section != nullptr && parameter != std::end(kParameters) &&
-            std::from_chars(number.data(), number.data() + number.size(), read).ec == std::errc{}) {
-            section->*parameter->member = std::clamp(read, parameter->min, parameter->max);
+        if (sights) {
+            Read(key, number, kSightParameters, g_sights);
+        } else if (weapon != nullptr) {
+            Read(key, number, kParameters, *weapon);
         }
     }
     Save();
 }
 
 void AimingOverhaul::Tuning::DrawWindow(void*) {
+    ImGui::SeparatorText("Down the sights, every weapon");
+    ImGui::SetItemTooltip("How much of the sway is left down the sights, standing and crouched; the "
+                          "stance's own steadiness comes on top.");
+    g_unsaved |= DrawSliders(kSightParameters, g_sights);
+
+    ImGui::SeparatorText("Shot shake");
     if (g_inHand != g_followed) {
         g_followed = g_inHand;
         g_edited = g_followed;
@@ -220,12 +272,7 @@ void AimingOverhaul::Tuning::DrawWindow(void*) {
     }
     ImGui::SetItemTooltip("The weapon the values below are for: the one in hand when it changes, or "
                           "any picked here.");
-    Values& values = g_weapons[g_edited];
-    for (const Parameter& parameter : kParameters) {
-        g_unsaved |= ImGui::SliderFloat(parameter.label, &(values.*parameter.member), parameter.min,
-                                        parameter.max, parameter.format,
-                                        ImGuiSliderFlags_AlwaysClamp);
-    }
+    g_unsaved |= DrawSliders(kParameters, g_weapons[g_edited]);
     ShotShake::DrawLastShot();
     if (g_unsaved && !ImGui::IsAnyItemActive()) {
         Save();

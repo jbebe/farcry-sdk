@@ -66,7 +66,7 @@ bool AimingOverhaul::Stance::Velocity(float out[3]) {
 }
 
 float AimingOverhaul::Stance::Sway() {
-    const float still = kStanding + (kCrouched - kStanding) * g_crouched;
-    const float moving = kStandingMoving + (kCrouchedMoving - kStandingMoving) * g_crouched;
-    return still + (moving - still) * g_moving;
+    const float still = std::lerp(kStanding, kCrouched, g_crouched);
+    const float moving = std::lerp(kStandingMoving, kCrouchedMoving, g_crouched);
+    return std::lerp(still, moving, g_moving);
 }
