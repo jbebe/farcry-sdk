@@ -24,10 +24,9 @@ namespace {
     FCSE::Relocation<GetKnowledgeFn> g_getKnowledge{FCSE::Uplay(0x00A235C0)};
     FCSE::Relocation<GetEquippedWeaponFn> g_getEquippedWeapon{FCSE::Uplay(0x00127DA0)};
 
-    // CShootingSystem: its agent, the lifetime its reaction CLifeTimer starts with, that timer's
-    // lifetime (-1 while stopped) and start time, and its target distance.
+    // CShootingSystem: its agent, its reaction CLifeTimer's lifetime (-1 while stopped) and start time,
+    // and its target distance.
     constexpr ptrdiff_t kShooter = 0x00;
-    constexpr ptrdiff_t kReactionDuration = 0xB8;
     constexpr ptrdiff_t kReactionLifetime = 0xBC;
     constexpr ptrdiff_t kReactionStart = 0xC0;
     constexpr ptrdiff_t kTargetDistance = 0xE8;
@@ -161,16 +160,11 @@ float TargetDistance(const void* shooting) { return Read<float>(shooting, kTarge
 bool Reacting(const void* shooting) { return Read<float>(shooting, kReactionLifetime) != -1.0f; }
 
 float AimSeconds(const void* shooting) {
-    return static_cast<float>(Game::Now()) - Read<float>(shooting, kReactionStart);
+    return Reacting(shooting) ? static_cast<float>(Game::Now()) - Read<float>(shooting, kReactionStart) : 0.0f;
 }
 
 void RestartAim(void* shooting) {
     Write(shooting, kReactionStart, static_cast<float>(Game::Now()));
-}
-
-void StartAim(void* shooting) {
-    Write(shooting, kReactionLifetime, Read<float>(shooting, kReactionDuration));
-    RestartAim(shooting);
 }
 
 bool Positions(void* shooting, float from[3], float to[3]) {

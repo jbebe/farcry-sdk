@@ -22,8 +22,8 @@ Notable changes to Difficulty Overhaul, loosely following
 - **Limb hits wound.** A hit to an arm or a leg that would kill a soldier puts him down wounded
   instead: he calls for help, crawls for cover and may shoot back from the ground. A torso hit never
   does: it wounds or kills.
-- **Aim is earned.** A soldier who spots you up close fires at once; farther out he takes longer
-  to make up his mind, 3 seconds at 50 m, and his aim settles meanwhile. Every shot is a real
+- **Aim is earned.** A soldier fires the moment he recognises you, but his first shots go wide
+  while his aim settles, longer the farther you are. Every shot is a real
   chance and none is certain, recoil spoils his follow-up shots, and you are harder to hit running
   across his line of fire than running at him. He never aims at your head in his first 3 seconds on
   you.
@@ -46,9 +46,9 @@ Notable changes to Difficulty Overhaul, loosely following
   him he never sees you, but hears you walk upright within 20 m; crouched, you can creep up unheard.
   Alerted soldiers see a quarter farther, and a soldier at the wheel only through his windscreen. The
   camo suit hides you crouched and still in high grass beyond 3 m, unless he is fighting you.
-  Beyond 30 m in front of him, or 20 m at his side, he needs a moment to notice you, longer the
-  farther and the less visible you are, up to 4 seconds: running across open ground at 50 m gives you
-  about 2, so a dash from cover to cover can go unseen.
+  In front of him he notices you at once. At his side, beyond 20 m, he needs a moment, longer the
+  farther and the less visible you are, up to 2 seconds, so a dash from cover to cover past his side
+  can go unseen.
 - **Weapons by range.** Pistols and SMGs lose accuracy with range. A shotgun is deadly out to 20 m
   and falls off fast past it.
 - **No rockets at you on foot.** A soldier with an RPG or a Carl Gustav draws his other gun at you on

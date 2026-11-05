@@ -17,7 +17,6 @@ add_library(DifficultyOverhaul SHARED
   "src/damage_taken.cpp"
   "src/hit_model.cpp"
   "src/fire_discipline.cpp"
-  "src/reaction.cpp"
   "src/range_falloff.cpp"
   "src/intuition.cpp"
   "src/suppression.cpp"

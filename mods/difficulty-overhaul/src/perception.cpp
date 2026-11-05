@@ -203,14 +203,13 @@ namespace {
     constexpr float kNoticeShare = 1.2f;
     constexpr float kUprightCatchesEye = 100.0f;
     constexpr float kCrouchedCatchesEye = 70.0f;
-    // Hardcore: within these distances, in his focus and at his side, he notices the player at once.
-    // Beyond them he must first sit through a delay: this many seconds per square metre past the line,
+    // Hardcore: in his focus he notices the player at once, and at his side within this distance.
+    // Beyond it he must first sit through a delay: this many seconds per square metre past the line,
     // over how far inside the notice distance the player is, at most kNoticeLongest, forgotten over
     // kNoticeForget out of sight.
-    constexpr float kNoticeAtOnceInFocus = 30.0f;
     constexpr float kNoticeAtOnceAtSide = 20.0f;
     constexpr float kNoticeSecondsPerSquareMetre = 1.0f / 400.0f;
-    constexpr float kNoticeLongest = 4.0f;
+    constexpr float kNoticeLongest = 2.0f;
     constexpr double kNoticeForget = 2.0;
     // The longest gap between two of a soldier's looks that still counts as the player in his sight.
     constexpr double kLookGap = 0.5;
@@ -615,14 +614,14 @@ namespace {
         return behind;
     }
 
-    // Seconds the player must be in a soldier's sight before he notices him, `distance` away and
-    // noticed from `notice` at most, past `atOnce`.
-    float NoticeDelay(float distance, float notice, float atOnce) {
-        if (distance <= atOnce) {
+    // Seconds the player at a soldier's side must be in his sight before he notices him, `distance`
+    // away and noticed from `notice` at most.
+    float NoticeDelay(float distance, float notice) {
+        if (distance <= kNoticeAtOnceAtSide) {
             return 0.0f;
         }
         const float within = 1.0f - distance / notice;
-        const float past = distance - atOnce;
+        const float past = distance - kNoticeAtOnceAtSide;
         return within > 0.0f ? std::min(kNoticeSecondsPerSquareMetre * past * past / within, kNoticeLongest)
                              : kNoticeLongest;
     }
@@ -944,10 +943,9 @@ namespace {
         } else if (hiding.behindGrass) {
             visibility = 0.0f;
         }
-        // Hearing him behind, and sensing him at arm's length, fall within the line he notices at once.
-        static_assert(kHeardRange <= kNoticeAtOnceAtSide && kArmsLength <= kNoticeAtOnceAtSide, "");
-        const float atOnce = zone == kFocus ? kNoticeAtOnceInFocus : kNoticeAtOnceAtSide;
-        const float delay = fighting ? 0.0f : NoticeDelay(distance, notice, atOnce);
+        // Sensing him at arm's length falls within the line he notices at once.
+        static_assert(kArmsLength <= kNoticeAtOnceAtSide, "");
+        const float delay = fighting || zone != kSide ? 0.0f : NoticeDelay(distance, notice);
         if (HeldBack(id, now, visibility >= Shooting::FuzzyLine(look.soldier), delay)) {
             visibility = 0.0f;
         }

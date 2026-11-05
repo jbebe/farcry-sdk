@@ -51,14 +51,11 @@ float SightSeconds(void* shooting);
 // The distance to his target, as last measured.
 float TargetDistance(const void* shooting);
 
-// Whether his reaction timer runs, which stays stopped until his first shot in a fight unless
-// reaction starts it, the seconds since his aim started settling, and restarting it.
+// Whether his reaction timer runs, which stays stopped until his first shot in a fight, the seconds
+// since his aim started settling, 0 while it is stopped, and restarting it.
 bool Reacting(const void* shooting);
 float AimSeconds(const void* shooting);
 void RestartAim(void* shooting);
-
-// Starts his stopped reaction timer now, as the game does at his first shot.
-void StartAim(void* shooting);
 
 // His position and his target's, false when either has no entity.
 bool Positions(void* shooting, float from[3], float to[3]);

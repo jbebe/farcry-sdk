@@ -20,8 +20,6 @@ SHOT = re.compile(
     r"^(?:soldier (\w{8}) )?shot at player: chance (\S+) \(.*?\) at (\S+) m, .*?, (hit|miss)"
     r"(?:; visibility \S+, (.+?); the player (.+))?$")
 DISCIPLINE = re.compile(r"^(?:soldier (\w{8}) )?fire discipline: holds his fire")
-REACTION = re.compile(
-    r"^soldier (\w{8}) reaction: spotted the player at (\S+) m, holds his fire (\S+) s")
 SUPPRESSED = re.compile(r"^(?:soldier (\w{8}) )?suppressed: (hit, he panics|near miss)")
 WATCHED = re.compile(r"^(?:soldier (\w{8}) )?watched spot:")
 SOLDIER_HIT = re.compile(r"^soldier (\w{8}) hit: .*? m, (.+?) \(")
@@ -43,7 +41,6 @@ class Line:
 class Soldier:
     id: str
     first: float = None
-    spotted: tuple = None
     weapon: str = ""
     shots: list = field(default_factory=list)
     holds: int = 0
@@ -104,8 +101,6 @@ def analyse(lines):
                                 hit=outcome == "hit", player=player))
         elif m := DISCIPLINE.match(text):
             soldier(m.group(1), t).holds += 1
-        elif m := REACTION.match(text):
-            soldier(m.group(1), t).spotted = (t, float(m.group(2)), float(m.group(3)))
         elif m := SUPPRESSED.match(text):
             s = soldier(m.group(1), t)
             if m.group(2) == "near miss":
@@ -164,10 +159,8 @@ def report(path, lines):
           f"{sum(any('killed' in r for r in s.hits_taken) for s in soldiers.values())} killed, "
           f"{sum(any('wounded' in r for r in s.hits_taken) for s in soldiers.values())} wounded")
     print(f"  Deaths: {len(deaths)}")
-    holds = sum(s.spotted is not None for s in soldiers.values())
-    totals = [count(holds, "reaction hold")] + [
-        count(sum(getattr(s, attribute) for s in soldiers.values()), label)
-        for label, attribute in counts]
+    totals = [count(sum(getattr(s, attribute) for s in soldiers.values()), label)
+              for label, attribute in counts]
     print("  Soldiers: " + ", ".join(totals))
 
     flags = []
@@ -176,12 +169,6 @@ def report(path, lines):
         if nans:
             flags.append((nans[0]["time"], f"soldier {s.id}: {count(len(nans), 'shot')} with no "
                                            f"chance (nan), {s.weapon or 'weapon not logged'}"))
-        if s.spotted:
-            spotted, _, hold = s.spotted
-            early = [shot for shot in s.shots if spotted <= shot["time"] < spotted + hold - 0.05]
-            if early:
-                flags.append((early[0]["time"], f"soldier {s.id}: {count(len(early), 'shot')} "
-                                                f"inside his {hold:.1f} s reaction hold"))
     for death in deaths:
         killer = soldiers.get(death["by"])
         first = next((shot["time"] for shot in killer.shots
@@ -201,9 +188,6 @@ def report(path, lines):
         weapon = f", {killer.weapon}" if killer and killer.weapon else ""
         print(f"Death at {clock(death['time'])}: killed by {death['by'] or 'unknown'} at "
               f"{death['distance']:.1f} m{weapon}")
-        if killer and killer.spotted and death["time"] - killer.spotted[0] < 60:
-            t, dist, hold = killer.spotted
-            print(f"  He spotted you at {clock(t)} from {dist:.1f} m and held {hold:.1f} s.")
         recent = lambda t: death["time"] - 10 <= t <= death["time"]
         window = sorted((shot for shot in shots if recent(shot["time"])),
                         key=lambda shot: shot["time"])
@@ -228,9 +212,6 @@ def report(path, lines):
     print("Soldiers")
     for s in sorted(soldiers.values(), key=lambda s: s.first):
         parts = [s.weapon or "weapon not logged"]
-        if s.spotted:
-            parts.append(f"spotted you {clock(s.spotted[0])} at {s.spotted[1]:.0f} m, "
-                         f"held {s.spotted[2]:.1f} s")
         if s.shots:
             best = max((shot["chance"] for shot in s.shots if not math.isnan(shot["chance"])),
                        default=0.0)
