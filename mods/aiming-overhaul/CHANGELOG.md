@@ -54,7 +54,7 @@ Notable changes to Aiming Overhaul, loosely following
   the same window, which can also throw some to try it.
 - **Being hit.** A hit on the body punches your view back and tips it down and darkens it from the
   edges for a couple of seconds; a hit on the head cuts the view to
-  black and brings it back double, the second image fading slowly. The harder the hit, the more of
+  black, then fades it back in double, the second image fading slowly. The harder the hit, the more of
   it. How far and how long each lasts is set in the same window, which can also show a hit on the
   body, the head or a vest to try it.
 - **Hold breath**, **Gun near walls**, **Vertical inertia**, **Gun up after sprint**, **Landing**,

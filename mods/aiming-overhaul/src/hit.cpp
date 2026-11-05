@@ -33,7 +33,7 @@ namespace {
     constexpr float kDarkHold = 0.5f;
     // The black clears over kUnblack seconds; the second image is kDouble of the view as it does,
     // and lies kDoubleDown of its distance across below the first.
-    constexpr float kUnblack = 0.25f;
+    constexpr float kUnblack = 1.5f;
     constexpr float kDouble = 0.5f;
     constexpr float kDoubleDown = 0.35f;
     // The screen height the double image's distance is given for.

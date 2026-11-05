@@ -95,12 +95,12 @@ both field by field with other mods' edits, reporting any clash.
 - **Being hit.** A bullet, blast or blade that takes the player's health shows where it landed. Off
   the head, the view punches back 5 cm and tips down 3°, peaking at 0.07 s and springing back; the
   edges go dark, held for half a second and gone in 2.5 s. On the head, the view goes black for
-  0.35 s and comes back double, the second image a little to the side and fading out over 5 s. A
-  hit taking half the player's health or more does all of it in full, a graze 0.4 of it; a
-  shotgun's pellets count as one hit. A hit on a vest is a shorter, smaller punch alone, but nothing
-  in the game hits a vest yet. The game's own hit sound, red hurt overlay and interface stay as they
-  are. While a scope's sight picture is up the view is not punched. The game's red marks pointing to
-  whoever hit the player are gone, whether this is on or off.
+  0.35 s and fades back in over 1.5 s, double, the second image a little to the side and fading out
+  over 5 s. A hit taking half the player's health or more does all of it in full, a graze 0.4 of
+  it; a shotgun's pellets count as one hit. A hit on a vest is a shorter, smaller punch alone, but
+  nothing in the game hits a vest yet. The game's own hit sound, red hurt overlay and interface stay
+  as they are. While a scope's sight picture is up the view is not punched. The game's red marks
+  pointing to whoever hit the player are gone, whether this is on or off.
 - **Shot shake.** Each shot kicks the view up and it springs straight back, as hard as the round
   pushes whoever fires it: its projectiles' mass times their muzzle velocity, from the round
   Difficulty Overhaul gives each gun's archetype, easing off past 15 newton-seconds, the same from
