@@ -12,7 +12,7 @@ namespace {
     using AimingOverhaul::Field;
 
     // CWeaponFireBulletProperties::SpawnBulletPuff, __thiscall(the shooter's entity proxy, the
-    // impact, a flag), which lets go of its hold on the proxy.
+    // impact, a flag).
     using SpawnPuffFn = void(__fastcall*)(uint8_t* properties, void* unused, uint8_t* shooter,
                                           float* impact, char flag);
     FCSE::Relocation<SpawnPuffFn> g_spawnPuff{FCSE::Uplay(0x000FAAB0)};
@@ -26,9 +26,7 @@ namespace {
     void __fastcall SpawnPuffDetour(uint8_t* properties, void* unused, uint8_t* shooter,
                                     float* impact, char flag) {
         if (impact != nullptr) {
-            g_onImpact(impact,
-                       Field<uint8_t>(reinterpret_cast<uint8_t*>(impact), kImpactMaterial),
-                       AimingOverhaul::ProxyEntity(shooter));
+            g_onImpact(impact, Field<uint8_t>(reinterpret_cast<uint8_t*>(impact), kImpactMaterial));
         }
         g_original(properties, unused, shooter, impact, flag);
     }

@@ -87,11 +87,11 @@ both field by field with other mods' edits, reporting any clash.
 - **Tighter down the sights.** Every gun's random spread down the iron sights is half the game's
   standing and a quarter of it crouched: a new AK-47's 0.2° and 0.1°, against the game's 0.4° and
   0.38°, an Eagle .50's 0.35° and 0.13°. From the hip it is the game's. A scope has none.
-- **Dirt in the eye.** A round someone else fires that lands within 3 m of the eye in ground,
-  sand, mud, pebbles, concrete, tile or wood throws dirt in it: two black, see-through, blurry blobs
-  on the side it came from, the view blurred around them, nearer and darker the closer it landed.
-  They hold for 0.6 s and are gone in 3 s. Metal, water, glass, flesh and plants throw none, and
-  nor do the player's own rounds. Only what the player sees changes; the aim does not.
+- **Dirt in the eye.** A round that lands within 3 m of the eye in ground, sand, mud, pebbles,
+  concrete, tile or wood, the player's own as much as anyone's, throws dirt in it: two black,
+  see-through, blurry blobs on the side it came from, the view blurred around them, bigger and
+  darker the closer it landed. They hold for 0.6 s and are gone in 3 s. Metal, water, glass, flesh
+  and plants throw none. Only what the player sees changes; the aim does not.
 - **Shot shake.** Each shot kicks the view up and it springs straight back, as hard as the round
   pushes whoever fires it: its projectiles' mass times their muzzle velocity, from the round
   Difficulty Overhaul gives each gun's archetype, easing off past 15 newton-seconds, the same from

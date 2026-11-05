@@ -5,9 +5,9 @@
 
 namespace AimingOverhaul::Impact {
 
-// Where the bullet landed in the world, the logic material it hit, as its `disId` in
-// databases\materials\logicmaterials.xml, and the entity that fired it, or null.
-using ImpactFn = void (*)(const float point[3], uint8_t material, const uint8_t* shooter);
+// Where the bullet landed in the world, and the logic material it hit, as its `disId` in
+// databases\materials\logicmaterials.xml.
+using ImpactFn = void (*)(const float point[3], uint8_t material);
 
 // False, and logged, when the impacts cannot be hooked.
 bool Install(ImpactFn onImpact);

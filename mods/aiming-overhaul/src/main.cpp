@@ -203,9 +203,9 @@ namespace {
         return g_lookHooked && AimingOverhaul::Recoil::Take(kick);
     }
 
-    // A bullet landing near the player on foot throws dirt in the eye, unless the player fired it.
-    void OnImpact(const float point[3], uint8_t material, const uint8_t* shooter) {
-        if (OnFoot(g_pawn) && shooter != AimingOverhaul::Pawn::Entity(g_pawn)) {
+    // A bullet landing near the player on foot throws dirt in the eye, whoever fired it.
+    void OnImpact(const float point[3], uint8_t material) {
+        if (OnFoot(g_pawn)) {
             AimingOverhaul::Dirt::OnImpact(point, material);
         }
     }
