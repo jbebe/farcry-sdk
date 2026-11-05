@@ -8,12 +8,7 @@ Notable changes to Difficulty Overhaul, loosely following
 ### Added
 - **Real rounds.** Every gun hits as hard as its real cartridge, whoever fires it: one torso hit from
   a rifle drops a soldier, two from a pistol, a head hit from anything kills. A soldier's gun hurts
-  you as much as yours hurts him, and no gun gains damage up close. Three AK-47 hits kill you,
-  wherever they land, and the last health bar no longer softens what you take.
-- **Healing in three steps.** On your last bar the surgery leaves you one rifle hit from death, and
-  a syrette two. Full health comes back slowly: nothing below a syrette's level, and from there to
-  full in 6 minutes on Hardcore, in seconds on Casual and Experienced and never on Infamous. Beds and
-  medic cabinets still heal you fully.
+  you as much as yours hurts him, and no gun gains damage up close.
 - **Limb hits wound.** A hit to an arm or a leg that would kill a soldier puts him down wounded
   instead: he calls for help, crawls for cover and may shoot back from the ground. A torso hit never
   does: it wounds or kills.
@@ -52,4 +47,4 @@ Notable changes to Difficulty Overhaul, loosely following
   when the alert began and goes back to his post, where the game kept him searching for good.
 - **A combat log** in `bin\difficulty-overhaul-logs`, one file per session and the last 20 kept:
   every hit on you and by you, and every shot at you with its chance.
-- **Tuned on Hardcore.** In this version every difficulty plays at the Hardcore values except healing.
+- **Tuned on Hardcore.** In this version every difficulty plays at the Hardcore values.

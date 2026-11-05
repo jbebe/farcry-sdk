@@ -37,7 +37,4 @@ bool SentByPlayer(const uint8_t* stim);
 float Health(const void* counters);
 float MaxHealth(const void* counters);
 
-// Sets a CFCXCountersComponent's health the way the game's own health changes do.
-void SetHealth(void* counters, float health);
-
 }

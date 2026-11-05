@@ -2,7 +2,6 @@
 #include "fcse_api.h"
 
 void InstallHitLog();
-void InstallDamageTaken();
 void InstallHitModel();
 void InstallFireDiscipline();
 void InstallReaction();
@@ -13,7 +12,6 @@ void InstallSquadMemory();
 void InstallWatchedSpot();
 void InstallPerception();
 void InstallGoingDown();
-void InstallHealing();
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION || !FCSE::Bind(api)) {
@@ -21,7 +19,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     }
 
     InstallHitLog();
-    InstallDamageTaken();
     InstallHitModel();
     InstallFireDiscipline();
     // After fire discipline, so its hook wraps fire discipline's: a hold starts only once he
@@ -34,6 +31,5 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallWatchedSpot();
     InstallPerception();
     InstallGoingDown();
-    InstallHealing();
     return true;
 }

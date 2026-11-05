@@ -31,7 +31,9 @@ Combat that is realistic and fair:
   are realistic for everyone: "The game has to be realistic, not the player-vs-world scenario."
 - **The player gets fair treatment, the enemy realistic treatment** (2026-11-05): "player gets fair
   treatment against a horde of enemies, the enemy gets realistic treatment". A soldier drops as a
-  man would; the player's health system is to be reworked.
+  man would; the player's health system is to be reworked. On 2026-11-05 the mod's healing and its
+  removal of the last-bar cushion were scrapped, so the rework starts from the game's own: "the
+  current approach is not well thought out".
 - **Fire discipline and cover define the mod.** A soldier holds his fire until he can make the player
   out. Seen in game: "The bush, the tall grass actually makes them stop shooting. the sniper has no
   LoS and waits for me to peek."
@@ -162,6 +164,7 @@ reach, the wall between left him unlit. Not played.
 | 4 | Intuition 6 s → 1 s, sighting, fire discipline, grass, crossing speed, range falloff for pistols, SMGs and shotguns | fire discipline, grass and crossing seen; the rest assumed |
 | 5 | Squad: suppression (near misses pin a soldier for 1 s and restart his aim); squad memory (hunted while within 15 m of where last seen); watched spot (a peek elsewhere makes him re-aim) | suppression works; memory and watched spot not yet |
 | 6 | Real rounds (2026-11-05): each gun's impact level from its round, no soldiers' damage curves, no close-range bonus, a head hit kills anyone but the player, a torso hit never downs; replaces step 2 | range, row 26 |
+| 7 | The game's own health back (2026-11-05): the mod's healing and its removal of the last-bar cushion scrapped, a blank slate for the health rework | nothing to check: the game as shipped |
 
 The mod's README lists each feature's values.
 
@@ -207,7 +210,7 @@ range in the log drifts from the scenario's distance.
 | 18 | Launchers | Rocket man at 40 m: stand in the open, on foot, then get into a vehicle | no rocket at the player on foot: he fires his pistol or SMG, raising the launcher at most once, unfired. Getting into a vehicle brings the launcher out | new: "I peeked at a rock and a guy 40m from me sent an rpg rocket in my direction. That is unfair. In a car, it can work" | on foot he fired his pistol. In a car he kept to the pistol until he dodged the car and his plan restarted, then fired rockets: he chose once, when he drew. Now he keeps watching and switches as the player gets in and out; not yet seen |
 | 19 | Shotgunners | Shotgunner behind cover: stay behind your line and let him come | he closes in from cover to cover, pausing about 1 s at each, and inside 12 m keeps pushing rather than holding back to fire; he stops about 3 m away | new: the game switches the shotgunner's push off inside 12 m; switched on at the player, the user's pick ("their weapon seems like a suitable tool for that") | he pushed in and walked into the player: "he has to stop at some point. like at 3 meters". Every soldier then stopped 3 m from the player, seen or not. Dropped with that stop, the user's call on 2026-10-28: the game already has the push on from 50 m to 12 m, and stopping near 12 m is close enough |
 | 20 | No headshot on first contact | Rifleman at 20 m: step out in front of him, take hits with invincibility on, duck out of sight and step out again | every `shot at player:` line under 3.0 s on him says `at the torso`; after that about one in seven says `at the head`, and ducking out starts it over | new: from the research, the user's pick ("that really rustles people's jimmies"); his first shot could go for the head | not run |
-| 21 | Healing | Rifleman at 20 m, invincibility off: take hits down to the last bar, heal, heal again, then hide and wait | at 1,025 maximum the surgery leaves 410 health (40 %) and a syrette 666 (65 %), `healed:` lines; a second syrette is refused; nothing comes back below 666, and from there health reaches full in 6 minutes, starting 5 s after the last hit (3 s on Casual, 10 s on Experienced, never on Infamous) | new: the user's three states ("surgery makes you survive one more shot, syrette makes you survive 2 shots, full regen makes you survive the 4 shots"); the game's surgery gave two bars, a syrette full health, and the bar health was in refilled within a second | not run |
+| 21 | Healing | Rifleman at 20 m, invincibility off: take hits down to the last bar, heal, heal again, then hide and wait | at 1,025 maximum the surgery leaves 410 health (40 %) and a syrette 666 (65 %), `healed:` lines; a second syrette is refused; nothing comes back below 666, and from there health reaches full in 6 minutes, starting 5 s after the last hit (3 s on Casual, 10 s on Experienced, never on Infamous) | new: the user's three states ("surgery makes you survive one more shot, syrette makes you survive 2 shots, full regen makes you survive the 4 shots"); the game's surgery gave two bars, a syrette full health, and the bar health was in refilled within a second | not run. Scrapped on 2026-11-05 with the last-bar cushion's removal: the game's healing is back |
 | 22 | Reaction | Rifleman at 50 m, idle: stand in the open in front of him until he spots you, then stay | `reaction: spotted the player at 50 m, holds his fire 2.2 s`, no shot for 2.2 s, then his first `shot at player:` says about `2.2 s on him` | new 2026-10-29: an idle soldier at 58.6 m opened fire the moment he noticed the user standing in a bush and killed him 1.2 s later ("my last death was bullshit"); the user's pick of a hold on first contact only, not on every peek ("I want them spraying when I peek") | not run |
 | 23 | Stand-down | Rifleman at 40 m, idle: fire a shot into the air out of his sight, then hide where he cannot find you | he searches, then 90 s after the alert last started over walks back to where he stood and goes back to idle | new 2026-11-02: after a shot into the air a squad searched for minutes and never went back to its posts; in the game only an idle soldier's look at something glimpsed, or the player in a safe zone, ends an alert ([how an alert ends](../engine-internals/ai.md#how-an-alert-ends)); the user's pick of 2 minutes, in the brain; 90 s since 2026-11-03, the user's call | not run |
 | 24 | Perception | `python tools\fc2drive\scenarios\perception.py`: 20 cases on the duel lane, at the low wall and in the grass field, by day and at night, in front of him, at his side and behind, the camo suit given by its bonus plan | each case's first `perception:` distances within a few metres of the model's | new 2026-11-03, [the model](#perception); supersedes rows 10, 16, 22 and item N | fc2drive, 2026-11-03, not played. A level counts only while the trace says he kept the player in the case's zone, with 3 tries; the player faces him. Matches wherever judged: still at 35 m and 45 m, crouched still at 35 m, crouched at night at 20 m, at his side at 15 m, heard behind him at 20 m, crouched behind him never, standing at the wall at 33 m; in grass, crouched and still at 15 m and only noticed at 22 m, moving crouched noticed at 22 m, standing at 30 m as in the open. Unjudged: every approach and most nevers, since an idle soldier looks away within seconds. The camo suit hid no one at first, the game reading its bonus inverted ([grass and stealth](../engine-internals/ai.md#grass-and-stealth)); read by the plugin since, it hides as the model says (item N). Then the walk-in cases, a soldier walking one of the range's patrol routes to the player, each sighting judged in the zone it happened in: all ten match. Noticed and recognised at 48/40 m standing or crouched still, 100/60 m walking upright to him, 61.7/50 m crouch-walking (he was glancing aside from 71 to 63 m), 30/25 m at night walking and crouched still, 24/20 m crouched still in grass, 30/25 m sidestepping in grass; never at his side 35 m off his line, never crouched behind the low wall with him 18 m away |
@@ -349,7 +352,7 @@ mod counts as finished. Listed on 2026-10-28; nothing decided yet.
 | Lever | Where | Casual → Infamous | With the mod |
 |---|---|---|---|
 | Player maximum health | data: `HealthMax_*` and `HealthBarSize_*` curves | 1,800 / 1,400 / 1,075 / 825 at the curves' start | untouched; the biggest thing still differing |
-| Last-bar cushion | code | quarters damage while the player is on his last bar | removed on every setting |
+| Last-bar cushion | code | quarters damage while the player is on his last bar | untouched |
 | Syrette cap | code | 6 / 5 / 4 / 3 | untouched |
 | Bleeding out on the last bar | data: `HealthDegenerationLevels` in `gamemodesconfig.xml` | a bar every 15 s on every setting; Infamous names a curve that does not exist | untouched |
 | Health pickups, medic stations | code | per setting; Infamous medic stations take another branch, never checked | untouched |
@@ -370,7 +373,6 @@ squad coordination are the forgiveness levers agreed on 2026-10-21:
 | Constant | Hardcore now | Eased by |
 |---|---|---|
 | Damage the player takes | each gun's real-round damage, whole wherever it lands: 350 from an AK-47 | a share of it; the player's health system is to be reworked |
-| Healing | the surgery leaves 40 % of maximum health (the game's two bars), a syrette 65 %, and 65 % to full takes 3 s on Casual, 10 s on Experienced, 6 minutes on Hardcore and never on Infamous | more left by each, faster regen |
 | Aim settle | 0.6 s + 0.02 s per metre | longer before his shots land |
 | Recoil | a follow-up loses up to 60 %, recovering in 0.25 s | more lost, or slower recovery |
 | Suppression pin | 1 s | longer pins |
@@ -389,5 +391,4 @@ squad coordination are the forgiveness levers agreed on 2026-10-21:
 
 - The point-blank bonus for the player's bullets on the easier settings: flatten it, or keep it as
   forgiveness?
-- The last-bar cushion: back on Casual and Experienced only?
 - Whether G goes ahead before C, which is on hold.

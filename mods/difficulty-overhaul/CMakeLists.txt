@@ -14,7 +14,6 @@ endif()
 add_library(DifficultyOverhaul SHARED
   "src/main.cpp"
   "src/hit_log.cpp"
-  "src/damage_taken.cpp"
   "src/hit_model.cpp"
   "src/fire_discipline.cpp"
   "src/reaction.cpp"
@@ -25,7 +24,6 @@ add_library(DifficultyOverhaul SHARED
   "src/watched_spot.cpp"
   "src/perception.cpp"
   "src/going_down.cpp"
-  "src/healing.cpp"
   "src/engine/combat_log.cpp"
   "src/engine/damage.cpp"
   "src/engine/game.cpp"

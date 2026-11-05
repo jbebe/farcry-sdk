@@ -6,13 +6,7 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
 
 - **Real rounds.** Every gun hits as hard as its real cartridge, whoever fires it: one torso hit from
   a rifle drops a soldier, two from a pistol, a head hit from anything kills. A soldier's gun hurts
-  you as much as yours hurts him, and no gun gains damage up close. Three AK-47 hits kill you,
-  wherever they land, and the last health bar no longer softens what you take.
-- **Healing in three steps.** On your last bar the surgery leaves you one rifle hit from death, and
-  a syrette two. Full health comes back slowly: nothing below a syrette's level, and from there to
-  full in 6 minutes on Hardcore, in seconds on Casual and Experienced and never on Infamous. A
-  syrette is not used where it would not raise your health. Beds and medic cabinets still heal you
-  fully.
+  you as much as yours hurts him, and no gun gains damage up close.
 - **Limb hits wound.** A hit to an arm or a leg that would kill a soldier puts him down wounded
   instead: he calls for help, crawls for cover and may shoot back from the ground. A torso hit never
   does: it wounds or kills.
@@ -53,9 +47,9 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
 - **A combat log** in `bin\difficulty-overhaul-logs`, one file per session and the last 20 kept:
   every hit on you and by you, and every shot at you with its chance. Attach it to a bug report.
 
-Everything is tuned on Hardcore. In this version every difficulty plays at the Hardcore values
-except healing; easier and harder settings come later. Fights between soldiers, and between soldiers and your
-buddies, play as the game ships them.
+Everything is tuned on Hardcore. In this version every difficulty plays at the Hardcore values;
+easier and harder settings come later. Fights between soldiers, and between soldiers and your buddies,
+play as the game ships them.
 
 ## Requirements
 

@@ -29,7 +29,6 @@ PLAYER_HIT = re.compile(
     r"^player hit: \w+ level \d+, ([\w ]+), at (\S+) m, health (\S+) -> (\S+)"
     r"(?: of (\S+), by (\w{8}))? \((\w+)")
 DIED = re.compile(r"^player died: killed by (\w{8}) at (\S+) m")
-HEALED = re.compile(r"^healed: ")
 
 RANGES = [(0, 15), (15, 30), (30, 60), (60, 1e9)]
 
@@ -86,7 +85,6 @@ def analyse(lines):
     soldiers = {}
     deaths = []
     player_hits = []
-    heals = 0
     max_health = None
     difficulty = None
 
@@ -128,9 +126,7 @@ def analyse(lines):
                 deaths.append(dict(time=t, by=None, distance=float(dist)))
         elif m := DIED.match(text):
             deaths.append(dict(time=t, by=m.group(1), distance=float(m.group(2))))
-        elif HEALED.match(text):
-            heals += 1
-    return soldiers, deaths, player_hits, heals, max_health, difficulty
+    return soldiers, deaths, player_hits, max_health, difficulty
 
 
 def count(n, word):
@@ -149,7 +145,7 @@ def report(path, lines):
     if not lines:
         print(f"{path}: no combat lines.")
         return
-    soldiers, deaths, player_hits, heals, max_health, difficulty = analyse(lines)
+    soldiers, deaths, player_hits, max_health, difficulty = analyse(lines)
     shots = [shot for s in soldiers.values() for shot in s.shots]
     counts = [("hold", "holds"), ("panic", "panics"), ("shake", "shakes"), ("restart", "restarts")]
     span = lines[-1].time - lines[0].time
@@ -167,7 +163,7 @@ def report(path, lines):
     print(f"  Your hits on soldiers: {len(results)}, "
           f"{sum(any('killed' in r for r in s.hits_taken) for s in soldiers.values())} killed, "
           f"{sum(any('wounded' in r for r in s.hits_taken) for s in soldiers.values())} wounded")
-    print(f"  Deaths: {len(deaths)}, heals: {heals}")
+    print(f"  Deaths: {len(deaths)}")
     holds = sum(s.spotted is not None for s in soldiers.values())
     totals = [count(holds, "reaction hold")] + [
         count(sum(getattr(s, attribute) for s in soldiers.values()), label)
