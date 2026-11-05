@@ -1,0 +1,208 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">Secondary.MAC10.Mikes_Rusty</value>
+      <object type="Entity">
+        <value name="hidName" type="String">weapons.Secondary.MAC10.Mikes_Rusty</value>
+        <value name="disEntityId" type="Int64">5695</value>
+        <value name="text_hidEntityClass" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">4</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CFileDescriptorComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileName" type="String">graphics\weapons\secondary\mac10\mac10.xml</value>
+            <value name="fileName" type="Hash">5DCBD328</value>
+            <value name="hidDescriptor" type="Rml">
+              <hidDescriptor>
+                <component class="GraphicComponent" version="2" detail="0">
+                  <object index="0" meshName="CLIP" boneName="CLIP" bboxMin="-0.0196462,-0.0111935,-0.0111157" bboxMax="0.0189006,0.0126917,0.195869" />
+                  <object index="1" meshName="FRAME" boneName="FRAME" bboxMin="-0.323818,-0.0259786,0.0320652" bboxMax="0.080449,0.0238007,0.211702" />
+                  <object index="2" meshName="SLIDE" boneName="SLIDE" bboxMin="-0.0214742,-0.000136255,-0.0126312" bboxMax="0.0268755,0.00217728,0.011821" />
+                  <object index="3" meshName="SLIDE02" boneName="SLIDE02" bboxMin="-0.0970235,0.00908098,0.0117666" bboxMax="-0.0766545,0.0294554,0.0293576" />
+                  <resource fileName="graphics\Weapons\Secondary\MAC10\Mac10.xbg" bboxMin="-0.0355547,-0.211579,-0.132481" bboxMax="0.030697,0.193552,0.140561" />
+                  <skeleton name="Mac10" pos="0,0,0" rot="1,-0,-0,-0">
+                    <bone name="CLIP" pos="-0.004,0.009384,-0.121365" rot="0.724498,0,-0,-0.689277" />
+                    <bone name="FRAME" pos="0.003782,-0.130218,-0.071141" rot="0.724498,0,-0,-0.689277" />
+                    <bone name="FX_CASING" pos="-0.011646,0.013318,0.099908" rot="0.657375,0.207269,0.217861,0.690966" />
+                    <bone name="FX_FIRE" pos="-0.012341,0.193166,0.095061" rot="0.99969,4.98109e-008,0,0.0249056" />
+                    <bone name="SLIDE" pos="-0.022708,0.012926,0.105342" rot="0.724498,0,-0,-0.689277" />
+                    <bone name="SLIDE02" pos="-0.022708,0.012926,0.105342" rot="0.724498,0,-0,-0.689277" />
+                    <bone name="Weapon_Break" pos="0,0,0" rot="1,0,0,0" />
+                  </skeleton>
+                </component>
+                <component class="RigidPhysComponent">
+                  <resource fileName="graphics\Weapons\Secondary\MAC10\Mac10.hkx" />
+                </component>
+              </hidDescriptor>
+            </value>
+          </object>
+          <object type="CGraphicComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bIntelHackGliderOn" type="Bool">False</value>
+            <value name="bCastShadow" type="Bool">True</value>
+            <value name="bReceiveShadow" type="Bool">True</value>
+            <value name="bCastAmbientShadow" type="Bool">True</value>
+            <value name="olgLightGroup" type="Hash">00000501</value>
+            <value name="bAllowCullBySize" type="Bool">True</value>
+            <value name="agAmbientGroup" type="Hash">00000000</value>
+            <value name="bBehaveLikeAPickup" type="Bool">False</value>
+            <value name="bShowInReflection" type="Bool">True</value>
+            <value name="bAlwaysShowInReflection" type="Bool">False</value>
+            <value name="bOverrideLODSphere" type="Bool">False</value>
+            <value name="fLODSphereRadius" type="Float">0</value>
+            <value name="hidSkyOcclusion0" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion1" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion2" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion3" type="Hash">FFFFFFFF</value>
+            <value name="hidGroundColor" type="Hash">FFFFFFFF</value>
+            <value name="hidObjectHeight" type="Float">3</value>
+            <value name="hidHeightAbove" type="Float">0</value>
+            <value name="hidHasAmbientValues" type="Bool">False</value>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">0</value>
+              <value name="text_objModel" type="String">graphics\weapons\secondary\mac10\mac10.xbg</value>
+              <value name="objModel" type="Hash">4D81166F</value>
+              <value name="hidMeshName" type="String">CLIP</value>
+              <value name="text_hidNodeName" type="String">CLIP</value>
+              <value name="hidNodeName" type="Hash">9BB5F9D3</value>
+              <value name="text_hidNodeNameLOD0" type="String">CLIP_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">00B20B5C</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">1</value>
+              <value name="text_objModel" type="String">graphics\weapons\secondary\mac10\mac10.xbg</value>
+              <value name="objModel" type="Hash">4D81166F</value>
+              <value name="hidMeshName" type="String">FRAME</value>
+              <value name="text_hidNodeName" type="String">FRAME</value>
+              <value name="hidNodeName" type="Hash">42ACFE7D</value>
+              <value name="text_hidNodeNameLOD0" type="String">FRAME_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">117FF4BB</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">2</value>
+              <value name="text_objModel" type="String">graphics\weapons\secondary\mac10\mac10.xbg</value>
+              <value name="objModel" type="Hash">4D81166F</value>
+              <value name="hidMeshName" type="String">SLIDE</value>
+              <value name="text_hidNodeName" type="String">SLIDE</value>
+              <value name="hidNodeName" type="Hash">85BB2CD2</value>
+              <value name="text_hidNodeNameLOD0" type="String">SLIDE_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">F2877992</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">3</value>
+              <value name="text_objModel" type="String">graphics\weapons\secondary\mac10\mac10.xbg</value>
+              <value name="objModel" type="Hash">4D81166F</value>
+              <value name="hidMeshName" type="String">SLIDE02</value>
+              <value name="text_hidNodeName" type="String">SLIDE02</value>
+              <value name="hidNodeName" type="Hash">D79E3B49</value>
+              <value name="text_hidNodeNameLOD0" type="String">SLIDE02_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">2F94BB68</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+          </object>
+          <object type="CSimpleAnimationComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileSkeleton" type="String">graphics\weapons\secondary\mac10\mac10_ref.skeleton</value>
+            <value name="fileSkeleton" type="Hash">FBC5862C</value>
+            <value name="sPartName" type="String">mac10</value>
+          </object>
+          <object type="CFCXWeapon">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="iAnimationValue" type="UInt32">14</value>
+            <value name="sndswtpWeaponStatusSoundSwitchType" type="Hash">004402A7</value>
+            <value name="WeaponStatusSwitchValues" type="Rml">
+              <WeaponStatusSwitchValues Failure="4294967295" LowReliability="4294967295" MediumReliability="4294967295" HighReliability="4294967295" />
+            </value>
+            <value name="bUseHiResScope" type="Bool">False</value>
+            <value name="fHiResLowResScopeSwitchTransitionPoint" type="Float">0.5</value>
+            <object type="FireStrategy" />
+            <object type="ReliabilityLevelsData">
+              <object type="Failure">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.26</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0.46</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.16</value>
+              </object>
+              <object type="Low">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.24</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0.44</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.08</value>
+              </object>
+              <object type="Medium">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.22</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0.42</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.04</value>
+              </object>
+              <object type="High">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.2</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0.4</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0</value>
+              </object>
+            </object>
+          </object>
+          <object type="CWeaponNetworkComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+          <object type="CCountersComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="archStimEffectTable" type="String">tables.StimEffectTables.WeaponDefault</value>
+          </object>
+          <object type="CPersistComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selLevel" type="UInt32">2</value>
+            <object type="enumLevel">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Limited</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Full</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Critical</value>
+              </object>
+            </object>
+          </object>
+          <object type="CFCSEDataComponent">
+            <object type="Cartridge.Name">
+              <value name="String" type="String">.45 ACP</value>
+            </object>
+            <object type="Cartridge.BulletMass">
+              <value name="Float" type="Float">15.0</value>
+            </object>
+            <object type="Cartridge.MuzzleVelocity">
+              <value name="Float" type="Float">280.0</value>
+            </object>
+            <object type="Cartridge.Projectiles">
+              <value name="Int" type="Int32">1</value>
+            </object>
+            <object type="Cartridge.MuzzleEnergy">
+              <value name="Float" type="Float">588.0</value>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>

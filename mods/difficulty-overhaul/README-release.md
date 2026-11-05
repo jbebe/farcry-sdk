@@ -4,15 +4,18 @@ Realistic damage and enemy shooting for Far Cry 2. A bullet that connects is ser
 a mercenary, and whether it connects depends on range, movement, how well the shooter sees you,
 recoil and the time he needs to settle his aim. Hard, but every death has a reason you can read.
 
-- **Lethal both ways.** About four torso hits or one head hit kill you, and the last health bar no
-  longer softens what you take. About two torso hits or four limb hits drop a soldier.
+- **Real rounds.** Every gun hits as hard as its real cartridge, whoever fires it: one torso hit from
+  a rifle drops a soldier, two from a pistol, a head hit from anything kills. A soldier's gun hurts
+  you as much as yours hurts him, and no gun gains damage up close. Three AK-47 hits kill you,
+  wherever they land, and the last health bar no longer softens what you take.
 - **Healing in three steps.** On your last bar the surgery leaves you one rifle hit from death, and
-  a syrette two. Only full health takes four, and it comes back slowly: nothing below a syrette's
-  level, and from there to full in 6 minutes on Hardcore, in seconds on Casual and Experienced and
-  never on Infamous. A syrette is not used where it would not raise your health. Beds and medic
-  cabinets still heal you fully.
+  a syrette two. Full health comes back slowly: nothing below a syrette's level, and from there to
+  full in 6 minutes on Hardcore, in seconds on Casual and Experienced and never on Infamous. A
+  syrette is not used where it would not raise your health. Beds and medic cabinets still heal you
+  fully.
 - **Limb hits wound.** A hit to an arm or a leg that would kill a soldier puts him down wounded
-  instead: he calls for help, crawls for cover and may shoot back from the ground.
+  instead: he calls for help, crawls for cover and may shoot back from the ground. A torso hit never
+  does: it wounds or kills.
 - **Aim is earned.** A soldier who spots you up close fires at once; farther out he takes longer
   to make up his mind, 3 seconds at 50 m, and his aim settles meanwhile. Every shot is a real
   chance and none is certain, recoil spoils his follow-up shots, and you are harder to hit running

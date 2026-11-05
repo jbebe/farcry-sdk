@@ -1,5 +1,6 @@
 // Going down: a soldier the player's limb hit would kill goes down wounded instead, every time, where
-// the game rolls against the player's reputation and caps how many soldiers are down at once.
+// the game rolls against the player's reputation and caps how many soldiers are down at once; a hit
+// to the head or torso never downs anyone.
 #include "engine/damage.h"
 #include "engine/memory.h"
 #include "fcse_api.h"
@@ -24,14 +25,13 @@ namespace {
     // Set while the game decides on a limb hit by the player: its cap is lifted and its roll won.
     thread_local bool t_limbHit = false;
 
-    bool LimbHitByPlayer(const uint8_t* stim) {
-        const Damage::BodyPart part = Damage::Part(stim);
-        return part >= Damage::kArms && part <= Damage::kFeet && Damage::ByPlayer(stim);
-    }
-
     bool __fastcall CanGoDownDetour(void* counters, void* unused, const uint8_t* stim,
                                     float chanceModifier) {
-        if (!LimbHitByPlayer(stim)) {
+        const Damage::BodyPart part = Damage::Part(stim);
+        if (part == Damage::kHead || part == Damage::kTorso) {
+            return false;
+        }
+        if (part == Damage::kNoBodyPart || !Damage::ByPlayer(stim)) {
             return g_originalCanGoDown(counters, unused, stim, chanceModifier);
         }
         t_limbHit = true;

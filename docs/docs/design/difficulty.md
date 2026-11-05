@@ -27,7 +27,11 @@ Combat that is realistic and fair:
   asked for.
 - **Where the mod covers a lever, the game's own per-difficulty spread goes**, so the mod is the one
   source of difficulty.
-- **Only the player's fights change.** Fights between soldiers stay as shipped.
+- **Only the player's fights change,** but for damage. Since 2026-11-05 the guns and the hit locations
+  are realistic for everyone: "The game has to be realistic, not the player-vs-world scenario."
+- **The player gets fair treatment, the enemy realistic treatment** (2026-11-05): "player gets fair
+  treatment against a horde of enemies, the enemy gets realistic treatment". A soldier drops as a
+  man would; the player's health system is to be reworked.
 - **Fire discipline and cover define the mod.** A soldier holds his fire until he can make the player
   out. Seen in game: "The bush, the tall grass actually makes them stop shooting. the sniper has no
   LoS and waits for me to peek."
@@ -157,6 +161,7 @@ reach, the wall between left him unlit. Not played.
 | 3 | Hit model: plain-chance roll, aim that settles with range, recoil, the 0.85 cap, head aimed at 15 % of the time | head share fixed to about a fifth of hits |
 | 4 | Intuition 6 s → 1 s, sighting, fire discipline, grass, crossing speed, range falloff for pistols, SMGs and shotguns | fire discipline, grass and crossing seen; the rest assumed |
 | 5 | Squad: suppression (near misses pin a soldier for 1 s and restart his aim); squad memory (hunted while within 15 m of where last seen); watched spot (a peek elsewhere makes him re-aim) | suppression works; memory and watched spot not yet |
+| 6 | Real rounds (2026-11-05): each gun's impact level from its round, no soldiers' damage curves, no close-range bonus, a head hit kills anyone but the player, a torso hit never downs; replaces step 2 | range, row 26 |
 
 The mod's README lists each feature's values.
 
@@ -183,8 +188,8 @@ range in the log drifts from the scenario's distance.
 | # | Feature | On the range | Expect | Before | Range result |
 |---|---|---|---|---|---|
 | 1 | Hit log | any fight | `soldier … hit:`, `player hit:` and `shot at player:` lines | used every step | passes |
-| 2 | Damage taken | invincibility off; take hits from one soldier | about 4 torso hits kill; one head hit kills; no softer last bar | felt realistic | at torso 2.5 and head 4, 8 torso hits killed (132 each of 1,025 health; a head hit 211) and the last bar took full damage. Raised to torso 5 and head 24, the user's choice: passes, 4 torso hits killed (264 each), and 2 torso hits then a head hit (1,266) |
-| 3 | Damage dealt | shoot one soldier in the torso, then one in the limbs | about 2 torso hits or 4 limb hits down him | seen | passes: 2 torso hits killed one (176 each of 250), 3 leg hits the other (88 each) |
+| 2 | Damage taken | invincibility off; take hits from one soldier | about 4 torso hits kill; one head hit kills; no softer last bar | felt realistic | at torso 2.5 and head 4, 8 torso hits killed (132 each of 1,025 health; a head hit 211) and the last bar took full damage. Raised to torso 5 and head 24, the user's choice: passes, 4 torso hits killed (264 each), and 2 torso hits then a head hit (1,266). Replaced on 2026-11-05 by row 26 |
+| 3 | Damage dealt | shoot one soldier in the torso, then one in the limbs | about 2 torso hits or 4 limb hits down him | seen | passes: 2 torso hits killed one (176 each of 250), 3 leg hits the other (88 each). Replaced on 2026-11-05 by row 26 |
 | 4 | Hit model: settling | step out in front of a soldier at 10 m, then at 50 m | first shots miss; the far one takes visibly longer to settle | seen | passes. 10 m: his chance climbs from 0 to 0.53 in about 0.8 s. 50 m: from 0 to 0.67 before recoil in about 1.6 s, first hit 1.3 s after his first shot; after a reload he resumed fully settled |
 | 5 | Hit model: recoil and cap | stand still in the open against a full-auto soldier | hits spread out within a burst; no shot is certain, point blank included | seen | passes: a burst opens at his full chance (0.52-0.69 at 20 m) and the next shots get about 0.6 of it; the highest chance was 0.80 at 5 m, and at 4-5 m 13 of 21 shots hit |
 | 6 | Hit model: head aim | take about 20 hits | about a fifth on the head | fixed and seen | passes: 9 of 57 hits on the head (16 %), over the machine gunner run and one before it at 11 m |
@@ -207,6 +212,7 @@ range in the log drifts from the scenario's distance.
 | 23 | Stand-down | Rifleman at 40 m, idle: fire a shot into the air out of his sight, then hide where he cannot find you | he searches, then 90 s after the alert last started over walks back to where he stood and goes back to idle | new 2026-11-02: after a shot into the air a squad searched for minutes and never went back to its posts; in the game only an idle soldier's look at something glimpsed, or the player in a safe zone, ends an alert ([how an alert ends](../engine-internals/ai.md#how-an-alert-ends)); the user's pick of 2 minutes, in the brain; 90 s since 2026-11-03, the user's call | not run |
 | 24 | Perception | `python tools\fc2drive\scenarios\perception.py`: 20 cases on the duel lane, at the low wall and in the grass field, by day and at night, in front of him, at his side and behind, the camo suit given by its bonus plan | each case's first `perception:` distances within a few metres of the model's | new 2026-11-03, [the model](#perception); supersedes rows 10, 16, 22 and item N | fc2drive, 2026-11-03, not played. A level counts only while the trace says he kept the player in the case's zone, with 3 tries; the player faces him. Matches wherever judged: still at 35 m and 45 m, crouched still at 35 m, crouched at night at 20 m, at his side at 15 m, heard behind him at 20 m, crouched behind him never, standing at the wall at 33 m; in grass, crouched and still at 15 m and only noticed at 22 m, moving crouched noticed at 22 m, standing at 30 m as in the open. Unjudged: every approach and most nevers, since an idle soldier looks away within seconds. The camo suit hid no one at first, the game reading its bonus inverted ([grass and stealth](../engine-internals/ai.md#grass-and-stealth)); read by the plugin since, it hides as the model says (item N). Then the walk-in cases, a soldier walking one of the range's patrol routes to the player, each sighting judged in the zone it happened in: all ten match. Noticed and recognised at 48/40 m standing or crouched still, 100/60 m walking upright to him, 61.7/50 m crouch-walking (he was glancing aside from 71 to 63 m), 30/25 m at night walking and crouched still, 24/20 m crouched still in grass, 30/25 m sidestepping in grass; never at his side 35 m off his line, never crouched behind the low wall with him 18 m away |
 | 25 | Notice delay | `python tools\fc2drive\scenarios\notice.py`: an idle rifleman walks the lane's patrol route toward the player by day, who stands still upright or crouched, walks to him, or runs to and fro | he notices where the delay, walked over his own traced looks, says he does: later than the notice distance, after the seconds in sight the model gives | new 2026-11-04: "running like a madman from one cover to another in a totally visible situation should give you around 2 seconds" | fc2drive, 2026-11-04, not played: every case where the model puts it, within a look. Standing still, noticed at 39.5 m (model 39.7 m), walking to him 38.5 m (38.5 m), crouched still 35.8 m (35.8 m), running to and fro 85.5 m after 4.0 s in sight (85.7 m), where row 24 had 48 m still and 100 m moving upright. An idle soldier glances about, so the delay fills only while the player is in his focus and drains between glances; row 24's walk-in notice distances predate it |
+| 26 | Real rounds | `python tools\fc2drive\scenarios\damage.py`: single shots at a rifleman's back from 10 m with the Makarov, Uzi, AK-47, FAL, SPAS-12 and AS50, standing and crouched; then a rifleman shoots the player, invincibility off | each hit at its gun's level: a torso hit takes 134, 185, 350, 399, 117 a pellet and 1,000, an arm 0.6 of it, a head hit kills; the rifleman's AK takes 350 from the player | new 2026-11-05: "weapon damage must be tied to the specific weapon with their specific ammo"; "ai damage curve should not exist"; "bonus damage should not exist at point blank" | fc2drive, 2026-11-05, not played: every hit at its gun's level. Torso hits took 134, 185, 117 a pellet, and the AK, FAL and AS50 killed; arm hits took 80 from the Makarov and 210 from the AK, which downed him at 41; a SPAS pellet in the legs 117. The rifleman's AK took 349 a hit from the player. A shotgun's off-centre pellets have their own stim, `Stim_ImpactDamageSecondary`, at the game's level until it was set too |
 
 ### Still to do before it is finished
 
@@ -351,7 +357,7 @@ mod counts as finished. Listed on 2026-10-28; nothing decided yet.
 | Clip pickups, reloading | code | per setting, values not checked | untouched |
 | Grenade drops from the dead | data: `ChanceToDropGrenade` | 1 / 0.5 / 0.33 / 0.25 | untouched |
 | The player's weapons' jams and wear | code | per setting, values not checked | untouched |
-| The player's close-range damage | data: `RangeMultipliers` per weapon | AK-47 at 0-2 m: +7 / +3 / +2 / none | untouched |
+| The player's close-range damage | data: `RangeMultipliers` per weapon | AK-47 at 0-2 m: +7 / +3 / +2 / none | removed on every setting |
 | Upgrade bonuses | code | per setting | untouched |
 | Enemy forced misses | data: `nForcedFailure*` per weapon | AK-47 misses 4-8 / 2-4 / 1 / 0 shots after a hit | replaced by the hit model on every setting |
 | Squad role split | code | one soldier / 70 % / 70 % / 90 % of the squad in the first role | untouched |
@@ -363,7 +369,7 @@ squad coordination are the forgiveness levers agreed on 2026-10-21:
 
 | Constant | Hardcore now | Eased by |
 |---|---|---|
-| Damage the player takes per body part | torso 5×, head 24× | lower multipliers |
+| Damage the player takes | each gun's real-round damage, whole wherever it lands: 350 from an AK-47 | a share of it; the player's health system is to be reworked |
 | Healing | the surgery leaves 40 % of maximum health (the game's two bars), a syrette 65 %, and 65 % to full takes 3 s on Casual, 10 s on Experienced, 6 minutes on Hardcore and never on Infamous | more left by each, faster regen |
 | Aim settle | 0.6 s + 0.02 s per metre | longer before his shots land |
 | Recoil | a follow-up loses up to 60 %, recovering in 0.25 s | more lost, or slower recovery |

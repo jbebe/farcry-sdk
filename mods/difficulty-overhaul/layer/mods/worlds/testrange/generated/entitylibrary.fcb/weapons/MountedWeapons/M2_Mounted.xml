@@ -1,0 +1,238 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">MountedWeapons.M2_Mounted</value>
+      <object type="Entity">
+        <value name="hidName" type="String">weapons.MountedWeapons.M2_Mounted</value>
+        <value name="disEntityId" type="Int64">5622</value>
+        <value name="text_hidEntityClass" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">4</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CFileDescriptorComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileName" type="String">graphics\weapons\special\browning_turret\turret_browning.xml</value>
+            <value name="fileName" type="Hash">1F7E4D6E</value>
+            <value name="hidDescriptor" type="Rml">
+              <hidDescriptor>
+                <component class="GraphicComponent" version="2" detail="0">
+                  <object index="0" meshName="ACCESSORY04" boneName="ACCESSORY04" bboxMin="-0.600588,-0.0515932,-0.0214574" bboxMax="0.657288,0.0554661,0.0362471" />
+                  <object index="1" meshName="FRAME" boneName="FRAME" bboxMin="-0.278129,-0.591069,-0.0514526" bboxMax="0.070809,0.23004,0.128072" />
+                  <object index="2" meshName="CLIP_BULLET" boneName="CLIP_BULLET" bboxMin="-0.0322394,-0.0288441,-0.0237329" bboxMax="0.0468767,0.043133,0.00498744" />
+                  <object index="3" meshName="ACCESSORY02" boneName="ACCESSORY02" bboxMin="-0.0444041,-0.286355,-0.0186852" bboxMax="0.0444039,0.00297118,0.00564381" />
+                  <object index="4" meshName="ACCESSORY" boneName="ACCESSORY" bboxMin="-0.0232209,-0.0443291,-0.0145883" bboxMax="0.0234774,0.00988352,0.00328435" />
+                  <object index="5" meshName="ACCESSORY03" boneName="ACCESSORY03" bboxMin="-0.0218231,-6.54452e-008,-0.0210791" bboxMax="0.0119524,0.0830084,0.0677294" />
+                  <resource fileName="graphics\Weapons\Special\Browning_Turret\TURRET_Browning.xbg" bboxMin="-0.278128,-0.591071,-0.0514526" bboxMax="0.118377,0.88943,0.133168" />
+                  <skeleton name="TURRET_Browning" pos="0,0,0" rot="1,-0,-0,-0">
+                    <bone name="ACCESSORY04" pos="-0.000239,0.288842,0.034766" rot="0.707107,0,-0,-0.707107">
+                      <bone name="FX_FIRE" pos="-0.600734,-0.00074,0.000311" rot="0.707107,-0,0,0.707107" />
+                    </bone>
+                    <bone name="FRAME" pos="0,-0,-0" rot="1,0,0,0" />
+                    <bone name="CLIP_BULLET" pos="-0.041676,-0.095879,0.080757" rot="1,0,0,0" />
+                    <bone name="ACCESSORY02" pos="-0.000249,-0.025428,0.094202" rot="1,0,0,0" />
+                    <bone name="ACCESSORY" pos="-0.000274,-0.540512,0.085773" rot="1,0,0,0" />
+                    <bone name="ACCESSORY03" pos="0.035368,-0.336634,0.030034" rot="0.707107,0,-0,-0.707107" />
+                    <bone name="FX_CASING" pos="0.04061,-0.108413,0.075596" rot="0.701057,0.0922957,-0.0922957,-0.701058" />
+                    <bone name="Weapon_Break" pos="0,0,0" rot="1,0,0,0" />
+                  </skeleton>
+                </component>
+                <component class="RigidPhysComponent">
+                  <resource fileName="graphics\Weapons\Special\Browning_Turret\TURRET_Browning.hkx" />
+                </component>
+                <component class="ParticleFXComponent">
+                  <FX_FIRE psEmitter="" />
+                </component>
+              </hidDescriptor>
+            </value>
+          </object>
+          <object type="CGraphicComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bIntelHackGliderOn" type="Bool">False</value>
+            <value name="bCastShadow" type="Bool">True</value>
+            <value name="bReceiveShadow" type="Bool">True</value>
+            <value name="bCastAmbientShadow" type="Bool">True</value>
+            <value name="olgLightGroup" type="Hash">00000501</value>
+            <value name="bAllowCullBySize" type="Bool">True</value>
+            <value name="agAmbientGroup" type="Hash">00000000</value>
+            <value name="bBehaveLikeAPickup" type="Bool">False</value>
+            <value name="bShowInReflection" type="Bool">True</value>
+            <value name="bAlwaysShowInReflection" type="Bool">False</value>
+            <value name="bOverrideLODSphere" type="Bool">False</value>
+            <value name="fLODSphereRadius" type="Float">0</value>
+            <value name="hidSkyOcclusion0" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion1" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion2" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion3" type="Hash">FFFFFFFF</value>
+            <value name="hidGroundColor" type="Hash">FFFFFFFF</value>
+            <value name="hidObjectHeight" type="Float">3</value>
+            <value name="hidHeightAbove" type="Float">0</value>
+            <value name="hidHasAmbientValues" type="Bool">False</value>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">0</value>
+              <value name="text_objModel" type="String">graphics\weapons\special\browning_turret\turret_browning.xbg</value>
+              <value name="objModel" type="Hash">0F348829</value>
+              <value name="hidMeshName" type="String">ACCESSORY04</value>
+              <value name="text_hidNodeName" type="String">ACCESSORY04</value>
+              <value name="hidNodeName" type="Hash">31B16E90</value>
+              <value name="text_hidNodeNameLOD0" type="String">ACCESSORY04_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">6C970C67</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">1</value>
+              <value name="text_objModel" type="String">graphics\weapons\special\browning_turret\turret_browning.xbg</value>
+              <value name="objModel" type="Hash">0F348829</value>
+              <value name="hidMeshName" type="String">FRAME</value>
+              <value name="text_hidNodeName" type="String">FRAME</value>
+              <value name="hidNodeName" type="Hash">42ACFE7D</value>
+              <value name="text_hidNodeNameLOD0" type="String">FRAME_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">117FF4BB</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">2</value>
+              <value name="text_objModel" type="String">graphics\weapons\special\browning_turret\turret_browning.xbg</value>
+              <value name="objModel" type="Hash">0F348829</value>
+              <value name="hidMeshName" type="String">CLIP_BULLET</value>
+              <value name="text_hidNodeName" type="String">CLIP_BULLET</value>
+              <value name="hidNodeName" type="Hash">A908A0B8</value>
+              <value name="text_hidNodeNameLOD0" type="String">CLIP_BULLET_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">78A3341A</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">3</value>
+              <value name="text_objModel" type="String">graphics\weapons\special\browning_turret\turret_browning.xbg</value>
+              <value name="objModel" type="Hash">0F348829</value>
+              <value name="hidMeshName" type="String">ACCESSORY02</value>
+              <value name="text_hidNodeName" type="String">ACCESSORY02</value>
+              <value name="hidNodeName" type="Hash">D8D2CBA5</value>
+              <value name="text_hidNodeNameLOD0" type="String">ACCESSORY02_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">BACEEF7A</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">4</value>
+              <value name="text_objModel" type="String">graphics\weapons\special\browning_turret\turret_browning.xbg</value>
+              <value name="objModel" type="Hash">0F348829</value>
+              <value name="hidMeshName" type="String">ACCESSORY</value>
+              <value name="text_hidNodeName" type="String">ACCESSORY</value>
+              <value name="hidNodeName" type="Hash">E5733BF3</value>
+              <value name="text_hidNodeNameLOD0" type="String">ACCESSORY_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">39A9BC5F</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">5</value>
+              <value name="text_objModel" type="String">graphics\weapons\special\browning_turret\turret_browning.xbg</value>
+              <value name="objModel" type="Hash">0F348829</value>
+              <value name="hidMeshName" type="String">ACCESSORY03</value>
+              <value name="text_hidNodeName" type="String">ACCESSORY03</value>
+              <value name="hidNodeName" type="Hash">AFD5FB33</value>
+              <value name="text_hidNodeNameLOD0" type="String">ACCESSORY03_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">71923CDF</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+          </object>
+          <object type="CSimpleAnimationComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileSkeleton" type="String">graphics\weapons\special\browning_turret\turret_browning_ref.skeleton</value>
+            <value name="fileSkeleton" type="Hash">5C9A9102</value>
+            <value name="sPartName" type="String">turret_browning</value>
+          </object>
+          <object type="CFCXWeapon">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="iAnimationValue" type="UInt32">34</value>
+            <value name="sndswtpWeaponStatusSoundSwitchType" type="Hash">FFFFFFFF</value>
+            <value name="WeaponStatusSwitchValues" type="Rml">
+              <WeaponStatusSwitchValues Failure="4294967295" LowReliability="4294967295" MediumReliability="4294967295" HighReliability="4294967295" />
+            </value>
+            <value name="bUseHiResScope" type="Bool">False</value>
+            <value name="fHiResLowResScopeSwitchTransitionPoint" type="Float">0.5</value>
+            <object type="FireStrategy" />
+            <object type="ReliabilityLevelsData">
+              <object type="Failure">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.9</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0.9</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.5</value>
+              </object>
+              <object type="Low">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.7</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0.7</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.4</value>
+              </object>
+              <object type="Medium">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.5</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0.5</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.2</value>
+              </object>
+              <object type="High">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.3</value>
+                <value name="fVerticalRecoilPerShot" type="Float">0.3</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.1</value>
+              </object>
+            </object>
+          </object>
+          <object type="CWeaponNetworkComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+          <object type="CCountersComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="archStimEffectTable" type="String">tables.StimEffectTables.WeaponDefault</value>
+          </object>
+          <object type="CPersistComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selLevel" type="UInt32">2</value>
+            <object type="enumLevel">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Limited</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Full</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Critical</value>
+              </object>
+            </object>
+          </object>
+          <object type="CFCSEDataComponent">
+            <object type="Cartridge.Name">
+              <value name="String" type="String">.50 BMG</value>
+            </object>
+            <object type="Cartridge.BulletMass">
+              <value name="Float" type="Float">42.0</value>
+            </object>
+            <object type="Cartridge.MuzzleVelocity">
+              <value name="Float" type="Float">887.0</value>
+            </object>
+            <object type="Cartridge.Projectiles">
+              <value name="Int" type="Int32">1</value>
+            </object>
+            <object type="Cartridge.MuzzleEnergy">
+              <value name="Float" type="Float">16522.1</value>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>

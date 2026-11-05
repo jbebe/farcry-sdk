@@ -1,7 +1,8 @@
 # Difficulty Overhaul
 
 Realistic damage and AI shooting for Far Cry 2, scaled by the game's own difficulty setting. An FCSE
-plugin that changes `Dunia.dll` in memory, and a data layer of changes to the soldiers' brain.
+plugin that changes `Dunia.dll` in memory, and a data layer of changes to the soldiers' brain, the
+guns and the hit locations.
 
 The goal is lethal combat in both directions where every hit is earned: a bullet that connects is
 serious for the player and for a mercenary, and whether it connects depends on range, movement,
@@ -14,10 +15,11 @@ the enemy aims. The values are constants in the plugin, with nothing on the Mod 
 
 | Feature | What it does |
 |---|---|
-| Damage taken | A bullet hits the player by where it lands, as a multiple of the game's damage: head 24, torso 5, arms and legs 3, hands and feet 2. With a rifleman's hits at 20 m and 1,025 health, four torso hits kill and one head hit does. The last health bar no longer quarters the damage. |
+| Weapon damage | Every gun's bullet is as lethal as its real round, whoever fires it: its impact level is the one whose damage on the game's curve is nearest 7.3 × √(one projectile's muzzle energy in joules), from the round's bullet mass and the gun's own muzzle velocity. Makarov 134, Star .45 168, Uzi, MP5 and MAC-10 185, M16 and M249 300, AK-47, G3 and Desert Eagle 350, FAL, Dragunov, PKM and M1903 399, AS50 and M2 1,000, a buckshot pellet 117, 100 from the DLC shotguns. The soldiers' damage curves are gone, so a soldier's gun hits as hard as the player's, and so is the close-range bonus on every difficulty. Part of the layer, with each gun's round as FCSE entity data any mod may read: `Cartridge.Name`, `Cartridge.BulletMass` in grams, `Cartridge.MuzzleVelocity` in m/s, `Cartridge.Projectiles` and `Cartridge.MuzzleEnergy` in joules for the whole round |
+| Hit locations | The player takes a hit whole wherever it lands, as in the game. Anyone else takes it by where it lands: a head hit kills, torso and legs 1, arms 0.6, hands and feet 0.3, in place of the game's 6, 1, 1, 0.5, 0.5, 0.5. The body part of each hit on the player is in the hit log. Part of the layer, `gamemodesconfig.xml` |
+| Damage taken | The last health bar no longer quarters the damage. With 1,025 health three AK-47 hits kill |
 | Healing | The heal key's surgery on the last bar leaves the game's two bars, 40 % of maximum health: on Hardcore one rifleman's torso hit from death. A syrette leaves 65 %, two hits from death, where the game fills health to full, and is refused at 65 % or above. Below 65 % nothing regenerates. Above it health climbs to full in 3 s on Casual, 10 s on Experienced, 6 minutes on Hardcore, starting 5 s after the last hit, and never on Infamous, where the game refills only the bar health is in, within a second. Sleeping in a bed and medic cabinets still heal to full. Each heal is logged as `healed:` |
-| Damage dealt | The player's hits on a soldier use head 6, torso 2.5, arms and legs 1.25, hands and feet 0.75 in place of the game's 6, 1, 1, 0.5, 0.5, 0.5 |
-| Going down | A soldier the player's hit in an arm, leg, hand or foot would kill goes down wounded instead, every time: he calls for help, crawls to cover, and may shoot back from the ground. The game rolls for it against the player's reputation, 15 % early in the story, and lets only a few soldiers be down at once. Torso and head hits keep the game's roll |
+| Going down | A soldier the player's hit in an arm, leg, hand or foot would kill goes down wounded instead, every time: he calls for help, crawls to cover, and may shoot back from the ground. The game rolls for it against the player's reputation, 15 % early in the story, and lets only a few soldiers be down at once. A head or torso hit never downs anyone: it wounds or kills |
 | Hit model | How the AI's shots at the player land. Aim settles over 0.6 s plus 0.02 s per metre after he acquires the player, where the game misses outright and then hits at full accuracy; the chance is the real probability of a hit, capped at 0.85 so no shot is certain, point blank included; it falls with how well he sees the player, full from a visibility of 0.6, and with how fast the player crosses his aim, as 1 / (1 + the angle crossed per second in radians), so running across his line of fire is harder to hit than running at him; each shot's recoil costs the next up to 60 % of its chance, recovering in about a quarter of a second, in place of the game's forced misses after a hit; and he aims at the head only 15 % of the time, where the game alternates head and torso, and never in his first 3 s on the player: first contact, a reacquired sight, a peek from a new spot or a near miss that pins him all start that over, so a first sighting cannot end in a headshot |
 | Fire discipline | A soldier holds his fire at the player until he recognises him: his own "clear" line, which perception puts at the distance he recognises the player from. Holding, he stays where he is, aimed, and fires the moment he recognises the player: the shoot task is told his aim is not on the player yet, which keeps it waiting, where refusing the shot would end it and send him elsewhere. A soldier a hit has panicked fires regardless |
 | Reaction | A soldier who spots the player before he has fired in the fight fires as fast as he can within 10 m, and beyond that holds his fire 0.075 s per metre while he makes up his mind: 3 s at 50 m. The game starts a soldier's aim timer at his first shot, so a timer that has not started marks one who has not fired yet. A hit that panics him ends the hold; once he has fired, nothing holds him |
@@ -78,13 +80,21 @@ recognises from. fc2drive's perception scenario reads it to know where the soldi
 .\verify_build.ps1           # x86, static CRT, FCSE_Load exported
 python ..\..\scripts\verify_patterns.py
 .\build-layer.ps1            # the brain's fragments in layer\, from the installed game's merc brain
+python data\weapons.py world1.xml world2.xml dlc1.xml tmpla.xml gamemodesconfig.xml
 ```
+
+`data\weapons.py` writes the guns' fragments and `gamemodesconfig.xml` from decoded retail entity
+libraries and the retail file; its docstring says which. The test range's guns come from `tmpla`'s
+library, which DevTools copies into the range's own, so `tmpla`'s fragments are written for
+`worlds\testrange`.
 
 `layer\` is what the release zips: the plugin under `plugins\`, and the brain's changes as fragments
 under `mods\scripts\game\newbrains\mercbrain.ai.rml\`, one file per plan or task, which JackAll
 merges into the game's own brain at install. `build-layer.ps1` makes them: it takes
 `mercbrain.ai.rml` out of the installed game, makes the edits and writes what differs with
-`jackall-cli ai fragments`. Install with `jackall-cli mod build --game "<game>" --layer layer`,
+`jackall-cli ai fragments`. Beside them are the guns' weapon and weapon-properties fragments, which
+JackAll merges field by field with any other mod's copies, and the whole `gamemodesconfig.xml`.
+Install with `jackall-cli mod build --game "<game>" --layer layer`,
 together with any other layers in play.
 
 Needs FCSE 1.4.0 or later (plugin API v8), and JackAll 1.7.0 or the Vortex extension 0.6.0, or later,

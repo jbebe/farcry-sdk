@@ -3,7 +3,6 @@
 
 void InstallHitLog();
 void InstallDamageTaken();
-void InstallDamageDealt();
 void InstallHitModel();
 void InstallFireDiscipline();
 void InstallReaction();
@@ -23,7 +22,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
 
     InstallHitLog();
     InstallDamageTaken();
-    InstallDamageDealt();
     InstallHitModel();
     InstallFireDiscipline();
     // After fire discipline, so its hook wraps fire discipline's: a hold starts only once he

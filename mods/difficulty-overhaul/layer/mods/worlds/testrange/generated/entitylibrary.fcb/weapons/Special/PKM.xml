@@ -1,0 +1,181 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">Special.PKM</value>
+      <object type="Entity">
+        <value name="hidName" type="String">weapons.Special.PKM</value>
+        <value name="disEntityId" type="Int64">5735</value>
+        <value name="text_hidEntityClass" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">4</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CFileDescriptorComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileName" type="String">graphics\weapons\special\pkm\pkm.xml</value>
+            <value name="fileName" type="Hash">CF450850</value>
+            <value name="hidDescriptor" type="Rml">
+              <hidDescriptor>
+                <component class="GraphicComponent" version="2" detail="0">
+                  <resource fileName="graphics\Weapons\Special\PKM\PKM.xbg" bboxMin="-0.110875,-0.206515,-0.0663444" bboxMax="0.0738171,0.96978,0.189803" />
+                  <skeleton name="PKM" pos="0,0,0" rot="1,-0,-0,-0">
+                    <bone name="FRAME" pos="-0.016391,-0.167073,-0.032317" rot="1,0,0,0" />
+                    <bone name="CLIP" pos="-0.014559,0.334062,-0.072478" rot="1,0,0,0" />
+                    <bone name="SLIDE" pos="-0.052659,0.284679,0.090811" rot="1,0,0,0" />
+                    <bone name="CASING" pos="-0.016695,0.397777,0.132094" rot="1,0,0,0" />
+                    <bone name="FX_FIRE" pos="-0.016391,0.969786,0.114218" rot="1,0,0,0" />
+                    <bone name="FX_CASING" pos="0.004696,0.32254,0.123382" rot="0.683013,0.183013,-0.183013,-0.683013" />
+                    <bone name="BULLETS" pos="-0.046321,0.334703,0.08805" rot="1,0,0,0" />
+                    <bone name="Bullet_01" pos="-0.054455,0.32665,0.042431" rot="-1.11659e-006,0.660538,-1e-006,0.750793" />
+                    <bone name="Bullet_02" pos="-0.055427,0.32665,0.054674" rot="-0.39219,9.19884e-007,0.919884,-9.19884e-007" />
+                    <bone name="Bullet_03" pos="-0.05397,0.32665,0.066686" rot="0.851664,0,-0.524089,-0" />
+                    <bone name="Bullet_04" pos="-0.05168,0.32665,0.07888" rot="0.834358,-0,-0.551224,-0" />
+                    <bone name="Bullet_05" pos="-0.050975,0.32665,0.091473" rot="-1.11659e-006,0.695831,-1e-006,0.718205" />
+                    <bone name="Bullet_06" pos="-0.053559,0.32665,0.103549" rot="7.90754e-007,0.714947,1e-006,0.699178" />
+                    <bone name="Bullet_07" pos="-0.05119,0.32665,0.114958" rot="0.855168,-0,-0.518352,-0" />
+                    <bone name="Bullet_08" pos="-0.042914,0.32665,0.124053" rot="0.956805,-0,-0.290731,-1.45366e-006" />
+                    <bone name="Bullet_09" pos="-0.031417,0.32665,0.127409" rot="0.998391,5.67091e-008,-0.0567095,1.47444e-006" />
+                    <bone name="Bullet_10" pos="-0.019022,0.32665,0.127843" rot="0.999997,-8.29454e-008,0.00250985,-3.0162e-008" />
+                  </skeleton>
+                </component>
+                <component class="RigidPhysComponent">
+                  <resource fileName="graphics\Weapons\Special\PKM\PKM.hkx" />
+                </component>
+              </hidDescriptor>
+            </value>
+          </object>
+          <object type="CGraphicComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bIntelHackGliderOn" type="Bool">False</value>
+            <value name="bCastShadow" type="Bool">True</value>
+            <value name="bReceiveShadow" type="Bool">True</value>
+            <value name="bCastAmbientShadow" type="Bool">True</value>
+            <value name="olgLightGroup" type="Hash">00000501</value>
+            <value name="bAllowCullBySize" type="Bool">True</value>
+            <value name="agAmbientGroup" type="Hash">00000000</value>
+            <value name="bBehaveLikeAPickup" type="Bool">False</value>
+            <value name="bShowInReflection" type="Bool">True</value>
+            <value name="bAlwaysShowInReflection" type="Bool">False</value>
+            <value name="bOverrideLODSphere" type="Bool">False</value>
+            <value name="fLODSphereRadius" type="Float">0</value>
+            <value name="hidSkyOcclusion0" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion1" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion2" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion3" type="Hash">FFFFFFFF</value>
+            <value name="hidGroundColor" type="Hash">FFFFFFFF</value>
+            <value name="hidObjectHeight" type="Float">3</value>
+            <value name="hidHeightAbove" type="Float">0</value>
+            <value name="hidHasAmbientValues" type="Bool">False</value>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">0</value>
+              <value name="text_objModel" type="String">graphics\weapons\special\pkm\pkm.xbg</value>
+              <value name="objModel" type="Hash">DF0FCD17</value>
+              <value name="hidMeshName" type="String"></value>
+              <value name="text_hidNodeName" type="String"></value>
+              <value name="hidNodeName" type="Hash">FFFFFFFF</value>
+              <value name="text_hidNodeNameLOD0" type="String"></value>
+              <value name="hidNodeNameLOD0" type="Hash">FFFFFFFF</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+          </object>
+          <object type="CSimpleAnimationComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileSkeleton" type="String">graphics\weapons\special\pkm\pkm_ref.skeleton</value>
+            <value name="fileSkeleton" type="Hash">634EAB4C</value>
+            <value name="sPartName" type="String">pkm</value>
+          </object>
+          <object type="CFCXWeapon">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="iAnimationValue" type="UInt32">18</value>
+            <value name="sndswtpWeaponStatusSoundSwitchType" type="Hash">004402A7</value>
+            <value name="WeaponStatusSwitchValues" type="Rml">
+              <WeaponStatusSwitchValues Failure="4294967295" LowReliability="4294967295" MediumReliability="4294967295" HighReliability="4294967295" />
+            </value>
+            <value name="bUseHiResScope" type="Bool">False</value>
+            <value name="fHiResLowResScopeSwitchTransitionPoint" type="Float">0.5</value>
+            <object type="FireStrategy" />
+            <object type="ReliabilityLevelsData">
+              <object type="Failure">
+                <value name="fHorizontalRecoilPerShot" type="Float">1.6</value>
+                <value name="fVerticalRecoilPerShot" type="Float">1.81</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.16</value>
+              </object>
+              <object type="Low">
+                <value name="fHorizontalRecoilPerShot" type="Float">1.4</value>
+                <value name="fVerticalRecoilPerShot" type="Float">1.79</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.08</value>
+              </object>
+              <object type="Medium">
+                <value name="fHorizontalRecoilPerShot" type="Float">1.2</value>
+                <value name="fVerticalRecoilPerShot" type="Float">1.77</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.04</value>
+              </object>
+              <object type="High">
+                <value name="fHorizontalRecoilPerShot" type="Float">1</value>
+                <value name="fVerticalRecoilPerShot" type="Float">1.75</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0</value>
+              </object>
+            </object>
+          </object>
+          <object type="CWeaponNetworkComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+          <object type="CCountersComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="archStimEffectTable" type="String">tables.StimEffectTables.WeaponDefault</value>
+          </object>
+          <object type="CPersistComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selLevel" type="UInt32">2</value>
+            <object type="enumLevel">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Limited</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Full</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Critical</value>
+              </object>
+            </object>
+          </object>
+          <object type="CFCSEDataComponent">
+            <object type="Cartridge.Name">
+              <value name="String" type="String">7.62x54 mmR</value>
+            </object>
+            <object type="Cartridge.BulletMass">
+              <value name="Float" type="Float">9.6</value>
+            </object>
+            <object type="Cartridge.MuzzleVelocity">
+              <value name="Float" type="Float">825.0</value>
+            </object>
+            <object type="Cartridge.Projectiles">
+              <value name="Int" type="Int32">1</value>
+            </object>
+            <object type="Cartridge.MuzzleEnergy">
+              <value name="Float" type="Float">3267.0</value>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>

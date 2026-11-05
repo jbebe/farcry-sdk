@@ -11,7 +11,7 @@ namespace DifficultyOverhaul::Damage {
 // CEntityEventStims::selType of the stims a weapon deals.
 enum StimType { kPierce = 3, kCrush = 4, kCut = 5 };
 
-// The body parts the counters service keeps a damage multiplier for, in its order.
+// The body part a stim hit.
 enum BodyPart { kHead, kTorso, kArms, kLegs, kHands, kFeet, kNoBodyPart };
 
 // __thiscall with one stack argument, which a free function spells __fastcall.
@@ -39,8 +39,5 @@ float MaxHealth(const void* counters);
 
 // Sets a CFCXCountersComponent's health the way the game's own health changes do.
 void SetHealth(void* counters, float health);
-
-// The counters service's shared multiplier per BodyPart, kHead to kFeet, or null.
-float* PartMultipliers(const void* counters);
 
 }
