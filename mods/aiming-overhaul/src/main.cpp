@@ -268,6 +268,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
 
 // Runs after every plugin's FCSE_Load, so DevTools has loaded by now if it is installed at all.
 extern "C" __declspec(dllexport) void FCSE_OnRegisterFunctions(const FCSE_PluginAPI*) {
-    DevTools::Overlay::AddWindow("Aiming Overhaul", 420.0f, 190.0f,
+    DevTools::Overlay::AddWindow("Aiming Overhaul", 420.0f, 240.0f,
                                  &AimingOverhaul::Tuning::DrawWindow);
 }

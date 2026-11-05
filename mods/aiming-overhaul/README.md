@@ -88,14 +88,15 @@ both field by field with other mods' edits, reporting any clash.
   easing off past 15: 0.38° for a Makarov, 0.74° for an AR-16, 1.08° for an AK-47, 1.45° for a
   PKM, 2.06° for a SPAS-12 and 2.95° for an AS50, the same from the hip and down the sights. It
   peaks within 0.05 s and is back in a quarter of a second. Firing full auto, the kick fades out
-  over the first three rounds into a roll, clockwise and back, a whole cycle every 0.4 s and 0.15°
+  over the burst's first 0.3 s into a roll, clockwise and back, a whole cycle every 0.4 s and 0.15°
   either way for each newton-second, which stops as soon as the rounds do. Single-shot guns kick on
   every shot however fast they are fired. A gun that names no round, a launcher, the Dart Rifle,
   the crossbow, the flare gun or every gun without Difficulty Overhaul, kicks by the game's own
   recoil instead, counted as a push the way an AK-47's is. Only the view turns, about the eye: the
   gun keeps its place and the shots their line, so the sights stay on where a shot goes. A scope's
-  sight picture does not shake. The kick, its time, the roll and its cycle are set in Aiming
-  Overhaul's window in DevTools' overlay, opened with Home, and kept in `bin\aiming-overhaul.ini`.
+  sight picture does not shake. The kick, its time and its delay after the shot, the roll, its
+  cycle and the fade into it are set in Aiming Overhaul's window in DevTools' overlay, opened with
+  Home, and kept in `bin\aiming-overhaul.ini`.
 - **Gun blur.** Down the iron sights the eye focuses on the front sight, and the rest of the gun
   goes out of focus by how far it is from it, as through an 8 mm pupil: the rear sight most, and the
   blur spills a little past the gun's edge. The focus holds on the front sight while a fast turn
@@ -243,8 +244,10 @@ shot shook.
 |---|---|---|
 | Single shot kick | degrees per newton-second | 0.2 |
 | Single shot time | seconds until the view is back | 0.25 |
+| Single shot delay | seconds from the shot until the kick starts | 0 |
 | Full auto roll | degrees either way per newton-second | 0.15 |
 | Full auto roll cycle | seconds for a roll clockwise and back | 0.4 |
+| Kick to roll fade | seconds of a burst over which the kick gives way to the roll | 0.3 |
 
 ## Building
 

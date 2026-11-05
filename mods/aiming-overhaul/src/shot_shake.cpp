@@ -9,6 +9,7 @@
 #include "imgui.h"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <numbers>
@@ -24,11 +25,9 @@ namespace {
     // How many times its seconds to peak a struck spring takes to be within a twentieth of rest.
     constexpr float kSettledAfterPeaks = 5.74f;
 
-    // Full-auto rounds less than kBurstGap seconds apart are one burst. Over its first
-    // kRoundsToRoll rounds the kick fades into the roll, which eases in and out over kRollEase
-    // seconds and stops once a round is kLate times the burst's interval late.
+    // Full-auto rounds less than kBurstGap seconds apart are one burst. The roll eases in and out
+    // over kRollEase seconds and stops once a round is kLate times the burst's interval late.
     constexpr float kBurstGap = 0.25f;
-    constexpr float kRoundsToRoll = 3.0f;
     constexpr float kRollEase = 0.06f;
     constexpr float kLate = 1.5f;
     constexpr float kShortestInterval = 0.02f;
@@ -36,14 +35,18 @@ namespace {
     // Set in the window, at their defaults until the file is read.
     std::atomic<float> g_kickPerImpulse{0.2f};
     std::atomic<float> g_kickTime{0.25f};
+    std::atomic<float> g_kickDelay{0.0f};
     std::atomic<float> g_rollPerImpulse{0.15f};
     std::atomic<float> g_rollCycle{0.4f};
+    std::atomic<float> g_rollFade{0.3f};
 
     constexpr AimingOverhaul::Tuning::Slider kSliders[] = {
         {"KickPerImpulse", "Single shot kick", 0.0f, 0.6f, "%.3f deg per N s", &g_kickPerImpulse},
         {"KickTime", "Single shot time", 0.05f, 1.0f, "%.2f s", &g_kickTime},
+        {"KickDelay", "Single shot delay", 0.0f, 0.3f, "%.3f s", &g_kickDelay},
         {"RollPerImpulse", "Full auto roll", 0.0f, 0.6f, "%.3f deg per N s", &g_rollPerImpulse},
         {"RollCycle", "Full auto roll cycle", 0.1f, 2.0f, "%.2f s", &g_rollCycle},
+        {"RollFade", "Kick to roll fade", 0.0f, 2.0f, "%.2f s", &g_rollFade},
     };
 
     std::atomic<bool> g_enabled{true};
@@ -58,6 +61,13 @@ namespace {
     float g_interval = kBurstGap;
 
     AimingOverhaul::Spring g_kick;
+    // Kicks waiting out the delay: the seconds left and how far each kicks.
+    struct Waiting {
+        float seconds;
+        float peak;
+    };
+    std::array<Waiting, 16> g_waiting = {};
+    size_t g_waitingCount = 0;
     // The roll's size either way as the last round set it, and as eased.
     float g_rollSize = 0.0f;
     float g_roll = 0.0f;
@@ -94,14 +104,30 @@ void AimingOverhaul::ShotShake::Kick(const Kick::Kick& kick) {
     const float round = Cartridge::Impulse();
     const float impulse = round > 0.0f ? round : (std::max)(kick.up, 0.0f) * kImpulsePerKick;
     g_lastImpulse = impulse;
-    const float rolled = (std::min)(static_cast<float>(g_rounds) / kRoundsToRoll, 1.0f);
-    g_kick.Strike((1.0f - rolled) * Angle(impulse, g_kickPerImpulse), KickOmega());
+    // A burst's first round only kicks; past the fade's seconds into it, its rounds only roll.
+    const float rolled =
+        g_rounds == 0 ? 0.0f : (std::min)(g_burst / (std::max)(g_rollFade.load(), 1e-3f), 1.0f);
+    const float peak = (1.0f - rolled) * Angle(impulse, g_kickPerImpulse);
+    if (g_kickDelay > 0.0f && g_waitingCount < g_waiting.size()) {
+        g_waiting[g_waitingCount++] = {g_kickDelay, peak};
+    } else {
+        g_kick.Strike(peak, KickOmega());
+    }
     g_rollSize = rolled * Angle(impulse, g_rollPerImpulse);
 }
 
 AimingOverhaul::ShotShake::Turn AimingOverhaul::ShotShake::Update(float seconds) {
     g_since += seconds;
     g_burst += seconds;
+    for (size_t i = 0; i < g_waitingCount;) {
+        g_waiting[i].seconds -= seconds;
+        if (g_waiting[i].seconds > 0.0f) {
+            ++i;
+            continue;
+        }
+        g_kick.Strike(g_waiting[i].peak, KickOmega());
+        g_waiting[i] = g_waiting[--g_waitingCount];
+    }
     const bool rolling = g_rounds > 0 && g_since < kLate * g_interval;
     g_roll = Follow(g_roll, rolling ? g_rollSize : 0.0f, seconds, kRollEase);
     g_kick.Settle(KickOmega(), seconds);
