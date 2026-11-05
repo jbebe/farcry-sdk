@@ -34,6 +34,11 @@ Combat that is realistic and fair:
   man would; the player's health system is to be reworked. On 2026-11-05 the mod's healing and its
   removal of the last-bar cushion were scrapped, so the rework starts from the game's own: "the
   current approach is not well thought out".
+- **Difficulty is how much the player can take** (2026-11-05): "we need hardcore to make you barely
+  alive, infamous impossible, normal normal and easy easy." The guns hit as hard on every setting;
+  the player's health is sized in AK-47 hits from full, the 8th killing on Easy, the 5th on Normal,
+  the 3rd on Hardcore and the 1st on Infamous; the last bar's cushion stays on Easy and Normal only;
+  and regeneration is quicker the easier the setting, never on Infamous ("its still hard for easy").
 - **Fire discipline and cover define the mod.** A soldier holds his fire until he can make the player
   out. Seen in game: "The bush, the tall grass actually makes them stop shooting. the sniper has no
   LoS and waits for me to peek."
@@ -166,6 +171,7 @@ reach, the wall between left him unlit. Not played.
 | 6 | Real rounds (2026-11-05): each gun's impact level from its round, no soldiers' damage curves, no close-range bonus, a head hit kills anyone but the player, a torso hit never downs; replaces step 2 | range, row 26 |
 | 7 | The game's own health back (2026-11-05): the mod's healing and its removal of the last-bar cushion scrapped, a blank slate for the health rework | nothing to check: the game as shipped |
 | 8 | Regeneration (2026-11-05): above one bar, one bar to full in 5 minutes from the game's 5 s after the last hit, in place of the game's refill of the bar health is in | range, row 27 |
+| 9 | Health by difficulty (2026-11-05): maximum health and bar curves scaled to AK-47 hits from full, the last bar's cushion on Easy and Normal only, regeneration per difficulty | Hardcore on the range, rows 27 and 28 |
 
 The mod's README lists each feature's values.
 
@@ -218,6 +224,7 @@ range in the log drifts from the scenario's distance.
 | 25 | Notice delay | `python tools\fc2drive\scenarios\notice.py`: an idle rifleman walks the lane's patrol route toward the player by day, who stands still upright or crouched, walks to him, or runs to and fro | he notices where the delay, walked over his own traced looks, says he does: later than the notice distance, after the seconds in sight the model gives | new 2026-11-04: "running like a madman from one cover to another in a totally visible situation should give you around 2 seconds" | fc2drive, 2026-11-04, not played: every case where the model puts it, within a look. Standing still, noticed at 39.5 m (model 39.7 m), walking to him 38.5 m (38.5 m), crouched still 35.8 m (35.8 m), running to and fro 85.5 m after 4.0 s in sight (85.7 m), where row 24 had 48 m still and 100 m moving upright. An idle soldier glances about, so the delay fills only while the player is in his focus and drains between glances; row 24's walk-in notice distances predate it |
 | 26 | Real rounds | `python tools\fc2drive\scenarios\damage.py`: single shots at a rifleman's back from 10 m with the Makarov, Uzi, AK-47, FAL, SPAS-12 and AS50, standing and crouched; then a rifleman shoots the player, invincibility off | each hit at its gun's level: a torso hit takes 134, 185, 350, 399, 117 a pellet and 1,000, an arm 0.6 of it, a head hit kills; the rifleman's AK takes 350 from the player | new 2026-11-05: "weapon damage must be tied to the specific weapon with their specific ammo"; "ai damage curve should not exist"; "bonus damage should not exist at point blank" | fc2drive, 2026-11-05, not played: every hit at its gun's level. Torso hits took 134, 185, 117 a pellet, and the AK, FAL and AS50 killed; arm hits took 80 from the Makarov and 210 from the AK, which downed him at 41; a SPAS pellet in the legs 117. The rifleman's AK took 349 a hit from the player. A shotgun's off-centre pellets have their own stim, `Stim_ImpactDamageSecondary`, at the game's level until it was set too |
 | 27 | Regeneration | `python tools\fc2drive\scenarios\regeneration.py`: a rifleman at 20 m, invincibility off, until one hit lands; cleared; 30 s later a second rifleman's first hit | a `regenerating:` line 5 s after the hit; the second hit's health before it where one bar to full in 300 s puts it, below the top of the bar the hit left him in | new 2026-11-05: "we need to make a slow regen feature if the player is not below the threshold for the field aid"; the user's picks: replace the game's refill, 5 minutes, the game's 5 s | fc2drive, 2026-11-05, not played: 1,025 -> 676, the climb started 5.0 s later with one bar 205, full in 128 s; 37.7 s in, health stood at 779, as predicted, where the game's refill would have reached the bar's top, 820, within a second. Below one bar not run |
+| 28 | Last bar | `python tools\fc2drive\scenarios\last_bar.py`: a shotgunner at 20 m shoots the player, invincibility off, until he dies | every hit takes its full damage, one on the last bar too, on Hardcore | new 2026-11-05: the cushion off on Hardcore and Infamous, kept on Easy and Normal | fc2drive, 2026-11-05, not played: pellets took 117 each from 1,025 down to 92, inside the 205 bar, and the next took its full 117 and killed, where the cushion would have taken 29. The light machine gunner, who carries an AK-47 on the range, killed with his third hit, 349 each. The range plays Hardcore only, so Easy, Normal and Infamous are unchecked: their curves are in the built patch |
 
 ### Still to do before it is finished
 
@@ -353,8 +360,8 @@ mod counts as finished. Listed on 2026-10-28; nothing decided yet.
 
 | Lever | Where | Casual → Infamous | With the mod |
 |---|---|---|---|
-| Player maximum health | data: `HealthMax_*` and `HealthBarSize_*` curves | 1,800 / 1,400 / 1,075 / 825 at the curves' start | untouched; the biggest thing still differing |
-| Last-bar cushion | code | quarters damage while the player is on his last bar | untouched |
+| Player maximum health | data: `HealthMax_*` and `HealthBarSize_*` curves | 1,800 / 1,400 / 1,075 / 825 at the curves' start | scaled to AK-47 hits from full: 2,244 / 1,471 / 1,025 / 320 at the campaign's start, the 8th / 5th / 3rd / 1st kills |
+| Last-bar cushion | code | quarters damage while the player is on his last bar | kept on Casual and Experienced, removed on Hardcore and Infamous |
 | Syrette cap | code | 6 / 5 / 4 / 3 | untouched |
 | Bleeding out on the last bar | data: `HealthDegenerationLevels` in `gamemodesconfig.xml` | a bar every 15 s on every setting; Infamous names a curve that does not exist | untouched |
 | Health pickups, medic stations | code | per setting; Infamous medic stations take another branch, never checked | untouched |
@@ -375,7 +382,7 @@ squad coordination are the forgiveness levers agreed on 2026-10-21:
 | Constant | Hardcore now | Eased by |
 |---|---|---|
 | Damage the player takes | each gun's real-round damage, whole wherever it lands: 350 from an AK-47 | a share of it; the player's health system is to be reworked |
-| Regeneration | above one bar, one bar to full in 5 minutes, from 5 s after the last hit | a faster climb |
+| Regeneration | above one bar, one bar to full in 5 minutes, from 5 s after the last hit | done: Easy from 1 s, in 10 s; Normal from 3 s, in a minute; Infamous never |
 | Aim settle | 0.6 s + 0.02 s per metre | longer before his shots land |
 | Recoil | a follow-up loses up to 60 %, recovering in 0.25 s | more lost, or slower recovery |
 | Suppression pin | 1 s | longer pins |

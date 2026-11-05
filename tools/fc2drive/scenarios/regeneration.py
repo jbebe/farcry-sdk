@@ -12,8 +12,8 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from damage import PLAYER_HIT, SHOOTER, SHOOTER_LIMIT, SOLDIERS_GUN, first_match
-from perception import CLEAR, LANE_MIDDLE, SAVE, Log, put, spawn, spawn_yaw
+from damage import PLAYER_HIT, SHOOTER_LIMIT, SOLDIERS_GUN, face_shooter, first_match
+from perception import CLEAR, SAVE, Log
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fc2drive import Run, launch
@@ -26,12 +26,7 @@ REGENERATING = re.compile(r"regenerating: health (\S+) of (\S+), one bar (\S+), 
 
 def take_a_hit(game, log):
     """A rifleman's first hit on the player, or None; he is cleared after it."""
-    west = spawn_yaw(-1.0, 0.0)
-    put(game, *LANE_MIDDLE, west)
-    log.new_lines()
-    spawn(game, (LANE_MIDDLE[0] + SHOOTER, LANE_MIDDLE[1]), west)
-    # A shot away from him alerts him: an idle soldier does not open fire.
-    game.fire(0.05)
+    face_shooter(game, log)
     hit = first_match(log, PLAYER_HIT, SHOOTER_LIMIT)
     game.lua(CLEAR)
     return hit

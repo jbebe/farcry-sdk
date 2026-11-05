@@ -2,14 +2,14 @@
 
 Realistic damage and AI shooting for Far Cry 2, scaled by the game's own difficulty setting. An FCSE
 plugin that changes `Dunia.dll` in memory, and a data layer of changes to the soldiers' brain, the
-guns and the hit locations.
+guns, the hit locations and the player's health.
 
 The goal is lethal combat in both directions where every hit is earned: a bullet that connects is
 serious for the player and for a mercenary, and whether it connects depends on range, movement,
-visibility, recoil and the time a shooter needs to settle his aim. Everything is tuned on Hardcore,
-and every difficulty plays at those values for now; Easy and Normal will be eased from it and
-Infamous made harder, so the difficulties differ in how forgiving the game is rather than in how well
-the enemy aims. The values are constants in the plugin, with nothing on the Mod Configuration Menu.
+visibility, recoil and the time a shooter needs to settle his aim. Everything is tuned on Hardcore.
+The difficulties differ only in how much the player can take and how he heals, never in how well the
+enemy aims or how hard his guns hit. The values are constants in the plugin, with nothing on the Mod
+Configuration Menu.
 
 ## Features
 
@@ -17,7 +17,9 @@ the enemy aims. The values are constants in the plugin, with nothing on the Mod 
 |---|---|
 | Weapon damage | Every gun's bullet is as lethal as its real round, whoever fires it: its impact level is the one whose damage on the game's curve is nearest 7.3 × √(one projectile's muzzle energy in joules), from the round's bullet mass and the gun's own muzzle velocity. Makarov 134, Star .45 168, Uzi, MP5 and MAC-10 185, M16 and M249 300, AK-47, G3 and Desert Eagle 350, FAL, Dragunov, PKM and M1903 399, AS50 and M2 1,000, a buckshot pellet 117, 100 from the DLC shotguns. The soldiers' damage curves are gone, so a soldier's gun hits as hard as the player's, and so is the close-range bonus on every difficulty. Part of the layer, with each gun's round as FCSE entity data any mod may read: `Cartridge.Name`, `Cartridge.BulletMass` in grams, `Cartridge.MuzzleVelocity` in m/s, `Cartridge.Projectiles` and `Cartridge.MuzzleEnergy` in joules for the whole round |
 | Hit locations | The player takes a hit whole wherever it lands, as in the game. Anyone else takes it by where it lands: a head hit kills, torso and legs 1, arms 0.6, hands and feet 0.3, in place of the game's 6, 1, 1, 0.5, 0.5, 0.5. The body part of each hit on the player is in the hit log. Part of the layer, `gamemodesconfig.xml` |
-| Regeneration | Above one health bar, where the heal key does a syrette rather than the surgery, health climbs steadily to full: one bar to full in 5 minutes, starting the game's 5 s after the last hit, on every difficulty. It replaces the game's refill of the bar health is in, within a second, which never brought an emptied bar back. Below one bar the game is unchanged: the last bar bleeds out and the surgery leaves two bars. A syrette, beds and medic cabinets still fill health. Each climb's start is logged as `regenerating:` |
+| Health | The player's maximum health on each difficulty is sized in AK-47 hits from full, at the sickness level the campaign starts at: the 8th kills on Easy, the 5th on Normal, the 3rd on Hardcore and the 1st on Infamous. That is 2,244, 1,471, the game's 1,025 and 320, the game's curves scaled by 1.32, 1.11, 1 and 0.4, with a bar still a fifth of it. Sickness still shrinks it as in the game, to 1,716, 1,138, 825 and 280; Hardcore and Infamous keep their counts, Easy and Normal move by a hit or two, which the last bar's cushion makes uneven. Part of the layer, `data\health.py` |
+| Damage taken | The last health bar quarters a hit on Easy and Normal, as in the game, and no longer on Hardcore and Infamous, where a hit on it takes its full damage |
+| Regeneration | Above one health bar, where the heal key does a syrette rather than the surgery, health climbs steadily to full: on Easy from 1 s after the last hit, one bar to full in 10 s; on Normal from 3 s, in a minute; on Hardcore from 5 s, in 5 minutes; never on Infamous. It replaces the game's refill of the bar health is in, within a second, which never brought an emptied bar back. Below one bar the game is unchanged: the last bar bleeds out and the surgery leaves two bars. A syrette, beds and medic cabinets still fill health. Each climb's start is logged as `regenerating:` |
 | Going down | A soldier the player's hit in an arm, leg, hand or foot would kill goes down wounded instead, every time: he calls for help, crawls to cover, and may shoot back from the ground. The game rolls for it against the player's reputation, 15 % early in the story, and lets only a few soldiers be down at once. A head or torso hit never downs anyone: it wounds or kills |
 | Hit model | How the AI's shots at the player land. Aim settles over 0.6 s plus 0.02 s per metre after he acquires the player, where the game misses outright and then hits at full accuracy; the chance is the real probability of a hit, capped at 0.85 so no shot is certain, point blank included; it falls with how well he sees the player, full from a visibility of 0.6, and with how fast the player crosses his aim, as 1 / (1 + the angle crossed per second in radians), so running across his line of fire is harder to hit than running at him; each shot's recoil costs the next up to 60 % of its chance, recovering in about a quarter of a second, in place of the game's forced misses after a hit; and he aims at the head only 15 % of the time, where the game alternates head and torso, and never in his first 3 s on the player: first contact, a reacquired sight, a peek from a new spot or a near miss that pins him all start that over, so a first sighting cannot end in a headshot |
 | Fire discipline | A soldier holds his fire at the player until he recognises him: his own "clear" line, which perception puts at the distance he recognises the player from. Holding, he stays where he is, aimed, and fires the moment he recognises the player: the shoot task is told his aim is not on the player yet, which keeps it waiting, where refusing the shot would end it and send him elsewhere. A soldier a hit has panicked fires regardless |
@@ -80,19 +82,21 @@ recognises from. fc2drive's perception scenario reads it to know where the soldi
 python ..\..\scripts\verify_patterns.py
 .\build-layer.ps1            # the brain's fragments in layer\, from the installed game's merc brain
 python data\weapons.py world1.xml world2.xml dlc1.xml tmpla.xml gamemodesconfig.xml
+python data\health.py world1.xml world2.xml dlc1.xml tmpla.xml
 ```
 
-`data\weapons.py` writes the guns' fragments and `gamemodesconfig.xml` from decoded retail entity
-libraries and the retail file; its docstring says which. The test range's guns come from `tmpla`'s
-library, which DevTools copies into the range's own, so `tmpla`'s fragments are written for
-`worlds\testrange`.
+`data\weapons.py` writes the guns' fragments and `gamemodesconfig.xml`, and `data\health.py` the
+player's health curves, from decoded retail entity libraries and the retail file; their docstrings say
+which. The test range's guns and curves come from `tmpla`'s library, which DevTools copies into the
+range's own, so `tmpla`'s fragments are written for `worlds\testrange`.
 
 `layer\` is what the release zips: the plugin under `plugins\`, and the brain's changes as fragments
 under `mods\scripts\game\newbrains\mercbrain.ai.rml\`, one file per plan or task, which JackAll
 merges into the game's own brain at install. `build-layer.ps1` makes them: it takes
 `mercbrain.ai.rml` out of the installed game, makes the edits and writes what differs with
-`jackall-cli ai fragments`. Beside them are the guns' weapon and weapon-properties fragments, which
-JackAll merges field by field with any other mod's copies, and the whole `gamemodesconfig.xml`.
+`jackall-cli ai fragments`. Beside them are the guns' weapon and weapon-properties fragments and the
+health curves, which JackAll merges field by field with any other mod's copies, and the whole
+`gamemodesconfig.xml`.
 Install with `jackall-cli mod build --game "<game>" --layer layer`,
 together with any other layers in play.
 

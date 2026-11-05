@@ -9,9 +9,14 @@ Notable changes to Difficulty Overhaul, loosely following
 - **Real rounds.** Every gun hits as hard as its real cartridge, whoever fires it: one torso hit from
   a rifle drops a soldier, two from a pistol, a head hit from anything kills. A soldier's gun hurts
   you as much as yours hurts him, and no gun gains damage up close.
-- **Wounds heal slowly.** Above your last bar health climbs back to full on its own, from one bar
-  to full in 5 minutes, starting 5 seconds after the last hit, where the game refilled only the bar
-  you were in. On your last bar you still bleed and need the surgery, as in the game.
+- **Difficulty is how much you can take.** From full health an AK-47 hit kills you on Infamous,
+  the third on Hardcore, the fifth on Normal and about the eighth on Easy, wherever it lands; the
+  soldiers aim and hit the same on every setting. On Easy and Normal your last bar still softens hits,
+  as in the game, and on Hardcore and Infamous no longer does.
+- **Wounds heal on their own.** Above your last bar health climbs back to full: on Easy from a
+  second after the last hit, in 10 seconds; on Normal from 3 seconds, in a minute; on Hardcore from 5
+  seconds, in 5 minutes; never on Infamous. The game refilled only the bar you were in. On your last
+  bar you still bleed and need the surgery, as in the game.
 - **Limb hits wound.** A hit to an arm or a leg that would kill a soldier puts him down wounded
   instead: he calls for help, crawls for cover and may shoot back from the ground. A torso hit never
   does: it wounds or kills.
@@ -50,4 +55,4 @@ Notable changes to Difficulty Overhaul, loosely following
   when the alert began and goes back to his post, where the game kept him searching for good.
 - **A combat log** in `bin\difficulty-overhaul-logs`, one file per session and the last 20 kept:
   every hit on you and by you, and every shot at you with its chance.
-- **Tuned on Hardcore.** In this version every difficulty plays at the Hardcore values.
+- **Tuned on Hardcore.** The difficulties differ only in your health and how it comes back.

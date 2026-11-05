@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from perception import CLEAR, LANE_MIDDLE, SAVE, Log, put, spawn, spawn_yaw
+from perception import CLEAR, LANE_MIDDLE, RIFLEMAN, SAVE, Log, put, spawn, spawn_yaw
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fc2drive import Run, launch
@@ -32,7 +32,7 @@ GUNS = ("weapons.Secondary.Makarov", "weapons.Secondary.Uzi", "weapons.Primary.A
         "weapons.Primary.SPAS12", "weapons.Primary.AS50")
 SOLDIERS_GUN = "weapons.Primary.AK47"
 SOLDIER_HIT = re.compile(r"soldier \w+ hit: \w+ level (\d+), ([\w ]+), at (\S+) m, (.*?) \(")
-PLAYER_HIT = re.compile(r"player hit: \w+ level (\d+), ([\w ]+), at (\S+) m, health (\S+) -> (\S+) of ")
+PLAYER_HIT = re.compile(r"player hit: \w+ level (\d+), ([\w ]+), at (\S+) m, health (\S+) -> (\S+) of ([\d.]+)")
 
 
 def expected(archetype):
@@ -49,6 +49,16 @@ def first_match(log, pattern, seconds):
             return hit
         time.sleep(0.05)
     return None
+
+
+def face_shooter(game, log, archetype=RIFLEMAN):
+    """A soldier SHOOTER m east of the player, who faces away from him, with the log read up to now."""
+    west = spawn_yaw(-1.0, 0.0)
+    put(game, *LANE_MIDDLE, west)
+    log.new_lines()
+    spawn(game, (LANE_MIDDLE[0] + SHOOTER, LANE_MIDDLE[1]), west, archetype)
+    # A shot away from him alerts him: an idle soldier does not open fire.
+    game.fire(0.05)
 
 
 def shoot_at(game, log, crouched):

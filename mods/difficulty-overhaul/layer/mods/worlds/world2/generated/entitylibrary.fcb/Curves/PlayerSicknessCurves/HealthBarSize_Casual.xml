@@ -1,0 +1,44 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">PlayerSicknessCurves.HealthBarSize_Casual</value>
+      <object type="Entity">
+        <value name="hidName" type="String">Curves.PlayerSicknessCurves.HealthBarSize_Casual</value>
+        <value name="disEntityId" type="Int64">162</value>
+        <value name="text_hidEntityClass" type="String">CCurve</value>
+        <value name="hidEntityClass" type="Hash">68745CCF</value>
+        <object type="curveCurve">
+          <value name="hidNumKnots" type="UInt32">2</value>
+          <object type="Knots">
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>0</x>
+                <y>475.2</y>
+                <z>0.5</z>
+                <w>0</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+            <object type="Knot">
+              <value name="Value" type="Vector4">
+                <x>5</x>
+                <y>343.2</y>
+                <z>0.5</z>
+                <w>0</w>
+              </value>
+              <value name="Info" type="Vector4">
+                <x>6.2832</x>
+                <y>1</y>
+                <z>0</z>
+                <w>0</w>
+              </value>
+              <value name="Type" type="UInt32">0</value>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>
