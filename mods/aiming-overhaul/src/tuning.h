@@ -47,6 +47,7 @@ struct HitLook {
     float reach = 0.55f;
     float vignetteGone = 2.5f;
     float black = 0.35f;
+    float unblack = 1.5f;
     float apart = 40.0f;
     float doubleGone = 5.0f;
 };

@@ -301,6 +301,7 @@ Throw dirt, under them, throws it as a round landing a metre to the right would.
 | Vignette reach | how far in from the corners the dark comes, a share of the way to the middle | 0.55 |
 | Vignette gone by | seconds after the hit | 2.5 |
 | Head: black for | seconds | 0.35 |
+| Head: black fades over | seconds after that | 1.5 |
 | Head: double image apart | pixels of a 1080-line screen | 40 |
 | Head: double image gone by | seconds after the hit | 5 |
 

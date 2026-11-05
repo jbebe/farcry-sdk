@@ -31,9 +31,8 @@ namespace {
     // The vignette darkens over kDarken seconds and starts to clear kDarkHold after the hit.
     constexpr float kDarken = 0.12f;
     constexpr float kDarkHold = 0.5f;
-    // The black clears over kUnblack seconds; the second image is kDouble of the view as it does,
-    // and lies kDoubleDown of its distance across below the first.
-    constexpr float kUnblack = 1.5f;
+    // The second image is kDouble of the view as the black clears, and lies kDoubleDown of its
+    // distance across below the first.
     constexpr float kDouble = 0.5f;
     constexpr float kDoubleDown = 0.35f;
     // The screen height the double image's distance is given for.
@@ -147,9 +146,10 @@ void AimingOverhaul::Hit::OnComposite(IDirect3DDevice9* device, IDirect3DSurface
                                      (1.0f - Through(sinceBody - kDarkHold,
                                                      look.vignetteGone - kDarkHold))
                                : 0.0f;
-    const float black = 1.0f - Through(clearing, kUnblack);
+    const float black = 1.0f - Through(clearing, look.unblack);
     const float seenDouble =
-        kDouble * (1.0f - Through(clearing, (std::max)(look.doubleGone - look.black, kUnblack)));
+        kDouble *
+        (1.0f - Through(clearing, (std::max)(look.doubleGone - look.black, look.unblack)));
     IDirect3DPixelShader9* shader =
         vignette > 0.0f || black > 0.0f || seenDouble > 0.0f ? g_shader.Get(device) : nullptr;
     if (shader == nullptr) {

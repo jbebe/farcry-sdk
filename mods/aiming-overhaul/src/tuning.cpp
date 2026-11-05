@@ -70,6 +70,7 @@ namespace {
         {"Reach", "Vignette reach", &HitLook::reach, 0.1f, 0.9f, "%.2f of the way in"},
         {"VignetteGone", "Vignette gone by", &HitLook::vignetteGone, 0.6f, 8.0f, "%.1f s"},
         {"Black", "Head: black for", &HitLook::black, 0.05f, 2.0f, "%.2f s"},
+        {"Unblack", "Head: black fades over", &HitLook::unblack, 0.05f, 5.0f, "%.2f s"},
         {"Apart", "Head: double image apart", &HitLook::apart, 0.0f, 150.0f, "%.0f px at 1080p"},
         {"DoubleGone", "Head: double image gone by", &HitLook::doubleGone, 0.5f, 15.0f, "%.1f s"},
     };
