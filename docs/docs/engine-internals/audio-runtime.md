@@ -654,6 +654,12 @@ water and so on. The shell-casing and explosion impact records have no sound.
 An NPC's bullet that hits the player plays particles and a decal but no impact sound. Shell casings play
 `matimpShellImpactFx` on the ground under the shooter.
 
+The loader (`FUN_1050d8f0`) keys each record by the CRC32 of its `Name`, so a mod can add a record
+and name it from a weapon's `matimpBulletImpactFx` **(RE-verified)**. A round that hits the player
+plays the shooter's weapon record. The player pawn's own `matimpFakeBulletFx` plays only on a
+`CPawnEventFakeBullet`, which only Lua's `SendPierceStimWithOrigin` sends (server
+`CPawnSoundAndFXComponent::OnEvent`, `0x088d1a90`).
+
 There is **no ricochet** anywhere: no event, field, string or code. The only bounce asset,
 `matimpBounceImpactFx`, belongs to thrown objects.
 

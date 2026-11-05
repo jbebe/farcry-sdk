@@ -7,6 +7,8 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
 - **Real rounds.** Every gun hits as hard as its real cartridge, whoever fires it: one torso hit from
   a rifle drops a soldier, two from a pistol, a head hit from anything kills. A soldier's gun hurts
   you as much as yours hurts him, and no gun gains damage up close.
+- **Blood only from buckshot.** A bullet that hits you or a soldier no longer throws a spray of
+  blood; a shotgun's pellets still do.
 - **Difficulty is how much you can take.** From full health an AK-47 hit kills you on Infamous,
   the third on Hardcore, the fifth on Normal and about the eighth on Easy, wherever it lands; the
   soldiers aim and hit the same on every setting. On Easy and Normal your last bar still softens hits,
@@ -85,4 +87,6 @@ jackall-cli mod restore --game "C:\Games\Far Cry 2"
 - **Mods that change the soldiers' brain** merge with it plan by plan, and a mod that replaces the
   brain whole still works: these changes go on top of it.
 - **Mods that change weapon damage or health** change the numbers this mod multiplies.
+- **Mods that change bullet impacts or blood** replace this mod's whole `materialimpacts.xml`, or it
+  replaces theirs: whichever is installed last wins.
 - **Flashlight:** its guards noticing your light does not work while this mod is installed.

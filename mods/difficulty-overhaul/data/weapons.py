@@ -13,6 +13,8 @@
 
 - gamemodesconfig.xml: the single-player hit locations, which scale every hit on anyone but the player:
   a head hit kills.
+- materialimpacts.xml: no blood sprays from a bullet that hits anyone, the player too. The shotguns'
+  pellets play Weapon.Pellet, the game's bullet impact copied with its blood.
 
 Each archetype fragment is copied whole out of a decoded entity library with only those values changed
 or FCSE's entity data component added, so JackAll merges it field by field with any other mod's copy.
@@ -24,11 +26,13 @@ rifle, the crossbow, the flare gun and the machetes.
     jackall-cli fcb decode <dlc1 entitylibrary.fcb> -o dlc1.xml
     jackall-cli fcb decode <tmpla entitylibrary.fcb> -o tmpla.xml
     python data\\weapons.py world1.xml world2.xml dlc1.xml tmpla.xml <engine\\gamemodes\\gamemodesconfig.xml>
+        <databases\\materialimpacts\\materialimpacts.xml>
 
 The libraries are the campaign's, worlds\\world{1,2}\\generated\\entitylibrary.fcb and
 downloadcontent\\dlc1\\generated\\entitylibrary.fcb, and tmpla's, worlds\\tmpla\\generated\\entitylibrary.fcb,
 whose guns DevTools' test range copies into its own library; tmpla's fragments are written for that
-library, worlds\\testrange. tmpla's and gamemodesconfig.xml are patch.dat's.
+library, worlds\\testrange. tmpla's and gamemodesconfig.xml are patch.dat's, materialimpacts.xml is
+common.dat's.
 """
 import math
 import os
@@ -37,7 +41,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "scripts"))
-from entity_fragments import add_entity_data, fragment_path, object_lines, prototypes, write
+from entity_fragments import add_entity_data, fragment_path, object_lines, prototypes, replace_hashed, write
 
 LAYER = os.path.join(HERE, "..", "layer", "mods")
 LIBRARIES = (
@@ -47,6 +51,13 @@ LIBRARIES = (
     ("worlds", "testrange", "generated", "entitylibrary.fcb"),
 )
 GAME_MODES = os.path.join(LAYER, "engine", "gamemodes", "gamemodesconfig.xml")
+IMPACTS = os.path.join(LAYER, "databases", "materialimpacts", "materialimpacts.xml")
+# The impact record every gun's bullets play, and the shotguns' copy of it, the only one with blood.
+BULLET_IMPACT = "Weapon.Bullet"
+PELLET_IMPACT = "Weapon.Pellet"
+PELLET_IMPACT_ID = "{0C6AFEF8-956A-4F1B-839D-33610FB79B00}"
+# The logic materials whose bullet particles are the blood spray.
+FLESH = ("Base.Flesh", "Base.Flesh_Head")
 
 # Each round: one projectile's mass in grams, and how many one round fires.
 BUCKSHOT = "12 gauge 00 buckshot"
@@ -155,24 +166,49 @@ def edit_properties(block, round_name, velocity):
     set_in(block, "RangeMultipliers", "iMultiplier", "0")
     for curve in AI_CURVES:
         set_in(block, "AICurve", curve, "")
+    # A variant that names no impact record keeps none.
+    if round_name == BUCKSHOT and any(">%s<" % BULLET_IMPACT in line for line in block):
+        text = "\n".join(block)
+        for field in ("matimpBulletImpactFx", "matimpSecondaryBulletImpactFx"):
+            text = replace_hashed(text, field, BULLET_IMPACT, PELLET_IMPACT)
+        block[:] = text.split("\n")
 
 
-def write_hit_locations(retail):
-    with open(retail, encoding="utf-8", newline="") as handle:
-        text = handle.read()
+def hit_locations(text):
     start = text.index("<HitLocations>", text.index("<DefaultCountersService>"))
     end = text.index("</HitLocations>", start)
     section = text[start:end]
     for part, multiplier in HIT_LOCATIONS.items():
         section, count = re.subn(r'(<%s multiplier=")[^"]*(")' % part, r"\g<1>%s\2" % multiplier, section)
         assert count == 1, part
-    os.makedirs(os.path.dirname(GAME_MODES), exist_ok=True)
-    with open(GAME_MODES, "w", encoding="utf-8", newline="") as handle:
-        handle.write(text[:start] + section + text[end:])
-    print(os.path.relpath(GAME_MODES, LAYER))
+    return text[:start] + section + text[end:]
 
 
-def main(paths, retail):
+def impacts(text):
+    start = text.index('\t<MaterialImpact Name="%s"' % BULLET_IMPACT)
+    end = text.index("</MaterialImpact>", start) + len("</MaterialImpact>\r\n")
+    bullet = text[start:end]
+    pellet = re.sub(r'Id="[^"]*"', 'Id="%s"' % PELLET_IMPACT_ID,
+                    bullet.replace('"%s"' % BULLET_IMPACT, '"%s"' % PELLET_IMPACT), count=1)
+    for material in FLESH:
+        bullet, count = re.subn(
+            r'(<ParticlesSystem disName="%s" disMatId="\d+" psParticlesSystem=")[^"]*(" crc_psParticlesSystem=")\d+'
+            % re.escape(material), r"\g<1>\g<2>4294967295", bullet)
+        assert count == 1, material
+    return text[:start] + bullet + pellet + text[end:]
+
+
+def write_retail(retail, out, edit):
+    """Writes the retail file at `out` in the layer, its text passed through `edit`."""
+    with open(retail, encoding="utf-8", newline="") as handle:
+        text = edit(handle.read())
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    with open(out, "w", encoding="utf-8", newline="") as handle:
+        handle.write(text)
+    print(os.path.relpath(out, LAYER))
+
+
+def main(paths, game_modes, material_impacts):
     written = 0
     for path, library in zip(paths, LIBRARIES):
         with open(path, encoding="utf-8") as handle:
@@ -195,7 +231,8 @@ def main(paths, retail):
             write(out, block)
             written += 1
             print(os.path.relpath(out, LAYER))
-    write_hit_locations(retail)
+    write_retail(game_modes, GAME_MODES, hit_locations)
+    write_retail(material_impacts, IMPACTS, impacts)
     print("%d fragments" % written)
     for name, (round_name, velocity) in GUNS.items():
         level = impact_level(round_name, velocity)
@@ -203,4 +240,4 @@ def main(paths, retail):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:5], sys.argv[5])
+    main(sys.argv[1:5], sys.argv[5], sys.argv[6])

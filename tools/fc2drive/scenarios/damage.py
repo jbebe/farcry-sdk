@@ -61,8 +61,9 @@ def face_shooter(game, log, archetype=RIFLEMAN):
     game.fire(0.05)
 
 
-def shoot_at(game, log, crouched):
-    """Single shots at a rifleman until one hits him; the hit's line, or None."""
+def shoot_at(game, log, crouched, tries=TRIES, after_fire=None):
+    """Single shots at a rifleman until one hits him; the hit's line, or None. `after_fire` is called
+    with each shot's number straight after it."""
     game.lua(CLEAR)
     put(game, *LANE_MIDDLE, spawn_yaw(1.0, 0.0))
     if crouched:
@@ -71,8 +72,10 @@ def shoot_at(game, log, crouched):
     time.sleep(SETTLE)
     log.new_lines()
     hit = None
-    for _ in range(TRIES):
+    for attempt in range(1, tries + 1):
         game.fire(0.05)
+        if after_fire:
+            after_fire(attempt)
         if hit := first_match(log, SOLDIER_HIT, TRY_SECONDS):
             break
     if crouched:

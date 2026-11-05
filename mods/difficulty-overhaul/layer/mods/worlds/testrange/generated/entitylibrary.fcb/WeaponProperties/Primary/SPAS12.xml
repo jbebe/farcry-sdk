@@ -271,10 +271,10 @@
               <value name="fSecondaryAnglePitchBulletSpread" type="Float">7</value>
               <value name="text_matimpShellImpactFx" type="String">Weapon.MetalShellMedium</value>
               <value name="matimpShellImpactFx" type="Hash">561ED150</value>
-              <value name="text_matimpBulletImpactFx" type="String">Weapon.Bullet</value>
-              <value name="matimpBulletImpactFx" type="Hash">792B8A0E</value>
-              <value name="text_matimpSecondaryBulletImpactFx" type="String">Weapon.Bullet</value>
-              <value name="matimpSecondaryBulletImpactFx" type="Hash">792B8A0E</value>
+              <value name="text_matimpBulletImpactFx" type="String">Weapon.Pellet</value>
+              <value name="matimpBulletImpactFx" type="Hash">57D5BE1C</value>
+              <value name="text_matimpSecondaryBulletImpactFx" type="String">Weapon.Pellet</value>
+              <value name="matimpSecondaryBulletImpactFx" type="Hash">57D5BE1C</value>
               <object type="Network">
                 <value name="strControllerNetobjectType" type="String"></value>
               </object>

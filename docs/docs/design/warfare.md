@@ -225,7 +225,7 @@ The war between the factions, with the player in neither.
 
 | Idea | What changes | Feasibility | Status |
 | --- | --- | --- | --- |
-| **No blood puffs** | Enemies hit by bullets no longer spray red sprites | data: the flesh entry in `materialimpacts.xml`; the `Base.Flesh` decal also marks hits on the player, so it is separate | requested |
+| **No blood puffs** | Enemies hit by bullets no longer spray red sprites | data: the flesh entry in `materialimpacts.xml`; the `Base.Flesh` decal also marks hits on the player, so it is separate | done in [Difficulty Overhaul](difficulty.md) 2026-11-05, for every gun but the shotguns, on the player too |
 | **A small, lasting wound** | A dark entry mark and a puff of cloth dust in place of the spray, with wound decals that last (Redux uses 30 s) | data | idea |
 | **No hit direction marker** | The red arc that shows where a shot came from | done: Legacy Plugin's *No hit indicator* | idea |
 
