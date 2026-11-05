@@ -9,6 +9,9 @@ Notable changes to Difficulty Overhaul, loosely following
 - **Real rounds.** Every gun hits as hard as its real cartridge, whoever fires it: one torso hit from
   a rifle drops a soldier, two from a pistol, a head hit from anything kills. A soldier's gun hurts
   you as much as yours hurts him, and no gun gains damage up close.
+- **Wounds heal slowly.** Above your last bar health climbs back to full on its own, from one bar
+  to full in 5 minutes, starting 5 seconds after the last hit, where the game refilled only the bar
+  you were in. On your last bar you still bleed and need the surgery, as in the game.
 - **Limb hits wound.** A hit to an arm or a leg that would kill a soldier puts him down wounded
   instead: he calls for help, crawls for cover and may shoot back from the ground. A torso hit never
   does: it wounds or kills.
