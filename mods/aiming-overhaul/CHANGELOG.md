@@ -38,12 +38,13 @@ Notable changes to Aiming Overhaul, loosely following
   as they were.
 - **Full auto spreads.** From the fourth shot of a burst each shot strays a little further, up to
   eight shots' worth.
-- **Shot shake.** Each shot kicks the view up hard and it springs straight back, harder the more the
-  gun kicks. Firing full auto, the kick fades into a roll clockwise and back with the rounds, which
-  stops when they do. Only the view moves: the gun and where the shots go stay as they were. A
-  scope's sight picture does not shake.
-- **Hold breath**, **Gun near walls**, **Vertical inertia**, **Gun up after sprint**, **Landing**
-  and **Recoil that stays** switches in the Mod Configuration menu.
+- **Shot shake.** Each shot kicks the view up and it springs straight back, as hard as the gun's
+  real round pushes back, from the round Difficulty Overhaul gives each gun. Firing full auto, the
+  kick fades into a roll clockwise and back, which stops when the rounds do. Only the view moves:
+  the gun and where the shots go stay as they were. A scope's sight picture does not shake. How hard
+  and how long the kick and the roll are is set in Aiming Overhaul's window in DevTools' overlay.
+- **Hold breath**, **Gun near walls**, **Vertical inertia**, **Gun up after sprint**, **Landing**,
+  **Recoil that stays** and **Shot shake** switches in the Mod Configuration menu.
 
 ### Changed
 - **Interact moves to F, throw grenade to G and next throwable to T** by default, to free Q and E

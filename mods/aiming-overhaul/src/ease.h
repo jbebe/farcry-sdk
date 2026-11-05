@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 
 namespace AimingOverhaul {
 
@@ -41,7 +42,31 @@ struct Spring {
             v += (omega * omega * (target - x) - 2.0f * zeta * omega * v) * dt;
             x += v * dt;
         }
-        if (target == 0.0f && std::fabs(x) < 1e-4f && std::fabs(v) < 1e-3f) {
+        if (target == 0.0f) {
+            Rest();
+        }
+    }
+
+    // Strikes it so that, from rest and damped not to swing, it peaks `peak` out 1 / omega seconds
+    // later.
+    void Strike(float peak, float omega) {
+        v += peak * omega * std::numbers::e_v<float>;
+    }
+
+    // Steps toward nought over `seconds`, ringing at `omega` and damped not to swing past it,
+    // exactly however long the step; at rest once it is close.
+    void Settle(float omega, float seconds) {
+        const float decay = std::exp(-omega * seconds);
+        const float rising = v + omega * x;
+        const float at = x + rising * seconds;
+        x = at * decay;
+        v = (rising - omega * at) * decay;
+        Rest();
+    }
+
+private:
+    void Rest() {
+        if (std::fabs(x) < 1e-4f && std::fabs(v) < 1e-3f) {
             x = v = 0.0f;
         }
     }

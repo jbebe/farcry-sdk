@@ -82,14 +82,20 @@ both field by field with other mods' edits, reporting any clash.
   the gun's kick more each time, up to eight shots' worth: down a new AK-47's sights, up to 1.2°
   more than the game's 0.4°. A burst is shots less than a quarter of a second apart, so slower taps
   each start fresh.
-- **Shot shake.** Each shot kicks the view up hard and it springs straight back, peaking in 0.04 s
-  and still again in a quarter of a second: 1.5 times the gun's kick, up to 3°, of which about four
-  fifths shows, 1.25° for a new AK-47 from the hip. Firing full auto, the kick fades out over the
-  first three rounds into a roll, clockwise and back, a whole cycle every four rounds and three
-  quarters of the kick either way, which stops as soon as the rounds do. Single-shot guns kick on
-  every shot however fast they are fired. Only the view turns, about the eye: the gun keeps its
-  place and the shots their line, so the sights stay on where a shot goes. A scope's sight picture
-  does not shake.
+- **Shot shake.** Each shot kicks the view up and it springs straight back, as hard as the round
+  pushes whoever fires it: its projectiles' mass times their muzzle velocity, from the round
+  Difficulty Overhaul gives each gun's archetype. The kick is 0.2° for each newton-second of push,
+  easing off past 15: 0.38° for a Makarov, 0.74° for an AR-16, 1.08° for an AK-47, 1.45° for a
+  PKM, 2.06° for a SPAS-12 and 2.95° for an AS50, the same from the hip and down the sights. It
+  peaks within 0.05 s and is back in a quarter of a second. Firing full auto, the kick fades out
+  over the first three rounds into a roll, clockwise and back, a whole cycle every 0.4 s and 0.15°
+  either way for each newton-second, which stops as soon as the rounds do. Single-shot guns kick on
+  every shot however fast they are fired. A gun that names no round, a launcher, the Dart Rifle,
+  the crossbow, the flare gun or every gun without Difficulty Overhaul, kicks by the game's own
+  recoil instead, counted as a push the way an AK-47's is. Only the view turns, about the eye: the
+  gun keeps its place and the shots their line, so the sights stay on where a shot goes. A scope's
+  sight picture does not shake. The kick, its time, the roll and its cycle are set in Aiming
+  Overhaul's window in DevTools' overlay, opened with Home, and kept in `bin\aiming-overhaul.ini`.
 - **Gun blur.** Down the iron sights the eye focuses on the front sight, and the rest of the gun
   goes out of focus by how far it is from it, as through an 8 mm pupil: the rear sight most, and the
   blur spills a little past the gun's edge. The focus holds on the front sight while a fast turn
@@ -150,7 +156,9 @@ in `src/engine/kick.cpp`, added to the look in `src/engine/look.cpp`, and a burs
 `src/engine/shot.cpp`. The guns that keep the game's recoil have `AimingOverhaul.RecoilReturns` on
 their archetype, written by `data\fragments.py`. The shot shake is `src/shot_shake.cpp`, struck by
 the same kicks and turning the view through the camera's angular offset in `src/engine/aim.cpp`;
-whether a gun fires full auto is the engine's own answer, read in `src/engine/fire.cpp`. The blur
+the round's push is read from the weapon's `Cartridge.*` entity data in `src/cartridge.cpp`, and
+whether a gun fires full auto is the engine's own answer, read in `src/engine/fire.cpp`. The window
+and its file are `src/tuning.cpp`, drawn through DevTools' overlay API. The blur
 draws the gun's own
 depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the
 blur and the scope shadow draw at the end of the pass the gun's colour is drawn in, before the
@@ -225,6 +233,18 @@ off, the view keeps its field of view down a gun's iron sights; a scope still
 magnifies. With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game
 draws them. Which guns fire them and how fast they fly are the weapon data's, and stay; so does the
 scopes' lost iron-sight effect, whatever the scope settings.
+
+With DevTools installed, its overlay has an Aiming Overhaul window, which sets the shot shake while
+the game runs and keeps it in `bin\aiming-overhaul.ini`, read at launch; delete the file for the
+defaults. Under the sliders it names the weapon in hand's round and its push, and what the last
+shot shook.
+
+| Slider | Unit | Default |
+|---|---|---|
+| Single shot kick | degrees per newton-second | 0.2 |
+| Single shot time | seconds until the view is back | 0.25 |
+| Full auto roll | degrees either way per newton-second | 0.15 |
+| Full auto roll cycle | seconds for a roll clockwise and back | 0.4 |
 
 ## Building
 

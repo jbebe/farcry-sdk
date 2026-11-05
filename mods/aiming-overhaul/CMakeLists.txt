@@ -11,6 +11,11 @@ if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
                       "Select the x86-debug/x86-release preset.")
 endif()
 
+# DevTools' overlay contract and the Dear ImGui it pins, for the tuning window; without DevTools the
+# window is not drawn and the plugin runs on the values its file holds.
+set(DEVTOOLS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../DevTools/include")
+include("${DEVTOOLS_INCLUDE_DIR}/devtools_imgui.cmake")
+
 # fxc ships with the Windows SDK the MSVC toolchain already requires, so shaders are compiled at
 # build time and embedded as headers.
 find_program(FXC_EXECUTABLE NAMES fxc
@@ -69,6 +74,7 @@ endforeach()
 add_library(AimingOverhaul SHARED
   "src/main.cpp"
   "src/blur.cpp"
+  "src/cartridge.cpp"
   "src/body.cpp"
   "src/breath.cpp"
   "src/eyepiece.cpp"
@@ -86,6 +92,7 @@ add_library(AimingOverhaul SHARED
   "src/sway.cpp"
   "src/streak.cpp"
   "src/tracers.cpp"
+  "src/tuning.cpp"
   "src/wall.cpp"
   "src/weight.cpp"
   "src/engine/aim.cpp"
@@ -116,6 +123,8 @@ target_include_directories(AimingOverhaul PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
   "${CMAKE_CURRENT_BINARY_DIR}/generated"
   "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/FCSE/include"
+  "${DEVTOOLS_INCLUDE_DIR}"
 )
-target_link_libraries(AimingOverhaul PRIVATE d3d9 ole32 windowscodecs)
+# Dear ImGui is the core alone, drawing into DevTools' context - the backends are DevTools'.
+target_link_libraries(AimingOverhaul PRIVATE d3d9 ole32 windowscodecs imgui)
 target_compile_features(AimingOverhaul PRIVATE cxx_std_20)

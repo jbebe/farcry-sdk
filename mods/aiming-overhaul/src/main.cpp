@@ -2,6 +2,8 @@
 #include "blur.h"
 #include "body.h"
 #include "breath.h"
+#include "cartridge.h"
+#include "devtools_api.h"
 #include "engine/aim.h"
 #include "engine/device_reset.h"
 #include "engine/fire.h"
@@ -32,6 +34,7 @@
 #include "surroundings.h"
 #include "sway.h"
 #include "tracers.h"
+#include "tuning.h"
 #include "wall.h"
 #include "weight.h"
 
@@ -98,6 +101,7 @@ namespace {
     float FollowWeapon(uint8_t* weapon) {
         AimingOverhaul::Breath::FollowWeapon(weapon);
         AimingOverhaul::Weight::Follow(weapon);
+        AimingOverhaul::Cartridge::Follow(weapon);
         AimingOverhaul::Recoil::FollowWeapon(weapon);
         AimingOverhaul::ShotShake::FollowWeapon(weapon);
         const AimingOverhaul::Scopes::Scope* scope = AimingOverhaul::Scopes::Follow(weapon);
@@ -258,5 +262,12 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Tracers", FCSE_CHECKBOX(true), &OnTracersChanged, nullptr},
     };
     api->RegisterSettings("AimingOverhaul", settings, std::size(settings));
+    AimingOverhaul::Tuning::Load();
     return true;
+}
+
+// Runs after every plugin's FCSE_Load, so DevTools has loaded by now if it is installed at all.
+extern "C" __declspec(dllexport) void FCSE_OnRegisterFunctions(const FCSE_PluginAPI*) {
+    DevTools::Overlay::AddWindow("Aiming Overhaul", 420.0f, 190.0f,
+                                 &AimingOverhaul::Tuning::DrawWindow);
 }

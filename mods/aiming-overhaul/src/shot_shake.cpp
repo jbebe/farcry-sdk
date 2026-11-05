@@ -1,9 +1,12 @@
 // The view shaken by the player's shots. See shot_shake.h.
 #include "shot_shake.h"
 
+#include "cartridge.h"
 #include "ease.h"
 #include "engine/aim.h"
 #include "engine/fire.h"
+
+#include "imgui.h"
 
 #include <algorithm>
 #include <atomic>
@@ -14,30 +17,43 @@ namespace {
     constexpr float kPi = std::numbers::pi_v<float>;
     constexpr float kDegree = kPi / 180.0f;
 
-    // A shot kicks the view up by kKickShare of the gun's kick, eased toward kMostKick, on a spring
-    // at kKickOmega damped not to swing past rest: it peaks after 0.04 s and is back in 0.25 s.
-    constexpr float kKickShare = 1.5f;
-    constexpr float kMostKick = 3.0f * kDegree;
-    constexpr float kKickOmega = 25.0f;
+    // The push, in newton-seconds, past which the shake eases off.
+    constexpr float kMostImpulse = 15.0f;
+    // Newton-seconds counted per radian of the game's kick where the gun names no round.
+    constexpr float kImpulsePerKick = 5.65f / 0.0192f;
+    // How many times its seconds to peak a struck spring takes to be within a twentieth of rest.
+    constexpr float kSettledAfterPeaks = 5.74f;
 
     // Full-auto rounds less than kBurstGap seconds apart are one burst. Over its first
-    // kRoundsToRoll rounds the kick fades into a roll of kRollShare of it either way, a whole cycle
-    // every kRoundsPerCycle rounds, eased in and out over kRollEase seconds. It stops once a round
-    // is kLate times the burst's interval late.
+    // kRoundsToRoll rounds the kick fades into the roll, which eases in and out over kRollEase
+    // seconds and stops once a round is kLate times the burst's interval late.
     constexpr float kBurstGap = 0.25f;
     constexpr float kRoundsToRoll = 3.0f;
-    constexpr float kRollShare = 0.75f;
-    constexpr float kRoundsPerCycle = 4.0f;
     constexpr float kRollEase = 0.06f;
     constexpr float kLate = 1.5f;
     constexpr float kShortestInterval = 0.02f;
+
+    // Set in the window, at their defaults until the file is read.
+    std::atomic<float> g_kickPerImpulse{0.2f};
+    std::atomic<float> g_kickTime{0.25f};
+    std::atomic<float> g_rollPerImpulse{0.15f};
+    std::atomic<float> g_rollCycle{0.4f};
+
+    constexpr AimingOverhaul::Tuning::Slider kSliders[] = {
+        {"KickPerImpulse", "Single shot kick", 0.0f, 0.6f, "%.3f deg per N s", &g_kickPerImpulse},
+        {"KickTime", "Single shot time", 0.05f, 1.0f, "%.2f s", &g_kickTime},
+        {"RollPerImpulse", "Full auto roll", 0.0f, 0.6f, "%.3f deg per N s", &g_rollPerImpulse},
+        {"RollCycle", "Full auto roll cycle", 0.1f, 2.0f, "%.2f s", &g_rollCycle},
+    };
 
     std::atomic<bool> g_enabled{true};
     uint8_t* g_weapon = nullptr;
     bool g_fullAuto = false;
 
-    // The burst's rounds before the last, the seconds since the last and between the last two.
+    // The burst's rounds before the last, the seconds since its first, since the last and between
+    // the last two.
     int g_rounds = 0;
+    float g_burst = 0.0f;
     float g_since = kBurstGap;
     float g_interval = kBurstGap;
 
@@ -45,6 +61,17 @@ namespace {
     // The roll's size either way as the last round set it, and as eased.
     float g_rollSize = 0.0f;
     float g_roll = 0.0f;
+    // The last shot's push, in newton-seconds.
+    std::atomic<float> g_lastImpulse{0.0f};
+
+    float KickOmega() {
+        return kSettledAfterPeaks / g_kickTime;
+    }
+
+    // Radians a push of `impulse` newton-seconds turns the view by at `perImpulse` degrees each.
+    float Angle(float impulse, float perImpulse) {
+        return perImpulse * kDegree * AimingOverhaul::SoftLimit(impulse, kMostImpulse);
+    }
 }
 
 void AimingOverhaul::ShotShake::FollowWeapon(uint8_t* weapon) {
@@ -60,28 +87,46 @@ void AimingOverhaul::ShotShake::Kick(const Kick::Kick& kick) {
         g_interval = (std::max)(g_since, kShortestInterval);
     } else {
         g_rounds = 0;
+        g_burst = 0.0f;
     }
     g_since = 0.0f;
 
-    const float size = SoftLimit(kKickShare * (std::max)(kick.up, 0.0f), kMostKick);
+    const float round = Cartridge::Impulse();
+    const float impulse = round > 0.0f ? round : (std::max)(kick.up, 0.0f) * kImpulsePerKick;
+    g_lastImpulse = impulse;
     const float rolled = (std::min)(static_cast<float>(g_rounds) / kRoundsToRoll, 1.0f);
-    // A damped spring struck at rest peaks at its speed over omega times e.
-    g_kick.v += (1.0f - rolled) * size * kKickOmega * std::numbers::e_v<float>;
-    g_rollSize = rolled * kRollShare * size;
+    g_kick.Strike((1.0f - rolled) * Angle(impulse, g_kickPerImpulse), KickOmega());
+    g_rollSize = rolled * Angle(impulse, g_rollPerImpulse);
 }
 
 AimingOverhaul::ShotShake::Turn AimingOverhaul::ShotShake::Update(float seconds) {
     g_since += seconds;
+    g_burst += seconds;
     const bool rolling = g_rounds > 0 && g_since < kLate * g_interval;
     g_roll = Follow(g_roll, rolling ? g_rollSize : 0.0f, seconds, kRollEase);
-    g_kick.Step(0.0f, kKickOmega, 1.0f, seconds);
+    g_kick.Settle(KickOmega(), seconds);
     if (!g_enabled) {
         return {};
     }
-    const float cycle = 2.0f * kPi * (static_cast<float>(g_rounds) + g_since / g_interval) /
-                        kRoundsPerCycle;
     const float free = 1.0f - Aim::Scoped();
-    return {free * g_kick.x, free * g_roll * std::sin(cycle)};
+    return {free * g_kick.x, free * g_roll * std::sin(2.0f * kPi * g_burst / g_rollCycle)};
+}
+
+std::span<const AimingOverhaul::Tuning::Slider> AimingOverhaul::ShotShake::Sliders() {
+    return kSliders;
+}
+
+void AimingOverhaul::ShotShake::DrawLastShot() {
+    ImGui::Separator();
+    ImGui::Text("In hand: %s", Aim::WeaponName());
+    const float last = g_lastImpulse;
+    if (Cartridge::Impulse() > 0.0f) {
+        ImGui::Text("Fires %s: %.2f N s a round", Cartridge::Name(), Cartridge::Impulse());
+    } else {
+        ImGui::Text("Names no round: its last shot's kick counted as %.2f N s", last);
+    }
+    ImGui::Text("Last shot: a kick of %.2f deg, a roll of %.2f deg either way",
+                Angle(last, g_kickPerImpulse) / kDegree, Angle(last, g_rollPerImpulse) / kDegree);
 }
 
 void AimingOverhaul::ShotShake::SetEnabled(bool enabled) {
