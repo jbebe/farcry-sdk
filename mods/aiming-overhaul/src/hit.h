@@ -1,5 +1,5 @@
-// A hit on the player, as they see it: on the body it punches the view back and tips it down,
-// darkens it from the edges and draws a gasp; on a vest it only punches, shorter; on the head it cuts
+// A hit on the player, as they see it: on the body it punches the view back and tips it down and
+// darkens it from the edges; on a vest it only punches, shorter; on the head it cuts
 // the view to black and brings it back double, the second image fading slowly.
 #pragma once
 

@@ -52,8 +52,8 @@ Notable changes to Aiming Overhaul, loosely following
   included, throws dirt in your eye: dark, blurry blobs on that side with the view blurred around them, gone in a
   few seconds. How big, dark and blurred, how long it lasts and how near it has to land are set in
   the same window, which can also throw some to try it.
-- **Being hit.** A hit on the body punches your view back and tips it down, darkens it from the
-  edges for a couple of seconds and knocks a gasp out of you; a hit on the head cuts the view to
+- **Being hit.** A hit on the body punches your view back and tips it down and darkens it from the
+  edges for a couple of seconds; a hit on the head cuts the view to
   black and brings it back double, the second image fading slowly. The harder the hit, the more of
   it. How far and how long each lasts is set in the same window, which can also show a hit on the
   body, the head or a vest to try it.

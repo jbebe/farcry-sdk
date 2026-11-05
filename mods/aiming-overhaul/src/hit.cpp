@@ -1,7 +1,6 @@
 // A hit on the player. See hit.h.
 #include "hit.h"
 
-#include "breath.h"
 #include "ease.h"
 #include "engine/aim.h"
 #include "engine/frame.h"
@@ -37,15 +36,12 @@ namespace {
     constexpr float kUnblack = 0.25f;
     constexpr float kDouble = 0.5f;
     constexpr float kDoubleDown = 0.35f;
-    // The gasp comes kGaspAfter seconds after a hit that winds, kGaspGap at least after the last.
-    constexpr double kGaspAfter = 0.15;
-    constexpr double kGaspGap = 1.0;
     // The screen height the double image's distance is given for.
     constexpr float kApartLines = 1080.0f;
     constexpr double kNever = -1e9;
 
     // How a hit off the head looks: its punch against a body hit's, in size and in seconds to its
-    // peak, and whether it winds the player, darkening the view and drawing a gasp.
+    // peak, and whether it winds the player, darkening the view.
     struct Look {
         float punch;
         float peak;
@@ -67,13 +63,10 @@ namespace {
     std::mutex g_lock;
     Hits g_hits;
 
-    // On the game thread: the punch, the hit it last struck for and how hard, and whether that
-    // hit's gasp is still to come.
+    // On the game thread: the punch, and the hit it last struck for and how hard.
     AimingOverhaul::Spring g_punch;
     double g_struckAt = kNever;
     float g_struckPeak = 0.0f;
-    bool g_gaspDue = false;
-    double g_lastGasp = kNever;
 
     // HitPS's constants: the double image and the black, then the vignette.
     constexpr UINT kConstants = 2;
@@ -126,10 +119,8 @@ AimingOverhaul::Hit::Punch AimingOverhaul::Hit::Update(float seconds) {
     const float peak = hits.look->punch * Strength(hits.lost);
     const float omega = 1.0f / (hits.look->peak * look.peak);
     if (hits.at != g_struckAt) {
-        const bool fresh = now - hits.at < kStale;
         g_struckAt = hits.at;
-        g_struckPeak = fresh ? 0.0f : peak;
-        g_gaspDue = fresh && hits.look->winds;
+        g_struckPeak = now - hits.at < kStale ? 0.0f : peak;
     }
     // Pellets after the first punch only as much harder as they make it.
     if (hits.at != kNever && peak > g_struckPeak) {
@@ -137,13 +128,6 @@ AimingOverhaul::Hit::Punch AimingOverhaul::Hit::Update(float seconds) {
         g_struckPeak = peak;
     }
     g_punch.Settle(omega, seconds);
-    if (g_gaspDue && now >= hits.at + kGaspAfter) {
-        g_gaspDue = false;
-        if (now - g_lastGasp >= kGaspGap) {
-            Breath::Gasp();
-            g_lastGasp = now;
-        }
-    }
     const float punch = (1.0f - Aim::Scoped()) * g_punch.x;
     return {punch * look.back, -punch * look.down * kDegree};
 }

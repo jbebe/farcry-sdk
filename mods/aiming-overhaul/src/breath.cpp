@@ -162,10 +162,6 @@ bool AimingOverhaul::Breath::HoldsSprint() {
     return g_enabled && g_needed;
 }
 
-void AimingOverhaul::Breath::Gasp() {
-    Sound::Play(kTiredInhale, kOnoPlayer);
-}
-
 void AimingOverhaul::Breath::SetEnabled(bool enabled) {
     g_enabled = enabled;
 }
