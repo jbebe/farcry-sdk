@@ -111,10 +111,10 @@ public class SoundLabelTests
     {
         if (Fixture.Read(ShotList) is not { } list || Fixture.Read(ShotLayer) is not { } layer) return;
 
-        var banks = new Dictionary<string, SpkPackage>
+        var banks = new Dictionary<string, SpkBank>
         {
-            [@"soundbinary\004bf5ea.spk"] = SpkPackage.Parse(list),
-            [@"soundbinary\004bf5e9.spk"] = SpkPackage.Parse(layer),
+            [@"soundbinary\004bf5ea.spk"] = SpkBank.Parse(list),
+            [@"soundbinary\004bf5e9.spk"] = SpkBank.Parse(layer),
         };
         var shot = new SoundUse(0x004BF5EA, "weapon", "AK47", "single bullet shot", "entitylibrary.fcb");
 
@@ -128,7 +128,7 @@ public class SoundLabelTests
     {
         if (Fixture.Read(BarkSounds) is not { } bytes) return;
 
-        var banks = new Dictionary<string, SpkPackage> { [@"scripts\game\barkdata\loc\1820776.spk"] = SpkPackage.Parse(bytes) };
+        var banks = new Dictionary<string, SpkBank> { [@"scripts\game\barkdata\loc\1820776.spk"] = SpkBank.Parse(bytes) };
         var line = new SoundUse(0x004DF52C, SoundCategories.Dialogue, "", "GREET", "1820776.bank", "Reuben");
 
         SoundLabel bare = Assert.Single(SoundLabeler.Label(banks, [], _ => null));

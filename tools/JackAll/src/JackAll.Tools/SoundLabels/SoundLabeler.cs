@@ -9,8 +9,8 @@ namespace JackAll.Tools.SoundLabels;
 
 /// <summary>
 /// Labels every `.spk` file by where its sounds are used. A sound nothing names directly takes the
-/// uses of the events that play it, through the banks' own links; a subtitled sound is dialogue, with
-/// its transcript as the detail.
+/// uses of the records that reach it (event links, container entries, layers); a subtitled sound is
+/// dialogue, with its transcript as the detail.
 /// </summary>
 public static class SoundLabeler
 {
@@ -26,7 +26,7 @@ public static class SoundLabeler
     /// adds are skipped, and so is every file the shipped reach list says is never read.</summary>
     public static IReadOnlyList<SoundLabel> FromGame(GameVfs vfs, IFcbClassScope classes, IProgress<string>? progress = null)
     {
-        var banks = new Dictionary<string, SpkPackage>(StringComparer.OrdinalIgnoreCase);
+        var banks = new Dictionary<string, SpkBank>(StringComparer.OrdinalIgnoreCase);
         var uses = new List<SoundUse>();
         IReadOnlySet<uint> unused = BundledAssets.LoadUnusedFiles();
         VfsFile[] files = [.. vfs.Files.Values.Where(f => !f.IsSynthetic && f.NameIsKnown
@@ -48,9 +48,9 @@ public static class SoundLabeler
                 case "spk":
                     try
                     {
-                        banks[file.Path] = SpkPackage.Parse(bytes);
+                        banks[file.Path] = SpkBank.Parse(bytes);
                     }
-                    catch (InvalidDataException)
+                    catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException or ArgumentException)
                     {
                     }
                     break;
@@ -82,14 +82,17 @@ public static class SoundLabeler
     /// <summary>One label per bank that any use reaches, plus a bare "dialogue" for every unreached
     /// bank in a localized folder.</summary>
     public static IReadOnlyList<SoundLabel> Label(
-        IReadOnlyDictionary<string, SpkPackage> banks, IEnumerable<SoundUse> uses, Func<uint, string?> subtitle)
+        IReadOnlyDictionary<string, SpkBank> banks, IEnumerable<SoundUse> uses, Func<uint, string?> subtitle)
     {
         var links = new Dictionary<uint, HashSet<uint>>();
-        foreach (SpkRecord record in banks.Values.SelectMany(b => b.Records))
+        foreach (SpkBankRecord record in banks.Values.SelectMany(b => b.Records))
         {
-            foreach (uint target in record.Links)
+            foreach ((uint target, SpkReference kind) in record.References())
             {
-                Add(links, record.Id, target);
+                if (kind != SpkReference.Rolloff)
+                {
+                    Add(links, record.Id, target);
+                }
             }
         }
 
@@ -145,7 +148,7 @@ public static class SoundLabeler
 
     /// <summary>A bank is dialogue when any use says so or its sound is recorded speech (an id a
     /// localized bank holds, which the event playing it shares).</summary>
-    private static SoundLabel? Describe(string path, SpkPackage bank, Dictionary<uint, HashSet<SoundUse>> direct,
+    private static SoundLabel? Describe(string path, SpkBank bank, Dictionary<uint, HashSet<SoundUse>> direct,
         Dictionary<uint, HashSet<SoundUse>> effective, HashSet<uint> spoken)
     {
         uint[] ids = [.. bank.Records.Select(r => r.Id).Distinct().Order()];

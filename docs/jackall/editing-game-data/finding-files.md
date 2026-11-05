@@ -87,4 +87,5 @@ plays. A bank no game file names but another bank plays, such as a shot's audio,
 the sound that plays it. Recorded speech without a subtitle is just `dialogue`.
 
 So `ak47 reload` in **Filter** finds the AK-47's reload sounds, and `dialogue Flora` finds Flora's
-lines. About 350 banks have no label yet: nothing in the game's files names them.
+lines. 37 retail banks have no label: nothing in the game's files names them, and most of those
+play only silence.
