@@ -99,7 +99,8 @@ both field by field with other mods' edits, reporting any clash.
   fading out over 5 s. A hit taking half the player's health or more does all of it in full, a
   graze 0.4 of it; a shotgun's pellets count as one hit. A hit on a vest is a shorter, smaller punch
   alone, but nothing in the game hits a vest yet. The game's own red hurt overlay and the interface
-  stay on top. While a scope's sight picture is up the view is not punched.
+  stay on top. While a scope's sight picture is up the view is not punched. The game's red marks
+  pointing to whoever hit the player are gone, whether this is on or off.
 - **Shot shake.** Each shot kicks the view up and it springs straight back, as hard as the round
   pushes whoever fires it: its projectiles' mass times their muzzle velocity, from the round
   Difficulty Overhaul gives each gun's archetype, easing off past 15 newton-seconds, the same from
@@ -219,7 +220,9 @@ is the player archetypes' `fWalkingAcceleration` and `fWalkingDeceleration`, and
 over time is `Curves.Locomotion.Sprint`, both fragments under `layer\mods\` written by
 `data\movement.py`. The breaths are the game's own stamina breathing,
 cut into inhales and exhales by `data\breath.py` into four banks, `layer\mods\soundbinary\00fc0b*.spk`,
-played in `src/breath.cpp` through `src/engine/sound.cpp`. The engine side is in
+played in `src/breath.cpp` through `src/engine/sound.cpp`. The direction marks are hidden by a
+`hud.mgb` fragment per aspect and language under `layer\mods\ui\`, written by `data\hud.py`. The
+engine side is in
 [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md),
 [bullet tracers](../../docs/docs/engine-internals/bullet-tracers.md) and
 [presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).
@@ -325,6 +328,7 @@ round and its push, and what its last shot shook.
 python data\fragments.py world1.xml world2.xml dlc1.xml   # rewrite the weapon data, see the script
 python data\movement.py world1.xml world2.xml            # rewrite the player data, see the script
 python data\breath.py <worlds soundbinary folder>        # rebuild the breath banks, see the script
+python data\hud.py <common ui\localized folder>          # rewrite the HUD fragments, see the script
 ```
 
 `fxc`, from the Windows SDK, compiles the shaders at build time. `-Install` builds the game's patch

@@ -1,0 +1,73 @@
+<Area slot="44" type="Area" FRAMERATE="30" CURRENTFRAME="0" STATICBOX="0 180 0 640">
+  <USERDATA name="#0E2B6A57">
+    <PROPERTIES />
+  </USERDATA>
+  <CHILDREN>
+    <Element slot="77" type="Placeholder" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#47CC8C92">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#D427AD4D" IDX="0" INTERPOLATION="None">
+          <ACTIONEXECUTER slot="133" type="ActionExecuter">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#1964B988">
+                <USERDATA name="#1964B988">
+                  <PROPERTIES>
+                    <PROPERTY key="#4BAB415E" type="17">
+                      <LINK slot="44" LASTOBJECTTYPE="Area" IDS="#A1126B78 #0E2B6A57" />
+                    </PROPERTY>
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+          </ACTIONEXECUTER>
+          <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+        </Keyframe>
+        <Keyframe name="#0107511F" IDX="43" INTERPOLATION="None">
+          <ACTIONEXECUTER slot="133" type="ActionExecuter">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#5C54C3AD">
+                <USERDATA name="#5C54C3AD">
+                  <PROPERTIES>
+                    <PROPERTY key="Area" type="17">
+                      <LINK slot="44" LASTOBJECTTYPE="Area" IDS="#A1126B78 #0E2B6A57" />
+                    </PROPERTY>
+                    <PROPERTY key="#743913C9" type="2" value="0" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+          </ACTIONEXECUTER>
+          <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Placeholder />
+    </Element>
+    <Element slot="74" type="Image" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+      <USERDATA name="#D165391C">
+        <PROPERTIES />
+      </USERDATA>
+      <KEYFRAMES>
+        <Keyframe name="#A315FDBB" IDX="0" INTERPOLATION="Linear">
+          <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="128" ORIGIN.y="335" LEFT="65498" RIGHT="218" TOP="65421" BOTTOM="555" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FF000000" COLOR2="FF000000" COLOR3="FF000000" COLOR4="FF000000" />
+        </Keyframe>
+        <Keyframe name="#D412CD2D" IDX="1" INTERPOLATION="Linear">
+          <ImageState INTERPOLATIONFLAGS="125833153" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="120" ORIGIN.y="348" LEFT="65506" RIGHT="210" TOP="65447" BOTTOM="607" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFDFDFDF" COLOR2="FFDFDFDF" COLOR3="FFDFDFDF" COLOR4="FFDFDFDF" />
+        </Keyframe>
+        <Keyframe name="#739E676F" IDX="26" INTERPOLATION="Linear">
+          <ImageState INTERPOLATIONFLAGS="125829121" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="120" ORIGIN.y="348" LEFT="65506" RIGHT="210" TOP="65447" BOTTOM="607" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="C8B8B8F1" COLOR2="C8B8B8F1" COLOR3="C8B8B8F1" COLOR4="C8B8B8F1" />
+        </Keyframe>
+        <Keyframe name="#8D3D7B29" IDX="38" INTERPOLATION="Linear">
+          <ImageState INTERPOLATIONFLAGS="125829185" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="117" ORIGIN.y="348" LEFT="65506" RIGHT="210" TOP="65447" BOTTOM="607" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="C80C0CB4" COLOR2="C80C0CB4" COLOR3="C80C0CB4" COLOR4="C80C0CB4" />
+        </Keyframe>
+        <Keyframe name="#55AE3466" IDX="43" INTERPOLATION="Root">
+          <ImageState INTERPOLATIONFLAGS="125833153" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="102" ORIGIN.y="293" LEFT="65524" RIGHT="192" TOP="65367" BOTTOM="417" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FF000000" COLOR2="FF000000" COLOR3="FF000000" COLOR4="FF000000" />
+        </Keyframe>
+      </KEYFRAMES>
+      <Image BLENDINGMODE="Lighten 4X" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+        <MATERIALLINK present="true" id="hit_indicator_sliced" PACKAGE="" />
+      </Image>
+    </Element>
+  </CHILDREN>
+</Area>

@@ -67,6 +67,7 @@ Notable changes to Aiming Overhaul, loosely following
   machete finish and the watch stay on E and Q, which the game never lets be rebound.
 - **No random spread down the AR-16's and the MGL-140's scopes**, so a scoped shot goes where the
   reticle is, as it already did on the sniper rifles.
+- **No red marks pointing to whoever hit you.** The game's red flash around the edges stays.
 
 ## [1.2.0] - 2026-10-15
 
