@@ -339,7 +339,9 @@ way any new world is ([Make a new world](../../docs/jackall/world/new-worlds.md)
   not loaded; the wall route's start was moved next to the player's sector for it.
 - `range\build-layer.ps1` makes the world's files from the installed game's `tmpla` with
   `jackall-cli world new`, then packs them with the content into `layer\` with `jackall-cli world pack`.
-  The layer is game files and is not committed.
+  The layer is game files and is not committed. The range's entity library is a copy of retail
+  `tmpla`'s, so a mod's `tmpla` fragments never reach it: a mod that changes archetypes there writes
+  fragments for `worlds\testrange\generated\entitylibrary.fcb`, as Difficulty Overhaul's guns do.
 
 ```
 .\mods\DevTools\range\build-layer.ps1

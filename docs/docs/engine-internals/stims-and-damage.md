@@ -156,8 +156,16 @@ range it lands at. The bands are the weapon's `RangeMultipliers`, one list per d
 
 The other primaries and pistols follow the same shape. A soldier's bullet skips the bands: its level is
 scaled by `GetAIDamageMultiplier` at the range, after a second roll against
-`GetAIPrimaryBulletChanceOfSuccess` at the range. What those two read was not traced. This is **traced
-in the server build** only.
+`GetAIPrimaryBulletChanceOfSuccess` at the range. This is **traced in the server build** only.
+
+The level a bullet starts from is its weapon properties' `FireStrategyProperties/Stim_ImpactDamage`
+`nLevel`; a shotgun's pellets off the centre of its spread carry their own,
+`Stim_ImpactDamageSecondary` (the SPAS-12's 17 and 16). A soldier's level is
+`ceil(level × multiplier)`, the multiplier from the curves the properties name under
+`CommonProperties/AICurve`, `archDamageMultiplierVisibleCurve` and `...NotVisibleCurve`; with no
+name it is 1. Assault rifles name `Curves.AIWeapon.AssaultDamageMultiplier*`, which brought the AK-47's
+13 to 10 at 20 m; pistols, SMGs and snipers name none. **Seen in game** (fc2drive, 2026-11-05): with
+the AK's level set to 27 and its curves emptied, a soldier's AK hit the player at 27.
 
 ## Soldiers
 
