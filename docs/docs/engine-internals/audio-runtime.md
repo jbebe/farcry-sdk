@@ -615,6 +615,20 @@ When it runs, it plays a sequence instead of the plain impact: the wizz, then th
 In retail the field is `0xFFFFFFFF` on every weapon, so the branch never runs. Close impacts take the
 normal call, at volume 1.0 (0 dB), like any other impact **(RE-verified)**.
 
+`SpawnBulletPuff` is `CWeaponFireBulletProperties`' `__thiscall(proxy, impact, flag)`, and it runs
+for every bullet that lands. The proxy is the shooter's entity proxy, with the entity at `+0x0C`; the
+function lets go of its hold on it. The impact record holds:
+
+- the point in the world at `+0x00`, then the surface's normal;
+- the body hit at `+0x18`;
+- the logic material, a byte at `+0x21`, which is its `disId` in `logicmaterials.xml`.
+
+:::info[Seen in a running game]
+On the test range the player's rounds into the ground read material 7, `Base.Sand`, and a proxy whose
+entity is the player's own. A soldier's rounds hitting the player read 10, `Base.Flesh`. Retail GOG
+v1.03, from Aiming Overhaul.
+:::
+
 :::warning[Filling `sndPassByWizz` alone makes close impacts silent]
 The sequence call passes a volume of `0.0` (`0x100faea0`) where the plain impact passes `1.0`.
 `SpawnSound` (`FUN_10511bc0`) runs it through `ConvertPercentToDecibels`, which returns the −96 dB

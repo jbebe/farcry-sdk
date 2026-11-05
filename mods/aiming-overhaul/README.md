@@ -87,6 +87,11 @@ both field by field with other mods' edits, reporting any clash.
 - **Tighter down the sights.** Every gun's random spread down the iron sights is half the game's
   standing and a quarter of it crouched: a new AK-47's 0.2° and 0.1°, against the game's 0.4° and
   0.38°, an Eagle .50's 0.35° and 0.13°. From the hip it is the game's. A scope has none.
+- **Dirt in the eye.** A round someone else fires that lands within 3 m of the eye in ground,
+  sand, mud, pebbles, concrete, tile or wood throws dirt in it: two black, see-through, blurry blobs
+  on the side it came from, the view blurred around them, nearer and darker the closer it landed.
+  They hold for 0.6 s and are gone in 3 s. Metal, water, glass, flesh and plants throw none, and
+  nor do the player's own rounds. Only what the player sees changes; the aim does not.
 - **Shot shake.** Each shot kicks the view up and it springs straight back, as hard as the round
   pushes whoever fires it: its projectiles' mass times their muzzle velocity, from the round
   Difficulty Overhaul gives each gun's archetype, easing off past 15 newton-seconds, the same from
@@ -172,7 +177,9 @@ their archetype, written by `data\fragments.py`. The shot shake is `src/shot_sha
 the same kicks and turning the view through the camera's angular offset in `src/engine/aim.cpp`;
 the round's push is read from the weapon's `Cartridge.*` entity data in `src/cartridge.cpp`, and
 whether a gun fires full auto is the engine's own answer, read in `src/engine/fire.cpp`. Each weapon's
-values, the window and its file are `src/tuning.cpp`, drawn through DevTools' overlay API. The blur
+values, the window and its file are `src/tuning.cpp`, drawn through DevTools' overlay API. Dirt in the
+eye is `src/dirt.cpp`, from each bullet's impact as the engine spawns its puff, in
+`src/engine/impact.cpp`, drawn over the finished frame with `src/shaders/dirt.fx`. The blur
 draws the gun's own
 depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the
 blur and the scope shadow draw at the end of the pass the gun's colour is drawn in, before the
@@ -232,6 +239,7 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Landing | Yes / No | Yes |
 | Recoil that stays | Yes / No | Yes |
 | Shot shake | Yes / No | Yes |
+| Dirt in the eye | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
 | Iron sight zoom | Yes / No | Yes |
 | Scope shadow | Yes / No | Yes |
@@ -243,7 +251,7 @@ With Sway off neither the eye nor the aim drifts, and there is nothing for the b
 With Hold breath off, sprint down the sights does what the game does with it. With Vertical
 inertia off, the arms keep still as the look pitches, as in the game. With Gun up after sprint off, the gun fires and aims as soon as the sprint ends, as in the game. With Landing off,
 the eye does not drop. With Recoil that stays off, the game's recoil comes back as it was and a
-burst no longer spreads. With Shot shake off, the view holds still as the gun fires. How quickly the player gets going is the player data's, and stays. With
+burst no longer spreads. With Shot shake off, the view holds still as the gun fires. With Dirt in the eye off, no round throws dirt. How quickly the player gets going is the player data's, and stays. With
 Iron sight zoom
 off, the view keeps its field of view down a gun's iron sights; a scope still
 magnifies. With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game
@@ -251,13 +259,23 @@ draws them. Which guns fire them and how fast they fly are the weapon data's, an
 scopes' lost iron-sight effect, whatever the scope settings.
 
 With DevTools installed, its overlay has an Aiming Overhaul window, which sets the sway down the
-sights and the shot shake for each weapon while the game runs and keeps them in
+sights, dirt in the eye and the shot shake for each weapon while the game runs and keeps them in
 `bin\aiming-overhaul.ini`, read at launch; delete the file for the defaults.
 
 | Down the sights, every weapon | Unit | Default |
 |---|---|---|
 | Sway standing | share of the sway left down the sights standing | 0.5 |
 | Sway crouched | share of it left crouched, on top of the stance's own half | 0.5 |
+
+| Dirt in the eye, every weapon | Unit | Default |
+|---|---|---|
+| Dirt size | the largest blob across, a share of the screen's height | 0.315 |
+| Dirt darkness | how dark it is in its middle, nought to one | 0.55 |
+| Dirt blur | the blur around it, in pixels of a 1080-line screen | 10 |
+| Dirt clears in | seconds until it is gone | 3 |
+| Dirt thrown from | metres from the eye a round has to land within | 3 |
+
+Throw dirt, under them, throws it as a round landing a metre to the right would.
 
 The shot shake has a section per weapon. Its Weapon list holds every gun the player can
 fire, variants under their gun, and Other weapons for the rest. It moves to the weapon in hand each

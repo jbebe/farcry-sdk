@@ -11,15 +11,15 @@ namespace {
 
     // CWeapon's entity, through the proxy at +0x08, and that entity's name.
     constexpr ptrdiff_t kWeaponProxy = 0x08;
-    constexpr ptrdiff_t kProxyEntity = 0x0C;
     constexpr ptrdiff_t kEntityName = 0x14;
 }
 
 void AimingOverhaul::EntityName::Read(uint8_t* weapon, char (&name)[64]) {
     name[0] = '\0';
     __try {
-        uint8_t* proxy = weapon != nullptr ? Field<uint8_t*>(weapon, kWeaponProxy) : nullptr;
-        uint8_t* entity = proxy != nullptr ? Field<uint8_t*>(proxy, kProxyEntity) : nullptr;
+        uint8_t* entity =
+            weapon != nullptr ? AimingOverhaul::ProxyEntity(Field<uint8_t*>(weapon, kWeaponProxy))
+                              : nullptr;
         const char* text = entity != nullptr ? Field<const char*>(entity, kEntityName) : nullptr;
         for (size_t i = 0; text != nullptr && i + 1 < sizeof(name) && text[i] != '\0'; i++) {
             name[i] = text[i];

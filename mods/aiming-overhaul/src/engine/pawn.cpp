@@ -18,10 +18,9 @@ namespace {
     constexpr uint32_t kCounters = FCSE::Crc32("CFCXCountersComponentPlayer");
     constexpr uint32_t kShaker = FCSE::Crc32("CCameraShakeAndPadRumbleComponent");
 
-    // A pawn's entity proxy and the proxy's entity; the counters' health and stamina, each a
-    // counter of what is left and the most there can be; and the camera shake's three angles.
+    // A pawn's entity proxy; the counters' health and stamina, each a counter of what is left and
+    // the most there can be; and the camera shake's three angles.
     constexpr ptrdiff_t kPawnProxy = 0x08;
-    constexpr ptrdiff_t kProxyEntity = 0x0C;
     constexpr ptrdiff_t kHealth = 0x44;
     constexpr ptrdiff_t kStamina = 0x64;
     constexpr ptrdiff_t kCounterLeft = 0x10;
@@ -31,15 +30,9 @@ namespace {
     constexpr ptrdiff_t kEntityAxes = 0x30;
     constexpr ptrdiff_t kEntityPlace = 0x60;
 
-    // The pawn's entity, or null.
-    uint8_t* Entity(uint8_t* pawn) {
-        uint8_t* proxy = Field<uint8_t*>(pawn, kPawnProxy);
-        return proxy != nullptr ? Field<uint8_t*>(proxy, kProxyEntity) : nullptr;
-    }
-
     // The pawn entity's component of the class named by `id`, or null.
     uint8_t* Component(uint8_t* pawn, const uint32_t& id) {
-        uint8_t* entity = g_lock && g_getComponent ? Entity(pawn) : nullptr;
+        uint8_t* entity = g_lock && g_getComponent ? AimingOverhaul::Pawn::Entity(pawn) : nullptr;
         if (entity == nullptr) {
             return nullptr;
         }
@@ -54,6 +47,10 @@ namespace {
         const float most = counter != nullptr ? Field<float>(counter, kCounterMost) : 0.0f;
         return most > 0.0f ? Field<float>(counter, kCounterLeft) / most : 1.0f;
     }
+}
+
+uint8_t* AimingOverhaul::Pawn::Entity(uint8_t* pawn) {
+    return AimingOverhaul::ProxyEntity(Field<uint8_t*>(pawn, kPawnProxy));
 }
 
 float AimingOverhaul::Pawn::Stamina(uint8_t* pawn) {

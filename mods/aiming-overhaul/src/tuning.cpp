@@ -1,7 +1,8 @@
-// The sway down the sights and each weapon's shot shake, and the window and file they are kept in.
-// See tuning.h.
+// The sway down the sights, dirt in the eye and each weapon's shot shake, and the window and file
+// they are kept in. See tuning.h.
 #include "tuning.h"
 
+#include "dirt.h"
 #include "engine/aim.h"
 #include "fcse_api.h"
 #include "shot_shake.h"
@@ -22,6 +23,7 @@
 #include <string_view>
 
 namespace {
+    using AimingOverhaul::Tuning::DirtLook;
     using AimingOverhaul::Tuning::SightSway;
     using AimingOverhaul::Tuning::Values;
 
@@ -44,6 +46,17 @@ namespace {
         {"SwayCrouched", "Sway crouched", &SightSway::crouched, 0.0f, 1.5f, "%.2fx"},
     };
     SightSway g_sights;
+
+    // Dirt in the eye's section in the file, and its values.
+    constexpr const char* kDirt = "Dirt in the eye";
+    constexpr Parameter<DirtLook> kDirtParameters[] = {
+        {"Size", "Dirt size", &DirtLook::size, 0.05f, 0.8f, "%.2f of the screen"},
+        {"Darkness", "Dirt darkness", &DirtLook::darkness, 0.0f, 1.0f, "%.2f"},
+        {"Blur", "Dirt blur", &DirtLook::blur, 0.0f, 30.0f, "%.1f px at 1080p"},
+        {"Clear", "Dirt clears in", &DirtLook::clear, 0.5f, 10.0f, "%.1f s"},
+        {"Range", "Dirt thrown from", &DirtLook::range, 0.2f, 5.0f, "%.1f m"},
+    };
+    DirtLook g_dirt;
 
     constexpr Parameter<Values> kParameters[] = {
         {"KickPerImpulse", "Single shot kick", &Values::kickPerImpulse, 0.0f, 0.6f,
@@ -186,9 +199,10 @@ namespace {
 
     void Save() {
         std::ofstream file(File(), std::ios::trunc);
-        file << "; Aiming Overhaul, the sights' section, then one per weapon. Set in its window in "
-                "DevTools' overlay\n; and read at launch.\n";
+        file << "; Aiming Overhaul, the sights' and the dirt's sections, then one per weapon. Set in "
+                "its window in\n; DevTools' overlay and read at launch.\n";
         WriteSection(file, kSights, kSightParameters, g_sights);
+        WriteSection(file, kDirt, kDirtParameters, g_dirt);
         for (size_t weapon = 0; weapon < g_weapons.size(); ++weapon) {
             WriteSection(file, NameOf(weapon), kParameters, g_weapons[weapon]);
         }
@@ -201,6 +215,10 @@ namespace {
 
 const SightSway& AimingOverhaul::Tuning::Sights() {
     return g_sights;
+}
+
+const DirtLook& AimingOverhaul::Tuning::DirtInTheEye() {
+    return g_dirt;
 }
 
 void AimingOverhaul::Tuning::Follow(uint8_t* weapon) {
@@ -221,6 +239,7 @@ void AimingOverhaul::Tuning::Load() {
     // A line outside a known section changes nothing.
     std::ifstream file(File());
     bool sights = false;
+    bool dirt = false;
     Values* weapon = nullptr;
     std::string line;
     while (std::getline(file, line)) {
@@ -228,6 +247,7 @@ void AimingOverhaul::Tuning::Load() {
         if (text.starts_with('[') && text.ends_with(']')) {
             const std::string_view name = text.substr(1, text.size() - 2);
             sights = name == kSights;
+            dirt = name == kDirt;
             weapon = nullptr;
             for (size_t i = 0; i < g_weapons.size() && weapon == nullptr; ++i) {
                 if (name == NameOf(i)) {
@@ -244,6 +264,8 @@ void AimingOverhaul::Tuning::Load() {
         const std::string_view number = Trim(text.substr(equals + 1));
         if (sights) {
             Read(key, number, kSightParameters, g_sights);
+        } else if (dirt) {
+            Read(key, number, kDirtParameters, g_dirt);
         } else if (weapon != nullptr) {
             Read(key, number, kParameters, *weapon);
         }
@@ -256,6 +278,13 @@ void AimingOverhaul::Tuning::DrawWindow(void*) {
     ImGui::SetItemTooltip("How much of the sway is left down the sights, standing and crouched; the "
                           "stance's own steadiness comes on top.");
     g_unsaved |= DrawSliders(kSightParameters, g_sights);
+
+    ImGui::SeparatorText("Dirt in the eye, every weapon");
+    g_unsaved |= DrawSliders(kDirtParameters, g_dirt);
+    if (ImGui::Button("Throw dirt")) {
+        Dirt::Throw();
+    }
+    ImGui::SetItemTooltip("Throws dirt in the eye as a round landing a metre to the right would.");
 
     ImGui::SeparatorText("Shot shake");
     if (g_inHand != g_followed) {

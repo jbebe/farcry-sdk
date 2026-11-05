@@ -3,10 +3,13 @@
 #include "body.h"
 #include "breath.h"
 #include "cartridge.h"
+#include "dirt.h"
 #include "devtools_api.h"
 #include "engine/aim.h"
 #include "engine/device_reset.h"
 #include "engine/fire.h"
+#include "engine/frame.h"
+#include "engine/impact.h"
 #include "engine/input.h"
 #include "engine/kick.h"
 #include "engine/look.h"
@@ -46,6 +49,7 @@
 namespace {
     void OnDeviceRelease() {
         AimingOverhaul::Blur::ReleaseDeviceObjects();
+        AimingOverhaul::Dirt::ReleaseDeviceObjects();
         AimingOverhaul::Eyepiece::ReleaseDeviceObjects();
         AimingOverhaul::ScopeShadow::ReleaseDeviceObjects();
         AimingOverhaul::SecondView::ReleaseDeviceObjects();
@@ -198,6 +202,13 @@ namespace {
         AimingOverhaul::ShotShake::Kick(kick);
         return g_lookHooked && AimingOverhaul::Recoil::Take(kick);
     }
+
+    // A bullet landing near the player on foot throws dirt in the eye, unless the player fired it.
+    void OnImpact(const float point[3], uint8_t material, const uint8_t* shooter) {
+        if (OnFoot(g_pawn) && shooter != AimingOverhaul::Pawn::Entity(g_pawn)) {
+            AimingOverhaul::Dirt::OnImpact(point, material);
+        }
+    }
 }
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
@@ -219,6 +230,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         api->Log("nothing is drawn on the gun: a Direct3D seam could not be hooked");
         g_hooked = false;
     }
+    // Dirt in the eye is closest to the eye, so it goes over the eyepiece.
+    AimingOverhaul::Frame::AddComposite(&AimingOverhaul::Dirt::OnComposite);
     if (!AimingOverhaul::SecondView::Install(&AimingOverhaul::Surroundings::Want)) {
         api->Log("a scope's surroundings are not drawn: the second view could not be hooked");
         g_hooked = false;
@@ -231,6 +244,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     AimingOverhaul::Ray::Install();
     AimingOverhaul::Fire::Install(&RefuseShot);
     AimingOverhaul::Shot::Install(&MoveShot);
+    AimingOverhaul::Impact::Install(&OnImpact);
     AimingOverhaul::Input::Install(&OnSignal);
     AimingOverhaul::Sprint::Install(&AimingOverhaul::Breath::HoldsSprint);
     AimingOverhaul::Sound::Install();
@@ -253,6 +267,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          Toggles(&AimingOverhaul::Recoil::SetEnabled)},
         {"Shot shake", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::ShotShake::SetEnabled)},
+        {"Dirt in the eye", FCSE_CHECKBOX(true), &OnToggled,
+         Toggles(&AimingOverhaul::Dirt::SetEnabled)},
         {"Gun blur", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Blur::SetEnabled)},
         {"Iron sight zoom", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Aim::SetIronsightZoom)},
@@ -269,6 +285,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
 
 // Runs after every plugin's FCSE_Load, so DevTools has loaded by now if it is installed at all.
 extern "C" __declspec(dllexport) void FCSE_OnRegisterFunctions(const FCSE_PluginAPI*) {
-    DevTools::Overlay::AddWindow("Aiming Overhaul", 420.0f, 340.0f,
+    DevTools::Overlay::AddWindow("Aiming Overhaul", 420.0f, 500.0f,
                                  &AimingOverhaul::Tuning::DrawWindow);
 }

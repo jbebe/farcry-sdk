@@ -31,6 +31,9 @@ inline uint8_t* Data(uint8_t* pawn) {
     return Field<uint8_t*>(pawn, kData);
 }
 
+// The pawn's entity, or null.
+uint8_t* Entity(uint8_t* pawn);
+
 // How much stamina and health the pawn has left, from nought to one; one where it has no such
 // counter.
 float Stamina(uint8_t* pawn);

@@ -1,5 +1,6 @@
-// How each weapon's shots shake the view and how much of the sway is left down the sights, kept in
-// bin\aiming-overhaul.ini and edited in Aiming Overhaul's window in DevTools' overlay.
+// How each weapon's shots shake the view, how much of the sway is left down the sights and how dirt
+// in the eye looks, kept in bin\aiming-overhaul.ini and edited in Aiming Overhaul's window in
+// DevTools' overlay.
 #pragma once
 
 #include <cstdint>
@@ -23,6 +24,18 @@ struct SightSway {
 };
 
 const SightSway& Sights();
+
+// How dirt in the eye looks and how near a round has to land to throw it, the same for every
+// weapon.
+struct DirtLook {
+    float size = 0.315f;
+    float darkness = 0.55f;
+    float blur = 10.0f;
+    float clear = 3.0f;
+    float range = 3.0f;
+};
+
+const DirtLook& DirtInTheEye();
 
 // Follows the weapon in hand, or null, taking its values each time it changes.
 void Follow(uint8_t* weapon);

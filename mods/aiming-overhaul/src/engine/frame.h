@@ -28,6 +28,9 @@ using CompositeFn = void (*)(IDirect3DDevice9* device);
 // back buffer, under the interface. False, and logged, when it cannot be hooked.
 bool Install(PassFn onScenePass, CompositeFn onComposite);
 
+// Has `onComposite` run there too, after those already added.
+void AddComposite(CompositeFn onComposite);
+
 // How many passes have ended so far, so two draws with the same serial are in the same pass.
 uint32_t PassSerial();
 

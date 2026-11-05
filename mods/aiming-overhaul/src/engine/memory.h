@@ -14,6 +14,11 @@ T& Field(uint8_t* object, ptrdiff_t offset) {
     return *reinterpret_cast<T*>(object + offset);
 }
 
+// The entity an entity proxy stands for, or null.
+inline uint8_t* ProxyEntity(uint8_t* proxy) {
+    return proxy != nullptr ? Field<uint8_t*>(proxy, 0x0C) : nullptr;
+}
+
 // Hooks the engine function at `target`, keeping what it called in `original`. False when the
 // function was not found, which is not logged here, or when FCSE refused it, which FCSE logs.
 template <class Fn>

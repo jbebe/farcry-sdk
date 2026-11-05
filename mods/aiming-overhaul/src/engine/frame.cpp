@@ -3,6 +3,9 @@
 #include "engine/com.h"
 #include "engine/vtable.h"
 
+#include <array>
+#include <cstddef>
+
 namespace {
     using EndSceneFn = HRESULT(__stdcall*)(IDirect3DDevice9*);
 
@@ -10,7 +13,9 @@ namespace {
 
     EndSceneFn g_originalEndScene = nullptr;
     AimingOverhaul::Frame::PassFn g_onScenePass = nullptr;
-    AimingOverhaul::Frame::CompositeFn g_onComposite = nullptr;
+    // The composite's callbacks, in the order they run.
+    std::array<AimingOverhaul::Frame::CompositeFn, 4> g_onComposites = {};
+    size_t g_composites = 0;
 
     uint32_t g_passSerial = 0;
     uint32_t g_frame = 0;
@@ -46,7 +51,9 @@ namespace {
             SUCCEEDED(device->GetDepthStencilSurface(&depth.surface)) && depth.surface != nullptr;
         const bool toBackBuffer = target.surface == backBuffer.surface;
         if (toBackBuffer && !haveDepth) {
-            g_onComposite(device);
+            for (size_t i = 0; i < g_composites; ++i) {
+                g_onComposites[i](device);
+            }
             g_pastSky = false;
             g_frame++;
             return;
@@ -72,8 +79,14 @@ namespace {
 
 bool AimingOverhaul::Frame::Install(PassFn onScenePass, CompositeFn onComposite) {
     g_onScenePass = onScenePass;
-    g_onComposite = onComposite;
+    AddComposite(onComposite);
     return Vtable::Hook(Vtable::kEndScene, &EndSceneDetour, &g_originalEndScene);
+}
+
+void AimingOverhaul::Frame::AddComposite(CompositeFn onComposite) {
+    if (g_composites < g_onComposites.size()) {
+        g_onComposites[g_composites++] = onComposite;
+    }
 }
 
 uint32_t AimingOverhaul::Frame::PassSerial() {

@@ -48,8 +48,13 @@ Notable changes to Aiming Overhaul, loosely following
   crouched, each set in the same window, and every gun's random spread down the iron sights is
   half the game's standing and a quarter of it crouched: a new AK-47's 0.2° and 0.1° instead of
   0.4° and 0.38°.
+- **Dirt in the eye.** An enemy's round landing in the dirt, sand, stone or wood by your face throws
+  dirt in your eye: dark, blurry blobs on that side with the view blurred around them, gone in a
+  few seconds. How big, dark and blurred, how long it lasts and how near it has to land are set in
+  the same window, which can also throw some to try it.
 - **Hold breath**, **Gun near walls**, **Vertical inertia**, **Gun up after sprint**, **Landing**,
-  **Recoil that stays** and **Shot shake** switches in the Mod Configuration menu.
+  **Recoil that stays**, **Shot shake** and **Dirt in the eye** switches in the Mod Configuration
+  menu.
 
 ### Changed
 - **Interact moves to F, throw grenade to G and next throwable to T** by default, to free Q and E
