@@ -92,8 +92,8 @@ its own entity, so any entity carrying that empty component can be a link's soun
 
 ## The player
 
-`CFCXCountersComponentPlayer::HandleDamageStim` (`0x087FDF20`) takes any `CEntityEventStims`, from a
-bullet or from an emitter alike, and calls `NotifyAttackerHUD`. Its gate is
+`CFCXCountersComponentPlayer::HandleDamageStim` (`0x087FDF20`, Steam `0x106A2880`) takes any
+`CEntityEventStims`, from a bullet or from an emitter alike, and calls `NotifyAttackerHUD`. Its gate is
 `CFCXCountersComponent::CanDoDamage` (`0x087E7250`), which refuses a stim:
 
 - whose instigator is the receiver itself, unless its `sDetail` is an explosion, fire spreading or a
@@ -120,6 +120,12 @@ Hardcore. In game the player had 495 or 825 on Hardcore and 780 or 1,300 on Casu
 **Hit locations are off for the player.** `ApplyLocationMultiplier` (Steam `0x107645E0`) scales a hit by
 the body part only when a flag on the receiver's counters component (`+0x48`) is set, and the player's is
 not. In game a head hit on the player did what a torso hit does.
+
+**What a stim carries.** A `CEntityEventStims` holds its type at `+0x48` (Pierce 3, Crush 4, Cut 5),
+its level at `+0x58`, and the body parts it struck as bits at `+0x5C`: torso `0x003`, head `0x040`,
+hands `0x028`, feet `0x500`, arms `0x014`, legs `0x280`. `ApplyLocationMultiplier` tests them in that
+order and counts the first that is set. The bits are set on the player's hits too: Difficulty
+Overhaul's hit log names the part of each, and Aiming Overhaul tells a head hit by them.
 
 **The last bar is cushioned.** `CFCXCountersComponentPlayerSP::ApplyDamageMultiplier` quarters a hit
 while the player's health is below one health bar. In game, below about 120 health a hit that took 42

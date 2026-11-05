@@ -30,6 +30,9 @@ bool Held();
 // and the weapon in hand needing it.
 bool HoldsSprint();
 
+// A sharp breath drawn in, as a hit knocks the wind out, whether or not the hold is switched on.
+void Gasp();
+
 void SetEnabled(bool enabled);
 
 }

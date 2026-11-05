@@ -45,9 +45,8 @@ namespace {
         return g_getComponent(entity, nullptr, &id);
     }
 
-    // The share left of the counter at `offset` on the pawn's counters, one where there is none.
-    float Left(uint8_t* pawn, ptrdiff_t offset) {
-        uint8_t* counters = Component(pawn, kCounters);
+    // The share left of the counter at `offset` on the counters, one where there is none.
+    float Left(uint8_t* counters, ptrdiff_t offset) {
         uint8_t* counter = counters != nullptr ? Field<uint8_t*>(counters, offset) : nullptr;
         const float most = counter != nullptr ? Field<float>(counter, kCounterMost) : 0.0f;
         return most > 0.0f ? Field<float>(counter, kCounterLeft) / most : 1.0f;
@@ -55,11 +54,15 @@ namespace {
 }
 
 float AimingOverhaul::Pawn::Stamina(uint8_t* pawn) {
-    return Left(pawn, kStamina);
+    return Left(Component(pawn, kCounters), kStamina);
 }
 
 float AimingOverhaul::Pawn::Health(uint8_t* pawn) {
-    return Left(pawn, kHealth);
+    return HealthOf(Component(pawn, kCounters));
+}
+
+float AimingOverhaul::Pawn::HealthOf(uint8_t* counters) {
+    return Left(counters, kHealth);
 }
 
 bool AimingOverhaul::Pawn::Position(uint8_t* pawn, float out[3]) {

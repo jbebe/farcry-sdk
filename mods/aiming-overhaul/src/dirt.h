@@ -16,8 +16,8 @@ void OnImpact(const float point[3], uint8_t material);
 // Throws dirt as a round landing a metre to the right would. From any thread.
 void Throw();
 
-// Draws the dirt over the frame's finished image, under the interface.
-void OnComposite(IDirect3DDevice9* device);
+// Draws the dirt over the frame's finished image, `frame`, under the interface.
+void OnComposite(IDirect3DDevice9* device, IDirect3DSurface9* frame);
 
 void ReleaseDeviceObjects();
 

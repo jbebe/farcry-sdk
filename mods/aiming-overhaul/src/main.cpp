@@ -6,6 +6,7 @@
 #include "dirt.h"
 #include "devtools_api.h"
 #include "engine/aim.h"
+#include "engine/damage.h"
 #include "engine/device_reset.h"
 #include "engine/fire.h"
 #include "engine/frame.h"
@@ -14,6 +15,7 @@
 #include "engine/kick.h"
 #include "engine/look.h"
 #include "engine/pawn.h"
+#include "engine/plain_copy.h"
 #include "engine/ray.h"
 #include "engine/second_view.h"
 #include "engine/shot.h"
@@ -24,6 +26,7 @@
 #include "eyepiece.h"
 #include "fcse_api.h"
 #include "heart.h"
+#include "hit.h"
 #include "landing.h"
 #include "lean.h"
 #include "pitch_slide.h"
@@ -51,6 +54,8 @@ namespace {
         AimingOverhaul::Blur::ReleaseDeviceObjects();
         AimingOverhaul::Dirt::ReleaseDeviceObjects();
         AimingOverhaul::Eyepiece::ReleaseDeviceObjects();
+        AimingOverhaul::FrameCopy().Release();
+        AimingOverhaul::Hit::ReleaseDeviceObjects();
         AimingOverhaul::ScopeShadow::ReleaseDeviceObjects();
         AimingOverhaul::SecondView::ReleaseDeviceObjects();
         AimingOverhaul::Streak::ReleaseDeviceObjects();
@@ -143,7 +148,8 @@ namespace {
     }
 
     // The lean, the gun near walls and after a sprint, the stance, a landing, the arms' slide behind
-    // the look's pitch, the recoil and the shots' shake, the heart, the breath and the eye's drift.
+    // the look's pitch, the recoil and the shots' shake, a hit's punch, the heart, the breath and the
+    // eye's drift.
     AimingOverhaul::Aim::Adjust OnAimFrame(uint8_t* pawn, float seconds) {
         using namespace AimingOverhaul;
         g_pawn = pawn;
@@ -170,10 +176,12 @@ namespace {
         PitchSlide::Update(seconds, (std::max)(Aim::Settled(), Aim::Scoped()));
         Recoil::Update(seconds);
         const ShotShake::Turn shake = ShotShake::Update(seconds);
+        const Hit::Punch punch = Hit::Update(seconds);
         Body::Follow(pawn);
         Heart::Update(seconds, sprinting, stamina, Pawn::Health(pawn), Pawn::Shake(pawn));
         Breath::Update(seconds, Aim::Aiming(), stamina);
-        return {Sway::Drift(seconds), roll + shake.roll, shake.pitch, Landing::EyeDrop()};
+        return {Sway::Drift(seconds), roll + shake.roll, shake.pitch + punch.pitch,
+                {0.0f, -Landing::EyeDrop(), -punch.back}};
     }
 
     bool OnFoot(uint8_t* pawn) {
@@ -230,8 +238,10 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         api->Log("nothing is drawn on the gun: a Direct3D seam could not be hooked");
         g_hooked = false;
     }
-    // Dirt in the eye is closest to the eye, so it goes over the eyepiece.
+    // Dirt in the eye is closest to the eye, so it goes over the eyepiece; what a hit does to the
+    // sight goes over everything.
     AimingOverhaul::Frame::AddComposite(&AimingOverhaul::Dirt::OnComposite);
+    AimingOverhaul::Frame::AddComposite(&AimingOverhaul::Hit::OnComposite);
     if (!AimingOverhaul::SecondView::Install(&AimingOverhaul::Surroundings::Want)) {
         api->Log("a scope's surroundings are not drawn: the second view could not be hooked");
         g_hooked = false;
@@ -245,6 +255,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     AimingOverhaul::Fire::Install(&RefuseShot);
     AimingOverhaul::Shot::Install(&MoveShot);
     AimingOverhaul::Impact::Install(&OnImpact);
+    AimingOverhaul::Damage::Install(&AimingOverhaul::Hit::OnHit);
     AimingOverhaul::Input::Install(&OnSignal);
     AimingOverhaul::Sprint::Install(&AimingOverhaul::Breath::HoldsSprint);
     AimingOverhaul::Sound::Install();
@@ -269,6 +280,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          Toggles(&AimingOverhaul::ShotShake::SetEnabled)},
         {"Dirt in the eye", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Dirt::SetEnabled)},
+        {"Being hit", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Hit::SetEnabled)},
         {"Gun blur", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Blur::SetEnabled)},
         {"Iron sight zoom", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Aim::SetIronsightZoom)},

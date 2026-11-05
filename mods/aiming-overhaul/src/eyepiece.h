@@ -22,7 +22,7 @@ struct Opening {
 bool BeforeGunDraw(IDirect3DDevice9* device, const WeaponDraws::Call& call);
 
 // Lays the reticle and the body over the finished frame.
-void OnComposite(IDirect3DDevice9* device);
+void OnComposite(IDirect3DDevice9* device, IDirect3DSurface9* frame);
 
 // The opening this frame, once the gun's depth pass has shown a scope drawn from its eyepiece.
 std::optional<Opening> Open();

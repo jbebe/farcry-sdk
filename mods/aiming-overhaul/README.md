@@ -92,6 +92,14 @@ both field by field with other mods' edits, reporting any clash.
   see-through, blurry blobs on the side it came from, the view blurred around them, bigger and
   darker the closer it landed. They hold for 0.6 s and are gone in 3 s. Metal, water, glass, flesh
   and plants throw none. Only what the player sees changes; the aim does not.
+- **Being hit.** A bullet, blast or blade that takes the player's health shows where it landed. Off
+  the head, the view punches back 5 cm and tips down 3°, peaking at 0.07 s and springing back; the
+  edges go dark, held for half a second and gone in 2.5 s; and the player gasps. On the head, the
+  view goes black for 0.35 s and comes back double, the second image a little to the side and
+  fading out over 5 s. A hit taking half the player's health or more does all of it in full, a
+  graze 0.4 of it; a shotgun's pellets count as one hit. A hit on a vest is a shorter, smaller punch
+  alone, but nothing in the game hits a vest yet. The game's own red hurt overlay and the interface
+  stay on top. While a scope's sight picture is up the view is not punched.
 - **Shot shake.** Each shot kicks the view up and it springs straight back, as hard as the round
   pushes whoever fires it: its projectiles' mass times their muzzle velocity, from the round
   Difficulty Overhaul gives each gun's archetype, easing off past 15 newton-seconds, the same from
@@ -179,7 +187,10 @@ the round's push is read from the weapon's `Cartridge.*` entity data in `src/car
 whether a gun fires full auto is the engine's own answer, read in `src/engine/fire.cpp`. Each weapon's
 values, the window and its file are `src/tuning.cpp`, drawn through DevTools' overlay API. Dirt in the
 eye is `src/dirt.cpp`, from each bullet's impact as the engine spawns its puff, in
-`src/engine/impact.cpp`, drawn over the finished frame with `src/shaders/dirt.fx`. The blur
+`src/engine/impact.cpp`, drawn over the finished frame with `src/shaders/dirt.fx`. Being hit is
+`src/hit.cpp`, from the player's damage as the engine deals it, in `src/engine/damage.cpp`; its punch
+goes through the same camera offsets, and the rest is drawn over the finished frame with
+`src/shaders/hit.fx`, the double image from the frame copy the eyepiece's glass also uses. The blur
 draws the gun's own
 depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the
 blur and the scope shadow draw at the end of the pass the gun's colour is drawn in, before the
@@ -240,6 +251,7 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Recoil that stays | Yes / No | Yes |
 | Shot shake | Yes / No | Yes |
 | Dirt in the eye | Yes / No | Yes |
+| Being hit | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
 | Iron sight zoom | Yes / No | Yes |
 | Scope shadow | Yes / No | Yes |
@@ -251,7 +263,7 @@ With Sway off neither the eye nor the aim drifts, and there is nothing for the b
 With Hold breath off, sprint down the sights does what the game does with it. With Vertical
 inertia off, the arms keep still as the look pitches, as in the game. With Gun up after sprint off, the gun fires and aims as soon as the sprint ends, as in the game. With Landing off,
 the eye does not drop. With Recoil that stays off, the game's recoil comes back as it was and a
-burst no longer spreads. With Shot shake off, the view holds still as the gun fires. With Dirt in the eye off, no round throws dirt. How quickly the player gets going is the player data's, and stays. With
+burst no longer spreads. With Shot shake off, the view holds still as the gun fires. With Dirt in the eye off, no round throws dirt. With Being hit off, a hit shows only what the game shows. How quickly the player gets going is the player data's, and stays. With
 Iron sight zoom
 off, the view keeps its field of view down a gun's iron sights; a scope still
 magnifies. With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game
@@ -259,7 +271,7 @@ draws them. Which guns fire them and how fast they fly are the weapon data's, an
 scopes' lost iron-sight effect, whatever the scope settings.
 
 With DevTools installed, its overlay has an Aiming Overhaul window, which sets the sway down the
-sights, dirt in the eye and the shot shake for each weapon while the game runs and keeps them in
+sights, dirt in the eye, being hit and the shot shake for each weapon while the game runs and keeps them in
 `bin\aiming-overhaul.ini`, read at launch; delete the file for the defaults.
 
 | Down the sights, every weapon | Unit | Default |
@@ -276,6 +288,20 @@ sights, dirt in the eye and the shot shake for each weapon while the game runs a
 | Dirt thrown from | metres from the eye a round has to land within | 3 |
 
 Throw dirt, under them, throws it as a round landing a metre to the right would.
+
+| Being hit, every weapon | Unit | Default |
+|---|---|---|
+| Punch back | metres the eye is pushed back at the punch's peak | 0.05 |
+| Punch tips down | degrees the view tips down at its peak | 3 |
+| Punch peaks after | seconds from the hit; a vest's in half of it | 0.07 |
+| Vignette darkness | how dark the corners go, nought to one | 0.85 |
+| Vignette reach | how far in from the corners the dark comes, a share of the way to the middle | 0.55 |
+| Vignette gone by | seconds after the hit | 2.5 |
+| Head: black for | seconds | 0.35 |
+| Head: double image apart | pixels of a 1080-line screen | 40 |
+| Head: double image gone by | seconds after the hit | 5 |
+
+Hit the body, Hit the head and Hit the vest, under them, show a hit there as hard as the hardest.
 
 The shot shake has a section per weapon. Its Weapon list holds every gun the player can
 fire, variants under their gun, and Other weapons for the rest. It moves to the weapon in hand each

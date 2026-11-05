@@ -46,6 +46,9 @@ public:
     // Writes colour only, leaving the target's alpha.
     void KeepAlpha();
 
+    // Lays colour already multiplied by its cover over what is there, leaving the target's alpha.
+    void Premultiplied();
+
 private:
     static constexpr UINT kMaxConstantRegisters = 8;
     static constexpr DWORD kSamplers = 6;

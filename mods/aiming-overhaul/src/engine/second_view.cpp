@@ -3,7 +3,7 @@
 #include "engine/com.h"
 #include "engine/frame.h"
 #include "engine/memory.h"
-#include "engine/render_target.h"
+#include "engine/plain_copy.h"
 #include "fcse_api.h"
 
 #include <cstddef>
@@ -102,12 +102,8 @@ namespace {
     alignas(16) uint8_t g_view[kViewSize];
     alignas(16) uint8_t g_component[kComponentSize];
 
-    IDirect3DDevice9* g_owner = nullptr;
-    AimingOverhaul::Target g_copy;
-    D3DSURFACE_DESC g_copyDesc = {};
+    AimingOverhaul::PlainCopy g_copy{"second view"};
     uint32_t g_drawnFrame = AimingOverhaul::Frame::kNever;
-    // Set once the device refuses the copy's target; cleared on reset.
-    bool g_refused = false;
     bool g_reported = false;
 
     // The reflection renderer's last colour, copied into a texture of our own.
@@ -119,27 +115,9 @@ namespace {
         if (texture == nullptr || FAILED(texture->GetSurfaceLevel(0, &surface))) {
             return false;
         }
-        D3DSURFACE_DESC desc = {};
-        surface->GetDesc(&desc);
         IDirect3DDevice9* device = nullptr;
         texture->GetDevice(&device);
-        if (!g_refused && (g_owner != device || g_copy.texture == nullptr ||
-                           g_copyDesc.Width != desc.Width || g_copyDesc.Height != desc.Height ||
-                           g_copyDesc.Format != desc.Format)) {
-            AimingOverhaul::Release(g_copy);
-            g_owner = device;
-            g_copyDesc = desc;
-            if (FAILED(AimingOverhaul::CreateTarget(device, desc.Width, desc.Height, desc.Format,
-                                                    g_copy))) {
-                AimingOverhaul::Release(g_copy);
-                g_refused = true;
-                FCSE::Logf("second view: the device refused a %ux%u target of format %d",
-                           desc.Width, desc.Height, desc.Format);
-            }
-        }
-        const bool copied =
-            g_copy.surface != nullptr &&
-            SUCCEEDED(device->StretchRect(surface, nullptr, g_copy.surface, nullptr, D3DTEXF_NONE));
+        const bool copied = g_copy.Take(device, surface) != nullptr;
         AimingOverhaul::Release(device);
         AimingOverhaul::Release(surface);
         return copied;
@@ -249,12 +227,10 @@ bool AimingOverhaul::SecondView::Install(WantFn want) {
 }
 
 IDirect3DTexture9* AimingOverhaul::SecondView::Latest() {
-    return g_drawnFrame == Frame::Number() ? g_copy.texture : nullptr;
+    return g_drawnFrame == Frame::Number() ? g_copy.Texture() : nullptr;
 }
 
 void AimingOverhaul::SecondView::ReleaseDeviceObjects() {
-    Release(g_copy);
-    g_owner = nullptr;
-    g_refused = false;
+    g_copy.Release();
     g_drawnFrame = Frame::kNever;
 }

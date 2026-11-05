@@ -1,10 +1,11 @@
-// The sway down the sights, dirt in the eye and each weapon's shot shake, and the window and file
-// they are kept in. See tuning.h.
+// The sway down the sights, dirt in the eye, being hit and each weapon's shot shake, and the window
+// and file they are kept in. See tuning.h.
 #include "tuning.h"
 
 #include "dirt.h"
 #include "engine/aim.h"
 #include "fcse_api.h"
+#include "hit.h"
 #include "shot_shake.h"
 
 #include "imgui.h"
@@ -24,6 +25,7 @@
 
 namespace {
     using AimingOverhaul::Tuning::DirtLook;
+    using AimingOverhaul::Tuning::HitLook;
     using AimingOverhaul::Tuning::SightSway;
     using AimingOverhaul::Tuning::Values;
 
@@ -57,6 +59,21 @@ namespace {
         {"Range", "Dirt thrown from", &DirtLook::range, 0.2f, 5.0f, "%.1f m"},
     };
     DirtLook g_dirt;
+
+    // Being hit's section in the file, and its values.
+    constexpr const char* kHit = "Being hit";
+    constexpr Parameter<HitLook> kHitParameters[] = {
+        {"Back", "Punch back", &HitLook::back, 0.0f, 0.2f, "%.3f m"},
+        {"Down", "Punch tips down", &HitLook::down, 0.0f, 10.0f, "%.1f deg"},
+        {"Peak", "Punch peaks after", &HitLook::peak, 0.02f, 0.3f, "%.2f s"},
+        {"Vignette", "Vignette darkness", &HitLook::vignette, 0.0f, 1.0f, "%.2f"},
+        {"Reach", "Vignette reach", &HitLook::reach, 0.1f, 0.9f, "%.2f of the way in"},
+        {"VignetteGone", "Vignette gone by", &HitLook::vignetteGone, 0.6f, 8.0f, "%.1f s"},
+        {"Black", "Head: black for", &HitLook::black, 0.05f, 2.0f, "%.2f s"},
+        {"Apart", "Head: double image apart", &HitLook::apart, 0.0f, 150.0f, "%.0f px at 1080p"},
+        {"DoubleGone", "Head: double image gone by", &HitLook::doubleGone, 0.5f, 15.0f, "%.1f s"},
+    };
+    HitLook g_hit;
 
     constexpr Parameter<Values> kParameters[] = {
         {"KickPerImpulse", "Single shot kick", &Values::kickPerImpulse, 0.0f, 0.6f,
@@ -197,12 +214,37 @@ namespace {
         return moved;
     }
 
+    // A section every weapon shares: its name, and its values read from a line and written out.
+    struct Section {
+        const char* name;
+        void (*read)(std::string_view key, std::string_view number);
+        void (*write)(std::ofstream& file, const char* name);
+    };
+
+    template <const auto& parameters, auto& values>
+    constexpr Section Shared(const char* name) {
+        return {name,
+                [](std::string_view key, std::string_view number) {
+                    Read(key, number, parameters, values);
+                },
+                [](std::ofstream& file, const char* name) {
+                    WriteSection(file, name, parameters, values);
+                }};
+    }
+
+    const Section kShared[] = {
+        Shared<kSightParameters, g_sights>(kSights),
+        Shared<kDirtParameters, g_dirt>(kDirt),
+        Shared<kHitParameters, g_hit>(kHit),
+    };
+
     void Save() {
         std::ofstream file(File(), std::ios::trunc);
-        file << "; Aiming Overhaul, the sights' and the dirt's sections, then one per weapon. Set in "
+        file << "; Aiming Overhaul, the sections every weapon shares, then one per weapon. Set in "
                 "its window in\n; DevTools' overlay and read at launch.\n";
-        WriteSection(file, kSights, kSightParameters, g_sights);
-        WriteSection(file, kDirt, kDirtParameters, g_dirt);
+        for (const Section& section : kShared) {
+            section.write(file, section.name);
+        }
         for (size_t weapon = 0; weapon < g_weapons.size(); ++weapon) {
             WriteSection(file, NameOf(weapon), kParameters, g_weapons[weapon]);
         }
@@ -219,6 +261,10 @@ const SightSway& AimingOverhaul::Tuning::Sights() {
 
 const DirtLook& AimingOverhaul::Tuning::DirtInTheEye() {
     return g_dirt;
+}
+
+const HitLook& AimingOverhaul::Tuning::BeingHit() {
+    return g_hit;
 }
 
 void AimingOverhaul::Tuning::Follow(uint8_t* weapon) {
@@ -238,16 +284,16 @@ void AimingOverhaul::Tuning::Load() {
     }
     // A line outside a known section changes nothing.
     std::ifstream file(File());
-    bool sights = false;
-    bool dirt = false;
+    const Section* shared = nullptr;
     Values* weapon = nullptr;
     std::string line;
     while (std::getline(file, line)) {
         const std::string_view text = Trim(line);
         if (text.starts_with('[') && text.ends_with(']')) {
             const std::string_view name = text.substr(1, text.size() - 2);
-            sights = name == kSights;
-            dirt = name == kDirt;
+            const auto found = std::find_if(std::begin(kShared), std::end(kShared),
+                                            [&](const Section& s) { return name == s.name; });
+            shared = found != std::end(kShared) ? found : nullptr;
             weapon = nullptr;
             for (size_t i = 0; i < g_weapons.size() && weapon == nullptr; ++i) {
                 if (name == NameOf(i)) {
@@ -262,10 +308,8 @@ void AimingOverhaul::Tuning::Load() {
         }
         const std::string_view key = Trim(text.substr(0, equals));
         const std::string_view number = Trim(text.substr(equals + 1));
-        if (sights) {
-            Read(key, number, kSightParameters, g_sights);
-        } else if (dirt) {
-            Read(key, number, kDirtParameters, g_dirt);
+        if (shared != nullptr) {
+            shared->read(key, number);
         } else if (weapon != nullptr) {
             Read(key, number, kParameters, *weapon);
         }
@@ -285,6 +329,21 @@ void AimingOverhaul::Tuning::DrawWindow(void*) {
         Dirt::Throw();
     }
     ImGui::SetItemTooltip("Throws dirt in the eye as a round landing a metre to the right would.");
+
+    ImGui::SeparatorText("Being hit, every weapon");
+    g_unsaved |= DrawSliders(kHitParameters, g_hit);
+    if (ImGui::Button("Hit the body")) {
+        Hit::Try(Hit::Where::kBody);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Hit the head")) {
+        Hit::Try(Hit::Where::kHead);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Hit the vest")) {
+        Hit::Try(Hit::Where::kVest);
+    }
+    ImGui::SetItemTooltip("Nothing in the game hits a vest yet, so only this shows it.");
 
     ImGui::SeparatorText("Shot shake");
     if (g_inHand != g_followed) {

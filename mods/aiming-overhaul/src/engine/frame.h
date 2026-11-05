@@ -21,7 +21,8 @@ struct Pass {
 };
 
 using PassFn = void (*)(const Pass&);
-using CompositeFn = void (*)(IDirect3DDevice9* device);
+// With the back buffer, borrowed for the callback.
+using CompositeFn = void (*)(IDirect3DDevice9* device, IDirect3DSurface9* frame);
 
 // Takes over the device's EndScene; `onScenePass` runs as each of the world's passes ends, with its
 // target and depth still bound, and `onComposite` as the frame's tone-mapped image is finished in the

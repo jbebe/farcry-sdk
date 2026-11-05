@@ -183,3 +183,10 @@ void AimingOverhaul::ScreenDraw::KeepAlpha() {
                                                          D3DCOLORWRITEENABLE_GREEN |
                                                          D3DCOLORWRITEENABLE_BLUE);
 }
+
+void AimingOverhaul::ScreenDraw::Premultiplied() {
+    m_device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+    m_device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+    m_device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+    KeepAlpha();
+}

@@ -2,14 +2,28 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <numbers>
 
 namespace AimingOverhaul {
 
+inline constexpr float kDegree = std::numbers::pi_v<float> / 180.0f;
+
+// Seconds on a steady clock.
+inline double Now() {
+    return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch())
+        .count();
+}
+
 // Smoothstep, nought to one.
 inline float Ease(float linear) {
     return linear * linear * (3.0f - 2.0f * linear);
+}
+
+// How far along `seconds` is of `span` seconds, eased, from nought to one.
+inline float Through(double seconds, float span) {
+    return Ease(std::clamp(static_cast<float>(seconds) / span, 0.0f, 1.0f));
 }
 
 // `value` moved toward `target` by at most `step`.

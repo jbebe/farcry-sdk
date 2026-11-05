@@ -11,6 +11,12 @@ struct Offset {
     float up;
 };
 
+struct Shift {
+    float right;
+    float up;
+    float ahead;
+};
+
 // Radians a second the look turns, right and up.
 struct Turning {
     float right;
@@ -29,10 +35,10 @@ struct Adjust {
     Offset drift;
     // The view's roll, in radians, right positive: with the body as it leans, and with the shots.
     float roll;
-    // The view's pitch as the shots kick it, in radians, up positive.
+    // The view's pitch as the shots and hits kick it, in radians, up positive.
     float pitch;
-    // How far the eye drops, in metres, as the knees take a landing.
-    float drop;
+    // How far the eye moves, as the knees take a landing and as a hit punches it back.
+    Shift eye;
 };
 
 // Once a frame, with the player's pawn and the seconds since the last, before the camera is placed

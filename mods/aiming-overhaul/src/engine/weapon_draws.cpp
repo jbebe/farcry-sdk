@@ -269,9 +269,9 @@ namespace {
         }
     }
 
-    void OnComposite(IDirect3DDevice9* device) {
+    void OnComposite(IDirect3DDevice9* device, IDirect3DSurface9* frame) {
         if (g_watching && g_depthFrame == AimingOverhaul::Frame::Number()) {
-            g_listener.onComposite(device);
+            g_listener.onComposite(device, frame);
         }
     }
 }

@@ -52,7 +52,7 @@ namespace {
         const bool toBackBuffer = target.surface == backBuffer.surface;
         if (toBackBuffer && !haveDepth) {
             for (size_t i = 0; i < g_composites; ++i) {
-                g_onComposites[i](device);
+                g_onComposites[i](device, target.surface);
             }
             g_pastSky = false;
             g_frame++;

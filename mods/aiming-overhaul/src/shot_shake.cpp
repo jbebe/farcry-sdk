@@ -17,7 +17,7 @@
 
 namespace {
     constexpr float kPi = std::numbers::pi_v<float>;
-    constexpr float kDegree = kPi / 180.0f;
+    using AimingOverhaul::kDegree;
 
     // The push, in newton-seconds, past which the shake eases off.
     constexpr float kMostImpulse = 15.0f;

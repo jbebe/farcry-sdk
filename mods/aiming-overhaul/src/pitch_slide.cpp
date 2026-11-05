@@ -7,13 +7,12 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
-#include <numbers>
 
 namespace {
     // As the game takes the turn's rate for its sideways slide: no faster than kFastest radians a
     // second, eased a tenth of the way each frame at 60 a second, which is kEasing seconds, and
     // nought below kSlowest.
-    constexpr float kDegree = std::numbers::pi_v<float> / 180.0f;
+    using AimingOverhaul::kDegree;
     constexpr float kFastest = 185.0f * kDegree;
     constexpr float kEasing = 0.158f;
     constexpr float kSlowest = 1.0f * kDegree;

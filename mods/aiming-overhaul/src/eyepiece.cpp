@@ -7,7 +7,7 @@
 #include "engine/com.h"
 #include "engine/image_file.h"
 #include "engine/frame.h"
-#include "engine/render_target.h"
+#include "engine/plain_copy.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "engine/weapon_mesh.h"
@@ -57,13 +57,6 @@ namespace {
     AimingOverhaul::PixelShader g_reticleShader{"eyepiece reticle", g_eyepieceReticlePixelShader};
     AimingOverhaul::PixelShader g_bodyShader{"eyepiece body", g_eyepieceBodyPixelShader};
     AimingOverhaul::PixelShader g_glassShader{"eyepiece glass", g_glassPixelShader};
-
-    // A copy of the finished frame for the glass to look through, on the device that made it;
-    // refused until a reset if the device would not make it.
-    IDirect3DDevice9* g_copyOwner = nullptr;
-    AimingOverhaul::Target g_copy;
-    D3DSURFACE_DESC g_copyDesc = {};
-    bool g_copyRefused = false;
 
     std::atomic<bool> g_enabled{true};
 
@@ -146,35 +139,13 @@ namespace {
         return g_reticle;
     }
 
-    bool EnsureCopy(IDirect3DDevice9* device, IDirect3DSurface9* frame) {
-        D3DSURFACE_DESC desc = {};
-        frame->GetDesc(&desc);
-        if (g_copyOwner == device && g_copy.texture != nullptr && g_copyDesc.Width == desc.Width &&
-            g_copyDesc.Height == desc.Height && g_copyDesc.Format == desc.Format) {
-            return true;
-        }
-        AimingOverhaul::Release(g_copy);
-        if (g_copyRefused) {
-            return false;
-        }
-        g_copyOwner = device;
-        g_copyDesc = desc;
-        if (FAILED(AimingOverhaul::CreateTarget(device, desc.Width, desc.Height, desc.Format,
-                                                g_copy))) {
-            AimingOverhaul::Release(g_copy);
-            g_copyRefused = true;
-            FCSE::ApiPointer()->Log("eyepiece: the device refused a copy of the frame");
-            return false;
-        }
-        return true;
-    }
-
     // The view inside the opening, redrawn through the scope's glass from a copy of the frame.
     void DrawGlass(IDirect3DDevice9* device, AimingOverhaul::ScreenDraw& draw,
                    const AimingOverhaul::Eyepiece::Opening& opening, IDirect3DSurface9* frame) {
         IDirect3DPixelShader9* shader = g_glassShader.Get(device);
-        if (shader == nullptr || !EnsureCopy(device, frame) ||
-            FAILED(device->StretchRect(frame, nullptr, g_copy.surface, nullptr, D3DTEXF_NONE))) {
+        IDirect3DTexture9* copy =
+            shader != nullptr ? AimingOverhaul::FrameCopy().Take(device, frame) : nullptr;
+        if (copy == nullptr) {
             return;
         }
         const float width = static_cast<float>(AimingOverhaul::Frame::Width());
@@ -186,7 +157,7 @@ namespace {
             kTint[0], kTint[1], kTint[2], 0.0f,
         };
         device->SetPixelShaderConstantF(0, constants, 3);
-        device->SetTexture(0, g_copy.texture);
+        device->SetTexture(0, copy);
         draw.Linear(0);
         device->SetPixelShader(shader);
         draw.Quad(0.0f, 0.0f, width, height);
@@ -259,7 +230,7 @@ bool AimingOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
     return !Held(g_drawnFrame);
 }
 
-void AimingOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
+void AimingOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device, IDirect3DSurface9* frame) {
     const std::optional<Opening> opening = Open();
     IDirect3DPixelShader9* body = opening ? g_bodyShader.Get(device) : nullptr;
     if (body == nullptr) {
@@ -279,8 +250,6 @@ void AimingOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
         Scopes::kShapeSpan,
     };
 
-    IDirect3DSurface9* frame = nullptr;
-    device->GetRenderTarget(0, &frame);
     ScreenDraw draw(device, 0, 4);
     // Each lays its colour over what is there by how much it covers it.
     device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
@@ -288,7 +257,6 @@ void AimingOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device) {
     device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
     draw.KeepAlpha();
     DrawGlass(device, draw, *opening, frame);
-    Release(frame);
     // The reticle's colour is already multiplied by its cover, and a lit one adds light past it.
     device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
     DrawReticle(device, draw, scope, *opening);
@@ -331,7 +299,4 @@ void AimingOverhaul::Eyepiece::ReleaseDeviceObjects() {
     Release(g_reticle);
     g_reticleOwner = nullptr;
     g_reticleOf[0] = '\0';
-    Release(g_copy);
-    g_copyOwner = nullptr;
-    g_copyRefused = false;
 }

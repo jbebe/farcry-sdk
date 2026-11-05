@@ -275,8 +275,9 @@ namespace {
         const float raised =
             raising && g_raiseFrom < 1.0f ? (weight - g_raiseFrom) / (1.0f - g_raiseFrom) : 0.0f;
         const AimingOverhaul::Aim::Adjust adjust = g_frame(pawn, seconds);
-        g_added = {adjust.drift.right * settled, adjust.drift.up * settled - adjust.drop};
-        g_addedAhead = g_raiseReach * raised;
+        g_added = {adjust.drift.right * settled + adjust.eye.right,
+                   adjust.drift.up * settled + adjust.eye.up};
+        g_addedAhead = g_raiseReach * raised + adjust.eye.ahead;
         g_addedPitch = adjust.pitch;
         g_addedRoll = adjust.roll;
         Shift(camera, 1.0f);

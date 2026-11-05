@@ -3,6 +3,7 @@
 
 #include "ease.h"
 #include "engine/aim.h"
+#include "engine/frame.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "soft_copy.h"
@@ -13,7 +14,6 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <chrono>
 #include <cmath>
 #include <iterator>
 #include <mutex>
@@ -73,10 +73,7 @@ namespace {
     AimingOverhaul::PixelShader g_shader{"dirt", g_dirtPixelShader};
     AimingOverhaul::SoftCopy g_soft{"dirt"};
 
-    double Now() {
-        return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch())
-            .count();
-    }
+    using AimingOverhaul::Now;
 
     float Between(float least, float most) {
         return std::uniform_real_distribution<float>(least, most)(g_random);
@@ -112,11 +109,8 @@ namespace {
     // How much of a blob is left `age` seconds after it was thrown, from nought to one.
     float Left(double age, float clear) {
         const float hold = (std::min)(kHold, 0.5f * clear);
-        const float seconds = static_cast<float>(age);
-        const float appeared = AimingOverhaul::Ease(std::clamp(seconds / kAppear, 0.0f, 1.0f));
-        const float cleared =
-            AimingOverhaul::Ease(std::clamp((seconds - hold) / (clear - hold), 0.0f, 1.0f));
-        return appeared * (1.0f - cleared);
+        return AimingOverhaul::Through(age, kAppear) *
+               (1.0f - AimingOverhaul::Through(age - hold, clear - hold));
     }
 }
 
@@ -154,7 +148,7 @@ void AimingOverhaul::Dirt::Throw() {
     ThrowAt(0.5f + kSideways, kMiddle, Strength(1.0f));
 }
 
-void AimingOverhaul::Dirt::OnComposite(IDirect3DDevice9* device) {
+void AimingOverhaul::Dirt::OnComposite(IDirect3DDevice9* device, IDirect3DSurface9* frame) {
     if (!g_enabled) {
         return;
     }
@@ -176,27 +170,18 @@ void AimingOverhaul::Dirt::OnComposite(IDirect3DDevice9* device) {
         }
     }
     IDirect3DPixelShader9* shader = any ? g_shader.Get(device) : nullptr;
-    IDirect3DSurface9* frame = nullptr;
-    if (shader == nullptr || FAILED(device->GetRenderTarget(0, &frame)) || frame == nullptr) {
-        return;
-    }
-    D3DSURFACE_DESC desc = {};
-    frame->GetDesc(&desc);
-    IDirect3DTexture9* soft = g_soft.Soften(device, frame, look.blur / kBlurLines);
-    Release(frame);
+    IDirect3DTexture9* soft =
+        shader != nullptr ? g_soft.Soften(device, frame, look.blur / kBlurLines) : nullptr;
     if (soft == nullptr) {
         return;
     }
-    const float width = static_cast<float>(desc.Width);
-    const float height = static_cast<float>(desc.Height);
+    const float width = static_cast<float>(Frame::Width());
+    const float height = static_cast<float>(Frame::Height());
     constants[0] = width / height;
 
-    // Laid on premultiplied: the blurred view by its share and the darkness over both.
+    // The blurred view by its share and the darkness over both.
     ScreenDraw draw(device, 0, kConstants);
-    device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-    device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
-    device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-    draw.KeepAlpha();
+    draw.Premultiplied();
     device->SetPixelShaderConstantF(0, constants, kConstants);
     device->SetTexture(0, soft);
     draw.Linear(0);

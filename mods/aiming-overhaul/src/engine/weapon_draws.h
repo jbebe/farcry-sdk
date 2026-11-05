@@ -48,7 +48,7 @@ struct Listener {
     // Before each of the gun's draws, depth and colour.
     GunDrawFn beforeDraw;
     // As the frame's tone-mapped image is finished in the back buffer, under the interface.
-    DeviceFn onComposite;
+    Frame::CompositeFn onComposite;
 };
 
 // Takes over the frame and the device's indexed draws, and calls `listener` while the player is
