@@ -45,7 +45,7 @@ namespace {
         {"KickTime", "Single shot time", 0.05f, 1.0f, "%.2f s", &g_kickTime},
         {"KickDelay", "Single shot delay", 0.0f, 0.3f, "%.3f s", &g_kickDelay},
         {"RollPerImpulse", "Full auto roll", 0.0f, 0.6f, "%.3f deg per N s", &g_rollPerImpulse},
-        {"RollCycle", "Full auto roll cycle", 0.1f, 2.0f, "%.2f s", &g_rollCycle},
+        {"RollCycle", "Full auto roll cycle", 0.04f, 2.0f, "%.2f s", &g_rollCycle},
         {"RollFade", "Kick to roll fade", 0.0f, 2.0f, "%.2f s", &g_rollFade},
     };
 
