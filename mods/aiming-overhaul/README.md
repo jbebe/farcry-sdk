@@ -82,6 +82,14 @@ both field by field with other mods' edits, reporting any clash.
   the gun's kick more each time, up to eight shots' worth: down a new AK-47's sights, up to 1.2°
   more than the game's 0.4°. A burst is shots less than a quarter of a second apart, so slower taps
   each start fresh.
+- **Shot shake.** Each shot kicks the view up hard and it springs straight back, peaking in 0.04 s
+  and still again in a quarter of a second: 1.5 times the gun's kick, up to 3°, of which about four
+  fifths shows, 1.25° for a new AK-47 from the hip. Firing full auto, the kick fades out over the
+  first three rounds into a roll, clockwise and back, a whole cycle every four rounds and three
+  quarters of the kick either way, which stops as soon as the rounds do. Single-shot guns kick on
+  every shot however fast they are fired. Only the view turns, about the eye: the gun keeps its
+  place and the shots their line, so the sights stay on where a shot goes. A scope's sight picture
+  does not shake.
 - **Gun blur.** Down the iron sights the eye focuses on the front sight, and the rest of the gun
   goes out of focus by how far it is from it, as through an 8 mm pupil: the rear sight most, and the
   blur spills a little past the gun's edge. The focus holds on the front sight while a fast turn
@@ -140,7 +148,10 @@ behind the look's pitch, `src/pitch_slide.cpp`, moves them in the same pass. A l
 `src/recoil.cpp`: each of the player's kicks is taken from the game before the game blends it in,
 in `src/engine/kick.cpp`, added to the look in `src/engine/look.cpp`, and a burst's shots stray in
 `src/engine/shot.cpp`. The guns that keep the game's recoil have `AimingOverhaul.RecoilReturns` on
-their archetype, written by `data\fragments.py`. The blur draws the gun's own
+their archetype, written by `data\fragments.py`. The shot shake is `src/shot_shake.cpp`, struck by
+the same kicks and turning the view through the camera's angular offset in `src/engine/aim.cpp`;
+whether a gun fires full auto is the engine's own answer, read in `src/engine/fire.cpp`. The blur
+draws the gun's own
 depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the
 blur and the scope shadow draw at the end of the pass the gun's colour is drawn in, before the
 bloom, in `src/blur.cpp` and `src/scope_shadow.cpp`.
@@ -196,6 +207,7 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Gun up after sprint | Yes / No | Yes |
 | Landing | Yes / No | Yes |
 | Recoil that stays | Yes / No | Yes |
+| Shot shake | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
 | Iron sight zoom | Yes / No | Yes |
 | Scope shadow | Yes / No | Yes |
@@ -207,7 +219,7 @@ With Sway off neither the eye nor the aim drifts, and there is nothing for the b
 With Hold breath off, sprint down the sights does what the game does with it. With Vertical
 inertia off, the arms keep still as the look pitches, as in the game. With Gun up after sprint off, the gun fires and aims as soon as the sprint ends, as in the game. With Landing off,
 the eye does not drop. With Recoil that stays off, the game's recoil comes back as it was and a
-burst no longer spreads. How quickly the player gets going is the player data's, and stays. With
+burst no longer spreads. With Shot shake off, the view holds still as the gun fires. How quickly the player gets going is the player data's, and stays. With
 Iron sight zoom
 off, the view keeps its field of view down a gun's iron sights; a scope still
 magnifies. With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game

@@ -26,6 +26,7 @@
 #include "recoil.h"
 #include "scope_shadow.h"
 #include "scopes.h"
+#include "shot_shake.h"
 #include "stance.h"
 #include "streak.h"
 #include "surroundings.h"
@@ -98,6 +99,7 @@ namespace {
         AimingOverhaul::Breath::FollowWeapon(weapon);
         AimingOverhaul::Weight::Follow(weapon);
         AimingOverhaul::Recoil::FollowWeapon(weapon);
+        AimingOverhaul::ShotShake::FollowWeapon(weapon);
         const AimingOverhaul::Scopes::Scope* scope = AimingOverhaul::Scopes::Follow(weapon);
         return scope != nullptr ? scope->raiseReach : 0.0f;
     }
@@ -132,7 +134,7 @@ namespace {
     }
 
     // The lean, the gun near walls and after a sprint, the stance, a landing, the arms' slide behind
-    // the look's pitch, the recoil, the heart, the breath and the eye's drift.
+    // the look's pitch, the recoil and the shots' shake, the heart, the breath and the eye's drift.
     AimingOverhaul::Aim::Adjust OnAimFrame(uint8_t* pawn, float seconds) {
         using namespace AimingOverhaul;
         g_pawn = pawn;
@@ -158,10 +160,11 @@ namespace {
         Landing::Update(pawn, seconds);
         PitchSlide::Update(seconds, (std::max)(Aim::Settled(), Aim::Scoped()));
         Recoil::Update(seconds);
+        const ShotShake::Turn shake = ShotShake::Update(seconds);
         Body::Follow(pawn);
         Heart::Update(seconds, sprinting, stamina, Pawn::Health(pawn), Pawn::Shake(pawn));
         Breath::Update(seconds, Aim::Aiming(), stamina);
-        return {Sway::Drift(seconds), roll, Landing::EyeDrop()};
+        return {Sway::Drift(seconds), roll + shake.roll, shake.pitch, Landing::EyeDrop()};
     }
 
     bool OnFoot(uint8_t* pawn) {
@@ -180,8 +183,15 @@ namespace {
         }
     }
 
+    // Whether the look is hooked, which the recoil that stays turns.
+    bool g_lookHooked = false;
+
     bool TakeKick(uint8_t* pawn, const AimingOverhaul::Kick::Kick& kick) {
-        return OnFoot(pawn) && AimingOverhaul::Recoil::Take(kick);
+        if (!OnFoot(pawn)) {
+            return false;
+        }
+        AimingOverhaul::ShotShake::Kick(kick);
+        return g_lookHooked && AimingOverhaul::Recoil::Take(kick);
     }
 }
 
@@ -211,10 +221,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     FollowZoom();
     AimingOverhaul::Tracers::Install();
     AimingOverhaul::Streak::Install();
-    // Kicks are taken only where the look can carry them.
-    if (AimingOverhaul::Look::Install(&AimingOverhaul::Sway::Wander)) {
-        AimingOverhaul::Kick::Install(&TakeKick);
-    }
+    g_lookHooked = AimingOverhaul::Look::Install(&AimingOverhaul::Sway::Wander);
+    AimingOverhaul::Kick::Install(&TakeKick);
     AimingOverhaul::Ray::Install();
     AimingOverhaul::Fire::Install(&RefuseShot);
     AimingOverhaul::Shot::Install(&MoveShot);
@@ -238,6 +246,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          Toggles(&AimingOverhaul::Landing::SetEnabled)},
         {"Recoil that stays", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Recoil::SetEnabled)},
+        {"Shot shake", FCSE_CHECKBOX(true), &OnToggled,
+         Toggles(&AimingOverhaul::ShotShake::SetEnabled)},
         {"Gun blur", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Blur::SetEnabled)},
         {"Iron sight zoom", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Aim::SetIronsightZoom)},

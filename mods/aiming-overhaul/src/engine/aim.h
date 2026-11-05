@@ -27,8 +27,10 @@ struct Swing {
 struct Adjust {
     // The hand's drift, which the eye follows down the iron sights.
     Offset drift;
-    // The view's roll with the body as it leans, in radians, right positive.
+    // The view's roll, in radians, right positive: with the body as it leans, and with the shots.
     float roll;
+    // The view's pitch as the shots kick it, in radians, up positive.
+    float pitch;
     // How far the eye drops, in metres, as the knees take a landing.
     float drop;
 };

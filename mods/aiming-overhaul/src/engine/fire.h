@@ -1,4 +1,5 @@
-// Whether a weapon can fire, which can be refused for the one in the player's hands.
+// Whether a weapon can fire, which can be refused for the one in the player's hands, and how it
+// fires.
 #pragma once
 
 #include <cstdint>
@@ -10,5 +11,9 @@ using RefuseFn = bool (*)(uint8_t* pawn);
 
 // False, and logged, when the check cannot be hooked.
 bool Install(RefuseFn refuse);
+
+// Whether `weapon` keeps firing for as long as its trigger is held; false where the engine's
+// pointers do not hold.
+bool FullAuto(uint8_t* weapon);
 
 }

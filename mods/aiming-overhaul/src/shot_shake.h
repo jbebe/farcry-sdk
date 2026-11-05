@@ -1,0 +1,30 @@
+// The view shaken by the player's shots: a hard kick up that springs back, which through a burst of
+// full-auto fire fades into a roll clockwise and back. Only the camera turns; the gun and the shot
+// stay where they are.
+#pragma once
+
+#include "engine/kick.h"
+
+#include <cstdint>
+
+namespace AimingOverhaul::ShotShake {
+
+// The view's turn off the look, in radians, pitched up and rolled right.
+struct Turn {
+    float pitch;
+    float roll;
+};
+
+// Follows the weapon in hand, or null, reading whether it fires full auto each time it changes.
+void FollowWeapon(uint8_t* weapon);
+
+// Shakes the view by a shot's kick, the game's own for the gun, its wear and the sights.
+void Kick(const Kick::Kick& kick);
+
+// Once a frame, with the seconds since the last: the view's turn this frame, none while a scope's
+// sight picture is up.
+Turn Update(float seconds);
+
+void SetEnabled(bool enabled);
+
+}

@@ -44,10 +44,11 @@ namespace {
     UpdateCameraOffsetFn g_originalUpdateCameraOffset = nullptr;
     UpdateFovFn g_originalUpdateFov = nullptr;
 
-    // CCameraPawnComponent: the view's roll over the body's, in radians, right positive, which also
-    // turns the eye's offset; the eye's offset in the view's axes, x right, y ahead, z up; and the
-    // field of view in radians, unaimed, as this frame's, and the noise added to it. Update's `this`
-    // is the component's second base.
+    // CCameraPawnComponent: the view's pitch up and roll right over the body's, in radians, which
+    // also turn the eye's offset; the eye's offset in the view's axes, x right, y ahead, z up; and
+    // the field of view in radians, unaimed, as this frame's, and the noise added to it. Update's
+    // `this` is the component's second base.
+    constexpr ptrdiff_t kViewPitch = 0xD0;
     constexpr ptrdiff_t kViewRoll = 0xD4;
     constexpr ptrdiff_t kEyeRight = 0xE8;
     constexpr ptrdiff_t kEyeAhead = 0xEC;
@@ -119,11 +120,22 @@ namespace {
     float g_raiseReach = 0.0f;
     float g_raiseFrom = 0.0f;
 
-    // What was added to the eye during the camera update under way, and to which camera.
+    // What was added to the eye and the view during the camera update under way, and to which
+    // camera.
     uint8_t* g_addedTo = nullptr;
     AimingOverhaul::Aim::Offset g_added = {};
     float g_addedAhead = 0.0f;
+    float g_addedPitch = 0.0f;
     float g_addedRoll = 0.0f;
+
+    // Adds what is added to the camera, or with a `sign` of -1 takes it off again.
+    void Shift(uint8_t* camera, float sign) {
+        Field<float>(camera, kEyeRight) += sign * g_added.right;
+        Field<float>(camera, kEyeUp) += sign * g_added.up;
+        Field<float>(camera, kEyeAhead) += sign * g_addedAhead;
+        Field<float>(camera, kViewPitch) += sign * g_addedPitch;
+        Field<float>(camera, kViewRoll) += sign * g_addedRoll;
+    }
 
     // The eye as last placed.
     float g_eye[3] = {};
@@ -265,11 +277,9 @@ namespace {
         const AimingOverhaul::Aim::Adjust adjust = g_frame(pawn, seconds);
         g_added = {adjust.drift.right * settled, adjust.drift.up * settled - adjust.drop};
         g_addedAhead = g_raiseReach * raised;
+        g_addedPitch = adjust.pitch;
         g_addedRoll = adjust.roll;
-        Field<float>(camera, kEyeRight) += g_added.right;
-        Field<float>(camera, kEyeUp) += g_added.up;
-        Field<float>(camera, kEyeAhead) += g_addedAhead;
-        Field<float>(camera, kViewRoll) += g_addedRoll;
+        Shift(camera, 1.0f);
         g_addedTo = camera;
     }
 
@@ -307,10 +317,7 @@ namespace {
     void __fastcall UpdateDetour(uint8_t* camera, void* unused, float seconds, uint32_t flags) {
         g_originalUpdate(camera, unused, seconds, flags);
         if (g_addedTo != nullptr) {
-            Field<float>(g_addedTo, kEyeRight) -= g_added.right;
-            Field<float>(g_addedTo, kEyeUp) -= g_added.up;
-            Field<float>(g_addedTo, kEyeAhead) -= g_addedAhead;
-            Field<float>(g_addedTo, kViewRoll) -= g_addedRoll;
+            Shift(g_addedTo, -1.0f);
             g_addedTo = nullptr;
         }
         uint8_t* component = camera - kSecondBase;
@@ -393,7 +400,7 @@ AimingOverhaul::Aim::Swing AimingOverhaul::Aim::ScopeSwing() {
         return {};
     }
     const float eased = speed * speed / (speed + kSlowTurn);
-    const float swing = kMostSwing * std::tanh(eased * kSwingPerTurn / kMostSwing) / speed;
+    const float swing = AimingOverhaul::SoftLimit(eased * kSwingPerTurn, kMostSwing) / speed;
     return {-right * swing, up * swing};
 }
 

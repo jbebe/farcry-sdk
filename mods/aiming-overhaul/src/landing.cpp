@@ -51,7 +51,7 @@ void AimingOverhaul::Landing::Update(uint8_t* pawn, float seconds) {
 }
 
 float AimingOverhaul::Landing::EyeDrop() {
-    return kMostDrop * std::tanh(g_drop.x / kMostDrop);
+    return SoftLimit(g_drop.x, kMostDrop);
 }
 
 void AimingOverhaul::Landing::SetEnabled(bool enabled) {

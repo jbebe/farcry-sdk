@@ -59,6 +59,12 @@ euler order as `CEntity::SetEuler` (`0x100677C0`, on `this + 0xD0`) and multipli
 where they are. Once placed, the scene camera, `ModifySceneCamera` (`0x10504CE0`) on `this`, holds
 the eye's world position at `+0x08`.
 
+:::info[Measured in a running game]
+Pitch and roll added to the angular offset after `UpdateCameraOffset`, and taken off again once
+`Update` returns, turned the scene camera's angles at `+0x6C` (pitch, roll, yaw) by the same amounts
+to within 0.0002 rad, frame by frame through a burst. Retail GOG v1.03, from Aiming Overhaul.
+:::
+
 Most branches of `UpdateCameraOffset` rewrite the positional offset every frame. The one that is
 blending an angular kick back leaves it alone, so anything added to it has to be taken out again
 before the next call.
@@ -570,9 +576,15 @@ hand these arrive:
 The rounds in the clip are a count at `+0x20` of the weapon's implementation, `*(weapon + 0x24)`,
 and drop by one with each `WeaponFired`.
 
+Whether the weapon fires a round a pull is `0x1012EEC0` (`__thiscall`, no arguments): it reads the
+fire mode's index at the properties' `+0x44` and returns 1 for `SingleShot` and `PrepareShot`, 0
+for `FullAuto`. The sound code picks its per-round or looped shots by it
+([automatic fire](audio-runtime.md#automatic-fire)).
+
 :::info[Seen in a running game]
 Retail GOG v1.03, from an FCSE plugin: the events above were logged, in that order, while firing
-through a scope, with the count beside them.
+through a scope, with the count beside them. Called on the weapon in hand, `0x1012EEC0` returned 0
+for the AK-47 and the MAC-10 and 1 for the Makarov and the SPAS-12.
 :::
 
 ### The scope's post effect

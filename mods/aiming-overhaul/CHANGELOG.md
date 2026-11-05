@@ -38,6 +38,10 @@ Notable changes to Aiming Overhaul, loosely following
   as they were.
 - **Full auto spreads.** From the fourth shot of a burst each shot strays a little further, up to
   eight shots' worth.
+- **Shot shake.** Each shot kicks the view up hard and it springs straight back, harder the more the
+  gun kicks. Firing full auto, the kick fades into a roll clockwise and back with the rounds, which
+  stops when they do. Only the view moves: the gun and where the shots go stay as they were. A
+  scope's sight picture does not shake.
 - **Hold breath**, **Gun near walls**, **Vertical inertia**, **Gun up after sprint**, **Landing**
   and **Recoil that stays** switches in the Mod Configuration menu.
 

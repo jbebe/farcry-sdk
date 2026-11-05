@@ -1,13 +1,19 @@
-// Whether a weapon can fire, which can be refused for the one in the player's hands.
+// Whether a weapon can fire, which can be refused for the one in the player's hands, and how it
+// fires.
 #include "engine/fire.h"
 
 #include "engine/memory.h"
 #include "fcse_api.h"
 
 #include <cstdint>
+#include <excpt.h>
 
 namespace {
     using AimingOverhaul::Field;
+
+    // Whether the weapon's fire mode is a round a pull, single shot or with a bolt worked between.
+    using SingleShotFn = uint32_t(__fastcall*)(uint8_t* weapon);
+    FCSE::Relocation<SingleShotFn> g_singleShot{FCSE::Uplay(0x0012EEC0)};
 
     // CWeaponState::CanFire(float), __thiscall, whose weapon is at the state's +0x00; and the
     // weapon's wielder, CEquipmentBase::GetWielder, the pawn holding it or null.
@@ -36,4 +42,15 @@ bool AimingOverhaul::Fire::Install(RefuseFn refuse) {
         return false;
     }
     return true;
+}
+
+bool AimingOverhaul::Fire::FullAuto(uint8_t* weapon) {
+    if (weapon == nullptr || !g_singleShot) {
+        return false;
+    }
+    __try {
+        return g_singleShot(weapon) == 0;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
 }

@@ -21,6 +21,11 @@ inline float Follow(float value, float target, float seconds, float lag) {
     return value + (target - value) * (1.0f - std::exp(-seconds / lag));
 }
 
+// `value` as it is when small, eased toward `most` as it grows.
+inline float SoftLimit(float value, float most) {
+    return most * std::tanh(value / most);
+}
+
 // A damped spring: where it is and how fast it moves.
 struct Spring {
     float x = 0.0f;

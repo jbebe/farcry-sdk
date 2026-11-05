@@ -80,6 +80,7 @@ add_library(AimingOverhaul SHARED
   "src/recoil.cpp"
   "src/scope_shadow.cpp"
   "src/scopes.cpp"
+  "src/shot_shake.cpp"
   "src/surroundings.cpp"
   "src/stance.cpp"
   "src/sway.cpp"

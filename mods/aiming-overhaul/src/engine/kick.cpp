@@ -56,7 +56,7 @@ bool AimingOverhaul::Kick::Install(TakeFn take) {
     g_take = take;
     if (!Hook(g_updateRecoil.address(), &UpdateRecoilDetour, &g_originalUpdateRecoil)) {
         FCSE::ApiPointer()->Log("kick: the recoil cannot be hooked, so the game takes each kick "
-                                "back");
+                                "back and shots do not shake the view");
         return false;
     }
     return true;
