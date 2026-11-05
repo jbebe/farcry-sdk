@@ -63,7 +63,8 @@ public sealed record FileFilter(string[] Includes, string[] Excludes, string? Ex
             hash);
     }
 
-    public bool Matches(VfsFile file, Func<VfsFile, string> moduleName)
+    /// <summary>Words match the path, or the text <paramref name="label"/> gives a file.</summary>
+    public bool Matches(VfsFile file, Func<VfsFile, string> moduleName, Func<VfsFile, string?>? label = null)
     {
         if ((Hash is { } hash && file.Hash != hash)
             || (Extension is not null && !string.Equals(file.Type.Extension, Extension, StringComparison.OrdinalIgnoreCase))
@@ -73,22 +74,26 @@ public sealed record FileFilter(string[] Includes, string[] Excludes, string? Ex
         }
 
         string path = NormalizeSlashes(file.Path);
+        string? text = label?.Invoke(file);
         foreach (string word in Excludes)
         {
-            if (path.Contains(word, StringComparison.OrdinalIgnoreCase))
+            if (Has(path, text, word))
             {
                 return false;
             }
         }
         foreach (string word in Includes)
         {
-            if (!path.Contains(word, StringComparison.OrdinalIgnoreCase))
+            if (!Has(path, text, word))
             {
                 return false;
             }
         }
         return true;
     }
+
+    private static bool Has(string path, string? text, string word)
+        => path.Contains(word, StringComparison.OrdinalIgnoreCase) || text?.Contains(word, StringComparison.OrdinalIgnoreCase) == true;
 
     private static string NormalizeSlashes(string path) => path.Replace('/', '\\');
 }

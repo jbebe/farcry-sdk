@@ -27,8 +27,10 @@ been played yet.
 
 A weapon names its sounds in its archetype, in fields starting with `snd`. The Dart Rifle's
 `sndSingleBulletShot` is `0x004BF5EA`, an event that only points on to `0x004BF5E9`, and that one
-is in `soundbinary\004bf5e9.spk`. Following a sound from the weapon to its bank is the fiddly part;
-[Replacing a weapon](/docs/modding/replacing-a-weapon) walks through it for every sound of a gun.
+is in `soundbinary\004bf5e9.spk`. JackAll follows that for you: both banks are labelled
+`weapon · single bullet shot (Dart Rifle)`, so `dart rifle shot` in the Files tab's **Filter** finds
+them (see [Sound labels](/jackall/finding-files#sound-labels)).
+[Replacing a weapon](/docs/modding/replacing-a-weapon) walks through every sound of a gun.
 
 ## The bank
 

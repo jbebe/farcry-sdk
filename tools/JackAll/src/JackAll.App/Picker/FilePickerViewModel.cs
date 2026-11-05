@@ -203,6 +203,6 @@ public sealed class FilePickerViewModel : Observable
         FileFilter filter = FileFilter.Parse(_filterText);
         Files = filter.IsEmpty
             ? _selectedFolder is { } folder ? _byFolder.GetValueOrDefault(folder.FullPath) ?? [] : []
-            : [.. Pickable().Where(f => filter.Matches(f, _vm.ModuleNameFor))];
+            : [.. Pickable().Where(f => filter.Matches(f, _vm.ModuleNameFor, MainViewModel.SoundLabelText))];
     }
 }

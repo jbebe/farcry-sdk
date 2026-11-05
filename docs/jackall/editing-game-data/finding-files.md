@@ -17,8 +17,8 @@ This page only looks at files.
 
 ## Search
 
-Type into **Filter** (1). Every word you type has to appear in the name, and three prefixes narrow
-it down:
+Type into **Filter** (1). Every word you type has to appear in the name, or in a sound's label
+(see [Sound labels](#sound-labels)), and three prefixes narrow it down:
 
 | Word | Keeps | Example |
 |---|---|---|
@@ -67,3 +67,24 @@ saying why (2). Editing one of them does nothing in game, however long you spend
 
 Tick **Hide unused game files** (3) to leave them out of the tree and the list altogether. Your own
 edits are never hidden.
+
+## Sound labels
+
+Sound banks are named by number (`soundbinary\004b27c7.spk`), so JackAll labels each one by where the
+game uses it. A list that holds labelled sounds gets a **Label** column, and selecting a bank shows
+its label with the files that name it. A label is a category and a detail:
+
+| Category | Example detail |
+|---|---|
+| `weapon` | `reload, 1st person (ak47)`, from the AK-47's reload animation |
+| `vehicle` | `suspension heavy (JeepWrangler, …)`, from the vehicles' archetypes |
+| `dialogue` | `Michele, BMD: "The APR men found out! - I’m surrounded! Where are you?!"`, the speaker and the subtitle |
+| `impact` | `materialimpact switch (Objects.Box_wood_1)`, from the material impact table |
+
+The other categories are `explosion`, `foley`, `voice`, `animal`, `object`, `ambience`, `music`,
+`ui`, `effect` and `scene` (a cutscene's sounds), with `other` for a sound only a mission script
+plays. A bank no game file names but another bank plays, such as a shot's audio, takes the label of
+the sound that plays it. Recorded speech without a subtitle is just `dialogue`.
+
+So `ak47 reload` in **Filter** finds the AK-47's reload sounds, and `dialogue Flora` finds Flora's
+lines. About 350 banks have no label yet: nothing in the game's files names them.

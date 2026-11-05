@@ -87,7 +87,7 @@ public sealed partial class MainViewModel
 
         // A search that leaves the target out is dropped, so the list can show it.
         FileFilter filter = FileFilter.Parse(FilterText);
-        bool hidden = !filter.IsEmpty && !filter.Matches(file, ModuleNameFor);
+        bool hidden = !filter.IsEmpty && !filter.Matches(file, ModuleNameFor, SoundLabelText);
         if (hidden)
         {
             _filterText = string.Empty;

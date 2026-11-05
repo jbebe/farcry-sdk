@@ -38,7 +38,7 @@ namespace JackAll.Core.Format.Rml;
 /// </remarks>
 public static class OasisStringTable
 {
-    private const string RmlPath = @"languages\english\oasisstrings.rml";
+    public const string RmlPath = @"languages\english\oasisstrings.rml";
 
     private static Func<string, byte[]?>? _source;
     private static Lazy<Table> _table = Defer();

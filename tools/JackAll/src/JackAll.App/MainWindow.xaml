@@ -15,6 +15,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <local:ModuleNameMultiConverter x:Key="ModuleNameConverter" />
         <local:UnusedFileConverter x:Key="UnusedFileConverter" />
+        <local:SoundLabelConverter x:Key="SoundLabelConverter" />
 
         <!-- The Mods tab's per-mod details tree (see MainViewModel.SelectedModFiles) - no
              grey/black "contains changes" coloring here, unlike the Files tab's FolderTemplate: every node in
@@ -382,7 +383,7 @@
                                  Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}">
                             <TextBox.Tag>
                                 <TextBlock>
-                                    <Run Text="Matches any word - narrow with " />
+                                    <Run Text="Matches words in a path or a sound's label - narrow with " />
                                     <Run Text="ext:&lt;type&gt;" FontStyle="Normal" FontFamily="{StaticResource MonoFont}" />
                                     <Run Text=", " />
                                     <Run Text="arch:&lt;module&gt;" FontStyle="Normal" FontFamily="{StaticResource MonoFont}" />
@@ -441,6 +442,16 @@
                                   SelectionMode="Extended" EnableColumnVirtualization="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Name" Binding="{Binding FileName}" Width="*" />
+                                <!-- Shown only while the list holds a labelled sound (see ListHasSoundLabels). -->
+                                <DataGridTextColumn x:Name="LabelColumn" Header="Label" Width="2*" Visibility="Collapsed"
+                                                    Binding="{Binding Converter={StaticResource SoundLabelConverter}}">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                                            <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
                                 <DataGridTextColumn Header="Size" Binding="{Binding Size, StringFormat={}{0:N0}}" Width="80" />
                                 <DataGridTextColumn Header="Source" Width="110">
                                     <!-- Disambiguates a colliding archive name with its parent folder
@@ -533,6 +544,9 @@
 
                                 <TextBlock Text="{Binding NamingNote}" Style="{StaticResource Note}" Margin="0,0,0,6"
                                            Visibility="{Binding HasNamingNote, Converter={StaticResource BoolToVis}}" />
+
+                                <TextBlock Text="{Binding SoundLabelNote}" TextWrapping="Wrap" Margin="0,0,0,6"
+                                           Visibility="{Binding HasSoundLabelNote, Converter={StaticResource BoolToVis}}" />
 
                                 <TextBlock Text="{Binding AncestryText}" Style="{StaticResource Note}" Margin="0,0,0,6"
                                            Visibility="{Binding HasAncestry, Converter={StaticResource BoolToVis}}" />

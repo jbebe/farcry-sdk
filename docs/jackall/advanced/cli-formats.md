@@ -160,7 +160,10 @@ OK - 004bf5e9.spk rebuilds byte for byte
 ```
 
 `spk import` replaces one record's audio in place, and `spk new` starts a bank from your own
-`.wav` or `.ogg` files. See [Replace music and speech](/jackall/music),
+`.wav` or `.ogg` files. `spk label --game <dir>` writes the
+[sound labels](/jackall/finding-files#sound-labels) the Files tab shows, one tab-separated line per
+bank: path, category, detail, how it was found (`usage`, `linked` or `folder`) and the files naming
+it. See [Replace music and speech](/jackall/music),
 [Replace a sound effect](/jackall/sound-effects) and
 [Editing sound banks](/docs/modding/editing-sound-banks).
 

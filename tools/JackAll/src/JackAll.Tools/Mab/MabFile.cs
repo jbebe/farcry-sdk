@@ -95,7 +95,13 @@ public class MabClip
 
     /// <summary>An event node opens with its time, and links to the next node from its own start.</summary>
     public const int EventTime = 0x00;
+    public const int EventType = 0x04;
+    public const int EventSize = 0x08;
     public const int EventNext = 0x0A;
+    public const int EventPayload = 0x0C;
+
+    /// <summary>An event whose payload is an `.fcb` node to instantiate.</summary>
+    public const uint EventTypeNode = 2;
 
     /// <summary>
     /// Four name slots per record, each a CRC32 then 32 NUL-padded bytes: what is animated, the bone
@@ -446,6 +452,15 @@ public class MabClip
 
     public static List<float> EventTimes(byte[] events)
         => [.. EventNodes(events).Select(at => F32(events, at + EventTime))];
+
+    /// <summary>The `.fcb` payload of every node-type event in a chain, in chain order.</summary>
+    public static IEnumerable<byte[]> EventNodePayloads(byte[] events) =>
+        from at in EventNodes(events)
+        where BinaryPrimitives.ReadUInt32LittleEndian(events.AsSpan(at + EventType)) == EventTypeNode
+        let start = at + EventPayload
+        let end = Math.Min(events.Length, start + U16(events, at + EventSize))
+        where end > start
+        select events[start..end];
 
     /// <summary>Skeleton bone ids named by a five-word bitmask, in ascending order.</summary>
     public static List<int> MaskBones(uint[] mask)

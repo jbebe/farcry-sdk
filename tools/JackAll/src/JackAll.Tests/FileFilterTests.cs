@@ -22,6 +22,17 @@ public class FileFilterTests
     }
 
     [Fact]
+    public void Words_match_a_label_as_well_as_the_path()
+    {
+        VfsFile file = File(@"soundbinary\004b27c7.spk");
+        FileFilter filter = FileFilter.Parse("soundbinary ak47 reload -dialogue");
+
+        Assert.True(filter.Matches(file, _ => "common", _ => "weapon · reload, 1st person (ak47)"));
+        Assert.False(filter.Matches(file, _ => "common", _ => "dialogue · ak47 reload"));
+        Assert.False(filter.Matches(file, _ => "common"));
+    }
+
+    [Fact]
     public void A_forward_slash_matches_a_backslash()
         => Assert.True(Matches("land/buggy", File(@"graphics\vehicles\land\buggy\buggy.xbg")));
 

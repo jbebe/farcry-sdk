@@ -2,6 +2,7 @@ using JackAll.Core.Mods;
 using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
 using JackAll.Tools.Reach;
+using JackAll.Tools.SoundLabels;
 using System.Collections.ObjectModel;
 using System.IO;
 
@@ -17,6 +18,7 @@ public sealed partial class MainViewModel
     private IReadOnlyList<VfsFile> _selectedFiles = [];
     private bool _onlyMods;
     private bool _hideUnused;
+    private bool _listHasSoundLabels;
     private string _filterText = "";
 
     /// <summary>
@@ -25,6 +27,8 @@ public sealed partial class MainViewModel
     /// feature off rather than failing.
     /// </summary>
     private static readonly Lazy<ReachList> Unreachable = new(() => ReachList.Load(AppConfig.ReachFile));
+
+    private static readonly Lazy<SoundLabelTable> SoundLabels = new(() => SoundLabelTable.Load(AppConfig.SoundLabelFile));
     private CancellationTokenSource? _exportCts;
 
     /// <summary>Where the selected fragment sits in its container, once the background lookup for it
@@ -72,6 +76,32 @@ public sealed partial class MainViewModel
     /// and is only ever as reachable as the container it lives inside.</summary>
     private static uint? ReachHashOf(VfsFile file)
         => file.ContainerHash ?? (file.IsSynthetic ? null : file.EngineHash);
+
+    /// <summary>What a sound file is, from the shipped label list; null for anything unlabelled.</summary>
+    public static SoundLabel? SoundLabelOf(VfsFile file)
+        => file.IsSynthetic ? null : SoundLabels.Value.Find(file.EngineHash);
+
+    /// <summary>A file's label as one line, for the grid and the search box.</summary>
+    public static string? SoundLabelText(VfsFile file) => SoundLabelOf(file)?.Text;
+
+    /// <summary>Whether the file list holds a labelled sound, set with each refill.</summary>
+    public bool ListHasSoundLabels
+    {
+        get => _listHasSoundLabels;
+        private set { if (_listHasSoundLabels != value) { _listHasSoundLabels = value; OnPropertyChanged(); } }
+    }
+
+    public bool HasSoundLabelNote => SoundLabelNote.Length > 0;
+
+    /// <summary>The selected file's label and where it came from.</summary>
+    public string SoundLabelNote => SelectedFile is { } file && SoundLabelOf(file) is { } label
+        ? label.Source switch
+        {
+            SoundLabeler.FromLinks => $"{label.Text}\nPlayed by another bank's sound, named in {label.Evidence}.",
+            SoundLabeler.FromFolder => $"{label.Text}\nA recorded line no game file names.",
+            _ => $"{label.Text}\nNamed in {label.Evidence}.",
+        }
+        : string.Empty;
 
     /// <summary>
     /// A partial-match search over every file's full path — while it's non-empty, the file list
@@ -134,6 +164,8 @@ public sealed partial class MainViewModel
             OnPropertyChanged(nameof(HasNamingNote));
             OnPropertyChanged(nameof(ReachNote));
             OnPropertyChanged(nameof(HasReachNote));
+            OnPropertyChanged(nameof(SoundLabelNote));
+            OnPropertyChanged(nameof(HasSoundLabelNote));
             OnPropertyChanged(nameof(HasOriginal));
             OnPropertyChanged(nameof(SelectionIsModel));
             OnPropertyChanged(nameof(SelectionIsMaterial));
@@ -544,27 +576,30 @@ public sealed partial class MainViewModel
         if (_vfs is null)
         {
             VisibleFiles.Clear();
+            ListHasSoundLabels = false;
             return;
         }
 
         GameVfs vfs = _vfs;
         FileFilter filter = FileFilter.Parse(_filterText);
+        Func<VfsFile, string> moduleName = vfs.DisplayModuleName;
         string? folderPath = SelectedFolder?.FullPath;
         bool onlyMods = OnlyMods;
         bool hideUnused = HideUnused;
 
         List<VfsFile>? matches;
+        bool labelled;
         try
         {
             // The scan itself (a substring match over every file, when a filter is active) is real
             // CPU work over a large collection - running it on a background thread is what actually
             // keeps the UI thread free while it happens, debounce or not.
-            matches = await Task.Run(() =>
+            (matches, labelled) = await Task.Run(() =>
             {
                 IEnumerable<VfsFile> files;
                 if (!filter.IsEmpty)
                 {
-                    files = vfs.Files.Values.Where(f => filter.Matches(f, vfs.DisplayModuleName));
+                    files = vfs.Files.Values.Where(f => filter.Matches(f, moduleName, SoundLabelText));
                 }
                 else if (folderPath is not null)
                 {
@@ -573,14 +608,14 @@ public sealed partial class MainViewModel
                 }
                 else
                 {
-                    return null;
+                    return ((List<VfsFile>?)null, false);
                 }
 
                 token.ThrowIfCancellationRequested();
-                return files
+                List<VfsFile> found = [.. files
                     .Where(f => PassesToggles(f, onlyMods, hideUnused))
-                    .OrderBy(f => f.FileName, StringComparer.OrdinalIgnoreCase)
-                    .ToList();
+                    .OrderBy(f => f.FileName, StringComparer.OrdinalIgnoreCase)];
+                return (found, found.Any(f => SoundLabelOf(f) is not null));
             }, token);
         }
         catch (OperationCanceledException)
@@ -602,6 +637,7 @@ public sealed partial class MainViewModel
             }
         }
         _refilling = false;
+        ListHasSoundLabels = labelled;
 
         if (_reselectPath is { } path)
         {

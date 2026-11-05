@@ -239,6 +239,9 @@ app.Configure(config =>
         spk.AddCommand<SpkNewCommand>("new")
             .WithDescription("Scaffold a bank's XML: an event playing one clip, or a random pick of several.")
             .WithExample("spk", "new", "0x00fc0200", "shot_a.wav", "shot_b.wav", "--rolloff", "0x00442c37");
+        spk.AddCommand<SpkLabelCommand>("label")
+            .WithDescription("Label every retail .spk by where its sounds are used: a category, a detail, and the files naming it.")
+            .WithExample("spk", "label", "--game", @"C:\Games\Far Cry 2", "-o", "fc2.soundlabels.tsv");
     });
 
     // --- .hkx Havok physics ------------------------------------------------

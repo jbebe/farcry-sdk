@@ -71,6 +71,10 @@ public partial class MainWindow : Window
             RevealSelectedFileInTree();
             ShowSelectedFileInGrid();
         }
+        else if (e.PropertyName == nameof(MainViewModel.ListHasSoundLabels))
+        {
+            LabelColumn.Visibility = _vm.ListHasSoundLabels ? Visibility.Visible : Visibility.Collapsed;
+        }
         else if (e.PropertyName is nameof(MainViewModel.XrefsReady) or nameof(MainViewModel.XrefStatus))
         {
             // The background index just finished (or advanced): the panel is showing a status line

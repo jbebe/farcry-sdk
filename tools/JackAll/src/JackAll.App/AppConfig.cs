@@ -91,6 +91,10 @@ public sealed class AppConfig
     /// </summary>
     public static string ReachFile => Path.Combine(DataDir, ".reachlist");
 
+    /// <summary>What each retail `.spk` is (see <c>jackall-cli spk label</c>). Missing is not fatal:
+    /// sound files simply show no label.</summary>
+    public static string SoundLabelFile => Path.Combine(DataDir, ".soundlabels");
+
     /// <summary>
     /// A savegame-specific hash -> name table (see <see cref="JackAll.App.FileHandlers.Sav.SaveGameCompiledFieldNames"/>)
     /// recovered by CRC32 dictionary-matching every string constant in the game's Linux dedicated-server
