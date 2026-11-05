@@ -43,7 +43,7 @@ Notable changes to Aiming Overhaul, loosely following
   kick fades into a roll clockwise and back, which stops when the rounds do. Only the view moves:
   the gun and where the shots go stay as they were. A scope's sight picture does not shake. How hard
   and how long the kick and the roll are, how late the kick comes and how soon it gives way to the
-  roll are set in Aiming Overhaul's window in DevTools' overlay.
+  roll are set for each weapon in Aiming Overhaul's window in DevTools' overlay.
 - **Hold breath**, **Gun near walls**, **Vertical inertia**, **Gun up after sprint**, **Landing**,
   **Recoil that stays** and **Shot shake** switches in the Mod Configuration menu.
 

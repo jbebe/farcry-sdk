@@ -5,6 +5,7 @@
 #include "ease.h"
 #include "engine/aim.h"
 #include "engine/fire.h"
+#include "tuning.h"
 
 #include "imgui.h"
 
@@ -32,23 +33,6 @@ namespace {
     constexpr float kLate = 1.5f;
     constexpr float kShortestInterval = 0.02f;
 
-    // Set in the window, at their defaults until the file is read.
-    std::atomic<float> g_kickPerImpulse{0.2f};
-    std::atomic<float> g_kickTime{0.25f};
-    std::atomic<float> g_kickDelay{0.0f};
-    std::atomic<float> g_rollPerImpulse{0.15f};
-    std::atomic<float> g_rollCycle{0.4f};
-    std::atomic<float> g_rollFade{0.3f};
-
-    constexpr AimingOverhaul::Tuning::Slider kSliders[] = {
-        {"KickPerImpulse", "Single shot kick", 0.0f, 0.6f, "%.3f deg per N s", &g_kickPerImpulse},
-        {"KickTime", "Single shot time", 0.05f, 1.0f, "%.2f s", &g_kickTime},
-        {"KickDelay", "Single shot delay", 0.0f, 0.3f, "%.3f s", &g_kickDelay},
-        {"RollPerImpulse", "Full auto roll", 0.0f, 0.6f, "%.3f deg per N s", &g_rollPerImpulse},
-        {"RollCycle", "Full auto roll cycle", 0.04f, 2.0f, "%.2f s", &g_rollCycle},
-        {"RollFade", "Kick to roll fade", 0.0f, 2.0f, "%.2f s", &g_rollFade},
-    };
-
     std::atomic<bool> g_enabled{true};
     uint8_t* g_weapon = nullptr;
     bool g_fullAuto = false;
@@ -75,7 +59,7 @@ namespace {
     std::atomic<float> g_lastImpulse{0.0f};
 
     float KickOmega() {
-        return kSettledAfterPeaks / g_kickTime;
+        return kSettledAfterPeaks / AimingOverhaul::Tuning::InHand().kickTime;
     }
 
     // Radians a push of `impulse` newton-seconds turns the view by at `perImpulse` degrees each.
@@ -105,15 +89,16 @@ void AimingOverhaul::ShotShake::Kick(const Kick::Kick& kick) {
     const float impulse = round > 0.0f ? round : (std::max)(kick.up, 0.0f) * kImpulsePerKick;
     g_lastImpulse = impulse;
     // A burst's first round only kicks; past the fade's seconds into it, its rounds only roll.
+    const Tuning::Values& values = Tuning::InHand();
     const float rolled =
-        g_rounds == 0 ? 0.0f : (std::min)(g_burst / (std::max)(g_rollFade.load(), 1e-3f), 1.0f);
-    const float peak = (1.0f - rolled) * Angle(impulse, g_kickPerImpulse);
-    if (g_kickDelay > 0.0f && g_waitingCount < g_waiting.size()) {
-        g_waiting[g_waitingCount++] = {g_kickDelay, peak};
+        g_rounds == 0 ? 0.0f : (std::min)(g_burst / (std::max)(values.rollFade, 1e-3f), 1.0f);
+    const float peak = (1.0f - rolled) * Angle(impulse, values.kickPerImpulse);
+    if (values.kickDelay > 0.0f && g_waitingCount < g_waiting.size()) {
+        g_waiting[g_waitingCount++] = {values.kickDelay, peak};
     } else {
         g_kick.Strike(peak, KickOmega());
     }
-    g_rollSize = rolled * Angle(impulse, g_rollPerImpulse);
+    g_rollSize = rolled * Angle(impulse, values.rollPerImpulse);
 }
 
 AimingOverhaul::ShotShake::Turn AimingOverhaul::ShotShake::Update(float seconds) {
@@ -135,11 +120,8 @@ AimingOverhaul::ShotShake::Turn AimingOverhaul::ShotShake::Update(float seconds)
         return {};
     }
     const float free = 1.0f - Aim::Scoped();
-    return {free * g_kick.x, free * g_roll * std::sin(2.0f * kPi * g_burst / g_rollCycle)};
-}
-
-std::span<const AimingOverhaul::Tuning::Slider> AimingOverhaul::ShotShake::Sliders() {
-    return kSliders;
+    return {free * g_kick.x,
+            free * g_roll * std::sin(2.0f * kPi * g_burst / Tuning::InHand().rollCycle)};
 }
 
 void AimingOverhaul::ShotShake::DrawLastShot() {
@@ -152,7 +134,8 @@ void AimingOverhaul::ShotShake::DrawLastShot() {
         ImGui::Text("Names no round: its last shot's kick counted as %.2f N s", last);
     }
     ImGui::Text("Last shot: a kick of %.2f deg, a roll of %.2f deg either way",
-                Angle(last, g_kickPerImpulse) / kDegree, Angle(last, g_rollPerImpulse) / kDegree);
+                Angle(last, Tuning::InHand().kickPerImpulse) / kDegree,
+                Angle(last, Tuning::InHand().rollPerImpulse) / kDegree);
 }
 
 void AimingOverhaul::ShotShake::SetEnabled(bool enabled) {

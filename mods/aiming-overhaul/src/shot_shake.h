@@ -4,10 +4,8 @@
 #pragma once
 
 #include "engine/kick.h"
-#include "tuning.h"
 
 #include <cstdint>
-#include <span>
 
 namespace AimingOverhaul::ShotShake {
 
@@ -28,9 +26,7 @@ void Kick(const Kick::Kick& kick);
 // sight picture is up.
 Turn Update(float seconds);
 
-// The window's sliders for the shake, and what it shows under them: the weapon in hand's round and
-// what the last shot shook.
-std::span<const Tuning::Slider> Sliders();
+// What the window shows under its sliders: the weapon in hand's round and what its last shot shook.
 void DrawLastShot();
 
 void SetEnabled(bool enabled);

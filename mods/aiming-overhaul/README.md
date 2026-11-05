@@ -84,12 +84,13 @@ both field by field with other mods' edits, reporting any clash.
   each start fresh.
 - **Shot shake.** Each shot kicks the view up and it springs straight back, as hard as the round
   pushes whoever fires it: its projectiles' mass times their muzzle velocity, from the round
-  Difficulty Overhaul gives each gun's archetype. The kick is 0.2° for each newton-second of push,
-  easing off past 15: 0.38° for a Makarov, 0.74° for an AR-16, 1.08° for an AK-47, 1.45° for a
-  PKM, 2.06° for a SPAS-12 and 2.95° for an AS50, the same from the hip and down the sights. It
-  peaks within 0.05 s and is back in a quarter of a second. Firing full auto, the kick fades out
-  over the burst's first 0.3 s into a roll, clockwise and back, a whole cycle every 0.4 s and 0.15°
-  either way for each newton-second, which stops as soon as the rounds do. Single-shot guns kick on
+  Difficulty Overhaul gives each gun's archetype. The kick is 0.149° for each newton-second of
+  push, easing off past 15: 0.28° for a Makarov, 0.55° for an AR-16, 0.8° for an AK-47, 1.08° for
+  a PKM, 1.53° for a SPAS-12 and 2.2° for an AS50, the same from the hip and down the sights. It
+  starts 0.1 s after the shot, peaks 0.07 s later and is back 0.4 s after it starts. Firing full
+  auto, the kick fades out over the burst's first 0.11 s into a roll, clockwise and back, a whole
+  cycle every 0.08 s and 0.103° either way for each newton-second, which stops as soon as the
+  rounds do. Each weapon can be given values of its own. Single-shot guns kick on
   every shot however fast they are fired. A gun that names no round, a launcher, the Dart Rifle,
   the crossbow, the flare gun or every gun without Difficulty Overhaul, kicks by the game's own
   recoil instead, counted as a push the way an AK-47's is. Only the view turns, about the eye: the
@@ -158,8 +159,8 @@ in `src/engine/kick.cpp`, added to the look in `src/engine/look.cpp`, and a burs
 their archetype, written by `data\fragments.py`. The shot shake is `src/shot_shake.cpp`, struck by
 the same kicks and turning the view through the camera's angular offset in `src/engine/aim.cpp`;
 the round's push is read from the weapon's `Cartridge.*` entity data in `src/cartridge.cpp`, and
-whether a gun fires full auto is the engine's own answer, read in `src/engine/fire.cpp`. The window
-and its file are `src/tuning.cpp`, drawn through DevTools' overlay API. The blur
+whether a gun fires full auto is the engine's own answer, read in `src/engine/fire.cpp`. Each weapon's
+values, the window and its file are `src/tuning.cpp`, drawn through DevTools' overlay API. The blur
 draws the gun's own
 depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the
 blur and the scope shadow draw at the end of the pass the gun's colour is drawn in, before the
@@ -235,19 +236,21 @@ magnifies. With Tracers off, the player's shots leave none again, none ricochets
 draws them. Which guns fire them and how fast they fly are the weapon data's, and stay; so does the
 scopes' lost iron-sight effect, whatever the scope settings.
 
-With DevTools installed, its overlay has an Aiming Overhaul window, which sets the shot shake while
-the game runs and keeps it in `bin\aiming-overhaul.ini`, read at launch; delete the file for the
-defaults. Under the sliders it names the weapon in hand's round and its push, and what the last
-shot shook.
+With DevTools installed, its overlay has an Aiming Overhaul window, which sets the shot shake for
+each weapon while the game runs and keeps it in `bin\aiming-overhaul.ini`, a section per weapon,
+read at launch; delete the file for the defaults. Its Weapon list holds every gun the player can
+fire, variants under their gun, and Other weapons for the rest. It moves to the weapon in hand each
+time that changes, and any other can be picked. Under the sliders it names the weapon in hand's
+round and its push, and what its last shot shook.
 
-| Slider | Unit | Default |
+| Slider | Unit | Default, every weapon |
 |---|---|---|
-| Single shot kick | degrees per newton-second | 0.2 |
-| Single shot time | seconds until the view is back | 0.25 |
-| Single shot delay | seconds from the shot until the kick starts | 0 |
-| Full auto roll | degrees either way per newton-second | 0.15 |
-| Full auto roll cycle | seconds for a roll clockwise and back | 0.4 |
-| Kick to roll fade | seconds of a burst over which the kick gives way to the roll | 0.3 |
+| Single shot kick | degrees per newton-second | 0.149 |
+| Single shot time | seconds until the view is back | 0.4 |
+| Single shot delay | seconds from the shot until the kick starts | 0.1 |
+| Full auto roll | degrees either way per newton-second | 0.103 |
+| Full auto roll cycle | seconds for a roll clockwise and back | 0.08 |
+| Kick to roll fade | seconds of a burst over which the kick gives way to the roll | 0.11 |
 
 ## Building
 
