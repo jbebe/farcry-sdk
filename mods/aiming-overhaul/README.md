@@ -84,13 +84,20 @@ both field by field with other mods' edits, reporting any clash.
   each start fresh.
 - **Shot shake.** Each shot kicks the view up and it springs straight back, as hard as the round
   pushes whoever fires it: its projectiles' mass times their muzzle velocity, from the round
-  Difficulty Overhaul gives each gun's archetype. The kick is 0.149° for each newton-second of
-  push, easing off past 15: 0.28° for a Makarov, 0.55° for an AR-16, 0.8° for an AK-47, 1.08° for
-  a PKM, 1.53° for a SPAS-12 and 2.2° for an AS50, the same from the hip and down the sights. It
-  starts 0.1 s after the shot, peaks 0.07 s later and is back 0.4 s after it starts. Firing full
-  auto, the kick fades out over the burst's first 0.11 s into a roll, clockwise and back, a whole
-  cycle every 0.08 s and 0.103° either way for each newton-second, which stops as soon as the
-  rounds do. Each weapon can be given values of its own. Single-shot guns kick on
+  Difficulty Overhaul gives each gun's archetype, easing off past 15 newton-seconds, the same from
+  the hip and down the sights. Each kind of gun kicks its own way, and each weapon can be given
+  values of its own:
+  - Rifles, submachine guns, machine guns and sniper rifles: 0.07° for each newton-second, a short,
+    sharp kick that starts 0.1 s after the shot and is back 0.1 s later: 0.26° for an AR-16, 0.38°
+    for an AK-47, 0.51° for a PKM, 1.03° for an AS50.
+  - Shotguns: 0.201° for each newton-second, back in 0.15 s: 2.07° for a SPAS-12.
+  - Pistols, launchers and the rest: 0.149° for each newton-second, back in 0.4 s: 0.28° for a
+    Makarov, 1.21° for an Eagle .50.
+
+  Firing full auto, the kick fades out over the burst's first 0.11 s into a roll, clockwise and
+  back, a whole cycle every 0.08 s, which stops as soon as the rounds do: 0.133° either way for each
+  newton-second on the automatic rifles, submachine guns and machine guns, ±0.72° on an AK-47, and
+  0.103° on the USAS-12. Single-shot guns kick on
   every shot however fast they are fired. A gun that names no round, a launcher, the Dart Rifle,
   the crossbow, the flare gun or every gun without Difficulty Overhaul, kicks by the game's own
   recoil instead, counted as a push the way an AK-47's is. Only the view turns, about the eye: the
@@ -243,14 +250,14 @@ fire, variants under their gun, and Other weapons for the rest. It moves to the 
 time that changes, and any other can be picked. Under the sliders it names the weapon in hand's
 round and its push, and what its last shot shook.
 
-| Slider | Unit | Default, every weapon |
-|---|---|---|
-| Single shot kick | degrees per newton-second | 0.149 |
-| Single shot time | seconds until the view is back | 0.4 |
-| Single shot delay | seconds from the shot until the kick starts | 0.1 |
-| Full auto roll | degrees either way per newton-second | 0.103 |
-| Full auto roll cycle | seconds for a roll clockwise and back | 0.08 |
-| Kick to roll fade | seconds of a burst over which the kick gives way to the roll | 0.11 |
+| Slider | Unit | Rifles, SMGs, MGs, snipers | Shotguns | Pistols, launchers, the rest |
+|---|---|---|---|---|
+| Single shot kick | degrees per newton-second | 0.07 | 0.201 | 0.149 |
+| Single shot time | seconds until the view is back | 0.1 | 0.15 | 0.4 |
+| Single shot delay | seconds from the shot until the kick starts | 0.102 | 0.1 | 0.1 |
+| Full auto roll | degrees either way per newton-second | 0.133 | 0.103 | 0.103 |
+| Full auto roll cycle | seconds for a roll clockwise and back | 0.08 | 0.08 | 0.08 |
+| Kick to roll fade | seconds of a burst over which the kick gives way to the roll | 0.11 | 0.11 | 0.11 |
 
 ## Building
 

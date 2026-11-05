@@ -45,11 +45,18 @@ namespace {
         {"RollFade", "Kick to roll fade", &Values::rollFade, 0.0f, 2.0f, "%.2f s"},
     };
 
-    // A weapon the window lists: its section in the file, and its archetype under weapons or
-    // DLC1Weapons, which its variants are named under too.
+    // The rifles', submachine guns' and machine guns' values until the file gives them their own,
+    // and the shotguns'; every other weapon starts from Values' own.
+    constexpr Values kLongGun = {0.07f, 0.1f, 0.102f, 0.133f, 0.08f, 0.11f};
+    constexpr Values kShotgun = {0.201f, 0.15f, 0.1f, 0.103f, 0.08f, 0.11f};
+
+    // A weapon the window lists: its section in the file, its archetype under weapons or
+    // DLC1Weapons, which its variants are named under too, and its values until the file gives it
+    // its own.
     struct Weapon {
         const char* name;
         const char* archetype;
+        Values defaults;
     };
 
     constexpr Weapon kWeapons[] = {
@@ -57,24 +64,24 @@ namespace {
         {"6P9", "Secondary.SilencedMakarov_6P9"},
         {"Star .45", "Secondary.Star45"},
         {"Eagle .50", "Secondary.DesertEagle"},
-        {"MAC-10", "Secondary.MAC10"},
-        {"Uzi", "Secondary.Uzi"},
-        {"MP5", "Primary.MP5"},
-        {"AK-47", "Primary.AK47"},
-        {"FAL", "Primary.FNFAL"},
-        {"G3", "Primary.G3KA4"},
-        {"AR-16", "Primary.M16"},
-        {"Homeland 37", "Primary.Ithaca"},
-        {"SPAS-12", "Primary.SPAS12"},
-        {"USAS-12", "Primary.USAS12"},
-        {"Sawed-off shotgun", "DLC1.SawedOffShotgun"},
-        {"Silenced shotgun", "DLC1.SilencedShotgun"},
-        {"Dart Rifle", "Special.Dart_Rifle"},
-        {"M1903", "Special.M1903"},
-        {"Dragunov", "Primary.Dragunov"},
-        {"AS50", "Primary.AS50"},
-        {"M249", "Special.M249_Saw"},
-        {"PKM", "Special.PKM"},
+        {"MAC-10", "Secondary.MAC10", kLongGun},
+        {"Uzi", "Secondary.Uzi", kLongGun},
+        {"MP5", "Primary.MP5", kLongGun},
+        {"AK-47", "Primary.AK47", kLongGun},
+        {"FAL", "Primary.FNFAL", kLongGun},
+        {"G3", "Primary.G3KA4", kLongGun},
+        {"AR-16", "Primary.M16", kLongGun},
+        {"Homeland 37", "Primary.Ithaca", kShotgun},
+        {"SPAS-12", "Primary.SPAS12", kShotgun},
+        {"USAS-12", "Primary.USAS12", kShotgun},
+        {"Sawed-off shotgun", "DLC1.SawedOffShotgun", kShotgun},
+        {"Silenced shotgun", "DLC1.SilencedShotgun", kShotgun},
+        {"Dart Rifle", "Special.Dart_Rifle", kLongGun},
+        {"M1903", "Special.M1903", kLongGun},
+        {"Dragunov", "Primary.Dragunov", kLongGun},
+        {"AS50", "Primary.AS50", kLongGun},
+        {"M249", "Special.M249_Saw", kLongGun},
+        {"PKM", "Special.PKM", kLongGun},
         {"M79", "Secondary.M79"},
         {"MGL-140", "Primary.MGL140"},
         {"RPG-7", "Special.RPG7"},
@@ -162,7 +169,9 @@ const Values& AimingOverhaul::Tuning::InHand() {
 }
 
 void AimingOverhaul::Tuning::Load() {
-    g_weapons.fill({});
+    for (size_t weapon = 0; weapon < g_weapons.size(); ++weapon) {
+        g_weapons[weapon] = weapon < kOther ? kWeapons[weapon].defaults : Values{};
+    }
     // A line that is not a known key and a number, or is outside a known section, changes nothing.
     std::ifstream file(File());
     Values* section = nullptr;

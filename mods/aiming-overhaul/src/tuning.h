@@ -6,8 +6,7 @@
 
 namespace AimingOverhaul::Tuning {
 
-// Degrees for each newton-second of a round's push, and seconds; every weapon's until the file gives
-// it its own.
+// Degrees for each newton-second of a round's push, and seconds.
 struct Values {
     float kickPerImpulse = 0.149f;
     float kickTime = 0.4f;
