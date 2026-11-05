@@ -13,8 +13,8 @@ Notable changes to Difficulty Overhaul, loosely following
   the third on Hardcore, the fifth on Normal and about the eighth on Easy, wherever it lands; the
   soldiers aim and hit the same on every setting. On Easy and Normal your last bar still softens hits,
   as in the game, and on Hardcore and Infamous no longer does.
-- **Wounds heal on their own.** Above your last bar health climbs back to full: on Easy from a
-  second after the last hit, in 10 seconds; on Normal from 3 seconds, in a minute; on Hardcore from 5
+- **Wounds heal on their own.** Above your last bar health climbs back to full: on Easy from half a
+  second after the last hit, in 2 seconds; on Normal from 2 seconds, in 4 seconds; on Hardcore from 5
   seconds, in 5 minutes; never on Infamous. The game refilled only the bar you were in. On your last
   bar you still bleed and need the surgery, as in the game.
 - **Limb hits wound.** A hit to an arm or a leg that would kill a soldier puts him down wounded

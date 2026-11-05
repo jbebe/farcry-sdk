@@ -36,7 +36,7 @@ namespace {
     // Per Game::Difficulty: seconds after the last hit before health climbs, and from one bar to
     // full.
     constexpr float kNever = std::numeric_limits<float>::infinity();
-    constexpr Pace kPace[] = {{1.0f, 10.0f}, {3.0f, 60.0f}, {5.0f, 300.0f}, {kNever, kNever}};
+    constexpr Pace kPace[] = {{0.5f, 2.0f}, {2.0f, 4.0f}, {5.0f, 300.0f}, {kNever, kNever}};
 
     const Pace& CurrentPace() {
         const Game::Difficulty difficulty = Game::CurrentDifficulty();

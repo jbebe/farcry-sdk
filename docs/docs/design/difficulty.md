@@ -382,7 +382,7 @@ squad coordination are the forgiveness levers agreed on 2026-10-21:
 | Constant | Hardcore now | Eased by |
 |---|---|---|
 | Damage the player takes | each gun's real-round damage, whole wherever it lands: 350 from an AK-47 | a share of it; the player's health system is to be reworked |
-| Regeneration | above one bar, one bar to full in 5 minutes, from 5 s after the last hit | done: Easy from 1 s, in 10 s; Normal from 3 s, in a minute; Infamous never |
+| Regeneration | above one bar, one bar to full in 5 minutes, from 5 s after the last hit | done: Easy from 0.5 s, in 2 s; Normal from 2 s, in 4 s; Infamous never |
 | Aim settle | 0.6 s + 0.02 s per metre | longer before his shots land |
 | Recoil | a follow-up loses up to 60 %, recovering in 0.25 s | more lost, or slower recovery |
 | Suppression pin | 1 s | longer pins |
