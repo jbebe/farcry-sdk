@@ -389,6 +389,8 @@
                                     <Run Text="arch:&lt;module&gt;" FontStyle="Normal" FontFamily="{StaticResource MonoFont}" />
                                     <Run Text=", " />
                                     <Run Text="hash:&lt;hex&gt;" FontStyle="Normal" FontFamily="{StaticResource MonoFont}" />
+                                    <Run Text=", " />
+                                    <Run Text="spk:&lt;label&gt;" FontStyle="Normal" FontFamily="{StaticResource MonoFont}" />
                                 </TextBlock>
                             </TextBox.Tag>
                         </TextBox>
