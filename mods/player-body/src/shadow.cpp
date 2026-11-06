@@ -1,18 +1,18 @@
 // The player's shadow. See shadow.h.
 #include "shadow.h"
 
-#include "body.h"
+#include "engine/com.h"
 #include "engine/pawn.h"
 #include "engine/scene_depth.h"
 #include "engine/seqlock.h"
 #include "engine/sky_pass.h"
-#include "engine/sun.h"
 #include "fcse_api.h"
 
 #include "shadow_ps.h"
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <cstring>
 #include <iterator>
 #include <vector>
@@ -20,32 +20,22 @@
 namespace {
     namespace Pawn = PlayerBody::Pawn;
     namespace SkyPass = PlayerBody::SkyPass;
-    namespace Sun = PlayerBody::Sun;
 
-    // The column standing in for the body, in metres: each sphere's radius, and how far the top one
-    // stands above the eye.
-    constexpr float kRadius = 0.22f;
-    constexpr float kCrown = 0.05f;
-    // Sky passes with the player in first person on foot and no cloud layer submitted, before that
-    // is logged.
-    constexpr uint32_t kPatience = 300;
+    // In metres, the farthest the shader's circle reaches from the feet: OUTER across, HEIGHT up.
+    constexpr float kReach = 0.75f;
 
-    // The lowest and highest spheres' centres in the world, z up.
-    struct Column {
+    // Where the feet stand in the world, z up, while they cast the shadow.
+    struct Feet {
         bool cast;
-        float feet[3];
-        float head[3];
+        float place[3];
     };
-    PlayerBody::Seqlock<Column> g_column;
+    PlayerBody::Seqlock<Feet> g_feet;
     std::atomic<bool> g_enabled{true};
 
-    // Render thread: the shader, the device it was made on and whether that device refused it; the
-    // cloud layers submitted by the last pass, and the passes that saw none.
+    // Render thread: the shader, the device it was made on, and whether that device refused it.
     IDirect3DDevice9* g_owner = nullptr;
     IDirect3DPixelShader9* g_shader = nullptr;
     bool g_refused = false;
-    uint32_t g_submissions = 0;
-    uint32_t g_unsubmitted = 0;
 
     struct Vertex {
         float x, y, z, rhw;
@@ -54,10 +44,7 @@ namespace {
 
     IDirect3DPixelShader9* Shader(IDirect3DDevice9* device) {
         if (device != g_owner) {
-            if (g_shader != nullptr) {
-                g_shader->Release();
-                g_shader = nullptr;
-            }
+            PlayerBody::Release(g_shader);
             g_owner = device;
             g_refused = false;
         }
@@ -74,22 +61,19 @@ namespace {
     }
 
     void Draw(const SkyPass::Pass& pass, IDirect3DTexture9* depth, IDirect3DPixelShader9* shader,
-              const Column& column, const Sun::Light& light, float darkness) {
+              const float feet[3]) {
         IDirect3DDevice9* device = pass.device;
         IDirect3DStateBlock9* saved = nullptr;
         if (FAILED(device->CreateStateBlock(D3DSBT_ALL, &saved))) {
             return;
         }
         const SkyPass::View& view = pass.view;
-        const float* eye = view.eye;
         const float constants[] = {
             view.halfWidth, view.halfHeight, view.viewDistance, 0.0f,
             view.right[0], view.right[1], view.right[2], 0.0f,
             view.up[0], view.up[1], view.up[2], 0.0f,
             view.forward[0], view.forward[1], view.forward[2], 0.0f,
-            column.feet[0] - eye[0], column.feet[1] - eye[1], column.feet[2] - eye[2], kRadius,
-            column.head[0] - eye[0], column.head[1] - eye[1], column.head[2] - eye[2], darkness,
-            light.direction[0], light.direction[1], light.direction[2], 0.0f,
+            feet[0], feet[1], feet[2], 0.0f,
         };
         device->SetPixelShaderConstantF(0, constants, static_cast<UINT>(std::size(constants) / 4));
         device->SetPixelShader(shader);
@@ -142,34 +126,40 @@ namespace {
         saved->Release();
     }
 
+    // Whether everything within kReach of `centre`, from the eye, lies outside the view: behind the
+    // eye, or past one of its four edges, each a plane through the eye.
+    bool OutOfView(const SkyPass::View& view, const float centre[3]) {
+        const auto along = [centre](const float axis[3]) {
+            return centre[0] * axis[0] + centre[1] * axis[1] + centre[2] * axis[2];
+        };
+        const float ahead = along(view.forward);
+        const auto past = [ahead](float off, float half) {
+            return (ahead * half - off) / std::sqrt(1.0f + half * half) < -kReach;
+        };
+        const float across = along(view.right);
+        const float above = along(view.up);
+        return ahead < -kReach || past(across, view.halfWidth) || past(-across, view.halfWidth) ||
+               past(above, view.halfHeight) || past(-above, view.halfHeight);
+    }
+
     void OnSkyPass(const SkyPass::Pass& pass) {
-        // A world was drawn since the last pass only if a cloud layer was submitted for it.
-        const uint32_t submissions = Sun::Submissions();
-        const bool live = submissions != g_submissions;
-        g_submissions = submissions;
-        Column column;
-        if (!g_column.Latest(column) || !column.cast) {
-            return;
-        }
-        if (submissions == 0 && ++g_unsubmitted == kPatience) {
-            FCSE::ApiPointer()->Log("shadow: no cloud layer has reached this plugin, so no shadow is "
-                                    "drawn; another plugin may be holding the submission back");
-        }
-        Sun::Light light;
+        Feet feet;
         IDirect3DTexture9* depth = PlayerBody::SceneDepth::Texture();
-        if (!live || depth == nullptr || !Sun::Latest(light)) {
+        if (depth == nullptr || !g_feet.Latest(feet) || !feet.cast) {
             return;
         }
-        const float darkness = (1.0f - light.night) * (1.0f - light.storm);
-        IDirect3DPixelShader9* shader = darkness > 0.0f ? Shader(pass.device) : nullptr;
+        const float* eye = pass.view.eye;
+        const float fromEye[3] = {feet.place[0] - eye[0], feet.place[1] - eye[1],
+                                  feet.place[2] - eye[2]};
+        IDirect3DPixelShader9* shader = OutOfView(pass.view, fromEye) ? nullptr : Shader(pass.device);
         if (shader != nullptr) {
-            Draw(pass, depth, shader, column, light, darkness);
+            Draw(pass, depth, shader, fromEye);
         }
     }
 }
 
 bool PlayerBody::Shadow::Install() {
-    return Sun::Install() && SceneDepth::Install() && SkyPass::Install(&OnSkyPass);
+    return SceneDepth::Install() && SkyPass::Install(&OnSkyPass);
 }
 
 void PlayerBody::Shadow::SetEnabled(bool enabled) {
@@ -177,13 +167,11 @@ void PlayerBody::Shadow::SetEnabled(bool enabled) {
 }
 
 void PlayerBody::Shadow::Update(uint8_t* pawn) {
-    Column column = {};
-    column.cast = g_enabled && Pawn::FirstPerson(pawn) && Pawn::OnFoot(pawn) &&
-                  Body::Eye(pawn, column.head);
-    if (column.cast) {
-        std::copy_n(Pawn::Place(Pawn::Entity(pawn)), 3, column.feet);
-        column.feet[2] += kRadius;
-        column.head[2] += kCrown;
+    Feet feet = {};
+    uint8_t* entity = Pawn::Entity(pawn);
+    feet.cast = g_enabled && entity != nullptr && Pawn::FirstPerson(pawn) && Pawn::OnFoot(pawn);
+    if (feet.cast) {
+        std::copy_n(Pawn::Place(entity), 3, feet.place);
     }
-    g_column.Publish(column);
+    g_feet.Publish(feet);
 }

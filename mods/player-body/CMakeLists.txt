@@ -42,7 +42,6 @@ add_library(PlayerBody SHARED
   "src/engine/skeleton.cpp"
   "src/engine/skin.cpp"
   "src/engine/sky_pass.cpp"
-  "src/engine/sun.cpp"
   "src/engine/vtable.cpp"
   "${SHADOW_HEADER}"
 )

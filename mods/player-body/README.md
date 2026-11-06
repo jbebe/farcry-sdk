@@ -10,7 +10,7 @@ no data layer: it changes nothing on disk, and works on whichever character the 
 | A crouch with the knees out, so the lowered eye sees past them | seen in game |
 | Seen from a camera away from the eye, such as DevTools' free camera: the whole body, head and back included, that does not vanish at 2 m; its arms keep the first-person pose | seen in game |
 | Feet tucked up in the air | built, not seen |
-| A soft, shapeless shadow where the engine casts none in first person, at the angle of the world's shadows: fainter toward the head's end, shorter crouched, fading out with the night and a storm | seen in game (test range, scripted shots; night and storm not seen) |
+| A soft round shadow on the ground under the feet, where the engine casts none in first person | seen in game (test range, scripted shots) |
 
 ## How it works
 
@@ -30,13 +30,10 @@ out of the camera's sight.
   mesh's inverse bind matrices. The hips hang below the spine where the animation holds it, which
   crouching lowers and looking down swings back; the feet go halfway with them. Each foot follows a
   stride worked out from how far the player moves, and two-bone IK bends the knee to reach it.
-- `shadow.cpp` stands a column of seven spheres from the feet to the eye, and at the frame's sky pass
-  multiplies the world by their shadow, worked out per pixel from the engine's own linear depth in
-  `shaders/shadow.fx`. Each sphere's shadow blurs and pales with its distance from the body. It is
-  cast along the direction the engine lays every other shadow along, which holds a low sun higher
-  than it stands, read with the night and the storm from the engine's cloud-layer submission
-  (`engine/sun.cpp`). The depth texture is found by watching a draw that reads it
-  (`engine/scene_depth.cpp`).
+- `shadow.cpp` darkens a soft circle around where the feet stand, at the frame's sky pass, from the
+  engine's own linear depth: `shaders/shadow.fx` finds each pixel's place in the world and darkens
+  it by its distance from the feet, so the circle lies on slopes and steps. The depth texture is
+  found by watching a draw that reads it (`engine/scene_depth.cpp`).
 
 The engine side is in [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md#the-first-person-body).
 
@@ -60,4 +57,3 @@ it hooks the same posing functions as Aiming Overhaul.
 - In a vehicle the full body is hidden and the avatar drawn as in retail.
 - Not yet checked in game: cutscenes and other full-body first-person clips, whose legs the plugin
   overrides; ladders; swimming; slopes, where the feet stand on the body's level ground.
-- The shadow darkens ground the engine already shades, such as under a roof or a tree, a second time.
