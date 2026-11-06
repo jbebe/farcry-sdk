@@ -1,2 +1,5 @@
 # The stitched map is the game's own picture and stays local; stitch_map.py makes it.
 assets/world1-map.png
+# The world data extract_world.py reads out of the game, and the sheet render_map.py draws from it.
+work/
+assets/world1-sheet.png

@@ -1,7 +1,33 @@
 # Map Overhaul
 
-A realistic map in place of the game's drawn one, and the GPS removed. Nothing built yet; the idea is
-issue #29.
+A realistic map in place of the game's drawn one, and the GPS removed: world 1 as a military
+topographic sheet, the kind handed over at a briefing, drawn from the world's own data. Nothing is in
+the game yet; the idea is issue #29.
+
+## The sheet
+
+`extract_world.py` reads world 1 out of an extracted `worlds.fat` (by default `tmp\gamefiles\worlds\worlds`)
+into `work/world1/`: the ground's heights and each sector's water from the `.sdat` files, the road,
+river and path splines from `world1.mapsdata.fcb`, and every placed entity with a bounding box, a
+detail-map rectangle or a `mapsdata` role, from the sector files and the entity library. It takes a
+few minutes and runs once.
+
+`render_map.py` draws `assets/world1-sheet.png` from that, 5120 px a side at 1 m per pixel, the world's
+own extent, so it slices back into the game's 25 area maps:
+
+| Layer | Drawn from |
+|---|---|
+| Height tints, 20 m bands to 100 m, then 50 m | the heights, smoothed over 1.5 m |
+| Contours every 10 m, labelled every 50 m; spot heights | the same |
+| Water and shorelines | ground below its sector's water level, where the sector has still or river water |
+| Roads, red where wider than 4 m; tracks | the road and path splines |
+| Railway, bridges | the track pieces and bridge decks, by their boxes |
+| Buildings | models under `graphics\buildings\`, 6 m² or more, by their boxes |
+| Names | the 21 detail maps' entities, in `PLACES`, and the summit as Mt Thabamolaetsa |
+
+The neat line is the playable square the game's world map covers, a sector wider each side; the
+margin outside it holds the title, legend, scale, layer tints and north points. `--region` and
+`--scale` draw part of the world for a closer look.
 
 ## The full map
 
@@ -14,4 +40,4 @@ seam. The picture is the game's own, so it stays local; make it with
 python mods\map-overhaul\stitch_map.py --game "C:\Games\Far Cry 2"
 ```
 
-It needs Pillow and a Release build of `jackall-cli`.
+The scripts need Pillow, numpy, scipy and matplotlib, and a Release build of `jackall-cli`.

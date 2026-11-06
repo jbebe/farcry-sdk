@@ -1,0 +1,330 @@
+# Draws world 1 as a military topographic sheet from what extract_world.py read out of the game:
+# height-band tints, contours, water, roads, tracks, buildings, spot heights, names and a 1 km grid.
+import argparse
+import json
+from pathlib import Path
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.patheffects as effects
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.collections import LineCollection, PolyCollection
+from matplotlib.font_manager import FontProperties
+from matplotlib.patches import Rectangle
+from scipy import ndimage
+
+HERE = Path(__file__).resolve().parent
+WORLD = 5120
+# The neat line: the playable square the game's own world map covers, and a sector either side.
+NEAT = (960, 4160)
+# World X and Y to grid eastings and northings, in metres.
+GRID_ORIGIN = (612000, 1404000)
+DPI = 100
+
+PAPER = "#f4f0e2"
+INK = "#1d1b19"
+BROWN = "#94603c"
+BLUE = "#3a79ad"
+WATER = "#b3d3e3"
+ROAD = "#c9452f"
+ROAD_MINOR = "#e9b15a"
+# Height bands: their upper bounds in metres and their tints, low ground green to high ground brown.
+BANDS = [(20, "#cfdcb4"), (40, "#dde3ba"), (60, "#e9e7c3"), (80, "#ece0bb"), (100, "#e6d4ab"),
+         (150, "#dbc39c"), (200, "#cfb08c"), (300, "#c19d7f")]
+
+FONT = {style: FontProperties(fname=f"C:/Windows/Fonts/{name}")
+        for style, name in (("regular", "ARIALN.TTF"), ("bold", "ARIALNB.TTF"),
+                            ("italic", "ARIALNI.TTF"), ("bolditalic", "ARIALNBI.TTF"))}
+
+# Each named place, by its detail map's texture, as a survey sheet would print it.
+PLACES = {
+    "town": ("PALA", "town"),
+    "fishing_village": ("SHWASANA", "village"),
+    "w1d4_shantytown": ("MOKUBA", "village"),
+    "fuel_depot": ("PetroSahel Fuel Terminal", "works"),
+    "railyard": ("Railway Yard", "works"),
+    "ranch": ("Cattle Ranch", "works"),
+    "fool_errand": ("Goka Falls", "feature"),
+    "old_fort": ("Fort (ruin)", "works"),
+    "king_oasis": ("Oasis", "feature"),
+    "villa": ("Villa", "works"),
+    "greenhouses": ("Greenhouses (OGC)", "works"),
+    "gncamp": ("Police Post", "works"),
+    "junkyard": ("Scrapyard", "works"),
+    "w1d3_chem_depot": ("Chemical Works", "works"),
+    "w1d3_airstrip": ("Airstrip", "works"),
+    "w1d4_dsoasis": ("Oasis", "feature"),
+    "slaughterhouse": ("Abattoir", "works"),
+    "fishingcamp": ("Fish Camp", "works"),
+    "lumberyard": ("Sawmill", "works"),
+}
+# Models that are drawn as buildings: by folder, then a footprint no smaller than this, in square metres.
+BUILDING_FOLDERS = ("graphics\\buildings\\",)
+BUILDING_SKIP = ("window", "door", "frame", "stairs", "antenna", "sign", "awning", "gazebo")
+MIN_FOOTPRINT = 6.0
+
+
+def pt(px):
+    return px * 72 / DPI
+
+
+def hermite(points, step=2.0):
+    out = []
+    for a, b in zip(points, points[1:]):
+        p0, p1 = np.array(a["pos"][:2]), np.array(b["pos"][:2])
+        m0, m1 = np.array(a["tan"][:2]), np.array(b["tan"][:2])
+        n = max(2, int(np.linalg.norm(p1 - p0) / step))
+        t = np.linspace(0, 1, n)[:, None]
+        out.append((2 * t**3 - 3 * t**2 + 1) * p0 + (t**3 - 2 * t**2 + t) * m0
+                   + (-2 * t**3 + 3 * t**2) * p1 + (t**3 - t**2) * m1)
+    return np.vstack(out)
+
+
+def placed(e, local):
+    yaw = np.radians(e["ang"][2] if e["ang"] else 0)
+    rot = np.array([[np.cos(yaw), -np.sin(yaw)], [np.sin(yaw), np.cos(yaw)]])
+    return np.asarray(local) @ rot.T + e["pos"][:2]
+
+
+def footprint(e):
+    x0, y0, _, x1, y1, _ = e["box"]
+    return placed(e, [[x0, y0], [x1, y0], [x1, y1], [x0, y1]])
+
+
+def models(entities, accept):
+    return [e for e in entities if e.get("model") and accept(e["model"].lower())]
+
+
+def is_building(model):
+    return model.startswith(BUILDING_FOLDERS) and not any(s in model for s in BUILDING_SKIP)
+
+
+def is_bridge(model):
+    return "_bridgekit\\" in model and "bridge" in model.split("\\")[-1] and "base" not in model
+
+
+def is_track(model):
+    name = model.split("\\")[-1]
+    return name.startswith("infra_train_track_") and "detail" not in name
+
+
+def track(e):
+    # A straight piece runs along its X axis; a curve from its origin to its far corner.
+    x0, y0, _, x1, y1, _ = e["box"]
+    name = e["model"].lower().split("\\")[-1]
+    if name.startswith("infra_train_track_b"):
+        far = max(((x, y) for x in (x0, x1) for y in (y0, y1)), key=lambda p: np.hypot(*p))
+        return placed(e, [[0, 0], [far[0] - np.sign(far[0]) * 2, far[1] - np.sign(far[1]) * 2]])
+    return placed(e, [[x0, 0], [x1, 0]])
+
+
+def water_depth(terrain):
+    flagged = (terrain["still"] > 0) | (terrain["river"] > 0)
+    level = np.where(flagged, terrain["level"], -1e3)
+    level = np.repeat(np.repeat(level, 64, 0), 64, 1)
+    level = np.pad(level, ((0, 1), (0, 1)), mode="edge")
+    return level - terrain["heights"]
+
+
+def spot_heights(heights, region):
+    x0, y0, x1, y1 = region
+    peaks = (heights == ndimage.maximum_filter(heights, size=161)) & (heights > ndimage.uniform_filter(heights, 161) + 12)
+    ys, xs = np.nonzero(peaks)
+    keep = (xs > x0) & (xs < x1) & (ys > y0) & (ys < y1)
+    return [(x, y, heights[y, x]) for x, y in zip(xs[keep], ys[keep])]
+
+
+def text(ax, x, y, s, size, style="regular", color=INK, halo=PAPER, ha="center", va="center", zorder=20):
+    ax.text(x, y, s, fontproperties=FONT[style], fontsize=pt(size), color=color, ha=ha, va=va, zorder=zorder,
+            path_effects=[effects.withStroke(linewidth=pt(size * 0.18), foreground=halo)] if halo else None)
+
+
+def margins(ax, px, scale):
+    mid = (NEAT[0] + NEAT[1]) / 2
+    top, bottom = NEAT[1], NEAT[0]
+    t = lambda x, y, s, size, style="regular", **kw: text(ax, x, y, s, size * scale, style, halo=None, **kw)
+
+    for y in (top + 700, 150):
+        t(mid, y, "RESTRICTED", 44, "bold")
+    t(mid, top + 520, "LEBOA-SAKO", 130, "bold")
+    t(mid, top + 380, "Scale 1:10 000", 44)
+    t(NEAT[0], top + 520, "SERIES M712", 40, "bold", ha="left")
+    t(NEAT[0], top + 450, "SHEET 3", 40, ha="left")
+    t(NEAT[1], top + 520, "LEBOA-SAKO", 40, "bold", ha="right")
+    t(NEAT[1], top + 450, "EDITION 2-LSD", 40, ha="right")
+    first = NEAT[0] + (-(GRID_ORIGIN[0] + NEAT[0])) % 1000
+    t(first, top + 110, f"{GRID_ORIGIN[0] + first}m E.", 22)
+
+    # Scale bar: 500 metres in hundreds left of zero, a whole kilometre right of it.
+    zero, y, h = mid - 250, bottom - 330, 26
+    for i in range(5):
+        ax.add_patch(Rectangle((zero - 500 + i * 100, y), 100, h, facecolor=INK if i % 2 else PAPER,
+                               edgecolor=INK, linewidth=px(1.5), zorder=20))
+    ax.add_patch(Rectangle((zero, y), 1000, h, facecolor=INK, edgecolor=INK, linewidth=px(1.5), zorder=20))
+    for x, label in ((zero - 500, "500"), (zero, "0"), (zero + 500, "500"), (zero + 1000, "1000")):
+        t(x, y + h + 34, label, 30)
+    t(zero + 1100, y + h / 2, "Metres", 30, ha="left")
+    t(mid, y - 70, "CONTOUR INTERVAL 10 METRES", 32, "bold")
+    t(mid, y - 120, "HEIGHTS IN METRES ABOVE MEAN SEA LEVEL", 28)
+    t(mid, y - 200, "Compiled from air photography 1974. Roads and buildings revised from ground survey 2006.", 24)
+
+    # Legend.
+    x, y = NEAT[0] + 20, bottom - 120
+    t(x, y, "LEGEND", 32, "bold", ha="left")
+    rows = [
+        ("Road, main", lambda a, b, c: [ax.plot([a, b], [c, c], color=INK, linewidth=px(8), solid_capstyle="butt"),
+                                        ax.plot([a, b], [c, c], color=ROAD, linewidth=px(5.5), solid_capstyle="butt")]),
+        ("Road, loose surface", lambda a, b, c: [ax.plot([a, b], [c, c], color=INK, linewidth=px(8), solid_capstyle="butt"),
+                                                 ax.plot([a, b], [c, c], color=ROAD_MINOR, linewidth=px(5.5),
+                                                         solid_capstyle="butt")]),
+        ("Track or footpath", lambda a, b, c: ax.plot([a, b], [c, c], color=INK, linewidth=px(1.3), dashes=(7, 4))),
+        ("Railway", lambda a, b, c: [ax.plot([a, b], [c, c], color=INK, linewidth=px(2.6))] +
+                                    [ax.plot([v, v], [c - 4, c + 4], color=INK, linewidth=px(1.6)) for v in range(int(a) + 10, int(b), 20)]),
+        ("Buildings", lambda a, b, c: [ax.add_patch(Rectangle((a + o, c - 7), 14, 14, color=INK)) for o in (0, 24, 48)]),
+        ("Water", lambda a, b, c: ax.add_patch(Rectangle((a, c - 12), b - a, 24, facecolor=WATER, edgecolor=BLUE,
+                                                         linewidth=px(0.9)))),
+        ("Contour, index contour", lambda a, b, c: [ax.plot([a, b], [c - 6, c - 6], color=BROWN, linewidth=px(0.7)),
+                                                    ax.plot([a, b], [c + 6, c + 6], color=BROWN, linewidth=px(1.7))]),
+        ("Spot height", lambda a, b, c: [ax.plot(a + 10, c, "o", color=INK, markersize=px(3)),
+                                         t(a + 22, c, "238", 18, "italic", ha="left")]),
+    ]
+    for i, (label, symbol) in enumerate(rows):
+        row_y = y - 70 - i * 72
+        symbol(x, x + 90, row_y)
+        t(x + 120, row_y, label, 26, ha="left")
+
+    # Height bands, highest at the top.
+    x, y = NEAT[1] - 640, bottom - 120
+    t(x, y, "LAYER TINTS", 32, "bold", ha="left")
+    for i, ((upper, colour), lower) in enumerate(zip(BANDS[::-1], [b for b, _ in BANDS[-2::-1]] + [0])):
+        row_y = y - 80 - i * 52
+        ax.add_patch(Rectangle((x, row_y - 22), 70, 44, facecolor=colour, edgecolor=INK, linewidth=px(1)))
+        t(x + 95, row_y, f"{lower}-{upper} m" if i else f"over {lower} m", 24, ha="left")
+
+    # North points from the foot of one line, their angles drawn larger than they are, as sheets do.
+    x, y = NEAT[1] - 100, bottom - 640
+    for angle, label in ((0, "TN"), (-9, "GN"), (-24, "MN")):
+        a = np.radians(angle)
+        ax.plot([x, x + 400 * np.sin(a)], [y, y + 400 * np.cos(a)], color=INK, linewidth=px(1.6))
+        t(x + 440 * np.sin(a), y + 440 * np.cos(a), label, 26, "bold")
+    t(x - 60, y - 50, "MN 3°12′ W of GN (2006)", 20)
+    t(x - 60, y - 85, "annual change 8′ E", 20)
+    t(x - 60, y - 120, "Angles not to scale", 20, "italic")
+
+
+def draw(region, scale, out):
+    terrain = np.load(HERE / "work/world1/terrain.npz")
+    features = json.loads((HERE / "work/world1/features.json").read_text())
+    heights = ndimage.gaussian_filter(terrain["heights"], 1.5)
+    x0, y0, x1, y1 = region
+
+    fig = plt.figure(figsize=((x1 - x0) * scale / DPI, (y1 - y0) * scale / DPI), dpi=DPI, facecolor=PAPER)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(x0, x1)
+    ax.set_ylim(y0, y1)
+    ax.axis("off")
+    neat = Rectangle((NEAT[0], NEAT[0]), NEAT[1] - NEAT[0], NEAT[1] - NEAT[0], transform=ax.transData)
+    px = lambda n: pt(n * scale)
+
+    # Only the part of the world the region needs, a little wider so lines run off its edge.
+    pad = 64
+    sx0, sy0 = max(0, int(x0) - pad), max(0, int(y0) - pad)
+    sx1, sy1 = min(WORLD, int(x1) + pad), min(WORLD, int(y1) + pad)
+    h = heights[sy0:sy1 + 1, sx0:sx1 + 1]
+    xs, ys = np.arange(sx0, sx1 + 1), np.arange(sy0, sy1 + 1)
+
+    levels = [-10] + [b for b, _ in BANDS]
+    tints = ax.contourf(xs, ys, h, levels=levels, colors=[c for _, c in BANDS], zorder=1, antialiased=True)
+    tints.set_clip_path(neat)
+    minor = ax.contour(xs, ys, h, levels=[v for v in range(10, 300, 10) if v % 50], colors=BROWN,
+                       linewidths=px(0.7), zorder=3)
+    index = ax.contour(xs, ys, h, levels=list(range(50, 300, 50)), colors=BROWN, linewidths=px(1.7), zorder=3)
+    for c in (minor, index):
+        c.set_clip_path(neat)
+    for label in ax.clabel(index, fmt="%d", inline=True, inline_spacing=4 * scale):
+        label.set_fontproperties(FONT["regular"])
+        label.set_fontsize(px(13))
+        label.set_clip_path(neat)
+
+    depth = water_depth(terrain)[sy0:sy1 + 1, sx0:sx1 + 1]
+    lake = ax.contourf(xs, ys, depth, levels=[0, 1e4], colors=[WATER], zorder=4)
+    shore = ax.contour(xs, ys, depth, levels=[0], colors=BLUE, linewidths=px(0.9), zorder=5)
+    lake.set_clip_path(neat)
+    shore.set_clip_path(neat)
+
+    entities = features["entities"]
+    paths = [hermite(s) for s in features["PathSplines"] if len(s) > 1]
+    roads = [(hermite(s), max(s[0]["widths"])) for s in features["RoadSplines"] if len(s) > 1]
+    rails = [track(e) for e in models(entities, is_track)]
+    ticks = []
+    for a, b in rails:
+        along = (b - a) / max(np.linalg.norm(b - a), 1e-6)
+        across = np.array([-along[1], along[0]]) * 4
+        for t in np.arange(10, np.linalg.norm(b - a) - 4, 20):
+            ticks.append([a + along * t - across, a + along * t + across])
+    buildings = [footprint(e) for e in models(entities, is_building)
+                 if (e["box"][3] - e["box"][0]) * (e["box"][4] - e["box"][1]) >= MIN_FOOTPRINT]
+    collections = [
+        LineCollection(paths, colors=INK, linewidths=px(1.3), linestyles=(0, (7, 4)), zorder=6),
+        LineCollection([r for r, _ in roads], colors=INK, linewidths=px(8), capstyle="round", zorder=7),
+        LineCollection([r for r, _ in roads], colors=[ROAD if w >= 4 else ROAD_MINOR for _, w in roads],
+                       linewidths=px(5.5), capstyle="round", zorder=8),
+        PolyCollection([footprint(e) for e in models(entities, is_bridge)], facecolors=ROAD_MINOR,
+                       edgecolors=INK, linewidths=px(1.5), zorder=8.5),
+        LineCollection(rails, colors=INK, linewidths=px(2.6), zorder=9),
+        LineCollection(ticks, colors=INK, linewidths=px(1.6), zorder=9),
+        PolyCollection(buildings, facecolors=INK, edgecolors="none", zorder=10),
+    ]
+    for c in collections:
+        ax.add_collection(c)
+        c.set_clip_path(neat)
+
+    for x, y, z in spot_heights(heights, region):
+        if NEAT[0] < x < NEAT[1] and NEAT[0] < y < NEAT[1]:
+            ax.plot(x, y, "o", color=INK, markersize=px(3), zorder=12)
+            text(ax, x + 6, y - 6, f"{z:.0f}", 14 * scale, "italic", ha="left", va="top")
+
+    # The world's summit is the mountain dialogue names "one mile northeast of Pala".
+    inside = heights[NEAT[0]:NEAT[1], NEAT[0]:NEAT[1]]
+    sy, sx = np.unravel_index(np.argmax(inside), inside.shape)
+    text(ax, sx + NEAT[0], sy + NEAT[0] + 60, "MT THABAMOLAETSA", 26 * scale, "bolditalic")
+
+    for e in entities:
+        if e.get("tex"):
+            name, kind = PLACES.get(Path(e["tex"]).stem.removeprefix("majorlocation_"), (None, None))
+            if name:
+                size, style = {"town": (40, "bold"), "village": (28, "bold"),
+                               "works": (18, "regular"), "feature": (20, "italic")}[kind]
+                text(ax, e["pos"][0], e["pos"][1] + e["h"] / 2 + size * 0.8, name, size * scale, style)
+
+    for axis, origin in enumerate(GRID_ORIGIN):
+        for g in range(NEAT[0] + (-(origin + NEAT[0])) % 1000, NEAT[1], 1000):
+            vertical = axis == 0
+            ax.plot([g, g] if vertical else NEAT, NEAT if vertical else [g, g], color=INK,
+                    linewidth=px(1.1), zorder=15)
+            number = f"{(g + origin) // 1000 % 100:02d}"
+            for edge, off in ((NEAT[0], -30), (NEAT[1], 30)):
+                text(ax, g if vertical else edge + off, edge + off if vertical else g, number, 26 * scale,
+                     halo=None)
+    ax.add_patch(Rectangle((NEAT[0], NEAT[0]), NEAT[1] - NEAT[0], NEAT[1] - NEAT[0], fill=False,
+                           edgecolor=INK, linewidth=px(2.5), zorder=16))
+    margins(ax, px, scale)
+
+    fig.savefig(out, dpi=DPI, facecolor=PAPER)
+    print(f"Wrote {out}")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--region", type=float, nargs=4, default=(0, 0, WORLD, WORLD),
+                        metavar=("X0", "Y0", "X1", "Y1"), help="world metres to draw")
+    parser.add_argument("--scale", type=float, default=1.0, help="pixels per metre")
+    parser.add_argument("--out", default=str(HERE / "assets/world1-sheet.png"))
+    args = parser.parse_args()
+    draw(args.region, args.scale, args.out)
+
+
+if __name__ == "__main__":
+    main()
