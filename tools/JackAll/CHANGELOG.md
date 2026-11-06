@@ -16,7 +16,7 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - **Sound labels.** Every sound bank the game's files name says what it is, as a category and a
   detail taken from where it is used: `weapon · reload, 1st person (ak47)`, or for speech the speaker
   and the subtitle. The Files tab shows them in a Label column and the details pane, and the filter
-  and the file picker search them, so `ak47 reload` finds the AK-47's reload sounds.
+  and the file picker search them with `spk:`, so `spk:"ak47 reload"` finds the AK-47's reload sounds.
   `jackall-cli spk label` builds the list.
 
 ## [1.7.0] - 2026-10-28

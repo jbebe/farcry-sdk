@@ -21,16 +21,23 @@ public class FileFilterTests
         Assert.False(Matches("buggy -land", file));
     }
 
-    [Fact]
-    public void Words_match_a_label_as_well_as_the_path()
+    [Theory]
+    [InlineData("spk:reload", true)]
+    [InlineData("spk:\"ak47 reload\"", true)]
+    [InlineData("spk:\"ak47 rel", true)]
+    [InlineData("soundbinary spk:ak47", true)]
+    [InlineData("spk:\"ak47 jam\"", false)]
+    [InlineData("ak47", false)]
+    public void Spk_words_match_the_label_and_plain_words_only_the_path(string filter, bool matches)
     {
         VfsFile file = File(@"soundbinary\004b27c7.spk");
-        FileFilter filter = FileFilter.Parse("soundbinary ak47 reload -dialogue");
 
-        Assert.True(filter.Matches(file, _ => "common", _ => "weapon · reload, 1st person (ak47)"));
-        Assert.False(filter.Matches(file, _ => "common", _ => "dialogue · ak47 reload"));
-        Assert.False(filter.Matches(file, _ => "common"));
+        Assert.Equal(matches, FileFilter.Parse(filter).Matches(file, _ => "common", _ => "weapon · reload, 1st person (ak47)"));
     }
+
+    [Fact]
+    public void A_file_without_a_label_never_matches_spk()
+        => Assert.False(FileFilter.Parse("spk:reload").Matches(File(@"soundbinary\004b27c7.spk"), _ => "common"));
 
     [Fact]
     public void A_forward_slash_matches_a_backslash()

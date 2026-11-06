@@ -17,14 +17,15 @@ This page only looks at files.
 
 ## Search
 
-Type into **Filter** (1). Every word you type has to appear in the name, or in a sound's label
-(see [Sound labels](#sound-labels)), and three prefixes narrow it down:
+Type into **Filter** (1). Every word you type has to appear in the name, and four prefixes narrow
+it down:
 
 | Word | Keeps | Example |
 |---|---|---|
 | `ext:<type>` | files of one type | `ext:xbt` for textures |
 | `arch:<archive>` | files from one archive, as the **Source** column (3) names it | `arch:patch` |
 | `hash:<hex>` | the file with this hash | `hash:585ACE93` |
+| `spk:<word>` or `spk:"<word> <word>"` | sounds whose [label](#sound-labels) has every word | `spk:"ak47 reload"` |
 
 `ext:xbt ak47` finds the AK-47's textures (2), across every folder.
 
@@ -86,6 +87,6 @@ The other categories are `explosion`, `foley`, `voice`, `animal`, `object`, `amb
 plays. A bank no game file names but another bank plays, such as a shot's audio, takes the label of
 the sound that plays it. Recorded speech without a subtitle is just `dialogue`.
 
-So `ak47 reload` in **Filter** finds the AK-47's reload sounds, and `dialogue Flora` finds Flora's
-lines. 37 retail banks have no label: nothing in the game's files names them, and most of those
+So `spk:"ak47 reload"` in **Filter** finds the AK-47's reload sounds, and `spk:"dialogue Flora"`
+finds Flora's lines. 37 retail banks have no label: nothing in the game's files names them, and most of those
 play only silence.
