@@ -626,17 +626,36 @@ The time since the last shot works through a timer on the strategy: the noise is
 not traced. Retail `m` is 1 on the AK-47, so it gets no bonus at all; it is 0.7 on the AR-16, 0.8 on
 the M249 and 0.85-0.9 on the G3 and FAL. Nothing grows the spread over a long burst.
 
-`GetActualSpreadData` (server `0x08F4D690`) picks which noise: the jump one while in the air, the
-iron-sight ones once the ironsight flag is set and the pawn's skill value at `+0x14` has reached
-0.75, and the crouched or standing one by stance. The stance is an integer at the effective data's
-`+0xA4`, `1` while crouched; the client reads it the same way (`0x1010EC79`, after
-`CPawn::GetEffectiveData`), at the pawn data's `+0x374`. In retail data the four sniper rifles have no
-spread down the sights at all, and the iron-sighted guns about 0.4°.
+`GetActualSpreadData` (`0x1010EC30`, server `0x08F4D690`, `__thiscall(pawn)`) picks which noise: the
+jump one while in the air, the iron-sight ones once the ironsight flag is set and the pawn's skill
+value at `+0x14` has reached 0.75, and the crouched or standing one by stance. The stance is an
+integer at the effective data's `+0xA4`, `1` while crouched; the client reads it the same way
+(`0x1010EC79`, after `CPawn::GetEffectiveData`), at the pawn data's `+0x374`. It returns its pick
+inside the fire data at the strategy's `+0x50`: `+0x234` standing, `+0x2A0` crouched, `+0x30C` down
+the sights, `+0x378` crouched down the sights and `+0x3E4` in the air. In retail data the four sniper
+rifles have no spread down the sights at all, and the iron-sighted guns about 0.4°.
 
 `CNoiseMaker` is a Catmull-Rom curve through Gaussian keys of standard deviation `fAmplitude`, a new
 key every `1 / fFrequency` seconds of game time. The retail `BulletSpread_IronSight` is 0.4° at 35
 keys a second, so a shot's error is effectively random from one shot to the next rather than a
 drift you could see.
+
+### The accuracy bonus
+
+`SetupShot1st` (`0x10112600`) passes the noise's size through `CPawn::GetBonus` (`0x1007E280`,
+`__thiscall(object, name, base, lowerIsBetter)`, returning the float on the FPU stack), with the
+weapon properties' name at `+0x04` as the object and `accuracy` (`0x93450383`) as the name.
+`CPawnBonusPlanManager::GetBonus` (server `0x09086830`) adds up that name's bonus for that object in
+every plan the player holds, caches the sum, and returns `base − base · percent − additive` when lower
+is better. Every gun's operation manual (`<gun>_oper_manual` in `gamemodesconfig.xml`'s
+`BonusService`) gives `accuracy` and `recoil` 20 %, and its challenge (`<gun>_challenge_bonus`) 10 %
+each, so a manual leaves 0.8 of the noise. A plan's name does not always follow its gun's:
+`de_oper_manual` is the `deserteagle`'s, `mgl40_oper_manual` the `MGL140`'s.
+
+`CWeaponFireBulletStrategy::UpdateBulletSpread` (`0x1010ECC0`) runs the same spread data, movement
+and bonus into the weapon's current spread, a float at the weapon state's `+0x64` (the weapon's
+`+0x24`), without the time since the last shot. Where a shot goes comes from `SetupShot1st` alone.
+This was read in the server build and the Steam DLL, not yet seen in a running game.
 
 ## Recoil
 

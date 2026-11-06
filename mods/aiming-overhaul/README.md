@@ -84,6 +84,9 @@ both field by field with other mods' edits, reporting any clash.
   the gun's kick more each time, up to eight shots' worth: down a new AK-47's sights, up to 1.2°
   more than its own 0.4°. A burst is shots less than a quarter of a second apart, so slower taps
   each start fresh.
+- **Operation manual.** With a gun's operation manual, its random spread down the iron sights is
+  half the game's standing and a quarter of it crouched: a new AK-47's 0.2° and 0.095° instead of
+  0.4° and 0.38°. Without one, and from the hip, in the air or for recoil, it is the game's.
 - **Dirt in the eye.** A round that lands within 3 m of the eye in ground, sand, mud, pebbles,
   concrete, tile or wood, the player's own as much as anyone's, throws dirt in it: two black,
   see-through, blurry blobs on the side it came from, the view blurred around them, bigger and
@@ -178,7 +181,8 @@ behind the look's pitch, `src/pitch_slide.cpp`, moves them in the same pass. A l
 `src/landing.cpp`, dropping the eye through the camera's positional offset. The recoil is
 `src/recoil.cpp`: each of the player's kicks is taken from the game before the game blends it in,
 in `src/engine/kick.cpp`, added to the look in `src/engine/look.cpp`, and a burst's shots stray in
-`src/engine/shot.cpp`. The guns that keep the game's recoil have `AimingOverhaul.RecoilReturns` on
+`src/engine/shot.cpp`. The operation manual is `src/manual.cpp`, on the accuracy bonus asked for
+there. The guns that keep the game's recoil have `AimingOverhaul.RecoilReturns` on
 their archetype, written by `data\fragments.py`. The shot shake is `src/shot_shake.cpp`, struck by
 the same kicks and turning the view through the camera's angular offset in `src/engine/aim.cpp`;
 the round's push is read from the weapon's `Cartridge.*` entity data in `src/cartridge.cpp`, and

@@ -29,6 +29,7 @@
 #include "hit.h"
 #include "landing.h"
 #include "lean.h"
+#include "manual.h"
 #include "pitch_slide.h"
 #include "ready.h"
 #include "recoil.h"
@@ -253,6 +254,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     AimingOverhaul::Kick::Install(&TakeKick);
     AimingOverhaul::Ray::Install();
     AimingOverhaul::Fire::Install(&RefuseShot);
+    AimingOverhaul::Manual::Install();
     AimingOverhaul::Shot::Install(&MoveShot);
     AimingOverhaul::Impact::Install(&OnImpact);
     AimingOverhaul::Damage::Install(&AimingOverhaul::Hit::OnHit);

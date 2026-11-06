@@ -13,4 +13,7 @@ using MoveFn = void (*)(uint8_t* pawn, float origin[3], float direction[3]);
 // False, and logged, when the shot cannot be hooked.
 bool Install(MoveFn move);
 
+// The bullet strategy whose first-person shot this thread is setting up, or null.
+uint8_t* SettingUp();
+
 }

@@ -46,6 +46,8 @@ Notable changes to Aiming Overhaul, loosely following
   roll are set for each weapon in Aiming Overhaul's window in DevTools' overlay.
 - **Steadier down the sights.** Half the sway is left down the sights, standing and crouched, each
   set in the same window.
+- **The operation manual tightens the iron sights.** With a gun's manual its random spread down the
+  iron sights is half the game's standing and a quarter crouched; without it, the game's.
 - **Dirt in the eye.** A round landing in the dirt, sand, stone or wood by your face, your own
   included, throws dirt in your eye: dark, blurry blobs on that side with the view blurred around them, gone in a
   few seconds. How big, dark and blurred, how long it lasts and how near it has to land are set in

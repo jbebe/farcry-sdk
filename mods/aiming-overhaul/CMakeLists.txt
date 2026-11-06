@@ -85,6 +85,7 @@ add_library(AimingOverhaul SHARED
   "src/hit.cpp"
   "src/landing.cpp"
   "src/lean.cpp"
+  "src/manual.cpp"
   "src/pitch_slide.cpp"
   "src/ready.cpp"
   "src/recoil.cpp"
