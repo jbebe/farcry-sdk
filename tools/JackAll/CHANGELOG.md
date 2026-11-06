@@ -13,11 +13,11 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - **Terrain for a new world.** A plan, `levels\<world>\terrain.xml`, raises ridges, and `world pack`
   shapes the world's sectors before it lays the vegetation and the navmesh on them. A raised spot
   keeps its full shape at every distance.
-- **Sound labels.** Every sound bank the game's files name says what it is, as a category and a
-  detail taken from where it is used: `weapon · reload, 1st person (ak47)`, or for speech the speaker
-  and the subtitle. The Files tab shows them in a Label column and the details pane, and the filter
-  and the file picker search them with `spk:`, so `spk:"ak47 reload"` finds the AK-47's reload sounds.
-  `jackall-cli spk label` builds the list.
+- **Sound labels.** Every retail sound bank says what it is, as a category and a detail taken from
+  where it is used: `weapon · reload, 1st person (ak47)`, or for speech the speaker and the subtitle;
+  the few nothing names are labelled by hand. The Files tab shows them in a Label column and the
+  details pane, and the filter and the file picker search them with `spk:`, so `spk:"ak47 reload"`
+  finds the AK-47's reload sounds. `jackall-cli spk label` builds the list, keeping hand labels.
 
 ## [1.7.0] - 2026-10-28
 

@@ -17,6 +17,7 @@ public static class SoundLabeler
     public const string FromUsage = "usage";
     public const string FromLinks = "linked";
     public const string FromFolder = "folder";
+    public const string FromHand = "hand";
 
     private const int MaxGroups = 6;
     private const int MaxSubjects = 5;

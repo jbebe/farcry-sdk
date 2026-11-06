@@ -870,9 +870,11 @@ soundbinary\00448bc8.spk	weapon	pass by near (player)	usage	worlds\ige_map\gener
 soundbinary\00448bd2.spk	weapon	pass by regular (player)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448cd4.spk	weapon	stop auto bullet shot (AK47, AK47 Gold)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448cd6.spk	weapon	start auto bullet shot (AK47, AK47 Gold)	linked	graphics\characters\_common\animations\special_actions\buddy_rescue\3rdge_synm_brentry_+000fw_prak4_i1.mab, worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb +22
+soundbinary\00448cd7.spk	other	silence	hand	
 soundbinary\00448cd8.spk	weapon	start auto bullet shot (AK47, AK47 Gold)	usage	graphics\characters\_common\animations\special_actions\buddy_rescue\3rdge_synm_brentry_+000fw_prak4_i1.mab, worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb +22
 soundbinary\00448ce1.spk	weapon	single bullet shot (SPAS12)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448cea.spk	weapon	start auto bullet shot (MAC10, Mikes Rusty)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
+soundbinary\00448ceb.spk	other	silence	hand	
 soundbinary\00448cec.spk	weapon	start auto bullet shot (MAC10, Mikes Rusty)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448cf1.spk	weapon	stop auto bullet shot (MAC10, Mikes Rusty)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448cff.spk	weapon	shell launch tp (Mortar, Mortar Merc)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
@@ -883,6 +885,7 @@ soundbinary\00448d1e.spk	weapon	loop end (RPG7Rocket, RPG7RocketUnstable)	usage	
 soundbinary\00448d25.spk	weapon	shoot, 1st person (celldetonator); shoot, 3rd person (celldetonator)	usage	graphics\characters\_common\animations\weapons\explosive\celldetonator\1stge_uppb_shoot_+000fw_iedde_i1.mab, graphics\characters\_common\animations\weapons\explosive\celldetonator\3rdge_uppb_shoot_+000fw_iedde_i1.mab
 soundbinary\00448d2a.spk	foley	brentry, 3rd person (buddy rescue)	usage	graphics\characters\_common\animations\special_actions\buddy_rescue\3rdge_synm_brentry_+000fw_prak4_i1.mab
 soundbinary\00448d31.spk	weapon	start auto bullet shot (M249 Mounted, M249 Saw, M249 Saw Merc)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
+soundbinary\00448d32.spk	weapon	mounted gun, auto fire	hand	
 soundbinary\00448d33.spk	weapon	start auto bullet shot (M249 Saw, M249 Saw Merc)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448d38.spk	weapon	stop auto bullet shot (M249 Mounted, M249 Saw, M249 Saw Merc)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448d92.spk	ambience	generic start (mll_sfx_realtrees_fire_dry_bark_lp)	usage	databases\generic\soundpoint.xml
@@ -895,6 +898,7 @@ soundbinary\00448dc4.spk	weapon	single bullet shot (AS50)	usage	worlds\ige_map\g
 soundbinary\00448dd6.spk	weapon	loop (CarlGustafRocket)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448dd8.spk	weapon	single bullet shot (Carl Gustaf, Carl Gustaf Merc)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448dd9.spk	weapon	loop end (CarlGustafRocket)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
+soundbinary\00448de1.spk	other	silence	hand	
 soundbinary\00448de2.spk	weapon	single bullet shot (DesertEagle)	usage	graphics\characters\_common\animations\special_actions\buddy_down\1stge_syns_cradlegunawayexecute_+000fw_sedea_i1.mab, graphics\characters\_common\animations\special_actions\buddy_down\1stge_syns_cradlegunchinexecute_+000fw_sedea_i1.mab, graphics\characters\_common\animations\special_actions\buddy_rescue\1stge_synm_brevent01_+000fw_sedea_i1.mab +25
 soundbinary\00448ded.spk	weapon	single bullet shot (AI, Dragunov, Dragunov Merc, Mikes Rusty)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448e25.spk	explosion	explosion (Molotov)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
@@ -911,25 +915,36 @@ soundbinary\00448e50.spk	weapon	stop flame (LPO50)	linked	worlds\ige_map\generat
 soundbinary\00448e51.spk	weapon	start flame (LPO50)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448e52.spk	weapon	stop flame (LPO50)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448e5f.spk	weapon	start auto bullet shot (FNFAL)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
+soundbinary\00448e60.spk	other	silence	hand	
 soundbinary\00448e61.spk	weapon	start auto bullet shot (FNFAL)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448e66.spk	weapon	stop auto bullet shot (FNFAL)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448e76.spk	weapon	stop auto bullet shot (G3KA4)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448e7d.spk	weapon	start auto bullet shot (G3KA4)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
+soundbinary\00448e7e.spk	other	silence	hand	
 soundbinary\00448e7f.spk	weapon	start auto bullet shot (G3KA4)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448e8a.spk	weapon	stop auto bullet shot (Mikes Rusty, MP5)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
+soundbinary\00448e92.spk	other	silence	hand	
 soundbinary\00448e93.spk	weapon	start auto bullet shot (Mikes Rusty, MP5)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
+soundbinary\00448e9b.spk	other	silence	hand	
 soundbinary\00448e9c.spk	weapon	single bullet shot (Ithaca)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448eaa.spk	weapon	stop auto bullet shot (Mikes Rusty, PKM, PKM Merc)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00448eb1.spk	weapon	start auto bullet shot (Mikes Rusty, PKM, PKM Merc)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
+soundbinary\00448eb2.spk	other	silence	hand	
 soundbinary\00448eb3.spk	weapon	start auto bullet shot (Mikes Rusty, PKM, PKM Merc)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\004492b6.spk	weapon	start auto bullet shot (M16)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
+soundbinary\004492b7.spk	other	silence	hand	
 soundbinary\004492b8.spk	weapon	start auto bullet shot (M16)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\004492bd.spk	weapon	stop auto bullet shot (M16)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
+soundbinary\004492d7.spk	other	silence	hand	
 soundbinary\004492d8.spk	weapon	single bullet shot (M79, Mikes Rusty)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
+soundbinary\00449311.spk	other	silence	hand	
+soundbinary\00449319.spk	other	silence	hand	
 soundbinary\0044931a.spk	weapon	single bullet shot (MK19, MK19 Mounted)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00449324.spk	weapon	movement fp start (M2 FishingBoat, M2 HummerMount, M2 SandBags, M2 SwampMount, M2 Tripod, +13)	usage	databases\generic\soundpoint.xml, downloadcontent\dlc1\generated\entitylibrary.fcb, worlds\ige_map\generated\entitylibrary.fcb +23
 soundbinary\00449325.spk	weapon	movement fp stop (M2 FishingBoat, M2 HummerMount, M2 SandBags, M2 SwampMount, M2 Tripod, +13)	usage	databases\generic\soundpoint.xml, downloadcontent\dlc1\generated\entitylibrary.fcb, worlds\ige_map\generated\entitylibrary.fcb +23
+soundbinary\00449363.spk	other	silence	hand	
 soundbinary\00449364.spk	weapon	single bullet shot (M1903, M1903 Merc)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
+soundbinary\0044936f.spk	other	silence	hand	
 soundbinary\00449370.spk	weapon	single bullet shot (Star45)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\0044937f.spk	weapon	stop auto bullet shot (Uzi)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00449386.spk	weapon	start auto bullet shot (Uzi)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
@@ -1213,12 +1228,14 @@ soundbinary\004569df.spk	weapon	single bullet shot (Star45)	linked	worlds\ige_ma
 soundbinary\004569ed.spk	weapon	start auto bullet shot (USAS12)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\004569ef.spk	weapon	stop auto bullet shot (USAS12)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\004569f0.spk	weapon	stop auto bullet shot (USAS12)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
+soundbinary\004569f1.spk	other	silence	hand	
 soundbinary\004569f3.spk	weapon	stop auto bullet shot (USAS12)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\004569f4.spk	weapon	start auto bullet shot (USAS12)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\004569f5.spk	weapon	start auto bullet shot (USAS12)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\004569fe.spk	weapon	stop auto bullet shot (M2, M2 Mounted)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\004569ff.spk	weapon	start auto bullet shot (M2, M2 Mounted)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00456a00.spk	weapon	stop auto bullet shot (M2, M2 Mounted)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
+soundbinary\00456a01.spk	other	silence	hand	
 soundbinary\00456a02.spk	weapon	stop auto bullet shot (M2, M2 Mounted)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00456a04.spk	weapon	start auto bullet shot (M2, M2 Mounted)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\00456a05.spk	weapon	start auto bullet shot (M2, M2 Mounted)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
@@ -2689,6 +2706,11 @@ soundbinary\004b0552.spk	dialogue	GAB (CVSUBV)	usage	scripts\game\barkdata\11583
 soundbinary\004b0556.spk	dialogue	GAA (CVSUBV)	usage	scripts\game\barkdata\1158300.bank
 soundbinary\004b055a.spk	dialogue	GAB (CVSUBV)	usage	scripts\game\barkdata\1158300.bank
 soundbinary\004b055e.spk	dialogue	GAA (CVSUBV)	usage	scripts\game\barkdata\1158300.bank
+soundbinary\004b1788.spk	foley		hand	
+soundbinary\004b1789.spk	ui	select	hand	
+soundbinary\004b178a.spk	ui	click	hand	
+soundbinary\004b178e.spk	ui		hand	
+soundbinary\004b178f.spk	ui		hand	
 soundbinary\004b17b3.spk	dialogue	MAI: "C’est pas grave, eh?...Viens, we drink."	usage	graphics\characters\_common\animations\choreographed_scene\mission_library\ml04\se03\lm04_se03_directspear_informant_sittostand_hi.mab, languages\english\oasisstrings.rml, scripts\game\barkdata\1536300.bank
 soundbinary\004b17c2.spk	dialogue	GAA (ABORTCV)	usage	scripts\game\barkdata\1201200.bank
 soundbinary\004b17c7.spk	dialogue	GAB (ABORTCV)	usage	scripts\game\barkdata\1201200.bank
@@ -3278,6 +3300,7 @@ soundbinary\004b6445.spk	music	PlayMusic (a2sm08 warlordassassination, a2sm08 mi
 soundbinary\004b6446.spk	music	PlayMusic (a3sm15 buddiesbetrayalfinalbattle, a3sm15 finalbriefing)	usage	domino\user\a3sm15_buddiesbetrayalfinalbattle.a3sm15_finalbriefing.lua
 soundbinary\004b644a.spk	music	PlayMusic (a2sm08 warlordassassination, a2sm08 mission forred)	usage	domino\user\a2sm08_warlordassassination.a2sm08_mission_forred.lua
 soundbinary\004b6451.spk	music	PlayMusic (a3sm15 buddiesbetrayalfinalbattle, a3sm15 mission)	usage	domino\user\a3sm15_buddiesbetrayalfinalbattle.a3sm15_mission.lua
+soundbinary\004b6452.spk	ui		hand	
 soundbinary\004b6459.spk	music	Common_CustomBoxes.StartMusicTrigger start music (a1lm01 copkiller, a1lm01 assassination, a1lm02 reapsew, a1lm02 assassination, a1lm06 oeduardrex, a1lm06 assassination, a1sm02 foolserrand, a1sm02 blue assassination, a1sm02 foolserrand, a1sm02 red assassination, +7)	usage	domino\user\a1lm01_copkiller.a1lm01_assassination.lua, domino\user\a1lm02_reapsew.a1lm02_assassination.lua, domino\user\a1lm06_oeduardrex.a1lm06_assassination.lua +9
 soundbinary\004b645a.spk	music	Common_CustomBoxes.StartMusicTrigger start music (a1lm01 copkiller, a1lm01 intimidation, a1lm04 directspear, a1lm04 intimidation, a2lm12 bunkerbuster, a2lm12 intimidation); Common_CustomBoxes.StartMusicTrigger stop music (a2lm07 radioarmageddon, a2lm07 intimidation)	usage	domino\user\a1lm01_copkiller.a1lm01_intimidation.lua, domino\user\a1lm04_directspear.a1lm04_intimidation.lua, domino\user\a2lm07_radioarmageddon.a2lm07_intimidation.lua +1
 soundbinary\004b645b.spk	voice	death (player)	usage	databases\soundmixing\soundmixings.xml, worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb +22
@@ -4799,6 +4822,8 @@ soundbinary\004ebe51.spk	music	PlayMusic (a1sm02 foolserrand, a1sm02 briefing fo
 soundbinary\004ebe5c.spk	other	entries entry (FCXCTF, FCXDeathMatch, FCXMulti, FCXTeamDeathMatch, FCXVIP)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +19
 soundbinary\004ebe65.spk	impact	materialimpact switch (Pawn.Splash)	usage	databases\materialimpacts\materialimpacts.xml, graphics\characters\_common\animations\smart_terrain\generic\duty\3rdge_fulb_stpdiamondend_+000fw_nowep_i1.mab
 soundbinary\004ebe66.spk	impact	materialimpact switch (Player.Splash)	usage	databases\materialimpacts\materialimpacts.xml
+soundbinary\004ebebc.spk	ui	back	hand	
+soundbinary\004ebebd.spk	ui	notify	hand	
 soundbinary\004ebec0.spk	foley	beep (DiamondBriefcase LVL1, DiamondBriefcase LVL2, DiamondBriefcase LVL3, DiamondBriefcase TUTORIAL ONLY)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\world1\generated\entitylibrary.fcb, worlds\world2\generated\entitylibrary.fcb
 soundbinary\004ebecb.spk	dialogue	tape start (A1JT00)	usage	engine\gamemodes\gamemodesconfig.xml
 soundbinary\004ebece.spk	dialogue	tape stop (A1JT00)	usage	engine\gamemodes\gamemodesconfig.xml
@@ -5247,6 +5272,9 @@ soundbinary\004f0070.spk	dialogue	broadcast (BoomBoxRadio)	usage	worlds\ige_map\
 soundbinary\004f0071.spk	dialogue	broadcast (BoomBoxRadio)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\world1\generated\entitylibrary.fcb, worlds\world2\generated\entitylibrary.fcb
 soundbinary\004f007a.spk	other	entries entry (FCXCTF, FCXDeathMatch, FCXMulti, FCXTeamDeathMatch, FCXVIP)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +19
 soundbinary\004f007b.spk	other	entries entry (FCXCTF, FCXDeathMatch, FCXMulti, FCXTeamDeathMatch, FCXVIP)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +19
+soundbinary\004f00c2.spk	ui	notify	hand	
+soundbinary\004f00c3.spk	explosion	small	hand	
+soundbinary\004f00c4.spk	foley		hand	
 soundbinary\004f00d5.spk	other	PlaySound (grin missions, grin refugees)	usage	domino\user\sidemissions\grin_missions.grin_refugees.lua
 soundbinary\004f00d6.spk	other	PlaySound (grin missions, grin refugees)	usage	domino\user\sidemissions\grin_missions.grin_refugees.lua
 soundbinary\004f00d7.spk	other	PlaySound (grin missions, grin refugees)	usage	domino\user\sidemissions\grin_missions.grin_refugees.lua
@@ -5279,8 +5307,10 @@ soundbinary\004f014b.spk	ui	popup event (A0GM00_00, A1LM00_00, A1LM01_05, A1LM02
 soundbinary\004f014c.spk	ui	popup event (A0GM00_01, A1AS01_01, A1AS02_01, A1AS03_01, A1AS04_01, +216)	usage	onscreenpopup\onscreendata.xml
 soundbinary\004f017a.spk	effect	revive get up first (player)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +19
 soundbinary\004f017c.spk	effect	revive get up third (player)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +19
+soundbinary\004f0193.spk	foley	footsteps	hand	
 soundbinary\004f01aa.spk	effect	buddy rescue start (player)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\world1\generated\entitylibrary.fcb, worlds\world2\generated\entitylibrary.fcb
 soundbinary\004f01ab.spk	effect	buddy rescue stop (player)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\world1\generated\entitylibrary.fcb, worlds\world2\generated\entitylibrary.fcb
+soundbinary\004f01b6.spk	effect	ringing	hand	
 soundbinary\004f01b8.spk	weapon	falling (MortarTracer)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\004f0afa.spk	dialogue	"You have... One... new message."	usage	languages\english\oasisstrings.rml, worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb +22
 soundbinary\004f0afc.spk	dialogue	greeting message stop (Phone)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
@@ -5296,7 +5326,11 @@ soundbinary\004f0e77.spk	other	PlaySound (a1sm01 townescape, a1sm01 mission)	usa
 soundbinary\004f0e7b.spk	other	PlaySound (openingsequence, taxiride)	usage	domino\user\openingsequence\openingsequence.taxiride.lua
 soundbinary\004f0e7e.spk	music	PlayMusic (openingsequence, taxiride)	usage	domino\user\openingsequence\openingsequence.taxiride.lua
 soundbinary\004f0e7f.spk	music	PlayMusic (openingsequence, taxiride)	usage	domino\user\openingsequence\openingsequence.taxiride.lua
+soundbinary\004f0e82.spk	effect	ringing	hand	
+soundbinary\004f0e85.spk	effect	ringing	hand	
+soundbinary\004f0e88.spk	effect	ringing	hand	
 soundbinary\004f2207.spk	vehicle	wheels run over (A2LM09 NitrousTruck, APR, BigTruck, BigTruck Tanker, BrokenDatsun, +23)	usage	downloadcontent\dlc1\generated\entitylibrary.fcb, worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +14
+soundbinary\2fffffff.spk	other	not a sound	hand	
 soundbinary\804425ce.spk	foley	draw, 1st person (equipped gadget); holster, 1st person (equipped gadget); mulge_uppb_draw_+000fw_nowep_eqcp_i1 (compass); mulge_uppb_holster_+000fw_nowep_eqcp_i1 (compass)	linked	graphics\characters\_common\animations\equipment\equipped_gadget\1stge_uppb_draw_+000fw_nowep_eqmpcp_i1.mab, graphics\characters\_common\animations\equipment\equipped_gadget\1stge_uppb_holster_+000fw_nowep_eqmpcp_i1.mab, graphics\characters\_common\animations\equipment\equipped_gadget\compass\mulge_uppb_draw_+000fw_nowep_eqcp_i1.mab +1
 soundbinary\804425d0.spk	foley	draw, 1st person (equipped gadget); drawvehicule, 1st person (equipped gadget); examinemapend, 3rd person (duty); examinemapstart, 3rd person (duty); holster, 1st person (equipped gadget); holstervehicule, 1st person (equipped gadget); +1 more	linked	graphics\characters\_common\animations\equipment\equipped_gadget\1stge_uppb_drawvehicule_+000fw_nowep_i1_eqmpcp.mab, graphics\characters\_common\animations\equipment\equipped_gadget\1stge_uppb_draw_+000fw_nowep_eqmpcp_i1.mab, graphics\characters\_common\animations\equipment\equipped_gadget\1stge_uppb_holstervehicule_+000fw_nowep_i1_eqmpcp.mab +7
 soundbinary\804425d2.spk	vehicle	flipmap (swampboat); flipmapvehicule, 1st person (fishingboat)	linked	graphics\characters\_common\animations\equipment\equipped_gadget\1stge_uppb_flipmapvehicule_+000fw_nowep_i1_eqmpcp.mab, graphics\characters\_common\animations\equipment\equipped_gadget\1stge_uppb_flipside_+000fw_nowep_eqmpcp_i1.mab, graphics\characters\_common\animations\vehicles\boat\fishingboat\1stge_uppb_flipmapvehicule_+000fw_nowep_i1_fishb.mab +1
@@ -5589,7 +5623,10 @@ soundbinary\804e1ac0.spk	music	state start (Drive (normal area), Drive (town), W
 soundbinary\804e1aca.spk	music	state start (Fight (drive), Fight (fly), Fight (walk - normal))	linked	databases\generic\music.xml
 soundbinary\804e1af0.spk	music	state start (Drive (normal area), Drive (town), Fly (any), Walk (normal area))	linked	databases\generic\music.xml
 soundbinary\804e1afa.spk	music	state start (Fight (drive), Fight (fly), Fight (walk - normal))	linked	databases\generic\music.xml
+soundbinary\804e1b35.spk	other	silence	hand	
 soundbinary\804e1c93.spk	ambience	generic start (sfx_TownEscape_CockRoaches_L)	linked	databases\generic\soundpoint.xml
+soundbinary\804e1e46.spk	other	silence	hand	
+soundbinary\804e1e5d.spk	other	silence	hand	
 soundbinary\804e1f1a.spk	object	time demo (BedRoll)	linked	worlds\ige_map\generated\entitylibrary.fcb, worlds\world1\generated\entitylibrary.fcb, worlds\world2\generated\entitylibrary.fcb
 soundbinary\804e4b48.spk	ambience	randomfx (DayMediumPerspective, NightMediumPerspective)	linked	soundregions.xml
 soundbinary\804e4b70.spk	ambience	randomfx (DayMediumPerspective)	linked	soundregions.xml

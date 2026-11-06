@@ -99,6 +99,7 @@ public sealed partial class MainViewModel
         {
             SoundLabeler.FromLinks => $"{label.Text}\nPlayed by another bank's sound, named in {label.Evidence}.",
             SoundLabeler.FromFolder => $"{label.Text}\nA recorded line no game file names.",
+            SoundLabeler.FromHand => $"{label.Text}\nLabelled by hand.",
             _ => $"{label.Text}\nNamed in {label.Evidence}.",
         }
         : string.Empty;

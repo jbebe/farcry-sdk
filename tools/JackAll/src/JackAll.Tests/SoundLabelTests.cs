@@ -147,5 +147,14 @@ public class SoundLabelTests
         Assert.Equal(label, read.Find(NameHash.Compute(label.Path)));
     }
 
+    [Fact]
+    public void A_later_label_for_the_same_bank_replaces_the_earlier()
+    {
+        var found = new SoundLabel(@"soundbinary\004b1789.spk", "other", "", "linked", "a.fcb");
+        var hand = new SoundLabel(@"soundbinary\004B1789.spk", "ui", "select", "hand", "");
+
+        Assert.Equal(hand, Assert.Single(new SoundLabelTable([found, hand]).Labels));
+    }
+
     private static (string, string, string) Parts(SoundLabel label) => (label.Category, label.Detail, label.Source);
 }

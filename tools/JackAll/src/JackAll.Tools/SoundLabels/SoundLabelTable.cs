@@ -18,10 +18,18 @@ public sealed class SoundLabelTable
 {
     private const string Header = "# path\tcategory\tdetail\tsource\tevidence";
 
-    private readonly Dictionary<uint, SoundLabel> _byHash;
+    private readonly Dictionary<uint, SoundLabel> _byHash = [];
 
+    /// <summary>A later label for the same path replaces an earlier one.</summary>
     public SoundLabelTable(IEnumerable<SoundLabel> labels)
-        => _byHash = labels.ToDictionary(l => NameHash.Compute(l.Path));
+    {
+        foreach (SoundLabel label in labels)
+        {
+            _byHash[NameHash.Compute(label.Path)] = label;
+        }
+    }
+
+    public IEnumerable<SoundLabel> Labels => _byHash.Values;
 
     public SoundLabel? Find(uint hash) => _byHash.GetValueOrDefault(hash);
 
@@ -44,7 +52,7 @@ public sealed class SoundLabelTable
         where f.Length == 5
         select new SoundLabel(f[0], f[1], f[2], f[3], f[4]));
 
-    public IEnumerable<string> Write() => _byHash.Values
+    public IEnumerable<string> Write() => Labels
         .OrderBy(l => l.Path, StringComparer.Ordinal)
         .Select(l => string.Join('\t', l.Path, l.Category, Clean(l.Detail), l.Source, Clean(l.Evidence)))
         .Prepend(Header);
