@@ -1,4 +1,4 @@
-# The previous owner's notes over the sheet in blue ballpoint: !GP! at each guard post, the safe houses
+# The previous owner's notes over the sheet in blue ballpoint: G.P. at each guard post, the safe houses
 # and bus stops, and the places by the names the game gives them.
 import itertools
 import urllib.request
@@ -115,15 +115,15 @@ def draw(ax, entities, scale, px):
         if name.startswith("Objectives.PGP."):
             r = 20
             stroke(ax, [[x, y + r], [x + r, y], [x, y - r], [x - r, y], [x, y + r * 1.1]], px(2.2), key)
-            hand(ax, x + r + 8, y, "!GP!", 38 * scale, key)
+            hand(ax, x + r + 8, y, "G.P.", 38 * scale, key)
         elif name.startswith("SafeHouse_"):
             r = 9
             stroke(ax, [[x - r, y - r], [x + r, y - r], [x + r, y + r * 0.4], [x, y + r * 1.3],
                         [x - r, y + r * 0.4], [x - r, y - r * 1.1]], px(1.8), key)
-            hand(ax, x + r + 8, y - 2, "SH", 30 * scale, key)
+            hand(ax, x + r + 8, y - 2, "S.H.", 30 * scale, key)
         elif name.startswith("Objectives.BusStation"):
             ring(ax, x, y, 16, px(1.8), key)
             hand(ax, x + 22, y + 14, "bus", 30 * scale, key)
 
-    hand(ax, 1000, 4160 + 260, "!GP! guard post      SH safe house", 40 * scale, "key")
+    hand(ax, 1000, 4160 + 260, "G.P. guard post      S.H. safe house", 40 * scale, "key")
     untangle(ax, scale)
