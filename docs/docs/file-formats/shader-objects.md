@@ -237,21 +237,107 @@ has no empty case — `cloudlayer`, which requires `LAYER1` or `LAYER2` — corr
     + "-" + (value - 1) + "of" + max      only for an option that has a maximum value
 ```
 
-The index counts the shader's `<define>`s in declaration order — the order of the second name list in
-`fastinitdata_d3d9.bin`. A boolean option has no maximum and adds only `_<index>`. So
-`celestialbody_3_4_2_5` is `celestialbody` with `TEXKILL`, `ADDITIVE`, `TOD_COLOR` and `FAKEHDR` set,
-and `burnterrain_0-0of31` to `burnterrain_0-31of31` are the 32 values of a ranged option. Checked
-against the retail `.pso`/`.vso` index: all 26 `celestialbody` permutations and all 32 `burnterrain`
-ones are found **(seen in data)**. How the define list is built for a shader whose defines come through
-`xi:include` or carry a `platform=` attribute (`aaaleaf`, for one) is not checked.
+The index counts the shader's `<define>`s in declaration order, the define list that
+`fastinitdata_d3d9.bin` stores for each shader. A boolean option has no maximum and adds only
+`_<index>`. So `celestialbody_3_4_2_5` is `celestialbody` with `TEXKILL`, `ADDITIVE`, `TOD_COLOR` and
+`FAKEHDR` set, and `burnterrain_0-0of31` to `burnterrain_0-31of31` are the 32 values of a ranged option.
+
+Every permutation is named this way. Building the key of each of fastinitdata's 147,828 permutations
+reaches every key of all three D3D9 tables, 147,140 in `index.pso` and `index.vso` and 147,200 in
+`index.rs`, with none left over **(seen in data)**. The 686 permutations no table holds are the
+editor's `PICKING` variants and console-only grass.
 
 ## What `fastinitdata_d3d9.bin` holds
 
-`common\engine\shaders\fastinitdata_d3d9.bin` is a big-endian table naming every shader and the
-options it was compiled with. Strings are 2-byte length-prefixed ASCII. Each option record carries a
-32-bit CRC32 of its own name and a small integer that is its bit position in the 64-bit option mask
-the engine passes around — for `celestialbody`: `TEXKILL` 31, `FAKEHDR` 33, `ADDITIVE` 34,
-`TIME_OF_DAY_COLOR` 35, `VISIBILITY_TEST` 36, `TIME_OF_DAY_MAPPING` 37.
+:::info[Verified via reverse engineering]
+Layout read from the loader `CSceneRenderer_Init` calls (`0x10436620`, one shader at `0x10443010`,
+Steam `Dunia.dll`) and walked over the retail file, which it consumes to the last byte.
+:::
+
+`common\engine\shaders\fastinitdata_d3d9.bin` lists every permutation the game was compiled with and
+every shader's options. It is big-endian, and a string is a 2-byte length then ASCII. The D3D10 build
+reads `fastinitdata_d3d10.bin` instead.
+
+| Field | Size | Contents |
+| --- | --- | --- |
+| Version | 4 | `1` |
+| Permutation count | 4 | 147,828 |
+| Permutations | 8 × count | Option masks, ascending |
+| Shader count | 4 | 86 |
+| Shaders | — | One record each, below |
+| Trailer | 5 | `AllOk` |
+
+A mask's low byte is the shader's 1-based position in the shader list, and its other bits are the
+options the permutation sets. The options every material shader shares, from
+`meta\commonoptions.xml`, sit at bits 8 to 30 in that file's order (`SHADOW` 8, `RECEIVE_SHADOWS` 9 …
+`ALPHA_TO_COVERAGE` 30); a shader's own options start at 31. A ranged option takes as many bits as its
+largest value needs, and holds the value plus one.
+
+One shader record:
+
+| Field | Contents |
+| --- | --- |
+| Name | String |
+| 7 masks | 8 bytes each: the options that matter to each stage, the `SHADOW`, `DEPTH` and `PICKING` bits, and the bits valid on this platform |
+| Next free bit | 4 bytes |
+| Options | A 4-byte count, then per option its CRC-32 (exact case), its name, its bit and its maximum (`FFFFFFFF` for a boolean), sorted by CRC |
+| Preloads | A 4-byte count, then per variation to load early a mask and a byte: 1 receives shadows, 2 shadow pass, 4 depth pass |
+| Defines | A 4-byte count, then the names in declaration order, the index a permutation key uses |
+| 3 strings | Empty in every retail shader |
+| 2 masks, a 4-byte word | Zero in every retail shader |
+| LOD level count | 4 bytes |
+| 8 LOD masks | 8 bytes each, ANDed into a permutation at that material LOD level |
+| Flag | 1 byte |
+| Pairs | A 4-byte count, then two 4-byte hashes each |
+
+`celestialbody`'s options are `TIME_OF_DAY_MAPPING` 31, `VISIBILITY_TEST` 32, `TIME_OF_DAY_COLOR` 33,
+`TEXKILL` 34, `ADDITIVE` 35 and `FAKEHDR` 36. The LOD masks are the source's `<lod level="N">` lines
+inverted: `aaa` drops `REFLECTION` at level 1, then `SPECULARMAP` as well, then `NORMALMAP` as well at
+level 3. Without this file the engine builds the same tables from the `meta\*.meta.xml` sources
+(`0x10436d50`).
+
+## Which quality draws an object
+
+A permutation's options come from the material, the pass and the lights, and then the quality
+settings change them. `engine\settings\defaultrenderconfig.xml` holds both halves of that. Its
+`<RenderQuality>` presets (`low`, `medium`, `high`, `veryhigh`, `ultrahigh`, and D3D10 versions) each
+pick a level for every setting (`VegetationQuality="veryhigh"`, `ShadowQuality="off"` …). Under a
+setting's element, each level can list what it adds to or removes from a shader's options:
+
+```xml
+<Vegetation>
+  <quality id="low">
+    <Shaders>
+      <shader name="AAA" add="" remove="SPECULARMAP,NORMALMAP,REFLECTION,AMBIENT_SPECULAR"/>
+      <shader name="Mesh_Grass" add="GRASSQUALITYLOW" remove="" />
+```
+
+`CRenderShaderConfig` (`0x103f43b0`) registers those four attributes: `name`, `add`, `remove` and
+`csmExcludeMask`. Five settings change shader options this way:
+
+| Setting | Shaders it changes |
+| --- | --- |
+| Environment | `CloudLayer`: `CLOUD_QUALITY_LOW`, `_MEDIUM`, nothing at `high`, `_ULTRAHIGH` |
+| Texture | `Mesh_Weapon`: `QUALITYLOW`, `QUALITYMEDIUM`, `QUALITYHIGH`; `Mesh_Skin` and `Mesh_Vehicle` lose `NORMALMAP` at `low` |
+| Water | `Water` and `WaterRiver` lose `HIGHQUALITYNORMALS` below `veryhigh`, and more below `high` |
+| Vegetation | `AAA`, `AAALeaf`, `Mesh_BigLeaf` and `RealtreeTrunk` lose features at the lower levels; `Mesh_Grass` gets `GRASSQUALITYLOW`, `MEDIUM`, `CONSOLE` at `high`, `HIGH` at `veryhigh` |
+| Terrain | `Terrain` loses `PER_PIXEL` at `low`; `Road` loses `PARALLAX` at every level but `ultrahigh` |
+
+The weapon and grass quality options are never named in `Dunia.dll`; this data is the only thing that
+sets them. Shadows are the other quality switch: the `off` level, which the `low` preset picks, sets
+`DisableShadow` and `DisableShadowGeneration`, so no shadow pass and no shadow receiver draws. That
+last step is inferred from the setting's names, not traced.
+
+The remaining options do not follow the presets:
+
+- the shadow filter is picked by the GPU when the renderer starts (`0x10385300`): `HW_SM_COMPARE`
+  where the card compares depth in hardware, else `FETCH4` where it has Fetch4, else `SIMPLE_SHADOWMAP`;
+- `SAMPLES2` and `SAMPLES4` follow the anti-aliasing setting, `ALPHA_TO_COVERAGE` its own setting;
+- `HEMI_*`, `SHADOW_CRUDE_BIG_KERNEL`, `RECEIVE_SINGLE_CASCADE` and the material LOD masks are chosen
+  per draw. `HemiQuality` is 2 at every PC level, so it changes nothing between presets.
+
+`jackall-cli shader label` applies these rules to every permutation that loads an object, so it can
+say which presets draw that object.
 
 ## Tooling
 
@@ -259,7 +345,12 @@ the engine passes around — for `celestialbody`: `TEXKILL` 31, `FAKEHDR` 33, `A
 jackall-cli shader index engine/shaders/obj --shader celestialbody
 jackall-cli shader extract shadernumber_3ffcc3dd.pso -n names.txt
 jackall-cli shader build  shadernumber_3ffcc3dd.bin
+jackall-cli shader label --game <dir> -o fc2.shaderlabels.tsv
 ```
+
+`label` writes one line per D3D9 object: what its shaders draw, its passes, the options all its
+permutations share, the presets that draw it, the settings that decide that, and one of its
+permutations' names. These are the labels JackAll's Files tab shows.
 
 `extract` splits an object into its bytecode (`.bin`, which `fxc /dumpbin` disassembles) and its
 binding table (`.xml`); `build` reassembles them, dropping the constant table `fxc` emits so the
