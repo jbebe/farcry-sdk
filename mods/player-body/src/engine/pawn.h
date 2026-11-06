@@ -52,6 +52,11 @@ inline float AboveGround(uint8_t* pawn) {
 // The entity of the pawn, or of any other entity component, or null.
 uint8_t* Entity(uint8_t* component);
 
+// Where an entity stands in the world, three floats.
+inline const float* Place(uint8_t* entity) {
+    return &Field<float>(entity, kEntityMatrix) + 12;
+}
+
 // Whether the pawn sits in no vehicle.
 bool OnFoot(uint8_t* pawn);
 

@@ -7,6 +7,7 @@
 #include "engine/skin.h"
 #include "fcse_api.h"
 #include "legs.h"
+#include "shadow.h"
 
 #include <algorithm>
 #include <chrono>
@@ -25,10 +26,15 @@ namespace {
     void OnTick(uint8_t* pawn) {
         const float seconds = Elapsed();
         PlayerBody::Legs::Update(pawn, seconds, PlayerBody::Body::Follow(pawn));
+        PlayerBody::Shadow::Update(pawn);
     }
 
     void __cdecl OnLegsChanged(const FCSE_SettingValue* value, void*) {
         PlayerBody::Body::SetEnabled(value->asCheckbox);
+    }
+
+    void __cdecl OnShadowChanged(const FCSE_SettingValue* value, void*) {
+        PlayerBody::Shadow::SetEnabled(value->asCheckbox);
     }
 }
 
@@ -42,9 +48,11 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     PlayerBody::Skin::Install(&PlayerBody::Body::OnSkinned);
     PlayerBody::Skeleton::Install(&PlayerBody::Legs::OnPosed);
     PlayerBody::Pawn::Install(&OnTick);
+    PlayerBody::Shadow::Install();
 
     const FCSE_Setting settings[] = {
         {"Legs in first person", FCSE_CHECKBOX(true), &OnLegsChanged, nullptr},
+        {"Shadow in first person", FCSE_CHECKBOX(true), &OnShadowChanged, nullptr},
     };
     api->RegisterSettings("Player Body", settings, std::size(settings));
     api->Log("Player Body loaded");

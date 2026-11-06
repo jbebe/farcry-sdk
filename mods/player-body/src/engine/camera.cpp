@@ -38,6 +38,6 @@ bool PlayerBody::Camera::Place(float out[3]) {
     if (entity == nullptr) {
         return false;
     }
-    std::copy_n(&Field<float>(entity, Pawn::kEntityMatrix) + 12, 3, out);
+    std::copy_n(Pawn::Place(entity), 3, out);
     return true;
 }

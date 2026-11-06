@@ -131,6 +131,7 @@ whole block below addressable from outside.
 | `+0x188` | Moon direction as its sprite is handed it, together with the 4×4 block at `+0xB0`. Its height read +0.17 at every hour in a running game, so it is not the moon's direction in the world |
 | `+0x1B8` | **Night factor**, 0 to 1 |
 | `+0x1BC` | Time-of-day coordinate, the one every sky shader looks its colour ramp up with |
+| `+0x328` | The direction the world's shadows are cast along, away from the light, as [`CSky::UpdateShadow`](./time-of-day-and-lighting.md#where-the-shadows-point) writes it. Read beside `+0x148` in a running game, negated: the sun's own with the sun at 58°, and 39° high where the sun stood at 30° |
 
 Everything the cloud layer reads is in the same block, listed [below](#every-cloud-parameter-is-read-out-of-the-scene-state).
 The names come from `CSky::LoadSky` writing the world's `<Sky>` attributes into those same offsets.

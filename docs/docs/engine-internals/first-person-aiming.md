@@ -271,6 +271,41 @@ every viewport and out of the near range is drawn whole, head included, in the f
 long as it is shown again after each model switch. Retail GOG v1.03, from Player Body.
 :::
 
+### The player's shadow
+
+`CPawn::ViewModeChanged` calls the graphic component's `vt+0xA0` with `!firstPerson`. That is
+`CGraphicComponent::SetCastShadow` (`0x1051A520`, `__thiscall`, `RET 4`). It sets bit 2 of the
+component's `+0x3C`, and bit 0 of each model's scene instance at `+0x18`. So in first person the
+player casts no shadow at all.
+
+A skinned model's bone matrices are uploaded once a frame and shared by every view that draws it.
+The render list builder (`0x103C8CB0`) queues one draw packet per sub-mesh for each view. The first
+view to reach a sub-mesh fills its bone constants through `0x103ED950`, which copies each palette
+slot's skin matrix. The constants are then left alone until the skin changes. A model therefore
+cannot be skinned one way for the shadow maps and another for the camera. It can only have draws
+left out of some passes.
+
+A loaded mesh's per-part sub-meshes, with their bone palettes, live only until
+`CGeometryResource::ClientProcessRawData` (`0x1035F080`) has turned them into scene objects. It then
+frees them and zeroes the mesh's `+0x68`. After that a draw's sub-mesh is reached through three
+handle pools, which `FillRenderBuffers` (`0x105B8AE0`) loads into `ECX` at `+0x35`, `+0x48` and
+`+0x5A`. An object is `(*(pool + 0x0C))[handle]`, where a handle is 8 bytes with the index first.
+
+- The geometry resource's scene object is at its `+0x40` handle. Its details' handles are at
+  `+0x90`, nearest first, with their count at `+0x94`.
+- A detail's sub-mesh handles are at `+0x0C`, with their count at `+0x10`. Its vertex resource is at
+  `+0x08`.
+- A sub-mesh holds its palette at `+0x20` (its count at `+0x24`), already turned into skin slots. Its
+  material is at `+0x32`, its first index at `+0x40`, and its triangle count in the low 31 bits of
+  `+0x4C`.
+
+:::info[Seen in a running game]
+An experiment in Player Body, not kept, kept the shadow on and left the full body's sub-meshes
+skinned to no leg out of the passes drawn at the screen's size. The shadow cascades, at 6144×2048,
+kept them. The player's shadow fell whole, head and the raised arm included, and the view still
+showed only the legs. Retail GOG v1.03.
+:::
+
 ## The gun near walls
 
 The engine never moves the gun out of a wall. It draws it in a depth range of its own, so a gun

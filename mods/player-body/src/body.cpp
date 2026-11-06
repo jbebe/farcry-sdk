@@ -55,19 +55,15 @@ namespace {
     constexpr float kOutside = 1.0f;
 
     // Whether the camera the player sees through stands away from the eye.
-    bool Outside(uint8_t* pawn, uint8_t* graphic) {
-        uint8_t* skeleton = Graphic::Skeleton(graphic, false);
-        uint8_t* entity = Pawn::Entity(pawn);
-        const int eye = skeleton != nullptr ? Skeleton::Find(skeleton, kCamera) : -1;
+    bool Outside(uint8_t* pawn) {
+        float eye[3];
         float view[3];
-        if (eye < 0 || entity == nullptr || !Camera::Place(view)) {
+        if (!PlayerBody::Body::Eye(pawn, eye) || !Camera::Place(view)) {
             return false;
         }
-        const float* m = &PlayerBody::Field<float>(entity, Pawn::kEntityMatrix);
-        const float* place = Skeleton::Posed(skeleton, eye) + 12;
         float off = 0.0f;
         for (int k = 0; k < 3; ++k) {
-            const float d = place[0] * m[k] + place[1] * m[4 + k] + place[2] * m[8 + k] + m[12 + k] - view[k];
+            const float d = eye[k] - view[k];
             off += d * d;
         }
         return off > kOutside * kOutside;
@@ -78,7 +74,7 @@ namespace {
             Graphic::Count(graphic) <= Graphic::kAvatar || !Pawn::OnFoot(pawn)) {
             return View::Engine;
         }
-        return Outside(pawn, graphic) ? View::Whole : View::Legs;
+        return Outside(pawn) ? View::Whole : View::Legs;
     }
 
     // The hips and the legs; bones come after their parents.
@@ -178,6 +174,22 @@ bool PlayerBody::Body::Follow(uint8_t* pawn) {
         Publish(graphic);
     }
     return g_view != View::Engine;
+}
+
+bool PlayerBody::Body::Eye(uint8_t* pawn, float out[3]) {
+    uint8_t* graphic = Pawn::Graphic(pawn);
+    uint8_t* skeleton = graphic != nullptr ? Graphic::Skeleton(graphic, false) : nullptr;
+    uint8_t* entity = Pawn::Entity(pawn);
+    const int eye = skeleton != nullptr ? Skeleton::Find(skeleton, kCamera) : -1;
+    if (eye < 0 || entity == nullptr) {
+        return false;
+    }
+    const float* m = &Field<float>(entity, Pawn::kEntityMatrix);
+    const float* place = Skeleton::Posed(skeleton, eye) + 12;
+    for (int k = 0; k < 3; ++k) {
+        out[k] = place[0] * m[k] + place[1] * m[4 + k] + place[2] * m[8 + k] + m[12 + k];
+    }
+    return true;
 }
 
 void PlayerBody::Body::OnViewMode(uint8_t* pawn, bool firstPerson) {
