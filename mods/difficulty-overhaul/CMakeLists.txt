@@ -24,7 +24,7 @@ add_library(DifficultyOverhaul SHARED
   "src/watched_spot.cpp"
   "src/perception.cpp"
   "src/going_down.cpp"
-  "src/regeneration.cpp"
+  "src/healing.cpp"
   "src/engine/combat_log.cpp"
   "src/engine/damage.cpp"
   "src/engine/game.cpp"

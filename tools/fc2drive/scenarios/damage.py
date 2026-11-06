@@ -32,6 +32,8 @@ GUNS = ("weapons.Secondary.Makarov", "weapons.Secondary.Uzi", "weapons.Primary.A
         "weapons.Primary.SPAS12", "weapons.Primary.AS50")
 SOLDIERS_GUN = "weapons.Primary.AK47"
 SOLDIER_HIT = re.compile(r"soldier \w+ hit: \w+ level (\d+), ([\w ]+), at (\S+) m, (.*?) \(")
+# The player's health bars, each a fifth of his maximum.
+BARS = 5
 PLAYER_HIT = re.compile(r"player hit: \w+ level (\d+), ([\w ]+), at (\S+) m, health (\S+) -> (\S+) of ([\d.]+)")
 
 

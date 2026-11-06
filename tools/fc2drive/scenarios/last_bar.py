@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from damage import PLAYER_HIT, SOLDIERS_GUN, face_shooter
+from damage import BARS, PLAYER_HIT, SOLDIERS_GUN, face_shooter
 from perception import CLEAR, SAVE, Log
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -39,7 +39,7 @@ def main():
                 if hit := PLAYER_HIT.search(line):
                     level, _, distance, *health = hit.groups()
                     before, after, maximum = map(float, health)
-                    where = "last bar" if before < maximum / 5 else "above it"
+                    where = "last bar" if before < maximum / BARS else "above it"
                     run.note(f"level {level} at {distance} m, {where}: {before:.0f} -> {after:.0f}, took "
                              f"{before - after:.0f} of its full {curve_damage(int(level)):.0f}")
             time.sleep(0.05)

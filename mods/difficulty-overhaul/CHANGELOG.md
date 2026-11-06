@@ -11,14 +11,12 @@ Notable changes to Difficulty Overhaul, loosely following
   you as much as yours hurts him, and no gun gains damage up close.
 - **Blood only from buckshot.** A bullet that hits you or a soldier no longer throws a spray of
   blood; a shotgun's pellets still do.
-- **Difficulty is how much you can take.** From full health an AK-47 hit kills you on Infamous,
-  the third on Hardcore, the fifth on Normal and about the eighth on Easy, wherever it lands; the
-  soldiers aim and hit the same on every setting. On Easy and Normal your last bar still softens hits,
+- **Difficulty is how much you can take.** On Easy and Normal you take as many AK-47 hits as in the
+  game, 37 and 28 from full; on Hardcore the third kills you and on Infamous the first, wherever it
+  lands. The soldiers aim and hit the same on every setting. On Easy and Normal your last bar still softens hits,
   as in the game, and on Hardcore and Infamous no longer does.
-- **Wounds heal on their own.** Above your last bar health climbs back to full: on Easy from half a
-  second after the last hit, in 2 seconds; on Normal from 2 seconds, in 4 seconds; on Hardcore from 5
-  seconds, in 5 minutes; never on Infamous. The game refilled only the bar you were in. On your last
-  bar you still bleed and need the surgery, as in the game.
+- **Healing as in the game, but on Infamous.** The bar you are in refills, and a lost bar needs a
+  syringe; on Infamous nothing refills. On your last bar you still bleed and need the surgery.
 - **Limb hits wound.** A hit to an arm or a leg that would kill a soldier puts him down wounded
   instead: he calls for help, crawls for cover and may shoot back from the ground. A torso hit never
   does: it wounds or kills.

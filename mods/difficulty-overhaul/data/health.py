@@ -1,7 +1,8 @@
 """Write the layer's player health: each difficulty's maximum health and bar size, the game's curves
-scaled so that from full health at the sickness level the campaign starts at, AK-47 hits kill on the
-8th on Easy, the 5th on Normal, the 3rd on Hardcore and the 1st on Infamous. Sickness still shrinks
-each pool as in the game, and a bar stays a fifth of maximum health, as the HUD's five bars need.
+scaled. Easy and Normal take as many AK-47 hits as in the game, 37 and 28 from full at the sickness
+level the campaign starts at: their curves grow by as much as the real round outhits the game's AK.
+Hardcore keeps the game's curves, where the 3rd hit kills, and on Infamous the 1st does. Sickness still
+shrinks each pool as in the game, and a bar stays a fifth of maximum health, as the HUD's five bars need.
 
     python data\\health.py world1.xml world2.xml dlc1.xml tmpla.xml
 
@@ -15,10 +16,14 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "scripts"))
 from entity_fragments import fragment_path, prototypes, write
-from weapons import LAYER, LIBRARIES
+from weapons import GUNS, LAYER, LIBRARIES, curve_damage, impact_level
 
+# The game's own AK-47 impact level, which a soldier's hit on the player kept in sight.
+GAME_AK_LEVEL = 13
+# How many times harder the real round hits than the game's AK.
+AK_RATIO = curve_damage(impact_level(*GUNS["Primary.AK47"])) / curve_damage(GAME_AK_LEVEL)
 # Each difficulty's scale on the game's curves; Hardcore keeps them.
-SCALES = {"Casual": 1.32, "Experienced": 1.11, "Infamous": 0.4}
+SCALES = {"Casual": AK_RATIO, "Experienced": AK_RATIO, "Infamous": 0.4}
 CURVES = ("HealthMax", "HealthBarSize")
 KNOT_VALUE = re.compile(r"<y>([^<]*)</y>")
 
