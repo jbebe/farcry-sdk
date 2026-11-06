@@ -7,5 +7,10 @@ namespace JackAll.App;
 /// </summary>
 public partial class App : Application
 {
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        CrashLog.Install(this);
+        base.OnStartup(e);
+    }
 }
 

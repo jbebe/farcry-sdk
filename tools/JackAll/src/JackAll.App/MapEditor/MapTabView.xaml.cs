@@ -100,8 +100,7 @@ public partial class MapTabView : UserControl
     private ShapeLayer? _triggerLayer;
     private SkyLayer? _sky;
 
-    private double _frameSeconds;
-    private int _frames;
+    private FrameStats? _stats;
 
     private readonly Camera3D _camera = new();
     private readonly HashSet<Key> _flyKeys = [];

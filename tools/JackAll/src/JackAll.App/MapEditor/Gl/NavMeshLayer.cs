@@ -128,6 +128,7 @@ public sealed class NavMeshLayer : IDisposable
             Use(_fill, viewProjection, cameraPosition, SurfaceLift);
             GL.DepthMask(false);
             GL.DrawElements(PrimitiveType.Triangles, _counts[0], DrawElementsType.UnsignedInt, 0);
+            FrameStats.Drawn(_counts[0] / 3);
             GL.DepthMask(true);
         }
 
@@ -168,6 +169,7 @@ public sealed class NavMeshLayer : IDisposable
         GL.LineWidth(width);
         GL.DrawElementsBaseVertex(PrimitiveType.Lines, _counts[range], DrawElementsType.UnsignedInt,
             _counts.Take(range).Sum() * sizeof(int), baseVertex);
+        FrameStats.Drawn(0);
     }
 
     public void Dispose()

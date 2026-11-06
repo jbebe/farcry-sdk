@@ -404,6 +404,7 @@ public sealed class WaterLayer : IDisposable
         GL.DepthMask(false);
         GL.DrawElementsInstanced(PrimitiveType.Triangles, _indexCount, DrawElementsType.UnsignedInt,
             IntPtr.Zero, _instanceCount);
+        FrameStats.Drawn((long)_indexCount / 3 * _instanceCount);
         GL.DepthMask(true);
         GL.Disable(EnableCap.Blend);
         GL.BindVertexArray(0);

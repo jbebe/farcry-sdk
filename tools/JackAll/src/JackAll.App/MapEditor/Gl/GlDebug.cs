@@ -3,8 +3,9 @@ using OpenTK.Graphics.OpenGL4;
 namespace JackAll.App.MapEditor.Gl;
 
 /// <summary>
-/// Routes driver diagnostics to the debug output, when the driver offers them. Synchronous, because
-/// the whole value is that the call stack still points at the offending call when it fires.
+/// Routes driver diagnostics to the debug output, and driver errors to the crash log. Synchronous
+/// only in Debug builds, where the call stack pointing at the offending call is the whole value;
+/// elsewhere the driver keeps its own thread.
 /// </summary>
 public static class GlDebug
 {
@@ -31,11 +32,15 @@ public static class GlDebug
 
         _callback = OnMessage;
         GL.Enable(EnableCap.DebugOutput);
+#if DEBUG
         GL.Enable(EnableCap.DebugOutputSynchronous);
+#endif
+        GL.DebugMessageControl(DebugSourceControl.DontCare, DebugTypeControl.DontCare,
+            DebugSeverityControl.DebugSeverityNotification, 0, (int[]?)null, false);
         GL.DebugMessageCallback(_callback, IntPtr.Zero);
     }
 
-    private static bool HasExtension(string name)
+    public static bool HasExtension(string name)
     {
         GL.GetInteger(GetPName.NumExtensions, out int count);
         for (int i = 0; i < count; i++)
@@ -48,16 +53,23 @@ public static class GlDebug
         return false;
     }
 
+    /// <summary>Called on the driver's thread outside Debug builds.</summary>
     private static void OnMessage(
         DebugSource source, DebugType type, int id, DebugSeverity severity,
         int length, IntPtr message, IntPtr userParam)
     {
-        if (severity == DebugSeverity.DebugSeverityNotification)
+        bool error = type == DebugType.DebugTypeError || severity == DebugSeverity.DebugSeverityHigh;
+#if !DEBUG
+        if (!error)
         {
             return;
         }
-
-        string text = System.Runtime.InteropServices.Marshal.PtrToStringAnsi(message, length);
-        System.Diagnostics.Debug.WriteLine($"GL {severity} {type} [{id}]: {text}");
+#endif
+        string text = $"GL {severity} {type} [{id}]: {System.Runtime.InteropServices.Marshal.PtrToStringAnsi(message, length)}";
+        if (error)
+        {
+            CrashLog.NoteGlError(text);
+        }
+        System.Diagnostics.Debug.WriteLine(text);
     }
 }

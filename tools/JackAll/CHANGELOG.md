@@ -18,6 +18,11 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   the few nothing names are labelled by hand. The Files tab shows them in a Label column and the
   details pane, and the filter and the file picker search them with `spk:`, so `spk:"ak47 reload"`
   finds the AK-47's reload sounds. `jackall-cli spk label` builds the list, keeping hand labels.
+- **The Map tab's viewport shows what a frame costs**: the frame rate and the slowest frame, CPU and
+  GPU time, draw calls, triangles, time spent rebuilding what is drawn, and video memory in use. A
+  frame drawn for one edit or click shows its own cost.
+- **`crash.log`.** A crash writes it next to `config.ini`, with the error, the graphics card, driver,
+  OpenGL version, video memory and RAM, and the last OpenGL errors, and says where it is.
 
 ## [1.7.0] - 2026-10-28
 

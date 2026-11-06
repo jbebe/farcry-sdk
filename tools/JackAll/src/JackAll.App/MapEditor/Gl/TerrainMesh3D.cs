@@ -483,6 +483,7 @@ public sealed class TerrainMesh3D : IDisposable
         GL.Uniform2(uniforms.Origin, originX, originY);
         GL.Uniform1(uniforms.Spacing, spacing);
         GL.DrawElements(PrimitiveType.Triangles, _indexCount, DrawElementsType.UnsignedInt, 0);
+        FrameStats.Drawn(_indexCount / 3);
     }
 
     public void Dispose()

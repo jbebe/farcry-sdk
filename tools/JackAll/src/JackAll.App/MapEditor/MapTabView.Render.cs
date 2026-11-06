@@ -9,8 +9,26 @@ public partial class MapTabView
 {
     private void Viewport_Render(TimeSpan delta)
     {
-        ShowFrameRate(delta);
+        _stats ??= new FrameStats();
 
+        // Still the previous frame's decision, so it says whether this frame was asked for as part of a run.
+        bool continuous = Viewport.RenderContinuously;
+        _stats.BeginFrame();
+        try
+        {
+            DrawFrame(delta);
+        }
+        finally
+        {
+            if (_stats.EndFrame(delta, continuous) is { } line)
+            {
+                ShowStats(line);
+            }
+        }
+    }
+
+    private void DrawFrame(TimeSpan delta)
+    {
         // A viewport that only redraws on demand hands out the whole idle gap as its delta, and
         // advancing the camera or the clock by seconds at once flings both.
         float step = MathF.Min((float)delta.TotalSeconds, MaxStep);
@@ -19,8 +37,7 @@ public partial class MapTabView
         GlDebug.Install();
 
         // Scoped for the throwing paths below - a shader typo in a lazy layer, a failed world swap.
-        // Leaving a pass framebuffer bound blacks the viewport for the rest of the session.
-        using GlState frame = new();
+        using GlState frame = new(Viewport.Framebuffer, Viewport.FrameBufferWidth, Viewport.FrameBufferHeight);
         GlState.BeginFrame();
 
         SyncPresentation();
@@ -84,6 +101,8 @@ public partial class MapTabView
                 : "No terrain textures loaded.";
         }
 
+        long rebuildStart = System.Diagnostics.Stopwatch.GetTimestamp();
+
         // The model tiers are keyed to the camera's sector, so crossing a boundary re-buckets the
         // instance streams the same way a mission-layer toggle does.
         var sector = ((int)MathF.Floor(_camera.Position.X / WorldModels.SectorMeters),
@@ -115,6 +134,7 @@ public partial class MapTabView
                 WorldMarkers.RebuildCategoryMarkers(_hierarchy.VisibleEntities, models, _categoryLayers);
             }
         }
+        _stats!.Rebuilt(System.Diagnostics.Stopwatch.GetElapsedTime(rebuildStart));
 
         int width = Viewport.FrameBufferWidth;
         int height = Viewport.FrameBufferHeight;
@@ -413,29 +433,9 @@ public partial class MapTabView
     private OpenTK.Mathematics.Vector3 Up()
         => OpenTK.Mathematics.Vector3.Cross(_camera.Right, _camera.Forward);
 
-    /// <summary>Averages over a quarter second: a per-frame number is unreadable, and the average is
-    /// the one that matters while judging whether a layer costs anything. Counted only while the
-    /// previous frame had already asked for another - the gap after an idle viewport is how long
-    /// nothing wanted a frame, and averaging it in reports seconds per frame that nobody waited.
-    /// </summary>
-    private void ShowFrameRate(TimeSpan delta)
+    private void ShowStats(string line)
     {
-        if (!Viewport.RenderContinuously)
-        {
-            return;
-        }
-
-        _frameSeconds += delta.TotalSeconds;
-        _frames++;
-        if (_frameSeconds < 0.25)
-        {
-            return;
-        }
-
-        FpsText.Text = $"{_frames / _frameSeconds:0} fps";
-        _frameSeconds = 0;
-        _frames = 0;
-
+        FpsText.Text = line;
         string status = _modelStatusText + (_modelLayer is { TextureBytesResident: > 0 } layer
             ? $" · {layer.TextureBytesResident / 1048576.0:F0} MB textures"
             : "");

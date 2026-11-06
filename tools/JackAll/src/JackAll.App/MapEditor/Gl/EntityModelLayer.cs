@@ -972,8 +972,11 @@ public sealed class EntityModelLayer : IDisposable
     }
 
     private static void DrawRange(IndexRange range, int instanceCount)
-        => GL.DrawElementsInstanced(PrimitiveType.Triangles, range.Count, DrawElementsType.UnsignedInt,
+    {
+        GL.DrawElementsInstanced(PrimitiveType.Triangles, range.Count, DrawElementsType.UnsignedInt,
             (IntPtr)(range.Start * sizeof(int)), instanceCount);
+        FrameStats.Drawn((long)range.Count / 3 * instanceCount);
+    }
 
     /// <summary>Null when the bytes are missing or not a decodable .xbt; the range then keeps its
     /// tint for good.</summary>

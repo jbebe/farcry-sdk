@@ -3,50 +3,34 @@ using OpenTK.Graphics.OpenGL4;
 namespace JackAll.App.MapEditor.Gl;
 
 /// <summary>
-/// The pipeline state a pass is allowed to disturb, put back on dispose. The frame is a chain of
-/// layers that each set what they need and mostly do not restore it - workable while everything
-/// draws to one framebuffer at one size, and not workable once passes bring their own.
+/// Puts back, on dispose, the pipeline state a pass is allowed to disturb: the frame's defaults, and
+/// for the frame as a whole the control's own framebuffer. Known values rather than queried ones - a
+/// glGet makes the caller wait for the driver to catch up with everything issued before it.
 /// </summary>
 public readonly struct GlState : IDisposable
 {
-    /// <summary>Reused rather than allocated per capture; the struct copies the four values straight
-    /// out, and nothing here nests or runs off the render thread.</summary>
-    private static readonly int[] ViewportScratch = new int[4];
-
-    private readonly int _framebuffer;
-    private readonly int _x;
-    private readonly int _y;
+    private readonly int _framebuffer = -1;
     private readonly int _width;
     private readonly int _height;
-    private readonly bool _depthTest;
-    private readonly int _depthFunc;
-    private readonly bool _depthMask;
-    private readonly bool _blend;
-    private readonly bool _cullFace;
 
+    /// <summary>Restores the frame's defaults only.</summary>
     public GlState()
     {
-        GL.GetInteger(GetPName.FramebufferBinding, out _framebuffer);
-        GL.GetInteger(GetPName.Viewport, ViewportScratch);
-        (_x, _y, _width, _height) =
-            (ViewportScratch[0], ViewportScratch[1], ViewportScratch[2], ViewportScratch[3]);
-        _depthTest = GL.IsEnabled(EnableCap.DepthTest);
-        GL.GetInteger(GetPName.DepthFunc, out _depthFunc);
-        GL.GetBoolean(GetPName.DepthWritemask, out _depthMask);
-        _blend = GL.IsEnabled(EnableCap.Blend);
-        _cullFace = GL.IsEnabled(EnableCap.CullFace);
     }
 
-    /// <summary>The state every layer is entitled to assume on entry. Set once at the top of the
-    /// frame: depth testing has never been enabled by the layers that rely on it, and the depth
-    /// function has never been set at all, so both are inherited from whatever ran last.</summary>
+    /// <summary>Also rebinds <paramref name="framebuffer"/> at the given size: a pass target left
+    /// bound by a throwing path blacks the viewport for the rest of the session.</summary>
+    public GlState(int framebuffer, int width, int height)
+    {
+        _framebuffer = framebuffer;
+        _width = width;
+        _height = height;
+    }
+
+    /// <summary>The state every layer is entitled to assume on entry, set once at the top of the frame.</summary>
     public static void BeginFrame()
     {
-        GL.Enable(EnableCap.DepthTest);
-        GL.DepthFunc(DepthFunction.Lequal);
-        GL.DepthMask(true);
-        GL.Disable(EnableCap.Blend);
-        GL.Disable(EnableCap.CullFace);
+        Defaults();
 
         // The shared units carry something readable from here on. Whatever produces a real cascade
         // array or occlusion buffer this frame binds over the top of these.
@@ -55,24 +39,20 @@ public readonly struct GlState : IDisposable
 
     public void Dispose()
     {
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
-        GL.Viewport(_x, _y, _width, _height);
-        Toggle(EnableCap.DepthTest, _depthTest);
-        GL.DepthFunc((DepthFunction)_depthFunc);
-        GL.DepthMask(_depthMask);
-        Toggle(EnableCap.Blend, _blend);
-        Toggle(EnableCap.CullFace, _cullFace);
+        if (_framebuffer >= 0)
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
+            GL.Viewport(0, 0, _width, _height);
+        }
+        Defaults();
     }
 
-    private static void Toggle(EnableCap cap, bool enabled)
+    private static void Defaults()
     {
-        if (enabled)
-        {
-            GL.Enable(cap);
-        }
-        else
-        {
-            GL.Disable(cap);
-        }
+        GL.Enable(EnableCap.DepthTest);
+        GL.DepthFunc(DepthFunction.Lequal);
+        GL.DepthMask(true);
+        GL.Disable(EnableCap.Blend);
+        GL.Disable(EnableCap.CullFace);
     }
 }

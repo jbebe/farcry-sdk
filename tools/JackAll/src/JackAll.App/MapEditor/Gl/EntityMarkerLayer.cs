@@ -216,6 +216,7 @@ public sealed class EntityMarkerLayer : IDisposable
         GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
         GL.BindVertexArray(_vao);
         GL.DrawArraysInstanced(PrimitiveType.Triangles, 0, 6, _instanceCount);
+        FrameStats.Drawn(2L * _instanceCount);
         GL.Disable(EnableCap.Blend);
     }
 
