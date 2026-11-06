@@ -233,11 +233,42 @@ Three cameras write it:
 - The free camera's update sets it every frame from the camera's own flag at `+0xCD`, which
   `camera_toggle_first_person` flips.
 
+### The two models
+
+The player's `CGraphicComponent` holds two models: the full body, `<name>.xbg`, first, and the
+headless avatar, `<name>_avatar.xbg`, second. The model switch (`0x1007FC80`, server
+`SPawnImpl::SetViewportID`, `__thiscall` on the pawn's data with the player's viewport, `RET 4`)
+reads the data's `+0x49A`, which `UpdateMaterialMask` sets just before. `UpdateMaterialMask` has
+many callers: the view mode change, the load path (`0x10082AF0`), the first-person and third-person
+cameras, and the free camera on every update. For the full body the switch opens every viewport to
+the full body and hides the avatar. For first person it masks the full body out of the player's
+viewport, shows the avatar, and then discards the full body with `RemoveObject(0)`, so retail never
+gets it back.
+
+Each model has a scene instance helper, at the model's `+0x34`. On it, `0x10336B50` sets the
+viewports the model is drawn in (its instance's `+0x98`), and `0x10336B10` sets those it is drawn in
+the near depth range in (`+0x90`), the range the first-person gun is drawn in. The component keeps
+its near viewports at `+0x12C`, and `0x1051A6E0` (`__fastcall` on the component) puts them on every
+model. Its `vt+0x98` (`SetRenderInNearZ`) does both. The view mode's last step (`0x10080000`) calls
+it, and so does `0x100810D0`, which `LaunchProjectile` and other weapon code call. So in first
+person the avatar is drawn in front of the world, walls and ground included.
+
+The skinning job (kernel `0x1061F3A0`) calls `0x1061F200` (`__cdecl`) once for each skinned model.
+That call builds the model's own skin matrices from the skeleton's posed bones, through its own map
+of skin slots to bones, and through its mesh's inverse bind matrices. The component lists its skinned
+models at `+0x120` (`+0x124` of them), each entry with the slots' bones at `+0x00`, their count at
+`+0x04` and the geometry resource at `+0x14`. The loaded mesh holds the inverse binds at `+0x70`,
+4×4 each, and their count at `+0x74`. Their inverses are the mesh's rest pose, in the mesh's own
+axes: the hips at the origin, ahead along x, left along y.
+
 :::info[Seen in a running game]
-Clearing the bit does not give the player a body worth showing. Seen from `Cameras.Camera.Third` in
-a vehicle, the player is still headless and still in the pose made for the first-person camera. From
-the free camera, the body disappears beyond about 10 m. The model and its driving animations are
-first-person only.
+On the player in first person, the hips (the first bone, the only one not held) are at the model's
+origin, on the ground. `Spine`, 0.098 m above the hips at rest, stands 1.093 m up, and 0.448 m
+crouched. Looking down swings it 0.36 m back and drops the eye from 1.66 m to 1.20 m. With the
+discard taken out and the full body shown, Vehicle Overhaul's chase camera shows the full body with
+the third-person driving clips. Seen from the free camera in first person, the full body shown in
+every viewport and out of the near range is drawn whole, head included, in the first-person pose, as
+long as it is shown again after each model switch. Retail GOG v1.03, from Player Body.
 :::
 
 ## The gun near walls
