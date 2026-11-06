@@ -9,6 +9,7 @@
 #include "engine/ray.h"
 #include "engine/shooting.h"
 #include "fcse_api.h"
+#include "perception.h"
 
 #include <windows.h>
 
@@ -246,6 +247,8 @@ namespace {
     constexpr float kMovingSpeed = 0.5f;
     constexpr float kHeardRange = 20.0f;
     constexpr float kArmsLength = 2.0f;
+    // The cover at and above which nothing hides the player's head from the soldier.
+    constexpr float kInTheOpen = 0.99f;
     // Hardcore: how long a shot the player fired gives him away to a soldier who heard it, the game's
     // own time for a muzzle flash at night, counted from when the soldier last had him in his view.
     constexpr double kGivenAwaySeconds = 3.0;
@@ -332,11 +335,9 @@ namespace {
     double g_lightAt = -1.0;
     Lighting g_light;
 
-    // The most each soldier, by entity id, has made of the player lately, 1 noticing and 2
-    // recognising, logged as it rises; once below it for a while, it is forgotten. Then when his grass
-    // check last found the player in grass, and when his line was last walked and what it found. Then
-    // how much of his notice delay he has sat through, since when, and when he last looked. Then when
-    // he last heard the player fire while alert, or last had him in view since.
+    // What each soldier, by entity id, has lately made of the player, 1 noticing and 2 recognising, logged
+    // as it rises and forgotten a while below it; his grass check and line walk; his notice delay and last
+    // look; the shot he heard while alert; and when he last saw enough of him in the open to fire at.
     struct Seen {
         int level = 0;
         double below = -1.0;
@@ -348,12 +349,15 @@ namespace {
         double sighted = -1.0;
         double looked = -1.0;
         double heard = -1.0;
+        double open = -1.0;
     };
     std::unordered_map<uint32_t, Seen> g_seen;
     std::mutex g_seenLock;
     constexpr double kForgetSeconds = 3.0;
     // Seconds a soldier's grass finding is held: his check sometimes misses the player for one look.
     constexpr double kGrassHold = 0.5;
+    // Seconds a sighting of the player in the open holds.
+    constexpr double kOpenHold = 1.0;
     // Every check of the player as a line, at most this often per soldier, when the game is launched
     // with the switch; fc2drive's perception scenario reads it to see where the soldier looks.
     constexpr char kTraceSwitch[] = "-perceptiontrace";
@@ -875,6 +879,9 @@ namespace {
         if (hiding.givenAway) {
             seen.heard = now;
         }
+        if (zone != kBehind && hiding.cover >= kInTheOpen && visibility >= Shooting::FireLine(look.soldier)) {
+            seen.open = now;
+        }
         if (g_trace && now - seen.traced >= kTraceSeconds) {
             seen.traced = now;
             CombatLogf("soldier %08X perception trace: %.1f m, %s, %s%s%s%s%s, %s; cover %.2f; visibility %.2f, "
@@ -947,7 +954,7 @@ namespace {
         recognise *= (zone == kSide ? kAtSide : 1.0f) * (hiding.grass ? kInGrass : 1.0f) * shade * hiding.cover;
         float notice = recognise * kNoticeShare;
         if (zone == kFocus && moving && look.night < 0.5f && !hiding.grass && !hiding.light.shaded &&
-            hiding.cover >= 0.99f) {
+            hiding.cover >= kInTheOpen) {
             notice = std::max(notice, upright ? kUprightCatchesEye : kCrouchedCatchesEye);
         }
         // A scope reaches farther, but no farther than night or fog let anyone see.
@@ -1059,3 +1066,8 @@ void InstallPerception() {
     }
 }
 
+bool DifficultyOverhaul::Perception::InTheOpen(uint32_t soldier, double now) {
+    std::lock_guard<std::mutex> lock(g_seenLock);
+    const auto seen = g_seen.find(soldier);
+    return seen != g_seen.end() && seen->second.open >= 0.0 && now - seen->second.open <= kOpenHold;
+}

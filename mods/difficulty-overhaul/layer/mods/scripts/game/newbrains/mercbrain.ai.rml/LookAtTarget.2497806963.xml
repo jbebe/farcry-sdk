@@ -1,0 +1,12 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/LookAtTarget" Class="CTaskSetLookStrategy" Looping="0" Independent="0">
+  <Parameter Name="lookStrategy" Value="16" />
+  <Parameter Name="SmartLookPos" Value="&lt;AiObject, &gt;">
+    <Parameter Name="RefType" Value="1" />
+    <Parameter Name="RefName" Value="" />
+  </Parameter>
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+</Task>

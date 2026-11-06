@@ -709,6 +709,18 @@ the squad's `AttackStrategy` fact or 10, finds firing spots the cover attack can
 heuristic 3 finds ones it can (**traced in the server build**; on the test range an assaulter's cover gave
 `NoTarget` until his search took heuristic 3).
 
+### Agent flags and path lengths
+
+The 64 flags are a `uint64` on the `CGameAgent` (Steam `+0x190`, the low 32 first; server build `+0x168`),
+which `CTaskOperateOnFlagField` sets, clears or tests and `CScannerFactExist` with `UseFlagField` watches: with
+`checkExistance` 1 it fires once the flag is set, with 0 once it is clear. No `mercbrain` task touches flag 34, and in the
+server build's code only vehicles' does, on vehicle agents (`CBrainVehicle`, `CBrainBoat`, `CVehicleAgent`), so a
+soldier's flag 34 is free; Difficulty Overhaul sets it while the player is in the open for him.
+`CTaskPathAnalyzer` compares the length of the path last found (agent `+0x18C` in the server build) with its
+`ShortPathValue` and `MediumPathValue`: up to the first it fires `ShortPath`, up to the second `MediumPath`, beyond
+it `LongPath`; `LongPathValue` is not read. A connection to a running plan with the anchor `Restart` stops and
+starts it again (**RE-verified** in the server build; on the test range).
+
 ### Seeing which tasks run
 
 Every task starts through `CTask::Start` (Steam `0x1031CA80`, `__thiscall`, no arguments). A task holds the CRC32 of

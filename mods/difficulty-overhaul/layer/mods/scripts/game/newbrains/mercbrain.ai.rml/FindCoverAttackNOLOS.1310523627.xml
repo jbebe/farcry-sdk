@@ -11,6 +11,6 @@
   <Exit Name="NoTarget">
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/CScannerInFOV1" TargetAnchor="Start" />
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/WaitCovered" TargetAnchor="Start" />
-    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CrouchInTheOpen" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/IfInTheOpenCrouch" TargetAnchor="Start" />
   </Exit>
 </Task>

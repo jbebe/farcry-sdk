@@ -1,0 +1,15 @@
+<Scanner Name="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/WhileInTheOpen" Class="CScannerFactExist" Looping="0" Independent="0">
+  <Parameter Name="factName" Value="" />
+  <Parameter Name="checkExistance" Value="0" />
+  <Parameter Name="useWorldBlackboard" Value="0" />
+  <Parameter Name="UseFlagField" Value="1" />
+  <Parameter Name="BlackboardType" Value="1" />
+  <Parameter Name="FlagFieldType" Value="0" />
+  <Parameter Name="FlagFieldValue" Value="34" />
+  <Parameter Name="ArmyFlagFieldValue" Value="0" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack" TargetAnchor="Restart" />
+  </Exit>
+</Scanner>

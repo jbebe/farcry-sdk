@@ -1,0 +1,40 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/SetDontReload" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/LookAtDest1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/PlayActionBark_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/FindCoverAttackNOLOS" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/FindCoverToMakeSuppressFireNoLOS" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/SetDontReload1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/SetIsSuppressing" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/NoCoverMoveAttack" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/CTaskChooseCoverAttack1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/FindCoverAttackWithLOS" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/FindCoverToMakeSuppressFireLOS" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/CanIRescueSomeone" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/SetFact_ManageThreshold" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/FindPathToCover" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/AnalyzePath" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/FollowPathLong" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/FollowPathMedium" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/FollowPathShort" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/TalkAboutSuppressing" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/SetDontReload" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/HoldInTheOpen" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/WhileInTheOpen" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/IfFarFromCover" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/IfInTheOpenLong" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/IfInTheOpenNoCover" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/FindCoverNear" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/FindPathToNearCover" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/IfNearEnough" />
+</Plan>

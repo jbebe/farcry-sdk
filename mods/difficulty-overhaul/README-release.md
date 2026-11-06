@@ -55,9 +55,11 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
   and falls off fast past it.
 - **Squad tactics.** Within 35 m half a squad pins you down from cover while the other half moves up,
   and the ones moving up fire from cover too: up over a low wall, out from a corner, or standing behind
-  a tall one. With no cover near, a soldier crouches to fire. With no cover to reach they run out to
-  your side rather than straight at you, farther the farther off they are, they go after you from a
-  firing spot or a way up when you are above them, and they move once under fire or hurt.
+  a tall one. Caught in the open with their cover more than 10 m off, they crouch and shoot where they
+  stand. Once you are behind cover, they make for cover first, however far, and with none within a 20 m
+  run they rush you. With no cover to reach they run out to your side rather than straight at you,
+  farther the farther off they are, they go after you from a firing spot or a way up when you are above
+  them, and they move once under fire or hurt.
 - **No rockets at you on foot.** A soldier with an RPG or a Carl Gustav draws his other gun at you on
   foot, and keeps the launcher for you in a vehicle.
 - **Alerts end.** A soldier who has lost you gives up after 90 seconds, walks back to where he was

@@ -1,0 +1,12 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/SuppressAttack/SuppressFireAttack/HoldInTheOpen" Class="CTaskWait" Looping="0" Independent="0">
+  <Parameter Name="waitTimeFact" Value="" />
+  <Parameter Name="timeToWait" Value="3" />
+  <Parameter Name="randomStartDelay" Value="0" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/SuppressAttack/SuppressFireAttack" TargetAnchor="Restart" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+</Task>

@@ -158,4 +158,8 @@
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/EscapeDangerousAmmoPile1" />
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScannerDangerousAmmoPile1" />
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/CrouchInTheOpen" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/IfInTheOpenCrouch" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FireWhereHeStands" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AimAtTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LookAtTarget" />
 </Brain>

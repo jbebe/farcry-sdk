@@ -1,0 +1,19 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FindCover" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FindCover/CheckIsUnderFire1" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FindPath" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/IfInTheOpenNoCover" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FindCover/FindCoverNoLOS" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FindCover/FindCoverWithLOS" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FindCover/CheckIsUnderFire1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FindCover/FindNearestWithLOS" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FindCover/FindNearestNoLOS" />
+</Plan>

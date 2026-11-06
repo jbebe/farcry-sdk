@@ -34,4 +34,14 @@
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/FindCoverAttackWithLOS" />
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/FindCoverAttackNOLOS" />
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/CTaskChooseCoverAttack1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/HoldInTheOpen" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/WhileInTheOpen" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/IfFarFromCover" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/IfInTheOpenMedium" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/IfInTheOpenLong" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/IfInTheOpenNoCover" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/FindCoverNear" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/FindPathToNearCover" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/IfNearEnough" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/RushHim" />
 </Plan>

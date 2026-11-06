@@ -1,0 +1,48 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/FindPathToNearCover" Class="CTaskPathFind" Looping="0" Independent="0">
+  <Parameter Name="start" Value="&lt;AiObject, &gt;">
+    <Parameter Name="RefType" Value="1" />
+    <Parameter Name="RefName" Value="" />
+  </Parameter>
+  <Parameter Name="destination" Value="&lt;Vec3dFact, GoodCoverToMakeSuppressFire&gt;">
+    <Parameter Name="RefType" Value="20" />
+    <Parameter Name="RefName" Value="GoodCoverToMakeSuppressFire" />
+  </Parameter>
+  <Parameter Name="orientation" Value="&lt;AiObject, &gt;">
+    <Parameter Name="RefType" Value="1" />
+    <Parameter Name="RefName" Value="" />
+  </Parameter>
+  <Parameter Name="IgnorePathShorterThan" Value="0.6" />
+  <Parameter Name="IgnorePathBiggerThan" Value="-1" />
+  <Parameter Name="DoBlindPathfind" Value="0" />
+  <Parameter Name="BlindPathFindRadiusAtDest" Value="0" />
+  <Parameter Name="BlindPathFindAngleLimit" Value="0" />
+  <Parameter Name="DesiredTurningRadius" Value="-1" />
+  <Parameter Name="MaxTurningRadius" Value="-1" />
+  <Parameter Name="TurningRadiusStepSize" Value="0" />
+  <Parameter Name="AllowPathClipping" Value="0" />
+  <Parameter Name="MaxAllowedClippingDistance" Value="-1" />
+  <Parameter Name="CatchPathClippingFailure" Value="0" />
+  <Parameter Name="BlindStartPointClippingRadius" Value="-1" />
+  <Parameter Name="BlindEndPointClippingRadius" Value="-1" />
+  <Parameter Name="UseTacticalPathFind" Value="1" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/IfNearEnough" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="PathFindFailed">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/NoCoverMoveAttack" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="UnknownError">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/NoCoverMoveAttack" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="PathTooLong">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/NoCoverMoveAttack" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="PathTooShort">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/FindCoverAttackWithLOS" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="RejectedClipping" />
+</Task>

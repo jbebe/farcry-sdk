@@ -1,9 +1,6 @@
-# Builds layer\ from the installed game: the merc brain's changes as fragments, which JackAll merges
-# into the player's own brain. Soldiers carrying an RPG or a Carl Gustav fire it at the player only in
-# a vehicle and draw their other gun at the player on foot, an alerted soldier stands down after
-# 90 seconds, the squad tactics the game ships switched off at long and medium range, or when a
-# soldier's position is given away, are on, assaulters fire from cover, and with no cover near a
-# soldier crouches to fire.
+# Builds layer\ from the installed game: the merc brain's changes as fragments, which JackAll merges into
+# the player's own brain: launchers held for a player in a vehicle, alerts that stand down, and squad tactics
+# by where the player is. README.md lists each change.
 param(
     [string]$Game = 'C:\Games\Far Cry 2',
     [string]$Cli = "$PSScriptRoot\..\..\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
@@ -70,18 +67,20 @@ function Also-Start($from, $outlet, [string[]]$targets) {
 # Starts $targets whenever the instance $name starts.
 function Start-With($name, [string[]]$targets) { Also-Start $name OnStart $targets }
 
-# Points every connection $outlet of $from makes at $targets instead.
-function Redirect($from, $outlet, [string[]]$targets) { (Outlet $from $outlet).InnerXml = Connect $targets }
+# Points every connection $outlet of $from makes at $targets' $anchor instead.
+function Redirect($from, $outlet, [string[]]$targets, $anchor = 'Start') {
+    (Outlet $from $outlet).InnerXml = Connect $targets $anchor
+}
 
 # Copies the instance $from as $to into $plan after $after, with each connection to a key of $targets
-# made to that key's target instead, or dropped for $null.
-function Copy-Instance($from, $to, $plan, $after, $targets) {
+# made to that key's target instead, or dropped for $null; without $targets, every one is dropped.
+function Copy-Instance($from, $to, $plan, $after, $targets = $null) {
     $copy = (Instance $from).CloneNode($true)
     $copy.SetAttribute('Name', $to)
     foreach ($connection in @($copy.SelectNodes('*/Connection'))) {
         $old = $connection.GetAttribute('Target')
-        if (-not $targets.ContainsKey($old)) { continue }
-        if ($null -eq $targets[$old]) { $connection.ParentNode.RemoveChild($connection) | Out-Null }
+        if ($null -ne $targets -and -not $targets.ContainsKey($old)) { continue }
+        if ($null -eq $targets -or $null -eq $targets[$old]) { $connection.ParentNode.RemoveChild($connection) | Out-Null }
         else { $connection.SetAttribute('Target', $targets[$old]) }
     }
     Add-Instance $plan $after $copy.OuterXml
@@ -254,7 +253,26 @@ foreach ($compromised in 'CombatFireAlert', 'CombatPlayHurt', 'ShootByAnotherTar
 }
 
 $bands = 'KillRangedAttack', 'ShortRangedAttack', 'MediumRangedAttack', 'LongRangedAttack'
-# Has the soldier crouch; started beside the task that keeps him where he fires, it runs in that one's plan.
+# The agent flag the plugin sets while the player is in the open for the soldier; the path too long to
+# run with him there; how long the soldier then holds; and the path short enough with him behind cover.
+$inTheOpen = 34
+$farFromCover = 10
+$holdSeconds = 3
+$nearCover = 20
+# The band whose tasks the new ones are copied from.
+$template = "$combat/MediumRangedAttack/AssaultAttack"
+
+# Adds to $plan, after $after, a task that starts $ifSet while the player is in the open for the soldier
+# and $ifClear otherwise.
+function Add-IfInTheOpen($name, $plan, $after, [string[]]$ifSet, [string[]]$ifClear) {
+    Copy-Instance "$template/NoCoverOrNoPathFailure/CheckIsUnderFire" $name $plan $after
+    Set-Parameter $name FlagFieldValue $inTheOpen
+    Redirect $name IS_TRUE $ifSet
+    Redirect $name IS_FALSE $ifClear
+}
+
+# Shared by every plan that starts them: the soldier crouches, crouches if the player is in the open,
+# fires where he stands, and aims and looks at his target.
 $crouch = "$combat/CrouchInTheOpen"
 Add-Instance $combat "$combat/NoCoverRunToThreatPlan" @"
 <Task Name="$crouch" Class="CTaskSetPostureIntention" Looping="0" Independent="0">
@@ -266,11 +284,58 @@ Add-Instance $combat "$combat/NoCoverRunToThreatPlan" @"
   <Exit Name="Always" />
 </Task>
 "@
-# An assaulter at his cover fires from it as a suppressor does, up over a low wall, out from a corner or
-# standing behind a tall one, where he stood beside it; a shotgunner still rushes on. The suppressor's
-# pop-up, strafe and stand-up plans run inside his assault; with no cover to fire from, he waits beside it
-# as before, crouched. With no cover near, a soldier crouches to fire where he stops: at the end of a run
-# to the target's side, after fleeing fire, and where he looks for a target he ran toward.
+$ifOpenCrouch = "$combat/IfInTheOpenCrouch"
+Add-IfInTheOpen $ifOpenCrouch $combat $crouch $crouch @()
+$fireStill = "$combat/FireWhereHeStands"
+Copy-Instance "$template/FireNotMoving2" $fireStill $combat $ifOpenCrouch
+$aim = "$combat/AimAtTarget"
+Copy-Instance "$template/NoCoverOrNoPathFailure/FlankAttack_KR1/AimSmartTarget" $aim $combat $fireStill
+$look = "$combat/LookAtTarget"
+Copy-Instance "$template/NoCoverOrNoPathFailure/FlankAttack_KR1/LookSmartTarget" $look $combat $aim
+
+# Adds to $plan, after $after, a hold: the soldier stays where he stands, crouched and firing, and starts
+# $plan over after $holdSeconds or once the player leaves the open. Returns what starts it.
+function Add-Hold($plan, $after) {
+    Copy-Instance "$template/WaitCovered" "$plan/HoldInTheOpen" $plan $after
+    Set-Parameter "$plan/HoldInTheOpen" timeToWait $holdSeconds
+    Redirect "$plan/HoldInTheOpen" Success $plan Restart
+    Copy-Instance "$template/NoCoverOrNoPathFailure/ScanReloadIsNeeded1/ScanNeedToRelocate" "$plan/WhileInTheOpen" `
+        $plan "$plan/HoldInTheOpen"
+    Set-Parameter "$plan/WhileInTheOpen" FlagFieldValue $inTheOpen
+    Set-Parameter "$plan/WhileInTheOpen" checkExistance 0
+    Redirect "$plan/WhileInTheOpen" Success $plan Restart
+    $crouch, $fireStill, $aim, $look, "$plan/HoldInTheOpen", "$plan/WhileInTheOpen"
+}
+
+# Adds to $plan, after $after, the suppressor's search for cover, $nearCover wide and at any distance from
+# the player, whose find is the fact $fact; it starts $found, or $none when there is none.
+function Add-NearCoverSearch($name, $plan, $after, $fact, $found, $none) {
+    Copy-Instance "$combat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/FindCoverToMakeSuppressFireLOS" `
+        $name $plan $after
+    Set-Parameter $name coverFoundFactName $fact
+    Set-Parameter $name maxRadius $nearCover
+    Set-Parameter $name minRadiusConst 0
+    Set-Parameter $name maxRadiusConst 1000
+    Redirect $name Success $found
+    Redirect $name FindCoverFailed $none
+    Redirect $name UnknownError $none
+}
+
+# Adds to $plan, after $after, a task that starts $near when the path the soldier found runs at most
+# $metres, and $far otherwise.
+function Add-PathSplit($name, $plan, $after, $metres, $near, $far) {
+    Copy-Instance "$template/AnalyzePath" $name $plan $after
+    Set-Parameter $name ShortPathValue $metres
+    Set-Parameter $name MediumPathValue $metres
+    Redirect $name ShortPath $near
+    Redirect $name MediumPath $near
+    Redirect $name LongPath $far
+}
+
+# An assaulter at his cover fires from it as a suppressor does, with the suppressor's pop-up, strafe and
+# stand-up plans; a shotgunner still rushes on. With the player in the open, a soldier whose cover is too
+# far holds and fires crouched, as does a suppressor with none; with him behind cover, a soldier runs to
+# his cover, else to any a short run off, else at the player. README.md has the whole of it.
 foreach ($band in $bands) {
     $assault = "$combat/$band/AssaultAttack"
     $suppress = "$combat/$band/SuppressAttack/SuppressFireAttack"
@@ -288,7 +353,7 @@ foreach ($band in $bands) {
     $waiting = (Outlet "$assault/AmIUsingShotgun" PlayerNotDoingAction).InnerXml
     foreach ($none in @("$assault/FindCoverAttackNOLOS", 'NoTarget'), @("$assault/CTaskChooseCoverAttack1", 'NoObstacle')) {
         (Outlet @none).InnerXml = $waiting
-        Also-Start @none $crouch
+        Also-Start @none $ifOpenCrouch
     }
     # He looks for cover as a suppressor does, behind something he can fire from, not a firing spot.
     foreach ($search in 'FindCoverWithLOS', 'FindCoverNoLOS') {
@@ -297,17 +362,53 @@ foreach ($band in $bands) {
     }
     Redirect "$assault/AmIUsingShotgun" PlayerNotDoingAction "$assault/FindCoverAttackWithLOS"
     Redirect "$assault/CheckForShotgunProgression" IS_FALSE "$assault/FindCoverAttackWithLOS"
-    Also-Start "$assault/NoCoverOrNoPathFailure/FlankAttack_KR1/FollowPathToFlankPos" Success $crouch
-    Also-Start "$assault/NoCoverOrNoPathFailure/FleeFromLocation_BP1/AfterFleeFireStrategy1" OnStart $crouch
+    Also-Start "$assault/NoCoverOrNoPathFailure/FlankAttack_KR1/FollowPathToFlankPos" Success $ifOpenCrouch
+    Also-Start "$assault/NoCoverOrNoPathFailure/FleeFromLocation_BP1/AfterFleeFireStrategy1" OnStart $ifOpenCrouch
+
+    $hold = Add-Hold $assault "$assault/CTaskChooseCoverAttack1"
+    Add-PathSplit "$assault/IfFarFromCover" $assault "$assault/WhileInTheOpen" $farFromCover `
+        "$assault/FollowPathMedium" "$assault/IfInTheOpenMedium"
+    Add-IfInTheOpen "$assault/IfInTheOpenMedium" $assault "$assault/IfFarFromCover" $hold "$assault/FollowPathMedium"
+    Add-IfInTheOpen "$assault/IfInTheOpenLong" $assault "$assault/IfInTheOpenMedium" $hold "$assault/FollowPathLong"
+    Redirect "$assault/AnalyzePath" MediumPath "$assault/IfFarFromCover"
+    Redirect "$assault/AnalyzePath" LongPath "$assault/IfInTheOpenLong"
+    Add-IfInTheOpen "$assault/IfInTheOpenNoCover" $assault "$assault/IfInTheOpenLong" "$assault/NoCoverOrNoPathFailure" `
+        "$assault/FindCoverNear"
+    Redirect "$assault/FindCover" Default "$assault/IfInTheOpenNoCover"
+    Add-NearCoverSearch "$assault/FindCoverNear" $assault "$assault/IfInTheOpenNoCover" coverPosition `
+        "$assault/FindPathToNearCover" "$assault/RushHim"
+    Copy-Instance "$assault/FindPath" "$assault/FindPathToNearCover" $assault "$assault/FindCoverNear" @{
+        "$assault/NoCoverOrNoPathFailure" = "$assault/RushHim"
+        "$assault/CTaskCheckUnderFire2"   = "$assault/IfNearEnough"
+    }
+    Add-PathSplit "$assault/IfNearEnough" $assault "$assault/FindPathToNearCover" $nearCover `
+        "$assault/CTaskCheckUnderFire2" "$assault/RushHim"
+    Copy-Instance "$assault/NoCoverOrNoPathFailure/CTaskOperateOnFlagField1" "$assault/RushHim" $assault `
+        "$assault/FindPathToNearCover"
+
+    $hold = Add-Hold $suppress "$suppress/AnalyzePath"
+    Add-PathSplit "$suppress/IfFarFromCover" $suppress "$suppress/WhileInTheOpen" $farFromCover `
+        "$suppress/FollowPathLong" "$suppress/IfInTheOpenLong"
+    Add-IfInTheOpen "$suppress/IfInTheOpenLong" $suppress "$suppress/IfFarFromCover" $hold "$suppress/FollowPathLong"
+    Redirect "$suppress/AnalyzePath" LongPath "$suppress/IfFarFromCover"
+    Add-IfInTheOpen "$suppress/IfInTheOpenNoCover" $suppress "$suppress/IfInTheOpenLong" $hold "$suppress/FindCoverNear"
+    Redirect "$suppress/SetIsSuppressing" OnStart "$suppress/IfInTheOpenNoCover"
+    Add-NearCoverSearch "$suppress/FindCoverNear" $suppress "$suppress/IfInTheOpenNoCover" GoodCoverToMakeSuppressFire `
+        "$suppress/FindPathToNearCover" "$suppress/NoCoverMoveAttack"
+    Copy-Instance "$suppress/FindPathToCover" "$suppress/FindPathToNearCover" $suppress "$suppress/FindCoverNear" @{
+        "$suppress/SetIsSuppressing" = "$suppress/NoCoverMoveAttack"
+        "$suppress/LookAtDest1"      = "$suppress/IfNearEnough"
+    }
+    Add-PathSplit "$suppress/IfNearEnough" $suppress "$suppress/FindPathToNearCover" $nearCover `
+        "$suppress/LookAtDest1" "$suppress/NoCoverMoveAttack"
 }
 $runs = @("$combat/NoCoverRunToThreatPlan/NoCoverRunToThreat_BP1") +
     ($bands | ForEach-Object { "$combat/$_/SuppressAttack/SuppressFireAttack/StrafeAttack/NoCoverRunToThreat_BP1" })
 foreach ($run in $runs) {
     foreach ($flank in 'FlankAttack_SR', 'FlankAttack_KR') {
-        Also-Start "$run/$flank/FollowPathToFlankPos" Success $crouch
+        Also-Start "$run/$flank/FollowPathToFlankPos" Success $ifOpenCrouch
     }
-    Start-With "$run/ScanForTarget" $crouch
-}
-$doc.Save($source)
+    Start-With "$run/ScanForTarget" $ifOpenCrouch
+}$doc.Save($source)
 Invoke-Cli ai fragments $source --base $brain --out $fragments
 Remove-Item -Recurse -Force $work

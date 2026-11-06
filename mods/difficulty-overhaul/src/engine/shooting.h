@@ -8,6 +8,10 @@
 namespace DifficultyOverhaul::Shooting {
 
 using TaskCheckFn = bool(__fastcall*)(void* task);
+using UpdateFn = void(__fastcall*)(void* shooting, void* unused, float seconds);
+
+// CShootingSystem::UpdateShootingSystem, once a frame for each soldier.
+extern FCSE::Relocation<UpdateFn> Update;
 
 // CTaskShoot::CanShoot, whether he may pull the trigger now; refused, the task ends.
 extern FCSE::Relocation<TaskCheckFn> CanShoot;
@@ -45,6 +49,9 @@ void* ProcessorSoldier(const void* processor);
 
 // The CPawnAgent a shooting system belongs to.
 void* Agent(void* shooting);
+
+// Sets or clears one of a CPawnAgent's 64 flags, which the brain's flag tasks and scanners read.
+void SetFlag(void* agent, int flag, bool on);
 
 // Shakes his aim: for `seconds` his chance at the player takes `factor`, a panic if `panic`. A worse
 // shake that still holds is kept. Returns whether any held.

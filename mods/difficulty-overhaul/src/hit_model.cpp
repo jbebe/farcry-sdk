@@ -31,10 +31,7 @@ namespace {
     ChanceFn g_originalGetChance = nullptr;
     ChanceFn g_originalGetTimerFactor = nullptr;
     ShootAtFn g_originalShootAt = nullptr;
-    // CShootingSystem::UpdateShootingSystem, once a frame for each soldier.
-    using UpdateFn = void(__fastcall*)(void* shooting, void* unused, float seconds);
-    FCSE::Relocation<UpdateFn> g_update{FCSE::Uplay(0x00A18410)};
-    UpdateFn g_originalUpdate = nullptr;
+    Shooting::UpdateFn g_originalUpdate = nullptr;
 
     // CShootingSystem: the part its aim dot is on (-1 until set up), the part to set the next dot up
     // on, and whether the last shot hit.
@@ -285,7 +282,7 @@ void InstallHitModel() {
         !Hook(g_shootAt, &ShootAtDetour, &g_originalShootAt)) {
         FCSE::Logf("hit model: the AI shooting system was not found in this build");
     }
-    if (!Hook(g_update, &UpdateDetour, &g_originalUpdate)) {
+    if (!Hook(Shooting::Update, &UpdateDetour, &g_originalUpdate)) {
         FCSE::Logf("hit model: the shooting system's update was not found in this build, so every soldier aims as "
                    "one surprised");
     }

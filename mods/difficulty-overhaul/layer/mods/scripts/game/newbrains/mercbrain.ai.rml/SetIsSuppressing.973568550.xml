@@ -1,0 +1,12 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/SuppressAttack/SuppressFireAttack/SetIsSuppressing" Class="CTaskOperateOnFlagField" Looping="0" Independent="0">
+  <Parameter Name="FlagFieldValue" Value="9" />
+  <Parameter Name="ArmyFlagFieldValue" Value="0" />
+  <Parameter Name="OperationType" Value="0" />
+  <Parameter Name="FlagFieldType" Value="0" />
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/SuppressAttack/SuppressFireAttack/IfInTheOpenNoCover" TargetAnchor="Start" />
+  </Anchor>
+  <Event Name="IS_TRUE" />
+  <Event Name="IS_FALSE" />
+  <Event Name="FLAG_SET" />
+</Task>

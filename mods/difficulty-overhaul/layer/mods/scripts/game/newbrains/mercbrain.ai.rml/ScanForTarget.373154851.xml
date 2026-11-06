@@ -2,7 +2,7 @@
   <Anchor Name="OnStart">
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/NoCoverRunToThreat_BP1/ScanForTarget/CheckTargetVisible1" TargetAnchor="Start" />
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/NoCoverRunToThreat_BP1/ScanForTarget/CTaskSetFireStrategy1" TargetAnchor="Start" />
-    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CrouchInTheOpen" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/IfInTheOpenCrouch" TargetAnchor="Start" />
   </Anchor>
   <Anchor Name="OnStop" />
   <Exit Name="Success" />

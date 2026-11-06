@@ -1,0 +1,44 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/FindPathToNearCover" Class="CTaskPathFind" Looping="0" Independent="0">
+  <Parameter Name="start" Value="&lt;AiObject, &gt;">
+    <Parameter Name="RefType" Value="1" />
+    <Parameter Name="RefName" Value="" />
+  </Parameter>
+  <Parameter Name="destination" Value="&lt;Vec3dFact, coverPosition&gt;">
+    <Parameter Name="RefType" Value="20" />
+    <Parameter Name="RefName" Value="coverPosition" />
+  </Parameter>
+  <Parameter Name="orientation" Value="&lt;AiObject, &gt;">
+    <Parameter Name="RefType" Value="1" />
+    <Parameter Name="RefName" Value="" />
+  </Parameter>
+  <Parameter Name="IgnorePathShorterThan" Value="0.6" />
+  <Parameter Name="IgnorePathBiggerThan" Value="-1" />
+  <Parameter Name="DoBlindPathfind" Value="0" />
+  <Parameter Name="BlindPathFindRadiusAtDest" Value="0" />
+  <Parameter Name="BlindPathFindAngleLimit" Value="0" />
+  <Parameter Name="DesiredTurningRadius" Value="-1" />
+  <Parameter Name="MaxTurningRadius" Value="-1" />
+  <Parameter Name="TurningRadiusStepSize" Value="0" />
+  <Parameter Name="AllowPathClipping" Value="1" />
+  <Parameter Name="MaxAllowedClippingDistance" Value="-1" />
+  <Parameter Name="CatchPathClippingFailure" Value="0" />
+  <Parameter Name="BlindStartPointClippingRadius" Value="-1" />
+  <Parameter Name="BlindEndPointClippingRadius" Value="-1" />
+  <Parameter Name="UseTacticalPathFind" Value="1" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/IfNearEnough" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/RushHim" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Always" />
+  <Exit Name="PathFindFailed" />
+  <Exit Name="UnknownError" />
+  <Exit Name="PathTooLong" />
+  <Exit Name="PathTooShort">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/FireNotMoving2" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="RejectedClipping" />
+</Task>

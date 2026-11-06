@@ -22,6 +22,7 @@ add_library(DifficultyOverhaul SHARED
   "src/suppression.cpp"
   "src/squad_memory.cpp"
   "src/squad_roles.cpp"
+  "src/in_the_open.cpp"
   "src/watched_spot.cpp"
   "src/perception.cpp"
   "src/going_down.cpp"

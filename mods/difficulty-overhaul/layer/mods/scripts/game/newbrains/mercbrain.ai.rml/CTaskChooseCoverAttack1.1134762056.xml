@@ -4,7 +4,7 @@
   <Exit Name="NoObstacle">
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/AssaultAttack/CScannerInFOV1" TargetAnchor="Start" />
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/AssaultAttack/WaitCovered" TargetAnchor="Start" />
-    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CrouchInTheOpen" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/IfInTheOpenCrouch" TargetAnchor="Start" />
   </Exit>
   <Exit Name="LeanLeft" />
   <Exit Name="LeanRight" />

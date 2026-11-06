@@ -41,6 +41,8 @@ namespace {
     constexpr ptrdiff_t kAgentClear = 0x86C;
     // CPawnAgent's state: 2 alert, 3 to 5 the combat states.
     constexpr ptrdiff_t kAgentState = 0x274;
+    // CGameAgent's 64 flags, the low 32 then the high.
+    constexpr ptrdiff_t kAgentFlags = 0x190;
     constexpr int kAlertState = 2;
     constexpr int kLastCombatState = 5;
     // CSensoryStimProcessor's agent.
@@ -81,6 +83,7 @@ namespace DifficultyOverhaul::Shooting {
 
 FCSE::Relocation<TaskCheckFn> CanShoot{FCSE::Uplay(0x009792F0)};
 FCSE::Relocation<TaskCheckFn> IsAligned{FCSE::Uplay(0x0097A3D0)};
+FCSE::Relocation<UpdateFn> Update{FCSE::Uplay(0x00A18410)};
 
 bool Found() { return g_getTarget && g_getVisibility && g_getKnowledge; }
 
@@ -124,6 +127,12 @@ void* ProcessorSoldier(const void* processor) {
 }
 
 void* Agent(void* shooting) { return Read<void*>(shooting, kShooter); }
+
+void SetFlag(void* agent, int flag, bool on) {
+    const uint64_t bit = uint64_t{1} << flag;
+    const uint64_t flags = Read<uint64_t>(agent, kAgentFlags);
+    Write(agent, kAgentFlags, on ? flags | bit : flags & ~bit);
+}
 
 namespace {
     // The shake that holds on him now, if any.

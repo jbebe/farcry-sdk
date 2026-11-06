@@ -21,7 +21,7 @@
   <Anchor Name="OnStop" />
   <Exit Name="Success">
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1/CTaskWait1" TargetAnchor="Start" />
-    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CrouchInTheOpen" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/IfInTheOpenCrouch" TargetAnchor="Start" />
   </Exit>
   <Exit Name="Default" />
   <Exit Name="Always" />

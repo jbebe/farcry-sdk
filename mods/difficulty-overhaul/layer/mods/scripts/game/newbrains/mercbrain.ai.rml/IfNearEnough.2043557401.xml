@@ -1,0 +1,15 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/IfNearEnough" Class="CTaskPathAnalyzer" Looping="0" Independent="0">
+  <Parameter Name="ShortPathValue" Value="20" />
+  <Parameter Name="MediumPathValue" Value="20" />
+  <Parameter Name="LongPathValue" Value="30" />
+  <Anchor Name="OnStart" />
+  <Event Name="ShortPath">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/CTaskCheckUnderFire2" TargetAnchor="Start" />
+  </Event>
+  <Event Name="MediumPath">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/CTaskCheckUnderFire2" TargetAnchor="Start" />
+  </Event>
+  <Event Name="LongPath">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/RushHim" TargetAnchor="Start" />
+  </Event>
+</Task>
