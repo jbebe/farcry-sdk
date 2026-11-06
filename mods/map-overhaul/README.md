@@ -37,7 +37,8 @@ tilt; `--clean` leaves them off:
 | Note | Drawn from |
 |---|---|
 | A sketched diamond on each guard post, and `G.P.` | the 32 `Objectives.PGP.*` markers in `mapsdata` |
-| Safe houses, a sketched house and `S.H.`; arms dealers, circled and `A.D.`; bus stops, circled | the `SafeHouse_*`, `WeaponShop` and `BusStation` markers |
+| Safe houses, a sketched house and `S.H.`; bus stops, circled | the `SafeHouse_*` and `BusStation` markers |
+| Arms dealers, circled and `A.D.` | the five `weaponshopbld_01` shop buildings; the one by Mike's Bar has no `WeaponShop` marker |
 | The game's names for places, and what its text says of them, after the printed name | `REMARKS`, from `docs/docs/lore/places.md` |
 | A key in the top margin | |
 

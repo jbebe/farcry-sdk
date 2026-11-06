@@ -12,8 +12,8 @@ HERE = Path(__file__).resolve().parent
 # A Google font under the SIL Open Font License, fetched once into work/.
 HANDWRITING = "https://raw.githubusercontent.com/google/fonts/main/ofl/nothingyoucoulddo/NothingYouCouldDo.ttf"
 BALLPOINT = "#1d3b8f"
-# Markers that are circled, and what is written beside the circle.
-CIRCLED = {"Objectives.BusStation": "bus", "Objectives.WeaponShop": "A.D."}
+# Arms dealers are found by their shop building: the one by Mike's Bar has no WeaponShop marker.
+SHOP = "weaponshopbld_01.xbg"
 
 # What the game's own text says of each named place, by its detail map's texture
 # (docs/docs/lore/places.md).
@@ -109,12 +109,15 @@ def untangle(ax, scale):
 
 def draw(ax, entities, scale, px):
     for e in entities:
-        if e["file"] != "mapsdata":
-            continue
         name = e["name"] or ""
         x, y = e["pos"][:2]
         key = f"{name}{x:.0f}{y:.0f}"
-        if name.startswith("Objectives.PGP."):
+        if (e.get("model") or "").lower().endswith(SHOP):
+            ring(ax, x, y, 16, px(1.8), key)
+            hand(ax, x + 22, y + 14, "A.D.", 30 * scale, key)
+        elif e["file"] != "mapsdata":
+            continue
+        elif name.startswith("Objectives.PGP."):
             r = 20
             stroke(ax, [[x, y + r], [x + r, y], [x, y - r], [x - r, y], [x, y + r * 1.1]], px(2.2), key)
             hand(ax, x + r + 8, y, "G.P.", 38 * scale, key)
@@ -123,9 +126,9 @@ def draw(ax, entities, scale, px):
             stroke(ax, [[x - r, y - r], [x + r, y - r], [x + r, y + r * 0.4], [x, y + r * 1.3],
                         [x - r, y + r * 0.4], [x - r, y - r * 1.1]], px(1.8), key)
             hand(ax, x + r + 8, y - 2, "S.H.", 30 * scale, key)
-        elif label := next((v for k, v in CIRCLED.items() if name.startswith(k)), None):
+        elif name.startswith("Objectives.BusStation"):
             ring(ax, x, y, 16, px(1.8), key)
-            hand(ax, x + 22, y + 14, label, 30 * scale, key)
+            hand(ax, x + 22, y + 14, "bus", 30 * scale, key)
 
     hand(ax, 1000, 4160 + 260, "G.P. guard post      S.H. safe house      A.D. arms dealer", 40 * scale, "key")
     untangle(ax, scale)
