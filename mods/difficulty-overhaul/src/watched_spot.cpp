@@ -37,7 +37,7 @@ namespace {
         }
         void* shooting = Shooting::OfTask(task);
         if (!Shooting::AimsAtPlayer(shooting) ||
-            Shooting::Visibility(shooting) < Shooting::ClearLine(Shooting::Agent(shooting))) {
+            Shooting::Visibility(shooting) < Shooting::FireLine(Shooting::Agent(shooting))) {
             return true;
         }
         const float sight = Shooting::SightSeconds(shooting);

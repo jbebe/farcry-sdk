@@ -25,7 +25,8 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
   across his line of fire than running at him. He never aims at your head in his first 3 seconds on
   you, so a first sighting cannot end in a headshot.
 - **Fire discipline.** Soldiers hold their fire until they recognise you, waiting aimed where they
-  are.
+  are. Once they are fighting you they fire at what they glimpse of you, a fifth farther out, but the
+  less they see, the less they hit.
 - **Suppression.** Your bullets shake a soldier's aim for a second but never silence him: hit him and
   he fires back in a panic.
 - **Squads hunt where they last saw you** for as long as you stay near it; only slipping away unseen

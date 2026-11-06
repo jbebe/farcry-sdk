@@ -113,6 +113,11 @@ bool Alert(const void* agent) {
     return state >= kAlertState && state <= kLastCombatState;
 }
 
+float FireLine(const void* agent) {
+    const int state = Read<int>(agent, kAgentState);
+    return state > kAlertState && state <= kLastCombatState ? FuzzyLine(agent) : ClearLine(agent);
+}
+
 void* ProcessorSoldier(const void* processor) {
     void* agent = Read<void*>(processor, kProcessorAgent);
     return agent == nullptr || IsPlayer(agent) ? nullptr : agent;

@@ -37,6 +37,9 @@ float ClearLine(const void* agent);
 // Whether a soldier is alert or fighting, by his CPawnAgent's state.
 bool Alert(const void* agent);
 
+// The line he fires at the player from: in a fight his fuzzy line, otherwise his clear one.
+float FireLine(const void* agent);
+
 // The soldier's CPawnAgent a CSensoryStimProcessor serves, or null when none or the player's.
 void* ProcessorSoldier(const void* processor);
 
