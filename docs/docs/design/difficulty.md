@@ -349,6 +349,13 @@ fire for 1 s plus 0.025 s per metre while his aim settles ([row 22](#built-check
 wanted: holding fire until his aim is half settled on every sighting, which would end the spraying on
 a peek.
 
+2026-11-06, alpha 4 on Steam, with the squad tactics, firing from cover and cover by where the player
+is: "I feel like this is it now. I can't add anything to it, the experience was right." A lone unaware
+soldier went down "effortlessly"; with two or more "the picture changes drastically". "The best thing is
+that they expect me to peek from the same spot. thats an almost instant death. I need to relocate, need to
+find cover, exactly what hardcore needs." Grass works both ways: "I dont see them but they dont see me
+either." Much testing is still to come.
+
 ## Postponed
 
 - **A vest.** A torso hit from a rifle nearly kills the player, which is realistic; a vest is how they
