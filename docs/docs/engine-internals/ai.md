@@ -449,6 +449,8 @@ unless he is in the social state or the stim comes from a vehicle's AI. An idle 
 Bang files a threat report 0.2 s later at priority 7; a Snap files one at its own priority. All of
 this is **RE-verified on the server** and seen in data.
 
+Every stim a soldier receives passes `CSensoryStimProcessor::ProcessStim` (Steam `0x10A25EC0`, `RET 4`), once per listener within the stim's radius, before it switches on his state at the agent's `+0x274`: 0 social, 1 idle, 2 alert, 3-5 the combat states, 6 threshold, 7 dead, 8 briefing. A muzzle's Bang is stim type 1 (**seen on the range**: the player's AK-47 Bang reached a soldier at 60 m and not at 100 m, a Dragunov's at 100 m).
+
 ### What a soldier remembers
 
 A sensory record of a pawn lasts **120 s**. One of an object lasts 5 s, or 2 s for object types 3
@@ -556,7 +558,7 @@ stock never shows it.
 `GenerateShootAtPosition` runs. `CanShoot` does not test how well he sees the target, so during the
 [intuition](#intuition) window a soldier fires at a player he cannot see. How visible the target is to
 him is `CSensorySystem::GetVisibilityValue` (Steam `0x10A021A0`), the smoothed value his knowledge base
-keeps for that target.
+keeps for that target. For the player it is a critically damped spring on the evaluator's value (server `ComputeSmoothedVisibility`, `0x08700940`) that runs only between 0.05 and 0.9 and jumps to the value outside them. The threat search makes a target out only when that value is strictly above the clear line, and notices it strictly above the fuzzy line, so a visibility held exactly on the line is never made out **(traced in the server build)**.
 
 The shoot task's update (Steam `0x1097B920`) treats its two checks differently **(traced in the Steam
 build)**. When `CanShoot` refuses, the task stops firing, sets flag 49 on its next update and ends, so

@@ -3,6 +3,7 @@
 // night, fog and the soldier's state. The game's own checks of distance, view, stance and movement
 // give way to it.
 #include "engine/combat_log.h"
+#include "engine/damage.h"
 #include "engine/game.h"
 #include "engine/memory.h"
 #include "engine/ray.h"
@@ -41,10 +42,15 @@ namespace {
                                            float lengthSquared);
     using CamouflageFn = float(__fastcall*)(const void* simulation);
     using FlushFn = void(__fastcall*)(void* trees);
+    using ProcessStimFn = void(__fastcall*)(void* processor, void* unused, const uint8_t* stim);
 
     // CVisibilityEvaluator::Evaluate, the product of a soldier's checks of how visible a target is.
     FCSE::Relocation<EvaluateFn> g_evaluate{FCSE::Uplay(0x00A1D8A0)};
     EvaluateFn g_originalEvaluate = nullptr;
+    // CSensoryStimProcessor::ProcessStim, which every stim reaching a soldier passes, a shot he hears
+    // within its gun's radius among them.
+    FCSE::Relocation<ProcessStimFn> g_processStim{FCSE::Uplay(0x00A25EC0)};
+    ProcessStimFn g_originalProcessStim = nullptr;
     // CSensorySystem::AdjustFOV past its range caps, once one soldier's cones for one target are set.
     FCSE::Relocation<uint8_t*> g_conesSet{FCSE::Pattern(
         "8B 45 10 8B 80 ?? ?? ?? ?? 50 E8 ?? ?? ?? ?? 83 C4 04 84 C0 74 ?? 8B 4E 04 F3 0F 10 05 ?? ?? ?? ?? "
@@ -239,6 +245,9 @@ namespace {
     constexpr float kMovingSpeed = 0.5f;
     constexpr float kHeardRange = 20.0f;
     constexpr float kArmsLength = 2.0f;
+    // Hardcore: how long a shot the player fired gives him away to a soldier who heard it, the game's
+    // own time for a muzzle flash at night, counted from when the soldier last had him in his view.
+    constexpr double kGivenAwaySeconds = 3.0;
     // One ray of the three that reaches the player, his head over a wall, shows him as plainly as
     // all three.
     constexpr float kSamplingRays = 3.0f;
@@ -299,7 +308,8 @@ namespace {
     };
 
     // What the soldier's own checks of cover and grass found, whether a bush's foliage counted in that
-    // cover, whether grass between them hides the player, whether the camo suit does, and his light.
+    // cover, whether grass between them hides the player, whether the camo suit does, his light, and
+    // whether a shot he fired gave him away.
     struct Hiding {
         float cover = 1.0f;
         bool grass = false;
@@ -307,6 +317,7 @@ namespace {
         bool behindGrass = false;
         bool camouflaged = false;
         Lighting light;
+        bool givenAway = false;
     };
 
     // While the soldier's checks of the player run on this thread: the check's context, whose eye and
@@ -323,7 +334,8 @@ namespace {
     // The most each soldier, by entity id, has made of the player lately, 1 noticing and 2
     // recognising, logged as it rises; once below it for a while, it is forgotten. Then when his grass
     // check last found the player in grass, and when his line was last walked and what it found. Then
-    // how much of his notice delay he has sat through, since when, and when he last looked.
+    // how much of his notice delay he has sat through, since when, and when he last looked. Then when
+    // he last heard the player fire, or last had him in view since.
     struct Seen {
         int level = 0;
         double below = -1.0;
@@ -334,6 +346,7 @@ namespace {
         double sat = 0.0;
         double sighted = -1.0;
         double looked = -1.0;
+        double heard = -1.0;
     };
     std::unordered_map<uint32_t, Seen> g_seen;
     std::mutex g_seenLock;
@@ -645,6 +658,25 @@ namespace {
         return seen.sat < 1.0;
     }
 
+    // Whether soldier `id` heard the player fire lately enough for the shot to give him away.
+    bool HeardShot(uint32_t id, double now) {
+        std::lock_guard<std::mutex> lock(g_seenLock);
+        const double heard = g_seen[id].heard;
+        return heard >= 0.0 && now - heard <= kGivenAwaySeconds;
+    }
+
+    void __fastcall ProcessStimDetour(void* processor, void* unused, const uint8_t* stim) {
+        if (Damage::Type(stim) == Damage::kBang && (Damage::ByPlayer(stim) || Damage::SentByPlayer(stim))) {
+            if (void* agent = Shooting::ProcessorSoldier(processor)) {
+                const uint32_t id = Shooting::ShooterId(Shooting::OfAgent(agent));
+                const double now = Game::Now();
+                std::lock_guard<std::mutex> lock(g_seenLock);
+                g_seen[id].heard = now;
+            }
+        }
+        g_originalProcessStim(processor, unused, stim);
+    }
+
     // The direction toward the sun, false while it is below the horizon or no world is loaded.
     bool TowardSun(float sun[3]) {
         const uint8_t* environment = *g_environment.get();
@@ -836,6 +868,10 @@ namespace {
             g_seen.clear();
         }
         Seen& seen = g_seen[id];
+        // The shot that gave the player away holds while the soldier keeps him in view.
+        if (hiding.givenAway) {
+            seen.heard = now;
+        }
         if (g_trace && now - seen.traced >= kTraceSeconds) {
             seen.traced = now;
             CombatLogf("soldier %08X perception trace: %.1f m, %s, %s%s%s%s%s, %s; cover %.2f; visibility %.2f, "
@@ -858,11 +894,12 @@ namespace {
             return;
         }
         seen.level = level;
-        CombatLogf("soldier %08X perception: %s the player at %.1f m, %s, %s%s%s%s, %s; cover %.2f, "
+        CombatLogf("soldier %08X perception: %s the player at %.1f m, %s, %s%s%s%s%s, %s; cover %.2f, "
                    "night %.2f; notices from %.0f m, recognises from %.0f m; %.1f s after first sighting him",
                    id, level == 2 ? "recognises" : "notices", distance, moving, kZoneNames[zone],
-                   HidingName(hiding), BushName(hiding), LightName(hiding), state, hiding.cover, look.night,
-                   notice, recognise, now - seen.sighted);
+                   HidingName(hiding), BushName(hiding), LightName(hiding),
+                   hiding.givenAway ? ", given away by his shot" : "", state, hiding.cover, look.night, notice,
+                   recognise, now - seen.sighted);
     }
 
     float __fastcall EvaluateDetour(void* evaluator, void* unused, void* context, bool* applies) {
@@ -933,9 +970,10 @@ namespace {
             recognise = notice = kCamouflaged;
         }
 
+        const bool heardShot = HeardShot(id, now);
         float visibility = Visibility(distance, recognise, notice, look.soldier);
-        hiding.behindGrass = g_groundHeight != nullptr && visibility > 0.0f && zone != kBehind &&
-                             distance > kArmsLength && HeldBehindGrass(id, at, now);
+        hiding.behindGrass = g_groundHeight != nullptr && (visibility > 0.0f || (heardShot && hiding.cover > 0.0f)) &&
+                             zone != kBehind && distance > kArmsLength && HeldBehindGrass(id, at, now);
         if (zone == kBehind) {
             visibility = look.close ? 1.0f : look.heard ? Shooting::FuzzyLine(look.soldier) : 0.0f;
         } else if (distance <= kArmsLength) {
@@ -943,9 +981,16 @@ namespace {
         } else if (hiding.behindGrass) {
             visibility = 0.0f;
         }
+        // A shot he heard gives the player away in full wherever anything of him shows in the soldier's
+        // view, for as long as he keeps him there: the game makes a target out only past the clear line,
+        // and follows a visibility below 0.9 slowly.
+        hiding.givenAway = heardShot && zone != kBehind && hiding.cover > 0.0f && !hiding.behindGrass;
+        if (hiding.givenAway) {
+            visibility = 1.0f;
+        }
         // Sensing him at arm's length falls within the line he notices at once.
         static_assert(kArmsLength <= kNoticeAtOnceAtSide, "");
-        const float delay = fighting || zone != kSide ? 0.0f : NoticeDelay(distance, notice);
+        const float delay = fighting || hiding.givenAway || zone != kSide ? 0.0f : NoticeDelay(distance, notice);
         if (HeldBack(id, now, visibility >= Shooting::FuzzyLine(look.soldier), delay)) {
             visibility = 0.0f;
         }
@@ -976,6 +1021,9 @@ void InstallPerception() {
     }
     if (!g_bonus || !g_bonusCategory) {
         FCSE::Logf("perception: the camo suit's bonus was not found in this build, so it hides no one");
+    }
+    if (!Hook(g_processStim, &ProcessStimDetour, &g_originalProcessStim)) {
+        FCSE::Logf("perception: the soldiers' hearing was not found in this build, so a shot gives no one away");
     }
     if (g_inHighGrass) {
         g_groundHeight = reinterpret_cast<GroundHeightFn>(GetProcAddress(
@@ -1008,3 +1056,4 @@ void InstallPerception() {
         g_ticksPerMicro = static_cast<double>(frequency.QuadPart) / 1e6;
     }
 }
+

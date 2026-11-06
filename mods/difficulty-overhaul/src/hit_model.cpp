@@ -44,9 +44,11 @@ namespace {
     constexpr int kHeadPart = 3;
     constexpr int kTorsoPart = 5;
 
-    // Hardcore: seconds for aim to settle after acquiring the player, at 0 m and per metre.
+    // Hardcore: seconds for aim to settle after acquiring the player, at 0 m and per metre, and for a
+    // soldier already alert to him.
     constexpr float kSettleSeconds = 0.6f;
     constexpr float kSettleSecondsPerMetre = 0.02f;
+    constexpr float kAlertSettleSeconds = 0.3f;
     // Hardcore: the best chance any one shot has.
     constexpr float kMaxChance = 0.85f;
     // Hardcore: how much of the chance a shot's recoil takes from the next, and how fast it returns.
@@ -75,12 +77,20 @@ namespace {
     };
     Shot g_shot;
 
-    // How settled his aim is, 0 to 1, from when the reaction timer started.
-    float Settled(const void* shooting) {
+    // How settled his aim is, 0 to 1, from when the reaction timer started. A soldier already alert
+    // to the player settles quicker, and also from when he last caught sight of him, so his first shot
+    // can hit and a peek from where the player vanished meets a settled rifle.
+    float Settled(void* shooting, bool alert) {
+        if (alert) {
+            const float seconds = std::max(Shooting::AimSeconds(shooting), Shooting::SightSeconds(shooting));
+            return std::clamp(seconds / kAlertSettleSeconds, 0.0f, 1.0f);
+        }
         const float distance = Shooting::TargetDistance(shooting);
         return std::clamp(Shooting::AimSeconds(shooting) / (kSettleSeconds + kSettleSecondsPerMetre * distance), 0.0f,
                           1.0f);
     }
+
+    bool Alerted(void* shooting) { return Shooting::Alert(Shooting::Agent(shooting)); }
 
     float Recoil(const void* shooting) {
         const auto last = g_lastShot.find(shooting);
@@ -142,11 +152,16 @@ namespace {
         return high;
     }
 
+    // The game misses with every shot until his reaction timer runs, which it starts at his first shot:
+    // a surprised soldier's first shot misses, an alert one's need not.
     float __fastcall GetTimerFactorDetour(void* shooting) {
-        if (!Shooting::Reacting(shooting) || !Shooting::AimsAtPlayer(shooting)) {
-            return g_originalGetTimerFactor(shooting);
+        if (Shooting::AimsAtPlayer(shooting)) {
+            const bool alert = Alerted(shooting);
+            if (alert || Shooting::Reacting(shooting)) {
+                return Settled(shooting, alert);
+            }
         }
-        return Settled(shooting);
+        return g_originalGetTimerFactor(shooting);
     }
 
     float __fastcall GetChanceDetour(void* shooting) {
@@ -156,7 +171,7 @@ namespace {
         }
         // A certain hit is point blank, which the reaction timer does not reach.
         if (chance >= 1.0f) {
-            chance *= Settled(shooting);
+            chance *= Settled(shooting, Alerted(shooting));
         }
         // Evidence for tracing where the game's chance goes wrong; to go once that is fixed.
         if (std::isnan(chance)) {

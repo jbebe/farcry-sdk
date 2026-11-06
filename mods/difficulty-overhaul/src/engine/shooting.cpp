@@ -39,6 +39,12 @@ namespace {
     // CPawnAgent's visibility lines for its current state, fuzzy then clear.
     constexpr ptrdiff_t kAgentFuzzy = 0x868;
     constexpr ptrdiff_t kAgentClear = 0x86C;
+    // CPawnAgent's state: 2 alert, 3 to 5 the combat states.
+    constexpr ptrdiff_t kAgentState = 0x274;
+    constexpr int kAlertState = 2;
+    constexpr int kLastCombatState = 5;
+    // CSensoryStimProcessor's agent.
+    constexpr ptrdiff_t kProcessorAgent = 0x04;
     // CSensorySystem's knowledge base, and a knowledge entry's unbroken seconds in the focus and
     // the peripheral cone, -1 while out of it.
     constexpr ptrdiff_t kSensesKnowledge = 0x24;
@@ -101,6 +107,16 @@ float Visibility(void* shooting) {
 float FuzzyLine(const void* agent) { return Read<float>(agent, kAgentFuzzy); }
 
 float ClearLine(const void* agent) { return Read<float>(agent, kAgentClear); }
+
+bool Alert(const void* agent) {
+    const int state = Read<int>(agent, kAgentState);
+    return state >= kAlertState && state <= kLastCombatState;
+}
+
+void* ProcessorSoldier(const void* processor) {
+    void* agent = Read<void*>(processor, kProcessorAgent);
+    return agent == nullptr || IsPlayer(agent) ? nullptr : agent;
+}
 
 void* Agent(void* shooting) { return Read<void*>(shooting, kShooter); }
 

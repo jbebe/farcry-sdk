@@ -21,9 +21,6 @@ namespace {
     FCSE::Relocation<OnBulletShotFn> g_onBulletShot{FCSE::Uplay(0x00A24770)};
     OnBulletShotFn g_originalOnBulletShot = nullptr;
 
-    // CSensoryStimProcessor's agent.
-    constexpr ptrdiff_t kProcessorAgent = 0x04;
-
     // Hardcore: how long a bullet shakes his aim, and what his chance keeps of it after a hit and
     // after a near miss.
     constexpr double kShakenSeconds = 1.0;
@@ -35,8 +32,8 @@ namespace {
         if (!Damage::SentByPlayer(stim)) {
             return;
         }
-        void* agent = Read<void*>(processor, kProcessorAgent);
-        if (agent == nullptr || Shooting::IsPlayer(agent)) {
+        void* agent = Shooting::ProcessorSoldier(processor);
+        if (agent == nullptr) {
             return;
         }
         void* shooting = Shooting::OfAgent(agent);

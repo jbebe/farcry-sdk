@@ -57,6 +57,12 @@ Combat that is realistic and fair:
 - **In front of him he sees you** (2026-11-06): the notice delay is for slipping between covers
   where he is not looking, so it runs only at his side, at most 2 s, and he no longer holds his fire
   on first contact: "so they react fast on the first notice".
+- **A fight is a fight** (2026-11-06): "enemies don't shoot even though they are already in alert
+  mode and already know where I am", and "I counted 5-6 that had LOS to me and yet they didnt shoot
+  even though I already killed one of their mates". A soldier already alert to the player settles
+  his aim in 0.3 s and his first shot can hit; a shot the player fires gives him away to every
+  soldier who hears it and can see any of him. Shooting at a glimpse in a fight (fire discipline at
+  the notice line) is offered, not agreed.
 - **Firefights are aggressive.** Nothing the player does silences a soldier who sees him: suppression
   only spoils aim, and holding fire never sends a soldier elsewhere
   ([2026-10-29](#on-the-real-map)).
@@ -189,6 +195,7 @@ reach, the wall between left him unlit. Not played.
 | 10 | Blood only from buckshot (2026-11-05): no blood spray from a bullet, on soldiers or the player; shotguns keep theirs through their own impact record | range, row 29 |
 | 11 | Quick in front (2026-11-06): the notice delay only at his side, capped at 2 s; the reaction hold removed | range, row 25 |
 | 12 | The game's hit counts (2026-11-06): Easy and Normal pools take as many AK-47 hits as in the game, 37 and 28; regeneration removed, the game's own refill of the bar back on Easy, Normal and Hardcore, none on Infamous | range, row 27, Hardcore only |
+| 13 | Alert aim and shots that give the player away (2026-11-06): an alert soldier settles in 0.3 s, from when he caught sight of the player too, and his first shot can hit; a shot heard within the gun's own radius makes the player out to a soldier who can see any of him, until 3 s out of his view | range, row 30 |
 
 The mod's README lists each feature's values.
 
@@ -243,6 +250,7 @@ range in the log drifts from the scenario's distance.
 | 27 | Regeneration, then healing | `python tools\fc2drive\scenarios\healing.py` (`regeneration.py` until 2026-11-06): a rifleman at 20 m, invincibility off, until one hit lands; cleared; 30 s later a second rifleman's first hit | a `regenerating:` line 5 s after the hit; the second hit's health before it where one bar to full in 300 s puts it, below the top of the bar the hit left him in | new 2026-11-05: "we need to make a slow regen feature if the player is not below the threshold for the field aid"; the user's picks: replace the game's refill, 5 minutes, the game's 5 s | fc2drive, 2026-11-05, not played: 1,025 -> 676, the climb started 5.0 s later with one bar 205, full in 128 s; 37.7 s in, health stood at 779, as predicted, where the game's refill would have reached the bar's top, 820, within a second. Below one bar not run. 2026-11-06, regeneration removed, the game's refill back: 1,025 -> 676, and 30 s later health stood at 820, the top of that bar, as the game refills it |
 | 28 | Last bar | `python tools\fc2drive\scenarios\last_bar.py`: a shotgunner at 20 m shoots the player, invincibility off, until he dies | every hit takes its full damage, one on the last bar too, on Hardcore | new 2026-11-05: the cushion off on Hardcore and Infamous, kept on Easy and Normal | fc2drive, 2026-11-05, not played: pellets took 117 each from 1,025 down to 92, inside the 205 bar, and the next took its full 117 and killed, where the cushion would have taken 29. The light machine gunner, who carries an AK-47 on the range, killed with his third hit, 349 each. The range plays Hardcore only, so Easy, Normal and Infamous are unchecked: their curves are in the built patch |
 | 29 | Blood | `python tools\fc2drive\scenarios\blood.py`: an AK-47 round and a SPAS-12 shell into a rifleman 10 m off, then a rifleman and a shotgunner shoot the player, who faces them; a shot straight after each hit and 0.3 s later | no spray from the AK round, one from the shell's pellets | new 2026-11-05: "remove the blood splatters for all guns except pellet guns, for enemies and for the player too" | fc2drive, 2026-11-05, not played: 0.3 s after an AK round in the legs, and in the torso, nothing flew off the soldier; after a SPAS shell red droplets flew off his legs, twice. On the player neither the rifleman's hits nor the shotgunner's showed a spray from first person; what shows is the game's red hit flash, a screen effect of its own, unchanged |
+| 30 | Shots give him away | `python tools\fc2drive\scenarios\given_away.py`: a rifleman faces the player, who crouches still in the open, beyond the 50 m an alert soldier makes him out from, and fires one round away from him: an AK-47 at 60 m and at 100 m, a Dragunov at 100 m | given away within the gun's report, 75 m and 150 m, not beyond; his first shots above 0 | new 2026-11-06: 5-6 soldiers with a line of sight never fired after the user killed one of them | fc2drive, 2026-11-06, not played: the AK at 60 m gave him away at 59.1 m and the soldier fired 1.0 s later, his first shots at 0.14, 0.09 and 0.20, two of them hits, where first shots had been 0.00; at 100 m it did not; the Dragunov at 100 m did, at 100.7 m, and in one run that soldier closed to 74 m before firing, his first at 0.28, in another he only advanced within 12 s. Held on his recognition line, the game kept him searching: it makes a target out only past the line and follows a visibility below 0.9 slowly, so a given-away player is seen in full |
 
 ### Still to do before it is finished
 

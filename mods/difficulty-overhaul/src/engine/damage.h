@@ -8,8 +8,8 @@
 
 namespace DifficultyOverhaul::Damage {
 
-// CEntityEventStims::selType of the stims a weapon deals.
-enum StimType { kPierce = 3, kCrush = 4, kCut = 5 };
+// CEntityEventStims::selType of the stims a weapon deals, its muzzle's Bang among them.
+enum StimType { kBang = 1, kPierce = 3, kCrush = 4, kCut = 5 };
 
 // The body part a stim hit.
 enum BodyPart { kHead, kTorso, kArms, kLegs, kHands, kFeet, kNoBodyPart };
