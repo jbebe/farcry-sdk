@@ -14,6 +14,7 @@ from matplotlib.collections import LineCollection, PolyCollection
 from matplotlib.font_manager import FontProperties
 from matplotlib.patches import Rectangle
 from scipy import ndimage
+from scipy.cluster.hierarchy import fclusterdata
 
 HERE = Path(__file__).resolve().parent
 WORLD = 5120
@@ -28,8 +29,7 @@ INK = "#1d1b19"
 BROWN = "#94603c"
 BLUE = "#3a79ad"
 WATER = "#b3d3e3"
-ROAD = "#c9452f"
-ROAD_MINOR = "#e9b15a"
+ROAD = "#ffffff"
 # Height bands: their upper bounds in metres and their tints, low ground green to high ground brown.
 BANDS = [(20, "#cfdcb4"), (40, "#dde3ba"), (60, "#e9e7c3"), (80, "#ece0bb"), (100, "#e6d4ab"),
          (150, "#dbc39c"), (200, "#cfb08c"), (300, "#c19d7f")]
@@ -105,6 +105,23 @@ def is_bridge(model):
     return "_bridgekit\\" in model and "bridge" in model.split("\\")[-1] and "base" not in model
 
 
+def bridges(entities, roads):
+    # A road stops at each riverbank; the decks between two road ends join them as one road.
+    decks = [footprint(e) for e in models(entities, is_bridge)]
+    ends = np.array([p for r in roads for p in (r[0], r[-1])])
+    groups = fclusterdata(np.array([d.mean(0) for d in decks]), t=12, criterion="distance", method="single")
+    links = []
+    for g in np.unique(groups):
+        corners = np.vstack([d for d, k in zip(decks, groups) if k == g])
+        centre = corners.mean(0)
+        near = ends[np.linalg.norm(ends - centre, axis=1) < np.linalg.norm(corners - centre, axis=1).max() + 15]
+        if len(near) >= 2:
+            gaps = np.linalg.norm(near[:, None] - near[None], axis=2)
+            i, j = np.unravel_index(np.argmax(gaps), gaps.shape)
+            links.append(np.array([near[i], near[j]]))
+    return links
+
+
 def is_track(model):
     name = model.split("\\")[-1]
     return name.startswith("infra_train_track_") and "detail" not in name
@@ -174,11 +191,8 @@ def margins(ax, px, scale):
     x, y = NEAT[0] + 20, bottom - 120
     t(x, y, "LEGEND", 32, "bold", ha="left")
     rows = [
-        ("Road, main", lambda a, b, c: [ax.plot([a, b], [c, c], color=INK, linewidth=px(8), solid_capstyle="butt"),
-                                        ax.plot([a, b], [c, c], color=ROAD, linewidth=px(5.5), solid_capstyle="butt")]),
-        ("Road, loose surface", lambda a, b, c: [ax.plot([a, b], [c, c], color=INK, linewidth=px(8), solid_capstyle="butt"),
-                                                 ax.plot([a, b], [c, c], color=ROAD_MINOR, linewidth=px(5.5),
-                                                         solid_capstyle="butt")]),
+        ("Road", lambda a, b, c: [ax.plot([a, b], [c, c], color=INK, linewidth=px(6), solid_capstyle="butt"),
+                                  ax.plot([a, b], [c, c], color=ROAD, linewidth=px(4), solid_capstyle="butt")]),
         ("Track or footpath", lambda a, b, c: ax.plot([a, b], [c, c], color=INK, linewidth=px(1.3), dashes=(7, 4))),
         ("Railway", lambda a, b, c: [ax.plot([a, b], [c, c], color=INK, linewidth=px(2.6))] +
                                     [ax.plot([v, v], [c - 4, c + 4], color=INK, linewidth=px(1.6)) for v in range(int(a) + 10, int(b), 20)]),
@@ -256,7 +270,8 @@ def draw(region, scale, out):
 
     entities = features["entities"]
     paths = [hermite(s) for s in features["PathSplines"] if len(s) > 1]
-    roads = [(hermite(s), max(s[0]["widths"])) for s in features["RoadSplines"] if len(s) > 1]
+    roads = [hermite(s) for s in features["RoadSplines"] if len(s) > 1]
+    roads += bridges(entities, roads)
     rails = [track(e) for e in models(entities, is_track)]
     ticks = []
     for a, b in rails:
@@ -268,11 +283,8 @@ def draw(region, scale, out):
                  if (e["box"][3] - e["box"][0]) * (e["box"][4] - e["box"][1]) >= MIN_FOOTPRINT]
     collections = [
         LineCollection(paths, colors=INK, linewidths=px(1.3), linestyles=(0, (7, 4)), zorder=6),
-        LineCollection([r for r, _ in roads], colors=INK, linewidths=px(8), capstyle="round", zorder=7),
-        LineCollection([r for r, _ in roads], colors=[ROAD if w >= 4 else ROAD_MINOR for _, w in roads],
-                       linewidths=px(5.5), capstyle="round", zorder=8),
-        PolyCollection([footprint(e) for e in models(entities, is_bridge)], facecolors=ROAD_MINOR,
-                       edgecolors=INK, linewidths=px(1.5), zorder=8.5),
+        LineCollection(roads, colors=INK, linewidths=px(6), capstyle="round", zorder=7),
+        LineCollection(roads, colors=ROAD, linewidths=px(4), capstyle="round", zorder=8),
         LineCollection(rails, colors=INK, linewidths=px(2.6), zorder=9),
         LineCollection(ticks, colors=INK, linewidths=px(1.6), zorder=9),
         PolyCollection(buildings, facecolors=INK, edgecolors="none", zorder=10),
@@ -291,8 +303,11 @@ def draw(region, scale, out):
     sy, sx = np.unravel_index(np.argmax(inside), inside.shape)
     text(ax, sx + NEAT[0], sy + NEAT[0] + 60, "MT THABAMOLAETSA", 26 * scale, "bolditalic")
 
+    # A place can have more than one detail-map entity on the same texture; it is named once.
+    named = set()
     for e in entities:
-        if e.get("tex"):
+        if e.get("tex") and e["tex"] not in named:
+            named.add(e["tex"])
             name, kind = PLACES.get(Path(e["tex"]).stem.removeprefix("majorlocation_"), (None, None))
             if name:
                 size, style = {"town": (40, "bold"), "village": (28, "bold"),

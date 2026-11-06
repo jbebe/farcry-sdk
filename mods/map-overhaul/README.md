@@ -20,8 +20,9 @@ own extent, so it slices back into the game's 25 area maps:
 | Height tints, 20 m bands to 100 m, then 50 m | the heights, smoothed over 1.5 m |
 | Contours every 10 m, labelled every 50 m; spot heights | the same |
 | Water and shorelines | ground below its sector's water level, where the sector has still or river water |
-| Roads, red where wider than 4 m; tracks | the road and path splines |
-| Railway, bridges | the track pieces and bridge decks, by their boxes |
+| Roads, white in a black casing; tracks | the road and path splines |
+| Bridges, as road | a road stops at each riverbank; where bridge decks stand between two road ends, the ends are joined |
+| Railway | the track pieces, by their boxes |
 | Buildings | models under `graphics\buildings\`, 6 m² or more, by their boxes |
 | Names | the 21 detail maps' entities, in `PLACES`, and the summit as Mt Thabamolaetsa |
 
