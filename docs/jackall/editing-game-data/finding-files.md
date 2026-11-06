@@ -17,7 +17,7 @@ This page only looks at files.
 
 ## Search
 
-Type into **Filter** (1). Every word you type has to appear in the name, and four prefixes narrow
+Type into **Filter** (1). Every word you type has to appear in the name, and five prefixes narrow
 it down:
 
 | Word | Keeps | Example |
@@ -26,6 +26,7 @@ it down:
 | `arch:<archive>` | files from one archive, as the **Source** column (3) names it | `arch:patch` |
 | `hash:<hex>` | the file with this hash | `hash:585ACE93` |
 | `spk:<word>` or `spk:"<word> <word>"` | sounds whose [label](#sound-labels) has every word | `spk:"ak47 reload"` |
+| `shader:<word>` or `shader:"<word> <word>"` | shader objects whose [label](#shader-labels) has every word | `shader:"weapon QUALITYHIGH"` |
 
 `ext:xbt ak47` finds the AK-47's textures (2), across every folder.
 
@@ -90,3 +91,32 @@ the sound that plays it. Recorded speech without a subtitle is just `dialogue`.
 So `spk:"ak47 reload"` in **Filter** finds the AK-47's reload sounds, and `spk:"dialogue Flora"`
 finds Flora's lines. The 37 retail banks nothing in the game's files names are labelled by hand; most
 of them play only silence.
+
+## Shader labels
+
+Compiled shaders are named by number too (`engine\shaders\obj\h0f\shadernumber_fc7bd88f.pso`).
+JackAll labels each Direct3D 9 one by the shaders that load it and the graphics quality that draws it.
+The label reads: what it draws, the shader, its passes, the options it is built with, and the quality
+presets that use it, such as
+`weapon · mesh_weapon · lit by spot · QUALITYLOW, receives shadows · no preset`.
+
+The first word is one of:
+
+| Category | Shaders |
+|---|---|
+| `foliage` | grass, tree leaves and trunks |
+| `ground` | terrain, roads, decals |
+| `weapon` | weapons |
+| `characters` | skin, hair, cloth |
+| `vehicles` | vehicles |
+| `world meshes` | buildings, props and other models |
+| `sky` | sky dome, clouds, sun and moon, stars |
+| `water` | lakes, rivers |
+| `effects` | particles and post effects |
+| `engine` | depth and render-state passes, debug drawing |
+
+An object several of these share is `shared`. The presets are the game's graphics quality presets,
+Low to Ultra High: `low`, `medium`, `high`, `veryhigh` and `ultrahigh`, or `all presets`. `no preset`
+means only a custom mix of settings draws it, such as low textures with shadows on. Selecting an
+object also shows which setting decides that, for instance `Vegetation ≥ high` or `Shadow ≥ low`. So
+`shader:"weapon QUALITYHIGH"` finds the weapon shaders that high textures use.

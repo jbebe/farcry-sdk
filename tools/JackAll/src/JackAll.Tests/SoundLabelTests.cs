@@ -1,6 +1,7 @@
 using System.Text;
 using JackAll.Core;
 using JackAll.Core.Format;
+using JackAll.Tools.Labels;
 using JackAll.Tools.SoundLabels;
 using JackAll.Tools.Spk;
 
@@ -118,7 +119,7 @@ public class SoundLabelTests
         };
         var shot = new SoundUse(0x004BF5EA, "weapon", "AK47", "single bullet shot", "entitylibrary.fcb");
 
-        Dictionary<string, SoundLabel> labels = SoundLabeler.Label(banks, [shot], _ => null).ToDictionary(l => l.Path);
+        Dictionary<string, FileLabel> labels = SoundLabeler.Label(banks, [shot], _ => null).ToDictionary(l => l.Path);
         Assert.Equal(("weapon", "single bullet shot (AK47)", SoundLabeler.FromUsage), Parts(labels[@"soundbinary\004bf5ea.spk"]));
         Assert.Equal(("weapon", "single bullet shot (AK47)", SoundLabeler.FromLinks), Parts(labels[@"soundbinary\004bf5e9.spk"]));
     }
@@ -131,30 +132,30 @@ public class SoundLabelTests
         var banks = new Dictionary<string, SpkBank> { [@"scripts\game\barkdata\loc\1820776.spk"] = SpkBank.Parse(bytes) };
         var line = new SoundUse(0x004DF52C, SoundCategories.Dialogue, "", "GREET", "1820776.bank", "Reuben");
 
-        SoundLabel bare = Assert.Single(SoundLabeler.Label(banks, [], _ => null));
+        FileLabel bare = Assert.Single(SoundLabeler.Label(banks, [], _ => null));
         Assert.Equal((SoundCategories.Dialogue, "", SoundLabeler.FromFolder), Parts(bare));
 
-        SoundLabel spoken = Assert.Single(SoundLabeler.Label(banks, [line], id => id == 0x004DF52C ? "Hello." : null));
+        FileLabel spoken = Assert.Single(SoundLabeler.Label(banks, [line], id => id == 0x004DF52C ? "Hello." : null));
         Assert.Equal("Reuben: \"Hello.\"", spoken.Detail);
     }
 
     [Fact]
     public void The_label_list_reads_back_what_it_writes()
     {
-        var label = new SoundLabel(@"soundbinary\004bf5ea.spk", "weapon", "single bullet shot (AK47)", "usage", "entitylibrary.fcb");
+        var label = new FileLabel(@"soundbinary\004bf5ea.spk", "weapon", "single bullet shot (AK47)", "usage", "entitylibrary.fcb");
 
-        SoundLabelTable read = SoundLabelTable.Parse(new SoundLabelTable([label]).Write());
+        FileLabelTable read = FileLabelTable.Parse(new FileLabelTable([label]).Write());
         Assert.Equal(label, read.Find(NameHash.Compute(label.Path)));
     }
 
     [Fact]
     public void A_later_label_for_the_same_bank_replaces_the_earlier()
     {
-        var found = new SoundLabel(@"soundbinary\004b1789.spk", "other", "", "linked", "a.fcb");
-        var hand = new SoundLabel(@"soundbinary\004B1789.spk", "ui", "select", "hand", "");
+        var found = new FileLabel(@"soundbinary\004b1789.spk", "other", "", "linked", "a.fcb");
+        var hand = new FileLabel(@"soundbinary\004B1789.spk", "ui", "select", "hand", "");
 
-        Assert.Equal(hand, Assert.Single(new SoundLabelTable([found, hand]).Labels));
+        Assert.Equal(hand, Assert.Single(new FileLabelTable([found, hand]).Labels));
     }
 
-    private static (string, string, string) Parts(SoundLabel label) => (label.Category, label.Detail, label.Source);
+    private static (string, string, string) Parts(FileLabel label) => (label.Category, label.Detail, label.Source);
 }

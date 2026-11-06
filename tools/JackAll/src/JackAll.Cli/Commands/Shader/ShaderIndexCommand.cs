@@ -13,8 +13,6 @@ namespace JackAll.Cli.Commands.Shader;
 /// </summary>
 public sealed class ShaderIndexCommand : CliCommand<ShaderIndexCommand.Settings>
 {
-    private static readonly string[] Kinds = ["pso", "vso", "rs"];
-
     public sealed class Settings : CommandSettings
     {
         [CommandArgument(0, "<dir>")]
@@ -32,7 +30,7 @@ public sealed class ShaderIndexCommand : CliCommand<ShaderIndexCommand.Settings>
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
-        var tables = Kinds.ToDictionary(
+        var tables = ShaderIndex.Stages.ToDictionary(
             kind => kind,
             kind => ShaderIndex.Parse(CliIO.ReadInput(Path.Combine(settings.Directory, "index." + kind))));
 

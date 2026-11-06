@@ -9,12 +9,17 @@ namespace JackAll.Tools.Shader;
 /// <c>shadersobj</c> tree: a sorted map from a shader permutation to the object it loads.
 /// </summary>
 /// <remarks>
-/// A permutation compiled with no options keys on <see cref="KeyOf"/>, the CRC32 of the shader's
-/// source name. How the engine folds a permutation's <c>#define</c>s into the key is not known, so
-/// option-bearing permutations can be enumerated but not addressed by name.
+/// A permutation keys on <see cref="KeyOf"/> of its name: the shader's source name alone with no
+/// options, or <see cref="ShaderDefinition.PermutationName"/> with them.
 /// </remarks>
 public sealed class ShaderIndex
 {
+    /// <summary>The D3D9 tree's folder in the archive; its index tables sit at its root.</summary>
+    public const string Root = @"engine\shaders\obj\";
+
+    /// <summary>The object kinds, each with its own index table: pixel shader, vertex shader, render state.</summary>
+    public static readonly IReadOnlyList<string> Stages = ["pso", "vso", "rs"];
+
     private const int HeaderSize = 28;
 
     private static ReadOnlySpan<byte> Magic => "DAEH"u8;
@@ -36,8 +41,8 @@ public sealed class ShaderIndex
     /// <summary>How many permutations the table maps.</summary>
     public int Count => byKey.Count;
 
-    /// <summary>The key of the permutation of <paramref name="shaderName"/> compiled with no options.</summary>
-    public static uint KeyOf(string shaderName) => Crc32.HashToUInt32(Encoding.ASCII.GetBytes(shaderName));
+    /// <summary>The key of a permutation by its name; a bare shader name is its permutation with no options.</summary>
+    public static uint KeyOf(string permutationName) => Crc32.HashToUInt32(Encoding.ASCII.GetBytes(permutationName));
 
     public static ShaderIndex Parse(ReadOnlySpan<byte> data)
     {

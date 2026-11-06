@@ -2,6 +2,8 @@ using JackAll.Core.Mods;
 using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
 using JackAll.Tools.Reach;
+using JackAll.Tools.Labels;
+using JackAll.Tools.ShaderLabels;
 using JackAll.Tools.SoundLabels;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -18,7 +20,7 @@ public sealed partial class MainViewModel
     private IReadOnlyList<VfsFile> _selectedFiles = [];
     private bool _onlyMods;
     private bool _hideUnused;
-    private bool _listHasSoundLabels;
+    private bool _listHasLabels;
     private string _filterText = "";
 
     /// <summary>
@@ -28,7 +30,8 @@ public sealed partial class MainViewModel
     /// </summary>
     private static readonly Lazy<ReachList> Unreachable = new(() => ReachList.Load(AppConfig.ReachFile));
 
-    private static readonly Lazy<SoundLabelTable> SoundLabels = new(() => SoundLabelTable.Load(AppConfig.SoundLabelFile));
+    private static readonly Lazy<FileLabelTable> SoundLabels = new(() => FileLabelTable.Load(AppConfig.SoundLabelFile));
+    private static readonly Lazy<FileLabelTable> ShaderLabels = new(() => FileLabelTable.Load(AppConfig.ShaderLabelFile));
     private CancellationTokenSource? _exportCts;
 
     /// <summary>Where the selected fragment sits in its container, once the background lookup for it
@@ -77,29 +80,35 @@ public sealed partial class MainViewModel
     private static uint? ReachHashOf(VfsFile file)
         => file.ContainerHash ?? (file.IsSynthetic ? null : file.EngineHash);
 
-    /// <summary>What a sound file is, from the shipped label list; null for anything unlabelled.</summary>
-    public static SoundLabel? SoundLabelOf(VfsFile file)
-        => file.IsSynthetic ? null : SoundLabels.Value.Find(file.EngineHash);
+    /// <summary>What a sound bank or shader object is, from the shipped label lists; null for anything unlabelled.</summary>
+    public static FileLabel? LabelOf(VfsFile file)
+        => file.IsSynthetic ? null : SoundLabels.Value.Find(file.EngineHash) ?? ShaderLabels.Value.Find(file.EngineHash);
 
-    /// <summary>A file's label as one line, for the grid and the search box.</summary>
-    public static string? SoundLabelText(VfsFile file) => SoundLabelOf(file)?.Text;
+    /// <summary>A file's label as one line, for the grid.</summary>
+    public static string? LabelText(VfsFile file) => LabelOf(file)?.Text;
 
-    /// <summary>Whether the file list holds a labelled sound, set with each refill.</summary>
-    public bool ListHasSoundLabels
+    /// <summary>A file's label of one kind (<see cref="FileFilter.SoundLabels"/> or
+    /// <see cref="FileFilter.ShaderLabels"/>) as one line, for the search box.</summary>
+    public static string? LabelText(VfsFile file, string kind) => file.IsSynthetic ? null
+        : (kind == FileFilter.ShaderLabels ? ShaderLabels : SoundLabels).Value.Find(file.EngineHash)?.Text;
+
+    /// <summary>Whether the file list holds a labelled file, set with each refill.</summary>
+    public bool ListHasLabels
     {
-        get => _listHasSoundLabels;
-        private set { if (_listHasSoundLabels != value) { _listHasSoundLabels = value; OnPropertyChanged(); } }
+        get => _listHasLabels;
+        private set { if (_listHasLabels != value) { _listHasLabels = value; OnPropertyChanged(); } }
     }
 
-    public bool HasSoundLabelNote => SoundLabelNote.Length > 0;
+    public bool HasLabelNote => LabelNote.Length > 0;
 
     /// <summary>The selected file's label and where it came from.</summary>
-    public string SoundLabelNote => SelectedFile is { } file && SoundLabelOf(file) is { } label
+    public string LabelNote => SelectedFile is { } file && LabelOf(file) is { } label
         ? label.Source switch
         {
             SoundLabeler.FromLinks => $"{label.Text}\nPlayed by another bank's sound, named in {label.Evidence}.",
             SoundLabeler.FromFolder => $"{label.Text}\nA recorded line no game file names.",
-            SoundLabeler.FromHand => $"{label.Text}\nLabelled by hand.",
+            FileLabel.FromHand => $"{label.Text}\nLabelled by hand.",
+            ShaderLabeler.FromIndex => $"{label.Text}\n{label.Evidence}.",
             _ => $"{label.Text}\nNamed in {label.Evidence}.",
         }
         : string.Empty;
@@ -165,8 +174,8 @@ public sealed partial class MainViewModel
             OnPropertyChanged(nameof(HasNamingNote));
             OnPropertyChanged(nameof(ReachNote));
             OnPropertyChanged(nameof(HasReachNote));
-            OnPropertyChanged(nameof(SoundLabelNote));
-            OnPropertyChanged(nameof(HasSoundLabelNote));
+            OnPropertyChanged(nameof(LabelNote));
+            OnPropertyChanged(nameof(HasLabelNote));
             OnPropertyChanged(nameof(HasOriginal));
             OnPropertyChanged(nameof(SelectionIsModel));
             OnPropertyChanged(nameof(SelectionIsMaterial));
@@ -577,7 +586,7 @@ public sealed partial class MainViewModel
         if (_vfs is null)
         {
             VisibleFiles.Clear();
-            ListHasSoundLabels = false;
+            ListHasLabels = false;
             return;
         }
 
@@ -600,7 +609,7 @@ public sealed partial class MainViewModel
                 IEnumerable<VfsFile> files;
                 if (!filter.IsEmpty)
                 {
-                    files = vfs.Files.Values.Where(f => filter.Matches(f, moduleName, SoundLabelText));
+                    files = vfs.Files.Values.Where(f => filter.Matches(f, moduleName, LabelText));
                 }
                 else if (folderPath is not null)
                 {
@@ -616,7 +625,7 @@ public sealed partial class MainViewModel
                 List<VfsFile> found = [.. files
                     .Where(f => PassesToggles(f, onlyMods, hideUnused))
                     .OrderBy(f => f.FileName, StringComparer.OrdinalIgnoreCase)];
-                return (found, found.Any(f => SoundLabelOf(f) is not null));
+                return (found, found.Any(f => LabelOf(f) is not null));
             }, token);
         }
         catch (OperationCanceledException)
@@ -638,7 +647,7 @@ public sealed partial class MainViewModel
             }
         }
         _refilling = false;
-        ListHasSoundLabels = labelled;
+        ListHasLabels = labelled;
 
         if (_reselectPath is { } path)
         {

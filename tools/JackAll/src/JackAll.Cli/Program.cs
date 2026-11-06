@@ -194,6 +194,9 @@ app.Configure(config =>
         shader.AddCommand<ShaderIndexCommand>("index")
             .WithDescription("Resolve a shader permutation to the object files it loads.")
             .WithExample("shader", "index", "engine/shaders/obj", "--shader", "celestialbody");
+        shader.AddCommand<ShaderLabelCommand>("label")
+            .WithDescription("Label every D3D9 shader object by what it draws, its passes, and the quality presets that draw it.")
+            .WithExample("shader", "label", "--game", @"C:\Games\Far Cry 2", "-o", "fc2.shaderlabels.tsv");
     });
 
     // --- .xbg meshes -----------------------------------------------------

@@ -95,6 +95,10 @@ public sealed class AppConfig
     /// sound files simply show no label.</summary>
     public static string SoundLabelFile => Path.Combine(DataDir, ".soundlabels");
 
+    /// <summary>What each D3D9 shader object is (see <c>jackall-cli shader label</c>). Missing is not
+    /// fatal: shader objects simply show no label.</summary>
+    public static string ShaderLabelFile => Path.Combine(DataDir, ".shaderlabels");
+
     /// <summary>
     /// A savegame-specific hash -> name table (see <see cref="JackAll.App.FileHandlers.Sav.SaveGameCompiledFieldNames"/>)
     /// recovered by CRC32 dictionary-matching every string constant in the game's Linux dedicated-server

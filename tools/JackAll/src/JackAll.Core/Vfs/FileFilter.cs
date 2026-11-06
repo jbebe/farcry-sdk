@@ -5,15 +5,18 @@ namespace JackAll.Core.Vfs;
 
 /// <summary>
 /// A filter box's text, parsed: path words that must all appear, <c>-words</c> that must not, and the
-/// <c>ext:xbt</c>, <c>arch:dlc1</c>, <c>hash:1a2b3c4d</c> and <c>spk:reload</c> tokens, freely combined.
+/// <c>ext:xbt</c>, <c>arch:dlc1</c>, <c>hash:1a2b3c4d</c>, <c>spk:reload</c> and <c>shader:foliage</c>
+/// tokens, freely combined.
 /// </summary>
 /// <remarks>
 /// <c>arch:</c> matches the module name the caller supplies, so a colliding archive's
 /// "folder/name" form works too. An unparsable <c>hash:</c> is dropped rather than matched as text,
-/// since a mistyped hash is never a meaningful path substring. <c>spk:</c> matches the label the caller
-/// supplies, and quoted, <c>spk:"ak47 reload"</c>, every word in the quotes must appear in it.
+/// since a mistyped hash is never a meaningful path substring. <c>spk:</c> and <c>shader:</c> match the
+/// label of that kind the caller supplies, so a file without one never matches them; quoted,
+/// <c>spk:"ak47 reload"</c>, every word in the quotes must appear in it.
 /// </remarks>
-public sealed partial record FileFilter(string[] Includes, string[] Excludes, string? Extension, string? Archive, uint? Hash, string[] Labels)
+public sealed partial record FileFilter(string[] Includes, string[] Excludes, string? Extension, string? Archive, uint? Hash,
+    (string Kind, string Word)[] Labels)
 {
     public bool IsEmpty => Includes.Length == 0 && Excludes.Length == 0 && Extension is null && Archive is null && Hash is null
         && Labels.Length == 0;
@@ -25,7 +28,7 @@ public sealed partial record FileFilter(string[] Includes, string[] Excludes, st
         uint? hash = null;
         var includes = new List<string>();
         var excludes = new List<string>();
-        var labels = new List<string>();
+        var labels = new List<(string Kind, string Word)>();
 
         foreach (string token in Tokens().Matches(text).Select(m => m.Value))
         {
@@ -49,9 +52,10 @@ public sealed partial record FileFilter(string[] Includes, string[] Excludes, st
                     hash = parsed;
                 }
             }
-            else if (token.StartsWith("spk:", StringComparison.OrdinalIgnoreCase))
+            else if (token.IndexOf(':') is var colon and > 0
+                && LabelKinds.FirstOrDefault(k => k.Equals(token[..colon], StringComparison.OrdinalIgnoreCase)) is { } kind)
             {
-                labels.AddRange(token[4..].Trim('"').Split(' ', StringSplitOptions.RemoveEmptyEntries));
+                labels.AddRange(token[(colon + 1)..].Trim('"').Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(w => (kind, w)));
             }
             else if (token.StartsWith('-') && token.Length > 1)
             {
@@ -72,9 +76,16 @@ public sealed partial record FileFilter(string[] Includes, string[] Excludes, st
             [.. labels]);
     }
 
-    /// <summary>Words match the path; <c>spk:</c> words match the text <paramref name="label"/> gives a
-    /// file, so a file without one never matches them.</summary>
-    public bool Matches(VfsFile file, Func<VfsFile, string> moduleName, Func<VfsFile, string?>? label = null)
+    /// <summary>The label kinds a filter asks its caller for, named as their tokens are.</summary>
+    public const string SoundLabels = "spk";
+    public const string ShaderLabels = "shader";
+
+
+    private static readonly string[] LabelKinds = [SoundLabels, ShaderLabels];
+
+    /// <summary>Words match the path; label words match the text <paramref name="label"/> gives a file for
+    /// the token's kind, null when it has no label of that kind.</summary>
+    public bool Matches(VfsFile file, Func<VfsFile, string> moduleName, Func<VfsFile, string, string?>? label = null)
     {
         if ((Hash is { } hash && file.Hash != hash)
             || (Extension is not null && !string.Equals(file.Type.Extension, Extension, StringComparison.OrdinalIgnoreCase))
@@ -98,15 +109,11 @@ public sealed partial record FileFilter(string[] Includes, string[] Excludes, st
                 return false;
             }
         }
-        if (Labels.Length > 0)
+        foreach ((string kind, string word) in Labels)
         {
-            string? text = label?.Invoke(file);
-            foreach (string word in Labels)
+            if (label?.Invoke(file, kind)?.Contains(word, StringComparison.OrdinalIgnoreCase) != true)
             {
-                if (text?.Contains(word, StringComparison.OrdinalIgnoreCase) != true)
-                {
-                    return false;
-                }
+                return false;
             }
         }
         return true;

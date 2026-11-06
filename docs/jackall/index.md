@@ -345,7 +345,7 @@ jackall-cli mod build --game "C:\Games\Far Cry 2" --layer mods\bettersights --la
 | `ai unpack` / `ai verify` / `ai lint` | A brain's source as XML, a check that brains recompile unchanged, and the parameters a brain sets that the game never reads |
 | `hkx tree` / `move` / `turn` / `resize` / `add-box` / `remove` / `check` and more | A collision file's shapes by number, edits to them that keep Havok's saved values in step, the whole file to XML and back, and a check for what would break in game |
 | `domino check` | Looks for what would break a mission script in game |
-| `shader extract` / `build` / `index` | Splits a shader object into its bytecode and binding table and back; `index` finds the object a shader permutation uses |
+| `shader extract` / `build` / `index` / `label` | Splits a shader object into its bytecode and binding table and back; `index` finds the object a shader permutation uses; `label` labels every object by what it draws and the quality presets that use it |
 | `sav list` / `sav clean` | Lists your saves, and writes a copy of one without its stored entities |
 | `xref build` / `xref to` / `xref from` / `xref reach` | Indexes every hash reference in the game, then answers what points at a file and what a file points at; `reach` sorts every file into used and unused |
 | `legacy analyze` / `changes` / `check` / `pick` | Lists every change an old mod makes, sorts the changes into features, and builds a layer with only the ones you pick |

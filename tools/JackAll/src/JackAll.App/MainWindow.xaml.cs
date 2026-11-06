@@ -71,9 +71,9 @@ public partial class MainWindow : Window
             RevealSelectedFileInTree();
             ShowSelectedFileInGrid();
         }
-        else if (e.PropertyName == nameof(MainViewModel.ListHasSoundLabels))
+        else if (e.PropertyName == nameof(MainViewModel.ListHasLabels))
         {
-            LabelColumn.Visibility = _vm.ListHasSoundLabels ? Visibility.Visible : Visibility.Collapsed;
+            LabelColumn.Visibility = _vm.ListHasLabels ? Visibility.Visible : Visibility.Collapsed;
         }
         else if (e.PropertyName is nameof(MainViewModel.XrefsReady) or nameof(MainViewModel.XrefStatus))
         {

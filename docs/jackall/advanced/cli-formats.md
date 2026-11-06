@@ -402,7 +402,11 @@ Then `xref from` lists what a file uses, here the AK-47's main material and its 
 ## More
 
 - `shader extract`, `shader build` and `shader index`: see
-  [Replacing a shader](/docs/modding/replacing-a-shader).
+  [Replacing a shader](/docs/modding/replacing-a-shader). `shader label --game <dir>` writes the
+  [shader labels](/jackall/finding-files#shader-labels) the Files tab shows, one tab-separated line
+  per Direct3D 9 object: path, category, detail, how it was found (`index` or `hand`) and the
+  settings that decide its presets with one of its permutations. `--hand <file>` works as it does
+  for `spk label`.
 - `sav list` and `sav clean`: the command-line side of [Savegames](/jackall/saves).
 - `depload decode` and `depload encode`, `move verify`, `move assemble` and `move names`: see the
   format pages for [depload](/docs/file-formats/depload) and [MOVE](/docs/file-formats/move).

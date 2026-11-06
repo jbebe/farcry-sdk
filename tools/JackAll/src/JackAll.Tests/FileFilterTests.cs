@@ -32,8 +32,17 @@ public class FileFilterTests
     {
         VfsFile file = File(@"soundbinary\004b27c7.spk");
 
-        Assert.Equal(matches, FileFilter.Parse(filter).Matches(file, _ => "common", _ => "weapon · reload, 1st person (ak47)"));
+        Assert.Equal(matches, FileFilter.Parse(filter).Matches(file, _ => "common", (_, _) => "weapon · reload, 1st person (ak47)"));
     }
+
+    [Theory]
+    [InlineData("shader:\"sky low\"", true)]
+    [InlineData("SHADER:sky", true)]
+    [InlineData("spk:sky", false)]
+    [InlineData("spk:sky shader:low", false)]
+    public void A_label_token_asks_for_the_label_of_its_own_kind(string filter, bool matches)
+        => Assert.Equal(matches, FileFilter.Parse(filter).Matches(File(@"engine\shaders\obj\h53\shadernumber_71845653.pso"),
+            _ => "common", (_, kind) => kind == FileFilter.ShaderLabels ? "sky · cloudlayer · low" : null));
 
     [Fact]
     public void A_file_without_a_label_never_matches_spk()

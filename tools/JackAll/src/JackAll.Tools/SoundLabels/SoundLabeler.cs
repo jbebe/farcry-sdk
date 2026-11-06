@@ -3,6 +3,7 @@ using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Format.Rml;
 using JackAll.Core.Vfs;
+using JackAll.Tools.Labels;
 using JackAll.Tools.Spk;
 
 namespace JackAll.Tools.SoundLabels;
@@ -17,7 +18,9 @@ public static class SoundLabeler
     public const string FromUsage = "usage";
     public const string FromLinks = "linked";
     public const string FromFolder = "folder";
-    public const string FromHand = "hand";
+
+    /// <summary>Whether a game file is a sound bank this labels.</summary>
+    public static bool Covers(VfsFile file) => file.Type.Extension == "spk";
 
     private const int MaxGroups = 6;
     private const int MaxSubjects = 5;
@@ -25,7 +28,7 @@ public static class SoundLabeler
 
     /// <summary>Labels the retail banks of an install from the files the game reads; files only a mod
     /// adds are skipped, and so is every file the shipped reach list says is never read.</summary>
-    public static IReadOnlyList<SoundLabel> FromGame(GameVfs vfs, IFcbClassScope classes, IProgress<string>? progress = null)
+    public static IReadOnlyList<FileLabel> FromGame(GameVfs vfs, IFcbClassScope classes, IProgress<string>? progress = null)
     {
         var banks = new Dictionary<string, SpkBank>(StringComparer.OrdinalIgnoreCase);
         var uses = new List<SoundUse>();
@@ -82,7 +85,7 @@ public static class SoundLabeler
 
     /// <summary>One label per bank that any use reaches, plus a bare "dialogue" for every unreached
     /// bank in a localized folder.</summary>
-    public static IReadOnlyList<SoundLabel> Label(
+    public static IReadOnlyList<FileLabel> Label(
         IReadOnlyDictionary<string, SpkBank> banks, IEnumerable<SoundUse> uses, Func<uint, string?> subtitle)
     {
         var links = new Dictionary<uint, HashSet<uint>>();
@@ -112,7 +115,7 @@ public static class SoundLabeler
 
         HashSet<uint> spoken = [.. banks.Where(b => IsLocalized(b.Key)).SelectMany(b => b.Value.Records).Select(r => r.Id)];
         Dictionary<uint, HashSet<SoundUse>> effective = Propagate(direct, links);
-        return [.. banks.Select(b => Describe(b.Key, b.Value, direct, effective, spoken)).OfType<SoundLabel>()];
+        return [.. banks.Select(b => Describe(b.Key, b.Value, direct, effective, spoken)).OfType<FileLabel>()];
     }
 
     /// <summary>A bank in a <c>loc\</c> folder holds recorded speech.</summary>
@@ -149,7 +152,7 @@ public static class SoundLabeler
 
     /// <summary>A bank is dialogue when any use says so or its sound is recorded speech (an id a
     /// localized bank holds, which the event playing it shares).</summary>
-    private static SoundLabel? Describe(string path, SpkBank bank, Dictionary<uint, HashSet<SoundUse>> direct,
+    private static FileLabel? Describe(string path, SpkBank bank, Dictionary<uint, HashSet<SoundUse>> direct,
         Dictionary<uint, HashSet<SoundUse>> effective, HashSet<uint> spoken)
     {
         uint[] ids = [.. bank.Records.Select(r => r.Id).Distinct().Order()];
@@ -157,7 +160,7 @@ public static class SoundLabeler
         bool speech = ids.Any(spoken.Contains);
         if (all.Count == 0)
         {
-            return speech ? new SoundLabel(path, SoundCategories.Dialogue, "", FromFolder, "") : null;
+            return speech ? new FileLabel(path, SoundCategories.Dialogue, "", FromFolder, "") : null;
         }
 
         string source = ids.Any(direct.ContainsKey) ? FromUsage : FromLinks;
@@ -165,14 +168,14 @@ public static class SoundLabeler
         if (speech || all.Any(u => u.Category == SoundCategories.Dialogue))
         {
             string lines = Lines(ids, effective);
-            return new SoundLabel(path, SoundCategories.Dialogue, lines.Length > 0 ? lines : Groups(all), source, evidence);
+            return new FileLabel(path, SoundCategories.Dialogue, lines.Length > 0 ? lines : Groups(all), source, evidence);
         }
 
         string category = all.GroupBy(u => u.Category)
             .OrderByDescending(g => g.Count())
             .ThenBy(g => SoundCategories.Rank(g.Key))
             .First().Key;
-        return new SoundLabel(path, category, Groups(all.Where(u => u.Category == category)), source, evidence);
+        return new FileLabel(path, category, Groups(all.Where(u => u.Category == category)), source, evidence);
     }
 
     /// <summary>Each line as <c>Speaker: "transcript"</c>, or <c>Speaker (bark tag)</c> without a
@@ -215,18 +218,15 @@ public static class SoundLabeler
 
         string text = string.Join("; ", groups.Take(MaxGroups).Select(g => g.Subjects.Count == 0
             ? g.Action
-            : $"{g.Action} ({string.Join(", ", g.Subjects.Take(MaxSubjects))}{More(g.Subjects.Count, MaxSubjects, ", +")})"));
-        return text + More(groups.Count, MaxGroups, "; +", " more");
+            : $"{g.Action} ({string.Join(", ", g.Subjects.Take(MaxSubjects))}{LabelFormat.More(g.Subjects.Count, MaxSubjects, ", +")})"));
+        return text + LabelFormat.More(groups.Count, MaxGroups, "; +", " more");
     }
 
     private static string Evidence(IEnumerable<string> files)
     {
         List<string> distinct = [.. files.Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase)];
-        return string.Join(", ", distinct.Take(MaxEvidence)) + More(distinct.Count, MaxEvidence, " +");
+        return string.Join(", ", distinct.Take(MaxEvidence)) + LabelFormat.More(distinct.Count, MaxEvidence, " +");
     }
-
-    private static string More(int count, int shown, string prefix, string suffix = "")
-        => count > shown ? $"{prefix}{count - shown}{suffix}" : "";
 
     private static void Add<TKey, TValue>(Dictionary<TKey, HashSet<TValue>> map, TKey key, TValue value) where TKey : notnull
     {
