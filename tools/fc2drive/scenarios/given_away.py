@@ -1,8 +1,8 @@
 """Difficulty Overhaul's shots giving the player away, on the test range: a rifleman faces the player,
-who crouches still in the open too far off for him to make out, and fires one round away from him.
-Within the gun's hearing the soldier should recognise him, "given away by his shot", and open fire;
-beyond it he should not. Reports what he did, and the chance of his first shots, which an alert
-soldier's quicker settle should lift off 0.
+who crouches still in the open too far off for him to make out, and fires a round away from him, then
+another. The first only alerts him: it should not give the player away. Within the gun's hearing the
+second should, "given away by his shot", and he should open fire; beyond it neither should. Reports
+what he did, and the chance of his first shots.
 
     python given_away.py
 """
@@ -24,6 +24,7 @@ from fc2drive import Run, launch
 CASES = (("weapons.Primary.AK47", 60.0, True), ("weapons.Primary.AK47", 100.0, False),
          ("weapons.Primary.Dragunov", 100.0, True))
 SETTLE = 2.0
+BETWEEN = 3.0
 WATCH = 12.0
 FIRST_SHOTS = 3
 GIVEN_AWAY = re.compile(r"perception: recognises the player at (\S+) m, .*given away by his shot")
@@ -38,16 +39,20 @@ def run_shot(run, game, log, archetype, distance, heard):
     spawn(game, (LANE_MIDDLE[0] + distance, LANE_MIDDLE[1]), spawn_yaw(-1.0, 0.0))
     time.sleep(SETTLE)
     log.new_lines()
-    # The round goes north, away from him.
+    # The rounds go north, away from him.
     game.fire(0.05)
+    revealed, which = first_match(log, GIVEN_AWAY, BETWEEN), "first"
+    if not revealed:
+        game.fire(0.05)
+        revealed, which = first_match(log, GIVEN_AWAY, WATCH), "second"
     got = "not given away"
-    if revealed := first_match(log, GIVEN_AWAY, WATCH):
+    if revealed:
         shots = []
         while len(shots) < FIRST_SHOTS and (shot := first_match(log, SHOT, WATCH)):
             shots.append(f"{shot.group(1)} at {shot.group(2)} m")
-        got = f"given away at {revealed.group(1)} m; first shots: {', '.join(shots) or 'none'}"
+        got = f"given away by the {which} shot at {revealed.group(1)} m; first shots: {', '.join(shots) or 'none'}"
     game.action("crouch", 1.0)
-    want = "given away" if heard else "not given away"
+    want = "given away by the second shot" if heard else "not given away"
     run.note(f"{archetype:<26} at {distance:.0f} m | expected {want} | {got}")
 
 

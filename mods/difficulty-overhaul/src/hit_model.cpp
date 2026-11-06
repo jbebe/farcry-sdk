@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <mutex>
 #include <unordered_map>
 
 using namespace DifficultyOverhaul;
@@ -30,6 +31,10 @@ namespace {
     ChanceFn g_originalGetChance = nullptr;
     ChanceFn g_originalGetTimerFactor = nullptr;
     ShootAtFn g_originalShootAt = nullptr;
+    // CShootingSystem::UpdateShootingSystem, once a frame for each soldier.
+    using UpdateFn = void(__fastcall*)(void* shooting, void* unused, float seconds);
+    FCSE::Relocation<UpdateFn> g_update{FCSE::Uplay(0x00A18410)};
+    UpdateFn g_originalUpdate = nullptr;
 
     // CShootingSystem: the part its aim dot is on (-1 until set up), the part to set the next dot up
     // on, and whether the last shot hit.
@@ -45,10 +50,17 @@ namespace {
     constexpr int kTorsoPart = 5;
 
     // Hardcore: seconds for aim to settle after acquiring the player, at 0 m and per metre, and for a
-    // soldier already alert to him.
+    // soldier who has been hunting him.
     constexpr float kSettleSeconds = 0.6f;
     constexpr float kSettleSecondsPerMetre = 0.02f;
-    constexpr float kAlertSettleSeconds = 0.3f;
+    constexpr float kHuntingSettleSeconds = 0.3f;
+    // Hardcore: how long before he caught sight of the player a soldier must have been alert to settle
+    // that quickly; one the player has only just alerted is still surprised.
+    constexpr double kHuntingSeconds = 2.0;
+    // A shooting system not updated for this long has gone, and a new soldier's may take its place;
+    // more than kMostRemembered alert at once are forgotten, as surprised.
+    constexpr double kGoneSeconds = 1.0;
+    constexpr size_t kMostRemembered = 512;
     // Hardcore: the best chance any one shot has.
     constexpr float kMaxChance = 0.85f;
     // Hardcore: how much of the chance a shot's recoil takes from the next, and how fast it returns.
@@ -77,20 +89,61 @@ namespace {
     };
     Shot g_shot;
 
-    // How settled his aim is, 0 to 1, from when the reaction timer started. A soldier already alert
-    // to the player settles quicker, and also from when he last caught sight of him, so his first shot
-    // can hit and a peek from where the player vanished meets a settled rifle.
-    float Settled(void* shooting, bool alert) {
-        if (alert) {
+    // How settled his aim is, 0 to 1, from when the reaction timer started. A soldier hunting the player
+    // settles quicker, and also from when he last caught sight of him, so his first shot can hit and a
+    // peek from where the player vanished meets a settled rifle.
+    float Settled(void* shooting, bool hunting) {
+        if (hunting) {
             const float seconds = std::max(Shooting::AimSeconds(shooting), Shooting::SightSeconds(shooting));
-            return std::clamp(seconds / kAlertSettleSeconds, 0.0f, 1.0f);
+            return std::clamp(seconds / kHuntingSettleSeconds, 0.0f, 1.0f);
         }
         const float distance = Shooting::TargetDistance(shooting);
         return std::clamp(Shooting::AimSeconds(shooting) / (kSettleSeconds + kSettleSecondsPerMetre * distance), 0.0f,
                           1.0f);
     }
 
-    bool Alerted(void* shooting) { return Shooting::Alert(Shooting::Agent(shooting)); }
+    // Since when each shooting system's soldier has been alert, and when it was last updated.
+    struct Alertness {
+        double since;
+        double updated;
+    };
+    std::unordered_map<const void*, Alertness> g_alertness;
+    std::mutex g_alertnessLock;
+
+    void __fastcall UpdateDetour(void* shooting, void* unused, float seconds) {
+        const double now = Game::Now();
+        {
+            std::lock_guard<std::mutex> lock(g_alertnessLock);
+            if (!Shooting::Alert(Shooting::Agent(shooting))) {
+                g_alertness.erase(shooting);
+            } else {
+                if (g_alertness.size() > kMostRemembered) {
+                    g_alertness.clear();
+                }
+                auto [entry, fresh] = g_alertness.try_emplace(shooting, Alertness{now, now});
+                if (!fresh && now - entry->second.updated > kGoneSeconds) {
+                    entry->second.since = now;
+                }
+                entry->second.updated = now;
+            }
+        }
+        g_originalUpdate(shooting, unused, seconds);
+    }
+
+    // Whether he was alert for kHuntingSeconds before this sight of the player began.
+    bool Hunting(void* shooting) {
+        double since = 0.0;
+        {
+            std::lock_guard<std::mutex> lock(g_alertnessLock);
+            const auto alertness = g_alertness.find(shooting);
+            if (alertness == g_alertness.end()) {
+                return false;
+            }
+            since = alertness->second.since;
+        }
+        const double sighted = Game::Now() - std::max(Shooting::SightSeconds(shooting), 0.0f);
+        return sighted - since >= kHuntingSeconds;
+    }
 
     float Recoil(const void* shooting) {
         const auto last = g_lastShot.find(shooting);
@@ -153,12 +206,12 @@ namespace {
     }
 
     // The game misses with every shot until his reaction timer runs, which it starts at his first shot:
-    // a surprised soldier's first shot misses, an alert one's need not.
+    // a surprised soldier's first shot misses, a hunting one's need not.
     float __fastcall GetTimerFactorDetour(void* shooting) {
         if (Shooting::AimsAtPlayer(shooting)) {
-            const bool alert = Alerted(shooting);
-            if (alert || Shooting::Reacting(shooting)) {
-                return Settled(shooting, alert);
+            const bool hunting = Hunting(shooting);
+            if (hunting || Shooting::Reacting(shooting)) {
+                return Settled(shooting, hunting);
             }
         }
         return g_originalGetTimerFactor(shooting);
@@ -171,7 +224,7 @@ namespace {
         }
         // A certain hit is point blank, which the reaction timer does not reach.
         if (chance >= 1.0f) {
-            chance *= Settled(shooting, Alerted(shooting));
+            chance *= Settled(shooting, Hunting(shooting));
         }
         // Evidence for tracing where the game's chance goes wrong; to go once that is fixed.
         if (std::isnan(chance)) {
@@ -230,5 +283,9 @@ void InstallHitModel() {
         !Hook(g_getChance, &GetChanceDetour, &g_originalGetChance) ||
         !Hook(g_shootAt, &ShootAtDetour, &g_originalShootAt)) {
         FCSE::Logf("hit model: the AI shooting system was not found in this build");
+    }
+    if (!Hook(g_update, &UpdateDetour, &g_originalUpdate)) {
+        FCSE::Logf("hit model: the shooting system's update was not found in this build, so every soldier aims as "
+                   "one surprised");
     }
 }

@@ -18,9 +18,9 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
 - **Limb hits wound.** A hit to an arm or a leg that would kill a soldier puts him down wounded
   instead: he calls for help, crawls for cover and may shoot back from the ground. A torso hit never
   does: it wounds or kills.
-- **Aim is earned.** A soldier fires the moment he recognises you. One you surprise sends his first
-  shots wide while his aim settles, longer the farther you are; one already alert to you settles in a
-  third of a second and can hit with his first. Every shot is a real
+- **Aim is earned.** A soldier fires the moment he recognises you. One you surprise, your own shot
+  included, sends his first shots wide while his aim settles, longer the farther you are; one who has
+  been hunting you settles in a third of a second and can hit with his first. Every shot is a real
   chance and none is certain, recoil spoils his follow-up shots, and you are harder to hit running
   across his line of fire than running at him. He never aims at your head in his first 3 seconds on
   you, so a first sighting cannot end in a headshot.
@@ -47,9 +47,10 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
   camo suit hides you crouched and still in high grass beyond 3 m, unless he is fighting you.
   In front of him he notices you at once. At his side, beyond 20 m, he needs a moment, longer the
   farther and the less visible you are, up to 2 seconds, so a dash from cover to cover past his side
-  can go unseen. Your shots give you away: a soldier who hears one, as far as your gun is heard (an
-  AK-47 75 m, a sniper rifle 150 m, a silenced gun a few metres), makes you out wherever any of you
-  shows, until he loses sight of you.
+  can go unseen. Your shots give you away to soldiers already hunting you: one who hears a shot, as
+  far as your gun is heard (an AK-47 75 m, a sniper rifle 150 m, a silenced gun a few metres), makes
+  you out wherever any of you shows, until he loses sight of you. A shot that alerts a soldier only
+  tells him where it came from.
 - **Weapons by range.** Pistols and SMGs lose accuracy with range. A shotgun is deadly out to 20 m
   and falls off fast past it.
 - **No rockets at you on foot.** A soldier with an RPG or a Carl Gustav draws his other gun at you on

@@ -335,7 +335,7 @@ namespace {
     // recognising, logged as it rises; once below it for a while, it is forgotten. Then when his grass
     // check last found the player in grass, and when his line was last walked and what it found. Then
     // how much of his notice delay he has sat through, since when, and when he last looked. Then when
-    // he last heard the player fire, or last had him in view since.
+    // he last heard the player fire while alert, or last had him in view since.
     struct Seen {
         int level = 0;
         double below = -1.0;
@@ -667,7 +667,9 @@ namespace {
 
     void __fastcall ProcessStimDetour(void* processor, void* unused, const uint8_t* stim) {
         if (Damage::Type(stim) == Damage::kBang && (Damage::ByPlayer(stim) || Damage::SentByPlayer(stim))) {
-            if (void* agent = Shooting::ProcessorSoldier(processor)) {
+            // A soldier the shot itself alerts only learns where it came from.
+            void* agent = Shooting::ProcessorSoldier(processor);
+            if (agent != nullptr && Shooting::Alert(agent)) {
                 const uint32_t id = Shooting::ShooterId(Shooting::OfAgent(agent));
                 const double now = Game::Now();
                 std::lock_guard<std::mutex> lock(g_seenLock);
