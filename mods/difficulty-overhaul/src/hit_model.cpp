@@ -262,13 +262,14 @@ namespace {
         float velocity[3];
         Shooting::Velocity(player, velocity);
         CombatLogf("soldier %08X shot at player: chance %.2f (recoil %.2f, sighting %.2f, crossing "
-                   "%.2f, shaken %.2f) at %.1f m, %.1f s on him, at the %s, %s; visibility %.2f, %s; "
-                   "the player %s at %.1f m/s",
+                   "%.2f, shaken %.2f) at %.1f m, %.1f s on him, at the %s, %s; visibility %.2f, %s, "
+                   "he is %s; the player %s at %.1f m/s",
                    Shooting::ShooterId(shooting), g_shot.chance, g_shot.recoil, g_shot.sighting,
                    g_shot.crossing, g_shot.shaken, Shooting::TargetDistance(shooting),
                    Shooting::AimSeconds(shooting), part == kHeadPart ? "head" : "torso",
                    Read<bool>(shooting, kLastShotHit) ? "hit" : "miss", visibility,
                    Shooting::WeaponClassName(Shooting::WeaponClass(shooting)),
+                   Shooting::StanceName(Shooting::Stance(Shooting::ShooterPawn(shooting))),
                    Shooting::StanceName(Shooting::Stance(player)),
                    std::hypot(velocity[0], velocity[1], velocity[2]));
         g_shot = {};

@@ -1,0 +1,8 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/CrouchInTheOpen" Class="CTaskSetPostureIntention" Looping="0" Independent="0">
+  <Parameter Name="AIIntention" Value="5" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+</Task>

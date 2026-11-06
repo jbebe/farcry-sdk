@@ -1,0 +1,37 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/DebugInfo_AssaultAttack" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/CheckIsUnderFire" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/LookAtDest1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/TryFindCover" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/ScanReloadIsNeeded1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/AmIUsingShotgun" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/CTaskWait1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/DebugInfo_AssaultAttack" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/CScannerInFOV1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/RescueCheck1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/Stand" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/WaitCovered" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/CTaskCheckUnderFire1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FireNotMoving2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/AnalyzePath" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FollowPathLong" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FollowPathMedium" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FollowPathShort" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FindPath" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/CheckForShotgunProgression" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/NoCoverOrNoPathFailure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/CheckIsUnderFire" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FindCover" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/PlayActionBark_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/CTaskCheckUnderFire2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FindCoverAttackWithLOS" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/FindCoverAttackNOLOS" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/CTaskChooseCoverAttack1" />
+</Plan>

@@ -1,0 +1,29 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/NoCoverRunToThreat_BP1/FlankAttack_SR/FollowPathToFlankPos" Class="CTaskPathFollow" Looping="0" Independent="0">
+  <Parameter Name="stopDistance" Value="-1" />
+  <Parameter Name="stopDistanceFactName" Value="" />
+  <Parameter Name="stopMovingUponArrival" Value="1" />
+  <Parameter Name="stopMovingUponInterrupt" Value="1" />
+  <Parameter Name="stopMovingUponInterruptFactName" Value="" />
+  <Parameter Name="stopMovingUponArrivalFactName" Value="" />
+  <Parameter Name="enableMidDeceleration" Value="1" />
+  <Parameter Name="VarianceTolerance" Value="0.2" />
+  <Parameter Name="NotMovingTimeout" Value="3" />
+  <Parameter Name="StopOnHardTurn" Value="0" />
+  <Parameter Name="Speed" Value="3" />
+  <Parameter Name="SpeedFactName" Value="" />
+  <Parameter Name="Acceleration" Value="0" />
+  <Parameter Name="Deceleration" Value="0" />
+  <Parameter Name="ExcludedEntitiesFact" Value="" />
+  <Parameter Name="ComputeAheadPos" Value="0" />
+  <Parameter Name="AheadPosDist" Value="5" />
+  <Parameter Name="stopDistanceConst" Value="-1" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/NoCoverRunToThreat_BP1/FlankAttack_SR/CTaskWait1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CrouchInTheOpen" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="UnableToMove" />
+</Task>

@@ -1,0 +1,39 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1/FindPerpendicularPos" Class="CTaskFindEscapePos" Looping="0" Independent="0">
+  <Parameter Name="ThreatPos" Value="&lt;AiObject, &gt;">
+    <Parameter Name="RefType" Value="1" />
+    <Parameter Name="RefName" Value="" />
+  </Parameter>
+  <Parameter Name="ThreatVelocity" Value="" />
+  <Parameter Name="EscapePosFact" Value="" />
+  <Parameter Name="ForbidenZoneAngle" Value="120" />
+  <Parameter Name="DodgeFrom" Value="&lt;AiObject, &gt;">
+    <Parameter Name="RefType" Value="1" />
+    <Parameter Name="RefName" Value="" />
+  </Parameter>
+  <Parameter Name="DodgeRandomness" Value="5" />
+  <Parameter Name="ComputedDodgePos" Value="" />
+  <Parameter Name="OppositeToPos" Value="&lt;AiObject, &gt;">
+    <Parameter Name="RefType" Value="1" />
+    <Parameter Name="RefName" Value="" />
+  </Parameter>
+  <Parameter Name="OppositeLength" Value="10" />
+  <Parameter Name="ComputedOppositePos" Value="" />
+  <Parameter Name="PerpendicularToPos" Value="&lt;Vec3dFact, BestTargetLastPosSeen&gt;">
+    <Parameter Name="RefType" Value="20" />
+    <Parameter Name="RefName" Value="BestTargetLastPosSeen" />
+  </Parameter>
+  <Parameter Name="PerpendicularLength" Value="15" />
+  <Parameter Name="ComputedPerpendicularPos" Value="FlankAttackPos" />
+  <Parameter Name="LastSeenPosFact" Value="" />
+  <Parameter Name="LastSeenVelFact" Value="" />
+  <Parameter Name="ComputedExtrapolatedPos" Value="" />
+  <Parameter Name="EscapeType" Value="1" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1/FindPathToFlankPos" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="EscapeFailed" />
+</Task>

@@ -1,0 +1,11 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FleeFromLocation_BP1/AfterFleeFireStrategy1" Class="CTaskSetFireStrategy" Looping="0" Independent="0">
+  <Parameter Name="fireStrategy" Value="9" />
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FleeFromLocation_BP1/WaitAfterFlee" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CrouchInTheOpen" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+</Task>

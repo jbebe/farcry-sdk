@@ -1,0 +1,16 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/FindCoverAttackNOLOS" Class="CTaskFindCoverAttack" Looping="0" Independent="0">
+  <Parameter Name="checkLOSOnBestTarget" Value="0" />
+  <Parameter Name="ignoreLean" Value="1" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/CTaskChooseCoverAttack1" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="NoTarget">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/CScannerInFOV1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/WaitCovered" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CrouchInTheOpen" TargetAnchor="Start" />
+  </Exit>
+</Task>

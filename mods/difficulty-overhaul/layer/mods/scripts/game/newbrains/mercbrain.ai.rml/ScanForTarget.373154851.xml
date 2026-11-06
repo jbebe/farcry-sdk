@@ -1,0 +1,17 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/NoCoverRunToThreat_BP1/ScanForTarget" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/NoCoverRunToThreat_BP1/ScanForTarget/CheckTargetVisible1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/NoCoverRunToThreat_BP1/ScanForTarget/CTaskSetFireStrategy1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CrouchInTheOpen" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/NoCoverRunToThreat_BP1/ScanForTarget/CTaskSetFireStrategy2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/NoCoverRunToThreat_BP1/ScanForTarget/CheckTargetVisible1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/NoCoverRunToThreat_BP1/ScanForTarget/Wait1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/NoCoverRunToThreat_BP1/ScanForTarget/AimAround1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/NoCoverRunToThreat_BP1/ScanForTarget/CTaskSetFireStrategy1" />
+</Plan>

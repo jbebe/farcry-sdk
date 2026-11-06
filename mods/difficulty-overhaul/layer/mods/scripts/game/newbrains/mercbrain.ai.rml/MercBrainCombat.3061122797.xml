@@ -1,0 +1,161 @@
+<Brain Name="::MercBrain/MercBrain/MercBrainCombat" Class="CBrainMercCombat" Looping="1" Independent="0">
+  <Selectable Filter="CombatNoTarget" Task="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable" />
+  <Selectable Filter="CombatSelectBestTarget" Task="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget" />
+  <Selectable Filter="CombatFirstTime" Task="::MercBrain/MercBrain/MercBrainCombat/CombatStartCombat" />
+  <Selectable Filter="CombatLongFireRange" Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack" />
+  <Selectable Filter="CombatMediumFireRange" Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack" />
+  <Selectable Filter="CombatShortFireRange" Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack" />
+  <Selectable Filter="CombatKillFireRange" Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack" />
+  <Selectable Filter="CombatNothing" Task="::MercBrain/MercBrain/MercBrainCombat/CombatNothingToDo" />
+  <Selectable Filter="CombatThrowGrenade" Task="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile" />
+  <Selectable Filter="CombatDefense" Task="::MercBrain/MercBrain/MercBrainCombat/CombatDefendPoint" />
+  <Selectable Filter="CombatPassiveLeapFrog" Task="::MercBrain/MercBrain/MercBrainCombat/PassiveLeapFrog" />
+  <Selectable Filter="CombatPlayerRescueActive" Task="::MercBrain/MercBrain/MercBrainCombat/CombatHumanPlayerRescueActive" />
+  <Selectable Filter="CombatReloadStrategy" Task="::MercBrain/MercBrain/MercBrainCombat/CombatReload" />
+  <Selectable Filter="CombatTargetTooClose" Task="::MercBrain/MercBrain/MercBrainCombat/CombatCloseTarget" />
+  <Selectable Filter="GrenadeEscape" Task="::MercBrain/MercBrain/MercBrainCombat/CombatEscapeProjectile" />
+  <Selectable Filter="MortarEscape" Task="::MercBrain/MercBrain/MercBrainCombat/CombatEscapeMortar" />
+  <Selectable Filter="SwitchToFireAlert" Task="::MercBrain/MercBrain/MercBrainCombat/CombatFireAlert" />
+  <Selectable Filter="EscapeFlameThrower" Task="::MercBrain/MercBrain/MercBrainCombat/CombatEscapeFlameThrower" />
+  <Selectable Filter="Relocate" Task="::MercBrain/MercBrain/MercBrainCombat/CombatRelocate" />
+  <Selectable Filter="CombatSniping" Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan" />
+  <Selectable Filter="PlayerInsideProtectedZone" />
+  <Selectable Filter="CombatBlindly" Task="::MercBrain/MercBrain/MercBrainCombat/CombatBlindTarget" />
+  <Selectable Filter="CombatStartFromSocial" Task="::MercBrain/MercBrain/MercBrainCombat/CombatStartFromSocialPlan" />
+  <Selectable Filter="CombatFromTrespassZone" Task="::MercBrain/MercBrain/MercBrainCombat/CombatFromTrespassZonePlan" />
+  <Selectable Filter="CombatOtherAI" />
+  <Selectable Filter="ShootFlare" Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare" />
+  <Selectable Filter="CombatBuilding" Task="::MercBrain/MercBrain/MercBrainCombat/CombatFightFromBuilding" />
+  <Selectable Filter="EscapeVehicle" Task="::MercBrain/MercBrain/MercBrainCombat/CombatEscapeVehicle" />
+  <Selectable Filter="EscapeFriendlyVehicle" Task="::MercBrain/MercBrain/MercBrainCombat/EscapeIncomingFriendlyVehicle" />
+  <Selectable Filter="MercBhvHurt" Task="::MercBrain/MercBrain/MercBrainCombat/CombatPlayHurt" />
+  <Selectable Filter="FriendDied" Task="::MercBrain/MercBrain/MercBrainCombat/CombatSawFriendDied" />
+  <Selectable Filter="CombatBuddyWager" Task="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager" />
+  <Selectable Filter="MountedWeapon" Task="::MercBrain/MercBrain/MercBrainCombat/CombatUsingMountedWeapon" />
+  <Selectable Filter="SpecialBehaviourDefenceReversal" Task="::MercBrain/MercBrain/MercBrainCombat/DefenceReversal" />
+  <Selectable Filter="CombatRushTarget" Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget" />
+  <Selectable Filter="CombatRushClashPoint" Task="::MercBrain/MercBrain/MercBrainCombat/RushClashPoint" />
+  <Selectable Filter="CombatHigherTarget" Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget" />
+  <Selectable Filter="CombatNoCoverRunToThreat" Task="::MercBrain/MercBrain/MercBrainCombat/NoCoverRunToThreatPlan" />
+  <Selectable Filter="FallBackToStartPosition" Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1" />
+  <Selectable Filter="ScriptedShootAtTarget" Task="::MercBrain/MercBrain/MercBrainCombat/DominoShootAtTarget" />
+  <Selectable Filter="ShotByAnotherTarget" Task="::MercBrain/MercBrain/MercBrainCombat/ShootByAnotherTarget" />
+  <Selectable Filter="CombatFromExitVehicle" Task="::MercBrain/MercBrain/MercBrainCombat/CombatFromExitVehiclePlan" />
+  <Selectable Filter="AmmoPileEscape" Task="::MercBrain/MercBrain/MercBrainCombat/EscapeDangerousAmmoPile1" />
+  <Parameter Name="KillRange" Value="5" />
+  <Parameter Name="ShortRange" Value="12" />
+  <Parameter Name="MediumRange" Value="25" />
+  <Parameter Name="LongRange" Value="35" />
+  <Parameter Name="OutRange" Value="50" />
+  <Parameter Name="SnipingRange" Value="20" />
+  <Parameter Name="mercTargetNameFactName" Value="BestTarget" />
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/FindVisualTargetAndReport" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanArmyMemberStateChange" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/ScanThresholdCross" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CheckRescueActive" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/FireStrategy" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/ScanFire" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/ScanPlayerDead" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/ScanUnderWater" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/FindFlyingProjectile" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/ScanUseVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CheckTargetInVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CheckFallback1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/NoEmotion1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CheckFallback2" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/PlayConfusionBark1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/ScanFallToDeath" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop">
+    <Connection Target="::MercBrain/MercBrain" TargetAnchor="Restart" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/StopIronsight1" TargetAnchor="Start" />
+  </Anchor>
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CTaskCheckActionSignal1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CTaskCheckActionSignal2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CTaskCheckActionSignal3" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LeaveMountedWeapon2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/UnreserveMountedWeapon2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CheckFallback2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScanMortarSeen1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/NoEmotion1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatStartCombat" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatNothingToDo" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatDefendPoint" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatHumanPlayerRescueActive" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatReload" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatCloseTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatEscapeProjectile" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatFireAlert" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatRelocate" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatBlindTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatStartFromSocialPlan" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatFromTrespassZonePlan" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatFightFromBuilding" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatEscapeVehicle" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FireStrategy" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CheckTargetInVehicle" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatPlayHurt" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatUsingMountedWeapon" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatSawFriendDied" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatEscapeFlameThrower" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/DefenceReversal" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/NoCoverRunToThreatPlan" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushClashPoint" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/DominoShootAtTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/EscapeIncomingFriendlyVehicle" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShootByAnotherTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatFromExitVehiclePlan" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/PassiveLeapFrog" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatEscapeMortar" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/PlayConfusionBark1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FindVisualTargetAndReport" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FindFlyingProjectile" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CheckHurt" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScanFriendDied" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScanTargetLost" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScanArmyMemberStateChange" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScannerRescuePlayerActive" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScanProjectileSeen" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScanFireProximity" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScanVisualThreat1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScanTargetInBuilding" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScanGrenadeAttackRequest" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScanFactShootFlare" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingVehicle" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScannerLastManStanding" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScanShotByAnotherTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RemoveFactBlindCombat1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CheckRescueActive" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CheckFactManageThreshold" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ReportSuspiciousBuilding" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CheckFallback1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LaunchGrenadeStrategy" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/StopIronsight1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/TalkAboutLastManStanding" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/WaitBetweenLastManBark" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CScannerFallback" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CTaskCheckSpecialMissionBehaviour1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CTaskWait1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingFriendlyVehicle" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/EscapeDangerousAmmoPile1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScannerDangerousAmmoPile1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CrouchInTheOpen" />
+</Brain>

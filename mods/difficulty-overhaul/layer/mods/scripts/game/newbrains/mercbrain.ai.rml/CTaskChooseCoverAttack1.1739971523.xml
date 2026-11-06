@@ -1,0 +1,23 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/CTaskChooseCoverAttack1" Class="CTaskChooseCoverAttack" Looping="0" Independent="0">
+  <Parameter Name="ignoreLean" Value="1" />
+  <Anchor Name="OnStart" />
+  <Exit Name="NoObstacle">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/CScannerInFOV1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/WaitCovered" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CrouchInTheOpen" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="LeanLeft" />
+  <Exit Name="LeanRight" />
+  <Exit Name="StrafeLeft">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="StrafeRight">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="PopUpHigh">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="StandAttack">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack" TargetAnchor="Start" />
+  </Exit>
+</Task>

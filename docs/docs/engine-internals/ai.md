@@ -116,7 +116,8 @@ it changes; they interrupt plans the same way. Tasks share state through the age
 
 `ComputeCurrentFireRange` computes it only in the combat states (army-member states 3-5), both for
 the target's current position and for its blackboard `BestTargetLastPosSeen`. The bands are
-constants in code.
+constants in code, read in the server build; the Steam build's are not matched, and on the test range
+soldiers 36 to 41 m from the player ran the medium band's plan.
 
 ### Sniping
 
@@ -152,11 +153,16 @@ It decides who suppresses (`IsNeededAsSuppress`, per range band), when a member 
 (`IsSwitchToAssaultNeeded`), runs rush patterns, picks who fires the flare, and calls in
 reinforcements.
 
-`FindRoleDistribution` splits a squad of *n* between its two combat roles by difficulty: on the
-lowest setting one member takes the first role and the rest the second; on the two middle settings
-70 % of the squad takes the first role, on the highest 90 %. The soldier brains never read the roles
-directly - `CTaskCheckSquadRole` and `CTaskCheckSquadAction` exist but are unused - so the roles act
-only through the orders and flags the lieutenant sends.
+`FindRoleDistribution` (Steam `0x10934E10`, `__thiscall` with three stack arguments, `this` unused) splits a
+squad of *n* between assault and suppress by difficulty: on the lowest setting one member assaults and
+the rest suppress; on the two middle settings 70 % of the squad assaults, rounded down, on the highest
+90 %; a lone soldier assaults. `ManageArmyMembersCombatRole` counts only members in the kill, short
+and medium bands of where they last saw their target, and `IsNeededAsSuppress` makes every member past
+them an assaulter and every one in his kill band a suppressor, so the split holds within 35 m. A member's
+role is `CPawnAgent` `+0x250`, 0 assault and 1 suppress, which `CTaskCheckArmyRole` reads for the
+brain's `RoleAssault` and `RoleSuppress`; `CTaskCheckSquadRole` and `CTaskCheckSquadAction` exist but are unused
+(**RE-verified**: the server build's functions and the Steam split; the 1-and-2 split of three on the
+test range).
 
 The army-member states the lieutenant and the senses switch on are, by number: 0 social, 1 idle,
 2 alert, 3 passive, 4 active, 5 defensive, 6 threshold, 7 dead, 8 briefing (read off
@@ -691,6 +697,17 @@ the same plan flees anyway when the soldier is under fire.
 
 Some blueprints are never copied into the live brain at all. The largest, `ShotgunProgression`
 (227 instances), is an advance from cover to cover with taunts.
+
+### Firing from cover
+
+In `mercbrain` only a suppressor fires from cover: at his cover `CTaskFindCoverAttack` measures the
+obstacle's edges against the target and `CTaskChooseCoverAttack` picks a pop-up over a low one, a strafe
+out from a corner or a stand-up behind a tall one. An assaulter who reaches cover stands beside it and
+fires. `CTaskFindCoverAttack` reads the cover off the agent (`+0xE4` and `+0xF0` its two edges, `+0x108`
+whether he has one) and fires `NoTarget` without it. The assault's cover search, with the heuristic of
+the squad's `AttackStrategy` fact or 10, finds firing spots the cover attack cannot use; the suppressor's
+heuristic 3 finds ones it can (**traced in the server build**; on the test range an assaulter's cover gave
+`NoTarget` until his search took heuristic 3).
 
 ### Seeing which tasks run
 

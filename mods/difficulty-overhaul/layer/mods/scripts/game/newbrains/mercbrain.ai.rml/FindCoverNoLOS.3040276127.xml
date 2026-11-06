@@ -1,0 +1,49 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/FindCover/FindCoverNoLOS" Class="CTaskFindCover" Looping="0" Independent="0">
+  <Parameter Name="coverFromTargetFactName" Value="" />
+  <Parameter Name="coverFromSmartPos" Value="&lt;AiObject, &gt;">
+    <Parameter Name="RefType" Value="1" />
+    <Parameter Name="RefName" Value="" />
+  </Parameter>
+  <Parameter Name="analyzeCoverFromPosition" Value="&lt;Vec3dFact, BestTargetLastPosSeen&gt;">
+    <Parameter Name="RefType" Value="20" />
+    <Parameter Name="RefName" Value="BestTargetLastPosSeen" />
+  </Parameter>
+  <Parameter Name="alternateThreatList" Value="UnknownFact" />
+  <Parameter Name="useEnemyInfoAsThreatList" Value="0" />
+  <Parameter Name="postionToAdvanceTowards" Value="&lt;AiObject, &gt;">
+    <Parameter Name="RefType" Value="1" />
+    <Parameter Name="RefName" Value="" />
+  </Parameter>
+  <Parameter Name="coverFoundFactName" Value="coverPosition" />
+  <Parameter Name="coverFoundNoOffsetFactName" Value="UnknownFact" />
+  <Parameter Name="analyzeCoverToPosition" Value="&lt;AiObject, &gt;">
+    <Parameter Name="RefType" Value="1" />
+    <Parameter Name="RefName" Value="" />
+  </Parameter>
+  <Parameter Name="gatherObstaclePosition" Value="&lt;Vec3dFact, BestTargetLastPosSeen&gt;">
+    <Parameter Name="RefType" Value="20" />
+    <Parameter Name="RefName" Value="BestTargetLastPosSeen" />
+  </Parameter>
+  <Parameter Name="maxRadiusFactName" Value="" />
+  <Parameter Name="minRadiusFactName" Value="" />
+  <Parameter Name="minRadius" Value="0" />
+  <Parameter Name="maxRadius" Value="50" />
+  <Parameter Name="idealMinCoverSize" Value="1.25" />
+  <Parameter Name="worstCaseMinCoverSize" Value="0.2" />
+  <Parameter Name="canUseSameCover" Value="1" />
+  <Parameter Name="isExposedCoverAllowed" Value="0" />
+  <Parameter Name="isBurnableZoneCoverAllowed" Value="1" />
+  <Parameter Name="isNotBurningZoneCoverAllowed" Value="1" />
+  <Parameter Name="coverHeuristicFilterFactName" Value="UnknownFact" />
+  <Parameter Name="coverHeuristicFilter" Value="3" />
+  <Parameter Name="offsetFromCover" Value="-1" />
+  <Parameter Name="minRadiusConst" Value="35" />
+  <Parameter Name="maxRadiusConst" Value="50" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="FindCoverFailed" />
+  <Exit Name="UnknownError" />
+</Task>
