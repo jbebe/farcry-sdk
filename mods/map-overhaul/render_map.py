@@ -16,6 +16,8 @@ from matplotlib.patches import Rectangle
 from scipy import ndimage
 from scipy.cluster.hierarchy import fclusterdata
 
+import notes
+
 HERE = Path(__file__).resolve().parent
 WORLD = 5120
 # The neat line: the playable square the game's own world map covers, and a sector either side.
@@ -154,8 +156,9 @@ def spot_heights(heights, region):
 
 
 def text(ax, x, y, s, size, style="regular", color=INK, halo=PAPER, ha="center", va="center", zorder=20):
-    ax.text(x, y, s, fontproperties=FONT[style], fontsize=pt(size), color=color, ha=ha, va=va, zorder=zorder,
-            path_effects=[effects.withStroke(linewidth=pt(size * 0.18), foreground=halo)] if halo else None)
+    return ax.text(x, y, s, fontproperties=FONT[style], fontsize=pt(size), color=color, ha=ha, va=va,
+                   zorder=zorder,
+                   path_effects=[effects.withStroke(linewidth=pt(size * 0.18), foreground=halo)] if halo else None)
 
 
 def margins(ax, px, scale):
@@ -228,7 +231,7 @@ def margins(ax, px, scale):
     t(x - 60, y - 120, "Angles not to scale", 20, "italic")
 
 
-def draw(region, scale, out):
+def draw(region, scale, out, clean):
     terrain = np.load(HERE / "work/world1/terrain.npz")
     features = json.loads((HERE / "work/world1/features.json").read_text())
     heights = ndimage.gaussian_filter(terrain["heights"], 1.5)
@@ -308,11 +311,18 @@ def draw(region, scale, out):
     for e in entities:
         if e.get("tex") and e["tex"] not in named:
             named.add(e["tex"])
-            name, kind = PLACES.get(Path(e["tex"]).stem.removeprefix("majorlocation_"), (None, None))
+            place = Path(e["tex"]).stem.removeprefix("majorlocation_")
+            name, kind = PLACES.get(place, (None, "works"))
+            size, style = {"town": (40, "bold"), "village": (28, "bold"),
+                           "works": (18, "regular"), "feature": (20, "italic")}[kind]
+            x, y = e["pos"][0], e["pos"][1] + e["h"] / 2 + size * 0.8
             if name:
-                size, style = {"town": (40, "bold"), "village": (28, "bold"),
-                               "works": (18, "regular"), "feature": (20, "italic")}[kind]
-                text(ax, e["pos"][0], e["pos"][1] + e["h"] / 2 + size * 0.8, name, size * scale, style)
+                label = text(ax, x, y, name, size * scale, style)
+                if not clean:
+                    width = label.get_window_extent(fig.canvas.get_renderer()).width / scale
+                    notes.remark(ax, place, x + width / 2 + 14, y, scale, "left")
+            elif not clean:
+                notes.remark(ax, place, x, y, scale, "center")
 
     for axis, origin in enumerate(GRID_ORIGIN):
         for g in range(NEAT[0] + (-(origin + NEAT[0])) % 1000, NEAT[1], 1000):
@@ -326,6 +336,8 @@ def draw(region, scale, out):
     ax.add_patch(Rectangle((NEAT[0], NEAT[0]), NEAT[1] - NEAT[0], NEAT[1] - NEAT[0], fill=False,
                            edgecolor=INK, linewidth=px(2.5), zorder=16))
     margins(ax, px, scale)
+    if not clean:
+        notes.draw(ax, entities, scale, px)
 
     fig.savefig(out, dpi=DPI, facecolor=PAPER)
     print(f"Wrote {out}")
@@ -337,8 +349,9 @@ def main():
                         metavar=("X0", "Y0", "X1", "Y1"), help="world metres to draw")
     parser.add_argument("--scale", type=float, default=1.0, help="pixels per metre")
     parser.add_argument("--out", default=str(HERE / "assets/world1-sheet.png"))
+    parser.add_argument("--clean", action="store_true", help="the sheet as printed, without the owner's notes")
     args = parser.parse_args()
-    draw(args.region, args.scale, args.out)
+    draw(args.region, args.scale, args.out, args.clean)
 
 
 if __name__ == "__main__":

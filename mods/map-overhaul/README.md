@@ -30,6 +30,18 @@ The neat line is the playable square the game's world map covers, a sector wider
 margin outside it holds the title, legend, scale, layer tints and north points. `--region` and
 `--scale` draw part of the world for a closer look.
 
+Over it, `notes.py` writes what the previous owner marked, in Ink Free with a little tilt and wobble;
+`--clean` leaves them off:
+
+| Note | Drawn from |
+|---|---|
+| Guard posts in red grease pencil: a diamond, what the post keeps, its mounted guns | the 32 `Objectives.PGP.*` markers in `mapsdata`, and `MountedWeapons.*` within 50 m |
+| Safe houses (`SH`), arms dealers, bus stops and masts in pencil | the `SafeHouse_*`, `WeaponShop`, `BusStation` and `CellTower` markers |
+| The game's names for places, and what its text says of them, after the printed name | `REMARKS`, from `docs/docs/lore/places.md` |
+| A key in the top margin | |
+
+A remark that would cover a printed name or another note steps down until it is clear.
+
 ## The full map
 
 `stitch_map.py` joins world 1's 25 area maps, `levels\w1_<row a-e>_<column 1-5>\mapcompass_mip0.xbt`,
