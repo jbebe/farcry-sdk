@@ -1,7 +1,8 @@
 # Builds layer\ from the installed game: the merc brain's changes as fragments, which JackAll merges
 # into the player's own brain. Soldiers carrying an RPG or a Carl Gustav fire it at the player only in
-# a vehicle and draw their other gun at the player on foot, and an alerted soldier stands down after
-# 90 seconds.
+# a vehicle and draw their other gun at the player on foot, an alerted soldier stands down after
+# 90 seconds, and the squad tactics the game ships switched off at long and medium range, or when a
+# soldier's position is given away, are on.
 param(
     [string]$Game = 'C:\Games\Far Cry 2',
     [string]$Cli = "$PSScriptRoot\..\..\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
@@ -60,6 +61,11 @@ function Start-With($name, [string[]]$targets) {
     $fragment = $doc.CreateDocumentFragment()
     $fragment.InnerXml = Connect $targets
     (Instance $name).SelectSingleNode("Anchor[@Name='OnStart']").AppendChild($fragment) | Out-Null
+}
+
+# Sends the CBlueprintDecision $name down its IS_TRUE exit.
+function Switch-On($name) {
+    (Instance $name).SelectSingleNode("Parameter[@Name='DecisionToUse']").SetAttribute('Value', '1')
 }
 
 # Whether the target is in a working vehicle, or with $invert 1, not in one.
@@ -131,7 +137,8 @@ function SwitchWeapon($name, $selected, $class, $then) {
 "@
 }
 
-$plan = '::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan'
+$combat = '::MercBrain/MercBrain/MercBrainCombat'
+$plan = "$combat/CombatSnipingPlan"
 $shoot = "$plan/ShootPhase"
 
 # In the shoot phase, a soldier with a launcher in hand, or known to carry one, fires it at the player
@@ -203,6 +210,18 @@ Add-Instance $alert "$alert/StandDownTimer" @"
 </Task>
 "@
 Start-With $alert "$alert/StandDownTimer"
+
+# At long and medium range, a soldier with no cover to reach runs out to the target's side rather than
+# at him, and goes after a target above him from a firing spot or a way up.
+foreach ($band in 'LongRangedAttack', 'MediumRangedAttack') {
+    Switch-On "$combat/$band/AssaultAttack/NoCoverOrNoPathFailure/TryRunToPerpendicular"
+    Switch-On "$combat/$band/CheckForHeightDiff"
+}
+# Under fire, hurt, or shot at by another target, a soldier moves from a position given away.
+foreach ($compromised in 'CombatFireAlert', 'CombatPlayHurt', 'ShootByAnotherTarget') {
+    Switch-On "$combat/$compromised/ScanReloadIsNeeded_BP1/ScanRelocate"
+    Switch-On "$combat/$compromised/ScanReloadIsNeeded_BP1/ScanRelocate2"
+}
 
 $doc.Save($source)
 Invoke-Cli ai fragments $source --base $brain --out $fragments

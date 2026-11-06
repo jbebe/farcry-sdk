@@ -33,7 +33,7 @@ RINGS = [("bush", BUSH, CREST, 1.8), ("Datsun", CAR, 0.0, 2.2)]
 SPOTS = 8
 WATCHER = 25.0
 HOLD = 5.0
-TRACE = re.compile(r"perception trace: [^;]*?(, in shade)?, (?:alert|idle);.*recognises from (\S+) m")
+TRACE = re.compile(r"perception trace: [^;]*?(, in shade)?, (?:fighting|alert|idle);.*recognises from (\S+) m")
 
 
 def look(game, log, at, raised, outward):

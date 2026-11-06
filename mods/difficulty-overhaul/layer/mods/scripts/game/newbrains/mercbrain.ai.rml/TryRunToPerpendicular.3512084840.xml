@@ -1,0 +1,10 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/TryRunToPerpendicular" Class="CBlueprintDecision" Looping="0" Independent="0">
+  <Parameter Name="DecisionToUse" Value="1" />
+  <Anchor Name="OnStart" />
+  <Event Name="IS_TRUE">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1" TargetAnchor="Start" />
+  </Event>
+  <Event Name="IS_FALSE">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/TryRunToThreat" TargetAnchor="Start" />
+  </Event>
+</Task>

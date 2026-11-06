@@ -24,7 +24,7 @@ LAMP_ABOVE = 3.0
 CASES = [("beside the lamp", (202.0, 180.0)), ("away from it", (202.0, 195.0))]
 WATCHER = 15.0
 HOLD = 9.0
-TRACE = re.compile(r"perception trace: (\S+) m, [^;]*?(, lit by a lamp)?, (alert|idle);.*recognises from (\S+) m")
+TRACE = re.compile(r"perception trace: (\S+) m, [^;]*?(, lit by a lamp)?, (fighting|alert|idle);.*recognises from (\S+) m")
 
 
 def main():

@@ -44,7 +44,7 @@ Notable changes to Difficulty Overhaul, loosely following
   recognises you from 25 m at most, whatever you do, a quarter farther under a lamp, and in a
   sandstorm from 40 m at most. Behind
   him he never sees you, but hears you walk upright within 20 m; crouched, you can creep up unheard.
-  Alerted soldiers see a quarter farther, and a soldier at the wheel only through his windscreen. The
+  Alerted soldiers see a quarter farther, those fighting you half as far again, and a soldier at the wheel only through his windscreen. The
   camo suit hides you crouched and still in high grass beyond 3 m, unless he is fighting you.
   In front of him he notices you at once. At his side, beyond 20 m, he needs a moment, longer the
   farther and the less visible you are, up to 2 seconds, so a dash from cover to cover past his side
@@ -54,6 +54,9 @@ Notable changes to Difficulty Overhaul, loosely following
   tells him where it came from.
 - **Weapons by range.** Pistols and SMGs lose accuracy with range. A shotgun is deadly out to 20 m
   and falls off fast past it.
+- **Squad tactics.** Soldiers use the game's own tactics at every range: with no cover to reach they
+  run out to your side rather than straight at you, they go after you from a firing spot or a way up
+  when you are above them, and they move once under fire or hurt.
 - **No rockets at you on foot.** A soldier with an RPG or a Carl Gustav draws his other gun at you on
   foot, and keeps the launcher for you in a vehicle.
 - **Alerts end.** A soldier who has lost you gives up after 90 seconds, walks back to where he was

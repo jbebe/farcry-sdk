@@ -68,6 +68,10 @@ Combat that is realistic and fair:
   the user's pistol shot and killed him at once: "That should not happen"): a shot gives the player away only
   to a soldier who was alert when he heard it, and the quick aim needs him alert 2 s before he caught sight
   of the player; one the shot alerts learns where it came from and is surprised.
+- **Squad tactics belong here** (2026-11-06): "yes, I want the squad tactics in difficulty overhaul".
+  First the game's own, switched on where it ships them off: flanking and height at long and medium
+  range, moving when compromised; then fire from cover and crouching to shoot in the open, researched
+  before they are built.
 - **Firefights are aggressive.** Nothing the player does silences a soldier who sees him: suppression
   only spoils aim, and holding fire never sends a soldier elsewhere
   ([2026-10-29](#on-the-real-map)).
@@ -93,7 +97,8 @@ turns the two into the visibility the game compares with the soldier's own fuzzy
 | Heavy fog | at most 40 m in a sandstorm, the heaviest; lighter fog in proportion to its full distance over its amount (2026-11-04) |
 | Talking guards | ×0.5; deferred 2026-11-04, social posts left as shipped until needed |
 | Driver | only through a 50° windscreen cone; a turret gunner sees 180° like a soldier on foot, and so does a passenger (phase 2; 50° and passengers 2026-11-04) |
-| Alert or fighting | ×1.25, after the night and fog limits |
+| Alert, or just out of a fight | ×1.25, after the night and fog limits |
+| Fighting | ×1.5, after the night and fog limits (2026-11-06: "It feels realistic") |
 | At his side, within 180° | ×0.5 |
 | Behind him | never; walking upright within 20 m he hears the player, "only crouching behind an enemy can get you behind them without noticing" |
 
@@ -203,6 +208,7 @@ reach, the wall between left him unlit. Not played.
 | 13 | Alert aim and shots that give the player away (2026-11-06): an alert soldier settles in 0.3 s, from when he caught sight of the player too, and his first shot can hit; a shot heard within the gun's own radius makes the player out to a soldier who can see any of him, until 3 s out of his view | range, row 30 |
 | 14 | Fire at a glimpse (2026-11-06): a soldier in a combat state fires at his fuzzy line rather than his clear one | range, row 31 |
 | 15 | Only in the fight (2026-11-06): a shot gives the player away only to a soldier already alert when he hears it; the quick aim only for one alert 2 s before he caught sight of the player | range, row 30 |
+| 16 | Fighting sight and the game's tactics (2026-11-06): a soldier fighting the player sees 1.5 times as far as idle, alerted 1.25; flanking and height switched on at long and medium range, relocating when under fire, hurt or shot at by another target | range, row 32 |
 
 The mod's README lists each feature's values.
 
@@ -259,6 +265,7 @@ range in the log drifts from the scenario's distance.
 | 29 | Blood | `python tools\fc2drive\scenarios\blood.py`: an AK-47 round and a SPAS-12 shell into a rifleman 10 m off, then a rifleman and a shotgunner shoot the player, who faces them; a shot straight after each hit and 0.3 s later | no spray from the AK round, one from the shell's pellets | new 2026-11-05: "remove the blood splatters for all guns except pellet guns, for enemies and for the player too" | fc2drive, 2026-11-05, not played: 0.3 s after an AK round in the legs, and in the torso, nothing flew off the soldier; after a SPAS shell red droplets flew off his legs, twice. On the player neither the rifleman's hits nor the shotgunner's showed a spray from first person; what shows is the game's red hit flash, a screen effect of its own, unchanged |
 | 30 | Shots give him away | `python tools\fc2drive\scenarios\given_away.py`: a rifleman faces the player, who crouches still in the open, beyond the 50 m an alert soldier makes him out from, and fires one round away from him: an AK-47 at 60 m and at 100 m, a Dragunov at 100 m | given away within the gun's report, 75 m and 150 m, not beyond; his first shots above 0 | new 2026-11-06: 5-6 soldiers with a line of sight never fired after the user killed one of them | fc2drive, 2026-11-06, not played: the AK at 60 m gave him away at 59.1 m and the soldier fired 1.0 s later, his first shots at 0.14, 0.09 and 0.20, two of them hits, where first shots had been 0.00; at 100 m it did not; the Dragunov at 100 m did, at 100.7 m, and in one run that soldier closed to 74 m before firing, his first at 0.28, in another he only advanced within 12 s. Held on his recognition line, the game kept him searching: it makes a target out only past the line and follows a visibility below 0.9 slowly, so a given-away player is seen in full. Since the user's death to a soldier his own shot had just alerted, two rounds: the first only alerted the AK's soldier at 60 m, who noticed him and came on; the second gave him away at 50.1 m. With his alert counted from the first round, every frame, he had been searching about 3 s when he caught sight of the player, so he aimed as a hunter: first shots 0.03, 0.18, 0.33; counted from perception's looks, which can start late or go stale, he had read as surprised. The Dragunov's soldier, alert for seconds, closed to 75 m and fired at 0.20, 0.11, 0.22 |
 | 31 | Fire at a glimpse | `python tools\fc2drive\scenarios\glimpse.py`: a rifleman 15 m off sees the player and opens fire; the player moves to 55 m and crouches still, past the 50 m a fighting soldier recognises him from, within the 60 m he notices him from | he keeps firing at a low chance where before he held | new 2026-11-06, the user's pick of option 3 | fc2drive, 2026-11-06, not played: his lines 0.20 and 0.40, the player seen at 0.30; in 8 s 37 shots and 9 hits at chances of 0.18 to 0.25, no hold, then he closed to 44 m; a second run 27 shots and 5 hits. The watched spot now restarts his aim on a glimpse too |
+| 32 | Fighting sight and tactics | `python tools\fc2drive\scenarios\tactics.py`: on open ground east of the hub, with no cover in reach, a squad of three riflemen 40 m off fights the player, who stands still; their positions come from the perception trace | a fighting soldier notices a still player from 72 m and recognises him from 60 m; an assaulter runs out to the player's side | new 2026-11-06 | fc2drive, 2026-11-06, not played: 72 m and 60 m in every look. No flank seen: a lone soldier 30 m off and a squad of three at 40 m held their distance within 2 m and moved round the player by 10 to 20 degrees in 15 s; which of them the squad made assaulters, the only ones the flank is for, the log does not show. The switches are on in the deployed brain; relocating and height not checked |
 
 ### Still to do before it is finished
 

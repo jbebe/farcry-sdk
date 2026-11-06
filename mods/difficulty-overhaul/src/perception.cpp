@@ -219,11 +219,12 @@ namespace {
     constexpr double kNoticeForget = 2.0;
     // The longest gap between two of a soldier's looks that still counts as the player in his sight.
     constexpr double kLookGap = 0.5;
-    // Hardcore: at his side, in high grass crouched, in shade by day, and alerted or fighting.
+    // Hardcore: at his side, in high grass crouched, in shade by day, alert, and fighting.
     constexpr float kAtSide = 0.5f;
     constexpr float kInGrass = 0.5f;
     constexpr float kInShade = 0.5f;
     constexpr float kAlert = 1.25f;
+    constexpr float kFighting = 1.5f;
     // Hardcore: a driver sees only through his windscreen, this wide.
     constexpr float kWindscreen = 50.0f;
     // Hardcore: the most a soldier recognises and notices from at night, and how much farther when a
@@ -859,7 +860,7 @@ namespace {
         return hidden;
     }
 
-    void Report(const Look& look, uint32_t id, double now, float visibility, float distance,
+    void Report(const Look& look, uint32_t id, double now, const float* eye, float visibility, float distance,
                 const char* moving, Zone zone, const Hiding& hiding, const char* state, float notice,
                 float recognise) {
         const int level = visibility >= Shooting::ClearLine(look.soldier)   ? 2
@@ -878,11 +879,11 @@ namespace {
             seen.traced = now;
             CombatLogf("soldier %08X perception trace: %.1f m, %s, %s%s%s%s%s, %s; cover %.2f; visibility %.2f, "
                        "lines %.2f and %.2f; fog full at %.0f m with %.2f; notices from %.0f m, "
-                       "recognises from %.0f m",
+                       "recognises from %.0f m; he stands at %.1f, %.1f",
                        id, distance, moving, kZoneNames[zone], HidingName(hiding), BushName(hiding),
                        LightName(hiding), look.driving ? ", driving" : "", state, hiding.cover,
                        visibility, Shooting::FuzzyLine(look.soldier), Shooting::ClearLine(look.soldier),
-                       g_fogEnd, g_fogAmount, notice, recognise);
+                       g_fogEnd, g_fogAmount, notice, recognise, eye[0], eye[1]);
         }
         if (level >= seen.level) {
             seen.below = -1.0;
@@ -931,7 +932,8 @@ namespace {
         const bool moving = std::hypot(velocity[0], velocity[1], velocity[2]) >= kMovingSpeed;
         const float distance = g_targetDistance(context);
         const Zone zone = ZoneOf(at, look);
-        const bool fighting = Read<bool>(at, kContextFighting) || Read<bool>(at, kContextAfterFight);
+        const bool inFight = Read<bool>(at, kContextFighting);
+        const bool fighting = inFight || Read<bool>(at, kContextAfterFight);
         const bool alert = Read<bool>(at, kContextAlerted) || fighting;
         const double now = Game::Now();
         void* soldier = Game::EntityOf(Shooting::Pawn(look.soldier));
@@ -964,10 +966,9 @@ namespace {
             recognise = std::min(recognise, kFogRecognise * fog);
             notice = std::min(notice, kFogNotice * fog);
         }
-        if (alert) {
-            recognise *= kAlert;
-            notice *= kAlert;
-        }
+        const float sharper = inFight ? kFighting : alert ? kAlert : 1.0f;
+        recognise *= sharper;
+        notice *= sharper;
         if (hiding.camouflaged) {
             recognise = notice = kCamouflaged;
         }
@@ -996,9 +997,9 @@ namespace {
         if (HeldBack(id, now, visibility >= Shooting::FuzzyLine(look.soldier), delay)) {
             visibility = 0.0f;
         }
-        Report(look, id, now, visibility, distance,
+        Report(look, id, now, Vec3(at, kContextEye), visibility, distance,
                moving ? (upright ? "walking upright" : "moving crouched") : "still", zone, hiding,
-               alert ? "alert" : "idle", notice, recognise);
+               inFight ? "fighting" : alert ? "alert" : "idle", notice, recognise);
         return visibility;
     }
 }
