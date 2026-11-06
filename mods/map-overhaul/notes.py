@@ -1,5 +1,5 @@
-# The previous owner's notes over the sheet in blue ballpoint: G.P. at each guard post, the safe houses
-# and bus stops, and the places by the names the game gives them.
+# The previous owner's notes over the sheet in blue ballpoint: G.P. at each guard post, the safe houses,
+# arms dealers and bus stops, and the places by the names the game gives them.
 import itertools
 import urllib.request
 import zlib
@@ -12,6 +12,8 @@ HERE = Path(__file__).resolve().parent
 # A Google font under the SIL Open Font License, fetched once into work/.
 HANDWRITING = "https://raw.githubusercontent.com/google/fonts/main/ofl/nothingyoucoulddo/NothingYouCouldDo.ttf"
 BALLPOINT = "#1d3b8f"
+# Markers that are circled, and what is written beside the circle.
+CIRCLED = {"Objectives.BusStation": "bus", "Objectives.WeaponShop": "A.D."}
 
 # What the game's own text says of each named place, by its detail map's texture
 # (docs/docs/lore/places.md).
@@ -121,9 +123,9 @@ def draw(ax, entities, scale, px):
             stroke(ax, [[x - r, y - r], [x + r, y - r], [x + r, y + r * 0.4], [x, y + r * 1.3],
                         [x - r, y + r * 0.4], [x - r, y - r * 1.1]], px(1.8), key)
             hand(ax, x + r + 8, y - 2, "S.H.", 30 * scale, key)
-        elif name.startswith("Objectives.BusStation"):
+        elif label := next((v for k, v in CIRCLED.items() if name.startswith(k)), None):
             ring(ax, x, y, 16, px(1.8), key)
-            hand(ax, x + 22, y + 14, "bus", 30 * scale, key)
+            hand(ax, x + 22, y + 14, label, 30 * scale, key)
 
-    hand(ax, 1000, 4160 + 260, "G.P. guard post      S.H. safe house", 40 * scale, "key")
+    hand(ax, 1000, 4160 + 260, "G.P. guard post      S.H. safe house      A.D. arms dealer", 40 * scale, "key")
     untangle(ax, scale)
