@@ -7,8 +7,10 @@
 
 #include "fcse_api.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 
 namespace {
     using ViewModeChangedFn = void(__thiscall*)(void* pawn, bool firstPerson);
@@ -26,13 +28,16 @@ namespace {
     constexpr ptrdiff_t kGetComponentCall = 0x38;
 
     // The model switch's first-person branch: SetObjectVisible(1, true) on the avatar, then RemoveObject(0) on the
-    // full body as PUSH 0, MOV ECX,EDI, CALL, which pops its own argument.
+    // full body as PUSH 0, MOV ECX,EDI, CALL, which pops its own argument. Player Body takes the same call out, so
+    // it may already be NOPs.
     FCSE::Relocation<uint8_t*> g_firstPersonBranch{FCSE::Pattern(
-        "8B 4C 24 14 F7 D1 51 8B 48 34 E8 ?? ?? ?? ?? 6A 01 6A 01 8B CF E8 ?? ?? ?? ?? 6A 00 8B CF E8 ?? ?? ?? ?? "
+        "8B 4C 24 14 F7 D1 51 8B 48 34 E8 ?? ?? ?? ?? 6A 01 6A 01 8B CF E8 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? "
         "5F 5E 5D 5B C2 04 00")};
     constexpr ptrdiff_t kSetObjectVisibleCall = 0x15;
     constexpr ptrdiff_t kDiscard = 0x1A;
     constexpr size_t kDiscardSize = 9;
+    constexpr uint8_t kDiscardStart[] = {0x6A, 0x00, 0x8B, 0xCF, 0xE8};
+    constexpr uint8_t kNop = 0x90;
 
     constexpr unsigned kFullBody = 0;
 
@@ -82,11 +87,17 @@ bool Install() {
     g_graphicType = At<const void*>(viewModeChanged, kGraphicType);
     g_setObjectVisible = CallTarget<SetObjectVisibleFn>(g_firstPersonBranch.get() + kSetObjectVisibleCall);
 
-    uint8_t nops[kDiscardSize];
-    for (uint8_t& nop : nops) {
-        nop = 0x90;
+    uint8_t* discard = g_firstPersonBranch.get() + kDiscard;
+    if (std::all_of(discard, discard + kDiscardSize, [](uint8_t b) { return b == kNop; })) {
+        return true;
     }
-    return api->Patch(g_firstPersonBranch.get() + kDiscard, nops, kDiscardSize);
+    if (!std::equal(std::begin(kDiscardStart), std::end(kDiscardStart), discard)) {
+        api->Log("view mode: the full body's discard is not the call this plugin knows");
+        return false;
+    }
+    uint8_t nops[kDiscardSize];
+    std::fill(std::begin(nops), std::end(nops), kNop);
+    return api->Patch(discard, nops, kDiscardSize);
 }
 
 void Set(void* pawn, bool firstPerson) {
