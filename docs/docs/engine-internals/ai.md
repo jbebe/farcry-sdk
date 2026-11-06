@@ -679,7 +679,7 @@ off:
 
 | Switch | Off in | What it gates |
 |---|---|---|
-| `TryRunToPerpendicular` | long, medium | a soldier with no reachable cover runs to a flanking spot to the target's side; off, he runs at the target |
+| `TryRunToPerpendicular` | long, medium | a soldier with no reachable cover runs to a flanking spot 7 m to the side of his line to the target (`FindPerpendicularPos`'s `PerpendicularLength`), waits 4 s and starts over; off, he runs at the target |
 | `CheckForHeightDiff` | long, medium | the attack on a target above him: a firing spot for a high target, or a path up |
 | `CheckForShotgunProgression` | kill (both copies) | a shotgunner takes the assault role whatever his squad gave him, and pauses 1 s at each cover instead of 3 s. On in the short, medium and long bands, so he pushes from 50 m in to 12 m |
 | `CheckForMountedWeapon`, `CheckForVehicle` | kill; kill and short | going for a mounted gun; calling a vehicle |
@@ -691,6 +691,15 @@ the same plan flees anyway when the soldier is under fire.
 
 Some blueprints are never copied into the live brain at all. The largest, `ShotgunProgression`
 (227 instances), is an advance from cover to cover with taunts.
+
+### Seeing which tasks run
+
+Every task starts through `CTask::Start` (Steam `0x1031CA80`, `__thiscall`, no arguments). A task holds the CRC32 of
+its instance name at `+0x04`, the plan it runs in at `+0x08` (null at the top brain) and its agent at `+0x0C`,
+which for a soldier's brain is his `CPawnAgent`. The name is the hash the packed repository keys the task by,
+so the shipped brain's source names every hash a hook logs (**RE-verified**: the server build's `CTask::Start`,
+`SetAgent` and `DispatchConnection`, and the Steam `CBlueprintDecision` vtable; logged on the test range).
+Difficulty Overhaul's `-braintrace` switch logs each task a soldier's combat brain starts this way.
 
 ## Task parameters
 

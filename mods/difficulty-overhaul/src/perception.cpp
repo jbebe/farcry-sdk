@@ -936,8 +936,7 @@ namespace {
         const bool fighting = inFight || Read<bool>(at, kContextAfterFight);
         const bool alert = Read<bool>(at, kContextAlerted) || fighting;
         const double now = Game::Now();
-        void* soldier = Game::EntityOf(Shooting::Pawn(look.soldier));
-        const uint32_t id = Game::Id(soldier);
+        const uint32_t id = Shooting::Id(look.soldier);
         hiding.grass = !upright && HeldInGrass(id, hiding.grass, now);
         hiding.camouflaged = hiding.grass && !moving && !fighting && WearsCamoSuit(pawn);
         hiding.light = PlayerLight(Vec3(at, kContextTargetPosition), now);

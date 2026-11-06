@@ -65,6 +65,8 @@ python fight_report.py --soldier 3A802DED       every line about one soldier
 Launched with `-perceptiontrace`, the game also logs every soldier's check of the player four times a
 second: how far, where in his view, what hides the player, and the distances he notices and
 recognises from. fc2drive's perception scenario reads it to know where the soldier is looking.
+With `-braintrace`, it logs each task a soldier's combat brain starts, by the CRC32 of its name in
+`mercbrain`; fc2drive's `brain.py` names them, and its tactics scenario reports each soldier's plans.
 
 ## Planned
 

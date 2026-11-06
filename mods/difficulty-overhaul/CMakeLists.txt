@@ -25,6 +25,7 @@ add_library(DifficultyOverhaul SHARED
   "src/perception.cpp"
   "src/going_down.cpp"
   "src/healing.cpp"
+  "src/brain_trace.cpp"
   "src/engine/combat_log.cpp"
   "src/engine/damage.cpp"
   "src/engine/game.cpp"

@@ -73,7 +73,8 @@ bool Positions(void* shooting, float from[3], float to[3]);
 void* Pawn(void* agent);
 void* ShooterPawn(void* shooting);
 
-// His entity's id, as the logs name soldiers.
+// A CPawnAgent's entity id, as the logs name soldiers, and the id of a shooting system's soldier.
+uint32_t Id(void* agent);
 uint32_t ShooterId(void* shooting);
 
 // CWeaponPropertiesCommon's selWeaponClass values.

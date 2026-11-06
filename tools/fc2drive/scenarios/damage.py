@@ -43,11 +43,14 @@ def expected(archetype):
     return f"level {level}, {curve_damage(level):.0f}"
 
 
-def first_match(log, pattern, seconds):
-    """The first line `pattern` finds in the log within `seconds`, or None."""
+def first_match(log, pattern, seconds, kept=None):
+    """The first line `pattern` finds in the log within `seconds`, or None; every line read goes on `kept`."""
     end = time.monotonic() + seconds
     while time.monotonic() < end:
-        if hit := next((m for m in map(pattern.search, log.new_lines()) if m), None):
+        lines = log.new_lines()
+        if kept is not None:
+            kept.extend(lines)
+        if hit := next((m for m in map(pattern.search, lines) if m), None):
             return hit
         time.sleep(0.05)
     return None

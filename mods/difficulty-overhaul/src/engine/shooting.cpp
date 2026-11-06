@@ -203,7 +203,9 @@ void* Pawn(void* agent) { return Read<void*>(agent, kAgentPawn); }
 
 void* ShooterPawn(void* shooting) { return Pawn(Agent(shooting)); }
 
-uint32_t ShooterId(void* shooting) { return Game::Id(Game::EntityOf(ShooterPawn(shooting))); }
+uint32_t Id(void* agent) { return Game::Id(Game::EntityOf(Pawn(agent))); }
+
+uint32_t ShooterId(void* shooting) { return Id(Agent(shooting)); }
 
 int WeaponClass(void* shooting) {
     if (!g_getEquippedWeapon) {
