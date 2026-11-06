@@ -1,14 +1,17 @@
-# The previous owner's notes over the sheet: guard posts in red grease pencil, and in pencil the safe
-# houses, arms dealers, bus stops and masts, and the places by the names the game gives them.
+# The previous owner's notes over the sheet in blue ballpoint: !GP! at each guard post, the safe houses
+# and bus stops, and the places by the names the game gives them.
+import itertools
+import urllib.request
 import zlib
+from pathlib import Path
 
-import matplotlib.patheffects as effects
 import numpy as np
 from matplotlib.font_manager import FontProperties
 
-HAND = FontProperties(fname="C:/Windows/Fonts/Inkfree.ttf")
-PENCIL = "#2b2e34"
-GREASE = "#c22b25"
+HERE = Path(__file__).resolve().parent
+# A Google font under the SIL Open Font License, fetched once into work/.
+HANDWRITING = "https://raw.githubusercontent.com/google/fonts/main/ofl/cedarvillecursive/Cedarville-Cursive.ttf"
+BALLPOINT = "#1d3b8f"
 
 # What the game's own text says of each named place, by its detail map's texture
 # (docs/docs/lore/places.md).
@@ -33,86 +36,92 @@ REMARKS = {
     "w1d3_airstrip": "Airfield - crop duster",
     "w1d4_shantytown": "shanty town",
 }
-SUPPLIES = {"Ammo": "ammo", "Health": "medical", "Explosives": "explos.", "Fuel": "fuel"}
-MARKERS = {"Objectives.WeaponShop": "guns", "Objectives.BusStation": "bus", "Objectives.CellTower": "mast"}
+
+
+def handwriting():
+    path = HERE / "work/fonts" / HANDWRITING.rsplit("/", 1)[1]
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        urllib.request.urlretrieve(HANDWRITING, path)
+    return FontProperties(fname=path)
+
+
+HAND = handwriting()
 
 
 def rng(key):
     return np.random.default_rng(zlib.crc32(key.encode()))
 
 
-def hand(ax, x, y, s, size, colour, key, ha="left", va="center"):
-    # Ink Free's strokes are hairlines at this size; an outline in the same colour gives them a pencil's weight.
+def hand(ax, x, y, s, size, key, ha="left", va="center", gid="ink"):
     tilt = rng(key).uniform(-4, 4)
-    ax.text(x, y, s, fontproperties=HAND, fontsize=size * 72 / 100, color=colour, alpha=0.9, ha=ha, va=va,
-            rotation=tilt, rotation_mode="anchor", linespacing=1.05, zorder=30,
-            path_effects=[effects.withStroke(linewidth=size * 0.05 * 72 / 100, foreground=colour, alpha=0.9)])
+    return ax.text(x, y, s, fontproperties=HAND, fontsize=size * 72 / 100, color=BALLPOINT, ha=ha, va=va,
+                   rotation=tilt, rotation_mode="anchor", linespacing=1.0, zorder=30, gid=gid)
 
 
-def remark(ax, place, x, y, scale, ha):
+def remark(ax, place, anchors, y, scale):
+    # Anchors are where the remark may start, best first: an x and the alignment that goes with it.
     if place in REMARKS:
-        hand(ax, x, y, REMARKS[place], 27 * scale, PENCIL, place, ha=ha, va="top" if "\n" in REMARKS[place] else "center")
-        ax.texts[-1].set_gid("remark")
+        x, ha = anchors[0]
+        text = hand(ax, x, y, REMARKS[place], 34 * scale, place, ha=ha,
+                    va="top" if "\n" in REMARKS[place] else "center", gid="ink-remark")
+        text.anchors = anchors
+
+
+def stroke(ax, points, width, key):
+    jitter = rng(key).normal(0, 0.5, np.shape(points))
+    line, = ax.plot(*(np.asarray(points) + jitter).T, color=BALLPOINT, linewidth=width, solid_capstyle="round",
+                    solid_joinstyle="round", zorder=29, gid="ink")
+    line.set_sketch_params(0.8, 40, 3)
+
+
+def ring(ax, x, y, r, width, key):
+    g = rng(key)
+    a = np.linspace(0, 2 * np.pi + g.uniform(0.3, 0.6), 60) + g.uniform(0, 2 * np.pi)
+    wobble = 1 + 0.06 * np.sin(a * 2 + g.uniform(0, 6))
+    stroke(ax, np.c_[x + r * wobble * np.cos(a), y + r * 0.85 * wobble * np.sin(a)], width, key)
 
 
 def untangle(ax, scale):
-    # Each remark steps down until it clears the printed names, the marks' labels and the remarks before it.
+    # Each remark takes the first of its anchors, a little higher or lower, that clears the printed names,
+    # the marks and the remarks before it; if none does, it stays where it was written.
     renderer = ax.figure.canvas.get_renderer()
-    notes = [t for t in ax.texts if t.get_zorder() >= 30]
+    notes = [t for t in ax.texts if (t.get_gid() or "").startswith("ink")]
     taken = [t.get_window_extent(renderer) for t in ax.texts if t.get_zorder() == 20]
-    taken += [t.get_window_extent(renderer) for t in notes if t.get_gid() != "remark"]
-    for t in (t for t in notes if t.get_gid() == "remark"):
-        box = t.get_window_extent(renderer)
-        for _ in range(8):
+    taken += [t.get_window_extent(renderer) for t in notes if t.get_gid() == "ink"]
+    for t in (t for t in notes if t.get_gid() == "ink-remark"):
+        y = t.get_position()[1]
+        height = t.get_window_extent(renderer).height / scale
+        for (x, ha), dy in itertools.product(t.anchors, (0, 0.5, -0.5, 1, -1)):
+            t.set_position((x, y + dy * height))
+            t.set_horizontalalignment(ha)
+            box = t.get_window_extent(renderer)
             if not any(box.overlaps(b) for b in taken):
                 break
-            x, y = t.get_position()
-            t.set_position((x, y - box.height / scale / 2))
+        else:
+            t.set_position((t.anchors[0][0], y))
+            t.set_horizontalalignment(t.anchors[0][1])
             box = t.get_window_extent(renderer)
         taken.append(box)
 
 
-def stroke(ax, points, colour, width, key):
-    jitter = rng(key).normal(0, 0.6, np.shape(points))
-    line, = ax.plot(*(np.asarray(points) + jitter).T, color=colour, alpha=0.85, linewidth=width,
-                    solid_capstyle="round", solid_joinstyle="round", zorder=29)
-    line.set_sketch_params(1.2, 40, 3)
-
-
-def ring(ax, x, y, r, colour, width, key):
-    g = rng(key)
-    a = np.linspace(0, 2 * np.pi + g.uniform(0.3, 0.6), 60) + g.uniform(0, 2 * np.pi)
-    wobble = 1 + 0.06 * np.sin(a * 2 + g.uniform(0, 6))
-    stroke(ax, np.c_[x + r * wobble * np.cos(a), y + r * 0.85 * wobble * np.sin(a)], colour, width, key)
-
-
 def draw(ax, entities, scale, px):
-    markers = [e for e in entities if e["file"] == "mapsdata"]
-    guns = np.array([e["pos"][:2] for e in entities
-                     if any("MountedWeapons." in (s or "") for s in (e.get("tpl"), e["name"]))])
-
-    for e in markers:
+    for e in entities:
+        if e["file"] != "mapsdata":
+            continue
         name = e["name"] or ""
         x, y = e["pos"][:2]
         key = f"{name}{x:.0f}{y:.0f}"
         if name.startswith("Objectives.PGP."):
-            supply = SUPPLIES[name.split(".")[2].split("_")[1]]
-            mounted = int((np.linalg.norm(guns - (x, y), axis=1) < 50).sum())
-            r = 20
-            stroke(ax, [[x, y + r], [x + r, y], [x, y - r], [x - r, y], [x, y + r * 1.1]], GREASE, px(3.2), key)
-            label = f"GP {supply}" + (f"\n{mounted} MG" if mounted else "")
-            hand(ax, x + r + 8, y, label, 25 * scale, GREASE, key)
+            hand(ax, x, y, "!GP!", 38 * scale, key, ha="center")
         elif name.startswith("SafeHouse_"):
             r = 9
             stroke(ax, [[x - r, y - r], [x + r, y - r], [x + r, y + r * 0.4], [x, y + r * 1.3],
-                        [x - r, y + r * 0.4], [x - r, y - r * 1.1]], PENCIL, px(2.2), key)
-            hand(ax, x + r + 6, y - 2, "SH", 23 * scale, PENCIL, key)
-        else:
-            label = next((v for k, v in MARKERS.items() if name.startswith(k)), None)
-            if label:
-                ring(ax, x, y, 16, PENCIL, px(2.2), key)
-                hand(ax, x + 22, y + 14, label, 24 * scale, PENCIL, key)
+                        [x - r, y + r * 0.4], [x - r, y - r * 1.1]], px(1.8), key)
+            hand(ax, x + r + 8, y - 2, "SH", 30 * scale, key)
+        elif name.startswith("Objectives.BusStation"):
+            ring(ax, x, y, 16, px(1.8), key)
+            hand(ax, x + 22, y + 14, "bus", 30 * scale, key)
 
-    x, y = 1000, 4160 + 260
-    hand(ax, x, y, "red = them.  GP guard post, what they keep, MGs\nSH safe house", 30 * scale, PENCIL, "key")
+    hand(ax, 1000, 4160 + 260, "!GP! guard post      SH safe house", 40 * scale, "key")
     untangle(ax, scale)

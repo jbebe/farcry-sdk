@@ -13,10 +13,12 @@ import numpy as np
 from matplotlib.collections import LineCollection, PolyCollection
 from matplotlib.font_manager import FontProperties
 from matplotlib.patches import Rectangle
+from PIL import Image
 from scipy import ndimage
 from scipy.cluster.hierarchy import fclusterdata
 
 import notes
+import paper
 
 HERE = Path(__file__).resolve().parent
 WORLD = 5120
@@ -319,10 +321,10 @@ def draw(region, scale, out, clean):
             if name:
                 label = text(ax, x, y, name, size * scale, style)
                 if not clean:
-                    width = label.get_window_extent(fig.canvas.get_renderer()).width / scale
-                    notes.remark(ax, place, x + width / 2 + 14, y, scale, "left")
+                    half = label.get_window_extent(fig.canvas.get_renderer()).width / scale / 2 + 14
+                    notes.remark(ax, place, [(x + half, "left"), (x - half, "right")], y, scale)
             elif not clean:
-                notes.remark(ax, place, x, y, scale, "center")
+                notes.remark(ax, place, [(x, "center")], y, scale)
 
     for axis, origin in enumerate(GRID_ORIGIN):
         for g in range(NEAT[0] + (-(origin + NEAT[0])) % 1000, NEAT[1], 1000):
@@ -339,8 +341,22 @@ def draw(region, scale, out, clean):
     if not clean:
         notes.draw(ax, entities, scale, px)
 
-    fig.savefig(out, dpi=DPI, facecolor=PAPER)
+    Image.fromarray(paper.finish(*layers(fig, ax))).save(out)
     print(f"Wrote {out}")
+
+
+def layers(fig, ax):
+    # The figure drawn twice: the print without the ink, then the ink alone.
+    ink = [a for a in ax.get_children() if (a.get_gid() or "").startswith("ink")]
+    for a in ink:
+        a.set_visible(False)
+    fig.canvas.draw()
+    printed = np.asarray(fig.canvas.buffer_rgba()).copy()
+    for a in ax.get_children():
+        a.set_visible(a in ink)
+    fig.patch.set_visible(False)
+    fig.canvas.draw()
+    return printed, np.asarray(fig.canvas.buffer_rgba()).copy()
 
 
 def main():

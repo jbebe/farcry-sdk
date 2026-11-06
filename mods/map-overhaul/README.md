@@ -30,17 +30,23 @@ The neat line is the playable square the game's world map covers, a sector wider
 margin outside it holds the title, legend, scale, layer tints and north points. `--region` and
 `--scale` draw part of the world for a closer look.
 
-Over it, `notes.py` writes what the previous owner marked, in Ink Free with a little tilt and wobble;
-`--clean` leaves them off:
+Over it, `notes.py` writes what the previous owner marked in blue ballpoint, in Cedarville Cursive (a
+Google font under the SIL Open Font License, fetched into `work/fonts/` the first time) with a little
+tilt; `--clean` leaves them off:
 
 | Note | Drawn from |
 |---|---|
-| Guard posts in red grease pencil: a diamond, what the post keeps, its mounted guns | the 32 `Objectives.PGP.*` markers in `mapsdata`, and `MountedWeapons.*` within 50 m |
-| Safe houses (`SH`), arms dealers, bus stops and masts in pencil | the `SafeHouse_*`, `WeaponShop`, `BusStation` and `CellTower` markers |
+| `!GP!` at each guard post | the 32 `Objectives.PGP.*` markers in `mapsdata` |
+| Safe houses, a sketched house and `SH`; bus stops, circled | the `SafeHouse_*` and `BusStation` markers |
 | The game's names for places, and what its text says of them, after the printed name | `REMARKS`, from `docs/docs/lore/places.md` |
 | A key in the top margin | |
 
-A remark that would cover a printed name or another note steps down until it is clear.
+A remark that would cover a printed name or another note moves a little higher or lower, or to the
+other side of the name, and stays put if nothing is clear.
+
+`paper.py` then lays the print on paper: faded a fifth of the way to a yellowed paper and a tenth
+greyer, an uneven tone that only ever yellows, and a fine grain. The ink goes on last as a multiply,
+skipping a little on the grain, so it reads as written on the sheet rather than printed with it.
 
 ## The full map
 
