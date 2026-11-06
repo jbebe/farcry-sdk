@@ -82,11 +82,8 @@ both field by field with other mods' edits, reporting any clash.
   mounted guns kick and come back as in the game.
 - **Full auto spreads.** From the fourth shot of a burst each shot strays further, by a quarter of
   the gun's kick more each time, up to eight shots' worth: down a new AK-47's sights, up to 1.2°
-  more than its own 0.2°. A burst is shots less than a quarter of a second apart, so slower taps
+  more than its own 0.4°. A burst is shots less than a quarter of a second apart, so slower taps
   each start fresh.
-- **Tighter down the sights.** Every gun's random spread down the iron sights is half the game's
-  standing and a quarter of it crouched: a new AK-47's 0.2° and 0.1°, against the game's 0.4° and
-  0.38°, an Eagle .50's 0.35° and 0.13°. From the hip it is the game's. A scope has none.
 - **Dirt in the eye.** A round that lands within 3 m of the eye in ground, sand, mud, pebbles,
   concrete, tile or wood, the player's own as much as anyone's, throws dirt in it: two black,
   see-through, blurry blobs on the side it came from, the view blurred around them, bigger and
@@ -206,11 +203,10 @@ view is drawn in `src/engine/second_view.cpp` and laid down as the gun's colour 
 `src/surroundings.cpp`. The player's own tracers, a streak's length against its shot, and the
 ricochets are in `src/tracers.cpp`, and the streak is drawn in `src/streak.cpp` with
 `src/shaders/tracer.fx`, in the draws that bind the Direct3D texture the engine's tracer texture
-resource holds. Which guns fire tracers, their speed and their streaks' longest length, every
-gun's random spread down the sights cut, the scopes the plugin draws losing the engine's
-iron-sight effect and that spread altogether, so a scoped shot goes where the reticle is, are
-weapon data: `WeaponProperties`
-fragments under `layer\mods\`. So is each scope's reticle, eyepiece shape, rim, lens centre, raise
+resource holds. Which guns fire tracers, their speed and their streaks' longest length, and the
+scopes the plugin draws losing the engine's iron-sight effect and its random spread down the
+sights, so a scoped shot goes where the reticle is, are weapon data: `WeaponProperties` fragments
+under `layer\mods\`. So is each scope's reticle, eyepiece shape, rim, lens centre, raise
 and size: `AimingOverhaul.Scope*` keys in a `CFCSEDataComponent` on its `weapons` archetype, the
 reticle as an image path under `bin\plugins` with `ScopeReticleLit` for one lit from within. A gun
 whose breath can be held, and whose scope sways harder, has `AimingOverhaul.HoldBreath` set to 1

@@ -44,10 +44,8 @@ Notable changes to Aiming Overhaul, loosely following
   the gun and where the shots go stay as they were. A scope's sight picture does not shake. How hard
   and how long the kick and the roll are, how late the kick comes and how soon it gives way to the
   roll are set for each weapon in Aiming Overhaul's window in DevTools' overlay.
-- **Steadier and tighter down the sights.** Half the sway is left down the sights, standing and
-  crouched, each set in the same window, and every gun's random spread down the iron sights is
-  half the game's standing and a quarter of it crouched: a new AK-47's 0.2° and 0.1° instead of
-  0.4° and 0.38°.
+- **Steadier down the sights.** Half the sway is left down the sights, standing and crouched, each
+  set in the same window.
 - **Dirt in the eye.** A round landing in the dirt, sand, stone or wood by your face, your own
   included, throws dirt in your eye: dark, blurry blobs on that side with the view blurred around them, gone in a
   few seconds. How big, dark and blurred, how long it lasts and how near it has to land are set in
