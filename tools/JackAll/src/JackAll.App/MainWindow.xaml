@@ -383,7 +383,7 @@
                                  Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}">
                             <TextBox.Tag>
                                 <TextBlock>
-                                    <Run Text="Matches words in a path or a sound's label - narrow with " />
+                                    <Run Text="Matches any word - narrow with " />
                                     <Run Text="ext:&lt;type&gt;" FontStyle="Normal" FontFamily="{StaticResource MonoFont}" />
                                     <Run Text=", " />
                                     <Run Text="arch:&lt;module&gt;" FontStyle="Normal" FontFamily="{StaticResource MonoFont}" />
