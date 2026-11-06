@@ -77,6 +77,9 @@ Combat that is realistic and fair:
 - **Cover first when the player is behind cover** (2026-11-06): "if I'm not in cover and their cover is too far,
   crouch, aim and shoot. if I'm behind cover, then, they have a bigger priority to move to cover than crouching
   and shooting"; too far is "10m"; with the player behind cover and none within 20 m, "he aggroes me".
+- **Rescue left as it is** (2026-11-06): an assaulter who fires from his cover or holds in the open no
+  longer reaches the game's check for a wounded squadmate, which runs after he has waited 3 s at cover;
+  suppressors still check at every start of their attack. "I dont need rescue fix."
 - **Firefights are aggressive.** Nothing the player does silences a soldier who sees him: suppression
   only spoils aim, and holding fire never sends a soldier elsewhere
   ([2026-10-29](#on-the-real-map)).
@@ -279,8 +282,8 @@ range in the log drifts from the scenario's distance.
 
 ### Still to do before it is finished
 
-**Before release, the user's call on 2026-10-29:** the camo suit (N), the vest (F), grass visibility
-(row 10) and heavy testing. Added 2026-11-04: perception phase 3 (shade and lamps), and a revision of
+**Before release, the user's call on 2026-10-29:** the camo suit (N), grass visibility (row 10) and heavy
+testing; the vest (F) was scrapped on 2026-11-06. Added 2026-11-04: perception phase 3 (shade and lamps), and a revision of
 the damage, the soldiers' shooting and the health system.
 
 | # | Item | State |
@@ -290,7 +293,7 @@ the damage, the soldiers' shooting and the health system.
 | C | **How enemies differ.** Skill by role: guard posts below vehicle patrols below bodyguards; the arsenal stays as the game has it | direction set, [on hold](#open-how-enemies-differ) |
 | D | **Tuning candidates** from the review of step 4: hold fire at each soldier's own "clear" value rather than a fixed 0.4; sighting and the speed evaluator both count the player's movement; range falloff from each weapon's own effective range; grass in combat (0.8) hides more than when alerted (0.765) | closed, the user's call: the game's own combat "clear" is 0.4, the fire line already |
 | E | **Damage falloff with range** for the player's hits on soldiers | not needed, the user's call: a rifle round barely slows within the 150 m soldiers live at |
-| F | **A vest** | before release; what it is and does is open ([notes below](#postponed)) |
+| F | **A vest** | scrapped, the user's call on 2026-11-06: "Scrap it. We don't need it." |
 | G | **The difficulty spread.** Ease Casual and Experienced and harden Infamous, from the Hardcore values | every lever [listed below](#open-the-difficulty-spread) gets an answer before the mod is finished; after A to C |
 | I | **Periphery sees movement.** Outside his focus a still player is barely noticed, a moving one is | built: a still or crouch-moving player counts 0.2 of one moving upright in the periphery, full from 2 m/s (crouch-moving split off at the user's request: it is as fast as a walk); works in game, user 2026-10-26 |
 | J | **Close-range awareness.** Within about 2 m a soldier senses the player at any angle, but a crouching player can always approach without alerting him; walking or running alerts him | built: moving upright at 0.5 m/s or more, both cones go all round within 20 m and behind his eyes he counts 0.5 (noticed); within 2 m he counts in full. The 20 m is the user's; walking, running and jumping count, crouching never; works in game, user 2026-10-26 |
@@ -355,12 +358,6 @@ soldier went down "effortlessly"; with two or more "the picture changes drastica
 that they expect me to peek from the same spot. thats an almost instant death. I need to relocate, need to
 find cover, exactly what hardcore needs." Grass works both ways: "I dont see them but they dont see me
 either." Much testing is still to come.
-
-## Postponed
-
-- **A vest.** A torso hit from a rifle nearly kills the player, which is realistic; a vest is how they
-  will survive one. How it is obtained, whether its plates wear and whether mercs wear one are open.
-  The [lore rules](./extending-the-world.md#rejected-outright) rule out plate armour.
 
 ## Open: how enemies differ
 
@@ -430,7 +427,7 @@ mod counts as finished. Listed on 2026-10-28; nothing decided yet.
 | The player's close-range damage | data: `RangeMultipliers` per weapon | AK-47 at 0-2 m: +7 / +3 / +2 / none | removed on every setting |
 | Upgrade bonuses | code | per setting | untouched |
 | Enemy forced misses | data: `nForcedFailure*` per weapon | AK-47 misses 4-8 / 2-4 / 1 / 0 shots after a hit | replaced by the hit model on every setting |
-| Squad role split | code | one soldier / 70 % / 70 % / 90 % of the squad in the first role | untouched |
+| Squad role split | code | one soldier / 70 % / 70 % / 90 % of the squad assaulting | half assaulting on every setting (2026-11-06) |
 | Malaria drain | code | per setting | untouched |
 | Gamepad aim assist | code | per setting | untouched; gamepad only |
 
