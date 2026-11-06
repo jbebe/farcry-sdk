@@ -10,7 +10,7 @@ from matplotlib.font_manager import FontProperties
 
 HERE = Path(__file__).resolve().parent
 # A Google font under the SIL Open Font License, fetched once into work/.
-HANDWRITING = "https://raw.githubusercontent.com/google/fonts/main/ofl/cedarvillecursive/Cedarville-Cursive.ttf"
+HANDWRITING = "https://raw.githubusercontent.com/google/fonts/main/ofl/nothingyoucoulddo/NothingYouCouldDo.ttf"
 BALLPOINT = "#1d3b8f"
 
 # What the game's own text says of each named place, by its detail map's texture
@@ -113,7 +113,9 @@ def draw(ax, entities, scale, px):
         x, y = e["pos"][:2]
         key = f"{name}{x:.0f}{y:.0f}"
         if name.startswith("Objectives.PGP."):
-            hand(ax, x, y, "!GP!", 38 * scale, key, ha="center")
+            r = 20
+            stroke(ax, [[x, y + r], [x + r, y], [x, y - r], [x - r, y], [x, y + r * 1.1]], px(2.2), key)
+            hand(ax, x + r + 8, y, "!GP!", 38 * scale, key)
         elif name.startswith("SafeHouse_"):
             r = 9
             stroke(ax, [[x - r, y - r], [x + r, y - r], [x + r, y + r * 0.4], [x, y + r * 1.3],

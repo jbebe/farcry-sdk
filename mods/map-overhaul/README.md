@@ -30,13 +30,13 @@ The neat line is the playable square the game's world map covers, a sector wider
 margin outside it holds the title, legend, scale, layer tints and north points. `--region` and
 `--scale` draw part of the world for a closer look.
 
-Over it, `notes.py` writes what the previous owner marked in blue ballpoint, in Cedarville Cursive (a
+Over it, `notes.py` writes what the previous owner marked in blue ballpoint, in Nothing You Could Do (a
 Google font under the SIL Open Font License, fetched into `work/fonts/` the first time) with a little
 tilt; `--clean` leaves them off:
 
 | Note | Drawn from |
 |---|---|
-| `!GP!` at each guard post | the 32 `Objectives.PGP.*` markers in `mapsdata` |
+| A sketched diamond on each guard post, and `!GP!` | the 32 `Objectives.PGP.*` markers in `mapsdata` |
 | Safe houses, a sketched house and `SH`; bus stops, circled | the `SafeHouse_*` and `BusStation` markers |
 | The game's names for places, and what its text says of them, after the printed name | `REMARKS`, from `docs/docs/lore/places.md` |
 | A key in the top margin | |
