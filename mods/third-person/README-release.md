@@ -59,8 +59,8 @@ jackall-cli mod restore --game "C:\Games\Far Cry 2"
 
 ## Compatibility
 
-- **Vehicle Overhaul 1.0.1 and earlier** have a third-person view of their own on V. Use a later
-  Vehicle Overhaul, which leaves the view to this mod.
+- **Vehicle Overhaul 1.0.1 and earlier** have a third-person view of their own on V. Use Vehicle
+  Overhaul 1.1.0 or later, which leaves the view to this mod.
 - **Mods that change the controls** combine with it when they ship only the sections they change,
   the way this one does. One that ships `config\defaultusercontrols.xml` or
   `config\inputactionmapcommon.xml` whole still gets the Third-person view control, but loses its own
