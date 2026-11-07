@@ -35,6 +35,7 @@ add_library(PlayerBody SHARED
   "src/body.cpp"
   "src/legs.cpp"
   "src/shadow.cpp"
+  "src/third_person.cpp"
   "src/engine/camera.cpp"
   "src/engine/graphic.cpp"
   "src/engine/pawn.cpp"
@@ -42,6 +43,7 @@ add_library(PlayerBody SHARED
   "src/engine/skeleton.cpp"
   "src/engine/skin.cpp"
   "src/engine/sky_pass.cpp"
+  "src/engine/third_camera.cpp"
   "src/engine/vtable.cpp"
   "${SHADOW_HEADER}"
 )
