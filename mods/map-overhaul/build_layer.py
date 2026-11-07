@@ -44,6 +44,14 @@ SHEET = Path(r"graphics\objects\mapcompass\sheet")
 SHEET_FILES = ("sheet.xbg", "sheet_ref.skeleton", "sheet.xbm")
 SHEET_TEXTURE = 4096
 MAPTOP = r"GRAPHICS\_MATERIALS\JFCARRIER2-M-1708200746783136.xbm"
+# The map's banks on foot, which hold.py remakes for the sheet in both hands, in place.
+BANK_FOLDER = Path(r"graphics\characters\_common\animations\equipment\equipped_gadget")
+BANKS = ("aimcyclecrh_+000fw_nowep_eqmpcp_i1", "aimoffset_+090rt_nowep_i1_eqmpcp", "aimoffset_-090lt_nowep_i1_eqmpcp",
+         "aimoffsetcrh_+090rt_nowep_i1_eqmpcp", "aimoffsetcrh_-090lt_nowep_i1_eqmpcp", "draw_+000fw_nowep_eqmpcp_i1",
+         "holster_+000fw_nowep_eqmpcp_i1", "idle_+000fw_nowep_eqmpcp_i1", "jumpend_+000fw_nowep_i1_eqmpcp",
+         "jumpidle_+000fw_nowep_i1_eqmpcp", "jumpstart_+000fw_nowep_i1_eqmpcp", "run_+000fw_nowep_eqmpcp_i1",
+         "slideend_+000fw_nowep_i1_eqmpcp", "slidepose_+000fw_nowep_i1_eqmpcp", "slidestart_+000fw_nowep_i1_eqmpcp",
+         "walk_+000fw_nowep_i1_eqmpcp", "walkcrh_+000fw_nowep_i1_eqmpcp")
 
 
 def run(*args):
@@ -99,17 +107,31 @@ def textures(source, tools, work):
             texture(tools, original, plan, work)
 
 
-def sheet_model(game, tools, work):
-    # sheet.py's panels, drawn with a copy of the map's paper material that shows the whole sheet.
+def sheet_model(game, tools, blender, work):
+    # sheet.py's panels, drawn with a copy of the map's paper material that shows the whole sheet, and the
+    # map's banks remade by hold.py for both hands.
     cli, texconv = tools
-    run(cli, "fc2model", "export", "-g", game, "graphics/objects/mapcompass/map.xbg", "-o", work / "map.fc2model")
+    clips = [a for bank in BANKS for a in ("--clip", (BANK_FOLDER / f"1stge_uppb_{bank}.mab").as_posix())]
+    run(cli, "fc2model", "export", "-g", game, "graphics/objects/mapcompass/map.xbg", *clips, "-o", work / "map.fc2model")
     run(sys.executable, HERE / "sheet.py", work / "map.fc2model", work / "sheet.fc2model", work / "sheet.json")
     run(cli, "fc2model", "add-material", work / "sheet.fc2model", SHEET / "sheet.xbm", "--from", MAPTOP, "--name", "SHEET")
-    run(cli, "fc2model", "extract", work / "sheet.fc2model", "-o", work / "sheet", "--all")
+    # Blender exits 0 when the script fails, so only the pack it writes tells.
+    held = subprocess.run([blender, "-b", "--python", HERE / "hold.py", "--", work / "sheet.fc2model",
+                           work / "held.fc2model"], capture_output=True, text=True)
+    print("\n".join(l for l in held.stdout.splitlines() if "frames" in l or "Error" in l or "Traceback" in l))
+    if not (work / "held.fc2model").exists():
+        sys.exit(f"hold.py failed:\n{held.stdout[-3000:]}{held.stderr[-3000:]}")
+    run(cli, "fc2model", "extract", work / "held.fc2model", "-o", work / "sheet", "--all")
+    # The pack preview_hold.py draws.
+    shutil.copy(work / "held.fc2model", HERE / "work" / "held.fc2model")
     out = LAYER / SHEET
     out.mkdir(parents=True, exist_ok=True)
     for name in SHEET_FILES:
         shutil.copy(work / "sheet" / "mods" / SHEET / name, out / name)
+    (LAYER / BANK_FOLDER).mkdir(parents=True, exist_ok=True)
+    for bank in BANKS:
+        name = f"1stge_uppb_{bank}.mab"
+        shutil.copy(work / "sheet" / "mods" / BANK_FOLDER / name, LAYER / BANK_FOLDER / name)
     run(cli, "xbm", "set", out / "sheet.xbm", f"DiffuseTexture1={SHEET / 'sheet.xbt'}", "-g", game)
 
     # The paper to its trimmed edge, which lies symmetric about the world's middle.
@@ -117,6 +139,7 @@ def sheet_model(game, tools, work):
     low, high = render_map.EDGE[0], render_map.WORLD - render_map.EDGE[0]
     paper = Image.open(HERE / "assets/world1-sheet.png").convert("RGB").crop((low, low, high, high))
     paper.resize((SHEET_TEXTURE,) * 2, Image.LANCZOS).save(png)
+    shutil.copy(png, HERE / "work" / "sheet.png")
     run(texconv, "-nologo", "-f", "BC1_UNORM", "-m", 0, "-dx9", "-y", "-o", work, png)
     run(cli, "xbt", "build", work / "sheet.dds", "-o", out / "sheet.xbt")
     return json.loads((work / "sheet.json").read_text())
@@ -182,13 +205,14 @@ def main():
     parser.add_argument("--game", default=r"C:\Games\Far Cry 2", help="the install the map's model is read from")
     parser.add_argument("--cli", default=str(REPO / "tools/JackAll/src/JackAll.Cli/bin/Release/net10.0/jackall-cli.exe"))
     parser.add_argument("--texconv", default=str(REPO / "tools/third-party/FCBConverter/texconv.exe"))
+    parser.add_argument("--blender", default=r"C:\Programs\Blender 5.2\blender.exe")
     args = parser.parse_args()
     source, tools = Path(args.source), (args.cli, args.texconv)
     if LAYER.exists():
         shutil.rmtree(LAYER)
     with tempfile.TemporaryDirectory() as work:
         textures(source, tools, Path(work))
-        sheet = sheet_model(args.game, tools, Path(work))
+        sheet = sheet_model(args.game, tools, args.blender, Path(work))
         fragments(source, args.cli, Path(work), sheet)
     print(f"Wrote {LAYER}")
 

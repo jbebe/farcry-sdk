@@ -1,8 +1,10 @@
-"""The sheet as a model: SIZE metres square, open in 3x3 panels, each a rigid plate on a hinge bone at its
-fold, so the clips can flex a fold by turning its hinge. The centre panel hangs on the map's root bone,
-the middle row's and column's on it, and the corners on the middle row's; each rests a few degrees off
-flat, and pillows out a little between creases that lie flat. The map's four corner bones stay, at the
-sheet's corners, for the strategy's markers. The front draws the whole sheet, the back plain paper.
+"""The sheet as a model: printed at render_map's scale to its trimmed edge, open in 3x3 panels, each a rigid
+plate on a hinge bone at its fold, so the clips can bow and flex the side columns by turning their hinges.
+The centre panel is the map's root bone's middle, the middle row's and column's hang on it, and the corners
+on the middle row's. The side columns rest a few degrees toward the eye and the rows flat, so the creases
+across the columns stay closed as they bow; each panel pillows out a little between its creases. The map's
+four corner bones stay, at the sheet's corners, for the strategy's markers. The front draws the whole
+sheet, the back plain paper.
 
 Built into a copy of the map's pack; the mesh is left with no material for `fc2model add-material` to add
 the sheet's own as its first. The model's box and each node's place in it go to <nodes.json>, for the
@@ -16,16 +18,15 @@ import sys
 import zipfile
 import zlib
 
+import render_map
+
 SOURCE, TARGET, PLACES = sys.argv[1], sys.argv[2], sys.argv[3]
 MODEL = "graphics/objects/mapcompass/sheet/sheet.xbg"
 RIG = "graphics/objects/mapcompass/sheet/sheet_ref.skeleton"
 
-# The sheet at 1:10 000 to its trimmed edge, render_map's EDGE, its left edge where the hand holds the map,
-# centred on the map's height and plane.
-SIZE = 0.380
+SIZE = (render_map.EDGE[1] - render_map.EDGE[0]) / render_map.SCALE
 PANEL = SIZE / 3
-LEFT_EDGE, PLANE = -0.150, 0.061
-CENTRE = [LEFT_EDGE + SIZE / 2, 0.0, PLANE]
+CENTRE = [0.0, 0.0, 0.0]
 # How far each panel pillows toward the eye, and the cells across a panel's front.
 PILLOW = 0.0015
 CELLS = 8
@@ -40,8 +41,8 @@ H = PANEL / 2
 # the eye, about x tips a top panel back.
 PANELS = {
     "PanelC": ("Map", CENTRE, None, 0, (-H, H), (-H, H)),
-    "PanelT": ("PanelC", [0, H, 0], "x", -4, (-H, H), (0, PANEL)),
-    "PanelB": ("PanelC", [0, -H, 0], "x", -3, (-H, H), (-PANEL, 0)),
+    "PanelT": ("PanelC", [0, H, 0], None, 0, (-H, H), (0, PANEL)),
+    "PanelB": ("PanelC", [0, -H, 0], None, 0, (-H, H), (-PANEL, 0)),
     "PanelL": ("PanelC", [-H, 0, 0], "y", 6, (-PANEL, 0), (-H, H)),
     "PanelR": ("PanelC", [H, 0, 0], "y", -6, (0, PANEL), (-H, H)),
     "PanelTL": ("PanelT", [-H, 0, 0], "y", 6, (-PANEL, 0), (0, PANEL)),
@@ -128,7 +129,7 @@ names = ["Map"] + list(CORNERS) + list(PANELS)
 parents = [None] + ["Map"] * len(CORNERS) + [PANELS[n][0] for n in PANELS]
 local = {"Map": ([0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0])}
 for corner, (sx, sy) in CORNERS.items():
-    local[corner] = ([CENTRE[0] + sx * SIZE / 2, CENTRE[1] + sy * SIZE / 2, PLANE + MARKER_LIFT], [0.0, 0.0, 0.0, 1.0])
+    local[corner] = ([CENTRE[0] + sx * SIZE / 2, CENTRE[1] + sy * SIZE / 2, CENTRE[2] + MARKER_LIFT], [0.0, 0.0, 0.0, 1.0])
 for name, (parent, hinge, axis, degrees, _, _) in PANELS.items():
     local[name] = (list(hinge), turn(axis, degrees))
 

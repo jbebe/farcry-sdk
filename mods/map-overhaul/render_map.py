@@ -23,11 +23,13 @@ import paper
 
 HERE = Path(__file__).resolve().parent
 WORLD = 5120
-# The neat line: the playable square the game's own world map covers, and a sector either side; and the
-# paper's edge, a margin of 3 cm at 1:10 000 outside it.
+# The neat line: the playable square the game's own world map covers, and a sector either side; the
+# paper's edge, a margin of 300 m outside it; and the scale the sheet is printed at, which sheet.py makes
+# the paper's size from.
 NEAT = (960, 4160)
 MARGIN = 300
 EDGE = (NEAT[0] - MARGIN, NEAT[1] + MARGIN)
+SCALE = 4500
 # World X and Y to grid eastings and northings, in metres.
 GRID_ORIGIN = (612000, 1404000)
 DPI = 100
@@ -175,7 +177,7 @@ def margins(ax, px, scale):
     # Above the map: series and sheet, the title and its scale, the edition, and the classification.
     t(NEAT[0], top + 110, "SERIES M712   SHEET 3", 26, "bold", ha="left")
     t(mid, top + 115, "LEBOA-SAKO", 72, "bold")
-    t(mid, top + 185, "Scale 1:10 000", 28)
+    t(mid, top + 185, f"Scale 1:{SCALE:,}".replace(",", " "), 28)
     t(NEAT[1], top + 110, "EDITION 2-LSD", 26, ha="right")
     t(mid, top + 255, "RESTRICTED", 30, "bold")
     first = NEAT[0] + (-(GRID_ORIGIN[0] + NEAT[0])) % 1000
