@@ -1,7 +1,8 @@
-"""Difficulty Overhaul's blood on the test range: a bullet sprays none where it hits, a shotgun's pellets
-do, on a soldier and on the player. The player shoots a rifleman 10 m off, crouched so the round lands
-on his body, with an AK-47 and with a SPAS-12; then a rifleman and a shotgunner shoot the player, who
-faces them. A shot is taken straight after each round, and again a moment later.
+"""Difficulty Overhaul's blood on the test range: a hit sprays blood only as its real round would, on a
+soldier and on the player. The player shoots a rifleman 10 m off, standing so the round lands high and
+crouched so it lands on his body, with a pistol, a rifle, a shotgun and the AS50; then a rifleman and a
+shotgunner shoot the player, who faces them. A shot is taken straight after each round, and again a
+moment later; each note names the body part hit.
 
     python blood.py
 """
@@ -18,7 +19,7 @@ from perception import CLEAR, LANE_MIDDLE, RIFLEMAN, SAVE, Log, put, spawn_yaw
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fc2drive import Run, launch
 
-GUNS = ("weapons.Primary.AK47", "weapons.Primary.SPAS12")
+GUNS = ("weapons.Secondary.Makarov", "weapons.Primary.AK47", "weapons.Primary.SPAS12", "weapons.Primary.AS50")
 SHOOTERS = (("rifleman", RIFLEMAN), ("shotgunner", SHOTGUNNER))
 TRIES = 8
 LATER = 0.3
@@ -30,11 +31,11 @@ def shots(run, game, label):
     run.shot(game, label + " later")
 
 
-def shoot_soldier(run, game, log, archetype):
-    game.give(archetype)
-    hit = shoot_at(game, log, True, TRIES, lambda attempt: shots(run, game, f"{archetype} round {attempt}"))
-    run.note(f"{archetype}: no hit in {TRIES} rounds" if hit is None else
-             f"{archetype}: hit, {hit.group(2)} at {hit.group(3)} m, on the last round shot")
+def shoot_soldier(run, game, log, archetype, crouched):
+    label = f"{archetype} {'crouched' if crouched else 'standing'}"
+    hit = shoot_at(game, log, crouched, TRIES, lambda attempt: shots(run, game, f"{label} round {attempt}"))
+    run.note(f"{label}: no hit in {TRIES} rounds" if hit is None else
+             f"{label}: hit, {hit.group(2)} at {hit.group(3)} m, on the last round shot")
 
 
 def shot_by(run, game, log, label, archetype):
@@ -60,7 +61,9 @@ def main():
     with launch(SAVE) as game:
         game.option("Invincibility", 1)
         for archetype in GUNS:
-            shoot_soldier(run, game, log, archetype)
+            game.give(archetype)
+            for crouched in (False, True):
+                shoot_soldier(run, game, log, archetype, crouched)
         for label, archetype in SHOOTERS:
             shot_by(run, game, log, label, archetype)
     print(run.folder)

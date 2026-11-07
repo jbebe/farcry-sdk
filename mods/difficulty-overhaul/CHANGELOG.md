@@ -9,8 +9,9 @@ Notable changes to Difficulty Overhaul, loosely following
 - **Real rounds.** Every gun hits as hard as its real cartridge, whoever fires it: one torso hit from
   a rifle drops a soldier, two from a pistol, a head hit from anything kills. A soldier's gun hurts
   you as much as yours hurts him, and no gun gains damage up close.
-- **Blood only from buckshot.** A bullet that hits you or a soldier no longer throws a spray of
-  blood; a shotgun's pellets still do.
+- **Blood as the round would show it.** On you as on a soldier, a pistol or SMG round throws no
+  spray of blood, a rifle round or a shotgun pellet only on a head hit, and only the .50 BMG on any
+  hit.
 - **Difficulty is how much you can take.** On Easy and Normal you take as many AK-47 hits as in the
   game, 37 and 28 from full; on Hardcore the third kills you and on Infamous the first, wherever it
   lands. The soldiers aim and hit the same on every setting. On Easy and Normal your last bar still softens hits,

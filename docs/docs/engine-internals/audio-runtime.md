@@ -660,6 +660,13 @@ plays the shooter's weapon record. The player pawn's own `matimpFakeBulletFx` pl
 `CPawnEventFakeBullet`, which only Lua's `SendPierceStimWithOrigin` sends (server
 `CPawnSoundAndFXComponent::OnEvent`, `0x088d1a90`).
 
+`matimpSecondaryBulletImpactFx` is where a round comes out the back of what it hit, not a shotgun's
+outer pellets. After a hit the bullet strategy casts a delayed ray back along the round's path, from its
+end or the next thing it hit, and plays the secondary record where that ray lands (server
+`CWeaponFireBulletStrategy::ApplyDelayDecal` → `SpawnBackBulletPuff` →
+`CWeaponFireBulletProperties::SpawnSecondaryBulletPuff`) **(RE-verified)**. On a soldier that is the
+spray out of the far side of him.
+
 There is **no ricochet** anywhere: no event, field, string or code. The only bounce asset,
 `matimpBounceImpactFx`, belongs to thrown objects.
 

@@ -13,8 +13,10 @@
 
 - gamemodesconfig.xml: the single-player hit locations, which scale every hit on anyone but the player:
   a head hit kills.
-- materialimpacts.xml: no blood sprays from a bullet that hits anyone, the player too. The shotguns'
-  pellets play Weapon.Pellet, the game's bullet impact copied with its blood.
+- materialimpacts.xml: blood sprays from a hit on anyone, the player too, only as the real round would
+  show it. Weapon.Bullet, which pistols and SMGs keep, sprays none; rifles play Weapon.HeadBlood, a copy
+  spraying from a head hit only, where the bullet hits and where it comes out, and shotguns only where a
+  pellet hits; the .50 BMG plays Weapon.Blood, a copy spraying from any hit as every bullet did.
 
 Each archetype fragment is copied whole out of a decoded entity library with only those values changed
 or FCSE's entity data component added, so JackAll merges it field by field with any other mod's copy.
@@ -41,7 +43,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "scripts"))
-from entity_fragments import add_entity_data, fragment_path, object_lines, prototypes, replace_hashed, write
+from entity_fragments import (add_entity_data, find_value, fragment_path, has_object, object_lines, prototypes,
+                              replace_hashed, write)
 
 LAYER = os.path.join(HERE, "..", "layer", "mods")
 LIBRARIES = (
@@ -52,12 +55,15 @@ LIBRARIES = (
 )
 GAME_MODES = os.path.join(LAYER, "engine", "gamemodes", "gamemodesconfig.xml")
 IMPACTS = os.path.join(LAYER, "databases", "materialimpacts", "materialimpacts.xml")
-# The impact record every gun's bullets play, and the shotguns' copy of it, the only one with blood.
+# The impact record every gun's bullets play, left with no blood, and its copies some rounds play
+# instead: one with blood from a head hit only, one with blood from any hit.
 BULLET_IMPACT = "Weapon.Bullet"
-PELLET_IMPACT = "Weapon.Pellet"
-PELLET_IMPACT_ID = "{0C6AFEF8-956A-4F1B-839D-33610FB79B00}"
-# The logic materials whose bullet particles are the blood spray.
-FLESH = ("Base.Flesh", "Base.Flesh_Head")
+HEAD_BLOOD = "Weapon.HeadBlood"
+ALL_BLOOD = "Weapon.Blood"
+# The logic materials whose bullet particles are the blood spray: a body hit's and a head hit's.
+BODY, HEAD = "Base.Flesh", "Base.Flesh_Head"
+# The fields naming the record a bullet plays where it hits, and where it comes out behind.
+IMPACT_FIELDS = ("matimpBulletImpactFx", "matimpSecondaryBulletImpactFx")
 
 # Each round: one projectile's mass in grams, and how many one round fires.
 BUCKSHOT = "12 gauge 00 buckshot"
@@ -73,6 +79,16 @@ ROUNDS = {
     ".30-06 Springfield": (9.7, 1),
     ".50 BMG": (42.0, 1),
     BUCKSHOT: (3.5, 9),
+}
+# The records each round's bullets play where they hit and where they come out; the rest keep Weapon.Bullet.
+BLOOD = {
+    "5.56x45 mm NATO": (HEAD_BLOOD, HEAD_BLOOD),
+    "7.62x39 mm": (HEAD_BLOOD, HEAD_BLOOD),
+    "7.62x51 mm NATO": (HEAD_BLOOD, HEAD_BLOOD),
+    "7.62x54 mmR": (HEAD_BLOOD, HEAD_BLOOD),
+    ".30-06 Springfield": (HEAD_BLOOD, HEAD_BLOOD),
+    ".50 BMG": (ALL_BLOOD, ALL_BLOOD),
+    BUCKSHOT: (HEAD_BLOOD, BULLET_IMPACT),
 }
 # Each gun, as its archetype is named under weapons, DLC1Weapons and WeaponProperties, with its
 # variants: its round and muzzle velocity in metres per second. The mounts name their gun.
@@ -150,7 +166,7 @@ def entity_data(round_name, velocity):
 
 def set_in(block, kind, name, value):
     """Sets every value `name` inside the one object of this type, if the archetype has one."""
-    if not any(line.strip() == '<object type="%s">' % kind for line in block):
+    if not has_object(block, kind):
         return
     first, last, _ = object_lines(block, kind)
     pattern = re.compile(r'(<value name="%s" type="[^"]+">)[^<]*(</value>)' % name)
@@ -166,12 +182,12 @@ def edit_properties(block, round_name, velocity):
     set_in(block, "RangeMultipliers", "iMultiplier", "0")
     for curve in AI_CURVES:
         set_in(block, "AICurve", curve, "")
-    # A variant that names no impact record keeps none.
-    if round_name == BUCKSHOT and any(">%s<" % BULLET_IMPACT in line for line in block):
-        text = "\n".join(block)
-        for field in ("matimpBulletImpactFx", "matimpSecondaryBulletImpactFx"):
-            text = replace_hashed(text, field, BULLET_IMPACT, PELLET_IMPACT)
-        block[:] = text.split("\n")
+    text = "\n".join(block)
+    for field, record in zip(IMPACT_FIELDS, BLOOD.get(round_name, ())):
+        # A variant that names no impact record keeps none.
+        if find_value(text, "text_" + field, "String") == BULLET_IMPACT:
+            text = replace_hashed(text, field, BULLET_IMPACT, record)
+    block[:] = text.split("\n")
 
 
 def hit_locations(text):
@@ -184,18 +200,27 @@ def hit_locations(text):
     return text[:start] + section + text[end:]
 
 
+def renamed(record, name, record_id):
+    return re.sub(r'Id="[^"]*"', 'Id="%s"' % record_id,
+                  record.replace('"%s"' % BULLET_IMPACT, '"%s"' % name), count=1)
+
+
+def without_blood(record, *materials):
+    for material in materials:
+        record, count = re.subn(
+            r'(<ParticlesSystem disName="%s" disMatId="\d+" psParticlesSystem=")[^"]*(" crc_psParticlesSystem=")\d+'
+            % re.escape(material), r"\g<1>\g<2>4294967295", record)
+        assert count == 1, material
+    return record
+
+
 def impacts(text):
     start = text.index('\t<MaterialImpact Name="%s"' % BULLET_IMPACT)
     end = text.index("</MaterialImpact>", start) + len("</MaterialImpact>\r\n")
     bullet = text[start:end]
-    pellet = re.sub(r'Id="[^"]*"', 'Id="%s"' % PELLET_IMPACT_ID,
-                    bullet.replace('"%s"' % BULLET_IMPACT, '"%s"' % PELLET_IMPACT), count=1)
-    for material in FLESH:
-        bullet, count = re.subn(
-            r'(<ParticlesSystem disName="%s" disMatId="\d+" psParticlesSystem=")[^"]*(" crc_psParticlesSystem=")\d+'
-            % re.escape(material), r"\g<1>\g<2>4294967295", bullet)
-        assert count == 1, material
-    return text[:start] + bullet + pellet + text[end:]
+    head = without_blood(renamed(bullet, HEAD_BLOOD, "{E2FB8C04-6D59-4621-AF39-BA8118292BF6}"), BODY)
+    blood = renamed(bullet, ALL_BLOOD, "{CB5AD2F5-9B7B-4613-8E77-77960A45E7E8}")
+    return text[:start] + without_blood(bullet, BODY, HEAD) + head + blood + text[end:]
 
 
 def write_retail(retail, out, edit):
