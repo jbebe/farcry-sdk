@@ -49,6 +49,11 @@ findings below has been tested. Marked **(proposed)** are choices not yet agreed
   and each of the 13 characters; the patrols' pawns leave it empty **(seen in data)**.
 - **The GPS in the hand is saved with the game.** Emptying `archCompassArchetype` left it in the
   hand, because the map strategy saves its `CompassEntity` (Inventory Overhaul's test, 2026-10-27).
+  Emptying the player's `archGPSVehicleArchetype` left the GPS on a Datsun's dashboard too, in a game
+  loaded from a save made before (seen in game, 2026-11-07); a new game was not tried.
+- **The game draws its own icons over the sheet**: safe houses, locked guard posts, arms dealers,
+  bus stops, masts, Mike's bar and the objective, on the area map, the town plan and the back (seen in
+  game, 2026-11-07).
 - **The player's arrow is a marker the map names**, `archPlayerMarker`
   (`gadgets.ObjectiveIcons.PlayerPosition`) **(seen in data)**.
 - **The gadget carries a table of marker kinds**: `Objective` on; `PGP`, `SafeHouse`, `CellTower`,

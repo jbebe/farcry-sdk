@@ -14,12 +14,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fc2drive import Run, launch
 
-GADGET_SECONDS = 2.5
+# Seconds for the gun to go and the map to come up, or for the sheet to turn over.
+GADGET_SECONDS = 4.0
 # Each spot's name, x, y, a z 2 m above the ground, and the yaw the player faces.
 SPOTS = [("hill south-east of Pala", 2678.0, 2365.0, 53.2, 37.0),
          ("Pala, by the bus stop", 2566.0, 2420.0, 20.0, 0.0)]
-# Where the Datsun stands, across the player's way north; he stands 3 m south of it.
-CAR = (2700.0, 2300.0, 24.3)
+# The Datsun on the flat of the airstrip, facing west, so its driver's door is on the south side, where the
+# player stands facing it; the ground there is at 20.4 m.
+CAR = (2620.0, 1200.0, 20.4)
+CAR_DOOR = 1.8
 CAR_ARCHETYPE = "vehicle.Land.Datsun"
 
 
@@ -48,9 +51,10 @@ def main():
             run.shot(game, f"{name}: the view")
             read_map(game, run, name)
 
-        game.goto(CAR[0], CAR[1] - 3.0, CAR[2] + 1.5, 0.0)
         game.lua(f'SpawnEntityFromArchetype("{CAR_ARCHETYPE}", {CAR[0]:.3f}, {CAR[1]:.3f}, {CAR[2] + 0.5:.3f}, 0, 0, 90)')
-        time.sleep(2.0)
+        game.goto(CAR[0], CAR[1] - CAR_DOOR, CAR[2] + 2.0, 0.0)
+        time.sleep(3.0)
+        run.shot(game, "Datsun: beside it")
         gadget(game, "use")
         time.sleep(2.0)
         run.shot(game, "Datsun: the dashboard")

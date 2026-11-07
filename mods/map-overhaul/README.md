@@ -3,7 +3,8 @@
 A realistic map in place of the game's drawn one, and the GPS removed: world 1 as a military
 topographic sheet, the kind handed over at a briefing, drawn from the world's own data. The idea is
 issue #29, the design `docs/docs/design/map.md`. So far the sheet is on the game's own map in the hand,
-and vehicles and the map have lost the GPS and the player's arrow; the GPS in the hand stays.
+and the map has lost the player's arrow (seen in game, 2026-11-07). The GPS in the hand stays, and so
+does the one on a vehicle's dashboard in a saved game, though the player's archetype no longer names it.
 
 ## The sheet
 
@@ -59,7 +60,7 @@ skipping a little on the grain, so it reads as written on the sheet rather than 
 | `levels\w1_*\mapcompass*.xbt` | the sheet cut into the 25 area maps, `w1_c_3`'s malaria-bubble pair included |
 | `worlds\world1\mapcompass*.xbt` | the world map: the sheet's playable square, 1024 to 4096 m, shrunk to 1024 px |
 | `levels\w1_*\majorlocation_*.xbt` | the 21 detail maps drawn again as town plans, each its entity's square at 1024 px, lines and lettering 3 times the sheet's |
-| `player\MainCharacter\PawnPlayer*` fragments | `archGPSVehicleArchetype` emptied on the player and each character: no GPS in vehicles |
+| `player\MainCharacter\PawnPlayer*` fragments | `archGPSVehicleArchetype` emptied on the player and each character; a saved game's Datsun still showed its GPS |
 | `gadgets\Equipped\Map` fragments | `archPlayerMarker` emptied: no arrow for the player on the map |
 
 Each texture keeps the game file's header and its levels, a `_mip0` the top level alone and the other
