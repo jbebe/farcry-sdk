@@ -25,6 +25,7 @@ schedule.
 | Difficulty Overhaul | `mods/difficulty-overhaul` | `difficulty-overhaul-<version>` | |
 | Inventory Overhaul | `mods/inventory-overhaul` | `inventory-overhaul-<version>` | |
 | Legacy Plugin | `mods/legacy-plugin` | `legacy-plugin-<version>` | |
+| Third Person | `mods/third-person` | `third-person-<version>` | |
 
 The Blender add-on's release installs Blender on the runner before it builds. Blender builds its own
 extension zips — a hand-made one will not install — so that is a build prerequisite there in the way
