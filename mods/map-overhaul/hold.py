@@ -27,7 +27,7 @@ from addon.pack import Pack
 argv = sys.argv[sys.argv.index("--") + 1:]
 SOURCE, TARGET = argv[0], argv[1]
 # Where the sheet's middle is from the eye, in metres, and how far its side columns bow toward the eye on top
-# of their rest, in degrees.
+# of their rest, in degrees; sheet.py shapes the paper's rounded folds for the two together, its HELD.
 DISTANCE, HEIGHT = 0.50, -0.03
 BOW = 24.0
 # How far below the middle row's centre line the hands hold the side edges, in metres.

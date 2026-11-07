@@ -339,6 +339,24 @@ The remaining options do not follow the presets:
 `jackall-cli shader label` applies these rules to every permutation that loads an object, so it can
 say which presets draw that object.
 
+## The `Map` option
+
+A material's `Generic` shader is `AAA` in the shader tables, and the material's `Map` integer sets its
+`MAP` option, which the map's paper (`MAPTOP`) carries. Comparing a permutation with and without it
+(`SUN`, `AMBIENT`, `HEMI_SIMPLE`, `RECEIVE_SHADOWS`, `DIFFUSE_MAP_BASE`), **read from the compiled
+objects**:
+
+- **Ambient.** Without `MAP` the vertex shader blends the hemisphere's ground and sky colours by which
+  way the surface faces and by its height. With it, every vertex takes the sky colour at half strength,
+  whichever way it faces.
+- **Shade.** The pixel shader adds 0.2 to the sun's shadow term, so a map in shade keeps a fifth of
+  the sun.
+- **Colour.** The pixel shader skips the blend from `DiffuseColorBase` to `DiffuseColor1` by the
+  vertex colour and takes `DiffuseColor1` alone.
+
+So a material with `Map` is lit flatly and never fully shaded. Without it, Map Overhaul's sheet takes
+the world's light like the hands holding it (seen in game, 2026-11-07).
+
 ## Tooling
 
 ```

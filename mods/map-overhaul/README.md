@@ -5,8 +5,9 @@ topographic sheet, the kind handed over at a briefing, drawn from the world's ow
 issue #29, the design `docs/docs/design/map.md`. So far the whole sheet is held open in both hands on
 foot, the map has lost the player's arrow, and the plugin keeps the GPS out of the hand and off the
 dashboard (seen in game, 2026-11-07, from a save made with both). The sheet stays level as the view
-looks up and down past it, and left mouse held reads it close; in a vehicle it is the hand's sheet where
-the game's map was, too big and not yet folded.
+looks up and down past it, and left mouse held reads it close; it bends at its two folds, takes the
+world's light, and shows only the mission targets' icons, each at its place on the paper. In a vehicle it
+is the hand's sheet where the game's map was, too big and not yet folded.
 The held sheet always shows its own picture, so the area maps and town plans in the layer, and R's turn to
 the world map, show nothing new on it.
 
@@ -65,11 +66,11 @@ skipping a little on the grain, so it reads as written on the sheet rather than 
 | `levels\w1_*\mapcompass*.xbt` | the sheet cut into the 25 area maps, `w1_c_3`'s malaria-bubble pair included |
 | `worlds\world1\mapcompass*.xbt` | the world map: the sheet's playable square, 1024 to 4096 m, shrunk to 1024 px |
 | `levels\w1_*\majorlocation_*.xbt` | the 21 detail maps drawn again as town plans, each its entity's square at 1024 px, lines and lettering 3 times the sheet's |
-| `graphics\objects\mapcompass\sheet\` | the sheet in the hand (`sheet.py`): the paper at its printed size, centred on the map's root, open in 3×3 panels on hinge bones at the folds; the side columns rest 6° toward the eye and the rows flat, each panel pillowed between its creases; drawn with a copy of the map's paper material, `Map` flag kept for its lighting, named SHEET so the game does not put the area map on it, showing the paper at 4096 px |
+| `graphics\objects\mapcompass\sheet\` | the sheet in the hand (`sheet.py`): the paper at its printed size, centred on the map's root, open in 3×3 panels on hinge bones at the folds; the side columns rest 6° toward the eye and the rows flat. The paper is shaped as the clips hold it, the side columns turned 30°, and each fold between the columns is rounded over 2 cm either side of the crease, then cut along its middle into the panels on either side, so the sheet bends there; the clips' flex leaves at most a 1.2° kink (3° running). Drawn with a copy of the map's paper material named SHEET, so the game does not put the area map on it, showing the paper at 4096 px. The copy drops the `Map` flag, under which the `Generic` shader lights a map with half the sky's light whichever way it faces and never shades it below a fifth of the sun, so the paper takes the world's light as the hands do; `PAPER`, its diffuse colour 0.5, keeps it from coming out overbright |
 | `graphics\characters\_common\animations\equipment\equipped_gadget\` | the map's 17 banks on foot, remade in place by `hold.py` for both hands (below) |
 | `gadgets\Equipped\Map` | the map pointed at the sheet: its descriptor, a graphic object per panel and its skeleton, the four corner bones kept at the sheet's corners for the game's icons |
 | `player\MainCharacter\PawnPlayer*` fragments | `archGPSVehicleArchetype` emptied on the player and each character; a saved game's Datsun still showed its GPS |
-| `gadgets\Equipped\Map` fragments | also `archPlayerMarker` emptied: no arrow for the player on the map |
+| `gadgets\Equipped\Map` fragments | also `archPlayerMarker` emptied: no arrow for the player on the map; the three `MarkerVisibility` tables keep only `Objective`, the mission targets, since the print and the notes show the rest; and the town plans' icons of what lies about and the diamonds' emptied |
 
 Each texture keeps the game file's header and its levels, a `_mip0` the top level alone and the other
 the rest of the chain, compressed to DXT1 by `tools\third-party\FCBConverter\texconv.exe`. The textures
@@ -98,6 +99,12 @@ banks are replaced at their own paths, so the map keeps its MOVE index and no MO
 Inventory Overhaul's notebook is built from the map's banks in the install, so build it without this
 layer.
 
+`build_layer.py` gives `hold.py` the game's own banks, the map and the protagonist's body, copied out of
+the extracted worlds archive into a small tree first. The install will not do once this layer is
+deployed, since its patch then holds the banks already remade, and remaking those again throws the hands
+off the sheet; nor will the whole archive, since a loose `fc2model export` from it takes an animal's
+`pelvis_ref.skeleton` for the human one and poses the wrong body.
+
 `preview_hold.py` draws the held sheet as the game's camera sees it at 87° on 16:9, with the 4:3
 screen's edges in yellow, for checking a change without the game, from the pack and picture
 `build_layer.py` leaves in `work/`:
@@ -117,10 +124,12 @@ its GPS whatever the archetypes say:
 | No GPS on the dashboard | after `CVehicle::SVehicleImpl::AttachToSeat` binds the player's vehicle GPS to the dashboard and shows it, `CEntity::SetIsVisible(false)` hides it again |
 | The sheet level as the view looks up and down (`level.cpp`) | while the map strategy's update has the map in a pawn's hands, the plugin follows that pawn's skeleton; each time it is posed, the spine and every bone below it but `Camera` are turned back about the eye by the `Camera` bone's pitch, so the arms and the sheet in the left hand keep their place against a level view; the turn eases in and out over 0.25 s as the map comes and goes. `python tools\fc2drive\scenarios\map_look.py` takes pictures from 73° down to 78° up |
 | Left mouse held reads the sheet close (`read.cpp`) | the pause service's signal listener sees `startshooting` and `stopshooting` before the player's does; while the map is out a press zooms the view to 0.61 rad (35°, three times closer than 87°) over 0.3 s through the skills' first field-of-view transition, as iron sights do, with the look at 0.19 of its speed. While held, the hold also turns the upper body back about the eye's up axis by however far the look has turned since the press, so the mouse looks over a sheet that stays put; past 0.6 rad, where the sheet's edge reaches the middle of the view, the sheet comes along. Let go, the view zooms out and the sheet swings back in front over 0.3 s. `toggleicons`, the map's own use of left mouse, is taken while the map is out; right mouse still brings the monocular up, and over the zoom it takes the zoom over (not yet tried with left mouse held). `python tools\fc2drive\scenarios\map_read.py` takes pictures of it |
+| The map's icons at their places (`markers.cpp`) | the game places each marker's icon by `WorldSpaceToGadgetMapSpace`, on the area map of the cell the player stands in, flat between the sheet's corner bones, and clamps the rest to the edge as arrows. While `ProcessMarker` places a marker of the map, that is answered instead with the marker's spot on the whole sheet, in the frame of the fold panel it lies on, on the bent paper and 2 mm in front of it; the bone the strategy hangs a new icon on (`+0xC0`, the lower-left corner) is that panel's until `ProcessMarker` returns, and an icon spawned before on another panel, a marker that moved across a fold, is hung again with `CEntity::Bind`. So each icon moves with its panel's bow and flex and stays on its spot as the view reads the sheet close (seen in game by script: safe houses, arms dealers and bus stops, shown for the check, sat on their notes on every panel, the bowed ones too) |
 
 `build.ps1` builds it and stages it in `layer\plugins\map-overhaul\`; the game gets it with the layer,
 from `jackall-cli mod build` with every other layer installed. Its six patterns are checked on both
-builds with `python ..\..\scripts\verify_patterns.py --uplay <Steam Dunia.dll> src`.
+builds with `python ..\..\scripts\verify_patterns.py --uplay <Steam Dunia.dll> src`; the rest of its sites
+are addresses the address library maps.
 
 ## The full map
 

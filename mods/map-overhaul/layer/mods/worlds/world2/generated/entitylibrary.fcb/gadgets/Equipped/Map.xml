@@ -241,7 +241,7 @@
               <value name="archCompassArchetype" type="String">gadgets.Equipped.CompassSingle</value>
               <value name="archMonocularArchetype" type="String">gadgets.Equipped.Monocular</value>
               <value name="archPlayerMarker" type="String"></value>
-              <value name="archDiamondMarker" type="String">gadgets.ObjectiveIcons.Diamond</value>
+              <value name="archDiamondMarker" type="String"></value>
               <value name="text_sMapCornerUpLeftBone" type="String">UpperLeftCorner</value>
               <value name="sMapCornerUpLeftBone" type="Hash">076881E5</value>
               <value name="text_sMapCornerUpRightBone" type="String">UpperRightCorner</value>
@@ -271,54 +271,54 @@
                 </object>
               </object>
               <object type="DetailedMap">
-                <value name="archMedicKit" type="String">gadgets.ObjectiveIcons.Health</value>
-                <value name="archAmmoPile" type="String">gadgets.ObjectiveIcons.AmmoPile</value>
-                <value name="archExplosivePile" type="String">gadgets.ObjectiveIcons.ExplosivePile</value>
-                <value name="archFuelPile" type="String">gadgets.ObjectiveIcons.FuelPile</value>
-                <value name="archMountedWeapon" type="String">gadgets.ObjectiveIcons.MountedWeapon</value>
-                <value name="archSniperPoint" type="String">gadgets.ObjectiveIcons.Sniper</value>
-                <value name="archLandVehicle" type="String">gadgets.ObjectiveIcons.Vehicle</value>
-                <value name="archWaterVehicle" type="String">gadgets.ObjectiveIcons.Vehicle</value>
-                <value name="archAirVehicle" type="String">gadgets.ObjectiveIcons.Vehicle</value>
+                <value name="archMedicKit" type="String"></value>
+                <value name="archAmmoPile" type="String"></value>
+                <value name="archExplosivePile" type="String"></value>
+                <value name="archFuelPile" type="String"></value>
+                <value name="archMountedWeapon" type="String"></value>
+                <value name="archSniperPoint" type="String"></value>
+                <value name="archLandVehicle" type="String"></value>
+                <value name="archWaterVehicle" type="String"></value>
+                <value name="archAirVehicle" type="String"></value>
               </object>
               <object type="MarkerVisibility">
                 <object type="World">
                   <value name="Objective" type="Bool">True</value>
                   <value name="PGP" type="Bool">False</value>
                   <value name="SafeHouse" type="Bool">False</value>
-                  <value name="CellTower" type="Bool">True</value>
-                  <value name="WeaponShop" type="Bool">True</value>
-                  <value name="BusStation" type="Bool">True</value>
-                  <value name="Underground" type="Bool">True</value>
+                  <value name="CellTower" type="Bool">False</value>
+                  <value name="WeaponShop" type="Bool">False</value>
+                  <value name="BusStation" type="Bool">False</value>
+                  <value name="Underground" type="Bool">False</value>
                   <value name="HQ" type="Bool">False</value>
-                  <value name="MikesPlace" type="Bool">True</value>
+                  <value name="MikesPlace" type="Bool">False</value>
                   <value name="Other" type="Bool">False</value>
-                  <value name="City" type="Bool">True</value>
+                  <value name="City" type="Bool">False</value>
                 </object>
                 <object type="Area">
                   <value name="Objective" type="Bool">True</value>
-                  <value name="PGP" type="Bool">True</value>
-                  <value name="SafeHouse" type="Bool">True</value>
-                  <value name="CellTower" type="Bool">True</value>
-                  <value name="WeaponShop" type="Bool">True</value>
-                  <value name="BusStation" type="Bool">True</value>
-                  <value name="Underground" type="Bool">True</value>
+                  <value name="PGP" type="Bool">False</value>
+                  <value name="SafeHouse" type="Bool">False</value>
+                  <value name="CellTower" type="Bool">False</value>
+                  <value name="WeaponShop" type="Bool">False</value>
+                  <value name="BusStation" type="Bool">False</value>
+                  <value name="Underground" type="Bool">False</value>
                   <value name="HQ" type="Bool">False</value>
-                  <value name="MikesPlace" type="Bool">True</value>
+                  <value name="MikesPlace" type="Bool">False</value>
                   <value name="Other" type="Bool">False</value>
-                  <value name="City" type="Bool">True</value>
+                  <value name="City" type="Bool">False</value>
                 </object>
                 <object type="KeyLocation">
                   <value name="Objective" type="Bool">True</value>
-                  <value name="PGP" type="Bool">True</value>
-                  <value name="SafeHouse" type="Bool">True</value>
+                  <value name="PGP" type="Bool">False</value>
+                  <value name="SafeHouse" type="Bool">False</value>
                   <value name="CellTower" type="Bool">False</value>
-                  <value name="WeaponShop" type="Bool">True</value>
+                  <value name="WeaponShop" type="Bool">False</value>
                   <value name="BusStation" type="Bool">False</value>
-                  <value name="Underground" type="Bool">True</value>
-                  <value name="HQ" type="Bool">True</value>
-                  <value name="MikesPlace" type="Bool">True</value>
-                  <value name="Other" type="Bool">True</value>
+                  <value name="Underground" type="Bool">False</value>
+                  <value name="HQ" type="Bool">False</value>
+                  <value name="MikesPlace" type="Bool">False</value>
+                  <value name="Other" type="Bool">False</value>
                   <value name="City" type="Bool">False</value>
                 </object>
               </object>

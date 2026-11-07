@@ -15,6 +15,7 @@ add_library(MapOverhaul SHARED
   "src/main.cpp"
   "src/gps.cpp"
   "src/level.cpp"
+  "src/markers.cpp"
   "src/read.cpp"
 )
 

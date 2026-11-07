@@ -1,10 +1,12 @@
 """The sheet as a model: printed at render_map's scale to its trimmed edge, open in 3x3 panels, each a rigid
-plate on a hinge bone at its fold, so the clips can bow and flex the side columns by turning their hinges.
+part on a hinge bone at its fold, so the clips can bow and flex the side columns by turning their hinges.
 The centre panel is the map's root bone's middle, the middle row's and column's hang on it, and the corners
 on the middle row's. The side columns rest a few degrees toward the eye and the rows flat, so the creases
-across the columns stay closed as they bow; each panel pillows out a little between its creases. The map's
-four corner bones stay, at the sheet's corners, for the strategy's markers. The front draws the whole
-sheet, the back plain paper.
+across the columns stay closed as they bow. The paper is shaped as the clips hold it, its side columns
+turned HELD toward the eye, and each of the two folds between the columns is rounded over twice ROUND,
+then cut along its middle into the panels on either side, so the sheet bends there rather than kinks; the
+flex the clips add on top leaves too small a kink to see. The map's four corner bones stay, at the sheet's
+corners, for the strategy. The front draws the whole sheet, the back plain paper.
 
 Built into a copy of the map's pack; the mesh is left with no material for `fc2model add-material` to add
 the sheet's own as its first. The model's box and each node's place in it go to <nodes.json>, for the
@@ -27,9 +29,13 @@ RIG = "graphics/objects/mapcompass/sheet/sheet_ref.skeleton"
 SIZE = (render_map.EDGE[1] - render_map.EDGE[0]) / render_map.SCALE
 PANEL = SIZE / 3
 CENTRE = [0.0, 0.0, 0.0]
-# How far each panel pillows toward the eye, and the cells across a panel's front.
-PILLOW = 0.0015
+# The cells across a panel's front, and more across each half of a rounded fold.
 CELLS = 8
+FOLD_CELLS = 8
+# The side columns' turn as the clips hold them, degrees: their rest below and hold.py's BOW, 24; and how
+# far each rounded fold reaches either side of the crease on the unfolded sheet, metres.
+HELD = 30.0
+ROUND = 0.02
 # A spot of plain paper on the sheet, for the backs: its top-left margin.
 BLANK = (0.02, 0.98)
 # How far the markers stand in front of the paper, as on the map.
@@ -91,30 +97,75 @@ def sheet_origin(name):
     return [origin[0] + hinge[0], origin[1] + hinge[1]]
 
 
+def held(s, y):
+    """Where the unfolded sheet's point (s, y) lies as the clips hold it, in the root's frame, and the front's
+    normal there. A rounded fold is an arc touching the middle column ROUND short of the crease and the side
+    column ROUND past it; the unfolded sheet is laid along the arc evenly, so the print keeps its place."""
+    turn = math.radians(HELD)
+    side = 1.0 if s > 0 else -1.0
+    out = abs(s)
+    radius = ROUND / math.tan(turn / 2)
+    if out <= H - ROUND:
+        x, z, bent = out, 0.0, 0.0
+    elif out <= H + ROUND:
+        bent = turn * (out - (H - ROUND)) / (2 * ROUND)
+        x, z = H - ROUND + radius * math.sin(bent), radius * (1 - math.cos(bent))
+    else:
+        x, z, bent = H + (out - H) * math.cos(turn), (out - H) * math.sin(turn), turn
+    return [side * x, y, z], [-side * math.sin(bent), 0.0, math.cos(bent)]
+
+
+def turn_about_y(v, degrees):
+    c, s = math.cos(math.radians(degrees)), math.sin(math.radians(degrees))
+    return [v[0] * c + v[2] * s, v[1], -v[0] * s + v[2] * c]
+
+
+def held_turn(name):
+    """The panel's turn about its hinge as the clips hold it: the side columns' HELD, the middle's none."""
+    degrees = PANELS[name][3]
+    return math.copysign(HELD, degrees) if degrees else 0.0
+
+
+def samples(low, high, cells, folds):
+    """Evenly across low..high, and more closely over any rounded fold that falls in it."""
+    points = {round(low + (high - low) * i / cells, 7) for i in range(cells + 1)}
+    for fold in folds:
+        for i in range(-FOLD_CELLS, FOLD_CELLS + 1):
+            s = fold + ROUND * i / FOLD_CELLS
+            if low < s < high:
+                points.add(round(s, 7))
+    return sorted(points)
+
+
 def panel(name):
-    """The panel's front and back, in its hinge's frame: positions, uvs, normals and triangles of each."""
+    """The panel's front and back as the clips hold it, in its hinge's frame: positions, uvs, normals and
+    triangles of each."""
     (x0, x1), (y0, y1) = PANELS[name][4], PANELS[name][5]
     ox, oy = sheet_origin(name)
+    unturn = -held_turn(name)
+    xs = samples(x0 + ox, x1 + ox, CELLS, (-H, H))
+    ys = samples(y0 + oy, y1 + oy, CELLS, ())
     front = {"positions": [], "uvs": [], "normals": [], "indices": []}
-    for i in range(CELLS + 1):
-        for j in range(CELLS + 1):
-            a, b = i / CELLS, j / CELLS
-            x, y = x0 + (x1 - x0) * a, y0 + (y1 - y0) * b
-            z = PILLOW * math.sin(math.pi * a) * math.sin(math.pi * b)
-            dzdx = PILLOW * math.pi / (x1 - x0) * math.cos(math.pi * a) * math.sin(math.pi * b)
-            dzdy = PILLOW * math.pi / (y1 - y0) * math.sin(math.pi * a) * math.cos(math.pi * b)
-            length = math.sqrt(dzdx * dzdx + dzdy * dzdy + 1)
-            front["positions"] += [x, y, z]
-            front["uvs"] += [(x + ox) / SIZE + 0.5, (y + oy) / SIZE + 0.5]
-            front["normals"] += [-dzdx / length, -dzdy / length, 1 / length]
-    for i in range(CELLS):
-        for j in range(CELLS):
-            a = i * (CELLS + 1) + j
-            b, c, d = a + 1, a + CELLS + 2, a + CELLS + 1
-            # Clockwise seen from +z, the side facing the eye.
+    back = {"positions": [], "uvs": [], "normals": [], "indices": []}
+    for s in xs:
+        for y in ys:
+            point, normal = held(s, y)
+            local = turn_about_y([point[0] - ox, point[1] - oy, point[2]], unturn)
+            facing = turn_about_y(normal, unturn)
+            front["positions"] += local
+            front["uvs"] += [s / SIZE + 0.5, y / SIZE + 0.5]
+            front["normals"] += facing
+            back["positions"] += local
+            back["uvs"] += list(BLANK)
+            back["normals"] += [-c for c in facing]
+    rows = len(ys)
+    for i in range(len(xs) - 1):
+        for j in range(rows - 1):
+            a = i * rows + j
+            b, c, d = a + 1, a + rows + 1, a + rows
+            # Clockwise seen from +z, the side facing the eye; the back the other way round.
             front["indices"] += [a, b, c, c, d, a]
-    back = {"positions": [x0, y0, 0, x1, y0, 0, x1, y1, 0, x0, y1, 0], "uvs": list(BLANK) * 4,
-            "normals": [0, 0, -1] * 4, "indices": [0, 1, 2, 2, 3, 0]}
+            back["indices"] += [a, c, b, c, a, d]
     return front, back
 
 

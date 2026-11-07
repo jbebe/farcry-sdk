@@ -62,12 +62,24 @@ previous owner's notes, by `mods/map-overhaul`, and held in the game as **Built*
   game, 2026-11-07).
 - **The game draws its own icons over the sheet**: safe houses, locked guard posts, arms dealers,
   bus stops, masts, Mike's bar and the objective, on the area map, the town plan and the back (seen in
-  game, 2026-11-07).
+  game, 2026-11-07); see how it places them below.
 - **The player's arrow is a marker the map names**, `archPlayerMarker`
   (`gadgets.ObjectiveIcons.PlayerPosition`) **(seen in data)**.
-- **The gadget carries a table of marker kinds**: `Objective` on; `PGP`, `SafeHouse`, `CellTower`,
-  `WeaponShop`, `BusStation`, `Underground`, `HQ`, `MikesPlace` and `Other` off **(seen in data)**.
-  What the table decides was not traced.
+- **The gadget carries tables of marker kinds**: `MarkerTypes`, which kinds blink as they appear
+  (`Objective` only), and `MarkerVisibility`, which kinds show on each side of the map, `World`, `Area`
+  and `KeyLocation` (the town plan) **(seen in data)**. The mission targets are all kind `Objective`:
+  the mission's own, the Underground's, the subvert offer, the buddies' missions and their targets, and
+  the world exit; the mission givers are other kinds (`HQ`, `CellTower`, `WeaponShop`, `Underground`)
+  **(seen in data)**.
+- **How the map places its icons** **(RE-verified on Steam)**. Every frame the map is out,
+  `UpdateMarkers` hands each marker the marker manager lists to `ProcessMarker` (Steam `0x106F1640`).
+  If its kind shows on this side of the map, `WorldSpaceToGadgetMapSpace` (`0x106ED0B0`) turns its
+  position into a spot on that side's picture, 0 to 1 across the cell's area map, the town plan or the
+  world map, and lays it on the rectangle the corner bones span, flat; a marker off the picture is
+  clamped to its edge and drawn as its arrow, turned toward it. The icon is an entity from a pool,
+  hung with `CEntity::Bind` on the bone the strategy's `+0xC0` names, the lower-left corner, and moved
+  there every frame. The markers' records are at the strategy's `+0x14C`, `0x1C` bytes each: the
+  marker's handle, then at `+8` and `+0xC` its icon's and a second icon's.
 - **While the map is out**, input set `mapcompass`: releasing left mouse sends `toggleicons`, right
   mouse sends `draw_monocular` and `holster_monocular`, and R sends `flipside`
   (`common\config\inputactionmapcommon.xml`). Left mouse also still sends `startshooting` and
@@ -92,6 +104,17 @@ previous owner's notes, by `mods/map-overhaul`, and held in the game as **Built*
   zooms out and the sheet swings back in front. The icon toggle on left mouse is gone (seen in game, by
   script: right, left and down over the sheet, let go, and the map put away while zoomed). The
   monocular raised with left mouse held is not tried.
+- **Only the mission targets' icons, fixed on the paper** (2026-11-07, the user's picks): the game's
+  own icons for now, the user making new ones later. Each sits at its true place on the whole sheet,
+  hung on the fold panel it lies on, so it keeps its spot as the columns bow and flex and as the sheet
+  is read close (seen in game, by script, with safe houses, arms dealers and bus stops shown for the
+  check, each on its note, the bowed columns' too).
+- **Bent, not cut, at the folds** (2026-11-07): the two folds between the columns are rounded over
+  4 cm, and the bumps between creases are gone (seen in game, by script).
+- **Lit as the world is** (2026-11-07): the paper no longer uses the map's lighting, which gave it half
+  the sky's light whichever way it faced and never let it shade below a fifth of the sun; it takes the
+  world's light as the hands do, its colour toned to 0.5 (seen in game, by script, under trees and in
+  Pala's sun; the brightness is not yet judged by the user).
 
 ## Open
 
@@ -103,4 +126,5 @@ previous owner's notes, by `mods/map-overhaul`, and held in the game as **Built*
 - **Whether a sheet of several panels can show several area maps**, and whether bigger textures load.
 - **Whether a gadget can be out while driving**, and how the lap sheet is placed.
 - **The idle animation**: the map's clips in hand animation set 9.
-- **The red circle**: what draws the objective marker, so a circle can replace it.
+- **The red circle**: the objective's icon is the map's `Objective` marker, an archetype the marker
+  names (`gadgets.ObjectiveIcons.MissionObjective`); the user's own icons are to replace the game's.

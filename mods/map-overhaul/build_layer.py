@@ -1,7 +1,7 @@
 # Builds layer/ from the sheet and the game's own files: the sheet in place of world 1's map textures,
 # its named places drawn again as town plans, the sheet as the model held in the hand, and the archetype
-# fragments that put that model on the map and take the GPS out of the vehicles and the player's arrow
-# off the map.
+# fragments that put that model on the map, take the GPS out of the vehicles and the player's arrow off the
+# map, and leave the map only the mission targets' icons.
 import argparse
 import json
 import re
@@ -34,16 +34,25 @@ VEHICLE_GPS = ('<value name="archGPSVehicleArchetype" type="String">gadgets.Equi
                '<value name="archGPSVehicleArchetype" type="String"></value>')
 PLAYER_ARROW = ('<value name="archPlayerMarker" type="String">gadgets.ObjectiveIcons.PlayerPosition</value>',
                 '<value name="archPlayerMarker" type="String"></value>')
+# The map shows only the mission targets, the markers its visibility tables call Objective: the sheet's
+# print and notes show the rest. The town plans' icons of what lies about and the diamonds' go too.
+OTHER_MARKERS = ("PGP", "SafeHouse", "CellTower", "WeaponShop", "BusStation", "Underground", "HQ", "MikesPlace",
+                 "Other", "City")
+OTHER_ICONS = ("archMedicKit", "archAmmoPile", "archExplosivePile", "archFuelPile", "archMountedWeapon",
+               "archSniperPoint", "archLandVehicle", "archWaterVehicle", "archAirVehicle", "archDiamondMarker")
 # Lettering and lines on a town plan, against the sheet's; its ground is drawn 1024 px across.
 PLAN_SYMBOLS = 3
 TILE = 1024
 # The sheet in the hand: its files, the size its texture is drawn at, and the map's paper material it
-# copies, Map flag and all, which is how the paper is lit. The game puts the area map on the material
-# named MAPTOP, so a copy under another name keeps its own texture.
+# copies. The game puts the area map on the material named MAPTOP, so a copy under another name keeps its
+# own texture. The copy loses MAPTOP's Map flag, which lights a map with half the sky's light whichever way
+# it faces and never lets its shade fall below a fifth of the sun, so the sheet takes the world's light as
+# the hands do; PAPER tones the paper down instead, which without the flag came out overbright.
 SHEET = Path(r"graphics\objects\mapcompass\sheet")
 SHEET_FILES = ("sheet.xbg", "sheet_ref.skeleton", "sheet.xbm")
 SHEET_TEXTURE = 4096
 MAPTOP = r"GRAPHICS\_MATERIALS\JFCARRIER2-M-1708200746783136.xbm"
+PAPER = 0.5
 # The map's banks on foot, which hold.py remakes for the sheet in both hands, in place.
 BANK_FOLDER = Path(r"graphics\characters\_common\animations\equipment\equipped_gadget")
 BANKS = ("aimcyclecrh_+000fw_nowep_eqmpcp_i1", "aimoffset_+090rt_nowep_i1_eqmpcp", "aimoffset_-090lt_nowep_i1_eqmpcp",
@@ -52,6 +61,11 @@ BANKS = ("aimcyclecrh_+000fw_nowep_eqmpcp_i1", "aimoffset_+090rt_nowep_i1_eqmpcp
          "jumpidle_+000fw_nowep_i1_eqmpcp", "jumpstart_+000fw_nowep_i1_eqmpcp", "run_+000fw_nowep_eqmpcp_i1",
          "slideend_+000fw_nowep_i1_eqmpcp", "slidepose_+000fw_nowep_i1_eqmpcp", "slidestart_+000fw_nowep_i1_eqmpcp",
          "walk_+000fw_nowep_i1_eqmpcp", "walkcrh_+000fw_nowep_i1_eqmpcp")
+# The map's model, its materials, the banks and the body the export carries, by their paths in the worlds archive.
+VANILLA_FOLDERS = (Path("graphics/objects/mapcompass"), BANK_FOLDER, Path("graphics/actors/principal_yabeck"))
+VANILLA_FILES = (Path("graphics/characters/_common/pelvis_ref.skeleton"),
+                 *(Path("graphics/_materials") / f"JFCARRIER2-M-{n}.xbm"
+                   for n in ("1708200746783136", "0307200865578952", "0307200863141764")))
 
 
 def run(*args):
@@ -107,12 +121,27 @@ def textures(source, tools, work):
             texture(tools, original, plan, work)
 
 
-def sheet_model(game, tools, blender, work):
+def vanilla_tree(source, work):
+    """What the map's export needs from the extracted worlds archive, copied apart: the map, the banks, the
+    protagonist's body and the human rig. Not the install, whose patch holds the banks this layer last
+    deployed, already remade; and not the whole archive, whose animals' rigs share the human rig's name, which
+    a loose export takes in its place."""
+    root, tree = source / "worlds/worlds", work / "vanilla"
+    for folder in VANILLA_FOLDERS:
+        shutil.copytree(root / folder, tree / folder, dirs_exist_ok=True)
+    for name in VANILLA_FILES:
+        (tree / name).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(root / name, tree / name)
+    return tree
+
+
+def sheet_model(source, game, tools, blender, work):
     # sheet.py's panels, drawn with a copy of the map's paper material that shows the whole sheet, and the
     # map's banks remade by hold.py for both hands.
     cli, texconv = tools
     clips = [a for bank in BANKS for a in ("--clip", (BANK_FOLDER / f"1stge_uppb_{bank}.mab").as_posix())]
-    run(cli, "fc2model", "export", "-g", game, "graphics/objects/mapcompass/map.xbg", *clips, "-o", work / "map.fc2model")
+    model = vanilla_tree(source, work) / "graphics/objects/mapcompass/map.xbg"
+    run(cli, "fc2model", "export", model, *clips, "-o", work / "map.fc2model")
     run(sys.executable, HERE / "sheet.py", work / "map.fc2model", work / "sheet.fc2model", work / "sheet.json")
     run(cli, "fc2model", "add-material", work / "sheet.fc2model", SHEET / "sheet.xbm", "--from", MAPTOP, "--name", "SHEET")
     # Blender exits 0 when the script fails, so only the pack it writes tells.
@@ -132,7 +161,8 @@ def sheet_model(game, tools, blender, work):
     for bank in BANKS:
         name = f"1stge_uppb_{bank}.mab"
         shutil.copy(work / "sheet" / "mods" / BANK_FOLDER / name, LAYER / BANK_FOLDER / name)
-    run(cli, "xbm", "set", out / "sheet.xbm", f"DiffuseTexture1={SHEET / 'sheet.xbt'}", "-g", game)
+    run(cli, "xbm", "set", out / "sheet.xbm", f"DiffuseTexture1={SHEET / 'sheet.xbt'}", f"DiffuseColor1={PAPER}",
+        "--remove", "Map", "-g", game)
 
     # The paper to its trimmed edge, which lies symmetric about the world's middle.
     png = work / "sheet.png"
@@ -182,6 +212,16 @@ def held_sheet(text, sheet):
     return replace_hashed(text, "fileSkeleton", r"graphics\objects\mapcompass\map_ref.skeleton", str(skeleton))
 
 
+def targets_only(text):
+    start = text.index('<object type="MarkerVisibility">')
+    end = text.index('<object type="MarkerRepository">', start)
+    kinds = "|".join(OTHER_MARKERS)
+    tables = re.sub(rf'(<value name="(?:{kinds})" type="Bool">)True(</value>)', r"\1False\2", text[start:end])
+    icons = "|".join(OTHER_ICONS)
+    return re.sub(rf'(<value name="(?:{icons})" type="String">)[^<]*(</value>)', r"\1\2",
+                  text[:start] + tables + text[end:])
+
+
 def fragments(source, cli, work, sheet):
     for library, extracted in LIBRARIES.items():
         xml = work / f"{library[1]}.xml"
@@ -190,7 +230,7 @@ def fragments(source, cli, work, sheet):
         for name, start, end in prototypes(lines):
             text = "\n".join(lines[start:end])
             if name == "gadgets.Equipped.Map":
-                text = held_sheet(text.replace(*PLAYER_ARROW), sheet)
+                text = targets_only(held_sheet(text.replace(*PLAYER_ARROW), sheet))
             elif VEHICLE_GPS[0] in text:
                 text = text.replace(*VEHICLE_GPS)
             else:
@@ -212,7 +252,7 @@ def main():
         shutil.rmtree(LAYER)
     with tempfile.TemporaryDirectory() as work:
         textures(source, tools, Path(work))
-        sheet = sheet_model(args.game, tools, args.blender, Path(work))
+        sheet = sheet_model(source, args.game, tools, args.blender, Path(work))
         fragments(source, args.cli, Path(work), sheet)
     print(f"Wrote {LAYER}")
 

@@ -2,6 +2,7 @@
 #include "fcse_api.h"
 #include "gps.h"
 #include "level.h"
+#include "markers.h"
 #include "read.h"
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
@@ -10,9 +11,10 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     }
     const bool gps = MapOverhaul::Gps::Install();
     const bool level = MapOverhaul::Level::Install();
+    const bool markers = MapOverhaul::Markers::Install();
     // Reading close turns the sheet through the hold, so it waits on it.
     if (level) {
         MapOverhaul::Read::Install();
     }
-    return gps || level;
+    return gps || level || markers;
 }
