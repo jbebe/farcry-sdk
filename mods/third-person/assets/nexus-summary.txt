@@ -1,1 +1,1 @@
-Third person on a key: over the shoulder on foot, with the game's crosshair and a closer aim; a chase camera at the wheel; a camera that keeps out of walls. In first person, your own legs and a shadow at your feet.
+Adds the option to play in third person view. Also adds your own legs and shadow under your feet in first person. Third person view landed here from vehicle overhaul too.
