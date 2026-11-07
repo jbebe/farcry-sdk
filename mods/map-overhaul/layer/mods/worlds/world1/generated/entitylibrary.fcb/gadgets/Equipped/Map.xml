@@ -25,21 +25,10 @@
         <object type="Components">
           <object type="CFileDescriptorComponent">
             <value name="hidHasAliasName" type="Bool">False</value>
-            <value name="text_fileName" type="String">graphics\objects\mapcompass\map.xml</value>
-            <value name="fileName" type="Hash">C8F5CDF7</value>
+            <value name="text_fileName" type="String">graphics\objects\mapcompass\sheet\sheet.xml</value>
+            <value name="fileName" type="Hash">B003463B</value>
             <value name="hidDescriptor" type="Rml">
-              <hidDescriptor>
-                <component class="GraphicComponent" version="2" detail="0">
-                  <object index="0" boneName="Map_LOD0" bboxMin="-0.13538,-0.157361,0.060949" bboxMax="0.177659,0.156684,0.0615495" />
-                  <resource fileName="graphics\Objects\MapCompass\Map.xbg" bboxMin="-0.13538,-0.157361,0.060949" bboxMax="0.177659,0.156684,0.0615495" />
-                  <skeleton name="Map" pos="0,0,0" rot="1,-0,-0,-0">
-                    <bone name="UpperLeftCorner" pos="-0.108642,0.130418,0.065092" rot="1,0,0,0" />
-                    <bone name="LowerLeftCorner" pos="-0.108642,-0.124582,0.065092" rot="1,0,0,0" />
-                    <bone name="LowerRightCorner" pos="0.146383,-0.124582,0.065092" rot="1,0,0,0" />
-                    <bone name="UpperRightCorner" pos="0.146383,0.130418,0.065092" rot="1,0,0,0" />
-                  </skeleton>
-                </component>
-              </hidDescriptor>
+              <hidDescriptor><component class="GraphicComponent" version="2" detail="0"><object index="0" meshName="PanelC" boneName="PanelC" bboxMin="-0.149065,-0.255766,0.0490949" bboxMax="0.361065,0.256829,0.0877471" /><object index="1" meshName="PanelT" boneName="PanelT" bboxMin="-0.149065,-0.255766,0.0490949" bboxMax="0.361065,0.256829,0.0877471" /><object index="2" meshName="PanelB" boneName="PanelB" bboxMin="-0.149065,-0.255766,0.0490949" bboxMax="0.361065,0.256829,0.0877471" /><object index="3" meshName="PanelL" boneName="PanelL" bboxMin="-0.149065,-0.255766,0.0490949" bboxMax="0.361065,0.256829,0.0877471" /><object index="4" meshName="PanelR" boneName="PanelR" bboxMin="-0.149065,-0.255766,0.0490949" bboxMax="0.361065,0.256829,0.0877471" /><object index="5" meshName="PanelTL" boneName="PanelTL" bboxMin="-0.149065,-0.255766,0.0490949" bboxMax="0.361065,0.256829,0.0877471" /><object index="6" meshName="PanelTR" boneName="PanelTR" bboxMin="-0.149065,-0.255766,0.0490949" bboxMax="0.361065,0.256829,0.0877471" /><object index="7" meshName="PanelBL" boneName="PanelBL" bboxMin="-0.149065,-0.255766,0.0490949" bboxMax="0.361065,0.256829,0.0877471" /><object index="8" meshName="PanelBR" boneName="PanelBR" bboxMin="-0.149065,-0.255766,0.0490949" bboxMax="0.361065,0.256829,0.0877471" /><resource fileName="graphics\objects\mapcompass\sheet\sheet.xbg" bboxMin="-0.149065,-0.255766,0.0490949" bboxMax="0.361065,0.256829,0.0877471" /><skeleton name="Map" pos="0,0,0" rot="1,-0,-0,-0"><bone name="UpperLeftCorner" pos="-0.15,0.256,0.065" rot="1,0,0,0" /><bone name="LowerLeftCorner" pos="-0.15,-0.256,0.065" rot="1,0,0,0" /><bone name="LowerRightCorner" pos="0.362,-0.256,0.065" rot="1,0,0,0" /><bone name="UpperRightCorner" pos="0.362,0.256,0.065" rot="1,0,0,0" /><bone name="PanelC" pos="0.106,0,0.061" rot="1,0,0,0" /><bone name="PanelT" pos="0.106,0.0853333,0.061" rot="0.999391,-0.0348995,0,0" /><bone name="PanelB" pos="0.106,-0.0853333,0.061" rot="0.999657,-0.0261769,0,0" /><bone name="PanelL" pos="0.0206667,0,0.061" rot="0.99863,0,0.052336,0" /><bone name="PanelR" pos="0.191333,0,0.061" rot="0.99863,0,-0.052336,0" /><bone name="PanelTL" pos="0.0206667,0.0853333,0.061" rot="0.998021,-0.0348517,0.0523041,-0.0018265" /><bone name="PanelTR" pos="0.191333,0.0853333,0.061" rot="0.998021,-0.0348517,-0.0523041,0.0018265" /><bone name="PanelBL" pos="0.0206667,-0.0853333,0.061" rot="0.998287,-0.0261411,0.052318,-0.00137" /><bone name="PanelBR" pos="0.191333,-0.0853333,0.061" rot="0.998287,-0.0261411,-0.052318,0.00137" /></skeleton></component></hidDescriptor>
             </value>
           </object>
           <object type="CGraphicComponent">
@@ -65,20 +54,108 @@
             <value name="hidHasAmbientValues" type="Bool">False</value>
             <object type="object">
               <value name="hidIndex" type="UInt32">0</value>
-              <value name="text_objModel" type="String">graphics\objects\mapcompass\map.xbg</value>
-              <value name="objModel" type="Hash">D8BF08B0</value>
-              <value name="hidMeshName" type="String"></value>
-              <value name="text_hidNodeName" type="String">Map</value>
-              <value name="hidNodeName" type="Hash">ABE0EC5B</value>
-              <value name="text_hidNodeNameLOD0" type="String">Map_LOD0</value>
-              <value name="hidNodeNameLOD0" type="Hash">53D28D0A</value>
+              <value name="text_objModel" type="String">graphics\objects\mapcompass\sheet\sheet.xbg</value>
+              <value name="objModel" type="Hash">A049837C</value>
+              <value name="hidMeshName" type="String">PanelC</value>
+              <value name="text_hidNodeName" type="String">PanelC</value>
+              <value name="hidNodeName" type="Hash">AA664AD3</value>
+              <value name="text_hidNodeNameLOD0" type="String">PanelC_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">46E766F3</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">1</value>
+              <value name="text_objModel" type="String">graphics\objects\mapcompass\sheet\sheet.xbg</value>
+              <value name="objModel" type="Hash">A049837C</value>
+              <value name="hidMeshName" type="String">PanelT</value>
+              <value name="text_hidNodeName" type="String">PanelT</value>
+              <value name="hidNodeName" type="Hash">29B5CF14</value>
+              <value name="text_hidNodeNameLOD0" type="String">PanelT_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">583454D0</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">2</value>
+              <value name="text_objModel" type="String">graphics\objects\mapcompass\sheet\sheet.xbg</value>
+              <value name="objModel" type="Hash">A049837C</value>
+              <value name="hidMeshName" type="String">PanelB</value>
+              <value name="text_hidNodeName" type="String">PanelB</value>
+              <value name="hidNodeName" type="Hash">DD617A45</value>
+              <value name="text_hidNodeNameLOD0" type="String">PanelB_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">8DBBB556</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">3</value>
+              <value name="text_objModel" type="String">graphics\objects\mapcompass\sheet\sheet.xbg</value>
+              <value name="objModel" type="Hash">A049837C</value>
+              <value name="hidMeshName" type="String">PanelL</value>
+              <value name="text_hidNodeName" type="String">PanelL</value>
+              <value name="hidNodeName" type="Hash">3AD95742</value>
+              <value name="text_hidNodeNameLOD0" type="String">PanelL_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">B7B1D426</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">4</value>
+              <value name="text_objModel" type="String">graphics\objects\mapcompass\sheet\sheet.xbg</value>
+              <value name="objModel" type="Hash">A049837C</value>
+              <value name="hidMeshName" type="String">PanelR</value>
+              <value name="text_hidNodeName" type="String">PanelR</value>
+              <value name="hidNodeName" type="Hash">C0D66A21</value>
+              <value name="text_hidNodeNameLOD0" type="String">PanelR_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">8E6DB7CD</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">5</value>
+              <value name="text_objModel" type="String">graphics\objects\mapcompass\sheet\sheet.xbg</value>
+              <value name="objModel" type="Hash">A049837C</value>
+              <value name="hidMeshName" type="String">PanelTL</value>
+              <value name="text_hidNodeName" type="String">PanelTL</value>
+              <value name="hidNodeName" type="Hash">B79B8384</value>
+              <value name="text_hidNodeNameLOD0" type="String">PanelTL_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">85E1583B</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">6</value>
+              <value name="text_objModel" type="String">graphics\objects\mapcompass\sheet\sheet.xbg</value>
+              <value name="objModel" type="Hash">A049837C</value>
+              <value name="hidMeshName" type="String">PanelTR</value>
+              <value name="text_hidNodeName" type="String">PanelTR</value>
+              <value name="hidNodeName" type="Hash">4D94BEE7</value>
+              <value name="text_hidNodeNameLOD0" type="String">PanelTR_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">BC3D3BD0</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">7</value>
+              <value name="text_objModel" type="String">graphics\objects\mapcompass\sheet\sheet.xbg</value>
+              <value name="objModel" type="Hash">A049837C</value>
+              <value name="hidMeshName" type="String">PanelBL</value>
+              <value name="text_hidNodeName" type="String">PanelBL</value>
+              <value name="hidNodeName" type="Hash">AB033653</value>
+              <value name="text_hidNodeNameLOD0" type="String">PanelBL_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">81EFF1CF</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">8</value>
+              <value name="text_objModel" type="String">graphics\objects\mapcompass\sheet\sheet.xbg</value>
+              <value name="objModel" type="Hash">A049837C</value>
+              <value name="hidMeshName" type="String">PanelBR</value>
+              <value name="text_hidNodeName" type="String">PanelBR</value>
+              <value name="hidNodeName" type="Hash">510C0B30</value>
+              <value name="text_hidNodeNameLOD0" type="String">PanelBR_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">B8339224</value>
               <value name="hidDetailObject" type="Bool">False</value>
             </object>
           </object>
           <object type="CSimpleAnimationComponent">
             <value name="hidHasAliasName" type="Bool">False</value>
-            <value name="text_fileSkeleton" type="String">graphics\objects\mapcompass\map_ref.skeleton</value>
-            <value name="fileSkeleton" type="Hash">ECBD7222</value>
+            <value name="text_fileSkeleton" type="String">graphics\objects\mapcompass\sheet\sheet_ref.skeleton</value>
+            <value name="fileSkeleton" type="Hash">5CC09BBD</value>
             <value name="sPartName" type="String">map</value>
           </object>
           <object type="CGadget">

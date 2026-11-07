@@ -61,8 +61,10 @@ skipping a little on the grain, so it reads as written on the sheet rather than 
 | `levels\w1_*\mapcompass*.xbt` | the sheet cut into the 25 area maps, `w1_c_3`'s malaria-bubble pair included |
 | `worlds\world1\mapcompass*.xbt` | the world map: the sheet's playable square, 1024 to 4096 m, shrunk to 1024 px |
 | `levels\w1_*\majorlocation_*.xbt` | the 21 detail maps drawn again as town plans, each its entity's square at 1024 px, lines and lettering 3 times the sheet's |
+| `graphics\objects\mapcompass\sheet\` | the sheet in the hand (`sheet.py`): 51.2 cm square, the whole sheet at 1:10 000, open in 3×3 panels on hinge bones at the folds, each a few degrees off flat and pillowed between flat creases; drawn with a copy of the map's paper material, `Map` flag kept for its lighting, named SHEET so the game does not put the area map on it, showing the sheet at 4096 px |
+| `gadgets\Equipped\Map` | the map pointed at the sheet: its descriptor, a graphic object per panel and its skeleton, the four corner bones kept at the sheet's corners for the game's icons |
 | `player\MainCharacter\PawnPlayer*` fragments | `archGPSVehicleArchetype` emptied on the player and each character; a saved game's Datsun still showed its GPS |
-| `gadgets\Equipped\Map` fragments | `archPlayerMarker` emptied: no arrow for the player on the map |
+| `gadgets\Equipped\Map` fragments | also `archPlayerMarker` emptied: no arrow for the player on the map |
 
 Each texture keeps the game file's header and its levels, a `_mip0` the top level alone and the other
 the rest of the chain, compressed to DXT1 by `tools\third-party\FCBConverter\texconv.exe`. The textures
