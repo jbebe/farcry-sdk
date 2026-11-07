@@ -74,12 +74,20 @@ findings below has been tested. Marked **(proposed)** are choices not yet agreed
 - **What the sheet can show** is three sets of textures: the world map, an area map for each level
   cell at 1 m a pixel, and detail maps of named places ([the map textures](../engine-internals/world-loading.md#the-map-textures)).
 
+## Built
+
+- **The sheet held open** (2026-11-07): 1:4 500, 84 cm, 50 cm in front of the eye with its side
+  columns bowed 30°, filling a 4:3 view at the install's 87° with the hands on its edges on 16:9; the
+  map's banks remade by `hold.py` (seen in game).
+- **Level while the view looks up and down** (2026-11-07): the plugin turns the upper body back about
+  the eye by the view's pitch while the map is out ([the look](../engine-internals/first-person-aiming.md#the-bodys-skeleton)),
+  eased in and out over a quarter second (seen in game, by script, at 73° down and 78° up).
+
 ## Open
 
 - **The panels' size.** The drawn sheet is 5.12 km with its margin and the area inside the neat line
   3.2 km, so 3×3 panels are about 1.7 km each over the whole sheet, or a little over 1 km each with
   the margin trimmed.
-- **Where the first-person map is placed** relative to the camera, so its pitch can be dropped.
 - **What the map strategy shows on the sheet**: one level cell's area map or a window that follows
   the player, how it zooms, and what the flip side shows.
 - **Whether a sheet of several panels can show several area maps**, and whether bigger textures load.

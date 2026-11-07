@@ -4,8 +4,9 @@ A realistic map in place of the game's drawn one, and the GPS removed: world 1 a
 topographic sheet, the kind handed over at a briefing, drawn from the world's own data. The idea is
 issue #29, the design `docs/docs/design/map.md`. So far the whole sheet is held open in both hands on
 foot, the map has lost the player's arrow, and the plugin keeps the GPS out of the hand and off the
-dashboard (seen in game, 2026-11-07, from a save made with both). The sheet still turns with the view
-up and down, and in a vehicle it is the hand's sheet where the game's map was, too big and not yet folded.
+dashboard (seen in game, 2026-11-07, from a save made with both). The sheet stays level as the view
+looks up and down past it; in a vehicle it is the hand's sheet where the game's map was, too big and not
+yet folded.
 The held sheet always shows its own picture, so the area maps and town plans in the layer, and R's turn to
 the world map, show nothing new on it.
 
@@ -114,9 +115,10 @@ its GPS whatever the archetypes say:
 |---|---|
 | No GPS in the hand | the map strategy's `EquipGadgetItem` and `UnequipGadgetItem` are skipped for its own `CompassEntity` (`+0x108`), so the saved compass stays in the pocket; the monocular still comes up |
 | No GPS on the dashboard | after `CVehicle::SVehicleImpl::AttachToSeat` binds the player's vehicle GPS to the dashboard and shows it, `CEntity::SetIsVisible(false)` hides it again |
+| The sheet level as the view looks up and down (`level.cpp`) | while the map strategy's update has the map in a pawn's hands, the plugin follows that pawn's skeleton; each time it is posed, the spine and every bone below it but `Camera` are turned back about the eye by the `Camera` bone's pitch, so the arms and the sheet in the left hand keep their place against a level view; the turn eases in and out over 0.25 s as the map comes and goes. `python tools\fc2drive\scenarios\map_look.py` takes pictures from 73° down to 78° up |
 
 `build.ps1` builds it and stages it in `layer\plugins\map-overhaul\`; the game gets it with the layer,
-from `jackall-cli mod build` with every other layer installed. Its four patterns are checked on both
+from `jackall-cli mod build` with every other layer installed. Its five patterns are checked on both
 builds with `python ..\..\scripts\verify_patterns.py --uplay <Steam Dunia.dll> src`.
 
 ## The full map

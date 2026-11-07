@@ -14,6 +14,7 @@ endif()
 add_library(MapOverhaul SHARED
   "src/main.cpp"
   "src/gps.cpp"
+  "src/level.cpp"
 )
 
 target_include_directories(MapOverhaul PRIVATE

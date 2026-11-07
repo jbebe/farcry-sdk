@@ -494,6 +494,18 @@ its sights up on the eye; the Desert Eagle stays on `R Hand`. Retail GOG v1.03, 
 Overhaul.
 :::
 
+:::info[Measured in a running game]
+The map out in the hands hangs from `L Hand`, its facing the hand's to the third decimal. Retail GOG
+v1.03, from Map Overhaul's probe, 2026-11-07.
+:::
+
+The look's pitch is posed into the body, not laid over it. As the view pitches, `Camera` and `Spine2`
+turn with it, so the arms and what they hold stay put on screen, while `Pelvis` stays level and slides
+back: 18 cm at 36° down, 36 cm at 73°. The eye drops with the head, 16 cm at 36° down
+**(measured in a running game, GOG v1.03, Map Overhaul's probe)**. So turning `Spine` and everything
+below it but `Camera` back about the eye by the `Camera` bone's own pitch holds the arms level while the
+view looks past them; the legs, on `Pelvis`, are left alone **(seen in game, Map Overhaul)**.
+
 The first-person body is drawn lined up on its `Camera` bone. Turn every bone but `Camera` about a
 point after the skeleton's job, and the arms and the gun turn on screen. Turn `Camera` with them,
 and the arms and the gun stay where they were in the world while the view turns.
