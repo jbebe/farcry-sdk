@@ -1,7 +1,7 @@
 // Left mouse held over the map reads it close: the view zooms in as down iron sights, the look slowing
 // with it, and the sheet stays where it was as the look turns, so the mouse looks over it; let go, the view
 // zooms out and the sheet swings back in front. The map's own use of left mouse, showing and hiding its
-// icons, is taken while it is out.
+// icons as it is let go, is taken while the map is out, and ends the reading.
 #pragma once
 
 #include <cstdint>

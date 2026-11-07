@@ -1,8 +1,9 @@
 """A picture of the sheet held, as the game's camera sees it at an 87 degree field of view on a 16:9 screen,
 for checking hold.py without the game: the pack's sheet and arms posed by one of its banks at one frame,
-drawn with the sheet's own picture, and the 4:3 screen's edges marked.
+drawn with the sheet's own picture, and the 4:3 screen's edges marked; the view level, or looking down as
+far as asked.
 
-    blender -b --python preview_hold.py -- <held.fc2model> <sheet.png> <bank part> <frame> <out.png>
+    blender -b --python preview_hold.py -- <held.fc2model> <sheet.png> <bank part> <frame> <out.png> [down]
 """
 import math
 import os
@@ -21,6 +22,8 @@ from addon.pack import Pack
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 SOURCE, PICTURE, BANK, FRAME, OUT = argv[0], argv[1], argv[2], int(argv[3]), argv[4]
+# How far down the view looks, in degrees; the plugin keeps the hold level, so the sheet stays put meanwhile.
+LOOK_DOWN = float(argv[5]) if len(argv) > 5 else 0.0
 # The game's field of view is the width of a 4:3 screen; a wider one sees further to the sides.
 FOV, WIDTH, HEIGHT = 87.0, 1920, 1080
 FOUR_THREE = HEIGHT * 4 // 3
@@ -43,7 +46,7 @@ for part in built["parts"]:
 eye = body.matrix_world @ convert.node_frame(body.pose.bones["Camera"].matrix)
 camera = bpy.data.objects.new("camera", bpy.data.cameras.new("camera"))
 scene.collection.objects.link(camera)
-camera.matrix_world = eye @ Matrix.Rotation(math.pi / 2, 4, "X")
+camera.matrix_world = eye @ Matrix.Rotation(-math.radians(LOOK_DOWN), 4, "X") @ Matrix.Rotation(math.pi / 2, 4, "X")
 camera.data.sensor_fit = "HORIZONTAL"
 camera.data.angle = 2 * math.atan(math.tan(math.radians(FOV) / 2) * (WIDTH / HEIGHT) / (4 / 3))
 camera.data.clip_start = 0.02

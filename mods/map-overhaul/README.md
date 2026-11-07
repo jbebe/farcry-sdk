@@ -81,7 +81,9 @@ hand on a hill, in Pala and from a Datsun's seat.
 ### The hold
 
 `hold.py` (Blender, through BlenderFC2) remakes each bank the map has on foot. The sheet's middle is 50
-cm in front of the eye and 3 cm below it, facing it, its side columns bowed 30° toward the eye. At the 87°
+cm from the eye and 40° below the level view, facing it, its side columns bowed 30° toward the eye: its
+top edge lies about on the horizon and the sheet reaches from there down toward the legs, so the hills
+show above it and the view looks down to read it, the plugin keeping it there. Looked at, at the 87°
 field of view this install plays at, the sheet's edges lie just past a 4:3 screen's, and on 16:9 the
 wrists show 1.10 of the way to the screen's edge. The game's field of view is a 4:3 screen's width and a
 wider screen sees further to the sides (UFCP's `WidescreenScale`), measured against an earlier in-game
@@ -107,10 +109,10 @@ off the sheet; nor will the whole archive, since a loose `fc2model export` from 
 
 `preview_hold.py` draws the held sheet as the game's camera sees it at 87° on 16:9, with the 4:3
 screen's edges in yellow, for checking a change without the game, from the pack and picture
-`build_layer.py` leaves in `work/`:
+`build_layer.py` leaves in `work/`; the view looks level, or down by the degrees given last:
 
 ```
-blender -b --python preview_hold.py -- work\held.fc2model work\sheet.png _idle_ 0 preview.png
+blender -b --python preview_hold.py -- work\held.fc2model work\sheet.png _idle_ 0 preview.png 40
 ```
 
 ## The plugin
@@ -123,7 +125,7 @@ its GPS whatever the archetypes say:
 | No GPS in the hand | the map strategy's `EquipGadgetItem` and `UnequipGadgetItem` are skipped for its own `CompassEntity` (`+0x108`), so the saved compass stays in the pocket; the monocular still comes up |
 | No GPS on the dashboard | after `CVehicle::SVehicleImpl::AttachToSeat` binds the player's vehicle GPS to the dashboard and shows it, `CEntity::SetIsVisible(false)` hides it again |
 | The sheet level as the view looks up and down (`level.cpp`) | while the map strategy's update has the map in a pawn's hands, the plugin follows that pawn's skeleton; each time it is posed, the spine and every bone below it but `Camera` are turned back about the eye by the `Camera` bone's pitch, so the arms and the sheet in the left hand keep their place against a level view; the turn eases in and out over 0.25 s as the map comes and goes. `python tools\fc2drive\scenarios\map_look.py` takes pictures from 73° down to 78° up |
-| Left mouse held reads the sheet close (`read.cpp`) | the pause service's signal listener sees `startshooting` and `stopshooting` before the player's does; while the map is out a press zooms the view to 0.61 rad (35°, three times closer than 87°) over 0.3 s through the skills' first field-of-view transition, as iron sights do, with the look at 0.19 of its speed. While held, the hold also turns the upper body back about the eye's up axis by however far the look has turned since the press, so the mouse looks over a sheet that stays put; past 0.6 rad, where the sheet's edge reaches the middle of the view, the sheet comes along. Let go, the view zooms out and the sheet swings back in front over 0.3 s. `toggleicons`, the map's own use of left mouse, is taken while the map is out; right mouse still brings the monocular up, and over the zoom it takes the zoom over (not yet tried with left mouse held). `python tools\fc2drive\scenarios\map_read.py` takes pictures of it |
+| Left mouse held reads the sheet close (`read.cpp`) | the pause service's signal listener sees `startshooting` and `stopshooting` before the player's does; while the map is out a press zooms the view to 0.61 rad (35°, three times closer than 87°) over 0.3 s through the skills' first field-of-view transition, as iron sights do, with the look at 0.19 of its speed. While held, the hold also turns the upper body back about the eye's up axis by however far the look has turned since the press, so the mouse looks over a sheet that stays put; past 0.6 rad, where the sheet's edge reaches the middle of the view, the sheet comes along. Let go, the view zooms out and the sheet swings back in front over 0.3 s; with the map out, the map's own input set answers left mouse let go with `toggleicons` rather than `stopshooting`, so either ends the reading, and `toggleicons`, the map's own use of left mouse, is taken while the map is out; right mouse still brings the monocular up, and over the zoom it takes the zoom over (not yet tried with left mouse held). `python tools\fc2drive\scenarios\map_read.py` takes pictures of it |
 | The map's icons at their places (`markers.cpp`) | the game places each marker's icon by `WorldSpaceToGadgetMapSpace`, on the area map of the cell the player stands in, flat between the sheet's corner bones, and clamps the rest to the edge as arrows. While `ProcessMarker` places a marker of the map, that is answered instead with the marker's spot on the whole sheet, in the frame of the fold panel it lies on, on the bent paper and 2 mm in front of it; the bone the strategy hangs a new icon on (`+0xC0`, the lower-left corner) is that panel's until `ProcessMarker` returns, and an icon spawned before on another panel, a marker that moved across a fold, is hung again with `CEntity::Bind`. So each icon moves with its panel's bow and flex and stays on its spot as the view reads the sheet close (seen in game by script: safe houses, arms dealers and bus stops, shown for the check, sat on their notes on every panel, the bowed ones too) |
 
 `build.ps1` builds it and stages it in `layer\plugins\map-overhaul\`; the game gets it with the layer,

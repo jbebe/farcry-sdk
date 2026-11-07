@@ -82,8 +82,9 @@ previous owner's notes, by `mods/map-overhaul`, and held in the game as **Built*
   marker's handle, then at `+8` and `+0xC` its icon's and a second icon's.
 - **While the map is out**, input set `mapcompass`: releasing left mouse sends `toggleicons`, right
   mouse sends `draw_monocular` and `holster_monocular`, and R sends `flipside`
-  (`common\config\inputactionmapcommon.xml`). Left mouse also still sends `startshooting` and
-  `stopshooting`, which Inventory Overhaul's notebook uses (seen in game).
+  (`common\config\inputactionmapcommon.xml`). Left mouse's press still sends `startshooting`, which
+  Inventory Overhaul's notebook uses (seen in game); its release seems not to send `stopshooting`, since
+  a reading that ended only on it stayed zoomed in the user's play (inferred).
 - **The map strategy's `Update` runs every frame** whether the map is out or not; its equipment's
   wielder is the player while the map is out and through the holster, and no one from just after
   `OnUnequip` (seen in game, 2026-11-07, by a probe in Map Overhaul's plugin).
@@ -92,9 +93,11 @@ previous owner's notes, by `mods/map-overhaul`, and held in the game as **Built*
 
 ## Built
 
-- **The sheet held open** (2026-11-07): 1:4 500, 84 cm, 50 cm in front of the eye with its side
-  columns bowed 30°, filling a 4:3 view at the install's 87° with the hands on its edges on 16:9; the
-  map's banks remade by `hold.py` (seen in game).
+- **The sheet held open** (2026-11-07): 1:4 500, 84 cm, 50 cm from the eye with its side columns
+  bowed 30°, filling a 4:3 view at the install's 87° with the hands on its edges on 16:9; the map's
+  banks remade by `hold.py` (seen in game). After the user's first play it is held 40° below the level
+  view, its top edge about on the horizon and the sheet reaching down toward the legs, so the view
+  looks down to read it (seen in game, by script).
 - **Level while the view looks up and down** (2026-11-07): the plugin turns the upper body back about
   the eye by the view's pitch while the map is out ([the look](../engine-internals/first-person-aiming.md#the-bodys-skeleton)),
   eased in and out over a quarter second (seen in game, by script, at 73° down and 78° up).
@@ -103,7 +106,9 @@ previous owner's notes, by `mods/map-overhaul`, and held in the game as **Built*
   mouse moves the view across a still sheet; 0.6 rad off its middle the sheet comes along. Let go, it
   zooms out and the sheet swings back in front. The icon toggle on left mouse is gone (seen in game, by
   script: right, left and down over the sheet, let go, and the map put away while zoomed). The
-  monocular raised with left mouse held is not tried.
+  monocular raised with left mouse held is not tried. In the user's play the zoom stayed in once let
+  go: the map's input set answers left mouse let go with `toggleicons`, not `stopshooting`, which now
+  ends the reading too (seen in game, by script, letting go with `toggleicons` alone).
 - **Only the mission targets' icons, fixed on the paper** (2026-11-07, the user's picks): the game's
   own icons for now, the user making new ones later. Each sits at its true place on the whole sheet,
   hung on the fold panel it lies on, so it keeps its spot as the columns bow and flex and as the sheet

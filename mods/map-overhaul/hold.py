@@ -1,6 +1,7 @@
 """The map's banks on foot remade for the sheet held open in both hands. In every held bank the sheet stands
-DISTANCE in front of the eye and HEIGHT below it, facing it, its side columns bowed BOW toward the eye, so at
-an 87 degree field of view it fills a 4:3 screen and a 16:9 one shows the hands on its edges; SWAY of the
+DISTANCE from the eye and PITCH below the level view, facing it, its side columns bowed BOW toward the eye,
+so looked at, at an 87 degree field of view, it fills a 4:3 screen and a 16:9 one shows the hands on its
+edges; SWAY of the
 bank's own sway of the map against the idle is kept, as a move of the sheet in its own frame. The left hand holds the
 left edge as the idle's held the map's, and the right one the right edge, mirrored. Banks that carry the map
 lowered hang the sheet from the left hand where the bank has it. The columns flex a little with each bank's
@@ -26,9 +27,11 @@ from addon.pack import Pack
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 SOURCE, TARGET = argv[0], argv[1]
-# Where the sheet's middle is from the eye, in metres, and how far its side columns bow toward the eye on top
-# of their rest, in degrees; sheet.py shapes the paper's rounded folds for the two together, its HELD.
-DISTANCE, HEIGHT = 0.50, -0.03
+# How far the sheet's middle is from the eye, in metres, and how far below the level view, in degrees: its
+# top edge near the horizon, so the sheet reaches from there down toward the legs and the view looks down to
+# read it. How far its side columns bow toward the eye on top of their rest, in degrees; sheet.py shapes the
+# paper's rounded folds for the two together, its HELD.
+DISTANCE, PITCH = 0.50, 40.0
 BOW = 24.0
 # How far below the middle row's centre line the hands hold the side edges, in metres.
 GRIP_HEIGHT = -0.03
@@ -60,9 +63,13 @@ COLUMNS = {"PanelL": (1, 0.0), "PanelTL": (1, 0.0), "PanelBL": (1, 0.0),
 STILL = ("PanelC", "PanelT", "PanelB")
 # The body's rest pose is symmetric across world x, and so is the sheet across its own middle.
 SIDES = Matrix.Diagonal((-1.0, 1.0, 1.0, 1.0))
-# The sheet in front of the eye, in the camera's frame (x right, y ahead, z up): its x along the camera's,
-# its y up, its front toward the eye.
-FACING = Matrix(((1, 0, 0, 0), (0, 0, -1, DISTANCE), (0, 1, 0, HEIGHT), (0, 0, 0, 1)))
+# The sheet below the eye, in the camera's frame (x right, y ahead, z up): its x along the camera's, its y up
+# and leaning away as far as it is below, its front toward the eye.
+_DOWN = math.radians(PITCH)
+FACING = Matrix(((1, 0, 0, 0),
+                 (0, math.sin(_DOWN), -math.cos(_DOWN), DISTANCE * math.cos(_DOWN)),
+                 (0, math.cos(_DOWN), math.sin(_DOWN), -DISTANCE * math.sin(_DOWN)),
+                 (0, 0, 0, 1)))
 
 
 def node(obj, name):

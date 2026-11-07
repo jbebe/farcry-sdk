@@ -83,7 +83,10 @@ namespace {
                 g_pressed = false;
                 break;
             case kToggleIcons:
+                // With the map out, the map's own input set answers left mouse let go with this, not with
+                // stopshooting; the press, which it leaves alone, still comes as startshooting.
                 if (g_out) {
+                    g_pressed = false;
                     id = kTaken;
                 }
                 break;

@@ -1,6 +1,7 @@
-"""The map read close on the hill south-east of Pala: left mouse held over Map Overhaul's sheet zooms in,
-the view looks right, left and down over the still sheet, and let go it zooms out with the sheet back in
-front; then the map is put away while still read close, and the view looked down with the gun that comes
+"""The map read close on the hill south-east of Pala: the view looks down at Map Overhaul's sheet, held
+below it, left mouse held zooms in, the view looks right, left and down over the still sheet, and let go,
+as the map's input set sends it, it zooms out with the sheet back in front; then the map is put away while
+still read close, and the view looked down with the gun that comes
 up, which should follow the look as it does without the map.
 
     python map_read.py
@@ -18,6 +19,8 @@ GADGET_SECONDS = 4.0
 # How hard the view turns, right and up positive, for each step, and what the step is called.
 LOOKS = [(0.5, 0.0, "looked right over it"), (-1.0, 0.0, "looked left over it"), (0.5, -0.4, "looked down over it")]
 TURN = 0.6
+# The look down at the sheet, which is held below the level view: about 40 degrees.
+LOOK_DOWN = -0.55
 
 
 def look(game, yaw, pitch):
@@ -37,17 +40,20 @@ def main():
         game.action("toggle_gadget", 1.0)
         time.sleep(GADGET_SECONDS)
         run.shot(game, "held")
+        look(game, 0.0, LOOK_DOWN)
+        run.shot(game, "held, looked down at it")
         game.action("startshooting", 1.0)
         time.sleep(1.0)
         run.shot(game, "read close")
         for yaw, pitch, name in LOOKS:
             look(game, yaw, pitch)
             run.shot(game, name)
-        game.action("stopshooting", 0.0)
+        # As the map's own input set answers left mouse let go: toggleicons, not stopshooting.
+        game.action("toggleicons", 1.0)
         time.sleep(1.0)
         run.shot(game, "let go")
         look(game, 0.0, 0.4)
-        run.shot(game, "held, level again")
+        run.shot(game, "held, looking at it again")
 
         game.action("startshooting", 1.0)
         time.sleep(1.0)
