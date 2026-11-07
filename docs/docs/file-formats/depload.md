@@ -65,6 +65,15 @@ on GOG)**:
 
 `mp_02_s_shanty`'s library, for scale, holds 236 systems and 641 emitters.
 
+An emitter sets its texture, its particle count (`NbInitPart` at once, then `EmitRateKF` per second for
+`EmitDuration`) and its aim (`RotOffset` and the `EmitDir…` cone) as attributes. Each `Init…KF` child
+is a starting value with a random `VariantKF` spread, and each `Part…KF` child a curve of knots over a
+particle's life, 0 to 1. The colour a particle shows is `InitColorKF` times `PartColorKF`
+**(inferred)**: the bullet blood's smoke puff, `(0.33, 0.18, 0.18)` times `(0.58, 0, 0)`, draws as a
+near-black red. `jackall-cli rml decode` and `rml encode` round-trip the shipped libraries byte for
+byte, so one system can be edited and the library re-encoded; Difficulty Overhaul's
+`data\particles.py` does that.
+
 Both paths bottom out in `CResourceManager::LoadDep(IFile*, bool isPrimary)` (`0x09c07f50`) →
 **`CResourceDataBase::LoadBinaryFile(IFile*, bool isPrimary)`** (`0x09c594c0`), the actual binary
 reader — its `IFile::Read` call sequence is the ground truth for the layout below. `isPrimary` only

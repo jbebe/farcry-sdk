@@ -10,8 +10,9 @@ Notable changes to Difficulty Overhaul, loosely following
   a rifle drops a soldier, two from a pistol, a head hit from anything kills. A soldier's gun hurts
   you as much as yours hurts him, and no gun gains damage up close.
 - **Blood as the round would show it.** On you as on a soldier, a pistol or SMG round throws no
-  spray of blood, a rifle round or a shotgun pellet only on a head hit, and only the .50 BMG on any
-  hit.
+  blood, a rifle round or a shotgun pellet only on a head hit, and only the .50 BMG on any hit. What
+  it throws is a dark red mist with a few droplets where the round goes in, in place of the game's
+  blob.
 - **Difficulty is how much you can take.** On Easy and Normal you take as many AK-47 hits as in the
   game, 37 and 28 from full; on Hardcore the third kills you and on Infamous the first, wherever it
   lands. The soldiers aim and hit the same on every setting. On Easy and Normal your last bar still softens hits,

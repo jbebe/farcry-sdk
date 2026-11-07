@@ -307,8 +307,8 @@
               <value name="matimpShellImpactFx" type="Hash">561ED150</value>
               <value name="text_matimpBulletImpactFx" type="String">Weapon.HeadBlood</value>
               <value name="matimpBulletImpactFx" type="Hash">F163F7A8</value>
-              <value name="text_matimpSecondaryBulletImpactFx" type="String">Weapon.HeadBlood</value>
-              <value name="matimpSecondaryBulletImpactFx" type="Hash">F163F7A8</value>
+              <value name="text_matimpSecondaryBulletImpactFx" type="String">Weapon.Bullet</value>
+              <value name="matimpSecondaryBulletImpactFx" type="Hash">792B8A0E</value>
               <object type="Network">
                 <value name="strControllerNetobjectType" type="String"></value>
               </object>

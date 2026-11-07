@@ -14,9 +14,9 @@
 - gamemodesconfig.xml: the single-player hit locations, which scale every hit on anyone but the player:
   a head hit kills.
 - materialimpacts.xml: blood sprays from a hit on anyone, the player too, only as the real round would
-  show it. Weapon.Bullet, which pistols and SMGs keep, sprays none; rifles play Weapon.HeadBlood, a copy
-  spraying from a head hit only, where the bullet hits and where it comes out, and shotguns only where a
-  pellet hits; the .50 BMG plays Weapon.Blood, a copy spraying from any hit as every bullet did.
+  show it, and only where the bullet goes in. Weapon.Bullet, which pistols and SMGs keep and every gun
+  plays where its bullet comes out, sprays none; rifles and shotguns play Weapon.HeadBlood, a copy
+  spraying from a head hit only, and the .50 BMG Weapon.Blood, a copy spraying from any hit.
 
 Each archetype fragment is copied whole out of a decoded entity library with only those values changed
 or FCSE's entity data component added, so JackAll merges it field by field with any other mod's copy.
@@ -62,8 +62,8 @@ HEAD_BLOOD = "Weapon.HeadBlood"
 ALL_BLOOD = "Weapon.Blood"
 # The logic materials whose bullet particles are the blood spray: a body hit's and a head hit's.
 BODY, HEAD = "Base.Flesh", "Base.Flesh_Head"
-# The fields naming the record a bullet plays where it hits, and where it comes out behind.
-IMPACT_FIELDS = ("matimpBulletImpactFx", "matimpSecondaryBulletImpactFx")
+# The field naming the record a bullet plays where it hits; the one for where it comes out keeps Weapon.Bullet.
+IMPACT_FIELD = "matimpBulletImpactFx"
 
 # Each round: one projectile's mass in grams, and how many one round fires.
 BUCKSHOT = "12 gauge 00 buckshot"
@@ -80,15 +80,15 @@ ROUNDS = {
     ".50 BMG": (42.0, 1),
     BUCKSHOT: (3.5, 9),
 }
-# The records each round's bullets play where they hit and where they come out; the rest keep Weapon.Bullet.
+# The record each round's bullets play where they hit; the rest keep Weapon.Bullet.
 BLOOD = {
-    "5.56x45 mm NATO": (HEAD_BLOOD, HEAD_BLOOD),
-    "7.62x39 mm": (HEAD_BLOOD, HEAD_BLOOD),
-    "7.62x51 mm NATO": (HEAD_BLOOD, HEAD_BLOOD),
-    "7.62x54 mmR": (HEAD_BLOOD, HEAD_BLOOD),
-    ".30-06 Springfield": (HEAD_BLOOD, HEAD_BLOOD),
-    ".50 BMG": (ALL_BLOOD, ALL_BLOOD),
-    BUCKSHOT: (HEAD_BLOOD, BULLET_IMPACT),
+    "5.56x45 mm NATO": HEAD_BLOOD,
+    "7.62x39 mm": HEAD_BLOOD,
+    "7.62x51 mm NATO": HEAD_BLOOD,
+    "7.62x54 mmR": HEAD_BLOOD,
+    ".30-06 Springfield": HEAD_BLOOD,
+    ".50 BMG": ALL_BLOOD,
+    BUCKSHOT: HEAD_BLOOD,
 }
 # Each gun, as its archetype is named under weapons, DLC1Weapons and WeaponProperties, with its
 # variants: its round and muzzle velocity in metres per second. The mounts name their gun.
@@ -183,11 +183,9 @@ def edit_properties(block, round_name, velocity):
     for curve in AI_CURVES:
         set_in(block, "AICurve", curve, "")
     text = "\n".join(block)
-    for field, record in zip(IMPACT_FIELDS, BLOOD.get(round_name, ())):
-        # A variant that names no impact record keeps none.
-        if find_value(text, "text_" + field, "String") == BULLET_IMPACT:
-            text = replace_hashed(text, field, BULLET_IMPACT, record)
-    block[:] = text.split("\n")
+    # A variant that names no impact record keeps none.
+    if round_name in BLOOD and find_value(text, "text_" + IMPACT_FIELD, "String") == BULLET_IMPACT:
+        block[:] = replace_hashed(text, IMPACT_FIELD, BULLET_IMPACT, BLOOD[round_name]).split("\n")
 
 
 def hit_locations(text):
