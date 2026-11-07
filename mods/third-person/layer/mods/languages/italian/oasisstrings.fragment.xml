@@ -1,0 +1,5 @@
+<oasisstrings>
+  <section name="Actions">
+    <string enum="toggle_thirdperson" value="Visuale in terza persona" />
+  </section>
+</oasisstrings>

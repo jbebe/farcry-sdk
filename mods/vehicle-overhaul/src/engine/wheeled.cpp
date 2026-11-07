@@ -127,10 +127,10 @@ namespace {
     using WheelRotationFn = float*(__fastcall*)(Car car, void* unused, float* rotation, uint32_t wheel, float steering);
 
     // CPhysWheeledVehicleEntityImpl::SetDriver, which is not a function start the address library
-    // knows.
+    // knows. Its first instructions are wildcards because Third Person hooks it too.
     FCSE::Relocation<SetDriverFn> g_setDriver{FCSE::Pattern(
-        "56 57 8B 7C 24 0C 57 8B F1 E8 ?? ?? ?? ?? 83 FF 02 75 1F 8B 86 84 01 00 00 8B 48 24 C6 41 "
-        "3D 01")};
+        "?? ?? ?? ?? ?? ?? 57 8B F1 E8 ?? ?? ?? ?? 83 FF 02 75 1F 8B 86 84 01 00 00 8B 48 24 C6 41 3D "
+        "01")};
     FCSE::Relocation<ActionFn> g_action{FCSE::Uplay(0x004AC3A0)};
     FCSE::Relocation<ActionFn> g_rollingResistance{FCSE::Uplay(0x004ABF70)};
     // hkpVehicleData::init, which derives the tyre solver's chassis terms from the centre of mass.

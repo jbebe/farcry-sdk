@@ -1,19 +1,10 @@
 # Vehicle Overhaul
 
-Driving in Far Cry 2 as off-road driving: a third-person view, physics that let a car slide, lean
-and bounce, an engine with real gears, and new engine sounds for every car.
+Driving in Far Cry 2 as off-road driving: physics that let a car slide, lean and bounce, an engine
+with real gears, and new engine sounds for every car.
 
 ## What it does
 
-- **Third-person view.** The **Third-person view** control (V by default, rebindable in
-  Options > Controls, under the vehicle controls) switches the car you drive to a chase camera and
-  back. The game's leftover F2 binding does the same.
-  - The camera sits behind the car and swings after its heading and height with a lag, so you see
-    the body work on its suspension. The mouse orbits it; two seconds after the mouse stops, it eases
-    back behind the car. It stays above the ground, though not out of rocks or buildings.
-  - You see your whole body at the wheel, playing the game's own driving animations.
-  - Getting out, or moving to a turret or a passenger seat, puts the first-person view back. The view
-    you chose is kept for your next drive.
 - **Off-road physics, on the car you drive.** AI drivers keep the game's physics.
   - No speed limiter (the game holds your car near 60 km/h), and longer gearing.
   - Weak brakes that lock the wheels into a skid after half a second, as on a car without ABS.

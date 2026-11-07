@@ -100,7 +100,7 @@ namespace {
                                                                    : volume;
     }
 
-    void Tick(void* pawn, float*) {
+    void Tick(void* pawn) {
         void* player = VehicleOverhaul::Wheeled::Player() != nullptr
                            ? VehicleOverhaul::Entity::Of(VehicleOverhaul::Vehicle::Current(pawn))
                            : nullptr;

@@ -238,6 +238,13 @@ Three cameras write it:
 - The free camera's update sets it every frame from the camera's own flag at `+0xCD`, which
   `camera_toggle_first_person` flips.
 
+`CPawn::ViewModeChanged` (`0x100811C0`) also hides, going into first person, everything the player
+carries, and shows it coming out: `CInventoryViewPawn::SetVisible` (`0x101296A0`) passes the flag to
+`CEntity::SetIsVisible` (`0x104DDB20`) for every item but the equipped gadget and the weapon in hand.
+Out of first person the map and the phone hang on the belt. Putting a gadget away
+(`SInventoryViewPawnImpl::UnequipGadget`, server `0x09001F10`) binds it back to body part 7 and
+hides its entity, and equipping one (`EquipGadget`, server `0x09003C90`) shows it.
+
 ### The two models
 
 The player's `CGraphicComponent` holds two models: the full body, `<name>.xbg`, first, and the
@@ -270,10 +277,11 @@ axes: the hips at the origin, ahead along x, left along y.
 On the player in first person, the hips (the first bone, the only one not held) are at the model's
 origin, on the ground. `Spine`, 0.098 m above the hips at rest, stands 1.093 m up, and 0.448 m
 crouched. Looking down swings it 0.36 m back and drops the eye from 1.66 m to 1.20 m. With the
-discard taken out and the full body shown, Vehicle Overhaul's chase camera shows the full body with
-the third-person driving clips. Seen from the free camera in first person, the full body shown in
-every viewport and out of the near range is drawn whole, head included, in the first-person pose, as
-long as it is shown again after each model switch. Retail GOG v1.03, from Player Body.
+discard taken out and the full body shown, the chase camera at the wheel, then Vehicle Overhaul's,
+shows the full body with the third-person driving clips. Seen from the free camera in first person,
+the full body shown in every viewport and out of the near range is drawn whole, head included, in the
+first-person pose, as long as it is shown again after each model switch. Retail GOG v1.03, from
+Third Person.
 :::
 
 ### The player's shadow
@@ -305,11 +313,47 @@ handle pools, which `FillRenderBuffers` (`0x105B8AE0`) loads into `ECX` at `+0x3
   `+0x4C`.
 
 :::info[Seen in a running game]
-An experiment in Player Body, not kept, kept the shadow on and left the full body's sub-meshes
+An experiment in Third Person, not kept, kept the shadow on and left the full body's sub-meshes
 skinned to no leg out of the passes drawn at the screen's size. The shadow cascades, at 6144×2048,
 kept them. The player's shadow fell whole, head and the raised arm included, and the view still
 showed only the legs. Retail GOG v1.03.
 :::
+
+### The body's animation out of first person
+
+Out of first person the player is animated as an NPC is. The `PawnBeautifierRepository` entity gives
+every pawn type `CPawnBeautifierThird` there. The pawn on foot is in the NPCs' MOVE state
+`Pawn_Generic_Movement`, with the layer `Pawn_Generic_Aim` (`main_avatar.gosm.xml`). Its third-person
+branch walks, jogs, runs and sprints on the mercenaries' `3rdge_fulb_*` clips, picked by `Speed` and
+`MentalState`.
+
+- It never tests `Stance`, and the game has no crouch-walk clip, so moving crouched plays the standing
+  legs.
+- Its jump clip is gated on `IsMultiplayer`.
+- `CameraPlacement` is the same for the player and an NPC there, so no rule can pick the player
+  alone.
+
+`CPawnBeautifierThird::UpdatePlayerMoveState` (server `0x09012660`) sets `AimStance` from the
+effective flags' bit 0 (`Normal`) and bit 3 (`IronSight`). `CPawnBeautifierFirst::Activate` (server
+`0x092E49B0`) sets bit 0 of the desired flags and `MentalState` Combat, and nothing clears either. So
+out of first person the player carries the gun up as an NPC advancing while aiming does. The free
+camera's debug player mode (`dbg_force_multiplayer_pms` in `CCameraFreeComponent::Update`, server
+`0x0894E100`) switches the same two: Relax clears the bit and sets `MentalState` 0, Combat sets both
+back.
+
+`CPawnBeautifierThird::UpdateEffectiveFromDesire` (server `0x0900FD60`) copies the desired flags to
+the effective ones and sets the effective look:
+
+| Desired flags | Effective look |
+|---|---|
+| `0x02` set | the desired look, `+0x38` (`+0x54` with `0x04`), which the mouse drives |
+| `0x02` clear, gun up | the aim angles, `+0x44` |
+| `0x02` clear, gun down | the entity's own facing |
+
+So with the gun carried down, a look that follows the mouse needs `0x02`.
+
+This was read in the server build and the MOVE data. Crouched in third person, the body was seen
+standing and jogging. Retail GOG v1.03, from Third Person.
 
 ## The gun near walls
 
@@ -756,7 +800,7 @@ noise there; it gets random spread only if the fire data's `+0x1B0` byte is set.
 With the player out of first person, `SetupShot1st` never ran. Shots at the sand 5 m ahead landed
 about 67 px left of the screen's centre, from a camera 0.55 m right of the head. Aimed in
 `SetupShot3rd` from the muzzle at what lay under the screen's centre, they landed on it. Retail GOG
-v1.03, from Player Body.
+v1.03, from Third Person.
 :::
 
 The game's own crosshair is `CGameConfig`'s `HelpCrosshair`, an int at the game profile's `+0xC8`
@@ -766,6 +810,12 @@ The game's own crosshair is `CGameConfig`'s `HelpCrosshair`, an int at the game 
 `CGameConfig::UseHelpCrosshair` (`0x10048860`, `__thiscall(difficulty)`, `RET 4`). That returns 0 on
 the hardest difficulty, 3, whatever the setting says, and the setting otherwise. Drawn, it is four
 ticks around the screen's centre, in first and third person alike.
+
+How far apart they stand is the frame the HUD plays its crosshair area at, `(100 − x) · spread ·
+0.125` held to 0-100, with `x` a second term not traced. The spread is `CWeapon::GetCurrentSpread`
+(`0x1012EB40`), the weapon state's `+0x64`, and the HUD's crosshair update (`0x1080AF10`) is its
+only caller. When the iron-sight flag changes, `CFCXMainHudUI::ToggleIronSightCrosshair` (server
+`0x08A4E7D0`) plays the area from frame 11 down the sights and from frame 1 out of them.
 
 ## Recoil
 

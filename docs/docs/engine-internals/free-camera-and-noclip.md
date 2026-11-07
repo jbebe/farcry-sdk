@@ -168,9 +168,8 @@ frame time) eases in from the previous camera, and runs while the component is a
 0x0C`). Angles are pitch, roll and yaw in radians: pitch up is positive, and yaw 0 looks down +Y.
 
 While active, the update also asks for the player's full body; see
-[the first-person body](./first-person-aiming.md#the-first-person-body). Vehicle Overhaul's chase
-camera (`mods/vehicle-overhaul/src/engine/third_camera.cpp`) replaces this update while it owns the
-camera.
+[the first-person body](./first-person-aiming.md#the-first-person-body). The Third Person mod's
+cameras (`mods/third-person/src/engine/third_camera.cpp`) replace this update while they own it.
 
 ## Where this runs
 

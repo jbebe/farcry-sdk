@@ -1,1 +1,1 @@
-Third-person chase camera, car physics, engine with real gears, new engine sounds, visible headlamps, new paints.
+Car physics, engine with real gears, new engine sounds, visible headlamps, new paints.

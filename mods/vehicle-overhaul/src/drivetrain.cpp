@@ -82,7 +82,7 @@ namespace {
         return real != nullptr && real->redline > 0.0f ? real->redline : kRedline;
     }
 
-    void Tick(void* pawn, float*) {
+    void Tick(void* pawn) {
         const VehicleOverhaul::Wheeled::Car car = VehicleOverhaul::Wheeled::Player();
         void* const vehicle = car != nullptr ? VehicleOverhaul::Vehicle::Current(pawn) : nullptr;
         VehicleOverhaul::RealVehicle::Follow(car, vehicle);

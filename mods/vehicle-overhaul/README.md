@@ -1,24 +1,14 @@
 # Vehicle Overhaul
 
-Driving in Far Cry 2 as off-road driving: a third-person camera to watch the car work, off-road
-physics, an engine with real gears, and every car's engine sound recorded from a real engine.
-Shooting from the windows and the wrecks revived as drivable vehicles are to come, after 1.0.
+Driving in Far Cry 2 as off-road driving: off-road physics, an engine with real gears, and every
+car's engine sound recorded from a real engine. Shooting from the windows and the wrecks revived as
+drivable vehicles are to come, after 1.0. The third-person view that was here is now
+[Third Person](../third-person/README.md)'s.
 
 `README-release.md` is the player's version, shipped in the release zip, and `CHANGELOG.md` the
 release notes; see [RELEASING.md](../../RELEASING.md).
 
 ## What it does
-
-- **Third-person view.** A new **Third-person view** control (V by default, rebindable in Options >
-  Controls, under the vehicle controls) switches a vehicle's view to a chase camera and back. Getting
-  out puts the first-person view back. Retail's leftover F2 binding sends the same signal, so F2 also
-  switches.
-  - The camera sits 6 m behind the car and swings after its heading with a lag. It follows the car's
-    height with a lag too, so the body visibly works on its suspension.
-  - The mouse orbits it all the way round, from nearly overhead to just below the car. Two seconds
-    after the mouse stops, it eases back behind the car.
-  - It stays above the terrain, though not out of rocks or buildings.
-  - The driver is the game's first-person body: headless and posed for the first-person camera.
 
 - **Off-road physics, on the car you drive.** Every physics step, the car's Havok vehicle is re-tuned
   from its own retail values, by that car's own set of tunings. Getting out puts them all back, so AI
@@ -113,10 +103,7 @@ release notes; see [RELEASING.md](../../RELEASING.md).
   bar, with the slats that stood behind the old openings taken out. Each
   has the old ones' 29 mm wall, out to 45 m; beyond that the model's painted slots are the old six.
 
-The engine's `Cameras.Camera.Third` is put up and its update is taken over to place the camera. Both
-are described in
-[the free camera and noclip](../../docs/docs/engine-internals/free-camera-and-noclip.md). The vehicle
-physics are in [vehicle physics](../../docs/docs/engine-internals/vehicle-physics.md).
+The vehicle physics are in [vehicle physics](../../docs/docs/engine-internals/vehicle-physics.md).
 
 ## Tuning
 
@@ -139,8 +126,6 @@ sliders set how loud each sound type plays while driving, for the session only.
 
 ```
 src\                         the FCSE plugin
-  third_person.cpp           the toggle, and putting the first-person camera back
-  chase.cpp                  where the chase camera goes each frame
   physics.cpp                the player's car tuned and put back, and the real vehicles' weight
   axles.cpp                  the solid axles: springs, dampers and leaning wheels
   drivetrain.cpp             the engine's revs and gear changes, for the sound and rev counter
@@ -152,19 +137,14 @@ src\                         the FCSE plugin
   lamp_glow.cpp              each lit headlamp's bright point and glare
   paint.cpp                  the cars' paints, written into the game's paint table
   shaders\                   the glow's shader
-  engine\                    the game's own seams: the signal dispatcher, the input pass, the camera
-                             manager and the third camera's update, entities, the seat lookup,
-                             terrain height, the Havok vehicle under each car, a vehicle's engine
-                             sound, the sound system, sound banks, each car's headlights, the
-                             paint table, the frame handed to the render thread, the Direct3D
-                             device's passes
+  engine\                    the game's own seams: the input pass, entities, the seat lookup, the
+                             Havok vehicle under each car, a vehicle's engine sound, the sound
+                             system, sound banks, each car's headlights, the paint table, the frame
+                             handed to the render thread, the Direct3D device's passes
 layer\mods\
   graphics\                  the big truck's model and physics, its fan a hinged body on a node of its own
                              and its grille the user's;
-                             the Datsun's model and its two chrome materials; the quad's third-person
-                             driving clip
-  config\                    the active_camerathird control and its binding, as sections
-  languages\                 the control's label, in every language
+                             the Datsun's model and its two chrome materials
   soundbinary\               every car's engine, idle and start sounds, the ZIL-130's, the Unimog's and
                              the quad's engine-off, the gear-change clunks, the retail pedal sounds
                              silenced; every car's quieter tyre sounds
@@ -176,8 +156,8 @@ layer\plugins\vehicle-overhaul\   the built plugin, staged here by build.ps1
 A car is known by its archetype's `iAnimVehicleType`, one per kind of car, not by its mass or engine, so a
 mod that retunes the cars keeps them known. The taxi shares the Wrangler's.
 
-Needs FCSE 1.4.0 or later. The control sections and the archetype fragments need JackAll 1.4.0 or the
-Vortex extension 0.4.0 or later, which merge them with other mods'.
+Needs FCSE 1.4.0 or later. The archetype fragments need JackAll 1.4.0 or the Vortex extension 0.4.0
+or later, which merge them with other mods'.
 
 ## Building
 

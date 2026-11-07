@@ -1,0 +1,4 @@
+out/
+.vs/
+# The DLL the layer only carries.
+layer/plugins/third-person/ThirdPerson.dll

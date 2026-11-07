@@ -3,6 +3,12 @@
 Notable changes to Vehicle Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Removed
+- **The third-person view**, with its Third-person view control and the quad's centred steering in
+  it. It moves to Third Person, which shows the player from outside on foot as well as at the wheel.
+
 ## [1.0.1] - 2026-10-20
 
 ### Fixed
