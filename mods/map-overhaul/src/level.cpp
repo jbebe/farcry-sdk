@@ -1,6 +1,7 @@
 #include "level.h"
 
 #include "fcse_api.h"
+#include "read.h"
 
 #include <algorithm>
 #include <array>
@@ -59,6 +60,8 @@ namespace {
     int g_camera = -1;
     std::array<bool, kMostBones> g_turned = {};
     std::atomic<float> g_weight{0.0f};
+    // How far the look has turned while the sheet is read close, which the sheet is turned back by.
+    std::atomic<float> g_yaw{0.0f};
     // What the last turn left in each bone: a bone still holding it was not posed again since.
     std::array<std::array<float, 16>, kMostBones> g_written = {};
 
@@ -121,9 +124,11 @@ namespace {
         const float step = std::clamp(seconds / kEase, 0.0f, 1.0f);
         const float weight = g_weight;
         g_weight = skeleton != nullptr ? std::min(1.0f, weight + step) : std::max(0.0f, weight - step);
+        g_yaw = Read::Update(skeleton != nullptr ? pawn : nullptr, seconds);
     }
 
-    // Turns the upper body back about the eye by the view's pitch, as far as the hold has come on.
+    // Turns the upper body back about the eye by the view's pitch, as far as the hold has come on, and about
+    // the body's up axis by how far the look has turned while the sheet is read close.
     void Hold(uint8_t* skeleton) {
         const float weight = g_weight;
         if (skeleton != g_skeleton || weight <= 0.0f) {
@@ -132,17 +137,26 @@ namespace {
         const float* eye = Model(skeleton, g_camera);
         const float pitch = std::asin(std::clamp(eye[6], -1.0f, 1.0f));
         const float angle = -pitch * weight;
+        const float yaw = -g_yaw.load();
         const float u[3] = {eye[0], eye[1], eye[2]};
         const float length = std::sqrt(u[0] * u[0] + u[1] * u[1] + u[2] * u[2]);
-        if (length < 1e-6f || std::fabs(angle) < 1e-5f) {
+        if (length < 1e-6f || (std::fabs(angle) < 1e-5f && std::fabs(yaw) < 1e-5f)) {
             return;
         }
-        // About the view's right axis, through the eye.
+        // About the view's right axis, then the body's up axis, both through the eye.
         const float x = u[0] / length, y = u[1] / length, z = u[2] / length;
         const float c = std::cos(angle), s = std::sin(angle), t = 1.0f - c;
-        const float turn[3][3] = {{t * x * x + c, t * x * y - s * z, t * x * z + s * y},
-                                  {t * x * y + s * z, t * y * y + c, t * y * z - s * x},
-                                  {t * x * z - s * y, t * y * z + s * x, t * z * z + c}};
+        const float level[3][3] = {{t * x * x + c, t * x * y - s * z, t * x * z + s * y},
+                                   {t * x * y + s * z, t * y * y + c, t * y * z - s * x},
+                                   {t * x * z - s * y, t * y * z + s * x, t * z * z + c}};
+        const float cy = std::cos(yaw), sy = std::sin(yaw);
+        const float about[3][3] = {{cy, -sy, 0.0f}, {sy, cy, 0.0f}, {0.0f, 0.0f, 1.0f}};
+        float turn[3][3];
+        for (int k = 0; k < 3; ++k) {
+            for (int j = 0; j < 3; ++j) {
+                turn[k][j] = about[k][0] * level[0][j] + about[k][1] * level[1][j] + about[k][2] * level[2][j];
+            }
+        }
         const float pivot[3] = {eye[12], eye[13], eye[14]};
         auto rotate = [&](float* v) {
             const float was[3] = {v[0], v[1], v[2]};
@@ -197,8 +211,7 @@ bool Install() {
                         Hook(reinterpret_cast<uintptr_t>(g_updateBody.get() + kUpdateEntry), &OnUpdate, &g_update) &&
                         Hook(g_poseSite.address(), &OnPose, &g_pose) && Hook(g_poseJobSite.address(), &OnPoseJob, &g_poseJob);
     FCSE::Logf("level: %s", hooked ? "the sheet stays level as the view looks up and down"
-                                    : "off, the map's update or the posing was not found");
-    return hooked;
+                                    : "off, the map's update or the posing was not found");    return hooked;
 }
 
 }

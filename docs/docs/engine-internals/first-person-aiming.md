@@ -98,6 +98,11 @@ weight its curve has reached, eased every frame by `BeautifierMaths::UpdateFOV` 
 | second weight | `+0x10C` |
 | second field of view | `+0x110` |
 
+A transition is on while the byte at its `+0x05` is set. The monocular's `OnEquip` (server
+`0x08901530`) sets the first one's and fills it with its own time, curve and field of view, and
+`OnUnequip` clears it. Map Overhaul reads its sheet close the same way, with the map out (seen in
+game).
+
 `CWeapon::OnEquip` (server `0x08F49D00`) fills the first transition from the weapon's iron-sight
 properties: its `fIronsightTransitionTime`, its transition curve, and its `fIronsightFOV` (`+0xE4`
 in the weapon's properties). A scoped weapon's zoom is that same transition, so the whole view zooms

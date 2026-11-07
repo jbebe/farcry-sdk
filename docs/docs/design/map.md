@@ -5,8 +5,8 @@ sidebar_position: 7
 # The map
 
 **Status:** designed 2026-11-07. The sheet is drawn: world 1 as a military topographic sheet with the
-previous owner's notes, by `mods/map-overhaul`. Nothing is in the game yet, and none of the engine
-findings below has been tested. Marked **(proposed)** are choices not yet agreed.
+previous owner's notes, by `mods/map-overhaul`, and held in the game as **Built** lists. Marked
+**(proposed)** are choices not yet agreed.
 
 ## The goal
 
@@ -70,7 +70,11 @@ findings below has been tested. Marked **(proposed)** are choices not yet agreed
   What the table decides was not traced.
 - **While the map is out**, input set `mapcompass`: releasing left mouse sends `toggleicons`, right
   mouse sends `draw_monocular` and `holster_monocular`, and R sends `flipside`
-  (`common\config\inputactionmapcommon.xml`).
+  (`common\config\inputactionmapcommon.xml`). Left mouse also still sends `startshooting` and
+  `stopshooting`, which Inventory Overhaul's notebook uses (seen in game).
+- **The map strategy's `Update` runs every frame** whether the map is out or not; its equipment's
+  wielder is the player while the map is out and through the holster, and no one from just after
+  `OnUnequip` (seen in game, 2026-11-07, by a probe in Map Overhaul's plugin).
 - **What the sheet can show** is three sets of textures: the world map, an area map for each level
   cell at 1 m a pixel, and detail maps of named places ([the map textures](../engine-internals/world-loading.md#the-map-textures)).
 
@@ -82,6 +86,12 @@ findings below has been tested. Marked **(proposed)** are choices not yet agreed
 - **Level while the view looks up and down** (2026-11-07): the plugin turns the upper body back about
   the eye by the view's pitch while the map is out ([the look](../engine-internals/first-person-aiming.md#the-bodys-skeleton)),
   eased in and out over a quarter second (seen in game, by script, at 73° down and 78° up).
+- **Left mouse held reads the sheet close** (2026-11-07): the view zooms three times closer over 0.3 s,
+  the look slowed with it, and the upper body is turned back by however far the look turns, so the
+  mouse moves the view across a still sheet; 0.6 rad off its middle the sheet comes along. Let go, it
+  zooms out and the sheet swings back in front. The icon toggle on left mouse is gone (seen in game, by
+  script: right, left and down over the sheet, let go, and the map put away while zoomed). The
+  monocular raised with left mouse held is not tried.
 
 ## Open
 
@@ -91,7 +101,6 @@ findings below has been tested. Marked **(proposed)** are choices not yet agreed
 - **What the map strategy shows on the sheet**: one level cell's area map or a window that follows
   the player, how it zooms, and what the flip side shows.
 - **Whether a sheet of several panels can show several area maps**, and whether bigger textures load.
-- **The camera for left mouse**: moving in on the sheet and panning across it with the mouse.
 - **Whether a gadget can be out while driving**, and how the lap sheet is placed.
 - **The idle animation**: the map's clips in hand animation set 9.
 - **The red circle**: what draws the objective marker, so a circle can replace it.

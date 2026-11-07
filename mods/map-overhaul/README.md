@@ -5,8 +5,8 @@ topographic sheet, the kind handed over at a briefing, drawn from the world's ow
 issue #29, the design `docs/docs/design/map.md`. So far the whole sheet is held open in both hands on
 foot, the map has lost the player's arrow, and the plugin keeps the GPS out of the hand and off the
 dashboard (seen in game, 2026-11-07, from a save made with both). The sheet stays level as the view
-looks up and down past it; in a vehicle it is the hand's sheet where the game's map was, too big and not
-yet folded.
+looks up and down past it, and left mouse held reads it close; in a vehicle it is the hand's sheet where
+the game's map was, too big and not yet folded.
 The held sheet always shows its own picture, so the area maps and town plans in the layer, and R's turn to
 the world map, show nothing new on it.
 
@@ -116,9 +116,10 @@ its GPS whatever the archetypes say:
 | No GPS in the hand | the map strategy's `EquipGadgetItem` and `UnequipGadgetItem` are skipped for its own `CompassEntity` (`+0x108`), so the saved compass stays in the pocket; the monocular still comes up |
 | No GPS on the dashboard | after `CVehicle::SVehicleImpl::AttachToSeat` binds the player's vehicle GPS to the dashboard and shows it, `CEntity::SetIsVisible(false)` hides it again |
 | The sheet level as the view looks up and down (`level.cpp`) | while the map strategy's update has the map in a pawn's hands, the plugin follows that pawn's skeleton; each time it is posed, the spine and every bone below it but `Camera` are turned back about the eye by the `Camera` bone's pitch, so the arms and the sheet in the left hand keep their place against a level view; the turn eases in and out over 0.25 s as the map comes and goes. `python tools\fc2drive\scenarios\map_look.py` takes pictures from 73° down to 78° up |
+| Left mouse held reads the sheet close (`read.cpp`) | the pause service's signal listener sees `startshooting` and `stopshooting` before the player's does; while the map is out a press zooms the view to 0.61 rad (35°, three times closer than 87°) over 0.3 s through the skills' first field-of-view transition, as iron sights do, with the look at 0.19 of its speed. While held, the hold also turns the upper body back about the eye's up axis by however far the look has turned since the press, so the mouse looks over a sheet that stays put; past 0.6 rad, where the sheet's edge reaches the middle of the view, the sheet comes along. Let go, the view zooms out and the sheet swings back in front over 0.3 s. `toggleicons`, the map's own use of left mouse, is taken while the map is out; right mouse still brings the monocular up, and over the zoom it takes the zoom over (not yet tried with left mouse held). `python tools\fc2drive\scenarios\map_read.py` takes pictures of it |
 
 `build.ps1` builds it and stages it in `layer\plugins\map-overhaul\`; the game gets it with the layer,
-from `jackall-cli mod build` with every other layer installed. Its five patterns are checked on both
+from `jackall-cli mod build` with every other layer installed. Its six patterns are checked on both
 builds with `python ..\..\scripts\verify_patterns.py --uplay <Steam Dunia.dll> src`.
 
 ## The full map
