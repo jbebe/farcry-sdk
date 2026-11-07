@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using JackAll.App.FileHandlers.Xbt;
 using JackAll.Tools.World;
@@ -67,7 +68,13 @@ public sealed class EntityModelLayer : IDisposable
         }
         """;
 
-    private const int VertexStrideBytes = WorldModel.FloatsPerVertex * sizeof(float);
+    /// <summary>A vertex as uploaded: position, signed-byte normal, both UV sets, byte vertex colour.</summary>
+    private const int PackedStride = 36;
+
+    /// <summary>The GPU memory past which meshes no stream placed lately are released.</summary>
+    private const long MeshBudget = 64 << 20;
+
+    private const long MeshUploadBudgetPerFrame = 4 << 20;
     private const int InstanceStrideBytes = InstanceStride * sizeof(float);
     private const int MaxDecoders = 2;
     private const long UploadBudgetPerFrame = 8 << 20;
@@ -104,8 +111,13 @@ public sealed class EntityModelLayer : IDisposable
 
     private sealed class Mesh
     {
-        public int Vao, VertexBuffer, IndexBuffer, InstanceBuffer;
-        public IndexRange Fine, Coarse;
+        public required WorldModel Model;
+        /// <summary>All 0 until the mesh is first streamed, and again once it is evicted.</summary>
+        public int Vao, InstanceBuffer;
+        public DrawElementsType IndexType;
+        public int IndexBytes;
+        /// <summary>The stream that last placed it, so eviction takes the longest unused first.</summary>
+        public int LastStreamed;
         /// <summary>Both tiers textured: the far ring is the file's coarsest LOD, not a flat tint.</summary>
         public required Tier FineTier;
         public required Tier CoarseTier;
@@ -133,8 +145,19 @@ public sealed class EntityModelLayer : IDisposable
 
     private readonly ShaderProgram _program;
     private readonly Mesh[] _meshes;
-    /// <summary>Vertex and index buffers per baked array; a kit look shares its part's.</summary>
-    private readonly Dictionary<float[], (int Vertex, int Index)> _buffers = new(ReferenceEqualityComparer.Instance);
+    /// <summary>Vertex and index buffers per baked array, shared by every resident mesh drawing it -
+    /// a kit look shares its part's.</summary>
+    private readonly Dictionary<float[], Geometry> _buffers = new(ReferenceEqualityComparer.Instance);
+
+    private sealed record Geometry(int Vertex, int Index, bool ShortIndices, long Bytes)
+    {
+        public int Users;
+    }
+
+    private int _stream;
+
+    /// <summary>Meshes the current streams place that are not resident yet.</summary>
+    private int _waiting;
     private readonly Dictionary<WorldEntity, Row> _rows;
 
     /// <summary>The shown entities with meshes, by the sector each was filed under.</summary>
@@ -186,10 +209,13 @@ public sealed class EntityModelLayer : IDisposable
     /// <summary>What the streamed diffuse textures currently hold on the GPU.</summary>
     public long TextureBytesResident { get; private set; }
 
-    /// <summary>Whether a texture is still queued, decoding or waiting to upload. Uploading happens
-    /// inside <see cref="Draw"/>, so a viewport that only redraws on demand has to keep asking for
-    /// frames while this is true or the maps never arrive.</summary>
-    public bool Streaming => !_requests.IsEmpty || !_decoded.IsEmpty || _activeDecoders > 0;
+    /// <summary>What the resident meshes' vertex, index and instance buffers hold on the GPU.</summary>
+    public long MeshBytesResident { get; private set; }
+
+    /// <summary>Whether a texture or a mesh is still queued, decoding or waiting to upload. Uploading
+    /// happens inside <see cref="Draw"/>, so a viewport that only redraws on demand has to keep
+    /// asking for frames while this is true or they never arrive.</summary>
+    public bool Streaming => !_requests.IsEmpty || !_decoded.IsEmpty || _activeDecoders > 0 || _waiting > 0;
 
     public EntityModelLayer(
         WorldModelSet set, Func<string, byte[]?> readByPath,
@@ -242,8 +268,7 @@ public sealed class EntityModelLayer : IDisposable
             WorldModel model = models[i];
             var mesh = new Mesh
             {
-                Fine = model.Fine,
-                Coarse = model.Coarse,
+                Model = model,
                 FineTier = Tier.Of(model.MaterialRanges),
                 CoarseTier = Tier.Of(model.CoarseMaterialRanges),
                 Staging = new float[capacity[i] * InstanceStride],
@@ -256,53 +281,9 @@ public sealed class EntityModelLayer : IDisposable
                 blended.Add(mesh);
             }
 
-            bool fresh = !_buffers.TryGetValue(model.Vertices, out (int Vertex, int Index) shared);
-            if (fresh)
-            {
-                shared = _buffers[model.Vertices] = (GL.GenBuffer(), GL.GenBuffer());
-                GL.BindBuffer(BufferTarget.ArrayBuffer, shared.Vertex);
-                GL.BufferData(BufferTarget.ArrayBuffer, model.Vertices.Length * sizeof(float),
-                    model.Vertices, BufferUsageHint.StaticDraw);
-            }
-            mesh.VertexBuffer = shared.Vertex;
-            mesh.IndexBuffer = shared.Index;
-
-            mesh.InstanceBuffer = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.InstanceBuffer);
-            GL.BufferData(BufferTarget.ArrayBuffer, Math.Max(1, capacity[i]) * InstanceStrideBytes,
-                IntPtr.Zero, BufferUsageHint.DynamicDraw);
-
-            mesh.Vao = GL.GenVertexArray();
-            GL.BindVertexArray(mesh.Vao);
-            GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.VertexBuffer);
-            GL.EnableVertexAttribArray(0);
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, VertexStrideBytes, 0);
-            GL.EnableVertexAttribArray(1);
-            GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, VertexStrideBytes, 12);
-            GL.EnableVertexAttribArray(2);
-            GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, VertexStrideBytes, 24);
-            GL.EnableVertexAttribArray(7);
-            GL.VertexAttribPointer(7, 2, VertexAttribPointerType.Float, false, VertexStrideBytes, 32);
-            GL.EnableVertexAttribArray(6);
-            GL.VertexAttribPointer(6, 3, VertexAttribPointerType.Float, false, VertexStrideBytes, 40);
-            GL.EnableVertexAttribArray(3);
-            GL.EnableVertexAttribArray(4);
-            GL.EnableVertexAttribArray(5);
-            PointInstanceAttribs(mesh, 0);
-            GL.VertexAttribDivisor(3, 1);
-            GL.VertexAttribDivisor(4, 1);
-            GL.VertexAttribDivisor(5, 1);
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, mesh.IndexBuffer);
-            if (fresh)
-            {
-                GL.BufferData(BufferTarget.ElementArrayBuffer, model.Indices.Length * sizeof(int),
-                    model.Indices, BufferUsageHint.StaticDraw);
-            }
-
             _meshes[i] = mesh;
         }
         _blendedMeshes = [.. blended];
-        GL.BindVertexArray(0);
 
         _depthProgram = new ShaderProgram(
             $$"""
@@ -537,10 +518,14 @@ public sealed class EntityModelLayer : IDisposable
                 // Doubled, so pasting copies one at a time does not reallocate on every paste. The
                 // buffer keeps its name, so the VAO's bindings stay valid.
                 int capacity = mesh.Wanted * 2;
+                if (mesh.Vao != 0)
+                {
+                    MeshBytesResident += (capacity * InstanceStride - mesh.Staging.Length) * sizeof(float);
+                    GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.InstanceBuffer);
+                    GL.BufferData(BufferTarget.ArrayBuffer, capacity * InstanceStrideBytes,
+                        IntPtr.Zero, BufferUsageHint.DynamicDraw);
+                }
                 mesh.Staging = new float[capacity * InstanceStride];
-                GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.InstanceBuffer);
-                GL.BufferData(BufferTarget.ArrayBuffer, capacity * InstanceStrideBytes,
-                    IntPtr.Zero, BufferUsageHint.DynamicDraw);
             }
 
             mesh.FineCount = 0;
@@ -578,6 +563,17 @@ public sealed class EntityModelLayer : IDisposable
             }
         }
 
+        _stream++;
+        _waiting = 0;
+        foreach (Mesh mesh in _meshes)
+        {
+            if (mesh.FineCount + mesh.CoarseCount > 0)
+            {
+                mesh.LastStreamed = _stream;
+                _waiting += mesh.Vao == 0 ? 1 : 0;
+            }
+        }
+        Evict();
         UploadStaging();
 
         IEnumerable<(List<T> Items, bool Fine)> InRing<T>(SectorIndex<T>? index)
@@ -626,6 +622,133 @@ public sealed class EntityModelLayer : IDisposable
         _filedAt[entity] = sector;
     }
 
+    /// <summary>Uploads a mesh's buffers, sharing the geometry another resident mesh already uploaded.</summary>
+    private void MakeResident(Mesh mesh)
+    {
+        // Bound first: an element buffer binding belongs to whichever vertex array is bound, so
+        // uploading the indices under another layer's would take its index buffer away.
+        mesh.Vao = GL.GenVertexArray();
+        GL.BindVertexArray(mesh.Vao);
+
+        WorldModel model = mesh.Model;
+        if (!_buffers.TryGetValue(model.Vertices, out Geometry? geometry))
+        {
+            _buffers[model.Vertices] = geometry = UploadGeometry(model);
+            MeshBytesResident += geometry.Bytes;
+        }
+        geometry.Users++;
+        mesh.IndexType = geometry.ShortIndices ? DrawElementsType.UnsignedShort : DrawElementsType.UnsignedInt;
+        mesh.IndexBytes = geometry.ShortIndices ? sizeof(ushort) : sizeof(int);
+
+        mesh.InstanceBuffer = GL.GenBuffer();
+        GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.InstanceBuffer);
+        GL.BufferData(BufferTarget.ArrayBuffer, Math.Max(1, mesh.Staging.Length) * sizeof(float),
+            IntPtr.Zero, BufferUsageHint.DynamicDraw);
+        MeshBytesResident += mesh.Staging.Length * sizeof(float);
+
+        GL.BindBuffer(BufferTarget.ArrayBuffer, geometry.Vertex);
+        GL.EnableVertexAttribArray(0);
+        GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, PackedStride, 0);
+        GL.EnableVertexAttribArray(1);
+        GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Byte, true, PackedStride, 12);
+        GL.EnableVertexAttribArray(2);
+        GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, PackedStride, 16);
+        GL.EnableVertexAttribArray(7);
+        GL.VertexAttribPointer(7, 2, VertexAttribPointerType.Float, false, PackedStride, 24);
+        GL.EnableVertexAttribArray(6);
+        GL.VertexAttribPointer(6, 3, VertexAttribPointerType.UnsignedByte, true, PackedStride, 32);
+        GL.EnableVertexAttribArray(3);
+        GL.EnableVertexAttribArray(4);
+        GL.EnableVertexAttribArray(5);
+        mesh.PointedAt = -1;
+        PointInstanceAttribs(mesh, 0);
+        GL.VertexAttribDivisor(3, 1);
+        GL.VertexAttribDivisor(4, 1);
+        GL.VertexAttribDivisor(5, 1);
+        GL.BindBuffer(BufferTarget.ElementArrayBuffer, geometry.Index);
+        GL.BindVertexArray(0);
+    }
+
+    /// <summary>One baked array in the uploaded layout, with 16-bit indices where its vertices allow.
+    /// Binds its index buffer to the vertex array bound by the caller.</summary>
+    private static Geometry UploadGeometry(WorldModel model)
+    {
+        float[] source = model.Vertices;
+        int count = source.Length / WorldModel.FloatsPerVertex;
+        var packed = new byte[count * PackedStride];
+        for (int v = 0; v < count; v++)
+        {
+            Span<byte> to = packed.AsSpan(v * PackedStride, PackedStride);
+            ReadOnlySpan<float> from = source.AsSpan(v * WorldModel.FloatsPerVertex, WorldModel.FloatsPerVertex);
+            for (int k = 0; k < 3; k++)
+            {
+                BinaryPrimitives.WriteSingleLittleEndian(to[(k * 4)..], from[k]);
+                to[12 + k] = (byte)(sbyte)Math.Clamp(MathF.Round(from[3 + k] * 127f), -127f, 127f);
+                to[32 + k] = (byte)Math.Clamp(MathF.Round(from[10 + k] * 255f), 0f, 255f);
+            }
+            for (int k = 0; k < 4; k++)
+            {
+                BinaryPrimitives.WriteSingleLittleEndian(to[(16 + k * 4)..], from[6 + k]);
+            }
+        }
+
+        int vertex = GL.GenBuffer();
+        GL.BindBuffer(BufferTarget.ArrayBuffer, vertex);
+        GL.BufferData(BufferTarget.ArrayBuffer, packed.Length, packed, BufferUsageHint.StaticDraw);
+
+        bool shortIndices = count <= ushort.MaxValue + 1;
+        int index = GL.GenBuffer();
+        GL.BindBuffer(BufferTarget.ElementArrayBuffer, index);
+        long indexBytes;
+        if (shortIndices)
+        {
+            ushort[] narrow = [.. model.Indices.Select(i => (ushort)i)];
+            indexBytes = narrow.Length * sizeof(ushort);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, (int)indexBytes, narrow, BufferUsageHint.StaticDraw);
+        }
+        else
+        {
+            indexBytes = model.Indices.Length * sizeof(int);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, (int)indexBytes, model.Indices, BufferUsageHint.StaticDraw);
+        }
+        return new Geometry(vertex, index, shortIndices, packed.Length + indexBytes);
+    }
+
+    /// <summary>Releases the meshes no stream has placed for longest until the layer fits its budget.</summary>
+    private void Evict()
+    {
+        if (MeshBytesResident <= MeshBudget)
+        {
+            return;
+        }
+        foreach (Mesh mesh in _meshes.Where(m => m.Vao != 0 && m.LastStreamed != _stream).OrderBy(m => m.LastStreamed))
+        {
+            Release(mesh);
+            if (MeshBytesResident <= MeshBudget)
+            {
+                return;
+            }
+        }
+    }
+
+    private void Release(Mesh mesh)
+    {
+        GL.DeleteVertexArray(mesh.Vao);
+        GL.DeleteBuffer(mesh.InstanceBuffer);
+        MeshBytesResident -= mesh.Staging.Length * sizeof(float);
+        mesh.Vao = 0;
+        mesh.InstanceBuffer = 0;
+
+        Geometry geometry = _buffers[mesh.Model.Vertices];
+        if (--geometry.Users == 0)
+        {
+            GL.DeleteBuffer(geometry.Vertex);
+            GL.DeleteBuffer(geometry.Index);
+            _buffers.Remove(mesh.Model.Vertices);
+            MeshBytesResident -= geometry.Bytes;
+        }
+    }
+
     /// <summary>Writes one placement into a mesh's staging, fine from the front and coarse from the
     /// back. A mesh whose staging is full drops the rest, which only a scatter can reach.</summary>
     private static void Place(
@@ -665,21 +788,55 @@ public sealed class EntityModelLayer : IDisposable
         {
             mesh.PointedAt = -1;
             mesh.CoarseStart = mesh.CoarseFloats / InstanceStride;
-            if (mesh.FineCount + mesh.CoarseCount > 0)
+            if (mesh.Vao != 0)
             {
-                GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.InstanceBuffer);
+                UploadInstances(mesh);
             }
-            if (mesh.FineCount > 0)
+        }
+    }
+
+    private void UploadInstances(Mesh mesh)
+    {
+        if (mesh.FineCount + mesh.CoarseCount > 0)
+        {
+            GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.InstanceBuffer);
+        }
+        if (mesh.FineCount > 0)
+        {
+            GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero,
+                mesh.FineCount * InstanceStrideBytes, mesh.Staging);
+            RequestTextures(mesh.FineTier);
+        }
+        if (mesh.CoarseCount > 0)
+        {
+            GL.BufferSubData(BufferTarget.ArrayBuffer, (IntPtr)(mesh.CoarseFloats * sizeof(float)),
+                mesh.CoarseCount * InstanceStrideBytes, ref mesh.Staging[mesh.CoarseFloats]);
+            RequestTextures(mesh.CoarseTier);
+        }
+    }
+
+    /// <summary>Uploads the streamed meshes not resident yet, as many as one frame's budget allows;
+    /// the rest draw from a later frame.</summary>
+    private void UploadWaiting()
+    {
+        if (_waiting == 0)
+        {
+            return;
+        }
+        long budget = MeshUploadBudgetPerFrame;
+        foreach (Mesh mesh in _meshes)
+        {
+            if (budget <= 0)
             {
-                GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero,
-                    mesh.FineCount * InstanceStrideBytes, mesh.Staging);
-                RequestTextures(mesh.FineTier);
+                return;
             }
-            if (mesh.CoarseCount > 0)
+            if (mesh.Vao == 0 && mesh.FineCount + mesh.CoarseCount > 0)
             {
-                GL.BufferSubData(BufferTarget.ArrayBuffer, (IntPtr)(mesh.CoarseFloats * sizeof(float)),
-                    mesh.CoarseCount * InstanceStrideBytes, ref mesh.Staging[mesh.CoarseFloats]);
-                RequestTextures(mesh.CoarseTier);
+                long before = MeshBytesResident;
+                MakeResident(mesh);
+                UploadInstances(mesh);
+                budget -= MeshBytesResident - before;
+                _waiting--;
             }
         }
     }
@@ -761,6 +918,8 @@ public sealed class EntityModelLayer : IDisposable
 
     public void Draw(Matrix4 viewProjection, Vector3 cameraPosition)
     {
+        UploadWaiting();
+
         // Budgeted so a ring change worth of decodes cannot dump hundreds of uploads in one frame.
         long uploadedBefore = TextureBytesResident;
         while (TextureBytesResident - uploadedBefore < UploadBudgetPerFrame
@@ -855,7 +1014,7 @@ public sealed class EntityModelLayer : IDisposable
                 Bind(1, second);
                 Bind(2, mask);
                 Bind(3, blood);
-                DrawRange(new IndexRange(range.Start, range.Count), instanceCount);
+                DrawRange(mesh, range, instanceCount);
             }
         }
 
@@ -884,7 +1043,7 @@ public sealed class EntityModelLayer : IDisposable
 
         foreach (Mesh mesh in _meshes)
         {
-            if (mesh.FineCount + mesh.CoarseCount == 0)
+            if (mesh.Vao == 0 || mesh.FineCount + mesh.CoarseCount == 0)
             {
                 continue;
             }
@@ -903,7 +1062,7 @@ public sealed class EntityModelLayer : IDisposable
             GL.DepthMask(false);
             foreach (Mesh mesh in _blendedMeshes)
             {
-                if (mesh.FineCount + mesh.CoarseCount > 0)
+                if (mesh.Vao != 0 && mesh.FineCount + mesh.CoarseCount > 0)
                 {
                     GL.BindVertexArray(mesh.Vao);
                     GL.Uniform2(_uBillboardFacing, mesh.Facing.X, mesh.Facing.Y);
@@ -949,7 +1108,7 @@ public sealed class EntityModelLayer : IDisposable
 
         foreach (Mesh mesh in _meshes)
         {
-            if (mesh.FineCount + mesh.CoarseCount == 0)
+            if (mesh.Vao == 0 || mesh.FineCount + mesh.CoarseCount == 0)
             {
                 continue;
             }
@@ -983,7 +1142,7 @@ public sealed class EntityModelLayer : IDisposable
                     GL.ActiveTexture(TextureUnit.Texture0);
                     GL.BindTexture(TextureTarget.Texture2D, handle);
                 }
-                DrawRange(new IndexRange(range.Start, range.Count), instanceCount);
+                DrawRange(mesh, range, instanceCount);
             }
         }
     }
@@ -1005,10 +1164,10 @@ public sealed class EntityModelLayer : IDisposable
         GL.VertexAttribPointer(5, 3, VertexAttribPointerType.Float, false, InstanceStrideBytes, baseOffset + 24);
     }
 
-    private static void DrawRange(IndexRange range, int instanceCount)
+    private static void DrawRange(Mesh mesh, MaterialRange range, int instanceCount)
     {
-        GL.DrawElementsInstanced(PrimitiveType.Triangles, range.Count, DrawElementsType.UnsignedInt,
-            (IntPtr)(range.Start * sizeof(int)), instanceCount);
+        GL.DrawElementsInstanced(PrimitiveType.Triangles, range.Count, mesh.IndexType,
+            (IntPtr)(range.Start * mesh.IndexBytes), instanceCount);
         FrameStats.Drawn((long)range.Count / 3 * instanceCount);
     }
 
@@ -1097,10 +1256,10 @@ public sealed class EntityModelLayer : IDisposable
             GL.DeleteVertexArray(mesh.Vao);
             GL.DeleteBuffer(mesh.InstanceBuffer);
         }
-        foreach ((int vertex, int index) in _buffers.Values)
+        foreach (Geometry geometry in _buffers.Values)
         {
-            GL.DeleteBuffer(vertex);
-            GL.DeleteBuffer(index);
+            GL.DeleteBuffer(geometry.Vertex);
+            GL.DeleteBuffer(geometry.Index);
         }
         foreach (int handle in _textures.Values)
         {

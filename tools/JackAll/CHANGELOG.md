@@ -29,9 +29,10 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   what is drawn from the whole world; it now takes only the sectors around the camera, so flying
   no longer hitches every 64 m. Dragging an object costs about a sixth of what it did per frame, and
   a typed edit in the inspector about a seventh. Grass draws only within 100 m of the camera.
-- **The Map tab needs less video memory.** The navmesh is read the first time its layer is shown
-  rather than with the map, which also loads the map faster, and the surface types the first time
-  they are shown.
+- **The Map tab needs about half the video memory.** The navmesh is read the first time its layer
+  is shown rather than with the map, which also loads the map faster, and the surface types the
+  first time they are shown. Each model is uploaded, in a more compact form, only once it comes near
+  the camera, and the ones longest out of reach are let go.
 
 ## [1.7.0] - 2026-10-28
 
