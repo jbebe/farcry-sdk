@@ -29,16 +29,18 @@ argv = sys.argv[sys.argv.index("--") + 1:]
 SOURCE, TARGET = argv[0], argv[1]
 # How far the sheet's middle is from the eye, in metres, and how far below the level view, in degrees: its
 # top edge near the horizon, so the sheet reaches from there down toward the legs and the view looks down to
-# read it. How far its side columns bow toward the eye on top of their rest, in degrees; sheet.py shapes the
-# paper's rounded folds for the two together, its HELD.
-DISTANCE, PITCH = 0.50, 40.0
+# read it, held out on all but straight arms; the sheet's printed scale, render_map.py's SCALE, sizes it to
+# fill the same view there. How far its side columns bow toward the eye on top of their rest, in degrees;
+# sheet.py shapes the paper's rounded folds for the two together, its HELD.
+DISTANCE, PITCH = 0.625, 40.0
 BOW = 24.0
 # How far below the middle row's centre line the hands hold the side edges, in metres.
 GRIP_HEIGHT = -0.03
 # The idle's grip on the map: the point of the map's left edge its left hand holds, in the map's frame.
 MAP_EDGE = Vector((-0.135, -0.127, 0.061))
-# How much of the arm's length a hand may be from its shoulder.
-REACH = 0.92
+# How much of the arm's length a hand may be from its shoulder: the arm all but straight, its elbow bent a
+# little under 30 degrees.
+REACH = 0.97
 # How much of a bank's sway of the map, against the idle, the sheet keeps: two hands hold it steadier than
 # one held the map; but all of it where the bank brings the map up or puts it away.
 SWAY = 0.5
@@ -178,7 +180,7 @@ def remake(pack, bank, resting, held, arm):
     chested = [] if own_right else MIRRORED if lowered else ARM
     rights = {} if own_right else {name: target("R " + name) for name in MIRRORED}
     left = target("L Hand")
-    brought, worst = 0.0, {"left": 0.0, "right": 0.0}
+    brought, worst, out = 0.0, {"left": 0.0, "right": 0.0}, 0.0
     goals = []
     for frame, f in enumerate(frames):
         scene.frame_set(frame + FIRST_FRAME)
@@ -195,6 +197,7 @@ def remake(pack, bank, resting, held, arm):
         if not lowered:
             for side, hand in (("L", lefts["Hand"]), ("R", goal["Hand"])):
                 to_shoulder = f["shoulders"][side] - hand.translation
+                out = max(out, to_shoulder.length / arm)
                 excess = to_shoulder.length - REACH * arm
                 if excess > move.length:
                     move = to_shoulder.normalized() * excess
@@ -227,9 +230,11 @@ def remake(pack, bank, resting, held, arm):
     export_mab.write(pack, bank, body, bones=[b for b in WRITTEN if not (own_right and b.startswith("R "))],
                      lossless=True)
     export_mab.write(pack, bank, model, bones=[root.name] + list(STILL) + list(COLUMNS), lossless=True)
-    print("%-55s %-7s %3d frames, sheet brought in %.1f cm; off target by at most: left %.1f mm, right %.1f mm"
-          % (bank.split("/")[-1], "lowered" if lowered else "held", last + 1, brought * 100,
-             worst["left"] * 1000.0, worst["right"] * 1000.0))
+    reached = ("hands out to %3.0f%% of the arm before the sheet is brought in %.1f cm" % (out * 100, brought * 100)
+               if not lowered else "hung from the left hand")
+    print("%-55s %-7s %3d frames, %s; off target by at most: left %.1f mm, right %.1f mm"
+          % (bank.split("/")[-1], "lowered" if lowered else "held", last + 1, reached, worst["left"] * 1000.0,
+             worst["right"] * 1000.0))
 
 
 pack = Pack.load(SOURCE)

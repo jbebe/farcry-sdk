@@ -47,11 +47,11 @@ namespace {
     constexpr ptrdiff_t kEquipmentEntity = 0x08;
 
     // The sheet as render_map.py draws it and sheet.py folds it: the world from 660 to 4460 m each way at
-    // 1:4 500, its middle the root's, cut in 3x3 panels, the side columns held turned 30 degrees toward the
+    // 1:3 600, its middle the root's, cut in 3x3 panels, the side columns held turned 30 degrees toward the
     // eye and the folds between the columns rounded over 2 cm either side; the icons stand a little in front
     // of the paper.
     constexpr float kMiddle = 2560.0f;
-    constexpr float kScale = 4500.0f;
+    constexpr float kScale = 3600.0f;
     constexpr float kSize = 3800.0f / kScale;
     constexpr float kPanel = kSize / 3.0f;
     constexpr float kHeld = 0.52359878f;

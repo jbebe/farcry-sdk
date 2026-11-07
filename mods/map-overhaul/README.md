@@ -35,7 +35,7 @@ own extent, so it slices back into the game's 25 area maps:
 
 The neat line is the playable square the game's world map covers, a sector wider each side; the
 paper's edge is 300 m outside it, in a margin that holds the title, legend, scale bar, layer tints and
-north points. The printed scale is `SCALE`, 1:4 500, which makes the paper 84.4 cm in the hand.
+north points. The printed scale is `SCALE`, 1:3 600, which makes the paper 105.6 cm in the hand.
 `--region` and `--scale` draw part of the world for a closer look.
 
 Over it, `notes.py` writes what the previous owner marked in blue ballpoint, in Nothing You Could Do (a
@@ -80,19 +80,21 @@ hand on a hill, in Pala and from a Datsun's seat.
 
 ### The hold
 
-`hold.py` (Blender, through BlenderFC2) remakes each bank the map has on foot. The sheet's middle is 50
-cm from the eye and 40° below the level view, facing it, its side columns bowed 30° toward the eye: its
-top edge lies about on the horizon and the sheet reaches from there down toward the legs, so the hills
-show above it and the view looks down to read it, the plugin keeping it there. Looked at, at the 87°
-field of view this install plays at, the sheet's edges lie just past a 4:3 screen's, and on 16:9 the
-wrists show 1.10 of the way to the screen's edge. The game's field of view is a 4:3 screen's width and a
-wider screen sees further to the sides (UFCP's `WidescreenScale`), measured against an earlier in-game
-picture to within 10 px. A 75° view would leave the hands off a 16:9 screen.
+`hold.py` (Blender, through BlenderFC2) remakes each bank the map has on foot. The sheet's middle is
+62.5 cm from the eye and 40° below the level view, facing it, its side columns bowed 30° toward the eye:
+its top edge lies about on the horizon and the sheet reaches from there down toward the legs, so the
+hills show above it and the view looks down to read it, the plugin keeping it there. The distance holds
+the sheet out on all but straight arms, the hands 96% of the arm from the shoulder in the idle, and the
+sheet's size is scaled with it, so looked at, at the 87° field of view this install plays at, its edges
+lie just past a 4:3 screen's and the hands show on them on 16:9. The game's field of view is a 4:3
+screen's width and a wider screen sees further to the sides (UFCP's `WidescreenScale`), measured against
+an earlier in-game picture to within 10 px. A 75° view would leave the hands off a 16:9 screen.
 
 The left hand holds the left column's edge 3 cm below the middle, as the idle's held the map's edge, and
 the right one the right edge, mirrored. The sheet keeps half of each bank's sway of the map against the
-idle, all of it in the draw and holster; where a hand would be over 92% of the arm's 52.2 cm from its
-shoulder the sheet comes toward the body (5 cm walking, 10–16 cm in the draw, holster and jumps). The
+idle, all of it in the draw and holster; where a hand would be over 97% of the arm's 52.2 cm from its
+shoulder the sheet comes toward the body (5.5 cm walking, 13 and 20 cm in the draw and holster, 2–3 cm
+in the jumps). The
 columns flex 1.2° either way to the bank's rhythm, each to its own beat, and the middle column is
 written at its rest too, since the game misplaces a bone left out under bones it writes (`mab.md`'s
 writer rules). Running and sliding, where the

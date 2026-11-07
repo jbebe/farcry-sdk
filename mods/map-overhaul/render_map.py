@@ -25,11 +25,12 @@ HERE = Path(__file__).resolve().parent
 WORLD = 5120
 # The neat line: the playable square the game's own world map covers, and a sector either side; the
 # paper's edge, a margin of 300 m outside it; and the scale the sheet is printed at, which sheet.py makes
-# the paper's size from.
+# the paper's size from, 1.06 m, and Map Overhaul's plugin its icons' places with: hold.py holds it where that
+# size fills the view, out on all but straight arms.
 NEAT = (960, 4160)
 MARGIN = 300
 EDGE = (NEAT[0] - MARGIN, NEAT[1] + MARGIN)
-SCALE = 4500
+SCALE = 3600
 # World X and Y to grid eastings and northings, in metres.
 GRID_ORIGIN = (612000, 1404000)
 DPI = 100

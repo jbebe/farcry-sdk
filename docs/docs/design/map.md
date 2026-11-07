@@ -97,7 +97,9 @@ previous owner's notes, by `mods/map-overhaul`, and held in the game as **Built*
   bowed 30°, filling a 4:3 view at the install's 87° with the hands on its edges on 16:9; the map's
   banks remade by `hold.py` (seen in game). After the user's first play it is held 40° below the level
   view, its top edge about on the horizon and the sheet reaching down toward the legs, so the view
-  looks down to read it (seen in game, by script).
+  looks down to read it (seen in game, by script). Then, at the user's word, further out on all but
+  straight arms, 62.5 cm, and printed at 1:3 600 so the 1.06 m sheet fills the same view (seen in the
+  Blender preview; not yet seen in game).
 - **Level while the view looks up and down** (2026-11-07): the plugin turns the upper body back about
   the eye by the view's pitch while the map is out ([the look](../engine-internals/first-person-aiming.md#the-bodys-skeleton)),
   eased in and out over a quarter second (seen in game, by script, at 73° down and 78° up).
