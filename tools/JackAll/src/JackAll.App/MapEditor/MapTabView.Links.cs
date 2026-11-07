@@ -43,11 +43,11 @@ public partial class MapTabView
         StatusText.Text = "Link cancelled";
     }
 
-    /// <summary>The link lines from the edited nodes. Needs the GL context.</summary>
-    private void RebuildLinkLayer(WorldEditSession edits)
+    /// <summary>The link lines from the edited nodes of <paramref name="sources"/>. Needs the GL context.</summary>
+    private void RebuildLinkLayer(WorldEditSession edits, IEnumerable<WorldEntity> sources)
     {
         var lines = new List<WorldShape>();
-        foreach (WorldEntity source in edits.World.Entities)
+        foreach (WorldEntity source in sources)
         {
             if (source.Position is not { } from)
             {
@@ -61,8 +61,7 @@ public partial class MapTabView
                 }
             }
         }
-        _linkLayer?.Dispose();
-        _linkLayer = new ShapeLayer(lines);
+        (_linkLayer ??= new ShapeLayer([])).SetShapes(lines);
         LayerCatalog.Links.Status = $"{lines.Count:N0} links";
     }
 

@@ -47,7 +47,7 @@ public partial class MapTabView
             RefreshSaveButton();
         }
 
-        _markersDirty = true;
+        _moved.UnionWith(step.Entities);
         _inspector.Reload();
         StatusText.Text = $"{verb} {step.Label}";
         OverlaysChanged();

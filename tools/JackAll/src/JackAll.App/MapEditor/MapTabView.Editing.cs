@@ -183,9 +183,7 @@ public partial class MapTabView
             return;
         }
 
-        // The instance streams are uploaded from entity placements, so the change shows up by asking
-        // for the same rebuild a mission-layer toggle does.
-        _markersDirty = true;
+        _moved.UnionWith(_dragStart.Keys);
     }
 
     /// <summary>Ends a drag, either recording the change for the next save or putting the selection
@@ -211,7 +209,7 @@ public partial class MapTabView
                 _edits?.Moved(entity);
             }
         }
-        _markersDirty |= changed.Count > 0;
+        _moved.UnionWith(changed);
         if (changed.Count > 0)
         {
             OverlaysChanged();

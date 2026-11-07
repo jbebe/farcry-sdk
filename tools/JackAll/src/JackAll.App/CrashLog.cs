@@ -4,18 +4,13 @@ using System.Windows;
 
 namespace JackAll.App;
 
-/// <summary>
-/// Writes crash.log beside config.ini when an exception escapes, with the machine and GPU details a
-/// crash on someone else's PC cannot be diagnosed without.
-/// </summary>
+/// <summary>Writes crash.log beside config.ini when an exception escapes, with the machine and GPU details.</summary>
 public static class CrashLog
 {
     private const int KeptGlErrors = 20;
 
     private static readonly Queue<string> GlErrors = new();
     private static Exception? _written;
-
-    public static string FilePath => Path.Combine(AppContext.BaseDirectory, "crash.log");
 
     /// <summary>Renderer, GL version, vendor and video memory, once a viewport has a context.</summary>
     public static string Gpu { get; set; } = "no GL context created";
@@ -25,7 +20,7 @@ public static class CrashLog
         app.DispatcherUnhandledException += (_, e) =>
         {
             Write(e.Exception);
-            MessageBox.Show($"JackAll crashed. The details are in\n{FilePath}\n\n{e.Exception.Message}",
+            MessageBox.Show($"JackAll crashed. The details are in\n{AppConfig.CrashLogPath}\n\n{e.Exception.Message}",
                 "JackAll", MessageBoxButton.OK, MessageBoxImage.Error);
         };
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
@@ -79,7 +74,7 @@ public static class CrashLog
             """;
         try
         {
-            File.WriteAllText(FilePath, report);
+            File.WriteAllText(AppConfig.CrashLogPath, report);
         }
         catch (IOException)
         {

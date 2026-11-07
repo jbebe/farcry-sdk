@@ -27,6 +27,10 @@ public partial class MapTabView
     /// <summary>Set when a trigger or light changed, so both layers are rebuilt from the edited nodes.</summary>
     private bool _overlaysDirty;
 
+    /// <summary>The entities that can draw a trigger, light or link: those that did at load, and every
+    /// one edited since. Null until the first rebuild.</summary>
+    private HashSet<WorldEntity>? _overlaySources;
+
     private IReadOnlyList<EntityHandle> CurrentHandles()
         => _edits is { } edits && _selection.Count == 1 && _selection.Primary is { } entity && _hierarchy.CanEdit(entity)
             ? EntityHandles.For(entity, edits.CurrentNode(entity))
@@ -130,16 +134,23 @@ public partial class MapTabView
         }
         _overlaysDirty = false;
 
-        IReadOnlyList<TriggerVolume> triggers = WorldTriggers.Load(edits.World.Entities, edits.CurrentNode);
-        _triggerLayer?.Dispose();
-        _triggerLayer = new ShapeLayer(WorldMarkers.BuildTriggerOutlines(triggers));
+        _overlaySources ??= [.. edits.World.Entities.Where(e => DrawsOverlay(e.Node))];
+        List<WorldEntity> sources = [.. edits.World.Entities.Where(e => _overlaySources.Contains(e) || edits.IsModified(e))];
+        _overlaySources.UnionWith(sources);
+
+        IReadOnlyList<TriggerVolume> triggers = WorldTriggers.Load(sources, edits.CurrentNode);
+        (_triggerLayer ??= new ShapeLayer([])).SetShapes(WorldMarkers.BuildTriggerOutlines(triggers));
         LayerCatalog.Triggers.Status = WorldMarkers.Describe(triggers);
-        IReadOnlyList<WorldLight> lights = WorldLights.Load(edits.World.Entities, edits.CurrentNode);
-        _lightLayer?.Dispose();
-        _lightLayer = new EntityMarkerLayer(WorldMarkers.BuildLightMarkers(lights), lights.Count);
+        IReadOnlyList<WorldLight> lights = WorldLights.Load(sources, edits.CurrentNode);
+        _lightLayer ??= new EntityMarkerLayer(lights.Count);
+        _lightLayer.SetInstances(WorldMarkers.BuildLightMarkers(lights), lights.Count);
         LayerCatalog.Lights.Status = WorldMarkers.Describe(lights);
-        RebuildLinkLayer(edits);
+        RebuildLinkLayer(edits, sources);
     }
+
+    private static bool DrawsOverlay(FcbObject node)
+        => WorldEntityCategories.Of(node) is EntityCategory.Trigger or EntityCategory.Light
+            || EntityLinks.Read(node).Count > 0;
 
     /// <summary>Draws the handles over everything, as the gizmo is, so one behind a wall stays grabbable.</summary>
     private void DrawHandles(OpenTK.Mathematics.Matrix4 viewProjection)
@@ -149,8 +160,7 @@ public partial class MapTabView
         if (_handlesDirty)
         {
             _handlesDirty = false;
-            _handleLines?.Dispose();
-            _handleLines = new ShapeLayer([.. handles.Where(h => h.IsRing).SelectMany(h => LinesOf(h, h == active))]);
+            (_handleLines ??= new ShapeLayer([])).SetShapes([.. handles.Where(h => h.IsRing).SelectMany(h => LinesOf(h, h == active))]);
         }
         if (handles.Count == 0)
         {

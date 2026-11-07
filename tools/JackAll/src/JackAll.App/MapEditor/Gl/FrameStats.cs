@@ -11,8 +11,7 @@ public sealed class FrameStats
 {
     private const double WindowSeconds = 0.5;
 
-    /// <summary>Timer queries in flight; a result is read this many frames after it was issued, by
-    /// which time the GPU has finished it and the read does not stall.</summary>
+    /// <summary>Timer queries in flight; a result is read this many frames after it was issued.</summary>
     private const int QueryRing = 4;
 
     private const int GpuMemoryTotalNvx = 0x9048;
@@ -23,22 +22,26 @@ public sealed class FrameStats
     private static long _triangles;
 
     private readonly int[] _queries = new int[QueryRing];
-    private readonly bool[] _issued = new bool[QueryRing];
-    private int _query;
+    private int _issued;
     private readonly bool _nvidiaMemory;
     private readonly bool _amdMemory;
     private long _frameStart;
-
-    private int _frames;
-    private double _seconds;
-    private double _worst;
-    private double _cpu;
-    private double _gpu;
-    private int _gpuSamples;
-    private long _windowDraws;
-    private long _windowTriangles;
-    private double _rebuild;
     private double _frameRebuild;
+    private Window _window;
+
+    /// <summary>The frames summed since the stats line last changed.</summary>
+    private struct Window
+    {
+        public int Frames;
+        public double Seconds;
+        public double Worst;
+        public double Cpu;
+        public double Gpu;
+        public int GpuSamples;
+        public long Draws;
+        public long Triangles;
+        public double Rebuild;
+    }
 
     public FrameStats()
     {
@@ -63,75 +66,59 @@ public sealed class FrameStats
         _triangles = 0;
         _frameRebuild = 0;
 
-        if (_issued[_query])
+        int query = _queries[_issued % QueryRing];
+        if (_issued >= QueryRing)
         {
-            GL.GetQueryObject(_queries[_query], GetQueryObjectParam.QueryResultAvailable, out int available);
+            GL.GetQueryObject(query, GetQueryObjectParam.QueryResultAvailable, out int available);
             if (available != 0)
             {
-                GL.GetQueryObject(_queries[_query], GetQueryObjectParam.QueryResult, out long nanoseconds);
-                _gpu += nanoseconds / 1e6;
-                _gpuSamples++;
+                GL.GetQueryObject(query, GetQueryObjectParam.QueryResult, out long nanoseconds);
+                _window.Gpu += nanoseconds / 1e6;
+                _window.GpuSamples++;
             }
         }
-        GL.BeginQuery(QueryTarget.TimeElapsed, _queries[_query]);
-        _issued[_query] = true;
+        GL.BeginQuery(QueryTarget.TimeElapsed, query);
     }
 
     /// <summary>Time spent rebuilding instance streams or overlays this frame.</summary>
     public void Rebuilt(TimeSpan elapsed) => _frameRebuild = elapsed.TotalMilliseconds;
 
-    /// <summary>
-    /// Closes the frame and returns the stats line when it closes a window, else null. A frame the
-    /// viewport did not ask for continuously is reported on its own: it has no rate, and its GPU time
-    /// arrives frames later, but its CPU cost is exactly the hitch an edit causes.
-    /// </summary>
+    /// <summary>Closes the frame and returns the stats line when it closes a window, else null. A
+    /// frame the viewport did not ask for continuously is reported on its own, without a rate or GPU time.</summary>
     public string? EndFrame(TimeSpan interval, bool continuous)
     {
         GL.EndQuery(QueryTarget.TimeElapsed);
-        _query = (_query + 1) % QueryRing;
+        _issued++;
         double cpu = Stopwatch.GetElapsedTime(_frameStart).TotalMilliseconds;
 
         if (!continuous)
         {
-            ResetWindow();
+            _window = default;
             return Line("one frame", cpu, null, _draws, _triangles, _frameRebuild);
         }
 
-        _frames++;
-        _seconds += interval.TotalSeconds;
-        _worst = Math.Max(_worst, interval.TotalMilliseconds);
-        _cpu += cpu;
-        _windowDraws += _draws;
-        _windowTriangles += _triangles;
-        _rebuild = Math.Max(_rebuild, _frameRebuild);
-        if (_seconds < WindowSeconds)
+        _window.Frames++;
+        _window.Seconds += interval.TotalSeconds;
+        _window.Worst = Math.Max(_window.Worst, interval.TotalMilliseconds);
+        _window.Cpu += cpu;
+        _window.Draws += _draws;
+        _window.Triangles += _triangles;
+        _window.Rebuild = Math.Max(_window.Rebuild, _frameRebuild);
+        if (_window.Seconds < WindowSeconds)
         {
             return null;
         }
 
-        string line = Line($"{_frames / _seconds:0} fps · worst {_worst:0} ms", _cpu / _frames,
-            _gpuSamples > 0 ? _gpu / _gpuSamples : null, _windowDraws / _frames, _windowTriangles / _frames, _rebuild);
-        ResetWindow();
-        return line;
+        Window w = _window;
+        _window = default;
+        return Line($"{w.Frames / w.Seconds:0} fps · worst {w.Worst:0} ms", w.Cpu / w.Frames,
+            w.GpuSamples > 0 ? w.Gpu / w.GpuSamples : null, w.Draws / w.Frames, w.Triangles / w.Frames, w.Rebuild);
     }
 
     private string Line(string rate, double cpu, double? gpu, long draws, long triangles, double rebuild)
         => $"{rate} · CPU {cpu:0.0} ms" + (gpu is { } g ? $" · GPU {g:0.0} ms" : "") +
            $" · {draws:N0} draws · {triangles / 1e6:0.00}M tris" +
            (rebuild >= 0.05 ? $" · rebuild {rebuild:0.0} ms" : "") + $" · {VideoMemory()}";
-
-    private void ResetWindow()
-    {
-        _frames = 0;
-        _seconds = 0;
-        _worst = 0;
-        _cpu = 0;
-        _gpu = 0;
-        _gpuSamples = 0;
-        _windowDraws = 0;
-        _windowTriangles = 0;
-        _rebuild = 0;
-    }
     /// <summary>The card's memory in use by everything on it, where the driver says.</summary>
     private string VideoMemory()
     {

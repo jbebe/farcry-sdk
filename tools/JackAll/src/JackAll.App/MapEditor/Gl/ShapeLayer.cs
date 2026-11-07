@@ -13,29 +13,13 @@ public sealed class ShapeLayer : IDisposable
     private readonly ShaderProgram _program;
     private readonly int _vao;
     private readonly int _vbo;
-    private readonly int _vertexCount;
+    private int _vertexCount;
     private readonly int _uViewProjection;
 
-    public int ShapeCount { get; }
+    public int ShapeCount { get; private set; }
 
     public ShapeLayer(IReadOnlyList<WorldShape> shapes)
     {
-        ShapeCount = shapes.Count;
-
-        // Each polyline becomes its own set of segments, so one buffer covers them all without
-        // needing a draw call per shape.
-        var vertices = new List<float>(shapes.Sum(s => s.Points.Count) * 12);
-        foreach (WorldShape shape in shapes)
-        {
-            (float r, float g, float b) = TintFor(shape.Kind);
-            for (int i = 0; i + 1 < shape.Points.Count; i++)
-            {
-                Append(vertices, shape.Points[i], r, g, b);
-                Append(vertices, shape.Points[i + 1], r, g, b);
-            }
-        }
-        _vertexCount = vertices.Count / 6;
-
         _program = new ShaderProgram(
             """
             #version 330 core
@@ -61,12 +45,36 @@ public sealed class ShapeLayer : IDisposable
         GL.BindVertexArray(_vao);
         _vbo = GL.GenBuffer();
         GL.BindBuffer(BufferTarget.ArrayBuffer, _vbo);
-        GL.BufferData(BufferTarget.ArrayBuffer, vertices.Count * sizeof(float), vertices.ToArray(),
-            BufferUsageHint.StaticDraw);
         GL.EnableVertexAttribArray(0);
         GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 6 * sizeof(float), 0);
         GL.EnableVertexAttribArray(1);
         GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, 6 * sizeof(float), 3 * sizeof(float));
+        GL.BindVertexArray(0);
+        SetShapes(shapes);
+    }
+
+    /// <summary>Replaces what the layer draws, keeping its program and buffer.</summary>
+    public void SetShapes(IReadOnlyList<WorldShape> shapes)
+    {
+        ShapeCount = shapes.Count;
+
+        // Each polyline becomes its own set of segments, so one buffer covers them all without
+        // needing a draw call per shape.
+        var vertices = new List<float>(shapes.Sum(s => s.Points.Count) * 12);
+        foreach (WorldShape shape in shapes)
+        {
+            (float r, float g, float b) = TintFor(shape.Kind);
+            for (int i = 0; i + 1 < shape.Points.Count; i++)
+            {
+                Append(vertices, shape.Points[i], r, g, b);
+                Append(vertices, shape.Points[i + 1], r, g, b);
+            }
+        }
+        _vertexCount = vertices.Count / 6;
+
+        GL.BindBuffer(BufferTarget.ArrayBuffer, _vbo);
+        GL.BufferData(BufferTarget.ArrayBuffer, vertices.Count * sizeof(float), vertices.ToArray(),
+            BufferUsageHint.DynamicDraw);
     }
 
     internal static (float R, float G, float B) TintFor(string kind) => kind switch

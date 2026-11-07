@@ -22,6 +22,7 @@ public partial class MapTabView : UserControl
         TerrainMap Map, WorldTerrain Terrain, SectorDetailLayers DetailLayers, TerrainLayerTable Table,
         Fc2World World, IReadOnlyList<WorldShape> Shapes, IReadOnlyList<WorldShape> Splines,
         IReadOnlyList<VegetationInstance> Vegetation, ScatterSet VegetationModels,
+        SectorIndex<ScatterInstance> VegetationBySector,
         NavMesh NavMesh,
         ArchetypeIndex Archetypes, WorldModelSet Models, WorldEnvironment Environment);
 
@@ -39,13 +40,28 @@ public partial class MapTabView : UserControl
 
     private EntityModelLayer? _modelLayer;
     private List<WorldEntity> _positionedEntities = [];
-    private bool _markersDirty;
+    /// <summary>Which entities are shown changed, so the model layer re-files them and the marker
+    /// categories are regrouped.</summary>
+    private bool _visibleDirty;
+
+    /// <summary>Shown entities placed somewhere else since the last frame.</summary>
+    private readonly HashSet<WorldEntity> _moved = [];
+
+    /// <summary>The model streams and markers need refilling from where things stand now.</summary>
+    private bool _modelsDirty;
+
+    /// <summary>The shown entities each marker category draws, grouped on a visibility change.</summary>
+    private Dictionary<EntityCategory, List<WorldEntity>> _markerGroups = [];
 
     private RenderTargets? _targets;
     private PostProcess? _post;
     private ShadowCascades? _cascades;
     private AmbientOcclusion? _occlusion;
     private (int X, int Y) _cameraSector = (int.MinValue, int.MinValue);
+
+    /// <summary>The ring's sectors the view reached when the streams were last filled.</summary>
+    private UInt128 _sectorsInView;
+    private OpenTK.Mathematics.Vector3 _grassStreamedFrom;
 
     /// <summary>The viewport's own background, and so what shows in place of the sky.</summary>
     private static readonly OpenTK.Mathematics.Vector3 BackgroundColour = new(0.13f, 0.15f, 0.17f);
@@ -87,10 +103,8 @@ public partial class MapTabView : UserControl
     /// the same layer the entities use, so they get its culling, detail tiers and materials.</summary>
     private EntityModelLayer? _vegetationModelLayer;
 
-    /// <summary>Every drawable scatter instance, as the model layer's visibility pass wants them.
-    /// Rebuilt into the layer whenever the camera crosses a sector.</summary>
-    private ScatterInstance[] _vegetationInstances = [];
     private bool _vegetationDirty;
+
     private NavMeshLayer? _navMeshLayer;
     private EntityMarkerLayer? _lightLayer;
 
@@ -152,12 +166,15 @@ public partial class MapTabView : UserControl
         };
         _hierarchy.VisibleSetChanged += () =>
         {
-            _markersDirty = true;
+            _visibleDirty = true;
             Viewport.InvalidateVisual();
         };
         _inspector.Edited += (entity, moved) =>
         {
-            _markersDirty |= moved;
+            if (moved)
+            {
+                _moved.Add(entity);
+            }
             _hierarchy.RefreshModified([entity]);
             RefreshSaveButton();
             OverlaysChanged();
@@ -258,6 +275,7 @@ public partial class MapTabView : UserControl
                 WorldModelSet models = WorldModels.Load(world.Entities, archetypes, vm.ReadByPath, progress);
                 return new PendingLoad(
                     map, terrain, detail, table, world, shapes, splines, vegetation, vegetationModels,
+                    SectorIndex<ScatterInstance>.Of(vegetationModels.Instances, p => p.Position),
                     navMesh, archetypes, models, environment);
             });
 
@@ -555,6 +573,7 @@ public partial class MapTabView : UserControl
         _inspector.Archetypes = _archetypes;
         _inspector.LoadLinkCatalog(world.Entities);
         _overlaysDirty = true;
+        _overlaySources = null;
         StartHistory();
         CancelDrag();
         _selection.Clear();

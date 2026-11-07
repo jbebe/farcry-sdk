@@ -84,6 +84,9 @@ public readonly record struct MaterialSurface
     /// </summary>
     public bool Billboard { get; init; }
 
+    /// <summary>Drawn with the engine's grass shader, which the map draws only near the camera.</summary>
+    public bool Grass { get; init; }
+
     /// <summary>The highlight's colour pair, weighted per template. Kept as authored and never capped
     /// - 466 retail materials run past 1 - because the renderer tames it instead.</summary>
     public Vector3 SpecularBase { get; init; }
@@ -787,6 +790,7 @@ public static class WorldModels
             MaskPath = TextureSlot(material, "MaskTexture1"),
             Alpha = AlphaOf(material),
             Billboard = BoolProperty(material, "Billboard"),
+            Grass = material.Template.Equals("Grass", StringComparison.OrdinalIgnoreCase),
             SpecularBase = specularBase,
             SpecularColour = specular,
             SpecularPower = Math.Clamp(ScalarProperty(material, "SpecularPower") ?? 0f, 0f, 128f),

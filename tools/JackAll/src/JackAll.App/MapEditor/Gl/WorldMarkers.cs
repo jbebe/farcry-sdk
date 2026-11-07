@@ -17,10 +17,9 @@ internal static class WorldMarkers
             (EntityCategory.Emitter, MarkerGlyph.Burst, LayerCatalog.Emitters, 0.80f, 0.50f, 0.75f),
         ];
 
-    /// <summary>Refills each category layer from the entities the model layer could not draw. Runs
-    /// only on a marker rebuild, so it costs nothing per frame.</summary>
-    public static void RebuildCategoryMarkers(
-        IEnumerable<WorldEntity> visible, WorldModelSet models, IReadOnlyDictionary<EntityCategory, EntityMarkerLayer> layers)
+    /// <summary>The shown entities the model layer cannot draw, by the category whose markers they get.</summary>
+    public static Dictionary<EntityCategory, List<WorldEntity>> GroupByCategory(
+        IEnumerable<WorldEntity> visible, WorldModelSet models)
     {
         var byCategory = new Dictionary<EntityCategory, List<WorldEntity>>();
         foreach (WorldEntity entity in visible)
@@ -42,7 +41,14 @@ internal static class WorldMarkers
             }
             bucket.Add(entity);
         }
+        return byCategory;
+    }
 
+    /// <summary>Refills each category layer from where its entities stand now.</summary>
+    public static void FillCategoryMarkers(
+        IReadOnlyDictionary<EntityCategory, List<WorldEntity>> byCategory,
+        IReadOnlyDictionary<EntityCategory, EntityMarkerLayer> layers)
+    {
         foreach ((EntityCategory category, _, _, float r, float g, float b) in DrawnCategories)
         {
             if (!layers.TryGetValue(category, out EntityMarkerLayer? layer))

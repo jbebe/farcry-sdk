@@ -2,11 +2,8 @@ using OpenTK.Graphics.OpenGL4;
 
 namespace JackAll.App.MapEditor.Gl;
 
-/// <summary>
-/// Routes driver diagnostics to the debug output, and driver errors to the crash log. Synchronous
-/// only in Debug builds, where the call stack pointing at the offending call is the whole value;
-/// elsewhere the driver keeps its own thread.
-/// </summary>
+/// <summary>Routes driver diagnostics to the debug output, and driver errors to the crash log;
+/// synchronously only in Debug builds.</summary>
 public static class GlDebug
 {
     /// <summary>Held for the lifetime of the process: the driver keeps the thunk, and a collected

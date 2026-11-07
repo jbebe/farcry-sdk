@@ -1,4 +1,5 @@
 using JackAll.App.MapEditor.Gl;
+using JackAll.Tools.Sdat;
 using JackAll.Tools.World;
 using OpenTK.Graphics.OpenGL4;
 
@@ -9,25 +10,25 @@ public partial class MapTabView
 {
     private void Viewport_Render(TimeSpan delta)
     {
-        _stats ??= new FrameStats();
+        FrameStats stats = _stats ??= new FrameStats();
 
         // Still the previous frame's decision, so it says whether this frame was asked for as part of a run.
         bool continuous = Viewport.RenderContinuously;
-        _stats.BeginFrame();
+        stats.BeginFrame();
         try
         {
-            DrawFrame(delta);
+            DrawFrame(delta, stats);
         }
         finally
         {
-            if (_stats.EndFrame(delta, continuous) is { } line)
+            if (stats.EndFrame(delta, continuous) is { } line)
             {
                 ShowStats(line);
             }
         }
     }
 
-    private void DrawFrame(TimeSpan delta)
+    private void DrawFrame(TimeSpan delta, FrameStats stats)
     {
         // A viewport that only redraws on demand hands out the whole idle gap as its delta, and
         // advancing the camera or the clock by seconds at once flings both.
@@ -64,8 +65,10 @@ public partial class MapTabView
             _vegetationModelLayer?.Dispose();
             _vegetationModelLayer = new EntityModelLayer(
                 pending.VegetationModels.Models, _vm is { } vegVm ? vegVm.ReadByPath : _ => null,
-                ScatterCapacity(pending.VegetationModels));
-            _vegetationInstances = pending.VegetationModels.Instances;
+                ScatterCapacity(pending.VegetationModels))
+            {
+                Scatter = pending.VegetationBySector,
+            };
             _vegetationDirty = true;
             _navMeshLayer?.Dispose();
             _navMeshLayer = new NavMeshLayer(pending.NavMesh);
@@ -86,7 +89,7 @@ public partial class MapTabView
             _modelSet = pending.Models;
             _modelLayer = new EntityModelLayer(
                 pending.Models, _vm is { } modelVm ? modelVm.ReadByPath : _ => null, WorldMarkers.MarkerColour);
-            _markersDirty = true;
+            _visibleDirty = true;
             _heightTexture = new HeightTexture(pending.Terrain);
             _surfaceTexture = new SurfaceTypeTexture(pending.Terrain);
             _terrainTextures = _vm is { } vm
@@ -101,40 +104,72 @@ public partial class MapTabView
                 : "No terrain textures loaded.";
         }
 
+        ApplyFlyKeys(step);
+        float aspect = (float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1));
+        OpenTK.Mathematics.Matrix4 viewProjection = _camera.View() * _camera.Projection(aspect);
+
         long rebuildStart = System.Diagnostics.Stopwatch.GetTimestamp();
 
-        // The model tiers are keyed to the camera's sector, so crossing a boundary re-buckets the
-        // instance streams the same way a mission-layer toggle does.
-        var sector = ((int)MathF.Floor(_camera.Position.X / WorldModels.SectorMeters),
-            (int)MathF.Floor(_camera.Position.Y / WorldModels.SectorMeters));
-        if (sector != _cameraSector)
+        // The model tiers are keyed to the camera's sector, so crossing a boundary refills the
+        // instance streams from the ring around the new one, and a turn from the sectors now in view.
+        var sector = WorldModels.SectorOf((System.Numerics.Vector3)_camera.Position);
+        var view = new SectorView(viewProjection,
+            (_terrain?.MinHeight ?? 0) * SdatSectorFile.MetersPerUnit - DeepestModel,
+            (_terrain?.MaxHeight ?? 0) * SdatSectorFile.MetersPerUnit + TallestModel,
+            SceneLighting.Demo ? CasterMargin : OverhangMargin);
+        UInt128 inView = view.Mask(sector, DrawRing);
+        bool crossed = sector != _cameraSector;
+        if (crossed)
+        {
+            _waterLayer?.SetVisible(_camera.Position);
+        }
+        if (crossed || inView != _sectorsInView)
         {
             _cameraSector = sector;
-            _markersDirty = true;
+            _sectorsInView = inView;
+            _modelsDirty = true;
             _vegetationDirty = true;
-            _waterLayer?.SetVisible(_camera.Position);
+        }
+
+        // Grass is cut off by distance, so it follows the camera inside a sector as well.
+        if ((_camera.Position - _grassStreamedFrom).LengthSquared > GrassStep * GrassStep)
+        {
+            _vegetationDirty = true;
         }
 
         if (_vegetationDirty && _vegetationModelLayer is { } vegetationModels)
         {
             _vegetationDirty = false;
-            vegetationModels.SetVisible(_vegetationInstances, _camera.Position, DrawRing);
+            _grassStreamedFrom = _camera.Position;
+            vegetationModels.Stream(_camera.Position, DrawRing, view);
         }
 
         RebuildOverlays();
 
-        // Toggling a mission layer changes which markers exist, so the instance stream is rebuilt
-        // here where a GL context is current rather than on the click.
-        if (_markersDirty)
+        // Rebuilt here, where a GL context is current, rather than on the click that caused it.
+        bool markersMoved = _visibleDirty || _moved.Count > 0;
+        if (_visibleDirty)
         {
-            _markersDirty = false;
-            _modelLayer?.SetVisible(_hierarchy.VisibleEntities, _camera.Position, DrawRing);
-            if (_modelSet is { } models && _categoryLayers.Count > 0)
-            {
-                WorldMarkers.RebuildCategoryMarkers(_hierarchy.VisibleEntities, models, _categoryLayers);
-            }
+            _visibleDirty = false;
+            _modelLayer?.SetVisible(_hierarchy.VisibleEntities);
+            _markerGroups = _modelSet is { } models ? WorldMarkers.GroupByCategory(_hierarchy.VisibleEntities, models) : [];
+            _modelsDirty = true;
         }
-        _stats!.Rebuilt(System.Diagnostics.Stopwatch.GetElapsedTime(rebuildStart));
+        if (_moved.Count > 0)
+        {
+            _modelsDirty |= _modelLayer?.Moved(_moved) == true;
+            _moved.Clear();
+        }
+        if (_modelsDirty)
+        {
+            _modelsDirty = false;
+            _modelLayer?.Stream(_camera.Position, DrawRing, view);
+        }
+        if (markersMoved)
+        {
+            WorldMarkers.FillCategoryMarkers(_markerGroups, _categoryLayers);
+        }
+        stats.Rebuilt(System.Diagnostics.Stopwatch.GetElapsedTime(rebuildStart));
 
         int width = Viewport.FrameBufferWidth;
         int height = Viewport.FrameBufferHeight;
@@ -160,10 +195,6 @@ public partial class MapTabView
         _targets ??= new RenderTargets();
         _targets.Resize(width, height, SceneLighting.Demo);
         _post ??= new PostProcess();
-
-        ApplyFlyKeys(step);
-        float aspect = (float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1));
-        OpenTK.Mathematics.Matrix4 viewProjection = _camera.View() * _camera.Projection(aspect);
 
         SceneLighting.Exposure = (float)ExposureSlider.Value;
         bool drawEntityModels = LayerCatalog.Entities.IsVisible;
@@ -313,6 +344,19 @@ public partial class MapTabView
     /// viewport can be seconds between frames, and neither is meant to cover that in one go.</summary>
     private const float MaxStep = 0.1f;
 
+    /// <summary>How far past its own sector a model may reach; the largest buildings overhang about this much.</summary>
+    private const float OverhangMargin = 32f;
+
+    /// <summary>The same with shadows on, where a caster out of view still darkens what is in it.</summary>
+    private const float CasterMargin = 96f;
+
+    /// <summary>The highest a model reaches above the ground, and the deepest one sinks below it.</summary>
+    private const float TallestModel = 100f;
+    private const float DeepestModel = 10f;
+
+    /// <summary>How far the camera moves before the grass is cut off again around where it now is.</summary>
+    private const float GrassStep = 4f;
+
     /// <summary>How far out, in sectors, a model or a scatter placement still draws as geometry.
     /// The far tier is the presentation's; off it, only the near ring draws.</summary>
     private static int DrawRing
@@ -332,7 +376,7 @@ public partial class MapTabView
         }
 
         SceneLighting.Demo = demo;
-        _markersDirty = true;
+        _modelsDirty = true;
         _vegetationDirty = true;
 
         // The occlusion and sky layers own nothing but shader programs, so they are kept: disposing

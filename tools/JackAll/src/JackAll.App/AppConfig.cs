@@ -27,6 +27,8 @@ public sealed class AppConfig
 
     public static string ConfigPath => Path.Combine(ExeDir, "config.ini");
 
+    public static string CrashLogPath => Path.Combine(ExeDir, "crash.log");
+
     /// <summary>Fixed by design — the staging area is not something a user should have to locate.</summary>
     public static string WorkspaceDir => Path.Combine(ExeDir, "workspace");
 

@@ -87,6 +87,9 @@ public sealed class EntityModelLayer : IDisposable
         public required int[] MaskHandles;
         public required int[] BloodHandles;
 
+        /// <summary>Whether its maps have been queued for decoding.</summary>
+        public bool Requested;
+
         public static Tier Of(IReadOnlyList<MaterialRange> ranges) => new()
         {
             Ranges = ranges,
@@ -116,6 +119,9 @@ public sealed class EntityModelLayer : IDisposable
         public int PointedAt = -1;
         /// <summary>Model-space direction the card looks, or zero when the mesh is not a billboard.</summary>
         public System.Numerics.Vector2 Facing;
+
+        /// <summary>Drawn only within <see cref="GrassDistance"/>.</summary>
+        public bool Grass;
     }
 
     /// <summary>What an entity contributes besides its live position and yaw: the meshes its
@@ -130,6 +136,10 @@ public sealed class EntityModelLayer : IDisposable
     /// <summary>Vertex and index buffers per baked array; a kit look shares its part's.</summary>
     private readonly Dictionary<float[], (int Vertex, int Index)> _buffers = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<WorldEntity, Row> _rows;
+
+    /// <summary>The shown entities with meshes, by the sector each was filed under.</summary>
+    private readonly SectorIndex<WorldEntity> _entities = new();
+    private readonly Dictionary<WorldEntity, (int X, int Y)> _filedAt = [];
     private readonly Func<string, byte[]?> _readByPath;
     /// <summary>Diffuse handle per path: -1 decoding, 0 failed for good, else the GL texture.</summary>
     private readonly Dictionary<string, int> _textures = new(StringComparer.OrdinalIgnoreCase);
@@ -239,6 +249,7 @@ public sealed class EntityModelLayer : IDisposable
                 Staging = new float[capacity[i] * InstanceStride],
                 Wanted = capacity[i],
                 Facing = model.BillboardFacing ?? System.Numerics.Vector2.Zero,
+                Grass = model.MaterialRanges.Any(r => r.Surface.Grass),
             };
             if (mesh.FineTier.Blended.Length > 0 || mesh.CoarseTier.Blended.Length > 0)
             {
@@ -505,52 +516,116 @@ public sealed class EntityModelLayer : IDisposable
         GL.Uniform1(_program.UniformLocation("bloodMap"), 3);
     }
 
-    /// <summary>
-    /// Re-buckets the visible entities into per-mesh fine/coarse instance streams around the
-    /// camera's sector and uploads them, returning the entities left for billboard markers: the
-    /// mesh-less plus everything beyond the coarse ring. Fine instances pack forward from the
-    /// front of each mesh's staging array, coarse ones backward from its end, so one pass fills
-    /// both without counting first.
-    /// </summary>
-    /// <summary>
-    /// The same visibility pass over bare placements. Only the ones inside <paramref name="ring"/>
-    /// reach a buffer, so a world scattering millions of them streams the few thousand around the
-    /// camera.
-    /// </summary>
-    public void SetVisible(ScatterInstance[] scatter, Vector3 cameraPosition, int ring)
-    {
-        int cameraX = (int)MathF.Floor(cameraPosition.X / WorldModels.SectorMeters);
-        int cameraY = (int)MathF.Floor(cameraPosition.Y / WorldModels.SectorMeters);
+    /// <summary>The scatter placements this layer draws, by sector; null for the entity layer.</summary>
+    public SectorIndex<ScatterInstance>? Scatter { get; init; }
 
+    /// <summary>How far from the camera scatter grass draws.</summary>
+    private const float GrassDistance = 100f;
+
+    /// <summary>
+    /// Re-buckets what stands within <paramref name="ring"/> sectors of the camera's, in sectors the
+    /// view reaches, into per-mesh fine/coarse instance streams and uploads them. Fine instances
+    /// pack forward from the front of each mesh's staging array, coarse ones backward from its end,
+    /// so one pass fills both without counting first.
+    /// </summary>
+    public void Stream(Vector3 cameraPosition, int ring, SectorView view)
+    {
         foreach (Mesh mesh in _meshes)
         {
+            if (mesh.Wanted * InstanceStride > mesh.Staging.Length)
+            {
+                // Doubled, so pasting copies one at a time does not reallocate on every paste. The
+                // buffer keeps its name, so the VAO's bindings stay valid.
+                int capacity = mesh.Wanted * 2;
+                mesh.Staging = new float[capacity * InstanceStride];
+                GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.InstanceBuffer);
+                GL.BufferData(BufferTarget.ArrayBuffer, capacity * InstanceStrideBytes,
+                    IntPtr.Zero, BufferUsageHint.DynamicDraw);
+            }
+
             mesh.FineCount = 0;
             mesh.CoarseCount = 0;
             mesh.FineFloats = 0;
             mesh.CoarseFloats = mesh.Staging.Length;
         }
 
-        foreach (ScatterInstance instance in scatter)
+        (int X, int Y) camera = WorldModels.SectorOf((System.Numerics.Vector3)cameraPosition);
+        foreach ((List<WorldEntity> entities, bool fine) in InView(_entities))
         {
-            int distance = SectorDistance(instance.Position, cameraX, cameraY);
-            if (distance > ring)
+            foreach (WorldEntity entity in entities)
             {
-                continue;
+                Row row = _rows[entity];
+                System.Numerics.Vector3 angles = entity.Angles * (MathF.PI / 180f);
+                foreach (int model in row.Models)
+                {
+                    Place(_meshes[model], entity.Position!.Value, angles, fine, row.R, row.G, row.B);
+                }
             }
+        }
 
-            Place(_meshes[instance.Model], instance.Position, System.Numerics.Vector3.Zero,
-                distance <= WorldModels.FineRadius, 1f, 1f, 1f);
+        var eye = new System.Numerics.Vector2(cameraPosition.X, cameraPosition.Y);
+        foreach ((List<ScatterInstance> placements, bool fine) in InView(Scatter))
+        {
+            foreach (ScatterInstance placement in placements)
+            {
+                Mesh mesh = _meshes[placement.Model];
+                if (mesh.Grass && System.Numerics.Vector2.DistanceSquared(
+                        eye, new System.Numerics.Vector2(placement.Position.X, placement.Position.Y)) > GrassDistance * GrassDistance)
+                {
+                    continue;
+                }
+                Place(mesh, placement.Position, System.Numerics.Vector3.Zero, fine, 1f, 1f, 1f);
+            }
         }
 
         UploadStaging();
+
+        IEnumerable<(List<T> Items, bool Fine)> InView<T>(SectorIndex<T>? index)
+            => (index?.Ring(camera, ring) ?? [])
+                .Where(s => view.Sees(s.Sector))
+                .Select(s => (s.Items, s.Distance <= WorldModels.FineRadius));
     }
 
-    /// <summary>Chebyshev distance in sectors, which is what makes a ring a square box of sectors
-    /// around the camera's own rather than a circle.</summary>
-    private static int SectorDistance(System.Numerics.Vector3 position, int cameraX, int cameraY)
+    /// <summary>Files the shown entities under their sectors for <see cref="Stream"/>. Needed when
+    /// which entities are shown changes; a move needs only <see cref="Moved"/>.</summary>
+    public void SetVisible(IEnumerable<WorldEntity> visible)
     {
-        (int x, int y) = WorldModels.SectorOf(position);
-        return Math.Max(Math.Abs(x - cameraX), Math.Abs(y - cameraY));
+        _entities.Clear();
+        _filedAt.Clear();
+        foreach (WorldEntity entity in visible)
+        {
+            if (_rows.ContainsKey(entity))
+            {
+                File(entity, WorldModels.SectorOf(entity.Position!.Value));
+            }
+        }
+    }
+
+    /// <summary>Re-files shown entities whose placement changed; true when any of them draws here.</summary>
+    public bool Moved(IEnumerable<WorldEntity> entities)
+    {
+        bool drawn = false;
+        foreach (WorldEntity entity in entities)
+        {
+            if (!_filedAt.TryGetValue(entity, out (int X, int Y) filed))
+            {
+                continue;
+            }
+            drawn = true;
+            (int X, int Y) sector = WorldModels.SectorOf(entity.Position!.Value);
+            if (sector != filed)
+            {
+                _entities.Remove(filed, entity);
+                File(entity, sector);
+            }
+        }
+        return drawn;
+    }
+
+    private void File(WorldEntity entity, (int X, int Y) sector)
+    {
+        _entities.Add(sector, entity);
+        _filedAt[entity] = sector;
     }
 
     /// <summary>Writes one placement into a mesh's staging, fine from the front and coarse from the
@@ -592,7 +667,10 @@ public sealed class EntityModelLayer : IDisposable
         {
             mesh.PointedAt = -1;
             mesh.CoarseStart = mesh.CoarseFloats / InstanceStride;
-            GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.InstanceBuffer);
+            if (mesh.FineCount + mesh.CoarseCount > 0)
+            {
+                GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.InstanceBuffer);
+            }
             if (mesh.FineCount > 0)
             {
                 GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero,
@@ -625,55 +703,13 @@ public sealed class EntityModelLayer : IDisposable
         return row.Models;
     }
 
-    public List<WorldEntity> SetVisible(List<WorldEntity> visible, Vector3 cameraPosition, int ring)
-    {
-        int cameraX = (int)MathF.Floor(cameraPosition.X / WorldModels.SectorMeters);
-        int cameraY = (int)MathF.Floor(cameraPosition.Y / WorldModels.SectorMeters);
-
-        foreach (Mesh mesh in _meshes)
-        {
-            if (mesh.Wanted * InstanceStride > mesh.Staging.Length)
-            {
-                // Doubled, so pasting copies one at a time does not reallocate on every paste. The
-                // buffer keeps its name, so the VAO's bindings stay valid.
-                int capacity = mesh.Wanted * 2;
-                mesh.Staging = new float[capacity * InstanceStride];
-                GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.InstanceBuffer);
-                GL.BufferData(BufferTarget.ArrayBuffer, capacity * InstanceStrideBytes,
-                    IntPtr.Zero, BufferUsageHint.DynamicDraw);
-            }
-
-            mesh.FineCount = 0;
-            mesh.CoarseCount = 0;
-            mesh.FineFloats = 0;
-            mesh.CoarseFloats = mesh.Staging.Length;
-        }
-
-        var leftover = new List<WorldEntity>(visible.Count);
-        foreach (WorldEntity entity in visible)
-        {
-            System.Numerics.Vector3 position = entity.Position!.Value;
-            int distance = SectorDistance(position, cameraX, cameraY);
-            if (distance > ring || !_rows.TryGetValue(entity, out Row row))
-            {
-                leftover.Add(entity);
-                continue;
-            }
-
-            bool fine = distance <= WorldModels.FineRadius;
-            System.Numerics.Vector3 angles = entity.Angles * (MathF.PI / 180f);
-            foreach (int model in row.Models)
-            {
-                Place(_meshes[model], position, angles, fine, row.R, row.G, row.B);
-            }
-        }
-
-        UploadStaging();
-        return leftover;
-    }
-
     private void RequestTextures(Tier tier)
     {
+        if (tier.Requested)
+        {
+            return;
+        }
+        tier.Requested = true;
         foreach (MaterialRange range in tier.Ranges)
         {
             // Every map, because the mask is what decides how much of the tint and of layer 2

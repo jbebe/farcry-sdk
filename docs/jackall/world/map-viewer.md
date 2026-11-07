@@ -62,6 +62,10 @@ outline is the edge of the walkable area.
 real water and a continuous redraw. Leave it off while you work, the view is faster without it.
 **Exposure** brightens or darkens the scene.
 
+The line at the top right of the view is what drawing it costs: the frame rate and the slowest
+frame, CPU and GPU time per frame, draw calls, triangles, time spent rebuilding what is drawn, and
+video memory in use. Grass is drawn up to 100 m from the camera.
+
 ## Find an object
 
 Type into the hierarchy's filter to keep only the objects whose name or archetype matches. Here
