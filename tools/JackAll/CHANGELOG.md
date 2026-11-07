@@ -32,7 +32,7 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - **The Map tab needs about half the video memory.** The navmesh is read the first time its layer
   is shown rather than with the map, which also loads the map faster, and the surface types the
   first time they are shown. Each model is uploaded, in a more compact form, only once it comes near
-  the camera, and the ones longest out of reach are let go.
+  the camera, and the models and textures longest out of reach are let go.
 
 ## [1.7.0] - 2026-10-28
 

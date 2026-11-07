@@ -72,9 +72,13 @@ public sealed class EntityModelLayer : IDisposable
     private const int PackedStride = 36;
 
     /// <summary>The GPU memory past which meshes no stream placed lately are released.</summary>
-    private const long MeshBudget = 64 << 20;
+    private const long MeshBudget = 32 << 20;
 
     private const long MeshUploadBudgetPerFrame = 4 << 20;
+
+    /// <summary>The GPU memory past which textures no stream uses are released.</summary>
+    private const long TextureBudget = 64 << 20;
+
     private const int InstanceStrideBytes = InstanceStride * sizeof(float);
     private const int MaxDecoders = 2;
     private const long UploadBudgetPerFrame = 8 << 20;
@@ -166,6 +170,9 @@ public sealed class EntityModelLayer : IDisposable
     private readonly Func<string, byte[]?> _readByPath;
     /// <summary>Diffuse handle per path: -1 decoding, 0 failed for good, else the GL texture.</summary>
     private readonly Dictionary<string, int> _textures = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Each uploaded texture's size, and the stream that last placed a mesh drawing it.</summary>
+    private readonly Dictionary<string, (long Bytes, int LastStreamed)> _textureUse = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentQueue<string> _requests = new();
     private readonly ConcurrentQueue<(string Path, Decoded? Texture)> _decoded = new();
     private int _activeDecoders;
@@ -571,9 +578,12 @@ public sealed class EntityModelLayer : IDisposable
             {
                 mesh.LastStreamed = _stream;
                 _waiting += mesh.Vao == 0 ? 1 : 0;
+                MarkTextures(mesh.FineCount > 0 ? mesh.FineTier : null);
+                MarkTextures(mesh.CoarseCount > 0 ? mesh.CoarseTier : null);
             }
         }
         Evict();
+        EvictTextures();
         UploadStaging();
 
         IEnumerable<(List<T> Items, bool Fine)> InRing<T>(SectorIndex<T>? index)
@@ -712,6 +722,55 @@ public sealed class EntityModelLayer : IDisposable
             GL.BufferData(BufferTarget.ElementArrayBuffer, (int)indexBytes, model.Indices, BufferUsageHint.StaticDraw);
         }
         return new Geometry(vertex, index, shortIndices, packed.Length + indexBytes);
+    }
+
+    private void MarkTextures(Tier? tier)
+    {
+        foreach (MaterialRange range in tier?.Ranges ?? [])
+        {
+            foreach (string? path in (string?[])[range.Surface.DiffuseTexturePath, range.Surface.SecondDiffusePath,
+                         range.Surface.MaskPath, range.Surface.BloodPath])
+            {
+                if (path is not null && _textureUse.TryGetValue(path, out (long Bytes, int LastStreamed) use))
+                {
+                    _textureUse[path] = (use.Bytes, _stream);
+                }
+            }
+        }
+    }
+
+    /// <summary>Releases the textures no stream has used for longest until the layer fits its
+    /// budget. A released map is read again the next time a mesh drawing it is streamed.</summary>
+    private void EvictTextures()
+    {
+        if (TextureBytesResident <= TextureBudget)
+        {
+            return;
+        }
+        bool evicted = false;
+        foreach ((string path, (long bytes, _)) in _textureUse.Where(u => u.Value.LastStreamed != _stream)
+                     .OrderBy(u => u.Value.LastStreamed).ToList())
+        {
+            GL.DeleteTexture(_textures[path]);
+            _textures.Remove(path);
+            _textureUse.Remove(path);
+            TextureBytesResident -= bytes;
+            evicted = true;
+            if (TextureBytesResident <= TextureBudget)
+            {
+                break;
+            }
+        }
+        if (!evicted)
+        {
+            return;
+        }
+        _texturesChanged = true;
+        foreach (Mesh mesh in _meshes)
+        {
+            mesh.FineTier.Requested = false;
+            mesh.CoarseTier.Requested = false;
+        }
     }
 
     /// <summary>Releases the meshes no stream has placed for longest until the layer fits its budget.</summary>
@@ -925,7 +984,12 @@ public sealed class EntityModelLayer : IDisposable
         while (TextureBytesResident - uploadedBefore < UploadBudgetPerFrame
             && _decoded.TryDequeue(out (string Path, Decoded? Texture) item))
         {
+            long before = TextureBytesResident;
             _textures[item.Path] = item.Texture is { } texture ? Upload(texture) : 0;
+            if (_textures[item.Path] > 0)
+            {
+                _textureUse[item.Path] = (TextureBytesResident - before, _stream);
+            }
             _texturesChanged = true;
         }
         if (_texturesChanged)
