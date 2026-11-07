@@ -10,24 +10,16 @@ namespace JackAll.App.MapEditor.Gl;
 /// </summary>
 public sealed class SurfaceTypeTexture : IDisposable
 {
-    public int Handle { get; }
+    private readonly WorldTerrain _terrain;
+
+    /// <summary>The id map, uploaded the first time surface types are drawn; 0 until then.</summary>
+    private int _handle;
+
     public int PaletteHandle { get; }
-    public int Side { get; }
 
     public SurfaceTypeTexture(WorldTerrain terrain)
     {
-        Side = terrain.Side;
-
-        Handle = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2D, Handle);
-        GL.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
-        GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.R8, Side, Side, 0,
-            PixelFormat.Red, PixelType.UnsignedByte, terrain.SurfaceTypes);
-        // Nearest everywhere: interpolating between two ids would invent a third.
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        _terrain = terrain;
 
         var colours = new byte[256 * 3];
         for (int id = 0; id < 256; id++)
@@ -79,17 +71,38 @@ public sealed class SurfaceTypeTexture : IDisposable
         return ((byte)(r * 255), (byte)(g * 255), (byte)(b * 255));
     }
 
-    public void Bind(TextureUnit surfaceUnit, TextureUnit paletteUnit)
+    /// <summary>Binds the id map and the palette; until the id map is first wanted, the palette also
+    /// stands in for it, so the unmet sampler still reads a complete texture.</summary>
+    public void Bind(TextureUnit surfaceUnit, TextureUnit paletteUnit, bool tinted)
     {
+        if (tinted && _handle == 0)
+        {
+            _handle = UploadIds();
+        }
         GL.ActiveTexture(surfaceUnit);
-        GL.BindTexture(TextureTarget.Texture2D, Handle);
+        GL.BindTexture(TextureTarget.Texture2D, _handle != 0 ? _handle : PaletteHandle);
         GL.ActiveTexture(paletteUnit);
         GL.BindTexture(TextureTarget.Texture2D, PaletteHandle);
     }
 
+    private int UploadIds()
+    {
+        int handle = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2D, handle);
+        GL.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
+        GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.R8, _terrain.Side, _terrain.Side, 0,
+            PixelFormat.Red, PixelType.UnsignedByte, _terrain.SurfaceTypes);
+        // Nearest everywhere: interpolating between two ids would invent a third.
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        return handle;
+    }
+
     public void Dispose()
     {
-        GL.DeleteTexture(Handle);
+        GL.DeleteTexture(_handle);
         GL.DeleteTexture(PaletteHandle);
     }
 }

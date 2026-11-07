@@ -23,7 +23,6 @@ public partial class MapTabView : UserControl
         Fc2World World, IReadOnlyList<WorldShape> Shapes, IReadOnlyList<WorldShape> Splines,
         IReadOnlyList<VegetationInstance> Vegetation, ScatterSet VegetationModels,
         SectorIndex<ScatterInstance> VegetationBySector,
-        NavMesh NavMesh,
         ArchetypeIndex Archetypes, WorldModelSet Models, WorldEnvironment Environment);
 
     private readonly SelectionSet _selection = new();
@@ -104,6 +103,10 @@ public partial class MapTabView : UserControl
     private bool _vegetationDirty;
 
     private NavMeshLayer? _navMeshLayer;
+
+    /// <summary>A navmesh read off the UI thread, waiting for the next frame to upload it.</summary>
+    private NavMesh? _loadedNavMesh;
+    private bool _navMeshLoading;
     private EntityMarkerLayer? _lightLayer;
 
     /// <summary>One marker layer per mesh-less category, each with its own glyph and its own toggle
@@ -266,7 +269,6 @@ public partial class MapTabView : UserControl
                 ScatterSet vegetationModels = WorldVegetation.Split(
                     scatter, WorldVegetation.ResourcesById(vm.AllKnownPaths), vm.ReadByPath, progress);
                 IReadOnlyList<VegetationInstance> vegetation = vegetationModels.Markers;
-                NavMesh navMesh = WorldNavMesh.Load(map, vm.ReadByPath, progress);
                 // The library single-player reads, and the one a save stages into - see
                 // docs/docs/engine-internals/entity-instancing.md.
                 ArchetypeIndex archetypes = vm.ArchetypesOf(map.Name, progress: progress).GetAwaiter().GetResult();
@@ -274,7 +276,7 @@ public partial class MapTabView : UserControl
                 return new PendingLoad(
                     map, terrain, detail, table, world, shapes, splines, vegetation, vegetationModels,
                     SectorIndex<ScatterInstance>.Of(vegetationModels.Instances, p => p.Position),
-                    navMesh, archetypes, models, environment);
+                    archetypes, models, environment);
             });
 
             WorldTerrain terrain = loaded.Terrain;

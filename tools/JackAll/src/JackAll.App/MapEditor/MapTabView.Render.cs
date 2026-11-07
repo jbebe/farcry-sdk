@@ -70,8 +70,9 @@ public partial class MapTabView
             };
             _vegetationDirty = true;
             _navMeshLayer?.Dispose();
-            _navMeshLayer = new NavMeshLayer(pending.NavMesh);
-            LayerCatalog.NavMesh.Status = WorldMarkers.Describe(pending.NavMesh);
+            _navMeshLayer = null;
+            _loadedNavMesh = null;
+            LayerCatalog.NavMesh.Status = "Read the first time it is shown.";
             // Sized for every positioned entity, because which category an entity lands in is not
             // known until the model layer has had its pass; the live counts do the real limiting.
             int categoryCapacity = pending.World.Entities.Count(e => e.Position is not null);
@@ -130,6 +131,19 @@ public partial class MapTabView
         }
 
         RebuildOverlays();
+
+        if (LayerCatalog.NavMesh.IsVisible && _navMeshLayer is null)
+        {
+            if (_loadedNavMesh is { } navMesh)
+            {
+                _navMeshLayer = new NavMeshLayer(navMesh);
+                _loadedNavMesh = null;
+            }
+            else
+            {
+                LoadNavMesh();
+            }
+        }
 
         // Rebuilt here, where a GL context is current, rather than on the click that caused it.
         bool markersMoved = _visibleDirty || _moved.Count > 0;
@@ -456,6 +470,26 @@ public partial class MapTabView
 
     private OpenTK.Mathematics.Vector3 Up()
         => OpenTK.Mathematics.Vector3.Cross(_camera.Right, _camera.Forward);
+
+    /// <summary>Reads the loaded map's navmesh off the UI thread; the frame after it arrives uploads it.</summary>
+    private async void LoadNavMesh()
+    {
+        if (_navMeshLoading || _vm is not { } vm || _loadedMap is not { } map)
+        {
+            return;
+        }
+
+        _navMeshLoading = true;
+        LayerCatalog.NavMesh.Status = $"Reading {map.Name} navmesh";
+        NavMesh mesh = await Task.Run(() => WorldNavMesh.Load(map, vm.ReadByPath));
+        _navMeshLoading = false;
+        if (map == _loadedMap)
+        {
+            _loadedNavMesh = mesh;
+            LayerCatalog.NavMesh.Status = WorldMarkers.Describe(mesh);
+        }
+        Viewport.InvalidateVisual();
+    }
 
     private void ShowStats(string line)
     {

@@ -427,7 +427,7 @@ public sealed class TerrainMesh3D : IDisposable
         _shadow.Apply();
         _occlusion.Apply();
         _heights.Bind(TextureUnit.Texture0);
-        _surfaces.Bind(TextureUnit.Texture1, TextureUnit.Texture2);
+        _surfaces.Bind(TextureUnit.Texture1, TextureUnit.Texture2, options.TintBySurfaceType);
         _textures?.Bind(TextureUnit.Texture3, TextureUnit.Texture4, TextureUnit.Texture5,
             TextureUnit.Texture6, TextureUnit.Texture7, TextureUnit.Texture8);
         GL.BindVertexArray(_vao);
