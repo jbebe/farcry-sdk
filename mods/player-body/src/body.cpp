@@ -138,9 +138,10 @@ namespace {
         }
         if (view == View::Engine) {
             Graphic::LetGo();
-            if (graphic != nullptr && Graphic::Count(graphic) > Graphic::kAvatar && firstPerson) {
-                Graphic::SetVisible(graphic, Graphic::kFullBody, false);
-                Graphic::SetVisible(graphic, Graphic::kAvatar, true);
+            if (graphic != nullptr && Graphic::Count(graphic) > Graphic::kAvatar) {
+                // Out of first person the engine opens every viewport to the full body but leaves it hidden.
+                Graphic::SetVisible(graphic, Graphic::kFullBody, !firstPerson);
+                Graphic::SetVisible(graphic, Graphic::kAvatar, firstPerson);
             }
         } else {
             Graphic::KeepInWorld(graphic, Graphic::kFullBody);

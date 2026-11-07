@@ -15,10 +15,21 @@ namespace {
     using GetCurrentVehicleFn = void*(__cdecl*)(uint8_t* pawn);
     FCSE::Relocation<GetCurrentVehicleFn> g_currentVehicle{FCSE::Uplay(0x000E7330)};
 
+    // CPawn::ViewModeChanged, __thiscall, found through its lookup of the pawn's graphic component.
+    using ViewModeChangedFn = void(__fastcall*)(uint8_t* pawn, void* unused, bool firstPerson);
+    FCSE::Relocation<ViewModeChangedFn> g_viewModeChanged{FCSE::Pattern(
+        "53 8B 5C 24 08 55 56 57 53 8B F9 E8 ?? ?? ?? ?? 8B 77 08 8B 6E 0C 83 46 08 01 8B CD E8 ?? ?? ?? ?? "
+        "83 3D ?? ?? ?? ?? 00 75 07 33 C9 E8 ?? ?? ?? ?? 68 ?? ?? ?? ?? 8B CD E8")};
+
     PlayerBody::Pawn::TickFn g_tick = nullptr;
 
     void OnInputPass(FCSE_MidHookContext* ctx) {
         g_tick(reinterpret_cast<uint8_t*>(ctx->ecx));
+    }
+
+    void SetFirstPersonBit(uint8_t& flags, bool firstPerson) {
+        flags = firstPerson ? flags | PlayerBody::Pawn::kFirstPerson
+                            : flags & ~PlayerBody::Pawn::kFirstPerson;
     }
 }
 
@@ -37,4 +48,14 @@ uint8_t* PlayerBody::Pawn::Entity(uint8_t* component) {
 
 bool PlayerBody::Pawn::OnFoot(uint8_t* pawn) {
     return g_currentVehicle(pawn) == nullptr;
+}
+
+void PlayerBody::Pawn::SetFirstPerson(uint8_t* pawn, bool firstPerson) {
+    if (!g_viewModeChanged) {
+        FCSE::ApiPointer()->Log("pawn: CPawn::ViewModeChanged was not found");
+        return;
+    }
+    SetFirstPersonBit(Field<uint8_t>(Data(pawn), kDesiredFlags), firstPerson);
+    SetFirstPersonBit(Field<uint8_t>(Data(pawn), kEffectiveFlags), firstPerson);
+    g_viewModeChanged(pawn, nullptr, firstPerson);
 }

@@ -11,6 +11,7 @@ no data layer: it changes nothing on disk, and works on whichever character the 
 | Seen from a camera away from the eye, such as DevTools' free camera: the whole body, head and back included, that does not vanish at 2 m; its arms keep the first-person pose | seen in game |
 | Feet tucked up in the air | built, not seen |
 | A soft round shadow on the ground under the feet, where the engine casts none in first person | seen in game (test range, scripted shots) |
+| Third person on foot, toggled on V: over the right shoulder, the full body with its own animations, weapons and shadow, the game's own crosshair with shots landing on it, and no iron sights | seen in game (test range, scripted shots) |
 
 ## How it works
 
@@ -34,6 +35,11 @@ out of the camera's sight.
   engine's own linear depth: `shaders/shadow.fx` finds each pixel's place in the world and darkens
   it by its distance from the feet, so the circle lies on slopes and steps. The depth texture is
   found by watching a draw that reads it (`engine/scene_depth.cpp`).
+- `third_person.cpp` puts up the engine's `Cameras.Camera.Third` on foot and takes the player out of
+  first person, which brings the full body, its animations and its shadow; its update is taken over
+  (`engine/third_camera.cpp`) to place it over the right shoulder. The HUD is told to draw the game's
+  own crosshair, each shot is aimed from the muzzle at what a bullet would hit under the screen's
+  centre, and the iron sights are let go of. A vehicle puts first person back.
 
 The engine side is in [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md#the-first-person-body).
 
@@ -41,7 +47,8 @@ The engine side is in [first-person aiming](../../docs/docs/engine-internals/fir
 
 `Legs in first person` and `Shadow in first person`, both on by default, under `[Player Body]` in
 `bin\fcse.ini` and on the Mods page. Off, the player is drawn as in retail. The shadow needs the
-engine's linear depth, which `DepthPassQuality` high or above draws.
+engine's linear depth, which `DepthPassQuality` high or above draws. `Third person key`, V by
+default, toggles the view on foot; Off leaves the game in first person.
 
 ## Building and installing
 
@@ -57,3 +64,6 @@ it hooks the same posing functions as Aiming Overhaul.
 - In a vehicle the full body is hidden and the avatar drawn as in retail.
 - Not yet checked in game: cutscenes and other full-body first-person clips, whose legs the plugin
   overrides; ladders; swimming; slopes, where the feet stand on the body's level ground.
+- Third person: the camera goes through walls and rocks; vehicles and cutscenes are not checked; the
+  key is read straight from the keyboard, so it is not in Controls and also toggles while typing in
+  an overlay.

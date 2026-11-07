@@ -740,6 +740,33 @@ and bonus into the weapon's current spread, a float at the weapon state's `+0x64
 `+0x24`), without the time since the last shot. Where a shot goes comes from `SetupShot1st` alone.
 This was read in the server build and the Steam DLL, not yet seen in a running game.
 
+### A shot out of first person
+
+`CWeaponFireBulletStrategy::SetupShot` (`0x10113230`, server `0x08F52220`) picks `SetupShot1st`
+(`0x10112600`) while the pawn's effective flags have the first-person bit `0x80`, and `SetupShot3rd`
+(`0x10112080`, server `0x08F51860`) otherwise. Both are `__thiscall(pawn, origin out, direction out,
+a fourth it passes on)`. The bullet's own ray then goes through a filter on layers `0x5BB`.
+
+`SetupShot3rd` starts the shot at the weapon's own model, its node at the strategy's `+0x50` or its
+whole object, and points it along that model's orientation, the barrel as the third-person animation
+holds it. An AI's shot is turned at its target instead. A player's gets no movement or iron-sight
+noise there; it gets random spread only if the fire data's `+0x1B0` byte is set.
+
+:::info[Seen in a running game]
+With the player out of first person, `SetupShot1st` never ran. Shots at the sand 5 m ahead landed
+about 67 px left of the screen's centre, from a camera 0.55 m right of the head. Aimed in
+`SetupShot3rd` from the muzzle at what lay under the screen's centre, they landed on it. Retail GOG
+v1.03, from Player Body.
+:::
+
+The game's own crosshair is `CGameConfig`'s `HelpCrosshair`, an int at the game profile's `+0xC8`
+(`look_HelpCrosshair` on the console), beside the cheat flags in
+[cheat flags and economy](./cheat-flags-and-economy.md). The HUD finds its `a_crosshair` area in
+`CFCXMainHudUI::InitCrosshairAreas` (`0x1080BB30`) and asks every frame whether to draw it through
+`CGameConfig::UseHelpCrosshair` (`0x10048860`, `__thiscall(difficulty)`, `RET 4`). That returns 0 on
+the hardest difficulty, 3, whatever the setting says, and the setting otherwise. Drawn, it is four
+ticks around the screen's centre, in first and third person alike.
+
 ## Recoil
 
 Each shot, `CWeapon::SWeaponImpl::Shoot` (server `0x08F4C720`) asks the weapons service for the gun's
