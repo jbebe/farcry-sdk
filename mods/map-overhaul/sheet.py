@@ -20,8 +20,9 @@ SOURCE, TARGET, PLACES = sys.argv[1], sys.argv[2], sys.argv[3]
 MODEL = "graphics/objects/mapcompass/sheet/sheet.xbg"
 RIG = "graphics/objects/mapcompass/sheet/sheet_ref.skeleton"
 
-# The sheet at 1:10 000, its left edge where the hand holds the map, centred on the map's height and plane.
-SIZE = 0.512
+# The sheet at 1:10 000 to its trimmed edge, render_map's EDGE, its left edge where the hand holds the map,
+# centred on the map's height and plane.
+SIZE = 0.380
 PANEL = SIZE / 3
 LEFT_EDGE, PLANE = -0.150, 0.061
 CENTRE = [LEFT_EDGE + SIZE / 2, 0.0, PLANE]

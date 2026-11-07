@@ -112,8 +112,11 @@ def sheet_model(game, tools, work):
         shutil.copy(work / "sheet" / "mods" / SHEET / name, out / name)
     run(cli, "xbm", "set", out / "sheet.xbm", f"DiffuseTexture1={SHEET / 'sheet.xbt'}", "-g", game)
 
+    # The paper to its trimmed edge, which lies symmetric about the world's middle.
     png = work / "sheet.png"
-    Image.open(HERE / "assets/world1-sheet.png").convert("RGB").resize((SHEET_TEXTURE,) * 2, Image.LANCZOS).save(png)
+    low, high = render_map.EDGE[0], render_map.WORLD - render_map.EDGE[0]
+    paper = Image.open(HERE / "assets/world1-sheet.png").convert("RGB").crop((low, low, high, high))
+    paper.resize((SHEET_TEXTURE,) * 2, Image.LANCZOS).save(png)
     run(texconv, "-nologo", "-f", "BC1_UNORM", "-m", 0, "-dx9", "-y", "-o", work, png)
     run(cli, "xbt", "build", work / "sheet.dds", "-o", out / "sheet.xbt")
     return json.loads((work / "sheet.json").read_text())

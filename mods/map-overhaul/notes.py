@@ -132,5 +132,5 @@ def draw(ax, entities, scale, symbols, px):
             ring(ax, x, y, 16 * m, px(1.8), key, m)
             hand(ax, x + 22 * m, y + 14 * m, "bus", 30 * symbols, key)
 
-    hand(ax, 1000, 4160 + 260, "G.P. guard post      S.H. safe house      A.D. arms dealer", 40 * symbols, "key")
+    hand(ax, 1000, 4160 + 235, "G.P. guard post      S.H. safe house      A.D. arms dealer", 40 * symbols, "key")
     untangle(ax, scale)

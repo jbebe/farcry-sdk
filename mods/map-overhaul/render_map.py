@@ -23,8 +23,11 @@ import paper
 
 HERE = Path(__file__).resolve().parent
 WORLD = 5120
-# The neat line: the playable square the game's own world map covers, and a sector either side.
+# The neat line: the playable square the game's own world map covers, and a sector either side; and the
+# paper's edge, a margin of 3 cm at 1:10 000 outside it.
 NEAT = (960, 4160)
+MARGIN = 300
+EDGE = (NEAT[0] - MARGIN, NEAT[1] + MARGIN)
 # World X and Y to grid eastings and northings, in metres.
 GRID_ORIGIN = (612000, 1404000)
 DPI = 100
@@ -169,33 +172,17 @@ def margins(ax, px, scale):
     top, bottom = NEAT[1], NEAT[0]
     t = lambda x, y, s, size, style="regular", **kw: text(ax, x, y, s, size * scale, style, halo=None, **kw)
 
-    for y in (top + 700, 150):
-        t(mid, y, "RESTRICTED", 44, "bold")
-    t(mid, top + 520, "LEBOA-SAKO", 130, "bold")
-    t(mid, top + 380, "Scale 1:10 000", 44)
-    t(NEAT[0], top + 520, "SERIES M712", 40, "bold", ha="left")
-    t(NEAT[0], top + 450, "SHEET 3", 40, ha="left")
-    t(NEAT[1], top + 520, "LEBOA-SAKO", 40, "bold", ha="right")
-    t(NEAT[1], top + 450, "EDITION 2-LSD", 40, ha="right")
+    # Above the map: series and sheet, the title and its scale, the edition, and the classification.
+    t(NEAT[0], top + 110, "SERIES M712   SHEET 3", 26, "bold", ha="left")
+    t(mid, top + 115, "LEBOA-SAKO", 72, "bold")
+    t(mid, top + 185, "Scale 1:10 000", 28)
+    t(NEAT[1], top + 110, "EDITION 2-LSD", 26, ha="right")
+    t(mid, top + 255, "RESTRICTED", 30, "bold")
     first = NEAT[0] + (-(GRID_ORIGIN[0] + NEAT[0])) % 1000
-    t(first, top + 110, f"{GRID_ORIGIN[0] + first}m E.", 22)
+    t(first, top + 62, f"{GRID_ORIGIN[0] + first}m E.", 18)
 
-    # Scale bar: 500 metres in hundreds left of zero, a whole kilometre right of it.
-    zero, y, h = mid - 250, bottom - 330, 26
-    for i in range(5):
-        ax.add_patch(Rectangle((zero - 500 + i * 100, y), 100, h, facecolor=INK if i % 2 else PAPER,
-                               edgecolor=INK, linewidth=px(1.5), zorder=20))
-    ax.add_patch(Rectangle((zero, y), 1000, h, facecolor=INK, edgecolor=INK, linewidth=px(1.5), zorder=20))
-    for x, label in ((zero - 500, "500"), (zero, "0"), (zero + 500, "500"), (zero + 1000, "1000")):
-        t(x, y + h + 34, label, 30)
-    t(zero + 1100, y + h / 2, "Metres", 30, ha="left")
-    t(mid, y - 70, "CONTOUR INTERVAL 10 METRES", 32, "bold")
-    t(mid, y - 120, "HEIGHTS IN METRES ABOVE MEAN SEA LEVEL", 28)
-    t(mid, y - 200, "Compiled from air photography 1974. Roads and buildings revised from ground survey 2006.", 24)
-
-    # Legend.
-    x, y = NEAT[0] + 20, bottom - 120
-    t(x, y, "LEGEND", 32, "bold", ha="left")
+    # Below it: the legend in a row, the scale bar, the notes and the classification again.
+    x, y = NEAT[0] + 10, bottom - 90
     rows = [
         ("Road", lambda a, b, c: [ax.plot([a, b], [c, c], color=INK, linewidth=px(6), solid_capstyle="butt"),
                                   ax.plot([a, b], [c, c], color=ROAD, linewidth=px(4), solid_capstyle="butt")]),
@@ -211,27 +198,40 @@ def margins(ax, px, scale):
                                          t(a + 22, c, "238", 18, "italic", ha="left")]),
     ]
     for i, (label, symbol) in enumerate(rows):
-        row_y = y - 70 - i * 72
-        symbol(x, x + 90, row_y)
-        t(x + 120, row_y, label, 26, ha="left")
+        row_x = x + i * 330
+        symbol(row_x, row_x + 70, y)
+        t(row_x + 85, y, label, 20, ha="left")
 
-    # Height bands, highest at the top.
-    x, y = NEAT[1] - 640, bottom - 120
-    t(x, y, "LAYER TINTS", 32, "bold", ha="left")
-    for i, ((upper, colour), lower) in enumerate(zip(BANDS[::-1], [b for b, _ in BANDS[-2::-1]] + [0])):
-        row_y = y - 80 - i * 52
-        ax.add_patch(Rectangle((x, row_y - 22), 70, 44, facecolor=colour, edgecolor=INK, linewidth=px(1)))
-        t(x + 95, row_y, f"{lower}-{upper} m" if i else f"over {lower} m", 24, ha="left")
+    # Scale bar: 500 metres in hundreds left of zero, a whole kilometre right of it.
+    zero, bar_y, h = NEAT[0] + 520, bottom - 185, 18
+    for i in range(5):
+        ax.add_patch(Rectangle((zero - 500 + i * 100, bar_y), 100, h, facecolor=INK if i % 2 else PAPER,
+                               edgecolor=INK, linewidth=px(1.2), zorder=20))
+    ax.add_patch(Rectangle((zero, bar_y), 1000, h, facecolor=INK, edgecolor=INK, linewidth=px(1.2), zorder=20))
+    for bar_x, label in ((zero - 500, "500"), (zero, "0"), (zero + 500, "500"), (zero + 1000, "1000")):
+        t(bar_x, bar_y + h + 20, label, 18)
+    t(zero + 1060, bar_y + h / 2, "Metres", 18, ha="left")
+    t(NEAT[0] + 10, bottom - 245, "CONTOUR INTERVAL 10 METRES. HEIGHTS IN METRES ABOVE MEAN SEA LEVEL.", 18, "bold",
+      ha="left")
+    t(NEAT[0] + 10, bottom - 275, "Compiled from air photography 1974. Roads and buildings revised from ground "
+      "survey 2006.", 16, ha="left")
+    t(mid + 600, bottom - 260, "RESTRICTED", 30, "bold")
 
-    # North points from the foot of one line, their angles drawn larger than they are, as sheets do.
-    x, y = NEAT[1] - 100, bottom - 640
+    # Height bands in a row, lowest on the left.
+    x, y = NEAT[1] - 780, bottom - 185
+    t(x, y + 50, "LAYER TINTS", 18, "bold", ha="left")
+    for i, ((upper, colour), lower) in enumerate(zip(BANDS, [0] + [b for b, _ in BANDS[:-1]])):
+        ax.add_patch(Rectangle((x + i * 96, y - 14), 88, 28, facecolor=colour, edgecolor=INK, linewidth=px(0.8)))
+        t(x + i * 96 + 44, y - 34, f"{lower}-{upper}" if i < len(BANDS) - 1 else f"{lower}+", 15)
+
+    # North points in the corner below and right of the map, their angles drawn larger than they are.
+    x, y = NEAT[1] + 170, bottom - 250
     for angle, label in ((0, "TN"), (-9, "GN"), (-24, "MN")):
         a = np.radians(angle)
-        ax.plot([x, x + 400 * np.sin(a)], [y, y + 400 * np.cos(a)], color=INK, linewidth=px(1.6))
-        t(x + 440 * np.sin(a), y + 440 * np.cos(a), label, 26, "bold")
-    t(x - 60, y - 50, "MN 3°12′ W of GN (2006)", 20)
-    t(x - 60, y - 85, "annual change 8′ E", 20)
-    t(x - 60, y - 120, "Angles not to scale", 20, "italic")
+        ax.plot([x, x + 170 * np.sin(a)], [y, y + 170 * np.cos(a)], color=INK, linewidth=px(1.2))
+        t(x + 190 * np.sin(a), y + 190 * np.cos(a), label, 16, "bold")
+    t(x - 20, y - 22, "MN 3°12′ W of GN", 13)
+    t(x - 20, y - 40, "Angles not to scale", 13, "italic")
 
 
 @functools.cache
