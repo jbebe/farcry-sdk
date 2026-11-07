@@ -8,16 +8,12 @@
 
 namespace PlayerBody::Pawn {
 
-// CPawn's data; in it the body's graphic component, and the effective state with its flags, whose
-// 0x80 is the first-person body, and its look, at the second place while the flags have 0x04.
+// CPawn's data; in it the body's graphic component, and the effective flags, whose 0x80 is the
+// first-person body.
 inline constexpr ptrdiff_t kData = 0x10;
 inline constexpr ptrdiff_t kGraphic = 0x0C;
-inline constexpr ptrdiff_t kEffective = 0x2D0;
-inline constexpr ptrdiff_t kEffectiveFlags = kEffective + 0x04;
+inline constexpr ptrdiff_t kEffectiveFlags = 0x2D4;
 inline constexpr uint8_t kFirstPerson = 0x80;
-inline constexpr ptrdiff_t kLook = 0x38;
-inline constexpr ptrdiff_t kOtherLook = 0x54;
-inline constexpr uint8_t kOtherLookFlag = 0x04;
 // Also in it, whether a jump has left the ground and whether it has ended, and how far the pawn is
 // above the ground, in metres.
 inline constexpr ptrdiff_t kJumping = 0x49B;
@@ -45,13 +41,6 @@ inline bool FirstPerson(uint8_t* pawn) {
     return (Field<uint8_t>(Data(pawn), kEffectiveFlags) & kFirstPerson) != 0;
 }
 
-// Pitch, roll and yaw in radians, as the third-person camera reads them: pitch up positive, yaw 0
-// facing +Y and turning left.
-inline const float* Look(uint8_t* pawn) {
-    const bool other = (Field<uint8_t>(Data(pawn), kEffectiveFlags) & kOtherLookFlag) != 0;
-    return &Field<float>(Data(pawn), kEffective + (other ? kOtherLook : kLook));
-}
-
 inline bool Jumping(uint8_t* pawn) {
     return Field<uint8_t>(Data(pawn), kJumping) != 0 && Field<uint8_t>(Data(pawn), kJumpEnded) == 0;
 }
@@ -70,9 +59,5 @@ inline const float* Place(uint8_t* entity) {
 
 // Whether the pawn sits in no vehicle.
 bool OnFoot(uint8_t* pawn);
-
-// Draws `pawn` from inside, as the avatar, or from outside, as the full body with its shadow, the
-// weapons it carries and the animations for that view, as CPawn::ViewModeChanged does.
-void SetFirstPerson(uint8_t* pawn, bool firstPerson);
 
 }
