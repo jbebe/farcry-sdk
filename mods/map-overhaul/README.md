@@ -3,8 +3,9 @@
 A realistic map in place of the game's drawn one, and the GPS removed: world 1 as a military
 topographic sheet, the kind handed over at a briefing, drawn from the world's own data. The idea is
 issue #29, the design `docs/docs/design/map.md`. So far the sheet is on the game's own map in the hand,
-and the map has lost the player's arrow (seen in game, 2026-11-07). The GPS in the hand stays, and so
-does the one on a vehicle's dashboard in a saved game, though the player's archetype no longer names it.
+the map has lost the player's arrow, and the plugin keeps the GPS out of the hand and off the
+dashboard (seen in game, 2026-11-07, from a save made with both). The map is still the game's small
+sheet in one hand; the other hand, where the GPS was, is empty.
 
 ## The sheet
 
