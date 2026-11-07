@@ -44,8 +44,11 @@ findings below has been tested. Marked **(proposed)** are choices not yet agreed
   `UpperLeftCorner` at (−0.109, 0.130, 0.065) and `LowerRightCorner` at (0.146, −0.125, 0.065), named
   in the gadget's `sMapCorner*Bone` fields. The markers are placed between them **(seen in data)**.
 - **The GPS is a gadget of its own.** The map names the one in the hand, `archCompassArchetype`
-  (`gadgets.Equipped.CompassSingle`), and each vehicle names its own, `archGPSVehicleArchetype`
-  (`gadgets.Equipped.Compass_Vehicle`), which the patrol vehicles leave empty **(seen in data)**.
+  (`gadgets.Equipped.CompassSingle`). The one in vehicles is named by the player, in his pawn's
+  `Inventory` as `archGPSVehicleArchetype` (`gadgets.Equipped.Compass_Vehicle`), on the base player
+  and each of the 13 characters; the patrols' pawns leave it empty **(seen in data)**.
+- **The GPS in the hand is saved with the game.** Emptying `archCompassArchetype` left it in the
+  hand, because the map strategy saves its `CompassEntity` (Inventory Overhaul's test, 2026-10-27).
 - **The player's arrow is a marker the map names**, `archPlayerMarker`
   (`gadgets.ObjectiveIcons.PlayerPosition`) **(seen in data)**.
 - **The gadget carries a table of marker kinds**: `Objective` on; `PGP`, `SafeHouse`, `CellTower`,

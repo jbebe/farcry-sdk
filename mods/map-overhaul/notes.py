@@ -61,27 +61,27 @@ def hand(ax, x, y, s, size, key, ha="left", va="center", gid="ink"):
                    rotation=tilt, rotation_mode="anchor", linespacing=1.0, zorder=30, gid=gid)
 
 
-def remark(ax, place, anchors, y, scale):
+def remark(ax, place, anchors, y, scale, symbols):
     # Anchors are where the remark may start, best first: an x and the alignment that goes with it.
     if place in REMARKS:
         x, ha = anchors[0]
-        text = hand(ax, x, y, REMARKS[place], 34 * scale, place, ha=ha,
+        text = hand(ax, x, y, REMARKS[place], 34 * symbols, place, ha=ha,
                     va="top" if "\n" in REMARKS[place] else "center", gid="ink-remark")
         text.anchors = anchors
 
 
-def stroke(ax, points, width, key):
-    jitter = rng(key).normal(0, 0.5, np.shape(points))
+def stroke(ax, points, width, key, m=1):
+    jitter = rng(key).normal(0, 0.5 * m, np.shape(points))
     line, = ax.plot(*(np.asarray(points) + jitter).T, color=BALLPOINT, linewidth=width, solid_capstyle="round",
                     solid_joinstyle="round", zorder=29, gid="ink")
     line.set_sketch_params(0.8, 40, 3)
 
 
-def ring(ax, x, y, r, width, key):
+def ring(ax, x, y, r, width, key, m=1):
     g = rng(key)
     a = np.linspace(0, 2 * np.pi + g.uniform(0.3, 0.6), 60) + g.uniform(0, 2 * np.pi)
     wobble = 1 + 0.06 * np.sin(a * 2 + g.uniform(0, 6))
-    stroke(ax, np.c_[x + r * wobble * np.cos(a), y + r * 0.85 * wobble * np.sin(a)], width, key)
+    stroke(ax, np.c_[x + r * wobble * np.cos(a), y + r * 0.85 * wobble * np.sin(a)], width, key, m)
 
 
 def untangle(ax, scale):
@@ -107,28 +107,30 @@ def untangle(ax, scale):
         taken.append(box)
 
 
-def draw(ax, entities, scale, px):
+def draw(ax, entities, scale, symbols, px):
+    # The marks are sized like the lettering, in pixels of the sheet at 1 m a pixel; m turns those into metres.
+    m = symbols / scale
     for e in entities:
         name = e["name"] or ""
         x, y = e["pos"][:2]
         key = f"{name}{x:.0f}{y:.0f}"
         if (e.get("model") or "").lower().endswith(SHOP):
-            ring(ax, x, y, 16, px(1.8), key)
-            hand(ax, x + 22, y + 14, "A.D.", 30 * scale, key)
+            ring(ax, x, y, 16 * m, px(1.8), key, m)
+            hand(ax, x + 22 * m, y + 14 * m, "A.D.", 30 * symbols, key)
         elif e["file"] != "mapsdata":
             continue
         elif name.startswith("Objectives.PGP."):
-            r = 20
-            stroke(ax, [[x, y + r], [x + r, y], [x, y - r], [x - r, y], [x, y + r * 1.1]], px(2.2), key)
-            hand(ax, x + r + 8, y, "G.P.", 38 * scale, key)
+            r = 20 * m
+            stroke(ax, [[x, y + r], [x + r, y], [x, y - r], [x - r, y], [x, y + r * 1.1]], px(2.2), key, m)
+            hand(ax, x + r + 8 * m, y, "G.P.", 38 * symbols, key)
         elif name.startswith("SafeHouse_"):
-            r = 9
+            r = 9 * m
             stroke(ax, [[x - r, y - r], [x + r, y - r], [x + r, y + r * 0.4], [x, y + r * 1.3],
-                        [x - r, y + r * 0.4], [x - r, y - r * 1.1]], px(1.8), key)
-            hand(ax, x + r + 8, y - 2, "S.H.", 30 * scale, key)
+                        [x - r, y + r * 0.4], [x - r, y - r * 1.1]], px(1.8), key, m)
+            hand(ax, x + r + 8 * m, y - 2 * m, "S.H.", 30 * symbols, key)
         elif name.startswith("Objectives.BusStation"):
-            ring(ax, x, y, 16, px(1.8), key)
-            hand(ax, x + 22, y + 14, "bus", 30 * scale, key)
+            ring(ax, x, y, 16 * m, px(1.8), key, m)
+            hand(ax, x + 22 * m, y + 14 * m, "bus", 30 * symbols, key)
 
-    hand(ax, 1000, 4160 + 260, "G.P. guard post      S.H. safe house      A.D. arms dealer", 40 * scale, "key")
+    hand(ax, 1000, 4160 + 260, "G.P. guard post      S.H. safe house      A.D. arms dealer", 40 * symbols, "key")
     untangle(ax, scale)

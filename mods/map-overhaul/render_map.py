@@ -1,6 +1,7 @@
 # Draws world 1 as a military topographic sheet from what extract_world.py read out of the game:
 # height-band tints, contours, water, roads, tracks, buildings, spot heights, names and a 1 km grid.
 import argparse
+import functools
 import json
 from pathlib import Path
 
@@ -233,10 +234,19 @@ def margins(ax, px, scale):
     t(x - 60, y - 120, "Angles not to scale", 20, "italic")
 
 
-def draw(region, scale, out, clean):
-    terrain = np.load(HERE / "work/world1/terrain.npz")
+@functools.cache
+def world():
+    terrain = dict(np.load(HERE / "work/world1/terrain.npz"))
     features = json.loads((HERE / "work/world1/features.json").read_text())
-    heights = ndimage.gaussian_filter(terrain["heights"], 1.5)
+    return terrain, features, ndimage.gaussian_filter(terrain["heights"], 1.5)
+
+
+def draw(region, scale, out, clean, symbols=None):
+    # Symbols, lines and lettering are sized in pixels of the sheet at 1 m a pixel; `symbols` scales them
+    # apart from the ground, so a town plan can draw its streets large and its lettering as the sheet's.
+    symbols = symbols or scale
+    m = symbols / scale
+    terrain, features, heights = world()
     x0, y0, x1, y1 = region
 
     fig = plt.figure(figsize=((x1 - x0) * scale / DPI, (y1 - y0) * scale / DPI), dpi=DPI, facecolor=PAPER)
@@ -245,7 +255,7 @@ def draw(region, scale, out, clean):
     ax.set_ylim(y0, y1)
     ax.axis("off")
     neat = Rectangle((NEAT[0], NEAT[0]), NEAT[1] - NEAT[0], NEAT[1] - NEAT[0], transform=ax.transData)
-    px = lambda n: pt(n * scale)
+    px = lambda n: pt(n * symbols)
 
     # Only the part of the world the region needs, a little wider so lines run off its edge.
     pad = 64
@@ -262,7 +272,7 @@ def draw(region, scale, out, clean):
     index = ax.contour(xs, ys, h, levels=list(range(50, 300, 50)), colors=BROWN, linewidths=px(1.7), zorder=3)
     for c in (minor, index):
         c.set_clip_path(neat)
-    for label in ax.clabel(index, fmt="%d", inline=True, inline_spacing=4 * scale):
+    for label in ax.clabel(index, fmt="%d", inline=True, inline_spacing=4 * symbols):
         label.set_fontproperties(FONT["regular"])
         label.set_fontsize(px(13))
         label.set_clip_path(neat)
@@ -281,8 +291,8 @@ def draw(region, scale, out, clean):
     ticks = []
     for a, b in rails:
         along = (b - a) / max(np.linalg.norm(b - a), 1e-6)
-        across = np.array([-along[1], along[0]]) * 4
-        for t in np.arange(10, np.linalg.norm(b - a) - 4, 20):
+        across = np.array([-along[1], along[0]]) * 4 * m
+        for t in np.arange(10 * m, np.linalg.norm(b - a) - 4 * m, 20 * m):
             ticks.append([a + along * t - across, a + along * t + across])
     buildings = [footprint(e) for e in models(entities, is_building)
                  if (e["box"][3] - e["box"][0]) * (e["box"][4] - e["box"][1]) >= MIN_FOOTPRINT]
@@ -301,12 +311,12 @@ def draw(region, scale, out, clean):
     for x, y, z in spot_heights(heights, region):
         if NEAT[0] < x < NEAT[1] and NEAT[0] < y < NEAT[1]:
             ax.plot(x, y, "o", color=INK, markersize=px(3), zorder=12)
-            text(ax, x + 6, y - 6, f"{z:.0f}", 14 * scale, "italic", ha="left", va="top")
+            text(ax, x + 6 * m, y - 6 * m, f"{z:.0f}", 14 * symbols, "italic", ha="left", va="top")
 
     # The world's summit is the mountain dialogue names "one mile northeast of Pala".
     inside = heights[NEAT[0]:NEAT[1], NEAT[0]:NEAT[1]]
     sy, sx = np.unravel_index(np.argmax(inside), inside.shape)
-    text(ax, sx + NEAT[0], sy + NEAT[0] + 60, "MT THABAMOLAETSA", 26 * scale, "bolditalic")
+    text(ax, sx + NEAT[0], sy + NEAT[0] + 60 * m, "MT THABAMOLAETSA", 26 * symbols, "bolditalic")
 
     # A place can have more than one detail-map entity on the same texture; it is named once.
     named = set()
@@ -317,14 +327,14 @@ def draw(region, scale, out, clean):
             name, kind = PLACES.get(place, (None, "works"))
             size, style = {"town": (40, "bold"), "village": (28, "bold"),
                            "works": (18, "regular"), "feature": (20, "italic")}[kind]
-            x, y = e["pos"][0], e["pos"][1] + e["h"] / 2 + size * 0.8
+            x, y = e["pos"][0], e["pos"][1] + e["h"] / 2 + size * 0.8 * m
             if name:
-                label = text(ax, x, y, name, size * scale, style)
+                label = text(ax, x, y, name, size * symbols, style)
                 if not clean:
-                    half = label.get_window_extent(fig.canvas.get_renderer()).width / scale / 2 + 14
-                    notes.remark(ax, place, [(x + half, "left"), (x - half, "right")], y, scale)
+                    half = label.get_window_extent(fig.canvas.get_renderer()).width / scale / 2 + 14 * m
+                    notes.remark(ax, place, [(x + half, "left"), (x - half, "right")], y, scale, symbols)
             elif not clean:
-                notes.remark(ax, place, [(x, "center")], y, scale)
+                notes.remark(ax, place, [(x, "center")], y, scale, symbols)
 
     for axis, origin in enumerate(GRID_ORIGIN):
         for g in range(NEAT[0] + (-(origin + NEAT[0])) % 1000, NEAT[1], 1000):
@@ -333,15 +343,16 @@ def draw(region, scale, out, clean):
                     linewidth=px(1.1), zorder=15)
             number = f"{(g + origin) // 1000 % 100:02d}"
             for edge, off in ((NEAT[0], -30), (NEAT[1], 30)):
-                text(ax, g if vertical else edge + off, edge + off if vertical else g, number, 26 * scale,
+                text(ax, g if vertical else edge + off, edge + off if vertical else g, number, 26 * symbols,
                      halo=None)
     ax.add_patch(Rectangle((NEAT[0], NEAT[0]), NEAT[1] - NEAT[0], NEAT[1] - NEAT[0], fill=False,
                            edgecolor=INK, linewidth=px(2.5), zorder=16))
-    margins(ax, px, scale)
+    margins(ax, px, symbols)
     if not clean:
-        notes.draw(ax, entities, scale, px)
+        notes.draw(ax, entities, scale, symbols, px)
 
     Image.fromarray(paper.finish(*layers(fig, ax))).save(out)
+    plt.close(fig)
     print(f"Wrote {out}")
 
 
@@ -365,9 +376,11 @@ def main():
                         metavar=("X0", "Y0", "X1", "Y1"), help="world metres to draw")
     parser.add_argument("--scale", type=float, default=1.0, help="pixels per metre")
     parser.add_argument("--out", default=str(HERE / "assets/world1-sheet.png"))
+    parser.add_argument("--symbols", type=float, help="how large lines and lettering are drawn, the sheet's being 1"
+                                                         " (default: the scale)")
     parser.add_argument("--clean", action="store_true", help="the sheet as printed, without the owner's notes")
     args = parser.parse_args()
-    draw(args.region, args.scale, args.out, args.clean)
+    draw(args.region, args.scale, args.out, args.clean, args.symbols)
 
 
 if __name__ == "__main__":

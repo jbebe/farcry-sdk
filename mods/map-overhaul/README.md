@@ -1,8 +1,9 @@
 # Map Overhaul
 
 A realistic map in place of the game's drawn one, and the GPS removed: world 1 as a military
-topographic sheet, the kind handed over at a briefing, drawn from the world's own data. Nothing is in
-the game yet; the idea is issue #29.
+topographic sheet, the kind handed over at a briefing, drawn from the world's own data. The idea is
+issue #29, the design `docs/docs/design/map.md`. So far the sheet is on the game's own map in the hand,
+and vehicles and the map have lost the GPS and the player's arrow; the GPS in the hand stays.
 
 ## The sheet
 
@@ -48,6 +49,24 @@ other side of the name, and stays put if nothing is clear.
 `paper.py` then lays the print on paper: faded a fifth of the way to a yellowed paper and a tenth
 greyer, an uneven tone that only ever yellows, and a fine grain. The ink goes on last as a multiply,
 skipping a little on the grain, so it reads as written on the sheet rather than printed with it.
+
+## The layer
+
+`build_layer.py` draws the sheet and writes `layer/`, which `jackall-cli mod build` installs:
+
+| Part | What it is |
+|---|---|
+| `levels\w1_*\mapcompass*.xbt` | the sheet cut into the 25 area maps, `w1_c_3`'s malaria-bubble pair included |
+| `worlds\world1\mapcompass*.xbt` | the world map: the sheet's playable square, 1024 to 4096 m, shrunk to 1024 px |
+| `levels\w1_*\majorlocation_*.xbt` | the 21 detail maps drawn again as town plans, each its entity's square at 1024 px, lines and lettering 3 times the sheet's |
+| `player\MainCharacter\PawnPlayer*` fragments | `archGPSVehicleArchetype` emptied on the player and each character: no GPS in vehicles |
+| `gadgets\Equipped\Map` fragments | `archPlayerMarker` emptied: no arrow for the player on the map |
+
+Each texture keeps the game file's header and its levels, a `_mip0` the top level alone and the other
+the rest of the chain, compressed to DXT1 by `tools\third-party\FCBConverter\texconv.exe`. The textures
+are drawn from the game's data and stay local; the fragments, from world 1's and world 2's entity
+libraries, are committed. `python tools\fc2drive\scenarios\map.py` takes pictures of the map in the
+hand on a hill, in Pala and from a Datsun's seat.
 
 ## The full map
 
