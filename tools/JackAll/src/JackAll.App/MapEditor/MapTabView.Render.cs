@@ -1,5 +1,4 @@
 using JackAll.App.MapEditor.Gl;
-using JackAll.Tools.Sdat;
 using JackAll.Tools.World;
 using OpenTK.Graphics.OpenGL4;
 
@@ -104,31 +103,17 @@ public partial class MapTabView
                 : "No terrain textures loaded.";
         }
 
-        ApplyFlyKeys(step);
-        float aspect = (float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1));
-        OpenTK.Mathematics.Matrix4 viewProjection = _camera.View() * _camera.Projection(aspect);
-
         long rebuildStart = System.Diagnostics.Stopwatch.GetTimestamp();
 
         // The model tiers are keyed to the camera's sector, so crossing a boundary refills the
-        // instance streams from the ring around the new one, and a turn from the sectors now in view.
+        // instance streams from the ring around the new one.
         var sector = WorldModels.SectorOf((System.Numerics.Vector3)_camera.Position);
-        var view = new SectorView(viewProjection,
-            (_terrain?.MinHeight ?? 0) * SdatSectorFile.MetersPerUnit - DeepestModel,
-            (_terrain?.MaxHeight ?? 0) * SdatSectorFile.MetersPerUnit + TallestModel,
-            SceneLighting.Demo ? CasterMargin : OverhangMargin);
-        UInt128 inView = view.Mask(sector, DrawRing);
-        bool crossed = sector != _cameraSector;
-        if (crossed)
-        {
-            _waterLayer?.SetVisible(_camera.Position);
-        }
-        if (crossed || inView != _sectorsInView)
+        if (sector != _cameraSector)
         {
             _cameraSector = sector;
-            _sectorsInView = inView;
             _modelsDirty = true;
             _vegetationDirty = true;
+            _waterLayer?.SetVisible(_camera.Position);
         }
 
         // Grass is cut off by distance, so it follows the camera inside a sector as well.
@@ -141,7 +126,7 @@ public partial class MapTabView
         {
             _vegetationDirty = false;
             _grassStreamedFrom = _camera.Position;
-            vegetationModels.Stream(_camera.Position, DrawRing, view);
+            vegetationModels.Stream(_camera.Position, DrawRing);
         }
 
         RebuildOverlays();
@@ -163,7 +148,7 @@ public partial class MapTabView
         if (_modelsDirty)
         {
             _modelsDirty = false;
-            _modelLayer?.Stream(_camera.Position, DrawRing, view);
+            _modelLayer?.Stream(_camera.Position, DrawRing);
         }
         if (markersMoved)
         {
@@ -195,6 +180,10 @@ public partial class MapTabView
         _targets ??= new RenderTargets();
         _targets.Resize(width, height, SceneLighting.Demo);
         _post ??= new PostProcess();
+
+        ApplyFlyKeys(step);
+        float aspect = (float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1));
+        OpenTK.Mathematics.Matrix4 viewProjection = _camera.View() * _camera.Projection(aspect);
 
         SceneLighting.Exposure = (float)ExposureSlider.Value;
         bool drawEntityModels = LayerCatalog.Entities.IsVisible;
@@ -344,15 +333,6 @@ public partial class MapTabView
     /// viewport can be seconds between frames, and neither is meant to cover that in one go.</summary>
     private const float MaxStep = 0.1f;
 
-    /// <summary>How far past its own sector a model may reach; the largest buildings overhang about this much.</summary>
-    private const float OverhangMargin = 32f;
-
-    /// <summary>The same with shadows on, where a caster out of view still darkens what is in it.</summary>
-    private const float CasterMargin = 96f;
-
-    /// <summary>The highest a model reaches above the ground, and the deepest one sinks below it.</summary>
-    private const float TallestModel = 100f;
-    private const float DeepestModel = 10f;
 
     /// <summary>How far the camera moves before the grass is cut off again around where it now is.</summary>
     private const float GrassStep = 4f;

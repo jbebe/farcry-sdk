@@ -523,12 +523,12 @@ public sealed class EntityModelLayer : IDisposable
     private const float GrassDistance = 100f;
 
     /// <summary>
-    /// Re-buckets what stands within <paramref name="ring"/> sectors of the camera's, in sectors the
-    /// view reaches, into per-mesh fine/coarse instance streams and uploads them. Fine instances
-    /// pack forward from the front of each mesh's staging array, coarse ones backward from its end,
-    /// so one pass fills both without counting first.
+    /// Re-buckets what stands within <paramref name="ring"/> sectors of the camera's into per-mesh
+    /// fine/coarse instance streams and uploads them. Fine instances pack forward from the front of
+    /// each mesh's staging array, coarse ones backward from its end, so one pass fills both without
+    /// counting first.
     /// </summary>
-    public void Stream(Vector3 cameraPosition, int ring, SectorView view)
+    public void Stream(Vector3 cameraPosition, int ring)
     {
         foreach (Mesh mesh in _meshes)
         {
@@ -550,7 +550,7 @@ public sealed class EntityModelLayer : IDisposable
         }
 
         (int X, int Y) camera = WorldModels.SectorOf((System.Numerics.Vector3)cameraPosition);
-        foreach ((List<WorldEntity> entities, bool fine) in InView(_entities))
+        foreach ((List<WorldEntity> entities, bool fine) in InRing(_entities))
         {
             foreach (WorldEntity entity in entities)
             {
@@ -564,7 +564,7 @@ public sealed class EntityModelLayer : IDisposable
         }
 
         var eye = new System.Numerics.Vector2(cameraPosition.X, cameraPosition.Y);
-        foreach ((List<ScatterInstance> placements, bool fine) in InView(Scatter))
+        foreach ((List<ScatterInstance> placements, bool fine) in InRing(Scatter))
         {
             foreach (ScatterInstance placement in placements)
             {
@@ -580,10 +580,8 @@ public sealed class EntityModelLayer : IDisposable
 
         UploadStaging();
 
-        IEnumerable<(List<T> Items, bool Fine)> InView<T>(SectorIndex<T>? index)
-            => (index?.Ring(camera, ring) ?? [])
-                .Where(s => view.Sees(s.Sector))
-                .Select(s => (s.Items, s.Distance <= WorldModels.FineRadius));
+        IEnumerable<(List<T> Items, bool Fine)> InRing<T>(SectorIndex<T>? index)
+            => (index?.Ring(camera, ring) ?? []).Select(s => (s.Items, s.Distance <= WorldModels.FineRadius));
     }
 
     /// <summary>Files the shown entities under their sectors for <see cref="Stream"/>. Needed when

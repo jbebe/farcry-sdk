@@ -33,6 +33,7 @@ public class SectorIndexTests
         Assert.False(index.Remove((3, 4), "jeep"));
         index.Add((5, 4), "jeep");
 
-        Assert.Equal((5, 4), Assert.Single(index.Ring((4, 4), 1).Where(s => s.Items.Count > 0)).Sector);
+        Assert.Empty(index.Ring((3, 4), 0).SelectMany(s => s.Items));
+        Assert.Equal("jeep", Assert.Single(index.Ring((5, 4), 0).SelectMany(s => s.Items)));
     }
 }

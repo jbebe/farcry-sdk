@@ -59,8 +59,6 @@ public partial class MapTabView : UserControl
     private AmbientOcclusion? _occlusion;
     private (int X, int Y) _cameraSector = (int.MinValue, int.MinValue);
 
-    /// <summary>The ring's sectors the view reached when the streams were last filled.</summary>
-    private UInt128 _sectorsInView;
     private OpenTK.Mathematics.Vector3 _grassStreamedFrom;
 
     /// <summary>The viewport's own background, and so what shows in place of the sky.</summary>

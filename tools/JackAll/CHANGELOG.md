@@ -28,8 +28,7 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - **The Map tab no longer stalls as you fly, drag or edit.** Crossing into another sector rebuilt
   what is drawn from the whole world; it now takes only the sectors around the camera, so flying
   no longer hitches every 64 m. Dragging an object costs about a sixth of what it did per frame, and
-  a typed edit in the inspector about a seventh. Only the sectors in view are drawn, and grass only
-  within 100 m of the camera.
+  a typed edit in the inspector about a seventh. Grass draws only within 100 m of the camera.
 
 ## [1.7.0] - 2026-10-28
 

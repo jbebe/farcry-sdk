@@ -34,7 +34,7 @@ public sealed class SectorIndex<T>
 
     /// <summary>What stands in each sector within <paramref name="ring"/> of <paramref name="centre"/>,
     /// with that sector's Chebyshev distance from it - so the ring is a square of sectors.</summary>
-    public IEnumerable<((int X, int Y) Sector, int Distance, List<T> Items)> Ring((int X, int Y) centre, int ring)
+    public IEnumerable<(int Distance, List<T> Items)> Ring((int X, int Y) centre, int ring)
     {
         for (int y = centre.Y - ring; y <= centre.Y + ring; y++)
         {
@@ -42,7 +42,7 @@ public sealed class SectorIndex<T>
             {
                 if (_sectors.TryGetValue((x, y), out List<T>? items))
                 {
-                    yield return ((x, y), Math.Max(Math.Abs(x - centre.X), Math.Abs(y - centre.Y)), items);
+                    yield return (Math.Max(Math.Abs(x - centre.X), Math.Abs(y - centre.Y)), items);
                 }
             }
         }
