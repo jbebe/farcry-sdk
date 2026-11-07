@@ -51,6 +51,15 @@ findings below has been tested. Marked **(proposed)** are choices not yet agreed
   hand, because the map strategy saves its `CompassEntity` (Inventory Overhaul's test, 2026-10-27).
   Emptying the player's `archGPSVehicleArchetype` left the GPS on a Datsun's dashboard too, in a game
   loaded from a save made before (seen in game, 2026-11-07); a new game was not tried.
+- **How the GPS reaches the hand and the dashboard.** The map's `OnEquip` puts its saved
+  `CompassEntity` (`+0x108` on Windows, `+0xB4` on the server) in the hand with `EquipGadgetItem`,
+  outside a vehicle only, and `OnUnequip` takes it back with `UnequipGadgetItem`; the monocular uses
+  the same pair. The vehicle GPS is a handle in the player's inventory view (`+0x54` of its
+  implementation on Windows), which `CVehicle::SVehicleImpl::AttachToSeat` binds to the vehicle's GPS
+  bone and shows with `CEntity::SetIsVisible(true)`; `ReturnGPS` binds it back to the pawn and hides it
+  **(RE-verified on Steam and GOG)**. Map Overhaul's plugin skips the pair for the compass and hides the
+  vehicle GPS after `AttachToSeat`: neither shows, in a game loaded from a save made with both (seen in
+  game, 2026-11-07).
 - **The game draws its own icons over the sheet**: safe houses, locked guard posts, arms dealers,
   bus stops, masts, Mike's bar and the objective, on the area map, the town plan and the back (seen in
   game, 2026-11-07).

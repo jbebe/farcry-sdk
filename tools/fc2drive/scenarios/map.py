@@ -1,6 +1,6 @@
-"""Map Overhaul's sheet on the map in the hand: taken out on a hill south-east of Pala and turned to its
-back, in Pala's street by the bus stop, where the town's plan shows, and from a Datsun's seat, whose
-dashboard should have no GPS.
+"""Map Overhaul's sheet on the map in the hand: taken out on a hill south-east of Pala, the monocular
+raised over it and the sheet turned to its back, then the same in Pala's street by the bus stop, where
+the town's plan shows, and from a Datsun's seat. No GPS should be in the hand or on the dashboard.
 
     python map.py
 
@@ -34,6 +34,9 @@ def gadget(game, signal):
 def read_map(game, run, label):
     gadget(game, "toggle_gadget")
     run.shot(game, f"{label}: the map")
+    gadget(game, "draw_monocular")
+    run.shot(game, f"{label}: the monocular")
+    gadget(game, "holster_monocular")
     gadget(game, "flipside")
     run.shot(game, f"{label}: its back")
     gadget(game, "flipside")

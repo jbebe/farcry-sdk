@@ -6,3 +6,7 @@ assets/world1-sheet.png
 # The map textures build_layer.py draws from them; the archetype fragments beside them are kept.
 layer/mods/levels/
 layer/mods/worlds/world1/mapcompass*.xbt
+# The plugin's build tree, and the DLL the layer only carries.
+out/
+layer/plugins/map-overhaul/MapOverhaul.dll
+__pycache__/

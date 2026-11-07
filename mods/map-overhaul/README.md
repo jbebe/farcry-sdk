@@ -69,6 +69,20 @@ are drawn from the game's data and stay local; the fragments, from world 1's and
 libraries, are committed. `python tools\fc2drive\scenarios\map.py` takes pictures of the map in the
 hand on a hill, in Pala and from a Datsun's seat.
 
+## The plugin
+
+`MapOverhaul.dll`, an FCSE plugin (`src/`), does what the layer's data cannot, since a saved game keeps
+its GPS whatever the archetypes say:
+
+| Part | How |
+|---|---|
+| No GPS in the hand | the map strategy's `EquipGadgetItem` and `UnequipGadgetItem` are skipped for its own `CompassEntity` (`+0x108`), so the saved compass stays in the pocket; the monocular still comes up |
+| No GPS on the dashboard | after `CVehicle::SVehicleImpl::AttachToSeat` binds the player's vehicle GPS to the dashboard and shows it, `CEntity::SetIsVisible(false)` hides it again |
+
+`build.ps1` builds it and stages it in `layer\plugins\map-overhaul\`; the game gets it with the layer,
+from `jackall-cli mod build` with every other layer installed. Its four patterns are checked on both
+builds with `python ..\..\scripts\verify_patterns.py --uplay <Steam Dunia.dll> src`.
+
 ## The full map
 
 `stitch_map.py` joins world 1's 25 area maps, `levels\w1_<row a-e>_<column 1-5>\mapcompass_mip0.xbt`,
