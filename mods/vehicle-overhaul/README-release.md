@@ -78,6 +78,8 @@ jackall-cli mod restore --game "C:\Games\Far Cry 2"
 
 ## Compatibility
 
+- **Third Person** (https://www.nexusmods.com/farcry2/mods/396) has the third-person view this mod
+  used to have, behind the car and on foot. The two work together.
 - **Mods that retune the cars** keep working with it: it knows each car by the kind of vehicle it is,
   not by its mass or engine. Its few changes to the big truck's data merge with theirs field by
   field.
