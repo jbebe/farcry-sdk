@@ -46,6 +46,20 @@ one, so spend the effort there.
 - When the change is complete, run `/simplify` and apply what it finds. The pass that wrote the
   code is anchored on it, so the review needs a different objective than the one that produced it.
 
+## Features and commits
+
+Each mod's `STATUS.md` holds its feature list; the format is in `.claude/skills/status/SKILL.md`.
+
+- When a new feature or idea comes up during work, add it to that mod's feature list as `new` before
+  continuing, and tell the user in one line. A commit that finishes or changes a feature updates its
+  STATUS.md line in the same commit.
+- Before every commit, run `python scripts/affected_mods.py <the paths being committed>` (PowerShell
+  tool). Add a line under `## [Unreleased]` in the CHANGELOG.md of every mod it lists as affected,
+  creating the section, or the file, where it is missing. A mod listed only as running on the
+  change gets a line only if it now needs the new version. For every collision it finds with no
+  decision, ask the user - deploy apart, or fixed by what - and record the answer under
+  `## Collisions` in both mods' STATUS.md files.
+
 ## Hooking Dunia.dll
 
 - Before declaring a detour's signature, find the function's `RET n` and make the detour pop exactly
