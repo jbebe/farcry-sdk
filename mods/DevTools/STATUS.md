@@ -43,3 +43,4 @@ Stage: active
 
 - vehicle-overhaul: fixed by VO's dispatcher hooking the function entry, stacked on DevTools' hook - the same function entry
 - map-overhaul: fixed by Map Overhaul's pause-listener patterns starting 10 bytes in - the pause listener's entry, which DevTools hooks
+- 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks

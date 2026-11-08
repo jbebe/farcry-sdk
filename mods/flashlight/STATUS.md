@@ -33,3 +33,4 @@ Stage: maintenance
 - vehicle-overhaul: deploy apart - user 2026-10-08: "flashlight is not needed, dont deploy it"; the hooks don't clash
 - map-overhaul: fixed by 137373d1 - its pause-listener pattern starts 10 bytes in, past the instructions Flashlight's hook overwrites
 - inventory-overhaul: fixed by 98535d3c - the notebook's bare quads took no flashlight light; page.py cuts them into cells
+- 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks

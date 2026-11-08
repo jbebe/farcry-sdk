@@ -33,3 +33,5 @@ Stage: maintenance
 ## Release order
 
 ## Collisions
+
+- 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks

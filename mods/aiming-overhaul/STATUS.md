@@ -69,3 +69,4 @@ Stage: active
 
 - vss-vintorez: fixed by b7946eaf - the VSS's Dart Rifle drew the game's scope until it carried AO's scope data (the Dragunov's)
 - sky-overhaul: fixed by FCSE 1.3.0's hook stacking - both hook the same Direct3D functions; the gun blur sits before bloom
+- 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks

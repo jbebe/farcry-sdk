@@ -33,3 +33,4 @@ Stage: active
 - inventory-overhaul: fixed by 137373d1 and 9e951c86, and by building its notebook without this layer - patterns start past its hooks on the pause listener and the map's Update; its notebook copies the map's banks from the install, which this layer remakes
 - DevTools: fixed by 137373d1 - the pause listener pattern starts past its hook on the entry
 - flashlight: fixed by 137373d1 - the pause listener pattern starts past its hook on the second instruction
+- 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
