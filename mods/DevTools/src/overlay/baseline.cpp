@@ -20,7 +20,6 @@
 #include <mutex>
 #include <numeric>
 #include <windows.h>
-#include <psapi.h>
 
 namespace {
     using DevTools::Baseline::MetricInfo;
@@ -81,30 +80,6 @@ namespace {
     const std::filesystem::path& File() {
         static const std::filesystem::path file = DevTools::BinFolder::File(L"DevTools-baseline.ini");
         return file;
-    }
-
-    // The file names of the DLLs loaded from bin\plugins\, joined.
-    const std::string& Plugins() {
-        static const std::string plugins = [] {
-            std::string joined;
-            HMODULE modules[1024];
-            DWORD bytes = 0;
-            if (!EnumProcessModules(GetCurrentProcess(), modules, sizeof(modules), &bytes)) {
-                return joined;
-            }
-
-            const size_t count = std::min<size_t>(bytes / sizeof(HMODULE), std::size(modules));
-            for (size_t index = 0; index < count; ++index) {
-                wchar_t path[MAX_PATH];
-                const std::filesystem::path file(
-                    std::wstring_view(path, GetModuleFileNameW(modules[index], path, MAX_PATH)));
-                if (_wcsicmp(file.parent_path().filename().c_str(), L"plugins") == 0) {
-                    joined.append(joined.empty() ? "" : ", ").append(file.filename().string());
-                }
-            }
-            return joined;
-        }();
-        return plugins;
     }
 
     std::string Now() {
@@ -250,6 +225,22 @@ namespace DevTools::Baseline {
 
 const MetricInfo& Describe(Metric metric) { return kMetrics[metric]; }
 
+Process Sampled(const ProcessStats::Snapshot& sample) {
+    Process process;
+    if (sample.serial != 0) {
+        process.engineThread = sample.engineThread;
+        process.processCpu = sample.processCpu;
+        process.committedMb = Megabytes(sample.committed);
+        process.privateMb = Megabytes(sample.privateBytes);
+        process.largestFreeMb = Megabytes(sample.largestFree);
+    }
+    if (sample.gpuKnown) {
+        process.gpuUsage = sample.gpuUsage;
+        process.vramMb = Megabytes(sample.vramDedicated);
+    }
+    return process;
+}
+
 Values Measure(std::vector<float>& frames, std::vector<float>& gpu, const Process& process) {
     std::sort(frames.begin(), frames.end());
     std::sort(gpu.begin(), gpu.end());
@@ -309,7 +300,7 @@ void Report() {
     record.loops = ++g_loops;
     record.display = FrameStats::ReadDisplay();
     record.cpu = ProcessStats::CpuName();
-    record.plugins = Plugins();
+    record.plugins = BinFolder::Plugins();
     record.values = Measure(g_frames, g_gpu, Collapse(g_samples));
 
     Save(record);

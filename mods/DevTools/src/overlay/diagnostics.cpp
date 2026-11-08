@@ -55,20 +55,7 @@ namespace {
         const History gpuHistory = DevTools::FrameStats::GpuTimes();
         std::vector<float> frames = Filled(frameHistory, frameHistory.count);
         std::vector<float> gpu = Filled(gpuHistory, gpuHistory.count);
-
-        DevTools::Baseline::Process process;
-        if (sample.serial != 0) {
-            process.engineThread = sample.engineThread;
-            process.processCpu = sample.processCpu;
-            process.committedMb = Megabytes(sample.committed);
-            process.privateMb = Megabytes(sample.privateBytes);
-            process.largestFreeMb = Megabytes(sample.largestFree);
-        }
-        if (sample.gpuKnown) {
-            process.gpuUsage = sample.gpuUsage;
-            process.vramMb = Megabytes(sample.vramDedicated);
-        }
-        return DevTools::Baseline::Measure(frames, gpu, process);
+        return DevTools::Baseline::Measure(frames, gpu, DevTools::Baseline::Sampled(sample));
     }
 
     void DrawFrames(float frameMs, float gpuMs, const Snapshot& sample) {

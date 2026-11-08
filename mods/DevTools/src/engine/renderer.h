@@ -21,8 +21,11 @@ using FrameFn = void (*)(const FrameStats::Frame& frame);
 // the device has to go; the next draw builds it again.
 using DeviceLostFn = void (*)();
 
+// Adds a frame subscriber, in the order they will be called. Call from FCSE_Load.
+void Subscribe(FrameFn fn);
+
 // Takes over the device's Present and Reset. Call once from FCSE_Load. False means the overlay
 // cannot draw, which it logs, and nothing is left hooked.
-bool Install(DrawFn draw, FrameFn onFrame, DeviceLostFn onDeviceLost);
+bool Install(DrawFn draw, DeviceLostFn onDeviceLost);
 
 }

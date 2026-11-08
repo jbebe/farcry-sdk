@@ -6,6 +6,9 @@ Notable changes to DevTools, loosely following
 ## [Unreleased]
 
 ### Added
+- **Session log** option, off by default: every frame of a session, its time, GPU time, whether the
+  player is in play and in a vehicle, and a once-a-second CPU, memory and VRAM sample, written to a
+  CSV in `bin\`, to compare a session with a mod against one without.
 - **Remote control**, off unless launched with `-devtoolsremote`: a local pipe for a program to read the
   game's state, teleport, fire actions, take screenshots and make and play recordings.
 - **Skip intro** and **skip title screen** fixes, moved from UFCP and always applied: the logo and

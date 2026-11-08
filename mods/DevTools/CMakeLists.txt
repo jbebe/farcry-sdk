@@ -85,6 +85,7 @@ add_library(DevTools SHARED
   "src/options/invincibility.cpp"
   "src/options/noclip.cpp"
   "src/options/options.cpp"
+  "src/options/session_log.cpp"
   "src/options/skip_system_detection.cpp"
   "src/options/unlock_all_weapons.cpp"
   "src/overlay/armory.cpp"

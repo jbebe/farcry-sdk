@@ -10,8 +10,10 @@
 namespace {
     using GetLocalPlayerFn = void*(__cdecl*)();
     using PawnClassFn = const uint8_t*(__cdecl*)();
+    using GetCurrentVehicleFn = void*(__cdecl*)(void* pawn);
 
     FCSE::Relocation<GetLocalPlayerFn> g_getLocalPlayerSite{FCSE::Uplay(0x00831870)};
+    FCSE::Relocation<GetCurrentVehicleFn> g_getCurrentVehicleSite{FCSE::Uplay(0x000E7330)};
 
     // CPawn's class hierarchy, built on first use, and where CPawn's own class id sits in it.
     FCSE::Relocation<PawnClassFn> g_pawnClass{FCSE::Uplay(0x00040A80)};
@@ -19,6 +21,7 @@ namespace {
 
     // Resolved once: an unresolved Relocation re-scans on every access, and this is on the frame.
     GetLocalPlayerFn g_getLocalPlayer = nullptr;
+    GetCurrentVehicleFn g_getCurrentVehicle = nullptr;
 
     constexpr ptrdiff_t kPlayerScene = 0x04;
     constexpr ptrdiff_t kSceneCameraManager = 0xB8;
@@ -39,6 +42,11 @@ void Install() {
     } else {
         api->Log("player: the local player accessor was not found in this build");
     }
+    if (g_getCurrentVehicleSite) {
+        g_getCurrentVehicle = g_getCurrentVehicleSite.get();
+    } else {
+        api->Log("player: CVehicle::GetCurrentVehicle was not found in this build");
+    }
     if (!g_pawnClass) {
         api->Log("player: the pawn's class was not found in this build");
     }
@@ -55,6 +63,10 @@ void* Pawn() {
     // The scene is a component of the player's entity, which also holds the pawn.
     void* entity = FCSE::ApiPointer()->EntityData->EntityOf(Read<void*>(local, kPlayerScene));
     return entity != nullptr ? Entity::Component(entity, g_pawnClass() + kHierarchyPawnId) : nullptr;
+}
+
+void* Vehicle(void* pawn) {
+    return pawn != nullptr && g_getCurrentVehicle != nullptr ? g_getCurrentVehicle(pawn) : nullptr;
 }
 
 void TurnLook(float leftRadians) {

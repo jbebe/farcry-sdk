@@ -88,13 +88,11 @@ namespace {
     // comes off it through Entity::Of.
     constexpr ptrdiff_t kVehicleRefBlock = 0x08;
 
-    using GetCurrentVehicleFn = void*(__cdecl*)(void* pawn);
     using FlushEntityJobFn = void(__fastcall*)(void* entity);
     using GetVehiclePhysicsFn = void*(__fastcall*)(void* entity);
     using VehicleHealthDamageFn = void(__fastcall*)(void* component, void* unused, float damage);
     using VehicleStimPartsFn = void(__fastcall*)(void* component, void* unused, void* stim);
 
-    FCSE::Relocation<GetCurrentVehicleFn> g_getCurrentVehicle{FCSE::Uplay(0x000E7330)};
     FCSE::Relocation<FlushEntityJobFn> g_flushEntityJob{FCSE::Uplay(0x004DD4F0)};
 
     // The address library rather than a pattern: this getter's bytes are shared with 69 others, and
@@ -137,14 +135,14 @@ namespace {
     }
 
     void ApplyVehicleProtection(uintptr_t pawn) {
-        if (!g_enabled || pawn == 0 || !g_getCurrentVehicle || !g_getVehiclePhysics) {
+        if (!g_enabled || pawn == 0 || !g_getVehiclePhysics) {
             if (g_derivedFor != nullptr) {
                 Forget();
             }
             return;
         }
 
-        void* vehicle = g_getCurrentVehicle.get()(reinterpret_cast<void*>(pawn));
+        void* vehicle = DevTools::Player::Vehicle(reinterpret_cast<void*>(pawn));
         void* seatBlock =
             vehicle != nullptr
                 ? *reinterpret_cast<void**>(static_cast<uint8_t*>(vehicle) + kVehicleRefBlock)

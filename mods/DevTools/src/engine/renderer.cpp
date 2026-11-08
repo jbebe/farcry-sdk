@@ -26,8 +26,11 @@ namespace {
     PresentFn g_originalPresent = nullptr;
     ResetFn g_originalReset = nullptr;
 
+    constexpr size_t kMaxSubscribers = 4;
+    DevTools::Renderer::FrameFn g_subscribers[kMaxSubscribers]{};
+    size_t g_subscriberCount = 0;
+
     DevTools::Renderer::DrawFn g_draw = nullptr;
-    DevTools::Renderer::FrameFn g_onFrame = nullptr;
     DevTools::Renderer::DeviceLostFn g_onDeviceLost = nullptr;
     bool g_inDraw = false;
 
@@ -58,7 +61,10 @@ namespace {
 
     HRESULT __stdcall PresentDetour(IDirect3DDevice9* device, const RECT* source,
                                     const RECT* destination, HWND window, const RGNDATA* dirty) {
-        g_onFrame(DevTools::FrameStats::Presenting());
+        const DevTools::FrameStats::Frame frame = DevTools::FrameStats::Presenting();
+        for (size_t i = 0; i < g_subscriberCount; ++i) {
+            g_subscribers[i](frame);
+        }
         DevTools::FrameCapture::OnPresent(device);
 
         // A draw that presented a frame of its own would otherwise recurse for as long as it kept
@@ -82,10 +88,15 @@ namespace {
 
 namespace DevTools::Renderer {
 
-bool Install(DrawFn draw, FrameFn onFrame, DeviceLostFn onDeviceLost) {
+void Subscribe(FrameFn fn) {
+    if (g_subscriberCount < kMaxSubscribers) {
+        g_subscribers[g_subscriberCount++] = fn;
+    }
+}
+
+bool Install(DrawFn draw, DeviceLostFn onDeviceLost) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
     g_draw = draw;
-    g_onFrame = onFrame;
     g_onDeviceLost = onDeviceLost;
 
     void* present = Vtable::Slot(kPresentSlot);

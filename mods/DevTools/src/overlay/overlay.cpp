@@ -689,11 +689,6 @@ namespace {
         ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
     }
 
-    // Every frame, overlay up or not, so a benchmark is measured whether or not it is open.
-    void OnFrame(const DevTools::FrameStats::Frame& frame) {
-        DevTools::Baseline::Add(frame);
-    }
-
     void OnDeviceLost() {
         if (g_running) {
             ImGui_ImplDX9_InvalidateDeviceObjects();
@@ -704,7 +699,9 @@ namespace {
 namespace DevTools::Overlay {
 
 bool Install() {
-    g_installed = Renderer::Install(&Draw, &OnFrame, &OnDeviceLost);
+    // Every frame, overlay up or not, so a benchmark is measured whether or not it is open.
+    Renderer::Subscribe(&Baseline::Add);
+    g_installed = Renderer::Install(&Draw, &OnDeviceLost);
     if (g_installed) {
         ProcessStats::Start();
         Benchmark::Install(&Baseline::Report);

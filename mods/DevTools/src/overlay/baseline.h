@@ -3,6 +3,7 @@
 #pragma once
 
 #include "engine/frame_stats.h"
+#include "engine/process_stats.h"
 
 #include <array>
 #include <string>
@@ -56,6 +57,9 @@ struct Process {
     float largestFreeMb = FrameStats::kUnmeasured;
     float vramMb = FrameStats::kUnmeasured;
 };
+
+// One process sample as measures, NaN where it has none.
+Process Sampled(const ProcessStats::Snapshot& sample);
 
 // Every measure of a stretch of frames. Sorts `frames` and `gpu`.
 Values Measure(std::vector<float>& frames, std::vector<float>& gpu, const Process& process);

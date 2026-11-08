@@ -24,6 +24,8 @@ int GetSkipSystemDetection();
 void SetSkipSystemDetection(int value);
 int GetFastLoading();
 void SetFastLoading(int value);
+int GetSessionLog();
+void SetSessionLog(int value);
 
 namespace {
     using DevTools::Options::Kind;
@@ -49,6 +51,7 @@ namespace {
         {"Skip system detection", Kind::Toggle, 1, 0, 1, &GetSkipSystemDetection,
          &SetSkipSystemDetection},
         {"Fast loading", Kind::Toggle, 1, 0, 1, &GetFastLoading, &SetFastLoading},
+        {"Session log", Kind::Toggle, 0, 0, 1, &GetSessionLog, &SetSessionLog},
     };
 }
 

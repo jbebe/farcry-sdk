@@ -11,6 +11,9 @@ void* Local();
 // The local player's CPawn, or null.
 void* Pawn();
 
+// The vehicle `pawn` sits in, or null.
+void* Vehicle(void* pawn);
+
 // Turns the local player's look by `leftRadians`; his body takes it from the look a frame later.
 // Game thread.
 void TurnLook(float leftRadians);
