@@ -19,7 +19,7 @@ river and path splines from `world1.mapsdata.fcb`, and every placed entity with 
 detail-map rectangle or a `mapsdata` role, from the sector files and the entity library. It takes a
 few minutes and runs once.
 
-`render_map.py` draws `assets/world1-sheet.png` from that, 5120 px a side at 1 m per pixel, the world's
+`render_map.py` draws `work/world1-sheet.png` from that, 5120 px a side at 1 m per pixel, the world's
 own extent, so it slices back into the game's 25 area maps:
 
 | Layer | Drawn from |
@@ -138,7 +138,7 @@ are addresses the address library maps.
 ## The full map
 
 `stitch_map.py` joins world 1's 25 area maps, `levels\w1_<row a-e>_<column 1-5>\mapcompass_mip0.xbt`,
-one per level cell, into `assets/world1-map.png`: 5120 px a side at 1 m per pixel, row `a` (the highest
+one per level cell, into `work/world1-map.png`: 5120 px a side at 1 m per pixel, row `a` (the highest
 Y) at the top and column `1` (the lowest X) at the left. The tiles go in as stored and meet without a
 seam. The picture is the game's own, so it stays local; make it with
 

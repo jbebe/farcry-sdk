@@ -68,7 +68,7 @@ release notes; see [RELEASING.md](../../RELEASING.md).
   revs as slices of a recorded sweep (steady takes on the ZIL-130), each pitched to the revs and faded
   into the next, a little quieter off the throttle and quieter still while the clutch is out, and a
   recorded start the engine fades in after as it catches. The builds and their recordings stay local
-  (`assets\vehicle-sounds\`); the layer carries the banks.
+  (`sounds\`); the layer carries the banks.
 
   | Car | Engine | Idle to redline | Start catches |
   |---|---|---|---|

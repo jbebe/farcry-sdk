@@ -94,8 +94,8 @@ def texture(tools, original, image, work):
 
 def textures(source, tools, work):
     levels = source / "worlds/worlds/levels"
-    render_map.draw((0, 0, render_map.WORLD, render_map.WORLD), 1, HERE / "assets/world1-sheet.png", False)
-    sheet = Image.open(HERE / "assets/world1-sheet.png").convert("RGB")
+    render_map.draw((0, 0, render_map.WORLD, render_map.WORLD), 1, HERE / "work/world1-sheet.png", False)
+    sheet = Image.open(HERE / "work/world1-sheet.png").convert("RGB")
 
     for r, row in enumerate("abcde"):
         for c in range(5):
@@ -167,7 +167,7 @@ def sheet_model(source, game, tools, blender, work):
     # The paper to its trimmed edge, which lies symmetric about the world's middle.
     png = work / "sheet.png"
     low, high = render_map.EDGE[0], render_map.WORLD - render_map.EDGE[0]
-    paper = Image.open(HERE / "assets/world1-sheet.png").convert("RGB").crop((low, low, high, high))
+    paper = Image.open(HERE / "work/world1-sheet.png").convert("RGB").crop((low, low, high, high))
     paper.resize((SHEET_TEXTURE,) * 2, Image.LANCZOS).save(png)
     shutil.copy(png, HERE / "work" / "sheet.png")
     run(texconv, "-nologo", "-f", "BC1_UNORM", "-m", 0, "-dx9", "-y", "-o", work, png)

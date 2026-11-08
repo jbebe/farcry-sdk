@@ -1,8 +1,6 @@
-# The stitched map is the game's own picture and stays local; stitch_map.py makes it.
-assets/world1-map.png
-# The world data extract_world.py reads out of the game, and the sheet render_map.py draws from it.
+# The world data extract_world.py reads out of the game, the sheet render_map.py draws from it, and the
+# map stitch_map.py joins from the game's own pictures.
 work/
-assets/world1-sheet.png
 # The map textures build_layer.py draws from them; the archetype fragments beside them are kept.
 layer/mods/levels/
 layer/mods/worlds/world1/mapcompass*.xbt

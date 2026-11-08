@@ -268,7 +268,7 @@ by convention; the only data of its own is on its pickup.
 For now the page also lists three placeholders for everyone, dummy content for later support of new
 mission types, never in Items and never saved. They go when
 Tales of Africa ships: [its README](../tales-of-africa/README.md) says how. Their sources are in
-`assets/`. `build-ui.ps1` makes the photo's texture from `photo.png`, and the cassette's bank,
+`notebook/`. `build-ui.ps1` makes the photo's texture from `photo.png`, and the cassette's bank,
 `00fd0002.spk`, is the mp3 made Ogg Vorbis (`ffmpeg -c:a libvorbis -q:a 2`).
 
 | What | Where |

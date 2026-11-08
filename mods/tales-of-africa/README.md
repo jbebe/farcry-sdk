@@ -8,7 +8,7 @@ solves for a weapon or diamonds. Data only so far. Its papers are read in
 When this mod ships, Inventory Overhaul's placeholder papers go. In that mod: `kExamples` and its insert
 in `src/papers_page.cpp`, the `Papers` section of the language fragments, the example photo's lines in
 `build-ui.ps1`, then run it again; `layer/mods/soundbinary/00fd0002.spk`, the papers' sources in
-`assets/`, and the "for now" lines in `README.md`, `README-release.md` and
+`notebook/`, and the "for now" lines in `README.md`, `README-release.md` and
 `assets/nexus-description.bbcode`. `SquarePicture` moves here with them, for this mod's own photos.
 This mod's photo also needs its `REGION` cut to the square the notebook now shows pictures in: it still
 crops to 3:2.

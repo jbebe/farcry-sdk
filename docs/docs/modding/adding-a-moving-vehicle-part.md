@@ -140,7 +140,7 @@ and the fan stopped in about 8 s.
 <details>
 <summary>The script that builds the fan's `.hkx`</summary>
 
-`mods/vehicle-overhaul/assets/physics/fan.cs`, gitignored; the layer carries the `.hkx` it writes.
+`mods/vehicle-overhaul/physics/fan.cs`, gitignored; the layer carries the `.hkx` it writes.
 Run it with `dotnet run fan.cs`.
 
 ```csharp

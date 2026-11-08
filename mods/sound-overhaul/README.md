@@ -64,7 +64,8 @@ layer\
    ├─ soundbinary\            sound banks, new and replacing retail ones
    ├─ worlds\world1|world2\   weapon and pickup archetype fragments
    └─ downloadcontent\dlc1\   the same for the DLC weapons
-assets\                       the Nexus texts; the builders and packs the banks come from stay local
+assets\                       the Nexus texts and images
+sounds\                       local and untracked: the builders and packs the banks come from
 ```
 
 A release is cut as in `RELEASING.md`; `CHANGELOG.md`, `README-release.md` (the README inside the zip)
@@ -75,7 +76,7 @@ echo adds the shot's event, sample and audio records again under new ids, the au
 way:
 
 ```
-jackall-cli spk import 004569c9.spk 0x004bf596 assets\weapon-sounds\makarov\close_1_trimmed.wav
+jackall-cli spk import 004569c9.spk 0x004bf596 sounds\weapon-sounds\makarov\close_1_trimmed.wav
 ```
 
 FCSE also offers the two DLLs in `dsoal\` as plugins and logs them as skipped; that is expected.

@@ -2,10 +2,10 @@
 out/
 layer/plugins/sound-overhaul/SoundOverhaul.dll
 # The sound builders and the third-party packs they read stay local.
-assets/weapon-sounds/build/
-assets/weapon-sounds/third-party/
-assets/vehicle-sounds/build/
-assets/vehicle-sounds/third-party/
-assets/room-reverb/build/
-assets/ambience/build/
-assets/pickups/build/
+sounds/weapon-sounds/build/
+sounds/weapon-sounds/third-party/
+sounds/vehicle-sounds/build/
+sounds/vehicle-sounds/third-party/
+sounds/room-reverb/build/
+sounds/ambience/build/
+sounds/pickups/build/

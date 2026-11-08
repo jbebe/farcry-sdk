@@ -378,7 +378,7 @@ def main():
     parser.add_argument("--region", type=float, nargs=4, default=(0, 0, WORLD, WORLD),
                         metavar=("X0", "Y0", "X1", "Y1"), help="world metres to draw")
     parser.add_argument("--scale", type=float, default=1.0, help="pixels per metre")
-    parser.add_argument("--out", default=str(HERE / "assets/world1-sheet.png"))
+    parser.add_argument("--out", default=str(HERE / "work/world1-sheet.png"))
     parser.add_argument("--symbols", type=float, help="how large lines and lettering are drawn, the sheet's being 1"
                                                          " (default: the scale)")
     parser.add_argument("--clean", action="store_true", help="the sheet as printed, without the owner's notes")

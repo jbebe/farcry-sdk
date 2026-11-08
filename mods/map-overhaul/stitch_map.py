@@ -1,4 +1,4 @@
-# Stitches world 1's 25 area maps, one per level cell, into assets/world1-map.png: 5120 px a side at
+# Stitches world 1's 25 area maps, one per level cell, into work/world1-map.png: 5120 px a side at
 # 1 m per pixel, row a (the highest Y) at the top and column 1 (the lowest X) at the left.
 import argparse
 import subprocess
@@ -37,7 +37,7 @@ def main():
                 with Image.open(xbt.with_suffix(".dds")) as tile:
                     full.paste(tile.convert("RGB"), (c * TILE, r * TILE))
 
-    out = HERE / "assets" / "world1-map.png"
+    out = HERE / "work" / "world1-map.png"
     out.parent.mkdir(exist_ok=True)
     full.save(out, optimize=True)
     print(f"Wrote {out}")

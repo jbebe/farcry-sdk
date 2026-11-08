@@ -41,8 +41,9 @@ layer\mods\
   ui\                        the HUD icon: textures, the parts of hud.mgb it changes per variant,
                              the UI dependency lists
 layer\plugins\flashlight\    the built plugin, staged here by build.ps1
+hud-icon\                    the HUD icon's art and the texture headers its textures are built with
 build\                       local and untracked: the scripts that make the HUD files, the icon
-                             textures and the click bank from retail files and assets\
+                             textures and the click bank from retail files and hud-icon\
 ```
 
 ## Building

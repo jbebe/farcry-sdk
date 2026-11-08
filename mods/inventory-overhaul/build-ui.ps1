@@ -535,7 +535,7 @@ function SquarePicture([string]$source, [string]$target, [int]$size) {
     $image.Dispose()
 }
 # The example photo, under the same header.
-SquarePicture "$PSScriptRoot\assets\photo.png" "$Work\photo.tif" 512
+SquarePicture "$PSScriptRoot\notebook\photo.png" "$Work\photo.tif" 512
 Exec $Texconv -nologo -f DXT5 -m 1 -y -o $Work "$Work\photo.tif" | Out-Null
 Exec $Cli xbt build "$Work\photo.dds" "$Work\ui_tape_icon.xml" -o "$Textures\example_photo.xbt" | Out-Null
 
