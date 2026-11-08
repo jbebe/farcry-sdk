@@ -31,6 +31,8 @@ Stage: active
 - [done] Glass inside the eyepiece: lines bow, colours part, rim darkens, faint tint - not confirmed by the user
 - [done] New reticles as replaceable PNGs, the holographic chevron lit - "everything works perfectly" 2026-10-09
 - [done] Scope surroundings at the unzoomed field of view, no zoom as the scope comes up - "everything works perfectly" 2026-10-04
+- [done] The eye comes forward while a scope comes up and stays back while it goes down - lowering unseen in game
+- [done] No radial edge blur on the scopes the mod draws - unconfirmed by the user
 - [done] Scope shadow: a soft crescent from the rim as the look turns
 - [done] Tracers on the M249, PKM, Dragunov, AS50 and mounted MGs, own shots included, 1 in 6 ricochet - "All works fine" 2026-10-06
 - [done] Iron sight zoom switch: off keeps the field of view down iron sights
