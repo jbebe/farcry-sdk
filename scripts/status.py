@@ -107,10 +107,11 @@ def board(states, issues, projects, session=False):
         errors = f" (STATUS.md: {len(p.status.errors)} bad lines)" if p.status.errors else ""
         out.append(f"| {p.name} | {p.status.stage}{errors} | {version_cell(state)} | {since} | "
                    f"{bugs_cell(state)} | {missing} | {waits_cell(state)} |")
-    untracked = [i for i in issues or [] if not any(l.startswith("mod:") for l in i.labels)]
-    if untracked:
-        out += ["", f"Open issues without a mod label: {len(untracked)} "
-                    f"({', '.join('#' + str(i.number) for i in untracked)})"]
+    homeless = [i for i in issues or [] if "needs-home" in i.labels]
+    untracked = [i for i in issues or [] if not any(l.startswith("mod:") for l in i.labels) and i not in homeless]
+    for label, found in (("without a mod label", untracked), ("needing a home (a new mod?)", homeless)):
+        if found:
+            out += ["", f"Open issues {label}: {len(found)} ({', '.join('#' + str(i.number) for i in found)})"]
     lines, _ = collision_lines(projects)
     if lines:
         out += ["", "Collisions with no decision in either STATUS.md:"] + lines
@@ -169,13 +170,17 @@ def detail(state, projects):
     return "\n".join(out)
 
 
-def fit(projects):
+def fit(projects, issues):
     out = ["## Purpose and features, mod by mod", "",
-           "For each feature that does not serve its mod's purpose, suggest the mod it fits, or a new mod "
-           "(name and one-line purpose) when none does. Skip scrapped features.", ""]
+           "For each feature that does not serve its mod's purpose, and each issue below with no mod, suggest "
+           "the mod it fits, or a new mod (name and one-line purpose) when none does. Skip scrapped features.", ""]
     for p in projects:
         out += [f"### {p.name} ({p.key})", f"Purpose: {p.status.purpose or '(none written)'}"]
         out += [f"- [{f.state}] {f.text}" for f in p.status.features if f.state != "scrapped"] + [""]
+    loose = [i for i in issues or [] if not any(l.startswith("mod:") for l in i.labels)]
+    if loose:
+        out += ["### Issues with no mod", ""]
+        out += [f"- #{i.number} {i.title} [{', '.join(i.labels)}]" for i in loose]
     return "\n".join(out)
 
 
@@ -190,7 +195,7 @@ def main():
 
     projects = modstatus.projects()
     if args.fit:
-        print(fit(projects))
+        print(fit(projects, None if args.offline else modstatus.github()[0]))
         return 0
     if args.mod:
         project = modstatus.find(args.mod, projects)
