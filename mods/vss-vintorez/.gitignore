@@ -1,9 +1,10 @@
-# The mod is the layer, the readmes, the changelog and the Nexus page copy. The build machinery that
+# The mod is the layer, the readmes, the changelog, its status and the Nexus page copy. The build machinery that
 # produced it — scripts, packs, reference renders, working notes — stays local.
 /*
 !/.gitignore
 !/README.md
 !/README-release.md
 !/CHANGELOG.md
+!/STATUS.md
 !/assets/
 !/layer/
