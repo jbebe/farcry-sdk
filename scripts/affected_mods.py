@@ -14,10 +14,6 @@ from pathlib import Path
 import modstatus
 from modstatus import REPO
 
-# Inside a project, files that record the change rather than make it.
-BOOKKEEPING = ("STATUS.md", "CHANGELOG.md")
-
-
 def changed_paths(args):
     if not args:
         return sorted(set(modstatus.dirty_paths()))
@@ -45,7 +41,7 @@ def affected(paths, projects):
         for p in projects:
             if under(path, p.dir):
                 reached = True
-                if path[len(p.dir) + 1:] not in BOOKKEEPING:
+                if modstatus.is_code(path[len(p.dir) + 1:]):
                     owned.setdefault(p.key, []).append(path)
                     hits.setdefault(p.key, [])
                     if "its folder" not in hits[p.key]:

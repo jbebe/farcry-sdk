@@ -91,6 +91,7 @@ Every project released to Nexus Mods keeps its page text in its `assets/` folder
 |---|---|
 | `assets/nexus-summary.txt` | The page's summary, plain text, at most 350 characters |
 | `assets/nexus-description.bbcode` | The page's description, BBCode |
+| `assets/images/` | The pictures the page shows, uploaded to it by hand |
 
 A release also sets its Nexus Mods page's summary and description from these, so the page describes
 the version that just went out. A project without a description file keeps its page as it is.
@@ -132,7 +133,8 @@ created by hand on the mod page once. The version it replaces is archived.
 
 ## Adding a new project
 
-1. Give it a `CHANGELOG.md` with no version sections yet - its first release writes the first one.
+1. Lay a mod out as `docs/docs/modding/mod-skeleton.md` says, and give it a `CHANGELOG.md` with no
+   version sections yet - its first release writes the first one.
 2. Give it `assets/nexus-summary.txt` and `assets/nexus-description.bbcode` (see [The mod page](#the-mod-page)).
 3. Copy the nearest `<project>-release.yml` and change the tag prefix and directory it prepares
    from, the build steps and tests, the artifact names and the Nexus `env:` block.

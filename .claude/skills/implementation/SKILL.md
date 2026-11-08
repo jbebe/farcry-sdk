@@ -56,7 +56,8 @@ Each mod's `STATUS.md` holds its feature list; the format is in `.claude/skills/
 - Before every commit, run `python scripts/affected_mods.py <the paths being committed>` (PowerShell
   tool). Add a line under `## [Unreleased]` in the CHANGELOG.md of every mod it lists as affected,
   creating the section, or the file, where it is missing. A mod listed only as running on the
-  change gets a line only if it now needs the new version. For every collision it finds with no
+  change gets a line only if it now needs the new version, and a change that leaves what a mod ships
+  untouched - a moved build input, a renamed local path - gets none: say so when committing. For every collision it finds with no
   decision, ask the user - deploy apart, or fixed by what - and record the answer under
   `## Collisions` in both mods' STATUS.md files.
 

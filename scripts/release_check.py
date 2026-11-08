@@ -295,6 +295,7 @@ def main():
         checks["simplify"],
         build,
         checks["played"],
+        checks.get("skeleton", Check("skeleton", "pass", "a tool, not a mod: the skeleton is for mods/")),
         checks["assets"],
         Check("page text", "pass", "not needed for a hotfix") if args.hotfix else checks["page text"],
         changelog_section(state),

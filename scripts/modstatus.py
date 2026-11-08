@@ -23,8 +23,14 @@ PAGE_TEXT = ("assets/nexus-summary.txt", "assets/nexus-description.bbcode")
 SUMMARY_LIMIT = 350
 IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".webp")
 
-# Inside a project, what is neither code nor data: changing it leaves a "played" approval current.
-NOT_CODE = ("STATUS.md", "*.md", "assets", ".gitignore")
+# Inside a project, what is neither code nor data: changing it leaves a "played" approval current and
+# needs no changelog line.
+NOT_CODE = ("*.md", "assets", ".gitignore")
+
+
+def is_code(inside):
+    """Whether a path inside a project (relative to it) is code or data."""
+    return not any(fnmatch.fnmatch(inside, p) or inside.startswith(p + "/") for p in NOT_CODE)
 
 # What a mod runs on without building against it: FCSE's loader for a plugin, and JackAll's and
 # Vortex's install path for a layer. A change here can change a mod's behaviour with no rebuild.
@@ -529,10 +535,10 @@ def simplify_check(project, tag):
 
 
 def assets_check(project):
-    assets = project.path / "assets"
+    folder = project.path / "assets" / "images"
     missing = [p.split("/")[-1] for p in PAGE_TEXT if not (project.path / p).exists()]
-    images = [f for f in assets.rglob("*") if f.suffix.lower() in IMAGE_SUFFIXES] if assets.is_dir() else []
-    problems = missing + ([] if images else ["no images"])
+    images = [f for f in folder.iterdir() if f.suffix.lower() in IMAGE_SUFFIXES] if folder.is_dir() else []
+    problems = missing + ([] if images else ["no images in assets/images/"])
     summary = project.path / PAGE_TEXT[0]
     if summary.exists():
         length = len(" ".join(summary.read_text(encoding="utf-8").split()))
@@ -541,6 +547,36 @@ def assets_check(project):
     if problems:
         return Check("assets", "fail", ", ".join(problems), "add them to assets/")
     return Check("assets", "pass", f"page text and {len(images)} images")
+
+
+def skeleton_check(project):
+    """The mod against docs/docs/modding/mod-skeleton.md, on what git tracks."""
+    tracked = {line[len(project.dir) + 1:] for line in git("ls-files", project.dir).splitlines()}
+    required = ["README.md", "README-release.md", "CHANGELOG.md", "STATUS.md", ".gitignore", *PAGE_TEXT]
+    plugin = project.is_plugin
+    if plugin:
+        required += ["CMakeLists.txt", "CMakePresets.json", "build.ps1", "src/main.cpp"]
+    problems = [f"no {p}" for p in required if p not in tracked]
+    if not any(p.startswith("assets/images/") and p.lower().endswith(IMAGE_SUFFIXES) for p in tracked):
+        problems.append("no assets/images/")
+    strays = sorted(p for p in tracked if p.startswith("assets/") and p not in PAGE_TEXT
+                    and not p.startswith("assets/images/"))
+    if strays:
+        problems.append(f"{len(strays)} other file{'s' if len(strays) > 1 else ''} in assets/ ({strays[0]})")
+    has_layer = any(p.startswith("layer/") for p in tracked)
+    if not plugin and not has_layer:
+        problems.append("no layer/")
+    if plugin and has_layer:
+        ignore = (project.path / ".gitignore").read_text(encoding="utf-8") if ".gitignore" in tracked else ""
+        if not re.search(r"^/?layer/plugins/\S+\.dll\s*$", ignore, re.M):
+            problems.append("the built DLL under layer/plugins/ is not gitignored")
+    if not project.tag_prefix:
+        problems.append("no release workflow")
+    if f"`{project.dir}`" not in (REPO / "RELEASING.md").read_text(encoding="utf-8"):
+        problems.append("no row in RELEASING.md")
+    if problems:
+        return Check("skeleton", "fail", "; ".join(problems), "lay it out as docs/docs/modding/mod-skeleton.md says")
+    return Check("skeleton", "pass", "matches docs/docs/modding/mod-skeleton.md")
 
 
 def notes_check(project, tag, unreleased):
@@ -564,6 +600,8 @@ def quick_checks(project, tag, unreleased):
               assets_check(project),
               record_check(project, "page text", [f"{project.dir}/{p}" for p in PAGE_TEXT], "page text",
                            "have the user read nexus-description.bbcode and nexus-summary.txt, then record it")]
+    if project.dir.startswith("mods/"):
+        checks.append(skeleton_check(project))
     return checks
 
 

@@ -30,7 +30,7 @@ def short(check):
         return f"{check.name} stale"
     if check.name == "changelog":
         return "no changelog" if check.detail.startswith("no CHANGELOG") else "no changelog notes"
-    if check.name in ("assets", "skeleton"):
+    if check.name == "assets":
         return f"{check.name}: {check.detail}"
     return check.name
 
