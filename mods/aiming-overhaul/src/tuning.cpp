@@ -340,11 +340,6 @@ void AimingOverhaul::Tuning::DrawWindow(void*) {
     if (ImGui::Button("Hit the head")) {
         Hit::Try(Hit::Where::kHead);
     }
-    ImGui::SameLine();
-    if (ImGui::Button("Hit the vest")) {
-        Hit::Try(Hit::Where::kVest);
-    }
-    ImGui::SetItemTooltip("Nothing in the game hits a vest yet, so only this shows it.");
 
     ImGui::SeparatorText("Shot shake");
     if (g_inHand != g_followed) {

@@ -97,9 +97,8 @@ both field by field with other mods' edits, reporting any clash.
   edges go dark, held for half a second and gone in 2.5 s. On the head, the view goes black for
   0.35 s and fades back in over 1.5 s, double, the second image a little to the side and fading out
   over 5 s. A hit taking half the player's health or more does all of it in full, a graze 0.4 of
-  it; a shotgun's pellets count as one hit. A hit on a vest is a shorter, smaller punch alone, but
-  nothing in the game hits a vest yet. The game's own hit sound, red hurt overlay and interface stay
-  as they are. While a scope's sight picture is up the view is not punched. The game's red marks
+  it; a shotgun's pellets count as one hit. The game's own hit sound, red hurt overlay and interface
+  stay as they are. While a scope's sight picture is up the view is not punched. The game's red marks
   pointing to whoever hit the player are gone, whether this is on or off.
 - **Shot shake.** Each shot kicks the view up and it springs straight back, as hard as the round
   pushes whoever fires it: its projectiles' mass times their muzzle velocity, from the round
@@ -296,7 +295,7 @@ Throw dirt, under them, throws it as a round landing a metre to the right would.
 |---|---|---|
 | Punch back | metres the eye is pushed back at the punch's peak | 0.05 |
 | Punch tips down | degrees the view tips down at its peak | 3 |
-| Punch peaks after | seconds from the hit; a vest's in half of it | 0.07 |
+| Punch peaks after | seconds from the hit | 0.07 |
 | Vignette darkness | how dark the corners go, nought to one | 0.85 |
 | Vignette reach | how far in from the corners the dark comes, a share of the way to the middle | 0.55 |
 | Vignette gone by | seconds after the hit | 2.5 |
@@ -305,7 +304,7 @@ Throw dirt, under them, throws it as a round landing a metre to the right would.
 | Head: double image apart | pixels of a 1080-line screen | 40 |
 | Head: double image gone by | seconds after the hit | 5 |
 
-Hit the body, Hit the head and Hit the vest, under them, show a hit there as hard as the hardest.
+Hit the body and Hit the head, under them, show a hit there as hard as the hardest.
 
 The shot shake has a section per weapon. Its Weapon list holds every gun the player can
 fire, variants under their gun, and Other weapons for the rest. It moves to the weapon in hand each

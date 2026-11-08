@@ -39,22 +39,10 @@ namespace {
     constexpr float kApartLines = 1080.0f;
     constexpr double kNever = -1e9;
 
-    // How a hit off the head looks: its punch against a body hit's, in size and in seconds to its
-    // peak, and whether it winds the player, darkening the view.
-    struct Look {
-        float punch;
-        float peak;
-        bool winds;
-    };
-    constexpr Look kBody = {1.0f, 1.0f, true};
-    constexpr Look kVest = {0.6f, 0.5f, false};
-
-    // The last hit off the head: when, how much health it took, and how it looks; and when the
-    // head was last hit.
+    // The last hit off the head, when and how much health it took, and when the head was last hit.
     struct Hits {
         double at = kNever;
         float lost = 0.0f;
-        const Look* look = &kBody;
         double headAt = kNever;
     };
 
@@ -92,13 +80,11 @@ namespace {
             }
             return;
         }
-        const Look* look = where == AimingOverhaul::Hit::Where::kVest ? &kVest : &kBody;
-        if (now - g_hits.at < kTogether && look == g_hits.look) {
+        if (now - g_hits.at < kTogether) {
             g_hits.lost += lost;
         } else {
             g_hits.at = now;
             g_hits.lost = lost;
-            g_hits.look = look;
         }
     }
 }
@@ -115,8 +101,8 @@ AimingOverhaul::Hit::Punch AimingOverhaul::Hit::Update(float seconds) {
     const Hits hits = Latest();
     const Tuning::HitLook& look = Tuning::BeingHit();
     const double now = Now();
-    const float peak = hits.look->punch * Strength(hits.lost);
-    const float omega = 1.0f / (hits.look->peak * look.peak);
+    const float peak = Strength(hits.lost);
+    const float omega = 1.0f / look.peak;
     if (hits.at != g_struckAt) {
         g_struckAt = hits.at;
         g_struckPeak = now - hits.at < kStale ? 0.0f : peak;
@@ -141,11 +127,9 @@ void AimingOverhaul::Hit::OnComposite(IDirect3DDevice9* device, IDirect3DSurface
     const double sinceBody = now - hits.at;
     // Seconds since the head's black began to clear, below nought until it does.
     const double clearing = now - hits.headAt - look.black;
-    const float vignette = hits.look->winds
-                               ? look.vignette * Strength(hits.lost) * Through(sinceBody, kDarken) *
-                                     (1.0f - Through(sinceBody - kDarkHold,
-                                                     look.vignetteGone - kDarkHold))
-                               : 0.0f;
+    const float vignette =
+        look.vignette * Strength(hits.lost) * Through(sinceBody, kDarken) *
+        (1.0f - Through(sinceBody - kDarkHold, look.vignetteGone - kDarkHold));
     const float black = 1.0f - Through(clearing, look.unblack);
     const float seenDouble =
         kDouble *
