@@ -73,6 +73,7 @@ Stage: active
 - after vortex-0.6.0
 - the difficulty spread (item G) decided lever by lever
 - heavy testing (#8)
+- a revision of damage, AI shooting and the health system (user, 2026-11-04)
 - the user makes the Nexus page (NEXUS_MOD_ID empty in difficulty-overhaul-release.yml)
 
 ## Collisions

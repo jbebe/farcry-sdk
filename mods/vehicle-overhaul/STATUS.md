@@ -64,3 +64,4 @@ Stage: active
 
 - flashlight: deploy apart - user 2026-10-08: "flashlight is not needed, dont deploy it"; VO's input hook beside Flashlight's left with db5067a
 - third-person: fixed by db5067a - both hook SetDriver, the call that gives a car its driver (patterns wildcard its first 6 bytes)
+- sound-overhaul: Vehicle Overhaul's copy wins - both ship mods/soundbinary/0045cbd8.spk, the Datsun idle; user 2026-10-18: "ignore sound overhaul"
