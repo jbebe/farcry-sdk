@@ -2,16 +2,31 @@
 
 [center][youtube]cB44FdfiZpQ[/youtube][/center]
 
-Changes how the player aims, from the hands to the shot leaving the gun. No damage or AI is changed. Compatibility with weapon behavioral mods.
+Changes how the player aims and moves, from the hands to the shot leaving the gun. No damage or AI is changed. Compatible with mods that change weapon behaviour.
 
-[b][size=4]What it adds[/size][/b]
+[b][size=4]Aiming[/size][/b]
 [list]
 [*][b]Sway[/b] - the breath and a slow wander move the aim, view, gun and shot together; the mouse corrects it as it would a real hand. Each breath rests calmly at the bottom: the moment to time a shot. Down the iron sights the sights also drift out of line as on a real gun.[/*]
 [*][b]Heart rate[/b] - from 70 to 170 a minute, climbing as stamina runs down and with wounds or blasts nearby. Each beat jolts the aim; a racing heart breathes faster, sways wider and is heard faintly down a magnifying scope.[/*]
 [*][b]Stance[/b] - crouched and still halves the sway; moving widens it.[/*]
 [*][b]Hold breath[/b] - on the Dart Rifle, M1903, Dragunov and AS50, hold sprint down the scope to steady the aim for 2 to 4 seconds. Held longer, the hands shake.[/*]
 [*][b]Lean[/b] - on Q and E: the upper body leans out about 25 cm past a corner, with the view, arms and gun, and shots leave from where the eye is. Hold to lean, or tap to stay leaned.[/*]
+[*][b]Recoil that stays[/b] - each shot kicks the aim up by the game's own amount, and it stays there until you pull it down. The first three shots of a burst land together; from the fourth each strays a little further.[/*]
+[*][b]The operation manual tightens the iron sights[/b] - with a gun's manual from the arms dealer, its spread down the iron sights is half the game's standing and a quarter crouched. Without it, the game's.[/*]
+[/list]
+[b][size=4]Moving[/size][/b]
+[list]
+[*][b]Getting going[/b] - a walk takes half a second to reach its pace and a sprint a second and a half to reach its top. Top speeds and the jump are the game's.[/*]
+[*][b]Gun up after a sprint[/b] - the gun is carried lower in a sprint and takes a moment to come back up, longer the heavier it is; until then it doesn't fire or aim.[/*]
 [*][b]Gun near walls[/b] - a gun that would reach into a wall swings down out of it and doesn't fire until it's back up.[/*]
+[*][b]Vertical inertia[/b] - the arms slide a little down as you look up and up as you look down, as the game already does sideways.[/*]
+[*][b]Landing[/b] - a landing drops your view a few centimetres as your knees take it.[/*]
+[/list]
+[b][size=4]What you see[/size][/b]
+[list]
+[*][b]Shot shake[/b] - each shot kicks the view up and it springs back, harder for a heavier round; full auto fades into a quick roll. Only the view moves, never where the shots go.[/*]
+[*][b]Being hit[/b] - a body hit punches your view back with dark edges; a head hit cuts to black and fades back in double. The game's marks pointing to the shooter are gone.[/*]
+[*][b]Dirt in the eye[/b] - a round landing in the dirt by your face, your own included, throws blurry dirt in your eye for a few seconds.[/*]
 [*][b]Gun blur[/b] - down the iron sights the eye focuses on the front sight, and the rest of the gun goes out of focus, the rear sight most.[/*]
 [*][b]Scope eyepiece[/b] - every scope is a black, out-of-focus eyepiece instead of a long tube, with the zoomed view filling its opening, seen through glass. It trails the look a little and kicks back with each shot. The AR-16 and MGL-140 scopes lose their random spread, so a shot goes where the reticle is.[/*]
 [*][b]Reticles[/b] - new in every scope: a hunting duplex on the Dart Rifle and M1903, a PSO-1 with its rangefinder on the Dragunov, a red tactical mil-scale on the AS50, and a lit holographic chevron on the AR-16 and MGL-140. They are plain PNG files in bin\plugins\aiming-overhaul\reticles\, so you can swap in your own.[/*]
@@ -23,12 +38,14 @@ Changes how the player aims, from the hands to the shot leaving the gun. No dama
 Two new controls, rebindable in Options → Controls under Movements: [b]Lean left[/b] on Q and [b]Lean right[/b] on E. To free those keys the defaults move: [b]interact to F, throw grenade to G and next throwable to T[/b]. Leaving a vehicle or a mounted gun, a buddy rescue, the machete finish and the watch stay on E and Q, which the game never lets be rebound.
 
 [b][size=4]Settings[/size][/b]
-In the [b]Mod Configuration[/b] menu, each effect has its own switch, all on by default: Sway, Hold breath, Gun near walls, Gun blur, Scope shadow, Scope eyepiece, Scope surroundings and Tracers. [b]Iron sight zoom[/b] is there too: switch it off and aiming down iron sights no longer zooms in, while scopes still magnify.
+In the [b]Mod Configuration[/b] menu, each effect has its own switch, all on by default: Sway, Hold breath, Gun near walls, Vertical inertia, Gun up after sprint, Landing, Recoil that stays, Shot shake, Dirt in the eye, Being hit, Gun blur, Scope shadow, Scope eyepiece, Scope surroundings and Tracers. [b]Iron sight zoom[/b] is there too: switch it off and aiming down iron sights no longer zooms in, while scopes still magnify.
+The finer values (sway down the sights, shot shake per weapon, the dirt and the look of a hit) are in bin\aiming-overhaul.ini. With DevTools installed, its overlay has an Aiming Overhaul window that sets them as you play.
 
 [size=4][b]Requirements[/b][/size]
 [list]
 [*][url=https://www.nexusmods.com/farcry2/mods/368]FCSE[/url] 1.4.0 or later, the plugin loader this runs in. Far Cry 2 1.03, Steam or GOG.[/*]
-[*]DirectX 9, set in Options → Display → DirectX Version. On DirectX 10 you get the game's own scopes, without the new eyepiece, reticles, surroundings or shadow; the gun blur doesn't show and tracers lose their bright glow.[/*]
+[*]JackAll 1.4.1 or the Vortex extension 0.4.0, or later, to install it.[/*]
+[*]DirectX 9, set in Options → Display → DirectX Version. On DirectX 10 you get the game's own scopes, without the new eyepiece, reticles, surroundings or shadow; the gun blur, the dirt and the dark edges of a hit don't show, and tracers lose their bright glow.[/*]
 [/list]
 [b][size=4]Installing[/size][/b]
 The download is a JackAll layer, which both installers read as-is:
@@ -41,4 +58,5 @@ The download is a JackAll layer, which both installers read as-is:
 [*][b]Mods that change weapons' stats or data[/b] merge with it field by field.[/*]
 [*][b]Mods that change the same fields[/b] (a weapon's tracer settings, its iron-sight effect or its spread down a scope) clash on those fields, and the installer reports it.[/*]
 [*][b]Mods that change the controls[/b], such as Flashlight, combine with it control by control. One that rebinds interact, throw grenade or next throwable too clashes on that control, and the installer reports it.[/*]
+[*][b]Mods that change the HUD[/b] combine with it part by part.[/*]
 [/list]

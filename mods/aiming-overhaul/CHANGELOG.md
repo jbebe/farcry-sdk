@@ -3,7 +3,7 @@
 Notable changes to Aiming Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.3.0] - 2026-11-08
 
 ### Added
 - **Lean**, on two new controls in Options > Controls under Movements: Lean left on Q and Lean
@@ -39,7 +39,8 @@ Notable changes to Aiming Overhaul, loosely following
 - **Full auto spreads.** From the fourth shot of a burst each shot strays a little further, up to
   eight shots' worth.
 - **Shot shake.** Each shot kicks the view up and it springs straight back, as hard as the gun's
-  real round pushes back, from the round Difficulty Overhaul gives each gun. Firing full auto, the
+  real round pushes back, from the round Difficulty Overhaul gives each gun, or from the game's own
+  kick without it. Firing full auto, the
   kick fades into a roll clockwise and back, which stops when the rounds do. Only the view moves:
   the gun and where the shots go stay as they were. A scope's sight picture does not shake. How hard
   and how long the kick and the roll are, how late the kick comes and how soon it gives way to the
@@ -49,19 +50,22 @@ Notable changes to Aiming Overhaul, loosely following
 - **The operation manual tightens the iron sights.** With a gun's manual its random spread down the
   iron sights is half the game's standing and a quarter crouched; without it, the game's.
 - **Dirt in the eye.** A round landing in the dirt, sand, stone or wood by your face, your own
-  included, throws dirt in your eye: dark, blurry blobs on that side with the view blurred around them, gone in a
-  few seconds. How big, dark and blurred, how long it lasts and how near it has to land are set in
-  the same window, which can also throw some to try it.
+  included, throws dirt in your eye: dark, blurry blobs on that side with the view blurred around
+  them, gone in a few seconds. How big, dark and blurred, how long it lasts and how near it has to
+  land are set in the same window, which can also throw some to try it.
 - **Being hit.** A hit on the body punches your view back and tips it down and darkens it from the
-  edges for a couple of seconds; a hit on the head cuts the view to
-  black, then fades it back in double, the second image fading slowly. The harder the hit, the more of
-  it. How far and how long each lasts is set in the same window, which can also show a hit on the
-  body, the head or a vest to try it.
+  edges for a couple of seconds; a hit on the head cuts the view to black, then fades it back in
+  double, the second image fading slowly. The harder the hit, the more of it. How far and how long
+  each lasts is set in the same window, which can also show a hit to try it.
+- **The window** is in DevTools' overlay when DevTools is installed. Its values are kept in
+  `bin\aiming-overhaul.ini`, which can be edited without it.
 - **Hold breath**, **Gun near walls**, **Vertical inertia**, **Gun up after sprint**, **Landing**,
   **Recoil that stays**, **Shot shake**, **Dirt in the eye** and **Being hit** switches in the Mod
   Configuration menu.
 
 ### Changed
+- **Needs JackAll 1.4.1 or the Vortex extension 0.4.0**, which merge the HUD's parts; the mod now
+  ships some.
 - **Interact moves to F, throw grenade to G and next throwable to T** by default, to free Q and E
   for the lean. All three can be rebound. Leaving a vehicle or a mounted gun, a buddy rescue, the
   machete finish and the watch stay on E and Q, which the game never lets be rebound.
