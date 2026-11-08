@@ -1,4 +1,4 @@
-// The campaign state every feature reads: the difficulty, the local player and the game clock.
+// The campaign state every feature reads: the difficulty, the local player, entities and the game clock.
 #include "engine/game.h"
 
 #include "engine/memory.h"
@@ -11,6 +11,8 @@
 namespace {
     using GetServiceFn = void*(__fastcall*)(void* manager, void* unused, const void* id, int create);
     using GetTerminalFn = void*(__cdecl*)();
+    using GetOwnerFn = void*(__fastcall*)(uint8_t* owner, void* unused, uint8_t** proxy);
+    using DestroyProxyFn = void(__fastcall*)(uint8_t* proxy, void* unused);
 
     // CGameModeManager's instance and GetGameModeService, then CFCXGameplayManager's service id
     // and the count that stays 0 until that id is built.
@@ -21,12 +23,18 @@ namespace {
     // The local player's CTerminal, and the game clock.
     FCSE::Relocation<GetTerminalFn> g_getTerminal{FCSE::Uplay(0x00831870)};
     FCSE::Relocation<void**> g_clock{FCSE::Uplay(0x01606360)};
+    // CPhysOwner::GetOwnerEntity, which hands back a CEntityProxy holding a reference, and the proxy's
+    // destructor.
+    FCSE::Relocation<GetOwnerFn> g_getOwner{FCSE::Uplay(0x0048ED40)};
+    FCSE::Relocation<DestroyProxyFn> g_destroyProxy{FCSE::Uplay(0x0029B7F0)};
 
     constexpr ptrdiff_t kClockSeconds = 0x30;
     constexpr ptrdiff_t kGameplayManagerDifficulty = 0x40;
     constexpr ptrdiff_t kTerminalPlayer = 0x04;
     constexpr ptrdiff_t kPlayerProxy = 0x08;
+    constexpr ptrdiff_t kProxyReferences = 0x08;
     constexpr ptrdiff_t kProxyEntity = 0x0C;
+    constexpr ptrdiff_t kBodyOwner = 0x08;
     constexpr ptrdiff_t kEntityId = 0x08;
     constexpr ptrdiff_t kEntityPosition = 0x60;
     constexpr ptrdiff_t kEntityForward = 0x40;
@@ -73,9 +81,25 @@ void* ProxyEntity(const void* proxy) {
 
 void* EntityOf(void* component) { return FCSE::ApiPointer()->EntityData->EntityOf(component); }
 
-uint32_t Id(const void* entity) {
-    return entity != nullptr ? Read<uint32_t>(entity, kEntityId) : 0;
+void* OwnerOf(uint8_t* body) {
+    uint8_t* proxy = nullptr;
+    if (body == nullptr || !g_getOwner || !g_destroyProxy || !EngineFree) {
+        return nullptr;
+    }
+    g_getOwner(body + kBodyOwner, nullptr, &proxy);
+    void* entity = ProxyEntity(proxy);
+    if (proxy != nullptr && --*reinterpret_cast<int*>(proxy + kProxyReferences) == 0) {
+        g_destroyProxy(proxy, nullptr);
+        EngineFree(proxy);
+    }
+    return entity;
 }
+
+uint64_t FullId(const void* entity) {
+    return entity != nullptr ? Read<uint64_t>(entity, kEntityId) : 0;
+}
+
+uint32_t Id(const void* entity) { return static_cast<uint32_t>(FullId(entity)); }
 
 void Position(const void* entity, float position[3]) {
     std::copy_n(Vec3(entity, kEntityPosition), 3, position);

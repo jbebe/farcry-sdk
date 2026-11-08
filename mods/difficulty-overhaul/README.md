@@ -16,7 +16,8 @@ Configuration Menu.
 | Feature | What it does |
 |---|---|
 | Weapon damage | Every gun's bullet is as lethal as its real round, whoever fires it: its impact level is the one whose damage on the game's curve is nearest 7.3 × √(one projectile's muzzle energy in joules), from the round's bullet mass and the gun's own muzzle velocity. Makarov 134, Star .45 168, Uzi, MP5 and MAC-10 185, M16 and M249 300, AK-47, G3 and Desert Eagle 350, FAL, Dragunov, PKM and M1903 399, AS50 and M2 1,000, a buckshot pellet 117, 100 from the DLC shotguns. The soldiers' damage curves are gone, so a soldier's gun hits as hard as the player's, and so is the close-range bonus on every difficulty. Part of the layer, with each gun's round as FCSE entity data any mod may read: `Cartridge.Name`, `Cartridge.BulletMass` in grams, `Cartridge.MuzzleVelocity` in m/s, `Cartridge.Projectiles` and `Cartridge.MuzzleEnergy` in joules for the whole round |
-| Blood | A hit on anyone, the player too, sprays blood only as its real round would, and only where it goes in: a pistol or SMG round never, a rifle round or shotgun pellet on a head hit, a .50 BMG round on any hit. The spray is a dark red mist with three droplets in place of the game's blob: the game's red smoke puff at 0.7 m for 0.7 s, and the machete hit's droplets thrown out at 3 m/s. A gun names one impact record for where its bullet hits and one for where it comes out behind. The game's, `Weapon.Bullet`, has its flesh particles blanked and plays where every bullet comes out; rifles and shotguns play `Weapon.HeadBlood`, a copy that keeps the head's, and the AS50 and M2 `Weapon.Blood`, a copy that keeps both. The 1 s wound decal stays on all. Part of the layer, as the whole `materialimpacts.xml` and four whole particle libraries, world 1's, world 2's, DLC 1's and the test range's, data\particles.py |
+| Blood | A hit on anyone, the player too, sprays blood by the whole round's muzzle energy, and only where it goes in: under 1,000 J (pistols, SMGs) never, over 1,000 J (rifles, shotguns, the Desert Eagle) on a head hit, over 10,000 J (the .50 BMG) on any hit. The spray is a dark red mist with three droplets in place of the game's blob: the game's red smoke puff at 0.45 m for 0.7 s, and the machete hit's droplets thrown out at 3 m/s. A gun names one impact record for where its bullet hits and one for where it comes out behind. The game's, `Weapon.Bullet`, has its flesh particles blanked and plays where every bullet comes out; rounds over 1,000 J play `Weapon.HeadBlood`, a copy that keeps the head's, and over 10,000 J `Weapon.Blood`, a copy that keeps both. The 1 s wound decal stays on all. Part of the layer, as the whole `materialimpacts.xml` and four whole particle libraries, world 1's, world 2's, DLC 1's and the test range's, data\particles.py |
+| Blood behind and below | Any hit on a body from a round over 1,000 J leaves a spatter of blood, 0.6 m across, where its line meets the ground, a wall, an object or a vehicle within 3 m beyond; an object shows the part of it that falls on it. A soldier killed after a bullet to the head, or three anywhere else, leaves a puddle 0.8 m across that seeps in over 4 s where he stood. Both stay until the game's decal budget recycles them. The plugin casts its own ray past the body and hands the hit to the game's impact code with the records `Blood.Spatter` and `Blood.Puddle`, which give every surface but flesh and water the decal of the same name, the game's blood spray and blood puddle textures. Part of the layer, as the whole `materialimpacts.xml` and `decal.xml` |
 | Hit locations | The player takes a hit whole wherever it lands, as in the game. Anyone else takes it by where it lands: a head hit kills, torso and legs 1, arms 0.6, hands and feet 0.3, in place of the game's 6, 1, 1, 0.5, 0.5, 0.5. The body part of each hit on the player is in the hit log. Part of the layer, `gamemodesconfig.xml` |
 | Health | The player's maximum health on each difficulty is sized in AK-47 hits from full, at the sickness level the campaign starts at. Easy and Normal take as many as in the game, the 37th and the 28th killing, where a soldier's AK took 70 a hit: the game's curves scaled by 4.96, as much as the real round outhits that, to 8,427 and 6,568. Hardcore keeps the game's 1,025, the 3rd hit killing, and Infamous 320, the 1st, scaled by 0.4. A bar is still a fifth of it. Sickness still shrinks it as in the game, to 6,444, 5,081, 825 and 280, keeping the game's own counts on Easy and Normal, 29 and 23 at the worst. Part of the layer, data\health.py |
 | Damage taken | The last health bar quarters a hit on Easy and Normal, as in the game, and no longer on Hardcore and Infamous, where a hit on it takes its full damage |
@@ -83,12 +84,12 @@ With `-braintrace`, it logs each task a soldier's combat brain starts, by the CR
 .\verify_build.ps1           # x86, static CRT, FCSE_Load exported
 python ..\..\scripts\verify_patterns.py
 .\build-layer.ps1            # the brain's fragments in layer\, from the installed game's merc brain
-python data\weapons.py world1.xml world2.xml dlc1.xml tmpla.xml gamemodesconfig.xml materialimpacts.xml
+python data\weapons.py world1.xml world2.xml dlc1.xml tmpla.xml gamemodesconfig.xml materialimpacts.xml decal.xml
 python data\health.py world1.xml world2.xml dlc1.xml tmpla.xml
 python data\particles.py world1.xml world2.xml tmpla.xml dlc1.xml   # decoded particle libraries
 ```
 
-`data\weapons.py` writes the guns' fragments, `gamemodesconfig.xml` and `materialimpacts.xml`,
+`data\weapons.py` writes the guns' fragments, `gamemodesconfig.xml`, `materialimpacts.xml` and `decal.xml`,
 `data\health.py` the player's health curves, and `data\particles.py` the four particle libraries with
 the bullet blood, from decoded retail entity and particle libraries and the retail files; their
 docstrings say which. The test range's guns and curves come from `tmpla`'s library, which DevTools copies into the
@@ -100,7 +101,7 @@ merges into the game's own brain at install. `build-layer.ps1` makes them: it ta
 `mercbrain.ai.rml` out of the installed game, makes the edits and writes what differs with
 `jackall-cli ai fragments`. Beside them are the guns' weapon and weapon-properties fragments and the
 health curves, which JackAll merges field by field with any other mod's copies, and the whole
-`gamemodesconfig.xml`, `materialimpacts.xml` and particle libraries. The test range's library replaces
+`gamemodesconfig.xml`, `materialimpacts.xml`, `decal.xml` and particle libraries. The test range's library replaces
 DevTools' copy, so this layer goes after DevTools'.
 Install with `jackall-cli mod build --game "<game>" --layer layer`,
 together with any other layers in play.

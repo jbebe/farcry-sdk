@@ -8,9 +8,12 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
   a rifle drops a soldier, two from a pistol, a head hit from anything kills. A soldier's gun hurts
   you as much as yours hurts him, and no gun gains damage up close.
 - **Blood as the round would show it.** On you as on a soldier, a pistol or SMG round throws no
-  blood, a rifle round or a shotgun pellet only on a head hit, and only the .50 BMG on any hit. What
-  it throws is a dark red mist with a few droplets where the round goes in, in place of the game's
-  blob.
+  blood, a rifle round, a shotgun pellet or a Desert Eagle round only on a head hit, and only the
+  .50 BMG on any hit. What it throws is a small dark red mist with a few droplets where the round
+  goes in, in place of the game's blob.
+- **Blood behind and below.** A rifle, shotgun or Desert Eagle round that hits a body spatters the
+  ground, wall or car up to 3 m behind it, and a soldier killed by a head shot or three bullets leaves
+  a puddle of blood where he dies.
 - **Difficulty is how much you can take.** On Easy and Normal you take as many AK-47 hits as in the
   game, 37 and 28 from full; on Hardcore the third kills you and on Infamous the first, wherever it
   lands. The soldiers aim and hit the same on every setting. On Easy and Normal your last bar still softens hits,
@@ -99,7 +102,7 @@ jackall-cli mod restore --game "C:\Games\Far Cry 2"
 - **Mods that change the soldiers' brain** merge with it plan by plan, and a mod that replaces the
   brain whole still works: these changes go on top of it.
 - **Mods that change weapon damage or health** change the numbers this mod multiplies.
-- **Mods that change bullet impacts, blood or particle effects** replace this mod's whole
-  `materialimpacts.xml` or world particle libraries, or it replaces theirs: whichever is installed
-  last wins.
+- **Mods that change bullet impacts, blood, decals or particle effects** replace this mod's whole
+  `materialimpacts.xml`, `decal.xml` or world particle libraries, or it replaces theirs: whichever is
+  installed last wins. Legacy mods that make decals last longer change `decal.xml`.
 - **Flashlight:** its guards noticing your light does not work while this mod is installed.

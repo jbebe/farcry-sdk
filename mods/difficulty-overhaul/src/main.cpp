@@ -16,6 +16,8 @@ void InstallPerception();
 void InstallGoingDown();
 void InstallHealing();
 void InstallBrainTrace();
+void InstallBloodSpatter();
+void InstallBloodPuddle();
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION || !FCSE::Bind(api)) {
@@ -37,5 +39,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallGoingDown();
     InstallHealing();
     InstallBrainTrace();
+    InstallBloodSpatter();
+    InstallBloodPuddle();
     return true;
 }

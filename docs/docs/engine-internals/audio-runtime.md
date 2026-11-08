@@ -667,6 +667,17 @@ end or the next thing it hit, and plays the secondary record where that ray land
 `CWeaponFireBulletProperties::SpawnSecondaryBulletPuff`) **(RE-verified)**. On a soldier that is the
 spray out of the far side of him.
 
+A record's decal for the surface hit goes through `CMaterialImpactFx::SpawnDecal` (Steam `0x10511300`)
+to `CDecalManager::SpawnDecal` (`0x1052B740`), which reads the `SCollisionInfo` its caller filled from the
+ray hit: the point and normal, the entity hit and its part, the static geometry hit (its tree and part),
+and whether the hit is terrain. A decal on terrain is cut to the terrain, one on static geometry is placed
+by its tree, and one on an entity only if `IsDecalPlaceable` (`0x10527370`) finds all four of its corners
+on the entity's physics within 1 cm, or failing that at 0.4 times the size **(RE-verified)**. An entity's
+decal is a projection in the object's own space, so one let past that test shows only where it falls on
+the object **(inferred)**. The exit puff fills no static geometry, so its decals never land on a building
+or a wall that is not an entity. Decal types are the entries of `databases\generic\decal.xml`, named in a
+record's `decalDecal` by the CRC32 of their `Name`; Difficulty Overhaul spawns its blood decals this way.
+
 There is **no ricochet** anywhere: no event, field, string or code. The only bounce asset,
 `matimpBounceImpactFx`, belongs to thrown objects.
 

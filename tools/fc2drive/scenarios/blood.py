@@ -1,8 +1,8 @@
 """Difficulty Overhaul's blood on the test range: a hit sprays blood only as its real round would, on a
 soldier and on the player. The player shoots a rifleman 10 m off, standing so the round lands high and
-crouched so it lands on his body, with a pistol, a rifle, a shotgun and the AS50; then a rifleman and a
-shotgunner shoot the player, who faces them. A shot is taken straight after each round, and again a
-moment later; each note names the body part hit.
+crouched so it lands on his body, with a pistol, the Desert Eagle, a rifle, a shotgun and the AS50; then a
+rifleman and a shotgunner shoot the player, who faces them. A shot is taken straight after each round, and
+again a moment later; each note names the body part hit.
 
     python blood.py
 """
@@ -19,7 +19,8 @@ from perception import CLEAR, LANE_MIDDLE, RIFLEMAN, SAVE, Log, put, spawn_yaw
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fc2drive import Run, launch
 
-GUNS = ("weapons.Secondary.Makarov", "weapons.Primary.AK47", "weapons.Primary.SPAS12", "weapons.Primary.AS50")
+GUNS = ("weapons.Secondary.Makarov", "weapons.Secondary.DesertEagle", "weapons.Primary.AK47",
+        "weapons.Primary.SPAS12", "weapons.Primary.AS50")
 SHOOTERS = (("rifleman", RIFLEMAN), ("shotgunner", SHOTGUNNER))
 TRIES = 8
 LATER = 0.3

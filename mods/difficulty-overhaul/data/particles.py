@@ -77,7 +77,7 @@ def set_knots(emit, curve, knots):
 def mist(emit):
     emit.set("NbInitPart", "3")
     set_init(emit, "EmitRateKF", 10, 0)
-    set_init(emit, "InitSizeKF", 0.7, 0.2)
+    set_init(emit, "InitSizeKF", 0.45, 0.12)
     set_init(emit, "InitLifeTimeKF", 0.7, 0)
     set_init(emit, "InitSpeedKF", 0.8, 0.3)
     # Blood red, where the game's dark tint times its red came out nearly black.

@@ -3695,6 +3695,174 @@
 			<Decal disName="Base.Wood_res" disMatId="18" decalDecal="4294967295" />
 		</Decals>
 	</MaterialImpact>
+	<MaterialImpact Name="Blood.Spatter" Id="{78649DA6-52EE-4004-8041-4771031BA7DB}" hidName="Blood.Spatter" sndSwitchSound="0xFFFFFFFF" sndtpSwitchSoundType="11">
+		<ParticlesSystems>
+			<ParticlesSystem disName="Base.BulletProof_Glass" disMatId="35" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Bush" disMatId="20" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Cactus" disMatId="38" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Carpet" disMatId="1" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Concrete" disMatId="2" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Default" disMatId="0" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Electronic_stuff" disMatId="32" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Flesh" disMatId="10" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Flesh_Head" disMatId="37" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Fruit" disMatId="30" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Glass" disMatId="24" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Grass" disMatId="19" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Grass_high" disMatId="34" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Ground_hard" disMatId="4" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Ground_soft" disMatId="5" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Leather" disMatId="29" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Metal_burn" disMatId="33" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Metal_fence" disMatId="15" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Metal_hard" disMatId="11" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Metal_light" disMatId="12" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Metal_painted" disMatId="31" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Metal_res" disMatId="14" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Metal_sheet" disMatId="13" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Mud" disMatId="6" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.NoImpact" disMatId="36" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Pebble" disMatId="3" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Plastic_sheet" disMatId="26" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Plastic_soft" disMatId="25" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Roof_tile" disMatId="9" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Sand" disMatId="7" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Straw" disMatId="27" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Stubble" disMatId="28" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Tile" disMatId="8" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Vegetation" disMatId="21" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Water_deep" disMatId="23" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Water_low" disMatId="22" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Wood_hard" disMatId="16" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Wood_light" disMatId="17" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Wood_res" disMatId="18" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+		</ParticlesSystems>
+		<Decals>
+			<Decal disName="Base.BulletProof_Glass" disMatId="35" decalDecal="1562838663" />
+			<Decal disName="Base.Bush" disMatId="20" decalDecal="1562838663" />
+			<Decal disName="Base.Cactus" disMatId="38" decalDecal="1562838663" />
+			<Decal disName="Base.Carpet" disMatId="1" decalDecal="1562838663" />
+			<Decal disName="Base.Concrete" disMatId="2" decalDecal="1562838663" />
+			<Decal disName="Base.Default" disMatId="0" decalDecal="1562838663" />
+			<Decal disName="Base.Electronic_stuff" disMatId="32" decalDecal="1562838663" />
+			<Decal disName="Base.Flesh" disMatId="10" decalDecal="4294967295" />
+			<Decal disName="Base.Flesh_Head" disMatId="37" decalDecal="4294967295" />
+			<Decal disName="Base.Fruit" disMatId="30" decalDecal="1562838663" />
+			<Decal disName="Base.Glass" disMatId="24" decalDecal="1562838663" />
+			<Decal disName="Base.Grass" disMatId="19" decalDecal="1562838663" />
+			<Decal disName="Base.Grass_high" disMatId="34" decalDecal="1562838663" />
+			<Decal disName="Base.Ground_hard" disMatId="4" decalDecal="1562838663" />
+			<Decal disName="Base.Ground_soft" disMatId="5" decalDecal="1562838663" />
+			<Decal disName="Base.Leather" disMatId="29" decalDecal="1562838663" />
+			<Decal disName="Base.Metal_burn" disMatId="33" decalDecal="1562838663" />
+			<Decal disName="Base.Metal_fence" disMatId="15" decalDecal="1562838663" />
+			<Decal disName="Base.Metal_hard" disMatId="11" decalDecal="1562838663" />
+			<Decal disName="Base.Metal_light" disMatId="12" decalDecal="1562838663" />
+			<Decal disName="Base.Metal_painted" disMatId="31" decalDecal="1562838663" />
+			<Decal disName="Base.Metal_res" disMatId="14" decalDecal="1562838663" />
+			<Decal disName="Base.Metal_sheet" disMatId="13" decalDecal="1562838663" />
+			<Decal disName="Base.Mud" disMatId="6" decalDecal="1562838663" />
+			<Decal disName="Base.NoImpact" disMatId="36" decalDecal="4294967295" />
+			<Decal disName="Base.Pebble" disMatId="3" decalDecal="1562838663" />
+			<Decal disName="Base.Plastic_sheet" disMatId="26" decalDecal="1562838663" />
+			<Decal disName="Base.Plastic_soft" disMatId="25" decalDecal="1562838663" />
+			<Decal disName="Base.Roof_tile" disMatId="9" decalDecal="1562838663" />
+			<Decal disName="Base.Sand" disMatId="7" decalDecal="1562838663" />
+			<Decal disName="Base.Straw" disMatId="27" decalDecal="1562838663" />
+			<Decal disName="Base.Stubble" disMatId="28" decalDecal="1562838663" />
+			<Decal disName="Base.Tile" disMatId="8" decalDecal="1562838663" />
+			<Decal disName="Base.Vegetation" disMatId="21" decalDecal="1562838663" />
+			<Decal disName="Base.Water_deep" disMatId="23" decalDecal="4294967295" />
+			<Decal disName="Base.Water_low" disMatId="22" decalDecal="4294967295" />
+			<Decal disName="Base.Wood_hard" disMatId="16" decalDecal="1562838663" />
+			<Decal disName="Base.Wood_light" disMatId="17" decalDecal="1562838663" />
+			<Decal disName="Base.Wood_res" disMatId="18" decalDecal="1562838663" />
+		</Decals>
+	</MaterialImpact>
+	<MaterialImpact Name="Blood.Puddle" Id="{4805DD53-522D-4FFC-ADC9-55EFE2D5C3B2}" hidName="Blood.Puddle" sndSwitchSound="0xFFFFFFFF" sndtpSwitchSoundType="11">
+		<ParticlesSystems>
+			<ParticlesSystem disName="Base.BulletProof_Glass" disMatId="35" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Bush" disMatId="20" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Cactus" disMatId="38" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Carpet" disMatId="1" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Concrete" disMatId="2" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Default" disMatId="0" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Electronic_stuff" disMatId="32" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Flesh" disMatId="10" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Flesh_Head" disMatId="37" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Fruit" disMatId="30" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Glass" disMatId="24" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Grass" disMatId="19" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Grass_high" disMatId="34" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Ground_hard" disMatId="4" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Ground_soft" disMatId="5" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Leather" disMatId="29" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Metal_burn" disMatId="33" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Metal_fence" disMatId="15" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Metal_hard" disMatId="11" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Metal_light" disMatId="12" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Metal_painted" disMatId="31" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Metal_res" disMatId="14" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Metal_sheet" disMatId="13" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Mud" disMatId="6" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.NoImpact" disMatId="36" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Pebble" disMatId="3" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Plastic_sheet" disMatId="26" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Plastic_soft" disMatId="25" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Roof_tile" disMatId="9" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Sand" disMatId="7" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Straw" disMatId="27" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Stubble" disMatId="28" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Tile" disMatId="8" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Vegetation" disMatId="21" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Water_deep" disMatId="23" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Water_low" disMatId="22" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Wood_hard" disMatId="16" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Wood_light" disMatId="17" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+			<ParticlesSystem disName="Base.Wood_res" disMatId="18" psParticlesSystem="" crc_psParticlesSystem="4294967295" />
+		</ParticlesSystems>
+		<Decals>
+			<Decal disName="Base.BulletProof_Glass" disMatId="35" decalDecal="2816525163" />
+			<Decal disName="Base.Bush" disMatId="20" decalDecal="2816525163" />
+			<Decal disName="Base.Cactus" disMatId="38" decalDecal="2816525163" />
+			<Decal disName="Base.Carpet" disMatId="1" decalDecal="2816525163" />
+			<Decal disName="Base.Concrete" disMatId="2" decalDecal="2816525163" />
+			<Decal disName="Base.Default" disMatId="0" decalDecal="2816525163" />
+			<Decal disName="Base.Electronic_stuff" disMatId="32" decalDecal="2816525163" />
+			<Decal disName="Base.Flesh" disMatId="10" decalDecal="4294967295" />
+			<Decal disName="Base.Flesh_Head" disMatId="37" decalDecal="4294967295" />
+			<Decal disName="Base.Fruit" disMatId="30" decalDecal="2816525163" />
+			<Decal disName="Base.Glass" disMatId="24" decalDecal="2816525163" />
+			<Decal disName="Base.Grass" disMatId="19" decalDecal="2816525163" />
+			<Decal disName="Base.Grass_high" disMatId="34" decalDecal="2816525163" />
+			<Decal disName="Base.Ground_hard" disMatId="4" decalDecal="2816525163" />
+			<Decal disName="Base.Ground_soft" disMatId="5" decalDecal="2816525163" />
+			<Decal disName="Base.Leather" disMatId="29" decalDecal="2816525163" />
+			<Decal disName="Base.Metal_burn" disMatId="33" decalDecal="2816525163" />
+			<Decal disName="Base.Metal_fence" disMatId="15" decalDecal="2816525163" />
+			<Decal disName="Base.Metal_hard" disMatId="11" decalDecal="2816525163" />
+			<Decal disName="Base.Metal_light" disMatId="12" decalDecal="2816525163" />
+			<Decal disName="Base.Metal_painted" disMatId="31" decalDecal="2816525163" />
+			<Decal disName="Base.Metal_res" disMatId="14" decalDecal="2816525163" />
+			<Decal disName="Base.Metal_sheet" disMatId="13" decalDecal="2816525163" />
+			<Decal disName="Base.Mud" disMatId="6" decalDecal="2816525163" />
+			<Decal disName="Base.NoImpact" disMatId="36" decalDecal="4294967295" />
+			<Decal disName="Base.Pebble" disMatId="3" decalDecal="2816525163" />
+			<Decal disName="Base.Plastic_sheet" disMatId="26" decalDecal="2816525163" />
+			<Decal disName="Base.Plastic_soft" disMatId="25" decalDecal="2816525163" />
+			<Decal disName="Base.Roof_tile" disMatId="9" decalDecal="2816525163" />
+			<Decal disName="Base.Sand" disMatId="7" decalDecal="2816525163" />
+			<Decal disName="Base.Straw" disMatId="27" decalDecal="2816525163" />
+			<Decal disName="Base.Stubble" disMatId="28" decalDecal="2816525163" />
+			<Decal disName="Base.Tile" disMatId="8" decalDecal="2816525163" />
+			<Decal disName="Base.Vegetation" disMatId="21" decalDecal="2816525163" />
+			<Decal disName="Base.Water_deep" disMatId="23" decalDecal="4294967295" />
+			<Decal disName="Base.Water_low" disMatId="22" decalDecal="4294967295" />
+			<Decal disName="Base.Wood_hard" disMatId="16" decalDecal="2816525163" />
+			<Decal disName="Base.Wood_light" disMatId="17" decalDecal="2816525163" />
+			<Decal disName="Base.Wood_res" disMatId="18" decalDecal="2816525163" />
+		</Decals>
+	</MaterialImpact>
 	<MaterialImpact Name="Weapon.Drop_Assault" Id="{5AB12C02-07EB-4FDA-B39A-94BF6E317563}" hidName="Weapon.Drop_Assault" sndSwitchSound="0x00456BD6" sndtpSwitchSoundType="11">
 		<ParticlesSystems>
 			<ParticlesSystem disName="Base.BulletProof_Glass" disMatId="35" psParticlesSystem="" crc_psParticlesSystem="4294967295" />

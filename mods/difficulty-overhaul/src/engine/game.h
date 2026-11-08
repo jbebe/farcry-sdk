@@ -1,4 +1,4 @@
-// The campaign state every feature reads: the difficulty, the local player and the game clock.
+// The campaign state every feature reads: the difficulty, the local player, entities and the game clock.
 #pragma once
 
 #include <cstdint>
@@ -22,7 +22,11 @@ void* ProxyEntity(const void* proxy);
 // The entity a component such as a CPawn or a counters component belongs to, or null.
 void* EntityOf(void* component);
 
-// The low half of an entity's 64-bit id, which names a soldier in the logs; 0 for none.
+// The entity that owns a physics body, or null.
+void* OwnerOf(uint8_t* body);
+
+// An entity's 64-bit id, and its low half, which names a soldier in the logs; 0 for none.
+uint64_t FullId(const void* entity);
 uint32_t Id(const void* entity);
 
 // An entity's world position and the way it faces, and the distance between two positions.
