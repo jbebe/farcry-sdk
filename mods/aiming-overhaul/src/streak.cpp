@@ -54,12 +54,11 @@ namespace {
     std::atomic<bool> g_enabled{true};
     AimingOverhaul::PixelShader g_shader{"tracer", g_tracerPixelShader};
 
-    // What stage 0 holds, the vertex shader last asked about and whether it is readable, and
-    // whether a streak has been drawn yet; all on the render thread.
+    // What stage 0 holds, and the vertex shader last asked about and whether it is readable; all on
+    // the render thread.
     IDirect3DBaseTexture9* g_stage0 = nullptr;
     IDirect3DVertexShader9* g_vertexShader = nullptr;
     bool g_readable = false;
-    bool g_drawnOne = false;
 
     // Null where the engine's pointers do not hold.
     IDirect3DBaseTexture9* Direct3DTextureOf(const uint8_t* resource) {
@@ -109,10 +108,6 @@ namespace {
         const HRESULT result = draw();
         device->SetPixelShader(engine);
         AimingOverhaul::Release(engine);
-        if (!g_drawnOne) {
-            g_drawnOne = true;
-            FCSE::Logf("streak: drawing tracers with the plugin's shader");
-        }
         return result;
     }
 

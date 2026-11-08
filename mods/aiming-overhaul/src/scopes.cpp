@@ -90,9 +90,6 @@ const Scope* AimingOverhaul::Scopes::Follow(uint8_t* weapon) {
     if (missing == nullptr) {
         g_unread = false;
         g_inHand = &reading;
-        FCSE::Logf("scopes: %s is drawn from its eyepiece; its scope is %zu draws, the first from "
-                   "index %u",
-                   Aim::WeaponName(), reading.part.startCount, reading.part.starts[0]);
     } else if (std::strcmp(missing, g_missing) != 0) {
         std::strncpy(g_missing, missing, sizeof(g_missing) - 1);
         FCSE::Logf("scopes: %s: %s", Aim::WeaponName(), missing);

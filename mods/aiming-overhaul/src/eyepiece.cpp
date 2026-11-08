@@ -131,11 +131,7 @@ namespace {
         AimingOverhaul::Release(g_reticle);
         g_reticleOwner = device;
         std::strcpy(g_reticleOf, scope.reticle);
-        const ULONGLONG start = GetTickCount64();
         g_reticle = AimingOverhaul::ImageFile::Texture(device, scope.reticle);
-        if (g_reticle != nullptr) {
-            FCSE::Logf("eyepiece: %s made in %llu ms", scope.reticle, GetTickCount64() - start);
-        }
         return g_reticle;
     }
 

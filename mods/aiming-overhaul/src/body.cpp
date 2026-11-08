@@ -92,9 +92,6 @@ namespace {
         MarkBelow(skeleton, {Skeleton::Find(skeleton, kLeftArm), Skeleton::Find(skeleton, kRightArm)},
                   g_arms);
         g_bends[g_camera] = g_arms[g_camera] = false;
-        FCSE::Logf("body: %zd bones lean, %zd move with the gun",
-                   std::count(g_bends.begin(), g_bends.end(), true),
-                   std::count(g_arms.begin(), g_arms.end(), true));
         return true;
     }
 

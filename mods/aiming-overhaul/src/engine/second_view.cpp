@@ -45,10 +45,8 @@ namespace {
     constexpr ptrdiff_t kEntityIndex = 0x08;
     constexpr ptrdiff_t kEntitySerial = 0x0C;
     constexpr ptrdiff_t kViewport = 0x10;
-    constexpr ptrdiff_t kKillScale = 0x20;
     constexpr ptrdiff_t kDetailScale = 0x24;
     constexpr ptrdiff_t kCameraComponent = 0x48;
-    constexpr ptrdiff_t kLodScale = 0x54;
     constexpr ptrdiff_t kEffect = 0x78;
 
     // CSceneRenderer: its config, the reflection renderer's holder, and the render-state handles
@@ -104,7 +102,6 @@ namespace {
 
     AimingOverhaul::PlainCopy g_copy{"second view"};
     uint32_t g_drawnFrame = AimingOverhaul::Frame::kNever;
-    bool g_reported = false;
 
     // The reflection renderer's last colour, copied into a texture of our own.
     bool Copy(uint8_t* renderer) {
@@ -191,16 +188,6 @@ namespace {
         Field<int>(config, kTargetWidth) = savedWidth;
         Field<int>(config, kTargetHeight) = savedHeight;
         Field<int>(config, kTargetSamples) = savedSamples;
-
-        if (!g_reported) {
-            g_reported = true;
-            FCSE::Logf("second view: %dx%d at a field of view of %.3f, the camera's %.3f; level of "
-                       "detail %.3f and kill scale %.3f, the reflection's %.3f and %.3f; %s",
-                       width, height, fov, Field<float>(component + kRenderCamera, kFieldOfView),
-                       lodScale, killScale, Field<float>(stack, kLodScale),
-                       Field<float>(frame, kKillScale),
-                       g_drawnFrame == AimingOverhaul::Frame::Number() ? "copied" : "not copied");
-        }
     }
 
     void OnReflectionDrawn(FCSE_MidHookContext* ctx) {
