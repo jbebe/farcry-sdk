@@ -1,7 +1,5 @@
 tmp
-CLAUDE.md
-.claude
-.codex
+.claude/settings.local.json
 __pycache__/
 # A clone whose own .gitignore is tracked, so the per-directory stub cannot be used on it.
 /tools/third-party/FC2JackalFix/
