@@ -535,10 +535,11 @@ def simplify_check(project, tag):
 
 
 def assets_check(project):
-    folder = project.path / "assets" / "images"
+    # A mod keeps its pictures in assets/images/ (the skeleton); a tool's assets/ is laid out its own way.
+    folder = project.path / "assets" / ("images" if project.dir.startswith("mods/") else "")
     missing = [p.split("/")[-1] for p in PAGE_TEXT if not (project.path / p).exists()]
-    images = [f for f in folder.iterdir() if f.suffix.lower() in IMAGE_SUFFIXES] if folder.is_dir() else []
-    problems = missing + ([] if images else ["no images in assets/images/"])
+    images = [f for f in folder.rglob("*") if f.suffix.lower() in IMAGE_SUFFIXES] if folder.is_dir() else []
+    problems = missing + ([] if images else [f"no images in {folder.relative_to(project.path).as_posix()}/"])
     summary = project.path / PAGE_TEXT[0]
     if summary.exists():
         length = len(" ".join(summary.read_text(encoding="utf-8").split()))
@@ -579,24 +580,26 @@ def skeleton_check(project):
     return Check("skeleton", "pass", "matches docs/docs/modding/mod-skeleton.md")
 
 
-def notes_check(project, tag, unreleased):
+def notes_check(project, tag):
     versions, notes = project.changelog()
     if versions is None:
         return Check("changelog", "fail", "no CHANGELOG.md", "add one with an [Unreleased] section")
     prepared = versions and (tag is None or version_key(versions[0]) > version_key(tag[1]))
-    if unreleased and not prepared and not notes:
-        return Check("changelog", "fail", "commits since the tag, no notes under [Unreleased]",
+    code = [*project.code_pathspecs(), *compiled_deps(project)]
+    fetched = tag is None or tag[2]
+    if fetched and not prepared and not notes and commits(tag[2] if tag else None, code):
+        return Check("changelog", "fail", "code or data changed since the tag, no notes under [Unreleased]",
                      "add a line under [Unreleased] for each change a player would notice")
     return Check("changelog", "pass", f"{versions[0]} prepared" if prepared else f"{notes} unreleased notes")
 
 
-def quick_checks(project, tag, unreleased):
+def quick_checks(project, tag):
     """The release-bar rows cheap enough for the session-start board."""
     checks = [feature_check(project),
               record_check(project, "played", project.code_pathspecs(), "played",
                            "play it, and record the user's approval in STATUS.md"),
               simplify_check(project, tag),
-              notes_check(project, tag, unreleased),
+              notes_check(project, tag),
               assets_check(project),
               record_check(project, "page text", [f"{project.dir}/{p}" for p in PAGE_TEXT], "page text",
                            "have the user read nexus-description.bbcode and nexus-summary.txt, then record it")]
@@ -643,7 +646,7 @@ def gather(selected=None, online=True):
             specs = [project.dir, *compiled_deps(project), f":(exclude){project.dir}/STATUS.md"]
             state.unreleased = commits(since, specs)
         state.issues = [i for i in issues or [] if project.label in i.labels]
-        state.checks = quick_checks(project, state.tag, state.unreleased)
+        state.checks = quick_checks(project, state.tag)
         state.waits = [(tag, text, tag is None or tag in tags) for tag, text in project.status.waits]
         return state
 
