@@ -13,6 +13,8 @@ Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachang
 - **UFCP is a JackAll layer.** The monocular fix is a change to its data, so the download installs
   through Vortex or JackAll, which merge it with your other data mods, rather than as a DLL copied
   by hand.
+- **Needs FCSE 1.5.0.** Built for its plugin API 9; an older FCSE leaves this mod unloaded and says
+  so in `fcse.log`.
 
 ## [1.3.1] - 2026-10-30
 

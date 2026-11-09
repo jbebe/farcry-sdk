@@ -34,6 +34,8 @@ Stage: active
 
 ## Release order
 
+- after fcse-1.5.0
+
 ## Collisions
 
 - sky-overhaul: fixed by design: Sky never swaps the grass spot-light shaders and that pass writes no Z - grass shaders

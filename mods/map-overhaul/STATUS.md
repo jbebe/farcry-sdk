@@ -28,6 +28,8 @@ Stage: active
 
 ## Release order
 
+- after fcse-1.5.0
+
 ## Collisions
 
 - inventory-overhaul: fixed by 137373d1 and 9e951c86, and by building its notebook without this layer - patterns start past its hooks on the pause listener and the map's Update; its notebook copies the map's banks from the install, which this layer remakes

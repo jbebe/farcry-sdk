@@ -83,6 +83,7 @@ const FCSE_PluginAPI* PluginApi::Build(const BuildInfo& build) {
     api.RegisterSettings = &SettingsRegistry::RegisterSettings;
     api.MidHook = &HookManager::MidHook;
     api.EntityData = EntityDataApi::Table();
+    api.SetSetting = &SettingsRegistry::SetForSession;
 
     return &api;
 }

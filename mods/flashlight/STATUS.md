@@ -28,6 +28,8 @@ Stage: maintenance
 
 ## Release order
 
+- after fcse-1.5.0
+
 ## Collisions
 
 - vehicle-overhaul: deploy apart - user 2026-10-08: "flashlight is not needed, dont deploy it"; the hooks don't clash

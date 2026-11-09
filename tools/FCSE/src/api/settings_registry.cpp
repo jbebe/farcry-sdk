@@ -376,7 +376,7 @@ const SettingsRegistry::Group* SettingsRegistry::FindGroup(const std::string& pl
     return nullptr;
 }
 
-bool SettingsRegistry::SetValue(Setting* setting, const FCSE_SettingValue& next) {
+bool SettingsRegistry::SetValue(Setting* setting, const FCSE_SettingValue& next, bool persist) {
     if (setting == nullptr) {
         return false;
     }
@@ -449,12 +449,42 @@ bool SettingsRegistry::SetValue(Setting* setting, const FCSE_SettingValue& next)
     }
 
     const std::string stored = FormatValue(*setting);
-    g_ini.Set(setting->groupName, setting->name, stored);
-    g_dirty = true;
-    Log::Loader("settings: [" + setting->groupName + "] " + setting->name + " = " + stored);
+    Log::Loader("settings: [" + setting->groupName + "] " + setting->name + " = " + stored +
+                (persist ? "" : " for this session"));
+    if (persist) {
+        g_ini.Set(setting->groupName, setting->name, stored);
+        g_dirty = true;
+    }
 
     Notify(*setting);
     Flush();
+    return true;
+}
+
+bool SettingsRegistry::SetForSession(const char* pluginName, const char* name, const char* text) {
+    void* caller = _ReturnAddress();
+    Setting* setting = nullptr;
+    if (const Group* group = pluginName != nullptr && name != nullptr ? FindGroup(pluginName) : nullptr) {
+        for (const std::unique_ptr<Setting>& candidate : group->settings) {
+            if (candidate->name == name) {
+                setting = candidate.get();
+                break;
+            }
+        }
+    }
+    if (setting == nullptr) {
+        Log::FromCaller(caller, std::string("SetSetting: no setting [") + (pluginName ? pluginName : "") +
+                                     "] " + (name ? name : ""));
+        return false;
+    }
+
+    Setting parsed = *setting;
+    if (text == nullptr || !ParseInto(parsed, text)) {
+        Log::FromCaller(caller, "SetSetting: [" + setting->groupName + "] " + setting->name + " takes no \"" +
+                                     (text ? text : "") + "\"");
+        return false;
+    }
+    SetValue(setting, parsed.value, false);
     return true;
 }
 

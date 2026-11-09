@@ -49,6 +49,8 @@ Stage: maintenance
 
 ## Release order
 
+- after fcse-1.5.0
+
 ## Collisions
 
 - aiming-overhaul: fixed by AO's stencil bit 0x20, gun blur before bloom and Reset via the device vtable - Direct3D hooks, stencil 0x40

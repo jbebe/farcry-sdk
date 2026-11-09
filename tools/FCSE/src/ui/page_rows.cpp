@@ -230,7 +230,7 @@ namespace {
                 }
                 narrowed[length] = '\0';
                 shown.asText = narrowed;
-                if (!SehCall(&code, &SettingsRegistry::SetValue, row.setting, shown)) {
+                if (!SehCall(&code, &SettingsRegistry::SetValue, row.setting, shown, true)) {
                     LogFailed("SettingsRegistry::SetValue", code);
                 }
 
@@ -254,7 +254,7 @@ namespace {
 
             // SetValue drops a no-op change itself, which is the common case here - most rows have
             // not moved - so there is nothing to compare against first.
-            if (!SehCall(&code, &SettingsRegistry::SetValue, row.setting, shown)) {
+            if (!SehCall(&code, &SettingsRegistry::SetValue, row.setting, shown, true)) {
                 LogFailed("SettingsRegistry::SetValue", code);
             }
         }

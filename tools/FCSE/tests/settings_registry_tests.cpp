@@ -288,6 +288,39 @@ TEST_F(SettingsRegistryTest, AnAcceptedChangeIsStoredAndPersistedImmediately) {
         << "a change reaches the file without waiting for a Flush";
 }
 
+TEST_F(SettingsRegistryTest, ASessionChangeFiresTheCallbackAndLeavesTheFileAlone) {
+    Init();
+    CallbackLog log;
+    FCSE_Setting declared = Choice("Difficulty", 1);
+    declared.onChanged = &RecordChange;
+    declared.userdata = &log;
+    ASSERT_TRUE(Register("demo", {declared, Slider("Distance", 6, 1, 10)}));
+    SettingsRegistry::Flush();
+    std::string before = ReadAll();
+
+    EXPECT_TRUE(SettingsRegistry::SetForSession("DEMO", "Difficulty", "hardcore"));
+    EXPECT_EQ(log.calls, 2);
+    EXPECT_EQ(log.number, 2);
+    EXPECT_EQ(ReadAll(), before);
+
+    FCSE_SettingValue next{};
+    next.type = FCSE_SettingType_Slider;
+    next.asSlider = 7;
+    ASSERT_TRUE(SettingsRegistry::SetValue(Find("demo", "Distance"), next));
+    EXPECT_NE(ReadAll().find("Difficulty = Normal"), std::string::npos)
+        << "a later persisted change must not write the session value";
+}
+
+TEST_F(SettingsRegistryTest, ASessionChangeRejectsAnUnknownSettingAndTextOfAnotherType) {
+    Init();
+    ASSERT_TRUE(Register("demo", {Slider("Distance", 6, 1, 10)}));
+
+    EXPECT_FALSE(SettingsRegistry::SetForSession("demo", "Range", "7"));
+    EXPECT_FALSE(SettingsRegistry::SetForSession("other", "Distance", "7"));
+    EXPECT_FALSE(SettingsRegistry::SetForSession("demo", "Distance", "far"));
+    EXPECT_EQ(Find("demo", "Distance")->value.asSlider, 6);
+}
+
 TEST_F(SettingsRegistryTest, ToggleFlipsACheckboxAndIgnoresEveryOtherType) {
     Init();
     ASSERT_TRUE(Register("demo", {Checkbox("Verbose", false), Slider("Distance", 6, 1, 10)}));

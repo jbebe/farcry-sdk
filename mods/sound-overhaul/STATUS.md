@@ -38,6 +38,8 @@ Stage: maintenance
 
 ## Release order
 
+- after fcse-1.5.0
+
 ## Collisions
 
 - vehicle-overhaul: Vehicle Overhaul's copy wins - both ship mods/soundbinary/0045cbd8.spk, the Datsun idle; user 2026-10-18: "ignore sound overhaul"

@@ -73,3 +73,7 @@ Notable changes to Difficulty Overhaul, loosely following
 - **A combat log** in `bin\difficulty-overhaul-logs`, one file per session and the last 20 kept:
   every hit on you and by you, and every shot at you with its chance.
 - **Tuned on Hardcore.** The difficulties differ only in your health and how it comes back.
+
+### Changed
+- **Needs FCSE 1.5.0.** Built for its plugin API 9; an older FCSE leaves this mod unloaded and says
+  so in `fcse.log`.

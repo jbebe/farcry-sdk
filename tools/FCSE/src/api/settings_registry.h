@@ -74,8 +74,12 @@ public:
     // the registry disagree about the setting and quietly storing something else would hide it.
     // A no-op change is dropped, so calling this on every display costs nothing.
     //
-    // Returns whether the value actually changed. Rejections are logged.
-    static bool SetValue(Setting* setting, const FCSE_SettingValue& next);
+    // Returns whether the value actually changed. Rejections are logged. Without `persist` the file
+    // keeps its value, so the change lasts this session only.
+    static bool SetValue(Setting* setting, const FCSE_SettingValue& next, bool persist = true);
+
+    // Backs FCSE_PluginAPI::SetSetting: parses `text` as the file would and sets it for this session.
+    static bool SetForSession(const char* pluginName, const char* name, const char* text);
 
     // Flips a Checkbox. Shorthand for SetValue with the negated value; no-ops (and logs) for any
     // other setting type.

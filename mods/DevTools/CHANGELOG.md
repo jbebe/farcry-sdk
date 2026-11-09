@@ -92,3 +92,7 @@ Notable changes to DevTools, loosely following
   what each takes. Only commands that still reach real code are listed - the survey that established
   which of the engine's 416 do is in the developer console page. Nothing here is a setting, and
   nothing appears in the Mod Configuration Menu.
+
+### Changed
+- **Needs FCSE 1.5.0.** Built for its plugin API 9; an older FCSE leaves this mod unloaded and says
+  so in `fcse.log`.

@@ -2,6 +2,19 @@
 
 Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **Tools can switch any mod's setting for one session.** For authors: `FCSE_PluginAPI::SetSetting`
+  sets a registered setting from its text, as `fcse.ini` spells it; the owner's callback fires and the
+  file keeps its value. DevTools' remote control uses it to switch a mod's features in automated tests.
+
+### Changed
+- **Plugin DLLs built for an earlier FCSE no longer load** until their authors rebuild them, so
+  update your plugins along with FCSE. `fcse.log` names each one that did not load. Lua scripts are
+  not affected. For authors: the plugin ABI is now `FCSE_API_VERSION` 9, since `FCSE_PluginAPI`
+  gained `SetSetting`; a rebuild is all a plugin needs.
+
 ## [1.4.2] - 2026-10-21
 
 ### Fixed

@@ -199,6 +199,10 @@ underneath), so a plugin built against 5 must be rebuilt too. `FCSE_API_VERSION`
 still deliver it through `onChanged` - they change the menu and nothing else. Prefer `Disabled`
 where either would do, since a row the player can see but not change says something is holding it.
 
+`FCSE_API_VERSION` 9 appended `SetSetting`, which sets any plugin's setting from its text, as the file
+spells it, for this session only: the owner's `onChanged` fires and `fcse.ini` keeps its value. DevTools'
+remote control uses it to switch a mod's features for a test. A plugin built against 8 must be rebuilt.
+
 ### Entity data
 
 `api->EntityData` lets a plugin keep values of its own on a game entity - the gun in the player's

@@ -32,6 +32,8 @@ Stage: active
 
 ## Release order
 
+- after fcse-1.5.0
+
 ## Collisions
 
 - vehicle-overhaul: fixed by db5067a - both hook SetDriver (patterns wildcard its first 6 bytes); VO 1.0.1 and earlier have their own view on V

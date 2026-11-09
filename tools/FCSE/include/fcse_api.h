@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-#define FCSE_API_VERSION 8
+#define FCSE_API_VERSION 9
 
 // Which Dunia.dll the game is running. Far Cry 2 v1.03 shipped as two different PC builds whose
 // images place the same code at different addresses, so a raw RVA is only ever true of one of them.
@@ -266,6 +266,12 @@ typedef struct FCSE_Setting {
 typedef bool (*FCSE_RegisterSettingsFn)(const char* pluginName, const FCSE_Setting* settings,
                                          size_t settingCount);
 
+// Sets any plugin's registered setting from text spelled as bin\fcse.ini spells it, for this session
+// only: the owner's onChanged fires and the file keeps its value. For tools that drive the game, such
+// as DevTools' remote control. Call from the game thread. False, and logged, when no setting of that
+// plugin and name exists or the text is not a value of its type.
+typedef bool (*FCSE_SetSettingFn)(const char* pluginName, const char* settingName, const char* value);
+
 // Values a plugin keeps on a game entity - the gun in the player's hands, a car, an NPC - under keys
 // of its own. They live in FCSE's entity component, CFCSEDataComponent, which the engine loads from
 // the entity's archetype data and saves with the entity, so they survive a save and reload. The
@@ -338,6 +344,9 @@ typedef struct FCSE_PluginAPI {
 
     // See FCSE_EntityDataAPI above. Never NULL.
     const FCSE_EntityDataAPI* EntityData;
+
+    // See FCSE_SetSettingFn above.
+    FCSE_SetSettingFn SetSetting;
 } FCSE_PluginAPI;
 
 // Required export. Called once per plugin, right after FCSE.exe loads Dunia.dll and before any

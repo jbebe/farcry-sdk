@@ -60,6 +60,8 @@ Stage: active
 
 ## Release order
 
+- after fcse-1.5.0
+
 ## Collisions
 
 - flashlight: deploy apart - user 2026-10-08: "flashlight is not needed, dont deploy it"; VO's input hook beside Flashlight's left with db5067a

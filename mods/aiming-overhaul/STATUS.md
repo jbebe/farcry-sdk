@@ -64,6 +64,7 @@ Stage: active
 
 ## Release order
 
+- after fcse-1.5.0
 - after jackall-1.4.1
 - after vortex-0.4.0
 

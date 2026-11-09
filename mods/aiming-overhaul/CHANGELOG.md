@@ -72,6 +72,8 @@ Notable changes to Aiming Overhaul, loosely following
 - **No random spread down the AR-16's and the MGL-140's scopes**, so a scoped shot goes where the
   reticle is, as it already did on the sniper rifles.
 - **No red marks pointing to whoever hit you.** The game's red flash around the edges stays.
+- **Needs FCSE 1.5.0.** Built for its plugin API 9; an older FCSE leaves this mod unloaded and says
+  so in `fcse.log`.
 
 ## [1.2.0] - 2026-10-15
 
