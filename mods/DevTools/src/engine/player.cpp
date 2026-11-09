@@ -5,6 +5,7 @@
 #include "engine/memory.h"
 #include "fcse_api.h"
 
+#include <cmath>
 #include <cstdint>
 
 namespace {
@@ -26,11 +27,15 @@ namespace {
     constexpr ptrdiff_t kPlayerScene = 0x04;
     constexpr ptrdiff_t kSceneCameraManager = 0xB8;
 
-    // The pawn's data, in it the desired and the effective look, and in each the yaw in radians, left
-    // positive, kept twice. See docs/docs/engine-internals/first-person-aiming.md#the-look.
+    // The pawn's data, in it the desired and the effective look, and in each the pitch, up positive,
+    // and the yaw, left positive, in radians and each kept twice; then the effective stance.
+    // See docs/docs/engine-internals/first-person-aiming.md#the-look.
     constexpr ptrdiff_t kPawnData = 0x10;
     constexpr ptrdiff_t kLooks[] = {0x140, 0x2D0};
+    constexpr ptrdiff_t kLookPitches[] = {0x38, 0x44};
     constexpr ptrdiff_t kLookYaws[] = {0x40, 0x4C};
+    constexpr ptrdiff_t kEffectiveStance = 0x374;
+    constexpr int32_t kCrouched = 1;
 }
 
 namespace DevTools::Player {
@@ -69,17 +74,49 @@ void* Vehicle(void* pawn) {
     return pawn != nullptr && g_getCurrentVehicle != nullptr ? g_getCurrentVehicle(pawn) : nullptr;
 }
 
-void TurnLook(float leftRadians) {
-    void* pawn = Pawn();
-    auto* data = pawn != nullptr ? Read<uint8_t*>(pawn, kPawnData) : nullptr;
-    if (data == nullptr) {
-        return;
+namespace {
+    uint8_t* Data() {
+        void* pawn = Pawn();
+        return pawn != nullptr ? Read<uint8_t*>(pawn, kPawnData) : nullptr;
     }
+}
+
+bool FaceLook(std::optional<float> yawDegrees, std::optional<float> pitchDegrees) {
+    uint8_t* data = Data();
+    if (data == nullptr) {
+        return false;
+    }
+
+    // The look's yaw is turned by its difference to the body's, which it is not measured against.
+    float turn = 0.0f;
+    if (yawDegrees) {
+        void* ref = Entity::AcquireFocusRef(CameraManager());
+        if (void* entity = Entity::Of(ref)) {
+            turn = std::remainder(*yawDegrees - Entity::Degrees(Entity::Yaw(entity)), 360.0f) *
+                   Entity::kRadiansPerDegree;
+        }
+        Entity::ReleaseRef(ref);
+    }
+
     for (const ptrdiff_t look : kLooks) {
-        for (const ptrdiff_t yaw : kLookYaws) {
-            *reinterpret_cast<float*>(data + look + yaw) += leftRadians;
+        for (int copy = 0; copy < 2; ++copy) {
+            *reinterpret_cast<float*>(data + look + kLookYaws[copy]) += turn;
+            if (pitchDegrees) {
+                *reinterpret_cast<float*>(data + look + kLookPitches[copy]) = *pitchDegrees * Entity::kRadiansPerDegree;
+            }
         }
     }
+    return true;
+}
+
+float LookPitch() {
+    uint8_t* data = Data();
+    return data != nullptr ? Read<float>(data, kLooks[1] + kLookPitches[0]) : 0.0f;
+}
+
+bool Crouched() {
+    uint8_t* data = Data();
+    return data != nullptr && Read<int32_t>(data, kEffectiveStance) == kCrouched;
 }
 
 void* CameraManager(void* local) {

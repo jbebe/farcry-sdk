@@ -109,28 +109,25 @@ void Install() {
     }
 }
 
-void* AcquireFocusRef(void* manager) {
-    if (manager == nullptr || g_refFromId == nullptr || g_refWorld == nullptr) {
-        return nullptr;
-    }
-
-    void** refWorld = *g_refWorld;
-    if (refWorld == nullptr) {
-        return nullptr;
-    }
-
-    auto* bytes = static_cast<uint8_t*>(manager);
-    const uint32_t idLow = *reinterpret_cast<uint32_t*>(bytes + kManagerFocusLow);
-    const uint32_t idHigh = *reinterpret_cast<uint32_t*>(bytes + kManagerFocusHigh);
-
-    // The manager's own guard for "no focus set".
-    if ((idLow & idHigh) == 0xFFFFFFFF) {
+void* AcquireRef(uint64_t id) {
+    // The invalid id, which the engine's own guard turns away.
+    if (id == UINT64_MAX || g_refFromId == nullptr || g_refWorld == nullptr || *g_refWorld == nullptr) {
         return nullptr;
     }
 
     void* ref = nullptr;
-    g_refFromId(refWorld, nullptr, &ref, idLow, idHigh);
+    g_refFromId(*g_refWorld, nullptr, &ref, static_cast<uint32_t>(id), static_cast<uint32_t>(id >> 32));
     return ref;
+}
+
+void* AcquireFocusRef(void* manager) {
+    if (manager == nullptr) {
+        return nullptr;
+    }
+    auto* bytes = static_cast<uint8_t*>(manager);
+    const uint64_t low = *reinterpret_cast<uint32_t*>(bytes + kManagerFocusLow);
+    const uint64_t high = *reinterpret_cast<uint32_t*>(bytes + kManagerFocusHigh);
+    return AcquireRef(high << 32 | low);
 }
 
 void ReleaseRef(void*& ref) {
@@ -192,6 +189,21 @@ const char* Name(const void* entity) {
 
 void* Component(void* entity, const void* classId) {
     return g_getComponentByTag != nullptr ? g_getComponentByTag(entity, nullptr, classId) : nullptr;
+}
+
+void* Component(void* entity, const char* className) {
+    // A class tag is a CStringID: the CRC-32 of the class's name.
+    const uint32_t tag = FCSE::Crc32(className);
+    return Component(entity, static_cast<const void*>(&tag));
+}
+
+std::optional<Health> HealthOf(void* entity) {
+    auto* counters = static_cast<uint8_t*>(Component(entity, "CFCXCountersComponent"));
+    auto* counter = counters != nullptr ? *reinterpret_cast<uint8_t**>(counters + kCountersHealth) : nullptr;
+    if (counter == nullptr) {
+        return std::nullopt;
+    }
+    return Health{*reinterpret_cast<float*>(counter + kCounterValue), *reinterpret_cast<float*>(counter + kCounterMax)};
 }
 
 void* PhysicsComponent(void* entity) {

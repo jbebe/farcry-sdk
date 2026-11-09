@@ -28,14 +28,15 @@
 #include <cstdint>
 
 namespace {
+    using DevTools::Entity::kCountersHealth;
+    using DevTools::Entity::kCounterValue;
+
     // CFCXCountersComponentPlayerSP, the campaign player's vitals.
-    constexpr ptrdiff_t kCountersHealth = 0x44;
     constexpr ptrdiff_t kCountersFailureThreshold = 0x6C;
     constexpr ptrdiff_t kCountersForcedFailure = 0x88;
     constexpr ptrdiff_t kCountersRescueState = 0xE8;
     constexpr ptrdiff_t kCountersReviveInvulnerable = 0x140;
 
-    constexpr ptrdiff_t kCounterValue = 0x10;
     constexpr size_t kCounterSetToMaxSlot = 0x20 / sizeof(void*);
 
     using CounterSetToMaxFn = void(__fastcall*)(void* counter);

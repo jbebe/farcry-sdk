@@ -160,8 +160,8 @@ namespace {
         g_noclipYaw = DevTools::Entity::Yaw(entity);
 
         // Pitch only exists on the camera.
-        g_noclipPitch = 0.0f;
-        DevTools::Camera::ViewPitch(manager, g_noclipPitch);
+        DevTools::Camera::View view{};
+        g_noclipPitch = DevTools::Camera::CurrentView(manager, view) ? view.pitch : 0.0f;
 
         g_noclipRef = ref;
         g_noclipPhysics = physics;
@@ -195,7 +195,9 @@ namespace {
 
         // Pitch steers flight only, so it is read off the camera rather than integrated: this
         // module's wall clock drifts against engine frame time.
-        DevTools::Camera::ViewPitch(manager, g_noclipPitch);
+        if (DevTools::Camera::View view{}; DevTools::Camera::CurrentView(manager, view)) {
+            g_noclipPitch = view.pitch;
+        }
 
         // The body takes the yaw and stays upright; pitching it pitches the head bone and the arms.
         DevTools::Entity::SetEuler(entity, 0.0f, 0.0f, g_noclipYaw);

@@ -8,6 +8,13 @@ namespace DevTools::Spawn {
 // The Lua call that spawns `archetype` at x, y, z facing `yaw` degrees, returning its entity id.
 std::string Call(const char* archetype, float x, float y, float z, float yaw);
 
+// Lua statements that spawn as Call does and keep the id at TestRange[TestRange.n], for kClear.
+std::string Kept(const char* archetype, float x, float y, float z, float yaw);
+
+// Lua that removes everything kept in the TestRange table, which keeps its own count in `n`.
+inline constexpr const char* kClear =
+    "TestRange = TestRange or {n = 0} for i = 1, TestRange.n do RemoveEntity(TestRange[i]) end TestRange = {n = 0} ";
+
 // Spawns `archetype` a few metres ahead of the player, facing the way they face, at the end of the
 // next frame. Logs and does nothing outside a world.
 void Ahead(const char* archetype);

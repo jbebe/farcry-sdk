@@ -170,6 +170,12 @@ classes that look one up, for example:
 | `CCorpseComponent` | `CCharacterPhysComponent` |
 | `CBindingComponent` | `CPhysComponent` |
 
+`GetComponent<T>` asks `CEntity::GetComponent(CStringID const&)` (server `0x09439f10`) for the id of
+`T`'s name, the plain CRC32 of it, and that answers with the entity's component whose class hierarchy
+holds the id, so asking for a base class finds the derived component. A tool can look up any class by
+its name's CRC32 this way **(proven)**: DevTools' `entity player CPawn` found the player's pawn, and
+`CFCXCountersComponent` found the player's `CFCXCountersComponentPlayerSP` and a soldier's counters.
+
 Treat these as "uses", not "requires". The call does not say which entity it is made on: every
 pickup looks up `CPawn`, but on the player that touches it, not on itself. Most callers tolerate a
 null result. Which components each archetype actually carries is observable in the shipped data —

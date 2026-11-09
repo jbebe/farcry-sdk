@@ -459,14 +459,20 @@ world there has loaded.
 
 | Command | What it does |
 |---|---|
-| `state` | Whether the player is in a world, whether a loading screen is up or anything is streaming, and `ready` for none of those. Then position, yaw, the gun in hand, its rounds and health, whether a recording is being made or played, and the game's window. While the engine is too busy loading to reach the end of a frame, only `ready` false and `busy` true |
+| `state` | Whether the player is in a world, whether a loading screen is up or anything is streaming, and `ready` for none of those. Then position, yaw, the look's pitch, `crouched` and `in_vehicle`; the `camera` the frame is drawn from, its position, yaw, pitch, roll (right positive) and the horizontal field of view on this screen; the gun in hand, its rounds and health; whether a recording is being made or played; and the game's window. Angles are degrees. While the engine is too busy loading to reach the end of a frame, only `ready` false and `busy` true |
 | `goto x y z [yaw]` | The game's own teleport, then the facing in degrees, turned through the player's look, since a facing set on the body does not hold. Answers a frame later, once the body faces it |
+| `look <yaw> <pitch>` | Points the player's look, in degrees: yaw as `goto` takes it, pitch up positive. Answers with the state a frame later |
 | `action <signal> [values]` | Fires an action by its name in the action map, as the player's bindings would: `startshooting 1`, `stopshooting 0`, `move 1 0`, `look 0 -0.5`, `use 1` |
 | `shot <path>` | Writes the next finished frame as a PNG, before the overlay draws on it |
 | `lua <code>`, `eval <expression>`, `console <line>` | The Lua tab's Run and Evaluate, with the lines they added, and a console line |
 | `guns`, `give <archetype>`, `rounds <n>`, `gunhealth <percent>` | The Armory's list and what its controls do |
 | `spawnpickup <archetype>` | The Spawner's call for something to pick up, close to the player and low, facing 0: spawned turned the way the player faced, an AK-47 was not offered for use |
-| `option <name> <value>` | Sets a row of the Mod Configuration Menu for this launch: `option Infinite ammo 1`. Nothing is saved |
+| `spawn <archetype> x y z [yaw]` | Spawns into the Range tab's `TestRange` table and answers with the entity's `id`. The spawn does not find the ground |
+| `clear` | Removes everything `spawn` and the Range tab spawned |
+| `entity <id>\|player [class]` | An entity's archetype `name`, `pos`, `yaw`, and `health` and `max_health` where it has them; with a component class such as `CPawn`, whether it `has` one of that class or a class derived from it |
+| `sight` | Each soldier whose sight of the player updated in the last second: where he stands, `distance` to the player, whether he `known`s of him, the `visibility` and whether he is `plainly_seen`, as the AI view draws them. The first ask starts the copying, so it can come back empty |
+| `setting [plugin] name = value` | Any mod's setting for this launch, spelled as in `fcse.ini`: `setting [DevTools] Infinite ammo = true`. Nothing is saved |
+| `pause on`, `pause off` | Stops the game clock, so the world stands still while frames keep coming, or starts it again |
 | `weather clear`, `weather engine` | No storm, rain or wind, or the engine's own |
 | `record`, `stoprecord <path>`, `play <path>` | See below |
 
@@ -645,7 +651,12 @@ Everything below needs a real install:
 - **Remote control** *(run, works, GOG v1.03, 2026-10-30)*: with `-devtoolsremote`, `fcse.log` shows
   `remote: serving on \\.\pipe\DevToolsRemote`. fc2drive's scenarios gave and fired guns, teleported
   1.5 km across world1 with the world loaded on arrival, took a pickup with `use`, and replayed a
-  recording.
+  recording. On 2026-11-09 `look` set yaw and pitch exactly; `entity player CPawn` read the player's
+  1025 of 1025 health and `has` true, `CVehicle` false; `spawn` gave a rifleman's id, `entity` read his
+  250 health, `clear` removed him and a wrong archetype was refused; `sight` saw him from 14.7 m;
+  `setting [UFCP] Field of view` at 110, 65 and 87 moved the camera's field of view to 124.6, 80.7 and
+  103.4 degrees, those 4:3 angles widened to the 16:9 screen; `pause on` held the camera still; and
+  leaning right rolled the camera +14.9 degrees.
 - **Range** *(seen 2026-10-25)*: Rifleman at 10 m put the player at the duel lane's start facing
   him and spawned him on a guard post. He stood facing the player for about 7 s before he noticed
   him, so the scenarios no longer use guard posts. Not yet run since that change.

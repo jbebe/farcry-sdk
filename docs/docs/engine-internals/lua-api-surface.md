@@ -39,7 +39,8 @@ one unnamed-string-literal binding, `UnBind`, `GetGlobalString`, `GetGlobalNumbe
 archetype named by its fully qualified `hidName` into the mission component's default layer, then
 `SetPos` and `SetAngles` it. The three angles are degrees, the third being yaw. It returns the new
 entity's id, or the invalid id when the name resolves to nothing. It does not find the ground:
-the entity starts exactly at `z`.
+the entity starts exactly at `z`. The id reaches Lua as a decimal string, printed `%llu` by the
+binding (server `0x093c4550`), so the invalid id reads `18446744073709551615` **(proven)**.
 
 **Gameplay/mission scripting, batch 1** (`0x109fc830`, 70 fns — the single largest registration site,
 almost certainly backing `SCRIPTS\MissionTools.lua`): `SpawnPickupMissionItem`, `AddWeapon`,

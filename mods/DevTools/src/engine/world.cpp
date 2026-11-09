@@ -1,11 +1,8 @@
 // What each call does is in docs/docs/engine-internals/loading-a-save.md.
 #include "engine/world.h"
 
-#include "engine/entity.h"
 #include "engine/player.h"
 #include "fcse_api.h"
-
-#include <cmath>
 
 namespace {
     using FlagFn = bool(__cdecl*)();
@@ -42,15 +39,7 @@ bool Teleport(float x, float y, float z, std::optional<float> yawDegrees) {
     }
     const float position[3] = {x, y, z};
     g_teleport(position);
-
-    if (yawDegrees) {
-        void* ref = Entity::AcquireFocusRef(Player::CameraManager());
-        if (void* entity = Entity::Of(ref)) {
-            const float degrees = std::remainder(*yawDegrees - Entity::Yaw(entity) / Entity::kRadiansPerDegree, 360.0f);
-            Player::TurnLook(degrees * Entity::kRadiansPerDegree);
-        }
-        Entity::ReleaseRef(ref);
-    }
+    Player::FaceLook(yawDegrees, std::nullopt);
     return true;
 }
 

@@ -26,8 +26,6 @@ namespace {
 
     constexpr float kPickupAhead = 1.6f;
     constexpr float kPickupAbove = 0.4f;
-
-    constexpr float kDegreesPerRadian = 57.2957795f;
 }
 
 namespace DevTools::Spawn {
@@ -55,7 +53,7 @@ namespace {
             for (int i = 0; i < count; ++i) {
                 const float across = (i - (count - 1) * 0.5f) * kSquadSpacing;
                 Lua::Run(Call(name.c_str(), x + std::cos(yaw) * across, y + std::sin(yaw) * across, z,
-                              turnDegrees ? yaw * kDegreesPerRadian + *turnDegrees : 0.0f));
+                              turnDegrees ? Entity::Degrees(yaw) + *turnDegrees : 0.0f));
             }
         });
     }
@@ -66,6 +64,11 @@ std::string Call(const char* archetype, float x, float y, float z, float yaw) {
     std::snprintf(call, sizeof(call), "SpawnEntityFromArchetype(\"%s\", %.3f, %.3f, %.3f, 0, 0, %.1f)",
                   archetype, x, y, z, yaw);
     return call;
+}
+
+std::string Kept(const char* archetype, float x, float y, float z, float yaw) {
+    return "TestRange = TestRange or {n = 0} TestRange.n = TestRange.n + 1 TestRange[TestRange.n] = " +
+           Call(archetype, x, y, z, yaw) + " ";
 }
 
 void Ahead(const char* archetype) { Line(archetype, 1, kAhead, kAbove, 0.0f); }

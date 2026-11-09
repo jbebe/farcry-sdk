@@ -6,6 +6,8 @@
 #include "engine/player.h"
 #include "fcse_api.h"
 
+#include <cstring>
+
 namespace {
     constexpr ptrdiff_t kManagerLocked = 0x14;
     constexpr size_t kSetFocusSlot = 0x78 / sizeof(void*);
@@ -19,7 +21,10 @@ namespace {
     constexpr ptrdiff_t kSpeed = 0xC8;
     constexpr ptrdiff_t kSpeedAdjust = 0xCC;
 
-    // The euler triple the renderer reads off the render camera; pitch is the first of the three.
+    // The pooled render camera, a CSceneCamera: its position, field of view, and pitch, roll and yaw.
+    // See docs/docs/engine-internals/first-person-aiming.md.
+    constexpr ptrdiff_t kRenderCameraPosition = 0x08;
+    constexpr ptrdiff_t kRenderCameraFov = 0x28;
     constexpr ptrdiff_t kRenderCameraEuler = 0x6C;
 
     using ActivateByNameFn = void(__fastcall*)(void* manager, void* unused, const char* name,
@@ -117,22 +122,15 @@ void SnapToFocus(void* manager, void* camera) {
     Entity::ReleaseRef(ref);
 }
 
-bool ViewPitch(void* manager, float& pitch) {
-    if (g_renderCamera == nullptr) {
-        return false;
-    }
-
-    void* camera = Active(manager);
-    if (camera == nullptr) {
-        return false;
-    }
-
-    auto* render = static_cast<uint8_t*>(g_renderCamera(camera));
+bool CurrentView(void* manager, View& view) {
+    void* camera = g_renderCamera != nullptr ? Active(manager) : nullptr;
+    auto* render = camera != nullptr ? static_cast<uint8_t*>(g_renderCamera(camera)) : nullptr;
     if (render == nullptr) {
         return false;
     }
-
-    pitch = *reinterpret_cast<float*>(render + kRenderCameraEuler);
+    std::memcpy(view.position, render + kRenderCameraPosition, sizeof(view.position));
+    std::memcpy(&view.pitch, render + kRenderCameraEuler, 3 * sizeof(float));
+    view.fov = *Field(render, kRenderCameraFov);
     return true;
 }
 

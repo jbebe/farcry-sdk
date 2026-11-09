@@ -25,8 +25,17 @@ uint8_t* Locked(void* manager);
 // activation that instantiates the camera.
 void SnapToFocus(void* manager, void* camera);
 
-// The pitch the view is actually at, off the pooled render camera. False when there is none to ask.
-bool ViewPitch(void* manager, float& pitch);
+// Where the pooled render camera is, its pitch, roll and yaw, and its field of view, angles in radians.
+struct View {
+    float position[3];
+    float pitch;
+    float roll;
+    float yaw;
+    float fov;
+};
+
+// The view the frame is drawn from, or false when there is no render camera to ask.
+bool CurrentView(void* manager, View& view);
 
 // Move axes are unit vectors in the camera's local frame and look values are rates; speed is metres
 // per second and is not folded into the axes.

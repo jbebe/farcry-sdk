@@ -35,16 +35,10 @@ namespace {
 
     constexpr const char* kTravel = "GameChangeWorld(\"testrange\", \"2054037628277228842\")";
 
-    // Removes everything the last scenario spawned, whose ids the global TestRange table holds from 1
-    // to TestRange.n. The game's Lua has no ipairs, so the count is kept by hand.
-    constexpr const char* kClear =
-        "TestRange = TestRange or {n = 0} for i = 1, TestRange.n do RemoveEntity(TestRange[i]) end TestRange = {n = 0} ";
-
     const Scenario* g_running = nullptr;
 
     void AppendSpawn(std::string& lua, const char* archetype, const Spot& at, float z) {
-        lua += "TestRange.n = TestRange.n + 1 TestRange[TestRange.n] = "
-               + DevTools::Spawn::Call(archetype, at.x, at.y, z, at.yaw) + " ";
+        lua += DevTools::Spawn::Kept(archetype, at.x, at.y, z, at.yaw);
     }
 
     // Moves the player onto `start` when he is near it, with collision off for the move. False when
@@ -71,7 +65,7 @@ namespace {
 
     void Start(const Arena& arena, const Scenario& scenario) {
         DevTools::GameThread::Post([&arena, &scenario] {
-            std::string lua = kClear;
+            std::string lua = DevTools::Spawn::kClear;
             lua += "CDynamicEnvironmentManager_GetInstance():SetScriptedTimeOfDay(12, 0) ";
             if (!PlaceNear(arena.start)) {
                 AppendSpawn(lua, kMarker, arena.start, kGround + kAboveGround);
@@ -97,7 +91,7 @@ void Draw() {
     }
     ImGui::SameLine();
     if (ImGui::Button("Clear")) {
-        Lua::Post(kClear);
+        Lua::Post(Spawn::kClear);
         g_running = nullptr;
     }
     ImGui::TextWrapped("Start clears the last scenario, sets noon, takes you to its arena and spawns its "

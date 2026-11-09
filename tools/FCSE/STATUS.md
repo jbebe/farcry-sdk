@@ -21,7 +21,7 @@ Stage: maintenance
 - [done] Black and white splash screen
 - [done] Example plugin and example script, the same effects side by side
 - [new] FATAL report from an unhandled-exception filter installed after the engine's own and chained to it - agreed for 1.4.3
-- [in progress] SetSetting, API v9: any plugin's setting set from text for this session, the file untouched - for DevTools' remote control; every plugin rebuilt
+- [done] SetSetting, API v9: any plugin's setting set from text for this session, the file untouched - DevTools' setting set UFCP's field of view in game 2026-11-09
 - [scrapped] Hand-rolled Mods page on CGameMenu - crashed; the page intercepts .mgb loads instead
 
 ## Approvals

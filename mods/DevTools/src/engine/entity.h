@@ -5,14 +5,28 @@
 // across frames has to hold a reference, and give it back.
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+
 namespace DevTools::Entity {
 
 constexpr float kRadiansPerDegree = 0.0174532925f;
 
+inline float Degrees(float radians) { return radians / kRadiansPerDegree; }
+
+// CFCXCountersComponent's health CCounter, and in it the value and its maximum.
+constexpr ptrdiff_t kCountersHealth = 0x44;
+constexpr ptrdiff_t kCounterValue = 0x10;
+constexpr ptrdiff_t kCounterMax = 0x14;
+
 void Install();
 
-// The entity a camera manager is focused on, as a holder the caller owns a reference on. Null when
-// the manager has no focus. Pass it back to ReleaseRef.
+// The entity with id `id`, as a holder the caller owns a reference on, or null. Pass it back to
+// ReleaseRef.
+void* AcquireRef(uint64_t id);
+
+// The entity a camera manager is focused on, as AcquireRef gives it. Null when the manager has no focus.
 void* AcquireFocusRef(void* manager);
 
 // Drops one reference and clears `ref`, destroying the holder if it was the last.
@@ -38,6 +52,17 @@ const char* Name(const void* entity);
 
 // The entity's component of the class `classId`, or null.
 void* Component(void* entity, const void* classId);
+
+// The entity's component of the class named `className`, or of a class derived from it, or null.
+void* Component(void* entity, const char* className);
+
+struct Health {
+    float value;
+    float max;
+};
+
+// The health in the entity's CFCXCountersComponent, the player's and a soldier's alike, if it has one.
+std::optional<Health> HealthOf(void* entity);
 
 // The entity's physics component, registering its class tag first, as the engine does on every
 // fetch. Null if the entity has none.
