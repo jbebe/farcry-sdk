@@ -9,11 +9,13 @@ description: Use when asked whether a mod can be released, to check a mod agains
 stale or review, with what to do about it. `/release-check <mod> hotfix` is for a player waiting on
 a fix: every row applies except the user's re-check of the BBCode and short message.
 
-1. Run it with the PowerShell tool (Python is blocked in Bash). The build and tests take a minute or
-   two; they are the steps the mod's release workflow runs, and each writes a log it names.
+1. Run it with the PowerShell tool (Python is blocked in Bash). The build and unit tests take a minute
+   or two; they are the steps the mod's release workflow runs, and each writes a log it names. A mod
+   with game tests (`tests/*.py`, fc2drive scripts) runs them against the install: deploy it first with
+   `/deploy`, and ask the user before the first game launch of the session; until then, add `--no-game`.
 
    ```powershell
-   python scripts/release_check.py <mod>            # or: <mod> --hotfix
+   python scripts/release_check.py <mod>            # or: <mod> --hotfix, <mod> --no-game
    ```
 
 2. Go through the two review rows yourself, reading each candidate in its file:

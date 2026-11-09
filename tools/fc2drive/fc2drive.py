@@ -331,6 +331,7 @@ class Run:
         self.folder.mkdir(parents=True)
         self.name = name
         self._entries = []
+        self._checks = []
 
     def _path(self, label, extension):
         return self.folder / f"{len(self._entries):03d}-{_safe(label)}.{extension}"
@@ -355,6 +356,18 @@ class Run:
 
     def note(self, text):
         self._add("note", text)
+
+    def expect(self, label, held, detail=""):
+        """One check of a test, read off the game's state; finish() fails the run if any did not hold."""
+        self._checks.append(bool(held))
+        self._add("pass" if held else "FAIL", f"{label}: {detail}" if detail else label)
+        return held
+
+    def finish(self):
+        """Ends a test with its verdict: exits 1 when a check failed or none was made."""
+        failed = self._checks.count(False)
+        self.note(f"{len(self._checks) - failed} of {len(self._checks)} checks held")
+        raise SystemExit(1 if failed or not self._checks else 0)
 
     def _write_index(self):
         parts = [f"<!doctype html><meta charset=utf-8><title>{html.escape(self.name)}</title>",

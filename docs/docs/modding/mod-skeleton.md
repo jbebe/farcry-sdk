@@ -28,6 +28,9 @@ mods/<mod>/
   src/
     main.cpp                FCSE_Load
     engine/                 the Dunia.dll seams, apart from the mod's own logic
+  tests/                    when the mod has tests
+    *.py                    game tests: fc2drive scripts that check the game's state
+    *.cpp                   unit tests, only for a plugin with a lot of pure logic
 ```
 
 Outside the folder, a released mod has its `.github/workflows/<tag prefix>-release.yml` and a row in
@@ -43,6 +46,25 @@ Outside the folder, a released mod has its `.github/workflows/<tag prefix>-relea
 - For an FCSE plugin: `CMakeLists.txt`, `CMakePresets.json`, `build.ps1` and `src/main.cpp`; and, when
   it has a layer, a `.gitignore` line keeping the built DLL under `layer/plugins/` out of git.
 - A release workflow whose `directory` is the mod, and the mod's row in `RELEASING.md`.
+
+## Tests
+
+Most of a mod is hooks into the running game, so its tests are game tests: each `tests/*.py` drives
+the game through fc2drive and DevTools' remote control - on the test range, or in world1 or world2
+from a save - and reads the outcome off the game's state (`tools/fc2drive/README.md`, "A mod's
+tests"). `/release-check` runs them against the mods deployed to the install; CI has no game, so
+they never run there.
+
+Unit tests are for the rare plugin with a lot of pure logic. That logic moves into its own files, which
+the tests link without the rest:
+
+```cmake
+include("${CMAKE_CURRENT_SOURCE_DIR}/../../tools/FCSE/include/fcse_tests.cmake")
+fcse_add_tests(ballistics_tests tests/ballistics_tests.cpp SOURCES src/ballistics.cpp)
+```
+
+The mod's `build.ps1` then takes `-Tests` and runs ctest after the build, as FCSE's does, and its
+release workflow passes `-Tests` so every release runs them.
 
 ## What is advice
 

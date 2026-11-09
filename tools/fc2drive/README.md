@@ -47,6 +47,31 @@ with launch("world1") as game:
 `launch` takes a name from `SAVES` or a `.sav` file. `game.action(signal, values...)` fires anything in
 the action map, and `game.lua(code)` and `game.eval(expression)` reach the rest of the game.
 
+## A mod's tests
+
+A mod's automated tests are fc2drive scripts in its own `tests/` folder, one `.py` per test, run by
+`/release-check` against the mods deployed to the install. Each sets up its case - on the test range
+(`demorange`), or in world1 or world2 from a save - reads the outcome off the game's state, and ends
+with a verdict:
+
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "tools" / "fc2drive"))
+from fc2drive import Run, launch
+
+run = Run("walks")
+with launch("demorange") as game:
+    before = game.state()["pos"]
+    game.walk(1.0, 0.0, 2.0)
+    after = game.state()["pos"]
+    run.expect("the player walked", before != after, f"{before} -> {after}")
+run.finish()
+```
+
+`run.expect(label, held, detail)` records one check; `run.finish()` exits 1 if any check failed, or if
+none was made, so a test that never reached its point does not pass.
+
 ## One command at a time
 
 For looking around and deciding what to do next, with the game left running between commands:

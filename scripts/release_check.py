@@ -2,7 +2,8 @@
 
     python scripts/release_check.py <mod>               # every row, the build and tests included
     python scripts/release_check.py <mod> --hotfix      # all but the user's page-text re-check
-    python scripts/release_check.py <mod> --no-build    # skip the build and tests
+    python scripts/release_check.py <mod> --no-build    # skip the build and unit tests
+    python scripts/release_check.py <mod> --no-game     # skip the game tests in the mod's tests/*.py
 
 Two rows only flag candidates - debug lines and unused parts - for a reader to go through; they
 show as "review" until that is done. The build and tests are the steps the mod's release workflow
@@ -245,6 +246,43 @@ def build_and_test(project):
     return Check("build", "pass", ", ".join(ran)), []
 
 
+def unit_tests(project):
+    """A mod's tests/*.cpp count only if its release build runs them; a tool's are its workflow's."""
+    if not project.dir.startswith("mods/"):
+        return Check("unit tests", "pass", "the release workflow's own test steps, run in the build row")
+    tests = sorted((project.path / "tests").glob("*.cpp"))
+    if not tests:
+        return Check("unit tests", "pass", "none: only a plugin with a lot of pure logic has them")
+    path = workflow(project)
+    if not path or not any("-Tests" in command for _, command, _ in workflow_steps(path)):
+        return Check("unit tests", "fail", f"{len(tests)} test files the release build does not run",
+                     "pass -Tests in the release workflow's build step")
+    return Check("unit tests", "pass", f"{len(tests)} test files, run in the build row")
+
+
+def game_tests(project, skip):
+    """Each tests/*.py, an fc2drive script that launches the game and exits 1 on a failed check."""
+    tests = sorted((project.path / "tests").glob("*.py"))
+    if not tests:
+        return Check("game tests", "pass", "none"), []
+    if skip:
+        return Check("game tests", "fail", f"{len(tests)} not run (--no-game)",
+                     "deploy the mod, get the user's OK to launch the game, then run without --no-game"), []
+    logs = Path(tempfile.gettempdir()) / "release-check" / project.key
+    logs.mkdir(parents=True, exist_ok=True)
+    failures = []
+    for test in tests:
+        log = logs / f"game-{test.stem}.log"
+        with open(log, "w", encoding="utf-8", errors="replace") as out:
+            result = subprocess.run([sys.executable, str(test)], cwd=REPO, stdout=out, stderr=subprocess.STDOUT)
+        if result.returncode != 0:
+            failures.append((f"game test {test.stem}", log, lines_of(log)[-15:]))
+    if failures:
+        return Check("game tests", "fail", f"{len(failures)} of {len(tests)} failed",
+                     "read the logs below and the run folders under tools/fc2drive/runs"), failures
+    return Check("game tests", "pass", f"{len(tests)} passed"), []
+
+
 # --- the bar --------------------------------------------------------------------------------------
 
 def release_order(project, tags):
@@ -267,6 +305,7 @@ def main():
     parser.add_argument("mod")
     parser.add_argument("--hotfix", action="store_true")
     parser.add_argument("--no-build", action="store_true")
+    parser.add_argument("--no-game", action="store_true")
     args = parser.parse_args()
 
     projects = modstatus.projects()
@@ -285,6 +324,8 @@ def main():
         build, failures = Check("build", "fail", "not run (--no-build)", "run without --no-build"), []
     else:
         build, failures = build_and_test(project)
+    game, game_failures = game_tests(project, args.no_game)
+    failures += game_failures
 
     rows = [
         checks["features"],
@@ -294,6 +335,8 @@ def main():
               "go through the candidates below"),
         checks["simplify"],
         build,
+        unit_tests(project),
+        game,
         checks["played"],
         checks.get("skeleton", Check("skeleton", "pass", "a tool, not a mod: the skeleton is for mods/")),
         checks["assets"],
