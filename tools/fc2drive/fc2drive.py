@@ -566,10 +566,10 @@ class Run:
             self._add("approve", f"{label}: {why}")
             return None
         changed, where = _changes(shot, reference, mask)
-        changes = shot.with_name(f"{shot.stem}-changes.png")
-        where.save(changes)
-        self._add("image", f"{label}: what changed", changes)
         if changed > tolerance:
+            changes = shot.with_name(f"{shot.stem}-changes.png")
+            where.save(changes)
+            self._add("image", f"{label}: what changed", changes)
             self._approvals.append(approval)
         return self.expect(label, changed <= tolerance, f"{changed:.1%} of a tile changed, {tolerance:.1%} allowed")
 
