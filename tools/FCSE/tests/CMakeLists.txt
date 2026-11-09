@@ -7,26 +7,9 @@
 # Everything else in src/ needs a live Dunia.dll to mean anything, so there is deliberately nothing
 # here that stubs the engine out to test around it.
 
-# GoogleTest, vendored the same way safetyhook is (see the note in ../CMakeLists.txt) - a pinned tag
-# fetched at configure time, so the suite needs no system-wide install to build.
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        v1.17.0
-)
-
-# GMock is not used, and INSTALL_GTEST would add install rules for a dependency that never ships.
-set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
-set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
-
-# gtest_force_shared_crt stays OFF, which is what lets GoogleTest inherit the /MT (/MTd in Debug)
-# CMAKE_MSVC_RUNTIME_LIBRARY the root CMakeLists sets before project() - see the CMP0091 note there
-# for why the whole build is static-CRT. Turning it ON here would build GoogleTest /MD and the test
-# exe would fail to link, loudly, which is the right failure for a mismatch of this kind.
-FetchContent_MakeAvailable(googletest)
-
-include(GoogleTest)
+# GoogleTest, pinned and fetched at configure time by the setup plugins share, so the suite needs no
+# system-wide install to build.
+include("${CMAKE_CURRENT_SOURCE_DIR}/../include/fcse_tests.cmake")
 
 # Built against the real code through fcse_core - no stubs, and no dependency on Dunia.dll, so it
 # runs anywhere the project builds. The rest of src/ is not linked in because nothing in it is

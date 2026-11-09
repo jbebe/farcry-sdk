@@ -18,13 +18,13 @@ import tempfile
 from collections import defaultdict
 from pathlib import Path
 
+import collisions
 import modstatus
 from modstatus import REPO, Check
 
 SOURCE = (".cpp", ".h", ".hpp", ".inl", ".fx", ".hlsl", ".fxh")
 SCRIPT = (".py", ".ps1", ".cmake", ".txt", ".json", ".js", ".ts")
 LAYER_TEXT = (".xml", ".ini", ".json", ".lua", ".txt", ".rml")
-SKIP_DIRS = {"out", "build", "bin", "obj", "node_modules", "dist", "__pycache__", "mockup", ".vs"}
 
 LOG_CALL = re.compile(r"\b(?:Logf|Log|OutputDebugStringA?|printf|puts|fprintf\s*\(\s*std(?:err|out)\s*,)\s*\(?"
                       r"[^\"\n]*\"([^\"]*)")
@@ -39,17 +39,16 @@ NOT_A_TYPE = r"(?!\s*(?:return|else|throw|case|delete|new|goto|co_return|if|for|
 FUNCTION_DEF = re.compile(rf"^{NOT_A_TYPE}\s*(?:[\w:<>,*&~]+\s+)+?[*&]*"
                           r"(?:\w+::)*(\w+)\s*\([^;{}]*\)\s*(?:const\s*)?(?:noexcept\s*)?(?:override\s*)?\{?\s*$")
 GLOBAL_DEF = re.compile(rf"^{NOT_A_TYPE}\s*(?:[\w:<>,()]+[\s*&]+)+(k[A-Z]\w*|g_\w+)\s*(?:\[[^\]]*\]\s*)?(?:=|\{{|;)")
+DECLARATION = re.compile(rf"^{NOT_A_TYPE}\s*(?:[\w:<>,*&]+\s+)+[*&]*(\w+)\s*\([^;{{}}]*\)\s*(?:const\s*)?;\s*$")
 PY_DEF = re.compile(r"^def (\w+)|^([A-Z][A-Z0-9_]{2,})\s*=")
 NULL_SETTING = re.compile(r"\{\s*\"([^\"]+)\"\s*,\s*FCSE_\w+\([^)]*\)\s*,\s*(?:nullptr|NULL|0)\s*[,}]")
 ENTRY_POINTS = {"main", "DllMain", "FCSE_Load", "FCSE_OnRegisterFunctions", "FCSE_Unload", "WinMain"}
 
 
-def walk(root, suffixes):
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
-        for name in filenames:
-            if name.lower().endswith(suffixes):
-                yield Path(dirpath) / name
+def sources(project, suffixes, folder=""):
+    """The project's files with these suffixes, as paths - what git tracks or does not ignore."""
+    return [project.path / p for p in project.files()
+            if p.lower().endswith(suffixes) and (not folder or modstatus.under(p, folder))]
 
 
 def lines_of(path):
@@ -63,21 +62,30 @@ def rel(path):
     return path.relative_to(REPO).as_posix()
 
 
+def run_logged(project, name, argv, cwd):
+    """Runs one step into a log of its own: None when it passed, else (name, log, its last lines)."""
+    logs = Path(tempfile.gettempdir()) / "release-check" / project.key
+    logs.mkdir(parents=True, exist_ok=True)
+    log = logs / f"{re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')}.log"
+    with open(log, "w", encoding="utf-8", errors="replace") as out:
+        result = subprocess.run(argv, cwd=cwd, stdout=out, stderr=subprocess.STDOUT)
+    return None if result.returncode == 0 else (name, log, lines_of(log)[-15:])
+
+
 # --- debug lines ----------------------------------------------------------------------------------
 
 def debug_candidates(project):
     found = []
-    for root in (project.path / "src", project.path / "include"):
-        for path in walk(root, SOURCE):
-            for number, line in enumerate(lines_of(path), 1):
-                log = LOG_CALL.search(line)
-                if log and not FAILURE.search(log.group(1)) and "//" not in line[:log.start()]:
-                    found.append((path, number, "log that is not a failure", line.strip()))
-                elif MARKER.search(line):
-                    found.append((path, number, "debug marker", line.strip()))
-                elif COMMENTED_CODE.match(line):
-                    found.append((path, number, "commented-out code?", line.strip()))
-    for path in walk(project.path / "data", (".py",)):
+    for path in sources(project, SOURCE, "src") + sources(project, SOURCE, "include"):
+        for number, line in enumerate(lines_of(path), 1):
+            log = LOG_CALL.search(line)
+            if log and not FAILURE.search(log.group(1)) and "//" not in line[:log.start()]:
+                found.append((path, number, "log that is not a failure", line.strip()))
+            elif MARKER.search(line):
+                found.append((path, number, "debug marker", line.strip()))
+            elif COMMENTED_CODE.match(line):
+                found.append((path, number, "commented-out code?", line.strip()))
+    for path in sources(project, (".py",), "data"):
         for number, line in enumerate(lines_of(path), 1):
             if re.search(r"\b(?:TODO|FIXME|XXX|HACK)\b", line):
                 found.append((path, number, "debug marker", line.strip()))
@@ -86,24 +94,10 @@ def debug_candidates(project):
 
 # --- unused parts ---------------------------------------------------------------------------------
 
-def corpus(project):
-    """{path: lines} of everything that can name a part of the mod: code, build files, layer text."""
-    files = {}
-    for path in walk(project.path, SOURCE + SCRIPT + LAYER_TEXT):
-        files[path] = lines_of(path)
-    return files
-
-
 def unused_candidates(project, vanilla):
-    files = corpus(project)
-    where = defaultdict(set)
-    for path, lines in files.items():
-        for number, line in enumerate(lines, 1):
-            for token in set(re.findall(r"\w+", line)):
-                where[token].add((path, number))
+    files = {path: lines_of(path) for path in sources(project, SOURCE + SCRIPT + LAYER_TEXT)}
 
-    definitions = defaultdict(set)
-    kinds = {}
+    definitions, kinds = defaultdict(set), {}
     for path, lines in files.items():
         suffix = path.suffix.lower()
         for number, line in enumerate(lines, 1):
@@ -113,8 +107,7 @@ def unused_candidates(project, vanilla):
                     if m and m.group(1) not in ENTRY_POINTS and not m.group(1).startswith("FCSE_"):
                         definitions[m.group(1)].add((path, number))
                         kinds.setdefault(m.group(1), (kind, path, number))
-                declaration = re.match(rf"^{NOT_A_TYPE}\s*(?:[\w:<>,*&]+\s+)+[*&]*(\w+)\s*\([^;{{}}]*\)\s*(?:const\s*)?;\s*$",
-                                       line)
+                declaration = DECLARATION.match(line)
                 if declaration:
                     definitions[declaration.group(1)].add((path, number))
             elif suffix == ".py":
@@ -124,10 +117,17 @@ def unused_candidates(project, vanilla):
                     definitions[name].add((path, number))
                     kinds.setdefault(name, ("function" if m.group(1) else "constant", path, number))
 
+    # Only the names defined above are ever looked up, so only they are indexed.
+    lines_with = defaultdict(set)
+    for path, lines in files.items():
+        for number, line in enumerate(lines, 1):
+            for token in set(re.findall(r"\w+", line)) & kinds.keys():
+                lines_with[token].add((path, number))
+
     found = []
     for name, (kind, path, number) in sorted(kinds.items(), key=lambda i: (rel(i[1][1]), i[1][2])):
-        if not where[name] - definitions[name]:
-            found.append((path, number, f"{kind} {name} is never used", lines_of(path)[number - 1].strip()))
+        if not lines_with[name] - definitions[name]:
+            found.append((path, number, f"{kind} {name} is never used", files[path][number - 1].strip()))
 
     for path, lines in files.items():
         if path.suffix.lower() == ".cpp":
@@ -136,28 +136,21 @@ def unused_candidates(project, vanilla):
                     found.append((path, number, f"setting \"{m.group(1)}\" has no callback, so nothing reads it",
                                   line.strip()))
 
-    layer = project.path / "layer"
     text = "\n".join(line for lines in files.values() for line in lines).lower()
     unnamed = defaultdict(list)
-    if layer.is_dir():
-        for path in sorted(layer.rglob("*")):
-            if not path.is_file() or path.suffix.lower() in (".dll", ".pdb") or path.name.startswith("."):
-                continue
-            inside = rel(path)[len(project.dir) + len("/layer/"):]
-            if inside.startswith("mods/") and _is_merged(inside):
-                continue
-            name = path.name.lower()
-            if inside.startswith("mods/") and vanilla is not None and name in vanilla:
-                continue
-            if path.stem.lower() in text or name in text:
-                continue
-            # A world's generated data is read by convention (nv_0.nvm, nv_1.nvm ...), never by name.
-            world = re.search(r"/(?:levels|worlds)/([^/]+)/", inside)
-            if world and (world.group(1).lower() in text or (vanilla and world.group(1).lower() in vanilla)):
-                continue
-            if inside.startswith("mods/") and vanilla is None:
-                continue
-            unnamed[path.parent].append(path)
+    for inside, path in sorted(collisions.layer_files(project, plugins=True).items()):
+        name = path.name.lower()
+        if path.suffix.lower() in (".dll", ".pdb") or name.startswith("."):
+            continue
+        if inside.startswith("mods/") and (vanilla is None or modstatus.container(inside) or name in vanilla):
+            continue
+        if path.stem.lower() in text or name in text:
+            continue
+        # A world's generated data is read by convention (nv_0.nvm, nv_1.nvm ...), never by name.
+        world = re.search(r"/(?:levels|worlds)/([^/]+)/", inside)
+        if world and (world.group(1).lower() in text or world.group(1).lower() in (vanilla or ())):
+            continue
+        unnamed[path.parent].append(path)
     # Hashed or generated names cannot be found as text, so these are listed a folder at a time.
     for folder, paths in sorted(unnamed.items()):
         where = rel(folder)[len(project.dir) + len("/layer/"):]
@@ -166,11 +159,6 @@ def unused_candidates(project, vanilla):
         names = ", ".join(p.name for p in paths[:2]) + (f" and {len(paths) - 2} more" if len(paths) > 2 else "")
         found.append((folder, 0, f"{len(paths)} layer file{'s' if len(paths) > 1 else ''} {reason}", names))
     return found
-
-
-def _is_merged(inside):
-    parts = inside.split("/")
-    return inside.endswith(".fragment.xml") or any("." in p for p in parts[1:-1])
 
 
 def vanilla_names():
@@ -182,13 +170,6 @@ def vanilla_names():
 
 
 # --- build and tests ------------------------------------------------------------------------------
-
-def workflow(project):
-    for path in (REPO / ".github" / "workflows").glob("*-release.yml"):
-        if re.search(rf"^\s*directory:\s*{re.escape(project.dir)}\s*$", path.read_text(encoding="utf-8"), re.M):
-            return path
-    return None
-
 
 def workflow_steps(path):
     """(name, command, working directory) of each single-line build, test or check command the
@@ -210,51 +191,41 @@ def workflow_steps(path):
         key = re.match(r"^\s*(name|run|working-directory):\s*(.*)$", line)
         if key:
             current["dir" if key.group(1) == "working-directory" else key.group(1)] = key.group(2).strip()
-    commands = []
-    for step in steps:
-        command = step["run"]
-        if command and command != "|" and re.match(r"^(?:\.[\\/]|pwsh |dotnet |npm )", command):
-            commands.append((step["name"] or command, command.removeprefix("pwsh "), step["dir"] or "."))
-    return commands
+    return [(step["name"] or step["run"], step["run"].removeprefix("pwsh "), step["dir"] or ".")
+            for step in steps
+            if step["run"] and step["run"] != "|" and re.match(r"^(?:\.[\\/]|pwsh |dotnet |npm )", step["run"])]
 
 
-def build_and_test(project):
+def build_steps(project):
     """The release workflow's build and test commands, then the byte patterns for a plugin."""
-    path = workflow(project)
-    steps = workflow_steps(path) if path else []
-    if not path and (project.path / "build.ps1").exists():
+    steps = workflow_steps(project.workflow) if project.workflow else []
+    if not project.workflow and (project.path / "build.ps1").exists():
         steps = [("build.ps1", r".\build.ps1", project.dir)]
     if project.is_plugin and (project.path / "src").is_dir():
         steps.append(("byte patterns", f"python scripts/verify_patterns.py {project.dir}/src", "."))
-    logs = Path(tempfile.gettempdir()) / "release-check" / project.key
-    logs.mkdir(parents=True, exist_ok=True)
-    failures, ran = [], []
-    for index, (name, command, directory) in enumerate(steps, 1):
-        log = logs / f"{index}-{re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')}.log"
-        with open(log, "w", encoding="utf-8", errors="replace") as out:
-            result = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
-                                    cwd=REPO / directory, stdout=out, stderr=subprocess.STDOUT)
-        ran.append(name)
-        if result.returncode != 0:
-            tail = lines_of(log)[-15:]
-            failures.append((name, log, tail))
+    return steps
+
+
+def build_and_test(project, steps):
     if not steps:
         return Check("build", "fail", "no release workflow and no build.ps1", "add the project's release workflow"), []
+    failures = [f for name, command, directory in steps
+                if (f := run_logged(project, name, ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                                                    "-Command", command], REPO / directory))]
     if failures:
         detail = "; ".join(f"{name} failed, log {log}" for name, log, _ in failures)
         return Check("build", "fail", detail, "fix the build or test, then run this again"), failures
-    return Check("build", "pass", ", ".join(ran)), []
+    return Check("build", "pass", ", ".join(name for name, _, _ in steps)), []
 
 
-def unit_tests(project):
+def unit_tests(project, steps):
     """A mod's tests/*.cpp count only if its release build runs them; a tool's are its workflow's."""
-    if not project.dir.startswith("mods/"):
+    if not project.is_mod:
         return Check("unit tests", "pass", "the release workflow's own test steps, run in the build row")
     tests = sorted((project.path / "tests").glob("*.cpp"))
     if not tests:
         return Check("unit tests", "pass", "none: only a plugin with a lot of pure logic has them")
-    path = workflow(project)
-    if not path or not any("-Tests" in command for _, command, _ in workflow_steps(path)):
+    if not any("-Tests" in command for _, command, _ in steps):
         return Check("unit tests", "fail", f"{len(tests)} test files the release build does not run",
                      "pass -Tests in the release workflow's build step")
     return Check("unit tests", "pass", f"{len(tests)} test files, run in the build row")
@@ -268,15 +239,8 @@ def game_tests(project, skip):
     if skip:
         return Check("game tests", "fail", f"{len(tests)} not run (--no-game)",
                      "deploy the mod, get the user's OK to launch the game, then run without --no-game"), []
-    logs = Path(tempfile.gettempdir()) / "release-check" / project.key
-    logs.mkdir(parents=True, exist_ok=True)
-    failures = []
-    for test in tests:
-        log = logs / f"game-{test.stem}.log"
-        with open(log, "w", encoding="utf-8", errors="replace") as out:
-            result = subprocess.run([sys.executable, str(test)], cwd=REPO, stdout=out, stderr=subprocess.STDOUT)
-        if result.returncode != 0:
-            failures.append((f"game test {test.stem}", log, lines_of(log)[-15:]))
+    failures = [f for test in tests
+                if (f := run_logged(project, f"game test {test.stem}", [sys.executable, str(test)], REPO))]
     if failures:
         return Check("game tests", "fail", f"{len(failures)} of {len(tests)} failed",
                      "read the logs below and the run folders under tools/fc2drive/runs"), failures
@@ -285,11 +249,11 @@ def game_tests(project, skip):
 
 # --- the bar --------------------------------------------------------------------------------------
 
-def release_order(project, tags):
-    waiting = [text for tag, text in project.status.waits if tag is None or tag not in tags]
+def release_order(state):
+    waiting = [text for _, text, met in state.waits if not met]
     if waiting:
         return Check("release order", "fail", "; ".join(waiting), "release those first, or settle the wait")
-    return Check("release order", "pass", "nothing to wait for" if not project.status.waits else "all met")
+    return Check("release order", "pass", "all met" if state.waits else "nothing to wait for")
 
 
 def changelog_section(state):
@@ -309,21 +273,18 @@ def main():
     args = parser.parse_args()
 
     projects = modstatus.projects()
-    project = modstatus.find(args.mod, projects)
-    if project is None:
-        print(f"No mod matches '{args.mod}'. Known: {', '.join(p.key for p in projects)}")
-        return 2
-    states, _, _ = modstatus.gather([project])
+    project = modstatus.require(args.mod, projects)
+    states, _ = modstatus.gather(projects, [project])
     state = states[0]
     checks = {c.name: c for c in state.checks}
-    tags = modstatus.local_tags()
 
     debug = debug_candidates(project)
     unused = unused_candidates(project, vanilla_names())
+    steps = build_steps(project)
     if args.no_build:
         build, failures = Check("build", "fail", "not run (--no-build)", "run without --no-build"), []
     else:
-        build, failures = build_and_test(project)
+        build, failures = build_and_test(project, steps)
     game, game_failures = game_tests(project, args.no_game)
     failures += game_failures
 
@@ -335,16 +296,15 @@ def main():
               "go through the candidates below"),
         checks["simplify"],
         build,
-        unit_tests(project),
+        unit_tests(project, steps),
         game,
         checks["played"],
-        checks.get("skeleton", Check("skeleton", "pass", "a tool, not a mod: the skeleton is for mods/")),
+        checks["skeleton"],
         checks["assets"],
         Check("page text", "pass", "not needed for a hotfix") if args.hotfix else checks["page text"],
         changelog_section(state),
-        release_order(project, tags),
+        release_order(state),
     ]
-    rows += [c for c in state.checks if c.name not in {r.name for r in rows} and c.name != "changelog"]
 
     mode = " (hotfix)" if args.hotfix else ""
     tag = state.tag[0] if state.tag else "never released"

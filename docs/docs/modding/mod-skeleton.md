@@ -38,7 +38,7 @@ Outside the folder, a released mod has its `.github/workflows/<tag prefix>-relea
 
 ## What is checked
 
-- The five files at the top, and the page text and at least one picture under `assets/`.
+- The five files at the top. The page text and pictures are the release check's assets row.
 - Nothing in `assets/` but the two page files and `images/`. Build inputs, source art and texture
   headers live in a folder of their own beside `src/`, named for what they are: Flashlight's
   `hud-icon/`, Inventory Overhaul's papers in `notebook/`, Sound Overhaul's local `sounds/`.

@@ -12,7 +12,8 @@ import sys
 from pathlib import Path
 
 import modstatus
-from modstatus import REPO
+from modstatus import REPO, under
+
 
 def changed_paths(args):
     if not args:
@@ -25,17 +26,10 @@ def changed_paths(args):
     return paths
 
 
-def under(path, prefix):
-    return path == prefix or path.startswith(prefix + "/")
-
-
 def affected(paths, projects):
     """{project key: [reason, ...]} for owners and builds, {key: [path]} for what they run on, the
     owners' changed paths, and paths no mod depends on."""
     hits, runs_on, owned, loose = {}, {}, {}, []
-    # A whole project named as a build tool (a script saying "build tools\JackAll") is too coarse to
-    # follow; what installs a layer is in modstatus.LAYER_RUNTIME.
-    roots = {p.dir for p in projects}
     for path in paths:
         reached = False
         for p in projects:
@@ -53,24 +47,14 @@ def affected(paths, projects):
                     reason = f"builds against {dep}"
                     if reason not in hits.setdefault(p.key, []):
                         hits[p.key].append(reason)
-            tools = [d for d in modstatus.build_deps(p) if modstatus.is_tool_dep(d) and d not in roots]
+            # A whole project named as a tool is too coarse to follow; what installs a layer is in LAYER_RUNTIME.
+            tools = [d for d in modstatus.build_deps(p) if modstatus.is_tool_dep(d) and not modstatus.is_project_root(d)]
             if modstatus.matches(path, modstatus.runtime_patterns(p)) or any(under(path, d) for d in tools):
                 reached = True
                 runs_on.setdefault(p.key, set()).add(path)
         if not reached and not modstatus.matches(path, modstatus.RELEASE_TOOLING):
             loose.append(path)
     return hits, runs_on, owned, loose
-
-
-def touched_kinds(paths):
-    kinds = set()
-    for path in paths:
-        parts = path.split("/")
-        if "src" in parts:
-            kinds.add("hook")
-        if "layer" in parts or "data" in parts:
-            kinds.update(("layer", "control", "string"))
-    return kinds
 
 
 def main():
@@ -112,11 +96,9 @@ def main():
     if loose:
         print(f"- no mod: {', '.join(loose[:8])}{' ...' if len(loose) > 8 else ''}")
 
-    kinds = touched_kinds([p for files in owned.values() for p in files])
-    if kinds and owned:
+    if owned:
         import collisions
-        found = [c for c in collisions.compute(projects)
-                 if c.kind in kinds and any(c.involves(k) for k in owned)]
+        found = [c for c in collisions.compute(projects) if any(c.involves(k) for k in owned)]
         open_ = [c for c in found if not collisions.decided(c, by_key)]
         if found:
             print(f"\nCollisions of the changed mods: {len(found) - len(open_)} decided in STATUS.md, "
@@ -124,7 +106,7 @@ def main():
         for c in open_:
             missing += 1
             via = "".join(f"; {m} as {n}" for m, n in c.via)
-            print(f"- {c.a} <-> {c.b}: {c.what}{via} - ask the user (deploy apart, or fixed by ...) and "
+            print(f"- {c.a} <-> {c.b}: {c.sentence()}{via} - ask the user (deploy apart, or fixed by ...) and "
                   f"record it under ## Collisions in both STATUS.md files")
     return 1 if missing else 0
 

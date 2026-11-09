@@ -7,6 +7,7 @@
     python scripts/status.py --offline ...   # without GitHub (no issues, local tags only)
 """
 import argparse
+import concurrent.futures
 import datetime as dt
 import sys
 from collections import defaultdict
@@ -54,17 +55,19 @@ def waits_cell(state):
     return "; ".join(text if tag is None else tag for tag, text, met in state.waits if not met)
 
 
-def phrase(collision, mods=2):
-    if not collision.what.startswith("hook "):
-        return collision.what
-    return ("all " if mods > 2 else "both ") + collision.what
-
-
-def collision_lines(projects, only=None):
+def computed_collisions(projects):
+    """(collisions, None), or ([], the error) - the board is shown either way."""
     try:
         import collisions
-        found = collisions.compute(projects)
+        return collisions.compute(projects), None
     except Exception as error:
+        return [], error
+
+
+def collision_lines(projects, computed, only=None):
+    import collisions
+    found, error = computed
+    if error:
         return [f"- collisions not computed: {error}"], []
     by_key = {p.key: p for p in projects}
     undecided, decided = {}, []
@@ -82,11 +85,11 @@ def collision_lines(projects, only=None):
     lines = []
     for first, mods in undecided.values():
         names = ", ".join(f"{m} ({n})" if n else m for m, n in sorted(mods.items(), key=lambda i: i[0].lower()))
-        lines.append(f"- {names}: {phrase(first, len(mods))}")
+        lines.append(f"- {names}: {first.sentence(len(mods))}")
     return sorted(lines), decided
 
 
-def board(states, issues, projects, session=False):
+def board(states, issues, projects, computed, session=False):
     now = dt.datetime.now()
     out = [f"## Mod board, {now:%Y-%m-%d %a %H:%M}", ""]
     due, last = modstatus.nexus_due(now)
@@ -112,7 +115,7 @@ def board(states, issues, projects, session=False):
     for label, found in (("without a mod label", untracked), ("needing a home (a new mod?)", homeless)):
         if found:
             out += ["", f"Open issues {label}: {len(found)} ({', '.join('#' + str(i.number) for i in found)})"]
-    lines, _ = collision_lines(projects)
+    lines, _ = collision_lines(projects, computed)
     if lines:
         out += ["", "Collisions with no decision in either STATUS.md:"] + lines
     out += ["", "Details: /status <mod>. Release bar: /release-check <mod>."]
@@ -121,7 +124,7 @@ def board(states, issues, projects, session=False):
     return "\n".join(out)
 
 
-def detail(state, projects):
+def detail(state, projects, computed):
     p = state.project
     s = p.status
     out = [f"## {p.name} ({p.dir})", ""]
@@ -148,10 +151,10 @@ def detail(state, projects):
         out += ["### Release order", ""]
         out += [f"- {'met' if met else 'waiting'}: {text}" for tag, text, met in state.waits] + [""]
 
-    lines, decided = collision_lines(projects, only=p.key)
+    lines, decided = collision_lines(projects, computed, only=p.key)
     if lines or decided or s.collisions:
         out += ["### Collisions", ""]
-        out += [f"- decided ({decision}): {c.other(p.key)}, {phrase(c)}" for c, decision in decided]
+        out += [f"- decided ({decision}): {c.other(p.key)}, {c.sentence()}" for c, decision in decided]
         out += [f"- undecided: {line[2:]}" for line in lines]
         recorded = {c.other(p.key).lower() for c, _ in decided}
         out += [f"- recorded, not detected now: {other}: {text}" for other, text in s.collisions.items()
@@ -197,16 +200,16 @@ def main():
     if args.fit:
         print(fit(projects, None if args.offline else modstatus.github()[0]))
         return 0
+    chosen = [modstatus.require(args.mod, projects)] if args.mod else None
+    # The collision scan is mostly file reads and gather mostly waits on git, so they overlap.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        computed = pool.submit(computed_collisions, projects)
+        states, issues = modstatus.gather(projects, chosen, online=not args.offline)
+        computed = computed.result()
     if args.mod:
-        project = modstatus.find(args.mod, projects)
-        if project is None:
-            print(f"No mod matches '{args.mod}'. Known: {', '.join(p.key for p in projects)}")
-            return 1
-        states, _, _ = modstatus.gather([project], online=not args.offline)
-        print(detail(states[0], projects))
-        return 0
-    states, issues, _ = modstatus.gather(online=not args.offline)
-    print(board(states, issues, projects, session=args.session))
+        print(detail(states[0], projects, computed))
+    else:
+        print(board(states, issues, projects, computed, session=args.session))
     return 0
 
 

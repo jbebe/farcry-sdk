@@ -38,10 +38,15 @@ DEFAULT_RETAIL = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 PATTERN_CALL = re.compile(r"FCSE::Pattern\(\s*((?:\"[^\"]*\"\s*)+)\)", re.S)
 
 
-def code_section(path):
-    """The bytes of the executable section - the only place FCSE's own scanner looks."""
+def text_section(path):
+    """The executable section's RVA and bytes - the only place FCSE's own scanner looks."""
     pe = pefile.PE(path, fast_load=True)
-    return next(s for s in pe.sections if s.Name.rstrip(b"\x00") == b".text").get_data()
+    text = next(s for s in pe.sections if s.Name.rstrip(b"\x00") == b".text")
+    return text.VirtualAddress, text.get_data()
+
+
+def code_section(path):
+    return text_section(path)[1]
 
 
 def to_regex(pattern):

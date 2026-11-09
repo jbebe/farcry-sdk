@@ -7,10 +7,11 @@ The STATUS.md format is documented in .claude/skills/status/SKILL.md.
 import concurrent.futures
 import datetime as dt
 import fnmatch
+import functools
 import json
-import os
 import re
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -26,11 +27,6 @@ IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".webp")
 # Inside a project, what is neither code nor data: changing it leaves a "played" approval current and
 # needs no changelog line.
 NOT_CODE = ("*.md", "assets", ".gitignore")
-
-
-def is_code(inside):
-    """Whether a path inside a project (relative to it) is code or data."""
-    return not any(fnmatch.fnmatch(inside, p) or inside.startswith(p + "/") for p in NOT_CODE)
 
 # What a mod runs on without building against it: FCSE's loader for a plugin, and JackAll's and
 # Vortex's install path for a layer. A change here can change a mod's behaviour with no rebuild.
@@ -51,12 +47,35 @@ BUILD_FILES = ("CMakeLists.txt", "*.cmake", "*.ps1", "*.py", "CMakePresets.json"
 OUTPUT_DIRS = {"bin", "obj", "out", "node_modules", "dist", "__pycache__"}
 
 
+def under(path, prefix):
+    return path == prefix or path.startswith(prefix.rstrip("/") + "/")
+
+
+def is_code(inside):
+    """Whether a path inside a project (relative to it) is code or data."""
+    return not any(fnmatch.fnmatch(inside, p) or under(inside, p) for p in NOT_CODE)
+
+
+def container(inside):
+    """The merged container a layer file belongs to - a folder named like a file, or a .fragment.xml -
+    or None for a whole file that replaces the game's."""
+    parts = inside.split("/")
+    for part in parts[1:-1]:
+        if "." in part:
+            return part
+    return parts[-1].removesuffix(".fragment.xml") if inside.endswith(".fragment.xml") else None
+
+
 def git(*args, check=True):
     result = subprocess.run(["git", "-C", str(REPO), *args], capture_output=True, text=True,
                             encoding="utf-8", errors="replace")
     if check and result.returncode != 0:
         raise RuntimeError(f"git {' '.join(args)}: {result.stderr.strip()}")
     return result.stdout
+
+
+def git_ok(*args):
+    return subprocess.run(["git", "-C", str(REPO), *args], capture_output=True).returncode == 0
 
 
 def parallel(fn, items):
@@ -80,10 +99,6 @@ class Record:
 class Feature:
     state: str
     text: str
-
-    @property
-    def issues(self):
-        return [int(n) for n in re.findall(r"#(\d+)", self.text)]
 
 
 @dataclass
@@ -151,7 +166,9 @@ def parse_status(text):
 class Project:
     dir: str
     status: Status
+    is_mod: bool
     tag_prefix: str = ""
+    workflow: Path = None
 
     @property
     def key(self):
@@ -178,7 +195,17 @@ class Project:
         return (self.path / "layer").is_dir()
 
     def code_pathspecs(self):
+        """The mod's own code and data."""
         return [self.dir] + [f":(exclude){self.dir}/{p}" for p in NOT_CODE]
+
+    def change_pathspecs(self):
+        """What a release of the mod carries: its code and data, and what its build compiles in."""
+        return [*self.code_pathspecs(), *compiled_deps(self)]
+
+    def files(self, untracked=True):
+        """The project's files relative to it: what git tracks, and with `untracked` what it does not
+        ignore either."""
+        return _files(self.dir, untracked)
 
     def changelog(self):
         """The changelog's versions, newest first, and how many lines its Unreleased section holds."""
@@ -197,31 +224,38 @@ class Project:
         return versions, unreleased
 
 
-def tag_prefixes():
-    """Each project directory's tag prefix, read from the release workflow that tags it."""
-    prefixes = {}
+@functools.cache
+def _files(directory, untracked):
+    extra = ["--others", "--exclude-standard"] if untracked else []
+    return tuple(line[len(directory) + 1:] for line in git("ls-files", "--cached", *extra, "--", directory).splitlines())
+
+
+def release_workflows():
+    """{project directory: (tag prefix, workflow path)}, read from the workflows that release them."""
+    found = {}
     for workflow in (REPO / ".github" / "workflows").glob("*-release.yml"):
         text = workflow.read_text(encoding="utf-8")
         directory = re.search(r"^\s*directory:\s*(\S+)", text, re.M)
         prefix = re.search(r"^\s*tag_prefix:\s*(\S+)", text, re.M)
         if directory and prefix:
-            prefixes[directory.group(1).strip("'\"")] = prefix.group(1).strip("'\"")
-    return prefixes
-
-
-def projects():
-    prefixes = tag_prefixes()
-    found = []
-    for path in sorted((REPO / "mods").glob("*/STATUS.md")) + sorted((REPO / "tools").glob("*/STATUS.md")):
-        directory = path.parent.relative_to(REPO).as_posix()
-        status = parse_status(path.read_text(encoding="utf-8"))
-        found.append(Project(directory, status, prefixes.get(directory, "")))
+            found[directory.group(1).strip("'\"")] = (prefix.group(1).strip("'\""), workflow)
     return found
 
 
-def find(name, candidates=None):
+def projects():
+    workflows = release_workflows()
+    found = []
+    for root in ("mods", "tools"):
+        for path in sorted((REPO / root).glob("*/STATUS.md")):
+            directory = path.parent.relative_to(REPO).as_posix()
+            prefix, workflow = workflows.get(directory, ("", None))
+            found.append(Project(directory, parse_status(path.read_text(encoding="utf-8")), root == "mods",
+                                 prefix, workflow))
+    return found
+
+
+def find(name, candidates):
     """The project a user's word names: its folder, title, tag prefix or label, or a unique prefix."""
-    candidates = candidates if candidates is not None else projects()
     word = name.lower().removeprefix("mod:").strip()
     for p in candidates:
         if word in (p.key.lower(), p.name.lower(), p.tag_prefix.lower()):
@@ -229,6 +263,15 @@ def find(name, candidates=None):
     hits = [p for p in candidates
             if p.key.lower().startswith(word) or p.name.lower().startswith(word)]
     return hits[0] if len(hits) == 1 else None
+
+
+def require(name, candidates):
+    """find(), or the known names and exit 2 when the word names no project."""
+    project = find(name, candidates)
+    if project is None:
+        print(f"No mod matches '{name}'. Known: {', '.join(p.key for p in candidates)}")
+        sys.exit(2)
+    return project
 
 
 # --- dependencies ---------------------------------------------------------------------------------
@@ -257,9 +300,6 @@ def _csproj_closure(csproj, seen):
             _csproj_closure(target, seen)
 
 
-_deps_cache = {}
-
-
 def _code_only(file):
     """The build file's text without comments, so a path named in prose is not a dependency."""
     text = file.read_text(encoding="utf-8", errors="replace")
@@ -278,10 +318,13 @@ def build_deps(project):
     Read from CMakeLists, build scripts and the like rather than declared anywhere, so a new include
     directory or script is picked up the moment the build uses it.
     """
-    if project.dir in _deps_cache:
-        return _deps_cache[project.dir]
-    files = [f for pattern in BUILD_FILES for f in project.path.glob(pattern)]
-    files += list((project.path / "cmake").glob("*.cmake"))
+    return list(_build_deps(project.dir))
+
+
+@functools.cache
+def _build_deps(directory):
+    root = REPO / directory
+    files = [f for pattern in BUILD_FILES for f in root.glob(pattern)] + list((root / "cmake").glob("*.cmake"))
     found = set()
     for file in files:
         text = _code_only(file)
@@ -307,26 +350,62 @@ def build_deps(project):
     deps = set()
     for target in found:
         rel = target.relative_to(REPO).as_posix() if target != REPO else ""
-        if rel.count("/") < 1 or rel == project.dir or rel.startswith(project.dir + "/"):
-            continue
-        if project.dir.startswith(rel + "/"):
-            continue
-        deps.add(rel)
+        if rel.count("/") >= 1 and not under(rel, directory) and not under(directory, rel):
+            deps.add(rel)
     # A path under another dependency adds nothing.
-    result = sorted(d for d in deps if not any(d.startswith(o + "/") for o in deps if o != d))
-    _deps_cache[project.dir] = result
-    return result
+    return tuple(sorted(d for d in deps if not any(under(d, o) for o in deps if o != d)))
 
 
 def is_tool_dep(path):
-    """A tool the build or install runs - JackAll's CLI, a third-party tool, a check script - rather
-    than code or data built into the mod."""
-    return (path.startswith(("tools/JackAll/src/JackAll.Cli", "tools/third-party/"))
-            or path == "tools/JackAll" or re.search(r"(^|/)verify_\w+\.(py|ps1)$", path) is not None)
+    """A tool the build or install runs - a whole project named as one ("build tools\\JackAll"), JackAll's
+    CLI, a third-party tool, a check script - rather than code or data built into the mod."""
+    return (is_project_root(path) or path.startswith(("tools/JackAll/src/JackAll.Cli", "tools/third-party/"))
+            or re.search(r"(^|/)verify_\w+\.(py|ps1)$", path) is not None)
+
+
+def is_project_root(path):
+    return re.fullmatch(r"(?:tools|mods)/[^/]+", path) is not None
 
 
 def compiled_deps(project):
-    return [d for d in build_deps(project) if not is_tool_dep(d)]
+    return list(_compiled_deps(project.dir))
+
+
+@functools.cache
+def _compiled_deps(directory):
+    """The build deps compiled into the project, an include folder narrowed to the code the project
+    names (an #include, a CMake include) and the files those name in turn. A folder holding its own
+    project file is compiled whole."""
+    text = None
+    out = []
+    for dep in (d for d in _build_deps(directory) if not is_tool_dep(d)):
+        candidates = {f for f in _files(dep, False) if is_code(f)} if (REPO / dep).is_dir() else set()
+        if not candidates or any(f.endswith(PROJECT_FILES) for f in candidates):
+            out.append(dep)
+            continue
+        if text is None:
+            text = "\n".join(_read(REPO / directory / p) for p in _files(directory, True)
+                             if p.lower().endswith(NAMING_SUFFIXES))
+        named, seen = set(), text
+        while True:
+            more = {f for f in candidates - named if Path(f).name in seen}
+            if not more:
+                break
+            named |= more
+            seen = "\n".join(_read(REPO / dep / f) for f in more)
+        out += sorted(f"{dep}/{f}" for f in named) or [dep]
+    return tuple(out)
+
+
+NAMING_SUFFIXES = (".cpp", ".h", ".hpp", ".inl", ".fx", ".hlsl", ".txt", ".cmake", ".ps1", ".py", ".json")
+PROJECT_FILES = (".csproj", "CMakeLists.txt", "package.json")
+
+
+def _read(path):
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
 
 
 def runtime_patterns(project):
@@ -366,9 +445,13 @@ def last_tag(project, tags):
     return prefix + version, version
 
 
+@functools.cache
 def has_commit(sha):
-    return subprocess.run(["git", "-C", str(REPO), "cat-file", "-e", f"{sha}^{{commit}}"],
-                          capture_output=True).returncode == 0
+    return git_ok("cat-file", "-e", f"{sha}^{{commit}}")
+
+
+def is_ancestor(older, newer):
+    return git_ok("merge-base", "--is-ancestor", older, newer)
 
 
 def commits(since, pathspecs):
@@ -378,52 +461,19 @@ def commits(since, pathspecs):
     return [tuple(line.split("\t", 1)) for line in out.splitlines() if "\t" in line]
 
 
-_porcelain = None
-
-
+@functools.cache
 def dirty_paths():
     """Paths with uncommitted changes, tracked or new."""
-    global _porcelain
-    if _porcelain is None:
-        _porcelain = []
-        for line in git("status", "--porcelain", "-uall").splitlines():
-            path = line[3:].split(" -> ")[-1].strip('"')
-            _porcelain.append(path)
-    return _porcelain
+    return tuple(line[3:].split(" -> ")[-1].strip('"') for line in git("status", "--porcelain", "-uall").splitlines())
 
 
 def dirty_under(pathspecs):
+    """The uncommitted paths the pathspecs cover, read off one cached `git status`."""
     includes = [p for p in pathspecs if not p.startswith(":(exclude)")]
     excludes = [p[len(":(exclude)"):] for p in pathspecs if p.startswith(":(exclude)")]
-    hits = []
-    for path in dirty_paths():
-        if not any(path == i or path.startswith(i.rstrip("/") + "/") for i in includes):
-            continue
-        if any(fnmatch.fnmatch(path, e) or path.startswith(e.rstrip("/") + "/") for e in excludes):
-            continue
-        hits.append(path)
-    return hits
-
-
-def staleness(record, pathspecs):
-    """Why a record no longer holds - commits or uncommitted edits to its paths since - or ''."""
-    if record is None:
-        return "none"
-    if not has_commit(record.sha):
-        return f"commit {record.sha} not found"
-    changed = commits(record.sha, pathspecs)
-    dirty = dirty_under(pathspecs)
-    reasons = []
-    if changed:
-        reasons.append(f"{len(changed)} commit{'s' if len(changed) != 1 else ''} since")
-    if dirty:
-        reasons.append("uncommitted edits")
-    return "stale: " + ", ".join(reasons) if reasons else ""
-
-
-def is_ancestor(older, newer):
-    return subprocess.run(["git", "-C", str(REPO), "merge-base", "--is-ancestor", older, newer],
-                          capture_output=True).returncode == 0
+    return [path for path in dirty_paths()
+            if any(under(path, i) for i in includes)
+            and not any(fnmatch.fnmatch(path, e) or under(path, e) for e in excludes)]
 
 
 # --- GitHub ---------------------------------------------------------------------------------------
@@ -486,9 +536,8 @@ def nexus_last_capture():
     return dt.datetime.fromtimestamp(max(stamps)) if stamps else None
 
 
-def nexus_due(now=None):
+def nexus_due(now):
     """(due, last capture): due on a Saturday or Sunday when the last capture is over 7 days old."""
-    now = now or dt.datetime.now()
     last = nexus_last_capture()
     stale = last is None or (now - last).days > 7
     return now.weekday() >= 5 and stale, last
@@ -504,6 +553,9 @@ class Check:
     fix: str = ""
 
 
+SIMPLIFY_FIX = "run /simplify over everything since the last tag, then record it"
+
+
 def feature_check(project):
     open_ = [f for f in project.status.features if f.state in OPEN_STATES]
     if not open_:
@@ -514,29 +566,33 @@ def feature_check(project):
                  "finish them, or mark each on hold, postponed or scrapped in STATUS.md")
 
 
-def record_check(project, kind, pathspecs, label, fix):
-    reason = staleness(project.status.records.get(kind), pathspecs)
-    if not reason:
-        record = project.status.records[kind]
-        return Check(label, "pass", f"{record.sha} {record.date}")
-    if reason == "none":
-        return Check(label, "fail", "not recorded", fix)
-    return Check(label, "stale" if reason.startswith("stale") else "fail", reason, fix)
+def record_check(project, kind, pathspecs, fix):
+    """A recorded approval or check: missing, stale once its paths changed after it, or current."""
+    record = project.status.records.get(kind)
+    if record is None:
+        return Check(kind, "fail", "not recorded", fix)
+    if not has_commit(record.sha):
+        return Check(kind, "fail", f"commit {record.sha} not found", fix)
+    changed = commits(record.sha, pathspecs)
+    reasons = [f"{len(changed)} commit{'s' if len(changed) != 1 else ''} since"] if changed else []
+    if dirty_under(pathspecs):
+        reasons.append("uncommitted edits")
+    if reasons:
+        return Check(kind, "stale", ", ".join(reasons), fix)
+    return Check(kind, "pass", f"{record.sha} {record.date}" + (f" - {record.note}" if record.note else ""))
 
 
 def simplify_check(project, tag):
+    check = record_check(project, "simplify", project.code_pathspecs(), SIMPLIFY_FIX)
     record = project.status.records.get("simplify")
-    check = record_check(project, "simplify", project.code_pathspecs(), "simplify",
-                         "run /simplify over everything since the last tag, then record it")
     if check.state == "pass" and tag and tag[2] and not is_ancestor(tag[2], record.sha):
-        return Check("simplify", "stale", f"{record.sha} ran before {tag[0]}", check.fix or
-                     "run /simplify over everything since the last tag, then record it")
+        return Check("simplify", "stale", f"{record.sha} ran before {tag[0]}", SIMPLIFY_FIX)
     return check
 
 
 def assets_check(project):
     # A mod keeps its pictures in assets/images/ (the skeleton); a tool's assets/ is laid out its own way.
-    folder = project.path / "assets" / ("images" if project.dir.startswith("mods/") else "")
+    folder = project.path / "assets" / ("images" if project.is_mod else "")
     missing = [p.split("/")[-1] for p in PAGE_TEXT if not (project.path / p).exists()]
     images = [f for f in folder.rglob("*") if f.suffix.lower() in IMAGE_SUFFIXES] if folder.is_dir() else []
     problems = missing + ([] if images else [f"no images in {folder.relative_to(project.path).as_posix()}/"])
@@ -551,15 +607,16 @@ def assets_check(project):
 
 
 def skeleton_check(project):
-    """The mod against docs/docs/modding/mod-skeleton.md, on what git tracks."""
-    tracked = {line[len(project.dir) + 1:] for line in git("ls-files", project.dir).splitlines()}
-    required = ["README.md", "README-release.md", "CHANGELOG.md", "STATUS.md", ".gitignore", *PAGE_TEXT]
+    """The mod against docs/docs/modding/mod-skeleton.md, on what git tracks; the page text and pictures
+    are the assets row's."""
+    if not project.is_mod:
+        return Check("skeleton", "pass", "a tool, not a mod: the skeleton is for mods/")
+    tracked = set(project.files(untracked=False))
+    required = ["README.md", "README-release.md", "CHANGELOG.md", "STATUS.md", ".gitignore"]
     plugin = project.is_plugin
     if plugin:
         required += ["CMakeLists.txt", "CMakePresets.json", "build.ps1", "src/main.cpp"]
     problems = [f"no {p}" for p in required if p not in tracked]
-    if not any(p.startswith("assets/images/") and p.lower().endswith(IMAGE_SUFFIXES) for p in tracked):
-        problems.append("no assets/images/")
     strays = sorted(p for p in tracked if p.startswith("assets/") and p not in PAGE_TEXT
                     and not p.startswith("assets/images/"))
     if strays:
@@ -571,7 +628,7 @@ def skeleton_check(project):
         ignore = (project.path / ".gitignore").read_text(encoding="utf-8") if ".gitignore" in tracked else ""
         if not re.search(r"^/?layer/plugins/\S+\.dll\s*$", ignore, re.M):
             problems.append("the built DLL under layer/plugins/ is not gitignored")
-    if not project.tag_prefix:
+    if not project.workflow:
         problems.append("no release workflow")
     if f"`{project.dir}`" not in (REPO / "RELEASING.md").read_text(encoding="utf-8"):
         problems.append("no row in RELEASING.md")
@@ -580,32 +637,29 @@ def skeleton_check(project):
     return Check("skeleton", "pass", "matches docs/docs/modding/mod-skeleton.md")
 
 
-def notes_check(project, tag):
-    versions, notes = project.changelog()
-    if versions is None:
+def notes_check(state):
+    if state.versions is None:
         return Check("changelog", "fail", "no CHANGELOG.md", "add one with an [Unreleased] section")
-    prepared = versions and (tag is None or version_key(versions[0]) > version_key(tag[1]))
-    code = [*project.code_pathspecs(), *compiled_deps(project)]
-    fetched = tag is None or tag[2]
-    if fetched and not prepared and not notes and commits(tag[2] if tag else None, code):
+    if state.prepared:
+        return Check("changelog", "pass", f"{state.prepared} prepared")
+    if state.code_unreleased and not state.notes:
         return Check("changelog", "fail", "code or data changed since the tag, no notes under [Unreleased]",
                      "add a line under [Unreleased] for each change a player would notice")
-    return Check("changelog", "pass", f"{versions[0]} prepared" if prepared else f"{notes} unreleased notes")
+    return Check("changelog", "pass", f"{state.notes} unreleased notes")
 
 
-def quick_checks(project, tag):
+def quick_checks(state):
     """The release-bar rows cheap enough for the session-start board."""
-    checks = [feature_check(project),
-              record_check(project, "played", project.code_pathspecs(), "played",
-                           "play it, and record the user's approval in STATUS.md"),
-              simplify_check(project, tag),
-              notes_check(project, tag),
-              assets_check(project),
-              record_check(project, "page text", [f"{project.dir}/{p}" for p in PAGE_TEXT], "page text",
-                           "have the user read nexus-description.bbcode and nexus-summary.txt, then record it")]
-    if project.dir.startswith("mods/"):
-        checks.append(skeleton_check(project))
-    return checks
+    project = state.project
+    return [feature_check(project),
+            record_check(project, "played", project.code_pathspecs(),
+                         "play it, and record the user's approval in STATUS.md"),
+            simplify_check(project, state.tag),
+            notes_check(state),
+            assets_check(project),
+            record_check(project, "page text", [f"{project.dir}/{p}" for p in PAGE_TEXT],
+                         "have the user read nexus-description.bbcode and nexus-summary.txt, then record it"),
+            skeleton_check(project)]
 
 
 # --- the whole picture ----------------------------------------------------------------------------
@@ -614,40 +668,55 @@ def quick_checks(project, tag):
 class State:
     project: Project
     tag: tuple = None
+    versions: list = None
+    notes: int = 0
     prepared: str = ""
     unreleased: list = field(default_factory=list)
+    code_unreleased: bool = False
     issues: list = field(default_factory=list)
     checks: list = field(default_factory=list)
     waits: list = field(default_factory=list)
 
 
-def gather(selected=None, online=True):
-    """Every project's computed state, plus the open issues (None when offline)."""
-    all_projects = projects()
-    chosen = selected or all_projects
-    issues, remote = github() if online else (None, {})
-    tags = local_tags()
-    for name, sha in remote.items():
-        tags.setdefault(name, sha)
+def _state(project, tags):
+    state = State(project)
+    found = last_tag(project, tags)
+    if found:
+        sha = tags[found[0]]
+        state.tag = (found[0], found[1], sha if has_commit(sha) else "")
+    state.versions, state.notes = project.changelog()
+    if state.versions and (not found or version_key(state.versions[0]) > version_key(found[1])):
+        state.prepared = state.versions[0]
+    since = state.tag[2] if state.tag else None
+    # A tag whose commit this clone lacks says nothing about what came after it.
+    if not state.tag or since:
+        rng = [f"{since}..HEAD"] if since else ["HEAD"]
+        deps = compiled_deps(project)
+        out = git("log", "--format=%x00%h%x09%s", "--name-only", *rng, "--", project.dir,
+                  f":(exclude){project.dir}/STATUS.md", *deps, check=False)
+        for entry in out.split("\0")[1:]:
+            head, *paths = entry.strip().splitlines()
+            sha, _, subject = head.partition("\t")
+            state.unreleased.append((sha, subject))
+            state.code_unreleased |= any(any(under(f, d) for d in deps) or
+                                         (under(f, project.dir) and is_code(f[len(project.dir) + 1:]))
+                                         for f in paths if f)
+    state.checks = quick_checks(state)
+    return state
 
-    def one(project):
-        state = State(project)
-        found = last_tag(project, tags)
-        if found:
-            sha = tags[found[0]]
-            state.tag = (found[0], found[1], sha if has_commit(sha) else "")
-        versions, _ = project.changelog()
-        if versions and (not found or version_key(versions[0]) > version_key(found[1])):
-            state.prepared = versions[0]
-        since = state.tag[2] if state.tag else None
-        if state.tag and not since:
-            state.unreleased = []
-        else:
-            specs = [project.dir, *compiled_deps(project), f":(exclude){project.dir}/STATUS.md"]
-            state.unreleased = commits(since, specs)
-        state.issues = [i for i in issues or [] if project.label in i.labels]
-        state.checks = quick_checks(project, state.tag)
-        state.waits = [(tag, text, tag is None or tag in tags) for tag, text in project.status.waits]
-        return state
 
-    return parallel(one, chosen), issues, all_projects
+def gather(all_projects, selected=None, online=True):
+    """(each chosen project's computed state, the open issues - None when offline)."""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        remote = pool.submit(github) if online else None
+        tags = local_tags()
+        states = parallel(lambda p: _state(p, tags), selected or all_projects)
+        issues, remote_tags = remote.result() if remote else (None, {})
+    merged = {**remote_tags, **tags}
+    for i, state in enumerate(states):
+        # A release tagged by CI and not fetched yet moves the project's last tag.
+        if last_tag(state.project, merged) != last_tag(state.project, tags):
+            states[i] = state = _state(state.project, merged)
+        state.issues = [issue for issue in issues or [] if state.project.label in issue.labels]
+        state.waits = [(tag, text, tag is None or tag in merged) for tag, text in state.project.status.waits]
+    return states, issues
