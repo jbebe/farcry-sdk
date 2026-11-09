@@ -31,6 +31,7 @@ mods/<mod>/
   tests/                    when the mod has tests
     *.py                    game tests: fc2drive scripts that check the game's state
     *.cpp                   unit tests, only for a plugin with a lot of pure logic
+    references/             the game tests' approved pictures, local and out of git
 ```
 
 Outside the folder, a released mod has its `.github/workflows/<tag prefix>-release.yml` and a row in
@@ -51,9 +52,10 @@ Outside the folder, a released mod has its `.github/workflows/<tag prefix>-relea
 
 Most of a mod is hooks into the running game, so its tests are game tests: each `tests/*.py` drives
 the game through fc2drive and DevTools' remote control - on the test range, or in world1 or world2
-from a save - and reads the outcome off the game's state (`tools/fc2drive/README.md`, "A mod's
-tests"). `/release-check` runs them against the mods deployed to the install; CI has no game, so
-they never run there.
+from a save - and reads the outcome off the game's state, or compares a picture with one the user
+approved (`tools/fc2drive/README.md`, "A mod's tests"). `/release-check` runs them against the mods
+deployed to the install; CI has no game, so they never run there. A plugin holds no logic for its own
+tests: what a test needs to read or do goes into DevTools' remote control, where every mod can use it.
 
 Unit tests are for the rare plugin with a lot of pure logic. That logic moves into its own files, which
 the tests link without the rest:

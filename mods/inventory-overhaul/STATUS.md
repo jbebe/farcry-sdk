@@ -25,7 +25,7 @@ Stage: active
 - [done] Other mods' notes, photos, cassettes and items known by a naming convention - user: "it all works"
 - [done] Example note, photo and cassette on the Docs page until Tales of Africa ships, never saved - the user heard the cassette
 - [done] Test window in DevTools' overlay: Stow, Take, Give, Discard, Fill, +1 diamond
-- [new] Malaria on the pills' post-it - agreed: "malaria becomes the pills' card"
+- [new] INVENTORY_OVERHAUL_FILL and the Lua start variable removed once tests set up the notebook through DevTools - plugins hold no test logic- [new] Malaria on the pills' post-it - agreed: "malaria becomes the pills' card"
 - [new] Camo Suit in Items once bought - agreed 2026-10-26
 - [new] Box page at the crates: the bought guns as a catalogue and stored things, one shared box #6
 - [new] One fetch mission - design log step 9

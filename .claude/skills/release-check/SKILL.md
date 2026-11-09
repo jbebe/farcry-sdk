@@ -32,6 +32,9 @@ a fix: every row applies except the user's re-check of the BBCode and short mess
      under `## Checks` in the mod's STATUS.md.
    - **played**, **page text**: only the user can give these. Ask; record what they say at
      `git rev-parse --short HEAD`, never on their behalf.
+   - **game tests** with pictures to approve: show the user each picture in the run's `index.html`.
+     Only once they say the pictures are right, run `python tools/fc2drive/fc2drive.py approve <run
+     folder>` and run the check again.
    - **changelog**: the release needs a `## [x.y.z] - date` section newer than the last tag
      (RELEASING.md).
 4. Show the result as the script's table plus what you did in step 2. When every row passes, say the

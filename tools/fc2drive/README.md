@@ -4,8 +4,9 @@ Drives Far Cry 2 from outside, to test mods without playing through the test by 
 save, teleport, fire actions, take pictures, record the run with NVIDIA, replay a chunk of play.
 
 It talks to [DevTools' remote control](../../mods/DevTools/README.md#remote-control), so DevTools has to
-be in the install. It needs Python 3 and nothing else, plus ffmpeg with NVENC on `PATH` for clips. The
-install it drives is `C:\Games\Far Cry 2`, or `FC2_GAME` if that is set.
+be in the install. It needs Python 3, plus Pillow and numpy for picture checks
+(`pip install pillow numpy`) and ffmpeg with NVENC on `PATH` for clips. The install it drives is
+`C:\Games\Far Cry 2`, or `FC2_GAME` if that is set.
 
 ## Scenarios
 
@@ -47,30 +48,74 @@ with launch("world1") as game:
 `launch` takes a name from `SAVES` or a `.sav` file. `game.action(signal, values...)` fires anything in
 the action map, and `game.lua(code)` and `game.eval(expression)` reach the rest of the game.
 
+The game's own state, each a remote command in [DevTools' table](../../mods/DevTools/README.md#remote-control):
+
+| Call | What it gives or does |
+|---|---|
+| `game.state()` | position, yaw, look pitch, `crouched`, `in_vehicle`, the `camera` (position, yaw, pitch, roll, fov) and the gun in hand |
+| `game.look(yaw, pitch)` | points the view, in degrees, so a picture frames the same every run |
+| `game.spawn(archetype, x, y, z, yaw)`, `game.clear()` | an entity put into the world, by id, and everything spawned removed |
+| `game.entity(id or "player", component)` | name, position, yaw, health, and whether it has a component class |
+| `game.sight()` | what each soldier makes of the player |
+| `game.setting(plugin, name, value)`, `game.option(name, value)` | any mod's setting, or DevTools' own, for this launch |
+| `game.pause(True)` | the world held still, for a picture |
+
+`eventually(check, seconds)` waits for something that takes time.
+
 ## A mod's tests
 
 A mod's automated tests are fc2drive scripts in its own `tests/` folder, one `.py` per test, run by
 `/release-check` against the mods deployed to the install. Each sets up its case - on the test range
 (`demorange`), or in world1 or world2 from a save - reads the outcome off the game's state, and ends
-with a verdict:
+with a verdict. A plugin never carries logic for its own tests: what a test needs that the remote
+control cannot read yet is added to DevTools, for every mod.
 
 ```python
 import sys
+import time
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "tools" / "fc2drive"))
-from fc2drive import Run, launch
+from fc2drive import Run
 
-run = Run("walks")
-with launch("demorange") as game:
-    before = game.state()["pos"]
-    game.walk(1.0, 0.0, 2.0)
-    after = game.state()["pos"]
-    run.expect("the player walked", before != after, f"{before} -> {after}")
+run = Run("lean", mods=["aiming-overhaul"])
+with run.launch("demorange") as game:
+    game.goto(256.0, 110.0, 16.5, yaw=0.0)
+    game.action("start_lean_right", 1.0)
+    time.sleep(1.0)
+    run.expect_between("the view rolls, degrees", game.state()["camera"]["roll"], 12.0, 18.0)
 run.finish()
 ```
 
-`run.expect(label, held, detail)` records one check; `run.finish()` exits 1 if any check failed, or if
-none was made, so a test that never reached its point does not pass.
+- `Run(name, mods=[...])` names the plugins the test is about, and ends it as skipped when one is not in
+  the install.
+- `run.launch` is `launch` with the game's own health part of the test. It fails the run when a message
+  box comes up (it would hang the run, so the game is ended), when the game crashes, when it does not quit
+  by itself when asked, and when `fcse.log` reports a crash, a Lua error, or a failure from FCSE,
+  DevTools or one of the test's mods. Another mod's failure is noted, not failed: a feature can rightly
+  be missing in a world, as Inventory Overhaul's notebook is on the test range. It also switches
+  DevTools' FPS counter off, since it changes every frame.
+- `run.expect(label, held, detail)` and `run.expect_between(label, value, low, high)` record one check.
+- `run.expect_picture(game, label, mask, tolerance)` takes a shot and compares it with the approved one
+  of the same label. Both are shrunk to 480 pixels wide and softened, and the check fails when more than
+  `tolerance` (5%) of any 16-pixel tile changed: two runs of the notebook test differed by under 1% of a
+  tile, a missing FPS counter by 12%, another page by 37%. A failure adds a picture of what changed.
+  Fix the light, clear the weather, `look` and `pause` before one; `mask` leaves rectangles out.
+- `run.finish()` exits 0 when every check held, 1 when one failed or none was made, 4 when only pictures
+  wait for approval. A skipped test exits 3.
+
+### Approving pictures
+
+A picture with no reference yet, or whose reference was taken with other plugins installed or at another
+resolution, waits for approval, and so does one that failed. Show the user the run's `index.html`; once
+they say the pictures are right:
+
+```
+python fc2drive.py approve runs\2026-11-09_14-02-12-notebook
+```
+
+That makes them the references, in `references/<test>/` beside the test, with a `setup.json` of the
+plugins and resolution they were taken with. References are true of this machine's install only, so
+they stay out of git.
 
 ## One command at a time
 
@@ -79,6 +124,7 @@ For looking around and deciding what to do next, with the game left running betw
 ```
 python fc2drive.py start world1
 python fc2drive.py state
+python fc2drive.py entity player CPawn
 python fc2drive.py goto 2604 2108 23 0
 python fc2drive.py action use 1
 python fc2drive.py shot C:\temp\here.png

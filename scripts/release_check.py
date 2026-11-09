@@ -63,13 +63,14 @@ def rel(path):
 
 
 def run_logged(project, name, argv, cwd):
-    """Runs one step into a log of its own: None when it passed, else (name, log, its last lines)."""
+    """Runs one step into a log of its own: None when it passed, else (name, log, its last lines, its
+    exit code)."""
     logs = Path(tempfile.gettempdir()) / "release-check" / project.key
     logs.mkdir(parents=True, exist_ok=True)
     log = logs / f"{re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')}.log"
     with open(log, "w", encoding="utf-8", errors="replace") as out:
         result = subprocess.run(argv, cwd=cwd, stdout=out, stderr=subprocess.STDOUT)
-    return None if result.returncode == 0 else (name, log, lines_of(log)[-15:])
+    return None if result.returncode == 0 else (name, log, lines_of(log)[-15:], result.returncode)
 
 
 # --- debug lines ----------------------------------------------------------------------------------
@@ -213,7 +214,7 @@ def build_and_test(project, steps):
                 if (f := run_logged(project, name, ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
                                                     "-Command", command], REPO / directory))]
     if failures:
-        detail = "; ".join(f"{name} failed, log {log}" for name, log, _ in failures)
+        detail = "; ".join(f"{name} failed, log {log}" for name, log, *_ in failures)
         return Check("build", "fail", detail, "fix the build or test, then run this again"), failures
     return Check("build", "pass", ", ".join(name for name, _, _ in steps)), []
 
@@ -232,18 +233,29 @@ def unit_tests(project, steps):
 
 
 def game_tests(project, skip):
-    """Each tests/*.py, an fc2drive script that launches the game and exits 1 on a failed check."""
+    """Each tests/*.py, an fc2drive script that launches the game and exits 1 on a failed check, and
+    with fc2drive's own codes when the mod is not in the install or pictures wait for approval."""
     tests = sorted((project.path / "tests").glob("*.py"))
     if not tests:
         return Check("game tests", "pass", "none"), []
     if skip:
         return Check("game tests", "fail", f"{len(tests)} not run (--no-game)",
                      "deploy the mod, get the user's OK to launch the game, then run without --no-game"), []
-    failures = [f for test in tests
-                if (f := run_logged(project, f"game test {test.stem}", [sys.executable, str(test)], REPO))]
-    if failures:
-        return Check("game tests", "fail", f"{len(failures)} of {len(tests)} failed",
-                     "read the logs below and the run folders under tools/fc2drive/runs"), failures
+    sys.path.insert(0, str(REPO / "tools" / "fc2drive"))
+    from fc2drive import NEEDS_APPROVAL, SKIPPED
+
+    ended = [f for test in tests
+             if (f := run_logged(project, f"game test {test.stem}", [sys.executable, str(test)], REPO))]
+    for found, detail, fix in (
+            ([f for f in ended if f[3] not in (NEEDS_APPROVAL, SKIPPED)], "failed",
+             "read the logs below and the run folders under tools/fc2drive/runs"),
+            ([f for f in ended if f[3] == SKIPPED], "skipped, the mod is not in the install",
+             "deploy it with /deploy, then run this again"),
+            ([f for f in ended if f[3] == NEEDS_APPROVAL], "have pictures to approve",
+             "show the user each run's index.html; once they say the pictures are right, "
+             "python tools/fc2drive/fc2drive.py approve <run folder>")):
+        if found:
+            return Check("game tests", "fail", f"{len(found)} of {len(tests)} {detail}", fix), ended
     return Check("game tests", "pass", f"{len(tests)} passed"), []
 
 
@@ -319,7 +331,7 @@ def main():
             for path, number, why, text in items:
                 at = f"{rel(path)}:{number}" if number else rel(path)
                 print(f"- {at} ({why}): `{text[:140]}`")
-    for name, log, tail in failures:
+    for name, log, tail, _ in failures:
         print(f"\n### {name} failed - last lines of {log}\n\n```")
         print("\n".join(tail))
         print("```")

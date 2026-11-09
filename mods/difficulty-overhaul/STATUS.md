@@ -40,6 +40,7 @@ Stage: active
 - [done] Stand-down: an alert ends after 90 s, the soldier walks back to where he was - range row not run
 - [done] Combat log per session in bin\difficulty-overhaul-logs, read by fight_report.py
 - [done] Perception and brain traces for testing (-perceptiontrace, -braintrace)
+- [new] Traces removed once tests read soldiers' sight and brain tasks through DevTools' remote control - plugins hold no test logic
 - [in progress] Difficulty spread (item G): a decision for every lever - health pools and cushion done, the rest undecided
 - [on hold] How enemies differ (item C): skill by role, guard posts below patrols below bodyguards - "don't implement, just discuss"
 - [on hold] Blood drips from a wounded player - paused by the user
