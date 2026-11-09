@@ -39,6 +39,14 @@ simplification rules for every language in this repo live there.
   spawning what it needs, not by hunting world 1. What fc2drive cannot do goes to the user as exact
   steps; after their run, read `<game>\bin\fcse.log` before changing anything.
 - **Measuring what a mod costs** is `/perftest`.
+- **If the session-start board flags a Nexus check, say so in your first reply.**
+
+## Mod state and releases
+
+- `<project>/STATUS.md` - each project's features, the user's approvals, release order and collision
+  decisions; the format and the rules for recording are in `.claude/skills/status/SKILL.md`
+- `/status` - the board of every mod, or one mod in full; a SessionStart hook loads the board
+- `/release-check <mod>` - the release bar, row by row (`.claude/skills/release-check/SKILL.md`)
 
 ## Knowledge about Far Cry 2
 
