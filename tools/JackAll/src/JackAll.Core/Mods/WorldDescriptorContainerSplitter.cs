@@ -13,7 +13,7 @@ namespace JackAll.Core.Mods;
 /// Mission names are unique, and the flat <c>&lt;MissionLayers&gt;</c> index is those same layers in
 /// the same order - derived rather than authored, so <see cref="Apply"/> rebuilds it instead of
 /// asking a mod to maintain two copies. A change anywhere else in the file keeps its whole-file
-/// override. See docs/design/mod-layout-final.md.
+/// override.
 /// </remarks>
 public sealed class WorldDescriptorContainerSplitter : IContainerSplitter
 {

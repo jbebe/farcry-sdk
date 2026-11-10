@@ -280,7 +280,7 @@ a BOM silently, so a fragment can validate as XML and still be rejected. **Windo
 :::note[There is no round trip through the whole container]
 `fcb decode` splits an entity library into group files; `fcb encode` refuses multi-file XML.
 Fragments are the route. Applying them re-encodes the container, which inflates it — `patch.dat`
-grows from 9.9 to 49.7 MB once both worlds are covered. See `docs/design/fcb-deep-fragments.md`.
+grows from 9.9 to 49.7 MB once both worlds are covered.
 :::
 
 ### Build, verify, restore

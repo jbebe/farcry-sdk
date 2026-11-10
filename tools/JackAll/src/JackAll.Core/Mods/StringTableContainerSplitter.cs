@@ -18,7 +18,7 @@ namespace JackAll.Core.Mods;
 /// <see cref="OasisStringsPatch"/> document holding all of its edits: a layer expands that document
 /// into these fragments when it is scanned. So the payload is the ten strings a weapon mod actually
 /// changes, conflicts are reported per string, and a retranslation is still one file rather than
-/// 11,394. See docs/design/mod-layout-final.md.
+/// 11,394.
 ///
 /// <see cref="IContainerTree.List"/> is deliberately empty. The table has no browsable child set
 /// worth 11,394 rows per language; the rows a person wants are the ones some mod overrides, and

@@ -9,8 +9,7 @@ public readonly record struct FcbFragment(string Id, FcbObject Node);
 
 /// <summary>
 /// The fragment-override id space of a container `.fcb`: which nodes of a recognised tree shape are
-/// individually overridable, and what path-shaped id (see docs/design/fcb-deep-fragments.md) each one
-/// gets. Two shapes are recognised:
+/// individually overridable, and what path-shaped id each one gets. Two shapes are recognised:
 ///
 ///   - An entity library (root <c>EntityLibraries</c> of <c>EntityLibrary</c> group children): one
 ///     fragment per <c>EntityPrototype</c>, keyed on its entity's <c>hidName</c> — the engine's own

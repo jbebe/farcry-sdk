@@ -103,7 +103,7 @@ public interface IContainerTree
 /// A mod stages a fragment at <c>&lt;container&gt;.&lt;ext&gt;\&lt;fragment id&gt;</c> and the build
 /// merges it into the vanilla container rather than shipping the whole recompiled file. That
 /// addressing is format-agnostic already - the id is a plain string keyed by container hash - so this
-/// is the only piece a new format has to supply. See docs/design/mod-layout-final.md.
+/// is the only piece a new format has to supply.
 /// </remarks>
 public interface IContainerSplitter
 {

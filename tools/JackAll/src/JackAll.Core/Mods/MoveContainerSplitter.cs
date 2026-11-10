@@ -23,7 +23,7 @@ namespace JackAll.Core.Mods;
 /// number, while a mod author holding the twin knows <c>Pawn_Generic_Aim</c>; binding on the number
 /// lets both land on one entry.
 ///
-/// See docs/docs/file-formats/move.md and docs/design/mod-layout-final.md.
+/// See docs/docs/file-formats/move.md.
 /// </remarks>
 public sealed class MoveContainerSplitter(MoveNames? names = null) : IContainerSplitter
 {

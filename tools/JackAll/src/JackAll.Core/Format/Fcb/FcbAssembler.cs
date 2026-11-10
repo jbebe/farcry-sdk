@@ -10,8 +10,7 @@ namespace JackAll.Core.Format.Fcb;
 /// <remarks>
 /// This is what turns a fragment override — a single node's XML, staged under
 /// <c>container.fcb\&lt;fragment id&gt;</c> — back into a real, engine-loadable `.fcb`, so a
-/// one-entity edit doesn't require shipping the whole recompiled binary. See
-/// docs/design/fcb-deep-fragments.md.
+/// one-entity edit doesn't require shipping the whole recompiled binary.
 /// </remarks>
 public static class FcbAssembler
 {

@@ -6,7 +6,7 @@ using JackAll.Tools.World;
 namespace JackAll.Tests;
 
 /// <summary>
-/// Deep fragments over a real <c>worldsector*.data.fcb</c> (docs/design/fcb-deep-fragments.md): one
+/// Deep fragments over a real <c>worldsector*.data.fcb</c>: one
 /// override unit per placed entity, keyed on its <c>disEntityId</c>, so editing a single entity no
 /// longer stages â€” or conflicts over â€” the whole sector. The fixture is a median-sized sector
 /// extracted from the dedicated server's worlds.fat (12 entities over 2 mission layers).

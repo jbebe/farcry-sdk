@@ -64,9 +64,9 @@ public class FcbXmlTests
         Assert.DoesNotContain("external=", FcbXml.ToXml(original, FcbClassDefinitions.Empty));
     }
 
-    /// <summary>One fragment per archetype (docs/design/fcb-deep-fragments.md): the id count matches
-    /// the library's distinct <c>hidName</c> count, and no two ids collide under the canonical
-    /// comparer, so every archetype is individually addressable.</summary>
+    /// <summary>One fragment per archetype: the id count matches the library's distinct
+    /// <c>hidName</c> count, and no two ids collide under the canonical comparer, so every archetype
+    /// is individually addressable.</summary>
     [Theory]
     [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
     public void An_entity_library_lists_one_uniquely_addressable_fragment_per_archetype(string fixture)

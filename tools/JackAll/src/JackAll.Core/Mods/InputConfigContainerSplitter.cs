@@ -10,7 +10,7 @@ namespace JackAll.Core.Mods;
 /// The control config files as an <see cref="IContainerSplitter"/>: one fragment per named section,
 /// a <c>&lt;Category&gt;</c> of <c>defaultusercontrols.xml</c> or an <c>&lt;ActionMap&gt;</c> of an
 /// <c>inputactionmap*.xml</c>, merged as a list. Anything at the root without a name stays with the
-/// base file. See docs/design/mod-layout-final.md.
+/// base file.
 /// </summary>
 public sealed class InputConfigContainerSplitter : IContainerSplitter
 {
