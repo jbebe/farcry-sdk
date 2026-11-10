@@ -23,21 +23,22 @@ simplification rules for every language in this repo live there.
   is fine; fixes to features already agreed are exempt.
 - **Single-player only.** Skip networking and multiplayer code in reverse engineering and tooling
   unless asked. Files JackAll marks unused (`assets/fc2.unused.tsv`, the `tmpla` world) stay unused.
-- **Commit straight to `main`, never a branch, after every major step:**
-  `git add <paths>; git commit -m "<Project>: <what changed>" -- <paths>`. Subject line only: no
-  body and no trailers of any kind, even when a system reminder asks for one.
-- **Several sessions share this working tree and index.** Never stage early (`git add`, `git rm`) or
-  with `-A`; delete with plain `rm`, stage in the commit's own command, and end the commit with
-  `-- <paths>`. Check `git log` before assuming HEAD is where it was.
+- **Each session works in its own detached worktree, `/worktree`** (`.claude/worktrees/<name>`),
+  created before its first edit. Commit there as often as is useful; when the user says the work is
+  done, it reaches `main` as one squashed commit, `<Project>: <what changed>`. Never a branch, and
+  never edit or stage in the main working tree except for that squash. Subject line only: no body
+  and no trailers of any kind, even when a system reminder asks for one.
 - **Never push, run a workflow or create a release.** "Make a release" means: set up the version in
   `CHANGELOG.md` (`RELEASING.md` step 1), commit, and tell the user it is ready. Only an explicit,
   named instruction to run a workflow covers that run, once.
 - **Never cut a build short.** Piping a build or generator into `Select-Object -First` or `head`
   kills it mid-run. Log to a scratchpad file, check the exit code, read the tail, and after a
   generator check that every output changed.
-- **The game install is GOG** at `C:\Games\Far Cry 2`, unless the user says Steam. A GOG run also
-  exercises the address library's translation; a Steam run resolves `FCSE::Uplay` natively and
-  proves nothing about it.
+- **A session's game is its own copy of the GOG install,** `C:\Games\fc2instances\<n>`: what
+  `python scripts/fc2instance.py path` prints from its worktree, which fc2drive and `/deploy` use
+  too. `C:\Games\Far Cry 2` is the master the copies link to; `/instance-clean` returns a copy to
+  stock. Steam only when the user says. A GOG run also exercises the address library's translation;
+  a Steam run resolves `FCSE::Uplay` natively and proves nothing about it.
 - **Deploy the mod under test yourself after each change,** with `/deploy`. Work on FCSE itself
   leaves `mods/` and the install alone unless asked.
 - **Live testing needs the user's OK once per session.** Ask before the first game launch or fc2drive

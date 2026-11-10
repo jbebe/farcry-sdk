@@ -9,7 +9,8 @@ Notable changes to DevTools, loosely following
 - **Session log** option, off by default: every frame of a session, its time, GPU time, whether the
   player is in play and in a vehicle, and a once-a-second CPU, memory and VRAM sample, written to a
   CSV in `bin\`, to compare a session with a mod against one without.
-- **Remote control**, off unless launched with `-devtoolsremote`: a local pipe for a program to read the
+- **Remote control**, off unless launched with `-devtoolsremote`: a local pipe, named after the install's
+  folder so games from different installs each serve their own, for a program to read the
   game's state, teleport, fire actions, take screenshots and make and play recordings. For automated
   tests it also points the view, reads the camera, stance and any entity's position, health and
   components, spawns and clears entities, reports what soldiers see of the player, sets any mod's

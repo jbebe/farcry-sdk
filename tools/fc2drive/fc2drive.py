@@ -18,8 +18,13 @@ from contextlib import contextmanager
 from ctypes import wintypes
 from pathlib import Path
 
-PIPE = r"\\.\pipe\DevToolsRemote"
-GAME_BIN = Path(os.environ.get("FC2_GAME", r"C:\Games\Far Cry 2")) / "bin"
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+from fc2instance import game_for  # noqa: E402
+
+# FC2_GAME, or this worktree's game copy; DevTools names its pipe after the install's folder.
+GAME = Path(os.environ.get("FC2_GAME") or game_for(Path(__file__).parent)).resolve()
+GAME_BIN = GAME / "bin"
+PIPE = rf"\\.\pipe\DevToolsRemote-{GAME.name}"
 RUNS = Path(__file__).parent / "runs"
 
 # The saves behind the RunDebug shortcuts in the game's bin folder.
@@ -58,6 +63,7 @@ PIXEL_CHANGE = 0.1
 TILE = 16
 
 KEEP_DISPLAY_ON = 0x80000003
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 KEYEVENTF_KEYUP = 2
 HWND_TOPMOST = -1
 HWND_NOTOPMOST = -2
@@ -77,6 +83,9 @@ WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 user32.EnumWindows.argtypes = [WNDENUMPROC, wintypes.LPARAM]
 user32.EnumChildWindows.argtypes = [wintypes.HWND, WNDENUMPROC, wintypes.LPARAM]
 user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+kernel32.OpenProcess.restype = wintypes.HANDLE
+kernel32.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)]
+kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
 
 
 class GameError(RuntimeError):
@@ -338,19 +347,34 @@ def _end_game(process):
             return True
         except subprocess.TimeoutExpired:
             pass
-    subprocess.run(["taskkill", "/f", "/im", "FCSE.exe"], capture_output=True)
-    subprocess.run(["taskkill", "/f", "/im", "FarCry2.exe"], capture_output=True)
+    for pid in _game_processes():
+        subprocess.run(["taskkill", "/f", "/pid", str(pid)], capture_output=True)
     return False
 
 
-def _game_is_running():
-    listing = subprocess.run(["tasklist", "/fi", "imagename eq FCSE.exe", "/fo", "csv", "/nh"], capture_output=True, text=True)
-    return "FCSE.exe" in listing.stdout
+def _game_processes():
+    """The game's processes started from this install's bin folder, leaving other copies' alone."""
+    pids = (wintypes.DWORD * 4096)()
+    size = wintypes.DWORD()
+    kernel32.K32EnumProcesses(pids, ctypes.sizeof(pids), ctypes.byref(size))
+    path = ctypes.create_unicode_buffer(32768)
+    found = []
+    for pid in pids[: size.value // ctypes.sizeof(wintypes.DWORD)]:
+        handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if not handle:
+            continue
+        length = wintypes.DWORD(len(path))
+        if kernel32.QueryFullProcessImageNameW(handle, 0, path, ctypes.byref(length)):
+            exe = Path(path.value)
+            if exe.parent == GAME_BIN and exe.name.lower() in ("fcse.exe", "farcry2.exe"):
+                found.append(pid)
+        kernel32.CloseHandle(handle)
+    return found
 
 
 def start(save=None, args=(), env=None):
     """Launches the game with the remote control on, and waits for its world."""
-    if _game_is_running():
+    if _game_processes():
         raise GameError("a game is already running")
     # The screensaver stops the game starting and the frame being presented.
     subprocess.run(["taskkill", "/f", "/im", "scrnsave.scr"], capture_output=True)

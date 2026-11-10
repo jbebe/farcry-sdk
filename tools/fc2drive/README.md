@@ -6,7 +6,10 @@ save, teleport, fire actions, take pictures, record the run with NVIDIA, replay 
 It talks to [DevTools' remote control](../../mods/DevTools/README.md#remote-control), so DevTools has to
 be in the install. It needs Python 3, plus Pillow and numpy for picture checks
 (`pip install pillow numpy`) and ffmpeg with NVENC on `PATH` for clips. The install it drives is
-`C:\Games\Far Cry 2`, or `FC2_GAME` if that is set.
+`FC2_GAME` if that is set; otherwise, run from a worktree, the game copy that worktree holds
+(`scripts/fc2instance.py path`, claiming a free one), and from the main working tree
+`C:\Games\Far Cry 2`. It starts, finds and stops only the game in that install, so other copies can
+run beside it.
 
 ## Scenarios
 

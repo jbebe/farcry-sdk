@@ -9,9 +9,12 @@ After a change to a mod the user is play-testing, put it into the game yourself 
 report that it is deployed. Never hand the user the install command. Launching the game is not part
 of a deploy; `CLAUDE.md`'s live-testing rule covers it.
 
-The install is the GOG one, `C:\Games\Far Cry 2`, unless the user says Steam
-(`C:\Program Files (x86)\Steam\steamapps\common\Far Cry 2`). Other sessions deploy into it too.
-`jackall-cli mod build` rebuilds the patch from vanilla plus only the layers it is given, so a layer
+The install, `<game>` below, is what `python scripts/fc2instance.py path` prints from this session's
+tree: in a worktree its own game copy under `C:\Games\fc2instances\`, in the main working tree the
+GOG install `C:\Games\Far Cry 2`, which other sessions deploy into too. Steam only when the user says
+(`C:\Program Files (x86)\Steam\steamapps\common\Far Cry 2`). A clean copy has no FCSE: install it
+with `tools\FCSE\build.ps1 -Install "<game>\bin"`, and DevTools with its `-Install` when fc2drive
+will drive the game. `jackall-cli mod build` rebuilds the patch from vanilla plus only the layers it is given, so a layer
 left off is removed, and nothing records which layers built the current patch. Read the set from the
 install every time, never from memory or an earlier build.
 
@@ -22,8 +25,9 @@ deploy, `<work>` below.
 
 ## 1. Check
 
-- The game must be closed: no `FarCry2` or `FCSE` process.
-- If the newest folder under `C:\Games\Far Cry 2 - perftest\` has `"restored": false` in its
+- The game must be closed: no `FarCry2` or `FCSE` process started from `<game>\bin`. Games in
+  other copies may run.
+- In the GOG install only: if the newest folder under `C:\Games\Far Cry 2 - perftest\` has `"restored": false` in its
   `run.json`, a perftest holds the install. Ask the user before going on.
 - `git status -- mods/`. A layer deploys as it is on disk, so another mod's uncommitted changes would
   go in with this one. Ask the user, or deploy that layer from a copy in `<work>` holding what is
@@ -82,7 +86,7 @@ Copy the DLL over the installed one and go to step 7. The patch is not rebuilt.
 ## 5. Rebuild
 
 ```
-jackall-cli mod build --game "C:\Games\Far Cry 2" --layer mods\<A>\layer --layer mods\<B>\layer ... --layer mods\<mod>\layer *> "<work>\deploy.log"
+jackall-cli mod build --game "<game>" --layer mods\<A>\layer --layer mods\<B>\layer ... --layer mods\<mod>\layer *> "<work>\deploy.log"
 ```
 
 - The whole set plus this mod, in one build.

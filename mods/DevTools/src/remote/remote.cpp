@@ -5,6 +5,7 @@
 #include "commands/guns.h"
 #include "engine/actions.h"
 #include "engine/ai_sight.h"
+#include "engine/bin_folder.h"
 #include "engine/camera.h"
 #include "engine/clock.h"
 #include "engine/console.h"
@@ -43,7 +44,6 @@ namespace {
     using std::chrono::seconds;
 
     constexpr char kSwitch[] = "-devtoolsremote";
-    constexpr char kPipe[] = R"(\\.\pipe\DevToolsRemote)";
     constexpr DWORD kBufferSize = 64 * 1024;
 
     // How long `state` waits for a frame before saying the game is busy, how long a frame may take in
@@ -455,12 +455,19 @@ namespace {
         }
     }
 
+    // One pipe per game copy, named after the install's folder.
+    const std::string& PipeName() {
+        static const std::string name =
+            R"(\\.\pipe\DevToolsRemote-)" + BinFolder::File(L"").parent_path().parent_path().filename().string();
+        return name;
+    }
+
     DWORD WINAPI Serve(void*) {
         // SavePng's image encoder is a COM object.
         CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
         while (true) {
-            HANDLE pipe = CreateNamedPipeA(kPipe, PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS,
+            HANDLE pipe = CreateNamedPipeA(PipeName().c_str(), PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS,
                                            1, kBufferSize, kBufferSize, 0, nullptr);
             if (pipe == INVALID_HANDLE_VALUE) {
                 FCSE::Logf("remote: the pipe could not be created, error %lu", GetLastError());
@@ -490,7 +497,7 @@ void Start() {
         return;
     }
     CloseHandle(thread);
-    FCSE::Logf("remote: serving on %s", kPipe);
+    FCSE::Logf("remote: serving on %s", PipeName().c_str());
 }
 
 }

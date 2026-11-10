@@ -5,3 +5,4 @@ __pycache__/
 **/tests/references/
 # A clone whose own .gitignore is tracked, so the per-directory stub cannot be used on it.
 /tools/third-party/FC2JackalFix/
+.claude/worktrees/

@@ -20,9 +20,9 @@ Applied unconditionally, with no setting.
 - **Skip title screen** — the menu appears without waiting behind "press any key". The main menu's
   initial state falls straight through into the next.
 - **Multiple instances** — a second copy of the game starts while one is running, instead of
-  refusing. `InitDuniaEngine` still looks for the `FarCry2Instance` mutex, but never acts on it. Every
-  copy still shares `bin\fcse.log`, which only the first can write, and the remote control's pipe,
-  which only the first serves.
+  refusing. `InitDuniaEngine` still looks for the `FarCry2Instance` mutex, but never acts on it. Two
+  games started from the same install share `bin\fcse.log`, which only the first can write, and the
+  remote control's pipe, which only the first serves; games from different installs share neither.
 
 ## Options
 
@@ -449,8 +449,9 @@ frame, so a window can post one straight from its draw. Sky Overhaul's window se
 
 ## Remote control
 
-Launched with `-devtoolsremote`, DevTools serves a local named pipe, `\\.\pipe\DevToolsRemote`, for a
-program to drive the game. [fc2drive](../../tools/fc2drive) is the program. It is off otherwise, because
+Launched with `-devtoolsremote`, DevTools serves a local named pipe, `\\.\pipe\DevToolsRemote-<folder>`
+named after the install's folder (`DevToolsRemote-Far Cry 2`, `DevToolsRemote-2`), for a program to
+drive the game. [fc2drive](../../tools/fc2drive) is the program. It is off otherwise, because
 whatever connects can run any Lua in the game, and the pipe refuses connections from other machines.
 
 Each command is one line, and each answer one line of JSON with `ok` true, or false and an `error`.

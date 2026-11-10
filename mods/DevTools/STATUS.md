@@ -33,6 +33,7 @@ Stage: active
 - [done] Range acacia grove west of the grass field - not deployed (signal the user first), unseen
 - [done] Remote control over a named pipe (-devtoolsremote): state, goto, actions, shots, recordings - run, works 2026-10-30
 - [done] Remote control for automated tests: absolute look, camera and stance in state, spawn and clear, entity health and components, soldiers' sight, any mod's setting, pause - run, works 2026-11-09
+- [done] Remote control: one pipe per install, named after its folder, so game copies run side by side - built, not run
 - [new] Remote control: entities of an archetype near the player, through the engine's sphere query - deferred, no test needs it yet
 - [new] Remote control: each soldier's current brain task, to replace Difficulty Overhaul's -braintrace in tests
 
