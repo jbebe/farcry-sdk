@@ -189,7 +189,7 @@ scale are doubles.
 above 0, so it stops, and AI, animation and game time stand still, while rendering and input go on.
 A free camera then needs the real delta at `+0x40` handed to its update; given it, it flies through
 the frozen world. DevTools' pause does this, and a player dropped from 6 m hung in the air while
-paused and fell once the scale was back (**seen in game on GOG, 2026-11-03**).
+paused and fell once the scale was back (**seen in game on GOG**).
 
 ### Physics substeps
 

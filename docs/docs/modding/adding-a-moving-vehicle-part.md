@@ -15,29 +15,27 @@ hinged body wherever Havok puts it, so most of the work is data:
 A plugin is needed only to decide when the part is hinged and to drive its motor.
 
 :::tip[This procedure is a shipped mod]
-The big truck's radiator fan in `mods/vehicle-overhaul` is built this way and was confirmed in game
-on 2026-10-12. When the player starts the engine it spins up to 8 Hz in a second. After they get
+The big truck's radiator fan in `mods/vehicle-overhaul` is built this way and confirmed in game.
+When the player starts the engine it spins up to 8 Hz in a second. After they get
 out it coasts to a stop over eight seconds. The engine facts are traced in `FarCry2_server` and
 Steam `Dunia.dll`, and [vehicle physics](../engine-internals/vehicle-physics.md#breakable-parts)
 has them.
 :::
 
-## What went wrong, so you don't repeat it
+## Symptoms and their causes
 
-Each of these symptoms cost at least one round in game. Each had a single cause, and in no case was
-it the first guess.
+Each of these symptoms has a single cause, and none is the one it first suggests.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| The part is not drawn anywhere | Its bone was added only to the entity's baked descriptor, which the retail game never reads; the skeleton comes from the `.xbg`'s nodes | [A node in the model](#step-1--a-node-in-the-model) |
+| The part is not drawn anywhere | Its bone is only in the entity's baked descriptor, which the retail game never reads; the skeleton comes from the `.xbg`'s nodes | [A node in the model](#step-1--a-node-in-the-model) |
 | Touching or shooting the truck launches it nose-first into the air | The part's hub sits inside the chassis's engine-block hull, and the contacts push the two apart | `RESPONSE_NONE` on the [body](#step-2--a-body-in-the-hkx) |
-| On some loads the part is missing and the truck flies when touched; on others the truck jerks once and then all is well. Later, getting in spun the truck off into the sky | The body was appended after the `HIGH_` bodies. The game keeps a position, rotation and mass only for the bodies before the first `HIGH_` or `NAV_` one, so it built the hinged part from whatever memory followed | Insert the body [before the first `HIGH_` body](#step-2--a-body-in-the-hkx) |
-| The plugin never found the player's car, then crashed reading its chassis | It took the frame body's vehicle object, a wrapper, for the physics object behind it | The physics object is at the wrapper's `+0x5C` ([the plugin](#step-5--the-plugin)) |
-| The motor never switched off | The plugin looked for the hinge only among the constraints the chassis is slave of, but the game's hinge is in its master list | Search both lists |
+| On some loads the part is missing and the truck flies when touched; on others the truck jerks once and then all is well, or getting in spins the truck off into the sky | The body comes after the `HIGH_` bodies. The game keeps a position, rotation and mass only for the bodies before the first `HIGH_` or `NAV_` one, so it builds the hinged part from whatever memory follows | Insert the body [before the first `HIGH_` body](#step-2--a-body-in-the-hkx) |
+| The plugin never finds the player's car, or crashes reading its chassis | It takes the frame body's vehicle object, a wrapper, for the physics object behind it | The physics object is at the wrapper's `+0x5C` ([the plugin](#step-5--the-plugin)) |
+| The motor never switches off | The plugin looks for the hinge only among the constraints the chassis is slave of, but the game's hinge is in its master list | Search both lists |
 
-The intermittent failures were first blamed on hinging the part while the level loads, which is why
-the fan is hinged at engine start instead. That theory was wrong. With the body in the right place, a
-part hinged from spawn as the doors are should work too, but this was not tried.
+The fan is hinged at engine start. With the body in the right place, a part hinged from spawn, as the
+doors are, should work too, but that is untried.
 
 ## Step 1 — a node in the model
 

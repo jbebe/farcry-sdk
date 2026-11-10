@@ -299,9 +299,9 @@ and the render thread runs `RenderFrame` — which prepares and executes the fra
 `Present`. The next frame's tick first waits for the previous frame to finish, so the render thread
 draws frame N while the game simulates frame N+1 (traced in the GOG build, **RE-verified**).
 
-The measurement this page used to give against it — a hook on the sky's submission and a hook on
-`EndScene` report the same thread id — compared two hooks that are both on the render thread: the sky
-is submitted from inside the frame graph's preparation, in the same call that then executes it. A
+A hook on the sky's submission and a hook on `EndScene` report the same thread id, because both are on
+the render thread: the sky is submitted from inside the frame graph's preparation, in the same call
+that then executes it. A
 plugin that reads game state from a render-side hook reads it one frame late, and needs to publish
 state across the boundary.
 
@@ -754,7 +754,7 @@ one. An id no listener knows makes the signal do nothing. `mods/inventory-overha
 and to the mouse wheel while its notebook is up.
 
 The wheel is `cycleweapon`, an `update` binding whose value is the turn: below zero for a turn
-towards the user, which moves down a list **(seen in game, 2026-10-27)**.
+towards the user, which moves down a list **(seen in game)**.
 
 ### The menu cursor
 

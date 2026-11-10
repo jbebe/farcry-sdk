@@ -199,7 +199,7 @@ the Lua calls `BlockBuddyRescue` and `UnblockBuddyRescue`. They set `CBuddyRescu
 
 :::info[Verified via reverse engineering and in game]
 Traced in the Steam `Dunia.dll` against the server build's symbols, and read by
-`mods/inventory-overhaul` on retail GOG v1.03 in the demo range **(seen in game, 2026-10-27)**.
+`mods/inventory-overhaul` on retail GOG v1.03 in the demo range **(seen in game)**.
 Addresses in this section are Steam.
 :::
 
@@ -222,14 +222,14 @@ each 0–5. Its text is `PauseMenu/REPUTATION_INFAMY_DESCRIPTION_<level>` and
 `<key>_DESC`; the Predecessor's lines have no recording date. Lua's
 `GetFCXMissionManager():NewJackalTapeFound()` marks the next Jackal tape of the current world found
 and plays it; in the demo range it found 09 to 13. `PartnerTapeFound("W1V1M1")` marks and plays a
-Predecessor tape by key **(seen in game, 2026-10-28)**.
+Predecessor tape by key **(seen in game)**.
 
 The record's other fields, as `SMissionTape::RegisterProperties` (`0x1074e4d0`) names them: the
 description at `+0x1C`, `startSoundID` and `stopSoundID` at `+0x38` and `+0x54` (strings,
 `"0x%08X"`), `soundType` at `+0x70`. The Bowa-Seko repeat fix patches the world test in
 `NewJackalTapeFound` (`0x1074e464`), which reads a byte at `+0x75` **(RE-verified)**.
 
-**Playing a tape** **(RE-verified; played from a plugin while the game runs, 2026-10-29)**. Every player of a tape, the pause pages and both Lua
+**Playing a tape** **(RE-verified; played from a plugin while the game runs)**. Every player of a tape, the pause pages and both Lua
 calls, ends in `CJackalTapeManager::PlayTape` (`0x10717fa0`, `__thiscall(manager, const SMissionTape*)`,
 `ret 4`), which needs nothing of the pause menu:
 
@@ -246,8 +246,8 @@ calls, ends in `CJackalTapeManager::PlayTape` (`0x10717fa0`, `__thiscall(manager
 - **The slot does not replace its sound.** Its play (`0x106f9210`), given a sound while the slot's
   own still plays, starts the new one unattached and resets the slot to none, so the old one plays on
   and neither is tracked. A stop id is such a play, and stops its own tape only: the first Jackal
-  tape's stop id, played over another sound in the slot, left that sound playing **(heard,
-  2026-10-29)**. `0x106f8b50` (`cdecl`, a fade in seconds) stops the slot's sound outright and resets
+  tape's stop id, played over another sound in the slot, left that sound playing **(heard)**.
+  `0x106f8b50` (`cdecl`, a fade in seconds) stops the slot's sound outright and resets
   the slot; the music manager's `0x106fa650` calls it **(RE-verified)**.
 - **Whether one plays:** the slot's handle `[0x1164c234]` is -1 when nothing does, reset by the music
   manager's update (`0x106fd830`) when the sound ends, and `[0x1164c22c]` holds the playing start id.
@@ -273,7 +273,7 @@ key ends in `_01` first), and the Underground's marker gives its line. One calle
 `SetupMissionObjective` (`MISSION_OBJECTIF_LIST`), `0x108569a0`, which writes the Underground's line
 into the widgets the page keeps at `+0x1B8`, `+0x1BC`, `+0x1C0` and `+0x1D8`, and `0x10855ba0`. They
 show what they fill, so hiding the panel in `sp_pause_menus.mgb` is not enough: an Underground job
-still showed with every element of it marked `HIDDEN` **(seen in game, 2026-10-29)**. The walk is
+still showed with every element of it marked `HIDDEN` **(seen in game)**. The walk is
 `GenericEntityMapIterator`: three words (the map's node, the entity's node, the map at the entity
 system `[0x11644e80] + 0x1C`), started from the map head's first node by `0x1070ddb0` and stepped by
 `0x1070e0d0`; an entity is `[[inner + 0x10] + 0xC]`, locked by `0x104dd4f0`, and its marker is
@@ -285,7 +285,7 @@ an engine `std::wstring` by value (`ret 0x20`) and frees that text, so the text 
 own: the string table's lookup into a string, `0x104d1fc0` (`__thiscall(table, out, section, key,
 file)`, `ret 0x10`), makes one; `0x10002890` destroys the result. In world 2's skytest save it read
 "Thanks to my latest efforts, I can pretty much write my own ticket…" and the objective "Go to any
-briefing location to get a mission." **(seen in game, 2026-10-28)**.
+briefing location to get a mission." **(seen in game)**.
 
 **The pause menu's entries.** `CFCXPauseMenuPage::Setup` (`0x10853540`) adds them one by one with
 `CListMenuPage::AddButton` (`0x10cdbb80`, `__thiscall(page, const wchar_t* label, bool enabled,
@@ -293,8 +293,8 @@ handler)`, `ret 0xC`, returning the button's index): Resume, Journal (`PAUSE_REP
 Legend, Upgrades, Jackal Tapes, Predecessor Tapes when that content is unlocked, Statistics, Options,
 Load Game, Save Game, Quit to Menu, Quit. It keeps the Jackal Tapes', Predecessor Tapes' and Save
 Game's indices at `+0x1F0`, `+0x1F4` and `+0x1EC` to enable them later, which skips an index of -1.
-An entry left out of `AddButton` with -1 returned is gone from the menu **(seen in game,
-2026-10-28)**; as its handler is left out of the page's list with it, the others keep theirs
+An entry left out of `AddButton` with -1 returned is gone from the menu **(seen in game)**;
+as its handler is left out of the page's list with it, the others keep theirs
 **(inferred)**.
 
 **The pause menu's look.** Its main page is `PAUSE_MENU_PAGE`, `sp_pause_menus.mgb`'s `#C1849B53`.
@@ -304,7 +304,7 @@ the same row button (`#1E789210`) as the game-over dialog. That dialog is `commo
 `#D096B132` that pops in, and the list. Its strings are `MBOXLISTHEADER_GAMEOVER` and
 `MBOXLISTGAMEOVER_*`. Moving the panel onto a copy of that post-it, with the notebook spread, its
 paperclip, the glows and the buddies' portraits hidden, makes the pause menu look like the dialog
-**(seen in game, 2026-10-28)**.
+**(seen in game)**.
 
 **Buddies.** `CBuddiesManager` is one too (class id `0x1164a484`, built by `0x10681c50` while the
 name at `0x1164a474` is unset). Its `SBuddyData` records are at `+0x44`, their count at `+0x48`,

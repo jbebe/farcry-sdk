@@ -36,13 +36,13 @@ the full provenance note.
 
 - **`jackall-cli fc2model export -g` reads the live patch.** A build that exports a model or its
   clips from the install, changes them and deploys the result finds its own output there next time,
-  and changes it again. Map Overhaul's hold went off the screen that way (2026-11-07). Export from
+  and changes it again. Map Overhaul's hold went off the screen that way. Export from
   the extracted archives instead.
 - **A loose `fc2model export` takes a rig by file name.** Exported from a whole extracted worlds
   archive, the map's pack carried an animal's `pelvis_ref.skeleton` for the human one, even with
   `--actor-rig` naming it, and the clips posed the wrong body. Copying just the model, its banks, the
   body and `graphics\characters\_common\pelvis_ref.skeleton` into a small tree first gives the right
-  rig (seen, 2026-11-07).
+  rig (seen).
 
 - **DLC weapon content is not supported by the normal Gibbed round-trip** and requires direct
   hex-editing of `entitylibrary.fcb` (see [Getting Started](./getting-started.md)). The community
@@ -106,7 +106,7 @@ the full provenance note.
   has its `CTRL+G` live-playtest shortcut (see [Engine Theory](./engine-theory.md)).
 - **A big quad barely takes a spot light.** On a `Generic` material a spot light landing mid-face
   showed almost nothing while the quad's corners lay outside its cone, and a pool of light once the
-  face was cut into cells about 4 cm square, the map's density **(seen in game, 2026-10-30)**. This
+  face was cut into cells about 4 cm square, the map's density **(seen in game)**. This
   implies the light is evaluated per vertex. The shader itself was not read. Tessellate large flat
   meshes that a flashlight or headlamp should light.
 

@@ -388,7 +388,7 @@ nobody edited plays.
   of hinged panels on the map's skeleton. With its banks carrying rotations for the root and the side
   panels only, the corner panels, written but hung on a top-row panel that was not, came out tipped
   against their neighbours, which Blender did not show; writing the middle panels at their rest put
-  them back *(seen in game, 2026-11-07, GOG v1.03)*. What pose the unwritten bone took was not read.
+  them back *(seen in game, GOG v1.03)*. What pose the unwritten bone took was not read.
 
 ## What is still open
 

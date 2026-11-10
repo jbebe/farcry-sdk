@@ -305,8 +305,7 @@ from it — the window switches `-borderless` and `-xpos` too. Four details deci
   stops at its first zero byte.
 - **Precedence.** A switch on both the real command line and in the file takes the command line's value.
 
-The live test this page used to report — a file containing `-nomouse` had no effect — did not meet
-these conditions. A test that should work:
+A test that meets these conditions:
 
 ```powershell
 Set-Content -Encoding ASCII -Path "$([Environment]::GetFolderPath('MyDocuments'))\My Games\Far Cry 2\fc2args.txt" -Value '-nomouse -borderless '

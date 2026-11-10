@@ -12,7 +12,7 @@ byte layout behind all of it is on the [`.spk` page](../file-formats/spk.md).
 
 :::info[What has been heard in game]
 Banks named after a new event id, their own rolloff curves and multi-events were all built this way
-for `mods/sound-overhaul` and heard (2026-09-26/27). A random container built by the tool has **not**
+for `mods/sound-overhaul` and heard. A random container built by the tool has **not**
 been heard yet.
 :::
 
@@ -118,7 +118,7 @@ XML, so the folder is the source you keep.
 
 `positioned` follows the rolloff, as it does on every retail event. A sound the game plays through a
 first-person sound type needs `--unpositioned` even with a rolloff: a positioned event fails to play
-there. The player's shot echo is one **(heard, 2026-09-28)**; the same event, unpositioned, also serves
+there. The player's shot echo is one **(heard)**; the same event, unpositioned, also serves
 NPC shots.
 
 To randomise a retail sound instead, decode its bank. Add a `<Sample>` and an `<Audio>` per new
@@ -135,7 +135,7 @@ where a ricochet variant goes (`004565a3.spk`).
   - a container with no children;
   - an event bank with no record of the id it is named after;
   - a `<Play>` with a rolloff over a stereo sample. Stereo plays unpositioned, so the curve is
-    ignored **(heard, 2026-09-27)**.
+    ignored **(heard)**.
 - **Notes:**
   - ids the bank points at but does not hold. Another loaded bank has to supply them;
   - records out of ascending id order in a bank named after its event. Retail sound banks keep that
@@ -147,9 +147,9 @@ where a ricochet variant goes (`004565a3.spk`).
   contains a record with its own id **(seen in data)**. A bank of samples or curves is named by a
   variant id instead.
 - **A new bank named after a new event id loads without a `depload` entry** when an `.fcb` field
-  names that id. The G3KA4's shots in `mods/sound-overhaul` are such banks **(heard, 2026-09-26)**.
+  names that id. The G3KA4's shots in `mods/sound-overhaul` are such banks **(heard)**.
 - **Keep everything a new event reaches in its own bank.** An id reached only from inside another
   bank must already be loaded, and the lookup has no load-on-miss path (see
   [`depload`](../file-formats/spk.md#what-loads-the-child-bank-depload)).
-- **Rolloff curves can live in your own bank** beside the event that uses them **(heard,
-  2026-09-27)**. The retail curves live in `common/soundbinary/2fffffff.spk`.
+- **Rolloff curves can live in your own bank** beside the event that uses them **(heard)**.
+  The retail curves live in `common/soundbinary/2fffffff.spk`.

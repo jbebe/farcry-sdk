@@ -11,7 +11,7 @@ identification.
 :::
 
 :::info[Tried in a running game]
-GOG v1.03, 2026-10-30. Firing `toggle_recording` as an action started and stopped the recorder, which
+GOG v1.03. Firing `toggle_recording` as an action started and stopped the recorder, which
 wrote all three files. <kbd>Numpad 8</kbd> itself was not pressed. Actions fired from outside the
 terminal's list, as DevTools' are, are not in the `.npl`.
 

@@ -85,7 +85,7 @@ What that means in practice:
   samples none](#relief-is-a-specular-pattern-not-a-normal-map).
 
 The canary borrowed its `.xbt` header from a UI icon, a texture with no `_mip0` companion. A texture at
-a new path no longer needs a donor: `jackall-cli xbt build <name>.dds` with no header XML beside it
+a new path needs no donor: `jackall-cli xbt build <name>.dds` with no header XML beside it
 writes a fresh header that names no companion ([`.xbt`](../file-formats/xbt.md#header)). That is
 backed by the engine's code, but a fresh header has not been tried in game yet. Either way you get a
 single self-contained file; put the whole mip chain in it with `texconv -m 0` rather than splitting
@@ -343,7 +343,7 @@ tiled `SpecularTexture1` patterns it too, and by the lighting, so it does not gl
 The Desert Eagle is the far end, and the clearest view of how the look is built. Its control map's
 red is 1.0 over the whole gun, its albedo is dark, and the cube map carries the rest:
 
-| | Desert Eagle chrome | Dragunov metal | VSS, first build | VSS, now |
+| | Desert Eagle chrome | Dragunov metal | VSS, specular only | VSS as shipped |
 | --- | ---: | ---: | ---: | ---: |
 | control red over the metal | 1.00 | ~0.8 | ~0.8 | ~0.8 |
 | effective albedo of the metal | 0.14 | 0.092 | 0.221 | 0.081 |
@@ -352,10 +352,10 @@ red is 1.0 over the whole gun, its albedo is dark, and the cube map carries the 
 | cube-map weight, `mask.r × ReflectionPower × specCol` | **0.72** | **0.27** | **0** | **0.14** |
 | `SpecularPower` | 15 | 30 | 30 | 150 |
 
-The first build copied the Dragunov's specular triplet and not the reflection that goes with it. A
-second took the Dragunov's reflection too, at 0.4 over steel halved to 0.113, and played too light
-and too reflective. What ships cuts the steel's albedo to 35% and the cube map to half the
-Dragunov's. The albedo is scaled by the control map's red — the channel that gates the cube map —
+Copying the Dragunov's specular triplet without the reflection that goes with it leaves the cube map
+out entirely (the third column). Taking the Dragunov's reflection too, at 0.4 over steel halved to
+0.113, plays too light and too reflective. The VSS ships with the steel's albedo cut to 35% and the
+cube map at half the Dragunov's. The albedo is scaled by the control map's red — the channel that gates the cube map —
 so what a texel loses in diffuse tracks what it gains in reflection.
 
 ### Relief is a specular pattern, not a normal map

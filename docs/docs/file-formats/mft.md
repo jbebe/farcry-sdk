@@ -7,7 +7,7 @@ sidebar_position: 25
 :::info[Verified via reverse engineering]
 Layout traced in `Dunia.dll` (`magma::PixmapFont::LoadFontFile` @ `0x10ac6b40` and the character map
 reader @ `0x10ac7460`, Steam) via GhidraMCP. JackAll reads and writes both shipped fonts byte for byte,
-and a font it drew from a TrueType file draws in game **(seen in game, 2026-10-28)**. See
+and a font it drew from a TrueType file draws in game **(seen in game)**. See
 [intro](../intro.md) for how RE-verified and community-reported claims are distinguished on this site.
 :::
 
@@ -73,7 +73,7 @@ A page is single-level DXT5, white, with the glyphs in alpha. `farcry2_25_0.xbt`
 Cyrillic font's are 256 × 256. A page's `.xbt` header is the default one any texture can have.
 
 A page can be any size under the same `.mft`, since its UVs are fractions: a font's page enlarged 4×
-draws the same glyphs in the same places **(seen in game, 2026-11-01)**.
+draws the same glyphs in the same places **(seen in game)**.
 
 ## Adding a font
 

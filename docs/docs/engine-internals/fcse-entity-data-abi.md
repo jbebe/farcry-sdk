@@ -11,7 +11,7 @@ functions through its address library, so they work on both shipped builds.
 :::
 
 :::info[Seen in a running game]
-Retail GOG v1.03, 2026-10-08, with FCSE's example plugin: a value authored on
+Retail GOG v1.03, with FCSE's example plugin: a value authored on
 `weapons.Secondary.Makarov` loaded from the entity library, and counts the plugin set on three
 weapons were in the save and came back on load — two of those weapons only gained the component at
 runtime, so the restore recreated it. `Persist` has not been exercised.

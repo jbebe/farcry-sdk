@@ -337,7 +337,7 @@ table holds one entry, the string `"0123456789"`; its generic-object table holds
 Each of the 65 counts is how many objects of one kind the package holds. Counted this way, the
 table below reproduces the block of **all 570 retail packages that set one**; the other 20 are all
 zero. Element names are the [XML interchange format](#the-xml-interchange-format)'s.
-**(measured over the retail corpus, 2026-10-09)**
+**(measured over the retail corpus)**
 
 | Pool | Counts |
 |---|---|
@@ -722,7 +722,7 @@ built with exact counts has **not been loaded in game yet**; retail's own packag
 counts, and the one edited package that has loaded carried 64 more in every pool.
 
 The Flashlight's HUD icon is 4 fragments per variant, 35 KB of XML in place of a 191 KB binary, and
-a build from them gives the package it used to ship whole, apart from the pool counts.
+a build from them gives the same package as the whole binary, apart from the pool counts.
 
 ```
 jackall-cli mgb fragments hud.xml --base <retail>\hud.mgb --out layer\mods\ui\localized\pc\eng\ui\hud.mgb

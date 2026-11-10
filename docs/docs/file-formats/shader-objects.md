@@ -355,7 +355,7 @@ objects**:
   vertex colour and takes `DiffuseColor1` alone.
 
 So a material with `Map` is lit flatly and never fully shaded. Without it, Map Overhaul's sheet takes
-the world's light like the hands holding it (seen in game, 2026-11-07).
+the world's light like the hands holding it (seen in game).
 
 ## Tooling
 

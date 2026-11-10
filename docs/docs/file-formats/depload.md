@@ -332,7 +332,7 @@ textures, fonts and sounds it draws and plays:
 - **A UI file opens only once it is loaded.** Magma opens a file through `CFileReaderNomad::Open`
   (`FarCry2_server` `0x096f7510`), which takes the resource if it is already loaded and otherwise
   creates an empty one that fails to open. A new font named in `fonts.mgb` but missing from this list
-  draws nothing; listed under `fonts.mgb.desc`, it draws **(seen in game, 2026-10-28)**. A texture is
+  draws nothing; listed under `fonts.mgb.desc`, it draws **(seen in game)**. A texture is
   not held to this: a HUD material on a texture no list names still draws
   ([engine interop](../magma-ui/engine-interop.md)).
 

@@ -197,7 +197,7 @@ A sound id an `.fcb` field names is turned into `soundbinary\<id>.spk` by
 `CSoundResource::GetFromSoundId` and loaded by that path (RE-verified on the Linux server). So a new
 bank named after a new event loads with no `depload` entry. The G3KA4's per-round shots in
 `mods/sound-overhaul` are such banks, `00fc0101.spk` and `00fc0107.spk`, which nothing lists
-**(heard, 2026-09-26)**.
+**(heard)**.
 
 What the registry cannot load is an id reached only from inside a bank: a child in a tail, or a
 resource another bank's event points at. That id must be in the same bank or in a bank `depload`
@@ -211,12 +211,12 @@ returns `-1` while the resource's loaded half-word at `+0x8` is 0; the reference
 for a load. An event that no field names therefore plays only once something holds a reference and has
 called the resource's slot `+0x8`, which requests the load (slot `+0xC` releases it). The same event as
 an extra record in a bank that is loaded does not help either: a play looks for the bank named after
-the id **(heard, 2026-09-29: sound-overhaul's NPC echo `0x00FC0150` failed from inside `00fc0140.spk`
+the id **(heard: sound-overhaul's NPC echo `0x00FC0150` failed from inside `00fc0140.spk`
 and from a bank of its own, and plays once the plugin holds that bank)**.
 
 The other way round is tested. Records appended to a bank that is already listed are registered when
 it loads and play with no `depload` change: an echo event, sample and audio added to the Makarov's
-`004569c9.spk` as `0x00FC0001`–`0x00FC0003` play in game **(heard, 2026-09-26)**. The new records
+`004569c9.spk` as `0x00FC0001`–`0x00FC0003` play in game **(heard)**. The new records
 copied their siblings' preamble words and got fresh random core fields.
 
 ### Leaf fields (type `1`, 91% of records)
@@ -229,7 +229,7 @@ copied their siblings' preamble words and got fresh random core fields.
 | `[4]` | `+0x10` | constant `0x00010000` = `1.0` in Q16.16 fixed point — plausibly an identity gain/scale default |
 | `[7]` | `+0x1C` | the event's **rolloff curve**, resolved by the fixup and validated as a `"Rolloff"` object (`FUN_10a3fcd0`); see [rolloff curves](#rolloff-curves). `0xFFFFFFFF` means none: an unpositioned sound. In the retail banks 2,483 of 4,087 distinct type-`1` events point at one of the 96 curves, and the rest carry the sentinel. The heavy reuse is shared curves: one 80 m curve serves 949 events |
 | `[9]` | `+0x24` | `0` in 90% of records; when nonzero, always exactly `+100` or `-100` — a discrete signed flag |
-| `[14]` | `+0x38` | **positioned** (suspected): `1` on every retail event with a rolloff (2,483 of 2,483) and on 5 without one; `0` on the other 1,599. An event with it set fails to play through a first-person sound type: the player's shot echo returned handle `0xFFFFFFFF` until it was cleared **(heard, 2026-09-28)**. The code that reads it is not traced |
+| `[14]` | `+0x38` | **positioned** (suspected): `1` on every retail event with a rolloff (2,483 of 2,483) and on 5 without one; `0` on the other 1,599. An event with it set fails to play through a first-person sound type: the player's shot echo returns handle `0xFFFFFFFF` with it set and plays with it cleared **(heard)**. The code that reads it is not traced |
 | `[16]` | `+0x40` | boolean — `0` in 84%, `1` in 16% |
 
 (All other words are `0` in every sample checked.)
@@ -510,7 +510,7 @@ word `[2]`, not for the length of its stream. Replace the audio with a shorter c
 alone, and the game plays the clip, then decodes a burst of noise for the rest of the original clip's
 duration. Rewrite `[2]`, and `[22]` where it mirrors it, to the new stream's byte length and the clip
 ends cleanly: a 0.24 s replacement of the Makarov's 1.32 s first-person shot plays with no crack and
-no trailing noise **(heard in game, 2026-09-26)**. That clip was not also played without the rewrite;
+no trailing noise **(heard in game)**. That clip was not also played without the rewrite;
 the noise is the symptom reported before.
 
 Word `[20]` is not it: patching it to the replacement's real sample count changes nothing. The counter

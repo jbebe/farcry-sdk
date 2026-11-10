@@ -339,7 +339,7 @@ What that means in retail:
 
 Two outdoor points are never occluded from each other, however much rock lies between them.
 
-:::info[Heard in game (GOG, 2026-09-25)]
+:::info[Heard in game (GOG)]
 Under water, NPC gunfire, voice lines and explosions are inaudible. Removing only the preset from the
 console while still under water (`#StopSoundMixingFromLua("Exclusive.Underwater")`) brings them back.
 The preset sets voices to 0 dB, so the silence is the low-pass: the path above works on a PC without
@@ -381,7 +381,7 @@ obstruction and room sends. The software filters are not affected.
 Step 2 never happens in retail. `CSoundSystem::PlaySoundReverb` (vtable `+0x98`) is empty: a bare
 `ret 4` in `Dunia.dll`, and an empty body in the server build's symbols **(RE-verified)**. No
 building, region or mix preset ever reaches DARE, which keeps the reverb it sets when EAX starts, the
-same everywhere **(heard in game with DSOAL, 2026-09-25)**. Sound Overhaul gives the slot a body that
+same everywhere **(heard in game with DSOAL)**. Sound Overhaul gives the slot a body that
 plays the reverb event through `PlaySound` (vtable `+0x9c`) as sound type 12, and the authored reverbs
 then switch as the player moves: a hangar gets its long tail **(heard in game)**.
 
@@ -390,7 +390,7 @@ Each voice's room send is full or off, from word `[9]` of its sample's header (`
 
 A full send is 0 mB for every voice, 2D or 3D. The player's own shots and reloads are 2D voices at full
 volume, so their tail sits far below their dry sound: with the direct path muted it is there, but faint
-**(heard in game with DSOAL, 2026-09-26)**. Sound Overhaul raises a 2D voice's full send by 1,000 mB,
+**(heard in game with DSOAL)**. Sound Overhaul raises a 2D voice's full send by 1,000 mB,
 the most `EAXSOURCE_ROOM` allows. An ambience loop and bullet casings kept their dry sound in that test,
 so some voices never pass through `FUN_10a68640` **(inferred)**.
 
@@ -440,7 +440,7 @@ A preset record is `0x70` bytes. `DARE_DS3D_SetEaxReverbProps` (`0x10a49a40`) co
 | | | `+0x6C` | flags |
 
 Echo time and echo depth have no audible effect through the bundled DSOAL: the desert preset renders
-the same with depth 1.0 or 0 **(measured offline, 2026-10-01)**.
+the same with depth 1.0 or 0 **(measured offline)**.
 
 Every voice gets the active FX slots `{none, primary}` right after its room send, in `FUN_10a68640`
 **(RE-verified)**. FX slots 2 and 3 stay free. Through DSOAL, slot 2 accepts EAX's echo effect and a
@@ -502,7 +502,7 @@ the intensity read from the map grid (see [reverb](#reverb)), it stands in for h
 The echo is played with `PlaySoundAtPosition` (`+0xa0`) at the shot's origin, with the shot's own sound
 type, and the handle goes to vtable `+0xa8` with `CAmbianceManager::GetEchoLength` (`0x10505820`)
 **(RE-verified)**. Filling the Makarov's `sndSingleBulletShotEcho` wakes it: the echo plays outdoors
-**(heard in game, 2026-09-26)**, and `GetEchoLength` returned 0.00 s for shots inside a hangar and
+**(heard in game)**, and `GetEchoLength` returned 0.00 s for shots inside a hangar and
 6.10 s outside **(logged)**.
 
 ### Automatic fire

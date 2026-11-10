@@ -545,7 +545,7 @@ Overhaul.
 
 :::info[Measured in a running game]
 The map out in the hands hangs from `L Hand`, its facing the hand's to the third decimal. Retail GOG
-v1.03, from Map Overhaul's probe, 2026-11-07.
+v1.03, from Map Overhaul's probe.
 :::
 
 The look's pitch is posed into the body, not laid over it. As the view pitches, `Camera` and `Spine2`
@@ -574,14 +574,14 @@ it keeps the sights on the eye whatever the pitch.
 :::info[Seen in a running game]
 The view, the arms and the gun lean together, slid and bent, a long gun down the sights included
 while turning, with a long gun's sights on the eye. Retail GOG v1.03, from Aiming Overhaul. Bending
-round the body's level forward, and moving the eye by the bone's move, had put a long gun's sights
-below the eye. The muzzle flash and a scope's sight picture were not checked.
+round the body's level forward, or moving the eye by the bone's move, puts a long gun's sights below
+the eye. The muzzle flash and a scope's sight picture were not checked.
 :::
 
-### What a lean was tried as
+### Leans that fall short
 
-Before that, Aiming Overhaul tried six ways of leaning the player, each seen in game on retail GOG
-v1.03. None leans the view, the arms and the gun, the muzzle and a scope's sight picture together.
+Six other ways of leaning the player, each seen in game on retail GOG v1.03, fall short: none leans
+the view, the arms and the gun, the muzzle and a scope's sight picture together.
 
 1. **The pawn entity rolled from the camera update** with `SetEuler`. The view rolls about its own
    axis and nothing else: the eye does not move, and the arms and the gun stay level with the world,
@@ -613,7 +613,7 @@ v1.03. None leans the view, the arms and the gun, the muzzle and a scope's sight
 
 From 3 and 6 the drawn body seems to follow the physics' own copy of the body, not the entity's
 matrix, and telling the physics of a tilt sets it turning the body. A physics component told of the
-lean only between the post-step and the next pre-physics tick list was the next step, untried.
+lean only between the post-step and the next pre-physics tick list is untried.
 
 :::info[Seen in a running game]
 Weapon entities leaned in the world on every `SetMatrix` move nothing visible, as the writes above

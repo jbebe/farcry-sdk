@@ -280,7 +280,7 @@ again for every target on every update:
   seat is in the vehicle's `CVehicle` properties (`+0x10`): the seats at `+0x0C`, their count at
   `+0x10`, each `0x50` bytes in the Steam `Dunia.dll` (`0x4C` in the server), with the role at
   `+0x10` (1 the driver, 3 a Datsun's passenger), the occupant's 64-bit entity id at `+0x28` and the
-  state at `+0x30`, 4 for seated (**seen in game**: the player at a Datsun's wheel, 2026-11-04).
+  state at `+0x30`, 4 for seated (**seen in game**: the player at a Datsun's wheel).
 
 The **night term** is `1 − night × fNightTimeMultiplier`. *night* is 0 by day and 1 at night, and
 ramps between them across dusk and dawn, four times kept by the dynamic environment manager. With
@@ -367,7 +367,7 @@ product **(RE-verified on GOG and the server)**:
   first and its distance at `+0x1C`. `CPhysWorld::RayCheck` (Steam `0x1048DD30`, `RET 0x18`) answers
   at once. Grass stops none of them, since no grass or bush mesh has the physics bit
   ([`flags`](./terrain-and-vegetation.md#the-mesh-a-tuft-names)): a soldier sees through tall grass
-  that hides him from the player (**RE-verified**; the queue's answers seen in game, 2026-11-03). A
+  that hides him from the player (**RE-verified**; the queue's answers seen in game). A
   CPawn's limb positions come from the limbs at `+0x04` of its data block (Steam `0x1010D780`,
   `RET 8`).
 
@@ -385,7 +385,7 @@ is in it when a placed tuft stands within 1.5 m of it, unburnt, of a mesh whose
 (`CStealthComponent::InHighGrass`, server `0x0883E250`, Steam `0x106991D0` with `RET 4` and its
 object unread; **RE-verified**). Only five shipped meshes have that, the tall savannah grasses and
 sorghum, so the multiplayer grass looks the same and hides no one. They stand 1.2 m, `_bold` 1.4 m. On the test range a crouched player in `1_grasssavannah_b` reads `in grass` on the
-Difficulty Overhaul's perception line and in `1_grasssavannah_b_mp` does not (fc2drive, 2026-11-03).
+Difficulty Overhaul's perception line and in `1_grasssavannah_b_mp` does not (fc2drive).
 
 - **Concealment** is `1 − ramp(d, 3 m, 10 m) × k`. *k* is 0.9 for an idle observer, 0.765 for one
   alerted before a fight, and 0 in or just after combat. The observer's side of the player picks
@@ -395,7 +395,7 @@ Difficulty Overhaul's perception line and in `1_grasssavannah_b_mp` does not (fc
   invisible beyond 2 m to an idle observer and beyond 4 m to an alerted one. It never applies in
   the game as shipped: the evaluator reads the bonus inverted, -1 for the camo suit's
   `stealth_camouflage` plan, and asks for more than 0. Read as it is, a crouched, still player in
-  the test range's grass went unseen (Difficulty Overhaul diagnostic, 2026-11-03; **RE-verified and
+  the test range's grass went unseen (Difficulty Overhaul diagnostic; **RE-verified and
   in game**). Lua's `Game:AddBonusPlan("stealth_camouflage")` gives the suit; the console's
   `add_bonus_plan` puts its argument into that call unquoted and gives nothing.
 

@@ -564,18 +564,18 @@ rest.
 | `Area::SetPlaying` | `0x10a973a0` | `__thiscall(area, bool playing, bool)` |
 
 `FindGenericObject` takes the id **by reference**. Passing the hash itself dereferences it as an address
-and crashes in the table lookup **(crashed, 2026-10-02)**.
+and crashes in the table lookup **(crashed)**.
 
 An `Area` keeps its milliseconds per frame as a `u16` at `+0x18`, its playhead in milliseconds as a
 `u32` at `+0x4C`, and its playing flag as a byte at `+0x54`; the frame is the playhead divided by the
 frame time. After `SetTime` and `SetPlaying` the playhead advances in real time
-**(measured, 2026-10-02)**.
+**(measured)**.
 
 **An instance of another package's area is that area, not a copy.** The `Area` an export's path
 resolves to through an instance has the defining package for parent, so every instance of it, in any
 package, shares its playhead and frame time: changing either for one changes it for all
-**(seen in game: `common.mgb`'s page flip, instanced in the HUD, had a package other than the HUD's
-for parent, 2026-10-28)**.
+**(seen in game: `common.mgb`'s page flip, instanced in the HUD, has a package other than the HUD's
+for parent)**.
 
 **A keyframe's actions run when an element moves onto that keyframe, not when its time is set.** Each
 element remembers the time it was last set to at `+0x2C` and the index of its keyframe then in the
@@ -583,26 +583,25 @@ low 12 bits of `+0x30` (all ones for none); its keyframe is the last one at or b
 element whose only keyframe is at frame 0 therefore runs that keyframe's actions once, the first
 time, and never again however often its area is set back to 0. Writing `0xFFFFFFFF` to its time and
 all ones to the index bits first makes the next `SetTime` run them again **(RE-verified; the page
-flip's sound then played on every turn, 2026-10-28)**.
+flip's sound then plays on every turn)**.
 
 Only a visible element takes a time: `Element::SetTime` skips one whose `+0x34` bit 0, the bit
 `SetVisible` writes, is clear, so a hidden element runs no actions. `SetTime` with `executeActions`
 false moves every element without running any **(RE-verified; `mods/inventory-overhaul` steps the page
-flip that way, 2026-10-28)**.
+flip that way)**.
 
 ### Sounds a layout plays
 
 The `SoundEvent` action is handled by `CSoundMenuManager::OnActionSignal` (Steam `0x100BD220`)
 wherever the area raising it is, the HUD's included: it reads `Sound Event Name`, a sound id written
 as a string such as `0x004ebebc`, passes it to `ISoundSystem::ConvertSoundStringToSoundId`, and plays
-it through the sound system with `Sound Event Type` **(RE-verified; seen played from the HUD,
-2026-10-28)**.
+it through the sound system with `Sound Event Type` **(RE-verified; seen played from the HUD)**.
 
 `CSoundSystem::PlaySound` (vtable `+0x9C`) returns the playing sound's handle, which `OnActionSignal`
 drops, so a sound a layout raises cannot be cut short. To cut one, set the area's time without its
 actions and play the event from code with the same id and type: the handle then goes to `StopSound`
 (`+0xA8`, with a fade-out in seconds), and `GetSoundLength` (`+0xC0`) takes the event id and returns
-its length in seconds, 0.656 for `0x004ebebc` **(RE-verified; logged, 2026-10-28)**.
+its length in seconds, 0.656 for `0x004ebebc` **(RE-verified; logged)**.
 
 The notebook's page flip is one such layout: `common.mgb`'s area `#5B36589B`, at 30 frames a second.
 Frames 0 to 16 cycle `notebook_flip_03`, `_02` and `_01` over the whole spread and sweep three
@@ -616,7 +615,7 @@ instance it with `SyncTimingStrategy` over their notebook: turning forward at (â
 :::info[Verified via reverse engineering and in game]
 Traced in the Steam `Dunia.dll` against the server build's symbols and used by
 `mods/inventory-overhaul` on the GOG build, whose notebook page shows its text, pictures and crops
-**(seen in game, 2026-10-27)**. Addresses are Steam.
+**(seen in game)**. Addresses are Steam.
 :::
 
 | Call | Address | Signature |
@@ -634,8 +633,8 @@ wide string can be handed straight to: the engine's `std::wstring` is an allocat
 inline until it outgrows 8 units, then its length at `+0x14` and capacity at `+0x18`, and a capacity
 of 8 or more makes the second word a pointer to the text.
 
-The colour is an aligned `ndVec4`, loaded with `movaps`; an unaligned one faults **(crashed,
-2026-10-27)**. Unless all four floats are zero, `SetLabel` writes it into the widget's current state
+The colour is an aligned `ndVec4`, loaded with `movaps`; an unaligned one faults **(crashed)**.
+Unless all four floats are zero, `SetLabel` writes it into the widget's current state
 (`widget+0x8`, then `+0x10`) as bytes red, green, blue, alpha. On a text inside an instance that does
 not tick, the keyframe's colour is back by the next frame, so a text that changes colour is better
 authored once per colour and shown or hidden **(seen in game)**.
@@ -647,7 +646,7 @@ An `Image` widget keeps its `Material*` at `+0x20` on PC (`+0x1c` in the server 
 `magma::LoadVisitor::ReadImage` (`0x10ae6d10`) stores the `MATERIALLINK` there, and the pause menu's
 Buddies page (`SetBuddyDescription`, `0x108621e0`) writes a buddy's portrait there. So one image's
 picture can be another's by copying that pointer: a list row takes a portrait from a hidden image of
-the same package that way **(seen in game, 2026-10-27)**.
+the same package that way **(seen in game)**.
 
 A `Text` authored with `WRAPPING="true"` wraps a string written at runtime over lines from the top of
 its box **(seen in game)**.
@@ -666,7 +665,7 @@ Magma draws every quad through `magma::Render` (`BeginQuad`, `SetVertex`, `SetCo
 render pass, which runs after the world's composite, so an area drawn into a texture of its own has
 to be caught there.
 
-It can be caught at the Direct3D device **(seen in game, 2026-10-27)**. An area's elements reach the
+It can be caught at the Direct3D device **(seen in game)**. An area's elements reach the
 device in their order in the package, each image binding its own texture, so the binds of an area's
 first and last image bracket its draws. The Inventory Overhaul brackets its page with two clear
 textures of a size no other texture has, and points render target 0 at a target of its own between
@@ -686,7 +685,7 @@ bound to that action map signal. It takes the names from the string table's `Key
 sections and joins several with `Generic/OR`, as the tutorials' messages do ("press `{use}` to
 interact"). `out` is the engine's own string, freed with its destructor (`0x10002890`). It gives
 "Tab" for `toggle_notebook`, "R" for `flipside`, "X" for a new control's `drop_item` and "left mouse
-button" for `startshooting` **(seen in game, 2026-10-28)**.
+button" for `startshooting` **(seen in game)**.
 
 ## Settings rows
 

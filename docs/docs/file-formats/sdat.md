@@ -112,7 +112,7 @@ heights inside depart from the coarser mesh by more than `CRenderConfig`'s
   sector.
 
 Across the shipped sectors, no more than 983 of a sector's 4225 vertices stay in LOD 3. This is
-**RE-verified** against `FarCry2_server` and the shipped files (2026-11-04).
+**RE-verified** against `FarCry2_server` and the shipped files.
 
 **Height sub-layout**, confirmed via `CSector::GetZApr` (`0x097ecf50`, called from `CTerrain::GetZApr` →
 `FCE_TerrainManager_GetHeightAt` — a runtime height query used for collision/physics, present in the

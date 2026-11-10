@@ -170,7 +170,7 @@ The level a bullet starts from is its weapon properties' `FireStrategyProperties
 `ceil(level × multiplier)`, the multiplier from the curves the properties name under
 `CommonProperties/AICurve`, `archDamageMultiplierVisibleCurve` and `...NotVisibleCurve`; with no
 name it is 1. Assault rifles name `Curves.AIWeapon.AssaultDamageMultiplier*`, which brought the AK-47's
-13 to 10 at 20 m; pistols, SMGs and snipers name none. **Seen in game** (fc2drive, 2026-11-05): with
+13 to 10 at 20 m; pistols, SMGs and snipers name none. **Seen in game** (fc2drive): with
 the AK's level set to 27 and its curves emptied, a soldier's AK hit the player at 27.
 
 ## Soldiers
@@ -254,7 +254,7 @@ spawned 56 to 130 m away now and then took that stim 1.4 to 1.9 s after the spaw
 0, and lay dead where he stood, a drop of 0.5 m or none. A second one spawned at the same spot within
 about half a minute lived; the next one after that could die again. Read as: the ground under a
 far spot can be missing from the physics world for a moment, so he falls and the ray finds nothing.
-What streams that ground in was not traced (fc2drive and a hook on `DamageHealth`, 2026-11-03).
+What streams that ground in was not traced (fc2drive and a hook on `DamageHealth`).
 
 ## Breakable props
 

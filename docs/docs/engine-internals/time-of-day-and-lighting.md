@@ -41,7 +41,7 @@ curved-horizon variables into the renderer's config and binding the world's temp
    On Steam `Dunia.dll` the start, end and amount setters are `0x1032F620`, `0x1032F640` and
    `0x1032F660`, each `__thiscall` taking one float with `RET 4`. In a running game on the test range
    the end was 398 m with an amount of 1 at noon, and 30 m with 0.98 under the
-   `Default.SandStorm.Fog` override (**seen in game, 2026-11-04**).
+   `Default.SandStorm.Fog` override (**seen in game**).
 7. `UpdateAdaptiveBloom` and `UpdateAtmosphericScattering`, then depth of field with the storm's and
    an override's blended in.
 8. `UpdateSky`: the sky gradients, the storm sky, and the clouds' formation, material and light.
@@ -119,7 +119,7 @@ The environment manager itself is reached through the global at Steam `0x10FE417
 `0x10F33874`), loaded just before the frame's call of `Update`. Its `CSky` sits at `+0x270` and keeps
 the sun direction it copies into the scene state at `+0x44`, so the sun can be read without the
 renderer: at 9 on the test range it was `(0.89, -0.04, 0.46)` and at 17 `(-0.69, -0.06, 0.72)`, east
-then west, as the shadows fell (**seen in game, 2026-11-04**). The clock's seconds sit at `+0x260`.
+then west, as the shadows fell (**seen in game**). The clock's seconds sit at `+0x260`.
 :::
 
 `GetNormalizedTimeOfDay` (`0x09156C80`) returns `+0x2F0` of the manager, and the lighting, fog, cloud

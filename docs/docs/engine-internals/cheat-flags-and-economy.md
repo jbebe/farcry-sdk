@@ -146,8 +146,8 @@ it was first seen with.
 ### What the player has bought
 
 :::info[Verified via reverse engineering and in game]
-Traced in the Steam `Dunia.dll`; the shop's lists were read out of a running game, retail GOG v1.03,
-2026-10-27. Addresses are Steam.
+Traced in the Steam `Dunia.dll`; the shop's lists were read out of a running game, retail GOG v1.03.
+Addresses are Steam.
 :::
 
 The wallet also keeps the name of everything bought from the arms dealer: engine `std::string`s

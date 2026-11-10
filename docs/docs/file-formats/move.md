@@ -928,7 +928,7 @@ That placement is a mitigation. Two mods that each insert before the same fallba
 same shifted address and merge into a reference that lands one sibling short, with no error. See
 [Open questions](#open-questions).
 
-**Confirmed in game (2026-10-27):** the map's set cloned onto 44, repointed at copies of its clips
+**Confirmed in game:** the map's set cloned onto 44, repointed at copies of its clips
 at new paths, plays for a gadget whose `iAnimationValue` is 44, exactly as the map's plays for 9.
 
 #### Importing a mod that shipped the whole graph

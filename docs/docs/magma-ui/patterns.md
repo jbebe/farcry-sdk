@@ -344,7 +344,7 @@ sets place the groups differently, so take the new instance's position from the 
 
 **Raise `POOLCOUNTS`.** A retail package's pool counts match what it holds, and adding objects past
 them crashes the load in Magma's memory-pool allocator, reading through a null free list
-**(crashed, 2026-10-02)**. Adding 64 to every count, the floor FCSE's own package uses, loads.
+**(crashed)**. Adding 64 to every count, the floor FCSE's own package uses, loads.
 Shipped as fragments (below), it need not: the build raises each count to what the package holds.
 
 **Ship the changed parts, not the package.** `jackall-cli mgb fragments` writes only the areas and
@@ -361,13 +361,13 @@ Every stock HUD texture is listed as a child of the package's `.mgb.desc` in tha
 `<CTextureResource ID="ui\textures\hud\x.xbt" crc_ID="<CRC32 of the path>" />`; the flashlight's are
 listed the same way, as a fragment of the list. A texture missing from that list still loads: the
 inventory overhaul's HUD materials on the shop's `textures\guns` pictures, which no list gives the
-HUD, draw in game **(seen in game, 2026-10-27)**. A font does not: see
+HUD, draw in game **(seen in game)**. A font does not: see
 [UI dependency lists](../file-formats/depload.md#ui-dependency-lists).
 
 :::danger[An image's corner colours multiply its alpha]
 `ImageState`'s `COLOR1`-`COLOR4` scale the image, alpha included. The same icon drew with
 `FFFFFFFF` corners and drew nothing with `00FFFFFF` ones, side by side in one area
-**(seen in game, 2026-10-02)**. Some stock HUD images carry `00FFFFFF` corners and still draw; what
+**(seen in game)**. Some stock HUD images carry `00FFFFFF` corners and still draw; what
 makes them visible is not known. Author new images with `FFFFFFFF`.
 :::
 

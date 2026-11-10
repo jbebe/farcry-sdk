@@ -7,7 +7,7 @@ sidebar_position: 30
 :::info[Verified via reverse engineering]
 Code traced in `FarCry2_server`; addresses are the server's. The state machines are retail
 `rescue.gosm.xml` and `main_avatar.gosm.xml`, the scripts retail Domino boxes. The two scripted
-endings below were seen in game on GOG on 2026-10-20, driven by the Wildlife Overhaul prototype
+endings below were seen in game on GOG, driven by the Wildlife Overhaul prototype
 `mods/wildlife-overhaul/prototype/knockout.lua`.
 :::
 

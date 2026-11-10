@@ -578,7 +578,7 @@ It holds only the lights near the player, about a dozen at a time in world 1. A 
 | `+0x5C` | `fOuterAngle`, the spot's full angle in radians |
 
 The `tmpla` library carries 17 lights as `IGE_Archetypes.AutoPrefab.OmniLight_*` and `SpotLight_*`,
-some on, some off; any of them can be spawned like a soldier (**seen in game, 2026-11-04**).
+some on, some off; any of them can be spawned like a soldier (**seen in game**).
 
 :::caution[Not lights]
 `<world>.omnis.fcb` contains **no lights**. "Omni" there means *omnipresent*: world-scope entities
