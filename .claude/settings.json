@@ -53,6 +53,20 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/fixture-manifest-guard.py"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
     ]
   },
   "enabledPlugins": {

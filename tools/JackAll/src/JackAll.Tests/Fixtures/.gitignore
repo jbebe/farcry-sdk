@@ -1,4 +1,9 @@
 # Since these files are owned by Ubisoft, I don't want to publish them.
+# jackall-cli fixtures restore brings them back from a Steam install, by manifest.tsv.
 **/*
+!*/
 
 !.gitignore
+!manifest.tsv
+!Mft/Caveat-VariableFont_wght.ttf
+!Mft/OFL.txt

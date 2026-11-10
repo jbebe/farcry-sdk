@@ -414,7 +414,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
 
         byte[] collidingContent = "not an fcb"u8.ToArray();
         uint collidingHash = NameHash.Compute(fragmentPath);
-        WriteSingleEntryArchive(Path.Combine(_sandbox, "Data_Win32", "extra"), collidingHash, collidingContent);
+        TestSupport.WriteSingleEntryArchive(Path.Combine(_sandbox, "Data_Win32", "extra"), collidingHash, collidingContent);
 
         using var vfs = GameVfs.Load(_install, names);
 
@@ -427,13 +427,6 @@ public class GameVfsFragmentOverrideTests : IDisposable
 
         // And a loader probing the fragment's path gets the real entry's bytes - engine semantics.
         Assert.Equal(collidingContent, vfs.ReadByPath(fragmentPath));
-    }
-
-    private static void WriteSingleEntryArchive(string basePath, uint hash, byte[] content)
-    {
-        File.WriteAllBytes(basePath + ".dat", content);
-        FatArchive.FromEntries([new FatEntry(hash, Offset: 0, content.Length, UncompressedSize: 0, CompressionScheme.None)])
-            .Write(basePath + ".fat");
     }
 
     public void Dispose()

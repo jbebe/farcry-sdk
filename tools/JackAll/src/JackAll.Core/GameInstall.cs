@@ -35,6 +35,14 @@ public sealed class GameInstall
 
     public bool HasVanillaBackup => File.Exists(VanillaPatchFat) && File.Exists(VanillaPatchDat);
 
+    /// <summary>The file the base game holds at <paramref name="path"/>: the vanilla backup in place of
+    /// the live patch pair once there is one.</summary>
+    public string BasePath(string path)
+        => !HasVanillaBackup ? path
+            : string.Equals(path, PatchFat, StringComparison.OrdinalIgnoreCase) ? VanillaPatchFat
+            : string.Equals(path, PatchDat, StringComparison.OrdinalIgnoreCase) ? VanillaPatchDat
+            : path;
+
     /// <summary>
     /// True when creating the vanilla backup right now would freeze a modded patch in as this
     /// install's base game: no backup exists yet and the live patch already looks modded. Headless

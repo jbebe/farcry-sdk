@@ -4,7 +4,7 @@ namespace JackAll.Tests;
 /// Locates the retail files under <c>Fixtures\</c>, and reports where two byte arrays first disagree.
 /// </summary>
 /// <remarks>
-/// The files are Ubisoft-owned and never committed, so every test has to no-op cleanly without them.
+/// Ubisoft's files are never committed, so every test has to no-op cleanly without them.
 /// Each fixture family has one canary tagged <c>[Trait("Category", "RequiresFixture")]</c>, which CI
 /// excludes but a local run fails loudly.
 /// </remarks>
@@ -41,7 +41,7 @@ internal static class Fixture
         Assert.True(
             missing.Length == 0,
             $"{Root} lacks {string.Join(", ", missing)}, so the tests over them silently no-opped. "
-            + "Copy them out of the game export to run them.");
+            + "Restore them with jackall-cli fixtures restore (README, Building).");
     }
 
     public static void AssertSameBytes(string name, ReadOnlySpan<byte> expected, ReadOnlySpan<byte> actual)

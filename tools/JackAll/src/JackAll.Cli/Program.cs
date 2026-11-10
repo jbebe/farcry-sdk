@@ -5,6 +5,7 @@ using JackAll.Cli.Commands.DepLoad;
 using JackAll.Cli.Commands.Domino;
 using JackAll.Cli.Commands.Fc2Model;
 using JackAll.Cli.Commands.Fcb;
+using JackAll.Cli.Commands.Fixtures;
 using JackAll.Cli.Commands.Hkx;
 using JackAll.Cli.Commands.Legacy;
 using JackAll.Cli.Commands.Mft;
@@ -39,6 +40,19 @@ app.Configure(config =>
                     "Rehashes every line of assets/fc2.hashlist in place to HHHHHHHH<TAB>name. Append " +
                     "new entries as a bare name on their own line, then run this to fill in the hash.");
         });
+    });
+
+    // --- Test fixtures ----------------------------------------------------
+    config.AddBranch("fixtures", fixtures =>
+    {
+        fixtures.AddCommand<FixturesRestoreCommand>("restore")
+            .WithDescription("Restore JackAll's test fixtures from a Steam install and the Nexus downloads manifest.tsv names.")
+            .WithExample("fixtures", "restore", @"src\JackAll.Tests\Fixtures", "--game",
+                @"C:\Program Files (x86)\Steam\steamapps\common\Far Cry 2", "--mods", @"C:\Downloads\fc2");
+        fixtures.AddCommand<FixturesRecordCommand>("record")
+            .WithDescription("Write manifest.tsv's line for each new or changed fixture file, finding it in a Steam install.")
+            .WithExample("fixtures", "record", @"src\JackAll.Tests\Fixtures", "--game",
+                @"C:\Program Files (x86)\Steam\steamapps\common\Far Cry 2");
     });
 
     // --- Mods -------------------------------------------------------------

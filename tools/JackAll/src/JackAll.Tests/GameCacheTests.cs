@@ -1,4 +1,5 @@
 using JackAll.Core;
+using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
@@ -49,6 +50,18 @@ public class GameCacheTests : IDisposable
 
     // ------------------------------------------------------------------ type section
 
+    private const int Nameless = 4;
+
+    /// <summary>The fixture archive's names but for its first <paramref name="count"/> entries, which a
+    /// load then has to sniff: the hash list itself now names every entry the fixture holds.</summary>
+    private static NameDatabase NamesWithout(GameInstall install, int count)
+    {
+        NameDatabase all = TestSupport.LoadNames();
+        return NameDatabase.LoadFrom(FatArchive.Read(Path.Combine(install.DataDir, "common.fat")).Entries
+            .Skip(count)
+            .Select(entry => all.TryResolve(entry.Hash, out string name) ? $"{entry.Hash:X8}\t{name}" : ""));
+    }
+
     [Fact]
     public void A_warm_cache_yields_the_identical_merged_view_and_skips_the_header_reads()
     {
@@ -58,7 +71,7 @@ public class GameCacheTests : IDisposable
 
         try
         {
-            NameDatabase names = TestSupport.LoadNames();
+            NameDatabase names = NamesWithout(install, Nameless);
 
             // Cold: no cache file. Every nameless entry is sniffed from the archive.
             var cold = GameCache.Load(_cachePath);
@@ -70,11 +83,8 @@ public class GameCacheTests : IDisposable
                 coldTypes = vfs.Files.Values.ToDictionary(f => f.Hash, f => $"{f.Type.Category}/{f.Type.Extension}");
             }
 
-            // The fixture is a small subset of a real install (216 entries, 4 nameless), so this
-            // just proves the cold pass sniffed every nameless one — not the "tens of thousands" a
-            // real install would produce.
             Assert.True(cold.IsDirty, "A cold load must have sniffed something worth writing down.");
-            Assert.True(cold.TypeCount > 0, "No types were cached; expected the fixture's nameless entries to be sniffed.");
+            Assert.Equal(Nameless, cold.TypeCount);
             cold.Save(_cachePath);
             Assert.False(cold.IsDirty);
 

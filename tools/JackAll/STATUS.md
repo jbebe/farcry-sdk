@@ -38,6 +38,7 @@ Stage: active
 - [done] .fc2model export and apply - actor, animation tag windows, shader property lists
 - [done] Dark theme
 - [done] jackall-cli with --json, and jackall-mi for the Vortex extension
+- [done] Test fixtures restored from a Steam install and two Nexus mods by manifest.tsv - fixtures restore/record, a Stop hook for unlisted files
 - [in progress] Tutorial docs and screenshot scripts - run-all not re-run since the UI-script refactor; verify-in-game.ps1 never deployed
 - [scrapped] Map editor on FC2Editor/FCE over host IPC - user: the wrong direction; the AVATAR port (18e58eab) is a quarry only
 - [scrapped] Map tab per-sector view culling - culled almost nothing, refilled streams on turns (d8b0f884)

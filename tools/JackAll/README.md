@@ -86,10 +86,29 @@ dotnet test             # under a minute
 
 Format tests run on a few real files Ubisoft shipped, because that's the only real authority on the
 format: two or three per format, each picked for a special case, not every file of a type. They live
-in `src/JackAll.Tests/Fixtures/<Format>/`, which is gitignored because the files are Ubisoft's; copy
-them out of your own game export. Without them the tests that need them no-op, and a
-`RequiresFixture` canary per class says so. The end-to-end tests also use the installed game, if
-it's present: a no-mod build reproduces the real `patch.dat` byte-for-byte.
+in `src/JackAll.Tests/Fixtures/<Format>/`, which is gitignored because the files are Ubisoft's. Without
+them the tests that need them no-op, and a `RequiresFixture` canary per class says so. The end-to-end
+tests also use the installed game, if it's present: a no-mod build reproduces the real `patch.dat`
+byte-for-byte.
+
+`Fixtures/manifest.tsv` lists every fixture by SHA-256 and where it comes from, so you can restore
+the same files from your own copy of the game. You need:
+
+- Far Cry 2 1.03 from Steam. GOG's patch archive is different, so the restore refuses a GOG install.
+- Two mods from Nexus, saved unrenamed in one folder:
+  [Functional Outposts](https://www.nexusmods.com/farcry2/mods/324) 1.1
+  (`Functional Outposts-324-1-1-1712706610.zip`) and
+  [Far Cry 2 Relaxed](https://www.nexusmods.com/farcry2/mods/279) 1.2 (`Far Cry 2 Relaxed-279-1-2.zip`).
+
+```
+dotnet build src\JackAll.Cli -c Release
+src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe fixtures restore src\JackAll.Tests\Fixtures --game "C:\Program Files (x86)\Steam\steamapps\common\Far Cry 2" --mods <the Nexus folder>
+```
+
+The restore writes only what is missing or differs, so running it again is safe. After adding or
+changing a fixture, `fixtures record` with the same folder and `--game` writes its line. A Nexus file
+or a file committed to git (the Caveat font and its licence) gets its line written by hand, and so
+does a removal: `record` keeps the line of a file that is not in the folder.
 
 ## Credits
 

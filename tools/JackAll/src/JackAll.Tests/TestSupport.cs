@@ -74,6 +74,14 @@ internal static class TestSupport
         return layer;
     }
 
+    /// <summary>Writes <paramref name="basePath"/>.fat/.dat holding one stored entry.</summary>
+    public static void WriteSingleEntryArchive(string basePath, uint hash, byte[] content)
+    {
+        File.WriteAllBytes(basePath + ".dat", content);
+        FatArchive.FromEntries([new FatEntry(hash, Offset: 0, content.Length, UncompressedSize: 0, CompressionScheme.None)])
+            .Write(basePath + ".fat");
+    }
+
     /// <summary>Walks up from the test runner's own output directory (e.g. bin\Debug\net10.0) to
     /// find the repo's checked-in <c>assets\fc2.hashlist</c> — it only ever lives under
     /// JackAll.App's output, not this project's own, so every caller needs to search for it rather

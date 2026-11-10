@@ -23,6 +23,9 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   frame drawn for one edit or click shows its own cost.
 - **`crash.log`.** A crash writes it next to `config.ini`, with the error, the graphics card, driver,
   OpenGL version, video memory and RAM, and the last OpenGL errors, and says where it is.
+- **`jackall-cli fixtures restore` and `record`, for working on JackAll itself.** The test suite's
+  game files come back from your own Steam install and two Nexus downloads, listed in the committed
+  `manifest.tsv`; `record` writes the line for a new fixture. JackAll's README, Building, has the steps.
 
 ### Changed
 - **The Map tab no longer stalls as you fly, drag or edit.** Crossing into another sector rebuilt

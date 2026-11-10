@@ -85,3 +85,6 @@ Each mod's `STATUS.md` holds its feature list; the format is in `.claude/skills/
   `Fixture.Locate`). Never from `tmp/`, never by enumerating a directory of game files.
 - A new edge case is a new fixture file copied out of `tmp/` plus a new row. Copying out is the only
   thing a test change does to `tmp/`.
+- A fixture comes from the Steam install, and `jackall-cli fixtures record` writes its line in
+  `Fixtures/manifest.tsv` (JackAll's README, Building). `tmp/gamefiles` may hold GOG's copy of a patch
+  file, and record refuses a file the Steam install does not have.
