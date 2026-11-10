@@ -125,23 +125,6 @@ changes what loads; they only stop the game waiting for things a single-player r
 Each part finds its own site and is left as shipped if it cannot; the log says which. See
 [loading a save](../../docs/docs/engine-internals/loading-a-save.md) for what each wait is.
 
-**Session log**, off by default, writes every frame presented to
-`bin\DevTools-session-<date>-<time>.csv`, for comparing two sessions played the same way, one with a
-mod and one without. A new file starts with each launch, and each time the option is switched on.
-Three `#` lines head it: the date, the resolution, vsync, GPU and CPU, and the FCSE plugins loaded
-from `bin\plugins\` and its subfolders. Then a row per frame:
-
-| Column | |
-|---|---|
-| `t` | seconds since the file's first frame |
-| `frame_ms`, `gpu_ms` | the frame's time and its GPU time, as the [Diagnostics](#diagnostics) tab measures them; `gpu_ms` is empty when no timestamp came back |
-| `in_play` | 1 while the player is in the world and the game runs: the input pass ran within the last quarter second. 0 in a menu or a load |
-| `in_vehicle`, `x`, `y`, `z` | in play only: whether the player sits in a vehicle, and where the camera's focus is |
-| `engine_thread` to `vram_mb` | the once-a-second process sample, on the last row of each second and empty on the rest: engine thread and process CPU in percent, GPU usage, committed and private memory, the largest free block and VRAM in MB |
-
-Rows are gathered as frames are presented and written once a second from a thread of the log's own,
-so the last second before a quit is not in the file. Five minutes at 100 fps comes to about 2 MB.
-
 ## Camera modes
 
 Two ways to fly, bound from the Mod Configuration Menu and off until you bind them, and a pause on
@@ -486,6 +469,25 @@ line per action: seconds from the start, the signal in hex, its values. Playing 
 times from wherever the player is now, inside a normal game, so start it from where it was recorded. A
 replay ended 3 mm from where the recording did, over 3.5 s of walking and firing. AI and physics are
 not recorded and will differ.
+
+## Session log
+
+Launched with `-perftest`, DevTools writes every frame presented to
+`bin\DevTools-session-<date>-<time>.csv`, for comparing two sessions played the same way, one with
+a mod and one without. Each launch with the switch starts a new file.
+Three `#` lines head it: the date, the resolution, vsync, GPU and CPU, and the FCSE plugins loaded
+from `bin\plugins\` and its subfolders. Then a row per frame:
+
+| Column | |
+|---|---|
+| `t` | seconds since the file's first frame |
+| `frame_ms`, `gpu_ms` | the frame's time and its GPU time, as the [Diagnostics](#diagnostics) tab measures them; `gpu_ms` is empty when no timestamp came back |
+| `in_play` | 1 while the player is in the world and the game runs: the input pass ran within the last quarter second. 0 in a menu or a load |
+| `in_vehicle`, `x`, `y`, `z` | in play only: whether the player sits in a vehicle, and where the camera's focus is |
+| `engine_thread` to `vram_mb` | the once-a-second process sample, on the last row of each second and empty on the rest: engine thread and process CPU in percent, GPU usage, committed and private memory, the largest free block and VRAM in MB |
+
+Rows are gathered as frames are presented and written once a second from a thread of the log's own,
+so the last second before a quit is not in the file. Five minutes at 100 fps comes to about 2 MB.
 
 ## Savegame launch
 

@@ -33,6 +33,7 @@
 #include "options/options.h"
 #include "overlay/overlay.h"
 #include "remote/remote.h"
+#include "remote/session_log.h"
 
 #include <vector>
 
@@ -51,7 +52,6 @@ void InstallInfiniteAmmoHooks();
 void InstallDiamondsHooks();
 void InstallSkipSystemDetectionHook();
 void InstallFastLoadingHooks();
-void InstallSessionLog();
 
 namespace {
     // One callback for every option: which one it is arrives as the userdata FCSE hands back.
@@ -149,7 +149,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallInvincibilityHooks();
     InstallInfiniteAmmoHooks();
     InstallDiamondsHooks();
-    InstallSessionLog();
+    DevTools::SessionLog::Start();
 
     // What a camera mode is made of. The two options below only say which key reaches one.
     DevTools::Entity::Install();

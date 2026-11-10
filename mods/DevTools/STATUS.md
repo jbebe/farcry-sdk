@@ -19,7 +19,7 @@ Stage: active
 - [done] AI view: what each soldier sees of the player, drawn in the world - toggle works in game (2026-10-26)
 - [done] Skip system detection
 - [done] Fast loading, on by default
-- [done] Session log: a per-frame CSV with CPU, memory and VRAM samples, for /perftest - /perftest tested
+- [done] Session log (-perftest): a per-frame CSV with CPU, memory and VRAM samples, for /perftest - fc2drive-run 2026-11-10: no CSV without the switch, one with it
 - [done] Overlay on Home: the command catalog, pinned tabs, and windows from other plugins through devtools_api.h
 - [done] Command API: console lines and Lua on the game thread, a 277-command catalog - run, works
 - [done] Environment tab: the clock and forced storm, rain and wind - forcing confirmed in game 2026-09-13

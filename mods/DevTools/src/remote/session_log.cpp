@@ -1,9 +1,7 @@
-// Session log: every frame presented, written to a CSV in bin\, so two play sessions - one with a mod,
-// one without - can be compared afterwards. Off by default; it changes nothing in play, but it writes
-// a few megabytes every few minutes.
-//
 // Frames are gathered on the thread that presents and written once a second from a thread of the
 // log's own, so the frames being measured pay for a push under a lock and nothing more.
+#include "remote/session_log.h"
+
 #include "engine/bin_folder.h"
 #include "engine/entity.h"
 #include "engine/frame_stats.h"
@@ -15,10 +13,10 @@
 #include "overlay/baseline.h"
 
 #include <algorithm>
-#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -27,6 +25,8 @@
 namespace {
     using Clock = std::chrono::steady_clock;
     using Seconds = std::chrono::duration<double>;
+
+    constexpr char kSwitch[] = "-perftest";
 
     // A frame is in play while the input pass ran this recently; it does not run in a menu or a load.
     constexpr Seconds kInPlay{0.25};
@@ -45,8 +45,6 @@ namespace {
         Place place;
     };
 
-    std::atomic<bool> g_enabled{false};
-
     std::mutex g_lock;
     std::vector<Row> g_rows;
     Place g_place;
@@ -55,15 +53,9 @@ namespace {
     // The writer thread's own.
     FILE* g_file = nullptr;
     Clock::time_point g_start;
-    Clock::time_point g_end;
-    size_t g_frames = 0;
     unsigned g_serial = 0;
 
     void OnTick(const DevTools::PawnTick::Frame& frame) {
-        if (!g_enabled) {
-            return;
-        }
-
         Place place;
         place.at = Clock::now();
         place.inVehicle = DevTools::Player::Vehicle(reinterpret_cast<void*>(frame.pawn)) != nullptr;
@@ -79,7 +71,7 @@ namespace {
     }
 
     void OnFrame(const DevTools::FrameStats::Frame& frame) {
-        if (!g_enabled || std::isnan(frame.ms)) {
+        if (std::isnan(frame.ms)) {
             return;
         }
 
@@ -127,16 +119,8 @@ namespace {
                    "committed_mb,private_mb,largest_free_mb,vram_mb\n",
                    g_file);
         g_start = start;
-        g_frames = 0;
         g_serial = DevTools::ProcessStats::Read().serial;
         FCSE::Logf("session log: writing bin\\%s", name);
-    }
-
-    void Close() {
-        std::fclose(g_file);
-        g_file = nullptr;
-        FCSE::Logf("session log: closed, %zu frames over %.0f s", g_frames,
-                   Seconds(g_end - g_start).count());
     }
 
     // Each frame is a row; the process, sampled once a second, goes on the last row of the batch it
@@ -172,8 +156,6 @@ namespace {
             }
         }
         std::fflush(g_file);
-        g_frames += rows.size();
-        g_end = rows.back().at;
     }
 
     void Run() {
@@ -195,30 +177,21 @@ namespace {
                 }
                 rows.clear();
             }
-            if (g_file != nullptr && !g_enabled) {
-                Close();
-            }
         }
     }
 }
 
-int GetSessionLog() { return g_enabled ? 1 : 0; }
+namespace DevTools::SessionLog {
 
-void SetSessionLog(int value) {
-    if ((value != 0) == g_enabled) {
+void Start() {
+    if (std::strstr(GetCommandLineA(), kSwitch) == nullptr) {
         return;
     }
-    g_enabled = value != 0;
 
-    static std::once_flag started;
-    if (g_enabled) {
-        std::call_once(started, [] { std::thread(&Run).detach(); });
-    }
-    FCSE::ApiPointer()->Log(g_enabled ? "session log: on - every frame is written to a CSV in bin"
-                                      : "session log: off");
+    std::thread(&Run).detach();
+    PawnTick::Subscribe(&OnTick);
+    Renderer::Subscribe(&OnFrame);
+    FCSE::ApiPointer()->Log("session log: on - every frame is written to a CSV in bin");
 }
 
-void InstallSessionLog() {
-    DevTools::PawnTick::Subscribe(&OnTick);
-    DevTools::Renderer::Subscribe(&OnFrame);
 }

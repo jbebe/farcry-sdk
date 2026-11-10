@@ -85,7 +85,6 @@ add_library(DevTools SHARED
   "src/options/invincibility.cpp"
   "src/options/noclip.cpp"
   "src/options/options.cpp"
-  "src/options/session_log.cpp"
   "src/options/skip_system_detection.cpp"
   "src/options/unlock_all_weapons.cpp"
   "src/overlay/armory.cpp"
@@ -96,6 +95,7 @@ add_library(DevTools SHARED
   "src/overlay/range.cpp"
   "src/overlay/spawner.cpp"
   "src/remote/remote.cpp"
+  "src/remote/session_log.cpp"
   "${imgui_SOURCE_DIR}/backends/imgui_impl_dx9.cpp"
   "${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp"
 )

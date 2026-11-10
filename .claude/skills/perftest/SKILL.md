@@ -7,7 +7,7 @@ description: Use when asked to measure what a mod costs in performance (frame ra
 
 Measures one mod's cost. The GOG install (`C:\Games\Far Cry 2`) is reset to FCSE, UFCP and DevTools;
 the user plays a session; the mod is added; the user plays the same again; and the two
-[Session logs](../../../mods/DevTools/README.md) are compared.
+[Session logs](../../../mods/DevTools/README.md#session-log) are compared.
 
 `perftest.ps1` makes every change to the install and `compare.py` does the analysis; both sit beside
 this file. The user plays the sessions: never launch the game for one yourself.
@@ -42,7 +42,6 @@ powershell -File .claude\skills\perftest\perftest.ps1 -Step reset -Mod <mod> [-W
 - Backs up the patch and `bin\plugins` into a new run folder under `C:\Games\Far Cry 2 - perftest\`.
 - Deploys DevTools and UFCP, and any `-With` mods, and removes every other plugin. The backup keeps
   them.
-- Turns DevTools' Session log on.
 - Refuses if the last run was never restored. Ask the user whether to restore it first or pass
   `-Force`.
 
@@ -57,7 +56,8 @@ user before the session:
 ## 4. Session without the mod
 
 Hand over, then stop and wait:
-- Launch the game through FCSE and load a save.
+- Launch the game through FCSE with `-perftest`, which turns DevTools' Session log on for
+  that launch, and load a save.
 - Play the session's length of what the mod touches: drive for a vehicle mod, fight for a combat mod,
   look around for a graphics mod. It has to be repeatable: the same save, route and actions both
   times.
@@ -67,8 +67,8 @@ Hand over, then stop and wait:
 
 When the user is done, run `-Step collect`. It moves the log into the run folder and prints its time
 in play. If there is no log, or it is marked short, say so and have them play again. If there
-is no log, check `Session log = true` under `[DevTools]` in `bin\fcse.ini` and `DevTools loaded` in
-`bin\fcse.log`.
+is no log, check `DevTools loaded` and `session log: on` in `bin\fcse.log`: without the second, the
+game was launched without the switch.
 
 ## 5. Session with the mod
 
@@ -111,6 +111,6 @@ If a change that matters comes out as noise with a wide interval, offer another 
 
 ## 7. Put the install back
 
-Ask whether to restore the setup from before the reset. `-Step restore` puts back the patch, every
-plugin and the Session log setting. A run folder holds three copies of the patch, about 150 MB each:
+Ask whether to restore the setup from before the reset. `-Step restore` puts back the patch and every
+plugin. A run folder holds three copies of the patch, about 150 MB each:
 say so, and leave deleting old ones to the user.

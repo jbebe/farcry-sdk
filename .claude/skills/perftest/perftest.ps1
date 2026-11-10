@@ -4,15 +4,15 @@
     DevTools' session logs, and puts the install back.
 
 .DESCRIPTION
-    reset    backs up the patch, bin\plugins and the Session log setting, deploys DevTools and UFCP (and
-             -With) alone, removes every plugin no layer deploys except DevTools.dll, and turns the
-             Session log on. Starts a run folder under "C:\Games\Far Cry 2 - perftest". -Length is one
-             session's play in seconds, which compare.py scales its blocks to.
+    reset    backs up the patch and bin\plugins, deploys DevTools and UFCP (and -With) alone, and
+             removes every plugin no layer deploys except DevTools.dll. Starts a run folder under
+             "C:\Games\Far Cry 2 - perftest". -Length is one session's play in seconds, which
+             compare.py scales its blocks to.
     mod      deploys the same plus -Mod.
     switch   puts a state deployed earlier back by copying it: -State baseline or mod.
     collect  moves the session logs written since the current state was deployed into the run folder,
              as <state>-<n>.csv, and says how much play each holds.
-    restore  puts back the patch, bin\plugins and the Session log setting from before the reset.
+    restore  puts back the patch and bin\plugins from before the reset.
 
     Each step but reset works on the newest run folder unless -Run names one. Builds are not done
     here: every layer named must be current already. Reset refuses while the newest run is not
@@ -62,7 +62,6 @@ function Find-Run {
     $newest.FullName
 }
 
-# fcse.ini as lines, kept CRLF and without a BOM when written back.
 function Get-IniValue($section, $key) {
     $inSection = $false
     foreach ($line in [IO.File]::ReadAllLines("$Bin\fcse.ini")) {
@@ -70,24 +69,6 @@ function Get-IniValue($section, $key) {
         if ($inSection -and $line -match "^$([regex]::Escape($key))\s*=\s*(.*)$") { return $Matches[1] }
     }
     $null
-}
-
-function Set-IniValue($section, $key, $value) {
-    $lines = [Collections.Generic.List[string]][IO.File]::ReadAllLines("$Bin\fcse.ini")
-    $start = $lines.IndexOf("[$section]")
-    if ($start -lt 0) { throw "fcse.ini has no [$section] section - launch the game once with DevTools installed." }
-    $end = $start + 1
-    while ($end -lt $lines.Count -and $lines[$end] -notmatch '^\[') { $end++ }
-    $at = -1
-    for ($i = $start + 1; $i -lt $end; $i++) { if ($lines[$i] -match "^$([regex]::Escape($key))\s*=") { $at = $i } }
-    if ($at -ge 0) {
-        $lines[$at] = "$key = $value"
-    } else {
-        $last = $end - 1
-        while ($last -gt $start -and $lines[$last].Trim() -eq '') { $last-- }
-        $lines.Insert($last + 1, "$key = $value")
-    }
-    [IO.File]::WriteAllText("$Bin\fcse.ini", ($lines -join "`r`n") + "`r`n")
 }
 
 function Copy-Install($to) {
@@ -152,14 +133,12 @@ switch ($Step) {
         $info = [pscustomobject]@{
             mod = $Mod; with = $With; length = $Length; current = $null; deployed = [pscustomobject]@{}
             restored = $false
-            sessionLogBefore = Get-IniValue 'DevTools' 'Session log'
         }
         Save-RunInfo $folder $info
         "backed up to $folder\before"
 
         Copy-Item $dll "$Plugins\DevTools.dll" -Force
         Deploy $folder $info 'baseline' ($Base + $With)
-        Set-IniValue 'DevTools' 'Session log' 'true'
         Show-Settings
         "run folder: $folder"
     }
@@ -209,7 +188,6 @@ switch ($Step) {
         $folder = Find-Run
         $info = Read-RunInfo $folder
         Restore-Install "$folder\before"
-        Set-IniValue 'DevTools' 'Session log' $(if ($info.sessionLogBefore) { $info.sessionLogBefore } else { 'false' })
         $info.restored = $true
         Save-RunInfo $folder $info
         "restored the install from $folder\before"

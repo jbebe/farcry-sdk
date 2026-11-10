@@ -22,8 +22,9 @@ differs is below.
 - **Four folders UFCP does not have.** `src/engine/` is something the running game owns - a
   singleton, a call, the frame, the device, the window - wrapped so the rest of the plugin can reach
   it. `src/commands/` is data describing what to ask for. `src/overlay/` is the UI drawn on the
-  game's frames, and `src/remote/` the same reach for a program, over a pipe. **Nothing in
-  `src/engine/` or `src/commands/` is configurable**: they are called, not configured.
+  game's frames, and `src/remote/` the same reach for a program: the pipe, and the session log's CSV,
+  each on only in a launch with its switch. **Nothing in `src/engine/` or `src/commands/` is
+  configurable**: they are called, not configured.
 - **Two ways of finding a site, and which one depends on whose code it is.** Dunia's own code is
   found by `FCSE::Pattern` or the address library, and `scripts/verify_patterns.py` checks it.
   Direct3D and DirectInput are not Dunia's: those live in `d3d9.dll` and `dinput8.dll`, are shared by
