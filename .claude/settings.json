@@ -18,7 +18,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Bash|PowerShell",
         "hooks": [
           {
             "type": "command",
@@ -28,7 +28,7 @@
               "-ExecutionPolicy",
               "Bypass",
               "-File",
-              "${CLAUDE_PROJECT_DIR}/.claude/hooks/no-python-in-bash.ps1"
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/shell-guard.ps1"
             ],
             "timeout": 10
           }
