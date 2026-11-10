@@ -17,10 +17,16 @@ simplification rules for every language in this repo live there.
 - **Questions go last, numbered** (1, 2, 3, options as a, b, c) so the user can answer "1b, 2a".
   Use the question dialog only when a few fixed options cover the real range; an open question is
   plain text.
-- **Propose before building.** When the user describes how something should behave, that is a wish:
-  say in a line what the game does now, then the options where there is a real choice, your pick
-  marked. Code, deploys and commits wait for their pick. Research that makes the proposal concrete
-  is fine; fixes to features already agreed are exempt.
+- **A feature or a new mod goes through three stages; only the user moves it on.**
+  1. **Talk.** The user says what they want. Answer each wish with a line on what the game does now,
+     then the options where there is a real choice, your pick marked. Research that makes it
+     concrete is fine; nothing is planned or built yet.
+  2. **Plan.** When the user says the talk is done and there are no more questions, work the plan
+     out in full into a file in the session scratchpad, then give the user a short summary of it. A
+     point the talk left open goes in the summary with your pick.
+  3. **Build.** Only when the user says to start. If they say to revise, rework the plan and
+     summarize it again. Code, deploys and commits wait for this stage; fixes to features already
+     agreed are exempt.
 - **Single-player only.** Skip networking and multiplayer code in reverse engineering and tooling
   unless asked. Files JackAll marks unused (`assets/fc2.unused.tsv`, the `tmpla` world) stay unused.
 - **Each session works in its own detached worktree, `/worktree`** (`.claude/worktrees/<name>`),
