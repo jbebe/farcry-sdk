@@ -59,8 +59,9 @@ def create():
         if target in created():
             print(f"{target}: exists")
             continue
-        # bin\ is copied, since tools overwrite its files in place; the archives are hard links.
-        entries = [place(target, rel, rel, "copy" if rel.startswith("bin/") else "link") for rel in stock]
+        # Stock files are hard links, since nothing rewrites one; the patch is copied, since JackAll's
+        # vanilla restore rewrites it in place.
+        entries = [place(target, rel, rel, "link") for rel in stock]
         entries += [place(target, rel, source, "copy") for rel, source in PATCH.items()]
         (target / STOCK).write_text(json.dumps(entries, indent=1))
         print(f"{target}: {len(entries)} files")

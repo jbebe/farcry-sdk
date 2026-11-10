@@ -5,9 +5,10 @@ description: Use when asked to clean a game copy (C:\Games\fc2instances\<n>) of 
 
 # Instance clean
 
-A game copy under `C:\Games\fc2instances\<n>` holds the stock game: `bin\` as copies, the archives
-as hard links to `C:\Games\Far Cry 2`, the patch from its `.vanilla` backup. `stock.json` lists every
-stock file. Sessions add plugins, FCSE, ini and log files, and rebuild the patch; nothing else.
+A game copy under `C:\Games\fc2instances\<n>` holds the stock game: every stock file as a hard link
+to `C:\Games\Far Cry 2`, the patch copied from its `.vanilla` backup. `stock.json` lists every stock
+file. Sessions add plugins, FCSE, ini and log files, and rebuild the patch; nothing else. A stock file
+written in place would change the master and every copy: replace one only by deleting it first.
 
 Commands run from the repo root with the PowerShell tool.
 
@@ -20,5 +21,5 @@ Commands run from the repo root with the PowerShell tool.
    Release when the worktree is done or gone; clean when the same session starts over.
 5. Report the script's line: added files removed, stock files restored.
 
-Never delete a copy's folder recursively and never put a junction into one: the archives are hard
+Never delete a copy's folder recursively and never put a junction into one: its stock files are hard
 links into the GOG install, and the script removes only what `stock.json` does not list.
