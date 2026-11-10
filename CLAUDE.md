@@ -10,10 +10,17 @@ simplification rules for every language in this repo live there.
 
 ## Working rules
 
+- **Short replies; the detail stays with you.** The user is the tech lead and decides the feature set
+  and the crucial choices, nothing more. A reply is a few lines: what happened, what you need. No
+  reasoning unless asked. A plan or analysis goes in full into a file in the session scratchpad, for
+  you only; never hand it to the user to read.
+- **Questions go last, numbered** (1, 2, 3, options as a, b, c) so the user can answer "1b, 2a".
+  Use the question dialog only when a few fixed options cover the real range; an open question is
+  plain text.
 - **Propose before building.** When the user describes how something should behave, that is a wish:
-  say what the game does now, whether the wish is possible and how, with options where there is a
-  real choice. Code, deploys and commits wait for their pick. Research that makes the proposal
-  concrete is fine; fixes to features already agreed are exempt.
+  say in a line what the game does now, then the options where there is a real choice, your pick
+  marked. Code, deploys and commits wait for their pick. Research that makes the proposal concrete
+  is fine; fixes to features already agreed are exempt.
 - **Single-player only.** Skip networking and multiplayer code in reverse engineering and tooling
   unless asked. Files JackAll marks unused (`assets/fc2.unused.tsv`, the `tmpla` world) stay unused.
 - **Commit straight to `main`, never a branch, after every major step:**
