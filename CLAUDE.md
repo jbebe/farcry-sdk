@@ -135,7 +135,7 @@ The method is split in two: `docs/docs/modding/replacing-a-weapon.md` for the me
 `docs/docs/modding/texturing-a-weapon.md` for materials and textures.
 
 A project with its own `CLAUDE.md` (UFCP, DevTools, Legacy Plugin, Difficulty Overhaul, FCSE,
-JackAll, the Vortex extension) adds instructions that apply while working in it.
+JackAll, the Vortex extension, the docs site) adds instructions that apply while working in it.
 
 ## Legacy mods
 
@@ -168,7 +168,7 @@ docs - overview, tutorials, reference - are a second docs instance in `docs/jack
 `/jackall`), with screenshots in `docs/static/img/jackall/` made by `tools/JackAll/screenshots/`. Run it with
 `cd docs && npm install && npm start`. `npm run build` is strict and fails on broken links or
 anchors - treat that as a real signal. Sidebar nav is generated from the folder structure
-(`_category_.json` per top-level folder).
+(`_category_.json` per top-level folder). The rules for writing a page are in `docs/CLAUDE.md`.
 
 ## CI
 
