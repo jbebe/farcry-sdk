@@ -34,12 +34,14 @@ Only when the user says the work is done:
 1. Commit what is left in the worktree.
 2. Run `python scripts/affected_mods.py` over `git diff --name-only main...HEAD` and add the
    CHANGELOG.md and STATUS.md lines the `implementation` skill asks for; commit them.
-3. In the main working tree: `git -C <main> merge --squash <worktree HEAD>`. It refuses when a file
-   it changes has uncommitted edits there: ask the user. On a conflict, resolve it in the main tree
-   and tell the user what was resolved.
-4. `git -C <main> commit -m "<Project>: <what changed>" -- <the paths from step 2>`, subject line only.
-5. ExitWorktree with `keep`, then `git worktree remove .claude/worktrees/<name>`. Folders the editor's
-   C# server still holds stay behind empty; they go once it lets go.
+3. ExitWorktree with `keep`: the shell guard refuses git aimed at the main tree from inside one.
+4. In one command, since the shell returns to the worktree folder after each:
+   `cd <main> && git merge --squash <worktree HEAD> && git commit -m "<Project>: <what changed>" --
+   <the paths from step 2>`, subject line only. The merge refuses when a file it changes has
+   uncommitted edits there: ask the user. On a conflict, resolve it in the main tree and tell the
+   user what was resolved.
+5. `cd <main> && git worktree remove .claude/worktrees/<name>`. The empty folder stays until the
+   session ends, or while the editor's C# server holds it.
 
 The session's game copy stays bound; a later `/deploy` of another session may take it over, since
 its worktree is gone.
