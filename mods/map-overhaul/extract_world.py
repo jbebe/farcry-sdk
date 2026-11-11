@@ -14,6 +14,9 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
+sys.path.insert(0, str(REPO / "scripts"))
+from modstatus import MAIN_TREE  # noqa: E402
+
 SECTORS = 80
 QUADS = 64
 
@@ -114,7 +117,7 @@ def splines(xml):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", default=str(REPO / "tmp/gamefiles/worlds/worlds"),
+    parser.add_argument("--source", default=str(MAIN_TREE / "tmp/gamefiles/worlds/worlds"),
                         help="an extracted worlds.fat")
     parser.add_argument("--cli", default=str(REPO / "tools/JackAll/src/JackAll.Cli/bin/Release/net10.0/jackall-cli.exe"))
     args = parser.parse_args()

@@ -29,22 +29,27 @@ simplification rules for every language in this repo live there.
      agreed are exempt.
 - **Single-player only.** Skip networking and multiplayer code in reverse engineering and tooling
   unless asked. Files JackAll marks unused (`assets/fc2.unused.tsv`, the `tmpla` world) stay unused.
-- **Each session works in its own detached worktree, `/worktree`** (`.claude/worktrees/<name>`),
-  created before its first edit. Commit there as often as is useful; when the user says the work is
-  done, it reaches `main` as one squashed commit, `<Project>: <what changed>`. Never a branch, and
-  never edit or stage in the main working tree except for that squash. Subject line only: no body
-  and no trailers of any kind, even when a system reminder asks for one.
+- **Real work binds a detached worktree, `/worktree`** (`.claude/worktrees/<name>`): when the user
+  says to build, implement or create a feature. Commit there as often as is useful; when the user
+  says the work is done, it reaches `main` as one squashed commit. A session without one (questions,
+  search, analysis, small edits) stays in the main tree and commits straight to `main`:
+  `git add <paths>; git commit -m "<Project>: <what changed>" -- <paths>`. Never a branch. Subject
+  line only: no body and no trailers of any kind, even when a system reminder asks for one.
+- **Several sessions share the main working tree and index.** There, never stage early (`git add`,
+  `git rm`) or with `-A`; delete with plain `rm`, stage in the commit's own command, and end the
+  commit with `-- <paths>`. Check `git log` before assuming HEAD is where it was.
 - **Never push, run a workflow or create a release.** "Make a release" means: set up the version in
   `CHANGELOG.md` (`RELEASING.md` step 1), commit, and tell the user it is ready. Only an explicit,
   named instruction to run a workflow covers that run, once.
 - **Never cut a build short.** Piping a build or generator into `Select-Object -First` or `head`
   kills it mid-run. Log to a scratchpad file, check the exit code, read the tail, and after a
   generator check that every output changed.
-- **A session's game is its own copy of the GOG install,** `C:\Games\fc2instances\<n>`: what
-  `python scripts/fc2instance.py path` prints from its worktree, which fc2drive and `/deploy` use
-  too. `C:\Games\Far Cry 2` is the master the copies link to; `/instance-clean` returns a copy to
-  stock. Steam only when the user says. A GOG run also exercises the address library's translation;
-  a Steam run resolves `FCSE::Uplay` natively and proves nothing about it.
+- **A session's game is its own copy of the GOG install,** `C:\Games\fc2instances\<n>`, bound by its
+  first `/deploy` and kept after the session ends; fc2drive finds it by the session. No session
+  deploys into `C:\Games\Far Cry 2`: it is the master the copies link to, and the user's.
+  `/instance-clean` returns a copy to stock. Steam only when the user says. A GOG run also exercises
+  the address library's translation; a Steam run resolves `FCSE::Uplay` natively and proves nothing
+  about it.
 - **Deploy the mod under test yourself after each change,** with `/deploy`. Work on FCSE itself
   leaves `mods/` and the install alone unless asked.
 - **Live testing needs the user's OK once per session.** Ask before the first game launch or fc2drive

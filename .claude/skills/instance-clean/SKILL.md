@@ -1,6 +1,6 @@
 ---
 name: instance-clean
-description: Use when asked to clean a game copy (C:\Games\fc2instances\<n>) of everything a session put into it, or for /instance-clean <n> - removes added plugins and files, restores the stock patch, keeps or frees the copy's claim
+description: Use when asked to clean a game copy (C:\Games\fc2instances\<n>) of everything a session put into it, or for /instance-clean <n> - removes added plugins and files and restores the stock patch; the copy stays bound to its session
 ---
 
 # Instance clean
@@ -12,14 +12,13 @@ written in place would change the master and every copy: replace one only by del
 
 Commands run from the repo root with the PowerShell tool.
 
-1. `python scripts/fc2instance.py list` shows each copy and the worktree that holds it.
-2. The game must be closed in that copy: no `FCSE` or `FarCry2` process whose path is under it. Another
-   copy's game may keep running.
-3. If the copy is held by a worktree other than this session's and that worktree still exists, ask the
-   user before going on.
-4. `python scripts/fc2instance.py clean <n>` keeps the claim; `release <n>` cleans and frees the copy.
-   Release when the worktree is done or gone; clean when the same session starts over.
-5. Report the script's line: added files removed, stock files restored.
+1. `python scripts/fc2instance.py list` shows each copy and the session it is bound to.
+2. If the copy is bound to another session whose worktree still exists, ask the user before going on.
+3. `python scripts/fc2instance.py clean <n>`. It refuses while the game runs from that copy; games in
+   other copies may keep running. The claim stays: a copy changes hands only through `/deploy`'s
+   claim.
+4. Report the script's line: added files removed, stock files restored. The mods' settings went with
+   their `.ini` files, back to defaults.
 
 Never delete a copy's folder recursively and never put a junction into one: its stock files are hard
 links into the GOG install, and the script removes only what `stock.json` does not list.

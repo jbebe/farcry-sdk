@@ -22,7 +22,7 @@ public class FcbRegisteredPropertyCoverageTests
         [FcbDocumentTests.Worlds, FcbDocumentTests.PatchOverride, FcbDocumentTests.Dlc1];
 
     private static string RegisteredPropertiesPath
-        => Path.Combine(TestSupport.RepositoryRoot, "tools", "fc2re", "out", "register_properties.jsonl");
+        => Path.Combine(TestSupport.MainTreeRoot, "tools", "fc2re", "out", "register_properties.jsonl");
 
     private static bool InputsPresent => File.Exists(RegisteredPropertiesPath) && Fixture.Present(Libraries);
 

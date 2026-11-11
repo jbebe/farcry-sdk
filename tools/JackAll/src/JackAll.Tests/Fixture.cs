@@ -12,11 +12,23 @@ internal static class Fixture
 {
     private static readonly string Root = Path.Combine(AppContext.BaseDirectory, "Fixtures");
 
-    /// <summary>The file at this path under <c>Fixtures\</c>, or null when this checkout lacks it.</summary>
+    // The main working tree's Fixtures\, which a worktree's checkout never has.
+    private static readonly string MainTreeFixtures =
+        Path.Combine(TestSupport.MainTreeRoot, "tools", "JackAll", "src", "JackAll.Tests", "Fixtures");
+
+    /// <summary>The file at this path under <c>Fixtures\</c>, or null when neither this checkout nor the main
+    /// working tree has it.</summary>
     public static string? Locate(string relativePath)
     {
-        string path = Path.Combine(Root, relativePath);
-        return File.Exists(path) || Directory.Exists(path) ? path : null;
+        foreach (string root in new[] { Root, MainTreeFixtures })
+        {
+            string path = Path.Combine(root, relativePath);
+            if (File.Exists(path) || Directory.Exists(path))
+            {
+                return path;
+            }
+        }
+        return null;
     }
 
     public static byte[]? Read(string relativePath)

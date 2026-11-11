@@ -514,7 +514,7 @@ happen, such as a shot with no chance or a death within 2 s of the killer's firs
 suppression and fire discipline are Difficulty Overhaul's lines:
 
 ```
-python fight_report.py                          the newest combat log
+python fight_report.py                          the newest combat log of FC2_GAME, or of the session's game copy
 python fight_report.py <file>                   a combat log, or an fcse.log without hits
 python fight_report.py --at 19:30:43            the lines in the 10 s before that time
 python fight_report.py --soldier 3A802DED       every line about one soldier

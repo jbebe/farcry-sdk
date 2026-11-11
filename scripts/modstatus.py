@@ -74,6 +74,12 @@ def git(*args, check=True):
     return result.stdout
 
 
+# The main working tree, which holds what git ignores (tmp\, tests' approved pictures) also when this
+# runs from a worktree.
+MAIN_TREE = Path(git("rev-parse", "--path-format=absolute", "--git-common-dir", check=False).strip()
+                 or REPO / ".git").parent
+
+
 def git_ok(*args):
     return subprocess.run(["git", "-C", str(REPO), *args], capture_output=True).returncode == 0
 

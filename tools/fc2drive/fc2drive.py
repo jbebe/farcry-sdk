@@ -19,12 +19,9 @@ from ctypes import wintypes
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
-from fc2instance import game_for  # noqa: E402
+from fc2instance import game_processes, session_game  # noqa: E402
+from modstatus import MAIN_TREE, REPO  # noqa: E402
 
-# FC2_GAME, or this worktree's game copy; DevTools names its pipe after the install's folder.
-GAME = Path(os.environ.get("FC2_GAME") or game_for(Path(__file__).parent)).resolve()
-GAME_BIN = GAME / "bin"
-PIPE = rf"\\.\pipe\DevToolsRemote-{GAME.name}"
 RUNS = Path(__file__).parent / "runs"
 
 # The saves behind the RunDebug shortcuts in the game's bin folder.
@@ -63,7 +60,6 @@ PIXEL_CHANGE = 0.1
 TILE = 16
 
 KEEP_DISPLAY_ON = 0x80000003
-PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 KEYEVENTF_KEYUP = 2
 HWND_TOPMOST = -1
 HWND_NOTOPMOST = -2
@@ -83,13 +79,26 @@ WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 user32.EnumWindows.argtypes = [WNDENUMPROC, wintypes.LPARAM]
 user32.EnumChildWindows.argtypes = [wintypes.HWND, WNDENUMPROC, wintypes.LPARAM]
 user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
-kernel32.OpenProcess.restype = wintypes.HANDLE
-kernel32.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)]
-kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
 
 
 class GameError(RuntimeError):
     pass
+
+
+@functools.cache
+def install():
+    """The install to drive: FC2_GAME, else the copy /deploy bound to this Claude session; never a guess."""
+    game = session_game(Path(__file__).parent)
+    if game is None:
+        raise SystemExit("no game copy is bound to this session: /deploy binds one, or set FC2_GAME")
+    return game
+
+
+def __getattr__(name):
+    """GAME_BIN for the scenarios that read it, worked out on first use."""
+    if name == "GAME_BIN":
+        return install() / "bin"
+    raise AttributeError(name)
 
 
 def eventually(check, timeout, interval=0.1):
@@ -140,7 +149,7 @@ def _dialogs(pid):
 
 def log_failures():
     """(module, text) for each line of this launch's fcse.log that says something did not work."""
-    log = GAME_BIN / "fcse.log"
+    log = install() / "bin" / "fcse.log"
     lines = log.read_text(encoding="utf-8", errors="replace").splitlines() if log.exists() else []
     tagged = (re.match(r"\[[^\]]*\]\[([^\]]+)\]\s*(.*)", line) for line in lines if LOG_FAILURE.search(line))
     return [found.groups() for found in tagged if found]
@@ -173,7 +182,8 @@ class Game:
             if self.process is not None and self.process.poll() is not None:
                 raise GameError(self.fault or f"the game exited with code {self.process.returncode}")
             try:
-                return open(PIPE, "r+b", buffering=0)
+                # DevTools names its pipe after the install's folder.
+                return open(rf"\\.\pipe\DevToolsRemote-{install().name}", "r+b", buffering=0)
             except OSError:
                 return None
 
@@ -347,43 +357,23 @@ def _end_game(process):
             return True
         except subprocess.TimeoutExpired:
             pass
-    for pid in _game_processes():
+    for pid in game_processes(install()):
         subprocess.run(["taskkill", "/f", "/pid", str(pid)], capture_output=True)
     return False
 
 
-def _game_processes():
-    """The game's processes started from this install's bin folder, leaving other copies' alone."""
-    pids = (wintypes.DWORD * 4096)()
-    size = wintypes.DWORD()
-    kernel32.K32EnumProcesses(pids, ctypes.sizeof(pids), ctypes.byref(size))
-    path = ctypes.create_unicode_buffer(32768)
-    found = []
-    for pid in pids[: size.value // ctypes.sizeof(wintypes.DWORD)]:
-        handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
-        if not handle:
-            continue
-        length = wintypes.DWORD(len(path))
-        if kernel32.QueryFullProcessImageNameW(handle, 0, path, ctypes.byref(length)):
-            exe = Path(path.value)
-            if exe.parent == GAME_BIN and exe.name.lower() in ("fcse.exe", "farcry2.exe"):
-                found.append(pid)
-        kernel32.CloseHandle(handle)
-    return found
-
-
 def start(save=None, args=(), env=None):
     """Launches the game with the remote control and DevTools' combat log on, and waits for its world."""
-    if _game_processes():
+    if game_processes(install()):
         raise GameError("a game is already running")
     # The screensaver stops the game starting and the frame being presented.
     subprocess.run(["taskkill", "/f", "/im", "scrnsave.scr"], capture_output=True)
     kernel32.SetThreadExecutionState(KEEP_DISPLAY_ON)
 
-    command = [str(GAME_BIN / "FCSE.exe"), "-devtoolsremote", "-combatlog"]
+    command = [str(install() / "bin" / "FCSE.exe"), "-devtoolsremote", "-combatlog"]
     if save:
         command += ["-load", SAVES.get(save, save)]
-    game = Game(subprocess.Popen(command + list(args), cwd=GAME_BIN, env={**os.environ, **(env or {})}))
+    game = Game(subprocess.Popen(command + list(args), cwd=install() / "bin", env={**os.environ, **(env or {})}))
     game.connect(PIPE_TIMEOUT)
     if save:
         game.wait_ready()
@@ -406,7 +396,7 @@ def _normal(name):
 @functools.cache
 def _plugins():
     """The plugins in the install, by the names of their DLLs."""
-    return sorted({path.stem for path in (GAME_BIN / "plugins").rglob("*.dll")}, key=str.lower)
+    return sorted({path.stem for path in (install() / "bin" / "plugins").rglob("*.dll")}, key=str.lower)
 
 
 def _nvidia_settings():
@@ -499,7 +489,7 @@ class Run:
     def __init__(self, name, mods=()):
         missing = [mod for mod in mods if _normal(mod) not in {_normal(plugin) for plugin in _plugins()}]
         if missing:
-            print(f"skipped: {', '.join(missing)} not in {GAME_BIN / 'plugins'}")
+            print(f"skipped: {', '.join(missing)} not in {install() / 'bin' / 'plugins'}")
             raise SystemExit(SKIPPED)
         self._answerable = {"fcse", "devtools", *map(_normal, mods)}
         stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -575,7 +565,9 @@ class Run:
         right, bottom) as shares of the frame. With no reference yet, or one taken with other plugins
         installed or at another resolution, the shot waits for approval: `fc2drive.py approve <run>`."""
         shot = self.shot(game, label)
-        references = Path(sys.modules["__main__"].__file__).resolve().parent / "references" / _safe(self.name)
+        # The approved pictures are gitignored, so they live in the main tree, where a worktree's run finds them.
+        test_folder = Path(sys.modules["__main__"].__file__).resolve().parent.relative_to(REPO)
+        references = MAIN_TREE / test_folder / "references" / _safe(self.name)
         from PIL import Image
 
         reference = references / f"{_safe(label)}.png"

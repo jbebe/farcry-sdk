@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Collections.Concurrent;
+using System.ComponentModel;
+using System.Diagnostics;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
@@ -40,6 +42,29 @@ internal static class TestSupport
                 dir = Path.GetDirectoryName(dir);
             }
             return dir ?? AppContext.BaseDirectory;
+        }
+    }
+
+    /// <summary>The main working tree, which holds the gitignored inputs - fixtures, generated dumps -
+    /// also when the tests run from a worktree, whose checkout has none.</summary>
+    public static string MainTreeRoot { get; } = FindMainTreeRoot() ?? RepositoryRoot;
+
+    private static string? FindMainTreeRoot()
+    {
+        var start = new ProcessStartInfo("git", ["-C", AppContext.BaseDirectory, "rev-parse", "--path-format=absolute", "--git-common-dir"])
+        {
+            RedirectStandardOutput = true,
+        };
+        try
+        {
+            using Process git = Process.Start(start)!;
+            string common = git.StandardOutput.ReadToEnd().Trim();
+            git.WaitForExit();
+            return git.ExitCode == 0 ? Path.GetDirectoryName(common) : null;
+        }
+        catch (Win32Exception)
+        {
+            return null;
         }
     }
 

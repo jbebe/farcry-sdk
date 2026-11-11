@@ -11,8 +11,9 @@ a fix: every row applies except the user's re-check of the BBCode and short mess
 
 1. Run it with the PowerShell tool (Python is blocked in Bash). The build and unit tests take a minute
    or two; they are the steps the mod's release workflow runs, and each writes a log it names. A mod
-   with game tests (`tests/*.py`, fc2drive scripts) runs them against the install: deploy it first with
-   `/deploy`, and ask the user before the first game launch of the session; until then, add `--no-game`.
+   with game tests (`tests/*.py`, fc2drive scripts) runs them against the session's game copy: deploy
+   it first with `/deploy`, and ask the user before the first game launch of the session; until then,
+   add `--no-game`.
 
    ```powershell
    python scripts/release_check.py <mod>            # or: <mod> --hotfix, <mod> --no-game

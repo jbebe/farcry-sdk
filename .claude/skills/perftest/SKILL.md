@@ -1,16 +1,22 @@
 ---
 name: perftest
-description: Use when asked to measure what a mod costs in performance (frame rate, CPU, GPU, memory, VRAM) - resets the GOG install to FCSE, UFCP and DevTools, has the user play a session without the mod and one with it, and compares DevTools' session logs
+description: Use when asked to measure what a mod costs in performance (frame rate, CPU, GPU, memory, VRAM) - resets the session's game copy to FCSE, UFCP and DevTools, has the user play a session without the mod and one with it, and compares DevTools' session logs
 ---
 
 # Perftest
 
-Measures one mod's cost. The GOG install (`C:\Games\Far Cry 2`) is reset to FCSE, UFCP and DevTools;
-the user plays a session; the mod is added; the user plays the same again; and the two
-[Session logs](../../../mods/DevTools/README.md#session-log) are compared.
+Measures one mod's cost. The session's game copy (`C:\Games\fc2instances\<n>`) is reset to FCSE,
+UFCP and DevTools; the user plays a session; the mod is added; the user plays the same again; and the
+two [Session logs](../../../mods/DevTools/README.md#session-log) are compared.
 
-`perftest.ps1` makes every change to the install and `compare.py` does the analysis; both sit beside
+`perftest.ps1` makes every change to the copy and `compare.py` does the analysis; both sit beside
 this file. The user plays the sessions: never launch the game for one yourself.
+
+## 0. The game copy
+
+Bind one as `/deploy` step 0 does: `python scripts/fc2instance.py claim --topic "perftest: <mod>"`,
+asking the user which copy to take over when it exits 3. A copy without `bin\FCSE.exe` gets FCSE from
+`tools\FCSE\build.ps1 -Install "<copy>\bin"`. `perftest.ps1` finds the same copy by the session.
 
 ## 1. The mod
 
@@ -39,7 +45,8 @@ build to a file in the scratchpad and read the tail.
 powershell -File .claude\skills\perftest\perftest.ps1 -Step reset -Mod <mod> [-With <mod>,<mod>] [-Length <seconds>]
 ```
 
-- Backs up the patch and `bin\plugins` into a new run folder under `C:\Games\Far Cry 2 - perftest\`.
+- Backs up the patch and `bin\plugins` into a new run folder under
+  `C:\Games\fc2instances\perftest\<n>\`, outside the copy, so `/instance-clean` keeps the runs.
 - Deploys DevTools and UFCP, and any `-With` mods, and removes every other plugin. The backup keeps
   them.
 - Refuses if the last run was never restored. Ask the user whether to restore it first or pass
@@ -56,7 +63,7 @@ user before the session:
 ## 4. Session without the mod
 
 Hand over, then stop and wait:
-- Launch the game through FCSE with `-perftest`, which turns DevTools' Session log on for
+- Launch the game through the copy's `bin\FCSE.exe` with `-perftest`, which turns DevTools' Session log on for
   that launch, and load a save.
 - Play the session's length of what the mod touches: drive for a vehicle mod, fight for a combat mod,
   look around for a graphics mod. It has to be repeatable: the same save, route and actions both
@@ -109,7 +116,7 @@ If a change that matters comes out as noise with a wide interval, offer another 
 2. `-Step switch -State mod`, a session, `-Step collect`.
 3. Compare again. It reads every `baseline-*.csv` and `mod-*.csv` in the folder.
 
-## 7. Put the install back
+## 7. Put the copy back
 
 Ask whether to restore the setup from before the reset. `-Step restore` puts back the patch and every
 plugin. A run folder holds three copies of the patch, about 150 MB each:

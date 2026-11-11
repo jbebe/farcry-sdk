@@ -31,7 +31,14 @@ def _drop_installed_copies():
 
 _drop_installed_copies()
 
-CORPUS = os.path.normpath(os.path.join(HERE, "..", "..", "..", "tmp", "gamefiles"))
+def _main_tree():
+    """The main working tree, which holds the gitignored tmp/ also when the tests run from a worktree."""
+    common = subprocess.run(["git", "-C", HERE, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                            capture_output=True, text=True).stdout.strip()
+    return os.path.dirname(common) if common else os.path.join(HERE, "..", "..", "..")
+
+
+CORPUS = os.path.normpath(os.path.join(_main_tree(), "tmp", "gamefiles"))
 GRAPHICS = os.path.join(CORPUS, "worlds", "worlds", "graphics")
 PELVIS_REF = os.path.join(GRAPHICS, "characters", "_common", "pelvis_ref.skeleton")
 

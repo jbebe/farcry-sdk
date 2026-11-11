@@ -1,5 +1,7 @@
-# What the build scripts share, dot-sourced: the repository, JackAll's CLI, and Exec.
+# What the build scripts share, dot-sourced: the repository, the extracted game, JackAll's CLI, and Exec.
 $Repo = Resolve-Path "$PSScriptRoot\..\.."
+# The gitignored tmp\ lives in the main working tree, also when this runs from a worktree.
+$Tmp = Join-Path (Split-Path -Parent (git -C $Repo rev-parse --path-format=absolute --git-common-dir)) "tmp"
 $Cli = "$Repo\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
 
 # Runs a program and returns its output, throwing when it fails. The CLI reports progress on stderr,

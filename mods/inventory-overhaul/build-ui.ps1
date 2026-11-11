@@ -22,8 +22,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 . "$PSScriptRoot\build-common.ps1"
-$Retail = "$Repo\tmp\gamefiles\common\ui\localized"
-$StockTexture = "$Repo\tmp\gamefiles\common\ui\textures\ui_tape_icon.xbt"
+$Retail = "$Tmp\gamefiles\common\ui\localized"
+$StockTexture = "$Tmp\gamefiles\common\ui\textures\ui_tape_icon.xbt"
 $Texconv = "$Repo\tools\third-party\FCBConverter\texconv.exe"
 $Layer = "$PSScriptRoot\layer\mods\ui\localized"
 $Textures = "$PSScriptRoot\layer\mods\ui\textures\io"

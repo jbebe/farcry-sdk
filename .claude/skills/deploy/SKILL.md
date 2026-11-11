@@ -9,26 +9,35 @@ After a change to a mod the user is play-testing, put it into the game yourself 
 report that it is deployed. Never hand the user the install command. Launching the game is not part
 of a deploy; `CLAUDE.md`'s live-testing rule covers it.
 
-The install, `<game>` below, is what `python scripts/fc2instance.py path` prints from this session's
-tree: in a worktree its own game copy under `C:\Games\fc2instances\`, in the main working tree the
-GOG install `C:\Games\Far Cry 2`, which other sessions deploy into too. Steam only when the user says
-(`C:\Program Files (x86)\Steam\steamapps\common\Far Cry 2`). A clean copy has no FCSE: install it
-with `tools\FCSE\build.ps1 -Install "<game>\bin"`, and DevTools with its `-Install` when fc2drive
-will drive the game. `jackall-cli mod build` rebuilds the patch from vanilla plus only the layers it is given, so a layer
+The install, `<game>` below, is the session's own game copy under `C:\Games\fc2instances\`, never
+the GOG install `C:\Games\Far Cry 2`: that is the master the copies link to, and the user's.
+Steam only when the user says (`C:\Program Files (x86)\Steam\steamapps\common\Far Cry 2`).
+`jackall-cli mod build` rebuilds the patch from vanilla plus only the layers it is given, so a layer
 left off is removed, and nothing records which layers built the current patch. Read the set from the
 install every time, never from memory or an earlier build.
 
-Commands run from the repo root. The CLI is
-`tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe`; if it is missing, build it with
-`dotnet build tools\JackAll\src\JackAll.Cli -c Release`. Make a new folder in the scratchpad for this
-deploy, `<work>` below.
+Commands run from the session's tree, its worktree or the main one, with the PowerShell tool. The CLI
+is `tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe`; if it is missing, build it
+with `dotnet build tools\JackAll\src\JackAll.Cli -c Release`. Make a new folder in the scratchpad for
+this deploy, `<work>` below.
+
+## 0. The game copy
+
+1. `python scripts/fc2instance.py claim --topic "<mod>: <what>"` prints the copy bound to this
+   session, binding a free one, or one whose worktree is gone, when there is none.
+2. Exit code 3: every copy is bound to a session still at work, and the script lists them. Ask the
+   user which to take over, one line per copy ("#1 aiming overhaul: scope lag, #2 difficulty: grass,
+   #3 vehicle overhaul: gearbox - which one?"), then `claim --topic "..." <n>`, which cleans it first.
+3. A copy without `bin\FCSE.exe` (new, or just cleaned): install FCSE with
+   `tools\FCSE\build.ps1 -Install "<game>\bin"`, and DevTools with its `build.ps1 -Install` so
+   fc2drive can drive the game. Then deploy the layers as below.
+
+fc2drive, `release_check.py` and `/perftest` find the same copy by the session.
 
 ## 1. Check
 
 - The game must be closed: no `FarCry2` or `FCSE` process started from `<game>\bin`. Games in
   other copies may run.
-- In the GOG install only: if the newest folder under `C:\Games\Far Cry 2 - perftest\` has `"restored": false` in its
-  `run.json`, a perftest holds the install. Ask the user before going on.
 - `git status -- mods/`. A layer deploys as it is on disk, so another mod's uncommitted changes would
   go in with this one. Ask the user, or deploy that layer from a copy in `<work>` holding what is
   installed now.
@@ -116,5 +125,5 @@ jackall-cli mod build --game "<game>" --layer mods\<A>\layer --layer mods\<B>\la
 
 ## 7. Report
 
-Say it is deployed: the layers in order, the plugins line, and the diff in brief. Leave `<work>` in
-place; its `before\` is the way back.
+Say it is deployed and where the user launches it, `<game>\bin\FCSE.exe`: the layers in order, the
+plugins line, and the diff in brief. Leave `<work>` in place; its `before\` is the way back.

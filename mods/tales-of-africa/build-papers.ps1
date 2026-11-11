@@ -9,6 +9,8 @@
 $ErrorActionPreference = "Stop"
 
 $Repo = Resolve-Path "$PSScriptRoot\..\.."
+# The gitignored tmp\ lives in the main working tree, also when this runs from a worktree.
+$Tmp = Join-Path (Split-Path -Parent (git -C $Repo rev-parse --path-format=absolute --git-common-dir)) "tmp"
 $Cli = "$Repo\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
 $Layer = "$PSScriptRoot\layer\mods"
 $Work = "$PSScriptRoot\out\papers"
@@ -23,7 +25,7 @@ foreach ($dir in $built) {
 }
 
 foreach ($world in $Worlds) {
-    Copy-Item "$Repo\tmp\gamefiles\worlds\worlds\worlds\$world\generated\entitylibrary.fcb" "$Work\$world.entitylibrary.fcb"
+    Copy-Item "$Tmp\gamefiles\worlds\worlds\worlds\$world\generated\entitylibrary.fcb" "$Work\$world.entitylibrary.fcb"
     & $Cli fcb decode "$Work\$world.entitylibrary.fcb" 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "fcb decode failed for $world" }
     python "$PSScriptRoot\papers.py" "$Work\$world.entitylibrary.xml" $Layer $world

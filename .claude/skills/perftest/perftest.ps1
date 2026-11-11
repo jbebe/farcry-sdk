@@ -1,13 +1,15 @@
 <#
 .SYNOPSIS
-    Sets up the GOG install for a mod performance test, switches it between the two states, collects
-    DevTools' session logs, and puts the install back.
+    Sets up the session's game copy for a mod performance test, switches it between the two states,
+    collects DevTools' session logs, and puts the copy back.
 
 .DESCRIPTION
+    The copy is the one bound to this Claude session (scripts\fc2instance.py path), or FC2_GAME.
+
     reset    backs up the patch and bin\plugins, deploys DevTools and UFCP (and -With) alone, and
              removes every plugin no layer deploys except DevTools.dll. Starts a run folder under
-             "C:\Games\Far Cry 2 - perftest". -Length is one session's play in seconds, which
-             compare.py scales its blocks to.
+             "C:\Games\fc2instances\perftest\<copy>", outside the copy so cleaning it keeps the runs.
+             -Length is one session's play in seconds, which compare.py scales its blocks to.
     mod      deploys the same plus -Mod.
     switch   puts a state deployed earlier back by copying it: -State baseline or mod.
     collect  moves the session logs written since the current state was deployed into the run folder,
@@ -29,12 +31,13 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
-$Game = 'C:\Games\Far Cry 2'
+$Repo = (Resolve-Path "$PSScriptRoot\..\..\..").Path
+$Game = python "$Repo\scripts\fc2instance.py" path
+if ($LASTEXITCODE -ne 0) { throw 'No game copy is bound to this session: claim one first, as the perftest skill says.' }
 $Bin = "$Game\bin"
 $Plugins = "$Bin\plugins"
 $Data = "$Game\Data_Win32"
-$Root = "$Game - perftest"
-$Repo = (Resolve-Path "$PSScriptRoot\..\..\..").Path
+$Root = "C:\Games\fc2instances\perftest\$(Split-Path $Game -Leaf)"
 $Base = @('DevTools', 'UFCP')
 
 # The CLI reports progress on stderr, which Windows PowerShell would otherwise stop the script on.
@@ -48,7 +51,9 @@ function Invoke-Cli {
 }
 
 function Assert-GameClosed {
-    if (Get-Process farcry2, FCSE -ErrorAction SilentlyContinue) { throw 'The game is running: quit it first.' }
+    if (Get-Process farcry2, FCSE -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$Bin\*" }) {
+        throw 'The game is running in this copy: quit it first.'
+    }
 }
 
 function Read-RunInfo($folder) { Get-Content "$folder\run.json" -Raw | ConvertFrom-Json }
@@ -125,7 +130,7 @@ switch ($Step) {
         $last = Get-ChildItem $Root -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending |
             Select-Object -First 1
         if ($last -and -not $Force -and -not (Read-RunInfo $last.FullName).restored) {
-            throw "The last run, $($last.FullName), was never restored: -Step restore puts the install back first, or -Force backs up the install as it is."
+            throw "The last run, $($last.FullName), was never restored: -Step restore puts the copy back first, or -Force backs up the copy as it is."
         }
 
         $folder = Join-Path $Root ((Get-Date).ToString('yyyy-MM-dd-HHmm') + "-$Mod")
@@ -190,6 +195,6 @@ switch ($Step) {
         Restore-Install "$folder\before"
         $info.restored = $true
         Save-RunInfo $folder $info
-        "restored the install from $folder\before"
+        "restored the copy from $folder\before"
     }
 }

@@ -29,9 +29,10 @@ import sys
 
 import pefile
 
+from modstatus import MAIN_TREE
+
 DEFAULT_UPLAY = r"C:\Program Files (x86)\Steam\steamapps\common\Far Cry 2\bin\Dunia.dll"
-DEFAULT_RETAIL = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                              "..", "tmp", "compare-dlls", "dlls", "1.03.gog.Dunia.dll")
+DEFAULT_RETAIL = str(MAIN_TREE / "tmp" / "compare-dlls" / "dlls" / "1.03.gog.Dunia.dll")
 
 # FCSE::Pattern("aa bb" "cc dd") - adjacent string literals are concatenated by the compiler, and a
 # long pattern is usually wrapped across two of them, so every quoted chunk in the call is joined.

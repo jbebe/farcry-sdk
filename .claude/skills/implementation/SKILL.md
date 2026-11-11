@@ -3,6 +3,9 @@ name: implementation
 description: Use when the user asks to implement, add, alter, extend, refactor, or fix something in this repo
 ---
 
+When the user has said to build, implement or create a feature and the session is not in a worktree
+yet, bind one first with `/worktree`. A small fix in the main tree needs none.
+
 ## Comment rules
 
 Applies to every language and every file. No exceptions per-language.

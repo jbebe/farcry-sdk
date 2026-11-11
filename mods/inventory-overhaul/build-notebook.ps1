@@ -13,7 +13,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 . "$PSScriptRoot\build-common.ps1"
-$Retail = "$Repo\tmp\gamefiles"
+$Retail = "$Tmp\gamefiles"
 $Scripts = "$PSScriptRoot\notebook"
 $Layer = "$PSScriptRoot\layer\mods"
 $Work = "$PSScriptRoot\out\notebook"
@@ -56,7 +56,7 @@ foreach ($file in "notebook.xbg", "notebook_ref.skeleton", "notebook_page.xbm") 
     Copy-Item "$Work\extract\mods\$ModelFolder\$file" "$Layer\$ModelFolder\$file"
 }
 Exec $Cli xbm set "$Layer\$ModelFolder\notebook_page.xbm" AlphaTestEnabled=1 -g $Game | Out-Null
-Exec python "$Scripts\clips.py" "$Work\extract" (Split-Path $Layer) $Work
+Exec python "$Scripts\clips.py" "$Work\extract" (Split-Path $Layer) $Work $Retail
 
 # The archetype in each world, boxed by the pages' geometry.
 Copy-Item "$Layer\$ModelFolder\notebook.xbg" "$Work\notebook.xbg"

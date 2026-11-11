@@ -2,14 +2,14 @@
 
 import argparse
 import math
-import os
 import re
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-LOGS = Path(os.environ.get("FC2_GAME", r"C:\Games\Far Cry 2")) / "bin" / "devtools-logs"
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+from fc2instance import session_game  # noqa: E402
 
 # A combat log's line, then an fcse.log line, where combat lines go when no combat log hears them;
 # the sender dropped from both.
@@ -73,9 +73,14 @@ def read_lines(path):
 
 
 def default_log():
-    sessions = sorted(LOGS.glob("combat-*.log"))
+    """The newest combat log of FC2_GAME, or of the game copy bound to this Claude session."""
+    game = session_game(Path(__file__).parent)
+    if game is None:
+        sys.exit("No game to read: set FC2_GAME, or pass a path.")
+    logs = game / "bin" / "devtools-logs"
+    sessions = sorted(logs.glob("combat-*.log"))
     if not sessions:
-        sys.exit(f"No combat logs in {LOGS}; pass a path.")
+        sys.exit(f"No combat logs in {logs}; pass a path.")
     return sessions[-1]
 
 

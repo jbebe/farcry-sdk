@@ -20,6 +20,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 sys.path.insert(0, str(REPO / "scripts"))
 from entity_fragments import crc, fragment_path, prototypes, replace_hashed, write
+from modstatus import MAIN_TREE
 
 LAYER = HERE / "layer" / "mods"
 # Each library by its path in the game, then in the extracted files.
@@ -241,7 +242,7 @@ def fragments(source, cli, work, sheet):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", default=str(REPO / "tmp/gamefiles"), help="the game's archives, extracted")
+    parser.add_argument("--source", default=str(MAIN_TREE / "tmp/gamefiles"), help="the game's archives, extracted")
     parser.add_argument("--game", default=r"C:\Games\Far Cry 2", help="the install the map's model is read from")
     parser.add_argument("--cli", default=str(REPO / "tools/JackAll/src/JackAll.Cli/bin/Release/net10.0/jackall-cli.exe"))
     parser.add_argument("--texconv", default=str(REPO / "tools/third-party/FCBConverter/texconv.exe"))

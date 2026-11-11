@@ -14,11 +14,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import modstatus
-from modstatus import REPO
+from modstatus import MAIN_TREE, REPO
 
 ADDRESS_TABLE = REPO / "tools" / "FCSE" / "assets" / "address_table.bin"
 ADDRLIB = REPO / "tools" / "FCSE" / "tools" / "addrlib"
-VANILLA_CONTROLS = REPO / "tmp" / "gamefiles" / "common" / "config" / "defaultusercontrols.xml"
+VANILLA_CONTROLS = MAIN_TREE / "tmp" / "gamefiles" / "common" / "config" / "defaultusercontrols.xml"
 CONTROL_FRAGMENTS = "mods/config/defaultusercontrols.xml/"
 STRINGS = "mods/languages/english/oasisstrings.fragment.xml"
 # Element-level checks below cover these, so a shared path alone is not a collision. An action map
@@ -73,8 +73,7 @@ class Resolver:
         self.starts, self.by_retail = _address_table()
         self._retail_keys = [r for r, _ in self.by_retail]
         self._sections = {}
-        cache = Path(modstatus.git("rev-parse", "--git-common-dir").strip())
-        self._cache_path = (cache if cache.is_absolute() else REPO / cache) / "modstatus-patterns.json"
+        self._cache_path = MAIN_TREE / ".git" / "modstatus-patterns.json"
         try:
             self._cache = json.loads(self._cache_path.read_text(encoding="utf-8"))
         except (OSError, ValueError):

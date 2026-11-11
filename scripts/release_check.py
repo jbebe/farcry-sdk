@@ -20,7 +20,7 @@ from pathlib import Path
 
 import collisions
 import modstatus
-from modstatus import REPO, Check
+from modstatus import MAIN_TREE, REPO, Check
 
 SOURCE = (".cpp", ".h", ".hpp", ".inl", ".fx", ".hlsl", ".fxh")
 SCRIPT = (".py", ".ps1", ".cmake", ".txt", ".json", ".js", ".ts")
@@ -164,7 +164,7 @@ def unused_candidates(project, vanilla):
 
 def vanilla_names():
     """Every file and folder name in the extracted retail game, or None when tmp/gamefiles is absent."""
-    root = REPO / "tmp" / "gamefiles"
+    root = MAIN_TREE / "tmp" / "gamefiles"
     if not root.is_dir():
         return None
     return {name.lower() for _, folders, names in os.walk(root) for name in folders + names}
@@ -242,7 +242,11 @@ def game_tests(project, skip):
         return Check("game tests", "fail", f"{len(tests)} not run (--no-game)",
                      "deploy the mod, get the user's OK to launch the game, then run without --no-game"), []
     sys.path.insert(0, str(REPO / "tools" / "fc2drive"))
-    from fc2drive import NEEDS_APPROVAL, SKIPPED
+    from fc2drive import NEEDS_APPROVAL, SKIPPED, install
+    try:
+        install()
+    except SystemExit as error:
+        return Check("game tests", "fail", f"{len(tests)} not run: {error}", "deploy the mod with /deploy"), []
 
     ended = [f for test in tests
              if (f := run_logged(project, f"game test {test.stem}", [sys.executable, str(test)], REPO))]

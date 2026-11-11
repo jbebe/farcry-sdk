@@ -2,7 +2,7 @@
 (eqmpcp becomes eqnote), MOVE weapon 9's branches cloned onto NOTEBOOK and repointed at them, and
 each registered in each world's depload wherever the map's is.
 
-    python clips.py <folder the banks were extracted to> <layer> <work folder>
+    python clips.py <folder the banks were extracted to> <layer> <work folder> <extracted game>
 """
 import os
 import re
@@ -11,10 +11,9 @@ import subprocess
 import sys
 import zlib
 
-BANKS, LAYER, WORK = sys.argv[1], sys.argv[2], sys.argv[3]
+BANKS, LAYER, WORK, GAME = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 JACKALL = os.path.join(REPO, r"tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe")
-GAME = os.path.join(REPO, r"tmp\gamefiles")
 RETAIL_MOVE = GAME + r"\common\graphics\move\movemgr.bin"
 WORLDS = {w: GAME + r"\worlds\worlds\worlds\%s\generated\%s_depload.dat" % (w, w) for w in ("world1", "world2")}
 FOLDER = r"graphics\characters\_common\animations\equipment\equipped_gadget"
