@@ -120,6 +120,18 @@ endif()
 
 gtest_discover_tests(entity_data_tests)
 
+# The channels plugins send to each other on, under the threading the API promises.
+add_executable(messaging_tests
+  "messaging_tests.cpp"
+)
+target_link_libraries(messaging_tests PRIVATE fcse_core GTest::gtest_main)
+
+if (CMAKE_VERSION VERSION_GREATER 3.12)
+  set_property(TARGET messaging_tests PROPERTY CXX_STANDARD 20)
+endif()
+
+gtest_discover_tests(messaging_tests)
+
 # Runs the real src/lua/runtime/fcse.lua against a stubbed native table, in the very interpreter
 # this build produced - so the dialect, the FFI behaviour and the runtime under test are all the
 # ones that will ship, not an approximation of them. Not wrapped in GoogleTest: the thing under test

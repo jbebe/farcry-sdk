@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-#define FCSE_API_VERSION 9
+#define FCSE_API_VERSION 10
 
 // Which Dunia.dll the game is running. Far Cry 2 v1.03 shipped as two different PC builds whose
 // images place the same code at different addresses, so a raw RVA is only ever true of one of them.
@@ -272,6 +272,22 @@ typedef bool (*FCSE_RegisterSettingsFn)(const char* pluginName, const FCSE_Setti
 // plugin and name exists or the text is not a value of its type.
 typedef bool (*FCSE_SetSettingFn)(const char* pluginName, const char* settingName, const char* value);
 
+// Messaging between plugins. A channel is a name the plugins that use it agree on; FCSE knows none
+// of them, and the bytes sent on one mean whatever its listener documents.
+//
+// A message as a listener gets it: the sending plugin's module name, resolved as its log tag is, and
+// the bytes it sent. Both are valid for the call only.
+typedef void (*FCSE_MessageFn)(const char* sender, const void* data, size_t size, void* userdata);
+
+// Listens on `channel` for the rest of the session. Valid from FCSE_Load on, from any thread. False
+// for an empty channel or a null onMessage.
+typedef bool (*FCSE_ListenFn)(const char* channel, FCSE_MessageFn onMessage, void* userdata);
+
+// Hands `data` to every listener on `channel`, on this thread and in the order they listened, and
+// returns how many there were: 0 means nobody heard it. Valid from FCSE_Load on, from any thread, a
+// listener included.
+typedef uint32_t (*FCSE_SendFn)(const char* channel, const void* data, size_t size);
+
 // Values a plugin keeps on a game entity - the gun in the player's hands, a car, an NPC - under keys
 // of its own. They live in FCSE's entity component, CFCSEDataComponent, which the engine loads from
 // the entity's archetype data and saves with the entity, so they survive a save and reload. The
@@ -347,6 +363,10 @@ typedef struct FCSE_PluginAPI {
 
     // See FCSE_SetSettingFn above.
     FCSE_SetSettingFn SetSetting;
+
+    // See FCSE_ListenFn and FCSE_SendFn above.
+    FCSE_ListenFn Listen;
+    FCSE_SendFn Send;
 } FCSE_PluginAPI;
 
 // Required export. Called once per plugin, right after FCSE.exe loads Dunia.dll and before any
@@ -461,8 +481,20 @@ inline FCSE_GameBuild RunningBuild() {
     return api == nullptr ? FCSE_GAME_BUILD_UNKNOWN : api->gameBuild;
 }
 
-// Log, with the message formatted printf-style. Does nothing before Bind, and a line longer than
-// 1023 characters is cut short and ends in "...".
+// Formats a line printf-style, a line longer than 1023 characters cut short to end in "...". False
+// when the format fails.
+inline bool FormatLine(char (&line)[1024], const char* format, va_list args) {
+    const int length = std::vsnprintf(line, sizeof(line), format, args);
+    if (length < 0) {
+        return false;
+    }
+    if (static_cast<size_t>(length) >= sizeof(line)) {
+        std::memcpy(line + sizeof(line) - 4, "...", 4);
+    }
+    return true;
+}
+
+// Log, with the line formatted by FormatLine. Does nothing before Bind.
 inline void Logf(const char* format, ...) {
     const FCSE_PluginAPI* api = ApiPointer();
     if (api == nullptr) {
@@ -472,15 +504,34 @@ inline void Logf(const char* format, ...) {
     char line[1024];
     va_list args;
     va_start(args, format);
-    const int length = std::vsnprintf(line, sizeof(line), format, args);
+    const bool formatted = FormatLine(line, format, args);
     va_end(args);
-    if (length < 0) {
-        return;
+    if (formatted) {
+        api->Log(line);
     }
-    if (static_cast<size_t>(length) >= sizeof(line)) {
-        std::memcpy(line + sizeof(line) - 4, "...", 4);
+}
+
+// Send, with the line formatted by FormatLine and sent with its terminating NUL, and logged instead
+// when nobody heard it. Returns how many did; does nothing before Bind.
+inline uint32_t Sendf(const char* channel, const char* format, ...) {
+    const FCSE_PluginAPI* api = ApiPointer();
+    if (api == nullptr) {
+        return 0;
     }
-    api->Log(line);
+
+    char line[1024];
+    va_list args;
+    va_start(args, format);
+    const bool formatted = FormatLine(line, format, args);
+    va_end(args);
+    if (!formatted) {
+        return 0;
+    }
+    const uint32_t heard = api->Send(channel, line, std::strlen(line) + 1);
+    if (heard == 0) {
+        api->Log(line);
+    }
+    return heard;
 }
 
 // A lazily-resolved engine address, typed.

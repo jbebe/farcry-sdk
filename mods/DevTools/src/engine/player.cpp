@@ -59,14 +59,15 @@ void Install() {
 
 void* Local() { return g_getLocalPlayer != nullptr ? g_getLocalPlayer() : nullptr; }
 
-void* Pawn() {
-    void* local = Local();
-    if (local == nullptr || !g_pawnClass) {
-        return nullptr;
-    }
-
+void* Entity() {
     // The scene is a component of the player's entity, which also holds the pawn.
-    void* entity = FCSE::ApiPointer()->EntityData->EntityOf(Read<void*>(local, kPlayerScene));
+    void* local = Local();
+    return local != nullptr ? FCSE::ApiPointer()->EntityData->EntityOf(Read<void*>(local, kPlayerScene))
+                            : nullptr;
+}
+
+void* Pawn() {
+    void* entity = g_pawnClass ? Entity() : nullptr;
     return entity != nullptr ? Entity::Component(entity, g_pawnClass() + kHierarchyPawnId) : nullptr;
 }
 

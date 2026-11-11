@@ -2,7 +2,6 @@
 // stands and moves, where he is in the soldier's view, grass, bushes, the camo suit, cover, shade,
 // night, fog and the soldier's state. The game's own checks of distance, view, stance and movement
 // give way to it.
-#include "engine/combat_log.h"
 #include "engine/damage.h"
 #include "engine/game.h"
 #include "engine/memory.h"
@@ -594,8 +593,8 @@ namespace {
         g_walkTotal += micros;
         g_walkLongest = std::max(g_walkLongest, micros);
         if (now - g_walksLogged >= kWalkLogSeconds) {
-            CombatLogf("perception: %d grass walks in %.0f s, %.1f us on average, %.1f us at the longest", g_walks,
-                       now - g_walksLogged, g_walkTotal / g_walks, g_walkLongest);
+            FCSE::Sendf("combat", "perception: %d grass walks in %.0f s, %.1f us on average, %.1f us at the longest", g_walks,
+                        now - g_walksLogged, g_walkTotal / g_walks, g_walkLongest);
             g_walksLogged = now;
             g_walks = 0;
             g_walkTotal = 0.0;
@@ -884,13 +883,13 @@ namespace {
         }
         if (g_trace && now - seen.traced >= kTraceSeconds) {
             seen.traced = now;
-            CombatLogf("soldier %08X perception trace: %.1f m, %s, %s%s%s%s%s, %s; cover %.2f; visibility %.2f, "
-                       "lines %.2f and %.2f; fog full at %.0f m with %.2f; notices from %.0f m, "
-                       "recognises from %.0f m; he stands at %.1f, %.1f",
-                       id, distance, moving, kZoneNames[zone], HidingName(hiding), BushName(hiding),
-                       LightName(hiding), look.driving ? ", driving" : "", state, hiding.cover,
-                       visibility, Shooting::FuzzyLine(look.soldier), Shooting::ClearLine(look.soldier),
-                       g_fogEnd, g_fogAmount, notice, recognise, eye[0], eye[1]);
+            FCSE::Sendf("combat", "soldier %08X perception trace: %.1f m, %s, %s%s%s%s%s, %s; cover %.2f; visibility %.2f, "
+                        "lines %.2f and %.2f; fog full at %.0f m with %.2f; notices from %.0f m, "
+                        "recognises from %.0f m; he stands at %.1f, %.1f",
+                        id, distance, moving, kZoneNames[zone], HidingName(hiding), BushName(hiding),
+                        LightName(hiding), look.driving ? ", driving" : "", state, hiding.cover,
+                        visibility, Shooting::FuzzyLine(look.soldier), Shooting::ClearLine(look.soldier),
+                        g_fogEnd, g_fogAmount, notice, recognise, eye[0], eye[1]);
         }
         if (level >= seen.level) {
             seen.below = -1.0;
@@ -904,12 +903,12 @@ namespace {
             return;
         }
         seen.level = level;
-        CombatLogf("soldier %08X perception: %s the player at %.1f m, %s, %s%s%s%s%s, %s; cover %.2f, "
-                   "night %.2f; notices from %.0f m, recognises from %.0f m; %.1f s after first sighting him",
-                   id, level == 2 ? "recognises" : "notices", distance, moving, kZoneNames[zone],
-                   HidingName(hiding), BushName(hiding), LightName(hiding),
-                   hiding.givenAway ? ", given away by his shot" : "", state, hiding.cover, look.night, notice,
-                   recognise, now - seen.sighted);
+        FCSE::Sendf("combat", "soldier %08X perception: %s the player at %.1f m, %s, %s%s%s%s%s, %s; cover %.2f, "
+                    "night %.2f; notices from %.0f m, recognises from %.0f m; %.1f s after first sighting him",
+                    id, level == 2 ? "recognises" : "notices", distance, moving, kZoneNames[zone],
+                    HidingName(hiding), BushName(hiding), LightName(hiding),
+                    hiding.givenAway ? ", given away by his shot" : "", state, hiding.cover, look.night, notice,
+                    recognise, now - seen.sighted);
     }
 
     float __fastcall EvaluateDetour(void* evaluator, void* unused, void* context, bool* applies) {

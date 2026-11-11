@@ -373,14 +373,14 @@ def _game_processes():
 
 
 def start(save=None, args=(), env=None):
-    """Launches the game with the remote control on, and waits for its world."""
+    """Launches the game with the remote control and DevTools' combat log on, and waits for its world."""
     if _game_processes():
         raise GameError("a game is already running")
     # The screensaver stops the game starting and the frame being presented.
     subprocess.run(["taskkill", "/f", "/im", "scrnsave.scr"], capture_output=True)
     kernel32.SetThreadExecutionState(KEEP_DISPLAY_ON)
 
-    command = [str(GAME_BIN / "FCSE.exe"), "-devtoolsremote"]
+    command = [str(GAME_BIN / "FCSE.exe"), "-devtoolsremote", "-combatlog"]
     if save:
         command += ["-load", SAVES.get(save, save)]
     game = Game(subprocess.Popen(command + list(args), cwd=GAME_BIN, env={**os.environ, **(env or {})}))

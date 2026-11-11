@@ -1,8 +1,8 @@
-// The hit log: every bullet, blast and blade that hits the player, and every one the player lands on
-// a soldier, written to the combat log with the health it took; and a soldier's death by anything else.
-#include "engine/combat_log.h"
+#include "remote/hit_log.h"
+
 #include "engine/damage.h"
-#include "engine/game.h"
+#include "engine/difficulty.h"
+#include "engine/entity.h"
 #include "engine/memory.h"
 #include "fcse_api.h"
 
@@ -10,9 +10,9 @@
 #include <cstdint>
 #include <cstdio>
 
-using namespace DifficultyOverhaul;
-
 namespace {
+    using namespace DevTools;
+
     Damage::StimHandlerFn g_originalPlayerDamage = nullptr;
     Damage::StimHandlerFn g_originalSoldierDamage = nullptr;
 
@@ -34,26 +34,30 @@ namespace {
                                                                 : nullptr;
     }
 
-    float Distance(const void* a, const void* b) {
+    Entity::Health HealthOf(const void* counters) {
+        return Entity::CountersHealth(counters).value_or(Entity::Health{NAN, NAN});
+    }
+
+    float Distance(void* a, void* b) {
         if (a == nullptr || b == nullptr) {
             return NAN;
         }
-        float p[3];
-        float q[3];
-        Game::Position(a, p);
-        Game::Position(b, q);
-        return Game::Distance(p, q);
+        const float* p = Entity::Matrix(a) + 12;
+        const float* q = Entity::Matrix(b) + 12;
+        return std::hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
     }
 
+    void* EntityOf(void* counters) { return FCSE::ApiPointer()->EntityData->EntityOf(counters); }
+
     // One line: who, what hit them where and from how far, the result, and the settings behind it.
-    void LogHit(const char* who, const char* type, const uint8_t* stim, float distance,
-                const void* counters, const char* result) {
+    void SendHit(const char* who, const char* type, const uint8_t* stim, float distance,
+                 const void* counters, const char* result) {
         const auto* missions = Read<const void*>(counters, kCountersMissionManager);
-        CombatLogf("%s hit: %s level %d, %s, at %.1f m, %s (%s, act %u, hit locations %s)", who,
-                   type, Damage::Level(stim), kPartNames[Damage::Part(stim)], distance, result,
-                   Game::Name(Game::CurrentDifficulty()),
-                   missions != nullptr ? Read<uint8_t>(missions, kMissionManagerAct) : 0u,
-                   Read<bool>(counters, kCountersHitLocations) ? "on" : "off");
+        FCSE::Sendf("combat", "%s hit: %s level %d, %s, at %.1f m, %s (%s, act %u, hit locations %s)",
+                    who, type, Damage::Level(stim), kPartNames[Damage::Part(stim)], distance, result,
+                    Difficulty::Name(),
+                    missions != nullptr ? Read<uint8_t>(missions, kMissionManagerAct) : 0u,
+                    Read<bool>(counters, kCountersHitLocations) ? "on" : "off");
     }
 
     void __fastcall PlayerDamageDetour(void* counters, void* unused, const uint8_t* stim) {
@@ -63,36 +67,37 @@ namespace {
             return;
         }
 
-        const float before = Damage::Health(counters);
+        const float before = HealthOf(counters).value;
         g_originalPlayerDamage(counters, unused, stim);
-        const float after = Damage::Health(counters);
+        const Entity::Health after = HealthOf(counters);
         void* shooter = Damage::Instigator(stim);
         char result[96];
         std::snprintf(result, sizeof(result), "health %.0f -> %.0f of %.0f, by %08X", before,
-                      after, Damage::MaxHealth(counters), Game::Id(shooter));
-        const float distance = Distance(Game::EntityOf(counters), shooter);
-        LogHit("player", type, stim, distance, counters, result);
-        if (before > 0.0f && after <= 0.0f) {
-            CombatLogf("player died: killed by %08X at %.1f m", Game::Id(shooter), distance);
+                      after.value, after.max, Entity::Id(shooter));
+        const float distance = Distance(EntityOf(counters), shooter);
+        SendHit("player", type, stim, distance, counters, result);
+        if (before > 0.0f && after.value <= 0.0f) {
+            FCSE::Sendf("combat", "player died: killed by %08X at %.1f m", Entity::Id(shooter),
+                        distance);
         }
     }
 
     void __fastcall SoldierDamageDetour(void* counters, void* unused, const uint8_t* stim) {
         const char* type = LoggedType(stim);
         if (type == nullptr || !Damage::ByPlayer(stim)) {
-            const float before = Damage::Health(counters);
+            const float before = HealthOf(counters).value;
             g_originalSoldierDamage(counters, unused, stim);
-            if (before > 0.0f && Damage::Health(counters) <= 0.0f) {
-                CombatLogf("soldier %08X died, not by the player: stim type %d level %d",
-                           Game::Id(Game::EntityOf(counters)), Damage::Type(stim), Damage::Level(stim));
+            if (before > 0.0f && HealthOf(counters).value <= 0.0f) {
+                FCSE::Sendf("combat", "soldier %08X died, not by the player: stim type %d level %d",
+                            Entity::Id(EntityOf(counters)), Damage::Type(stim), Damage::Level(stim));
             }
             return;
         }
 
         const bool wasWounded = Read<bool>(counters, kSoldierWounded);
-        const float before = Damage::Health(counters);
+        const float before = HealthOf(counters).value;
         g_originalSoldierDamage(counters, unused, stim);
-        const float after = Damage::Health(counters);
+        const float after = HealthOf(counters).value;
 
         char result[64];
         if (wasWounded) {
@@ -104,17 +109,28 @@ namespace {
                           : Read<bool>(counters, kSoldierWounded) ? ", wounded"
                                                                    : "");
         }
-        void* soldier = Game::EntityOf(counters);
+        void* soldier = EntityOf(counters);
         char who[24];
-        std::snprintf(who, sizeof(who), "soldier %08X", Game::Id(soldier));
-        LogHit(who, type, stim, Distance(soldier, Damage::Instigator(stim)), counters, result);
+        std::snprintf(who, sizeof(who), "soldier %08X", Entity::Id(soldier));
+        SendHit(who, type, stim, Distance(soldier, Damage::Instigator(stim)), counters, result);
+    }
+
+    bool Hook(const FCSE::Relocation<Damage::StimHandlerFn>& site, Damage::StimHandlerFn detour,
+              Damage::StimHandlerFn* original) {
+        return site && FCSE::ApiPointer()->Hook(reinterpret_cast<void*>(site.address()),
+                                                reinterpret_cast<void*>(detour),
+                                                reinterpret_cast<void**>(original));
     }
 }
 
-void InstallHitLog() {
+namespace DevTools::HitLog {
+
+void Install() {
     if (!Hook(Damage::PlayerDamage, &PlayerDamageDetour, &g_originalPlayerDamage) ||
         !Hook(Damage::SoldierDamage, &SoldierDamageDetour, &g_originalSoldierDamage)) {
-        FCSE::Logf("hit log: the player's or the soldiers' damage handling was not found in this "
-                   "build");
+        FCSE::ApiPointer()->Log("combat log: the player's or the soldiers' damage handling was not "
+                                "found in this build - no hits are logged");
     }
+}
+
 }

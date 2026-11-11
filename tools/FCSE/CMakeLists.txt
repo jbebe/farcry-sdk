@@ -205,6 +205,8 @@ add_library(fcse_core STATIC
   "src/engine/entity_data_store.h"
   "src/api/hook.cpp"
   "src/api/hook.h"
+  "src/api/messaging.cpp"
+  "src/api/messaging.h"
   "src/api/pattern_scan.cpp"
   "src/api/pattern_scan.h"
   "src/api/settings_registry.cpp"

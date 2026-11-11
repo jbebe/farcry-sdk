@@ -10,8 +10,6 @@ enum Difficulty { kUnknown = -1, kEasy, kNormal, kHardcore, kInfamous };
 // The difficulty the campaign is played on, or kUnknown before the gameplay manager exists.
 Difficulty CurrentDifficulty();
 
-const char* Name(Difficulty difficulty);
-
 // The local player's entity, or null outside a session, and whether an entity is it.
 void* PlayerEntity();
 bool IsPlayerEntity(const void* entity);

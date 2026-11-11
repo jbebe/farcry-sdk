@@ -1,7 +1,6 @@
 // Difficulty Overhaul - realistic damage and AI shooting, scaled by the game's own difficulty.
 #include "fcse_api.h"
 
-void InstallHitLog();
 void InstallDamageTaken();
 void InstallHitModel();
 void InstallFireDiscipline();
@@ -24,7 +23,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         return false;
     }
 
-    InstallHitLog();
     InstallDamageTaken();
     InstallHitModel();
     InstallFireDiscipline();

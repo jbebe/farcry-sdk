@@ -1,6 +1,5 @@
 // Brain trace: with -braintrace on the command line, logs each task a soldier's combat brain starts,
 // by the CRC32 of its instance name in mercbrain.
-#include "engine/combat_log.h"
 #include "engine/memory.h"
 #include "engine/shooting.h"
 #include "fcse_api.h"
@@ -39,7 +38,7 @@ namespace {
     void __fastcall StartDetour(void* task) {
         void* agent = Read<void*>(task, kTaskAgent);
         if (agent != nullptr && InCombatBrain(task)) {
-            CombatLogf("soldier %08X brain: %08X", Shooting::Id(agent), Read<uint32_t>(task, kTaskName));
+            FCSE::Sendf("combat", "soldier %08X brain: %08X", Shooting::Id(agent), Read<uint32_t>(task, kTaskName));
         }
         g_originalStart(task);
     }

@@ -10,7 +10,8 @@ void Install();
 // Null outside a session, which is how everything here tells a live game from a menu.
 void* Local();
 
-// The local player's CPawn, or null.
+// The local player's entity and CPawn, or null.
+void* Entity();
 void* Pawn();
 
 // The vehicle `pawn` sits in, or null.

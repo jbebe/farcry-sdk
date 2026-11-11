@@ -70,10 +70,10 @@ Notable changes to Difficulty Overhaul, loosely following
   foot, and keeps the launcher for you in a vehicle.
 - **Alerts end.** A soldier who has lost you gives up after 90 seconds, walks back to where he was
   when the alert began and goes back to his post, where the game kept him searching for good.
-- **A combat log** in `bin\difficulty-overhaul-logs`, one file per session and the last 20 kept:
-  every hit on you and by you, and every shot at you with its chance.
+- **A combat log**: every shot at you with its chance, and what each feature did to a soldier, in
+  `fcse.log`, or with DevTools' `-combatlog` in its combat log beside every hit on you and by you.
 - **Tuned on Hardcore.** The difficulties differ only in your health and how it comes back.
 
 ### Changed
-- **Needs FCSE 1.5.0.** Built for its plugin API 9; an older FCSE leaves this mod unloaded and says
+- **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.

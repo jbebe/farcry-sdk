@@ -6,7 +6,7 @@ Notable changes to Vehicle Overhaul, loosely following
 ## [Unreleased]
 
 ### Changed
-- **Needs FCSE 1.5.0.** Built for its plugin API 9; an older FCSE leaves this mod unloaded and says
+- **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.
 
 ## [1.1.0] - 2026-11-07

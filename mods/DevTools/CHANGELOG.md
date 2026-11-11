@@ -9,6 +9,9 @@ Notable changes to DevTools, loosely following
 - **Session log**, off unless launched with `-perftest`: every frame of a session, its
   time, GPU time, whether the player is in play and in a vehicle, and a once-a-second CPU, memory and
   VRAM sample, written to a CSV in `bin\`, to compare a session with a mod against one without.
+- **Combat log**, off unless launched with `-combatlog`: every hit on the player and by him, and
+  every line other mods send on FCSE's `combat` channel, Difficulty Overhaul's shots among them, in
+  one timeline in `bin\devtools-logs`, with `fight_report.py` to report a session's fights.
 - **Remote control**, off unless launched with `-devtoolsremote`: a local pipe, named after the install's
   folder so games from different installs each serve their own, for a program to read the
   game's state, teleport, fire actions, take screenshots and make and play recordings. For automated
@@ -98,5 +101,5 @@ Notable changes to DevTools, loosely following
   nothing appears in the Mod Configuration Menu.
 
 ### Changed
-- **Needs FCSE 1.5.0.** Built for its plugin API 9; an older FCSE leaves this mod unloaded and says
+- **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.

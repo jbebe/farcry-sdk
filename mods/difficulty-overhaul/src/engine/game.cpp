@@ -38,8 +38,6 @@ namespace {
     constexpr ptrdiff_t kEntityId = 0x08;
     constexpr ptrdiff_t kEntityPosition = 0x60;
     constexpr ptrdiff_t kEntityForward = 0x40;
-
-    const char* const kNames[] = {"Easy", "Normal", "Hardcore", "Infamous"};
 }
 
 namespace DifficultyOverhaul::Game {
@@ -58,10 +56,6 @@ Difficulty CurrentDifficulty() {
     }
     const auto level = Read<uint32_t>(gameplay, kGameplayManagerDifficulty);
     return level <= kInfamous ? static_cast<Difficulty>(level) : kUnknown;
-}
-
-const char* Name(Difficulty difficulty) {
-    return difficulty == kUnknown ? "difficulty unknown" : kNames[difficulty];
 }
 
 void* PlayerEntity() {

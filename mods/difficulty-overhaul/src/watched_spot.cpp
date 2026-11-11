@@ -1,6 +1,5 @@
 // Watched spot: a soldier keeps his aim on where the player vanished, so a peek from that spot meets
 // a settled rifle, and a player who reappears elsewhere makes him settle his aim again.
-#include "engine/combat_log.h"
 #include "engine/game.h"
 #include "engine/memory.h"
 #include "engine/shooting.h"
@@ -61,9 +60,9 @@ namespace {
             const float moved = Game::Distance(last.position, to);
             if (moved / range > kWatchedAngle) {
                 Shooting::RestartAim(shooting);
-                CombatLogf("soldier %08X watched spot: the player reappeared %.1f m from where he "
-                           "vanished after at most %.1f s, at %.1f m, aim restarts",
-                           Shooting::ShooterId(shooting), moved, unseen, range);
+                FCSE::Sendf("combat", "soldier %08X watched spot: the player reappeared %.1f m from where he "
+                            "vanished after at most %.1f s, at %.1f m, aim restarts",
+                            Shooting::ShooterId(shooting), moved, unseen, range);
             }
         }
         std::copy_n(to, 3, last.position);

@@ -32,6 +32,7 @@
 #include "engine/world_draw.h"
 #include "options/options.h"
 #include "overlay/overlay.h"
+#include "remote/combat_log.h"
 #include "remote/remote.h"
 #include "remote/session_log.h"
 
@@ -150,6 +151,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallInfiniteAmmoHooks();
     InstallDiamondsHooks();
     DevTools::SessionLog::Start();
+    DevTools::CombatLog::Start();
 
     // What a camera mode is made of. The two options below only say which key reaches one.
     DevTools::Entity::Install();

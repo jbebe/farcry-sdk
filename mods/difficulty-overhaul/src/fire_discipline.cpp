@@ -1,7 +1,6 @@
 // Fire discipline: a soldier holds his fire at the player until he recognises him, or in a fight until
 // he notices him, and waits aimed where he is rather than giving up the shot; one a hit has panicked
 // fires regardless.
-#include "engine/combat_log.h"
 #include "engine/memory.h"
 #include "engine/shooting.h"
 #include "fcse_api.h"
@@ -31,10 +30,10 @@ namespace {
         Stance& last = Remember(g_stances, shooting);
         if (stance != last) {
             last = stance;
-            CombatLogf("soldier %08X fire discipline: %s at %.1f m, visibility %.2f",
-                       Shooting::ShooterId(shooting),
-                       stance == Stance::kHolds ? "holds his fire" : "fires",
-                       Shooting::TargetDistance(shooting), visibility);
+            FCSE::Sendf("combat", "soldier %08X fire discipline: %s at %.1f m, visibility %.2f",
+                        Shooting::ShooterId(shooting),
+                        stance == Stance::kHolds ? "holds his fire" : "fires",
+                        Shooting::TargetDistance(shooting), visibility);
         }
         return stance == Stance::kFires;
     }

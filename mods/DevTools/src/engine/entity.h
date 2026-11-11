@@ -41,6 +41,9 @@ void AddRef(void* ref);
 // The entity's world transform: 4x4 row-major, rows 0-2 the basis, row 3 the position.
 const float* Matrix(void* entity);
 
+// The low half of the entity's id, as logs print it; 0 for no entity.
+uint32_t Id(const void* entity);
+
 // The yaw SetEuler takes for the way the entity faces now, in radians.
 float Yaw(void* entity);
 
@@ -61,8 +64,10 @@ struct Health {
     float max;
 };
 
-// The health in the entity's CFCXCountersComponent, the player's and a soldier's alike, if it has one.
+// The health in the entity's CFCXCountersComponent, the player's and a soldier's alike, if it has one,
+// and in a CFCXCountersComponent itself.
 std::optional<Health> HealthOf(void* entity);
+std::optional<Health> CountersHealth(const void* counters);
 
 // The entity's physics component, registering its class tag first, as the engine does on every
 // fetch. Null if the entity has none.

@@ -38,8 +38,9 @@ Stage: active
 - [done] Assaulters fire from cover; flanks 20/15 m wide; the game's height attack and relocating switched on - range-checked
 - [done] Cover by where the player is: crouch and fire at him in the open, cover first when he is behind cover - range-checked
 - [done] Stand-down: an alert ends after 90 s, the soldier walks back to where he was - range row not run
-- [done] Combat log per session in bin\difficulty-overhaul-logs, read by fight_report.py
+- [scrapped] Combat log per session in bin\difficulty-overhaul-logs, and its hit lines - moved to DevTools
 - [done] Perception and brain traces for testing (-perceptiontrace, -braintrace)
+- [done] Combat lines sent on FCSE's combat channel for DevTools' combat log, to fcse.log when nobody hears - both seen in game, GOG 2026-11-11
 - [new] Traces removed once tests read soldiers' sight and brain tasks through DevTools' remote control - plugins hold no test logic
 - [in progress] Difficulty spread (item G): a decision for every lever - health pools and cushion done, the rest undecided
 - [on hold] How enemies differ (item C): skill by role, guard posts below patrols below bodyguards - "don't implement, just discuss"

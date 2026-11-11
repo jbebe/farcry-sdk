@@ -34,33 +34,19 @@ Configuration Menu.
 | Launchers | A soldier with an RPG or a Carl Gustav fires it at the player only while the player is in a working vehicle. At a player on foot he draws his other gun: his primary, or his pistol or SMG when he has none. He keeps watching: the player getting into a vehicle brings the launcher out, and getting out puts it away. The game hands him the launcher whenever his target is beyond 20 m, so the first time he may raise it, find the player on foot and put it away; after that he remembers. His shots at other soldiers and at buddies are as shipped. Part of the layer's brain |
 | Squad tactics | Half a squad assaults and half suppresses, the assaulters rounded down; the game makes it 70 % assaulters, 90 % on Infamous, and splits only those within 35 m of where they last saw the player, so farther off every soldier assaults and in his kill band every soldier suppresses. An assaulter who reaches cover fires from it as a suppressor does, up over a low wall, out from a corner or standing behind a tall one, and looks for cover he can fire from; a shotgunner still rushes on. The plugin tells each soldier's brain whether the player has been in the open for him within the last second, nothing hiding his head (agent flag 34). With the player in the open, a soldier whose cover is more than 10 m off crouches and fires where he stands instead of running to it, looking again every 3 s and at once when the player leaves the open; a suppressor with no cover in reach does the same; and a soldier crouches to fire where he stops, after a run to the player's side, after fleeing fire, and where he looks for a target he ran toward. With the player behind cover, a soldier runs to his cover however far, and with none in reach takes any he can reach in a 20 m run, or rushes the player. The game's own tactics it ships switched off at long and medium range, or when a soldier's position is given away, are on: an assaulter with no cover to reach runs out to the player's side rather than straight at him, 20 m across his line at long range and 15 m at medium where the game has 7 m, a soldier goes after a target above him from a firing spot or a way up, and one under fire, hurt, or shot at by another target moves from where he was seen. The role split and the flag are the plugin; the rest is the layer's brain, written by `build-layer.ps1` |
 | Stand-down | An alert ends. 90 seconds into an alert that nothing new has started over, a soldier falls back to where he stood when he was alerted, aiming along the way, and goes back to idle. The game ends an alert only for an idle soldier who looked into something he glimpsed and found nothing, or once the player is inside a safe zone; any other alert, from a gunshot or a fight, kept him searching for good. Part of the layer's brain |
-| Combat log | Every hit on the player and every hit the player lands on a soldier, every AI shot at the player, and what each feature did to a soldier, one line each. See [Combat log](#combat-log) |
+| Combat log | Every AI shot at the player and what each feature did to a soldier, one line each. See [Combat log](#combat-log) |
 
 ## Combat log
 
-Each game session writes its own file, `bin\difficulty-overhaul-logs\combat-<date>_<time>.log`, and
-the folder keeps the last 20, since `fcse.log` starts over at every launch. Every line also goes to
+Each line is sent on FCSE's `combat` channel. Launched with `-combatlog`, DevTools hears it and writes
+it into its combat log, beside its own lines for every hit on the player and by him; DevTools'
+README says where and how `fight_report.py` reads it. With nobody listening, the line goes to
 `fcse.log`. A soldier is named by his entity id, the same in every line about him:
 
 ```
 soldier 3A802DED shot at player: chance 0.66 (recoil 1.00, sighting 1.00, crossing 1.00, shaken 1.00) at 58.6 m, 2.6 s on him, at the torso, hit; visibility 0.77, assault rifle; the player standing at 0.0 m/s
-player hit: pierce level 10, torso, at 58.6 m, health 495 -> 231 of 495, by 3A802DED (Hardcore, act 1, hit locations off)
-player died: killed by 3A802DED at 58.6 m
-soldier 3A802DED hit: pierce level 8, torso, at 58.0 m, health 250 -> 146 (Hardcore, act 1, hit locations on)
 soldier 3A802DED suppressed: hit, he panics at 58.6 m
 soldier 7C000123 fire discipline: holds his fire at 30.2 m, visibility 0.12
-soldier 7C000123 died, not by the player: stim type 4 level 1000
-```
-
-`fight_report.py` reads a session and reports it: totals by range, each death with who fired in the
-10 s before it, each soldier from his first shot to his last, and flags for what should not happen,
-such as a shot with no chance or a death within 2 s of the killer's first shot:
-
-```
-python fight_report.py                          the newest session
-python fight_report.py <file>                   a session file, or an fcse.log
-python fight_report.py --at 19:30:43            the lines in the 10 s before that time
-python fight_report.py --soldier 3A802DED       every line about one soldier
 ```
 
 Launched with `-perceptiontrace`, the game also logs every soldier's check of the player four times a

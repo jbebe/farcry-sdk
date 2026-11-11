@@ -1,6 +1,5 @@
 // Suppression: the player's bullets shake a soldier's aim at the player for a moment, and one that
 // hits him panics him into firing back however little he sees. Neither stops his fire.
-#include "engine/combat_log.h"
 #include "engine/damage.h"
 #include "engine/game.h"
 #include "engine/memory.h"
@@ -43,9 +42,9 @@ namespace {
         const bool held =
             Shooting::Shake(shooting, hit ? kHitFactor : kNearMissFactor, hit, kShakenSeconds);
         if (hit || !held) {
-            CombatLogf("soldier %08X suppressed: %s at %.1f m", Shooting::ShooterId(shooting),
-                       hit ? "hit, he panics" : "near miss",
-                       Shooting::TargetDistance(shooting));
+            FCSE::Sendf("combat", "soldier %08X suppressed: %s at %.1f m", Shooting::ShooterId(shooting),
+                        hit ? "hit, he panics" : "near miss",
+                        Shooting::TargetDistance(shooting));
         }
     }
 }

@@ -22,6 +22,7 @@ Stage: maintenance
 - [done] Example plugin and example script, the same effects side by side
 - [new] FATAL report from an unhandled-exception filter installed after the engine's own and chained to it - agreed for 1.4.3
 - [done] SetSetting, API v9: any plugin's setting set from text for this session, the file untouched - DevTools' setting set UFCP's field of view in game 2026-11-09
+- [done] Messaging between plugins, API v10: a message on a named channel reaches every plugin listening, and the send says whether anyone heard - DO to DevTools in game, GOG 2026-11-11
 - [scrapped] Hand-rolled Mods page on CGameMenu - crashed; the page intercepts .mgb loads instead
 
 ## Approvals

@@ -69,8 +69,8 @@ recoil and the time he needs to settle his aim. Hard, but every death has a reas
   foot, and keeps the launcher for you in a vehicle.
 - **Alerts end.** A soldier who has lost you gives up after 90 seconds, walks back to where he was
   when the alert began and goes back to his post, where the game kept him searching for good.
-- **A combat log** in `bin\difficulty-overhaul-logs`, one file per session and the last 20 kept:
-  every hit on you and by you, and every shot at you with its chance. Attach it to a bug report.
+- **A combat log**: every shot at you with its chance, and what each feature did to a soldier, in
+  `bin\fcse.log`. It starts over at every launch, so attach it to a bug report before playing again.
 
 Everything is tuned on Hardcore. The difficulties differ only in how much you can take and how you
 heal; the soldiers are the same on every setting. Fights between soldiers, and between soldiers and your

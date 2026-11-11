@@ -1,4 +1,4 @@
-"""Reads a Difficulty Overhaul combat log and reports its fights. README.md says how to use it."""
+"""Reads a combat log and reports its fights. README.md says how to use it."""
 
 import argparse
 import math
@@ -9,11 +9,12 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-LOGS = Path(os.environ.get("FC2_GAME", r"C:\Games\Far Cry 2")) / "bin" / "difficulty-overhaul-logs"
+LOGS = Path(os.environ.get("FC2_GAME", r"C:\Games\Far Cry 2")) / "bin" / "devtools-logs"
 
-# A session file's line, then an fcse.log line from this plugin.
-SESSION_LINE = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d+) (.*)$")
-FCSE_LINE = re.compile(r"^\[[\d-]+ (\d\d):(\d\d):(\d\d)\.(\d+)\]\[difficultyoverhaul\] (.*)$")
+# A combat log's line, then an fcse.log line, where combat lines go when no combat log hears them;
+# the sender dropped from both.
+SESSION_LINE = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d+) (?:\[[^\]]*\] )?(.*)$")
+FCSE_LINE = re.compile(r"^\[[\d-]+ (\d\d):(\d\d):(\d\d)\.(\d+)\]\[[^\]]*\] (.*)$")
 
 # Lines from before the session files lack the soldier, the shake, the weapon and the shooter.
 SHOT = re.compile(
@@ -229,7 +230,7 @@ def report(path, lines):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("log", nargs="?", type=Path,
-                        help="a combat log or fcse.log; the newest session's when left out")
+                        help="a combat log or fcse.log; the newest combat log when left out")
     parser.add_argument("--at", help="print the lines around this time, HH:MM:SS")
     parser.add_argument("--window", type=float, default=10.0,
                         help="seconds before --at to print (default 10)")

@@ -1,6 +1,5 @@
 // Squad memory: a squad keeps the player as its target, at the spot it last saw him, for as long as
 // he stays near that spot; only slipping away unseen lets it forget him.
-#include "engine/combat_log.h"
 #include "engine/game.h"
 #include "engine/memory.h"
 #include "fcse_api.h"
@@ -74,16 +73,16 @@ namespace {
         Pass& last = Remember(g_passes, lieutenant);
         if (sighting == nullptr) {
             if (last.spotted) {
-                CombatLogf("squad memory: the squad lost him %.0f s after it last saw him, %.1f m from "
-                           "there, where the game keeps him %.0f s",
-                           last.unseen, last.distance, last.memory);
+                FCSE::Sendf("combat", "squad memory: the squad lost him %.0f s after it last saw him, %.1f m from "
+                            "there, where the game keeps him %.0f s",
+                            last.unseen, last.distance, last.memory);
             }
             last.spotted = false;
             g_originalUpdateTargetList(lieutenant, unused, noTargets);
             return;
         }
         if (!last.spotted) {
-            CombatLogf("squad memory: the squad spotted the player");
+            FCSE::Sendf("combat", "squad memory: the squad spotted the player");
         }
         const auto score = Read<float>(lieutenant, kLieutenantCampingScore);
         const auto seenAt = Read<float>(sighting, kSeenTargetTime);
@@ -98,9 +97,9 @@ namespace {
         }
         if (unseen > last.memory && last.reported != seenAt) {
             last.reported = seenAt;
-            CombatLogf("squad memory: unseen %.0f s and %.1f m from where they last saw him, "
-                       "still hunted where the game would have forgotten him",
-                       unseen, distance);
+            FCSE::Sendf("combat", "squad memory: unseen %.0f s and %.1f m from where they last saw him, "
+                        "still hunted where the game would have forgotten him",
+                        unseen, distance);
         }
         Write(lieutenant, kLieutenantCampingScore, kForever);
         g_originalUpdateTargetList(lieutenant, unused, noTargets);

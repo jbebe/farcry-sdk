@@ -23,7 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fc2drive import GAME_BIN, Run, launch
 
-LOGS = GAME_BIN / "difficulty-overhaul-logs"
+LOGS = GAME_BIN / "devtools-logs"
 RIFLEMAN = "enemy_archetypes.Red_Faction.Assault_Caucasian"
 # The save behind RunDebug_demorange, which starts on the test range: changing world to it from
 # another save crashed in the frame after.

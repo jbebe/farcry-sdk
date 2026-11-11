@@ -489,6 +489,37 @@ from `bin\plugins\` and its subfolders. Then a row per frame:
 Rows are gathered as frames are presented and written once a second from a thread of the log's own,
 so the last second before a quit is not in the file. Five minutes at 100 fps comes to about 2 MB.
 
+## Combat log
+
+Launched with `-combatlog`, DevTools writes a fight as one timeline to
+`bin\devtools-logs\combat-<date>_<time>.log`, one file per launch and the last 20 kept. It listens on
+FCSE's `combat` channel, so any mod can add its own lines by sending them there (the FCSE README's
+Messaging section says how), and it sends its own: every bullet, blast and blade that hits the
+player, every one the player lands on a soldier, and a soldier's death by anything else. Each line
+carries the time and the plugin that sent it; a soldier is named by his entity id, the same in every
+line about him:
+
+```
+19:30:41.512 [difficultyoverhaul] soldier 3A802DED shot at player: chance 0.66 (recoil 1.00, sighting 1.00, crossing 1.00, shaken 1.00) at 58.6 m, 2.6 s on him, at the torso, hit; visibility 0.77, assault rifle; the player standing at 0.0 m/s
+19:30:41.513 [DevTools] player hit: pierce level 10, torso, at 58.6 m, health 495 -> 231 of 495, by 3A802DED (Hardcore, act 1, hit locations off)
+19:30:43.020 [DevTools] player died: killed by 3A802DED at 58.6 m
+19:30:39.877 [DevTools] soldier 3A802DED hit: pierce level 8, torso, at 58.0 m, health 250 -> 146 (Hardcore, act 1, hit locations on)
+19:30:39.878 [difficultyoverhaul] soldier 3A802DED suppressed: hit, he panics at 58.6 m
+19:30:40.101 [DevTools] soldier 7C000123 died, not by the player: stim type 4 level 1000
+```
+
+`fight_report.py` reads a combat log and reports it: totals by range, each death with who fired in
+the 10 s before it, each soldier from his first shot to his last, and flags for what should not
+happen, such as a shot with no chance or a death within 2 s of the killer's first shot. Shots,
+suppression and fire discipline are Difficulty Overhaul's lines:
+
+```
+python fight_report.py                          the newest combat log
+python fight_report.py <file>                   a combat log, or an fcse.log without hits
+python fight_report.py --at 19:30:43            the lines in the 10 s before that time
+python fight_report.py --soldier 3A802DED       every line about one soldier
+```
+
 ## Savegame launch
 
 `-load` opens the save and parses it correctly, then dies in what it does next: a validation pass

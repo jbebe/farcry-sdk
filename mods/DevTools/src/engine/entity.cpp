@@ -15,6 +15,7 @@ namespace {
 
     constexpr ptrdiff_t kRefCount = 0x08;
     constexpr ptrdiff_t kRefEntity = 0x0C;
+    constexpr ptrdiff_t kEntityId = 0x08;
     constexpr ptrdiff_t kEntityName = 0x10;
     constexpr ptrdiff_t kEntityMatrix = 0x30;
 
@@ -161,6 +162,8 @@ const float* Matrix(void* entity) {
     return reinterpret_cast<const float*>(static_cast<uint8_t*>(entity) + kEntityMatrix);
 }
 
+uint32_t Id(const void* entity) { return entity != nullptr ? Read<uint32_t>(entity, kEntityId) : 0; }
+
 float Yaw(void* entity) {
     // Local +Y is forward and yaw is measured from +X, hence the quarter turn.
     const float* matrix = Matrix(entity);
@@ -198,12 +201,15 @@ void* Component(void* entity, const char* className) {
 }
 
 std::optional<Health> HealthOf(void* entity) {
-    auto* counters = static_cast<uint8_t*>(Component(entity, "CFCXCountersComponent"));
-    auto* counter = counters != nullptr ? *reinterpret_cast<uint8_t**>(counters + kCountersHealth) : nullptr;
+    return CountersHealth(Component(entity, "CFCXCountersComponent"));
+}
+
+std::optional<Health> CountersHealth(const void* counters) {
+    const auto* counter = counters != nullptr ? Read<const void*>(counters, kCountersHealth) : nullptr;
     if (counter == nullptr) {
         return std::nullopt;
     }
-    return Health{*reinterpret_cast<float*>(counter + kCounterValue), *reinterpret_cast<float*>(counter + kCounterMax)};
+    return Health{Read<float>(counter, kCounterValue), Read<float>(counter, kCounterMax)};
 }
 
 void* PhysicsComponent(void* entity) {

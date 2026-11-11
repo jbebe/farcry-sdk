@@ -121,7 +121,8 @@ See `include/fcse_api.h` for the authoritative, documented ABI. Summary, from "n
    needed. See below.
 
 Alongside the tiers, **`EntityData`** keeps a plugin's own values on game entities, loaded from the
-entity library and carried through savegames - see [Entity data](#entity-data).
+entity library and carried through savegames - see [Entity data](#entity-data). **`Listen`** and
+**`Send`** let plugins talk to each other on named channels - see [Messaging](#messaging).
 
 ### Settings and `bin\fcse.ini`
 
@@ -248,6 +249,31 @@ does not know, so only these values are lost. The engine side is in
 Lua scripts have no entity data yet.
 
 `FCSE_API_VERSION` 8 appended `EntityData`, so a plugin built against 7 must be rebuilt.
+
+### Messaging
+
+A plugin listens on a channel, a name it agrees on with the plugins that send there, and from then
+on every message sent on it reaches the plugin's callback, with the bytes sent and the sender's
+module name - resolved by FCSE, as a log line's tag is, so a sender cannot name itself wrongly.
+`FCSE::Sendf(channel, format, ...)` sends a line formatted as `FCSE::Logf` formats it, with its
+terminating NUL, and logs it instead when nobody heard it:
+
+```cpp
+void OnCombat(const char* sender, const void* data, size_t size, void* userdata) {
+    // data is the NUL-terminated line `sender` sent
+}
+
+api->Listen("combat", &OnCombat, nullptr);   // from FCSE_Load on
+
+FCSE::Sendf("combat", "soldier %08X suppressed", id);
+```
+
+`Send` calls every listener on the sending thread, in the order they listened, before it returns how
+many there were, so a sender can tell when nobody heard. Both calls work from any thread, a listener
+included; a listener is never removed. FCSE gives no channel a meaning: the plugin that listens on
+one documents what it takes, as DevTools' README does for `combat`.
+
+Lua scripts have no messaging yet. `FCSE_API_VERSION` 10 appended `Listen` and `Send`.
 
 ### Conflict handling
 

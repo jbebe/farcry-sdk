@@ -1,7 +1,6 @@
 // The AI hit model against the player: aim that settles with distance, a chance that means what it
 // says, recoil in place of forced misses, no certain hits, aim at the body, and a chance that falls
 // with how well he sees the player and how fast the player crosses his aim.
-#include "engine/combat_log.h"
 #include "engine/game.h"
 #include "engine/memory.h"
 #include "engine/shooting.h"
@@ -225,11 +224,11 @@ namespace {
         }
         // Evidence for tracing where the game's chance goes wrong; to go once that is fixed.
         if (std::isnan(chance)) {
-            CombatLogf("soldier %08X shot at player: the game's chance is not a number: own status "
-                       "%.2f, target status %.2f, group %.2f, distance %.2f",
-                       Shooting::ShooterId(shooting), Read<float>(shooting, kOwnStatusFactor),
-                       Read<float>(shooting, kTargetStatusFactor), Read<float>(shooting, kGroupFactor),
-                       Read<float>(shooting, kDistanceFactor));
+            FCSE::Sendf("combat", "soldier %08X shot at player: the game's chance is not a number: own status "
+                        "%.2f, target status %.2f, group %.2f, distance %.2f",
+                        Shooting::ShooterId(shooting), Read<float>(shooting, kOwnStatusFactor),
+                        Read<float>(shooting, kTargetStatusFactor), Read<float>(shooting, kGroupFactor),
+                        Read<float>(shooting, kDistanceFactor));
         }
         g_shot.chance = std::min(chance, kMaxChance) * g_shot.recoil * g_shot.sighting *
                         g_shot.crossing * g_shot.shaken;
@@ -258,17 +257,17 @@ namespace {
         void* player = Shooting::Pawn(Shooting::Target(shooting));
         float velocity[3];
         Shooting::Velocity(player, velocity);
-        CombatLogf("soldier %08X shot at player: chance %.2f (recoil %.2f, sighting %.2f, crossing "
-                   "%.2f, shaken %.2f) at %.1f m, %.1f s on him, at the %s, %s; visibility %.2f, %s, "
-                   "he is %s; the player %s at %.1f m/s",
-                   Shooting::ShooterId(shooting), g_shot.chance, g_shot.recoil, g_shot.sighting,
-                   g_shot.crossing, g_shot.shaken, Shooting::TargetDistance(shooting),
-                   Shooting::AimSeconds(shooting), part == kHeadPart ? "head" : "torso",
-                   Read<bool>(shooting, kLastShotHit) ? "hit" : "miss", visibility,
-                   Shooting::WeaponClassName(Shooting::WeaponClass(shooting)),
-                   Shooting::StanceName(Shooting::Stance(Shooting::ShooterPawn(shooting))),
-                   Shooting::StanceName(Shooting::Stance(player)),
-                   std::hypot(velocity[0], velocity[1], velocity[2]));
+        FCSE::Sendf("combat", "soldier %08X shot at player: chance %.2f (recoil %.2f, sighting %.2f, crossing "
+                    "%.2f, shaken %.2f) at %.1f m, %.1f s on him, at the %s, %s; visibility %.2f, %s, "
+                    "he is %s; the player %s at %.1f m/s",
+                    Shooting::ShooterId(shooting), g_shot.chance, g_shot.recoil, g_shot.sighting,
+                    g_shot.crossing, g_shot.shaken, Shooting::TargetDistance(shooting),
+                    Shooting::AimSeconds(shooting), part == kHeadPart ? "head" : "torso",
+                    Read<bool>(shooting, kLastShotHit) ? "hit" : "miss", visibility,
+                    Shooting::WeaponClassName(Shooting::WeaponClass(shooting)),
+                    Shooting::StanceName(Shooting::Stance(Shooting::ShooterPawn(shooting))),
+                    Shooting::StanceName(Shooting::Stance(player)),
+                    std::hypot(velocity[0], velocity[1], velocity[2]));
         g_shot = {};
         Remember(g_lastShot, shooting) = Game::Now();
         return result;

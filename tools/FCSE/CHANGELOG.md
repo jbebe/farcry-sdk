@@ -8,12 +8,16 @@ Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachang
 - **Tools can switch any mod's setting for one session.** For authors: `FCSE_PluginAPI::SetSetting`
   sets a registered setting from its text, as `fcse.ini` spells it; the owner's callback fires and the
   file keeps its value. DevTools' remote control uses it to switch a mod's features in automated tests.
+- **Mods can talk to each other.** For authors: `FCSE_PluginAPI::Listen` and `Send` carry messages
+  on named channels from one plugin to every plugin listening, and `Send` says how many heard;
+  `FCSE::Sendf` sends a formatted line and logs it when nobody heard it.
+  Difficulty Overhaul uses it to write its combat lines into DevTools' combat log.
 
 ### Changed
 - **Plugin DLLs built for an earlier FCSE no longer load** until their authors rebuild them, so
   update your plugins along with FCSE. `fcse.log` names each one that did not load. Lua scripts are
-  not affected. For authors: the plugin ABI is now `FCSE_API_VERSION` 9, since `FCSE_PluginAPI`
-  gained `SetSetting`; a rebuild is all a plugin needs.
+  not affected. For authors: the plugin ABI is now `FCSE_API_VERSION` 10, since `FCSE_PluginAPI`
+  gained `SetSetting`, `Listen` and `Send`; a rebuild is all a plugin needs.
 
 ## [1.4.2] - 2026-10-21
 
