@@ -22,6 +22,14 @@ Stage: active
 - [scrapped] Mast (cell tower) notes - user: useless info
 - [scrapped] Guard posts' supplies and gun counts - G.P. only, the user's pick
 
+## To validate
+
+- The sheet held at 62.5 cm, 1:3 600 - not seen
+- The sheet level as the view looks up and down - script only
+- Left mouse held reads the sheet close; the monocular during the zoom - script only, the monocular untried
+- Bent at the folds - script only
+- The paper's brightness under the world's light - not judged
+
 ## Approvals
 
 ## Checks

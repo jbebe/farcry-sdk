@@ -20,6 +20,10 @@ Stage: maintenance
 - [new] A normal map through a Generic material - open option, not picked; loses the worn look
 - [scrapped] The multiplayer dropped pickup - skipped on the single-player rule, it still has no barrel
 
+## To validate
+
+- The shot sound, first and third person - not confirmed
+
 ## Approvals
 
 - played: 276998b 2026-10-09 - with Aiming Overhaul: "everything works perfectly" (the PSO-1 from its own data)

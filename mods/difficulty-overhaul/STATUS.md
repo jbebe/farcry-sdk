@@ -62,6 +62,16 @@ Stage: active
 - [scrapped] Recognition: an alerted soldier keeps looking - never acted, removed
 - [scrapped] Re-settle after a reload, close-range recoil scaling, over-cover fade-in - decided against 2026-10-26
 
+## To validate
+
+- Health on Easy, Normal and Infamous, in AK-47 hits from full - only Hardcore checked
+- No head aim in a soldier's first 3 s on the player - range row not run
+- Pistols and SMGs losing accuracy with range - not run
+- A soldier at the wheel sees only through his windscreen - no driver seen
+- The notice delay at a soldier's side, at most 2 s - not run
+- Soldiers switching from launchers as the player gets in and out of a vehicle - unseen
+- Stand-down: an alert ends after 90 s and the soldier walks back - range row not run
+
 ## Approvals
 
 - played: 8e20a82 2026-11-06 - alpha4 on Steam, Hardcore: "I feel like this is it now. I can't add anything to it, the experience was right."

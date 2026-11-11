@@ -55,6 +55,18 @@ Stage: active
 - [scrapped] Grit, chips and dust sprites in dirt in the eye - user wanted only blurry blobs
 - [scrapped] Operation manual extras: burst fade, new bonus attributes, window values, zeroing challenges - user rejected
 
+## To validate
+
+- Crouched and still the sway halves, moving widens it - unconfirmed
+- Lean with a scope up: the muzzle flash and the scope follow the leaned eye - unchecked
+- Gun near walls: swings down out of a wall, won't fire until back up - latest changes unplayed
+- Recoil that stays in the aim, the first two kicks light - unplayed
+- Full auto spreads from a burst's 4th shot, up to 8 shots' worth - unplayed
+- Operation manual: iron-sight spread halved standing, quartered crouched - unplayed
+- Glass in the eyepiece: lines bow, colours part, rim darkens, faint tint - unconfirmed
+- Lowering a scope: the eye stays back while it goes down - unseen
+- No radial edge blur on the mod's scopes - unconfirmed
+
 ## Approvals
 
 - played: 10aebf7 2026-10-15 - implied by the aiming-overhaul-1.2.0 release

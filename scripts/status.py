@@ -20,7 +20,9 @@ Rules for this session (format and details: .claude/skills/status/SKILL.md):
 - When the user says a mod played well or is good, or that its BBCode and short message are checked,
   record the approval in that mod's STATUS.md at the current commit and tell them in one line.
 - A feature or idea that comes up mid-work goes into its mod's STATUS.md as `new` right away (one-line
-  note to the user); a commit that finishes or changes a feature updates its line in the same commit."""
+  note to the user); a commit that finishes or changes a feature updates its line in the same commit.
+- A change the user has not yet tried in game goes under `## To validate` in the same commit, as what
+  to try; the line goes once the user says it works."""
 
 
 def short(check):
@@ -99,8 +101,8 @@ def board(states, issues, projects, computed, session=False):
                 "bookmarklet, then run /nexus-inbox.", ""]
     if issues is None:
         out += ["GitHub unreachable: no issues, and only local tags.", ""]
-    out += ["| Mod | Stage | Version | Since tag | Bugs | Missing for release | Waiting on |",
-            "|---|---|---|---|---|---|---|"]
+    out += ["| Mod | Stage | Version | Since tag | Bugs | To validate | Missing for release | Waiting on |",
+            "|---|---|---|---|---|---|---|---|"]
     for state in states:
         p = state.project
         missing = ", ".join(short(c) for c in state.checks if c.state != "pass")
@@ -109,7 +111,7 @@ def board(states, issues, projects, computed, session=False):
             since = "tag not fetched"
         errors = f" (STATUS.md: {len(p.status.errors)} bad lines)" if p.status.errors else ""
         out.append(f"| {p.name} | {p.status.stage}{errors} | {version_cell(state)} | {since} | "
-                   f"{bugs_cell(state)} | {missing} | {waits_cell(state)} |")
+                   f"{bugs_cell(state)} | {len(p.status.validate) or ''} | {missing} | {waits_cell(state)} |")
     homeless = [i for i in issues or [] if "needs-home" in i.labels]
     untracked = [i for i in issues or [] if not any(l.startswith("mod:") for l in i.labels) and i not in homeless]
     for label, found in (("without a mod label", untracked), ("needing a home (a new mod?)", homeless)):
@@ -140,6 +142,10 @@ def detail(state, projects, computed):
                        if any(f.state == st for f in s.features))
     out += [f"### Features ({counts})", ""]
     out += [f"- [{f.state}] {f.text}" for f in s.features] + [""]
+
+    if s.validate:
+        out += [f"### To validate ({len(s.validate)}), in game, by the user", ""]
+        out += [f"- {line}" for line in s.validate] + [""]
 
     out += ["### Release bar (the cheap rows; /release-check runs the rest)", ""]
     for c in state.checks:

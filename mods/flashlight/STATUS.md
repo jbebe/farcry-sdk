@@ -19,6 +19,10 @@ Stage: maintenance
 - [done] Combines with other mods' controls, HUD parts and HUD dependency lists
 - [scrapped] Light as a noise, a plain 15 m radius - user chose the beam rule
 
+## To validate
+
+- A guard inside the beam sees all around him, at the cone's full or half angle - unverified
+
 ## Approvals
 
 - played: 49624dc 2026-10-29 - implied by the flashlight-1.2.1 release

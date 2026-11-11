@@ -16,6 +16,10 @@ Stage: unfinished
 - [new] Pool plugin: placed animals sometimes become new ones - after the in-game check
 - [scrapped] Buffalo head toss after a hit - user: useless, it played after stopping
 
+## To validate
+
+- A buffalo's gore knocks the player down, and they get up unless it killed - not seen in game
+
 ## Approvals
 
 ## Checks

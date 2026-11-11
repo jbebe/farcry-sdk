@@ -21,6 +21,10 @@ Stage: active
 - [done] Textures written back, outside images added as new textures - 0.4.0 unreleased
 - [done] build.ps1 builds the extension zip with Blender; open_model.cmd opens a pack and a clip in the UI
 
+## To validate
+
+- The material editor's new path, in game - untested
+
 ## Approvals
 
 - played: f8ab839 2026-10-25 - implied by the blenderfc2-0.3.3 release

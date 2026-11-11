@@ -29,6 +29,10 @@ Stage: maintenance
 - [scrapped] Ricochets, wizz, air absorption, voice cap, ducking, weapon extras, tails, foley - the user cut the sound list 2026-10-01
 - [scrapped] Datsun engine sound overhaul - abandoned 2026-09-30 ("abandon the ship!"), only the quieter idle kept (3283244)
 
+## To validate
+
+- No echo in rooms after the muffling fix - unchecked
+
 ## Approvals
 
 - played: 3d0dc81 2026-10-18 - implied by the sound-overhaul-1.0.3 release

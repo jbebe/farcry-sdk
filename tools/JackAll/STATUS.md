@@ -45,6 +45,16 @@ Stage: active
 - [scrapped] Map tab Demo-mode speed-ups - user: a non-issue
 - [scrapped] SoundBench as a JackAll tab - SoundBench stays standalone
 
+## To validate
+
+- Map tab: a scene edit, placed and moved objects, seen in game - nothing seen
+- Map tab characters in their own outfit - a placed merc draws as a marker
+- A new world (New map) and its navmesh, seen in game - nothing seen
+- _layout.xml moves and deletes of mission entities - unchecked in game
+- The App's .mgb fragment save, run in the UI - never run
+- Edited Havok collision in game - never checked
+- A material at a new path, in game - untested
+
 ## Approvals
 
 - played: 49624dc 2026-10-29 - implied by the jackall-1.7.0 release

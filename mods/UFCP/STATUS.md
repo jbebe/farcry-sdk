@@ -25,6 +25,13 @@ Stage: active
 - [scrapped] Extra job workers - the engine's jobs crash when two run at once (1.3.0)
 - [scrapped] Skip intro and skip title screen - moved to DevTools before UFCP's first release
 
+## To validate
+
+- The Jackal tapes advance in the southern map - unchecked
+- The menu cursor follows a slow mouse - unchecked
+- Monocular look speed matching the scopes - unchecked
+- Grey exclusive full screen in every game (#42): NVIDIA Control Panel, Change resolution, "Use NVIDIA color settings", Output dynamic range Full, then a full-screen game - if it clears, the driver's limited range is the cause and no plugin is needed
+
 ## Approvals
 
 - played: 290c8ed 2026-10-30 - implied by the ufcp-1.3.1 release

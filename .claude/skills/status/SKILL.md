@@ -45,6 +45,11 @@ Stage: active
 - [postponed] Shooting from vehicle windows #11
 - [scrapped] Gun weight - dropped by the user
 
+## To validate
+
+- Lean with a scope up: the muzzle flash and the scope follow the leaned eye
+- Full auto: the spread opens from a burst's 4th shot - fc2drive only
+
 ## Approvals
 
 - played: 1b343c9 2026-11-08 - "this is it now"
@@ -68,6 +73,10 @@ Stage: active
 - **Stage** is a word: `active`, `maintenance`, `on hold`, `unfinished` or `scaffold`.
 - **Features**: one line each, in one of the six states. A `#n` links its issue. Issues hold what is
   not planned; once one is picked for a version it becomes a feature line here that links to it.
+- **To validate**: what the user has still to try in game themselves, one line each: the thing to
+  try, then after ` - ` how far it was seen (fc2drive only, a log, nothing). A change they have not
+  tried goes here in the commit that makes it; the line goes once they say it works, and a feature
+  line takes their words. The board counts the lines, `/status <mod>` lists them.
 - **Approvals** are the user's, each at the commit it was given: `played` (played, and it's good) and
   `page text` (nexus-description.bbcode and nexus-summary.txt checked). Record one the moment the
   user says so in chat, at `git rev-parse --short HEAD`, with their words as the note, and tell them

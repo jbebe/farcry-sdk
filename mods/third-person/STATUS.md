@@ -23,6 +23,14 @@ Stage: active
 - [scrapped] Right click swooshing into first person - the user stopped it midway; not re-added unless asked
 - [scrapped] A crouch-walk animation - the game has none; user: "keep the crouch as is. I dont care"
 
+## To validate
+
+- Feet tucked up in the air - not seen
+- The aim key brings the camera closer and the crosshair tightest - not seen
+- The gun carried low on the move, up to aim and fire, with your mouse - script only
+- Behind the car the camera ignores leaves and walls, kept only above the ground - #39, not seen
+- Cutscenes, ladders, swimming, slopes and turning on the spot - #44
+
 ## Approvals
 
 - played: db5067a 2026-11-07 - the deployed build with camera collision, then "let's prepare the mod for release" (commit: played by the user)

@@ -25,7 +25,8 @@ Stage: active
 - [done] Other mods' notes, photos, cassettes and items known by a naming convention - user: "it all works"
 - [done] Example note, photo and cassette on the Docs page until Tales of Africa ships, never saved - the user heard the cassette
 - [done] Test window in DevTools' overlay: Stow, Take, Give, Discard, Fill, +1 diamond
-- [new] INVENTORY_OVERHAUL_FILL and the Lua start variable removed once tests set up the notebook through DevTools - plugins hold no test logic- [new] Malaria on the pills' post-it - agreed: "malaria becomes the pills' card"
+- [new] INVENTORY_OVERHAUL_FILL and the Lua start variable removed once tests set up the notebook through DevTools - plugins hold no test logic
+- [new] Malaria on the pills' post-it - agreed: "malaria becomes the pills' card"
 - [new] Camo Suit in Items once bought - agreed 2026-10-26
 - [new] Box page at the crates: the bought guns as a catalogue and stored things, one shared box #6
 - [new] One fetch mission - design log step 9
@@ -39,6 +40,20 @@ Stage: active
 - [scrapped] Upgrades in the notebook - stays in the pause menu for other players
 - [scrapped] Story synopses from the pause menu's Journal - dropped by the user
 - [scrapped] Notebook on DirectX 10 - the user does not care; never spend time on it
+
+## To validate
+
+- Gun A on key 3, gun B on key 2, an old save's primary in A - fc2drive only
+- Post-its of the armory's guns (the flamethrower), Mike's rusty guns and the three DLC guns - fc2drive, rusty ones untested
+- A dropped gun falls onto its side - fc2drive only
+- The condition word with wear, on a carried and a stowed gun - fc2drive, carried gun only
+- The notebook first opens on gun A
+- A bought upgrade's icon on the post-it - not seen
+- A picked-up gun comes to hand - fc2drive only
+- The handwriting at 20 px on a paper being read - not judged
+- The Missions page - self-test only
+- R's page turn: the pause menu's flip at twice the speed, half its sound - not heard
+- Saving with the notebook out, then loading that save twice - #46
 
 ## Approvals
 

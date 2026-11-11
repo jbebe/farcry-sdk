@@ -38,6 +38,12 @@ Stage: active
 - [new] Remote control: each soldier's current brain task, to replace Difficulty Overhaul's -braintrace in tests
 - [done] Combat log (-combatlog): hits on the player, his hits on soldiers and deaths, and every mod's lines from FCSE's combat channel, in one session file; fight_report.py moved here - fc2drive damage run, GOG 2026-11-11
 
+## To validate
+
+- A second copy of the game starting beside the first - unseen
+- The Range tab's arena start facing - probably wrong, unchecked
+- The grass field, grass crest and tamarix bush arenas - fc2drive only
+
 ## Approvals
 
 ## Checks

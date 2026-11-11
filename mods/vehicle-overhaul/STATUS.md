@@ -51,6 +51,12 @@ Stage: active
 - [scrapped] Kickdown, throttle-dependent shift points and creep for the automatic - offered, not wanted
 - [scrapped] Formant-preserved in-between engine takes - the user heard no difference
 
+## To validate
+
+- AI drivers' cars rev through the gears, never above half the redline - #37, logged, not heard
+- The Jeep Liberty's automatic gearbox - unfelt
+- The Jeep Liberty's engine sound - no verdict
+
 ## Approvals
 
 - played: ccf0eed 2026-11-08 - implied by the vehicle-overhaul-1.1.0 release

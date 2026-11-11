@@ -116,6 +116,8 @@ class Status:
     records: dict = field(default_factory=dict)
     waits: list = field(default_factory=list)
     collisions: dict = field(default_factory=dict)
+    # What the user has still to try in game themselves, one line each.
+    validate: list = field(default_factory=list)
     errors: list = field(default_factory=list)
 
 
@@ -154,6 +156,8 @@ def parse_status(text):
             current = status.records.get(record.kind)
             if current is None or record.date >= current.date:
                 status.records[record.kind] = record
+        elif section == "to validate":
+            status.validate.append(line[2:].strip())
         elif section == "release order":
             body = line[2:].strip()
             after = re.match(r"after\s+(\S+)$", body)
