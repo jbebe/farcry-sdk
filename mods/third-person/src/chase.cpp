@@ -1,7 +1,6 @@
 // The chase camera. See chase.h.
 #include "chase.h"
 
-#include "boom.h"
 #include "ease.h"
 #include "engine/terrain.h"
 
@@ -44,7 +43,6 @@ namespace {
         float idle = 0.0f;
         float lookPitch = 0.0f;
         float lookYaw = 0.0f;
-        ThirdPerson::Boom boom;
     };
 
     State g_state;
@@ -89,19 +87,19 @@ ThirdPerson::ThirdCamera::Pose ThirdPerson::Chase::Place(const float* car, float
 
     const float yaw = s.heading + s.orbit;
     const float aim[3] = {car[12], car[13], s.aimZ + kAimHeight};
-    // Back along the view from the aim point; a view at yaw 0 looks down +Y.
+    // Back along the view from the aim point; a view at yaw 0 looks down +Y. Nothing but the ground
+    // stops it: a boom would catch on every leaf beside the road.
     const float level = std::cos(s.pitch);
     const float back[3] = {std::sin(yaw) * level, -std::cos(yaw) * level, -std::sin(s.pitch)};
-    const float distance = s.boom.Follow(aim, back, kDistance, seconds);
 
-    ThirdCamera::Pose pose{{aim[0] + back[0] * distance, aim[1] + back[1] * distance,
-                            aim[2] + back[2] * distance},
+    ThirdCamera::Pose pose{{aim[0] + back[0] * kDistance, aim[1] + back[1] * kDistance,
+                            aim[2] + back[2] * kDistance},
                            {s.pitch, 0.0f, yaw}};
 
     const float floor = Terrain::Height(pose.position[0], pose.position[1]) + kClearance;
     if (pose.position[2] < floor) {
         pose.position[2] = floor;
-        pose.angles[0] = std::atan2(aim[2] - floor, distance * level);
+        pose.angles[0] = std::atan2(aim[2] - floor, kDistance * level);
     }
     return pose;
 }

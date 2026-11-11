@@ -20,8 +20,9 @@ wheel. And in first person, your own legs under you and a shadow at your feet.
   with a lag, so you see the body work on its suspension. The mouse orbits it, and two seconds after
   the mouse stops it eases back behind the car. You see yourself driving, with the game's own driving
   animations. A passenger seat or a turret is seen in first person.
-- **The camera keeps out of walls.** Where the ground, a wall or a rock comes between you and the
-  camera, it pulls in toward you quickly, and eases back out once the way is clear.
+- **The camera keeps out of walls on foot.** Where the ground, a wall or a rock comes between you
+  and the camera, it pulls in toward you quickly, and eases back out once the way is clear. Behind
+  the car it only keeps above the ground, so roadside leaves never pull it into the car.
 - **Your legs in first person.** Look down and you see your legs and boots, striding as you walk,
   strafe and back up, with the knees out when you crouch.
 - **A soft shadow under your feet** in first person, where the game casts none.
@@ -71,5 +72,6 @@ jackall-cli mod restore --game "C:\Games\Far Cry 2"
 - Moving crouched in third person plays the standing legs: the game has no crouch-walk animation.
 - There is no jump in third person: the game's jump animation is for multiplayer only.
 - Getting in or out of a car shows first person while you climb in or out.
-- The camera keeps out of the ground, walls and rocks, but not out of other cars or people, and can
-  clip a corner beside its line of sight.
+- On foot the camera keeps out of the ground, walls and rocks, but not out of other cars or people,
+  and can clip a corner beside its line of sight. Behind the car it goes through walls, rocks and
+  trees.

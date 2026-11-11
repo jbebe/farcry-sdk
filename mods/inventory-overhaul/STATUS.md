@@ -11,7 +11,7 @@ Stage: active
 - [done] Notebook on Tab, given with the map, held in both hands, its right page bending with the hands - user: "it works in all situations"
 - [done] Items page: guns A and B, Items with the diamonds, the belt with its counts; the wheel moves the selection
 - [done] Post-it for the selected row: picture, name, condition word, ammo, upgrade icons, ratings - a bought upgrade not seen yet
-- [in progress] Condition word thresholds - applied to raw 0-1000 reliability, so a gun reads "new" until nearly broken (bug)
+- [done] Condition word from the gun's reliability as a share of its MaxReliability - fc2drive: new, used, worn, worn, failing at 100, 70, 45, 30, 10 %
 - [done] Left mouse uses the selected row: stows gun A or B, heals on the syrettes - user-confirmed
 - [done] Context menu on a stowed gun: To slot A, To slot B - user: "it fully works"
 - [done] X drops the gun in hand, or the notebook's selected row, on a new Drop control - stowed gun and item drop seen by fc2drive

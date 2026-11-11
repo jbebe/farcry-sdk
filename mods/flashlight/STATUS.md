@@ -36,3 +36,4 @@ Stage: maintenance
 - map-overhaul: fixed by 137373d1 - its pause-listener pattern starts 10 bytes in, past the instructions Flashlight's hook overwrites
 - inventory-overhaul: fixed by 98535d3c - the notebook's bare quads took no flashlight light; page.py cuts them into cells
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
+- 0x001449B0: stacks - the input pass, which DevTools, Flashlight and Third Person each hook as g_inputPass; FCSE stacks same-address hooks

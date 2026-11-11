@@ -17,6 +17,8 @@ Notable changes to Inventory Overhaul, loosely following
   flamethrower, and Mike's rusty ones showed the mosquito and a word like "Persistent". The sawed-off
   shotgun, the silenced shotgun and the crossbow have theirs too.
 - **A dropped gun falls onto its side** instead of landing upright on its edge.
+- **A gun's condition follows its wear:** new, used, worn and failing, where every gun read "new"
+  until it was about to break.
 
 ## [1.0.0] - 2026-11-01
 

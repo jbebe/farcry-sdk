@@ -47,9 +47,13 @@ bool IsGun(void* weapon);
 const uint32_t* Category(void* weapon);
 // The archetype the weapon was made from, such as "weapons.Primary.AK47".
 const char* Name(void* weapon);
-// How worn a gun is, as the engine counts it.
+// How worn a gun is, as the engine counts it: down from its MaxReliability, which a gun is made with
+// at kNewReliability.
+constexpr float kNewReliability = 1000.0f;
 float Reliability(void* weapon);
 void SetReliability(void* weapon, float reliability);
+// Reliability as a share of the gun's own MaxReliability: 1 new, 0 worn out.
+float Health(void* weapon);
 // The rounds in a gun's magazine: for the gun in hand its own, for a holstered one those it will
 // load when next drawn. SetLoaded sets the latter.
 int Loaded(const void* inventory, void* weapon);

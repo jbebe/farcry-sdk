@@ -9,6 +9,10 @@ Notable changes to Third Person, loosely following
 - **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.
 
+### Fixed
+- **The chase camera no longer snaps into the car** at every small leaf: behind the car it is only
+  kept above the ground.
+
 ## [1.0.0] - 2026-11-07
 
 ### Added

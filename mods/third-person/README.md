@@ -17,7 +17,7 @@ the player plays.
 | Third person on foot: over the right shoulder, the full body with its own animations, weapons and shadow, the game's own crosshair with shots landing on it, and no iron sights | seen in game (test range, scripted shots) |
 | Third person at the wheel: a chase camera 6 m behind the car, swinging after its heading and height, orbited by the mouse and easing back behind two seconds after it stops, kept above the ground; the driver's whole body with the game's driving animations, the quad's steering centred | seen in game as Vehicle Overhaul's; moved here, not seen |
 | In third person, the map, phone and notebook hidden from the belt, but the one in hand | built, not seen |
-| In third person, the camera pulled in toward the player, or toward the car at the wheel, where the ground, a wall or a rock comes between, quickly, and let back out softly once it is gone | built, not seen |
+| In third person on foot, the camera pulled in toward the player where the ground, a wall or a rock comes between, quickly, and let back out softly once it is gone; at the wheel, only kept above the ground | built, not seen |
 | In third person on foot, the aim key held brings the camera closer over the right shoulder and draws the crosshair at its tightest | built, not seen |
 | In third person on foot, the gun carried down on the move and standing, and held up while aiming, firing and a second after a shot | built, not seen |
 
@@ -58,10 +58,11 @@ out of the camera's sight.
     the input pass so the driver's own view stays still. Who drives is followed through the game
     giving each car its driver (`engine/driver.cpp`). A passenger seat or a turret, and getting in
     or out, are seen in first person.
-  - Either camera hangs on `boom.cpp`'s boom from the player, or from above the car: a ray out to
-    where the camera wants to stand, through the layers a car's wheels hit, so neither the player
-    nor the car stops it. What it hits shortens the boom within about a tenth of a second, and it
-    lengthens again over about three quarters of one.
+  - On foot the camera hangs on `boom.cpp`'s boom from the player: a ray out to where the camera
+    wants to stand, through the layers a car's wheels hit, so the player does not stop it. What it
+    hits shortens the boom within about a tenth of a second, and it lengthens again over about three
+    quarters of one. The chase camera has no boom, since leaves beside the road would pull it into
+    the car; it is only kept above the terrain.
 
 The engine side is in [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md#the-first-person-body).
 
@@ -96,8 +97,9 @@ layer\plugins\third-person\   the built plugin, staged here by build.ps1
 - In a vehicle in first person, the avatar is drawn as in retail.
 - Not yet checked in game: cutscenes and other full-body first-person clips, whose legs the plugin
   overrides; ladders; swimming; slopes, where the feet stand on the body's level ground.
-- Third person: the camera is pulled in along one ray, so it can still clip a corner or a thin post
-  beside that line, and other cars and people do not stop it. Getting in or out of a car shows first
+- Third person: on foot the camera is pulled in along one ray, so it can still clip a corner or a
+  thin post beside that line, and other cars and people do not stop it. Behind the car it goes
+  through walls, rocks and trees. Getting in or out of a car shows first
   person between the two views. Cutscenes and a gadget picked up in third person are not checked.
   Aiming does not tighten the spread; only the view and the crosshair change. Moving crouched plays
   the standing legs, because the game has no crouch-walk animation. There is no jump animation: the

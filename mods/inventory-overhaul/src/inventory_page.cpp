@@ -131,9 +131,9 @@ namespace {
     // The post-it's image of a picture.
     std::string PostItPicture(const char* picture) { return "IO_POSTIT_PIC_" + Upper(picture); }
 
-    // A gun's wear, 1 to 0, as a condition word: new, used, worn or failing.
-    const wchar_t* Condition(float reliability) {
-        return reliability >= 0.75f ? L"new" : reliability >= 0.5f ? L"used" : reliability >= 0.25f ? L"worn" : L"failing";
+    // A gun's health, 1 to 0, as a condition word: new, used, worn or failing.
+    const wchar_t* Condition(float health) {
+        return health >= 0.75f ? L"new" : health >= 0.5f ? L"used" : health >= 0.25f ? L"worn" : L"failing";
     }
 
     // A row of the page, in reading order: the weapons, Items, then the belt.
@@ -198,8 +198,9 @@ namespace {
         }
     }
 
-    // A gun's post-it, whether it is carried as `weapon` or stowed in Items as `item`.
-    void GunPostIt(Model& model, const std::string& archetype, float reliability, int loaded, int spare) {
+    // A gun's post-it, whether it is carried as `weapon` or stowed in Items as `item`; `health` below
+    // zero shows no condition.
+    void GunPostIt(Model& model, const std::string& archetype, float health, int loaded, int spare) {
         const Gun* known = GunOf(archetype);
         model.Show(known != nullptr ? PostItPicture(known->picture) : "IO_POSTIT_PIC_PLACEHOLDER", true);
         const std::wstring name = known != nullptr ? CrateText(*known, "NAME") : L"";
@@ -207,9 +208,9 @@ namespace {
         if (known != nullptr) {
             model.Text("IO_POSTIT_SUB", CrateText(*known, "DESCRIPTION"));
         }
-        if (reliability >= 0) {
+        if (health >= 0) {
             model.Text("IO_POSTIT_LINE1", L"Condition");
-            model.Text("IO_POSTIT_VALUE1", Condition(reliability));
+            model.Text("IO_POSTIT_VALUE1", Condition(health));
         }
         model.Text("IO_POSTIT_LINE2", L"Ammo");
         model.Text("IO_POSTIT_VALUE2", (loaded >= 0 ? std::to_wstring(loaded) : L"-") + L" / " + std::to_wstring(spare));
@@ -259,7 +260,7 @@ namespace {
                 model.Text("IO_POSTIT_NOTE", L"Pick a gun up, or take one from Items.");
                 return;
             }
-            GunPostIt(model, Inventory::Name(row.gun->weapon), Inventory::Reliability(row.gun->weapon),
+            GunPostIt(model, Inventory::Name(row.gun->weapon), Inventory::Health(row.gun->weapon),
                       Inventory::Loaded(carried.inventory, row.gun->weapon),
                       Inventory::SpareRounds(carried.view, row.gun->weapon));
             return;
@@ -274,7 +275,9 @@ namespace {
             const Items::Record& item = *row.item;
             if (item.gun) {
                 const Gun* known = GunOf(item.id);
-                GunPostIt(model, item.id, item.reliability, item.loaded,
+                // A stowed gun is made again with the MaxReliability every gun is made with.
+                const float health = item.reliability >= 0 ? item.reliability / Inventory::kNewReliability : -1.0f;
+                GunPostIt(model, item.id, health, item.loaded,
                           known != nullptr ? Inventory::Ammo(carried.view, known->ammo) : 0);
                 return;
             }

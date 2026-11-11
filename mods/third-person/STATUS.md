@@ -17,8 +17,8 @@ Stage: active
 - [done] Map, phone and notebook hidden from the belt in third person - per-frame poll "all works!"; its one-shot rewrite not seen
 - [done] Chase camera behind the car at the wheel, orbited by the mouse - moved from Vehicle Overhaul (db5067a), there "works perfectly"
 - [done] The driver's whole body at the wheel, the quad's steering centred - moved from Vehicle Overhaul, there "it works!"
-- [done] The camera pulled in where the ground, a wall or a rock comes between, eased back out (boom)
-- [new] No camera collision behind the car, so small leaves stop pulling the view into it - #39
+- [done] The camera on foot pulled in where the ground, a wall or a rock comes between, eased back out (boom)
+- [done] No camera collision behind the car, so small leaves stop pulling the view into it, only the terrain floor - #39, not seen
 - [scrapped] A recognisable full-body or sun-cast shadow - user: "something blurry, something unrecognizable and easy to render"
 - [scrapped] Right click swooshing into first person - the user stopped it midway; not re-added unless asked
 - [scrapped] A crouch-walk animation - the game has none; user: "keep the crouch as is. I dont care"
@@ -38,3 +38,4 @@ Stage: active
 
 - vehicle-overhaul: fixed by db5067a - both hook SetDriver (patterns wildcard its first 6 bytes); VO 1.0.1 and earlier have their own view on V
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
+- 0x001449B0: stacks - the input pass, which DevTools, Flashlight and Third Person each hook as g_inputPass; FCSE stacks same-address hooks

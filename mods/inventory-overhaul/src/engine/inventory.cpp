@@ -117,9 +117,11 @@ namespace {
     constexpr size_t kItemWeaponSlot = 0x14 / sizeof(void*);
     constexpr size_t kWeaponCategorySlot = 0x8C / sizeof(void*);
     constexpr size_t kSetReliabilitySlot = 0xBC / sizeof(void*);
-    // The weapon's state object, its CWeaponPropertiesCommon, and the ammo type in that.
+    // The weapon's state object, its CWeaponPropertiesCommon and MaxReliability, and the ammo type in
+    // the properties.
     constexpr ptrdiff_t kWeaponState = 0x24;
     constexpr ptrdiff_t kStateProperties = 0x04;
+    constexpr ptrdiff_t kStateMaxReliability = 0x10;
     constexpr ptrdiff_t kPropertiesAmmoType = 0x88;
 
     // Set while a gun is taken away, so its drop leaves no pickup.
@@ -244,6 +246,11 @@ const char* Name(void* weapon) {
 }
 
 float Reliability(void* weapon) { return g_reliability(weapon, nullptr); }
+
+float Health(void* weapon) {
+    const float most = Read<float>(Read<const void*>(weapon, kWeaponState), kStateMaxReliability);
+    return most > 0.0f ? Reliability(weapon) / most : 0.0f;
+}
 
 void SetReliability(void* weapon, float reliability) {
     Method<SetReliabilityFn>(weapon, kSetReliabilitySlot)(weapon, nullptr, reliability);
