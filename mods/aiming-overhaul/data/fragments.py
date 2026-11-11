@@ -1,5 +1,5 @@
 """Write the layer's weapon archetype fragments: which guns fire tracers, how fast and how long their
-streaks are, which scopes the plugin draws and how, those scopes losing the engine's iron-sight
+streaks are, which fire Soviet rounds with green tracers, which scopes the plugin draws and how, those scopes losing the engine's iron-sight
 post effect and its random spread down the sights, which guns' breath can be held, what each weapon
 weighs, and which guns the game still takes the kick back on.
 
@@ -38,6 +38,9 @@ TRACER_GUNS = ("Special.M249_Saw", "Special.PKM", "Primary.Dragunov", "Primary.A
 # A tracer's speed and its streak's longest length, in metres.
 TRACER_SPEED = "350"
 TRACER_LENGTH = "8"
+# The tracer guns that fire Soviet rounds, whose tracers burn green; the rest fire NATO's, orange.
+SOVIET_TRACERS = ("Special.PKM", "Primary.Dragunov")
+SOVIET_TRACER_KEY = "AimingOverhaul.SovietTracer"
 # The scopes the plugin draws from their eyepiece, an archetype and its variants each, as the entity
 # data src\scopes.h's Scope is read from; they lose their iron-sight post effect. A reticle is an
 # image under bin\plugins, which layer\plugins\ installs.
@@ -150,6 +153,8 @@ def edit_weapon(archetype, block):
         data[HOLD_BREATH_KEY] = 1
     if of(archetype, RECOIL_RETURNS):
         data[RECOIL_RETURNS_KEY] = 1
+    if of(archetype, SOVIET_TRACERS):
+        data[SOVIET_TRACER_KEY] = 1
     weight = lookup(archetype, WEIGHTS)
     if weight is not None:
         data[WEIGHT_KEY] = weight

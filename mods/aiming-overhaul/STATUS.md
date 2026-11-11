@@ -35,6 +35,7 @@ Stage: active
 - [done] No radial edge blur on the scopes the mod draws - unconfirmed by the user
 - [done] Scope shadow: a soft crescent from the rim as the look turns
 - [done] Tracers on the M249, PKM, Dragunov, AS50 and mounted MGs, own shots included, 1 in 6 ricochet - "All works fine" 2026-10-06
+- [done] Tracer colour by cartridge: Soviet rounds (PKM, Dragunov) light green with a near-white core, NATO orange; AimingOverhaul.SovietTracer weapon data - #57, fc2drive night shots
 - [done] Iron sight zoom switch: off keeps the field of view down iron sights
 - [done] No random spread down the AR-16's and MGL-140's scopes
 - [done] Scopes as weapon data (AimingOverhaul.Scope* keys), found in the weapon's own mesh - "it seems to be working" 2026-10-08
@@ -57,6 +58,7 @@ Stage: active
 
 ## To validate
 
+- Tracers by cartridge at night: the PKM's and Dragunov's green with a near-white core, the M249's orange - #57, fc2drive shots only
 - Crouched and still the sway halves, moving widens it - unconfirmed
 - Lean with a scope up: the muzzle flash and the scope follow the leaned eye - unchecked
 - Gun near walls: swings down out of a wall, won't fire until back up - latest changes unplayed

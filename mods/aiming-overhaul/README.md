@@ -161,9 +161,10 @@ both field by field with other mods' edits, reporting any clash.
   them, at the rate the game gives each, the player's own shots included, which the game never
   draws. A tracer flies at 350 m/s with a streak short enough to be seen crossing even a near
   shot, and some ricochet off where they land, anywhere from level to straight up and to either
-  side, never back. The streak is drawn by a shader of the plugin's own: an orange glow with a
-  hotter core, brighter than white so that it blooms, smooth at any angle, and a few pixels wide
-  however far off it is.
+  side, never back. The streak is drawn by a shader of the plugin's own: a glow with a hotter core,
+  brighter than white so that it blooms, smooth at any angle, and a few pixels wide however far off
+  it is. Its colour is the round's: a NATO round's tracer burns orange, a Soviet round's, from the
+  PKM and the Dragunov, light green with a near-white core. A ricochet keeps its round's colour.
 
 The eye is moved through the camera's positional offset, the one the recoil kicks, and a scope's
 zoom held back until its sight picture is up, in `src/engine/aim.cpp`. The aim's wander is added
@@ -214,7 +215,10 @@ and size: `AimingOverhaul.Scope*` keys in a `CFCSEDataComponent` on its `weapons
 reticle as an image path under `bin\plugins` with `ScopeReticleLit` for one lit from within. A gun
 whose breath can be held, and whose scope sways harder, has `AimingOverhaul.HoldBreath` set to 1
 there, and every weapon has its weight in kilograms, `AimingOverhaul.Weight`; a weapon without one
-weighs 3.5. All of it is written by `data\fragments.py`. How quickly a walk speeds up and slows down
+weighs 3.5. A gun that fires Soviet rounds has `AimingOverhaul.SovietTracer` set to 1, and its
+tracers burn green; without it they are NATO's, orange. The plugin follows each tracer back to the
+fire strategy that added it and that strategy's weapon, and builds a Soviet round's streak with its
+vertex alpha at 0.5, which the shader tells it by. All of it is written by `data\fragments.py`. How quickly a walk speeds up and slows down
 is the player archetypes' `fWalkingAcceleration` and `fWalkingDeceleration`, and a sprint's speed
 over time is `Curves.Locomotion.Sprint`, both fragments under `layer\mods\` written by
 `data\movement.py`. The breaths are the game's own stamina breathing,

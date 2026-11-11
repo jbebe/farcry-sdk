@@ -1,5 +1,6 @@
 // The player's shots leave tracers too, past the engine's first-person test; a streak is never
-// longer than a share of its shot, some ricochet, and each is drawn a few pixels wide however far.
+// longer than a share of its shot, some ricochet, each is drawn a few pixels wide however far, and a
+// Soviet round's is marked for the shader to draw green.
 // See docs/docs/engine-internals/bullet-tracers.md.
 #include "tracers.h"
 
@@ -13,8 +14,10 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <excpt.h>
 #include <numbers>
 #include <random>
+#include <vector>
 
 namespace {
     using AimingOverhaul::Field;
@@ -23,6 +26,14 @@ namespace {
     FCSE::Relocation<uint8_t*> g_firstPersonTest{FCSE::Pattern(
         "F6 40 04 80 0F 85 ?? ?? ?? ?? 8B 87 68 01 00 00 85 C0 0F 84 ?? ?? ?? ?? 8B 4F 50")};
     constexpr ptrdiff_t kPastTest = 10;
+
+    // BuildTrace storing the streak's vertex colour, (1, 1, 1, 1), with ESI the trace; the hook goes
+    // on the call after it, where the colour is at ESP + 0x60.
+    FCSE::Relocation<uint8_t*> g_streakColour{FCSE::Pattern(
+        "F3 0F 11 44 24 54 F3 0F 11 44 24 50 F3 0F 11 44 24 4C 0F 28 44 24 4C 57 0F 29 44 24 60 E8 ?? ?? "
+        "?? ?? DD D8 8B 45 0C")};
+    constexpr ptrdiff_t kPastColour = 0x1D;
+    constexpr ptrdiff_t kColourAlpha = 0x60 + 0x0C;
 
     // CBulletTracerManager, all __thiscall: AddTrace(start, end, speed, length, distortion length,
     // width, &texture, &distortion texture); Update(seconds, a second argument it never reads),
@@ -43,6 +54,17 @@ namespace {
     AddTraceFn g_originalAddTrace = nullptr;
     UpdateFn g_originalUpdate = nullptr;
     BuildTraceFn g_originalBuildTrace = nullptr;
+
+    // The fire strategy hands AddTrace its own texture field, this far into it, and keeps its
+    // CWeapon here.
+    constexpr ptrdiff_t kStrategyTexture = 0x80;
+    constexpr ptrdiff_t kStrategyWeapon = 0x40;
+    // The weapon entity data that makes its rounds Soviet, with green tracers; without it they are
+    // NATO's.
+    constexpr const char* kSovietKey = "AimingOverhaul.SovietTracer";
+    // The vertex alpha a Soviet round's streak is built with, for the shader to tell it by; the
+    // streak's additive blend never reads it.
+    constexpr float kSovietAlpha = 0.5f;
 
     // The manager's traces, as AddTrace's `this` sees them: a pointer to the first and a count.
     constexpr ptrdiff_t kTraces = 0xE0;
@@ -99,6 +121,9 @@ namespace {
     // Where the camera was when a streak was last drawn.
     float g_camera[3] = {};
     std::minstd_rand g_random{20261005};
+    // The traces of Soviet rounds; each one added is put in or taken out, so a trace the manager
+    // reuses never keeps another's.
+    std::vector<uint8_t*> g_soviet;
 
     float Length(const float* v) {
         return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
@@ -124,6 +149,35 @@ namespace {
         flight[2] = std::sin(climb) * reach;
     }
 
+    // The CWeapon of the fire strategy whose texture field AddTrace was handed, or null where the
+    // pointers do not hold.
+    void* WeaponOf(const uint32_t* texture) {
+        __try {
+            return *reinterpret_cast<void* const*>(reinterpret_cast<const uint8_t*>(texture) -
+                                                   kStrategyTexture + kStrategyWeapon);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return nullptr;
+        }
+    }
+
+    bool MarkedSoviet(const uint8_t* trace) {
+        return std::ranges::find(g_soviet, trace) != g_soviet.end();
+    }
+
+    // Marks the trace the manager added last as a Soviet round's or not, and returns it, or null.
+    uint8_t* MarkLatest(uint8_t* manager, bool soviet) {
+        const uint32_t count = Field<uint32_t>(manager, kTraceCount);
+        if (count == 0) {
+            return nullptr;
+        }
+        uint8_t* trace = Field<uint8_t**>(manager, kTraces)[count - 1];
+        std::erase(g_soviet, trace);
+        if (soviet) {
+            g_soviet.push_back(trace);
+        }
+        return trace;
+    }
+
     void __fastcall AddTraceDetour(uint8_t* manager, void* unused, const float* start,
                                    const float* end, float speed, float length,
                                    float distortionLength, float width, const uint32_t* texture,
@@ -139,14 +193,14 @@ namespace {
         g_originalAddTrace(manager, unused, start, end, speed, streak, distortionLength, width,
                            texture, distortionTexture);
         g_manager = manager;
-        const uint32_t count = Field<uint32_t>(manager, kTraceCount);
-        if (++g_tracers % kRicochetEvery != 0 || distance >= kRicochetFarthestShot || count == 0 ||
-            g_ricochetCount == kMostRicochets) {
+        uint8_t* trace = MarkLatest(manager, AimingOverhaul::EntityFlag(WeaponOf(texture), kSovietKey));
+        if (++g_tracers % kRicochetEvery != 0 || distance >= kRicochetFarthestShot ||
+            trace == nullptr || g_ricochetCount == kMostRicochets) {
             return;
         }
         Ricochet& ricochet = g_ricochets[g_ricochetCount++];
         ricochet.due = (distance - streak) / speed;
-        ricochet.trace = Field<uint8_t**>(manager, kTraces)[count - 1];
+        ricochet.trace = trace;
         Bounce(start, end, ricochet.flight);
     }
 
@@ -186,6 +240,7 @@ namespace {
                                Field<float>(trace, kTraceWidth),
                                &Field<uint32_t>(trace, kTraceTexture),
                                &Field<uint32_t>(trace, kTraceDistortionTexture));
+            MarkLatest(g_manager, MarkedSoviet(trace));
         }
         g_ricochetCount = waiting;
         g_originalUpdate(manager, unused, seconds, unread);
@@ -231,6 +286,12 @@ namespace {
         g_originalBuildTrace(unused, unusedEdx, trace, camera);
         width = own;
     }
+
+    void OnStreakColour(FCSE_MidHookContext* ctx) {
+        if (g_enabled && MarkedSoviet(reinterpret_cast<const uint8_t*>(ctx->esi))) {
+            *reinterpret_cast<float*>(ctx->esp + kColourAlpha) = kSovietAlpha;
+        }
+    }
 }
 
 bool AimingOverhaul::Tracers::Install() {
@@ -251,6 +312,11 @@ bool AimingOverhaul::Tracers::Install() {
     }
     if (!Hook(g_buildTrace.address(), &BuildTraceDetour, &g_originalBuildTrace)) {
         FCSE::Logf("tracers: the streak's drawing cannot be hooked, so a far tracer is thin");
+    }
+    if (!g_streakColour ||
+        !FCSE::ApiPointer()->MidHook(g_streakColour.get() + kPastColour, &OnStreakColour)) {
+        FCSE::Logf("tracers: the streak's colour was not found, so Soviet rounds' tracers are "
+                   "NATO's colour");
     }
     return true;
 }

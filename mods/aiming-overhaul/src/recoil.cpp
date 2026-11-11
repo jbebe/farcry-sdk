@@ -5,6 +5,7 @@
 
 #include "ease.h"
 #include "engine/look.h"
+#include "engine/memory.h"
 #include "fcse_api.h"
 
 #include <algorithm>
@@ -59,13 +60,7 @@ void AimingOverhaul::Recoil::FollowWeapon(uint8_t* weapon) {
         return;
     }
     g_weapon = weapon;
-    const FCSE_EntityDataAPI* data = FCSE::ApiPointer()->EntityData;
-    void* entity = weapon != nullptr ? data->EntityOf(weapon) : nullptr;
-    int32_t returns = 0;
-    if (entity != nullptr) {
-        data->GetInt(entity, "AimingOverhaul.RecoilReturns", &returns);
-    }
-    g_returns = returns != 0;
+    g_returns = EntityFlag(weapon, "AimingOverhaul.RecoilReturns");
 }
 
 bool AimingOverhaul::Recoil::Take(const Kick::Kick& kick) {

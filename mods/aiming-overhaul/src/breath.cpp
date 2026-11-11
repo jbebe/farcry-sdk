@@ -4,6 +4,7 @@
 #include "breath.h"
 
 #include "ease.h"
+#include "engine/memory.h"
 #include "engine/sound.h"
 #include "fcse_api.h"
 #include "heart.h"
@@ -91,13 +92,7 @@ void AimingOverhaul::Breath::FollowWeapon(uint8_t* weapon) {
         return;
     }
     g_weapon = weapon;
-    const FCSE_EntityDataAPI* data = FCSE::ApiPointer()->EntityData;
-    void* entity = weapon != nullptr ? data->EntityOf(weapon) : nullptr;
-    int32_t needed = 0;
-    if (entity != nullptr) {
-        data->GetInt(entity, "AimingOverhaul.HoldBreath", &needed);
-    }
-    g_needed = needed != 0;
+    g_needed = EntityFlag(weapon, "AimingOverhaul.HoldBreath");
 }
 
 bool AimingOverhaul::Breath::Needed() {

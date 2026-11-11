@@ -19,6 +19,18 @@ inline uint8_t* ProxyEntity(uint8_t* proxy) {
     return proxy != nullptr ? Field<uint8_t*>(proxy, 0x0C) : nullptr;
 }
 
+// Whether the entity of `component`, such as a CWeapon, has the integer entity data `key` set to
+// anything but 0.
+inline bool EntityFlag(void* component, const char* key) {
+    const FCSE_EntityDataAPI* data = FCSE::ApiPointer()->EntityData;
+    void* entity = component != nullptr ? data->EntityOf(component) : nullptr;
+    int32_t value = 0;
+    if (entity != nullptr) {
+        data->GetInt(entity, key, &value);
+    }
+    return value != 0;
+}
+
 // Hooks the engine function at `target`, keeping what it called in `original`. False when the
 // function was not found, which is not logged here, or when FCSE refused it, which FCSE logs.
 template <class Fn>

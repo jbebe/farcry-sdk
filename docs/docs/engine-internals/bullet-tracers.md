@@ -92,8 +92,15 @@ The rear moves toward the end at `fSpeed` until less than `fLength` is left, the
 where nothing more is drawn; the trace lives on unseen until its time is out. So a new streak
 already reaches `fLength` past the muzzle, and a shot nearer than `fLength` is drawn for one frame.
 
+`AddTrace`'s two texture pointers are the fire strategy's own fields at `+0x80` and `+0x88`, so the
+pointer less `0x80` is the strategy that fired, and its `+0x40` the weapon. Each trace is a
+`CScenePrimitives` group of its own, begun on its own texture, and its corners go to
+`CScenePrimitives::AddVertex(position, colour, uv)` (`0x1045BE60`, `__thiscall`, pops `0xC`) with the
+colour built on the stack as (1, 1, 1, 1) **(RE-verified)**.
+
 There is no light. `PackColor` (`0x1045B810`) clamps each channel to one, so the vertex colour can
-only tint or darken the texture. The streak goes into world pass `0x22`, which runs before the
+only tint or darken the texture. It loads the colour's four floats with one `MOVAPS`, so a colour
+handed to `AddVertex` must be 16-byte aligned, or the game faults **(seen in game, GOG v1.03)**. The streak goes into world pass `0x22`, which runs before the
 bloom; that order is read from `CSceneRenderer_ExecuteViewPasses` (`0x10342360`), not measured.
 
 The retail `bullettracer_d.xbt` is a 32×8 DXT1 lit on 2 of its 8 rows, a dim grey about 23% bright

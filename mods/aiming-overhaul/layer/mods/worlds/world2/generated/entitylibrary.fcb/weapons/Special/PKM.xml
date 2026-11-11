@@ -159,6 +159,9 @@
             </object>
           </object>
           <object type="CFCSEDataComponent">
+            <object type="AimingOverhaul.SovietTracer">
+              <value name="Int" type="Int32">1</value>
+            </object>
             <object type="AimingOverhaul.Weight">
               <value name="Float" type="Float">9.0</value>
             </object>
