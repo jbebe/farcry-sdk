@@ -199,6 +199,14 @@ refills every gun. It neither makes room in the gun's class nor draws the gun. A
 | Spare | `CInventoryViewPawn::SetAmmo` (`0x10125f70`) | Sets the pool of that ammo type exactly, with no cap |
 | Draw | `ForceSelectWeapon` (`0x1012b9b0`) | Skipped while the inventory is locked (`+0x50`); does nothing if a gun of the class is already out |
 
+`DropWeapon` returns the new pickup's `CPickupWeapon`. The pickup comes from
+`SpawnPickupFromArchetype` (`0x1012c240`, server `0x08ffd310`): 1 m in front of the chest, upright at
+the pawn's yaw, thrown at 3.5 m/s the way the pawn looks, or dropped at the chest with no speed when
+a wall is within 1.5 m. Its spin is zero, so a flat gun can land on its edge and stay there. Both go into
+the start state of its `CRigidPhysComponent` (class id at `0x10fdeecc`): vtable `+0x114` returns it,
+velocity at `+0x5C`, spin at `+0x68`, a flag at `+0xB7` that applies them; written before the body's
+first step, they are what it starts with **(RE-verified)**.
+
 Drawing a gun (`SWeaponImpl::OnEquip`, server `0x08f49d00`) sets its magazine to the rounds it
 remembers, taking from the pool whatever `RememberedAmmoOverflow` does not cover.
 `SetRememberedAmmoInClip` sets both, so nothing is taken. A gun without clips first remembers its whole

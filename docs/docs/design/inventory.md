@@ -247,7 +247,7 @@ Movement and look stay live, as with the map. The gamepad mirrors the map's: d-p
 ## Under the hood
 
 - **Two guns:** every gun keeps its real class, because the box, scripts and the HUD read it. Each
-  carried gun holds its slot, 1 or 2, as entity data. Keys 2 and 3 draw gun 1 and gun 2 whatever
+  carried gun holds its slot, 1 or 2, as entity data. Keys 3 and 2 draw gun 1 and gun 2 whatever
   their class, `AddWeapon` drops the gun in hand when two are carried, and while the player picks
   something up the engine finds no carried gun of its class to replace. Two of the same model share
   an item id, so the later one gets an id of its own.

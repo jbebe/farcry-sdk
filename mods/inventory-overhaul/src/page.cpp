@@ -30,14 +30,14 @@ namespace {
     constexpr int kHalfSteps = 10;
 
     // The page open, R's turns, the wheel's steps and whether it was clicked or X pressed since the
-    // last write, and each page's selected row; the Items page opens on the gun in hand. The sheet
-    // of the paper read and the action underlined in a stowed gun's menu, -1 while neither is open.
+    // last write, and each page's selected row. The sheet of the paper read and the action underlined
+    // in a stowed gun's menu, -1 while neither is open.
     int g_tab = kInventory;
     std::atomic<int> g_turns{0};
     std::atomic<int> g_steps{0};
     std::atomic<bool> g_used{false};
     std::atomic<bool> g_dropped{false};
-    int g_selected[kTabs] = {-1, 0, 0, 0};
+    int g_selected[kTabs] = {};
     std::atomic<int> g_sheet{-1};
     std::atomic<int> g_menu{-1};
     std::atomic<bool> g_heals{false};

@@ -109,12 +109,12 @@ bool Draw(void* inventory, const Inventory::Weapon& gun) {
 }
 
 namespace {
-    // The slot whose key the gun's class had in the game: the secondary's 2 is gun 1, the
-    // primary's 3 gun 2. The special class's 4 reaches nothing now.
+    // The slot whose key the gun's class had in the game: the primary's 3 is gun 1, the
+    // secondary's 2 gun 2. The special class's 4 reaches nothing now.
     int GameSlot(void* weapon) {
-        return Inventory::Is(weapon, Inventory::kSecondary) ? 1
-               : Inventory::Is(weapon, Inventory::kPrimary) ? 2
-                                                            : 0;
+        return Inventory::Is(weapon, Inventory::kPrimary) ? 1
+               : Inventory::Is(weapon, Inventory::kSecondary) ? 2
+                                                              : 0;
     }
 
     // Two guns of the same model share an item id, which would make the engine draw the first
@@ -223,15 +223,15 @@ namespace {
 
     void __fastcall OnAction(void* node, void* unused, void* context, void* extra) {
         const auto action = Read<uint32_t>(node, kActionType);
-        g_keySlot = action == kSelectSecondary ? 1
-                    : action == kSelectPrimary ? 2
+        g_keySlot = action == kSelectPrimary ? 1
+                    : action == kSelectSecondary ? 2
                     : action == kSelectSpecial ? 0
                                                : -1;
         g_action(node, unused, context, extra);
         g_keySlot = -1;
     }
 
-    // Key 2 draws gun 1 and key 3 gun 2, whatever their class; key 4 draws nothing.
+    // Key 3 draws gun 1 and key 2 gun 2, whatever their class; key 4 draws nothing.
     bool __fastcall OnSelectWeapon(void* inventory, void* unused, const uint32_t* category) {
         const int slot = g_keySlot;
         if (slot < 0 || !Inventory::IsPlayers(inventory)) {

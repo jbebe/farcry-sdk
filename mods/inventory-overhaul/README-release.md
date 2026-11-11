@@ -4,7 +4,7 @@ Two guns of any class, and a notebook for everything else you carry. You hold th
 hands while the game runs on, the way you hold the map, so looking through your things in a firefight
 is your own risk.
 
-- **Two guns.** Gun A is on key 2 and gun B on key 3, whatever their class. A gun you pick up with two
+- **Two guns.** Gun A is on key 3 and gun B on key 2, whatever their class. A gun you pick up with two
   carried takes the place of the one in hand. Key 4 draws nothing, and the machete is unchanged.
 - **Items.** Stow a gun and it keeps its wear and its loaded rounds. You can have four guns in all,
   slots included. Spare ammo and upgrades stay yours, as they always were.

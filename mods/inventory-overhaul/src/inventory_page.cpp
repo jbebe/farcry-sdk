@@ -23,7 +23,8 @@ namespace {
 
     // A gun as the shop and the multiplayer loadout know it: its archetype, its picture
     // gun_icon_<picture>.png, its short name, its five loadout ratings from 0 to 5 (none below zero),
-    // its name in the shop, its ammo type and the bandolier that carries more of it.
+    // its name in the shop (empty for a gun the shop does not sell), its ammo type and the bandolier
+    // that carries more of it.
     struct Gun {
         const char* archetype;
         const char* picture;
@@ -34,7 +35,7 @@ namespace {
         const char* bandolier;
     };
 
-    // Matched against the start of the archetype's last part, in lower case without underscores.
+    // Matched against the start of any part of the archetype, in lower case without underscores.
     constexpr Gun kGuns[] = {
         {"ak47", "ak47", L"AK-47", {3, 4, 3, 5, 4}, "ak47", "assaultrifle", "assault webbing"},
         {"as50", "as50", L"AS50", {5, 5, 3, 3, 3}, "as50", "sniperrifle", "marksmans bandolier"},
@@ -64,6 +65,9 @@ namespace {
         {"pkm", "rpk", L"PKM", {3, 4, 3, 3.5f, 3}, "pkm", "lmg", "gunner pack"},
         {"rpg7", "rpg7", L"RPG-7", {5, 4, 3, 4, 1}, "rpg7", "rocket", "rocketeer satchel"},
         {"ied", "ied", L"IED", {5, 0, 0, 5, 0}, "ied", "ied", "grenadier webbing"},
+        {"sawedoff", "sawedoff", L"Sawed-off", {-1, -1, -1, -1, -1}, "", "deserteagle", "pistol belt"},
+        {"silencedshotgun", "silencedshotgun", L"Silenced shotgun", {-1, -1, -1, -1, -1}, "", "shotgun", "shotgun bandolier"},
+        {"crossbow", "crossbow", L"Crossbow", {-1, -1, -1, -1, -1}, "", "rocket", "rocketeer satchel"},
     };
 
     // The shop's word for a gun's crate, WEAPONBAZAAR_<SHOP>_CRATE_<field>: NAME, its name, or
@@ -93,10 +97,10 @@ namespace {
     // A stowed gun's menu: to slot A, to slot B.
     constexpr int kMenuActions = 2;
 
-    // "weapons.Special.M249_Saw" is m249saw.
-    std::string Key(const std::string& archetype) {
+    // The part M249_Saw is m249saw.
+    std::string Key(std::string_view part) {
         std::string key;
-        for (char c : archetype.substr(archetype.find_last_of('.') + 1)) {
+        for (char c : part) {
             if (c != '_') {
                 key += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
             }
@@ -104,12 +108,17 @@ namespace {
         return key;
     }
 
-    const Gun* GunOf(const std::string& archetype) {
-        const std::string key = Key(archetype);
-        for (const Gun& gun : kGuns) {
-            if (key.rfind(gun.archetype, 0) == 0) {
-                return &gun;
+    // "weapons.Special.M249_Saw.Persistent" is the M-249.
+    const Gun* GunOf(std::string_view archetype) {
+        for (size_t begin = 0; begin <= archetype.size();) {
+            const size_t end = std::min(archetype.find('.', begin), archetype.size());
+            const std::string key = Key(archetype.substr(begin, end - begin));
+            for (const Gun& gun : kGuns) {
+                if (key.rfind(gun.archetype, 0) == 0) {
+                    return &gun;
+                }
             }
+            begin = end + 1;
         }
         return nullptr;
     }
@@ -194,7 +203,7 @@ namespace {
         const Gun* known = GunOf(archetype);
         model.Show(known != nullptr ? PostItPicture(known->picture) : "IO_POSTIT_PIC_PLACEHOLDER", true);
         const std::wstring name = known != nullptr ? CrateText(*known, "NAME") : L"";
-        model.Text("IO_POSTIT_NAME", !name.empty() ? name : PlainName(archetype));
+        model.Text("IO_POSTIT_NAME", !name.empty() ? name : ShortName(archetype));
         if (known != nullptr) {
             model.Text("IO_POSTIT_SUB", CrateText(*known, "DESCRIPTION"));
         }
@@ -205,8 +214,10 @@ namespace {
         model.Text("IO_POSTIT_LINE2", L"Ammo");
         model.Text("IO_POSTIT_VALUE2", (loaded >= 0 ? std::to_wstring(loaded) : L"-") + L" / " + std::to_wstring(spare));
         if (known != nullptr) {
+            // A gun the shop does not sell has no manuals.
             const std::string shop = known->shop;
-            const std::string names[] = {shop + " operation manual", shop + " repair manual", known->bandolier};
+            const std::string names[] = {shop.empty() ? shop : shop + " operation manual",
+                                         shop.empty() ? shop : shop + " repair manual", known->bandolier};
             Upgrades(model, "IO_POSTIT_UP", 3, names);
             for (int rating = 0; rating < kRatings; ++rating) {
                 const float value = known->ratings[rating];
@@ -321,11 +332,6 @@ int InventoryPage(Model& model, int& selected, const void* view, void* inventory
                      Inventory::Throwables(view, "grenade"), Inventory::Throwables(view, "molotov")}};
     const std::vector<Row> rows = Rows(carried);
 
-    // The gun in hand is selected when the page is first opened.
-    if (selected < 0) {
-        const Inventory::Weapon* inHand = TwoGuns::InHand(inventory, carried.guns);
-        selected = inHand != nullptr && inHand == rows[1].gun ? 1 : 0;
-    }
     selected = std::clamp(selected, 0, static_cast<int>(rows.size()) - 1);
     const Row& row = rows[selected];
     const bool stowedGun = row.kind == Row::kItem && row.item->gun;

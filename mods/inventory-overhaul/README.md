@@ -6,7 +6,7 @@ this is an FCSE plugin, built in the log's steps.
 
 | Step | What it does | Status |
 |---|---|---|
-| 1. Two guns | gun 1 on key 2, gun 2 on key 3, of any class; a third gun replaces the one in hand | works in game |
+| 1. Two guns | gun 1 on key 3, gun 2 on key 2, of any class; a third gun replaces the one in hand | works in game |
 | 2. Items | guns stowed outside the two slots, at most four guns in all with theirs, and any other item by id and count; a test window in DevTools' overlay; X drops the gun in hand, or the notebook's selected row | works in game; X seen dropping guns A and B, a stowed gun and an item, by `tools/fc2drive/scenarios/inventory.py` |
 | 3. The notebook on Tab | a gadget of its own beside the map, given with it, on a new Notebook control: two bent pages held in both hands, the right one bending as the hands move | works in game |
 | 4. The Items page | the mockup's spread as a Magma page drawn onto the notebook's pages: Weapons, Items with the diamonds, the belt with its counts, the wheel moving along them, and a post-it with the selected row's details and upgrades | seen in game, a long Items list included; a bought upgrade not seen yet |
@@ -22,7 +22,7 @@ secondary and a special. What changes is the player's inventory (`InventoryOverh
 | Engine call | What the plugin does |
 |---|---|
 | `AddWeapon` | for a gun picked up with two carried, or with four in all counting Items' guns, drops the one in hand first (else the one last drawn), and with none carried and four in Items drops the new one; gives every new gun a free slot, kept on it as the entity data `InventoryOverhaul.Slot`. Loading a save adds its guns here too, and drops none |
-| the state machine's select-class actions, `SelectWeapon` | key 2 draws gun 1 and key 3 gun 2, whatever their class; key 4 draws nothing; the machete is unchanged. Other callers of `SelectWeapon`, such as the weapon crate, still select by class |
+| the state machine's select-class actions, `SelectWeapon` | key 3 draws gun 1 and key 2 gun 2, whatever their class; key 4 draws nothing; the machete is unchanged. Other callers of `SelectWeapon`, such as the weapon crate, still select by class |
 | `GetWeaponFromCategory`, inside the player's `CPickupWeapon::PrePickup` and `Pick` | finds no gun, so a pickup replaces nothing of its own class and `AddWeapon` makes room; the gun picked up is then drawn |
 
 Two guns of the same model share an item id, by which the engine draws them, so the later one is
@@ -32,12 +32,12 @@ A loading save adds its guns before the save's own data on them comes back, and 
 any slot given meanwhile. So guns added any way but a pickup are placed later, the first time
 `CInventoryViewPawn::GetEquippedWeapon` is asked for the player's gun, which the HUD does every
 frame; a number key that finds no gun in its slot places them too. Every gun without a slot then
-takes the key its class had in the game where it is free: the secondary's 2 (gun 1), the primary's
-3 (gun 2), else the free one. A save from before the mod carries up to three guns; the one left
+takes the key its class had in the game where it is free: the primary's 3 (gun 1), the secondary's
+2 (gun 2), else the free one. A save from before the mod carries up to three guns; the one left
 without a slot, the special-class gun, is dropped at the player's feet, and if it was in hand gun 1
 is drawn. A weapon crate's gun taken with two carried is placed the same way, so the gun left over
 is dropped. A scripted draw of the secondary class, if the game has one, goes through the same
-action as key 2 and draws gun 1.
+action as key 2 and draws gun 2.
 
 ## Items
 
@@ -137,7 +137,8 @@ being read, are in Caveat, a handwriting font (`notebook/fonts/`, under the SIL 
 `C:\Games\Far Cry 2` by default). It has no Cyrillic or Greek, so a paper written in those draws as
 nothing.
 The post-it's gun pictures are the shop's `gun_icon_*` textures, multiplied onto the paper, one image
-per gun, all but one hidden.
+per gun, all but one hidden; the mortar and the three DLC guns, which have none, have their HUD
+silhouette in ink.
 
 `src/engine/paper.cpp` puts it on the pages, on DirectX 9 only: the notebook does not work on DirectX 10.
 Its first and last images, `mark_begin` and `mark_end`,
@@ -169,7 +170,7 @@ the string assignment `CMagmaFacade::SetLabel` makes and `Element::SetVisible`
 
 The mouse wheel moves the selection along every list in reading order, the weapons, Items, then the
 belt, underlining the row in red pencil; the notebook takes the wheel's `cycleweapon` signal while
-it is out, so the gun in hand stays. It opens on the gun in hand, and keeps its place while
+it is out, so the gun in hand stays. It first opens on gun A, and keeps its place while
 the game runs.
 
 The left mouse button (`startshooting`, taken too) uses the selected row: gun A or B is stowed in
@@ -187,9 +188,11 @@ manual and the bandolier for its ammo. The syrettes have the two first aid manua
 and molotovs their bandoliers. Bought is a name in the wallet's list, as the shop names its items
 (`ak47 repair manual`, `assault webbing`).
 
-Names, classes and ratings are the shop's and the loadout's, matched by the archetype's last part;
-the full name and type are the string table's `WeaponBazaar/WEAPONBAZAAR_<shop name>_CRATE_NAME` and
-`_DESCRIPTION`. A gun the table does not know is named from its archetype. The page shows at the end of each frame
+Names, classes and ratings are the shop's and the loadout's, matched by any part of the archetype,
+so a variant such as the shop's `weapons.Special.LPO50.Persistent` or Mike's `.Mikes_Rusty` is its
+gun; the full name and type are the string table's `WeaponBazaar/WEAPONBAZAAR_<shop name>_CRATE_NAME`
+and `_DESCRIPTION`. The DLC guns, which the shop does not sell, have their short name, no type and no
+manuals or ratings. A gun the table does not know is named from its archetype. The page shows at the end of each frame
 (`GameThread::EachFrame`) and only while the notebook is open, so a HUD loaded meanwhile starts
 hidden.
 

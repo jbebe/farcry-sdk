@@ -5,7 +5,7 @@ Stage: active
 
 ## Features
 
-- [done] Two guns of any class on keys 2 and 3; a gun picked up with two carried replaces the one in hand - user: "works perfectly"
+- [done] Two guns of any class, A on key 3 and B on key 2; a gun picked up with two carried replaces the one in hand - user: "works perfectly"
 - [done] Picked-up gun comes to hand - fc2drive only, the user has not played it
 - [done] Items: stowed guns keep their wear and loaded rounds, four guns in all with the slots; other items by id and count
 - [done] Notebook on Tab, given with the map, held in both hands, its right page bending with the hands - user: "it works in all situations"

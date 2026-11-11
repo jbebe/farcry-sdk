@@ -8,6 +8,15 @@ Notable changes to Inventory Overhaul, loosely following
 ### Changed
 - **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.
+- **Gun A on key 3, gun B on key 2,** as the game has the primary and the secondary; a save from
+  before the mod puts the primary in A.
+- **The notebook first opens on gun A**, whichever gun is in hand.
+
+### Fixed
+- **Every gun has its picture and name on the post-it:** guns bought at the armory, such as the
+  flamethrower, and Mike's rusty ones showed the mosquito and a word like "Persistent". The sawed-off
+  shotgun, the silenced shotgun and the crossbow have theirs too.
+- **A dropped gun falls onto its side** instead of landing upright on its edge.
 
 ## [1.0.0] - 2026-11-01
 

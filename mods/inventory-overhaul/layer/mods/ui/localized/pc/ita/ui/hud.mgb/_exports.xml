@@ -735,6 +735,15 @@
     <GENERICOBJECT name="IO_POSTIT_PIC_MORTAR">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_mortar" />
     </GENERICOBJECT>
+    <GENERICOBJECT name="IO_POSTIT_PIC_SAWEDOFF">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_sawedoff" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_POSTIT_PIC_SILENCEDSHOTGUN">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_silencedshotgun" />
+    </GENERICOBJECT>
+    <GENERICOBJECT name="IO_POSTIT_PIC_CROSSBOW">
+      <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_crossbow" />
+    </GENERICOBJECT>
     <GENERICOBJECT name="IO_POSTIT_PIC_DIAMOND">
       <LINK slot="69" LASTOBJECTTYPE="Element" IDS="#A1126B78 #F2CDBA4C a_io_notebook a_io_notebook a_io_page a_io_page a_io_postit a_io_postit i_io_postit_pic_diamond" />
     </GENERICOBJECT>

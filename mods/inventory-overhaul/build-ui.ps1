@@ -24,7 +24,6 @@ $ErrorActionPreference = "Stop"
 . "$PSScriptRoot\build-common.ps1"
 $Retail = "$Tmp\gamefiles\common\ui\localized"
 $StockTexture = "$Tmp\gamefiles\common\ui\textures\ui_tape_icon.xbt"
-$Texconv = "$Repo\tools\third-party\FCBConverter\texconv.exe"
 $Layer = "$PSScriptRoot\layer\mods\ui\localized"
 $Textures = "$PSScriptRoot\layer\mods\ui\textures\io"
 $Work = "$PSScriptRoot\out\ui"
@@ -393,7 +392,11 @@ foreach ($pic in $GunPictures) {
     AddExported $postIt $PostItPath (Image "i_io_postit_pic_$pic" "io_gun_$pic" "" 94 29 230 58 "FFFFFFFF" 0 @(0, 0, 1, 1) Multiply)
 }
 AddExported $postIt $PostItPath (Image i_io_postit_pic_machete hud_icon_machete "" 94 29 230 58)
-AddExported $postIt $PostItPath (Image i_io_postit_pic_mortar hud_icon_mortar_shop "" 94 29 230 58 (Colour "000000" 0.8))
+# The guns without a gun_icon have their HUD silhouette in ink.
+$hudPictures = [ordered]@{ mortar = "hud_icon_mortar_shop"; sawedoff = "hud_icon_sawedoff_shotgun"; silencedshotgun = "hud_silenced_shotgun"; crossbow = "hud_stricker_crossbow" }
+foreach ($pic in $hudPictures.Keys) {
+    AddExported $postIt $PostItPath (Image "i_io_postit_pic_$pic" $hudPictures[$pic] "" 94 29 230 58 (Colour "000000" 0.8))
+}
 # The wallet's and the belt's pictures are square.
 foreach ($square in @(@{ Pic = "diamond"; Material = "ui_hud_icon_diamond"; Blending = "Normal" }) + $belt) {
     AddExported $postIt $PostItPath (Image "i_io_postit_pic_$($square.Pic)" $square.Material "" 173 22 72 72 "FFFFFFFF" 0 @(0, 0, 1, 1) $square.Blending)

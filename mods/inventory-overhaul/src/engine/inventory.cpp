@@ -5,6 +5,7 @@
 #include "fcse_api.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <string_view>
 #include <utility>
@@ -80,6 +81,17 @@ namespace {
     FCSE::Relocation<const uint32_t*> g_weaponItemType{FCSE::Uplay(0x00FE46EC)};
     FCSE::Relocation<const uint32_t*> g_classes{FCSE::Uplay(0x00F93390)};
     CanSpawnPickupFn g_canSpawnPickup = nullptr;
+    // CRigidPhysComponent's class id, built when its name is still unset, and its start state, where
+    // a spawn sets the body's first velocity and spin.
+    using StartStateFn = uint8_t*(__fastcall*)(void* body, void* unused);
+    FCSE::Relocation<BuildClassIdFn> g_buildRigidType{FCSE::Uplay(0x00054D80)};
+    FCSE::Relocation<const void* const*> g_rigidTypeName{FCSE::Uplay(0x00FDEEB8)};
+    FCSE::Relocation<const uint32_t*> g_rigidType{FCSE::Uplay(0x00FDEECC)};
+    constexpr size_t kStartStateSlot = 0x114 / sizeof(void*);
+    constexpr ptrdiff_t kStartVelocity = 0x5C;
+    constexpr ptrdiff_t kStartSpin = 0x68;
+    // How fast a dropped gun rolls about the way it is thrown, in radians a second.
+    constexpr float kDropRoll = 4.0f;
 
     // A component of the player's entity, not its pawn.
     constexpr ptrdiff_t kTerminalPlayer = 0x04;
@@ -154,6 +166,7 @@ bool Install() {
            g_gadgetFromCategory && g_uses && g_addGadget && g_pawnClass && g_getComponent &&
            g_buildCountersType && g_countersTypeName && g_countersType && g_buildEconomyType &&
            g_economyType && g_buildWeaponItemType && g_weaponItemType && g_classes &&
+           g_buildRigidType && g_rigidTypeName && g_rigidType &&
            (g_canSpawnPickup != nullptr ||
             Hook(g_canSpawnPickupSite, &OnCanSpawnPickup, &g_canSpawnPickup));
 }
@@ -326,11 +339,30 @@ void Equip(void* inventory, uint32_t id) {
     }
 }
 
-void Drop(void* inventory, void* weapon) { g_dropWeapon(inventory, nullptr, weapon, 0); }
+// The engine throws a gun upright and without spin, so it can land on its edge; a roll about the
+// throw tips it onto its side. A gun dropped against a wall falls straight, and rolls about x.
+void Drop(void* inventory, void* weapon) {
+    void* pickup = g_dropWeapon(inventory, nullptr, weapon, 0);
+    if (pickup == nullptr) {
+        return;
+    }
+    void* body = g_getComponent(Entity(pickup), nullptr,
+                                ClassId(g_buildRigidType, g_rigidTypeName, g_rigidType));
+    if (body == nullptr) {
+        return;
+    }
+    uint8_t* start = Method<StartStateFn>(body, kStartStateSlot)(body, nullptr);
+    const float x = Read<float>(start, kStartVelocity);
+    const float y = Read<float>(start, kStartVelocity + 4);
+    const float length = std::hypot(x, y);
+    const float roll = length > 0 ? kDropRoll / length : 0.0f;
+    Write(start, kStartSpin, length > 0 ? x * roll : kDropRoll);
+    Write(start, kStartSpin + 4, y * roll);
+}
 
 void Remove(void* inventory, void* weapon) {
     g_removing = true;
-    Drop(inventory, weapon);
+    g_dropWeapon(inventory, nullptr, weapon, 0);
     g_removing = false;
 }
 
