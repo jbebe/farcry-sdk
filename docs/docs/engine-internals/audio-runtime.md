@@ -743,6 +743,10 @@ t   = clamp((speed − fMinSpeed[g]) / (fMaxSpeed[g] − fMinSpeed[g]), 0, 1)
 rpm = fMinRPM[g] + (fMaxRPM[g] − fMinRPM[g]) × t
 ```
 
+The `CVehicleTypeWheeled` keeps the block as arrays of three floats, `fMinSpeed` at `+0x33C`,
+`fMaxSpeed` at `+0x348`, `fMinRPM` at `+0x354` and `fMaxRPM` at `+0x360`, its gear at `+0x36C`, the
+RPM at `+0x370`, and its `CVehicle` at `+0x04` **(RE-verified, Steam and GOG v1.03)**.
+
 `Update` keeps its own gear index, 0 to 2. It moves up one gear when the speed passes the current gear's
 `fMaxSpeed` and down one when it drops below `fMinSpeed`. The overlap between gears (the Rover's gear 0
 ends at 4 m/s, gear 1 starts at 3.8) is the only hysteresis. The Havok vehicle has an RPM of its own

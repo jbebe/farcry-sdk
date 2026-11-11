@@ -22,8 +22,20 @@ struct Engine {
 // For the vehicle entity a sound belongs to: false leaves it to the game; true sets its engine.
 using EngineFn = bool (*)(void* vehicle, Engine& engine);
 
+// The revs the game made up for a vehicle from its road speed: in its pretend gear, from 0, which runs
+// from `low` to `high`.
+struct GameRevs {
+    float rpm;
+    int gear;
+    float low;
+    float high;
+};
+
+// For a vehicle EngineFn leaves to the game, its entity and CVehicle: the revs its sound plays.
+using RevsFn = float (*)(void* vehicle, void* owner, const GameRevs& game);
+
 // False, and logged, when this build lacks the update's gear and RPM steps.
-bool Install(EngineFn engine);
+bool Install(EngineFn engine, RevsFn revs);
 
 // Called every frame with each vehicle entity and its sound, before the gear choice. Install first.
 using ObserveFn = void (*)(void* vehicle, uint8_t* sound);

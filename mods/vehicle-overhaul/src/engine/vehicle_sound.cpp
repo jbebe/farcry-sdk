@@ -16,8 +16,12 @@
 namespace {
     using VehicleOverhaul::At;
 
-    // A component of the vehicle's own entity.
+    // The vehicle's CVehicle, a component of its own entity.
     constexpr ptrdiff_t kSoundComponent = 0x04;
+    // GearEmulation's revs at the bottom and the top of each pretend gear, and the gear the game is in.
+    constexpr ptrdiff_t kSoundLowRpm = 0x354;
+    constexpr ptrdiff_t kSoundHighRpm = 0x360;
+    constexpr int kGameGears = 3;
     constexpr ptrdiff_t kSoundGear = 0x36C;
     constexpr ptrdiff_t kSoundRpm = 0x370;
     constexpr ptrdiff_t kSoundShiftDirection = 0x374;
@@ -80,6 +84,7 @@ namespace {
     }
 
     VehicleOverhaul::VehicleSound::EngineFn g_engine = nullptr;
+    VehicleOverhaul::VehicleSound::RevsFn g_revs = nullptr;
     VehicleOverhaul::VehicleSound::ObserveFn g_observe = nullptr;
     std::atomic<uint32_t> g_shiftSound{0};
 
@@ -124,16 +129,26 @@ namespace {
     }
 
     void OnRpmDone(FCSE_MidHookContext* ctx) {
-        if (reinterpret_cast<uint8_t*>(ctx->esi) == g_driven) {
+        auto* sound = reinterpret_cast<uint8_t*>(ctx->esi);
+        if (sound == g_driven) {
             At<float>(g_driven, kSoundRpm) = g_rpm;
             g_driven = nullptr;
+            return;
         }
+        const int gear = At<int32_t>(sound, kSoundGear);
+        if (gear < 0 || gear >= kGameGears) {
+            return;
+        }
+        void* owner = At<void*>(sound, kSoundComponent);
+        float& rpm = At<float>(sound, kSoundRpm);
+        rpm = g_revs(VehicleOverhaul::Entity::Of(owner), owner,
+                     {rpm, gear, At<float>(sound, kSoundLowRpm + gear * 4), At<float>(sound, kSoundHighRpm + gear * 4)});
     }
 }
 
 namespace VehicleOverhaul::VehicleSound {
 
-bool Install(EngineFn engine) {
+bool Install(EngineFn engine, RevsFn revs) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
     if (!g_gearChoice || !g_rpmDone) {
         api->Log("vehicle sound: the update's gear and RPM steps were not found in this build");
@@ -142,6 +157,7 @@ bool Install(EngineFn engine) {
     // Without it a gear change sound's bank never loads and the change is silent; the engine runs on.
     SoundBank::Install();
     g_engine = engine;
+    g_revs = revs;
     if (!api->MidHook(g_gearChoice.get(), &OnGearChoice) || !api->MidHook(g_rpmDone.get(), &OnRpmDone)) {
         return false;
     }

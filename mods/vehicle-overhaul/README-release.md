@@ -31,6 +31,8 @@ with real gears, and new engine sounds for every car.
   - A gear-change clunk on the Datsun, the ZIL-130 and the Unimog.
   - A recorded engine-off on the ZIL-130, the Unimog and the quad. The game's ZIL-130 stopped
     silently.
+  - Cars driven by others rev through the gears up to half their engine's redline at most, and
+    cruise at speed.
 - **Quieter tyres.** Tyre sounds on every surface play 10 dB quieter, so they no longer drown out
   the engine.
 - **Headlamps you can see.** Every lit headlamp, on any car, shows as a bright point from afar and

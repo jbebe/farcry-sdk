@@ -43,6 +43,16 @@ namespace {
     constexpr float kCatchFade = 0.5f;
     // The seconds an automatic's torque converter takes to bring the revs to a new gear's.
     constexpr float kConverterGlide = 0.3f;
+    // A car no one drives through the plugin revs no higher than this share of its real engine's redline,
+    // whose recordings screech near the top. Each of the game's three pretend gears runs within its band
+    // of the way from idle up to there: to the top of it in the first two, and only to cruising revs in
+    // the top one, which the game holds flat at speed.
+    constexpr float kOthersTop = 0.5f;
+    struct Band {
+        float from;
+        float to;
+    };
+    constexpr Band kPretendGears[] = {{0.0f, 1.0f}, {0.5f, 1.0f}, {0.6f, 0.85f}};
 
     // Kept by the physics step, read by the sound. The shift is the last gear change not yet sounded:
     // +1 up, -1 down.
@@ -103,12 +113,25 @@ namespace {
         engine.caught = g_caught;
         return true;
     }
+
+    // The game's revs, from road speed, laid over the real engine a car's sound is recorded for, so an
+    // AI's car is not held at the top of it. The player's own car keeps the game's.
+    float Revs(void* vehicle, void* owner, const VehicleOverhaul::VehicleSound::GameRevs& game) {
+        const VehicleOverhaul::RealVehicle::Spec* real = VehicleOverhaul::RealVehicle::Of(owner);
+        if (vehicle == g_vehicle || real == nullptr || real->idle <= 0.0f || game.high <= game.low) {
+            return game.rpm;
+        }
+        const float t = std::clamp((game.rpm - game.low) / (game.high - game.low), 0.0f, 1.0f);
+        const Band band = kPretendGears[game.gear];
+        const float top = std::max(real->idle, kOthersTop * real->redline);
+        return real->idle + (band.from + (band.to - band.from) * t) * (top - real->idle);
+    }
 }
 
 namespace VehicleOverhaul::Drivetrain {
 
 bool Install() {
-    return Vehicle::Install() && VehicleSound::Install(&Heard) && PawnTick::Subscribe(&Tick);
+    return Vehicle::Install() && VehicleSound::Install(&Heard, &Revs) && PawnTick::Subscribe(&Tick);
 }
 
 float Step(Car car, const RealVehicle::Spec* real, const Wheeled::Readout& readout, float seconds) {

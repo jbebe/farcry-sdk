@@ -85,6 +85,11 @@ release notes; see [RELEASING.md](../../RELEASING.md).
   ZIL-130 and the Unimog. The ZIL-130, the Unimog and the quad play their own recorded engine-off, the
   ZIL-130's where retail's stopped silently; the other cars keep retail's. The new sounds play on every car of a kind; the fade-in and the clunk only on the one
   you drive.
+- **Cars you do not drive rev on their own engine.** The game's revs for them, made up from road
+  speed over three pretend gears that run far past these engines' redlines, are laid over each
+  engine's way from idle up to half its redline, never higher, since the recordings screech near the
+  top: the first two gears climb to that half, the top one runs from 60% to 85% of the way, its
+  cruising revs. The car you drive keeps its own.
 - **Quieter tyres.** Every car's tyre sounds on the ground, dirt, gravel, grass and the rest, play
   10 dB quieter, so they no longer drown out the engine.
 - **Headlamps you can see.** Every lit headlamp, on any car, shows as a bright point: a lit white

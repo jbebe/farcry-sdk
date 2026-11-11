@@ -9,6 +9,11 @@ Notable changes to Vehicle Overhaul, loosely following
 - **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.
 
+### Fixed
+- **AI drivers' cars no longer scream at the top of their revs.** Their engine sound follows their
+  speed through the gears, never above half the engine's redline, and cruises at speed. The car you
+  drive is unchanged.
+
 ## [1.1.0] - 2026-11-07
 
 ### Removed
