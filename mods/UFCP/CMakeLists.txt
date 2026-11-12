@@ -43,6 +43,7 @@ add_library(UFCP SHARED
   "src/fixes/high_precision_timer.cpp"
   "src/fixes/hybrid_cores.cpp"
   "src/fixes/many_cores.cpp"
+  "src/fixes/map_icons.cpp"
   "src/fixes/menu_cursor.cpp"
   "src/fixes/mouse_speed_cap.cpp"
   "src/fixes/utilisation.cpp"

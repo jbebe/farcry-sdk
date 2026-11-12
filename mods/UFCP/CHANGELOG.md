@@ -7,6 +7,8 @@ Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachang
 ### Fixed
 - **Menu cursor** follows a slow mouse movement. Each frame dropped whatever the mouse moved below a
   pixel, so moving slowly did nothing at all, the more so the higher the frame rate.
+- **Map icons** sit still on the paper. They were placed less precisely than the map they lie on,
+  so they shifted by less than a pixel as you walked or the hands swayed.
 - **Monocular** turns the view at the guns' look speed for its zoom, 0.061, instead of 64% faster.
 
 ### Changed

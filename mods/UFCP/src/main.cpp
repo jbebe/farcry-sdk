@@ -42,6 +42,8 @@ void ApplyGrassSpotLightFix();
 void ApplyManyCoresFix();
 // On a hybrid CPU a thread the frame waits for can land on a slow efficiency core.
 void ApplyHybridCoresFix();
+// The map's icons shift on the paper by less than a pixel as the player moves.
+void ApplyMapIconsFix();
 
 // Options. The hook has to exist before the setting that drives it is registered, because
 // registration is what delivers the saved value.
@@ -103,6 +105,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     ApplyGrassSpotLightFix();
     ApplyManyCoresFix();
     ApplyHybridCoresFix();
+    ApplyMapIconsFix();
 
     UFCP::FindRenderProfile();
     InstallFovHook();

@@ -29,6 +29,7 @@ Applied unconditionally, with no setting — a fix that needs a switch is a pref
 | Many cores | The game closed at the splash screen on a PC with 32 or more logical processors. The hardware probe's walk over the processors could only end on a bit that shifts out to zero, which x86 never produces, so it wrote up the stack until it crashed. |
 | CPU and GPU utilisation | Idle job workers spun in the queue's critical section, the GPU could never run ahead a frame, and with a frame cap set the limiter burned a whole core busy-waiting. The job pool keeps the engine's own single worker: its jobs crash when two run at once. |
 | Hybrid cores | On a CPU with performance and efficiency cores, such as Intel's since Alder Lake, a thread the frame waits for could land on a slower efficiency core. The game now runs on the performance cores alone where they have at least 8 threads; with fewer it would stutter, so there, and on any other CPU, it keeps every processor. |
+| Map icons | The icons on the map moved slightly on the paper, by less than a pixel, as you walked or the hands swayed. The map is drawn at a precise position, its icons were not: each was worked out in float coordinates two to four kilometres from the world's origin, a quarter of a millimetre at a time. They are now placed the precise way the map is, and stay on their spots. |
 
 The two restorations are not a bypass of anything anyone can still buy. Both were Ubisoft promotions
 that ended; the Steam build asks a retired Uplay privileges service and the GOG build reads a

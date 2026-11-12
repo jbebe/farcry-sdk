@@ -15,6 +15,7 @@ Stage: active
 - [done] CPU and GPU use: no idle spinning, the GPU a frame ahead, no busy-wait frame cap; the engine's single job worker kept
 - [done] Many-core startup crash on 32+ logical processors
 - [done] Hybrid CPUs run on the performance cores where they have 8+ threads
+- [done] Map icons sit still on the paper instead of shifting by less than a pixel (#40) - unreleased; user: "they look as if they are glued to the map" (2026-11-12)
 - [done] Grass lit under headlights and flashlights - user: "now its perfect" (2026-10-12); 1.3.1's shadow-casting lights fix unseen
 - [done] Field of view 65-140 for the view on foot, cutscenes and ladders
 - [done] Weapon field of view, the same as the view by default or an angle of its own
