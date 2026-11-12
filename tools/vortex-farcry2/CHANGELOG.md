@@ -5,6 +5,10 @@ Notable changes to the Vortex Far Cry 2 extension, loosely following
 
 ## [Unreleased]
 
+### Fixed
+- **Vortex finds FCSE in `bin` on its own.** The tool's path lookup no longer fails when Vortex scans
+  for it.
+
 ### Added
 - **Mods that change game settings or particle effects merge.** A mod can ship only the blocks of
   `gamemodesconfig.xml` and the particle effects it changes or adds, and the extension merges them

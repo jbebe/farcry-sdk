@@ -14,11 +14,15 @@ Stage: maintenance
 - [done] Conflicts notification listing every change a mod lost
 - [done] Fragment merging of every container JackAll splits - controls, .mgb, brains, fonts, depload, MOVE, strings
 - [done] FCSE fetched from Nexus when a plugin mod needs it, warning icon in the FCSE column
-- [done] FCSE made Play's default launcher - open bug: FCSE_TOOL.queryPath reads a parameter Vortex never passes
+- [done] FCSE made Play's default launcher
 - [done] Asks before starting FarCry2.exe with plugin mods - cancelling shows "Failed to run tool" in Vortex 2.8
 - [done] Game start waits for a running build
 - [done] Bundled jackall-mi, or a local CLI build through JACKALL_MI
 - [scrapped] Showing the discovered FCSE tool or primary tool on Vortex's Tools page - the user dropped it
+
+## To validate
+
+- Vortex finds FCSE in bin on its own after a rescan of the game, and Play starts it
 
 ## Approvals
 

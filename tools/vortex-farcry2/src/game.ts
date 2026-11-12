@@ -93,9 +93,8 @@ export const FCSE_TOOL = {
   id: FCSE_TOOL_ID,
   name: 'Far Cry Script Extender (FCSE)',
   shortName: 'FCSE',
-  executable: () => 'FCSE.exe',
-  requiredFiles: ['FCSE.exe'],
-  queryPath: (gameRoot: string) => path.join(gameRoot, 'bin'),
+  executable: () => path.join('bin', 'FCSE.exe'),
+  requiredFiles: [path.join('bin', 'FCSE.exe')],
   relative: true,
 } as types.ITool;
 

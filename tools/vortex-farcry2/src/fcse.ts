@@ -92,7 +92,7 @@ export function syncFcseLauncher(api: types.IExtensionApi): void {
   if (enabled && fcseWasEnabled === false && primary === undefined) {
     api.store?.dispatch(actions.addDiscoveredTool(GAME_ID, FCSE_TOOL_ID, {
       ...FCSE_TOOL,
-      path: path.join(gameRoot, 'bin', FCSE_TOOL.executable()),
+      path: path.join(gameRoot, FCSE_TOOL.executable()),
       hidden: false,
       parameters: [],
       custom: false,
