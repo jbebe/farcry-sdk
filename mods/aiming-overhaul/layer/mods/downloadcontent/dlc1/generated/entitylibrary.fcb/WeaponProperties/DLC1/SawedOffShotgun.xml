@@ -727,10 +727,10 @@
                 </object>
               </object>
               <object type="Particles">
-                <value name="text_psMuzzleParticlesId" type="String">dlc1_particles.dlc1.pl_muzzleflash_sawedgun</value>
-                <value name="psMuzzleParticlesId" type="Hash">DC471B0B</value>
-                <value name="text_psMuzzleParticlesId_3rd" type="String">weapons.weapons.muzzleflash_ithaca</value>
-                <value name="psMuzzleParticlesId_3rd" type="Hash">C9445137</value>
+                <value name="text_psMuzzleParticlesId" type="String">aimingoverhaul.flashes.sawedoffshotgun</value>
+                <value name="psMuzzleParticlesId" type="Hash">9DAA75FD</value>
+                <value name="text_psMuzzleParticlesId_3rd" type="String">aimingoverhaul.flashes.sawedoffshotgun_3rd</value>
+                <value name="psMuzzleParticlesId_3rd" type="Hash">3FB1FA4F</value>
                 <value name="text_MuzzleBone" type="String">FX_FIRE</value>
                 <value name="MuzzleBone" type="Hash">AF2676DA</value>
                 <value name="text_psBulletCaseParticleId" type="String"></value>

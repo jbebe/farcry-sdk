@@ -128,7 +128,8 @@ and can throw dirt or show a hit to try them.
 ## Requirements
 
 - **FCSE 1.4.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
-- **JackAll 1.4.1 or the Vortex extension 0.4.0, or later**, to install it.
+- **JackAll 1.8.0 or the Vortex extension 0.7.0, or later**, to install it. Older versions leave the
+  muzzle light as the game has it and the guns without a muzzle flash.
 - **DirectX 9**, set in Options > Display > DirectX Version. On DirectX 10 you get the game's own
   scopes, without the eyepiece, reticles, surroundings or shadow, and the gun blur, the dirt and the
   dark edges of a hit don't show.

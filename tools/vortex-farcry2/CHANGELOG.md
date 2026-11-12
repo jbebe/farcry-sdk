@@ -3,6 +3,14 @@
 Notable changes to the Vortex Far Cry 2 extension, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **Mods that change game settings or particle effects merge.** A mod can ship only the blocks of
+  `gamemodesconfig.xml` and the particle effects it changes or adds, and the extension merges them
+  with every other mod's, where two such mods used to replace each other's whole file. Difficulty
+  Overhaul's hit locations and blood and Aiming Overhaul's muzzle light and flashes ship this way.
+
 ## [0.6.0] - 2026-10-28
 
 ### Added

@@ -81,8 +81,8 @@ Stage: active
 ## Release order
 
 - after fcse-1.5.0
-- after jackall-1.7.0
-- after vortex-0.6.0
+- after jackall-1.8.0
+- after vortex-0.7.0
 - the difficulty spread (item G) decided lever by lever
 - heavy testing (#8)
 - a revision of damage, AI shooting and the health system (user, 2026-11-04)
@@ -90,3 +90,4 @@ Stage: active
 
 ## Collisions
 
+- aiming-overhaul: merged by JackAll, no shared field - both edit the guns' entity-library archetypes and particle libraries

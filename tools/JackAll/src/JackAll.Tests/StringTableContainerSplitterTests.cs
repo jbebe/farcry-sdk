@@ -46,10 +46,8 @@ public class StringTableContainerSplitterTests : IDisposable
     [Theory]
     [InlineData("oasisstrings.rml", true)]
     [InlineData("OASISSTRINGS.RML", true)]
-    // The plain-text twin is a stale pre-patch leftover the engine never loads, and the particle
-    // libraries are a different container with a different key.
+    // The plain-text twin is a stale pre-patch leftover the engine never loads.
     [InlineData("oasisstrings.xml", false)]
-    [InlineData("world1_deploadnewparticles.rml", false)]
     [InlineData("toc.rml", false)]
     public void Only_the_string_table_splits_not_every_rml(string fileName, bool expected)
         => Assert.Equal(expected, ContainerFormats.IsContainerSegment(fileName));

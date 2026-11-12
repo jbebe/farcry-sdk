@@ -666,10 +666,10 @@
                 </object>
               </object>
               <object type="Particles">
-                <value name="text_psMuzzleParticlesId" type="String">weapons.weapons.pl_muzzleflash_base_gun</value>
-                <value name="psMuzzleParticlesId" type="Hash">9483923D</value>
-                <value name="text_psMuzzleParticlesId_3rd" type="String">weapons.weapons.muzzleflash_base_gun</value>
-                <value name="psMuzzleParticlesId_3rd" type="Hash">7F9D1B0D</value>
+                <value name="text_psMuzzleParticlesId" type="String">aimingoverhaul.flashes.makarov</value>
+                <value name="psMuzzleParticlesId" type="Hash">BE3E2EAC</value>
+                <value name="text_psMuzzleParticlesId_3rd" type="String">aimingoverhaul.flashes.makarov_3rd</value>
+                <value name="psMuzzleParticlesId_3rd" type="Hash">9BA36DB5</value>
                 <value name="text_MuzzleBone" type="String">FX_FIRE</value>
                 <value name="MuzzleBone" type="Hash">AF2676DA</value>
                 <value name="text_psBulletCaseParticleId" type="String">weapons.weapons.brass_desert_eagle</value>

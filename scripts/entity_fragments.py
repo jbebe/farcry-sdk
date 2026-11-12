@@ -71,12 +71,39 @@ def add_entity_data(block, values):
     block[last:last] = added + [inner + "</object>"]
 
 
+def of(name, archetypes):
+    """Whether the archetype is one of these or a variant under one."""
+    return any(name == a or name.startswith(a + ".") for a in archetypes)
+
+
+def lookup(archetype, table):
+    """The table's value for the archetype or one it is a variant of, or None."""
+    return next((value for a, value in table.items() if of(archetype, (a,))), None)
+
+
+def block(text, opening, closing):
+    """The start and end of the element that `opening` begins."""
+    start = text.index(opening)
+    return start, text.index(closing, start) + len(closing)
+
+
 def fragment_path(layer, library, archetype):
     """Where a layer stages the archetype's fragment of this library."""
     return os.path.join(layer, *library, *archetype.split(".")) + ".xml"
 
 
+def path_id(name):
+    """The CPathID a resource such as a particle system is found by."""
+    return zlib.crc32(name.lower().encode("ascii"))
+
+
+def numbered(name):
+    """A fragment's file named by the resource it holds: its name, then its CPathID."""
+    return "%s.%d.xml" % (name, path_id(name))
+
+
 def write(path, block):
+    """Writes a fragment, given as its lines or its text."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8", newline="\n") as handle:
-        handle.write("\n".join(block) + "\n")
+        handle.write(block if isinstance(block, str) else "\n".join(block) + "\n")

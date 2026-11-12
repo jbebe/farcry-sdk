@@ -10,6 +10,14 @@ Notable changes to Aiming Overhaul, loosely following
   orange-red. The core keeps the round's colour instead of washing out to pale yellow. A ricochet
   keeps its round's colour. A modded gun picks green with `AimingOverhaul.SovietTracer` in its
   weapon data.
+- **A muzzle light that reaches.** A shot lights the walls and ground up to 5 m away, two and a half
+  times as far as the game's.
+- **A muzzle flash per gun.** Each gun's flash, yours and the soldiers', is sized to its round, its
+  barrel and its muzzle: flash hiders break it into prongs, short barrels and big rounds throw a
+  bigger ball, and the AS50 and M2 the largest. The Dragunov and M1903 now flash. Every flash lasts
+  as long as the game's. Needs the next JackAll, which merges the game modes config and the particle
+  effects with other mods'.
+- **On the test range too.** Every gun change the mod makes reaches the guns of DevTools' test range.
 
 ### Changed
 - **Tracers as real belts are linked.** One round in five from the M249 and the mounted M249s and

@@ -32,7 +32,15 @@ public static class ContainerFormats
            || IsWorldDescriptor(segment)
            || IsInputConfig(segment)
            || IsMagmaPackage(segment)
-           || IsBrainWorkspace(segment);
+           || IsBrainWorkspace(segment)
+           || IsGameModesConfig(segment)
+           || IsParticleLibrary(segment);
+
+    /// <summary>The game modes config, which splits per property block and per game mode.</summary>
+    public static bool IsGameModesConfig(string path) => GameModesConfigContainerSplitter.IsGameModesConfig(path);
+
+    /// <summary>A world's particle library, which splits per particle system.</summary>
+    public static bool IsParticleLibrary(string path) => ParticleLibraryContainerSplitter.IsParticleLibrary(path);
 
     /// <summary>A brain workspace, which splits per instance.</summary>
     public static bool IsBrainWorkspace(string fileName) => AiWorkspaceContainerSplitter.IsWorkspace(fileName);
@@ -58,6 +66,7 @@ public static class ContainerFormats
     public static bool IsPlainDocumentFragment(string container, string fragmentId)
         => IsDepLoad(container) || IsUiDepLoad(container) || IsWorldDescriptor(container)
            || IsInputConfig(container) || IsMagmaPackage(container) || IsBrainWorkspace(container)
+           || IsGameModesConfig(container) || IsParticleLibrary(container)
            || ContainerLayout.IsLayoutId(fragmentId);
 
     /// <summary>
@@ -144,6 +153,16 @@ public static class ContainerFormats
         if (IsBrainWorkspace(fileName))
         {
             return AiWorkspaceContainerSplitter.Instance;
+        }
+
+        if (IsGameModesConfig(fileName))
+        {
+            return GameModesConfigContainerSplitter.Instance;
+        }
+
+        if (IsParticleLibrary(fileName))
+        {
+            return ParticleLibraryContainerSplitter.Instance;
         }
 
         return IsStringTable(fileName)

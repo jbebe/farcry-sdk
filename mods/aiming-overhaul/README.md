@@ -165,6 +165,13 @@ both field by field with other mods' edits, reporting any clash.
   brighter than white so that it blooms, smooth at any angle, and a few pixels wide however far off
   it is. Its colour is the round's, core included: a NATO round's tracer burns orange-red, a Soviet
   round's, from the PKM, green. A ricochet keeps its round's colour.
+- **Muzzle flash.** A shot's light reaches 5 m, two and a half times the game's, so it lights the
+  walls and ground around the shooter. Each gun's flash, as the player and as anyone else sees it,
+  is sized to its round, its barrel and its muzzle: the M16's birdcage and the FAL's, G3's and
+  Dragunov's flash hiders break it into prongs, as the M249's and PKM's do; the .45s, the Desert
+  Eagle and the cut barrels of the sawed-off throw a bigger ball than the 9 mm guns; the AS50's
+  brake and the M2's .50 BMG throw the largest; the Dragunov and M1903 flash, where the game shows
+  only smoke. Every flash lasts as long as the game's.
 
 The eye is moved through the camera's positional offset, the one the recoil kicks, and a scope's
 zoom held back until its sight picture is up, in `src/engine/aim.cpp`. The aim's wander is added
@@ -218,7 +225,12 @@ there, and every weapon has its weight in kilograms, `AimingOverhaul.Weight`; a 
 weighs 3.5. A gun that fires Soviet rounds has `AimingOverhaul.SovietTracer` set to 1, and its
 tracers burn green; without it they are NATO's, orange. The plugin follows each tracer back to the
 fire strategy that added it and that strategy's weapon, and builds a Soviet round's streak with its
-vertex alpha at 0.5, which the shader tells it by. All of it is written by `data\fragments.py`. How quickly a walk speeds up and slows down
+vertex alpha at 0.5, which the shader tells it by. All of it is written by `data\fragments.py`, for
+the campaign's libraries and the test range's. The muzzle light's reach is `fRadius` in the
+`DefaultMuzzleFlashManager` block of `gamemodesconfig.xml`, a fragment under `layer\mods\engine\`;
+the game throws one light, the same for every gun. Each gun's flash is a particle system of its own,
+first and third person, in each world's particle library and the DLC's, with depload entries that
+load it, written by `data\flashes.py`; the guns' weapon properties name them. How quickly a walk speeds up and slows down
 is the player archetypes' `fWalkingAcceleration` and `fWalkingDeceleration`, and a sprint's speed
 over time is `Curves.Locomotion.Sprint`, both fragments under `layer\mods\` written by
 `data\movement.py`. The breaths are the game's own stamina breathing,
@@ -227,7 +239,8 @@ played in `src/breath.cpp` through `src/engine/sound.cpp`. The direction marks a
 `hud.mgb` fragment per aspect and language under `layer\mods\ui\`, written by `data\hud.py`. The
 engine side is in
 [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md),
-[bullet tracers](../../docs/docs/engine-internals/bullet-tracers.md) and
+[bullet tracers](../../docs/docs/engine-internals/bullet-tracers.md),
+[muzzle flash](../../docs/docs/engine-internals/muzzle-flash.md) and
 [presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).
 
 ## Requirements
@@ -329,7 +342,8 @@ round and its push, and what its last shot shook.
 ```
 .\build.ps1                                     # x86 release -> layer\plugins\aiming-overhaul\
 .\build.ps1 -Install "C:\Games\Far Cry 2\bin"   # and build the layer into the game with jackall-cli
-python data\fragments.py world1.xml world2.xml dlc1.xml   # rewrite the weapon data, see the script
+python data\flashes.py world1.xml world2.xml tmpla.xml dlc1.xml <their four deploads>   # the guns' flashes, see the script
+python data\fragments.py world1.xml world2.xml dlc1.xml tmpla.xml   # rewrite the weapon data, see the script
 python data\movement.py world1.xml world2.xml            # rewrite the player data, see the script
 python data\breath.py <worlds soundbinary folder>        # rebuild the breath banks, see the script
 python data\hud.py <common ui\localized folder>          # rewrite the HUD fragments, see the script

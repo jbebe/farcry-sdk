@@ -1,7 +1,8 @@
 """Write the layer's weapon archetype fragments: which guns fire tracers, how fast and how long their
 streaks are, which fire Soviet rounds with green tracers, which scopes the plugin draws and how, those scopes losing the engine's iron-sight
 post effect and its random spread down the sights, which guns' breath can be held, what each weapon
-weighs, and which guns the game still takes the kick back on.
+weighs, which guns the game still takes the kick back on, and each gun's own muzzle flash, the particle
+systems data\\flashes.py writes.
 
 Each fragment is a WeaponProperties or weapons archetype copied whole out of a decoded entity
 library, with only the fields below changed or FCSE's entity data component added, so JackAll
@@ -11,10 +12,13 @@ Multiplayer (.Multi) archetypes are left alone.
     jackall-cli fcb decode <world1 entitylibrary.fcb> -o world1.xml
     jackall-cli fcb decode <world2 entitylibrary.fcb> -o world2.xml
     jackall-cli fcb decode <dlc1 entitylibrary.fcb> -o dlc1.xml
-    python data\\fragments.py world1.xml world2.xml dlc1.xml
+    jackall-cli fcb decode <tmpla entitylibrary.fcb> -o tmpla.xml
+    python data\\fragments.py world1.xml world2.xml dlc1.xml tmpla.xml
 
-The libraries are the campaign's: worlds\\world{1,2}\\generated\\entitylibrary.fcb and
-downloadcontent\\dlc1\\generated\\entitylibrary.fcb.
+The libraries are the campaign's, worlds\\world{1,2}\\generated\\entitylibrary.fcb and
+downloadcontent\\dlc1\\generated\\entitylibrary.fcb, and patch.dat's worlds\\tmpla\\generated\\entitylibrary.fcb,
+whose guns DevTools' test range copies into its own library; tmpla's fragments are written for that
+library, worlds\\testrange.
 """
 import os
 import re
@@ -22,14 +26,16 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "scripts"))
-from entity_fragments import (add_entity_data, fragment_path, has_object, object_lines, prototypes,
+from entity_fragments import (add_entity_data, crc, fragment_path, has_object, lookup, object_lines, of, prototypes,
                               write)
+import flashes
 
 LAYER = os.path.join(HERE, "..", "layer", "mods")
 LIBRARIES = (
     ("worlds", "world1", "generated", "entitylibrary.fcb"),
     ("worlds", "world2", "generated", "entitylibrary.fcb"),
     ("downloadcontent", "dlc1", "generated", "entitylibrary.fcb"),
+    ("worlds", "testrange", "generated", "entitylibrary.fcb"),
 )
 
 # The belt-fed guns that keep their tracers, an archetype and its variants each, and one round in how
@@ -91,13 +97,11 @@ RECOIL_RETURNS = ("Primary.Ithaca", "Primary.SPAS12", "Primary.USAS12", "Primary
                   "DLC1.SawedOffShotgun", "DLC1.SilencedShotgun")
 RECOIL_RETURNS_KEY = "AimingOverhaul.RecoilReturns"
 
+# The particle systems a gun's muzzle flash is, first and third person: its own, from data\flashes.py.
+MUZZLE_FIELDS = ("psMuzzleParticlesId", "psMuzzleParticlesId_3rd")
+
 PROPERTIES = "WeaponProperties."
 WEAPONS = ("weapons.", "DLC1Weapons.")
-
-
-def of(name, archetypes):
-    """Whether the archetype is one of these or a variant under one."""
-    return any(name == a or name.startswith(a + ".") for a in archetypes)
 
 
 def find_value(block, name, within=None):
@@ -141,11 +145,10 @@ def edit_properties(archetype, block):
         for spread in SCOPE_SPREADS:
             if has_object(block, spread):
                 set_value(block, "fAmplitude", "0", spread)
-
-
-def lookup(archetype, table):
-    """The table's value for the archetype or one it is a variant of, or None."""
-    return next((value for a, value in table.items() if of(archetype, (a,))), None)
+    for field, system in zip(MUZZLE_FIELDS, lookup(archetype, flashes.NAMES) or ()):
+        if system is not None:
+            set_value(block, "text_" + field, system, "Particles")
+            set_value(block, field, crc(system), "Particles")
 
 
 def edit_weapon(archetype, block):
@@ -186,4 +189,4 @@ def main(paths):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:4])
+    main(sys.argv[1:5])

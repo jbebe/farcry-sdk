@@ -1,11 +1,9 @@
-"""Write the layer's particle libraries: the blood a bullet hit sprays, the particle system
-bullet_impact.bullet_impact.b_imp_flesh, as a red mist and a few droplets in place of the game's splash.
+"""Write the blood a bullet hit sprays, the particle system bullet_impact.bullet_impact.b_imp_flesh, as a
+red mist and a few droplets in place of the game's splash: one fragment per particle library.
 
 - The splash, an animated blob of blood, and the dust puff beside it are gone.
 - The mist is the game's red smoke puff, smaller, fainter and quicker.
 - The droplets are the machete hit's, three flung out fast where the splash flew, falling as they fade.
-
-JackAll merges no particle library, so each is the game's whole, with only that system changed.
 
     jackall-cli rml decode <worlds\\world1\\generated\\world1_deploadnewparticles.rml> -o world1.xml
     jackall-cli rml decode <worlds\\world2\\generated\\world2_deploadnewparticles.rml> -o world2.xml
@@ -18,16 +16,12 @@ DevTools ships as a copy of it.
 """
 import copy
 import os
-import subprocess
 import sys
-import tempfile
 import xml.etree.ElementTree as ET
 
 from weapons import LAYER
+from entity_fragments import block, numbered, write
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-CLI = os.path.join(HERE, "..", "..", "..", "tools", "JackAll", "src", "JackAll.Cli", "bin", "Release", "net10.0",
-                   "jackall-cli.exe")
 LIBRARIES = (
     ("worlds", "world1", "generated", "world1_deploadnewparticles.rml"),
     ("worlds", "world2", "generated", "world2_deploadnewparticles.rml"),
@@ -42,12 +36,6 @@ SPRINKLE, SPRINKLE_ID = EMITTER + "sprinkle", "{7D2F4C0F-A035-4B7B-81E8-5EA633BF
 # The splash's aim, which the sprinkle takes: out of the wound in a 45-degree cone.
 AIM = ("RotOffset", "EmitDirAxisAngle", "EmitDirAxisSpread", "EmitDirPlaneAngle", "EmitDirPlaneSpread", "EmitFlag",
        "EmitVolRadius")
-
-
-def block(text, opening, closing):
-    """The start and end of the element that `opening` begins."""
-    start = text.index(opening)
-    return start, text.index(closing, start) + len(closing)
 
 
 def emitter(system, name):
@@ -107,6 +95,7 @@ def sprinkle(droplets, splash):
 
 
 def edit(text, droplets):
+    """The blood system of one library, edited, as fragment text."""
     start, end = block(text, '<PartSys Name="%s"' % SYSTEM, "</PartSys>")
     system = ET.fromstring(text[start:end])
     splash = emitter(system, SPLASH)
@@ -114,7 +103,7 @@ def edit(text, droplets):
     system.append(sprinkle(droplets, splash))
     system.remove(splash)
     system.remove(emitter(system, DUST))
-    return text[:start] + ET.tostring(system, encoding="unicode") + text[end:]
+    return ET.tostring(system, encoding="unicode")
 
 
 def main(paths):
@@ -124,15 +113,10 @@ def main(paths):
     source = next(t for t in texts if opening in t)
     start, end = block(source, opening, "</PartEmit>")
     droplets = ET.fromstring(source[start:end])
-    with tempfile.TemporaryDirectory() as work:
-        for text, library in zip(texts, LIBRARIES):
-            edited = os.path.join(work, library[-1] + ".xml")
-            with open(edited, "w", encoding="utf-8") as handle:
-                handle.write(edit(text, droplets))
-            out = os.path.join(LAYER, *library)
-            os.makedirs(os.path.dirname(out), exist_ok=True)
-            subprocess.run([CLI, "rml", "encode", edited, "-o", out], check=True, capture_output=True)
-            print(os.path.relpath(out, LAYER))
+    for text, library in zip(texts, LIBRARIES):
+        out = os.path.join(LAYER, *library, numbered(SYSTEM))
+        write(out, edit(text, droplets))
+        print(os.path.relpath(out, LAYER))
 
 
 if __name__ == "__main__":

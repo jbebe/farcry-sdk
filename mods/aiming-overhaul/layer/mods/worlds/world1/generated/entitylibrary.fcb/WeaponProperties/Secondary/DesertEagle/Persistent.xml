@@ -702,10 +702,10 @@
                 </object>
               </object>
               <object type="Particles">
-                <value name="text_psMuzzleParticlesId" type="String">weapons.weapons.pl_muzzleflash_desert_eagle</value>
-                <value name="psMuzzleParticlesId" type="Hash">BA8AC363</value>
-                <value name="text_psMuzzleParticlesId_3rd" type="String">weapons.weapons.muzzleflash_desert_eagle</value>
-                <value name="psMuzzleParticlesId_3rd" type="Hash">47DC1FE2</value>
+                <value name="text_psMuzzleParticlesId" type="String">aimingoverhaul.flashes.deserteagle</value>
+                <value name="psMuzzleParticlesId" type="Hash">EC010464</value>
+                <value name="text_psMuzzleParticlesId_3rd" type="String">aimingoverhaul.flashes.deserteagle_3rd</value>
+                <value name="psMuzzleParticlesId_3rd" type="Hash">C03B728E</value>
                 <value name="text_MuzzleBone" type="String">FX_FIRE</value>
                 <value name="MuzzleBone" type="Hash">AF2676DA</value>
                 <value name="text_psBulletCaseParticleId" type="String">weapons.weapons.brass_desert_eagle</value>

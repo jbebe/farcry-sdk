@@ -5,6 +5,13 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ## [Unreleased]
 
 ### Added
+- **`gamemodesconfig.xml` merges across mods.** Each block of game settings (`DefaultMuzzleFlashManager`,
+  the counters with the hit locations, the weapon bazaar) and each game mode is a fragment, merged value
+  by value, so two mods changing different settings both reach the game. The AI tab saves the behaviour
+  odds as their block.
+- **Particle libraries merge across mods.** Each particle effect of a `<world>_deploadnewparticles.rml`
+  is a fragment, numbered by the resource id the game finds it by, so a mod ships only the effects it
+  changes or adds, and two mods changing different effects both land.
 - **Vegetation for a new world.** A plan, `levels\<world>\vegetation.xml`, lays out patches of grass,
   trees or any other scatter mesh over rectangles and at single spots, and `world pack` grows it into
   the world's sectors. Each copy takes its look from the same one in a shipped level you name. Packing

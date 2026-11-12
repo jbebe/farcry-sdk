@@ -65,6 +65,8 @@ lists it changes is in it whole, so it works next to any other mod that changes 
 | Controls, `config\inputactionmap*.xml` and `config\defaultusercontrols.xml` | One action map or category | `mods\config\inputactionmapcommon.xml\common_gameplay.xml` |
 | Menus and the HUD, `.mgb` | One area, plus the package's lists of materials, fonts, font families, strings and exports | `mods\ui\localized\pc\eng\ui\hud.mgb\a_flashlight_object.1092050190.xml` |
 | AI brains, `scripts\game\newbrains\*.ai.rml` | One brain, plan, scanner or task. A plan lists the tasks it owns, so a mod adding a task also ships its plan | `mods\scripts\game\newbrains\mercbrain.ai.rml\LauncherInHand.3303724464.xml` |
+| The game modes config, `engine\gamemodes\gamemodesconfig.xml` | One block of game settings, such as the muzzle light or the hit locations, or one game mode | `mods\engine\gamemodes\gamemodesconfig.xml\DefaultMuzzleFlashManager.xml` |
+| Particle libraries, `<world>_deploadnewparticles.rml` | One particle effect | `mods\worlds\world1\generated\world1_deploadnewparticles.rml\weapons.weapons.pl_muzzleflash_ak47.483129128.xml` |
 
 Everything else ships whole: textures, sounds, music, models, animation clips, terrain, Lua scripts,
 and the other `.fcb` and `.xml` files. When two mods ship the same whole file, the lowest
@@ -80,13 +82,14 @@ zip.
 - **An archetype's folders are its name.** `WeaponProperties.Primary.AK47` is
   `WeaponProperties\Primary\AK47.xml`. The same file in another folder is another archetype, a new
   one. A mission in a world descriptor works the same way.
-- **Placed objects, dependency entries, animation situations and HUD areas are named by the number
-  before `.xml`.** The text in front of it is only a label:
+- **Placed objects, dependency entries, animation situations, HUD areas and particle effects are
+  named by the number before `.xml`.** The text in front of it is only a label:
   `land.jeepliberty_0.2054243731923553576.xml` and `2054243731923553576.xml` are the same jeep. These
   files sit directly in the container's folder, not in folders of their own.
-- **The rest go by their name:** a controls section such as `common_gameplay.xml`, and the fixed
-  names that start with `_`, such as `_materials.xml`, `_fonts.xml`, `_environment.xml` and
-  `_layout.xml`.
+- **The rest go by their name:** a controls section such as `common_gameplay.xml`, a block of the
+  game modes config such as `DefaultMuzzleFlashManager.xml`, a game mode as `GameMode.Single.xml`,
+  and the fixed names that start with `_`, such as `_materials.xml`, `_fonts.xml`,
+  `_environment.xml` and `_layout.xml`.
 
 ## What a fragment holds
 
@@ -148,7 +151,7 @@ warns.
 | Save on the **Map** tab | The objects you moved or added, the sector's `_layout.xml`, archetypes you pasted from the other world, and the dependency entries they need |
 | Save in the MGB editor | The areas that differ from what the game loads now; an area put back to the original is removed again |
 | Save on the **Animations** tab | The situations you changed |
-| Save on the **AI** tab | Soldier, weapon and curve archetypes; a brain as the plans and tasks that differ; behaviour odds as a whole file |
+| Save on the **AI** tab | Soldier, weapon and curve archetypes; a brain as the plans and tasks that differ; behaviour odds as their block of the game modes config |
 | **Make a font** on the **Mods** tab | The font and its family in every `fonts.mgb`, and its files in every UI dependency list; see [Add a font](/jackall/fonts) |
 | **Import legacy mod** | Every piece of every container the old mod changed |
 

@@ -75,22 +75,21 @@ python data\health.py world1.xml world2.xml dlc1.xml tmpla.xml
 python data\particles.py world1.xml world2.xml tmpla.xml dlc1.xml   # decoded particle libraries
 ```
 
-`data\weapons.py` writes the guns' fragments, `gamemodesconfig.xml`, `materialimpacts.xml` and `decal.xml`,
-`data\health.py` the player's health curves, and `data\particles.py` the four particle libraries with
-the bullet blood, from decoded retail entity and particle libraries and the retail files; their
-docstrings say which. The test range's guns and curves come from `tmpla`'s library, which DevTools copies into the
+`data\weapons.py` writes the guns' fragments, the hit locations' block of `gamemodesconfig.xml`,
+`materialimpacts.xml` and `decal.xml`, `data\health.py` the player's health curves, and
+`data\particles.py` the bullet blood's particle system in each of four particle libraries, from decoded
+retail entity and particle libraries and the retail files; their docstrings say which. The test range's guns and curves come from `tmpla`'s library, which DevTools copies into the
 range's own, so `tmpla`'s fragments are written for `worlds\testrange`.
 
 `layer\` is what the release zips: the plugin under `plugins\`, and the brain's changes as fragments
 under `mods\scripts\game\newbrains\mercbrain.ai.rml\`, one file per plan or task, which JackAll
 merges into the game's own brain at install. `build-layer.ps1` makes them: it takes
 `mercbrain.ai.rml` out of the installed game, makes the edits and writes what differs with
-`jackall-cli ai fragments`. Beside them are the guns' weapon and weapon-properties fragments and the
-health curves, which JackAll merges field by field with any other mod's copies, and the whole
-`gamemodesconfig.xml`, `materialimpacts.xml`, `decal.xml` and particle libraries. The test range's library replaces
-DevTools' copy, so this layer goes after DevTools'.
+`jackall-cli ai fragments`. Beside them are the guns' weapon and weapon-properties fragments, the
+health curves, the hit locations' block of `gamemodesconfig.xml` and the blood's particle systems,
+which JackAll merges with any other mod's copies, and the whole `materialimpacts.xml` and `decal.xml`.
 Install with `jackall-cli mod build --game "<game>" --layer layer`,
 together with any other layers in play.
 
-Needs FCSE 1.4.0 or later (plugin API v8), and JackAll 1.7.0 or the Vortex extension 0.6.0, or later,
-to install the brain's fragments.
+Needs FCSE 1.4.0 or later (plugin API v8), and JackAll 1.8.0 or the Vortex extension 0.7.0, or later,
+to install its fragments.

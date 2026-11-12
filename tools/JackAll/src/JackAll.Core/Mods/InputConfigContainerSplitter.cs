@@ -1,5 +1,3 @@
-using System.Text;
-using System.Xml;
 using System.Xml.Linq;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
@@ -30,7 +28,7 @@ public sealed class InputConfigContainerSplitter : IContainerSplitter
     /// <summary>A section's id: its name, as a file.</summary>
     public static string IdOf(string sectionName) => FcbFragments.Sanitize(sectionName) + ".xml";
 
-    public IContainerTree Open(byte[] container) => new Tree(Load(container, LoadOptions.None).Root!);
+    public IContainerTree Open(byte[] container) => new Tree(XmlFileText.Load(container, LoadOptions.None).Root!);
 
     public string Canonicalize(string fragmentId, string fragmentXml) => Render(XElement.Parse(fragmentXml));
 
@@ -45,7 +43,7 @@ public sealed class InputConfigContainerSplitter : IContainerSplitter
             return baseBytes;
         }
 
-        XDocument document = Load(baseBytes, LoadOptions.PreserveWhitespace);
+        XDocument document = XmlFileText.Load(baseBytes, LoadOptions.PreserveWhitespace);
         XElement root = document.Root!;
         Dictionary<string, XElement> byId = Index(root);
         foreach ((string id, string xml) in fragmentXmlById.OrderBy(kv => kv.Key, StringComparer.Ordinal))
@@ -70,7 +68,7 @@ public sealed class InputConfigContainerSplitter : IContainerSplitter
             byId[id] = replacement;
         }
 
-        return Save(document);
+        return XmlFileText.Save(document);
     }
 
     /// <summary>What a section's child is matched by in a merge: its name, else the action map it
@@ -93,35 +91,6 @@ public sealed class InputConfigContainerSplitter : IContainerSplitter
             }
         }
         return byId;
-    }
-
-    /// <summary>The file as its declaration says it is encoded.</summary>
-    private static XDocument Load(byte[] bytes, LoadOptions options)
-    {
-        using var stream = new MemoryStream(bytes);
-        return XDocument.Load(stream, options);
-    }
-
-    /// <summary>The file in the encoding its declaration names, without a byte order mark, and with
-    /// the CRLF line endings the shipped files use.</summary>
-    private static byte[] Save(XDocument document)
-    {
-        Encoding encoding = document.Declaration?.Encoding is { Length: > 0 } name
-            ? Encoding.GetEncoding(name)
-            : Encoding.UTF8;
-        var settings = new XmlWriterSettings
-        {
-            Encoding = encoding is UTF8Encoding ? new UTF8Encoding(false) : encoding,
-            OmitXmlDeclaration = document.Declaration is null,
-            NewLineChars = "\r\n",
-        };
-
-        using var stream = new MemoryStream();
-        using (XmlWriter writer = XmlWriter.Create(stream, settings))
-        {
-            document.Save(writer);
-        }
-        return stream.ToArray();
     }
 
     /// <summary>One section in the shape every staged fragment is written in, tab-indented like the

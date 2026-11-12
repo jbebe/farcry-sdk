@@ -3,6 +3,13 @@
 Notable changes to Difficulty Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Changed
+- **The hit locations and the blood merge with other mods.** The mod ships only its block of
+  `gamemodesconfig.xml` and its blood particle effect, where it shipped those files whole, so a mod
+  changing other game settings or other particle effects works beside it. Needs the next JackAll.
+
 ## [0.1.0] - 2026-10-28
 
 ### Added

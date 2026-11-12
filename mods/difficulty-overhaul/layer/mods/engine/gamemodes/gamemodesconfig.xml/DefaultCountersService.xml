@@ -1,0 +1,152 @@
+<DefaultCountersService>
+		    <JumpDamage fMinSpeedFallDamage="14" fMaxSpeedFallDamage="17" iMinFallLevelStim="2" iMaxFallLevelStim="32" />
+			<CounterHealthRatingsTable>
+				<Act>	<!-- Act 1 -->
+					<Item rating="high" value="250" />
+					<Item rating="medium" value="150" />
+					<Item rating="low" value="130" />
+					<Item rating="failure" value="50" />
+				</Act>		
+				<Act>	<!-- Act 2 -->
+					<Item rating="high" value="250" />
+					<Item rating="medium" value="130" />
+					<Item rating="low" value="100" />
+					<Item rating="failure" value="50" />
+				</Act>		
+				<Act>	<!-- Act 3 -->
+					<Item rating="high" value="250" />
+					<Item rating="medium" value="160" />
+					<Item rating="low" value="120" />
+					<Item rating="failure" value="50" />
+				</Act>
+			</CounterHealthRatingsTable>
+			
+			<CounterReliabilityRatingsTable>
+				<Act>	<!-- Act 1 -->
+					<Item rating="high" value="240" />
+					<Item rating="medium" value="120" />
+					<Item rating="low" value="80" />
+					<Item rating="failure" value="20" />
+				</Act>		
+				<Act>	<!-- Act 2 -->
+					<Item rating="high" value="180" />
+					<Item rating="medium" value="130" />
+					<Item rating="low" value="100" />
+					<Item rating="failure" value="20" />
+				</Act>		
+				<Act>	<!-- Act 3 -->
+					<Item rating="high" value="220" />
+					<Item rating="medium" value="160" />
+					<Item rating="low" value="120" />
+					<Item rating="failure" value="20" />
+				</Act>
+			</CounterReliabilityRatingsTable>
+			
+			<FxVals fPlayerWoundFxAccel="4.f" />
+			
+			<DamageRules fPlayerInstantDeathExplosionRadius="0.f" fPlayerReviveInvulnerabilityCounter="0.f" />
+			
+			<!-- WIP -->
+			<Pillars numRatings="4" />
+			
+			<StaminaDesertDrainFilters RadiusKill="30">
+			    <Level Min="0" Max="0" Filter="desert_collapse" />
+			    <Level Min="1" Max="29" Filter="desert_heavy" />
+			    <Level Min="30" Max="64" Filter="desert_medium" />
+			    <Level Min="65" Max="99" Filter="desert_light" />
+			</StaminaDesertDrainFilters>
+			
+			<Infamy>
+				<Acts>
+					<Act startlevel="0"  maxlevel="75"/>	    <!-- Act 1 -->
+					<Act startlevel="28" maxlevel="116"/>	    <!-- Act 2 -->
+					<Act startlevel="65" maxlevel="175"/>	    <!-- Act 3 -->
+				</Acts>
+				<Levels>
+				    <Level minRate="0" maxRate="15" medicine="1" failureChance="15" maxNPCInFailure="2" />
+				    <Level minRate="16" maxRate="35" medicine="1" failureChance="25" maxNPCInFailure="3" />
+				    <Level minRate="36" maxRate="65" medicine="1" failureChance="35" maxNPCInFailure="5" />
+				    <Level minRate="66" maxRate="95" medicine="1" failureChance="50" maxNPCInFailure="8" />
+				    <Level minRate="96" maxRate="130" medicine="0" failureChance="65" maxNPCInFailure="11" />
+				    <Level minRate="131" maxRate="1000" medicine="0" failureChance="80" maxNPCInFailure="14" />
+				</Levels>
+				<MaxInfamyForMedicine value="60" />
+			</Infamy>
+			
+			<!-- The FailureDropRates values specify at what rate the AI's counters
+				automatically drop over time when under their failure threshold, in
+				units per second -->
+			<FailureDropRates health="0.05" morale="0.05" />	<!-- Doesn't apply to reliability -->
+			
+			<!-- Lists the damage multipliers for various hit locations -->
+			<HitLocations>
+			    <Head multiplier="100.0"/>
+			    <Torso multiplier="1.0"/>
+			    <Arms multiplier="0.6"/>
+			    <Legs multiplier="1.0"/>
+			    <Hands multiplier="0.3"/>
+			    <Feet multiplier="0.3"/>
+			</HitLocations>
+			
+			<HealthDegenerationLevels>
+			    <DifficultyLevel CurveName="Curves.PlayerSicknessCurves.EasyDegenerationRate" />
+			    <DifficultyLevel CurveName="Curves.PlayerSicknessCurves.CasualDegenerationRate" />
+			    <DifficultyLevel CurveName="Curves.PlayerSicknessCurves.HardcoreDegenerationRate" />
+			    <DifficultyLevel CurveName="Curves.PlayerSicknessCurves.InfamousHealTime" />
+			</HealthDegenerationLevels>  
+			
+			<AIInfamyRange lowAIInfamy="15" highAIInfamy="30" />
+			  
+			<HealthFailure>
+			    <MaxNumberNPCInFailure
+			    		 MaxNumberInFailure="Curves.HealthFailure.MaxNumberNPCInFailure"
+			    />
+			</HealthFailure>  
+			
+			<PlayerSickness>
+			    <Health ValueBurnDamageRate="85" ValueBurnDamageMax="170">
+			    		<DifficultyLevel 
+			    						Max="Curves.PlayerSicknessCurves.HealthMax_Casual" 
+			    						BarSize="Curves.PlayerSicknessCurves.HealthBarSize_Casual" 
+			    						RegenDelay="Curves.PlayerSicknessCurves.HealthRegenDelay" 
+			    						RegenRate="Curves.PlayerSicknessCurves.HealthRegenRate"  
+			    		/>
+			    		<DifficultyLevel 
+			    						Max="Curves.PlayerSicknessCurves.HealthMax_Experienced" 
+			    						BarSize="Curves.PlayerSicknessCurves.HealthBarSize_Experienced" 
+			    						RegenDelay="Curves.PlayerSicknessCurves.HealthRegenDelay" 
+			    						RegenRate="Curves.PlayerSicknessCurves.HealthRegenRate"  
+			    		/>
+			    		<DifficultyLevel 
+			    						Max="Curves.PlayerSicknessCurves.HealthMax_Hardcore" 
+			    						BarSize="Curves.PlayerSicknessCurves.HealthBarSize_Hardcore" 
+			    						RegenDelay="Curves.PlayerSicknessCurves.HealthRegenDelay" 
+			    						RegenRate="Curves.PlayerSicknessCurves.HealthRegenRate"  
+			    		/>
+			    		<DifficultyLevel 
+			    						Max="Curves.PlayerSicknessCurves.HealthMax_Infamous" 
+			    						BarSize="Curves.PlayerSicknessCurves.HealthBarSize_Infamous" 
+			    						RegenDelay="Curves.PlayerSicknessCurves.HealthRegenDelay" 
+			    						RegenRate="Curves.PlayerSicknessCurves.HealthRegenRate"  
+			    		/>
+			    </Health>
+			    <Stamina
+			        Max="Curves.PlayerSicknessCurves.StaminaMax"
+			        ActionThreshold="Curves.PlayerSicknessCurves.StaminaSprintThreshold"
+			        NearZeroFX="Curves.PlayerSicknessCurves.StaminaNearZeroFX"
+			        RegenRate="Curves.PlayerSicknessCurves.StaminaRegenRate"
+			        SprintDrain="Curves.PlayerSicknessCurves.StaminaSprintDrain"
+			        LowDrain="Curves.PlayerSicknessCurves.StaminaLowDrain"
+			        HighDrain="Curves.PlayerSicknessCurves.StaminaHighDrain"
+			        SwimDrain="Curves.PlayerSicknessCurves.StaminaSprintDrain"
+			        DrownHealthDrain="Curves.PlayerSicknessCurves.HealthDrownRate"
+			        JumpDrain="Curves.PlayerSicknessCurves.StaminaJumpDrain"
+			    />
+			    <Malaria
+    			    FirstAttackTime="Curves.PlayerSicknessCurves.MalariaTimeBeforeFirstAttack"
+    			    BetweenAttackTime="Curves.PlayerSicknessCurves.MalariaTimeBetweenEachAttack"
+			        MinorAttackQte="Curves.PlayerSicknessCurves.MalariaMaxNumberOfMinorAttack"
+			        MinorAttackDuration="Curves.PlayerSicknessCurves.MalariaMinorAttackDuration"
+			    />
+			</PlayerSickness>
+		</DefaultCountersService>

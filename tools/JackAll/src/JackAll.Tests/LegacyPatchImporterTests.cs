@@ -59,7 +59,7 @@ public class LegacyPatchImporterTests : IDisposable
 
         NameDatabase names = TestSupport.LoadNames();
 
-        const string wholeFilePath = "engine/gamemodes/gamemodesconfig.xml";
+        const string wholeFilePath = "engine/settings/defaultrenderconfig.xml";
         byte[] wholeFileContent = "legacy whole-file change"u8.ToArray();
 
         VfsFile container;
@@ -114,7 +114,7 @@ public class LegacyPatchImporterTests : IDisposable
         NameDatabase names = TestSupport.LoadNames();
         uint other = FatArchive.Read(CleanInstall.PatchFat).Entries[0].Hash;
         string legacyZipPath = BuildLegacyPatch("retail_based", names,
-            MakeZipMod("retail_based_source", ("engine/gamemodes/gamemodesconfig.xml", "a real change"u8.ToArray())));
+            MakeZipMod("retail_based_source", ("engine/settings/defaultrenderconfig.xml", "a real change"u8.ToArray())));
 
         using var cleanVfs = GameVfs.OpenForOriginalsOnly(CleanInstall, names);
         LegacyImportResult result = LegacyPatchImporter.Import(
@@ -438,7 +438,7 @@ public class LegacyPatchImporterTests : IDisposable
         if (LegacySourceInstall is null || CleanInstall is null) return;
 
         NameDatabase names = TestSupport.LoadNames();
-        const string wholeFilePath = "engine/gamemodes/gamemodesconfig.xml";
+        const string wholeFilePath = "engine/settings/defaultrenderconfig.xml";
         byte[] wholeFileContent = "legacy whole-file change"u8.ToArray();
 
         // The same built patch, offered two ways: still zipped, and already extracted the way a mod

@@ -102,7 +102,7 @@ public sealed class AiBehaviorsModel(MainViewModel vm) : Observable
             return;
         }
         _xml = AdaptiveBehaviors.Write(_xml, Rows.Select(r => new AdaptiveBehavior(r.Name, r.Chances)));
-        vm.Replace(_file, AppText.EncodeUtf8(_xml));
+        vm.StageContainer(_file, AppText.EncodeUtf8(_xml));
         IsDirty = false;
     }
 }

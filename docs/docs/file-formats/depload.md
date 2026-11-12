@@ -71,8 +71,9 @@ is a starting value with a random `VariantKF` spread, and each `Part…KF` child
 particle's life, 0 to 1. The colour a particle shows is `InitColorKF` times `PartColorKF`
 **(inferred)**: the bullet blood's smoke puff, `(0.33, 0.18, 0.18)` times `(0.58, 0, 0)`, draws as a
 near-black red. `jackall-cli rml decode` and `rml encode` round-trip the shipped libraries byte for
-byte, so one system can be edited and the library re-encoded; Difficulty Overhaul's
-`data\particles.py` does that.
+byte, and JackAll merges a library system by system, so a mod ships only the systems it changes or
+adds, as fragments numbered by their resource id; Difficulty Overhaul's `data\particles.py` writes
+its bullet blood that way.
 
 Both paths bottom out in `CResourceManager::LoadDep(IFile*, bool isPrimary)` (`0x09c07f50`) →
 **`CResourceDataBase::LoadBinaryFile(IFile*, bool isPrimary)`** (`0x09c594c0`), the actual binary

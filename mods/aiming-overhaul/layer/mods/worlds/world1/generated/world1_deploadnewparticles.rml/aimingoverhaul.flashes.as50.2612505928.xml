@@ -1,0 +1,1391 @@
+<PartSys Name="aimingoverhaul.flashes.as50" Id="{B9C42B85-6704-5F73-B28A-B132AA1829FF}">
+	<PartEmit Name="aimingoverhaul.flashes.as50.flams" Id="{BEBBC530-1DB5-54EA-B852-0B2F3F94A6E1}" Active="1" StaticSize="1" PosOffset="0.35,0,0" RotOffset="0,90,0" degRotOffset="1" EmitDuration="0.01" EmitLoop="0" NbInitPart="1" MaxEmitDist="100" FadeEmitDist="75" InterpEmit="0" TweakInitLifeTime="1" EmitDirAxisAngle="0" degEmitDirAxisAngle="1" EmitDirAxisSpread="0" degEmitDirAxisSpread="1" EmitDirPlaneAngle="0" degEmitDirPlaneAngle="1" EmitDirPlaneSpread="0" degEmitDirPlaneSpread="1" EmitFlag="5" EmitVolRadius="0.01" EmitVolHalfSizeX="0" EmitVolHalfSizeY="0" EmitVolHalfSizeZ="0" UniformSize="0" RandomMirrorU="1" RandomMirrorV="1" CameraScalingDistance="0" CameraScaling="1" InitGravityDir="0,0,0" LocalGravity="0" DiffuseTexture="graphics\GFX\Weapons\GFX_muzzle_flash_CO.PNG" NormalTexture="" Geometry="" BlendType="1" RandomColor="0" HDRMul="1.95" RandomAlpha="0" NearFade="0" AlphaTestValue="0" AlphaDissolve="0" FramePerSecond="70" FramePerSecondVariant="0" FrameCount="2" FramePlayOnce="1" FrameRandomStart="0" Ambient="0" LightingExponent="2" NormalMapped="0" ZOffset="0" Soft="0" SoftHighQuality="0" SoftRange="0.5" FarSoftDistance="-1" FarSoftRange="1" WaterReflection="1" Masked="0" DistortionEnabled="0" DistortionTexture="graphics/gfx/_common/gfx_default.xbt" DistortionSpeedU="0.25" DistortionSpeedV="0.25" DistortionTilingU="1" DistortionTilingV="1" DistortionStrength="0.005" Flags="72">
+		<EmitRateKF>
+			<ValueKF Value="1">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</EmitRateKF>
+		<EmitFlag DirFromVolumeSurface="1" Boundary="0" Smooth="1" Type="0" />
+		<InitLifeTimeKF>
+			<ValueKF Value="0.01">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitLifeTimeKF>
+		<InitSpeedKF>
+			<ValueKF Value="3">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitSpeedKF>
+		<PartSpeedKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1.0024" Y="-0.0017" />
+		</PartSpeedKF>
+		<PartEmitSpringRatioKF>
+			<Knot X="0" Y="0" />
+			<Knot X="1" Y="0" />
+		</PartEmitSpringRatioKF>
+		<InitSizeKF>
+			<ValueKF Value="0.21">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitSizeKF>
+		<PartSizeKF>
+			<Knot X="0.0027" Y="1.4006" />
+			<Knot X="1.0026" Y="1.4003" />
+		</PartSizeKF>
+		<PartSizeYKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartSizeYKF>
+		<PartSizeZKF>
+			<Knot X="-0.0088" Y="3.9996" />
+			<Knot X="1.0069" Y="4.0011" />
+		</PartSizeZKF>
+		<InitAnglesXKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="180">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitAnglesXKF>
+		<InitAnglesYKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitAnglesYKF>
+		<InitAnglesZKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitAnglesZKF>
+		<InitRotSpeedXKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitRotSpeedXKF>
+		<InitRotSpeedYKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitRotSpeedYKF>
+		<InitRotSpeedZKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitRotSpeedZKF>
+		<PartRotSpeedKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartRotSpeedKF>
+		<PartUVRotSpeedKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartUVRotSpeedKF>
+		<InitGravityIntensityKF>
+			<ValueKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitGravityIntensityKF>
+		<PartGravityKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="0.9948" />
+		</PartGravityKF>
+		<InitExtSpdRatioKF>
+			<ValueKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitExtSpdRatioKF>
+		<PartExtSpdRatioKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartExtSpdRatioKF>
+		<InitColorKF>
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Knot Position="0" Color="16777215" />
+			<Knot Position="1" Color="16777215" />
+		</InitColorKF>
+		<PartColorKF>
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Knot Position="0" Color="16777215" />
+			<Knot Position="1" Color="16777215" />
+		</PartColorKF>
+		<InitAlphaKF>
+			<Knot X="0" Y="0.5007" />
+			<Knot X="1" Y="0.5007" />
+		</InitAlphaKF>
+		<PartAlphaKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartAlphaKF>
+		<Flags Orientation="8" OffsetWorldSpace="0" LocalEmitterSpace="1" NoDrawUnderwater="0" NoZTest="0" Culling="0" Censorable="0" NoEmitRot="0" />
+	</PartEmit>
+	<PartEmit Name="aimingoverhaul.flashes.as50.flams2" Id="{8CC8AA3C-EF41-5642-BDDD-4A786D4DB391}" Active="1" StaticSize="1" PosOffset="-0.35,0,0" RotOffset="0,-90,0" degRotOffset="1" EmitDuration="0.01" EmitLoop="0" NbInitPart="1" MaxEmitDist="100" FadeEmitDist="75" InterpEmit="0" TweakInitLifeTime="1" EmitDirAxisAngle="0" degEmitDirAxisAngle="1" EmitDirAxisSpread="0" degEmitDirAxisSpread="1" EmitDirPlaneAngle="0" degEmitDirPlaneAngle="1" EmitDirPlaneSpread="0" degEmitDirPlaneSpread="1" EmitFlag="5" EmitVolRadius="0.01" EmitVolHalfSizeX="0" EmitVolHalfSizeY="0" EmitVolHalfSizeZ="0" UniformSize="0" RandomMirrorU="1" RandomMirrorV="1" CameraScalingDistance="0" CameraScaling="1" InitGravityDir="0,0,0" LocalGravity="0" DiffuseTexture="graphics\GFX\Weapons\GFX_muzzle_flash_CO.PNG" NormalTexture="" Geometry="" BlendType="1" RandomColor="0" HDRMul="1.95" RandomAlpha="0" NearFade="0" AlphaTestValue="0" AlphaDissolve="0" FramePerSecond="70" FramePerSecondVariant="0" FrameCount="2" FramePlayOnce="1" FrameRandomStart="0" Ambient="0" LightingExponent="2" NormalMapped="0" ZOffset="0" Soft="0" SoftHighQuality="0" SoftRange="0.5" FarSoftDistance="-1" FarSoftRange="1" WaterReflection="1" Masked="0" DistortionEnabled="0" DistortionTexture="graphics/gfx/_common/gfx_default.xbt" DistortionSpeedU="0.25" DistortionSpeedV="0.25" DistortionTilingU="1" DistortionTilingV="1" DistortionStrength="0.005" Flags="72">
+		<EmitRateKF>
+			<ValueKF Value="1">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</EmitRateKF>
+		<EmitFlag DirFromVolumeSurface="1" Boundary="0" Smooth="1" Type="0" />
+		<InitLifeTimeKF>
+			<ValueKF Value="0.01">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitLifeTimeKF>
+		<InitSpeedKF>
+			<ValueKF Value="3">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitSpeedKF>
+		<PartSpeedKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1.0024" Y="-0.0017" />
+		</PartSpeedKF>
+		<PartEmitSpringRatioKF>
+			<Knot X="0" Y="0" />
+			<Knot X="1" Y="0" />
+		</PartEmitSpringRatioKF>
+		<InitSizeKF>
+			<ValueKF Value="0.21">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitSizeKF>
+		<PartSizeKF>
+			<Knot X="0.0027" Y="1.4006" />
+			<Knot X="1.0045" Y="1.4003" />
+		</PartSizeKF>
+		<PartSizeYKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartSizeYKF>
+		<PartSizeZKF>
+			<Knot X="-0.0088" Y="3.9996" />
+			<Knot X="1.0031" Y="4.0002" />
+		</PartSizeZKF>
+		<InitAnglesXKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="180">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitAnglesXKF>
+		<InitAnglesYKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitAnglesYKF>
+		<InitAnglesZKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitAnglesZKF>
+		<InitRotSpeedXKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitRotSpeedXKF>
+		<InitRotSpeedYKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitRotSpeedYKF>
+		<InitRotSpeedZKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitRotSpeedZKF>
+		<PartRotSpeedKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartRotSpeedKF>
+		<PartUVRotSpeedKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartUVRotSpeedKF>
+		<InitGravityIntensityKF>
+			<ValueKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitGravityIntensityKF>
+		<PartGravityKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="0.9948" />
+		</PartGravityKF>
+		<InitExtSpdRatioKF>
+			<ValueKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitExtSpdRatioKF>
+		<PartExtSpdRatioKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartExtSpdRatioKF>
+		<InitColorKF>
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Knot Position="0" Color="16777215" />
+			<Knot Position="1" Color="16777215" />
+		</InitColorKF>
+		<PartColorKF>
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Knot Position="0" Color="16777215" />
+			<Knot Position="1" Color="16777215" />
+		</PartColorKF>
+		<InitAlphaKF>
+			<Knot X="0" Y="0.5007" />
+			<Knot X="1" Y="0.5007" />
+		</InitAlphaKF>
+		<PartAlphaKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartAlphaKF>
+		<Flags Orientation="8" OffsetWorldSpace="0" LocalEmitterSpace="1" NoDrawUnderwater="0" NoZTest="0" Culling="0" Censorable="0" NoEmitRot="0" />
+	</PartEmit>
+	<PartEmit Name="aimingoverhaul.flashes.as50.smok" Id="{F964A83F-0FC0-573F-8793-05898152F208}" Active="0" StaticSize="1" PosOffset="0,0.25,0" RotOffset="-90,0,0" degRotOffset="1" EmitDuration="0.1" EmitLoop="0" NbInitPart="1" MaxEmitDist="100" FadeEmitDist="75" InterpEmit="0" TweakInitLifeTime="0" EmitDirAxisAngle="-90.0002" degEmitDirAxisAngle="1" EmitDirAxisSpread="10" degEmitDirAxisSpread="1" EmitDirPlaneAngle="90.0002" degEmitDirPlaneAngle="1" EmitDirPlaneSpread="0" degEmitDirPlaneSpread="1" EmitFlag="35" EmitVolRadius="0.01" EmitVolHalfSizeX="0" EmitVolHalfSizeY="0" EmitVolHalfSizeZ="0" UniformSize="1" RandomMirrorU="1" RandomMirrorV="1" CameraScalingDistance="0" CameraScaling="1" InitGravityDir="0,0,1" LocalGravity="0" DiffuseTexture="graphics\GFX\Smokes\GFX_smok.XBT" NormalTexture="" Geometry="" BlendType="0" RandomColor="0" HDRMul="1" RandomAlpha="0" NearFade="0" AlphaTestValue="0" AlphaDissolve="0" FramePerSecond="0" FramePerSecondVariant="0" FrameCount="0" FramePlayOnce="0" FrameRandomStart="0" Ambient="1" LightingExponent="2" NormalMapped="0" ZOffset="0" Soft="0" SoftHighQuality="0" SoftRange="0.5" FarSoftDistance="-1" FarSoftRange="1" WaterReflection="1" Masked="0" DistortionEnabled="0" DistortionTexture="graphics/gfx/_common/gfx_default.xbt" DistortionSpeedU="0.25" DistortionSpeedV="0.25" DistortionTilingU="1" DistortionTilingV="1" DistortionStrength="0.005" Flags="0">
+		<EmitRateKF>
+			<ValueKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</EmitRateKF>
+		<EmitFlag DirFromVolumeSurface="1" Boundary="1" Smooth="0" Type="32" />
+		<InitLifeTimeKF>
+			<ValueKF Value="5">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="2.5">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitLifeTimeKF>
+		<InitSpeedKF>
+			<ValueKF Value="0.2">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0.1">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitSpeedKF>
+		<PartSpeedKF>
+			<Knot X="0" Y="1" />
+			<Knot X="0.1606" Y="0.5597" />
+			<Knot X="0.1606" Y="0.5597" />
+			<Knot X="0.3862" Y="0.2481" />
+			<Knot X="0.3862" Y="0.2481" />
+			<Knot X="0.6248" Y="0.1156" />
+			<Knot X="0.6248" Y="0.1156" />
+			<Knot X="1" Y="0.0052" />
+		</PartSpeedKF>
+		<PartEmitSpringRatioKF>
+			<Knot X="-0.0077" Y="1.0029" />
+			<Knot X="0.112" Y="0" />
+			<Knot X="0.112" Y="0" />
+			<Knot X="1" Y="0" />
+		</PartEmitSpringRatioKF>
+		<InitSizeKF>
+			<ValueKF Value="0.27">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0.18">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitSizeKF>
+		<PartSizeKF>
+			<Knot X="0" Y="0.8" />
+			<Knot X="0.0596" Y="0.9981" />
+			<Knot X="0.0596" Y="0.9981" />
+			<Knot X="0.129" Y="1.0948" />
+			<Knot X="0.129" Y="1.0948" />
+			<Knot X="0.3492" Y="1.1363" />
+			<Knot X="0.3492" Y="1.1363" />
+			<Knot X="0.5727" Y="1.2324" />
+			<Knot X="0.5727" Y="1.2324" />
+			<Knot X="0.783" Y="1.38" />
+			<Knot X="0.783" Y="1.38" />
+			<Knot X="1" Y="1.5745" />
+		</PartSizeKF>
+		<PartSizeYKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartSizeYKF>
+		<PartSizeZKF>
+			<Knot X="0" Y="0.8078" />
+			<Knot X="0.0963" Y="0.9981" />
+			<Knot X="0.0963" Y="0.9981" />
+			<Knot X="0.3536" Y="1.0854" />
+			<Knot X="0.3536" Y="1.0854" />
+			<Knot X="0.5914" Y="1.2236" />
+			<Knot X="0.5914" Y="1.2236" />
+			<Knot X="0.783" Y="1.5364" />
+			<Knot X="0.783" Y="1.5364" />
+			<Knot X="1" Y="2.1548" />
+		</PartSizeZKF>
+		<InitAnglesXKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitAnglesXKF>
+		<InitAnglesYKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="180">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitAnglesYKF>
+		<InitAnglesZKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitAnglesZKF>
+		<InitRotSpeedXKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitRotSpeedXKF>
+		<InitRotSpeedYKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="60.0001">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitRotSpeedYKF>
+		<InitRotSpeedZKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitRotSpeedZKF>
+		<PartRotSpeedKF>
+			<Knot X="0" Y="1" />
+			<Knot X="0.0652" Y="0.3779" />
+			<Knot X="0.0652" Y="0.3779" />
+			<Knot X="0.1128" Y="0.1987" />
+			<Knot X="0.1128" Y="0.1987" />
+			<Knot X="0.2082" Y="0.0922" />
+			<Knot X="0.2082" Y="0.0922" />
+			<Knot X="0.4449" Y="0.0194" />
+			<Knot X="0.4449" Y="0.0194" />
+			<Knot X="1" Y="0.0052" />
+		</PartRotSpeedKF>
+		<PartUVRotSpeedKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartUVRotSpeedKF>
+		<InitGravityIntensityKF>
+			<ValueKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitGravityIntensityKF>
+		<PartGravityKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartGravityKF>
+		<InitExtSpdRatioKF>
+			<ValueKF Value="0.01">
+				<RatioUI>
+					<Knot X="0" Y="0.3039" />
+					<Knot X="1" Y="0.3039" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitExtSpdRatioKF>
+		<PartExtSpdRatioKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartExtSpdRatioKF>
+		<InitColorKF>
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Key Value="0.501961,0.501961,0.501961" />
+			<Knot Position="0" Color="8421504" />
+			<Knot Position="1" Color="8421504" />
+		</InitColorKF>
+		<PartColorKF>
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.972549,0.972549,0.972549" />
+			<Key Value="0.949020,0.949020,0.949020" />
+			<Key Value="0.921569,0.921569,0.921569" />
+			<Key Value="0.898039,0.898039,0.898039" />
+			<Key Value="0.870588,0.870588,0.870588" />
+			<Key Value="0.847059,0.847059,0.847059" />
+			<Key Value="0.823529,0.823529,0.823529" />
+			<Key Value="0.796079,0.796079,0.796079" />
+			<Key Value="0.772549,0.772549,0.772549" />
+			<Key Value="0.749020,0.749020,0.749020" />
+			<Key Value="0.721569,0.721569,0.721569" />
+			<Key Value="0.698039,0.698039,0.698039" />
+			<Key Value="0.670588,0.670588,0.670588" />
+			<Key Value="0.647059,0.647059,0.647059" />
+			<Key Value="0.623529,0.623529,0.623529" />
+			<Knot Position="0" Color="16777215" />
+			<Knot Position="1" Color="10461087" />
+		</PartColorKF>
+		<InitAlphaKF>
+			<Knot X="0" Y="0.4181" />
+			<Knot X="1" Y="0.4156" />
+		</InitAlphaKF>
+		<PartAlphaKF>
+			<Knot X="0" Y="1" />
+			<Knot X="0.133" Y="0.6636" />
+			<Knot X="0.133" Y="0.6636" />
+			<Knot X="0.311" Y="0.391" />
+			<Knot X="0.311" Y="0.391" />
+			<Knot X="0.4945" Y="0.2039" />
+			<Knot X="0.4945" Y="0.2039" />
+			<Knot X="0.7459" Y="0.061" />
+			<Knot X="0.7459" Y="0.061" />
+			<Knot X="1" Y="0.013" />
+		</PartAlphaKF>
+		<Flags Orientation="0" OffsetWorldSpace="0" LocalEmitterSpace="0" NoDrawUnderwater="0" NoZTest="0" Culling="0" Censorable="0" NoEmitRot="0" />
+	</PartEmit>
+	<PartEmit Name="aimingoverhaul.flashes.as50.Smoke_muzzle" Id="{EB5FC22F-6991-5625-8206-C6B53E46A2B4}" Active="1" StaticSize="1" PosOffset="0,0,0.02" RotOffset="0,0,0" degRotOffset="1" EmitDuration="1" EmitLoop="0" NbInitPart="1" MaxEmitDist="2" FadeEmitDist="1.3" InterpEmit="0" TweakInitLifeTime="1" EmitDirAxisAngle="0" degEmitDirAxisAngle="1" EmitDirAxisSpread="2" degEmitDirAxisSpread="1" EmitDirPlaneAngle="0" degEmitDirPlaneAngle="1" EmitDirPlaneSpread="180" degEmitDirPlaneSpread="1" EmitFlag="0" EmitVolRadius="0" EmitVolHalfSizeX="0" EmitVolHalfSizeY="0" EmitVolHalfSizeZ="0" UniformSize="0" RandomMirrorU="1" RandomMirrorV="1" CameraScalingDistance="0" CameraScaling="1" InitGravityDir="0,0,1" LocalGravity="0" DiffuseTexture="graphics\GFX\Weapons\GFX_gun_smok.XBT" NormalTexture="" Geometry="" BlendType="0" RandomColor="0" RandomAlpha="0" NearFade="1" AlphaTestValue="0" FramePerSecond="0" FramePerSecondVariant="0" FrameCount="1" FramePlayOnce="0" FrameRandomStart="0" Ambient="1" NormalMapped="0" ZOffset="0.01" Soft="0" SoftRange="0.5" FarSoftDistance="-1" FarSoftRange="1" WaterReflection="1" DistortionEnabled="0" DistortionTexture="graphics/gfx/_common/gfx_default.xbt" DistortionSpeedU="0.25" DistortionSpeedV="0.25" DistortionTilingU="1" DistortionTilingV="1" DistortionStrength="0.005" Flags="176">
+		<EmitRateKF>
+			<ValueKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</EmitRateKF>
+		<EmitFlag DirFromVolumeSurface="0" Boundary="0" Smooth="0" Type="0" />
+		<InitLifeTimeKF>
+			<ValueKF Value="0.5">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0.1">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitLifeTimeKF>
+		<InitSpeedKF>
+			<ValueKF Value="0.3">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitSpeedKF>
+		<PartSpeedKF>
+			<Knot X="0" Y="1" />
+			<Knot X="0.3679" Y="0.9506" />
+			<Knot X="0.3679" Y="0.9506" />
+			<Knot X="0.5917" Y="0.8038" />
+			<Knot X="0.5917" Y="0.8038" />
+			<Knot X="0.7643" Y="0.5926" />
+			<Knot X="0.7643" Y="0.5926" />
+			<Knot X="0.8909" Y="0.3427" />
+			<Knot X="0.8909" Y="0.3427" />
+			<Knot X="1" Y="0.013" />
+		</PartSpeedKF>
+		<PartEmitSpringRatioKF>
+			<Knot X="-0.0019" Y="0.9974" />
+			<Knot X="0.2486" Y="0.9935" />
+			<Knot X="0.2486" Y="0.9935" />
+			<Knot X="0.4552" Y="0.9286" />
+			<Knot X="0.4552" Y="0.9286" />
+			<Knot X="0.5936" Y="0.7805" />
+			<Knot X="0.5936" Y="0.7805" />
+			<Knot X="0.6827" Y="0.5598" />
+			<Knot X="0.6827" Y="0.5598" />
+			<Knot X="0.8026" Y="0.0039" />
+			<Knot X="0.8026" Y="0.0039" />
+			<Knot X="1" Y="0" />
+		</PartEmitSpringRatioKF>
+		<InitSizeKF>
+			<ValueKF Value="0.1">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0.05">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitSizeKF>
+		<PartSizeKF>
+			<Knot X="-0.0055" Y="0.0289" />
+			<Knot X="0.368" Y="0.0767" />
+			<Knot X="0.368" Y="0.0767" />
+			<Knot X="0.6457" Y="0.1534" />
+			<Knot X="0.6457" Y="0.1534" />
+			<Knot X="0.8266" Y="0.246" />
+			<Knot X="0.8266" Y="0.246" />
+			<Knot X="1.0143" Y="0.4125" />
+		</PartSizeKF>
+		<PartSizeYKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartSizeYKF>
+		<PartSizeZKF>
+			<Knot X="-0.0089" Y="-0.0007" />
+			<Knot X="0.2266" Y="0.1488" />
+			<Knot X="0.2266" Y="0.1488" />
+			<Knot X="0.5228" Y="0.3734" />
+			<Knot X="0.5228" Y="0.3734" />
+			<Knot X="0.8021" Y="0.6849" />
+			<Knot X="0.8021" Y="0.6849" />
+			<Knot X="1.0082" Y="1.0132" />
+		</PartSizeZKF>
+		<InitAnglesXKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="180">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitAnglesXKF>
+		<InitAnglesYKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="5">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitAnglesYKF>
+		<InitAnglesZKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitAnglesZKF>
+		<InitRotSpeedXKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="160">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitRotSpeedXKF>
+		<InitRotSpeedYKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitRotSpeedYKF>
+		<InitRotSpeedZKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitRotSpeedZKF>
+		<PartRotSpeedKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartRotSpeedKF>
+		<PartUVRotSpeedKF>
+			<Knot X="-0.0037" Y="0" />
+			<Knot X="0.3647" Y="0.2283" />
+			<Knot X="0.3647" Y="0.2283" />
+			<Knot X="0.7345" Y="0.6419" />
+			<Knot X="0.7345" Y="0.6419" />
+			<Knot X="1.0063" Y="1.1075" />
+		</PartUVRotSpeedKF>
+		<InitGravityIntensityKF>
+			<ValueKF Value="0.4">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0.1">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitGravityIntensityKF>
+		<PartGravityKF>
+			<Knot X="-0.0051" Y="1.7908" />
+			<Knot X="0.0731" Y="0.5718" />
+			<Knot X="0.0731" Y="0.5718" />
+			<Knot X="0.1521" Y="0.2643" />
+			<Knot X="0.1521" Y="0.2643" />
+			<Knot X="0.3545" Y="0.0891" />
+			<Knot X="0.3545" Y="0.0891" />
+			<Knot X="1.0055" Y="-0.0086" />
+		</PartGravityKF>
+		<InitExtSpdRatioKF>
+			<ValueKF Value="0.02">
+				<RatioUI>
+					<Knot X="0" Y="0.4" />
+					<Knot X="1" Y="0.4" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0.01">
+				<RatioUI>
+					<Knot X="0" Y="0.4" />
+					<Knot X="1" Y="0.4" />
+				</RatioUI>
+			</VariantKF>
+		</InitExtSpdRatioKF>
+		<PartExtSpdRatioKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartExtSpdRatioKF>
+		<InitColorKF>
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Knot Position="0" Color="16777215" />
+			<Knot Position="1" Color="16777215" />
+		</InitColorKF>
+		<PartColorKF>
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Knot Position="0" Color="16777215" />
+			<Knot Position="1" Color="16777215" />
+		</PartColorKF>
+		<InitAlphaKF>
+			<Knot X="-0.021" Y="0.8005" />
+			<Knot X="1.0122" Y="0.8005" />
+		</InitAlphaKF>
+		<PartAlphaKF>
+			<Knot X="-0.0074" Y="1.0018" />
+			<Knot X="0.1028" Y="0.5841" />
+			<Knot X="0.1028" Y="0.5841" />
+			<Knot X="0.2378" Y="0.3274" />
+			<Knot X="0.2378" Y="0.3274" />
+			<Knot X="0.4247" Y="0.1624" />
+			<Knot X="0.4247" Y="0.1624" />
+			<Knot X="0.6542" Y="0.0602" />
+			<Knot X="0.6542" Y="0.0602" />
+			<Knot X="1.0037" Y="-0.0049" />
+		</PartAlphaKF>
+		<Flags Orientation="16" OffsetWorldSpace="1" LocalEmitterSpace="0" NoDrawUnderwater="0" NoZTest="0" Culling="0" Censorable="0" NoEmitRot="1" />
+	</PartEmit>
+	<PartEmit Name="aimingoverhaul.flashes.as50.heat" Id="{DD498C20-CB63-5904-86B8-686E8C7F3DBD}" Active="1" StaticSize="1" PosOffset="0,0,0.06" RotOffset="0,0,0" degRotOffset="1" EmitDuration="0.1" EmitLoop="0" NbInitPart="1" MaxEmitDist="19" FadeEmitDist="10" InterpEmit="0" TweakInitLifeTime="0" EmitDirAxisAngle="0" degEmitDirAxisAngle="1" EmitDirAxisSpread="22.5" degEmitDirAxisSpread="1" EmitDirPlaneAngle="0" degEmitDirPlaneAngle="1" EmitDirPlaneSpread="180" degEmitDirPlaneSpread="1" EmitFlag="0" EmitVolRadius="0" EmitVolHalfSizeX="0" EmitVolHalfSizeY="0" EmitVolHalfSizeZ="0" UniformSize="0" RandomMirrorU="0" RandomMirrorV="0" CameraScalingDistance="0" CameraScaling="1" InitGravityDir="0,0,0.1" LocalGravity="0" DiffuseTexture="graphics\GFX\_Common\GFX_heat_fade.XBT" NormalTexture="" Geometry="" BlendType="0" RandomColor="0" RandomAlpha="0" NearFade="1" AlphaTestValue="0.1" FramePerSecond="0" FramePerSecondVariant="0" FrameCount="1" FramePlayOnce="0" FrameRandomStart="1" Ambient="1" NormalMapped="0" ZOffset="0" Soft="0" SoftRange="1" FarSoftDistance="-1" FarSoftRange="1" WaterReflection="1" DistortionEnabled="1" DistortionTexture="graphics\GFX\_Common\GFX_heat.XBT" DistortionSpeedU="0.3" DistortionSpeedV="0.3" DistortionTilingU="1" DistortionTilingV="1" DistortionStrength="0.01" Flags="64">
+		<EmitRateKF>
+			<ValueKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</EmitRateKF>
+		<EmitFlag DirFromVolumeSurface="0" Boundary="0" Smooth="0" Type="0" />
+		<InitLifeTimeKF>
+			<ValueKF Value="1.2">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitLifeTimeKF>
+		<InitSpeedKF>
+			<ValueKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitSpeedKF>
+		<PartSpeedKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartSpeedKF>
+		<PartEmitSpringRatioKF>
+			<Knot X="0" Y="0" />
+			<Knot X="1" Y="0" />
+		</PartEmitSpringRatioKF>
+		<InitSizeKF>
+			<ValueKF Value="0.04">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitSizeKF>
+		<PartSizeKF>
+			<Knot X="-0.0033" Y="1.4997" />
+			<Knot X="1" Y="1" />
+		</PartSizeKF>
+		<PartSizeYKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartSizeYKF>
+		<PartSizeZKF>
+			<Knot X="0" Y="2.0208" />
+			<Knot X="1.0069" Y="3.2199" />
+		</PartSizeZKF>
+		<InitAnglesXKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitAnglesXKF>
+		<InitAnglesYKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitAnglesYKF>
+		<InitAnglesZKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitAnglesZKF>
+		<InitRotSpeedXKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitRotSpeedXKF>
+		<InitRotSpeedYKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitRotSpeedYKF>
+		<InitRotSpeedZKF>
+			<ValueKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF degValue="1" Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitRotSpeedZKF>
+		<PartRotSpeedKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartRotSpeedKF>
+		<PartUVRotSpeedKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartUVRotSpeedKF>
+		<InitGravityIntensityKF>
+			<ValueKF Value="0.1">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="0.198" Y="1.486" />
+					<Knot X="0.198" Y="1.486" />
+					<Knot X="0.4787" Y="0.6289" />
+					<Knot X="0.4787" Y="0.6289" />
+					<Knot X="0.7693" Y="1.1872" />
+					<Knot X="0.7693" Y="1.1872" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="1" />
+					<Knot X="1" Y="1" />
+				</RatioUI>
+			</VariantKF>
+		</InitGravityIntensityKF>
+		<PartGravityKF>
+			<Knot X="0" Y="1" />
+			<Knot X="0.3133" Y="1.0107" />
+			<Knot X="0.3133" Y="1.0107" />
+			<Knot X="0.5282" Y="1.07" />
+			<Knot X="0.5282" Y="1.07" />
+			<Knot X="0.7067" Y="1.2396" />
+			<Knot X="0.7067" Y="1.2396" />
+			<Knot X="0.8719" Y="1.5444" />
+			<Knot X="0.8719" Y="1.5444" />
+			<Knot X="0.9745" Y="1.9337" />
+			<Knot X="0.9745" Y="1.9337" />
+			<Knot X="1.0142" Y="2.2113" />
+		</PartGravityKF>
+		<InitExtSpdRatioKF>
+			<ValueKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="0.3974" />
+					<Knot X="1" Y="0.3974" />
+				</RatioUI>
+			</ValueKF>
+			<VariantKF Value="0">
+				<RatioUI>
+					<Knot X="0" Y="0.2026" />
+					<Knot X="1" Y="0.2026" />
+				</RatioUI>
+			</VariantKF>
+		</InitExtSpdRatioKF>
+		<PartExtSpdRatioKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</PartExtSpdRatioKF>
+		<InitColorKF>
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Knot Position="0" Color="16777215" />
+			<Knot Position="1" Color="16777215" />
+		</InitColorKF>
+		<PartColorKF>
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="0.996078,0.996078,0.996078" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Key Value="1.000000,1.000000,1.000000" />
+			<Knot Position="0" Color="16777215" />
+			<Knot Position="1" Color="16777215" />
+		</PartColorKF>
+		<InitAlphaKF>
+			<Knot X="0" Y="1" />
+			<Knot X="1" Y="1" />
+		</InitAlphaKF>
+		<PartAlphaKF>
+			<Knot X="-0.0073" Y="-0.0078" />
+			<Knot X="0.2371" Y="1.0013" />
+			<Knot X="0.2371" Y="1.0013" />
+			<Knot X="1.0045" Y="-0.0026" />
+		</PartAlphaKF>
+		<Flags Orientation="0" OffsetWorldSpace="0" LocalEmitterSpace="1" NoDrawUnderwater="0" NoZTest="0" Culling="0" Censorable="0" NoEmitRot="0" />
+	</PartEmit>
+</PartSys>
+  

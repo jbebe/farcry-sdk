@@ -42,8 +42,9 @@ Stage: active
 - [done] Weapon and player data as fragments that merge field by field with other mods
 - [done] A switch per effect in the Mod Configuration Menu
 - [new] Forward/back bob per shot and physical sway in full auto, no climb - user 2026-11-08: "VERY needed"; proposal pending
-- [new] Muzzle light reaches at least twice as far: the game's one shot light, 2 m, at 4 m or more - user 2026-11-12
-- [new] Muzzle flashes per weapon instead of a shared one - user 2026-11-12; no unused flash in the retail files
+- [done] Muzzle light reaches 5 m, two and a half times the game's, from a gamemodesconfig.xml fragment - user 2026-11-12: "perfect!"
+- [done] Muzzle flash per gun, first and third person, sized and brightened to its round, barrel and muzzle device, the game's length kept; data only - user 2026-11-12: "they seem to be proper"
+- [done] Every gun change reaches the test range's guns too - unplayed
 - [on hold] Auto lean at corners - shelved until wanted
 - [scrapped] Gun weight motion (lag, swing, slowdown by weight) - dropped by the user 2026-11-02 after five tries
 - [scrapped] Gradual stops when the keys are let go - user rejected
@@ -80,11 +81,12 @@ Stage: active
 ## Release order
 
 - after fcse-1.5.0
-- after jackall-1.4.1
-- after vortex-0.4.0
+- after jackall-1.8.0
+- after vortex-0.7.0
 
 ## Collisions
 
 - vss-vintorez: fixed by b7946eaf - the VSS's Dart Rifle drew the game's scope until it carried AO's scope data (the Dragunov's)
 - sky-overhaul: fixed by FCSE 1.3.0's hook stacking - both hook the same Direct3D functions; the gun blur sits before bloom
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
+- difficulty-overhaul: merged by JackAll, no shared field - both edit the guns' entity-library archetypes and particle libraries

@@ -38,7 +38,7 @@ public class InputConfigSplitterTests : IDisposable
     [Theory]
     [InlineData("defaultusercontrols.xml", true)]
     [InlineData("inputactionmapsingle.xml", true)]
-    [InlineData("gamemodesconfig.xml", false)]
+    [InlineData("defaultrenderconfig.xml", false)]
     public void Both_files_and_every_action_map_are_recognised(string fileName, bool splits)
         => Assert.Equal(splits, ContainerFormats.IsContainerSegment(fileName));
 

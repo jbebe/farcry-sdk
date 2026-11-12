@@ -638,8 +638,8 @@
                 </object>
               </object>
               <object type="Particles">
-                <value name="text_psMuzzleParticlesId" type="String">weapons.weapons.muzzleflash_ak47</value>
-                <value name="psMuzzleParticlesId" type="Hash">E0AC1190</value>
+                <value name="text_psMuzzleParticlesId" type="String">aimingoverhaul.flashes.m2</value>
+                <value name="psMuzzleParticlesId" type="Hash">71815737</value>
                 <value name="text_psMuzzleParticlesId_3rd" type="String"></value>
                 <value name="psMuzzleParticlesId_3rd" type="Hash">FFFFFFFF</value>
                 <value name="text_MuzzleBone" type="String">FX_FIRE</value>

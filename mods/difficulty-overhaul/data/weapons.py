@@ -11,8 +11,8 @@
       Cartridge.Projectiles     how many one round fires: a buckshot shell's pellets, 1 otherwise
       Cartridge.MuzzleEnergy    the whole round's, in joules
 
-- gamemodesconfig.xml: the single-player hit locations, which scale every hit on anyone but the player:
-  a head hit kills.
+- gamemodesconfig.xml's DefaultCountersService block, as a fragment: the single-player hit locations,
+  which scale every hit on anyone but the player: a head hit kills.
 - materialimpacts.xml: blood sprays from a hit on anyone, the player too, by the whole round's muzzle
   energy, and only where the bullet goes in. Weapon.Bullet, which rounds under 1,000 J keep and every
   gun plays where its bullet comes out, sprays none; rounds over 1,000 J play Weapon.HeadBlood, a copy
@@ -48,8 +48,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "scripts"))
-from entity_fragments import (add_entity_data, crc, find_value, fragment_path, has_object, object_lines, prototypes,
-                              replace_hashed, write)
+from entity_fragments import (add_entity_data, block, crc, find_value, fragment_path, has_object, object_lines,
+                              prototypes, replace_hashed, write)
 
 LAYER = os.path.join(HERE, "..", "layer", "mods")
 LIBRARIES = (
@@ -58,7 +58,9 @@ LIBRARIES = (
     ("downloadcontent", "dlc1", "generated", "entitylibrary.fcb"),
     ("worlds", "testrange", "generated", "entitylibrary.fcb"),
 )
-GAME_MODES = os.path.join(LAYER, "engine", "gamemodes", "gamemodesconfig.xml")
+# The block of gamemodesconfig.xml holding the single-player hit locations, as a fragment JackAll merges.
+COUNTERS = "DefaultCountersService"
+GAME_MODES = os.path.join(LAYER, "engine", "gamemodes", "gamemodesconfig.xml", COUNTERS + ".xml")
 IMPACTS = os.path.join(LAYER, "databases", "materialimpacts", "materialimpacts.xml")
 DECALS = os.path.join(LAYER, "databases", "generic", "decal.xml")
 # The impact record every gun's bullets play, left with no blood, and its copies some rounds play
@@ -213,7 +215,10 @@ def edit_properties(block, round_name, velocity):
 
 
 def hit_locations(text):
-    start = text.index("<HitLocations>", text.index("<DefaultCountersService>"))
+    """The counters block of gamemodesconfig.xml, alone, with the hit locations set."""
+    start, end = block(text, "<%s>" % COUNTERS, "</%s>" % COUNTERS)
+    text = text[start:end]
+    start = text.index("<HitLocations>")
     end = text.index("</HitLocations>", start)
     section = text[start:end]
     for part, multiplier in HIT_LOCATIONS.items():
