@@ -42,6 +42,8 @@ Stage: active
 - [done] Weapon and player data as fragments that merge field by field with other mods
 - [done] A switch per effect in the Mod Configuration Menu
 - [new] Forward/back bob per shot and physical sway in full auto, no climb - user 2026-11-08: "VERY needed"; proposal pending
+- [new] Muzzle light reaches at least twice as far: the game's one shot light, 2 m, at 4 m or more - user 2026-11-12
+- [new] Muzzle flashes per weapon instead of a shared one - user 2026-11-12; no unused flash in the retail files
 - [on hold] Auto lean at corners - shelved until wanted
 - [scrapped] Gun weight motion (lag, swing, slowdown by weight) - dropped by the user 2026-11-02 after five tries
 - [scrapped] Gradual stops when the keys are let go - user rejected
