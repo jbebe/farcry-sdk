@@ -18,7 +18,7 @@ Stage: active
 - [done] Chase camera behind the car at the wheel, orbited by the mouse - moved from Vehicle Overhaul (db5067a), there "works perfectly"
 - [done] The driver's whole body at the wheel, the quad's steering centred - moved from Vehicle Overhaul, there "it works!"
 - [done] The camera on foot pulled in where the ground, a wall or a rock comes between, eased back out (boom)
-- [done] No camera collision behind the car, so small leaves stop pulling the view into it, only the terrain floor - #39, not seen
+- [done] No camera collision behind the car, so small leaves stop pulling the view into it, only the terrain floor - #39, user 2026-11-12: "it works!"
 - [scrapped] A recognisable full-body or sun-cast shadow - user: "something blurry, something unrecognizable and easy to render"
 - [scrapped] Right click swooshing into first person - the user stopped it midway; not re-added unless asked
 - [scrapped] A crouch-walk animation - the game has none; user: "keep the crouch as is. I dont care"
@@ -28,7 +28,6 @@ Stage: active
 - Feet tucked up in the air - not seen
 - The aim key brings the camera closer and the crosshair tightest - not seen
 - The gun carried low on the move, up to aim and fire, with your mouse - script only
-- Behind the car the camera ignores leaves and walls, kept only above the ground - #39, not seen
 - Cutscenes, ladders, swimming, slopes and turning on the spot - #44
 
 ## Approvals

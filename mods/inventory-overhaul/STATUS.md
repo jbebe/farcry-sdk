@@ -5,16 +5,16 @@ Stage: active
 
 ## Features
 
-- [done] Two guns of any class, A on key 3 and B on key 2; a gun picked up with two carried replaces the one in hand - user: "works perfectly"
+- [done] Two guns of any class, A on key 3 and B on key 2; a gun picked up with two carried replaces the one in hand - user: "works perfectly"; #51 keys and an old save's primary in A verified 2026-11-12
 - [done] Picked-up gun comes to hand - fc2drive only, the user has not played it
 - [done] Items: stowed guns keep their wear and loaded rounds, four guns in all with the slots; other items by id and count
-- [done] Notebook on Tab, given with the map, held in both hands, its right page bending with the hands - user: "it works in all situations"
+- [done] Notebook on Tab, given with the map, held in both hands, its right page bending with the hands - user: "it works in all situations"; first opens on gun A, verified 2026-11-12
 - [done] Items page: guns A and B, Items with the diamonds, the belt with its counts; the wheel moves the selection
-- [done] Post-it for the selected row: picture, name, condition word, ammo, upgrade icons, ratings - a bought upgrade not seen yet
-- [done] Condition word from the gun's reliability as a share of its MaxReliability - fc2drive: new, used, worn, worn, failing at 100, 70, 45, 30, 10 %
+- [done] Post-it for the selected row: picture, name, condition word, ammo, upgrade icons, ratings - a bought upgrade not seen yet; #52 every gun's post-it, DLC and rusty guns included, verified 2026-11-12
+- [done] Condition word from the gun's reliability as a share of its MaxReliability - fc2drive: new, used, worn, worn, failing at 100, 70, 45, 30, 10 %; carried and stowed verified 2026-11-12
 - [done] Left mouse uses the selected row: stows gun A or B, heals on the syrettes - user-confirmed
 - [done] Context menu on a stowed gun: To slot A, To slot B - user: "it fully works"
-- [done] X drops the gun in hand, or the notebook's selected row, on a new Drop control - stowed gun and item drop seen by fc2drive
+- [done] X drops the gun in hand, or the notebook's selected row, on a new Drop control - stowed gun and item drop seen by fc2drive; #49 a dropped gun lands on its side, verified 2026-11-12
 - [done] Docs page: other mods' notes, photos and cassettes, the Jackal and Predecessor tapes, played with a click - user: "it works!"
 - [done] Paper reader: a note or photo read whole over the right page, the wheel turning its sheets - user: "everything looks good"
 - [done] Handwriting (Caveat Bold) only on the paper being read - 20 px without Cyrillic not yet judged by the user
@@ -43,11 +43,6 @@ Stage: active
 
 ## To validate
 
-- Gun A on key 3, gun B on key 2, an old save's primary in A - fc2drive only
-- Post-its of the armory's guns (the flamethrower), Mike's rusty guns and the three DLC guns - fc2drive, rusty ones untested
-- A dropped gun falls onto its side - fc2drive only
-- The condition word with wear, on a carried and a stowed gun - fc2drive, carried gun only
-- The notebook first opens on gun A
 - A bought upgrade's icon on the post-it - not seen
 - A picked-up gun comes to hand - fc2drive only
 - The handwriting at 20 px on a paper being read - not judged

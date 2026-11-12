@@ -36,7 +36,7 @@ Stage: active
 - [done] The big truck's radiator fan spinning with the engine - user: "perfect!" (859d1f21)
 - [done] Tuning file and DevTools window, a set of values per car, with a Sounds tab
 - [new] Chassis centre of mass baked into each car's .hkx in place of the plugin's override - user's rule 2026-10-13, not started
-- [done] Engine sound of cars NPCs drive: the game's revs laid over each real engine's idle to half its redline, never higher, top gear cruising - #37; user: "never let an npc car hit top rpm", not heard
+- [done] Engine sound of cars NPCs drive: the game's revs laid over each real engine's idle to half its redline, never higher, top gear cruising - #37; user: "never let an npc car hit top rpm"; 2026-11-12: better, but the revs rise and fall as a looping sawtooth, not constant - fixing
 - [postponed] Shooting from the windows, ported from a legacy mod - post-1.0 #11
 - [postponed] Wrecks (bus, UAZ, a car) revived as drivable vehicles - the user's own work, post-1.0 #12
 - [postponed] Further revamps of the existing car models, next the Datsun's grille - post-1.0 #10
