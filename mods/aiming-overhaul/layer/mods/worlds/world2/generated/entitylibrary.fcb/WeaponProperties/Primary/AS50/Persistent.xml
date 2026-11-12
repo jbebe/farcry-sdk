@@ -712,12 +712,12 @@
                 <value name="texTexture" type="Hash">5D831E10</value>
                 <value name="text_texTextureDistortion" type="String"></value>
                 <value name="texTextureDistortion" type="Hash">FFFFFFFF</value>
-                <value name="fSpeed" type="Float">350</value>
-                <value name="fLength" type="Float">8</value>
+                <value name="fSpeed" type="Float">400</value>
+                <value name="fLength" type="Float">10</value>
                 <value name="fLengthDistortion" type="Float">50</value>
                 <value name="fWidth" type="Float">0.03</value>
                 <value name="fOffset" type="Float">9</value>
-                <value name="iFrequency" type="Int32">1</value>
+                <value name="iFrequency" type="Int32">0</value>
               </object>
             </object>
           </object>

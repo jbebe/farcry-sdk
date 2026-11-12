@@ -688,7 +688,7 @@
                 <value name="fLengthDistortion" type="Float">50</value>
                 <value name="fWidth" type="Float">0.04</value>
                 <value name="fOffset" type="Float">0.5</value>
-                <value name="iFrequency" type="Int32">2</value>
+                <value name="iFrequency" type="Int32">5</value>
               </object>
             </object>
           </object>

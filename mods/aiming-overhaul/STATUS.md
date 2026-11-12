@@ -34,8 +34,8 @@ Stage: active
 - [done] The eye comes forward while a scope comes up and stays back while it goes down - lowering unseen in game
 - [done] No radial edge blur on the scopes the mod draws - unconfirmed by the user
 - [done] Scope shadow: a soft crescent from the rim as the look turns
-- [done] Tracers on the M249, PKM, Dragunov, AS50 and mounted MGs, own shots included, 1 in 6 ricochet - "All works fine" 2026-10-06
-- [done] Tracer colour by cartridge: Soviet rounds (PKM, Dragunov) green, NATO orange-red, the core in the round's colour; AimingOverhaul.SovietTracer weapon data - #57, user 2026-11-12: "Now it's perfect"
+- [done] Tracers on the belt-fed MGs only, as real belts: 1 in 5 from the M249 and mounted M249/M2, 1 in 4 from the PKM; none from the Dragunov, AS50 or rifles - #57, verified by the user 2026-11-12; own shots included, 1 in 6 ricochet - "All works fine" 2026-10-06
+- [done] Tracer colour by cartridge: Soviet rounds (PKM) green, NATO orange-red, the core in the round's colour; AimingOverhaul.SovietTracer weapon data - #57, user 2026-11-12: "Now it's perfect"
 - [done] Iron sight zoom switch: off keeps the field of view down iron sights
 - [done] No random spread down the AR-16's and MGL-140's scopes
 - [done] Scopes as weapon data (AimingOverhaul.Scope* keys), found in the weapon's own mesh - "it seems to be working" 2026-10-08

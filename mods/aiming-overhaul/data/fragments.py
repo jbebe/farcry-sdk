@@ -32,14 +32,15 @@ LIBRARIES = (
     ("downloadcontent", "dlc1", "generated", "entitylibrary.fcb"),
 )
 
-# The guns that keep their tracers, an archetype and its variants each; every other gun's are off.
-TRACER_GUNS = ("Special.M249_Saw", "Special.PKM", "Primary.Dragunov", "Primary.AS50",
-               "MountedWeapons.M249_Mounted", "MountedWeapons.M2_Mounted")
+# The belt-fed guns that keep their tracers, an archetype and its variants each, and one round in how
+# many is a tracer, as their belts are linked; every other gun's are off.
+TRACERS = {"Special.M249_Saw": 5, "MountedWeapons.M249_Mounted": 5, "MountedWeapons.M2_Mounted": 5,
+           "Special.PKM": 4}
 # A tracer's speed and its streak's longest length, in metres.
 TRACER_SPEED = "350"
 TRACER_LENGTH = "8"
-# The tracer guns that fire Soviet rounds, whose tracers burn green; the rest fire NATO's, orange.
-SOVIET_TRACERS = ("Special.PKM", "Primary.Dragunov")
+# The tracer guns that fire Soviet rounds, whose tracers burn green; the rest fire NATO's, orange-red.
+SOVIET_TRACERS = ("Special.PKM",)
 SOVIET_TRACER_KEY = "AimingOverhaul.SovietTracer"
 # The scopes the plugin draws from their eyepiece, an archetype and its variants each, as the entity
 # data src\scopes.h's Scope is read from; they lose their iron-sight post effect. A reticle is an
@@ -129,11 +130,11 @@ def fires_tracers(block):
 
 def edit_properties(archetype, block):
     if fires_tracers(block):
-        if of(archetype, TRACER_GUNS):
+        frequency = lookup(archetype, TRACERS) or 0
+        if frequency:
             set_value(block, "fSpeed", TRACER_SPEED, "BulletTracer")
             set_value(block, "fLength", TRACER_LENGTH, "BulletTracer")
-        else:
-            set_value(block, "iFrequency", "0", "BulletTracer")
+        set_value(block, "iFrequency", str(frequency), "BulletTracer")
     if of(archetype, SCOPES):
         set_value(block, "text_IronsightFX", "")
         set_value(block, "IronsightFX", "FFFFFFFF")

@@ -84,10 +84,10 @@ hit you.
   out of focus, as with both eyes open. The magnification is there at once inside the eyepiece, so
   the view no longer zooms as the scope comes up.
 - **Scope shadow.** A soft dark crescent comes in from the eyepiece's rim on a fast turn.
-- **Tracers** from the M249, the PKM, the Dragunov, the AS50 and the mounted machine guns, your own
-  shots included: bright streaks at 350 m/s, visible however far off, orange-red for NATO rounds
-  and green for the Soviet rounds of the PKM and the Dragunov. One in six glances off where it
-  lands, up into the air.
+- **Tracers** from the belt-fed machine guns only, your own shots included, as real belts are
+  linked: one round in five from the M249 and the mounted machine guns, one in four from the PKM.
+  Bright streaks at 350 m/s, visible however far off, orange-red for NATO rounds and green for the
+  PKM's Soviet rounds. One in six glances off where it lands, up into the air.
 
 ## Controls
 
