@@ -20,6 +20,7 @@ Stage: active
 - [in progress] Map tab performance - sector-filed rebuilds, VRAM 913 to 489 MB; grass distance pick pending, eviction unseen by eye
 - [done] Map tab frame-cost readout and crash.log - unreleased
 - [new] Map tab drawn with Direct3D 11 in a native child window, no OpenGL or GLWpfControl, so it runs on every Windows 10 PC #66
+- [new] gamemodesconfig.xml merged block by block across layers, not last-one-wins - user 2026-11-12, for Aiming Overhaul's muzzle light beside Difficulty Overhaul's copy
 - [done] New worlds - New map / world new and world pack - unseen in game
 - [done] Terrain plans for new worlds, ridges raised by world pack - unreleased
 - [done] Vegetation plans for new worlds, grass and RealTrees - unreleased; no fire data, not editable on the Map tab
