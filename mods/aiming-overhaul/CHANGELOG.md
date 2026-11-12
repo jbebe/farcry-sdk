@@ -6,9 +6,10 @@ Notable changes to Aiming Overhaul, loosely following
 ## [Unreleased]
 
 ### Added
-- **Tracers by cartridge.** Soviet rounds' tracers, from the PKM and the Dragunov, burn light green
-  with a near-white core; NATO rounds' stay orange. A ricochet keeps its round's colour. A modded
-  gun picks green with `AimingOverhaul.SovietTracer` in its weapon data.
+- **Tracers by cartridge.** Soviet rounds' tracers, from the PKM and the Dragunov, burn green; NATO
+  rounds' burn orange-red. The core keeps the round's colour instead of washing out to pale yellow.
+  A ricochet keeps its round's colour. A modded gun picks green with `AimingOverhaul.SovietTracer`
+  in its weapon data.
 
 ## [1.3.0] - 2026-11-08
 

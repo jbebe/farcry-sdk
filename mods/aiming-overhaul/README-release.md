@@ -85,8 +85,8 @@ hit you.
   the view no longer zooms as the scope comes up.
 - **Scope shadow.** A soft dark crescent comes in from the eyepiece's rim on a fast turn.
 - **Tracers** from the M249, the PKM, the Dragunov, the AS50 and the mounted machine guns, your own
-  shots included: bright streaks at 350 m/s, visible however far off, orange for NATO rounds and
-  light green for the Soviet rounds of the PKM and the Dragunov. One in six glances off where it
+  shots included: bright streaks at 350 m/s, visible however far off, orange-red for NATO rounds
+  and green for the Soviet rounds of the PKM and the Dragunov. One in six glances off where it
   lands, up into the air.
 
 ## Controls

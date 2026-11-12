@@ -163,8 +163,8 @@ both field by field with other mods' edits, reporting any clash.
   shot, and some ricochet off where they land, anywhere from level to straight up and to either
   side, never back. The streak is drawn by a shader of the plugin's own: a glow with a hotter core,
   brighter than white so that it blooms, smooth at any angle, and a few pixels wide however far off
-  it is. Its colour is the round's: a NATO round's tracer burns orange, a Soviet round's, from the
-  PKM and the Dragunov, light green with a near-white core. A ricochet keeps its round's colour.
+  it is. Its colour is the round's, core included: a NATO round's tracer burns orange-red, a Soviet
+  round's, from the PKM and the Dragunov, green. A ricochet keeps its round's colour.
 
 The eye is moved through the camera's positional offset, the one the recoil kicks, and a scope's
 zoom held back until its sight picture is up, in `src/engine/aim.cpp`. The aim's wander is added
