@@ -30,7 +30,6 @@ Stage: active
 - The Jackal tapes advance in the southern map - unchecked
 - The menu cursor follows a slow mouse - unchecked
 - Monocular look speed matching the scopes - unchecked
-- Grey exclusive full screen in every game (#42): NVIDIA Control Panel, Change resolution, "Use NVIDIA color settings", Output dynamic range Full, then a full-screen game - if it clears, the driver's limited range is the cause and no plugin is needed
 
 ## Approvals
 
