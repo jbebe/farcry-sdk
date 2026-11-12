@@ -705,7 +705,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>-0.0017</x>
-                <y>0.1002</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -720,7 +720,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.2486</x>
-                <y>0.1002</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -735,7 +735,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.2486</x>
-                <y>0.1002</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -750,7 +750,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.5015</x>
-                <y>0.0504</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -765,7 +765,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.5015</x>
-                <y>0.0504</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -780,7 +780,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.7501</x>
-                <y>0.1001</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -795,7 +795,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.7501</x>
-                <y>0.1001</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -810,7 +810,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.9989</x>
-                <y>0.1001</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -19065,7 +19065,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.5091</x>
-                <y>0.2739</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -19080,7 +19080,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.5091</x>
-                <y>0.2739</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -20329,7 +20329,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.2988</x>
-                <y>0.2008</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -20344,7 +20344,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.2988</x>
-                <y>0.2008</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -20359,7 +20359,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.4999</x>
-                <y>0.1723</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -20374,7 +20374,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.4999</x>
-                <y>0.1723</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -20389,7 +20389,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.7005</x>
-                <y>0.2013</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -20404,7 +20404,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.7005</x>
-                <y>0.2013</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -22705,7 +22705,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.5015</x>
-                <y>0.0504</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>
@@ -22720,7 +22720,7 @@
             <object type="Knot">
               <value name="Value" type="Vector4">
                 <x>0.5015</x>
-                <y>0.0504</y>
+                <y>0</y>
                 <z>0.5</z>
                 <w>0</w>
               </value>

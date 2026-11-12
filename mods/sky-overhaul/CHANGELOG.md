@@ -8,6 +8,8 @@ Notable changes to Sky Overhaul, loosely following
 ### Changed
 - **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.
+- **No rim light.** The bluish glow along the edges of people and plants is gone by day too, and
+  in every weather, not only on clear, cloudy and jungle nights.
 
 ## [1.5.0] - 2026-10-16
 

@@ -6,9 +6,9 @@ frame as the player looks toward the sun, and a retinal afterimage left behind w
 **The layer ships two data fragments per campaign world.** The world descriptor's `<Environment>`
 halves the moon's size and points the storm's fog at the clear preset, and is otherwise retail. The
 preset library in `managers.fcb` changes the night in the clear, jungle, storm and cloudy
-lighting: a dimmer blue-grey ambient, no rim light, and a brighter moon that lights the ground only
-once it has risen, so moonlit ground has shading and shadows. By day it lifts only the clear preset's
-ambient, up to 1.7 times at noon. It replaces the whole library, so it
+lighting: a dimmer blue-grey ambient and a brighter moon that lights the ground only once it has
+risen, so moonlit ground has shading and shadows. By day it lifts only the clear preset's ambient, up
+to 1.7 times at noon. No preset has a rim light at any hour. It replaces the whole library, so it
 collides with any other mod that edits a preset. Nothing here changes how the sun itself looks.
 
 ## What it does

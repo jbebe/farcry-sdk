@@ -15,6 +15,7 @@ Stage: maintenance
 - [done] Cloud shadows on the ground - needs depth pass quality high
 - [done] Night: a smaller unfogged moon, moonlit clouds, blue-grey preset nights with moon shadows - user: "looks really nice"
 - [done] Night eye pass: the world's colour drains to rod blue-grey in the dark, lights keep theirs
+- [done] No rim light on characters and plants in any preset, at any hour - user: "the fix for the rimlight works"
 - [new] Night eye pass off indoors - known issue; two raycast attempts crashed and were reverted, needs another route
 - [done] Colour grade override: neutral, no yellow tint - the user's tuned values are the defaults
 - [done] Ambient occlusion, off by default - fades into fog
