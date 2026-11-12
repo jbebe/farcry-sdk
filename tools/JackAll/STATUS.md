@@ -19,6 +19,7 @@ Stage: active
 - [in progress] Map tab characters wear their own outfit - a placed merc draws as a marker; in-app check outstanding
 - [in progress] Map tab performance - sector-filed rebuilds, VRAM 913 to 489 MB; grass distance pick pending, eviction unseen by eye
 - [done] Map tab frame-cost readout and crash.log - unreleased
+- [new] Map tab drawn with Direct3D 11 in a native child window, no OpenGL or GLWpfControl, so it runs on every Windows 10 PC #66
 - [done] New worlds - New map / world new and world pack - unseen in game
 - [done] Terrain plans for new worlds, ridges raised by world pack - unreleased
 - [done] Vegetation plans for new worlds, grass and RealTrees - unreleased; no fire data, not editable on the Map tab
@@ -54,6 +55,7 @@ Stage: active
 - The App's .mgb fragment save, run in the UI - never run
 - Edited Havok collision in game - never checked
 - A material at a new path, in game - untested
+- JackAll on a PC without OpenGL 3.3 starts, and its Map tab says why (#66) - a forced failure here only
 
 ## Approvals
 

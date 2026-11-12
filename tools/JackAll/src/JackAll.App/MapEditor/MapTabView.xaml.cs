@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
@@ -52,6 +53,7 @@ public partial class MapTabView : UserControl
     /// <summary>The shown entities each marker category draws, grouped on a visibility change.</summary>
     private Dictionary<EntityCategory, List<WorldEntity>> _markerGroups = [];
 
+    private bool _viewportStarted;
     private RenderTargets? _targets;
     private PostProcess? _post;
     private ShadowCascades? _cascades;
@@ -190,8 +192,42 @@ public partial class MapTabView : UserControl
         Inspector.LinkPickRequested += StartLinkPick;
         _inspector.EntityById = EntityById;
 
-        Viewport.Start(new GLWpfControlSettings { MajorVersion = 3, MinorVersion = 3 });
         Viewport.SizeChanged += Redraw;
+        IsVisibleChanged += (_, e) =>
+        {
+            if (e.NewValue is true)
+            {
+                StartViewport();
+            }
+        };
+    }
+
+    /// <summary>Makes the GL context the first time the tab shows, so a driver without GL 3.3 or
+    /// NV_DX_interop costs only this tab. It runs before the viewport itself turns visible, which is
+    /// when GLWpfControl hooks continuous rendering.</summary>
+    private void StartViewport()
+    {
+        if (_viewportStarted) return;
+        _viewportStarted = true;
+
+        try
+        {
+            Viewport.Start(new GLWpfControlSettings { MajorVersion = 3, MinorVersion = 3 });
+        }
+        catch (Exception ex) when (ex is OpenTK.Windowing.GraphicsLibraryFramework.GLFWException
+                                       or PlatformNotSupportedException or ExternalException or TypeLoadException)
+        {
+            Content = new TextBlock
+            {
+                Text = "The 3D viewport cannot start on this graphics driver, so the Map tab is off. "
+                    + $"The rest of JackAll works without it.\n\n{ex.Message}",
+                Style = (System.Windows.Style)FindResource("EmptyHint"),
+                TextAlignment = System.Windows.TextAlignment.Center,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                MaxWidth = 560,
+            };
+        }
     }
 
     private void Redraw(object? sender, System.Windows.RoutedEventArgs e) => Viewport.InvalidateVisual();

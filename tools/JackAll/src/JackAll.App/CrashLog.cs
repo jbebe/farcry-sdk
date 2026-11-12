@@ -4,7 +4,8 @@ using System.Windows;
 
 namespace JackAll.App;
 
-/// <summary>Writes crash.log beside config.ini when an exception escapes, with the machine and GPU details.</summary>
+/// <summary>When an exception escapes, writes crash.log beside config.ini with the machine and GPU
+/// details, and says where it is.</summary>
 public static class CrashLog
 {
     private const int KeptGlErrors = 20;
@@ -17,17 +18,12 @@ public static class CrashLog
 
     public static void Install(Application app)
     {
-        app.DispatcherUnhandledException += (_, e) =>
-        {
-            Write(e.Exception);
-            MessageBox.Show($"JackAll crashed. The details are in\n{AppConfig.CrashLogPath}\n\n{e.Exception.Message}",
-                "JackAll", MessageBoxButton.OK, MessageBoxImage.Error);
-        };
+        app.DispatcherUnhandledException += (_, e) => Report(e.Exception);
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
             if (e.ExceptionObject is Exception exception)
             {
-                Write(exception);
+                Report(exception);
             }
         };
     }
@@ -45,7 +41,7 @@ public static class CrashLog
         }
     }
 
-    private static void Write(Exception exception)
+    private static void Report(Exception exception)
     {
         // An unhandled UI exception reaches both handlers.
         if (ReferenceEquals(Interlocked.Exchange(ref _written, exception), exception))
@@ -53,6 +49,13 @@ public static class CrashLog
             return;
         }
 
+        Write(exception);
+        MessageBox.Show($"JackAll crashed. The details are in\n{AppConfig.CrashLogPath}\n\n{exception.Message}",
+            "JackAll", MessageBoxButton.OK, MessageBoxImage.Error);
+    }
+
+    private static void Write(Exception exception)
+    {
         string[] errors;
         lock (GlErrors)
         {

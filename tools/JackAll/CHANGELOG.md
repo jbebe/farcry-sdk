@@ -37,6 +37,15 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   first time they are shown. Each model is uploaded, in a more compact form, only once it comes near
   the camera, and the models and textures longest out of reach are let go.
 
+### Fixed
+- **JackAll starts on a PC whose graphics driver cannot run the Map tab** (#66). The tab's 3D
+  viewport used to start with the window, so a driver without OpenGL 3.3, such as Windows' basic
+  display driver or an older Intel chip, stopped JackAll before its window opened. The viewport now
+  starts the first time the Map tab is opened, and where it cannot, the tab says why and the rest of
+  JackAll works.
+- **Every crash says so.** A crash outside the window's own work used to write `crash.log` and close
+  without a word; it now shows the same message as any other.
+
 ## [1.7.0] - 2026-10-28
 
 ### Added
