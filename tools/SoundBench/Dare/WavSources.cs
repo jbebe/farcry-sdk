@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using SoundBench.Game;
 
 namespace SoundBench.Dare;
 
@@ -21,7 +22,12 @@ public static partial class WavSources
         {
             if (Tag().Match(Path.GetFileName(path)) is { Success: true } tag)
             {
-                found.TryAdd(uint.Parse(tag.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture), path);
+                uint id = uint.Parse(tag.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                // A WAV of the overhaul's bank scripts stands for the records its record became in the layer.
+                foreach (uint record in OwnSounds.Records.GetValueOrDefault(id, [id]))
+                {
+                    found.TryAdd(record, path);
+                }
             }
         }
         return found;

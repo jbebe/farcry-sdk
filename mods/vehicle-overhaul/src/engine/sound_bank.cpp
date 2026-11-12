@@ -5,8 +5,7 @@
 
 #include "fcse_api.h"
 
-#include <algorithm>
-#include <array>
+#include <unordered_set>
 
 namespace {
     struct ResourceRef {
@@ -21,7 +20,7 @@ namespace {
     // unloaded when nothing holds it yet.
     FCSE::Relocation<GetFromSoundIdFn> g_getFromSoundId{FCSE::Uplay(0x006242F0)};
 
-    std::array<uint32_t, 8> g_held{};
+    std::unordered_set<uint32_t> g_held;
 }
 
 namespace VehicleOverhaul::SoundBank {
@@ -35,14 +34,9 @@ bool Install() {
 }
 
 void Hold(uint32_t id) {
-    if (!g_getFromSoundId || std::find(g_held.begin(), g_held.end(), id) != g_held.end()) {
+    if (!g_getFromSoundId || !g_held.insert(id).second) {
         return;
     }
-    const auto free = std::find(g_held.begin(), g_held.end(), 0u);
-    if (free == g_held.end()) {
-        return;
-    }
-    *free = id;
 
     // The reference is never released, so the bank stays.
     ResourceRef ref;

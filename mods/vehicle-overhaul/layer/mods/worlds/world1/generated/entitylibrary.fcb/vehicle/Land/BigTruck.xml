@@ -2523,7 +2523,7 @@
               <value name="sndEngineLoop" type="String">0x0045CD74</value>
               <value name="sndExtraTorqueEngineLoop" type="String">0xFFFFFFFF</value>
               <value name="sndEngineIgnition" type="String">0x0045CD79</value>
-              <value name="sndTurnOffEngine" type="String">0x00FD0240</value>
+              <value name="sndTurnOffEngine" type="String">0x0045CD7A</value>
               <value name="sndFrameLoop" type="String">0x004B8893</value>
               <value name="sndGearShift_New" type="String">0xFFFFFFFF</value>
               <value name="sndGearShift_MinorDamage" type="String">0xFFFFFFFF</value>

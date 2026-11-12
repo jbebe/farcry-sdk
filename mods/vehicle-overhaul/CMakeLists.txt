@@ -60,6 +60,7 @@ add_library(VehicleOverhaul SHARED
   "src/lights.cpp"
   "src/paint.cpp"
   "src/physics.cpp"
+  "src/player_sounds.cpp"
   "src/real_vehicle.cpp"
   "src/sounds.cpp"
   "src/tuning.cpp"

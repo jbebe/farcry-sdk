@@ -120,6 +120,7 @@ namespace {
                 return &spec;
             }
         }
+        FCSE::Logf("vehicles: a car of iAnimVehicleType %d is not one the overhaul knows", animType);
         return nullptr;
     }
 }
@@ -132,14 +133,8 @@ void Follow(Wheeled::Car car, void* vehicle) {
         return;
     }
     g_vehicle = vehicle;
-    const Spec* spec = Of(vehicle);
-    if (vehicle != nullptr && spec == nullptr) {
-        FCSE::Logf("vehicles: a car of iAnimVehicleType %d is not one the overhaul knows", Vehicle::AnimType(vehicle));
-    }
-    g_player = {car, spec};
+    g_player = {car, vehicle != nullptr ? OfType(Vehicle::AnimType(vehicle)) : nullptr};
 }
-
-const Spec* Of(void* vehicle) { return vehicle != nullptr ? OfType(Vehicle::AnimType(vehicle)) : nullptr; }
 
 const Spec* OfPlayer(Wheeled::Car car) {
     const Followed followed = g_player;

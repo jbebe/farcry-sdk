@@ -164,6 +164,11 @@ public partial class MainWindow : Window
         {
             registry.Hold(slot.Id);
         }
+        // The overhaul's own sounds name banks no depload lists, which its plugin holds.
+        foreach (uint bank in OwnSounds.Banks.GetValueOrDefault(car.Sounds.EngineLoop, []))
+        {
+            registry.Hold(bank);
+        }
         List<string> problems = [];
         IReadOnlyList<AudioSwap> swaps = registry.Refresh(WavSources.In(wavs), problems);
         // Nothing plays from the registry yet, so it takes the audio with no lock.

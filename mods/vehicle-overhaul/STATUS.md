@@ -28,7 +28,7 @@ Stage: active
 - [done] Recorded starts the engine fades in after as it catches
 - [done] A gear-change clunk on the Datsun, ZIL-130 and Unimog - clunk at peaks: "perfect"
 - [done] A recorded engine-off on the ZIL-130, Unimog and quad
-- [done] Quieter tyres, 10 dB down
+- [done] Quieter tyres on the car the player drives, 7 dB down (user 2026-11-12: 7, not 10); every other car's at the game's level
 - [done] Headlamps you can see: a bright lens and glare on every lit lamp - user: "the angle is good"; oval and lens tweaks unseen
 - [done] New muted paints for the Datsun, Land Rover, big truck and buggy - user: "flawless"
 - [done] The Datsun's chrome: bumpers, door handles, rims, grille frame and badge
@@ -36,7 +36,7 @@ Stage: active
 - [done] The big truck's radiator fan spinning with the engine - user: "perfect!" (859d1f21)
 - [done] Tuning file and DevTools window, a set of values per car, with a Sounds tab
 - [new] Chassis centre of mass baked into each car's .hkx in place of the plugin's override - user's rule 2026-10-13, not started
-- [done] Engine sound of cars NPCs drive: the game's revs laid over each real engine's idle to half its redline, never higher, top gear cruising - #37; user: "never let an npc car hit top rpm"; 2026-11-12: better, but the revs rise and fall as a looping sawtooth, not constant - fixing
+- [done] The new engine sounds only on the car the player drives, under ids of the overhaul's own; cars NPCs drive play the game's own engine, revs and tyres - #37; the user chose the base game's sound for them over gear-following revs (a looping sawtooth) and one steady note (still cycled); 2026-11-12: "everything seem to be working"
 - [postponed] Shooting from the windows, ported from a legacy mod - post-1.0 #11
 - [postponed] Wrecks (bus, UAZ, a car) revived as drivable vehicles - the user's own work, post-1.0 #12
 - [postponed] Further revamps of the existing car models, next the Datsun's grille - post-1.0 #10
@@ -53,7 +53,6 @@ Stage: active
 
 ## To validate
 
-- AI drivers' cars rev through the gears, never above half the redline - #37, logged, not heard
 - The Jeep Liberty's automatic gearbox - unfelt
 - The Jeep Liberty's engine sound - no verdict
 
@@ -72,4 +71,3 @@ Stage: active
 
 - flashlight: deploy apart - user 2026-10-08: "flashlight is not needed, dont deploy it"; VO's input hook beside Flashlight's left with db5067a
 - third-person: fixed by db5067a - both hook SetDriver, the call that gives a car its driver (patterns wildcard its first 6 bytes)
-- sound-overhaul: Vehicle Overhaul's copy wins - both ship mods/soundbinary/0045cbd8.spk, the Datsun idle; user 2026-10-18: "ignore sound overhaul"

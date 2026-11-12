@@ -16,12 +16,8 @@
 namespace {
     using VehicleOverhaul::At;
 
-    // The vehicle's CVehicle, a component of its own entity.
+    // A component of the vehicle's own entity.
     constexpr ptrdiff_t kSoundComponent = 0x04;
-    // GearEmulation's revs at the bottom and the top of each pretend gear, and the gear the game is in.
-    constexpr ptrdiff_t kSoundLowRpm = 0x354;
-    constexpr ptrdiff_t kSoundHighRpm = 0x360;
-    constexpr int kGameGears = 3;
     constexpr ptrdiff_t kSoundGear = 0x36C;
     constexpr ptrdiff_t kSoundRpm = 0x370;
     constexpr ptrdiff_t kSoundShiftDirection = 0x374;
@@ -84,7 +80,6 @@ namespace {
     }
 
     VehicleOverhaul::VehicleSound::EngineFn g_engine = nullptr;
-    VehicleOverhaul::VehicleSound::RevsFn g_revs = nullptr;
     VehicleOverhaul::VehicleSound::ObserveFn g_observe = nullptr;
     std::atomic<uint32_t> g_shiftSound{0};
 
@@ -129,26 +124,31 @@ namespace {
     }
 
     void OnRpmDone(FCSE_MidHookContext* ctx) {
-        auto* sound = reinterpret_cast<uint8_t*>(ctx->esi);
-        if (sound == g_driven) {
+        if (reinterpret_cast<uint8_t*>(ctx->esi) == g_driven) {
             At<float>(g_driven, kSoundRpm) = g_rpm;
             g_driven = nullptr;
-            return;
         }
-        const int gear = At<int32_t>(sound, kSoundGear);
-        if (gear < 0 || gear >= kGameGears) {
-            return;
-        }
-        void* owner = At<void*>(sound, kSoundComponent);
-        float& rpm = At<float>(sound, kSoundRpm);
-        rpm = g_revs(VehicleOverhaul::Entity::Of(owner), owner,
-                     {rpm, gear, At<float>(sound, kSoundLowRpm + gear * 4), At<float>(sound, kSoundHighRpm + gear * 4)});
+    }
+
+    // CVehicleTypeWheeled::UpdateSounds, with the sound in ECX and a word it pops, and the test it starts
+    // with on the CVehicle: whether the player is in it.
+    using UpdateSoundsFn = void(__fastcall*)(uint8_t* sound, void* unused, uint32_t word);
+    using PlayerInFn = bool(__fastcall*)(void* vehicle);
+    FCSE::Relocation<UpdateSoundsFn> g_updateSounds{FCSE::Uplay(0x001AD900)};
+    FCSE::Relocation<PlayerInFn> g_playerIn{FCSE::Uplay(0x000D6A40)};
+    UpdateSoundsFn g_originalUpdateSounds = nullptr;
+    VehicleOverhaul::VehicleSound::BeforeUpdateFn g_before = nullptr;
+    constexpr ptrdiff_t kSoundEngineRunning = 0x29C;
+
+    void __fastcall UpdateSoundsDetour(uint8_t* sound, void* unused, uint32_t word) {
+        g_before(sound, g_playerIn(At<void*>(sound, kSoundComponent)));
+        g_originalUpdateSounds(sound, unused, word);
     }
 }
 
 namespace VehicleOverhaul::VehicleSound {
 
-bool Install(EngineFn engine, RevsFn revs) {
+bool Install(EngineFn engine) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
     if (!g_gearChoice || !g_rpmDone) {
         api->Log("vehicle sound: the update's gear and RPM steps were not found in this build");
@@ -157,7 +157,6 @@ bool Install(EngineFn engine, RevsFn revs) {
     // Without it a gear change sound's bank never loads and the change is silent; the engine runs on.
     SoundBank::Install();
     g_engine = engine;
-    g_revs = revs;
     if (!api->MidHook(g_gearChoice.get(), &OnGearChoice) || !api->MidHook(g_rpmDone.get(), &OnRpmDone)) {
         return false;
     }
@@ -180,5 +179,18 @@ uint32_t ShiftSound() { return g_shiftSound; }
 int32_t Type(const uint8_t* sound) { return At<int32_t>(sound, kSoundType); }
 
 void* Callbacks(uint8_t* sound) { return sound + kSoundCallbacks; }
+
+bool EngineRunning(const uint8_t* sound) { return At<uint8_t>(sound, kSoundEngineRunning) != 0; }
+
+bool BeforeUpdate(BeforeUpdateFn before) {
+    const FCSE_PluginAPI* api = FCSE::ApiPointer();
+    if (!g_updateSounds || !g_playerIn) {
+        api->Log("vehicle sound: the sound update or its test for the player was not found in this build");
+        return false;
+    }
+    g_before = before;
+    return api->Hook(reinterpret_cast<void*>(g_updateSounds.address()), reinterpret_cast<void*>(&UpdateSoundsDetour),
+                     reinterpret_cast<void**>(&g_originalUpdateSounds));
+}
 
 }

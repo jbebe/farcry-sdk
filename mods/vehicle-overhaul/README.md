@@ -67,8 +67,10 @@ release notes; see [RELEASING.md](../../RELEASING.md).
 - **Every car's engine sound**, built from recordings of a real engine: an idle in the idle loop, the
   revs as slices of a recorded sweep (steady takes on the ZIL-130), each pitched to the revs and faded
   into the next, a little quieter off the throttle and quieter still while the clutch is out, and a
-  recorded start the engine fades in after as it catches. The builds and their recordings stay local
-  (`sounds\`); the layer carries the banks.
+  recorded start the engine fades in after as it catches. It plays only on the car you drive: every
+  other car sounds as in the game, its own engine, revs and tyres. The builds and their recordings stay
+  local (`sounds\`), under the game's ids into `sounds\built\`; `data\own_sounds.py` moves them into the
+  layer under ids of the overhaul's own and writes the table the plugin uses.
 
   | Car | Engine | Idle to redline | Start catches |
   |---|---|---|---|
@@ -83,15 +85,15 @@ release notes; see [RELEASING.md](../../RELEASING.md).
 
   A gear-change clunk, recorded on the Datsun, plays halfway through each shift on the Datsun, the
   ZIL-130 and the Unimog. The ZIL-130, the Unimog and the quad play their own recorded engine-off, the
-  ZIL-130's where retail's stopped silently; the other cars keep retail's. The new sounds play on every car of a kind; the fade-in and the clunk only on the one
-  you drive.
-- **Cars you do not drive rev on their own engine.** The game's revs for them, made up from road
-  speed over three pretend gears that run far past these engines' redlines, are laid over each
-  engine's way from idle up to half its redline, never higher, since the recordings screech near the
-  top: the first two gears climb to that half, the top one runs from 60% to 85% of the way, its
-  cruising revs. The car you drive keeps its own.
-- **Quieter tyres.** Every car's tyre sounds on the ground, dirt, gravel, grass and the rest, play
-  10 dB quieter, so they no longer drown out the engine.
+  ZIL-130's where retail's stopped silently; the other cars keep retail's.
+
+  The sounds sit in banks the game's data never names, so the plugin holds them from the first car's
+  sound update on, and writes their ids into the sound slots of the car you get into before the game
+  starts its engine. A car you get out of keeps them until its engine stops, so it plays the
+  overhaul's engine-off; a car whose engine runs as you get in keeps the game's until it stops.
+- **Quieter tyres on the car you drive.** Its tyre sounds on the ground, dirt, gravel, grass and the
+  rest, play 7 dB under the game's, so they no longer drown out its engine. Every other car's play at
+  the game's level.
 - **Headlamps you can see.** Every lit headlamp, on any car, shows as a bright point: a lit white
   lens from afar, never smaller than a pixel or so, and a glare that dazzles a little up close in front
   of it, narrowing to the lamp's beam. Whatever stands in the way hides it. The game lit the lenses
@@ -130,6 +132,8 @@ sliders set how loud each sound type plays while driving, for the session only.
 ## Layout
 
 ```
+data\own_sounds.py           the bank scripts' builds into the layer under the overhaul's own ids, and
+                             the plugin's and Sound Bench's tables of them
 src\                         the FCSE plugin
   physics.cpp                the player's car tuned and put back, and the real vehicles' weight
   axles.cpp                  the solid axles: springs, dampers and leaning wheels
@@ -138,6 +142,8 @@ src\                         the FCSE plugin
   real_vehicle.cpp           the real vehicles the cars depict, by their archetypes' iAnimVehicleType
   tuning.cpp                 the values, their file and the window
   sounds.cpp                 the window's Sounds tab
+  player_sounds.cpp          the overhaul's sounds in the slots of the car the player drives
+  own_sound_ids.h            their ids, slot by slot, written by data\own_sounds.py
   lights.cpp                 the car lights, put together
   lamp_glow.cpp              each lit headlamp's bright point and glare
   paint.cpp                  the cars' paints, written into the game's paint table
@@ -150,11 +156,11 @@ layer\mods\
   graphics\                  the big truck's model and physics, its fan a hinged body on a node of its own
                              and its grille the user's;
                              the Datsun's model and its two chrome materials
-  soundbinary\               every car's engine, idle and start sounds, the ZIL-130's, the Unimog's and
-                             the quad's engine-off, the gear-change clunks, the retail pedal sounds
-                             silenced; every car's quieter tyre sounds
-  worlds\                    the big truck's archetypes in each world's entity library, which name its
-                             engine-off sound
+  soundbinary\               the car the player drives' sounds under the overhaul's own ids, 0x00FDcxxx
+                             by car: its engine, idle and start, the ZIL-130's, the Unimog's and the
+                             quad's engine-off, the gear-change clunks, the retail pedal sounds
+                             silenced, its quieter tyre sounds
+  worlds\                    the big truck's archetypes in each world's entity library, for its fan
 layer\plugins\vehicle-overhaul\   the built plugin, staged here by build.ps1
 ```
 

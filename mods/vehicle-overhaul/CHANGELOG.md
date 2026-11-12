@@ -9,10 +9,15 @@ Notable changes to Vehicle Overhaul, loosely following
 - **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.
 
+### Changed
+- **The new engine sounds play only on the car you drive.** Every other car sounds as in the game
+  again: its own engine and revs, and its tyres at the game's level. Your car's tyres play 7 dB under
+  the game's, where every car's were 10 dB down. A car you get out of plays the overhaul's engine-off
+  before it goes back to the game's sounds.
+
 ### Fixed
-- **AI drivers' cars no longer scream at the top of their revs.** Their engine sound follows their
-  speed through the gears, never above half the engine's redline, and cruises at speed. The car you
-  drive is unchanged.
+- **AI drivers' cars no longer scream at the top of their revs** in the new engine sounds: they play
+  the game's own.
 
 ## [1.1.0] - 2026-11-07
 

@@ -26,15 +26,15 @@ with real gears, and new engine sounds for every car.
   - Gears change as in Far Cry 3: never while the clutch is out, and up only if the next gear will
     pull, so a car climbing a hill holds its gear instead of hunting.
   - The ZIL-130 drives on its real five-speed gearbox, and the Jeep Liberty is an automatic.
-- **New engine sounds for every car**, from recordings of real engines: an idle, a start that the
-  engine fades in after as it catches, and the revs, each recording pitched and faded into the next.
+- **New engine sounds for every car you drive**, from recordings of real engines: an idle, a start
+  that the engine fades in after as it catches, and the revs, each recording pitched and faded into
+  the next.
   - A gear-change clunk on the Datsun, the ZIL-130 and the Unimog.
   - A recorded engine-off on the ZIL-130, the Unimog and the quad. The game's ZIL-130 stopped
     silently.
-  - Cars driven by others rev through the gears up to half their engine's redline at most, and
-    cruise at speed.
-- **Quieter tyres.** Tyre sounds on every surface play 10 dB quieter, so they no longer drown out
-  the engine.
+  - Cars driven by others sound as in the game.
+- **Quieter tyres.** The car you drive's tyre sounds on every surface play 7 dB quieter, so they no
+  longer drown out its engine.
 - **Headlamps you can see.** Every lit headlamp, on any car, shows as a bright point from afar and
   glares a little up close in front of it. Whatever stands in the way hides it. The game lit the
   lenses of AI cars only.

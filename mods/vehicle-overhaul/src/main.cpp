@@ -6,6 +6,7 @@
 #include "lights.h"
 #include "paint.h"
 #include "physics.h"
+#include "player_sounds.h"
 #include "sounds.h"
 #include "tuning.h"
 
@@ -19,10 +20,11 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     const bool physics = VehicleOverhaul::Physics::Install();
     const bool drivetrain = VehicleOverhaul::Drivetrain::Install();
     const bool sounds = VehicleOverhaul::Sounds::Install();
+    const bool playerSounds = VehicleOverhaul::PlayerSounds::Install();
     const bool lights = VehicleOverhaul::Lights::Install();
     const bool fan = VehicleOverhaul::Fan::Install();
     VehicleOverhaul::Paint::Install();
-    return physics || drivetrain || sounds || lights || fan;
+    return physics || drivetrain || sounds || playerSounds || lights || fan;
 }
 
 // Runs after every plugin's FCSE_Load, so DevTools has loaded by now if it is installed at all.

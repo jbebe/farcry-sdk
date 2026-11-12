@@ -41,17 +41,20 @@ public static class CarCatalog
             (int)(FcbEntityFields.ReadU32(wheeled, Hash("nGears")) ?? 4),
             Wheels(wheeled).Sum(w => Float(w, "fBrakingTorque")),
             Float(start, "MintEngineStartTime"));
+        // The sounds the car plays with the player at the wheel: the overhaul's own where it has them.
+        IReadOnlyDictionary<string, uint>? own = OwnSounds.ByEngineLoop.GetValueOrDefault(Id(sound, "sndEngineLoop"));
+        uint Slot(string field) => own?.GetValueOrDefault(field, Id(sound, field)) ?? Id(sound, field);
         var sounds = new CarSounds(
-            Id(sound, "sndEngineIgnition"),
-            Id(sound, "sndPlayEngineIdleLoop"),
-            Id(sound, "sndStopEngineIdleLoop"),
-            Id(sound, "sndEngineLoop"),
-            Id(sound, "sndExtraTorqueEngineLoop"),
-            Id(sound, "sndTurnOffEngine"),
-            Id(sound, "sndThrustPedal"),
+            Slot("sndEngineIgnition"),
+            Slot("sndPlayEngineIdleLoop"),
+            Slot("sndStopEngineIdleLoop"),
+            Slot("sndEngineLoop"),
+            Slot("sndExtraTorqueEngineLoop"),
+            Slot("sndTurnOffEngine"),
+            Slot("sndThrustPedal"),
             Id(sound, "sndBrake"),
             Id(sound, "sndGearShift_New"),
-            [.. Enumerable.Range(1, 4).Select(i => Id(sound, $"sndWheelRoll_{i}")).Where(id => id != SpkLayout.NoId)],
+            [.. Enumerable.Range(1, 4).Select(i => Slot($"sndWheelRoll_{i}")).Where(id => id != SpkLayout.NoId)],
             Float(pedal, "fThrustPedalStopThreshold"),
             Float(pedal, "fThrustPedalStopFadeOut"),
             new CarParameters(

@@ -715,6 +715,25 @@ So the engine sound is a set of loops that play for as long as the engine runs. 
 changes while driving changes through multilayer curves. `sndThrustPedal` is the one layer that
 exists only while the player is on the throttle.
 
+`UpdateSounds` (Dunia `0x101AD900`, `__thiscall` with one stack word, `RET 4`) starts by asking the
+`CVehicle` whether the player is in it (`0x100D6A40`: `[[CVehicle+0x10]+0x50] != 0`) and keeps the
+answer at `+0x269`. The answer decides two things:
+
+- **The wheels' rolling.** With the player in, each wheel plays its own `sndWheelRoll_n` with that
+  wheel's callbacks: the wheels are an array at `+0x2F4`, `0x1C` bytes each, with the handle at `+0`
+  and the callbacks at `+8`. Otherwise the vehicle plays `sndWheelRoll_1` alone with its own callbacks
+  (`+0x30C`), its handle at `+0x280`. When the answer changes, the rolling is stopped and started again
+  the new way.
+- **The cabin.** `sndFrameLoop` plays only with the player in.
+
+Every other event in the table plays with the vehicle's own callbacks, `+0x30C`, and suspension and
+brakes with a wheel's. Each event's id is read from the vehicle's sound object (`+0x2A0` on, one word
+per field in the archetype's order: `sndPlayEngineIdleLoop`, `sndStopEngineIdleLoop`,
+`sndEngineLoop`, `sndExtraTorqueEngineLoop`, `sndEngineIgnition`, `sndTurnOffEngine`, …,
+`sndWheelRoll_1`–`4` at `+0x2DC`–`+0x2E8`) at the moment it plays, so an id written there plays from
+the next change of state on **(RE-verified, Steam build; seen in game, GOG v1.03)**. The engine's
+running state as the update last saw it is the byte at `+0x29C`.
+
 ### The parameters it answers
 
 A [multilayer](../file-formats/spk.md#resource-containers) asks its playing object for a game

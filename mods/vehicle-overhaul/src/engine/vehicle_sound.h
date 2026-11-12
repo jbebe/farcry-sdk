@@ -22,20 +22,8 @@ struct Engine {
 // For the vehicle entity a sound belongs to: false leaves it to the game; true sets its engine.
 using EngineFn = bool (*)(void* vehicle, Engine& engine);
 
-// The revs the game made up for a vehicle from its road speed: in its pretend gear, from 0, which runs
-// from `low` to `high`.
-struct GameRevs {
-    float rpm;
-    int gear;
-    float low;
-    float high;
-};
-
-// For a vehicle EngineFn leaves to the game, its entity and CVehicle: the revs its sound plays.
-using RevsFn = float (*)(void* vehicle, void* owner, const GameRevs& game);
-
 // False, and logged, when this build lacks the update's gear and RPM steps.
-bool Install(EngineFn engine, RevsFn revs);
+bool Install(EngineFn engine);
 
 // Called every frame with each vehicle entity and its sound, before the gear choice. Install first.
 using ObserveFn = void (*)(void* vehicle, uint8_t* sound);
@@ -79,5 +67,15 @@ constexpr Slot kSlots[] = {
 // The sound type the vehicle plays its sounds as, and the callbacks they play for.
 int32_t Type(const uint8_t* sound);
 void* Callbacks(uint8_t* sound);
+
+// Whether the vehicle's engine runs, as its sound update last left it.
+bool EngineRunning(const uint8_t* sound);
+
+// Called with each vehicle's sound before its sound update, which starts and stops its sounds as it
+// changes: the player getting in or out, the engine starting or stopping, the wheels rolling.
+using BeforeUpdateFn = void (*)(uint8_t* sound, bool playerIn);
+
+// False, and logged, when this build lacks the sound update or its test for the player.
+bool BeforeUpdate(BeforeUpdateFn before);
 
 }

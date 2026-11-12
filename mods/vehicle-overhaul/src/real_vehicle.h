@@ -53,9 +53,6 @@ void Follow(Wheeled::Car car, void* vehicle);
 // Any thread.
 const Spec* OfPlayer(Wheeled::Car car);
 
-// The vehicle a CVehicle depicts, or null for one the overhaul does not know.
-const Spec* Of(void* vehicle);
-
 // Every vehicle the overhaul knows.
 std::span<const Spec> All();
 
