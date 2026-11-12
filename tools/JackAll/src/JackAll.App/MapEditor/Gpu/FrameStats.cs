@@ -1,30 +1,28 @@
 using System.Diagnostics;
-using OpenTK.Graphics.OpenGL4;
+using Vortice.Direct3D11;
+using static JackAll.App.MapEditor.Gpu.GpuDevice;
 
-namespace JackAll.App.MapEditor.Gl;
+namespace JackAll.App.MapEditor.Gpu;
 
 /// <summary>
 /// What the viewport's frames cost - interval, CPU and GPU time, scene draws and triangles, the
 /// slowest stream rebuild - summed over a short window for the stats line.
 /// </summary>
-public sealed class FrameStats
+public sealed class FrameStats : IDisposable
 {
     private const double WindowSeconds = 0.5;
 
     /// <summary>Timer queries in flight; a result is read this many frames after it was issued.</summary>
     private const int QueryRing = 4;
 
-    private const int GpuMemoryTotalNvx = 0x9048;
-    private const int GpuMemoryAvailableNvx = 0x9049;
-    private const int TextureFreeMemoryAti = 0x87FC;
-
     private static int _draws;
     private static long _triangles;
 
-    private readonly int[] _queries = new int[QueryRing];
+    /// <summary>Per frame: the disjoint query that gives the clock's rate, and a stamp either end.</summary>
+    private readonly (ID3D11Query Disjoint, ID3D11Query Begin, ID3D11Query End)[] _queries =
+        new (ID3D11Query, ID3D11Query, ID3D11Query)[QueryRing];
+
     private int _issued;
-    private readonly bool _nvidiaMemory;
-    private readonly bool _amdMemory;
     private long _frameStart;
     private double _frameRebuild;
     private Window _window;
@@ -45,11 +43,11 @@ public sealed class FrameStats
 
     public FrameStats()
     {
-        GL.GenQueries(QueryRing, _queries);
-        _nvidiaMemory = GlDebug.HasExtension("GL_NVX_gpu_memory_info");
-        _amdMemory = GlDebug.HasExtension("GL_ATI_meminfo");
-        CrashLog.Gpu = $"{GL.GetString(StringName.Renderer)} | {GL.GetString(StringName.Version)} | " +
-                       $"{GL.GetString(StringName.Vendor)} | {VideoMemory()}";
+        for (int i = 0; i < QueryRing; i++)
+        {
+            _queries[i] = (Device.CreateQuery(QueryType.TimestampDisjoint), Device.CreateQuery(QueryType.Timestamp),
+                Device.CreateQuery(QueryType.Timestamp));
+        }
     }
 
     /// <summary>One draw a scene layer issued, and the triangles it rasterises.</summary>
@@ -66,18 +64,18 @@ public sealed class FrameStats
         _triangles = 0;
         _frameRebuild = 0;
 
-        int query = _queries[_issued % QueryRing];
-        if (_issued >= QueryRing)
+        var (disjoint, begin, end) = _queries[_issued % QueryRing];
+        if (_issued >= QueryRing
+            && Context.GetData(disjoint, AsyncGetDataFlags.DoNotFlush, out QueryDataTimestampDisjoint clock)
+            && Context.GetData(begin, AsyncGetDataFlags.DoNotFlush, out ulong started)
+            && Context.GetData(end, AsyncGetDataFlags.DoNotFlush, out ulong ended)
+            && !clock.Disjoint)
         {
-            GL.GetQueryObject(query, GetQueryObjectParam.QueryResultAvailable, out int available);
-            if (available != 0)
-            {
-                GL.GetQueryObject(query, GetQueryObjectParam.QueryResult, out long nanoseconds);
-                _window.Gpu += nanoseconds / 1e6;
-                _window.GpuSamples++;
-            }
+            _window.Gpu += (ended - started) * 1000.0 / clock.Frequency;
+            _window.GpuSamples++;
         }
-        GL.BeginQuery(QueryTarget.TimeElapsed, query);
+        Context.Begin(disjoint);
+        Context.End(begin);
     }
 
     /// <summary>Time spent rebuilding instance streams or overlays this frame.</summary>
@@ -87,7 +85,9 @@ public sealed class FrameStats
     /// frame the viewport did not ask for continuously is reported on its own, without a rate or GPU time.</summary>
     public string? EndFrame(TimeSpan interval, bool continuous)
     {
-        GL.EndQuery(QueryTarget.TimeElapsed);
+        var (disjoint, _, end) = _queries[_issued % QueryRing];
+        Context.End(end);
+        Context.End(disjoint);
         _issued++;
         double cpu = Stopwatch.GetElapsedTime(_frameStart).TotalMilliseconds;
 
@@ -115,25 +115,18 @@ public sealed class FrameStats
             w.GpuSamples > 0 ? w.Gpu / w.GpuSamples : null, w.Draws / w.Frames, w.Triangles / w.Frames, w.Rebuild);
     }
 
-    private string Line(string rate, double cpu, double? gpu, long draws, long triangles, double rebuild)
+    private static string Line(string rate, double cpu, double? gpu, long draws, long triangles, double rebuild)
         => $"{rate} · CPU {cpu:0.0} ms" + (gpu is { } g ? $" · GPU {g:0.0} ms" : "") +
            $" · {draws:N0} draws · {triangles / 1e6:0.00}M tris" +
-           (rebuild >= 0.05 ? $" · rebuild {rebuild:0.0} ms" : "") + $" · {VideoMemory()}";
-    /// <summary>The card's memory in use by everything on it, where the driver says.</summary>
-    private string VideoMemory()
+           (rebuild >= 0.05 ? $" · rebuild {rebuild:0.0} ms" : "") + $" · {GpuDevice.VideoMemory()}";
+
+    public void Dispose()
     {
-        if (_nvidiaMemory)
+        foreach (var (disjoint, begin, end) in _queries)
         {
-            GL.GetInteger((GetPName)GpuMemoryTotalNvx, out int total);
-            GL.GetInteger((GetPName)GpuMemoryAvailableNvx, out int available);
-            return $"VRAM {(total - available) / 1048576.0:0.0}/{total / 1048576.0:0.0} GB";
+            disjoint.Dispose();
+            begin.Dispose();
+            end.Dispose();
         }
-        if (_amdMemory)
-        {
-            var free = new int[4];
-            GL.GetInteger((GetPName)TextureFreeMemoryAti, free);
-            return $"VRAM {free[0] / 1048576.0:0.0} GB free";
-        }
-        return "VRAM unknown";
     }
 }

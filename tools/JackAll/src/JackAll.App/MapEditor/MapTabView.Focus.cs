@@ -1,5 +1,5 @@
 using System.Numerics;
-using JackAll.App.MapEditor.Gl;
+using JackAll.App.MapEditor.Gpu;
 using JackAll.Tools.World;
 
 namespace JackAll.App.MapEditor;
@@ -29,13 +29,13 @@ public partial class MapTabView
         float radius = Vector3.Distance(min, max) * 0.5f;
         float distance = MathF.Max(radius / (MathF.Tan(Camera3D.VerticalFovRadians * 0.5f) * FrameFill), MinFrameDistance);
 
-        Vector3 eye = (Vector3)_camera.Position;
+        Vector3 eye = _camera.Position;
         Vector3 towards = centre - eye;
-        Vector3 direction = towards.LengthSquared() > 1e-4f ? Vector3.Normalize(towards) : (Vector3)_camera.Forward;
+        Vector3 direction = towards.LengthSquared() > 1e-4f ? Vector3.Normalize(towards) : _camera.Forward;
         _camera.Pitch = Math.Clamp(MathF.Asin(direction.Z), -1.55f, 1.55f);
         _camera.Yaw = MathF.Atan2(direction.X, direction.Y);
-        _camera.Position = (OpenTK.Mathematics.Vector3)(centre - ((Vector3)_camera.Forward * distance));
+        _camera.Position = centre - (_camera.Forward * distance);
         HoldAboveTerrain();
-        Viewport.InvalidateVisual();
+        Viewport.RequestFrame();
     }
 }

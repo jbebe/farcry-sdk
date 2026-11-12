@@ -29,12 +29,17 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   GPU time, draw calls, triangles, time spent rebuilding what is drawn, and video memory in use. A
   frame drawn for one edit or click shows its own cost.
 - **`crash.log`.** A crash writes it next to `config.ini`, with the error, the graphics card, driver,
-  OpenGL version, video memory and RAM, and the last OpenGL errors, and says where it is.
+  Direct3D feature level, video memory and RAM, and the last Direct3D errors, and says where it is.
 - **`jackall-cli fixtures restore` and `record`, for working on JackAll itself.** The test suite's
   game files come back from your own Steam install and two Nexus downloads, listed in the committed
   `manifest.tsv`; `record` writes the line for a new fixture. JackAll's README, Building, has the steps.
 
 ### Changed
+- **The Map tab draws with Direct3D 11 instead of OpenGL** (#66), so it runs on any Windows 10 PC:
+  on the graphics card where its driver offers Direct3D 10 or better, and on Windows' own software
+  renderer where it does not, as with only the basic display driver or over remote desktop. World 1
+  looks as it did and takes less of the graphics card to draw. The frame-cost line sits under the
+  viewport now, and the video memory it shows is JackAll's own rather than the whole card's.
 - **The Map tab no longer stalls as you fly, drag or edit.** Crossing into another sector rebuilt
   what is drawn from the whole world; it now takes only the sectors around the camera, so flying
   no longer hitches every 64 m. Dragging an object costs about a sixth of what it did per frame, and

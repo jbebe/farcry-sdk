@@ -1,19 +1,19 @@
+using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using JackAll.App.FileHandlers.Fcb;
-using JackAll.App.MapEditor.Gl;
+using JackAll.App.MapEditor.Gpu;
 using JackAll.Tools.World;
-using OpenTK.Wpf;
 
 namespace JackAll.App.MapEditor;
 
 /// <summary>
 /// The map editor tab: hierarchy, 3D viewport, inspector and entity library. The panels are
-/// view-models over the loaded world; this class composes them and owns the viewport. GL objects are
-/// created and destroyed only inside <see cref="Viewport_Render"/>, the one place a context is current.
+/// view-models over the loaded world; this class composes them and owns the viewport. GPU objects are
+/// created and destroyed inside <see cref="Viewport_Render"/>, on the frame that needs them.
 /// </summary>
 public partial class MapTabView : UserControl
 {
@@ -56,19 +56,20 @@ public partial class MapTabView : UserControl
     private bool _viewportStarted;
     private RenderTargets? _targets;
     private PostProcess? _post;
+    private PresentPass? _present;
     private ShadowCascades? _cascades;
     private AmbientOcclusion? _occlusion;
     private (int X, int Y) _cameraSector = (int.MinValue, int.MinValue);
 
-    private OpenTK.Mathematics.Vector3 _grassStreamedFrom;
+    private Vector3 _grassStreamedFrom;
 
     /// <summary>The viewport's own background, and so what shows in place of the sky.</summary>
-    private static readonly OpenTK.Mathematics.Vector3 BackgroundColour = new(0.13f, 0.15f, 0.17f);
+    private static readonly Vector3 BackgroundColour = new(0.13f, 0.15f, 0.17f);
 
     /// <summary>The same colour for the scene buffer, which holds linear radiance and is sRGB-encoded
     /// by the composite - clear it with the authored value and the background comes back far lighter.
     /// </summary>
-    private static readonly OpenTK.Mathematics.Vector3 BackgroundLinear =
+    private static readonly Vector3 BackgroundLinear =
         SceneLighting.Linear(BackgroundColour);
 
     /// <summary>The model stats line without its live texture-memory suffix.</summary>
@@ -76,7 +77,7 @@ public partial class MapTabView : UserControl
 
     private ArchetypeIndex? _archetypes;
 
-    /// <summary>Kept past the GL swap that clears the pending load, because picking and the
+    /// <summary>Kept past the swap that clears the pending load, because picking and the
     /// selection outline need each entity's baked bounds every frame.</summary>
     private WorldModelSet? _modelSet;
 
@@ -88,6 +89,9 @@ public partial class MapTabView : UserControl
     public event Action<string, ulong>? SectorEditorRequested;
 
     private PendingLoad? _pendingLoad;
+
+    /// <summary>The world last swapped in, kept to swap in again on a new device.</summary>
+    private PendingLoad? _lastLoad;
     private WorldTerrain? _terrain;
     private HeightTexture? _heightTexture;
     private SurfaceTypeTexture? _surfaceTexture;
@@ -139,7 +143,7 @@ public partial class MapTabView : UserControl
         // rather than off the checkbox - code that hides a layer without a click still redraws.
         foreach (MapLayer layer in LayerCatalog.Layers)
         {
-            layer.PropertyChanged += (_, _) => Viewport.InvalidateVisual();
+            layer.PropertyChanged += (_, _) => Viewport.RequestFrame();
         }
 
         // The toolbar's other controls have no such state to watch, so they are caught as routed
@@ -165,12 +169,12 @@ public partial class MapTabView : UserControl
         _selection.Changed += () =>
         {
             _handlesDirty = true;
-            Viewport.InvalidateVisual();
+            Viewport.RequestFrame();
         };
         _hierarchy.VisibleSetChanged += () =>
         {
             _visibleDirty = true;
-            Viewport.InvalidateVisual();
+            Viewport.RequestFrame();
         };
         _inspector.Edited += (entity, moved) =>
         {
@@ -192,7 +196,18 @@ public partial class MapTabView : UserControl
         Inspector.LinkPickRequested += StartLinkPick;
         _inspector.EntityById = EntityById;
 
-        Viewport.SizeChanged += Redraw;
+        Viewport.Render += Viewport_Render;
+        Viewport.MouseButtonDown += Viewport_MouseDown;
+        Viewport.MouseButtonUp += Viewport_MouseUp;
+        Viewport.PointerMoved += Viewport_MouseMove;
+        Viewport.WheelTurned += Viewport_MouseWheel;
+        Viewport.CaptureLost += Viewport_CaptureLost;
+        Viewport.KeyPressed += key => HandleKeyDown(key);
+        Viewport.KeyReleased += HandleKeyUp;
+        Viewport.DragHovered += Viewport_DragOver;
+        Viewport.DragDropped += Viewport_Drop;
+        Viewport.DeviceLost += Viewport_DeviceLost;
+        Viewport.Failed += ShowViewportFailure;
         IsVisibleChanged += (_, e) =>
         {
             if (e.NewValue is true)
@@ -202,9 +217,8 @@ public partial class MapTabView : UserControl
         };
     }
 
-    /// <summary>Makes the GL context the first time the tab shows, so a driver without GL 3.3 or
-    /// NV_DX_interop costs only this tab. It runs before the viewport itself turns visible, which is
-    /// when GLWpfControl hooks continuous rendering.</summary>
+    /// <summary>Makes the Direct3D device the first time the tab shows, so a PC that cannot run it
+    /// loses only this tab.</summary>
     private void StartViewport()
     {
         if (_viewportStarted) return;
@@ -212,25 +226,29 @@ public partial class MapTabView : UserControl
 
         try
         {
-            Viewport.Start(new GLWpfControlSettings { MajorVersion = 3, MinorVersion = 3 });
+            GpuDevice.Create();
         }
-        catch (Exception ex) when (ex is OpenTK.Windowing.GraphicsLibraryFramework.GLFWException
-                                       or PlatformNotSupportedException or ExternalException or TypeLoadException)
+        catch (Exception ex) when (GpuDevice.IsFailure(ex))
         {
-            Content = new TextBlock
-            {
-                Text = "The 3D viewport cannot start on this graphics driver, so the Map tab is off. "
-                    + $"The rest of JackAll works without it.\n\n{ex.Message}",
-                Style = (System.Windows.Style)FindResource("EmptyHint"),
-                TextAlignment = System.Windows.TextAlignment.Center,
-                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-                VerticalAlignment = System.Windows.VerticalAlignment.Center,
-                MaxWidth = 560,
-            };
+            ShowViewportFailure(ex);
         }
     }
 
-    private void Redraw(object? sender, System.Windows.RoutedEventArgs e) => Viewport.InvalidateVisual();
+    private void ShowViewportFailure(Exception ex)
+    {
+        Content = new TextBlock
+        {
+            Text = "The 3D viewport cannot start on this graphics driver, so the Map tab is off. "
+                + $"The rest of JackAll works without it.\n\n{ex.Message}",
+            Style = (System.Windows.Style)FindResource("EmptyHint"),
+            TextAlignment = System.Windows.TextAlignment.Center,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            MaxWidth = 560,
+        };
+    }
+
+    private void Redraw(object? sender, System.Windows.RoutedEventArgs e) => Viewport.RequestFrame();
 
     /// <summary>Called by MainWindow once the VFS is loaded and its maps become discoverable.</summary>
     public async Task InitializeAsync(MainViewModel vm)
@@ -316,7 +334,7 @@ public partial class MapTabView : UserControl
             });
 
             WorldTerrain terrain = loaded.Terrain;
-            _pendingLoad = loaded;
+            _pendingLoad = _lastLoad = loaded;
             ShowSurfaceLegend(terrain, loaded.Table);
             _archetypes = loaded.Archetypes;
             _loadedMap = map;
@@ -331,9 +349,10 @@ public partial class MapTabView : UserControl
                 (models.EntitiesWithoutMesh > 0 ? $", {models.EntitiesWithoutMesh:N0} named none" : "") + ")";
             LayerCatalog.Entities.Status = _modelStatusText;
             int center = terrain.Side / 2;
-            _camera.Position = new OpenTK.Mathematics.Vector3(
+            _camera.Position = new Vector3(
                 center, center, terrain.HeightMetersAt(center, center) + 150);
             ViewportHint.Visibility = System.Windows.Visibility.Collapsed;
+            Viewport.Visibility = System.Windows.Visibility.Visible;
             StatusText.Text = $"{map.Name}: {map.SectorsPerSide}x{map.SectorsPerSide} sectors, " +
                               $"{terrain.MinHeight / 128f:F0}-{terrain.MaxHeight / 128f:F0} m";
             Viewport.Focus();
@@ -341,7 +360,7 @@ public partial class MapTabView : UserControl
         finally
         {
             LoadButton.IsEnabled = true;
-            Viewport.InvalidateVisual();
+            Viewport.RequestFrame();
         }
     }
 
@@ -368,8 +387,8 @@ public partial class MapTabView : UserControl
         float strafe = (_flyKeys.Contains(Key.D) ? 1 : 0) - (_flyKeys.Contains(Key.A) ? 1 : 0);
         float lift = (_flyKeys.Contains(Key.E) ? 1 : 0) - (_flyKeys.Contains(Key.Q) ? 1 : 0);
 
-        OpenTK.Mathematics.Vector3 direction = _camera.MoveDirection(forward, strafe, lift);
-        if (direction == OpenTK.Mathematics.Vector3.Zero)
+        Vector3 direction = _camera.MoveDirection(forward, strafe, lift);
+        if (direction == Vector3.Zero)
         {
             _flyHeldSeconds = 0f;
             return;
@@ -392,30 +411,45 @@ public partial class MapTabView : UserControl
     {
         if (GroundCollision.IsChecked != true || _terrain is null) return;
 
-        OpenTK.Mathematics.Vector3 position = _camera.Position;
+        Vector3 position = _camera.Position;
         float floor = _terrain.HeightMetersAt((int)MathF.Round(position.X), (int)MathF.Round(position.Y))
             + GroundClearance;
         if (position.Z < floor)
         {
-            _camera.Position = new OpenTK.Mathematics.Vector3(position.X, position.Y, floor);
+            _camera.Position = new Vector3(position.X, position.Y, floor);
         }
     }
 
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
-        bool viewport = Viewport.IsKeyboardFocused;
+        e.Handled |= HandleKeyDown(e.Key);
+        base.OnPreviewKeyDown(e);
+    }
+
+    protected override void OnPreviewKeyUp(KeyEventArgs e)
+    {
+        HandleKeyUp(e.Key);
+        base.OnPreviewKeyUp(e);
+    }
+
+    /// <summary>
+    /// A key, from WPF while focus is in the tab's own controls, or from the viewport's window while
+    /// it has focus. A key WPF handled never reaches the window, and one it did not does nothing a
+    /// second time, so the two routes cannot act twice.
+    /// </summary>
+    private bool HandleKeyDown(Key key)
+    {
+        bool viewport = Viewport.HasFocus;
         bool tree = Hierarchy.Tree.IsKeyboardFocusWithin;
-        if (e.Key == Key.Escape && IsDragging)
+        if (key == Key.Escape && IsDragging)
         {
             EndDrag(revert: true);
-            e.Handled = true;
         }
-        else if (e.Key == Key.Escape && _pickingLinkTarget)
+        else if (key == Key.Escape && _pickingLinkTarget)
         {
             CancelLinkPick();
-            e.Handled = true;
         }
-        else if ((viewport || Hierarchy.IsKeyboardFocusWithin) && UndoChrome.IsUndoKey(e.Key, out bool redo))
+        else if ((viewport || Hierarchy.IsKeyboardFocusWithin) && UndoChrome.IsUndoKey(key, out bool redo))
         {
             if (redo)
             {
@@ -425,9 +459,8 @@ public partial class MapTabView : UserControl
             {
                 Undo();
             }
-            e.Handled = true;
         }
-        else if ((viewport || Hierarchy.IsKeyboardFocusWithin) && e.Key == Key.G
+        else if ((viewport || Hierarchy.IsKeyboardFocusWithin) && key == Key.G
             && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
         {
             if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
@@ -438,11 +471,10 @@ public partial class MapTabView : UserControl
             {
                 GroupSelected();
             }
-            e.Handled = true;
         }
-        else if ((viewport || tree) && Keyboard.Modifiers == ModifierKeys.Control && e.Key is Key.C or Key.X)
+        else if ((viewport || tree) && Keyboard.Modifiers == ModifierKeys.Control && key is Key.C or Key.X)
         {
-            if (e.Key == Key.C)
+            if (key == Key.C)
             {
                 CopySelected();
             }
@@ -450,59 +482,54 @@ public partial class MapTabView : UserControl
             {
                 CutSelected();
             }
-            e.Handled = true;
         }
-        else if (viewport && Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.V)
+        else if (viewport && Keyboard.Modifiers == ModifierKeys.Control && key == Key.V)
         {
-            PasteAt(Mouse.GetPosition(Viewport));
-            e.Handled = true;
+            PasteAt(Viewport.CursorPosition);
         }
-        else if ((viewport || tree) && e.Key == Key.Delete)
+        else if ((viewport || tree) && key == Key.Delete)
         {
             DeleteSelected();
-            e.Handled = true;
         }
-        else if (viewport && Keyboard.Modifiers == ModifierKeys.None && e.Key is Key.T or Key.R)
+        else if (viewport && Keyboard.Modifiers == ModifierKeys.None && key is Key.T or Key.R)
         {
-            (e.Key == Key.T ? MoveMode : RotateMode).IsChecked = true;
-            e.Handled = true;
+            (key == Key.T ? MoveMode : RotateMode).IsChecked = true;
         }
-        else if (viewport && e.Key is Key.W or Key.A or Key.S or Key.D or Key.Q or Key.E)
+        else if (viewport && key is Key.W or Key.A or Key.S or Key.D or Key.Q or Key.E)
         {
             // Auto-repeat fires this for as long as the key is held, by which point the frame has
             // already asked for continuous redraws - only the first press has to wake it.
-            if (_flyKeys.Add(e.Key))
+            if (_flyKeys.Add(key))
             {
-                Viewport.InvalidateVisual();
+                Viewport.RequestFrame();
             }
-            e.Handled = true;
         }
-        base.OnPreviewKeyDown(e);
-    }
-
-    protected override void OnPreviewKeyUp(KeyEventArgs e)
-    {
-        if (_flyKeys.Remove(e.Key))
+        else
         {
-            Viewport.InvalidateVisual();
+            return false;
         }
-        base.OnPreviewKeyUp(e);
+        return true;
     }
 
-    private void Viewport_MouseDown(object sender, MouseButtonEventArgs e)
+    private void HandleKeyUp(Key key)
     {
-        Viewport.InvalidateVisual();
-        Viewport.Focus();
-        if (e.ChangedButton == MouseButton.Right)
+        if (_flyKeys.Remove(key))
+        {
+            Viewport.RequestFrame();
+        }
+    }
+
+    private void Viewport_MouseDown(MouseButton button, System.Windows.Point point)
+    {
+        Viewport.RequestFrame();
+        if (button == MouseButton.Right)
         {
             _looking = true;
-            _lastDragPoint = e.GetPosition(Viewport);
+            _lastDragPoint = point;
             Viewport.CaptureMouse();
         }
-        else if (e.ChangedButton == MouseButton.Left && LayerCatalog.Entities.IsVisible)
+        else if (button == MouseButton.Left && LayerCatalog.Entities.IsVisible)
         {
-            System.Windows.Point point = e.GetPosition(Viewport);
-
             // The gizmo gets first refusal on the click: it stands in front of the entities it
             // moves, so a click that lands on it must not fall through and reselect what is behind.
             if (BeginDrag(point) || BeginHandleDrag(point))
@@ -516,27 +543,34 @@ public partial class MapTabView : UserControl
         }
     }
 
-    private void Viewport_MouseUp(object sender, MouseButtonEventArgs e)
+    private void Viewport_MouseUp(MouseButton button, System.Windows.Point point)
     {
-        Viewport.InvalidateVisual();
-        if (e.ChangedButton == MouseButton.Right)
+        Viewport.RequestFrame();
+        if (button == MouseButton.Right)
         {
             _looking = false;
             Viewport.ReleaseMouseCapture();
         }
-        else if (e.ChangedButton == MouseButton.Left && IsDragging)
+        else if (button == MouseButton.Left && IsDragging)
         {
             EndDrag(revert: false);
         }
     }
 
-    private void Viewport_MouseMove(object sender, MouseEventArgs e)
+    /// <summary>The mouse went to another window with the right button still down - an Alt+Tab
+    /// mid-turn - so the button-up will never arrive here.</summary>
+    private void Viewport_CaptureLost()
     {
-        System.Windows.Point p = e.GetPosition(Viewport);
+        _looking = false;
+        Viewport.RequestFrame();
+    }
+
+    private void Viewport_MouseMove(System.Windows.Point p)
+    {
         if (IsDragging)
         {
             DragTo(p);
-            Viewport.InvalidateVisual();
+            Viewport.RequestFrame();
             return;
         }
 
@@ -544,7 +578,7 @@ public partial class MapTabView : UserControl
         {
             _camera.Look((float)(p.X - _lastDragPoint.X), (float)(p.Y - _lastDragPoint.Y));
             _lastDragPoint = p;
-            Viewport.InvalidateVisual();
+            Viewport.RequestFrame();
             return;
         }
 
@@ -552,15 +586,15 @@ public partial class MapTabView : UserControl
         // scene for every mouse move across the viewport is the cost this mode exists to avoid.
         if (HoverGizmo(p))
         {
-            Viewport.InvalidateVisual();
+            Viewport.RequestFrame();
         }
     }
 
-    private void Viewport_MouseWheel(object sender, MouseWheelEventArgs e)
+    private void Viewport_MouseWheel(int delta)
     {
-        Viewport.InvalidateVisual();
+        Viewport.RequestFrame();
         if (_terrain is null) return;
-        _camera.MoveSpeed = Math.Clamp(_camera.MoveSpeed * (e.Delta > 0 ? 1.3f : 1 / 1.3f), 5f, 600f);
+        _camera.MoveSpeed = Math.Clamp(_camera.MoveSpeed * (delta > 0 ? 1.3f : 1 / 1.3f), 5f, 600f);
         StatusText.Text = $"fly speed {_camera.MoveSpeed:F0} m/s";
     }
 
@@ -628,7 +662,7 @@ public partial class MapTabView : UserControl
         }
         _hierarchy.Rebuild(_positionedEntities, _edits.Deleted, _archetypes, _edits.IsModified, _edits.CurrentNode);
         RefreshSaveButton();
-        Viewport.InvalidateVisual();
+        Viewport.RequestFrame();
     }
 
     private async void Save_Click(object sender, System.Windows.RoutedEventArgs e)

@@ -1,9 +1,8 @@
 using System.Numerics;
 using System.Windows;
-using JackAll.App.MapEditor.Gl;
+using JackAll.App.MapEditor.Gpu;
 using JackAll.Core.Format.Fcb;
 using JackAll.Tools.World;
-using OpenTK.Graphics.OpenGL4;
 
 namespace JackAll.App.MapEditor;
 
@@ -91,7 +90,7 @@ public partial class MapTabView
             _ => $"cone {value:0.0}°",
         };
         _handlesDirty = true;
-        Viewport.InvalidateVisual();
+        Viewport.RequestFrame();
     }
 
     private void EndHandleDrag(bool revert)
@@ -121,11 +120,11 @@ public partial class MapTabView
     {
         _overlaysDirty = true;
         _handlesDirty = true;
-        Viewport.InvalidateVisual();
+        Viewport.RequestFrame();
     }
 
     /// <summary>Rebuilds the trigger, light and link layers from the edited nodes, on load and after
-    /// any edit that could move them. Needs the GL context.</summary>
+    /// any edit that could move them. Runs in the frame.</summary>
     private void RebuildOverlays()
     {
         if (!_overlaysDirty || _edits is not { } edits)
@@ -153,7 +152,7 @@ public partial class MapTabView
             || EntityLinks.Read(node).Count > 0;
 
     /// <summary>Draws the handles over everything, as the gizmo is, so one behind a wall stays grabbable.</summary>
-    private void DrawHandles(OpenTK.Mathematics.Matrix4 viewProjection)
+    private void DrawHandles(Matrix4x4 viewProjection)
     {
         IReadOnlyList<EntityHandle> handles = CurrentHandles();
         EntityHandle? active = _handleGrab?.Handle ?? _hoveredHandle;
@@ -167,8 +166,8 @@ public partial class MapTabView
             return;
         }
 
-        using var state = new GlState();
-        GL.Disable(EnableCap.DepthTest);
+        using GpuState state = new();
+        GpuState.Depth(DepthMode.Off);
         _handleLines?.Draw(viewProjection);
         _selectionBox ??= new SelectionBoxLayer();
         foreach (EntityHandle face in handles.Where(h => !h.IsRing))
@@ -176,7 +175,7 @@ public partial class MapTabView
             float size = GizmoScale(face.Point) * (FaceHandlePixels / GizmoPixels);
             Matrix4x4 model = Matrix4x4.CreateScale(size) * Matrix4x4.CreateTranslation(face.Point);
             (float r, float g, float b) = ShapeLayer.TintFor(KindOf(face == active));
-            _selectionBox.Draw(viewProjection, GlMatrix.From(model), new OpenTK.Mathematics.Vector3(r, g, b));
+            _selectionBox.Draw(viewProjection, model, new Vector3(r, g, b));
         }
     }
 

@@ -100,8 +100,15 @@ covers what it does and why a build is always safe; the user docs are in `docs/j
 
 ### Map tab rendering
 
-- **Bind a layer's own VAO before uploading its indices.** An element-buffer bind lands in whichever
-  VAO is bound, and indices uploaded under another layer's VAO crashed the NVIDIA driver.
+- **Direct3D 11 through Vortice, shader model 4.0**, so feature level 10 hardware runs it; WARP is
+  the floor. `fxc` refuses some things at 4.0 that 4.1 allows, such as comparison sampling of a
+  texture array, which is why the shadow cascades are four textures.
+- **Our own targets hold the frame bottom-up; only `PresentPass` turns it upright.** A pass into
+  one runs its clip position through `toTarget`, and its screen-space uv run from the bottom-left.
+- **A texture still bound for reading is silently unbound when it becomes a target.** A `GpuState`
+  pass clears a layer's slots on dispose; the debug layer of a Debug build reports the rest.
+- **`JACKALL_MAP_DEVICE=warp` or `fail`** forces WARP or the tab's failure message, to see either on
+  a PC that needs neither.
 - **Measure VRAM with the process's GPU "Total Committed" counter**, not by summing uploads.
 
 ## Build

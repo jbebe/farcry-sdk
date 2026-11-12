@@ -1,8 +1,11 @@
 using JackAll.Tools.World;
-using OpenTK.Graphics.OpenGL4;
-using OpenTK.Mathematics;
+using System.Numerics;
+using Vortice.Direct3D;
+using Vortice.Direct3D11;
+using Vortice.DXGI;
+using static JackAll.App.MapEditor.Gpu.GpuDevice;
 
-namespace JackAll.App.MapEditor.Gl;
+namespace JackAll.App.MapEditor.Gpu;
 
 /// <summary>
 /// The water surfaces: one instanced grid per sector that declares water, at the height that sector
@@ -53,21 +56,21 @@ public sealed class WaterLayer : IDisposable
     /// The wave shape, shared by the shader that displaces the surface and the one that shades it.
     /// Both stages paste the whole block; each uses the half it needs.
     /// </summary>
-    private static readonly string WaveGlsl =
+    private static readonly string WaveHlsl =
         $$"""
-        uniform float time;
+
 
         // River water runs faster than a lake's.
         float waveSpeed(float river)
         {
-            return mix(0.35, 1.1, river);
+            return lerp(0.35, 1.1, river);
         }
 
         // Gerstner, vertical component only. The horizontal part sharpens crests by bunching the
         // surface toward them, but it also drags each sector's grid off its own 64 m square and
         // opens a gap against its neighbour - and a gap in a surface that blends without writing
         // depth shows the terrain and the sky straight through it.
-        float waveHeight(vec2 position, vec2 direction, float wavelength, float amplitude, float speed)
+        float waveHeight(float2 position, float2 direction, float wavelength, float amplitude, float speed)
         {
             float k = 6.2831853 / wavelength;
             return amplitude * sin(k * (dot(direction, position) - speed * time));
@@ -75,29 +78,29 @@ public sealed class WaterLayer : IDisposable
 
         // The slope that same wave carries, so the normal comes from a derivative rather than from
         // differencing a mesh far too coarse to hold the detail.
-        vec2 waveSlope(vec2 position, vec2 direction, float wavelength, float amplitude, float speed)
+        float2 waveSlope(float2 position, float2 direction, float wavelength, float amplitude, float speed)
         {
             float k = 6.2831853 / wavelength;
             return direction * (amplitude * k * cos(k * (dot(direction, position) - speed * time)));
         }
 
         // What the mesh is displaced by.
-        float swell(vec2 position, float river)
+        float swell(float2 position, float river)
         {
             float speed = waveSpeed(river);
             return {{WaveTerms("waveHeight", DisplacedWaves)}};
         }
 
         // What the shading sees: the same swell plus the ripples below grid scale.
-        vec3 surfaceNormal(vec2 position, float river)
+        float3 surfaceNormal(float2 position, float river)
         {
             float speed = waveSpeed(river);
-            vec2 slope = {{WaveTerms("waveSlope", Waves.Length)}};
-            return normalize(vec3(-slope, 1.0));
+            float2 slope = {{WaveTerms("waveSlope", Waves.Length)}};
+            return normalize(float3(-slope, 1.0));
         }
         """;
 
-    /// <summary>The first <paramref name="count"/> waves as a summed GLSL expression. Directions are
+    /// <summary>The first <paramref name="count"/> waves as a summed HLSL expression. Directions are
     /// normalised here rather than in the shader, where it would be an inverse square root per wave
     /// per fragment to normalise a literal.</summary>
     private static string WaveTerms(string function, int count)
@@ -106,34 +109,55 @@ public sealed class WaterLayer : IDisposable
         foreach ((float x, float y, float wavelength, float amplitude, float speed) in Waves.Take(count))
         {
             float length = MathF.Sqrt(x * x + y * y);
-            terms.Add($"{function}(position, vec2({N(x / length)}, {N(y / length)}), "
-                + $"{N(wavelength)}, {N(amplitude)}, speed * {N(speed)})");
+            terms.Add($"{function}(position, float2({ShaderProgram.Literal(x / length)}, {ShaderProgram.Literal(y / length)}), "
+                + $"{ShaderProgram.Literal(wavelength)}, {ShaderProgram.Literal(amplitude)}, speed * {ShaderProgram.Literal(speed)})");
         }
         return string.Join("\n                 + ", terms);
     }
 
-    /// <summary>Invariant, so a comma-decimal locale cannot turn one constant into two.</summary>
-    private static string N(float value)
-        => value.ToString("0.0#####", System.Globalization.CultureInfo.InvariantCulture);
+    private const string Shared =
+        """
+        cbuffer Params : register(b0)
+        {
+            float4x4 viewProjection;
+            float3 cameraPosition;
+            float time;
+        };
+
+        struct Varyings
+        {
+            float4 position : SV_Position;
+            float3 worldPosition : TEXCOORD0;
+            float3 surfaceTint : COLOR;
+            float riverness : TEXCOORD1;
+        };
+        """;
+
+    private static readonly InputElementDescription[] Layout =
+    [
+        new("POSITION", 0, Format.R32G32_Float, 0, 0),
+        new("INSTANCE_ORIGIN", 0, Format.R32G32B32A32_Float, 0, 1, InputClassification.PerInstanceData, 1),
+        new("INSTANCE_TINT", 0, Format.R32G32B32_Float, 16, 1, InputClassification.PerInstanceData, 1),
+    ];
 
     private readonly ShaderProgram _program;
     private readonly WaterSector[] _sectors;
     private readonly float[] _staging;
     private readonly int _side;
-    private readonly int _vao;
-    private readonly int _vbo;
-    private readonly int _ebo;
-    private readonly int _instanceBuffer;
+    private readonly ID3D11Buffer _corners;
+    private readonly ID3D11Buffer _indices;
+    private readonly ID3D11Buffer _instanceBuffer;
+    private readonly ID3D11Buffer[] _streams;
+    private static readonly uint[] Strides = [2 * sizeof(float), InstanceStride * sizeof(float)];
+    private static readonly uint[] Offsets = [0, 0];
     private readonly int _indexCount;
     private int _instanceCount;
     private readonly int _uViewProjection;
     private readonly int _uCameraPosition;
-    private readonly int _uSunDirection;
     private readonly int _uTime;
-    private readonly SkyBinding _sky;
 
     /// <summary>Whether any water is near enough to draw. The scene copy the refraction reads costs
-    /// a full-screen colour and depth blit, and on a map with no water near the camera there is
+    /// a full-screen colour and depth copy, and on a map with no water near the camera there is
     /// nothing to spend it on.</summary>
     public bool HasVisibleWater => _instanceCount > 0;
 
@@ -145,50 +169,45 @@ public sealed class WaterLayer : IDisposable
 
         _program = new ShaderProgram(
             $$"""
-            #version 330 core
-            layout(location = 0) in vec2 gridCorner;
-            layout(location = 1) in vec4 instanceOrigin;
-            layout(location = 2) in vec3 instanceTint;
-            uniform mat4 viewProjection;
-            uniform float demo;
-            {{WaveGlsl}}
-            out vec3 worldPosition;
-            out vec3 surfaceTint;
-            out float riverness;
-            void main()
+            {{Shared}}
+            {{WaveHlsl}}
+            struct VertexInput
             {
-                vec2 plane = instanceOrigin.xy + gridCorner * {{SectorSize}}.0;
-                riverness = instanceOrigin.w;
-                surfaceTint = instanceTint;
-                float height = demo < 0.5 ? 0.0 : swell(plane, riverness);
-                worldPosition = vec3(plane, instanceOrigin.z + height);
-                gl_Position = viewProjection * vec4(worldPosition, 1.0);
+                float2 gridCorner : POSITION;
+                float4 instanceOrigin : INSTANCE_ORIGIN;
+                float3 instanceTint : INSTANCE_TINT;
+            };
+            Varyings main(VertexInput i)
+            {
+                Varyings o;
+                float2 plane = i.instanceOrigin.xy + i.gridCorner * {{SectorSize}}.0;
+                o.riverness = i.instanceOrigin.w;
+                o.surfaceTint = i.instanceTint;
+                float height = demo < 0.5 ? 0.0 : swell(plane, o.riverness);
+                o.worldPosition = float3(plane, i.instanceOrigin.z + height);
+                o.position = toTarget(mul(viewProjection, float4(o.worldPosition, 1.0)));
+                return o;
             }
             """,
             $$"""
-            #version 330 core
-            in vec3 worldPosition;
-            in vec3 surfaceTint;
-            in float riverness;
-            uniform vec3 cameraPosition;
-            uniform vec3 sunDirection;
-            uniform sampler2D sceneColour;
-            uniform sampler2D sceneDepth;
-            out vec4 fragment;
+            {{Shared}}
+            Texture2D sceneColour : register(t0);
+            Texture2D sceneDepth : register(t1);
 
-            {{SceneLighting.SkyGlsl}}
-            {{WaveGlsl}}
+            {{SceneLighting.SkyHlsl}}
+            {{WaveHlsl}}
 
-            const float near = {{Camera3D.NearPlane:0.0##}};
-            const float far = {{Camera3D.FarPlane:0.0}};
+            static const float near = {{ShaderProgram.Literal(Camera3D.NearPlane)}};
+            static const float far = {{ShaderProgram.Literal(Camera3D.FarPlane)}};
 
+            // From the stored depth, which runs 0 to 1 from the near plane to the far one.
             float linearDepth(float sampled)
             {
                 float z = sampled * 2.0 - 1.0;
                 return 2.0 * near * far / (far + near - z * (far - near));
             }
 
-            void main()
+            float4 main(Varyings v) : SV_Target
             {
                 // Presentation off: a flat translucent pane of the authored tint. Everything below
                 // - the wave normal, the three scene taps, the refraction, the glint and the foam -
@@ -196,47 +215,48 @@ public sealed class WaterLayer : IDisposable
                 // even taken.
                 if (demo < 0.5)
                 {
-                    fragment = vec4(surfaceTint, 0.55);
-                    return;
+                    return float4(v.surfaceTint, 0.55);
                 }
 
-                vec2 screenUv = gl_FragCoord.xy / vec2(textureSize(sceneDepth, 0));
-                float viewDistance = distance(cameraPosition, worldPosition);
-                vec3 view = normalize(cameraPosition - worldPosition);
-                float surfaceZ = linearDepth(gl_FragCoord.z);
+                float2 size;
+                sceneDepth.GetDimensions(size.x, size.y);
+                float2 screenUv = v.position.xy / size;
+                float viewDistance = distance(cameraPosition, v.worldPosition);
+                float3 view = normalize(cameraPosition - v.worldPosition);
+                float surfaceZ = linearDepth(v.position.z);
 
                 // Ripples flatten with distance, or the surface turns to noise at the horizon where
                 // one pixel spans several wavelengths.
-                vec3 normal = normalize(mix(surfaceNormal(worldPosition.xy, riverness), vec3(0.0, 0.0, 1.0),
-                                            clamp(viewDistance / 260.0, 0.0, 1.0)));
+                float3 normal = normalize(lerp(surfaceNormal(v.worldPosition.xy, v.riverness), float3(0.0, 0.0, 1.0),
+                                               saturate(viewDistance / 260.0)));
 
                 // How much water the view travels through before it reaches whatever is behind it.
-                float column = max(linearDepth(texture(sceneDepth, screenUv).r) - surfaceZ, 0.0);
+                float column = max(linearDepth(sceneDepth.SampleLevel(pointClamp, screenUv, 0).r) - surfaceZ, 0.0);
 
                 // Refraction, offset by the surface slope and by how much water there is to bend
                 // through. A sample that turns out to be in front of the surface is something
                 // standing out of the water, so it snaps back rather than being dragged under.
-                vec2 offset = normal.xy * min(column, 15.0) * 0.0036;
-                vec2 refractUv = clamp(screenUv + offset, vec2(0.001), vec2(0.999));
-                if (linearDepth(texture(sceneDepth, refractUv).r) < surfaceZ)
+                float2 offset = normal.xy * min(column, 15.0) * 0.0036;
+                float2 refractUv = clamp(screenUv + offset, 0.001, 0.999);
+                if (linearDepth(sceneDepth.SampleLevel(pointClamp, refractUv, 0).r) < surfaceZ)
                 {
                     refractUv = screenUv;
                 }
 
                 // Beer-Lambert through the tint: shallows keep the ground, depth takes it away.
                 // This, not the reflection, is what reads as a volume rather than a sheet.
-                vec3 extinction = (1.0 - surfaceTint) * 0.9;
-                vec3 throughWater = texture(sceneColour, refractUv).rgb * exp(-extinction * column)
-                                  + surfaceTint * (1.0 - exp(-column * 0.5)) * 0.35;
+                float3 extinction = (1.0 - v.surfaceTint) * 0.9;
+                float3 throughWater = sceneColour.SampleLevel(linearClamp, refractUv, 0).rgb * exp(-extinction * column)
+                                    + v.surfaceTint * (1.0 - exp(-column * 0.5)) * 0.35;
 
                 float grazing = 1.0 - max(dot(normal, view), 0.0);
                 float grazing2 = grazing * grazing;
                 float fresnel = 0.02 + 0.98 * grazing2 * grazing2 * grazing;
-                vec3 reflected = skyColour(reflect(-view, normal), sunDirection);
+                float3 reflected = skyColour(reflect(-view, normal), sunDirection);
 
                 // A narrow GGX lobe on the rippled normal: the glitter path toward the sun, which is
                 // the one highlight a flat sheet can never produce.
-                vec3 halfway = normalize(view + sunDirection);
+                float3 halfway = normalize(view + sunDirection);
                 // GGX, in terms of alpha squared throughout - the roughness itself never appears.
                 float alphaSq = 9.150625e-6;
                 float ndoth = max(dot(normal, halfway), 0.0);
@@ -246,25 +266,21 @@ public sealed class WaterLayer : IDisposable
                 // Foam where the water is shallow enough to break, plus a thread along the crests.
                 float shore = 1.0 - smoothstep(0.0, 1.2, column);
                 float crest = smoothstep(0.55, 1.0, length(normal.xy) * 9.0);
-                float foam = clamp(shore + crest * 0.35, 0.0, 1.0)
-                           * (1.0 - clamp(viewDistance / 400.0, 0.0, 1.0));
+                float foam = saturate(shore + crest * 0.35)
+                           * (1.0 - saturate(viewDistance / 400.0));
 
-                vec3 lit = mix(throughWater, reflected, fresnel) + sunTint * min(glint, 60.0) * 0.5;
-                lit = mix(lit, vec3(0.72), foam);
-                lit = applyHaze(lit, viewDistance, worldPosition.z);
+                float3 lit = lerp(throughWater, reflected, fresnel) + sunTint * min(glint, 60.0) * 0.5;
+                lit = lerp(lit, 0.72, foam);
+                lit = applyHaze(lit, viewDistance, v.worldPosition.z);
 
                 // It covers what is behind it, because the refraction already brought that through.
-                fragment = vec4(lit, clamp(1.0 - exp(-column * 3.0) + fresnel, 0.0, 1.0));
+                return float4(lit, saturate(1.0 - exp(-column * 3.0) + fresnel));
             }
-            """);
-        _uViewProjection = _program.UniformLocation("viewProjection");
-        _uCameraPosition = _program.UniformLocation("cameraPosition");
-        _uSunDirection = _program.UniformLocation("sunDirection");
-        _uTime = _program.UniformLocation("time");
-        _sky = new SkyBinding(_program);
-        _program.Use();
-        GL.Uniform1(_program.UniformLocation("sceneColour"), 0);
-        GL.Uniform1(_program.UniformLocation("sceneDepth"), 1);
+            """,
+            Layout);
+        _uViewProjection = _program.Offset("viewProjection");
+        _uCameraPosition = _program.Offset("cameraPosition");
+        _uTime = _program.Offset("time");
 
         // One grid, drawn once per water sector - the same shape the entity layer already instances
         // with, in place of six vertices per sector written into one buffer.
@@ -279,13 +295,13 @@ public sealed class WaterLayer : IDisposable
             }
         }
 
-        var indices = new int[GridSide * GridSide * 6];
+        var indices = new uint[GridSide * GridSide * 6];
         at = 0;
         for (int y = 0; y < GridSide; y++)
         {
             for (int x = 0; x < GridSide; x++)
             {
-                int origin = y * (GridSide + 1) + x;
+                uint origin = (uint)(y * (GridSide + 1) + x);
                 indices[at++] = origin;
                 indices[at++] = origin + 1;
                 indices[at++] = origin + GridSide + 1;
@@ -296,33 +312,10 @@ public sealed class WaterLayer : IDisposable
         }
         _indexCount = indices.Length;
 
-        _vao = GL.GenVertexArray();
-        GL.BindVertexArray(_vao);
-
-        _vbo = GL.GenBuffer();
-        GL.BindBuffer(BufferTarget.ArrayBuffer, _vbo);
-        GL.BufferData(BufferTarget.ArrayBuffer, corners.Length * sizeof(float), corners,
-            BufferUsageHint.StaticDraw);
-        GL.EnableVertexAttribArray(0);
-        GL.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2 * sizeof(float), 0);
-
-        _ebo = GL.GenBuffer();
-        GL.BindBuffer(BufferTarget.ElementArrayBuffer, _ebo);
-        GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(int), indices,
-            BufferUsageHint.StaticDraw);
-
-        _instanceBuffer = GL.GenBuffer();
-        GL.BindBuffer(BufferTarget.ArrayBuffer, _instanceBuffer);
-        GL.BufferData(BufferTarget.ArrayBuffer, Math.Max(_staging.Length, 1) * sizeof(float),
-            IntPtr.Zero, BufferUsageHint.DynamicDraw);
-        int stride = InstanceStride * sizeof(float);
-        GL.EnableVertexAttribArray(1);
-        GL.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, stride, 0);
-        GL.VertexAttribDivisor(1, 1);
-        GL.EnableVertexAttribArray(2);
-        GL.VertexAttribPointer(2, 3, VertexAttribPointerType.Float, false, stride, 4 * sizeof(float));
-        GL.VertexAttribDivisor(2, 1);
-        GL.BindVertexArray(0);
+        _corners = Device.CreateBuffer(corners, BindFlags.VertexBuffer, ResourceUsage.Immutable);
+        _indices = Device.CreateBuffer(indices, BindFlags.IndexBuffer, ResourceUsage.Immutable);
+        _instanceBuffer = Device.CreateBuffer((uint)(Math.Max(_staging.Length, 1) * sizeof(float)), BindFlags.VertexBuffer);
+        _streams = [_corners, _instanceBuffer];
     }
 
     /// <summary>Mossy water reads green, ordinary water blue; rivers sit slightly lighter than lakes.</summary>
@@ -371,51 +364,43 @@ public sealed class WaterLayer : IDisposable
             return;
         }
 
-        GL.BindBuffer(BufferTarget.ArrayBuffer, _instanceBuffer);
-        GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, at * sizeof(float), _staging);
+        Context.UpdateSubresource(_staging.AsSpan(0, at), _instanceBuffer,
+            region: new Vortice.Mathematics.Box(0, 0, 0, at * sizeof(float), 1, 1));
     }
 
-    public void Draw(Matrix4 viewProjection, Vector3 cameraPosition, RenderTargets targets)
+    public void Draw(Matrix4x4 viewProjection, Vector3 cameraPosition, RenderTargets targets)
     {
         if (_instanceCount == 0)
         {
             return;
         }
 
+        using GpuState pass = new();
         _program.Use();
-        GL.UniformMatrix4(_uViewProjection, false, ref viewProjection);
-        GL.Uniform3(_uCameraPosition, cameraPosition);
-        GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
-        GL.Uniform1(_uTime, SceneLighting.Time);
-        _sky.Apply();
+        _program.Set(_uViewProjection, viewProjection);
+        _program.Set(_uCameraPosition, cameraPosition);
+        _program.Set(_uTime, SceneLighting.Time);
 
-        // Both are 0 with the presentation off, which is what the flat pane wants: it samples
+        // Both are null with the presentation off, which is what the flat pane wants: it samples
         // neither, and there is nothing allocated to sample.
-        GL.ActiveTexture(TextureUnit.Texture1);
-        GL.BindTexture(TextureTarget.Texture2D, targets.DepthCopy);
-        GL.ActiveTexture(TextureUnit.Texture0);
-        GL.BindTexture(TextureTarget.Texture2D, targets.ColourCopy);
+        Context.PSSetShaderResource(0, targets.Presentation?.ColourCopy.View!);
+        Context.PSSetShaderResource(1, targets.Presentation?.DepthCopy.View!);
 
-        GL.BindVertexArray(_vao);
-        GL.Enable(EnableCap.Blend);
-        GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+        Context.IASetVertexBuffers(0, 2, _streams, Strides, Offsets);
+        Context.IASetIndexBuffer(_indices, Format.R32_UInt, 0);
+        GpuState.AlphaBlend(true);
         // Depth-tested against the terrain but not written, so overlapping surfaces don't punch
         // holes in each other.
-        GL.DepthMask(false);
-        GL.DrawElementsInstanced(PrimitiveType.Triangles, _indexCount, DrawElementsType.UnsignedInt,
-            IntPtr.Zero, _instanceCount);
+        GpuState.Depth(DepthMode.TestOnly);
+        _program.DrawIndexedInstanced(_indexCount, _instanceCount);
         FrameStats.Drawn((long)_indexCount / 3 * _instanceCount);
-        GL.DepthMask(true);
-        GL.Disable(EnableCap.Blend);
-        GL.BindVertexArray(0);
     }
 
     public void Dispose()
     {
         _program.Dispose();
-        GL.DeleteBuffer(_vbo);
-        GL.DeleteBuffer(_ebo);
-        GL.DeleteBuffer(_instanceBuffer);
-        GL.DeleteVertexArray(_vao);
+        _corners.Dispose();
+        _indices.Dispose();
+        _instanceBuffer.Dispose();
     }
 }

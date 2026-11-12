@@ -1,6 +1,6 @@
 using System.Numerics;
 using System.Windows;
-using JackAll.App.MapEditor.Gl;
+using JackAll.App.MapEditor.Gpu;
 using JackAll.Tools.World;
 
 namespace JackAll.App.MapEditor;
@@ -47,7 +47,7 @@ public partial class MapTabView
 
     /// <summary>Outlines every selected entity with the same box picking tests against, and puts the
     /// gizmo on the primary one.</summary>
-    private void DrawSelection(OpenTK.Mathematics.Matrix4 viewProjection)
+    private void DrawSelection(Matrix4x4 viewProjection)
     {
         _selectionBox ??= new SelectionBoxLayer();
         foreach (WorldEntity entity in _selection.Items)
@@ -63,8 +63,8 @@ public partial class MapTabView
                 * entity.Rotation
                 * Matrix4x4.CreateTranslation(position);
             bool primary = ReferenceEquals(entity, _selection.Primary);
-            _selectionBox.Draw(viewProjection, GlMatrix.From(model),
-                primary ? new OpenTK.Mathematics.Vector3(1f, 0.85f, 0.2f) : new OpenTK.Mathematics.Vector3(0.9f, 0.6f, 0.1f));
+            _selectionBox.Draw(viewProjection, model,
+                primary ? new Vector3(1f, 0.85f, 0.2f) : new Vector3(0.9f, 0.6f, 0.1f));
         }
 
         if (_selection.Primary is not { Position: { } pivot })
@@ -79,16 +79,12 @@ public partial class MapTabView
     /// one definition - hit testing and drawing both go through it.</summary>
     private float GizmoScale(Vector3 origin)
         => TranslateGizmo.Scale(
-            origin, (Vector3)_camera.Position, Camera3D.VerticalFovRadians,
+            origin, _camera.Position, Camera3D.VerticalFovRadians,
             (float)Viewport.ActualHeight, GizmoPixels);
 
-    /// <summary>The world ray under a viewport point, in the numerics types the world model uses.</summary>
+    /// <summary>The world ray under a viewport point.</summary>
     private (Vector3 Origin, Vector3 Direction) RayAt(Point point)
-    {
-        (OpenTK.Mathematics.Vector3 origin, OpenTK.Mathematics.Vector3 direction) = _camera.Ray(
-            point.X, point.Y, Viewport.ActualWidth, Math.Max(Viewport.ActualHeight, 1));
-        return ((Vector3)origin, (Vector3)direction);
-    }
+        => _camera.Ray(point.X, point.Y, Viewport.ActualWidth, Math.Max(Viewport.ActualHeight, 1));
 
     /// <summary>The handle of the current gizmo under a point, or None.</summary>
     private GizmoAxis HandleAt(Point point, out GizmoGrab? move, out RotateGrab? rotate)
@@ -490,35 +486,35 @@ public partial class MapTabView
         return added;
     }
 
-    private void Viewport_DragOver(object sender, DragEventArgs e)
+    /// <summary>What a drag from the library over the viewport would do: place on the ground under
+    /// it, or nothing where there is no ground.</summary>
+    private DragDropEffects Viewport_DragOver(IDataObject data, Point point)
     {
-        Vector3? ground = e.Data.GetDataPresent(EntityLibraryViewModel.DragFormat)
-            || e.Data.GetDataPresent(EntityLibraryViewModel.PrefabDragFormat)
-            ? TerrainUnder(e.GetPosition(Viewport))
+        Vector3? ground = data.GetDataPresent(EntityLibraryViewModel.DragFormat)
+            || data.GetDataPresent(EntityLibraryViewModel.PrefabDragFormat)
+            ? TerrainUnder(point)
             : null;
-        e.Effects = ground is null ? DragDropEffects.None : DragDropEffects.Copy;
         if (ground is { } at)
         {
             StatusText.Text = $"place at {at.X:0.0}, {at.Y:0.0}, {at.Z:0.0}";
         }
-        e.Handled = true;
+        return ground is null ? DragDropEffects.None : DragDropEffects.Copy;
     }
 
-    private void Viewport_Drop(object sender, DragEventArgs e)
+    private void Viewport_Drop(IDataObject data, Point point)
     {
-        if (e.Data.GetData(EntityLibraryViewModel.DragFormat) is string archetype)
+        if (data.GetData(EntityLibraryViewModel.DragFormat) is string archetype)
         {
-            Place(archetype, Core.Format.Fcb.MissionLayers.MainName, e.GetPosition(Viewport));
+            Place(archetype, Core.Format.Fcb.MissionLayers.MainName, point);
         }
-        else if (e.Data.GetData(EntityLibraryViewModel.PrefabDragFormat) is string bundle)
+        else if (data.GetData(EntityLibraryViewModel.PrefabDragFormat) is string bundle)
         {
-            PastePrefab(bundle, e.GetPosition(Viewport));
+            PastePrefab(bundle, point);
         }
         else
         {
             return;
         }
         Viewport.Focus();
-        e.Handled = true;
     }
 }

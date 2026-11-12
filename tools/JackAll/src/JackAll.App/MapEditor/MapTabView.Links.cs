@@ -1,5 +1,5 @@
 using System.Numerics;
-using JackAll.App.MapEditor.Gl;
+using JackAll.App.MapEditor.Gpu;
 using JackAll.Tools.World;
 
 namespace JackAll.App.MapEditor;
@@ -43,7 +43,7 @@ public partial class MapTabView
         StatusText.Text = "Link cancelled";
     }
 
-    /// <summary>The link lines from the edited nodes of <paramref name="sources"/>. Needs the GL context.</summary>
+    /// <summary>The link lines from the edited nodes of <paramref name="sources"/>. Runs in the frame.</summary>
     private void RebuildLinkLayer(WorldEditSession edits, IEnumerable<WorldEntity> sources)
     {
         var lines = new List<WorldShape>();

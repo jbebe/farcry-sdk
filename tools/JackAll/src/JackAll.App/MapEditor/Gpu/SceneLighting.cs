@@ -1,7 +1,10 @@
+using System.Numerics;
+using System.Runtime.InteropServices;
 using JackAll.Tools.World;
-using OpenTK.Mathematics;
+using Vortice.Direct3D11;
+using static JackAll.App.MapEditor.Gpu.GpuDevice;
 
-namespace JackAll.App.MapEditor.Gl;
+namespace JackAll.App.MapEditor.Gpu;
 
 /// <summary>
 /// What the sky, the surface shading and the fog all have to agree on. Kept in one place because the
@@ -45,11 +48,6 @@ public static class SceneLighting
     /// </summary>
     public static Vector3 Linear(Vector3 srgb) => new(Linear(srgb.X), Linear(srgb.Y), Linear(srgb.Z));
 
-    /// <summary>The same, for the colours that arrive from the world data rather than from this
-    /// file - the descriptor's fog and the materials' tints are all System.Numerics.</summary>
-    public static System.Numerics.Vector3 Linear(System.Numerics.Vector3 srgb)
-        => new(Linear(srgb.X), Linear(srgb.Y), Linear(srgb.Z));
-
     private static float Linear(float c)
         => c <= 0.04045f ? c / 12.92f : MathF.Pow((c + 0.055f) / 1.055f, 2.4f);
 
@@ -68,8 +66,8 @@ public static class SceneLighting
     /// </summary>
     public static float Exposure { get; set; } = 1.8f;
 
-    /// <summary>The current world's authored fog, applied by <c>applyHaze</c> via uniforms; set at
-    /// world load and left at the retail default until one is.</summary>
+    /// <summary>The current world's authored fog, applied by <c>applyHaze</c> through the frame's
+    /// constants; set at world load and left at the retail default until one is.</summary>
     public static WorldEnvironment Fog { get; set; } = WorldEnvironment.Default;
 
     /// <summary>Seconds since the viewport started, for anything that moves. The water is the only
@@ -82,59 +80,48 @@ public static class SceneLighting
     /// </summary>
     public static ShadowCascades? Shadows { get; set; }
 
-    /// <summary>This frame's occlusion texture, or 0 with the presentation switched off. On the same
-    /// terms as <see cref="Shadows"/> - the handle rather than the buffers it came from, so a layer
-    /// cannot reach the frame's framebuffers through the lighting.</summary>
-    public static int OcclusionMap { get; set; }
+    /// <summary>This frame's occlusion, or null with the presentation switched off. On the same
+    /// terms as <see cref="Shadows"/> - the texture rather than the targets it came from, so a layer
+    /// cannot reach the frame's targets through the lighting.</summary>
+    public static ID3D11ShaderResourceView? OcclusionMap { get; set; }
 
     /// <summary>
-    /// The presentation switch behind the viewport's Demo checkbox: every pass, every uniform and
+    /// The presentation switch behind the viewport's Demo checkbox: every pass, every constant and
     /// every shader branch that exists to make the map look like the game rather than to show what
     /// is in it. Off, the frame is one geometry pass of flatly lit textures.
     /// </summary>
     public static bool Demo { get; set; }
 
     /// <summary>
-    /// The sky as a GLSL function, shared so water reflects exactly the sky that gets drawn rather
+    /// The sky as an HLSL function, shared so water reflects exactly the sky that gets drawn rather
     /// than an approximation of it. Covers the gradient and the sun's broad halo; the sharp disc
     /// belongs to <see cref="SkyLayer"/> alone, because a mirrored disc aliases badly on water and a
-    /// specular highlight reads better anyway.
+    /// specular highlight reads better anyway. The fog and the switch come from the frame's constants.
     /// </summary>
-    /// <remarks>Every program pasting this block needs a <see cref="SkyBinding"/> to fill the
-    /// uniforms it declares. Left at their zero defaults the fog is disabled entirely and the
-    /// presentation reads as off, which is visible enough not to ship by accident.</remarks>
-    public static string SkyGlsl { get; } =
+    public static string SkyHlsl { get; } =
         $$"""
-        const vec3 skyZenith  = vec3({{Glsl(Linear(Zenith))}});
-        const vec3 skyHorizon = vec3({{Glsl(Linear(Horizon))}});
-        const vec3 skyNadir   = vec3({{Glsl(Linear(Nadir))}});
-        const vec3 sunTint    = vec3({{Glsl(Linear(SunColour))}});
+        static const float3 skyZenith  = float3({{Hlsl(Linear(Zenith))}});
+        static const float3 skyHorizon = float3({{Hlsl(Linear(Horizon))}});
+        static const float3 skyNadir   = float3({{Hlsl(Linear(Nadir))}});
+        static const float3 sunTint    = float3({{Hlsl(Linear(SunColour))}});
+        static const float3 sunDirection = float3({{Hlsl(SunDirection)}});
 
-        // The world's authored fog: (start, 1/(end-start), amount) and its colour, from the
-        // descriptor's <Fog> element rather than a guess.
-        uniform vec3 fogSetup;
-        uniform vec3 fogTint;
-
-        // The presentation switch, declared once here because every surface shader pastes this
-        // block. Uniform across the draw, so the branches it guards cost nothing to take.
-        uniform float demo;
-
-        vec3 skyColour(vec3 ray, vec3 sunDirection)
+        float3 skyColour(float3 ray, float3 sunDirection)
         {
-            vec3 sky = ray.z >= 0.0
-                ? mix(skyHorizon, skyZenith, pow(clamp(ray.z, 0.0, 1.0), 0.42))
-                : mix(skyHorizon, skyNadir, clamp(-ray.z * 2.5, 0.0, 1.0));
+            float3 sky = ray.z >= 0.0
+                ? lerp(skyHorizon, skyZenith, pow(saturate(ray.z), 0.42))
+                : lerp(skyHorizon, skyNadir, saturate(-ray.z * 2.5));
             return sky + sunTint * pow(max(dot(ray, sunDirection), 0.0), 8.0) * 0.30;
         }
 
         // The authored linear fog, with one editor liberty kept: dust sits in the low air, so the
         // haze thins with altitude and peaks rise out of it. Every surface in the scene has to run
         // this same function or it will visibly float out of the haze the rest of the world sits in.
-        vec3 applyHaze(vec3 colour, float viewDistance, float height)
+        float3 applyHaze(float3 colour, float viewDistance, float height)
         {
-            float fog = clamp((viewDistance - fogSetup.x) * fogSetup.y, 0.0, 1.0) * fogSetup.z;
+            float fog = saturate((viewDistance - fogSetup.x) * fogSetup.y) * fogSetup.z;
             fog *= exp(-max(height - 30.0, 0.0) / 140.0);
-            return mix(colour, fogTint, clamp(fog, 0.0, 1.0));
+            return lerp(colour, fogTint, saturate(fog));
         }
         """;
 
@@ -143,19 +130,19 @@ public static class SceneLighting
     /// over the same four constants, and they are the two ends of one pipeline - kept together so
     /// neither can be adjusted without the other.
     /// </summary>
-    public static string ColourGlsl { get; } =
+    public static string ColourHlsl { get; } =
         """
         // For albedo whose upload cannot be tagged sRGB: the model texture cache is keyed by path
         // and serves the diffuse, the second diffuse and the blend mask alike, and only the first
         // two are colours. The terrain, whose roles are separable, uses the sRGB formats instead.
-        vec3 srgbToLinear(vec3 c)
+        float3 srgbToLinear(float3 c)
         {
-            return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
+            return lerp(c / 12.92, pow(abs((c + 0.055) / 1.055), 2.4), step(0.04045, c));
         }
 
-        vec3 linearToSrgb(vec3 c)
+        float3 linearToSrgb(float3 c)
         {
-            return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(vec3(0.0031308), c));
+            return lerp(c * 12.92, 1.055 * pow(abs(c), 1.0 / 2.4) - 0.055, step(0.0031308, c));
         }
         """;
 
@@ -164,14 +151,29 @@ public static class SceneLighting
     /// the lighting for the same reason everything else here is: a second copy of the cascade choice
     /// is a second chance for the terrain and the models to disagree about where a shadow falls.
     /// </summary>
-    /// <remarks>A program pasting this needs a <see cref="ShadowBinding"/> to fill it; left unset,
-    /// <c>shadowStrength</c> is zero and the lookup returns full sun.</remarks>
-    public static string ShadowGlsl { get; } =
+    /// <remarks>With no cascades this frame, <c>shadowStrength</c> is zero and the lookup returns full
+    /// sun.</remarks>
+    public static string ShadowHlsl { get; } =
         $$"""
-        uniform sampler2DArrayShadow shadowMap;
-        uniform mat4 shadowMatrices[{{ShadowCascades.Count}}];
-        uniform vec4 shadowSplits;
-        uniform float shadowStrength;
+        Texture2D shadowMap0 : register(t{{GpuState.ShadowSlot}});
+        Texture2D shadowMap1 : register(t{{GpuState.ShadowSlot + 1}});
+        Texture2D shadowMap2 : register(t{{GpuState.ShadowSlot + 2}});
+        Texture2D shadowMap3 : register(t{{GpuState.ShadowSlot + 3}});
+
+        // 3x3 compares around one texel of one cascade.
+        float shadowTaps(Texture2D map, float3 uv, float bias)
+        {
+            float texel = 1.0 / {{ShadowCascades.Size}}.0;
+            float sum = 0.0;
+            [unroll] for (int y = -1; y <= 1; y++)
+            {
+                [unroll] for (int x = -1; x <= 1; x++)
+                {
+                    sum += map.SampleCmpLevelZero(shadowCompare, uv.xy + float2(x, y) * texel, uv.z - bias);
+                }
+            }
+            return sum / 9.0;
+        }
 
         // What the real-time shadow is still worth at this distance. It reaches nothing at the last
         // cascade, which is exactly where the terrain's baked lightmap has to take back over.
@@ -180,7 +182,7 @@ public static class SceneLighting
             return 1.0 - smoothstep(shadowSplits.w * 0.75, shadowSplits.w, viewDistance);
         }
 
-        float sampleShadow(vec3 worldPosition, float viewDistance, float ndotl)
+        float sampleShadow(float3 worldPosition, float viewDistance, float ndotl)
         {
             // Both callers multiply the result by ndotl, so on a face turned away from the sun the
             // nine compares below would be computed and then multiplied by zero.
@@ -193,9 +195,9 @@ public static class SceneLighting
                         : viewDistance < shadowSplits.y ? 1
                         : viewDistance < shadowSplits.z ? 2 : 3;
 
-            vec4 clip = shadowMatrices[cascade] * vec4(worldPosition, 1.0);
-            // Orthographic, so w is exactly 1 and the perspective divide would be three no-ops.
-            vec3 uv = clip.xyz * 0.5 + 0.5;
+            float4 clip = mul(shadowMatrices[cascade], float4(worldPosition, 1.0));
+            // Orthographic, so w is exactly 1, and its depth already runs 0 to 1.
+            float3 uv = float3(clip.xy * 0.5 + 0.5, clip.z);
             if (uv.z > 1.0)
             {
                 return 1.0;
@@ -205,22 +207,15 @@ public static class SceneLighting
             // bias than one facing it, and neither the eye-flipped mesh normals nor the terrain's
             // finite-difference ones are trustworthy enough to push a sample along.
             // Constant plus slope-scaled, in light-clip depth. All of the bias is here: the terrain
-            // sets and clears PolygonOffsetFill inside its own draw, so an outer one would not survive.
+            // sets and clears its own depth bias inside its draw, so an outer one would not survive.
             float bias = 0.0006 + 0.0030 * (1.0 - ndotl);
-            float texel = 1.0 / {{ShadowCascades.Size}}.0;
-
-            float sum = 0.0;
-            for (int y = -1; y <= 1; y++)
-            {
-                for (int x = -1; x <= 1; x++)
-                {
-                    sum += texture(shadowMap,
-                        vec4(uv.xy + vec2(x, y) * texel, float(cascade), uv.z - bias));
-                }
-            }
-            return sum / 9.0;
+            [branch] if (cascade == 0) { return shadowTaps(shadowMap0, uv, bias); }
+            [branch] if (cascade == 1) { return shadowTaps(shadowMap1, uv, bias); }
+            [branch] if (cascade == 2) { return shadowTaps(shadowMap2, uv, bias); }
+            return shadowTaps(shadowMap3, uv, bias);
         }
         """;
+
     /// <summary>
     /// The lighting every solid surface runs - terrain, entity meshes, the scatter. Shaped after the
     /// engine's own terrain pixel shader (shadersobj/engine/shaders/obj10, DXBC with its RDEF names
@@ -228,36 +223,35 @@ public static class SceneLighting
     /// directional and coloured, the sun ADDS to it before the albedo multiplies, and specular is a
     /// separate additive Blinn term rather than something folded into the diffuse.
     /// </summary>
-    public static string SurfaceGlsl { get; } =
+    public static string SurfaceHlsl { get; } =
         $$"""
-        {{ColourGlsl}}
+        {{ColourHlsl}}
 
-        uniform sampler2D occlusionMap;
-        uniform float occlusionStrength;
+        Texture2D occlusionMap : register(t{{GpuState.OcclusionSlot}});
 
-        // What the screen-space pass found for this fragment. It reaches the ambient term and
-        // nothing else: a face the sun is on does not go darker for standing near a wall.
-        float ambientOcclusion()
+        // What the screen-space pass found for this pixel. It reaches the ambient term and nothing
+        // else: a face the sun is on does not go darker for standing near a wall.
+        float ambientOcclusion(float2 pixel)
         {
             if (occlusionStrength <= 0.0)
             {
                 return 1.0;
             }
-            return texture(occlusionMap, gl_FragCoord.xy / vec2(textureSize(occlusionMap, 0))).r;
+            return occlusionMap.Load(int3(pixel, 0)).r;
         }
 
-        const vec3 sunLight      = vec3({{Glsl(SunLight)}});
-        const vec3 ambientSky    = vec3({{Glsl(AmbientSky)}});
-        const vec3 ambientGround = vec3({{Glsl(AmbientGround)}});
-        const float specularStrength = {{Glsl(SpecularStrength)}};
+        static const float3 sunLight      = float3({{Hlsl(SunLight)}});
+        static const float3 ambientSky    = float3({{Hlsl(AmbientSky)}});
+        static const float3 ambientGround = float3({{Hlsl(AmbientGround)}});
+        static const float specularStrength = {{Hlsl(SpecularStrength)}};
 
         // Directional ambient plus sun. With the presentation off this is the whole of the shading -
         // called with no occlusion, and with none of the cascade lookup, highlight or haze that
         // shadeSurface goes on to add. One expression for both, so switching the presentation
         // changes what the frame computes rather than how bright the world is.
-        vec3 shadeDiffuse(vec3 albedo, vec3 normal, float sunAmount, float occlusion)
+        float3 shadeDiffuse(float3 albedo, float3 normal, float sunAmount, float occlusion)
         {
-            vec3 ambient = mix(ambientGround, ambientSky, normal.z * 0.5 + 0.5) * occlusion;
+            float3 ambient = lerp(ambientGround, ambientSky, normal.z * 0.5 + 0.5) * occlusion;
             return albedo * (ambient + sunLight * sunAmount);
         }
 
@@ -265,25 +259,23 @@ public static class SceneLighting
         // callers answer that differently: a mesh takes max(dot(n, L), 0), the terrain multiplies
         // that by its baked shadow. Everything downstream - including whether a highlight is
         // allowed at all - is identical for both, which is the point of this living in one place.
-        // Keep this source ASCII: a stray non-ASCII byte, even in a comment, stops the GLSL
-        // tokeniser dead with an unexpected end of file.
-        vec3 shadeSurface(
-            vec3 albedo, vec3 normal, vec3 toEye, vec3 sunDirection, float sunAmount,
-            vec3 specularColour, float specularPower)
+        float3 shadeSurface(
+            float3 albedo, float3 normal, float3 toEye, float3 sunDirection, float sunAmount,
+            float3 specularColour, float specularPower, float2 pixel)
         {
-            vec3 lit = shadeDiffuse(albedo, normal, sunAmount, ambientOcclusion());
+            float3 lit = shadeDiffuse(albedo, normal, sunAmount, ambientOcclusion(pixel));
             if (specularPower > 0.0 && sunAmount > 0.0)
             {
                 // Blinn, gated on sunAmount so a facet the sun does not reach cannot catch a
                 // highlight. The colour clamp is render-side on purpose: the .xbm values stay as
                 // authored, and retail runs to 2.0 because the engine multiplies a spec map into
                 // them that this renderer does not have.
-                vec3 sum = sunDirection + toEye;
+                float3 sum = sunDirection + toEye;
                 float len = length(sum);
                 if (len > 1.0e-4)
                 {
                     float blinn = pow(max(dot(normal, sum / len), 0.0), specularPower);
-                    lit += min(specularColour, vec3(1.5)) * sunLight
+                    lit += min(specularColour, 1.5) * sunLight
                          * (sunAmount * blinn * specularStrength);
                 }
             }
@@ -291,45 +283,77 @@ public static class SceneLighting
         }
         """;
 
-    private static string Glsl(Vector3 v) => string.Create(
-        System.Globalization.CultureInfo.InvariantCulture, $"{v.X:0.####}, {v.Y:0.####}, {v.Z:0.####}");
+    private static string Hlsl(Vector3 v)
+        => $"{ShaderProgram.Literal(v.X)}, {ShaderProgram.Literal(v.Y)}, {ShaderProgram.Literal(v.Z)}";
 
-    /// <summary>Invariant, so a comma-decimal locale cannot turn one constant into two.</summary>
-    private static string Glsl(float v)
-        => v.ToString("0.0####", System.Globalization.CultureInfo.InvariantCulture);
+    private static string Hlsl(float v) => ShaderProgram.Literal(v);
 }
 
 /// <summary>
-/// The uniforms <see cref="SceneLighting.SkyGlsl"/> declares, resolved on one program. Same shape as
-/// <see cref="ShadowBinding"/> and <see cref="OcclusionBinding"/>: the block is shared GLSL, so what
-/// fills it has to be shared too rather than hand-carried as a list of locations per layer.
+/// The <c>Frame</c> constant buffer every program declares (<see cref="ShaderProgram"/>'s prelude),
+/// with the cascades and the occlusion on their shared slots. Filled from <see cref="SceneLighting"/>
+/// in one place, so no layer can carry its own copy of the fog or the shadow matrices.
 /// </summary>
-public sealed class SkyBinding
+public static class FrameConstants
 {
-    private readonly int _demo;
-    private readonly int _fogSetup;
-    private readonly int _fogTint;
-
-    public SkyBinding(ShaderProgram program)
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Layout
     {
-        _demo = program.UniformLocation("demo");
-        _fogSetup = program.UniformLocation("fogSetup");
-        _fogTint = program.UniformLocation("fogTint");
+        public Matrix4x4 Shadow0, Shadow1, Shadow2, Shadow3;
+        public Vector4 ShadowSplits;
+        public Vector3 FogSetup;
+        public float ShadowStrength;
+        public Vector3 FogTint;
+        public float OcclusionStrength;
+        public Vector2 ViewportSize;
+        public float Demo;
+        public float Pad;
     }
 
-    /// <summary>Uploads the switch and the current world's fog to whichever program is in use.
-    /// </summary>
-    public void Apply()
+    private static ID3D11Buffer? _buffer;
+
+    public static void Release()
     {
-        OpenTK.Graphics.OpenGL4.GL.Uniform1(_demo, SceneLighting.Demo ? 1f : 0f);
+        _buffer?.Dispose();
+        _buffer = null;
+    }
+
+    /// <summary>Uploads the frame's lighting and binds it, with the cascades and the occlusion that
+    /// go with it; run again once the presentation's passes have made them.</summary>
+    public static void Upload(int width, int height)
+    {
+        _buffer ??= Device.CreateBuffer((uint)Marshal.SizeOf<Layout>(), BindFlags.ConstantBuffer,
+            ResourceUsage.Dynamic, CpuAccessFlags.Write);
 
         WorldEnvironment fog = SceneLighting.Fog;
         float range = MathF.Max(fog.FogEnd - fog.FogStart, 1f);
-        OpenTK.Graphics.OpenGL4.GL.Uniform3(_fogSetup, fog.FogStart, 1f / range, fog.FogAmount);
+        var frame = new Layout
+        {
+            FogSetup = new Vector3(fog.FogStart, 1f / range, fog.FogAmount),
+            // The descriptor writes fog as an 8-bit triple - an authored sRGB colour, like every
+            // other colour in SceneLighting, and the haze mixes toward it in linear radiance.
+            FogTint = SceneLighting.Linear(fog.FogColour),
+            ViewportSize = new Vector2(width, height),
+            Demo = SceneLighting.Demo ? 1f : 0f,
+            OcclusionStrength = SceneLighting.OcclusionMap is null ? 0f : 1f,
+        };
+        if (SceneLighting.Shadows is { } cascades)
+        {
+            frame.ShadowStrength = 1f;
+            frame.ShadowSplits = ShadowCascades.Splits;
+            frame.Shadow0 = cascades.Matrices[0];
+            frame.Shadow1 = cascades.Matrices[1];
+            frame.Shadow2 = cascades.Matrices[2];
+            frame.Shadow3 = cascades.Matrices[3];
+        }
 
-        // The descriptor writes fog as an 8-bit triple - an authored sRGB colour, like every other
-        // colour in this file, and the haze mixes toward it in linear radiance.
-        System.Numerics.Vector3 tint = SceneLighting.Linear(fog.FogColour);
-        OpenTK.Graphics.OpenGL4.GL.Uniform3(_fogTint, tint.X, tint.Y, tint.Z);
+        MappedSubresource mapped = Context.Map(_buffer, MapMode.WriteDiscard);
+        Marshal.StructureToPtr(frame, mapped.DataPointer, false);
+        Context.Unmap(_buffer);
+        Context.VSSetConstantBuffer(1, _buffer);
+        Context.PSSetConstantBuffer(1, _buffer);
+        Context.PSSetShaderResources(GpuState.ShadowSlot, ShadowCascades.Count,
+            SceneLighting.Shadows?.Views ?? GpuState.NoTextures);
+        Context.PSSetShaderResource(GpuState.OcclusionSlot, SceneLighting.OcclusionMap!);
     }
 }

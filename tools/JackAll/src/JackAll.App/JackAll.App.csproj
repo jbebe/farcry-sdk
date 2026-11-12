@@ -17,7 +17,8 @@
       it binds to our own view models and imposes no document model on ReconstructedGraph.
     -->
     <PackageReference Include="Nodify" Version="7.3.0" />
-    <PackageReference Include="OpenTK.GLWpfControl" Version="4.3.6" />
+    <PackageReference Include="Vortice.D3DCompiler" Version="3.8.3" />
+    <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
   </ItemGroup>
 
   <PropertyGroup>

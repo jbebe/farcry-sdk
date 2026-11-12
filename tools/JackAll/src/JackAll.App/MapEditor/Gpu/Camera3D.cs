@@ -1,6 +1,6 @@
-using OpenTK.Mathematics;
+using System.Numerics;
 
-namespace JackAll.App.MapEditor.Gl;
+namespace JackAll.App.MapEditor.Gpu;
 
 /// <summary>
 /// The fly camera for the 3D mode, working directly in world coordinates (X east, Y north, Z up) -
@@ -41,14 +41,14 @@ public sealed class Camera3D
 
     public Vector3 Right => new(MathF.Cos(Yaw), -MathF.Sin(Yaw), 0);
 
-    public Matrix4 View() => Matrix4.LookAt(
+    public Matrix4x4 View() => Matrix4x4.CreateLookAt(
         new Vector3(Position.X, Position.Y, Position.Z),
         new Vector3(Position.X, Position.Y, Position.Z) + Forward,
         Vector3.UnitZ);
 
     /// <summary>Shared with anything sizing itself against the screen rather than the world - a
     /// marker glyph's pixel size falls out of this and the viewport height.</summary>
-    public static readonly float VerticalFovRadians = MathHelper.DegreesToRadians(60f);
+    public static readonly float VerticalFovRadians = float.DegreesToRadians(60f);
 
     /// <summary>The clip planes, shared with anything that has to undo the projection - the water
     /// turns a depth sample back into metres of water to see through, and a copy of these that
@@ -57,7 +57,7 @@ public sealed class Camera3D
 
     public const float FarPlane = 8000f;
 
-    public Matrix4 Projection(float aspect) => Matrix4.CreatePerspectiveFieldOfView(
+    public Matrix4x4 Projection(float aspect) => Matrix4x4.CreatePerspectiveFieldOfView(
         VerticalFovRadians, MathF.Max(aspect, 0.1f), NearPlane, FarPlane);
 
     public void Look(float dxPixels, float dyPixels)
@@ -71,21 +71,21 @@ public sealed class Camera3D
     public Vector3 MoveDirection(float forward, float strafe, float lift)
     {
         Vector3 move = Forward * forward + Right * strafe + Vector3.UnitZ * lift;
-        return move.LengthSquared > 1e-6f ? Vector3.Normalize(move) : Vector3.Zero;
+        return move.LengthSquared() > 1e-6f ? Vector3.Normalize(move) : Vector3.Zero;
     }
 
     public void Move(Vector3 direction, float meters) => Position += direction * meters;
 
     /// <summary>The world-space ray under a viewport pixel, unprojected through the inverse
-    /// view-projection.</summary>
+    /// view-projection at the near plane, which is clip depth 0.</summary>
     public (Vector3 Origin, Vector3 Direction) Ray(double px, double py, double viewWidth, double viewHeight)
     {
         var ndc = new Vector4(
             (float)(px / viewWidth * 2 - 1),
             (float)(1 - py / viewHeight * 2),
-            -1f, 1f);
-        Matrix4 inverse = Matrix4.Invert(View() * Projection((float)(viewWidth / Math.Max(viewHeight, 1))));
-        Vector4 world = ndc * inverse;
+            0f, 1f);
+        Matrix4x4.Invert(View() * Projection((float)(viewWidth / Math.Max(viewHeight, 1))), out Matrix4x4 inverse);
+        Vector4 world = Vector4.Transform(ndc, inverse);
         world /= world.W;
         return (Position, Vector3.Normalize(new Vector3(world.X, world.Y, world.Z) - Position));
     }

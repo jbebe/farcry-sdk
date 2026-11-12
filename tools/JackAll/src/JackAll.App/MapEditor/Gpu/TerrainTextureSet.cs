@@ -1,8 +1,10 @@
 using JackAll.Tools.Xbt;
 using JackAll.Tools.World;
-using OpenTK.Graphics.OpenGL4;
+using Vortice.Direct3D11;
+using Vortice.DXGI;
+using static JackAll.App.MapEditor.Gpu.GpuDevice;
 
-namespace JackAll.App.MapEditor.Gl;
+namespace JackAll.App.MapEditor.Gpu;
 
 /// <summary>
 /// Everything the terrain needs to look like the game does: the world-wide blend weights stitched
@@ -10,7 +12,7 @@ namespace JackAll.App.MapEditor.Gl;
 /// sector blends, and the layer textures themselves as one array.
 /// </summary>
 /// <remarks>
-/// The masks stay DXT1-compressed on the GPU - they are uploaded straight into a world-sized
+/// The masks stay DXT1-compressed on the GPU - they are laid straight into a world-sized
 /// compressed texture, one 128x128 atlas at a time, which is block-aligned because a sector is 64
 /// texels across. That costs about a sixth of what decoding them would.
 /// </remarks>
@@ -28,6 +30,8 @@ public sealed class TerrainTextureSet : IDisposable
     /// <summary>Levels of a 2048 chain down to 1x1. Every one is written here, so nothing is
     /// generated and no level is left holding whatever the driver had in it.</summary>
     private const int DetailLevels = 12;
+
+    private const Format DetailFormat = Format.BC1_UNorm_SRgb;
 
     private const int Dxt1BlockBytes = 8;
 
@@ -55,15 +59,15 @@ public sealed class TerrainTextureSet : IDisposable
     /// </remarks>
     private const float SectorSide = 64f;
 
-    public int WeightHandle { get; }
-    public int ColourHandle { get; }
-    public int ShadowHandle { get; }
+    public ID3D11ShaderResourceView WeightView { get; }
+    public ID3D11ShaderResourceView ColourView { get; }
+    public ID3D11ShaderResourceView ShadowView { get; }
 
     /// <summary>
     /// The baked far-field albedo, one texel per world unit: what the ground fades into past
     /// <see cref="DetailFullDistance"/> instead of showing the detail textures at a high mip.
     /// </summary>
-    public int DiffuseHandle { get; }
+    public ID3D11ShaderResourceView DiffuseView { get; }
 
     /// <summary>False when the world ships no <c>atlas&lt;id&gt;_diffuse.xbt</c> at all, in which
     /// case the detail blend has to carry every distance on its own.</summary>
@@ -91,8 +95,8 @@ public sealed class TerrainTextureSet : IDisposable
     /// across, which is as far as its transpose can be undone by moving whole blocks.</summary>
     private const int BakedLevels = 5;
 
-    public int SectorLayerHandle { get; }
-    public int DetailArrayHandle { get; }
+    public ID3D11ShaderResourceView SectorLayerView { get; }
+    public ID3D11ShaderResourceView DetailView { get; }
     public int WeightSide { get; }
     public int LayersLoaded { get; }
 
@@ -125,39 +129,21 @@ public sealed class TerrainTextureSet : IDisposable
         WeightSide = map.SectorsPerSide * SdatQuadsPerSector;
 
         Dictionary<int, string> sectorPaths = map.Sectors.ToDictionary(s => s.SectorId, s => s.Path);
-        (WeightHandle, _) = BuildAtlasTexture(map, sectorPaths, readByPath, "mask");
-        (ColourHandle, _) = BuildAtlasTexture(map, sectorPaths, readByPath, "color");
-        (DiffuseHandle, int bakedAtlases) = BuildBakedDiffuse(map, sectorPaths, readByPath);
+        (WeightView, _) = BuildAtlasTexture(map, sectorPaths, readByPath, "mask");
+        (ColourView, _) = BuildAtlasTexture(map, sectorPaths, readByPath, "color");
+        (DiffuseView, int bakedAtlases) = BuildBakedDiffuse(map, sectorPaths, readByPath);
         HasDiffuseAtlas = bakedAtlases > 0;
-        ShadowHandle = BuildShadowTexture(map, readByPath);
+        ShadowView = BuildShadowTexture(map, readByPath);
 
         // One texel per sector, carrying its four layer indices.
-        SectorLayerHandle = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2D, SectorLayerHandle);
-        GL.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
-        GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8,
-            map.SectorsPerSide, map.SectorsPerSide, 0,
-            PixelFormat.Rgba, PixelType.UnsignedByte, detailLayers.Indices);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        SectorLayerView = Upload.Texture(detailLayers.Indices, Format.R8G8B8A8_UNorm,
+            map.SectorsPerSide, map.SectorsPerSide);
 
         Array.Fill(Tiling, SectorSide / 20f);
         Array.Fill(ProjectionAxis, 2f);
 
-        DetailArrayHandle = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2DArray, DetailArrayHandle);
-        (LayersLoaded, FailedLayers, int slices) = BuildDetailArray(table, readByPath);
+        (LayersLoaded, FailedLayers, int slices, DetailView) = BuildDetailArray(table, readByPath);
         DetailBytes = ArrayBytes(slices);
-
-        GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureMaxLevel, DetailLevels - 1);
-        GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureMinFilter,
-            (int)TextureMinFilter.LinearMipmapLinear);
-        GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
-        GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
-        GlSampling.Anisotropic(TextureTarget.Texture2DArray);
     }
 
     /// <summary>
@@ -170,7 +156,7 @@ public sealed class TerrainTextureSet : IDisposable
     /// textures, so this is close to half the memory and half the archive reads. What a layer keeps
     /// to itself is its tiling and projection, not its pixels.
     /// </remarks>
-    private (int Loaded, IReadOnlyList<string> Failed, int Slices) BuildDetailArray(
+    private (int Loaded, IReadOnlyList<string> Failed, int Slices, ID3D11ShaderResourceView Array) BuildDetailArray(
         TerrainLayerTable table, Func<string, byte[]?> readByPath)
     {
         var failed = new List<string>();
@@ -199,13 +185,13 @@ public sealed class TerrainTextureSet : IDisposable
         // Slice 0 is the fallback grey, so a layer index no table entry claims - a sector's mask can
         // name one - draws flat instead of out of whatever the driver left in the slice.
         int slices = layersByPath.Count + 1;
-        Allocate(slices);
-        FillSlice(0, surface: null);
+        var array = new Upload.Staged(DetailFormat, DetailSide, DetailSide, DetailLevels, slices);
+        FillSlice(array, 0, surface: null);
 
         int loaded = 0, slice = 1;
         foreach ((string path, List<TerrainLayer> group) in layersByPath)
         {
-            int repeat = FillSlice(slice, ReadDetail(path, readByPath));
+            int repeat = FillSlice(array, slice, ReadDetail(path, readByPath));
             if (repeat == 0)
             {
                 failed.AddRange(group.Select(l => l.Name));
@@ -221,7 +207,7 @@ public sealed class TerrainTextureSet : IDisposable
             }
             slice++;
         }
-        return (loaded, failed, slices);
+        return (loaded, failed, slices, array.Create());
     }
 
     /// <summary>
@@ -241,17 +227,6 @@ public sealed class TerrainTextureSet : IDisposable
         return squarePowerOfTwo && surface.FourCc == DdsSurface.FourCcDxt1 ? surface : null;
     }
 
-    private static void Allocate(int slices)
-    {
-        for (int level = 0; level < DetailLevels; level++)
-        {
-            int side = DetailSide >> level;
-            GL.CompressedTexImage3D(TextureTarget.Texture2DArray, level,
-                InternalFormat.CompressedSrgbS3tcDxt1Ext, side, side, slices, 0,
-                LevelBytes(side) * slices, IntPtr.Zero);
-        }
-    }
-
     /// <summary>
     /// Writes one texture's whole chain into a slice and returns how many times it repeats across it;
     /// 0 for a slice with no usable texture, which is filled neutral instead.
@@ -261,13 +236,13 @@ public sealed class TerrainTextureSet : IDisposable
     /// still nothing is decoded - and the caller multiplies its layers' tiling by the same factor,
     /// which lands the pattern at exactly the world scale the game gives it.
     /// </remarks>
-    private static int FillSlice(int slice, DdsSurface? surface)
+    private static int FillSlice(Upload.Staged array, int slice, DdsSurface? surface)
     {
         if (surface is null)
         {
             for (int level = 0; level < DetailLevels; level++)
             {
-                FillLevel(slice, level, NeutralGrey);
+                FillLevel(array, slice, level, NeutralGrey);
             }
             return 0;
         }
@@ -290,7 +265,7 @@ public sealed class TerrainTextureSet : IDisposable
             // gets the texture's own average colour - which is what a mip that small converges to.
             if (source >= surface.Mips.Count || (side < 4 && repeat > 1))
             {
-                FillLevel(slice, level, average);
+                FillLevel(array, slice, level, average);
                 continue;
             }
 
@@ -299,9 +274,7 @@ public sealed class TerrainTextureSet : IDisposable
             {
                 for (int x = 0; x < repeat; x++)
                 {
-                    GL.CompressedTexSubImage3D(TextureTarget.Texture2DArray, level,
-                        x * side, y * side, slice, side, side, 1,
-                        InternalFormat.CompressedSrgbS3tcDxt1Ext, blocks.Length, blocks);
+                    array.Write(level, slice, x * side, y * side, side, side, blocks);
                 }
             }
         }
@@ -310,7 +283,7 @@ public sealed class TerrainTextureSet : IDisposable
 
     /// <summary>One flat colour across a level of a slice, as DXT1 blocks with both endpoints equal
     /// and every index 0.</summary>
-    private static void FillLevel(int slice, int level, ushort colour)
+    private static void FillLevel(Upload.Staged array, int slice, int level, ushort colour)
     {
         int side = DetailSide >> level;
         var blocks = new byte[LevelBytes(side)];
@@ -319,8 +292,7 @@ public sealed class TerrainTextureSet : IDisposable
             blocks[i] = blocks[i + 2] = (byte)colour;
             blocks[i + 1] = blocks[i + 3] = (byte)(colour >> 8);
         }
-        GL.CompressedTexSubImage3D(TextureTarget.Texture2DArray, level, 0, 0, slice, side, side, 1,
-            InternalFormat.CompressedSrgbS3tcDxt1Ext, blocks.Length, blocks);
+        array.Write(level, slice, 0, 0, side, side, blocks);
     }
 
     /// <summary>The texture's overall colour, read straight off the endpoints of its smallest mip -
@@ -360,25 +332,15 @@ public sealed class TerrainTextureSet : IDisposable
     /// atlas lands at its block's world position; the transposed layout inside a sector is handled
     /// when sampling, not here.
     /// </summary>
-    /// <returns>The handle, and how many atlases actually landed in it - zero means the world ships
+    /// <returns>The view, and how many atlases actually landed in it - zero means the world ships
     /// none of that kind.</returns>
-    private (int Handle, int Loaded) BuildAtlasTexture(
+    private (ID3D11ShaderResourceView View, int Loaded) BuildAtlasTexture(
         TerrainMap map, Dictionary<int, string> sectorPaths, Func<string, byte[]?> readByPath, string kind)
     {
         int loaded = 0;
         // The colour atlas is albedo; the mask beside it is blend data. Only one is sRGB.
-        InternalFormat format = kind == "color"
-            ? InternalFormat.CompressedSrgbS3tcDxt1Ext
-            : InternalFormat.CompressedRgbS3tcDxt1Ext;
-        int handle = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2D, handle);
-        GL.CompressedTexImage2D(TextureTarget.Texture2D, 0,
-            format, WeightSide, WeightSide, 0,
-            WeightSide * WeightSide / 2, IntPtr.Zero);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        Format format = kind == "color" ? Format.BC1_UNorm_SRgb : Format.BC1_UNorm;
+        var texture = new Upload.Staged(format, WeightSide, WeightSide);
 
         foreach (int atlasId in AtlasIds(map))
         {
@@ -395,12 +357,10 @@ public sealed class TerrainTextureSet : IDisposable
             {
                 continue;
             }
-            GL.CompressedTexSubImage2D(TextureTarget.Texture2D, 0,
-                col * SdatQuadsPerSector, row * SdatQuadsPerSector, 128, 128,
-                format, expected, blocks);
+            texture.Write(0, 0, col * SdatQuadsPerSector, row * SdatQuadsPerSector, 128, 128, blocks);
             loaded++;
         }
-        return (handle, loaded);
+        return (texture.Create(), loaded);
     }
 
     /// <summary>
@@ -414,24 +374,10 @@ public sealed class TerrainTextureSet : IDisposable
     /// lossless - a transpose inside a 64-texel sector is a move of whole DXT1 blocks plus a mirror
     /// of the 4x4 selector grid inside each, and neither touches the endpoints.
     /// </remarks>
-    private (int Handle, int Loaded) BuildBakedDiffuse(
+    private (ID3D11ShaderResourceView View, int Loaded) BuildBakedDiffuse(
         TerrainMap map, Dictionary<int, string> sectorPaths, Func<string, byte[]?> readByPath)
     {
-        int handle = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2D, handle);
-        for (int level = 0; level < BakedLevels; level++)
-        {
-            int side = WeightSide >> level;
-            GL.CompressedTexImage2D(TextureTarget.Texture2D, level,
-                InternalFormat.CompressedSrgbS3tcDxt1Ext, side, side, 0, side * side / 2, IntPtr.Zero);
-        }
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxLevel, BakedLevels - 1);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter,
-            (int)TextureMinFilter.LinearMipmapLinear);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-        GlSampling.Anisotropic(TextureTarget.Texture2D);
+        var texture = new Upload.Staged(Format.BC1_UNorm_SRgb, WeightSide, WeightSide, BakedLevels);
 
         int loaded = 0;
         foreach (int atlasId in AtlasIds(map))
@@ -449,13 +395,11 @@ public sealed class TerrainTextureSet : IDisposable
                 int sector = SdatQuadsPerSector >> level;
                 int side = AtlasSide >> level;
                 byte[] blocks = DxtSectorTranspose.Mirror(surface.Mips[level], side, sector);
-                GL.CompressedTexSubImage2D(TextureTarget.Texture2D, level,
-                    col * sector, row * sector, side, side,
-                    InternalFormat.CompressedSrgbS3tcDxt1Ext, blocks.Length, blocks);
+                texture.Write(level, 0, col * sector, row * sector, side, side, blocks);
             }
             loaded++;
         }
-        return (handle, loaded);
+        return (texture.Create(), loaded);
     }
 
     /// <summary>One atlas covers a 2x2 block of sectors, so only even rows and columns name one.</summary>
@@ -475,17 +419,9 @@ public sealed class TerrainTextureSet : IDisposable
     /// uncompressed with two 16-bit channels (masks <c>0000FFFF</c> / <c>FFFF0000</c>); the high byte
     /// of the first is kept, the one the terrain shades with.
     /// </summary>
-    private int BuildShadowTexture(TerrainMap map, Func<string, byte[]?> readByPath)
+    private ID3D11ShaderResourceView BuildShadowTexture(TerrainMap map, Func<string, byte[]?> readByPath)
     {
-        int handle = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2D, handle);
-        GL.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
-        GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.R8, WeightSide, WeightSide, 0,
-            PixelFormat.Red, PixelType.UnsignedByte, IntPtr.Zero);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        var texture = new Upload.Staged(Format.R8_UNorm, WeightSide, WeightSide);
 
         const int tile = SdatQuadsPerSector;
         var texels = new byte[tile * tile];
@@ -512,10 +448,9 @@ public sealed class TerrainTextureSet : IDisposable
             }
 
             int row = sectorId / map.SectorsPerSide, col = sectorId % map.SectorsPerSide;
-            GL.TexSubImage2D(TextureTarget.Texture2D, 0, col * tile, row * tile, tile, tile,
-                PixelFormat.Red, PixelType.UnsignedByte, texels);
+            texture.Write(0, 0, col * tile, row * tile, tile, tile, texels);
         }
-        return handle;
+        return texture.Create();
     }
 
     /// <summary>Derived from the sector's own path so the level folder never has to be recomputed.</summary>
@@ -531,30 +466,22 @@ public sealed class TerrainTextureSet : IDisposable
         return readByPath(atlasPath) is { } xbt ? JackAll.Tools.Xbt.XbtTexture.Split(xbt).Dds : null;
     }
 
-    public void Bind(TextureUnit weights, TextureUnit sectorLayers, TextureUnit detail,
-        TextureUnit colour, TextureUnit shadow, TextureUnit bakedDiffuse)
+    public void Bind(int weights, int sectorLayers, int detail, int colour, int shadow, int bakedDiffuse)
     {
-        GL.ActiveTexture(weights);
-        GL.BindTexture(TextureTarget.Texture2D, WeightHandle);
-        GL.ActiveTexture(sectorLayers);
-        GL.BindTexture(TextureTarget.Texture2D, SectorLayerHandle);
-        GL.ActiveTexture(detail);
-        GL.BindTexture(TextureTarget.Texture2DArray, DetailArrayHandle);
-        GL.ActiveTexture(colour);
-        GL.BindTexture(TextureTarget.Texture2D, ColourHandle);
-        GL.ActiveTexture(shadow);
-        GL.BindTexture(TextureTarget.Texture2D, ShadowHandle);
-        GL.ActiveTexture(bakedDiffuse);
-        GL.BindTexture(TextureTarget.Texture2D, DiffuseHandle);
+        Context.PSSetShaderResource((uint)weights, WeightView);
+        Context.PSSetShaderResource((uint)sectorLayers, SectorLayerView);
+        Context.PSSetShaderResource((uint)detail, DetailView);
+        Context.PSSetShaderResource((uint)colour, ColourView);
+        Context.PSSetShaderResource((uint)shadow, ShadowView);
+        Context.PSSetShaderResource((uint)bakedDiffuse, DiffuseView);
     }
 
     public void Dispose()
     {
-        GL.DeleteTexture(WeightHandle);
-        GL.DeleteTexture(ColourHandle);
-        GL.DeleteTexture(ShadowHandle);
-        GL.DeleteTexture(DiffuseHandle);
-        GL.DeleteTexture(SectorLayerHandle);
-        GL.DeleteTexture(DetailArrayHandle);
+        foreach (ID3D11ShaderResourceView view in (ID3D11ShaderResourceView[])
+                     [WeightView, ColourView, DiffuseView, ShadowView, SectorLayerView, DetailView])
+        {
+            view.Dispose();
+        }
     }
 }

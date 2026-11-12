@@ -8,13 +8,13 @@ namespace JackAll.App;
 /// details, and says where it is.</summary>
 public static class CrashLog
 {
-    private const int KeptGlErrors = 20;
+    private const int KeptGpuErrors = 20;
 
-    private static readonly Queue<string> GlErrors = new();
+    private static readonly Queue<string> GpuErrors = new();
     private static Exception? _written;
 
-    /// <summary>Renderer, GL version, vendor and video memory, once a viewport has a context.</summary>
-    public static string Gpu { get; set; } = "no GL context created";
+    /// <summary>Adapter, feature level, driver and video memory, once the Map tab has a device.</summary>
+    public static string Gpu { get; set; } = "no Direct3D device created";
 
     public static void Install(Application app)
     {
@@ -28,15 +28,15 @@ public static class CrashLog
         };
     }
 
-    /// <summary>Keeps a driver error for the next crash report; called from the driver's thread.</summary>
-    public static void NoteGlError(string message)
+    /// <summary>Keeps a Direct3D error for the next crash report.</summary>
+    public static void NoteGpuError(string message)
     {
-        lock (GlErrors)
+        lock (GpuErrors)
         {
-            GlErrors.Enqueue($"{DateTime.Now:HH:mm:ss} {message}");
-            if (GlErrors.Count > KeptGlErrors)
+            GpuErrors.Enqueue($"{DateTime.Now:HH:mm:ss} {message}");
+            if (GpuErrors.Count > KeptGpuErrors)
             {
-                GlErrors.Dequeue();
+                GpuErrors.Dequeue();
             }
         }
     }
@@ -57,9 +57,9 @@ public static class CrashLog
     private static void Write(Exception exception)
     {
         string[] errors;
-        lock (GlErrors)
+        lock (GpuErrors)
         {
-            errors = [.. GlErrors];
+            errors = [.. GpuErrors];
         }
 
         using var process = System.Diagnostics.Process.GetCurrentProcess();
@@ -70,7 +70,7 @@ public static class CrashLog
             {Environment.OSVersion}, .NET {Environment.Version}
             Memory: {process.PrivateMemorySize64 / 1048576} MB private, {GC.GetGCMemoryInfo().TotalAvailableMemoryBytes / 1048576} MB RAM
             GPU: {Gpu}
-            Recent GL errors:
+            Recent Direct3D errors:
             {(errors.Length > 0 ? string.Join(Environment.NewLine, errors) : "none")}
 
             {exception}

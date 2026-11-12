@@ -1,7 +1,6 @@
 <UserControl x:Class="JackAll.App.MapEditor.MapTabView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:glWpf="clr-namespace:OpenTK.Wpf;assembly=GLWpfControl"
              xmlns:mapEditor="clr-namespace:JackAll.App.MapEditor"
              xmlns:world="clr-namespace:JackAll.Tools.World;assembly=JackAll.Tools">
 
@@ -167,16 +166,16 @@
 
             <GridSplitter Grid.Row="0" Grid.Column="1" />
 
+            <!-- The viewport is a native window, which WPF cannot draw over: the frame cost sits in
+                 a strip under it, and the hint takes its place until a world is loaded. -->
             <Grid Grid.Row="0" Grid.Column="2">
-                <glWpf:GLWpfControl x:Name="Viewport" Focusable="True" AllowDrop="True"
-                                    Render="Viewport_Render"
-                                    MouseDown="Viewport_MouseDown" MouseUp="Viewport_MouseUp"
-                                    MouseMove="Viewport_MouseMove" MouseWheel="Viewport_MouseWheel"
-                                    DragOver="Viewport_DragOver" Drop="Viewport_Drop" />
-                <Border VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,6,8,0"
-                        Background="#66000000" Padding="6,2" CornerRadius="3" IsHitTestVisible="False">
-                    <TextBlock x:Name="FpsText" Foreground="#CFC" FontFamily="Consolas" FontSize="11" />
-                </Border>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <mapEditor:D3DViewport x:Name="Viewport" Focusable="True" Visibility="Collapsed" />
+                <TextBlock x:Name="FpsText" Grid.Row="1" HorizontalAlignment="Right" Margin="0,2,8,2"
+                           FontFamily="Consolas" FontSize="11" Style="{StaticResource Muted}" />
 
                 <StackPanel x:Name="ViewportHint" VerticalAlignment="Center" HorizontalAlignment="Center"
                             IsHitTestVisible="False">

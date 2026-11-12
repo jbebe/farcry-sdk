@@ -1,6 +1,6 @@
 using JackAll.Tools.World;
 
-namespace JackAll.App.MapEditor.Gl;
+namespace JackAll.App.MapEditor.Gpu;
 
 /// <summary>The instance streams and outlines the marker layers draw, and the one-line summaries of
 /// what a loaded map holds of each.</summary>

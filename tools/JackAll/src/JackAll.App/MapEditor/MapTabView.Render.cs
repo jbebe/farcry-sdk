@@ -1,6 +1,9 @@
-using JackAll.App.MapEditor.Gl;
+using System.Numerics;
+using JackAll.App.MapEditor.Gpu;
 using JackAll.Tools.World;
-using OpenTK.Graphics.OpenGL4;
+using Vortice.Direct3D11;
+using Vortice.Mathematics;
+using static JackAll.App.MapEditor.Gpu.GpuDevice;
 
 namespace JackAll.App.MapEditor;
 
@@ -34,34 +37,21 @@ public partial class MapTabView
         float step = MathF.Min((float)delta.TotalSeconds, MaxStep);
         SceneLighting.Time += step;
 
-        GlDebug.Install();
-
-        // Scoped for the throwing paths below - a shader typo in a lazy layer, a failed world swap.
-        using GlState frame = new(Viewport.Framebuffer, Viewport.FrameBufferWidth, Viewport.FrameBufferHeight);
-        GlState.BeginFrame();
-
+        GpuState.BeginFrame();
         SyncPresentation();
 
         if (_pendingLoad is { } pending)
         {
-            // Swap inside the render callback so GL resources live and die with a context.
+            // Swapped inside the frame, where everything the layers own is made and released.
             _pendingLoad = null;
-            _terrainMesh?.Dispose();
-            _heightTexture?.Dispose();
-            _surfaceTexture?.Dispose();
-            _terrainTextures?.Dispose();
-            _waterLayer?.Dispose();
+            ReleaseWorld();
             _terrain = pending.Terrain;
-            _shapeLayer?.Dispose();
-            _splineLayer?.Dispose();
             _waterLayer = new WaterLayer(pending.Terrain);
             _waterLayer.SetVisible(_camera.Position);
             _shapeLayer = new ShapeLayer(pending.Shapes);
             _splineLayer = new ShapeLayer(pending.Splines);
-            _vegetationLayer?.Dispose();
             _vegetationLayer = new EntityMarkerLayer(
                 WorldMarkers.BuildVegetationMarkers(pending.Vegetation), pending.Vegetation.Count);
-            _vegetationModelLayer?.Dispose();
             _vegetationModelLayer = new EntityModelLayer(
                 pending.VegetationModels.Models, _vm is { } vegVm ? vegVm.ReadByPath : _ => null,
                 ScatterCapacity(pending.VegetationModels))
@@ -69,23 +59,15 @@ public partial class MapTabView
                 Scatter = pending.VegetationBySector,
             };
             _vegetationDirty = true;
-            _navMeshLayer?.Dispose();
-            _navMeshLayer = null;
             _loadedNavMesh = null;
             LayerCatalog.NavMesh.Status = "Read the first time it is shown.";
             // Sized for every positioned entity, because which category an entity lands in is not
             // known until the model layer has had its pass; the live counts do the real limiting.
             int categoryCapacity = pending.World.Entities.Count(e => e.Position is not null);
-            foreach (EntityMarkerLayer stale in _categoryLayers.Values)
-            {
-                stale.Dispose();
-            }
-            _categoryLayers.Clear();
             foreach ((EntityCategory category, _, _, _, _, _) in WorldMarkers.DrawnCategories)
             {
                 _categoryLayers[category] = new EntityMarkerLayer(categoryCapacity);
             }
-            _modelLayer?.Dispose();
             _modelSet = pending.Models;
             _modelLayer = new EntityModelLayer(
                 pending.Models, _vm is { } modelVm ? modelVm.ReadByPath : _ => null, WorldMarkers.MarkerColour);
@@ -108,7 +90,7 @@ public partial class MapTabView
 
         // The model tiers are keyed to the camera's sector, so crossing a boundary refills the
         // instance streams from the ring around the new one.
-        var sector = WorldModels.SectorOf((System.Numerics.Vector3)_camera.Position);
+        var sector = WorldModels.SectorOf(_camera.Position);
         if (sector != _cameraSector)
         {
             _cameraSector = sector;
@@ -118,7 +100,7 @@ public partial class MapTabView
         }
 
         // Grass is cut off by distance, so it follows the camera inside a sector as well.
-        if ((_camera.Position - _grassStreamedFrom).LengthSquared > GrassStep * GrassStep)
+        if ((_camera.Position - _grassStreamedFrom).LengthSquared() > GrassStep * GrassStep)
         {
             _vegetationDirty = true;
         }
@@ -145,7 +127,7 @@ public partial class MapTabView
             }
         }
 
-        // Rebuilt here, where a GL context is current, rather than on the click that caused it.
+        // Rebuilt here, in the frame, rather than on the click that caused it.
         bool markersMoved = _visibleDirty || _moved.Count > 0;
         if (_visibleDirty)
         {
@@ -170,56 +152,48 @@ public partial class MapTabView
         }
         stats.Rebuilt(System.Diagnostics.Stopwatch.GetElapsedTime(rebuildStart));
 
-        int width = Viewport.FrameBufferWidth;
-        int height = Viewport.FrameBufferHeight;
+        int width = Viewport.PixelWidth;
+        int height = Viewport.PixelHeight;
+        ID3D11RenderTargetView backBuffer = Viewport.BackBuffer!;
 
-        // Collapsed or mid-layout: there is no surface to size the offscreen targets against.
-        if (width <= 0 || height <= 0)
-        {
-            return;
-        }
-
-        GL.Viewport(0, 0, width, height);
-
-        // Nothing loaded yet, so there is no scene to resolve - clear the control's own buffer and
-        // leave, rather than clearing an offscreen one nothing will read. This one is the only clear
-        // that reaches an 8-bit buffer directly, so it takes the colour as authored.
+        // Nothing loaded yet, so there is no scene to resolve - clear the back buffer and leave. It
+        // is the only clear that reaches an 8-bit buffer directly, so it takes the colour as authored.
         if (_terrain is null || _terrainMesh is null)
         {
-            GL.ClearColor(BackgroundColour.X, BackgroundColour.Y, BackgroundColour.Z, 1f);
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            Context.ClearRenderTargetView(backBuffer, new Color4(BackgroundColour, 1f));
             return;
         }
 
         _targets ??= new RenderTargets();
         _targets.Resize(width, height, SceneLighting.Demo);
         _post ??= new PostProcess();
+        _present ??= new PresentPass();
 
         ApplyFlyKeys(step);
         float aspect = (float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1));
-        OpenTK.Mathematics.Matrix4 viewProjection = _camera.View() * _camera.Projection(aspect);
+        Matrix4x4 viewProjection = _camera.View() * _camera.Projection(aspect);
 
         SceneLighting.Exposure = (float)ExposureSlider.Value;
         bool drawEntityModels = LayerCatalog.Entities.IsVisible;
 
         SceneLighting.Shadows = null;
-        SceneLighting.OcclusionMap = 0;
+        SceneLighting.OcclusionMap = null;
         if (SceneLighting.Demo)
         {
             SceneLighting.Shadows = DrawShadowMaps(drawEntityModels, aspect);
             SceneLighting.OcclusionMap = DrawOcclusion(drawEntityModels, viewProjection, aspect);
         }
 
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets.SceneFramebuffer);
-        GL.Viewport(0, 0, width, height);
-
-        GL.ClearColor(BackgroundLinear.X, BackgroundLinear.Y, BackgroundLinear.Z, 1f);
+        _targets.BindScene();
+        FrameConstants.Upload(width, height);
+        Context.ClearRenderTargetView(_targets.Scene.Target, new Color4(BackgroundLinear, 1f));
 
         // The occlusion pass leaves behind the depth its prepass laid down, which is exactly what
         // the opaque pass tests against - so only the colour needs clearing when it ran.
-        GL.Clear(SceneLighting.OcclusionMap == 0
-            ? ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit
-            : ClearBufferMask.ColorBufferBit);
+        if (SceneLighting.OcclusionMap is null)
+        {
+            Context.ClearDepthStencilView(_targets.Depth.Stencil, DepthStencilClearFlags.Depth, 1f, 0);
+        }
 
         if (SceneLighting.Demo)
         {
@@ -249,17 +223,14 @@ public partial class MapTabView
         if (LayerCatalog.Water.IsVisible && _waterLayer is { HasVisibleWater: true })
         {
             // The water reads both what is behind it and how far away that is, and a pass cannot
-            // sample an image the draw it is part of is bound to. Depth as well as colour, because
-            // the water is depth-testing against the live buffer while it reads this one. The flat
-            // pane reads neither, so the copy is part of the presentation.
+            // sample a texture it is drawing into. Depth as well as colour, because the water is
+            // depth-testing against the live buffer while it reads this one. The flat pane reads
+            // neither, so the copy is part of the presentation.
             if (SceneLighting.Demo)
             {
-                GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, _targets.SceneFramebuffer);
-                GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, _targets.ColourCopyFramebuffer);
-                GL.BlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-                    ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit,
-                    BlitFramebufferFilter.Nearest);
-                GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets.SceneFramebuffer);
+                Context.OMSetRenderTargets((ID3D11RenderTargetView)null!);
+                _targets.CopyScene();
+                _targets.BindScene();
             }
 
             _waterLayer.Draw(viewProjection, _camera.Position, _targets);
@@ -268,8 +239,8 @@ public partial class MapTabView
         // The scene is complete, so resolve it to a displayable image here. Everything after this
         // point is an indicator drawn at exactly the colour it was authored in - run a selection box
         // or a category glyph through the tonemap and it comes back muted.
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets.PresentFramebuffer);
-        _post.Composite(_targets.Colour);
+        _targets.BindPresent();
+        _post.Composite(_targets.Scene.View);
 
         // Indicators from here on: lines and markers that are meant to read through the water, not
         // sit under it.
@@ -285,7 +256,7 @@ public partial class MapTabView
 
         if (LayerCatalog.Vegetation.IsVisible)
         {
-            _vegetationLayer?.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
+            _vegetationLayer?.Draw(viewProjection, _camera.Position, Right(), Up(),
                 MarkerStyle.World(2f));
         }
 
@@ -301,7 +272,7 @@ public partial class MapTabView
 
         if (LayerCatalog.Lights.IsVisible)
         {
-            _lightLayer?.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
+            _lightLayer?.Draw(viewProjection, _camera.Position, Right(), Up(),
                 MarkerStyle.World(4f));
         }
 
@@ -315,7 +286,7 @@ public partial class MapTabView
         {
             if (layer.IsVisible && _categoryLayers.TryGetValue(category, out EntityMarkerLayer? markers))
             {
-                markers.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
+                markers.Draw(viewProjection, _camera.Position, Right(), Up(),
                     MarkerStyle.Screen(glyph, GlyphPixels, (float)Viewport.ActualHeight,
                         Camera3D.VerticalFovRadians, GlyphMaxDistance));
             }
@@ -324,12 +295,7 @@ public partial class MapTabView
         DrawSelection(viewProjection);
         DrawHandles(viewProjection);
 
-        // Colour only: the control's depth is a 24-bit renderbuffer and the scene's is a 32-bit
-        // float texture, and a depth blit between two formats is an error.
-        GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, _targets.PresentFramebuffer);
-        GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, Viewport.Framebuffer);
-        GL.BlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-            ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Nearest);
+        _present.Draw(backBuffer, _targets.Present.View, width, height);
 
         // Keep drawing only while something is still moving. The water is the one thing in the scene
         // that animates, and only under the presentation. A texture reaches the GPU inside the very
@@ -341,6 +307,82 @@ public partial class MapTabView
                 && _waterLayer is { HasVisibleWater: true })
             || (drawEntityModels && _modelLayer is { Streaming: true })
             || (LayerCatalog.Vegetation.IsVisible && _vegetationModelLayer is { Streaming: true });
+    }
+
+    /// <summary>
+    /// The device went away under the viewport - a driver reset or update. Everything the old one
+    /// held is let go, a new one is made, and the last world is swapped in again on the next frame;
+    /// the edits live in the session, not on the GPU, so they survive.
+    /// </summary>
+    private void Viewport_DeviceLost()
+    {
+        ReleaseGpu();
+        Viewport.ReleaseSwapChain();
+        GpuDevice.Destroy();
+        try
+        {
+            GpuDevice.Create();
+        }
+        catch (Exception ex) when (GpuDevice.IsFailure(ex))
+        {
+            ShowViewportFailure(ex);
+            return;
+        }
+        _pendingLoad = _lastLoad;
+        _overlaysDirty = true;
+        _handlesDirty = true;
+        Viewport.RequestFrame();
+    }
+
+    /// <summary>What a world swap replaces: every layer made from the loaded world.</summary>
+    private void ReleaseWorld()
+    {
+        Release(ref _terrainMesh);
+        Release(ref _heightTexture);
+        Release(ref _surfaceTexture);
+        Release(ref _terrainTextures);
+        Release(ref _waterLayer);
+        Release(ref _shapeLayer);
+        Release(ref _splineLayer);
+        Release(ref _vegetationLayer);
+        Release(ref _vegetationModelLayer);
+        Release(ref _navMeshLayer);
+        Release(ref _modelLayer);
+        foreach (EntityMarkerLayer layer in _categoryLayers.Values)
+        {
+            layer.Dispose();
+        }
+        _categoryLayers.Clear();
+    }
+
+    /// <summary>Every GPU object the tab holds, for a device that is going away: the world's, and
+    /// what the frame and the overlays make for themselves.</summary>
+    private void ReleaseGpu()
+    {
+        ReleaseWorld();
+        Release(ref _lightLayer);
+        Release(ref _triggerLayer);
+        Release(ref _linkLayer);
+        Release(ref _handleLines);
+        Release(ref _selectionBox);
+        Release(ref _translateGizmo);
+        Release(ref _rotateGizmo);
+        Release(ref _sky);
+        Release(ref _occlusion);
+        Release(ref _cascades);
+        Release(ref _post);
+        Release(ref _present);
+        Release(ref _targets);
+        Release(ref _stats);
+        _terrain = null;
+        _overlaySources = null;
+    }
+
+    /// <summary>Released and forgotten, so the next frame's <c>??=</c> makes it again.</summary>
+    private static void Release<T>(ref T? field) where T : class, IDisposable
+    {
+        field?.Dispose();
+        field = null;
     }
 
     /// <summary>The longest step the camera and the water clock will take from one frame. An idle
@@ -359,7 +401,7 @@ public partial class MapTabView
     /// <summary>
     /// Takes the Demo checkbox and, when it has moved, everything that follows from it: the draw
     /// ring changes, so both instance streams are rebuilt, and switching off frees the 64 MB cascade
-    /// array. Read here rather than on the click because that freeing needs a current GL context.
+    /// array. Read in the frame rather than on the click, beside everything else the GPU holds.
     /// </summary>
     private void SyncPresentation()
     {
@@ -388,14 +430,12 @@ public partial class MapTabView
     /// ready before the surfaces that consume it are shaded, and a forward pass cannot sample a
     /// depth buffer it is still writing.
     /// </summary>
-    private int DrawOcclusion(
-        bool drawEntityModels, OpenTK.Mathematics.Matrix4 viewProjection, float aspect)
+    private ID3D11ShaderResourceView DrawOcclusion(bool drawEntityModels, Matrix4x4 viewProjection, float aspect)
     {
         _occlusion ??= new AmbientOcclusion();
 
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets!.SceneFramebuffer);
-        GL.Viewport(0, 0, _targets.Width, _targets.Height);
-        GL.Clear(ClearBufferMask.DepthBufferBit);
+        _targets!.BindDepth();
+        Context.ClearDepthStencilView(_targets.Depth.Stencil, DepthStencilClearFlags.Depth, 1f, 0);
         DrawCasters(viewProjection, drawEntityModels);
 
         return _occlusion.Render(_targets, _camera.Projection(aspect));
@@ -403,7 +443,7 @@ public partial class MapTabView
 
     /// <summary>Everything that writes depth, from one viewpoint. The cascades and the prepass want
     /// the same set - the only difference between them is where it is seen from.</summary>
-    private void DrawCasters(OpenTK.Mathematics.Matrix4 viewProjection, bool drawEntityModels)
+    private void DrawCasters(Matrix4x4 viewProjection, bool drawEntityModels)
     {
         if (LayerCatalog.Heightmap.IsVisible)
         {
@@ -424,9 +464,9 @@ public partial class MapTabView
     /// the lightmap baked into it covers the ground and nothing standing on it, so a hut in a hill's
     /// shade would stay lit without this.
     /// </summary>
-    /// <remarks>The bias is entirely in the lookup rather than a polygon offset here, because the
-    /// terrain's own draw sets and clears <c>PolygonOffsetFill</c> for its coarse patch and would
-    /// take an outer one with it.</remarks>
+    /// <remarks>The bias is entirely in the lookup rather than in the rasterizer here, because the
+    /// terrain's own draw sets and clears a depth bias for its coarse patch and would take an outer
+    /// one with it.</remarks>
     private ShadowCascades DrawShadowMaps(bool drawEntityModels, float aspect)
     {
         _cascades ??= new ShadowCascades();
@@ -466,10 +506,9 @@ public partial class MapTabView
 
     /// <summary>The billboard axes for the 3D view: the camera's own right, and the up that squares
     /// with it, so every marker layer faces the viewer the same way.</summary>
-    private OpenTK.Mathematics.Vector3 Right() => _camera.Right;
+    private Vector3 Right() => _camera.Right;
 
-    private OpenTK.Mathematics.Vector3 Up()
-        => OpenTK.Mathematics.Vector3.Cross(_camera.Right, _camera.Forward);
+    private Vector3 Up() => Vector3.Cross(_camera.Right, _camera.Forward);
 
     /// <summary>Reads the loaded map's navmesh off the UI thread; the frame after it arrives uploads it.</summary>
     private async void LoadNavMesh()
@@ -488,7 +527,7 @@ public partial class MapTabView
             _loadedNavMesh = mesh;
             LayerCatalog.NavMesh.Status = WorldMarkers.Describe(mesh);
         }
-        Viewport.InvalidateVisual();
+        Viewport.RequestFrame();
     }
 
     private void ShowStats(string line)
