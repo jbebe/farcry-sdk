@@ -8,7 +8,8 @@ description: Use when asked to process the Nexus inbox - turn captured Nexus Mod
 The user captures Nexus pages with the bookmarklet in `tools/nexus-inbox/` (see its README). Never
 open or fetch Nexus pages yourself.
 
-1. Run `node tools/nexus-inbox/inbox.mjs`. Each entry is a thread (comment thread, bug report, or PM
+1. Run `node tools/nexus-inbox/inbox.mjs`, adding the folder when the user names one other than
+   Downloads (and to `done` in step 7). Each entry is a thread (comment thread, bug report, or PM
    conversation): `new` lists the ids of its unhandled items, and `thread` holds every captured item
    for context. An empty list means nothing to do: say so, run `done`, stop.
 2. Sort each item into one of two piles:

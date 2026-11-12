@@ -1,18 +1,19 @@
-// node inbox.mjs        prints each thread in Downloads/nexus-*.json that has unhandled items
-// node inbox.mjs done   records every item in those files as seen and deletes the files
-// node inbox.mjs link   prints the bookmarklet URL to paste into a bookmark
+// node inbox.mjs [dir]        prints each thread in <dir>/nexus-*.json (default Downloads) that has unhandled items
+// node inbox.mjs done [dir]   records every item in those files as seen and deletes the files
+// node inbox.mjs link         prints the bookmarklet URL to paste into a bookmark
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
 const AUTHOR = 'bajuh';
-const mode = process.argv[2];
+const args = process.argv.slice(2);
+const mode = ['done', 'link'].includes(args[0]) ? args.shift() : undefined;
 if (mode === 'link') {
   console.log('javascript:' + encodeURIComponent(fs.readFileSync(path.join(import.meta.dirname, 'bookmarklet.js'), 'utf8')));
   process.exit();
 }
 
-const downloads = path.join(os.homedir(), 'Downloads');
+const downloads = args[0] ?? path.join(os.homedir(), 'Downloads');
 const seenFile = path.join(import.meta.dirname, 'seen.json');
 const seen = new Set(fs.existsSync(seenFile) ? JSON.parse(fs.readFileSync(seenFile, 'utf8')) : []);
 const files = fs.readdirSync(downloads).filter(f => /^nexus-.+\.json$/.test(f)).map(f => path.join(downloads, f));
@@ -41,7 +42,7 @@ for (const { kind, source, items } of threads.values()) {
   const fresh = thread.filter(item => !seen.has(key(kind, item))
     && item.author !== AUTHOR
     && !thread.some(c => c.author === AUTHOR && c.date > item.date)
-    && (!item.status || item.status === 'New'));
+    && (!item.status || item.status.startsWith('New')));
   if (fresh.length) out.push({ kind, source, new: fresh.map(i => i.id), thread });
 }
 console.log(JSON.stringify(out, null, 1));
