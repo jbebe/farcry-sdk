@@ -23,9 +23,10 @@ namespace {
     constexpr float kZilSprings = 0.5f;
     constexpr float kUnimogSprings = 0.5f;
 
-    // Each as the user tuned it in game (2026-10-18).
+    // Each as the user tuned it in game (2026-10-18). The Rover's top speed puts its limiter at 90 km/h on its 0.42 m
+    // wheels (2026-11-12).
     constexpr Start kRoverTuning[] = {
-        {"Engine power", 0.9f},      {"Top speed", 1.2f},           {"Downshift time", 0.5f},
+        {"Engine power", 0.9f},      {"Top speed", 2.0f},           {"Downshift time", 0.5f},
         {"Steering lock", 1.3f},     {"Steering at speed", 1.0f},   {"Inertia", 2.0f},
         {"Springs", 1.0f},           {"Travel", 0.8f},              {"Compression damping", 0.5f},
         {"Rebound damping", 0.5f}};

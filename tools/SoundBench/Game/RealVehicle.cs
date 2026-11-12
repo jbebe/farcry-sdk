@@ -24,7 +24,7 @@ public sealed record RealVehicle(
     [
         new("Land Rover Series III", 1600, 95, 525, 4000, null, 0.8f, new Dictionary<string, float>
         {
-            ["Engine power"] = 0.9f, ["Top speed"] = 1.2f, ["Downshift time"] = 0.5f, ["Steering lock"] = 1.3f,
+            ["Engine power"] = 0.9f, ["Top speed"] = 2.0f, ["Downshift time"] = 0.5f, ["Steering lock"] = 1.3f,
             ["Steering at speed"] = 1.0f, ["Inertia"] = 2.0f, ["Springs"] = 1.0f, ["Travel"] = 0.8f,
             ["Compression damping"] = 0.5f, ["Rebound damping"] = 0.5f,
         }),

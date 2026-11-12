@@ -6,7 +6,7 @@ Stage: active
 ## Features
 
 - [done] Off-road physics on the car you drive: no limiter, weak locking brakes, the ground's grip, soft springs - user: "feel good"
-- [done] Each car tuned as the real vehicle it depicts, its own start values per car - Datsun, Liberty, Wrangler, Buggy "good"; Rover "golden"
+- [done] Each car tuned as the real vehicle it depicts, its own start values per car - Datsun, Liberty, Wrangler, Buggy "good"; Rover "golden", its top speed raised to 90 km/h (user 2026-11-12: "it all works")
 - [done] Real centre of mass and front-axle weight per car, from the real vehicle's tip-over g - Datsun's 54% "perfect"
 - [done] Solid axles on the Land Rover, ZIL-130 and Unimog, damped at the wheels, the wheels hanging and leaning with the beam
 - [done] The big truck's inertia at 3.6 times the game's, so it rocks and turns slowly

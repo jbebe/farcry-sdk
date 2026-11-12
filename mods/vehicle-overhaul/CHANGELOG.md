@@ -14,6 +14,9 @@ Notable changes to Vehicle Overhaul, loosely following
   again: its own engine and revs, and its tyres at the game's level. Your car's tyres play 7 dB under
   the game's, where every car's were 10 dB down. A car you get out of plays the overhaul's engine-off
   before it goes back to the game's sounds.
+- **The Land Rover tops out at 90 km/h**, where it ran out of revs at 52, so each gear pulls it
+  further. A `bin\vehicle-overhaul.ini` from an earlier version keeps its own value: set Top speed
+  to 2 in its `[Land Rover Series III]` section, or delete the file to start from the new tuning.
 
 ### Fixed
 - **AI drivers' cars no longer scream at the top of their revs** in the new engine sounds: they play
