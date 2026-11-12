@@ -283,7 +283,7 @@ def main():
                 audio.setdefault(old, set()).add(n)
             print(f"{name}: {len(slots)} slots of its own, {len(car_banks)} banks")
         unused = sorted(p.stem for p in BUILT.glob("*.spk")
-                        if not p.stem.startswith("00fd") and p.stem not in banks.used | SURFACES)
+                        if not p.stem.startswith("00fd") and p.stem not in banks.used)
     if unused:
         print("built\\ banks no slot plays:", " ".join(unused))
     wheels = [(o, i, g) for (o, _), i, g in zip(WHEEL_SLOTS, wheel_ids, WHEELS[1])]
