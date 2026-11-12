@@ -19,7 +19,7 @@ Stage: active
 - [in progress] Map tab characters wear their own outfit - a placed merc draws as a marker; in-app check outstanding
 - [in progress] Map tab performance - sector-filed rebuilds, VRAM 913 to 489 MB; grass distance pick pending, eviction unseen by eye
 - [done] Map tab frame-cost readout and crash.log - unreleased
-- [done] Map tab drawn with Direct3D 11 in a native child window, no OpenGL or GLWpfControl, so it runs on every Windows 10 PC #66 - unreleased
+- [done] Map tab drawn with Direct3D 11 in a native child window, no OpenGL or GLWpfControl, so it runs on every Windows 10 PC #66 - unreleased; user: "map tab is validated"
 - [done] gamemodesconfig.xml merged block by block across layers, not last-one-wins; the AI tab saves the behaviour odds as their block - user 2026-11-12, unplayed
 - [done] Particle libraries merged system by system across layers - for Aiming Overhaul's flashes beside Difficulty Overhaul's blood, unplayed
 - [done] New worlds - New map / world new and world pack - unseen in game
@@ -57,8 +57,7 @@ Stage: active
 - The App's .mgb fragment save, run in the UI - never run
 - Edited Havok collision in game - never checked
 - A material at a new path, in game - untested
-- Map tab on Direct3D 11: world1 looks and handles as before - before/after shots and a UI Automation run of every feature here
-- Map tab on a PC without a proper graphics driver or over remote desktop (#66): it draws on WARP, or says why - forced here only
+- Map tab on a PC without a proper graphics driver or over remote desktop (#66): it draws on WARP, or says why - forced here only; not yet verified by the user who reported it, who can test only once released
 - Aiming Overhaul's muzzle light and Difficulty Overhaul's hit locations, both from gamemodesconfig.xml fragments, in one game - unplayed
 - The AI tab's behaviour odds saved as a fragment of gamemodesconfig.xml - never run in the UI
 
