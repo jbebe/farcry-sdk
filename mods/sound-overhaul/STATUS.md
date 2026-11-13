@@ -9,7 +9,7 @@ Stage: maintenance
 - [done] The reverb switching as the player moves, PlaySoundReverb given a body
 - [done] Every building's reverb by its type and size, on presets retail never used - user: "super realistic"
 - [done] A short hard slap off a small room's walls
-- [done] Walls muffle by material; open doors and windows let the outside in by their size - heard; echo-in-rooms fix unchecked in game
+- [done] Walls muffle by material; open doors and windows let the outside in by their size - heard; no echo in rooms, user: "verified and working"
 - [done] The player's own shots and reloads take the room, 2D reverb send +1,000 mB - user: "now its perfect"
 - [done] New first- and third-person shots for every single-player weapon, from Dark Signal - every gun replaced 2026-09-29
 - [done] An echo after every unsuppressed shot, at a level per gun graded by the real weapon's muzzle blast - #9 - user: "all is good, sound-wise"
@@ -25,12 +25,9 @@ Stage: maintenance
 - [scrapped] Speed-of-sound delay - prototype rejected 2026-09-29; never re-propose
 - [scrapped] Engine-made gunshot echo through EAX - user: "all of them is awful"; never re-propose
 - [scrapped] Ricochets, wizz, air absorption, voice cap, ducking, weapon extras, tails, foley - the user cut the sound list 2026-10-01
-- [scrapped] Datsun engine sound overhaul - abandoned 2026-09-30 ("abandon the ship!"); the quieter idle kept then (3283244) removed 2026-11-13
+- [scrapped] Datsun engine sound overhaul - abandoned 2026-09-30 ("abandon the ship!"); the quieter idle kept then (3283244) removed 2026-11-13, the stock idle heard back - user: "verified and working"
 
 ## To validate
-
-- No echo in rooms after the muffling fix - unchecked
-- The Datsun idles as in the game as shipped, with Sound Overhaul installed
 
 ## Approvals
 
