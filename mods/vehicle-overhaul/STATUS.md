@@ -37,6 +37,7 @@ Stage: active
 - [done] Tuning file and DevTools window, a set of values per car, with a Sounds tab
 - [new] Chassis centre of mass baked into each car's .hkx in place of the plugin's override - user's rule 2026-10-13, not started
 - [done] The new engine sounds only on the car the player drives, under ids of the overhaul's own; cars NPCs drive play the game's own engine, revs and tyres - #37; the user chose the base game's sound for them over gear-following revs (a looping sawtooth) and one steady note (still cycled); 2026-11-12: "everything seem to be working"
+- [new] Own sound ids packed from 0x00FD0000 with no gap per car: one prefix per mod, ids counted up without gaps - agreed 2026-11-13
 - [postponed] Shooting from the windows, ported from a legacy mod - post-1.0 #11
 - [postponed] Wrecks (bus, UAZ, a car) revived as drivable vehicles - the user's own work, post-1.0 #12
 - [postponed] Further revamps of the existing car models, next the Datsun's grille - post-1.0 #10

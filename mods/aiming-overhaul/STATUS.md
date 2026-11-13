@@ -46,6 +46,7 @@ Stage: active
 - [done] Muzzle light reaches 5 m, two and a half times the game's, from a gamemodesconfig.xml fragment - #67, user 2026-11-12: "perfect!"
 - [done] Muzzle flash per gun, first and third person, sized and brightened to its round, barrel and muzzle device, the game's length kept; data only - user 2026-11-12: "they seem to be proper"
 - [done] Every gun change reaches the test range's guns too - unplayed
+- [new] Own sound ids moved out of Sound Overhaul's 0x00FC block into 0x00FB, packed from 0x00FB0000: one prefix per mod - agreed 2026-11-13
 - [on hold] Auto lean at corners - shelved until wanted
 - [scrapped] Gun weight motion (lag, swing, slowdown by weight) - dropped by the user 2026-11-02 after five tries
 - [scrapped] Gradual stops when the keys are let go - user rejected

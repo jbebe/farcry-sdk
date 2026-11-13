@@ -22,6 +22,7 @@ Stage: maintenance
 - [done] The player's own pickups never muffled - heard working
 - [done] A DevTools window muting single shots, full-auto fire or echoes
 - [done] Enumeration fix so an older or Wine-derived dsound.dll opens a device
+- [new] Own sound ids packed from 0x00FC0000 with no gaps, the 0x00FC block this mod's alone: one prefix per mod, Aiming Overhaul and Flashlight move out - agreed 2026-11-13
 - [scrapped] Speed-of-sound delay - prototype rejected 2026-09-29; never re-propose
 - [scrapped] Engine-made gunshot echo through EAX - user: "all of them is awful"; never re-propose
 - [scrapped] Ricochets, wizz, air absorption, voice cap, ducking, weapon extras, tails, foley - the user cut the sound list 2026-10-01
