@@ -226,7 +226,7 @@ text the game has is the game's, in the player's language, through its string ta
   the same on a cassette, which plays in the music manager's tape slot with the Jackal tapes' sound
   type and clicks, so its own sound
   needs none: the click their recordings start with, the stock sample `0x004ebec4` played through
-  this mod's event `0x00FD0001` (`notebook/tape_click.xml`, encoded with `jackall-cli spk encode`
+  this mod's event `0x00FE0001` (`notebook/tape_click.xml`, encoded with `jackall-cli spk encode`
   into `layer/mods/soundbinary/`), then the cassette once the click has played; on a stop, the slot
   is stopped under it with the click their stop sounds play, `0x004EBECF`. Its bank and the clicks'
   are held loaded while the page lists it.
@@ -272,7 +272,7 @@ For now the page also lists three placeholders for everyone, dummy content for l
 mission types, never in Items and never saved. They go when
 Tales of Africa ships: [its README](../tales-of-africa/README.md) says how. Their sources are in
 `notebook/`. `build-ui.ps1` makes the photo's texture from `photo.png`, and the cassette's bank,
-`00fd0002.spk`, is the mp3 made Ogg Vorbis (`ffmpeg -c:a libvorbis -q:a 2`).
+`00fe0002.spk`, is the mp3 made Ogg Vorbis (`ffmpeg -c:a libvorbis -q:a 2`).
 
 | What | Where |
 |---|---|

@@ -19,6 +19,8 @@ Notable changes to Inventory Overhaul, loosely following
 - **A dropped gun falls onto its side** instead of landing upright on its edge.
 - **A gun's condition follows its wear:** new, used, worn and failing, where every gun read "new"
   until it was about to break.
+- **The cassette's sounds no longer share ids with Vehicle Overhaul's,** which could crash the game
+  with both installed.
 
 ## [1.0.0] - 2026-11-01
 
