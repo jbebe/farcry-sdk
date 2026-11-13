@@ -34,7 +34,7 @@ Stage: maintenance
 
 ## Approvals
 
-- played: b655d21b 2026-11-13 - "all is good, sound-wise"
+- played: e46087f1 2026-11-13 - "all is good, sound-wise"
 - page text: 3d0dc81 2026-10-18 - implied by the sound-overhaul-1.0.3 release
 
 ## Checks
