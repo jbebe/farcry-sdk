@@ -25,3 +25,4 @@ Stage: on hold
 ## Collisions
 
 - inventory-overhaul: merged by JackAll, no shared field - both edit hud.mgb; this mod adds its own pictures, materials and exports to Inventory Overhaul's `a_io_paper_pictures`, and every name both ship is identical
+- flashlight: merged by JackAll, no shared field - both edit hud.mgb; each adds its own areas, materials and exports, and every name both ship is identical
