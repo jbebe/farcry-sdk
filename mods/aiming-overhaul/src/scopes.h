@@ -26,6 +26,10 @@ struct Scope {
     float raiseReach;
     // How big the scope is drawn, as a share of the size every scope is drawn at.
     float size = 1.0f;
+    // Whether a black mount runs from the eyepiece down to the screen's foot.
+    bool mount = true;
+    // Whether the gun's barrel shows right of the eyepiece, black and out of focus.
+    bool barrel = false;
     WeaponMesh::ScopePart part;
 };
 

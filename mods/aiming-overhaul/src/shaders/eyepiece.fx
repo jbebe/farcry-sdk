@@ -8,11 +8,17 @@ float4 Light : register(c0);
 // radius. All in screen heights.
 float4 Lens : register(c1);
 // The body, in lens radii: x its opening's radius as drawn, y its outer edge's, z the mount's
-// half-width, w its softness.
+// half-width, below nought for none, w its softness.
 float4 Body : register(c2);
 // xy: the look's centre off the lens's, in lens radii, y down. z: the shape field's width and w the
 // distances its bytes span, in lens radii; z is nought for a scope with no shape of its own.
 float4 Shape : register(c3);
+// The barrel, between its top edge and its lower edge from the lens's centre: xy the top edge's
+// normal into it, y down; in lens radii, z its distance from the lens's centre and w the barrel's
+// softness.
+float4 Barrel : register(c4);
+// xy: the barrel's lower edge's normal into it, y down.
+float4 BarrelSide : register(c5);
 
 // Colour multiplied by cover, with its mip chain.
 sampler2D Reticle : register(s0);
@@ -34,13 +40,17 @@ float4 ReticlePS(float2 uv : TEXCOORD0, float2 at : TEXCOORD1) : COLOR0 {
 }
 
 // Black over the scope's body around the lens: a ring around the opening, a mount from its centre
-// down past the screen's foot, and the eyepiece's own shape, each with a soft edge.
+// down past the screen's foot, the eyepiece's own shape and the barrel beside it under the ring,
+// each with a soft edge. Nothing covers the opening but the shape.
 float4 BodyPS(float2 uv : TEXCOORD0) : COLOR0 {
     float2 at = ((uv - 0.5f) * float2(Lens.x, 1.0f) - Lens.yz) / Lens.w;
     float distance = length(at);
-    float ring = smoothstep(-Body.w, Body.w, distance - Body.x) *
-                 (1.0f - smoothstep(-Body.w, Body.w, min(distance - Body.y,
-                                                         max(abs(at.x) - Body.z, -at.y))));
+    float body = 1.0f - smoothstep(-Body.w, Body.w,
+                                   min(distance - Body.y, max(abs(at.x) - Body.z, -at.y)));
+    float barrel = smoothstep(-Barrel.w, Barrel.w, min(dot(at, Barrel.xy) - Barrel.z,
+                                                       dot(at, BarrelSide.xy)));
+    // The body and the barrel blurred as one: where their soft edges meet, they add.
+    float ring = smoothstep(-Body.w, Body.w, distance - Body.x) * (body + barrel - body * barrel);
     float2 field = (at - Shape.xy) / max(Shape.z, 0.001f) + 0.5f;
     float inside = (tex2D(ShapeField, field).r - 0.5f) * Shape.w;
     float ink = max(ring, step(0.001f, Shape.z) * smoothstep(-Body.w, Body.w, inside));

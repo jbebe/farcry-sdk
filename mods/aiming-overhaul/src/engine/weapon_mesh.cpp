@@ -74,7 +74,8 @@ namespace {
         return g_missing;
     }
 
-    // The scope's draws at the nearest detail of the loaded mesh; what is missing, if any.
+    // The scope's draws at the nearest detail of the loaded mesh, or for a whole mesh only its
+    // vertices; what is missing, if any.
     const char* ReadNearest(uint8_t* loaded, AimingOverhaul::WeaponMesh::ScopePart& part) {
         const uint32_t details = Field<uint32_t>(loaded, kDetailCount);
         if (details == 0) {
@@ -92,7 +93,7 @@ namespace {
             }
         }
         part.vertices = Field<uint8_t*>(nearest, kDetailVertices);
-        if (part.startCount == 0) {
+        if (part.startCount == 0 && !part.whole) {
             const uint32_t first = count > 0 ? Field<uint32_t>(draws, kDrawPart) : 0;
             return Missing("no SCOPE_HI_LOD0 draw among the %u at the nearest of %u details; the "
                            "first is of node %08X",
@@ -118,8 +119,13 @@ const char* AimingOverhaul::WeaponMesh::Read(void* entity, ScopePart& part) {
             return "no graphic component";
         }
         uint8_t* scope = FindScope(graphic);
+        const uint32_t partCount = Field<uint32_t>(graphic, kPartCount);
+        if (scope == nullptr && partCount == 1) {
+            scope = Field<uint8_t**>(graphic, kParts)[0];
+            part.whole = true;
+        }
         if (scope == nullptr) {
-            return Missing("no SCOPE_HI among its %u parts", Field<uint32_t>(graphic, kPartCount));
+            return Missing("no SCOPE_HI among its %u parts", partCount);
         }
         uint8_t* helper = Field<uint8_t*>(scope, kPartHelper);
         uint8_t* geometry = helper != nullptr ? Field<uint8_t*>(helper, kHelperGeometry) : nullptr;

@@ -39,6 +39,7 @@ Stage: active
 - [done] Iron sight zoom switch: off keeps the field of view down iron sights
 - [done] No random spread down the AR-16's and MGL-140's scopes
 - [done] Scopes as weapon data (AimingOverhaul.Scope* keys), found in the weapon's own mesh - "it seems to be working" 2026-10-08
+- [done] Scopes on the Carl Gustaf (its M4 reticle, thick eyecup, no mount below, its barrel blurred and black right of it where the game's shows) and the DLC crossbow (hunting duplex, hold breath, the eyepiece once its sights are up, as the game shows no scope picture for it) (#56) - Carl Gustaf: user 2026-11-13 "the carlg is done"; crossbow: user 2026-11-13 "all is well"
 - [done] Weapon and player data as fragments that merge field by field with other mods
 - [done] A switch per effect in the Mod Configuration Menu
 - [new] Forward/back bob per shot and physical sway in full auto, no climb - user 2026-11-08: "VERY needed"; proposal pending
@@ -70,7 +71,6 @@ Stage: active
 - Glass in the eyepiece: lines bow, colours part, rim darkens, faint tint - unconfirmed
 - Lowering a scope: the eye stays back while it goes down - unseen
 - No radial edge blur on the mod's scopes - unconfirmed
-
 ## Approvals
 
 - played: 10aebf7 2026-10-15 - implied by the aiming-overhaul-1.2.0 release

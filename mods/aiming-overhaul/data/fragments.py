@@ -67,13 +67,18 @@ SCOPES = {
     "Primary.MGL140": {"Reticle": RETICLES + "holosight.png", "ReticleLit": 1, "Shape": "mgl140",
                        "Rim": 0.15, "LensX": -0.00275, "LensY": 0.00213, "Raise": 0.073,
                        "Size": 0.8},
+    # The Carl Gustaf's barrel runs right of its sight: no mount below the eyepiece, the barrel beside it.
+    "Special.Carl_Gustaf": {"Reticle": RETICLES + "carlgm4.png", "Rim": 0.36, "Mount": 0,
+                            "Barrel": 1},
+    "DLC1.Crossbow": {"Reticle": RETICLES + "hunter.png", "Rim": 0.15},
 }
 SCOPE_KEY = "AimingOverhaul.Scope"
 # The engine's random spread down the sights, standing and crouched, which a scope loses.
 SCOPE_SPREADS = ("BulletSpread_IronSight", "BulletSpreadCrouch_IronSight")
 # The guns whose scope sways harder and whose breath can be held to steady it: the magnifying ones,
-# not the holographic sights.
-HOLD_BREATH = ("Special.Dart_Rifle", "Special.M1903", "Primary.Dragunov", "Primary.AS50")
+# not the holographic sights, nor the Carl Gustaf.
+HOLD_BREATH = ("Special.Dart_Rifle", "Special.M1903", "Primary.Dragunov", "Primary.AS50",
+               "DLC1.Crossbow")
 HOLD_BREATH_KEY = "AimingOverhaul.HoldBreath"
 # Each weapon's weight in the hands, loaded, in kilograms, an archetype and its variants each: how
 # long it takes to come up after a sprint.

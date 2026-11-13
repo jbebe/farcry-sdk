@@ -112,12 +112,13 @@ namespace {
     std::atomic<float> g_magnification{1.0f};
 
     // The equipped weapon as last seen, its name, how many times it has changed, how far the eye
-    // comes forward as its scope is raised, if the plugin draws that, and the iron sights' weight
-    // the raise began at.
+    // comes forward as its scope is raised, if the plugin draws that, whether the engine never shows
+    // that scope's sight picture, and the iron sights' weight the raise began at.
     uint8_t* g_weapon = nullptr;
     char g_weaponName[64] = {};
     std::atomic<uint32_t> g_weaponChanges{0};
     float g_raiseReach = 0.0f;
+    bool g_sightsScope = false;
     float g_raiseFrom = 0.0f;
 
     // What was added to the eye and the view during the camera update under way, and to which
@@ -159,16 +160,23 @@ namespace {
             AimingOverhaul::EntityName::Read(weapon, g_weaponName);
             g_weaponChanges++;
         }
-        g_raiseReach = g_followWeapon(weapon);
+        const AimingOverhaul::Aim::Followed followed = g_followWeapon(weapon);
+        g_raiseReach = followed.raiseReach;
+        g_sightsScope = followed.sightsScope;
     }
 
-    // Whether the weapon has a scope's sight picture of its own, and whether that is up.
+    // Whether the weapon has a scope's sight picture, and whether that is up: the engine's as it
+    // shows it, or for a scope the engine never shows, once the sights are wholly raised.
     bool HasScope(uint8_t* weapon) {
         return weapon != nullptr && Field<uint8_t>(weapon, kHiResScope) != 0;
     }
 
-    bool SightPictureUp(uint8_t* weapon) {
-        return HasScope(weapon) && Field<uint8_t>(weapon, kScopeShown) != 0;
+    bool SightPictureUp(uint8_t* weapon, uint8_t* data) {
+        if (!HasScope(weapon)) {
+            return false;
+        }
+        return g_sightsScope ? Field<float>(data, kIronsightWeight) >= 1.0f
+                             : Field<uint8_t>(weapon, kScopeShown) != 0;
     }
 
     // Whether the event is the one named, read from the std::string at its +0x08, whose characters
@@ -250,7 +258,7 @@ namespace {
         uint8_t* weapon = g_equippedWeapon(data + kInventory);
         FollowWeapon(weapon);
         // The scope's sight picture outlasts the iron sights by a few frames as the scope goes.
-        const bool scope = SightPictureUp(weapon);
+        const bool scope = SightPictureUp(weapon, data);
         const float step = seconds / kSettle;
         // The iron sights let go at once when a scope's own sight picture comes up, and the scope
         // when it goes.
@@ -310,7 +318,7 @@ namespace {
             if (!g_zoomAtOnce) {
                 return;
             }
-            fov += (scoped - fov) * (SightPictureUp(weapon) ? 1.0f : 0.0f);
+            fov += (scoped - fov) * (SightPictureUp(weapon, data) ? 1.0f : 0.0f);
         }
         Field<float>(camera, kFov) = fov + Field<float>(camera, kFovNoise);
     }

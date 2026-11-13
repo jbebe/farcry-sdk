@@ -6,6 +6,10 @@ Notable changes to Aiming Overhaul, loosely following
 ## [Unreleased]
 
 ### Added
+- **Scopes on the Carl Gustaf and the crossbow.** The Carl Gustaf's sight shows its M4 range and
+  lead marks in a thick eyecup, with no black mount below it; the launcher's barrel shows right
+  of it instead, black and out of focus. The
+  DLC crossbow gets the hunting duplex, and its breath can be held like the sniper rifles'.
 - **Tracers by cartridge.** Soviet rounds' tracers, from the PKM, burn green; NATO rounds' burn
   orange-red. The core keeps the round's colour instead of washing out to pale yellow. A ricochet
   keeps its round's colour. A modded gun picks green with `AimingOverhaul.SovietTracer` in its

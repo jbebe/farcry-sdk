@@ -27,6 +27,7 @@ Stage: active
 - [done] Lua tab, with script errors and System:Log lines caught
 - [done] Spawner: vehicles and soldier squads - soldiers seen 2026-10-25
 - [done] Armory: gives a gun, Ammo slider and Health % for the gun in hand - user-confirmed
+- [done] Armory: the DLC's silenced shotgun, sawed-off shotgun and crossbow - user 2026-11-13: "devtools fix works"
 - [done] Test range world, testrange - travel from world1 crashes the GOG build (Dunia+0x4CFD33), cause unknown
 - [done] Range tab: a scenario per Difficulty Overhaul checklist row - seen 2026-10-25; arena start facing probably wrong (unchecked)
 - [done] Range grass field, grass crest and tamarix bush arenas, three patrol routes - fc2drive-run 2026-11-03/04, not played
@@ -43,7 +44,6 @@ Stage: active
 - A second copy of the game starting beside the first - unseen
 - The Range tab's arena start facing - probably wrong, unchecked
 - The grass field, grass crest and tamarix bush arenas - fc2drive only
-
 ## Approvals
 
 ## Checks

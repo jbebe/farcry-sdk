@@ -6,6 +6,7 @@ Notable changes to DevTools, loosely following
 ## [Unreleased]
 
 ### Added
+- **The DLC's guns in the Armory**: the silenced shotgun, the sawed-off shotgun and the crossbow.
 - **Session log**, off unless launched with `-perftest`: every frame of a session, its
   time, GPU time, whether the player is in play and in a vehicle, and a once-a-second CPU, memory and
   VRAM sample, written to a CSV in `bin\`, to compare a session with a mod against one without.

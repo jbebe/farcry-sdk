@@ -45,9 +45,16 @@ struct Adjust {
 // from the body, so what turns the body this frame turns the view too.
 using FrameFn = Adjust (*)(uint8_t* pawn, float seconds);
 
-// Follows the weapon in hand, or null: how far the eye comes forward, in metres, as its scope is
-// raised; nought unless the plugin draws that scope.
-using FollowWeaponFn = float (*)(uint8_t* weapon);
+// What the plugin draws of the weapon in hand's scope: how far the eye comes forward, in metres, as
+// it is raised, nought unless the plugin draws it; and whether the engine never shows a sight
+// picture for it, having no scope part to show, so that it is up once the sights are raised.
+struct Followed {
+    float raiseReach;
+    bool sightsScope;
+};
+
+// Follows the weapon in hand, or null.
+using FollowWeaponFn = Followed (*)(uint8_t* weapon);
 
 // Hooks the first-person camera; `frame` and `followWeapon` then run once a frame. False, and
 // logged, when the camera cannot be hooked.

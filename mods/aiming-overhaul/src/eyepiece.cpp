@@ -32,6 +32,14 @@ namespace {
     // How far inside the opening the body is wholly black, so that its soft edge lies over the
     // shadow and the reticle rather than leaving a light seam between them and it.
     constexpr float kBodyOverlap = 0.005f;
+    // The Carl Gustaf's barrel, under the eyepiece and right of it, as far as the game's own shows:
+    // its top edge's normal into it, y down, and that edge's distance from the lens's centre; its
+    // lower edge's normal, the edge running from that centre; and its softness, wide as it is close
+    // to the eye. Distances in shares of the screen's height.
+    constexpr float kBarrelNormal[2] = {0.452f, 0.892f};
+    constexpr float kBarrelEdge = 0.0652f;
+    constexpr float kBarrelSide[2] = {0.791f, -0.612f};
+    constexpr float kBarrelSoftness = 0.04f;
     // How far the scope trails the look's turn, as a share of the shadow's swing.
     constexpr float kTrail = 0.1f;
     // How much bigger the scope is drawn at the height of a shot's kick, as it comes back toward
@@ -207,9 +215,12 @@ bool AimingOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
         }
         return true;
     }
-    // Only the sight picture draws the scope's part, in the gun's depth pass first; the weapon's
-    // draws go with the eyepiece while it is held.
-    const bool sightPicture = call.depthPass && g_inHand->part.Draws(call.startIndex);
+    // Only the sight picture draws the scope's part, in the gun's depth pass first; a scope drawn as
+    // one with the gun has its sight picture as the aim says. The weapon's draws go with the
+    // eyepiece while it is held.
+    const WeaponMesh::ScopePart& part = g_inHand->part;
+    const bool sightPicture =
+        call.depthPass && (part.whole ? Aim::ScopeUp() : part.Draws(call.startIndex));
     if (!sightPicture && !Held(g_drawnFrame)) {
         return true;
     }
@@ -217,7 +228,7 @@ bool AimingOverhaul::Eyepiece::BeforeGunDraw(IDirect3DDevice9* device,
     UINT offset = 0;
     UINT stride = 0;
     device->GetStreamSource(0, &stream, &offset, &stride);
-    if (Borrowed(stream) != WeaponMesh::VertexBuffer(g_inHand->part.vertices)) {
+    if (Borrowed(stream) != WeaponMesh::VertexBuffer(part.vertices)) {
         return true;
     }
     if (sightPicture) {
@@ -237,13 +248,18 @@ void AimingOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device, IDirect3DSu
     const float width = static_cast<float>(Frame::Width());
     const float height = static_cast<float>(Frame::Height());
     const float radius = opening->radius;
-    // c1 to c3: the lens on screen, the body in lens radii, and where the shape is from the lens.
-    const float constants[12] = {
+    // c1 to c5: the lens on screen, the body, where the shape is from the lens, and the barrel, all
+    // in lens radii. A mount's half-width below nought leaves it out, as does a barrel's top edge
+    // past any screen.
+    const float constants[20] = {
         width / height, opening->x, opening->y, radius,
         1.0f - (kBodyOverlap + kBodySoftness) / radius, opening->outer / radius,
-        kMountHalfWidth / radius, kBodySoftness / radius,
+        scope.mount ? kMountHalfWidth / radius : -1.0f, kBodySoftness / radius,
         -scope.lensX, scope.lensY, shape != nullptr ? Scopes::kShapeWidth : 0.0f,
         Scopes::kShapeSpan,
+        kBarrelNormal[0], kBarrelNormal[1], scope.barrel ? kBarrelEdge / radius : 1.0e4f,
+        kBarrelSoftness / radius,
+        kBarrelSide[0], kBarrelSide[1], 0.0f, 0.0f,
     };
 
     ScreenDraw draw(device, 0, 4);
@@ -258,7 +274,7 @@ void AimingOverhaul::Eyepiece::OnComposite(IDirect3DDevice9* device, IDirect3DSu
     DrawReticle(device, draw, scope, *opening);
     device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
 
-    device->SetPixelShaderConstantF(1, constants, 3);
+    device->SetPixelShaderConstantF(1, constants, 5);
     device->SetTexture(1, shape);
     draw.Linear(1);
     device->SetPixelShader(body);

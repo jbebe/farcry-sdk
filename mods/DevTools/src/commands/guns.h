@@ -1,5 +1,5 @@
 // What the Armory tab can put in the player's hands, as data: the guns of the game's own
-// CHEAT_GiveWeapons box, by the class each one is carried in.
+// CHEAT_GiveWeapons box and the DLC's three, by the class each one is carried in.
 #pragma once
 
 #include <span>

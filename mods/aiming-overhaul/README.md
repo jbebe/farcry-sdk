@@ -38,8 +38,9 @@ both field by field with other mods' edits, reporting any clash.
   twice as fast, crouched and moving it holds where it is, and walking upright keeps the heart a
   little up. A lean keeps the stance it leans
   from, and nothing counts as resting the gun.
-- **Hold breath.** With a magnifying scope, on the Dart Rifle, the M1903, the Dragunov and the AS50,
-  holding sprint down the scope holds the breath instead of sprinting: the breath settles to the
+- **Hold breath.** With a magnifying scope, on the Dart Rifle, the M1903, the Dragunov, the AS50 and
+  the crossbow, though not the Carl Gustaf, holding sprint down the scope holds the breath instead
+  of sprinting: the breath settles to the
   bottom of its rest within half a second and stays there, and the wander eases to a sixth of
   itself, for 4 s with the heart at rest and 2 s with it racing. Held longer, the hands shake
   harder, up to two and a half times the wander, until it is let go. After a hold the sway is up to
@@ -135,20 +136,24 @@ both field by field with other mods' edits, reporting any clash.
 - **Eyepiece.** The engine draws a scope as a tube seen down its length, with the reticle and the
   zoomed view far at its end. Here the tube is not drawn. Every scope looks the same size instead:
   a pitch-black, out-of-focus body whose outer edge spans 80% of the screen's height, with a black
-  mount below it down to the screen's foot, and the zoomed view filling its opening. The sniper
-  scopes are a plain ring, thin on the Dart Rifle and the M1903 and thicker on the Dragunov and the
-  AS50; the AR-16's and the MGL-140's, which are not round, also show their eyepiece's own shape.
+  mount below it down to the screen's foot, and the zoomed view filling its opening. The Carl
+  Gustaf has no mount; its barrel shows right of the eyepiece instead, running in under it, as
+  far as the game draws it, black and further out of focus. The magnifying scopes are a plain ring, thin
+  on the Dart Rifle, the M1903 and the crossbow and thicker on the Dragunov, the AS50 and the Carl
+  Gustaf; the AR-16's and the MGL-140's, which are not round, also show their eyepiece's own shape.
   The reticle is a new one, an image with its centre on the point of aim and its edge on the lens's
-  rim: a hunting duplex on the Dart Rifle and the M1903, a PSO-1 with its rangefinder on the
-  Dragunov, a red tactical mil-scale on the AS50, and a holographic chevron on the AR-16 and the
-  MGL-140. The holographic one is lit: its strokes burn toward a hotter shade of their colour inside
+  rim: a hunting duplex on the Dart Rifle, the M1903 and the crossbow, the M4 sight's range and lead
+  marks on the Carl Gustaf, a PSO-1 with its rangefinder on the Dragunov, a red tactical mil-scale
+  on the AS50, and a holographic chevron on the AR-16 and the MGL-140. The holographic one is lit: its strokes burn toward a hotter shade of their colour inside
   and glow past their edges, adding light rather than covering. The magnification is unchanged. The view inside is seen through
   glass: lines bow slightly toward the rim, colours part there the more the scope magnifies, the
   rim darkens, and the coating tints it faintly. The scope is laid over the finished frame, after
   the tone mapping, and trails the look a little as it turns. Each round fired kicks it back toward
-  the eye for a moment, as the stock comes back onto the shoulder. A scope on a weapon without the
-  plugin's scope data, or whose mesh has no `SCOPE_HI` part, is drawn as the game draws it, and
-  named in `fcse.log`.
+  the eye for a moment, as the stock comes back onto the shoulder. The crossbow, whose mesh is one
+  part with no `SCOPE_HI` and which the game aims as iron sights down the scope on its model, gets
+  the eyepiece once its sights are wholly raised, and the crossbow is hidden behind it. Any other
+  scope on a weapon without the plugin's scope data, or whose mesh has no `SCOPE_HI` part, is drawn
+  as the game draws it, and named in `fcse.log`.
 - **Surroundings.** Around the eyepiece the world is seen at the field of view the eye has without
   a scope, as with both eyes open, while the eyepiece keeps the scope's magnified view. With the
   eyepiece on too, the view does not zoom as the scope comes up: the gun comes to the eye, and the
@@ -219,7 +224,9 @@ scopes the plugin draws losing the engine's iron-sight effect and its random spr
 sights, so a scoped shot goes where the reticle is, are weapon data: `WeaponProperties` fragments
 under `layer\mods\`. So is each scope's reticle, eyepiece shape, rim, lens centre, raise
 and size: `AimingOverhaul.Scope*` keys in a `CFCSEDataComponent` on its `weapons` archetype, the
-reticle as an image path under `bin\plugins` with `ScopeReticleLit` for one lit from within. A gun
+reticle as an image path under `bin\plugins` with `ScopeReticleLit` for one lit from within, and
+`ScopeMount` 0 for a scope with no black mount below its eyepiece and `ScopeBarrel` 1 for one
+with the gun's barrel right of it. A gun
 whose breath can be held, and whose scope sways harder, has `AimingOverhaul.HoldBreath` set to 1
 there, and every weapon has its weight in kilograms, `AimingOverhaul.Weight`; a weapon without one
 weighs 3.5. A gun that fires Soviet rounds has `AimingOverhaul.SovietTracer` set to 1, and its

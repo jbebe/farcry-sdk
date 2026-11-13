@@ -388,8 +388,10 @@ the ground. Nothing is placed there.
 ### Armory
 
 The Armory tab has a button for each of the 28 guns of the game's own
-`CHEAT_GiveWeapons` box, under the class the gun is really carried in: the M1903 is a primary and the
-flare gun a secondary, whatever their archetype names say. Hovering a button shows the archetype.
+`CHEAT_GiveWeapons` box and the DLC's three, under the class the gun is really carried in: the M1903
+is a primary and the flare gun a secondary, whatever their archetype names say, and of the DLC's the
+silenced shotgun is a primary, the sawed-off shotgun a secondary and the crossbow a special. Hovering
+a button shows the archetype.
 
 A click works like a pickup, at the end of the next frame: the gun of that class you carry drops at
 your feet, and the new one is drawn at once, full and new. If you already carry that model, it is kept

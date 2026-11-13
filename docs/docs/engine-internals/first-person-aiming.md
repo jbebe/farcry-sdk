@@ -639,6 +639,10 @@ name, a `char*` at its `+0x14`, is its archetype's: `weapons.Primary.M16`,
 When aiming stops, the iron-sight flag goes a few frames before `+0x84` does, and the sight picture
 is drawn until `+0x84` goes.
 
+The DLC's crossbow (`DLC1Weapons.DLC1.Crossbow`) has `+0x85` set, but its mesh is one part with no
+`SCOPE_HI`, and `+0x84` stays nought however long it is aimed: the engine aims it as iron sights,
+down the scope on its own model (seen in game, GOG v1.03).
+
 ### Where the scope is drawn from
 
 :::info[Verified via reverse engineering]

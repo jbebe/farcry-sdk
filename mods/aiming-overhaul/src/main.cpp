@@ -108,7 +108,7 @@ namespace {
         FollowZoom();
     }
 
-    float FollowWeapon(uint8_t* weapon) {
+    AimingOverhaul::Aim::Followed FollowWeapon(uint8_t* weapon) {
         AimingOverhaul::Breath::FollowWeapon(weapon);
         AimingOverhaul::Weight::Follow(weapon);
         AimingOverhaul::Cartridge::Follow(weapon);
@@ -116,7 +116,10 @@ namespace {
         AimingOverhaul::Recoil::FollowWeapon(weapon);
         AimingOverhaul::ShotShake::FollowWeapon(weapon);
         const AimingOverhaul::Scopes::Scope* scope = AimingOverhaul::Scopes::Follow(weapon);
-        return scope != nullptr ? scope->raiseReach : 0.0f;
+        if (scope == nullptr) {
+            return {};
+        }
+        return {scope->raiseReach, scope->part.whole};
     }
 
     // The player's pawn as the camera last saw it, and when. The camera stops seeing it out of a

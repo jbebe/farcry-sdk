@@ -17,6 +17,7 @@ namespace {
         {"USAS-12", "weapons.Primary.USAS12"},
         {"Ithaca", "weapons.Primary.Ithaca"},
         {"MGL-140", "weapons.Primary.MGL140"},
+        {"Silenced shotgun", "DLC1Weapons.DLC1.SilencedShotgun"},
     };
 
     constexpr Gun kSecondary[] = {
@@ -29,6 +30,7 @@ namespace {
         {"M79", "weapons.Secondary.M79"},
         {"IED", "weapons.Secondary.IED"},
         {"Flare gun", "weapons.Special.Flare_Gun"},
+        {"Sawed-off shotgun", "DLC1Weapons.DLC1.SawedOffShotgun"},
     };
 
     constexpr Gun kSpecial[] = {
@@ -39,6 +41,7 @@ namespace {
         {"Carl Gustaf", "weapons.Special.Carl_Gustaf"},
         {"RPG-7", "weapons.Special.RPG7"},
         {"LPO-50", "weapons.Special.LPO50"},
+        {"Crossbow", "DLC1Weapons.DLC1.Crossbow"},
     };
 
     constexpr Class kClasses[] = {

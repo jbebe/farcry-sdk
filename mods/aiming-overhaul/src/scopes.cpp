@@ -69,6 +69,12 @@ namespace {
         data->GetFloat(entity, "AimingOverhaul.ScopeLensY", &scope.lensY);
         data->GetFloat(entity, "AimingOverhaul.ScopeRaise", &scope.raiseReach);
         data->GetFloat(entity, "AimingOverhaul.ScopeSize", &scope.size);
+        int32_t mount = 1;
+        data->GetInt(entity, "AimingOverhaul.ScopeMount", &mount);
+        scope.mount = mount != 0;
+        int32_t barrel = 0;
+        data->GetInt(entity, "AimingOverhaul.ScopeBarrel", &barrel);
+        scope.barrel = barrel != 0;
         return true;
     }
 }
