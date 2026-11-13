@@ -19,7 +19,6 @@ Stage: maintenance
 - [done] A Combat music setting in the Mod Configuration Menu
 - [done] Voices fall off like speech, gone by 50 m - user: "good now" (206f6d5)
 - [done] No distant dogs and jackals in the ambience
-- [done] A rougher, quieter Datsun idle (0045cbd8)
 - [done] The player's own pickups never muffled - heard working
 - [done] A DevTools window muting single shots, full-auto fire or echoes
 - [done] Enumeration fix so an older or Wine-derived dsound.dll opens a device
@@ -27,11 +26,12 @@ Stage: maintenance
 - [scrapped] Speed-of-sound delay - prototype rejected 2026-09-29; never re-propose
 - [scrapped] Engine-made gunshot echo through EAX - user: "all of them is awful"; never re-propose
 - [scrapped] Ricochets, wizz, air absorption, voice cap, ducking, weapon extras, tails, foley - the user cut the sound list 2026-10-01
-- [scrapped] Datsun engine sound overhaul - abandoned 2026-09-30 ("abandon the ship!"), only the quieter idle kept (3283244)
+- [scrapped] Datsun engine sound overhaul - abandoned 2026-09-30 ("abandon the ship!"); the quieter idle kept then (3283244) removed 2026-11-13
 
 ## To validate
 
 - No echo in rooms after the muffling fix - unchecked
+- The Datsun idles as in the game as shipped, with Sound Overhaul installed
 
 ## Approvals
 

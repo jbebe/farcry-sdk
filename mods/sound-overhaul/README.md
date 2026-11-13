@@ -42,8 +42,8 @@ the audio runtime page, `docs/docs/engine-internals/audio-runtime.md`.
   From 40 m it crosses into a crack, and only the last echo of a burst rings out.
 - **Replaces the grenade and rocket blasts** (`00455b16`, `004b65df`, `00455bdb`).
 - **Makes voices fall off like speech** (`2fffffff.spk`), **drops the distant dogs** from the ambience
-  (`004b89d8`), **gives the Datsun a quieter, rougher idle** (`0045cbd8`), and **stops the player's own
-  pickups being muffled** (the `pile_archetypes` and `OA_MissionPickups` fragments).
+  (`004b89d8`), and **stops the player's own pickups being muffled** (the `pile_archetypes` and
+  `OA_MissionPickups` fragments).
 - **Adds a DevTools window that mutes** single shots, full-auto fire or echoes (`src/mutes.cpp`), when
   DevTools is installed.
 - **Lets an older or Wine-derived `dsound.dll` open a device at all** (`src/enumeration_fix.cpp`).

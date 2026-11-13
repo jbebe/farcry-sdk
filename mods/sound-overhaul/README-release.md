@@ -16,7 +16,7 @@ gunshots with echoes, and distant fire that cracks.
   about 40 m an enemy's shot turns into its crack, and past 80 m the crack is all you hear.
 - **New grenade and rocket explosions.**
 - **Voices fall off like real speech**, gone by 50 m.
-- **No distant dogs and jackals** in the ambience, and a rougher, quieter idle for the Datsun.
+- **No distant dogs and jackals** in the ambience.
 - **A Combat music setting**, in the **Mod Configuration** menu and `bin\fcse.ini`. With it off,
   fights play without music, so enemies can be heard.
 

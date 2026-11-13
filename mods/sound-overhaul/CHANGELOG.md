@@ -9,6 +9,9 @@ Notable changes to Sound Overhaul, loosely following
 - **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.
 
+### Removed
+- **The Datsun's rougher, quieter idle.** The pickup idles as in the game as shipped.
+
 ## [1.0.3] - 2026-10-18
 
 ### Fixed
