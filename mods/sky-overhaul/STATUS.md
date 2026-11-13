@@ -10,6 +10,7 @@ Stage: maintenance
 - [done] Storms: thicker clouds, cirrus over the whole sky, grey light, the clear fog kept - confirmed in game 2026-09-13
 - [done] Clear days not blown out: the sky at half brightness and sunlit clouds at a quarter once the sun is up
 - [done] The game's clouds stay until ours draw, so a Direct3D injector never leaves an empty sky
+- [new] Drawn through the engine with no Direct3D hooks, so it works beside ReShade, DXVK and DLSS injectors #63
 - [done] Sun glare and afterimage, covered by our clouds - cloud cover confirmed in game 2026-09-13
 - [done] Light shafts that stop where our clouds stand - confirmed in game 2026-09-13
 - [done] Cloud shadows on the ground - needs depth pass quality high
