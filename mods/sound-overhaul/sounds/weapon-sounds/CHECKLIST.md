@@ -16,16 +16,25 @@ the gun's audio keeps it.
 
 ## Echoes
 
-Built by `build/echoes.py`. Each tier's bank holds the player's echo at the tier's id (the near echo, stereo,
-unpositioned: a positioned event plays nothing through a first-person sound type) and NPCs' at the id +
-`0x10` (a mono near echo and a mono far tail, positioned, crossing over at 40 m, the near gone by 80 m),
-which the plugin plays for NPC shots.
+Built by `build/echoes.py`. Two takes, the big one DS `_gunfire/stereo/rpg` `echo_1` / `tail_1`, the small
+one `echo_2` / `tail_2`. Each weapon's echo level, its loudest 50 ms, is graded by the real weapon's muzzle
+blast without muzzle devices; weapons on the same take and level share a tier. Each tier's bank holds the
+player's echo at the tier's id (the near echo, stereo, unpositioned: a positioned event plays nothing through
+a first-person sound type) and NPCs' at the id + `0x10` (a mono near echo and a mono far tail, positioned,
+crossing over at 40 m, the near gone by 80 m), which the plugin plays for NPC shots.
 
-| Tier | Id | Built | Near / far | Weapons |
-|---|---|---|---|---|
-| Big | `0x00FC0140` | [x] | DS `_gunfire/stereo/rpg` `echo_1` / `tail_1`, loudest 50 ms -18 dB (-10 and -15 were too loud) | rifles, MGs, shotguns, Desert Eagle, RPG-7, Carl Gustaf |
-| Small | `0x00FC0120` | [x] | DS `_gunfire/stereo/rpg` `echo_2` / `tail_2`, loudest 50 ms -29 dB (11 dB under big) | Makarov, Star .45, Uzi, MAC-10, M79, MGL-140, MK19 |
-| None | | | | 6P9, MP5, Dart Rifle, silenced shotgun, flare gun, crossbow |
+| Id | Take | Level | Weapons |
+|---|---|---|---|
+| `0x00FC0D00` | big | -16 dB | AS50, M2, RPG-7, Carl Gustaf |
+| `0x00FC0D20` | big | -18 dB (every big echo's level before #9) | Dragunov, G3KA4, PKM, M1903 |
+| `0x00FC0D40` | big | -19 dB | FAL |
+| `0x00FC0D60` | small | -19 dB | MK19 |
+| `0x00FC0D80` | big | -21 dB | AK-47, M16, M249, Desert Eagle, sawed-off shotgun |
+| `0x00FC0DA0` | big | -22 dB | Ithaca 37, SPAS-12, USAS-12 |
+| `0x00FC0DC0` | small | -28 dB | Star .45 |
+| `0x00FC0DE0` | small | -29 dB (the small echo's level before #9) | Makarov, Uzi, MAC-10 |
+| `0x00FC0E00` | small | -32 dB | M79, MGL-140 |
+| | | | None: 6P9, MP5, Dart Rifle, silenced shotgun, flare gun, crossbow |
 
 Automatics play their echo only once they fire per round, from the user's cut of their fire loop.
 

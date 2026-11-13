@@ -39,3 +39,4 @@ Stage: maintenance
 ## Collisions
 
 - aiming-overhaul: fixed by loading the VSS after Aiming Overhaul - both set the Dart Rifle's scope keys
+- sound-overhaul: fixed by loading the VSS after Sound Overhaul - both ship the Dart Rifle's shot banks 004bf5e9 and 004bf5eb

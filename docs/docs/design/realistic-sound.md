@@ -140,6 +140,11 @@ Nothing on the list is impossible.
   needed.
 - **NPC echoes, and terrain-aware slapback: plugin.** An NPC's shot never plays an echo
   **(RE-verified)**. Echo length follows the biome region, not the hills around you.
+- **Each gun's echo at its own level (2026-11-13, #9).** The recordings stay; the level follows the real
+  weapon's muzzle blast without muzzle devices, the propellant's energy left once the bullet has its
+  share, not the calibre alone. The Dragunov class keeps the echo level every big gun had, which the
+  user put at 80 % of the loudest; the .50s and rocket launchers take the rest, and everything else is
+  quieter by as much as its blast is weaker.
 - **An echo from the effects engine instead of recordings: dropped (2026-10-01).**
   - The reverb's echo time and depth do nothing through DSOAL **(measured offline)**.
   - EAX's echo effect does work in a free FX slot, but it ping-pongs.

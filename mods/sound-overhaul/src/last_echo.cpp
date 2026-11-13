@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <vector>
 
 namespace {
     // ApplyDelayBullet storing the handle of the player's echo (EAX), before it fetches the sound system,
@@ -67,7 +68,7 @@ namespace {
 
     // The NPC echo banks held loaded. Nothing in the data names them, and a play loads nothing: it fails
     // until a reference has requested the bank.
-    std::array<uint32_t, 8> g_heldEchoes{};
+    std::vector<uint32_t> g_heldEchoes;
 
     GetSoundSystemFn g_getSoundSystem = nullptr;
     GetEchoLengthFn g_getEchoLength = nullptr;
@@ -96,11 +97,7 @@ namespace {
             std::find(g_heldEchoes.begin(), g_heldEchoes.end(), id) != g_heldEchoes.end()) {
             return;
         }
-        const auto free = std::find(g_heldEchoes.begin(), g_heldEchoes.end(), 0u);
-        if (free == g_heldEchoes.end()) {
-            return;
-        }
-        *free = id;
+        g_heldEchoes.push_back(id);
 
         SoundResourceRef ref;
         reinterpret_cast<GetFromSoundIdFn>(g_getFromSoundId.get())(&ref, id, nullptr);

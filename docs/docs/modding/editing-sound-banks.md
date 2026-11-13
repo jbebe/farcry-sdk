@@ -112,7 +112,9 @@ jackall-cli spk encode 00fc0200\00fc0200.xml
 ```
 
 Ids run on from the event's: the container, then a sample and its audio per clip, and the records are
-written in that order, as retail sound banks list theirs. `--like` copies the unidentified words of a
+written in that order, as retail sound banks list theirs. Every id must be new across all the banks
+that load, not only the bank's own: an echo bank whose sample took an id an explosion bank already
+held crashed the game when the echo played **(seen in game, GOG v1.03)**. `--like` copies the unidentified words of a
 retail event and sample, which is how a weapon shot should start. The audio is copied in beside the
 XML, so the folder is the source you keep.
 

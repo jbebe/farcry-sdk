@@ -90,3 +90,4 @@ Stage: active
 - sky-overhaul: fixed by FCSE 1.3.0's hook stacking - both hook the same Direct3D functions; the gun blur sits before bloom
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
 - difficulty-overhaul: merged by JackAll, no shared field - both edit the guns' entity-library archetypes and particle libraries
+- sound-overhaul: merged by JackAll, no shared field, and the shot hooks stack, fixed in Sound Overhaul 1.0.2 - both edit the guns' entity-library archetypes, this mod leaving the echo field as shipped, and both hook the shot at 0x00115680

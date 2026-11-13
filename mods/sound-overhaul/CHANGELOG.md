@@ -5,9 +5,16 @@ Notable changes to Sound Overhaul, loosely following
 
 ## [Unreleased]
 
+### Added
+- **The guns sound the same in DevTools' test range**, with their echoes and full-auto shots, as in
+  the campaign.
+
 ### Changed
 - **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.
+- **Every gun's echo has its own level**, as loud as the real gun's blast: the .50 calibre rifles and
+  the rocket launchers ring out loudest, the Dragunov, G3, PKM and M1903 as before, and assault rifles,
+  shotguns, pistols and grenade launchers quieter.
 
 ### Removed
 - **The Datsun's rougher, quieter idle.** The pickup idles as in the game as shipped.

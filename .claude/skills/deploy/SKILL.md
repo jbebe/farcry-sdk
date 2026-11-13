@@ -99,9 +99,8 @@ jackall-cli mod build --game "<game>" --layer mods\<A>\layer --layer mods\<B>\la
 ```
 
 - The whole set plus this mod, in one build.
-- A later `--layer` wins a whole file two layers ship. `vehicle-overhaul` goes after `sound-overhaul`
-  (the Datsun's idle bank), `vss-vintorez` after `sound-overhaul` and `aiming-overhaul` (its shot
-  banks, the Dart Rifle's fields), and `difficulty-overhaul` after `DevTools` (the test range's
+- A later `--layer` wins a whole file two layers ship. `vss-vintorez` goes after `sound-overhaul` and
+  `aiming-overhaul` (its shot banks, the Dart Rifle's fields), and `difficulty-overhaul` after `DevTools` (the test range's
   particle library). Otherwise the mod under test goes last.
 - Under Windows PowerShell the CLI's progress on stderr stops a script running with
   `$ErrorActionPreference = 'Stop'`. Run it under `Continue` and check `$LASTEXITCODE`, as `Invoke-Cli`

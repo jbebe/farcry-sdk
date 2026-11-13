@@ -28,6 +28,7 @@ Stage: active
 - [new] INVENTORY_OVERHAUL_FILL and the Lua start variable removed once tests set up the notebook through DevTools - plugins hold no test logic
 - [new] Malaria on the pills' post-it - agreed: "malaria becomes the pills' card"
 - [new] Camo Suit in Items once bought - agreed 2026-10-26
+- [new] The two sound banks 00fd0001 and 00fd0002 on ids of their own: their records 0x00FD0001-0x00FD0004 are also in Vehicle Overhaul's 00fd0000.spk, and a shared id crashed the game in Sound Overhaul's echo work - agreed 2026-11-13
 - [new] Box page at the crates: the bought guns as a catalogue and stored things, one shared box #6
 - [new] One fetch mission - design log step 9
 - [postponed] Diamonds, food, pills and ammo as items - later, once decided

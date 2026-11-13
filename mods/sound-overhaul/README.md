@@ -34,8 +34,8 @@ the audio runtime page, `docs/docs/engine-internals/audio-runtime.md`.
   their dry sound. The plugin raises the send of 2D voices by 1,000 mB, the most EAX allows.
 - **Gives every single-player weapon a new shot and an echo** (the `00fc02*` and swapped retail banks,
   and the `WeaponProperties` fragments under `layer\mods\worlds\` and `downloadcontent\`), from Dark
-  Signal Weapon Soundscape. The echo, big or small by calibre, fills each weapon's dormant
-  `sndSingleBulletShotEcho`, which the game trims to the region's echo length.
+  Signal Weapon Soundscape. The echo, at a level graded by the real weapon's muzzle blast, fills each
+  weapon's dormant `sndSingleBulletShotEcho`, which the game trims to the region's echo length.
 - **Plays full-auto per round** (`src/per_round_shots.cpp`): a weapon whose fire loops are emptied
   plays its single shot on every round.
 - **Gives NPC shots their echo** (`src/last_echo.cpp`), which the game plays only for the player's.

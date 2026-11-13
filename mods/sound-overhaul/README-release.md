@@ -12,8 +12,9 @@ gunshots with echoes, and distant fire that cracks.
   pickups in a safehouse are no longer muffled.
 - **New gunshots** for every single-player weapon, first and third person, from Dark Signal Weapon
   Soundscape, with full-auto playing every round.
-- **Echoes** after every unsuppressed shot, big or small by calibre, for enemies' shots too. From
-  about 40 m an enemy's shot turns into its crack, and past 80 m the crack is all you hear.
+- **Echoes** after every unsuppressed shot, each gun's as loud as the real gun's blast, for enemies'
+  shots too. From about 40 m an enemy's shot turns into its crack, and past 80 m the crack is all you
+  hear.
 - **New grenade and rocket explosions.**
 - **Voices fall off like real speech**, gone by 50 m.
 - **No distant dogs and jackals** in the ambience.

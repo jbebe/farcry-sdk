@@ -91,3 +91,4 @@ Stage: active
 ## Collisions
 
 - aiming-overhaul: merged by JackAll, no shared field - both edit the guns' entity-library archetypes and particle libraries
+- sound-overhaul: merged by JackAll, no shared field - both edit the guns' entity-library archetypes
