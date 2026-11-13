@@ -70,4 +70,5 @@ Stage: active
 - DevTools: fixed by FCSE hook stacking - both hook the entry of the pause service's signal listener
 - flashlight: fixed by 98535d3c - its light fell on none of the notebook's pages
 - map-overhaul: fixed by 137373d1 and 9e951c86, and by building the notebook without its layer - its patterns start past this mod's hooks on the pause listener and the map's Update; the notebook copies the map's banks from the install, which its layer remakes
+- tales-of-africa: merged by JackAll, no shared field - both edit hud.mgb; Tales of Africa adds its own pictures, materials and exports to this mod's `a_io_paper_pictures`, and every name both ship is identical
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks

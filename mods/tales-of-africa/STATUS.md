@@ -23,3 +23,5 @@ Stage: on hold
 - with an Inventory Overhaul release that drops its example papers
 
 ## Collisions
+
+- inventory-overhaul: merged by JackAll, no shared field - both edit hud.mgb; this mod adds its own pictures, materials and exports to Inventory Overhaul's `a_io_paper_pictures`, and every name both ship is identical
