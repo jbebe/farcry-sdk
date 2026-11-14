@@ -42,7 +42,7 @@ out of the camera's sight.
 - `shadow.cpp` darkens a soft circle around where the feet stand, at the frame's sky pass, from the
   engine's own linear depth: `shaders/shadow.fx` finds each pixel's place in the world and darkens
   it by its distance from the feet, so the circle lies on slopes and steps. The depth texture is
-  found by watching a draw that reads it (`engine/scene_depth.cpp`).
+  the one the renderer's per-view parameter update hands the view's shaders (`engine/scene_depth.cpp`).
 - `outside.cpp` puts up the engine's `Cameras.Camera.Third` when the control's signal asks for
   it, and takes the player out of first person, which brings the full body, its animations and its
   shadow; its update is taken over (`engine/third_camera.cpp`) to place it. Leaving first person

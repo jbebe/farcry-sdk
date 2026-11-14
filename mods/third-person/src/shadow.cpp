@@ -144,14 +144,18 @@ namespace {
 
     void OnSkyPass(const SkyPass::Pass& pass) {
         Feet feet;
-        IDirect3DTexture9* depth = ThirdPerson::SceneDepth::Texture();
-        if (depth == nullptr || !g_feet.Latest(feet) || !feet.cast) {
+        if (!g_feet.Latest(feet) || !feet.cast) {
             return;
         }
         const float* eye = pass.view.eye;
         const float fromEye[3] = {feet.place[0] - eye[0], feet.place[1] - eye[1],
                                   feet.place[2] - eye[2]};
-        IDirect3DPixelShader9* shader = OutOfView(pass.view, fromEye) ? nullptr : Shader(pass.device);
+        if (OutOfView(pass.view, fromEye)) {
+            return;
+        }
+        // The world's target, and so its depth, is the size of the sky pass's viewport.
+        IDirect3DTexture9* depth = ThirdPerson::SceneDepth::Texture(pass.viewport.Width, pass.viewport.Height);
+        IDirect3DPixelShader9* shader = depth != nullptr ? Shader(pass.device) : nullptr;
         if (shader != nullptr) {
             Draw(pass, depth, shader, fromEye);
         }

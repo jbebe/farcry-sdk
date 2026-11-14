@@ -142,8 +142,9 @@ silhouette in ink.
 
 `src/engine/paper.cpp` puts it on the pages, on DirectX 9 only: the notebook does not work on DirectX 10.
 Its first and last images, `mark_begin` and `mark_end`,
-are clear textures of a size no other has. While the notebook is open, the Direct3D texture binds
-between them go into a target of the screen's size, with alpha, instead of the screen; it is cleared to
+are clear textures of a size no other has, caught as the engine's texture binders bind them. While
+the notebook is open, the draws between them go into a target of the screen's size, with alpha,
+instead of the screen; it is cleared to
 a clear paper tone, so the filtered edges of the spread and its tabs fade into paper, not black. That
 target is
 copied into a mip-mapped texture, which is bound wherever the area map is: the notebook's pages draw

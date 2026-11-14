@@ -1,7 +1,6 @@
 #include "engine/paper.h"
 
 #include "engine/memory.h"
-#include "engine/vtable.h"
 #include "fcse_api.h"
 #include "notebook.h"
 
@@ -14,26 +13,49 @@ namespace InventoryOverhaul::Paper {
 namespace {
     using SetMapTextureFn = void(__fastcall*)(void* strategy, void* unused, void* resource,
                                               uint32_t owned);
-    using SetTextureFn = HRESULT(__stdcall*)(IDirect3DDevice9* device, DWORD stage,
-                                             IDirect3DBaseTexture9* texture);
-    using EndSceneFn = HRESULT(__stdcall*)(IDirect3DDevice9* device);
-    using ResetFn = HRESULT(__stdcall*)(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* parameters);
+    // A shader parameter's texture binder, __thiscall declared __fastcall: binds what it holds to
+    // the pixel sampler `sampler` points at.
+    using BindFn = void(__fastcall*)(void* parameter, void* unused, IDirect3DDevice9* device,
+                                     const uint16_t* sampler);
+    // The engine device's EndScene and Reset, __thiscall declared __fastcall; Reset is true when
+    // Direct3D's reset succeeded.
+    using EndSceneFn = HRESULT(__fastcall*)(void* self);
+    using ResetFn = bool(__fastcall*)(void* self);
 
     // CGadgetMapStrategy::SetMapTexture(CSmartResourcePtr<CTextureResource>), its pointer passed by
     // value with a flag.
     FCSE::Relocation<SetMapTextureFn> g_setMapTextureSite{
         FCSE::Pattern("53 8B D9 8B 43 38 55 56 8B 70 08 83 46 08 01 57 8B 7E 0C 8B CF E8 ?? ?? ?? ?? "
                       "83 3D ?? ?? ?? ?? 00 75 07 33 C9 E8")};
+    // The binder of a parameter holding a device texture, which binds the markers, and of one holding
+    // a texture, which binds the paper; neither is in the address library, and the first seven bytes,
+    // the ones another plugin's hook overwrites, are wildcards.
+    FCSE::Relocation<BindFn> g_bindDeviceTextureSite{
+        FCSE::Pattern("?? ?? ?? ?? ?? ?? ?? 8B 41 0C 85 C0 74 19 8B 40 18 8B 4C 24 04 56 8B 31 "
+                      "50 52 51 8B 8E 04 01 00 00 FF D1 5E C2 08 00")};
+    FCSE::Relocation<BindFn> g_bindTextureSite{
+        FCSE::Pattern("?? ?? ?? ?? ?? ?? ?? 56 8B F1 8B 4E 0C 85 C9 74 28 8B 49 0C 85 C9 74 21 "
+                      "8B 49 18 8B 54 24 08 57 8B 3A 51 50 52 8B 97 04 01 00 00 FF D2 5F")};
+    // The engine device's EndScene, its whole body; the first seven bytes are wildcards for the same
+    // reason.
+    FCSE::Relocation<EndSceneFn> g_endSceneSite{
+        FCSE::Pattern("?? ?? ?? ?? ?? ?? ?? 8B 41 38 8B 08 8B 91 A8 00 00 00 50 FF D2 C3")};
+    FCSE::Relocation<ResetFn> g_resetSite{FCSE::Uplay(0x00422630)};
     SetMapTextureFn g_setMapTexture = nullptr;
-    SetTextureFn g_setTexture = nullptr;
+    BindFn g_bindDeviceTexture = nullptr;
+    BindFn g_bindTexture = nullptr;
     EndSceneFn g_endScene = nullptr;
     ResetFn g_reset = nullptr;
 
     // CTextureResource: the texture it hands the renderer; that one's device texture, a
-    // CTextureD3D9; and that one's Direct3D texture.
+    // CTextureD3D9; and that one's Direct3D texture. A binder holds either at +0x0C.
     constexpr ptrdiff_t kResourceTexture = 0x28;
     constexpr ptrdiff_t kTextureDevice = 0x0C;
     constexpr ptrdiff_t kDeviceDirect3D = 0x18;
+    constexpr ptrdiff_t kBinderHeld = 0x0C;
+
+    // The engine device's Direct3D device.
+    constexpr ptrdiff_t kDevice = 0x38;
 
     // The marker images' textures are 4 by 64 and 64 by 4, sizes no other texture has.
     constexpr UINT kMarkShort = 4;
@@ -88,11 +110,24 @@ namespace {
         return mark;
     }
 
+    // The pointer at `offset` into `object`, or null for no object.
+    void* Follow(const void* object, ptrdiff_t offset) {
+        return object == nullptr ? nullptr : Read<void*>(object, offset);
+    }
+
+    // The Direct3D texture behind a device texture, and behind a texture.
+    IDirect3DBaseTexture9* OfDeviceTexture(const void* deviceTexture) {
+        return static_cast<IDirect3DBaseTexture9*>(Follow(deviceTexture, kDeviceDirect3D));
+    }
+
+    IDirect3DBaseTexture9* OfTexture(const void* texture) {
+        return OfDeviceTexture(Follow(texture, kTextureDevice));
+    }
+
     // Null where the engine's pointers do not hold, as while the texture is still loading.
     IDirect3DBaseTexture9* Direct3DTextureOf(const void* resource) {
         __try {
-            return Read<IDirect3DBaseTexture9*>(
-                Read<const void*>(Read<const void*>(resource, kResourceTexture), kTextureDevice), kDeviceDirect3D);
+            return OfTexture(Follow(resource, kResourceTexture));
         } __except (EXCEPTION_EXECUTE_HANDLER) {
             return nullptr;
         }
@@ -167,8 +202,7 @@ namespace {
             const bool copied = SUCCEEDED(device->StretchRect(g_screen, nullptr, page, nullptr, D3DTEXF_NONE));
             page->Release();
             g_page->GenerateMipSubLevels();
-            const void* resource = g_paperResource;
-            g_paper = copied && resource != nullptr ? Direct3DTextureOf(resource) : nullptr;
+            g_paper = copied ? Direct3DTextureOf(g_paperResource) : nullptr;
         }
     }
 
@@ -177,11 +211,12 @@ namespace {
         g_setMapTexture(strategy, unused, resource, owned);
     }
 
-    // The markers redirect whenever they are bound: the HUD being drawn may be a frame behind the
-    // notebook, and a page let through would cover the screen.
-    HRESULT __stdcall OnSetTexture(IDirect3DDevice9* device, DWORD stage, IDirect3DBaseTexture9* texture) {
+    // A marker about to be bound starts or ends the page; the paper's texture answers with the page,
+    // to be bound over it. The markers redirect whenever they are bound: the HUD being drawn may be a
+    // frame behind the notebook, and a page let through would cover the screen.
+    IDirect3DBaseTexture9* BeforeBind(IDirect3DDevice9* device, IDirect3DBaseTexture9* texture) {
         if (texture == nullptr) {
-            return g_setTexture(device, stage, texture);
+            return nullptr;
         }
         if (g_newHud.load(std::memory_order_relaxed) && g_newHud.exchange(false)) {
             g_begin = g_end = nullptr;
@@ -193,25 +228,46 @@ namespace {
         } else if (mark == Mark::End && g_saved != nullptr) {
             End(device);
         } else if (open && texture == g_paper) {
-            return g_setTexture(device, stage, g_page);
+            return g_page;
         }
-        return g_setTexture(device, stage, texture);
+        return nullptr;
+    }
+
+    // Binds as `original` does, `held` being the texture it binds, and the page over the paper's.
+    void BindOver(BindFn original, IDirect3DBaseTexture9* held, void* parameter, void* unused,
+                  IDirect3DDevice9* device, const uint16_t* sampler) {
+        IDirect3DBaseTexture9* page = BeforeBind(device, held);
+        original(parameter, unused, device, sampler);
+        if (page != nullptr) {
+            device->SetTexture(*sampler, page);
+        }
+    }
+
+    void __fastcall OnBindDeviceTexture(void* parameter, void* unused, IDirect3DDevice9* device,
+                                        const uint16_t* sampler) {
+        BindOver(g_bindDeviceTexture, OfDeviceTexture(Follow(parameter, kBinderHeld)), parameter, unused,
+                 device, sampler);
+    }
+
+    void __fastcall OnBindTexture(void* parameter, void* unused, IDirect3DDevice9* device,
+                                  const uint16_t* sampler) {
+        BindOver(g_bindTexture, OfTexture(Follow(parameter, kBinderHeld)), parameter, unused, device, sampler);
     }
 
     // A frame whose page was not finished, as when the HUD went away in the middle of it, goes back
     // to the screen.
-    HRESULT __stdcall OnEndScene(IDirect3DDevice9* device) {
+    HRESULT __fastcall OnEndScene(void* self) {
         if (g_saved != nullptr) {
-            Restore(device);
+            Restore(Read<IDirect3DDevice9*>(self, kDevice));
         }
-        return g_endScene(device);
+        return g_endScene(self);
     }
 
     // Targets made in the device's own memory have to go before it can be reset.
-    HRESULT __stdcall OnReset(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* parameters) {
+    bool __fastcall OnReset(void* self) {
         ReleaseAll();
         g_begin = g_end = nullptr;
-        return g_reset(device, parameters);
+        return g_reset(self);
     }
 }
 
@@ -219,11 +275,13 @@ void NewHud() { g_newHud = true; }
 
 void Install() {
     const bool hooked = Hook(g_setMapTextureSite, &OnSetMapTexture, &g_setMapTexture) &&
-                        Vtable::Hook(Vtable::kSetTexture, &OnSetTexture, &g_setTexture) &&
-                        Vtable::Hook(Vtable::kEndScene, &OnEndScene, &g_endScene) &&
-                        Vtable::Hook(Vtable::kReset, &OnReset, &g_reset);
+                        Hook(g_bindDeviceTextureSite, &OnBindDeviceTexture, &g_bindDeviceTexture) &&
+                        Hook(g_bindTextureSite, &OnBindTexture, &g_bindTexture) &&
+                        Hook(g_endSceneSite, &OnEndScene, &g_endScene) &&
+                        Hook(g_resetSite, &OnReset, &g_reset);
     FCSE::Logf("paper: %s", hooked ? "the page is drawn on the notebook's pages"
-                                   : "off, the map's texture or the device was not found; the page is drawn over the screen");
+                                   : "off, the map's texture or the renderer was not found; the page "
+                                     "is drawn over the screen");
 }
 
 }

@@ -9,6 +9,7 @@ Stage: active
 - [done] Picked-up gun comes to hand - fc2drive only, the user has not played it
 - [done] Items: stowed guns keep their wear and loaded rounds, four guns in all with the slots; other items by id and count
 - [done] Notebook on Tab, given with the map, held in both hands, its right page bending with the hands - user: "it works in all situations"; first opens on gun A, verified 2026-11-12
+- [done] The page drawn onto the paper through the engine's texture binders and device, with no Direct3D hooks, so it works under dgVoodoo and DLSS injectors - pages and a resize match the old build (fc2drive); user 2026-11-14: "they work alright" #63
 - [done] Items page: guns A and B, Items with the diamonds, the belt with its counts; the wheel moves the selection
 - [done] Post-it for the selected row: picture, name, condition word, ammo, upgrade icons, ratings - a bought upgrade not seen yet; #52 every gun's post-it, DLC and rusty guns included, verified 2026-11-12
 - [done] Condition word from the gun's reliability as a share of its MaxReliability - fc2drive: new, used, worn, worn, failing at 100, 70, 45, 30, 10 %; carried and stowed verified 2026-11-12
@@ -70,3 +71,5 @@ Stage: active
 - map-overhaul: fixed by 137373d1 and 9e951c86, and by building the notebook without its layer - its patterns start past this mod's hooks on the pause listener and the map's Update; the notebook copies the map's banks from the install, which its layer remakes
 - tales-of-africa: merged by JackAll, no shared field - both edit hud.mgb; Tales of Africa adds its own pictures, materials and exports to this mod's `a_io_paper_pictures`, and every name both ship is identical
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
+- 0x00422510: stacks - the engine device's EndScene, which Sky, Aiming, Vehicle and Inventory Overhaul and Third Person hook; FCSE chains them
+- 0x00422630: stacks - the engine device's Reset, which Aiming, Vehicle and Inventory Overhaul hook; FCSE chains them

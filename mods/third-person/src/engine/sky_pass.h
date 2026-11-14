@@ -28,8 +28,8 @@ struct Pass {
 
 using PassFn = void (*)(const Pass& pass);
 
-// Hooks the device's EndScene and Present. `onPass` runs once a frame at most, on the render thread,
-// with the pass's target and depth bound. False when they cannot be hooked, which is logged.
+// Hooks the engine device's EndScene. `onPass` runs once a frame at most, on the render thread, with
+// the pass's target and depth bound. False, and logged, when it cannot be hooked.
 bool Install(PassFn onPass);
 
 }

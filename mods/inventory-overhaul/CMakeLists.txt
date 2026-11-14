@@ -36,7 +36,6 @@ add_library(InventoryOverhaul SHARED
   "src/engine/paper.cpp"
   "src/engine/sound.cpp"
   "src/engine/story.cpp"
-  "src/engine/vtable.cpp"
 )
 
 target_include_directories(InventoryOverhaul PRIVATE
@@ -44,5 +43,5 @@ target_include_directories(InventoryOverhaul PRIVATE
   "${DEVTOOLS_INCLUDE_DIR}"
   "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/FCSE/include"
 )
-target_link_libraries(InventoryOverhaul PRIVATE d3d9 imgui)
+target_link_libraries(InventoryOverhaul PRIVATE imgui)
 target_compile_features(InventoryOverhaul PRIVATE cxx_std_20)

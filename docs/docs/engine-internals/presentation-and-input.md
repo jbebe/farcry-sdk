@@ -372,9 +372,16 @@ view distance, split across red, green and blue as 24 bits. `UncompressDepthWeig
 texel back into that fraction, `UncompressDepthWeightsWS` at `c57` into world units, and
 `CameraDistances` at `c40` holds near, far, view distance and its inverse.
 
-No seam hands the texture over. It can be found by recognising one of those 74 shaders as it
-draws, by the CRC-32 of its bytecode, and reading what is bound at `s0`. Sky Overhaul's
-`src/engine/depth_texture.cpp` does that.
+Each view hands the texture to its shaders. The renderer's per-view parameter update (Steam
+`0x10367F70`, `__thiscall(renderer, view)`, `ret 4`) sets `DepthVPSampler`, the viewport provider's
+parameter at `+0x4A0` with its texture at `+0x4AC`, from the view's `+0x1C`, and
+`ResolvedDepthVPSampler` (`+0x4B0`) from the view's `+0x20`. The view's `+0x1C` is a device texture
+whose Direct3D texture is at `+0x18`, so a hook on that update has the texture before any of the
+view's passes draw; of the views that carry one, the world's is the last updated before the world's
+passes (seen in game, GOG v1.03). Third Person reads it there. The provider is made through a factory and no global points at it.
+
+It can also be found by recognising one of those 74 shaders as it draws, by the CRC-32 of its
+bytecode, and reading what is bound at `s0`. Sky Overhaul's `src/engine/depth_texture.cpp` does that.
 
 :::info[Verified in a running game]
 Retail GOG v1.03 at 1920×1080 with four-sample multisampling, read back from an FCSE plugin at the
@@ -721,9 +728,26 @@ too, ahead of that `Reset`; a plugin that frees its `D3DPOOL_DEFAULT` objects at
 reset succeed (seen in game, GOG v1.03). It is a function apart from the device teardown at slot 20, which the address
 library does not carry.
 
-Sky Overhaul and Aiming Overhaul both hook slots 15, 55 and 56, and Vehicle Overhaul hooks slot 15;
-FCSE chains them. Aiming Overhaul and Vehicle Overhaul free their objects at slot 21, Sky Overhaul at
-the teardown.
+Sky Overhaul and Aiming Overhaul both hook slots 15, 55 and 56, and Vehicle Overhaul, Inventory
+Overhaul and Third Person slot 15; FCSE chains them. Aiming Overhaul, Vehicle Overhaul and Inventory
+Overhaul free their objects at slot 21, Sky Overhaul at the teardown.
+
+### Texture binds, before Direct3D
+
+A shader parameter that holds a texture binds it with a small method of its own, `__thiscall(this,
+IDirect3DDevice9* device, const WORD* sampler)` with `ret 8`, which calls Direct3D's `SetTexture`
+directly **(RE-verified, Steam v1.03)**:
+
+| Steam | Holds at `this+0x0C` | Sampler |
+|---|---|---|
+| `0x10437570` | a device texture (`CTextureD3D9`, its Direct3D texture at `+0x18`) | vertex, `*sampler + 0x101` |
+| `0x104375C0` | a device texture | pixel, `*sampler` |
+| `0x10437600` | a texture (its device texture at `+0x0C`) | vertex, `*sampler + 0x101` |
+| `0x10437660` | a texture | pixel, `*sampler` |
+
+The interface binds through the pixel pair: Inventory Overhaul's marker textures go through
+`0x104375C0` and the map's paper through `0x10437660` (seen in game, GOG v1.03). The address library
+carries none of the four; a pattern of each body, past its first seven bytes, finds it in both builds.
 
 ### Which device vtable slots the repo's plugins hold
 
@@ -733,12 +757,9 @@ it is build-specific.
 
 | Slot | Function | Held by |
 |---|---|---|
-| 16 | `Reset` | DevTools, Inventory Overhaul, Third Person |
-| 17 | `Present` | DevTools, Third Person |
-| 42 | `EndScene` | DevTools (the AI view, in the sky pass), Inventory Overhaul, Third Person |
-| 65 | `SetTexture` | Inventory Overhaul |
-| 81 | `DrawPrimitive` | Third Person |
-| 82 | `DrawIndexedPrimitive` | Third Person |
+| 16 | `Reset` | DevTools |
+| 17 | `Present` | DevTools |
+| 42 | `EndScene` | DevTools (the AI view, in the sky pass) |
 
 Since FCSE 1.3.0 a second plugin hooking one of these slots stacks on the first rather than being
 turned away, so the table says who else runs there, not what is taken. `TestCooperativeLevel`, which

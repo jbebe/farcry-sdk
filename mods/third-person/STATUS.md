@@ -10,6 +10,7 @@ Stage: active
 - [done] The whole body seen from a camera away from the eye, such as DevTools' free camera - seen in scripted shots
 - [done] Feet tucked up in the air - built, not seen (README)
 - [done] A soft round shadow under the feet in first person - user: "it looks good" (4134a2e5)
+- [done] The shadow read from the engine's own view depth and drawn at the engine device's sky pass, with no Direct3D hooks, so it works under dgVoodoo and DLSS injectors and stays after a resize - matches the old build (fc2drive); user 2026-11-14: "they work alright" #63
 - [done] A Third-person view control on V, rebindable under Misc, on foot and at the wheel, kept for the session (db5067a)
 - [done] Third person on foot over the right shoulder: the game's own crosshair, shots landing on it, no iron sights (73a5efe9)
 - [done] The aim key brings the camera closer over the shoulder and the crosshair to its tightest - built, not seen (README)
@@ -46,3 +47,4 @@ Stage: active
 - vehicle-overhaul: fixed by db5067a - both hook SetDriver (patterns wildcard its first 6 bytes); VO 1.0.1 and earlier have their own view on V
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
 - 0x001449B0: stacks - the input pass, which DevTools, Flashlight and Third Person each hook as g_inputPass; FCSE stacks same-address hooks
+- 0x00422510: stacks - the engine device's EndScene, which Sky, Aiming, Vehicle and Inventory Overhaul and Third Person hook; FCSE chains them

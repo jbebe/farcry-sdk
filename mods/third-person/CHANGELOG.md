@@ -12,6 +12,8 @@ Notable changes to Third Person, loosely following
 ### Fixed
 - **The chase camera no longer snaps into the car** at every small leaf: behind the car it is only
   kept above the ground.
+- **The shadow under your feet shows under dgVoodoo and DLSS injectors,** and stays when the game's
+  window is resized.
 
 ## [1.0.0] - 2026-11-07
 

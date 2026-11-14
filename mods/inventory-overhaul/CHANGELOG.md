@@ -13,6 +13,8 @@ Notable changes to Inventory Overhaul, loosely following
 - **The notebook first opens on gun A**, whichever gun is in hand.
 
 ### Fixed
+- **The notebook's pages are drawn on its paper under dgVoodoo and DLSS injectors too,** where they
+  lay flat over the screen.
 - **Every gun has its picture and name on the post-it:** guns bought at the armory, such as the
   flamethrower, and Mike's rusty ones showed the mosquito and a word like "Persistent". The sawed-off
   shotgun, the silenced shotgun and the crossbow have theirs too.

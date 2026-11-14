@@ -50,7 +50,6 @@ add_library(ThirdPerson SHARED
   "src/engine/sky_pass.cpp"
   "src/engine/terrain.cpp"
   "src/engine/third_camera.cpp"
-  "src/engine/vtable.cpp"
   "${SHADOW_HEADER}"
 )
 
@@ -59,7 +58,5 @@ target_include_directories(ThirdPerson PRIVATE
   "${CMAKE_CURRENT_BINARY_DIR}/generated"
   "${FCSE_INCLUDE_DIR}"
 )
-
-target_link_libraries(ThirdPerson PRIVATE d3d9)
 
 set_target_properties(ThirdPerson PROPERTIES OUTPUT_NAME "ThirdPerson" PREFIX "" CXX_STANDARD 20)

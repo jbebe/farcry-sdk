@@ -1,13 +1,22 @@
 #include "engine/sky_pass.h"
 
 #include "engine/com.h"
-#include "engine/vtable.h"
+#include "engine/memory.h"
 
 #include <algorithm>
 
 namespace {
-    constexpr size_t kPresentSlot = 17;
-    constexpr size_t kEndSceneSlot = 42;
+    // The engine device's EndScene, __thiscall declared __fastcall.
+    using EndSceneFn = HRESULT(__fastcall*)(uint8_t* self);
+
+    // Its whole body, which the address library lacks; the first seven bytes, the ones another
+    // plugin's hook overwrites, are wildcards.
+    FCSE::Relocation<EndSceneFn> g_endScene{FCSE::Pattern(
+        "?? ?? ?? ?? ?? ?? ?? 8B 41 38 8B 08 8B 91 A8 00 00 00 50 FF D2 C3")};
+    EndSceneFn g_originalEndScene = nullptr;
+
+    // The engine device's Direct3D device.
+    constexpr ptrdiff_t kDevice = 0x38;
 
     // The only world pass whose depth range is squeezed against the far plane.
     constexpr float kSkyPassMinZ = 0.9f;
@@ -23,15 +32,9 @@ namespace {
     constexpr size_t kRight = 32;
     constexpr size_t kUp = 36;
 
-    using PresentFn = HRESULT(__stdcall*)(IDirect3DDevice9* device, const RECT* source,
-                                          const RECT* destination, HWND window, const RGNDATA* dirty);
-    using EndSceneFn = HRESULT(__stdcall*)(IDirect3DDevice9* device);
-    PresentFn g_originalPresent = nullptr;
-    EndSceneFn g_originalEndScene = nullptr;
-
     ThirdPerson::SkyPass::PassFn g_onPass = nullptr;
 
-    // Whether a pass has run since the last Present. Render thread.
+    // Whether the sky pass has run since the frame's composite. Render thread.
     bool g_passed = false;
 
     // An offscreen target of the back buffer's size, with depth.
@@ -50,6 +53,19 @@ namespace {
         target.surface->GetDesc(&targetDesc);
         backBuffer.surface->GetDesc(&backBufferDesc);
         return targetDesc.Width == backBufferDesc.Width && targetDesc.Height == backBufferDesc.Height;
+    }
+
+    // The back buffer with no depth: the composite, which ends the frame's world.
+    bool IsComposite(IDirect3DDevice9* device) {
+        ThirdPerson::Surface depth;
+        if (SUCCEEDED(device->GetDepthStencilSurface(&depth.surface)) && depth.surface != nullptr) {
+            return false;
+        }
+        ThirdPerson::Surface target;
+        ThirdPerson::Surface backBuffer;
+        return SUCCEEDED(device->GetRenderTarget(0, &target.surface)) &&
+               SUCCEEDED(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &backBuffer.surface)) &&
+               target.surface != nullptr && target.surface == backBuffer.surface;
     }
 
     bool ReadView(IDirect3DDevice9* device, ThirdPerson::SkyPass::View& out) {
@@ -72,26 +88,26 @@ namespace {
         return true;
     }
 
-    HRESULT __stdcall PresentDetour(IDirect3DDevice9* device, const RECT* source,
-                                    const RECT* destination, HWND window, const RGNDATA* dirty) {
-        g_passed = false;
-        return g_originalPresent(device, source, destination, window, dirty);
-    }
-
-    HRESULT __stdcall EndSceneDetour(IDirect3DDevice9* device) {
+    HRESULT __fastcall EndSceneDetour(uint8_t* self) {
+        IDirect3DDevice9* device = ThirdPerson::Field<IDirect3DDevice9*>(self, kDevice);
         ThirdPerson::SkyPass::Pass pass = {device};
-        if (!g_passed && SUCCEEDED(device->GetViewport(&pass.viewport)) &&
-            pass.viewport.MinZ >= kSkyPassMinZ && device->TestCooperativeLevel() == D3D_OK &&
-            IsWorld(device) && ReadView(device, pass.view)) {
+        if (g_passed) {
+            g_passed = !IsComposite(device);
+        } else if (SUCCEEDED(device->GetViewport(&pass.viewport)) &&
+                   pass.viewport.MinZ >= kSkyPassMinZ && device->TestCooperativeLevel() == D3D_OK &&
+                   IsWorld(device) && ReadView(device, pass.view)) {
             g_passed = true;
             g_onPass(pass);
         }
-        return g_originalEndScene(device);
+        return g_originalEndScene(self);
     }
 }
 
 bool ThirdPerson::SkyPass::Install(PassFn onPass) {
     g_onPass = onPass;
-    return Vtable::Hook(kPresentSlot, &PresentDetour, &g_originalPresent) &&
-           Vtable::Hook(kEndSceneSlot, &EndSceneDetour, &g_originalEndScene);
+    if (!Hook(g_endScene.address(), &EndSceneDetour, &g_originalEndScene)) {
+        FCSE::Logf("sky pass: the engine device's EndScene cannot be hooked; no shadow is drawn");
+        return false;
+    }
+    return true;
 }

@@ -6,7 +6,8 @@
 
 namespace ThirdPerson::Shadow {
 
-// Hooks the device's draws and its frame. False, and logged, when they cannot be hooked.
+// Hooks the renderer's view update and the engine device's EndScene. False, and logged, when they
+// cannot be hooked.
 bool Install();
 
 void SetEnabled(bool enabled);
