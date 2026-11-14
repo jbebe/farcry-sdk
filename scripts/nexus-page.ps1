@@ -1,7 +1,8 @@
 <#
 .SYNOPSIS
     Sets each project's Nexus Mods page summary and description from its assets\nexus-summary.txt and
-    assets\nexus-description.bbcode, through the v3 editMod endpoint.
+    assets\nexus-description.bbcode, through the v3 editMod endpoint. Every description ends with a
+    line linking its project's source on GitHub.
 
 .DESCRIPTION
     A project's page is the NEXUS_MOD_ID of the release workflow that prepares its directory, so the
@@ -81,6 +82,7 @@ foreach ($directory in $projects) {
         Write-Host "::warning::$directory has no $missing - its page is not updated."
         continue
     }
+    $description += "`n`n[b]Open source[/b]: every line of it is on GitHub, in [url=https://github.com/jbebe/farcry-sdk/tree/main/$directory]farcry-sdk/$directory[/url]."
 
     $body = [ordered]@{ description = $description }
     if (-not $summary) {

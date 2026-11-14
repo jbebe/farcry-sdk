@@ -95,6 +95,8 @@ Every project released to Nexus Mods keeps its page text in its `assets/` folder
 
 A release also sets its Nexus Mods page's summary and description from these, so the page describes
 the version that just went out. A project without a description file keeps its page as it is.
+`scripts/nexus-page.ps1` ends every description with a line linking the project's source on GitHub,
+so the file itself leaves it out.
 
 To change a page's text without a release, run Actions → **Nexus Mods pages** → **Run workflow**,
 with the project directory, such as `mods/UFCP`. A page is only ever changed by naming its project.
