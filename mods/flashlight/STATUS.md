@@ -26,7 +26,7 @@ Stage: maintenance
 
 ## Approvals
 
-- played: 49624dc 2026-10-29 - implied by the flashlight-1.2.1 release
+- played: 7b4c384a 2026-11-14 - "I approve it all changes"
 - page text: 49624dc 2026-10-29 - implied by the flashlight-1.2.1 release
 
 ## Checks

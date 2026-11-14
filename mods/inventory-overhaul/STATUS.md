@@ -53,7 +53,7 @@ Stage: active
 
 ## Approvals
 
-- played: 7950320 2026-11-01 - implied by the inventory-overhaul-1.0.0 release; earlier "it all seem to be working" (2026-10-29)
+- played: 7b4c384a 2026-11-14 - "I approve it all changes"
 - page text: 7950320 2026-11-01 - implied by the inventory-overhaul-1.0.0 release
 
 ## Checks

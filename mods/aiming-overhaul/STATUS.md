@@ -74,7 +74,7 @@ Stage: active
 - No radial edge blur on the mod's scopes - unconfirmed
 ## Approvals
 
-- played: 10aebf7 2026-10-15 - implied by the aiming-overhaul-1.2.0 release
+- played: 7b4c384a 2026-11-14 - "I approve it all changes"
 - page text: 10aebf7 2026-10-15 - implied by the aiming-overhaul-1.2.0 release
 
 ## Checks
