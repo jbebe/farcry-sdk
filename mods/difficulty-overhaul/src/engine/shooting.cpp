@@ -116,10 +116,12 @@ bool Alert(const void* agent) {
     return state >= kAlertState && state <= kLastCombatState;
 }
 
-float FireLine(const void* agent) {
+bool Fighting(const void* agent) {
     const int state = Read<int>(agent, kAgentState);
-    return state > kAlertState && state <= kLastCombatState ? FuzzyLine(agent) : ClearLine(agent);
+    return state > kAlertState && state <= kLastCombatState;
 }
+
+float FireLine(const void* agent) { return Fighting(agent) ? FuzzyLine(agent) : ClearLine(agent); }
 
 void* ProcessorSoldier(const void* processor) {
     void* agent = Read<void*>(processor, kProcessorAgent);
@@ -220,7 +222,7 @@ int WeaponClass(void* shooting) {
     if (!g_getEquippedWeapon) {
         return kNoWeapon;
     }
-    void* weapon = g_getEquippedWeapon(PawnData(ShooterPawn(shooting)) + kDataInventory);
+    void* weapon = g_getEquippedWeapon(InventoryView(ShooterPawn(shooting)));
     if (weapon == nullptr) {
         return kNoWeapon;
     }
@@ -237,6 +239,8 @@ const char* WeaponClassName(int weaponClass) {
 }
 
 uint8_t* PawnData(void* pawn) { return Read<uint8_t*>(pawn, kPawnData); }
+
+void* InventoryView(void* pawn) { return PawnData(pawn) + kDataInventory; }
 
 void Velocity(void* pawn, float velocity[3]) {
     std::copy_n(Vec3(PawnData(pawn) + kDataEffective, kEffectiveVelocity), 3, velocity);

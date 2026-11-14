@@ -1,0 +1,23 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1/FindPerpendicularPos" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/IfInTheOpenAfterFlank" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/TryRunToThreat" TargetAnchor="Start" />
+  </Exit>
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1/FindPerpendicularPos" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1/FindPathToFlankPos" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1/Stand" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1/AimSmartTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1/LookSmartTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1/CombatFireMoving" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1/FollowPathToFlankPos" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1/LookAtDest1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1/CTaskWait1" />
+</Plan>

@@ -1,0 +1,24 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanProjectileSeen" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/SetPostureIntention" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFireProximity" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScannerDangerousAmmoPile1" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/Stand" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/ComputeProjectileTrajectory" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/StopShooting" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/ThrowGrenade" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/WaitEndAttacking" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/SetAimAtTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/SetLookAtTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/SetPostureIntention" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/ComputeHigherLob" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/ComputeFlatterThrow" />
+</Plan>

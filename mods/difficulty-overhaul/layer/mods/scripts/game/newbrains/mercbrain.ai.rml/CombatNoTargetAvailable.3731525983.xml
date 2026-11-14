@@ -1,0 +1,33 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanProjectileSeen" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable/SetPostureIntention" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFireProximity" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFactShootFlare" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanThrowRequest" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanTargetLost" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CheckHurt" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingFriendlyVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanShotByAnotherTarget" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanMortarSeen1" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable/CheckDZCombat1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable/SetFallback1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable/SearchLeftRight" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable/UnSetNewBestTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable/Stand" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable/SetAimAtPath" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable/SetLookAtPath" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable/SetPostureIntention" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable/SelectBestTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable/WaitAndRetry" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable/SetFireStrategyNever" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable/CTaskWait1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatNoTargetAvailable/CScannerSocialRegion1" />
+</Plan>

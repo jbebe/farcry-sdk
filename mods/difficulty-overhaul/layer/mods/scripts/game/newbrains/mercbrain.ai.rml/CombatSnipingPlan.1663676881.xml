@@ -4,6 +4,7 @@
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/ScanTargetTooClose" TargetAnchor="Start" />
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatSnipingPlan/SetFireSpecial" TargetAnchor="Start" />
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFactShootFlare" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanThrowRequest" TargetAnchor="Start" />
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanProjectileSeen" TargetAnchor="Start" />
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanTargetLost" TargetAnchor="Start" />
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingVehicle" TargetAnchor="Start" />

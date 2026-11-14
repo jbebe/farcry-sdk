@@ -37,12 +37,13 @@ Stage: active
 - [done] Launchers fired at the player only in a vehicle; on foot he draws his other gun - switching as he gets in and out unseen
 - [done] Squad roles: half assault, half suppress - range-checked
 - [done] Assaulters fire from cover; flanks 20/15 m wide; the game's height attack and relocating switched on - range-checked
-- [done] Cover by where the player is: crouch and fire at him in the open beyond a 20 m run to cover, cover first when he is behind cover, searches 30 m - range-checked at 10 m and 20 m; 20 m and 30 m unplayed
+- [done] Cover by where the player is: crouch and fire at him in the open beyond a 20 m run to cover, cover first when he is behind cover, searches 30 m, else the flank below - range-checked at 10 m and 20 m; 20 m and 30 m unplayed
 - [done] Stand-down: an alert ends after 90 s, the soldier walks back to where he was - range row not run
 - [done] Short exposures from cover: up 1.5 s at a time, the pop-up twice in 9 s, then another spot preferred - unplayed
 - [done] Duck at the crack: a round past a soldier at cover in a fight with the player drops him 1.5-2.5 s, then he moves on - unplayed
-- [new] Flank a player behind cover: a soldier with no cover in reach runs out 20/15 m to his side, then comes in crouched, in place of the straight rush
-- [new] Grenades in a fight: half of each squad carries one grenade, none more; a soldier within 30 m throws at where he last saw a player hidden behind cover for a few seconds, one at a time - the game's own fight throw, never triggered as shipped; every soldier carries 3 today
+- [done] Flank a player behind cover: a soldier with no cover in reach runs out 20/15 m to his side, a random side, then comes in by the game's rush, standing, in place of the straight rush - range-checked: two of three came in from 38-40 m to 8-13 m, the third kept flanking at 40 m; unplayed
+- [done] Grenades in a fight: every soldier carries one grenade, none more, spent by any throw; one throws at where he last saw a player kept behind cover 3 s, 8-30 m off, lobbed at 45°, else 65° or 30° where blocked, 10 s between throws - the game's own fight throw, never triggered as shipped - range-checked: throws at 20-30 m spent the grenade, the others ran from it; recorded at the long wall, the grenade over the player's wall; played: "I cant stay at one place because I'm smoked out with grenades ... This is perfect."
+- [scrapped] Dead soldiers drop a grenade only if they still carry it, no roll - "dropped grenades should work like the base game, the thrown grenades do not affect it"
 - [new] Alerted by a kill: onlookers crouch before drawing - the game already sends them to cover or away 0.2 s after an unseen kill, standing 0.35 s to draw (fc2drive)
 - [scrapped] Combat log per session in bin\difficulty-overhaul-logs, and its hit lines - moved to DevTools
 - [done] Perception and brain traces for testing (-perceptiontrace, -braintrace)
@@ -83,11 +84,13 @@ Stage: active
 - Firing from cover: a soldier shows himself about 1.5 s at a time and comes up somewhere else after two pops
 - A near miss on a soldier at cover makes him duck for 1.5-2.5 s before he moves on
 - With Flashlight at night: a soldier looking your way sees the light from afar, one in the beam sees you all around, at its edge too (full or half cone angle unverified); with it off the night hides you
+- Behind a rock with soldiers coming over open ground: they spread out to your sides and come in from there, not in a line
 
 ## Approvals
 
 - played: 8e20a82 2026-11-06 - alpha4 on Steam, Hardcore: "I feel like this is it now. I can't add anything to it, the experience was right."
 - played: ad7a904f 2026-11-14 - world 1 on GOG, with UFCP, Aiming, Flashlight, Sky, Sound, Vehicle and VSS: "I really enjoyed this round."
+- played: bd1bc3b1 2026-11-14 - grenades and the flank, world 1 on GOG with the same mods: "Okay this is starting to be really good. I cant stay at one place because I'm smoked out with grenades. They dont aggro on me because they are happy behind their covers and its me who need to make the move. This is perfect."
 
 ## Checks
 

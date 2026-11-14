@@ -237,8 +237,8 @@ Add-Instance $alert "$alert/StandDownTimer" @"
 Start-With $alert "$alert/StandDownTimer"
 
 # At long and medium range, a soldier with no cover to reach runs out to the target's side rather than
-# at him, this many metres across his line to the target where the game has 7, and goes after a target
-# above him from a firing spot or a way up.
+# at him, this many metres across his line to the target where the game has 7, to a side picked at
+# random, and goes after a target above him from a firing spot or a way up.
 $flankWidth = @{ LongRangedAttack = 20; MediumRangedAttack = 15 }
 foreach ($band in $flankWidth.Keys) {
     $open = "$combat/$band/AssaultAttack/NoCoverOrNoPathFailure"
@@ -345,7 +345,8 @@ function Add-FarFromCover($plan, [string[]]$hold) {
 # An assaulter at his cover fires from it as a suppressor does, with the suppressor's pop-up, strafe and
 # stand-up plans; a shotgunner still rushes on. With the player in the open, a soldier whose cover is too
 # far holds and fires crouched, as does a suppressor with none; with him behind cover, a soldier runs to
-# his cover, else to any a short run off, else at the player. README.md has the whole of it.
+# his cover, else to any a short run off, else out to the player's side and in at him from there.
+# README.md has the whole of it.
 foreach ($band in $bands) {
     $assault = "$combat/$band/AssaultAttack"
     $suppress = "$combat/$band/SuppressAttack/SuppressFireAttack"
@@ -376,19 +377,22 @@ foreach ($band in $bands) {
     Also-Start "$assault/NoCoverOrNoPathFailure/FleeFromLocation_BP1/AfterFleeFireStrategy1" OnStart $ifOpenCrouch
 
     Add-FarFromCover $assault (Add-Hold $assault "$assault/CTaskChooseCoverAttack1")
-    Add-IfInTheOpen "$assault/IfInTheOpenNoCover" $assault "$assault/IfInTheOpenLong" "$assault/NoCoverOrNoPathFailure" `
-        "$assault/FindCoverNear"
+    $noCover = "$assault/NoCoverOrNoPathFailure"
+    Add-IfInTheOpen "$assault/IfInTheOpenNoCover" $assault "$assault/IfInTheOpenLong" $noCover "$assault/FindCoverNear"
     Redirect "$assault/FindCover" Default "$assault/IfInTheOpenNoCover"
     Add-NearCoverSearch "$assault/FindCoverNear" $assault "$assault/IfInTheOpenNoCover" coverPosition `
-        "$assault/FindPathToNearCover" "$assault/RushHim"
+        "$assault/FindPathToNearCover" $noCover
     Copy-Instance "$assault/FindPath" "$assault/FindPathToNearCover" $assault "$assault/FindCoverNear" @{
-        "$assault/NoCoverOrNoPathFailure" = "$assault/RushHim"
-        "$assault/CTaskCheckUnderFire2"   = "$assault/IfNearEnough"
+        "$assault/CTaskCheckUnderFire2" = "$assault/IfNearEnough"
     }
     Add-PathSplit "$assault/IfNearEnough" $assault "$assault/FindPathToNearCover" $nearCover `
-        "$assault/CTaskCheckUnderFire2" "$assault/RushHim"
-    Copy-Instance "$assault/NoCoverOrNoPathFailure/CTaskOperateOnFlagField1" "$assault/RushHim" $assault `
-        "$assault/FindPathToNearCover"
+        "$assault/CTaskCheckUnderFire2" $noCover
+    # From the side, a soldier comes in at a player behind cover as the game's rush does.
+    if ($flankWidth.ContainsKey($band)) {
+        Add-IfInTheOpen "$noCover/IfInTheOpenAfterFlank" $noCover "$noCover/FlankAttack_KR1" "$noCover/WaitCovered1" `
+            "$noCover/CTaskOperateOnFlagField1"
+        Redirect "$noCover/FlankAttack_KR1" Success "$noCover/IfInTheOpenAfterFlank"
+    }
 
     Set-Parameter "$suppress/FindCoverToMakeSuppressFireLOS" maxRadius $nearCover
     $hold = Add-Hold $suppress "$suppress/AnalyzePath"
@@ -457,6 +461,61 @@ foreach ($band in $bands) {
     Set-Parameter "$suppress/FindCoverToMakeSuppressFireLOS" canUseSameCover 0
     Set-Parameter "$combat/$band/AssaultAttack/FindCover/FindCoverWithLOS" canUseSameCover 0
 }
+
+# Replaces each of the parameters $parameters of the instance $to with $from's.
+function Copy-Parameter($from, $to, [string[]]$parameters) {
+    foreach ($parameter in $parameters) {
+        $old = (Instance $to).SelectSingleNode("Parameter[@Name='$parameter']")
+        $new = (Instance $from).SelectSingleNode("Parameter[@Name='$parameter']").CloneNode($true)
+        $old.ParentNode.ReplaceChild($new, $old) | Out-Null
+    }
+}
+
+# Switches on the optional parameter $parameter of the instance $name at $value.
+function Set-Switched($name, $parameter, $value) {
+    $node = (Instance $name).SelectSingleNode("Parameter[@Name='$parameter']")
+    $node.SetAttribute('Value', "<$value, True>")
+    $node.SelectSingleNode("Parameter[@Name='Value']").SetAttribute('Value', $value)
+    $node.SelectSingleNode("Parameter[@Name='Enabled']").SetAttribute('Value', 1)
+}
+
+# On the agent flag the plugin sets, a soldier fighting the player throws his grenade: the flag asks combat
+# for its throw, which the game never asks for, wherever the flare's flag is watched. The throw goes at the
+# spot he last saw his target, as fast across as the alert brain's, but lobbed to come down at 45 degrees
+# over the cover he hides behind, up to 3.5 s in the air; where that arc is blocked, a higher lob at 65,
+# then a flatter throw at 30.
+$throwFlag = 35
+$flare = "$combat/ScanFactShootFlare"
+$askThrow = "$combat/ScanThrowRequest"
+Copy-Instance $flare $askThrow $combat $flare
+Set-Parameter $askThrow FlagFieldValue $throwFlag
+Redirect $askThrow Success "$combat/ClearThrowRequest", "$combat/ThrowRequested"
+Copy-Instance "$template/NoCoverOrNoPathFailure/CTaskOperateOnFlagField1" "$combat/ClearThrowRequest" $combat $askThrow
+Set-Parameter "$combat/ClearThrowRequest" FlagFieldValue $throwFlag
+Set-Parameter "$combat/ClearThrowRequest" OperationType 1
+Copy-Instance "$shoot/LauncherInHand" "$combat/ThrowRequested" $combat "$combat/ClearThrowRequest"
+Set-Parameter "$combat/ThrowRequested" factNameIN ThrowGrenade
+Redirect "$combat/ThrowRequested" Success $combat Restart
+foreach ($connection in @($doc.SelectNodes("//Connection[@Target='$flare']"))) {
+    $copy = $connection.CloneNode($true)
+    $copy.SetAttribute('Target', $askThrow)
+    $connection.ParentNode.InsertAfter($copy, $connection) | Out-Null
+}
+$throw = "$combat/CombatThrowProjectile"
+$alertThrow = "$alert/GoThrowProjectile"
+$compute = "$throw/ComputeProjectileTrajectory"
+Copy-Parameter "$alertThrow/PrepareThrow1" $compute throwPosFactName, MaxHorThrowSpeed
+Set-Switched $compute ApproachAngle -45
+Set-Switched $compute MaxFlyingTime 3.5
+$previous = $compute
+foreach ($retry in @{ Name = 'ComputeHigherLob'; Angle = -65 }, @{ Name = 'ComputeFlatterThrow'; Angle = -30 }) {
+    Copy-Instance $previous "$throw/$($retry.Name)" $throw $previous @{}
+    Set-Switched "$throw/$($retry.Name)" ApproachAngle $retry.Angle
+    Redirect $previous Failure "$throw/$($retry.Name)"
+    $previous = "$throw/$($retry.Name)"
+}
+Copy-Parameter "$alertThrow/CTaskSetAimStrategy1" "$throw/SetAimAtTarget" aimStrategy, SmartAimPos
+Copy-Parameter "$alertThrow/CTaskSetLookStrategy1" "$throw/SetLookAtTarget" lookStrategy, SmartLookPos
 
 $doc.Save($source)
 Invoke-Cli ai fragments $source --base $brain --out $fragments

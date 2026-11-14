@@ -42,5 +42,4 @@
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/FindCoverNear" />
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/FindPathToNearCover" />
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/IfNearEnough" />
-  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/RushHim" />
 </Plan>

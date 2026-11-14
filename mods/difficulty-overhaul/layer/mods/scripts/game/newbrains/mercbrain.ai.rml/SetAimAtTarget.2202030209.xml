@@ -1,0 +1,14 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/SetAimAtTarget" Class="CTaskSetAimStrategy" Looping="0" Independent="0">
+  <Parameter Name="aimStrategy" Value="1" />
+  <Parameter Name="SmartAimPos" Value="&lt;Vec3dFact, BestTargetLastPosSeen&gt;">
+    <Parameter Name="RefType" Value="20" />
+    <Parameter Name="RefName" Value="BestTargetLastPosSeen" />
+  </Parameter>
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/SetLookAtTarget" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+</Task>

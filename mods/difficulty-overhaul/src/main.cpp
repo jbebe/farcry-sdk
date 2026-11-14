@@ -10,6 +10,7 @@ void InstallSuppression();
 void InstallSquadMemory();
 void InstallSquadRoles();
 void InstallInTheOpen();
+void InstallGrenades();
 void InstallWatchedSpot();
 void InstallPerception();
 void InstallFlashlight();
@@ -33,6 +34,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallSquadMemory();
     InstallSquadRoles();
     InstallInTheOpen();
+    InstallGrenades();
     InstallWatchedSpot();
     InstallPerception();
     InstallFlashlight();

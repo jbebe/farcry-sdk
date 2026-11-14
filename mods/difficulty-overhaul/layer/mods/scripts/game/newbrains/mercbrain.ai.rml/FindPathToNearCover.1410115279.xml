@@ -31,7 +31,7 @@
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/IfNearEnough" TargetAnchor="Start" />
   </Exit>
   <Exit Name="Default">
-    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/RushHim" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure" TargetAnchor="Start" />
   </Exit>
   <Exit Name="Always" />
   <Exit Name="PathFindFailed" />

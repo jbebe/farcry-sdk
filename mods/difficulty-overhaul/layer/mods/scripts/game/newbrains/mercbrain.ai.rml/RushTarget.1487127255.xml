@@ -1,0 +1,56 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/RushTarget" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScannerLastManStanding" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanProjectileSeen" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFireProximity" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanTargetInBuilding" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanGrenadeAttackRequest" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFactShootFlare" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanThrowRequest" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CheckHeightDiff1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingFriendlyVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/RushTarget/EquipWeaponPlan2" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/RushTarget/ScanNeedRelocate" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CheckFireRange" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanMortarSeen1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScannerDangerousAmmoPile1" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/ScanNeedRelocate" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/ShootPlan2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CScannerIsInDistance3" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CTaskPathFollow3" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CTaskFindRandomDest4" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CTaskFindRandomDest3" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CTaskWait3" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/BlindPathFind1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/BlindPathFind" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CScannerIsInDistance2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CTaskPathFind2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CTaskPathFollow2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/ShootPlan1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/ScanNewBestTarget_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CTaskPathFind1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CTaskPathFollow1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CTaskWait1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CScannerIsInDistance1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/MovingShootPlan" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CTaskCheckTargetVisible1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/RelocateToTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CheckFactBestTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CScannerNewTargetNeeded1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CTaskWait2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/SetNewBestTarget1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/ScanNoBestTargetExist" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CTaskSetLookStrategy1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CTaskSetAimStrategy1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CheckHeightDiff1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CTaskFindRandomDest1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/EquipWeaponPlan2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/RushTarget/CheckFireRange" />
+</Plan>

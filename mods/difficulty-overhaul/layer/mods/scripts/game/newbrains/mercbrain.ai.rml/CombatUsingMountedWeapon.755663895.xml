@@ -1,0 +1,21 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/CombatUsingMountedWeapon" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatUsingMountedWeapon/UseMountedWeapon1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanProjectileSeen" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanTargetLost" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFireProximity" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFactShootFlare" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanThrowRequest" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanMortarSeen1" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatUsingMountedWeapon/StopUsingMountedWeapon_BP1" TargetAnchor="Start" />
+  </Anchor>
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatUsingMountedWeapon/UseMountedWeapon1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatUsingMountedWeapon/StopUsingMountedWeapon_BP1" />
+</Plan>

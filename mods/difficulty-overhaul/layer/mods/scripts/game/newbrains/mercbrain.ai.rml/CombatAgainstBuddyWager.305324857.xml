@@ -1,0 +1,34 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFireProximity" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanProjectileSeen" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFactShootFlare" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanThrowRequest" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager/AlwaysMissAccuracy" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager/ScanBuddyWagerPreCombat" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager/EquipWeaponPlan" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingFriendlyVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanShotByAnotherTarget" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager/AccuracyNormal" TargetAnchor="Start" />
+  </Anchor>
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat" TargetAnchor="Restart" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager/AccuracyNormal" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager/NoTargetPlan" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager/TargetPlan" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager/ScanNewBestTarget_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager/CTaskSelectBestTarget1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager/AlwaysMissAccuracy" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager/CTaskDebugSetCurrentBehavior1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager/ScanBuddyWagerPreCombat" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager/CheckFactDefensivePoint" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager/EquipWeaponPlan" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatAgainstBuddyWager/NoDefensivePointPlan" />
+</Plan>

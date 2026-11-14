@@ -47,9 +47,9 @@
   <Exit Name="Default" />
   <Exit Name="Always" />
   <Exit Name="FindCoverFailed">
-    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/RushHim" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/NoCoverOrNoPathFailure" TargetAnchor="Start" />
   </Exit>
   <Exit Name="UnknownError">
-    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/RushHim" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/NoCoverOrNoPathFailure" TargetAnchor="Start" />
   </Exit>
 </Task>

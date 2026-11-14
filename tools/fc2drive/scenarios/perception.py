@@ -349,10 +349,12 @@ def verdict(watch, level, model, close):
     return "unjudged, he never came close" if model is None else "unjudged, not in the zone within reach"
 
 
-def spawn_alive(game, log, at, yaw):
-    """A rifleman spawned at `at` who outlives a fall the game is sure of, and the lines since."""
+def spawn_alive(game, log, at, yaw, clear=True):
+    """A rifleman spawned at `at` who outlives a fall the game is sure of, and the lines since; with `clear`
+    off, the soldiers already spawned stay and a dead one with them."""
     for _ in range(SPAWNS):
-        game.lua(CLEAR)
+        if clear:
+            game.lua(CLEAR)
         log.new_lines()
         game.lua(f'TestRange.n = TestRange.n + 1 TestRange[TestRange.n] = SpawnEntityFromArchetype('
                  f'"{RIFLEMAN}", {at[0]:.3f}, {at[1]:.3f}, {GROUND:.4f}, 0, 0, {yaw:.1f})')

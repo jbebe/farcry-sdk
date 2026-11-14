@@ -114,6 +114,19 @@ Combat that is realistic and fair:
   flashlight mod did before with the AI". Flashlight sends its beam on an FCSE channel and this mod
   applies its three rules (the user's pick over finding the light among the scene's lights, which car
   headlights could fool). Without this mod, guards ignore the light.
+- **A flank at a player behind cover, and grenades** (2026-11-14). From world 1: "I sit behind a rock
+  with a sniper and firstly, no one threw a grenade at me, secondly, they all ran towards me one by one
+  ... they ran on the same path in an open field towards me." A soldier with no cover in reach now runs
+  out to the player's side first, as with the player in the open, and comes in from there (the user's
+  1a over a 40 m flank or holding to fire at the rock). Grenades: the game's fight throw, which nothing
+  asks for, asked for once the player has kept behind cover a few seconds and the soldier is within
+  30 m, one soldier at a time (2a over keeping the game's two throws only), with the user's limit: "every
+  enemy should own at most one grenade. so like for 2 enemies there should be 1 grenade, for 3, its 1
+  or 2, for 4 its 2 grenades ... I dont want grenade spamming like in stalker". A dead soldier drops a
+  grenade only if he still carries his (1a over the game's roll, alone or on top). After the first build
+  the user widened it: "lets give every enemy one grenade and thats it. only one can throw in a given
+  time interval but they can all have one". The drop went back to the game's own roll with it:
+  "dropped grenades should work like the base game, the thrown grenades do not affect it".
 
 ## Perception
 
@@ -255,6 +268,7 @@ reach, the wall between left him unlit. Not played.
 | 21 | Hard to hit (2026-11-14): a cover attack shows the soldier 1.5 s at a time, the pop-up 2 to 3 s down and 1.5 s up twice in 9 s where the game has 3 s, 3 s and 15 s, the strafe and stand-up 1.5 s where it has 5 s; his next cover search passes over his cover, its fallback excepted; a round that marks him under fire while he fights the player from cover crouches him, halts the attack's own timers, and ends it 1.5 to 2.5 s later; hit locations but the head ×0.4: torso and legs 0.4, arms 0.24, hands and feet 0.12 | range, row 36 |
 | 22 | Harder to kill (2026-11-14): torso 0.165, arms and hands 0.105, legs and feet 0.3, so four AK-47 hits to the body, six to an arm; only a leg or foot hit downs a soldier, and the plugin sets the limb share a downed soldier takes to 0.11 where the game has 0.2, so six AK-47 hits to a leg kill, the second leaving him 40 health as he goes down; in the open a soldier runs to cover up to 20 m off where he ran 10 m, the assaulter's long paths split there too; the suppressors' cover search and the fallback reach 30 m where they reached 20 m | range, row 36 |
 | 23 | The player's flashlight (2026-11-14): Flashlight's beam read from FCSE's `flashlight.beam` channel; while it is lit night no longer shortens a soldier's sight; one whose head is inside the beam has the player in his focus and his cones widened to a full turn, as when he hears him; in the dark one not facing away within 60 m of the lamp times the darkness sees it; seeing it, he recognises from at least four times his distance before cover, grass and shade | `tools\fc2drive\scenarios\flashlight_sight.py` at 01:00, twice: off at 40 m he recognised from 25 m and never saw the player; on at 40 m every look facing the player saw the flashlight, recognising from 159-242 m; at 20 m with his back turned the beam on him put the player in his focus on every look and he fought; with the beam turned away he saw nothing until he turned toward the lamp (GOG) |
+| 24 | Flank behind cover and grenades (2026-11-14): with the player behind cover and no cover in a 30 m run, the assaulter's no-cover plan: the flank 20/15 m to a random side at long and medium range, then the game's rush from there; every enemy soldier keeps one grenade of the game's three, its unlimited uses switched off so a throw spends it; a soldier fighting the player is asked, on agent flag 35, once the player has kept out of the open 3 s and the spot he last saw him is 8-30 m off, 10 s between asks; the combat throw lobbed at that spot, 45° down, else 65° and then 30° where the arc is blocked, at most 3.5 s in the air; the dead drop grenades by the game's own roll, a spent grenade still in the inventory | `tools\fc2drive\scenarios\grenades.py`, invincibility on, the player behind the low wall: two of three riflemen 38-40 m off flanked and came in to 8-13 m, the third kept flanking at 40 m; with every other soldier carrying, one of three carried a grenade; one asked at 20 m threw within 0.3 s, it spent his grenade and the others ran from it; at 25° down the throw failed its clearance over the wall, and at 45° once in five. `grenades.py wall`, recorded: the player behind the 18 m wall north of the long wall, four riflemen south of it; a carrier at the long wall threw from 30 m 5.6 s after the player hid, and it burst on the player's wall (GOG) |
 
 The mod's README lists each feature's values.
 

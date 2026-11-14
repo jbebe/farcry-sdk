@@ -1,0 +1,34 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/ComputeProjectileTrajectory" Class="CTaskComputeProjectileTrajectory" Looping="0" Independent="0">
+  <Parameter Name="projectileType" Value="0" />
+  <Parameter Name="throwPosFactName" Value="&lt;Vec3dFact, BestTargetLastPosSeen&gt;">
+    <Parameter Name="RefType" Value="20" />
+    <Parameter Name="RefName" Value="BestTargetLastPosSeen" />
+  </Parameter>
+  <Parameter Name="MaxFlyingTime" Value="&lt;3.5, True&gt;">
+    <Parameter Name="Value" Value="3.5" />
+    <Parameter Name="Enabled" Value="1" />
+  </Parameter>
+  <Parameter Name="MaxHorThrowSpeed" Value="&lt;20, True&gt;">
+    <Parameter Name="Value" Value="20" />
+    <Parameter Name="Enabled" Value="1" />
+  </Parameter>
+  <Parameter Name="ApproachAngle" Value="&lt;-45, True&gt;">
+    <Parameter Name="Value" Value="-45" />
+    <Parameter Name="Enabled" Value="1" />
+  </Parameter>
+  <Parameter Name="FriendlyClearanceRange" Value="&lt;0, False&gt;">
+    <Parameter Name="Value" Value="0" />
+    <Parameter Name="Enabled" Value="0" />
+  </Parameter>
+  <Parameter Name="testTrajectoryClearance" Value="1" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/ThrowGrenade" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatThrowProjectile/ComputeHigherLob" TargetAnchor="Start" />
+  </Exit>
+</Task>

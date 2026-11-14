@@ -1,0 +1,31 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/CombatRelocate" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFireProximity" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanProjectileSeen" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFactShootFlare" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanThrowRequest" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanTargetLost" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CheckHurt" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingFriendlyVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanShotByAnotherTarget" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatRelocate/CTaskSetLookStrategy1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanMortarSeen1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScannerDangerousAmmoPile1" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CheckFactManageThreshold" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatRelocate/CTaskPathFind1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatRelocate/CTaskPathFollow1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatRelocate/DisplayError1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatRelocate/TestForBlockPlan1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatRelocate/CTaskWait1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatRelocate/CTaskSetLookStrategy1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatRelocate/CTaskSetAimStrategy1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatRelocate/IronSight" />
+</Plan>

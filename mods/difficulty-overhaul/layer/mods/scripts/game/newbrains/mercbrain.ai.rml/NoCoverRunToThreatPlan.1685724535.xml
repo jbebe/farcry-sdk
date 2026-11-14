@@ -1,0 +1,34 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/NoCoverRunToThreatPlan" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/NoCoverRunToThreatPlan/NoCoverRunToThreat_BP1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/NoCoverRunToThreatPlan/CheckTargetUsingMountedWeapon1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/NoCoverRunToThreatPlan/ScanNewBestTarget_BP1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/NoCoverRunToThreatPlan/CheckCloseTarget_BP1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/NoCoverRunToThreatPlan/ScanReloadIsNeeded_BP1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CheckHurt" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanTargetLost" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFactShootFlare" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanThrowRequest" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScannerLastManStanding" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanProjectileSeen" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFireProximity" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFriendDied" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingFriendlyVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanShotByAnotherTarget" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanMortarSeen1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScannerDangerousAmmoPile1" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CheckFactManageThreshold" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/NoCoverRunToThreatPlan/NoCoverRunToThreat_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/NoCoverRunToThreatPlan/ScanNewBestTarget_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/NoCoverRunToThreatPlan/CheckCloseTarget_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/NoCoverRunToThreatPlan/CheckTargetUsingMountedWeapon1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/NoCoverRunToThreatPlan/ScanReloadIsNeeded_BP1" />
+</Plan>

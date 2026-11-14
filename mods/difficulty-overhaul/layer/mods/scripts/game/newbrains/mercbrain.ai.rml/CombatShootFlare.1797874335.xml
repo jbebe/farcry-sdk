@@ -1,0 +1,32 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFactShootFlare" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanThrowRequest" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/CTaskCheckTargetVisible1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanMortarSeen1" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/UnSetShootFlare1" TargetAnchor="Start" />
+  </Anchor>
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat" TargetAnchor="Restart" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/UnSetShootFlare2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/UnSetShootFlare1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/ReportReinforcementConfirmation1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/Stand" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/SwitchWeaponToFlareGun" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/CTaskWait2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/CTaskShoot1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/CTaskDisplayError1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/CTaskSetFireStrategy1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/CTaskSetAimStrategy1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/ReportReinforcementConfirmation" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/UnSetShootFlare" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/EmitBarkCallReinforcements" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/CTaskCheckIsPlayingBark1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/CombatShootFlare/CTaskCheckTargetVisible1" />
+</Plan>

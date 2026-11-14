@@ -38,8 +38,9 @@ float Visibility(void* shooting);
 float FuzzyLine(const void* agent);
 float ClearLine(const void* agent);
 
-// Whether a soldier is alert or fighting, by his CPawnAgent's state.
+// Whether a soldier is alert or fighting, and whether fighting, by his CPawnAgent's state.
 bool Alert(const void* agent);
+bool Fighting(const void* agent);
 
 // The line he fires at the player from: in a fight his fuzzy line, otherwise his clear one.
 float FireLine(const void* agent);
@@ -97,8 +98,9 @@ int WeaponClass(void* shooting);
 
 const char* WeaponClassName(int weaponClass);
 
-// A CPawn's data block.
+// A CPawn's data block, and the CInventoryViewPawn in it.
 uint8_t* PawnData(void* pawn);
+void* InventoryView(void* pawn);
 
 // A CPawn's stances: the two low ones are crouched and the one swimming forces.
 enum StanceId { kStanding, kCrouched, kLow };

@@ -1,0 +1,49 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/ScanReloadIsNeeded_BP1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/ScanNewBestTarget_BP1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CheckCloseTarget_BP1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CTaskSetFireStrategy1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CheckHurt" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanTargetLost" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFactShootFlare" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanThrowRequest" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScannerLastManStanding" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanProjectileSeen" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFireProximity" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanGrenadeAttackRequest" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFriendDied" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanTargetInBuilding" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingFriendlyVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanShotByAnotherTarget" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanMortarSeen1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScannerDangerousAmmoPile1" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CheckFactManageThreshold" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CTaskCheckTargetHeightDiff4" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CTaskCheckTargetHeightDiff3" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CTaskCheckTargetHeightDiff1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CTaskFindRandomDest1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CTaskPathFind1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CTaskPathFollow1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/ScanReloadIsNeeded_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/ScanNewBestTarget_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CheckCloseTarget_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CTaskPathFind2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CTaskPathFollow2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CTaskSetFireStrategy2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CTaskCheckTargetHeightDiff2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CTaskFuzzyChoice1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CTaskSetFireStrategy1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CTaskHighTargetAttackPos1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CheckTargetIsInBuilding" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/CTaskWait1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/AttackHigherTarget/BarkAboutTargetOnRoof" />
+</Plan>

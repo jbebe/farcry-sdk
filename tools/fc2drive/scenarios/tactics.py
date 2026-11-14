@@ -46,7 +46,7 @@ CROUCH = "CrouchInTheOpen"
 # Where a soldier held where he stood to fire, looked for cover near himself, and rushed the player.
 HOLD = "HoldInTheOpen"
 NEAR = "FindCoverNear"
-RUSHES = ("RushHim", "NoCoverMoveAttack")
+RUSHES = ("NoCoverRunToThreatPlan", "NoCoverMoveAttack")
 ASSAULT_COVER = "AssaultAttack/CTaskChooseCoverAttack1"
 SHOT = re.compile(r"shot at player:")
 TRACE = re.compile(r"soldier (\w{8}) perception trace: (\S+) m, .*notices from (\S+) m, recognises from (\S+) m; "

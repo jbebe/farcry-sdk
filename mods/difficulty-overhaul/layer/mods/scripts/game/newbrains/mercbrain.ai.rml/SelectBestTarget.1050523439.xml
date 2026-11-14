@@ -1,0 +1,28 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFactShootFlare" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanThrowRequest" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanTargetLost" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget/CTaskWait1" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat" TargetAnchor="Restart" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget/SetTargetIsSafeFlag" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget/AimTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget/LookTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget/AimAtPath1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget/LookPath1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget/AimAtPath" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget/LookPath" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget/SelectBestTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget/WaitAndRetry" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget/CheckFactExist" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget/SetFireStrategyNone" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget/UnSetNewBestTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/SelectBestTarget/CTaskWait1" />
+</Plan>

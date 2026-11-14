@@ -10,8 +10,13 @@ Notable changes to Difficulty Overhaul, loosely following
   sees it from up to 60 m, one you shine it on sees you even with his back turned, and while it is on
   the dark no longer hides you. Needs the next Flashlight, which hands this mod the guards' reaction
   to its light.
+- **Grenades in a fight.** Stay behind cover too long and a soldier within 30 m lobs a grenade at
+  where he last saw you. Each soldier carries just one and only one throws at a time, at most every
+  10 s, so a fight never sees a rain of them.
 
 ### Changed
+- **No more lines of soldiers running at your rock.** With you behind cover and no cover near him, a
+  soldier first runs out to your side, left or right, and comes in at you from there.
 - **Soldiers are hard to hit.** A soldier firing from cover shows himself for about 1.5 s at a time and
   comes up somewhere else after two pops. A round cracking past him makes him duck. Caught in the open,
   he runs to cover up to 20 m off before he crouches and shoots where he stands, and soldiers look for

@@ -1,0 +1,55 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckTargetUsingMountedWeapon1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/ScanNewBestTarget_BP1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckIsUsingMountedWeapon" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckIsAIvsAI" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckCloseTarget" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckForHeightDiff" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFriendDied" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFactShootFlare" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanThrowRequest" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanTargetLost" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScannerLastManStanding" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanProjectileSeen" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFireProximity" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanTargetInBuilding" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanGrenadeAttackRequest" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CheckHurt" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CTaskCheckSpecialMissionBehaviour1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingFriendlyVehicle" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanShotByAnotherTarget" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanMortarSeen1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScannerDangerousAmmoPile1" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CheckFactManageThreshold" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckIsAIvsAI" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/SetUnderFireTrue" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckTargetUsingMountedWeapon1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/ScanNewBestTarget_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckForVehicle" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckForMountedWeapon" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/RequestVehiclePlan" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckIsUsingMountedWeapon" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/FindMountedWeapon1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/UseMountedWeapon1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/DebugInfo_MountedWeapon" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/SuppressAttack" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CTaskCheckArmyRole1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/SetUnderFireFalse" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CTaskCheckUnderFire1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckAIvsAIPlan" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckCloseTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckPlayerUsingShotgun" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckForShotgunProgression" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckHeightDiff" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/CheckForHeightDiff" />
+</Plan>

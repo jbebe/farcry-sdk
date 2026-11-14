@@ -143,6 +143,54 @@ server build** parts:
 Difficulty Overhaul's brain keeps the launcher for a player in a vehicle
 ([design log](../design/difficulty.md)).
 
+### Grenades
+
+Every enemy inventory pack in `gamemodesconfig.xml` (`assault`, `shotgun`, `sniper`, `RocketLauncher`,
+`Mortar`, `CarlGustav`) gives three M67 grenades. A gadget's state (`CGadget` `+0x24`) holds its uses
+(`+0x7C` in Steam) and a flag (`+0x80`) that makes `CGadget::DecreaseUses` (Steam `0x10149690`) spend
+none. A soldier's grenade has the flag set, so his throws never use one up (seen in game with fc2drive,
+GOG v1.03).
+
+The combat brain has its own throw, `CombatThrowGrenade`, which runs `CombatThrowProjectile`. The chain
+picks it when the blackboard fact `ThrowGrenade` (CRC32 `0x417D566B`) is there, right after
+`CombatTargetTooClose`, and removes the fact. Nothing in the shipped game writes that fact: the code
+reads it only in `CBrainMercCombat::DoStart`, and no `mercbrain` task names it. So the plan never runs.
+Its trajectory task has no limits switched on and aims at the target itself (**traced in the server
+build**). A `CTaskUpdateBlackboard` that creates the fact by name does select it.
+
+Two other throws do run:
+
+- **The squad loses the player.** The lieutenant drops a target once no member has seen it for 10 s plus
+  its camping score. When its last target goes, `CDispatcherSquadLieutenant::BroadcastTargetLost` sorts
+  the members by distance to their `BestTargetLastPosSeen`. If the nearest is more than 10 m from it
+  and a roll comes out over 50 %, the two nearest get rush type 5 and the rest wait (type 3). Otherwise
+  up to four rush the spot by the lieutenant's rush types. `SearchTargetLost` keeps the type at agent
+  `+0x934`, and the alert brain runs type 5 as `GoThrowProjectile`: a tactical path to the spot, a stop
+  15 m short of it, and a throw at it with at most 2.5 s in the air and 20 m/s across, coming down at
+  25°.
+- **The player in a building.** `DealMercSuspiciousBuilding` orders a member to throw inside when
+  `IsAgentValidForGrenadeBuildingAttack` passes: he is alert or active (army-member states 2 or 4),
+  in no building himself, within 30 m of the building, with an entry near him, and his grenade has uses
+  left. The order raises flag 20 and sets the fact `GrenadeTargetBuilding` (**traced in the server
+  build**).
+
+`CTaskComputeProjectileTrajectory::ComputeGrenadeTrajectory` with `ApproachAngle` on takes the flight
+time squared as 2(tan(angle) · d − dz) / −9.82, and refuses a throw past `MaxFlyingTime` or
+`MaxHorThrowSpeed`. With `testTrajectoryClearance` it then checks the arc with rays, and a failed check
+ends the task with no throw. A throw coming down at 25° does not clear a low wall 3 m in front of its
+target; one coming down at 45° does (seen in game with fc2drive, GOG v1.03).
+
+When a pawn dies, `CGOStateEventInventory::DropGadget` (Steam `0x10CE1A80`, `__thiscall` with the pawn
+on the stack, `RET 4`) rolls `ChanceToDropGrenade`. It then asks the pawn's counters
+`CanDropGadgetUponDeath` (vtable `+0xA0`), which says no once `DamageHealth` has set its flag. If both
+pass, it drops one grenade pickup whenever the inventory holds the grenade gadget at all, whatever its
+uses. A throw never takes the gadget out: `CGadgetUseThrowStrategy::Throw` only calls `DecreaseUses`, so
+a soldier who threw his last grenade still drops one (**traced in the server build**). `SInventoryViewPawnImpl::OnSpawn` (Steam `0x10126C00`, no arguments) equips the pack whose name's
+CRC32 sits at the inventory's `+0x08`; the pawn is at `+0x48`.
+
+Difficulty Overhaul gives every soldier one grenade that his throws spend, and asks for the combat throw
+([design log](../design/difficulty.md)).
+
 ## Squads
 
 Every army is run by a `CDispatcherSquadLieutenant`, a C++ commander above the individual brains. It
@@ -747,7 +795,9 @@ The 64 flags are a `uint64` on the `CGameAgent` (Steam `+0x190`, the low 32 firs
 which `CTaskOperateOnFlagField` sets, clears or tests and `CScannerFactExist` with `UseFlagField` watches: with
 `checkExistance` 1 it fires once the flag is set, with 0 once it is clear. No `mercbrain` task touches flag 34, and in the
 server build's code only vehicles' does, on vehicle agents (`CBrainVehicle`, `CBrainBoat`, `CVehicleAgent`), so a
-soldier's flag 34 is free; Difficulty Overhaul sets it while the player is in the open for him.
+soldier's flag 34 is free; Difficulty Overhaul sets it while the player is in the open for him. No `mercbrain`
+task touches flag 35 either, nor any of the server build's flag calls whose index reads off in the
+decompiled code; Difficulty Overhaul sets it to ask a soldier for his grenade.
 `CTaskPathAnalyzer` compares the length of the path last found (agent `+0x18C` in the server build) with its
 `ShortPathValue` and `MediumPathValue`: up to the first it fires `ShortPath`, up to the second `MediumPath`, beyond
 it `LongPath`; `LongPathValue` is not read. A connection to a running plan with the anchor `Restart` stops and

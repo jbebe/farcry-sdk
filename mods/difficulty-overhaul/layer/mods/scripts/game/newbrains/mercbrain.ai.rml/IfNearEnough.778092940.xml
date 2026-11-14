@@ -10,6 +10,6 @@
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/CTaskCheckUnderFire2" TargetAnchor="Start" />
   </Event>
   <Event Name="LongPath">
-    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/RushHim" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/AssaultAttack/NoCoverOrNoPathFailure" TargetAnchor="Start" />
   </Event>
 </Task>

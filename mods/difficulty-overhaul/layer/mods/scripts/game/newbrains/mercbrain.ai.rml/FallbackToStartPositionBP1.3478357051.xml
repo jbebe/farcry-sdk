@@ -1,0 +1,42 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/AimAtTarget" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanArmyMemberStateChange" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFriendDied" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFactShootFlare" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanThrowRequest" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanVisualThreat1" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingVehicle" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanTargetLost" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanProjectileSeen" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanGrenadeAttackRequest" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanTargetInBuilding" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanFireProximity" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScannerLastManStanding" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ScanIncomingFriendlyVehicle" TargetAnchor="Stop" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat" TargetAnchor="Stop" />
+  </Exit>
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/CheckPlayerInsideDZ1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/CheckDZCombat1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/CTaskSetFireStrategy2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/RemoveFallbackBehavior" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/SetFallbackComplete" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/AimAtTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/LookAtTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/SetPostureIntention1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/Stand1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/AimAtPath" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/LookAtPath" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/CTaskPathFind1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/CTaskPathFollow1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/CTaskSetFireStrategy1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/CTaskWait1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/CheckInside DZ" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/FallbackToStartPositionBP1/FleeFromPlayer" />
+</Plan>

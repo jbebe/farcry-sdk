@@ -162,4 +162,7 @@
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/FireWhereHeStands" />
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/AimAtTarget" />
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/LookAtTarget" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ScanThrowRequest" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ClearThrowRequest" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/ThrowRequested" />
 </Brain>

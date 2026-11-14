@@ -1,0 +1,22 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/CheckIsUnderFire" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/ScanReloadIsNeeded1" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop" />
+  <Exit Name="Success" />
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/ScanReloadIsNeeded1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FlankAttack_KR1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/CTaskOperateOnFlagField2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/TryRunToPerpendicular" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/WaitCovered1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/TryFlee" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/TryRunToThreat" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/FleeFromLocation_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/CheckIsUnderFire" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/CTaskOperateOnFlagField1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/AssaultAttack/NoCoverOrNoPathFailure/IfInTheOpenAfterFlank" />
+</Plan>
