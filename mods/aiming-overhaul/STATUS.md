@@ -23,6 +23,7 @@ Stage: active
 - [done] Operation manual halves the iron-sight spread standing, quarters it crouched - unplayed
 - [done] Shot shake sized by the round's push, fading into a roll in full auto, per weapon - user-tuned, "Let's call it done" 2026-11-05
 - [done] Dirt in the eye: black blurry blobs from rounds landing in dirt within 3 m, own rounds too - played 2026-11-08
+- [new] Dirt in the eye bigger and darker, overlapping blobs darkening each other rather than the darker one showing alone - user 2026-11-14: "the current ones are too small"
 - [done] Being hit: body punch and dark edges, head cut to black then a double image - played 2026-11-08
 - [done] No red marks pointing to whoever hit the player - played 2026-11-08
 - [done] Aiming Overhaul window in DevTools' overlay, values kept in bin\aiming-overhaul.ini
