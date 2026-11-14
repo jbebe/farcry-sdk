@@ -46,11 +46,11 @@ namespace {
 
     // Reverb events: retail's small room, and the mod's own on presets retail authored but never used.
     constexpr uint32_t kSmallRoom = 0x004BE3E6;
-    constexpr uint32_t kMediumRoom = 0x00FC0902;
-    constexpr uint32_t kLargeRoom = 0x00FC0903;
-    constexpr uint32_t kHall = 0x00FC0904;
-    constexpr uint32_t kHangar = 0x00FC0905;
-    constexpr uint32_t kMetalBox = 0x00FC0906;
+    constexpr uint32_t kMediumRoom = 0x00FC00A0;
+    constexpr uint32_t kLargeRoom = 0x00FC00A1;
+    constexpr uint32_t kHall = 0x00FC00A2;
+    constexpr uint32_t kHangar = 0x00FC00A3;
+    constexpr uint32_t kMetalBox = 0x00FC00A4;
 
     // Modest on purpose: whether a room is carpeted or bare is not in the data.
     uint32_t ReverbFor(uint32_t type, float longestSide) {

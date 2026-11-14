@@ -39,10 +39,10 @@ namespace {
     // The breath drawn as the hold begins and let out as it ends, weaker while stamina is above
     // kTired and stronger below: the layer's banks, written by data\breath.py, played as the
     // player's own voice.
-    constexpr uint32_t kInhale = 0x00FC0B00;
-    constexpr uint32_t kTiredInhale = 0x00FC0B20;
-    constexpr uint32_t kExhale = 0x00FC0B40;
-    constexpr uint32_t kTiredExhale = 0x00FC0B60;
+    constexpr uint32_t kInhale = 0x00FB0000;
+    constexpr uint32_t kTiredInhale = 0x00FB000E;
+    constexpr uint32_t kExhale = 0x00FB001C;
+    constexpr uint32_t kTiredExhale = 0x00FB0028;
     constexpr float kTired = 0.5f;
     constexpr int32_t kOnoPlayer = 6;
 
@@ -64,9 +64,9 @@ namespace {
     // The heart beating, the layer's banks of the game's own beat from going down wounded: while the
     // breath is in, and down the scope of a gun that needs it, from loudest to faintest as the heart
     // settles from kLoudRacing to kSilentRacing, and not at all below.
-    constexpr uint32_t kHeartbeat = 0x00FC0B80;
-    constexpr uint32_t kFaintHeartbeats[] = {0x00FC0C20, 0x00FC0C40, 0x00FC0C60, 0x00FC0C80,
-                                             0x00FC0CA0};
+    constexpr uint32_t kHeartbeat = 0x00FB0032;
+    constexpr uint32_t kFaintHeartbeats[] = {0x00FB0035, 0x00FB0038, 0x00FB003B, 0x00FB003E,
+                                             0x00FB0041};
     constexpr int kFaintSteps = static_cast<int>(std::size(kFaintHeartbeats));
     constexpr float kLoudRacing = 0.6f;
     constexpr float kSilentRacing = 0.1f;

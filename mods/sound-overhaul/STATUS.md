@@ -22,13 +22,15 @@ Stage: maintenance
 - [done] The player's own pickups never muffled - heard working
 - [done] A DevTools window muting single shots, full-auto fire or echoes
 - [done] Enumeration fix so an older or Wine-derived dsound.dll opens a device
-- [new] Own sound ids packed from 0x00FC0000 with no gaps, the 0x00FC block this mod's alone: one prefix per mod, Aiming Overhaul and Flashlight move out - agreed 2026-11-13
+- [done] Own sound ids packed from 0x00FC0000 with no gaps, the 0x00FC block this mod's alone: one prefix per mod, Aiming Overhaul and Flashlight move out - a shot, its echo and a grenade found in an fc2drive clip
 - [scrapped] Speed-of-sound delay - prototype rejected 2026-09-29; never re-propose
 - [scrapped] Engine-made gunshot echo through EAX - user: "all of them is awful"; never re-propose
 - [scrapped] Ricochets, wizz, air absorption, voice cap, ducking, weapon extras, tails, foley - the user cut the sound list 2026-10-01
 - [scrapped] Datsun engine sound overhaul - abandoned 2026-09-30 ("abandon the ship!"); the quieter idle kept then (3283244) removed 2026-11-13, the stock idle heard back - user: "verified and working"
 
 ## To validate
+
+- Own ids: a hangar's and a hall's reverb, soldiers' shots and their echoes, all as before - unheard
 
 ## Approvals
 

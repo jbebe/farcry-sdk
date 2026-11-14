@@ -78,7 +78,7 @@ namespace {
     constexpr float kCassetteFade = 0.25f;
     // The click the Jackal tapes' recordings start with, a sample played through this mod's own event
     // (notebook\tape_click.xml), and the click their stop sounds play.
-    constexpr uint32_t kClickIn = 0x00FE0001;
+    constexpr uint32_t kClickIn = 0x00FE0000;
     constexpr uint32_t kClickOut = 0x004EBECF;
 
     // The mission manager's Jackal and Predecessor tapes, SMissionTape records each starting with its

@@ -27,6 +27,8 @@ Notable changes to Aiming Overhaul, loosely following
 - **Tracers as real belts are linked.** One round in five from the M249 and the mounted M249s and
   M2s, one in four from the PKM, where every third and second round were tracers. The Dragunov and
   the AS50 fire none: a marksman loads plain rounds.
+- **The breath and heartbeat on ids of their own, from 0x00FB0000,** out of Sound Overhaul's block.
+  They sound the same.
 
 ## [1.3.0] - 2026-11-08
 

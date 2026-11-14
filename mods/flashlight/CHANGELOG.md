@@ -8,6 +8,7 @@ Notable changes to Flashlight, loosely following
 ### Changed
 - **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.
+- **The click on an id of its own, 0x00FA0000,** out of Sound Overhaul's block. It sounds the same.
 
 ## [1.2.1] - 2026-10-28
 

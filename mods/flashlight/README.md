@@ -37,7 +37,7 @@ src\                         the FCSE plugin
 layer\mods\
   config\                    the toggle_flashlight control and its binding
   languages\                 the control's label, in every language
-  soundbinary\00fc0a00.spk   the switch click
+  soundbinary\00fa0000.spk   the switch click
   ui\                        the HUD icon: textures, the parts of hud.mgb it changes per variant,
                              the UI dependency lists
 layer\plugins\flashlight\    the built plugin, staged here by build.ps1

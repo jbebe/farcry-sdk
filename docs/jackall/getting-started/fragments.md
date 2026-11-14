@@ -43,7 +43,7 @@ mods\ui\localized\pc\eng\ui\hud.mgb\a_flashlight_object.1092050190.xml   one are
 mods\ui\localized\pc\eng\ui\hud.mgb\_materials.xml           the HUD's list of textures
 mods\ui\localized\pc\eng\ui\_depload.xml\hud.mgb.desc.1430943848.xml   what the HUD preloads
 mods\ui\textures\hud\flashlight_hud_off.xbt                   a whole file
-mods\soundbinary\00fc0a00.spk                                 a whole file
+mods\soundbinary\00fa0000.spk                                 a whole file
 plugins\flashlight\Flashlight.dll                             an FCSE plugin
 ```
 

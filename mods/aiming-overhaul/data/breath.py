@@ -13,6 +13,7 @@ layer\\mods\\soundbinary\\.
 import array
 import os
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -34,17 +35,18 @@ WEAK = (("0x00455c65", 581), ("0x00455c66", 527), ("0x00455c67", 540),
         ("0x00455c6c", 593), ("0x00455c6d", 467), ("0x00455c6e", 388))
 # The breaths whose exhale is too harsh to hear again and again; their inhales are kept.
 HARSH_EXHALES = ("0x00455c67", "0x00455c57", "0x00455c58")
-# The banks, by what they hold and its gain in dB, which src\breath.cpp plays by id: the breath held,
-# at the level it was recorded at. The game's own breathing plays 32 dB lower, through its two
-# switches, which was very quiet for a held breath.
-BANKS = {"0x00fc0b00": ("inhale", WEAK, "0"), "0x00fc0b20": ("inhale", STRONG, "0"),
-         "0x00fc0b40": ("exhale", WEAK, "0"), "0x00fc0b60": ("exhale", STRONG, "0")}
+# The first bank's event, the first of this mod's own sound ids; each bank after it starts on the id
+# after the last record of the one before, and src\breath.cpp plays each by its event.
+FIRST = 0x00FB0000
+# The banks, by what they hold and its gain in dB: the breath held, at the level it was recorded at.
+# The game's own breathing plays 32 dB lower, through its two switches, which was very quiet for a
+# held breath.
+BANKS = (("inhale", WEAK, "0"), ("inhale", STRONG, "0"), ("exhale", WEAK, "0"), ("exhale", STRONG, "0"))
 # The heart beating: one of the beats the game plays as the player goes down wounded, as banks with
 # their gains in dB - a little quieter than the game plays it while the breath is held, and faint
 # down the scope while the heart races, in steps the plugin fades it out through as it settles.
 WOUNDED_BEAT = ("004c661e.spk", "0x004c660d")
-HEARTBEATS = {"0x00fc0b80": "-12", "0x00fc0c20": "-14", "0x00fc0c40": "-18", "0x00fc0c60": "-22",
-              "0x00fc0c80": "-26", "0x00fc0ca0": "-30"}
+HEARTBEATS = ("-12", "-14", "-18", "-22", "-26", "-30")
 # Milliseconds each half fades in and out at the cut, so it does not click.
 FADE_MS = 5
 
@@ -81,36 +83,39 @@ def cut(work, audio, at_ms):
     return halves
 
 
+def bank(work, event, clips, gain):
+    """Writes the event's bank of the clips and returns the id after its last record."""
+    name = "%08x" % event
+    folder = os.path.join(work, name)
+    run("spk", "new", "0x" + name, *clips, "--unpositioned", "--gain", gain,
+        "--like", os.path.join(work, LIKE), "-o", folder)
+    out = os.path.join(LAYER, name + ".spk")
+    run("spk", "encode", os.path.join(folder, name + ".xml"), "-o", out)
+    print(os.path.relpath(out, os.path.join(HERE, "..")))
+    with open(out, "rb") as built:
+        return event + struct.unpack("<4xI", built.read(8))[0]
+
+
 def main(soundbinary):
     work = tempfile.mkdtemp()
     try:
         # spk extract writes beside the bank, so it reads a copy.
-        for bank in (BREATHING, LIKE, WOUNDED_BEAT[0]):
-            shutil.copy(os.path.join(soundbinary, bank), work)
-        bank = os.path.join(work, BREATHING)
+        for name in (BREATHING, LIKE, WOUNDED_BEAT[0]):
+            shutil.copy(os.path.join(soundbinary, name), work)
         halves = {}
         for audio, at_ms in STRONG + WEAK:
-            run("spk", "extract", bank, audio)
+            run("spk", "extract", os.path.join(work, BREATHING), audio)
             halves[audio] = cut(work, audio, at_ms)
         os.makedirs(LAYER, exist_ok=True)
-        for event, (half, breaths, gain) in BANKS.items():
-            folder = os.path.join(work, event[2:])
+        event = FIRST
+        for half, breaths, gain in BANKS:
             clips = [halves[audio][half] for audio, _ in breaths
                      if half == "inhale" or audio not in HARSH_EXHALES]
-            run("spk", "new", event, *clips, "--unpositioned", "--gain", gain,
-                "--like", os.path.join(work, LIKE), "-o", folder)
-            out = os.path.join(LAYER, event[2:] + ".spk")
-            run("spk", "encode", os.path.join(folder, event[2:] + ".xml"), "-o", out)
-            print(os.path.relpath(out, os.path.join(HERE, "..")))
+            event = bank(work, event, clips, gain)
         beat_bank, beat = WOUNDED_BEAT
         run("spk", "extract", os.path.join(work, beat_bank), beat)
-        for event, gain in HEARTBEATS.items():
-            folder = os.path.join(work, event[2:])
-            run("spk", "new", event, os.path.join(work, beat[2:] + ".wav"), "--unpositioned",
-                "--gain", gain, "--like", os.path.join(work, LIKE), "-o", folder)
-            out = os.path.join(LAYER, event[2:] + ".spk")
-            run("spk", "encode", os.path.join(folder, event[2:] + ".xml"), "-o", out)
-            print(os.path.relpath(out, os.path.join(HERE, "..")))
+        for gain in HEARTBEATS:
+            event = bank(work, event, [os.path.join(work, beat[2:] + ".wav")], gain)
     finally:
         shutil.rmtree(work)
 

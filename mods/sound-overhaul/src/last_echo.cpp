@@ -1,5 +1,5 @@
 // Echoes: NPC shots play the weapon's echo too, which the game only does for the player's - its NPC version
-// at the echo's id + 0x10 when that bank exists, held loaded here - and of the echoes a burst plays, one per
+// at the echo's id + 3 when that bank exists, held loaded here - and of the echoes a burst plays, one per
 // round, only the last rings out: each new round's echo fades out the previous one from the same shooter.
 #include "mutes.h"
 
@@ -41,9 +41,9 @@ namespace {
     // The delayed bullet in EBX starts with its origin at +4.
     constexpr uintptr_t kShotOrigin = 0x4;
     constexpr uint32_t kNoSound = 0xFFFFFFFF;
-    // An echo bank may hold an NPC version of its echo at this offset: positioned, so it fades with distance,
-    // which the player's own echo cannot be, as it plays through a first-person sound type.
-    constexpr uint32_t kNpcEchoOffset = 0x10;
+    // An echo's NPC version is the bank after the echo's three records (event, sample, audio): positioned, so
+    // it fades with distance, which the player's own echo cannot be, as it plays through a first-person sound type.
+    constexpr uint32_t kNpcEchoOffset = 3;
 
     constexpr uintptr_t kPlaySoundAtPosition = 0xA0;
     constexpr uintptr_t kStopSound = 0xA8;

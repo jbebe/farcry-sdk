@@ -26,7 +26,7 @@ namespace {
     constexpr uint32_t kToggleSignal = FCSE::Crc32("toggle_flashlight");
 
     // The switch, a bank of this layer's own, played through the player's own foley.
-    constexpr uint32_t kClick = 0x00FC0A00;
+    constexpr uint32_t kClick = 0x00FA0000;
     constexpr int32_t kFoleyPlayer = 15;
 
     // Seconds from the click to the light switching, and for the light to come up to full.

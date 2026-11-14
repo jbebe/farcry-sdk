@@ -85,9 +85,9 @@ disagrees with it.
 A `<Random>` picks one `<Choice>` each time it plays:
 
 ```xml
-<Random id="0x00fc0201" silence="1">
-    <Choice resource="0x00fc0202" />
-    <Choice resource="0x00fc0204" weight="2" />
+<Random id="0x00f80001" silence="1">
+    <Choice resource="0x00f80002" />
+    <Choice resource="0x00f80004" weight="2" />
 </Random>
 ```
 
@@ -106,15 +106,14 @@ The quickest route is `spk new`, which scaffolds an event over one clip, or a ra
 given several:
 
 ```
-jackall-cli spk new 0x00fc0200 shot_a.wav shot_b.wav shot_c.wav --rolloff 0x00442c37 ^
+jackall-cli spk new 0x00f80000 shot_a.wav shot_b.wav shot_c.wav --rolloff 0x00442c37 ^
     --like soundbinary\00455359.spk
-jackall-cli spk encode 00fc0200\00fc0200.xml
+jackall-cli spk encode 00f80000\00f80000.xml
 ```
 
 Ids run on from the event's: the container, then a sample and its audio per clip, and the records are
 written in that order, as retail sound banks list theirs. Every id must be new across all the banks
-that load, not only the bank's own: an echo bank whose sample took an id an explosion bank already
-held crashed the game when the echo played **(seen in game, GOG v1.03)**. `--like` copies the unidentified words of a
+that load, not only the bank's own (see [Ids of your own](#ids-of-your-own)). `--like` copies the unidentified words of a
 retail event and sample, which is how a weapon shot should start. The audio is copied in beside the
 XML, so the folder is the source you keep.
 
@@ -127,6 +126,31 @@ To randomise a retail sound instead, decode its bank. Add a `<Sample>` and an `<
 variation. Then put a `<Random>` between the event and the samples, or add `<Choice>`s to the one
 that is already there. Retail impacts are a material `<Switch>` over random containers, which is
 where a ricochet variant goes (`004565a3.spk`).
+
+## Ids of your own
+
+Every record of every loaded bank registers under its own id in one table the whole game shares. Two
+banks holding different records under one id clash: an echo bank whose sample took an id an
+explosion bank already held crashed the game when the echo played **(seen in game, GOG v1.03)**.
+Retail ids run up to `0x004F2211`, so a mod's own sounds go above them, as `0xMMMMCCCC`:
+
+- `MMMM` is the mod and `CCCC` its records, 65,536 per mod. Bit 31 (a group bank) and bit 30 (a
+  localized bank) go on top of the same id.
+- A mod's ids count up from `CCCC = 0000` with no gaps. A new event takes the next free id, and
+  `spk new` gives its records the ids after it.
+- The prefixes stay below `0x0100`. The mods in this repository hold these, and the next new mod
+  takes `0x00FF`, then `0x00F9` and down:
+
+| Prefix | Mod |
+| --- | --- |
+| `0x00FA` | Flashlight |
+| `0x00FB` | Aiming Overhaul |
+| `0x00FC` | Sound Overhaul |
+| `0x00FD` | Vehicle Overhaul, which keeps the ids it shipped with, gaps and all: a save keeps the ids written into a car's sound slots |
+| `0x00FE` | Inventory Overhaul |
+
+Records the App adds to a bank take `0x10000000 + bank id × 32` instead (see [In the App](#in-the-app)).
+They belong to that bank's file, and an install holds one copy of each file, so they never clash.
 
 ## What `spk encode` checks
 

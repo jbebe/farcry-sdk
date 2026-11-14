@@ -26,7 +26,7 @@ namespace {
 
     // Examples of what other mods add, for everyone and never saved, until Tales of Africa ships papers.
     const Items::Record kExamples[] = {
-        {.id = "Note.Example_note"}, {.id = "Photo.Example_photo"}, {.id = "Tape.Example_cassette", .sound = 0x00FE0002}};
+        {.id = "Note.Example_note"}, {.id = "Photo.Example_photo"}, {.id = "Tape.Example_cassette", .sound = 0x00FE0001}};
 
     // A paper's words are the string table's Papers/<id>, its name, <id>_FOUND, where it was found,
     // and <id>_1, _2... its sheets: a photo's caption or a cassette's description the first.

@@ -15,6 +15,8 @@ Notable changes to Sound Overhaul, loosely following
 - **Every gun's echo has its own level**, as loud as the real gun's blast: the .50 calibre rifles and
   the rocket launchers ring out loudest, the Dragunov, G3, PKM and M1903 as before, and assault rifles,
   shotguns, pistols and grenade launchers quieter.
+- **Its sounds on new ids, packed from 0x00FC0000,** a block no other mod uses. Nothing sounds
+  different, and saves are unaffected.
 
 ### Removed
 - **The Datsun's rougher, quieter idle.** The pickup idles as in the game as shipped.
