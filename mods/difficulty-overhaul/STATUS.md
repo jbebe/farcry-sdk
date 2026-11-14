@@ -41,6 +41,8 @@ Stage: active
 - [done] Stand-down: an alert ends after 90 s, the soldier walks back to where he was - range row not run
 - [done] Short exposures from cover: up 1.5 s at a time, the pop-up twice in 9 s, then another spot preferred - unplayed
 - [done] Duck at the crack: a round past a soldier at cover in a fight with the player drops him 1.5-2.5 s, then he moves on - unplayed
+- [new] Flank a player behind cover: a soldier with no cover in reach runs out 20/15 m to his side, then comes in crouched, in place of the straight rush
+- [new] Grenades in a fight: half of each squad carries one grenade, none more; a soldier within 30 m throws at where he last saw a player hidden behind cover for a few seconds, one at a time - the game's own fight throw, never triggered as shipped; every soldier carries 3 today
 - [new] Alerted by a kill: onlookers crouch before drawing - the game already sends them to cover or away 0.2 s after an unseen kill, standing 0.35 s to draw (fc2drive)
 - [scrapped] Combat log per session in bin\difficulty-overhaul-logs, and its hit lines - moved to DevTools
 - [done] Perception and brain traces for testing (-perceptiontrace, -braintrace)
