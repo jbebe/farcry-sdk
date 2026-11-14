@@ -25,12 +25,14 @@ namespace {
                                               UINT startVertex, UINT primitiveCount);
     using FlushFn = void(__cdecl*)(IDirect3DDevice9* device);
 
+    // The patterns leave out the first six bytes, the ones a hook placed by another plugin
+    // overwrites.
     FCSE::Relocation<EngineDrawIndexedFn> g_mappedIndexed{FCSE::Uplay(0x00423AF0)};
     FCSE::Relocation<EngineDrawIndexedFn> g_scannedIndexed{FCSE::Pattern(
-        "83 EC 08 56 8B F1 8B 46 38 50 E8 ?? ?? ?? ?? DB 44 24 28 8B 4C 24 28")};
+        "?? ?? ?? ?? ?? ?? 8B 46 38 50 E8 ?? ?? ?? ?? DB 44 24 28 8B 4C 24 28")};
     FCSE::Relocation<EngineDrawFn> g_mappedPlain{FCSE::Uplay(0x00423A70)};
     FCSE::Relocation<EngineDrawFn> g_scannedPlain{FCSE::Pattern(
-        "83 EC 08 56 8B F1 8B 46 38 50 E8 ?? ?? ?? ?? DB 44 24 1C 8B 4C 24 1C")};
+        "?? ?? ?? ?? ?? ?? 8B 46 38 50 E8 ?? ?? ?? ?? DB 44 24 1C 8B 4C 24 1C")};
 
     // Where both draws call the constant flush, an E8 and its displacement.
     constexpr size_t kFlushCall = 0x0A;

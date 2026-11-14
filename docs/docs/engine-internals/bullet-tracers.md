@@ -115,4 +115,7 @@ A trace's texture at `+0x58` is a `CTextureResource`. `BuildTrace` hands its `+0
 
 That is a `CTextureD3D9`, which keeps its `IDirect3DTexture9` at `+0x18`. The type was not traced
 through the engine's virtual calls, but confirmed in a running game (GOG v1.03): the device's draws
-that bind the `IDirect3DTexture9` found this way are the streaks.
+that bind the `IDirect3DTexture9` found this way are the streaks. Every one of them reaches Direct3D
+through the engine device's `DrawPrimitive`, slot 55 in
+[the engine's device class](./presentation-and-input.md#the-engines-draws-and-pass-ends-before-direct3d),
+never an indexed or user-pointer draw (counted in game, GOG v1.03).

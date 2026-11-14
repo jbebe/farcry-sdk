@@ -6,8 +6,8 @@
 
 namespace AimingOverhaul::Streak {
 
-// Hooks the device calls the streaks are told apart and drawn by. False, and logged, when they
-// cannot be hooked; the streaks are then drawn with their texture.
+// Hooks the engine device's draw the streaks are told apart and drawn in. False, and logged, when
+// it cannot be hooked; the streaks are then drawn with their texture.
 bool Install();
 
 // Takes the streaks' texture from a trace's texture resource, a CTextureResource, as the trace is

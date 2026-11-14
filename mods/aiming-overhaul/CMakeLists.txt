@@ -104,6 +104,7 @@ add_library(AimingOverhaul SHARED
   "src/engine/aim.cpp"
   "src/engine/damage.cpp"
   "src/engine/device_reset.cpp"
+  "src/engine/engine_device.cpp"
   "src/engine/entity_name.cpp"
   "src/engine/fire.cpp"
   "src/engine/impact.cpp"
@@ -122,7 +123,6 @@ add_library(AimingOverhaul SHARED
   "src/engine/sound.cpp"
   "src/engine/shader.cpp"
   "src/engine/sprint.cpp"
-  "src/engine/vtable.cpp"
   "src/engine/weapon_draws.cpp"
   "src/engine/weapon_mesh.cpp"
   ${SHADER_HEADERS}
@@ -135,5 +135,5 @@ target_include_directories(AimingOverhaul PRIVATE
   "${DEVTOOLS_INCLUDE_DIR}"
 )
 # Dear ImGui is the core alone, drawing into DevTools' context - the backends are DevTools'.
-target_link_libraries(AimingOverhaul PRIVATE d3d9 ole32 windowscodecs imgui)
+target_link_libraries(AimingOverhaul PRIVATE ole32 windowscodecs imgui)
 target_compile_features(AimingOverhaul PRIVATE cxx_std_20)

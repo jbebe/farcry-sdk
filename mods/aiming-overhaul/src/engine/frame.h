@@ -24,9 +24,9 @@ using PassFn = void (*)(const Pass&);
 // With the back buffer, borrowed for the callback.
 using CompositeFn = void (*)(IDirect3DDevice9* device, IDirect3DSurface9* frame);
 
-// Takes over the device's EndScene; `onScenePass` runs as each of the world's passes ends, with its
-// target and depth still bound, and `onComposite` as the frame's tone-mapped image is finished in the
-// back buffer, under the interface. False, and logged, when it cannot be hooked.
+// Takes over the engine device's EndScene; `onScenePass` runs as each of the world's passes ends,
+// with its target and depth still bound, and `onComposite` as the frame's tone-mapped image is
+// finished in the back buffer, under the interface. False when it cannot be hooked.
 bool Install(PassFn onScenePass, CompositeFn onComposite);
 
 // Has `onComposite` run there too, after those already added.

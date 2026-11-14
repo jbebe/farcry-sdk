@@ -151,7 +151,7 @@ src\                         the FCSE plugin
   engine\                    the game's own seams: the input pass, entities, the seat lookup, the
                              Havok vehicle under each car, a vehicle's engine sound, the sound
                              system, sound banks, each car's headlights, the paint table, the frame
-                             handed to the render thread, the Direct3D device's passes
+                             handed to the render thread, the engine device's pass ends and reset
 layer\mods\
   graphics\                  the big truck's model and physics, its fan a hinged body on a node of its own
                              and its grille the user's;

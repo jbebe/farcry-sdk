@@ -30,6 +30,7 @@ Stage: active
 - [done] A recorded engine-off on the ZIL-130, Unimog and quad
 - [done] Quieter tyres on the car the player drives, 7 dB down (user 2026-11-12: 7, not 10); every other car's at the game's level
 - [done] Headlamps you can see: a bright lens and glare on every lit lamp - user: "the angle is good"; oval and lens tweaks unseen
+- [done] Headlamps drawn through the engine with no Direct3D hooks, so they work under dgVoodoo and DLSS injectors, as Aiming and Sky Overhaul do - user 2026-11-14, without and under dgVoodoo with DLSS 5: "it works in both" #63
 - [done] New muted paints for the Datsun, Land Rover, big truck and buggy - user: "flawless"
 - [done] The Datsun's chrome: bumpers, door handles, rims, grille frame and badge
 - [done] The big truck's grille with thirteen openings - user: "perfect!" (b4ce9584)
@@ -71,4 +72,6 @@ Stage: active
 ## Collisions
 
 - flashlight: deploy apart - user 2026-10-08: "flashlight is not needed, dont deploy it"; VO's input hook beside Flashlight's left with db5067a
+- sky-overhaul: stacks - both hook the engine's EndScene, which FCSE chains; VO's reset seam is the engine's own Reset, not Sky's teardown
+- aiming-overhaul: stacks - both hook the engine's EndScene and Reset, which FCSE chains
 - third-person: fixed by db5067a - both hook SetDriver, the call that gives a car its driver (patterns wildcard its first 6 bytes)

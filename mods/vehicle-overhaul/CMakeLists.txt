@@ -80,7 +80,6 @@ add_library(VehicleOverhaul SHARED
   "src/engine/vehicle.cpp"
   "src/engine/vehicle_sound.cpp"
   "src/engine/view.cpp"
-  "src/engine/vtable.cpp"
   "src/engine/wheeled.cpp"
   ${SHADER_HEADERS}
 )
@@ -93,4 +92,4 @@ target_include_directories(VehicleOverhaul PRIVATE
 )
 target_compile_features(VehicleOverhaul PRIVATE cxx_std_20)
 # Dear ImGui is the core alone, drawing into DevTools' context - the backends are DevTools'.
-target_link_libraries(VehicleOverhaul PRIVATE imgui d3d9)
+target_link_libraries(VehicleOverhaul PRIVATE imgui)

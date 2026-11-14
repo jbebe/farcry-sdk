@@ -59,6 +59,6 @@ Stage: maintenance
 
 ## Collisions
 
-- aiming-overhaul: fixed by AO's stencil bit 0x20, gun blur before bloom and Reset via the device vtable - stencil 0x40; Sky hooks the engine's draws, AO Direct3D's, scope checked together (fc2drive)
-- vehicle-overhaul: fixed by VO's lamp glow hooking the device vtable's Reset - Sky's engine teardown pattern fails once hooked twice
+- aiming-overhaul: fixed by AO's stencil bit 0x20 and gun blur before bloom - stencil 0x40; both hook the engine's draws and EndScene, which stack, and AO resets through the engine's Reset, not Sky's teardown - scope and tracers checked together (fc2drive)
+- vehicle-overhaul: stacks - both hook the engine's EndScene, which FCSE chains; VO's reset seam is the engine's own Reset, not Sky's teardown
 - ufcp: fixed by design: Sky never swaps the grass spot-light shaders and that pass writes no Z - grass shaders

@@ -9,9 +9,10 @@ namespace {
 
     // The renderer's device teardown: it clears the render target, releases what it holds and runs
     // the engine's own device-lost listeners. The two absolute addresses in the prologue are
-    // wildcards because they differ between builds.
+    // wildcards because they differ between builds, and so is the first instruction's opcode, which
+    // another plugin's hook overwrites.
     FCSE::Relocation<DeviceCallbackFn> g_teardown{FCSE::Pattern(
-        "A1 ?? ?? ?? ?? 83 EC 18 53 55 56 8B 35 ?? ?? ?? ?? 8D 04 80 57 8D 3C 86 3B F7 8B D9 "
+        "?? ?? ?? ?? ?? 83 EC 18 53 55 56 8B 35 ?? ?? ?? ?? 8D 04 80 57 8D 3C 86 3B F7 8B D9 "
         "C6 05 ?? ?? ?? ?? 00 74 10 8B 16 8B 42 04 8B CE FF D0")};
 
     DeviceCallbackFn g_originalTeardown = nullptr;

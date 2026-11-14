@@ -30,6 +30,12 @@ Notable changes to Aiming Overhaul, loosely following
 - **The breath and heartbeat on ids of their own, from 0x00FB0000,** out of Sound Overhaul's block.
   They sound the same.
 
+### Fixed
+- **Works under dgVoodoo and DLSS injectors.** Under dgVoodoo, which the DLSS 5 injector needs to
+  run Far Cry 2, the scope picture, eyepiece, scope shadow, gun blur and the tracers' look were
+  missing. Aiming Overhaul draws through the game itself instead of hooking Direct3D, so they are
+  there too.
+
 ## [1.3.0] - 2026-11-08
 
 ### Added

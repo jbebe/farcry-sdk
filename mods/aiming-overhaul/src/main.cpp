@@ -239,7 +239,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     g_hooked = true;
     if (!AimingOverhaul::DeviceReset::Install(&OnDeviceRelease) ||
         !AimingOverhaul::WeaponDraws::Install(listener)) {
-        api->Log("nothing is drawn on the gun: a Direct3D seam could not be hooked");
+        api->Log("nothing is drawn on the gun: the engine's renderer could not be hooked");
         g_hooked = false;
     }
     // Dirt in the eye is closest to the eye, so it goes over the eyepiece; what a hit does to the

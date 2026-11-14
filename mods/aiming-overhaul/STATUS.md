@@ -47,7 +47,7 @@ Stage: active
 - [done] Muzzle flash per gun, first and third person, sized and brightened to its round, barrel and muzzle device, the game's length kept; data only - user 2026-11-12: "they seem to be proper"
 - [done] Every gun change reaches the test range's guns too - unplayed
 - [done] Own sound ids moved out of Sound Overhaul's 0x00FC block into 0x00FB, packed from 0x00FB0000: one prefix per mod - user: "changes in instance 3 are verified"
-- [new] Drawn through the engine with no Direct3D hooks, so it works under dgVoodoo and DLSS injectors, as Sky Overhaul does #63
+- [done] Drawn through the engine with no Direct3D hooks, so it works under dgVoodoo and DLSS injectors, as Sky Overhaul does - pictures match the old build (fc2drive); the user saw scope, blur and tracers right under dgVoodoo with DLSS 5 #63
 - [on hold] Auto lean at corners - shelved until wanted
 - [scrapped] Gun weight motion (lag, swing, slowdown by weight) - dropped by the user 2026-11-02 after five tries
 - [scrapped] Gradual stops when the keys are let go - user rejected
@@ -73,6 +73,7 @@ Stage: active
 - Glass in the eyepiece: lines bow, colours part, rim darkens, faint tint - unconfirmed
 - Lowering a scope: the eye stays back while it goes down - unseen
 - No radial edge blur on the mod's scopes - unconfirmed
+
 ## Approvals
 
 - played: 7b4c384a 2026-11-14 - "I approve it all changes"
@@ -89,7 +90,8 @@ Stage: active
 ## Collisions
 
 - vss-vintorez: fixed by b7946eaf - the VSS's Dart Rifle drew the game's scope until it carried AO's scope data (the Dragunov's)
-- sky-overhaul: fixed - Sky hooks the engine's draws and AO Direct3D's, so no function is shared; the gun blur sits before bloom
+- sky-overhaul: stacks - both hook the engine's draws and EndScene, which FCSE chains; AO's reset seam is the engine's own Reset, not Sky's teardown; the gun blur sits before bloom
+- vehicle-overhaul: stacks - both hook the engine's EndScene and Reset, which FCSE chains
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
 - difficulty-overhaul: merged by JackAll, no shared field - both edit the guns' entity-library archetypes and particle libraries
 - sound-overhaul: merged by JackAll, no shared field, and the shot hooks stack, fixed in Sound Overhaul 1.0.2 - both edit the guns' entity-library archetypes, this mod leaving the echo field as shipped, and both hook the shot at 0x00115680

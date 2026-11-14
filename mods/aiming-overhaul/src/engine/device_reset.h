@@ -4,8 +4,8 @@
 
 namespace AimingOverhaul::DeviceReset {
 
-// Hooks the device's Reset so `onRelease` runs first. False, and logged, when it cannot be hooked;
-// a caller that holds device resources must then hold none at all.
+// Hooks the engine device's Reset so `onRelease` runs first. False when it cannot be hooked; a
+// caller that holds device resources must then hold none at all.
 bool Install(void (*onRelease)());
 
 }

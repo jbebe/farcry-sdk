@@ -51,9 +51,9 @@ struct Listener {
     Frame::CompositeFn onComposite;
 };
 
-// Takes over the frame and the device's indexed draws, and calls `listener` while the player is
-// down the sights or a scope, and for a few frames after a scope, which the render thread can still
-// be drawing. False, and logged, when either cannot be hooked.
+// Takes over the frame and the engine device's indexed draw, and calls `listener` while the player
+// is down the sights or a scope, and for a few frames after a scope, which the render thread can
+// still be drawing. False when they cannot be hooked.
 bool Install(const Listener& listener);
 
 void ReleaseDeviceObjects();

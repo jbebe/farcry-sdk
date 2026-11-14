@@ -15,9 +15,9 @@ struct Pass {
 
 using PassFn = void (*)(const Pass&);
 
-// Takes over the device's EndScene. `onSkyPass` runs as the frame's first sky pass ends, the one
-// with the world's depth complete and the camera it was drawn with still bound; `onComposite` runs
-// as the tone-mapped image is finished in the back buffer, under the user interface. False, and
+// Takes over the engine device's EndScene. `onSkyPass` runs as the frame's first sky pass ends, the
+// one with the world's depth complete and the camera it was drawn with still bound; `onComposite`
+// runs as the tone-mapped image is finished in the back buffer, under the user interface. False, and
 // logged, when it cannot be hooked.
 bool Install(PassFn onSkyPass, PassFn onComposite);
 

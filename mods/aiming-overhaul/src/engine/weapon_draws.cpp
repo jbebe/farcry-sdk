@@ -2,16 +2,23 @@
 
 #include "engine/aim.h"
 #include "engine/com.h"
+#include "engine/engine_device.h"
+#include "engine/memory.h"
 #include "engine/render_target.h"
-#include "engine/vtable.h"
 #include "fcse_api.h"
 
 #include <cmath>
 #include <iterator>
 
 namespace {
-    using DrawIndexedPrimitiveFn = HRESULT(__stdcall*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, INT,
-                                                       UINT, UINT, UINT, UINT);
+    // The engine device's indexed draw, __thiscall declared __fastcall; `type` is the engine's own
+    // primitive type, which only the engine reads.
+    using DrawIndexedPrimitiveFn = HRESULT(__fastcall*)(void* self, void* unused, UINT type,
+                                                        INT baseVertexIndex, UINT minVertexIndex,
+                                                        UINT numVertices, UINT startIndex,
+                                                        UINT primitiveCount);
+    FCSE::Relocation<DrawIndexedPrimitiveFn> g_engineDraw{FCSE::Uplay(0x00423AF0)};
+    DrawIndexedPrimitiveFn g_original = nullptr;
     using AimingOverhaul::Frame::kNever;
     using AimingOverhaul::WeaponDraws::Projection;
 
@@ -28,7 +35,6 @@ namespace {
     constexpr UINT kProjectionRegister = 8;
     constexpr float kWeaponNearest = 0.05f;
 
-    DrawIndexedPrimitiveFn g_original = nullptr;
     AimingOverhaul::WeaponDraws::Listener g_listener = {};
     // Whether the gun's draws are watched; and the frame a scope's sight picture was last up in,
     // which the render thread can draw frames behind, so the gun is watched for a few frames more.
@@ -206,17 +212,19 @@ namespace {
         AimingOverhaul::Release(g_savedDepth);
     }
 
-    HRESULT __stdcall DrawIndexedPrimitiveDetour(IDirect3DDevice9* device, D3DPRIMITIVETYPE type,
-                                                 INT baseVertexIndex, UINT minVertexIndex,
-                                                 UINT numVertices, UINT startIndex,
-                                                 UINT primitiveCount) {
+    HRESULT __fastcall DrawIndexedPrimitiveDetour(void* self, void* unused, UINT type,
+                                                  INT baseVertexIndex, UINT minVertexIndex,
+                                                  UINT numVertices, UINT startIndex,
+                                                  UINT primitiveCount) {
         const auto draw = [&] {
-            return g_original(device, type, baseVertexIndex, minVertexIndex, numVertices,
+            return g_original(self, unused, type, baseVertexIndex, minVertexIndex, numVertices,
                               startIndex, primitiveCount);
         };
         if (!g_watching) {
             return draw();
         }
+        IDirect3DDevice9* device = AimingOverhaul::EngineDevice::Direct3D(self);
+        AimingOverhaul::EngineDevice::SendConstants(device);
         D3DVIEWPORT9 viewport = {};
         Projection projection = {};
         const bool squeezed = !AimingOverhaul::Frame::PastSky();
@@ -278,8 +286,8 @@ namespace {
 
 bool AimingOverhaul::WeaponDraws::Install(const Listener& listener) {
     g_listener = listener;
-    return Frame::Install(&OnScenePass, &OnComposite) &&
-           Vtable::Hook(Vtable::kDrawIndexedPrimitive, &DrawIndexedPrimitiveDetour, &g_original);
+    return Frame::Install(&OnScenePass, &OnComposite) && EngineDevice::CanSendConstants() &&
+           Hook(g_engineDraw.address(), &DrawIndexedPrimitiveDetour, &g_original);
 }
 
 void AimingOverhaul::WeaponDraws::ReleaseDeviceObjects() {

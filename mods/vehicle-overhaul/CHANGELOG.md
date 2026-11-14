@@ -21,6 +21,7 @@ Notable changes to Vehicle Overhaul, loosely following
 ### Fixed
 - **AI drivers' cars no longer scream at the top of their revs** in the new engine sounds: they play
   the game's own.
+- **Headlamps show their lens and glare under dgVoodoo and DLSS injectors** too.
 
 ## [1.1.0] - 2026-11-07
 

@@ -685,12 +685,14 @@ viewport's edge is already where a rasteriser interpolating to a pixel centre ex
 
 The renderer reaches `IDirect3DDevice9` through the engine's own D3D9 device class, which holds the
 game's device pointer at `this+0x38`. Every draw of the world and every pass end go through four of its
-methods **(RE-verified, Steam v1.03; the GOG addresses through the address library and patterns)**:
+methods, and every device reset through a fifth **(RE-verified, Steam v1.03; the GOG addresses
+through the address library and patterns)**:
 
 | Slot | Steam | GOG | Method | Calls |
 |---|---|---|---|---|
 | 14 | `0x10423060` | `0x10415220` | `BeginScene()` | targets, viewport, clear, then device slot 41 |
 | 15 | `0x10422510` | `0x104146D0` | `EndScene()`, 22 bytes | clears the renderer's in-scene flag, then slot 42 |
+| 21 | `0x10422630` | `0x104147F0` | `Reset()`, returns true when Direct3D's reset succeeded | slot 77 of its own, then device slot 16 with the stored present parameters |
 | 55 | `0x10423A70` | `0x10415C30` | `DrawPrimitive(type, startVertex, count)`, `ret 0xC` | the flush, then slot 81 |
 | 56 | `0x10423AF0` | `0x10415CB0` | `DrawIndexedPrimitive(type, base, minIndex, vertices, startIndex, count)`, `ret 0x18` | the flush, then slot 82 |
 
@@ -712,8 +714,16 @@ Inside the renderer these two draws are the only callers of Direct3D's `DrawPrim
 (`0x10ACA570` and Magma's `Read*` functions) draws on its own. So a hook here sees every world draw
 and pass end and nothing of another plugin's, and anything it calls on the device at `this+0x38` goes
 the way the game's own calls go, through whatever wrapper the game was given. The address library
-does not carry slot 15; a pattern of its whole body finds it in both builds. Sky Overhaul hooks slots
-15, 55 and 56.
+does not carry slot 15; a pattern of its whole body finds it in both builds.
+
+Slot 21 is the only caller of Direct3D's `Reset` in the renderer, and it runs on a window resize
+too, ahead of that `Reset`; a plugin that frees its `D3DPOOL_DEFAULT` objects at its entry lets the
+reset succeed (seen in game, GOG v1.03). It is a function apart from the device teardown at slot 20, which the address
+library does not carry.
+
+Sky Overhaul and Aiming Overhaul both hook slots 15, 55 and 56, and Vehicle Overhaul hooks slot 15;
+FCSE chains them. Aiming Overhaul and Vehicle Overhaul free their objects at slot 21, Sky Overhaul at
+the teardown.
 
 ### Which device vtable slots the repo's plugins hold
 
@@ -723,14 +733,12 @@ it is build-specific.
 
 | Slot | Function | Held by |
 |---|---|---|
-| 16 | `Reset` | DevTools, Aiming Overhaul, Inventory Overhaul, Third Person, Vehicle Overhaul |
+| 16 | `Reset` | DevTools, Inventory Overhaul, Third Person |
 | 17 | `Present` | DevTools, Third Person |
-| 42 | `EndScene` | DevTools (the AI view, in the sky pass), Aiming Overhaul, Inventory Overhaul, Third Person, Vehicle Overhaul |
-| 65 | `SetTexture` | Aiming Overhaul, Inventory Overhaul |
-| 81 | `DrawPrimitive` | Aiming Overhaul, Third Person |
-| 82 | `DrawIndexedPrimitive` | Aiming Overhaul, Third Person |
-| 83 | `DrawPrimitiveUP` | Aiming Overhaul |
-| 84 | `DrawIndexedPrimitiveUP` | Aiming Overhaul |
+| 42 | `EndScene` | DevTools (the AI view, in the sky pass), Inventory Overhaul, Third Person |
+| 65 | `SetTexture` | Inventory Overhaul |
+| 81 | `DrawPrimitive` | Third Person |
+| 82 | `DrawIndexedPrimitive` | Third Person |
 
 Since FCSE 1.3.0 a second plugin hooking one of these slots stacks on the first rather than being
 turned away, so the table says who else runs there, not what is taken. `TestCooperativeLevel`, which

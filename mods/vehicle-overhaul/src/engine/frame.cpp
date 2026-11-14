@@ -1,16 +1,23 @@
 #include "engine/frame.h"
 
 #include "engine/com.h"
-#include "engine/vtable.h"
+#include "engine/memory.h"
 #include "fcse_api.h"
 
 namespace {
-    constexpr size_t kEndSceneSlot = 42;
+    // The engine device's EndScene, __thiscall declared __fastcall.
+    using EndSceneFn = HRESULT(__fastcall*)(void* self);
+
+    // Its whole body, which the address library lacks; the first seven bytes, the ones another
+    // plugin's hook overwrites, are wildcards.
+    FCSE::Relocation<EndSceneFn> g_endScene{FCSE::Pattern(
+        "?? ?? ?? ?? ?? ?? ?? 8B 41 38 8B 08 8B 91 A8 00 00 00 50 FF D2 C3")};
+
+    // The engine device's Direct3D device.
+    constexpr ptrdiff_t kDevice = 0x38;
 
     // The sky pass is the only scene pass whose depth range is squeezed against the far plane.
     constexpr float kSkyPassMinZ = 0.9f;
-
-    using EndSceneFn = HRESULT(__stdcall*)(IDirect3DDevice9*);
 
     EndSceneFn g_originalEndScene = nullptr;
     VehicleOverhaul::Frame::PassFn g_onSkyPass = nullptr;
@@ -73,21 +80,21 @@ namespace {
         }
     }
 
-    HRESULT __stdcall EndSceneDetour(IDirect3DDevice9* device) {
-        Observe(device);
-        return g_originalEndScene(device);
+    HRESULT __fastcall EndSceneDetour(void* self) {
+        Observe(VehicleOverhaul::At<IDirect3DDevice9*>(self, kDevice));
+        return g_originalEndScene(self);
     }
 }
 
 bool VehicleOverhaul::Frame::Install(PassFn onSkyPass, PassFn onComposite) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
-    void* endScene = Vtable::Slot(kEndSceneSlot);
-    if (endScene == nullptr) {
-        api->Log("frame: no Direct3D 9 device could be created to read the vtable from");
+    if (!g_endScene) {
+        api->Log("frame: the engine device's EndScene was not found in this build");
         return false;
     }
     g_onSkyPass = onSkyPass;
     g_onComposite = onComposite;
-    return api->Hook(endScene, reinterpret_cast<void*>(&EndSceneDetour),
+    return api->Hook(reinterpret_cast<void*>(g_endScene.address()),
+                     reinterpret_cast<void*>(&EndSceneDetour),
                      reinterpret_cast<void**>(&g_originalEndScene));
 }

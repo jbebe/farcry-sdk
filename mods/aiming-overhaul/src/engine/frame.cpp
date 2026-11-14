@@ -1,17 +1,25 @@
 #include "engine/frame.h"
 
 #include "engine/com.h"
-#include "engine/vtable.h"
+#include "engine/engine_device.h"
+#include "engine/memory.h"
 
 #include <array>
 #include <cstddef>
 
 namespace {
-    using EndSceneFn = HRESULT(__stdcall*)(IDirect3DDevice9*);
+    // The engine device's EndScene, __thiscall taking only `this`, declared __fastcall because MSVC
+    // will not let a free function be __thiscall.
+    using EndSceneFn = HRESULT(__fastcall*)(void* self);
+
+    // Its whole body, which the address library lacks; the first seven bytes, the ones another
+    // plugin's hook overwrites, are wildcards.
+    FCSE::Relocation<EndSceneFn> g_endScene{FCSE::Pattern(
+        "?? ?? ?? ?? ?? ?? ?? 8B 41 38 8B 08 8B 91 A8 00 00 00 50 FF D2 C3")};
+    EndSceneFn g_originalEndScene = nullptr;
 
     constexpr float kSkyPassMinZ = 0.9f;
 
-    EndSceneFn g_originalEndScene = nullptr;
     AimingOverhaul::Frame::PassFn g_onScenePass = nullptr;
     // The composite's callbacks, in the order they run.
     std::array<AimingOverhaul::Frame::CompositeFn, 4> g_onComposites = {};
@@ -70,17 +78,17 @@ namespace {
         g_onScenePass({device, target.surface, g_passSerial});
     }
 
-    HRESULT __stdcall EndSceneDetour(IDirect3DDevice9* device) {
-        Observe(device);
+    HRESULT __fastcall EndSceneDetour(void* self) {
+        Observe(AimingOverhaul::EngineDevice::Direct3D(self));
         g_passSerial++;
-        return g_originalEndScene(device);
+        return g_originalEndScene(self);
     }
 }
 
 bool AimingOverhaul::Frame::Install(PassFn onScenePass, CompositeFn onComposite) {
     g_onScenePass = onScenePass;
     AddComposite(onComposite);
-    return Vtable::Hook(Vtable::kEndScene, &EndSceneDetour, &g_originalEndScene);
+    return Hook(g_endScene.address(), &EndSceneDetour, &g_originalEndScene);
 }
 
 void AimingOverhaul::Frame::AddComposite(CompositeFn onComposite) {

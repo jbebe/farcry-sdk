@@ -1,22 +1,23 @@
 #include "engine/device_reset.h"
 
-#include "engine/vtable.h"
-
-#include <d3d9.h>
+#include "engine/memory.h"
 
 namespace {
-    using ResetFn = HRESULT(__stdcall*)(IDirect3DDevice9*, D3DPRESENT_PARAMETERS*);
+    // The engine device's own Reset, __thiscall taking only `this`, declared __fastcall because
+    // MSVC will not let a free function be __thiscall. True when Direct3D's reset succeeded.
+    using ResetFn = bool(__fastcall*)(void* self);
+    FCSE::Relocation<ResetFn> g_reset{FCSE::Uplay(0x00422630)};
 
     ResetFn g_originalReset = nullptr;
     void (*g_onRelease)() = nullptr;
 
-    HRESULT __stdcall ResetDetour(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* parameters) {
+    bool __fastcall ResetDetour(void* self) {
         g_onRelease();
-        return g_originalReset(device, parameters);
+        return g_originalReset(self);
     }
 }
 
 bool AimingOverhaul::DeviceReset::Install(void (*onRelease)()) {
     g_onRelease = onRelease;
-    return Vtable::Hook(Vtable::kReset, &ResetDetour, &g_originalReset);
+    return Hook(g_reset.address(), &ResetDetour, &g_originalReset);
 }

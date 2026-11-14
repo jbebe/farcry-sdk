@@ -4,8 +4,9 @@
 #include "streak.h"
 
 #include "engine/com.h"
+#include "engine/engine_device.h"
+#include "engine/memory.h"
 #include "engine/shader.h"
-#include "engine/vtable.h"
 #include "fcse_api.h"
 
 #include "tracer_ps.h"
@@ -18,27 +19,12 @@
 #include <vector>
 
 namespace {
-    using SetTextureFn = HRESULT(__stdcall*)(IDirect3DDevice9* device, DWORD stage,
-                                             IDirect3DBaseTexture9* texture);
-    using DrawPrimitiveFn = HRESULT(__stdcall*)(IDirect3DDevice9* device, D3DPRIMITIVETYPE type,
-                                                UINT start, UINT count);
-    using DrawIndexedPrimitiveFn = HRESULT(__stdcall*)(IDirect3DDevice9* device,
-                                                       D3DPRIMITIVETYPE type, INT baseVertex,
-                                                       UINT minVertex, UINT vertices,
-                                                       UINT startIndex, UINT count);
-    using DrawPrimitiveUPFn = HRESULT(__stdcall*)(IDirect3DDevice9* device, D3DPRIMITIVETYPE type,
-                                                  UINT count, const void* data, UINT stride);
-    using DrawIndexedPrimitiveUPFn = HRESULT(__stdcall*)(IDirect3DDevice9* device,
-                                                         D3DPRIMITIVETYPE type, UINT minVertex,
-                                                         UINT vertices, UINT count,
-                                                         const void* indices, D3DFORMAT format,
-                                                         const void* data, UINT stride);
-
-    SetTextureFn g_originalSetTexture = nullptr;
-    DrawPrimitiveFn g_originalDrawPrimitive = nullptr;
-    DrawIndexedPrimitiveFn g_originalDrawIndexedPrimitive = nullptr;
-    DrawPrimitiveUPFn g_originalDrawPrimitiveUP = nullptr;
-    DrawIndexedPrimitiveUPFn g_originalDrawIndexedPrimitiveUP = nullptr;
+    // The engine device's plain draw, which every streak goes through; __thiscall declared
+    // __fastcall, and `type` the engine's own primitive type, which only the engine reads.
+    using DrawPrimitiveFn = HRESULT(__fastcall*)(void* self, void* unused, UINT type, UINT start,
+                                                 UINT count);
+    FCSE::Relocation<DrawPrimitiveFn> g_engineDraw{FCSE::Uplay(0x00423A70)};
+    DrawPrimitiveFn g_original = nullptr;
 
     // CTextureResource: the texture it hands the renderer; that one's device texture, a
     // CTextureD3D9; and that one's Direct3D texture.
@@ -54,9 +40,7 @@ namespace {
     std::atomic<bool> g_enabled{true};
     AimingOverhaul::PixelShader g_shader{"tracer", g_tracerPixelShader};
 
-    // What stage 0 holds, and the vertex shader last asked about and whether it is readable; all on
-    // the render thread.
-    IDirect3DBaseTexture9* g_stage0 = nullptr;
+    // The vertex shader last asked about and whether it is readable; on the render thread.
     IDirect3DVertexShader9* g_vertexShader = nullptr;
     bool g_readable = false;
 
@@ -90,16 +74,28 @@ namespace {
         return g_readable;
     }
 
-    // Makes the draw with the plugin's shader if it is a streak's.
-    template <class Draw>
-    HRESULT Drawn(IDirect3DDevice9* device, Draw draw) {
-        if (!g_enabled || g_stage0 == nullptr || g_stage0 != g_texture.load()) {
-            return draw();
+    // Whether the draw about to be made is a streak's: the engine's tracer texture at stage 0, asked
+    // first so the shader check, cached for one shader, only ever sees the streaks' own.
+    bool IsStreak(IDirect3DDevice9* device, IDirect3DBaseTexture9* tracer) {
+        IDirect3DBaseTexture9* stage0 = nullptr;
+        device->GetTexture(0, &stage0);
+        if (AimingOverhaul::Borrowed(stage0) != tracer) {
+            return false;
         }
         IDirect3DVertexShader9* vertexShader = nullptr;
         device->GetVertexShader(&vertexShader);
-        const bool readable = Readable(AimingOverhaul::Borrowed(vertexShader));
-        IDirect3DPixelShader9* shader = readable ? g_shader.Get(device) : nullptr;
+        return Readable(AimingOverhaul::Borrowed(vertexShader));
+    }
+
+    HRESULT __fastcall DrawPrimitiveDetour(void* self, void* unused, UINT type, UINT start,
+                                           UINT count) {
+        const auto draw = [&] { return g_original(self, unused, type, start, count); };
+        IDirect3DBaseTexture9* tracer = g_texture.load();
+        if (!g_enabled || tracer == nullptr) {
+            return draw();
+        }
+        IDirect3DDevice9* device = AimingOverhaul::EngineDevice::Direct3D(self);
+        IDirect3DPixelShader9* shader = IsStreak(device, tracer) ? g_shader.Get(device) : nullptr;
         IDirect3DPixelShader9* engine = nullptr;
         if (shader == nullptr || FAILED(device->GetPixelShader(&engine))) {
             return draw();
@@ -111,60 +107,12 @@ namespace {
         return result;
     }
 
-    HRESULT __stdcall SetTextureDetour(IDirect3DDevice9* device, DWORD stage,
-                                       IDirect3DBaseTexture9* texture) {
-        if (stage == 0) {
-            g_stage0 = texture;
-        }
-        return g_originalSetTexture(device, stage, texture);
-    }
-
-    HRESULT __stdcall DrawPrimitiveDetour(IDirect3DDevice9* device, D3DPRIMITIVETYPE type,
-                                          UINT start, UINT count) {
-        return Drawn(device, [&] { return g_originalDrawPrimitive(device, type, start, count); });
-    }
-
-    HRESULT __stdcall DrawIndexedPrimitiveDetour(IDirect3DDevice9* device, D3DPRIMITIVETYPE type,
-                                                 INT baseVertex, UINT minVertex, UINT vertices,
-                                                 UINT startIndex, UINT count) {
-        return Drawn(device, [&] {
-            return g_originalDrawIndexedPrimitive(device, type, baseVertex, minVertex, vertices,
-                                                  startIndex, count);
-        });
-    }
-
-    HRESULT __stdcall DrawPrimitiveUPDetour(IDirect3DDevice9* device, D3DPRIMITIVETYPE type,
-                                            UINT count, const void* data, UINT stride) {
-        return Drawn(device, [&] {
-            return g_originalDrawPrimitiveUP(device, type, count, data, stride);
-        });
-    }
-
-    HRESULT __stdcall DrawIndexedPrimitiveUPDetour(IDirect3DDevice9* device,
-                                                   D3DPRIMITIVETYPE type, UINT minVertex,
-                                                   UINT vertices, UINT count, const void* indices,
-                                                   D3DFORMAT format, const void* data,
-                                                   UINT stride) {
-        return Drawn(device, [&] {
-            return g_originalDrawIndexedPrimitiveUP(device, type, minVertex, vertices, count,
-                                                    indices, format, data, stride);
-        });
-    }
-
 }
 
 bool AimingOverhaul::Streak::Install() {
-    const bool hooked =
-        Vtable::Hook(Vtable::kDrawPrimitive, &DrawPrimitiveDetour, &g_originalDrawPrimitive) &&
-        Vtable::Hook(Vtable::kDrawIndexedPrimitive, &DrawIndexedPrimitiveDetour,
-                     &g_originalDrawIndexedPrimitive) &&
-        Vtable::Hook(Vtable::kDrawPrimitiveUP, &DrawPrimitiveUPDetour,
-                     &g_originalDrawPrimitiveUP) &&
-        Vtable::Hook(Vtable::kDrawIndexedPrimitiveUP, &DrawIndexedPrimitiveUPDetour,
-                     &g_originalDrawIndexedPrimitiveUP) &&
-        Vtable::Hook(Vtable::kSetTexture, &SetTextureDetour, &g_originalSetTexture);
+    const bool hooked = Hook(g_engineDraw.address(), &DrawPrimitiveDetour, &g_original);
     if (!hooked) {
-        FCSE::Logf("streak: the device cannot be hooked, so tracers are drawn with their texture");
+        FCSE::Logf("streak: the engine's draw cannot be hooked; tracers keep their texture");
     }
     return hooked;
 }
@@ -182,5 +130,4 @@ void AimingOverhaul::Streak::SetEnabled(bool enabled) {
 void AimingOverhaul::Streak::ReleaseDeviceObjects() {
     g_shader.Release();
     g_vertexShader = nullptr;
-    g_stage0 = nullptr;
 }

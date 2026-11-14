@@ -15,7 +15,8 @@ Notable changes to Sky Overhaul, loosely following
 - **Works under dgVoodoo and DLSS injectors.** Under dgVoodoo, which the DLSS 5 injector needs to
   run Far Cry 2, Sky Overhaul drew nothing and the game's own sky stayed. It draws through the game
   itself instead of hooking Direct3D, so its sky is right there too, with ReShade and a DLSS 5
-  injector on top.
+  injector on top, and beside Aiming Overhaul and Vehicle Overhaul, which hook the same parts of
+  the game.
 
 ## [1.5.0] - 2026-10-16
 
