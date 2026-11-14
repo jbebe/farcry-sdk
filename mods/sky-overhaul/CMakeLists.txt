@@ -144,6 +144,7 @@ add_library(SkyOverhaul SHARED
   "src/engine/fog_tint.cpp"
   "src/engine/known_shaders.cpp"
   "src/engine/known_textures.cpp"
+  "src/engine/locate.cpp"
   "src/engine/noise.cpp"
   "src/engine/frame.cpp"
   "src/engine/frame_copy.cpp"
@@ -153,7 +154,6 @@ add_library(SkyOverhaul SHARED
   "src/engine/sun_occlusion.cpp"
   "src/engine/time_of_day.cpp"
   "src/engine/vertex_patch.cpp"
-  "src/engine/vtable.cpp"
   ${SHADER_HEADERS}
 )
 
@@ -166,10 +166,9 @@ target_include_directories(SkyOverhaul PRIVATE
   "${FCSE_INCLUDE_DIR}"
 )
 
-# The wash is drawn through the game's own device, so the plugin links Direct3D only to name the
-# interface and read its vtable; it never creates a device of the game's. Dear ImGui is the core
-# alone, drawing into DevTools' context - the backends are DevTools'.
-target_link_libraries(SkyOverhaul PRIVATE d3d9 imgui)
+# Everything is drawn through the game's own device, so the plugin imports nothing from Direct3D.
+# Dear ImGui is the core alone, drawing into DevTools' context - the backends are DevTools'.
+target_link_libraries(SkyOverhaul PRIVATE imgui)
 
 # No "lib" prefix and no decoration: bin\plugins\SkyOverhaul.dll is what the player installs and
 # what fcse.log names in every line this plugin writes.

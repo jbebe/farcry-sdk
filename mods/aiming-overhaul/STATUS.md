@@ -88,7 +88,7 @@ Stage: active
 ## Collisions
 
 - vss-vintorez: fixed by b7946eaf - the VSS's Dart Rifle drew the game's scope until it carried AO's scope data (the Dragunov's)
-- sky-overhaul: fixed by FCSE 1.3.0's hook stacking - both hook the same Direct3D functions; the gun blur sits before bloom
+- sky-overhaul: fixed - Sky hooks the engine's draws and AO Direct3D's, so no function is shared; the gun blur sits before bloom
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
 - difficulty-overhaul: merged by JackAll, no shared field - both edit the guns' entity-library archetypes and particle libraries
 - sound-overhaul: merged by JackAll, no shared field, and the shot hooks stack, fixed in Sound Overhaul 1.0.2 - both edit the guns' entity-library archetypes, this mod leaving the echo field as shipped, and both hook the shot at 0x00115680

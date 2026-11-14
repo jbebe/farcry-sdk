@@ -1,5 +1,6 @@
 #include "sun_shadows.h"
 
+#include "engine/locate.h"
 #include "fcse_api.h"
 #include "tuning.h"
 
@@ -30,7 +31,7 @@ namespace {
         "55 8B EC 83 E4 F0 81 EC F4 00 00 00 53 56 57 8B F9 6A 01 57 B9 ?? ?? ?? ?? "
         "E8 ?? ?? ?? ?? 8A 5D 08 84 DB")};
     constexpr size_t kManagerOperand = 21;
-    constexpr size_t kCallOperand = 26;
+    constexpr size_t kCall = 25;
     constexpr size_t kShadowDirection = 0x328;
 
     // How far the sun turns before the shadows follow it: half a degree, as a cosine. The cascades
@@ -129,9 +130,7 @@ bool SkyOverhaul::SunShadows::Install() {
         return false;
     }
     g_manager = *reinterpret_cast<void**>(code + kManagerOperand);
-    const int32_t displacement = *reinterpret_cast<int32_t*>(code + kCallOperand);
-    g_writableState =
-        reinterpret_cast<WritableStateFn>(code + kCallOperand + sizeof(int32_t) + displacement);
+    g_writableState = SkyOverhaul::CallTarget<WritableStateFn>(code + kCall);
 
     if (!api->Hook(code, reinterpret_cast<void*>(&UpdateShadowDetour),
                    reinterpret_cast<void**>(&g_originalUpdateShadow))) {

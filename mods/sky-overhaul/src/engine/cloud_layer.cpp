@@ -1,5 +1,6 @@
 #include "engine/cloud_layer.h"
 
+#include "engine/locate.h"
 #include "engine/seqlock.h"
 #include "fcse_api.h"
 
@@ -132,22 +133,11 @@ namespace {
 bool SkyOverhaul::CloudLayer::Install() {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
-    const uintptr_t mapped = g_mapped.address();
-    const uintptr_t scanned = g_scanned.address();
-    if (mapped == 0 && scanned == 0) {
+    const uintptr_t target = Locate("clouds", g_mapped.address(), g_scanned.address());
+    if (target == 0) {
         api->Log("clouds unavailable: the cloud-layer submission was not found in this build");
         return false;
     }
-    if (mapped != scanned) {
-        FCSE::Logf("clouds: the address library says 0x%08zX and the pattern says 0x%08zX, "
-                   "taking %s", static_cast<size_t>(mapped), static_cast<size_t>(scanned),
-                   scanned != 0 ? "the pattern" : "the library");
-    }
-
-    // A disagreement goes to the pattern, which is checked against both shipped builds before
-    // every release, where a translated address is only ever as good as the mapping behind it.
-    const uintptr_t target = scanned != 0 ? scanned : mapped;
-
     if (!api->Hook(reinterpret_cast<void*>(target), reinterpret_cast<void*>(&SubmitCloudsDetour),
                    reinterpret_cast<void**>(&g_original))) {
         api->Log("clouds unavailable: the cloud-layer submission could not be hooked");

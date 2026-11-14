@@ -51,6 +51,14 @@ vtable's slots before releasing that device.** A wrapper such as an overlay can 
 the device object and free it with the device; DevTools read the table after releasing its device and
 crashed at startup on such a machine.
 
+A throwaway device names the functions the game's calls reach only while a wrapper in front of
+`d3d9.dll` leaves that device unwrapped. ReShade 6.8.0 does: it skips a device whose focus window is
+the desktop, so the throwaway stays a plain system device, and ReShade forwards the game's calls to
+those same functions (seen in game, GOG v1.03). Under dgVoodoo 2.87.6 the throwaway device cannot be
+created at all, so a plugin that reads its slots this way does nothing (seen in game, GOG v1.03).
+A hook on [the engine's own device class](#the-engines-draws-and-pass-ends-before-direct3d) depends
+on no wrapper at all.
+
 ### EndScene is not once a frame
 
 Far Cry 2 renders through offscreen passes and composites them — HDR,
@@ -334,6 +342,10 @@ simply read the depth-stencil surface. It has to read the engine's own linear de
 or intercept the creation of the depth surface and substitute a single-sampled readable one, which
 costs the game its antialiasing. An occlusion query needs none of this, because it asks the hardware
 to count against depth rather than to hand it over.
+
+ReShade is bound by the same rule: with the world passes multisampled four ways, ReShade 6.8.0's
+depth view (`DisplayDepth.fx`) shows no depth at all, with no plugin installed but DevTools (seen in
+game, GOG v1.03). Effects and upscalers that take ReShade's depth get none.
 :::
 
 ### The engine keeps a readable linear depth of its own
@@ -449,6 +461,13 @@ Around `0x1040E9CC` the renderer sets up a cut-out material. With alpha-to-cover
 the drivers' own switches, `D3DRS_ADAPTIVETESS_Y` set to `'ATOC'` on NVIDIA and `D3DRS_POINTSIZE` set
 to `'A2M1'` on AMD, and back to zero or `'A2M0'` for everything else. Either way it then sets
 `D3DRS_ALPHATESTENABLE`, followed by the material's `D3DRS_ALPHAREF`.
+
+Which switch it uses follows the adapter's vendor ID, read at device creation (`0x10425177`): `0x10DE`
+for NVIDIA, `0x1002` for AMD. NVIDIA's path is taken only if `CheckDeviceFormat` accepts the `'ATOC'`
+format, and it keeps the alpha test on beside the switch. AMD's path is taken without asking, and it
+turns the alpha test off, leaving the cut-out to the driver. Under dgVoodoo 2.87.6 with four-sample
+antialiasing, grass and leaves draw solid while its `AdapterIDType` is unset and cut out once it is
+`nvidia` (seen in game, GOG v1.03).
 
 :::info[Verified in a running game]
 Retail GOG v1.03 at 1920×1080 with four-sample multisampling, standing in a grass field, counted
@@ -662,6 +681,40 @@ vertex, give every corner `w = 1` so the interpolation stays linear, and take **
 offset — that rule is for reading a texture by screen position, and a direction belonging at the
 viewport's edge is already where a rasteriser interpolating to a pixel centre expects it.
 
+### The engine's draws and pass ends, before Direct3D
+
+The renderer reaches `IDirect3DDevice9` through the engine's own D3D9 device class, which holds the
+game's device pointer at `this+0x38`. Every draw of the world and every pass end go through four of its
+methods **(RE-verified, Steam v1.03; the GOG addresses through the address library and patterns)**:
+
+| Slot | Steam | GOG | Method | Calls |
+|---|---|---|---|---|
+| 14 | `0x10423060` | `0x10415220` | `BeginScene()` | targets, viewport, clear, then device slot 41 |
+| 15 | `0x10422510` | `0x104146D0` | `EndScene()`, 22 bytes | clears the renderer's in-scene flag, then slot 42 |
+| 55 | `0x10423A70` | `0x10415C30` | `DrawPrimitive(type, startVertex, count)`, `ret 0xC` | the flush, then slot 81 |
+| 56 | `0x10423AF0` | `0x10415CB0` | `DrawIndexedPrimitive(type, base, minIndex, vertices, startIndex, count)`, `ret 0x18` | the flush, then slot 82 |
+
+All are `__thiscall`. `type` is the engine's own primitive enum, turned into Direct3D's through a
+table at Steam `0x10E53004`: 0 and 6 are triangle lists, 1 and 2 strips, 3 a line list, 4 a line
+strip, 5 a fan. The count reaches Direct3D as at least 1.
+
+The flush (Steam `0x10422EB0`, GOG `0x10415070`, `__cdecl(IDirect3DDevice9*)`, called only by the two
+draws) uploads the shader constants the engine has changed since the last draw. The engine keeps a
+copy of both constant files (Steam `0x1160A080` vertex, `0x1160B080` pixel, a float4 each) with a
+dirty range per file, uploads that range and resets it, so a second call sends nothing. A hook on a
+draw that calls the flush first finds on the device exactly what the draw will see, and can change it
+before the engine's own draw runs. A few parameter blocks are uploaded directly rather than through
+the copies (`0x1041AE80`, `0x1041B130`), so the copies alone are not the whole of what is on the
+device.
+
+Inside the renderer these two draws are the only callers of Direct3D's `DrawPrimitive` and
+`DrawIndexedPrimitive`, and slot 15 the only caller of `EndScene`; the interface's renderer
+(`0x10ACA570` and Magma's `Read*` functions) draws on its own. So a hook here sees every world draw
+and pass end and nothing of another plugin's, and anything it calls on the device at `this+0x38` goes
+the way the game's own calls go, through whatever wrapper the game was given. The address library
+does not carry slot 15; a pattern of its whole body finds it in both builds. Sky Overhaul hooks slots
+15, 55 and 56.
+
 ### Which device vtable slots the repo's plugins hold
 
 The game's device runs the same functions as a throwaway device created at load, so the slots are
@@ -670,16 +723,14 @@ it is build-specific.
 
 | Slot | Function | Held by |
 |---|---|---|
-| 16 | `Reset` | DevTools |
-| 17 | `Present` | DevTools |
-| 42 | `EndScene` | Sky Overhaul, DevTools (the AI view, in the sky pass) |
-| 82 | `DrawIndexedPrimitive` | Sky Overhaul |
-| 94 | `SetVertexShaderConstantF` | Sky Overhaul |
-| 109 | `SetPixelShaderConstantF` | Sky Overhaul |
-
-Slot 82 is where the sky dome is recognised, by the signature in
-[the sky and cloud system](./sky-and-clouds.md#the-domes-draw-call). The two constant setters see
-every upload of the fog colour at `c49`–`c50`.
+| 16 | `Reset` | DevTools, Aiming Overhaul, Inventory Overhaul, Third Person, Vehicle Overhaul |
+| 17 | `Present` | DevTools, Third Person |
+| 42 | `EndScene` | DevTools (the AI view, in the sky pass), Aiming Overhaul, Inventory Overhaul, Third Person, Vehicle Overhaul |
+| 65 | `SetTexture` | Aiming Overhaul, Inventory Overhaul |
+| 81 | `DrawPrimitive` | Aiming Overhaul, Third Person |
+| 82 | `DrawIndexedPrimitive` | Aiming Overhaul, Third Person |
+| 83 | `DrawPrimitiveUP` | Aiming Overhaul |
+| 84 | `DrawIndexedPrimitiveUP` | Aiming Overhaul |
 
 Since FCSE 1.3.0 a second plugin hooking one of these slots stacks on the first rather than being
 turned away, so the table says who else runs there, not what is taken. `TestCooperativeLevel`, which
@@ -773,8 +824,9 @@ window subclassed, and the two DirectInput reads answered while it has the input
 `mods/DevTools/src/overlay/`.
 
 Sky Overhaul is the other shape: an effect that belongs *inside* the world's frame rather than over
-the finished one. It follows `EndScene`, classifies each pass, measures the sun against the scene's
-depth during the sky pass, and paints over the composite so the result lands under the interface.
+the finished one. It follows the engine device's `EndScene` and draws, classifies each pass, measures
+the sun against the scene's depth during the sky pass, and paints over the composite so the result
+lands under the interface.
 `mods/sky-overhaul/src/engine/` holds those three concerns — following the frame, guarding device
 state, and letting go before a reset — in modules that know nothing about the effect itself.
 

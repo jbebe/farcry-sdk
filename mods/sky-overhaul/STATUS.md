@@ -10,7 +10,7 @@ Stage: maintenance
 - [done] Storms: thicker clouds, cirrus over the whole sky, grey light, the clear fog kept - confirmed in game 2026-09-13
 - [done] Clear days not blown out: the sky at half brightness and sunlit clouds at a quarter once the sun is up
 - [done] The game's clouds stay until ours draw, so a Direct3D injector never leaves an empty sky
-- [new] Drawn through the engine with no Direct3D hooks, so it works beside ReShade, DXVK and DLSS injectors #63
+- [done] Drawn through the engine with no Direct3D hooks, so it works under dgVoodoo, ReShade and a DLSS 5 injector - user: "even with dlss, the sky is right" #63
 - [done] Sun glare and afterimage, covered by our clouds - cloud cover confirmed in game 2026-09-13
 - [done] Light shafts that stop where our clouds stand - confirmed in game 2026-09-13
 - [done] Cloud shadows on the ground - needs depth pass quality high
@@ -42,6 +42,10 @@ Stage: maintenance
 - [scrapped] Weather controls - developer settings, they live in DevTools' Environment tab
 - [scrapped] Sharpening, a longer shadow-cascade reach, FC3/FC4 RE for it - never propose
 
+## To validate
+
+- Play a while as usual: sky, clouds, dusk fog, grass, leaves, rocks and grade as before - fc2drive only, noon, dusk and night at two spots
+
 ## Approvals
 
 - played: e28a5a3 2026-10-16 - implied by the sky-overhaul-1.5.0 release
@@ -55,6 +59,6 @@ Stage: maintenance
 
 ## Collisions
 
-- aiming-overhaul: fixed by AO's stencil bit 0x20, gun blur before bloom and Reset via the device vtable - Direct3D hooks, stencil 0x40
+- aiming-overhaul: fixed by AO's stencil bit 0x20, gun blur before bloom and Reset via the device vtable - stencil 0x40; Sky hooks the engine's draws, AO Direct3D's, scope checked together (fc2drive)
 - vehicle-overhaul: fixed by VO's lamp glow hooking the device vtable's Reset - Sky's engine teardown pattern fails once hooked twice
 - ufcp: fixed by design: Sky never swaps the grass spot-light shaders and that pass writes no Z - grass shaders

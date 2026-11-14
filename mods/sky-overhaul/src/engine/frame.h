@@ -1,4 +1,4 @@
-// The engine's frame, followed from the one seam a second plugin can still take.
+// The engine's frame, followed from its device class's EndScene.
 //
 // EndScene runs once per pass on the render thread, several times a frame, so a pass has to be
 // recognised rather than counted. See docs/docs/engine-internals/presentation-and-input.md.
@@ -38,10 +38,10 @@ struct Pass {
 
 using PassFn = void (*)(const Pass&);
 
-// Takes over the device's EndScene. Call once from FCSE_Load. `onScenePass` runs on each of the
-// frame's scene passes, with the scene's own target and depth still bound; `onFinalPass` runs once
-// on the composite, with the back buffer bound and the user interface not yet drawn. False means
-// the frame cannot be followed, which it logs, and nothing is left hooked.
+// Takes over the engine device's EndScene. Call once from FCSE_Load. `onScenePass` runs on each of
+// the frame's scene passes, with the scene's own target and depth still bound; `onFinalPass` runs
+// once on the composite, with the back buffer bound and the user interface not yet drawn. False
+// means the frame cannot be followed, which it logs, and nothing is left hooked.
 bool Install(PassFn onScenePass, PassFn onFinalPass);
 
 // How many passes have ended so far. What a draw is in the middle of belongs to the pass that has

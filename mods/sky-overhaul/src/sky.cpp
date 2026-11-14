@@ -116,9 +116,6 @@ namespace {
 }
 
 void SkyOverhaul::Sky::Install() {
-    // The world's own fog colour is followed whether or not our sky is drawn: it is what the land
-    // fades into, and a player who wants the horizon changed wants the land changed with it.
-    FogTint::Install();
     DomeDraw::Install(&Draw);
 }
 

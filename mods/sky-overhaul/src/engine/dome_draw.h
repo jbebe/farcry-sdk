@@ -10,7 +10,7 @@
 // what it lets through, so that the mask follows our clouds rather than the engine's, and draws the
 // moon without the fog the engine hides a low moon in.
 //
-// It also watches the draws named by their shaders, in DrawPrimitive too, for the effects below.
+// It also watches the draws named by their shaders, non-indexed ones too, for the effects below.
 //
 // See docs/docs/engine-internals/presentation-and-input.md for what named that call.
 #pragma once
@@ -33,9 +33,9 @@ enum class Mode {
 // a substitute that cannot draw yet costs nothing but what it did not replace.
 using SubstituteFn = bool (*)(IDirect3DDevice9* device);
 
-// Takes over the device's draw entry point. Call once from FCSE_Load. False means it could not be
-// taken, which it logs, and nothing is left hooked. Starts in Engine mode, so nothing changes
-// until something asks for it.
+// Takes over the engine device's two draw methods. Call once from FCSE_Load. False means they could
+// not be taken, which it logs, and nothing is left hooked. Starts in Engine mode, so nothing
+// changes until something asks for it.
 bool Install(SubstituteFn substitute);
 
 // Takes effect on the next draw.

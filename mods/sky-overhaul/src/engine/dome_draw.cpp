@@ -2,11 +2,12 @@
 
 #include "engine/com.h"
 #include "engine/depth_texture.h"
+#include "engine/engine_device.h"
 #include "engine/fog_tint.h"
 #include "engine/frame.h"
 #include "engine/known_shaders.h"
+#include "engine/locate.h"
 #include "engine/solid_depth.h"
-#include "engine/vtable.h"
 #include "fcse_api.h"
 
 #include <windows.h>
@@ -14,7 +15,35 @@
 #include <iterator>
 
 namespace {
-    constexpr size_t kDrawIndexedPrimitiveSlot = 82;
+    // The engine device's two draw methods, __thiscall declared __fastcall. Each sends the shader
+    // constants the engine has changed since the last draw to the device, then draws.
+    using EngineDrawIndexedFn = HRESULT(__fastcall*)(void* self, void* unused, UINT type,
+                                                     INT baseVertexIndex, UINT minVertexIndex,
+                                                     UINT numVertices, UINT startIndex,
+                                                     UINT primitiveCount);
+    using EngineDrawFn = HRESULT(__fastcall*)(void* self, void* unused, UINT type,
+                                              UINT startVertex, UINT primitiveCount);
+    using FlushFn = void(__cdecl*)(IDirect3DDevice9* device);
+
+    FCSE::Relocation<EngineDrawIndexedFn> g_mappedIndexed{FCSE::Uplay(0x00423AF0)};
+    FCSE::Relocation<EngineDrawIndexedFn> g_scannedIndexed{FCSE::Pattern(
+        "83 EC 08 56 8B F1 8B 46 38 50 E8 ?? ?? ?? ?? DB 44 24 28 8B 4C 24 28")};
+    FCSE::Relocation<EngineDrawFn> g_mappedPlain{FCSE::Uplay(0x00423A70)};
+    FCSE::Relocation<EngineDrawFn> g_scannedPlain{FCSE::Pattern(
+        "83 EC 08 56 8B F1 8B 46 38 50 E8 ?? ?? ?? ?? DB 44 24 1C 8B 4C 24 1C")};
+
+    // Where both draws call the constant flush, an E8 and its displacement.
+    constexpr size_t kFlushCall = 0x0A;
+
+    // The engine's primitive types as Direct3D's, as its own table maps them in both builds.
+    constexpr D3DPRIMITIVETYPE kPrimitiveTypes[] = {
+        D3DPT_TRIANGLELIST, D3DPT_TRIANGLESTRIP, D3DPT_TRIANGLESTRIP, D3DPT_LINELIST,
+        D3DPT_LINESTRIP,    D3DPT_TRIANGLEFAN,   D3DPT_TRIANGLELIST,
+    };
+
+    D3DPRIMITIVETYPE Direct3DType(UINT type) {
+        return type < std::size(kPrimitiveTypes) ? kPrimitiveTypes[type] : D3DPT_FORCE_DWORD;
+    }
 
     // What the sky dome is, measured over sixty-one sky passes across noon, dusk, night, the pause
     // menu and a water reflection: one indexed triangle strip of 714 vertices and 1450 triangles,
@@ -44,8 +73,6 @@ namespace {
     constexpr UINT kMoonParams = 71;
     constexpr float kMoonPeak = 1.0f;
 
-    constexpr size_t kDrawPrimitiveSlot = 81;
-
     // A full-screen pass is one or two triangles, which spares every other draw the shader lookup
     // while only the grade is watched for.
     constexpr UINT kScreenPrimitives = 2;
@@ -57,12 +84,9 @@ namespace {
     // and rock read.
     constexpr UINT kOwnParameters = 110;
 
-    using DrawIndexedPrimitiveFn = HRESULT(__stdcall*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, INT,
-                                                       UINT, UINT, UINT, UINT);
-    using DrawPrimitiveFn = HRESULT(__stdcall*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, UINT, UINT);
-
-    DrawIndexedPrimitiveFn g_original = nullptr;
-    DrawPrimitiveFn g_originalPlain = nullptr;
+    EngineDrawIndexedFn g_original = nullptr;
+    EngineDrawFn g_originalPlain = nullptr;
+    FlushFn g_flush = nullptr;
     SkyOverhaul::DomeDraw::SubstituteFn g_substitute = nullptr;
     SkyOverhaul::DomeDraw::SubstituteFn g_maskSubstitute = nullptr;
     SkyOverhaul::DomeDraw::GradeFn g_grade = nullptr;
@@ -79,7 +103,7 @@ namespace {
     uint32_t g_drawnPass = 0xFFFFFFFFu;
     uint32_t g_maskedPass = 0xFFFFFFFFu;
 
-    // Everything here is on the path every indexed draw in the process takes, some seventeen
+    // Everything here is on the path every indexed draw of the renderer takes, some seventeen
     // hundred of them a frame, so the whole of it is two compares and a mode until a draw matches.
     bool Substitute(IDirect3DDevice9* device, D3DPRIMITIVETYPE type, UINT vertices,
                     UINT primitives) {
@@ -322,25 +346,39 @@ namespace {
         return drawn;
     }
 
-    HRESULT __stdcall DrawPrimitiveDetour(IDirect3DDevice9* device, D3DPRIMITIVETYPE type,
-                                          UINT startVertex, UINT primitiveCount) {
+    // The device as the draw will find it: the engine's constants sent first, which leaves the
+    // flush inside its own draw nothing to send.
+    IDirect3DDevice9* Prepare(void* self) {
+        IDirect3DDevice9* device = SkyOverhaul::EngineDevice::Direct3D(self);
+        g_flush(device);
         SkyOverhaul::FogTint::BeforeDraw(device);
+        return device;
+    }
+
+    HRESULT __fastcall DrawPrimitiveDetour(void* self, void* unused, UINT engineType,
+                                           UINT startVertex, UINT primitiveCount) {
+        IDirect3DDevice9* device = Prepare(self);
         return WatchShaders(device, primitiveCount, [&] {
             return DrawVertex(device, [&] {
-                return g_originalPlain(device, type, startVertex, primitiveCount);
+                return g_originalPlain(self, unused, engineType, startVertex, primitiveCount);
             });
         });
     }
 
-    HRESULT __stdcall DrawIndexedPrimitiveDetour(IDirect3DDevice9* device, D3DPRIMITIVETYPE type,
-                                                 INT baseVertexIndex, UINT minVertexIndex,
-                                                 UINT numVertices, UINT startIndex,
-                                                 UINT primitiveCount) {
-        SkyOverhaul::FogTint::BeforeDraw(device);
+    HRESULT __fastcall DrawIndexedPrimitiveDetour(void* self, void* unused, UINT engineType,
+                                                  INT baseVertexIndex, UINT minVertexIndex,
+                                                  UINT numVertices, UINT startIndex,
+                                                  UINT primitiveCount) {
+        IDirect3DDevice9* device = Prepare(self);
+        const D3DPRIMITIVETYPE type = Direct3DType(engineType);
         if (Substitute(device, type, numVertices, primitiveCount) ||
             SubstituteMask(device, type)) {
             return D3D_OK;
         }
+        const auto engineDraw = [&] {
+            return g_original(self, unused, engineType, baseVertexIndex, minVertexIndex,
+                              numVertices, startIndex, primitiveCount);
+        };
 
         // The engine fogs the moon by the height of its sprite, which hides all but a high moon in
         // the night's near-black fog; our sky already carries the air's colour in front of it.
@@ -358,31 +396,31 @@ namespace {
             const float unfogged[4] = {fog[0], fog[1], 0.0f, fog[3]};
             device->SetVertexShaderConstantF(kFogValues, unfogged, 1);
             device->SetPixelShaderConstantF(kMoonParams, held, 1);
-            const HRESULT drawn = g_original(device, type, baseVertexIndex, minVertexIndex,
-                                             numVertices, startIndex, primitiveCount);
+            const HRESULT drawn = engineDraw();
             device->SetPixelShaderConstantF(kMoonParams, params, 1);
             device->SetVertexShaderConstantF(kFogValues, fog, 1);
             return drawn;
         }
-        return WatchShaders(device, primitiveCount, [&] {
-            return DrawVertex(device, [&] {
-                return g_original(device, type, baseVertexIndex, minVertexIndex, numVertices,
-                                  startIndex, primitiveCount);
-            });
-        });
+        return WatchShaders(device, primitiveCount,
+                            [&] { return DrawVertex(device, engineDraw); });
     }
 }
 
 bool SkyOverhaul::DomeDraw::Install(SubstituteFn substitute) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
-    void* draw = Vtable::Slot(kDrawIndexedPrimitiveSlot);
-    if (draw == nullptr) {
-        api->Log("dome: no Direct3D 9 device could be created to read the vtable from");
+    const uintptr_t indexed =
+        Locate("dome", g_mappedIndexed.address(), g_scannedIndexed.address());
+    const uint8_t* call = reinterpret_cast<const uint8_t*>(indexed) + kFlushCall;
+    if (indexed == 0 || call[0] != 0xE8) {
+        api->Log("dome unavailable: the engine's indexed draw was not found in this build");
         return false;
     }
+    g_flush = CallTarget<FlushFn>(call);
+
     // A rejected hook is already logged by FCSE.
-    if (!api->Hook(draw, reinterpret_cast<void*>(&DrawIndexedPrimitiveDetour),
+    if (!api->Hook(reinterpret_cast<void*>(indexed),
+                   reinterpret_cast<void*>(&DrawIndexedPrimitiveDetour),
                    reinterpret_cast<void**>(&g_original))) {
         return false;
     }
@@ -390,10 +428,11 @@ bool SkyOverhaul::DomeDraw::Install(SubstituteFn substitute) {
     g_substitute = substitute;
 
     // The final pass draws its grade through it. Not worth refusing the sky over.
-    void* plain = Vtable::Slot(kDrawPrimitiveSlot);
-    if (plain == nullptr || !api->Hook(plain, reinterpret_cast<void*>(&DrawPrimitiveDetour),
-                                       reinterpret_cast<void**>(&g_originalPlain))) {
-        api->Log("dome: DrawPrimitive is not watched, so the grade cannot be changed");
+    const uintptr_t plain = Locate("dome", g_mappedPlain.address(), g_scannedPlain.address());
+    if (plain == 0 ||
+        !api->Hook(reinterpret_cast<void*>(plain), reinterpret_cast<void*>(&DrawPrimitiveDetour),
+                   reinterpret_cast<void**>(&g_originalPlain))) {
+        api->Log("dome: the engine's plain draw is not watched, so the grade cannot be changed");
     }
     return true;
 }

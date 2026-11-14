@@ -11,6 +11,12 @@ Notable changes to Sky Overhaul, loosely following
 - **No rim light.** The bluish glow along the edges of people and plants is gone by day too, and
   in every weather, not only on clear, cloudy and jungle nights.
 
+### Fixed
+- **Works under dgVoodoo and DLSS injectors.** Under dgVoodoo, which the DLSS 5 injector needs to
+  run Far Cry 2, Sky Overhaul drew nothing and the game's own sky stayed. It draws through the game
+  itself instead of hooking Direct3D, so its sky is right there too, with ReShade and a DLSS 5
+  injector on top.
+
 ## [1.5.0] - 2026-10-16
 
 ### Added

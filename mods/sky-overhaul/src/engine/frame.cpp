@@ -1,15 +1,21 @@
 #include "engine/frame.h"
 
 #include "engine/cloud_layer.h"
-#include "engine/vtable.h"
+#include "engine/engine_device.h"
 #include "fcse_api.h"
 
 #include <windows.h>
 
 namespace {
-    constexpr size_t kEndSceneSlot = 42;
+    // __thiscall taking only `this`, declared __fastcall because MSVC will not let a free function
+    // be __thiscall.
+    using EndSceneFn = HRESULT(__fastcall*)(void* self);
 
-    using EndSceneFn = HRESULT(__stdcall*)(IDirect3DDevice9*);
+    // Its whole body: it clears the renderer's in-scene flag, the first seven bytes and the ones a
+    // hook placed by another plugin first overwrites, then ends the device's scene. The address
+    // library does not carry it.
+    FCSE::Relocation<EndSceneFn> g_endScene{FCSE::Pattern(
+        "?? ?? ?? ?? ?? ?? ?? 8B 41 38 8B 08 8B 91 A8 00 00 00 50 FF D2 C3")};
 
     EndSceneFn g_originalEndScene = nullptr;
     SkyOverhaul::Frame::PassFn g_onScenePass = nullptr;
@@ -117,12 +123,12 @@ namespace {
         }
     }
 
-    HRESULT __stdcall EndSceneDetour(IDirect3DDevice9* device) {
-        Observe(device);
+    HRESULT __fastcall EndSceneDetour(void* self) {
+        Observe(SkyOverhaul::EngineDevice::Direct3D(self));
         // Every pass, not only the ones anyone acts on: the draws this counts off are inside all
         // of them.
         g_passSerial++;
-        return g_originalEndScene(device);
+        return g_originalEndScene(self);
     }
 
 }
@@ -130,14 +136,14 @@ namespace {
 bool SkyOverhaul::Frame::Install(PassFn onScenePass, PassFn onFinalPass) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
-    void* endScene = Vtable::Slot(kEndSceneSlot);
-    if (endScene == nullptr) {
-        api->Log("frame: no Direct3D 9 device could be created to read the vtable from");
+    if (!g_endScene) {
+        api->Log("frame: the engine's EndScene was not found in this build");
         return false;
     }
 
     // A rejected hook is already logged by FCSE.
-    if (!api->Hook(endScene, reinterpret_cast<void*>(&EndSceneDetour),
+    if (!api->Hook(reinterpret_cast<void*>(g_endScene.address()),
+                   reinterpret_cast<void*>(&EndSceneDetour),
                    reinterpret_cast<void**>(&g_originalEndScene))) {
         return false;
     }
