@@ -104,3 +104,5 @@ Notable changes to DevTools, loosely following
 ### Changed
 - **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.
+- **Works under dgVoodoo and DLSS injectors:** the overlay, the AI view, the frame and GPU times and
+  the remote control's screenshots draw and measure through the game itself, not by hooking Direct3D.

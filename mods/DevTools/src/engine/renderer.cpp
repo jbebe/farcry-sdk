@@ -1,30 +1,33 @@
-// The game's device runs the same Present and Reset as a device of our own, so detouring those names
-// the game's device the moment it calls them; nothing of ours stays resident until then.
-//
-// Reset is hooked before Present, and a failure to hook either leaves neither installed. Drawing
-// with Reset unhooked would be the worst of both: ImGui's buffers live in the default pool, so a
-// device reset the overlay never hears about fails outright and takes the game's renderer with it.
+// The overlay draws just before the engine's Present calls Direct3D's, the frame is timed just
+// after, and the engine's Reset frees what the overlay holds. Reset is hooked first and the draw
+// last: ImGui's buffers live in the default pool, so a reset the overlay missed would fail.
 #include "engine/renderer.h"
 
 #include "engine/frame_capture.h"
-#include "engine/vtable.h"
+#include "engine/memory.h"
 #include "fcse_api.h"
 
 #include <d3d9.h>
-#include <windows.h>
 
 namespace {
-    // IDirect3DDevice9's vtable, as declared in d3d9.h.
-    constexpr size_t kResetSlot = 16;
-    constexpr size_t kPresentSlot = 17;
-
-    using PresentFn = HRESULT(__stdcall*)(IDirect3DDevice9* device, const RECT* source,
-                                          const RECT* destination, HWND window,
-                                          const RGNDATA* dirty);
-    using ResetFn = HRESULT(__stdcall*)(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* params);
-
-    PresentFn g_originalPresent = nullptr;
+    // The engine device's Reset, __thiscall declared __fastcall; true when Direct3D's reset
+    // succeeded.
+    using ResetFn = bool(__fastcall*)(void* self);
+    FCSE::Relocation<ResetFn> g_reset{FCSE::Uplay(0x00422630)};
     ResetFn g_originalReset = nullptr;
+
+    // Direct3D's Present inside the engine's Present, which the address library lacks, between the
+    // calls that let another thread borrow the device and take it back; ESI is the engine device.
+    FCSE::Relocation<uint8_t*> g_presentCall{FCSE::Pattern(
+        "BD 01 00 00 00 55 6A 02 E8 ?? ?? ?? ?? 8B 54 24 20 8B 46 38 8B 08 83 C4 08 53 52 "
+        "8B 54 24 24 52 8B 54 24 2C 52 50 8B 41 44 FF D0 6A 02 55 8B F8 E8 ?? ?? ?? ?? "
+        "B8 FF FF FF 7F")};
+    // Before the device is lent, and once it is taken back: the render thread owns it at both.
+    constexpr ptrdiff_t kBeforePresent = 0x00;
+    constexpr ptrdiff_t kAfterPresent = 0x35;
+
+    // The engine device's Direct3D device.
+    constexpr ptrdiff_t kDevice = 0x38;
 
     constexpr size_t kMaxSubscribers = 4;
     DevTools::Renderer::FrameFn g_subscribers[kMaxSubscribers]{};
@@ -32,7 +35,10 @@ namespace {
 
     DevTools::Renderer::DrawFn g_draw = nullptr;
     DevTools::Renderer::DeviceLostFn g_onDeviceLost = nullptr;
-    bool g_inDraw = false;
+
+    IDirect3DDevice9* DeviceOf(const FCSE_MidHookContext* ctx) {
+        return DevTools::Read<IDirect3DDevice9*>(reinterpret_cast<const void*>(ctx->esi), kDevice);
+    }
 
     // Draws into the back buffer, whatever the game left bound, and puts its target back. Anything
     // that cannot be undone is not started: without the previous target there is nothing to restore
@@ -59,30 +65,24 @@ namespace {
         previousTarget->Release();
     }
 
-    HRESULT __stdcall PresentDetour(IDirect3DDevice9* device, const RECT* source,
-                                    const RECT* destination, HWND window, const RGNDATA* dirty) {
+    void BeforePresent(FCSE_MidHookContext* ctx) {
+        IDirect3DDevice9* device = DeviceOf(ctx);
         const DevTools::FrameStats::Frame frame = DevTools::FrameStats::Presenting();
         for (size_t i = 0; i < g_subscriberCount; ++i) {
             g_subscribers[i](frame);
         }
         DevTools::FrameCapture::OnPresent(device);
-
-        // A draw that presented a frame of its own would otherwise recurse for as long as it kept
-        // drawing.
-        if (!g_inDraw) {
-            g_inDraw = true;
-            DrawToBackBuffer(device);
-            g_inDraw = false;
-        }
-        const HRESULT presented = g_originalPresent(device, source, destination, window, dirty);
-        DevTools::FrameStats::Presented(device);
-        return presented;
+        DrawToBackBuffer(device);
     }
 
-    HRESULT __stdcall ResetDetour(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* params) {
+    void AfterPresent(FCSE_MidHookContext* ctx) {
+        DevTools::FrameStats::Presented(DeviceOf(ctx));
+    }
+
+    bool __fastcall ResetDetour(void* self) {
         DevTools::FrameStats::DeviceLost();
         g_onDeviceLost();
-        return g_originalReset(device, params);
+        return g_originalReset(self);
     }
 }
 
@@ -99,23 +99,24 @@ bool Install(DrawFn draw, DeviceLostFn onDeviceLost) {
     g_draw = draw;
     g_onDeviceLost = onDeviceLost;
 
-    void* present = Vtable::Slot(kPresentSlot);
-    void* reset = Vtable::Slot(kResetSlot);
-    if (present == nullptr || reset == nullptr) {
-        api->Log("renderer: no Direct3D 9 device could be created - the overlay cannot draw");
+    if (!g_reset || !g_presentCall) {
+        api->Log("renderer: the engine's Reset or Present was not found in this build - the overlay "
+                 "cannot draw");
         return false;
     }
 
-    // A rejected hook is already logged by FCSE. Reset first: Present is what starts drawing, and
-    // drawing without Reset is what breaks the game.
-    if (!api->Hook(reset, reinterpret_cast<void*>(&ResetDetour),
+    uint8_t* call = g_presentCall.get();
+    // A rejected hook is already logged by FCSE.
+    if (!api->Hook(reinterpret_cast<void*>(g_reset.address()),
+                   reinterpret_cast<void*>(&ResetDetour),
                    reinterpret_cast<void**>(&g_originalReset)) ||
-        !api->Hook(present, reinterpret_cast<void*>(&PresentDetour),
-                   reinterpret_cast<void**>(&g_originalPresent))) {
+        !api->MidHook(call + kAfterPresent, &AfterPresent) ||
+        !api->MidHook(call + kBeforePresent, &BeforePresent)) {
         return false;
     }
 
-    FCSE::Logf("renderer: drawing from Present at 0x%08zX", reinterpret_cast<size_t>(present));
+    FCSE::Logf("renderer: drawing before the engine's Present at 0x%08zX",
+               reinterpret_cast<size_t>(call + kBeforePresent));
     return true;
 }
 

@@ -74,6 +74,6 @@ Stage: active
 - flashlight: deploy apart - user 2026-10-08: "flashlight is not needed, dont deploy it"; VO's input hook beside Flashlight's left with db5067a
 - sky-overhaul: stacks - both hook the engine's EndScene, which FCSE chains; VO's reset seam is the engine's own Reset, not Sky's teardown
 - aiming-overhaul: stacks - both hook the engine's EndScene and Reset, which FCSE chains
-- 0x00422510: stacks - the engine device's EndScene, which Sky, Aiming, Vehicle and Inventory Overhaul and Third Person hook; FCSE chains them
-- 0x00422630: stacks - the engine device's Reset, which Aiming, Vehicle and Inventory Overhaul hook; FCSE chains them
+- 0x00422510: stacks - the engine device's EndScene, which Sky, Aiming, Vehicle and Inventory Overhaul, Third Person and DevTools hook; FCSE chains them
+- 0x00422630: stacks - the engine device's Reset, which Aiming, Vehicle and Inventory Overhaul and DevTools hook; FCSE chains them
 - third-person: fixed by db5067a - both hook SetDriver, the call that gives a car its driver (patterns wildcard its first 6 bytes)

@@ -69,7 +69,6 @@ add_library(DevTools SHARED
   "src/engine/process_stats.cpp"
   "src/engine/renderer.cpp"
   "src/engine/spawn.cpp"
-  "src/engine/vtable.cpp"
   "src/engine/weather.cpp"
   "src/engine/world.cpp"
   "src/engine/world_draw.cpp"
@@ -104,12 +103,12 @@ add_library(DevTools SHARED
   "${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp"
 )
 
-# d3d9 for the overlay's own device handling, dinput8 for taking the mouse and keyboard off the game
-# while the overlay is up. Both ship with the Windows SDK; the legacy DirectX SDK is not needed.
+# dinput8 takes the mouse and keyboard off the game while the overlay is up; it ships with the
+# Windows SDK, and the legacy DirectX SDK is not needed.
 # ole32 is for the one CoInitializeEx call that holds dxdiagn.dll loaded under the cached provider.
 # pdh and psapi are the diagnostics tab's: the GPU counters Task Manager reads, and process memory.
 # windowscodecs writes the remote control's screenshots.
-target_link_libraries(DevTools PRIVATE imgui d3d9 dinput8 dxguid ole32 pdh psapi windowscodecs)
+target_link_libraries(DevTools PRIVATE imgui dinput8 dxguid ole32 pdh psapi windowscodecs)
 
 # windows.h would otherwise define min and max as macros over std::min and std::max.
 target_compile_definitions(DevTools PRIVATE NOMINMAX)

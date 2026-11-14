@@ -27,9 +27,10 @@ differs is below.
   configurable**: they are called, not configured.
 - **Two ways of finding a site, and which one depends on whose code it is.** Dunia's own code is
   found by `FCSE::Pattern` or the address library, and `scripts/verify_patterns.py` checks it.
-  Direct3D and DirectInput are not Dunia's: those live in `d3d9.dll` and `dinput8.dll`, are shared by
-  every object in the process, and are found by vtable index off an object built for the purpose. The
-  verifier cannot see those, and should not be expected to.
+  Direct3D is reached through the engine's own device class, Dunia's code, so a wrapper such as
+  dgVoodoo in front of `d3d9.dll` changes nothing. DirectInput is not Dunia's: it lives in
+  `dinput8.dll`, is shared by every object in the process, and is found by vtable index off an object
+  built for the purpose. The verifier cannot see that, and should not be expected to.
 - **Dear ImGui is the one exception to "`fcse_api.h` is the entire dependency".** It is pinned once,
   in `include/devtools_imgui.cmake`, fetched at configure time and compiled into the plugin, never
   linked from `tools/FCSE/`. The rule it does not weaken: nothing here ever reaches into

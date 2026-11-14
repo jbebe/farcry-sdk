@@ -92,8 +92,8 @@ Stage: active
 - vss-vintorez: fixed by b7946eaf - the VSS's Dart Rifle drew the game's scope until it carried AO's scope data (the Dragunov's)
 - sky-overhaul: stacks - both hook the engine's draws and EndScene, which FCSE chains; AO's reset seam is the engine's own Reset, not Sky's teardown; the gun blur sits before bloom
 - vehicle-overhaul: stacks - both hook the engine's EndScene and Reset, which FCSE chains
-- 0x00422510: stacks - the engine device's EndScene, which Sky, Aiming, Vehicle and Inventory Overhaul and Third Person hook; FCSE chains them
-- 0x00422630: stacks - the engine device's Reset, which Aiming, Vehicle and Inventory Overhaul hook; FCSE chains them
+- 0x00422510: stacks - the engine device's EndScene, which Sky, Aiming, Vehicle and Inventory Overhaul, Third Person and DevTools hook; FCSE chains them
+- 0x00422630: stacks - the engine device's Reset, which Aiming, Vehicle and Inventory Overhaul and DevTools hook; FCSE chains them
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
 - difficulty-overhaul: merged by JackAll, no shared field - both edit the guns' entity-library archetypes and particle libraries
 - sound-overhaul: merged by JackAll, no shared field, and the shot hooks stack, fixed in Sound Overhaul 1.0.2 - both edit the guns' entity-library archetypes, this mod leaving the echo field as shipped, and both hook the shot at 0x00115680

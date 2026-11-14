@@ -27,7 +27,7 @@ struct Frame {
 // Fills the frame's shapes. Called on the render thread, once a frame, with both lists empty.
 using FillFn = void (*)(Frame& out);
 
-// Takes over the device's EndScene. Call once from FCSE_Load; logs if it cannot.
+// Takes over the engine device's EndScene. Call once from FCSE_Load; logs if it cannot.
 void Install();
 
 // What to draw each frame. Null, which it starts as, draws nothing and costs every pass one test.

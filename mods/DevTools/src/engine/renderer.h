@@ -24,8 +24,8 @@ using DeviceLostFn = void (*)();
 // Adds a frame subscriber, in the order they will be called. Call from FCSE_Load.
 void Subscribe(FrameFn fn);
 
-// Takes over the device's Present and Reset. Call once from FCSE_Load. False means the overlay
-// cannot draw, which it logs, and nothing is left hooked.
+// Takes over the engine's Present and Reset. Call once from FCSE_Load. False means the overlay
+// cannot draw, which it logs, and nothing that draws is left hooked.
 bool Install(DrawFn draw, DeviceLostFn onDeviceLost);
 
 }

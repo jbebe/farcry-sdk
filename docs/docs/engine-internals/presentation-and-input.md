@@ -48,8 +48,8 @@ Two windows exist before the game's own, and neither is the one to draw into:
 window, and asks it what the hardware can do. Anyone who needs `IDirect3DDevice9`'s functions can do
 precisely this: one device of your own names the functions the game's device will call. **Copy the
 vtable's slots before releasing that device.** A wrapper such as an overlay can keep the vtable inside
-the device object and free it with the device; DevTools read the table after releasing its device and
-crashed at startup on such a machine.
+the device object and free it with the device, and reading the table after releasing the device
+crashes at startup on such a machine.
 
 A throwaway device names the functions the game's calls reach only while a wrapper in front of
 `d3d9.dll` leaves that device unwrapped. ReShade 6.8.0 does: it skips a device whose focus window is
@@ -692,13 +692,14 @@ viewport's edge is already where a rasteriser interpolating to a pixel centre ex
 
 The renderer reaches `IDirect3DDevice9` through the engine's own D3D9 device class, which holds the
 game's device pointer at `this+0x38`. Every draw of the world and every pass end go through four of its
-methods, and every device reset through a fifth **(RE-verified, Steam v1.03; the GOG addresses
-through the address library and patterns)**:
+methods, every presented frame through a fifth and every device reset through a sixth **(RE-verified,
+Steam v1.03; the GOG addresses through the address library and patterns)**:
 
 | Slot | Steam | GOG | Method | Calls |
 |---|---|---|---|---|
 | 14 | `0x10423060` | `0x10415220` | `BeginScene()` | targets, viewport, clear, then device slot 41 |
 | 15 | `0x10422510` | `0x104146D0` | `EndScene()`, 22 bytes | clears the renderer's in-scene flag, then slot 42 |
+| 16 | `0x10424150` | `0x10416310` | `Present(HWND)`, `ret 4` | its own end-of-frame work, then device slot 17 at `0x104244DC`, between two calls of `0x10408A90` |
 | 21 | `0x10422630` | `0x104147F0` | `Reset()`, returns true when Direct3D's reset succeeded | slot 77 of its own, then device slot 16 with the stored present parameters |
 | 55 | `0x10423A70` | `0x10415C30` | `DrawPrimitive(type, startVertex, count)`, `ret 0xC` | the flush, then slot 81 |
 | 56 | `0x10423AF0` | `0x10415CB0` | `DrawIndexedPrimitive(type, base, minIndex, vertices, startIndex, count)`, `ret 0x18` | the flush, then slot 82 |
@@ -728,9 +729,19 @@ too, ahead of that `Reset`; a plugin that frees its `D3DPOOL_DEFAULT` objects at
 reset succeed (seen in game, GOG v1.03). It is a function apart from the device teardown at slot 20, which the address
 library does not carry.
 
+Slot 16 does work of its own before it presents, its own frame captures among them, so a draw over
+the finished frame belongs just before its call to Direct3D's `Present`, where `ESI` holds the engine
+device. Around that call `0x10408A90`, a compare-and-swap spin on a device token at `0x1160966C`,
+turns the token from 2 to 1, which lets a loading thread borrow the device while `Present` runs, and
+back to 2 after it. A draw belongs outside that pair, where the render thread owns the device: at
+`0x104244B3`, the `mov ebp, 1` that starts the hand-over, and at `0x104244E8`, just after the device
+is taken back. Neither slot 16 nor those sites are in the address library; a pattern of the call with
+the hand-over around it finds them in both builds.
+
 Sky Overhaul and Aiming Overhaul both hook slots 15, 55 and 56, and Vehicle Overhaul, Inventory
-Overhaul and Third Person slot 15; FCSE chains them. Aiming Overhaul, Vehicle Overhaul and Inventory
-Overhaul free their objects at slot 21, Sky Overhaul at the teardown.
+Overhaul, Third Person and DevTools slot 15; FCSE chains them. Aiming Overhaul, Vehicle Overhaul,
+Inventory Overhaul and DevTools free their objects at slot 21, Sky Overhaul at the teardown. DevTools
+draws its overlay at the `Present` call inside slot 16.
 
 ### Texture binds, before Direct3D
 
@@ -748,22 +759,6 @@ directly **(RE-verified, Steam v1.03)**:
 The interface binds through the pixel pair: Inventory Overhaul's marker textures go through
 `0x104375C0` and the map's paper through `0x10437660` (seen in game, GOG v1.03). The address library
 carries none of the four; a pattern of each body, past its first seven bytes, finds it in both builds.
-
-### Which device vtable slots the repo's plugins hold
-
-The game's device runs the same functions as a throwaway device created at load, so the slots are
-read from one of those, copied before it is released. No `Dunia.dll` address is involved and none of
-it is build-specific.
-
-| Slot | Function | Held by |
-|---|---|---|
-| 16 | `Reset` | DevTools |
-| 17 | `Present` | DevTools |
-| 42 | `EndScene` | DevTools (the AI view, in the sky pass) |
-
-Since FCSE 1.3.0 a second plugin hooking one of these slots stacks on the first rather than being
-turned away, so the table says who else runs there, not what is taken. `TestCooperativeLevel`, which
-the engine calls before it resets, is a workable third release seam.
 
 ## DirectInput 8, and the mouse messages that never arrive
 
@@ -846,11 +841,10 @@ does.
 
 ## What this is enough to build
 
-DevTools' overlay is exactly the above and nothing else: a throwaway device for the vtable, `Present`
-and `Reset` detoured through FCSE's own hook API, the back buffer bound explicitly for the draw, the
-window subclassed, and the two DirectInput reads answered while it has the input. No address in
-`Dunia.dll` is involved, so none of it is build-specific — see `mods/DevTools/src/engine/` and
-`mods/DevTools/src/overlay/`.
+DevTools' overlay is exactly the above and nothing else: a mid-hook just before the engine's
+`Present` calls Direct3D's, the engine's `Reset` hooked to let go of what it holds, the back buffer
+bound explicitly for the draw, the window subclassed, and the two DirectInput reads answered while it
+has the input — see `mods/DevTools/src/engine/` and `mods/DevTools/src/overlay/`.
 
 Sky Overhaul is the other shape: an effect that belongs *inside* the world's frame rather than over
 the finished one. It follows the engine device's `EndScene` and draws, classifies each pass, measures

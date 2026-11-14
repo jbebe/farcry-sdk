@@ -226,9 +226,9 @@ While it is open the game cannot see your mouse or keyboard, so clicking a butto
 your weapon. Press Home again, or close the last open window, and input goes straight back.
 
 It draws with [Dear ImGui](https://github.com/ocornut/imgui), fetched at configure time and compiled
-into the plugin. Reaching Direct3D takes no address in `Dunia.dll` at all: a device built purely to
-be measured gives the vtable, `Present` and `Reset` are detoured through FCSE, and the back buffer is
-bound explicitly for the draw. Far Cry 2 ends a scene several times a frame and holds the mouse
+into the plugin. It draws just before the engine's `Present` calls Direct3D's, lets go of its buffers
+when the engine's `Reset` runs, and binds the back buffer explicitly for the draw, so it works under a
+wrapper such as dgVoodoo too. Far Cry 2 ends a scene several times a frame and holds the mouse
 through DirectInput, and both of those shape the result — see
 [presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).
 
@@ -578,9 +578,10 @@ address library, which is keyed by exact entries: function starts and data addre
 bridge and the weather hooks are the other case, all function starts and globals, so they use the
 library directly.
 
-Direct3D and DirectInput are neither. Those functions live in `d3d9.dll` and `dinput8.dll`, shared by
-every object in the process, so the overlay builds one object of its own, reads the vtable, and
-hooks by index — no `Dunia.dll` address is involved and nothing about it is build-specific.
+Direct3D is reached through the engine's own device class, by the same two ways: its `Reset` from
+the library, and its `EndScene` and the `Present` call inside its `Present` by pattern. DirectInput
+is neither. Its functions live in `dinput8.dll`, shared by every object in the process, so the
+overlay builds one object of its own, reads the vtable, and hooks by index.
 
 A pattern is one mechanism doing three jobs: it finds the code, it verifies the code is
 what the feature was written against, and it works on any build whose code still looks the same

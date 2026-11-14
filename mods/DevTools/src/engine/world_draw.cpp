@@ -1,6 +1,6 @@
 #include "engine/world_draw.h"
 
-#include "engine/vtable.h"
+#include "engine/memory.h"
 #include "fcse_api.h"
 
 #include <atomic>
@@ -11,7 +11,17 @@ namespace {
     using DevTools::WorldDraw::Frame;
     using DevTools::WorldDraw::Vertex;
 
-    constexpr size_t kEndSceneSlot = 42;
+    // The engine device's EndScene, __thiscall declared __fastcall.
+    using EndSceneFn = HRESULT(__fastcall*)(void* self);
+
+    // Its whole body, which the address library lacks; the first seven bytes, the ones another
+    // plugin's hook overwrites, are wildcards.
+    FCSE::Relocation<EndSceneFn> g_endScene{FCSE::Pattern(
+        "?? ?? ?? ?? ?? ?? ?? 8B 41 38 8B 08 8B 91 A8 00 00 00 50 FF D2 C3")};
+    EndSceneFn g_originalEndScene = nullptr;
+
+    // The engine device's Direct3D device.
+    constexpr ptrdiff_t kDevice = 0x38;
 
     // The sky pass is the only world pass whose depth range is squeezed against the far plane.
     constexpr float kSkyPassMinZ = 0.9f;
@@ -27,9 +37,6 @@ namespace {
     // How wide a line is on screen.
     constexpr float kLinePixels = 3.0f;
 
-    using EndSceneFn = HRESULT(__stdcall*)(IDirect3DDevice9* device);
-
-    EndSceneFn g_originalEndScene = nullptr;
     std::atomic<DevTools::WorldDraw::FillFn> g_fill{nullptr};
     Frame g_frame;
     std::vector<Vertex> g_ribbons;
@@ -171,15 +178,16 @@ namespace {
         saved->Release();
     }
 
-    HRESULT __stdcall EndSceneDetour(IDirect3DDevice9* device) {
+    HRESULT __fastcall EndSceneDetour(void* self) {
         const DevTools::WorldDraw::FillFn fill = g_fill.load(std::memory_order_relaxed);
+        IDirect3DDevice9* device = DevTools::Read<IDirect3DDevice9*>(self, kDevice);
         D3DVIEWPORT9 viewport = {};
         if (fill != nullptr && SUCCEEDED(device->GetViewport(&viewport)) &&
             viewport.MinZ >= kSkyPassMinZ && IsWorld(device) &&
             device->TestCooperativeLevel() == D3D_OK) {
             Draw(device, viewport, fill);
         }
-        return g_originalEndScene(device);
+        return g_originalEndScene(self);
     }
 }
 
@@ -187,13 +195,14 @@ namespace DevTools::WorldDraw {
 
 void Install() {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
-    void* endScene = Vtable::Slot(kEndSceneSlot);
-    if (endScene == nullptr) {
-        api->Log("world draw: no Direct3D 9 device could be created - nothing can be drawn");
+    if (!g_endScene) {
+        api->Log("world draw: the engine device's EndScene was not found in this build - nothing "
+                 "can be drawn");
         return;
     }
     // A rejected hook is already logged by FCSE.
-    api->Hook(endScene, reinterpret_cast<void*>(&EndSceneDetour),
+    api->Hook(reinterpret_cast<void*>(g_endScene.address()),
+              reinterpret_cast<void*>(&EndSceneDetour),
               reinterpret_cast<void**>(&g_originalEndScene));
 }
 

@@ -21,6 +21,7 @@ Stage: active
 - [done] Fast loading, on by default
 - [done] Session log (-perftest): a per-frame CSV with CPU, memory and VRAM samples, for /perftest - fc2drive-run 2026-11-10: no CSV without the switch, one with it
 - [done] Overlay on Home: the command catalog, pinned tabs, and windows from other plugins through devtools_api.h
+- [done] Overlay, AI view, frame stats and fc2drive's screenshots through the engine's Present, EndScene and Reset, with no Direct3D hooks, so they work under dgVoodoo and DLSS injectors - fc2drive drove a run end to end under dgVoodoo #63
 - [done] Command API: console lines and Lua on the game thread, a 277-command catalog - run, works
 - [done] Environment tab: the clock and forced storm, rain and wind - forcing confirmed in game 2026-09-13
 - [done] Diagnostics tab: frame, GPU and memory against a benchmark baseline
@@ -44,6 +45,7 @@ Stage: active
 - A second copy of the game starting beside the first - unseen
 - The Range tab's arena start facing - probably wrong, unchecked
 - The grass field, grass crest and tamarix bush arenas - fc2drive only
+- The overlay on Home and its windows through the engine's Present, without and under dgVoodoo - fc2drive saw the FPS readout and the AI view only
 ## Approvals
 
 ## Checks
@@ -58,3 +60,6 @@ Stage: active
 - map-overhaul: fixed by Map Overhaul's pause-listener patterns starting 10 bytes in - the pause listener's entry, which DevTools hooks
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
 - 0x001449B0: stacks - the input pass, which DevTools, Flashlight and Third Person each hook as g_inputPass; FCSE stacks same-address hooks
+- 0x00422510: stacks - the engine device's EndScene, which Sky, Aiming, Vehicle and Inventory Overhaul, Third Person and DevTools hook; FCSE chains them
+- sky-overhaul: stacks - both hook the engine device's EndScene, which FCSE chains
+- 0x00422630: stacks - the engine device's Reset, which Aiming, Vehicle and Inventory Overhaul and DevTools hook; FCSE chains them
