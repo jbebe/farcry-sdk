@@ -17,13 +17,12 @@ Stage: maintenance
 - [done] Works in safe houses and briefing rooms
 - [done] No crash when part of the game can't be hooked; what is left out is logged in fcse.log
 - [done] Combines with other mods' controls, HUD parts and HUD dependency lists
-- [done] Own sound ids moved out of Sound Overhaul's 0x00FC block into 0x00FA, packed from 0x00FA0000: one prefix per mod - the click found in an fc2drive clip
+- [done] Own sound ids moved out of Sound Overhaul's 0x00FC block into 0x00FA, packed from 0x00FA0000: one prefix per mod - user: "changes in instance 3 are verified"
 - [scrapped] Light as a noise, a plain 15 m radius - user chose the beam rule
 
 ## To validate
 
 - A guard inside the beam sees all around him, at the cone's full or half angle - unverified
-- Own ids: the click on and off as before - unheard
 
 ## Approvals
 

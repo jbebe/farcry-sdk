@@ -28,7 +28,7 @@ Stage: active
 - [new] INVENTORY_OVERHAUL_FILL and the Lua start variable removed once tests set up the notebook through DevTools - plugins hold no test logic
 - [new] Malaria on the pills' post-it - agreed: "malaria becomes the pills' card"
 - [new] Camo Suit in Items once bought - agreed 2026-10-26
-- [done] The two sound banks on ids of their own, 00fe0000 and 00fe0001: their old records 0x00FD0001-0x00FD0004 were also in Vehicle Overhaul's 00fd0000.spk, and a shared id crashed the game in Sound Overhaul's echo work
+- [done] The two sound banks on ids of their own, 00fe0000 and 00fe0001: their old records 0x00FD0001-0x00FD0004 were also in Vehicle Overhaul's 00fd0000.spk, and a shared id crashed the game in Sound Overhaul's echo work - user: "changes in instance 3 are verified"
 - [new] Box page at the crates: the bought guns as a catalogue and stored things, one shared box #6
 - [new] One fetch mission - design log step 9
 - [postponed] Diamonds, food, pills and ammo as items - later, once decided
@@ -50,7 +50,6 @@ Stage: active
 - The Missions page - self-test only
 - R's page turn: the pause menu's flip at twice the speed, half its sound - not heard
 - Saving with the notebook out, then loading that save twice - #46
-- The cassette and its click on the Docs page, with Vehicle Overhaul deployed, on 0x00FE0000 and 0x00FE0001 - fc2drive clips only: the click, then the cassette, each matched to its audio
 
 ## Approvals
 
