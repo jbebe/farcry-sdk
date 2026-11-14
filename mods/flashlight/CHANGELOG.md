@@ -9,6 +9,10 @@ Notable changes to Flashlight, loosely following
 - **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.
 - **The click on an id of its own, 0x00FA0000,** out of Sound Overhaul's block. It sounds the same.
+- **Guards see the light only with Difficulty Overhaul.** The flashlight no longer changes the
+  guards' sight itself, which it could not do beside Difficulty Overhaul. It sends its beam on FCSE's
+  `flashlight.beam` channel instead, and Difficulty Overhaul makes guards see it as this mod did: from
+  up to 60 m in the dark, and all around inside the beam. Without it, guards ignore the light.
 
 ## [1.2.1] - 2026-10-28
 

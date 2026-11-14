@@ -1,0 +1,38 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/CTaskWait1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/CheckAmmoStatus1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/ScanReloadIsNeeded_BP1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/Crack" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/SetDontReload1" TargetAnchor="Start" />
+  </Anchor>
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/SetDontReload1" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/SetPostureIntentionCrouch1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/SetNeedReload1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/CheckAmmoStatus1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/UnSetDontReload1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/SetDontReload1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/UnSetIsSuppressing1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/UnSetIsSuppressing" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/SetIsSuppressing" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/CheckDifficultyLevel1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/WaitCrouch" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/WaitStand" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/CTaskWait1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/FireNotMoving" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/SetPostureIntentionCrouch" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/SetPostureIntentionStand" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/ShootAIShootMeObject1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/StartIronsight" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/ScanReloadIsNeeded_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/Crack" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/CrackAtPlayer" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/Duck" />
+</Plan>

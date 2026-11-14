@@ -1,0 +1,43 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/CheckAmmoStatus" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/ScanReloadIsNeeded_BP1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/Crack" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/SetDontReload1" TargetAnchor="Start" />
+  </Anchor>
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/SetDontReload1" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/FireMoving1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/SetDontReload1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/UnSetDontReload2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/UnSetDontReload1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/UnSetIsSuppressing1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/UnSetIsSuppressing" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/SetIsSuppressing" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/CTaskWait3" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/CTaskWait1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/FireMoving" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/CTaskWait2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/SetFact_SwitchToReload" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/NoCoverRunToThreat_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/FindPathToStrafePos" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/FollowPath" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/Crouch" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/Stand" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/RandomChoice" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/ShootAIShootMeObject" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/CheckDifficultyLevel" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/StartIronsight" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/CheckAmmoStatus" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/SetNeedReload" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/ScanReloadIsNeeded_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/Crack" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/CrackAtPlayer" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/SuppressAttack/SuppressFireAttack/StrafeAttack/Duck" />
+</Plan>

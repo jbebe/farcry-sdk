@@ -26,6 +26,7 @@ add_library(DifficultyOverhaul SHARED
   "src/blood_puddle.cpp"
   "src/watched_spot.cpp"
   "src/perception.cpp"
+  "src/flashlight.cpp"
   "src/going_down.cpp"
   "src/healing.cpp"
   "src/brain_trace.cpp"

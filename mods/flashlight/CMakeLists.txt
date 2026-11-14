@@ -14,12 +14,12 @@ endif()
 add_library(Flashlight SHARED
   "src/main.cpp"
   "src/flashlight.cpp"
+  "src/beam.cpp"
   "src/engine/frame.cpp"
   "src/engine/hud.cpp"
   "src/engine/input.cpp"
   "src/engine/light.cpp"
   "src/engine/player.cpp"
-  "src/engine/sight.cpp"
   "src/engine/sound.cpp"
   "src/engine/vehicle.cpp"
 )

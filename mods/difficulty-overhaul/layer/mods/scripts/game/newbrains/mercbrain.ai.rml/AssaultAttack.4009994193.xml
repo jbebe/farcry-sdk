@@ -37,7 +37,6 @@
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/HoldInTheOpen" />
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/WhileInTheOpen" />
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/IfFarFromCover" />
-  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/IfInTheOpenMedium" />
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/IfInTheOpenLong" />
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/IfInTheOpenNoCover" />
   <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/AssaultAttack/FindCoverNear" />

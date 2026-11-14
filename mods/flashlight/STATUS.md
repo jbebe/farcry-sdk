@@ -1,6 +1,6 @@
 # Flashlight
 
-Purpose: A flashlight on its own rebindable control, with a click and a HUD icon, that guards can see at night.
+Purpose: A flashlight on its own rebindable control, with a click and a HUD icon, whose beam a mod modelling the guards' sight can read.
 Stage: maintenance
 
 ## Features
@@ -10,19 +10,18 @@ Stage: maintenance
 - [done] Switch click, from an unused game sound, with the light coming up just after it
 - [done] HUD icon above the diamond counter, on or off, fading with the HUD
 - [done] Cone (small, medium, large) and Shadows settings in the Mod Configuration Menu
-- [done] Guards see it: a lit light counts as just fired - always on; not hooked beside Difficulty Overhaul, fix not chosen
-- [done] A guard inside the beam sees all around him - worked from behind in game 2026-10-02; full vs half cone angle unverified
-- [done] In the dark, guards looking your way see it from up to 60 m - user lowered it from 100 m; unplayed
+- [done] The beam sent on FCSE's flashlight.beam channel every frame it is on, for other mods - read by Difficulty Overhaul, fc2drive-checked
 - [done] Off in vehicles: getting in switches it off with its click
 - [done] Works in safe houses and briefing rooms
 - [done] No crash when part of the game can't be hooked; what is left out is logged in fcse.log
 - [done] Combines with other mods' controls, HUD parts and HUD dependency lists
 - [done] Own sound ids moved out of Sound Overhaul's 0x00FC block into 0x00FA, packed from 0x00FA0000: one prefix per mod - user: "changes in instance 3 are verified"
 - [scrapped] Light as a noise, a plain 15 m radius - user chose the beam rule
+- [scrapped] Guards see it on their own: lit counts as just fired, all around inside the beam, 60 m in the dark - moved into Difficulty Overhaul, user 2026-11-14: "flashlight mod doesnt change AI behavior"
 
 ## To validate
 
-- A guard inside the beam sees all around him, at the cone's full or half angle - unverified
+- Without Difficulty Overhaul, guards ignore the light
 
 ## Approvals
 
@@ -39,6 +38,7 @@ Stage: maintenance
 
 - vehicle-overhaul: deploy apart - user 2026-10-08: "flashlight is not needed, dont deploy it"; the hooks don't clash
 - map-overhaul: fixed by 137373d1 - its pause-listener pattern starts 10 bytes in, past the instructions Flashlight's hook overwrites
+- difficulty-overhaul: fixed by moving the guards' sight of the light into Difficulty Overhaul - Flashlight no longer hooks CSensorySystem::AdjustFOV, Difficulty Overhaul reads its beam on flashlight.beam
 - inventory-overhaul: fixed by 98535d3c - the notebook's bare quads took no flashlight light; page.py cuts them into cells
 - tales-of-africa: merged by JackAll, no shared field - both edit hud.mgb; each adds its own areas, materials and exports, and every name both ship is identical
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks

@@ -240,7 +240,14 @@ carried or healed by a comrade, and while the target is visible and close enough
 shoots (`RepelTarget`). Which weapon he shoots with there was not checked. In the range a comrade
 lifted a downed soldier onto his shoulders, carried him a moment and dropped him on the ground.
 
-What a downed soldier then soaks is in [issue #25](https://github.com/jbebe/farcry-sdk/issues/25).
+A downed soldier keeps the health the hit left him, but never more than 49, and 49 when the hit would have killed him: a rifle hit from 109 downed one at 4, one from 51 at 49 (fc2drive, GOG). For 0.4 s after that,
+hits do nothing (`fHealthFailureCantDieDuration`). After that, torso hits do half their damage and limb
+hits a fifth: `fHealthFailureTorsoHitModifier` 0.5 and `fHealthFailureLimbsHitModifier` 0.2 on
+`CFCXCountersComponentAI`, in all 135 soldier archetypes. Each soldier's component holds its own copy, at
+`+0x90` and `+0x94` in `Dunia.dll` (`+0x7C` and `+0x80` in the server build), and
+`HandleRegularWeaponDamage` reads it on every hit (**traced in the server build**, the offsets matched in
+Steam's `Dunia.dll`). With the limb share set to 0.13 on a downed soldier, a leg hit on him took 14 of an AK-47's 105
+(fc2drive, GOG).
 
 **A fall he is sure he will not survive.** When a soldier starts to fall, `CPawn::SPawnImpl::UpdateJump`
 (server `0x08FCC600`) casts a ray 10.1 m down from him, 2.1 m for the player. If it finds no ground

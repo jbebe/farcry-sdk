@@ -1,0 +1,33 @@
+<Plan Name="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack" Class="CPlan" Looping="0" Independent="0">
+  <Anchor Name="OnStart">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/SetDontReload1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/ScanReloadIsNeeded_BP1" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/Crack" TargetAnchor="Start" />
+  </Anchor>
+  <Anchor Name="OnStop">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/SetDontReload1" TargetAnchor="Start" />
+  </Anchor>
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/SetDontReload1" TargetAnchor="Start" />
+  </Exit>
+  <Exit Name="Default" />
+  <Exit Name="Always" />
+  <Exit Name="Failure" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/UnSetDontReload2" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/UnSetDontReload1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/SetDontReload1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/UnSetIsSuppressing1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/UnSetIsSuppressing" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/SetIsSuppressing" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/CheckDifficultyLevel1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/ShootAIShootMeObject1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/CTaskWait1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/CScannerTargetVisible1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/FindPathToTarget1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/FireNotMoving" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/StartIronsight" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/ScanReloadIsNeeded_BP1" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/Crack" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/CrackAtPlayer" />
+  <Add Task="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/StandUpAttack/Duck" />
+</Plan>

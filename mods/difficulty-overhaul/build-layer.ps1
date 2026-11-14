@@ -1,6 +1,6 @@
 # Builds layer\ from the installed game: the merc brain's changes as fragments, which JackAll merges into
-# the player's own brain: launchers held for a player in a vehicle, alerts that stand down, and squad tactics
-# by where the player is. README.md lists each change.
+# the player's own brain: launchers held for a player in a vehicle, alerts that stand down, squad tactics
+# by where the player is, and short exposures from cover. README.md lists each change.
 param(
     [string]$Game = 'C:\Games\Far Cry 2',
     [string]$Cli = "$PSScriptRoot\..\..\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
@@ -254,11 +254,12 @@ foreach ($compromised in 'CombatFireAlert', 'CombatPlayHurt', 'ShootByAnotherTar
 
 $bands = 'KillRangedAttack', 'ShortRangedAttack', 'MediumRangedAttack', 'LongRangedAttack'
 # The agent flag the plugin sets while the player is in the open for the soldier; the path too long to
-# run with him there; how long the soldier then holds; and the path short enough with him behind cover.
+# run with him there; how long the soldier then holds; and how far he looks for and runs to cover with
+# him behind cover.
 $inTheOpen = 34
-$farFromCover = 10
+$farFromCover = 20
 $holdSeconds = 3
-$nearCover = 20
+$nearCover = 30
 # The band whose tasks the new ones are copied from.
 $template = "$combat/MediumRangedAttack/AssaultAttack"
 
@@ -332,6 +333,15 @@ function Add-PathSplit($name, $plan, $after, $metres, $near, $far) {
     Redirect $name LongPath $far
 }
 
+# Splits $plan's long paths to cover at $farFromCover: a longer one with the player in the open starts
+# $hold instead. The game's medium paths end at 15 m for an assaulter and 9 m for a suppressor, inside it.
+function Add-FarFromCover($plan, [string[]]$hold) {
+    Add-PathSplit "$plan/IfFarFromCover" $plan "$plan/WhileInTheOpen" $farFromCover `
+        "$plan/FollowPathLong" "$plan/IfInTheOpenLong"
+    Add-IfInTheOpen "$plan/IfInTheOpenLong" $plan "$plan/IfFarFromCover" $hold "$plan/FollowPathLong"
+    Redirect "$plan/AnalyzePath" LongPath "$plan/IfFarFromCover"
+}
+
 # An assaulter at his cover fires from it as a suppressor does, with the suppressor's pop-up, strafe and
 # stand-up plans; a shotgunner still rushes on. With the player in the open, a soldier whose cover is too
 # far holds and fires crouched, as does a suppressor with none; with him behind cover, a soldier runs to
@@ -365,13 +375,7 @@ foreach ($band in $bands) {
     Also-Start "$assault/NoCoverOrNoPathFailure/FlankAttack_KR1/FollowPathToFlankPos" Success $ifOpenCrouch
     Also-Start "$assault/NoCoverOrNoPathFailure/FleeFromLocation_BP1/AfterFleeFireStrategy1" OnStart $ifOpenCrouch
 
-    $hold = Add-Hold $assault "$assault/CTaskChooseCoverAttack1"
-    Add-PathSplit "$assault/IfFarFromCover" $assault "$assault/WhileInTheOpen" $farFromCover `
-        "$assault/FollowPathMedium" "$assault/IfInTheOpenMedium"
-    Add-IfInTheOpen "$assault/IfInTheOpenMedium" $assault "$assault/IfFarFromCover" $hold "$assault/FollowPathMedium"
-    Add-IfInTheOpen "$assault/IfInTheOpenLong" $assault "$assault/IfInTheOpenMedium" $hold "$assault/FollowPathLong"
-    Redirect "$assault/AnalyzePath" MediumPath "$assault/IfFarFromCover"
-    Redirect "$assault/AnalyzePath" LongPath "$assault/IfInTheOpenLong"
+    Add-FarFromCover $assault (Add-Hold $assault "$assault/CTaskChooseCoverAttack1")
     Add-IfInTheOpen "$assault/IfInTheOpenNoCover" $assault "$assault/IfInTheOpenLong" "$assault/NoCoverOrNoPathFailure" `
         "$assault/FindCoverNear"
     Redirect "$assault/FindCover" Default "$assault/IfInTheOpenNoCover"
@@ -386,11 +390,9 @@ foreach ($band in $bands) {
     Copy-Instance "$assault/NoCoverOrNoPathFailure/CTaskOperateOnFlagField1" "$assault/RushHim" $assault `
         "$assault/FindPathToNearCover"
 
+    Set-Parameter "$suppress/FindCoverToMakeSuppressFireLOS" maxRadius $nearCover
     $hold = Add-Hold $suppress "$suppress/AnalyzePath"
-    Add-PathSplit "$suppress/IfFarFromCover" $suppress "$suppress/WhileInTheOpen" $farFromCover `
-        "$suppress/FollowPathLong" "$suppress/IfInTheOpenLong"
-    Add-IfInTheOpen "$suppress/IfInTheOpenLong" $suppress "$suppress/IfFarFromCover" $hold "$suppress/FollowPathLong"
-    Redirect "$suppress/AnalyzePath" LongPath "$suppress/IfFarFromCover"
+    Add-FarFromCover $suppress $hold
     Add-IfInTheOpen "$suppress/IfInTheOpenNoCover" $suppress "$suppress/IfInTheOpenLong" $hold "$suppress/FindCoverNear"
     Redirect "$suppress/SetIsSuppressing" OnStart "$suppress/IfInTheOpenNoCover"
     Add-NearCoverSearch "$suppress/FindCoverNear" $suppress "$suppress/IfInTheOpenNoCover" GoodCoverToMakeSuppressFire `
@@ -409,6 +411,53 @@ foreach ($run in $runs) {
         Also-Start "$run/$flank/FollowPathToFlankPos" Success $ifOpenCrouch
     }
     Start-With "$run/ScanForTarget" $ifOpenCrouch
-}$doc.Save($source)
+}
+
+# A cover attack shows the soldier for $exposure seconds at a time, the pop-up twice, down $downSeconds and
+# a random $downRandom more between; a round cracking past him at it while he fights the player ducks him
+# for $duckSeconds and a random $duckRandom more, then ends it. His next cover search prefers another spot.
+$exposure = 1.5
+$downSeconds = 2
+$downRandom = 1
+$popUpSeconds = 2 * ($exposure + $downSeconds + $downRandom)
+$duckSeconds = 1.5
+$duckRandom = 1
+$crack = "$combat/CombatSnipingPlan/ShootPhase/ManageUnderFire/ScanUnderFire"
+
+# Adds the duck to the cover attack $plan, halting its own $timers while he is down.
+function Add-Duck($plan, [string[]]$timers) {
+    Copy-Instance $crack "$plan/Crack" $plan "$plan/$($timers[0])"
+    (Instance "$plan/Crack").SetAttribute('Independent', '1')
+    Set-Parameter "$plan/Crack" TimeTolerance 0.25
+    Redirect "$plan/Crack" Success "$plan/CrackAtPlayer"
+    Add-Instance $plan "$plan/Crack" (IfAtPlayer "$plan/CrackAtPlayer" (
+        (Connect $crouch, "$plan/Duck") + (Connect ($timers | ForEach-Object { "$plan/$_" }) 'Stop')) '')
+    Copy-Instance "$template/WaitCovered" "$plan/Duck" $plan "$plan/CrackAtPlayer"
+    Set-Parameter "$plan/Duck" timeToWait $duckSeconds
+    Set-Parameter "$plan/Duck" randomStartDelay $duckRandom
+    Redirect "$plan/Duck" Success $plan Stop
+    Start-With $plan "$plan/Crack"
+}
+
+# Each cover attack: the wait he fires through, and the timers a duck halts.
+$coverAttacks = @{
+    PopUpAttack   = 'WaitStand', ('WaitCrouch', 'WaitStand')
+    StrafeAttack  = 'CTaskWait1', ('CTaskWait1', 'CTaskWait2', 'FollowPath')
+    StandUpAttack = 'CTaskWait1', @('CTaskWait1')
+}
+foreach ($band in $bands) {
+    $suppress = "$combat/$band/SuppressAttack/SuppressFireAttack"
+    foreach ($attack in $coverAttacks.Keys) {
+        Set-Parameter "$suppress/$attack/$($coverAttacks[$attack][0])" timeToWait $exposure
+        Add-Duck "$suppress/$attack" $coverAttacks[$attack][1]
+    }
+    Set-Parameter "$suppress/PopUpAttack/WaitCrouch" timeToWait $downSeconds
+    Set-Parameter "$suppress/PopUpAttack/WaitCrouch" randomStartDelay $downRandom
+    Set-Parameter "$suppress/PopUpAttack/CTaskWait1" timeToWait $popUpSeconds
+    Set-Parameter "$suppress/FindCoverToMakeSuppressFireLOS" canUseSameCover 0
+    Set-Parameter "$combat/$band/AssaultAttack/FindCover/FindCoverWithLOS" canUseSameCover 0
+}
+
+$doc.Save($source)
 Invoke-Cli ai fragments $source --base $brain --out $fragments
 Remove-Item -Recurse -Force $work

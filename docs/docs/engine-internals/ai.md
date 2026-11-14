@@ -217,6 +217,32 @@ tall around him: it stops his suppressive fire and starts the assault plan, whic
 (flag 48). A bullet that misses by more changes nothing but the flinch. All of this is **traced in the
 server build** and the brain data; the two Steam addresses were matched in `Dunia.dll`.
 
+The mark itself is what `CScannerIsUnderFire` reads: it fires while the time since the soldier was
+last marked (`CSensorySystem::IsUnderFire`, the time at `+0x10C`, the shooter's position at `+0x110`)
+is within its `TimeTolerance`, which when negative is 1 s in army-member state 2 and 5 s otherwise
+(**traced in the server build**). In `mercbrain` only the sniping plans (`ManageUnderFire` in
+combat, `SnipingBehavior` in alert), the domino shoot and the wounded soldier's plans scan it.
+
+A soldier who sees a squadmate killed gets flag 38, which `ScanFriendDied` in every range band turns
+into a restart of combat, and the chain's `FriendDied` link runs `CombatSawFriendDied`: he stands,
+stops firing, aims and looks at where his squadmate died, and 1 s later combat starts over. The flag
+is set on the death event (`CPawnAgent::OnEvent`) only when the dead man is in the soldier's sensory
+memory as fully seen with a visibility above his own clear line (`+0x974`, 0.4 by default), and
+`UpdateFriendDiedInfos` clears it 2 s after the death. His sensory memory holds his own army only in
+the idle and social brains: those set the focus filter to every army (`0x1F`), while the alert,
+combat, special, wounded and vehicle brains set `GetLimitedFocusFilter`, which leaves his own army out
+(**traced in the server build**). So a squadmate killed in a fight is never seen, and one killed in
+front of an idle soldier is seen, but the shot's alert brings the onlooker into combat about 2 s later,
+once the flag is gone: on the test range three idle riflemen, one killed by a single shot 25 m away,
+never ran `CombatSawFriendDied` (fc2drive, GOG).
+
+Onlookers who cannot see the shooter take the alert brain's `SniperAlert` 0.2 s after the death. Each
+draws his gun, which takes 0.35 s, and runs to cover against where the shot came from. A soldier with
+no cover in reach crouches and flees from the shot for 3 to 4 s instead. Then he crouches and waits,
+looking left and right, until he finds the shooter. None went to the body (`SawCorpse`). On the test
+range, the player crouched in tall grass killed one of three idle riflemen 80 m away with a single
+AS50 shot. One onlooker ran 25 m to cover in 7 s and the other fled (fc2drive, GOG).
+
 ### Reinforcements
 
 The reinforcement system calls in mercs and vehicles from `CReinforcementPoint`s placed in the
@@ -708,6 +734,12 @@ whether he has one) and fires `NoTarget` without it. The assault's cover search,
 the squad's `AttackStrategy` fact or 10, finds firing spots the cover attack cannot use; the suppressor's
 heuristic 3 finds ones it can (**traced in the server build**; on the test range an assaulter's cover gave
 `NoTarget` until his search took heuristic 3).
+
+How long each shows him, in every band: `PopUpAttack` crouches 3 s and stands firing 3 s, over and over,
+for 15 s in all; `StrafeAttack` walks out to the corner's firing spot and fires 5 s; `StandUpAttack`
+fires 5 s. When one ends the suppress plan ends with it and combat picks again, so the soldier searches
+for cover anew; every `CTaskFindCover` in the combat bands has `canUseSameCover` 1, which lets that
+search hand back the cover he is at.
 
 ### Agent flags and path lengths
 

@@ -30,7 +30,7 @@
   <Parameter Name="maxRadius" Value="50" />
   <Parameter Name="idealMinCoverSize" Value="1.25" />
   <Parameter Name="worstCaseMinCoverSize" Value="0.2" />
-  <Parameter Name="canUseSameCover" Value="1" />
+  <Parameter Name="canUseSameCover" Value="0" />
   <Parameter Name="isExposedCoverAllowed" Value="0" />
   <Parameter Name="isBurnableZoneCoverAllowed" Value="1" />
   <Parameter Name="isNotBurningZoneCoverAllowed" Value="1" />

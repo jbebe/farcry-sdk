@@ -1,6 +1,6 @@
-// Going down: a soldier the player's limb hit would kill goes down wounded instead, every time, where
-// the game rolls against the player's reputation and caps how many soldiers are down at once; a hit
-// to the head or torso never downs anyone.
+// Going down: a soldier the player's leg or foot hit would kill goes down wounded instead, every time,
+// where the game rolls against the player's reputation and caps how many soldiers are down at once; a
+// hit anywhere else never downs anyone, and limb hits on a downed soldier do less than the game's share.
 #include "engine/damage.h"
 #include "engine/memory.h"
 #include "fcse_api.h"
@@ -22,26 +22,31 @@ namespace {
     CanGoDownFn g_originalCanGoDown = nullptr;
     MaxDownFn g_originalMaxDown = nullptr;
 
-    // Set while the game decides on a limb hit by the player: its cap is lifted and its roll won.
-    thread_local bool t_limbHit = false;
+    // CFCXCountersComponentAI's fHealthFailureLimbsHitModifier: the share of a limb hit a downed soldier
+    // takes, the game's 0.2.
+    constexpr ptrdiff_t kDownedLimbShare = 0x94;
+    constexpr float kDownedLimbShareValue = 0.11f;
+
+    // Set while the game decides on a leg or foot hit by the player: its cap is lifted and its roll won.
+    thread_local bool t_legHit = false;
 
     bool __fastcall CanGoDownDetour(void* counters, void* unused, const uint8_t* stim,
                                     float chanceModifier) {
         const Damage::BodyPart part = Damage::Part(stim);
-        if (part == Damage::kHead || part == Damage::kTorso) {
+        if (part != Damage::kLegs && part != Damage::kFeet && part != Damage::kNoBodyPart) {
             return false;
         }
-        if (part == Damage::kNoBodyPart || !Damage::ByPlayer(stim)) {
-            return g_originalCanGoDown(counters, unused, stim, chanceModifier);
+        t_legHit = part != Damage::kNoBodyPart && Damage::ByPlayer(stim);
+        const bool down = g_originalCanGoDown(counters, unused, stim, t_legHit ? FLT_MAX : chanceModifier);
+        t_legHit = false;
+        if (down) {
+            Write<float>(counters, kDownedLimbShare, kDownedLimbShareValue);
         }
-        t_limbHit = true;
-        const bool down = g_originalCanGoDown(counters, unused, stim, FLT_MAX);
-        t_limbHit = false;
         return down;
     }
 
     uint32_t __fastcall MaxDownDetour(void* service, void* unused, int reputationLevel) {
-        return t_limbHit ? UINT16_MAX : g_originalMaxDown(service, unused, reputationLevel);
+        return t_legHit ? UINT16_MAX : g_originalMaxDown(service, unused, reputationLevel);
     }
 }
 

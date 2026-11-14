@@ -7,9 +7,9 @@
     <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/AssaultAttack/FollowPathShort" TargetAnchor="Start" />
   </Event>
   <Event Name="MediumPath">
-    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/AssaultAttack/IfFarFromCover" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/AssaultAttack/FollowPathMedium" TargetAnchor="Start" />
   </Event>
   <Event Name="LongPath">
-    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/AssaultAttack/IfInTheOpenLong" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/KillRangedAttack/AssaultAttack/IfFarFromCover" TargetAnchor="Start" />
   </Event>
 </Task>

@@ -1,0 +1,8 @@
+<Scanner Name="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/Crack" Class="CScannerIsUnderFire" Looping="0" Independent="1">
+  <Parameter Name="TimeTolerance" Value="0.25" />
+  <Anchor Name="OnStart" />
+  <Anchor Name="OnStop" />
+  <Exit Name="Success">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/LongRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/CrackAtPlayer" TargetAnchor="Start" />
+  </Exit>
+</Scanner>

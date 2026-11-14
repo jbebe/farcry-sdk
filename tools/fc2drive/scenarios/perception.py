@@ -56,6 +56,8 @@ CROUCH = 3.0
 # approach's longest.
 SETTLE = 3.0
 HOLD = 6.0
+# Where a soldier is spawned first, far off, since the first one spawned after a load sees nothing.
+BLIND = (440.0, 420.0)
 SWING = 1.5
 APPROACH_LIMIT = 40.0
 # An approach stops this close to the soldier, or once it has drawn this much farther from him than

@@ -81,10 +81,10 @@
 			<!-- Lists the damage multipliers for various hit locations -->
 			<HitLocations>
 			    <Head multiplier="100.0"/>
-			    <Torso multiplier="1.0"/>
-			    <Arms multiplier="0.6"/>
-			    <Legs multiplier="1.0"/>
-			    <Hands multiplier="0.3"/>
+			    <Torso multiplier="0.165"/>
+			    <Arms multiplier="0.105"/>
+			    <Legs multiplier="0.3"/>
+			    <Hands multiplier="0.105"/>
 			    <Feet multiplier="0.3"/>
 			</HitLocations>
 			

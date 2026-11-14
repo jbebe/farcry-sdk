@@ -27,7 +27,7 @@
   <Parameter Name="maxRadiusFactName" Value="UnknownFact" />
   <Parameter Name="minRadiusFactName" Value="UnknownFact" />
   <Parameter Name="minRadius" Value="0" />
-  <Parameter Name="maxRadius" Value="20" />
+  <Parameter Name="maxRadius" Value="30" />
   <Parameter Name="idealMinCoverSize" Value="1.25" />
   <Parameter Name="worstCaseMinCoverSize" Value="0.2" />
   <Parameter Name="canUseSameCover" Value="1" />

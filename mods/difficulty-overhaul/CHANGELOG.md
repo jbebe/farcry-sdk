@@ -5,7 +5,21 @@ Notable changes to Difficulty Overhaul, loosely following
 
 ## [Unreleased]
 
+### Added
+- **Your flashlight gives you away**, with the Flashlight mod. At night a soldier looking your way
+  sees it from up to 60 m, one you shine it on sees you even with his back turned, and while it is on
+  the dark no longer hides you. Needs the next Flashlight, which hands this mod the guards' reaction
+  to its light.
+
 ### Changed
+- **Soldiers are hard to hit.** A soldier firing from cover shows himself for about 1.5 s at a time and
+  comes up somewhere else after two pops. A round cracking past him makes him duck. Caught in the open,
+  he runs to cover up to 20 m off before he crouches and shoots where he stands, and soldiers look for
+  cover farther around them.
+- **Soldiers are hard to kill.** A head hit still kills, but it takes four AK-47 hits to the body, six
+  to an arm, seven from an SMG and ten from a Makarov, as if every soldier wore a soft vest. Two leg
+  hits from a rifle put him down, and only a leg hit does; a downed soldier dies to four more leg hits
+  or two to the body.
 - **The hit locations and the blood merge with other mods.** The mod ships only its block of
   `gamemodesconfig.xml` and its blood particle effect, where it shipped those files whole, so a mod
   changing other game settings or other particle effects works beside it. Needs the next JackAll.

@@ -7,13 +7,13 @@ Stage: active
 
 - [done] Real rounds: each gun's damage from its real cartridge, no AI damage curves, no close-range bonus - range-checked
 - [done] Cartridge entity data (bullet mass, muzzle velocity, energy) for other mods - read by Aiming Overhaul's shot shake
-- [done] Hit locations on soldiers: a head hit kills, torso and legs 1, arms 0.6, hands and feet 0.3; the player takes hits whole
+- [done] Hit locations on soldiers: a head hit kills, torso 0.165, arms and hands 0.105, legs and feet 0.3, four AK-47 hits to the body as if under a soft vest; the player takes hits whole - range-checked, unplayed
 - [done] Blood by muzzle energy, only where the round goes in, a dark red mist with droplets - played: "it works flawlessly"
 - [done] Blood spatter behind a body hit and a puddle under the dead - ground spatter "consistent"; on objects unseen
 - [done] Health by difficulty in AK-47 hits from full: Easy 37, Normal 28, Hardcore 3, Infamous 1 - only Hardcore range-checked
 - [done] Last-bar cushion on Easy and Normal only - range-checked on Hardcore
 - [done] Healing: the game's own bar refill, none on Infamous - range-checked on Hardcore
-- [done] Going down: a limb hit that would kill a soldier downs him instead - range: "good like this"
+- [done] Going down: a leg or foot hit that would kill a soldier downs him instead, then limb hits on him do 0.11 - range: "good like this" with arms downing too; legs only range-checked, unplayed
 - [done] Hit model: aim settles with range, real chance capped at 0.85, recoil, crossing, 15 % head aim - "good like this"
 - [done] Hunting soldiers settle in 0.3 s and can hit with the first shot, only if alert 2 s before sighting - range-checked
 - [done] No headshot on first contact: no head aim in a soldier's first 3 s on the player - range row not run
@@ -28,6 +28,7 @@ Stage: active
 - [done] Grass: crouched in grass halves the distances; tall grass on a crest hides - "I dont see them but they dont see me either"
 - [done] Bushes hide the player wherever their leaves are - fc2drive-checked
 - [done] Shade by day halves recognition; a lamp at night extends it 1.25 times - fc2drive-checked
+- [done] The player's flashlight, Flashlight's rules read from its beam channel: lit lifts night, in the beam all around, 60 m in the dark - fc2drive-checked at night, unplayed
 - [done] Fog limits sight, a sandstorm's to 40 m - range-checked
 - [done] A soldier at the wheel sees only through a 50 degree windscreen - no soldier seen driving
 - [done] Camo suit hides a still player in grass beyond 3 m from a soldier not fighting him - fc2drive-checked
@@ -36,8 +37,11 @@ Stage: active
 - [done] Launchers fired at the player only in a vehicle; on foot he draws his other gun - switching as he gets in and out unseen
 - [done] Squad roles: half assault, half suppress - range-checked
 - [done] Assaulters fire from cover; flanks 20/15 m wide; the game's height attack and relocating switched on - range-checked
-- [done] Cover by where the player is: crouch and fire at him in the open, cover first when he is behind cover - range-checked
+- [done] Cover by where the player is: crouch and fire at him in the open beyond a 20 m run to cover, cover first when he is behind cover, searches 30 m - range-checked at 10 m and 20 m; 20 m and 30 m unplayed
 - [done] Stand-down: an alert ends after 90 s, the soldier walks back to where he was - range row not run
+- [done] Short exposures from cover: up 1.5 s at a time, the pop-up twice in 9 s, then another spot preferred - unplayed
+- [done] Duck at the crack: a round past a soldier at cover in a fight with the player drops him 1.5-2.5 s, then he moves on - unplayed
+- [new] Alerted by a kill: onlookers crouch before drawing - the game already sends them to cover or away 0.2 s after an unseen kill, standing 0.35 s to draw (fc2drive)
 - [scrapped] Combat log per session in bin\difficulty-overhaul-logs, and its hit lines - moved to DevTools
 - [done] Perception and brain traces for testing (-perceptiontrace, -braintrace)
 - [done] Combat lines sent on FCSE's combat channel for DevTools' combat log, to fcse.log when nobody hears - both seen in game, GOG 2026-11-11
@@ -60,6 +64,7 @@ Stage: active
 - [scrapped] Damage falloff with range on the player's hits (item E) - not needed within 150 m
 - [scrapped] Vertical sight limit (K) and a heard step meaning investigate (L) - covered by the round cone and J
 - [scrapped] Recognition: an alerted soldier keeps looking - never acted, removed
+- [scrapped] A squadmate killed in view crouches him where the game stands him up to stare - the game's plan almost never runs (fc2drive)
 - [scrapped] Re-settle after a reload, close-range recoil scaling, over-cover fade-in - decided against 2026-10-26
 
 ## To validate
@@ -71,10 +76,16 @@ Stage: active
 - The notice delay at a soldier's side, at most 2 s - not run
 - Soldiers switching from launchers as the player gets in and out of a vehicle - unseen
 - Stand-down: an alert ends after 90 s and the soldier walks back - range row not run
+- Soldiers take four AK-47 hits to the body and six to an arm, two to a leg put them down; a head hit still kills
+- Caught in the open, a soldier runs to cover up to 20 m off before he crouches and fires where he stands
+- Firing from cover: a soldier shows himself about 1.5 s at a time and comes up somewhere else after two pops
+- A near miss on a soldier at cover makes him duck for 1.5-2.5 s before he moves on
+- With Flashlight at night: a soldier looking your way sees the light from afar, one in the beam sees you all around, at its edge too (full or half cone angle unverified); with it off the night hides you
 
 ## Approvals
 
 - played: 8e20a82 2026-11-06 - alpha4 on Steam, Hardcore: "I feel like this is it now. I can't add anything to it, the experience was right."
+- played: ad7a904f 2026-11-14 - world 1 on GOG, with UFCP, Aiming, Flashlight, Sky, Sound, Vehicle and VSS: "I really enjoyed this round."
 
 ## Checks
 
@@ -83,6 +94,7 @@ Stage: active
 - after fcse-1.5.0
 - after jackall-1.8.0
 - after vortex-0.7.0
+- with or after the next Flashlight release, the first that sends its beam
 - the difficulty spread (item G) decided lever by lever
 - heavy testing (#8)
 - a revision of damage, AI shooting and the health system (user, 2026-11-04)
@@ -90,5 +102,6 @@ Stage: active
 
 ## Collisions
 
+- flashlight: fixed by moving the guards' sight of the light into this mod - Flashlight no longer hooks CSensorySystem::AdjustFOV, this mod reads its beam on flashlight.beam
 - aiming-overhaul: merged by JackAll, no shared field - both edit the guns' entity-library archetypes and particle libraries
 - sound-overhaul: merged by JackAll, no shared field - both edit the guns' entity-library archetypes

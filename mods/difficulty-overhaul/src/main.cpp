@@ -12,6 +12,7 @@ void InstallSquadRoles();
 void InstallInTheOpen();
 void InstallWatchedSpot();
 void InstallPerception();
+void InstallFlashlight();
 void InstallGoingDown();
 void InstallHealing();
 void InstallBrainTrace();
@@ -34,6 +35,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallInTheOpen();
     InstallWatchedSpot();
     InstallPerception();
+    InstallFlashlight();
     InstallGoingDown();
     InstallHealing();
     InstallBrainTrace();

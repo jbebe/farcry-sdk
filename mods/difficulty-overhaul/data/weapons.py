@@ -137,8 +137,8 @@ GUNS = {
 PROPERTIES_ROOT = "WeaponProperties"
 ROOTS = ("weapons", "DLC1Weapons", PROPERTIES_ROOT)
 
-# One projectile's damage per square root of its muzzle energy in joules: two torso hits from a 9x18 mm
-# Makarov drop a soldier of 250 health, one from a rifle.
+# One projectile's damage per square root of its muzzle energy in joules: at a hit location's 1, two hits
+# from a 9x18 mm Makarov drop a soldier of 250 health, one from a rifle.
 DAMAGE_PER_ROOT_JOULE = 7.3
 # The health a stim level takes, the knots of the game's Curves.StimEffectCurves.OldDamageHealth.
 DAMAGE_CURVE = ((0.0, 0.0), (9.03, 47.0543), (18.0236, 100.032), (24.0103, 201.831), (28.0165, 399.253),
@@ -146,8 +146,9 @@ DAMAGE_CURVE = ((0.0, 0.0), (9.03, 47.0543), (18.0236, 100.032), (24.0103, 201.8
 LEVELS = range(1, 33)
 # The soldiers' damage curves a gun's properties name, by visibility.
 AI_CURVES = ("archDamageMultiplierVisibleCurve", "archDamageMultiplierNotVisibleCurve")
-# The single-player hit locations' multipliers, from the game's head 6, torso 1, arms 1, the rest 0.5.
-HIT_LOCATIONS = {"Head": "100.0", "Torso": "1.0", "Arms": "0.6", "Legs": "1.0", "Hands": "0.3", "Feet": "0.3"}
+# The single-player hit locations' multipliers, from the game's head 6, torso 1, arms 1, the rest 0.5: a head
+# hit kills, four AK-47 hits to the body or six to an arm do, and two to a leg down him.
+HIT_LOCATIONS = {"Head": "100.0", "Torso": "0.165", "Arms": "0.105", "Legs": "0.3", "Hands": "0.105", "Feet": "0.3"}
 
 
 def gun(relative):

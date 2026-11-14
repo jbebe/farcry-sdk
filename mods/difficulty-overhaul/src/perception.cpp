@@ -1,6 +1,6 @@
 // Perception: from how far a soldier recognises the player and notices something, by how the player
 // stands and moves, where he is in the soldier's view, grass, bushes, the camo suit, cover, shade,
-// night, fog and the soldier's state. The game's own checks of distance, view, stance and movement
+// night, his flashlight, fog and the soldier's state. The game's own checks of distance, view, stance and movement
 // give way to it.
 #include "engine/damage.h"
 #include "engine/game.h"
@@ -8,6 +8,7 @@
 #include "engine/ray.h"
 #include "engine/shooting.h"
 #include "fcse_api.h"
+#include "flashlight.h"
 #include "perception.h"
 
 #include <windows.h>
@@ -233,6 +234,10 @@ namespace {
     constexpr float kNightNotice = 30.0f;
     constexpr float kLitByLamp = 1.25f;
     constexpr float kLampFixture = 0.3f;
+    // The player's flashlight: a soldier who sees it recognises from at least this many times his
+    // distance, and in full night one sees it in his view from this far, nearer as the dark lifts.
+    constexpr float kFlashlightReach = 4.0f;
+    constexpr float kFlashlightSeenFrom = 60.0f;
     // Hardcore: the most a soldier recognises and notices from in the heaviest fog, a sandstorm's,
     // full at 30 m with 0.98 of the view; lighter fog limits him in proportion to its reach.
     constexpr float kFogRecognise = 40.0f;
@@ -297,6 +302,7 @@ namespace {
         bool heard = false;
         bool close = false;
         bool driving = false;
+        Flashlight::Lamp flashlight;
         float ahead[3] = {};
     };
     thread_local Look t_look;
@@ -320,6 +326,7 @@ namespace {
         bool behindGrass = false;
         bool camouflaged = false;
         Lighting light;
+        bool flashlight = false;
         bool givenAway = false;
     };
 
@@ -433,6 +440,7 @@ namespace {
         const float distance = std::hypot(at[0] - eye[0], at[1] - eye[1]);
         look.heard = movingUpright && distance <= kHeardRange;
         look.close = movingUpright && distance <= kArmsLength;
+        look.flashlight = Flashlight::Seen(eye);
         void* soldierPawn = Shooting::Pawn(soldier);
         void* vehicle = g_currentVehicle(soldierPawn);
         look.driving = vehicle != nullptr && Drives(vehicle, Game::EntityOf(soldierPawn));
@@ -442,7 +450,8 @@ namespace {
         t_look = look;
 
         const float reach = std::max(Read<float>(cones, kFocusLength), kMaxReach);
-        const float span = look.heard ? kFullTurn : kHalfTurn;
+        // Inside the player's lit beam he sees all around him, as when he hears the player.
+        const float span = look.heard || look.flashlight.inBeam ? kFullTurn : kHalfTurn;
         Write(cones, kFocusLength, reach);
         Write(cones, kPeripheralLength, std::max(Read<float>(cones, kPeripheralLength), reach));
         Write(cones, kFocusAngle, std::max(Read<float>(cones, kFocusAngle), span));
@@ -551,7 +560,10 @@ namespace {
     const char* BushName(const Hiding& hiding) { return hiding.behindBush ? ", behind a bush" : ""; }
 
     const char* LightName(const Hiding& hiding) {
-        return hiding.light.shaded ? ", in shade" : hiding.light.lit ? ", lit by a lamp" : "";
+        return hiding.flashlight     ? ", sees his flashlight"
+               : hiding.light.shaded ? ", in shade"
+               : hiding.light.lit    ? ", lit by a lamp"
+                                     : "";
     }
 
     // Whether grass hides the player from soldier `id`: as his check found now, or within kGrassHold.
@@ -937,7 +949,12 @@ namespace {
         const bool upright = Shooting::Stance(pawn) == Shooting::kStanding;
         const bool moving = std::hypot(velocity[0], velocity[1], velocity[2]) >= kMovingSpeed;
         const float distance = g_targetDistance(context);
-        const Zone zone = ZoneOf(at, look);
+        // Inside the player's lit beam a soldier has him in his focus, and in the dark one with the lamp
+        // in his view sees it from afar.
+        const Flashlight::Lamp& flashlight = look.flashlight;
+        const Zone zone = flashlight.inBeam ? kFocus : ZoneOf(at, look);
+        hiding.flashlight = flashlight.inBeam || (flashlight.lit && zone != kBehind &&
+                                                  flashlight.distance <= kFlashlightSeenFrom * look.night);
         const bool inFight = Read<bool>(at, kContextFighting);
         const bool fighting = inFight || Read<bool>(at, kContextAfterFight);
         const bool alert = Read<bool>(at, kContextAlerted) || fighting;
@@ -949,10 +966,15 @@ namespace {
 
         // Shade counts in full by day and fades out with the daylight.
         const float shade = hiding.light.shaded ? kInShade + (1.0f - kInShade) * look.night : 1.0f;
+        // Night shortens his sight only while the player's flashlight is off.
+        const float dark = flashlight.lit ? 0.0f : look.night;
         float recognise = moving ? (upright ? kRecogniseUpright : kRecogniseCrouched) : kRecogniseStill;
+        if (hiding.flashlight) {
+            recognise = std::max(recognise, kFlashlightReach * distance);
+        }
         recognise *= (zone == kSide ? kAtSide : 1.0f) * (hiding.grass ? kInGrass : 1.0f) * shade * hiding.cover;
         float notice = recognise * kNoticeShare;
-        if (zone == kFocus && moving && look.night < 0.5f && !hiding.grass && !hiding.light.shaded &&
+        if (zone == kFocus && moving && dark < 0.5f && !hiding.grass && !hiding.light.shaded &&
             hiding.cover >= kInTheOpen) {
             notice = std::max(notice, upright ? kUprightCatchesEye : kCrouchedCatchesEye);
         }
@@ -962,8 +984,8 @@ namespace {
         notice *= scope;
         // A lamp lets him see the player farther at night than the dark does.
         const float lamp = hiding.light.lit ? kLitByLamp : 1.0f;
-        recognise = AtNight(recognise, kNightRecognise * lamp, look.night);
-        notice = AtNight(notice, kNightNotice * lamp, look.night);
+        recognise = AtNight(recognise, kNightRecognise * lamp, dark);
+        notice = AtNight(notice, kNightNotice * lamp, dark);
         // How far this frame's fog lets anyone see, relative to the heaviest fog's: its full distance
         // over how much of the view it takes.
         if (g_fogEnd > 0.0f && g_fogAmount > 0.0f) {

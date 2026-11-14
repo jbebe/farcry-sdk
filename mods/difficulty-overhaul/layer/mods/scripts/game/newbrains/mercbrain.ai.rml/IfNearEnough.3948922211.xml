@@ -1,6 +1,6 @@
 <Task Name="::MercBrain/MercBrain/MercBrainCombat/MediumRangedAttack/SuppressAttack/SuppressFireAttack/IfNearEnough" Class="CTaskPathAnalyzer" Looping="0" Independent="0">
-  <Parameter Name="ShortPathValue" Value="20" />
-  <Parameter Name="MediumPathValue" Value="20" />
+  <Parameter Name="ShortPathValue" Value="30" />
+  <Parameter Name="MediumPathValue" Value="30" />
   <Parameter Name="LongPathValue" Value="30" />
   <Anchor Name="OnStart" />
   <Event Name="ShortPath">

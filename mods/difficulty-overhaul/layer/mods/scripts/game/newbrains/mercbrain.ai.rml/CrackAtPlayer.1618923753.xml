@@ -1,0 +1,14 @@
+<Task Name="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/CrackAtPlayer" Class="CTaskCheckTargetType" Looping="0" Independent="0">
+  <Parameter Name="currentTarget" Value="BestTarget" />
+  <Anchor Name="OnStart" />
+  <Event Name="IsABuddy" />
+  <Event Name="IsAPlayer">
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/CrouchInTheOpen" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/Duck" TargetAnchor="Start" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/WaitCrouch" TargetAnchor="Stop" />
+    <Connection Target="::MercBrain/MercBrain/MercBrainCombat/ShortRangedAttack/SuppressAttack/SuppressFireAttack/PopUpAttack/WaitStand" TargetAnchor="Stop" />
+  </Event>
+  <Event Name="IsASpecialChar" />
+  <Event Name="IsAMerc" />
+  <Event Name="IsNotFound" />
+</Task>

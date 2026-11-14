@@ -5,12 +5,12 @@
 // HUD icon for the new state fades in and out again after the stock HUD's delay.
 #include "flashlight.h"
 
+#include "beam.h"
 #include "engine/frame.h"
 #include "engine/hud.h"
 #include "engine/input.h"
 #include "engine/light.h"
 #include "engine/player.h"
-#include "engine/sight.h"
 #include "engine/sound.h"
 #include "engine/vehicle.h"
 #include "fcse_api.h"
@@ -103,7 +103,7 @@ namespace {
 
     void Forget() {
         Flashlight::Light::Destroy();
-        Flashlight::Sight::Clear();
+        Flashlight::Beam::Off();
         g_on = false;
         g_wanted = false;
         g_switchIn = kNever;
@@ -181,9 +181,9 @@ namespace {
             pose = Flashlight::Light::Place(player, kIntensity * (1.0f - (1.0f - t) * (1.0f - t)), kAbove, kRight);
         }
         if (pose) {
-            Flashlight::Sight::SetBeam(*pose, CurrentSpot());
+            Flashlight::Beam::Send(*pose, CurrentSpot());
         } else {
-            Flashlight::Sight::Clear();
+            Flashlight::Beam::Off();
         }
     }
 
@@ -203,7 +203,6 @@ bool Install() {
     // Frame placed the first hook: a refusal now would unload the plugin with it live, so these only log.
     Sound::Install();
     Hud::Install();
-    Sight::Install();
     Vehicle::Install();
     Input::Install(&OnSignal);
     return true;
