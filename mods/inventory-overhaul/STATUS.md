@@ -49,7 +49,6 @@ Stage: active
 - The handwriting at 20 px on a paper being read - not judged
 - The Missions page - self-test only
 - R's page turn: the pause menu's flip at twice the speed, half its sound - not heard
-- Saving with the notebook out, then loading that save twice - #46
 
 ## Approvals
 
