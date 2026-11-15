@@ -44,14 +44,25 @@ public sealed class Fc2ModelExtractCommand : CliCommand<Fc2ModelExtractCommand.S
         List<Fc2ModelOutput> outputs = Fc2ModelApplier.Outputs(bundle, onlyModified: !settings.All);
 
         string root = settings.Out ?? Path.GetFileNameWithoutExtension(settings.Pack);
-        foreach (Fc2ModelOutput output in outputs)
+        // A layer's content lives under the reserved mods folder, and anything outside it is
+        // ignored - that wrapper is the whole of the layer contract.
+        string layer = Path.GetFullPath(Path.Combine(root, "mods")) + Path.DirectorySeparatorChar;
+        var targets = outputs
+            .Select(output => (output.Path, output.Content, Target: Path.GetFullPath(
+                Path.Combine(layer, output.Path.Replace('/', Path.DirectorySeparatorChar)))))
+            .ToList();
+        // An entry packed from a file path, such as a --rig given as one, has no place in the layer.
+        if (targets.FirstOrDefault(t => !t.Target.StartsWith(layer, StringComparison.OrdinalIgnoreCase)) is
+            { Path: not null } outside)
         {
-            // A layer's content lives under the reserved mods folder, and anything outside it is
-            // ignored - that wrapper is the whole of the layer contract.
-            string target = Path.Combine(
-                root, "mods", output.Path.Replace('/', Path.DirectorySeparatorChar));
+            throw new IOException(
+                $"The pack's entry '{outside.Path}' is not a game path, so it would be written outside the "
+                + "layer; nothing was written. Export with --rig set to the rig's game path.");
+        }
+        foreach ((_, byte[] content, string target) in targets)
+        {
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            File.WriteAllBytes(target, output.Content);
+            File.WriteAllBytes(target, content);
         }
 
         if (settings.Json)

@@ -62,6 +62,9 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - **A mistyped `jackall-cli` option stops the command.** An option the command does not have used to
   be ignored, so a wrong output option wrote the result beside the file it came from, into the game
   folder when it was read from there. The command now names the option and does nothing.
+- **`fc2model extract` writes only inside the layer.** A pack exported with `--rig` naming a file
+  carried that file's path, and `extract --all` wrote the rig back over it. Extract now refuses such
+  an entry, names it and writes nothing.
 
 ## [1.7.0] - 2026-10-28
 

@@ -996,10 +996,9 @@ Three traps were found on the way:
   the companion's name is in the carried header (`XbtTexture.cs`, `Fc2ModelApplier.cs`). Dropping
   `header` and `companion_header` from the entry writes one self-contained file instead (not checked in
   game).
-- **`--rig` with a full path, then `extract --all`, writes the skeleton back to that path,** outside
-  the layer, because `Path.Combine` with an absolute path drops the layer folder
-  (`Fc2ModelExtractCommand.cs`). Pointed at `tmp/` or the install, it overwrites the original. Export
-  from a scratch copy of the rig, and never pass `--all` with it.
+- **A pack exported with `--rig` naming a file cannot be extracted with `--all`:** the rig's entry is
+  that file's path, not a game path, and extract refuses an entry that would land outside the layer
+  (`Fc2ModelExtractCommand.cs`). Export from a scratch copy of the rig, and extract without `--all`.
 - **A changed shared entry is refused** (`Fc2ModelApplier.cs`); mark the renamed entries `owned` with
   their `origin_sha256` instead of passing `--all`.
 
