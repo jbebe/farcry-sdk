@@ -30,6 +30,8 @@ Stage: maintenance
 
 ## Checks
 
+- simplify: 6d24fd7 2026-11-15 - since flashlight-1.2.1
+
 ## Release order
 
 - after fcse-1.5.0
