@@ -38,6 +38,8 @@ Stage: active
 
 ## Checks
 
+- simplify: 626ce06 2026-11-15 - since third-person-1.0.0
+
 ## Release order
 
 - after fcse-1.5.0
