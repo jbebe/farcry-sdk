@@ -16,8 +16,8 @@ Stage: active
 - [done] Archetypes tab - library override chain, mods editing each archetype, dead-edit check (mod lint)
 - [done] Saves tab - .sav metadata and progress, PersistenceDB editing, sav clean
 - [done] Map tab scene editor - select, move, rotate, place, links, prefabs, Check, undo - nothing seen in game
-- [in progress] Map tab characters wear their own outfit - a placed merc draws as a marker; in-app check outstanding
-- [in progress] Map tab performance - sector-filed rebuilds, VRAM 913 to 489 MB; grass distance pick pending, eviction unseen by eye
+- [done] Map tab characters wear their own outfit - user: "verified working"
+- [done] Map tab performance - sector-filed rebuilds, VRAM 913 to 489 MB, grass within 100 m; user: "working"
 - [done] Map tab frame-cost readout and crash.log - unreleased
 - [done] Map tab drawn with Direct3D 11 in a native child window, no OpenGL or GLWpfControl, so it runs on every Windows 10 PC #66 - unreleased; user: "map tab is validated"
 - [done] gamemodesconfig.xml merged block by block across layers, not last-one-wins; the AI tab saves the behaviour odds as their block - user 2026-11-12, unplayed
@@ -42,7 +42,7 @@ Stage: active
 - [done] Dark theme
 - [done] jackall-cli with --json, and jackall-mi for the Vortex extension
 - [done] Test fixtures restored from a Steam install and two Nexus mods by manifest.tsv - fixtures restore/record, a Stop hook for unlisted files
-- [in progress] Tutorial docs and screenshot scripts - run-all not re-run since the UI-script refactor; verify-in-game.ps1 never deployed
+- [postponed] Tutorial docs and screenshot scripts - run-all not re-run since the UI-script refactor; verify-in-game.ps1 never deployed; postponed by the user past 1.8.0
 - [scrapped] Map editor on FC2Editor/FCE over host IPC - user: the wrong direction; the AVATAR port (18e58eab) is a quarry only
 - [scrapped] Map tab per-sector view culling - culled almost nothing, refilled streams on turns (d8b0f884)
 - [scrapped] Map tab Demo-mode speed-ups - user: a non-issue
@@ -51,7 +51,6 @@ Stage: active
 ## To validate
 
 - Map tab: a scene edit, placed and moved objects, seen in game - nothing seen
-- Map tab characters in their own outfit - a placed merc draws as a marker
 - A new world (New map) and its navmesh, seen in game - nothing seen
 - _layout.xml moves and deletes of mission entities - unchecked in game
 - The App's .mgb fragment save, run in the UI - never run
