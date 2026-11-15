@@ -38,6 +38,8 @@ Stage: maintenance
 
 ## Checks
 
+- simplify: 20db6f0 2026-11-15 - since sound-overhaul-1.0.3
+
 ## Release order
 
 - after fcse-1.5.0
