@@ -208,6 +208,8 @@ def build_steps(project):
 
 
 def build_and_test(project, steps):
+    if not steps and project.workflow and not project.is_plugin:
+        return Check("build", "pass", "none: the release workflow ships the layer as it is"), []
     if not steps:
         return Check("build", "fail", "no release workflow and no build.ps1", "add the project's release workflow"), []
     failures = [f for name, command, directory in steps
