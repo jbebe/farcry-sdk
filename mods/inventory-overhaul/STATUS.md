@@ -58,6 +58,8 @@ Stage: active
 
 ## Checks
 
+- simplify: 7b185ea 2026-11-15 - since inventory-overhaul-1.0.0
+
 ## Release order
 
 - after fcse-1.5.0
