@@ -2,7 +2,7 @@
 
 Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.5.0] - 2026-11-15
 
 ### Added
 - **Tools can switch any mod's setting for one session.** For authors: `FCSE_PluginAPI::SetSetting`
