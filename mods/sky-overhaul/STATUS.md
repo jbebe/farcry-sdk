@@ -53,6 +53,8 @@ Stage: maintenance
 
 ## Checks
 
+- simplify: 455cbed 2026-11-15 - since sky-overhaul-1.5.0
+
 ## Release order
 
 - after fcse-1.5.0
