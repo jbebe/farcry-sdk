@@ -30,6 +30,8 @@ Stage: maintenance
 
 ## Checks
 
+- simplify: 20db6f0 2026-11-15 - since legacy-plugin-1.0.0
+
 ## Release order
 
 - after fcse-1.5.0
