@@ -68,7 +68,7 @@ Stage: active
 
 ## Checks
 
-- simplify: 3c1ba06 2026-11-15 - since jackall-1.7.0
+- simplify: 699cb5c 2026-11-15 - since jackall-1.7.0
 
 ## Release order
 
