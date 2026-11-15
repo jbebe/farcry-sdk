@@ -24,7 +24,7 @@ Stage: maintenance
 
 ## Approvals
 
-- played: 27b5a1c 2026-11-15 - "its approved by me"
+- played: 4d32f17 2026-11-15 - "its approved by me", held after the lockfile commit
 - page text: 319572b 2026-11-15 - "ok"
 
 ## Checks
