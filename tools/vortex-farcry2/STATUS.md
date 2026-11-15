@@ -25,7 +25,7 @@ Stage: maintenance
 ## Approvals
 
 - played: 27b5a1c 2026-11-15 - "its approved by me"
-- page text: 49624dc 2026-10-29 - implied by the vortex-0.6.0 release; the BBCode still describes 0.1.0 (Data_Win32 asset mods)
+- page text: 319572b 2026-11-15 - "ok"
 
 ## Checks
 
