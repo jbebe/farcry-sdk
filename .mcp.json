@@ -6,6 +6,15 @@
     },
     "audacity": {
       "command": "audacity-mcp"
-    }
+    },
+    "blender": {
+			"command": "uv",
+			"args": [
+				"--directory",
+				"C:\\Programs\\blender_mcp\\mcp",
+				"run",
+				"blender-mcp"
+			]
+		}
   }
 }
