@@ -27,7 +27,7 @@ Stage: maintenance
 
 ## Approvals
 
-- played: 14fc24e 2026-10-21 - implied by the fcse-1.4.2 release
+- played: d1068d1 2026-11-15 - main menu, Mod Configuration Menu and exit with UFCP, GOG
 - page text: 14fc24e 2026-10-21 - implied by the fcse-1.4.2 release
 
 ## Checks
