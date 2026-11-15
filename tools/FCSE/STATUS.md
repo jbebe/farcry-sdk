@@ -32,6 +32,8 @@ Stage: maintenance
 
 ## Checks
 
+- simplify: c4fcf5f 2026-11-15 - since fcse-1.4.2
+
 ## Release order
 
 ## Collisions
