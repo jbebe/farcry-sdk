@@ -32,6 +32,8 @@ Stage: active
 
 ## Checks
 
+- simplify: aa85c23 2026-11-15 - since blenderfc2-0.3.3
+
 ## Release order
 
 - after jackall-1.7.0
