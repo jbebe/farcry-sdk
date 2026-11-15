@@ -65,6 +65,8 @@ Stage: active
 
 ## Checks
 
+- simplify: 0089810 2026-11-15 - since vehicle-overhaul-1.1.0
+
 ## Release order
 
 - after fcse-1.5.0
