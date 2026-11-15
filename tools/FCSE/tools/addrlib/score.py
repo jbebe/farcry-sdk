@@ -25,7 +25,6 @@ from collections import defaultdict
 import common
 
 EXACT_STAGES = {"export", "thunk", "exact_bytes", "exact_insn"}
-NEAR_STAGES = {"string_unique", "symbol", "propagate", "bsim", "exact_mnem"}
 
 # Precedence when several stages claim the same reference function. Higher wins.
 STAGE_RANK = {"export": 100, "thunk": 90, "exact_bytes": 80, "exact_insn": 70,

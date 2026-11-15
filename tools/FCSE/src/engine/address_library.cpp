@@ -14,11 +14,10 @@ namespace {
     // Must match tools/FCSE/tools/addrlib/emit.py. The header is fixed-size on
     // purpose: no length-prefixed strings to walk, so a truncated resource is
     // caught by one size check instead of failing somewhere in the middle.
-    constexpr char kResourceName[] = "FCSE_ADDRLIB";
+    constexpr wchar_t kResourceName[] = L"FCSE_ADDRLIB";
     constexpr uint32_t kMagic = 0x52444146u;   // 'FADR' little-endian
     constexpr uint16_t kFormatVersion = 1;
     constexpr uint16_t kCodecVarintDelta = 0;
-    constexpr uint32_t kMissing = 0xFFFFFFFFu;
 
 #pragma pack(push, 1)
     struct Header {
@@ -251,7 +250,7 @@ bool AddressLibrary::Init(HMODULE duniaModule, const BuildInfo& build) {
 
     const void* blob = nullptr;
     size_t size = 0;
-    if (!FindRcData(L"FCSE_ADDRLIB", &blob, &size)) {
+    if (!FindRcData(kResourceName, &blob, &size)) {
         Log::Loader("address library: FCSE_ADDRLIB resource is missing from "
                     "FCSE.exe - this build was linked without an address table");
         return false;

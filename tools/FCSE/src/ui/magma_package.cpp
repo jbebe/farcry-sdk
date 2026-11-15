@@ -33,7 +33,6 @@ namespace {
     // inline buffer while capacity < 0x10, otherwise a pointer. Same shape as CUIPageBase's page
     // name (allocator +0x28, data +0x2c). CFileNameNomad::GetFileType calls
     // magma::StringUtil::FindExtension on +0x08, i.e. on the string object, not on the characters.
-    constexpr ptrdiff_t kPathAllocatorOffset = 0x08;
     constexpr ptrdiff_t kPathBufferOffset = 0x0c;
     constexpr ptrdiff_t kPathSizeOffset = 0x1c;
     constexpr ptrdiff_t kPathCapacityOffset = 0x20;

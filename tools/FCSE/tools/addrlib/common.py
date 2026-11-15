@@ -112,11 +112,6 @@ def write_json(path, obj):
     os.replace(tmp, path)
 
 
-def read_json(path):
-    with open(path, encoding="utf-8") as fh:
-        return json.load(fh)
-
-
 # ---------------------------------------------------------------------------
 # csv tables (registry / overrides) -- kept text so they diff and review well
 # ---------------------------------------------------------------------------

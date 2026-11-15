@@ -203,13 +203,13 @@ namespace {
         return g_groups.back();
     }
 
-    bool GroupHasSetting(const SettingsRegistry::Group& group, const std::string& name) {
+    SettingsRegistry::Setting* SettingIn(const SettingsRegistry::Group& group, const std::string& name) {
         for (const std::unique_ptr<SettingsRegistry::Setting>& setting : group.settings) {
             if (setting->name == name) {
-                return true;
+                return setting.get();
             }
         }
-        return false;
+        return nullptr;
     }
 
     void Notify(const SettingsRegistry::Setting& setting) {
@@ -285,7 +285,7 @@ bool SettingsRegistry::RegisterSettings(const char* pluginName, const FCSE_Setti
                                          "\" - " + problem);
             continue;
         }
-        if (GroupHasSetting(group, name)) {
+        if (SettingIn(group, name) != nullptr) {
             Log::FromCaller(caller, "RegisterSettings(\"" + groupName + "\") skipped \"" + name +
                                          "\" - already registered under this plugin name");
             continue;
@@ -463,15 +463,8 @@ bool SettingsRegistry::SetValue(Setting* setting, const FCSE_SettingValue& next,
 
 bool SettingsRegistry::SetForSession(const char* pluginName, const char* name, const char* text) {
     void* caller = _ReturnAddress();
-    Setting* setting = nullptr;
-    if (const Group* group = pluginName != nullptr && name != nullptr ? FindGroup(pluginName) : nullptr) {
-        for (const std::unique_ptr<Setting>& candidate : group->settings) {
-            if (candidate->name == name) {
-                setting = candidate.get();
-                break;
-            }
-        }
-    }
+    const Group* group = pluginName != nullptr && name != nullptr ? FindGroup(pluginName) : nullptr;
+    Setting* setting = group != nullptr ? SettingIn(*group, name) : nullptr;
     if (setting == nullptr) {
         Log::FromCaller(caller, std::string("SetSetting: no setting [") + (pluginName ? pluginName : "") +
                                      "] " + (name ? name : ""));
