@@ -85,8 +85,11 @@ namespace {
         return static_cast<uint8_t*>(FCSE::ApiPointer()->EntityData->EntityOf(component));
     }
 
-    uint8_t* BindingOf(uint8_t* handle) {
-        uint8_t* entity = handle != nullptr ? Field<uint8_t*>(handle, kHandleEntity) : nullptr;
+    uint8_t* EntityOf(uint8_t* handle) {
+        return handle != nullptr ? Field<uint8_t*>(handle, kHandleEntity) : nullptr;
+    }
+
+    uint8_t* BindingOfEntity(uint8_t* entity) {
         return entity != nullptr ? Field<uint8_t*>(entity, kEntityBinding) : nullptr;
     }
 
@@ -119,8 +122,8 @@ namespace {
         uint8_t** children = Field<uint8_t**>(binding, kChildren);
         const uint32_t count = Field<uint32_t>(binding, kChildCount);
         for (uint32_t i = 0; i < count; ++i) {
-            uint8_t* child = children[i] != nullptr ? Field<uint8_t*>(children[i], kHandleEntity) : nullptr;
-            uint8_t* childBinding = child != nullptr ? Field<uint8_t*>(child, kEntityBinding) : nullptr;
+            uint8_t* child = EntityOf(children[i]);
+            uint8_t* childBinding = BindingOfEntity(child);
             if (childBinding == nullptr || Field<uint8_t>(childBinding, kOwnMatrix) != 0) {
                 continue;
             }
@@ -155,8 +158,7 @@ namespace {
     void __fastcall OnUpdateMarkers(uint8_t* strategy, void* unused, float seconds, void* pawn,
                                     int sector) {
         g_updateMarkers(strategy, unused, seconds, pawn, sector);
-        uint8_t* entity = OwnerOf(Field<uint8_t*>(strategy, kStrategyEquipment));
-        uint8_t* binding = entity != nullptr ? Field<uint8_t*>(entity, kEntityBinding) : nullptr;
+        uint8_t* binding = BindingOfEntity(OwnerOf(Field<uint8_t*>(strategy, kStrategyEquipment)));
         if (binding == nullptr) {
             return;
         }
@@ -170,7 +172,7 @@ namespace {
             map = &g_maps[g_nextMap++ % std::size(g_maps)];
             map->binding = binding;
         }
-        map->parent = BindingOf(Field<uint8_t*>(binding, kParentHandle));
+        map->parent = BindingOfEntity(EntityOf(Field<uint8_t*>(binding, kParentHandle)));
         map->updates = kUpdates;
     }
 }
