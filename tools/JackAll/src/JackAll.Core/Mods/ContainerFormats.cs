@@ -23,24 +23,29 @@ public static class ContainerFormats
 
     private const string FcbSuffix = ".fcb";
 
+    /// <summary>A container kind other than `.fcb`: how its file is recognised, whether its fragments
+    /// are plain documents rather than value trees, and its splitter.</summary>
+    private sealed record Kind(Func<string, bool> Matches, bool PlainDocument, Func<NameDatabase?, IContainerSplitter> Splitter);
+
+    /// <summary>In the order <see cref="For"/> tries them. Only a depload takes the NameDatabase: a MOVE
+    /// state name is not a game path, so its splitter reads its own bundled table, and a section
+    /// carries its name in the file.</summary>
+    private static readonly Kind[] Kinds =
+    [
+        new(IsDepLoad, true, names => names is null ? DepLoadContainerSplitter.Instance : new DepLoadContainerSplitter(names)),
+        new(IsMoveGraph, false, _ => MoveSplitter.Value),
+        new(IsWorldDescriptor, true, _ => WorldDescriptorContainerSplitter.Instance),
+        new(IsInputConfig, true, _ => InputConfigContainerSplitter.Instance),
+        new(IsUiDepLoad, true, _ => UiDepLoadContainerSplitter.Instance),
+        new(IsMagmaPackage, true, _ => MgbContainerSplitter.Instance),
+        new(IsBrainWorkspace, true, _ => AiWorkspaceContainerSplitter.Instance),
+        new(GameModesConfigContainerSplitter.IsGameModesConfig, true, _ => GameModesConfigContainerSplitter.Instance),
+        new(ParticleLibraryContainerSplitter.IsParticleLibrary, true, _ => ParticleLibraryContainerSplitter.Instance),
+        new(IsStringTable, false, _ => StringTableContainerSplitter.Instance),
+    ];
+
     public static bool IsContainerSegment(string segment)
-        => segment.EndsWith(FcbSuffix, StringComparison.OrdinalIgnoreCase)
-           || IsDepLoad(segment)
-           || IsUiDepLoad(segment)
-           || IsMoveGraph(segment)
-           || IsStringTable(segment)
-           || IsWorldDescriptor(segment)
-           || IsInputConfig(segment)
-           || IsMagmaPackage(segment)
-           || IsBrainWorkspace(segment)
-           || IsGameModesConfig(segment)
-           || IsParticleLibrary(segment);
-
-    /// <summary>The game modes config, which splits per property block and per game mode.</summary>
-    public static bool IsGameModesConfig(string path) => GameModesConfigContainerSplitter.IsGameModesConfig(path);
-
-    /// <summary>A world's particle library, which splits per particle system.</summary>
-    public static bool IsParticleLibrary(string path) => ParticleLibraryContainerSplitter.IsParticleLibrary(path);
+        => segment.EndsWith(FcbSuffix, StringComparison.OrdinalIgnoreCase) || Kinds.Any(kind => kind.Matches(segment));
 
     /// <summary>A brain workspace, which splits per instance.</summary>
     public static bool IsBrainWorkspace(string fileName) => AiWorkspaceContainerSplitter.IsWorkspace(fileName);
@@ -64,10 +69,7 @@ public static class ContainerFormats
     /// value tree, and so belongs in a text view instead of the value editor.
     /// </summary>
     public static bool IsPlainDocumentFragment(string container, string fragmentId)
-        => IsDepLoad(container) || IsUiDepLoad(container) || IsWorldDescriptor(container)
-           || IsInputConfig(container) || IsMagmaPackage(container) || IsBrainWorkspace(container)
-           || IsGameModesConfig(container) || IsParticleLibrary(container)
-           || ContainerLayout.IsLayoutId(fragmentId);
+        => Kinds.Any(kind => kind.PlainDocument && kind.Matches(container)) || ContainerLayout.IsLayoutId(fragmentId);
 
     /// <summary>
     /// Whether a fragment's base-game form is worth diffing against. A world sector's layout states
@@ -113,61 +115,8 @@ public static class ContainerFormats
     public static IContainerSplitter For(
         string containerPath, FcbClassDefinitions definitions, NameDatabase? names = null)
     {
-        if (IsDepLoad(containerPath))
-        {
-            return names is null
-                ? DepLoadContainerSplitter.Instance
-                : new DepLoadContainerSplitter(names);
-        }
-
-        // The rest are matched on their filename, so a container path ending in one is unambiguous.
-        // None takes a NameDatabase: a MOVE state name is not a game path, so the hashlist cannot
-        // resolve one and the splitter reads its own bundled table instead, while a section carries
-        // its name in the file.
         string fileName = Path.GetFileName(containerPath);
-        if (IsMoveGraph(fileName))
-        {
-            return MoveSplitter.Value;
-        }
-
-        if (IsWorldDescriptor(fileName))
-        {
-            return WorldDescriptorContainerSplitter.Instance;
-        }
-
-        if (IsInputConfig(fileName))
-        {
-            return InputConfigContainerSplitter.Instance;
-        }
-
-        if (IsUiDepLoad(fileName))
-        {
-            return UiDepLoadContainerSplitter.Instance;
-        }
-
-        if (IsMagmaPackage(fileName))
-        {
-            return MgbContainerSplitter.Instance;
-        }
-
-        if (IsBrainWorkspace(fileName))
-        {
-            return AiWorkspaceContainerSplitter.Instance;
-        }
-
-        if (IsGameModesConfig(fileName))
-        {
-            return GameModesConfigContainerSplitter.Instance;
-        }
-
-        if (IsParticleLibrary(fileName))
-        {
-            return ParticleLibraryContainerSplitter.Instance;
-        }
-
-        return IsStringTable(fileName)
-            ? StringTableContainerSplitter.Instance
-            : new FcbContainerSplitter(definitions);
+        return Kinds.FirstOrDefault(kind => kind.Matches(fileName))?.Splitter(names) ?? new FcbContainerSplitter(definitions);
     }
 
     /// <summary>

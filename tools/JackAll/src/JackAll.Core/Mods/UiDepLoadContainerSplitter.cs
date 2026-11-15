@@ -32,7 +32,7 @@ public sealed class UiDepLoadContainerSplitter : IContainerSplitter
     /// <summary>A resource's id: its file name as the label, its <c>crc_ID</c> as the number.</summary>
     public static string IdOf(string resourcePath) => FragmentId.Of(NameHash.Compute(resourcePath), resourcePath);
 
-    public IContainerTree Open(byte[] container) => new Tree(Load(container).Root!);
+    public IContainerTree Open(byte[] container) => new Tree(XmlFileText.Load(container, LoadOptions.None).Root!);
 
     public string Canonicalize(string fragmentId, string fragmentXml) => Render(XElement.Parse(fragmentXml));
 
@@ -48,7 +48,7 @@ public sealed class UiDepLoadContainerSplitter : IContainerSplitter
             return baseBytes;
         }
 
-        XDocument document = Load(baseBytes);
+        XDocument document = XmlFileText.Load(baseBytes, LoadOptions.None);
         XElement root = document.Root!;
         Dictionary<string, XElement> byId = Index(root);
         foreach ((string id, string xml) in fragmentXmlById.OrderBy(kv => kv.Key, StringComparer.Ordinal))
@@ -89,12 +89,6 @@ public sealed class UiDepLoadContainerSplitter : IContainerSplitter
             }
         }
         return byId;
-    }
-
-    private static XDocument Load(byte[] bytes)
-    {
-        using var stream = new MemoryStream(bytes);
-        return XDocument.Load(stream);
     }
 
     /// <summary>The file as the game ships it: tab-indented, LF line endings, no declaration, and a

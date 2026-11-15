@@ -300,7 +300,7 @@ public sealed class EntityModelLayer : IDisposable
     public long TextureBytesResident { get; private set; }
 
     /// <summary>What the resident meshes' vertex, index and instance buffers hold on the GPU.</summary>
-    public long MeshBytesResident { get; private set; }
+    private long MeshBytesResident { get; set; }
 
     /// <summary>Whether a texture or a mesh is still queued, decoding or waiting to upload. Uploading
     /// happens inside <see cref="Draw"/>, so a viewport that only redraws on demand has to keep
@@ -1231,7 +1231,7 @@ public sealed class EntityModelLayer : IDisposable
                 _ => Format.BC1_UNorm,
             };
             TextureBytesResident += texture.Mips.Sum(mip => (long)mip.Length);
-            return Upload.Immutable(format, texture.Width, texture.Height, [.. texture.Mips], texture.Mips.Count);
+            return Upload.Immutable(format, texture.Width, texture.Height, texture.Mips, texture.Mips.Count);
         }
 
         // The whole chain, generated from the one level the decoder gave.

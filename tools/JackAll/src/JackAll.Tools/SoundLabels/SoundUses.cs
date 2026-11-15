@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
+using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Tools.Bark;
 using JackAll.Tools.Mab;
@@ -119,7 +120,7 @@ public static partial class SoundUses
         XDocument document;
         try
         {
-            document = XDocument.Load(new MemoryStream(content));
+            document = XmlFileText.Load(content, LoadOptions.None);
         }
         catch (XmlException)
         {

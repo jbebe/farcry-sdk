@@ -335,8 +335,7 @@ public sealed class WaterLayer : IDisposable
     /// </summary>
     public void SetVisible(Vector3 cameraPosition)
     {
-        int cameraX = (int)MathF.Floor(cameraPosition.X / SectorSize);
-        int cameraY = (int)MathF.Floor(cameraPosition.Y / SectorSize);
+        (int cameraX, int cameraY) = WorldModels.SectorOf(cameraPosition);
 
         int at = 0;
         foreach (WaterSector water in _sectors)

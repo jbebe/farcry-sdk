@@ -49,12 +49,15 @@ public static class CrashLog
             return;
         }
 
-        Write(exception);
-        MessageBox.Show($"JackAll crashed. The details are in\n{AppConfig.CrashLogPath}\n\n{exception.Message}",
+        string? path = Write(exception);
+        string where = path is null ? "No crash log could be written." : $"The details are in\n{path}";
+        MessageBox.Show($"JackAll crashed. {where}\n\n{exception.Message}",
             "JackAll", MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
-    private static void Write(Exception exception)
+    /// <summary>Writes the report beside config.ini, or in the temp folder when JackAll's own folder is
+    /// read-only, and returns where it went.</summary>
+    private static string? Write(Exception exception)
     {
         string[] errors;
         lock (GpuErrors)
@@ -75,15 +78,17 @@ public static class CrashLog
 
             {exception}
             """;
-        try
+        foreach (string path in new[] { AppConfig.CrashLogPath, Path.Combine(Path.GetTempPath(), "JackAll-crash.log") })
         {
-            File.WriteAllText(AppConfig.CrashLogPath, report);
+            try
+            {
+                File.WriteAllText(path, report);
+                return path;
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+            }
         }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
+        return null;
     }
 }

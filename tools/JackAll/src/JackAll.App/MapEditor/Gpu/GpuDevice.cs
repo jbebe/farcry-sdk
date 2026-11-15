@@ -20,8 +20,6 @@ public static class GpuDevice
 
     public static ID3D11DeviceContext Context { get; private set; } = null!;
 
-    private static FeatureLevel FeatureLevel { get; set; }
-
     private static bool IsWarp { get; set; }
 
     public static bool IsCreated => Device is not null;
@@ -56,7 +54,6 @@ public static class GpuDevice
 
         Device = device;
         Context = device.ImmediateContext;
-        FeatureLevel = device.FeatureLevel;
 
         using IDXGIDevice1 dxgi = device.QueryInterface<IDXGIDevice1>();
         dxgi.SetMaximumFrameLatency(2);
@@ -67,7 +64,7 @@ public static class GpuDevice
         GpuState.Create();
 
         adapter.CheckInterfaceSupport<IDXGIDevice>(out long driver);
-        CrashLog.Gpu = $"{adapter.Description.Description} | Direct3D {LevelName} | driver " +
+        CrashLog.Gpu = $"{adapter.Description.Description} | Direct3D {LevelName(device.FeatureLevel)} | driver " +
             $"{driver >> 48 & 0xFFFF}.{driver >> 32 & 0xFFFF}.{driver >> 16 & 0xFFFF}.{driver & 0xFFFF} | {VideoMemory()}";
     }
 
@@ -83,7 +80,7 @@ public static class GpuDevice
         return result.Success ? device : null;
     }
 
-    private static string LevelName => FeatureLevel switch
+    private static string LevelName(FeatureLevel level) => level switch
     {
         FeatureLevel.Level_11_1 => "11.1",
         FeatureLevel.Level_11_0 => "11.0",

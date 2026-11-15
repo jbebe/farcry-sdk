@@ -57,6 +57,11 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   JackAll works.
 - **Every crash says so.** A crash outside the window's own work used to write `crash.log` and close
   without a word; it now shows the same message as any other.
+- **A crash leaves a log even where JackAll's folder is read-only.** The log then goes to the Windows
+  temp folder as `JackAll-crash.log`, and the message names the file it was written to.
+- **A mistyped `jackall-cli` option stops the command.** An option the command does not have used to
+  be ignored, so a wrong output option wrote the result beside the file it came from, into the game
+  folder when it was read from there. The command now names the option and does nothing.
 
 ## [1.7.0] - 2026-10-28
 

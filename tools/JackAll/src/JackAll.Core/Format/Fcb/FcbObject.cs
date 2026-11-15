@@ -20,7 +20,18 @@ public sealed class FcbObject
     public List<FcbObject> Children { get; } = [];
 
     /// <summary>Every node under this one, each before its own children.</summary>
-    public IEnumerable<FcbObject> Descendants() => Children.SelectMany(c => c.Descendants().Prepend(c));
+    public IEnumerable<FcbObject> Descendants()
+    {
+        var stack = new Stack<FcbObject>(Enumerable.Reverse(Children));
+        while (stack.TryPop(out FcbObject? node))
+        {
+            yield return node;
+            for (int i = node.Children.Count - 1; i >= 0; i--)
+            {
+                stack.Push(node.Children[i]);
+            }
+        }
+    }
 
     /// <summary>A deep copy - no value array or child is shared with this node.</summary>
     public FcbObject Clone()

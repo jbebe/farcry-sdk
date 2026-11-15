@@ -33,8 +33,6 @@ public sealed class TerrainTextureSet : IDisposable
 
     private const Format DetailFormat = Format.BC1_UNorm_SRgb;
 
-    private const int Dxt1BlockBytes = 8;
-
     /// <summary>Mid-grey as a DXT1 endpoint - what a layer draws when its texture cannot be used.</summary>
     private const ushort NeutralGrey = 0x8410;
 
@@ -286,8 +284,8 @@ public sealed class TerrainTextureSet : IDisposable
     private static void FillLevel(Upload.Staged array, int slice, int level, ushort colour)
     {
         int side = DetailSide >> level;
-        var blocks = new byte[LevelBytes(side)];
-        for (int i = 0; i < blocks.Length; i += Dxt1BlockBytes)
+        var blocks = new byte[Upload.LevelBytes(DetailFormat, side)];
+        for (int i = 0; i < blocks.Length; i += Upload.BlockBytes(DetailFormat))
         {
             blocks[i] = blocks[i + 2] = (byte)colour;
             blocks[i + 1] = blocks[i + 3] = (byte)(colour >> 8);
@@ -308,19 +306,13 @@ public sealed class TerrainTextureSet : IDisposable
         return (ushort)(r << 11 | g << 5 | b);
     }
 
-    private static int LevelBytes(int side)
-    {
-        int blocks = Math.Max(1, (side + 3) / 4);
-        return blocks * blocks * Dxt1BlockBytes;
-    }
-
     /// <summary>Every level of every slice, for the status line.</summary>
     private static long ArrayBytes(int slices)
     {
         long total = 0;
         for (int level = 0; level < DetailLevels; level++)
         {
-            total += LevelBytes(DetailSide >> level);
+            total += Upload.LevelBytes(DetailFormat, DetailSide >> level);
         }
         return total * slices;
     }

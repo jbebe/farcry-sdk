@@ -49,6 +49,10 @@ public static class Upload
         ? Math.Max(1, (width + 3) / 4) * block
         : (int)(width * format.GetBitsPerPixel() / 8);
 
+    /// <summary>Bytes in one square level this many texels on a side.</summary>
+    public static int LevelBytes(Format format, int side)
+        => RowPitch(format, side) * (BlockBytes(format) > 0 ? (side + 3) / 4 : side);
+
     /// <summary>8 for BC1, 16 for BC2 and BC3, 0 for a format that is not block-compressed.</summary>
     public static int BlockBytes(Format format) => format switch
     {

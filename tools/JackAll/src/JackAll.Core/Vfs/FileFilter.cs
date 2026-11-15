@@ -80,7 +80,6 @@ public sealed partial record FileFilter(string[] Includes, string[] Excludes, st
     public const string SoundLabels = "spk";
     public const string ShaderLabels = "shader";
 
-
     private static readonly string[] LabelKinds = [SoundLabels, ShaderLabels];
 
     /// <summary>Words match the path; label words match the text <paramref name="label"/> gives a file for

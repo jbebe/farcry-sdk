@@ -419,8 +419,7 @@ public partial class MapTabView
         // them would reclaim a few KB and cost three compiles the next time Demo comes back on.
         if (!demo)
         {
-            _cascades?.Dispose();
-            _cascades = null;
+            Release(ref _cascades);
         }
     }
 

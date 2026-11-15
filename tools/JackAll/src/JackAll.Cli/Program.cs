@@ -29,6 +29,8 @@ var app = new CommandApp();
 app.Configure(config =>
 {
     config.SetApplicationName("jackall-cli");
+    // A mistyped flag stops the command instead of falling back to its default, such as writing beside the source.
+    config.UseStrictParsing();
 
     // --- Maintenance -----------------------------------------------------
     config.AddBranch("system", system =>

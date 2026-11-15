@@ -41,10 +41,7 @@ public sealed class Camera3D
 
     public Vector3 Right => new(MathF.Cos(Yaw), -MathF.Sin(Yaw), 0);
 
-    public Matrix4x4 View() => Matrix4x4.CreateLookAt(
-        new Vector3(Position.X, Position.Y, Position.Z),
-        new Vector3(Position.X, Position.Y, Position.Z) + Forward,
-        Vector3.UnitZ);
+    public Matrix4x4 View() => Matrix4x4.CreateLookAt(Position, Position + Forward, Vector3.UnitZ);
 
     /// <summary>Shared with anything sizing itself against the screen rather than the world - a
     /// marker glyph's pixel size falls out of this and the viewport height.</summary>

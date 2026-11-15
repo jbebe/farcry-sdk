@@ -127,7 +127,7 @@ public static partial class WorldPack
 
         if (read(TerrainPlan.PathOf(world)) is { } terrain)
         {
-            Dictionary<string, byte[]> shaped = TerrainPlan.Build(XElement.Load(new MemoryStream(terrain)), map, read);
+            Dictionary<string, byte[]> shaped = TerrainPlan.Build(XmlFileText.Load(terrain, LoadOptions.None).Root!, map, read);
             foreach ((string path, byte[] bytes) in shaped)
             {
                 files[path] = bytes;
@@ -179,7 +179,7 @@ public static partial class WorldPack
         SectorsDep.Mark(sectorsDep, SectorsDep.HasNavMesh, ids);
         if (read(VegetationPlan.PathOf(world)) is { } plan)
         {
-            Dictionary<(int Sector, bool Far), byte[]> grown = VegetationPlan.Build(XElement.Load(new MemoryStream(plan)), map, Built, knownPaths, progress);
+            Dictionary<(int Sector, bool Far), byte[]> grown = VegetationPlan.Build(XmlFileText.Load(plan, LoadOptions.None).Root!, map, Built, knownPaths, progress);
             foreach ((string sdat, int id) in map.Sectors)
             {
                 if (grown.TryGetValue((id, false), out byte[]? near))
