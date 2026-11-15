@@ -11,9 +11,6 @@
 #include <unordered_map>
 
 namespace {
-    // Sky passes between two reports of what has been flattened.
-    constexpr uint32_t kReportEvery = 1800;
-
     // How many shaders that could not be flattened are named in the log, at most.
     constexpr int kNamedLeft = 24;
 
@@ -25,11 +22,7 @@ namespace {
     std::unordered_map<IDirect3DVertexShader9*, IDirect3DVertexShader9*> g_shaders;
     IDirect3DVertexShader9* g_lastBound = nullptr;
     IDirect3DVertexShader9* g_lastOurs = nullptr;
-    int g_flattened = 0;
-    int g_left = 0;
     int g_named = 0;
-    int g_reported = -1;
-    uint32_t g_passes = 0;
 
     void Forget() {
         for (auto& [engine, ours] : g_shaders) {
@@ -39,9 +32,6 @@ namespace {
         g_shaders.clear();
         g_lastBound = nullptr;
         g_lastOurs = nullptr;
-        g_flattened = 0;
-        g_left = 0;
-        g_reported = -1;
     }
 
     IDirect3DVertexShader9* Make(IDirect3DDevice9* device, IDirect3DVertexShader9* engine) {
@@ -50,7 +40,6 @@ namespace {
             SkyOverhaul::VertexPatch::Flattened(tokens.data(), tokens.size(), g_flatten);
         IDirect3DVertexShader9* ours = nullptr;
         if (flat.empty() || FAILED(device->CreateVertexShader(flat.data(), &ours))) {
-            g_left++;
             if (g_named < kNamedLeft) {
                 g_named++;
                 FCSE::Logf("flatten: vertex shader %08X is drawn as it is, not projected as the "
@@ -60,7 +49,6 @@ namespace {
             }
             return nullptr;
         }
-        g_flattened++;
         return ours;
     }
 
@@ -102,10 +90,6 @@ void SkyOverhaul::Flatten::OnScenePass(const Frame::Pass& pass) {
         now.stretch != g_flatten.stretch) {
         Forget();
         g_flatten = now;
-    }
-    if (++g_passes % kReportEvery == 0 && g_flattened + g_left != g_reported) {
-        g_reported = g_flattened + g_left;
-        FCSE::Logf("flatten: %d vertex shaders drawn flatter, %d as they are", g_flattened, g_left);
     }
 }
 
