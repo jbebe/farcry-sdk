@@ -1,36 +1,75 @@
-[b]Far Cry 2 - Vortex Extension[/b]
-Adds full Far Cry 2 support to Vortex: install mods from Nexus, enable/disable them, set load order, deploy, and purge. A normal Vortex workflow, for a game that has no loose-file loading and no plugin list.
-[b]
-Why this exists[/b]
-Far Cry 2 reads everything out of packed archives. The only thing a mod can touch is patch.dat or patch.fat, and "installing a mod" really means [i]recompiling that archive pair[/i] with the mod's files spliced in. This extension handles that recompilation for you. Under the hood it's powered by JackAll, a tool ecosystem made for Far Cry 2, which does the archive work correctly and reversibly.
+[quote][b]I'm working on all of these mods on my own.[/b] If you'd like to help, extend or fix one of them, co-author a new one, or join one of my bigger projects, I'm very open to it. Send me a message here on Nexus or on the [b]FarCry:Modding Discord Server[/b].[/quote]
 
-[b]What it supports[/b]
-Every mod archive is classified automatically into one of three kinds:
+[size=6][b]Far Cry 2 - Vortex Extension[/b][/size]
+
+Far Cry 2 support for Vortex. Install mods from Nexus, turn them on and off, put them in order, deploy and purge: the normal Vortex routine, for a game that loads no loose files and has no plugin list.
+
+Far Cry 2 reads everything out of packed archives, and the only one a mod may touch is patch.dat. So installing a mod really means rebuilding that archive with the mod's files inside it. The extension does that for you on every deploy. The archive work itself is done by [url=https://www.nexusmods.com/farcry2/mods/370]JackAll[/url], which comes inside the extension, so there is nothing else to install, not even .NET.
+
+[line]
+
+[size=5][b]What it does[/b][/size]
+
+[size=4][b]Installs every kind of FC2 mod[/b][/size]
+
 [list]
-[*][b]Legacy patch mods:[/b] the classic patch.dat/patch.fat pair most existing Far Cry 2 mods ship as. Converted at install time, keeping only what actually differs from the base game.[/*]
-[*][b]FCSE plugins[/b]: a .dll under the plugins\ folder, for [url=https://jbebe.github.io/farcry-sdk/fcse]Far Cry Script Extender[/url]. Deployed straight to bin\plugins\.[/*]
-[*][b]Asset mods[/b]: files rooted under Data_Win32\, staged as an ordinary layer.[/*]
+[*][b]Old patch mods.[/b] Most Far Cry 2 mods ship a full patch.dat and patch.fat. These are converted when you install them: the extension compares them with a clean game and keeps only what they really changed, so they stack with your other mods instead of replacing the whole archive.[/*]
+[*][b]New mods[/b], with a mods\ folder, a plugins\ folder, or both. Game files under mods\ go into patch.dat, and an FCSE plugin under plugins\ goes to bin\plugins\. One mod can carry both halves, and disabling it removes both.[/*]
+[*][b]FCSE itself[/b], which goes to bin\.[/*]
 [/list]
-Two mods editing different parts of the same file get merged automatically. If they genuinely conflict on the same part, load order decides, and you'll get a notification telling you exactly what happened.
-[b]
-Requirements[/b]
+
+[size=4][b]Merges mods that edit the same files[/b][/size]
+
+Two mods that change the same file don't overwrite each other. The files mods change most are split into small pieces, and each mod lands only the pieces it changed: the weapons, vehicles and characters in the entity libraries, what is placed in the worlds, AI brains, the animation rules, menus and the HUD, controls, fonts, text, game mode settings and particle effects. Two mods changing different weapons, or different values of the same weapon, both keep their changes. Old patch mods come in the same way, as the values they changed.
+
+Only two mods setting the same value differently is a real conflict. Then load order decides, and the mod lower in the list wins. A notification lists every change a mod lost, which mod won, and what to do about it.
+
+[size=4][b]Brings FCSE along[/b][/size]
+
+A mod with a plugin needs [url=https://www.nexusmods.com/farcry2/mods/368]FCSE[/url]. If it's missing, the extension downloads it from Nexus and enables it. Nexus gives direct downloads to premium accounts only, so with a free account it offers to open FCSE's page instead, where "Mod Manager Download" gets it. Until FCSE is there, the mod shows a warning icon in the mod list, and clicking it starts the download.
+
+Once FCSE is installed, it's what Vortex's Play button starts, unless you already picked another launcher. Starting FarCry2.exe on its own while a mod has a plugin asks first, since the game alone never loads plugins.
+
+[size=4][b]Never wrecks your install[/b][/size]
+
+The first deploy saves your original patch.dat once, and every build starts from that copy, never from whatever is on disk. So deploying twice gives the exact same result, disabling a mod and deploying really removes it, and a purge puts the original back instead of trying to undo each mod. A build only swaps the finished file in at the end, so a failed one leaves the game as it was, and starting the game while a deploy is still running waits for it to finish.
+
+If your patch.dat is already modded when Vortex first manages the game, the extension asks before taking it as the original, and tells you how to get the clean files back on Steam or GOG.
+
+[line]
+
+[size=5][b]Requirements[/b][/size]
+
 [list]
 [*]Vortex[/*]
-[*]Far Cry 2 (Steam or GOG)[/*]
-[*][url=https://jbebe.github.io/farcry-sdk/fcse]FCSE[/url], only if you're installing an FCSE plugin mod. (the extension will prompt you if it's missing)[/*]
+[*]Far Cry 2, Steam or GOG[/*]
+[*][url=https://www.nexusmods.com/farcry2/mods/368]FCSE[/url], only for mods with a plugin. The extension gets it for you.[/*]
 [/list]
-[b]
-Installation[/b]
+
+[size=5][b]Installation[/b][/size]
+
 [list=1]
 [*]Download this file.[/*]
-[*]In Vortex: [b]Extensions → drag the file in[/b] (or use the manual install button), then restart Vortex.[/*]
-[*]Add Far Cry 2 as a managed game if Vortex hasn't already picked it up automatically.[/*]
+[*]In Vortex, open [b]Extensions[/b] and drag the file in, then restart Vortex.[/*]
+[*]Add Far Cry 2 as a managed game if Vortex hasn't found it already.[/*]
 [/list]
-[b]Safety[/b]
-Every build regenerates patch.dat from a pristine backup taken the first time you deploy mods. Never from whatever's currently on disk. That means deploying twice always produces identical results, disabling a mod and redeploying genuinely removes it, and purging is a true restore rather than an unwind. Your original game files are never touched directly. A build only swaps the finished file in once it's done.
-[b]
-Known limitations[/b]
-Some very old Far Cry 2 mods were distributed as manual instructions (readme-driven edits, standalone scripts) rather than a structured archive. Those predate any installer convention and can't be auto-classified. If you hit one, it likely needs manual installation the old-fashioned way.
-[b]
-Feedback / issues[/b]
-This is an early release (0.1.0). If a mod fails to install or behaves unexpectedly, please report it with the mod name and what happened.
+
+[line]
+
+[size=5][b]For mod authors[/b][/size]
+
+Put mods\, plugins\ or both at the root of your archive, with no folder above them. A wrapper folder is rejected, and the message names the folder to move. Under mods\, game files sit at their real paths, at any depth.
+
+To merge with other mods, ship only the pieces you change instead of whole files. An entity, for example, is its own file at a path like mods\generated\entitylibrary.fcb\vehicle\Land\Jeep.xml. [url=https://www.nexusmods.com/farcry2/mods/370]JackAll[/url] saves your edits in exactly this shape, so its workspace zipped up is a mod this extension installs. Text changes go in an oasisstrings.fragment.xml holding only the strings you change; a whole oasisstrings.rml is refused.
+
+[size=5][b]Known limitations[/b][/size]
+
+[list]
+[*]Some very old mods came as instructions or scripts rather than an archive. Those can't be recognised and still need installing by hand.[/*]
+[*]From an old patch mod, only the patch.dat and patch.fat pair is converted. Anything else in its archive is left out, and a dialog says so before it installs.[/*]
+[*]Cancelling the question before starting FarCry2.exe stops the launch, but Vortex shows "Failed to run tool". The message is Vortex's own and means nothing went wrong.[/*]
+[/list]
+
+[size=5][b]Feedback[/b][/size]
+
+If a mod fails to install or behaves oddly, report it under Bugs with the mod's name and what happened.

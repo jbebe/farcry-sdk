@@ -1,1 +1,1 @@
-A Vortex extension for the game Far Cry 2
+Far Cry 2 support for Vortex: install mods from Nexus, order them, deploy and purge. Old patch.dat mods convert when installed, mods that edit the same files merge piece by piece, and FCSE comes along when a plugin mod needs it.
