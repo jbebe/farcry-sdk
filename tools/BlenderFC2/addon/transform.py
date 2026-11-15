@@ -3,11 +3,6 @@
 # Matrices are row-major nested tuples and multiply as parent x child, matching
 # CGeomResource::GenerateMatrices.
 
-IDENTITY = ((1.0, 0.0, 0.0, 0.0),
-            (0.0, 1.0, 0.0, 0.0),
-            (0.0, 0.0, 1.0, 0.0),
-            (0.0, 0.0, 0.0, 1.0))
-
 
 def trs_matrix(rotation, translation, scale=(1.0, 1.0, 1.0)):
     """Compose a node's local transform from its quaternion, offset and scale."""
@@ -36,8 +31,3 @@ def apply(matrix, point):
 def apply_direction(matrix, vector):
     """Rotate without translating, for normals and tangents."""
     return tuple(sum(matrix[r][c] * vector[c] for c in range(3)) for r in range(3))
-
-
-def is_identity(matrix, tolerance=1e-6):
-    return all(abs(matrix[r][c] - IDENTITY[r][c]) <= tolerance
-               for r in range(4) for c in range(4))

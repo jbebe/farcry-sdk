@@ -269,12 +269,3 @@ def loaded_bank(armature):
     """The bank the armature's Action was loaded from, if one was."""
     action = armature.animation_data.action if armature and armature.animation_data else None
     return action.get(PROP_BANK) if action else None
-
-
-def model_of(armature):
-    """The pack this armature was imported from, if the import recorded one."""
-    for collection in armature.users_collection:
-        origin = collection.get(import_xbg.PROP_SOURCE)
-        if origin:
-            return origin
-    return None

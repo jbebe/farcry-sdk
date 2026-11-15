@@ -290,6 +290,7 @@ def _alpha_levels(image):
         return None
     return len(numpy.unique(numpy.round(found[::max(1, len(found) // ALPHA_SAMPLES)], 2)))
 
+
 def _material(material, pack):
     path = material.get(PROP_MATERIAL_PATH, "")
     original = pack.material(path) if path else None

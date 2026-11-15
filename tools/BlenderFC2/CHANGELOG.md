@@ -24,6 +24,10 @@ Notable changes to the Far Cry 2 Blender add-on, loosely following
   an image from outside it becomes a new texture beside the model, in the codec its alpha needs. A
   new normal map is stored the way the game reads one.
 
+### Fixed
+- **Two textures of one name in different folders load as two images.** They shared one, so Blender
+  showed one texture in place of the other, and export could write its pixels under the other's path.
+
 ## [0.3.3] - 2026-10-25
 
 ### Added

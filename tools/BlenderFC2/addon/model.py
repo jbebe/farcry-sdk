@@ -19,9 +19,6 @@ LOD_SUFFIX = re.compile(r"_LOD\d+$", re.IGNORECASE)
 # root's space - every skinned part, and any rigid one already modelled in place.
 NO_PLACEMENT = 0xFFFF
 
-# What a palette slot holds when it names no bone.
-EMPTY_SLOT = -1
-
 
 @dataclass
 class PartMesh:
@@ -105,10 +102,6 @@ def part_placement(mesh, part, world=None):
         return None
     node = part.get("placement_node", NO_PLACEMENT)
     return world[0] if node >= len(mesh["nodes"]) else world[node]
-
-
-def lod_count(mesh):
-    return len(mesh["lods"])
 
 
 def parts_at(mesh, lod_index=0, place=True):

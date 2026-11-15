@@ -8,6 +8,7 @@
 
 import os
 import tempfile
+import zlib
 
 import bpy
 
@@ -80,7 +81,9 @@ def _image(game_path, pack, cache):
     png = pack.texture(game_path)
     if png:
         name = stem(game_path) + ".png"
-        temporary = os.path.join(tempfile.gettempdir(), "fc2tex", name)
+        # One file per game path, since two folders can hold textures of one name.
+        key = zlib.crc32(game_path.lower().replace("/", "\\").encode("utf-8"))
+        temporary = os.path.join(tempfile.gettempdir(), "fc2tex", "%s-%08x.png" % (stem(game_path), key))
         os.makedirs(os.path.dirname(temporary), exist_ok=True)
         with open(temporary, "wb") as handle:
             handle.write(png)
