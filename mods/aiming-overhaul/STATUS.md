@@ -83,6 +83,8 @@ Stage: active
 
 ## Checks
 
+- simplify: ca0a881 2026-11-15 - since aiming-overhaul-1.2.0
+
 ## Release order
 
 - after fcse-1.5.0
