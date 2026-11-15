@@ -62,8 +62,8 @@ Stage: active
 
 ## Approvals
 
-- played: 49624dc 2026-10-29 - implied by the jackall-1.7.0 release
-- page text: 49624dc 2026-10-29 - implied by the jackall-1.7.0 release; the BBCode predates 1.7.0 and still calls the Map tab read-only
+- played: a01d69c 2026-11-15 - "ok"
+- page text: a01d69c 2026-11-15 - BBCode and short message checked: "ok"
 
 ## Checks
 
