@@ -224,8 +224,6 @@ namespace {
             leg.lower = Length(leg.restFoot.Row(3) - leg.restCalf.Row(3));
             leg.side = hip.x > 0.0f ? 1.0f : -1.0f;
         }
-        FCSE::Logf("legs: posed on %u bones, thigh %.3f m and shin %.3f m", Skeleton::Count(skeleton),
-                   rig.legs[0].upper, rig.legs[0].lower);
         g_rig = rig;
         return true;
     }

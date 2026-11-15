@@ -59,6 +59,5 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Shadow in first person", FCSE_CHECKBOX(true), &OnShadowChanged, nullptr},
     };
     api->RegisterSettings("Third Person", settings, std::size(settings));
-    api->Log("Third Person loaded");
     return true;
 }

@@ -132,10 +132,6 @@ namespace {
 
     // Draws the player as `view` wants, which the engine undoes each time it switches models.
     void Draw(uint8_t* graphic, bool firstPerson, View view) {
-        constexpr const char* kNames[] = {"as the engine draws it", "with legs", "whole"};
-        if (view != g_view) {
-            FCSE::Logf("body: drawn %s", kNames[static_cast<int>(view)]);
-        }
         if (view == View::Engine) {
             Graphic::LetGo();
             if (graphic != nullptr && Graphic::Count(graphic) > Graphic::kAvatar) {
