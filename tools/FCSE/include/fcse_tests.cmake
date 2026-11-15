@@ -1,7 +1,7 @@
 # Unit tests for a plugin's pure logic. Include this, then
 #   fcse_add_tests(<name> tests/<file>_tests.cpp ... SOURCES src/<pure file>.cpp ...)
 # A test links only the sources it names, so code reaching into Dunia.dll fails to link rather than
-# being stubbed. FCSE's own tests use the same GoogleTest; the plugin's build.ps1 -Tests runs ctest.
+# being stubbed. The plugin's build.ps1 -Tests runs ctest.
 include_guard(GLOBAL)
 
 include(FetchContent)

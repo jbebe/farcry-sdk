@@ -3,6 +3,7 @@
 #include "caller_identity.h"
 #include "log.h"
 
+#include <intrin.h>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -30,7 +31,8 @@ namespace {
     }
 }
 
-bool Messaging::Listen(void* caller, const char* channel, FCSE_MessageFn onMessage, void* userdata) {
+bool Messaging::Listen(const char* channel, FCSE_MessageFn onMessage, void* userdata) {
+    void* caller = _ReturnAddress();
     if (channel == nullptr || *channel == '\0' || onMessage == nullptr) {
         Log::FromCaller(caller, "Listen: a channel name and a callback are both needed, refused");
         return false;
@@ -48,7 +50,7 @@ bool Messaging::Listen(void* caller, const char* channel, FCSE_MessageFn onMessa
     return true;
 }
 
-uint32_t Messaging::Send(void* caller, const char* channel, const void* data, size_t size) {
+uint32_t Messaging::Send(const char* channel, const void* data, size_t size) {
     if (channel == nullptr) {
         return 0;
     }
@@ -57,14 +59,14 @@ uint32_t Messaging::Send(void* caller, const char* channel, const void* data, si
     if (listeners == nullptr) {
         return 0;
     }
-    const std::string sender = ResolveCallerModuleName(caller);
+    const std::string sender = ResolveCallerModuleName(_ReturnAddress());
     for (const Listener& listener : *listeners) {
         listener.onMessage(sender.c_str(), data, size, listener.userdata);
     }
     return static_cast<uint32_t>(listeners->size());
 }
 
-void Messaging::Reset() {
+void Messaging::ResetForTesting() {
     std::lock_guard lock(g_lock);
     g_channels.clear();
 }

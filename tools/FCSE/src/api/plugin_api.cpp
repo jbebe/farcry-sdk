@@ -29,14 +29,6 @@ namespace {
         FunctionRegistry::Register(fn, name);
     }
 
-    bool __cdecl PluginListenShim(const char* channel, FCSE_MessageFn onMessage, void* userdata) {
-        return Messaging::Listen(_ReturnAddress(), channel, onMessage, userdata);
-    }
-
-    uint32_t __cdecl PluginSendShim(const char* channel, const void* data, size_t size) {
-        return Messaging::Send(_ReturnAddress(), channel, data, size);
-    }
-
     uintptr_t __cdecl PluginFindPatternShim(const char* pattern, uint32_t* outMatchCount) {
         return PatternScan::Find(pattern, outMatchCount, _ReturnAddress());
     }
@@ -93,8 +85,8 @@ const FCSE_PluginAPI* PluginApi::Build(const BuildInfo& build) {
     api.MidHook = &HookManager::MidHook;
     api.EntityData = EntityDataApi::Table();
     api.SetSetting = &SettingsRegistry::SetForSession;
-    api.Listen = &PluginListenShim;
-    api.Send = &PluginSendShim;
+    api.Listen = &Messaging::Listen;
+    api.Send = &Messaging::Send;
 
     return &api;
 }

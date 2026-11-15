@@ -230,14 +230,12 @@ namespace {
 
     // The filter Dunia.dll set, or the one it set last: what FatalFilter hands each exception on to.
     LPTOP_LEVEL_EXCEPTION_FILTER g_gameFilter = nullptr;
-    uintptr_t* g_filterSlot = nullptr;
-    uintptr_t g_filterSlotOriginal = 0;
+    DetouredImport g_setFilter;
 
     // Set before the report is written, so a fault while writing it does not report itself in turn.
     bool g_fatalReported = false;
 
-    // Runs only for an exception nothing caught, so it names the fault that ends the game. The full
-    // report is written here only when Handler has not already written one for that address.
+    // Runs only for an exception nothing caught, so it names the fault that ends the game.
     LONG WINAPI FatalFilter(EXCEPTION_POINTERS* info) {
         if (!g_fatalReported && info != nullptr && info->ExceptionRecord != nullptr &&
             info->ContextRecord != nullptr) {
@@ -275,15 +273,12 @@ void CrashLog::Install() {
 }
 
 void CrashLog::InstallFatalFilter(uintptr_t duniaBase) {
-    uintptr_t* slot = FindImportSlot(duniaBase, "KERNEL32.dll", "SetUnhandledExceptionFilter");
-    const uintptr_t original = slot != nullptr ? *slot : 0;
-    if (original == 0 || !WriteImportSlot(slot, reinterpret_cast<uintptr_t>(&SetFilterDetour))) {
+    if (!g_setFilter.Install(duniaBase, "KERNEL32.dll", "SetUnhandledExceptionFilter",
+                             reinterpret_cast<uintptr_t>(&SetFilterDetour))) {
         Log::Loader("CrashLog: could not take over Dunia.dll's SetUnhandledExceptionFilter import - "
                     "the fault that ends the game is not marked FATAL this run");
         return;
     }
-    g_filterSlot = slot;
-    g_filterSlotOriginal = original;
     g_gameFilter = SetUnhandledExceptionFilter(&FatalFilter);
     Log::Loader("CrashLog: the fault that ends the game will be marked FATAL");
 }
@@ -293,9 +288,7 @@ void CrashLog::Shutdown() {
         RemoveVectoredExceptionHandler(g_handle);
         g_handle = nullptr;
     }
-    if (g_filterSlot != nullptr) {
-        WriteImportSlot(g_filterSlot, g_filterSlotOriginal);
-        g_filterSlot = nullptr;
+    if (g_setFilter.Restore()) {
         SetUnhandledExceptionFilter(g_gameFilter);
     }
 }

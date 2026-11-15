@@ -5,7 +5,6 @@
 #include "util/pe_image.h"
 
 #include <cstdint>
-#include <cstring>
 #include <string>
 #include <windows.h>
 
@@ -20,21 +19,7 @@ namespace {
                                                           DWORD background);
     constexpr int kGdiPlusOk = 0;
 
-    struct DetouredImport {
-        uintptr_t* slot = nullptr;
-        uintptr_t original = 0;
-
-        void Restore();
-    };
-
     DetouredImport g_createHBitmap;
-
-    void DetouredImport::Restore() {
-        if (slot != nullptr && original != 0) {
-            WriteImportSlot(slot, original);
-        }
-        slot = nullptr;
-    }
 
     void Desaturate(HBITMAP bitmap) {
         DIBSECTION dib{};
@@ -90,26 +75,12 @@ bool Splash::Install() {
         return false;
     }
 
-    uintptr_t* slot = FindImportSlot(base, kGdiPlusModule, kGdiPlusImport);
-    if (slot == nullptr) {
-        Log::Loader("Splash: this Dunia.dll does not import " + std::string(kGdiPlusModule) + "!" +
-                    kGdiPlusImport + " - splash left as-is");
+    if (!g_createHBitmap.Install(base, kGdiPlusModule, kGdiPlusImport,
+                                 reinterpret_cast<uintptr_t>(&CreateHBitmapDetour))) {
+        Log::Loader("Splash: could not take over Dunia.dll's " + std::string(kGdiPlusModule) + "!" +
+                    kGdiPlusImport + " import - splash left as-is");
         return false;
     }
-    if (*slot == 0) {
-        Log::Loader("Splash: the " + std::string(kGdiPlusImport) +
-                    " import slot is empty - splash left as-is");
-        return false;
-    }
-
-    g_createHBitmap.original = *slot;
-    if (!WriteImportSlot(slot, reinterpret_cast<uintptr_t>(&CreateHBitmapDetour))) {
-        Log::Loader("Splash: could not make the " + std::string(kGdiPlusImport) +
-                    " import slot writable - splash left as-is");
-        g_createHBitmap.original = 0;
-        return false;
-    }
-    g_createHBitmap.slot = slot;
 
     Log::Loader("Splash: detour installed on " + std::string(kGdiPlusModule) + "!" +
                 kGdiPlusImport);

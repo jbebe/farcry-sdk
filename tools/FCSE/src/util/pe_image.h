@@ -16,11 +16,17 @@ const IMAGE_NT_HEADERS32* PeHeaders(const void* imageBase);
 // the name is a convention, the executable flag is what decides whether code can live there.
 bool FindExecutableSection(const void* imageBase, const uint8_t** begin, size_t* size);
 
-// The import-table slot holding `moduleName`'s `functionName`, for callers that detour an import
-// by overwriting it. Returns nullptr when the image does not import that function by name.
-uintptr_t* FindImportSlot(uintptr_t imageBase, const char* moduleName, const char* functionName);
+// An import-table slot pointed at a detour, and the function it held before.
+struct DetouredImport {
+    uintptr_t* slot = nullptr;
+    uintptr_t original = 0;
 
-// Overwrites an import slot. False when the slot's page could not be made writable.
-bool WriteImportSlot(uintptr_t* slot, uintptr_t value);
+    // False when the image does not import `moduleName`'s `functionName` by name, or its slot is
+    // empty or could not be made writable.
+    bool Install(uintptr_t imageBase, const char* moduleName, const char* functionName,
+                 uintptr_t detour);
+    // Puts the original back. False when nothing was installed.
+    bool Restore();
+};
 
 }

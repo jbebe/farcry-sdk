@@ -267,9 +267,8 @@ typedef bool (*FCSE_RegisterSettingsFn)(const char* pluginName, const FCSE_Setti
                                          size_t settingCount);
 
 // Sets any plugin's registered setting from text spelled as bin\fcse.ini spells it, for this session
-// only: the owner's onChanged fires and the file keeps its value. For tools that drive the game, such
-// as DevTools' remote control. Call from the game thread. False, and logged, when no setting of that
-// plugin and name exists or the text is not a value of its type.
+// only: the owner's onChanged fires and the file keeps its value. Call from the game thread. False,
+// and logged, when no setting of that plugin and name exists or the text is not a value of its type.
 typedef bool (*FCSE_SetSettingFn)(const char* pluginName, const char* settingName, const char* value);
 
 // Messaging between plugins. A channel is a name the plugins that use it agree on; FCSE knows none
@@ -481,17 +480,18 @@ inline FCSE_GameBuild RunningBuild() {
     return api == nullptr ? FCSE_GAME_BUILD_UNKNOWN : api->gameBuild;
 }
 
-// Formats a line printf-style, a line longer than 1023 characters cut short to end in "...". False
-// when the format fails.
-inline bool FormatLine(char (&line)[1024], const char* format, va_list args) {
+// Formats a line printf-style, a line longer than 1023 characters cut short to end in "...". Returns
+// its length, or -1 when the format fails.
+inline int FormatLine(char (&line)[1024], const char* format, va_list args) {
     const int length = std::vsnprintf(line, sizeof(line), format, args);
     if (length < 0) {
-        return false;
+        return -1;
     }
     if (static_cast<size_t>(length) >= sizeof(line)) {
         std::memcpy(line + sizeof(line) - 4, "...", 4);
+        return static_cast<int>(sizeof(line)) - 1;
     }
-    return true;
+    return length;
 }
 
 // Log, with the line formatted by FormatLine. Does nothing before Bind.
@@ -504,9 +504,9 @@ inline void Logf(const char* format, ...) {
     char line[1024];
     va_list args;
     va_start(args, format);
-    const bool formatted = FormatLine(line, format, args);
+    const int length = FormatLine(line, format, args);
     va_end(args);
-    if (formatted) {
+    if (length >= 0) {
         api->Log(line);
     }
 }
@@ -522,12 +522,12 @@ inline uint32_t Sendf(const char* channel, const char* format, ...) {
     char line[1024];
     va_list args;
     va_start(args, format);
-    const bool formatted = FormatLine(line, format, args);
+    const int length = FormatLine(line, format, args);
     va_end(args);
-    if (!formatted) {
+    if (length < 0) {
         return 0;
     }
-    const uint32_t heard = api->Send(channel, line, std::strlen(line) + 1);
+    const uint32_t heard = api->Send(channel, line, static_cast<size_t>(length) + 1);
     if (heard == 0) {
         api->Log(line);
     }

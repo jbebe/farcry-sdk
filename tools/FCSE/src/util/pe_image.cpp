@@ -44,54 +44,85 @@ bool FindExecutableSection(const void* imageBase, const uint8_t** begin, size_t*
     return false;
 }
 
-uintptr_t* FindImportSlot(uintptr_t imageBase, const char* moduleName, const char* functionName) {
-    const IMAGE_NT_HEADERS32* headers = PeHeaders(reinterpret_cast<const void*>(imageBase));
-    if (headers == nullptr) {
-        return nullptr;
-    }
-
-    const IMAGE_DATA_DIRECTORY& imports =
-        headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
-    if (imports.VirtualAddress == 0 || imports.Size == 0) {
-        return nullptr;
-    }
-
-    for (const auto* descriptor = reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>(
-             imageBase + imports.VirtualAddress);
-         descriptor->Name != 0; ++descriptor) {
-        if (_stricmp(reinterpret_cast<const char*>(imageBase + descriptor->Name), moduleName) != 0) {
-            continue;
-        }
-
-        if (descriptor->OriginalFirstThunk == 0) {
+namespace {
+    // The import-table slot holding `moduleName`'s `functionName`, or nullptr when the image does
+    // not import it by name.
+    uintptr_t* FindImportSlot(uintptr_t imageBase, const char* moduleName,
+                              const char* functionName) {
+        const IMAGE_NT_HEADERS32* headers = PeHeaders(reinterpret_cast<const void*>(imageBase));
+        if (headers == nullptr) {
             return nullptr;
         }
 
-        const auto* names = reinterpret_cast<const IMAGE_THUNK_DATA32*>(
-            imageBase + descriptor->OriginalFirstThunk);
-        auto* slots = reinterpret_cast<uintptr_t*>(imageBase + descriptor->FirstThunk);
-        for (; names->u1.AddressOfData != 0; ++names, ++slots) {
-            if (IMAGE_SNAP_BY_ORDINAL32(names->u1.Ordinal)) {
+        const IMAGE_DATA_DIRECTORY& imports =
+            headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+        if (imports.VirtualAddress == 0 || imports.Size == 0) {
+            return nullptr;
+        }
+
+        for (const auto* descriptor = reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>(
+                 imageBase + imports.VirtualAddress);
+             descriptor->Name != 0; ++descriptor) {
+            const auto* name = reinterpret_cast<const char*>(imageBase + descriptor->Name);
+            if (_stricmp(name, moduleName) != 0) {
                 continue;
             }
-            const auto* imported =
-                reinterpret_cast<const IMAGE_IMPORT_BY_NAME*>(imageBase + names->u1.AddressOfData);
-            if (strcmp(reinterpret_cast<const char*>(imported->Name), functionName) == 0) {
-                return slots;
+
+            if (descriptor->OriginalFirstThunk == 0) {
+                return nullptr;
             }
+
+            const auto* names = reinterpret_cast<const IMAGE_THUNK_DATA32*>(
+                imageBase + descriptor->OriginalFirstThunk);
+            auto* slots = reinterpret_cast<uintptr_t*>(imageBase + descriptor->FirstThunk);
+            for (; names->u1.AddressOfData != 0; ++names, ++slots) {
+                if (IMAGE_SNAP_BY_ORDINAL32(names->u1.Ordinal)) {
+                    continue;
+                }
+                const auto* imported = reinterpret_cast<const IMAGE_IMPORT_BY_NAME*>(
+                    imageBase + names->u1.AddressOfData);
+                if (strcmp(reinterpret_cast<const char*>(imported->Name), functionName) == 0) {
+                    return slots;
+                }
+            }
+            return nullptr;
         }
         return nullptr;
     }
-    return nullptr;
+
+    bool WriteImportSlot(uintptr_t* slot, uintptr_t value) {
+        DWORD previous = 0;
+        if (!VirtualProtect(slot, sizeof(*slot), PAGE_READWRITE, &previous)) {
+            return false;
+        }
+        *slot = value;
+        VirtualProtect(slot, sizeof(*slot), previous, &previous);
+        return true;
+    }
 }
 
-bool WriteImportSlot(uintptr_t* slot, uintptr_t value) {
-    DWORD previous = 0;
-    if (!VirtualProtect(slot, sizeof(*slot), PAGE_READWRITE, &previous)) {
+bool DetouredImport::Install(uintptr_t imageBase, const char* moduleName,
+                             const char* functionName, uintptr_t detour) {
+    uintptr_t* found = FindImportSlot(imageBase, moduleName, functionName);
+    if (found == nullptr || *found == 0) {
         return false;
     }
-    *slot = value;
-    VirtualProtect(slot, sizeof(*slot), previous, &previous);
+    // Before the write: the detour may run as soon as the slot points at it.
+    original = *found;
+    if (!WriteImportSlot(found, detour)) {
+        original = 0;
+        return false;
+    }
+    slot = found;
+    return true;
+}
+
+bool DetouredImport::Restore() {
+    if (slot == nullptr) {
+        return false;
+    }
+    WriteImportSlot(slot, original);
+    slot = nullptr;
     return true;
 }
 

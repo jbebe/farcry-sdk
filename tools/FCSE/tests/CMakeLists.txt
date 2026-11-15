@@ -14,18 +14,8 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/../include/fcse_tests.cmake")
 # Built against the real code through fcse_core - no stubs, and no dependency on Dunia.dll, so it
 # runs anywhere the project builds. The rest of src/ is not linked in because nothing in it is
 # reachable without the game.
-add_executable(ini_file_tests
-  "ini_file_tests.cpp"
-)
-target_link_libraries(ini_file_tests PRIVATE fcse_core GTest::gtest_main)
-
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET ini_file_tests PROPERTY CXX_STANDARD 20)
-endif()
-
-# One ctest entry per TEST_F rather than one for the whole exe, so a failure names the case that
-# failed in ctest's own output without having to go read the exe's.
-gtest_discover_tests(ini_file_tests)
+fcse_add_tests(ini_file_tests ini_file_tests.cpp)
+target_link_libraries(ini_file_tests PRIVATE fcse_core)
 
 # The address-library decoder, run against the very table assets/address_table.bin ships. The
 # encoder is Python in tools/addrlib and the decoder is C++ here, so nothing else in the build would
@@ -35,102 +25,46 @@ gtest_discover_tests(ini_file_tests)
 # Needs no Dunia.dll: the tests decode into memory and never dereference what they resolve, so a
 # fabricated module base is enough to check the arithmetic. log.cpp is linked in because the decoder
 # reports failures through it, and it no-ops safely when Log::Init was never called.
-add_executable(address_library_tests
-  "address_library_tests.cpp"
-)
-target_link_libraries(address_library_tests PRIVATE fcse_core GTest::gtest_main)
+fcse_add_tests(address_library_tests address_library_tests.cpp)
+target_link_libraries(address_library_tests PRIVATE fcse_core)
 
 # ctest runs from the build tree, so the relative paths the test tries first will not resolve;
 # this is the one that always does.
 target_compile_definitions(address_library_tests PRIVATE
   FCSE_TEST_ADDRESS_TABLE="${FCSE_ADDRLIB}")
 
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET address_library_tests PROPERTY CXX_STANDARD 20)
-endif()
-
-gtest_discover_tests(address_library_tests)
-
 # The byte-pattern compiler and search. Pure logic over buffers, so no game is needed - and worth
 # testing precisely because both halves fail quietly: a compiler that reads "??" as two wildcards
 # shifts every byte after it, and a search that mis-anchors reports matches at the wrong offset.
 # Neither shows up as a crash anywhere near the mistake.
-add_executable(pattern_scan_tests
-  "pattern_scan_tests.cpp"
-)
-target_link_libraries(pattern_scan_tests PRIVATE fcse_core GTest::gtest_main)
-
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET pattern_scan_tests PROPERTY CXX_STANDARD 20)
-endif()
-
-gtest_discover_tests(pattern_scan_tests)
+fcse_add_tests(pattern_scan_tests pattern_scan_tests.cpp)
+target_link_libraries(pattern_scan_tests PRIVATE fcse_core)
 
 # The settings store: declaration validation, the file<->value parse and the change path. Worth
 # testing for the same reason ini_file is - it owns the player's config, and both a value that
 # stops round-tripping and a rejected value that gets stored anyway fail silently.
-add_executable(settings_registry_tests
-  "settings_registry_tests.cpp"
-)
-target_link_libraries(settings_registry_tests PRIVATE fcse_core GTest::gtest_main)
-
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET settings_registry_tests PROPERTY CXX_STANDARD 20)
-endif()
-
-gtest_discover_tests(settings_registry_tests)
+fcse_add_tests(settings_registry_tests settings_registry_tests.cpp)
+target_link_libraries(settings_registry_tests PRIVATE fcse_core)
 
 # The settings page's scroll window - the only part of that page that means anything without a
 # running game, and the part that decides which plugin's row a control ends up bound to.
-add_executable(page_window_tests
-  "page_window_tests.cpp"
-)
-target_link_libraries(page_window_tests PRIVATE fcse_core GTest::gtest_main)
-
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET page_window_tests PROPERTY CXX_STANDARD 20)
-endif()
-
-gtest_discover_tests(page_window_tests)
+fcse_add_tests(page_window_tests page_window_tests.cpp)
+target_link_libraries(page_window_tests PRIVATE fcse_core)
 
 # The hook manager, with real safetyhook hooks on code the test assembles in its own process. A
 # wrong claim rule or teardown order otherwise only shows up as a crash in someone's game.
-add_executable(hook_tests
-  "hook_tests.cpp"
-)
-target_link_libraries(hook_tests PRIVATE fcse_core GTest::gtest_main)
-
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET hook_tests PROPERTY CXX_STANDARD 20)
-endif()
-
-gtest_discover_tests(hook_tests)
+fcse_add_tests(hook_tests hook_tests.cpp)
+target_link_libraries(hook_tests PRIVATE fcse_core)
 
 # The entity-data store and the CRC-32 its keys and class id are hashed with. A hash that drifts
 # from the engine's names nothing the engine can find, and a layering mistake freezes data edits
 # into old saves - both silent until someone notices in game.
-add_executable(entity_data_tests
-  "entity_data_tests.cpp"
-)
-target_link_libraries(entity_data_tests PRIVATE fcse_core GTest::gtest_main)
-
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET entity_data_tests PROPERTY CXX_STANDARD 20)
-endif()
-
-gtest_discover_tests(entity_data_tests)
+fcse_add_tests(entity_data_tests entity_data_tests.cpp)
+target_link_libraries(entity_data_tests PRIVATE fcse_core)
 
 # The channels plugins send to each other on, under the threading the API promises.
-add_executable(messaging_tests
-  "messaging_tests.cpp"
-)
-target_link_libraries(messaging_tests PRIVATE fcse_core GTest::gtest_main)
-
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET messaging_tests PROPERTY CXX_STANDARD 20)
-endif()
-
-gtest_discover_tests(messaging_tests)
+fcse_add_tests(messaging_tests messaging_tests.cpp)
+target_link_libraries(messaging_tests PRIVATE fcse_core)
 
 # Runs the real src/lua/runtime/fcse.lua against a stubbed native table, in the very interpreter
 # this build produced - so the dialect, the FFI behaviour and the runtime under test are all the

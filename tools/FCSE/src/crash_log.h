@@ -24,8 +24,8 @@ public:
     // carries on if registration fails.
     static void Install();
 
-    // Keeps a filter for unhandled exceptions above the one Dunia.dll sets, which ends the process
-    // without a word, and hands each exception on to it. Call before RunGame.
+    // Keeps a filter for unhandled exceptions above the one Dunia.dll sets, and hands each exception
+    // on to it. Call before RunGame.
     static void InstallFatalFilter(uintptr_t duniaBase);
 
     static void Shutdown();

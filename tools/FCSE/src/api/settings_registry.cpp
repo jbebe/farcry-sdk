@@ -463,18 +463,22 @@ bool SettingsRegistry::SetValue(Setting* setting, const FCSE_SettingValue& next,
 
 bool SettingsRegistry::SetForSession(const char* pluginName, const char* name, const char* text) {
     void* caller = _ReturnAddress();
-    const Group* group = pluginName != nullptr && name != nullptr ? FindGroup(pluginName) : nullptr;
+    if (pluginName == nullptr || name == nullptr || text == nullptr) {
+        Log::FromCaller(caller, "SetSetting() called with a null argument, rejected");
+        return false;
+    }
+
+    const Group* group = FindGroup(pluginName);
     Setting* setting = group != nullptr ? SettingIn(*group, name) : nullptr;
     if (setting == nullptr) {
-        Log::FromCaller(caller, std::string("SetSetting: no setting [") + (pluginName ? pluginName : "") +
-                                     "] " + (name ? name : ""));
+        Log::FromCaller(caller, std::string("SetSetting: no setting [") + pluginName + "] " + name);
         return false;
     }
 
     Setting parsed = *setting;
-    if (text == nullptr || !ParseInto(parsed, text)) {
-        Log::FromCaller(caller, "SetSetting: [" + setting->groupName + "] " + setting->name + " takes no \"" +
-                                     (text ? text : "") + "\"");
+    if (!ParseInto(parsed, text)) {
+        Log::FromCaller(caller, "SetSetting: [" + setting->groupName + "] " + setting->name +
+                                     " takes no \"" + text + "\"");
         return false;
     }
     SetValue(setting, parsed.value, false);

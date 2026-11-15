@@ -6,15 +6,14 @@
 
 namespace FCSE {
 
-// Backs FCSE_PluginAPI::Listen and Send. `caller` is the return address the plugin API's shims
-// capture, resolved to the plugin's name only when a log line or a listener needs it.
+// Backs FCSE_PluginAPI::Listen and Send.
 class Messaging {
 public:
-    static bool Listen(void* caller, const char* channel, FCSE_MessageFn onMessage, void* userdata);
-    static uint32_t Send(void* caller, const char* channel, const void* data, size_t size);
+    static bool Listen(const char* channel, FCSE_MessageFn onMessage, void* userdata);
+    static uint32_t Send(const char* channel, const void* data, size_t size);
 
-    // Forgets every listener, for the tests.
-    static void Reset();
+    // Forgets every listener.
+    static void ResetForTesting();
 };
 
 }
