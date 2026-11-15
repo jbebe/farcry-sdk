@@ -81,6 +81,32 @@ entries sorted by hash, then a localisation count. The flags word is `0x0301` �
 byte 0, compression version 3 in byte 1 — on every compressed archive, and `0` on `sound.fat`,
 `sound_english.fat` and `shadersobj.fat` **(seen in data)**.
 
+### The Xbox 360 prototype's version 4
+
+The September 2008 Xbox 360 prototype (`tools/third-party/Far Cry 2 Sep 8 2008 prototype`) packs its
+archives as `FAT2` version `4` with flags `0x0402`: platform 2 (Xenon), compression version 4. The
+header and the localisation count are as in version 5, little-endian, and an entry is 24 bytes
+**(seen in data)**:
+
+| Offset | Field |
+|---|---|
+| `+0x00` | path hash |
+| `+0x04` | `0x7F7F7F7F`, unused |
+| `+0x08` | compressed size (30 bits), offset bits 0–1 in bits 30–31 |
+| `+0x0C` | `offset >> 2` |
+| `+0x10` | `uncompressedSize << 2`, scheme in bits 0–1 |
+| `+0x14` | `0x7F7F7F7F`, unused |
+
+These are version 5's three packed words in another order. Every entry is scheme 0 (LZMA) or stored
+(uncompressed size 0). A scheme-0 body is a 7-bit varint *n*, the five LZMA property bytes (`0x5D`, an
+8 MB dictionary), a raw LZMA stream with no end marker, and then *n* bytes stored as they are: the
+stream decodes to the uncompressed size minus *n*, and the tail completes the file. A decoder that
+hands the tail to LZMA fails on the stream or writes the file's last bytes as garbage.
+
+Each pair has its plaintext `.nfo` beside it, whose `Crc` attribute is the entry's path hash in
+decimal, so every entry has its name. The prototype's `.fcb` files are little-endian `nbCF` version 2,
+as on PC, and compare byte for byte with retail.
+
 ### How a path becomes a key
 
 `CPathID::SetContent` (`0x09c8fe50` in the Linux server, **RE-verified**) turns a path into the key:
@@ -173,7 +199,7 @@ whose uncompressed-size bits are non-zero — a 3-way dispatch on a 2-bit scheme
 
 | Scheme | Handler | Status |
 |---|---|---|
-| 0 | `0x10258c50` | LZMA: a 7-bit varint, five LZMA property bytes, then the range-coded stream (`0x10256380` → `LZMA_DecompressInPlace` `0x1025a850` in the GOG build, **RE-verified**). Unreachable in practice — real `Compression=None` entries always carry `UncompressedSize=0`, so they never reach the dispatcher. |
+| 0 | `0x10258c50` | LZMA: a 7-bit varint, five LZMA property bytes, then the range-coded stream (`0x10256380` → `LZMA_DecompressInPlace` `0x1025a850` in the GOG build, **RE-verified**). In the Xbox 360 prototype's archives, which use only this scheme, the varint counts bytes stored uncompressed after the stream ([version 4](#the-xbox-360-prototypes-version-4)). Unreachable in practice — real `Compression=None` entries always carry `UncompressedSize=0`, so they never reach the dispatcher. |
 | 1 | `ArchiveEntry_DecompressLzo1x` (`0x10258d60`) → `Lzo1x_Decompress` (`0x1025a620`) | Confirmed LZO1X — matches JackAll's `Lzo1x.cs` state machine constant-for-constant. |
 | 2 | `ArchiveEntry_DecompressZlib` (`0x10258d00`) → `Zlib_DecompressChunked` (`0x1025d1c0`) → `Zlib_InflateRawBlock` (`0x1025d110`) | Confirmed real zlib (raw DEFLATE, `windowBits=-15`), unrelated to the separate Quazal-networking zlib instance elsewhere in the binary. |
 
