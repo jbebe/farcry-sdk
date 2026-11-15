@@ -102,19 +102,6 @@ namespace page {
         Log::Loader(buf);
     }
 
-    void LogPointer(const char* what, void* page, ptrdiff_t offset) {
-        DWORD code = 0;
-        void* value = nullptr;
-        if (!SehReadPointer(page, offset, &value, &code)) {
-            LogFailed(what, code);
-            return;
-        }
-        char buf[160];
-        std::snprintf(buf, sizeof(buf), "FcsePage:   %s (+0x%02X) = 0x%08X", what,
-                      static_cast<unsigned>(offset), reinterpret_cast<unsigned>(value));
-        Log::Loader(buf);
-    }
-
     // Overwrites one of the page's own MSVC std::string/wstring members in place, leaving the
     // allocator the ctor already stored. Long values get a deliberately leaked buffer: the page is
     // never destroyed, so nothing runs the string's destructor, and handing the engine's allocator
@@ -492,12 +479,6 @@ static bool EnsurePage(void* optionsMenuThis) {
         LogFailed("CUIPageBase::Init", code);
         return false;
     }
-    Log::Loader("FcsePage: CUIPageBase::Init returned - bound state follows");
-    LogPointer("magma::Page", page, kBoundMagmaPageOffset);
-    LogPointer("row list Element", page, kRowListElementOffset);
-    LogPointer("row ListBox", page, kRowListBoxOffset);
-    LogPointer("title TextBase", page, kTitleTextOffset);
-    LogPointer("inited flag", page, kInitedFlagOffset);
 
     void* boundPage = nullptr;
     if (SehReadPointer(page, kBoundMagmaPageOffset, &boundPage, &code) && boundPage == nullptr) {

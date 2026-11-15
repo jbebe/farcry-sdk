@@ -104,10 +104,8 @@ constexpr char kPageName[] = "FCSE_PAGE";
 constexpr wchar_t kTitle[] = L"Mod Configuration";
 
 constexpr ptrdiff_t kBoundMagmaPageOffset = 0x14; // written by SetPage
-constexpr ptrdiff_t kRowListElementOffset = 0x08; // written by FetchMagmaElements
-constexpr ptrdiff_t kRowListBoxOffset = 0x0c;     //   "
+constexpr ptrdiff_t kRowListBoxOffset = 0x0c;     // written by FetchMagmaElements
 constexpr ptrdiff_t kTitleTextOffset = 0x10;      //   "
-constexpr ptrdiff_t kInitedFlagOffset = 0x68;     // set to 1 at the end of Init
 constexpr ptrdiff_t kParentPageOffset = 0xec;     // what AddPage<T> stores for its caller
 
 // The owning CGameMenu*, read by CSetNextPageMenuHandler::SwitchPage itself.

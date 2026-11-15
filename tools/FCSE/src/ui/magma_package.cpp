@@ -27,16 +27,6 @@ namespace {
     // Symbols::kFileNameCtor, then named by Symbols::kFileNameSetIdentifier(char const*).
     constexpr size_t kFileNameSize = 0x24;
 
-    // The path string object begins at +0x08, and its first member is the *allocator* - the ELF
-    // type is std::basic_string<char, char_traits<char>, magma::Allocator<char,0>>, whose allocator
-    // is stateful, so it is not empty-base-optimised away. The character data follows at +0x0c: the
-    // inline buffer while capacity < 0x10, otherwise a pointer. Same shape as CUIPageBase's page
-    // name (allocator +0x28, data +0x2c). CFileNameNomad::GetFileType calls
-    // magma::StringUtil::FindExtension on +0x08, i.e. on the string object, not on the characters.
-    constexpr ptrdiff_t kPathBufferOffset = 0x0c;
-    constexpr ptrdiff_t kPathSizeOffset = 0x1c;
-    constexpr ptrdiff_t kPathCapacityOffset = 0x20;
-
     // NOT destroying the CFileNameNomad. 0x105E93F0 was previously used for this and is NOT the
     // destructor - both of the call sites it was inferred from pass a *different* object than the
     // FileName they had just constructed, and calling it access-violated every run. The real
@@ -228,23 +218,6 @@ namespace {
         }
     }
 
-    bool SafeDescribeFileName(void* storage, char* out, size_t outSize, DWORD* outCode) {
-        __try {
-            auto base = reinterpret_cast<char*>(storage);
-            uint32_t size = *reinterpret_cast<uint32_t*>(base + kPathSizeOffset);
-            uint32_t capacity = *reinterpret_cast<uint32_t*>(base + kPathCapacityOffset);
-            // Short strings live inline at +0x0c; long ones put a pointer there instead.
-            const char* text = capacity < 0x10 ? base + kPathBufferOffset
-                                               : *reinterpret_cast<char**>(base + kPathBufferOffset);
-            std::snprintf(out, outSize, "size=%u capacity=%u path=\"%.100s\"", size, capacity,
-                          text != nullptr ? text : "(null)");
-            return true;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            *outCode = GetExceptionCode();
-            return false;
-        }
-    }
-
     std::string Hex(DWORD value) {
         char buffer[16];
         std::snprintf(buffer, sizeof(buffer), "0x%08lX", value);
@@ -331,14 +304,6 @@ bool MagmaPackage::Load() {
     if (!SafeBuildFileName(ctor, setIdentifier, fileName, path, &code)) {
         Log::Loader("Magma package: faulted building the CFileNameNomad (" + Hex(code) + ")");
         return false;
-    }
-
-    char described[192] = {};
-    DWORD describeCode = 0;
-    if (SafeDescribeFileName(fileName, described, sizeof(described), &describeCode)) {
-        Log::Loader(std::string("Magma package: FileName holds ") + described);
-    } else {
-        Log::Loader("Magma package: faulted reading the FileName back (" + Hex(describeCode) + ")");
     }
 
     // The CPathID SetIdentifier just computed is what the reader will be asked for, so read it

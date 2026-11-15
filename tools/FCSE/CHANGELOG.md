@@ -18,6 +18,8 @@ Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachang
   update your plugins along with FCSE. `fcse.log` names each one that did not load. Lua scripts are
   not affected. For authors: the plugin ABI is now `FCSE_API_VERSION` 10, since `FCSE_PluginAPI`
   gained `SetSetting`, `Listen` and `Send`; a rebuild is all a plugin needs.
+- **`fcse.log` is a little shorter.** Two leftover traces from building the Mod Configuration Menu,
+  its internal pointers and the name its menu package loads under, are no longer written.
 
 ## [1.4.2] - 2026-10-21
 
