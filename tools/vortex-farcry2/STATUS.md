@@ -29,7 +29,7 @@ Stage: maintenance
 
 ## Checks
 
-- simplify: 3c19e54 2026-11-15 - since vortex-0.6.0; after 268333f only info.json's version changed
+- simplify: b4c4bd6 2026-11-15 - since vortex-0.6.0; after 268333f only info.json's version and package-lock.json changed
 
 ## Release order
 
