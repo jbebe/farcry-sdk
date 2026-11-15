@@ -31,6 +31,8 @@ Stage: maintenance
 
 ## Checks
 
+- simplify: 268333f 2026-11-15 - since vortex-0.6.0
+
 ## Release order
 
 ## Collisions
