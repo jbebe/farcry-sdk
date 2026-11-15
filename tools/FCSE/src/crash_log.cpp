@@ -1,7 +1,9 @@
 #include "crash_log.h"
 
 #include "log.h"
+#include "util/pe_image.h"
 
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <windows.h>
@@ -161,15 +163,21 @@ namespace {
         }
     }
 
-    void Report(const EXCEPTION_RECORD* record, const CONTEXT* context) {
+    void LogHeadline(const char* label, const EXCEPTION_RECORD* record) {
         char described[320];
         DescribeAddress(record->ExceptionAddress, described, sizeof(described));
 
         char line[512];
-        std::snprintf(line, sizeof(line), "CRASH: %s (0x%08X) at %s", CodeName(record->ExceptionCode),
-                      static_cast<unsigned>(record->ExceptionCode), described);
+        std::snprintf(line, sizeof(line), "%s: %s (0x%08X) at %s", label,
+                      CodeName(record->ExceptionCode), static_cast<unsigned>(record->ExceptionCode),
+                      described);
         Log::Loader(line);
+    }
 
+    void Report(const char* label, const EXCEPTION_RECORD* record, const CONTEXT* context) {
+        LogHeadline(label, record);
+
+        char line[512];
         if (record->ExceptionCode == EXCEPTION_ACCESS_VIOLATION &&
             record->NumberParameters >= 2) {
             const char* what = record->ExceptionInformation[0] == 0   ? "reading"
@@ -212,12 +220,43 @@ namespace {
         if (g_reports == kMaxReports) {
             Log::Loader("CrashLog: report limit reached - further exceptions go unlogged this run");
         }
-        Report(info->ExceptionRecord, info->ContextRecord);
+        Report("CRASH", info->ExceptionRecord, info->ContextRecord);
         g_inHandler = false;
 
         // Always. This handler exists to observe, never to swallow: a fault the engine would have
         // handled still gets handled, and one it would not still ends the process exactly as before.
         return EXCEPTION_CONTINUE_SEARCH;
+    }
+
+    // The filter Dunia.dll set, or the one it set last: what FatalFilter hands each exception on to.
+    LPTOP_LEVEL_EXCEPTION_FILTER g_gameFilter = nullptr;
+    uintptr_t* g_filterSlot = nullptr;
+    uintptr_t g_filterSlotOriginal = 0;
+
+    // Set before the report is written, so a fault while writing it does not report itself in turn.
+    bool g_fatalReported = false;
+
+    // Runs only for an exception nothing caught, so it names the fault that ends the game. The full
+    // report is written here only when Handler has not already written one for that address.
+    LONG WINAPI FatalFilter(EXCEPTION_POINTERS* info) {
+        if (!g_fatalReported && info != nullptr && info->ExceptionRecord != nullptr &&
+            info->ContextRecord != nullptr) {
+            g_fatalReported = true;
+            if (AlreadyReported(info->ExceptionRecord->ExceptionAddress)) {
+                LogHeadline("FATAL", info->ExceptionRecord);
+            } else {
+                Report("FATAL", info->ExceptionRecord, info->ContextRecord);
+            }
+        }
+        return g_gameFilter != nullptr ? g_gameFilter(info) : EXCEPTION_CONTINUE_SEARCH;
+    }
+
+    // Stands in for SetUnhandledExceptionFilter in Dunia.dll's import table: a filter the game sets
+    // becomes the one FatalFilter hands on to, and FatalFilter stays the process's.
+    LPTOP_LEVEL_EXCEPTION_FILTER WINAPI SetFilterDetour(LPTOP_LEVEL_EXCEPTION_FILTER filter) {
+        LPTOP_LEVEL_EXCEPTION_FILTER previous = g_gameFilter;
+        g_gameFilter = filter;
+        return previous;
     }
 }
 
@@ -235,10 +274,29 @@ void CrashLog::Install() {
                       "nothing behind");
 }
 
+void CrashLog::InstallFatalFilter(uintptr_t duniaBase) {
+    uintptr_t* slot = FindImportSlot(duniaBase, "KERNEL32.dll", "SetUnhandledExceptionFilter");
+    const uintptr_t original = slot != nullptr ? *slot : 0;
+    if (original == 0 || !WriteImportSlot(slot, reinterpret_cast<uintptr_t>(&SetFilterDetour))) {
+        Log::Loader("CrashLog: could not take over Dunia.dll's SetUnhandledExceptionFilter import - "
+                    "the fault that ends the game is not marked FATAL this run");
+        return;
+    }
+    g_filterSlot = slot;
+    g_filterSlotOriginal = original;
+    g_gameFilter = SetUnhandledExceptionFilter(&FatalFilter);
+    Log::Loader("CrashLog: the fault that ends the game will be marked FATAL");
+}
+
 void CrashLog::Shutdown() {
     if (g_handle != nullptr) {
         RemoveVectoredExceptionHandler(g_handle);
         g_handle = nullptr;
+    }
+    if (g_filterSlot != nullptr) {
+        WriteImportSlot(g_filterSlot, g_filterSlotOriginal);
+        g_filterSlot = nullptr;
+        SetUnhandledExceptionFilter(g_gameFilter);
     }
 }
 

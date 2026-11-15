@@ -20,4 +20,7 @@ bool FindExecutableSection(const void* imageBase, const uint8_t** begin, size_t*
 // by overwriting it. Returns nullptr when the image does not import that function by name.
 uintptr_t* FindImportSlot(uintptr_t imageBase, const char* moduleName, const char* functionName);
 
+// Overwrites an import slot. False when the slot's page could not be made writable.
+bool WriteImportSlot(uintptr_t* slot, uintptr_t value);
+
 }

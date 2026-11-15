@@ -20,7 +20,7 @@ Stage: maintenance
 - [done] FCSE::Logf and FCSE::Crc32 header helpers
 - [done] Black and white splash screen
 - [done] Example plugin and example script, the same effects side by side
-- [new] FATAL report from an unhandled-exception filter installed after the engine's own and chained to it - agreed for 1.4.3
+- [done] FATAL line for the fault that ends the game, from an unhandled-exception filter kept above the engine's through Dunia.dll's SetUnhandledExceptionFilter import and chained to it - a test plugin's crash logged FATAL and the game closed with exit code 0, GOG 2026-11-15
 - [done] SetSetting, API v9: any plugin's setting set from text for this session, the file untouched - DevTools' setting set UFCP's field of view in game 2026-11-09
 - [done] Messaging between plugins, API v10: a message on a named channel reaches every plugin listening, and the send says whether anyone heard - DO to DevTools in game, GOG 2026-11-11
 - [scrapped] Hand-rolled Mods page on CGameMenu - crashed; the page intercepts .mgb loads instead

@@ -116,6 +116,15 @@ Called directly from three places — the sound system's `Lag in RDSound3D tool 
 forwards when the Gear runtime config word at `0x10f92164` equals 2. Nothing sets it to 2 on the
 retail path.
 
+## A crash: the unhandled-exception filter
+
+A crash writes nothing. During engine start-up `0x1029D739` (GOG `0x1029B8D9`) sets the process's
+unhandled-exception filter to `0x1029D120` (GOG `0x1029B2B0`), which is
+`TerminateProcess(GetCurrentProcess(), 0)` and nothing else: no dialog, no dump, no Windows Error
+Reporting, and an exit code of 0. The filter it replaces is dropped, not chained. FCSE keeps its own
+filter above this one through `Dunia.dll`'s import of `SetUnhandledExceptionFilter`, writes a
+`FATAL` line to `fcse.log`, and hands the exception on to it (RE-verified, Steam and GOG v1.03).
+
 ## Dead ends
 
 Registered, callable, and empty:

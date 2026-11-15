@@ -108,6 +108,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     // See splash.h for why it detours a gdiplus import rather than anything in the game.
     Splash::Install();
 
+    // Before the handoff: the engine sets its own filter inside RunGame.
+    CrashLog::InstallFatalFilter(DuniaApi::Base());
+
     // Before any plugin can register: registration resolves each setting against what this loads,
     // and fires the plugin's callback with the result, so the file has to be in memory first.
     SettingsRegistry::Init(LoaderPaths::In(L"fcse.ini"));

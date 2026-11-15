@@ -85,4 +85,14 @@ uintptr_t* FindImportSlot(uintptr_t imageBase, const char* moduleName, const cha
     return nullptr;
 }
 
+bool WriteImportSlot(uintptr_t* slot, uintptr_t value) {
+    DWORD previous = 0;
+    if (!VirtualProtect(slot, sizeof(*slot), PAGE_READWRITE, &previous)) {
+        return false;
+    }
+    *slot = value;
+    VirtualProtect(slot, sizeof(*slot), previous, &previous);
+    return true;
+}
+
 }

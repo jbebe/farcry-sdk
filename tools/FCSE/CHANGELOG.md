@@ -12,6 +12,9 @@ Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachang
   on named channels from one plugin to every plugin listening, and `Send` says how many heard;
   `FCSE::Sendf` sends a formatted line and logs it when nobody heard it.
   Difficulty Overhaul uses it to write its combat lines into DevTools' combat log.
+- **`fcse.log` marks the crash that closed the game.** The log also records faults the game catches
+  and survives, so the one nothing caught gets a `FATAL:` line of its own. The game still closes the
+  way it always has.
 
 ### Changed
 - **Plugin DLLs built for an earlier FCSE no longer load** until their authors rebuild them, so
