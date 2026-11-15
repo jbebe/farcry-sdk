@@ -1,6 +1,5 @@
 // A hit on the player, as they see it: on the body it punches the view back and tips it down and
-// darkens it from the edges; on the head it cuts
-// the view to black and brings it back double, the second image fading slowly.
+// darkens it from the edges; on the head it cuts the view to black and brings it back double.
 #pragma once
 
 #include <d3d9.h>

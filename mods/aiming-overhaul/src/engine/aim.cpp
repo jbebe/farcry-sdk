@@ -239,9 +239,8 @@ namespace {
         g_lastYaw = yaw;
         g_turning = {right, up};
 
-        const float follow = 1.0f - std::exp(-seconds / kTrail);
-        g_turnRight += (right - g_turnRight) * follow;
-        g_turnUp += (up - g_turnUp) * follow;
+        g_turnRight = AimingOverhaul::Follow(g_turnRight, right, seconds, kTrail);
+        g_turnUp = AimingOverhaul::Follow(g_turnUp, up, seconds, kTrail);
         g_turnedRight = g_turnRight;
         g_turnedUp = g_turnUp;
     }

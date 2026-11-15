@@ -2,6 +2,7 @@
 // fragments in layer\mods\ give it (written by data\fragments.py).
 #include "weight.h"
 
+#include "engine/memory.h"
 #include "fcse_api.h"
 
 #include <algorithm>
@@ -13,17 +14,12 @@ namespace {
     constexpr float kEmptyKilograms = 1.0f;
     constexpr float kLightest = 0.1f;
 
-    uint8_t* g_weapon = nullptr;
     float g_kilograms = kEmptyKilograms;
 }
 
 void AimingOverhaul::Weight::Follow(uint8_t* weapon) {
-    if (weapon == g_weapon) {
-        return;
-    }
-    g_weapon = weapon;
     const FCSE_EntityDataAPI* data = FCSE::ApiPointer()->EntityData;
-    void* entity = weapon != nullptr ? data->EntityOf(weapon) : nullptr;
+    void* entity = EntityOf(weapon);
     g_kilograms = weapon != nullptr ? kUnknownKilograms : kEmptyKilograms;
     if (entity != nullptr) {
         data->GetFloat(entity, "AimingOverhaul.Weight", &g_kilograms);

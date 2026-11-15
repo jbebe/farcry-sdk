@@ -1,5 +1,5 @@
 // How the player stands: crouched or not, still or moving, which steadies or unsteadies the hands.
-// A lean keeps the stance it leans from, and nothing counts as resting the gun.
+// A lean keeps the stance it leans from.
 #pragma once
 
 #include <cstdint>

@@ -1,5 +1,4 @@
-// Whether a weapon can fire, which can be refused for the one in the player's hands, and how it
-// fires.
+// Whether a weapon can fire, and how. See fire.h.
 #include "engine/fire.h"
 
 #include "engine/memory.h"

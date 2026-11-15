@@ -1,6 +1,4 @@
-// Holding the breath while aiming a gun that needs it: sprint held down its scope steadies the sway
-// for a few seconds, then the hands shake harder until it is let go, and the player is winded for a
-// while after.
+// Holding the breath. See breath.h.
 #include "breath.h"
 
 #include "ease.h"
@@ -47,8 +45,7 @@ namespace {
     constexpr int32_t kOnoPlayer = 6;
 
     std::atomic<bool> g_enabled{true};
-    // The weapon in hand as last followed, and whether its breath can be held.
-    uint8_t* g_weapon = nullptr;
+    // Whether the weapon in hand's breath can be held.
     std::atomic<bool> g_needed{false};
     float g_sinceSprint = kLetGo;
     // The share of the breath left to hold, and seconds strained against it after.
@@ -88,10 +85,6 @@ void AimingOverhaul::Breath::OnSignal(uint32_t signal) {
 }
 
 void AimingOverhaul::Breath::FollowWeapon(uint8_t* weapon) {
-    if (weapon == g_weapon) {
-        return;
-    }
-    g_weapon = weapon;
     g_needed = EntityFlag(weapon, "AimingOverhaul.HoldBreath");
 }
 

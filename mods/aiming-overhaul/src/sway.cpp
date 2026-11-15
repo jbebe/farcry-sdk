@@ -1,6 +1,4 @@
-// The hand's drift: a breathing cycle that rests calm at the bottom of each breath, a wander, and a
-// jolt with each beat of the heart, which move the eye a few millimetres off the gun and the aim a
-// fraction of a degree, all of it quicker and wider as the heart races, and scaled by the stance.
+// The hand's drift. See sway.h.
 #include "sway.h"
 
 #include "breath.h"

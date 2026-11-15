@@ -15,7 +15,7 @@ struct Turn {
     float roll;
 };
 
-// Follows the weapon in hand, or null, reading whether it fires full auto each time it changes.
+// Reads whether the weapon now in hand, or null, fires full auto. Call each time the weapon changes.
 void FollowWeapon(uint8_t* weapon);
 
 // Shakes the view for a shot: by its round's push, or where the gun names no round, by the game's

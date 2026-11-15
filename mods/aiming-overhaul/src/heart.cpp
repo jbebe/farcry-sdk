@@ -1,6 +1,4 @@
-// The heart: its rate climbs with exertion and comes back down as the stamina does, jumps with a
-// wound or a blast nearby and settles slowly from that; each beat jolts the aim, and a fast heart
-// steadies the hands less.
+// The heart. See heart.h.
 #include "heart.h"
 
 #include "ease.h"

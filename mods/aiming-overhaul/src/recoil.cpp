@@ -28,7 +28,6 @@ namespace {
     constexpr float kShortestRise = 0.01f;
 
     bool g_enabled = true;
-    uint8_t* g_weapon = nullptr;
     bool g_returns = false;
 
     // The shots in the burst so far, and the seconds since its last.
@@ -56,10 +55,6 @@ void AimingOverhaul::Recoil::SetEnabled(bool enabled) {
 }
 
 void AimingOverhaul::Recoil::FollowWeapon(uint8_t* weapon) {
-    if (weapon == g_weapon) {
-        return;
-    }
-    g_weapon = weapon;
     g_returns = EntityFlag(weapon, "AimingOverhaul.RecoilReturns");
 }
 

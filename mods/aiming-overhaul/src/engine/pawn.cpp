@@ -9,12 +9,6 @@
 namespace {
     using AimingOverhaul::Field;
 
-    // Both __thiscall, which a free function spells __fastcall with an unused EDX.
-    using LockFn = void(__fastcall*)(void* entity, void* unused);
-    using GetComponentFn = uint8_t*(__fastcall*)(void* entity, void* unused, const uint32_t* id);
-    FCSE::Relocation<LockFn> g_lock{FCSE::Uplay(0x004DD4F0)};
-    FCSE::Relocation<GetComponentFn> g_getComponent{FCSE::Uplay(0x004E2CC0)};
-
     constexpr uint32_t kCounters = FCSE::Crc32("CFCXCountersComponentPlayer");
     constexpr uint32_t kShaker = FCSE::Crc32("CCameraShakeAndPadRumbleComponent");
 
@@ -36,13 +30,9 @@ namespace {
     }
 
     // The pawn entity's component of the class named by `id`, or null.
-    uint8_t* Component(uint8_t* pawn, const uint32_t& id) {
-        uint8_t* entity = g_lock && g_getComponent ? Entity(pawn) : nullptr;
-        if (entity == nullptr) {
-            return nullptr;
-        }
-        g_lock(entity, nullptr);
-        return g_getComponent(entity, nullptr, &id);
+    uint8_t* PawnComponent(uint8_t* pawn, uint32_t id) {
+        uint8_t* entity = Entity(pawn);
+        return entity != nullptr ? AimingOverhaul::Component(entity, id) : nullptr;
     }
 
     // The share left of the counter at `offset` on the counters, one where there is none.
@@ -54,11 +44,11 @@ namespace {
 }
 
 float AimingOverhaul::Pawn::Stamina(uint8_t* pawn) {
-    return Left(Component(pawn, kCounters), kStamina);
+    return Left(PawnComponent(pawn, kCounters), kStamina);
 }
 
 float AimingOverhaul::Pawn::Health(uint8_t* pawn) {
-    return HealthOf(Component(pawn, kCounters));
+    return HealthOf(PawnComponent(pawn, kCounters));
 }
 
 float AimingOverhaul::Pawn::HealthOf(uint8_t* counters) {
@@ -88,7 +78,7 @@ bool AimingOverhaul::Pawn::ToWorld(uint8_t* pawn, const float v[3], float out[3]
 }
 
 float AimingOverhaul::Pawn::Shake(uint8_t* pawn) {
-    uint8_t* shaker = Component(pawn, kShaker);
+    uint8_t* shaker = PawnComponent(pawn, kShaker);
     if (shaker == nullptr) {
         return 0.0f;
     }

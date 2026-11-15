@@ -6,7 +6,7 @@
 
 namespace AimingOverhaul::Cartridge {
 
-// Follows the weapon in hand, or null, reading its round each time it changes.
+// Reads the round of the weapon now in hand, or null. Call each time the weapon changes.
 void Follow(uint8_t* weapon);
 
 // The push one round gives whoever fires it, in newton-seconds: its projectiles' momentum leaving

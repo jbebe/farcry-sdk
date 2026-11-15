@@ -56,9 +56,6 @@ inline float Pitch(uint8_t* pawn) {
     return Field<float>(Data(pawn), kEffectivePitch);
 }
 
-inline float Yaw(uint8_t* pawn) {
-    return Field<float>(Data(pawn), kEffectiveYaw);
-}
 
 inline bool Jumping(uint8_t* pawn) {
     return Field<uint8_t>(Data(pawn), kJumping) != 0 && Field<uint8_t>(Data(pawn), kJumpEnded) == 0;

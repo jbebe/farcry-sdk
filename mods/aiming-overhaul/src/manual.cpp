@@ -36,11 +36,8 @@ namespace {
     float __fastcall BonusDetour(uint8_t* pawn, void* unused, const uint32_t* object,
                                  const uint32_t* name, float base, int lowerIsBetter) {
         uint8_t* strategy = *name == kAccuracy ? AimingOverhaul::Shot::SettingUp() : nullptr;
-        if (strategy == nullptr) {
-            return g_original(pawn, unused, object, name, base, lowerIsBetter);
-        }
         const float value = g_original(pawn, unused, object, name, base, lowerIsBetter);
-        if (value <= 0.0f || value > base * kWithManual) {
+        if (strategy == nullptr || value <= 0.0f || value > base * kWithManual) {
             return value;
         }
         const ptrdiff_t picked =

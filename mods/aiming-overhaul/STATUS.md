@@ -74,6 +74,7 @@ Stage: active
 - Glass in the eyepiece: lines bow, colours part, rim darkens, faint tint - unconfirmed
 - Lowering a scope: the eye stays back while it goes down - unseen
 - No radial edge blur on the mod's scopes - unconfirmed
+- Swap guns (simplify pass, the weapon's data now read once per change): breath hold, weight, recoil, shot shake and the window's per-gun values follow the new gun - built only
 
 ## Approvals
 

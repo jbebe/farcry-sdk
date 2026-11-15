@@ -3,6 +3,7 @@
 #include "scopes.h"
 
 #include "engine/aim.h"
+#include "engine/memory.h"
 #include "fcse_api.h"
 #include "shape_ar16.h"
 #include "shape_mgl140.h"
@@ -82,7 +83,7 @@ namespace {
 const Scope* AimingOverhaul::Scopes::Follow(uint8_t* weapon) {
     if (weapon != g_weapon) {
         g_weapon = weapon;
-        g_entity = weapon != nullptr ? FCSE::ApiPointer()->EntityData->EntityOf(weapon) : nullptr;
+        g_entity = EntityOf(weapon);
         g_inHand = nullptr;
         g_reading = (g_reading + 1) % std::size(g_scopes);
         g_unread = g_entity != nullptr && ReadData(g_entity, g_scopes[g_reading]);

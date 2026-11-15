@@ -1,6 +1,4 @@
-// Leaning: held Q or E slides the upper body out to the side and bends it from the belly, and the
-// head, the view, the arms and the gun go with it; see
-// docs/docs/engine-internals/first-person-aiming.md#leaning.
+// Leaning. See lean.h.
 #include "lean.h"
 
 #include "ease.h"

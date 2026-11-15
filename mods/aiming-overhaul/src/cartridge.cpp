@@ -1,25 +1,21 @@
 // The round the weapon in hand fires. See cartridge.h.
 #include "cartridge.h"
 
+#include "engine/memory.h"
 #include "fcse_api.h"
 
 #include <atomic>
 
 namespace {
-    uint8_t* g_weapon = nullptr;
     std::atomic<float> g_impulse{0.0f};
     char g_name[32] = {};
 }
 
 void AimingOverhaul::Cartridge::Follow(uint8_t* weapon) {
-    if (weapon == g_weapon) {
-        return;
-    }
-    g_weapon = weapon;
     g_name[0] = '\0';
     g_impulse = 0.0f;
     const FCSE_EntityDataAPI* data = FCSE::ApiPointer()->EntityData;
-    void* entity = weapon != nullptr ? data->EntityOf(weapon) : nullptr;
+    void* entity = EntityOf(weapon);
     float grams = 0.0f;
     float velocity = 0.0f;
     int32_t projectiles = 1;

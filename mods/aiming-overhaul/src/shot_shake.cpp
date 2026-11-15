@@ -34,7 +34,6 @@ namespace {
     constexpr float kShortestInterval = 0.02f;
 
     std::atomic<bool> g_enabled{true};
-    uint8_t* g_weapon = nullptr;
     bool g_fullAuto = false;
 
     // The burst's rounds before the last, the seconds since its first, since the last and between
@@ -69,10 +68,7 @@ namespace {
 }
 
 void AimingOverhaul::ShotShake::FollowWeapon(uint8_t* weapon) {
-    if (weapon != g_weapon) {
-        g_weapon = weapon;
-        g_fullAuto = Fire::FullAuto(weapon);
-    }
+    g_fullAuto = Fire::FullAuto(weapon);
 }
 
 void AimingOverhaul::ShotShake::Kick(const Kick::Kick& kick) {

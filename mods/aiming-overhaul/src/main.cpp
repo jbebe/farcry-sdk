@@ -108,13 +108,20 @@ namespace {
         FollowZoom();
     }
 
+    // Aim's count of weapon changes as last followed.
+    uint32_t g_weaponChanges = 0;
+
+    // The weapon's data read each time it changes; the scope every frame, since it retries the mesh.
     AimingOverhaul::Aim::Followed FollowWeapon(uint8_t* weapon) {
-        AimingOverhaul::Breath::FollowWeapon(weapon);
-        AimingOverhaul::Weight::Follow(weapon);
-        AimingOverhaul::Cartridge::Follow(weapon);
-        AimingOverhaul::Tuning::Follow(weapon);
-        AimingOverhaul::Recoil::FollowWeapon(weapon);
-        AimingOverhaul::ShotShake::FollowWeapon(weapon);
+        if (AimingOverhaul::Aim::WeaponChanges() != g_weaponChanges) {
+            g_weaponChanges = AimingOverhaul::Aim::WeaponChanges();
+            AimingOverhaul::Breath::FollowWeapon(weapon);
+            AimingOverhaul::Weight::Follow(weapon);
+            AimingOverhaul::Cartridge::Follow(weapon);
+            AimingOverhaul::Tuning::Follow();
+            AimingOverhaul::Recoil::FollowWeapon(weapon);
+            AimingOverhaul::ShotShake::FollowWeapon(weapon);
+        }
         const AimingOverhaul::Scopes::Scope* scope = AimingOverhaul::Scopes::Follow(weapon);
         if (scope == nullptr) {
             return {};

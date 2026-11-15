@@ -10,7 +10,4 @@ bool Install();
 // `length` when nothing is hit within it. The game thread only.
 float Cast(const float from[3], const float direction[3], float length);
 
-// Whether nothing solid is within `length` of `from` along `direction`.
-bool Clear(const float from[3], const float direction[3], float length);
-
 }

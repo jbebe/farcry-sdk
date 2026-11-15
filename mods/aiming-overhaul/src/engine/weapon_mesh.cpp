@@ -13,13 +13,6 @@
 namespace {
     using AimingOverhaul::Field;
 
-    // Both __thiscall, which a free function spells __fastcall with an unused EDX.
-    using LockFn = void(__fastcall*)(void* entity, void* unused);
-    using GetComponentFn = uint8_t*(__fastcall*)(void* entity, void* unused, const uint32_t* id);
-
-    FCSE::Relocation<LockFn> g_lock{FCSE::Uplay(0x004DD4F0)};
-    FCSE::Relocation<GetComponentFn> g_getComponent{FCSE::Uplay(0x004E2CC0)};
-
     constexpr uint32_t kGraphicComponent = FCSE::Crc32("CGraphicComponent");
     constexpr uint32_t kScopePart = FCSE::Crc32("SCOPE_HI");
     constexpr uint32_t kNearestScopeNode = FCSE::Crc32("SCOPE_HI_LOD0");
@@ -109,12 +102,11 @@ bool AimingOverhaul::WeaponMesh::ScopePart::Draws(uint32_t start) const {
 
 const char* AimingOverhaul::WeaponMesh::Read(void* entity, ScopePart& part) {
     part = {};
-    if (!g_lock || !g_getComponent) {
+    if (!ComponentsMapped()) {
         return "CEntity::Lock or GetComponent is not mapped on this build";
     }
     __try {
-        g_lock(entity, nullptr);
-        uint8_t* graphic = g_getComponent(entity, nullptr, &kGraphicComponent);
+        uint8_t* graphic = Component(entity, kGraphicComponent);
         if (graphic == nullptr) {
             return "no graphic component";
         }

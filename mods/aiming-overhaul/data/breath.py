@@ -39,8 +39,6 @@ HARSH_EXHALES = ("0x00455c67", "0x00455c57", "0x00455c58")
 # after the last record of the one before, and src\breath.cpp plays each by its event.
 FIRST = 0x00FB0000
 # The banks, by what they hold and its gain in dB: the breath held, at the level it was recorded at.
-# The game's own breathing plays 32 dB lower, through its two switches, which was very quiet for a
-# held breath.
 BANKS = (("inhale", WEAK, "0"), ("inhale", STRONG, "0"), ("exhale", WEAK, "0"), ("exhale", STRONG, "0"))
 # The heart beating: one of the beats the game plays as the player goes down wounded, as banks with
 # their gains in dB - a little quieter than the game plays it while the breath is held, and faint

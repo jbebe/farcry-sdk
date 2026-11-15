@@ -10,8 +10,8 @@ namespace AimingOverhaul::Breath {
 // Follows the sprint signals.
 void OnSignal(uint32_t signal);
 
-// Follows the weapon in hand, or null, reading whether its archetype's entity data asks for the
-// breath to be held each time it changes.
+// Reads whether the weapon now in hand, or null, asks in its entity data for the breath to be held.
+// Call each time the weapon changes.
 void FollowWeapon(uint8_t* weapon);
 
 // Whether the weapon in hand's breath can be held, its scope swaying harder for it.

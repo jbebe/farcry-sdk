@@ -80,7 +80,3 @@ float AimingOverhaul::Ray::Cast(const float from[3], const float direction[3], f
     const float distance = FirstHit(from, direction, length);
     return distance < 0.0f ? length : distance;
 }
-
-bool AimingOverhaul::Ray::Clear(const float from[3], const float direction[3], float length) {
-    return FirstHit(from, direction, length) < 0.0f;
-}

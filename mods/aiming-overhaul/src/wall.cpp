@@ -1,5 +1,4 @@
-// The gun near walls: a gun that would go into what is ahead swings down out of it, and while it is
-// down it neither fires nor comes up to the sights.
+// The gun near walls. See wall.h.
 #include "wall.h"
 
 #include "ease.h"
@@ -43,7 +42,8 @@ void AimingOverhaul::Wall::Update(float seconds, const float eye[3], const float
     if (g_enabled && eye != nullptr) {
         const float room = Ray::Cast(eye, forward, kReach);
         target = std::clamp((kReach - room) / kSwingRoom, 0.0f, 1.0f);
-    }    if (target >= g_swing) {
+    }
+    if (target >= g_swing) {
         g_swing = Approach(g_swing, target, seconds / kSwingTime);
         g_clear = 0.0f;
     } else if (g_clear >= kClearHold || target < g_swing - kClearRoom / kSwingRoom) {

@@ -10,8 +10,8 @@ namespace AimingOverhaul::Recoil {
 
 void SetEnabled(bool enabled);
 
-// Follows the weapon in hand, or null, reading whether the game still takes its kick back each time
-// it changes.
+// Reads whether the game still takes the kick back for the weapon now in hand, or null. Call each
+// time the weapon changes.
 void FollowWeapon(uint8_t* weapon);
 
 // Takes the kick of the player's last shot from the game, so it stays in the aim; false where the

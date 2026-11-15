@@ -5,7 +5,7 @@
 
 namespace AimingOverhaul::Weight {
 
-// Follows the weapon in hand, or null, reading its weight each time it changes.
+// Reads the weight of the weapon now in hand, or null. Call each time the weapon changes.
 void Follow(uint8_t* weapon);
 
 // The weapon in hand's weight, in kilograms.

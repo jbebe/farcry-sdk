@@ -134,9 +134,7 @@ namespace {
     // A set for each weapon in kWeapons, in its order, then one for the weapons it leaves out.
     constexpr size_t kOther = std::size(kWeapons);
     std::array<Values, kOther + 1> g_weapons;
-    // The weapon in hand and its set; the set the sliders edit, and the set in hand they last
-    // followed.
-    uint8_t* g_weapon = nullptr;
+    // The weapon in hand's set; the set the sliders edit, and the set in hand they last followed.
     std::atomic<size_t> g_inHand{kOther};
     size_t g_edited = kOther;
     size_t g_followed = kOther;
@@ -268,11 +266,8 @@ const HitLook& AimingOverhaul::Tuning::BeingHit() {
     return g_hit;
 }
 
-void AimingOverhaul::Tuning::Follow(uint8_t* weapon) {
-    if (weapon != g_weapon) {
-        g_weapon = weapon;
-        g_inHand = IndexOf(Aim::WeaponName());
-    }
+void AimingOverhaul::Tuning::Follow() {
+    g_inHand = IndexOf(Aim::WeaponName());
 }
 
 const Values& AimingOverhaul::Tuning::InHand() {

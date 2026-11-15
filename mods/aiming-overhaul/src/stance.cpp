@@ -1,5 +1,4 @@
-// How the player stands: crouched or not, still or moving, which steadies or unsteadies the hands.
-// A lean keeps the stance it leans from, and nothing counts as resting the gun.
+// How the player stands. See stance.h.
 #include "stance.h"
 
 #include "ease.h"

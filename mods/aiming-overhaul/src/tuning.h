@@ -54,8 +54,8 @@ struct HitLook {
 
 const HitLook& BeingHit();
 
-// Follows the weapon in hand, or null, taking its values each time it changes.
-void Follow(uint8_t* weapon);
+// Takes the values of the weapon now in hand, by its name. Call each time the weapon changes.
+void Follow();
 
 // The weapon in hand's values, which the window edits in place.
 const Values& InHand();
