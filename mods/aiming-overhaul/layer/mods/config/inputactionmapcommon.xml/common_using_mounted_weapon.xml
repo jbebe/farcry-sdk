@@ -1,0 +1,29 @@
+<ActionMap name="common_using_mounted_weapon">
+	<import actionmap="common_heal_remap" optional="" />
+	<Import actionmap="common_changeseat_remap" optional="" />
+	<MouseFilter input="mouse:move" curve="Weapons.AimCurves.Mouse_Curve" sensitivity="0.8" maxOutput="10" />
+	<Binding input="mouse:move" action="update" signal="look_mw" />
+	<!--Gamepad-->
+	<PadFilter name="right_thumb" device="pad" padAccelerationBoostAmplitude="0">
+		<StickyHelper curve="Weapons.AimCurves.Pad_Sticky" radius="1.2" strength="0.01" accelerationCutoffRadius="0.5" distanceForFullSticky="10" distanceForNoSticky="2" />
+		<FollowEnemyHelper curve="Weapons.AimCurves.Pad_Sticky" radius="3.0" strength="0.005" />
+		<IronSightHelper height="0.05" duration="0.2" distanceFactor="0.1" distanceFactorHeight="0.05" startSnapPercentage="0.75">
+			<radius>
+				<Casual value="1" />
+				<Experienced value="0.5" />
+				<Hardcore value="0.25" />
+				<Infamous value="0.125" />
+			</radius>
+		</IronSightHelper>
+		<ShootCorrectionHelper radius="1" strength="1" maxDistance="200" />
+		<Binding input="right_thumb_leftright" axis="0" sensitivity="0.5" curve="Weapons.AimCurves.Pad_LookLeftRight_MountedWeapon" />
+		<Binding input="right_thumb_updown" axis="1" sensitivity="0.4" curve="Weapons.AimCurves.Pad_LookUpDown_MountedWeapon" />
+	</PadFilter>
+	<Binding input="pad:right_thumb" action="update" signal="look_mw" />
+	<Binding input="pad:left_shoulder" action="press" signal="heal" />
+	<Binding input="kb:f" action="press" signal="leave_mounted_weapon" />
+	<Binding input="pad:y" action="press" signal="leave_mounted_weapon" />
+	<Binding input="pad:a" action="press" signal="change_seat" />
+	<Binding input="kb:c" action="press" signal="change_seat" />
+	<Binding input="kb:h" action="press" signal="heal" />
+</ActionMap>

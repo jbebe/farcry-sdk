@@ -17,8 +17,9 @@ float Moving();
 // frame measured none: a new pawn, or a frame too long to measure by.
 bool Velocity(float out[3]);
 
-// How much of the sway the stance leaves: half crouched and still, all of it standing still, and
-// more moving.
-float Sway();
+// The sway the stance leaves, given the shares left standing and crouched: `standing` standing
+// still, half of `crouched` crouched still, `standing` crouched moving, and twice `standing`
+// standing moving.
+float Sway(float standing, float crouched);
 
 }

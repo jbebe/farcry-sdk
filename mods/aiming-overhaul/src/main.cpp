@@ -135,6 +135,10 @@ namespace {
     ULONGLONG g_seen = 0;
     constexpr ULONGLONG kOnFootMilliseconds = 200;
 
+    bool OnFoot(uint8_t* pawn) {
+        return pawn != nullptr && pawn == g_pawn && GetTickCount64() - g_seen < kOnFootMilliseconds;
+    }
+
     // Whether the aim key is held, and whether the gun near walls or after a sprint let go of the
     // sights it asked for.
     constexpr uint32_t kAim = FCSE::Crc32("startironsight");
@@ -163,6 +167,10 @@ namespace {
     // eye's drift.
     AimingOverhaul::Aim::Adjust OnAimFrame(uint8_t* pawn, float seconds) {
         using namespace AimingOverhaul;
+        // Back on foot from a load, a vehicle or a mounted gun, the player stands upright.
+        if (!OnFoot(pawn)) {
+            Lean::Stop();
+        }
         g_pawn = pawn;
         g_seen = GetTickCount64();
         const bool sprinting = Pawn::Is(pawn, Pawn::kSprint);
@@ -193,10 +201,6 @@ namespace {
         Breath::Update(seconds, Aim::Aiming(), stamina);
         return {Sway::Drift(seconds), roll + shake.roll, shake.pitch + punch.pitch,
                 {0.0f, -Landing::EyeDrop(), -punch.back}};
-    }
-
-    bool OnFoot(uint8_t* pawn) {
-        return pawn != nullptr && pawn == g_pawn && GetTickCount64() - g_seen < kOnFootMilliseconds;
     }
 
     bool RefuseShot(uint8_t* pawn) {

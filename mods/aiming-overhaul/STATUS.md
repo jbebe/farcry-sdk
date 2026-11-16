@@ -5,14 +5,14 @@ Stage: active
 
 ## Features
 
-- [done] Sway: a breath cycle and a slow wander move the aim; down iron sights the sights drift out of line - user: "perfect"
-- [done] Steadier down the sights: share of the sway left standing and crouched, set in the window - played 2026-11-08
-- [done] Heart rate 70-170: beats jolt the aim, faint beat down magnifying scopes - fade "perfect" 2026-10-26, sway effects unconfirmed
-- [done] Stance: crouched and still halves the sway, moving widens it - unconfirmed in game
-- [done] Hold breath with sprint down the Dart Rifle, M1903, Dragunov and AS50 scopes, heard drawn in and let out
-- [done] Lean on Q/E: upper body slides 10 cm and bends 15°, hold or tap - user: "perfect" 2026-10-24
-- [done] Shots leave from the leaned eye - confirmed 2026-10-29; muzzle flash and scope while leaning unchecked
-- [done] Default keys moved for the lean: interact to F, throw grenade to G, next throwable to T
+- [done] Sway: a breath cycle and a slow wander move the aim; down iron sights the sights drift out of line - user: "perfect", works 2026-11-16
+- [done] Steadier down the sights: share of the sway left standing and crouched, set in the window; standing, the iron sights' wander 1.6 times the eye's drift - user 2026-11-16: standing "too rigid, too precise", wander raised, unplayed
+- [done] Heart rate 70-170: beats jolt the aim, faint beat down magnifying scopes - fade "perfect" 2026-10-26, works 2026-11-16
+- [done] Stance: crouched and still halves the sway; moving, crouched sways as standing still and standing twice that, the wander up to twice as fast - user 2026-11-16: moving should be worse than standing, unplayed
+- [done] Hold breath with sprint down the Dart Rifle, M1903, Dragunov and AS50 scopes, heard drawn in and let out - works 2026-11-16
+- [done] Lean on Q/E: upper body slides 10 cm and bends 15°, hold or tap; a load, vehicle or mounted gun ends it - user: "perfect" 2026-10-24; the end on a load, user 2026-11-16, unplayed
+- [done] Shots leave from the leaned eye - confirmed 2026-10-29; muzzle flash and scope while leaning work 2026-11-16
+- [done] Default keys moved for the lean: interact to F, throw grenade to G, next throwable to T, leaving a vehicle or mounted gun to F - user 2026-11-16: "If F is enter vehicle, F should be exit vehicle", unplayed
 - [done] Gun near walls: swings down out of a wall and won't fire until back up - latest changes unplayed
 - [done] Vertical inertia: the arms slide behind the look's pitch - user: "perfect"
 - [done] Landing: the view drops a few cm as the knees take it - user-approved
@@ -65,8 +65,10 @@ Stage: active
 
 ## To validate
 
-- Crouched and still the sway halves, moving widens it - unconfirmed
-- Lean with a scope up: the muzzle flash and the scope follow the leaned eye - unchecked
+- Standing down the iron sights the front sight wanders 60% further off the mark; crouched as before
+- Moving while aiming: crouched sways as much as standing still, standing twice that, and quicker
+- Lean, then load a save, get in a vehicle or on a mounted gun: back on foot, upright
+- F leaves a vehicle (driver and passenger) and a mounted gun; E no longer does
 - Gun near walls: swings down out of a wall, won't fire until back up - latest changes unplayed
 - Recoil that stays in the aim, the first two kicks light - unplayed
 - Full auto spreads from a burst's 4th shot, up to 8 shots' worth - unplayed

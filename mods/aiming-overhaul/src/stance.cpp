@@ -8,15 +8,14 @@
 #include <cmath>
 
 namespace {
-    // The sway left standing still, crouched still, standing moving and crouched moving.
-    constexpr float kStanding = 1.0f;
+    // The share of the sway left crouched still, and how many times standing still's is left
+    // standing moving.
     constexpr float kCrouched = 0.5f;
-    constexpr float kStandingMoving = 1.8f;
-    constexpr float kCrouchedMoving = 1.4f;
+    constexpr float kStandingMoving = 2.0f;
     // Metres a second along the ground below which the player is still, a creep included, and from
-    // which they are wholly moving.
+    // which they are wholly moving, a crouched walk down the sights included.
     constexpr float kStill = 0.4f;
-    constexpr float kMoving = 1.5f;
+    constexpr float kMoving = 1.0f;
     // Seconds for the stance to ease between crouched and standing, and still and moving.
     constexpr float kFollow = 0.15f;
     // Seconds between two frames past which the step is too long to measure a speed by.
@@ -64,8 +63,8 @@ bool AimingOverhaul::Stance::Velocity(float out[3]) {
     return g_measured;
 }
 
-float AimingOverhaul::Stance::Sway() {
-    const float still = std::lerp(kStanding, kCrouched, g_crouched);
-    const float moving = std::lerp(kStandingMoving, kCrouchedMoving, g_crouched);
+float AimingOverhaul::Stance::Sway(float standing, float crouched) {
+    const float still = std::lerp(standing, kCrouched * crouched, g_crouched);
+    const float moving = std::lerp(kStandingMoving * standing, standing, g_crouched);
     return std::lerp(still, moving, g_moving);
 }

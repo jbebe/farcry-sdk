@@ -97,6 +97,14 @@ void AimingOverhaul::Lean::OnSignal(uint32_t signal) {
     }
 }
 
+void AimingOverhaul::Lean::Stop() {
+    g_side = 0;
+    g_latched = false;
+    g_ended = 0;
+    g_bend = 0.0f;
+    g_posedBend = 0.0f;
+}
+
 float AimingOverhaul::Lean::Update(uint8_t* pawn, float seconds, bool free, bool posable) {
     // Sprinting ends a tapped lean, rather than leaving it to come back after.
     if (g_latched && !free) {

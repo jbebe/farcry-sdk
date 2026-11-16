@@ -20,6 +20,9 @@ struct Bend {
 // as it is held.
 void OnSignal(uint32_t signal);
 
+// Ends any lean at once, upright, for a player back on foot after a load, a vehicle or a mounted gun.
+void Stop();
+
 // Leans the pawn's body this frame, given the seconds since the last, whether the player may lean
 // now and whether the body can be bent at all. Returns how far the view rolls with it, in radians,
 // right positive.

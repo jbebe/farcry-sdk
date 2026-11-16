@@ -1,0 +1,47 @@
+<ActionMap name="common_in_vehicle">
+	<Import actionmap="common_in_vehicle_remap" optional="" />
+	<import actionmap="common_heal_remap" optional="" />
+	<Import actionmap="common_changeseat_remap" optional="" />
+	<Import actionmap="common_exitvehicle_remap" optional="" />
+	<!--Keyboard-->
+	<Binding input="kb:f" action="press" signal="exitvehicle" />
+	<Binding input="kb:c" action="press" signal="change_seat" />
+	<Binding input="kb:r" action="press" signal="toggle_awd" />
+	<Binding input="kb:h" action="press" signal="heal" />
+	<!--Gamepad-->
+	<Binding input="pad:y" action="press" signal="exitvehicle" />
+	<Binding input="pad:a" action="press" signal="change_seat" />
+	<Binding input="pad:left_shoulder" action="press" signal="toggle_awd" />
+	<!--Mouse look-->
+	<MouseFilter input="mouse:move" curve="Weapons.AimCurves.Mouse_Curve" sensitivity="0.8" maxOutput="10" />
+	<Binding input="mouse:move" action="update" signal="look" />
+	<CompoundInput name="pov_front_reset" device="mouse">
+		<Input input="rb" axis="2" />
+	</CompoundInput>
+	<Binding input="mouse:pov_front_reset" action="press" signal="look_pov" />
+	<!--Both mouse buttons generate a look-back-->
+	<Binding signal="look_back">
+		<Input input="mouse:rb" action="press" useAsAxisInput="1" />
+		<Input input="mouse:lb" action="press" />
+	</Binding>
+	<CompoundInput name="look_pov" device="mouse">
+		<Binding input="rb" axis="0" />
+		<Binding input="lb" axis="0" invert="1" />
+		<Binding input="" axis="1" />
+	</CompoundInput>
+	<Binding input="mouse:look_pov" action="press" signal="look_pov" />
+	<Binding input="mouse:look_pov" action="release" signal="look_pov" />
+	<!--Look on pad-->
+	<PadFilter name="right_thumb" device="pad" padAccelerationBoostAmplitude="0">
+		<Binding input="right_thumb_leftright" axis="0" sensitivity="0.9" curve="Weapons.AimCurves.Pad_LookLeftRight" />
+		<Binding input="right_thumb_updown" axis="1" sensitivity="0.5" curve="Weapons.AimCurves.Pad_LookUpDown" />
+	</PadFilter>
+	<CompoundInput name="look_pov" device="pad">
+		<Binding input="right_thumb_push" axis="1" invert="1" />
+		<Binding input="" axis="0" />
+	</CompoundInput>
+	<Binding input="pad:look_pov" action="press" signal="look_pov" />
+	<Binding input="pad:look_pov" action="release" signal="look_pov" />
+	<Binding input="pad:right_thumb" action="update" signal="look" />
+	<Binding input="pad:left_shoulder" action="press" signal="heal" />
+</ActionMap>

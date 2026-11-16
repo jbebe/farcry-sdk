@@ -21,6 +21,10 @@ namespace {
     constexpr float kIronsightWander = 0.0035f;
     constexpr float kScopeWander = 0.006f;
     constexpr float kHoldBreathScope = 2.0f;
+    // How many times further the iron sights' wander reaches than the eye's drift standing still, and
+    // how much quicker the wander runs moving.
+    constexpr float kStandingFront = 1.6f;
+    constexpr float kMovingPace = 1.0f;
 
     // The breath at rest: seconds drawing in, letting out and resting at the bottom, how far it
     // lifts the aim against the wander's weights, the share of the wander left in the rest, and the
@@ -78,6 +82,8 @@ namespace {
     float g_up = 0.0f;
     float g_breath = 0.0f;
     float g_jolt = 0.0f;
+    // How many times the eye's drift the iron sights' wander is, by the stance.
+    float g_front = 1.0f;
 
     float Sum(std::span<const Wave> waves) {
         float sum = 0.0f;
@@ -122,16 +128,10 @@ namespace {
         const float steadiness = AimingOverhaul::Breath::Steadiness();
         return steadiness * g_up + (std::max)(steadiness, 1.0f) * g_breath + g_jolt;
     }
-
-    // The share of the sway left down the sights, as far crouched as the player is.
-    float SightShare() {
-        const AimingOverhaul::Tuning::SightSway& sights = AimingOverhaul::Tuning::Sights();
-        return std::lerp(sights.standing, sights.crouched, AimingOverhaul::Stance::Crouched());
-    }
 }
 
 AimingOverhaul::Aim::Offset AimingOverhaul::Sway::Drift(float seconds) {
-    g_time += seconds;
+    g_time += seconds * (1.0f + kMovingPace * Stance::Moving());
     // The breath keeps its place in the cycle as the heart quickens or slows it.
     const Pace pace = Paced(Heart::Racing());
     g_breathTime *= pace.Length() / g_pace.Length();
@@ -149,7 +149,10 @@ AimingOverhaul::Aim::Offset AimingOverhaul::Sway::Drift(float seconds) {
         return {};
     }
     const float racing = Heart::Racing();
-    const float steady = Stance::Sway() * SightShare();
+    const Tuning::SightSway& sights = Tuning::Sights();
+    const float steady = Stance::Sway(sights.standing, sights.crouched);
+    const float front = Stance::Sway(kStandingFront * sights.standing, sights.crouched);
+    g_front = steady > 0.0f ? front / steady : 1.0f;
     const float wider = (1.0f + kRacingSway * racing) * steady;
     const float calm = Calm(g_breathTime, pace) * wider;
     g_right = calm * Sum(kRight);
@@ -164,7 +167,7 @@ AimingOverhaul::Look::Angles AimingOverhaul::Sway::Wander() {
         return {};
     }
     const float scope = kScopeWander * (Breath::Needed() ? kHoldBreathScope : 1.0f);
-    const float wander = kIronsightWander * Aim::Settled() + scope * Aim::Scoped();
+    const float wander = kIronsightWander * g_front * Aim::Settled() + scope * Aim::Scoped();
     return {wander * Up(), wander * Breath::Steadiness() * g_right};
 }
 

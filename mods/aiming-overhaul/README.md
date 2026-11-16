@@ -18,7 +18,7 @@ both field by field with other mods' edits, reporting any clash.
   moves further and the two drift out of line. Shots still go where the engine sends them: down the
   view, which is where the barrel points. Sights that have drifted out of line are wrong by the same
   angle as on a real gun. The breath and the wander also move the aim itself, view, gun and shot
-  together, by about 0.1° down the iron sights, 0.18° through a holographic sight and 0.35°
+  together, by about 0.16° down the iron sights, 0.18° through a holographic sight and 0.35°
   through a magnifying scope, standing still; the mouse corrects it as it would a real hand. How
   much of the sway is left down the sights, standing and crouched, is set in Aiming Overhaul's
   window in DevTools' overlay, half of it on both by default. While a scope's own sight
@@ -32,9 +32,11 @@ both field by field with other mods' edits, reporting any clash.
   of the rest, sways up to 60% wider, and holds the breath for as little as half as long. Down a
   magnifying scope a heart past 130 a minute is heard faintly, and it fades out as the heart slows,
   silent below 80; iron sights and the holographic sights never hear it.
-- **Stance.** Crouched and still, the sway, heart jolts included, is half what it is standing still;
-  moving, it is 1.4 times crouched and 1.8 times standing, eased in from walking pace with a creep
-  still counting as still. Crouched and still a wound's or a blast's share of the heart settles
+- **Stance.** Crouched and still, the sway, heart jolts included, is half what it is standing still,
+  and down the iron sights the aim's wander under a third of it, so standing the front sight never
+  quite settles on the mark. Moving, crouched sways as much as standing still and standing twice
+  that, and the wander runs up to twice as fast, eased in from a creep, which still counts as still,
+  to 1 m/s, a crouched walk down the sights. Crouched and still a wound's or a blast's share of the heart settles
   twice as fast, crouched and moving it holds where it is, and walking upright keeps the heart a
   little up. A lean keeps the stance it leans
   from, and nothing counts as resting the gun.
@@ -53,7 +55,8 @@ both field by field with other mods' edits, reporting any clash.
   it 15° from the lower back, over a quarter of a second, so the eye moves out about 25 cm. The
   head, the view, the arms and the gun go with it, and shots leave from where the eye now is. Held, the key leans for as long as it is held;
   tapped, let go within a quarter of a second, it leans until it is tapped again. The other key
-  leans the other way instead. Sprinting ends a lean.
+  leans the other way instead. Sprinting ends a lean, and a load, a vehicle or a mounted gun ends it
+  at once.
 - **Gun near walls.** A gun that would reach into a wall, within 0.8 m of the eye, swings down out
   of it, by up to 34° as the room ahead shrinks by another 0.5 m, while the view holds still.
   Swung most of the way down, past nine tenths, it lets go of the sights and does not fire, until it
@@ -258,8 +261,9 @@ FCSE 1.4.0 or later.
 
 Two new controls, rebindable in Options > Controls under Movements: **Lean left** on Q and **Lean
 right** on E. To free those keys the defaults move: interact to F, throw grenade to G and next
-throwable to T. E and Q stay as the game had them where the game never lets them be
-rebound: leaving a vehicle or a mounted gun, a buddy rescue, the machete finish and the watch.
+throwable to T, and leaving a vehicle or a mounted gun goes to F with interact. E and Q stay as
+the game had them where the game never lets them be rebound: a buddy rescue, the machete finish
+and the watch.
 
 ## Settings
 

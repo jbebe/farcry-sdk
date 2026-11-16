@@ -29,8 +29,13 @@ Notable changes to Aiming Overhaul, loosely following
   the AS50 fire none: a marksman loads plain rounds.
 - **The breath and heartbeat on ids of their own, from 0x00FB0000,** out of Sound Overhaul's block.
   They sound the same.
+- **Standing is less precise.** Down the iron sights standing, the front sight wanders 60% further
+  off the mark. Moving, crouched sways as much as standing still and standing twice as
+  much, and the sway runs faster.
+- **Leaving a vehicle or a mounted gun is on F**, the same key as getting in, instead of E.
 
 ### Fixed
+- **A lean ends with a load, a vehicle or a mounted gun,** instead of coming back afterwards.
 - **Works under dgVoodoo and DLSS injectors.** Under dgVoodoo, which the DLSS 5 injector needs to
   run Far Cry 2, the scope picture, eyepiece, scope shadow, gun blur and the tracers' look were
   missing. Aiming Overhaul draws through the game itself instead of hooking Direct3D, so they are

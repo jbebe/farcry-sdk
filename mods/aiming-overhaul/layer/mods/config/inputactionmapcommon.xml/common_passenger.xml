@@ -1,0 +1,29 @@
+<ActionMap name="common_passenger">
+	<import actionmap="common_heal_remap" optional="" />
+	<Import actionmap="common_shoot_remap" optional="" />
+	<Import actionmap="common_iron_remap" optional="" />
+	<Import actionmap="common_reload_remap" optional="" />
+	<Import actionmap="common_changeseat_remap" optional="" />
+	<Import actionmap="common_exitvehicle_remap" optional="" />
+	<!--Keyboard-->
+	<Binding input="kb:f" action="press" signal="exitvehicle" />
+	<Binding input="kb:c" action="press" signal="change_seat" />
+	<Binding input="kb:h" action="press" signal="heal" />
+	<Binding input="kb:H" action="press" signal="heal" />
+	<!--Gamepad-->
+	<Binding input="pad:y" action="press" signal="exitvehicle" />
+	<Binding input="pad:a" action="press" signal="change_seat" />
+	<Binding input="pad:left_shoulder" action="press" signal="heal" />
+	<!--Shooting-->
+	<Binding input="mouse:lb" action="press" signal="startshooting" />
+	<Binding input="mouse:lb" action="release" signal="stopshooting" />
+	<Binding input="pad:right_trigger" action="press" signal="startshooting" />
+	<Binding input="pad:right_trigger" action="release" signal="stopshooting" />
+	<Binding input="kb:r" action="press" signal="reload" />
+	<Binding input="pad:x" action="press" signal="reload" />
+	<!--Ironsight-->
+	<Binding input="mouse:rb" action="press" signal="startironsight" />
+	<Binding input="mouse:rb" action="release" signal="stopironsight" />
+	<Binding input="pad:left_trigger" action="press" signal="startironsight" />
+	<Binding input="pad:left_trigger" action="release" signal="stopironsight" />
+</ActionMap>
