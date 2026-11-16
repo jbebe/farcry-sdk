@@ -79,6 +79,8 @@ site. Browse the folders or Grep across them - there is no index to regenerate.
 - `docs/docs/design/` - design logs: what FC2 should feel like and why, decisions and ideas with status
 - `docs/docs/lore/` - the world as the game's own text tells it: factions, characters, timeline,
   places, themes, each claim cited to a string and marked stated or implied
+- `docs/docs/cut-and-dormant/` - what retail holds but never uses or keeps off, the Sep 2008
+  prototype against retail, and pre-release promises against what shipped
 - `docs/docs/intro.md` - how claims are marked RE-verified vs community-reported
 - GitHub issues (`gh issue list`) - open problems and wishlist, labelled by type (`idea`, `feature`,
   `bug`, `chore`) and by mod (`mod:*`)
