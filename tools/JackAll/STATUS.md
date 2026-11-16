@@ -64,7 +64,7 @@ Stage: active
 ## Approvals
 
 - played: e9c79bcf 2026-11-16 - "it works well"
-- page text: a01d69c 2026-11-15 - BBCode and short message checked: "ok"
+- page text: 297912af 2026-11-16 - BBCode and short message checked: "page text is validated"
 
 ## Checks
 
