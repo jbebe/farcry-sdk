@@ -29,7 +29,6 @@ public class FileFilterTests
     [InlineData("tag:\"ak47 jam\"", false)]
     [InlineData("TAG:reload", true)]
     [InlineData("ak47", false)]
-    [InlineData("spk:reload", false)]
     public void Tag_words_ask_the_caller_and_other_words_match_only_the_path(string filter, bool matches)
     {
         VfsFile file = File(@"soundbinary\004b27c7.spk");

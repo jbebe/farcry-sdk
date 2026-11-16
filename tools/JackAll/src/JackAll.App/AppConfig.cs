@@ -97,8 +97,12 @@ public sealed class AppConfig
     /// tables of <c>tools/asset-tags</c>). Missing is not fatal: files show no label and <c>tag:</c> finds
     /// nothing.</summary>
     public static string[] TagFiles =>
-        [Path.Combine(DataDir, ".modeltags"), Path.Combine(DataDir, ".texturetags"), Path.Combine(DataDir, ".soundtags"),
-         Path.Combine(DataDir, ".shadertags")];
+    [
+        Path.Combine(DataDir, ".modeltags"),
+        Path.Combine(DataDir, ".texturetags"),
+        Path.Combine(DataDir, ".soundtags"),
+        Path.Combine(DataDir, ".shadertags"),
+    ];
 
     /// <summary>
     /// A savegame-specific hash -> name table (see <see cref="JackAll.App.FileHandlers.Sav.SaveGameCompiledFieldNames"/>)
