@@ -37,7 +37,7 @@ struct Adjust {
     float roll;
     // The view's pitch as the shots and hits kick it, in radians, up positive.
     float pitch;
-    // How far the eye moves, as the knees take a landing and as a hit punches it back.
+    // How far the eye moves, as a hit punches it back.
     Shift eye;
 };
 

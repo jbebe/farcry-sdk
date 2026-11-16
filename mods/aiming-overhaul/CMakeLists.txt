@@ -83,7 +83,6 @@ add_library(AimingOverhaul SHARED
   "src/eyepiece.cpp"
   "src/heart.cpp"
   "src/hit.cpp"
-  "src/landing.cpp"
   "src/lean.cpp"
   "src/manual.cpp"
   "src/pitch_slide.cpp"

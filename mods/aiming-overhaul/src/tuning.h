@@ -28,8 +28,8 @@ const SightSway& Sights();
 // How dirt in the eye looks and how near a round has to land to throw it, the same for every
 // weapon.
 struct DirtLook {
-    float size = 0.315f;
-    float darkness = 0.55f;
+    float size = 0.5f;
+    float darkness = 0.7f;
     float blur = 10.0f;
     float clear = 3.0f;
     float range = 3.0f;
@@ -40,8 +40,8 @@ const DirtLook& DirtInTheEye();
 // How a hit on the player looks, the same for every weapon: the punch a body hit gives the view, in
 // metres, degrees and seconds; the vignette after it; and a head hit's black and double image.
 struct HitLook {
-    float back = 0.05f;
-    float down = 3.0f;
+    float back = 0.08f;
+    float down = 5.0f;
     float peak = 0.07f;
     float vignette = 0.85f;
     float reach = 0.55f;

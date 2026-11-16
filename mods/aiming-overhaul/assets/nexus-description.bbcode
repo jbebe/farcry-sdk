@@ -20,25 +20,24 @@ Changes how the player aims and moves, from the hands to the shot leaving the gu
 [*][b]Gun up after a sprint[/b] - the gun is carried lower in a sprint and takes a moment to come back up, longer the heavier it is; until then it doesn't fire or aim.[/*]
 [*][b]Gun near walls[/b] - a gun that would reach into a wall swings down out of it and doesn't fire until it's back up.[/*]
 [*][b]Vertical inertia[/b] - the arms slide a little down as you look up and up as you look down, as the game already does sideways.[/*]
-[*][b]Landing[/b] - a landing drops your view a few centimetres as your knees take it.[/*]
 [/list]
 [b][size=4]What you see[/size][/b]
 [list]
 [*][b]Shot shake[/b] - each shot kicks the view up and it springs back, harder for a heavier round; full auto fades into a quick roll. Only the view moves, never where the shots go.[/*]
-[*][b]Being hit[/b] - a body hit punches your view back with dark edges; a head hit cuts to black and fades back in double. The game's marks pointing to the shooter are gone.[/*]
-[*][b]Dirt in the eye[/b] - a round landing in the dirt by your face, your own included, throws blurry dirt in your eye for a few seconds.[/*]
+[*][b]Being hit[/b] - a body hit punches your view back with dark edges; a head hit cuts to black and fades back in double. The game's marks pointing to the shooter and its red flash around the edges are gone.[/*]
+[*][b]Dirt in the eye[/b] - a round landing in the dirt by your face, your own included, throws big, dark, blurry dirt in your eye for a few seconds.[/*]
 [*][b]Gun blur[/b] - down the iron sights the eye focuses on the front sight, and the rest of the gun goes out of focus, the rear sight most.[/*]
-[*][b]Scope eyepiece[/b] - every scope is a black, out-of-focus eyepiece instead of a long tube, with the zoomed view filling its opening, seen through glass. It trails the look a little and kicks back with each shot. The AR-16 and MGL-140 scopes lose their random spread, so a shot goes where the reticle is.[/*]
+[*][b]Scope eyepiece[/b] - every scope is a black, out-of-focus eyepiece instead of a long tube, with the zoomed view filling its opening, seen through glass. It lags behind the look as it turns and kicks back with each shot. The AR-16 and MGL-140 scopes lose their random spread, so a shot goes where the reticle is.[/*]
 [*][b]Reticles[/b] - new in every scope: a hunting duplex on the Dart Rifle and M1903, a PSO-1 with its rangefinder on the Dragunov, a red tactical mil-scale on the AS50, and a lit holographic chevron on the AR-16 and MGL-140. They are plain PNG files in bin\plugins\aiming-overhaul\reticles\, so you can swap in your own.[/*]
-[*][b]Scope surroundings[/b] - around the eyepiece the world stays at your normal field of view, slightly out of focus, as with both eyes open. No more zooming as the scope comes up.[/*]
-[*][b]Scope shadow[/b] - a soft dark crescent from the eyepiece's rim on a fast turn.[/*]
+[*][b]Scope surroundings[/b] - around the eyepiece the world stays at your normal field of view, slightly out of focus, as with both eyes open, easing out of focus as the scope comes up. No more zooming as the scope comes up.[/*]
+[*][b]Scope shadow[/b] - a soft dark crescent from the eyepiece's rim as the look turns, deeper the faster it turns.[/*]
 [*][b]Tracers[/b] - from the belt-fed machine guns only, your own shots included, as real belts are linked: one round in five from the M249 and the mounted machine guns, one in four from the PKM. Bright streaks, visible however far off, orange-red for NATO rounds and green for the PKM's Soviet rounds. One in six glances off where it lands, up into the air.[/*]
 [/list]
 [b][size=4]Controls[/size][/b]
-Two new controls, rebindable in Options → Controls under Movements: [b]Lean left[/b] on Q and [b]Lean right[/b] on E. To free those keys the defaults move: [b]interact to F, throw grenade to G and next throwable to T[/b]. Leaving a vehicle or a mounted gun, a buddy rescue, the machete finish and the watch stay on E and Q, which the game never lets be rebound.
+Two new controls, rebindable in Options → Controls under Movements: [b]Lean left[/b] on Q and [b]Lean right[/b] on E. To free those keys the defaults move: [b]interact to F, throw grenade to G and next throwable to T[/b], and leaving a vehicle or a mounted gun goes to F with interact. A buddy rescue, the machete finish and the watch stay on E and Q, which the game never lets be rebound.
 
 [b][size=4]Settings[/size][/b]
-In the [b]Mod Configuration[/b] menu, each effect has its own switch, all on by default: Sway, Hold breath, Gun near walls, Vertical inertia, Gun up after sprint, Landing, Recoil that stays, Shot shake, Dirt in the eye, Being hit, Gun blur, Scope shadow, Scope eyepiece, Scope surroundings and Tracers. [b]Iron sight zoom[/b] is there too: switch it off and aiming down iron sights no longer zooms in, while scopes still magnify.
+In the [b]Mod Configuration[/b] menu, each effect has its own switch, all on by default: Sway, Hold breath, Gun near walls, Vertical inertia, Gun up after sprint, Recoil that stays, Shot shake, Dirt in the eye, Being hit, Gun blur, Scope shadow, Scope eyepiece, Scope surroundings and Tracers. [b]Iron sight zoom[/b] is there too: switch it off and aiming down iron sights no longer zooms in, while scopes still magnify.
 The finer values (sway down the sights, shot shake per weapon, the dirt and the look of a hit) are in bin\aiming-overhaul.ini. With DevTools installed, its overlay has an Aiming Overhaul window that sets them as you play.
 
 [size=4][b]Requirements[/b][/size]

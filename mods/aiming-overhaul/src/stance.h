@@ -13,10 +13,6 @@ void Update(uint8_t* pawn, float seconds);
 float Crouched();
 float Moving();
 
-// The pawn's velocity over the last frame, in metres a second in the world, z up. False where this
-// frame measured none: a new pawn, or a frame too long to measure by.
-bool Velocity(float out[3]);
-
 // The sway the stance leaves, given the shares left standing and crouched: `standing` standing
 // still, half of `crouched` crouched still, `standing` crouched moving, and twice `standing`
 // standing moving.

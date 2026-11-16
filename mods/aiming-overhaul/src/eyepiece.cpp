@@ -41,7 +41,7 @@ namespace {
     constexpr float kBarrelSide[2] = {0.791f, -0.612f};
     constexpr float kBarrelSoftness = 0.04f;
     // How far the scope trails the look's turn, as a share of the shadow's swing.
-    constexpr float kTrail = 0.1f;
+    constexpr float kTrail = 0.15f;
     // How much bigger the scope is drawn at the height of a shot's kick, as it comes back toward
     // the eye.
     constexpr float kKickGrowth = 0.06f;

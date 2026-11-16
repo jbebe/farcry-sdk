@@ -13,43 +13,46 @@ Stage: active
 - [done] Lean on Q/E: upper body slides 10 cm and bends 15°, hold or tap; a load, vehicle or mounted gun ends it - user: "perfect" 2026-10-24; the end on a load, user 2026-11-16, unplayed
 - [done] Shots leave from the leaned eye - confirmed 2026-10-29; muzzle flash and scope while leaning work 2026-11-16
 - [done] Default keys moved for the lean: interact to F, throw grenade to G, next throwable to T, leaving a vehicle or mounted gun to F - user 2026-11-16: "If F is enter vehicle, F should be exit vehicle", unplayed
-- [done] Gun near walls: swings down out of a wall and won't fire until back up - latest changes unplayed
-- [done] Vertical inertia: the arms slide behind the look's pitch - user: "perfect"
-- [done] Landing: the view drops a few cm as the knees take it - user-approved
-- [done] Gun up after a sprint: carried low, slower to come up the heavier it is - user-approved
-- [done] Getting going: a walk takes 0.5 s and a sprint 1.5 s to reach pace; stops stay instant - user-approved
-- [done] Recoil that stays: the game's kick stays in the aim, light first two kicks - unplayed
-- [done] Full auto spreads from a burst's 4th shot, up to 8 shots' worth - unplayed
-- [done] Operation manual halves the iron-sight spread standing, quarters it crouched - unplayed
+- [done] Gun near walls: swings down out of a wall and won't fire until back up - works 2026-11-16
+- [done] Vertical inertia: the arms slide behind the look's pitch - user: "perfect", works 2026-11-16
+- [new] Inertia by turn and weight: the sideways and vertical slides bigger the faster the look turns, slower back after a hard twitch, quicker for a light gun, never at once; the scope's lag the same - user 2026-11-16; talk open
+- [done] Gun up after a sprint: carried low, slower to come up the heavier it is - user-approved, works 2026-11-16
+- [done] Getting going: a walk takes 0.5 s and a sprint 1.5 s to reach pace; stops stay instant - user-approved, works 2026-11-16
+- [done] Recoil that stays: the game's kick stays in the aim, light first two kicks - works 2026-11-16
+- [done] Full auto spreads from a burst's 4th shot, up to 8 shots' worth - works 2026-11-16
+- [done] Operation manual halves the iron-sight spread standing, quarters it crouched - works 2026-11-16
 - [done] Shot shake sized by the round's push, fading into a roll in full auto, per weapon - user-tuned, "Let's call it done" 2026-11-05
 - [done] Dirt in the eye: black blurry blobs from rounds landing in dirt within 3 m, own rounds too - played 2026-11-08
-- [new] Dirt in the eye bigger and darker, overlapping blobs darkening each other rather than the darker one showing alone - user 2026-11-14: "the current ones are too small"
-- [done] Being hit: body punch and dark edges, head cut to black then a double image - played 2026-11-08
-- [done] No red marks pointing to whoever hit the player - played 2026-11-08
-- [done] Aiming Overhaul window in DevTools' overlay, values kept in bin\aiming-overhaul.ini
+- [done] Dirt in the eye bigger and darker, overlapping blobs darkening each other rather than the darker one showing alone - user 2026-11-14: "the current ones are too small"; built, unplayed
+- [done] Being hit: body punch and dark edges, head cut to black then a double image - played 2026-11-08; punch raised to 8 cm and 5° at the user's ask 2026-11-16, unplayed
+- [new] Health shown in the picture: three bars left less colourful, two less still with grain and a slight glow, the last black and white, grainy, strong glow, each fading into the next over 1 s - user 2026-11-16; talk open
+- [new] Head hit silences every sound at once, then brings it back - user 2026-11-16; talk open
+- [done] No red marks pointing to whoever hit the player, and no red flash around the edges - marks played 2026-11-08; the flash hidden at the user's ask 2026-11-16, unplayed
+- [done] Aiming Overhaul window in DevTools' overlay, values kept in bin\aiming-overhaul.ini - works 2026-11-16
 - [done] Gun blur down the iron sights, focused on the front sight - focus fix "perfect" 2026-10-06
-- [done] Scope eyepiece: black out-of-focus body over the zoomed view, kicks back per shot - "its perfect now!" 2026-10-04
-- [done] Glass inside the eyepiece: lines bow, colours part, rim darkens, faint tint - not confirmed by the user
+- [done] Scope eyepiece: black out-of-focus body over the zoomed view, kicks back per shot, lags behind the look's turn - "its perfect now!" 2026-10-04; lag raised at the user's ask 2026-11-16, unplayed
+- [done] Glass inside the eyepiece: lines bow, colours part, rim darkens, faint tint - works 2026-11-16
 - [done] New reticles as replaceable PNGs, the holographic chevron lit - "everything works perfectly" 2026-10-09
-- [done] Scope surroundings at the unzoomed field of view, no zoom as the scope comes up - "everything works perfectly" 2026-10-04
-- [done] The eye comes forward while a scope comes up and stays back while it goes down - lowering unseen in game
-- [done] No radial edge blur on the scopes the mod draws - unconfirmed by the user
-- [done] Scope shadow: a soft crescent from the rim as the look turns
+- [done] Scope surroundings at the unzoomed field of view, no zoom as the scope comes up, easing out of focus over 0.25 s - "everything works perfectly" 2026-10-04; the ease asked 2026-11-16, unplayed
+- [done] The eye comes forward while a scope comes up and stays back while it goes down - works 2026-11-16
+- [done] No radial edge blur on the scopes the mod draws - works 2026-11-16
+- [done] Scope shadow: a soft crescent from the rim as the look turns, slow turns included - user 2026-11-16: "should be emphasized more", raised, unplayed
 - [done] Tracers on the belt-fed MGs only, as real belts: 1 in 5 from the M249 and mounted M249/M2, 1 in 4 from the PKM; none from the Dragunov, AS50 or rifles - #57, verified by the user 2026-11-12; own shots included, 1 in 6 ricochet - "All works fine" 2026-10-06
 - [done] Tracer colour by cartridge: Soviet rounds (PKM) green, NATO orange-red, the core in the round's colour; AimingOverhaul.SovietTracer weapon data - #57, user 2026-11-12: "Now it's perfect"
-- [done] Iron sight zoom switch: off keeps the field of view down iron sights
-- [done] No random spread down the AR-16's and MGL-140's scopes
+- [done] Iron sight zoom switch: off keeps the field of view down iron sights - works 2026-11-16
+- [done] No random spread down the AR-16's and MGL-140's scopes - works 2026-11-16
 - [done] Scopes as weapon data (AimingOverhaul.Scope* keys), found in the weapon's own mesh - "it seems to be working" 2026-10-08
 - [done] Scopes on the Carl Gustaf (its M4 reticle, thick eyecup, no mount below, its barrel blurred and black right of it where the game's shows) and the DLC crossbow (hunting duplex, hold breath, the eyepiece once its sights are up, as the game shows no scope picture for it) (#56) - Carl Gustaf: user 2026-11-13 "the carlg is done"; crossbow: user 2026-11-13 "all is well"
 - [done] Weapon and player data as fragments that merge field by field with other mods
-- [done] A switch per effect in the Mod Configuration Menu
-- [new] Forward/back bob per shot and physical sway in full auto, no climb - user 2026-11-08: "VERY needed"; proposal pending
+- [done] A switch per effect in the Mod Configuration Menu - works 2026-11-16
+- [new] Forward/back bob per shot and physical sway in full auto, no climb - user 2026-11-08: "VERY needed"; 2026-11-16: the shake should not pull the gun up but shake it around, maxing out at a very shaky state that lasts to the end of the ammo; talk open
 - [done] Muzzle light reaches 5 m, two and a half times the game's, from a gamemodesconfig.xml fragment - #67, user 2026-11-12: "perfect!"
 - [done] Muzzle flash per gun, first and third person, sized and brightened to its round, barrel and muzzle device, the game's length kept; data only - user 2026-11-12: "they seem to be proper"
-- [done] Every gun change reaches the test range's guns too - unplayed
+- [done] Every gun change reaches the test range's guns too - works 2026-11-16
 - [done] Own sound ids moved out of Sound Overhaul's 0x00FC block into 0x00FB, packed from 0x00FB0000: one prefix per mod - user: "changes in instance 3 are verified"
 - [done] Drawn through the engine with no Direct3D hooks, so it works under dgVoodoo and DLSS injectors, as Sky Overhaul does - pictures match the old build (fc2drive); the user saw scope, blur and tracers right under dgVoodoo with DLSS 5 #63
 - [on hold] Auto lean at corners - shelved until wanted
+- [scrapped] Landing: the view dropped a few cm as the knees took it - removed 2026-11-16, user: "its not needed"
 - [scrapped] Gun weight motion (lag, swing, slowdown by weight) - dropped by the user 2026-11-02 after five tries
 - [scrapped] Gradual stops when the keys are let go - user rejected
 - [scrapped] Iron-sight spread cut for every gun - removed at the user's ask (1b343c97); lives on only with the manual
@@ -69,14 +72,12 @@ Stage: active
 - Moving while aiming: crouched sways as much as standing still, standing twice that, and quicker
 - Lean, then load a save, get in a vehicle or on a mounted gun: back on foot, upright
 - F leaves a vehicle (driver and passenger) and a mounted gun; E no longer does
-- Gun near walls: swings down out of a wall, won't fire until back up - latest changes unplayed
-- Recoil that stays in the aim, the first two kicks light - unplayed
-- Full auto spreads from a burst's 4th shot, up to 8 shots' worth - unplayed
-- Operation manual: iron-sight spread halved standing, quartered crouched - unplayed
-- Glass in the eyepiece: lines bow, colours part, rim darkens, faint tint - unconfirmed
-- Lowering a scope: the eye stays back while it goes down - unseen
-- No radial edge blur on the mod's scopes - unconfirmed
-- Swap guns (simplify pass, the weapon's data now read once per change): breath hold, weight, recoil, shot shake and the window's per-gun values follow the new gun - built only
+- Dirt in the eye: blobs about half the screen across at the closest, darker, and darker still where two overlap
+- A body hit punches the view back 8 cm and down 5°
+- No red flash around the edges on a hit
+- Scope shadow: shows on a slow turn of a few degrees a second, deep on a fast one
+- Scope eyepiece lags behind a turn more and comes back over about a third of a second
+- Raising a scope: the view around it eases out of focus over a quarter second, no sudden swap
 
 ## Approvals
 

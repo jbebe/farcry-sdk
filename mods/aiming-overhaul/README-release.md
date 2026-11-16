@@ -53,7 +53,6 @@ hit you.
   comes back up, so a trunk swaying at the edge of its reach doesn't shake it.
 - **Vertical inertia.** The game's arms slide a little sideways behind a turn but never up or down;
   now they also slide a little down as you look up and up as you look down, just as much.
-- **Landing.** A landing drops your view a few centimetres as your knees take it.
 
 ## What you see
 
@@ -64,16 +63,16 @@ hit you.
 - **Being hit.** A hit on the body punches your view back and tips it down, and the edges go dark
   for a couple of seconds. A hit on the head cuts the view to black, then fades it back in double,
   the second image fading slowly. The harder the hit, the more of it. The game's red marks pointing
-  to whoever hit you are gone; its hit sound and its red flash around the edges stay.
+  to whoever hit you and its red flash around the edges are gone; its hit sound stays.
 - **Dirt in the eye.** A round landing in the dirt, sand, stone or wood within 3 m of your face, your
-  own included, throws dirt in your eye: dark, blurry blobs on that side with the view blurred
-  around them, gone in a few seconds.
+  own included, throws dirt in your eye: big, dark, blurry blobs on that side with the view blurred
+  around them, darker where they overlap, gone in a few seconds.
 - **Gun blur.** Down the iron sights the eye focuses on the front sight and the rest of the gun goes
   out of focus by how far it is from it, the rear sight most. A pistol's sights are too close
   together to blur.
 - **Scope eyepiece.** Instead of a long tube, every scope is a black, out-of-focus eyepiece spanning
   80% of the screen, with the zoomed view filling its opening. The view inside is seen through
-  glass, and the scope trails the look a little and kicks back with each shot. The AR-16's and the
+  glass, and the scope lags behind the look as it turns and kicks back with each shot. The AR-16's and the
   MGL-140's scopes lose the game's random spread, so a scoped shot goes where the reticle is, as on
   the sniper rifles.
 - **Reticles**, new in every scope: a hunting duplex on the Dart Rifle and the M1903, a PSO-1 with
@@ -81,9 +80,10 @@ hit you.
   chevron on the AR-16 and the MGL-140. They are plain PNG files in
   `bin\plugins\aiming-overhaul\reticles\`, so you can swap in your own.
 - **Scope surroundings.** Around the eyepiece the world stays at your normal field of view, slightly
-  out of focus, as with both eyes open. The magnification is there at once inside the eyepiece, so
-  the view no longer zooms as the scope comes up.
-- **Scope shadow.** A soft dark crescent comes in from the eyepiece's rim on a fast turn.
+  out of focus, as with both eyes open, easing out of focus as the scope comes up. The magnification
+  is there at once inside the eyepiece, so the view no longer zooms as the scope comes up.
+- **Scope shadow.** A soft dark crescent comes in from the eyepiece's rim as the look turns, deeper
+  the faster it turns.
 - **Tracers** from the belt-fed machine guns only, your own shots included, as real belts are
   linked: one round in five from the M249 and the mounted machine guns, one in four from the PKM.
   Bright streaks at 350 m/s, visible however far off, orange-red for NATO rounds and green for the
@@ -93,8 +93,9 @@ hit you.
 
 Two new controls, rebindable in Options > Controls under Movements: **Lean left** on Q and **Lean
 right** on E. To free those keys the defaults move: interact to F, throw grenade to G and next
-throwable to T. E and Q stay as the game had them where the game never lets them be rebound:
-leaving a vehicle or a mounted gun, a buddy rescue, the machete finish and the watch.
+throwable to T, and leaving a vehicle or a mounted gun goes to F with interact. E and Q stay as the
+game had them where the game never lets them be rebound: a buddy rescue, the machete finish and the
+watch.
 
 ## Settings
 
@@ -108,7 +109,6 @@ a switch, all on by default:
 | Gun near walls | the gun goes into walls, as in the game |
 | Vertical inertia | the arms keep still as the look pitches |
 | Gun up after sprint | the gun fires and aims as soon as the sprint ends |
-| Landing | the eye does not drop |
 | Recoil that stays | the game's recoil, and a burst no longer spreads |
 | Shot shake | the view holds still as the gun fires |
 | Dirt in the eye | no round throws dirt |

@@ -3,7 +3,7 @@
 An FCSE plugin, with weapon and player data and controls, for how the player aims and moves: sway
 and a blurred gun down the iron sights; a scope that shadows, is seen from its eyepiece, and has the
 world around it at the eye's own field of view; tracers; leaning, on two new controls; a gun carried
-low in a sprint; a landing the knees take; and a player who takes a moment to get going. It owns
+low in a sprint; and a player who takes a moment to get going. It owns
 everything from the player's input to the shot leaving the gun, and nothing after: no damage, no AI.
 Its weapon data sets only tracer and scope-effect fields, and gives each weapon entity data of the
 plugin's own; its player data sets only how quickly a walk and a sprint get going. JackAll merges
@@ -67,8 +67,6 @@ both field by field with other mods' edits, reporting any clash.
   Here they also slide down a little as the look pitches up, and up as it pitches down, at the same
   rate, smoothing and size as the game's own: 1.1 cm at 126° a second, the most at 185°. Down the
   sights there is none, as there is none sideways.
-- **Landing.** A landing drops the eye as the knees take it, by how fast it came down, about 5 cm
-  from a standing jump, and it is back up in about a third of a second.
 - **Gun up after a sprint.** A sprint carries the gun lower than the game does, and after it the gun
   takes 0.25 s and 0.03 s more for each kilogram it weighs to come back up: 0.38 s for an AK-47,
   half a second for a PKM. Until it is up it neither fires nor comes to the sights, and the sights
@@ -94,16 +92,18 @@ both field by field with other mods' edits, reporting any clash.
 - **Dirt in the eye.** A round that lands within 3 m of the eye in ground, sand, mud, pebbles,
   concrete, tile or wood, the player's own as much as anyone's, throws dirt in it: two black,
   see-through, blurry blobs on the side it came from, the view blurred around them, bigger and
-  darker the closer it landed. They hold for 0.6 s and are gone in 3 s. Metal, water, glass, flesh
+  darker the closer it landed, the largest half the screen's height across. Where blobs overlap
+  they darken each other. They hold for 0.6 s and are gone in 3 s. Metal, water, glass, flesh
   and plants throw none. Only what the player sees changes; the aim does not.
 - **Being hit.** A bullet, blast or blade that takes the player's health shows where it landed. Off
-  the head, the view punches back 5 cm and tips down 3°, peaking at 0.07 s and springing back; the
+  the head, the view punches back 8 cm and tips down 5°, peaking at 0.07 s and springing back; the
   edges go dark, held for half a second and gone in 2.5 s. On the head, the view goes black for
   0.35 s and fades back in over 1.5 s, double, the second image a little to the side and fading out
   over 5 s. A hit taking half the player's health or more does all of it in full, a graze 0.4 of
-  it; a shotgun's pellets count as one hit. The game's own hit sound, red hurt overlay and interface
-  stay as they are. While a scope's sight picture is up the view is not punched. The game's red marks
-  pointing to whoever hit the player are gone, whether this is on or off.
+  it; a shotgun's pellets count as one hit. The game's own hit sound and interface stay as they are.
+  While a scope's sight picture is up the view is not punched. The game's red marks pointing to
+  whoever hit the player, and its red flash around the screen's edges, are gone, whether this is on
+  or off.
 - **Shot shake.** Each shot kicks the view up and it springs straight back, as hard as the round
   pushes whoever fires it: its projectiles' mass times their muzzle velocity, from the round
   Difficulty Overhaul gives each gun's archetype, easing off past 15 newton-seconds, the same from
@@ -134,8 +134,9 @@ both field by field with other mods' edits, reporting any clash.
   a pistol, has its sights too close together in dioptres for a blur you could see, and gets none,
   as a real eye nearly does.
 - **Scope shadow.** As the look turns, a soft dark crescent comes in from the eyepiece's rim on the
-  side turned toward: hardly any on a slow move, a slight one on a fast flick, gone when the look is
-  still or the scope comes down. It needs the eyepiece, whose opening it shades.
+  side turned toward: some on a slow move of a few degrees a second, a deep one on a fast flick,
+  easing off over a third of a second once the look is still, and gone when the scope comes down.
+  It needs the eyepiece, whose opening it shades.
 - **Eyepiece.** The engine draws a scope as a tube seen down its length, with the reticle and the
   zoomed view far at its end. Here the tube is not drawn. Every scope looks the same size instead:
   a pitch-black, out-of-focus body whose outer edge spans 80% of the screen's height, with a black
@@ -151,7 +152,8 @@ both field by field with other mods' edits, reporting any clash.
   and glow past their edges, adding light rather than covering. The magnification is unchanged. The view inside is seen through
   glass: lines bow slightly toward the rim, colours part there the more the scope magnifies, the
   rim darkens, and the coating tints it faintly. The scope is laid over the finished frame, after
-  the tone mapping, and trails the look a little as it turns. Each round fired kicks it back toward
+  the tone mapping, and lags behind the look as it turns, coming back over a third of a second once
+  the look is still. Each round fired kicks it back toward
   the eye for a moment, as the stock comes back onto the shoulder. The crossbow, whose mesh is one
   part with no `SCOPE_HI` and which the game aims as iron sights down the scope on its model, gets
   the eyepiece once its sights are wholly raised, and the crossbow is hidden behind it. Any other
@@ -161,8 +163,9 @@ both field by field with other mods' edits, reporting any clash.
   a scope, as with both eyes open, while the eyepiece keeps the scope's magnified view. With the
   eyepiece on too, the view does not zoom as the scope comes up: the gun comes to the eye, and the
   magnification is there at once inside the eyepiece, so the world around it never changes. The
-  surroundings are evenly out of focus, as the other eye sees past a scope, and the game's own
-  radial blur toward the screen's edges is left out. They are a second, cheaper view drawn by the
+  surroundings are evenly out of focus, as the other eye sees past a scope, going out of focus over
+  a quarter of a second as the eyepiece comes up, and the game's own radial blur toward the
+  screen's edges is left out. They are a second, cheaper view drawn by the
   engine's water reflection renderer, at half the screen's size with less detail; the magnified
   view inside stays the engine's own.
 - **Tracers.** Only the belt-fed machine guns fire them, as their belts are linked: one round in
@@ -192,8 +195,7 @@ and the sprint it holds is refused in the input listener, in `src/engine/sprint.
 `src/engine/fire.cpp`; the gun after a sprint is `src/ready.cpp`, refused the same way. Both swing
 the gun down in the same pass that bends the lean, which turns the arms' bones; how long the gun
 takes to come up after a sprint is by the weight `src/weight.cpp` reads. The arms' slide
-behind the look's pitch, `src/pitch_slide.cpp`, moves them in the same pass. A landing is
-`src/landing.cpp`, dropping the eye through the camera's positional offset. The recoil is
+behind the look's pitch, `src/pitch_slide.cpp`, moves them in the same pass. The recoil is
 `src/recoil.cpp`: each of the player's kicks is taken from the game before the game blends it in,
 in `src/engine/kick.cpp`, added to the look in `src/engine/look.cpp`, and a burst's shots stray in
 `src/engine/shot.cpp`. The operation manual is `src/manual.cpp`, on the accuracy bonus asked for
@@ -245,8 +247,9 @@ is the player archetypes' `fWalkingAcceleration` and `fWalkingDeceleration`, and
 over time is `Curves.Locomotion.Sprint`, both fragments under `layer\mods\` written by
 `data\movement.py`. The breaths are the game's own stamina breathing,
 cut into inhales and exhales by `data\breath.py` into four banks, `layer\mods\soundbinary\00fc0b*.spk`,
-played in `src/breath.cpp` through `src/engine/sound.cpp`. The direction marks are hidden by a
-`hud.mgb` fragment per aspect and language under `layer\mods\ui\`, written by `data\hud.py`. The
+played in `src/breath.cpp` through `src/engine/sound.cpp`. The direction marks and the red flash
+are hidden by `hud.mgb` fragments per aspect and language under `layer\mods\ui\`, written by
+`data\hud.py`. The
 engine side is in
 [first-person aiming](../../docs/docs/engine-internals/first-person-aiming.md),
 [bullet tracers](../../docs/docs/engine-internals/bullet-tracers.md),
@@ -277,7 +280,6 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Gun near walls | Yes / No | Yes |
 | Vertical inertia | Yes / No | Yes |
 | Gun up after sprint | Yes / No | Yes |
-| Landing | Yes / No | Yes |
 | Recoil that stays | Yes / No | Yes |
 | Shot shake | Yes / No | Yes |
 | Dirt in the eye | Yes / No | Yes |
@@ -291,8 +293,8 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 
 With Sway off neither the eye nor the aim drifts, and there is nothing for the breath to steady.
 With Hold breath off, sprint down the sights does what the game does with it. With Vertical
-inertia off, the arms keep still as the look pitches, as in the game. With Gun up after sprint off, the gun fires and aims as soon as the sprint ends, as in the game. With Landing off,
-the eye does not drop. With Recoil that stays off, the game's recoil comes back as it was and a
+inertia off, the arms keep still as the look pitches, as in the game. With Gun up after sprint off, the gun fires and aims as soon as the sprint ends, as in the game.
+With Recoil that stays off, the game's recoil comes back as it was and a
 burst no longer spreads. With Shot shake off, the view holds still as the gun fires. With Dirt in the eye off, no round throws dirt. With Being hit off, a hit shows only what the game shows. How quickly the player gets going is the player data's, and stays. With
 Iron sight zoom
 off, the view keeps its field of view down a gun's iron sights; a scope still
@@ -311,8 +313,8 @@ sights, dirt in the eye, being hit and the shot shake for each weapon while the 
 
 | Dirt in the eye, every weapon | Unit | Default |
 |---|---|---|
-| Dirt size | the largest blob across, a share of the screen's height | 0.315 |
-| Dirt darkness | how dark it is in its middle, nought to one | 0.55 |
+| Dirt size | the largest blob across, a share of the screen's height | 0.5 |
+| Dirt darkness | how dark it is in its middle, nought to one | 0.7 |
 | Dirt blur | the blur around it, in pixels of a 1080-line screen | 10 |
 | Dirt clears in | seconds until it is gone | 3 |
 | Dirt thrown from | metres from the eye a round has to land within | 3 |
@@ -321,8 +323,8 @@ Throw dirt, under them, throws it as a round landing a metre to the right would.
 
 | Being hit, every weapon | Unit | Default |
 |---|---|---|
-| Punch back | metres the eye is pushed back at the punch's peak | 0.05 |
-| Punch tips down | degrees the view tips down at its peak | 3 |
+| Punch back | metres the eye is pushed back at the punch's peak | 0.08 |
+| Punch tips down | degrees the view tips down at its peak | 5 |
 | Punch peaks after | seconds from the hit | 0.07 |
 | Vignette darkness | how dark the corners go, nought to one | 0.85 |
 | Vignette reach | how far in from the corners the dark comes, a share of the way to the middle | 0.55 |

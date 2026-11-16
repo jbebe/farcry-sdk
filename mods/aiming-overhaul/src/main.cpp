@@ -27,7 +27,6 @@
 #include "fcse_api.h"
 #include "heart.h"
 #include "hit.h"
-#include "landing.h"
 #include "lean.h"
 #include "manual.h"
 #include "pitch_slide.h"
@@ -162,7 +161,7 @@ namespace {
         }
     }
 
-    // The lean, the gun near walls and after a sprint, the stance, a landing, the arms' slide behind
+    // The lean, the gun near walls and after a sprint, the stance, the arms' slide behind
     // the look's pitch, the recoil and the shots' shake, a hit's punch, the heart, the breath and the
     // eye's drift.
     AimingOverhaul::Aim::Adjust OnAimFrame(uint8_t* pawn, float seconds) {
@@ -191,7 +190,6 @@ namespace {
         }
         const float stamina = Pawn::Stamina(pawn);
         Stance::Update(pawn, seconds);
-        Landing::Update(pawn, seconds);
         PitchSlide::Update(seconds, (std::max)(Aim::Settled(), Aim::Scoped()));
         Recoil::Update(seconds);
         const ShotShake::Turn shake = ShotShake::Update(seconds);
@@ -200,7 +198,7 @@ namespace {
         Heart::Update(seconds, sprinting, stamina, Pawn::Health(pawn), Pawn::Shake(pawn));
         Breath::Update(seconds, Aim::Aiming(), stamina);
         return {Sway::Drift(seconds), roll + shake.roll, shake.pitch + punch.pitch,
-                {0.0f, -Landing::EyeDrop(), -punch.back}};
+                {0.0f, 0.0f, -punch.back}};
     }
 
     bool RefuseShot(uint8_t* pawn) {
@@ -288,8 +286,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          Toggles(&AimingOverhaul::PitchSlide::SetEnabled)},
         {"Gun up after sprint", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Ready::SetEnabled)},
-        {"Landing", FCSE_CHECKBOX(true), &OnToggled,
-         Toggles(&AimingOverhaul::Landing::SetEnabled)},
         {"Recoil that stays", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Recoil::SetEnabled)},
         {"Shot shake", FCSE_CHECKBOX(true), &OnToggled,

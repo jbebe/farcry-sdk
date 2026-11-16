@@ -81,15 +81,15 @@ namespace {
     constexpr float kSettle = 0.4f;
     // Seconds for the turn rate to follow the look. Faster than this in a frame is a cut, not a
     // turn.
-    constexpr float kTrail = 0.18f;
+    constexpr float kTrail = 0.3f;
     constexpr float kFastestTurn = 10.0f;
 
     // The scope's far end swings against the turn. Turns slower than kSlowTurn radians a second
     // hardly move it; past that it moves kSwingPerTurn opening radii per radian a second, and
     // kMostSwing at most.
-    constexpr float kSlowTurn = 0.1f;
-    constexpr float kSwingPerTurn = 1.5f;
-    constexpr float kMostSwing = 0.5f;
+    constexpr float kSlowTurn = 0.03f;
+    constexpr float kSwingPerTurn = 3.0f;
+    constexpr float kMostSwing = 0.7f;
 
     AimingOverhaul::Aim::FrameFn g_frame = nullptr;
     AimingOverhaul::Aim::FollowWeaponFn g_followWeapon = nullptr;

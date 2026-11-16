@@ -19,8 +19,9 @@ float4 DirtPS(float2 uv : TEXCOORD0) : COLOR0 {
     for (int i = 0; i < 4; i++) {
         float2 at = (uv - Blobs[i].xy) * float2(Screen.x, 1.0f / Blobs[i].w);
         float r = length(at) / max(Blobs[i].z, 0.0001f);
-        // Dark in its middle and gone past its edge; the view blurred out to 2.4 times as far.
-        dark = max(dark, Darkness[i] * (1.0f - smoothstep(0.1f, 1.1f, r)));
+        // Dark in its middle and gone past its edge, overlapping blobs darker together; the view
+        // blurred out to 2.4 times as far.
+        dark = 1.0f - (1.0f - dark) * (1.0f - Darkness[i] * (1.0f - smoothstep(0.1f, 1.1f, r)));
         blur = max(blur, Blur[i] * (1.0f - smoothstep(1.08f, 2.4f, r)));
     }
     float3 blurred = tex2D(Blurred, uv).rgb;

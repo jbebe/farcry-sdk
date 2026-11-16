@@ -33,6 +33,16 @@ Notable changes to Aiming Overhaul, loosely following
   off the mark. Moving, crouched sways as much as standing still and standing twice as
   much, and the sway runs faster.
 - **Leaving a vehicle or a mounted gun is on F**, the same key as getting in, instead of E.
+- **Dirt in the eye is bigger and darker,** the largest blob half the screen's height across, and
+  blobs that overlap darken each other.
+- **A hit punches harder:** the view goes back 8 cm and tips down 5°, from 5 cm and 3°.
+- **No red flash around the edges** when you are hit, as there are no red marks.
+- **The scope shadow shows on slow turns too,** and goes deeper on fast ones.
+- **The scope lags behind the look more,** and comes back more slowly once the look is still.
+- **The view around a scope eases out of focus** as the scope comes up, instead of at once.
+
+### Removed
+- **Landing.** A landing no longer drops the view.
 
 ### Fixed
 - **A lean ends with a load, a vehicle or a mounted gun,** instead of coming back afterwards.
