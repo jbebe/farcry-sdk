@@ -63,7 +63,7 @@ Stage: active
 
 ## Approvals
 
-- played: e9c79bcf 2026-11-16 - "it works well"
+- played: 3aa139d0 2026-11-16 - "I approve the play"
 - page text: 297912af 2026-11-16 - BBCode and short message checked: "page text is validated"
 
 ## Checks
