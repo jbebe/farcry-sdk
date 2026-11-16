@@ -138,6 +138,8 @@ Each project's `README.md` covers what it is and how to build it.
   for hearing vehicle sound work before a deploy, and editing its banks' curves (C#)
 - `tools/BlenderFC2/` - a Blender add-on that edits `.fc2model` packs; holds no format code of its
   own, only what a scene is allowed to be (Python)
+- `tools/asset-tags/` - every retail model, texture and sound tagged by what it is and where it
+  belongs; `/assets` lists what fits a scene (Python)
 
 Weapon replacements are data + art, not code. Each publishes only a `layer/` you install with
 `jackall-cli mod build` and a `README.md`; the build machinery - scripts, donor packs, reference
