@@ -8,7 +8,7 @@ using Spectre.Console.Cli;
 
 namespace JackAll.Cli.Infrastructure;
 
-/// <summary>Options shared by the commands that write a label list the App reads.</summary>
+/// <summary>Options shared by the commands that write a labeler's list.</summary>
 public class LabelCommandSettings : GameCommandSettings
 {
     [CommandOption("-o|--out <file>")]

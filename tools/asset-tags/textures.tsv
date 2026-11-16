@@ -145,7 +145,7 @@ graphics\_textures\diffuse\metal\metalburned_04_d.xbt	material	burned metal	meta
 graphics\_textures\diffuse\metal\metalburnedpaint_d.xbt	material	burned painted metal	metal burned war ruins exterior industrial town	256x256	37	traincabose_01, traincabose_01_multi, traincabosestair_01 +34	exterior metal railway rusty	worlds
 graphics\_textures\diffuse\metal\metalburnedsmall_d.xbt	material	burned metal detail	metal burned war ruins exterior industrial town	128x128	45	doorprison, ruin_underground, traincrane +42	exterior metal	worlds
 graphics\_textures\diffuse\metal\metaldiamon01_d.xbt	material	diamond plate steel	metal warehouse industrial interior exterior	256x256	12	warehouselg01walkway_01, warehouselg01walkway_02, warehouselg01walkway_02_multi +9	exterior industrial junkyard landmark metal railway rusty	worlds
-graphics\_textures\diffuse\metal\metalforgedfence_d.xbt	material			256x256	1	cage_03	exterior farm home interior market metal ranch rusty shop village	worlds
+graphics\_textures\diffuse\metal\metalforgedfence_d.xbt	material			256x256	1	cage_03	exterior farm home interior market metal ranch rusty shop travel village	worlds
 graphics\_textures\diffuse\metal\metalfueltrain01_d.xbt	material	fuel train tank metal	metal railway oil industrial exterior	256x256	14	colonialgarage02_bk, colonialgarage02_ruin, traincrane +11	burned exterior industrial landmark metal railway rusty	worlds
 graphics\_textures\diffuse\metal\metalgalvanize02_d.xbt	material	galvanized metal sheet	metal tin town railway garage exterior	256x256	86	colonialgarage_01, colonialmdtrainstation_01, colonialsmtrainstationroofsheet_01 +83	exterior industrial metal	worlds
 graphics\_textures\diffuse\metal\metalgalvanize_01_d.xbt	material	galvanized metal sheet	metal tin oil industrial exterior	256x256	87	fueldepotoffice01, fueldepotoffice01_platform01, bridgetrack01 +84	exterior metal	worlds
@@ -263,7 +263,7 @@ graphics\_textures\diffuse\vegetal\strawmill_d.xbt	material	straw thatch	straw h
 graphics\_textures\diffuse\vegetal\strawroof3alpha_d.xbt	material	straw thatch cutout	straw hut village rural exterior savanna	256x256	9	boxweapons_assault, boxweapons_explosive, boxweapons_heavy +6	armory checkpoint exterior hq interior military usable war warehouse wood	worlds
 graphics\_textures\diffuse\vegetal\strawstraightalpha_02_d.xbt	material	straight straw cutout	straw hut village camp rural exterior savanna	512x512	36	branchesshelterstraw02, branchesshelterstraw04, buildingshelterstraw01 +33	exterior hut rural savanna straw village wood	worlds
 graphics\_textures\diffuse\vegetal\strawstraightalpha_03_d.xbt	material	straw bundle	straw farm ranch village rural exterior savanna	256x512	12	punchingbag, haybundle01, haybundle02 +9	exterior farm hut ranch rural savanna straw village	worlds
-graphics\_textures\diffuse\vegetal\weaving_01_d.xbt	material			256x256	1	cage_01	exterior farm home interior market ranch straw village wood	worlds
+graphics\_textures\diffuse\vegetal\weaving_01_d.xbt	material			256x256	1	cage_01	exterior farm home interior market ranch straw travel village wood	worlds
 graphics\_textures\diffuse\vegetal\weaving_02_d.xbt	material			256x256	6	fishbasket01, sorghumbasket01, sorghumbasket01_bk +3	broken exterior farm home hut interior market rural shanty straw village	worlds
 graphics\_textures\diffuse\wood\acacia_trunk2_d.xbt	material	acacia wood trunk	wood hut village rural exterior savanna	256x512	68	hutmd05framesav_sh, hutmd05roof_sh, hutmd01pilars_01 +65	exterior hut rural savanna village wood	worlds
 graphics\_textures\diffuse\wood\acacia_trunk_d.xbt	material	acacia wood trunk	wood hut village rural exterior savanna	256x512	83	hutmd04pilars_01, hutmd04roof_03, hutmd04roofframe_01 +80	exterior hut jungle rural village wood	worlds
@@ -381,7 +381,7 @@ graphics\_textures\mask\logooilcorp_m.xbt	material			512x256	1	gastankbig_flag	d
 graphics\_textures\mask\logosboxesconfidential_m.xbt	material			256x256	1	ledger01	bar church clutter concrete exterior garage government hotel industrial interior office paper shop town urban	worlds
 graphics\_textures\mask\logosboxeswood_m.xbt	material			256x256	6	boxlogo_01, boxlogo_02, boxlogo_03 +3	bar colonial construction dirty exterior garage home interior jungle market military paint port prison refugees rural shanty shop town travel village warehouse wood	worlds
 graphics\_textures\mask\logosboxeswoodnitrous_m.xbt	material			256x256	1	nitrousbottlestack	colonial construction dirty exterior garage industrial interior jungle junkyard metal prison shanty story town village warehouse wood workshop	worlds
-graphics\_textures\mask\logosplasticitems_m.xbt	material			256x256	2	beerbox01, colabox01	airfield bar brewery clutter dirty exterior industrial interior market metal mud oil restaurant road rural savanna shop village warehouse	worlds
+graphics\_textures\mask\logosplasticitems_m.xbt	material			256x256	2	beerbox01, colabox01	airfield bar brewery clutter dirty exterior industrial interior market metal mud oil restaurant road rural savanna shop travel village warehouse	worlds
 graphics\_textures\mask\meat01_m.xbt	material			256x512	13	cutmeat01, cutmeat02, cutmeat03 +10	bar bloody exterior interior market office paint plastic ranch restaurant shop slaughterhouse village	worlds
 graphics\_textures\mask\megaphone_m.xbt	material			256x256	1	megaphone	checkpoint church clutter dirty exterior market military mud plastic police road rural savanna school town village	worlds
 graphics\_textures\mask\metalbarrel_m.xbt	material			256x256	1	trackswitch01	concrete dirty exterior industrial junkyard metal oil railway rusty town	worlds
@@ -478,7 +478,7 @@ graphics\_textures\normal\metal\metalbolts02_n.xbt	material			256x256	25	pipelin
 graphics\_textures\normal\metal\metalbumped_n.xbt	material			256x256	27	debriswoodplankscartonsm03, newsmallpresurizebottles00, oldsmallpresurizebottles00 +24	burned dirty exterior garage industrial interior metal military mud oil railway road ruins rural rusty savanna tin town village war	worlds
 graphics\_textures\normal\metal\metalburned_02_n.xbt	material			256x256	133	prisonbars01, prisondoor01, greenhouselight +130	airfield bar burned church dirty exterior farm fishing garage gas-station greenhouse industrial interior metal military oil paint railway ranch ruins rural rusty tin town war warehouse water-supply	worlds
 graphics\_textures\normal\metal\metaldiamon01_n.xbt	material			256x256	25	hangarlgwalkway_01, hangarlgwalkway_02, hangarmedwalkway_01 +22	airfield burned church dirty exterior hut industrial interior landmark metal military mud ruins rural rusty savanna town village war warehouse	worlds
-graphics\_textures\normal\metal\metalforgedfence_n.xbt	material			256x256	2	cage_03, beerfridge	bar burned dirty exterior farm garage glass home hotel industrial interior market metal ranch restaurant ruins rusty shop town urban village war	worlds
+graphics\_textures\normal\metal\metalforgedfence_n.xbt	material			256x256	2	cage_03, beerfridge	bar burned dirty exterior farm garage glass home hotel industrial interior market metal ranch restaurant ruins rusty shop town travel urban village war	worlds
 graphics\_textures\normal\metal\metalfueltrain01_n.xbt	material			256x256	10	traincrane, traincranewheeledbase, trainfuel_01 +7	airfield burned dirty exterior industrial junkyard metal military oil railway ruins rusty town war	worlds
 graphics\_textures\normal\metal\metalfueltrain02_n.xbt	material			256x256	26	pipeline_a01_multi, pipeline_b01_multi01, pipeline_bend_16m +23	church dirty exterior farm garage greenhouse industrial metal mud oil railway ranch road rural rusty savanna town village water-supply	worlds
 graphics\_textures\normal\metal\metalgalvanize_01_n.xbt	material			256x256	11	ruin_underground, buddyjaildoor, buddyjailwindow +8	burned dirty exterior garage industrial interior metal military mud oil road ruins rural rusty savanna town village war	worlds
@@ -507,7 +507,7 @@ graphics\_textures\normal\misc\clothe01_n.xbt	material			256x256	1	bedcamp	bedro
 graphics\_textures\normal\misc\clothe02_n.xbt	material			256x256	31	brickcoverw2_bk, corkboard, corkboard_02 +28	bar camp clutter dirty exterior fabric farm home hut industrial interior mud office oil refugees road rural savanna town travel village warehouse	worlds
 graphics\_textures\normal\misc\coatofarms_n.xbt	material			256x256	1	signetring	clutter home hq interior metal office safehouse story	worlds
 graphics\_textures\normal\misc\corrugated_metal2_n.xbt	material			512x512	2	industrialshelter02_bk, rug02	bar bedroom broken exterior fabric gas-station home hotel hut industrial interior living-room metal mud office paint rural savanna tin town village warehouse workshop	worlds
-graphics\_textures\normal\misc\corrugated_metal_3_n.xbt	material			256x256	2	beerbox01, fuelpile_pickup	bar brewery camp clutter dirty exterior garage gas-station industrial interior metal military mud oil restaurant road rural savanna shop usable village war warehouse wood	worlds
+graphics\_textures\normal\misc\corrugated_metal_3_n.xbt	material			256x256	2	beerbox01, fuelpile_pickup	bar brewery camp clutter dirty exterior garage gas-station industrial interior market metal military mud oil restaurant road rural savanna shop travel usable village war warehouse wood	worlds
 graphics\_textures\normal\misc\corrugated_metal_n.xbt	material			256x256	132	buddyrescue_roof01, fishingbuildingstory_01, fishingmdgazebo_01 +129	airfield bar burned church dirty exterior fabric fishing garage home industrial interior metal mud office paint railway road ruins rural rusty savanna tin town village war warehouse wood	worlds
 graphics\_textures\normal\misc\dashnorm_n.xbt	material			256x256	8	microphone, radio01, radio02 +5	brick colonial concrete exterior industrial interior metal oil story town urban usable	worlds
 graphics\_textures\normal\misc\debris01n.xbt	material			256x256	8	carwrecked01, carwrecked01_bk, carwrecked02 +5	burned church dirty exterior garage industrial interior junkyard metal road ruins rusty town war	worlds
@@ -554,7 +554,7 @@ graphics\_textures\normal\misc\tire01_n.xbt	material			256x256	31	traincranewhee
 graphics\_textures\normal\misc\tire_02_n.xbt	material			256x256	4	quayconnect01, quaylong01, quaystair01 +1	dirty exterior fishing mud port river road rural savanna village wood	worlds
 graphics\_textures\normal\misc\trashbag_n.xbt	material			256x256	10	bigtrashpile01, trashborder02, trashcorner01 +7	construction dirty exterior fabric home interior junkyard market military paper plastic refugees shanty town urban village wood	worlds
 graphics\_textures\normal\misc\trashmix_n.xbt	material			128x128	7	garbagebag, garbagebag02, garbagebag03 +4	dirty exterior home hut interior junkyard market mud refugees road rural savanna shanty town urban village	worlds
-graphics\_textures\normal\misc\weaving_01_n.xbt	material			128x128	1	cage_01	dirty exterior farm home interior market mud ranch road rural savanna straw village wood	worlds
+graphics\_textures\normal\misc\weaving_01_n.xbt	material			128x128	1	cage_01	dirty exterior farm home interior market mud ranch road rural savanna straw travel village wood	worlds
 graphics\_textures\normal\misc\weaving_02_n.xbt	material			128x128	6	fishbasket01, sorghumbasket01, sorghumbasket01_bk +3	broken exterior farm home hut interior market rural savanna shanty straw village	worlds
 graphics\_textures\normal\misc\wrap01_n.xbt	material			256x256	3	dogonbed01, dogonmattress01, propagandaposter	bedroom home hut interior shanty village	worlds
 graphics\_textures\normal\misc\zipper_n.xbt	material			128x32	2	courierpouch, military_dufflebag	bar bus-station camp clutter dirty exterior fabric home hq interior military mud office refugees road rural savanna story town travel village	worlds
@@ -666,7 +666,7 @@ graphics\_textures\specular\stonecliffs01.xbt	terrain	cliff rock specular	stone 
 graphics\_textures\specular\strawstraight_02_s.xbt	material			256x256	78	branchesshelterstraw02, branchesshelterstraw04, buildingshelterstraw01 +75	camp exterior farm hut ranch rural savanna straw village	worlds
 graphics\_textures\specular\stripelongleaves_s.xbt	material			256x256	1	bedbunk_bk	aid bedroom broken camp dirty exterior garage hotel industrial interior metal military prison refugees rusty school wood	dlc1
 graphics\_textures\specular\veh_spec_s.xbt	material			256x256	7	colonialgarage_01, colonialmdtrainstation_01, colonialsmtrainstationroofsheet_01 +4	dirty exterior garage hut industrial interior metal mud oil railway road rural rusty savanna tin town travel village	worlds
-graphics\_textures\specular\weaving_01_s.xbt	material			128x128	1	cage_01	dirty exterior farm home interior market mud ranch road rural savanna straw village wood	worlds
+graphics\_textures\specular\weaving_01_s.xbt	material			128x128	1	cage_01	dirty exterior farm home interior market mud ranch road rural savanna straw travel village wood	worlds
 graphics\_textures\specular\wood_01_s.xbt	material			256x256	74	fishingbuildingstory_01, fishingbuildingstory_01room01, fishingbuildingstorywindow_01 +71	bar brewery camp colonial construction dirty exterior gas-station home hut industrial interior jungle metal military mud oil paint prison railway ranch rural savanna school shanty town village wood	worlds
 graphics\_textures\specular\wood_02_s.xbt	material			256x256	13	debriswoodplankscartonsm01, debriswoodplankscartonsm02, debriswoodplankscartonsm04 +10	burned exterior farm fishing industrial metal mine oil ruins rusty town war warehouse water-supply	worlds
 graphics\_textures\specular\wood_03_s.xbt	material			256x256	98	colonial_animateddoor01, colonial_lockedanimateddoor01, colonialchurch_01 +95	armory colonial concrete construction exterior home interior military paint shanty town urban village wood	worlds
@@ -1187,12 +1187,12 @@ graphics\characters\animals\bats\bat01_d.xbt	character	bat skin	wilderness jungl
 graphics\characters\animals\bats\bat01_n.xbt	character			256x256	0			worlds
 graphics\characters\animals\birds\bird.xbt	character			256x256	1	bird02	jungle savanna wetland wilderness	worlds
 graphics\characters\animals\birds\bird02.xbt	character			256x256	1	bird01	jungle savanna wetland wilderness	worlds
-graphics\characters\animals\chicken\char_chicken_02_d.xbt	character			128x128	1	chicken_a	farm home market rural village	worlds
-graphics\characters\animals\chicken\char_chicken_03_d.xbt	character			128x128	1	chicken_b	farm home market rural village	worlds
-graphics\characters\animals\chicken\char_chicken_d.xbt	character			128x128	1	chicken	farm home market rural village	worlds
-graphics\characters\animals\chicken\char_chicken_m.xbt	character			128x128	3	chicken, chicken_a, chicken_b	farm home market rural village	worlds
-graphics\characters\animals\chicken\char_chicken_n.xbt	character			256x256	3	chicken, chicken_a, chicken_b	farm home market rural village	worlds
-graphics\characters\animals\gazelle\char_furdetail_s.xbt	character			256x256	3	chicken, chicken_a, chicken_b	farm home market rural village	worlds
+graphics\characters\animals\chicken\char_chicken_02_d.xbt	character			128x128	1	chicken_a	farm home market rural travel village	worlds
+graphics\characters\animals\chicken\char_chicken_03_d.xbt	character			128x128	1	chicken_b	farm home market rural travel village	worlds
+graphics\characters\animals\chicken\char_chicken_d.xbt	character			128x128	1	chicken	farm home market rural travel village	worlds
+graphics\characters\animals\chicken\char_chicken_m.xbt	character			128x128	3	chicken, chicken_a, chicken_b	farm home market rural travel village	worlds
+graphics\characters\animals\chicken\char_chicken_n.xbt	character			256x256	3	chicken, chicken_a, chicken_b	farm home market rural travel village	worlds
+graphics\characters\animals\gazelle\char_furdetail_s.xbt	character			256x256	3	chicken, chicken_a, chicken_b	farm home market rural travel village	worlds
 graphics\characters\buddies\andre\c_andre_newhead_d.xbt	character			256x256	2	andrehyppolite, introtrucktroops	exterior metal military road story	worlds
 graphics\characters\buddies\andre\c_andre_newhead_n.xbt	character			256x256	2	andrehyppolite, introtrucktroops	exterior metal military road story	worlds
 graphics\characters\buddies\flora\c_fl_boot_d.xbt	character			512x512	2	michele, nasreen	story	worlds

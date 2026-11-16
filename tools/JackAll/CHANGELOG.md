@@ -25,11 +25,12 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   the few nothing names are labelled by hand. The Files tab shows them in a Label column and the
   details pane, and `tag:"ak47 reload"` finds the AK-47's reload sounds. `jackall-cli spk label`
   builds the list, keeping hand labels.
-- **Asset tags.** Every model, texture and sound bank of the game is tagged by what it is and where it
-  belongs: `furniture · small urban writing desk`, tagged `office home interior wood`. The Files tab
-  shows a model's or texture's kind and description in the Label column and its tags in the details
-  pane, and the filter and the file picker search them with `tag:`. `tag:"kitchen interior" ext:xbg`
-  lists the models for a kitchen, and `tag:war` finds war props, not warehouses.
+- **Asset tags.** Every model, texture, sound bank and shader object of the game is tagged by what it
+  is and where it belongs: `furniture · small urban writing desk`, tagged `office home interior wood`;
+  a shader's tags are the quality presets that draw it. The Files tab shows each file's label in the
+  Label column and its tags in the details pane, and the filter and the file picker search them all
+  with `tag:`. `tag:"kitchen interior" ext:xbg` lists the models for a kitchen, `tag:war` finds war
+  props, not warehouses, and `tag:"weapon high"` the weapon shaders the High preset draws.
 - **The Map tab's viewport shows what a frame costs**: the frame rate and the slowest frame, CPU and
   GPU time, draw calls, triangles, time spent rebuilding what is drawn, and video memory in use. A
   frame drawn for one edit or click shows its own cost.

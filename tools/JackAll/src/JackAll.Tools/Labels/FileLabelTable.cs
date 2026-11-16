@@ -8,14 +8,12 @@ public sealed record FileLabel(string Path, string Category, string Detail, stri
 {
     /// <summary>A label set by hand, which a labeler run keeps over the one it finds.</summary>
     public const string FromHand = "hand";
-
-    /// <summary>The category and detail as one line, for a grid cell or a search.</summary>
-    public string Text { get; } = Detail.Length == 0 ? Category : $"{Category} · {Detail}";
 }
 
 /// <summary>
-/// A checked-in label list (<c>assets/fc2.soundlabels.tsv</c>, <c>assets/fc2.shaderlabels.tsv</c>),
-/// looked up by file hash. A missing or unreadable list loads empty.
+/// A labeler's checked-in list (<c>assets/fc2.soundlabels.tsv</c>, <c>assets/fc2.shaderlabels.tsv</c>),
+/// one label per path, which <c>tools/asset-tags/build.py</c> reads. A missing or unreadable list loads
+/// empty.
 /// </summary>
 public sealed class FileLabelTable
 {
@@ -33,8 +31,6 @@ public sealed class FileLabelTable
     }
 
     public IEnumerable<FileLabel> Labels => _byHash.Values;
-
-    public FileLabel? Find(uint hash) => _byHash.GetValueOrDefault(hash);
 
     public static FileLabelTable Load(string path)
     {

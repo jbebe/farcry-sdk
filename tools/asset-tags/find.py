@@ -1,8 +1,8 @@
 """Lists tagged assets matching every term, grouped by kind, with the variants of one object on one line.
 
-Usage: python tools/asset-tags/find.py <term>... [--textures | --sounds] [--kind <kind>] [--all]
-A term that is a kind, tag, trait or category of the table matches only those; any other term matches
-the path, description, archetypes or label. `a,b` matches either.
+Usage: python tools/asset-tags/find.py <term>... [--textures | --sounds | --shaders] [--kind <kind>] [--all]
+A term that is a kind, tag or trait of the table matches only those; any other term matches the path,
+description, archetypes or detail. `a,b` matches either.
 """
 import argparse
 import collections
@@ -14,9 +14,10 @@ from tables import VARIANT, read, shortlist
 COLUMNS = {
     "models": (("kind", "tags", "traits"), ("size", "placed", "archetypes")),
     "textures": (("kind", "tags", "inherited"), ("size", "used_by")),
-    "sounds": (("kind", "tags", "category"), ("label",)),
+    "sounds": (("kind", "tags"), ("detail",)),
+    "shaders": (("kind", "tags"), ("detail",)),
 }
-TEXT = ("path", "what", "archetypes", "label", "used_by")
+TEXT = ("path", "what", "archetypes", "detail", "used_by")
 # Above this many objects, a query without --kind prints only their names per kind.
 BRIEF_ABOVE = 60
 
@@ -27,9 +28,9 @@ def stem(path):
 
 def family(row, table):
     """What a file is a variant of: a model's folder and unnumbered stem, a texture's stem without its
-    map suffix, a sound's description."""
-    if table == "sounds":
-        return row["what"]
+    map suffix, a sound's or shader's description or detail."""
+    if table in ("sounds", "shaders"):
+        return row["what"] or row["detail"]
     if table == "textures":
         return re.sub(r"_?\d*_(d|n|s|m|h|mask|spec)$", "", stem(row["path"]))
     return row["path"].rpartition("\\")[0], re.sub(r"_?\d+[a-z]?$", "", VARIANT.sub("", stem(row["path"])))
@@ -88,6 +89,7 @@ def main():
     parser = parser_for(__doc__.splitlines()[0])
     parser.add_argument("--textures", action="store_const", const="textures", dest="table", default="models")
     parser.add_argument("--sounds", action="store_const", const="sounds", dest="table")
+    parser.add_argument("--shaders", action="store_const", const="shaders", dest="table")
     args = parser.parse_args()
 
     rows = select(args.table, args.terms, args.kind)

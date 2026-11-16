@@ -17,7 +17,7 @@ This page only looks at files.
 
 ## Search
 
-Type into **Filter** (1). Every word you type has to appear in the name, and five prefixes narrow
+Type into **Filter** (1). Every word you type has to appear in the name, and four prefixes narrow
 it down:
 
 | Word | Keeps | Example |
@@ -25,8 +25,7 @@ it down:
 | `ext:<type>` | files of one type | `ext:xbt` for textures |
 | `arch:<archive>` | files from one archive, as the **Source** column (3) names it | `arch:patch` |
 | `hash:<hex>` | the file with this hash | `hash:585ACE93` |
-| `tag:<word>` or `tag:"<word> <word>"` | models, textures and sounds whose [tags](#tags) match every word | `tag:"kitchen interior"` |
-| `shader:<word>` or `shader:"<word> <word>"` | shader objects whose [label](#shader-labels) has every word | `shader:"weapon QUALITYHIGH"` |
+| `tag:<word>` or `tag:"<word> <word>"` | models, textures, sounds and shaders whose [tags](#tags) match every word | `tag:"kitchen interior"` |
 
 `ext:xbt ak47` finds the AK-47's textures (2), across every folder.
 
@@ -72,22 +71,23 @@ edits are never hidden.
 
 ## Tags
 
-Every model, texture and sound bank of the game is tagged by what it is and where it belongs: a kind
-(`furniture`, `container`, `material`, `ambience`), a few words saying what it is, and tags for the
-places, rooms, settings, materials and condition it fits, such as `home kitchen interior wood`.
-Models and textures show their kind and description in the **Label** column, and selecting one shows
-its tags. The full list of kinds and tags is in the repository's `tools/asset-tags/README.md`.
+Every model, texture, sound bank and shader object of the game is tagged by what it is and where it
+belongs: a kind (`furniture`, `container`, `material`, `ambience`, `foliage`), a few words saying what
+it is, and tags for the places, rooms, settings, materials and condition it fits, such as
+`home kitchen interior wood`, or for a shader the quality presets that draw it. The **Label** column
+shows the kind, then for a sound or shader the detail of its label (below) and for a model or
+texture its description. Selecting one also shows its tags. The full list of kinds and tags is in
+the repository's `tools/asset-tags/README.md`.
 
 `tag:` searches them. A word that is a kind or a tag matches only the files that carry it, so
 `tag:war` finds the props of a battlefield and not warehouses. Any other word matches part of the
-description, the tags or a sound's [label](#sound-labels), so a half-typed word already finds
-something. With the other words, `tag:"kitchen interior" ext:xbg` lists the models for a kitchen.
+description, the tags or the label, so a half-typed word already finds something. With the other
+words, `tag:"kitchen interior" ext:xbg` lists the models for a kitchen.
 
 ## Sound labels
 
 Sound banks are named by number (`soundbinary\004b27c7.spk`), so JackAll labels each one by where the
-game uses it. A list that holds labelled sounds gets a **Label** column, and selecting a bank shows
-its label with the files that name it. A label is a category and a detail:
+game uses it. A label is a category and a detail:
 
 | Category | Example detail |
 |---|---|
@@ -130,6 +130,11 @@ The first word is one of:
 
 An object several of these share is `shared`. The presets are the game's graphics quality presets,
 Low to Ultra High: `low`, `medium`, `high`, `veryhigh` and `ultrahigh`, or `all presets`. `no preset`
-means only a custom mix of settings draws it, such as low textures with shadows on. Selecting an
-object also shows which setting decides that, for instance `Vegetation ≥ high` or `Shadow ≥ low`. So
-`shader:"weapon QUALITYHIGH"` finds the weapon shaders that high textures use.
+means only a custom mix of settings draws it, such as low textures with shadows on.
+
+The category is a shader's kind, in the word models and textures use for the same thing: `vehicles`
+is `vehicle`, `characters` `character`, `foliage` `vegetation`, `ground` `terrain`, `effects` `fx`,
+and `world meshes` is `world-meshes`. Each preset that draws it is a tag: `all presets` gives all
+five, `no preset` the tag `no-preset`. So `tag:"weapon high"` finds the weapon shaders the High preset
+draws, `tag:"weapon QUALITYHIGH"`, matching the label, the ones high textures use, and `tag:vehicle`
+the vehicles' models, sounds and shaders together.

@@ -12,7 +12,7 @@ columns and the vocabulary). Query with the PowerShell tool; Python is blocked i
 python tools/asset-tags/find.py home interior               # every term must match
 python tools/asset-tags/find.py travel,refugees,bus-station # a,b matches either
 python tools/asset-tags/find.py kitchen --kind kitchenware
-python tools/asset-tags/find.py market --sounds             # --textures for textures
+python tools/asset-tags/find.py market --sounds             # --textures, --shaders for those
 python tools/asset-tags/render.py kitchen --kind kitchenware  # a contact sheet of the models
 ```
 

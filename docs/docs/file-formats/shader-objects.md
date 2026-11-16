@@ -368,7 +368,8 @@ jackall-cli shader label --game <dir> -o fc2.shaderlabels.tsv
 
 `label` writes one line per D3D9 object: what its shaders draw, its passes, the options all its
 permutations share, the presets that draw it, the settings that decide that, and one of its
-permutations' names. These are the labels JackAll's Files tab shows.
+permutations' names. `tools/asset-tags/build.py` turns them into the shader tags JackAll's Files
+tab shows and searches with `tag:`.
 
 `extract` splits an object into its bytecode (`.bin`, which `fxc /dumpbin` disassembles) and its
 binding table (`.xml`); `build` reassembles them, dropping the constant table `fxc` emits so the

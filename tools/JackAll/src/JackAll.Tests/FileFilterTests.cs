@@ -27,23 +27,16 @@ public class FileFilterTests
     [InlineData("tag:\"ak47 rel", true)]
     [InlineData("soundbinary tag:ak47", true)]
     [InlineData("tag:\"ak47 jam\"", false)]
+    [InlineData("TAG:reload", true)]
     [InlineData("ak47", false)]
-    public void Tag_words_ask_the_caller_and_plain_words_match_only_the_path(string filter, bool matches)
+    [InlineData("spk:reload", false)]
+    public void Tag_words_ask_the_caller_and_other_words_match_only_the_path(string filter, bool matches)
     {
         VfsFile file = File(@"soundbinary\004b27c7.spk");
 
         Assert.Equal(matches, FileFilter.Parse(filter).Matches(file, _ => "common",
-            (_, _, word) => "weapon reload, 1st person (ak47)".Contains(word, StringComparison.OrdinalIgnoreCase)));
+            (_, word) => "weapon reload, 1st person (ak47)".Contains(word, StringComparison.OrdinalIgnoreCase)));
     }
-
-    [Theory]
-    [InlineData("shader:\"sky low\"", true)]
-    [InlineData("SHADER:sky", true)]
-    [InlineData("tag:sky", false)]
-    [InlineData("tag:sky shader:low", false)]
-    public void A_label_token_asks_for_the_label_of_its_own_kind(string filter, bool matches)
-        => Assert.Equal(matches, FileFilter.Parse(filter).Matches(File(@"engine\shaders\obj\h53\shadernumber_71845653.pso"),
-            _ => "common", (_, kind, word) => kind == FileFilter.ShaderLabels && "sky · cloudlayer · low".Contains(word)));
 
     [Fact]
     public void A_file_nothing_labels_never_matches_tag()

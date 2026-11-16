@@ -145,7 +145,7 @@ public class SoundLabelTests
         var label = new FileLabel(@"soundbinary\004bf5ea.spk", "weapon", "single bullet shot (AK47)", "usage", "entitylibrary.fcb");
 
         FileLabelTable read = FileLabelTable.Parse(new FileLabelTable([label]).Write());
-        Assert.Equal(label, read.Find(NameHash.Compute(label.Path)));
+        Assert.Equal(label, Assert.Single(read.Labels));
     }
 
     [Fact]

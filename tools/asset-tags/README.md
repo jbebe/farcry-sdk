@@ -1,25 +1,34 @@
 # Asset tags
 
-Every model (`.xbg`), texture (`.xbt`) and sound bank (`.spk`) of the retail game, tagged by what it
-is and where it belongs, so that a scene can be dressed from a list: "a house interior", "a bus and
-people packing to leave".
+Every model (`.xbg`), texture (`.xbt`), sound bank (`.spk`) and shader object (`.pso`, `.vso`, `.rs`)
+of the retail game, tagged by what it is and where it belongs, so that a scene can be dressed from a
+list: "a house interior", "a bus and people packing to leave".
 
 | Table | Rows | One row per |
 | --- | --- | --- |
 | `models.tsv` | 2,961 | `.xbg` in `worlds`, `common`, `patch` and the DLC archives |
-| `textures.tsv` | 2,917 | `.xbt` under `graphics\` and `ui\`; per-level map tiles and sector maps are left out |
-| `sounds.tsv` | 8,282 | `.spk`, with the category and label of `tools/JackAll/assets/fc2.soundlabels.tsv` |
+| `textures.tsv` | 2,916 | `.xbt` under `graphics\` and `ui\`; per-level map tiles and sector maps are left out |
+| `sounds.tsv` | 8,282 | `.spk` that `jackall-cli spk label` labels (`tools/JackAll/assets/fc2.soundlabels.tsv`) |
+| `shaders.tsv` | 27,516 | Direct3D 9 shader object that `jackall-cli shader label` labels (`fc2.shaderlabels.tsv`) |
 
 ## Finding assets
 
 ```powershell
 python tools/asset-tags/find.py home interior            # models carrying both tags
 python tools/asset-tags/find.py travel --kind container  # one kind only
-python tools/asset-tags/find.py market --sounds          # sounds; --textures for textures
+python tools/asset-tags/find.py market --sounds          # --textures and --shaders for those
 python tools/asset-tags/find.py jerrycan                 # a word in a path, description or archetype
 ```
 
-JackAll ships the three tables and searches them in the Files tab with `tag:`, by the same rule.
+A term that is a kind, tag or trait of the table matches only those, so `war` does not find
+warehouses; any other term matches any part of the path, the description, the archetypes or the
+detail. One line covers the variants of an object (`_01`, `_02`, broken and LOD meshes), a texture with
+its maps, or sounds or shaders with one description; `--all` lists every file instead. A query
+matching more than 60 objects lists only their names per kind until `--kind` narrows it.
+
+JackAll ships the four tables and searches them in the Files tab with `tag:`, by the same rule. They
+are the only labels it reads, every one `kind · detail`, or `kind · what` where a table has no
+detail; the labelers' lists reach it through `build.py`.
 
 ## Thumbnails
 
@@ -34,16 +43,15 @@ and draws numbered contact sheets of 20 models each. A render is kept, gitignore
 run at 60 models. It reads the game install (`--game`, `C:\Games\Far Cry 2` by default) and needs
 Blender 5.2 (`--blender`). A model drawn plain red has a texture the pack could not find.
 
-A term that is a kind, tag, trait or sound category of the table matches only those, so `war` does
-not find warehouses; any other term matches any part of the path, the description, the archetypes or
-the sound label. One line covers the variants of an object (`_01`, `_02`, broken and LOD meshes), a
-texture with its maps, or sounds with one description; `--all` lists every file instead. A query
-matching more than 60 objects lists only their names per kind until `--kind` narrows it.
-
 ## Columns
 
 The hand columns are `kind`, `what` and `tags`. `build.py` writes every other column from the game
-files and keeps the hand columns of the existing table, matched by path.
+files and the labelers' lists and keeps the hand columns of the existing table, matched by path. A
+sound's or shader's empty hand column is filled from its label: the kind is the labeler's category,
+in the word the other tables use (a sound's `scene` is `dialogue`, `other` is `misc`; a shader's
+`vehicles` is `vehicle`, `foliage` is `vegetation`, `ground` is `terrain`, `effects` is `fx`); a
+shader's `what` is the shader and its lighting, and its tags the quality presets that use it (`all
+presets` is all five).
 
 | Column | Table | Meaning |
 | --- | --- | --- |
@@ -59,7 +67,7 @@ files and keeps the hand columns of the existing table, matched by path.
 | `traits` | models | from its archetypes: `static`, `rigid` (moves when hit), `breakable`, `flammable`, `pickup`, `vehicle`, `character`, `animated`, `building`; from its name: `broken-variant`, `lod`, `mp` |
 | `users`, `used_by` | textures | how many models bind it, and the first three |
 | `inherited` | textures | the tags at least half of the models binding it carry; for a normal, specular or mask map, also the tags of the diffuse textures beside it in a material |
-| `category`, `label` | sounds | the sound labeler's category and label |
+| `detail` | sounds, shaders | the labeler's detail: where the sound is used, or the shader, its passes, options and presets |
 
 ## Vocabulary
 
@@ -133,6 +141,19 @@ health, save point, ladder, door) · `animated`
 Sounds take the tags above and these: `loop` · `one-shot` · `day` · `night` · `crowd` · `radio` ·
 `machine` · `insects` · `birds` · `wind` · `rain` · `distant` · `close`
 
+### Shader kinds
+
+The shader labeler's categories, in the other tables' words where they have one: `vegetation` grass,
+leaves and trunks · `terrain` terrain, roads, decals · `weapon` · `character` skin, hair, cloth ·
+`vehicle` · `world-meshes` buildings, props and other models · `sky` · `water` · `fx` particles and
+post effects · `engine` depth and render-state passes, debug drawing · `shared` an object several of
+these share
+
+### Shader tags
+
+The graphics quality presets that draw it: `low` · `medium` · `high` · `veryhigh` · `ultrahigh`, or
+`no-preset` when only a custom mix of settings does
+
 ## Regenerating
 
 ```powershell
@@ -144,5 +165,6 @@ Run `build.py` after a merge: the textures' `inherited` column follows the model
 
 `build.py` reads the extracted archives in the main tree's `tmp/gamefiles`, the full entity library
 of `tmpla` (decoded with `jackall-cli fcb decode`), every campaign `worldsector` and `landmarknear`
-file, and the gazetteer of `docs/docs/lore/set-dressing/reading-the-world.md`. Sector `n` covers the
-64 m square at `(n mod 80, n div 80) x 64`.
+file, the gazetteer of `docs/docs/lore/set-dressing/reading-the-world.md`, and the labelers' lists in
+`tools/JackAll/assets`. Sector `n` covers the 64 m square at `(n mod 80, n div 80) x 64`. After
+`jackall-cli spk label` or `shader label`, run `build.py`, or JackAll keeps the old labels.

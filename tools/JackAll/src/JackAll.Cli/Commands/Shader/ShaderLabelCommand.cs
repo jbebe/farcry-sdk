@@ -6,8 +6,9 @@ namespace JackAll.Cli.Commands.Shader;
 
 /// <summary>
 /// Labels every Direct3D 9 shader object by the permutations that load it and the quality presets
-/// that draw it, and writes the list the App reads (<c>assets/fc2.shaderlabels.tsv</c>). Hand labels
-/// win over found ones: those already in the output are kept, and <c>--hand</c> adds more.
+/// that draw it, and writes <c>assets/fc2.shaderlabels.tsv</c>, which <c>tools/asset-tags/build.py</c>
+/// turns into the shader tags. Hand labels win over found ones: those already in the output are kept,
+/// and <c>--hand</c> adds more.
 /// </summary>
 public sealed class ShaderLabelCommand : CliCommand<LabelCommandSettings>
 {

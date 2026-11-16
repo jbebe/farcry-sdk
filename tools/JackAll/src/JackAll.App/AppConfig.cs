@@ -93,18 +93,12 @@ public sealed class AppConfig
     /// </summary>
     public static string ReachFile => Path.Combine(DataDir, ".reachlist");
 
-    /// <summary>What each retail `.spk` is (see <c>jackall-cli spk label</c>). Missing is not fatal:
-    /// sound files simply show no label.</summary>
-    public static string SoundLabelFile => Path.Combine(DataDir, ".soundlabels");
-
-    /// <summary>What each D3D9 shader object is (see <c>jackall-cli shader label</c>). Missing is not
-    /// fatal: shader objects simply show no label.</summary>
-    public static string ShaderLabelFile => Path.Combine(DataDir, ".shaderlabels");
-
-    /// <summary>What each retail model, texture and sound bank is and where it belongs (the tables of
-    /// <c>tools/asset-tags</c>). Missing is not fatal: <c>tag:</c> simply finds nothing.</summary>
+    /// <summary>What each retail model, texture, sound bank and shader object is and where it belongs (the
+    /// tables of <c>tools/asset-tags</c>). Missing is not fatal: files show no label and <c>tag:</c> finds
+    /// nothing.</summary>
     public static string[] TagFiles =>
-        [Path.Combine(DataDir, ".modeltags"), Path.Combine(DataDir, ".texturetags"), Path.Combine(DataDir, ".soundtags")];
+        [Path.Combine(DataDir, ".modeltags"), Path.Combine(DataDir, ".texturetags"), Path.Combine(DataDir, ".soundtags"),
+         Path.Combine(DataDir, ".shadertags")];
 
     /// <summary>
     /// A savegame-specific hash -> name table (see <see cref="JackAll.App.FileHandlers.Sav.SaveGameCompiledFieldNames"/>)

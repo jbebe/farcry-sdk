@@ -10,9 +10,10 @@ TABLES = {
     "models": (("path", *HAND, "size", "placed", "places", "archetypes", "textures", "traits", "archive"),
                "Model kinds", ("Tags",)),
     "textures": (("path", *HAND, "size", "users", "used_by", "inherited", "archive"), "Texture kinds", ("Tags",)),
-    "sounds": (("path", *HAND, "category", "label"), "Sound kinds", ("Tags", "Sound tags")),
+    "sounds": (("path", *HAND, "detail"), "Sound kinds", ("Tags", "Sound tags")),
+    "shaders": (("path", *HAND, "detail"), "Shader kinds", ("Shader tags",)),
 }
-EXTENSIONS = {".xbg": "models", ".xbt": "textures", ".spk": "sounds"}
+EXTENSIONS = {".xbg": "models", ".xbt": "textures", ".spk": "sounds", ".pso": "shaders", ".vso": "shaders", ".rs": "shaders"}
 # A broken, LOD or multiplayer variant suffix in a model's file name.
 VARIANT = re.compile(r"_(bk|lod|mp|broken|destroyed|dest)\d*[a-z]?(?=_|$)")
 

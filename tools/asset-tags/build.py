@@ -1,4 +1,6 @@
-"""Writes the generated columns of the asset tables from the retail game files, keeping the hand columns.
+"""Writes the generated columns of the asset tables from the retail game files and the labelers' lists.
+
+The hand columns are kept; one that is empty and a label can fill is filled from it.
 
 Usage: python tools/asset-tags/build.py [--game-files <tmp/gamefiles>] [--cli <jackall-cli.exe>]
 """
@@ -47,6 +49,12 @@ COMPONENT_TRAITS = {
 }
 NAME_TRAITS = {"bk": "broken-variant", "broken": "broken-variant", "destroyed": "broken-variant",
                "dest": "broken-variant", "lod": "lod", "mp": "mp"}
+# The labelers' categories that are kinds under another word, the one the other tables use.
+SOUND_KINDS = {"scene": "dialogue", "other": "misc"}
+SHADER_KINDS = {"foliage": "vegetation", "ground": "terrain", "characters": "character", "vehicles": "vehicle",
+                "effects": "fx", "world meshes": "world-meshes"}
+# A shader label's presets that are not tags as they stand.
+PRESET_TAGS = {"all presets": "low medium high veryhigh ultrahigh", "no preset": "no-preset"}
 
 
 def game_files(root):
@@ -156,9 +164,26 @@ def majority(tag_sets):
 
 
 def read_labels(path):
-    """Path -> (category, detail) from the sound labeler's list."""
+    """Path -> (category, detail) from a labeler's list."""
     rows = (line.split("\t") for line in path.read_text(encoding="utf-8").splitlines() if line and line[0] != "#")
     return {f[0]: (f[1], f[2]) for f in rows if len(f) == 5}
+
+
+def sound_fill(category, detail):
+    """A sound's kind from its label: the category."""
+    return (SOUND_KINDS.get(category, category),)
+
+
+def shader_fill(category, detail):
+    """A shader's kind, what and tags from its label: shader, passes and lighting, options, then the presets."""
+    parts = detail.split(" · ")
+    lighting = next((p[p.index("lit by"):] for p in parts[1:-1] if "lit by" in p), None)
+    what = f"{parts[0]}, {lighting}" if lighting else parts[0]
+    return SHADER_KINDS.get(category, category), what, PRESET_TAGS.get(parts[-1], parts[-1].replace(",", ""))
+
+
+# Tables made from a labeler's list in tools/JackAll/assets, and how a label fills empty hand columns.
+LABELLED = {"sounds": ("fc2.soundlabels.tsv", sound_fill), "shaders": ("fc2.shaderlabels.tsv", shader_fill)}
 
 
 def keep_hand(row, old):
@@ -233,13 +258,19 @@ def main():
         }, old_textures))
     write("textures", textures)
 
-    labels = read_labels(REPO / "tools/JackAll/assets/fc2.soundlabels.tsv")
-    old_sounds = read("sounds")
-    sounds = [keep_hand({"path": p, "category": c, "label": d}, old_sounds) for p, (c, d) in sorted(labels.items())]
-    write("sounds", sounds)
+    built = {"models": models, "textures": textures}
+    for table, (source, fill) in LABELLED.items():
+        old, rows = read(table), []
+        for path, (category, detail) in sorted(read_labels(REPO / "tools/JackAll/assets" / source).items()):
+            row = keep_hand({"path": path, "detail": detail}, old)
+            for column, value in zip(HAND, fill(category, detail)):
+                row[column] = row[column] or value
+            rows.append(row)
+        write(table, rows)
+        built[table] = rows
 
-    print(f"{len(models)} models, {len(textures)} textures, {len(sounds)} sounds, {len(library)} archetypes")
-    for table, rows in (("models", models), ("textures", textures), ("sounds", sounds)):
+    print(", ".join(f"{len(rows)} {table}" for table, rows in built.items()) + f", {len(library)} archetypes")
+    for table, rows in built.items():
         bad = check(table, rows)
         if bad:
             print(f"{table}: {len(bad)} kinds or tags not in the vocabulary, first: {shortlist(f'{p} {w!r}' for p, w in bad)}")

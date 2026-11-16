@@ -391,8 +391,6 @@
                                     <Run Text="hash:&lt;hex&gt;" FontStyle="Normal" FontFamily="{StaticResource MonoFont}" />
                                     <Run Text=", " />
                                     <Run Text="tag:&lt;word&gt;" FontStyle="Normal" FontFamily="{StaticResource MonoFont}" />
-                                    <Run Text=", " />
-                                    <Run Text="shader:&lt;label&gt;" FontStyle="Normal" FontFamily="{StaticResource MonoFont}" />
                                 </TextBlock>
                             </TextBox.Tag>
                         </TextBox>
