@@ -43,7 +43,7 @@ LAYER_RUNTIME = (
 RELEASE_TOOLING = (".github/**", "scripts/changelog.ps1", "scripts/nexus-page.ps1")
 
 BUILD_FILES = ("CMakeLists.txt", "*.cmake", "*.ps1", "*.py", "CMakePresets.json", "package.json",
-               "webpack.config.js")
+               "webpack.config.js", "src/*/*.csproj")
 OUTPUT_DIRS = {"bin", "obj", "out", "node_modules", "dist", "__pycache__"}
 
 
@@ -319,6 +319,8 @@ def _code_only(file):
         text = re.sub(r'""".*?"""', "", text, flags=re.S)
     if file.suffix in (".json", ".js"):
         return re.sub(r"(?m)^\s*//.*$", "", text)
+    if file.suffix == ".csproj":
+        return re.sub(r"<!--.*?-->", "", text, flags=re.S)
     return re.sub(r"(?m)(^|\s)#.*$", r"\1", text)
 
 

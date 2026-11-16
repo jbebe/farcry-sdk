@@ -35,7 +35,8 @@ Stage: active
 - [done] Material editor for .xbm, New material, xbm CLI - a material at a new path untested in game
 - [done] Make a font, .mft viewer and mft CLI
 - [done] .spk sound bank editor and XML round trip, Vorbis and IMA-ADPCM import
-- [done] Sound labels for every retail .spk, spk: search - unreleased
+- [done] Sound labels for every retail .spk - unreleased
+- [done] Asset tags in the Files tab and file picker - tag: search over every model, texture and sound, labels for models and textures - unreleased
 - [done] Shader labels and shader extract/index/build/label - unreleased
 - [done] .xbt, .sbao, .xbg and .rtx viewers and converters - bundled ffmpeg for audio, bare .dds builds
 - [done] .fc2model export and apply - actor, animation tag windows, shader property lists
@@ -59,6 +60,7 @@ Stage: active
 - Map tab on a PC without a proper graphics driver or over remote desktop (#66): it draws on WARP, or says why - forced here only; not yet verified by the user who reported it, who can test only once released
 - Aiming Overhaul's muzzle light and Difficulty Overhaul's hit locations, both from gamemodesconfig.xml fragments, in one game - unplayed
 - The AI tab's behaviour odds saved as a fragment of gamemodesconfig.xml - never run in the UI
+- The Files tab's tag: search and the model and texture labels - run here through UI Automation; not tried by the user
 
 ## Approvals
 

@@ -13,6 +13,7 @@ python tools/asset-tags/find.py home interior               # every term must ma
 python tools/asset-tags/find.py travel,refugees,bus-station # a,b matches either
 python tools/asset-tags/find.py kitchen --kind kitchenware
 python tools/asset-tags/find.py market --sounds             # --textures for textures
+python tools/asset-tags/render.py kitchen --kind kitchenware  # a contact sheet of the models
 ```
 
 ## Answering a scene
@@ -25,6 +26,8 @@ python tools/asset-tags/find.py market --sounds             # --textures for tex
    archetype name for the Map tab's library, or the mesh path where there is none (`StaticObject`).
    Lead with what the campaign places (`placed` above 0); say how many more there are.
 3. Add the sounds (`--sounds`) and, if surfaces matter, the textures (`--textures`) that fit.
+4. To show what the models look like, run `render.py` with the same terms and a `--kind`. Read the
+   sheet it prints, give the user its path, and fix any description the picture contradicts.
 
 ## Fixing a tag
 

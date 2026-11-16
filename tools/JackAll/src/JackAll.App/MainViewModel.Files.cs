@@ -32,6 +32,7 @@ public sealed partial class MainViewModel
 
     private static readonly Lazy<FileLabelTable> SoundLabels = new(() => FileLabelTable.Load(AppConfig.SoundLabelFile));
     private static readonly Lazy<FileLabelTable> ShaderLabels = new(() => FileLabelTable.Load(AppConfig.ShaderLabelFile));
+    private static readonly Lazy<AssetTagTable> Tags = new(() => AssetTagTable.Load(AppConfig.TagFiles));
     private CancellationTokenSource? _exportCts;
 
     /// <summary>Where the selected fragment sits in its container, once the background lookup for it
@@ -80,17 +81,20 @@ public sealed partial class MainViewModel
     private static uint? ReachHashOf(VfsFile file)
         => file.ContainerHash ?? (file.IsSynthetic ? null : file.EngineHash);
 
-    /// <summary>What a sound bank or shader object is, from the shipped label lists; null for anything unlabelled.</summary>
-    public static FileLabel? LabelOf(VfsFile file)
-        => file.IsSynthetic ? null : SoundLabels.Value.Find(file.EngineHash) ?? ShaderLabels.Value.Find(file.EngineHash);
+    /// <summary>What a sound bank, shader object, model or texture is, from the shipped label lists and
+    /// asset tags; null for anything unlabelled.</summary>
+    public static FileLabel? LabelOf(VfsFile file) => file.IsSynthetic ? null
+        : SoundLabels.Value.Find(file.EngineHash) ?? ShaderLabels.Value.Find(file.EngineHash) ?? Tags.Value.Find(file.EngineHash);
 
     /// <summary>A file's label as one line, for the grid.</summary>
     public static string? LabelText(VfsFile file) => LabelOf(file)?.Text;
 
-    /// <summary>A file's label of one kind (<see cref="FileFilter.SoundLabels"/> or
-    /// <see cref="FileFilter.ShaderLabels"/>) as one line, for the search box.</summary>
-    public static string? LabelText(VfsFile file, string kind) => file.IsSynthetic ? null
-        : (kind == FileFilter.ShaderLabels ? ShaderLabels : SoundLabels).Value.Find(file.EngineHash)?.Text;
+    /// <summary>Whether a <see cref="FileFilter.Tags"/> or <see cref="FileFilter.ShaderLabels"/> word
+    /// matches the file, for the search box.</summary>
+    public static bool LabelMatches(VfsFile file, string kind, string word) => !file.IsSynthetic
+        && (kind == FileFilter.Tags
+            ? Tags.Value.Matches(file.EngineHash, word, SoundLabels.Value.Find(file.EngineHash)?.Text)
+            : ShaderLabels.Value.Find(file.EngineHash)?.Text.Contains(word, StringComparison.OrdinalIgnoreCase) == true);
 
     /// <summary>Whether the file list holds a labelled file, set with each refill.</summary>
     public bool ListHasLabels
@@ -101,8 +105,12 @@ public sealed partial class MainViewModel
 
     public bool HasLabelNote => LabelNote.Length > 0;
 
-    /// <summary>The selected file's label and where it came from.</summary>
-    public string LabelNote => SelectedFile is { } file && LabelOf(file) is { } label
+    /// <summary>The selected file's label, where it came from, and its tags.</summary>
+    public string LabelNote => SelectedFile is { IsSynthetic: false } file
+        ? string.Join("\n", new[] { LabelSource(file), TagLine(file) }.Where(s => s.Length > 0))
+        : string.Empty;
+
+    private static string LabelSource(VfsFile file) => LabelOf(file) is { } label
         ? label.Source switch
         {
             SoundLabeler.FromLinks => $"{label.Text}\nPlayed by another bank's sound, named in {label.Evidence}.",
@@ -112,6 +120,9 @@ public sealed partial class MainViewModel
             _ => $"{label.Text}\nNamed in {label.Evidence}.",
         }
         : string.Empty;
+
+    private static string TagLine(VfsFile file)
+        => Tags.Value.TagsOf(file.EngineHash) is { Length: > 0 } tags ? $"Tags: {tags}." : string.Empty;
 
     /// <summary>
     /// A partial-match search over every file's full path — while it's non-empty, the file list
@@ -609,7 +620,7 @@ public sealed partial class MainViewModel
                 IEnumerable<VfsFile> files;
                 if (!filter.IsEmpty)
                 {
-                    files = vfs.Files.Values.Where(f => filter.Matches(f, moduleName, LabelText));
+                    files = vfs.Files.Values.Where(f => filter.Matches(f, moduleName, LabelMatches));
                 }
                 else if (folderPath is not null)
                 {

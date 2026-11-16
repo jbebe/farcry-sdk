@@ -19,6 +19,21 @@ python tools/asset-tags/find.py market --sounds          # sounds; --textures fo
 python tools/asset-tags/find.py jerrycan                 # a word in a path, description or archetype
 ```
 
+JackAll ships the three tables and searches them in the Files tab with `tag:`, by the same rule.
+
+## Thumbnails
+
+```powershell
+python tools/asset-tags/render.py travel --kind container   # a contact sheet of what find.py lists
+```
+
+`render.py` takes `find.py`'s terms, `--kind` and `--all` for models, renders each model it lists with
+its textures (a `.fc2model` pack from `jackall-cli`, drawn by Blender through the BlenderFC2 add-on),
+and draws numbered contact sheets of 20 models each. A render is kept, gitignored, in the main tree's
+`tools/asset-tags/thumbs/` at the model's game path, so each model is drawn once; `--limit` caps a
+run at 60 models. It reads the game install (`--game`, `C:\Games\Far Cry 2` by default) and needs
+Blender 5.2 (`--blender`). A model drawn plain red has a texture the pack could not find.
+
 A term that is a kind, tag, trait or sound category of the table matches only those, so `war` does
 not find warehouses; any other term matches any part of the path, the description, the archetypes or
 the sound label. One line covers the variants of an object (`_01`, `_02`, broken and LOD meshes), a

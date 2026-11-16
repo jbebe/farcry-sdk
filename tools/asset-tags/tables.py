@@ -1,5 +1,6 @@
 """The asset tag tables: their files and columns, the README's vocabulary, and reading, writing and checking them."""
 import re
+import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -55,6 +56,17 @@ def check(table, rows):
             bad.append((row["path"], row["kind"]))
         bad += [(row["path"], t) for t in row["tags"].split() if t not in tags]
     return bad
+
+
+def main_tree():
+    """The main working tree, which holds the gitignored game files and the Release jackall-cli."""
+    sys.path.insert(0, str(HERE.parents[1] / "scripts"))
+    from modstatus import MAIN_TREE
+    return MAIN_TREE
+
+
+def jackall_cli():
+    return main_tree() / "tools/JackAll/src/JackAll.Cli/bin/Release/net10.0/jackall-cli.exe"
 
 
 def shortlist(items, limit=3):

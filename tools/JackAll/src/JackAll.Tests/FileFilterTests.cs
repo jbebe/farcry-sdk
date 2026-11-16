@@ -22,31 +22,32 @@ public class FileFilterTests
     }
 
     [Theory]
-    [InlineData("spk:reload", true)]
-    [InlineData("spk:\"ak47 reload\"", true)]
-    [InlineData("spk:\"ak47 rel", true)]
-    [InlineData("soundbinary spk:ak47", true)]
-    [InlineData("spk:\"ak47 jam\"", false)]
+    [InlineData("tag:reload", true)]
+    [InlineData("tag:\"ak47 reload\"", true)]
+    [InlineData("tag:\"ak47 rel", true)]
+    [InlineData("soundbinary tag:ak47", true)]
+    [InlineData("tag:\"ak47 jam\"", false)]
     [InlineData("ak47", false)]
-    public void Spk_words_match_the_label_and_plain_words_only_the_path(string filter, bool matches)
+    public void Tag_words_ask_the_caller_and_plain_words_match_only_the_path(string filter, bool matches)
     {
         VfsFile file = File(@"soundbinary\004b27c7.spk");
 
-        Assert.Equal(matches, FileFilter.Parse(filter).Matches(file, _ => "common", (_, _) => "weapon · reload, 1st person (ak47)"));
+        Assert.Equal(matches, FileFilter.Parse(filter).Matches(file, _ => "common",
+            (_, _, word) => "weapon reload, 1st person (ak47)".Contains(word, StringComparison.OrdinalIgnoreCase)));
     }
 
     [Theory]
     [InlineData("shader:\"sky low\"", true)]
     [InlineData("SHADER:sky", true)]
-    [InlineData("spk:sky", false)]
-    [InlineData("spk:sky shader:low", false)]
+    [InlineData("tag:sky", false)]
+    [InlineData("tag:sky shader:low", false)]
     public void A_label_token_asks_for_the_label_of_its_own_kind(string filter, bool matches)
         => Assert.Equal(matches, FileFilter.Parse(filter).Matches(File(@"engine\shaders\obj\h53\shadernumber_71845653.pso"),
-            _ => "common", (_, kind) => kind == FileFilter.ShaderLabels ? "sky · cloudlayer · low" : null));
+            _ => "common", (_, kind, word) => kind == FileFilter.ShaderLabels && "sky · cloudlayer · low".Contains(word)));
 
     [Fact]
-    public void A_file_without_a_label_never_matches_spk()
-        => Assert.False(FileFilter.Parse("spk:reload").Matches(File(@"soundbinary\004b27c7.spk"), _ => "common"));
+    public void A_file_nothing_labels_never_matches_tag()
+        => Assert.False(FileFilter.Parse("tag:reload").Matches(File(@"soundbinary\004b27c7.spk"), _ => "common"));
 
     [Fact]
     public void A_forward_slash_matches_a_backslash()

@@ -12,7 +12,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from tables import HAND, HERE, VARIANT, check, read, shortlist, write
+from tables import HAND, HERE, VARIANT, check, jackall_cli, main_tree, read, shortlist, write
 
 REPO = HERE.parents[1]
 sys.path.insert(0, str(REPO / "scripts"))
@@ -168,11 +168,9 @@ def keep_hand(row, old):
 
 
 def main():
-    from modstatus import MAIN_TREE
-
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--game-files", type=Path, default=MAIN_TREE / "tmp/gamefiles")
-    parser.add_argument("--cli", type=Path, default=MAIN_TREE / "tools/JackAll/src/JackAll.Cli/bin/Release/net10.0/jackall-cli.exe")
+    parser.add_argument("--game-files", type=Path, default=main_tree() / "tmp/gamefiles")
+    parser.add_argument("--cli", type=Path, default=jackall_cli())
     args = parser.parse_args()
 
     files = game_files(args.game_files)

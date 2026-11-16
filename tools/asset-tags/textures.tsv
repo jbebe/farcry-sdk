@@ -7,9 +7,9 @@ graphics\_textures\cubemap\lens_cubemap.xbt	cubemap	lens reflection cube		64x64	
 graphics\_textures\diffuse\architectural\brickcement_d.xbt	material	cement and brick wall	brick concrete town colonial exterior urban	256x256	13	colonialgarage_01, brickcoverw2_bk, concretebridge +10	concrete exterior town	worlds
 graphics\_textures\diffuse\architectural\brickold_01_d.xbt	material	old brick wall	brick colonial town home exterior interior urban	256x256	80	colonialmedium02_bld01, colonialmedium02_bld02, colonialmedium02_bld03 +77	concrete exterior military stone	worlds
 graphics\_textures\diffuse\architectural\brickold_03_d.xbt	material			256x256	6	colonialmdtrainstation_01, colonialsmall03_bldsh01, colonialsmtrainstation_01 +3	brick bus-station colonial concrete exterior landmark railway town travel urban	worlds
-graphics\_textures\diffuse\architectural\brickterracotta02_d.xbt	material	terracotta brick wall	brick town colonial home exterior urban	256x256	14	urban_large_window_bk, urban_small_window_bk, urbanlarge01_cs_door +11	exterior home town urban	worlds
+graphics\_textures\diffuse\architectural\brickterracotta02_d.xbt	material	terracotta brick wall	brick town colonial home exterior urban	256x256	14	urban_large_window_bk, urban_small_window_bk, urbanlarge01_cs_door +11	exterior home shop town urban	worlds
 graphics\_textures\diffuse\architectural\brickterracottadark_d.xbt	material			256x256	8	hutmd04floor_02, hutmd04frame_01, hutmd04roof_03 +5	exterior hut jungle mud rural stone village	worlds
-graphics\_textures\diffuse\architectural\cement_01_d.xbt	material	plain cement wall	concrete home town village exterior interior urban rural	256x256	94	buddyrescue_bld01, buddyrescue_bld02, colonialgarage02 +91	concrete exterior	worlds
+graphics\_textures\diffuse\architectural\cement_01_d.xbt	material	plain cement wall	concrete home town village exterior interior urban rural	256x256	94	buddyrescue_bld01, buddyrescue_bld02, colonialgarage02 +91	exterior	worlds
 graphics\_textures\diffuse\architectural\cementcracks_01_d.xbt	material	cracked cement wall	concrete broken home village hut shanty exterior rural	256x256	31	hutmd05framesav_sh, hutmd05roof_sh, hutmd01floor_02 +28	exterior village	worlds
 graphics\_textures\diffuse\architectural\ceramictile_08_d.xbt	material			256x256	3	colonialmd01buildingint_01, colonialmdtrainstationint_01, colonialsmtrainstationint_01	brick bus-station colonial concrete interior railway town travel urban	worlds
 graphics\_textures\diffuse\architectural\ceramictile_09_d.xbt	material			256x256	3	colonialmd01buildingint_01, colonialmdtrainstationint_01, colonialsmtrainstationint_01	brick bus-station colonial concrete interior railway town travel urban	worlds
@@ -24,13 +24,13 @@ graphics\_textures\diffuse\architectural\concrete_07_d.xbt	material			256x256	3	
 graphics\_textures\diffuse\architectural\concrete_08_d.xbt	material	concrete platform surface	concrete oil industrial exterior	256x256	14	fueldepotplatform_01, ranch_windmill_01, urbanhotel +11	concrete exterior interior	worlds
 graphics\_textures\diffuse\architectural\concrete_08_reinforced_d.xbt	material			256x256	1	fueldepotplatform_01	concrete exterior industrial metal oil	worlds
 graphics\_textures\diffuse\architectural\concrete_09_d.xbt	material	concrete wall surface	concrete interior exterior town urban industrial office hotel church garage	256x256	24	colonialgarage_01, colonialmd01buildingint_01, colonialmdtrainstationint_01 +21	concrete exterior town urban	worlds
-graphics\_textures\diffuse\architectural\concrete_10_d.xbt	material	grimy concrete wall	concrete dirty prison police interior town urban	256x256	9	broken_wall, prison_cell_02a, prison_cell_05a +6	brick concrete exterior government military prison stone	worlds
+graphics\_textures\diffuse\architectural\concrete_10_d.xbt	material	grimy concrete wall	concrete dirty prison police interior town urban	256x256	9	broken_wall, prison_cell_02a, prison_cell_05a +6	exterior military prison	worlds
 graphics\_textures\diffuse\architectural\concrete_12_d.xbt	material	concrete wall surface	concrete interior exterior town urban industrial office hotel church garage	256x256	59	hq_newsp_int, concretepipe_01_multi, concretepipe_02 +56	concrete exterior shop town urban	worlds
 graphics\_textures\diffuse\architectural\concrete_13_d.xbt	material	painted concrete wall	concrete paint church town colonial interior exterior	256x256	30	colonialchurch01_balcony, colonialchurch_01, colonialchurch_01_int +27	concrete exterior industrial	worlds
 graphics\_textures\diffuse\architectural\concreteblue_01_d.xbt	material	blue painted concrete wall	concrete paint colonial home town exterior urban	256x256	38	colonial_animateddoor01, colonial_lockedanimateddoor01, colonialchurch_01 +35	colonial exterior town urban wood	worlds
 graphics\_textures\diffuse\architectural\concreteblue_02_d.xbt	material			256x256	2	ranch_house_01, ranchbarn_01_multi	exterior farm home hq landmark ranch rural savanna tin wood	worlds
 graphics\_textures\diffuse\architectural\concreteblue_03_d.xbt	material			256x256	1	colonialchurch_01	church colonial concrete exterior landmark town urban	worlds
-graphics\_textures\diffuse\architectural\concretebrown_02_d.xbt	material	brown weathered concrete wall	concrete ruins war broken town exterior urban	256x256	13	ethiopian_ruinswall01, ethiopian_ruinswall01_bk, ethiopian_ruinswall02 +10	concrete exterior ruins rural stone war	worlds
+graphics\_textures\diffuse\architectural\concretebrown_02_d.xbt	material	brown weathered concrete wall	concrete ruins war broken town exterior urban	256x256	13	ethiopian_ruinswall01, ethiopian_ruinswall01_bk, ethiopian_ruinswall02 +10	exterior ruins rural stone war	worlds
 graphics\_textures\diffuse\architectural\concretebrown_d.xbt	material			256x256	1	gasstation_pump_a	exterior garage gas-station metal oil road usable	worlds
 graphics\_textures\diffuse\architectural\concretecolonial_01_d.xbt	material	colonial plastered concrete wall	concrete paint colonial town home exterior interior urban	256x256	160	prison_animateddoor01, buddyrescue_bld02, colonialmd01building_02 +157	concrete exterior military stone	worlds
 graphics\_textures\diffuse\architectural\concretecracks_03_d.xbt	material	cracked concrete wall	concrete broken ruins war garage town exterior urban	256x256	24	buddyrescue_windowscover, colonialgarage_01, colonial_large_window_bk +21	colonial exterior glass town urban wood	worlds
@@ -41,10 +41,10 @@ graphics\_textures\diffuse\architectural\concretepaint_d.xbt	material	painted co
 graphics\_textures\diffuse\architectural\concretestone_01_d.xbt	material			256x256	5	roadsign_base_01, barrelconcrete01, barrelconcrete02 +2	concrete exterior road	worlds
 graphics\_textures\diffuse\architectural\concretetown_01_d.xbt	material	town concrete wall	concrete town urban exterior interior home shop	256x256	43	buddyrescue_bld01, buddyrescue_bld02, buddyrescue_bld03 +40	colonial concrete exterior town urban	worlds
 graphics\_textures\diffuse\architectural\concretetown_02_d.xbt	material	town concrete wall	concrete town urban exterior interior home shop	256x256	86	buddyrescue_bld01, buddyrescue_bld02, buddyrescue_bld03 +83	colonial concrete exterior home town urban	worlds
-graphics\_textures\diffuse\architectural\concretetown_03_d.xbt	material	town concrete wall	concrete town urban exterior interior home shop	512x128	13	urbancomplete_bld03, urbancomplete_bld03_gazebo02_bk, urbancomplete_bld03_gazebo_bk +10	concrete exterior home town urban	worlds
+graphics\_textures\diffuse\architectural\concretetown_03_d.xbt	material	town concrete wall	concrete town urban exterior interior home shop	512x128	13	urbancomplete_bld03, urbancomplete_bld03_gazebo02_bk, urbancomplete_bld03_gazebo_bk +10	exterior home town urban	worlds
 graphics\_textures\diffuse\architectural\concretetown_05_d.xbt	material			256x256	2	gasstation02, bld_military_guardpost_a	checkpoint colonial concrete exterior gas-station landmark military road town urban	worlds
 graphics\_textures\diffuse\architectural\concretetown_06_d.xbt	material	military barracks concrete wall	concrete military camp interior exterior	256x256	74	barrack_a02, barrack_a03, barrack_a04 +71	concrete exterior home town urban	worlds
-graphics\_textures\diffuse\architectural\decrepidbrick01_d.xbt	material	decrepit brick wall	brick dirty military town ruins exterior interior urban	512x512	78	barrack_a02, barrack_a03, barrack_a04 +75	brick concrete exterior town urban	worlds
+graphics\_textures\diffuse\architectural\decrepidbrick01_d.xbt	material	decrepit brick wall	brick dirty military town ruins exterior interior urban	512x512	78	barrack_a02, barrack_a03, barrack_a04 +75	concrete exterior town urban	worlds
 graphics\_textures\diffuse\architectural\fencecolonial_d.xbt	material			128x256	3	colonialmd01balcony_01, colonialmd01balcony_02, urbanst01_roof02	colonial concrete exterior home town urban	worlds
 graphics\_textures\diffuse\architectural\fortstone01_d.xbt	material	fortress stone wall	stone military prison colonial exterior interior	256x256	110	prison_animateddoor01, colonialgarage02, colonialgarage02_bk +107	concrete exterior military stone	worlds
 graphics\_textures\diffuse\architectural\mudbrick01_d.xbt	material			256x256	2	ranch_house_01, ranchbarn_01_multi	exterior farm home hq landmark ranch rural savanna tin wood	worlds
@@ -120,7 +120,7 @@ graphics\_textures\diffuse\icone\red.xbt	misc	flat red swatch		8x8	102	tolloyrui
 graphics\_textures\diffuse\icone\white.xbt	misc	flat white swatch		8x8	10	plantspurs02_bk, plasticpot01, diamondpackage +7	dirty exterior fabric glass home hq interior mud office refugees road rural savanna town village	worlds
 graphics\_textures\diffuse\metal\barbwire01_d.xbt	material	barbed wire	metal rusty military prison checkpoint camp exterior war	128x64	10	compositeindfence_10m, compositeindfence_5m, compositeindfence_5m_hole +7	camp checkpoint exterior metal military prison ranch rural rusty wood	worlds
 graphics\_textures\diffuse\metal\bedframe_d.xbt	material			256x128	6	bedbunk_bk, bedframe01, bedframe02 +3	aid bedroom burned camp exterior hotel interior junkyard metal military prison refugees road rusty war	worlds
-graphics\_textures\diffuse\metal\colorsshanty.xbt	material	shanty colourful painted metal sheets	metal tin paint shanty fishing village town exterior rusty	256x256	63	fishingbuildingstory_01, fishingmdgazebo_01, fishingmdgazebo_02 +60	dirty exterior home industrial metal rusty shanty tin town urban wood	worlds
+graphics\_textures\diffuse\metal\colorsshanty.xbt	material	shanty colourful painted metal sheets	metal tin paint shanty fishing village town exterior rusty	256x256	63	fishingbuildingstory_01, fishingmdgazebo_01, fishingmdgazebo_02 +60	dirty exterior home industrial metal rusty shanty tin town wood	worlds
 graphics\_textures\diffuse\metal\colorsshanty02_d.xbt	material			256x256	2	ranch_house_01, ranch_house_windowsblock	exterior farm glass home hq landmark ranch rural savanna wood	worlds
 graphics\_textures\diffuse\metal\dirtrust_02_d.xbt	material	dirty rusty metal	metal rusty dirty industrial garage exterior	256x256	106	barge_animateddoor01, barge_lockedanimateddoor01, base_animateddoor +103	exterior metal	worlds
 graphics\_textures\diffuse\metal\dirtrust_03_d.xbt	material	dirty rusty metal	metal rusty dirty industrial garage exterior	256x256	199	colonial_animateddoor01, colonial_lockedanimateddoor01, industrial_animateddoor01 +196	exterior metal	worlds
@@ -178,7 +178,7 @@ graphics\_textures\diffuse\misc\africanpattern04_d.xbt	material			256x256	5	plat
 graphics\_textures\diffuse\misc\africanpattern05_d.xbt	material			256x256	6	rug03, potterybowl01, potteryoval01 +3	exterior home hut interior kitchen market mud village	worlds
 graphics\_textures\diffuse\misc\africanpattern06_d.xbt	material			256x256	5	fishbasket01, basketstraw01, basketstrawgroup01 +2	exterior farm hut interior market rural straw village	worlds
 graphics\_textures\diffuse\misc\africanpattern07_d.xbt	material			256x256	6	potteryround02, potteryround_compound, platewoodhut02_bk +3	broken clutter home hut interior kitchen market shanty village wood	dlc1
-graphics\_textures\diffuse\misc\africanpattern08_d.xbt	material			256x256	3	touristresortlgwall_dlc, touristresortsmwall_dlc, touristresortsmwood_dlc	exterior hotel jungle village wood	dlc1
+graphics\_textures\diffuse\misc\africanpattern08_d.xbt	material			256x256	3	touristresortlgwall_dlc, touristresortsmwall_dlc, touristresortsmwood_dlc	concrete exterior hotel jungle paint	dlc1
 graphics\_textures\diffuse\misc\alcoolmedic_d.xbt	material			256x128	2	medecinesuppliesrectangle00, medecinesuppliessmall00	aid camp clinic exterior interior military paper refugees usable	worlds
 graphics\_textures\diffuse\misc\ballpointpen_d.xbt	material			256x64	1	ballpointpen	bar clutter government home hotel hq interior office plastic police school	worlds
 graphics\_textures\diffuse\misc\birdcage_d.xbt	material			128x128	1	birdcage	clutter exterior home hotel hut interior market metal shop village	worlds
@@ -312,7 +312,7 @@ graphics\_textures\diffuse\wood\woodrose_13_d.xbt	material			256x256	5	mortar, p
 graphics\_textures\diffuse\wood\woodrough_01_d.xbt	material	rough wooden boards	wood construction rural exterior	256x256	12	scaffolddogon01, scaffolddogon02, fencewoodwire01_bk +9	exterior farm ranch rural village wood	worlds
 graphics\_textures\diffuse\wood\woodslick_01_d.xbt	material	smooth worn wood	wood camp village rural exterior	512x256	73	branchesshelter02, branchesshelter04, buildingshelter01 +70	exterior home hut rural savanna village wood	worlds
 graphics\_textures\diffuse\wood\woodwave_01_d.xbt	material			256x256	5	garagesm, boxlogo_01, chariotplanks01 +2	exterior industrial metal rusty wood	worlds
-graphics\_textures\diffuse\wood\woodweapons_01_d.xbt	material			256x256	2	colonialmd01buildingint_01, dart_pistol	armory bedroom colonial concrete home interior kitchen living-room metal town urban usable war	worlds
+graphics\_textures\diffuse\wood\woodweapons_01_d.xbt	material			256x256	2	colonialmd01buildingint_01, dart_pistol	armory bedroom colonial concrete home interior kitchen living-room metal military town urban usable	worlds
 graphics\_textures\diffuse\wood\woodweapons_02_d.xbt	material	weapon crate wood	wood armory military interior	256x256	74	colonialmdtrainstationint_01, colonialmedium02_bldint01, colonialsmtrainstationint_01 +71	exterior hut jungle rural village wood	worlds
 graphics\_textures\mask\ammocrate_m.xbt	material			256x256	2	ammopile_pickup, multipile_pickup	armory camp exterior home interior military shanty town usable village war wood	worlds
 graphics\_textures\mask\barril_01_m.xbt	material			512x128	15	ledger01, goldbar, barrelmetal_02 +12	dirty exterior gas-station home hut industrial interior metal military mine mud port road rural rusty savanna school town village warehouse wood	worlds
@@ -415,7 +415,7 @@ graphics\_textures\mask\pealing_paint_05_m.xbt	material			256x256	67	weaponrackb
 graphics\_textures\mask\pealing_paint_m.xbt	material			256x256	78	colonial_animateddoor01, colonial_lockedanimateddoor01, colonialchurch_01 +75	bar colonial concrete exterior home interior paint shanty town urban village wood	worlds
 graphics\_textures\mask\pealing_paint_massive_m.xbt	material			256x256	4	massive_256x512, massive_512x128, massive_512x256 +1	exterior home interior market road shanty town village wood	worlds
 graphics\_textures\mask\plasticbarrel_m.xbt	material			256x64	21	dogonkiln0_propanetank, propanetankkiln, radiotransmitter03_withgastanks +18	camp dirty exterior garage home industrial metal mud oil road rural savanna village wood	worlds
-graphics\_textures\mask\prisonfloor_01_m.xbt	material			512x256	24	prison_cell_02a, prison_cell_05a, prison_cell_06a +21	brick colonial concrete exterior government home interior military paint prison stone town urban	worlds
+graphics\_textures\mask\prisonfloor_01_m.xbt	material			512x256	24	prison_cell_02a, prison_cell_05a, prison_cell_06a +21	colonial concrete exterior home interior military paint prison stone town urban	worlds
 graphics\_textures\mask\pumplogo_m.xbt	material			256x256	1	ranch_waterpump	airfield exterior farm industrial metal ranch rural rusty savanna water-supply	worlds
 graphics\_textures\mask\ricebag_m.xbt	material			512x256	10	potatobag, potatogroup01, ricebag_01 +7	aid dirty exterior fabric farm home interior market military mud refugees road rural savanna shop town travel village warehouse	worlds
 graphics\_textures\mask\rockgeneric_01_m.xbt	material			256x256	4	warehouselg01frame_01, warehouselg02frame_01, trashground01 +1	burned dirty exterior garage industrial junkyard metal plastic railway refugees ruins rusty shanty town urban war warehouse	worlds
@@ -508,7 +508,7 @@ graphics\_textures\normal\misc\clothe02_n.xbt	material			256x256	31	brickcoverw2
 graphics\_textures\normal\misc\coatofarms_n.xbt	material			256x256	1	signetring	clutter home hq interior metal office safehouse story	worlds
 graphics\_textures\normal\misc\corrugated_metal2_n.xbt	material			512x512	2	industrialshelter02_bk, rug02	bar bedroom broken exterior fabric gas-station home hotel hut industrial interior living-room metal mud office paint rural savanna tin town village warehouse workshop	worlds
 graphics\_textures\normal\misc\corrugated_metal_3_n.xbt	material			256x256	2	beerbox01, fuelpile_pickup	bar brewery camp clutter dirty exterior garage gas-station industrial interior metal military mud oil restaurant road rural savanna shop usable village war warehouse wood	worlds
-graphics\_textures\normal\misc\corrugated_metal_n.xbt	material			256x256	132	buddyrescue_roof01, fishingbuildingstory_01, fishingmdgazebo_01 +129	airfield bar burned church dirty exterior fabric fishing garage home industrial interior metal mud office paint railway road ruins rural rusty savanna tin town urban village war warehouse	worlds
+graphics\_textures\normal\misc\corrugated_metal_n.xbt	material			256x256	132	buddyrescue_roof01, fishingbuildingstory_01, fishingmdgazebo_01 +129	airfield bar burned church dirty exterior fabric fishing garage home industrial interior metal mud office paint railway road ruins rural rusty savanna tin town village war warehouse wood	worlds
 graphics\_textures\normal\misc\dashnorm_n.xbt	material			256x256	8	microphone, radio01, radio02 +5	brick colonial concrete exterior industrial interior metal oil story town urban usable	worlds
 graphics\_textures\normal\misc\debris01n.xbt	material			256x256	8	carwrecked01, carwrecked01_bk, carwrecked02 +5	burned church dirty exterior garage industrial interior junkyard metal road ruins rusty town war	worlds
 graphics\_textures\normal\misc\dirtbeam_n.xbt	material			128x128	2	punulularge03, punulumedium02	dirty exterior home hut mud rural savanna village wood	worlds
@@ -1084,10 +1084,10 @@ graphics\characters\_common\c_cm_cloth_04_s.xbt	character			256x256	7	waltonpure
 graphics\characters\_common\c_cm_cloth_05_s.xbt	character			256x256	7	michele, multi_agent, multi_assault +4	dirty military war	worlds
 graphics\characters\_common\c_cm_cloth_08_s.xbt	character			256x256	2	michele, multi_heavy	military story war	worlds
 graphics\characters\_common\c_cm_cloth_10_s.xbt	character			256x256	2	multi_agent, multi_heavy	military war	worlds
-graphics\characters\_common\c_cm_cloth_nylon.xbt	character			256x256	2	avatar_wound_test, nasreen	bloody dirty story war	worlds
+graphics\characters\_common\c_cm_cloth_nylon.xbt	character			256x256	2	avatar_wound_test, nasreen	bloody dirty story	worlds
 graphics\characters\_common\c_cm_cowboyboot_d.xbt	character			256x256	1	multi_heavy	military war	worlds
 graphics\characters\_common\c_cm_cowboyboot_n.xbt	character			256x256	1	multi_heavy	dirty military war	worlds
-graphics\characters\_common\c_cm_dirt_01_d.xbt	character	character dirt overlay	dirty	256x256	10	xodtrainer, avatar_wound_test, nasreen +7	military story war	worlds
+graphics\characters\_common\c_cm_dirt_01_d.xbt	character	character dirt overlay	dirty	256x256	10	xodtrainer, avatar_wound_test, nasreen +7	military story	worlds
 graphics\characters\_common\c_cm_dirt_02_d.xbt	character	character dirt overlay	dirty	256x256	12	waltonpurefoy, taxidriver, michele +9	story	worlds
 graphics\characters\_common\c_cm_dirt_03_d.xbt	character			256x256	6	multi_agent, multi_assault, multi_cqb +3	military war	worlds
 graphics\characters\_common\c_cm_eyebrown_d.xbt	character			128x128	3	michele, nasreen, policeman	story	worlds
@@ -1100,7 +1100,7 @@ graphics\characters\_common\c_cm_goggles_n.xbt	character			256x256	2	multi_agent
 graphics\characters\_common\c_cm_head_m.xbt	character			256x256	1	policeman	police story town	worlds
 graphics\characters\_common\c_cm_holster_d.xbt	character			512x512	3	avatar_wound_test, warren, warren_avatar	story	worlds
 graphics\characters\_common\c_cm_holster_d2.xbt	character			512x512	2	nasreen, policeman	dirty police story town	worlds
-graphics\characters\_common\c_cm_holster_m.xbt	character			512x512	1	avatar_wound_test	bloody dirty war	worlds
+graphics\characters\_common\c_cm_holster_m.xbt	character			512x512	1	avatar_wound_test	bloody dirty	worlds
 graphics\characters\_common\c_cm_holster_m2.xbt	character			256x256	2	nasreen, policeman	dirty police story town	worlds
 graphics\characters\_common\c_cm_holster_n2.xbt	character			512x512	3	avatar_wound_test, nasreen, policeman	dirty story	worlds
 graphics\characters\_common\c_cm_hood_02_n.xbt	character			512x512	1	multi_cqb	military war	worlds
@@ -1124,8 +1124,8 @@ graphics\characters\_common\c_cm_pad_d.xbt	character			256x256	2	multi_assault, 
 graphics\characters\_common\c_cm_pad_m.xbt	character			256x256	2	multi_assault, multi_heavy	dirty military war	worlds
 graphics\characters\_common\c_cm_pad_n.xbt	character			256x256	2	multi_assault, multi_heavy	dirty military war	worlds
 graphics\characters\_common\c_cm_pant_d.xbt	character			512x512	5	avatar_wound_test, michele, warren_avatar +2	story	worlds
-graphics\characters\_common\c_cm_pant_m.xbt	character			256x256	6	avatar_wound_test, michele, warren_avatar +3	dirty story war	worlds
-graphics\characters\_common\c_cm_pant_n.xbt	character			512x512	7	avatar_wound_test, michele, warren_avatar +4	dirty war	worlds
+graphics\characters\_common\c_cm_pant_m.xbt	character			256x256	6	avatar_wound_test, michele, warren_avatar +3	dirty story	worlds
+graphics\characters\_common\c_cm_pant_n.xbt	character			512x512	7	avatar_wound_test, michele, warren_avatar +4	dirty	worlds
 graphics\characters\_common\c_cm_shirt_02_n.xbt	character			256x256	1	multi_heavy	dirty military war	worlds
 graphics\characters\_common\c_cm_shirt_d.xbt	character			256x256	1	michele	story	worlds
 graphics\characters\_common\c_cm_shirt_n.xbt	character			256x256	1	michele	dirty story	worlds
@@ -1170,7 +1170,7 @@ graphics\characters\_common\c_cm_shirt_print55.xbt	character	printed t-shirt pat
 graphics\characters\_common\c_cm_shirt_print56.xbt	character	printed t-shirt pattern	fabric	128x128	0			worlds
 graphics\characters\_common\c_cm_shoeboot_d.xbt	character			256x256	1	policeman	police story town	worlds
 graphics\characters\_common\c_cm_shoeboot_m.xbt	character			256x256	1	policeman	dirty police story town	worlds
-graphics\characters\_common\c_cm_shoeboot_n.xbt	character			512x512	2	avatar_wound_test, policeman	bloody dirty police story town war	worlds
+graphics\characters\_common\c_cm_shoeboot_n.xbt	character			512x512	2	avatar_wound_test, policeman	bloody dirty police story town	worlds
 graphics\characters\_common\c_cm_shoes_01_d.xbt	character			512x512	2	avatar_wound_test, multi_vip	bloody military war	worlds
 graphics\characters\_common\c_cm_sportvestapr.xbt	character	sport vest apr marked	apr fabric	256x256	0			worlds
 graphics\characters\_common\c_cm_sportvestufll.xbt	character	sport vest ufll marked	ufll fabric	256x256	0			worlds
@@ -1917,8 +1917,8 @@ graphics\weapons\secondary\makarov\makarovstate1_m.xbt	object			256x256	1	makaro
 graphics\weapons\secondary\makarov\makarovstate2_m.xbt	object			256x256	1	makarov	armory dirty exterior garage hut industrial interior metal military mud police rural rusty savanna town usable village war	worlds
 graphics\weapons\secondary\mp5_sd3\mp5_sd3_m_state1.xbt	object			512x512	1	mp5_sd3	armory dirty exterior fabric garage home hut industrial interior metal military mud refugees rural rusty savanna town usable village war	worlds
 graphics\weapons\secondary\mp5_sd3\mp5_sd3_m_state2.xbt	object			512x512	1	mp5_sd3	armory dirty exterior fabric garage home hut industrial interior metal military mud refugees rural rusty savanna town usable village war	worlds
-graphics\weapons\secondary\pneudart190\pneudart_m_state1.xbt	object			256x256	1	dart_pistol	armory burned dirty exterior garage industrial interior metal mud road ruins rural rusty savanna town usable village war	worlds
-graphics\weapons\secondary\pneudart190\pneudart_m_state2.xbt	object			256x256	1	dart_pistol	armory burned dirty exterior garage industrial interior metal mud road ruins rural rusty savanna town usable village war	worlds
+graphics\weapons\secondary\pneudart190\pneudart_m_state1.xbt	object			256x256	1	dart_pistol	armory burned dirty exterior garage industrial interior metal military mud road ruins rural rusty savanna town usable village war	worlds
+graphics\weapons\secondary\pneudart190\pneudart_m_state2.xbt	object			256x256	1	dart_pistol	armory burned dirty exterior garage industrial interior metal military mud road ruins rural rusty savanna town usable village war	worlds
 graphics\weapons\secondary\starmodelp\smart_state01_m.xbt	object			256x256	1	star_model_p	armory dirty exterior garage hut industrial interior metal military mud police rural rusty savanna town usable village war wood	worlds
 graphics\weapons\secondary\starmodelp\smart_state03_m.xbt	object			256x256	1	star_model_p	armory dirty exterior garage hut industrial interior metal military mud police rural rusty savanna town usable village war wood	worlds
 graphics\weapons\secondary\uzi\uzi_state01_m.xbt	object			256x256	1	uzi	armory dirty exterior garage industrial interior metal mud road rural rusty savanna town usable village war	worlds

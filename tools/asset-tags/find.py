@@ -50,42 +50,58 @@ def describe(row, shown):
     return " | ".join(parts)
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("terms", nargs="+")
-    parser.add_argument("--textures", action="store_const", const="textures", dest="table", default="models")
-    parser.add_argument("--sounds", action="store_const", const="sounds", dest="table")
-    parser.add_argument("--kind")
-    parser.add_argument("--all", action="store_true", help="one line per file")
-    args = parser.parse_args()
-
-    exact, shown = COLUMNS[args.table]
-    table = read(args.table).values()
-    words = {w for r in table for c in exact for w in r[c].split()}
-    terms = [term.lower().split(",") for term in args.terms]
-    rows = []
-    for row in table:
+def select(table, terms, kind=None):
+    """The table's rows matching every term and, given one, the kind."""
+    exact, _ = COLUMNS[table]
+    rows = read(table).values()
+    words = {w for r in rows for c in exact for w in r[c].split()}
+    terms = [term.lower().split(",") for term in terms]
+    selected = []
+    for row in rows:
         own = {w for c in exact for w in row[c].split()}
         text = " ".join(row.get(c, "") for c in TEXT).lower()
-        if all(any(t in own if t in words else t in text for t in term) for term in terms) and args.kind in (None, row["kind"]):
-            rows.append(row)
+        if all(any(t in own if t in words else t in text for t in term) for term in terms) and kind in (None, row["kind"]):
+            selected.append(row)
+    return selected
 
+
+def families(rows, table, every=False):
+    """Kind -> family (or path, with every) -> its rows, the plain mesh or diffuse texture first."""
     by_kind = collections.defaultdict(lambda: collections.defaultdict(list))
     for row in rows:
-        by_kind[row["kind"]][row["path"] if args.all else family(row, args.table)].append(row)
+        by_kind[row["kind"]][row["path"] if every else family(row, table)].append(row)
+    for groups in by_kind.values():
+        for members in groups.values():
+            members.sort(key=intact_first)
+    return by_kind
 
+
+def parser_for(description):
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument("terms", nargs="+")
+    parser.add_argument("--kind")
+    parser.add_argument("--all", action="store_true", help="one line per file")
+    return parser
+
+
+def main():
+    parser = parser_for(__doc__.splitlines()[0])
+    parser.add_argument("--textures", action="store_const", const="textures", dest="table", default="models")
+    parser.add_argument("--sounds", action="store_const", const="sounds", dest="table")
+    args = parser.parse_args()
+
+    rows = select(args.table, args.terms, args.kind)
+    by_kind = families(rows, args.table, args.all)
     brief = not args.kind and not args.all and sum(len(g) for g in by_kind.values()) > BRIEF_ABOVE
     for kind in sorted(by_kind):
         groups = by_kind[kind]
         print(f"\n## {kind} ({len(groups)})")
-        for members in groups.values():
-            members.sort(key=intact_first)
         if brief:
             print(", ".join(stem(m[0]["path"]) for m in groups.values()))
             continue
         for first, *others in groups.values():
             more = f" (+{len(others)}: {shortlist(stem(m['path']) for m in others)})" if others else ""
-            print(f"- {first['path']}{more} | {describe(first, shown)}")
+            print(f"- {first['path']}{more} | {describe(first, COLUMNS[args.table][1])}")
     print(f"\n{len(rows)} files" + (" - add --kind <kind> for sizes, placements and archetypes" if brief else ""))
 
 

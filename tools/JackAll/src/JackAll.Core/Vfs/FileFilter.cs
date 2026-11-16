@@ -5,15 +5,15 @@ namespace JackAll.Core.Vfs;
 
 /// <summary>
 /// A filter box's text, parsed: path words that must all appear, <c>-words</c> that must not, and the
-/// <c>ext:xbt</c>, <c>arch:dlc1</c>, <c>hash:1a2b3c4d</c>, <c>spk:reload</c> and <c>shader:foliage</c>
+/// <c>ext:xbt</c>, <c>arch:dlc1</c>, <c>hash:1a2b3c4d</c>, <c>tag:kitchen</c> and <c>shader:foliage</c>
 /// tokens, freely combined.
 /// </summary>
 /// <remarks>
 /// <c>arch:</c> matches the module name the caller supplies, so a colliding archive's
 /// "folder/name" form works too. An unparsable <c>hash:</c> is dropped rather than matched as text,
-/// since a mistyped hash is never a meaningful path substring. <c>spk:</c> and <c>shader:</c> match the
-/// label of that kind the caller supplies, so a file without one never matches them; quoted,
-/// <c>spk:"ak47 reload"</c>, every word in the quotes must appear in it.
+/// since a mistyped hash is never a meaningful path substring. <c>tag:</c> and <c>shader:</c> words are
+/// matched by the caller against the file's tags or label of that kind, so a file without them never
+/// matches; quoted, <c>tag:"ak47 reload"</c>, every word in the quotes must match.
 /// </remarks>
 public sealed partial record FileFilter(string[] Includes, string[] Excludes, string? Extension, string? Archive, uint? Hash,
     (string Kind, string Word)[] Labels)
@@ -77,14 +77,13 @@ public sealed partial record FileFilter(string[] Includes, string[] Excludes, st
     }
 
     /// <summary>The label kinds a filter asks its caller for, named as their tokens are.</summary>
-    public const string SoundLabels = "spk";
+    public const string Tags = "tag";
     public const string ShaderLabels = "shader";
 
-    private static readonly string[] LabelKinds = [SoundLabels, ShaderLabels];
+    private static readonly string[] LabelKinds = [Tags, ShaderLabels];
 
-    /// <summary>Words match the path; label words match the text <paramref name="label"/> gives a file for
-    /// the token's kind, null when it has no label of that kind.</summary>
-    public bool Matches(VfsFile file, Func<VfsFile, string> moduleName, Func<VfsFile, string, string?>? label = null)
+    /// <summary>Words match the path; each label word goes to <paramref name="labelMatches"/> with its kind.</summary>
+    public bool Matches(VfsFile file, Func<VfsFile, string> moduleName, Func<VfsFile, string, string, bool>? labelMatches = null)
     {
         if ((Hash is { } hash && file.Hash != hash)
             || (Extension is not null && !string.Equals(file.Type.Extension, Extension, StringComparison.OrdinalIgnoreCase))
@@ -110,7 +109,7 @@ public sealed partial record FileFilter(string[] Includes, string[] Excludes, st
         }
         foreach ((string kind, string word) in Labels)
         {
-            if (label?.Invoke(file, kind)?.Contains(word, StringComparison.OrdinalIgnoreCase) != true)
+            if (labelMatches?.Invoke(file, kind, word) != true)
             {
                 return false;
             }

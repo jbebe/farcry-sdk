@@ -25,7 +25,7 @@ it down:
 | `ext:<type>` | files of one type | `ext:xbt` for textures |
 | `arch:<archive>` | files from one archive, as the **Source** column (3) names it | `arch:patch` |
 | `hash:<hex>` | the file with this hash | `hash:585ACE93` |
-| `spk:<word>` or `spk:"<word> <word>"` | sounds whose [label](#sound-labels) has every word | `spk:"ak47 reload"` |
+| `tag:<word>` or `tag:"<word> <word>"` | models, textures and sounds whose [tags](#tags) match every word | `tag:"kitchen interior"` |
 | `shader:<word>` or `shader:"<word> <word>"` | shader objects whose [label](#shader-labels) has every word | `shader:"weapon QUALITYHIGH"` |
 
 `ext:xbt ak47` finds the AK-47's textures (2), across every folder.
@@ -70,6 +70,19 @@ saying why (2). Editing one of them does nothing in game, however long you spend
 Tick **Hide unused game files** (3) to leave them out of the tree and the list altogether. Your own
 edits are never hidden.
 
+## Tags
+
+Every model, texture and sound bank of the game is tagged by what it is and where it belongs: a kind
+(`furniture`, `container`, `material`, `ambience`), a few words saying what it is, and tags for the
+places, rooms, settings, materials and condition it fits, such as `home kitchen interior wood`.
+Models and textures show their kind and description in the **Label** column, and selecting one shows
+its tags. The full list of kinds and tags is in the repository's `tools/asset-tags/README.md`.
+
+`tag:` searches them. A word that is a kind or a tag matches only the files that carry it, so
+`tag:war` finds the props of a battlefield and not warehouses. Any other word matches part of the
+description, the tags or a sound's [label](#sound-labels), so a half-typed word already finds
+something. With the other words, `tag:"kitchen interior" ext:xbg` lists the models for a kitchen.
+
 ## Sound labels
 
 Sound banks are named by number (`soundbinary\004b27c7.spk`), so JackAll labels each one by where the
@@ -88,7 +101,7 @@ The other categories are `explosion`, `foley`, `voice`, `animal`, `object`, `amb
 plays. A bank no game file names but another bank plays, such as a shot's audio, takes the label of
 the sound that plays it. Recorded speech without a subtitle is just `dialogue`.
 
-So `spk:"ak47 reload"` in **Filter** finds the AK-47's reload sounds, and `spk:"dialogue Flora"`
+So `tag:"ak47 reload"` in **Filter** finds the AK-47's reload sounds, and `tag:"dialogue Flora"`
 finds Flora's lines. The 37 retail banks nothing in the game's files names are labelled by hand; most
 of them play only silence.
 

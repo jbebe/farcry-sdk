@@ -101,6 +101,11 @@ public sealed class AppConfig
     /// fatal: shader objects simply show no label.</summary>
     public static string ShaderLabelFile => Path.Combine(DataDir, ".shaderlabels");
 
+    /// <summary>What each retail model, texture and sound bank is and where it belongs (the tables of
+    /// <c>tools/asset-tags</c>). Missing is not fatal: <c>tag:</c> simply finds nothing.</summary>
+    public static string[] TagFiles =>
+        [Path.Combine(DataDir, ".modeltags"), Path.Combine(DataDir, ".texturetags"), Path.Combine(DataDir, ".soundtags")];
+
     /// <summary>
     /// A savegame-specific hash -> name table (see <see cref="JackAll.App.FileHandlers.Sav.SaveGameCompiledFieldNames"/>)
     /// recovered by CRC32 dictionary-matching every string constant in the game's Linux dedicated-server
