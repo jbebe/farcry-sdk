@@ -297,7 +297,6 @@ void ThirdPerson::Outside::Update(uint8_t* pawn, float* look) {
     }
     // A level load or a cutscene took the camera: let it go where it stands.
     if (g_camera != nullptr && Camera::Active() != g_camera) {
-        FCSE::ApiPointer()->Log("third person: the camera was taken over, leaving it");
         Pawn::SetFirstPerson(pawn, true);
         Pawn::SetGunUp(pawn, true);
         g_view = View::First;
