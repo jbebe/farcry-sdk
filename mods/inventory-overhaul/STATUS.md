@@ -50,12 +50,12 @@ Stage: active
 
 ## Approvals
 
-- played: 76dd3c60 2026-11-17 - "it all works flawlessly"
+- played: 4f56b011 2026-11-17 - "it all works flawlessly"; after the simplify pass: "I tested it, it works."
 - page text: 7950320 2026-11-01 - implied by the inventory-overhaul-1.0.0 release
 
 ## Checks
 
-- simplify: 95391607 2026-11-17 - since inventory-overhaul-1.0.0
+- simplify: 4f56b011 2026-11-17 - since inventory-overhaul-1.0.0
 
 ## Release order
 
