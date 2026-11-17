@@ -3,7 +3,7 @@
 Notable changes to Inventory Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.1.0] - 2026-11-17
 
 ### Added
 - **Malaria on the pills' post-it,** in the words the pause menu's Journal had for how sick you are.
