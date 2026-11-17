@@ -183,7 +183,8 @@ PC Perspective preview in June 2008 reported a plan to burn down huts that faile
 **Claimed.** Levesque (November 2008): the plan began as fire only on patches of grass no bigger than 10
 by 10 metres; management asked for the whole savanna to burn; spread is capped because endless fire "is
 just not fun". He names uphill spread and humidity. The tech-demo walkthrough shows fire spreading
-from a flamethrower toward a fuel depot.
+from a flamethrower toward a fuel depot; the third has a burning soldier set the grass around him alight
+as he leaves a vehicle, and promises that "what should burn will burn", the savannah included.
 
 **Retail: present.** `CFireComponent::PropagateFire` (`0x08B4CD80`) spreads per burning node by a wind
 term (force over 30, projected on the node direction), the fire damage, and a vertical term that makes
@@ -281,7 +282,9 @@ can do the same to you."
 **Claimed.** GameSpot at Leipzig: a demo that "began in a dense, oppressive jungle like those from the
 original Far Cry". Producer Louis-Pierre Pharand: savannah woodlands approximate the density of the
 original's jungles
-([GamesRadar](https://www.gamesradar.com/far-cry-2-first-look-part-two/)). A fan comparison of the
+([GamesRadar](https://www.gamesradar.com/far-cry-2-first-look-part-two/)). The third walkthrough: dense,
+dark jungles like those of the Congo, several kinds of savannah, and forests seen hundreds of metres
+away. A fan comparison of the
 pre-alpha video, relayed by [unseen64](https://www.unseen64.net/2009/10/01/far-cry-2-pc-xbox-360-ps3-beta-alpha/),
 found its jungle "more realistic" and its grass greener.
 
@@ -306,6 +309,8 @@ shanty towns that "can be almost totally raised to the ground". Hooked Gamers (A
 rocks and boulders". PAX: ammo piles send "hundreds of bullets" flying and chain explosions. A
 narrated tech-demo walkthrough (event and date not recorded) shoots an ammo crate that "will just start
 spraying bullets all over the place", and fights through a shanty town with "destructibles all over".
+The third walkthrough: "whatever looks destroyable is", so the player can shoot through walls the enemy
+hides behind; a shot ammo pile sends the soldiers into hiding.
 
 **Retail.**
 
@@ -485,7 +490,8 @@ in the hand stops the player shooting until removed; "a graze to the head litera
 consciousness"; burning clothes must be beaten out. GameSpot: one first-aid key chooses the right
 interaction. Engadget at PAX: "over 60 animations for first-aid". The tech-demo walkthrough: there are
 no medkits, the player performs actions on himself to get back into the fight, and an overused weapon
-jams. Both ship as shown: the surgery animations and weapon jams are in retail.
+jams. Both ship as shown: the surgery animations and weapon jams are in retail. The third walkthrough
+promises over 60 healing animations, among them popping a shoulder back after a car crash.
 
 **Retail.**
 
@@ -518,7 +524,9 @@ type-0 `CGameRegion` for over 10 s blacks the player out (`0x088085A0`, used in 
 ### Enemy hit reactions
 
 **Claimed.** Hooked Gamers: an enemy's movements "will be influenced by his injury, as well as any
-previous wounds he has suffered", and weapons affect the movements.
+previous wounds he has suffered", and weapons affect the movements. A third narrated walkthrough (event
+and date not recorded, "a pre-alpha build") describes a hybrid of animation and ragdoll: a soldier shot
+in the neck, shoulder or leg reacts there, grabbing his leg or putting his hands to his neck.
 
 **Retail: present in part.** Limping, falling and firing a pistol from the ground, and crawling to cover,
 ship (see [stims and damage](../engine-internals/stims-and-damage.md)). Persistent wounds and
@@ -569,7 +577,8 @@ mercenaries, and the other nine are buddies, independent mercenaries doing their
 player once unlocked.
 
 **Retail: present, with nine.** Twelve mercenaries appear, nine of them playable; the ones not chosen
-are buddies ([characters](../lore/characters.md)).
+are buddies ([characters](../lore/characters.md)). The third walkthrough adds that buddies are "not to be
+trusted all the time"; retail ends with them turning on the player in the final battle.
 
 ## Sound
 
