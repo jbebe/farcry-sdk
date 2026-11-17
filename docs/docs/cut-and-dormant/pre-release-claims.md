@@ -150,7 +150,10 @@ the sandstorm particle effects ship in a layer that is on by default. See
 
 **Claimed.** At PAX 07: "Trees are actually losing branches". HEXUS at Leipzig: "If there's a stiff
 breeze blowing, branches might snap off trees and blow away". 3DNews: the wind carries fallen leaves
-and branches. The r/farcry2 list says wind swayed branches and that shot branches broke off and flew,
+and branches. In the tech-demo walkthrough a storm builds as clouds cover the sky, the wind rises and the
+grass reacts; its narrator admits the wind was exaggerated to 160 km/h for the demo, and it breaks
+branches off, a shot branch flies with the wind, and a grenade's particles drift with it. The r/farcry2
+list says wind swayed branches and that shot branches broke off and flew,
 shown in a GIF; shot branches do break in retail
 ([trees shot apart](#trees-shot-apart-felled-uprooted)).
 
@@ -179,7 +182,8 @@ PC Perspective preview in June 2008 reported a plan to burn down huts that faile
 
 **Claimed.** Levesque (November 2008): the plan began as fire only on patches of grass no bigger than 10
 by 10 metres; management asked for the whole savanna to burn; spread is capped because endless fire "is
-just not fun". He names uphill spread and humidity.
+just not fun". He names uphill spread and humidity. The tech-demo walkthrough shows fire spreading
+from a flamethrower toward a fuel depot.
 
 **Retail: present.** `CFireComponent::PropagateFire` (`0x08B4CD80`) spreads per burning node by a wind
 term (force over 30, projected on the node direction), the fire damage, and a vertical term that makes
@@ -231,7 +235,11 @@ Regeneration" trailer and the Ubidays demo showed sprouting
 **Claimed.** At PAX 07 Hocking said "everything in the world is destructible down to the pixel" and shot
 branches off a distant tree with a sniper rifle. GameSpot: "trees can be blasted out of the ground with
 grenades". Kikizo: bullets rip leaves and branches from trees, "reducing the foliage to
-near-nothingness". PC Zone: a tree-toppling machete.
+near-nothingness". PC Zone: a tree-toppling machete. A narrated tech-demo walkthrough (event and date
+not recorded): vegetation "is going to break exactly where you shoot", it reacts to every impact,
+"a Jeep, bullet, whatever", and an RPG-7 rocket breaks trees 300 to 350 m away, to show that distant
+trees keep their destruction rather than falling back to static levels of detail. Whether retail breaks
+branches at that distance is not traced.
 
 **Retail.**
 
@@ -282,6 +290,14 @@ million instances as retail, to within 35. Retail's High preset culls vegetation
 prototype's High ([prototype comparison](./prototype-comparison.md)). Any difference from the 2007
 video predates the available data.
 
+## Day and night
+
+**Claimed.** The tech-demo walkthrough: a 24-hour day and night cycle with fully dynamic lighting, god
+rays through moving trees and shadows moving with the sun, so the player can scout a place by day and
+come back at night; open skies give sharp shadow edges.
+
+**Retail: present.** See [time of day and lighting](../engine-internals/time-of-day-and-lighting.md).
+
 ## Physics and destruction
 
 **Claimed.** Ubisoft's fact sheet and the Steam store page: "Everything is breakable and alterable".
@@ -307,6 +323,9 @@ spraying bullets all over the place", and fights through a shanty town with "des
 - **Parts thrown by explosions: present but gated.** `fPartsSpeed` is 0 on 303 of 339 explosion blocks,
   so pieces drop in place. See [physics and explosions](./physics-and-explosions.md).
 - **Ammo dumps firing rounds: not traced.** Ammo caches explode.
+- **RPG-7 rockets arming late and bouncing: not traced.** The tech-demo walkthrough says the rocket does
+  not fuse until four or five rotations, so it can be bounced off the ground under a vehicle or off a
+  wall.
 - **Persistent damage: reduced.** Guard posts repopulate and the world resets as the player travels.
 
 ## Animals
@@ -367,7 +386,9 @@ drop exists. Hands-up and panic gestures play only as bark gestures. See [AI and
 ### Medics dragging the wounded; squad classes
 
 **Claimed.** The fact sheet and Steam page: "Medics will drag wounded soldiers to safety." TechPowerUp:
-"Classes: Grunt, Engineer, Medic, Sniper". Kikizo: enemies help downed compatriots. An Overclockers
+"Classes: Grunt, Engineer, Medic, Sniper". Kikizo: enemies help downed compatriots. The tech-demo
+walkthrough: you can shoot to wound rather than kill, the wounded soldier causes chaos around him and
+crawls for cover, and medics bring him to safety, patch him up and send him back into combat. An Overclockers
 thread (2008) asks whether anyone had managed to see a rescue in the game.
 
 **Retail: present, by any comrade.** `mercbrain` carries a complete rescue: `RescuerWalkToVictim`,
@@ -423,7 +444,8 @@ vehicle crews escalate the chase (`VehicleChaseLevel2`, `3` in `vehiclebrain`); 
 **Claimed.** Pharand (GamesRadar, 2007): "Our AI is needs-driven, and the main needs are Rest, Duty and
 Social", with smart-terrain points such as a sleep point. PC Zone: "more likely you'll find sleeping
 guards during the wee hours". GameSpot (January 2008): enemies have "general schedules". The tech-demo
-walkthrough shows a camp at lunchtime with the guards eating as a patrol arrives by vehicle.
+walkthrough shows a camp at lunchtime with the guards eating as a patrol arrives by vehicle, and says
+soldiers patrol and behave differently in the morning, at midday and at night.
 
 **Retail: present, as a time-of-day table.**
 
@@ -541,6 +563,13 @@ be compared only against footage.
 not at the bar, and gave their missions there.
 
 **Retail.** Not checked against data.
+
+**Claimed.** The tech-demo walkthrough: Jack Carver has retired; the player picks one of ten
+mercenaries, and the other nine are buddies, independent mercenaries doing their own jobs who help the
+player once unlocked.
+
+**Retail: present, with nine.** Twelve mercenaries appear, nine of them playable; the ones not chosen
+are buddies ([characters](../lore/characters.md)).
 
 ## Sound
 
