@@ -80,8 +80,8 @@ is in Options > Controls, under Misc.
 ```
 
 builds `ThirdPerson.dll` (32-bit) and stages it in `layer\plugins\third-person\`. The game gets it with
-the layer, from `jackall-cli mod build` together with every other layer installed. Needs FCSE 1.3.0
-or later, since it hooks the same posing functions as Aiming Overhaul, and JackAll 1.4.0 or later,
+the layer, from `jackall-cli mod build` together with every other layer installed. Needs FCSE 1.5.0
+or later, for its plugin API 10, and JackAll 1.4.0 or later,
 which merges the control sections with other mods'.
 
 ```
