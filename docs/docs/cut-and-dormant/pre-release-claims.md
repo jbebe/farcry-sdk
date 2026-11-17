@@ -124,11 +124,24 @@ cycle "influences NPC behaviour and tactics"
 or weather enters perception ([AI](../engine-internals/ai.md)). Time of day does change which smart
 terrain points idle soldiers use (see sleeping guards below).
 
+### Strong winds and sandstorms
+
+**Claimed.** The r/farcry2 post "List of Cut and Removed Content from Far Cry 2 (Alpha & Demo)"
+(u/Unkn0wn2010), working from alpha and demo footage, lists "better dynamic weather": strong winds,
+sandstorms, and weather that visibly moved grass and trees.
+
+**Retail: present, milder.** The storm presets raise the wind force that bends grass and trees, and
+the sandstorm particle effects ship in a layer that is on by default. See
+[time of day and lighting](../engine-internals/time-of-day-and-lighting.md) and
+[vegetation, fire and weather](./vegetation-fire-weather.md).
+
 ### Wind snapping branches off trees
 
 **Claimed.** At PAX 07: "Trees are actually losing branches". HEXUS at Leipzig: "If there's a stiff
 breeze blowing, branches might snap off trees and blow away". 3DNews: the wind carries fallen leaves
-and branches.
+and branches. The r/farcry2 list says wind swayed branches and that shot branches broke off and flew,
+shown in a GIF; shot branches do break in retail
+([trees shot apart](#trees-shot-apart-felled-uprooted)).
 
 **Retail: present but dead at its call site.** The code exists (`ApplyWindDest`, and the
 `real_tree.wind.*` particles ship), but `RTxcManager::CheckWindDestruction` has no caller and
@@ -460,6 +473,46 @@ previous wounds he has suffered", and weapons affect the movements.
 **Retail: present in part.** Limping, falling and firing a pistol from the ground, and crawling to cover,
 ship (see [stims and damage](../engine-internals/stims-and-damage.md)). Persistent wounds and
 weapon-specific reactions are not confirmed.
+
+## Look and interface
+
+**Claimed.** The r/farcry2 list says the alpha and demo had no brown filter, with natural lighting and
+bright colours, and a completely different HUD and loading screens. Commenters on that post note that
+every screenshot on the game's Steam store page shows alpha or beta builds.
+
+**Retail.** The colour grade is per environment preset ([environment presets](../modding/environment-presets.md)).
+The alpha and demo builds the post describes are not available, so their HUD and loading screens can
+be compared only against footage.
+
+## Navigation and equipment
+
+**Claimed.** The r/farcry2 list says:
+
+- A compass stood where the GPS is. Its design changed several times and ended as a compass with an LED
+  that pointed to nearby diamond cases.
+- Cars and boats had no GPS, because the game used the compass.
+- The wristwatch model was different, and the watch could be used anywhere, not only at a bed,
+  probably to change the time of day.
+- The AR-16 had no scope; it was not full-auto, as in retail.
+- The grenade had a handle, like a stick grenade.
+- A vehicle that is not in the final game was shown (the text does not name it).
+
+**Retail.**
+
+- **Compass: present, unused.** The world libraries keep `gadgets.Equipped.CompassMulti`,
+  `CompassSingle` and `Compass_Vehicle`. Scubrah's Patch swaps the GPS for the compass.
+- **Watch:** the player raises it only at a bedroll, to choose when to wake. Scubrah's Patch puts the
+  raise on a key anywhere; it shows the watch and does not change the time.
+- **Grenades:** retail has `M67`, `UnstableM67`, `Molotov`, `Flare` and the launcher rounds; no
+  stick-grenade archetype ships.
+- Vehicles nothing places are listed in [unused assets](./unused-assets.md).
+
+## Buddies
+
+**Claimed.** The r/farcry2 list says the best buddy and the second-best buddy waited at the safe house,
+not at the bar, and gave their missions there.
+
+**Retail.** Not checked against data.
 
 ## Sound
 

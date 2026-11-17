@@ -81,6 +81,7 @@ site. Browse the folders or Grep across them - there is no index to regenerate.
   places, themes, each claim cited to a string and marked stated or implied
 - `docs/docs/cut-and-dormant/` - what retail holds but never uses or keeps off, the Sep 2008
   prototype against retail, and pre-release promises against what shipped
+- `docs/docs/community-wishes/` - what players ask for in mods and remakes, by subject, with sources
 - `docs/docs/intro.md` - how claims are marked RE-verified vs community-reported
 - GitHub issues (`gh issue list`) - open problems and wishlist, labelled by type (`idea`, `feature`,
   `bug`, `chore`) and by mod (`mod:*`)
