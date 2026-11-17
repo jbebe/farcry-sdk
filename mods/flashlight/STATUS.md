@@ -25,7 +25,7 @@ Stage: maintenance
 ## Approvals
 
 - played: 1d366b0d 2026-11-17 - "it works alright"
-- page text: 49624dc 2026-10-29 - implied by the flashlight-1.2.1 release
+- page text: ec69a311 2026-11-17 - "yes", BBCode and short message checked
 
 ## Checks
 
