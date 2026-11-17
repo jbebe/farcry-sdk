@@ -30,7 +30,7 @@ Stage: active
 - [new] Malaria on the pills' post-it - agreed: "malaria becomes the pills' card"
 - [new] Camo Suit in Items once bought - agreed 2026-10-26
 - [done] The two sound banks on ids of their own, 00fe0000 and 00fe0001: their old records 0x00FD0001-0x00FD0004 were also in Vehicle Overhaul's 00fd0000.spk, and a shared id crashed the game in Sound Overhaul's echo work - user: "changes in instance 3 are verified"
-- [new] A gun picked up or taken at the armory: with A and B empty, into the slot in hand, else A; with one empty, into the empty one; with both full, it replaces the slot in hand, else A
+- [new] A gun picked up or taken at the armory: with A and B empty, into A; with one empty, into the empty one; with both full, it replaces the slot in hand, else A, and the replaced gun falls at the player's feet
 - [new] Notebook usable in the armory
 - [postponed] Box page at the crates: the bought guns as a catalogue and stored things, one shared box #6 - not yet
 - [postponed] One fetch mission - design log step 9
