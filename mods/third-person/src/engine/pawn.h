@@ -70,6 +70,12 @@ inline void SetGunUp(uint8_t* pawn, bool up) {
     flags = up ? (flags | kGunUp) & ~kLookOnly : (flags & ~kGunUp) | kLookOnly;
 }
 
+// The pawn's CGOStateMachineDriver, from CPawn::GetStateDriver at +0x78 in its vtable.
+inline uint8_t* StateDriver(uint8_t* pawn) {
+    using StateDriverFn = uint8_t*(__fastcall*)(uint8_t* pawn);
+    return Field<StateDriverFn*>(pawn, 0)[0x78 / sizeof(void*)](pawn);
+}
+
 inline bool Jumping(uint8_t* pawn) {
     return Field<uint8_t>(Data(pawn), kJumping) != 0 && Field<uint8_t>(Data(pawn), kJumpEnded) == 0;
 }

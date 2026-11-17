@@ -10,6 +10,11 @@ Notable changes to Third Person, loosely following
   so in `fcse.log`.
 
 ### Fixed
+- **Picking something up in third person no longer leaves you stuck mid-reach.** A gun, ammo, the
+  medicine box, a diamond briefcase, a door or the bazaar computer is seen in first person while you
+  use it, and the view goes back over your shoulder once you are done.
+- **The crosshair over the shoulder no longer goes missing** after the machete or another weapon
+  without one: drawing a gun in third person brings it back, as it does in first person.
 - **The chase camera no longer snaps into the car** at every small leaf: behind the car it is only
   kept above the ground.
 - **The shadow under your feet shows under dgVoodoo and DLSS injectors,** and stays when the game's

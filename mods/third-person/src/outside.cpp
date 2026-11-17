@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <iterator>
 #include <windows.h>
 
 namespace {
@@ -51,6 +52,36 @@ namespace {
     constexpr uint32_t kFire = FCSE::Crc32("startshooting");
     constexpr uint32_t kFireReleased = FCSE::Crc32("stopshooting");
 
+    // CGOStateMachineDriver::Signal(id), __thiscall, RET 4: a signal to a pawn's state machine.
+    using SignalFn = void(__fastcall*)(uint8_t* driver, void* unused, uint32_t signal);
+    FCSE::Relocation<SignalFn> g_signal{FCSE::Uplay(0x0029DA10)};
+    SignalFn g_originalSignal = nullptr;
+
+    // The signals that start the player's interactions in interactions.gosm. Their states wait for
+    // animations only the first-person view plays to the end.
+    constexpr uint32_t kInteractions[] = {
+        FCSE::Crc32("pickup_weapon"), FCSE::Crc32("pickup_and_reload"),
+        FCSE::Crc32("pickup_weapon_holster"), FCSE::Crc32("pickup_syringe"),
+        FCSE::Crc32("open_briefcase"), FCSE::Crc32("open_door"),
+        FCSE::Crc32("open_door_to_weaponsafe"), FCSE::Crc32("open_door_out_of_weaponsafe"),
+        FCSE::Crc32("open_computer")};
+    // How long the pawn stays in first person before an interaction held back for it starts, in
+    // milliseconds; started at the switch, the state still waits on the third-person animations.
+    constexpr DWORD kSettle = 150;
+    // How long a sent interaction may take to leave idle before it counts as refused.
+    constexpr DWORD kStartTimeout = 1000;
+
+    // CGOStateMachineDriver::BelongsToGroup(&group), __thiscall, RET 4: whether a state the machine
+    // is in belongs to the group, the Crc32 of its full name.
+    using BelongsFn = bool(__fastcall*)(uint8_t* driver, void* unused, const uint32_t* group);
+    FCSE::Relocation<BelongsFn> g_belongs{FCSE::Uplay(0x0029DBA0)};
+    // The states an interaction starts from and returns to.
+    constexpr uint32_t kIdleGroup = FCSE::Crc32("::Interactions/InteractionsIdleGroup");
+
+    // An interaction over the shoulder: held back while the pawn settles in first person, sent and
+    // not yet out of idle, then running until idle again.
+    enum class Interaction { None, HeldBack, Started, Running };
+
     // How long the gun stays up after a shot, in milliseconds.
     constexpr DWORD kGunUpAfterShot = 1000;
 
@@ -59,6 +90,25 @@ namespace {
     using UseCrosshairFn = int32_t(__fastcall*)(void* config, void* unused, int32_t difficulty);
     FCSE::Relocation<UseCrosshairFn> g_useCrosshair{FCSE::Uplay(0x00048860)};
     UseCrosshairFn g_originalUseCrosshair = nullptr;
+
+    // CFCXMainHudUI::UpdateCrosshair(dt), __thiscall, RET 4: the HUD's crosshair, drawn while the
+    // HUD's own show flag is set.
+    using UpdateCrosshairFn = void(__fastcall*)(uint8_t* hud, void* unused, float dt);
+    FCSE::Relocation<UpdateCrosshairFn> g_updateCrosshair{FCSE::Uplay(0x0080AF10)};
+    UpdateCrosshairFn g_originalUpdateCrosshair = nullptr;
+    constexpr ptrdiff_t kHudShowCrosshair = 0x321;
+
+    // A gun's select and deselect, __thiscall, plain RET: they show and hide the HUD's crosshair
+    // when the wielder is in first person. CEquipmentBase::GetWielder, on the gun's equipment at
+    // +0x40, gives its pawn or null.
+    using WeaponFn = void(__fastcall*)(uint8_t* weapon);
+    using WielderFn = uint8_t*(__fastcall*)(uint8_t* equipment);
+    FCSE::Relocation<WeaponFn> g_weaponSelect{FCSE::Uplay(0x00110A70)};
+    FCSE::Relocation<WeaponFn> g_weaponDeselect{FCSE::Uplay(0x00110B10)};
+    FCSE::Relocation<WielderFn> g_wielder{FCSE::Uplay(0x00156BA0)};
+    WeaponFn g_originalWeaponSelect = nullptr;
+    WeaponFn g_originalWeaponDeselect = nullptr;
+    constexpr ptrdiff_t kWeaponEquipment = 0x40;
 
     // CWeapon::GetCurrentSpread, __fastcall on the weapon, which only the HUD's crosshair reads.
     using CurrentSpreadFn = float(__fastcall*)(uint8_t* weapon);
@@ -91,6 +141,12 @@ namespace {
     View g_view = View::First;
     uint8_t* g_camera = nullptr;
     uint8_t* g_pawn = nullptr;
+    // Game thread: the pawn's state machine, and an interaction seen in first person: its stage,
+    // when it was held back, and its signal.
+    uint8_t* g_driver = nullptr;
+    Interaction g_interaction = Interaction::None;
+    DWORD g_interactionAt = 0;
+    uint32_t g_heldBack = 0;
     // Game thread: the view where the player is: on foot, at the wheel, or neither.
     View g_where = View::First;
     // Game thread: where the camera over the shoulder stands, and the way it looks; its boom.
@@ -157,6 +213,35 @@ namespace {
 
     int32_t __fastcall UseCrosshairDetour(void* config, void* unused, int32_t difficulty) {
         return g_view == View::Shoulder ? 1 : g_originalUseCrosshair(config, unused, difficulty);
+    }
+
+    // The player's crosshair shown or hidden as a gun raised or put away sets it, which the game
+    // only does while the wielder is in first person; -1 for nothing pending.
+    std::atomic<int> g_crosshairShown{-1};
+
+    void PlayerWeaponChanged(uint8_t* weapon, bool shown) {
+        uint8_t* wielder = g_wielder(ThirdPerson::Field<uint8_t*>(weapon, kWeaponEquipment));
+        if (wielder != nullptr && wielder == g_pawn && !Pawn::FirstPerson(wielder)) {
+            g_crosshairShown = shown;
+        }
+    }
+
+    void __fastcall WeaponSelectDetour(uint8_t* weapon) {
+        PlayerWeaponChanged(weapon, true);
+        g_originalWeaponSelect(weapon);
+    }
+
+    void __fastcall WeaponDeselectDetour(uint8_t* weapon) {
+        PlayerWeaponChanged(weapon, false);
+        g_originalWeaponDeselect(weapon);
+    }
+
+    void __fastcall UpdateCrosshairDetour(uint8_t* hud, void* unused, float dt) {
+        const int shown = g_crosshairShown.exchange(-1);
+        if (shown >= 0) {
+            ThirdPerson::Field<uint8_t>(hud, kHudShowCrosshair) = static_cast<uint8_t>(shown);
+        }
+        g_originalUpdateCrosshair(hud, unused, dt);
     }
 
     float __fastcall CurrentSpreadDetour(uint8_t* weapon) {
@@ -252,14 +337,62 @@ namespace {
         g_boom.Reset();
         g_view = to;
     }
+
+    // Over the shoulder, holds an interaction back and drops to first person; Update starts it.
+    void __fastcall SignalDetour(uint8_t* driver, void* unused, uint32_t signal) {
+        if (driver == g_driver && g_view == View::Shoulder &&
+            std::find(std::begin(kInteractions), std::end(kInteractions), signal) !=
+                std::end(kInteractions)) {
+            Switch(g_pawn, View::First);
+            if (g_view == View::First) {
+                g_interaction = Interaction::HeldBack;
+                g_interactionAt = GetTickCount();
+                g_heldBack = signal;
+                return;
+            }
+        }
+        g_originalSignal(driver, unused, signal);
+    }
+
+    // Sends a held-back interaction once the pawn has settled in first person, and lets the view go
+    // back when the state machine is idle again.
+    void UpdateInteraction() {
+        if (g_interaction == Interaction::None) {
+            return;
+        }
+        const DWORD since = GetTickCount() - g_interactionAt;
+        const bool idle = g_belongs(g_driver, nullptr, &kIdleGroup);
+        if (g_interaction == Interaction::HeldBack) {
+            if (since >= kSettle) {
+                g_originalSignal(g_driver, nullptr, g_heldBack);
+                g_interaction = Interaction::Started;
+            }
+        } else if (g_interaction == Interaction::Started) {
+            if (!idle) {
+                g_interaction = Interaction::Running;
+            } else if (since >= kSettle + kStartTimeout) {
+                g_interaction = Interaction::None;
+            }
+        } else if (idle) {
+            g_interaction = Interaction::None;
+        }
+    }
 }
 
 bool ThirdPerson::Outside::Install() {
     Ray::Install();
+    if (!g_wielder || !Hook(g_updateCrosshair.address(), &UpdateCrosshairDetour, &g_originalUpdateCrosshair) ||
+        !Hook(g_weaponSelect.address(), &WeaponSelectDetour, &g_originalWeaponSelect) ||
+        !Hook(g_weaponDeselect.address(), &WeaponDeselectDetour, &g_originalWeaponDeselect)) {
+        FCSE::ApiPointer()->Log("third person: a gun raised over the shoulder may keep the crosshair hidden");
+    }
     if (!Hook(g_useCrosshair.address(), &UseCrosshairDetour, &g_originalUseCrosshair) ||
         !Hook(g_spread.address(), &SpreadDetour, &g_originalSpread) ||
         !Hook(g_setup3rd.address(), &Setup3rdDetour, &g_originalSetup3rd)) {
         FCSE::ApiPointer()->Log("third person: the crosshair or the third-person shot was not found");
+    }
+    if (!g_belongs || !Hook(g_signal.address(), &SignalDetour, &g_originalSignal)) {
+        FCSE::ApiPointer()->Log("third person: a pickup or a door in third person may never finish");
     }
     if (!Hook(g_currentSpread.address(), &CurrentSpreadDetour, &g_originalCurrentSpread)) {
         FCSE::ApiPointer()->Log("third person: the crosshair does not tighten while aiming");
@@ -278,7 +411,10 @@ void ThirdPerson::Outside::Update(uint8_t* pawn, float* look) {
         g_pawn = pawn;
         g_aimHeld = false;
         g_fireHeld = false;
+        g_interaction = Interaction::None;
     }
+    g_driver = Pawn::StateDriver(pawn);
+    UpdateInteraction();
     if (!g_pressed && !g_wanted && !g_held && g_view == View::First) {
         return;
     }
@@ -287,6 +423,7 @@ void ThirdPerson::Outside::Update(uint8_t* pawn, float* look) {
     if (where != g_where) {
         g_where = where;
         g_held = false;
+        g_interaction = Interaction::None;
     }
     // Held, a press brings the chosen view back.
     if (g_pressed.exchange(false)) {
@@ -303,7 +440,7 @@ void ThirdPerson::Outside::Update(uint8_t* pawn, float* look) {
         g_camera = nullptr;
         g_held = true;
     }
-    const View wanted = g_wanted && !g_held ? where : View::First;
+    const View wanted = g_wanted && !g_held && g_interaction == Interaction::None ? where : View::First;
     if (wanted != g_view) {
         Switch(pawn, wanted);
     }

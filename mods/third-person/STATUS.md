@@ -8,13 +8,14 @@ Stage: active
 - [done] Legs and boots under the first-person view, a stride that follows the movement, two-bone IK - seen in scripted shots (e7c1ccd3)
 - [done] A crouch with the knees out, so the lowered eye sees past them - seen in scripted shots
 - [done] The whole body seen from a camera away from the eye, such as DevTools' free camera - seen in scripted shots
-- [done] Feet tucked up in the air - built, not seen (README)
+- [done] Feet tucked up in the air - user 2026-11-17 checklist: works
 - [done] A soft round shadow under the feet in first person - user: "it looks good" (4134a2e5)
 - [done] The shadow read from the engine's own view depth and drawn at the engine device's sky pass, with no Direct3D hooks, so it works under dgVoodoo and DLSS injectors and stays after a resize - matches the old build (fc2drive); user 2026-11-14: "they work alright" #63
 - [done] A Third-person view control on V, rebindable under Misc, on foot and at the wheel, kept for the session (db5067a)
-- [done] Third person on foot over the right shoulder: the game's own crosshair, shots landing on it, no iron sights (73a5efe9)
-- [done] The aim key brings the camera closer over the shoulder and the crosshair to its tightest - built, not seen (README)
-- [done] The gun carried low on the move, raised to aim, fire and for 1 s after a shot - seen by script, not with the user's mouse
+- [done] Third person on foot over the right shoulder: the game's own crosshair, shots landing on it, no iron sights (73a5efe9); the crosshair back after the machete, user 2026-11-17: "yes"
+- [done] The aim key brings the camera closer over the shoulder and the crosshair to its tightest - user 2026-11-17 checklist: works
+- [done] The gun carried low on the move, raised to aim, fire and for 1 s after a shot - user 2026-11-17 checklist: works
+- [done] A pickup, the medicine box, a briefcase, a door or the bazaar computer used over the shoulder plays in first person, then back to third person - Nexus bug, user 2026-11-17: "it works good"
 - [done] Map, phone and notebook hidden from the belt in third person - per-frame poll "all works!"; its one-shot rewrite not seen
 - [done] Chase camera behind the car at the wheel, orbited by the mouse - moved from Vehicle Overhaul (db5067a), there "works perfectly"
 - [done] The driver's whole body at the wheel, the quad's steering centred - moved from Vehicle Overhaul, there "it works!"
@@ -26,10 +27,7 @@ Stage: active
 
 ## To validate
 
-- Feet tucked up in the air - not seen
-- The aim key brings the camera closer and the crosshair tightest - not seen
-- The gun carried low on the move, up to aim and fire, with your mouse - script only
-- Cutscenes, ladders, swimming, slopes and turning on the spot - #44
+- From third person: an ammo pile, a diamond briefcase, an ordinary door, the bazaar computer, a gun swap that holsters first - not tried; guns, the medicine box and safe-house doors were
 
 ## Approvals
 
@@ -38,7 +36,7 @@ Stage: active
 
 ## Checks
 
-- simplify: 38d37828 2026-11-17 - since third-person-1.0.0; after 626ce06 only one log line went
+- simplify: 15a373b6 2026-11-17 - since third-person-1.0.0; 38d37828 covered up to it, then the interaction hold-back: two small cuts
 
 ## Release order
 
