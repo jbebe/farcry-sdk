@@ -38,7 +38,7 @@ Stage: active
 
 ## Checks
 
-- simplify: 626ce06 2026-11-15 - since third-person-1.0.0
+- simplify: 38d37828 2026-11-17 - since third-person-1.0.0; after 626ce06 only one log line went
 
 ## Release order
 
