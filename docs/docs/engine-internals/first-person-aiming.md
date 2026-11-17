@@ -197,7 +197,7 @@ its `fFOV` at `+0x4C`, so it eases in from whatever the last weapon left. **RE-v
 
 Retail weapons scale the gamepad's full-zoom speed with their field of view, about 0.3 per radian:
 0.4 at a pistol's 1.309, 0.07 at the AS50's 0.2. The monocular zooms as far as the AS50 and ships
-with 0.1; UFCP's layer gives it 0.061.
+with 0.1.
 
 ### Holding the breath
 

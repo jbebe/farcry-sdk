@@ -9,14 +9,10 @@ Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachang
   pixel, so moving slowly did nothing at all, the more so the higher the frame rate.
 - **Map icons** sit still on the paper. They were placed less precisely than the map they lie on,
   so they shifted by less than a pixel as you walked or the hands swayed.
-- **Monocular** turns the way a scope does at its zoom. With a mouse, the zoomed view turned as fast
-  as the unzoomed one, so the smallest movement jumped across the picture; with a gamepad, it turned
-  64% faster than the guns' scopes.
+- **Monocular** turns with the mouse the way a scope does at its zoom. The zoomed view turned as fast
+  as the unzoomed one, so the smallest movement jumped across the picture.
 
 ### Changed
-- **UFCP is a JackAll layer.** The monocular's gamepad speed is a change to its data, so the
-  download installs through Vortex or JackAll, which merge it with your other data mods, rather
-  than as a DLL copied by hand.
 - **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.
 

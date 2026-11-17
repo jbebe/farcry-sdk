@@ -43,7 +43,6 @@ jobs:
 
       - name: Build UFCP.dll
         shell: pwsh
-        # build.ps1 stages the DLL into layer\plugins\.
         run: .\build.ps1 -Config release
 
       - name: Verify the release build
@@ -56,15 +55,13 @@ jobs:
 
       - name: Stage release contents
         shell: pwsh
-        # A JackAll layer, which both installers read as-is: mods\ is the monocular's data, and
-        # plugins\ is what JackAll deploys into bin\plugins. README-release.md rather than README.md,
-        # which links to the docs by relative path, dead once the file is alone inside a zip.
+        # Extracts straight into the game's bin\ folder: FCSE scans bin\plugins\ by name.
+        # README-release.md rather than README.md, which links to the docs by relative path, dead
+        # once the file is alone inside a zip.
         run: |
-          if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7+ is required - older Compress-Archive writes backslash entry paths, which no installer reads.' }
-          Copy-Item "layer" "stage" -Recurse
+          New-Item -ItemType Directory -Force -Path "stage\plugins" | Out-Null
+          Copy-Item "out\build\x86-release\UFCP.dll" "stage\plugins\UFCP.dll"
           Copy-Item "README-release.md" "stage\README.md"
-          if (-not (Test-Path "stage\plugins\UFCP.dll")) { throw 'UFCP.dll was not staged - the zip would not be a layer.' }
-          if (-not (Test-Path "stage\mods\worlds\world1\generated\entitylibrary.fcb\gadgets\Equipped\Monocular.xml")) { throw 'The monocular was not staged.' }
 
       - name: Zip release artifact
         shell: pwsh

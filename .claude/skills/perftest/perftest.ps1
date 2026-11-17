@@ -7,7 +7,7 @@
     The copy is the one bound to this Claude session (scripts\fc2instance.py path), or FC2_GAME.
 
     reset    backs up the patch and bin\plugins, deploys DevTools and UFCP (and -With) alone, and
-             removes every plugin no layer deploys except DevTools.dll. Starts a run folder under
+             removes every other plugin except DevTools.dll. Starts a run folder under
              "C:\Games\fc2instances\perftest\<copy>", outside the copy so cleaning it keeps the runs.
              -Length is one session's play in seconds, which compare.py scales its blocks to.
     mod      deploys the same plus -Mod.
@@ -89,10 +89,15 @@ function Restore-Install($from) {
 }
 
 function Deploy($folder, $info, $name, [string[]]$mods) {
-    $layers = foreach ($m in $mods) {
+    # A mod with no layer\ is a plain plugin: its built DLL is copied in by hand.
+    $layers = @()
+    $dlls = @()
+    foreach ($m in $mods) {
         $path = "$Repo\mods\$m\layer"
-        if (-not (Test-Path $path)) { throw "mods\$m has no layer\ - build it first." }
-        '--layer'; $path
+        if (Test-Path $path) { $layers += '--layer', $path; continue }
+        $dll = @(Get-ChildItem "$Repo\mods\$m\out\build\x86-release\*.dll")
+        if ($dll.Count -ne 1) { throw "mods\$m has no layer\ and no single built DLL - build it first." }
+        $dlls += $dll[0]
     }
     Invoke-Cli mod build --game $Game @layers | Select-Object -Last 3
 
@@ -104,6 +109,7 @@ function Deploy($folder, $info, $name, [string[]]$mods) {
     }
     Get-ChildItem $Plugins -Recurse -Directory | Sort-Object { $_.FullName.Length } -Descending |
         Where-Object { -not (Get-ChildItem $_.FullName -Force) } | Remove-Item
+    foreach ($dll in $dlls) { Copy-Item $dll.FullName $Plugins -Force }
 
     Copy-Install "$folder\state-$name"
     $info.current = $name

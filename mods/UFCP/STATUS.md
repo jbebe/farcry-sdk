@@ -10,7 +10,7 @@ Stage: active
 - [done] Exit crash: Exit Game closes instead of faulting - verified from the menu
 - [done] Mouse speed cap: a fast flick turns as far as a slow one
 - [done] Menu cursor follows a slow mouse - unreleased, unchecked in game
-- [done] Monocular turns like a scope at its zoom: the mouse slowed by its field of view as down a gun's sights (plugin), the gamepad's look speed 0.061 in both worlds (data) - unreleased; user 2026-11-17: the data fix alone left the mouse at the unzoomed speed
+- [done] Monocular turns with the mouse like a scope at its zoom, slowed by its field of view as down a gun's sights - unreleased; the gamepad keeps the retail 0.1 (user 2026-11-17)
 - [done] Loading screens run at their 30 FPS (high-precision timer)
 - [done] CPU and GPU use: no idle spinning, the GPU a frame ahead, no busy-wait frame cap; the engine's single job worker kept
 - [done] Many-core startup crash on 32+ logical processors
@@ -21,7 +21,7 @@ Stage: active
 - [done] Weapon field of view, the same as the view by default or an angle of its own
 - [done] Maximum frame rate through the engine's limiter, 60 Hz by default
 - [done] Display mode: borderless
-- [done] Ships as a JackAll layer, installed through Vortex or JackAll - unreleased
+- [scrapped] Ships as a JackAll layer with the monocular's gamepad look speed 0.061 - dropped by the user 2026-11-17; a plain DLL
 - [scrapped] Processor affinity option - removed in 1.3.0; the game's processors are chosen for it
 - [scrapped] Extra job workers - the engine's jobs crash when two run at once (1.3.0)
 - [scrapped] Skip intro and skip title screen - moved to DevTools before UFCP's first release
