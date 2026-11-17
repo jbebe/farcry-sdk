@@ -35,7 +35,7 @@ Stage: active
 ## Approvals
 
 - played: 290c8ed 2026-10-30 - implied by the ufcp-1.3.1 release
-- page text: 290c8ed 2026-10-30 - implied by the ufcp-1.3.1 release; changed since in 0edd19a (layer install note)
+- page text: e893623 2026-11-17
 
 ## Checks
 
