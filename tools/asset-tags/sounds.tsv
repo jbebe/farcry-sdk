@@ -5310,7 +5310,7 @@ soundbinary\004f017c.spk	effect	player revived gasp and rise	war one-shot close	
 soundbinary\004f0193.spk	foley	footsteps ?	one-shot close	footsteps
 soundbinary\004f01aa.spk	effect	player revived gasp and rise	war one-shot close	buddy rescue start (player)
 soundbinary\004f01ab.spk	effect	player revived gasp and rise	war one-shot close	buddy rescue stop (player)
-soundbinary\004f01b6.spk	effect	ear ringing after blast	war one-shot close	ringing
+soundbinary\004f01b6.spk	effect	shiny reveal, low quality	one-shot	shiny reveal, low quality
 soundbinary\004f01b8.spk	weapon	mortar shell whistling down	military war one-shot distant	falling (MortarTracer)
 soundbinary\004f0afa.spk	dialogue			"You have... One... new message."
 soundbinary\004f0afc.spk	dialogue			greeting message stop (Phone)
@@ -5326,9 +5326,9 @@ soundbinary\004f0e77.spk	misc	mission scripted sound ?	one-shot	PlaySound (a1sm0
 soundbinary\004f0e7b.spk	misc	mission scripted sound ?	one-shot	PlaySound (openingsequence, taxiride)
 soundbinary\004f0e7e.spk	music	opening taxi ride music ?	road travel one-shot	PlayMusic (openingsequence, taxiride)
 soundbinary\004f0e7f.spk	music	opening taxi ride music ?	road travel one-shot	PlayMusic (openingsequence, taxiride)
-soundbinary\004f0e82.spk	effect	ear ringing after blast	war one-shot close	ringing
-soundbinary\004f0e85.spk	effect	ear ringing after blast	war one-shot close	ringing
-soundbinary\004f0e88.spk	effect	ear ringing after blast	war one-shot close	ringing
+soundbinary\004f0e82.spk	ui	diamond acquired tingling, another take	one-shot	diamond acquired tingling, another take
+soundbinary\004f0e85.spk	ui	diamond acquired tingling	loop	diamond acquired tingling
+soundbinary\004f0e88.spk	ui	diamond tingling join: stops 004f0e85, plays 004f0e82		diamond tingling join from 004f0e85 to 004f0e82
 soundbinary\004f2207.spk	vehicle	wheels running over debris	road travel exterior machine one-shot	wheels run over (A2LM09 NitrousTruck, APR, BigTruck, BigTruck Tanker, BrokenDatsun, +23)
 soundbinary\2fffffff.spk	misc	placeholder not a sound	one-shot	not a sound
 soundbinary\804425ce.spk	foley	gadget draw and holster rustle	one-shot close	draw, 1st person (equipped gadget); holster, 1st person (equipped gadget); mulge_uppb_draw_+000fw_nowep_eqcp_i1 (compass); mulge_uppb_holster_+000fw_nowep_eqcp_i1 (compass)

@@ -440,13 +440,12 @@ multiplayer files only; nothing.
   `004569f1`, `00456a01`); most of the rest are stop or exit events of paired start events (stop of
   the LPO50 flame, the G3KA4, USAS12 and MK19 automatic fire; the water pump and pipeline exits
   `00456579`, `0045657b`, `004c64d0`, `004c64d2`, `004c64d5`, `004c6501`; the propane tank init
-  `0044f6d9`). The engine probably pairs stop to start by convention, so they are not dead. Two are
-  spare takes:
-  - `004f0e82` "ringing": a 13.7 KB mono tinnitus sting next to `004f0e85`, which `hud.mgb.desc`
-    names. It is probably a spare of the explosion-ringing cue; playing it takes only an event call.
-  - `004c661a`, the `PostFx.Wounds.Down_to_Normal` key: 88 KB stereo, about 2 s, the length of the
-    `Down_to_Normal` sequence. `moviedata.xml` plays `0x004C6623` for that key instead, so this is
-    probably a superseded take of the revive sound.
+  `0044f6d9`). The engine probably pairs stop to start by convention, so they are not dead.
+  `004f0e82`, 13.7 KB mono, is the diamond acquired tingling in another take (heard); `004f0e88`,
+  which `hud.mgb.desc` names, stops `004f0e85` and plays it, so it is reached too. One is a spare
+  take: `004c661a`, the `PostFx.Wounds.Down_to_Normal` key, 88 KB stereo, about 2 s, the length of
+  the `Down_to_Normal` sequence. `moviedata.xml` plays `0x004C6623` for that key instead, so this is
+  probably a superseded take of the revive sound.
 - **`.sbao` streams.** How an `.sbao` is referenced (the descriptor's no-inline path, `moviedata.xml`,
   facial `.lfe`) is not fully modelled, so a count of unreferenced streams is not given.
 

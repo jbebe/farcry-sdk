@@ -384,7 +384,7 @@ retail, at equal or higher rate (22.05 to 32 kHz for 1,038), with no length chan
 - Across the 3,937 shared resources and 3,928 shared events, every switch, random container,
   multilayer and multi-event has the same children in both builds: no variation or layer was cut.
 - Retail adds 454 events, 45 resources, 37 samples (151 s) and 423 dialogue banks: hit-player and
-  headshot sounds (`004C65F3`, `004C6606`), ear ringing after a blast (`004F01B6`, `004F0E85`), the
+  headshot sounds (`004C65F3`, `004C6606`), a low-quality shiny reveal (`004F01B6`), the diamond acquired tingling (`004F0E85`), the
   falling-mortar whistle (`004F01B8`), a neon light and wall collapses.
 - The prototype has three banks retail lacks: `004493F4` (the placeholder branch break above),
   `004E1D91` (an 8.7 s mono scripted effect only the Hornet's Nest barge sequence played; what it is

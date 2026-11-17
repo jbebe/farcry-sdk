@@ -5310,7 +5310,7 @@ soundbinary\004f017c.spk	effect	revive get up third (player)	usage	worlds\ige_ma
 soundbinary\004f0193.spk	foley	footsteps	hand	
 soundbinary\004f01aa.spk	effect	buddy rescue start (player)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\world1\generated\entitylibrary.fcb, worlds\world2\generated\entitylibrary.fcb
 soundbinary\004f01ab.spk	effect	buddy rescue stop (player)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\world1\generated\entitylibrary.fcb, worlds\world2\generated\entitylibrary.fcb
-soundbinary\004f01b6.spk	effect	ringing	hand	
+soundbinary\004f01b6.spk	effect	shiny reveal, low quality	hand	
 soundbinary\004f01b8.spk	weapon	falling (MortarTracer)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
 soundbinary\004f0afa.spk	dialogue	"You have... One... new message."	usage	languages\english\oasisstrings.rml, worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb +22
 soundbinary\004f0afc.spk	dialogue	greeting message stop (Phone)	usage	worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_02_s_shanty\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +21
@@ -5326,9 +5326,9 @@ soundbinary\004f0e77.spk	other	PlaySound (a1sm01 townescape, a1sm01 mission)	usa
 soundbinary\004f0e7b.spk	other	PlaySound (openingsequence, taxiride)	usage	domino\user\openingsequence\openingsequence.taxiride.lua
 soundbinary\004f0e7e.spk	music	PlayMusic (openingsequence, taxiride)	usage	domino\user\openingsequence\openingsequence.taxiride.lua
 soundbinary\004f0e7f.spk	music	PlayMusic (openingsequence, taxiride)	usage	domino\user\openingsequence\openingsequence.taxiride.lua
-soundbinary\004f0e82.spk	effect	ringing	hand	
-soundbinary\004f0e85.spk	effect	ringing	hand	
-soundbinary\004f0e88.spk	effect	ringing	hand	
+soundbinary\004f0e82.spk	effect	diamond acquired tingling, another take	hand	
+soundbinary\004f0e85.spk	effect	diamond acquired tingling	hand	
+soundbinary\004f0e88.spk	effect	diamond tingling join from 004f0e85 to 004f0e82	hand	
 soundbinary\004f2207.spk	vehicle	wheels run over (A2LM09 NitrousTruck, APR, BigTruck, BigTruck Tanker, BrokenDatsun, +23)	usage	downloadcontent\dlc1\generated\entitylibrary.fcb, worlds\ige_map\generated\entitylibrary.fcb, worlds\mp_06_m_ranch\generated\entitylibrary.fcb +14
 soundbinary\2fffffff.spk	other	not a sound	hand	
 soundbinary\804425ce.spk	foley	draw, 1st person (equipped gadget); holster, 1st person (equipped gadget); mulge_uppb_draw_+000fw_nowep_eqcp_i1 (compass); mulge_uppb_holster_+000fw_nowep_eqcp_i1 (compass)	linked	graphics\characters\_common\animations\equipment\equipped_gadget\1stge_uppb_draw_+000fw_nowep_eqmpcp_i1.mab, graphics\characters\_common\animations\equipment\equipped_gadget\1stge_uppb_holster_+000fw_nowep_eqmpcp_i1.mab, graphics\characters\_common\animations\equipment\equipped_gadget\compass\mulge_uppb_draw_+000fw_nowep_eqcp_i1.mab +1
