@@ -32,6 +32,12 @@ Stage: maintenance
 - [done] Land to the horizon where the drawn world ends short - user: "its good like this" (2026-10-16)
 - [new] The land chunks the engine skips by view position - anti-portals suspected; next a DisableAntiPortals test layer
 - [done] Flatten, off by default - user: "it looks perfect. beautiful."; shots past ~250 m land off, no fade when zoomed
+- [new] Land to the horizon: its brightness set per clock hour, a slider for each hour the user tunes - darker at night and early morning, brighter noon and afternoon, darker at dusk
+- [new] Land to the horizon hides the sun behind it - at dusk the sun and the filled land melt together
+- [new] Stars and the Milky Way a little fainter all over
+- [new] Bug: at 23:00 the whole sky turns dusk-orange when the view crosses into the west half
+- [new] Ambient occlusion and Flatten on by default
+- [new] Remove the rock shading - user: "makes rocks worse, too PS1-like"
 - [done] Each part switched in the Mod Configuration Menu, values in bin\sky-overhaul.ini and a DevTools window
 - [scrapped] Tonemap or highlight roll-off - user: "useless" (2026-09-15); never propose again
 - [scrapped] Per-moment sky presets and moment tabs - user found them overwhelming; the sky follows the sun, sliders only on request
