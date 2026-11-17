@@ -8,9 +8,8 @@
 //     F6 40 04 08   test byte [eax+4], 8   ; effective data: down the sights?
 //     74 4A         jz   unzoomed
 //
-// A gun's fire strategy mirrors that bit into the zoom's on byte, 0x0D into the skills, every frame.
-// The monocular sets only the on byte and its field of view, so the mouse never slows; its
-// fLookSensitivity reaches the gamepad alone. The test takes the on byte as well.
+// A gun's fire strategy copies that bit into the zoom's on byte every frame; the monocular sets only
+// the on byte and its field of view. The test takes the on byte as well.
 #include "fcse_api.h"
 
 #include <cstdint>
@@ -19,15 +18,15 @@ namespace {
     // The bit test, 7 bytes into the match.
     constexpr ptrdiff_t kSightsTest = 7;
 
-    // The skills are *(pawn + 0x10) + 0xD8, and the zoom's on byte is 0x0D into them.
+    // The pawn's data, and the zoom's on byte in it.
     constexpr size_t kPawnData = 0x10;
-    constexpr size_t kZoomOn = 0xD8 + 0x0D;
+    constexpr size_t kZoomOn = 0xE5;
 
     FCSE::Relocation<uint8_t*> g_sightsTest{
         FCSE::Pattern("8B CE E8 ?? ?? ?? ?? F6 40 04 08 74 ?? D9 44 24 1C 51 D9 1C 24 53 8B CD E8")};
 
     // Effective data whose flags hold only the iron-sight bit, for the test to read instead.
-    alignas(4) const uint8_t g_downTheSights[8] = {0, 0, 0, 0, 0x08};
+    const uint8_t g_downTheSights[5] = {0, 0, 0, 0, 0x08};
 
     void SightsTestHandler(FCSE_MidHookContext* ctx) {
         const auto* data = *reinterpret_cast<const uint8_t* const*>(ctx->esi + kPawnData);
