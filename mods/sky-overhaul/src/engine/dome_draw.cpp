@@ -82,8 +82,8 @@ namespace {
     // Saturation, ColorRemapData and ContrastData, a register each.
     constexpr UINT kGradeRegisters = 3;
 
-    // Where our shaders' own registers start, above every register the engine's lit grass, leaves
-    // and rock read.
+    // Where our shaders' own registers start, above every register the engine's lit grass and
+    // leaves read.
     constexpr UINT kOwnParameters = 110;
 
     EngineDrawIndexedFn g_original = nullptr;
@@ -93,7 +93,6 @@ namespace {
     SkyOverhaul::DomeDraw::SubstituteFn g_maskSubstitute = nullptr;
     SkyOverhaul::DomeDraw::GradeFn g_grade = nullptr;
     SkyOverhaul::DomeDraw::FoliageFn g_foliage = nullptr;
-    SkyOverhaul::DomeDraw::RockFn g_rocks = nullptr;
     SkyOverhaul::DomeDraw::VertexFn g_vertex = nullptr;
     // A bit per DepthUser that wants the linear depth watched for.
     unsigned g_depthUsers = 0;
@@ -238,72 +237,6 @@ namespace {
         return drawn;
     }
 
-    struct SamplerState {
-        D3DSAMPLERSTATETYPE type;
-        DWORD value;
-    };
-
-    // How a rock draw's own texture is sampled.
-    constexpr SamplerState kRockSampling[] = {
-        {D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP}, {D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP},
-        {D3DSAMP_MAGFILTER, D3DTEXF_LINEAR},  {D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC},
-        {D3DSAMP_MIPFILTER, D3DTEXF_LINEAR},  {D3DSAMP_MAXANISOTROPY, 4},
-        {D3DSAMP_SRGBTEXTURE, FALSE},         {D3DSAMP_MIPMAPLODBIAS, 0},
-        {D3DSAMP_MAXMIPLEVEL, 0},
-    };
-
-    // Rock through our shaders, registers and texture, with the engine's put back after; the
-    // engine filters redundant state, so every sampler state changed is restored too.
-    template <class Draw>
-    HRESULT DrawRock(IDirect3DDevice9* device, const SkyOverhaul::DomeDraw::RockDraw& ours,
-                     Draw draw) {
-        constexpr UINT kRegisters = SkyOverhaul::DomeDraw::kRockParameterRegisters;
-        float engineParameters[kRegisters * 4] = {};
-        IDirect3DPixelShader9* engine = nullptr;
-        IDirect3DVertexShader9* engineVertex = nullptr;
-        if (FAILED(device->GetPixelShader(&engine)) ||
-            FAILED(device->GetVertexShader(&engineVertex)) ||
-            FAILED(device->GetPixelShaderConstantF(kOwnParameters, engineParameters,
-                                                   kRegisters))) {
-            SkyOverhaul::Release(engine);
-            SkyOverhaul::Release(engineVertex);
-            return draw();
-        }
-        device->SetPixelShader(ours.pixel);
-        device->SetVertexShader(ours.vertex);
-        device->SetPixelShaderConstantF(kOwnParameters, ours.parameters, kRegisters);
-        constexpr DWORD sampler = SkyOverhaul::DomeDraw::kRockSampler;
-        IDirect3DBaseTexture9* engineTexture = nullptr;
-        DWORD engineSampling[std::size(kRockSampling)] = {};
-        if (ours.texture != nullptr) {
-            device->GetTexture(sampler, &engineTexture);
-            for (size_t i = 0; i < std::size(kRockSampling); i++) {
-                device->GetSamplerState(sampler, kRockSampling[i].type, &engineSampling[i]);
-                if (engineSampling[i] != kRockSampling[i].value) {
-                    device->SetSamplerState(sampler, kRockSampling[i].type,
-                                            kRockSampling[i].value);
-                }
-            }
-            device->SetTexture(sampler, ours.texture);
-        }
-        const HRESULT drawn = draw();
-        if (ours.texture != nullptr) {
-            device->SetTexture(sampler, engineTexture);
-            for (size_t i = 0; i < std::size(kRockSampling); i++) {
-                if (engineSampling[i] != kRockSampling[i].value) {
-                    device->SetSamplerState(sampler, kRockSampling[i].type, engineSampling[i]);
-                }
-            }
-            SkyOverhaul::Release(engineTexture);
-        }
-        device->SetPixelShaderConstantF(kOwnParameters, engineParameters, kRegisters);
-        device->SetVertexShader(engineVertex);
-        device->SetPixelShader(engine);
-        SkyOverhaul::Release(engine);
-        SkyOverhaul::Release(engineVertex);
-        return drawn;
-    }
-
     // The draws named by their shaders, each drawn again, replaced or watched as its effect asks.
     // `draw` is the engine's call.
     template <class Draw>
@@ -318,12 +251,6 @@ namespace {
             const VertexKind vertex = SkyOverhaul::KnownShaders::VertexBound(device);
             if (vertex != VertexKind::Other && vertex != VertexKind::Foliage) {
                 return DrawFoliage(device, g_foliage, vertex, draw);
-            }
-        }
-        if (g_rocks != nullptr) {
-            SkyOverhaul::DomeDraw::RockDraw rock = {};
-            if (g_rocks(device, rock)) {
-                return DrawRock(device, rock, draw);
             }
         }
         const bool gradeShape = g_grade != nullptr && primitives <= kScreenPrimitives;
@@ -453,10 +380,6 @@ void SkyOverhaul::DomeDraw::SetGrade(GradeFn grade) {
 
 void SkyOverhaul::DomeDraw::SetFoliage(FoliageFn foliage) {
     g_foliage = foliage;
-}
-
-void SkyOverhaul::DomeDraw::SetRocks(RockFn rocks) {
-    g_rocks = rocks;
 }
 
 void SkyOverhaul::DomeDraw::SetVertex(VertexFn vertex) {

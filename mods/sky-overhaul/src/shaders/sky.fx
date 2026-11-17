@@ -15,6 +15,7 @@
 // written down anywhere.
 
 #include "hash.inc.fx"
+#include "horizon.inc.fx"
 
 // The air, in metres. A planet, because the whole point of a horizon is that the ground curves
 // away from it - a flat atmosphere has no sunset, only a light that switches off.
@@ -107,6 +108,14 @@
 // drawing them at zero, so they fade in that stretch rather than vanish at once.
 #define STARS_FADE 0.02f
 
+// How much of the stars and the Milky Way the night sky covers at least, its colour over theirs.
+#define STARS_COVER 0.5f
+
+// The moon draws before the sky as the stars do, so that cover leaves it alone: the cosines of the
+// angles from its centre where the cover starts to give way and where it is gone.
+#define MOON_CLEAR_EDGE 0.9976f
+#define MOON_CLEAR_FULL 0.9990f
+
 // The star sphere's backdrop, which is the colour of the night sky between the stars.
 #define NIGHT_SKY float3(0.039f, 0.055f, 0.094f)
 
@@ -143,11 +152,11 @@ float4 FogColourRange : register(c75);
 float4 FogColourVector : register(c76);
 
 // x: how much the land's fill shows. y: the sine of how far above the horizon it reaches, below it
-// where negative. z: how much of that land is haze rather than earth.
+// where negative. z: how much of that land is haze rather than earth. w: how bright it is drawn.
 float4 Fill : register(c77);
 
-// Over how far below its top, as a sine, the filled land gives way to the sky's own horizon.
-#define FILL_SOFTNESS 0.003f
+// xyz: the direction of the moon, pointing at it.
+float4 Moon : register(c78);
 
 // How bright sunlit earth is against the fog in front of it.
 #define EARTH_BRIGHTNESS 0.7f
@@ -250,6 +259,12 @@ float3 FogAlong(float2 heading) {
     return FogColour.rgb + FogColourRange.rgb * angle;
 }
 
+// The land past the drawn world's edge along a heading: earth, a little into the haze.
+float3 Land(float2 heading) {
+    float3 fog = FogAlong(heading);
+    return Fill.w * lerp(dot(fog, LUMA) * EARTH_BRIGHTNESS * GROUND_HUE, fog, Fill.z);
+}
+
 // How far a heading belongs to the far side of the sun: nothing at the sun's own heading, half at a
 // right angle to it, everything opposite, eased at both ends so neither side shows where the turn
 // begins. Half all the way round a sun that is straight up or down.
@@ -308,6 +323,13 @@ float3 DawnGlow(float farness, float below) {
            (DAWN_GLOW_LUMINANCE * rise * sunward * sunward * pow(below, DAWN_GLOW_FALLOFF));
 }
 
+// The colour at the frame's exposure. Half the frames are eight bits a channel, and a sky is the one
+// thing in a game made entirely of gradients - so the last bit is broken up on purpose, which is
+// cheaper than any number of extra bits would be.
+float4 Output(float3 colour, float alpha, float2 screen) {
+    return float4((colour + (Dither(screen) - 0.5f) / 255.0f) * Eye.w, alpha);
+}
+
 float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float3 ray = normalize(rayIn);
     float2 heading = normalize(ray.xy + 0.0001f);
@@ -347,23 +369,29 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     colour += DawnGlow(farness, below);
 
     // The sky is drawn only where the world drew nothing, so under the horizon it is the land past
-    // the drawn world's edge: earth, a little into the haze.
-    float3 landFog = FogAlong(heading);
-    float3 land = lerp(dot(landFog, LUMA) * EARTH_BRIGHTNESS * GROUND_HUE, landFog, Fill.z);
-    float filled = Fill.x * saturate((Fill.y - ray.z) / FILL_SOFTNESS);
-    colour = lerp(colour, land, filled);
+    // the drawn world's edge.
+    float filled = Filled(ray, Fill.xy);
+    colour = lerp(colour, Land(heading), filled);
     colour = lerp(colour, dot(colour, LUMA), Air.w);
 
-    // Opaque by day, and at night only as much as the sky is bright, taken before the exposure as
-    // the dome takes it. The dome's own alpha keeps covering the stars until the night factor is
-    // one, which hides them for hours before dawn. The land is opaque.
+    // Opaque by day, and at night as much as the sky is bright, taken before the exposure as the
+    // dome takes it, but never under the stars' cover. The dome's own alpha keeps covering the
+    // stars until the night factor is one, which hides them for hours before dawn. The land is
+    // opaque.
     float luminance = dot(colour, LUMA);
-    float alpha = saturate(saturate(1.0f - Sun.w / STARS_FADE) + luminance * 0.5f);
+    float nearMoon = smoothstep(MOON_CLEAR_EDGE, MOON_CLEAR_FULL, dot(ray, Moon.xyz));
+    float alpha = saturate(max(saturate(1.0f - Sun.w / STARS_FADE) + luminance * 0.5f,
+                               STARS_COVER * (1.0f - nearMoon)));
     alpha = lerp(alpha, 1.0f, filled);
+    return Output(colour, alpha, screen);
+}
 
-    // Half the frames are eight bits a channel, and a sky is the one thing in a game made entirely
-    // of gradients - so the last bit is broken up on purpose, which is cheaper than any number of
-    // extra bits would be.
-    colour += (Dither(screen) - 0.5f) / 255.0f;
-    return float4(colour * Eye.w, alpha);
+// The filled land alone, drawn again over the finished pass, so the engine's sun, drawn after the
+// sky, goes down behind it.
+float4 LandPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
+    float3 ray = normalize(rayIn);
+    float filled = Filled(ray, Fill.xy);
+    clip(filled - 0.001f);
+    float3 colour = Land(normalize(ray.xy + 0.0001f));
+    return Output(lerp(colour, dot(colour, LUMA), Air.w), filled, screen);
 }

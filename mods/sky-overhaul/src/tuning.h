@@ -93,15 +93,6 @@ struct Values {
     float leafGlint;
     float leafGlow;
 
-    float rockSmoothness;
-    float rockFlatDistance;
-    float rockGlint;
-    float rockGlintSharpness;
-    float rockDetailSize;
-    float rockDetailRelief;
-    float rockDetailGrain;
-    float rockCavity;
-
     float flattenStart;
     float flattenEnd;
     float flattenStretch;

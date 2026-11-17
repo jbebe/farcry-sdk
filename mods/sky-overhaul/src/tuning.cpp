@@ -59,12 +59,11 @@ namespace {
     // Everything drawn over the finished picture.
     constexpr Category kPostFx = {"Post FX"};
     constexpr Category kFoliage = {"Foliage"};
-    constexpr Category kRock = {"Rock"};
     constexpr Category kWorld = {"World"};
 
     // The window's tabs, in order.
-    constexpr const Category* kTabs[] = {&kSun,    &kSky,     &kClouds, &kNight, &kShadows,
-                                         &kPostFx, &kFoliage, &kRock,   &kWorld};
+    constexpr const Category* kTabs[] = {&kSun,    &kSky,     &kClouds,  &kNight,
+                                         &kShadows, &kPostFx, &kFoliage, &kWorld};
 
     constexpr Group kFog = {"Fog", &kSky};
     constexpr Group kCloudLayer = {"Cloud layer", &kClouds};
@@ -80,8 +79,6 @@ namespace {
     constexpr Group kHeatHaze = {"Heat haze", &kPostFx};
     constexpr Group kGrass = {"Grass", &kFoliage};
     constexpr Group kLeaves = {"Leaves", &kFoliage};
-    constexpr Group kRockShading = {"Rock and cliff", &kRock};
-    constexpr Group kRockDetail = {"Detail", &kRock};
     constexpr Group kFlatten = {"Flatten distance", &kWorld};
 
     // In the order the file and the window list them.
@@ -278,30 +275,6 @@ namespace {
          "How bright the shine off leaves facing the sun is. The engine's is 1.5."},
         {"Leaf glow", &kLeaves, offsetof(Values, leafGlow), 0.7f, 0.0f, 4.0f, "%.2f",
          "How much sunlight comes through leaves with the sun behind them, against the engine's."},
-
-        {"Rock smoothness", &kRockShading, offsetof(Values, rockSmoothness), 0.5f, 0.0f, 1.0f,
-         "%.2f",
-         "How far near rock is lit back toward the engine's smooth surface. Zero lights every "
-         "triangle flat; one is the engine's shading, without its sheen."},
-        {"Rock flat distance", &kRockShading, offsetof(Values, rockFlatDistance), 69.0f, 10.0f,
-         400.0f, "%.0f m",
-         "Where rock is halfway from flat to the engine's smooth surface. It is as flat as Rock "
-         "smoothness sets within half this distance, and wholly smooth past one and a half."},
-        {"Rock glint", &kRockShading, offsetof(Values, rockGlint), 8.05f, 0.0f, 25.0f, "%.2f",
-         "How bright the small glint of the sun off the triangles is. One is what bare stone "
-         "reflects, the same on every rock."},
-        {"Rock glint sharpness", &kRockShading, offsetof(Values, rockGlintSharpness), 5.0f, 2.0f,
-         200.0f, "%.0f",
-         "How tight the glint is: higher is a smaller, harder spot. The engine's sheen is 5."},
-
-        {"Detail size", &kRockDetail, offsetof(Values, rockDetailSize), 0.7f, 0.5f, 8.0f, "%.1f m",
-         "How wide one repeat of the detail map is on rock. The scan it is made from is 2.4 m."},
-        {"Detail relief", &kRockDetail, offsetof(Values, rockDetailRelief), 2.29f, 0.0f, 3.0f,
-         "%.2f", "How deep the cracks and bumps of the detail map are."},
-        {"Detail grain", &kRockDetail, offsetof(Values, rockDetailGrain), 0.5f, 0.0f, 1.0f, "%.2f",
-         "How much the detail map's light and dark grain shows through the rock's own colour."},
-        {"Cavity", &kRockDetail, offsetof(Values, rockCavity), 0.5f, 0.0f, 1.0f, "%.2f",
-         "How much the detail map's cracks darken the light rock takes from the sky."},
 
         {"Flatten start", &kFlatten, offsetof(Values, flattenStart), 250.0f, 0.0f, 1000.0f,
          "%.0f m", "How far off things start to be drawn flatter toward the eye's height."},

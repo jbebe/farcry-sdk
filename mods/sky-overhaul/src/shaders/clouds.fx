@@ -58,6 +58,7 @@
 #define SHADOW_FADE_END 600.0f
 
 #include "hash.inc.fx"
+#include "horizon.inc.fx"
 #include "shadows.inc.fx"
 
 // The low frequencies a cloud's body is carved from, the high ones its edges are eroded by, and
@@ -108,6 +109,7 @@ float4 FogColour : register(c80);
 float4 FogColourRange : register(c81);
 float4 FogValues : register(c82);
 float4 FogHeightValues : register(c83);
+// xy: the engine's fog vector. zw: our sky's filled land, as Filled takes it.
 float4 FogColourVector : register(c84);
 
 float Remap(float value, float fromLow, float fromHigh, float toLow, float toHigh) {
@@ -415,7 +417,8 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     return float4(colour * Eye.w, 1.0f - cover);
 }
 
-// How much of a ray the clouds cover, as MainPS draws them, with the march offset by `dither`.
+// How much of a ray the clouds cover, as MainPS draws them, with the march offset by `dither`, and
+// the filled land under the horizon with them.
 float Cover(float3 rayIn, float dither) {
     float3 ray = normalize(rayIn);
     float enter;
@@ -438,17 +441,18 @@ float Cover(float3 rayIn, float dither) {
 
     float cirrusCover = 0.0f;
     HighCloud(ray, dot(ray, Light.xyz), 0.0f, cirrusCover);
-    return cover + cirrusCover * (1.0f - cover);
+    cover += cirrusCover * (1.0f - cover);
+    return cover + Filled(ray, FogColourVector.zw) * (1.0f - cover);
 }
 
-// Discards a pixel with the likelihood that the clouds cover its ray.
+// Discards a pixel with the likelihood that the clouds or the land cover its ray.
 float4 CoverPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float dither = Dither(screen);
     clip(dither - Cover(rayIn, dither));
     return 0.0f;
 }
 
-// What the clouds cover of a pixel's ray, for the god-ray mask to be multiplied down by.
+// What the clouds and the land cover of a pixel's ray, for the god-ray mask to be multiplied down by.
 float4 MaskPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     return Cover(rayIn, Dither(screen));
 }

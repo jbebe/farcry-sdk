@@ -60,3 +60,13 @@ bool SkyOverhaul::TimeOfDay::Elapsed(double& seconds) {
     return true;
 }
 
+bool SkyOverhaul::TimeOfDay::Hour(float& hour) {
+    const uint8_t* manager = Manager();
+    if (manager == nullptr) {
+        return false;
+    }
+    const double seconds = *reinterpret_cast<const float*>(manager + kSecondsFromMidnight);
+    hour = static_cast<float>(std::fmod(seconds / kHour, 24.0));
+    return true;
+}
+

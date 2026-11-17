@@ -19,10 +19,6 @@ endif()
 
 project ("SkyOverhaul")
 
-# For the rock detail map in src/sky_overhaul.rc: a .rc added to a project without RC enabled is
-# skipped silently, and the plugin would build without it.
-enable_language(RC)
-
 if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "SkyOverhaul must be built 32-bit (x86) - Far Cry 2 is a 32-bit process and a "
                       "64-bit DLL cannot load into it. Select the x86-debug/x86-release preset.")
@@ -64,6 +60,7 @@ set(SHADER_PASSES
   "clouds.fx:MaskPS:ps_3_0:clouds_mask_ps.h:g_cloudsMaskPixelShader"
   "clouds.fx:ShadowPS:ps_3_0:clouds_shadow_ps.h:g_cloudsShadowPixelShader"
   "sky.fx:MainPS:ps_3_0:sky_ps.h:g_skyPixelShader"
+  "sky.fx:LandPS:ps_3_0:sky_land_ps.h:g_skyLandPixelShader"
   "night.fx:MainPS:ps_3_0:night_ps.h:g_nightPixelShader"
   "grain.fx:MainPS:ps_2_b:grain_ps.h:g_grainPixelShader"
   "haze.fx:MainPS:ps_3_0:haze_ps.h:g_hazePixelShader"
@@ -81,18 +78,14 @@ set(SHADER_PASSES
   "leaves.fx:CascadedVS:vs_3_0:leaves_cascaded_vs.h:g_leavesCascadedVertexShader"
   "leaves.fx:CascadedCopiesVS:vs_3_0:leaves_cascaded_copies_vs.h:g_leavesCascadedCopiesVertexShader"
   "leaves.fx:UnshadowedVS:vs_3_0:leaves_unshadowed_vs.h:g_leavesUnshadowedVertexShader"
-  "leaves.fx:UnshadowedCopiesVS:vs_3_0:leaves_unshadowed_copies_vs.h:g_leavesUnshadowedCopiesVertexShader"
-  "rocks.fx:CascadedPS:ps_3_0:rocks_cascaded_ps.h:g_rocksCascadedPixelShader"
-  "rocks.fx:SinglePS:ps_3_0:rocks_single_ps.h:g_rocksSinglePixelShader"
-  "rocks.fx:VertexAmbientPS:ps_3_0:rocks_vertex_ambient_ps.h:g_rocksVertexAmbientPixelShader"
-  "rocks.fx:RiverPS:ps_3_0:rocks_river_ps.h:g_rocksRiverPixelShader"
-  "rocks.fx:ShadowlessPS:ps_3_0:rocks_shadowless_ps.h:g_rocksShadowlessPixelShader")
+  "leaves.fx:UnshadowedCopiesVS:vs_3_0:leaves_unshadowed_copies_vs.h:g_leavesUnshadowedCopiesVertexShader")
 
 # Included by more than one shader source, so any change to them recompiles them all.
 set(SHADER_INCLUDES
   "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/depth.inc.fx"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/foliage.inc.fx"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/hash.inc.fx"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/horizon.inc.fx"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/shadows.inc.fx"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/solid.inc.fx")
 
@@ -119,7 +112,6 @@ endforeach()
 
 add_library(SkyOverhaul SHARED
   "src/main.cpp"
-  "src/sky_overhaul.rc"
   "src/clouds.cpp"
   "src/dazzle.cpp"
   "src/flatten.cpp"
@@ -129,7 +121,6 @@ add_library(SkyOverhaul SHARED
   "src/haze.cpp"
   "src/night.cpp"
   "src/occlusion.cpp"
-  "src/rocks.cpp"
   "src/shadows.cpp"
   "src/sky.cpp"
   "src/sky_model.cpp"
@@ -143,7 +134,6 @@ add_library(SkyOverhaul SHARED
   "src/engine/dome_draw.cpp"
   "src/engine/fog_tint.cpp"
   "src/engine/known_shaders.cpp"
-  "src/engine/known_textures.cpp"
   "src/engine/locate.cpp"
   "src/engine/noise.cpp"
   "src/engine/frame.cpp"
@@ -173,10 +163,6 @@ target_link_libraries(SkyOverhaul PRIVATE imgui)
 # No "lib" prefix and no decoration: bin\plugins\SkyOverhaul.dll is what the player installs and
 # what fcse.log names in every line this plugin writes.
 set_target_properties(SkyOverhaul PROPERTIES OUTPUT_NAME "SkyOverhaul" PREFIX "")
-
-# rc.exe reports no dependency on the file an RCDATA line embeds.
-set_source_files_properties("src/sky_overhaul.rc" PROPERTIES
-  OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/textures/rock_detail.dds")
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET SkyOverhaul PROPERTY CXX_STANDARD 20)

@@ -1,6 +1,6 @@
 # Sky Overhaul
 
-Purpose: A new sky, clouds, sun and light for Far Cry 2, drawn from the sun's position, plus the night, grade, foliage, rock, shadow and haze passes the user widened it to.
+Purpose: A new sky, clouds, sun and light for Far Cry 2, drawn from the sun's position, plus the night, grade, foliage, shadow and haze passes the user widened it to.
 Stage: maintenance
 
 ## Features
@@ -19,10 +19,9 @@ Stage: maintenance
 - [done] No rim light on characters and plants in any preset, at any hour - user: "the fix for the rimlight works"
 - [new] Night eye pass off indoors - known issue; two raycast attempts crashed and were reverted, needs another route
 - [done] Colour grade override: neutral, no yellow tint - the user's tuned values are the defaults
-- [done] Ambient occlusion, off by default - fades into fog
+- [done] Ambient occlusion, on by default since 1.6.0 - fades into fog
 - [done] Grass lit by the sun: dark roots, sheen, light through the blades - user: "looks nice"; bent and shadowless grass not covered
 - [done] Tree leaves lit one by one - user: "perfect"
-- [done] Rocks and cliffs shaded as faceted stone with a CC0 detail texture, smooth with distance - user: "look just as we wanted"
 - [done] Sun shadows reach farther and turn in half-degree steps so building shadows hold still - user-picked ranges 51/100/207 m
 - [done] Dusk fog: the land's fog darkens as the sun sets - the user has not confirmed the one-frame flash fix
 - [done] Daytime ambient lift in the clear preset, up to 1.7x at noon - widened at the user's call after a tester's report
@@ -31,25 +30,25 @@ Stage: maintenance
 - [done] Mirages on bare level ground far off - user: "now it works perfectly"; scope zoom fix "perfect"
 - [done] Land to the horizon where the drawn world ends short - user: "its good like this" (2026-10-16)
 - [new] The land chunks the engine skips by view position - anti-portals suspected; next a DisableAntiPortals test layer
-- [done] Flatten, off by default - user: "it looks perfect. beautiful."; shots past ~250 m land off, no fade when zoomed
-- [new] Land to the horizon: its brightness set per clock hour, a slider for each hour the user tunes - darker at night and early morning, brighter noon and afternoon, darker at dusk
-- [new] Land to the horizon hides the sun behind it - at dusk the sun and the filled land melt together
-- [new] Stars and the Milky Way a little fainter all over
-- [new] Ambient occlusion and Flatten on by default
-- [new] Remove the rock shading - user: "makes rocks worse, too PS1-like"
+- [done] Flatten, on by default since 1.6.0 - user: "it looks perfect. beautiful."; shots past ~250 m land off, no fade when zoomed
+- [done] Land to the horizon: its brightness per clock hour, the user's tuned values hardcoded, no sliders
+- [done] Land to the horizon hides the sun behind it, its glare and light shafts with it - user: "works"
+- [done] Stars and the Milky Way fainter all over: about half - 70% was not enough for the user
 - [done] Each part switched in the Mod Configuration Menu, values in bin\sky-overhaul.ini and a DevTools window
 - [scrapped] Tonemap or highlight roll-off - user: "useless" (2026-09-15); never propose again
 - [scrapped] Per-moment sky presets and moment tabs - user found them overwhelming; the sky follows the sun, sliders only on request
 - [scrapped] Sun shadow softening - did not reach the distant shadows, reverted; never propose again
 - [scrapped] Heat haze far blur - user: "not important"; never propose again
 - [scrapped] Re-faceting the rock meshes - abandoned; the user wanted the retail mesh lit better
+- [scrapped] Rocks and cliffs shaded as faceted stone - removed in 1.6.0, user: "makes rocks worse, too PS1-like"
 - [scrapped] Dark adaptation, night dazzle, a black-level curve, acuity blur - declined; FC2 stays a casual FPS
 - [scrapped] Weather controls - developer settings, they live in DevTools' Environment tab
 - [scrapped] Sharpening, a longer shadow-cascade reach, FC3/FC4 RE for it - never propose
 
 ## To validate
 
-- Play a while as usual: sky, clouds, dusk fog, grass, leaves, rocks and grade as before - fc2drive only, noon, dusk and night at two spots
+- Night, clear sky: stars and the Milky Way about half as bright as before 1.6.0, the moon and the sky between them unchanged - nothing
+- Play a while as usual: sky, clouds, dusk fog, grass, leaves and grade as before - fc2drive only, noon, dusk and night at two spots
 
 ## Approvals
 
@@ -58,7 +57,7 @@ Stage: maintenance
 
 ## Checks
 
-- simplify: 455cbed 2026-11-15 - since sky-overhaul-1.5.0
+- simplify: 285116a 2026-11-17 - since sky-overhaul-1.5.0
 
 ## Release order
 

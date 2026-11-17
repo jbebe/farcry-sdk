@@ -60,7 +60,7 @@ collides with any other mod that edits a preset. Nothing here changes how the su
   so the bloom and the glare come after. `src/haze.cpp` and `src/shaders/haze.fx`.
 - **Land to the horizon.** Where the drawn world ends short of the horizon, the sky below it is
   painted as far earth lightly hazed, so the skyline never shows sky beneath it. `src/shaders/sky.fx`.
-- **Flatten**, off by default. Far things are drawn flatter toward the eye's height, so the small
+- **Flatten.** Far things are drawn flatter toward the eye's height, so the small
   world reads farther off than it is: every world vertex shader is rewritten, as it is first drawn,
   to ease heights in from a start distance before projecting. Only the drawing changes, so what is
   hit and aimed at stays where it is. `src/flatten.cpp` and `src/engine/vertex_patch.cpp`.
@@ -72,14 +72,14 @@ collides with any other mod that edits a preset. Nothing here changes how the su
   state.
 - **Switching each part.** The mod menu, and the `[SkyOverhaul]` group in `fcse.ini`, holds only
   which parts are on: Sky (Engine or Overhaul), Clouds (Engine, Off or Overhaul), Sun (Engine, or
-  Overhaul for the glare and the afterimage), Night, Shadows, Grade, Grass, Leaves, Sun shadows and
-  Rocks (each Engine or Overhaul), and Occlusion, Grain, Heat haze and Flatten (each Off or On).
+  Overhaul for the glare and the afterimage), Night, Shadows, Grade, Grass, Leaves and Sun shadows
+  (each Engine or Overhaul), and Occlusion, Grain, Heat haze and Flatten (each Off or On).
 - **Tuning.** Every effect's values are kept in `bin\sky-overhaul.ini`, beside `fcse.ini`, which is
   written on the first launch. The sky has only its fog and the land filled in below its horizon:
   otherwise it follows the sun alone. `src/tuning.cpp`.
 - **A window in DevTools' overlay.** With [DevTools](../DevTools) installed, Home shows a Sky Overhaul
-  window that edits that file in Sun, Sky, Clouds, Night, Shadows, Post FX, Foliage, Rock and World
-  tabs of sliders, saving each edit when it is let go. Without DevTools, `fcse.log` says so once and the
+  window that edits that file in Sun, Sky, Clouds, Night, Shadows, Post FX, Foliage and World tabs
+  of sliders, saving each edit when it is let go. Without DevTools, `fcse.log` says so once and the
   file is the only way in.
 
 ## How it is put together

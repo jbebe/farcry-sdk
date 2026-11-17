@@ -22,7 +22,6 @@
 #include "haze.h"
 #include "night.h"
 #include "occlusion.h"
-#include "rocks.h"
 #include "shadows.h"
 #include "sky.h"
 #include "sun_shadows.h"
@@ -43,7 +42,6 @@ namespace {
         SkyOverhaul::FrameCopy::ReleaseDeviceObjects();
         SkyOverhaul::DrawGuard::ReleaseDeviceObjects();
         SkyOverhaul::Foliage::ReleaseDeviceObjects();
-        SkyOverhaul::Rocks::ReleaseDeviceObjects();
         SkyOverhaul::Grain::ReleaseDeviceObjects();
         SkyOverhaul::Haze::ReleaseDeviceObjects();
         SkyOverhaul::Flatten::ReleaseDeviceObjects();
@@ -53,6 +51,7 @@ namespace {
     // Each effect decides for itself whether the pass is one it wants. The sky has already drawn
     // itself from inside the pass by the time this runs.
     void OnScenePass(const SkyOverhaul::Frame::Pass& pass) {
+        SkyOverhaul::Sky::OnScenePass(pass);
         SkyOverhaul::Clouds::OnScenePass(pass);
         SkyOverhaul::Shadows::OnScenePass(pass);
         SkyOverhaul::SolidDepth::OnScenePass(pass);
@@ -131,10 +130,6 @@ namespace {
     void __cdecl OnSunShadowsChanged(const FCSE_SettingValue* value, void*) {
         SkyOverhaul::SunShadows::SetEnabled(value->asChoice == 1);
     }
-
-    void __cdecl OnRocksChanged(const FCSE_SettingValue* value, void*) {
-        SkyOverhaul::Rocks::SetEnabled(value->asChoice == 1);
-    }
 }
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
@@ -178,16 +173,15 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Shadows", FCSE_CHOICE(1), &OnShadowsChanged, nullptr, kModes, std::size(kModes)},
         {"Grade", FCSE_CHOICE(1), &OnGradeChanged, nullptr, kModes, std::size(kModes)},
         {"Grain", FCSE_CHOICE(1), &OnGrainChanged, nullptr, kSwitchModes, std::size(kSwitchModes)},
-        {"Occlusion", FCSE_CHOICE(0), &OnOcclusionChanged, nullptr, kSwitchModes,
+        {"Occlusion", FCSE_CHOICE(1), &OnOcclusionChanged, nullptr, kSwitchModes,
          std::size(kSwitchModes)},
         {"Heat haze", FCSE_CHOICE(1), &OnHazeChanged, nullptr, kSwitchModes,
          std::size(kSwitchModes)},
-        {"Flatten", FCSE_CHOICE(0), &OnFlattenChanged, nullptr, kSwitchModes,
+        {"Flatten", FCSE_CHOICE(1), &OnFlattenChanged, nullptr, kSwitchModes,
          std::size(kSwitchModes)},
         {"Grass", FCSE_CHOICE(1), &OnGrassChanged, nullptr, kModes, std::size(kModes)},
         {"Leaves", FCSE_CHOICE(1), &OnLeavesChanged, nullptr, kModes, std::size(kModes)},
         {"Sun shadows", FCSE_CHOICE(1), &OnSunShadowsChanged, nullptr, kModes, std::size(kModes)},
-        {"Rocks", FCSE_CHOICE(1), &OnRocksChanged, nullptr, kModes, std::size(kModes)},
     };
     // Registered under the module name: the mod menu lists every loaded plugin and then every group
     // that matched none, so a group named apart from its DLL would arrive twice, once empty.

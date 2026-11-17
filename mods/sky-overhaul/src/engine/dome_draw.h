@@ -66,26 +66,6 @@ using FoliageFn = IDirect3DVertexShader9* (*)(IDirect3DDevice9* device,
                                                float parameters[kFoliageParameterRegisters * 4]);
 void SetFoliage(FoliageFn foliage);
 
-// How many registers of their own the pixel shaders drawing rock in the engine's place read.
-constexpr UINT kRockParameterRegisters = 4;
-
-// The sampler a rock draw's own texture is bound to, one no Generic pixel shader reads.
-constexpr DWORD kRockSampler = 7;
-
-// What a rock draw is drawn with in place of the engine's.
-struct RockDraw {
-    IDirect3DPixelShader9* pixel;
-    IDirect3DVertexShader9* vertex;
-    // Bound to kRockSampler, wrapping and filtered, if not null.
-    IDirect3DBaseTexture9* texture;
-    float parameters[kRockParameterRegisters * 4];
-};
-
-// Fills `draw` for a draw to be drawn with shaders of ours; false leaves it the engine's. Asked of
-// every draw the foliage did not take.
-using RockFn = bool (*)(IDirect3DDevice9* device, RockDraw& draw);
-void SetRocks(RockFn rocks);
-
 // The vertex shader to draw with in place of `bound`, asked at the engine's own draw call after
 // every effect above has chosen its shaders; null leaves `bound`. Never asked in the sky pass.
 using VertexFn = IDirect3DVertexShader9* (*)(IDirect3DDevice9* device,

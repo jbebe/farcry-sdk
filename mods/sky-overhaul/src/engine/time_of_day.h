@@ -11,4 +11,7 @@ bool Install();
 // frame, and only while a world is drawn.
 bool Elapsed(double& seconds);
 
+// The clock's hour, 0 up to 24, fractions included.
+bool Hour(float& hour);
+
 }

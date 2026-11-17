@@ -10,8 +10,19 @@ Notable changes to Sky Overhaul, loosely following
   so in `fcse.log`.
 - **No rim light.** The bluish glow along the edges of people and plants is gone by day too, and
   in every weather, not only on clear, cloudy and jungle nights.
+- **Ambient occlusion and Flatten on by default.** A new install starts with both on. An upgrade
+  keeps what `fcse.ini` already holds, so turn them on in the Mod Configuration menu.
+- **Fainter stars.** The stars and the Milky Way shine at about half their old brightness.
+- **Far land through the day.** The land painted past the edge of the drawn world follows the
+  hour: darker around dawn and late at night, a little brighter through the day.
+
+### Removed
+- **Rock shading.** Rocks and cliffs are the game's own again: the faceted look read as
+  low-poly rather than stone. The **Rocks** switch and the Rock tab are gone with it.
 
 ### Fixed
+- **The sun sets behind the far land.** Where land is painted past the edge of the drawn world,
+  the setting sun stayed in front of it, glare and light shafts included. It now sinks behind it.
 - **Works under dgVoodoo and DLSS injectors.** Under dgVoodoo, which the DLSS 5 injector needs to
   run Far Cry 2, Sky Overhaul drew nothing and the game's own sky stayed. It draws through the game
   itself instead of hooking Direct3D, so its sky is right there too, with ReShade and a DLSS 5

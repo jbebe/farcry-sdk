@@ -1,5 +1,6 @@
 #include "clouds.h"
 
+#include "sky.h"
 #include "sky_model.h"
 
 #include "engine/camera.h"
@@ -220,6 +221,8 @@ namespace {
         const float cirrusAltitude = above > kCirrusFloor ? above : kCirrusFloor;
 
         const float shapeGrain = 1.0f / v.cloudSize;
+        float fill[2];
+        SkyOverhaul::Sky::Fill(v, fill);
         const float constants[(kConstantCount - kTrailCount) * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             v.cloudBase, v.cloudThickness, v.cloudCoverage, v.cloudDensity,
@@ -236,7 +239,7 @@ namespace {
             view.fogValues[0], view.fogValues[1], view.fogValues[2], 0.0f,
             view.fogHeightValues[0], view.fogHeightValues[1], view.fogHeightValues[2],
             view.fogHeightValues[3],
-            view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f,
+            view.fogColourVector[0], view.fogColourVector[1], fill[0], fill[1],
             cirrusAltitude, kCirrusGrain, v.cirrus, v.cirrusOpacity,
             v.contrails, kTrailWidth, kTrailBreak, 0.0f,
             light.glow[0], light.glow[1], light.glow[2], SkyOverhaul::SkyModel::Grey(storminess)};

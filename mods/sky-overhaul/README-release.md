@@ -15,13 +15,13 @@ through the whole day, the weather and the night.
   and the world's colour draining where it is dark.
 - **A neutral colour grade** in place of the game's yellow cast, a faint film grain, and ambient
   occlusion in corners and creases.
-- **The world in that light**: grass and tree leaves lit by the sun, rocks and cliffs shaded as
-  faceted stone up close, and sun shadows that reach further and follow a low sun toward the horizon.
+- **The world in that light**: grass and tree leaves lit by the sun, and sun shadows that reach
+  further and follow a low sun toward the horizon.
 - **Heat haze and mirages**: on sunny days distant land shimmers and smudges in the hot air near the
   ground, more the farther it is, and bare level ground far off mirrors the sky.
 - **Land to the horizon**: where the game stops drawing the world short of the skyline, the gap is
   filled with far, hazy land instead of sky.
-- **Flatten**, off by default: distant land drawn flatter, so the world reads bigger than it is.
+- **Flatten**: distant land drawn flatter, so the world reads bigger than it is.
 
 Each part switches back to the engine's own in the **Mod Configuration** menu. Every effect's values
 are in `bin\sky-overhaul.ini`, and with DevTools installed its overlay has a window of sliders for

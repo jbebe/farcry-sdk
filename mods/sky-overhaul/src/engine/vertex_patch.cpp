@@ -24,8 +24,6 @@ namespace {
     constexpr DWORD kTemp = 0;
     constexpr DWORD kConst = 2;
     constexpr DWORD kOutput = 6;
-    constexpr DWORD kTexcoordUsage = 5;
-    constexpr UINT kOutputRegisters = 12;
     constexpr UINT kTempRegisters = 32;
     constexpr UINT kConstRegisters = 256;
 
@@ -43,9 +41,6 @@ namespace {
     constexpr DWORD kWwww = 0xFFu;
 
     constexpr UINT kCameraPosition = SkyOverhaul::Camera::kPositionRegister;
-
-    // How many tokens a dp4 takes: the instruction and its three registers.
-    constexpr size_t kDp4Tokens = 4;
 
     DWORD Type(DWORD token) {
         return ((token >> 28) & 7) | ((token >> 8) & 0x18);
@@ -71,7 +66,6 @@ namespace {
 
     // Where a shader writes its clip position: four dp4 of one temp into o0.
     struct Scan {
-        size_t afterDeclarations = 0;
         size_t end = 0;
         size_t projections[4] = {};
         int count = 0;
@@ -79,15 +73,11 @@ namespace {
         // The lowest constant register the four read the matrix from, or -1 if not four in a row.
         int matrix = -1;
         UINT freeTemp = 0;
-        bool outputUsed[kOutputRegisters] = {};
         bool constUsed[kConstRegisters] = {};
         bool relativeConst = false;
-        int texcoordOutput[16];
-        DWORD texcoordMask[16];
     };
 
     bool Read(const DWORD* tokens, size_t count, Scan& scan) {
-        std::fill(std::begin(scan.texcoordOutput), std::end(scan.texcoordOutput), -1);
         int matrixMin = kConstRegisters;
         unsigned matrixRows = 0;
         size_t i = 1;
@@ -109,18 +99,8 @@ namespace {
                 return false;
             }
 
-            if (opcode == kDcl && length == 2) {
-                scan.afterDeclarations = next;
-                if (Type(parameters[1]) == kOutput && Number(parameters[1]) < kOutputRegisters) {
-                    scan.outputUsed[Number(parameters[1])] = true;
-                    const DWORD usage = parameters[0] & 0x1F;
-                    const UINT index = (parameters[0] >> 16) & 0xF;
-                    if (usage == kTexcoordUsage) {
-                        scan.texcoordOutput[index] = static_cast<int>(Number(parameters[1]));
-                        scan.texcoordMask[index] = (parameters[1] >> 16) & 0xF;
-                    }
-                }
-            } else {
+            // A declaration names no temp or constant.
+            if (opcode != kDcl) {
                 // A def's values are floats, not registers.
                 const size_t registers = opcode == kDef || opcode == kDefi || opcode == kDefb
                                              ? (length > 0 ? 1 : 0)
@@ -160,45 +140,6 @@ namespace {
                           : -1;
         return true;
     }
-}
-
-std::vector<DWORD> SkyOverhaul::VertexPatch::WithPosition(const DWORD* tokens, size_t count,
-                                                          UINT semantic) {
-    Scan scan;
-    if (!Read(tokens, count, scan) || scan.freeTemp >= kTempRegisters) {
-        return {};
-    }
-
-    int target = semantic < 16 ? scan.texcoordOutput[semantic] : -1;
-    const DWORD targetMask = target >= 0 ? scan.texcoordMask[semantic] : 0xF;
-    std::vector<DWORD> declaration;
-    if (target < 0) {
-        for (UINT o = 0; o < kOutputRegisters && target < 0; o++) {
-            if (!scan.outputUsed[o]) {
-                target = static_cast<int>(o);
-            }
-        }
-        if (target < 0) {
-            return {};
-        }
-        declaration = {Instruction(kDcl, 2), kParameter | (semantic << 16) | kTexcoordUsage,
-                       Destination(kOutput, static_cast<UINT>(target), 0xF)};
-    }
-    const DWORD copy[] = {Instruction(kMov, 2), Destination(kTemp, scan.freeTemp, 0xF),
-                          kParameter | (kXyzw << 16) | scan.projected};
-    const DWORD write[] = {Instruction(kMov, 2),
-                           Destination(kOutput, static_cast<UINT>(target), targetMask),
-                           Source(kTemp, scan.freeTemp)};
-
-    const DWORD* afterProjection = tokens + scan.projections[3] + kDp4Tokens;
-    std::vector<DWORD> patched(tokens, tokens + scan.afterDeclarations);
-    patched.insert(patched.end(), declaration.begin(), declaration.end());
-    patched.insert(patched.end(), tokens + scan.afterDeclarations, afterProjection);
-    patched.insert(patched.end(), std::begin(copy), std::end(copy));
-    patched.insert(patched.end(), afterProjection, tokens + scan.end);
-    patched.insert(patched.end(), std::begin(write), std::end(write));
-    patched.push_back(kEnd);
-    return patched;
 }
 
 std::vector<DWORD> SkyOverhaul::VertexPatch::Flattened(const DWORD* tokens, size_t count,

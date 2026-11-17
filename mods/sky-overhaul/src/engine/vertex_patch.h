@@ -1,5 +1,4 @@
-// A vertex shader's bytecode rewritten: to also hand its camera-relative position to the pixel
-// shader, which the engine's own shaders keep to themselves, or to draw far things flatter.
+// A vertex shader's bytecode rewritten to draw far things flatter.
 #pragma once
 
 #include <windows.h>
@@ -7,11 +6,6 @@
 #include <vector>
 
 namespace SkyOverhaul::VertexPatch {
-
-// `tokens` with the temp its clip position is projected from written, as the shader's last
-// instruction, to the output declared TEXCOORD`semantic`, which is declared if it was not. Empty if
-// the clip position is not four dp4 of one temp into o0, which is how every Generic shader writes it.
-std::vector<DWORD> WithPosition(const DWORD* tokens, size_t count, UINT semantic);
 
 // The registers a world shader projects its position with: the view-projection at c4, which takes
 // world positions, or the rotation-only one at c0, which takes positions relative to the camera.
