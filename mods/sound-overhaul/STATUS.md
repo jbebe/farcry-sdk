@@ -34,7 +34,7 @@ Stage: maintenance
 ## Approvals
 
 - played: 7b4c384a 2026-11-14 - "I approve it all changes"
-- page text: 3d0dc81 2026-10-18 - implied by the sound-overhaul-1.0.3 release
+- page text: 8224b040 2026-11-17 - "yes"
 
 ## Checks
 
