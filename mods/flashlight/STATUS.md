@@ -22,11 +22,9 @@ Stage: maintenance
 
 ## To validate
 
-- Without Difficulty Overhaul, guards ignore the light
-
 ## Approvals
 
-- played: 7b4c384a 2026-11-14 - "I approve it all changes"
+- played: 1d366b0d 2026-11-17 - "it works alright"
 - page text: 49624dc 2026-10-29 - implied by the flashlight-1.2.1 release
 
 ## Checks
