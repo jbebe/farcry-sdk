@@ -51,7 +51,7 @@ Stage: active
 ## Approvals
 
 - played: 4f56b011 2026-11-17 - "it all works flawlessly"; after the simplify pass: "I tested it, it works."
-- page text: 7950320 2026-11-01 - implied by the inventory-overhaul-1.0.0 release
+- page text: 046e36c7 2026-11-17 - "I approve it"
 
 ## Checks
 
