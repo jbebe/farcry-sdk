@@ -15,6 +15,8 @@ struct Values {
     float rollPerImpulse = 0.103f;
     float rollCycle = 0.08f;
     float rollFade = 0.11f;
+    // How far full auto's shake points the arms off at its most, in times the gun's own kick.
+    float shake = 1.5f;
 };
 
 // How much of the sway down the sights is left, standing and crouched, the same for every weapon.
@@ -38,21 +40,36 @@ struct DirtLook {
 const DirtLook& DirtInTheEye();
 
 // How a hit on the player looks, the same for every weapon: the punch a body hit gives the view, in
-// metres, degrees and seconds; the vignette after it; and a head hit's black and double image.
+// metres, degrees and seconds; the vignette after it, which a head hit gives in full; and a head hit's
+// double image.
 struct HitLook {
     float back = 0.08f;
     float down = 5.0f;
     float peak = 0.07f;
-    float vignette = 0.85f;
-    float reach = 0.55f;
+    float vignette = 1.3f;
+    float reach = 0.65f;
     float vignetteGone = 2.5f;
-    float black = 0.35f;
-    float unblack = 1.5f;
     float apart = 40.0f;
     float doubleGone = 5.0f;
 };
 
 const HitLook& BeingHit();
+
+// How the picture shows the player's health, the same for every weapon: the colour left at 3 bars,
+// 2 bars and the last bar, nought to one, the grain and glow at the last two, and the seconds from
+// one to the next.
+struct HealthLook {
+    float colour3 = 0.67f;
+    float colour2 = 0.33f;
+    float grain2 = 0.04f;
+    float glow2 = 0.2f;
+    float colour1 = 0.0f;
+    float grain1 = 0.12f;
+    float glow1 = 0.5f;
+    float fade = 1.0f;
+};
+
+const HealthLook& HealthPicture();
 
 // Takes the values of the weapon now in hand, by its name. Call each time the weapon changes.
 void Follow();

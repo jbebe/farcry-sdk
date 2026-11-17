@@ -26,6 +26,10 @@ inline Offset operator+(const Offset& a, const Offset& b) {
             a.right + b.right, a.ahead + b.ahead, a.up + b.up};
 }
 
+// The gun turned `yaw` left and `pitch` up about its own middle, its muzzle one way and its stock the
+// other, rather than swung about the shoulders.
+Offset AboutGun(float yaw, float pitch);
+
 // Once a frame on the game thread, after the lean and the arms are worked out: follows the pawn's
 // skeleton, having its bones posed again when the pose changed, and hands the pose to the posing
 // threads.

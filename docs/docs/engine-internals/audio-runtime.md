@@ -866,6 +866,12 @@ Entity fields name a preset by the CRC of its `hidName` (`crc_hidName` in the XM
 - It sends each type's summed volume, clamped to −96…0 dB, to `SetTypeVolume`, and keeps each type's
   filter for `ComputeOcclusion`.
 
+It does so for every type on every frame, whether a preset changed or not, so `SetTypeVolume`
+(Steam `0x106225B0`, `__thiscall(type, dB, fade)`, `RET 0xC`) is the one place every sound in the
+game, music and interface included, passes on its way to the sound engine. A hook there that lowers
+the decibels works as a master volume, live, without touching the options **(RE-verified)**; Vehicle
+Overhaul's engine mix hooks it.
+
 `ApplyPreset(name, duration)` starts or extends one and plays its `sndStart`. The Domino box
 `SoundMixing` (`StartSoundMixingFromLua`/`StopSoundMixingFromLua`) lets a mission script do the same.
 Both are global Lua functions, so the game's console reaches them through its `#` Lua prefix. That is

@@ -81,7 +81,7 @@ namespace {
     constexpr float kSettle = 0.4f;
     // Seconds for the turn rate to follow the look. Faster than this in a frame is a cut, not a
     // turn.
-    constexpr float kTrail = 0.3f;
+    constexpr float kTurnSmoothing = 0.3f;
     constexpr float kFastestTurn = 10.0f;
 
     // The scope's far end swings against the turn. Turns slower than kSlowTurn radians a second
@@ -220,7 +220,7 @@ namespace {
         return g_originalWeaponEvent(weapon, unused, event);
     }
 
-    // How fast the look turns, smoothed over kTrail seconds.
+    // How fast the look turns, smoothed over kTurnSmoothing seconds.
     void FollowLook(uint8_t* pawn, uint8_t* data, float seconds) {
         const float pitch = Field<float>(data, kEffectivePitch);
         const float yaw = Field<float>(data, kEffectiveYaw);
@@ -239,8 +239,8 @@ namespace {
         g_lastYaw = yaw;
         g_turning = {right, up};
 
-        g_turnRight = AimingOverhaul::Follow(g_turnRight, right, seconds, kTrail);
-        g_turnUp = AimingOverhaul::Follow(g_turnUp, up, seconds, kTrail);
+        g_turnRight = AimingOverhaul::Follow(g_turnRight, right, seconds, kTurnSmoothing);
+        g_turnUp = AimingOverhaul::Follow(g_turnUp, up, seconds, kTurnSmoothing);
         g_turnedRight = g_turnRight;
         g_turnedUp = g_turnUp;
     }
@@ -401,15 +401,17 @@ AimingOverhaul::Aim::Turning AimingOverhaul::Aim::Turned() {
 }
 
 AimingOverhaul::Aim::Swing AimingOverhaul::Aim::ScopeSwing() {
-    const float right = g_turnedRight;
-    const float up = g_turnedUp;
-    const float speed = std::hypot(right, up);
+    return SwingOf({g_turnedRight, g_turnedUp});
+}
+
+AimingOverhaul::Aim::Swing AimingOverhaul::Aim::SwingOf(Turning turn) {
+    const float speed = std::hypot(turn.right, turn.up);
     if (speed <= 0.0f) {
         return {};
     }
     const float eased = speed * speed / (speed + kSlowTurn);
     const float swing = AimingOverhaul::SoftLimit(eased * kSwingPerTurn, kMostSwing) / speed;
-    return {-right * swing, up * swing};
+    return {-turn.right * swing, turn.up * swing};
 }
 
 float AimingOverhaul::Aim::Magnification() {

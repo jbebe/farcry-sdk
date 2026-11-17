@@ -25,11 +25,12 @@
 #include "engine/weapon_draws.h"
 #include "eyepiece.h"
 #include "fcse_api.h"
+#include "health.h"
 #include "heart.h"
 #include "hit.h"
+#include "inertia.h"
 #include "lean.h"
 #include "manual.h"
-#include "pitch_slide.h"
 #include "ready.h"
 #include "recoil.h"
 #include "scope_shadow.h"
@@ -55,6 +56,7 @@ namespace {
         AimingOverhaul::Dirt::ReleaseDeviceObjects();
         AimingOverhaul::Eyepiece::ReleaseDeviceObjects();
         AimingOverhaul::FrameCopy().Release();
+        AimingOverhaul::Health::ReleaseDeviceObjects();
         AimingOverhaul::Hit::ReleaseDeviceObjects();
         AimingOverhaul::ScopeShadow::ReleaseDeviceObjects();
         AimingOverhaul::SecondView::ReleaseDeviceObjects();
@@ -162,7 +164,7 @@ namespace {
     }
 
     // The lean, the gun near walls and after a sprint, the stance, the arms' slide behind
-    // the look's pitch, the recoil and the shots' shake, a hit's punch, the heart, the breath and the
+    // the look's turn, the recoil and the shots' shake, a hit's punch, the heart, the breath and the
     // eye's drift.
     AimingOverhaul::Aim::Adjust OnAimFrame(uint8_t* pawn, float seconds) {
         using namespace AimingOverhaul;
@@ -189,13 +191,15 @@ namespace {
             g_sightsDropped = false;
         }
         const float stamina = Pawn::Stamina(pawn);
+        const float health = Pawn::Health(pawn);
+        Health::Set(health);
         Stance::Update(pawn, seconds);
-        PitchSlide::Update(seconds, (std::max)(Aim::Settled(), Aim::Scoped()));
+        Inertia::Update(seconds, (std::max)(Aim::Settled(), Aim::Scoped()));
         Recoil::Update(seconds);
         const ShotShake::Turn shake = ShotShake::Update(seconds);
         const Hit::Punch punch = Hit::Update(seconds);
         Body::Follow(pawn);
-        Heart::Update(seconds, sprinting, stamina, Pawn::Health(pawn), Pawn::Shake(pawn));
+        Heart::Update(seconds, sprinting, stamina, health, Pawn::Shake(pawn));
         Breath::Update(seconds, Aim::Aiming(), stamina);
         return {Sway::Drift(seconds), roll + shake.roll, shake.pitch + punch.pitch,
                 {0.0f, 0.0f, -punch.back}};
@@ -251,9 +255,10 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         api->Log("nothing is drawn on the gun: the engine's renderer could not be hooked");
         g_hooked = false;
     }
-    // Dirt in the eye is closest to the eye, so it goes over the eyepiece; what a hit does to the
-    // sight goes over everything.
+    // Dirt in the eye is closest to the eye, so it goes over the eyepiece; the health's look and
+    // what a hit does to the sight go over everything.
     AimingOverhaul::Frame::AddComposite(&AimingOverhaul::Dirt::OnComposite);
+    AimingOverhaul::Frame::AddComposite(&AimingOverhaul::Health::OnComposite);
     AimingOverhaul::Frame::AddComposite(&AimingOverhaul::Hit::OnComposite);
     if (!AimingOverhaul::SecondView::Install(&AimingOverhaul::Surroundings::Want)) {
         api->Log("a scope's surroundings are not drawn: the second view could not be hooked");
@@ -269,9 +274,10 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     AimingOverhaul::Manual::Install();
     AimingOverhaul::Shot::Install(&MoveShot);
     AimingOverhaul::Impact::Install(&OnImpact);
-    AimingOverhaul::Damage::Install(&AimingOverhaul::Hit::OnHit);
+    AimingOverhaul::Damage::Install(&AimingOverhaul::Hit::OnHit, &AimingOverhaul::Health::Set);
     AimingOverhaul::Input::Install(&OnSignal);
     AimingOverhaul::Sprint::Install(&AimingOverhaul::Breath::HoldsSprint);
+    AimingOverhaul::Inertia::Install();
     AimingOverhaul::Sound::Install();
     AimingOverhaul::Skeleton::Install(&AimingOverhaul::Body::OnPosed,
                                       &AimingOverhaul::Body::OnAttached);
@@ -282,8 +288,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          Toggles(&AimingOverhaul::Breath::SetEnabled)},
         {"Gun near walls", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Wall::SetEnabled)},
-        {"Vertical inertia", FCSE_CHECKBOX(true), &OnToggled,
-         Toggles(&AimingOverhaul::PitchSlide::SetEnabled)},
+        {"Inertia", FCSE_CHECKBOX(true), &OnToggled,
+         Toggles(&AimingOverhaul::Inertia::SetEnabled)},
         {"Gun up after sprint", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Ready::SetEnabled)},
         {"Recoil that stays", FCSE_CHECKBOX(true), &OnToggled,
@@ -293,6 +299,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Dirt in the eye", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Dirt::SetEnabled)},
         {"Being hit", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Hit::SetEnabled)},
+        {"Health in the picture", FCSE_CHECKBOX(true), &OnToggled,
+         Toggles(&AimingOverhaul::Health::SetEnabled)},
         {"Gun blur", FCSE_CHECKBOX(true), &OnToggled, Toggles(&AimingOverhaul::Blur::SetEnabled)},
         {"Iron sight zoom", FCSE_CHECKBOX(true), &OnToggled,
          Toggles(&AimingOverhaul::Aim::SetIronsightZoom)},

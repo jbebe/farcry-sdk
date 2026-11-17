@@ -7,7 +7,10 @@ namespace AimingOverhaul::Damage {
 // it landed on the head. On the game thread.
 using HitFn = void (*)(bool head, float lost);
 
+// The player's health after any damage, from nought to one. On the game thread.
+using HealthFn = void (*)(float health);
+
 // False, and logged, when the player's damage cannot be hooked.
-bool Install(HitFn onHit);
+bool Install(HitFn onHit, HealthFn onHealth);
 
 }

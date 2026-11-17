@@ -34,6 +34,10 @@ hit you.
   and the sights, and the aim stays there until you pull it back down. The first two kicks of a
   burst are light, so its first three shots land together. Shotguns, launchers and mounted guns
   kick and come back as in the game.
+- **Full auto shakes the gun.** From the fourth shot of a burst the aim stops climbing; instead your
+  arms point the gun off it at random, as two hands fighting to hold it still, turning it about its
+  own middle, and the shots go where it points. It grows until the eighth shot and stays that shaky until you let go or the magazine runs
+  dry.
 - **Full auto spreads.** From the fourth shot of a burst each shot strays a little further, up to
   eight shots' worth. Shots more than a quarter of a second apart each start fresh.
 - **The operation manual tightens the iron sights.** With a gun's manual from the arms dealer, its
@@ -51,19 +55,24 @@ hit you.
 - **Gun near walls.** A gun that would reach into a wall swings down out of it, the view staying
   where it is, and does not fire until it is back up. It waits for the way to stay clear before it
   comes back up, so a trunk swaying at the edge of its reach doesn't shake it.
-- **Vertical inertia.** The game's arms slide a little sideways behind a turn but never up or down;
-  now they also slide a little down as you look up and up as you look down, just as much.
+- **Inertia.** The arms slide and point behind the look as it turns, sideways and up and down, far
+  more than the game's own sideways slide, and come back as slowly as the gun is heavy: quickly for a
+  pistol, slowly for a machine gun, and slower still after a hard twitch. Down the iron sights the
+  gun turns about its own middle instead, the muzzle leading the turn and the stock trailing.
 
 ## What you see
 
 - **Shot shake.** Each shot kicks the view up and it springs straight back, harder for a heavier
   round: about 0.4° for an AK-47, 2° for a SPAS-12. Firing full auto, the kick fades into a quick
-  roll clockwise and back, which stops when the rounds do. Only the view moves: the gun and where
-  the shots go stay as they were, and a scope's sight picture does not shake.
+  roll clockwise and back, which stops when the rounds do. Only the view moves: the gun and where the shots go stay as they were,
+  and a scope's sight picture does not shake.
 - **Being hit.** A hit on the body punches your view back and tips it down, and the edges go dark
-  for a couple of seconds. A hit on the head cuts the view to black, then fades it back in double,
-  the second image fading slowly. The harder the hit, the more of it. The game's red marks pointing
-  to whoever hit you and its red flash around the edges are gone; its hit sound stays.
+  for a couple of seconds. A hit on the head darkens the edges as hard as the hardest body hit and at
+  once you see double, the second image fading slowly. The harder the hit, the more of it. The game's red marks pointing to whoever hit you and
+  its red flash around the edges are gone; its hit sound stays.
+- **Health in the picture.** Three full health bars still count as healthy. Into the third bar the
+  picture loses some of its colour; into the second, more of it, with light grain and a slight
+  glow; into the last, it is black and white, grainy and glowing. Each fades into the next over a second, and back as you heal.
 - **Dirt in the eye.** A round landing in the dirt, sand, stone or wood within 3 m of your face, your
   own included, throws dirt in your eye: big, dark, blurry blobs on that side with the view blurred
   around them, darker where they overlap, gone in a few seconds.
@@ -107,12 +116,13 @@ a switch, all on by default:
 | Sway | neither the eye nor the aim drifts, and there is nothing for the breath to steady |
 | Hold breath | sprint down the sights does what the game does with it |
 | Gun near walls | the gun goes into walls, as in the game |
-| Vertical inertia | the arms keep still as the look pitches |
+| Inertia | the arms slide behind a turn as the game has them, sideways only |
 | Gun up after sprint | the gun fires and aims as soon as the sprint ends |
-| Recoil that stays | the game's recoil, and a burst no longer spreads |
+| Recoil that stays | the game's recoil, and a burst no longer spreads or shakes |
 | Shot shake | the view holds still as the gun fires |
 | Dirt in the eye | no round throws dirt |
 | Being hit | a hit shows only what the game shows, without its marks pointing to the shooter |
+| Health in the picture | the picture keeps its colour at any health |
 | Gun blur | the gun stays sharp down the iron sights |
 | Iron sight zoom | the view doesn't zoom in down iron sights; scopes still magnify |
 | Scope shadow | no crescent; it needs the eyepiece, whose opening it shades |
@@ -120,10 +130,11 @@ a switch, all on by default:
 | Scope surroundings | the game's view around a scope |
 | Tracers | your own shots leave none and none ricochets |
 
-How much sway is left down the sights, the shot shake for each weapon, the dirt and the look of a
-hit are values in `bin\aiming-overhaul.ini`, written with the defaults on the first start. With
-DevTools installed, its overlay (Home) has an **Aiming Overhaul** window that sets them as you play,
-and can throw dirt or show a hit to try them.
+How much sway is left down the sights, the shot shake and full auto's arms shake for each weapon, the
+dirt, the look of a hit and the look of each health level are values in `bin\aiming-overhaul.ini`,
+written with the defaults on the first start. With DevTools installed, its overlay (Home) has an
+**Aiming Overhaul** window that sets them as you play, and can throw dirt, show a hit or hold a
+health level to try them.
 
 ## Requirements
 

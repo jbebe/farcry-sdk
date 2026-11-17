@@ -12,6 +12,7 @@
 #include "engine/shader.h"
 #include "engine/weapon_mesh.h"
 #include "fcse_api.h"
+#include "inertia.h"
 #include "scopes.h"
 
 #include "eyepiece_body_ps.h"
@@ -40,7 +41,7 @@ namespace {
     constexpr float kBarrelEdge = 0.0652f;
     constexpr float kBarrelSide[2] = {0.791f, -0.612f};
     constexpr float kBarrelSoftness = 0.04f;
-    // How far the scope trails the look's turn, as a share of the shadow's swing.
+    // How far the scope lags behind the look's turn, as a share of the shadow's swing.
     constexpr float kTrail = 0.15f;
     // How much bigger the scope is drawn at the height of a shot's kick, as it comes back toward
     // the eye.
@@ -288,7 +289,7 @@ std::optional<AimingOverhaul::Eyepiece::Opening> AimingOverhaul::Eyepiece::Open(
     const Scope& scope = *g_inHand;
     const float outer = kBodyRadius * scope.size * (1.0f + kKickGrowth * Aim::ScopeKick());
     const float radius = outer / (1.0f + scope.rim);
-    const Aim::Swing swing = Aim::ScopeSwing();
+    const Aim::Swing swing = Aim::SwingOf(Inertia::Lagged());
     return Opening{(kTrail * swing.x + scope.lensX) * radius,
                    (kTrail * swing.y - scope.lensY) * radius, radius, outer};
 }

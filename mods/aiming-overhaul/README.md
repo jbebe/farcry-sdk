@@ -63,10 +63,13 @@ both field by field with other mods' edits, reporting any clash.
   is back above seven tenths; then the sights come back by themselves if the aim key is still held.
   It comes back up only once there has been 10 cm more room than it went down for, for 0.4 s, and
   then over 0.3 s, so a trunk or a branch swaying at the edge of its reach does not shake it.
-- **Vertical inertia.** The game slides the arms a little sideways behind a turn, never up or down.
-  Here they also slide down a little as the look pitches up, and up as it pitches down, at the same
-  rate, smoothing and size as the game's own: 1.1 cm at 126° a second, the most at 185°. Down the
-  sights there is none, as there is none sideways.
+- **Inertia.** The arms slide and point behind the look as it turns, sideways and up and down: left
+  as it turns right, down as it pitches up. At 126° a second they slide 2.2 cm, twice the game's own
+  sideways slide, which this replaces, and point the gun 4° behind, 8° at the most. They follow the turn and come back by the gun's weight,
+  easing over 0.2 s for a 1 kg pistol up to 0.6 s for a 7.5 kg PKM, and up to half again as slowly
+  after a hard twitch, which is forgotten over a second. Down the iron sights the gun turns about its own middle instead,
+  its muzzle leading the turn and its stock trailing, 1.5° at 126° a second and 4° at the most, by
+  the same easing. A scope's eyepiece lags behind the turn the same way.
 - **Gun up after a sprint.** A sprint carries the gun lower than the game does, and after it the gun
   takes 0.25 s and 0.03 s more for each kilogram it weighs to come back up: 0.38 s for an AK-47,
   half a second for a PKM. Until it is up it neither fires nor comes to the sights, and the sights
@@ -82,6 +85,13 @@ both field by field with other mods' edits, reporting any clash.
   sights: a new AK-47 climbs 0.6° a shot down the sights and 1.1° from the hip. The first two kicks
   of a burst are a quarter of that, so its first three shots land together. Shotguns, launchers and
   mounted guns kick and come back as in the game.
+- **Full auto shakes the gun.** From the fourth shot of a burst the aim no longer climbs: the arms
+  point the gun off it at random instead, as hands that can barely hold it, each round sending them
+  somewhere new and the arms snapping there 50 ms after it, within an eighth of the time to the next round, so the shake keeps
+  the gun's own rate of fire; each shot leaves where the gun points. How far grows with each shot to its most
+  by the eighth, one and a half times the gun's kick on the move standing, about 0.9° down a new AK-47's sights, half that standing still and a quarter crouched still, as the sway has it, the gun turning about its own middle as two hands fight to hold it still, and stays there
+  while the burst lasts. The view does not shake with it. When the trigger is let go or the magazine
+  runs dry the arms come back onto the aim.
 - **Full auto spreads.** From the fourth shot of a burst each shot strays further, by a quarter of
   the gun's kick more each time, up to eight shots' worth: down a new AK-47's sights, up to 1.2°
   more than its own 0.4°. A burst is shots less than a quarter of a second apart, so slower taps
@@ -97,13 +107,19 @@ both field by field with other mods' edits, reporting any clash.
   and plants throw none. Only what the player sees changes; the aim does not.
 - **Being hit.** A bullet, blast or blade that takes the player's health shows where it landed. Off
   the head, the view punches back 8 cm and tips down 5°, peaking at 0.07 s and springing back; the
-  edges go dark, held for half a second and gone in 2.5 s. On the head, the view goes black for
-  0.35 s and fades back in over 1.5 s, double, the second image a little to the side and fading out
-  over 5 s. A hit taking half the player's health or more does all of it in full, a graze 0.4 of
+  edges go dark from a third of the way out, darkening smoothly to black near the corners, held
+  for half a second and gone in 2.5 s. On the head, the edges go dark as from the hardest body hit,
+  and at once the view is double, the second image a little to the side and fading out over 5 s. A hit taking half the player's health or more does all of it in full, a graze 0.4 of
   it; a shotgun's pellets count as one hit. The game's own hit sound and interface stay as they are.
   While a scope's sight picture is up the view is not punched. The game's red marks pointing to
   whoever hit the player, and its red flash around the screen's edges, are gone, whether this is on
   or off.
+- **Health in the picture.** Three full health bars of the five still count as healthy. Once into
+  the third bar the picture loses a third of its colour; into the second, two thirds, with light
+  grain and a slight glow; into the last, it is black and white, grainy and glowing. The grain is in
+  even cells 3 pixels across at 1080p. Each look fades into the next over a second, either way, so healing
+  brings the colour back the same way. The glow is the picture blurred wide and laid back over
+  itself. It shows in vehicles too, from the health the last hit left. A hit's dark edges cover it.
 - **Shot shake.** Each shot kicks the view up and it springs straight back, as hard as the round
   pushes whoever fires it: its projectiles' mass times their muzzle velocity, from the round
   Difficulty Overhaul gives each gun's archetype, easing off past 15 newton-seconds, the same from
@@ -119,13 +135,12 @@ both field by field with other mods' edits, reporting any clash.
   Firing full auto, the kick fades out over the burst's first 0.11 s into a roll, clockwise and
   back, a whole cycle every 0.08 s, which stops as soon as the rounds do: 0.133° either way for each
   newton-second on the automatic rifles, submachine guns and machine guns, ±0.72° on an AK-47, and
-  0.103° on the USAS-12. Single-shot guns kick on
-  every shot however fast they are fired. A gun that names no round, a launcher, the Dart Rifle,
+  0.103° on the USAS-12. Single-shot guns kick on every shot however fast they are fired. A gun that names no round, a launcher, the Dart Rifle,
   the crossbow, the flare gun or every gun without Difficulty Overhaul, kicks by the game's own
   recoil instead, counted as a push the way an AK-47's is. Only the view turns, about the eye: the
   gun keeps its place and the shots their line, so the sights stay on where a shot goes. A scope's
   sight picture does not shake. The kick, its time and its delay after the shot, the roll, its
-  cycle and the fade into it are set in Aiming Overhaul's window in DevTools' overlay, opened with
+  cycle and the fade into it, and full auto's arms shake, are set in Aiming Overhaul's window in DevTools' overlay, opened with
   Home, and kept in `bin\aiming-overhaul.ini`.
 - **Gun blur.** Down the iron sights the eye focuses on the front sight, and the rest of the gun
   goes out of focus by how far it is from it, as through an 8 mm pupil: the rear sight most, and the
@@ -195,7 +210,8 @@ and the sprint it holds is refused in the input listener, in `src/engine/sprint.
 `src/engine/fire.cpp`; the gun after a sprint is `src/ready.cpp`, refused the same way. Both swing
 the gun down in the same pass that bends the lean, which turns the arms' bones; how long the gun
 takes to come up after a sprint is by the weight `src/weight.cpp` reads. The arms' slide
-behind the look's pitch, `src/pitch_slide.cpp`, moves them in the same pass. The recoil is
+behind the look's turn, `src/inertia.cpp`, moves them in the same pass, the game's own sideways
+slide handed to the animation as nought in `src/engine/turn_slide.cpp`. The recoil is
 `src/recoil.cpp`: each of the player's kicks is taken from the game before the game blends it in,
 in `src/engine/kick.cpp`, added to the look in `src/engine/look.cpp`, and a burst's shots stray in
 `src/engine/shot.cpp`. The operation manual is `src/manual.cpp`, on the accuracy bonus asked for
@@ -209,7 +225,10 @@ eye is `src/dirt.cpp`, from each bullet's impact as the engine spawns its puff, 
 `src/engine/impact.cpp`, drawn over the finished frame with `src/shaders/dirt.fx`. Being hit is
 `src/hit.cpp`, from the player's damage as the engine deals it, in `src/engine/damage.cpp`; its punch
 goes through the same camera offsets, and the rest is drawn over the finished frame with
-`src/shaders/hit.fx`, the double image from the frame copy the eyepiece's glass also uses. The blur
+`src/shaders/hit.fx`, the double image from the frame copy the eyepiece's glass also uses. Full
+auto's arms shake is `src/recoil.cpp`, turning the arms in the same pass as the lean and bending
+the shot to where they point. The health's look is `src/health.cpp` with `src/shaders/health.fx`,
+fed by each frame on foot and by the damage hook. The blur
 draws the gun's own
 depth pass a second time into a depth texture of its own, in `src/engine/weapon_draws.cpp`, and the
 blur and the scope shadow draw at the end of the pass the gun's colour is drawn in, before the
@@ -278,12 +297,13 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Sway | Yes / No | Yes |
 | Hold breath | Yes / No | Yes |
 | Gun near walls | Yes / No | Yes |
-| Vertical inertia | Yes / No | Yes |
+| Inertia | Yes / No | Yes |
 | Gun up after sprint | Yes / No | Yes |
 | Recoil that stays | Yes / No | Yes |
 | Shot shake | Yes / No | Yes |
 | Dirt in the eye | Yes / No | Yes |
 | Being hit | Yes / No | Yes |
+| Health in the picture | Yes / No | Yes |
 | Gun blur | Yes / No | Yes |
 | Iron sight zoom | Yes / No | Yes |
 | Scope shadow | Yes / No | Yes |
@@ -292,10 +312,12 @@ On the plugin's page in the Mod Configuration Menu, stored under `[AimingOverhau
 | Tracers | Yes / No | Yes |
 
 With Sway off neither the eye nor the aim drifts, and there is nothing for the breath to steady.
-With Hold breath off, sprint down the sights does what the game does with it. With Vertical
-inertia off, the arms keep still as the look pitches, as in the game. With Gun up after sprint off, the gun fires and aims as soon as the sprint ends, as in the game.
+With Hold breath off, sprint down the sights does what the game does with it. With Inertia
+off, the arms slide behind a turn as the game has them, sideways only; a scope's eyepiece still
+lags. With Gun up after sprint off, the gun fires and aims as soon as the sprint ends, as in the game.
 With Recoil that stays off, the game's recoil comes back as it was and a
-burst no longer spreads. With Shot shake off, the view holds still as the gun fires. With Dirt in the eye off, no round throws dirt. With Being hit off, a hit shows only what the game shows. How quickly the player gets going is the player data's, and stays. With
+burst no longer spreads or shakes. With Shot shake off, the view holds still as the gun fires. With Dirt in the eye off, no round throws dirt. With Being hit off, a hit shows only what the game shows. With Health in
+the picture off, the picture keeps its colour at any health. How quickly the player gets going is the player data's, and stays. With
 Iron sight zoom
 off, the view keeps its field of view down a gun's iron sights; a scope still
 magnifies. With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game
@@ -303,7 +325,8 @@ draws them. Which guns fire them and how fast they fly are the weapon data's, an
 scopes' lost iron-sight effect, whatever the scope settings.
 
 With DevTools installed, its overlay has an Aiming Overhaul window, which sets the sway down the
-sights, dirt in the eye, being hit and the shot shake for each weapon while the game runs and keeps them in
+sights, dirt in the eye, being hit, the health's look and the shot shake for each weapon while the
+game runs and keeps them in
 `bin\aiming-overhaul.ini`, read at launch; delete the file for the defaults.
 
 | Down the sights, every weapon | Unit | Default |
@@ -326,15 +349,26 @@ Throw dirt, under them, throws it as a round landing a metre to the right would.
 | Punch back | metres the eye is pushed back at the punch's peak | 0.08 |
 | Punch tips down | degrees the view tips down at its peak | 5 |
 | Punch peaks after | seconds from the hit | 0.07 |
-| Vignette darkness | how dark the corners go, nought to one | 0.85 |
-| Vignette reach | how far in from the corners the dark comes, a share of the way to the middle | 0.55 |
+| Vignette darkness | how dark it gets, past one black sooner | 1.3 |
+| Vignette reach | how far in from the corners the dark comes, a share of the way to the middle | 0.65 |
 | Vignette gone by | seconds after the hit | 2.5 |
-| Head: black for | seconds | 0.35 |
-| Head: black fades over | seconds after that | 1.5 |
 | Head: double image apart | pixels of a 1080-line screen | 40 |
 | Head: double image gone by | seconds after the hit | 5 |
 
 Hit the body and Hit the head, under them, show a hit there as hard as the hardest.
+
+| Health in the picture, every weapon | Unit | Default |
+|---|---|---|
+| 3 bars: colour | the colour left, nought to one | 0.67 |
+| 2 bars: colour | the colour left | 0.33 |
+| 2 bars: grain | the grain's strength | 0.04 |
+| 2 bars: glow | how much of the blurred picture is laid back over it | 0.2 |
+| Last bar: colour | the colour left | 0 |
+| Last bar: grain | the grain's strength | 0.12 |
+| Last bar: glow | how much of the blurred picture is laid back over it | 0.5 |
+| Fades from one to the next over | seconds | 1 |
+
+Show, under them, holds a level whatever the player's health, until Health is picked again.
 
 The shot shake has a section per weapon. Its Weapon list holds every gun the player can
 fire, variants under their gun, and Other weapons for the rest. It moves to the weapon in hand each
@@ -349,6 +383,7 @@ round and its push, and what its last shot shook.
 | Full auto roll | degrees either way per newton-second | 0.133 | 0.103 | 0.103 |
 | Full auto roll cycle | seconds for a roll clockwise and back | 0.08 | 0.08 | 0.08 |
 | Kick to roll fade | seconds of a burst over which the kick gives way to the roll | 0.11 | 0.11 | 0.11 |
+| Full auto arms shake | how far the arms point the gun off at the most, in times the gun's kick | 1.5 | 1.5 | 1.5 |
 
 ## Building
 

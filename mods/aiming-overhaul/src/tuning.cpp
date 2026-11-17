@@ -5,6 +5,7 @@
 #include "dirt.h"
 #include "engine/aim.h"
 #include "fcse_api.h"
+#include "health.h"
 #include "hit.h"
 #include "shot_shake.h"
 
@@ -26,6 +27,7 @@
 namespace {
     using AimingOverhaul::Tuning::DirtLook;
     using AimingOverhaul::Tuning::HitLook;
+    using AimingOverhaul::Tuning::HealthLook;
     using AimingOverhaul::Tuning::SightSway;
     using AimingOverhaul::Tuning::Values;
 
@@ -66,15 +68,27 @@ namespace {
         {"Back", "Punch back", &HitLook::back, 0.0f, 0.2f, "%.3f m"},
         {"Down", "Punch tips down", &HitLook::down, 0.0f, 10.0f, "%.1f deg"},
         {"Peak", "Punch peaks after", &HitLook::peak, 0.02f, 0.3f, "%.2f s"},
-        {"Vignette", "Vignette darkness", &HitLook::vignette, 0.0f, 1.0f, "%.2f"},
+        {"Vignette", "Vignette darkness", &HitLook::vignette, 0.0f, 2.0f, "%.2f"},
         {"Reach", "Vignette reach", &HitLook::reach, 0.1f, 0.9f, "%.2f of the way in"},
         {"VignetteGone", "Vignette gone by", &HitLook::vignetteGone, 0.6f, 8.0f, "%.1f s"},
-        {"Black", "Head: black for", &HitLook::black, 0.05f, 2.0f, "%.2f s"},
-        {"Unblack", "Head: black fades over", &HitLook::unblack, 0.05f, 5.0f, "%.2f s"},
         {"Apart", "Head: double image apart", &HitLook::apart, 0.0f, 150.0f, "%.0f px at 1080p"},
         {"DoubleGone", "Head: double image gone by", &HitLook::doubleGone, 0.5f, 15.0f, "%.1f s"},
     };
     HitLook g_hit;
+
+    // Health in the picture's section in the file, and its values.
+    constexpr const char* kHealth = "Health in the picture";
+    constexpr Parameter<HealthLook> kHealthParameters[] = {
+        {"Colour3", "3 bars: colour", &HealthLook::colour3, 0.0f, 1.0f, "%.2f"},
+        {"Colour2", "2 bars: colour", &HealthLook::colour2, 0.0f, 1.0f, "%.2f"},
+        {"Grain2", "2 bars: grain", &HealthLook::grain2, 0.0f, 0.5f, "%.3f"},
+        {"Glow2", "2 bars: glow", &HealthLook::glow2, 0.0f, 1.0f, "%.2f"},
+        {"Colour1", "Last bar: colour", &HealthLook::colour1, 0.0f, 1.0f, "%.2f"},
+        {"Grain1", "Last bar: grain", &HealthLook::grain1, 0.0f, 0.5f, "%.3f"},
+        {"Glow1", "Last bar: glow", &HealthLook::glow1, 0.0f, 1.0f, "%.2f"},
+        {"Fade", "Fades from one to the next over", &HealthLook::fade, 0.1f, 5.0f, "%.1f s"},
+    };
+    HealthLook g_health;
 
     constexpr Parameter<Values> kParameters[] = {
         {"KickPerImpulse", "Single shot kick", &Values::kickPerImpulse, 0.0f, 0.6f,
@@ -85,6 +99,7 @@ namespace {
          "%.3f deg per N s"},
         {"RollCycle", "Full auto roll cycle", &Values::rollCycle, 0.04f, 2.0f, "%.2f s"},
         {"RollFade", "Kick to roll fade", &Values::rollFade, 0.0f, 2.0f, "%.2f s"},
+        {"Shake", "Full auto arms shake", &Values::shake, 0.0f, 8.0f, "%.1fx the kick"},
     };
 
     // The rifles', submachine guns' and machine guns' values until the file gives them their own,
@@ -235,6 +250,7 @@ namespace {
         Shared<kSightParameters, g_sights>(kSights),
         Shared<kDirtParameters, g_dirt>(kDirt),
         Shared<kHitParameters, g_hit>(kHit),
+        Shared<kHealthParameters, g_health>(kHealth),
     };
 
     void Save() {
@@ -264,6 +280,10 @@ const DirtLook& AimingOverhaul::Tuning::DirtInTheEye() {
 
 const HitLook& AimingOverhaul::Tuning::BeingHit() {
     return g_hit;
+}
+
+const HealthLook& AimingOverhaul::Tuning::HealthPicture() {
+    return g_health;
 }
 
 void AimingOverhaul::Tuning::Follow() {
@@ -335,6 +355,18 @@ void AimingOverhaul::Tuning::DrawWindow(void*) {
     if (ImGui::Button("Hit the head")) {
         Hit::Try(Hit::Where::kHead);
     }
+
+    ImGui::SeparatorText("Health in the picture, every weapon");
+    g_unsaved |= DrawSliders(kHealthParameters, g_health);
+    ImGui::TextUnformatted("Show:");
+    constexpr const char* kShown[] = {"Health", "3 bars", "2 bars", "Last bar"};
+    for (int level = 0; level < static_cast<int>(std::size(kShown)); ++level) {
+        ImGui::SameLine();
+        if (ImGui::RadioButton(kShown[level], Health::Shown() == level)) {
+            Health::Show(level);
+        }
+    }
+    ImGui::SetItemTooltip("Shows a health level whatever the player's health, until Health is picked.");
 
     ImGui::SeparatorText("Shot shake");
     if (g_inHand != g_followed) {

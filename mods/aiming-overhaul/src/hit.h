@@ -1,5 +1,5 @@
 // A hit on the player, as they see it: on the body it punches the view back and tips it down and
-// darkens it from the edges; on the head it cuts the view to black and brings it back double.
+// darkens it from the edges; on the head it darkens the edges as hard as it can and shows it double.
 #pragma once
 
 #include <d3d9.h>
@@ -24,7 +24,7 @@ struct Punch {
 // scope's sight picture is up.
 Punch Update(float seconds);
 
-// Draws the vignette, the black and the double image over the frame's finished image, `frame`,
+// Draws the vignettes and the double image over the frame's finished image, `frame`,
 // under the interface.
 void OnComposite(IDirect3DDevice9* device, IDirect3DSurface9* frame);
 

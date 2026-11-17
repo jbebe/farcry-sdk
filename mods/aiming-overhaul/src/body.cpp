@@ -5,9 +5,10 @@
 #include "engine/pawn.h"
 #include "engine/skeleton.h"
 #include "fcse_api.h"
+#include "inertia.h"
 #include "lean.h"
-#include "pitch_slide.h"
 #include "ready.h"
+#include "recoil.h"
 #include "wall.h"
 
 #include <windows.h>
@@ -33,6 +34,8 @@ namespace {
     // Where the arms turn as they move the gun, in the view's axes, metres right, ahead and
     // up: between the shoulders, below and behind the eye.
     constexpr float kPivot[3] = {0.0f, -0.1f, -0.15f};
+    // The gun's middle in the same axes, under and ahead of the eye.
+    constexpr float kGunMiddle[3] = {0.0f, 0.3f, -0.08f};
 
     // Milliseconds without a frame past which the player is not on foot, and nothing is posed.
     constexpr ULONGLONG kStaleMilliseconds = 200;
@@ -184,8 +187,20 @@ namespace {
     }
 }
 
+AimingOverhaul::Body::Offset AimingOverhaul::Body::AboutGun(float yaw, float pitch) {
+    // Turned about the pivot as ArmsMove turns it, then moved back so the gun's middle stays put.
+    const float cy = std::cos(yaw), sy = std::sin(yaw);
+    const float cp = std::cos(pitch), sp = std::sin(pitch);
+    const float ahead = kGunMiddle[1] - kPivot[1];
+    const float up = kGunMiddle[2] - kPivot[2];
+    const float turned[3] = {-sy * cp * ahead + sy * sp * up, cy * cp * ahead - cy * sp * up,
+                             sp * ahead + cp * up};
+    return {yaw, pitch, 0.0f, -turned[0], ahead - turned[1], up - turned[2]};
+}
+
 void AimingOverhaul::Body::Follow(uint8_t* pawn) {
-    const Pose pose = {Lean::Posed(), Ready::Posed() + Wall::Posed() + PitchSlide::Posed()};
+    const Pose pose = {Lean::Posed(),
+                       Ready::Posed() + Wall::Posed() + Inertia::Posed() + Recoil::Posed()};
     uint8_t* skeleton = Skeleton::Of(pawn, !(pose == g_poses[g_current]));
     if (skeleton != g_skeleton) {
         g_skeleton = nullptr;

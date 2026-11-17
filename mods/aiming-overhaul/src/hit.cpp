@@ -31,7 +31,7 @@ namespace {
     // The vignette darkens over kDarken seconds and starts to clear kDarkHold after the hit.
     constexpr float kDarken = 0.12f;
     constexpr float kDarkHold = 0.5f;
-    // The second image is kDouble of the view as the black clears, and lies kDoubleDown of its
+    // The second image is kDouble of the view from a head hit on, and lies kDoubleDown of its
     // distance across below the first.
     constexpr float kDouble = 0.5f;
     constexpr float kDoubleDown = 0.35f;
@@ -55,7 +55,7 @@ namespace {
     double g_struckAt = kNever;
     float g_struckPeak = 0.0f;
 
-    // HitPS's constants: the double image and the black, then the vignette.
+    // HitPS's constants: the double image, then the vignette.
     constexpr UINT kConstants = 2;
     AimingOverhaul::PixelShader g_shader{"hit", g_hitPixelShader};
 
@@ -66,6 +66,12 @@ namespace {
 
     float Strength(float lost) {
         return kWeakest + (1.0f - kWeakest) * (std::min)(lost / kHardest, 1.0f);
+    }
+
+    // How far a hit `since` seconds ago has darkened the edges, nought to one.
+    float Darkened(double since, const AimingOverhaul::Tuning::HitLook& look) {
+        return Through(since, kDarken) *
+               (1.0f - Through(since - kDarkHold, look.vignetteGone - kDarkHold));
     }
 
     void Take(AimingOverhaul::Hit::Where where, float lost) {
@@ -124,33 +130,27 @@ void AimingOverhaul::Hit::OnComposite(IDirect3DDevice9* device, IDirect3DSurface
     const Hits hits = Latest();
     const Tuning::HitLook& look = Tuning::BeingHit();
     const double now = Now();
-    const double sinceBody = now - hits.at;
-    // Seconds since the head's black began to clear, below nought until it does.
-    const double clearing = now - hits.headAt - look.black;
+    const double sinceHead = now - hits.headAt;
+    // A hit on the head darkens the edges as the hardest body hit does.
     const float vignette =
-        look.vignette * Strength(hits.lost) * Through(sinceBody, kDarken) *
-        (1.0f - Through(sinceBody - kDarkHold, look.vignetteGone - kDarkHold));
-    const float black = 1.0f - Through(clearing, look.unblack);
-    const float seenDouble =
-        kDouble *
-        (1.0f - Through(clearing, (std::max)(look.doubleGone - look.black, look.unblack)));
+        look.vignette *
+        (std::max)(Strength(hits.lost) * Darkened(now - hits.at, look), Darkened(sinceHead, look));
+    const float seenDouble = kDouble * (1.0f - Through(sinceHead, look.doubleGone));
     IDirect3DPixelShader9* shader =
-        vignette > 0.0f || black > 0.0f || seenDouble > 0.0f ? g_shader.Get(device) : nullptr;
+        vignette > 0.0f || seenDouble > 0.0f ? g_shader.Get(device) : nullptr;
     if (shader == nullptr) {
         return;
     }
-    // Nothing of the second image shows through the black.
-    IDirect3DTexture9* copy =
-        seenDouble > 0.0f && black < 1.0f ? FrameCopy().Take(device, frame) : nullptr;
+    IDirect3DTexture9* copy = seenDouble > 0.0f ? FrameCopy().Take(device, frame) : nullptr;
     const float width = static_cast<float>(Frame::Width());
     const float height = static_cast<float>(Frame::Height());
     const float apart = look.apart * height / kApartLines;
     const float constants[kConstants * 4] = {
-        apart / width, kDoubleDown * apart / height, copy != nullptr ? seenDouble : 0.0f, black,
+        apart / width, kDoubleDown * apart / height, copy != nullptr ? seenDouble : 0.0f, 0.0f,
         vignette,      1.0f - look.reach,           0.0f,                                 0.0f,
     };
 
-    // The second image by its share, and the dark and the black over both.
+    // The second image by its share, and the dark over both.
     ScreenDraw draw(device, 0, kConstants);
     draw.Premultiplied();
     device->SetPixelShaderConstantF(0, constants, kConstants);

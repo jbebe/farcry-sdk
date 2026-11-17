@@ -75,6 +75,9 @@ bool Aiming();
 // How far the scope's shadow has swung off the opening's centre, against the look's turn.
 Swing ScopeSwing();
 
+// How far a scope swings against a turn of `turn` radians a second.
+Swing SwingOf(Turning turn);
+
 // How fast the look turned over the last frame, unsmoothed; nought across a cut. On the game thread.
 Turning Turned();
 

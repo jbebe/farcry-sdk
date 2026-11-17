@@ -22,6 +22,10 @@ Notable changes to Aiming Overhaul, loosely following
   as long as the game's. Needs the next JackAll, which merges the game modes config and the particle
   effects with other mods'.
 - **On the test range too.** Every gun change the mod makes reaches the guns of DevTools' test range.
+- **Health in the picture.** Three full health bars still count as healthy. Into the third bar the
+  picture loses some of its colour; into the second, more of it, with light grain and a slight
+  glow; into the last, it is black and white, grainy and glowing. Each fades into the next over a
+  second, and back as you heal. Its own switch, and its looks in Aiming Overhaul's window.
 
 ### Changed
 - **Tracers as real belts are linked.** One round in five from the M249 and the mounted M249s and
@@ -41,6 +45,19 @@ Notable changes to Aiming Overhaul, loosely following
 - **The scope shadow shows on slow turns too,** and goes deeper on fast ones.
 - **The scope lags behind the look more,** and comes back more slowly once the look is still.
 - **The view around a scope eases out of focus** as the scope comes up, instead of at once.
+- **Inertia, sideways and up and down.** The arms slide behind a turn twice as far as the game's own
+  sideways slide, which this replaces, and point the gun up to 8° behind it, and come back as slowly
+  as the gun is heavy, slower still after a hard twitch. Down the iron sights the gun turns about
+  its own middle instead, the muzzle leading the turn and the stock trailing. A scope's eyepiece lags the
+  same way. The Vertical inertia switch is now Inertia.
+- **Full auto shakes the gun instead of climbing.** From a burst's fourth shot the aim no longer
+  climbs: the gun turns about its own middle at random, as two hands fighting to hold it, a new way each
+  round at the gun's own rate of fire, and the shots go where it points, worst from the eighth shot, less standing still and least crouched
+  until you let go or the magazine runs dry. The view's roll stays. How far the arms shake is set
+  per weapon in the window.
+- **A hit darkens the edges harder,** from further in, fading in smoothly with no ring.
+- **A head hit no longer cuts to black:** the edges go dark as from the hardest body hit and you see
+  double at once.
 
 ### Removed
 - **Landing.** A landing no longer drops the view.

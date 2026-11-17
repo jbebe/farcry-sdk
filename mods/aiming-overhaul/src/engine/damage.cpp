@@ -28,11 +28,14 @@ namespace {
     constexpr uint32_t kHead = 0x040;
 
     AimingOverhaul::Damage::HitFn g_onHit = nullptr;
+    AimingOverhaul::Damage::HealthFn g_onHealth = nullptr;
 
     void __fastcall HandleDamageDetour(uint8_t* counters, void* unused, uint8_t* stim) {
         const float before = AimingOverhaul::Pawn::HealthOf(counters);
         g_original(counters, unused, stim);
-        const float lost = before - AimingOverhaul::Pawn::HealthOf(counters);
+        const float after = AimingOverhaul::Pawn::HealthOf(counters);
+        g_onHealth(after);
+        const float lost = before - after;
         const int type = Field<int>(stim, kStimType);
         if (lost > 0.0f && type >= kPierce && type <= kCut) {
             const uint32_t parts = Field<uint32_t>(stim, kStimBodyParts);
@@ -41,8 +44,9 @@ namespace {
     }
 }
 
-bool AimingOverhaul::Damage::Install(HitFn onHit) {
+bool AimingOverhaul::Damage::Install(HitFn onHit, HealthFn onHealth) {
     g_onHit = onHit;
+    g_onHealth = onHealth;
     if (!Hook(g_handleDamage.address(), &HandleDamageDetour, &g_original)) {
         FCSE::ApiPointer()->Log("damage: the player's damage cannot be hooked, so a hit shows "
                                 "nothing");

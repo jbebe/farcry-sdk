@@ -51,7 +51,6 @@ inline float Pitch(uint8_t* pawn) {
     return Field<float>(Data(pawn), kEffectivePitch);
 }
 
-
 inline bool Is(uint8_t* pawn, uint8_t flag) {
     return (Field<uint8_t>(Data(pawn), kEffectiveFlags) & flag) != 0;
 }
