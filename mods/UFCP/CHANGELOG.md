@@ -2,7 +2,7 @@
 
 Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.4.0] - 2026-11-17
 
 ### Fixed
 - **Menu cursor** follows a slow mouse movement. Each frame dropped whatever the mouse moved below a
