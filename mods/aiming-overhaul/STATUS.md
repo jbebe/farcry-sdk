@@ -70,12 +70,12 @@ Stage: active
 
 ## Approvals
 
-- played: 46e4fbff 2026-11-17 - "all is perfect!"
+- played: 631b0978 2026-11-17 - "all is perfect!"
 - page text: 10aebf7 2026-10-15 - implied by the aiming-overhaul-1.2.0 release
 
 ## Checks
 
-- simplify: a2209070 2026-11-17 - since aiming-overhaul-1.2.0
+- simplify: 631b0978 2026-11-17 - since aiming-overhaul-1.2.0
 
 ## Release order
 
