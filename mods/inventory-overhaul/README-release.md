@@ -4,13 +4,16 @@ Two guns of any class, and a notebook for everything else you carry. You hold th
 hands while the game runs on, the way you hold the map, so looking through your things in a firefight
 is your own risk.
 
-- **Two guns.** Gun A is on key 3 and gun B on key 2, whatever their class. A gun you pick up with two
-  carried takes the place of the one in hand. Key 4 draws nothing, and the machete is unchanged.
+- **Two guns.** Gun A is on key 3 and gun B on key 2, whatever their class. A gun you pick up, from
+  the ground or the armory's wall, goes into gun A when both slots are empty and into the empty one
+  when one is. With both full it takes the place of the gun in hand, or of gun A when neither is in
+  hand, and the gun it replaces falls at your feet. Key 4 draws nothing, and the machete is unchanged.
 - **Items.** Stow a gun and it keeps its wear and its loaded rounds. You can have four guns in all,
   slots included. Spare ammo and upgrades stay yours, as they always were.
-- **The notebook** comes with the map. It works on foot.
-- **Items page:** your guns, your items, your diamonds and the belt. A post-it shows the selected
-  row's picture, condition, ammo, upgrades and ratings.
+- **The notebook** comes with the map. It works on foot, in the armory too.
+- **Items page:** your guns, your items, the camo suit once you have bought it, your diamonds and the
+  belt. A post-it shows the selected row's picture, condition, ammo, upgrades and ratings; on the
+  malaria pills, how sick you are.
 - **Docs page:** the Jackal's and the Predecessor's tapes you have found, which play while you keep
   moving. The documents beside them, a note, a photo and a cassette, are only dummy content for now,
   for later support of new mission types.
@@ -69,8 +72,8 @@ notebook's own labels and the guns' names are in English in every language for n
 
 - **Other mods' HUD changes** merge with this one when they ship them as fragments. A mod that
   replaces the whole `hud.mgb` will not work alongside it.
-- **Weapon crates** still draw the gun they hand out by its class, and a pickup's prompt shows the
-  carried gun of the pickup's class.
+- **The safe houses' weapon crates** work as in the game: they draw the gun they hand out by its
+  class. A pickup's prompt shows the carried gun of the pickup's class.
 
 ## For modders
 
