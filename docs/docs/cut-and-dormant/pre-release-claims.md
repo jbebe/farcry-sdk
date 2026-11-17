@@ -184,7 +184,8 @@ PC Perspective preview in June 2008 reported a plan to burn down huts that faile
 by 10 metres; management asked for the whole savanna to burn; spread is capped because endless fire "is
 just not fun". He names uphill spread and humidity. The tech-demo walkthrough shows fire spreading
 from a flamethrower toward a fuel depot; the third has a burning soldier set the grass around him alight
-as he leaves a vehicle, and promises that "what should burn will burn", the savannah included.
+as he leaves a vehicle, and promises that "what should burn will burn", the savannah included. The
+Moscow presentation shows burning grass carried from one side of the view to the other by the wind.
 
 **Retail: present.** `CFireComponent::PropagateFire` (`0x08B4CD80`) spreads per burning node by a wind
 term (force over 30, projected on the node direction), the fire damage, and a vertical term that makes
@@ -272,7 +273,8 @@ a jeep or truck was reported at Leipzig and PAX.
 ### Tracking by trails in the grass
 
 **Claimed.** HEXUS at Leipzig: "you can track enemies by the trails they leave in the grass and they
-can do the same to you."
+can do the same to you." The Moscow presentation: a vehicle flattens the grass behind it, so the AI can
+detect it.
 
 **Retail: absent.** No AI code reads trampled grass or footprints; the player's `Stim_FootSteps`
 (7 m, Snap) is the only trace soldiers get.
@@ -284,7 +286,9 @@ original Far Cry". Producer Louis-Pierre Pharand: savannah woodlands approximate
 original's jungles
 ([GamesRadar](https://www.gamesradar.com/far-cry-2-first-look-part-two/)). The third walkthrough: dense,
 dark jungles like those of the Congo, several kinds of savannah, and forests seen hundreds of metres
-away. A fan comparison of the
+away. The Moscow presentation calls its opening jungle "super lush and super dense", modelled after a
+team trip to Kenya, and shows over 850 m of view across the savannah toward the desert. A fan comparison
+of the
 pre-alpha video, relayed by [unseen64](https://www.unseen64.net/2009/10/01/far-cry-2-pc-xbox-360-ps3-beta-alpha/),
 found its jungle "more realistic" and its grass greener.
 
@@ -310,7 +314,8 @@ rocks and boulders". PAX: ammo piles send "hundreds of bullets" flying and chain
 narrated tech-demo walkthrough (event and date not recorded) shoots an ammo crate that "will just start
 spraying bullets all over the place", and fights through a shanty town with "destructibles all over".
 The third walkthrough: "whatever looks destroyable is", so the player can shoot through walls the enemy
-hides behind; a shot ammo pile sends the soldiers into hiding.
+hides behind; a shot ammo pile sends the soldiers into hiding. The Moscow presentation names ammo piles
+and propane tanks as tools the player and the soldiers both shoot.
 
 **Retail.**
 
@@ -355,7 +360,9 @@ enum has a Crocodile value (6) with no animations. See [animals](../engine-inter
 **Claimed.** "About 12 different types of animals" (PAX 07), with GamesRadar naming zebras, wildebeest,
 gazelle, buffalo, impalas and oryx. Pharand: gazelles "trek to watering holes each morning". bit-tech:
 a spooked herd flees and "reveals your position"
-([GamesRadar](https://gamesradar.com/it-came-from-africa)).
+([GamesRadar](https://gamesradar.com/it-came-from-africa)). A pre-alpha presentation in Moscow (date not
+recorded) names zebras, gnus, gazelles, goats and chickens, shows gazelles drinking at a lake at dusk,
+and says the animals have their own AI and fear mercenaries and hang gliders.
 
 **Retail.**
 
@@ -450,7 +457,9 @@ vehicle crews escalate the chase (`VehicleChaseLevel2`, `3` in `vehiclebrain`); 
 Social", with smart-terrain points such as a sleep point. PC Zone: "more likely you'll find sleeping
 guards during the wee hours". GameSpot (January 2008): enemies have "general schedules". The tech-demo
 walkthrough shows a camp at lunchtime with the guards eating as a patrol arrives by vehicle, and says
-soldiers patrol and behave differently in the morning, at midday and at night.
+soldiers patrol and behave differently in the morning, at midday and at night. The Moscow presentation
+adds that soldiers light fires when the sun goes down, go for lunch, and relieve themselves, an
+animation the team motion-captured.
 
 **Retail: present, as a time-of-day table.**
 
@@ -465,6 +474,9 @@ soldiers patrol and behave differently in the morning, at midday and at night.
   applies to awake soldiers.
 - The postmortem gives the limit: smart terrain was built for combat first, and idle behaviours were
   "hacked together in desperation at the last minute". `CBrainSmartTerrain` is unused for soldiers.
+- Eating (`Pawn_ST_Rest_Eat1`, `Eat2`, `EatHandFood`), relieving oneself (`Pawn_ST_Rest_Piss`) and
+  kicking out a fire (`Pawn_ST_Duty_KickFire`) are live smart-terrain activities with named states in
+  `movemgr.bin`. The torch-lighting points are never placed, so soldiers light no fires at dusk.
 - Nine guard activities are never placed (sit, lean, torch lighting, ask directions).
 
 ### Faction standing and towns
@@ -542,6 +554,15 @@ every screenshot on the game's Steam store page shows alpha or beta builds.
 The alpha and demo builds the post describes are not available, so their HUD and loading screens can
 be compared only against footage.
 
+## Weapons and vehicles
+
+**Claimed.** The Moscow presentation: over 30 weapons, picked up from the ground; a gun jams and
+deteriorates, its texture growing rustier and its sound changing, until it is tossed aside; over 14
+vehicles, among them the buggy.
+
+**Retail.** Weapons wear, jam and break, and their worn appearance is a texture state. Whether a worn
+gun sounds different is not traced.
+
 ## Navigation and equipment
 
 **Claimed.** The r/farcry2 list says:
@@ -578,7 +599,9 @@ player once unlocked.
 
 **Retail: present, with nine.** Twelve mercenaries appear, nine of them playable; the ones not chosen
 are buddies ([characters](../lore/characters.md)). The third walkthrough adds that buddies are "not to be
-trusted all the time"; retail ends with them turning on the player in the final battle.
+trusted all the time"; retail ends with them turning on the player in the final battle. The Moscow
+presentation shows a buddy arriving when the player is mortally wounded, carrying him to safety and
+fighting beside him, unscripted; the buddy rescue is in retail.
 
 ## Sound
 
