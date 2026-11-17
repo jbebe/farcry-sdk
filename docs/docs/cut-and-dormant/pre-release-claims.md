@@ -306,8 +306,11 @@ rocks and boulders". PAX: ammo piles send "hundreds of bullets" flying and chain
 animals that prey on humans "for the sake of balancing", playtesters having tired of being "outrun by
 packs of lions". Generation NT (24 September 2008) relayed a possible DLC with vicious animals; none
 was released ([Generation NT](https://www.generation-nt.com/actualites/far-cry-animaux-predateurs-157641)).
+In a Reddit thread on a Far Cry 2 remake, players say, unsourced and hedged ("according to some
+reports", "iirc"), that the game was meant to have many dangerous animals, especially lions, elephants
+and hippos, and that a trailer showed African elephants.
 
-**Retail: absent.** No animal has attack, charge or melee code, not even unused. The animation species
+**Retail: absent.** No elephant or hippo archetype or art ships. No animal has attack, charge or melee code, not even unused. The animation species
 enum has a Crocodile value (6) with no animations. See [animals](../engine-internals/animals.md).
 
 ### Species and routines
