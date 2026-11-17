@@ -49,7 +49,7 @@ Stage: maintenance
 ## Approvals
 
 - played: e28a5a3 2026-10-16 - implied by the sky-overhaul-1.5.0 release
-- page text: e28a5a3 2026-10-16 - implied by the sky-overhaul-1.5.0 release; changed since in e6cb22c (DirectX 9 note)
+- page text: 49fbc84 2026-11-17 - "they are good."
 
 ## Checks
 
