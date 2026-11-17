@@ -5,12 +5,12 @@ Stage: active
 
 ## Features
 
-- [done] Jackal tapes advance in the southern map - unchecked in game; pattern missed with Legacy Plugin loaded first (unexplained)
+- [done] Jackal tapes advance in the southern map - user 2026-11-17: works; pattern missed with Legacy Plugin loaded first (unexplained)
 - [done] Bonus content back: the seven predecessor missions and the Primitive and Homemade machetes - same Legacy Plugin miss
 - [done] Exit crash: Exit Game closes instead of faulting - verified from the menu
 - [done] Mouse speed cap: a fast flick turns as far as a slow one
-- [done] Menu cursor follows a slow mouse - unreleased, unchecked in game
-- [done] Monocular turns with the mouse like a scope at its zoom, slowed by its field of view as down a gun's sights - unreleased; the gamepad keeps the retail 0.1 (user 2026-11-17)
+- [done] Menu cursor follows a slow mouse - unreleased; user 2026-11-17: works
+- [done] Monocular turns with the mouse like a scope at its zoom, slowed by its field of view as down a gun's sights - unreleased; user 2026-11-17: works; the gamepad keeps the retail 0.1
 - [done] Loading screens run at their 30 FPS (high-precision timer)
 - [done] CPU and GPU use: no idle spinning, the GPU a frame ahead, no busy-wait frame cap; the engine's single job worker kept
 - [done] Many-core startup crash on 32+ logical processors
@@ -28,14 +28,10 @@ Stage: active
 
 ## To validate
 
-- The Jackal tapes advance in the southern map - unchecked
-- The menu cursor follows a slow mouse - unchecked
-- The monocular turns with the mouse as slowly and smoothly as the AS50's scope - unchecked
-
 ## Approvals
 
-- played: 290c8ed 2026-10-30 - implied by the ufcp-1.3.1 release
-- page text: e893623 2026-11-17
+- played: 3dcbf56 2026-11-17
+- page text: 3dcbf56 2026-11-17
 
 ## Checks
 
