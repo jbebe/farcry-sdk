@@ -75,3 +75,4 @@ Stage: active
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
 - 0x00422510: stacks - the engine device's EndScene, which Sky, Aiming, Vehicle and Inventory Overhaul, Third Person and DevTools hook; FCSE chains them
 - 0x00422630: stacks - the engine device's Reset, which Aiming, Vehicle and Inventory Overhaul and DevTools hook; FCSE chains them
+- aiming-overhaul: merged by JackAll, no shared field - both edit hud.mgb's area #F2CDBA4C; this mod adds its own element there, Aiming Overhaul only hides the red flash's placing, and JackAll pairs elements by name

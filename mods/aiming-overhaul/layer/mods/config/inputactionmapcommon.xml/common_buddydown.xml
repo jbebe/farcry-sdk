@@ -1,0 +1,13 @@
+<ActionMap name="common_buddydown" resendOnChange="0">
+
+  <!--Keyboard-->
+	<Binding input="kb:f" action="press" signal="BuddyDown_Exit"/>  <!--Send the heal on the buddy-->
+	<Binding input="kb:2" action="press" signal="BuddyDown_TrySwitchCradleExecute"/>
+	<Binding input="kb:-" action="press" signal="BuddyDown_TrySwitchCradleExecute"/>
+	<Binding input="kb:=" action="press" signal="BuddyDown_TrySwitchCradleExecute"/>
+
+	<!--Gamepad-->
+	<Binding input="pad:y" action="press" signal="BuddyDown_Exit"/>
+	<Binding input="pad:left" action="press" signal="BuddyDown_TrySwitchCradleExecute"/>
+	<Binding input="pad:right" action="press" signal="BuddyDown_TrySwitchCradleExecute"/>
+</ActionMap>

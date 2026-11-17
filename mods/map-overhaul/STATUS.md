@@ -44,3 +44,4 @@ Stage: active
 - DevTools: fixed by 137373d1 - the pause listener pattern starts past its hook on the entry
 - flashlight: fixed by 137373d1 - the pause listener pattern starts past its hook on the second instruction
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
+- aiming-overhaul: merged by JackAll, no shared field - both edit the player archetypes in entitylibrary.fcb (26 files); this mod clears archGPSVehicleArchetype, Aiming Overhaul sets fWalkingAcceleration and fWalkingDeceleration

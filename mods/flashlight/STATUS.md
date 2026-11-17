@@ -45,3 +45,4 @@ Stage: maintenance
 - tales-of-africa: merged by JackAll, no shared field - both edit hud.mgb; each adds its own areas, materials and exports, and every name both ship is identical
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
 - 0x001449B0: stacks - the input pass, which DevTools, Flashlight and Third Person each hook as g_inputPass; FCSE stacks same-address hooks
+- aiming-overhaul: merged by JackAll, no shared field - both edit hud.mgb's area #F2CDBA4C; this mod adds its own element there, Aiming Overhaul only hides the red flash's placing, and JackAll pairs elements by name

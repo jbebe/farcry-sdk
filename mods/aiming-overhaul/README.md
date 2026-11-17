@@ -264,9 +264,9 @@ FCSE 1.4.0 or later.
 
 Two new controls, rebindable in Options > Controls under Movements: **Lean left** on Q and **Lean
 right** on E. To free those keys the defaults move: interact to F, throw grenade to G and next
-throwable to T, and leaving a vehicle or a mounted gun goes to F with interact. E and Q stay as
-the game had them where the game never lets them be rebound: a buddy rescue, the machete finish
-and the watch.
+throwable to T, and leaving a vehicle or a mounted gun and healing a downed buddy go to F with
+interact. E and Q stay as the game had them where the game never lets them be rebound: the
+machete finish and the watch.
 
 ## Settings
 

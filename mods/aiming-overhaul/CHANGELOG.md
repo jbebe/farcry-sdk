@@ -32,7 +32,8 @@ Notable changes to Aiming Overhaul, loosely following
 - **Standing is less precise.** Down the iron sights standing, the front sight wanders 60% further
   off the mark. Moving, crouched sways as much as standing still and standing twice as
   much, and the sway runs faster.
-- **Leaving a vehicle or a mounted gun is on F**, the same key as getting in, instead of E.
+- **Leaving a vehicle or a mounted gun, and healing a downed buddy, are on F**, the same key as
+  getting in and every other interaction, instead of E.
 - **Dirt in the eye is bigger and darker,** the largest blob half the screen's height across, and
   blobs that overlap darken each other.
 - **A hit punches harder:** the view goes back 8 cm and tips down 5°, from 5 cm and 3°.

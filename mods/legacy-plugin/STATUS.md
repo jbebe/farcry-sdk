@@ -39,3 +39,4 @@ Stage: maintenance
 ## Collisions
 
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
+- aiming-overhaul: stacks - both mid-hook the sprint press (0x00144630, Steam); Aiming Overhaul skips it down a scope while the breath is held, the sprint toggle only times the keyboard press, and a skipped press leaves no sprint to latch; FCSE stacks same-address hooks
