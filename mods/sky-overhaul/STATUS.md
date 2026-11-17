@@ -17,7 +17,7 @@ Stage: maintenance
 - [done] Night: a smaller unfogged moon, moonlit clouds, blue-grey preset nights with moon shadows - user: "looks really nice"
 - [done] Night eye pass: the world's colour drains to rod blue-grey in the dark, lights keep theirs
 - [done] No rim light on characters and plants in any preset, at any hour - user: "the fix for the rimlight works"
-- [new] Night eye pass off indoors - known issue; two raycast attempts crashed and were reverted, needs another route
+- [postponed] Night eye pass off indoors - known issue; two raycast attempts crashed and were reverted, needs another route
 - [done] Colour grade override: neutral, no yellow tint - the user's tuned values are the defaults
 - [done] Ambient occlusion, on by default since 1.6.0 - fades into fog
 - [done] Grass lit by the sun: dark roots, sheen, light through the blades - user: "looks nice"; bent and shadowless grass not covered
@@ -29,7 +29,7 @@ Stage: maintenance
 - [done] Heat haze: drifting waves, far land smudged, hilltops calm - user-tuned defaults, on by default; user: "is great"
 - [done] Mirages on bare level ground far off - user: "now it works perfectly"; scope zoom fix "perfect"
 - [done] Land to the horizon where the drawn world ends short - user: "its good like this" (2026-10-16)
-- [new] The land chunks the engine skips by view position - anti-portals suspected; next a DisableAntiPortals test layer
+- [postponed] The land chunks the engine skips by view position - anti-portals suspected; next a DisableAntiPortals test layer
 - [done] Flatten, on by default since 1.6.0 - user: "it looks perfect. beautiful."; shots past ~250 m land off, no fade when zoomed
 - [done] Land to the horizon: its brightness per clock hour, the user's tuned values hardcoded, no sliders
 - [done] Land to the horizon hides the sun behind it, its glare and light shafts with it - user: "works"
@@ -47,13 +47,12 @@ Stage: maintenance
 
 ## To validate
 
-- Night, clear sky: stars and the Milky Way about half as bright as before 1.6.0, the moon and the sky between them unchanged - nothing
-- Play a while as usual: sky, clouds, dusk fog, grass, leaves and grade as before - fc2drive only, noon, dusk and night at two spots
+- Night, clear sky: stars and the Milky Way about half as bright as before 1.6.0, the moon and the sky between them unchanged - fc2drive only
 
 ## Approvals
 
-- played: e28a5a3 2026-10-16 - implied by the sky-overhaul-1.5.0 release
-- page text: 49fbc84 2026-11-17 - "they are good."
+- played: 844c90c 2026-11-17 - the 1.6.0 play check, confirmed by the user as the approval
+- page text: 844c90c 2026-11-17 - "they are good"
 
 ## Checks
 
