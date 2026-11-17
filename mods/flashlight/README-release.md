@@ -26,7 +26,7 @@ Both apply to a light that is already on.
 
 ## Requirements
 
-- **FCSE 1.4.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
+- **FCSE 1.5.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
 - **JackAll 1.7.0 or the Vortex extension 0.6.0, or later**, to install it.
 
 ## Installing
