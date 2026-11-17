@@ -57,7 +57,7 @@ Stage: maintenance
 
 ## Checks
 
-- simplify: 285116a 2026-11-17 - since sky-overhaul-1.5.0
+- simplify: 272c81e 2026-11-17 - since sky-overhaul-1.5.0
 
 ## Release order
 
