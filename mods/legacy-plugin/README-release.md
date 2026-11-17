@@ -8,7 +8,7 @@ managers, so this plugin collects them for anyone who still wants them. The mods
 still come from the mods themselves; this plugin supplies only the engine side. Nothing is
 overwritten and nothing survives uninstalling it.
 
-Requires FCSE (the Far Cry Script Extender) 1.4.0 or later, the plugin loader, released from the
+Requires FCSE (the Far Cry Script Extender) 1.5.0 or later, the plugin loader, released from the
 same place as this archive, and Far Cry 2 v1.03, either the Steam/Ubisoft Connect build or the
 GOG/retail one.
 

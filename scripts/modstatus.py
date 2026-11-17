@@ -40,7 +40,7 @@ LAYER_RUNTIME = (
     "tools/vortex-farcry2/src/**",
 )
 # Shared by every release rather than built into any mod.
-RELEASE_TOOLING = (".github/**", "scripts/changelog.ps1", "scripts/nexus-page.ps1")
+RELEASE_TOOLING = (".github/**", "scripts/changelog.ps1", "scripts/nexus-page.ps1", "scripts/nexus_requires.py")
 
 BUILD_FILES = ("CMakeLists.txt", "*.cmake", "*.ps1", "*.py", "CMakePresets.json", "package.json",
                "webpack.config.js", "src/*/*.csproj")
@@ -446,15 +446,18 @@ def version_key(version):
     return numbers, pre == "", pre
 
 
+def tag_versions(tag_prefix, tags):
+    """The versions tagged under a prefix, oldest first."""
+    prefix = tag_prefix + "-"
+    return sorted((t[len(prefix):] for t in tags if t.startswith(prefix) and re.match(r"\d", t[len(prefix):])),
+                  key=version_key)
+
+
 def last_tag(project, tags):
-    if not project.tag_prefix:
-        return None
-    prefix = project.tag_prefix + "-"
-    versions = [t[len(prefix):] for t in tags if t.startswith(prefix) and re.match(r"\d", t[len(prefix):])]
+    versions = tag_versions(project.tag_prefix, tags) if project.tag_prefix else []
     if not versions:
         return None
-    version = max(versions, key=version_key)
-    return prefix + version, version
+    return f"{project.tag_prefix}-{versions[-1]}", versions[-1]
 
 
 @functools.cache

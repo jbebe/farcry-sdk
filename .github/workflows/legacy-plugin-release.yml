@@ -22,6 +22,10 @@ jobs:
         working-directory: mods/legacy-plugin
     steps:
       - uses: actions/checkout@v4
+        with:
+          # History without file contents: what the release requires on Nexus is read from tags.
+          fetch-depth: 0
+          filter: blob:none
 
       - name: Prepare the release
         id: release
@@ -29,6 +33,12 @@ jobs:
         with:
           directory: mods/legacy-plugin
           tag_prefix: legacy-plugin
+
+      - name: Check that what it requires is on Nexus Mods
+        shell: pwsh
+        env:
+          NEXUSMODS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
+        run: python ${{ github.workspace }}/scripts/nexus_requires.py verify legacy-plugin
 
       - name: Build LegacyPlugin.dll
         shell: pwsh
@@ -68,6 +78,12 @@ jobs:
           display_name: Legacy Plugin
           changelog: ${{ steps.release.outputs.nexus }}
           update_mod_version: 'true'
+
+      - name: Set what it requires on Nexus Mods
+        shell: pwsh
+        env:
+          NEXUSMODS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
+        run: python ${{ github.workspace }}/scripts/nexus_requires.py send legacy-plugin ${{ steps.release.outputs.version }}
 
       - name: Update the Nexus Mods page
         shell: pwsh

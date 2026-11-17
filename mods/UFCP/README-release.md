@@ -4,7 +4,7 @@ Bugs Ubisoft never patched. Almost all are fixed in the running game instead of 
 disk; the monocular's look speed is a change to its data, which merges with the data mods you
 already have.
 
-Requires FCSE (the Far Cry Script Extender) 1.4.0 or later, the plugin loader, released from the
+Requires FCSE (the Far Cry Script Extender) 1.5.0 or later, the plugin loader, released from the
 same place as this archive — and Far Cry 2 v1.03, either the Steam/Ubisoft Connect build or the
 GOG/retail one. DevTools, a separate plugin from the same project, is for working on the game rather
 than playing it: it holds the developer console, booting straight into a save with `-load`, and

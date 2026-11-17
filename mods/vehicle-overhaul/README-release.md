@@ -58,7 +58,7 @@ window with a slider for each, the car's speed, revs and gear, and the sideways 
 
 ## Requirements
 
-- **FCSE 1.4.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
+- **FCSE 1.5.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
 - **JackAll 1.4.0 or the Vortex extension 0.4.0, or later**, to install it.
 - **UFCP**, recommended: with it, headlights light the grass, which the game leaves dark under any
   spot light.

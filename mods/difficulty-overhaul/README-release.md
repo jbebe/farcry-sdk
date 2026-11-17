@@ -78,7 +78,7 @@ buddies, play as the game ships them.
 
 ## Requirements
 
-- **FCSE 1.4.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
+- **FCSE 1.5.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
 - **JackAll 1.8.0 or the Vortex extension 0.7.0, or later**, to install it. Older versions install
   the plugin but leave the soldiers' brain, the hit locations and the blood as they were, without saying so.
 

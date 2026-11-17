@@ -29,7 +29,7 @@ them. **Upgrading from 1.1.0**, delete that file once so the new values take eff
 
 ## Requirements
 
-- **FCSE 1.4.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
+- **FCSE 1.5.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
 - **Bloom on** in Options → Video.
 - **Depth pass quality high** or above, for the cloud shadows and the heat haze only.
 

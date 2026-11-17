@@ -4,7 +4,7 @@ The developer side of Far Cry 2, made reachable — for modders and reverse engi
 players. Nothing is overwritten, nothing survives uninstalling it, and it stacks with the mods you
 already have.
 
-Requires FCSE (the Far Cry Script Extender), the plugin loader, released from the same place as this
+Requires FCSE (the Far Cry Script Extender) 1.5.0 or later, the plugin loader, released from the same place as this
 archive — and Far Cry 2 v1.03, either the Steam/Ubisoft Connect build or the GOG/retail one. UFCP,
 the unofficial patch, is a separate plugin: install both, or either on its own.
 

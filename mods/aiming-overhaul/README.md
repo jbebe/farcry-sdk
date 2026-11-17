@@ -277,7 +277,7 @@ engine side is in
 
 ## Requirements
 
-FCSE 1.4.0 or later.
+FCSE 1.5.0 or later.
 
 ## Controls
 

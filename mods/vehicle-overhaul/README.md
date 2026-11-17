@@ -167,7 +167,7 @@ layer\plugins\vehicle-overhaul\   the built plugin, staged here by build.ps1
 A car is known by its archetype's `iAnimVehicleType`, one per kind of car, not by its mass or engine, so a
 mod that retunes the cars keeps them known. The taxi shares the Wrangler's.
 
-Needs FCSE 1.4.0 or later. The archetype fragments need JackAll 1.4.0 or the Vortex extension 0.4.0
+Needs FCSE 1.5.0 or later. The archetype fragments need JackAll 1.4.0 or the Vortex extension 0.4.0
 or later, which merge them with other mods'.
 
 ## Building

@@ -35,7 +35,7 @@ is your own risk.
 
 ## Requirements
 
-- **FCSE 1.4.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
+- **FCSE 1.5.0 or later**, on Far Cry 2 1.03 (Steam or GOG).
 - **JackAll 1.7.0 or the Vortex extension 0.6.0, or later**, to install it. Older versions can't merge
   the handwriting font this mod adds to the game's font list.
 - **DirectX 9**, set in Options > Display > DirectX Version. The notebook does not work on DirectX 10.

@@ -65,7 +65,44 @@ seconds rather than after a full build:
   for this release;
 - that version's section is empty;
 - for the Vortex extension, `info.json` disagrees with the changelog;
-- for the Blender add-on, `blender_manifest.toml` disagrees with the changelog.
+- for the Blender add-on, `blender_manifest.toml` disagrees with the changelog;
+- a version it requires on Nexus Mods is not uploaded yet (see below).
+
+## What a release requires on Nexus
+
+Every upload sets what its version requires on Nexus Mods, which is what Vortex reads to offer the
+dependencies. `scripts/nexus_requires.py` works it out and sends it; the release runs it twice, once
+before the build to stop when a required version is not on Nexus yet, and once after the upload. It
+also switches the mod from page-wide requirements to per-file ones, so requirements set by hand on
+the page stop showing.
+
+- **FCSE**, for every FCSE plugin, comes from the plugin ABI: FCSE loads only a plugin built against
+  its own `FCSE_API_VERSION`, so the range runs from the first FCSE release with the ABI the plugin
+  builds against to the last one before the ABI changed, or has no upper end while it is current.
+  The ABI of each release is read from its tag.
+- **Anything else** goes in the project's `assets/nexus-requires.txt`, one requirement per line,
+  alternatives joined by `|`, each a tag prefix and a version, with an upper end only when a version
+  is known to break the mod:
+
+  ```text
+  ufcp >= 1.3.1
+  vehicle-overhaul >= 1.1.0, <= 1.2.0
+  ```
+
+  Installers (JackAll, the Vortex extension) and anything only recommended stay out: Nexus has no
+  optional requirement, and the extension sits under another game. They stay in the README and the
+  page text.
+
+When an FCSE release changes the ABI, its run caps the newest upload of every plugin built for the
+old ABI at the last FCSE that loads it, so Vortex stops pairing them with the new FCSE.
+
+`/release-check` fails the row `nexus requires` until each required version is tagged and the
+`README-release.md` and page text state the same minimum, as `<name> x.y.z or later`. To see what
+Nexus holds now and what each release would send:
+
+```powershell
+$env:NEXUSMODS_API_KEY = '<key>'; python scripts/nexus_requires.py check
+```
 
 ## Where the notes go
 
@@ -139,7 +176,9 @@ created by hand on the mod page once. The version it replaces is archived.
    version sections yet - its first release writes the first one.
 2. Give it `assets/nexus-summary.txt` and `assets/nexus-description.bbcode` (see [The mod page](#the-mod-page)).
 3. Copy the nearest `<project>-release.yml` and change the tag prefix and directory it prepares
-   from, the build steps and tests, the artifact names and the Nexus `env:` block.
+   from, the build steps and tests, the artifact names and the Nexus `env:` block. A copied FCSE
+   plugin's workflow already carries the two `nexus_requires.py` steps and the checkout with
+   history they need; change the tag prefix in both.
 
 A weapon replacement has no build steps to change: it ships the `layer/` that is already checked in.
 Copy `vss-release.yml`, which packages one, and only its directory, tag prefix, artifact name and

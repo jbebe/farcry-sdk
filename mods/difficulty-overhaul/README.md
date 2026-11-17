@@ -93,5 +93,5 @@ which JackAll merges with any other mod's copies, and the whole `materialimpacts
 Install with `jackall-cli mod build --game "<game>" --layer layer`,
 together with any other layers in play.
 
-Needs FCSE 1.4.0 or later (plugin API v8), and JackAll 1.8.0 or the Vortex extension 0.7.0, or later,
+Needs FCSE 1.5.0 or later (plugin API v10), and JackAll 1.8.0 or the Vortex extension 0.7.0, or later,
 to install its fragments.

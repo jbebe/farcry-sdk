@@ -104,7 +104,7 @@ without it, but the sun it sits beside is a flat disc until bloom runs.
 `DepthPassQuality` high or above for the cloud shadows and the heat haze: below it the engine writes
 no linear depth, and `fcse.log` says so once.
 
-Needs FCSE 1.4.0 or later.
+Needs FCSE 1.5.0 or later.
 
 ## Building
 

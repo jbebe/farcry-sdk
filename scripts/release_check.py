@@ -20,6 +20,7 @@ from pathlib import Path
 
 import collisions
 import modstatus
+import nexus_requires
 from modstatus import MAIN_TREE, REPO, Check
 
 SOURCE = (".cpp", ".h", ".hpp", ".inl", ".fx", ".hlsl", ".fxh")
@@ -274,6 +275,16 @@ def release_order(state):
     return Check("release order", "pass", "all met" if state.waits else "nothing to wait for")
 
 
+def nexus_requires_check(project, projects):
+    if not nexus_requires.applies(project):
+        return Check("nexus requires", "pass", "requires nothing on Nexus")
+    found = nexus_requires.problems(project, projects)
+    if found:
+        return Check("nexus requires", "fail", "; ".join(found),
+                     "release what it requires first, or make README and page state the minimum (RELEASING.md)")
+    return Check("nexus requires", "pass", nexus_requires.render(nexus_requires.requirements(project)))
+
+
 def changelog_section(state):
     if not state.prepared:
         return Check("changelog", "fail", "no version section newer than the last tag",
@@ -322,6 +333,7 @@ def main():
         Check("page text", "pass", "not needed for a hotfix") if args.hotfix else checks["page text"],
         changelog_section(state),
         release_order(state),
+        nexus_requires_check(project, projects),
     ]
 
     mode = " (hotfix)" if args.hotfix else ""

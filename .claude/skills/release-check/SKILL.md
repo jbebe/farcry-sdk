@@ -38,5 +38,8 @@ a fix: every row applies except the user's re-check of the BBCode and short mess
      folder>` and run the check again.
    - **changelog**: the release needs a `## [x.y.z] - date` section newer than the last tag
      (RELEASING.md).
+   - **nexus requires**: every version the mod requires on Nexus has to be released first, and its
+     `README-release.md` and page text must state the same minimum (RELEASING.md, What a release
+     requires on Nexus). A changed page text needs the user's page-text approval again.
 4. Show the result as the script's table plus what you did in step 2. When every row passes, say the
    mod is ready and stop: the user pushes and runs the workflow. Never push, tag or run a workflow.
