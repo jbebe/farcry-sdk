@@ -44,7 +44,7 @@ Stage: active
 - [done] Weapon and player data as fragments that merge field by field with other mods
 - [done] A switch per effect in the Mod Configuration Menu - works 2026-11-16
 - [done] Full auto shakes the gun instead of climbing: from a burst's 4th shot each round sends the arms a new way at random, snapped to within an eighth of the time to the next round so it keeps the gun's rate of fire, up to 1.5x the kick by the 8th, the gun turning about its own middle, the shots following, until the trigger is let go or the magazine runs dry, then back onto the aim; the view keeps the shot shake's roll; per-weapon size in the window - user 2026-11-08: "VERY needed"; 2026-11-17: "Good good, now we are getting close", faster and synced with the rate of fire - done; then "too much shake around", 3x to 2x; then less again, 1.5x, and about the gun's middle; then 2026-11-17 "stronger, snappier" - snaps instead of easing; then a 50 ms delay from the shot to the snap; then by stance as the sway: full on the move standing, half standing still or crouched moving, a quarter crouched still; works 2026-11-17
-- [new] Forward/back bob per shot - user 2026-11-08, part of the full-auto request; not asked for again
+- [scrapped] Forward/back bob per shot - user 2026-11-17 scrapped it before 1.3.0
 - [done] Muzzle light reaches 5 m, two and a half times the game's, from a gamemodesconfig.xml fragment - #67, user 2026-11-12: "perfect!"
 - [done] Muzzle flash per gun, first and third person, sized and brightened to its round, barrel and muzzle device, the game's length kept; data only - user 2026-11-12: "they seem to be proper"
 - [done] Every gun change reaches the test range's guns too - works 2026-11-16
@@ -71,7 +71,7 @@ Stage: active
 ## Approvals
 
 - played: 631b0978 2026-11-17 - "all is perfect!"
-- page text: 10aebf7 2026-10-15 - implied by the aiming-overhaul-1.2.0 release
+- page text: 33ecba7f 2026-11-17 - the user read nexus-description.bbcode and nexus-summary.txt
 
 ## Checks
 
