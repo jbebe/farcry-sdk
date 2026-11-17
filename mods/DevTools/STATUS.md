@@ -64,3 +64,4 @@ Stage: active
 - 0x00422510: stacks - the engine device's EndScene, which Sky, Aiming, Vehicle and Inventory Overhaul, Third Person and DevTools hook; FCSE chains them
 - sky-overhaul: stacks - both hook the engine device's EndScene, which FCSE chains
 - 0x00422630: stacks - the engine device's Reset, which Aiming, Vehicle and Inventory Overhaul and DevTools hook; FCSE chains them
+- 0x00345C70: stacks - DevTools' precache and UFCP's frame-limiter mid-hooks sit 0x4A1 bytes apart on both builds, neither inside the other's pattern

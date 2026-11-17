@@ -48,3 +48,4 @@ Stage: active
 ## Collisions
 
 - sky-overhaul: fixed by design: Sky never swaps the grass spot-light shaders and that pass writes no Z - grass shaders
+- 0x00345C70: stacks - UFCP's frame-limiter and DevTools' precache mid-hooks sit 0x4A1 bytes apart on both builds, neither inside the other's pattern
