@@ -16,7 +16,7 @@ Stage: maintenance
 - [done] No crash when part of the game can't be hooked; what is left out is logged in fcse.log
 - [done] Combines with other mods' controls, HUD parts and HUD dependency lists
 - [done] Own sound ids moved out of Sound Overhaul's 0x00FC block into 0x00FA, packed from 0x00FA0000: one prefix per mod - user: "changes in instance 3 are verified"
-- [new] Guards see the light without Difficulty Overhaul: Flashlight's own sight rules when nobody hears flashlight.beam - user 2026-11-17
+- [new] Guards see the light without Difficulty Overhaul: Flashlight's 1.2.1 sight rules, automatically whenever nobody hears flashlight.beam - user 2026-11-17
 - [scrapped] Light as a noise, a plain 15 m radius - user chose the beam rule
 - [scrapped] Guards see it on their own: lit counts as just fired, all around inside the beam, 60 m in the dark - moved into Difficulty Overhaul, user 2026-11-14: "flashlight mod doesnt change AI behavior"
 
