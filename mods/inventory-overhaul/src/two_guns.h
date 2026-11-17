@@ -1,5 +1,5 @@
-// Two guns, any class: gun 1 on key 3, gun 2 on key 2, and a gun picked up with both carried
-// replacing the one in hand.
+// Two guns, any class: gun 1 on key 3, gun 2 on key 2, and a gun picked up going into an empty
+// slot, gun 1 first, or with both carried replacing the one in hand, else gun 1.
 #pragma once
 
 #include "engine/inventory.h"
@@ -24,5 +24,14 @@ void Settle(void* inventory);
 // Takes a carried gun out of the inventory, dropped at the pawn's feet or gone; if it was in hand,
 // gun 1 is drawn, else gun 2.
 void Release(void* inventory, const Inventory::Weapon& gun, bool drop);
+
+// While it lives, a gun added outside a pickup is not marked to be placed: the plugin's own adds
+// place or drop their gun themselves, and the engine asks for the gun in hand mid-drop.
+struct Quiet {
+    Quiet();
+    ~Quiet();
+    Quiet(const Quiet&) = delete;
+    Quiet& operator=(const Quiet&) = delete;
+};
 
 }

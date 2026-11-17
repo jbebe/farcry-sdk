@@ -26,7 +26,7 @@ namespace {
     // none when it could not be made.
     std::optional<Inventory::Weapon> Make(void* inventory, const Record& stowed,
                                           const std::vector<Inventory::Weapon>& before) {
-        if (!Inventory::AddByName(inventory, stowed.id.c_str())) {
+        if (const TwoGuns::Quiet quiet; !Inventory::AddByName(inventory, stowed.id.c_str())) {
             return std::nullopt;
         }
         for (const Inventory::Weapon& gun : Inventory::Guns(inventory)) {

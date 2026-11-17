@@ -36,6 +36,7 @@ Stage: active
 - [done] Remote control over a named pipe (-devtoolsremote): state, goto, actions, shots, recordings - run, works 2026-10-30
 - [done] Remote control for automated tests: absolute look, camera and stance in state, spawn and clear, entity health and components, soldiers' sight, any mod's setting, pause - run, works 2026-11-09
 - [done] Remote control: one pipe per install, named after its folder, so game copies run side by side - built, not run
+- [done] Remote control: `send <channel> <text>` to a plugin listening on an FCSE channel - built, not run
 - [new] Remote control: entities of an archetype near the player, through the engine's sphere query - deferred, no test needs it yet
 - [new] Remote control: each soldier's current brain task, to replace Difficulty Overhaul's -braintrace in tests
 - [done] Combat log (-combatlog): hits on the player, his hits on soldiers and deaths, and every mod's lines from FCSE's combat channel, in one session file; fight_report.py moved here - fc2drive damage run, GOG 2026-11-11

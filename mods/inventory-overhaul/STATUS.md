@@ -6,32 +6,33 @@ Stage: active
 ## Features
 
 - [done] Two guns of any class, A on key 3 and B on key 2; a gun picked up with two carried replaces the one in hand - user: "works perfectly"; #51 keys and an old save's primary in A verified 2026-11-12
-- [done] Picked-up gun comes to hand - fc2drive only, the user has not played it
+- [done] Picked-up gun comes to hand - user 2026-11-17: "it all works flawlessly"
 - [done] Items: stowed guns keep their wear and loaded rounds, four guns in all with the slots; other items by id and count
 - [done] Notebook on Tab, given with the map, held in both hands, its right page bending with the hands - user: "it works in all situations"; first opens on gun A, verified 2026-11-12
 - [done] The page drawn onto the paper through the engine's texture binders and device, with no Direct3D hooks, so it works under dgVoodoo and DLSS injectors - pages and a resize match the old build (fc2drive); user 2026-11-14: "they work alright" #63
 - [done] Items page: guns A and B, Items with the diamonds, the belt with its counts; the wheel moves the selection
-- [done] Post-it for the selected row: picture, name, condition word, ammo, upgrade icons, ratings - a bought upgrade not seen yet; #52 every gun's post-it, DLC and rusty guns included, verified 2026-11-12
+- [done] Post-it for the selected row: picture, name, condition word, ammo, upgrade icons, ratings - user 2026-11-17: "it all works flawlessly"; #52 every gun's post-it, DLC and rusty guns included, verified 2026-11-12
 - [done] Condition word from the gun's reliability as a share of its MaxReliability - fc2drive: new, used, worn, worn, failing at 100, 70, 45, 30, 10 %; carried and stowed verified 2026-11-12
 - [done] Left mouse uses the selected row: stows gun A or B, heals on the syrettes - user-confirmed
 - [done] Context menu on a stowed gun: To slot A, To slot B - user: "it fully works"
 - [done] X drops the gun in hand, or the notebook's selected row, on a new Drop control - stowed gun and item drop seen by fc2drive; #49 a dropped gun lands on its side, verified 2026-11-12
 - [done] Docs page: other mods' notes, photos and cassettes, the Jackal and Predecessor tapes, played with a click - user: "it works!"
 - [done] Paper reader: a note or photo read whole over the right page, the wheel turning its sheets - user: "everything looks good"
-- [done] Handwriting (Caveat Bold) only on the paper being read - 20 px without Cyrillic not yet judged by the user
-- [done] Missions page: reputation, the current job with its objectives and the Underground's - seen by self-test
+- [done] Handwriting (Caveat Bold) only on the paper being read - user 2026-11-17: "it all works flawlessly"
+- [done] Missions page: reputation, the current job with its objectives and the Underground's - user 2026-11-17: "it all works flawlessly"
 - [done] Buddies page: active buddies first, then the others, the missing and the dead faded
-- [done] R turns the page with the pause menu's own flip at twice the speed, half its sound - seen by self-test; the user has not heard it
+- [done] R turns the page with the pause menu's own flip at twice the speed, half its sound - user 2026-11-17: "it all works flawlessly"
 - [done] Pause menu without Resume, Journal, Buddies and the tapes, its main page as the game-over dialog; Upgrades stays
 - [done] Other mods' notes, photos, cassettes and items known by a naming convention - user: "it all works"
 - [done] Example note, photo and cassette on the Docs page until Tales of Africa ships, never saved - the user heard the cassette
 - [done] Test window in DevTools' overlay: Stow, Take, Give, Discard, Fill, +1 diamond
-- [new] INVENTORY_OVERHAUL_FILL and the Lua start variable removed once tests set up the notebook through DevTools - plugins hold no test logic
-- [new] Malaria on the pills' post-it - agreed: "malaria becomes the pills' card"
-- [new] Camo Suit in Items once bought - agreed 2026-10-26
+- [done] INVENTORY_OVERHAUL_FILL and the Lua start variable removed: tests press the test window's Give and Fill through the channel `inventoryoverhaul`, with DevTools' remote `send`
+- [done] Malaria on the pills' post-it, the pause menu Journal's words for the level - user 2026-11-17: "it all works flawlessly"
+- [done] Camo Suit in Items once bought, with the shop's name and description - user 2026-11-17: "it all works flawlessly"
 - [done] The two sound banks on ids of their own, 00fe0000 and 00fe0001: their old records 0x00FD0001-0x00FD0004 were also in Vehicle Overhaul's 00fd0000.spk, and a shared id crashed the game in Sound Overhaul's echo work - user: "changes in instance 3 are verified"
-- [new] A gun picked up or taken at the armory: with A and B empty, into A; with one empty, into the empty one; with both full, it replaces the slot in hand, else A, and the replaced gun falls at the player's feet
-- [new] Notebook usable in the armory
+- [done] A gun picked up from the ground or the armory's wall: with A and B empty, into A; with one empty, into the empty one; with both full, or four guns in all, it replaces the slot in hand, else A; the replaced gun falls at the player's feet - user 2026-11-17: "it all works flawlessly"
+- [new] Safe-house weapon crates as the game has them: with two guns of other classes carried, the crate's gun is dropped at the player's feet - found in RE, not seen in game
+- [done] Notebook usable in the armory and other rooms without guns: Tab, the wheel, the left mouse button and X bound in the briefing action map they use; there X stays X when Drop is rebound - user 2026-11-17: "it all works flawlessly"
 - [postponed] Box page at the crates: the bought guns as a catalogue and stored things, one shared box #6 - not yet
 - [postponed] One fetch mission - design log step 9
 - [postponed] Diamonds, food, pills and ammo as items - later, once decided
@@ -47,20 +48,14 @@ Stage: active
 
 ## To validate
 
-- A bought upgrade's icon on the post-it - not seen
-- A picked-up gun comes to hand - fc2drive only
-- The handwriting at 20 px on a paper being read - not judged
-- The Missions page - self-test only
-- R's page turn: the pause menu's flip at twice the speed, half its sound - not heard
-
 ## Approvals
 
-- played: 7b4c384a 2026-11-14 - "I approve it all changes"
+- played: 76dd3c60 2026-11-17 - "it all works flawlessly"
 - page text: 7950320 2026-11-01 - implied by the inventory-overhaul-1.0.0 release
 
 ## Checks
 
-- simplify: 7b185ea 2026-11-15 - since inventory-overhaul-1.0.0
+- simplify: 95391607 2026-11-17 - since inventory-overhaul-1.0.0
 
 ## Release order
 

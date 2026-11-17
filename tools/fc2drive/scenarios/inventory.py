@@ -71,7 +71,8 @@ def main():
         raise GameError("Inventory Overhaul is not in the install")
 
     run = Run("inventory")
-    with launch("world1", env={"INVENTORY_OVERHAUL_FILL": "1"}) as game:
+    with launch("world1") as game:
+        game.send("inventoryoverhaul", "fill")
         game.option("Invincibility", 1)
         game.goto(*FLAT_GROUND)
         time.sleep(3.0)

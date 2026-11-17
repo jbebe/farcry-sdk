@@ -5,7 +5,15 @@ Notable changes to Inventory Overhaul, loosely following
 
 ## [Unreleased]
 
+### Added
+- **Malaria on the pills' post-it,** in the words the pause menu's Journal had for how sick you are.
+- **The camo suit in Items** once you have bought it.
+- **The notebook in the armory** and the other rooms where you carry no gun.
+
 ### Changed
+- **Where a gun you pick up goes:** into gun A when both slots are empty, into the empty slot when
+  one is, and with both full in place of the gun in hand, or gun A when neither is in hand. The
+  same holds for a gun taken from the armory's wall.
 - **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.
 - **Gun A on key 3, gun B on key 2,** as the game has the primary and the secondary; a save from
@@ -23,6 +31,7 @@ Notable changes to Inventory Overhaul, loosely following
   until it was about to break.
 - **The cassette's sounds no longer share ids with Vehicle Overhaul's,** which could crash the game
   with both installed.
+- **A gun dropped from Items lands once,** where it could land twice, or land and stay in a slot.
 
 ## [1.0.0] - 2026-11-01
 

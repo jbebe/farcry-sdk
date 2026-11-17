@@ -60,7 +60,7 @@ namespace {
     FCSE::Relocation<ClassFn> g_pawnClass{FCSE::Uplay(0x00040A80)};
     constexpr size_t kPawnClass = 3;
     // An entity's component by class id; CFCXCountersComponentPlayerSP's class id, built when its
-    // name is still unset, its RemainingPills, and its reputation level, 0 to 5.
+    // name is still unset, its RemainingPills, and its reputation and malaria levels, 0 to 5.
     using GetComponentFn = void*(__fastcall*)(void* entity, void* unused, const uint32_t* type);
     FCSE::Relocation<GetComponentFn> g_getComponent{FCSE::Uplay(0x004E2CC0)};
     FCSE::Relocation<BuildClassIdFn> g_buildCountersType{FCSE::Uplay(0x00657F30)};
@@ -68,7 +68,8 @@ namespace {
     FCSE::Relocation<const uint32_t*> g_countersType{FCSE::Uplay(0x01649838)};
     constexpr ptrdiff_t kRemainingPills = 0xF0;
     constexpr ptrdiff_t kReputation = 0x184;
-    constexpr int kTopReputation = 5;
+    constexpr ptrdiff_t kSickness = 0x68;
+    constexpr int kTopLevel = 5;
     // The wallet's class id, CEconomyComponent's, built on first use; its diamonds, and the names
     // bought, engine std::strings, and how many, which CEconomyComponent::AlreadyBoughtItem searches.
     FCSE::Relocation<BuildTypeFn> g_buildEconomyType{FCSE::Uplay(0x006574F0)};
@@ -153,6 +154,12 @@ namespace {
 
     const void* Counters() {
         return PlayerComponent(ClassId(g_buildCountersType, g_countersTypeName, g_countersType));
+    }
+
+    // A counters level of 0 to 5, or -1 when there is no player.
+    int Level(ptrdiff_t offset) {
+        const void* counters = Counters();
+        return counters != nullptr ? std::min<int>(Read<uint8_t>(counters, offset), kTopLevel) : -1;
     }
 
     // The wallet is found by its class id as the game's mission rewards find it.
@@ -293,10 +300,9 @@ int Pills() {
     return counters != nullptr ? Read<int32_t>(counters, kRemainingPills) : -1;
 }
 
-int Reputation() {
-    const void* counters = Counters();
-    return counters != nullptr ? std::min<int>(Read<uint8_t>(counters, kReputation), kTopReputation) : -1;
-}
+int Reputation() { return Level(kReputation); }
+
+int Sickness() { return Level(kSickness); }
 
 int Diamonds() {
     const void* wallet = Wallet();

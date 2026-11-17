@@ -340,6 +340,16 @@ namespace {
         return Ok();
     }
 
+    // Hands the text, with its terminating NUL, to every plugin listening on the channel.
+    std::string Send(const std::string& arguments) {
+        const auto [channel, text] = FirstWord(arguments);
+        if (channel.empty()) {
+            return Fail("send takes a channel, then the text");
+        }
+        const uint32_t heard = FCSE::ApiPointer()->Send(channel.c_str(), text.c_str(), text.size() + 1);
+        return heard > 0 ? Ok() : Fail("nobody listens on " + channel);
+    }
+
     // Clear is no storm, rain or wind. Engine hands them back.
     std::string SetWeather(const std::string& choice) {
         Weather::Wanted wanted;
@@ -419,6 +429,9 @@ namespace {
         }
         if (verb == "weather") {
             return SetWeather(rest);
+        }
+        if (verb == "send") {
+            return Send(rest);
         }
         if (verb == "record") {
             Actions::StartRecording();

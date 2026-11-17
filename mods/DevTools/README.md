@@ -460,6 +460,7 @@ world there has loaded.
 | `setting [plugin] name = value` | Any mod's setting for this launch, spelled as in `fcse.ini`: `setting [DevTools] Infinite ammo = true`. Nothing is saved |
 | `pause on`, `pause off` | Stops the game clock, so the world stands still while frames keep coming, or starts it again |
 | `weather clear`, `weather engine` | No storm, rain or wind, or the engine's own |
+| `send <channel> <text>` | Hands the text to every plugin listening on that FCSE channel, as another plugin's `Send` would; fails when nobody listens. Inventory Overhaul's test window hears `inventoryoverhaul`: `give <id>`, `fill` |
 | `record`, `stoprecord <path>`, `play <path>` | See below |
 
 Actions are not keypresses. They reach the listeners the bindings reach, so they ignore how controls

@@ -15,6 +15,10 @@ bool Install();
 // Game thread only, as is everything below.
 const std::wstring& Localize(const char* section, const std::string& key);
 
+// The pause menu Journal's text for a level, 0 to 5, of `kind`, "INFAMY" (reputation) or "SICKNESS"
+// (malaria). From level 1 the game opens it with a heading line, which goes into `heading`.
+std::wstring JournalText(const char* kind, int level, std::wstring& heading);
+
 // The string `key` of `section` with the names it leaves as words, such as PRIMARY_BUDDY_NAME,
 // filled in as the pause menu fills them; empty when this build lacks the calls.
 std::wstring Words(const char* section, const std::string& key);

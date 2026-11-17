@@ -38,8 +38,8 @@ Fifteen places in the engine call the event's `SetUsable` **(RE-verified)**:
   weapon"), a climbing helper (`CheckClimb`, `TryClimb`), and the multiplayer flag ("Take flag").
 - **Inside a known class's code**, between its constructors and destructors: `CUsableComponent`,
   `CDoor`, `CBedroll`, `CPickup` and its subclasses, `CBazaarComputer`,
-  `CProximityTriggerComponent` and `CExplosive`.
-- **By address only (inferred):** `CMagicCrate` and the vehicle.
+  `CProximityTriggerComponent`, `CExplosive` and `CMagicCrate`.
+- **By address only (inferred):** the vehicle.
 - **The rest:** a generic setter, and one handler at `0x08fc4670` that was not identified.
 
 ## Retail interactions
@@ -72,6 +72,19 @@ Fifteen places in the engine call the event's `SetUsable` **(RE-verified)**:
 Archetypes, components, prompts, persist levels and counts are **(seen in data)**. "Saved fields"
 are the members the [component registry](../engine-internals/entity-component-schema.md#flag-bits)
 marks as written to savegames **(RE-verified)**.
+
+### The weapon crate
+
+Every weapon crate opens one store, the player's `CPawnMagicCrate` component, whose `Contents` the
+crates share. On use, `CMagicCrate::OnEvent` asks `GetWeaponFromCategory` for the carried gun of
+the crate's class and `CPawnMagicCrate::ContainsCategory` for a stored one, and signals the player's
+state machine: `pick` when only the store has one, `drop` when only the player does, `switch` when
+both do. The crate animation's `magic_crate_pick_detach` event then runs `CompleteTransaction`
+(Steam `0x106D7130`): `GetWeaponFromInventory` (`0x106D7050`, through `GetWeaponFromCategory`)
+names the gun that goes in, which is removed from the inventory into `Contents`, and
+`GetWeaponFromCrate` (`0x106D6F80`) the gun that comes out, which `AddWeapon` adds and
+`SelectWeapon` draws by its class. Both return an entity proxy through a pointer argument, `RET 4`
+**(RE-verified, server build and Steam)**.
 
 ### What persists
 

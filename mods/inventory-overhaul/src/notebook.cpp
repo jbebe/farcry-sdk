@@ -85,6 +85,11 @@ namespace {
     constexpr uint32_t kHolsterMonocular = FCSE::Crc32("holster_monocular");
     // The Drop control's signal, X: the row selected while the notebook is out, else the gun in hand.
     constexpr uint32_t kDropItem = FCSE::Crc32("drop_item");
+    // The briefing map's own signals for the wheel, the left mouse button and X, in the armory and
+    // the other rooms without guns: the ones above while the notebook is out, nothing otherwise.
+    constexpr uint32_t kNotebookWheel = FCSE::Crc32("notebook_wheel");
+    constexpr uint32_t kNotebookUse = FCSE::Crc32("notebook_use");
+    constexpr uint32_t kNotebookDrop = FCSE::Crc32("notebook_drop");
 
     // Whether the notebook is out, whether the toggle the player handles next is Tab's, and whether
     // the notebook could not be made.
@@ -108,6 +113,12 @@ namespace {
             return g_signal(dispatcher, unused, signal, context);
         }
         uint32_t& id = *const_cast<uint32_t*>(signal);
+        if (id == kNotebookWheel || id == kNotebookUse || id == kNotebookDrop) {
+            id = !g_open                 ? kTaken
+                 : id == kNotebookWheel ? kCycleWeapon
+                 : id == kNotebookUse   ? kStartShooting
+                                        : kDropItem;
+        }
         switch (id) {
         case kCycleWeapon:
             if (g_open) {

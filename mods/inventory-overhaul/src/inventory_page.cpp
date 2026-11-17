@@ -136,9 +136,12 @@ namespace {
         return health >= 0.75f ? L"new" : health >= 0.5f ? L"used" : health >= 0.25f ? L"worn" : L"failing";
     }
 
+    // The camo suit's name in the shop, which shows it in Items once bought.
+    constexpr const char* kCamoSuitShopName = "camo suit";
+
     // A row of the page, in reading order: the weapons, Items, then the belt.
     struct Row {
-        enum Kind { kGun, kMachete, kItem, kDiamonds, kBelt } kind;
+        enum Kind { kGun, kMachete, kItem, kCamoSuit, kDiamonds, kBelt } kind;
         int slot = 0;
         const Inventory::Weapon* gun = nullptr;
         const Items::Record* item = nullptr;
@@ -169,6 +172,9 @@ namespace {
             if (carried.items[i].gun || !IsPaper(carried.items[i].id)) {
                 rows.push_back({Row::kItem, 0, nullptr, &carried.items[i], i});
             }
+        }
+        if (Inventory::IsBought(kCamoSuitShopName)) {
+            rows.push_back({Row::kCamoSuit});
         }
         if (carried.diamonds > 0) {
             rows.push_back({Row::kDiamonds, 0, nullptr, nullptr, carried.items.size()});
@@ -235,10 +241,19 @@ namespace {
         }
     }
 
-    // An Items row's text: a stowed gun's short name, an item's name and count, or the diamonds.
+    std::wstring CamoSuitName() {
+        const std::wstring name = Story::Localize(kShopStrings, "WEAPONBAZAAR_CAMO_SUIT_NAME");
+        return !name.empty() ? name : L"Camo Suit";
+    }
+
+    // An Items row's text: a stowed gun's short name, an item's name and count, the camo suit or the
+    // diamonds.
     std::wstring ItemText(const Carried& carried, const Row& row) {
         if (row.kind == Row::kDiamonds) {
             return std::to_wstring(carried.diamonds) + L" diamonds";
+        }
+        if (row.kind == Row::kCamoSuit) {
+            return CamoSuitName();
         }
         const Items::Record& item = *row.item;
         if (item.gun) {
@@ -289,6 +304,12 @@ namespace {
             model.Text("IO_POSTIT_QUOTE", Story::Localize(kItemStrings, item.id + "_DESC"));
             return;
         }
+        case Row::kCamoSuit:
+            model.Show("IO_POSTIT_PIC_PLACEHOLDER", true);
+            model.Text("IO_POSTIT_NAME", CamoSuitName());
+            model.Text("IO_POSTIT_SUB", L"Worn");
+            model.Text("IO_POSTIT_QUOTE", Story::Localize(kShopStrings, "WEAPONBAZAAR_CAMO_SUIT_DESCRIPTION"));
+            return;
         case Row::kDiamonds:
             model.Show("IO_POSTIT_PIC_DIAMOND", true);
             model.Text("IO_POSTIT_NAME", ItemText(carried, row));
@@ -303,6 +324,11 @@ namespace {
             model.Text("IO_POSTIT_VALUE1", L"\x00D7" + std::to_wstring(std::max(carried.belt[row.index], 0)));
             const std::string names[] = {belt.upgrades[0], belt.upgrades[1]};
             Upgrades(model, "IO_POSTIT_BELT_UP", 2, names);
+            // The pills' post-it tells the malaria as the pause menu's Journal did, without its heading.
+            if (const int sickness = Inventory::Sickness(); std::string_view(belt.picture) == "pills" && sickness >= 0) {
+                std::wstring heading;
+                model.Text("IO_POSTIT_QUOTE", Story::JournalText("SICKNESS", sickness, heading));
+            }
             return;
         }
         }
@@ -367,7 +393,7 @@ int InventoryPage(Model& model, int& selected, const void* view, void* inventory
 
     std::vector<std::wstring> texts;
     for (const Row& each : rows) {
-        if (each.kind == Row::kItem || each.kind == Row::kDiamonds) {
+        if (each.kind == Row::kItem || each.kind == Row::kCamoSuit || each.kind == Row::kDiamonds) {
             texts.push_back(ItemText(carried, each));
         }
     }

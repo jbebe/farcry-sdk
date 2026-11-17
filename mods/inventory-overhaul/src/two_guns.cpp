@@ -58,13 +58,14 @@ namespace {
     bool g_inPickup = false;
     // Set when a weapon is added some other way, as a save's are, until the player's guns are seen.
     bool g_check = true;
+    // How many Quiet holds are alive; none sets g_check.
+    int g_quiet = 0;
     // The gun the player's pickup added, and the inventory it went into.
     struct Picked {
         void* inventory;
         void* weapon;
     };
     Picked g_picked{};
-    int g_lastSlot = 1;
 }
 
 void SetSlot(void* weapon, int slot) {
@@ -172,14 +173,20 @@ namespace {
         return droppedInHand;
     }
 
-    // The gun a new one takes the place of: the one in hand, else the one last drawn with a key, else
-    // the first of `guns`, which must not be empty.
+    // Whether a new gun has to take a carried gun's place: two in the slots, or as many guns in all as
+    // Items allows.
+    bool Full(const void* inventory, const std::vector<Inventory::Weapon>& guns) {
+        return guns.size() >= kSlots || Items::Full(inventory);
+    }
+
+    // The gun a new one takes the place of: the one in hand, else gun 1, else the first of `guns`,
+    // which must not be empty.
     const Inventory::Weapon& ToReplace(const void* inventory, const std::vector<Inventory::Weapon>& guns) {
         if (const Inventory::Weapon* gun = InHand(inventory, guns)) {
             return *gun;
         }
-        const Inventory::Weapon* last = InSlot(guns, g_lastSlot);
-        return last != nullptr ? *last : guns.front();
+        const Inventory::Weapon* first = InSlot(guns, 1);
+        return first != nullptr ? *first : guns.front();
     }
 
     // Draws gun 1, else gun 2.
@@ -253,24 +260,26 @@ namespace {
         if (!Draw(inventory, *gun)) {
             return false;
         }
-        g_lastSlot = slot;
         FCSE::Logf("key: gun %d, the %s", slot, Inventory::Name(gun->weapon));
         return true;
     }
 
-    // A gun the player picks up with two carried, or with as many as Items allows in all, takes the
-    // place of the one in hand; with none carried it falls back at their feet. A weapon added any
-    // other way is placed the next time the HUD asks for the player's gun.
+    // A gun the player picks up goes into gun 1 when both slots are empty and into the empty one when
+    // one is. Full, it takes the place of the gun in hand, else of gun 1, which falls at their feet;
+    // with none carried it falls there itself. A weapon added any other way is placed the next time
+    // the HUD asks for the player's gun.
     void __fastcall OnAddWeapon(void* inventory, void* unused, void* weapon) {
         if (!g_inPickup || !Inventory::IsPlayers(inventory) || !Inventory::IsGun(weapon)) {
-            g_check |= !g_inPickup;
+            g_check |= !g_inPickup && g_quiet == 0;
             return g_addWeapon(inventory, unused, weapon);
         }
         const std::vector<Inventory::Weapon> carried = Inventory::Guns(inventory);
-        const bool full = carried.size() >= kSlots || Items::Full(inventory);
+        const bool full = Full(inventory, carried);
+        int slot = InSlot(carried, 1) == nullptr ? 1 : 2;
         if (full && !carried.empty()) {
             const Inventory::Weapon& out = ToReplace(inventory, carried);
-            FCSE::Logf("the %s takes a slot: the %s is dropped", Inventory::Name(weapon),
+            slot = SlotOf(out.weapon);
+            FCSE::Logf("the %s takes gun %d: the %s is dropped", Inventory::Name(weapon), slot,
                        Inventory::Name(out.weapon));
             Inventory::Drop(inventory, out.weapon);
         }
@@ -280,6 +289,7 @@ namespace {
             Inventory::Drop(inventory, weapon);
             return;
         }
+        SetSlot(weapon, slot);
         PlaceGuns(inventory, false);
         g_picked = {inventory, weapon};
     }
@@ -287,9 +297,10 @@ namespace {
     // A pickup replaces the carried gun of its class, which the player's no longer is: AddWeapon
     // makes room instead.
     void* __fastcall OnFindByClass(void* inventory, void* unused, const uint32_t* category) {
-        return g_inPickup && Inventory::IsPlayers(inventory)
-                   ? nullptr
-                   : g_findByClass(inventory, unused, category);
+        if (g_inPickup && Inventory::IsPlayers(inventory)) {
+            return nullptr;
+        }
+        return g_findByClass(inventory, unused, category);
     }
 
     void __fastcall OnPrePickup(void* pickup, void* unused, void* pawn) {
@@ -298,7 +309,7 @@ namespace {
         g_inPickup = false;
     }
 
-    // The gun the player picks up is drawn, as it is in the game.
+    // The gun the pickup added is drawn, as the game draws a gun picked up.
     bool __fastcall OnPick(void* pickup, void* unused, void* user, uint32_t flag) {
         g_inPickup = true;
         const bool picked = g_pick(pickup, unused, user, flag);
@@ -317,6 +328,10 @@ namespace {
 }
 
 void Settle(void* inventory) { PlaceGuns(inventory, false); }
+
+Quiet::Quiet() { ++g_quiet; }
+
+Quiet::~Quiet() { --g_quiet; }
 
 void Release(void* inventory, const Inventory::Weapon& gun, bool drop) {
     const bool inHand = Inventory::IsInHand(inventory, gun.item);

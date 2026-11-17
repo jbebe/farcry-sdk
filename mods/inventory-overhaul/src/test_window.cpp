@@ -1,5 +1,6 @@
 // The window draws on the thread that presents the frame, which must not touch the inventory: its
-// buttons queue requests, and it shows what Run last saw on the game thread.
+// buttons queue requests, and it shows what Run last saw on the game thread. A scripted test presses
+// Give and Fill through the channel `inventoryoverhaul`: "give <id>" or "fill".
 #include "test_window.h"
 
 #include "devtools_api.h"
@@ -10,6 +11,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cstdio>
+#include <cstring>
 #include <mutex>
 #include <string>
 #include <utility>
@@ -18,7 +20,7 @@
 namespace InventoryOverhaul::TestWindow {
 
 namespace {
-    enum class Action { Stow, Take, Give, Discard, Story, Lua };
+    enum class Action { Stow, Take, Give, Discard, Story };
 
     struct Request {
         Action action;
@@ -38,10 +40,10 @@ namespace {
     constexpr const char* kPresets[] = {"weapons.Special.Carl_Gustaf", "weapons.Special.RPG7",
                                         "weapons.Special.PKM", "weapons.Primary.AK47",
                                         "weapons.Secondary.Makarov"};
-    // The mockup's Fill items: two stowed guns, nine items, then Tales of Africa's note and photo.
+    // The mockup's Fill items: two stowed guns, eight items, then Tales of Africa's note and photo.
     constexpr const char* kFill[] = {"weapons.Special.Carl_Gustaf", "weapons.Special.PKM", "Courier_pouch",
                                      "Sealed_envelope", "Vaccine_case", "Radio_valve", "Roll_of_film",
-                                     "Map_case", "Dog_tags", "Ledger", "Camo_Suit", "Note.Torn_notebook_page",
+                                     "Map_case", "Dog_tags", "Ledger", "Note.Torn_notebook_page",
                                      "Photo.Cliff_village"};
     // The mockup's buddies, met through the game's own Lua (whose bools take 1), Frank the primary
     // buddy, Hakim the secondary (who must be alive) and Warren dead, and the Jackal tapes found the
@@ -49,10 +51,7 @@ namespace {
     constexpr const char* kBuddies[] = {"Flora_Guillen", "Frank_Bilders", "Marty_Alencar", "Josip_Idromeno",
                                         "Warren_Clyde"};
     constexpr int kTapes = 5;
-    // Set in the game's environment for a scripted test: the first fills Items as the game starts,
-    // the second holds console lines, split by |, run in DevTools' console then, # starting Lua.
-    constexpr const char* kFillVariable = "INVENTORY_OVERHAUL_FILL";
-    constexpr const char* kLuaVariable = "INVENTORY_OVERHAUL_LUA";
+    constexpr const char* kChannel = "inventoryoverhaul";
 
     std::mutex g_lock;
     std::vector<Request> g_requests;
@@ -74,6 +73,18 @@ namespace {
             Ask(Action::Give, 0, id);
         }
         Ask(Action::Story);
+    }
+
+    void OnMessage(const char*, const void* data, size_t size, void*) {
+        const std::string text(static_cast<const char*>(data), strnlen(static_cast<const char*>(data), size));
+        std::lock_guard<std::mutex> held(g_lock);
+        if (text == "fill") {
+            Fill();
+        } else if (text.rfind("give ", 0) == 0) {
+            Ask(Action::Give, 0, text.substr(5));
+        } else {
+            FCSE::Logf("%s: unknown message '%s'", kChannel, text.c_str());
+        }
     }
 
     void Draw(void*) {
@@ -148,14 +159,7 @@ namespace {
 
 void Add() {
     DevTools::Overlay::AddWindow("Inventory Overhaul", 420.0f, 480.0f, &Draw);
-    std::lock_guard<std::mutex> held(g_lock);
-    if (GetEnvironmentVariableA(kFillVariable, nullptr, 0) > 0) {
-        Fill();
-    }
-    char lua[1024];
-    if (const DWORD length = GetEnvironmentVariableA(kLuaVariable, lua, sizeof(lua)); length > 0 && length < sizeof(lua)) {
-        Ask(Action::Lua, 0, lua);
-    }
+    FCSE::ApiPointer()->Listen(kChannel, &OnMessage, nullptr);
 }
 
 bool Pending() { return g_asked || g_shown; }
@@ -193,14 +197,6 @@ void Run(void* inventory) {
                 DevTools::Overlay::PostLine("#GetFCXMissionManager():NewJackalTapeFound()");
             }
             DevTools::Overlay::PostLine("#GetFCXMissionManager():PartnerTapeFound(\"W1V1M1\")");
-            break;
-        case Action::Lua:
-            for (size_t start = 0; start < request.id.size();) {
-                size_t end = request.id.find('|', start);
-                end = end == std::string::npos ? request.id.size() : end;
-                DevTools::Overlay::PostLine(request.id.substr(start, end - start).c_str());
-                start = end + 1;
-            }
             break;
         }
     }

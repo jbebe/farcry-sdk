@@ -28,8 +28,10 @@ layer. Marked **(proposed)** are choices not yet agreed.
   scoreboard and the console's autocomplete use it.
 - **Two gun slots, any class.** The machete stays on 1, gun 1 and gun 2 are 2 and 3. Grenades and
   molotovs stay gadgets.
-- **Picking up a gun** fills an empty slot. With both full it replaces the gun in hand, which is
-  stowed in Items if it has room and falls at the feet if not **(proposed)**.
+- **Picking up a gun**, from the ground or the armory's wall (2026-11-17): with both slots empty it
+  goes into gun 1, with one empty into that one. With both full, or four guns in all, it takes the
+  place of the gun in hand, else of gun 1; the gun it replaces falls at the feet. The safe houses'
+  weapon crates stay as the game has them.
 - **Items** carries what is not in a slot: at most two more guns, so four guns in all, and everything
   else without a limit. No weight and no carrying capacity.
 - **One box, shared** by every safe house and the armory.
@@ -213,8 +215,7 @@ Which bandolier covers which gun, from the shop's plans:
 | Other item | — | thrown away, one at a time |
 | Pills, grenades, molotovs | — | no |
 
-A gun swapped out of a slot is stowed in Items if Items holds fewer than two guns, and falls at the
-player's feet if not.
+A gun a pickup swaps out of a slot falls at the player's feet.
 
 ### Items
 

@@ -239,6 +239,10 @@ class Game:
     def console(self, line):
         self.call(f"console {line}")
 
+    def send(self, channel, text):
+        """Sends `text` to the plugins listening on an FCSE channel: `send("inventoryoverhaul", "fill")`."""
+        self.call(f"send {channel} {text}")
+
     def setting(self, plugin, name, value):
         """Sets a mod's setting for this launch, spelled as in fcse.ini: `setting("AimingOverhaul", "Lean", False)`."""
         if isinstance(value, bool):

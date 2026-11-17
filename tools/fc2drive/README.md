@@ -51,6 +51,8 @@ with launch("world1") as game:
 
 `launch` takes a name from `SAVES` or a `.sav` file. `game.action(signal, values...)` fires anything in
 the action map, and `game.lua(code)` and `game.eval(expression)` reach the rest of the game.
+`game.send(channel, text)` talks to a plugin that listens on an FCSE channel, such as Inventory
+Overhaul's test window: `game.send("inventoryoverhaul", "fill")`.
 
 The game's own state, each a remote command in [DevTools' table](../../mods/DevTools/README.md#remote-control):
 

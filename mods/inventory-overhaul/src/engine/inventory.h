@@ -71,8 +71,9 @@ void* Gadget(const void* view, uint32_t category);
 void* AddGadget(void* inventory, const char* archetype, int uses);
 // The malaria pills the player carries, or -1 when there is no player.
 int Pills();
-// The player's reputation level, 0 to 5, or -1 when there is no player.
+// The player's reputation and malaria levels, 0 to 5, or -1 when there is no player.
 int Reputation();
+int Sickness();
 // The diamonds in the player's wallet, or -1 when there is no player.
 int Diamonds();
 // Whether the player has bought the shop item `name`, as the shop names it: "ak47 repair manual",

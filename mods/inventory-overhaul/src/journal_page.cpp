@@ -19,12 +19,7 @@ namespace {
 void JournalPage(Model& model) {
     const int level = std::max(Inventory::Reputation(), 0);
     std::wstring heading = L"REPUTATION LEVEL " + std::to_wstring(level);
-    std::wstring text = Story::Localize("PauseMenu", "REPUTATION_INFAMY_DESCRIPTION_" + std::to_string(level));
-    // Above level 0 the game's text opens with its own heading line.
-    if (const size_t newline = text.find(L'\n'); newline != std::wstring::npos) {
-        heading = text.substr(0, newline);
-        text.erase(0, newline + 1);
-    }
+    std::wstring text = Story::JournalText("INFAMY", level, heading);
     model.Text("IO_REPUTATION", std::move(heading));
     model.Text("IO_REPUTATION_PROSE", std::move(text));
 

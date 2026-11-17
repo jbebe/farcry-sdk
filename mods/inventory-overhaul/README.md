@@ -21,9 +21,9 @@ secondary and a special. What changes is the player's inventory (`InventoryOverh
 
 | Engine call | What the plugin does |
 |---|---|
-| `AddWeapon` | for a gun picked up with two carried, or with four in all counting Items' guns, drops the one in hand first (else the one last drawn), and with none carried and four in Items drops the new one; gives every new gun a free slot, kept on it as the entity data `InventoryOverhaul.Slot`. Loading a save adds its guns here too, and drops none |
-| the state machine's select-class actions, `SelectWeapon` | key 3 draws gun 1 and key 2 gun 2, whatever their class; key 4 draws nothing; the machete is unchanged. Other callers of `SelectWeapon`, such as the weapon crate, still select by class |
-| `GetWeaponFromCategory`, inside the player's `CPickupWeapon::PrePickup` and `Pick` | finds no gun, so a pickup replaces nothing of its own class and `AddWeapon` makes room; the gun picked up is then drawn |
+| `AddWeapon` | puts a gun picked up in gun 1 when both slots are empty and in the empty one when one is. With two carried, or with four in all counting Items' guns, it drops the one in hand first, else gun 1, and the new gun takes its slot; with none carried and four in Items it drops the new one. The slot is kept on the gun as the entity data `InventoryOverhaul.Slot`. Loading a save adds its guns here too, and drops none |
+| the state machine's select-class actions, `SelectWeapon` | key 3 draws gun 1 and key 2 gun 2, whatever their class; key 4 draws nothing; the machete is unchanged. Other callers of `SelectWeapon` still select by class |
+| `GetWeaponFromCategory`, inside the player's `CPickupWeapon::PrePickup` and `Pick` | finds no gun, so a pickup, from the ground or the armory's wall, replaces nothing of its own class and `AddWeapon` makes room; the gun picked up is then drawn |
 
 Two guns of the same model share an item id, by which the engine draws them, so the later one is
 given an id of its own. Every decision is logged to `bin\fcse.log`.
@@ -35,8 +35,7 @@ frame; a number key that finds no gun in its slot places them too. Every gun wit
 takes the key its class had in the game where it is free: the primary's 3 (gun 1), the secondary's
 2 (gun 2), else the free one. A save from before the mod carries up to three guns; the one left
 without a slot, the special-class gun, is dropped at the player's feet, and if it was in hand gun 1
-is drawn. A weapon crate's gun taken with two carried is placed the same way, so the gun left over
-is dropped. A scripted draw of the secondary class, if the game has one, goes through the same
+is drawn. A scripted draw of the secondary class, if the game has one, goes through the same
 action as key 2 and draws gun 2.
 
 ## Items
@@ -54,7 +53,8 @@ which it loads when drawn; a gun taken out is given the latter, as a gun made fr
 nothing left in hand, the gun is drawn with the immediate select a pickup uses.
 
 The player's diamonds are a row of Items too, read straight from the wallet (`CEconomyComponent`,
-`DiamondCount`); they cannot be dropped.
+`DiamondCount`); they cannot be dropped. So is the camo suit once the wallet lists `camo suit` as
+bought, with the shop's name and description on its post-it; it cannot be dropped either.
 
 X, a new Drop control (`drop_item`, named with the game's own `TOOLCONTROL_DROP` in each
 language), drops the gun in hand, and the other gun is drawn. With the notebook out it drops the
@@ -67,9 +67,9 @@ and stays with the player, and upgrades are the player's, not the gun's, so noth
 
 Until the notebook can use its rows, a window in DevTools' overlay (Home) shows both slots and
 Items, with Stow, Take, Give and Discard, and +1 on the diamonds, which runs `#Game:AddDiamonds(1)`.
-Fill gives the mockup's long Items list, two stowed guns and nine items, to see Items scroll, and the
-other pages' test data; the game started with the environment variable `INVENTORY_OVERHAUL_FILL` set
-does the same as it loads.
+Fill gives the mockup's long Items list, two stowed guns and eight items, to see Items scroll, and
+the other pages' test data. A scripted test presses Give and Fill through FCSE's channel
+`inventoryoverhaul`, with `give <id>` or `fill`, which fc2drive sends with DevTools' `send`.
 Its buttons are carried out on the game thread, the next time the HUD asks for the player's gun. An
 item's id has no spaces, so the page shows its underscores as spaces.
 
@@ -99,6 +99,7 @@ says what it makes:
 |---|---|
 | `layer/mods/config/defaultusercontrols.xml/CATEGORY_MISC.xml` | the Notebook control, on Tab |
 | `layer/mods/config/inputactionmapsingle.xml/weapons.xml` | Tab bound to `toggle_notebook` where the map key is bound |
+| `layer/mods/config/inputactionmapcommon.xml/common_briefinginteraction.xml` | the same in the map the armory and other rooms without guns use, with the wheel, the left mouse button and X on signals of their own, `notebook_wheel`, `notebook_use` and `notebook_drop`, which the plugin turns into the on-foot ones while the notebook is out and into nothing otherwise |
 | `layer/mods/languages/<language>/oasisstrings.fragment.xml` | the control's name in each language |
 | `layer/mods/graphics/objects/equipment/notebook/` | the pages (`page.py`): two pages meeting at the spine, each a chain of four hinged strips, drawn with a copy of the map's `MAPTOP` material cut out by its alpha |
 | `layer/mods/graphics/characters/_common/animations/equipment/equipped_gadget/*_eqnote*.mab` | the arms (`arms.py`): the map's banks on foot with the left hand moved off the pages and the right one holding the other edge in the idle's grip, mirrored |
@@ -162,7 +163,9 @@ the string assignment `CMagmaFacade::SetLabel` makes and `Element::SetVisible`
 - **Items:** stowed guns, other items with their count, and the player's diamonds; ten rows at a
   time, with how many more lie above and below beside the pause menu's arrow.
 - **The belt:** syrettes (the ammo type `syringe`), malaria pills (the player's counters
-  component), grenades and molotovs (the uses of the gadget of each category).
+  component), grenades and molotovs (the uses of the gadget of each category). The pills' post-it
+  tells the malaria in the words the pause menu's Journal had for its level (the counters' `+0x68`,
+  0 to 5), without the heading line those open with.
 - **The post-it:** the selected row. A gun has its picture, full name, type (Pistol), condition,
   `<loaded> / <spare>` ammo (the spare rounds being the player's whole pool of its ammo, so a stowed
   gun's too), its upgrades and the multiplayer loadout's five ratings as brush strokes. The machete
@@ -256,12 +259,10 @@ the job panel whatever the layer says, so the plugin also skips the three method
   (`a_io_portraits`); a faded row is a second set of texts and picture, shown in the normal one's
   place, since an element's colour cannot be changed at runtime.
 
-Fill in the test window, or `INVENTORY_OVERHAUL_FILL`, also gives Tales of Africa's note and photo and, through the
-game's own Lua in DevTools' console, meets Frank, Flora, Marty, Josip and Warren, makes Frank the
-primary buddy and Hakim the secondary (the game takes only a living one), kills Warren, and finds
-five Jackal tapes and the Moroccan's. `INVENTORY_OVERHAUL_LUA` holds console lines, split by `|`,
-that the console runs as the game loads, such as `hit_me` or, as Lua,
-`#AddGadget(SpawnWeapon("gadgets.Equipped.Map"))`.
+Fill in the test window also gives Tales of Africa's note and photo and, through the game's own Lua
+in DevTools' console, meets Frank, Flora, Marty, Josip and Warren, makes Frank the primary buddy and
+Hakim the secondary (the game takes only a living one), kills Warren, and finds five Jackal tapes and
+the Moroccan's.
 
 ### Other mods' papers
 

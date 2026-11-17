@@ -182,6 +182,15 @@ const std::wstring& Localize(const char* section, const std::string& key) {
     return s_known[id] = text != nullptr && std::wcscmp(text, L" ") != 0 ? text : L"";
 }
 
+std::wstring JournalText(const char* kind, int level, std::wstring& heading) {
+    std::wstring text = Localize("PauseMenu", std::string("REPUTATION_") + kind + "_DESCRIPTION_" + std::to_string(level));
+    if (const size_t newline = text.find(L'\n'); newline != std::wstring::npos) {
+        heading = text.substr(0, newline);
+        text.erase(0, newline + 1);
+    }
+    return text;
+}
+
 std::wstring Words(const char* section, const std::string& key) {
     void* table = g_words ? *g_stringTable.get() : nullptr;
     if (table == nullptr) {
