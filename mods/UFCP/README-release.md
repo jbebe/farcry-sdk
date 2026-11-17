@@ -1,7 +1,7 @@
 # UFCP — Unofficial Far Cry Patch
 
 Bugs Ubisoft never patched. Almost all are fixed in the running game instead of in the files on
-disk; the monocular's look speed is a change to its data, which merges with the data mods you
+disk; the monocular's gamepad speed is a change to its data, which merges with the data mods you
 already have.
 
 Requires FCSE (the Far Cry Script Extender) 1.5.0 or later, the plugin loader, released from the
@@ -40,8 +40,9 @@ Always applied. A fix that needs a switch is a preference in disguise.
   output ceiling was applied to the mouse as well.
 - **Menu cursor** — a slow mouse movement did not move the menu cursor at all, as if behind a
   deadzone.
-- **Monocular** — it turned the view 64% faster than the guns' scopes do at the same zoom. Its look
-  speed is now theirs.
+- **Monocular** — with a mouse, the zoomed view turned as fast as the unzoomed one, so the smallest
+  movement jumped across the picture; with a gamepad, 64% faster than the guns' scopes. It now turns
+  the way a scope does at its zoom.
 - **High-precision timer** — loading screens ran far below the 30 FPS they are paced for.
 - **Grass under spot lights** — headlights and flashlights left grass black however close it was.
 - **Many cores** — on a PC with 32 or more logical processors the game closed at the splash screen,

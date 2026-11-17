@@ -45,6 +45,7 @@ add_library(UFCP SHARED
   "src/fixes/many_cores.cpp"
   "src/fixes/map_icons.cpp"
   "src/fixes/menu_cursor.cpp"
+  "src/fixes/monocular_mouse.cpp"
   "src/fixes/mouse_speed_cap.cpp"
   "src/fixes/utilisation.cpp"
   "src/options/display_mode.cpp"

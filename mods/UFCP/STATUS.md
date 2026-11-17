@@ -10,7 +10,7 @@ Stage: active
 - [done] Exit crash: Exit Game closes instead of faulting - verified from the menu
 - [done] Mouse speed cap: a fast flick turns as far as a slow one
 - [done] Menu cursor follows a slow mouse - unreleased, unchecked in game
-- [done] Monocular look speed matches the scopes, a data fix in both worlds - unreleased, unchecked in game
+- [done] Monocular turns like a scope at its zoom: the mouse slowed by its field of view as down a gun's sights (plugin), the gamepad's look speed 0.061 in both worlds (data) - unreleased; user 2026-11-17: the data fix alone left the mouse at the unzoomed speed
 - [done] Loading screens run at their 30 FPS (high-precision timer)
 - [done] CPU and GPU use: no idle spinning, the GPU a frame ahead, no busy-wait frame cap; the engine's single job worker kept
 - [done] Many-core startup crash on 32+ logical processors
@@ -30,7 +30,7 @@ Stage: active
 
 - The Jackal tapes advance in the southern map - unchecked
 - The menu cursor follows a slow mouse - unchecked
-- Monocular look speed matching the scopes - unchecked
+- The monocular turns with the mouse as slowly and smoothly as the AS50's scope - unchecked
 
 ## Approvals
 

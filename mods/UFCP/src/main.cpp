@@ -44,6 +44,8 @@ void ApplyManyCoresFix();
 void ApplyHybridCoresFix();
 // The map's icons shift on the paper by less than a pixel as the player moves.
 void ApplyMapIconsFix();
+// With a mouse, the monocular's zoomed view turns as fast as the unzoomed one.
+void ApplyMonocularMouseFix();
 
 // Options. The hook has to exist before the setting that drives it is registered, because
 // registration is what delivers the saved value.
@@ -106,6 +108,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     ApplyManyCoresFix();
     ApplyHybridCoresFix();
     ApplyMapIconsFix();
+    ApplyMonocularMouseFix();
 
     UFCP::FindRenderProfile();
     InstallFovHook();

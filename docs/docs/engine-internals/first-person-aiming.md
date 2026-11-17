@@ -176,16 +176,28 @@ the sights with sprint held. Retail GOG v1.03, from Aiming Overhaul.
 
 ### Look speed while zoomed
 
-`0x107D8D10` scales the frame's turn by a look speed blended from `+0x40` to `+0x44` by the zoom's
-progress at `+0x18`, all in the zoom data at `*(pawn + 0x10) + 0xD8` (`0x1007E1F0`). Both start at
-1. A weapon writes both (`0x10131280`): its own `fLookSensitivityFactor` (`+0xCC` in its properties)
-first, and its `IronSight` one (`+0xD0`) at full zoom. The monocular's use strategy (`0x1072B170`)
-writes only the second, from its `fLookSensitivity` at `+0x50`, beside its `fFOV` at `+0x4C`. So the
-monocular eases in from whatever the last weapon left. **RE-verified on Steam.**
+The mouse and the gamepad slow the turn while zoomed in different places, from different fields of
+the skills (`0x1007E1F0`).
 
-Retail weapons scale the full-zoom speed with their field of view, about 0.3 per radian: 0.4 at a
-pistol's 1.309, 0.07 at the AS50's 0.2. The monocular zooms as far as the AS50 and ships with 0.1;
-UFCP's layer gives it 0.061.
+The mouse's look curve (`0x107D8B90`, GOG `0x107CC2C0`, in the mouse filter's vtable at
+`0x10EA9760`) multiplies the turn by the zoom's field of view at `+0x1C` over 1.309 radians, the
+unzoomed one (`0x10EA979C` holds its inverse). It does so only while bit 3 (`0x08`) of the effective
+flags is set, which a gun sets down its sights. `CWeaponFireStrategy::Update` (server `0x08F8A5B0`)
+copies that bit every frame into the zoom transition's on byte, `+0x0D`. The monocular's `OnEquip`
+sets the on byte and the field of view but never the bit, so in the retail game the monocular zooms
+while the mouse turns at the unzoomed speed. UFCP makes the curve test the on byte as well.
+**RE-verified on Steam.**
+
+The gamepad's `CActionMapPadFilter::ApplyIronSightSensitivity` (`0x107D8D10`, server `0x08E99F90`)
+multiplies the turn by a look speed blended from `+0x40` to `+0x44` by the zoom's progress at
+`+0x18`. Both start at 1. A weapon writes both (`0x10131280`): its own `fLookSensitivityFactor`
+(`+0xCC` in its properties) first, and its `IronSight` one (`+0xD0`) at full zoom. The monocular's
+use strategy (`0x1072B170`) writes only the second, from its `fLookSensitivity` at `+0x50`, beside
+its `fFOV` at `+0x4C`, so it eases in from whatever the last weapon left. **RE-verified on Steam.**
+
+Retail weapons scale the gamepad's full-zoom speed with their field of view, about 0.3 per radian:
+0.4 at a pistol's 1.309, 0.07 at the AS50's 0.2. The monocular zooms as far as the AS50 and ships
+with 0.1; UFCP's layer gives it 0.061.
 
 ### Holding the breath
 
