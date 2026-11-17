@@ -31,12 +31,12 @@ Stage: active
 
 ## Approvals
 
-- played: db5067a 2026-11-07 - the deployed build with camera collision, then "let's prepare the mod for release" (commit: played by the user)
-- page text: ccf0eed 2026-11-08 - implied by the third-person-1.0.0 release
+- played: 150efa45 2026-11-17 - "played and text approved"
+- page text: 150efa45 2026-11-17 - "played and text approved"
 
 ## Checks
 
-- simplify: 15a373b6 2026-11-17 - since third-person-1.0.0; 38d37828 covered up to it, then the interaction hold-back: two small cuts
+- simplify: 150efa45 2026-11-17 - since third-person-1.0.0; the interaction hold-back two small cuts, the crosshair fix clean
 
 ## Release order
 
