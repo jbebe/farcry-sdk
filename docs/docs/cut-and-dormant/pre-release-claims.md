@@ -46,6 +46,17 @@ Each entry gives what was said, then what retail holds, with one of these states
   [Gamasutra](https://gamedeveloper.com/game-platforms/interview-how-i-far-cry-2-i-s-fire-fuels-spreads),
   November 2008).
 
+## World and biomes
+
+**Claimed.** The tech-demo walkthrough: jungle, savannah and desert biomes, the desert playing the role
+the ocean played in the first Far Cry while holding "a lot of gameplay"; the map sheet shown covers one
+square kilometre of a 50 square kilometre world, and crossing the demo's route on foot would take at
+least 30 minutes.
+
+**Retail: present.** Each of the two worlds is an 80 by 80 grid of 64 m sectors, 5.12 km on a side, so
+the pair is about 52 square kilometres; the desert is its own environment zone
+([time of day and lighting](../engine-internals/time-of-day-and-lighting.md)).
+
 ## Weather
 
 ### Rain, lightning and thunder
@@ -276,7 +287,9 @@ video predates the available data.
 **Claimed.** Ubisoft's fact sheet and the Steam store page: "Everything is breakable and alterable".
 TechPowerUp: "totally destructible to the point of wind blowing a leaf off of a tree". HEXUS at Leipzig:
 shanty towns that "can be almost totally raised to the ground". Hooked Gamers (April 2008): "blow up
-rocks and boulders". PAX: ammo piles send "hundreds of bullets" flying and chain explosions.
+rocks and boulders". PAX: ammo piles send "hundreds of bullets" flying and chain explosions. A
+narrated tech-demo walkthrough (event and date not recorded) shoots an ammo crate that "will just start
+spraying bullets all over the place", and fights through a shanty town with "destructibles all over".
 
 **Retail.**
 
@@ -396,11 +409,21 @@ flares".
   reinforcements arrive.
 - **Camp-to-camp radio: absent.** There is no inter-camp messaging; each army's lieutenant is local.
 
+### Vehicle chases
+
+**Claimed.** The tech-demo walkthrough: enemies are "super aggressive", jump into vehicles to chase the
+player, shoot at him and try to ram him off the road, and work together.
+
+**Retail: present.** Soldiers take vehicles after a target (`ChaseWithVehicle` in `mercbrain`) and
+vehicle crews escalate the chase (`VehicleChaseLevel2`, `3` in `vehiclebrain`); see
+[AI](../engine-internals/ai.md).
+
 ### Needs-driven schedules and sleeping guards
 
 **Claimed.** Pharand (GamesRadar, 2007): "Our AI is needs-driven, and the main needs are Rest, Duty and
 Social", with smart-terrain points such as a sleep point. PC Zone: "more likely you'll find sleeping
-guards during the wee hours". GameSpot (January 2008): enemies have "general schedules".
+guards during the wee hours". GameSpot (January 2008): enemies have "general schedules". The tech-demo
+walkthrough shows a camp at lunchtime with the guards eating as a patrol arrives by vehicle.
 
 **Retail: present, as a time-of-day table.**
 
@@ -438,7 +461,9 @@ been relationship-based).
 **Claimed.** Multiplayer.it at Leipzig: 16 critical wound locations with their own animations; a bullet
 in the hand stops the player shooting until removed; "a graze to the head literally made us lose
 consciousness"; burning clothes must be beaten out. GameSpot: one first-aid key chooses the right
-interaction. Engadget at PAX: "over 60 animations for first-aid".
+interaction. Engadget at PAX: "over 60 animations for first-aid". The tech-demo walkthrough: there are
+no medkits, the player performs actions on himself to get back into the fight, and an overused weapon
+jams. Both ship as shown: the surgery animations and weapon jams are in retail.
 
 **Retail.**
 
