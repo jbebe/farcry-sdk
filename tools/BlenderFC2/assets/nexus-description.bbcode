@@ -105,7 +105,6 @@ That is the most useful thing this add-on can tell a weapon modeler and you cann
 [list]
 [*][b]Split UVs, normals or colours.[/b] The format stores all three per vertex, not per corner, so a seam has to be a duplicated vertex. The first corner touching a vertex wins.[/*]
 [*][b]Add or remove parts, nodes or LODs.[/b] A part can be added but not removed, and an added part exists only at the LOD you added it to, so it isn't drawn once the model drops to a coarser one.[/*]
-[*][b]Make a new material.[/b] A new part reuses one the model already has.[/*]
 [*][b]Add a vertex component a buffer has no room for.[/b] A second UV set on a part whose buffer carries one is dropped rather than invented.[/*]
 [*][b].hkx collision isn't parsed[/b], so a reshaped model keeps its donor's collision shape.[/*]
 [/list]
