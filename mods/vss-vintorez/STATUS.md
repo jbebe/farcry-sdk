@@ -1,4 +1,4 @@
-﻿# VSS Vintorez
+# VSS Vintorez
 
 Purpose: Replace the single-player Dart Rifle with a VSS Vintorez, as data and art only.
 Stage: maintenance
