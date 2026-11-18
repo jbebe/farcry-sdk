@@ -16,18 +16,16 @@ Stage: maintenance
 - [done] Shot sound, first and third person - user 2026-11-18: validated, before the re-encode
 - [done] Reload animation, registered under the dragunov package, with 17 MOVE fragments
 - [done] Aiming Overhaul's scope drawn as the Dragunov's PSO-1 - user, with AO: "everything works perfectly"
-- [done] The shot banks 004bf5e9 and 004bf5eb re-encoded from the source clip with the current encoder, out of the IMA-ADPCM layout JackAll wrote before 2026-10-09 that gave a click and a muffled shot
+- [done] The shot banks 004bf5e9 and 004bf5eb re-encoded from the source clip with the current encoder, out of the IMA-ADPCM layout JackAll wrote before 2026-10-09 that gave a click and a muffled shot - user 2026-11-18: "vss shot is heard"
 - [scrapped] Wood on its own material (DART_RIFLE_METAL is free) for a wood-only highlight - dropped by the user
 - [scrapped] A normal map through a Generic material - dropped by the user; it would lose the worn look
 - [scrapped] The multiplayer dropped pickup - skipped on the single-player rule, it still has no barrel
 
 ## To validate
 
-- The shot sound, first and third person, after the re-encode: no click at the start, not muffled - nothing heard
-
 ## Approvals
 
-- played: da21184b 2026-11-18 - alone, with Sound Overhaul and Aiming Overhaul, then with Realism Plus Redux under them: "okay it works", "It all works nicely", "all works"
+- played: 32925996 2026-11-18 - the re-encoded shot: "vss shot is heard, everything is happy"
 - page text: 1687389e 2026-11-18 - with the load-below-AO-and-Sound-Overhaul line: "I also approve the vss page text"
 
 ## Checks

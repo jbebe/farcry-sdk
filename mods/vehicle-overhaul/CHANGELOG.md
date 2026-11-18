@@ -3,13 +3,11 @@
 Notable changes to Vehicle Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.2.0] - 2026-11-18
 
 ### Changed
 - **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says
   so in `fcse.log`.
-
-### Changed
 - **The new engine sounds play only on the car you drive.** Every other car sounds as in the game
   again: its own engine and revs, and its tyres at the game's level. Your car's tyres play 7 dB under
   the game's, where every car's were 10 dB down. A car you get out of plays the overhaul's engine-off

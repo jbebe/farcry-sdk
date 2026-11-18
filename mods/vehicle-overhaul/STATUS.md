@@ -36,7 +36,7 @@ Stage: active
 - [done] The big truck's grille with thirteen openings - user: "perfect!" (b4ce9584)
 - [done] The big truck's radiator fan spinning with the engine - user: "perfect!" (859d1f21)
 - [done] Tuning file and DevTools window, a set of values per car, with a Sounds tab
-- [new] Chassis centre of mass baked into each car's .hkx in place of the plugin's override - user's rule 2026-10-13, not started
+- [postponed] Chassis centre of mass baked into each car's .hkx in place of the plugin's override - user's rule 2026-10-13; user 2026-11-18: "not starting it now"
 - [done] The new engine sounds only on the car the player drives, under ids of the overhaul's own; cars NPCs drive play the game's own engine, revs and tyres - #37; the user chose the base game's sound for them over gear-following revs (a looping sawtooth) and one steady note (still cycled); 2026-11-12: "everything seem to be working"
 - [scrapped] Own sound ids packed from 0x00FD0000 with no gap per car - kept as shipped, user 2026-11-13: a save keeps the ids in a car's sound slots, and 1.1.0 put 0x00FD0240 in the Zil's
 - [postponed] Shooting from the windows, ported from a legacy mod - post-1.0 #11
