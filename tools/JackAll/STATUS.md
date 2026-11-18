@@ -60,7 +60,7 @@ Stage: active
 
 ## Checks
 
-- simplify: f678f5ba 2026-11-18 - since jackall-1.7.0; user: "jackall is reviewed"
+- simplify: cb1edc64 2026-11-18 - since jackall-1.7.0; 927777c6's sound id check reviewed, nothing to change
 
 ## Release order
 

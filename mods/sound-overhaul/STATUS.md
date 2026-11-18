@@ -38,7 +38,7 @@ Stage: maintenance
 
 ## Checks
 
-- simplify: 20db6f0 2026-11-15 - since sound-overhaul-1.0.3
+- simplify: cb1edc64 2026-11-18 - since sound-overhaul-1.0.3; after 20db6f0 only the re-encoded banks changed, data
 
 ## Release order
 

@@ -30,7 +30,7 @@ Stage: maintenance
 
 ## Checks
 
-- simplify: b4c4bd6 2026-11-15 - since vortex-0.6.0; after 268333f only info.json's version and package-lock.json changed
+- simplify: cb1edc64 2026-11-18 - since vortex-0.6.0; 927777c6's sound id warning reviewed, nothing to change
 
 ## Release order
 
