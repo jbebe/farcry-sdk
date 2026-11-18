@@ -27,7 +27,7 @@ Stage: maintenance
 
 ## Approvals
 
-- played: 927777c6 2026-11-18 - alone, with UFCP and DevTools: "okay it works"
+- played: 518010c0 2026-11-18 - alone, then with Sound Overhaul and Aiming Overhaul: "okay it works", "It all works nicely"
 - page text: 1687389e 2026-11-18 - with the load-below-AO-and-Sound-Overhaul line: "I also approve the vss page text"
 
 ## Checks
