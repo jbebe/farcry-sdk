@@ -65,12 +65,12 @@ Stage: active
 
 ## Approvals
 
-- played: 3aa139d0 2026-11-16 - "I approve the play"
+- played: f678f5ba 2026-11-18 - "jackall is reviewed and works fine"
 - page text: 297912af 2026-11-16 - BBCode and short message checked: "page text is validated"
 
 ## Checks
 
-- simplify: 8ddaa04e 2026-11-16 - since jackall-1.7.0
+- simplify: f678f5ba 2026-11-18 - since jackall-1.7.0; user: "jackall is reviewed"
 
 ## Release order
 
