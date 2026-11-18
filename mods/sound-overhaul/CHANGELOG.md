@@ -17,9 +17,17 @@ Notable changes to Sound Overhaul, loosely following
   shotguns, pistols and grenade launchers quieter.
 - **Its sounds on new ids, packed from 0x00FC0000,** a block no other mod uses. Nothing sounds
   different, and saves are unaffected.
+- **The Star .45 is a little quieter,** level with the Makarov. It was the hottest shot in the mod
+  and sounded harsh.
 
 ### Removed
 - **The Datsun's rougher, quieter idle.** The pickup idles as in the game as shipped.
+
+### Fixed
+- **Every shot plays as it was made.** Most of the mod's sounds had shipped in a layout the game
+  misreads, so each started with a click and some came out muffled, in places 35 dB quieter. Worst
+  hit were enemies' PKM, M249, M16, FAL, MP5, G3, sawed-off and Desert Eagle, the player's own G3,
+  Ithaca, SPAS-12 and MK19, and the grenade's far blast.
 
 ## [1.0.3] - 2026-10-18
 
