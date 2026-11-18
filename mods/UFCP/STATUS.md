@@ -30,12 +30,12 @@ Stage: active
 
 ## Approvals
 
-- played: 3dcbf56 2026-11-17
+- played: 3056ed3 2026-11-18
 - page text: 3dcbf56 2026-11-17
 
 ## Checks
 
-- simplify: 54cf034 2026-11-18 - since ufcp-1.3.1
+- simplify: 3056ed3 2026-11-18 - since ufcp-1.3.1
 
 ## Release order
 
