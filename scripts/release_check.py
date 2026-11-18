@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tempfile
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import collisions
@@ -44,6 +45,7 @@ DECLARATION = re.compile(rf"^{NOT_A_TYPE}\s*(?:[\w:<>,*&]+\s+)+[*&]*(\w+)\s*\([^
 PY_DEF = re.compile(r"^def (\w+)|^([A-Z][A-Z0-9_]{2,})\s*=")
 NULL_SETTING = re.compile(r"\{\s*\"([^\"]+)\"\s*,\s*FCSE_\w+\([^)]*\)\s*,\s*(?:nullptr|NULL|0)\s*[,}]")
 ENTRY_POINTS = {"main", "DllMain", "FCSE_Load", "FCSE_OnRegisterFunctions", "FCSE_Unload", "WinMain"}
+CLI = REPO / "tools/JackAll/src/JackAll.Cli/bin/Release/net10.0/jackall-cli.exe"
 
 
 def sources(project, suffixes, folder=""):
@@ -266,6 +268,31 @@ def game_tests(project, skip):
     return Check("game tests", "pass", f"{len(tests)} passed"), []
 
 
+def sound_banks(project):
+    """The layer's .spk banks, decoded: an IMA-ADPCM stream whose header does not count the 10 raw frames the
+    engine reads first was written by JackAll before 2026-10-09, and plays as a click and a muffled sound."""
+    banks = [path for inside, path in collisions.layer_files(project).items() if inside.endswith(".spk")]
+    if not banks:
+        return Check("sound banks", "pass", "none")
+    if not CLI.exists():
+        return Check("sound banks", "fail", "jackall-cli not built", "dotnet build tools/JackAll/src/JackAll.Cli -c Release")
+
+    with tempfile.TemporaryDirectory() as work:
+        def old_streams(job):
+            index, bank = job
+            folder = Path(work) / str(index)
+            subprocess.run([CLI, "spk", "decode", bank, "-o", folder], capture_output=True)
+            return [f"{bank.name} {ima.stem}" for ima in folder.glob("*.ima") if ima.read_bytes()[0x0E] != 10]
+
+        with ThreadPoolExecutor(8) as pool:
+            old = [s for found in pool.map(old_streams, enumerate(banks)) for s in found]
+    if old:
+        return Check("sound banks", "fail", f"{len(old)} streams in the old IMA-ADPCM layout: {', '.join(old[:3])}"
+                     + (f" and {len(old) - 3} more" if len(old) > 3 else ""),
+                     "re-encode what was built: its nibbles from the header on, through today's jackall-cli")
+    return Check("sound banks", "pass", f"{len(banks)} banks")
+
+
 # --- the bar --------------------------------------------------------------------------------------
 
 def release_order(state):
@@ -327,6 +354,7 @@ def main():
         build,
         unit_tests(project, steps),
         game,
+        sound_banks(project),
         checks["played"],
         checks["skeleton"],
         checks["assets"],
