@@ -16,6 +16,7 @@ Stage: maintenance
 - [done] Shot sound, first and third person - not yet confirmed in game
 - [done] Reload animation, registered under the dragunov package, with 17 MOVE fragments
 - [done] Aiming Overhaul's scope drawn as the Dragunov's PSO-1 - user, with AO: "everything works perfectly"
+- [new] The shot banks 004bf5e9 and 004bf5eb re-encoded: both are in the IMA-ADPCM layout JackAll wrote before 2026-10-09, a click and a muffled shot
 - [scrapped] Wood on its own material (DART_RIFLE_METAL is free) for a wood-only highlight - dropped by the user
 - [scrapped] A normal map through a Generic material - dropped by the user; it would lose the worn look
 - [scrapped] The multiplayer dropped pickup - skipped on the single-player rule, it still has no barrel
