@@ -3,6 +3,12 @@
 Notable changes to the VSS Vintorez, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+- **The shot plays as it was made.** Its two sound banks shipped in a layout the game misreads,
+  so each shot started with a click and came out muffled.
+
 ## [1.1.0] - 2026-10-09
 
 ### Added

@@ -1,4 +1,4 @@
-# VSS Vintorez
+﻿# VSS Vintorez
 
 Purpose: Replace the single-player Dart Rifle with a VSS Vintorez, as data and art only.
 Stage: maintenance
@@ -13,15 +13,17 @@ Stage: maintenance
 - [done] The name in all eleven shipped languages
 - [done] Semi-automatic, ten rounds off the sniper ammo pool, the Dragunov's jam and break behaviour
 - [done] The Dart Rifle's damage and short suppression radius kept - deliberate, a stealth weapon
-- [done] Shot sound, first and third person - not yet confirmed in game
+- [done] Shot sound, first and third person - user 2026-11-18: validated, before the re-encode
 - [done] Reload animation, registered under the dragunov package, with 17 MOVE fragments
 - [done] Aiming Overhaul's scope drawn as the Dragunov's PSO-1 - user, with AO: "everything works perfectly"
-- [new] The shot banks 004bf5e9 and 004bf5eb re-encoded: both are in the IMA-ADPCM layout JackAll wrote before 2026-10-09, a click and a muffled shot
+- [done] The shot banks 004bf5e9 and 004bf5eb re-encoded from the source clip with the current encoder, out of the IMA-ADPCM layout JackAll wrote before 2026-10-09 that gave a click and a muffled shot
 - [scrapped] Wood on its own material (DART_RIFLE_METAL is free) for a wood-only highlight - dropped by the user
 - [scrapped] A normal map through a Generic material - dropped by the user; it would lose the worn look
 - [scrapped] The multiplayer dropped pickup - skipped on the single-player rule, it still has no barrel
 
 ## To validate
+
+- The shot sound, first and third person, after the re-encode: no click at the start, not muffled - nothing heard
 
 ## Approvals
 
