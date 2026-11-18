@@ -2,7 +2,7 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [1.8.0] - 2026-11-15
+## [1.8.0] - 2026-11-18
 
 ### Added
 - **`gamemodesconfig.xml` merges across mods.** Each block of game settings (`DefaultMuzzleFlashManager`,
