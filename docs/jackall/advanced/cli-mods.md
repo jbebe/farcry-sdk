@@ -94,9 +94,9 @@ the game's own.
 
 ### Two mods that change the same value
 
-Where the app's **Deploy mods** stops with a conflict (see
-[Managing mods](/jackall/managing-mods)), the command line builds anyway and keeps the later layer's
-value. These two mods set the AK-47's magazine to 40 and to 50:
+The command line keeps the later layer's value and warns, as the app's **Deploy mods** does with
+**Stop on conflicts** unticked (see [Managing mods](/jackall/managing-mods)). These two mods set the
+AK-47's magazine to 40 and to 50:
 
 ```
 > jackall-cli mod build --game "C:\Games\Far Cry 2" --layer ak47-40-rounds.zip --layer ak47-50-rounds.zip

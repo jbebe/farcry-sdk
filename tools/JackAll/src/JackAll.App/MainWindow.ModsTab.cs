@@ -260,19 +260,16 @@ public partial class MainWindow
             List<string> warnings = [.. result.Warnings()];
             if (warnings.Count > 0)
             {
-                const int shown = 10;
-                Warn("Deployed, with something to know:\n\n"
-                     + string.Join("\n\n", warnings.Take(shown))
-                     + (warnings.Count > shown ? $"\n\n... and {warnings.Count - shown:N0} more" : ""));
+                new DeployReportWindow("Deployed", $"Deployed, with {warnings.Count:N0} thing(s) to know:", warnings)
+                    { Owner = this }.ShowDialog();
             }
         }
         catch (Exception ex)
         {
             _vm.Status = "Build failed - the game's files were not changed.";
-            MessageBox.Show(this,
-                $"{ex.Message}\n\nYour game is untouched: the new patch is written to a temporary " +
-                "file and only swapped in once it's complete.",
-                "Build failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            new DeployReportWindow("Build failed",
+                "Your game is untouched: the new patch is written to a temporary file and only swapped in once it's complete.",
+                [ex.Message]) { Owner = this }.ShowDialog();
         }
         finally
         {

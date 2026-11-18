@@ -46,16 +46,28 @@ mod with the original game and combines the differences:
 - Two mods that change **different entities** never meet.
 - Two mods that change **different fields of the same entity**, say one changes the AK-47's
   magazine and the other its damage, are merged. You get both changes.
-- Two mods that change **the same field to different values** are a real conflict. JackAll won't
-  guess which one you meant.
+- Two mods that change **the same field to different values** are a real conflict. The lower mod's
+  value wins that field, and JackAll tells you about it after the deploy.
 
 Entities aren't the only files kept in pieces. Which files are, and how to make your mod work next to
 others, is on [Containers and fragments](/jackall/fragments).
 
 ## When two mods conflict
 
-Click **Deploy mods** with both test mods ticked, and the build stops. The message names both mods,
-the entity file and the exact field that clash, here `…/Ammo/iAmmoInClip`.
+Click **Deploy mods** with both test mods ticked, and the deploy goes through. A window then lists
+every conflict: which mod won, which one lost, the entity file and the exact field, here
+`…/Ammo/iAmmoInClip`. The text can be selected and copied, to paste into a bug report. The
+50-round mod is lower in the list, so the AK-47 holds 50 rounds. To get the other value, move the
+other mod lower and deploy again.
+
+To keep both mods ticked and pick the value yourself, set the field in your own workspace, for
+example on the **Archetypes** tab. Your workspace's value settles the conflict, and the rest of
+both mods still applies. A workspace edit that leaves that field alone doesn't settle it.
+
+### Stop on conflicts
+
+Tick **Stop on conflicts**, next to **Deploy mods**, to have the deploy stop at a conflict instead.
+The message names both mods, the entity file and the field, and the order of the mods doesn't help.
 
 ![The build fails and names the field both mods change](/img/jackall/managing-mods/02-conflict.png)
 
@@ -63,16 +75,9 @@ Your game is not touched when this happens. The new archive is built in a tempor
 swapped in when it's complete.
 
 To fix it, decide which value you want and untick the other mod (1). Deploy again (2), and the
-status line says **Built patch.dat** (3).
+status line says **Built patch.dat** (3). A value set in your workspace settles it too.
 
 ![One of the two mods unticked, and the build goes through](/img/jackall/managing-mods/03-one-off.png)
-
-To keep both mods ticked, set the field to the value you want in your own workspace instead, for
-example on the **Archetypes** tab. Your workspace's value settles the conflict, and the rest of
-both mods still applies. A workspace edit that leaves that field alone doesn't settle it.
-
-Moving one of the mods up or down doesn't fix a conflict. Order decides between whole files, not
-between two values of one field.
 
 ## Plugins
 

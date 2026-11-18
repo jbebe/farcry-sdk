@@ -26,10 +26,18 @@ Save-Shot $slug '01-mods' -Callouts $arrows[0], (Find-Ui -Scope $row -Type Check
 
 $deploy = Find-Ui -Type Button -Name 'Deploy mods'
 Invoke-Ui $deploy
+$listed = Wait-Ui { Find-ShotWindow 'Deployed' } -Timeout 120 -What 'the deploy to list the conflict'
+if ((Get-UiValue (Find-Ui -Scope $listed -Id DeployReportText)) -notlike '*iAmmoInClip*') { throw 'The deploy listed something else' }
+Invoke-Ui (Find-Ui -Scope $listed -Id DeployReportOk)
+Wait-ShotStatus 'Built patch.dat*' | Out-Null
+Add-SessionPatch
+
+Set-UiToggle (Find-Ui -Type CheckBox -Name 'Stop on conflicts') $true
+Invoke-Ui $deploy
 $failed = Wait-Ui { Find-ShotWindow 'Build failed' } -Timeout 120 -What 'the conflict to fail the build'
-if ((Get-DialogText $failed) -notmatch 'iAmmoInClip') { throw 'The build failed for another reason' }
-Save-Shot $slug '02-conflict' -Window $failed -Screen
-Push-ShotButton $failed 'OK'
+if ((Get-UiValue (Find-Ui -Scope $failed -Id DeployReportText)) -notlike '*iAmmoInClip*') { throw 'The build failed for another reason' }
+Save-Shot $slug '02-conflict' -Window $failed
+Invoke-Ui (Find-Ui -Scope $failed -Id DeployReportOk)
 
 $row50 = Find-UiByText -Scope $grid -Type DataItem -Like 'ak47-50*'
 $active = Find-Ui -Scope $row50 -Type CheckBox

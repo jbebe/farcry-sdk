@@ -196,6 +196,12 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
         await BuildXrefsAsync();
     }
 
+    public bool StopOnConflict
+    {
+        get => Config.StopOnConflict;
+        set { Config.StopOnConflict = value; OnPropertyChanged(); SaveConfig(); }
+    }
+
     public void SaveConfig()
     {
         Config.GamePath = Install?.RootPath ?? Config.GamePath;

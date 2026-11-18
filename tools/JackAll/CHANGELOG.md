@@ -41,6 +41,11 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   `manifest.tsv`; `record` writes the line for a new fixture. JackAll's README, Building, has the steps.
 
 ### Changed
+- **Deploy mods lets the lower mod win a value two mods set differently**, as Vortex and `jackall-cli`
+  do, and lists every such conflict after the deploy. Tick **Stop on conflicts** on the Mods tab to
+  have it stop there instead.
+- **What a deploy has to say opens as text you can select and copy**, every conflict and note
+  rather than the first ten. A failed deploy shows its reason the same way.
 - **The Map tab draws with Direct3D 11 instead of OpenGL** (#66), so it runs on any Windows 10 PC:
   on the graphics card where its driver offers Direct3D 10 or better, and on Windows' own software
   renderer where it does not, as with only the basic display driver or over remote desktop. World 1

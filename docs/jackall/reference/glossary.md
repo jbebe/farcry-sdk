@@ -27,8 +27,9 @@ soldier. [Tune the AI](/jackall/ai#brains)
 **Component.** One part of an entity with one job: its model, its animation, its sounds, its weapon
 behaviour. [The value editor in depth](/jackall/value-editor#the-layout)
 
-**Conflict.** Two mods that set the same field to different values. **Deploy mods** stops and names
-it. [When two mods conflict](/jackall/managing-mods#when-two-mods-conflict)
+**Conflict.** Two mods that set the same field to different values. The lower mod's value wins, and
+**Deploy mods** names it, or stops there with **Stop on conflicts** ticked.
+[When two mods conflict](/jackall/managing-mods#when-two-mods-conflict)
 
 **Container.** A game file JackAll keeps in pieces, such as an entity library, the text table or a
 HUD package, so a mod ships only the pieces it changes. [Containers and fragments](/jackall/fragments)

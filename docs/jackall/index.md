@@ -51,8 +51,8 @@ JackAll saves your original `patch.dat` once as `patch.dat.vanilla`, and every b
 backup again, never from the file that happens to be there. So building twice gives you the exact
 same bytes, turning a mod off really removes it, and a failed build leaves the game untouched. If
 two mods change different parts of the same file they get merged instead of one of them winning
-silently; if they set the same value differently, **Deploy mods** stops and names it, unless your
-workspace sets that value too. **Check for
+silently; if they set the same value differently, the lower mod wins it and **Deploy mods** names
+the conflict, unless your workspace sets that value too. **Check for
 dead edits** finds edits that a later entity library overrides, which is the kind of change that
 looks fine in the tool and does nothing in game. A mod can also carry a `plugins\` folder, and that
 one goes to `bin\plugins\` for [FCSE](/fcse) instead of into the archive. See
@@ -294,10 +294,10 @@ a rifle and the other changed a jeep. JackAll splits the file into one piece per
 only that piece, on a path like
 `worlds\world1\generated\entitylibrary.fcb\weaponproperties\primary\ak47.xml`. Two mods on different
 entities never meet. Two mods on different fields of the same entity get merged against the original
-version. Only a real conflict, same field with two different values, needs you: **Deploy mods**
-stops and names the field instead of quietly picking one, and a value you set in your workspace
-settles it. The command line builds anyway, keeps the
-later mod's value and warns. Entity libraries aren't the only files kept in pieces; see
+version. Only a real conflict, same field with two different values, needs a decision: the later
+mod's value wins and **Deploy mods** names the field instead of picking in silence, and a value you
+set in your workspace settles it. Tick **Stop on conflicts** to have the deploy stop there instead.
+Entity libraries aren't the only files kept in pieces; see
 [Containers and fragments](/jackall/fragments).
 
 ## CLI

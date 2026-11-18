@@ -59,9 +59,10 @@ Trim the workspace to the mod's own files. See
 replaces does, so the game can't read it: a WAV or MP3 picked for a sound bank, say. New audio goes
 in through the bank's own **Import…**; see [Replace the audio](/jackall/sound-effects#replace-the-audio).
 
-**Deploy mods stops and names a field.** Two mods set the same value differently. Untick one of
-them, or set the value you want in your workspace, and deploy again. See
-[When two mods conflict](/jackall/managing-mods#when-two-mods-conflict).
+**Deploy mods names a conflict.** Two mods set the same value differently, and the lower one's
+value is in the game. To get the other value, move that mod lower, untick one of them, or set the
+value you want in your workspace, and deploy again. With **Stop on conflicts** ticked, the deploy
+stops there instead. See [When two mods conflict](/jackall/managing-mods#when-two-mods-conflict).
 
 **Deploy failed for another reason.** The game is untouched. Close the game if it's running and try
 again. See [Something went wrong](/jackall/installing-mods#something-went-wrong).

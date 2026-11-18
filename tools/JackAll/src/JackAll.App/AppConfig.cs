@@ -21,6 +21,7 @@ public sealed class AppConfig
     private const string GameSection = "game";
     private const string ModsSection = "mods";
     private const string UiSection = "ui";
+    private const string DeploySection = "deploy";
     private const char DisabledMarker = '!';
 
     private static string ExeDir => AppContext.BaseDirectory;
@@ -128,6 +129,9 @@ public sealed class AppConfig
 
     public AppTheme Theme { get; set; } = AppTheme.System;
 
+    /// <summary>Deploy stops at a value two mods set differently.</summary>
+    public bool StopOnConflict { get; set; }
+
     public sealed record ModEntry(string Path, bool Enabled);
 
     public static AppConfig Load()
@@ -150,6 +154,8 @@ public sealed class AppConfig
         {
             config.Theme = theme;
         }
+
+        config.StopOnConflict = bool.TryParse(data[DeploySection]["stoponconflict"]?.Trim(), out bool stop) && stop;
 
         string workspaceValue = data[ModsSection]["0"]?.Trim() ?? string.Empty;
         if (workspaceValue.Length > 0)
@@ -207,6 +213,11 @@ public sealed class AppConfig
         data.Sections.AddSection(UiSection);
         data.Sections.GetSectionData(UiSection).Comments.Add(" theme is system, light or dark - system follows the Windows app mode");
         data[UiSection]["theme"] = Theme.ToString().ToLowerInvariant();
+
+        data.Sections.AddSection(DeploySection);
+        data.Sections.GetSectionData(DeploySection).Comments.Add(
+            " stoponconflict true stops a deploy where two mods set one value differently; false lets the lower mod win");
+        data[DeploySection]["stoponconflict"] = StopOnConflict ? "true" : "false";
 
         new FileIniDataParser().WriteFile(ConfigPath, data);
     }

@@ -72,6 +72,9 @@
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Content="Deploy mods" Click="BuildAndApply_Click"
                                     Style="{StaticResource PrimaryButton}" />
+                            <CheckBox DockPanel.Dock="Right" Content="Stop on conflicts" IsChecked="{Binding StopOnConflict}"
+                                      VerticalAlignment="Center" Margin="0,0,16,0"
+                                      ToolTip="Ticked, Deploy stops where two mods set the same value differently. Unticked, the mod lower in the list wins that value. Either way, the deploy lists every conflict." />
                             <Button DockPanel.Dock="Right" Content="Revert to original" Click="RestoreVanilla_Click"
                                     Style="{StaticResource ToolbarButton}" Margin="0,0,16,0" />
                             <StackPanel Orientation="Horizontal">

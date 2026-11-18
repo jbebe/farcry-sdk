@@ -406,7 +406,8 @@ public sealed partial class MainViewModel
             throw new InvalidOperationException("No game install is loaded.");
         }
         IReadOnlyList<IModLayer> layers = Layers;
-        BuildResult result = await Task.Run(() => PatchBuilder.Build(install, layers, vfs.ReadOriginal, vfs.Definitions));
+        BuildResult result = await Task.Run(() => PatchBuilder.Build(install, layers, vfs.ReadOriginal, vfs.Definitions,
+            resolveFragmentConflictsWithLoadOrder: !StopOnConflict));
         await Task.Run(vfs.ReloadPatchArchive);
         return result;
     }

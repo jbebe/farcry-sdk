@@ -43,7 +43,7 @@ Stage: active
 - [done] Dark theme
 - [done] jackall-cli with --json, and jackall-mi for the Vortex extension
 - [done] Test fixtures restored from a Steam install and two Nexus mods by manifest.tsv - fixtures restore/record, a Stop hook for unlisted files
-- [new] Deploy never stops on a clash: the lower mod wins each clashing value, as in jackall-mi and the CLI, and a dialog lists the clashes with their values named as the mods spell them; the manual pages rewritten - the user sees the dialog once tested
+- [done] Stop on conflicts, a Mods-tab box, off by default: off, the lower mod wins a value two mods set differently, as in jackall-mi and the CLI; on, Deploy stops there; the conflicts are listed either way, as selectable text in a window with only OK
 - [postponed] Tutorial docs and screenshot scripts - run-all not re-run since the UI-script refactor; verify-in-game.ps1 never deployed; postponed by the user past 1.8.0
 - [scrapped] Map editor on FC2Editor/FCE over host IPC - user: the wrong direction; the AVATAR port (18e58eab) is a quarry only
 - [scrapped] Map tab per-sector view culling - culled almost nothing, refilled streams on turns (d8b0f884)
@@ -61,6 +61,8 @@ Stage: active
 - Map tab on a PC without a proper graphics driver or over remote desktop (#66): it draws on WARP, or says why - forced here only; not yet verified by the user who reported it, who can test only once released
 - Aiming Overhaul's muzzle light and Difficulty Overhaul's hit locations, both from gamemodesconfig.xml fragments, in one game - unplayed
 - The AI tab's behaviour odds saved as a fragment of gamemodesconfig.xml - never run in the UI
+- Stop on conflicts with Aiming Overhaul then VSS Vintorez: off, Deploy goes through and lists the Dart Rifle's five scope values; on, it stops - UIA run on a scratch game copy only, list read but never seen drawn
+- The deploy report window: its look in both themes, and selecting and copying its text - never seen
 
 ## Approvals
 

@@ -109,10 +109,11 @@ order, comparing each with the original:
 - **Different fragments of one file** all land.
 - **Different values in the same fragment** all land.
 - **The same value changed to the same thing** is fine.
-- **The same value changed to different things** is a conflict. **Deploy mods** stops and names it,
-  unless your workspace sets that value too: your workspace's value settles it. See
-  [When two mods conflict](/jackall/managing-mods#when-two-mods-conflict). The command line keeps
-  the later mod's value and warns, and the Files tab shows the later mod's value.
+- **The same value changed to different things** is a conflict. The later mod's value wins and the
+  deploy names the conflict, unless your workspace sets that value too: your workspace's value
+  settles it. With **Stop on conflicts** ticked, **Deploy mods** stops there instead. See
+  [When two mods conflict](/jackall/managing-mods#when-two-mods-conflict). The Files tab shows the
+  later mod's value.
 - **Two mods adding the same new fragment** with different contents is a conflict too.
 - **Items added to the same list,** such as dependencies of one resource, are all kept.
 
@@ -140,8 +141,8 @@ starts with, and a new object into the `main` mission layer.
 A fragment can change or add a piece, but not remove one. To delete placed objects or archetypes, a
 mod lists them in the container's `_layout.xml`, which the Map tab writes when you delete something.
 The same file moves objects between mission layers. If another mod changes an object you delete,
-**Deploy mods** stops and asks you to drop one of the two; the command line keeps the object and
-warns.
+the deploy keeps the object and says so; with **Stop on conflicts** ticked, **Deploy mods** stops
+and asks you to drop one of the two.
 
 ## Where fragments come from
 
