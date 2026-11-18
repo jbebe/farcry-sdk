@@ -53,8 +53,8 @@ add_library(UFCP SHARED
   "src/options/max_frame_rate.cpp"
 )
 
-# timeBeginPeriod, for the loading screen's frame pacing; Direct3DCreate9, for the device's draw call.
-target_link_libraries(UFCP PRIVATE winmm d3d9)
+# timeBeginPeriod, for the loading screen's frame pacing.
+target_link_libraries(UFCP PRIVATE winmm)
 
 # src/ on the path so every #include reads from the root of this tree - "fixes/fixes.h", never
 # "../fixes/fixes.h" - and moving a file between folders does not rewrite anyone's includes.

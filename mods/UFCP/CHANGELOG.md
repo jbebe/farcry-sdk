@@ -11,6 +11,9 @@ Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachang
   so they shifted by less than a pixel as you walked or the hands swayed.
 - **Monocular** turns with the mouse the way a scope does at its zoom. The zoomed view turned as fast
   as the unzoomed one, so the smallest movement jumped across the picture.
+- **Grass under spot lights** is lit under dgVoodoo and DLSS injectors too. The fix needed a Direct3D
+  device of its own to find the game's shaders, which dgVoodoo does not allow, so there the grass
+  stayed dark.
 
 ### Changed
 - **Needs FCSE 1.5.0.** Built for its plugin API 10; an older FCSE leaves this mod unloaded and says

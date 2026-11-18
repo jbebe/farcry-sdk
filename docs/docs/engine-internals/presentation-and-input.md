@@ -743,6 +743,16 @@ Overhaul, Third Person and DevTools slot 15; FCSE chains them. Aiming Overhaul, 
 Inventory Overhaul and DevTools free their objects at slot 21, Sky Overhaul at the teardown. DevTools
 draws its overlay at the `Present` call inside slot 16.
 
+A `.vso` reaches Direct3D through the engine as well. The engine's vertex shader object loads one at
+slot 4 of its vtable (Steam vtable `0x10E52868`, method `0x1041A990`, `__thiscall`, `ret 8`, the
+`.vso` file's bytes as its first argument). It reads the parameter table, then calls the device's
+`CreateVertexShader` with the bytecode at the offset the header gives, storing the shader at
+`this+0x13C`, and does not check the result **(RE-verified, Steam v1.03)**. At the load of that call
+(Steam `0x1041A9ED`, GOG `0x1040CB9D`) its arguments, the device, the bytecode and the out pointer,
+are on the stack, so a mid-hook there can hand the device other bytecode. UFCP swaps the grass
+spot-light passes there. The address library carries neither address; a pattern of the call finds
+the site in both builds.
+
 ### Texture binds, before Direct3D
 
 A shader parameter that holds a texture binds it with a small method of its own, `__thiscall(this,

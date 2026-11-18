@@ -16,7 +16,7 @@ Stage: active
 - [done] Many-core startup crash on 32+ logical processors
 - [done] Hybrid CPUs run on the performance cores where they have 8+ threads
 - [done] Map icons sit still on the paper instead of shifting by less than a pixel (#40) - unreleased; user: "they look as if they are glued to the map" (2026-11-12)
-- [done] Grass lit under headlights and flashlights - user: "now its perfect" (2026-10-12); 1.3.1's shadow-casting lights fix unseen
+- [done] Grass lit under headlights and flashlights - user: "now its perfect" (2026-10-12); 1.3.1's shadow-casting lights fix unseen; swapped at the engine's own shader creation with no Direct3D hooks, so it works under dgVoodoo and DLSS injectors - unreleased; user 2026-11-18 under dgVoodoo with DLSS 5: "It works" (#63)
 - [done] Field of view 65-140 for the view on foot, cutscenes and ladders
 - [done] Weapon field of view, the same as the view by default or an angle of its own
 - [done] Maximum frame rate through the engine's limiter, 60 Hz by default
@@ -35,7 +35,7 @@ Stage: active
 
 ## Checks
 
-- simplify: 0a35648 2026-11-17 - since ufcp-1.3.1
+- simplify: 54cf034 2026-11-18 - since ufcp-1.3.1
 
 ## Release order
 

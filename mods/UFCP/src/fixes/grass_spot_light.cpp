@@ -22,17 +22,21 @@
 // colour at c48. An omni light's pass has both bugs too and stays as it shipped: the only one measured
 // is drawn for a few seconds after a load at the player, reaching tens of metres or more, and what it
 // would do to the grass unscaled has not been seen.
+//
+// The swap is made where the engine's vertex shader object hands its bytecode to the device, Steam
+// Dunia.dll 0x1041A9ED, GOG 0x1040CB9D.
 #include "fcse_api.h"
 
 #include <d3d9.h>
-#include <windows.h>
 
 #include <bit>
+#include <cstdint>
 #include <iterator>
 #include <vector>
 
 namespace {
-    constexpr size_t kCreateVertexShaderSlot = 91;
+    // The load of the device's CreateVertexShader, its device, bytecode and out pointer pushed.
+    FCSE::Relocation<uint8_t*> g_create{FCSE::Pattern("8B 81 6C 01 00 00 FF D0 56 8B CD E8")};
 
     // Shader tokens as d3d9types.h lays them out.
     constexpr DWORD kVsVersion3 = 0xFFFE0300;
@@ -154,60 +158,43 @@ namespace {
         return out;
     }
 
-    // Every IDirect3DDevice9 shares one vtable, so a throwaway device of our own names its slots.
-    void* DeviceSlot(size_t slot) {
-        IDirect3D9* d3d = Direct3DCreate9(D3D_SDK_VERSION);
-        if (d3d == nullptr) {
-            return nullptr;
-        }
-        D3DPRESENT_PARAMETERS present = {};
-        present.Windowed = TRUE;
-        present.SwapEffect = D3DSWAPEFFECT_DISCARD;
-        present.hDeviceWindow = GetDesktopWindow();
-        IDirect3DDevice9* device = nullptr;
-        void* function = nullptr;
-        if (SUCCEEDED(d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, present.hDeviceWindow,
-                                        D3DCREATE_SOFTWARE_VERTEXPROCESSING, &present, &device))) {
-            function = (*reinterpret_cast<void***>(device))[slot];
-            device->Release();
-        }
-        d3d->Release();
-        return function;
-    }
-
-    using CreateVertexShaderFn = HRESULT(__stdcall*)(IDirect3DDevice9*, const DWORD*, IDirect3DVertexShader9**);
-    CreateVertexShaderFn g_original = nullptr;
-
-    HRESULT __stdcall CreateVertexShaderDetour(IDirect3DDevice9* device, const DWORD* engine,
-                                               IDirect3DVertexShader9** shader) {
+    // Swaps in the rewritten pass when the device accepts it.
+    void CreateHandler(FCSE_MidHookContext* ctx) {
+        auto* stack = reinterpret_cast<void**>(ctx->esp);
+        auto* device = static_cast<IDirect3DDevice9*>(stack[0]);
+        const auto* engine = static_cast<const DWORD*>(stack[1]);
         const Shape shape = ShapeOf(engine);
-        if (shape.IsSpotLightOverGrass()) {
-            const uint32_t crc = FCSE::Crc32(engine, shape.size * sizeof(DWORD));
-            const HRESULT created = g_original(device, Rewritten(engine, shape).data(), shader);
-            if (SUCCEEDED(created)) {
-                FCSE::Logf("grass under spot lights: the engine's pass %08X rewritten", crc);
-                return created;
-            }
+        if (!shape.IsSpotLightOverGrass()) {
+            return;
+        }
+        // Read by the engine's call once this returns.
+        thread_local std::vector<DWORD> t_ours;
+        t_ours = Rewritten(engine, shape);
+
+        const uint32_t crc = FCSE::Crc32(engine, shape.size * sizeof(DWORD));
+        IDirect3DVertexShader9* trial = nullptr;
+        if (FAILED(device->CreateVertexShader(t_ours.data(), &trial))) {
             FCSE::Logf("grass under spot lights: the device refused the engine's pass %08X rewritten - that grass "
                        "stays dark",
                        crc);
+            return;
         }
-        return g_original(device, engine, shader);
+        trial->Release();
+        stack[1] = t_ours.data();
+        FCSE::Logf("grass under spot lights: the engine's pass %08X rewritten", crc);
     }
 }
 
 void ApplyGrassSpotLightFix() {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
-    void* create = DeviceSlot(kCreateVertexShaderSlot);
-    if (create == nullptr) {
-        api->Log("grass under spot lights: no Direct3D 9 device could be made to find the shader call - "
+    if (!g_create) {
+        api->Log("grass under spot lights: the engine's vertex shader creation was not found in this build - "
                  "grass stays dark");
         return;
     }
 
-    if (api->Hook(create, reinterpret_cast<void*>(&CreateVertexShaderDetour),
-                  reinterpret_cast<void**>(&g_original))) {
+    if (api->MidHook(reinterpret_cast<void*>(g_create.address()), &CreateHandler)) {
         api->Log("grass under spot lights: watching for the engine's grass light pass");
     }
 }
