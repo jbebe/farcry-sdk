@@ -27,7 +27,7 @@ Stage: maintenance
 
 ## Approvals
 
-- played: 518010c0 2026-11-18 - alone, then with Sound Overhaul and Aiming Overhaul: "okay it works", "It all works nicely"
+- played: da21184b 2026-11-18 - alone, with Sound Overhaul and Aiming Overhaul, then with Realism Plus Redux under them: "okay it works", "It all works nicely", "all works"
 - page text: 1687389e 2026-11-18 - with the load-below-AO-and-Sound-Overhaul line: "I also approve the vss page text"
 
 ## Checks
