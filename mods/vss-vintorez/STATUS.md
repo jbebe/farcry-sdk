@@ -27,7 +27,7 @@ Stage: maintenance
 
 ## Approvals
 
-- played: 276998b 2026-10-09 - with Aiming Overhaul: "everything works perfectly" (the PSO-1 from its own data)
+- played: 927777c6 2026-11-18 - alone, with UFCP and DevTools: "okay it works"
 - page text: 1687389e 2026-11-18 - with the load-below-AO-and-Sound-Overhaul line: "I also approve the vss page text"
 
 ## Checks
