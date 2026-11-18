@@ -32,7 +32,7 @@ Stage: maintenance
 
 ## Checks
 
-- simplify: 20db6f0 2026-11-15 - since mod-vss-1.1.0
+- simplify: 7807a249 2026-11-18 - since mod-vss-1.1.0; after 20db6f0 only the re-encoded banks changed, data
 
 ## Release order
 
