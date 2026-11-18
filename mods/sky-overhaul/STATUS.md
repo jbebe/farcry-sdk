@@ -47,8 +47,6 @@ Stage: maintenance
 
 ## To validate
 
-- Night, clear sky: stars and the Milky Way about half as bright as before 1.6.0, the moon and the sky between them unchanged - fc2drive only
-
 ## Approvals
 
 - played: 844c90c 2026-11-17 - the 1.6.0 play check, confirmed by the user as the approval

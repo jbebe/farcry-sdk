@@ -23,8 +23,6 @@ Stage: maintenance
 
 ## To validate
 
-- The shot sound, first and third person - not confirmed
-
 ## Approvals
 
 - played: da21184b 2026-11-18 - alone, with Sound Overhaul and Aiming Overhaul, then with Realism Plus Redux under them: "okay it works", "It all works nicely", "all works"

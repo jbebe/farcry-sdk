@@ -23,12 +23,10 @@ Stage: active
 
 ## To validate
 
-- The material editor's new path, in game - untested
-
 ## Approvals
 
-- played: f8ab839 2026-10-25 - implied by the blenderfc2-0.3.3 release
-- page text: f8ab839 2026-10-25 - implied by the blenderfc2-0.3.3 release; the BBCode predates 0.4.0 and lists a new material as impossible
+- played: d04a2176 2026-11-18 - "I read all texts and played all mods and validated all lines"
+- page text: d04a2176 2026-11-18 - "I read all texts and played all mods and validated all lines"
 
 ## Checks
 

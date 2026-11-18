@@ -71,7 +71,7 @@ Stage: active
 ## Approvals
 
 - played: 631b0978 2026-11-17 - "all is perfect!"
-- page text: 33ecba7f 2026-11-17 - the user read nexus-description.bbcode and nexus-summary.txt
+- page text: d04a2176 2026-11-18 - "I read all texts and played all mods and validated all lines"
 
 ## Checks
 

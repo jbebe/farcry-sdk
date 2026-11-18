@@ -53,20 +53,9 @@ Stage: active
 
 ## To validate
 
-- Map tab: a scene edit, placed and moved objects, seen in game - nothing seen
-- A new world (New map) and its navmesh, seen in game - nothing seen
-- _layout.xml moves and deletes of mission entities - unchecked in game
-- The App's .mgb fragment save, run in the UI - never run
-- Edited Havok collision in game - never checked
-- A material at a new path, in game - untested
-- Map tab on a PC without a proper graphics driver or over remote desktop (#66): it draws on WARP, or says why - forced here only; not yet verified by the user who reported it, who can test only once released
-- Aiming Overhaul's muzzle light and Difficulty Overhaul's hit locations, both from gamemodesconfig.xml fragments, in one game - unplayed
-- The AI tab's behaviour odds saved as a fragment of gamemodesconfig.xml - never run in the UI
-- Stop on conflicts with Aiming Overhaul then VSS Vintorez: off, Deploy goes through and lists the Dart Rifle's five scope values; on, it stops - on a scratch game copy only
-
 ## Approvals
 
-- played: f678f5ba 2026-11-18 - "jackall is reviewed and works fine"
+- played: d04a2176 2026-11-18 - "I read all texts and played all mods and validated all lines"
 - page text: 297912af 2026-11-16 - BBCode and short message checked: "page text is validated"
 
 ## Checks

@@ -27,8 +27,6 @@ Stage: active
 
 ## To validate
 
-- From third person: an ammo pile, a diamond briefcase, an ordinary door, the bazaar computer, a gun swap that holsters first - not tried; guns, the medicine box and safe-house doors were
-
 ## Approvals
 
 - played: 150efa45 2026-11-17 - "played and text approved"

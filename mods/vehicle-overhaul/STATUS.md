@@ -55,13 +55,10 @@ Stage: active
 
 ## To validate
 
-- The Jeep Liberty's automatic gearbox - unfelt
-- The Jeep Liberty's engine sound - no verdict
-
 ## Approvals
 
-- played: ccf0eed 2026-11-08 - implied by the vehicle-overhaul-1.1.0 release
-- page text: ccf0eed 2026-11-08 - implied by the vehicle-overhaul-1.1.0 release
+- played: d04a2176 2026-11-18 - "I read all texts and played all mods and validated all lines"
+- page text: d04a2176 2026-11-18 - "I read all texts and played all mods and validated all lines"
 
 ## Checks
 
