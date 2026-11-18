@@ -16,8 +16,8 @@ Stage: maintenance
 - [done] Shot sound, first and third person - not yet confirmed in game
 - [done] Reload animation, registered under the dragunov package, with 17 MOVE fragments
 - [done] Aiming Overhaul's scope drawn as the Dragunov's PSO-1 - user, with AO: "everything works perfectly"
-- [new] Wood on its own material (DART_RIFLE_METAL is free) for a wood-only highlight - open option, not picked
-- [new] A normal map through a Generic material - open option, not picked; loses the worn look
+- [scrapped] Wood on its own material (DART_RIFLE_METAL is free) for a wood-only highlight - dropped by the user
+- [scrapped] A normal map through a Generic material - dropped by the user; it would lose the worn look
 - [scrapped] The multiplayer dropped pickup - skipped on the single-player rule, it still has no barrel
 
 ## To validate
@@ -27,7 +27,7 @@ Stage: maintenance
 ## Approvals
 
 - played: 276998b 2026-10-09 - with Aiming Overhaul: "everything works perfectly" (the PSO-1 from its own data)
-- page text: 83ea468 2026-10-09 - implied by the mod-vss-1.1.0 release; changed since in 299b0f4 to ab21b3d
+- page text: 0f7dc15 2026-11-18 - "I read it its okay"
 
 ## Checks
 
