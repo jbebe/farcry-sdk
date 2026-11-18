@@ -40,6 +40,7 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
         GuardVanillaBackup(install, settings.Force);
 
         List<IModLayer> layers = [.. settings.Layers.Select(ModPipeline.OpenLayer)];
+        GuardSoundIds(layers, settings.Layers);
         BuildResult result = ModPipeline.Build(install, layers, new SyncProgress(JsonOutput.Report));
 
         if (settings.Json)
@@ -98,6 +99,19 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
             AnsiConsole.MarkupLine($"[yellow]Warning:[/] {warning.EscapeMarkup()}");
         }
         return 0;
+    }
+
+    /// <summary>Refuses a build that would install two banks with different records under one sound id.</summary>
+    private static void GuardSoundIds(List<IModLayer> layers, string[] paths)
+    {
+        IReadOnlyList<SpkIdClash> clashes = SpkIdClashes.Find(layers);
+        if (clashes.Count == 0)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            string.Join(" ", clashes.Select(c => c.Describe(layer => paths[layers.IndexOf(layer)]))));
     }
 
     /// <summary>

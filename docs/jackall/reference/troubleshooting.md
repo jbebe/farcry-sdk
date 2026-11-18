@@ -111,5 +111,8 @@ with `bin\FCSE.exe`.
 patch doesn't look like the game's own. Verify the game's files first. See
 [Build](/jackall/cli-mods#build).
 
+**`mod build` stops because two sound banks hold the same ids.** Two mods, or one, gave different
+records in two banks the same id. Give one bank's records new ids. See [Build](/jackall/cli-mods#build).
+
 **`mod build` succeeded but two mods conflicted.** The command line keeps the later layer's value and
 prints a warning. See [Two mods that change the same value](/jackall/cli-mods#two-mods-that-change-the-same-value).

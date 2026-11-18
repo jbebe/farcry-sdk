@@ -317,82 +317,29 @@ public sealed class SpkRecord
 /// </summary>
 public sealed class SpkPackage
 {
-    public const uint Magic = 0x53504B01;
+    public const uint Magic = SpkFraming.Magic;
 
     public required IReadOnlyList<SpkRecord> Records { get; init; }
 
-    public static SpkPackage Parse(byte[] data)
+    public static SpkPackage Parse(byte[] data) => new()
     {
-        if (data.Length < 8 || BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(0)) != Magic)
+        Records = [.. SpkFraming.Read(data).Select(frame =>
         {
-            throw new InvalidDataException(
-                "Not a Far Cry 2 .spk (no 0x53504B01 header) - this viewer doesn't support this file's format.");
-        }
-
-        uint count = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(4));
-        if (count > 1_000_000)
-        {
-            throw new InvalidDataException($"Implausible record count {count}.");
-        }
-
-        int idTableStart = 8;
-        int recordsStart = idTableStart + checked((int)count * 4);
-        if (recordsStart > data.Length)
-        {
-            throw new InvalidDataException("Truncated id table.");
-        }
-
-        var ids = new uint[count];
-        for (int i = 0; i < count; i++)
-        {
-            ids[i] = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(idTableStart + i * 4));
-        }
-
-        var records = new List<SpkRecord>((int)count);
-        var cursor = new ByteCursor(data);
-        cursor.Position = recordsStart;
-        for (int i = 0; i < count; i++)
-        {
-            uint preambleWordCount = cursor.ReadU32();
-            if (preambleWordCount > 4096)
+            SpkRecordCore? core = ParseCore(frame.Payload);
+            return new SpkRecord
             {
-                throw new InvalidDataException($"Implausible preamble word count {preambleWordCount} in record {i}.");
-            }
-
-            var preamble = new uint[preambleWordCount];
-            for (int w = 0; w < preambleWordCount; w++)
-            {
-                preamble[w] = cursor.ReadU32();
-            }
-
-            uint size = cursor.ReadU32();
-            if (size > int.MaxValue || cursor.Position + (long)size > data.Length)
-            {
-                throw new InvalidDataException(
-                    $"Truncated payload in record {i} (wanted {size} bytes at 0x{cursor.Position:X}).");
-            }
-
-            byte[] payload = cursor.ReadBytes((int)size);
-            // next record is 4-byte aligned
-            byte[] padding = cursor.ReadBytes(Math.Min(PadLength(cursor.Position), cursor.Remaining));
-
-            SpkRecordCore? core = ParseCore(payload);
-            records.Add(new SpkRecord
-            {
-                Id = ids[i],
-                PreambleWords = preamble,
-                Payload = payload,
-                Padding = padding,
+                Id = frame.Id,
+                PreambleWords = frame.Preamble,
+                Payload = frame.Payload,
+                Padding = frame.Padding,
                 Core = core,
-                SimpleFixed68 = core?.Type == SpkRecordType.SimpleFixed68 ? ParseSimpleFixed68(payload) : null,
+                SimpleFixed68 = core?.Type == SpkRecordType.SimpleFixed68 ? ParseSimpleFixed68(frame.Payload) : null,
                 TransformedFixed128 = core?.Type == SpkRecordType.TransformedFixed128
-                    ? ParseTransformedFixed128(payload)
+                    ? ParseTransformedFixed128(frame.Payload)
                     : null,
-            });
-        }
-
-        return new SpkPackage { Records = records };
-    }
+            };
+        })],
+    };
 
     /// <summary>The sample rate for a <see cref="SpkRecordType.FlatCopy"/> record's audio, read from
     /// the sibling <see cref="TransformedFixed128SubHeader"/> record whose
@@ -419,8 +366,6 @@ public sealed class SpkPackage
         flatCopyRecord.FlatCopyAudioStream is { } audio && TryGetAudioDescriptor(flatCopyRecord) is { } t128
             ? t128.AudioByteLength == (uint)audio.Length
             : null;
-
-    private static int PadLength(int length) => (4 - length % 4) % 4;
 
     private static SpkRecordCore? ParseCore(byte[] payload)
     {

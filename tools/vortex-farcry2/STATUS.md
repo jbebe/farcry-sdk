@@ -12,6 +12,7 @@ Stage: maintenance
 - [done] Deploy builds patch.dat through mod build; purge restores the vanilla archives
 - [done] Load order page - the bottom mod wins
 - [done] Conflicts notification listing every change a mod lost
+- [done] Warning naming two mods whose sound banks hold different records under one id; both installed - user: "I confirm the vortex run to work"
 - [done] Fragment merging of every container JackAll splits - controls, .mgb, brains, fonts, depload, MOVE, strings
 - [done] FCSE fetched from Nexus when a plugin mod needs it, warning icon in the FCSE column
 - [done] FCSE made Play's default launcher

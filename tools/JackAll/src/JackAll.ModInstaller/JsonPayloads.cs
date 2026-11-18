@@ -45,6 +45,17 @@ internal sealed record BuildPayload
     public IReadOnlyList<string> PluginCollisions { get; init; } = [];
     public IReadOnlyList<BuildLayerPayload> Layers { get; init; } = [];
     public IReadOnlyList<ConflictPayload> Conflicts { get; init; } = [];
+    /// <summary>Installed anyway: jackall-cli stops on these, a Vortex deploy only warns.</summary>
+    public IReadOnlyList<SoundIdClashPayload> SoundIdClashes { get; init; } = [];
+}
+
+/// <summary>Two banks holding different records under the same ids - see <c>SpkIdClash</c>.</summary>
+internal sealed record SoundIdClashPayload
+{
+    public IReadOnlyList<string> Layers { get; init; } = [];
+    public IReadOnlyList<string> Banks { get; init; } = [];
+    public IReadOnlyList<uint> Ids { get; init; } = [];
+    public string Message { get; init; } = string.Empty;
 }
 
 internal sealed record BuildLayerPayload

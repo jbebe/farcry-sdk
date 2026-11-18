@@ -152,6 +152,9 @@ async function buildPatch(api: types.IExtensionApi, trigger: 'deploy' | 'manual'
     if (result.pluginCollisions.length > 0) {
       notifyPluginCollisions(api, gameRoot, result.pluginCollisions);
     }
+    if (result.soundIdClashes !== undefined && result.soundIdClashes.length > 0) {
+      notifySoundIdClashes(api, result.soundIdClashes);
+    }
   } catch (err) {
     dismiss(api, NOTIFICATION_ID);
     notifyError(api, 'Failed to build Far Cry 2\'s patch.dat', err as Error, {
@@ -208,6 +211,17 @@ function notifyPluginCollisions(
       title: 'Open folder',
       action: () => { void util.opn(path.join(gameRoot, 'bin', 'plugins')).catch(() => undefined); },
     }],
+  });
+}
+
+function notifySoundIdClashes(
+  api: types.IExtensionApi, clashes: NonNullable<jackall.BuildResult['soundIdClashes']>,
+): void {
+  notify(api, {
+    type: 'warning',
+    title: `${clashes.length} sound id clash(es)`,
+    message: clashes.map(c => c.message).join('\n'),
+    allowSuppress: true,
   });
 }
 

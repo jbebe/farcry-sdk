@@ -92,6 +92,12 @@ building would make that mod part of the base game. Put the original patch back,
 verifying the game's files in Steam or GOG Galaxy. Pass `--force` only if you're sure the patch is
 the game's own.
 
+`mod build` also stops when two sound banks the layers install hold different records under the same
+id. The game's own banks repeat an id only as an identical copy of its record, and the game crashed on
+two banks that held different ones (seen in game, GOG v1.03). The error names the ids and both banks;
+give one bank's records new ids. A bank two layers ship under the same name is one bank, and the later
+layer's copy wins.
+
 ### Two mods that change the same value
 
 The command line keeps the later layer's value and warns, as the app's **Deploy mods** does with

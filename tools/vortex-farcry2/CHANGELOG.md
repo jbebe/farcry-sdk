@@ -6,6 +6,8 @@ Notable changes to the Vortex Far Cry 2 extension, loosely following
 ## [0.7.0] - 2026-11-15
 
 ### Added
+- **A warning when two mods give different sounds the same id.** The game can crash once both mods'
+  sound banks are loaded; the deploy still installs both and names the two mods and their banks.
 - **Mods that change game settings or particle effects merge.** A mod can ship only the blocks of
   `gamemodesconfig.xml` and the particle effects it changes or adds, and the extension merges them
   with every other mod's, where two such mods used to replace each other's whole file. Difficulty

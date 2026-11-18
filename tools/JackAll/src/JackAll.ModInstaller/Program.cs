@@ -126,6 +126,7 @@ internal static class Program
 
         IReadOnlyList<string> layerPaths = [.. cli.Values("layer"), .. cli.Values("l")];
         List<IModLayer> layers = [.. layerPaths.Select(ModPipeline.OpenLayer)];
+        IReadOnlyList<SpkIdClash> clashes = SpkIdClashes.Find(layers);
         BuildResult result = ModPipeline.Build(install, layers, new SyncProgress(Report));
 
         Emit(cli, new BuildPayload
@@ -150,6 +151,13 @@ internal static class Program
                 PluginFiles = layer.PluginPaths.Count,
             })],
             Conflicts = [.. result.Conflicts.Select(ToPayload)],
+            SoundIdClashes = [.. clashes.Select(c => new SoundIdClashPayload
+            {
+                Layers = [c.First.Layer.Name, c.Second.Layer.Name],
+                Banks = [c.First.Path, c.Second.Path],
+                Ids = c.Ids,
+                Message = c.Describe(layer => layer.Name),
+            })],
         }, ModInstallerJson.Default.BuildPayload,
             $"Built {install.PatchDat} - {result.TotalEntries:N0} entries "
             + $"({result.OverriddenEntries:N0} overridden, {result.AddedEntries:N0} added, "
@@ -162,6 +170,10 @@ internal static class Program
         foreach (ModConflict conflict in result.Conflicts)
         {
             Report($"Warning: {conflict.Describe()}");
+        }
+        foreach (SpkIdClash clash in clashes)
+        {
+            Report($"Warning: {clash.Describe(layer => layer.Name)}");
         }
         foreach (string collision in result.Plugins.SkippedForeign)
         {

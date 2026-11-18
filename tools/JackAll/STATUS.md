@@ -42,6 +42,7 @@ Stage: active
 - [done] .fc2model export and apply - actor, animation tag windows, shader property lists
 - [done] Dark theme
 - [done] jackall-cli with --json, and jackall-mi for the Vortex extension
+- [done] mod build stops on two installed sound banks with different records under one id; jackall-mi only warns - unreleased; stopped on Vehicle and Inventory Overhaul's 0x00FD0001-0x00FD0004
 - [done] Test fixtures restored from a Steam install and two Nexus mods by manifest.tsv - fixtures restore/record, a Stop hook for unlisted files
 - [done] Stop on conflicts, a Mods-tab box, off by default: off, the lower mod wins a value two mods set differently, as in jackall-mi and the CLI; on, Deploy stops there; the conflicts are listed either way, as selectable text in a window with only OK - user: "I tested and approve the light theme of the JackAll conflict window"
 - [postponed] Tutorial docs and screenshot scripts - run-all not re-run since the UI-script refactor; verify-in-game.ps1 never deployed; postponed by the user past 1.8.0

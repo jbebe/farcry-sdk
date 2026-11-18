@@ -45,6 +45,12 @@ export interface BuildResult extends Envelope {
     /** The conflict and what to do about it, as one sentence. */
     message: string;
   }>;
+  /** Two mods' sound banks holding different records under the same ids, installed anyway. jackall-cli
+   * stops on these instead, so its result never has the field. */
+  soundIdClashes?: Array<{
+    /** The clash and what to do about it, as one sentence. */
+    message: string;
+  }>;
 }
 
 export class JackAllError extends Error {

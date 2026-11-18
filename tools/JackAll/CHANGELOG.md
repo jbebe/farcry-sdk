@@ -39,6 +39,10 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - **`jackall-cli fixtures restore` and `record`, for working on JackAll itself.** The test suite's
   game files come back from your own Steam install and two Nexus downloads, listed in the committed
   `manifest.tsv`; `record` writes the line for a new fixture. JackAll's README, Building, has the steps.
+- **`mod build` stops on two sound banks with the same ids.** Two installed banks holding different
+  records under one id can crash the game, so the build names the ids and both banks and leaves the
+  game's patch as it was. `jackall-mi`, under the Vortex extension, builds anyway and lists them as
+  `soundIdClashes`.
 
 ### Changed
 - **Deploy mods lets the lower mod win a value two mods set differently**, as Vortex and `jackall-cli`
