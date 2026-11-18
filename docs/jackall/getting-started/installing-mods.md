@@ -67,8 +67,9 @@ ever make any. Leave it alone.
 
 If you have more than one mod, the order only matters when two of them replace the same file: the
 one lower in the list wins. Two mods that set the same value differently stop the deploy instead;
-see [Load order, conflicts and plugins](/jackall/managing-mods). Sky Overhaul, Sound Overhaul and
-VSS Vintorez don't touch each other, so any order is fine for them.
+see [Load order, conflicts and plugins](/jackall/managing-mods). Sound Overhaul and VSS Vintorez
+both ship the Dart Rifle's shot sound, so put VSS Vintorez below Sound Overhaul to hear the VSS's
+own shot.
 
 ## 4. Deploy
 
