@@ -26,7 +26,7 @@ Stage: maintenance
 ## Approvals
 
 - played: c8e9531 2026-10-15 - the user checked all 17 tweaks in game: they work
-- page text: 10aebf7 2026-10-15 - implied by the legacy-plugin-1.0.0 release; the page text itself landed after the tag (b5d17ee)
+- page text: dd2c12c 2026-11-18 - the user read nexus-description.bbcode and nexus-summary.txt: OK
 
 ## Checks
 
