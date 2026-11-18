@@ -43,6 +43,7 @@ Stage: active
 - [done] Dark theme
 - [done] jackall-cli with --json, and jackall-mi for the Vortex extension
 - [done] Test fixtures restored from a Steam install and two Nexus mods by manifest.tsv - fixtures restore/record, a Stop hook for unlisted files
+- [new] Deploy never stops on a clash: the lower mod wins each clashing value, as in jackall-mi and the CLI, and a dialog lists the clashes with their values named as the mods spell them; the manual pages rewritten - the user sees the dialog once tested
 - [postponed] Tutorial docs and screenshot scripts - run-all not re-run since the UI-script refactor; verify-in-game.ps1 never deployed; postponed by the user past 1.8.0
 - [scrapped] Map editor on FC2Editor/FCE over host IPC - user: the wrong direction; the AVATAR port (18e58eab) is a quarry only
 - [scrapped] Map tab per-sector view culling - culled almost nothing, refilled streams on turns (d8b0f884)

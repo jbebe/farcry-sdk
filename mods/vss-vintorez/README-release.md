@@ -30,6 +30,8 @@ behaviour.
 **With Aiming Overhaul 1.1.0 or later, load the VSS after it.** Both set how the Dart Rifle's scope is drawn, and
 whichever loads later wins; the VSS's PSO-1 should win over the Dart Rifle's hunting scope.
 
+**With Sound Overhaul, load the VSS after it too.** Both ship the Dart Rifle's shot sound, and the later one is heard.
+
 ## Known limitations
 
 - A dropped VSS in multiplayer has no barrel — the multiplayer pickup was deliberately skipped.
