@@ -29,6 +29,14 @@ sidebar_position: 8
 - **Wet ground later** (2026-11-19), once rain itself has been seen in play.
 - **The sandstorm stays the missions'** (2026-11-19): the retail `SandStorm` presets play only where
   a mission calls them, never in the rotation.
+- **The draft rows, numbers and shares stand** (2026-11-19) and are changed in play where they feel
+  wrong.
+- **The weather is worked out, not saved** (2026-11-19). Every cell's sub-weather, and how far a
+  blend has gone, is a function of the engine's storm hour, which saves already, and a fixed seed,
+  so a loaded save comes back with the weather it was made in. Two things to check: the storm curve
+  loops after 92.66 storm hours, about 15 real hours, so the weather would repeat unless a longer
+  curve in the layer lets the hour run on; and whether sleeping moves the storm hour along with the
+  clock.
 
 ## What the game does now
 
@@ -164,11 +172,6 @@ own savannah, jungle and desert weighting under each cell of the map.
 | Wind and dust (W) | 5% | 15% | 30% |
 | A calm morning has fog (M1) | 70% | 30% | 0 |
 | A day has an afternoon storm | ~50% | ~25% | under 5% |
-
-## Open
-
-- **Saving (proposed):** the map and its timeline are worked out from the engine's storm hour, which
-  saves already, so a save reloads into the weather it was made in.
 
 ## What is new to build
 
