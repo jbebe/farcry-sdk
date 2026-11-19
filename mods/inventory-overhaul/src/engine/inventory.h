@@ -35,12 +35,14 @@ void* PlayerComponent(const uint32_t* type);
 
 // An entity's component by class id, or null.
 const void* Component(void* entity, const uint32_t* type);
-// The local player's CPawn, or null when there is none.
+// The local player's CPawn and inventory, or null when there is none.
 void* PlayerPawn();
+void* PlayerInventory();
 // How many items an inventory holds.
 size_t Count(const void* inventory);
 
-// Every weapon but the machete, in the inventory's order.
+// Every weapon, the machete too, in the inventory's order; Guns leaves the machete out.
+std::vector<Weapon> Weapons(const void* inventory);
 std::vector<Weapon> Guns(const void* inventory);
 bool Is(void* weapon, Class weaponClass);
 bool IsGun(void* weapon);
@@ -83,6 +85,10 @@ bool IsBought(const std::string& name);
 // An item's id, by which the engine selects, draws and saves it.
 uint32_t& Id(void* item);
 bool IsInHand(const void* inventory, void* item);
+// The id of the weapon in hand, else of the one last in hand.
+uint32_t Current(const void* inventory);
+// Whether the pawn may not change weapons now.
+bool Locked(const void* inventory);
 // Whether the gun in hand is out, rather than being drawn or put away.
 bool Drawn(const void* inventory);
 // Whether nothing is in hand, as after the gun in hand was dropped.

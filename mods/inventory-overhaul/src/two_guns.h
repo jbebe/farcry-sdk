@@ -1,5 +1,6 @@
-// Two guns, any class: gun 1 on key 3, gun 2 on key 2, and a gun picked up going into an empty
-// slot, gun 1 first, or with both carried replacing the one in hand, else gun 1.
+// Two guns, any class: gun 1 on key 3, gun 2 on key 2, the wheel through the machete and both, and
+// a gun picked up going into an empty slot, gun 1 first, or with both carried replacing the one in
+// hand, else gun 1, which the HUD shows.
 #pragma once
 
 #include "engine/inventory.h"

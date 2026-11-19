@@ -108,7 +108,10 @@ namespace {
     constexpr ptrdiff_t kProxyEntity = 0x0C;
     constexpr ptrdiff_t kInventoryInHand = 0x14;
     constexpr ptrdiff_t kInventoryDesired = 0x18;
+    constexpr ptrdiff_t kInventoryLast = 0x1C;
+    constexpr uint32_t kNoWeapon = 0xFFFFFFFF;
     constexpr ptrdiff_t kInventoryOwner = 0x48;
+    constexpr ptrdiff_t kInventoryLocked = 0x50;
     constexpr ptrdiff_t kInventoryHandState = 0x74;
     constexpr uint32_t kHandStateDrawn = 1;
     constexpr ptrdiff_t kItemId = 0x0C;
@@ -211,14 +214,19 @@ void* PlayerPawn() {
     return PlayerComponent(&pawn);
 }
 
+void* PlayerInventory() {
+    void* pawn = PlayerPawn();
+    return pawn != nullptr ? OfView(ViewOf(pawn)) : nullptr;
+}
+
 size_t Count(const void* inventory) {
     return Read<uint32_t>(Read<const void*>(inventory, kInventoryItems), sizeof(void*));
 }
 
-std::vector<Weapon> Guns(const void* inventory) {
+std::vector<Weapon> Weapons(const void* inventory) {
     g_buildWeaponItemType();
     const uint32_t weaponItemType = *g_weaponItemType.get();
-    std::vector<Weapon> guns;
+    std::vector<Weapon> weapons;
     const void* list = Read<const void*>(inventory, kInventoryItems);
     void* const* items = Read<void* const*>(list, 0);
     const auto count = Read<uint32_t>(list, sizeof(void*));
@@ -227,10 +235,17 @@ std::vector<Weapon> Guns(const void* inventory) {
             continue;
         }
         void* weapon = Method<ItemWeaponFn>(items[i], kItemWeaponSlot)(items[i], nullptr);
-        if (weapon != nullptr && IsGun(weapon)) {
-            guns.push_back({items[i], weapon});
+        if (weapon != nullptr) {
+            weapons.push_back({items[i], weapon});
         }
     }
+    return weapons;
+}
+
+std::vector<Weapon> Guns(const void* inventory) {
+    std::vector<Weapon> guns = Weapons(inventory);
+    guns.erase(std::remove_if(guns.begin(), guns.end(), [](const Weapon& each) { return !IsGun(each.weapon); }),
+               guns.end());
     return guns;
 }
 
@@ -326,6 +341,13 @@ uint32_t& Id(void* item) {
 }
 
 bool IsInHand(const void* inventory, void* item) { return Id(item) == Read<uint32_t>(inventory, kInventoryInHand); }
+
+uint32_t Current(const void* inventory) {
+    const auto inHand = Read<uint32_t>(inventory, kInventoryInHand);
+    return inHand != kNoWeapon ? inHand : Read<uint32_t>(inventory, kInventoryLast);
+}
+
+bool Locked(const void* inventory) { return Read<uint8_t>(inventory, kInventoryLocked) != 0; }
 
 bool Drawn(const void* inventory) {
     return Read<uint32_t>(inventory, kInventoryHandState) == kHandStateDrawn;

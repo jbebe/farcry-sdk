@@ -23,7 +23,9 @@ secondary and a special. What changes is the player's inventory (`InventoryOverh
 |---|---|
 | `AddWeapon` | puts a gun picked up in gun 1 when both slots are empty and in the empty one when one is. With two carried, or with four in all counting Items' guns, it drops the one in hand first, else gun 1, and the new gun takes its slot; with none carried and four in Items it drops the new one. The slot is kept on the gun as the entity data `InventoryOverhaul.Slot`. Loading a save adds its guns here too, and drops none |
 | the state machine's select-class actions, `SelectWeapon` | key 3 draws gun 1 and key 2 gun 2, whatever their class; key 4 draws nothing; the machete is unchanged. Other callers of `SelectWeapon` still select by class |
+| `SelectNextWeapon`, `SelectPreviousWeapon` | the wheel steps through the machete, gun 1 and gun 2 in that order, whatever their class; the game's own order is by class, so it reached only one gun of a class |
 | `GetWeaponFromCategory`, inside the player's `CPickupWeapon::PrePickup` and `Pick` | finds no gun, so a pickup, from the ground or the armory's wall, replaces nothing of its own class and `AddWeapon` makes room; the gun picked up is then drawn |
+| `GetWeaponFromCategory`, inside the HUD's `CFCXMainHudUI::SelectSwitchGizmoIcons` for a gun on the ground | finds the gun `AddWeapon` would drop, so the swap icon shows it, or nothing while a slot is free. The HUD chooses the icons only when what is aimed at changes, so `UpdateSwitchGizmo` chooses them again when that gun changes, as when the other gun is drawn |
 
 Two guns of the same model share an item id, by which the engine draws them, so the later one is
 given an id of its own. Every decision is logged to `bin\fcse.log`.

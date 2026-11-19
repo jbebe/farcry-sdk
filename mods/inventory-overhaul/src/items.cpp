@@ -168,8 +168,7 @@ bool Drop(void* inventory, size_t index) {
 bool Give(const std::string& id, uint32_t sound) {
     std::vector<Record> items = Load();
     if (id.rfind(kWeaponPrefix, 0) == 0) {
-        void* pawn = Inventory::PlayerPawn();
-        const void* inventory = pawn != nullptr ? Inventory::OfView(Inventory::ViewOf(pawn)) : nullptr;
+        const void* inventory = Inventory::PlayerInventory();
         if (inventory == nullptr || Full(inventory)) {
             return false;
         }

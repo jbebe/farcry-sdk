@@ -7,7 +7,9 @@ is your own risk.
 - **Two guns.** Gun A is on key 3 and gun B on key 2, whatever their class. A gun you pick up, from
   the ground or the armory's wall, goes into gun A when both slots are empty and into the empty one
   when one is. With both full it takes the place of the gun in hand, or of gun A when neither is in
-  hand, and the gun it replaces falls at your feet. Key 4 draws nothing, and the machete is unchanged.
+  hand, and the gun it replaces falls at your feet; the HUD shows that gun as the one you swap.
+  The mouse wheel goes through the machete, gun A and gun B. Key 4 draws nothing, and the machete is
+  unchanged.
 - **Items.** Stow a gun and it keeps its wear and its loaded rounds. You can have four guns in all,
   slots included. Spare ammo and upgrades stay yours, as they always were.
 - **The notebook** comes with the map. It works on foot, in the armory too.

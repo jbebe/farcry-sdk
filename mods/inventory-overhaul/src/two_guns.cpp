@@ -1,5 +1,5 @@
 // Each gun keeps its slot on it as entity data. The engine keeps its classes: only the number keys,
-// the gun count and what a pickup replaces change.
+// the wheel, the gun count and what a pickup replaces change, on the HUD too.
 #include "two_guns.h"
 
 #include "engine/game_thread.h"
@@ -23,24 +23,42 @@ namespace {
     using PrePickupFn = void(__fastcall*)(void* pickup, void* unused, void* pawn);
     using PickFn = bool(__fastcall*)(void* pickup, void* unused, void* user, uint32_t flag);
     using EquippedFn = void*(__fastcall*)(void* view, void* unused);
+    using StepFn = bool(__fastcall*)(void* inventory, void* unused);
+    using GizmoIconsFn = void(__fastcall*)(void* hud, void* unused, const int32_t* interaction);
+    using GizmoUpdateFn = void(__fastcall*)(void* hud, void* unused, float frameTime);
+    using AimedAtFn = int32_t*(__fastcall*)(void* hud, void* unused, int32_t* interaction, uint32_t low,
+                                            uint32_t high);
 
     // CInventoryViewPawn::GetEquippedWeapon, which the HUD asks for the player every frame; a state
-    // machine node's action; the inventory's AddWeapon(CWeapon*), SelectWeapon(class) and
-    // GetWeaponFromCategory(class); CPickupWeapon's PrePickup(pawn) and Pick(user, flag).
+    // machine node's action; the inventory's AddWeapon(CWeapon*), SelectWeapon(class),
+    // GetWeaponFromCategory(class) and the wheel's SelectNextWeapon and SelectPreviousWeapon;
+    // CPickupWeapon's PrePickup(pawn) and Pick(user, flag).
     FCSE::Relocation<EquippedFn> g_equippedSite{FCSE::Uplay(0x00127DA0)};
     FCSE::Relocation<ActionFn> g_actionSite{FCSE::Uplay(0x00CE27F0)};
     FCSE::Relocation<AddWeaponFn> g_addWeaponSite{FCSE::Uplay(0x001285F0)};
     FCSE::Relocation<SelectWeaponFn> g_selectWeaponSite{FCSE::Uplay(0x0012D670)};
     FCSE::Relocation<FindByClassFn> g_findByClassSite{FCSE::Uplay(0x00128FB0)};
+    FCSE::Relocation<StepFn> g_nextSite{FCSE::Uplay(0x0012AB50)};
+    FCSE::Relocation<StepFn> g_previousSite{FCSE::Uplay(0x0012AD00)};
     FCSE::Relocation<PrePickupFn> g_prePickupSite{FCSE::Uplay(0x00099450)};
     FCSE::Relocation<PickFn> g_pickSite{FCSE::Uplay(0x00099E90)};
+    // CFCXMainHudUI's switch gizmo, the icons of what is aimed at and of what it replaces:
+    // SelectSwitchGizmoIcons(interaction), UpdateSwitchGizmo(frame time), and the interaction with what
+    // is aimed at, made from its handle.
+    FCSE::Relocation<GizmoIconsFn> g_gizmoIconsSite{FCSE::Uplay(0x00807580)};
+    FCSE::Relocation<GizmoUpdateFn> g_gizmoUpdateSite{FCSE::Uplay(0x008094D0)};
+    FCSE::Relocation<AimedAtFn> g_aimedAt{FCSE::Uplay(0x008092E0)};
     ActionFn g_action = nullptr;
     AddWeaponFn g_addWeapon = nullptr;
     SelectWeaponFn g_selectWeapon = nullptr;
     FindByClassFn g_findByClass = nullptr;
+    StepFn g_next = nullptr;
+    StepFn g_previous = nullptr;
     PrePickupFn g_prePickup = nullptr;
     PickFn g_pick = nullptr;
     EquippedFn g_equipped = nullptr;
+    GizmoIconsFn g_gizmoIcons = nullptr;
+    GizmoUpdateFn g_gizmoUpdate = nullptr;
 
     constexpr int kSlots = 2;
     constexpr const char* kSlotKey = "InventoryOverhaul.Slot";
@@ -51,6 +69,13 @@ namespace {
     constexpr uint32_t kSelectSecondary = 0x0B;
     constexpr uint32_t kSelectSpecial = 0x0C;
     constexpr uint32_t kTwinSalt = FCSE::Crc32("InventoryOverhaul.Twin");
+    // An interaction's words, the first its type, 1 for a gun on the ground; the gizmo's state, 2
+    // while it shows, and the handle of what is aimed at.
+    constexpr size_t kInteractionWords = 0x10;
+    constexpr int32_t kGunOnGround = 1;
+    constexpr ptrdiff_t kGizmoState = 0xB8;
+    constexpr uint32_t kGizmoShown = 2;
+    constexpr ptrdiff_t kGizmoTarget = 0x98;
 
     // The slot the number key being handled asks for, 0 for none; -1 outside a number key.
     int g_keySlot = -1;
@@ -66,6 +91,11 @@ namespace {
         void* weapon;
     };
     Picked g_picked{};
+    // Set while the gizmo's icons are chosen for a gun on the ground; that HUD, and the carried gun
+    // it was shown replacing.
+    bool g_inGizmo = false;
+    void* g_gizmoHud = nullptr;
+    void* g_gizmoReplaced = nullptr;
 }
 
 void SetSlot(void* weapon, int slot) {
@@ -179,14 +209,24 @@ namespace {
         return guns.size() >= kSlots || Items::Full(inventory);
     }
 
-    // The gun a new one takes the place of: the one in hand, else gun 1, else the first of `guns`,
-    // which must not be empty.
-    const Inventory::Weapon& ToReplace(const void* inventory, const std::vector<Inventory::Weapon>& guns) {
+    // The carried gun a new one takes the place of: none while there is room or no gun is carried,
+    // else the one in hand, else gun 1, else the first of `guns`.
+    const Inventory::Weapon* ToReplace(const void* inventory, const std::vector<Inventory::Weapon>& guns) {
+        if (guns.empty() || !Full(inventory, guns)) {
+            return nullptr;
+        }
         if (const Inventory::Weapon* gun = InHand(inventory, guns)) {
-            return *gun;
+            return gun;
         }
         const Inventory::Weapon* first = InSlot(guns, 1);
-        return first != nullptr ? *first : guns.front();
+        return first != nullptr ? first : &guns.front();
+    }
+
+    // The carried gun the player's next pickup would replace, or null.
+    void* Replaced(const void* inventory) {
+        const std::vector<Inventory::Weapon> guns = Inventory::Guns(inventory);
+        const Inventory::Weapon* gun = ToReplace(inventory, guns);
+        return gun != nullptr ? gun->weapon : nullptr;
     }
 
     // Draws gun 1, else gun 2.
@@ -264,6 +304,48 @@ namespace {
         return true;
     }
 
+    // The wheel steps `step`, 1 or -1, through the machete, gun 1 and gun 2, whatever their class, and
+    // from nothing to the first or the last.
+    bool Step(void* inventory, int step) {
+        if (Inventory::Locked(inventory)) {
+            return false;
+        }
+        const std::vector<Inventory::Weapon> weapons = Inventory::Weapons(inventory);
+        std::vector<const Inventory::Weapon*> order;
+        for (const Inventory::Weapon& weapon : weapons) {
+            if (!Inventory::IsGun(weapon.weapon)) {
+                order.push_back(&weapon);
+            }
+        }
+        for (int slot = 1; slot <= kSlots; ++slot) {
+            if (const Inventory::Weapon* gun = InSlot(weapons, slot)) {
+                order.push_back(gun);
+            }
+        }
+        if (order.empty()) {
+            return false;
+        }
+        const uint32_t current = Inventory::Current(inventory);
+        const auto at = std::find_if(order.begin(), order.end(), [&](const Inventory::Weapon* weapon) {
+            return Inventory::Id(weapon->item) == current;
+        });
+        if (at == order.end()) {
+            return Draw(inventory, *(step > 0 ? order.front() : order.back()));
+        }
+        const int count = static_cast<int>(order.size());
+        const int from = static_cast<int>(at - order.begin());
+        const int to = (from + step + count) % count;
+        return to != from && Draw(inventory, *order[to]);
+    }
+
+    bool __fastcall OnNext(void* inventory, void* unused) {
+        return Inventory::IsPlayers(inventory) ? Step(inventory, 1) : g_next(inventory, unused);
+    }
+
+    bool __fastcall OnPrevious(void* inventory, void* unused) {
+        return Inventory::IsPlayers(inventory) ? Step(inventory, -1) : g_previous(inventory, unused);
+    }
+
     // A gun the player picks up goes into gun 1 when both slots are empty and into the empty one when
     // one is. Full, it takes the place of the gun in hand, else of gun 1, which falls at their feet;
     // with none carried it falls there itself. A weapon added any other way is placed the next time
@@ -276,12 +358,11 @@ namespace {
         const std::vector<Inventory::Weapon> carried = Inventory::Guns(inventory);
         const bool full = Full(inventory, carried);
         int slot = InSlot(carried, 1) == nullptr ? 1 : 2;
-        if (full && !carried.empty()) {
-            const Inventory::Weapon& out = ToReplace(inventory, carried);
-            slot = SlotOf(out.weapon);
+        if (const Inventory::Weapon* out = ToReplace(inventory, carried)) {
+            slot = SlotOf(out->weapon);
             FCSE::Logf("the %s takes gun %d: the %s is dropped", Inventory::Name(weapon), slot,
-                       Inventory::Name(out.weapon));
-            Inventory::Drop(inventory, out.weapon);
+                       Inventory::Name(out->weapon));
+            Inventory::Drop(inventory, out->weapon);
         }
         g_addWeapon(inventory, unused, weapon);
         if (full && carried.empty()) {
@@ -295,12 +376,45 @@ namespace {
     }
 
     // A pickup replaces the carried gun of its class, which the player's no longer is: AddWeapon
-    // makes room instead.
+    // makes room instead, and the gizmo shows the gun it will drop.
     void* __fastcall OnFindByClass(void* inventory, void* unused, const uint32_t* category) {
+        if (g_inGizmo && Inventory::IsPlayers(inventory)) {
+            return g_gizmoReplaced;
+        }
         if (g_inPickup && Inventory::IsPlayers(inventory)) {
             return nullptr;
         }
         return g_findByClass(inventory, unused, category);
+    }
+
+    void __fastcall OnGizmoIcons(void* hud, void* unused, const int32_t* interaction) {
+        g_gizmoHud = nullptr;
+        g_gizmoReplaced = nullptr;
+        const void* inventory = Inventory::PlayerInventory();
+        if (interaction[0] == kGunOnGround && inventory != nullptr) {
+            g_inGizmo = true;
+            g_gizmoHud = hud;
+            g_gizmoReplaced = Replaced(inventory);
+        }
+        g_gizmoIcons(hud, unused, interaction);
+        g_inGizmo = false;
+    }
+
+    // The gizmo chooses its icons only when what is aimed at changes; while it shows a gun on the
+    // ground they are chosen again when the gun it replaces changes, as when the other gun is drawn.
+    void __fastcall OnGizmoUpdate(void* hud, void* unused, float frameTime) {
+        g_gizmoUpdate(hud, unused, frameTime);
+        if (hud != g_gizmoHud || Read<uint32_t>(hud, kGizmoState) != kGizmoShown) {
+            return;
+        }
+        const void* inventory = Inventory::PlayerInventory();
+        if (inventory == nullptr || Replaced(inventory) == g_gizmoReplaced) {
+            return;
+        }
+        int32_t interaction[kInteractionWords];
+        g_aimedAt(hud, nullptr, interaction, Read<uint32_t>(hud, kGizmoTarget),
+                  Read<uint32_t>(hud, kGizmoTarget + sizeof(uint32_t)));
+        OnGizmoIcons(hud, nullptr, interaction);
     }
 
     void __fastcall OnPrePickup(void* pickup, void* unused, void* pawn) {
@@ -355,12 +469,15 @@ bool Install() {
                        Hook(g_equippedSite, &OnEquipped, &g_equipped);
     const bool keys = Hook(g_selectWeaponSite, &OnSelectWeapon, &g_selectWeapon) &&
                       Hook(g_actionSite, &OnAction, &g_action);
+    const bool wheel = Hook(g_nextSite, &OnNext, &g_next) && Hook(g_previousSite, &OnPrevious, &g_previous);
     const bool pickups = Hook(g_findByClassSite, &OnFindByClass, &g_findByClass) &&
                          Hook(g_prePickupSite, &OnPrePickup, &g_prePickup) &&
                          Hook(g_pickSite, &OnPick, &g_pick);
-    FCSE::Logf("two guns: adding %s, keys %s, pickups %s", added ? "on" : "off",
-               keys ? "on" : "off", pickups ? "on" : "off");
-    return added || keys || pickups;
+    const bool gizmo = pickups && g_aimedAt && Hook(g_gizmoIconsSite, &OnGizmoIcons, &g_gizmoIcons) &&
+                       Hook(g_gizmoUpdateSite, &OnGizmoUpdate, &g_gizmoUpdate);
+    FCSE::Logf("two guns: adding %s, keys %s, wheel %s, pickups %s, their HUD %s", added ? "on" : "off",
+               keys ? "on" : "off", wheel ? "on" : "off", pickups ? "on" : "off", gizmo ? "on" : "off");
+    return added || keys || wheel || pickups;
 }
 
 }

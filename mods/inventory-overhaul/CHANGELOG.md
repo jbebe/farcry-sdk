@@ -21,6 +21,11 @@ Notable changes to Inventory Overhaul, loosely following
 - **The notebook first opens on gun A**, whichever gun is in hand.
 
 ### Fixed
+- **The mouse wheel reaches both guns:** it goes through the machete, gun A and gun B, where it
+  reached only one of two guns of the same class.
+- **The HUD's swap icon shows the gun a pickup replaces:** the gun in hand, or gun A when neither is
+  in hand, and nothing while a slot is free. It showed the carried gun of the pickup's class, or
+  nothing when you carried none of that class.
 - **The notebook's pages are drawn on its paper under dgVoodoo and DLSS injectors too,** where they
   lay flat over the screen.
 - **Every gun has its picture and name on the post-it:** guns bought at the armory, such as the

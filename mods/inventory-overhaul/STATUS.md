@@ -6,6 +6,8 @@ Stage: active
 ## Features
 
 - [done] Two guns of any class, A on key 3 and B on key 2; a gun picked up with two carried replaces the one in hand - user: "works perfectly"; #51 keys and an old save's primary in A verified 2026-11-12
+- [done] The mouse wheel through the machete, gun A and gun B, whatever their class - user 2026-11-19: machete, A, B and back work in game
+- [done] The HUD's swap icon shows the gun a pickup replaces, and again when the other gun is drawn - user 2026-11-19: it shows the gun in hand and changes when the other is drawn
 - [done] Picked-up gun comes to hand - user 2026-11-17: "it all works flawlessly"
 - [done] Items: stowed guns keep their wear and loaded rounds, four guns in all with the slots; other items by id and count
 - [done] Notebook on Tab, given with the map, held in both hands, its right page bending with the hands - user: "it works in all situations"; first opens on gun A, verified 2026-11-12
@@ -47,6 +49,8 @@ Stage: active
 - [scrapped] Notebook on DirectX 10 - the user does not care; never spend time on it
 
 ## To validate
+
+- With a slot empty, a gun on the ground shows no gun to swap - nothing yet
 
 ## Approvals
 
