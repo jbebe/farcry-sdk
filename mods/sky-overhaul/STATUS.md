@@ -38,7 +38,7 @@ Stage: maintenance
 - [done] A third less GPU time: the sky from a table drawn once a frame, clouds marched at half resolution, haze with two noise reads a sheet - +2.15 to +1.47 ms a frame at 1080p on an RTX 4060 Ti; the clouds' half resolution accepted by the user from pictures
 - [postponed] The solid depth (Occlusion, Heat haze) in one target switch: it costs ~0.5 ms, ~0.3 of it switching targets around each draw; collect and replay the draws after the depth pass - the user left it for now (2026-11-19)
 - [new] The ground lit by where you look from: sand, dirt and tarmac brighter with the sun at your back, a sheen toward it at grazing angles, slopes and the layers' own normal maps showing - the user's ask from the airport runway (2026-11-19)
-- [new] Volumetric fog - the user's ask (2026-11-19); FC2JackalFix's Far Cry Instincts port in tools/third-party is the reference under review
+- [postponed] Volumetric fog: a froxel volume lit through the sun's shadow cascades, a haze and a mist 1.5 m deep over the ground and water - user: "not good enough, base game fog is cheap and good" (2026-11-19); the code is kept at the local tag shelf/sky-overhaul-volumetric-fog
 - [new] Distant dust: plumes blown off the ground in the wind's direction, seen from far off, not whole storms - the user's ask (2026-11-19); 3D volumes rising anywhere, by day in dry weather, more with wind and in desert areas, none in jungle; built with the volumetric fog in one pass
 - [scrapped] Tonemap or highlight roll-off - user: "useless" (2026-09-15); never propose again
 - [scrapped] Per-moment sky presets and moment tabs - user found them overwhelming; the sky follows the sun, sliders only on request

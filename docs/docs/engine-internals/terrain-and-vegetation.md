@@ -62,6 +62,25 @@ delete a sector's water plane rather than a sentinel that happens to work.
 `ComputeMinMaxZ` scans all 4225 cells and forces the span to at least 1 metre when the sector is
 flat, so a perfectly level sector still gets a non-degenerate bounding volume.
 
+## Reading the ground from a plugin
+
+`Dunia.dll` keeps the same model with its own field offsets (RE-verified, the same in the Steam and
+GOG builds):
+
+- `FCE_TerrainManager_GetHeightAt(float x, float y)`, a `cdecl` editor export, is
+  `CTerrain::GetZApr`: the interpolated height, or `-1.0` where no sector is loaded. Its first
+  instructions load the terrain from its global with `mov ecx, [global]`, four bytes in.
+- `CTerrain` holds the sectors per row at `+0x8` and the sector array at `+0x20`.
+- `CSector` keeps its origin at `+0x44`/`+0x48`, its two water flags at `+0x28`/`+0x29` and its
+  `WaterLevel` at `+0x2C`. `CSector::GetWaterLevel` (`0x103334a0`) returns the level while either
+  flag is set, and `-1e6` otherwise.
+- `FCE_TerrainManager_GetWaterLevel` is no help: it returns the editor manager's one global level,
+  not the water at a place.
+
+In a single-player world the heightfield is loaded only near the player: samples come back `-1`
+from 100 to 160 m out, depending on where the player stands in the 64 m sector grid (seen in game,
+GOG v1.03, world 1). What is drawn further out is the render side's, not this heightfield.
+
 ## The height write path
 
 `CTerrain::SetSectorHeightFixed` is the only route by which heights change, and it does three

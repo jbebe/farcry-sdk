@@ -190,6 +190,43 @@ stop joining up: looking away from a low sun, stretches of ground lose their sha
 casters were culled. 18 is about the most that stays continuous with 15 and 8 for the angles and the
 other two ranges at their retail 20 and 140.
 
+## What the shadows' receivers are handed
+
+:::info[Verified via reverse engineering]
+Traced via GhidraMCP in the Steam `Dunia.dll` v1.03; addresses in this section are that build's. The
+manager's offset and the slot layout were checked against GOG v1.03's bytes.
+:::
+
+Every shader that receives a light's shadow takes its values from a `CNewLightingDataProvider`,
+whose parameters `FUN_103cc7b0` registers by name. The renderer object keeps a lighting manager at
+`+0x34`, `0x6DE0` bytes, made by `CSceneRenderer_Init` (GOG makes it at the same offset). The
+manager holds 29 slots of `0x3A0` bytes from `+0x10`, one per light, each with a provider inside;
+`+4` points at this frame's array of slot pointers and `+8` counts them.
+
+A slot starts with a pointer to the light's descriptor, whose `+4` is 0 for a directional light.
+Each shader value sits `0x10` past its parameter's member, so from the slot:
+
+| Offset | Parameter |
+| --- | --- |
+| `+0x110` | `LightDirectionWS` |
+| `+0x170` | `LightColor` |
+| `+0x1C0` | `ShadowSampler`, its engine texture at `+0x1CC` |
+| `+0x220` | `ShadowMapSize`: width, height and their reciprocals |
+| `+0x240` | `ShadowProjectionMatrix`, four registers, world space |
+| `+0x290` | `CascadedShadowRanges` |
+| `+0x2B0` | `CascadedShadowScale` |
+| `+0x310` | `CascadedShadowSliceScaleOffsetsBiased`, three registers |
+| `+0x350`, `+0x370` | `CascadedShadowSliceDepthScales`, `...DepthOffsets` |
+| `+0x390` | `CascadedShadowDepthRanges` |
+
+The projection is copied in by `0x10382c40` (`ECX` the manager, `RET 4`), only when the first light
+in the frame's list is directional, from raw floats at manager `+0x6A60`, transposed on the way, so
+the four registers at `+0x240` are exactly what the shaders read. The engine texture is a
+`CTextureD3D9` whose `IDirect3DTexture9` sits at `+0x18`. Its format is picked at startup: `D24S8`,
+or `D16`, where the card compares depth in its sampler; otherwise FOURCC `DF24` or `DF16`, which hold
+the depth itself. Spot and omni lights have slots and shadow textures of their own, so the sun's
+stays as it was drawn for the rest of the frame.
+
 ## The clouds are lit from a stretched clock
 
 `UpdateSky` (`0x091601A0`) evaluates the cloud material from the cloud preset, the storm's cloud
