@@ -91,6 +91,7 @@ Stage: active
 - played: 8e20a82 2026-11-06 - alpha4 on Steam, Hardcore: "I feel like this is it now. I can't add anything to it, the experience was right."
 - played: ad7a904f 2026-11-14 - world 1 on GOG, with UFCP, Aiming, Flashlight, Sky, Sound, Vehicle and VSS: "I really enjoyed this round."
 - played: 90229be9 2026-11-14 - grenades and the flank, world 1 on GOG with the same mods: "Okay this is starting to be really good. I cant stay at one place because I'm smoked out with grenades. They dont aggro on me because they are happy behind their covers and its me who need to make the move. This is perfect."
+- played: 4ede99ff 2026-11-19 - the rename from Difficulty Overhaul counted as played, by the user
 
 ## Checks
 

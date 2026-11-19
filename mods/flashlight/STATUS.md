@@ -26,6 +26,7 @@ Stage: maintenance
 
 - played: 1d366b0d 2026-11-17 - "it works alright"
 - page text: ec69a311 2026-11-17 - "yes", BBCode and short message checked
+- page text: 4ede99ff 2026-11-19 - Difficulty Overhaul renamed to Combat Overhaul in it, counted as read, by the user
 
 ## Checks
 

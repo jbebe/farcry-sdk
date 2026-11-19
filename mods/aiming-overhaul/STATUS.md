@@ -71,6 +71,7 @@ Stage: active
 ## Approvals
 
 - played: 33965adb 2026-11-19 - "AO too. they are all ready by me, the tester."
+- played: 4ede99ff 2026-11-19 - the Combat Overhaul rename, a comment in cartridge.h, counted as played, by the user
 - page text: d04a2176 2026-11-18 - "I read all texts and played all mods and validated all lines"
 
 ## Checks
