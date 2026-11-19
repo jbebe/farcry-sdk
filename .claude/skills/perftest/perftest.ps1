@@ -68,6 +68,8 @@ function Find-Run {
 }
 
 function Get-IniValue($section, $key) {
+    # A copy never launched has no fcse.ini: every setting is at its default.
+    if (-not (Test-Path "$Bin\fcse.ini")) { return '(default: no fcse.ini yet)' }
     $inSection = $false
     foreach ($line in [IO.File]::ReadAllLines("$Bin\fcse.ini")) {
         if ($line -match '^\[(.+)\]$') { $inSection = $Matches[1] -eq $section; continue }
@@ -102,8 +104,10 @@ function Deploy($folder, $info, $name, [string[]]$mods) {
     Invoke-Cli mod build --game $Game @layers | Select-Object -Last 3
 
     # Whatever no layer deployed, other than DevTools.dll, is not part of the test; the backup holds it.
-    $keep = @((Get-Content "$Plugins\.jackall-plugins.json" -Raw | ConvertFrom-Json).files.path) +
-        @('DevTools.dll', '.jackall-plugins.json')
+    # jackall-cli writes no manifest when no layer carries a plugin.
+    $keep = @('DevTools.dll', '.jackall-plugins.json')
+    $manifest = "$Plugins\.jackall-plugins.json"
+    if (Test-Path $manifest) { $keep += @((Get-Content $manifest -Raw | ConvertFrom-Json).files.path) }
     foreach ($file in Get-ChildItem $Plugins -Recurse -File -Force) {
         if ($keep -notcontains $file.FullName.Substring($Plugins.Length + 1)) { Remove-Item $file.FullName -Force }
     }
@@ -140,6 +144,8 @@ switch ($Step) {
         }
 
         $folder = Join-Path $Root ((Get-Date).ToString('yyyy-MM-dd-HHmm') + "-$Mod")
+        # A stock copy has no plugins folder yet.
+        New-Item -ItemType Directory -Force -Path $Plugins | Out-Null
         Copy-Install "$folder\before"
         $info = [pscustomobject]@{
             mod = $Mod; with = $With; length = $Length; current = $null; deployed = [pscustomobject]@{}
