@@ -35,6 +35,8 @@ Stage: maintenance
 - [done] Land to the horizon hides the sun behind it, its glare and light shafts with it - user: "works"
 - [done] Stars and the Milky Way fainter all over: about half - 70% was not enough for the user
 - [done] Each part switched in the Mod Configuration Menu, values in bin\sky-overhaul.ini and a DevTools window
+- [done] A third less GPU time: the sky from a table drawn once a frame, clouds marched at half resolution, haze with two noise reads a sheet - +2.15 to +1.47 ms a frame at 1080p on an RTX 4060 Ti; the clouds' half resolution accepted by the user from pictures
+- [postponed] The solid depth (Occlusion, Heat haze) in one target switch: it costs ~0.5 ms, ~0.3 of it switching targets around each draw; collect and replay the draws after the depth pass - the user left it for now (2026-11-19)
 - [scrapped] Tonemap or highlight roll-off - user: "useless" (2026-09-15); never propose again
 - [scrapped] Per-moment sky presets and moment tabs - user found them overwhelming; the sky follows the sun, sliders only on request
 - [scrapped] Sun shadow softening - did not reach the distant shadows, reverted; never propose again
@@ -46,6 +48,9 @@ Stage: maintenance
 - [scrapped] Sharpening, a longer shadow-cascade reach, FC3/FC4 RE for it - never propose
 
 ## To validate
+
+- Play a while by day and at dusk: the sky, the clouds and the heat haze look as before, thin cloud edges a touch grainier
+- Alt+Tab out of full screen and back, or change the resolution: the sky and the clouds come back
 
 ## Approvals
 

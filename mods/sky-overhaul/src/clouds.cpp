@@ -1,20 +1,24 @@
 #include "clouds.h"
 
+#include "depth_constants.h"
 #include "sky.h"
 #include "sky_model.h"
 
 #include "engine/camera.h"
 #include "engine/cloud_layer.h"
+#include "engine/depth_texture.h"
 #include "engine/dome_draw.h"
 #include "engine/noise.h"
+#include "engine/render_target.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "engine/time_of_day.h"
 #include "tuning.h"
 
+#include "clouds_composite_ps.h"
 #include "clouds_cover_ps.h"
+#include "clouds_half_ps.h"
 #include "clouds_mask_ps.h"
-#include "clouds_ps.h"
 #include "clouds_shadow_ps.h"
 
 #include <algorithm>
@@ -28,6 +32,11 @@ namespace {
     // The trails' registers come last.
     constexpr UINT kTrailCount = 3;
     constexpr UINT kConstantCount = 17 + kTrailCount;
+    // The half-resolution march also reads the depth's registers, which follow the clouds' own.
+    constexpr UINT kHalfConstantCount =
+        SkyOverhaul::DepthConstants::kFirst + SkyOverhaul::DepthConstants::kCount - kFirstConstant;
+    // Where CompositePS reads the march, past the noise and the depth.
+    constexpr DWORD kHalfSampler = 4;
 
     constexpr double kPi = 3.14159265358979;
 
@@ -103,10 +112,14 @@ namespace {
     float g_corners[4][3] = {};
     bool g_drawn = false;
 
-    SkyOverhaul::PixelShader g_shader{"clouds", g_cloudsPixelShader};
+    SkyOverhaul::PixelShader g_halfShader{"clouds half", g_cloudsHalfPixelShader};
+    SkyOverhaul::PixelShader g_compositeShader{"clouds composite", g_cloudsCompositePixelShader};
     SkyOverhaul::PixelShader g_coverShader{"clouds cover", g_cloudsCoverPixelShader};
     SkyOverhaul::PixelShader g_maskShader{"clouds mask", g_cloudsMaskPixelShader};
     SkyOverhaul::PixelShader g_shadowShader{"clouds shadow", g_cloudsShadowPixelShader};
+
+    // The march at half resolution: colour premultiplied, alpha what survives, as the layer blends.
+    SkyOverhaul::OwnedTarget g_half{"clouds", D3DFMT_A16B16G16R16F};
 
     // The one light the shader marches toward, and the glow of the air around the moon.
     struct Light {
@@ -198,24 +211,45 @@ namespace {
         }
     }
 
-    // A quad over the sky through the shader, tested against the world's own depth, which the pass
-    // still owns, and blended source over destination.
-    bool DrawSky(IDirect3DDevice9* device, IDirect3DPixelShader9* shader, D3DBLEND source,
-                 D3DBLEND destination) {
-        SkyOverhaul::ScreenDraw draw(device, kFirstConstant, kConstantCount);
+    // The march into the half-resolution target where there is sky near, then laid over the sky at
+    // full resolution, tested against the world's own depth, so the skyline and the trees keep
+    // every pixel.
+    bool DrawHalf(const SkyOverhaul::Frame::Pass& pass, IDirect3DPixelShader9* shader,
+                  const SkyOverhaul::Camera::View& view,
+                  const SkyOverhaul::DepthTexture::Found& depth) {
+        IDirect3DDevice9* device = pass.device;
+        IDirect3DPixelShader9* composite = g_compositeShader.Get(device);
+        if (composite == nullptr || !g_half.Ensure(device, (pass.backBuffer.Width + 1) / 2,
+                                                   (pass.backBuffer.Height + 1) / 2)) {
+            return false;
+        }
+        SkyOverhaul::ScreenDraw draw(device, kFirstConstant, kHalfConstantCount);
         Bind(device, shader);
+        SkyOverhaul::DepthConstants::Set(device, view, depth, pass.backBuffer.Width,
+                                         pass.backBuffer.Height);
+        {
+            SkyOverhaul::AwayFromPass away(pass);
+            device->SetRenderTarget(0, g_half.surface);
+            if (!draw.ClipQuad(0.0f, g_corners)) {
+                return false;
+            }
+        }
+        device->SetPixelShader(composite);
+        device->SetTexture(kHalfSampler, g_half.texture);
+        device->SetSamplerState(kHalfSampler, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+        device->SetSamplerState(kHalfSampler, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
         device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
         device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-        device->SetRenderState(D3DRS_SRCBLEND, source);
-        device->SetRenderState(D3DRS_DESTBLEND, destination);
+        device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+        device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCALPHA);
         return draw.ClipQuad(SkyOverhaul::Frame::kFarDepth, g_corners);
     }
 
-    void Draw(IDirect3DDevice9* device, IDirect3DPixelShader9* shader,
+    void Draw(const SkyOverhaul::Frame::Pass& pass, IDirect3DPixelShader9* shader,
               const SkyOverhaul::Camera::View& view,
               const SkyOverhaul::CloudLayer::Lighting& lighting, const Light& light,
               const Values& v, float storminess, const float drift[2],
-              const float trails[kTrailCount * 4]) {
+              const float trails[kTrailCount * 4], const SkyOverhaul::DepthTexture::Found& depth) {
         // Kept clear of the layer below it however high that is set, so the two never interleave.
         const float above = v.cloudBase + v.cloudThickness + kCirrusClearance;
         const float cirrusAltitude = above > kCirrusFloor ? above : kCirrusFloor;
@@ -251,7 +285,7 @@ namespace {
 
         // Blended the way the engine's cloud layer blended: colour already multiplied in, alpha
         // what survives.
-        g_drawn = DrawSky(device, shader, D3DBLEND_ONE, D3DBLEND_SRCALPHA);
+        g_drawn = DrawHalf(pass, shader, view, depth);
         if (g_drawn) {
             SkyOverhaul::CloudLayer::Replaced();
         }
@@ -269,11 +303,12 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
     }
     g_drawn = false;
 
-    IDirect3DPixelShader9* shader = g_shader.Get(pass.device);
+    IDirect3DPixelShader9* shader = g_halfShader.Get(pass.device);
     Camera::View view;
     CloudLayer::Lighting lighting;
+    DepthTexture::Found depth = {};
     if (shader == nullptr || !Camera::Read(pass.device, view) || !CloudLayer::Latest(lighting) ||
-        !Noise::Ensure(pass.device)) {
+        !Noise::Ensure(pass.device) || !DepthTexture::Latest(depth)) {
         return;
     }
 
@@ -288,7 +323,7 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
     const int day = static_cast<int>(gameSeconds / 86400.0);
     float trails[kTrailCount * 4];
     RollTrails(day, trails);
-    Draw(pass.device, shader, view, lighting, light, v, storminess, drift, trails);
+    Draw(pass, shader, view, lighting, light, v, storminess, drift, trails, depth);
 }
 
 bool SkyOverhaul::Clouds::DrawCover(IDirect3DDevice9* device, float left, float top, float right,
@@ -307,8 +342,15 @@ bool SkyOverhaul::Clouds::DrawMask(IDirect3DDevice9* device) {
     if (shader == nullptr) {
         return false;
     }
-    // As the engine's own mask clouds blend: the mask multiplied down by the cover.
-    return DrawSky(device, shader, D3DBLEND_ZERO, D3DBLEND_INVSRCCOLOR);
+    // Over the sky, tested against the world's own depth, which the pass still owns, and blended as
+    // the engine's own mask clouds blend: the mask multiplied down by the cover.
+    ScreenDraw draw(device, kFirstConstant, kConstantCount);
+    Bind(device, shader);
+    device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
+    device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+    device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);
+    device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCCOLOR);
+    return draw.ClipQuad(Frame::kFarDepth, g_corners);
 }
 
 bool SkyOverhaul::Clouds::DrawShadow(IDirect3DDevice9* device) {
@@ -323,13 +365,16 @@ bool SkyOverhaul::Clouds::DrawShadow(IDirect3DDevice9* device) {
 
 void SkyOverhaul::Clouds::ReleaseDeviceObjects() {
     Noise::ReleaseDeviceObjects();
-    g_shader.Release();
+    g_halfShader.Release();
+    g_compositeShader.Release();
     g_coverShader.Release();
     g_maskShader.Release();
     g_shadowShader.Release();
+    g_half.Release();
 }
 
 void SkyOverhaul::Clouds::SetEnabled(bool enabled) {
     g_enabled = enabled;
     DomeDraw::SetMaskSubstitute(enabled ? &DrawMask : nullptr);
+    DomeDraw::SetWatchDepth(DomeDraw::DepthUser::Clouds, enabled);
 }

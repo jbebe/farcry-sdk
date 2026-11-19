@@ -306,12 +306,16 @@ float4 MainPS(float2 screen : VPOS) : COLOR0
     {
         float far = smoothstep(Far.x, Far.y, distance) * Hotness(at.z - ground);
         float wobble = lerp(1.0f, Far.z, far);
+        // The exposure's two ends; the whole exposure spans under one texel of the turbulence, so the
+        // moments between them are interpolated.
+        float2 first = Push(around, direction.z, distance, Time.x - EXPOSURE * turn / MOMENTS, ground);
+        float2 last = Push(around, direction.z, distance,
+                           Time.x - EXPOSURE * (MOMENTS - 1 + turn) / MOMENTS, ground);
         float3 sum = 0.0f;
         float weight = 0.0f;
         [unroll] for (int i = 0; i < MOMENTS; i++)
         {
-            float time = Time.x - EXPOSURE * (i + turn) / MOMENTS;
-            float2 push = Push(around, direction.z, distance, time, ground) * toUv * wobble;
+            float2 push = lerp(first, last, i / (MOMENTS - 1.0f)) * toUv * wobble;
             shift += push / MOMENTS;
             spread += abs(push) / MOMENTS;
             float along = (i + turn) / MOMENTS * 2.0f - 1.0f;

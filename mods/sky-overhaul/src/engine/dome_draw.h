@@ -52,7 +52,7 @@ void SetGrade(GradeFn grade);
 
 // The effects that read the linear depth; the draws that read it are watched for its texture while
 // any of them wants it.
-enum class DepthUser : unsigned { Shadows = 1, Occlusion = 2, Haze = 4 };
+enum class DepthUser : unsigned { Shadows = 1, Occlusion = 2, Haze = 4, Clouds = 8 };
 
 void SetWatchDepth(DepthUser user, bool watch);
 

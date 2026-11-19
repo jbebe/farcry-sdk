@@ -325,7 +325,7 @@ void Span(float3 ray, out float enter, out float stride, out float reach) {
 }
 
 
-float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
+float4 March(float3 rayIn, float2 screen) {
     float3 ray = normalize(rayIn);
     float enter;
     float stride;
@@ -417,9 +417,35 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     return float4(colour * Eye.w, 1.0f - cover);
 }
 
-// How much of a ray the clouds cover, as MainPS draws them, with the march offset by `dither`, and
-// the filled land under the horizon with them.
-float Cover(float3 rayIn, float dither) {
+// The march at half resolution, for CompositePS to lay over the sky. Only where the four by four
+// pixels around a half-resolution pixel hold sky: its own two by two, and the ring that CompositePS's
+// filtered read reaches into from the pixels beside it.
+float4 HalfPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
+    float2 corner = FullFromHalf(screen);
+    bool sky = false;
+    [unroll] for (int y = -1; y <= 2; y++) {
+        [unroll] for (int x = -1; x <= 2; x++) {
+            sky = sky || IsSky(Stored(corner + float2(x, y) * Lens.zw));
+        }
+    }
+    [branch] if (!sky) {
+        return float4(0.0f, 0.0f, 0.0f, 1.0f);
+    }
+    return March(rayIn, screen);
+}
+
+// What HalfPS drew, over the sky at full resolution.
+sampler2D HalfClouds : register(s4);
+
+float4 CompositePS(float2 screen : VPOS) : COLOR0 {
+    // Each half-resolution ray was taken at its texel's corner, not its centre, so the read lands
+    // half a pixel on for each full pixel to meet its own ray.
+    return tex2Dlod(HalfClouds, float4((screen + 1.0f) * Lens.zw, 0.0f, 0.0f));
+}
+
+// How much of a ray the clouds cover, as March draws them, with the march offset by `dither`, and
+// the filled land under the horizon with them. `cheap` leaves the edges uneroded.
+float Cover(float3 rayIn, float dither, uniform bool cheap) {
     float3 ray = normalize(rayIn);
     float enter;
     float stride;
@@ -432,7 +458,7 @@ float Cover(float3 rayIn, float dither) {
             break;
         }
         float3 at = Eye.xyz + ray * (enter + ((float)i + dither) * stride);
-        float density = Density(at, false);
+        float density = Density(at, cheap);
         if (density > 0.0005f) {
             transmittance *= exp(-density * stride);
         }
@@ -448,13 +474,14 @@ float Cover(float3 rayIn, float dither) {
 // Discards a pixel with the likelihood that the clouds or the land cover its ray.
 float4 CoverPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float dither = Dither(screen);
-    clip(dither - Cover(rayIn, dither));
+    clip(dither - Cover(rayIn, dither, false));
     return 0.0f;
 }
 
-// What the clouds and the land cover of a pixel's ray, for the god-ray mask to be multiplied down by.
+// What the clouds and the land cover of a pixel's ray, for the god-ray mask to be multiplied down by,
+// with the edges uneroded: the rays blur the mask.
 float4 MaskPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
-    return Cover(rayIn, Dither(screen));
+    return Cover(rayIn, Dither(screen), true);
 }
 
 // What the clouds leave of the sunlight on the ground under a half-resolution pixel, in alpha,

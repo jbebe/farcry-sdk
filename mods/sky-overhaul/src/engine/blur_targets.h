@@ -1,6 +1,7 @@
 // Two render targets of one size that a separable blur passes between.
 #pragma once
 
+#include "engine/render_target.h"
 #include "engine/screen_draw.h"
 
 #include <d3d9.h>
@@ -9,13 +10,9 @@ namespace SkyOverhaul {
 
 class BlurTargets {
 public:
-    struct Target {
-        IDirect3DTexture9* texture;
-        IDirect3DSurface9* surface;
-    };
-
     // `owner` names the effect in the log.
-    explicit BlurTargets(const char* owner) : m_owner(owner) {}
+    explicit BlurTargets(const char* owner)
+        : m_targets{{owner, D3DFMT_A8R8G8B8}, {owner, D3DFMT_A8R8G8B8}} {}
 
     // Both targets at `width` by `height`, made on first use. False once the device has refused
     // one, which it logs; Release clears that.
@@ -28,17 +25,10 @@ public:
     // one texel in texture coordinates in its zw.
     void Blur(IDirect3DDevice9* device, DrawGuard& draw, UINT axisRegister);
 
-    const Target& First() const { return m_targets[0]; }
-    UINT Width() const { return m_width; }
-    UINT Height() const { return m_height; }
+    const OwnedTarget& First() const { return m_targets[0]; }
 
 private:
-    const char* m_owner;
-    IDirect3DDevice9* m_device = nullptr;
-    Target m_targets[2] = {};
-    UINT m_width = 0;
-    UINT m_height = 0;
-    bool m_refused = false;
+    OwnedTarget m_targets[2];
 };
 
 }

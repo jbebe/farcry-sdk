@@ -14,6 +14,9 @@ void Install();
 // engine's sun.
 void OnScenePass(const Frame::Pass& pass);
 
+// Draws the frame's air into the table the next frame's sky reads.
+void OnFinalPass(const Frame::Pass& pass);
+
 // How much the filled land shows and the sine of its top; none shows while the engine's sky is
 // drawn.
 void Fill(const Tuning::Values& values, float fill[2]);

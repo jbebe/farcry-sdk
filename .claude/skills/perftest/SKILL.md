@@ -10,7 +10,8 @@ UFCP and DevTools; the user plays a session; the mod is added; the user plays th
 two [Session logs](../../../mods/DevTools/README.md#session-log) are compared.
 
 `perftest.ps1` makes every change to the copy and `compare.py` does the analysis; both sit beside
-this file. The user plays the sessions: never launch the game for one yourself.
+this file. The user plays the sessions, or `session.py` plays them by script (Scripted sessions,
+below). Launch the game yourself only for a scripted one, after the user's OK for the session.
 
 ## 0. The game copy
 
@@ -81,6 +82,22 @@ game was launched without the switch.
 
 Run `-Step mod` and check that the printed plugins include the mod's DLL, if it has one. Then hand
 over the same instructions: the same thing as before. Wait, then `-Step collect`.
+
+## Scripted sessions
+
+In place of steps 4 and 5, `python -I session.py` plays one session in the copy with no mouse or keys:
+the save from 16 October, a turn right, 40 m on foot, a turn right, then 40 s still there, about 60 s
+in play. Reset with `-Length 60`.
+
+- `--check` plays the route with no session log and a picture after each step: show the user its
+  `index.html` before the first measured run of a session.
+- One session a side, and the baseline only once per machine and setup: after a change, copy the
+  last run's `baseline-*.csv` into the new run folder and play one mod session. Good means accept;
+  bad means rework and run once more. The user wants the game launched as few times as possible.
+- `perftest.ps1` deploys the builds of the tree it sits in, so from a worktree run the main tree's.
+- `python -I switches.py`, with the mod deployed, splits Sky Overhaul's cost by part in one session:
+  each switch off for 10 s between 10 s with all on, then all off. Each part is read against the
+  all-on segments either side; a saving under 0.1 ms is noise.
 
 ## 6. Evaluate
 

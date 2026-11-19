@@ -158,6 +158,12 @@ float4 Fill : register(c77);
 // xyz: the direction of the moon, pointing at it.
 float4 Moon : register(c78);
 
+// The air's colour by direction, drawn once a frame by TablePS. Across: the heading's angle from the
+// sun's, nought to pi, since the air scatters alike either side of the sun. Down: the square root of
+// the elevation over a right angle, which spends the rows near the horizon, where the sky changes
+// fastest.
+sampler2D SkyTable : register(s7);
+
 // How bright sunlit earth is against the fog in front of it.
 #define EARTH_BRIGHTNESS 0.7f
 
@@ -252,6 +258,19 @@ float3 Scattered(float3 ray, float3 sun, float mie, float intensity) {
     return intensity * gathered;
 }
 
+// The sun's heading on the ground, and any heading while it stands straight up or down.
+float2 SunHeading() {
+    float sunAcross = length(Sun.xy);
+    return sunAcross > 0.0001f ? Sun.xy / sunAcross : float2(1.0f, 0.0f);
+}
+
+// Where a ray at or above the horizon reads the table.
+float2 TableUv(float3 ray) {
+    float2 heading = normalize(ray.xy + 0.0001f);
+    float around = acos(clamp(dot(heading, SunHeading()), -1.0f, 1.0f)) / PI;
+    return float2(around, sqrt(asin(saturate(ray.z)) / (0.5f * PI)));
+}
+
 // The engine's fog colour along a flat unit heading: its fog ramp, read by that heading's angle to
 // its fog vector.
 float3 FogAlong(float2 heading) {
@@ -341,7 +360,7 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // side of a low sun that is the colour from a few degrees up, since the skyline itself is where
     // the far side's darkening goes deepest.
     float3 skyward = normalize(float3(ray.xy, max(ray.z, BELOW_HORIZON_LIFT * turn)));
-    float3 colour = Scattered(skyward, Sun.xyz, Air.x, Air.y);
+    float3 colour = tex2Dlod(SkyTable, float4(TableUv(skyward), 0.0f, 0.0f)).rgb;
     // One at the skyline, nought overhead.
     float below = saturate(1.0f - skyward.z);
 
@@ -384,6 +403,17 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
                                STARS_COVER * (1.0f - nearMoon)));
     alpha = lerp(alpha, 1.0f, filled);
     return Output(colour, alpha, screen);
+}
+
+// One texel of the table: the air along the ray it stands for. `texel` runs nought to one across
+// the table and lands on texel centres.
+float4 TablePS(float3 texel : TEXCOORD0) : COLOR0 {
+    float2 along = SunHeading();
+    float2 across = float2(-along.y, along.x);
+    float around = texel.x * PI;
+    float elevation = texel.y * texel.y * 0.5f * PI;
+    float3 ray = float3((along * cos(around) + across * sin(around)) * cos(elevation), sin(elevation));
+    return float4(Scattered(ray, Sun.xyz, Air.x, Air.y), 1.0f);
 }
 
 // The filled land alone, drawn again over the finished pass, so the engine's sun, drawn after the

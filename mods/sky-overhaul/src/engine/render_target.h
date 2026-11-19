@@ -18,4 +18,31 @@ inline HRESULT CreateTarget(IDirect3DDevice9* device, const D3DSURFACE_DESC& des
     return *texture == nullptr ? E_FAIL : (*texture)->GetSurfaceLevel(0, surface);
 }
 
+// One such target in a fixed format, made on first use and again when the device or the size
+// changes.
+class OwnedTarget {
+public:
+    // `owner` names the effect in the log.
+    OwnedTarget(const char* owner, D3DFORMAT format) : m_owner(owner), m_format(format) {}
+
+    // False once the device has refused it, which it logs; Release clears that.
+    bool Ensure(IDirect3DDevice9* device, UINT width, UINT height);
+
+    void Release();
+
+    UINT Width() const { return m_width; }
+    UINT Height() const { return m_height; }
+
+    IDirect3DTexture9* texture = nullptr;
+    IDirect3DSurface9* surface = nullptr;
+
+private:
+    const char* m_owner;
+    D3DFORMAT m_format;
+    IDirect3DDevice9* m_device = nullptr;
+    UINT m_width = 0;
+    UINT m_height = 0;
+    bool m_refused = false;
+};
+
 }

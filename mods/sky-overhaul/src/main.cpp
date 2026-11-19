@@ -64,6 +64,7 @@ namespace {
     }
 
     void OnFinalPass(const SkyOverhaul::Frame::Pass& pass) {
+        SkyOverhaul::Sky::OnFinalPass(pass);
         SkyOverhaul::Dazzle::OnFinalPass(pass);
         SkyOverhaul::Grain::OnFinalPass(pass);
         SkyOverhaul::SolidDepth::OnFinalPass(pass);

@@ -3,6 +3,17 @@
 Notable changes to Sky Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Changed
+- **Faster.** Sky Overhaul costs about a third less GPU time: the sky's air is worked out once a
+  frame instead of for every pixel, the clouds are drawn at half resolution, and the heat haze reads
+  its noise less often. Thin cloud edges are a touch grainier; the rest looks as it did.
+
+### Fixed
+- **Even frame pacing.** Looking at a still sky could make every tenth frame or so take twice as
+  long. That stutter is gone.
+
 ## [1.6.0] - 2026-11-17
 
 ### Changed
