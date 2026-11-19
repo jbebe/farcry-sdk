@@ -6,7 +6,7 @@ at night it gives you away.
 - **Its own control**, Flashlight, on L by default and rebindable in Options > Controls.
 - **A real light.** The engine's own spot light, the kind the vehicles' headlights use, sits at your
   head and follows where you look. It is the headlights' warm white, reaches 25 m and casts shadows.
-- **Guards see it, with Difficulty Overhaul.** At night a guard looking your way sees it from up to
+- **Guards see it, with Combat Overhaul.** At night a guard looking your way sees it from up to
   60 m, and a guard you shine it on notices you even with his back turned. Without Difficulty
   Overhaul the guards ignore the light.
 - **A switch click**, with the light coming up just after it.

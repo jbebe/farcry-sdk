@@ -91,7 +91,7 @@ Stage: active
 - 0x00422510: stacks - the engine device's EndScene, which Sky, Aiming, Vehicle and Inventory Overhaul, Third Person and DevTools hook; FCSE chains them
 - 0x00422630: stacks - the engine device's Reset, which Aiming, Vehicle and Inventory Overhaul and DevTools hook; FCSE chains them
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
-- difficulty-overhaul: merged by JackAll, no shared field - both edit the guns' entity-library archetypes and particle libraries
+- combat-overhaul: merged by JackAll, no shared field - both edit the guns' entity-library archetypes and particle libraries
 - sound-overhaul: merged by JackAll, no shared field, and the shot hooks stack, fixed in Sound Overhaul 1.0.2 - both edit the guns' entity-library archetypes, this mod leaving the echo field as shipped, and both hook the shot at 0x00115680
 - legacy-plugin: stacks - both mid-hook the sprint press (0x00144630, Steam); Aiming Overhaul skips it down a scope while the breath is held, Legacy Plugin's sprint toggle only times the keyboard press, and a skipped press leaves no sprint to latch; FCSE stacks same-address hooks
 - map-overhaul: merged by JackAll, no shared field - both edit the player archetypes in entitylibrary.fcb (26 files); Aiming Overhaul sets fWalkingAcceleration and fWalkingDeceleration, Map Overhaul clears archGPSVehicleArchetype

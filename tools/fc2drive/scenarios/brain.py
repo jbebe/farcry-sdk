@@ -1,4 +1,4 @@
-"""Difficulty Overhaul's brain trace: with SWITCH on the command line, each task a soldier's alert and
+"""Combat Overhaul's brain trace: with SWITCH on the command line, each task a soldier's alert and
 combat brains start is logged by the CRC32 of its instance name. names() reads the names back out of the merc
 brain the installed game loads.
 """

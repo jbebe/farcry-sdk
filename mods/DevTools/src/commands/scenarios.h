@@ -21,7 +21,7 @@ struct Soldier {
 
 struct Scenario {
     const char* name;
-    // The Difficulty Overhaul finish checklist rows it covers.
+    // The Combat Overhaul finish checklist rows it covers.
     const char* rows;
     std::span<const Soldier> soldiers;
     const char* steps;

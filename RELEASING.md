@@ -22,7 +22,7 @@ schedule.
 | Flashlight | `mods/flashlight` | `flashlight-<version>` | |
 | Aiming Overhaul | `mods/aiming-overhaul` | `aiming-overhaul-<version>` | |
 | Vehicle Overhaul | `mods/vehicle-overhaul` | `vehicle-overhaul-<version>` | |
-| Difficulty Overhaul | `mods/difficulty-overhaul` | `difficulty-overhaul-<version>` | |
+| Combat Overhaul | `mods/combat-overhaul` | `combat-overhaul-<version>` | |
 | Inventory Overhaul | `mods/inventory-overhaul` | `inventory-overhaul-<version>` | |
 | Legacy Plugin | `mods/legacy-plugin` | `legacy-plugin-<version>` | |
 | Third Person | `mods/third-person` | `third-person-<version>` | |

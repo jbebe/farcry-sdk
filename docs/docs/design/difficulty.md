@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # Difficulty
 
-**Status:** in progress since 2026-10-21, built as `mods/difficulty-overhaul`. Seventeen features are
+**Status:** in progress since 2026-10-21, built as `mods/combat-overhaul`. Seventeen features are
 built; the [finish checklist](#finish-checklist) re-checks each on the test range and lists what is
 left. How enemies should differ from one another is [not agreed](#open-how-enemies-differ).
 
@@ -68,7 +68,7 @@ Combat that is realistic and fair:
   the user's pistol shot and killed him at once: "That should not happen"): a shot gives the player away only
   to a soldier who was alert when he heard it, and the quick aim needs him alert 2 s before he caught sight
   of the player; one the shot alerts learns where it came from and is surprised.
-- **Squad tactics belong here** (2026-11-06): "yes, I want the squad tactics in difficulty overhaul".
+- **Squad tactics belong here** (2026-11-06): "yes, I want the squad tactics in combat overhaul".
   First the game's own, switched on where it ships them off: flanking and height at long and medium
   range, moving when compromised; then fire from cover and crouching to shoot in the open, researched
   before they are built.
@@ -110,7 +110,7 @@ Combat that is realistic and fair:
   spot in `AdjustFOV`, and whichever loaded second found its pattern overwritten, so with both
   installed the guards ignored the light. Fixing only the hook would not have been enough: Flashlight
   stretched the game's cones, which this model replaces. The user: "flashlight mod doesnt change AI
-  behavior, but if difficulty overhaul detects that you turned on the flashlight, it does what
+  behavior, but if combat overhaul detects that you turned on the flashlight, it does what
   flashlight mod did before with the AI". Flashlight sends its beam on an FCSE channel and this mod
   applies its three rules (the user's pick over finding the light among the scene's lights, which car
   headlights could fool). Without this mod, guards ignore the light.

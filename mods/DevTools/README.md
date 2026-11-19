@@ -87,7 +87,7 @@ camera, so walls hide them; Present is too late, because the scene's depth is go
 are strips three pixels wide that turn to face the camera. For each soldier:
 
 - his focus cone as his archetype sets it, in cyan, and the wider cone the engine tested this
-  update, in blue, as translucent sectors on the ground at his feet (with the Difficulty Overhaul,
+  update, in blue, as translucent sectors on the ground at his feet (with the Combat Overhaul,
   the wider one spans 180°);
 - a white line where his head points;
 - a line to your head and a bar above his, coloured by how visible you are to him against his own
@@ -341,7 +341,7 @@ way any new world is ([Make a new world](../../docs/jackall/world/new-worlds.md)
   `jackall-cli world new`, then packs them with the content into `layer\` with `jackall-cli world pack`.
   The layer is game files and is not committed. The range's entity library is a copy of retail
   `tmpla`'s, so a mod's `tmpla` fragments never reach it: a mod that changes archetypes there writes
-  fragments for `worlds\testrange\generated\entitylibrary.fcb`, as Difficulty Overhaul's guns do.
+  fragments for `worlds\testrange\generated\entitylibrary.fcb`, as Combat Overhaul's guns do.
 
 ```
 .\mods\DevTools\range\build-layer.ps1
@@ -350,7 +350,7 @@ tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe mod build --ga
 
 The **Range** tab has **Travel to the range**, the same as
 `#GameChangeWorld("testrange", "2054037628277228842")`, and a button per scenario. A scenario covers
-rows of the Difficulty Overhaul's [finish checklist](../../docs/docs/design/difficulty.md#finish-checklist).
+rows of the Combat Overhaul's [finish checklist](../../docs/docs/design/difficulty.md#finish-checklist).
 Pressing it does the following, as one chunk of the game's own Lua:
 
 1. Removes everything the last scenario spawned.
@@ -503,18 +503,18 @@ carries the time and the plugin that sent it; a soldier is named by his entity i
 line about him:
 
 ```
-19:30:41.512 [difficultyoverhaul] soldier 3A802DED shot at player: chance 0.66 (recoil 1.00, sighting 1.00, crossing 1.00, shaken 1.00) at 58.6 m, 2.6 s on him, at the torso, hit; visibility 0.77, assault rifle; the player standing at 0.0 m/s
+19:30:41.512 [combatoverhaul] soldier 3A802DED shot at player: chance 0.66 (recoil 1.00, sighting 1.00, crossing 1.00, shaken 1.00) at 58.6 m, 2.6 s on him, at the torso, hit; visibility 0.77, assault rifle; the player standing at 0.0 m/s
 19:30:41.513 [DevTools] player hit: pierce level 10, torso, at 58.6 m, health 495 -> 231 of 495, by 3A802DED (Hardcore, act 1, hit locations off)
 19:30:43.020 [DevTools] player died: killed by 3A802DED at 58.6 m
 19:30:39.877 [DevTools] soldier 3A802DED hit: pierce level 8, torso, at 58.0 m, health 250 -> 146 (Hardcore, act 1, hit locations on)
-19:30:39.878 [difficultyoverhaul] soldier 3A802DED suppressed: hit, he panics at 58.6 m
+19:30:39.878 [combatoverhaul] soldier 3A802DED suppressed: hit, he panics at 58.6 m
 19:30:40.101 [DevTools] soldier 7C000123 died, not by the player: stim type 4 level 1000
 ```
 
 `fight_report.py` reads a combat log and reports it: totals by range, each death with who fired in
 the 10 s before it, each soldier from his first shot to his last, and flags for what should not
 happen, such as a shot with no chance or a death within 2 s of the killer's first shot. Shots,
-suppression and fire discipline are Difficulty Overhaul's lines:
+suppression and fire discipline are Combat Overhaul's lines:
 
 ```
 python fight_report.py                          the newest combat log of FC2_GAME, or of the session's game copy

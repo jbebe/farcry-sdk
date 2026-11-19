@@ -1,4 +1,4 @@
-"""Difficulty Overhaul's hard-to-hit soldiers on the test range. Three riflemen fight the player across the
+"""Combat Overhaul's hard-to-hit soldiers on the test range. Three riflemen fight the player across the
 low wall, invincibility on. Watched first: how long each cover attack stands him up to fire, and how often a
 pop-up comes up and where. Then, each time one stands to fire, a burst past him 2 m to his side, and how
 long he ducks. Last, an ambush: one of an idle group shot dead, each hit's health, and what the other two

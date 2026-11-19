@@ -1,4 +1,4 @@
-"""Difficulty Overhaul's squad tactics on the test range: a squad of three riflemen fights the player,
+"""Combat Overhaul's squad tactics on the test range: a squad of three riflemen fights the player,
 who stands still, in one of four arenas. In the open, with no cover in reach, an assaulter runs out to the
 player's side and a soldier crouches to fire where he stops. At the wall, the squad stands north of the
 low wall with the player south of it, so a soldier fires from behind it. Beside it, the wall lies off to

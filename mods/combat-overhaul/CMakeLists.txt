@@ -1,0 +1,47 @@
+# CMakeLists.txt for Combat Overhaul - an FCSE plugin. See README.md.
+cmake_minimum_required (VERSION 3.21)
+
+# Static CRT (/MT), matching FCSE.exe; must be set before project() to take effect.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+project ("CombatOverhaul")
+
+if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
+  message(FATAL_ERROR "Combat Overhaul must be built 32-bit (x86) - Far Cry 2 is a 32-bit "
+                      "process. Select the x86-debug/x86-release preset.")
+endif()
+
+add_library(CombatOverhaul SHARED
+  "src/main.cpp"
+  "src/damage_taken.cpp"
+  "src/hit_model.cpp"
+  "src/fire_discipline.cpp"
+  "src/range_falloff.cpp"
+  "src/intuition.cpp"
+  "src/suppression.cpp"
+  "src/squad_memory.cpp"
+  "src/squad_roles.cpp"
+  "src/in_the_open.cpp"
+  "src/grenades.cpp"
+  "src/blood_spatter.cpp"
+  "src/blood_puddle.cpp"
+  "src/watched_spot.cpp"
+  "src/perception.cpp"
+  "src/flashlight.cpp"
+  "src/going_down.cpp"
+  "src/healing.cpp"
+  "src/brain_trace.cpp"
+  "src/engine/bullets.cpp"
+  "src/engine/damage.cpp"
+  "src/engine/game.cpp"
+  "src/engine/impacts.cpp"
+  "src/engine/ray.cpp"
+  "src/engine/shooting.cpp"
+)
+
+target_include_directories(CombatOverhaul PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/FCSE/include"
+)
+target_compile_features(CombatOverhaul PRIVATE cxx_std_20)
+target_compile_definitions(CombatOverhaul PRIVATE NOMINMAX)

@@ -55,7 +55,7 @@ fc2drive, `release_check.py` and `/perftest` find the same copy by the session.
   | `build.ps1 -Install` | Mods |
   | --- | --- |
   | Rebuilds the patch from vanilla plus this one layer, dropping every other | aiming-overhaul, flashlight, sky-overhaul, vehicle-overhaul, wildlife-overhaul |
-  | Copies the DLL into `bin\plugins\` and leaves the patch alone | UFCP, DevTools, difficulty-overhaul, inventory-overhaul, legacy-plugin |
+  | Copies the DLL into `bin\plugins\` and leaves the patch alone | UFCP, DevTools, combat-overhaul, inventory-overhaul, legacy-plugin |
   | Copies `layer\plugins\sound-overhaul\` into `bin\plugins\sound-overhaul\` | sound-overhaul |
   | Not offered | map-overhaul, third-person |
 
@@ -100,7 +100,7 @@ jackall-cli mod build --game "<game>" --layer mods\<A>\layer --layer mods\<B>\la
 
 - The whole set plus this mod, in one build.
 - A later `--layer` wins a whole file two layers ship. `vss-vintorez` goes after `sound-overhaul` and
-  `aiming-overhaul` (its shot banks, the Dart Rifle's fields), and `difficulty-overhaul` after `DevTools` (the test range's
+  `aiming-overhaul` (its shot banks, the Dart Rifle's fields), and `combat-overhaul` after `DevTools` (the test range's
   particle library). Otherwise the mod under test goes last.
 - Under Windows PowerShell the CLI's progress on stderr stops a script running with
   `$ErrorActionPreference = 'Stop'`. Run it under `Continue` and check `$LASTEXITCODE`, as `Invoke-Cli`

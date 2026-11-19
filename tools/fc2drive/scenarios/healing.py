@@ -1,4 +1,4 @@
-"""Difficulty Overhaul's healing on the test range, which plays Hardcore: a rifleman 20 m off shoots the
+"""Combat Overhaul's healing on the test range, which plays Hardcore: a rifleman 20 m off shoots the
 player, invincibility off, until a hit lands, and is cleared; WAIT seconds later a second rifleman's
 first hit shows how far health came back, beside the game's own refill of the bar the first hit left.
 

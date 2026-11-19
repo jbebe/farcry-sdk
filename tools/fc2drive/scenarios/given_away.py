@@ -1,4 +1,4 @@
-"""Difficulty Overhaul's shots giving the player away, on the test range: a rifleman faces the player,
+"""Combat Overhaul's shots giving the player away, on the test range: a rifleman faces the player,
 who crouches still in the open too far off for him to make out, and fires a round away from him, then
 another. The first only alerts him: it should not give the player away. Within the gun's hearing the
 second should, "given away by his shot", and he should open fire; beyond it neither should. Reports

@@ -72,7 +72,7 @@ particle's life, 0 to 1. The colour a particle shows is `InitColorKF` times `Par
 **(inferred)**: the bullet blood's smoke puff, `(0.33, 0.18, 0.18)` times `(0.58, 0, 0)`, draws as a
 near-black red. `jackall-cli rml decode` and `rml encode` round-trip the shipped libraries byte for
 byte, and JackAll merges a library system by system, so a mod ships only the systems it changes or
-adds, as fragments numbered by their resource id; Difficulty Overhaul's `data\particles.py` writes
+adds, as fragments numbered by their resource id; Combat Overhaul's `data\particles.py` writes
 its bullet blood that way.
 
 Both paths bottom out in `CResourceManager::LoadDep(IFile*, bool isPrimary)` (`0x09c07f50`) →

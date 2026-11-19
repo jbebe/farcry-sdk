@@ -1,4 +1,4 @@
-"""Difficulty Overhaul's grenades and its flank at a player behind cover, on the test range, invincibility on.
+"""Combat Overhaul's grenades and its flank at a player behind cover, on the test range, invincibility on.
 The player stands behind cover and fires a round over the riflemen; once they fire back he crouches out of
 their sight. Throw: three riflemen 28 m north of the low wall; who is asked to throw and the throw plan he
 runs. Flank: three riflemen 38 m off on open ground; the plans each runs once the player is hidden, and how far across and toward him he gets. Wall,

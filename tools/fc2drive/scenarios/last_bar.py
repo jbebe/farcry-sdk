@@ -1,4 +1,4 @@
-"""Difficulty Overhaul's last health bar on the test range's Hardcore: a shotgunner 20 m off shoots the
+"""Combat Overhaul's last health bar on the test range's Hardcore: a shotgunner 20 m off shoots the
 player, invincibility off, until he dies, each pellet a hit of 117. Each hit is reported with what it
 took beside its level's full damage, so a hit on the last bar shows whether it was quartered.
 
@@ -16,7 +16,7 @@ from perception import CLEAR, SAVE, Log
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fc2drive import Run, launch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "mods" / "difficulty-overhaul" / "data"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "mods" / "combat-overhaul" / "data"))
 from weapons import curve_damage
 
 SHOTGUNNER = "enemy_archetypes.Red_Faction.ShotgunMan_Caucasian"

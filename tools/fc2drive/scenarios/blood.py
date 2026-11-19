@@ -1,4 +1,4 @@
-"""Difficulty Overhaul's blood on the test range: a hit sprays blood only as its real round would, on a
+"""Combat Overhaul's blood on the test range: a hit sprays blood only as its real round would, on a
 soldier and on the player. The player shoots a rifleman 10 m off, standing so the round lands high and
 crouched so it lands on his body, with a pistol, the Desert Eagle, a rifle, a shotgun and the AS50; then a
 rifleman and a shotgunner shoot the player, who faces them. A shot is taken straight after each round, and

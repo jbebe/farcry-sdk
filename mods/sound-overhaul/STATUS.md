@@ -47,5 +47,5 @@ Stage: maintenance
 ## Collisions
 
 - aiming-overhaul: merged by JackAll, no shared field, and the shot hooks stack, fixed in 1.0.2 - both edit the guns' entity-library archetypes, Aiming Overhaul leaving the echo field as shipped, and both hook the shot at 0x00115680
-- difficulty-overhaul: merged by JackAll, no shared field - both edit the guns' entity-library archetypes
+- combat-overhaul: merged by JackAll, no shared field - both edit the guns' entity-library archetypes
 - vss-vintorez: fixed by loading the VSS after Sound Overhaul - both ship the Dart Rifle's shot banks 004bf5e9 and 004bf5eb

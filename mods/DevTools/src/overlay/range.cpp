@@ -96,7 +96,7 @@ void Draw() {
     }
     ImGui::TextWrapped("Start clears the last scenario, sets noon, takes you to its arena and spawns its "
                        "soldiers: inside the range without a loading screen, from farther away by teleport. "
-                       "Rows are the Difficulty Overhaul's finish checklist.");
+                       "Rows are the Combat Overhaul's finish checklist.");
 
     for (const Arena& arena : Scenarios::Arenas()) {
         ImGui::SeparatorText(arena.name);

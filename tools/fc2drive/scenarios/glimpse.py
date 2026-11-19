@@ -1,4 +1,4 @@
-"""Difficulty Overhaul's fire at a glimpse on the test range: a rifleman 15 m off sees the player and
+"""Combat Overhaul's fire at a glimpse on the test range: a rifleman 15 m off sees the player and
 starts fighting him; then the player moves to 55 m and crouches still, past the 50 m a fighting
 soldier recognises him from but within the 60 m he notices him from. A soldier fighting the player
 should keep firing at what he notices, at a low chance, where before he held his fire until he

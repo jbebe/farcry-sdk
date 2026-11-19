@@ -122,7 +122,7 @@ both field by field with other mods' edits, reporting any clash.
   itself. It shows in vehicles too, from the health the last hit left. A hit's dark edges cover it.
 - **Shot shake.** Each shot kicks the view up and it springs straight back, as hard as the round
   pushes whoever fires it: its projectiles' mass times their muzzle velocity, from the round
-  Difficulty Overhaul gives each gun's archetype, easing off past 15 newton-seconds, the same from
+  Combat Overhaul gives each gun's archetype, easing off past 15 newton-seconds, the same from
   the hip and down the sights. Each kind of gun kicks its own way, and each weapon can be given
   values of its own:
   - Rifles, submachine guns, machine guns and sniper rifles: 0.07° for each newton-second, a short,
@@ -136,7 +136,7 @@ both field by field with other mods' edits, reporting any clash.
   back, a whole cycle every 0.08 s, which stops as soon as the rounds do: 0.133° either way for each
   newton-second on the automatic rifles, submachine guns and machine guns, ±0.72° on an AK-47, and
   0.103° on the USAS-12. Single-shot guns kick on every shot however fast they are fired. A gun that names no round, a launcher, the Dart Rifle,
-  the crossbow, the flare gun or every gun without Difficulty Overhaul, kicks by the game's own
+  the crossbow, the flare gun or every gun without Combat Overhaul, kicks by the game's own
   recoil instead, counted as a push the way an AK-47's is. Only the view turns, about the eye: the
   gun keeps its place and the shots their line, so the sights stay on where a shot goes. A scope's
   sight picture does not shake. The kick, its time and its delay after the shot, the roll, its

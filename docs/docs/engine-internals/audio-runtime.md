@@ -676,7 +676,7 @@ on the entity's physics within 1 cm, or failing that at 0.4 times the size **(RE
 decal is a projection in the object's own space, so one let past that test shows only where it falls on
 the object **(inferred)**. The exit puff fills no static geometry, so its decals never land on a building
 or a wall that is not an entity. Decal types are the entries of `databases\generic\decal.xml`, named in a
-record's `decalDecal` by the CRC32 of their `Name`; Difficulty Overhaul spawns its blood decals this way.
+record's `decalDecal` by the CRC32 of their `Name`; Combat Overhaul spawns its blood decals this way.
 
 There is **no ricochet** anywhere: no event, field, string or code. The only bounce asset,
 `matimpBounceImpactFx`, belongs to thrown objects.

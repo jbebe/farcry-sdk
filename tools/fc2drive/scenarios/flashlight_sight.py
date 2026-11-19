@@ -1,4 +1,4 @@
-"""Difficulty Overhaul's soldiers and the player's flashlight, at night on the test range, Flashlight installed:
+"""Combat Overhaul's soldiers and the player's flashlight, at night on the test range, Flashlight installed:
 the player stands still on the open ground and a rifleman is spawned ahead of him, first 40 m off with the
 light off, then with it on, then 20 m off with his back turned and the beam on him, then with the beam
 turned away. Reports each case's looks: where the player was in his view, whether he saw the flashlight,

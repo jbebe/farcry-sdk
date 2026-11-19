@@ -140,7 +140,7 @@ server build** parts:
 - **`CTaskSwitchWeapon` with `weaponSelected` primary draws the secondary when he has no primary.**
   `desiredWeaponClass`, when he carries that category, overrides it.
 
-Difficulty Overhaul's brain keeps the launcher for a player in a vehicle
+Combat Overhaul's brain keeps the launcher for a player in a vehicle
 ([design log](../design/difficulty.md)).
 
 ### Grenades
@@ -188,7 +188,7 @@ uses. A throw never takes the gadget out: `CGadgetUseThrowStrategy::Throw` only 
 a soldier who threw his last grenade still drops one (**traced in the server build**). `SInventoryViewPawnImpl::OnSpawn` (Steam `0x10126C00`, no arguments) equips the pack whose name's
 CRC32 sits at the inventory's `+0x08`; the pawn is at `+0x48`.
 
-Difficulty Overhaul gives every soldier one grenade that his throws spend, and asks for the combat throw
+Combat Overhaul gives every soldier one grenade that his throws spend, and asks for the combat throw
 ([design log](../design/difficulty.md)).
 
 ## Squads
@@ -249,7 +249,7 @@ An alert entered any other way, from a gunshot or a target lost in a fight, neve
   player is inside a safe zone.
 
 This is **traced in the server build** (`CBrainMerc::DoStart`, `CBrainMercAlert::DoStart`) and the
-shipped `mercbrain`, not yet matched in `Dunia.dll`. Difficulty Overhaul's brain sets flag 57 two
+shipped `mercbrain`, not yet matched in `Dunia.dll`. Combat Overhaul's brain sets flag 57 two
 minutes into an alert ([design log](../design/difficulty.md)).
 
 ### Under fire
@@ -459,7 +459,7 @@ is in it when a placed tuft stands within 1.5 m of it, unburnt, of a mesh whose
 (`CStealthComponent::InHighGrass`, server `0x0883E250`, Steam `0x106991D0` with `RET 4` and its
 object unread; **RE-verified**). Only five shipped meshes have that, the tall savannah grasses and
 sorghum, so the multiplayer grass looks the same and hides no one. They stand 1.2 m, `_bold` 1.4 m. On the test range a crouched player in `1_grasssavannah_b` reads `in grass` on the
-Difficulty Overhaul's perception line and in `1_grasssavannah_b_mp` does not (fc2drive).
+Combat Overhaul's perception line and in `1_grasssavannah_b_mp` does not (fc2drive).
 
 - **Concealment** is `1 − ramp(d, 3 m, 10 m) × k`. *k* is 0.9 for an idle observer, 0.765 for one
   alerted before a fight, and 0 in or just after combat. The observer's side of the player picks
@@ -469,7 +469,7 @@ Difficulty Overhaul's perception line and in `1_grasssavannah_b_mp` does not (fc
   invisible beyond 2 m to an idle observer and beyond 4 m to an alerted one. It never applies in
   the game as shipped: the evaluator reads the bonus inverted, -1 for the camo suit's
   `stealth_camouflage` plan, and asks for more than 0. Read as it is, a crouched, still player in
-  the test range's grass went unseen (Difficulty Overhaul diagnostic; **RE-verified and
+  the test range's grass went unseen (Combat Overhaul diagnostic; **RE-verified and
   in game**). Lua's `Game:AddBonusPlan("stealth_camouflage")` gives the suit; the console's
   `add_bonus_plan` puts its argument into that call unquoted and gives nothing.
 
@@ -795,9 +795,9 @@ The 64 flags are a `uint64` on the `CGameAgent` (Steam `+0x190`, the low 32 firs
 which `CTaskOperateOnFlagField` sets, clears or tests and `CScannerFactExist` with `UseFlagField` watches: with
 `checkExistance` 1 it fires once the flag is set, with 0 once it is clear. No `mercbrain` task touches flag 34, and in the
 server build's code only vehicles' does, on vehicle agents (`CBrainVehicle`, `CBrainBoat`, `CVehicleAgent`), so a
-soldier's flag 34 is free; Difficulty Overhaul sets it while the player is in the open for him. No `mercbrain`
+soldier's flag 34 is free; Combat Overhaul sets it while the player is in the open for him. No `mercbrain`
 task touches flag 35 either, nor any of the server build's flag calls whose index reads off in the
-decompiled code; Difficulty Overhaul sets it to ask a soldier for his grenade.
+decompiled code; Combat Overhaul sets it to ask a soldier for his grenade.
 `CTaskPathAnalyzer` compares the length of the path last found (agent `+0x18C` in the server build) with its
 `ShortPathValue` and `MediumPathValue`: up to the first it fires `ShortPath`, up to the second `MediumPath`, beyond
 it `LongPath`; `LongPathValue` is not read. A connection to a running plan with the anchor `Restart` stops and
@@ -810,7 +810,7 @@ its instance name at `+0x04`, the plan it runs in at `+0x08` (null at the top br
 which for a soldier's brain is his `CPawnAgent`. The name is the hash the packed repository keys the task by,
 so the shipped brain's source names every hash a hook logs (**RE-verified**: the server build's `CTask::Start`,
 `SetAgent` and `DispatchConnection`, and the Steam `CBlueprintDecision` vtable; logged on the test range).
-Difficulty Overhaul's `-braintrace` switch logs each task a soldier's combat brain starts this way.
+Combat Overhaul's `-braintrace` switch logs each task a soldier's combat brain starts this way.
 
 ## Task parameters
 

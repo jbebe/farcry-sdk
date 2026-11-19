@@ -11,7 +11,7 @@ Notable changes to DevTools, loosely following
   time, GPU time, whether the player is in play and in a vehicle, and a once-a-second CPU, memory and
   VRAM sample, written to a CSV in `bin\`, to compare a session with a mod against one without.
 - **Combat log**, off unless launched with `-combatlog`: every hit on the player and by him, and
-  every line other mods send on FCSE's `combat` channel, Difficulty Overhaul's shots among them, in
+  every line other mods send on FCSE's `combat` channel, Combat Overhaul's shots among them, in
   one timeline in `bin\devtools-logs`, with `fight_report.py` to report a session's fights.
 - **Remote control**, off unless launched with `-devtoolsremote`: a local pipe, named after the install's
   folder so games from different installs each serve their own, for a program to read the

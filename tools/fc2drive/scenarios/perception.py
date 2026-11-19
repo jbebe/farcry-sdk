@@ -1,4 +1,4 @@
-"""Difficulty Overhaul's perception on the test range: from how far one rifleman notices and recognises
+"""Combat Overhaul's perception on the test range: from how far one rifleman notices and recognises
 the player, case by case, read off the combat log's perception lines.
 
     python perception.py [--only day-upright,night-upright]
@@ -46,7 +46,7 @@ PERCEPTION = re.compile(r"perception: (notices|recognises) the player at (\S+) m
                         rf"({ZONE}(?:, in grass|, hidden by the camo suit)?)")
 TRACE = re.compile(rf"perception trace: (\S+) m, [^,]+, {ZONE}")
 DEATH = re.compile(r"soldier \S+ died, not by the player")
-# The switch that has Difficulty Overhaul trace every check of the player.
+# The switch that has Combat Overhaul trace every check of the player.
 TRACE_SWITCH = "-perceptiontrace"
 # The bonus plan that is the camo suit.
 CAMO_SUIT = "stealth_camouflage"

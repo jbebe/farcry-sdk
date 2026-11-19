@@ -1,8 +1,8 @@
-"""Difficulty Overhaul's weapon damage on the test range: the player shoots a rifleman who stands 10 m
+"""Combat Overhaul's weapon damage on the test range: the player shoots a rifleman who stands 10 m
 off with his back turned, a single shot at a time, with each of a few guns, standing (the shot lands
 high) and crouched (it lands on the body); then a rifleman shoots the player, invincibility off, until
 two hits have landed. Reports each hit as the combat log has it, its level, body part and health, beside
-the level and health mods\\difficulty-overhaul\\data\\weapons.py gives the gun.
+the level and health mods\\combat-overhaul\\data\\weapons.py gives the gun.
 
     python damage.py
 """
@@ -18,7 +18,7 @@ from perception import CLEAR, LANE_MIDDLE, RIFLEMAN, SAVE, Log, put, spawn, spaw
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fc2drive import Run, launch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "mods" / "difficulty-overhaul" / "data"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "mods" / "combat-overhaul" / "data"))
 from weapons import curve_damage, gun, impact_level
 
 TARGET = 10.0

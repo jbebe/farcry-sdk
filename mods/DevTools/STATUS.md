@@ -30,7 +30,7 @@ Stage: active
 - [done] Armory: gives a gun, Ammo slider and Health % for the gun in hand - user-confirmed
 - [done] Armory: the DLC's silenced shotgun, sawed-off shotgun and crossbow - user 2026-11-13: "devtools fix works"
 - [done] Test range world, testrange - travel from world1 crashes the GOG build (Dunia+0x4CFD33), cause unknown
-- [done] Range tab: a scenario per Difficulty Overhaul checklist row - seen 2026-10-25; arena start facing probably wrong (unchecked)
+- [done] Range tab: a scenario per Combat Overhaul checklist row - seen 2026-10-25; arena start facing probably wrong (unchecked)
 - [done] Range grass field, grass crest and tamarix bush arenas, three patrol routes - fc2drive-run 2026-11-03/04, not played
 - [done] Range acacia grove west of the grass field - not deployed (signal the user first), unseen
 - [done] Remote control over a named pipe (-devtoolsremote): state, goto, actions, shots, recordings - run, works 2026-10-30
@@ -38,7 +38,7 @@ Stage: active
 - [done] Remote control: one pipe per install, named after its folder, so game copies run side by side - built, not run
 - [done] Remote control: `send <channel> <text>` to a plugin listening on an FCSE channel - built, not run
 - [new] Remote control: entities of an archetype near the player, through the engine's sphere query - deferred, no test needs it yet
-- [new] Remote control: each soldier's current brain task, to replace Difficulty Overhaul's -braintrace in tests
+- [new] Remote control: each soldier's current brain task, to replace Combat Overhaul's -braintrace in tests
 - [done] Combat log (-combatlog): hits on the player, his hits on soldiers and deaths, and every mod's lines from FCSE's combat channel, in one session file; fight_report.py moved here - fc2drive damage run, GOG 2026-11-11
 
 ## To validate

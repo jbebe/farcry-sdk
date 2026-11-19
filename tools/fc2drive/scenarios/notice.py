@@ -1,4 +1,4 @@
-"""Difficulty Overhaul's notice delay on the test range: an idle rifleman walking the lane's patrol route
+"""Combat Overhaul's notice delay on the test range: an idle rifleman walking the lane's patrol route
 toward the player, by day, the player standing still, walking to him, or running to and fro. Reports
 where he noticed the player and after how long in sight, beside where the model has him notice: at
 once in his focus, after the delay at his side, walked over his traced looks, a quarter second apart,

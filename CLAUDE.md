@@ -94,7 +94,7 @@ Each project's `README.md` covers what it is and how to build it.
 - `mods/UFCP/` - Unofficial patch; an FCSE plugin that patches `Dunia.dll` in memory, plus a data
   layer for bugs in data (C++/CMake)
 - `mods/DevTools/` - the same, for modders rather than players: developer console, `-load` into a
-  save, and the test range: `testrange`, a flat world with arenas for the Difficulty Overhaul's
+  save, and the test range: `testrange`, a flat world with arenas for the Combat Overhaul's
   checks, built from `range/` and run from the overlay's Range tab (C++/CMake)
 - `mods/legacy-plugin/` - the `Dunia.dll` half of legacy mods' preference tweaks as FCSE settings
   that default to the game as shipped; an FCSE plugin, scaffold only so far (C++/CMake)
@@ -119,7 +119,7 @@ Each project's `README.md` covers what it is and how to build it.
   and model touches (C++/CMake)
 - `mods/wildlife-overhaul/` - more varied and dangerous wildlife; an FCSE plugin plus a data layer,
   unfinished: the cape buffalo charges the player and its gore knocks them down (C++/CMake)
-- `mods/difficulty-overhaul/` - realistic damage and AI shooting, scaled by the game's difficulty;
+- `mods/combat-overhaul/` - realistic damage and AI shooting, scaled by the game's difficulty;
   an FCSE plugin: damage by body part, the AI's hit model, fire discipline, intuition and grass;
   plus merc brain fragments `build-layer.ps1` makes from the installed game, which JackAll merges at
   install: launchers held for a player in a vehicle; design log in `docs/docs/design/difficulty.md`
@@ -158,7 +158,7 @@ through its own `<mod>-release.yml` - see `RELEASING.md`.
 The method is split in two: `docs/docs/modding/replacing-a-weapon.md` for the mesh and archetypes,
 `docs/docs/modding/texturing-a-weapon.md` for materials and textures.
 
-A project with its own `CLAUDE.md` (UFCP, DevTools, Legacy Plugin, Difficulty Overhaul, FCSE,
+A project with its own `CLAUDE.md` (UFCP, DevTools, Legacy Plugin, Combat Overhaul, FCSE,
 JackAll, the Vortex extension, the docs site) adds instructions that apply while working in it.
 
 ## Legacy mods

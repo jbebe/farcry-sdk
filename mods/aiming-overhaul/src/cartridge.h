@@ -1,5 +1,5 @@
 // The round the weapon in hand fires, from its archetype's `Cartridge.*` entity data, which
-// Difficulty Overhaul's weapon fragments give it.
+// Combat Overhaul's weapon fragments give it.
 #pragma once
 
 #include <cstdint>
