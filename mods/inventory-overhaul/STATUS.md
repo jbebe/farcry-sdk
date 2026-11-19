@@ -57,7 +57,7 @@ Stage: active
 
 ## Checks
 
-- simplify: 4f56b011 2026-11-17 - since inventory-overhaul-1.0.0
+- simplify: 44507230 2026-11-19 - since inventory-overhaul-1.0.0; 33965adb's wheel and swap icon reviewed, nothing to change
 
 ## Release order
 
