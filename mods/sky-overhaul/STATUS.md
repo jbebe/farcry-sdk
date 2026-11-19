@@ -39,6 +39,7 @@ Stage: maintenance
 - [postponed] The solid depth (Occlusion, Heat haze) in one target switch: it costs ~0.5 ms, ~0.3 of it switching targets around each draw; collect and replay the draws after the depth pass - the user left it for now (2026-11-19)
 - [new] The ground lit by where you look from: sand, dirt and tarmac brighter with the sun at your back, a sheen toward it at grazing angles, slopes and the layers' own normal maps showing - the user's ask from the airport runway (2026-11-19)
 - [new] Volumetric fog - the user's ask (2026-11-19); FC2JackalFix's Far Cry Instincts port in tools/third-party is the reference under review
+- [new] Distant dust: plumes blown off the ground in the wind's direction, seen from far off, not whole storms - the user's ask (2026-11-19)
 - [scrapped] Tonemap or highlight roll-off - user: "useless" (2026-09-15); never propose again
 - [scrapped] Per-moment sky presets and moment tabs - user found them overwhelming; the sky follows the sun, sliders only on request
 - [scrapped] Sun shadow softening - did not reach the distant shadows, reverted; never propose again
