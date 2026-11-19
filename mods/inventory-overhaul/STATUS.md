@@ -7,7 +7,7 @@ Stage: active
 
 - [done] Two guns of any class, A on key 3 and B on key 2; a gun picked up with two carried replaces the one in hand - user: "works perfectly"; #51 keys and an old save's primary in A verified 2026-11-12
 - [done] The mouse wheel through the machete, gun A and gun B, whatever their class - user 2026-11-19: machete, A, B and back work in game
-- [done] The HUD's swap icon shows the gun a pickup replaces, and again when the other gun is drawn - user 2026-11-19: it shows the gun in hand and changes when the other is drawn
+- [done] The HUD's swap icon shows the gun a pickup replaces, and again when the other gun is drawn - user 2026-11-19: it shows the gun in hand and changes when the other is drawn; with a slot empty, verified by the user 2026-11-19
 - [done] Picked-up gun comes to hand - user 2026-11-17: "it all works flawlessly"
 - [done] Items: stowed guns keep their wear and loaded rounds, four guns in all with the slots; other items by id and count
 - [done] Notebook on Tab, given with the map, held in both hands, its right page bending with the hands - user: "it works in all situations"; first opens on gun A, verified 2026-11-12
@@ -50,11 +50,9 @@ Stage: active
 
 ## To validate
 
-- With a slot empty, a gun on the ground shows no gun to swap - nothing yet
-
 ## Approvals
 
-- played: 4f56b011 2026-11-17 - "it all works flawlessly"; after the simplify pass: "I tested it, it works."
+- played: 33965adb 2026-11-19 - "IO is verified by all aspects"; "they are all ready by me, the tester"
 - page text: 046e36c7 2026-11-17 - "I approve it"
 
 ## Checks
