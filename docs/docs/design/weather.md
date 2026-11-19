@@ -19,11 +19,12 @@ sidebar_position: 8
 
 ## Decisions
 
-- **A weather map** (2026-11-19). Cells tens of kilometres across lie over the world and drift with
-  the wind. What is overhead is the player's weather, what is far off is seen in the sky, a storm can
-  be watched coming, and rain falls under its cell only. Each cell's odds follow the zones beneath
-  it, so the jungle half of the map is wetter. The cloud shader reads a coverage map instead of one
-  number; the clouds are already a noise field in world space.
+- **A weather map** (2026-11-19). Shower and storm cells a few kilometres across drift with the
+  wind through an air mass that covers the whole world, which is about 5 km across. What is overhead
+  is the player's weather, what is far off is seen in the sky, a storm can be watched coming, and
+  rain falls under its cell only. Cells form by the zone beneath them, so the jungle is wetter. The
+  cloud shader reads a coverage map instead of one number; the clouds are already a noise field in
+  world space.
 - **No seasons** (2026-11-19). The zone shares below hold all game.
 - **Visuals only** (2026-11-19). Weather does not change what guards see or hear, or how cars grip.
 - **Wet ground later** (2026-11-19), once rain itself has been seen in play.
