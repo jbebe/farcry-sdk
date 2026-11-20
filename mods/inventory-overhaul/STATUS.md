@@ -54,7 +54,7 @@ Stage: active
 ## Approvals
 
 - played: 33965adb 2026-11-19 - "IO is verified by all aspects"; "they are all ready by me, the tester"
-$note
+- played: 9c9a8ac3 2026-11-20 - "I verified it all" (#78-#81 and the head-hit punch), counted as played by the user
 - page text: 046e36c7 2026-11-17 - "I approve it"
 
 ## Checks
