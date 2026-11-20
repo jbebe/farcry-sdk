@@ -33,6 +33,7 @@ Stage: active
 - [done] Camo Suit in Items once bought, with the shop's name and description - user 2026-11-17: "it all works flawlessly"
 - [done] The two sound banks on ids of their own, 00fe0000 and 00fe0001: their old records 0x00FD0001-0x00FD0004 were also in Vehicle Overhaul's 00fd0000.spk, and a shared id crashed the game in Sound Overhaul's echo work - user: "changes in instance 3 are verified"
 - [done] A gun picked up from the ground or the armory's wall: with A and B empty, into A; with one empty, into the empty one; with both full, or four guns in all, it replaces the slot in hand, else A; the replaced gun falls at the player's feet - user 2026-11-17: "it all works flawlessly"
+- [new] A gun picked up while the one in hand is jammed or reloading - blocked until the jam clears or the reload ends; Nexus report and the user's play #79
 - [postponed] Safe-house weapon crates as the game has them: with two guns of other classes carried, the crate's gun is dropped at the player's feet - found in RE, not seen in game; user 2026-11-18: "its for a later release"
 - [done] Notebook usable in the armory and other rooms without guns: Tab, the wheel, the left mouse button and X bound in the briefing action map they use; there X stays X when Drop is rebound - user 2026-11-17: "it all works flawlessly"
 - [postponed] Box page at the crates: the bought guns as a catalogue and stored things, one shared box #6 - not yet

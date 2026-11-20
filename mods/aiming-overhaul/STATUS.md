@@ -50,6 +50,8 @@ Stage: active
 - [done] Every gun change reaches the test range's guns too - works 2026-11-16
 - [done] Own sound ids moved out of Sound Overhaul's 0x00FC block into 0x00FB, packed from 0x00FB0000: one prefix per mod - user: "changes in instance 3 are verified"
 - [done] Drawn through the engine with no Direct3D hooks, so it works under dgVoodoo and DLSS injectors, as Sky Overhaul does - pictures match the old build (fc2drive); the user saw scope, blur and tracers right under dgVoodoo with DLSS 5 #63
+- [new] The monocular keeps its zoom with Iron sight zoom off - Nexus report, unconfirmed #78
+- [new] Being hit darkens the whole screen, the dark edges less concentric - user 2026-11-20 from a Nexus suggestion #80
 - [on hold] Auto lean at corners - shelved until wanted
 - [scrapped] Landing: the view dropped a few cm as the knees took it - removed 2026-11-16, user: "its not needed"
 - [scrapped] Head hit silencing every sound for a moment - built 2026-11-17, user: "the head hit should not mute the game, ignore my previous wish"
