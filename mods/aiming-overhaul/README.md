@@ -105,14 +105,14 @@ both field by field with other mods' edits, reporting any clash.
   darker the closer it landed, the largest half the screen's height across. Where blobs overlap
   they darken each other. They hold for 0.6 s and are gone in 3 s. Metal, water, glass, flesh
   and plants throw none. Only what the player sees changes; the aim does not.
-- **Being hit.** A bullet, blast or blade that takes the player's health shows where it landed. Off
-  the head, the view punches back 8 cm and tips down 5°, peaking at 0.07 s and springing back; the
-  whole view dims by up to a third, clearing within a second, and the edges go dark from a third of
-  the way out, following the screen's sides and creeping in unevenly, a little differently with
-  each hit, darkening to black near the corners, held for half a second and gone in 2.5 s. On the
-  head, the view dims and the edges go dark as from the hardest body hit,
-  and at once the view is double, the second image a little to the side and fading out over 5 s. A hit taking half the player's health or more does all of it in full, a graze 0.4 of
-  it; a shotgun's pellets count as one hit. The game's own hit sound and interface stay as they are.
+- **Being hit.** A bullet, blast or blade that takes the player's health shows where it landed.
+  The view punches back 8 cm and tips down 5°, peaking at 0.07 s and springing back; the whole view
+  dims by up to a third, clearing within a second, and the edges go dark from half the way out,
+  following the screen's sides, darkening to nearly black in the corners, held for half a second
+  and gone in 1.3 s. On the head, the view dims and the edges go dark as from the hardest body hit,
+  and at once the view is double, the second image a little to the side and fading out over 5 s. A
+  hit taking half the player's health or more does all of it in full, a graze 0.4 of it; a
+  shotgun's pellets count as one hit. The game's own hit sound and interface stay as they are.
   While a scope's sight picture is up the view is not punched. The game's red marks pointing to
   whoever hit the player, and its red flash around the screen's edges, are gone, whether this is on
   or off.
@@ -351,10 +351,9 @@ Throw dirt, under them, throws it as a round landing a metre to the right would.
 | Punch back | metres the eye is pushed back at the punch's peak | 0.08 |
 | Punch tips down | degrees the view tips down at its peak | 5 |
 | Punch peaks after | seconds from the hit | 0.07 |
-| Vignette darkness | how dark it gets, past one black sooner | 1.3 |
-| Vignette reach | how far in from the corners the dark comes, a share of the way to the middle | 0.65 |
-| Vignette gone by | seconds after the hit | 2.5 |
-| Vignette unevenness | how far the dark edge creeps in and out around the screen, a share of its reach | 0.15 |
+| Vignette darkness | how dark it gets, past one black sooner | 0.98 |
+| Vignette reach | how far in from the corners the dark comes, a share of the way to the middle | 0.46 |
+| Vignette gone by | seconds after the hit | 1.3 |
 | Whole view darkness | how dark the whole view goes, one black | 0.35 |
 | Whole view gone by | seconds after the hit | 1 |
 | Head: double image apart | pixels of a 1080-line screen | 40 |

@@ -42,13 +42,11 @@ namespace {
     constexpr float kApartLines = 1080.0f;
     constexpr double kNever = -1e9;
 
-    // The last hit off the head, when and how much health it took, when the head was last hit, and
-    // which uneven edge the dark creeps in by.
+    // The last hit, when and how much health it took, and when the head was last hit.
     struct Hits {
         double at = kNever;
         float lost = 0.0f;
         double headAt = kNever;
-        float edge = 0.0f;
     };
 
     std::atomic<bool> g_enabled{true};
@@ -60,8 +58,8 @@ namespace {
     double g_struckAt = kNever;
     float g_struckPeak = 0.0f;
 
-    // HitPS's constants: the double image, the darkening, then the uneven edge.
-    constexpr UINT kConstants = 3;
+    // HitPS's constants: the double image, then the darkening.
+    constexpr UINT kConstants = 2;
     AimingOverhaul::PixelShader g_shader{"hit", g_hitPixelShader};
 
     Hits Latest() {
@@ -86,16 +84,8 @@ namespace {
         }
         const std::lock_guard<std::mutex> lock(g_lock);
         const double now = Now();
-        // A hit while the last one's dark still shows keeps its edge.
-        const double last = (std::max)(g_hits.at, g_hits.headAt);
-        if (now - last > AimingOverhaul::Tuning::BeingHit().vignetteGone) {
-            g_hits.edge += 1.0f;
-        }
-        if (where == AimingOverhaul::Hit::Where::kHead) {
-            if (now - g_hits.headAt >= kTogether) {
-                g_hits.headAt = now;
-            }
-            return;
+        if (where == AimingOverhaul::Hit::Where::kHead && now - g_hits.headAt >= kTogether) {
+            g_hits.headAt = now;
         }
         if (now - g_hits.at < kTogether) {
             g_hits.lost += lost;
@@ -155,8 +145,7 @@ void AimingOverhaul::Hit::OnComposite(IDirect3DDevice9* device, IDirect3DSurface
     const float apart = look.apart * height / kApartLines;
     const float constants[kConstants * 4] = {
         apart / width, kDoubleDown * apart / height, copy != nullptr ? seenDouble : 0.0f, 0.0f,
-        vignette,      1.0f - look.reach,            dim,                                 look.uneven,
-        hits.edge,     0.0f,                         0.0f,                                width / height,
+        vignette,      1.0f - look.reach,            dim,                                 0.0f,
     };
 
     // The second image by its share, and the dark over both.

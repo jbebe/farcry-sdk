@@ -71,7 +71,6 @@ namespace {
         {"Vignette", "Vignette darkness", &HitLook::vignette, 0.0f, 2.0f, "%.2f"},
         {"Reach", "Vignette reach", &HitLook::reach, 0.1f, 0.9f, "%.2f of the way in"},
         {"VignetteGone", "Vignette gone by", &HitLook::vignetteGone, 0.6f, 8.0f, "%.1f s"},
-        {"Uneven", "Vignette unevenness", &HitLook::uneven, 0.0f, 0.5f, "%.2f"},
         {"Dim", "Whole view darkness", &HitLook::dim, 0.0f, 1.0f, "%.2f"},
         {"DimGone", "Whole view gone by", &HitLook::dimGone, 0.3f, 4.0f, "%.1f s"},
         {"Apart", "Head: double image apart", &HitLook::apart, 0.0f, 150.0f, "%.0f px at 1080p"},

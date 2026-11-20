@@ -7,9 +7,10 @@ Notable changes to Aiming Overhaul, loosely following
 
 ### Changed
 - **Being hit darkens the whole view.** A hit dims the whole screen for about a second, as well as
-  darkening the edges. The dark edges now follow the screen's sides and creep in unevenly, a little
-  differently with each hit, instead of closing in as an even oval. The window has three new values
-  for it: Vignette unevenness, Whole view darkness and Whole view gone by.
+  darkening the edges. The dark edges now follow the screen's sides instead of closing in as an
+  oval, and they are lighter, start further out and are gone in 1.3 s instead of 2.5 s. The window
+  has two new values for it: Whole view darkness and Whole view gone by.
+- **A head hit punches the view** back and down, as a body hit does.
 
 ### Fixed
 - **The monocular zooms with Iron sight zoom off.** Switching off the iron sights' zoom also took

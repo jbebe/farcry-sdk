@@ -50,8 +50,9 @@ Stage: active
 - [done] Every gun change reaches the test range's guns too - works 2026-11-16
 - [done] Own sound ids moved out of Sound Overhaul's 0x00FC block into 0x00FB, packed from 0x00FB0000: one prefix per mod - user: "changes in instance 3 are verified"
 - [done] Drawn through the engine with no Direct3D hooks, so it works under dgVoodoo and DLSS injectors, as Sky Overhaul does - pictures match the old build (fc2drive); the user saw scope, blur and tracers right under dgVoodoo with DLSS 5 #63
-- [done] The monocular keeps its zoom with Iron sight zoom off: the switch takes only a zoom the gun's iron-sight flag started - the monocular's OnEquip eases the same field of view without the flag #78
-- [done] Being hit dims the whole view by up to 0.35, gone by 1 s, and the dark edges follow the screen's sides as rounded rectangles, creeping in unevenly by 0.15, new each hit - user 2026-11-20 from a Nexus suggestion #80
+- [done] The monocular keeps its zoom with Iron sight zoom off: the switch takes only a zoom the gun's iron-sight flag started - the monocular's OnEquip eases the same field of view without the flag - user 2026-11-20: works #78
+- [done] Being hit dims the whole view by up to 0.35, gone by 1 s, and the dark edges follow the screen's sides as rounded rectangles - user 2026-11-20 from a Nexus suggestion: works; the user's values from play as the defaults, vignette 0.98, reach 0.46, gone by 1.3 s, and the uneven creep removed ("unevenness should not be a thing") #80
+- [done] A head hit punches the view back and down as a body hit does, by the health it took - user 2026-11-20
 - [on hold] Auto lean at corners - shelved until wanted
 - [scrapped] Landing: the view dropped a few cm as the knees took it - removed 2026-11-16, user: "its not needed"
 - [scrapped] Head hit silencing every sound for a moment - built 2026-11-17, user: "the head hit should not mute the game, ignore my previous wish"
@@ -70,8 +71,7 @@ Stage: active
 
 ## To validate
 
-- Iron sight zoom off: the monocular still zooms; a gun's iron sights still don't, raising and lowering them - fc2drive only: monocular 15.2° on and off, AK-47 sights 68.9° on, 91.3° off
-- Take hits on the body and the head (the window's Hit buttons too): the whole view dims for about a second, the edges darken unevenly along the screen's sides, differently each hit - fc2drive pictures of a body hit only
+- Take hits on the head (the window's Hit the head too): the view punches back and down as from a body hit, with the dim, the dark edges and the double image as before; the edges darken evenly
 
 ## Approvals
 
