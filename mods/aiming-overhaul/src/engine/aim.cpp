@@ -95,8 +95,7 @@ namespace {
     AimingOverhaul::Aim::FollowWeaponFn g_followWeapon = nullptr;
     std::atomic<bool> g_zoomAtOnce{true};
     std::atomic<bool> g_ironsightZoom{true};
-    // Whether the gun's iron-sight flag started the iron-sight field of view under way; the
-    // monocular eases the same one in without it.
+    // Whether the gun's iron-sight flag started the iron-sight field of view under way.
     bool g_gunSights = false;
     float g_sights = 0.0f;
     float g_scope = 0.0f;
@@ -308,7 +307,7 @@ namespace {
             g_gunSights = false;
             return;
         }
-        g_gunSights = g_gunSights || AimingOverhaul::Pawn::Is(pawn, AimingOverhaul::Pawn::kIronsight);
+        g_gunSights |= AimingOverhaul::Pawn::Is(pawn, AimingOverhaul::Pawn::kIronsight);
         const bool scope = HasScope(weapon);
         if (!scope && (g_ironsightZoom || !g_gunSights)) {
             return;

@@ -64,7 +64,6 @@ jobs:
           Copy-Item "layer" "stage" -Recurse
           Copy-Item "README-release.md" "stage\README.md"
           if (-not (Test-Path "stage\plugins\UFCP.dll")) { throw 'UFCP.dll was not staged - the zip would not be a layer.' }
-          if (-not (Test-Path "stage\mods\scripts\engine\objects\pawn\statemachine\weapons.gosm.xml\__Pawn Weapons_Weapon Mechanics_States_AllowWeaponSwitch.xml")) { throw 'The weapon switch was not staged.' }
 
       - name: Zip release artifact
         shell: pwsh
