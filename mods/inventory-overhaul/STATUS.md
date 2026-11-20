@@ -54,6 +54,7 @@ Stage: active
 ## Approvals
 
 - played: 33965adb 2026-11-19 - "IO is verified by all aspects"; "they are all ready by me, the tester"
+$note
 - page text: 046e36c7 2026-11-17 - "I approve it"
 
 ## Checks

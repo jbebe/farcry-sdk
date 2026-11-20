@@ -32,6 +32,7 @@ Stage: active
 ## Approvals
 
 - played: 3056ed3 2026-11-18
+$note
 - page text: 3dcbf56 2026-11-17
 
 ## Checks
