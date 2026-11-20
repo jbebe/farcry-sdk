@@ -77,6 +77,7 @@ Stage: active
 - played: 33965adb 2026-11-19 - "AO too. they are all ready by me, the tester."
 - played: 4ede99ff 2026-11-19 - the Combat Overhaul rename, a comment in cartridge.h, counted as played, by the user
 - played: 9c9a8ac3 2026-11-20 - "I verified it all" (#78-#81 and the head-hit punch), counted as played by the user
+- played: 77244489 2026-11-20 - the simplify pass, the iron-sight latch written as |= and a shorter comment, counted as played by the user
 - page text: d04a2176 2026-11-18 - "I read all texts and played all mods and validated all lines"
 
 ## Checks
