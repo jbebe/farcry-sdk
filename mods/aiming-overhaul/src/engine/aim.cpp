@@ -95,6 +95,9 @@ namespace {
     AimingOverhaul::Aim::FollowWeaponFn g_followWeapon = nullptr;
     std::atomic<bool> g_zoomAtOnce{true};
     std::atomic<bool> g_ironsightZoom{true};
+    // Whether the gun's iron-sight flag started the iron-sight field of view under way; the
+    // monocular eases the same one in without it.
+    bool g_gunSights = false;
     float g_sights = 0.0f;
     float g_scope = 0.0f;
     std::atomic<float> g_settled{0.0f};
@@ -293,7 +296,7 @@ namespace {
 
     // The field of view worked out again: with a scope's magnification wholly in while its sight
     // picture is up and wholly out while it is not, so that it never eases in over the raise; and
-    // with no iron-sight zoom at all where that is switched off.
+    // with no iron-sight zoom at all for a gun where that is switched off.
     void __fastcall UpdateFovDetour(uint8_t* camera, void* unused, uint8_t* pawn, float seconds) {
         g_originalUpdateFov(camera, unused, pawn, seconds);
         if (camera != g_playerCamera()) {
@@ -302,10 +305,12 @@ namespace {
         uint8_t* data = AimingOverhaul::Pawn::Data(pawn);
         uint8_t* weapon = g_equippedWeapon(data + kInventory);
         if (Field<float>(data, kIronsightWeight) <= 0.0f) {
+            g_gunSights = false;
             return;
         }
+        g_gunSights = g_gunSights || AimingOverhaul::Pawn::Is(pawn, AimingOverhaul::Pawn::kIronsight);
         const bool scope = HasScope(weapon);
-        if (!scope && g_ironsightZoom) {
+        if (!scope && (g_ironsightZoom || !g_gunSights)) {
             return;
         }
         const float base = Field<float>(camera, kBaseFov);

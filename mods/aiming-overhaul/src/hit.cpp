@@ -17,6 +17,7 @@
 
 namespace {
     using AimingOverhaul::Now;
+    using AimingOverhaul::Pulse;
     using AimingOverhaul::Through;
 
     // A hit's strength runs from kWeakest for a graze up to one for a hit taking kHardest of the
@@ -28,9 +29,11 @@ namespace {
     constexpr double kTogether = 0.15;
     // A hit not yet seen on foot this many seconds after it, as from a vehicle, never punches.
     constexpr double kStale = 0.25;
-    // The vignette darkens over kDarken seconds and starts to clear kDarkHold after the hit.
+    // A hit darkens over kDarken seconds. The edges start to clear kDarkHold after it, the whole
+    // view kDimHold after it.
     constexpr float kDarken = 0.12f;
     constexpr float kDarkHold = 0.5f;
+    constexpr float kDimHold = 0.15f;
     // The second image is kDouble of the view from a head hit on, and lies kDoubleDown of its
     // distance across below the first.
     constexpr float kDouble = 0.5f;
@@ -39,11 +42,13 @@ namespace {
     constexpr float kApartLines = 1080.0f;
     constexpr double kNever = -1e9;
 
-    // The last hit off the head, when and how much health it took, and when the head was last hit.
+    // The last hit off the head, when and how much health it took, when the head was last hit, and
+    // which uneven edge the dark creeps in by.
     struct Hits {
         double at = kNever;
         float lost = 0.0f;
         double headAt = kNever;
+        float edge = 0.0f;
     };
 
     std::atomic<bool> g_enabled{true};
@@ -55,8 +60,8 @@ namespace {
     double g_struckAt = kNever;
     float g_struckPeak = 0.0f;
 
-    // HitPS's constants: the double image, then the vignette.
-    constexpr UINT kConstants = 2;
+    // HitPS's constants: the double image, the darkening, then the uneven edge.
+    constexpr UINT kConstants = 3;
     AimingOverhaul::PixelShader g_shader{"hit", g_hitPixelShader};
 
     Hits Latest() {
@@ -68,10 +73,11 @@ namespace {
         return kWeakest + (1.0f - kWeakest) * (std::min)(lost / kHardest, 1.0f);
     }
 
-    // How far a hit `since` seconds ago has darkened the edges, nought to one.
-    float Darkened(double since, const AimingOverhaul::Tuning::HitLook& look) {
-        return Through(since, kDarken) *
-               (1.0f - Through(since - kDarkHold, look.vignetteGone - kDarkHold));
+    // How dark the latest hits make what clears from `hold` seconds and is gone by `gone`, nought to
+    // one: a head hit as the hardest body hit.
+    float Darkness(const Hits& hits, double now, float hold, float gone) {
+        return (std::max)(Strength(hits.lost) * Pulse(now - hits.at, kDarken, hold, gone),
+                          Pulse(now - hits.headAt, kDarken, hold, gone));
     }
 
     void Take(AimingOverhaul::Hit::Where where, float lost) {
@@ -80,6 +86,11 @@ namespace {
         }
         const std::lock_guard<std::mutex> lock(g_lock);
         const double now = Now();
+        // A hit while the last one's dark still shows keeps its edge.
+        const double last = (std::max)(g_hits.at, g_hits.headAt);
+        if (now - last > AimingOverhaul::Tuning::BeingHit().vignetteGone) {
+            g_hits.edge += 1.0f;
+        }
         if (where == AimingOverhaul::Hit::Where::kHead) {
             if (now - g_hits.headAt >= kTogether) {
                 g_hits.headAt = now;
@@ -130,14 +141,11 @@ void AimingOverhaul::Hit::OnComposite(IDirect3DDevice9* device, IDirect3DSurface
     const Hits hits = Latest();
     const Tuning::HitLook& look = Tuning::BeingHit();
     const double now = Now();
-    const double sinceHead = now - hits.headAt;
-    // A hit on the head darkens the edges as the hardest body hit does.
-    const float vignette =
-        look.vignette *
-        (std::max)(Strength(hits.lost) * Darkened(now - hits.at, look), Darkened(sinceHead, look));
-    const float seenDouble = kDouble * (1.0f - Through(sinceHead, look.doubleGone));
+    const float vignette = look.vignette * Darkness(hits, now, kDarkHold, look.vignetteGone);
+    const float dim = look.dim * Darkness(hits, now, kDimHold, look.dimGone);
+    const float seenDouble = kDouble * (1.0f - Through(now - hits.headAt, look.doubleGone));
     IDirect3DPixelShader9* shader =
-        vignette > 0.0f || seenDouble > 0.0f ? g_shader.Get(device) : nullptr;
+        vignette > 0.0f || dim > 0.0f || seenDouble > 0.0f ? g_shader.Get(device) : nullptr;
     if (shader == nullptr) {
         return;
     }
@@ -147,7 +155,8 @@ void AimingOverhaul::Hit::OnComposite(IDirect3DDevice9* device, IDirect3DSurface
     const float apart = look.apart * height / kApartLines;
     const float constants[kConstants * 4] = {
         apart / width, kDoubleDown * apart / height, copy != nullptr ? seenDouble : 0.0f, 0.0f,
-        vignette,      1.0f - look.reach,           0.0f,                                 0.0f,
+        vignette,      1.0f - look.reach,            dim,                                 look.uneven,
+        hits.edge,     0.0f,                         0.0f,                                width / height,
     };
 
     // The second image by its share, and the dark over both.

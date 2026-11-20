@@ -21,12 +21,15 @@ Stage: active
 - [done] Weapon field of view, the same as the view by default or an angle of its own
 - [done] Maximum frame rate through the engine's limiter, 60 Hz by default
 - [done] Display mode: borderless
+- [done] Weapon switch during a bolt or pump gun's cycle after a shot: the two Preparing_Weapon states added to weapons.gosm's AllowWeaponSwitch, a fragment in a layer again, merged by JackAll 1.9.0 - fc2drive (tests/weapon_switch.py): the pistol up 0.6 s after an M1903 shot against 2.0 s as shipped, the first ~0.35 s of the shot still drops a press; the rifle fires when drawn back #81
 - [scrapped] Ships as a JackAll layer with the monocular's gamepad look speed 0.061 - dropped by the user 2026-11-17; a plain DLL
 - [scrapped] Processor affinity option - removed in 1.3.0; the game's processors are chosen for it
 - [scrapped] Extra job workers - the engine's jobs crash when two run at once (1.3.0)
 - [scrapped] Skip intro and skip title screen - moved to DevTools before UFCP's first release
 
 ## To validate
+
+- Fire the M1903 or the Ithaca and press 2 or 3 at once: the other gun comes up as soon as the shot's kick is over, before the bolt or pump is worked; back on the rifle, it works its bolt and fires - fc2drive only
 
 ## Approvals
 
@@ -40,6 +43,8 @@ Stage: active
 ## Release order
 
 - after fcse-1.5.0
+- after jackall-1.9.0
+- after vortex-0.8.0
 
 ## Collisions
 

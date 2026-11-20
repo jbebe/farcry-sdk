@@ -55,13 +55,16 @@ jobs:
 
       - name: Stage release contents
         shell: pwsh
-        # Extracts straight into the game's bin\ folder: FCSE scans bin\plugins\ by name.
-        # README-release.md rather than README.md, which links to the docs by relative path, dead
-        # once the file is alone inside a zip.
+        # A JackAll layer, which both installers read as-is: mods\ is the weapon switch's state
+        # machine fragment, and plugins\ is what JackAll deploys into bin\plugins. README-release.md
+        # rather than README.md, which links to the docs by relative path, dead once the file is
+        # alone inside a zip.
         run: |
-          New-Item -ItemType Directory -Force -Path "stage\plugins" | Out-Null
-          Copy-Item "out\build\x86-release\UFCP.dll" "stage\plugins\UFCP.dll"
+          if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7+ is required - older Compress-Archive writes backslash entry paths, which no installer reads.' }
+          Copy-Item "layer" "stage" -Recurse
           Copy-Item "README-release.md" "stage\README.md"
+          if (-not (Test-Path "stage\plugins\UFCP.dll")) { throw 'UFCP.dll was not staged - the zip would not be a layer.' }
+          if (-not (Test-Path "stage\mods\scripts\engine\objects\pawn\statemachine\weapons.gosm.xml\__Pawn Weapons_Weapon Mechanics_States_AllowWeaponSwitch.xml")) { throw 'The weapon switch was not staged.' }
 
       - name: Zip release artifact
         shell: pwsh

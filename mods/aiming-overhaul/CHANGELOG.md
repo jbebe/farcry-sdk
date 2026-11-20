@@ -3,6 +3,18 @@
 Notable changes to Aiming Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Changed
+- **Being hit darkens the whole view.** A hit dims the whole screen for about a second, as well as
+  darkening the edges. The dark edges now follow the screen's sides and creep in unevenly, a little
+  differently with each hit, instead of closing in as an even oval. The window has three new values
+  for it: Vignette unevenness, Whole view darkness and Whole view gone by.
+
+### Fixed
+- **The monocular zooms with Iron sight zoom off.** Switching off the iron sights' zoom also took
+  the monocular's zoom away.
+
 ## [1.3.0] - 2026-11-17
 
 ### Added

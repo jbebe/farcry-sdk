@@ -3,6 +3,13 @@
 Notable changes to the Vortex Far Cry 2 extension, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **Mods that change the pawn's state machines merge.** A mod can ship only the groups and states of
+  a `*.gosm.xml` it changes, such as UFCP's weapon switch, and the extension merges them with every
+  other mod's, where two such mods used to replace each other's whole file.
+
 ## [0.7.0] - 2026-11-15
 
 ### Added

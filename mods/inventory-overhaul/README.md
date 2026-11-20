@@ -26,6 +26,7 @@ secondary and a special. What changes is the player's inventory (`InventoryOverh
 | `SelectNextWeapon`, `SelectPreviousWeapon` | the wheel steps through the machete, gun 1 and gun 2 in that order, whatever their class; the game's own order is by class, so it reached only one gun of a class |
 | `GetWeaponFromCategory`, inside the player's `CPickupWeapon::PrePickup` and `Pick` | finds no gun, so a pickup, from the ground or the armory's wall, replaces nothing of its own class and `AddWeapon` makes room; the gun picked up is then drawn |
 | `GetWeaponFromCategory`, inside the HUD's `CFCXMainHudUI::SelectSwitchGizmoIcons` for a gun on the ground | finds the gun `AddWeapon` would drop, so the swap icon shows it, or nothing while a slot is free. The HUD chooses the icons only when what is aimed at changes, so `UpdateSwitchGizmo` chooses them again when that gun changes, as when the other gun is drawn |
+| `CWeapon::IsJammed`, inside `CPickupWeapon::CheckPickable` | says the gun in hand is not jammed, so a gun on the ground can be picked up with a jammed one in hand, which it replaces; the game refuses that pickup, prompt and all, until the jam is cleared. Other pickups, ammo among them, still wait for the jam |
 
 Two guns of the same model share an item id, by which the engine draws them, so the later one is
 given an id of its own. Every decision is logged to `bin\fcse.log`.

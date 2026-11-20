@@ -107,8 +107,10 @@ both field by field with other mods' edits, reporting any clash.
   and plants throw none. Only what the player sees changes; the aim does not.
 - **Being hit.** A bullet, blast or blade that takes the player's health shows where it landed. Off
   the head, the view punches back 8 cm and tips down 5°, peaking at 0.07 s and springing back; the
-  edges go dark from a third of the way out, darkening smoothly to black near the corners, held
-  for half a second and gone in 2.5 s. On the head, the edges go dark as from the hardest body hit,
+  whole view dims by up to a third, clearing within a second, and the edges go dark from a third of
+  the way out, following the screen's sides and creeping in unevenly, a little differently with
+  each hit, darkening to black near the corners, held for half a second and gone in 2.5 s. On the
+  head, the view dims and the edges go dark as from the hardest body hit,
   and at once the view is double, the second image a little to the side and fading out over 5 s. A hit taking half the player's health or more does all of it in full, a graze 0.4 of
   it; a shotgun's pellets count as one hit. The game's own hit sound and interface stay as they are.
   While a scope's sight picture is up the view is not punched. The game's red marks pointing to
@@ -319,8 +321,8 @@ With Recoil that stays off, the game's recoil comes back as it was and a
 burst no longer spreads or shakes. With Shot shake off, the view holds still as the gun fires. With Dirt in the eye off, no round throws dirt. With Being hit off, a hit shows only what the game shows. With Health in
 the picture off, the picture keeps its colour at any health. How quickly the player gets going is the player data's, and stays. With
 Iron sight zoom
-off, the view keeps its field of view down a gun's iron sights; a scope still
-magnifies. With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game
+off, the view keeps its field of view down a gun's iron sights; a scope and the monocular still
+magnify. With Tracers off, the player's shots leave none again, none ricochets, and they are drawn as the game
 draws them. Which guns fire them and how fast they fly are the weapon data's, and stay; so does the
 scopes' lost iron-sight effect, whatever the scope settings.
 
@@ -352,6 +354,9 @@ Throw dirt, under them, throws it as a round landing a metre to the right would.
 | Vignette darkness | how dark it gets, past one black sooner | 1.3 |
 | Vignette reach | how far in from the corners the dark comes, a share of the way to the middle | 0.65 |
 | Vignette gone by | seconds after the hit | 2.5 |
+| Vignette unevenness | how far the dark edge creeps in and out around the screen, a share of its reach | 0.15 |
+| Whole view darkness | how dark the whole view goes, one black | 0.35 |
+| Whole view gone by | seconds after the hit | 1 |
 | Head: double image apart | pixels of a 1080-line screen | 40 |
 | Head: double image gone by | seconds after the hit | 5 |
 

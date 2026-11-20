@@ -66,6 +66,7 @@ lists it changes is in it whole, so it works next to any other mod that changes 
 | Menus and the HUD, `.mgb` | One area, plus the package's lists of materials, fonts, font families, strings and exports | `mods\ui\localized\pc\eng\ui\hud.mgb\a_flashlight_object.1092050190.xml` |
 | AI brains, `scripts\game\newbrains\*.ai.rml` | One brain, plan, scanner or task. A plan lists the tasks it owns, so a mod adding a task also ships its plan | `mods\scripts\game\newbrains\mercbrain.ai.rml\LauncherInHand.3303724464.xml` |
 | The game modes config, `engine\gamemodes\gamemodesconfig.xml` | One block of game settings, such as the muzzle light or the hit locations, or one game mode | `mods\engine\gamemodes\gamemodesconfig.xml\DefaultMuzzleFlashManager.xml` |
+| The pawn state machines, `*.gosm.xml` | One group, state or track, by its `FullName`. A mod ships the whole group with its change; two mods adding to one group both land | `mods\scripts\engine\objects\pawn\statemachine\weapons.gosm.xml\__Pawn Weapons_Weapon Mechanics_States_AllowWeaponSwitch.xml` |
 | Particle libraries, `<world>_deploadnewparticles.rml` | One particle effect | `mods\worlds\world1\generated\world1_deploadnewparticles.rml\weapons.weapons.pl_muzzleflash_ak47.483129128.xml` |
 
 Everything else ships whole: textures, sounds, music, models, animation clips, terrain, Lua scripts,

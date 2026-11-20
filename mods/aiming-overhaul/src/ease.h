@@ -26,6 +26,12 @@ inline float Through(double seconds, float span) {
     return Ease(std::clamp(static_cast<float>(seconds) / span, 0.0f, 1.0f));
 }
 
+// How far a pulse is along `seconds` in, from nought to one: risen over `rise` seconds, clearing
+// from `hold` seconds, gone by `gone`.
+inline float Pulse(double seconds, float rise, float hold, float gone) {
+    return Through(seconds, rise) * (1.0f - Through(seconds - hold, gone - hold));
+}
+
 // `value` moved toward `target` by at most `step`.
 inline float Approach(float value, float target, float step) {
     return target > value ? (std::min)(value + step, target) : (std::max)(value - step, target);

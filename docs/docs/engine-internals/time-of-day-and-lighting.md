@@ -224,7 +224,8 @@ in the frame's list is directional, from raw floats at manager `+0x6A60`, transp
 the four registers at `+0x240` are exactly what the shaders read. The engine texture is a
 `CTextureD3D9` whose `IDirect3DTexture9` sits at `+0x18`. Its format is picked at startup: `D24S8`,
 or `D16`, where the card compares depth in its sampler; otherwise FOURCC `DF24` or `DF16`, which hold
-the depth itself. Spot and omni lights have slots and shadow textures of their own, so the sun's
+the depth itself. The colour target drawn beside it is FOURCC `NULL` on an NVIDIA card (the device's
+`+0x11`) and a real `R5G6B5` on any other (`0x103aa1c6`, **RE-verified on Steam**). Spot and omni lights have slots and shadow textures of their own, so the sun's
 stays as it was drawn for the rest of the frame.
 
 ## The clouds are lit from a stretched clock

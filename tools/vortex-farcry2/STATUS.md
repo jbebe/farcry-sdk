@@ -20,6 +20,7 @@ Stage: maintenance
 - [done] Game start waits for a running build
 - [done] Bundled jackall-mi, or a local CLI build through JACKALL_MI
 - [scrapped] Showing the discovered FCSE tool or primary tool on Vortex's Tools page - the user dropped it
+- [done] Mods changing the pawn's state machines merge, through jackall-mi's JackAll 1.9.0 core (#81) - not run in Vortex
 
 ## To validate
 

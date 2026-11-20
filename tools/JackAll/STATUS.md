@@ -22,6 +22,7 @@ Stage: active
 - [done] Map tab drawn with Direct3D 11 in a native child window, no OpenGL or GLWpfControl, so it runs on every Windows 10 PC #66 - unreleased; user: "map tab is validated"
 - [done] gamemodesconfig.xml merged block by block across layers, not last-one-wins; the AI tab saves the behaviour odds as their block - user 2026-11-12, unplayed
 - [done] Particle libraries merged system by system across layers - for Aiming Overhaul's flashes beside Combat Overhaul's blood, unplayed
+- [done] Pawn state machines, *.gosm.xml, merged group by group and state by state across layers - for UFCP's weapon switch (#81); tests pass, deployed to a game copy with UFCP's fragment and seen in game by fc2drive
 - [done] New worlds - New map / world new and world pack - unseen in game
 - [done] Terrain plans for new worlds, ridges raised by world pack - unreleased
 - [done] Vegetation plans for new worlds, grass and RealTrees - unreleased; no fire data, not editable on the Map tab

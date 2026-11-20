@@ -154,8 +154,9 @@ namespace {
         Entity::ReleaseRef(ref);
 
         const Inventory::Held held = Inventory::InHandNow();
-        std::snprintf(fields, sizeof(fields), ",\"magazine\":%d,\"spare\":%d,\"capacity\":%d,\"health\":%.1f",
-                      held.magazine, held.spare, held.capacity, held.health);
+        std::snprintf(fields, sizeof(fields),
+                      ",\"magazine\":%d,\"spare\":%d,\"capacity\":%d,\"health\":%.1f,\"jammed\":%s",
+                      held.magazine, held.spare, held.capacity, held.health, Bool(held.jammed));
         return Ok(state + ",\"gun\":" + Quote(held.name) + fields);
     }
 

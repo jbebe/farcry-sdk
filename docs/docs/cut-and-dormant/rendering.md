@@ -173,7 +173,8 @@ per decal material and is not tier-gated.
 
 The shadow-receiving shaders compile three ways. `0x10385300` picks `HW_SM_COMPARE` when the D3D9
 device accepts a `D24S8` depth texture (`CheckDeviceFormat` through device vtable `+0x100`,
-`0x104227d0`), otherwise `FETCH4` (vtable `+0x108`, a `'DF16'` probe) and otherwise
+`0x104227d0`), otherwise `FETCH4` (vtable `+0x108`, `0x10423680`: an AMD card, the device's `+0x10`,
+whose `DF24` probe at `+0x10c` passes) and otherwise
 `SIMPLE_SHADOWMAP`. The prototype's `sampleshadowati.inc.fx` renames the 8-tap soft kernel on the
 ATI path to `disabled_SHADOW_CRUDE_BIG_KERNEL`, so the Fetch4 and simple paths do one bilinear 2x2
 compare. The retail objects match: `SHADOW_CRUDE_BIG_KERNEL` changes the pixel shader for one third

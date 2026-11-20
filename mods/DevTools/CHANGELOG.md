@@ -19,7 +19,7 @@ Notable changes to DevTools, loosely following
   tests it also points the view, reads the camera, stance and any entity's position, health and
   components, spawns and clears entities, reports what soldiers see of the player, sets any mod's
   setting for one launch, stops the game clock, and sends a line to any plugin listening on an FCSE
-  channel.
+  channel. Its state says whether the gun in hand is jammed.
 - **Skip intro** and **skip title screen** fixes, moved from UFCP and always applied: the logo and
   rating movies and the "press any key" screen no longer stand between a launch and the menu. Ported
   from FC2JackalFix (MIT, Joshhhuaaa and TGP482).

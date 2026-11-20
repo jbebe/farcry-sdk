@@ -108,9 +108,7 @@ namespace {
 
     // How much of a blob is left `age` seconds after it was thrown, from nought to one.
     float Left(double age, float clear) {
-        const float hold = (std::min)(kHold, 0.5f * clear);
-        return AimingOverhaul::Through(age, kAppear) *
-               (1.0f - AimingOverhaul::Through(age - hold, clear - hold));
+        return AimingOverhaul::Pulse(age, kAppear, (std::min)(kHold, 0.5f * clear), clear);
     }
 }
 

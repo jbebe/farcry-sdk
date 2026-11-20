@@ -28,6 +28,8 @@ namespace {
     using GizmoUpdateFn = void(__fastcall*)(void* hud, void* unused, float frameTime);
     using AimedAtFn = int32_t*(__fastcall*)(void* hud, void* unused, int32_t* interaction, uint32_t low,
                                             uint32_t high);
+    using CheckPickableFn = bool(__fastcall*)(void* pickup, void* unused, void* user);
+    using IsJammedFn = bool(__fastcall*)(void* weapon, void* unused);
 
     // CInventoryViewPawn::GetEquippedWeapon, which the HUD asks for the player every frame; a state
     // machine node's action; the inventory's AddWeapon(CWeapon*), SelectWeapon(class),
@@ -48,6 +50,12 @@ namespace {
     FCSE::Relocation<GizmoIconsFn> g_gizmoIconsSite{FCSE::Uplay(0x00807580)};
     FCSE::Relocation<GizmoUpdateFn> g_gizmoUpdateSite{FCSE::Uplay(0x008094D0)};
     FCSE::Relocation<AimedAtFn> g_aimedAt{FCSE::Uplay(0x008092E0)};
+    // CPickupWeapon::CheckPickable(user), given the user's handle by value, which it releases; its
+    // base refuses a user whose gun in hand CWeapon::IsJammed says is jammed.
+    FCSE::Relocation<CheckPickableFn> g_checkPickableSite{
+        FCSE::Pattern("83 B9 14 01 00 00 00 53 56 8B 74 24 0C 74 1D 83 46 08 FF 75 10 8B CE E8 ?? ?? ?? ?? "
+                      "56 E8 ?? ?? ?? ?? 83 C4 04 32 C0 5E 5B C2 04 00 51 8B C4 89 30")};
+    FCSE::Relocation<IsJammedFn> g_isJammedSite{FCSE::Uplay(0x0012E940)};
     ActionFn g_action = nullptr;
     AddWeaponFn g_addWeapon = nullptr;
     SelectWeaponFn g_selectWeapon = nullptr;
@@ -59,6 +67,8 @@ namespace {
     EquippedFn g_equipped = nullptr;
     GizmoIconsFn g_gizmoIcons = nullptr;
     GizmoUpdateFn g_gizmoUpdate = nullptr;
+    CheckPickableFn g_checkPickable = nullptr;
+    IsJammedFn g_isJammed = nullptr;
 
     constexpr int kSlots = 2;
     constexpr const char* kSlotKey = "InventoryOverhaul.Slot";
@@ -81,6 +91,8 @@ namespace {
     int g_keySlot = -1;
     // Set while anything picks a weapon up.
     bool g_inPickup = false;
+    // Set while a gun on the ground asks whether it may be picked up.
+    bool g_askingPickable = false;
     // Set when a weapon is added some other way, as a save's are, until the player's guns are seen.
     bool g_check = true;
     // How many Quiet holds are alive; none sets g_check.
@@ -417,6 +429,18 @@ namespace {
         OnGizmoIcons(hud, nullptr, interaction);
     }
 
+    // A gun on the ground can be picked up with a jammed gun in hand, which it replaces.
+    bool __fastcall OnCheckPickable(void* pickup, void* unused, void* user) {
+        g_askingPickable = true;
+        const bool pickable = g_checkPickable(pickup, unused, user);
+        g_askingPickable = false;
+        return pickable;
+    }
+
+    bool __fastcall OnIsJammed(void* weapon, void* unused) {
+        return !g_askingPickable && g_isJammed(weapon, unused);
+    }
+
     void __fastcall OnPrePickup(void* pickup, void* unused, void* pawn) {
         g_inPickup = true;
         g_prePickup(pickup, unused, pawn);
@@ -475,8 +499,11 @@ bool Install() {
                          Hook(g_pickSite, &OnPick, &g_pick);
     const bool gizmo = pickups && g_aimedAt && Hook(g_gizmoIconsSite, &OnGizmoIcons, &g_gizmoIcons) &&
                        Hook(g_gizmoUpdateSite, &OnGizmoUpdate, &g_gizmoUpdate);
-    FCSE::Logf("two guns: adding %s, keys %s, wheel %s, pickups %s, their HUD %s", added ? "on" : "off",
-               keys ? "on" : "off", wheel ? "on" : "off", pickups ? "on" : "off", gizmo ? "on" : "off");
+    const bool jammed = Hook(g_checkPickableSite, &OnCheckPickable, &g_checkPickable) &&
+                        Hook(g_isJammedSite, &OnIsJammed, &g_isJammed);
+    FCSE::Logf("two guns: adding %s, keys %s, wheel %s, pickups %s, their HUD %s, with a jammed gun %s",
+               added ? "on" : "off", keys ? "on" : "off", wheel ? "on" : "off", pickups ? "on" : "off",
+               gizmo ? "on" : "off", jammed ? "on" : "off");
     return added || keys || wheel || pickups;
 }
 

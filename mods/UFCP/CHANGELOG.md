@@ -2,6 +2,18 @@
 
 Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+- **Weapon switch after a shot**: after a shot from the M1903, the Ithaca, the Dart Rifle or the
+  silenced shotgun, another weapon can be drawn at once, as it can mid-reload. The game waited
+  until the bolt or pump had been worked. A gun switched away mid-cycle works it when drawn again.
+
+### Changed
+- **UFCP is a JackAll layer again**, for the weapon switch's change to the game's data, which
+  merges with other mods' changes to the same state machine. It needs JackAll 1.9.0 or the Far Cry
+  2 Vortex extension 0.8.0 or later; copying the DLL by hand no longer installs all of it.
+
 ## [1.4.0] - 2026-11-17
 
 ### Fixed

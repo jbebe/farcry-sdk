@@ -16,6 +16,7 @@ struct Held {
     float health = 0.0f;
     float reliability = 0.0f;
     float maxReliability = 0.0f;
+    bool jammed = false;
 };
 
 void Install();

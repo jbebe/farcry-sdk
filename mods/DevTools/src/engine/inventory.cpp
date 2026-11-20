@@ -51,6 +51,8 @@ namespace {
     constexpr ptrdiff_t kStateProperties = 0x04;
     constexpr ptrdiff_t kStateReliability = 0x0C;
     constexpr ptrdiff_t kStateMaxReliability = 0x10;
+    // The jams left to clear; CWeapon::IsJammed is this above nought.
+    constexpr ptrdiff_t kStateJams = 0x18;
     constexpr ptrdiff_t kPropertiesAmmoType = 0x88;
     constexpr ptrdiff_t kPropertiesUsesClips = 0xA4;
     constexpr size_t kSetReliabilitySlot = 0xBC / sizeof(void*);
@@ -166,6 +168,7 @@ namespace {
             held.reliability = Read<float>(state, kStateReliability);
             held.maxReliability = Read<float>(state, kStateMaxReliability);
             held.health = held.maxReliability > 0.0f ? held.reliability / held.maxReliability * 100.0f : 0.0f;
+            held.jammed = Read<int32_t>(state, kStateJams) > 0;
         }
         std::lock_guard<std::mutex> locked(g_lock);
         g_held = std::move(held);

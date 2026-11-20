@@ -1,7 +1,8 @@
 # UFCP — Unofficial Far Cry Patch
 
-Bugs Ubisoft never patched, fixed in the running game instead of in the files on disk. Nothing is
-overwritten, nothing survives uninstalling it, and it stacks with the data mods you already have.
+Bugs Ubisoft never patched, almost all fixed in the running game instead of in the files on disk.
+The one data change, the weapon switch's, merges with the data mods you already have, and nothing
+is left behind when you remove it.
 
 Requires FCSE (the Far Cry Script Extender) 1.5.0 or later, the plugin loader, released from the
 same place as this archive — and Far Cry 2 v1.03, either the Steam/Ubisoft Connect build or the
@@ -11,11 +12,20 @@ skipping the intro movies and title screen.
 
 ## Installing
 
-1. Install FCSE: `FCSE.exe` goes next to the game's own `FarCry2.exe`, in `bin\`.
-2. Copy `plugins\UFCP.dll` from this archive into the game's `bin\plugins\`.
-3. Launch `FCSE.exe` instead of `FarCry2.exe`.
+This archive is a JackAll layer: `plugins\` is the FCSE plugin, and `mods\` holds the weapon
+switch's state machine change. Install FCSE first: `FCSE.exe` goes next to the game's own
+`FarCry2.exe`, in `bin\`.
 
-`bin\fcse.log` lists what was applied. To uninstall, delete the DLL.
+- **Vortex**: with the Far Cry 2 extension 0.8.0 or later installed, drop the zip in and enable it.
+- **JackAll** 1.9.0 or later: add the zip in the app, or from the command line:
+
+```
+jackall-cli mod build   --game "C:\Games\Far Cry 2" --layer ufcp.zip
+jackall-cli mod restore --game "C:\Games\Far Cry 2"
+```
+
+`mod restore` is the uninstall, and removes the plugin too. Launch `FCSE.exe` instead of
+`FarCry2.exe`; `bin\fcse.log` lists what was applied.
 
 ## Fixes
 
@@ -31,6 +41,8 @@ Always applied. A fix that needs a switch is a preference in disguise.
   output ceiling was applied to the mouse as well.
 - **Menu cursor** — a slow mouse movement did not move the menu cursor at all, as if behind a
   deadzone.
+- **Weapon switch after a shot** — after a shot from the M1903, the Ithaca, the Dart Rifle or the
+  silenced shotgun, no other weapon could be drawn until the bolt or pump had been worked.
 - **Monocular** — with a mouse, the zoomed view turned as fast as the unzoomed one, so the smallest
   movement jumped across the picture. It now turns the way a scope does at its zoom.
 - **High-precision timer** — loading screens ran far below the 30 FPS they are paced for.

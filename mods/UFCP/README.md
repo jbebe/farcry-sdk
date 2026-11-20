@@ -1,10 +1,11 @@
 # UFCP — Unofficial Far Cry Patch
 
-Bugs Ubisoft never patched, fixed in the running game instead of in the files on disk.
+Bugs Ubisoft never patched, almost all fixed in the running game instead of in the files on disk.
 
 UFCP is an [FCSE](../../tools/FCSE) plugin: it patches `Dunia.dll` in memory at startup, so it
 overwrites nothing, leaves no trace when uninstalled, and stacks with whatever data mods are already
-installed.
+installed. A bug that is wrong data, not wrong code, is fixed in `layer/` instead, as a fragment
+JackAll merges with every other layer; the plugin ships inside that layer.
 
 This is the plugin a player installs. The things only someone working on the game wants — the
 developer console, booting straight into a save — are a separate plugin, [DevTools](../DevTools),
@@ -22,6 +23,7 @@ Applied unconditionally, with no setting — a fix that needs a switch is a pref
 | Exit crash | Quitting through Exit Game faulted instead of closing cleanly — the reason "Far Cry 2 crashes on exit" is folklore, and a guaranteed false positive on top of any real crash you are trying to read. |
 | Mouse speed cap | A fast flick turned the view less far than a slow one: the gamepad filter's output ceiling was applied to the mouse too, so quick movement saturated. |
 | Menu cursor | A slow mouse movement did not move the menu cursor at all. Each frame's movement was cut down to whole pixels, so whatever fell below a pixel was lost, the more so the higher the frame rate. |
+| Weapon switch after a shot | After a shot from the M1903, the Ithaca, the Dart Rifle or the silenced shotgun, no other weapon could be drawn until the bolt or pump had been worked, though one can be drawn mid-reload. The pawn's weapon state machine lets the switch keys through only in the states of its `AllowWeaponSwitch` group, which lacked the two the gun is in while it cycles, `Preparing_Weapon` and `Preparing_Weapon_CanIronsight`; `layer/` adds them, as a fragment of `weapons.gosm.xml`. A gun switched away mid-cycle cycles when it is drawn again, before it fires. |
 | Monocular look speed | With a mouse, the monocular's zoomed view turned as fast as the unzoomed one, so the smallest movement jumped across the picture. The mouse's look curve slows the turn by the zoom's field of view only while a gun is down its sights; it now also does so while the monocular's zoom is on. |
 | High-precision timer | Loading screens ran far below the 30 FPS they are paced for, because the default 15.6 ms timer resolution overshoots every sleep. |
 | Grass under spot lights | Headlights and flashlights left grass black however close it was. The game's light pass over grass scaled the light by the fog's amount instead of by what the fog leaves, so only grass already lost in fog was lit. It also lit each clump only as far as the ground under it faced the lamp, a tenth of the light where a headlight skims along the ground. |
@@ -201,7 +203,10 @@ holds no pure logic worth a suite, and stubbing the engine to manufacture some w
 ## Installing
 
 1. Install FCSE (`FCSE.exe` next to the game's `FarCry2.exe`).
-2. Drop `UFCP.dll` into `bin\plugins\`, or let `build.ps1 -Install "<game>\bin"` copy it there.
+2. Build the layer into the game with every other layer installed, since `mod build` keeps only the
+   layers it is given: `jackall-cli mod build --game "<game>" --layer mods\UFCP\layer --layer ...`,
+   with JackAll 1.9.0 or later, the first to merge a `.gosm.xml`. `build.ps1` stages `UFCP.dll` into
+   the layer first; `-Install` copies only the DLL.
 3. Launch `FCSE.exe`.
 
 ## Verification

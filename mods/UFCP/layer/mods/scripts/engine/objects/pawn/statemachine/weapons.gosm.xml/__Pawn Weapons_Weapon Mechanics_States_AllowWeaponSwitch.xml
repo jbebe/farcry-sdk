@@ -1,0 +1,92 @@
+<Group FullName="::Pawn Weapons/Weapon Mechanics/States/AllowWeaponSwitch" Type="BaseGroup">
+	<StateRef Path="::Pawn Weapons/External States/Main Avatar/Common/xIdle" />
+	<StateRef Path="::Pawn Weapons/Weapon Mechanics/States/ReloadStates/Reloading" />
+	<StateRef Path="::Pawn Weapons/Weapon Mechanics/States/Switching weapon/Switch Drawing" />
+	<StateRef Path="::Pawn Weapons/External States/Main Avatar/Common/xIdleCycleBreaker" />
+	<StateRef Path="::Pawn Weapons/Weapon Mechanics/States/ReloadStates/Reloading_SingleBegin" />
+	<StateRef Path="::Pawn Weapons/Weapon Mechanics/States/ReloadStates/Reloading_SingleCycle" />
+	<StateRef Path="::Pawn Weapons/Weapon Mechanics/States/ReloadStates/Reloading_SingleEnd" />
+	<StateRef Path="::Pawn Weapons/Weapon Mechanics/States/Preparing_Weapon" />
+	<StateRef Path="::Pawn Weapons/Weapon Mechanics/States/Preparing_Weapon_CanIronsight" />
+	<Event Name="Try draw" Type="CGOStateEventInventory" Start="0" End="100" Signal="drawweapon">
+		<Parameter Name="alwaysTrigger" Value="0" />
+		<Parameter Name="triggerOnce" Value="0" />
+		<Parameter Name="triggeredOnEnd" Value="0" />
+		<Parameter Name="triggeredOnBegin" Value="0" />
+		<Parameter Name="requestType" Value="5" />
+		<Parameter Name="simpleEventID" Value="" />
+	</Event>
+	<Event Name="Try holster" Type="CGOStateEventInventory" Start="0" End="100" Signal="holsterweapon">
+		<Parameter Name="alwaysTrigger" Value="0" />
+		<Parameter Name="triggerOnce" Value="0" />
+		<Parameter Name="triggeredOnEnd" Value="0" />
+		<Parameter Name="triggeredOnBegin" Value="0" />
+		<Parameter Name="requestType" Value="6" />
+		<Parameter Name="simpleEventID" Value="" />
+	</Event>
+	<Event Name="Select previous weapon" Type="CGOStateEventInventory" Start="0" End="100" Signal="select_previous_weapon">
+		<Parameter Name="alwaysTrigger" Value="0" />
+		<Parameter Name="triggerOnce" Value="0" />
+		<Parameter Name="triggeredOnEnd" Value="0" />
+		<Parameter Name="triggeredOnBegin" Value="0" />
+		<Parameter Name="requestType" Value="2" />
+		<Parameter Name="simpleEventID" Value="" />
+	</Event>
+	<Event Name="Select next weapon" Type="CGOStateEventInventory" Start="0" End="100" Signal="select_next_weapon">
+		<Parameter Name="alwaysTrigger" Value="0" />
+		<Parameter Name="triggerOnce" Value="0" />
+		<Parameter Name="triggeredOnEnd" Value="0" />
+		<Parameter Name="triggeredOnBegin" Value="0" />
+		<Parameter Name="requestType" Value="1" />
+		<Parameter Name="simpleEventID" Value="" />
+	</Event>
+	<Event Name="Select primary" Type="CGOStateEventInventory" Start="0" End="100" Signal="select_primary_weapon">
+		<Parameter Name="alwaysTrigger" Value="0" />
+		<Parameter Name="triggerOnce" Value="0" />
+		<Parameter Name="triggeredOnEnd" Value="0" />
+		<Parameter Name="triggeredOnBegin" Value="0" />
+		<Parameter Name="requestType" Value="10" />
+		<Parameter Name="simpleEventID" Value="" />
+	</Event>
+	<Event Name="Select hand to hand" Type="CGOStateEventInventory" Start="0" End="100" Signal="select_hand_to_hand_weapon">
+		<Parameter Name="alwaysTrigger" Value="0" />
+		<Parameter Name="triggerOnce" Value="0" />
+		<Parameter Name="triggeredOnEnd" Value="0" />
+		<Parameter Name="triggeredOnBegin" Value="0" />
+		<Parameter Name="requestType" Value="9" />
+		<Parameter Name="simpleEventID" Value="" />
+	</Event>
+	<Event Name="Select secondary" Type="CGOStateEventInventory" Start="0" End="100" Signal="select_secondary_weapon">
+		<Parameter Name="alwaysTrigger" Value="0" />
+		<Parameter Name="triggerOnce" Value="0" />
+		<Parameter Name="triggeredOnEnd" Value="0" />
+		<Parameter Name="triggeredOnBegin" Value="0" />
+		<Parameter Name="requestType" Value="11" />
+		<Parameter Name="simpleEventID" Value="" />
+	</Event>
+	<Event Name="Select special" Type="CGOStateEventInventory" Start="0" End="100" Signal="select_special_weapon">
+		<Parameter Name="alwaysTrigger" Value="0" />
+		<Parameter Name="triggerOnce" Value="0" />
+		<Parameter Name="triggeredOnEnd" Value="0" />
+		<Parameter Name="triggeredOnBegin" Value="0" />
+		<Parameter Name="requestType" Value="12" />
+		<Parameter Name="simpleEventID" Value="" />
+	</Event>
+	<Event Name="Toggle Gadget" Type="CGOStateEventInventory" Start="0" End="100" Signal="toggle_gadget">
+		<Parameter Name="alwaysTrigger" Value="0" />
+		<Parameter Name="triggerOnce" Value="0" />
+		<Parameter Name="triggeredOnEnd" Value="0" />
+		<Parameter Name="triggeredOnBegin" Value="0" />
+		<Parameter Name="requestType" Value="32" />
+		<Parameter Name="simpleEventID" Value="" />
+	</Event>
+	<Sink Name="holster now" Start="0" End="100">
+		<Connection Target="::Pawn Weapons/Weapon Mechanics/States/Holstering" Signal="holsterweapon_now" />
+	</Sink>
+	<Sink Name="draw now" Start="0" End="100">
+		<Connection Target="::Pawn Weapons/Weapon Mechanics/States/Drawing" Signal="drawweapon_now" />
+	</Sink>
+	<Sink Name="switch" Start="0" End="100">
+		<Connection Target="::Pawn Weapons/Weapon Mechanics/States/Switching weapon/Switch Holstering" Signal="switch" />
+	</Sink>
+</Group>

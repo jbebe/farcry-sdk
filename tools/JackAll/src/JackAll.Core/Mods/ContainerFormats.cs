@@ -40,6 +40,7 @@ public static class ContainerFormats
         new(IsMagmaPackage, true, _ => MgbContainerSplitter.Instance),
         new(IsBrainWorkspace, true, _ => AiWorkspaceContainerSplitter.Instance),
         new(GameModesConfigContainerSplitter.IsGameModesConfig, true, _ => GameModesConfigContainerSplitter.Instance),
+        new(GosmContainerSplitter.IsStateMachine, true, _ => GosmContainerSplitter.Instance),
         new(ParticleLibraryContainerSplitter.IsParticleLibrary, true, _ => ParticleLibraryContainerSplitter.Instance),
         new(IsStringTable, false, _ => StringTableContainerSplitter.Instance),
     ];

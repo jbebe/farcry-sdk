@@ -40,8 +40,8 @@ struct DirtLook {
 const DirtLook& DirtInTheEye();
 
 // How a hit on the player looks, the same for every weapon: the punch a body hit gives the view, in
-// metres, degrees and seconds; the vignette after it, which a head hit gives in full; and a head hit's
-// double image.
+// metres, degrees and seconds; the vignette and the whole view's dimming after it, which a head hit
+// gives in full, and how unevenly the vignette creeps in; and a head hit's double image.
 struct HitLook {
     float back = 0.08f;
     float down = 5.0f;
@@ -49,6 +49,9 @@ struct HitLook {
     float vignette = 1.3f;
     float reach = 0.65f;
     float vignetteGone = 2.5f;
+    float dim = 0.35f;
+    float dimGone = 1.0f;
+    float uneven = 0.15f;
     float apart = 40.0f;
     float doubleGone = 5.0f;
 };

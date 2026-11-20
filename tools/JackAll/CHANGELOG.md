@@ -2,6 +2,14 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **The pawn state machines merge across mods.** Each group, state and track of a `*.gosm.xml`, such
+  as `weapons.gosm.xml`'s `AllowWeaponSwitch`, is a fragment named after its `FullName` and merged
+  child by child, so two mods adding states or events to one group both reach the game. A legacy mod
+  that ships the whole file is split into these fragments on import.
+
 ## [1.8.0] - 2026-11-18
 
 ### Added
