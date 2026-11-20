@@ -37,7 +37,7 @@ Stage: active
 
 ## Checks
 
-- simplify: 3056ed3 2026-11-18 - since ufcp-1.3.1
+- simplify: 77244489 2026-11-20 - since ufcp-1.4.0
 
 ## Release order
 

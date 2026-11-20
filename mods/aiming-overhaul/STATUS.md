@@ -81,7 +81,7 @@ Stage: active
 
 ## Checks
 
-- simplify: 631b0978 2026-11-17 - since aiming-overhaul-1.2.0
+- simplify: 77244489 2026-11-20 - since aiming-overhaul-1.3.0
 
 ## Release order
 

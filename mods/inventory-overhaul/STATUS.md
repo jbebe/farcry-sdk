@@ -59,7 +59,7 @@ Stage: active
 
 ## Checks
 
-- simplify: 44507230 2026-11-19 - since inventory-overhaul-1.0.0; 33965adb's wheel and swap icon reviewed, nothing to change
+- simplify: 77244489 2026-11-20 - since inventory-overhaul-1.1.0; the jammed-gun hooks reviewed, nothing to change
 
 ## Release order
 
