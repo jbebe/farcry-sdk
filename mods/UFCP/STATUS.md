@@ -33,7 +33,7 @@ Stage: active
 
 - played: 3056ed3 2026-11-18
 - played: 9c9a8ac3 2026-11-20 - "I verified it all" (#78-#81 and the head-hit punch), counted as played by the user
-- page text: 3dcbf56 2026-11-17
+- page text: 2859eedb 2026-11-21 - BBCode and short message checked: "I read it"
 
 ## Checks
 
