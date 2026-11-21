@@ -31,7 +31,7 @@ Stage: maintenance
 
 ## Checks
 
-- simplify: cb1edc64 2026-11-18 - since vortex-0.6.0; 927777c6's sound id warning reviewed, nothing to change
+- simplify: 3197dd65 2026-11-21 - since vortex-0.7.0; only JackAll.Core changed, reviewed in JackAll's pass, nothing to change
 
 ## Release order
 

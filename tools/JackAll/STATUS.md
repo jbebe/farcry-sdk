@@ -63,7 +63,7 @@ Stage: active
 
 ## Checks
 
-- simplify: cb1edc64 2026-11-18 - since jackall-1.7.0; 927777c6's sound id check reviewed, nothing to change
+- simplify: 3197dd65 2026-11-21 - since jackall-1.8.0; the gosm splitter repeats the input-config and game-modes splitters' shape, a shared base left for after the release
 
 ## Release order
 
