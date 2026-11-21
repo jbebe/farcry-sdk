@@ -10,6 +10,11 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   child by child, so two mods adding states or events to one group both reach the game. A legacy mod
   that ships the whole file is split into these fragments on import.
 
+### Fixed
+- **Deploy works on Windows 10 1809 and older, such as LTSC 2019.** It failed there with "Cannot
+  create a file when that file already exists", and the game's `patch.dat` was gone once JackAll
+  closed.
+
 ## [1.8.0] - 2026-11-18
 
 ### Added

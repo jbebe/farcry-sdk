@@ -54,6 +54,8 @@ Stage: active
 
 ## To validate
 
+- Deploy twice with JackAll open: both build, and Data_Win32 holds no `*.old` file; Windows 10 1809 itself only the Nexus reporter can confirm (bug 1172349) - tests only
+
 ## Approvals
 
 - played: d04a2176 2026-11-18 - "I read all texts and played all mods and validated all lines"

@@ -10,6 +10,10 @@ Notable changes to the Vortex Far Cry 2 extension, loosely following
   a `*.gosm.xml` it changes, such as UFCP's weapon switch, and the extension merges them with every
   other mod's, where two such mods used to replace each other's whole file.
 
+### Fixed
+- **Deploy works while JackAll is open on Windows 10 1809 and older, such as LTSC 2019.** It failed
+  there with "Cannot create a file when that file already exists".
+
 ## [0.7.0] - 2026-11-15
 
 ### Added

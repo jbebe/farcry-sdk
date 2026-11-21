@@ -366,23 +366,27 @@ public static class PatchBuilder
     }
 
     /// <summary>
-    /// Swaps <paramref name="tempPath"/> into <paramref name="destPath"/>'s place. Deliberately
-    /// <c>File.Delete</c> then a plain (non-overwrite) <c>File.Move</c>, not <c>File.Move(overwrite:
-    /// true)</c>: on Windows the latter fails with <see cref="UnauthorizedAccessException"/> whenever
-    /// anything — including this same process's own <c>GameVfs</c>, which stays open for the app's
-    /// whole session and may well have <paramref name="destPath"/> mounted via a <c>DuniaArchive</c> —
-    /// still has the destination open for reading, even with <see cref="FileShare.Delete"/> set on
-    /// that handle. A plain delete-then-rename has no such restriction, and the effect is the same:
-    /// an existing open reader keeps reading the old (now-unlinked but still valid) file contents,
-    /// and every fresh open after this call sees <paramref name="tempPath"/>'s.
+    /// Swaps <paramref name="tempPath"/> into <paramref name="destPath"/>'s place, renaming the live
+    /// file aside first: a reader may hold it open (the App's <c>GameVfs</c>), and while one does, an
+    /// overwriting move is refused and a delete keeps the name taken on Windows 10 1809 and older.
     /// </summary>
     private static void ReplaceFile(string tempPath, string destPath)
     {
+        string aside = $"{destPath}.{Guid.NewGuid():N}.old";
         if (File.Exists(destPath))
         {
-            File.Delete(destPath);
+            File.Move(destPath, aside);
         }
-        File.Move(tempPath, destPath);
+        try
+        {
+            File.Move(tempPath, destPath);
+        }
+        catch
+        {
+            if (File.Exists(aside)) File.Move(aside, destPath);
+            throw;
+        }
+        SafeDelete(aside);
     }
 
     private static void SafeDelete(string path)
@@ -393,8 +397,7 @@ public static class PatchBuilder
         }
         catch
         {
-            // Best effort — a leftover .building file is noise, not damage, and reporting the
-            // original failure matters more than reporting a failure to clean up after it.
+            // Best effort: a leftover file is noise, not damage.
         }
     }
 }

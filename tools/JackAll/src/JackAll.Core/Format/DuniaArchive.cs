@@ -73,20 +73,8 @@ public sealed class DuniaArchive : IDisposable
     public static DuniaArchive Open(string fatPath, string datPath, string? name = null)
     {
         var index = FatArchive.Read(fatPath);
-        // Read-only, shared, and deletable out from under us: the game may well be running while the
-        // user browses, and PatchBuilder.Build replaces patch.dat/.fat in place while this same file
-        // can legitimately still be mounted here (JackAll.App keeps its GameVfs open for the whole
-        // session) - without FileShare.Delete, Windows refuses that replace with an access-denied
-        // error as long as this handle stays open.
-        //
-        // FileShare.Delete alone is *not* enough to keep using this handle afterward, though - it
-        // only avoids the access-denied error on the replace itself. Confirmed empirically: once
-        // another file has been moved into this handle's path, further reads through this handle
-        // throw EndOfStreamException (Length still reports the old size, but the bytes are gone) -
-        // unlike a plain delete-with-no-replacement, where the old handle keeps reading fine. Whoever
-        // mounted this archive and might outlive a PatchBuilder.Build against the same install.PatchFat
-        // MUST re-open it afterward - see GameVfs.ReloadPatchArchive, which JackAll.App's
-        // MainViewModel.BuildPatch calls right after a successful build for exactly this reason.
+        // Shared with delete: PatchBuilder.Build renames patch.dat aside while the App still has it
+        // mounted here, and GameVfs.ReloadPatchArchive re-opens the new one after the build.
         SafeFileHandle data = File.OpenHandle(
             datPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
 

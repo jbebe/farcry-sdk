@@ -175,6 +175,23 @@ public class PatchBuilderTests : IDisposable
         Assert.False(File.Exists(_install.PatchDat + ".building"));
     }
 
+    /// <summary>The App keeps patch.dat mounted while it deploys, so the build renames it aside.</summary>
+    [Fact]
+    public void A_build_moves_a_mounted_patch_aside_and_its_reader_keeps_the_old_bytes()
+    {
+        if (_install is null) return;
+
+        var mod = MakeZipMod("test_mod", ("mods/engine/gamemodes/gamemodesconfig.xml", "hello"u8.ToArray()));
+        using var mounted = DuniaArchive.Open(_install.PatchFat);
+        FatEntry last = mounted.Entries.MaxBy(e => e.Offset)!;
+        byte[] before = mounted.Read(last);
+
+        PatchBuilder.Build(_install, [mod]);
+
+        Assert.Equal(before, mounted.Read(last));
+        Assert.Empty(Directory.GetFiles(_install.DataDir, "*.old"));
+    }
+
     [Fact]
     public void A_fragment_override_is_assembled_into_its_container_rather_than_dropped()
     {
