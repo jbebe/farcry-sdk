@@ -63,7 +63,7 @@ Stage: active
 
 ## Checks
 
-- simplify: 3197dd65 2026-11-21 - since jackall-1.8.0; the gosm splitter repeats the input-config and game-modes splitters' shape, a shared base left for after the release
+- simplify: 934fab1c 2026-11-21 - since jackall-1.8.0; the gosm, game-modes and input-config splitters moved onto one base, XmlElementSplitter
 
 ## Release order
 

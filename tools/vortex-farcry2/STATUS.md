@@ -31,7 +31,7 @@ Stage: maintenance
 
 ## Checks
 
-- simplify: 3197dd65 2026-11-21 - since vortex-0.7.0; only JackAll.Core changed, reviewed in JackAll's pass, nothing to change
+- simplify: 934fab1c 2026-11-21 - since vortex-0.7.0; only JackAll.Core changed, reviewed in JackAll's pass
 
 ## Release order
 
