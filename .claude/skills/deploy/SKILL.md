@@ -19,7 +19,16 @@ install every time, never from memory or an earlier build.
 Commands run from the session's tree, its worktree or the main one, with the PowerShell tool. The CLI
 is `tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe`; if it is missing, build it
 with `dotnet build tools\JackAll\src\JackAll.Cli -c Release`. Make a new folder in the scratchpad for
-this deploy, `<work>` below.
+this deploy's logs, `<work>` below.
+
+The copy's patch is staged in `c:\Projects\FarCry2\tmp\deploy\<n>`, `<stage>` below: `<n>` is the
+copy's folder name, which `claim` prints (`steam` for the Steam install). The stage keeps the patch
+between deploys and sessions, so no deploy copies or extracts the same patch twice. Only the session
+bound to the copy writes to it.
+
+- `current\` holds `patch.fat` and `patch.dat` as the last deploy left them, and `x\`, their
+  extraction.
+- `previous\` holds the same for the deploy before that. It is the way back.
 
 ## 0. The game copy
 
@@ -74,10 +83,13 @@ Copy the DLL over the installed one and go to step 7. The patch is not rebuilt.
 
 ## 4. Infer the installed set
 
-1. Back up: copy `Data_Win32\patch.fat` and `patch.dat` into `<work>\before\`.
-2. Extract the copy: `jackall-cli archive extract "<work>\before\patch.fat" --names -o "<work>\before-x"`.
+1. Reuse `<stage>\current\` when its `patch.fat` and `patch.dat` hash the same as `Data_Win32`'s and
+   `x\` is there. Otherwise, as after a clean, a first deploy or a build by hand, delete `current\`,
+   copy the two files into it, and extract them:
+   `jackall-cli archive extract "<stage>\current\patch.fat" --names -o "<stage>\current\x"`.
    Never extract an archive inside the install: without `-o` the files land beside it.
-3. Hash every extracted file and every whole file in each `mods\<mod>\layer\mods\`. A fragment is not
+2. `current\` is now the backup of the installed patch.
+3. Hash every file in `<stage>\current\x` and every whole file in each `mods\<mod>\layer\mods\`. A fragment is not
    a whole file: it sits in a folder named after the file it merges into (`entitylibrary.fcb\`,
    `hud.mgb\`, ...) or is an `oasisstrings.fragment.xml`.
 4. A layer is deployed when its whole files are found by content. Match on content, not on names:
@@ -107,22 +119,23 @@ jackall-cli mod build --game "<game>" --layer mods\<A>\layer --layer mods\<B>\la
   in `.claude\skills\perftest\perftest.ps1` does.
 - Read the log's end: `Built ... entries`, then `bin\plugins: N plugin file(s) deployed, M removed`,
   then any `Warning:` lines. M is 0 unless a plugin was meant to go. A removal nobody asked for means
-  a layer was left out: copy `<work>\before\` back into `Data_Win32`.
+  a layer was left out: copy `<stage>\current\patch.fat` and `patch.dat` back into `Data_Win32`.
 
 ## 6. Diff by content
 
-1. Copy the new `patch.fat` and `patch.dat` into `<work>\after\` and extract them to `<work>\after-x`
-   the same way.
-2. Compare the two by content: files added, removed and changed.
+1. Rotate the stage: delete `<stage>\previous\`, rename `current\` to `previous\`, copy the new
+   `patch.fat` and `patch.dat` into a new `current\`, and extract them to `current\x` the same way.
+2. Compare `previous\x` with `current\x` by content: files added, removed and changed.
 3. Only this mod's files and the containers its fragments merge into may change. Two changes come on
    every build of the same inputs and are not regressions:
    - six `.rml` entries of about 1 MB differ by some 100 bytes of floats;
    - each `languages\*\oasisstrings.rml` keeps its size with its lines reordered, which
      `jackall-cli rml decode` shows as the same lines.
-4. Anything else changed or removed: copy `<work>\before\patch.fat` and `patch.dat` back into
-   `Data_Win32` and find out why before building again.
+4. Anything else changed or removed: copy `<stage>\previous\patch.fat` and `patch.dat` back into
+   `Data_Win32`, delete `current\` and rename `previous\` to `current\`. Find out why before
+   building again.
 
 ## 7. Report
 
 Say it is deployed and where the user launches it, `<game>\bin\FCSE.exe`: the layers in order, the
-plugins line, and the diff in brief. Leave `<work>` in place; its `before\` is the way back.
+plugins line, and the diff in brief. `<stage>\previous\` is the way back until the next deploy.
