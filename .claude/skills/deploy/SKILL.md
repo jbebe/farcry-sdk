@@ -22,7 +22,7 @@ with `dotnet build tools\JackAll\src\JackAll.Cli -c Release`. Make a new folder 
 this deploy's logs, `<work>` below.
 
 The copy's patch is staged in `c:\Projects\FarCry2\tmp\deploy\<n>`, `<stage>` below: `<n>` is the
-copy's folder name, which `claim` prints (`steam` for the Steam install). The stage keeps the patch
+copy's index, `C:\Games\fc2instances\<n>` as `claim` prints it. The stage keeps the patch
 between deploys and sessions, so no deploy copies or extracts the same patch twice. Only the session
 bound to the copy writes to it.
 
