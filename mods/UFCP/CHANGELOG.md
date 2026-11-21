@@ -2,7 +2,7 @@
 
 Notable changes to UFCP, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.5.0] - 2026-11-21
 
 ### Fixed
 - **Weapon switch after a shot**: after a shot from the M1903, the Ithaca, the Dart Rifle or the

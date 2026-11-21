@@ -3,7 +3,7 @@
 Notable changes to the Vortex Far Cry 2 extension, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.8.0] - 2026-11-21
 
 ### Added
 - **Mods that change the pawn's state machines merge.** A mod can ship only the groups and states of

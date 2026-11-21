@@ -3,7 +3,7 @@
 Notable changes to Inventory Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.1.1] - 2026-11-21
 
 ### Fixed
 - **A gun can be picked up with a jammed gun in hand.** The game refused the pickup until the jam

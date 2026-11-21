@@ -3,7 +3,7 @@
 Notable changes to Aiming Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.4.0] - 2026-11-21
 
 ### Changed
 - **Being hit darkens the whole view.** A hit dims the whole screen for about a second, as well as

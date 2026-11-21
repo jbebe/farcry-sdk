@@ -2,7 +2,7 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.9.0] - 2026-11-21
 
 ### Added
 - **The pawn state machines merge across mods.** Each group, state and track of a `*.gosm.xml`, such
