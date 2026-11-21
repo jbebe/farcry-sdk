@@ -44,6 +44,14 @@ simplification rules for every language in this repo live there.
 - **Never cut a build short.** Piping a build or generator into `Select-Object -First` or `head`
   kills it mid-run. Log to a scratchpad file, check the exit code, read the tail, and after a
   generator check that every output changed.
+- **Game files are extracted once, into the main tree's `tmp/`, and reused.** Look there before you
+  extract or decode anything from the game. `tmp/gamefiles/` holds every stock archive already
+  extracted (GOG), `tmp/proto2008/` the prototype, and `tmp/mods/` with `tmp/legacy/` the community
+  mods. A decoded form that another session will want too (the entity library, a brain or a world as
+  XML, a disassembly) is made once into `tmp/derived/<what>/`, with the command that made it in a
+  `SOURCE.txt` beside it, and is reused from then on. Never write into `tmp/gamefiles/`. The
+  scratchpad holds only the session's own files: a copy's modded patch, deploy diffs, test output.
+  `tmp/` is gitignored, so from a worktree it is `c:\Projects\FarCry2\tmp`.
 - **A session's game is its own copy of the GOG install,** `C:\Games\fc2instances\<n>`, bound by its
   first `/deploy` and kept after the session ends; fc2drive finds it by the session. No session
   deploys into `C:\Games\Far Cry 2`: it is the master the copies link to, and the user's.
@@ -183,7 +191,8 @@ Driven live through the GhidraMCP bridge (`.mcp.json`, server `ghidra`) against 
   `entity_fragments.py` for mods that generate archetype fragments
 - `tools/misc/` - format samples, hash lists, text snippets, sbao and modpatcher material
 - `tools/third-party/` - third-party tools, editors, and prototype builds (FC2/FC3/Avatar)
-- `tmp/` - proprietary game files, for testing ideas against
+- `tmp/` - proprietary game files, extracted once and reused (the working rule above):
+  `gamefiles/` stock archives, `proto2008/`, `mods/` and `legacy/`, `derived/` decoded forms
 
 ## Docs site
 
